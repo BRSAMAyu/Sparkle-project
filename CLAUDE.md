@@ -44,7 +44,7 @@ PYTHON ENGINE (Intelligence) →  AI, RAG, tools, LLM | LangGraph FSM | FastAPI 
 
 ## Aurora Adaptive Kernel
 
-Aurora (Stages 4-40) governs how user behavioral signals flow into AI reasoning, routing, and prompt assembly. Safety enforced through **53+ governance rules** (CI via `scripts/run_all_rule_guards.sh`).
+Aurora (Stages 4-40) governs how user behavioral signals flow into AI reasoning, routing, and prompt assembly. Safety enforced through **67+ governance rules** (CI via `scripts/run_all_rule_guards.sh`).
 
 **Kill Switch Protocol**: Every Aurora feature ships behind tri-state: `off` → `shadow` → `live`. All switches expose Prometheus gauge. Drill scripts in `scripts/stage{N}/drill_transitions.sh`.
 

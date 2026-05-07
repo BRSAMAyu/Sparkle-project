@@ -244,6 +244,15 @@ services:
       - AURORA_STAGE21_SKILL_SELECTION_MODE=${AURORA_STAGE21_SKILL_SELECTION_MODE:-live}
       - AURORA_STAGE21_SKILL_SHARE_MODE=${AURORA_STAGE21_SKILL_SHARE_MODE:-live}
       - AURORA_TRAITS_NLP_MODE=${AURORA_TRAITS_NLP_MODE:-live}
+      # Aurora: Stage 37-40, DualCore, Privacy
+      - AURORA_STAGE37_LLM_SAFETY_MODE=${AURORA_STAGE37_LLM_SAFETY_MODE:-live}
+      - AURORA_STAGE39_MODE=${AURORA_STAGE39_MODE:-live}
+      - AURORA_STAGE39_SCAFFOLDING_PROMPT_MODE=${AURORA_STAGE39_SCAFFOLDING_PROMPT_MODE:-live}
+      - AURORA_STAGE39_COGLOAD_ROUTE_MODE=${AURORA_STAGE39_COGLOAD_ROUTE_MODE:-live}
+      - AURORA_STAGE39_GALAXY_INJECT_MODE=${AURORA_STAGE39_GALAXY_INJECT_MODE:-live}
+      - AURORA_STAGE40_CALENDAR_MODE=${AURORA_STAGE40_CALENDAR_MODE:-live}
+      - AURORA_DUAL_CORE_ROUTER_MODE=${AURORA_DUAL_CORE_ROUTER_MODE:-live}
+      - AURORA_PRIVACY_PII_REDACTION_MODE=${AURORA_PRIVACY_PII_REDACTION_MODE:-live}
     depends_on:
       - db
       - redis
@@ -312,6 +321,15 @@ services:
       - AURORA_STAGE21_SKILL_SELECTION_MODE=${AURORA_STAGE21_SKILL_SELECTION_MODE:-live}
       - AURORA_STAGE21_SKILL_SHARE_MODE=${AURORA_STAGE21_SKILL_SHARE_MODE:-live}
       - AURORA_TRAITS_NLP_MODE=${AURORA_TRAITS_NLP_MODE:-live}
+      # Aurora: Stage 37-40, DualCore, Privacy
+      - AURORA_STAGE37_LLM_SAFETY_MODE=${AURORA_STAGE37_LLM_SAFETY_MODE:-live}
+      - AURORA_STAGE39_MODE=${AURORA_STAGE39_MODE:-live}
+      - AURORA_STAGE39_SCAFFOLDING_PROMPT_MODE=${AURORA_STAGE39_SCAFFOLDING_PROMPT_MODE:-live}
+      - AURORA_STAGE39_COGLOAD_ROUTE_MODE=${AURORA_STAGE39_COGLOAD_ROUTE_MODE:-live}
+      - AURORA_STAGE39_GALAXY_INJECT_MODE=${AURORA_STAGE39_GALAXY_INJECT_MODE:-live}
+      - AURORA_STAGE40_CALENDAR_MODE=${AURORA_STAGE40_CALENDAR_MODE:-live}
+      - AURORA_DUAL_CORE_ROUTER_MODE=${AURORA_DUAL_CORE_ROUTER_MODE:-live}
+      - AURORA_PRIVACY_PII_REDACTION_MODE=${AURORA_PRIVACY_PII_REDACTION_MODE:-live}
     depends_on:
       - db
       - redis
@@ -352,6 +370,40 @@ services:
       - app
     healthcheck:
       test: ["CMD-SHELL", "celery -A app.core.celery_app inspect ping -d celery@$${HOSTNAME} 2>/dev/null || exit 1"]
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 45s
+    deploy:
+      resources: *resources_worker
+
+  celery_glm_batch_worker:
+    image: ${BACKEND_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/sparkle-backend}:${IMAGE_TAG:?IMAGE_TAG must be set}
+    container_name: sparkle_celery_glm_batch_worker
+    restart: unless-stopped
+    user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
+    command: celery -A app.core.celery_app worker -l warning -Q glm_batch --autoscale=6,2 --hostname=glm-batch@%h
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - SPARKLE_RBAC_ENABLED=${SPARKLE_RBAC_ENABLED:-false}
+      - SPARKLE_ENGINE_DATABASE_URL=${SPARKLE_ENGINE_DATABASE_URL}
+      - SPARKLE_CELERY_DATABASE_URL=${SPARKLE_CELERY_DATABASE_URL}
+      - REDIS_URL=${SPARKLE_CELERY_REDIS_URL:-${REDIS_URL}}
+      - REDIS_PASSWORD=${SPARKLE_CELERY_REDIS_PASSWORD:-${REDIS_PASSWORD}}
+      - CELERY_BROKER_URL=${SPARKLE_CELERY_BROKER_URL:-${CELERY_BROKER_URL}}
+      - CELERY_RESULT_BACKEND=${SPARKLE_CELERY_RESULT_BACKEND:-${CELERY_RESULT_BACKEND}}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+      - ENVIRONMENT=production
+      - SERVICE_ROLE=celery-glm-batch
+      - GLM_BATCH_MAX_CONCURRENCY=${GLM_BATCH_MAX_CONCURRENCY:-6}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://tempo:4317}
+    depends_on:
+      - db
+      - redis
+    networks:
+      - app
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.core.celery_app inspect ping -d glm-batch@$${HOSTNAME} 2>/dev/null || exit 1"]
       interval: 60s
       timeout: 15s
       retries: 3

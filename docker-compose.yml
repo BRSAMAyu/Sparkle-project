@@ -163,6 +163,15 @@ services:
       - AURORA_STAGE21_SKILL_SELECTION_MODE=${AURORA_STAGE21_SKILL_SELECTION_MODE:-live}
       - AURORA_STAGE21_SKILL_SHARE_MODE=${AURORA_STAGE21_SKILL_SHARE_MODE:-live}
       - AURORA_TRAITS_NLP_MODE=${AURORA_TRAITS_NLP_MODE:-live}
+      # Aurora: Stage 37-40, DualCore, Privacy
+      - AURORA_STAGE37_LLM_SAFETY_MODE=${AURORA_STAGE37_LLM_SAFETY_MODE:-live}
+      - AURORA_STAGE39_MODE=${AURORA_STAGE39_MODE:-live}
+      - AURORA_STAGE39_SCAFFOLDING_PROMPT_MODE=${AURORA_STAGE39_SCAFFOLDING_PROMPT_MODE:-live}
+      - AURORA_STAGE39_COGLOAD_ROUTE_MODE=${AURORA_STAGE39_COGLOAD_ROUTE_MODE:-live}
+      - AURORA_STAGE39_GALAXY_INJECT_MODE=${AURORA_STAGE39_GALAXY_INJECT_MODE:-live}
+      - AURORA_STAGE40_CALENDAR_MODE=${AURORA_STAGE40_CALENDAR_MODE:-live}
+      - AURORA_DUAL_CORE_ROUTER_MODE=${AURORA_DUAL_CORE_ROUTER_MODE:-live}
+      - AURORA_PRIVACY_PII_REDACTION_MODE=${AURORA_PRIVACY_PII_REDACTION_MODE:-live}
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://sparkle_tempo:4317
     volumes:
       - ./backend:/app
@@ -256,6 +265,15 @@ services:
       - AURORA_STAGE21_SKILL_SELECTION_MODE=${AURORA_STAGE21_SKILL_SELECTION_MODE:-live}
       - AURORA_STAGE21_SKILL_SHARE_MODE=${AURORA_STAGE21_SKILL_SHARE_MODE:-live}
       - AURORA_TRAITS_NLP_MODE=${AURORA_TRAITS_NLP_MODE:-live}
+      # Aurora: Stage 37-40, DualCore, Privacy
+      - AURORA_STAGE37_LLM_SAFETY_MODE=${AURORA_STAGE37_LLM_SAFETY_MODE:-live}
+      - AURORA_STAGE39_MODE=${AURORA_STAGE39_MODE:-live}
+      - AURORA_STAGE39_SCAFFOLDING_PROMPT_MODE=${AURORA_STAGE39_SCAFFOLDING_PROMPT_MODE:-live}
+      - AURORA_STAGE39_COGLOAD_ROUTE_MODE=${AURORA_STAGE39_COGLOAD_ROUTE_MODE:-live}
+      - AURORA_STAGE39_GALAXY_INJECT_MODE=${AURORA_STAGE39_GALAXY_INJECT_MODE:-live}
+      - AURORA_STAGE40_CALENDAR_MODE=${AURORA_STAGE40_CALENDAR_MODE:-live}
+      - AURORA_DUAL_CORE_ROUTER_MODE=${AURORA_DUAL_CORE_ROUTER_MODE:-live}
+      - AURORA_PRIVACY_PII_REDACTION_MODE=${AURORA_PRIVACY_PII_REDACTION_MODE:-live}
     volumes:
       - ./backend:/app
       - sparkle_backend_logs:/app/logs
@@ -375,6 +393,47 @@ services:
       retries: 3
       start_period: 45s
 
+  celery_beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sparkle_celery_beat
+    restart: unless-stopped
+    env_file:
+      - .env
+    command: celery -A app.core.celery_app beat -l warning
+    user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
+    environment:
+      # Override localhost URLs from .env with correct Docker service names
+      - SPARKLE_RBAC_ENABLED=${SPARKLE_RBAC_ENABLED:-false}
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/0
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/2
+      - POSTGRES_HOST=sparkle_db
+      - POSTGRES_PORT=5432
+      - REDIS_HOST=sparkle_redis
+      - SERVICE_ROLE=beat
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - sparkle_backend_logs:/app/logs
+      - sparkle_backend_cache:/app/.cache
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 128M
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.core.celery_app inspect ping -d celery@$${HOSTNAME} 2>/dev/null || exit 1"]
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 30s
+
   sparkle_gateway:
     build:
       context: ./backend/gateway
@@ -436,7 +495,7 @@ services:
     volumes:
       - ./monitoring/tempo.yaml:/etc/tempo.yaml
     ports:
-      - "4317:4317"
+      - "127.0.0.1:4317:4317"
     deploy:
       resources:
         limits:
@@ -457,7 +516,7 @@ services:
       - ./monitoring/sparkle_recording_rules.yml:/etc/prometheus/sparkle_recording_rules.yml:ro
       - ./monitoring/sqam_alerts.yml:/etc/prometheus/sqam_alerts.yml:ro
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
     depends_on:
       - sparkle_api
       - sparkle_gateway
@@ -479,7 +538,7 @@ services:
     volumes:
       - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
     ports:
-      - "9093:9093"
+      - "127.0.0.1:9093:9093"
     deploy:
       resources:
         limits:
@@ -492,7 +551,7 @@ services:
     volumes:
       - ./monitoring/loki-config.yaml:/etc/loki/local-config.yaml:ro
     ports:
-      - "3100:3100"
+      - "127.0.0.1:3100:3100"
     deploy:
       resources:
         limits:
@@ -524,7 +583,7 @@ services:
       - ./monitoring/grafana-provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
       - ./monitoring/grafana-dashboards:/var/lib/grafana/dashboards:ro
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     depends_on:
       - prometheus
       - loki
