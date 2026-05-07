@@ -15,8 +15,7 @@ from loguru import logger
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.deps import get_current_user_id
-from app.models.deps import get_db
+from app.api.deps import get_current_user_id, get_db
 from app.models.task_feedback import TaskFeedback
 
 router = APIRouter()
