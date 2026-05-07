@@ -73,7 +73,7 @@ class Goal(BaseModel):
     metadata_payload = Column("metadata", JSON, nullable=True)
 
     user = relationship("User", backref="goals")
-    plan = relationship("Plan")
+    plan = relationship("Plan", foreign_keys=[plan_id])
 
     def to_dict(self) -> dict:
         return {
