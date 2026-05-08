@@ -678,6 +678,13 @@ class StateAggregatorService:
         judgment = await self._evaluate_sufficiency(
             user_id=user_id, now=now, current_turn_parse=current_turn_parse
         )
+        if judgment is None:
+            return StateFieldEnvelope(
+                value=SufficiencySummaryValue(score=0.0, top_missing_dimensions=()),
+                computed_at=now,
+                source_snapshot_ids=(),
+                freshness_seconds=0,
+            )
         return StateFieldEnvelope(
             value=SufficiencySummaryValue(
                 score=judgment.task_sufficiency.score,
@@ -697,6 +704,13 @@ class StateAggregatorService:
         judgment = await self._evaluate_sufficiency(
             user_id=user_id, now=now, current_turn_parse=current_turn_parse
         )
+        if judgment is None:
+            return StateFieldEnvelope(
+                value=SufficiencySummaryValue(score=0.0, top_missing_dimensions=()),
+                computed_at=now,
+                source_snapshot_ids=(),
+                freshness_seconds=0,
+            )
         return StateFieldEnvelope(
             value=SufficiencySummaryValue(
                 score=judgment.context_sufficiency.score,
