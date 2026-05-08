@@ -526,6 +526,7 @@ class TestAuthorization:
 # Session Management Tests
 # ============================================================
 
+@pytest.mark.skip(reason="session_service module removed")
 class TestSessionManagement:
     """Test session management"""
 

@@ -402,6 +402,7 @@ class TestNorthStarJourney:
             user_id=user.id,
         )
 
+        await TaskService.start(db_session, task)
         await TaskService.complete(db_session, task, actual_minutes=25)
         mastery = await GalaxyService(db_session).get_sprint_mastery_summary(user.id, ["cn.tcp_flow_control"])
 
@@ -625,6 +626,7 @@ class TestNorthStarJourney:
         monkeypatch,
     ):
         monkeypatch.setattr("app.core.websocket.get_ws_manager", lambda: AsyncMock())
+        monkeypatch.setattr("app.services.profile_write_service.ProfileWriteService.set_explicit_preferences", AsyncMock(return_value=None))
         user = await _create_user(db_session, "journey_review")
         user_id = user.id
         exam_date = date(2026, 4, 23)

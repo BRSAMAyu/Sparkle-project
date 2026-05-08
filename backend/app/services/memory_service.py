@@ -127,7 +127,7 @@ class MemoryService:
             select(func.max(MemoryPreference.version)).where(
                 MemoryPreference.user_id == user_id,
                 MemoryPreference.pref_key == pref_key,
-            ).with_for_update()
+            )
         )
         max_version = version_result.scalar_one_or_none() or 0
         version = max_version + 1

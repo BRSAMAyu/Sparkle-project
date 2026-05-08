@@ -121,6 +121,7 @@ async def test_adaptive_replanner_integration_on_task_completion(db_session: Asy
     tasks_result = await db_session.execute(select(Task).where(Task.plan_id == plan_id))
     tasks = tasks_result.scalars().all()
     task_to_complete = [t for t in tasks if t.status == TaskStatus.PENDING][0]
+    task_to_complete.status = TaskStatus.IN_PROGRESS
 
     await TaskService.complete(
         db=db_session,
@@ -328,7 +329,7 @@ async def test_task_completion_records_observation_revision_summary(db_session: 
         plan_id=plan_id,
         title="完成一项稳定任务",
         type=TaskType.LEARNING,
-        status=TaskStatus.PENDING,
+        status=TaskStatus.IN_PROGRESS,
         estimated_minutes=20,
         difficulty=2,
     )

@@ -345,7 +345,7 @@ class TestEndToEndDirectiveFlow:
             tone="encouraging",
         )
         await orchestrator._store_response_directive("u1", rd)
-        await orchestrator._publish_directive_event("spine:directive:response", rd.to_dict())
+        await orchestrator.directive_store.publish_event("spine:directive:response", rd.to_dict())
 
         result = await orchestrator.get_response_directive("u1")
         assert result is not None

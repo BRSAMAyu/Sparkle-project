@@ -101,7 +101,7 @@ async def test_e2e_modify_task_triggers_replanning_and_adjustment(db_session: As
             plan_id=plan_id,
             title=f"Python 练习 {i+1}",
             type=TaskType.TRAINING,
-            status=TaskStatus.PENDING,
+            status=TaskStatus.IN_PROGRESS if i == 0 else TaskStatus.PENDING,
             estimated_minutes=30,  # All 30 minutes initially
             difficulty=3,
         )
@@ -707,6 +707,7 @@ async def test_e2e_multi_plan_state_isolation(db_session: AsyncSession):
     assert state_b.facts["difficulty_preference"] == "easy"
 
     # Step 1: Complete task in Plan A
+    await TaskService.start(db=db_session, db_obj=task_a1)
     await TaskService.complete(
         db=db_session,
         db_obj=task_a1,
