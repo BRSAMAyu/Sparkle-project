@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.metrics import SPARKLE_SKILL_SELECTION_ACTIVATION_RATE
 from app.models.aurora_stage21 import UserSkill
+from app.services.aurora_stage20_kill_switch_service import AuroraStage20KillSwitchService
 from app.services.aurora_stage21_kill_switch_service import AuroraStage21KillSwitchService
 from app.services.conflict_resolver_service import ConflictResolverService
 from app.services.skill_schema import (
@@ -23,6 +24,7 @@ class SkillSelectionService:
         self.db = db
         self.conflict_resolver = ConflictResolverService(db)
         self.kill_switches = AuroraStage21KillSwitchService()
+        self.stage20_switches = AuroraStage20KillSwitchService()
 
     async def resolve_prompt_payload(
         self,
@@ -47,7 +49,8 @@ class SkillSelectionService:
             score, topic_keys = self._match_skill(skill=skill, selection_context=selection_context)
             if score < 0.6:
                 continue
-            if await self.conflict_resolver.has_unresolved_conflict(user_id=user_id, topic_keys=topic_keys):
+            conflict_check_enabled = await self.stage20_switches.is_enabled("conflict_resolver")
+            if conflict_check_enabled and await self.conflict_resolver.has_unresolved_conflict(user_id=user_id, topic_keys=topic_keys):
                 blocked_caveats.append(f"技能“{skill.name}”因存在未决事实分歧未激活。")
                 continue
             matches.append(

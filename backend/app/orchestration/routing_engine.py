@@ -32,6 +32,7 @@ from app.orchestration.dual_core_router import DualCoreDecision, DualCoreRouting
 from app.orchestration.mode_workflow_config import get_mode_strategy
 from app.orchestration.route_adapter import to_route_decision
 from app.orchestration.schemas import RouteDecision
+from app.services.aurora_stage20_kill_switch_service import AuroraStage20KillSwitchService
 from app.services.aurora_stage21_kill_switch_service import AuroraStage21KillSwitchService
 from app.services.aurora_stage33_kill_switch_service import AuroraStage33KillSwitchService
 from app.services.aurora_stage35_kill_switch_service import AuroraStage35KillSwitchService
@@ -946,6 +947,9 @@ class RoutingEngineMixin:
         )
         judgment_id = None
         if task_summary is not None and context_summary is not None:
+            sufficiency_enabled = await AuroraStage20KillSwitchService().is_enabled("sufficiency_judge")
+            if not sufficiency_enabled:
+                return task_summary, context_summary, None
             judge = SufficiencyJudgeService()
             full_state = await aggregator.get_user_state(
                 uuid.UUID(user_id),

@@ -1054,6 +1054,12 @@ class StateAggregatorService:
         now: datetime,
         current_turn_parse: CurrentTurnParseResult | None,
     ):
+        from app.services.aurora_stage20_kill_switch_service import AuroraStage20KillSwitchService
+
+        sufficiency_enabled = await AuroraStage20KillSwitchService().is_enabled("sufficiency_judge")
+        if not sufficiency_enabled:
+            return None
+
         parse_result = current_turn_parse or CurrentTurnParseResult(
             intent="chat",
             intent_confidence=0.0,
