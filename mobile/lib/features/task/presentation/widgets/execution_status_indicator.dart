@@ -82,6 +82,7 @@ class _ExecutionStatusIndicatorState extends State<ExecutionStatusIndicator>
   void dispose() {
     _timer?.cancel();
     _spinController.dispose();
+    _glowController.dispose();
     _successController.dispose();
     _errorController.dispose();
     super.dispose();

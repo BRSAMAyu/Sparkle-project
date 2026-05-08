@@ -88,6 +88,7 @@ Future<T?> showSensoryModalBottomSheet<T>({
   required BuildContext context,
   required WidgetBuilder builder,
   Color? backgroundColor,
+  Color? barrierColor,
   ShapeBorder? shape,
   bool isScrollControlled = false,
   bool useRootNavigator = false,
