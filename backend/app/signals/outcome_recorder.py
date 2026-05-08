@@ -73,6 +73,32 @@ _ATTRIBUTION_RULES: dict[str, dict[str, Any]] = {
         "needs_confirmation_attribution": "needs_confirmation",
         "needs_confirmation_confidence": 0.5,
     },
+    # Receipt feedback outcomes — close the user confirmation/correction loop
+    "user_confirmed_receipt": {
+        "effective_conditions": {
+            "action": "confirm",
+        },
+        "effective_attribution": "effective",
+        "effective_confidence": 0.85,
+        "insufficient_conditions": {
+            "action": "dismiss",
+        },
+    },
+    "user_corrected_receipt": {
+        "effective_conditions": {
+            "action": "correct",
+        },
+        "effective_attribution": "effective",
+        "effective_confidence": 0.9,
+        "insufficient_conditions": {},
+    },
+    "directive_applied": {
+        "effective_conditions": {
+            "source": "signal_pipeline",
+        },
+        "effective_attribution": "effective",
+        "effective_confidence": 0.6,
+    },
 }
 
 
