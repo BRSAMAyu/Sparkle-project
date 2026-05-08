@@ -6,7 +6,6 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/experience/experience_profile.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
@@ -14,7 +13,7 @@ import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 
 /// 消息详情放大视图
 /// 全屏显示消息内容，支持滚动和复制
-class MessageDetailView extends StatelessWidget {
+class MessageDetailView extends StatefulWidget {
   const MessageDetailView({
     required this.message,
     required this.heroTag,
@@ -25,8 +24,21 @@ class MessageDetailView extends StatelessWidget {
   final String heroTag;
 
   @override
+  State<MessageDetailView> createState() => _MessageDetailViewState();
+}
+
+class _MessageDetailViewState extends State<MessageDetailView> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final isUserMessage = message.role == MessageRole.user;
+    final isUserMessage = widget.message.role == MessageRole.user;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -41,74 +53,77 @@ class MessageDetailView extends StatelessWidget {
               ),
             ),
           ),
-          Dismissible(
-            key: Key('message_detail_${message.id}'),
-            direction: DismissDirection.vertical,
-            onDismissed: (_) => Navigator.of(context).pop(),
-            child: Semantics(
-              button: true,
-              label: 'Chat message detail view control 1',
+          GestureDetector(
+            // Tap background to close
+            onTap: () => Navigator.of(context).pop(),
+            onVerticalDragEnd: (details) {
+              // Only dismiss when at scroll top with sufficient velocity
+              final velocity = details.primaryVelocity ?? 0;
+              final atTop = !_scrollController.hasClients ||
+                  _scrollController.offset <= 0;
+              if (atTop && velocity > 300) {
+                Navigator.of(context).pop();
+              }
+            },
+            child: ColoredBox(
+              color: Colors.transparent,
               child: GestureDetector(
-                // 点击背景关闭
-                onTap: () => Navigator.of(context).pop(),
-                child: Container(
-                  color: Colors.transparent,
-                  child: GestureDetector(
-                    // 阻止点击内容区域时关闭
-                    onTap: () {},
-                    child: SafeArea(
-                      child: Center(
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(
-                            horizontal: DS.md,
-                            vertical: DS.lg,
+                // Prevent content area from closing on tap
+                onTap: () {},
+                child: SafeArea(
+                  child: Center(
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: DS.md,
+                        vertical: DS.lg,
+                      ),
+                      constraints: BoxConstraints(
+                        maxHeight: MediaQuery.of(context).size.height * 0.88,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surface,
+                        borderRadius: BorderRadius.circular(DS.radius20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.15),
+                            blurRadius: 30,
+                            offset: const Offset(0, 15),
                           ),
-                          constraints: BoxConstraints(
-                            maxHeight: MediaQuery.of(context).size.height * 0.88,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surface,
-                            borderRadius: BorderRadius.circular(DS.radius20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.15),
-                                blurRadius: 30,
-                                offset: const Offset(0, 15),
-                              ),
-                            ],
-                            border: Border.all(
-                              color: DS.borderSubtle.withValues(alpha: 0.5),
-                            ),
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // 顶部工具栏
-                              _buildHeader(context, isUserMessage),
+                        ],
+                        border: Border.all(
+                          color: DS.borderSubtle.withValues(alpha: 0.5),
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Header
+                          _buildHeader(context, isUserMessage),
 
-                              // 内容区域（可滚动）
-                              Flexible(
-                                child: Hero(
-                                  tag: heroTag,
-                                  child: Material(
-                                    color: Colors.transparent,
-                                    child: SingleChildScrollView(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: DS.lg,
-                                        vertical: DS.md,
-                                      ),
-                                      child:
-                                          _buildContent(context, isUserMessage),
-                                    ),
+                          // Scrollable content
+                          Flexible(
+                            child: Hero(
+                              tag: widget.heroTag,
+                              child: Material(
+                                color: Colors.transparent,
+                                child: SingleChildScrollView(
+                                  controller: _scrollController,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: DS.lg,
+                                    vertical: DS.md,
+                                  ),
+                                  child: _buildContent(
+                                    context,
+                                    isUserMessage,
                                   ),
                                 ),
                               ),
-
-                              // 底部操作栏
-                              _buildActions(context),
-                            ],
+                            ),
                           ),
-                        ),
+
+                          // Bottom actions
+                          _buildActions(context),
+                        ],
                       ),
                     ),
                   ),
@@ -138,7 +153,7 @@ class MessageDetailView extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // 发送者标识
+          // Role badge
           Container(
             padding: const EdgeInsets.symmetric(
               horizontal: DS.sm,
@@ -173,9 +188,9 @@ class MessageDetailView extends StatelessWidget {
 
           const SizedBox(width: DS.sm),
 
-          // 时间戳
+          // Timestamp
           Text(
-            DateFormat('MM/dd HH:mm').format(message.createdAt),
+            DateFormat('MM/dd HH:mm').format(widget.message.createdAt),
             style: TextStyle(
               color: DS.textSecondary,
               fontSize: 12,
@@ -184,7 +199,7 @@ class MessageDetailView extends StatelessWidget {
 
           const SizedBox(width: DS.sm),
 
-          // 字数统计
+          // Character count
           Container(
             padding: const EdgeInsets.symmetric(
               horizontal: DS.sm,
@@ -195,7 +210,7 @@ class MessageDetailView extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
-              '${message.content.length} ${context.l10n.chatCharacters}',
+              '${widget.message.content.length} ${context.l10n.chatCharacters}',
               style: TextStyle(
                 color: DS.textTertiary,
                 fontSize: 11,
@@ -205,7 +220,7 @@ class MessageDetailView extends StatelessWidget {
 
           const Spacer(),
 
-          // 关闭按钮
+          // Close button
           Semantics(
             button: true,
             label: 'Chat message detail view control 2',
@@ -222,7 +237,7 @@ class MessageDetailView extends StatelessWidget {
   }
 
   Widget _buildContent(BuildContext context, bool isUserMessage) {
-    if (message.content.isEmpty) {
+    if (widget.message.content.isEmpty) {
       return Center(
         child: Text(
           context.l10n.chatNoContent,
@@ -234,10 +249,9 @@ class MessageDetailView extends StatelessWidget {
       );
     }
 
-    // 用户消息使用纯文本
     if (isUserMessage) {
       return SelectableText(
-        message.content,
+        widget.message.content,
         style: TextStyle(
           fontSize: 16,
           height: 1.6,
@@ -248,7 +262,7 @@ class MessageDetailView extends StatelessWidget {
     }
 
     return SparkleMarkdown(
-      content: message.content,
+      content: widget.message.content,
       textColor: DS.textPrimary,
       codeBackgroundColor: DS.surfaceTertiary.withValues(alpha: 0.35),
       linkColor: DS.primaryBase,
@@ -258,10 +272,10 @@ class MessageDetailView extends StatelessWidget {
   }
 
   Widget _buildActions(BuildContext context) {
-    final charCount = message.content.length;
-    final wordCount = message.content.trim().isEmpty
+    final charCount = widget.message.content.length;
+    final wordCount = widget.message.content.trim().isEmpty
         ? 0
-        : message.content.trim().split(RegExp(r'\s+')).length;
+        : widget.message.content.trim().split(RegExp(r'\s+')).length;
 
     return Container(
       padding: const EdgeInsets.all(DS.md),
@@ -274,7 +288,6 @@ class MessageDetailView extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // 字数统计
           Padding(
             padding: const EdgeInsets.only(bottom: DS.sm),
             child: Text(
@@ -285,16 +298,16 @@ class MessageDetailView extends StatelessWidget {
               ),
             ),
           ),
-          // 操作按钮
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              // 复制按钮
               _ActionButton(
                 icon: Icons.copy,
                 label: context.l10n.chatCopy,
                 onPressed: () async {
-                  await Clipboard.setData(ClipboardData(text: message.content));
+                  await Clipboard.setData(
+                    ClipboardData(text: widget.message.content),
+                  );
                   if (!context.mounted) return;
                   AppFeedback.success(
                     context,
@@ -302,14 +315,12 @@ class MessageDetailView extends StatelessWidget {
                   );
                 },
               ),
-
-              // 分享按钮
               _ActionButton(
                 icon: Icons.share,
                 label: context.l10n.chatShare,
                 onPressed: () async {
                   await SharePlus.instance.share(
-                    ShareParams(text: message.content),
+                    ShareParams(text: widget.message.content),
                   );
                 },
               ),

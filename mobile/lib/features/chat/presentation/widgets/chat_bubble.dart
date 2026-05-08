@@ -347,8 +347,9 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     if (widget.message is ChatMessageModel) {
       final chatMessage = widget.message as ChatMessageModel;
 
-      // 如果消息内容太短（少于60个字符），不需要放大查看
-      if (chatMessage.content.length < 60) return;
+      // 如果消息内容太短（少于60个字符且少于4行），不需要放大查看
+      final lineCount = '\n'.allMatches(chatMessage.content).length + 1;
+      if (chatMessage.content.length < 60 && lineCount < 4) return;
 
       unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
 
@@ -364,9 +365,17 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
             pageBuilder: (context, animation, secondaryAnimation) =>
                 FadeTransition(
               opacity: animation,
-              child: MessageDetailView(
-                message: chatMessage,
-                heroTag: heroTag,
+              child: ScaleTransition(
+                scale: Tween<double>(begin: 0.95, end: 1.0).animate(
+                  CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeOutCubic,
+                  ),
+                ),
+                child: MessageDetailView(
+                  message: chatMessage,
+                  heroTag: heroTag,
+                ),
               ),
             ),
             transitionDuration: const Duration(milliseconds: 250),
