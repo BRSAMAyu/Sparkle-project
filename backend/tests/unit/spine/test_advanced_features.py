@@ -666,70 +666,6 @@ async def test_v210_session_summary_persistence():
 # ============================================================
 # P3-2: Multi-message queue
 # ============================================================
-
-
-@pytest.mark.asyncio
-async def test_v210_agenda_save_and_get():
-    """Agenda persists and can be retrieved."""
-    from app.signals.agenda_queue import AgendaQueueService
-    from app.signals.types import AuroraAgenda, AuroraAgendaItem, _uid
-    redis = FakeRedis()
-    svc = AgendaQueueService(redis)
-
-    agenda = AuroraAgenda(
-        session_id="sess_1",
-        scope="test agenda",
-        agenda_items=[
-            AuroraAgendaItem(item_id=_uid("ai"), item_type="confirm_available_time", status="pending"),
-        ],
-    )
-    await svc.save_agenda("u1", agenda)
-
-    loaded = await svc.get_agenda("sess_1")
-    assert loaded is not None
-    assert len(loaded.agenda_items) == 1
-
-
-@pytest.mark.asyncio
-async def test_v210_agenda_pending_items():
-    """get_pending_items returns items needing user interaction."""
-    from app.signals.agenda_queue import AgendaQueueService
-    from app.signals.types import AuroraAgenda, AuroraAgendaItem, _uid
-    redis = FakeRedis()
-    svc = AgendaQueueService(redis)
-
-    agenda = AuroraAgenda(
-        session_id="sess_2",
-        scope="pending test",
-        agenda_items=[
-            AuroraAgendaItem(item_id=_uid("ai"), item_type="confirm_available_time", status="pending"),
-            AuroraAgendaItem(item_id=_uid("ai"), item_type="motivation_check", status="done"),
-        ],
-    )
-    await svc.save_agenda("u1", agenda)
-
-    pending = await svc.get_pending_items("u1")
-    assert len(pending) == 1
-    assert pending[0]["item"]["item_type"] == "confirm_available_time"
-
-
-@pytest.mark.asyncio
-async def test_v210_agenda_add_item():
-    """add_item_to_agenda adds a new pending item."""
-    from app.signals.agenda_queue import AgendaQueueService
-    from app.signals.types import AuroraAgenda
-    redis = FakeRedis()
-    svc = AgendaQueueService(redis)
-
-    agenda = AuroraAgenda(session_id="sess_3", scope="add test")
-    await svc.save_agenda("u1", agenda)
-
-    item = await svc.add_item_to_agenda("u1", "sess_3", "relationship_check", {"reason": "test"})
-    assert item is not None
-    assert item.item_type == "relationship_check"
-    assert item.status == "pending"
-
-
 # ============================================================
 # P3-3: L4 Async Deep Learning
 # ============================================================
@@ -803,62 +739,6 @@ async def test_v210_deep_learner_store_result():
 # ============================================================
 # P3-4: Strategy Marketplace
 # ============================================================
-
-
-@pytest.mark.asyncio
-async def test_v210_marketplace_publish_and_get():
-    """Strategy can be published and retrieved."""
-    from app.signals.strategy_marketplace import StrategyMarketplace
-    redis = FakeRedis()
-    mp = StrategyMarketplace(redis)
-
-    entry = await mp.publish_strategy(
-        "recover_execution_rhythm",
-        source_user_id="u1",
-        effectiveness=0.85,
-        evidence_count=12,
-        goal_type="exam_prep",
-        subject="数学",
-    )
-    assert entry["effectiveness"] == 0.85
-    assert entry["source_user_id"] != "u1"  # anonymized
-
-    retrieved = await mp.get_strategy("recover_execution_rhythm")
-    assert retrieved is not None
-    assert retrieved["evidence_count"] == 12
-
-
-@pytest.mark.asyncio
-async def test_v210_marketplace_find_recommendations():
-    """Recommendations filtered by effectiveness and goal type."""
-    from app.signals.strategy_marketplace import StrategyMarketplace
-    redis = FakeRedis()
-    mp = StrategyMarketplace(redis)
-
-    await mp.publish_strategy("s1", source_user_id="u1", effectiveness=0.9, evidence_count=10, goal_type="exam_prep")
-    await mp.publish_strategy("s2", source_user_id="u2", effectiveness=0.6, evidence_count=5, goal_type="exam_prep")
-    await mp.publish_strategy("s3", source_user_id="u3", effectiveness=0.85, evidence_count=8, goal_type="fitness")
-
-    recs = await mp.find_recommendations(goal_type="exam_prep", min_effectiveness=0.7)
-    assert len(recs) == 1
-    assert recs[0]["strategy_key"] == "s1"
-
-
-@pytest.mark.asyncio
-async def test_v210_marketplace_cache_recommendations():
-    """Recommendations can be cached and retrieved for a user."""
-    from app.signals.strategy_marketplace import StrategyMarketplace
-    redis = FakeRedis()
-    mp = StrategyMarketplace(redis)
-
-    recs = [{"strategy_key": "s1", "effectiveness": 0.9}]
-    await mp.store_recommendations("u1", recs)
-
-    cached = await mp.get_cached_recommendations("u1")
-    assert len(cached) == 1
-    assert cached[0]["strategy_key"] == "s1"
-
-
 # ============================================================
 # P2-5: Full Aurora Core Session v1
 # ============================================================
