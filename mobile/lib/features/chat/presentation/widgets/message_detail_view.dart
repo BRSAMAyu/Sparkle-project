@@ -29,6 +29,7 @@ class MessageDetailView extends StatefulWidget {
 
 class _MessageDetailViewState extends State<MessageDetailView> {
   final ScrollController _scrollController = ScrollController();
+  bool _hasScrolledToBottom = false;
 
   @override
   void dispose() {
@@ -106,16 +107,54 @@ class _MessageDetailViewState extends State<MessageDetailView> {
                               tag: widget.heroTag,
                               child: Material(
                                 color: Colors.transparent,
-                                child: SingleChildScrollView(
-                                  controller: _scrollController,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: DS.lg,
-                                    vertical: DS.md,
-                                  ),
-                                  child: _buildContent(
-                                    context,
-                                    isUserMessage,
-                                  ),
+                                child: Stack(
+                                  children: [
+                                    NotificationListener<ScrollNotification>(
+                                      onNotification: (notification) {
+                                        if (notification is ScrollEndNotification) {
+                                          setState(() {
+                                            _hasScrolledToBottom = _scrollController.hasClients &&
+                                                _scrollController.position.pixels >=
+                                                    _scrollController.position.maxScrollExtent - 1;
+                                          });
+                                        }
+                                        return false;
+                                      },
+                                      child: SingleChildScrollView(
+                                        controller: _scrollController,
+                                        padding: const EdgeInsets.only(
+                                          left: DS.lg,
+                                          right: DS.lg,
+                                          top: DS.md,
+                                          bottom: 28,
+                                        ),
+                                        child: _buildContent(
+                                          context,
+                                          isUserMessage,
+                                        ),
+                                      ),
+                                    ),
+                                    // Bottom gradient — visible until scrolled to bottom
+                                    if (!_hasScrolledToBottom)
+                                      Positioned(
+                                        bottom: 0,
+                                        left: 0,
+                                        right: 0,
+                                        height: 32,
+                                        child: DecoratedBox(
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              begin: Alignment.topCenter,
+                                              end: Alignment.bottomCenter,
+                                              colors: [
+                                                Theme.of(context).colorScheme.surface.withValues(alpha: 0),
+                                                Theme.of(context).colorScheme.surface,
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
                                 ),
                               ),
                             ),

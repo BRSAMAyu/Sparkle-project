@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:collection';
 
 import 'package:flutter/material.dart';
@@ -148,46 +149,57 @@ class _CollapsibleWidgetWrapperState extends State<CollapsibleWidgetWrapper>
           // Expanded content
           if (_expanded) ...[
             const SizedBox(height: DS.sm),
-            Stack(
-              children: [
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: accent.withValues(alpha: 0.12),
+            TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.0, end: 1.0),
+              duration: const Duration(milliseconds: 120),
+              builder: (context, opacity, child) => Opacity(
+                opacity: opacity,
+                child: child,
+              ),
+              child: Stack(
+                children: [
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: accent.withValues(alpha: 0.12),
+                      ),
+                      borderRadius: BorderRadius.circular(DS.spacing10),
                     ),
-                    borderRadius: BorderRadius.circular(DS.spacing10),
+                    child: widget.child,
                   ),
-                  child: widget.child,
-                ),
-                // Collapse button — top-right
-                Positioned(
-                  top: DS.spacing4,
-                  right: DS.spacing4,
-                  child: Material(
-                    color: Colors.transparent,
-                    child: Semantics(
-                      button: true,
-                      label: 'Chat collapsible widget wrapper control 2',
-                      child: InkWell(
-                        onTap: () => _setExpanded(false),
-                        borderRadius: BorderRadius.circular(999),
-                        child: Container(
-                          padding: const EdgeInsets.all(DS.spacing4),
-                          decoration: BoxDecoration(
-                            color: DS.surfacePanel.withValues(alpha: 0.9),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.close,
-                            size: 14,
-                            color: DS.textSecondary,
+                  // Collapse button — top-right
+                  Positioned(
+                    top: DS.spacing4,
+                    right: DS.spacing4,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: Semantics(
+                        button: true,
+                        label: 'Chat collapsible widget wrapper control 2',
+                        child: InkWell(
+                          onTap: () {
+                            unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+                            _setExpanded(false);
+                          },
+                          borderRadius: BorderRadius.circular(999),
+                          child: Container(
+                            padding: const EdgeInsets.all(DS.spacing4),
+                            decoration: BoxDecoration(
+                              color: DS.surfacePanel.withValues(alpha: 0.9),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.close,
+                              size: 14,
+                              color: DS.textSecondary,
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ],
