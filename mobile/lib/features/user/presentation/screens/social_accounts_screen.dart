@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/social_auth_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
@@ -285,7 +286,7 @@ class _SocialAccountsScreenState extends ConsumerState<SocialAccountsScreen> {
                 if (_isLoading)
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: DS.spacing40),
-                    child: Center(child: CircularProgressIndicator()),
+                    child: SparkleCardSkeleton(),
                   )
                 else
                   ..._accounts.asMap().entries.map(

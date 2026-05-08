@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/navigation/route_resilience.dart';
 import 'package:sparkle/features/plan/data/models/exam_sprint_models.dart';
 import 'package:sparkle/features/plan/plan_routes.dart';
@@ -133,7 +134,7 @@ class _LearningPortfolioScreenState
             onRefresh: _refreshPortfolio,
             child: portfolioAsync.when(
               loading: () => const _ScrollableStateFill(
-                child: Center(child: CircularProgressIndicator()),
+                child: SparkleCardSkeleton(),
               ),
               error: (Object error, StackTrace stackTrace) =>
                   _ScrollableStateFill(

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/cognitive/presentation/widgets/strategy_migration_wizard.dart';
@@ -284,7 +285,7 @@ class _GoalHeader extends StatelessWidget {
     }
 
     // Overdue: show warning chip
-    final overdueLabel = isZh ? '已过期' : 'Overdue';
+    final overdueLabel = l10n.goalDetailOverdue;
     final amber = const Color(0xFFE6A817);
     return Semantics(
       label: '${l10n.goalDetailTargetDate}: $targetDate, $overdueLabel',
@@ -419,19 +420,19 @@ class _TodayStepCard extends ConsumerWidget {
                   ),
                   OutlinedButton.icon(
                     onPressed: () async {
-                      final confirmed = await showDialog<bool>(
+                      final confirmed = await showSensoryDialog<bool>(
                         context: context,
                         builder: (context) => AlertDialog(
                           title: Text(l10n.goalDetailCompletedTitle),
                           content: Text(l10n.goalDetailCompletedBody),
                           actions: [
-                            TextButton(
+                            SparkleButton.ghost(
+                              label: l10n.goalDetailCancel,
                               onPressed: () => Navigator.of(context).pop(false),
-                              child: Text(l10n.goalDetailCancel),
                             ),
-                            FilledButton(
+                            SparkleButton.primary(
+                              label: l10n.goalDetailComplete,
                               onPressed: () => Navigator.of(context).pop(true),
-                              child: Text(l10n.goalDetailComplete),
                             ),
                           ],
                         ),
@@ -606,13 +607,8 @@ class _SectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    return Container(
-      padding: const EdgeInsets.all(DS.spacing16),
-      decoration: BoxDecoration(
-        color: DS.surfaceHigh,
-        borderRadius: DS.borderRadius12,
-        border: Border.all(color: DS.borderSubtle),
-      ),
+    return GraphiteCardSurface(
+      surfaceRole: SparkleSurfaceRole.card,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -625,7 +621,7 @@ class _SectionCard extends StatelessWidget {
                   title,
                   style: textTheme.titleMedium?.copyWith(
                     color: DS.textPrimary,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
                 ),
               ),

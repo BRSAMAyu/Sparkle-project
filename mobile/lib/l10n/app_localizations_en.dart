@@ -32262,4 +32262,78 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get communityCommentHint => 'Write a comment...';
+
+  @override
+  String get goalDetailOverdue => 'Overdue';
+
+  @override
+  String get goalDetailCompletedTitle => 'Mark as Complete?';
+
+  @override
+  String get goalDetailCompletedBody =>
+      'Mark the current step as completed and move to the next one?';
+
+  @override
+  String get goalDetailCancel => 'Cancel';
+
+  @override
+  String get goalDetailComplete => 'Complete';
+
+  @override
+  String get intentSuggestedActionLabel => 'A low-cost first step';
+
+  @override
+  String get intentCorrectionLabel => 'Or I got it wrong —';
+
+  @override
+  String intentConfidenceLabel(Object percent) {
+    return '$percent% confidence';
+  }
+
+  @override
+  String get intentExamRescue => 'Exam rescue';
+
+  @override
+  String get intentExamBuild => 'Exam prep';
+
+  @override
+  String get intentJobSearch => 'Job sprint';
+
+  @override
+  String get intentProject => 'Project';
+
+  @override
+  String get intentHabit => 'Habit';
+
+  @override
+  String get intentKeepGoing => 'Keep going';
+
+  @override
+  String intentDaysLeft(Object days) {
+    return '$days days left';
+  }
+
+  @override
+  String get sprintCompletionLoading => 'Loading...';
+
+  @override
+  String get planEditLoading => 'Loading plan...';
+
+  @override
+  String get learningPortfolioLoading => 'Loading...';
+
+  @override
+  String get sprintActionLoading => 'Loading...';
+
+  @override
+  String get syncCenterLoading => 'Loading...';
+
+  @override
+  String get securityLogLoading => 'Loading...';
+
+  @override
+  String get socialAccountsLoading => 'Loading...';
+
+  @override
+  String get sessionManagementLoading => 'Loading...';
 }

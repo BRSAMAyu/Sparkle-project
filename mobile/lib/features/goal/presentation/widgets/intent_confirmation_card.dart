@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/goal/data/models/goal_intent_models.dart';
 
 /// Phase-1 Entry Wire — renders the server's intent analysis as a card the
@@ -18,11 +18,9 @@ class IntentConfirmationCard extends StatelessWidget {
   final ValueChanged<GoalIntentCorrectionOption> onCorrectionSelected;
   final ValueChanged<GoalIntentSuggestedAction> onSuggestedActionTapped;
 
-  static String _t(String zh, String en) =>
-      I18nService.instance.isChinese ? zh : en;
-
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Container(
       key: const ValueKey('intent-confirmation-card'),
       padding: const EdgeInsets.all(16),
@@ -43,17 +41,17 @@ class IntentConfirmationCard extends StatelessWidget {
                   height: 1.4,
                 ),
           ),
-          if (_metaLine().isNotEmpty) ...[
+          if (_metaLine(l10n.intentDaysLeft(analysis.deadlineDays ?? 0)).isNotEmpty) ...[
             const SizedBox(height: 6),
             Text(
-              _metaLine(),
+              _metaLine(l10n.intentDaysLeft(analysis.deadlineDays ?? 0)),
               style: TextStyle(color: DS.textSecondary, fontSize: 12),
             ),
           ],
           if (analysis.suggestedActions.isNotEmpty) ...[
             const SizedBox(height: 14),
             Text(
-              _t('我建议先这样做', 'A low-cost first step'),
+              l10n.intentSuggestedActionLabel,
               style: TextStyle(
                 color: DS.textPrimary,
                 fontSize: 12,
@@ -74,7 +72,7 @@ class IntentConfirmationCard extends StatelessWidget {
             Divider(color: DS.border.withValues(alpha: 0.4)),
             const SizedBox(height: 8),
             Text(
-              _t('或者我猜错了——', 'Or I got it wrong —'),
+              l10n.intentCorrectionLabel,
               style: TextStyle(color: DS.textSecondary, fontSize: 12),
             ),
             const SizedBox(height: 6),
@@ -95,11 +93,10 @@ class IntentConfirmationCard extends StatelessWidget {
     );
   }
 
-  String _metaLine() {
+  String _metaLine(String daysLeftText) {
     final parts = <String>[];
     if (analysis.deadlineDays != null) {
-      parts.add(_t('剩 ${analysis.deadlineDays} 天',
-          '${analysis.deadlineDays} days left'));
+      parts.add(daysLeftText);
     }
     if ((analysis.detectedSubject ?? '').isNotEmpty) {
       parts.add(analysis.detectedSubject!);
@@ -118,12 +115,10 @@ class _ModeChip extends StatelessWidget {
   final String mode;
   final double confidence;
 
-  static String _t(String zh, String en) =>
-      I18nService.instance.isChinese ? zh : en;
-
   @override
   Widget build(BuildContext context) {
-    final (label, color) = _label(mode);
+    final l10n = context.l10n;
+    final (label, color) = _label(l10n);
     return Wrap(
       spacing: 6,
       crossAxisAlignment: WrapCrossAlignment.center,
@@ -152,31 +147,30 @@ class _ModeChip extends StatelessWidget {
         ),
         if (confidence > 0)
           Text(
-            _t('置信度 ${(confidence * 100).round()}%',
-                '${(confidence * 100).round()}% confidence'),
+            l10n.intentConfidenceLabel((confidence * 100).round()),
             style: TextStyle(color: DS.textSecondary, fontSize: 11),
           ),
       ],
     );
   }
 
-  (String, Color) _label(String mode) {
+  (String, Color) _label(dynamic l10n) {
     if (mode.startsWith('exam_rescue')) {
-      return (_t('考试抢救', 'Exam rescue'), DS.error);
+      return (l10n.intentExamRescue, DS.error);
     }
     if (mode.startsWith('exam_build')) {
-      return (_t('考试备战', 'Exam prep'), DS.warning);
+      return (l10n.intentExamBuild, DS.warning);
     }
     if (mode.startsWith('job_search')) {
-      return (_t('求职冲刺', 'Job sprint'), DS.info);
+      return (l10n.intentJobSearch, DS.info);
     }
     if (mode.startsWith('project')) {
-      return (_t('项目交付', 'Project'), DS.brandPrimary);
+      return (l10n.intentProject, DS.brandPrimary);
     }
     if (mode.startsWith('habit')) {
-      return (_t('习惯养成', 'Habit'), DS.success);
+      return (l10n.intentHabit, DS.success);
     }
-    return (_t('继续了解', 'Keep going'), DS.textSecondary);
+    return (l10n.intentKeepGoing, DS.textSecondary);
   }
 }
 

@@ -107,7 +107,7 @@ class _SyncCenterScreenState extends ConsumerState<SyncCenterScreen> {
                   data: (stats) => _CompactStatsRow(stats: stats),
                   loading: () => const SizedBox(
                     height: 72,
-                    child: Center(child: CircularProgressIndicator()),
+                    child: SparkleCardSkeleton(),
                   ),
                   error: (error, _) => Padding(
                     padding: const EdgeInsets.all(DS.spacing12),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/plan/presentation/screens/plan_create_screen.dart';
 
@@ -22,7 +23,7 @@ class PlanEditScreen extends ConsumerWidget {
       loading: () => const SparklePageScaffold(
         role: SparklePageRole.content,
         child: Center(
-          child: CircularProgressIndicator(),
+          child: SparkleCardSkeleton(),
         ),
       ),
       error: (error, _) => SparklePageScaffold(

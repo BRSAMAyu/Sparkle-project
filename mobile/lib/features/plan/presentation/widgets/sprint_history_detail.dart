@@ -127,6 +127,7 @@ class SprintHistoryDetailSheet extends StatelessWidget {
                         valueColor: AlwaysStoppedAnimation<Color>(
                           _getProgressColor(item.finalProgress),
                         ),
+                        color: DS.brandPrimary,
                       ),
                     ),
                     Column(

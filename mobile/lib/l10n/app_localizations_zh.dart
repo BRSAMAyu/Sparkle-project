@@ -30927,4 +30927,77 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get communityCommentHint => '写评论...';
+
+  @override
+  String get goalDetailOverdue => '已过期';
+
+  @override
+  String get goalDetailCompletedTitle => '标记为完成？';
+
+  @override
+  String get goalDetailCompletedBody => '将当前步骤标记为完成并进入下一步？';
+
+  @override
+  String get goalDetailCancel => '取消';
+
+  @override
+  String get goalDetailComplete => '完成';
+
+  @override
+  String get intentSuggestedActionLabel => '我建议先这样做';
+
+  @override
+  String get intentCorrectionLabel => '或者我猜错了——';
+
+  @override
+  String intentConfidenceLabel(Object percent) {
+    return '置信度 $percent%';
+  }
+
+  @override
+  String get intentExamRescue => '考试抢救';
+
+  @override
+  String get intentExamBuild => '考试备战';
+
+  @override
+  String get intentJobSearch => '求职冲刺';
+
+  @override
+  String get intentProject => '项目交付';
+
+  @override
+  String get intentHabit => '习惯养成';
+
+  @override
+  String get intentKeepGoing => '继续了解';
+
+  @override
+  String intentDaysLeft(Object days) {
+    return '剩 $days 天';
+  }
+
+  @override
+  String get sprintCompletionLoading => '加载中...';
+
+  @override
+  String get planEditLoading => '加载计划中...';
+
+  @override
+  String get learningPortfolioLoading => '加载中...';
+
+  @override
+  String get sprintActionLoading => '加载中...';
+
+  @override
+  String get syncCenterLoading => '加载中...';
+
+  @override
+  String get securityLogLoading => '加载中...';
+
+  @override
+  String get socialAccountsLoading => '加载中...';
+
+  @override
+  String get sessionManagementLoading => '加载中...';
 }

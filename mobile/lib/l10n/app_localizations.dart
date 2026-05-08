@@ -56268,6 +56268,144 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'写评论...'**
   String get communityCommentHint;
+
+  /// No description provided for @goalDetailOverdue.
+  ///
+  /// In zh, this message translates to:
+  /// **'已过期'**
+  String get goalDetailOverdue;
+
+  /// No description provided for @goalDetailCompletedTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'标记为完成？'**
+  String get goalDetailCompletedTitle;
+
+  /// No description provided for @goalDetailCompletedBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'将当前步骤标记为完成并进入下一步？'**
+  String get goalDetailCompletedBody;
+
+  /// No description provided for @goalDetailCancel.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消'**
+  String get goalDetailCancel;
+
+  /// No description provided for @goalDetailComplete.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成'**
+  String get goalDetailComplete;
+
+  /// No description provided for @intentSuggestedActionLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'我建议先这样做'**
+  String get intentSuggestedActionLabel;
+
+  /// No description provided for @intentCorrectionLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'或者我猜错了——'**
+  String get intentCorrectionLabel;
+
+  /// No description provided for @intentConfidenceLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'置信度 {percent}%'**
+  String intentConfidenceLabel(Object percent);
+
+  /// No description provided for @intentExamRescue.
+  ///
+  /// In zh, this message translates to:
+  /// **'考试抢救'**
+  String get intentExamRescue;
+
+  /// No description provided for @intentExamBuild.
+  ///
+  /// In zh, this message translates to:
+  /// **'考试备战'**
+  String get intentExamBuild;
+
+  /// No description provided for @intentJobSearch.
+  ///
+  /// In zh, this message translates to:
+  /// **'求职冲刺'**
+  String get intentJobSearch;
+
+  /// No description provided for @intentProject.
+  ///
+  /// In zh, this message translates to:
+  /// **'项目交付'**
+  String get intentProject;
+
+  /// No description provided for @intentHabit.
+  ///
+  /// In zh, this message translates to:
+  /// **'习惯养成'**
+  String get intentHabit;
+
+  /// No description provided for @intentKeepGoing.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续了解'**
+  String get intentKeepGoing;
+
+  /// No description provided for @intentDaysLeft.
+  ///
+  /// In zh, this message translates to:
+  /// **'剩 {days} 天'**
+  String intentDaysLeft(Object days);
+
+  /// No description provided for @sprintCompletionLoading.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载中...'**
+  String get sprintCompletionLoading;
+
+  /// No description provided for @planEditLoading.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载计划中...'**
+  String get planEditLoading;
+
+  /// No description provided for @learningPortfolioLoading.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载中...'**
+  String get learningPortfolioLoading;
+
+  /// No description provided for @sprintActionLoading.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载中...'**
+  String get sprintActionLoading;
+
+  /// No description provided for @syncCenterLoading.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载中...'**
+  String get syncCenterLoading;
+
+  /// No description provided for @securityLogLoading.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载中...'**
+  String get securityLogLoading;
+
+  /// No description provided for @socialAccountsLoading.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载中...'**
+  String get socialAccountsLoading;
+
+  /// No description provided for @sessionManagementLoading.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载中...'**
+  String get sessionManagementLoading;
 }
 
 class _AppLocalizationsDelegate

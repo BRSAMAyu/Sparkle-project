@@ -133,11 +133,11 @@ class _GoalCreationWizardScreenState
                   onPressed:
                       _primaryActionEnabled ? () => unawaited(_next()) : null,
                   icon: _creating || _loadingPreview
-                      ? const SizedBox(
+                      ? SizedBox(
                           height: 16,
                           width: 16,
                           child: CircularProgressIndicator(
-                              strokeWidth: 2, semanticsLabel: 'Loading'),
+                              strokeWidth: 2, color: DS.neutral0),
                         )
                       : Icon(
                           _step == 4

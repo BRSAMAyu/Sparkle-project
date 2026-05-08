@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/plan/presentation/providers/sprint_actions_provider.dart';
@@ -156,7 +157,7 @@ class _SprintActionsSheetState extends ConsumerState<_SprintActionsSheet> {
             if (actionsState.isProcessing)
               const Padding(
                 padding: EdgeInsets.all(DS.spacing32),
-                child: CircularProgressIndicator(),
+                child: SparkleCardSkeleton(),
               )
             else
               ListView(
