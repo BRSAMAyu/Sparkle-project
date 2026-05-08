@@ -32,6 +32,7 @@ class CompactStatusBar extends StatelessWidget {
       dashboardState.weather.type,
     );
     final textScale = MediaQuery.textScalerOf(context).scale(1);
+    final nicknameInitial = nickname.isNotEmpty ? nickname[0].toUpperCase() : 'S';
 
     return ContentConstraint(
       child: Padding(
@@ -71,7 +72,7 @@ class CompactStatusBar extends StatelessWidget {
                         backgroundColor: DS.avatarFallbackBackground,
                         child: user?.avatarUrl == null
                             ? Text(
-                                nickname[0].toUpperCase(),
+                                nicknameInitial,
                                 style: TextStyle(
                                   color: DS.avatarFallbackForeground,
                                   fontWeight: DS.fontWeightBold,
