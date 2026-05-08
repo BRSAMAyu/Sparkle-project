@@ -46,7 +46,11 @@ class _NoopApiClient implements ApiClient {
       throw UnimplementedError();
 
   @override
-  Future<Response<T>> patch<T>(String path, {Object? data}) =>
+  Future<Response<T>> patch<T>(
+    String path, {
+    Object? data,
+    Map<String, dynamic>? queryParameters,
+  }) =>
       throw UnimplementedError();
 
   @override

@@ -145,7 +145,11 @@ class _FakeApiClient implements ApiClient {
   }
 
   @override
-  Future<Response<T>> patch<T>(String path, {Object? data}) {
+  Future<Response<T>> patch<T>(
+    String path, {
+    Object? data,
+    Map<String, dynamic>? queryParameters,
+  }) {
     throw UnimplementedError();
   }
 

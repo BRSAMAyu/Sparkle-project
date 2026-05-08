@@ -152,7 +152,12 @@ class RecordingApiClient implements ApiClient {
       );
 
   @override
-  Future<Response<T>> patch<T>(String path, {Object? data}) => _handle<T>(
+  Future<Response<T>> patch<T>(
+    String path, {
+    Object? data,
+    Map<String, dynamic>? queryParameters,
+  }) =>
+      _handle<T>(
         ApiRequestRecord(method: 'PATCH', path: path, data: data),
         onPatch,
       );
