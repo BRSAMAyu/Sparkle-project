@@ -125,7 +125,8 @@ class SkillExtractService:
         user_confirmed: bool,
     ) -> bool:
         if trigger_type == "explicit_phrase":
-            return (seconds_since_response or 10_000) <= 60 and self.matches_explicit_trigger(consent_text)
+            effective = seconds_since_response if seconds_since_response is not None else 10_000
+            return effective <= 60 and self.matches_explicit_trigger(consent_text)
         if trigger_type == "feedback_opt_in":
             return feedback_positive and user_confirmed
         return False

@@ -3529,13 +3529,16 @@ class ChatOrchestrator(
                                                     user_id=user_id,
                                                     payload=draft_to_payload(draft),
                                                 )
+                                            _skill_svc.record_draft_outcome(accepted=True)
                                             logger.info(
                                                 "Skill extracted and persisted: user=%s name=%s",
                                                 user_id, draft.name,
                                             )
-                                        except ValueError:
-                                            logger.debug("Skill extract: LLM rejected draft for user=%s", user_id)
+                                        except ValueError as _ve:
+                                            _skill_svc.record_draft_outcome(accepted=False)
+                                            logger.debug("Skill extract skipped for user=%s: %s", user_id, _ve)
                                         except Exception as _persist_exc:
+                                            _skill_svc.record_draft_outcome(accepted=False)
                                             logger.warning(
                                                 "Skill extract persistence failed for user=%s: %s",
                                                 user_id, _persist_exc,
