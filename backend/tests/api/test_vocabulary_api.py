@@ -4,7 +4,7 @@ Vocabulary API Tests
 """
 import pytest
 from uuid import uuid4
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from fastapi.testclient import TestClient
 
@@ -125,6 +125,7 @@ class TestVocabularyAPI:
             mock_word.context_sentence = None
 
             mock_service.add_to_wordbook = AsyncMock(return_value=mock_word)
+            mock_service.build_learning_loop_summary = MagicMock(return_value={})
 
             response = vocab_client.post(
                 "/vocabulary/wordbook",
@@ -177,6 +178,7 @@ class TestVocabularyAPI:
             mock_word.context_sentence = None
 
             mock_service.update_importance = AsyncMock(return_value=mock_word)
+            mock_service.build_learning_loop_summary = MagicMock(return_value={})
 
             response = vocab_client.patch(
                 f"/vocabulary/wordbook/{word_id}/importance",
@@ -208,6 +210,7 @@ class TestVocabularyAPI:
             mock_word.context_sentence = None
 
             mock_service.get_review_list = AsyncMock(return_value=[mock_word])
+            mock_service.build_learning_loop_summary = MagicMock(return_value={})
 
             response = vocab_client.get(
                 "/vocabulary/wordbook/review",
@@ -285,6 +288,7 @@ class TestVocabularyAPI:
             mock_word.context_sentence = None
 
             mock_service.record_review = AsyncMock(return_value=mock_word)
+            mock_service.build_learning_loop_summary = MagicMock(return_value={})
 
             response = vocab_client.post(
                 "/vocabulary/wordbook/review",

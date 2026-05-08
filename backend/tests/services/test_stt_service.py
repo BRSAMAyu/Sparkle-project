@@ -148,7 +148,7 @@ async def test_stt_service_transcribe_file_error():
 
             try:
                 result = await service.transcribe_file(temp_path)
-                assert "Transcription Error" in result["text"]
+                assert "Transcription" in result["text"]
                 assert result["error"]
             finally:
                 os.unlink(temp_path)

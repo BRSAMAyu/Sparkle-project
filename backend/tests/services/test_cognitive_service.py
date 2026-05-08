@@ -149,17 +149,17 @@ async def test_create_fragment_falls_back_when_vector_runtime_unavailable(monkey
     mock_db.rollback.assert_awaited_once()
     assert mock_db.execute.await_count == 2
     assert cognitive_service_module._VECTOR_RUNTIME_ENABLED is True
-    assert service._is_vector_runtime_enabled_for_user(stored_fragment.user_id) is False
+    assert await service._is_vector_runtime_enabled_for_user(stored_fragment.user_id) is False
 
 
-def test_disable_vector_runtime_is_scoped_per_user(monkeypatch):
+async def test_disable_vector_runtime_is_scoped_per_user(monkeypatch):
     monkeypatch.setattr(cognitive_service_module, "_VECTOR_RUNTIME_ENABLED", True)
-    monkeypatch.setattr(cognitive_service_module, "_VECTOR_RUNTIME_DISABLED_USERS", set())
+    monkeypatch.setattr(cognitive_service_module, "_VECTOR_RUNTIME_DISABLED_USERS", {})
 
     user_a = uuid4()
     user_b = uuid4()
 
-    CognitiveService._disable_vector_runtime_for_user(user_a, "pgvector unavailable")
+    await CognitiveService._disable_vector_runtime_for_user(user_a, "pgvector unavailable")
 
-    assert CognitiveService._is_vector_runtime_enabled_for_user(user_a) is False
-    assert CognitiveService._is_vector_runtime_enabled_for_user(user_b) is True
+    assert await CognitiveService._is_vector_runtime_enabled_for_user(user_a) is False
+    assert await CognitiveService._is_vector_runtime_enabled_for_user(user_b) is True
