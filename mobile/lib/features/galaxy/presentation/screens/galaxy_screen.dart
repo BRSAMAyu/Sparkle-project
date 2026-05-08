@@ -13,6 +13,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart' hide AnimatedSlide;
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/galaxy/data/models/galaxy_build_playback_plan.dart';
 import 'package:sparkle/features/galaxy/data/models/galaxy_draft_review_models.dart';
@@ -1147,7 +1148,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   }
 
   void _startTapFeedback(String nodeId) {
-    unawaited(_accessibilityService.lightHaptic());
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
     setState(() {
       _clearPreviewState();
       _selectedNodeId = nodeId;
@@ -1439,6 +1440,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     if (node == null) {
       return;
     }
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
     await NodeDetailSheet.show(
       context: context,
       nodeId: node.id,
@@ -2880,10 +2882,31 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                         duration: const Duration(milliseconds: 300),
                         switchInCurve: Curves.easeOut,
                         switchOutCurve: Curves.easeIn,
-                        child: Stack(
-                          key: const ValueKey<bool>(isDarkMode),
-                          children: [
-                            Listener(
+                        child: AnimatedBuilder(
+                          animation: _entranceController,
+                          builder: (context, child) {
+                            final progress = _entranceController.value;
+                            return ImageFiltered(
+                              imageFilter: ImageFilter.blur(
+                                sigmaX: (12 * (1 - progress)).clamp(0, 50),
+                                sigmaY: (12 * (1 - progress)).clamp(0, 50),
+                              ),
+                              child: Opacity(
+                                opacity: progress,
+                                child: Transform.scale(
+                                  scale: 0.9 +
+                                      0.1 *
+                                          Curves.easeOutCubic
+                                              .transform(progress),
+                                  child: child,
+                                ),
+                              ),
+                            );
+                          },
+                          child: Stack(
+                            key: const ValueKey<bool>(isDarkMode),
+                            children: [
+                              Listener(
                               behavior: HitTestBehavior.opaque,
                               onPointerDown: _handlePointerDown,
                               onPointerMove: _gestureHandler.handlePointerMove,

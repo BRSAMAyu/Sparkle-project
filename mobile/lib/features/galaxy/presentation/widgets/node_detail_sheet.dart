@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/file/presentation/widgets/file_picker_with_presigned.dart';
 import 'package:sparkle/features/galaxy/data/models/node_history_model.dart';
@@ -47,10 +49,11 @@ class NodeDetailSheet extends ConsumerStatefulWidget {
     String? packId,
     NodeAddMaterialCallback? onAddMaterial,
   }) =>
-      showModalBottomSheet<void>(
+      showSensoryModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
-        useSafeArea: true,
+        backgroundColor: Colors.transparent,
+        barrierColor: Colors.black.withValues(alpha: 0.1),
         builder: (context) => NodeDetailSheet(
           nodeId: nodeId,
           nodeLabel: nodeLabel,
@@ -403,7 +406,10 @@ class _HistoryContent extends StatelessWidget {
             children: [
               Expanded(
                 child: FilledButton.icon(
-                  onPressed: () => onStartReview(history),
+                  onPressed: () {
+                    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
+                    onStartReview(history);
+                  },
                   icon: Icon(
                     history.mastery <= 0
                         ? Icons.school_rounded
@@ -417,7 +423,10 @@ class _HistoryContent extends StatelessWidget {
               const SizedBox(width: DS.spacing12),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () => onViewErrors(history),
+                  onPressed: () {
+                    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+                    onViewErrors(history);
+                  },
                   icon: const Icon(Icons.assignment_rounded),
                   label: Text(context.l10n.galaxyNodeViewErrors),
                 ),
@@ -428,7 +437,10 @@ class _HistoryContent extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              onPressed: () => onAddMaterial(history),
+              onPressed: () {
+                unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+                onAddMaterial(history);
+              },
               icon: const Icon(Icons.menu_book_rounded),
               label: Text(context.l10n.galaxyNodeAddMaterial),
             ),

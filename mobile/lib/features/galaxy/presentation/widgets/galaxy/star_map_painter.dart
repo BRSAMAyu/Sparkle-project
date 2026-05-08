@@ -882,6 +882,7 @@ class StarMapPainter extends CustomPainter {
           position,
           radius: radius * 1.7,
           color: starColor.withValues(alpha: alpha * 0.8),
+          rotation: ambientPhase * (0.2 + random.nextDouble() * 0.3),
         );
       }
     }
@@ -892,22 +893,30 @@ class StarMapPainter extends CustomPainter {
     Offset center, {
     required double radius,
     required Color color,
+    double rotation = 0,
   }) {
     final paint = Paint()
       ..color = color
       ..strokeWidth = 0.8
       ..strokeCap = StrokeCap.round;
+
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.rotate(rotation);
+
     canvas
       ..drawLine(
-        Offset(center.dx - radius, center.dy),
-        Offset(center.dx + radius, center.dy),
+        Offset(-radius, 0),
+        Offset(radius, 0),
         paint,
       )
       ..drawLine(
-        Offset(center.dx, center.dy - radius),
-        Offset(center.dx, center.dy + radius),
+        Offset(0, -radius),
+        Offset(0, radius),
         paint,
       );
+
+    canvas.restore();
   }
 
   List<_PaintNode> _selectVisibleNodes({
