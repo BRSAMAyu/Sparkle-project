@@ -50,8 +50,12 @@ void main() {
   });
 
   tearDown(() async {
-    await isar.close(deleteFromDisk: true);
-    await tempDir.delete(recursive: true);
+    try {
+      await isar.close(deleteFromDisk: true);
+    } catch (_) {}
+    try {
+      await tempDir.delete(recursive: true);
+    } catch (_) {}
   });
 
   test('waitingAck TTL rollback requeues item', () async {
