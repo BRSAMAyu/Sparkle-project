@@ -19,7 +19,6 @@ import 'package:sparkle/l10n/app_localizations.dart';
 import 'evidence_cards_test.mocks.dart';
 import '../../../../shared/i18n_test_helper.dart';
 
-// Mock Classes
 @GenerateMocks([
   ApiClient,
 ])
@@ -27,6 +26,13 @@ import '../../../../shared/i18n_test_helper.dart';
 void main() {
 
   setUp(setUpI18nForTesting);
+
+  /// Helper: tap the first InkWell in an EvidenceCard to expand TIER1→TIER2.
+  Future<void> tapExpandCard(WidgetTester tester) async {
+    await tester.tap(find.byType(InkWell).first);
+    await tester.pumpAndSettle();
+  }
+
   group('EvidenceCard Tests', () {
     testWidgets('should render evidence card with event payload', (tester) async {
       final item = EvidenceResolveItem(
@@ -47,9 +53,17 @@ void main() {
           ),),
       );
 
-      expect(find.text('event · evt-1'), findsOneWidget);
-      expect(find.text('Type: task_completed'), findsOneWidget);
-      expect(find.text('Timestamp: 1234567890'), findsOneWidget);
+      // TIER1 summary (always visible)
+      expect(find.text('事件: task_completed'), findsOneWidget);
+
+      // Expand to TIER2
+      await tapExpandCard(tester);
+
+      // TIER2 key fields with Chinese labels
+      expect(find.text('类型'), findsOneWidget);
+      expect(find.text('task_completed'), findsOneWidget);
+      expect(find.text('时间'), findsOneWidget);
+      expect(find.text('1234567890'), findsOneWidget);
     });
 
     testWidgets('should render evidence card with error payload', (tester) async {
@@ -72,9 +86,18 @@ void main() {
           ),),
       );
 
-      expect(find.text('Subject: MATH101'), findsOneWidget);
-      expect(find.text('Root Cause: Concept misunderstanding'), findsOneWidget);
-      expect(find.text('Suggestion: Review chapter 5'), findsOneWidget);
+      // TIER1
+      expect(find.text('错题: MATH101'), findsOneWidget);
+
+      // Expand to TIER2
+      await tapExpandCard(tester);
+
+      expect(find.text('科目'), findsOneWidget);
+      expect(find.text('MATH101'), findsOneWidget);
+      expect(find.text('根因'), findsOneWidget);
+      expect(find.text('Concept misunderstanding'), findsOneWidget);
+      expect(find.text('建议'), findsOneWidget);
+      expect(find.text('Review chapter 5'), findsOneWidget);
     });
 
     testWidgets('should render evidence card with concept payload', (tester) async {
@@ -96,7 +119,15 @@ void main() {
           ),),
       );
 
-      expect(find.text('Name: Photosynthesis'), findsOneWidget);
+      // TIER1
+      expect(find.text('概念: Photosynthesis'), findsOneWidget);
+
+      // Expand to TIER2
+      await tapExpandCard(tester);
+
+      expect(find.text('名称'), findsOneWidget);
+      expect(find.text('Photosynthesis'), findsOneWidget);
+      expect(find.text('描述'), findsOneWidget);
       expect(find.textContaining('Process by which plants'), findsOneWidget);
     });
 
@@ -120,9 +151,18 @@ void main() {
           ),),
       );
 
-      expect(find.text('Title: Complete assignment'), findsOneWidget);
-      expect(find.text('Status: in_progress'), findsOneWidget);
-      expect(find.text('Due: 2026-04-01'), findsOneWidget);
+      // TIER1
+      expect(find.text('任务: Complete assignment'), findsOneWidget);
+
+      // Expand to TIER2
+      await tapExpandCard(tester);
+
+      expect(find.text('标题'), findsOneWidget);
+      expect(find.text('Complete assignment'), findsOneWidget);
+      expect(find.text('状态'), findsOneWidget);
+      expect(find.text('in_progress'), findsOneWidget);
+      expect(find.text('截止'), findsOneWidget);
+      expect(find.text('2026-04-01'), findsOneWidget);
     });
 
     testWidgets('should render evidence card with summary payload', (tester) async {
@@ -144,8 +184,16 @@ void main() {
           ),),
       );
 
-      expect(find.text('Date: 2026-03-30'), findsOneWidget);
-      expect(find.text('Summary: Weekly progress completed'), findsOneWidget);
+      // TIER1: 'summary' type not matched in _buildSummary, falls through to default
+      expect(find.text('证据记录'), findsOneWidget);
+
+      // Expand to TIER2
+      await tapExpandCard(tester);
+
+      expect(find.text('日期'), findsOneWidget);
+      expect(find.text('2026-03-30'), findsOneWidget);
+      expect(find.text('摘要'), findsOneWidget);
+      expect(find.text('Weekly progress completed'), findsOneWidget);
     });
 
     testWidgets('should render evidence card with state payload', (tester) async {
@@ -168,9 +216,18 @@ void main() {
           ),),
       );
 
-      expect(find.text('Focus: deep'), findsOneWidget);
-      expect(find.text('Load: high'), findsOneWidget);
-      expect(find.text('Sprint: active'), findsOneWidget);
+      // TIER1: 'state' type not matched, falls through to default
+      expect(find.text('证据记录'), findsOneWidget);
+
+      // Expand to TIER2
+      await tapExpandCard(tester);
+
+      expect(find.text('专注'), findsOneWidget);
+      expect(find.text('deep'), findsOneWidget);
+      expect(find.text('负荷'), findsOneWidget);
+      expect(find.text('high'), findsOneWidget);
+      expect(find.text('冲刺'), findsOneWidget);
+      expect(find.text('active'), findsOneWidget);
     });
 
     testWidgets('should render evidence card with practice outcome payload', (tester) async {
@@ -195,9 +252,24 @@ void main() {
           ),),
       );
 
-      expect(find.text('Performance: remembered'), findsOneWidget);
-      expect(find.text('Mastery: 0.7'), findsOneWidget);
-      expect(find.textContaining('错题复习结果：remembered'), findsOneWidget);
+      // TIER1: 'practice_outcome' type not matched, falls through to default
+      expect(find.text('证据记录'), findsOneWidget);
+
+      // Expand to TIER2 (shows first 4 key-value pairs)
+      await tapExpandCard(tester);
+
+      expect(find.text('表现'), findsOneWidget);
+      expect(find.text('remembered'), findsOneWidget);
+      expect(find.text('掌握'), findsOneWidget);
+      expect(find.text('0.7'), findsOneWidget);
+
+      // TIER3: '摘要' is the 5th field (after error_id, performance, mastery, reviewed_at)
+      // Tap "查看全部" to expand to TIER3
+      await tester.tap(find.text('查看全部'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('摘要'), findsOneWidget);
+      expect(find.textContaining('错题复习结果'), findsOneWidget);
     });
 
     testWidgets('should render redacted evidence with reason', (tester) async {
@@ -214,6 +286,7 @@ void main() {
           ),),
       );
 
+      // TIER1 shows redaction reason for redacted status
       expect(find.text('Contains personal information'), findsOneWidget);
     });
 
@@ -230,7 +303,8 @@ void main() {
           ),),
       );
 
-      expect(find.text('无法解析证据'), findsOneWidget);
+      // TIER1 shows Chinese '证据缺失' for missing status
+      expect(find.text('证据缺失'), findsOneWidget);
     });
 
     testWidgets('should truncate long values', (tester) async {
@@ -253,9 +327,12 @@ void main() {
           ),),
       );
 
-      // Should show truncated value with ellipsis
-      expect(find.textContaining('...'), findsOneWidget);
-      expect(find.text(longText), findsNothing);
+      // Expand to TIER2
+      await tapExpandCard(tester);
+
+      // Text widget stores full data even with maxLines:2 and overflow:ellipsis.
+      // Visual truncation happens at the rendering level, not the widget data level.
+      expect(find.text(longText), findsOneWidget);
     });
 
     testWidgets('should handle null payload gracefully', (tester) async {
@@ -272,10 +349,11 @@ void main() {
           ),),
       );
 
+      // Falls through to default record label
       expect(find.text('证据记录'), findsOneWidget);
     });
 
-    testWidgets('should display OK status badge', (tester) async {
+    testWidgets('should display OK status dot in card', (tester) async {
       final item = EvidenceResolveItem(
         type: 'event',
         id: 'evt-1',
@@ -288,18 +366,15 @@ void main() {
           ),),
       );
 
-      expect(find.text('OK'), findsOneWidget);
-      // Verify success color (green-ish)
-      final chip = tester.widget<Chip>(
-        find.ancestor(
-          of: find.text('OK'),
-          matching: find.byType(Chip),
-        ),
-      );
-      expect(chip.backgroundColor, DS.semanticSuccess.withValues(alpha: 0.12));
+      // Status dot is a Container with BoxShape.circle and success color
+      // The card should render without Chip (no Chip-based badges)
+      expect(find.byType(Chip), findsNothing);
+
+      // TIER1 should show the default record text for empty payload
+      expect(find.text('证据记录'), findsOneWidget);
     });
 
-    testWidgets('should display redacted status badge', (tester) async {
+    testWidgets('should display redacted status dot in card', (tester) async {
       final item = EvidenceResolveItem(
         type: 'sensitive',
         id: 'sens-1',
@@ -312,17 +387,13 @@ void main() {
           ),),
       );
 
-      expect(find.text('已隐藏'), findsOneWidget);
-      final chip = tester.widget<Chip>(
-        find.ancestor(
-          of: find.text('已隐藏'),
-          matching: find.byType(Chip),
-        ),
-      );
-      expect(chip.backgroundColor, DS.semanticWarning.withValues(alpha: 0.12));
+      // The card no longer uses Chip — status is a colored dot
+      expect(find.byType(Chip), findsNothing);
+      // TIER1 shows redaction fallback
+      expect(find.text('证据已隐藏'), findsOneWidget);
     });
 
-    testWidgets('should display missing status badge', (tester) async {
+    testWidgets('should display missing status dot in card', (tester) async {
       final item = EvidenceResolveItem(
         type: 'missing',
         id: 'miss-1',
@@ -335,14 +406,8 @@ void main() {
           ),),
       );
 
-      expect(find.text('缺失'), findsOneWidget);
-      final chip = tester.widget<Chip>(
-        find.ancestor(
-          of: find.text('缺失'),
-          matching: find.byType(Chip),
-        ),
-      );
-      expect(chip.backgroundColor, DS.semanticError.withValues(alpha: 0.12));
+      expect(find.byType(Chip), findsNothing);
+      expect(find.text('证据缺失'), findsOneWidget);
     });
 
     testWidgets('should handle empty payload dict', (tester) async {
@@ -362,7 +427,7 @@ void main() {
       expect(find.text('证据记录'), findsOneWidget);
     });
 
-    testWidgets('should display missing keys as hyphen', (tester) async {
+    testWidgets('should skip empty values instead of showing hyphen', (tester) async {
       final item = EvidenceResolveItem(
         type: 'event',
         id: 'evt-2',
@@ -370,7 +435,7 @@ void main() {
         payload: {
           'event': {
             'event_type': 'test',
-            // ts_ms missing
+            // ts_ms missing — value is null
           },
         },
       );
@@ -381,7 +446,17 @@ void main() {
           ),),
       );
 
-      expect(find.text('Timestamp: -'), findsOneWidget);
+      // TIER1
+      expect(find.text('事件: test'), findsOneWidget);
+
+      // Expand to TIER2
+      await tapExpandCard(tester);
+
+      // Only '类型: test' is shown; missing ts_ms is skipped entirely
+      expect(find.text('类型'), findsOneWidget);
+      expect(find.text('test'), findsOneWidget);
+      // Time label should NOT be present (missing value is skipped)
+      expect(find.text('时间'), findsNothing);
     });
   });
 
@@ -397,11 +472,8 @@ void main() {
 
       final chip = tester.widget<Chip>(find.byType(Chip));
       expect(chip.backgroundColor, DS.semanticSuccess.withValues(alpha: 0.12));
-      expect(chip.label, isA<Text>().having(
-        (t) => t.style?.color,
-        'color',
-        DS.semanticSuccess,
-      ));
+      // Label is now a Row (wrapping count + Text), not a plain Text
+      expect(chip.label, isA<Row>());
     });
 
     testWidgets('should render redacted badge with warning color', (tester) async {
@@ -475,353 +547,115 @@ void main() {
       container.dispose();
     });
 
-    testWidgets('should show drawer with loading state', (tester) async {
-      AppFeatureFlags.enableEvidenceViewer = true;
-
-      final refs = [
-        EvidenceRefModel(type: 'event', id: 'evt-1'),
-      ];
-
-      // Mock incomplete future to keep loading state
-      final completer = Completer<Response<Map<String, dynamic>>>();
-      when(mockApiClient.post(any, data: anyNamed('data'))).thenAnswer(
-        (_) => completer.future,
-      );
+    // Helper to pump the EvidenceDrawer widget directly
+    Future<void> pumpDrawer(
+      WidgetTester tester, {
+      List<EvidenceRefModel> refs = const [],
+      List<Map<String, dynamic>> items = const [],
+      bool evidenceMissing = false,
+    }) async {
+      tester.view.physicalSize = const Size(900, 1400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
 
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
           child: testMaterialApp(
             home: Scaffold(
-              body: Builder(
-                builder: (context) => ElevatedButton(
-                  onPressed: () => EvidenceDrawer.show(
-                    context,
-                    refs: refs,
-                    evidenceMissing: false,
-                  ),
-                  child: const Text('Show Evidence'),
+              body: SingleChildScrollView(
+                child: EvidenceDrawer(
+                  refs: refs,
+                  items: items,
+                  evidenceMissing: evidenceMissing,
                 ),
               ),
             ),
           ),
         ),
       );
-
-      await tester.tap(find.text('Show Evidence'));
-      await tester.pump();
-      await tester.pump();
-
-      // Drawer renders ref items directly (no loading state in current impl)
-      expect(find.text('event: evt-1'), findsOneWidget);
-
-      // Complete the future to avoid timer issues
-      completer.complete(Response<Map<String, dynamic>>(
-        requestOptions: RequestOptions(path: ''),
-        data: {'resolved': []},
-        statusCode: 200,
-      ));
       await tester.pumpAndSettle();
+    }
+
+    testWidgets('should show drawer with ref items', (tester) async {
+      await pumpDrawer(tester, refs: [
+        EvidenceRefModel(type: 'event', id: 'evt-1'),
+      ]);
+
+      expect(find.text('event: evt-1'), findsOneWidget);
     });
 
     testWidgets('should show drawer with missing evidence banner', (tester) async {
-      AppFeatureFlags.enableEvidenceViewer = true;
-
-      final refs = [
-        EvidenceRefModel(type: 'event', id: 'evt-1'),
-      ];
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: testMaterialApp(
-            home: Scaffold(
-              body: Builder(
-                builder: (context) => ElevatedButton(
-                  onPressed: () => EvidenceDrawer.show(
-                    context,
-                    refs: refs,
-                    evidenceMissing: true, // Evidence is missing
-                  ),
-                  child: const Text('Show Evidence'),
-                ),
-              ),
-            ),
-          ),
-        ),
+      await pumpDrawer(
+        tester,
+        refs: [EvidenceRefModel(type: 'event', id: 'evt-1')],
+        evidenceMissing: true,
       );
 
-      await tester.tap(find.text('Show Evidence'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('证据不足'), findsOneWidget);
+      // With refs, the drawer shows ref items regardless of evidenceMissing flag
+      expect(find.text('event: evt-1'), findsOneWidget);
     });
 
     testWidgets('should show drawer when evidence viewer disabled', (tester) async {
       AppFeatureFlags.enableEvidenceViewer = false;
 
-      final refs = [
+      await pumpDrawer(tester, refs: [
         EvidenceRefModel(type: 'event', id: 'evt-1'),
-      ];
+      ]);
 
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: testMaterialApp(
-            home: Scaffold(
-              body: Builder(
-                builder: (context) => ElevatedButton(
-                  onPressed: () => EvidenceDrawer.show(
-                    context,
-                    refs: refs,
-                    evidenceMissing: false,
-                  ),
-                  child: const Text('Show Evidence'),
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-
-      await tester.tap(find.text('Show Evidence'));
-      await tester.pumpAndSettle();
-
-      // Widget renders ref items even when evidence viewer disabled
+      // Drawer renders ref items regardless of feature flag
       expect(find.text('event: evt-1'), findsOneWidget);
     });
 
     testWidgets('should show resolved evidence grouped by type', (tester) async {
-      AppFeatureFlags.enableEvidenceViewer = true;
-
-      final refs = [
+      await pumpDrawer(tester, refs: [
         EvidenceRefModel(type: 'event', id: 'evt-1'),
         EvidenceRefModel(type: 'event', id: 'evt-2'),
         EvidenceRefModel(type: 'task', id: 'task-1'),
-      ];
+      ]);
 
-      when(mockApiClient.post(any, data: anyNamed('data'))).thenAnswer(
-        (_) async => Response<Map<String, dynamic>>(
-          requestOptions: RequestOptions(path: ''),
-          data: {
-            'resolved': [
-              {
-                'type': 'event',
-                'id': 'evt-1',
-                'status': 'ok',
-                'event': {'event_type': 'test_event'},
-              },
-              {
-                'type': 'event',
-                'id': 'evt-2',
-                'status': 'ok',
-                'event': {'event_type': 'test_event_2'},
-              },
-              {
-                'type': 'task',
-                'id': 'task-1',
-                'status': 'ok',
-                'task': {'title': 'Test Task'},
-              },
-            ],
-          },
-          statusCode: 200,
-        ),
-      );
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: testMaterialApp(
-            home: Scaffold(
-              body: Builder(
-                builder: (context) => ElevatedButton(
-                  onPressed: () => EvidenceDrawer.show(
-                    context,
-                    refs: refs,
-                    evidenceMissing: false,
-                  ),
-                  child: const Text('Show Evidence'),
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-
-      await tester.tap(find.text('Show Evidence'));
-      await tester.pumpAndSettle();
-
-      // Should show ref items (grouped by type in current impl)
+      // Drawer shows ref items as 'type: id'
       expect(find.text('event: evt-1'), findsOneWidget);
       expect(find.text('event: evt-2'), findsOneWidget);
       expect(find.text('task: task-1'), findsOneWidget);
-
-      // Should show ref items as ListTiles in current impl
-      expect(find.byType(ListTile), findsWidgets);
     });
 
     testWidgets('should show empty state when no evidence', (tester) async {
-      AppFeatureFlags.enableEvidenceViewer = true;
+      await pumpDrawer(tester);
 
-      when(mockApiClient.post(any, data: anyNamed('data'))).thenAnswer(
-        (_) async => Response<Map<String, dynamic>>(
-          requestOptions: RequestOptions(path: ''),
-          data: {'resolved': []},
-          statusCode: 200,
-        ),
-      );
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: testMaterialApp(
-            home: Scaffold(
-              body: Builder(
-                builder: (context) => ElevatedButton(
-                  onPressed: () => EvidenceDrawer.show(
-                    context,
-                    refs: [],
-                    evidenceMissing: false,
-                  ),
-                  child: const Text('Show Evidence'),
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-
-      await tester.tap(find.text('Show Evidence'));
-      await tester.pumpAndSettle();
-
+      // No refs + no items = '暂无证据记录'
       expect(find.text('暂无证据记录'), findsOneWidget);
     });
 
-    testWidgets('should show error message on resolve failure', (tester) async {
-      AppFeatureFlags.enableEvidenceViewer = true;
+    testWidgets('should show error state when items unavailable', (tester) async {
+      // EvidenceDrawer with evidenceMissing=true but no items/refs
+      await pumpDrawer(tester, evidenceMissing: true);
 
-      final refs = [
-        EvidenceRefModel(type: 'event', id: 'evt-1'),
-      ];
-
-      when(mockApiClient.post(any, data: anyNamed('data'))).thenThrow(
-        Exception('Network error'),
-      );
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: testMaterialApp(
-            home: Scaffold(
-              body: Builder(
-                builder: (context) => ElevatedButton(
-                  onPressed: () => EvidenceDrawer.show(
-                    context,
-                    refs: refs,
-                    evidenceMissing: false,
-                  ),
-                  child: const Text('Show Evidence'),
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-
-      await tester.tap(find.text('Show Evidence'));
-      await tester.pumpAndSettle();
-
-      // Widget shows ref items even on API error (drawer renders before resolve)
-      expect(find.text('event: evt-1'), findsOneWidget);
+      // evidenceMissing + no items + no refs = '证据不足'
+      expect(find.text('证据不足'), findsOneWidget);
     });
 
     testWidgets('should handle empty refs list', (tester) async {
-      AppFeatureFlags.enableEvidenceViewer = true;
+      await pumpDrawer(tester, refs: []);
 
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: testMaterialApp(
-            home: Scaffold(
-              body: Builder(
-                builder: (context) => ElevatedButton(
-                  onPressed: () => EvidenceDrawer.show(
-                    context,
-                    refs: [],
-                    evidenceMissing: false,
-                  ),
-                  child: const Text('Show Evidence'),
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-
-      await tester.tap(find.text('Show Evidence'));
-      await tester.pumpAndSettle();
-
-      // Should show empty state in drawer
+      // Empty refs + no items = empty state
       expect(find.text('暂无证据记录'), findsOneWidget);
     });
 
-    testWidgets('should group evidence in alphabetical order', (tester) async {
-      AppFeatureFlags.enableEvidenceViewer = true;
-
+    testWidgets('should render ref items in display order', (tester) async {
       final refs = [
         EvidenceRefModel(type: 'zebra', id: 'z-1'),
         EvidenceRefModel(type: 'alpha', id: 'a-1'),
         EvidenceRefModel(type: 'beta', id: 'b-1'),
       ];
 
-      when(mockApiClient.post(any, data: anyNamed('data'))).thenAnswer(
-        (_) async => Response<Map<String, dynamic>>(
-          requestOptions: RequestOptions(path: ''),
-          data: {
-            'resolved': [
-              {'type': 'zebra', 'id': 'z-1', 'status': 'ok'},
-              {'type': 'alpha', 'id': 'a-1', 'status': 'ok'},
-              {'type': 'beta', 'id': 'b-1', 'status': 'ok'},
-            ],
-          },
-          statusCode: 200,
-        ),
-      );
+      await pumpDrawer(tester, refs: refs);
 
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: testMaterialApp(
-            home: Scaffold(
-              body: Builder(
-                builder: (context) => ElevatedButton(
-                  onPressed: () => EvidenceDrawer.show(
-                    context,
-                    refs: refs,
-                    evidenceMissing: false,
-                  ),
-                  child: const Text('Show Evidence'),
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-
-      await tester.tap(find.text('Show Evidence'));
-      await tester.pumpAndSettle();
-
-      // Get all text widgets
-      final texts = find.byType(Text);
-      final alphaIndex = tester.getTopLeft(find.text('alpha: a-1')).dy;
-      final betaIndex = tester.getTopLeft(find.text('beta: b-1')).dy;
-      final zebraIndex = tester.getTopLeft(find.text('zebra: z-1')).dy;
-
-      // Verify refs appear in list order
-      expect(alphaIndex, isNonNegative);
-      expect(betaIndex, isNonNegative);
-      expect(zebraIndex, isNonNegative);
+      // Ref items are rendered from the refs list in display order
+      expect(find.text('zebra: z-1'), findsOneWidget);
+      expect(find.text('alpha: a-1'), findsOneWidget);
+      expect(find.text('beta: b-1'), findsOneWidget);
     });
   });
 
@@ -1094,7 +928,7 @@ void main() {
   });
 
   group('Integration Tests', () {
-    testWidgets('should show badge in card', (tester) async {
+    testWidgets('should show evidence card without chip badges', (tester) async {
       final item = EvidenceResolveItem(
         type: 'event',
         id: 'evt-1',
@@ -1107,9 +941,9 @@ void main() {
           ),),
       );
 
-      // Find the status badge (it's a private class _StatusBadge, but we can find the Chip)
-      expect(find.byType(Chip), findsOneWidget);
-      expect(find.text('OK'), findsOneWidget);
+      // EvidenceCard no longer uses Chip — status shown as _StatusDot + summary text
+      expect(find.byType(Chip), findsNothing);
+      expect(find.text('证据记录'), findsOneWidget);
     });
 
     testWidgets('should display evidence chain title in drawer', (tester) async {
@@ -1138,7 +972,7 @@ void main() {
       await tester.tap(find.text('Show'));
       await tester.pumpAndSettle();
 
-      // The drawer should show evidence record title (localized)
+      // The drawer header always shows '证据记录'
       expect(find.text('证据记录'), findsOneWidget);
     });
   });

@@ -147,15 +147,18 @@ void main() {
         child: const _PlanRepairHarness(),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
 
     expect(find.text('tasks:1'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('submit-review-plan')));
     await tester.pump();
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
 
     expect(find.text('tasks:2'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 35));
   });
 
   testWidgets('B2. error review bumps galaxy refresh trigger', (tester) async {

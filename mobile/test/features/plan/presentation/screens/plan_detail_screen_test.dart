@@ -35,6 +35,8 @@ void main() {
       expect(find.text('只背结论，不会用题目条件触发判断。'), findsOneWidget);
       expect(find.text('看到熟悉关键词就跳步，漏掉边界条件。'), findsOneWidget);
       expect(tester.takeException(), isNull);
+
+      await tester.pump(const Duration(seconds: 35));
     });
 
     testWidgets('does not render the common mistakes section for an empty list',
@@ -46,6 +48,8 @@ void main() {
       expect(find.text('⚠️ 常见误区'), findsNothing);
       expect(_commonMistakeCards(), findsNothing);
       expect(tester.takeException(), isNull);
+
+      await tester.pump(const Duration(seconds: 35));
     });
   });
 
@@ -68,6 +72,8 @@ void main() {
       expect(find.text('⚠️'), findsOneWidget);
       expect(find.text('错题补强'), findsOneWidget);
       expect(tester.takeException(), isNull);
+
+      await tester.pump(const Duration(seconds: 35));
     });
 
     testWidgets('renders specialized repair task with orange card treatment',
@@ -87,6 +93,8 @@ void main() {
       expect(find.text('⚠️'), findsOneWidget);
       expect(find.text('错题补强'), findsOneWidget);
       expect(tester.takeException(), isNull);
+
+      await tester.pump(const Duration(seconds: 35));
     });
   });
 
@@ -115,12 +123,13 @@ void main() {
 
       await tester.tap(find.byType(CustomButton).first);
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       expect(attempts, equals(2));
       expect(find.text('⚠️ 常见误区'), findsNothing);
       expect(find.text('错题补强'), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 35));
     });
   });
 }

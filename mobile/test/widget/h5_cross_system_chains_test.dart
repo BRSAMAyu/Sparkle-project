@@ -151,6 +151,9 @@ void main() {
 
     expect(repairCard.backgroundColor, DS.warning.withValues(alpha: 0.08));
     expect(repairOffset.dy, lessThan(dayTwoNormalOffset.dy));
+
+    // Clear pending 30s timer from plan detail screen
+    await tester.pump(const Duration(seconds: 35));
   });
 
   testWidgets('chain D galaxy node color deepens after mastery increases',
