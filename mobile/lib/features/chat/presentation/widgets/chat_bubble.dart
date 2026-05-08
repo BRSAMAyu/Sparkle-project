@@ -1107,11 +1107,9 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                                         ? comfortableHeight
                                                         : maxHeight;
                                             final isFull = heightState == 2;
-                                            final toggleLabel = heightState == 0
-                                                ? S.chatBubbleReadMore
-                                                : heightState == 1
-                                                    ? S.chatBubbleReadMore
-                                                    : S.chatBubbleCollapse;
+                                            final toggleLabel = heightState == 2
+                                                    ? S.chatBubbleCollapse
+                                                    : S.chatBubbleReadMore;
 
                                             final animatedContent =
                                                 AnimatedSize(
@@ -1158,11 +1156,11 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                                                         end: Alignment.bottomCenter,
                                                                         colors: [
                                                                           isUser
-                                                                              ? DS.chatBubbleUserText.withValues(alpha: 0)
-                                                                              : Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0),
+                                                                              ? DS.chatBubbleUser.withValues(alpha: 0)
+                                                                              : DS.chatBubbleOther.withValues(alpha: 0),
                                                                           isUser
-                                                                              ? DS.chatBubbleUserText
-                                                                              : Theme.of(context).colorScheme.surfaceContainerHighest,
+                                                                              ? DS.chatBubbleUser
+                                                                              : DS.chatBubbleOther,
                                                                         ],
                                                                       ),
                                                                     ),
