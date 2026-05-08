@@ -1338,6 +1338,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               ),
             ),
             SafeArea(
+              bottom: false, // Handle bottom padding manually to avoid double padding with ChatInput
               child: ContentConstraint(
                 child: Column(
                   children: [
@@ -2925,8 +2926,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 trace: chatState.graphragTrace,
               ),
             ),
-          // Bottom safe area padding
-          SizedBox(height: MediaQuery.of(context).padding.bottom),
+          // Bottom safe area padding — only shown when keyboard is closed
+          if (MediaQuery.of(context).viewInsets.bottom == 0)
+            SizedBox(
+              height: max(
+                DS.spacing8,
+                MediaQuery.of(context).padding.bottom,
+              ),
+            ),
         ],
       ),
     );
