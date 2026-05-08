@@ -200,6 +200,7 @@ app.*.map.json
 *.tmp
 *.temp
 *.bak
+tmp*.py
 
 # Logs
 logs/
@@ -289,6 +290,11 @@ register_res.json
 # SGW runtime artifacts (databases, checkpoints, debug output)
 # ========================================
 artifacts/sgw*/
+artifacts/e2e/screenshots/
+artifacts/e2e/videos/
+artifacts/e2e/logs/
+artifacts/e2e/reports/*.txt
+artifacts/e2e/reports/PRELAUNCH_REPORT.md
 
 # Keep dictionaries directory (MDX files for vocabulary lookup)
 # data/dictionaries/
