@@ -104,8 +104,8 @@ void main() {
 
       expect(find.byType(CommunityMainScreen), findsOneWidget);
       expect(find.byType(TabBar), findsOneWidget);
-      expect(find.byIcon(Icons.search), findsOneWidget);
-      expect(find.byIcon(Icons.more_horiz_rounded), findsOneWidget);
+      // Community now has 3 tabs: Partners, Feed, Groups
+      expect(find.byType(Tab), findsNWidgets(3));
       expect(tester.takeException(), isNull);
     });
 
