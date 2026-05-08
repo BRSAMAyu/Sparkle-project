@@ -1,0 +1,136 @@
+name: PR Checks
+
+# Lightweight CI that runs on all pull requests for fast feedback.
+# The full CI pipeline (ci.yml) runs on push to main/develop for thorough validation.
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  GO_VERSION: '1.24.0'
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  # ── Python Lint + Unit Tests ──────────────────────────────────────────────
+  python-checks:
+    name: Python Lint & Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/requirements.lock
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.lock
+
+      - name: Python Lint (Ruff)
+        run: ruff check backend/app --output-format=github
+
+      - name: Python Unit Tests
+        env:
+          TESTING: 'true'
+        run: pytest backend/tests/unit -v --timeout=60 -x -q
+
+  # ── Go Lint + Tests ───────────────────────────────────────────────────────
+  go-checks:
+    name: Go Lint & Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: backend/gateway/go.sum
+
+      - name: Go Vet
+        working-directory: backend/gateway
+        run: go vet ./...
+
+      - name: Go Lint (golangci-lint)
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: backend/gateway
+          args: --timeout=5m
+
+      - name: Go Test
+        working-directory: backend/gateway
+        run: go test -v -race ./...
+
+  # ── Proto Lint ────────────────────────────────────────────────────────────
+  proto-check:
+    name: Proto Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed proto files
+        id: proto_changes
+        run: |
+          git fetch origin "${{ github.base_ref }}" --depth=1
+          CHANGED_PROTO=$(git diff --name-only "origin/${{ github.base_ref }}"...HEAD -- 'proto/*.proto' || true)
+          if [ -n "$CHANGED_PROTO" ]; then
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+            echo "Changed proto files:"
+            echo "$CHANGED_PROTO"
+          else
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            echo "No proto file changes detected."
+          fi
+
+      - name: Build Proto Toolchain Image
+        if: steps.proto_changes.outputs.has_changes == 'true'
+        run: make proto-tools-build
+
+      - name: Buf Lint
+        if: steps.proto_changes.outputs.has_changes == 'true'
+        run: |
+          PROTO_TOOLCHAIN_IMAGE=sparkle/proto-toolchain:latest \
+          scripts/proto_toolchain.sh lint
+
+      - name: Buf Breaking Change Detection
+        if: steps.proto_changes.outputs.has_changes == 'true'
+        run: |
+          PROTO_TOOLCHAIN_IMAGE=sparkle/proto-toolchain:latest \
+          scripts/proto_toolchain.sh breaking '.git#branch=main'
+
+  # ── Summary ───────────────────────────────────────────────────────────────
+  pr-summary:
+    name: PR Checks Summary
+    runs-on: ubuntu-latest
+    needs: [python-checks, go-checks, proto-check]
+    if: always()
+    steps:
+      - name: Check results
+        run: |
+          echo "## PR Check Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          PYTHON="${{ needs.python-checks.result }}"
+          GO="${{ needs.go-checks.result }}"
+          PROTO="${{ needs.proto-check.result }}"
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Python Lint & Unit Tests | ${PYTHON} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Go Lint & Tests | ${GO} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Proto Validation | ${PROTO} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "$PYTHON" = "failure" ] || [ "$GO" = "failure" ] || [ "$PROTO" = "failure" ]; then
+            echo "::error::One or more PR checks failed. See job details above."
+            exit 1
+          fi
+          echo "All PR checks passed."
