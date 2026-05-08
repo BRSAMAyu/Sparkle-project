@@ -69,6 +69,8 @@ class _StatusChip extends StatelessWidget {
       ),
       child: Text(
         label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: DS.bodySmall.copyWith(
           color: DS.textPrimary,
           fontWeight: DS.fontWeightSemibold,

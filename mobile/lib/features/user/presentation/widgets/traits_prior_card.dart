@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class TraitsPriorCard extends StatelessWidget {
@@ -38,43 +39,41 @@ class TraitsPriorCard extends StatelessWidget {
   Widget build(BuildContext context) {
     if (traits.isEmpty) return const SizedBox.shrink();
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              context.l10n.userTraitsLongTerm,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              helperText,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const SizedBox(height: 12),
-            ...traits.map(
-              (item) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(_labelFor(context, item['dim']?.toString() ?? '')),
-                    ),
-                    Text(
-                      _summaryForValue(context, (item['value'] as num?)?.toDouble() ?? 0.0),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      '${(((item['confidence'] as num?)?.toDouble() ?? 0.0) * 100).round()}%',
-                    ),
-                  ],
-                ),
+    return GraphiteCardSurface(
+      padding: const EdgeInsets.all(DS.spacing16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            context.l10n.userTraitsLongTerm,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: DS.spacing8),
+          Text(
+            helperText,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: DS.spacing12),
+          ...traits.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(bottom: DS.spacing8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(_labelFor(context, item['dim']?.toString() ?? '')),
+                  ),
+                  Text(
+                    _summaryForValue(context, (item['value'] as num?)?.toDouble() ?? 0.0),
+                  ),
+                  const SizedBox(width: DS.spacing12),
+                  Text(
+                    '${(((item['confidence'] as num?)?.toDouble() ?? 0.0) * 100).round()}%',
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

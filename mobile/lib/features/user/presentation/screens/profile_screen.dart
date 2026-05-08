@@ -47,7 +47,9 @@ class ProfileScreen extends ConsumerWidget {
         : UserStateV1Model.fromProfileContext(profileContext);
     final l10n = AppLocalizations.of(context)!;
     final screenHeight = MediaQuery.of(context).size.height;
-    final headerHeight = screenHeight < 720 ? 164.0 : 198.0;
+    final safeAreaTop = MediaQuery.of(context).padding.top;
+    final baseHeaderHeight = screenHeight < 720 ? 164.0 : 198.0;
+    final headerHeight = safeAreaTop > 24 ? baseHeaderHeight + (safeAreaTop - 24) : baseHeaderHeight;
 
     if (user == null) return const SizedBox.shrink();
 
@@ -658,7 +660,7 @@ class ProfileScreen extends ConsumerWidget {
                   accentColor: const Color(0xFF5F8C72),
                   onTap: () => context.push(PlanRoutes.learningPortfolio),
                 ),
-                const Divider(height: 1, indent: 60),
+                const Divider(height: 1, indent: 68),
                 _buildSettingsTile(
                   context,
                   icon: Icons.auto_stories_outlined,
@@ -667,7 +669,7 @@ class ProfileScreen extends ConsumerWidget {
                   accentColor: const Color(0xFF5C7DCC),
                   onTap: () => context.push(DocumentLibraryRoutes.library),
                 ),
-                const Divider(height: 1, indent: 60),
+                const Divider(height: 1, indent: 68),
                 _buildSettingsTile(
                   context,
                   icon: Icons.emoji_events_outlined,
@@ -675,7 +677,7 @@ class ProfileScreen extends ConsumerWidget {
                   accentColor: const Color(0xFFFFD700),
                   onTap: () => context.push(AchievementRoutes.basePath),
                 ),
-                const Divider(height: 1, indent: 60),
+                const Divider(height: 1, indent: 68),
                 _buildSettingsTile(
                   context,
                   icon: Icons.photo_library_outlined,
@@ -684,7 +686,7 @@ class ProfileScreen extends ConsumerWidget {
                   accentColor: const Color(0xFF6E8EF7),
                   onTap: () => context.push(UserRoutes.posterStudio),
                 ),
-                const Divider(height: 1, indent: 60),
+                const Divider(height: 1, indent: 68),
                 _buildSettingsTile(
                   context,
                   icon: Icons.palette_outlined,
@@ -692,7 +694,7 @@ class ProfileScreen extends ConsumerWidget {
                   accentColor: const Color(0xFFD9B66F),
                   onTap: () => context.push(VisualElementsRoutes.basePath),
                 ),
-                const Divider(height: 1, indent: 60),
+                const Divider(height: 1, indent: 68),
                 _buildSettingsTile(
                   context,
                   icon: Icons.psychology_alt_outlined,
@@ -718,7 +720,7 @@ class ProfileScreen extends ConsumerWidget {
                   accentColor: const Color(0xFF9B7A72),
                   onTap: () => context.push(UserRoutes.editProfile),
                 ),
-                const Divider(height: 1, indent: 60),
+                const Divider(height: 1, indent: 68),
                 _buildSettingsTile(
                   context,
                   icon: Icons.tune_rounded,
@@ -726,7 +728,7 @@ class ProfileScreen extends ConsumerWidget {
                   accentColor: const Color(0xFF7087A6),
                   onTap: () => context.push(UserRoutes.settings),
                 ),
-                const Divider(height: 1, indent: 60),
+                const Divider(height: 1, indent: 68),
                 _buildSettingsTile(
                   context,
                   icon: Icons.auto_awesome_motion_rounded,
@@ -734,7 +736,7 @@ class ProfileScreen extends ConsumerWidget {
                   accentColor: const Color(0xFF6F8F86),
                   onTap: () => context.push(UserRoutes.skills),
                 ),
-                const Divider(height: 1, indent: 60),
+                const Divider(height: 1, indent: 68),
                 _buildToggleTile(
                   context,
                   icon: Icons.insights_outlined,
@@ -773,8 +775,7 @@ class ProfileScreen extends ConsumerWidget {
                   accentColor: const Color(0xFF6E8FAE),
                   onTap: () => context.push(UserRoutes.accountSecurity),
                 ),
-                if (AppFeatureFlags.enableUserMemoryControls) ...[
-                  const Divider(height: 1, indent: 60),
+                if (AppFeatureFlags.enableUserMemoryControls)
                   _buildSettingsTile(
                     context,
                     icon: Icons.memory_rounded,
@@ -782,8 +783,8 @@ class ProfileScreen extends ConsumerWidget {
                     accentColor: const Color(0xFF6D9282),
                     onTap: () => context.push(UserRoutes.memorySettings),
                   ),
-                ],
-                const Divider(height: 1, indent: 60),
+                if (AppFeatureFlags.enableUserMemoryControls)
+                  const Divider(height: 1, indent: 68),
                 _buildSettingsTile(
                   context,
                   icon: Icons.download_rounded,
@@ -811,7 +812,7 @@ class ProfileScreen extends ConsumerWidget {
                   isDestructive: true,
                   onTap: () => _showLogoutDialog(context, ref, l10n),
                 ),
-                const Divider(height: 1, indent: 60),
+                const Divider(height: 1, indent: 68),
                 _buildSettingsTile(
                   context,
                   icon: Icons.delete_forever_rounded,

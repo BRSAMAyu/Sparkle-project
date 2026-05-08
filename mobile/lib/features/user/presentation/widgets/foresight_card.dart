@@ -34,6 +34,8 @@ class ForesightCard extends StatelessWidget {
               (value?.hintText ?? '').isEmpty
                   ? context.l10n.userForesightEmpty
                   : value!.hintText!,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: DS.bodyMedium.copyWith(color: DS.textPrimary),
             ),
             if (value?.generatedAt != null ||
@@ -61,6 +63,8 @@ class ForesightCard extends StatelessWidget {
                       (item) => Chip(
                         label: Text(
                           '${_labelForDim(item.dim, context)} ${item.confidence.toStringAsFixed(2)}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     )

@@ -48,11 +48,13 @@ class WorkingMemoryCard extends StatelessWidget {
                           color: DS.surfaceSecondary,
                           borderRadius: DS.borderRadius16,
                         ),
-                        child: Column(
+                          child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               item.summary,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                               style: DS.bodyMedium.copyWith(
                                 color: DS.textPrimary,
                                 fontWeight: DS.fontWeightSemibold,
@@ -61,6 +63,8 @@ class WorkingMemoryCard extends StatelessWidget {
                             const SizedBox(height: DS.spacing6),
                             Text(
                               _buildMeta(context, item),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: DS.bodySmall.copyWith(
                                 color: DS.textSecondary,
                               ),

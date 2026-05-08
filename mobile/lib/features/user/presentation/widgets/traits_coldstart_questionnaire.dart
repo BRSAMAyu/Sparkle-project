@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class TraitsColdstartQuestionnaire extends StatefulWidget {
@@ -25,39 +26,37 @@ class _TraitsColdstartQuestionnaireState
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              context.l10n.userTraitsColdstart,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              context.l10n.userTraitsColdstartHint,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const SizedBox(height: 12),
-            ...widget.questions.map(_buildQuestion),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                TextButton(
-                  onPressed: _submitting ? null : () async => widget.onSkip(),
-                  child: Text(context.l10n.userSkip),
-                ),
-                const Spacer(),
-                FilledButton(
-                  onPressed: _submitting ? null : _handleSubmit,
-                  child: Text(_submitting ? context.l10n.userSubmitting : context.l10n.userSave),
-                ),
-              ],
-            ),
-          ],
-        ),
+    return GraphiteCardSurface(
+      padding: const EdgeInsets.all(DS.spacing16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            context.l10n.userTraitsColdstart,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: DS.spacing8),
+          Text(
+            context.l10n.userTraitsColdstartHint,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: DS.spacing12),
+          ...widget.questions.map(_buildQuestion),
+          const SizedBox(height: DS.spacing12),
+          Row(
+            children: [
+              TextButton(
+                onPressed: _submitting ? null : () async => widget.onSkip(),
+                child: Text(context.l10n.userSkip),
+              ),
+              const Spacer(),
+              FilledButton(
+                onPressed: _submitting ? null : _handleSubmit,
+                child: Text(_submitting ? context.l10n.userSubmitting : context.l10n.userSave),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -69,12 +68,12 @@ class _TraitsColdstartQuestionnaireState
             .whereType<Map<String, dynamic>>()
             .toList();
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: DS.spacing16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(question['title']?.toString() ?? ''),
-          const SizedBox(height: 8),
+          const SizedBox(height: DS.spacing8),
           ...options.map(
             (option) => RadioListTile<String>(
               contentPadding: EdgeInsets.zero,

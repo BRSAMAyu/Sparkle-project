@@ -40,6 +40,8 @@ class ActiveSkillsCard extends StatelessWidget {
                       (item) => Chip(
                         label: Text(
                           '${item.name} ${(item.activationMatchScore * 100).round()}%',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     )
