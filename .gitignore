@@ -287,14 +287,10 @@ register_res.json
 2026-*-this-session-is-being-continued-from-a-previous-*.txt
 
 # ========================================
-# SGW runtime artifacts (databases, checkpoints, debug output)
+# SGW & E2E runtime artifacts (databases, checkpoints, debug output)
 # ========================================
 artifacts/sgw*/
-artifacts/e2e/screenshots/
-artifacts/e2e/videos/
-artifacts/e2e/logs/
-artifacts/e2e/reports/*.txt
-artifacts/e2e/reports/PRELAUNCH_REPORT.md
+artifacts/e2e/
 
 # Keep dictionaries directory (MDX files for vocabulary lookup)
 # data/dictionaries/
