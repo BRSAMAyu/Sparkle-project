@@ -3,8 +3,8 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 
-/// Purple color constant for capsule cards
-const _capsulePurple = Color(0xFF9C27B0);
+/// Purple color for capsule cards - uses DS capsule accent for theme-aware coloring
+final _capsulePurple = DS.capsuleAccent;
 
 /// Widget for displaying a capsule (time capsule / thought capsule) share card preview
 ///
@@ -245,7 +245,7 @@ class CapsuleShareCard extends StatelessWidget {
                                 ),
                                 child: Text(
                                   '#$tag',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: DS.fontSizeXs,
                                     color: _capsulePurple,
                                   ),
