@@ -68,7 +68,7 @@ class MessageDetailView extends StatelessWidget {
                           ),
                           decoration: BoxDecoration(
                             color: Theme.of(context).colorScheme.surface,
-                            borderRadius: BorderRadius.circular(DS.radius24),
+                            borderRadius: BorderRadius.circular(DS.radius20),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withValues(alpha: 0.15),
@@ -133,7 +133,7 @@ class MessageDetailView extends StatelessWidget {
       decoration: BoxDecoration(
         color: DS.surfaceTertiary.withValues(alpha: 0.4),
         borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(DS.radius24),
+          top: Radius.circular(DS.radius20),
         ),
       ),
       child: Row(
@@ -268,7 +268,7 @@ class MessageDetailView extends StatelessWidget {
       decoration: BoxDecoration(
         color: DS.surfaceTertiary.withValues(alpha: 0.4),
         borderRadius: const BorderRadius.vertical(
-          bottom: Radius.circular(DS.radius24),
+          bottom: Radius.circular(DS.radius20),
         ),
       ),
       child: Column(
