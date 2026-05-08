@@ -2717,11 +2717,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         : ref.watch(offlineQueueSnapshotProvider(offlineUserId)).valueOrNull ??
             OfflineQueueSnapshot.empty;
 
-    return SingleChildScrollView(
-      physics: const NeverScrollableScrollPhysics(),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.4,
+      ),
+      child: SingleChildScrollView(
+        physics: const ClampingScrollPhysics(),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
           if (isCompactMobile && showChatContextToggle)
             Padding(
               padding: const EdgeInsets.fromLTRB(
