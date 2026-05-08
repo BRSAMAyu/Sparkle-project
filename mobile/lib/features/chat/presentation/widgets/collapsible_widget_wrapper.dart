@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:collection';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 /// A collapsible wrapper for metadata widgets rendered after AI messages.
 ///
@@ -76,24 +78,37 @@ class _CollapsibleWidgetWrapperState extends State<CollapsibleWidgetWrapper>
               button: true,
               label: 'Chat collapsible widget wrapper control 1',
               child: InkWell(
-                onTap: () => _setExpanded(!_expanded),
+                onTap: () async {
+                  await SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
+                  _setExpanded(!_expanded);
+                },
                 borderRadius: BorderRadius.circular(999),
                 child: AnimatedContainer(
                   duration: _animationDuration,
                   padding: EdgeInsets.symmetric(
-                    horizontal: _expanded ? DS.spacing10 : DS.spacing10,
+                    horizontal: _expanded ? DS.spacing12 : DS.spacing10,
                     vertical: DS.spacing6,
                   ),
                   decoration: BoxDecoration(
                     color: _expanded
-                        ? accent.withValues(alpha: isDark ? 0.12 : 0.08)
+                        ? accent.withValues(alpha: isDark ? 0.16 : 0.10)
                         : DS.surfacePanel,
                     borderRadius: BorderRadius.circular(999),
                     border: Border.all(
                       color: _expanded
-                          ? accent.withValues(alpha: 0.26)
+                          ? accent.withValues(alpha: 0.35)
                           : DS.borderSubtle,
+                      width: _expanded ? 1.2 : 1.0,
                     ),
+                    boxShadow: _expanded && !isDark
+                        ? [
+                            BoxShadow(
+                              color: accent.withValues(alpha: 0.12),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                        : null,
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
