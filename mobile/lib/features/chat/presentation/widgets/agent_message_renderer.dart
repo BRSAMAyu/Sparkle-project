@@ -270,6 +270,7 @@ class AgentMessageRenderer extends ConsumerWidget {
     required IconData icon,
     required Widget child,
     Color? accentColor,
+    bool defaultExpanded = false,
   }) =>
       Padding(
         padding: const EdgeInsets.only(top: DS.sm),
@@ -277,6 +278,7 @@ class AgentMessageRenderer extends ConsumerWidget {
           label: label,
           icon: icon,
           accentColor: accentColor,
+          defaultExpanded: defaultExpanded,
           child: child,
         ),
       );
