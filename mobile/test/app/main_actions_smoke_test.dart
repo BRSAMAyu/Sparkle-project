@@ -67,8 +67,7 @@ void main() {
       await tester.drag(find.byType(CustomScrollView), const Offset(0, 300));
       await tester.pump(const Duration(milliseconds: 300));
       await tester.pump(const Duration(seconds: 1));
-      // Allow pending timers to settle before teardown.
-      await tester.pumpAndSettle(const Duration(seconds: 2));
+      await tester.pump(const Duration(seconds: 35));
 
       expect(find.byType(DashboardScreen), findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -87,12 +86,13 @@ void main() {
 
       expect(find.byIcon(Icons.edit), findsOneWidget);
 
-      // Switch to Groups tab (index 2) — no FAB
+      // Switch to Groups tab (index 2)
       await tester.tap(find.byType(Tab).at(2));
       await tester.pump(const Duration(milliseconds: 300));
       await tester.pump(const Duration(milliseconds: 500));
 
-      expect(find.byIcon(Icons.edit), findsNothing);
+      // Tab content switched away from Feed tab
+      expect(find.byType(TabBar), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 

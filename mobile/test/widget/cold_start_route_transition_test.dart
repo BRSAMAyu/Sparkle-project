@@ -39,6 +39,7 @@ void main() {
 
     router.go('/chat');
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
 
     // Transition page renders the child; ColdStartRouteTransition or FadeTransition
     // is used depending on accessibility preferences. Both are valid transitions.

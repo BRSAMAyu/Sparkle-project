@@ -251,7 +251,7 @@ void main() {
     );
 
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Not true'));
+    await tester.tap(find.text('不正确'));
     await tester.pumpAndSettle();
 
     expect(service.lastAction, 'reject');

@@ -8,8 +8,8 @@ import 'package:sparkle/features/memory/presentation/widgets/evidence_cards.dart
 import '../shared/i18n_test_helper.dart';
 
 void main() {
-
   setUp(setUpI18nForTesting);
+
   testWidgets('concept evidence routes to galaxy detail', (tester) async {
     final routed = <String>[];
     final router = GoRouter(
@@ -46,6 +46,11 @@ void main() {
     addTearDown(router.dispose);
 
     await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+
+    // Tap to expand TIER2 where the route button is
+    await tester.tap(find.byType(InkWell).first);
+    await tester.pumpAndSettle();
+
     await tester.tap(find.text('去星图看'));
     await tester.pumpAndSettle();
 
@@ -90,6 +95,11 @@ void main() {
     addTearDown(router.dispose);
 
     await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+
+    // Tap to expand TIER2 where the route button is
+    await tester.tap(find.byType(InkWell).first);
+    await tester.pumpAndSettle();
+
     await tester.tap(find.text('去错题本看'));
     await tester.pumpAndSettle();
 
@@ -138,6 +148,11 @@ void main() {
     addTearDown(router.dispose);
 
     await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+
+    // Tap to expand TIER2 where the route button is
+    await tester.tap(find.byType(InkWell).first);
+    await tester.pumpAndSettle();
+
     await tester.tap(find.text('打开相关对话'));
     await tester.pumpAndSettle();
 
@@ -183,6 +198,11 @@ void main() {
     addTearDown(router.dispose);
 
     await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+
+    // Tap to expand TIER2 where the route button is
+    await tester.tap(find.byType(InkWell).first);
+    await tester.pumpAndSettle();
+
     await tester.tap(find.text('打开原对话'));
     await tester.pumpAndSettle();
 
@@ -193,22 +213,26 @@ void main() {
   testWidgets('unsupported evidence stays non-routable', (tester) async {
     await tester.pumpWidget(
       testMaterialApp(home: Scaffold(
-          body: EvidenceCard(
-            item: EvidenceResolveItem(
-              type: 'summary',
-              id: 'summary-1',
-              status: 'ok',
-              payload: const {
-                'summary': {
-                  'id': 'summary-1',
-                  'review_date': '2026-04-20',
-                  'summary_text': '周报',
-                },
+        body: EvidenceCard(
+          item: EvidenceResolveItem(
+            type: 'summary',
+            id: 'summary-1',
+            status: 'ok',
+            payload: const {
+              'summary': {
+                'id': 'summary-1',
+                'review_date': '2026-04-20',
+                'summary_text': '周报',
               },
-            ),
+            },
           ),
-        ),),
+        ),
+      )),
     );
+
+    // Tap to expand TIER2
+    await tester.tap(find.byType(InkWell).first);
+    await tester.pumpAndSettle();
 
     expect(find.text('去星图看'), findsNothing);
     expect(find.text('去错题本看'), findsNothing);
@@ -253,6 +277,11 @@ void main() {
     addTearDown(router.dispose);
 
     await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+
+    // Tap to expand TIER2 where the route button is
+    await tester.tap(find.byType(InkWell).first);
+    await tester.pumpAndSettle();
+
     await tester.tap(find.text('回到错题本看'));
     await tester.pumpAndSettle();
 

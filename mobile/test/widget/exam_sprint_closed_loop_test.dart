@@ -91,6 +91,8 @@ void main() {
         expect(find.byKey(const ValueKey('task-protocol-kind-chip')),
             findsOneWidget);
         expect(find.text('process_trace_card'), findsWidgets);
+
+        await tester.pump(const Duration(seconds: 35));
       },
     );
 
@@ -134,6 +136,8 @@ void main() {
         );
 
         expect(completedColor, isNot(initialColor));
+
+        await tester.pump(const Duration(seconds: 35));
       },
     );
 
@@ -169,6 +173,8 @@ void main() {
         expect(find.text('Aurora 两步帮扶'), findsNothing);
         expect(find.text(task.title), findsWidgets);
         expect(find.text('完成任务'), findsOneWidget);
+
+        await tester.pump(const Duration(seconds: 35));
       },
     );
 
@@ -191,6 +197,8 @@ void main() {
         expect(find.text('已为你精简今日计划'), findsOneWidget);
         expect(find.textContaining('1 个任务 / 35 分钟'), findsOneWidget);
         expect(find.text('compressed_recovery'), findsWidgets);
+
+        await tester.pump(const Duration(seconds: 35));
       },
     );
 
@@ -235,6 +243,8 @@ void main() {
         expect(find.text('已完成'), findsWidgets);
         expect(find.text('2026-05-01（已完成，7天冲刺）'), findsOneWidget);
         expect(find.text('掌握度 9%'), findsOneWidget);
+
+        await tester.pump(const Duration(seconds: 35));
       },
     );
   });

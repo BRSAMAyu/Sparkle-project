@@ -47,6 +47,13 @@ void main() {
           'haptic_feedback': true,
           'low_load_mode': false,
         },
+        'haptics_enabled': true,
+        'galaxy_accessibility_defaults': {
+          'screen_reader_enabled': false,
+          'reduce_motion': true,
+          'high_contrast': true,
+          'haptic_enabled': true,
+        },
       });
     });
 

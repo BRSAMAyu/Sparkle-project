@@ -44,7 +44,7 @@ void main() {
       ),
     );
 
-    expect(find.text('正在发送 3 条消息...'), findsOneWidget);
+    expect(find.text('正在发送 3 条排队消息...'), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
   });
 

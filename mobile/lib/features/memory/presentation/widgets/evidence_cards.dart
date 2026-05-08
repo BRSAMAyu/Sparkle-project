@@ -423,6 +423,17 @@ class _Tier1Summary extends StatelessWidget {
           ? '${I18nService.instance.isChinese ? '事件' : 'Event'}: $eventType'
           : context.l10n.memEvidenceRecord;
     }
+    final practiceOutcome = payload['practice_outcome'] as Map<String, dynamic>?;
+    if (practiceOutcome != null) {
+      final summary = practiceOutcome['summary']?.toString() ?? '';
+      final perf = practiceOutcome['review_performance']?.toString() ?? '';
+      final label = summary.isNotEmpty
+          ? summary
+          : perf.isNotEmpty
+              ? '${I18nService.instance.isChinese ? '练习结果' : 'Practice'}: $perf'
+              : '';
+      if (label.isNotEmpty) return label;
+    }
     final chatTurn = payload['chat_turn'] as Map<String, dynamic>?;
     if (chatTurn != null) {
       final role = chatTurn['role']?.toString() ?? '';
