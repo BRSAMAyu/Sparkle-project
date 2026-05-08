@@ -20,6 +20,8 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch, call
 from typing import Any
 
+from sqlalchemy.exc import OperationalError
+
 from app.services.cognitive_service import CognitiveService, _VECTOR_RUNTIME_ENABLED
 from app.models.cognitive import CognitiveFragment, BehaviorPattern, AnalysisStatus
 from app.core.event_bus import event_bus
@@ -305,6 +307,7 @@ class TestAnalyzeBehavior:
         target_fragment = fragments[0]
 
         with patch("app.services.cognitive_service.settings.ANALYSIS_SYNC_ON_EVENT", False), \
+             patch("app.services.cognitive_service._VECTOR_RUNTIME_ENABLED", False), \
              patch("app.services.cognitive_service.AnalyticsService.get_user_profile_summary", new_callable=AsyncMock, return_value="Test user summary"), \
              patch("app.services.cognitive_service.event_bus.publish", new_callable=AsyncMock), \
              patch("app.services.cognitive_service.SystemUpdateService") as mock_su:
@@ -400,6 +403,7 @@ class TestAnalyzeBehavior:
         target_fragment = fragments[0]
 
         with patch("app.services.cognitive_service.settings.ANALYSIS_SYNC_ON_EVENT", False), \
+             patch("app.services.cognitive_service._VECTOR_RUNTIME_ENABLED", False), \
              patch("app.services.cognitive_service.AnalyticsService.get_user_profile_summary", new_callable=AsyncMock, return_value="Test user summary"), \
              patch("app.services.cognitive_service.event_bus.publish", new_callable=AsyncMock), \
              patch("app.services.cognitive_service.SystemUpdateService") as mock_su:
@@ -541,12 +545,13 @@ class TestAnalyzeBehavior:
         service = CognitiveService(db_session)
 
         # 设置 LLM 失败
-        mock_llm_service.chat.side_effect = Exception("LLM service unavailable")
+        mock_llm_service.chat.side_effect = RuntimeError("LLM service unavailable")
 
         target_fragment = fragments[0]
 
         # 分析应该返回错误而不是抛出异常
         with patch("app.services.cognitive_service.settings.ANALYSIS_SYNC_ON_EVENT", False), \
+             patch("app.services.cognitive_service._VECTOR_RUNTIME_ENABLED", False), \
              patch("app.services.cognitive_service.AnalyticsService.get_user_profile_summary", new_callable=AsyncMock, return_value="Test user summary"), \
              patch("app.services.cognitive_service.event_bus.publish", new_callable=AsyncMock), \
              patch("app.services.cognitive_service.SystemUpdateService") as mock_su:
@@ -810,8 +815,12 @@ class TestVectorEmbeddingFallback:
                     nonlocal call_count
                     call_count += 1
                     if call_count == 1:
-                        # 模拟 pgvector 错误
-                        raise Exception('type "vector" does not exist')
+                        # 模拟 pgvector 错误 (code catches SQLAlchemyError)
+                        raise OperationalError(
+                            "INSERT INTO cognitive_fragments ...",
+                            {},
+                            Exception('type "vector" does not exist'),
+                        )
                     await original_commit()
 
                 with patch.object(db_session, 'commit', side_effect=failing_commit), \
@@ -1086,6 +1095,7 @@ class TestEventPublishing:
         target_fragment = fragments[0]
 
         with patch("app.services.cognitive_service.settings.ANALYSIS_SYNC_ON_EVENT", False), \
+             patch("app.services.cognitive_service._VECTOR_RUNTIME_ENABLED", False), \
              patch("app.services.cognitive_service.AnalyticsService.get_user_profile_summary", new_callable=AsyncMock, return_value="Test user summary"):
             await service.analyze_behavior(
                 user_id=test_user.id,

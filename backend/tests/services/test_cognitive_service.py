@@ -2,6 +2,8 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
+from sqlalchemy.exc import OperationalError
+
 import app.services.cognitive_service as cognitive_service_module
 from app.services.cognitive_service import CognitiveService
 from app.models.cognitive import CognitiveFragment, BehaviorPattern
@@ -125,7 +127,7 @@ async def test_create_fragment_falls_back_when_vector_runtime_unavailable(monkey
     result_select = MagicMock()
     result_select.scalar_one.return_value = stored_fragment
     mock_db.execute.side_effect = [result_insert, result_select]
-    mock_db.commit.side_effect = [RuntimeError("vector.so unavailable"), None]
+    mock_db.commit.side_effect = [OperationalError("INSERT", {}, Exception("vector.so unavailable")), None]
 
     with patch(
         "app.services.cognitive_service.embedding_service.get_embedding",

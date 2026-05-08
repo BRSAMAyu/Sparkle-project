@@ -2452,7 +2452,7 @@ async def copy_group_file_to_library(
                 user_id=result.notify_owner_id,
                 title="你的文档被保存了",
                 content=f"{copier_name} 已将你的文档复制到个人资料库",
-                notification_type="social",
+                notification_type="document_copied",
                 data={
                     "source": "group_file",
                     "group_id": str(group_id),

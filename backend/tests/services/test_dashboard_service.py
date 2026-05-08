@@ -207,10 +207,10 @@ async def test_get_spine_status_returns_band_data():
         mock_cache.redis = MagicMock()
         mock_growth_cls.return_value.build_snapshot = AsyncMock(return_value={})
 
-        with patch("app.signals.spine_orchestrator.SpineOrchestrator") as mock_orch_cls:
+        with patch("app.signals.spine_orchestrator.get_spine_orchestrator") as mock_get_orch:
             mock_orch = AsyncMock()
             mock_orch.get_status_band_summary = AsyncMock(return_value=mock_summary)
-            mock_orch_cls.return_value = mock_orch
+            mock_get_orch.return_value = mock_orch
 
             result = await service.get_dashboard_status(user_id)
 

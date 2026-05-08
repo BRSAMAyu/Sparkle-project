@@ -45,7 +45,7 @@ from app.models.user import User
 from app.services.accountability_notification_service import (
     accountability_notification_service,
 )
-from app.services.notification_service import NotificationService
+from app.services.notification_push_service import NotificationPushService
 from app.services.personalization.preference_service import PreferenceService
 from app.services.profile_context_service import ProfileContextService
 
@@ -598,15 +598,15 @@ async def test_send_friend_request_creates_notification_for_target(
 
     recorded: dict[str, object] = {}
 
-    async def _fake_notification_create(db, user_id, obj_in, push_via_websocket=True):
+    async def _fake_create_and_push(self, user_id, title, content, notification_type="system", data=None, priority="normal"):
         recorded["user_id"] = user_id
-        recorded["title"] = obj_in.title
-        recorded["content"] = obj_in.content
-        recorded["type"] = obj_in.type
-        recorded["data"] = obj_in.data
+        recorded["title"] = title
+        recorded["content"] = content
+        recorded["type"] = notification_type
+        recorded["data"] = data
         return None
 
-    monkeypatch.setattr(NotificationService, "create", staticmethod(_fake_notification_create))
+    monkeypatch.setattr(NotificationPushService, "create_and_push", _fake_create_and_push)
 
     state["current_user"] = requester
     async with AsyncClient(
