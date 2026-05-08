@@ -30,16 +30,46 @@ class MessageDetailView extends StatefulWidget {
 class _MessageDetailViewState extends State<MessageDetailView> {
   final ScrollController _scrollController = ScrollController();
   bool _hasScrolledToBottom = false;
+  bool _canScroll = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_updateScrollAffordance);
+  }
 
   @override
   void dispose() {
+    _scrollController.removeListener(_updateScrollAffordance);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _updateScrollAffordance() {
+    if (!_scrollController.hasClients) {
+      return;
+    }
+    final position = _scrollController.position;
+    final canScroll = position.maxScrollExtent > 1;
+    final hasScrolledToBottom =
+        !canScroll || position.pixels >= position.maxScrollExtent - 1;
+    if (canScroll != _canScroll ||
+        hasScrolledToBottom != _hasScrolledToBottom) {
+      setState(() {
+        _canScroll = canScroll;
+        _hasScrolledToBottom = hasScrolledToBottom;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final isUserMessage = widget.message.role == MessageRole.user;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _updateScrollAffordance();
+      }
+    });
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -110,14 +140,8 @@ class _MessageDetailViewState extends State<MessageDetailView> {
                                 child: Stack(
                                   children: [
                                     NotificationListener<ScrollNotification>(
-                                      onNotification: (notification) {
-                                        if (notification is ScrollEndNotification) {
-                                          setState(() {
-                                            _hasScrolledToBottom = _scrollController.hasClients &&
-                                                _scrollController.position.pixels >=
-                                                    _scrollController.position.maxScrollExtent - 1;
-                                          });
-                                        }
+                                      onNotification: (_) {
+                                        _updateScrollAffordance();
                                         return false;
                                       },
                                       child: SingleChildScrollView(
@@ -135,7 +159,7 @@ class _MessageDetailViewState extends State<MessageDetailView> {
                                       ),
                                     ),
                                     // Bottom gradient — visible until scrolled to bottom
-                                    if (!_hasScrolledToBottom)
+                                    if (_canScroll && !_hasScrolledToBottom)
                                       Positioned(
                                         bottom: 0,
                                         left: 0,
@@ -147,8 +171,13 @@ class _MessageDetailViewState extends State<MessageDetailView> {
                                               begin: Alignment.topCenter,
                                               end: Alignment.bottomCenter,
                                               colors: [
-                                                Theme.of(context).colorScheme.surface.withValues(alpha: 0),
-                                                Theme.of(context).colorScheme.surface,
+                                                Theme.of(context)
+                                                    .colorScheme
+                                                    .surface
+                                                    .withValues(alpha: 0),
+                                                Theme.of(context)
+                                                    .colorScheme
+                                                    .surface,
                                               ],
                                             ),
                                           ),

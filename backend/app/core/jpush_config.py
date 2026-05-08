@@ -7,13 +7,13 @@ are not available.
 
 JPush REST API v3: https://docs.jiguang.cn/jpush/server/push/rest_api_v3_push
 """
+
 from __future__ import annotations
 
 from functools import lru_cache
 from typing import Literal
 
 from loguru import logger
-from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -21,17 +21,17 @@ class JPushSettings(BaseSettings):
     """JPush configuration from environment variables"""
 
     # JPush Application Credentials
-    JPUSH_APP_KEY: str | None = Field(default=None, env="JPUSH_APP_KEY")
-    JPUSH_MASTER_SECRET: str | None = Field(default=None, env="JPUSH_MASTER_SECRET")
+    JPUSH_APP_KEY: str | None = None
+    JPUSH_MASTER_SECRET: str | None = None
 
     # JPush Region: cn (default), us, sg (Singapore)
-    JPUSH_REGION: Literal["cn", "us", "sg"] = Field(default="cn", env="JPUSH_REGION")
+    JPUSH_REGION: Literal["cn", "us", "sg"] = "cn"
 
     # Enable/Disable JPush
-    JPUSH_ENABLED: bool = Field(default=True, env="JPUSH_ENABLED")
+    JPUSH_ENABLED: bool = True
 
     # API endpoints for different regions
-    JPUSH_API_URL: str = Field(default="", env="JPUSH_API_URL")
+    JPUSH_API_URL: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env",

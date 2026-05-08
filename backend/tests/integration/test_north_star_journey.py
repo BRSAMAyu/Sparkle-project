@@ -626,7 +626,6 @@ class TestNorthStarJourney:
         monkeypatch,
     ):
         monkeypatch.setattr("app.core.websocket.get_ws_manager", lambda: AsyncMock())
-        monkeypatch.setattr("app.services.profile_write_service.ProfileWriteService.set_explicit_preferences", AsyncMock(return_value=None))
         user = await _create_user(db_session, "journey_review")
         user_id = user.id
         exam_date = date(2026, 4, 23)
@@ -747,6 +746,8 @@ class TestNorthStarJourney:
             ]
         )
         await db_session.commit()
+        # Keep a reference to the plan's id before service calls
+        plan_id = plan.id
 
         review_request = journey_models.review_request.model_copy(update={"plan_id": plan.id})
         response = await ExamSprintReviewService(db_session).submit_post_exam_review(
@@ -918,17 +919,19 @@ class TestNorthStarJourney:
             event={"achievement_id": "30_day_learner", "achievement_name": "30 天学习者"},
         )
 
-        stored = (
-            await db_session.execute(select(Notification).where(Notification.id == notification.id))
-        ).scalar_one()
+        stored = (await db_session.execute(select(Notification).where(Notification.id == notification.id))).scalar_one()
         unlocked = (
-            await db_session.execute(
-                select(UserAchievement).where(
-                    UserAchievement.user_id == user.id,
-                    UserAchievement.achievement_id == "30_day_learner",
+            (
+                await db_session.execute(
+                    select(UserAchievement).where(
+                        UserAchievement.user_id == user.id,
+                        UserAchievement.achievement_id == "30_day_learner",
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
         assert notification is not None
         assert notification.type == "milestone_notification"

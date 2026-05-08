@@ -67,40 +67,65 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
     );
   }
 
-  Widget _buildContent(BuildContext context, WidgetRef ref, GroupInfo group) =>
-      ContentConstraint(
-        child: CustomScrollView(
-          physics: const BouncingScrollPhysics(),
-          slivers: [
-            _buildAppBar(context, ref, group),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  DS.spacing16,
-                  DS.spacing16,
-                  DS.spacing16,
-                  DS.spacing12,
+  Widget _buildContent(BuildContext context, WidgetRef ref, GroupInfo group) {
+    final isMember = group.myRole != null;
+    return ContentConstraint(
+      child: Stack(
+        children: [
+          CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              _buildAppBar(context, ref, group),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    DS.spacing16,
+                    DS.spacing16,
+                    DS.spacing16,
+                    DS.spacing12,
+                  ),
+                  child: _GroupDetailTabs(
+                    selectedTab: _selectedTab,
+                    onChanged: (tab) => setState(() => _selectedTab = tab),
+                  ),
                 ),
-                child: _GroupDetailTabs(
-                  selectedTab: _selectedTab,
-                  onChanged: (tab) => setState(() => _selectedTab = tab),
+              ),
+              if (_selectedTab == _GroupDetailTab.overview)
+                SliverToBoxAdapter(
+                  child: _buildOverviewTab(context, ref, group),
+                )
+              else
+                SliverFillRemaining(
+                  hasScrollBody: true,
+                  child: GroupKnowledgeBaseView(
+                    groupId: widget.groupId,
+                    currentUserRole: group.myRole,
+                  ),
+                ),
+              if (isMember)
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: 88),
+                ),
+            ],
+          ),
+          if (isMember)
+            Positioned(
+              left: DS.spacing16,
+              right: DS.spacing16,
+              bottom: DS.spacing16,
+              child: SafeArea(
+                child: SparkleButton.primary(
+                  label: context.l10n.gdEnterChat,
+                  icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                  onPressed: () =>
+                      unawaited(context.push('/chat/group/${widget.groupId}')),
                 ),
               ),
             ),
-            if (_selectedTab == _GroupDetailTab.overview)
-              SliverToBoxAdapter(
-                child: _buildOverviewTab(context, ref, group),
-              )
-            else
-              SliverFillRemaining(
-                child: GroupKnowledgeBaseView(
-                  groupId: widget.groupId,
-                  currentUserRole: group.myRole,
-                ),
-              ),
-          ],
-        ),
-      );
+        ],
+      ),
+    );
+  }
 
   SliverAppBar _buildAppBar(
       BuildContext context, WidgetRef ref, GroupInfo group) {
@@ -204,234 +229,214 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
     final isMember = group.myRole != null;
     final theme = Theme.of(context);
 
-    return Stack(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(DS.spacing16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (group.isSprint && group.daysRemaining != null)
-                Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          DS.error.withValues(alpha: 0.1),
-                          DS.surfacePrimary,
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: DS.error.withValues(alpha: 0.16),
-                      ),
-                    ),
-                    child: Text(
-                      context.l10n.gdSprintCountdown(group.daysRemaining ?? 0),
-                      style: TextStyle(
-                        color: DS.error,
-                        fontWeight: DS.fontWeightBold,
-                      ),
-                    ),
+    return Padding(
+      padding: const EdgeInsets.all(DS.spacing16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (group.isSprint && group.daysRemaining != null)
+            Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      DS.error.withValues(alpha: 0.1),
+                      DS.surfacePrimary,
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: DS.error.withValues(alpha: 0.16),
                   ),
                 ),
-              const SizedBox(height: DS.md),
-              TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.0, end: 1.0),
-                duration: const Duration(milliseconds: 800),
-                curve: Curves.easeOutBack,
-                builder: (context, value, child) => Transform.scale(
-                  scale: value,
-                  child: Opacity(opacity: value, child: child),
-                ),
-                child: Center(
-                  child: BonfireWidget(
-                    level: (group.totalFlamePower ~/ 1000 + 1).clamp(1, 5),
-                    size: 100,
-                    showCrackleToggle: true,
+                child: Text(
+                  context.l10n.gdSprintCountdown(group.daysRemaining ?? 0),
+                  style: TextStyle(
+                    color: DS.error,
+                    fontWeight: DS.fontWeightBold,
                   ),
                 ),
               ),
-              const SizedBox(height: DS.lg),
-              SparkleStaggerItem(
-                index: 0,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _buildStatCard(
-                        context,
-                        context.l10n.gdMembers,
-                        '${group.memberCount}/${group.maxMembers}',
-                        Icons.people,
-                      ),
-                    ),
-                    const SizedBox(width: DS.md),
-                    Expanded(
-                      child: _buildStatCard(
-                        context,
-                        context.l10n.gdFlamePower,
-                        '${group.totalFlamePower}',
-                        Icons.local_fire_department,
-                      ),
-                    ),
-                    const SizedBox(width: DS.md),
-                    Expanded(
-                      child: _buildStatCard(
-                        context,
-                        context.l10n.gdTodayCheckin,
-                        '${group.todayCheckinCount}',
-                        Icons.check_circle,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: DS.lg),
-              Text(
-                context.l10n.gdAbout,
-                style: theme.textTheme.titleLarge
-                    ?.copyWith(fontWeight: DS.fontWeightBold),
-              ),
-              const SizedBox(height: DS.sm),
-              Text(
-                group.description ?? context.l10n.gdNoDescription,
-                style: theme.textTheme.bodyMedium
-                    ?.copyWith(color: DS.textSecondary, height: 1.6),
-              ),
-              const SizedBox(height: DS.md),
-              if (group.focusTags.isNotEmpty) ...[
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: group.focusTags
-                      .map(
-                        (tag) => Chip(
-                          label: Text(tag),
-                          backgroundColor: Color.alphaBlend(
-                            DS.info.withValues(alpha: 0.05),
-                            DS.surfacePrimary,
-                          ),
-                          side: BorderSide(
-                            color: DS.border.withValues(alpha: 0.45),
-                          ),
-                          labelStyle: TextStyle(color: DS.textPrimary),
-                        ),
-                      )
-                      .toList(),
-                ),
-                const SizedBox(height: DS.lg),
-              ],
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      context.l10n.gdAnnouncement,
-                      style: theme.textTheme.titleLarge
-                          ?.copyWith(fontWeight: DS.fontWeightBold),
-                    ),
-                  ),
-                  if (group.isAdmin)
-                    SparkleIconButton(
-                      icon: const Icon(Icons.edit_outlined, size: 18),
-                      onPressed: () => _showEditAnnouncementDialog(
-                        context,
-                        ref,
-                        group,
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: DS.sm),
-              Text(
-                group.announcement?.isNotEmpty ?? false
-                    ? group.announcement!
-                    : context.l10n.gdNoAnnouncement,
-                style: theme.textTheme.bodyMedium
-                    ?.copyWith(color: DS.textSecondary, height: 1.6),
-              ),
-              const SizedBox(height: DS.lg),
-              if (isMember) ...[
-                Row(
-                  children: [
-                    Expanded(
-                      child: SparkleButton.secondary(
-                        label: context.l10n.gdTasks,
-                        icon: const Icon(Icons.task_alt, size: 18),
-                        onPressed: () => unawaited(context
-                            .push('/community/groups/${widget.groupId}/tasks')),
-                      ),
-                    ),
-                    const SizedBox(width: DS.md),
-                    Expanded(
-                      child: SparkleButton.secondary(
-                        label: context.l10n.gdMembers,
-                        icon: const Icon(Icons.people_outline, size: 18),
-                        onPressed: () => unawaited(
-                          context.push(
-                            '/community/groups/${widget.groupId}/members?name=${Uri.encodeComponent(group.name)}',
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: DS.md),
-                SparkleButton.secondary(
-                  label: context.l10n.gdOpenKnowledge,
-                  icon: const Icon(Icons.auto_stories_outlined, size: 18),
-                  onPressed: () =>
-                      setState(() => _selectedTab = _GroupDetailTab.knowledgeBase),
-                ),
-              ] else ...[
-                SparkleButton.primary(
-                  label: context.l10n.gdJoinGroup,
-                  onPressed: () async {
-                    unawaited(
-                      SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
-                    );
-                    try {
-                      await ref
-                          .read(groupDetailProvider(widget.groupId).notifier)
-                          .joinGroup();
-                      if (context.mounted) {
-                        AppFeedback.success(
-                            context,
-                            context.l10n.communityWelcomeToGroup);
-                      }
-                    } catch (e) {
-                      if (context.mounted) {
-                        AppFeedback.error(
-                            context, context.l10n.gdJoinFailed(e.toString()));
-                      }
-                    }
-                  },
-                ),
-              ],
-              const SizedBox(height: 80),
-            ],
-          ),
-        ),
-        if (isMember)
-          Positioned(
-            left: DS.spacing16,
-            right: DS.spacing16,
-            bottom: DS.spacing16,
-            child: SafeArea(
-              child: SparkleButton.primary(
-                label: context.l10n.gdEnterChat,
-                icon: const Icon(Icons.chat_bubble_outline, size: 18),
-                onPressed: () =>
-                    unawaited(context.push('/chat/group/${widget.groupId}')),
+            ),
+          const SizedBox(height: DS.md),
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.0, end: 1.0),
+            duration: const Duration(milliseconds: 800),
+            curve: Curves.easeOutBack,
+            builder: (context, value, child) => Transform.scale(
+              scale: value,
+              child: Opacity(opacity: value, child: child),
+            ),
+            child: Center(
+              child: BonfireWidget(
+                level: (group.totalFlamePower ~/ 1000 + 1).clamp(1, 5),
+                size: 100,
+                showCrackleToggle: true,
               ),
             ),
           ),
-      ],
+          const SizedBox(height: DS.lg),
+          SparkleStaggerItem(
+            index: 0,
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildStatCard(
+                    context,
+                    context.l10n.gdMembers,
+                    '${group.memberCount}/${group.maxMembers}',
+                    Icons.people,
+                  ),
+                ),
+                const SizedBox(width: DS.md),
+                Expanded(
+                  child: _buildStatCard(
+                    context,
+                    context.l10n.gdFlamePower,
+                    '${group.totalFlamePower}',
+                    Icons.local_fire_department,
+                  ),
+                ),
+                const SizedBox(width: DS.md),
+                Expanded(
+                  child: _buildStatCard(
+                    context,
+                    context.l10n.gdTodayCheckin,
+                    '${group.todayCheckinCount}',
+                    Icons.check_circle,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: DS.lg),
+          Text(
+            context.l10n.gdAbout,
+            style: theme.textTheme.titleLarge
+                ?.copyWith(fontWeight: DS.fontWeightBold),
+          ),
+          const SizedBox(height: DS.sm),
+          Text(
+            group.description ?? context.l10n.gdNoDescription,
+            style: theme.textTheme.bodyMedium
+                ?.copyWith(color: DS.textSecondary, height: 1.6),
+          ),
+          const SizedBox(height: DS.md),
+          if (group.focusTags.isNotEmpty) ...[
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: group.focusTags
+                  .map(
+                    (tag) => Chip(
+                      label: Text(tag),
+                      backgroundColor: Color.alphaBlend(
+                        DS.info.withValues(alpha: 0.05),
+                        DS.surfacePrimary,
+                      ),
+                      side: BorderSide(
+                        color: DS.border.withValues(alpha: 0.45),
+                      ),
+                      labelStyle: TextStyle(color: DS.textPrimary),
+                    ),
+                  )
+                  .toList(),
+            ),
+            const SizedBox(height: DS.lg),
+          ],
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  context.l10n.gdAnnouncement,
+                  style: theme.textTheme.titleLarge
+                      ?.copyWith(fontWeight: DS.fontWeightBold),
+                ),
+              ),
+              if (group.isAdmin)
+                SparkleIconButton(
+                  icon: const Icon(Icons.edit_outlined, size: 18),
+                  onPressed: () => _showEditAnnouncementDialog(
+                    context,
+                    ref,
+                    group,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: DS.sm),
+          Text(
+            group.announcement?.isNotEmpty ?? false
+                ? group.announcement!
+                : context.l10n.gdNoAnnouncement,
+            style: theme.textTheme.bodyMedium
+                ?.copyWith(color: DS.textSecondary, height: 1.6),
+          ),
+          const SizedBox(height: DS.lg),
+          if (isMember) ...[
+            Row(
+              children: [
+                Expanded(
+                  child: SparkleButton.secondary(
+                    label: context.l10n.gdTasks,
+                    icon: const Icon(Icons.task_alt, size: 18),
+                    onPressed: () => unawaited(context
+                        .push('/community/groups/${widget.groupId}/tasks')),
+                  ),
+                ),
+                const SizedBox(width: DS.md),
+                Expanded(
+                  child: SparkleButton.secondary(
+                    label: context.l10n.gdMembers,
+                    icon: const Icon(Icons.people_outline, size: 18),
+                    onPressed: () => unawaited(
+                      context.push(
+                        '/community/groups/${widget.groupId}/members?name=${Uri.encodeComponent(group.name)}',
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: DS.md),
+            SparkleButton.secondary(
+              label: context.l10n.gdOpenKnowledge,
+              icon: const Icon(Icons.auto_stories_outlined, size: 18),
+              onPressed: () =>
+                  setState(() => _selectedTab = _GroupDetailTab.knowledgeBase),
+            ),
+          ] else ...[
+            SparkleButton.primary(
+              label: context.l10n.gdJoinGroup,
+              onPressed: () async {
+                unawaited(
+                  SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
+                );
+                try {
+                  await ref
+                      .read(groupDetailProvider(widget.groupId).notifier)
+                      .joinGroup();
+                  if (context.mounted) {
+                    AppFeedback.success(
+                        context, context.l10n.communityWelcomeToGroup);
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    AppFeedback.error(
+                        context, context.l10n.gdJoinFailed(e.toString()));
+                  }
+                }
+              },
+            ),
+          ],
+        ],
+      ),
     );
   }
 

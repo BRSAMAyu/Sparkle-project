@@ -233,6 +233,12 @@ class ExamSprintReviewService:
         await self.db.commit()
         await self.db.refresh(archived_plan)
 
+        # Capture plan fields before any service commits detach the plan instance
+        plan_subject = archived_plan.subject
+        plan_target_date = archived_plan.target_date
+        plan_name = archived_plan.name
+        plan_id = archived_plan.id
+
         final_summary = await self._build_summary(user_id=user_id, plan=archived_plan)
         persistent_weak_nodes = self._identify_persistent_weak_nodes(plan=archived_plan, request=request)
         await self._apply_persistent_weak_node_mastery_adjustments(
@@ -251,6 +257,10 @@ class ExamSprintReviewService:
         await self._record_north_star_post_exam_metrics(
             user_id=user_id,
             plan=archived_plan,
+            plan_subject=plan_subject,
+            plan_target_date=plan_target_date,
+            plan_name=plan_name,
+            plan_id=plan_id,
             request=request,
             review_id=review_id,
             summary=final_summary,
@@ -439,7 +449,9 @@ class ExamSprintReviewService:
         weakest_points = []
         weak_chapters = metadata.get("exam_sprint_intake")
         if isinstance(weak_chapters, dict):
-            weakest_points = [self._strip(item) for item in weak_chapters.get("weak_chapters") or [] if self._strip(item)]
+            weakest_points = [
+                self._strip(item) for item in weak_chapters.get("weak_chapters") or [] if self._strip(item)
+            ]
 
         if days_total and progress > 0:
             proud_nodes = [f"已推进 {max(1, round(progress * days_total))} / {days_total} 天"]
@@ -469,7 +481,9 @@ class ExamSprintReviewService:
     async def _count_mastered_nodes_for_active_plan(self, user_id: UUID) -> int:
         """Count user nodes with mastery >= threshold (60)."""
         result = await self.db.execute(
-            select(func.count()).select_from(UserNodeStatus).where(
+            select(func.count())
+            .select_from(UserNodeStatus)
+            .where(
                 UserNodeStatus.user_id == user_id,
                 UserNodeStatus.mastery_score >= self.MASTERY_COVERAGE_THRESHOLD,
             )
@@ -555,7 +569,10 @@ class ExamSprintReviewService:
 
         logger.info(
             "Sprint auto-archived: plan_id={} user_id={} tasks={}/{}",
-            plan_id, user_id, task_stats.completed, task_stats.total,
+            plan_id,
+            user_id,
+            task_stats.completed,
+            task_stats.total,
         )
         return True
 
@@ -568,7 +585,19 @@ class ExamSprintReviewService:
         review_id: str,
         summary: SprintSummaryResponse,
         occurred_at: datetime,
+        plan_subject: str | None = None,
+        plan_target_date: Any = None,
+        plan_name: str | None = None,
+        plan_id: UUID | None = None,
     ) -> None:
+        # Use pre-captured values if provided, otherwise access plan attributes
+        # (plan attributes may be detached after service commits)
+        subject = plan_subject if plan_subject is not None else plan.subject
+        target_date = plan_target_date if plan_target_date is not None else plan.target_date
+        # Use pre-captured plan_id if provided, otherwise fall back to plan.id
+        # (plan may be detached which causes lazy-load errors)
+        effective_plan_id = plan_id if plan_id is not None else plan.id
+
         passed = bool(request.exam_passed) if request.exam_passed is not None else int(request.result_rating or 0) >= 3
         payload = {
             "review_id": review_id,
@@ -579,19 +608,19 @@ class ExamSprintReviewService:
             "helpful_features": [item.value for item in request.helpful_features],
             "task_completion_rate": summary.task_stats.completion_rate,
             "score_delta": summary.score_stats.delta,
-            "subject": plan.subject,
-            "exam_date": plan.target_date.isoformat() if plan.target_date else None,
+            "subject": subject,
+            "exam_date": target_date.isoformat() if target_date else None,
         }
         try:
             await NorthStarMetricsService(self.db).record_exam_outcome(
                 user_id=user_id,
-                plan_id=plan.id,
+                plan_id=effective_plan_id,
                 passed=passed,
                 source="exam_sprint_post_exam_review",
                 occurred_at=occurred_at,
                 payload=payload,
             )
-            tasks = await self._load_plan_tasks(plan.id)
+            tasks = await self._load_plan_tasks(effective_plan_id)
             if self._has_completed_seven_day_sprint(tasks):
                 await self._record_north_star_seven_day_completion(
                     user_id=user_id,
@@ -601,7 +630,7 @@ class ExamSprintReviewService:
                     occurred_at=occurred_at,
                 )
         except Exception as exc:
-            logger.warning("North Star post-exam metric recording failed for plan {}: {}", plan.id, exc)
+            logger.warning("North Star post-exam metric recording failed for plan {}: {}", effective_plan_id, exc)
 
     async def _record_north_star_seven_day_completion(
         self,

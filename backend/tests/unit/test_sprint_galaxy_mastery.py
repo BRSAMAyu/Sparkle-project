@@ -80,15 +80,14 @@ async def test_task_completion_increments_sprint_pack_node_mastery(db_session, m
     monkeypatch.setattr("app.services.task_service.event_bus_reliable.publish", _noop)
     monkeypatch.setattr("app.services.task_service.publish_srl_event", _noop)
 
+    await TaskService.start(db_session, task)
     await TaskService.complete(db_session, task, actual_minutes=25)
 
     summary = await GalaxyService(db_session).get_sprint_mastery_summary(
         user.id,
         ["cn.tcp_flow_control"],
     )
-    completed_task = (
-        await db_session.execute(select(Task).where(Task.id == task.id))
-    ).scalar_one()
+    completed_task = (await db_session.execute(select(Task).where(Task.id == task.id))).scalar_one()
 
     assert completed_task.status == TaskStatus.COMPLETED
     assert summary["cn.tcp_flow_control"] == pytest.approx(0.25)
@@ -183,6 +182,7 @@ async def test_four_sprint_pack_tasks_reach_mastery_100(db_session, monkeypatch)
 
     for task in tasks:
         await db_session.refresh(task)
+        await TaskService.start(db_session, task)
         await TaskService.complete(db_session, task, actual_minutes=25)
 
     service = GalaxyService(db_session)

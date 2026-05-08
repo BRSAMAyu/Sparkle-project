@@ -122,6 +122,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
 
   bool _showHeart = false;
   bool _isPressed = false;
+
   /// 0 = compact, 1 = comfortable, 2 = full
   final Map<String, int> _messageHeightState = <String, int>{};
 
@@ -1058,11 +1059,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                         LayoutBuilder(
                                           builder: (context, constraints) {
                                             // Calculate max height based on screen size
-                                            final maxHeight =
+                                            final screenHeight =
                                                 MediaQuery.of(context)
-                                                        .size
-                                                        .height *
-                                                    0.5;
+                                                    .size
+                                                    .height;
                                             final contentWidget =
                                                 SparkleMarkdown(
                                               content: _content,
@@ -1095,21 +1095,17 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                                     .toString();
                                             // Three-state: 0=compact, 1=comfortable, 2=full
                                             final heightState =
-                                                _messageHeightState[messageKey] ?? 0;
+                                                _messageHeightState[
+                                                        messageKey] ??
+                                                    0;
                                             final compactHeight =
-                                                min(maxHeight, 220.0);
+                                                min(screenHeight * 0.35, 220.0);
                                             final comfortableHeight =
-                                                min(maxHeight, 350.0);
-                                            final constrainedHeight =
-                                                heightState == 0
-                                                    ? compactHeight
-                                                    : heightState == 1
-                                                        ? comfortableHeight
-                                                        : maxHeight;
+                                                min(screenHeight * 0.55, 350.0);
                                             final isFull = heightState == 2;
                                             final toggleLabel = heightState == 2
-                                                    ? S.chatBubbleCollapse
-                                                    : S.chatBubbleReadMore;
+                                                ? S.chatBubbleCollapse
+                                                : S.chatBubbleReadMore;
 
                                             final animatedContent =
                                                 AnimatedSize(
@@ -1128,32 +1124,40 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                                       mainAxisSize:
                                                           MainAxisSize.min,
                                                       children: [
-                                                        ConstrainedBox(
-                                                          constraints:
-                                                              BoxConstraints(
-                                                            maxHeight: constrainedHeight,
-                                                          ),
-                                                          child: Stack(
-                                                            children: [
-                                                              SingleChildScrollView(
-                                                            physics: isFull
-                                                                ? const ClampingScrollPhysics()
-                                                                : const NeverScrollableScrollPhysics(),
-                                                            child:
-                                                                contentWidget,
-                                                              ),
-                                                              // Gradient fade when not fully expanded
-                                                              if (!isFull)
+                                                        if (isFull)
+                                                          contentWidget
+                                                        else
+                                                          ConstrainedBox(
+                                                            constraints:
+                                                                BoxConstraints(
+                                                              maxHeight: heightState ==
+                                                                      0
+                                                                  ? compactHeight
+                                                                  : comfortableHeight,
+                                                            ),
+                                                            child: Stack(
+                                                              children: [
+                                                                SingleChildScrollView(
+                                                                  physics:
+                                                                      const NeverScrollableScrollPhysics(),
+                                                                  child:
+                                                                      contentWidget,
+                                                                ),
                                                                 Positioned(
                                                                   bottom: 0,
                                                                   left: 0,
                                                                   right: 0,
                                                                   height: 40,
-                                                                  child: DecoratedBox(
-                                                                    decoration: BoxDecoration(
-                                                                      gradient: LinearGradient(
-                                                                        begin: Alignment.topCenter,
-                                                                        end: Alignment.bottomCenter,
+                                                                  child:
+                                                                      DecoratedBox(
+                                                                    decoration:
+                                                                        BoxDecoration(
+                                                                      gradient:
+                                                                          LinearGradient(
+                                                                        begin: Alignment
+                                                                            .topCenter,
+                                                                        end: Alignment
+                                                                            .bottomCenter,
                                                                         colors: [
                                                                           isUser
                                                                               ? DS.chatBubbleUser.withValues(alpha: 0)
@@ -1166,9 +1170,9 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                                                     ),
                                                                   ),
                                                                 ),
-                                                            ],
+                                                              ],
+                                                            ),
                                                           ),
-                                                        ),
                                                         const SizedBox(
                                                           height: DS.spacing8,
                                                         ),
@@ -1179,15 +1183,25 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                                           child:
                                                               TextButton.icon(
                                                             onPressed: () {
-                                                              unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+                                                              unawaited(SensoryFeedbackService.emit(
+                                                                  SensoryFeedbackEvent
+                                                                      .selection));
                                                               setState(() {
-                                                                _messageHeightState[messageKey] =
-                                                                    (heightState + 1) % 3 == 0
+                                                                _messageHeightState[
+                                                                        messageKey] =
+                                                                    (heightState + 1) %
+                                                                                3 ==
+                                                                            0
                                                                         ? 0
-                                                                        : heightState + 1;
+                                                                        : heightState +
+                                                                            1;
                                                                 // If cycling back to 0, remove to save memory
-                                                                if (_messageHeightState[messageKey] == 0) {
-                                                                  _messageHeightState.remove(messageKey);
+                                                                if (_messageHeightState[
+                                                                        messageKey] ==
+                                                                    0) {
+                                                                  _messageHeightState
+                                                                      .remove(
+                                                                          messageKey);
                                                                 }
                                                               });
                                                             },
@@ -1270,12 +1284,13 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                       ),
                                       _buildAccessoryDisclosure(
                                         id: 'source_explanation_${chatMessage?.id}',
-                                        label: context.l10n.chatActionTitleSourceSummary,
+                                        label: context
+                                            .l10n.chatActionTitleSourceSummary,
                                         icon: Icons.fact_check_rounded,
                                         child: SourceExplanationCard(
-                                          rawMetadata:
-                                              (widget.message as ChatMessageModel)
-                                                  .rawMetadata,
+                                          rawMetadata: (widget.message
+                                                  as ChatMessageModel)
+                                              .rawMetadata,
                                         ),
                                       ),
                                     ],
@@ -1317,7 +1332,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                               // in a Wrap for compact horizontal layout when collapsed.
                               ..._buildAccessoryCluster(
                                 context,
-                                showAiSystemAccessories: showAiSystemAccessories,
+                                showAiSystemAccessories:
+                                    showAiSystemAccessories,
                                 showAgentSwitching: showAgentSwitching,
                                 chatPureMode: chatPureMode,
                                 isUser: isUser,
@@ -1631,8 +1647,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     }
 
     // Prediction / theater preview
-    if (!chatPureMode && !isUser &&
-        predictionPreview != null && predictionPreview.isNotEmpty) {
+    if (!chatPureMode &&
+        !isUser &&
+        predictionPreview != null &&
+        predictionPreview.isNotEmpty) {
       disclosureItems.add(
         _buildAccessoryDisclosure(
           id: 'prediction_preview',
@@ -1649,8 +1667,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     }
 
     // Simulation preview
-    if (!chatPureMode && !isUser &&
-        simulationPreview != null && simulationPreview.isNotEmpty) {
+    if (!chatPureMode &&
+        !isUser &&
+        simulationPreview != null &&
+        simulationPreview.isNotEmpty) {
       disclosureItems.add(
         _buildAccessoryDisclosure(
           id: 'simulation_preview',
@@ -1667,8 +1687,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     }
 
     // Report preview
-    if (!chatPureMode && !isUser &&
-        reportPreview != null && reportPreview.isNotEmpty) {
+    if (!chatPureMode &&
+        !isUser &&
+        reportPreview != null &&
+        reportPreview.isNotEmpty) {
       disclosureItems.add(
         _buildAccessoryDisclosure(
           id: 'report_preview',
@@ -1685,8 +1707,11 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     }
 
     // Collaboration signature (no activity snapshots)
-    if (showAgentSwitching && !isUser && agentActivities.isEmpty &&
-        ((collaborationNarrative != null && collaborationNarrative.isNotEmpty) ||
+    if (showAgentSwitching &&
+        !isUser &&
+        agentActivities.isEmpty &&
+        ((collaborationNarrative != null &&
+                collaborationNarrative.isNotEmpty) ||
             agentsInvolved.isNotEmpty)) {
       disclosureItems.add(
         _buildAccessoryDisclosure(

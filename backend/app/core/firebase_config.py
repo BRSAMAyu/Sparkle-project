@@ -4,6 +4,7 @@ Firebase Admin SDK Configuration
 Initializes Firebase Admin SDK for Cloud Messaging (FCM) push notifications.
 Supports both FCM (Android/Web) and APNs (iOS) through Firebase.
 """
+
 from __future__ import annotations
 
 from functools import lru_cache
@@ -18,15 +19,13 @@ class FirebaseSettings(BaseSettings):
     """Firebase configuration from environment variables"""
 
     # Firebase Project Configuration
-    FIREBASE_PROJECT_ID: str | None = Field(default=None, env="FIREBASE_PROJECT_ID")
-    FIREBASE_PRIVATE_KEY: str | None = Field(default=None, env="FIREBASE_PRIVATE_KEY")
-    FIREBASE_CLIENT_EMAIL: str | None = Field(default=None, env="FIREBASE_CLIENT_EMAIL")
-    FIREBASE_STORAGE_BUCKET: str | None = Field(default=None, env="FIREBASE_STORAGE_BUCKET")
+    FIREBASE_PROJECT_ID: str | None = None
+    FIREBASE_PRIVATE_KEY: str | None = None
+    FIREBASE_CLIENT_EMAIL: str | None = None
+    FIREBASE_STORAGE_BUCKET: str | None = None
 
     # Alternative: Path to service account JSON file
-    FIREBASE_CREDENTIALS_PATH: str | None = Field(
-        default=None, env="FIREBASE_CREDENTIALS_PATH"
-    )
+    FIREBASE_CREDENTIALS_PATH: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -39,11 +38,7 @@ class FirebaseSettings(BaseSettings):
         # Either credentials path or all three fields must be set
         if self.FIREBASE_CREDENTIALS_PATH:
             return True
-        return bool(
-            self.FIREBASE_PROJECT_ID
-            and self.FIREBASE_PRIVATE_KEY
-            and self.FIREBASE_CLIENT_EMAIL
-        )
+        return bool(self.FIREBASE_PROJECT_ID and self.FIREBASE_PRIVATE_KEY and self.FIREBASE_CLIENT_EMAIL)
 
     def get_credentials_dict(self) -> dict[str, Any] | None:
         """Get credentials as a dictionary for Firebase Admin SDK"""
@@ -133,16 +128,12 @@ def initialize_firebase() -> bool:
                     "storageBucket": settings.FIREBASE_STORAGE_BUCKET,
                 },
             )
-            logger.info(
-                f"Firebase Admin SDK initialized for project: {settings.FIREBASE_PROJECT_ID}"
-            )
+            logger.info(f"Firebase Admin SDK initialized for project: {settings.FIREBASE_PROJECT_ID}")
 
         return True
 
     except ImportError:
-        logger.warning(
-            "firebase-admin not installed. Install with: pip install firebase-admin"
-        )
+        logger.warning("firebase-admin not installed. Install with: pip install firebase-admin")
         return False
     except Exception as e:
         logger.error(f"Failed to initialize Firebase Admin SDK: {e}")

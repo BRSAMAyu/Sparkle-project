@@ -2,6 +2,7 @@
 Redis Caching Module
 负责缓存管理，提供装饰器和工具函数
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -53,10 +54,7 @@ class CacheService:
             )
         )
 
-        self.redis = redis.from_url(
-            settings.REDIS_URL,
-            **kwargs
-        )
+        self.redis = redis.from_url(settings.REDIS_URL, **kwargs)
         try:
             await self.redis.ping()
             logger.info("Redis Cache initialized successfully")
@@ -137,18 +135,20 @@ end
         except json.JSONDecodeError:
             return data
 
-    async def set(self, key: str, value: Any, ttl: int = None):
+    async def set(self, key: str, value: Any, ttl: int = None, ex: int = None):
+        # Support both 'ttl' and 'ex' parameter names (standard Redis naming)
+        ttl_value = ttl or ex
         if not self.redis:
             self._maybe_cleanup_local_cache()
             expires_at = None
-            ttl_value = ttl or self.default_ttl
-            if ttl_value:
-                expires_at = time.time() + ttl_value
+            effective_ttl = ttl_value or self.default_ttl
+            if effective_ttl:
+                expires_at = time.time() + effective_ttl
             self._local_cache[key] = (value, expires_at)
             self._maybe_cleanup_local_cache()
             return
         dumped = json.dumps(value, default=_json_default, ensure_ascii=True)
-        await self.redis.set(key, dumped, ex=ttl or self.default_ttl)
+        await self.redis.set(key, dumped, ex=ttl_value or self.default_ttl)
 
     async def incr(self, key: str, amount: int = 1) -> int:
         if not self.redis:
@@ -168,7 +168,8 @@ end
 
     async def delete_pattern(self, pattern: str):
         """Delete all keys matching pattern"""
-        if not self.redis: return
+        if not self.redis:
+            return
         # Scan and delete
         async for key in self.redis.scan_iter(pattern):
             await self.redis.delete(key)
@@ -184,8 +185,7 @@ end
 
         now = time.time()
         expired_keys = [
-            key for key, (_, expires_at) in self._local_cache.items()
-            if expires_at is not None and now > expires_at
+            key for key, (_, expires_at) in self._local_cache.items() if expires_at is not None and now > expires_at
         ]
         for key in expired_keys:
             self._local_cache.pop(key, None)
@@ -198,7 +198,9 @@ end
         for key in keys_to_remove:
             self._local_cache.pop(key, None)
 
+
 cache_service = CacheService()
+
 
 def _json_default(value: Any) -> Any:
     if isinstance(value, BaseModel):
@@ -213,11 +215,8 @@ def _json_default(value: Any) -> Any:
         return value.decode("utf-8", errors="replace")
     return str(value)
 
-def cached(
-    ttl: int = 300,
-    key_builder: Callable = None,
-    namespace: str = "view"
-):
+
+def cached(ttl: int = 300, key_builder: Callable = None, namespace: str = "view"):
     """
     Cache Decorator for Async Functions
 
@@ -225,6 +224,7 @@ def cached(
     :param key_builder: Custom function to build cache key from args
     :param namespace: Key prefix
     """
+
     def decorator(func):
         @wraps(func)
         async def wrapper(*args, **kwargs):
@@ -255,5 +255,7 @@ def cached(
                 await cache_service.set(cache_key, result, ttl=ttl)
 
             return result
+
         return wrapper
+
     return decorator

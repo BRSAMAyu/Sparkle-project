@@ -5,6 +5,7 @@ Six persistent primitives for the Sparkle Growth Loop System.
 Aligned with: docs/product/SPARKLE_CARD_PROTOCOL_TAXONOMY_2026-04-02.md
 ADR: docs/adr/0004-card-protocol-architecture.md
 """
+
 from __future__ import annotations
 
 import enum
@@ -200,7 +201,7 @@ class ImportMode(enum.StrEnum):
 class Card(BaseModel):
     __tablename__ = "cards"
 
-    card_type = Column(Enum(CardType, name="card_type_enum"), nullable=False, index=True)
+    card_type = Column(_string_enum(CardType, "card_type_enum"), nullable=False, index=True)
     owner_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     holder_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     version = Column(Integer, nullable=False, default=1)
@@ -306,9 +307,7 @@ class CardEdge(BaseModel):
 class TaskOccurrence(BaseModel):
     __tablename__ = "task_occurrences"
 
-    series_card_id = Column(
-        GUID(), ForeignKey("cards.id", ondelete="CASCADE"), nullable=False, index=True
-    )
+    series_card_id = Column(GUID(), ForeignKey("cards.id", ondelete="CASCADE"), nullable=False, index=True)
     plan_card_id = Column(GUID(), ForeignKey("cards.id", ondelete="SET NULL"), nullable=True, index=True)
     phase_card_id = Column(GUID(), ForeignKey("cards.id", ondelete="SET NULL"), nullable=True, index=True)
     scheduled_for = Column(Date, nullable=True, index=True)
@@ -350,12 +349,8 @@ class TaskOccurrence(BaseModel):
 class PlanningArtifact(BaseModel):
     __tablename__ = "planning_artifacts"
 
-    plan_card_id = Column(
-        GUID(), ForeignKey("cards.id", ondelete="CASCADE"), nullable=False, index=True
-    )
-    artifact_type = Column(
-        _string_enum(ArtifactType, "artifact_type_enum"), nullable=False, index=True
-    )
+    plan_card_id = Column(GUID(), ForeignKey("cards.id", ondelete="CASCADE"), nullable=False, index=True)
+    artifact_type = Column(_string_enum(ArtifactType, "artifact_type_enum"), nullable=False, index=True)
     version = Column(Integer, nullable=False, default=1)
     status = Column(
         _string_enum(ArtifactStatus, "artifact_status_enum"),
@@ -395,9 +390,7 @@ class InterventionRecord(BaseModel):
     user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     plan_card_id = Column(GUID(), ForeignKey("cards.id", ondelete="SET NULL"), nullable=True, index=True)
     phase_card_id = Column(GUID(), ForeignKey("cards.id", ondelete="SET NULL"), nullable=True)
-    task_occurrence_id = Column(
-        GUID(), ForeignKey("task_occurrences.id", ondelete="SET NULL"), nullable=True
-    )
+    task_occurrence_id = Column(GUID(), ForeignKey("task_occurrences.id", ondelete="SET NULL"), nullable=True)
     knowledge_card_id = Column(GUID(), ForeignKey("cards.id", ondelete="SET NULL"), nullable=True)
     trigger_type = Column(
         _string_enum(InterventionTriggerType, "intervention_trigger_enum"),
@@ -406,12 +399,8 @@ class InterventionRecord(BaseModel):
     )
     trigger_source_ref = Column(String(128), nullable=True)
     diagnosis_payload = Column(JSONBCompat, nullable=False, server_default="{}")
-    delivery_strategy = Column(
-        _string_enum(DeliveryStrategy, "delivery_strategy_enum"), nullable=False
-    )
-    delivery_channel = Column(
-        _string_enum(DeliveryChannel, "delivery_channel_enum"), nullable=False
-    )
+    delivery_strategy = Column(_string_enum(DeliveryStrategy, "delivery_strategy_enum"), nullable=False)
+    delivery_channel = Column(_string_enum(DeliveryChannel, "delivery_channel_enum"), nullable=False)
     content_version = Column(String(64), nullable=False, server_default="1")
     acceptance_status = Column(
         _string_enum(InterventionAcceptanceStatus, "intervention_acceptance_enum"),
@@ -455,7 +444,7 @@ class CardSnapshot(BaseModel):
 
     root_card_id = Column(GUID(), ForeignKey("cards.id", ondelete="SET NULL"), nullable=True, index=True)
     source_owner_id = Column(GUID(), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
-    source_card_type = Column(Enum(CardType, name="snapshot_card_type_enum"), nullable=False, index=True)
+    source_card_type = Column(_string_enum(CardType, "snapshot_card_type_enum"), nullable=False, index=True)
     schema_version = Column(String(16), nullable=False, server_default="1.0")
     payload = Column(JSONBCompat, nullable=False, server_default="{}")
     metadata_ = Column("metadata", JSONBCompat, nullable=False, server_default="{}")
@@ -480,9 +469,7 @@ class CardSnapshot(BaseModel):
 class CardShareRecord(BaseModel):
     __tablename__ = "card_share_records"
 
-    snapshot_id = Column(
-        GUID(), ForeignKey("card_snapshots.id", ondelete="CASCADE"), nullable=False, index=True
-    )
+    snapshot_id = Column(GUID(), ForeignKey("card_snapshots.id", ondelete="CASCADE"), nullable=False, index=True)
     root_card_id = Column(GUID(), ForeignKey("cards.id", ondelete="SET NULL"), nullable=True, index=True)
     shared_by_user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     target_user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
@@ -526,9 +513,7 @@ class CardAdoptionRecord(BaseModel):
         GUID(), ForeignKey("card_share_records.id", ondelete="CASCADE"), nullable=False, index=True
     )
     adopter_user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    adopted_root_card_id = Column(
-        GUID(), ForeignKey("cards.id", ondelete="SET NULL"), nullable=True, index=True
-    )
+    adopted_root_card_id = Column(GUID(), ForeignKey("cards.id", ondelete="SET NULL"), nullable=True, index=True)
     import_mode = Column(Enum(ImportMode, name="import_mode_enum"), nullable=False, index=True)
     attribution_payload = Column(JSONBCompat, nullable=False, server_default="{}")
 
@@ -536,9 +521,7 @@ class CardAdoptionRecord(BaseModel):
     adopter_user = relationship("User", foreign_keys=[adopter_user_id])
     adopted_root_card = relationship("Card", foreign_keys=[adopted_root_card_id])
 
-    __table_args__ = (
-        Index("ix_card_adoption_user_mode", "adopter_user_id", "import_mode"),
-    )
+    __table_args__ = (Index("ix_card_adoption_user_mode", "adopter_user_id", "import_mode"),)
 
     def __repr__(self):
         return f"<CardAdoptionRecord(id={self.id}, mode={self.import_mode}, adopter={self.adopter_user_id})>"
