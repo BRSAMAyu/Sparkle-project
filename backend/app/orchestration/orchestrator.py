@@ -3503,6 +3503,52 @@ class ChatOrchestrator(
                             )
                         )
                         self._track_task(task)
+
+                        # Schedule automatic skill extraction when user uses trigger phrases
+                        _assistant_text = str(final_response_data.get("message") or "")
+                        if user_message and _assistant_text:
+                            try:
+                                from app.services.skill_extract_service import SkillExtractService
+                                _skill_svc = SkillExtractService()
+                                if _skill_svc.matches_explicit_trigger(user_message):
+
+                                    async def _extract_and_persist_skill():
+                                        try:
+                                            draft = await _skill_svc.generate_draft(
+                                                trigger_type="explicit_phrase",
+                                                consent_text=user_message,
+                                                user_message=user_message,
+                                                assistant_message=_assistant_text,
+                                                seconds_since_response=0,
+                                            )
+                                            from app.db.session import AsyncSessionLocal
+                                            from app.services.skill_store import SkillStoreService
+                                            from app.services.skill_schema import draft_to_payload
+                                            async with AsyncSessionLocal() as db:
+                                                await SkillStoreService(db).create_skill(
+                                                    user_id=user_id,
+                                                    payload=draft_to_payload(draft),
+                                                )
+                                            logger.info(
+                                                "Skill extracted and persisted: user=%s name=%s",
+                                                user_id, draft.name,
+                                            )
+                                        except ValueError:
+                                            logger.debug("Skill extract: LLM rejected draft for user=%s", user_id)
+                                        except Exception as _persist_exc:
+                                            logger.warning(
+                                                "Skill extract persistence failed for user=%s: %s",
+                                                user_id, _persist_exc,
+                                            )
+
+                                    _skill_task = asyncio.create_task(_extract_and_persist_skill())
+                                    self._track_task(_skill_task)
+                                    logger.info(
+                                        "Skill extract draft scheduled: user={} session={}",
+                                        user_id, session_id,
+                                    )
+                            except Exception as _skill_exc:
+                                logger.debug("Skill extract schedule skipped: {}", _skill_exc)
                     except Exception as exc:
                         logger.warning("Failed to schedule chat signal collection: %s", exc)
                     if executable_plan and executable_plan.collaboration_mode != "single":
