@@ -73,7 +73,11 @@ class _FakeRedis:
     async def setex(self, key: str, _: int, value: str) -> None:
         self._store[key] = value
 
-    async def set(self, key: str, value: str, ex: int | None = None) -> None:
+    async def set(self, key: str, value: str, ex: int | None = None, nx: bool = False, xx: bool = False) -> None:
+        if nx and key in self._store:
+            return
+        if xx and key not in self._store:
+            return
         self._store[key] = value
 
 
