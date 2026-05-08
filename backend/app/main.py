@@ -117,7 +117,7 @@ async def _run_working_memory_orphan_cleanup() -> None:
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(fastapp: FastAPI):
     """
     应用生命周期管理
 
@@ -218,7 +218,7 @@ async def lifespan(app: FastAPI):
         user_service = UserService(None, cache_service.redis)
         consumer = PreferenceEventConsumer(cache_service.redis, user_service)
         preference_consumer_task = asyncio.create_task(consumer.start())
-        app.state.preference_consumer_task = preference_consumer_task
+        fastapp.state.preference_consumer_task = preference_consumer_task
 
     # Start Galaxy event consumer
     galaxy_consumer_task = None
@@ -227,20 +227,20 @@ async def lifespan(app: FastAPI):
 
         galaxy_consumer = GalaxyEventConsumer(event_bus=event_bus)
         galaxy_consumer_task = asyncio.create_task(galaxy_consumer.start())
-        app.state.galaxy_consumer_task = galaxy_consumer_task
+        fastapp.state.galaxy_consumer_task = galaxy_consumer_task
 
     # Start Task event consumer
     task_consumer_task = None
     if cache_service.redis:
         task_consumer = TaskEventConsumer(event_bus=event_bus)
         task_consumer_task = asyncio.create_task(task_consumer.start())
-        app.state.task_consumer_task = task_consumer_task
+        fastapp.state.task_consumer_task = task_consumer_task
 
     srl_phase_tracker_task = None
     if cache_service.redis and event_bus is not None:
         srl_phase_tracker = SRLPhaseTrackerService(event_bus=event_bus, redis=cache_service.redis)
         srl_phase_tracker_task = asyncio.create_task(srl_phase_tracker.start())
-        app.state.srl_phase_tracker_task = srl_phase_tracker_task
+        fastapp.state.srl_phase_tracker_task = srl_phase_tracker_task
 
     idiographic_association_task = None
     idiographic_association_service = None
@@ -250,115 +250,115 @@ async def lifespan(app: FastAPI):
             redis=cache_service.redis,
         )
         idiographic_association_task = asyncio.create_task(idiographic_association_service.start())
-        app.state.idiographic_association_service = idiographic_association_service
-        app.state.idiographic_association_task = idiographic_association_task
+        fastapp.state.idiographic_association_service = idiographic_association_service
+        fastapp.state.idiographic_association_task = idiographic_association_task
 
     achievement_consumer_task = None
     if cache_service.redis:
         achievement_consumer = AchievementEventConsumer(event_bus=event_bus)
         achievement_consumer_task = asyncio.create_task(achievement_consumer.start())
-        app.state.achievement_consumer_task = achievement_consumer_task
+        fastapp.state.achievement_consumer_task = achievement_consumer_task
 
     execution_consumer_task = None
     if cache_service.redis:
         execution_consumer = ExecutionEventConsumer(event_bus=event_bus)
         execution_consumer_task = asyncio.create_task(execution_consumer.start())
-        app.state.execution_consumer_task = execution_consumer_task
+        fastapp.state.execution_consumer_task = execution_consumer_task
 
     galaxy_execution_consumer_task = None
     if cache_service.redis:
         galaxy_execution_consumer = GalaxyExecutionConsumer(event_bus=event_bus)
         galaxy_execution_consumer_task = asyncio.create_task(galaxy_execution_consumer.start())
-        app.state.galaxy_execution_consumer_task = galaxy_execution_consumer_task
+        fastapp.state.galaxy_execution_consumer_task = galaxy_execution_consumer_task
 
     group_file_consumer_task = None
     if cache_service.redis:
         group_file_consumer = GroupFileEventConsumer(event_bus=event_bus)
         group_file_consumer_task = asyncio.create_task(group_file_consumer.start())
-        app.state.group_file_consumer_task = group_file_consumer_task
+        fastapp.state.group_file_consumer_task = group_file_consumer_task
 
     profile_consumer_task = None
     if cache_service.redis:
         profile_consumer = ProfileEventConsumer(event_bus=event_bus, redis_client=cache_service.redis)
         profile_consumer_task = asyncio.create_task(profile_consumer.start())
-        app.state.profile_consumer_task = profile_consumer_task
+        fastapp.state.profile_consumer_task = profile_consumer_task
 
     if cache_service.redis:
         cognitive_consumer = CognitiveEventConsumer(event_bus=event_bus, redis_client=cache_service.redis)
         cognitive_consumer_task = asyncio.create_task(cognitive_consumer.start())
-        app.state.cognitive_consumer_task = cognitive_consumer_task
+        fastapp.state.cognitive_consumer_task = cognitive_consumer_task
 
     if cache_service.redis:
         capsule_consumer = CapsuleEventConsumer(event_bus=event_bus)
         capsule_consumer_task = asyncio.create_task(capsule_consumer.start())
-        app.state.capsule_consumer_task = capsule_consumer_task
+        fastapp.state.capsule_consumer_task = capsule_consumer_task
 
     if cache_service.redis and event_bus is not None:
         document_feedback_consumer = DocumentFeedbackEventConsumer(event_bus=event_bus)
         document_feedback_consumer_task = asyncio.create_task(document_feedback_consumer.start())
-        app.state.document_feedback_consumer_task = document_feedback_consumer_task
+        fastapp.state.document_feedback_consumer_task = document_feedback_consumer_task
 
     if cache_service.redis and event_bus is not None:
         nudge_consumer = NudgeEventConsumer(event_bus=event_bus)
         nudge_consumer_task = asyncio.create_task(nudge_consumer.start())
-        app.state.nudge_consumer_task = nudge_consumer_task
+        fastapp.state.nudge_consumer_task = nudge_consumer_task
 
     # Start plan health event consumer
     plan_health_consumer_task = None
     if cache_service.redis and event_bus is not None:
         plan_health_consumer = PlanHealthEventConsumer(event_bus=event_bus)
         plan_health_consumer_task = asyncio.create_task(plan_health_consumer.start())
-        app.state.plan_health_consumer_task = plan_health_consumer_task
+        fastapp.state.plan_health_consumer_task = plan_health_consumer_task
 
     intervention_consumer_task = None
     if cache_service.redis and event_bus is not None:
         intervention_consumer = InterventionEventConsumer(event_bus=event_bus)
         intervention_consumer_task = asyncio.create_task(intervention_consumer.start())
-        app.state.intervention_consumer_task = intervention_consumer_task
+        fastapp.state.intervention_consumer_task = intervention_consumer_task
 
     social_signal_consumer_task = None
     if cache_service.redis and event_bus is not None:
         social_signal_consumer = SocialSignalEventConsumer(event_bus=event_bus)
         social_signal_consumer_task = asyncio.create_task(social_signal_consumer.start())
-        app.state.social_signal_consumer = social_signal_consumer
-        app.state.social_signal_consumer_task = social_signal_consumer_task
+        fastapp.state.social_signal_consumer = social_signal_consumer
+        fastapp.state.social_signal_consumer_task = social_signal_consumer_task
 
     main_chain_artifact_consumer_task = None
     if cache_service.redis and event_bus is not None:
         main_chain_consumer = MainChainArtifactConsumer(event_bus=event_bus)
         main_chain_artifact_consumer_task = asyncio.create_task(main_chain_consumer.start())
-        app.state.main_chain_artifact_consumer_task = main_chain_artifact_consumer_task
+        fastapp.state.main_chain_artifact_consumer_task = main_chain_artifact_consumer_task
 
     if cache_service.redis and event_bus is not None:
         welcome_consumer = WelcomeOnboardingConsumer(event_bus=event_bus, redis_client=cache_service.redis)
-        app.state.welcome_onboarding_consumer_task = asyncio.create_task(welcome_consumer.start())
+        fastapp.state.welcome_onboarding_consumer_task = asyncio.create_task(welcome_consumer.start())
 
         profile_bootstrap_consumer = UserProfileBootstrapConsumer(
             event_bus=event_bus,
             redis_client=cache_service.redis,
         )
-        app.state.user_profile_bootstrap_consumer_task = asyncio.create_task(profile_bootstrap_consumer.start())
+        fastapp.state.user_profile_bootstrap_consumer_task = asyncio.create_task(profile_bootstrap_consumer.start())
 
         user_memory_seed_consumer = UserMemorySeedConsumer(
             event_bus=event_bus,
             redis_client=cache_service.redis,
         )
-        app.state.user_memory_seed_consumer_task = asyncio.create_task(user_memory_seed_consumer.start())
+        fastapp.state.user_memory_seed_consumer_task = asyncio.create_task(user_memory_seed_consumer.start())
 
         galaxy_plan_consumer = GalaxyPlanConsumer(event_bus=event_bus, redis_client=cache_service.redis)
-        app.state.galaxy_plan_consumer_task = asyncio.create_task(galaxy_plan_consumer.start())
+        fastapp.state.galaxy_plan_consumer_task = asyncio.create_task(galaxy_plan_consumer.start())
 
         achievement_plan_consumer = AchievementPlanConsumer(
             event_bus=event_bus,
             redis_client=cache_service.redis,
         )
-        app.state.achievement_plan_consumer_task = asyncio.create_task(achievement_plan_consumer.start())
+        fastapp.state.achievement_plan_consumer_task = asyncio.create_task(achievement_plan_consumer.start())
 
         plan_task_generation_consumer = PlanTaskGenerationConsumer(
             event_bus=event_bus,
             redis_client=cache_service.redis,
         )
-        app.state.plan_task_generation_consumer_task = asyncio.create_task(plan_task_generation_consumer.start())
+        fastapp.state.plan_task_generation_consumer_task = asyncio.create_task(plan_task_generation_consumer.start())
 
         # AUR-005: Wire EpisodeLogger to Redis persistence (production sink)
         try:
@@ -373,7 +373,7 @@ async def lifespan(app: FastAPI):
     intervention_outcome_verifier_task = None
     if event_bus is not None and ENABLE_IN_PROCESS_INTERVENTION_OUTCOME_VERIFIER:
         intervention_outcome_verifier_task = asyncio.create_task(_run_intervention_outcome_verifier_loop())
-        app.state.intervention_outcome_verifier_task = intervention_outcome_verifier_task
+        fastapp.state.intervention_outcome_verifier_task = intervention_outcome_verifier_task
 
     summarization_worker_task = None
     summarization_worker = None
@@ -384,8 +384,8 @@ async def lifespan(app: FastAPI):
                 worker_id="main-app-worker",
             )
             summarization_worker_task = asyncio.create_task(summarization_worker.start())
-            app.state.summarization_worker = summarization_worker
-            app.state.summarization_worker_task = summarization_worker_task
+            fastapp.state.summarization_worker = summarization_worker
+            fastapp.state.summarization_worker_task = summarization_worker_task
             logger.info("SummarizationWorker started")
         except Exception as e:
             logger.error(f"Failed to start SummarizationWorker: {e}")
@@ -396,8 +396,8 @@ async def lifespan(app: FastAPI):
         try:
             billing_worker = BillingWorker()
             billing_worker_task = asyncio.create_task(billing_worker.start())
-            app.state.billing_worker = billing_worker
-            app.state.billing_worker_task = billing_worker_task
+            fastapp.state.billing_worker = billing_worker
+            fastapp.state.billing_worker_task = billing_worker_task
             logger.info("BillingWorker started")
         except Exception as e:
             logger.error(f"Failed to start BillingWorker: {e}")
@@ -409,7 +409,7 @@ async def lifespan(app: FastAPI):
         try:
             galaxy_streaming_service = await init_galaxy_streaming_service(manager, event_bus)
             # Store the service in app state for potential access
-            app.state.galaxy_streaming_service = galaxy_streaming_service
+            fastapp.state.galaxy_streaming_service = galaxy_streaming_service
             logger.info("GalaxyStreamingService initialized")
         except Exception as e:
             logger.error(f"Failed to initialize GalaxyStreamingService: {e}")
@@ -422,8 +422,8 @@ async def lifespan(app: FastAPI):
             event_bus=event_bus,
         )
         task_event_listener_task = asyncio.create_task(task_event_listener.start())
-        app.state.task_event_listener = task_event_listener
-        app.state.task_event_listener_task = task_event_listener_task
+        fastapp.state.task_event_listener = task_event_listener
+        fastapp.state.task_event_listener_task = task_event_listener_task
         logger.info("Galaxy TaskEventListener started")
 
     async with AsyncSessionLocal() as db:

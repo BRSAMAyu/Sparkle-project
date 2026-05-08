@@ -12,6 +12,7 @@ branch_labels = None
 depends_on = None
 
 def upgrade() -> None:
+    op.execute("COMMIT")
     op.execute("""
         CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_group_members_composite
         ON group_members (group_id, user_id);

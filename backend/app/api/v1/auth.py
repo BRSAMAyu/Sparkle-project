@@ -1084,5 +1084,3 @@ async def upgrade_guest_social(
         **await _issue_auth_tokens(db=db, user=current_user, request=request),
         "user": _build_user_profile(current_user),
     }
-"user": _build_user_profile(current_user),
-    }

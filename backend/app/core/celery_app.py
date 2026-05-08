@@ -25,7 +25,10 @@ import os
 
 from celery import Celery
 from celery.schedules import crontab
-from celery.signals import on_after_configure
+try:
+    from celery.signals import on_after_configure
+except ImportError:
+    on_after_configure = None
 
 from app.config import settings
 
@@ -1216,11 +1219,18 @@ celery_app.conf.beat_schedule = {
 # (L4 异步深度学习 6 个 Job、Aurora wake scanner、社区错误聚合等)
 # =============================================================================
 
-@on_after_configure.connect
-def _setup_periodic_tasks(sender, **kwargs):
-    """延迟加载 celery_schedule，避免循环导入。"""
-    from app.celery_schedule import setup_periodic_tasks
-    setup_periodic_tasks(sender, **kwargs)
+if on_after_configure is not None:
+    @on_after_configure.connect
+    def _setup_periodic_tasks(sender, **kwargs):
+        """延迟加载 celery_schedule，避免循环导入。"""
+        from app.celery_schedule import setup_periodic_tasks
+        setup_periodic_tasks(sender, **kwargs)
+else:
+    try:
+        from app.celery_schedule import setup_periodic_tasks
+        setup_periodic_tasks(celery_app)
+    except Exception:
+        pass
 
 
 # =============================================================================
