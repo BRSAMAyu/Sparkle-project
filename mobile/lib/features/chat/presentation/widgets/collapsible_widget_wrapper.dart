@@ -86,8 +86,8 @@ class _CollapsibleWidgetWrapperState extends State<CollapsibleWidgetWrapper>
                 child: AnimatedContainer(
                   duration: _animationDuration,
                   padding: EdgeInsets.symmetric(
-                    horizontal: _expanded ? DS.spacing12 : DS.spacing10,
-                    vertical: DS.spacing6,
+                    horizontal: _expanded ? DS.spacing12 : DS.spacing8,
+                    vertical: _expanded ? DS.spacing6 : DS.spacing4,
                   ),
                   decoration: BoxDecoration(
                     color: _expanded

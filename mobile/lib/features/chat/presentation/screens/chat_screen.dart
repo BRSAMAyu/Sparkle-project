@@ -207,6 +207,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           if (next.length > (previous?.length ?? 0)) {
             _scrollToBottom();
           }
+          // Scroll when the latest assistant message gains new widgets
+          // (accessories arriving asynchronously after text generation).
+          if (next.isNotEmpty) {
+            final latest = next.last;
+            if (latest.role == MessageRole.assistant) {
+              final prevLatest = (previous?.isNotEmpty ?? false)
+                  ? previous!.last
+                  : null;
+              final prevCount = prevLatest?.widgets?.length ?? 0;
+              final currCount = latest.widgets?.length ?? 0;
+              if (currCount > prevCount) {
+                _scrollToBottom();
+              }
+            }
+          }
         },
       )
       ..listenManual(activePlanProvider, (previous, next) {
