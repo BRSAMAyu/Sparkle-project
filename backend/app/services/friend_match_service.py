@@ -265,7 +265,7 @@ class FriendMatchService:
             score_breakdown = cls._apply_feedback_tuning(
                 score_breakdown,
                 tuning=tuning,
-                strategy=strategy,
+                _strategy=strategy,
             )
             total_score = cls._weighted_total(score_breakdown)
             total_score *= cls._strategy_bias_multiplier(tuning, strategy)

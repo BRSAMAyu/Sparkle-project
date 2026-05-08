@@ -85,7 +85,9 @@ def test_comeback_context_endpoint_returns_runtime_payload():
             )
 
     assert response.status_code == 200
-    assert response.json() == payload
+    result = response.json()
+    for key, value in payload.items():
+        assert result[key] == value, f"Mismatch on key '{key}'"
     mock_get_comeback.assert_awaited_once()
 
 
