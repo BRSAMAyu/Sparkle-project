@@ -59,7 +59,7 @@ class CompactStatusBar extends StatelessWidget {
                   final width = constraints.maxWidth;
                   final showUserBadge = width >= 316 && textScale < 1.15;
                   final showFlameChip = width >= 352 && textScale < 1.1;
-                  final showWeatherLabel = width >= 390 && textScale < 1.05;
+                  final showWeatherLabel = width >= 390 && textScale < 1.2;
 
                   return Row(
                     children: [

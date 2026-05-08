@@ -67,7 +67,7 @@ class CollapsibleSlot extends ConsumerWidget {
     }
 
     return AnimatedSize(
-      duration: DS.durationNormal,
+      duration: DS.motionDuration(SparkleMotionToken.responsive),
       curve: DS.curveEaseInOut,
       alignment: Alignment.topCenter,
       child: Padding(

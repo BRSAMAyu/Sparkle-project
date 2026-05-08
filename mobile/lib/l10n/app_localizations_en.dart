@@ -27520,6 +27520,33 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get communityGroupDetails => 'Group Details';
+
+  @override
+  String get communityWelcomeToGroup => 'Welcome to the group!';
+
+  @override
+  String get communityLeaveGroupFailed => 'Failed to leave group, please retry';
+
+  @override
+  String get communityCommentLabel => 'Comment';
+
+  @override
+  String get communityCommentsComingSoon => 'Comments coming soon';
+
+  @override
+  String get communityShowMore => 'Show more';
+
+  @override
+  String get communityShowLess => 'Show less';
+
+  @override
+  String get communityShareLabel => 'Share';
+
+  @override
+  String get communityDeleteLabel => 'Delete';
+
+  @override
   String get communityTaskFallback => 'Task';
 
   @override

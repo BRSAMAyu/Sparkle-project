@@ -122,61 +122,31 @@ class _FeedTabContentState extends ConsumerState<FeedTabContent> {
     final filters = isChinese
         ? ['全局动态', '我的小队', '目标伙伴', '我的关注']
         : ['Global Feed', 'My Squad', 'Goal Mates', 'Following'];
-    final descriptions = isChinese
-        ? [
-            '公开动态，只显示所有人可见的内容',
-            '同小队成员的公开内容，好友内容仍尊重好友可见',
-            '当前责任伙伴和目标同路人的动态',
-            '已互相关注好友的动态',
-          ]
-        : [
-            'Public posts that are visible to everyone',
-            'Posts from squad members, with friend-only privacy preserved',
-            'Updates from active accountability partners',
-            'Posts from accepted friends',
-          ];
     const scopes = [null, 'squad', 'goal_mates', 'following'];
     return Padding(
       padding: const EdgeInsets.fromLTRB(DS.lg, DS.lg, DS.lg, DS.sm),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                for (int i = 0; i < filters.length; i++) ...[
-                  _FilterChip(
-                    label: filters[i],
-                    isSelected: selectedIndex == i,
-                    onTap: () {
-                      ref.read(communityFeedFilterProvider.notifier).state = i;
-                      unawaited(
-                        ref.read(feedProvider.notifier).refresh(
-                              scope: scopes[i],
-                              clearScope: scopes[i] == null,
-                            ),
-                      );
-                    },
-                  ),
-                  if (i < filters.length - 1) const SizedBox(width: DS.sm),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(height: DS.sm),
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 180),
-            child: Text(
-              descriptions[selectedIndex],
-              key: ValueKey(selectedIndex),
-              style: TextStyle(
-                color: DS.textSecondary,
-                fontSize: 12,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            for (int i = 0; i < filters.length; i++) ...[
+              _FilterChip(
+                label: filters[i],
+                isSelected: selectedIndex == i,
+                onTap: () {
+                  ref.read(communityFeedFilterProvider.notifier).state = i;
+                  unawaited(
+                    ref.read(feedProvider.notifier).refresh(
+                          scope: scopes[i],
+                          clearScope: scopes[i] == null,
+                        ),
+                  );
+                },
               ),
-            ),
-          ),
-        ],
+              if (i < filters.length - 1) const SizedBox(width: DS.sm),
+            ],
+          ],
+        ),
       ),
     );
   }

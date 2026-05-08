@@ -30,14 +30,13 @@ class FeedPostCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
     return Semantics(
       container: true,
       explicitChildNodes: true,
       label: '${post.user.username}. ${post.content}',
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        padding: const EdgeInsets.all(DS.lg),
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -74,7 +73,7 @@ class FeedPostCard extends StatelessWidget {
                         image: true,
                         label: '${post.user.username} avatar',
                         child: CircleAvatar(
-                          radius: 20,
+                          radius: 16,
                           backgroundColor: DS.avatarFallbackBackground,
                           backgroundImage: post.user.avatarUrl != null
                               ? CachedNetworkImageProvider(post.user.avatarUrl!)
@@ -151,9 +150,9 @@ class FeedPostCard extends StatelessWidget {
                   ),
               ],
             ),
-            const SizedBox(height: DS.md),
-            Text(
-              post.content,
+            const SizedBox(height: DS.sm),
+            _ExpandableText(
+              text: post.content,
               style: TextStyle(
                 color: DS.textPrimary,
                 fontSize: 15,
@@ -170,7 +169,7 @@ class FeedPostCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-            const SizedBox(height: DS.lg),
+            const SizedBox(height: DS.md),
             Wrap(
               spacing: DS.lg,
               runSpacing: DS.sm,
@@ -187,20 +186,20 @@ class FeedPostCard extends StatelessWidget {
                 ),
                 _ActionButton(
                   icon: Icons.chat_bubble_outline,
-                  label: zh ? '评论' : 'Comment',
-                  semanticLabel: zh ? '评论' : 'Comment',
+                  label: context.l10n.communityCommentLabel,
+                  semanticLabel: context.l10n.communityCommentLabel,
                   onTap: onComment ??
                       () {
                         AppFeedback.info(
                           context,
-                          zh ? '评论功能即将上线' : 'Comments coming soon',
+                          context.l10n.communityCommentsComingSoon,
                         );
                       },
                 ),
                 _ActionButton(
                   icon: Icons.share_outlined,
-                  label: zh ? '分享' : 'Share',
-                  semanticLabel: zh ? '分享' : 'Share',
+                  label: context.l10n.communityShareLabel,
+                  semanticLabel: context.l10n.communityShareLabel,
                   onTap: () {
                     final buffer = StringBuffer(post.content);
                     if (post.topic != null && post.topic!.isNotEmpty) {
@@ -209,15 +208,15 @@ class FeedPostCard extends StatelessWidget {
                     Clipboard.setData(ClipboardData(text: buffer.toString()));
                     AppFeedback.success(
                       context,
-                      zh ? '已复制到剪贴板' : 'Copied to clipboard',
+                      context.l10n.communityCopiedToClipboard,
                     );
                   },
                 ),
                 if (_isOwner && onDelete != null)
                   _ActionButton(
                     icon: Icons.delete_outline,
-                    label: zh ? '删除' : 'Delete',
-                    semanticLabel: zh ? '删除动态' : 'Delete post',
+                    label: context.l10n.communityDeleteLabel,
+                    semanticLabel: context.l10n.communityDeleteLabel,
                     color: DS.error,
                     onTap: onDelete,
                   ),
@@ -304,4 +303,70 @@ class _ActionButton extends StatelessWidget {
           ),
         ),
       );
+}
+
+class _ExpandableText extends StatefulWidget {
+  const _ExpandableText({required this.text, this.style});
+  final String text;
+  final TextStyle? style;
+
+  @override
+  State<_ExpandableText> createState() => _ExpandableTextState();
+}
+
+class _ExpandableTextState extends State<_ExpandableText> {
+  bool _expanded = false;
+  bool _overflows = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final textPainter = TextPainter(
+              text: TextSpan(text: widget.text, style: widget.style),
+              maxLines: 4,
+              textDirection: Directionality.of(context),
+            )..layout(maxWidth: constraints.maxWidth);
+            final overflows = textPainter.didExceedMaxLines;
+            if (overflows != _overflows) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) setState(() => _overflows = overflows);
+              });
+            }
+            return AnimatedSize(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+              alignment: Alignment.topLeft,
+              child: Text(
+                widget.text,
+                maxLines: _expanded ? null : 4,
+                overflow: _expanded ? TextOverflow.visible : TextOverflow.ellipsis,
+                style: widget.style,
+              ),
+            );
+          },
+        ),
+        if (_overflows)
+          GestureDetector(
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                _expanded
+                    ? context.l10n.communityShowLess
+                    : context.l10n.communityShowMore,
+                style: TextStyle(
+                  color: DS.brandPrimary,
+                  fontSize: 13,
+                  fontWeight: DS.fontWeightMedium,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
 }

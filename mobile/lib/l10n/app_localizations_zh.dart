@@ -26380,6 +26380,33 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get communityGroupDetails => '社群详情';
+
+  @override
+  String get communityWelcomeToGroup => '欢迎加入社群！';
+
+  @override
+  String get communityLeaveGroupFailed => '退出群组失败，请重试';
+
+  @override
+  String get communityCommentLabel => '评论';
+
+  @override
+  String get communityCommentsComingSoon => '评论功能即将上线';
+
+  @override
+  String get communityShowMore => '展开全文';
+
+  @override
+  String get communityShowLess => '收起';
+
+  @override
+  String get communityShareLabel => '分享';
+
+  @override
+  String get communityDeleteLabel => '删除';
+
+  @override
   String get communityTaskFallback => '任务';
 
   @override

@@ -558,19 +558,31 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       );
 
   List<Widget> _buildDashboardSkeletonSections() => const [
+        // CompactStatusBar skeleton — short wide bar
         Padding(
           padding: EdgeInsets.fromLTRB(
             DS.spacing16,
             DS.spacing8,
             DS.spacing16,
-            DS.spacing8,
+            DS.spacing10,
           ),
-          child: SparkleCardSkeleton(),
+          child: SizedBox(
+            height: 48,
+            child: SparkleCardSkeleton(),
+          ),
         ),
+        // AuroraStatusBand skeleton — thin strip
         Padding(
-          padding: EdgeInsets.symmetric(horizontal: DS.spacing16),
-          child: SparkleCardSkeleton(),
+          padding: EdgeInsets.symmetric(
+            horizontal: DS.spacing16,
+            vertical: DS.spacing4,
+          ),
+          child: SizedBox(
+            height: 40,
+            child: SparkleCardSkeleton(),
+          ),
         ),
+        // Goal switcher + daily context
         Padding(
           padding: EdgeInsets.fromLTRB(
             DS.spacing16,
@@ -580,10 +592,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
           child: SparkleCardSkeleton(),
         ),
+        // Command center skeleton
         Padding(
           padding: EdgeInsets.symmetric(horizontal: DS.spacing16),
-          child: SparkleChatBubbleSkeleton(),
+          child: SizedBox(
+            height: 120,
+            child: SparkleCardSkeleton(),
+          ),
         ),
+        // Goal detail / return case file
         Padding(
           padding: EdgeInsets.fromLTRB(
             DS.spacing16,

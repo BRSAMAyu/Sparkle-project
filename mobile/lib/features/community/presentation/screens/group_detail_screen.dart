@@ -3,10 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
@@ -47,8 +45,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                   icon: const Icon(Icons.arrow_back),
                   onPressed: () => context.pop(),
                 ),
-                title: Text(
-                    I18nService.instance.isChinese ? '社群详情' : 'Group Details'),
+                title: Text(context.l10n.communityGroupDetails),
               ),
               Expanded(
                 child: Center(
@@ -115,7 +112,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
         icon: const Icon(Icons.arrow_back),
         onPressed: () => context.pop(),
       ),
-      expandedHeight: 200,
+      expandedHeight: 160,
       pinned: true,
       stretch: true,
       backgroundColor: DS.surfaceOverlay.withValues(alpha: 0.94),
@@ -207,226 +204,234 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
     final isMember = group.myRole != null;
     final theme = Theme.of(context);
 
-    return Padding(
-      padding: const EdgeInsets.all(DS.spacing16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (group.isSprint && group.daysRemaining != null)
-            Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      DS.error.withValues(alpha: 0.1),
-                      DS.surfacePrimary,
-                    ],
+    return Stack(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(DS.spacing16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (group.isSprint && group.daysRemaining != null)
+                Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          DS.error.withValues(alpha: 0.1),
+                          DS.surfacePrimary,
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: DS.error.withValues(alpha: 0.16),
+                      ),
+                    ),
+                    child: Text(
+                      context.l10n.gdSprintCountdown(group.daysRemaining ?? 0),
+                      style: TextStyle(
+                        color: DS.error,
+                        fontWeight: DS.fontWeightBold,
+                      ),
+                    ),
                   ),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: DS.error.withValues(alpha: 0.16),
-                  ),
                 ),
-                child: Text(
-                  context.l10n.gdSprintCountdown(group.daysRemaining ?? 0),
-                  style: TextStyle(
-                    color: DS.error,
-                    fontWeight: DS.fontWeightBold,
+              const SizedBox(height: DS.md),
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: 1.0),
+                duration: const Duration(milliseconds: 800),
+                curve: Curves.easeOutBack,
+                builder: (context, value, child) => Transform.scale(
+                  scale: value,
+                  child: Opacity(opacity: value, child: child),
+                ),
+                child: Center(
+                  child: BonfireWidget(
+                    level: (group.totalFlamePower ~/ 1000 + 1).clamp(1, 5),
+                    size: 100,
+                    showCrackleToggle: true,
                   ),
                 ),
               ),
-            ),
-          const SizedBox(height: DS.xl),
-          TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0.0, end: 1.0),
-            duration: const Duration(milliseconds: 800),
-            curve: Curves.easeOutBack,
-            builder: (context, value, child) => Transform.scale(
-              scale: value,
-              child: Opacity(opacity: value, child: child),
-            ),
-            child: Center(
-              child: BonfireWidget(
-                level: (group.totalFlamePower ~/ 1000 + 1).clamp(1, 5),
-                size: 140,
-                showCrackleToggle: true,
+              const SizedBox(height: DS.lg),
+              SparkleStaggerItem(
+                index: 0,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _buildStatCard(
+                        context,
+                        context.l10n.gdMembers,
+                        '${group.memberCount}/${group.maxMembers}',
+                        Icons.people,
+                      ),
+                    ),
+                    const SizedBox(width: DS.md),
+                    Expanded(
+                      child: _buildStatCard(
+                        context,
+                        context.l10n.gdFlamePower,
+                        '${group.totalFlamePower}',
+                        Icons.local_fire_department,
+                      ),
+                    ),
+                    const SizedBox(width: DS.md),
+                    Expanded(
+                      child: _buildStatCard(
+                        context,
+                        context.l10n.gdTodayCheckin,
+                        '${group.todayCheckinCount}',
+                        Icons.check_circle,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ),
-          const SizedBox(height: DS.xxl),
-          SparkleStaggerItem(
-            index: 0,
-            child: Row(
-              children: [
-                Expanded(
-                  child: _buildStatCard(
-                    context,
-                    context.l10n.gdMembers,
-                    '${group.memberCount}/${group.maxMembers}',
-                    Icons.people,
-                  ),
+              const SizedBox(height: DS.lg),
+              Text(
+                context.l10n.gdAbout,
+                style: theme.textTheme.titleLarge
+                    ?.copyWith(fontWeight: DS.fontWeightBold),
+              ),
+              const SizedBox(height: DS.sm),
+              Text(
+                group.description ?? context.l10n.gdNoDescription,
+                style: theme.textTheme.bodyMedium
+                    ?.copyWith(color: DS.textSecondary, height: 1.6),
+              ),
+              const SizedBox(height: DS.md),
+              if (group.focusTags.isNotEmpty) ...[
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: group.focusTags
+                      .map(
+                        (tag) => Chip(
+                          label: Text(tag),
+                          backgroundColor: Color.alphaBlend(
+                            DS.info.withValues(alpha: 0.05),
+                            DS.surfacePrimary,
+                          ),
+                          side: BorderSide(
+                            color: DS.border.withValues(alpha: 0.45),
+                          ),
+                          labelStyle: TextStyle(color: DS.textPrimary),
+                        ),
+                      )
+                      .toList(),
                 ),
-                const SizedBox(width: DS.md),
-                Expanded(
-                  child: _buildStatCard(
-                    context,
-                    context.l10n.gdFlamePower,
-                    '${group.totalFlamePower}',
-                    Icons.local_fire_department,
+                const SizedBox(height: DS.lg),
+              ],
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      context.l10n.gdAnnouncement,
+                      style: theme.textTheme.titleLarge
+                          ?.copyWith(fontWeight: DS.fontWeightBold),
+                    ),
                   ),
+                  if (group.isAdmin)
+                    SparkleIconButton(
+                      icon: const Icon(Icons.edit_outlined, size: 18),
+                      onPressed: () => _showEditAnnouncementDialog(
+                        context,
+                        ref,
+                        group,
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: DS.sm),
+              Text(
+                group.announcement?.isNotEmpty ?? false
+                    ? group.announcement!
+                    : context.l10n.gdNoAnnouncement,
+                style: theme.textTheme.bodyMedium
+                    ?.copyWith(color: DS.textSecondary, height: 1.6),
+              ),
+              const SizedBox(height: DS.lg),
+              if (isMember) ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: SparkleButton.secondary(
+                        label: context.l10n.gdTasks,
+                        icon: const Icon(Icons.task_alt, size: 18),
+                        onPressed: () => unawaited(context
+                            .push('/community/groups/${widget.groupId}/tasks')),
+                      ),
+                    ),
+                    const SizedBox(width: DS.md),
+                    Expanded(
+                      child: SparkleButton.secondary(
+                        label: context.l10n.gdMembers,
+                        icon: const Icon(Icons.people_outline, size: 18),
+                        onPressed: () => unawaited(
+                          context.push(
+                            '/community/groups/${widget.groupId}/members?name=${Uri.encodeComponent(group.name)}',
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: DS.md),
-                Expanded(
-                  child: _buildStatCard(
-                    context,
-                    context.l10n.gdTodayCheckin,
-                    '${group.todayCheckinCount}',
-                    Icons.check_circle,
-                  ),
+                const SizedBox(height: DS.md),
+                SparkleButton.secondary(
+                  label: context.l10n.gdOpenKnowledge,
+                  icon: const Icon(Icons.auto_stories_outlined, size: 18),
+                  onPressed: () =>
+                      setState(() => _selectedTab = _GroupDetailTab.knowledgeBase),
+                ),
+              ] else ...[
+                SparkleButton.primary(
+                  label: context.l10n.gdJoinGroup,
+                  onPressed: () async {
+                    unawaited(
+                      SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
+                    );
+                    try {
+                      await ref
+                          .read(groupDetailProvider(widget.groupId).notifier)
+                          .joinGroup();
+                      if (context.mounted) {
+                        AppFeedback.success(
+                            context,
+                            context.l10n.communityWelcomeToGroup);
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        AppFeedback.error(
+                            context, context.l10n.gdJoinFailed(e.toString()));
+                      }
+                    }
+                  },
                 ),
               ],
-            ),
-          ),
-          const SizedBox(height: DS.xxl),
-          Text(
-            context.l10n.gdAbout,
-            style: theme.textTheme.titleLarge
-                ?.copyWith(fontWeight: DS.fontWeightBold),
-          ),
-          const SizedBox(height: DS.sm),
-          Text(
-            group.description ?? context.l10n.gdNoDescription,
-            style: theme.textTheme.bodyMedium
-                ?.copyWith(color: DS.textSecondary, height: 1.6),
-          ),
-          const SizedBox(height: DS.xl),
-          if (group.focusTags.isNotEmpty) ...[
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: group.focusTags
-                  .map(
-                    (tag) => Chip(
-                      label: Text(tag),
-                      backgroundColor: Color.alphaBlend(
-                        DS.info.withValues(alpha: 0.05),
-                        DS.surfacePrimary,
-                      ),
-                      side: BorderSide(
-                        color: DS.border.withValues(alpha: 0.45),
-                      ),
-                      labelStyle: TextStyle(color: DS.textPrimary),
-                    ),
-                  )
-                  .toList(),
-            ),
-            const SizedBox(height: DS.xxl),
-          ],
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  context.l10n.gdAnnouncement,
-                  style: theme.textTheme.titleLarge
-                      ?.copyWith(fontWeight: DS.fontWeightBold),
-                ),
-              ),
-              if (group.isAdmin)
-                SparkleIconButton(
-                  icon: const Icon(Icons.edit_outlined, size: 18),
-                  onPressed: () => _showEditAnnouncementDialog(
-                    context,
-                    ref,
-                    group,
-                  ),
-                ),
+              const SizedBox(height: 80),
             ],
           ),
-          const SizedBox(height: DS.sm),
-          Text(
-            group.announcement?.isNotEmpty ?? false
-                ? group.announcement!
-                : context.l10n.gdNoAnnouncement,
-            style: theme.textTheme.bodyMedium
-                ?.copyWith(color: DS.textSecondary, height: 1.6),
+        ),
+        if (isMember)
+          Positioned(
+            left: DS.spacing16,
+            right: DS.spacing16,
+            bottom: DS.spacing16,
+            child: SafeArea(
+              child: SparkleButton.primary(
+                label: context.l10n.gdEnterChat,
+                icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                onPressed: () =>
+                    unawaited(context.push('/chat/group/${widget.groupId}')),
+              ),
+            ),
           ),
-          const SizedBox(height: DS.xxl),
-          if (isMember) ...[
-            CustomButton.primary(
-              text: context.l10n.gdEnterChat,
-              icon: Icons.chat_bubble_outline,
-              size: CustomButtonSize.large,
-              onPressed: () =>
-                  unawaited(context.push('/chat/group/${widget.groupId}')),
-            ),
-            const SizedBox(height: DS.lg),
-            Row(
-              children: [
-                Expanded(
-                  child: CustomButton.secondary(
-                    text: context.l10n.gdTasks,
-                    icon: Icons.task_alt,
-                    onPressed: () => unawaited(context
-                        .push('/community/groups/${widget.groupId}/tasks')),
-                  ),
-                ),
-                const SizedBox(width: DS.lg),
-                Expanded(
-                  child: CustomButton.secondary(
-                    text: context.l10n.gdMembers,
-                    icon: Icons.people_outline,
-                    onPressed: () => unawaited(
-                      context.push(
-                        '/community/groups/${widget.groupId}/members?name=${Uri.encodeComponent(group.name)}',
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: DS.lg),
-            CustomButton.secondary(
-              text: context.l10n.gdOpenKnowledge,
-              icon: Icons.auto_stories_outlined,
-              onPressed: () =>
-                  setState(() => _selectedTab = _GroupDetailTab.knowledgeBase),
-            ),
-          ] else ...[
-            CustomButton.primary(
-              text: context.l10n.gdJoinGroup,
-              onPressed: () async {
-                unawaited(
-                  SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
-                );
-                try {
-                  await ref
-                      .read(groupDetailProvider(widget.groupId).notifier)
-                      .joinGroup();
-                  if (context.mounted) {
-                    AppFeedback.success(
-                        context,
-                        I18nService.instance.isChinese
-                            ? '欢迎加入社群！'
-                            : 'Welcome to the group!');
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    AppFeedback.error(
-                        context, context.l10n.gdJoinFailed(e.toString()));
-                  }
-                }
-              },
-            ),
-          ],
-          const SizedBox(height: 40),
-        ],
-      ),
+      ],
     );
   }
 
@@ -533,9 +538,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                       if (context.mounted) {
                         AppFeedback.error(
                           context,
-                          I18nService.instance.isChinese
-                              ? '退出群组失败，请重试'
-                              : 'Failed to leave group, please retry',
+                          context.l10n.communityLeaveGroupFailed,
                         );
                       }
                     }

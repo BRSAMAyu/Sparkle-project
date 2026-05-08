@@ -236,7 +236,7 @@ class _RecommendationsSection extends ConsumerWidget {
                 return const SizedBox.shrink();
               }
               return SizedBox(
-                height: 220,
+                height: 200,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   itemCount: items.length,
@@ -267,7 +267,7 @@ class _RecommendationsSection extends ConsumerWidget {
               );
             },
             loading: () => SizedBox(
-              height: 220,
+              height: 200,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: 2,

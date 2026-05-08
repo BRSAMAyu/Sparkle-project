@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -61,6 +62,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
   late Animation<Offset> _slideAnimation;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
+  bool _richCardExpanded = false;
 
   @override
   void initState() {
@@ -606,7 +608,10 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
     final streak = (data['streak'] as num?)?.toInt() ?? 0;
 
     return Container(
-      width: 240,
+      constraints: BoxConstraints(
+        minWidth: 200,
+        maxWidth: math.min(MediaQuery.of(context).size.width * 0.6, 300),
+      ),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isMe
@@ -695,7 +700,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                     if (streak > 0)
                       _buildCheckinStat(
                         context.l10n.communityStreakLabel,
-                        '$streak 天',
+                        context.l10n.communityStreakDaysSuffix(streak),
                         isMe,
                       ),
                   ],
@@ -776,6 +781,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
         payload,
         onTap: () => _handleSharedResourceTap(payload),
         sharedResourceId: sharedResourceId,
+        isCompact: !_richCardExpanded,
         onAdopt: sharedResourceId == null
             ? null
             : () => _handleAdopt(context, sharedResourceId, 'task'),
@@ -810,6 +816,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
         payload,
         onTap: () => _handleSharedResourceTap(payload),
         sharedResourceId: sharedResourceId,
+        isCompact: !_richCardExpanded,
         onAdopt: sharedResourceId == null
             ? null
             : () => _handleAdopt(context, sharedResourceId, 'plan'),
@@ -842,6 +849,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
         child: NodeShareCardFactory.fromPayload(
           payload,
           onTap: () => _handleSharedResourceTap(payload),
+          isCompact: !_richCardExpanded,
         ),
       );
     }
@@ -878,6 +886,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
       child: CapsuleShareCardFactory.fromPayload(
         payload,
         onTap: () => _handleSharedResourceTap(payload),
+        isCompact: !_richCardExpanded,
       ),
     );
   }
@@ -1045,10 +1054,15 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
             : DS.shadowSm);
 
     return SparkleTappable(
-      onTap: onTap,
+      onTap: onTap ??
+          () {
+            setState(() => _richCardExpanded = !_richCardExpanded);
+          },
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 280),
+        constraints: BoxConstraints(
+          maxWidth: math.min(MediaQuery.of(context).size.width * 0.72, 320),
+        ),
         decoration: BoxDecoration(
           color: wrapperColor,
           borderRadius: BorderRadius.circular(16),
@@ -1058,7 +1072,12 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(16),
-          child: child,
+          child: AnimatedSize(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+            alignment: Alignment.topCenter,
+            child: child,
+          ),
         ),
       ),
     );

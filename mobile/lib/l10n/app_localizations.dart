@@ -48154,6 +48154,60 @@ abstract class AppLocalizations {
   /// **'{count} 天'**
   String communityStreakDaysSuffix(Object count);
 
+  /// No description provided for @communityGroupDetails.
+  ///
+  /// In zh, this message translates to:
+  /// **'社群详情'**
+  String get communityGroupDetails;
+
+  /// No description provided for @communityWelcomeToGroup.
+  ///
+  /// In zh, this message translates to:
+  /// **'欢迎加入社群！'**
+  String get communityWelcomeToGroup;
+
+  /// No description provided for @communityLeaveGroupFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'退出群组失败，请重试'**
+  String get communityLeaveGroupFailed;
+
+  /// No description provided for @communityCommentLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'评论'**
+  String get communityCommentLabel;
+
+  /// No description provided for @communityCommentsComingSoon.
+  ///
+  /// In zh, this message translates to:
+  /// **'评论功能即将上线'**
+  String get communityCommentsComingSoon;
+
+  /// No description provided for @communityShowMore.
+  ///
+  /// In zh, this message translates to:
+  /// **'展开全文'**
+  String get communityShowMore;
+
+  /// No description provided for @communityShowLess.
+  ///
+  /// In zh, this message translates to:
+  /// **'收起'**
+  String get communityShowLess;
+
+  /// No description provided for @communityShareLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享'**
+  String get communityShareLabel;
+
+  /// No description provided for @communityDeleteLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除'**
+  String get communityDeleteLabel;
+
   /// No description provided for @communityTaskFallback.
   ///
   /// In zh, this message translates to:

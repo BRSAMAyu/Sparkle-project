@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/network/response_parser.dart';
+import 'package:timeago/timeago.dart' as timeago;
 
 /// Shows a bottom sheet with comments for a post and an input field.
 Future<void> showCommentSheet(
@@ -177,21 +179,37 @@ class _CommentSheetContentState extends ConsumerState<_CommentSheetContent> {
           const Divider(),
           Expanded(
             child: _loading
-                ? const Center(child: CircularProgressIndicator())
+                ? const SparkleListSkeleton(count: 3)
                 : _error != null
                     ? Center(
-                        child: TextButton(
-                          onPressed: _loadComments,
-                          child: Text(l10n.communityCommentRetry),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.error_outline, size: 32, color: DS.textTertiary),
+                            const SizedBox(height: DS.sm),
+                            Text(l10n.communityCommentRetry,
+                                style: TextStyle(color: DS.textSecondary)),
+                            TextButton(
+                              onPressed: _loadComments,
+                              child: Text(l10n.communityCommentRetry),
+                            ),
+                          ],
                         ),
                       )
                     : _comments.isEmpty
                         ? Center(
-                            child: Text(
-                              l10n.communityCommentEmpty,
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.chat_bubble_outline, size: 32, color: DS.textTertiary),
+                                const SizedBox(height: DS.sm),
+                                Text(
+                                  l10n.communityCommentEmpty,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: DS.textSecondary,
+                                  ),
+                                ),
+                              ],
                             ),
                           )
                         : ListView.builder(
@@ -199,24 +217,94 @@ class _CommentSheetContentState extends ConsumerState<_CommentSheetContent> {
                             itemCount: _comments.length,
                             itemBuilder: (context, index) {
                               final c = _comments[index];
+                              final author = c['user'] as Map<String, dynamic>?;
+                              final username = author?['display_name'] as String? ??
+                                  author?['username'] as String? ??
+                                  context.l10n.communityMemberFallback;
+                              final avatarUrl = author?['avatar_url'] as String?;
                               final dateStr = c['created_at'] as String? ?? '';
-                              final date = dateStr.length >= 10
-                                  ? dateStr.substring(0, 10)
-                                  : dateStr;
-                              return ListTile(
-                                dense: true,
-                                title: Text(c['content'] as String? ?? ''),
-                                subtitle: Text(date),
-                                trailing: IconButton(
-                                  icon: const Icon(
-                                    Icons.delete_outline,
-                                    size: 18,
-                                  ),
-                                  onPressed: () {
-                                    final id = c['id']?.toString();
-                                    if (id == null || id.isEmpty) return;
-                                    unawaited(_deleteComment(id));
-                                  },
+                              final date = dateStr.isNotEmpty
+                                  ? timeago.format(DateTime.tryParse(dateStr) ?? DateTime.now())
+                                  : '';
+                              final isOwner = c['is_owner'] == true;
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 14,
+                                      backgroundColor: DS.avatarFallbackBackground,
+                                      backgroundImage: avatarUrl != null
+                                          ? NetworkImage(avatarUrl)
+                                          : null,
+                                      child: avatarUrl == null
+                                          ? Text(
+                                              username[0].toUpperCase(),
+                                              style: TextStyle(
+                                                color: DS.avatarFallbackForeground,
+                                                fontSize: 12,
+                                              ),
+                                            )
+                                          : null,
+                                    ),
+                                    const SizedBox(width: DS.sm),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Text(
+                                                username,
+                                                style: TextStyle(
+                                                  fontWeight: DS.fontWeightMedium,
+                                                  fontSize: 13,
+                                                  color: DS.textPrimary,
+                                                ),
+                                              ),
+                                              const SizedBox(width: DS.sm),
+                                              Text(
+                                                date,
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: DS.textTertiary,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            c['content'] as String? ?? '',
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: DS.textPrimary,
+                                              height: 1.4,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    if (isOwner)
+                                      GestureDetector(
+                                        onTap: () {
+                                          final id = c['id']?.toString();
+                                          if (id == null || id.isEmpty) return;
+                                          unawaited(_deleteComment(id));
+                                        },
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(4),
+                                          child: Icon(
+                                            Icons.delete_outline,
+                                            size: 16,
+                                            color: DS.textTertiary,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
                                 ),
                               );
                             },
@@ -231,31 +319,40 @@ class _CommentSheetContentState extends ConsumerState<_CommentSheetContent> {
                 12,
                 MediaQuery.of(context).viewInsets.bottom + 8,
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _inputController,
-                      decoration: InputDecoration(
-                        hintText: l10n.communityCommentHint,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(20),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: DS.surfaceSecondary,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: DS.borderSubtle),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _inputController,
+                        decoration: InputDecoration(
+                          hintText: l10n.communityCommentHint,
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
+                          isDense: true,
                         ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
-                        ),
-                        isDense: true,
+                        onSubmitted: (_) => _submitComment(),
                       ),
-                      onSubmitted: (_) => _submitComment(),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    onPressed: _submitting ? null : _submitComment,
-                    icon: const Icon(Icons.send),
-                  ),
-                ],
+                    Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: IconButton(
+                        onPressed: _submitting ? null : _submitComment,
+                        icon: Icon(Icons.send,
+                            color: _submitting ? DS.textTertiary : DS.brandPrimary),
+                        iconSize: 20,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

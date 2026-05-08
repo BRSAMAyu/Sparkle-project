@@ -5,8 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/compact_error_card.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/data/models/accountability_model.dart';
 import 'package:sparkle/features/community/data/models/community_accountability_hub_model.dart';
@@ -42,52 +45,85 @@ class PartnersTab extends ConsumerWidget {
           slivers: [
             // Accountability hub card
             SliverToBoxAdapter(
-              child: CommunityAccountabilityHubCard(
-                onCreateCommitment: () =>
-                    context.push(CommunityRoutes.accountability),
-                onFindPartners: () => context.push(CommunityRoutes.friends),
+              child: SparkleStaggerItem(
+                index: 0,
+                child: CommunityAccountabilityHubCard(
+                  onCreateCommitment: () =>
+                      context.push(CommunityRoutes.accountability),
+                  onFindPartners: () => context.push(CommunityRoutes.friends),
+                ),
               ),
             ),
 
             // Active partnerships
             SliverToBoxAdapter(
-              child: partnershipsAsync.when(
-                data: (partnerships) {
-                  final active = partnerships
-                      .where((p) => p.status == AccountabilityStatus.active)
-                      .toList();
-                  if (active.isEmpty) return const SizedBox.shrink();
-                  return _PartnershipsSection(partnerships: active);
-                },
-                loading: () => const _SectionLoading(),
-                error: (_, __) => _SectionError(
-                    onRetry: () => ref.invalidate(myPartnershipsProvider)),
+              child: SparkleStaggerItem(
+                index: 1,
+                child: partnershipsAsync.when(
+                  data: (partnerships) {
+                    final active = partnerships
+                        .where((p) => p.status == AccountabilityStatus.active)
+                        .toList();
+                    if (active.isEmpty) return const SizedBox.shrink();
+                    return _PartnershipsSection(partnerships: active);
+                  },
+                  loading: () => const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: DS.lg, vertical: DS.md),
+                    child: SparkleListSkeleton(count: 2),
+                  ),
+                  error: (_, __) => Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: DS.lg),
+                    child: CompactErrorCard(
+                      onRetry: () => ref.invalidate(myPartnershipsProvider),
+                    ),
+                  ),
+                ),
               ),
             ),
 
             // Hub data: commitments, progress, risks, helpable
             SliverToBoxAdapter(
-              child: hubAsync.when(
-                data: (hub) {
-                  if (hub.isEmpty) return const SizedBox.shrink();
-                  return _HubSections(hub: hub);
-                },
-                loading: () => const _SectionLoading(),
-                error: (_, __) => _SectionError(
-                    onRetry: () => ref.invalidate(accountabilityHubProvider)),
+              child: SparkleStaggerItem(
+                index: 2,
+                child: hubAsync.when(
+                  data: (hub) {
+                    if (hub.isEmpty) return const SizedBox.shrink();
+                    return _HubSections(hub: hub);
+                  },
+                  loading: () => const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: DS.lg, vertical: DS.md),
+                    child: SparkleListSkeleton(count: 2),
+                  ),
+                  error: (_, __) => Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: DS.lg),
+                    child: CompactErrorCard(
+                      onRetry: () => ref.invalidate(accountabilityHubProvider),
+                    ),
+                  ),
+                ),
               ),
             ),
 
             // Friends list
             SliverToBoxAdapter(
-              child: friendsAsync.when(
-                data: (friends) {
-                  if (friends.isEmpty) return const SizedBox.shrink();
-                  return _FriendsSection(friends: friends);
-                },
-                loading: () => const _SectionLoading(),
-                error: (_, __) => _SectionError(
-                    onRetry: () => ref.invalidate(friendsProvider)),
+              child: SparkleStaggerItem(
+                index: 3,
+                child: friendsAsync.when(
+                  data: (friends) {
+                    if (friends.isEmpty) return const SizedBox.shrink();
+                    return _FriendsSection(friends: friends);
+                  },
+                  loading: () => const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: DS.lg, vertical: DS.md),
+                    child: SparkleListSkeleton(count: 3),
+                  ),
+                  error: (_, __) => Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: DS.lg),
+                    child: CompactErrorCard(
+                      onRetry: () => ref.invalidate(friendsProvider),
+                    ),
+                  ),
+                ),
               ),
             ),
 
@@ -180,12 +216,15 @@ class _PartnershipCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: DS.sm),
       child: GestureDetector(
-        onTap: () => unawaited(
-          context.push(
-            CommunityRoutes.accountabilityDetail
-                .replaceFirst(':id', partnership.id),
-          ),
-        ),
+        onTap: () {
+          unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+          unawaited(
+            context.push(
+              CommunityRoutes.accountabilityDetail
+                  .replaceFirst(':id', partnership.id),
+            ),
+          );
+        },
         child: Container(
           padding: const EdgeInsets.all(DS.md),
           decoration: BoxDecoration(
@@ -632,10 +671,12 @@ class _FriendTile extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: DS.sm),
       child: GestureDetector(
-        onTap: () => unawaited(
-          context
-              .push(CommunityRoutes.userProfile.replaceFirst(':id', user.id)),
-        ),
+        onTap: () {
+          unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+          unawaited(
+            context.push(CommunityRoutes.userProfile.replaceFirst(':id', user.id)),
+          );
+        },
         child: Container(
           padding: const EdgeInsets.all(DS.md),
           decoration: BoxDecoration(
@@ -750,44 +791,3 @@ class _PartnerAvatar extends StatelessWidget {
       );
 }
 
-class _SectionLoading extends StatelessWidget {
-  const _SectionLoading();
-
-  @override
-  Widget build(BuildContext context) => const Padding(
-        padding: EdgeInsets.all(DS.lg),
-        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-      );
-}
-
-class _SectionError extends StatelessWidget {
-  const _SectionError({required this.onRetry});
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final zh = I18nService.instance.isChinese;
-    return Padding(
-      padding: const EdgeInsets.all(DS.lg),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.cloud_off_rounded, size: 32, color: DS.textTertiary),
-            const SizedBox(height: DS.spacing8),
-            Text(
-              zh ? '加载失败' : 'Failed to load',
-              style: TextStyle(color: DS.textSecondary, fontSize: 13),
-            ),
-            const SizedBox(height: DS.spacing8),
-            TextButton(
-              onPressed: onRetry,
-              child: Text(zh ? '重试' : 'Retry',
-                  style: const TextStyle(fontSize: 13)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

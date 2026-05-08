@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -30,7 +29,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   bool get _isDirty =>
       _contentController.text.isNotEmpty || _topicController.text.isNotEmpty;
   XFile? _selectedImage;
-  String? _selectedLocation;
 
   Future<void> _pickImage() async {
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
@@ -41,18 +39,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         _selectedImage = image;
       });
     }
-  }
-
-  Future<void> _pickLocation() async {
-    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
-    // Feature: Implement location picker using geolocator package
-    // Requires: flutter pub add geolocator
-    // 暂时使用模拟位置
-    setState(() {
-      _selectedLocation = I18nService.instance.isChinese ? '模拟位置' : 'Mock Location';
-    });
-
-    AppFeedback.info(context, I18nService.instance.isChinese ? '位置选择功能开发中，使用模拟位置' : 'Location picker is under development, using mock location');
   }
 
   Future<void> _submit() async {
@@ -79,12 +65,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             imageUrl != null ? [imageUrl] : [],
             _topicController.text.trim(),
           );
-      // Feature: Save location data separately if provided
-      if (_selectedLocation != null) {
-        if (kDebugMode) {
-          debugPrint('Location info: $_selectedLocation');
-        }
-      }
       unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.success));
       if (mounted) context.pop();
     } catch (e) {
@@ -165,7 +145,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                     ),
                   ),
                   const SizedBox(height: DS.spacing24),
-                  // Toolbar (Placeholder)
+                  // Toolbar
                   SparkleStaggerItem(
                     index: 1,
                     axis: Axis.horizontal,
@@ -178,14 +158,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                             color: DS.brandPrimary,
                           ),
                           onPressed: _pickImage,
-                        ),
-                        SparkleIconButton(
-                          variant: ButtonVariant.ghost,
-                          icon: Icon(
-                            Icons.location_on_outlined,
-                            color: DS.brandPrimary,
-                          ),
-                          onPressed: _pickLocation,
                         ),
                       ],
                     ),

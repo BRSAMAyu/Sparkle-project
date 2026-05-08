@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/components/organisms/expandable_section.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -317,26 +318,38 @@ class _DashboardView extends StatelessWidget {
                   onChat: onChat,
                 ),
               ),
-              const SizedBox(height: DS.spacing12),
+              const SizedBox(height: DS.spacing8),
               SparkleStaggerItem(
                 index: 1,
-                child: _PendingPoliciesCard(summary: dashboard.pendingPolicies),
+                child: ExpandableSection(
+                  title: context.l10n.accountabilityPendingPolicies,
+                  initiallyExpanded: false,
+                  child: _PendingPoliciesCard(summary: dashboard.pendingPolicies),
+                ),
               ),
-              const SizedBox(height: DS.spacing12),
+              const SizedBox(height: DS.spacing8),
               SparkleStaggerItem(
                 index: 2,
-                child: _RecentReflectionsCard(
-                  summary: dashboard.recentReflections,
+                child: ExpandableSection(
+                  title: context.l10n.accountabilityRecentReflections,
+                  initiallyExpanded: false,
+                  child: _RecentReflectionsCard(
+                    summary: dashboard.recentReflections,
+                  ),
                 ),
               ),
               if (dashboard.foresightHint?.hintText?.isNotEmpty ?? false) ...[
-                const SizedBox(height: DS.spacing12),
+                const SizedBox(height: DS.spacing8),
                 SparkleStaggerItem(
                   index: 3,
-                  child: _ForesightHintCard(summary: dashboard.foresightHint),
+                  child: ExpandableSection(
+                    title: context.l10n.accountabilityForesightHint,
+                    initiallyExpanded: true,
+                    child: _ForesightHintCard(summary: dashboard.foresightHint),
+                  ),
                 ),
               ],
-              const SizedBox(height: DS.spacing12),
+              const SizedBox(height: DS.spacing8),
               SparkleStaggerItem(
                 index: dashboard.foresightHint?.hintText?.isNotEmpty ?? false
                     ? 4
@@ -349,7 +362,7 @@ class _DashboardView extends StatelessWidget {
                           context.l10n.accountabilityGoalNotSet,
                 ),
               ),
-              const SizedBox(height: DS.spacing12),
+              const SizedBox(height: DS.spacing8),
               SparkleStaggerItem(
                 index: dashboard.foresightHint?.hintText?.isNotEmpty ?? false
                     ? 5
@@ -362,7 +375,7 @@ class _DashboardView extends StatelessWidget {
                       : partnership.initiatorGoal,
                 ),
               ),
-              const SizedBox(height: DS.spacing12),
+              const SizedBox(height: DS.spacing8),
               SparkleStaggerItem(
                 index: dashboard.foresightHint?.hintText?.isNotEmpty ?? false
                     ? 6
@@ -377,13 +390,14 @@ class _DashboardView extends StatelessWidget {
                 ),
               ),
               if (dashboard.recentShares.isNotEmpty) ...[
-                const SizedBox(height: DS.spacing12),
+                const SizedBox(height: DS.spacing8),
                 SparkleStaggerItem(
                   index: dashboard.foresightHint?.hintText?.isNotEmpty ?? false
                       ? 7
                       : 6,
-                  child: _SectionCard(
+                  child: ExpandableSection(
                     title: context.l10n.accountabilityRecentShares,
+                    initiallyExpanded: false,
                     child: Column(
                       children: dashboard.recentShares
                           .take(3)
@@ -436,7 +450,7 @@ class _DashboardView extends StatelessWidget {
                   ),
                 ),
               ],
-              const SizedBox(height: DS.spacing12),
+              const SizedBox(height: DS.spacing8),
               SparkleStaggerItem(
                 index: 7,
                 child: _SectionCard(
@@ -452,11 +466,12 @@ class _DashboardView extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: DS.spacing12),
+              const SizedBox(height: DS.spacing8),
               SparkleStaggerItem(
                 index: 6,
-                child: _SectionCard(
+                child: ExpandableSection(
                   title: context.l10n.accountabilityPartnerAchievements,
+                  initiallyExpanded: false,
                   child: partnerAchievements.isEmpty
                       ? Text(
                           context.l10n.accountabilityPartnerNoAchievements,
@@ -468,12 +483,12 @@ class _DashboardView extends StatelessWidget {
                         ),
                 ),
               ),
-              const SizedBox(height: DS.spacing16),
+              const SizedBox(height: DS.spacing8),
               Text(
                 context.l10n.accountabilityRecentCheckins,
                 style: DS.titleLarge.copyWith(fontWeight: DS.fontWeightBold),
               ),
-              const SizedBox(height: DS.spacing8),
+              const SizedBox(height: DS.spacing4),
               if (dashboard.timeline.isEmpty)
                 _SectionCard(
                   title: context.l10n.accountabilityNoCheckinRecords,
