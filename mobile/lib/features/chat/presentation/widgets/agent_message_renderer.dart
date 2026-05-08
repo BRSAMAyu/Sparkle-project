@@ -203,7 +203,14 @@ class AgentMessageRenderer extends ConsumerWidget {
 
       case 'knowledge_card':
         try {
-          return KnowledgeCard(data: widget.data);
+          final knowledgeConfig = _widgetConfigs(context)['knowledge_card'];
+          return _wrap(
+            label: knowledgeConfig?.label ?? '知识',
+            icon: knowledgeConfig?.icon ?? Icons.auto_stories,
+            accentColor: knowledgeConfig?.accentColor,
+            defaultExpanded: true,
+            child: KnowledgeCard(data: widget.data),
+          );
         } catch (e) {
           debugPrint('Error rendering KnowledgeCard: $e');
           return CompactErrorCard(
