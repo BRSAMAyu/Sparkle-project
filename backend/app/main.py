@@ -53,6 +53,7 @@ from app.services.capsule_event_consumer import CapsuleEventConsumer
 from app.services.cognitive_event_consumer import CognitiveEventConsumer
 from app.services.document_feedback_event_consumer import DocumentFeedbackEventConsumer
 from app.services.execution_event_consumer import ExecutionEventConsumer
+from app.services.galaxy.event_listener import TaskEventListener
 from app.services.galaxy_event_consumer import GalaxyEventConsumer
 from app.services.galaxy_execution_consumer import GalaxyExecutionConsumer
 from app.services.group_file_event_consumer import GroupFileEventConsumer
@@ -405,6 +406,18 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger.error(f"Failed to initialize GalaxyStreamingService: {e}")
 
+    # Start Galaxy TaskEventListener (implicit feedback from task/error events)
+    task_event_listener_task = None
+    if cache_service.redis and event_bus is not None:
+        task_event_listener = TaskEventListener(
+            session_factory=AsyncSessionLocal,
+            event_bus=event_bus,
+        )
+        task_event_listener_task = asyncio.create_task(task_event_listener.start())
+        app.state.task_event_listener = task_event_listener
+        app.state.task_event_listener_task = task_event_listener_task
+        logger.info("Galaxy TaskEventListener started")
+
     async with AsyncSessionLocal() as db:
         try:
             try:
@@ -647,6 +660,17 @@ async def lifespan(app: FastAPI):
         billing_worker_task.cancel()
         with suppress(asyncio.CancelledError):
             await billing_worker_task
+
+    # Stop Galaxy TaskEventListener
+    task_event_listener = getattr(app.state, "task_event_listener", None)
+    task_event_listener_task = getattr(app.state, "task_event_listener_task", None)
+    if task_event_listener:
+        task_event_listener.stop()
+    if task_event_listener_task:
+        task_event_listener_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task_event_listener_task
+        logger.info("Galaxy TaskEventListener stopped")
 
     # Stop Galaxy Streaming Service
     galaxy_streaming_service = getattr(app.state, "galaxy_streaming_service", None)
