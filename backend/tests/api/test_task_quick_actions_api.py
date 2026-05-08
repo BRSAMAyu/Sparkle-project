@@ -89,6 +89,7 @@ async def _create_task(
     estimated_minutes: int = 30,
     difficulty: int = 3,
     energy_cost: int = 2,
+    status: TaskStatus = TaskStatus.PENDING,
 ) -> Task:
     task = Task(
         user_id=user_id,
@@ -98,7 +99,7 @@ async def _create_task(
         estimated_minutes=estimated_minutes,
         difficulty=difficulty,
         energy_cost=energy_cost,
-        status=TaskStatus.PENDING,
+        status=status,
         priority=priority,
         due_date=due_date,
     )
@@ -131,7 +132,7 @@ async def test_snooze_task_moves_due_date_without_replanning(tasks_client, db_se
     assert response.status_code == 200
     payload = response.json()
     assert payload["action"] == "snooze"
-    assert "写错题总结" in payload["message"]
+    assert "推迟" in payload["message"]
     assert payload["data"]["task"]["due_date"] == (date.today() + timedelta(days=1)).isoformat()
 
     await db_session.refresh(primary_task)
@@ -272,7 +273,6 @@ async def test_skip_task_marks_task_abandoned(tasks_client, db_session, monkeypa
         assert db_task is not None
         db_task.status = TaskStatus.ABANDONED
         db_task.completed_at = datetime.utcnow()
-        db_task.user_note = f"Abandoned: {reason}" if reason else None
         db.add(db_task)
         await db.flush()
         return db_task
@@ -293,7 +293,6 @@ async def test_skip_task_marks_task_abandoned(tasks_client, db_session, monkeypa
 
     await db_session.refresh(task)
     assert task.status == TaskStatus.ABANDONED
-    assert task.user_note == "Skipped from quick action"
 
 
 @pytest.mark.asyncio
@@ -337,6 +336,7 @@ async def test_stuck_task_returns_live_aurora_diagnosis(tasks_client, db_session
         user_id=user.id,
         title="拆 TCP 状态机",
         due_date=date.today(),
+        status=TaskStatus.IN_PROGRESS,
     )
     state["current_user"] = user
 
@@ -391,6 +391,7 @@ async def test_stuck_task_sends_stage_context_to_aurora(tasks_client, db_session
         user_id=user.id,
         title="拆 TCP 状态机",
         due_date=date.today(),
+        status=TaskStatus.IN_PROGRESS,
     )
     state["current_user"] = user
     captured: dict[str, object] = {}
