@@ -3747,8 +3747,8 @@ async def test_plan_directive_practice_task_injection():
 
 
 @pytest.mark.asyncio
-async def test_orchestrator_production_fetches_response_directive():
-    """orchestrator_production.py fetches ResponseDirective from spine and passes to prompt."""
+async def test_spine_orchestrator_fetches_response_directive():
+    """SpineOrchestrator fetches ResponseDirective from spine and passes to prompt."""
     from app.signals.types import ResponseDirective
     import json
 
