@@ -122,7 +122,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
 
   bool _showHeart = false;
   bool _isPressed = false;
-  final Set<String> _expandedMessageIds = <String>{};
+  /// 0 = compact, 1 = comfortable, 2 = full
+  final Map<String, int> _messageHeightState = <String, int>{};
 
   bool get _isFreshUserBubble {
     if (widget.message is! ChatMessageModel) {
@@ -1081,20 +1082,36 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                                   .chatBubble,
                                             );
 
+                                            // Streaming messages are never constrained
+                                            if (_isStreamingAssistantBubble) {
+                                              return contentWidget;
+                                            }
+
                                             final shouldConstrain =
                                                 _content.length > 500;
                                             final messageKey = _messageId ??
                                                 _createdAt
                                                     .microsecondsSinceEpoch
                                                     .toString();
-                                            final isExpanded =
-                                                _expandedMessageIds
-                                                    .contains(messageKey);
-                                            final collapsedHeight =
-                                                min(maxHeight, 280.0);
-                                            final toggleLabel = isExpanded
-                                                    ? S.chatBubbleCollapse
-                                                    : S.chatBubbleReadMore;
+                                            // Three-state: 0=compact, 1=comfortable, 2=full
+                                            final heightState =
+                                                _messageHeightState[messageKey] ?? 0;
+                                            final compactHeight =
+                                                min(maxHeight, 220.0);
+                                            final comfortableHeight =
+                                                min(maxHeight, 350.0);
+                                            final constrainedHeight =
+                                                heightState == 0
+                                                    ? compactHeight
+                                                    : heightState == 1
+                                                        ? comfortableHeight
+                                                        : maxHeight;
+                                            final isFull = heightState == 2;
+                                            final toggleLabel = heightState == 0
+                                                ? S.chatBubbleReadMore
+                                                : heightState == 1
+                                                    ? S.chatBubbleReadMore
+                                                    : S.chatBubbleCollapse;
 
                                             final animatedContent =
                                                 AnimatedSize(
@@ -1116,17 +1133,42 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                                         ConstrainedBox(
                                                           constraints:
                                                               BoxConstraints(
-                                                            maxHeight: isExpanded
-                                                                ? maxHeight
-                                                                : collapsedHeight,
+                                                            maxHeight: constrainedHeight,
                                                           ),
-                                                          child:
+                                                          child: Stack(
+                                                            children: [
                                                               SingleChildScrollView(
-                                                            physics: isExpanded
+                                                            physics: isFull
                                                                 ? const ClampingScrollPhysics()
                                                                 : const NeverScrollableScrollPhysics(),
                                                             child:
                                                                 contentWidget,
+                                                              ),
+                                                              // Gradient fade when not fully expanded
+                                                              if (!isFull)
+                                                                Positioned(
+                                                                  bottom: 0,
+                                                                  left: 0,
+                                                                  right: 0,
+                                                                  height: 40,
+                                                                  child: DecoratedBox(
+                                                                    decoration: BoxDecoration(
+                                                                      gradient: LinearGradient(
+                                                                        begin: Alignment.topCenter,
+                                                                        end: Alignment.bottomCenter,
+                                                                        colors: [
+                                                                          isUser
+                                                                              ? DS.chatBubbleUserText.withValues(alpha: 0)
+                                                                              : Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0),
+                                                                          isUser
+                                                                              ? DS.chatBubbleUserText
+                                                                              : Theme.of(context).colorScheme.surfaceContainerHighest,
+                                                                        ],
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                            ],
                                                           ),
                                                         ),
                                                         const SizedBox(
@@ -1141,21 +1183,18 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                                             onPressed: () {
                                                               unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
                                                               setState(() {
-                                                                if (isExpanded) {
-                                                                  _expandedMessageIds
-                                                                      .remove(
-                                                                    messageKey,
-                                                                  );
-                                                                } else {
-                                                                  _expandedMessageIds
-                                                                      .add(
-                                                                    messageKey,
-                                                                  );
+                                                                _messageHeightState[messageKey] =
+                                                                    (heightState + 1) % 3 == 0
+                                                                        ? 0
+                                                                        : heightState + 1;
+                                                                // If cycling back to 0, remove to save memory
+                                                                if (_messageHeightState[messageKey] == 0) {
+                                                                  _messageHeightState.remove(messageKey);
                                                                 }
                                                               });
                                                             },
                                                             icon: Icon(
-                                                              isExpanded
+                                                              isFull
                                                                   ? Icons
                                                                       .unfold_less_rounded
                                                                   : Icons
