@@ -436,7 +436,8 @@ class SyncEngine {
   }
 
   DateTime _nextAttempt(int attemptCount) {
-    final backoffMs = min(_baseBackoffMs * pow(2, attemptCount), _maxBackoffMs);
+    final exponent = attemptCount.clamp(0, 20);
+    final backoffMs = min(_baseBackoffMs * pow(2, exponent), _maxBackoffMs);
     final jitterMs = _random.nextInt(250);
     return DateTime.now()
         .add(Duration(milliseconds: backoffMs.toInt() + jitterMs));

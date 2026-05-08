@@ -12,6 +12,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:isar/isar.dart';
+import 'shared/isar_test_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/app/app.dart';
 import 'package:sparkle/core/analytics/models/user_analytics_event.dart';
@@ -27,7 +28,7 @@ void main() {
   testWidgets(
     'App smoke test',
     (WidgetTester tester) async {
-      await Isar.initializeIsarCore(download: true);
+      await initializeIsarCoreForTesting();
       SharedPreferences.setMockInitialValues({});
 
       final tempDir = await Directory.systemTemp.createTemp('sparkle_app_test');
