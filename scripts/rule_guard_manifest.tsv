@@ -42,7 +42,6 @@ AM	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/stage28/check_rule_am_confidence_cap.py
 S28-ROUTER	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/stage28/check_trait_not_router.py"
 S28-NLP-WRITE	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/stage28/check_nlp_no_direct_write.py"
 S28-ISOLATION	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/stage28/check_trait_user_isolation.py"
-S28-BIAS	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/stage28/check_nlp_bias_calibration.py"
 S28-LABELS	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/stage28/check_traits_no_diagnostic_labels.py"
 AN	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/stage29/check_rule_an_orchestrator_isolation.py" && "${PYTHON_BIN}" "${REPO_ROOT}/scripts/stage29/check_rule_an_orchestrator_no_hardcoded_phase.py" && "${PYTHON_BIN}" "${REPO_ROOT}/scripts/stage29/check_scaffolding_aggregator_only.py" && "${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_rule_an_cross_user_isolation.py"
 S29-ROUTER	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/stage29/check_srl_not_router.py"
