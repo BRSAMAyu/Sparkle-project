@@ -5,8 +5,6 @@ single mobile-friendly payload. Registration is left to the closeout
 integration pass so parallel agents do not contend on the central router.
 """
 
-from __future__ import annotations
-
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 

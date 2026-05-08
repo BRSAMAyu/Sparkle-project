@@ -83,21 +83,20 @@ func TestChatOrchestrator_QuotaIntegration(t *testing.T) {
 		})
 		assert.NoError(t, err)
 
-		// First expect the accepted ACK introduced by realtime request admission.
-		// The chat flow may also emit a legacy message_ack before the service
-		// error. Seeing the error proves it passed quota admission and attempted
-		// the agent call.
+		// First expect the accepted ACK from sendLegacyAcceptedAck.
+		// Then a message_nack when agentClient is nil.
+		// Seeing the nack proves it passed quota admission and attempted the agent call.
 		var resp map[string]interface{}
 		err = conn.ReadJSON(&resp)
 		assert.NoError(t, err)
 		assert.Equal(t, "ack", resp["type"])
 
-		for i := 0; i < 3 && resp["type"] != "error"; i++ {
+		for i := 0; i < 3 && resp["type"] != "message_nack"; i++ {
 			err = conn.ReadJSON(&resp)
 			assert.NoError(t, err)
 		}
-		assert.Equal(t, "error", resp["type"])
-		assert.Equal(t, "AI Service Unavailable", resp["message"])
+		assert.Equal(t, "message_nack", resp["type"])
+		assert.Equal(t, "AI Service Unavailable", resp["error_message"])
 
 		assert.False(t, s.Exists("user:quota:user_quota_test"))
 	})

@@ -132,6 +132,7 @@ from app.orchestration.observability_logger import observability_logger
 from app.orchestration.observability_mixin import ObservabilityMixin
 from app.orchestration.orchestration_trace import OrchestrationTrace
 from app.orchestration.persistence_layer import PersistenceLayerMixin
+from app.orchestration.plan_review_service import plan_review_service
 from app.orchestration.planning_workflow import EXAM_SPRINT_FAST_TRACK_FLAG, PlanningWorkflowManager
 from app.orchestration.response_builder import ResponseBuilderMixin
 

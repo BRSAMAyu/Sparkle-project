@@ -231,7 +231,7 @@ from app.models.user import PushPreference, User
 from app.models.user_preferences import UserPreferencesCenter
 from app.models.user_settings import UserSettings
 from app.models.user_state import UserStateSnapshot
-from app.models.visual_element import VisualElement
+from app.models.visual_element import UserVisualConfig, UserVisualElement, VisualElement
 from app.models.vocabulary import DictionaryEntry, WordBook
 try:
     from app.models.workflow_conversation import (
@@ -556,6 +556,8 @@ __all__ = [
     "UserSettings",
     "UserStateSnapshot",
     # Visual
+    "UserVisualConfig",
+    "UserVisualElement",
     "VisualElement",
     # Vocabulary
     "DictionaryEntry",

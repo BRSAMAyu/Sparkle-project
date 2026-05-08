@@ -31,10 +31,11 @@ from app.config import settings
 from app.core.cache import cache_service
 from app.core.galaxy_event_bridge import galaxy_event_bridge
 from app.db.session import AsyncSessionLocal
-from app.gen import error_book_pb2, error_book_pb2_grpc, stt_service_pb2, stt_service_pb2_grpc
+from app.gen import error_book_pb2, error_book_pb2_grpc
 from app.gen.agent.v1 import agent_service_pb2, agent_service_pb2_grpc
 from app.gen.galaxy.v1 import galaxy_service_pb2, galaxy_service_pb2_grpc
 from app.gen.sparkle.inference.v1 import inference_pb2
+from app.gen.stt.v1 import stt_service_pb2, stt_service_pb2_grpc
 from app.orchestration.orchestrator import ChatOrchestrator
 from app.services.agent_grpc_service import AgentServiceImpl
 from app.services.error_book_grpc_service import ErrorBookGrpcServiceImpl

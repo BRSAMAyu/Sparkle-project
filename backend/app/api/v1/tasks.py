@@ -1068,6 +1068,7 @@ async def skip_task(
     task_id: UUID = Path(..., description="Task ID"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    req: Request = None,  # injected by FastAPI for locale detection
 ):
     """Hide a task from active surfaces by marking it abandoned as a quick skip."""
     reason = (request.reason if request else None) or "quick_action_skip"

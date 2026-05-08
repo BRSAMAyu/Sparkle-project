@@ -961,12 +961,10 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	h.logger.Info("Registered aurora proxy routes (catch-all)")
 
 	// ==================== Galaxy Routes ====================
-	galaxy := api.Group("/galaxy")
-	galaxy.Use(authMiddleware)
-	{
-		h.registerREST(galaxy, "/*path")
-	}
-	h.logger.Info("Registered galaxy proxy routes")
+	// Note: galaxy_handler.RegisterRoutes() already registers specific routes.
+	// A catch-all /*path would conflict with those concrete routes.
+	// Unmatched galaxy paths fall through to NoRoute proxy.
+	h.logger.Info("Skipped galaxy proxy catch-all (handled by galaxy_handler)")
 
 	// ==================== Missing Proxy Routes ====================
 

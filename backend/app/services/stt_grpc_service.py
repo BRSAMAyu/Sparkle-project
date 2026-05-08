@@ -16,7 +16,7 @@ for _path in (_GEN_ROOT, _GEN_ROOT / "stt" / "v1"):
     if _path_str not in sys.path:
         sys.path.append(_path_str)
 
-from app.gen import stt_service_pb2, stt_service_pb2_grpc
+from app.gen.stt.v1 import stt_service_pb2, stt_service_pb2_grpc
 from app.services.stt_service import STTService, stt_service
 
 

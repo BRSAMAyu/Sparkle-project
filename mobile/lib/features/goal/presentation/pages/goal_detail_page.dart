@@ -184,7 +184,7 @@ class _GoalHeader extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Hero(
-              tag: 'goal-$goalId',
+              tag: 'goal-${data.goal.id}',
               child: Material(
                 type: MaterialType.transparency,
                 child: SizedBox(

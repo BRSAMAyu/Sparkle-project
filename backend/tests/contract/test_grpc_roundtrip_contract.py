@@ -8,7 +8,8 @@ from google.protobuf import json_format
 # Proto imports — test that generated code is importable and consistent.
 # The flat app.gen modules are the canonical Python generated outputs; nested
 # packages re-export them for some proto namespaces.
-from app.gen import agent_service_pb2, galaxy_service_pb2
+from app.gen.agent.v1 import agent_service_pb2
+from app.gen.galaxy.v1 import galaxy_service_pb2
 
 
 class TestAgentProtoRoundTrip:
@@ -97,12 +98,12 @@ class TestProtoModuleHealth:
     """Smoke-test that all generated proto modules are importable."""
 
     def test_agent_service_pb2_importable(self):
-        from app.gen import agent_service_pb2 as m
+        from app.gen.agent.v1 import agent_service_pb2 as m
         assert hasattr(m, "ChatRequest")
         assert hasattr(m, "ChatResponse")
 
     def test_galaxy_service_pb2_importable(self):
-        from app.gen import galaxy_service_pb2 as m
+        from app.gen.galaxy.v1 import galaxy_service_pb2 as m
         assert hasattr(m, "UpdateNodeMasteryRequest")
         assert hasattr(m, "CollaborativeGalaxyUpdate")
 

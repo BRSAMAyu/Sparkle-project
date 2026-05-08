@@ -60,12 +60,18 @@ class _AnimatedAchievementCardState extends State<AnimatedAchievementCard>
   late final Animation<double> _scaleAnimation;
   late final Animation<Offset> _slideAnimation;
 
-  int get _rarityDelayMs => switch (widget.rarity) {
-        AchievementRarity.common => 32,
-        AchievementRarity.rare => 44,
-        AchievementRarity.epic => 56,
-        AchievementRarity.legendary => 70,
-      };
+  int get _rarityDelayMs {
+    switch (widget.rarity) {
+      case AchievementRarity.common:
+        return 32;
+      case AchievementRarity.rare:
+        return 44;
+      case AchievementRarity.epic:
+        return 56;
+      case AchievementRarity.legendary:
+        return 70;
+    }
+  }
 
   @override
   void initState() {
@@ -124,6 +130,7 @@ class _AnimatedAchievementCardState extends State<AnimatedAchievementCard>
       child: widget.child,
     );
   }
+}
 
 // ---------------------------------------------------------------------------
 // _AnimatedProgressBar  (fills from 0 -> target on first build)

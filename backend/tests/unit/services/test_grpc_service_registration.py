@@ -17,7 +17,7 @@ for path in (GEN_ROOT, GEN_ROOT / "stt" / "v1"):
 
 from sparkle.inference.v1 import inference_pb2_grpc
 
-from app.gen import stt_service_pb2, stt_service_pb2_grpc
+from app.gen.stt.v1 import stt_service_pb2, stt_service_pb2_grpc
 from app.gen.sparkle.inference.v1 import inference_pb2
 from grpc_server import DEPRECATED_PROTO_SERVICE_NAMES, register_grpc_services, registered_grpc_service_names
 

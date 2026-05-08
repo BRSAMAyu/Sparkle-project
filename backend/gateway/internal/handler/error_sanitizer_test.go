@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sparkle/gateway/internal/config"
 	"github.com/sparkle/gateway/internal/i18n"
 	"github.com/stretchr/testify/require"
 )
@@ -38,6 +39,7 @@ func TestSanitizeErrorResponse_ProductionHidesInternalDetails(t *testing.T) {
 
 func TestSanitizeErrorResponse_DevelopmentKeepsRawError(t *testing.T) {
 	t.Setenv("ENVIRONMENT", "development")
+	InitHandlerConfig(&config.Config{Environment: "development"})
 	gin.SetMode(gin.TestMode)
 
 	r := gin.New()
@@ -58,6 +60,7 @@ func TestSanitizeErrorResponse_DevelopmentKeepsRawError(t *testing.T) {
 
 func TestSanitizeErrorResponse_UsesRequestLocale(t *testing.T) {
 	t.Setenv("ENVIRONMENT", "prod")
+	InitHandlerConfig(&config.Config{Environment: "prod"})
 	gin.SetMode(gin.TestMode)
 
 	r := gin.New()

@@ -13,10 +13,7 @@ from google.protobuf.descriptor import Descriptor, EnumDescriptor, FileDescripto
 
 PROTO_MODULES = [
     "app.gen.agent_service_pb2",
-    "app.gen.community_service_pb2",
     "app.gen.error_book_pb2",
-    "app.gen.galaxy_service_pb2",
-    "app.gen.stt_service_pb2",
     "app.gen.websocket_pb2",
 ]
 
