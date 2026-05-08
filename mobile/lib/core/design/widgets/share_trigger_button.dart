@@ -36,7 +36,7 @@ enum ShareButtonSize {
 /// This widget provides a consistent interface for triggering share operations
 /// with different visual variants to fit various UI contexts.
 class ShareTriggerButton extends StatelessWidget {
-  const ShareTriggerButton({
+  ShareTriggerButton({
     required this.payload,
     this.onGenerateCard,
     this.onCommunityShare,
@@ -44,10 +44,10 @@ class ShareTriggerButton extends StatelessWidget {
     this.size = ShareButtonSize.medium,
     this.label,
     this.icon,
-    this.templates = DefaultShareTemplates.all,
+    List<ShareTemplate>? templates,
     this.showLabel = true,
     super.key,
-  });
+  }) : templates = templates ?? DefaultShareTemplates.all;
 
   /// The share payload containing content info
   final UniversalSharePayload payload;

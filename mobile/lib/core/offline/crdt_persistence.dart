@@ -25,7 +25,7 @@ class FlutterCRDTPersistence {
 
       // Reuse the existing IsarId so put() becomes an update, not an insert.
       if (existing != null) {
-        snapshot.isarId = existing.isarId;
+        snapshot.id = existing.id;
       }
 
       await _localDb.isar.localCRDTSnapshots.put(snapshot);

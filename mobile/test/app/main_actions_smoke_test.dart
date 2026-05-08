@@ -67,36 +67,32 @@ void main() {
       await tester.drag(find.byType(CustomScrollView), const Offset(0, 300));
       await tester.pump(const Duration(milliseconds: 300));
       await tester.pump(const Duration(seconds: 1));
+      // Allow pending timers to settle before teardown.
+      await tester.pumpAndSettle(const Duration(seconds: 2));
 
       expect(find.byType(DashboardScreen), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('community tab switch and action sheets work', (tester) async {
+    testWidgets('community tab switch works and shows FAB on Feed tab', (tester) async {
       await _pumpPage(tester, const CommunityMainScreen());
 
+      expect(find.byType(TabBar), findsOneWidget);
+      expect(find.byType(Tab), findsNWidgets(3));
+
+      // Switch to Feed tab (index 1) — FAB with edit icon appears
       await tester.tap(find.byType(Tab).at(1));
       await tester.pump(const Duration(milliseconds: 300));
       await tester.pump(const Duration(milliseconds: 500));
-      expect(find.byType(TabBar), findsOneWidget);
 
-      await tester.tap(find.byIcon(Icons.search));
-      await tester.pumpAndSettle();
-      expect(
-        find.byWidgetPredicate(
-          (widget) => widget is ListTile && widget.leading is Icon,
-        ),
-        findsWidgets,
-      );
-      Navigator.of(
-        tester.element(find.byType(ListTile).first),
-      ).pop();
-      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.edit), findsOneWidget);
 
-      // person_add_outlined is inside the "more" popup menu
-      await tester.tap(find.byIcon(Icons.more_horiz_rounded));
-      await tester.pumpAndSettle();
-      expect(find.byIcon(Icons.person_add_outlined), findsOneWidget);
+      // Switch to Groups tab (index 2) — no FAB
+      await tester.tap(find.byType(Tab).at(2));
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.byIcon(Icons.edit), findsNothing);
       expect(tester.takeException(), isNull);
     });
 
@@ -146,9 +142,9 @@ void main() {
         ),
       );
 
-      await tester.enterText(find.byType(TextField), '本地联调发送测试');
+      await tester.enterText(find.byType(TextField).first, '本地联调发送测试');
       await tester.pumpAndSettle();
-      await tester.tap(find.bySemanticsLabel('Send message'));
+      await tester.tap(find.bySemanticsLabel('Send message').first);
       await tester.pumpAndSettle();
 
       expect(sent, '本地联调发送测试');
@@ -278,7 +274,7 @@ void main() {
 
       await tester.enterText(find.byType(TextField).at(0), '联调发帖内容');
       await tester.enterText(find.byType(TextField).at(1), '知识星图');
-      await tester.tap(find.text('Post'));
+      await tester.tap(find.text('发布'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 700));
       await tester.pumpAndSettle();

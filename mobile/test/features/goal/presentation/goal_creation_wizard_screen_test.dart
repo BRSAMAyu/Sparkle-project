@@ -113,4 +113,11 @@ class _FakeGoalRepository implements GoalRepository {
       status: 'active',
     );
   }
+
+  @override
+  Future<void> updateGoal({
+    required String goalId,
+    String? title,
+    String? description,
+  }) async {}
 }

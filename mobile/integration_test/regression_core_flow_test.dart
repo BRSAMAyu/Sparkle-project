@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:integration_test/integration_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -9,6 +10,7 @@ import 'package:sparkle/features/auth/presentation/screens/login_screen.dart';
 import 'package:sparkle/features/chat/presentation/screens/chat_screen.dart';
 import 'package:sparkle/features/home/presentation/screens/dashboard_screen.dart';
 import 'package:sparkle/main.dart' as app;
+import 'package:sparkle/core/services/notification_service.dart';
 
 /// Regression Core Flow Test
 /// Full path: launch → login → home → galaxy → chat → community → profile → back
