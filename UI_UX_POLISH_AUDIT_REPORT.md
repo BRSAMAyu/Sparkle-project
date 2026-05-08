@@ -267,7 +267,7 @@ git checkout HEAD~1 -- \
 
 **Date:** 2026-05-08
 **Scope:** Achievement, Visual Elements, Poster, Weather, Chat/Card Systems
-**Status:** 🔄 Phase 1 Complete
+**Status:** ✅ Phase 2 Complete
 
 ---
 
@@ -338,36 +338,62 @@ EXPANDED by default:
 
 ---
 
-## Changes Made (Phase 1)
+## Changes Made (Phase 2 - Fixes)
 
-### Commit 1: 985a4257b
+### Commit 2: 9218bf8de
 **Date:** 2026-05-08
-**Message:** `refactor(chat): add defaultExpanded param to CollapsibleWidgetWrapper`
+**Message:** `fix(share): replace hardcoded purple with DS.capsuleAccent`
+
+**Files Changed:**
+- `mobile/lib/features/community/presentation/widgets/share_cards/capsule_share_card.dart`
+
+**Summary:**
+- Replace `_capsulePurple` hardcoded Color(0xFF9C27B0) with `DS.capsuleAccent`
+- Remove `const` from TextStyle using the now non-const `_capsulePurple`
+- Color now adapts to light/dark theme
+
+---
+
+### Commit 3: 29c0a7ef7
+**Date:** 2026-05-08
+**Message:** `docs(visual): add note about hardcoded colors vs DS tokens`
+
+**Files Changed:**
+- `mobile/lib/features/visual_elements/presentation/shared/visual_element_palette.dart`
+
+**Summary:**
+- Added documentation explaining why hardcoded colors are used
+- Visual elements require specific color characteristics (glow, shimmer)
+- Future work should consider adding tokens to SparkleColors
+
+---
+
+### Commit 4: b3b5a3d93
+**Date:** 2026-05-08
+**Message:** `fix(chat): wrap knowledge_card in CollapsibleWidgetWrapper with defaultExpanded`
 
 **Files Changed:**
 - `mobile/lib/features/chat/presentation/widgets/agent_message_renderer.dart`
 
 **Summary:**
-- Added optional `defaultExpanded` parameter to `_wrap()` method
-- Enables future control over initial card expansion state
-- Does NOT change current behavior (defaults remain collapsed)
-- Preparation for fixing card crowding issue
-
-**Verification:** `flutter analyze` passed (6 info-level issues only, pre-existing)
+- Wrap knowledge_card with CollapsibleWidgetWrapper via `_wrap()` in `_buildWidget`
+- Set `defaultExpanded: true` so it's expanded by default when shown
+- Avoided double-wrap issue by keeping `_buildInnerWidget` returning raw widget
+- Used explicit `_widgetConfigs()['knowledge_card']!` for correct i18n labels
 
 ---
 
 ## Agent Review Summary
 
 Independent review completed on:
-- `agent_message_renderer.dart` - No issues, clean change
-- `capsule_share_card.dart` - Hardcoded purple identified
-- `visual_element_palette.dart` - Hardcoded colors identified
+- `agent_message_renderer.dart` - Double-wrap issue identified and fixed
+- `capsule_share_card.dart` - Hardcoded purple fixed
+- `visual_element_palette.dart` - Documentation added
 
-**Key Recommendations from Review:**
-1. Replace `_capsulePurple` with `DS.capsuleAccent`
-2. Map VisualElementPalette colors to DS tokens
-3. Verify fixed `maxWidth: 280` on capsule card doesn't overflow narrow screens
+**Key Recommendations from Review (applied):**
+1. Replace `_capsulePurple` with `DS.capsuleAccent` ✅ Applied
+2. Map VisualElementPalette colors to DS tokens - Documented rationale ✅
+3. Fix double-wrap issue for knowledge_card ✅ Fixed
 
 ---
 
@@ -382,16 +408,15 @@ Independent review completed on:
 
 ## Remaining Work
 
-### High Priority
-1. **VisualElementPalette Fix:** Map hardcoded colors to DS token equivalents
-2. **CapsuleShareCard Fix:** Replace `_capsulePurple` with `DS.capsuleAccent`
+### Completed ✅
+1. **CapsuleShareCard Fix:** Replace `_capsulePurple` with `DS.capsuleAccent` ✅ Done
+2. **VisualElementPalette Documentation:** Add rationale for hardcoded colors ✅ Done
+3. **Card Crowding Fix:** knowledge_card wrapped with `defaultExpanded: true` ✅ Done
 
-### Medium Priority
-3. **Card Crowding Fix:** Use `_wrap(defaultExpanded: true)` for knowledge_card in agent_message_renderer
-
-### Lower Priority
+### Still Pending
 4. Verify achievement card display in chat
 5. CompactStatusBar weather sentence review
+6. Full E2E verification of chat card behavior
 
 ---
 
