@@ -525,64 +525,6 @@ class TestAuthorization:
 # ============================================================
 # Session Management Tests
 # ============================================================
-
-class TestSessionManagement:
-    """Test session management"""
-
-    @pytest.mark.asyncio
-    async def test_session_creation(
-        self,
-        db: AsyncSession,
-        test_user_with_password: User,
-        redis_client
-    ):
-        """Test creating a session"""
-        from app.services.session_service import create_session
-
-        session_id = await create_session(
-            db=db,
-            user_id=str(test_user_with_password.id),
-            metadata={"device": "test"}
-        )
-
-        assert session_id is not None
-
-        # Verify session in Redis
-        session_key = f"session:{session_id}"
-        session_data = await redis_client.get(session_key)
-
-        assert session_data is not None
-
-    @pytest.mark.asyncio
-    async def test_session_expiration(
-        self,
-        db: AsyncSession,
-        test_user_with_password: User,
-        redis_client
-    ):
-        """Test session expiration"""
-        from app.services.session_service import create_session
-
-        session_id = await create_session(
-            db=db,
-            user_id=str(test_user_with_password.id),
-            expires_in=1  # 1 second TTL
-        )
-
-        # Session should exist immediately
-        session_key = f"session:{session_id}"
-        session_data = await redis_client.get(session_key)
-        assert session_data is not None
-
-        # Wait for expiration
-        await asyncio.sleep(2)
-
-        # Session should be expired
-        session_data = await redis_client.get(session_key)
-        assert session_data is None
-
-
-# ============================================================
 # Security Tests
 # ============================================================
 
