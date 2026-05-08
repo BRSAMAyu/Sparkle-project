@@ -347,8 +347,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     if (widget.message is ChatMessageModel) {
       final chatMessage = widget.message as ChatMessageModel;
 
-      // 如果消息内容太短（少于100个字符），不需要放大查看
-      if (chatMessage.content.length < 100) return;
+      // 如果消息内容太短（少于60个字符），不需要放大查看
+      if (chatMessage.content.length < 60) return;
+
+      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
 
       // 生成唯一的Hero tag
       final heroTag = 'message_${chatMessage.id}';
@@ -1128,6 +1130,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                                           child:
                                                               TextButton.icon(
                                                             onPressed: () {
+                                                              unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
                                                               setState(() {
                                                                 if (isExpanded) {
                                                                   _expandedMessageIds
@@ -1219,10 +1222,15 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                                 .enabledReceiptTypes,
                                         onActionSelected: _continueInlinePrompt,
                                       ),
-                                      SourceExplanationCard(
-                                        rawMetadata:
-                                            (widget.message as ChatMessageModel)
-                                                .rawMetadata,
+                                      _buildAccessoryDisclosure(
+                                        id: 'source_explanation_${chatMessage?.id}',
+                                        label: context.l10n.chatActionTitleSourceSummary,
+                                        icon: Icons.fact_check_rounded,
+                                        child: SourceExplanationCard(
+                                          rawMetadata:
+                                              (widget.message as ChatMessageModel)
+                                                  .rawMetadata,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -1480,43 +1488,48 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                         right: 8.0,
                                         left: 8.0,
                                       ),
-                                      child: ActionCard(
-                                        action: w,
-                                        onConfirm: actionable &&
-                                                widget.onActionConfirm != null
-                                            ? () => widget.onActionConfirm!(w)
-                                            : null,
-                                        onDismiss: actionable &&
-                                                widget.onActionDismiss != null
-                                            ? () => widget.onActionDismiss!(w)
-                                            : null,
-                                        onConfirmTasks: (toolResultId) async {
-                                          final planId =
-                                              w.data['plan_id']?.toString() ??
-                                                  w.data['planId']?.toString();
-                                          await _confirmGeneratedTasks(
-                                            toolResultId: toolResultId,
-                                            planId: planId,
-                                          );
-                                        },
-                                        onConfirmAllTasks:
-                                            (toolResultId) async {
-                                          final planId =
-                                              w.data['plan_id']?.toString() ??
-                                                  w.data['planId']?.toString();
-                                          await _confirmGeneratedTasks(
-                                            toolResultId: toolResultId,
-                                            planId: planId,
-                                          );
-                                        },
-                                        onPlanNavigation: (planId) {
-                                          unawaited(
-                                            ref
-                                                .read(planListProvider.notifier)
-                                                .refresh(),
-                                          );
-                                        },
-                                        onWidgetAction: widget.onWidgetAction,
+                                      child: _buildAccessoryDisclosure(
+                                        id: 'action_${w.type}_${w.data['id'] ?? w.data['tool_result_id'] ?? ''}',
+                                        label: _getActionLabel(context, w),
+                                        icon: _getActionIcon(w),
+                                        child: ActionCard(
+                                          action: w,
+                                          onConfirm: actionable &&
+                                                  widget.onActionConfirm != null
+                                              ? () => widget.onActionConfirm!(w)
+                                              : null,
+                                          onDismiss: actionable &&
+                                                  widget.onActionDismiss != null
+                                              ? () => widget.onActionDismiss!(w)
+                                              : null,
+                                          onConfirmTasks: (toolResultId) async {
+                                            final planId =
+                                                w.data['plan_id']?.toString() ??
+                                                    w.data['planId']?.toString();
+                                            await _confirmGeneratedTasks(
+                                              toolResultId: toolResultId,
+                                              planId: planId,
+                                            );
+                                          },
+                                          onConfirmAllTasks:
+                                              (toolResultId) async {
+                                            final planId =
+                                                w.data['plan_id']?.toString() ??
+                                                    w.data['planId']?.toString();
+                                            await _confirmGeneratedTasks(
+                                              toolResultId: toolResultId,
+                                              planId: planId,
+                                            );
+                                          },
+                                          onPlanNavigation: (planId) {
+                                            unawaited(
+                                              ref
+                                                  .read(planListProvider.notifier)
+                                                  .refresh(),
+                                            );
+                                          },
+                                          onWidgetAction: widget.onWidgetAction,
+                                        ),
                                       ),
                                     );
                                   },
@@ -1585,6 +1598,132 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
         ),
       ),
     );
+  }
+
+  String _getActionLabel(BuildContext context, WidgetPayload action) {
+    final type = action.type == 'system_update'
+        ? (action.data['type']?.toString() ?? action.type)
+        : action.type;
+    switch (type) {
+      case 'create_task':
+        return context.l10n.chatActionTitleCreateTask;
+      case 'task_list':
+        return context.l10n.chatActionTitleTaskList;
+      case 'create_plan':
+        return context.l10n.chatActionTitleCreatePlan;
+      case 'update_preference':
+        return context.l10n.chatActionTitleUpdatePreference;
+      case 'add_error':
+        return context.l10n.chatActionTitleAddError;
+      case 'focus_card':
+        return context.l10n.chatActionTitleFocusSprint;
+      case 'system_update':
+        return context.l10n.chatActionTitleSystemUpdate;
+      case 'nightly_review':
+        return context.l10n.chatActionTitleNightlyReview;
+      case 'execution_summary':
+        return context.l10n.chatActionTitleExecutionSummary;
+      case 'execution_suggestion':
+        return context.l10n.chatActionAiExecutionSuggestion;
+      case 'evolution_card':
+        return context.l10n.chatActionTitleEvolution;
+      case 'progress_card':
+        return context.l10n.chatActionTitleProgress;
+      case 'reflection_card':
+        return context.l10n.chatActionTitleReflection;
+      case 'source_summary':
+        return context.l10n.chatActionTitleSourceSummary;
+      case 'next_actions':
+        return context.l10n.chatActionTitleNextActions;
+      case 'adaptation_summary':
+        return context.l10n.chatActionCurrentRoundAdjust;
+      case 'profile_front_door':
+        return context.l10n.chatActionCurrentProfileFrontDoor;
+      case 'continuity_banner':
+        return context.l10n.chatActionTitleContinuity;
+      case 'mode_explanation':
+        return context.l10n.chatActionTitleModeExplanation;
+      case 'blocked_input_request':
+        return context.l10n.chatActionTitleBlockedInput;
+      case 'planning_bottleneck_card':
+        return context.l10n.chatActionBottleneckAnalysis;
+      case 'planning_strategy_card':
+        return context.l10n.chatActionStrategyPlan;
+      case 'planning_progress_strip':
+        return context.l10n.chatActionPlanningProcess;
+      case 'aurora_nudge_entry':
+      case 'aurora_runtime_follow_up':
+        return context.l10n.chatActionAuroraReminder;
+      case 'task_stuck_card':
+        return context.l10n.stuckHelpTitle;
+      case 'low_yield_gentle_block':
+        return context.l10n.lowYieldCardTitle;
+      default:
+        return context.l10n.chatActionTitleDefault;
+    }
+  }
+
+  IconData _getActionIcon(WidgetPayload action) {
+    final type = action.type == 'system_update'
+        ? (action.data['type']?.toString() ?? action.type)
+        : action.type;
+    switch (type) {
+      case 'create_task':
+        return Icons.add_task_rounded;
+      case 'task_list':
+        return Icons.format_list_bulleted_rounded;
+      case 'create_plan':
+        return Icons.map_rounded;
+      case 'update_preference':
+        return Icons.settings_rounded;
+      case 'add_error':
+        return Icons.error_outline_rounded;
+      case 'focus_card':
+        return Icons.timer_rounded;
+      case 'system_update':
+        return Icons.auto_awesome_rounded;
+      case 'nightly_review':
+        return Icons.nightlight_round;
+      case 'execution_summary':
+        return Icons.task_alt_rounded;
+      case 'execution_suggestion':
+        return Icons.rocket_launch_rounded;
+      case 'evolution_card':
+        return Icons.auto_awesome_motion_rounded;
+      case 'progress_card':
+        return Icons.insights_rounded;
+      case 'reflection_card':
+        return Icons.psychology_alt_rounded;
+      case 'source_summary':
+        return Icons.fact_check_rounded;
+      case 'next_actions':
+        return Icons.alt_route_rounded;
+      case 'adaptation_summary':
+        return Icons.tune_rounded;
+      case 'profile_front_door':
+        return Icons.psychology_rounded;
+      case 'continuity_banner':
+        return Icons.link_rounded;
+      case 'mode_explanation':
+        return Icons.tips_and_updates_rounded;
+      case 'blocked_input_request':
+        return Icons.help_outline_rounded;
+      case 'planning_bottleneck_card':
+        return Icons.warning_amber_rounded;
+      case 'planning_strategy_card':
+        return Icons.map_rounded;
+      case 'planning_progress_strip':
+        return Icons.linear_scale_rounded;
+      case 'aurora_nudge_entry':
+      case 'aurora_runtime_follow_up':
+        return Icons.psychology_rounded;
+      case 'task_stuck_card':
+        return Icons.assignment_late_rounded;
+      case 'low_yield_gentle_block':
+        return Icons.tips_and_updates_outlined;
+      default:
+        return Icons.touch_app_rounded;
+    }
   }
 
   double _bubbleMaxWidth(BuildContext context) {
