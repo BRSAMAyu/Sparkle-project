@@ -18,7 +18,7 @@ except ImportError:
 
 from app.core.cache import cache_service
 from app.services.galaxy.collaborative_service import CollaborativeGalaxyService
-from app.services.galaxy.crdt_persistence import CRDTPersistenceManager
+from app.services.galaxy.crdt_persistence import CRDTPersistenceManager, MasteryMergeCRDT
 from app.services.galaxy_service import GalaxyService
 
 # Memory cache for active YDocs to avoid reloading from DB every time
@@ -101,13 +101,55 @@ class GalaxyGrpcServiceImpl:
                 )
 
                 if not result.get("success"):
-                    # For gRPC, we can return status code but also the current revision for the client to sync
-                    # Use custom response fields
+                    # CRDT merge: resolve offline sync conflicts with max-wins semantics
+                    if result.get("reason") == "conflict":
+                        from sqlalchemy import select as sa_select
+                        from app.models.galaxy import UserNodeStatus
+                        current_revision = result.get("current_revision", 0)
+                        node_id_uuid = UUID(request.node_id) if isinstance(request.node_id, str) else request.node_id
+                        stmt = sa_select(UserNodeStatus.mastery_score).where(
+                            UserNodeStatus.user_id == UUID(request.user_id),
+                            UserNodeStatus.node_id == node_id_uuid,
+                        )
+                        current_result = await db.execute(stmt)
+                        current_row = current_result.fetchone()
+                        current_mastery = float(current_row[0]) if current_row else 0.0
+
+                        merged_mastery = MasteryMergeCRDT.merge_mastery(
+                            current_mastery,
+                            request.mastery,
+                        )
+                        if merged_mastery > current_mastery:
+                            # Incoming is higher — retry without revision check
+                            retry_result = await galaxy_service.update_node_mastery(
+                                user_id=UUID(request.user_id),
+                                node_id=UUID(request.node_id),
+                                new_mastery=merged_mastery,
+                                reason=request.reason,
+                                request_id=request.request_id,
+                            )
+                            if retry_result.get("success"):
+                                return galaxy_service_pb2.UpdateNodeMasteryResponse(
+                                    success=True,
+                                    old_mastery=int(retry_result.get("old_mastery", 0)),
+                                    new_mastery=int(retry_result.get("new_mastery", 0)),
+                                    request_id=request.request_id,
+                                    current_revision=retry_result.get("current_revision", 0),
+                                )
+                        # Idempotent: current value already >= incoming
+                        return galaxy_service_pb2.UpdateNodeMasteryResponse(
+                            success=True,
+                            old_mastery=int(current_mastery),
+                            new_mastery=int(current_mastery),
+                            request_id=request.request_id,
+                            current_revision=current_revision,
+                        )
+
                     return galaxy_service_pb2.UpdateNodeMasteryResponse(
                         success=False,
                         reason=result.get("reason", "conflict"),
                         request_id=request.request_id,
-                        current_revision=result.get("current_revision", 0)
+                        current_revision=result.get("current_revision", 0),
                     )
 
                 return galaxy_service_pb2.UpdateNodeMasteryResponse(
