@@ -212,9 +212,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           if (next.isNotEmpty) {
             final latest = next.last;
             if (latest.role == MessageRole.assistant) {
-              final prevLatest = (previous?.isNotEmpty ?? false)
-                  ? previous!.last
-                  : null;
+              final prevLatest =
+                  (previous?.isNotEmpty ?? false) ? previous!.last : null;
               final prevCount = prevLatest?.widgets?.length ?? 0;
               final currCount = latest.widgets?.length ?? 0;
               if (currCount > prevCount) {
@@ -1353,7 +1352,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               ),
             ),
             SafeArea(
-              bottom: false, // Handle bottom padding manually to avoid double padding with ChatInput
+              bottom:
+                  false, // Handle bottom padding manually to avoid double padding with ChatInput
               child: ContentConstraint(
                 child: Column(
                   children: [
@@ -2723,9 +2723,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       ),
       child: SingleChildScrollView(
         physics: const ClampingScrollPhysics(),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
           if (isCompactMobile && showChatContextToggle)
             Padding(
               padding: const EdgeInsets.fromLTRB(
@@ -2953,7 +2951,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 MediaQuery.of(context).padding.bottom,
               ),
             ),
-        ],
+        ]),
       ),
     );
   }
