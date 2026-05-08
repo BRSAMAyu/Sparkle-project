@@ -33,10 +33,10 @@ PROTO_TO_GO: dict[str, list[str]] = {
 }
 
 PROTO_TO_PY: dict[str, list[str]] = {
-    "agent_service.proto": ["agent_service_pb2.py", "agent_service_pb2_grpc.py"],
+    "agent_service.proto": ["agent_service_pb2.py", "agent/v1/agent_service_pb2_grpc.py"],
     "error_book.proto": ["error_book_pb2.py", "error_book_pb2_grpc.py"],
-    "galaxy_service.proto": ["galaxy_service_pb2.py", "galaxy_service_pb2_grpc.py"],
-    "stt_service.proto": ["stt_service_pb2.py", "stt_service_pb2_grpc.py"],
+    "galaxy_service.proto": ["galaxy/v1/galaxy_service_pb2.py", "galaxy/v1/galaxy_service_pb2_grpc.py"],
+    "stt_service.proto": ["stt/v1/stt_service_pb2.py", "stt/v1/stt_service_pb2_grpc.py"],
     "user_state.proto": ["user_state_pb2.py"],
     "websocket.proto": ["websocket_pb2.py"],
 }
