@@ -260,3 +260,150 @@ git checkout HEAD~1 -- \
 **Report Generated:** 2026-05-08
 **Auditor:** AI Agent (Independent Review)
 **Approver:** Pending
+
+---
+
+# UIUX Polish - Achievement/Visual/Poster/Weather Systems
+
+**Date:** 2026-05-08
+**Scope:** Achievement, Visual Elements, Poster, Weather, Chat/Card Systems
+**Status:** 🔄 Phase 1 Complete
+
+---
+
+## Executive Summary
+
+Comprehensive UIUX polish for Sparkle project focused on four systems: achievement, visual elements, poster, and weather. Goal is微创式优化 (minimal-invasive improvements) without破坏式重构 (breaking changes).
+
+**Critical UX Issue Identified:** AI-generated content cards crowd the main message area, pushing the main message up and forcing user to scroll.
+
+---
+
+## Phase 1: Analysis Complete
+
+### Modules Examined
+| Module | Key Files | Status |
+|--------|-----------|--------|
+| Achievement | `achievement_unlock_dialog.dart`, `achievement_card.dart` | Reviewed - well-structured |
+| Visual Elements | `visual_element_palette.dart` | ⚠️ Hardcoded colors - needs DS mapping |
+| Poster/Share | `share_poster_service.dart`, `capsule_share_card.dart` | ⚠️ Hardcoded purple - needs DS mapping |
+| Weather | `weather_presentation.dart`, `compact_status_bar.dart` | Reviewed - working |
+| Chat/Cards | `agent_message_renderer.dart`, `collapsible_widget_wrapper.dart` | ⚠️ Card crowding issue |
+
+### Key Issues Found
+
+#### Issue 1: Visual Element Palette Hardcoded Colors (High Priority)
+**File:** `mobile/lib/features/visual_elements/presentation/shared/visual_element_palette.dart`
+
+**Problem:** VisualElementPalette defines its own color system (moonless, inkBlue, surface, panel, cyan, gold) completely separate from DS design tokens.
+
+**Severity:** High - Color inconsistency across the app
+
+**Suggested Fix:** Map colors to DS token equivalents (DS.surfacePrimary, DS.brandPrimary, etc.)
+
+---
+
+#### Issue 2: CapsuleShareCard Hardcoded Purple (Medium Priority)
+**File:** `mobile/lib/features/community/presentation/widgets/share_cards/capsule_share_card.dart`
+
+**Problem:** Uses hardcoded `_capsulePurple = Color(0xFF9C27B0)` instead of `DS.capsuleAccent`
+
+**Severity:** Medium - Color doesn't adapt to theme
+
+**Suggested Fix:** Replace with `DS.capsuleAccent` which is theme-aware
+
+---
+
+#### Issue 3: Cards Crowding Main Message Area (Critical UX)
+**File:** `mobile/lib/features/chat/presentation/widgets/agent_message_renderer.dart`
+
+**Problem:** Multiple cards appear stacked vertically, pushing main message up.
+
+**Root Cause:** Card default expansion states vary:
+```
+COLLAPSED by default:
+- create_task, create_plan, plan_card, task_list
+- source_summary, next_actions, profile_front_door
+- continuity_banner, mode_explanation
+- execution_summary, execution_suggestion
+
+EXPANDED by default:
+- knowledge_card, prism_card, achievement_card, error_card
+- TaskCard (most entry points)
+```
+
+**Severity:** Critical - User experience affected
+
+**Suggested Fix:** Make knowledge_card and prism_card use CollapsibleWidgetWrapper with defaultExpanded option
+
+---
+
+## Changes Made (Phase 1)
+
+### Commit 1: 985a4257b
+**Date:** 2026-05-08
+**Message:** `refactor(chat): add defaultExpanded param to CollapsibleWidgetWrapper`
+
+**Files Changed:**
+- `mobile/lib/features/chat/presentation/widgets/agent_message_renderer.dart`
+
+**Summary:**
+- Added optional `defaultExpanded` parameter to `_wrap()` method
+- Enables future control over initial card expansion state
+- Does NOT change current behavior (defaults remain collapsed)
+- Preparation for fixing card crowding issue
+
+**Verification:** `flutter analyze` passed (6 info-level issues only, pre-existing)
+
+---
+
+## Agent Review Summary
+
+Independent review completed on:
+- `agent_message_renderer.dart` - No issues, clean change
+- `capsule_share_card.dart` - Hardcoded purple identified
+- `visual_element_palette.dart` - Hardcoded colors identified
+
+**Key Recommendations from Review:**
+1. Replace `_capsulePurple` with `DS.capsuleAccent`
+2. Map VisualElementPalette colors to DS tokens
+3. Verify fixed `maxWidth: 280` on capsule card doesn't overflow narrow screens
+
+---
+
+## What NOT to Touch This Round
+1. Achievement unlock dialog animations (working well)
+2. Weather animation system (backend-driven, complex)
+3. Poster generation service (functioning)
+4. Core chat bubble layout (structural change too risky)
+5. CollapsibleWidgetWrapper core logic (working as designed)
+
+---
+
+## Remaining Work
+
+### High Priority
+1. **VisualElementPalette Fix:** Map hardcoded colors to DS token equivalents
+2. **CapsuleShareCard Fix:** Replace `_capsulePurple` with `DS.capsuleAccent`
+
+### Medium Priority
+3. **Card Crowding Fix:** Use `_wrap(defaultExpanded: true)` for knowledge_card in agent_message_renderer
+
+### Lower Priority
+4. Verify achievement card display in chat
+5. CompactStatusBar weather sentence review
+
+---
+
+## Verification Commands
+```bash
+cd mobile
+flutter analyze lib/features/chat/presentation/widgets/agent_message_renderer.dart
+flutter analyze lib/features/community/presentation/widgets/share_cards/capsule_share_card.dart
+```
+
+---
+
+**Phase 1 Completed:** 2026-05-08
+**Next Action:** Proceed to Phase 2 fixes based on above priorities
+
