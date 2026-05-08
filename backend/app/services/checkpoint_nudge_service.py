@@ -191,6 +191,20 @@ class CheckpointNudgeService:
         self.db.add(message)
         await self.db.commit()
         await self.db.refresh(message)
+
+        try:
+            from app.core.event_bus import event_bus
+            await event_bus.publish("nudge.triggered", {
+                "user_id": str(user_id),
+                "nudge_id": nudge_id,
+                "type": "checkpoint",
+                "plan_id": str(plan_id),
+                "checkpoint_day": checkpoint_day,
+                "message_id": str(message.id),
+            })
+        except Exception:
+            pass
+
         return message
 
     async def _build_runtime_nudge(

@@ -167,7 +167,8 @@ final planDetailProvider =
     FutureProvider.autoDispose.family<PlanModel, String>((ref, id) async {
   // Keep alive for 30s to avoid loading flash on tab switches
   final link = ref.keepAlive();
-  Timer(const Duration(seconds: 30), link.close);
+  final timer = Timer(const Duration(seconds: 30), link.close);
+  ref.onDispose(timer.cancel);
   final planRepo = ref.watch(planRepositoryProvider);
   return planRepo.getPlan(id);
 });

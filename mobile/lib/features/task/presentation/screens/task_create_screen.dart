@@ -673,11 +673,14 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                         }
                       },
                       trailing: _dueDate != null
-                          ? SparkleIconButton(
-                              variant: ButtonVariant.ghost,
-                              size: 32,
-                              icon: const Icon(Icons.clear),
-                              onPressed: () => setState(() => _dueDate = null),
+                          ? SizedBox(
+                              width: 40,
+                              child: SparkleIconButton(
+                                variant: ButtonVariant.ghost,
+                                size: 32,
+                                icon: const Icon(Icons.clear),
+                                onPressed: () => setState(() => _dueDate = null),
+                              ),
                             )
                           : null,
                     ),

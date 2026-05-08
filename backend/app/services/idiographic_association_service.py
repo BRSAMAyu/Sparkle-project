@@ -52,7 +52,7 @@ def _day_start(day: date) -> datetime:
 
 
 class IdiographicAssociationService:
-    STREAM_NAME = "sparkle_events"
+    STREAM_NAME = "stream:tracking_events"
     GROUP_NAME = "idiographic_association"
     WINDOW_DAYS = 45
     CHANGEPOINT_LOOKBACK_DAYS = 30

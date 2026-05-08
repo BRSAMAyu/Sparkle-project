@@ -20,7 +20,9 @@ import 'package:sparkle/gen/websocket.pb.dart';
 import 'package:uuid/uuid.dart';
 
 class SyncEngine {
-  SyncEngine(this._localDb, this._wsService, this._apiClient);
+  SyncEngine(this._localDb, this._wsService, this._apiClient,
+      {Connectivity? connectivity})
+      : _connectivity = connectivity ?? Connectivity();
 
   final LocalDatabase _localDb;
   final WebSocketService _wsService;
@@ -29,7 +31,7 @@ class SyncEngine {
   final Uuid _uuid = const Uuid();
   final Random _random = Random();
   Future<SharedPreferences>? _prefsFuture;
-  final Connectivity _connectivity = Connectivity();
+  final Connectivity _connectivity;
 
   StreamSubscription<void>? _subscription;
   bool _isProcessing = false;

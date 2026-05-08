@@ -37,7 +37,7 @@ void main() {
     expect(find.text('展开指南'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('task-guide-toggle')));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text('这张卡还没有更细的指南，先从你能确定的一小步开始。'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -100,7 +100,7 @@ void main() {
     );
 
     await tester.tap(find.byKey(const Key('task-guide-toggle')));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text('先写出每一步的角色和目的。'), findsOneWidget);
     expect(find.text('已完成 0/4'), findsOneWidget);
@@ -108,13 +108,13 @@ void main() {
     expect(find.text('当前进行中'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('guide-step-0')));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text('已完成 1/4'), findsOneWidget);
 
     await tester.ensureVisible(find.byKey(const Key('done-criterion-0')));
     await tester.tap(find.byKey(const Key('done-criterion-0')));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text('1/2'), findsOneWidget);
   });
@@ -152,7 +152,7 @@ void main() {
     expect(find.text('我只需要完成一版可提交草稿。'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('task-guide-toggle')));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.byKey(const Key('fail-safe-rule-card')), findsOneWidget);
     expect(find.text('失手时降压规则'), findsOneWidget);
@@ -163,7 +163,7 @@ void main() {
     expect(find.text('开始逃避'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('fail-safe-rule-toggle')));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text('失手规则：如果超过10分钟卡住，就把范围降到一个例子。'), findsOneWidget);
 
@@ -197,7 +197,7 @@ void main() {
     expect(find.byKey(const Key('task-micro-contract-banner')), findsNothing);
 
     await tester.tap(find.byKey(const Key('task-guide-toggle')));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.byKey(const Key('fail-safe-rule-card')), findsNothing);
     expect(find.byKey(const Key('aurora-triggers-section')), findsNothing);
@@ -269,7 +269,7 @@ void main() {
     await tester.pump();
 
     await tester.tap(find.byKey(const Key('stuck-help-fab')));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text('别担心，我们来看看卡在哪里'), findsOneWidget);
     expect(find.text('把卡住的具体位置写下来'), findsOneWidget);
@@ -293,10 +293,10 @@ void main() {
     await tester.pump();
 
     await tester.tap(find.byKey(const Key('stuck-help-fab')));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
     await tester.ensureVisible(find.text('和Sparkle聊聊这个问题'));
     await tester.tap(find.text('和Sparkle聊聊这个问题'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text('和 Sparkle 聊聊这个卡点'), findsOneWidget);
     expect(
@@ -318,7 +318,7 @@ void main() {
     await tester.pump();
 
     await tester.tap(find.text('完成任务'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text('今天完成了！'), findsOneWidget);
     expect(find.text('写出一个可提交的结论'), findsOneWidget);

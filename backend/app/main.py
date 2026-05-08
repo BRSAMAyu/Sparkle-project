@@ -194,6 +194,14 @@ async def lifespan(app: FastAPI):
     pending_actions_store.set_redis(cache_service.redis)
     # Initialize WebSocket Redis
     await manager.init_redis()
+    
+    # Initialize Security Monitor
+    try:
+        from app.core.security_monitor import security_monitor
+        await security_monitor.initialize(cache_service.redis)
+        logger.info("Security Monitor initialized successfully")
+    except Exception as exc:
+        logger.warning(f"Failed to initialize Security Monitor: {exc}")
     try:
         await _run_working_memory_orphan_cleanup()
     except Exception as exc:
@@ -832,13 +840,14 @@ app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads"
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     """处理 Pydantic 验证错误"""
+    from app.core.error_codes import ErrorCode
     encoded_errors = jsonable_encoder(exc.errors(), custom_encoder={ValueError: lambda value: str(value)})
     logger.error(f"Validation error for {request.method} {request.url}: {encoded_errors}")
     return JSONResponse(
         status_code=400,
         content={
             "success": False,
-            "error_code": "ValidationError",
+            "error_code": ErrorCode.BAD_REQUEST,
             "message": "请求数据格式不正确",
             "detail": encoded_errors,
         },
@@ -866,12 +875,13 @@ async def sparkle_exception_handler(request: Request, exc: SparkleException):
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):
     """全局未捕获异常处理器"""
+    from app.core.error_codes import ErrorCode
     logger.exception(f"Unhandled exception: {exc}")
     request_id = getattr(request.state, "request_id", None)
     trace_id = getattr(request.state, "trace_id", None)
     content = {
         "success": False,
-        "error_code": "InternalServerError",
+        "error_code": ErrorCode.INTERNAL_ERROR,
         "message": "An unexpected error occurred",
         "request_id": request_id,
         "trace_id": trace_id,

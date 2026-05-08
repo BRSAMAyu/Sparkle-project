@@ -51,10 +51,16 @@ def sha256_token(value: str) -> str:
 
 
 def pii_redaction_mode() -> str:
-    mode = normalize_mode(
-        getattr(settings, "AURORA_PRIVACY_PII_REDACTION_MODE", "live"),
-        fallback="live",
-    )
+    from app.services.aurora_privacy_kill_switch_service import AuroraPrivacyKillSwitchService
+    import asyncio
+    try:
+        ks = AuroraPrivacyKillSwitchService()
+        mode = asyncio.get_event_loop().run_until_complete(ks.get_mode())
+    except Exception:
+        mode = normalize_mode(
+            getattr(settings, "AURORA_PRIVACY_PII_REDACTION_MODE", "live"),
+            fallback="live",
+        )
     record_mode_gauge("privacy", "pii_redaction", mode)
     return mode
 

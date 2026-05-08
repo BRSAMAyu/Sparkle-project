@@ -21,7 +21,7 @@ def orchestrator() -> MinimalStage4RoutingOrchestrator:
     return MinimalStage4RoutingOrchestrator()
 
 
-def test_stage4_routing_mode_keeps_direct_behavior_when_flag_is_off(orchestrator):
+async def test_stage4_routing_mode_keeps_direct_behavior_when_flag_is_off(orchestrator):
     state = SimpleNamespace(context_data={})
     route_decision = RouteDecision(
         execution_mode="direct",
@@ -31,7 +31,7 @@ def test_stage4_routing_mode_keeps_direct_behavior_when_flag_is_off(orchestrator
     )
 
     with patch("app.orchestration.routing_engine.aurora_flags.AURORA_ROUTING_MODE_ENABLED", False):
-        updated = orchestrator._apply_stage4_routing_mode(
+        updated = await orchestrator._apply_stage4_routing_mode(
             route_decision=route_decision,
             state=state,
             user_id=str(uuid.uuid4()),
@@ -44,7 +44,7 @@ def test_stage4_routing_mode_keeps_direct_behavior_when_flag_is_off(orchestrator
     assert state.context_data["stage4_routing_mode"]["feature_enabled"] is False
 
 
-def test_stage4_routing_mode_promotes_planning_request_to_workflow_when_flag_on(orchestrator):
+async def test_stage4_routing_mode_promotes_planning_request_to_workflow_when_flag_on(orchestrator):
     state = SimpleNamespace(context_data={})
     route_decision = RouteDecision(
         execution_mode="direct",
@@ -54,7 +54,7 @@ def test_stage4_routing_mode_promotes_planning_request_to_workflow_when_flag_on(
     )
 
     with patch("app.orchestration.routing_engine.aurora_flags.AURORA_ROUTING_MODE_ENABLED", True):
-        updated = orchestrator._apply_stage4_routing_mode(
+        updated = await orchestrator._apply_stage4_routing_mode(
             route_decision=route_decision,
             state=state,
             user_id=str(uuid.uuid4()),
@@ -68,7 +68,7 @@ def test_stage4_routing_mode_promotes_planning_request_to_workflow_when_flag_on(
     assert state.context_data["stage4_routing_mode"]["routing_mode"] == "workflow"
 
 
-def test_stage4_routing_mode_marks_task_assistant_candidate_without_workflow_jump(orchestrator):
+async def test_stage4_routing_mode_marks_task_assistant_candidate_without_workflow_jump(orchestrator):
     state = SimpleNamespace(context_data={})
     route_decision = RouteDecision(
         execution_mode="direct",
@@ -78,7 +78,7 @@ def test_stage4_routing_mode_marks_task_assistant_candidate_without_workflow_jum
     )
 
     with patch("app.orchestration.routing_engine.aurora_flags.AURORA_ROUTING_MODE_ENABLED", True):
-        updated = orchestrator._apply_stage4_routing_mode(
+        updated = await orchestrator._apply_stage4_routing_mode(
             route_decision=route_decision,
             state=state,
             user_id=str(uuid.uuid4()),
@@ -92,7 +92,7 @@ def test_stage4_routing_mode_marks_task_assistant_candidate_without_workflow_jum
     assert state.context_data["stage4_task_assistant_candidate"] is True
 
 
-def test_stage4_routing_mode_keeps_frustration_signal_direct_until_ws_b2(orchestrator):
+async def test_stage4_routing_mode_keeps_frustration_signal_direct_until_ws_b2(orchestrator):
     state = SimpleNamespace(context_data={})
     route_decision = RouteDecision(
         execution_mode="direct",
@@ -102,7 +102,7 @@ def test_stage4_routing_mode_keeps_frustration_signal_direct_until_ws_b2(orchest
     )
 
     with patch("app.orchestration.routing_engine.aurora_flags.AURORA_ROUTING_MODE_ENABLED", True):
-        updated = orchestrator._apply_stage4_routing_mode(
+        updated = await orchestrator._apply_stage4_routing_mode(
             route_decision=route_decision,
             state=state,
             user_id=str(uuid.uuid4()),
@@ -121,7 +121,7 @@ def test_stage4_routing_mode_keeps_frustration_signal_direct_until_ws_b2(orchest
 # ======================================================================
 
 
-def test_stage4_escalation_fires_on_explicit_planning_request(orchestrator):
+async def test_stage4_escalation_fires_on_explicit_planning_request(orchestrator):
     """WS-B.2 trigger 1: explicit planning request promotes direct → langgraph."""
     state = SimpleNamespace(context_data={})
     route_decision = RouteDecision(
@@ -132,7 +132,7 @@ def test_stage4_escalation_fires_on_explicit_planning_request(orchestrator):
     )
 
     with patch("app.orchestration.routing_engine.aurora_flags.AURORA_ROUTING_MODE_ENABLED", True):
-        updated = orchestrator._apply_stage4_escalation(
+        updated = await orchestrator._apply_stage4_escalation(
             route_decision=route_decision,
             state=state,
             user_id=str(uuid.uuid4()),
@@ -147,7 +147,7 @@ def test_stage4_escalation_fires_on_explicit_planning_request(orchestrator):
     assert state.context_data["stage4_escalation"]["trigger"] == "explicit_planning_request"
 
 
-def test_stage4_escalation_fires_on_structural_topic_turns(orchestrator):
+async def test_stage4_escalation_fires_on_structural_topic_turns(orchestrator):
     """WS-B.2 trigger 2: 2+ structural-topic turns promote direct → langgraph."""
     state = SimpleNamespace(context_data={})
     route_decision = RouteDecision(
@@ -165,7 +165,7 @@ def test_stage4_escalation_fires_on_structural_topic_turns(orchestrator):
     }
 
     with patch("app.orchestration.routing_engine.aurora_flags.AURORA_ROUTING_MODE_ENABLED", True):
-        updated = orchestrator._apply_stage4_escalation(
+        updated = await orchestrator._apply_stage4_escalation(
             route_decision=route_decision,
             state=state,
             user_id=str(uuid.uuid4()),
@@ -178,7 +178,7 @@ def test_stage4_escalation_fires_on_structural_topic_turns(orchestrator):
     assert state.context_data["stage4_escalation"]["trigger"] == "structural_topic_turns"
 
 
-def test_stage4_escalation_fires_on_frustration_text(orchestrator):
+async def test_stage4_escalation_fires_on_frustration_text(orchestrator):
     """WS-B.2 trigger 3: frustration text markers promote direct → langgraph."""
     state = SimpleNamespace(context_data={})
     route_decision = RouteDecision(
@@ -189,7 +189,7 @@ def test_stage4_escalation_fires_on_frustration_text(orchestrator):
     )
 
     with patch("app.orchestration.routing_engine.aurora_flags.AURORA_ROUTING_MODE_ENABLED", True):
-        updated = orchestrator._apply_stage4_escalation(
+        updated = await orchestrator._apply_stage4_escalation(
             route_decision=route_decision,
             state=state,
             user_id=str(uuid.uuid4()),
@@ -202,7 +202,7 @@ def test_stage4_escalation_fires_on_frustration_text(orchestrator):
     assert state.context_data["stage4_escalation"]["trigger"] == "frustration_blockage"
 
 
-def test_stage4_escalation_no_fire_when_flag_off(orchestrator):
+async def test_stage4_escalation_no_fire_when_flag_off(orchestrator):
     """Escalation verdict is recorded but mode stays direct when flag is off."""
     state = SimpleNamespace(context_data={})
     route_decision = RouteDecision(
@@ -213,7 +213,7 @@ def test_stage4_escalation_no_fire_when_flag_off(orchestrator):
     )
 
     with patch("app.orchestration.routing_engine.aurora_flags.AURORA_ROUTING_MODE_ENABLED", False):
-        updated = orchestrator._apply_stage4_escalation(
+        updated = await orchestrator._apply_stage4_escalation(
             route_decision=route_decision,
             state=state,
             user_id=str(uuid.uuid4()),
@@ -227,7 +227,7 @@ def test_stage4_escalation_no_fire_when_flag_off(orchestrator):
     assert state.context_data["stage4_escalation"]["feature_enabled"] is False
 
 
-def test_stage4_escalation_no_fire_when_already_workflow(orchestrator):
+async def test_stage4_escalation_no_fire_when_already_workflow(orchestrator):
     """Escalation does not fire when WS-B.1 already promoted to workflow."""
     state = SimpleNamespace(context_data={})
     route_decision = RouteDecision(
@@ -238,7 +238,7 @@ def test_stage4_escalation_no_fire_when_already_workflow(orchestrator):
     )
 
     with patch("app.orchestration.routing_engine.aurora_flags.AURORA_ROUTING_MODE_ENABLED", True):
-        updated = orchestrator._apply_stage4_escalation(
+        updated = await orchestrator._apply_stage4_escalation(
             route_decision=route_decision,
             state=state,
             user_id=str(uuid.uuid4()),
@@ -251,7 +251,7 @@ def test_stage4_escalation_no_fire_when_already_workflow(orchestrator):
     assert "stage4_escalation" not in state.context_data
 
 
-def test_stage4_escalation_no_fire_without_trigger(orchestrator):
+async def test_stage4_escalation_no_fire_without_trigger(orchestrator):
     """No escalation when no trigger is present."""
     state = SimpleNamespace(context_data={})
     route_decision = RouteDecision(
@@ -262,7 +262,7 @@ def test_stage4_escalation_no_fire_without_trigger(orchestrator):
     )
 
     with patch("app.orchestration.routing_engine.aurora_flags.AURORA_ROUTING_MODE_ENABLED", True):
-        updated = orchestrator._apply_stage4_escalation(
+        updated = await orchestrator._apply_stage4_escalation(
             route_decision=route_decision,
             state=state,
             user_id=str(uuid.uuid4()),

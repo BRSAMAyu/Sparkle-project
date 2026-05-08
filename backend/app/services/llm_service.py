@@ -1460,7 +1460,16 @@ class LLMService:
 # ==========================================
 
 # 默认单例（使用新的动态路由）
-llm_service = LLMService(agent_role=AgentRole.GENERATION, enable_dynamic_routing=True)
+llm_service_impl = LLMService(agent_role=AgentRole.GENERATION, enable_dynamic_routing=True)
+
+from app.core.llm_security_wrapper import LLMSecurityWrapper, SecurityConfig
+from app.core.cache import cache_service
+
+llm_service = LLMSecurityWrapper(
+    llm_service=llm_service_impl,
+    redis_client=cache_service.redis,
+    config=SecurityConfig()
+)
 
 # 创建专用角色的服务实例（按需使用）
 def get_llm_service(agent_role: AgentRole | str) -> LLMService:

@@ -118,7 +118,7 @@ class ContextBuilderMixin:
                 "error_bridge_mode": str(getattr(settings, "AURORA_STAGE34_ERROR_BRIDGE_MODE", "shadow") or "shadow"),
                 "capsule_mode": str(getattr(settings, "AURORA_STAGE34_CAPSULE_MODE", "shadow") or "shadow"),
                 "journey_subscribers_enabled": str(
-                    getattr(settings, "AURORA_STAGE34_JOURNEY_SUBSCRIBERS_ENABLED", "live") or "live"
+                    getattr(settings, "AURORA_STAGE34_JOURNEY_SUBSCRIBERS_MODE", "live") or "live"
                 ),
             }
 
@@ -801,6 +801,53 @@ class ContextBuilderMixin:
                     "exploration_level": llm_profile.exploration_level,
                     "tone": llm_profile.tone,
                 }
+
+                # --- Aurora Profile Integration ---
+                try:
+                    from app.aurora.ledger import AppendOnlyLedgerStore
+                    from app.aurora.relationship_state import SparkleRelationshipStateManager
+                    from app.aurora.profile_translator import ProfileTranslator
+                    from app.aurora.schemas.primitives import InsightClaim, IdentityEvidence
+
+                    # Instantiate ledger (defaults to memory-based if no storage path is mapped)
+                    ledger = AppendOnlyLedgerStore(storage_path=settings.AURORA_LEDGER_PATH)
+                    raw_records = ledger.list_records(user_id=user_id, record_types={"insight_claim", "identity_evidence"})
+
+                    claims = []
+                    for r in raw_records:
+                        if r["record_type"] == "insight_claim":
+                            try:
+                                claims.append(InsightClaim.model_validate(r["payload"]))
+                            except Exception:
+                                continue
+
+                    evidence = []
+                    for r in raw_records:
+                        if r["record_type"] == "identity_evidence":
+                            try:
+                                evidence.append(IdentityEvidence.model_validate(r["payload"]))
+                            except Exception:
+                                continue
+
+                    rel_manager = SparkleRelationshipStateManager()
+                    # Derive maturity from interaction history count + claims
+                    interaction_metadata = {"interaction_count": len(raw_records)}
+                    rel_state = rel_manager.derive_state(
+                        user_id=uuid.UUID(user_id),
+                        claims=claims,
+                        identity_evidence=evidence,
+                        interaction_metadata=interaction_metadata
+                    )
+
+                    translator = ProfileTranslator()
+                    translation = translator.translate(claims=claims, evidence=evidence, relationship_state=rel_state)
+
+                    # Inject into profile context for prompt building
+                    llm_profile_data["aurora_profile_summary"] = translation.summary
+                    llm_profile_data["relationship_maturity"] = rel_state.relationship_maturity
+                    llm_profile_data["relationship_label"] = rel_state.label
+                except Exception as aurora_err:
+                    logger.warning(f"Failed to integrate Aurora profile context: {aurora_err}")
             except Exception as e:
                 logger.warning(f"Failed to build LLM profile: {e}")
 

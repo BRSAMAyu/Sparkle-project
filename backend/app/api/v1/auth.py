@@ -430,6 +430,18 @@ async def login(
             request=request,
             metadata={"identifier": login_id, "reason": "user_not_found"},
         )
+        try:
+            from app.core.security_monitor import security_monitor
+            await security_monitor.record_login_attempt(
+                user_id=None,
+                username=login_id,
+                ip_address=request.client.host if request.client else "unknown",
+                user_agent=request.headers.get("user-agent", "unknown"),
+                success=False,
+                db=db
+            )
+        except Exception as exc:
+            logger.warning(f"Failed to record security monitor event: {exc}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="用户名或密码不正确，请重试",
@@ -471,6 +483,18 @@ async def login(
         request=request,
         metadata={"registration_source": user.registration_source},
     )
+    try:
+        from app.core.security_monitor import security_monitor
+        await security_monitor.record_login_attempt(
+            user_id=user.id,
+            username=login_id,
+            ip_address=request.client.host if request.client else "unknown",
+            user_agent=request.headers.get("user-agent", "unknown"),
+            success=True,
+            db=db
+        )
+    except Exception as exc:
+        logger.warning(f"Failed to record security monitor event: {exc}")
 
     return {
         **await _issue_auth_tokens(db=db, user=user, request=request),
@@ -652,7 +676,8 @@ async def logout(
         if access_token:
             try:
                 payload = await decode_token(access_token, expected_type="access")
-                await blacklist_token(payload.get("jti"), payload.get("exp"))
+                from app.core.token_revocation import token_revocation_service
+                await token_revocation_service.blacklist_token(payload.get("jti"), payload.get("exp"))
                 if payload.get("sid"):
                     await auth_session_service.revoke_session_by_id(
                         db,
@@ -1058,4 +1083,6 @@ async def upgrade_guest_social(
     return {
         **await _issue_auth_tokens(db=db, user=current_user, request=request),
         "user": _build_user_profile(current_user),
+    }
+"user": _build_user_profile(current_user),
     }

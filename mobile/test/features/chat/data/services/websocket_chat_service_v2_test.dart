@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/riverpod.dart';
@@ -158,15 +159,15 @@ void main() {
       });
 
       test('should parse NackEvent from message_nack JSON', () {
-        final nackJson = {
+        final nackJson = jsonEncode({
           'type': 'message_nack',
           'message_id': 'req-nack-1',
           'error_code': 'service_unavailable',
           'error_message': 'Agent temporarily unreachable',
           'retry_after_ms': 5000,
-        };
+        });
 
-        final event = WebSocketChatServiceV2Parser.parseEvent(nackJson);
+        final event = parseChatEventForTest(nackJson);
         expect(event, isA<NackEvent>());
         final nackEvent = event as NackEvent;
         expect(nackEvent.messageId, equals('req-nack-1'));
@@ -177,14 +178,14 @@ void main() {
       });
 
       test('should parse NackEvent without retry_after_ms as permanent', () {
-        final nackJson = {
+        final nackJson = jsonEncode({
           'type': 'message_nack',
           'message_id': 'req-nack-2',
           'error_code': 'quota_exceeded',
           'error_message': 'Daily quota exceeded',
-        };
+        });
 
-        final event = WebSocketChatServiceV2Parser.parseEvent(nackJson);
+        final event = parseChatEventForTest(nackJson);
         expect(event, isA<NackEvent>());
         final nackEvent = event as NackEvent;
         expect(nackEvent.errorCode, equals('quota_exceeded'));

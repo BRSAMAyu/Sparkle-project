@@ -1458,7 +1458,7 @@ event_bus_reliable = EventBusReliablePublisher(event_bus)
 
 @_dataclass
 class InterventionRecorded:
-    event_type: str = "intervention_recorded"
+    event_type: str = "intervention_record.created"
     user_id: str = ""
     intervention_id: str = ""
     intervention_type: str = ""

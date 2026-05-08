@@ -243,11 +243,6 @@ class Settings(BaseSettings):
     OPENCLAW_TRUST_AUTO_PROMOTE_SUCCESS_RATE: float = 0.85
     TOOL_EXECUTION_TIMEOUT_SECONDS: float = 120.0
 
-    # Global Aurora default mode — when set to "shadow", all individual AURORA_*_MODE
-    # switches that are still at their factory default ("live") use this value instead.
-    # Use for development shadow testing: set AURORA_DEFAULT_MODE=shadow in .env
-    AURORA_DEFAULT_MODE: str = "live"  # off | shadow | live
-
     # Aurora Stage 18
     AURORA_STAGE18_AGGREGATOR_MODE: str = "live"  # off | shadow | live
     AURORA_STAGE18_PUSH_POLICY_MODE: str = "live"  # off | shadow | live
@@ -358,7 +353,7 @@ class Settings(BaseSettings):
     AURORA_STAGE34_MODE: str = "live"  # off | shadow | live
     AURORA_STAGE34_ERROR_BRIDGE_MODE: str = "live"  # off | shadow | live
     AURORA_STAGE34_CAPSULE_MODE: str = "live"  # off | shadow | live
-    AURORA_STAGE34_JOURNEY_SUBSCRIBERS_ENABLED: str = "live"  # off | shadow | live
+    AURORA_STAGE34_JOURNEY_SUBSCRIBERS_MODE: str = "live"  # off | shadow | live
 
     # Aurora Stage 35
     AURORA_STAGE35_MODE: str = "live"  # off | shadow | live
@@ -665,6 +660,8 @@ class Settings(BaseSettings):
     SPARKLE_MEMORY_INFERRED_WRITE_ENABLED: bool = True
     SPARKLE_MEMORY_INFERRED_DRY_RUN_ENABLED: bool = False
     SPARKLE_AGGREGATOR_ENABLED: bool = True
+    AURORA_LEDGER_PATH: str = "backend/data/aurora/ledger.json"
+    AURORA_FME_L3_CLOSURE_MODE: str = "live"
     # This data is prompt context only, not a routing decision signal.
     # Any if/switch logic based on it requires Stage 19B Sufficiency Judge acceptance.
     SPARKLE_ROUTER_SOCIAL_CONTEXT_READ_ENABLED: bool = True

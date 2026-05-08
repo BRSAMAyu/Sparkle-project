@@ -1872,7 +1872,7 @@ Please review this plan and provide your assessment."""
     ) -> None:
         from sqlalchemy import select
 
-        from app.database import get_db_session
+        from app.db.session import AsyncSessionLocal as get_db_session
         from app.models.memory import MemoryGoal
         from app.models.plan import Plan
         from app.services.memory_service import MemoryService
@@ -1941,7 +1941,7 @@ Please review this plan and provide your assessment."""
 
         from sqlalchemy import select
 
-        from app.database import get_db_session
+        from app.db.session import AsyncSessionLocal as get_db_session
         from app.models.plan import Plan, PlanType
         from app.models.task import Task
         from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
@@ -2175,7 +2175,7 @@ Please review this plan and provide your assessment."""
 
         from app.core.context_pack import ContextPackBuilder
         from app.core.sse import sse_manager
-        from app.database import get_db_session
+        from app.db.session import AsyncSessionLocal as get_db_session
         from app.orchestration.executor import ToolExecutor
         from app.orchestration.lang_graph_planner import LangGraphPlanner
         from app.orchestration.state_snapshot import StateSnapshotManager

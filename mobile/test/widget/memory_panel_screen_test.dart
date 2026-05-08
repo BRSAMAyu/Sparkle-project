@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/evidence_resolve_service.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
+import 'package:sparkle/features/memory/presentation/screens/memory_detail_screen.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_panel_screen.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import '../shared/i18n_test_helper.dart';
@@ -222,13 +225,39 @@ void main() {
     AppFeatureFlags.enableEvidenceViewer = false;
     AppFeatureFlags.enableMemoryExplain = false;
 
+    final router = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (_, __) => MemoryPanelScreen(),
+        ),
+        GoRoute(
+          path: '/chat',
+          builder: (_, __) => const SizedBox.shrink(),
+        ),
+        GoRoute(
+          path: '/memory/detail',
+          builder: (_, __) => const SizedBox.shrink(),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           memoryApiServiceProvider.overrideWithValue(_EmptyMemoryApiService()),
         ],
-        child: testMaterialApp(
-          home: MemoryPanelScreen(),
+        child: MaterialApp.router(
+          routerConfig: router,
+          locale: const Locale('zh'),
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
         ),
       ),
     );
@@ -247,6 +276,27 @@ void main() {
     AppFeatureFlags.enableMemoryPanelV2 = false;
     AppFeatureFlags.enableEvidenceViewer = false;
     AppFeatureFlags.enableMemoryExplain = false;
+
+    final router = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (_, __) => MemoryPanelScreen(),
+        ),
+        GoRoute(
+          path: '/memory/detail',
+          builder: (_, state) {
+            final args = state.extra;
+            if (args is MemoryDetailArgs) {
+              return MemoryDetailScreen(args: args);
+            }
+            return const SizedBox.shrink();
+          },
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -254,8 +304,16 @@ void main() {
           evidenceResolveServiceProvider
               .overrideWithValue(_FakeEvidenceResolveService()),
         ],
-        child: testMaterialApp(
-          home: MemoryPanelScreen(),
+        child: MaterialApp.router(
+          routerConfig: router,
+          locale: const Locale('zh'),
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
         ),
       ),
     );

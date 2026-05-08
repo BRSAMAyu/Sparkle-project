@@ -14,6 +14,7 @@ import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/data/repositories/chat_repository.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
+import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/features/user/presentation/screens/modeling_chat_screen.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
@@ -158,10 +159,10 @@ class _FakeOnboardingCompletedNotifier extends OnboardingCompletedNotifier {
 Future<GoRouter> _pumpModelingScreen(
   WidgetTester tester, {
   required _QueuedChatRepository repository,
+  required SharedPreferences sharedPrefs,
   String initialLocation = '/',
   bool useShellPlanRoute = false,
 }) async {
-  SharedPreferences.setMockInitialValues(<String, Object>{});
 
   final router = GoRouter(
     initialLocation: initialLocation,
@@ -236,6 +237,7 @@ Future<GoRouter> _pumpModelingScreen(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        sharedPreferencesProvider.overrideWithValue(sharedPrefs),
         chatRepositoryProvider.overrideWithValue(repository),
         authProvider.overrideWith((ref) => _FakeAuthNotifier()),
         authRepositoryProvider.overrideWithValue(
@@ -264,14 +266,17 @@ Future<GoRouter> _pumpModelingScreen(
 
 void main() {
 
-  setUp(setUpI18nForTesting);
   TestWidgetsFlutterBinding.ensureInitialized();
+  SharedPreferences.setMockInitialValues({});
 
   group('ModelingChatScreen', () {
     late _QueuedChatRepository repository;
     late List<StreamController<ChatStreamEvent>> controllers;
+    late SharedPreferences sharedPrefs;
 
-    setUp(() {
+    setUp(() async {
+      setUpI18nForTesting();
+      sharedPrefs = await SharedPreferences.getInstance();
       repository = _QueuedChatRepository();
       controllers = <StreamController<ChatStreamEvent>>[];
     });
@@ -301,6 +306,7 @@ void main() {
       final router = await _pumpModelingScreen(
         tester,
         repository: repository,
+        sharedPrefs: sharedPrefs,
         useShellPlanRoute: true,
       );
 
@@ -356,7 +362,7 @@ void main() {
       controllers.add(onboardingController);
       repository.enqueueController(onboardingController);
 
-      await _pumpModelingScreen(tester, repository: repository);
+      await _pumpModelingScreen(tester, repository: repository, sharedPrefs: sharedPrefs);
 
       onboardingController
         ..add(
@@ -388,7 +394,7 @@ void main() {
         ..enqueueController(onboardingController)
         ..enqueueController(interjectionController);
 
-      await _pumpModelingScreen(tester, repository: repository);
+      await _pumpModelingScreen(tester, repository: repository, sharedPrefs: sharedPrefs);
 
       onboardingController
         ..add(TextEvent(content: '先从轻松的问题开始。'))
@@ -420,7 +426,7 @@ void main() {
       controllers.add(onboardingController);
       repository.enqueueController(onboardingController);
 
-      await _pumpModelingScreen(tester, repository: repository);
+      await _pumpModelingScreen(tester, repository: repository, sharedPrefs: sharedPrefs);
 
       onboardingController
         ..add(TextEvent(content: '第'))

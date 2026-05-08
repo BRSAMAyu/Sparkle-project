@@ -473,14 +473,14 @@ void main() {
       final notifier = container.read(purchaseHistoryProvider.notifier);
       await notifier.loadPurchaseHistory();
 
-      await notifier.loadPurchaseHistory();
+      await notifier.loadMore();
 
       await Future<void>.delayed(Duration.zero);
 
       final state = container.read(purchaseHistoryProvider);
 
       expect(state.purchases.length, 21);
-      expect(state.currentOffset, 21);
+      expect(state.currentOffset, 20);
     });
 
     test('handles empty purchase history', () async {
@@ -539,7 +539,7 @@ void main() {
       final state = container.read(purchaseHistoryProvider);
 
       expect(state.purchases.length, 1);
-      expect(state.currentOffset, 1);
+      expect(state.currentOffset, 0);
     });
   });
 

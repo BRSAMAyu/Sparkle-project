@@ -10,6 +10,7 @@ import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/task_notification_id_mapper.dart';
 import 'package:sparkle/core/services/task_notification_scheduler.dart';
+import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/calendar/data/datasources/calendar_remote_datasource.dart';
 import 'package:sparkle/features/calendar/data/models/calendar_event_model.dart';
 import 'package:sparkle/features/calendar/data/repositories/calendar_repository.dart';
@@ -77,26 +78,32 @@ void main() {
     testWidgets('tool shell sheet stays bottom aligned with close affordance',
         (tester) async {
       SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
 
       await tester.pumpWidget(
-        MaterialApp(
-          theme: AppThemes.lightTheme,
-          darkTheme: AppThemes.darkTheme,
-          home: Scaffold(
-            body: SizedBox.expand(
-              child: ToolShell(
-                surface: ToolSurface.sheet,
-                icon: Icons.calculate_rounded,
-                title: '计算器',
-                subtitle: '用于快速计算与草稿推演',
-                accentColor: DS.info,
-                body: const SizedBox(
-                  height: 600,
-                  child: Column(
-                    children: [
-                      Text('sheet-body'),
-                      SizedBox(height: 400),
-                    ],
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+          ],
+          child: MaterialApp(
+            theme: AppThemes.lightTheme,
+            darkTheme: AppThemes.darkTheme,
+            home: Scaffold(
+              body: SizedBox.expand(
+                child: ToolShell(
+                  surface: ToolSurface.sheet,
+                  icon: Icons.calculate_rounded,
+                  title: '计算器',
+                  subtitle: '用于快速计算与草稿推演',
+                  accentColor: DS.info,
+                  body: const SizedBox(
+                    height: 600,
+                    child: Column(
+                      children: [
+                        Text('sheet-body'),
+                        SizedBox(height: 400),
+                      ],
+                    ),
                   ),
                 ),
               ),

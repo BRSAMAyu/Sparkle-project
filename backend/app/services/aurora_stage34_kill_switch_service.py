@@ -34,7 +34,7 @@ class AuroraStage34KillSwitchService:
             stage="34",
             feature="journey_subscribers",
             redis_key="journey_subscribers_enabled",
-            settings_attr="AURORA_STAGE34_JOURNEY_SUBSCRIBERS_ENABLED",
+            settings_attr="AURORA_STAGE34_JOURNEY_SUBSCRIBERS_MODE",
         ),
     }
 

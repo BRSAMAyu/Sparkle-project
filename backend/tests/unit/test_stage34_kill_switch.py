@@ -15,7 +15,7 @@ async def test_stage34_kill_switch_defaults_follow_settings(monkeypatch) -> None
     settings.AURORA_STAGE34_MODE = "shadow"
     settings.AURORA_STAGE34_ERROR_BRIDGE_MODE = "live"
     settings.AURORA_STAGE34_CAPSULE_MODE = "shadow"
-    settings.AURORA_STAGE34_JOURNEY_SUBSCRIBERS_ENABLED = "live"
+    settings.AURORA_STAGE34_JOURNEY_SUBSCRIBERS_MODE = "live"
 
     summary = await AuroraStage34KillSwitchService().summary()
 

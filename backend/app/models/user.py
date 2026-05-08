@@ -88,7 +88,7 @@ class User(BaseModel):
     is_superuser = Column(Boolean, default=False, nullable=False)
     status = Column(Enum(UserStatus), default=UserStatus.OFFLINE, nullable=False)
 
-    # 🆕 社交登录 ID (encrypted at rest via EncryptedString)
+    # 🆕 社交登录 ID (encrypted at rest via pii_encryption_listeners)
     google_id = Column(String(512), unique=True, nullable=True, index=True)
     google_id_hash = Column(String(64), nullable=True, index=True)
     apple_id = Column(String(512), unique=True, nullable=True, index=True)
@@ -364,7 +364,7 @@ class UserDevice(BaseModel):
     device_id = Column(String(255), nullable=False, index=True)  # 设备唯一标识
     platform = Column(String(50), nullable=False)  # ios, android, web
 
-    # 推送令牌 (encrypted at rest via EncryptedString)
+    # 推送令牌 (encrypted at rest via pii_encryption_listeners)
     push_token = Column(String(1024), nullable=False, index=True)  # FCM/APNs token
     push_token_hash = Column(String(64), nullable=True, index=True)
     token_type = Column(String(50), nullable=False)  # fcm, apns, huawei

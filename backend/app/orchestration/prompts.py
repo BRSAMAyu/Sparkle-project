@@ -1125,6 +1125,7 @@ def build_system_prompt(
     persona_section = ""
     if persona_constraints_summary:
         persona_section = "\n## 用户画像提示 [L2 引导]\n" + persona_constraints_summary
+    aurora_profile_section = _format_aurora_profile_section(user_context=user_context)
     companion_persona_section = _format_companion_persona_section(
         user_context=user_context,
         plan_context=plan_context,
@@ -1300,6 +1301,7 @@ def build_system_prompt(
         "collaboration_narrative_section": collaboration_narrative_section,
         "mode_strategy_section": mode_strategy_section,
         "persona_section": persona_section,
+        "aurora_profile_section": aurora_profile_section,
         "companion_persona_section": companion_persona_section,
         "constitution_guardrail_section": constitution_guardrail_section,
         "agent_persona_section": agent_persona_section,
@@ -1354,6 +1356,7 @@ def build_system_prompt(
             "collaboration_narrative_section": 2,
             "mode_strategy_section": 2,
             "persona_section": 2,
+            "aurora_profile_section": 1,
             "companion_persona_section": 1,
             "constitution_guardrail_section": 1,
             "agent_persona_section": 2,
@@ -1391,6 +1394,7 @@ def build_system_prompt(
     collaboration_narrative_section = section_map["collaboration_narrative_section"]
     mode_strategy_section = section_map["mode_strategy_section"]
     persona_section = section_map["persona_section"]
+    aurora_profile_section = section_map["aurora_profile_section"]
     companion_persona_section = section_map["companion_persona_section"]
     constitution_guardrail_section = section_map["constitution_guardrail_section"]
     agent_persona_section = section_map["agent_persona_section"]
@@ -1461,6 +1465,7 @@ def build_system_prompt(
                 mode_strategy_section=mode_strategy_section,
                 aurora_language_contract_section=aurora_language_contract_section,
                 persona_section=persona_section,
+                aurora_profile_section=aurora_profile_section,
                 companion_persona_section=companion_persona_section,
                 constitution_guardrail_section=constitution_guardrail_section,
                 agent_persona_section=agent_persona_section,
@@ -1487,6 +1492,7 @@ def build_system_prompt(
                 task_awareness_section,
                 aurora_language_contract_section,
                 persona_section,
+                aurora_profile_section,
                 companion_persona_section,
                 constitution_guardrail_section,
                 agent_persona_section,
@@ -1967,6 +1973,32 @@ def _get_default_preference_instructions(user_context: dict) -> str:
 - 回答深度：{depth_text}
 - 探索倾向：{curiosity_text}
 """
+
+
+def _format_aurora_profile_section(*, user_context: dict) -> str:
+    profile_data = user_context.get("llm_profile_data")
+    if not isinstance(profile_data, dict):
+        profile_data = user_context if isinstance(user_context, dict) else {}
+
+    summary = str(profile_data.get("aurora_profile_summary") or "").strip()
+    if not summary:
+        return ""
+
+    maturity = profile_data.get("relationship_maturity")
+    label = profile_data.get("relationship_label")
+
+    lines = ["## 用户画像 [L2 引导]"]
+    if label:
+        lines.append(f"- 协作者关系状态: {label}")
+    if maturity is not None:
+        try:
+            lines.append(f"- 协作者关系成熟度: {float(maturity):.2f}")
+        except (ValueError, TypeError):
+            pass
+
+    lines.append(f"- 用户特征摘要: {summary}")
+    lines.append("- 回合建议: 基于上述摘要校准沟通深度和共情方式，不要直接复读摘要。")
+    return "\n" + "\n".join(lines)
 
 
 def _format_companion_persona_section(

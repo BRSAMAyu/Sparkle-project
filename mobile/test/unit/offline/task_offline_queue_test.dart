@@ -2,6 +2,7 @@
 
 import 'dart:io';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:isar/isar.dart';
 import '../../shared/isar_test_helper.dart';
@@ -16,6 +17,19 @@ import 'package:sparkle/core/services/websocket_service.dart';
 import 'package:sparkle/features/task/data/services/task_offline_queue.dart';
 
 import 'task_offline_queue_test.mocks.dart';
+
+class _FakeConnectivity implements Connectivity {
+  _FakeConnectivity([this.result = const [ConnectivityResult.wifi]]);
+
+  final List<ConnectivityResult> result;
+
+  @override
+  Future<List<ConnectivityResult>> checkConnectivity() async => result;
+
+  @override
+  Stream<List<ConnectivityResult>> get onConnectivityChanged =>
+      const Stream.empty();
+}
 
 @GenerateMocks([WebSocketService, ApiClient, SyncEngine])
 void main() {
@@ -174,7 +188,12 @@ void main() {
     // Use a real SyncEngine to write items
     final mockWs = MockWebSocketService();
     final mockApi = MockApiClient();
-    final realEngine = SyncEngine(localDb, mockWs, mockApi);
+    final realEngine = SyncEngine(
+      localDb,
+      mockWs,
+      mockApi,
+      connectivity: _FakeConnectivity([ConnectivityResult.none]),
+    );
 
     final queue = TaskOfflineQueue(realEngine, localDb);
     await queue.enqueueStart('task-1');

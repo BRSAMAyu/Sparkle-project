@@ -366,7 +366,7 @@ int _asInt(dynamic value) {
 }
 
 int _taskStatusRank(String? status) {
-  switch (status) {
+  switch (status?.toLowerCase()) {
     case 'pending':
     case 'todo':
       return 0;

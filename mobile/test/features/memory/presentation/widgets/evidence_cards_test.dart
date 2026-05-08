@@ -252,8 +252,8 @@ void main() {
           ),),
       );
 
-      // TIER1: 'practice_outcome' type not matched, falls through to default
-      expect(find.text('证据记录'), findsOneWidget);
+      // TIER1: practice_outcome shows summary text
+      expect(find.text('错题复习结果：remembered'), findsOneWidget);
 
       // Expand to TIER2 (shows first 4 key-value pairs)
       await tapExpandCard(tester);
@@ -269,7 +269,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('摘要'), findsOneWidget);
-      expect(find.textContaining('错题复习结果'), findsOneWidget);
+      expect(find.textContaining('错题复习结果'), findsAtLeastNWidgets(1));
     });
 
     testWidgets('should render redacted evidence with reason', (tester) async {

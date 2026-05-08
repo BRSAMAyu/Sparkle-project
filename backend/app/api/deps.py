@@ -31,6 +31,11 @@ async def get_current_user_id(
     try:
         token = credentials.credentials
         payload = await decode_token(token, expected_type="access")
+        
+        from app.core.token_revocation import token_revocation_service
+        if await token_revocation_service.is_token_blacklisted(payload.get("jti")):
+            raise AuthenticationError("登录已失效，请重新登录")
+            
         request.state.token_payload = payload
         user_id: str = payload.get("sub")
         if user_id is None:
@@ -94,6 +99,11 @@ async def get_optional_current_user(
     try:
         token = credentials.credentials
         payload = await decode_token(token, expected_type="access")
+        
+        from app.core.token_revocation import token_revocation_service
+        if await token_revocation_service.is_token_blacklisted(payload.get("jti")):
+            raise AuthenticationError("登录已失效，请重新登录")
+            
         request.state.token_payload = payload
         user_id: str | None = payload.get("sub")
         if user_id is None:

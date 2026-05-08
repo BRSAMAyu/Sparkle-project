@@ -177,6 +177,14 @@ quality-budget-check:
 	@echo "🧱 Enforcing technical debt budget..."
 	python3 scripts/check_tech_debt_budget.py
 
+quality-sqam:
+	@echo "📊 Running SQAM quality benchmark..."
+	cd backend && python3 -m app.learning.persistent_bayesian_sqam
+
+quality-slo-check:
+	@echo "🎯 Validating SLO definitions..."
+	cd backend && python3 -c "from app.core.slo import all_targets; targets=all_targets(); print(f'{len(targets)} SLO targets validated'); assert len(targets) >= 10, 'Too few SLO targets defined'"
+
 openapi-contract-check:
 	@echo "🧾 Checking OpenAPI contract snapshot..."
 	python3 scripts/check_openapi_contract.py

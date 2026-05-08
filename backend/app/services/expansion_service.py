@@ -430,6 +430,18 @@ class ExpansionService:
             if invalidate_caches:
                 await self._invalidate_after_graph_mutation(user_id)
 
+            try:
+                from app.core.event_bus import event_bus
+                await event_bus.publish("knowledge_node_updated", {
+                    "user_id": str(user_id),
+                    "node_id": str(node.id),
+                    "node_name": node.name,
+                    "created": created,
+                    "source_type": source_type,
+                })
+            except Exception:
+                pass
+
         return node, created
 
     def _apply_node_updates(self, node: KnowledgeNode, updates: dict | None) -> None:

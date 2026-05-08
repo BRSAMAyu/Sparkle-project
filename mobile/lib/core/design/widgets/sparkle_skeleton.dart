@@ -140,6 +140,7 @@ class SparkleListSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ListView.separated(
         physics: const NeverScrollableScrollPhysics(),
+        shrinkWrap: true,
         padding: padding,
         itemCount: count,
         separatorBuilder: (_, __) => const SizedBox(height: DS.spacing12),

@@ -6,7 +6,7 @@ Closes event-bus paths for achievement progression without blocking request hand
 import asyncio
 from datetime import UTC, datetime, timedelta
 from urllib.parse import urlencode
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from loguru import logger
 from sqlalchemy import and_, func, select
@@ -105,6 +105,61 @@ class AchievementEventConsumer:
                 estimated_minutes=int(float(event.get("estimated_minutes") or 0)),
                 difficulty=int(float(event.get("difficulty") or 1)),
             )
+
+            try:
+                from app.core.cache import cache_service
+                from app.signals.strategy_marketplace import StrategyMarketplace
+                actual = float(event.get("actual_minutes") or 0)
+                estimated = float(event.get("estimated_minutes") or 1)
+                if actual > 0 and estimated > 0 and cache_service.redis:
+                    marketplace = StrategyMarketplace(cache_service.redis)
+                    goal_type = str(event.get("goal_type") or "")
+                    subject = str(event.get("subject") or "")
+                    strategy_key = f"{goal_type}:{subject}" if goal_type or subject else f"task:{event.get('task_id', '')}"
+                    effectiveness = min(actual / estimated, 1.0) if estimated > 0 else 0.0
+                    if effectiveness >= 0.7:
+                        await marketplace.publish_strategy(
+                            strategy_key=strategy_key,
+                            source_user_id=str(event["user_id"]),
+                            effectiveness=effectiveness,
+                            evidence_count=1,
+                            goal_type=goal_type,
+                            subject=subject,
+                        )
+            except Exception:
+                pass
+
+            try:
+                from app.services.feedback_adjustment_service import (
+                    FeedbackDrivenAdjustmentService,
+                    FeedbackEvent,
+                    FeedbackType,
+                )
+                from app.services.plan_state_service import PlanStateService
+                plan_id = event.get("plan_id")
+                task_id = event.get("task_id")
+                if plan_id and task_id:
+                    plan_state_svc = PlanStateService(db)
+                    feedback_svc = FeedbackDrivenAdjustmentService(db, plan_state_svc)
+                    feedback_event = FeedbackEvent(
+                        event_id=str(uuid4()),
+                        user_id=UUID(str(event["user_id"])),
+                        plan_id=UUID(str(plan_id)),
+                        task_id=UUID(str(task_id)),
+                        feedback_type=FeedbackType.TASK_COMPLETED,
+                        timestamp=_utcnow(),
+                        actual_duration_minutes=int(float(event.get("actual_minutes") or 0)),
+                    )
+                    await feedback_svc.process_feedback(feedback_event)
+            except Exception:
+                pass
+
+            try:
+                from app.services.state_driven_push_service import StateDrivenPushService
+                push_svc = StateDrivenPushService(db)
+                await push_svc.compile_and_deliver(UUID(str(event["user_id"])))
+            except Exception:
+                pass
 
     async def _handle_focus_session_completed(self, event: dict):
         user_id = event.get("user_id")

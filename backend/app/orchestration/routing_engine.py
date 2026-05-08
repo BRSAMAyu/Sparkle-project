@@ -1937,7 +1937,7 @@ class RoutingEngineMixin:
             state.context_data["unified_intent"]["execution_mode"] = route_decision.execution_mode
             state.context_data["unified_intent"]["risk_level"] = route_decision.risk_level
 
-        route_decision = self._apply_stage4_routing_mode(
+        route_decision = await self._apply_stage4_routing_mode(
             route_decision=route_decision,
             state=state,
             user_id=user_id,
@@ -1946,7 +1946,7 @@ class RoutingEngineMixin:
         )
 
         # WS-B.2: mid-flight escalation (separate from WS-B.1 routing seam)
-        route_decision = self._apply_stage4_escalation(
+        route_decision = await self._apply_stage4_escalation(
             route_decision=route_decision,
             state=state,
             user_id=user_id,
@@ -2184,7 +2184,7 @@ class RoutingEngineMixin:
                 count += 1
         return count
 
-    def _apply_stage4_escalation(
+    async def _apply_stage4_escalation(
         self,
         *,
         route_decision: RouteDecision,
@@ -2210,7 +2210,7 @@ class RoutingEngineMixin:
         if state.context_data.get("stage4_task_assistant_candidate"):
             return route_decision
 
-        snapshot = self._build_stage4_routing_snapshot(
+        snapshot = await self._build_stage4_routing_snapshot(
             user_id=user_id,
             user_message=user_message,
             conversation_context=conversation_context,
@@ -2251,13 +2251,37 @@ class RoutingEngineMixin:
         }
         return any(marker.lower() in lowered for marker in markers)
 
-    def _build_stage4_routing_snapshot(
+    async def _build_stage4_routing_snapshot(
         self,
         *,
         user_id: str,
         user_message: str,
         conversation_context: dict[str, Any] | None,
     ) -> SignalSnapshot:
+        try:
+            user_uuid = uuid.UUID(str(user_id))
+        except (TypeError, ValueError, AttributeError):
+            user_uuid = uuid.uuid5(uuid.NAMESPACE_URL, f"stage4-routing:{user_id}")
+
+        from app.services.aurora_stage18_kill_switch_service import AuroraStage18KillSwitchService
+        aggregator_service = AuroraStage18KillSwitchService()
+        if await aggregator_service.is_enabled("aggregator_enabled"):
+            from app.aurora.signal_aggregator import SignalAggregator
+            service_map = {
+                "memory": getattr(self, "memory_service", None),
+                "focus": getattr(self, "focus_service", None),
+                "persona": getattr(self, "persona_service", None),
+                "error_book": getattr(self, "error_book_service", None),
+            }
+            aggregator = SignalAggregator(service_map=service_map)
+            return await aggregator.assemble_snapshot(
+                user_id=user_uuid,
+                scenario_pack_id="stage4_routing_mode@v1",
+                policy_version="aurora_policy@v1.0",
+                budget_limit=4000,
+                context=conversation_context,
+            )
+
         optional_signals: dict[str, Any] = {}
         if self._stage4_task_assistant_request(user_message):
             optional_signals["task_card_id"] = "stage4_task_assistant_candidate"
@@ -2265,11 +2289,6 @@ class RoutingEngineMixin:
         structural_turns = self._count_structural_topic_turns(conversation_context)
         if structural_turns > 0:
             optional_signals["structural_topic_turns"] = structural_turns
-
-        try:
-            user_uuid = uuid.UUID(str(user_id))
-        except (TypeError, ValueError, AttributeError):
-            user_uuid = uuid.uuid5(uuid.NAMESPACE_URL, f"stage4-routing:{user_id}")
 
         digest = hashlib.sha256(f"{user_id}|{user_message}".encode()).hexdigest()[:16]
         return SignalSnapshot(
@@ -2285,7 +2304,7 @@ class RoutingEngineMixin:
             budget_limit=4000,
         )
 
-    def _apply_stage4_routing_mode(
+    async def _apply_stage4_routing_mode(
         self,
         *,
         route_decision: RouteDecision,
@@ -2294,7 +2313,7 @@ class RoutingEngineMixin:
         user_message: str,
         conversation_context: dict[str, Any] | None,
     ) -> RouteDecision:
-        snapshot = self._build_stage4_routing_snapshot(
+        snapshot = await self._build_stage4_routing_snapshot(
             user_id=user_id,
             user_message=user_message,
             conversation_context=conversation_context,

@@ -289,22 +289,21 @@ def record_token_usage(
     """
     import asyncio
 
-    from app.db.session import AsyncSessionLocal
-    from app.services.token_tracker import TokenTracker
+    from app.core.cache import cache_service
+    from app.orchestration.token_tracker import TokenTracker
 
     async def _record():
-        async with AsyncSessionLocal() as session:
-            tracker = TokenTracker(session)
-            await tracker.record_usage(
-                user_id=user_id,
-                session_id=session_id,
-                request_id=request_id,
-                prompt_tokens=prompt_tokens,
-                completion_tokens=completion_tokens,
-                model=model,
-                cost=cost,
-            )
-            return {"status": "success", "user_id": user_id}
+        tracker = TokenTracker(cache_service.redis)
+        await tracker.record_usage(
+            user_id=user_id,
+            session_id=session_id,
+            request_id=request_id,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            model=model,
+            cost=cost,
+        )
+        return {"status": "success", "user_id": user_id}
 
     try:
         return asyncio.run(_record())
@@ -435,28 +434,11 @@ def cleanup_pending_actions(self):
 
     这是 pending_actions 中 _cleanup_expired 的 Celery 版本
     """
-    import asyncio
-    from datetime import datetime, timedelta
-
-    from loguru import logger
-
-    from app.db.session import AsyncSessionLocal
-    from app.models.pending_actions import PendingAction
-
-    async def _cleanup():
-        async with AsyncSessionLocal() as session:
-            cutoff = datetime.now() - timedelta(hours=24)
-
-            result = await session.execute(PendingAction.__table__.delete().where(PendingAction.created_at < cutoff))
-            deleted = result.rowcount
-
-            await session.commit()
-
-            logger.info(f"✅ Cleaned up {deleted} pending actions")
-            return {"status": "success", "deleted": deleted}
+    from app.core.pending_actions import pending_actions_store
 
     try:
-        return asyncio.run(_cleanup())
+        pending_actions_store.cleanup_expired(hours=24)
+        return {"status": "success"}
     except Exception as exc:
         raise self.retry(exc=exc, countdown=60) from exc
 
@@ -498,7 +480,7 @@ def expansion_worker_task(self, node_id: str, operation: str):
     from loguru import logger
 
     from app.db.session import AsyncSessionLocal
-    from app.services.galaxy.expansion_service import ExpansionService
+    from app.services.expansion_service import ExpansionService
 
     async def _expand():
         async with AsyncSessionLocal() as session:
@@ -524,22 +506,9 @@ def expansion_worker_task(self, node_id: str, operation: str):
 def visualize_graph(self, user_id: str, graph_data: dict):
     """
     生成可视化数据 (长时任务)
-
-    这是 visualization service 的 Celery 版本
+    Currently disabled due to missing implementation module.
     """
-    import asyncio
-
-    from app.services.visualization.graph_generator import GraphGenerator
-
-    async def _visualize():
-        generator = GraphGenerator()
-        result = await generator.generate(graph_data, user_id)
-        return {"status": "success", "visualization_id": result.id}
-
-    try:
-        return asyncio.run(_visualize())
-    except Exception as exc:
-        raise self.retry(exc=exc, countdown=2**self.request.retries) from exc
+    return {"status": "skipped", "reason": "GraphGenerator not implemented"}
 
 
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.generate_weekly_learning_reports")
@@ -623,10 +592,10 @@ def run_daily_goal_reflections(self, limit: int = 500):
     async def _run():
         import json
 
-        from app.core.redis_client import get_redis
+        from app.core.cache import cache_service
         from app.signals.async_deep_learner import AsyncDeepLearner
 
-        redis = get_redis()
+        redis = cache_service.redis
         learner = AsyncDeepLearner(redis)
         cursor, keys = await redis.scan(match="spine:deep_learning_accumulation:*", count=limit)
         processed = 0
@@ -682,10 +651,10 @@ def run_l4_policy_effect_compaction(self, limit: int = 500):
     async def _run():
         import json
 
-        from app.core.redis_client import get_redis
+        from app.core.cache import cache_service
         from app.signals.async_deep_learner import AsyncDeepLearner
 
-        redis = get_redis()
+        redis = cache_service.redis
         learner = AsyncDeepLearner(redis)
         cursor, keys = await redis.scan(match="spine:policy_ledger:*", count=limit)
         processed = 0
@@ -732,10 +701,10 @@ def run_l4_skill_candidate_extraction(self, limit: int = 500):
     async def _run():
         import json
 
-        from app.core.redis_client import get_redis
+        from app.core.cache import cache_service
         from app.signals.async_deep_learner import AsyncDeepLearner
 
-        redis = get_redis()
+        redis = cache_service.redis
         learner = AsyncDeepLearner(redis)
         cursor, keys = await redis.scan(match="spine:strategy_history:*", count=limit)
         processed = 0
@@ -782,10 +751,10 @@ def run_l4_source_effectiveness(self, limit: int = 500):
     async def _run():
         import json
 
-        from app.core.redis_client import get_redis
+        from app.core.cache import cache_service
         from app.signals.async_deep_learner import AsyncDeepLearner
 
-        redis = get_redis()
+        redis = cache_service.redis
         learner = AsyncDeepLearner(redis)
         cursor, keys = await redis.scan(match="spine:source_interactions:*", count=limit)
         processed = 0
@@ -832,10 +801,10 @@ def run_l4_community_aggregation(self, limit: int = 200):
     async def _run():
         import json
 
-        from app.core.redis_client import get_redis
+        from app.core.cache import cache_service
         from app.signals.async_deep_learner import AsyncDeepLearner
 
-        redis = get_redis()
+        redis = cache_service.redis
         learner = AsyncDeepLearner(redis)
         cursor, keys = await redis.scan(match="spine:community_signals:*", count=limit)
         processed = 0
@@ -882,10 +851,10 @@ def run_l4_state_decay_and_retraction(self, limit: int = 500):
     async def _run():
         import json
 
-        from app.core.redis_client import get_redis
+        from app.core.cache import cache_service
         from app.signals.async_deep_learner import AsyncDeepLearner
 
-        redis = get_redis()
+        redis = cache_service.redis
         learner = AsyncDeepLearner(redis)
         cursor, keys = await redis.scan(match="spine:active_states:*", count=limit)
         processed = 0
@@ -945,9 +914,8 @@ def run_l4_async_engine_sweep(self, limit: int = 500):
         import json
 
         from app.aurora.runtime_v1.l4_async import L4AsyncEngine, L4_ANALYSIS_TYPES
-        from app.core.redis_client import get_redis
-
-        redis = get_redis()
+        from app.core.cache import cache_service
+        redis = cache_service.redis
         engine = L4AsyncEngine(redis_client=redis)
         analysis_types = [
             "behavior_trend",
@@ -1022,10 +990,10 @@ def run_l4_learning_pipeline_async(self, user_id: str = "", limit: int = 100):
     async def _run():
         import json
 
-        from app.core.redis_client import get_redis
+        from app.core.cache import cache_service
         from app.learning.outcome_consumer import OutcomeConsumingService
 
-        redis = get_redis()
+        redis = cache_service.redis
         consumer = OutcomeConsumingService(redis)
 
         if user_id:
@@ -1091,11 +1059,11 @@ def run_counterfactual_evaluations(self, limit_users: int = 500):
     """Daily production counterfactual evaluation over eligible InterventionEpisodes."""
 
     async def _run():
-        from app.core.redis_client import get_redis
+        from app.core.cache import cache_service
         from app.db.session import AsyncSessionLocal
         from app.signals.counterfactual_evaluation import CounterfactualReportService
 
-        redis = get_redis()
+        redis = cache_service.redis
         async with AsyncSessionLocal() as session:
             service = CounterfactualReportService(session, redis)
             result = await service.run_daily_evaluations(limit_users=limit_users)
@@ -2654,10 +2622,10 @@ def recall_notification_task(self, user_id: str, trigger_type: str, context: str
     parsed_context = json.loads(context) if isinstance(context, str) else context
 
     async def _run():
-        from app.core.redis_client import get_redis
+        from app.core.cache import cache_service
         from app.signals.spine_orchestrator import get_spine_orchestrator
 
-        redis = get_redis()
+        redis = cache_service.redis
         spine = get_spine_orchestrator(redis_client=redis)
 
         # V-14: Run signal pipeline first (generates directives + trace)
@@ -2833,10 +2801,10 @@ def spine_snapshot_task(self, user_id: str):
     """
 
     async def _run():
-        from app.core.redis_client import get_redis
+        from app.core.cache import cache_service
         from app.signals.spine_orchestrator import get_spine_orchestrator
 
-        redis = get_redis()
+        redis = cache_service.redis
         spine = get_spine_orchestrator(redis_client=redis)
         snapshot = await spine.save_spine_snapshot(user_id=user_id)
         return {"status": "saved", "snapshot_id": snapshot.get("snapshot_id")}
@@ -2920,10 +2888,10 @@ def compact_user_traces(self, user_id: str):
     """
 
     async def _run():
-        from app.core.redis_client import get_redis
+        from app.core.cache import cache_service
         from app.signals.causal_trace_store import CausalTraceStore
 
-        redis = get_redis()
+        redis = cache_service.redis
         store = CausalTraceStore(redis)
         result = await store.compact_old_traces(user_id)
         if result is None:
@@ -2942,9 +2910,8 @@ def scan_trace_compaction(self, limit: int = 500):
     """Phase 6 / T6.5.1: Daily scan — dispatch compact_user_traces for active users."""
 
     async def _run():
-        from app.core.redis_client import get_redis
-
-        redis = get_redis()
+        from app.core.cache import cache_service
+        redis = cache_service.redis
         # Scan all user trace index keys
         cursor = 0
         dispatched = 0
@@ -2994,10 +2961,10 @@ def community_cohort_signal_task(self, user_id: str, knowledge_node_id: str):
     async def _run():
         import json
 
-        from app.core.redis_client import get_redis
+        from app.core.cache import cache_service
         from app.signals.spine_orchestrator import get_spine_orchestrator
 
-        redis = get_redis()
+        redis = cache_service.redis
         spine = get_spine_orchestrator(redis_client=redis)
 
         # Load community_signal from knowledge node metadata
@@ -3033,9 +3000,8 @@ def scan_community_cohort_signals(self, limit: int = 200):
     """Scan active users and dispatch community cohort signal tasks."""
 
     async def _run():
-        from app.core.redis_client import get_redis
-
-        redis = get_redis()
+        from app.core.cache import cache_service
+        redis = cache_service.redis
         # Find users with active Spine state (recently interacted)
         cursor, keys = await redis.scan(match="spine:last_seen:*", count=limit)
         dispatched = 0
@@ -3086,10 +3052,10 @@ def spine_expire_stale_states(self, limit: int = 500):
     """Expire stale state entries for active users."""
 
     async def _run():
-        from app.core.redis_client import get_redis
+        from app.core.cache import cache_service
         from app.signals.state_register import StateRegister
 
-        redis = get_redis()
+        redis = cache_service.redis
         register = StateRegister(redis)
         cursor, keys = await redis.scan(match="spine:last_seen:*", count=limit)
         expired_total = 0
@@ -3112,10 +3078,10 @@ def spine_auto_deprecate_skills(self, limit: int = 500):
     """Auto-deprecate stale skills for active users."""
 
     async def _run():
-        from app.core.redis_client import get_redis
+        from app.core.cache import cache_service
         from app.signals.skill_lifecycle import SkillLifecycleManager
 
-        redis = get_redis()
+        redis = cache_service.redis
         manager = SkillLifecycleManager(redis)
         cursor, keys = await redis.scan(match="spine:last_seen:*", count=limit)
         total_deprecated = 0
@@ -3150,10 +3116,10 @@ def apply_memory_decay(self, batch_size: int = 200):
 
         from sqlalchemy import select
 
-        from app.core.db import async_session_factory
+        from app.db.session import AsyncSessionLocal
         from app.models.memory import EpisodicMemory
 
-        async with async_session_factory() as session:
+        async with AsyncSessionLocal() as session:
             now = datetime.now(UTC)
             policies = {
                 "30d": {"half_life_days": 30, "archive_threshold": 0.15},
@@ -3327,11 +3293,11 @@ def run_community_privacy_maintenance(self, limit: int = 200):
     """
 
     async def _run():
-        from app.core.redis_client import get_redis
+        from app.core.cache import cache_service
         from app.db.session import AsyncSessionLocal
         from app.models.community_privacy import PrivacyBudgetLedger
 
-        redis = get_redis()
+        redis = cache_service.redis
         results = {"budgets_reset": 0, "cohorts_pruned": 0, "errors": 0}
 
         async with AsyncSessionLocal() as session:
@@ -3391,10 +3357,10 @@ def run_research_improvement_loop(self, limit: int = 500):
     async def _run():
         import json
 
-        from app.core.redis_client import get_redis
+        from app.core.cache import cache_service
         from app.signals.research_mode import ContinuousImprovementLoop
 
-        redis = get_redis()
+        redis = cache_service.redis
         loop = ContinuousImprovementLoop()
         cursor, keys = await redis.scan(match="spine:research_gaps:*", count=limit)
         total_proposals = 0
@@ -3447,3 +3413,121 @@ def run_research_improvement_loop(self, limit: int = 500):
     except Exception as exc:
         logger.error("Research improvement loop failed: {}", exc)
         raise self.retry(exc=exc, countdown=600) from exc
+
+
+@celery_app.task(bind=True, max_retries=2, name="observe_user_traits")
+def observe_user_traits(self, user_id: str):
+    """Observe Big Five traits from recent chat messages via NLP."""
+    import asyncio
+
+    from app.db.session import AsyncSessionLocal
+
+    async def _run():
+        from app.services.traits_nlp_observer_service import TraitsNlpObserverService
+        async with AsyncSessionLocal() as session:
+            svc = TraitsNlpObserverService(session)
+            result = await svc.observe_user(UUID(user_id))
+            return result
+
+    try:
+        return asyncio.run(_run())
+    except Exception as exc:
+        raise self.retry(exc=exc, countdown=30) from exc
+
+
+@celery_app.task(bind=True, max_retries=2, name="scan_behavior_patterns")
+def scan_behavior_patterns(self, user_id: str):
+    """Analyze user behavior patterns for planning optimism, focus decay, blindspots."""
+    import asyncio
+
+    from app.db.session import AsyncSessionLocal
+
+    async def _run():
+        from app.services.analytics.behavior_pattern_service import BehaviorPatternService
+        from app.models.task import Task, TaskStatus
+        from sqlalchemy import select
+        async with AsyncSessionLocal() as session:
+            svc = BehaviorPatternService(session)
+            uid = UUID(user_id)
+            stmt = (
+                select(Task.id)
+                .where(Task.user_id == uid, Task.status == TaskStatus.COMPLETED)
+                .order_by(Task.updated_at.desc())
+                .limit(5)
+            )
+            result = await session.execute(stmt)
+            task_ids = [row[0] for row in result.all()]
+            patterns = []
+            for tid in task_ids:
+                pattern = await svc.analyze_planning_optimism(uid, tid)
+                if pattern:
+                    patterns.append(pattern)
+            return {"user_id": user_id, "patterns_found": len(patterns)}
+
+    try:
+        return asyncio.run(_run())
+    except Exception as exc:
+        raise self.retry(exc=exc, countdown=30) from exc
+
+
+@celery_app.task(bind=True, max_retries=2, name="propose_routing_parameters")
+def propose_routing_parameters(self):
+    """Propose routing parameter optimizations from accumulated effectiveness data."""
+    import asyncio
+
+    from app.db.session import AsyncSessionLocal
+
+    async def _run():
+        from app.services.routing_parameter_proposal_service import RoutingParameterProposalService
+        async with AsyncSessionLocal() as session:
+            svc = RoutingParameterProposalService(session)
+            proposals = await svc.propose_from_effectiveness()
+            return {"proposals_generated": len(proposals)}
+
+    try:
+        return asyncio.run(_run())
+    except Exception as exc:
+        raise self.retry(exc=exc, countdown=60) from exc
+
+
+@celery_app.task(bind=True, max_retries=2, name="optimize_context_pack_budget")
+def optimize_context_pack_budget(self, user_id: str, total_budget: int, context_packs: list[str]):
+    """Optimize context pack budget allocation using multi-armed bandit."""
+    import asyncio
+
+    from app.db.session import AsyncSessionLocal
+
+    async def _run():
+        from app.services.budget_optimization_service import BudgetOptimizationService
+        async with AsyncSessionLocal() as session:
+            svc = BudgetOptimizationService(session)
+            allocation = await svc.optimize_budget_allocation(
+                user_id=user_id,
+                total_budget=total_budget,
+                context_packs=context_packs,
+            )
+            return allocation
+
+    try:
+        return asyncio.run(_run())
+    except Exception as exc:
+        raise self.retry(exc=exc, countdown=30) from exc
+
+
+@celery_app.task(bind=True, max_retries=2, name="auto_optimize_routing_parameters")
+def auto_optimize_routing_parameters(self):
+    """Run routing parameter auto-optimization cycle."""
+    import asyncio
+
+    async def _run():
+        from app.core.cache import cache_service
+        from app.learning.auto_optimizer import AutoOptimizer
+        redis = cache_service.redis
+        optimizer = AutoOptimizer(graph_router=None, learner=None, redis_client=redis)
+        result = await optimizer.optimize()
+        return result
+
+    try:
+        return asyncio.run(_run())
+    except Exception as exc:
+        raise self.retry(exc=exc, countdown=120) from exc

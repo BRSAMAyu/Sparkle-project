@@ -474,6 +474,12 @@ class AuroraCoreSessionService:
         active_key = _ACTIVE_SESSION_KEY.format(user_id=user_id)
         await self.redis.set(active_key, agenda.session_id, ex=_SESSION_TTL)
 
+        try:
+            from app.signals.agenda_queue import AgendaQueueService
+            await AgendaQueueService(self.redis).save_agenda(user_id, agenda)
+        except Exception:
+            pass
+
         logger.info(
             "AuroraCoreSession: created session={} user={} type={}",
             agenda.session_id,
