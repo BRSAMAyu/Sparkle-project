@@ -1,11 +1,14 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/experience/experience_profile.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 
@@ -26,69 +29,86 @@ class MessageDetailView extends StatelessWidget {
     final isUserMessage = message.role == MessageRole.user;
 
     return Scaffold(
-      backgroundColor: DS.overlay30.withValues(alpha: 0),
-      body: Dismissible(
-        key: Key('message_detail_${message.id}'),
-        direction: DismissDirection.vertical,
-        onDismissed: (_) => Navigator.of(context).pop(),
-        child: Semantics(
-          button: true,
-          label: 'Chat message detail view control 1',
-          child: GestureDetector(
-            // 点击背景关闭
-            onTap: () => Navigator.of(context).pop(),
-            child: ColoredBox(
-              color: DS.textPrimary.withValues(alpha: 0.5),
+      backgroundColor: Colors.transparent,
+      body: Stack(
+        children: [
+          // Backdrop blur
+          Positioned.fill(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+              child: Container(
+                color: DS.overlay30.withValues(alpha: 0.4),
+              ),
+            ),
+          ),
+          Dismissible(
+            key: Key('message_detail_${message.id}'),
+            direction: DismissDirection.vertical,
+            onDismissed: (_) => Navigator.of(context).pop(),
+            child: Semantics(
+              button: true,
+              label: 'Chat message detail view control 1',
               child: GestureDetector(
-                // 阻止点击内容区域时关闭
-                onTap: () {},
-                child: SafeArea(
-                  child: Center(
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(
-                        horizontal: DS.md,
-                        vertical: DS.lg,
-                      ),
-                      constraints: BoxConstraints(
-                        maxHeight: MediaQuery.of(context).size.height * 0.92,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surface,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: DS.textPrimary.withValues(alpha: 0.3),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
+                // 点击背景关闭
+                onTap: () => Navigator.of(context).pop(),
+                child: Container(
+                  color: Colors.transparent,
+                  child: GestureDetector(
+                    // 阻止点击内容区域时关闭
+                    onTap: () {},
+                    child: SafeArea(
+                      child: Center(
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(
+                            horizontal: DS.md,
+                            vertical: DS.lg,
                           ),
-                        ],
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // 顶部工具栏
-                          _buildHeader(context, isUserMessage),
-
-                          // 内容区域（可滚动）
-                          Flexible(
-                            child: Hero(
-                              tag: heroTag,
-                              child: Material(
-                                color: DS.overlay30.withValues(alpha: 0),
-                                child: SingleChildScrollView(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: DS.lg,
-                                    vertical: DS.md,
-                                  ),
-                                  child: _buildContent(context, isUserMessage),
-                                ),
+                          constraints: BoxConstraints(
+                            maxHeight: MediaQuery.of(context).size.height * 0.88,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surface,
+                            borderRadius: BorderRadius.circular(DS.radius24),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.15),
+                                blurRadius: 30,
+                                offset: const Offset(0, 15),
                               ),
+                            ],
+                            border: Border.all(
+                              color: DS.borderSubtle.withValues(alpha: 0.5),
                             ),
                           ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // 顶部工具栏
+                              _buildHeader(context, isUserMessage),
 
-                          // 底部操作栏
-                          _buildActions(context),
-                        ],
+                              // 内容区域（可滚动）
+                              Flexible(
+                                child: Hero(
+                                  tag: heroTag,
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: SingleChildScrollView(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: DS.lg,
+                                        vertical: DS.md,
+                                      ),
+                                      child:
+                                          _buildContent(context, isUserMessage),
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                              // 底部操作栏
+                              _buildActions(context),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -96,7 +116,7 @@ class MessageDetailView extends StatelessWidget {
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -111,9 +131,9 @@ class MessageDetailView extends StatelessWidget {
         vertical: DS.md,
       ),
       decoration: BoxDecoration(
-        color: DS.surfaceTertiary.withValues(alpha: 0.35),
+        color: DS.surfaceTertiary.withValues(alpha: 0.4),
         borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(20),
+          top: Radius.circular(DS.radius24),
         ),
       ),
       child: Row(
@@ -246,9 +266,9 @@ class MessageDetailView extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(DS.md),
       decoration: BoxDecoration(
-        color: DS.surfaceTertiary.withValues(alpha: 0.35),
+        color: DS.surfaceTertiary.withValues(alpha: 0.4),
         borderRadius: const BorderRadius.vertical(
-          bottom: Radius.circular(20),
+          bottom: Radius.circular(DS.radius24),
         ),
       ),
       child: Column(
@@ -317,7 +337,10 @@ class _ActionButton extends StatelessWidget {
         button: true,
         label: 'Chat message detail view control 3',
         child: InkWell(
-          onTap: () => unawaited(onPressed()),
+          onTap: () async {
+            await SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
+            await onPressed();
+          },
           borderRadius: BorderRadius.circular(12),
           child: Padding(
             padding: const EdgeInsets.symmetric(
