@@ -908,8 +908,41 @@ class SpineOrchestrator:
                 )
             except Exception as exc:
                 logger.debug("on_user_correction skipped: {}", exc)
+
+            # AUR-005: Close feedback loop on user correction
+            try:
+                receipt_trace = await self.trace_store.create_trace()
+                receipt_trace.raw_event_ids.append(receipt_id)
+                await self.trace_store.link_to_user(user_id, receipt_trace.trace_id)
+                receipt_trace.outcome_to_measure = ["user_corrected_receipt"]
+                await self.record_outcome(
+                    trace=receipt_trace,
+                    intervention=f"receipt:{receipt_id}",
+                    reason="user_corrected_strategy_adjustment",
+                    expected_outcome="user_corrected_receipt",
+                    actual_outcome={"receipt_id": receipt_id, "action": action},
+                    user_id=user_id,
+                )
+            except Exception:
+                logger.debug("record_outcome: receipt correct skipped for user={}", user_id, exc_info=True)
         elif action == "confirm":
             await self.metrics.record_outcome_recorded(effective=True)
+            # AUR-005: Close feedback loop on user confirmation
+            try:
+                receipt_trace = await self.trace_store.create_trace()
+                receipt_trace.raw_event_ids.append(receipt_id)
+                await self.trace_store.link_to_user(user_id, receipt_trace.trace_id)
+                receipt_trace.outcome_to_measure = ["user_confirmed_receipt"]
+                await self.record_outcome(
+                    trace=receipt_trace,
+                    intervention=f"receipt:{receipt_id}",
+                    reason="user_confirmed_strategy_adjustment",
+                    expected_outcome="user_confirmed_receipt",
+                    actual_outcome={"receipt_id": receipt_id, "action": action},
+                    user_id=user_id,
+                )
+            except Exception:
+                logger.debug("record_outcome: receipt confirm skipped for user={}", user_id, exc_info=True)
         elif action == "dismiss":
             await self.metrics.record_outcome_recorded(effective=False)
 
@@ -1689,6 +1722,27 @@ class SpineOrchestrator:
             await self.redis.delete(f"spine:pipeline_lock:{user_id}")
         except Exception as _final_unlock:
             classify_error(_final_unlock, component="spine_pipeline_lock", category=ErrorCategory.REDIS)
+
+        # AUR-005: Record outcome to close the feedback loop
+        # (continuous learning pipeline, skill extraction, outcome consumer, self-model update)
+        try:
+            await self.record_outcome(
+                trace=trace,
+                intervention=getattr(decision, "policy_decision_id", signal.state_key),
+                reason=getattr(signal, "evidence_summary", "") or getattr(decision, "reason", ""),
+                expected_outcome=trace.outcome_to_measure[-1] if trace.outcome_to_measure else "directive_applied",
+                actual_outcome={
+                    "signal_type": getattr(signal, "signal_type", ""),
+                    "state_key": signal.state_key,
+                    "directive_type": getattr(directive, "directive_type", ""),
+                    "policy_decision_id": getattr(decision, "policy_decision_id", ""),
+                    "source": "signal_pipeline",
+                },
+                user_id=user_id,
+            )
+        except Exception:
+            logger.debug("record_outcome: pipeline outcome recording skipped for user={}", user_id, exc_info=True)
+
         return trace
 
     # ── P0-1 Integration: FirstMinuteSnapshot / ExamRescue ─────────────

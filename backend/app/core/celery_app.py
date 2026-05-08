@@ -25,6 +25,7 @@ import os
 
 from celery import Celery
 from celery.schedules import crontab
+from celery.signals import on_after_configure
 
 from app.config import settings
 
@@ -1208,6 +1209,18 @@ celery_app.conf.beat_schedule = {
         "options": {"queue": "low_priority"},
     },
 }
+
+
+# =============================================================================
+# 周期任务信号注册 — 连接 celery_schedule.setup_periodic_tasks
+# (L4 异步深度学习 6 个 Job、Aurora wake scanner、社区错误聚合等)
+# =============================================================================
+
+@on_after_configure.connect
+def _setup_periodic_tasks(sender, **kwargs):
+    """延迟加载 celery_schedule，避免循环导入。"""
+    from app.celery_schedule import setup_periodic_tasks
+    setup_periodic_tasks(sender, **kwargs)
 
 
 # =============================================================================
