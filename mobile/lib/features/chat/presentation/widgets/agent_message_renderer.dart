@@ -159,10 +159,11 @@ class AgentMessageRenderer extends ConsumerWidget {
     // knowledge_card renders its own full content with expand by default
     // through the outer CollapsibleWidgetWrapper below
     if (widget.type == 'knowledge_card') {
+      final knowledgeConfig = _widgetConfigs(context)['knowledge_card']!;
       return _wrap(
-        label: config?.label ?? '知识',
-        icon: config?.icon ?? Icons.auto_stories,
-        accentColor: config?.accentColor,
+        label: knowledgeConfig.label,
+        icon: knowledgeConfig.icon,
+        accentColor: knowledgeConfig.accentColor,
         defaultExpanded: true,
         child: inner,
       );
