@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_confetti.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 class TaskCompletionCelebration extends StatefulWidget {
@@ -32,6 +34,7 @@ class _TaskCompletionCelebrationState extends State<TaskCompletionCelebration> {
   void initState() {
     super.initState();
     _scheduleAutoDismiss();
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.success));
   }
 
   @override
@@ -60,40 +63,53 @@ class _TaskCompletionCelebrationState extends State<TaskCompletionCelebration> {
 
     return Material(
       key: const Key('task-completion-celebration'),
-      color: DS.overlay50.withValues(alpha: 0.62),
-      child: SparkleConfetti(
-        play: widget.play,
-        intensity: SparkleCelebrationIntensity.small,
-        enableSensory: false,
-        child: Center(
-          child: TweenAnimationBuilder<double>(
-            tween: Tween<double>(begin: 0.96, end: 1),
-            duration: DS.motionDuration(SparkleMotionToken.scene),
-            curve: DS.motionCurve(SparkleMotionToken.scene),
-            builder: (context, scale, child) =>
-                Transform.scale(scale: scale, child: child),
-            child: GraphiteCardSurface(
-              borderColor: DS.success.withValues(alpha: 0.24),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 360),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      context.l10n.taskCompletedToday,
-                      textAlign: TextAlign.center,
-                      style: DS.titleLarge.copyWith(
-                        color: DS.textPrimary,
-                        fontWeight: DS.fontWeightBold,
-                      ),
-                    ),
-                    const SizedBox(height: DS.spacing8),
-                    Text(
-                      context.l10n.taskDone,
-                      textAlign: TextAlign.center,
-                      style:
-                          Theme.of(context).textTheme.headlineSmall?.copyWith(
+      color: Colors.transparent,
+      child: Stack(
+        children: [
+          // Backdrop blur
+          Positioned.fill(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+              child: Container(
+                color: DS.overlay50.withValues(alpha: 0.5),
+              ),
+            ),
+          ),
+          SparkleConfetti(
+            play: widget.play,
+            intensity: SparkleCelebrationIntensity.small,
+            enableSensory: false,
+            child: Center(
+              child: TweenAnimationBuilder<double>(
+                tween: Tween<double>(begin: 0.96, end: 1),
+                duration: DS.motionDuration(SparkleMotionToken.scene),
+                curve: DS.motionCurve(SparkleMotionToken.scene),
+                builder: (context, scale, child) =>
+                    Transform.scale(scale: scale, child: child),
+                child: GraphiteCardSurface(
+                  borderColor: DS.success.withValues(alpha: 0.24),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 360),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          context.l10n.taskCompletedToday,
+                          textAlign: TextAlign.center,
+                          style: DS.titleLarge.copyWith(
+                            color: DS.textPrimary,
+                            fontWeight: DS.fontWeightBold,
+                          ),
+                        ),
+                        const SizedBox(height: DS.spacing8),
+                        Text(
+                          context.l10n.taskDone,
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context)
+                                  .textTheme
+                                  .headlineSmall
+                                  ?.copyWith(
                                     color: DS.success,
                                     fontWeight: DS.fontWeightBold,
                                   ) ??
@@ -101,37 +117,43 @@ class _TaskCompletionCelebrationState extends State<TaskCompletionCelebration> {
                                 color: DS.success,
                                 fontWeight: DS.fontWeightBold,
                               ),
-                    ),
-                    const SizedBox(height: DS.spacing16),
-                    if (criteria.isNotEmpty)
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          for (final item in criteria.take(3))
-                            _CelebrationCriterion(text: item),
-                        ],
-                      )
-                    else
-                      Text(
-                        context.l10n.taskCompletedOneStep,
-                        textAlign: TextAlign.center,
-                        style: DS.bodyMedium.copyWith(
-                          color: DS.textSecondary,
-                          height: 1.45,
                         ),
-                      ),
-                    const SizedBox(height: DS.spacing20),
-                    SparkleButton(
-                      label: context.l10n.taskContinueNext,
-                      icon: const Icon(Icons.arrow_forward_rounded),
-                      onPressed: widget.onContinue,
+                        const SizedBox(height: DS.spacing16),
+                        if (criteria.isNotEmpty)
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              for (final item in criteria.take(3))
+                                _CelebrationCriterion(text: item),
+                            ],
+                          )
+                        else
+                          Text(
+                            context.l10n.taskCompletedOneStep,
+                            textAlign: TextAlign.center,
+                            style: DS.bodyMedium.copyWith(
+                              color: DS.textSecondary,
+                              height: 1.45,
+                            ),
+                          ),
+                        const SizedBox(height: DS.spacing20),
+                        SparkleButton(
+                          label: context.l10n.taskContinueNext,
+                          icon: const Icon(Icons.arrow_forward_rounded),
+                          onPressed: () {
+                            unawaited(SensoryFeedbackService.emit(
+                                SensoryFeedbackEvent.selection));
+                            widget.onContinue();
+                          },
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

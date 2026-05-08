@@ -639,7 +639,10 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SparkleTappable(
-        onTap: onPressed,
+        onTap: () {
+          unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+          onPressed();
+        },
         borderRadius: BorderRadius.circular(20),
         child: Container(
           padding: const EdgeInsets.all(6),

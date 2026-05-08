@@ -28,6 +28,7 @@ class _ExecutionStatusIndicatorState extends State<ExecutionStatusIndicator>
     with TickerProviderStateMixin {
   Timer? _timer;
   late final AnimationController _spinController;
+  late final AnimationController _glowController;
   late final AnimationController _successController;
   late final AnimationController _errorController;
   Duration _elapsed = Duration.zero;
@@ -40,6 +41,10 @@ class _ExecutionStatusIndicatorState extends State<ExecutionStatusIndicator>
     _spinController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
+    );
+    _glowController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
     );
     _successController = AnimationController(
       vsync: this,
@@ -103,8 +108,12 @@ class _ExecutionStatusIndicatorState extends State<ExecutionStatusIndicator>
 
     if (widget.status == ExecutionIntentStatus.running && !_reduceMotion) {
       unawaited(_spinController.repeat());
+      unawaited(_glowController.repeat(reverse: true));
     } else {
       _spinController
+        ..stop()
+        ..value = 0;
+      _glowController
         ..stop()
         ..value = 0;
     }
@@ -348,23 +357,41 @@ class _ExecutionStatusIndicatorState extends State<ExecutionStatusIndicator>
       );
     }
 
-    final core = Container(
-      key: ValueKey(widget.status.name),
-      width: widget.size,
-      height: widget.size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: RadialGradient(
-          colors: [
-            spec.color.withValues(alpha: 0.14),
-            spec.color.withValues(alpha: 0.06),
-          ],
-        ),
-        border: Border.all(
-          color: spec.color.withValues(alpha: 0.18),
-        ),
-      ),
-      alignment: Alignment.center,
+    final core = AnimatedBuilder(
+      animation: _glowController,
+      builder: (context, child) {
+        final glow = _glowController.value;
+        return Container(
+          key: ValueKey(widget.status.name),
+          width: widget.size,
+          height: widget.size,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: RadialGradient(
+              colors: [
+                spec.color.withValues(alpha: 0.14 + (glow * 0.1)),
+                spec.color.withValues(alpha: 0.06),
+              ],
+            ),
+            boxShadow: (spec.pulse || widget.status == ExecutionIntentStatus.running) &&
+                    !_reduceMotion
+                ? [
+                    BoxShadow(
+                      color: spec.color.withValues(alpha: 0.15 * glow),
+                      blurRadius: 10 * glow,
+                      spreadRadius: 2 * glow,
+                    ),
+                  ]
+                : null,
+            border: Border.all(
+              color: spec.color.withValues(alpha: 0.18 + (glow * 0.12)),
+              width: 1 + (glow * 0.5),
+            ),
+          ),
+          alignment: Alignment.center,
+          child: child,
+        );
+      },
       child: icon,
     );
 
