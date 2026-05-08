@@ -156,6 +156,18 @@ class AgentMessageRenderer extends ConsumerWidget {
     final config = _widgetConfigs(context)[widget.type];
     final inner = _buildInnerWidget(context, widget);
 
+    // knowledge_card renders its own full content with expand by default
+    // through the outer CollapsibleWidgetWrapper below
+    if (widget.type == 'knowledge_card') {
+      return _wrap(
+        label: config?.label ?? '知识',
+        icon: config?.icon ?? Icons.auto_stories,
+        accentColor: config?.accentColor,
+        defaultExpanded: true,
+        child: inner,
+      );
+    }
+
     // If no config found, render raw with a generic wrapper.
     if (config == null) {
       return _wrap(
@@ -203,14 +215,7 @@ class AgentMessageRenderer extends ConsumerWidget {
 
       case 'knowledge_card':
         try {
-          final knowledgeConfig = _widgetConfigs(context)['knowledge_card'];
-          return _wrap(
-            label: knowledgeConfig?.label ?? '知识',
-            icon: knowledgeConfig?.icon ?? Icons.auto_stories,
-            accentColor: knowledgeConfig?.accentColor,
-            defaultExpanded: true,
-            child: KnowledgeCard(data: widget.data),
-          );
+          return KnowledgeCard(data: widget.data);
         } catch (e) {
           debugPrint('Error rendering KnowledgeCard: $e');
           return CompactErrorCard(
