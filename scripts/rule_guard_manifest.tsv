@@ -67,3 +67,4 @@ GOV-DATA-MIN	PYTHONPATH="${REPO_ROOT}/backend" "${PYTHON_BIN}" "${REPO_ROOT}/scr
 FME	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_fme_kill_switch_registered.py"
 AURORA-CONFIG	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_aurora_config_consistency.py"
 CARD-DUAL-WRITE	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_card_protocol_dual_write_consistency.py"
+BJ	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_bj_dead_imports.py"
