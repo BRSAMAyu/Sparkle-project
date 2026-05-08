@@ -1,6 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/shared/entities/visual_element_model.dart';
 
+/// Visual element color palette for themed display elements.
+///
+/// NOTE: This palette uses hardcoded colors rather than DS tokens because
+/// visual elements require specific color characteristics (glow, shimmer)
+/// that may not map 1:1 to standard design tokens. Future work should
+/// consider adding visual-element-specific tokens to SparkleColors when
+/// the design system is next updated.
+
 class VisualElementPalette {
   const VisualElementPalette._();
 
