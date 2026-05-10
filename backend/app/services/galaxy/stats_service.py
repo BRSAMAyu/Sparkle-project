@@ -454,6 +454,21 @@ class GalaxyStatsService:
         return _utcnow() + timedelta(days=days)
 
     async def _get_or_create_status(self, user_id: UUID, node_id: UUID) -> UserNodeStatus:
+        # P1-9 fix: use INSERT ... ON CONFLICT DO NOTHING to avoid race condition
+        # instead of read-then-write which can cause IntegrityError on concurrent inserts
+        try:
+            from sqlalchemy.dialects.postgresql import insert as pg_insert
+            stmt = pg_insert(UserNodeStatus).values(
+                user_id=user_id, node_id=node_id, bkt_mastery_prob=0.0
+            ).on_conflict_do_nothing(
+                index_elements=['user_id', 'node_id']
+            )
+            await self.db.execute(stmt)
+            await self.db.flush()
+        except Exception:
+            pass  # Already exists, will be fetched below
+
+        # Re-read after insert attempt
         query = select(UserNodeStatus).where(
             and_(
                 UserNodeStatus.user_id == user_id,
@@ -464,6 +479,7 @@ class GalaxyStatsService:
         status = result.scalar_one_or_none()
 
         if not status:
+            # Fallback: create new status (should not reach here normally)
             status = UserNodeStatus(user_id=user_id, node_id=node_id, bkt_mastery_prob=0.0)
             self.db.add(status)
             await self.db.flush()

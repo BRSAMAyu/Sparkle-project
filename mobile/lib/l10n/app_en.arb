@@ -8341,6 +8341,15 @@
   },
   "statisticsRetry": "Retry",
   "statisticsVsLast": "vs last",
+  "statisticsEmptyFocus": "No focus records",
+  "statisticsEmptyFocusSubtitle": "Statistics will appear after you start focusing",
+  "statisticsEmptyAgent": "No agent usage records",
+  "statisticsEmptyAgentSubtitle": "Statistics will appear after using the agent",
+  "statisticsEmptyCapsule": "No curiosity capsules",
+  "statisticsEmptyCapsuleSubtitle": "Statistics will appear after exploring capsules",
+  "statisticsEmptyLearning": "No learning data",
+  "statisticsEmptyLearningSubtitle": "Statistics will appear after learning",
+  "statisticsFailedToLoad": "Failed to load",
   "statisticsExportImageReport": "Image Report",
   "statisticsExportPDFReport": "PDF Report",
   "interventionStartNow": "Start Now",
@@ -15041,5 +15050,121 @@
   "syncCenterLoading": "Loading...",
   "securityLogLoading": "Loading...",
   "socialAccountsLoading": "Loading...",
-  "sessionManagementLoading": "Loading..."
+  "sessionManagementLoading": "Loading...",
+
+  "intentPredictionSprint": "Sprint!",
+  "intentPredictionCreateTask": "Create Task",
+  "intentPredictionStartFocus": "Start Focus",
+  "intentPredictionViewCalendar": "View Calendar",
+  "intentPredictionCuriosityCapsule": "Curiosity Capsule",
+  "intentPredictionSendToAI": "Send to AI",
+  "intentPredictionNoteIdea": "Note Idea",
+  "intentPredictionContinue": "Continue",
+  "intentPredictionSetReminder": "Set Reminder",
+  "intentPredictionNoteThought": "Note Thought",
+  "intentPredictionCognitivePrism": "Cognitive Prism",
+  "intentPredictionTranslate": "Translate",
+  "intentPredictionLearnLanguage": "Learn Language",
+  "intentPredictionContinueTask": "Continue \"{taskTitle}\"",
+  "@intentPredictionContinueTask": {
+    "placeholders": {
+      "taskTitle": {"type": "String"}
+    }
+  },
+
+  "auroraCorrectInChat": "Correct in chat",
+  "auroraQuickCalibration": "Quick Calibration",
+  "auroraExpandHint": "Double tap to expand calibration options",
+  "auroraCollapseHint": "Double tap to collapse calibration options",
+  "auroraCoolingDownResumingSoon": "Resuming soon",
+  "auroraCooldownSec": "Resuming in {seconds} sec",
+  "@auroraCooldownSec": {
+    "placeholders": {
+      "seconds": {"type": "int"}
+    }
+  },
+  "auroraCooldownMin": "Resuming in {minutes} min",
+  "@auroraCooldownMin": {
+    "placeholders": {
+      "minutes": {"type": "int"}
+    }
+  },
+  "auroraCooldownHr": "Resuming in {hours} hr {remainMinutes} min",
+  "@auroraCooldownHr": {
+    "placeholders": {
+      "hours": {"type": "int"},
+      "remainMinutes": {"type": "int"}
+    }
+  },
+  "auroraExpandedExplanationDefault": "Aurora is making a lightweight read; important judgments remain correctable.",
+  "auroraIfReadOffCorrectHere": "If this read is off, correct it here:",
+
+  "auroraSensing": "Aurora · Lightweight Sensing",
+  "auroraCalibrated": "Aurora · Calibrated",
+  "auroraRiskDetected": "Aurora · Strategy Risk Detected",
+  "auroraNeedsConfirm": "Aurora · Confirmation Needed",
+  "auroraCalibrationAvailable": "Aurora · Deep Calibration Available",
+  "auroraCoolingDown": "Aurora · Cooling Down",
+  "auroraSourceAware": "Aurora · Referenced Current Task Materials",
+  "auroraNoSourcesUsed": "Aurora · No Materials Used This Round",
+  "auroraStrategyActive": "Aurora · Strategy Active",
+
+  "dashboardSectionsLabel": "Sections",
+  "dashboardWorkspaceCards": "Workspace cards",
+  "dashboardLeanView": "Lean view",
+  "dashboardAllSectionsVisible": "All sections start visible. Switch to hide, drag to reorder, tap to collapse low-glance sections into a 64px header.",
+
+  "notificationWelcomeTitle": "Welcome to Sparkle AI Learning Assistant",
+  "notificationWelcomeContent": "Start your learning journey!",
+  "notificationNewTaskTitle": "New Task Reminder",
+  "notificationNewTaskContent": "You have a task due soon",
+  "notificationAchievementTitle": "Learning Achievement Unlocked",
+  "notificationAchievementContent": "Congratulations! You've unlocked \"7-Day Learning Streak\"",
+
+  "dashboardPlanName": "Computer Networks Exam Sprint",
+  "dashboardSubject": "Computer Networks",
+  "dashboardTopicReliableTransport": "Reliable Transport Layer",
+  "dashboardTopicTcpCongestion": "TCP Congestion Control",
+  "dashboardSignalManyRecentTasks": "Many recent tasks",
+  "dashboardSignalSomeIncomplete": "Some incomplete tasks remain",
+  "dashboardSignalEveningInterrupted": "Evening study sessions are easily interrupted",
+  "dashboardSignalRecent24hActive": "Active in the last 24 hours",
+  "dashboardSignalPriorityPending": "Priority tasks still pending",
+  "dashboardLabelContinuePriority": "Continue Priority Task",
+  "dashboardLabelStart25Min": "Start a 25-min Focus",
+
+  "multiAgentSwitchMode": "Switch to {mode} mode",
+  "@multiAgentSwitchMode": {
+    "placeholders": {
+      "mode": {"type": "String"}
+    }
+  },
+
+  "intentTaskCreate": "Create Task",
+  "intentTaskSetReminder": "Set Reminder",
+  "intentCapsuleNoteIdea": "Note Idea",
+  "intentCapsuleCognitivePrism": "Cognitive Prism",
+  "intentTranslationTranslate": "Translate",
+  "intentTranslationLearnLang": "Learn Language",
+  "intentTranslationHelpLearn": "Help me learn {text}",
+  "@intentTranslationHelpLearn": {
+    "placeholders": {
+      "text": {"type": "String"}
+    }
+  },
+  "intentPrismView": "View Cognitive Prism",
+  "intentPrismBehaviorAnalysis": "Behavior Analysis",
+  "intentSprintStart": "Start Sprint",
+  "intentSprintFocusMode": "Focus Mode",
+  "intentLearnStart": "Start Learning",
+  "intentLearnCreatePlan": "Create Study Plan",
+  "intentReviewStart": "Start Review",
+  "intentReviewHelpReview": "Help me review: {text}",
+  "@intentReviewHelpReview": {
+    "placeholders": {
+      "text": {"type": "String"}
+    }
+  },
+  "intentReviewErrorBook": "View Error Book",
+  "intentChatSendToAI": "Send to AI"
 }

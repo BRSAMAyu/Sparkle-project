@@ -18033,6 +18033,20 @@ class AppLocalizationsZh extends AppLocalizations {
   String get statisticsChartMonth12 => '十二月';
 
   @override
+  String get statisticsNoDataYet => '暂无统计数据';
+
+  @override
+  String statisticsLoadingFailed(String error) {
+    return '加载失败: $error';
+  }
+
+  @override
+  String get statisticsRetry => '重试';
+
+  @override
+  String get statisticsVsLast => '较上期';
+
+  @override
   String get statisticsExportImageReport => '图片报告';
 
   @override
@@ -18401,7 +18415,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String intentPredictionContinue(Object title) {
-    return '继续\"$title\"';
+    return '继续';
   }
 
   @override
@@ -18429,7 +18443,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get intentPredictionCognitivePrism => '认知棱镜';
 
   @override
-  String get intentPredictionTranslate => '翻译文本';
+  String get intentPredictionTranslate => '翻译';
 
   @override
   String get intentPredictionLearnLanguage => '学习语言';
@@ -19001,7 +19015,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get auroraEvidence => '基于';
 
   @override
-  String get auroraNeedsConfirm => 'Aurora 需要确认';
+  String get auroraNeedsConfirm => 'Aurora · 需要确认一个判断';
 
   @override
   String get auroraStrategyRisk => 'Aurora 策略风险升高';
@@ -32941,4 +32955,145 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get sessionManagementLoading => '加载中...';
+
+  @override
+  String get intentPredictionSprint => '冲刺！';
+
+  @override
+  String get intentPredictionNoteThought => '记录想法';
+
+  @override
+  String intentPredictionContinueTask(String taskTitle) {
+    return '继续「$taskTitle」';
+  }
+
+  @override
+  String get auroraCorrectInChat => '去聊天里纠正';
+
+  @override
+  String get auroraQuickCalibration => '快速校准';
+
+  @override
+  String get auroraExpandHint => '双击展开校准选项';
+
+  @override
+  String get auroraCollapseHint => '双击收起校准选项';
+
+  @override
+  String get auroraCoolingDownResumingSoon => '即将恢复';
+
+  @override
+  String auroraCooldownSec(int seconds) {
+    return '$seconds秒后恢复';
+  }
+
+  @override
+  String auroraCooldownMin(int minutes) {
+    return '$minutes分钟后恢复';
+  }
+
+  @override
+  String auroraCooldownHr(int hours, int remainMinutes) {
+    return '$hours小时$remainMinutes分钟后恢复';
+  }
+
+  @override
+  String get auroraExpandedExplanationDefault =>
+      'Aurora 会先轻量判断当前状态，重要判断都可以被你纠正。';
+
+  @override
+  String get auroraIfReadOffCorrectHere => '如果我判断错了，直接改一下：';
+
+  @override
+  String get auroraSensing => 'Aurora · 轻量感知中';
+
+  @override
+  String get auroraCalibrated => 'Aurora · 已校准';
+
+  @override
+  String get auroraRiskDetected => 'Aurora · 发现策略风险';
+
+  @override
+  String get auroraCalibrationAvailable => 'Aurora · 深度校准可用';
+
+  @override
+  String get auroraCoolingDown => 'Aurora · 冷却中';
+
+  @override
+  String get auroraSourceAware => 'Aurora · 已参考当前任务资料';
+
+  @override
+  String get auroraNoSourcesUsed => 'Aurora · 本轮未调用课件';
+
+  @override
+  String get auroraStrategyActive => 'Aurora · 策略已激活';
+
+  @override
+  String get dashboardSectionsLabel => '页面分区';
+
+  @override
+  String get dashboardWorkspaceCards => '工作区卡片';
+
+  @override
+  String get dashboardLeanView => '回到精简';
+
+  @override
+  String get dashboardAllSectionsVisible =>
+      '所有分区默认可见。开关隐藏，拖拽排序，按让低频分区收成 64px 标题条。';
+
+  @override
+  String get notificationWelcomeTitle => '欢迎使用星火AI学习助手';
+
+  @override
+  String get notificationWelcomeContent => '开始您的学习之旅吧！';
+
+  @override
+  String get notificationNewTaskTitle => '新任务提醒';
+
+  @override
+  String get notificationNewTaskContent => '您有一个即将到期的任务';
+
+  @override
+  String get notificationAchievementTitle => '学习成就解锁';
+
+  @override
+  String get notificationAchievementContent => '恭喜您获得「连续学习7天」成就';
+
+  @override
+  String get dashboardPlanName => '计算机网络考前冲刺';
+
+  @override
+  String get dashboardSubject => '计算机网络';
+
+  @override
+  String get dashboardTopicReliableTransport => '传输层可靠传输';
+
+  @override
+  String get dashboardTopicTcpCongestion => 'TCP 拥塞控制';
+
+  @override
+  String get dashboardSignalManyRecentTasks => '近期任务较多';
+
+  @override
+  String get dashboardSignalSomeIncomplete => '存在少量未完成任务';
+
+  @override
+  String get dashboardSignalEveningInterrupted => '晚间学习容易被打断';
+
+  @override
+  String get dashboardSignalRecent24hActive => '最近24小时持续活跃';
+
+  @override
+  String get dashboardSignalPriorityPending => '当前仍有重点待办';
+
+  @override
+  String get dashboardLabelContinuePriority => '继续重点任务';
+
+  @override
+  String get dashboardLabelStart25Min => '先做 25 分钟';
+
+  @override
+  String multiAgentSwitchMode(String mode) {
+    return '切换到$mode模式';
+  }
 }

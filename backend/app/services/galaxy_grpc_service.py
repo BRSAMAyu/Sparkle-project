@@ -357,7 +357,7 @@ class GalaxyGrpcServiceImpl(galaxy_service_pb2_grpc.GalaxyServiceServicer if gal
                 # P1-7 fix: look up mastery from UserNodeStatus for each result
                 # P1-5/6 fix: use keywords instead of non-existent tags
                 from app.models.galaxy import UserNodeStatus
-                from sqlalchemy import select
+                from sqlalchemy import select as sa_select
 
                 node_ids = [r.node.id for r in results]
                 status_rows = (await db.execute(
@@ -400,39 +400,57 @@ class GalaxyGrpcServiceImpl(galaxy_service_pb2_grpc.GalaxyServiceServicer if gal
                 from_id = _UUID(request.from_node_id)
                 to_id = _UUID(request.to_node_id)
 
-                # Simple BFS through NodeRelation edges
+                # P1-21 fix: pre-load all edges in a single query to avoid N+1,
+                # and limit BFS to prevent unbounded exploration DoS
+                all_edges_stmt = select(NodeRelation).limit(5000)
+                all_edges_result = await db.execute(all_edges_stmt)
+                all_edges = all_edges_result.scalars().all()
+
+                # Build adjacency map in memory
+                adjacency: dict[str, list[tuple[str, str, str]]] = {}
+                for edge in all_edges:
+                    src = str(edge.source_node_id)
+                    tgt = str(edge.target_node_id)
+                    rel = edge.relation_type or "related"
+                    if src not in adjacency:
+                        adjacency[src] = []
+                    adjacency[src].append((tgt, rel, str(edge.id)))
+                    # Also add reverse for bidirectional traversal
+                    if tgt not in adjacency:
+                        adjacency[tgt] = []
+                    adjacency[tgt].append((src, rel, str(edge.id)))
+
+                # BFS with depth and visited limits
+                MAX_DEPTH = 20
+                MAX_VISITED = 500
+
                 visited: set[str] = set()
-                queue: list[tuple[str, list[str]]] = [(str(from_id), [str(from_id)])]
+                queue: list[tuple[str, list[str], list[tuple[str, str, str]]]] = [
+                    (str(from_id), [str(from_id)], [])
+                ]
                 path_found = False
                 path_node_ids: list[str] = []
                 path_edges: list[dict] = []
+                depth = 0
 
-                while queue:
-                    current, path = queue.pop(0)
+                while queue and depth < MAX_DEPTH and len(visited) < MAX_VISITED:
+                    current, path, edges_so_far = queue.pop(0)
                     if current == str(to_id):
                         path_node_ids = path
+                        path_edges = [
+                            {"source_id": e[2], "target_id": e[0], "relation": e[1]}
+                            for e in edges_so_far
+                        ]
                         path_found = True
                         break
                     if current in visited:
                         continue
                     visited.add(current)
+                    depth = len(path) - 1
 
-                    # Query outgoing edges
-                    stmt = select(NodeRelation).where(
-                        NodeRelation.source_node_id == _UUID(current)
-                    ).limit(100)
-                    result = await db.execute(stmt)
-                    edges = result.scalars().all()
-
-                    for edge in edges:
-                        next_id = str(edge.target_node_id)
-                        if next_id not in visited:
-                            queue.append((next_id, path + [next_id]))
-                            path_edges.append({
-                                "source_id": str(edge.source_node_id),
-                                "target_id": str(edge.target_node_id),
-                                "relation": edge.relation_type or "related",
-                            })
+                    for tgt, rel, edge_id in adjacency.get(current, []):
+                        if tgt not in visited:
+                            queue.append((tgt, path + [tgt], edges_so_far + [(current, rel, edge_id)]))
 
                 edges_pb = [
                     galaxy_service_pb2.GalaxyEdge(
@@ -503,7 +521,16 @@ class GalaxyGrpcServiceImpl(galaxy_service_pb2_grpc.GalaxyServiceServicer if gal
                 # Map GalaxyUserStats fields to proto response
                 in_progress = max(0, stats.unlocked_count - stats.mastered_count)
                 not_started = max(0, stats.total_nodes - stats.unlocked_count)
-                avg_mastery = (stats.mastered_count / stats.total_nodes * 100.0) if stats.total_nodes > 0 else 0.0
+
+                # P1-8 fix: compute actual average mastery (sum of all mastery_scores / count)
+                # Previously used mastered_count/total_nodes which is % mastered nodes, not avg mastery
+                from app.models.galaxy import UserNodeStatus
+                from sqlalchemy import func as sa_func
+                avg_result = await db.execute(
+                    sa_select(sa_func.coalesce(sa_func.avg(UserNodeStatus.mastery_score), 0.0))
+                    .where(UserNodeStatus.user_id == UUID(request.user_id))
+                )
+                avg_mastery = float(avg_result.scalar() or 0.0)
 
                 # Convert sector distribution (SectorCode -> int) to string keys
                 nodes_by_type: dict[str, int] = {

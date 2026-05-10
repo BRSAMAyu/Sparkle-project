@@ -32809,6 +32809,30 @@ abstract class AppLocalizations {
   /// **'十二月'**
   String get statisticsChartMonth12;
 
+  /// No description provided for @statisticsNoDataYet.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无统计数据'**
+  String get statisticsNoDataYet;
+
+  /// No description provided for @statisticsLoadingFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载失败: {error}'**
+  String statisticsLoadingFailed(String error);
+
+  /// No description provided for @statisticsRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get statisticsRetry;
+
+  /// No description provided for @statisticsVsLast.
+  ///
+  /// In zh, this message translates to:
+  /// **'较上期'**
+  String get statisticsVsLast;
+
   /// No description provided for @statisticsExportImageReport.
   ///
   /// In zh, this message translates to:
@@ -33502,7 +33526,7 @@ abstract class AppLocalizations {
   /// No description provided for @intentPredictionContinue.
   ///
   /// In zh, this message translates to:
-  /// **'继续\"{title}\"'**
+  /// **'继续'**
   String intentPredictionContinue(Object title);
 
   /// No description provided for @intentPredictionCreateTask.
@@ -33556,7 +33580,7 @@ abstract class AppLocalizations {
   /// No description provided for @intentPredictionTranslate.
   ///
   /// In zh, this message translates to:
-  /// **'翻译文本'**
+  /// **'翻译'**
   String get intentPredictionTranslate;
 
   /// No description provided for @intentPredictionLearnLanguage.
@@ -34618,7 +34642,7 @@ abstract class AppLocalizations {
   /// No description provided for @auroraNeedsConfirm.
   ///
   /// In zh, this message translates to:
-  /// **'Aurora 需要确认'**
+  /// **'Aurora · 需要确认一个判断'**
   String get auroraNeedsConfirm;
 
   /// No description provided for @auroraStrategyRisk.
@@ -59934,6 +59958,264 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'加载中...'**
   String get sessionManagementLoading;
+
+  /// No description provided for @intentPredictionSprint.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺！'**
+  String get intentPredictionSprint;
+
+  /// No description provided for @intentPredictionNoteThought.
+  ///
+  /// In zh, this message translates to:
+  /// **'记录想法'**
+  String get intentPredictionNoteThought;
+
+  /// No description provided for @intentPredictionContinueTask.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续「{taskTitle}」'**
+  String intentPredictionContinueTask(String taskTitle);
+
+  /// No description provided for @auroraCorrectInChat.
+  ///
+  /// In zh, this message translates to:
+  /// **'去聊天里纠正'**
+  String get auroraCorrectInChat;
+
+  /// No description provided for @auroraQuickCalibration.
+  ///
+  /// In zh, this message translates to:
+  /// **'快速校准'**
+  String get auroraQuickCalibration;
+
+  /// No description provided for @auroraExpandHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'双击展开校准选项'**
+  String get auroraExpandHint;
+
+  /// No description provided for @auroraCollapseHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'双击收起校准选项'**
+  String get auroraCollapseHint;
+
+  /// No description provided for @auroraCoolingDownResumingSoon.
+  ///
+  /// In zh, this message translates to:
+  /// **'即将恢复'**
+  String get auroraCoolingDownResumingSoon;
+
+  /// No description provided for @auroraCooldownSec.
+  ///
+  /// In zh, this message translates to:
+  /// **'{seconds}秒后恢复'**
+  String auroraCooldownSec(int seconds);
+
+  /// No description provided for @auroraCooldownMin.
+  ///
+  /// In zh, this message translates to:
+  /// **'{minutes}分钟后恢复'**
+  String auroraCooldownMin(int minutes);
+
+  /// No description provided for @auroraCooldownHr.
+  ///
+  /// In zh, this message translates to:
+  /// **'{hours}小时{remainMinutes}分钟后恢复'**
+  String auroraCooldownHr(int hours, int remainMinutes);
+
+  /// No description provided for @auroraExpandedExplanationDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 会先轻量判断当前状态，重要判断都可以被你纠正。'**
+  String get auroraExpandedExplanationDefault;
+
+  /// No description provided for @auroraIfReadOffCorrectHere.
+  ///
+  /// In zh, this message translates to:
+  /// **'如果我判断错了，直接改一下：'**
+  String get auroraIfReadOffCorrectHere;
+
+  /// No description provided for @auroraSensing.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora · 轻量感知中'**
+  String get auroraSensing;
+
+  /// No description provided for @auroraCalibrated.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora · 已校准'**
+  String get auroraCalibrated;
+
+  /// No description provided for @auroraRiskDetected.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora · 发现策略风险'**
+  String get auroraRiskDetected;
+
+  /// No description provided for @auroraCalibrationAvailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora · 深度校准可用'**
+  String get auroraCalibrationAvailable;
+
+  /// No description provided for @auroraCoolingDown.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora · 冷却中'**
+  String get auroraCoolingDown;
+
+  /// No description provided for @auroraSourceAware.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora · 已参考当前任务资料'**
+  String get auroraSourceAware;
+
+  /// No description provided for @auroraNoSourcesUsed.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora · 本轮未调用课件'**
+  String get auroraNoSourcesUsed;
+
+  /// No description provided for @auroraStrategyActive.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora · 策略已激活'**
+  String get auroraStrategyActive;
+
+  /// No description provided for @dashboardSectionsLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'页面分区'**
+  String get dashboardSectionsLabel;
+
+  /// No description provided for @dashboardWorkspaceCards.
+  ///
+  /// In zh, this message translates to:
+  /// **'工作区卡片'**
+  String get dashboardWorkspaceCards;
+
+  /// No description provided for @dashboardLeanView.
+  ///
+  /// In zh, this message translates to:
+  /// **'回到精简'**
+  String get dashboardLeanView;
+
+  /// No description provided for @dashboardAllSectionsVisible.
+  ///
+  /// In zh, this message translates to:
+  /// **'所有分区默认可见。开关隐藏，拖拽排序，按让低频分区收成 64px 标题条。'**
+  String get dashboardAllSectionsVisible;
+
+  /// No description provided for @notificationWelcomeTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'欢迎使用星火AI学习助手'**
+  String get notificationWelcomeTitle;
+
+  /// No description provided for @notificationWelcomeContent.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始您的学习之旅吧！'**
+  String get notificationWelcomeContent;
+
+  /// No description provided for @notificationNewTaskTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'新任务提醒'**
+  String get notificationNewTaskTitle;
+
+  /// No description provided for @notificationNewTaskContent.
+  ///
+  /// In zh, this message translates to:
+  /// **'您有一个即将到期的任务'**
+  String get notificationNewTaskContent;
+
+  /// No description provided for @notificationAchievementTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习成就解锁'**
+  String get notificationAchievementTitle;
+
+  /// No description provided for @notificationAchievementContent.
+  ///
+  /// In zh, this message translates to:
+  /// **'恭喜您获得「连续学习7天」成就'**
+  String get notificationAchievementContent;
+
+  /// No description provided for @dashboardPlanName.
+  ///
+  /// In zh, this message translates to:
+  /// **'计算机网络考前冲刺'**
+  String get dashboardPlanName;
+
+  /// No description provided for @dashboardSubject.
+  ///
+  /// In zh, this message translates to:
+  /// **'计算机网络'**
+  String get dashboardSubject;
+
+  /// No description provided for @dashboardTopicReliableTransport.
+  ///
+  /// In zh, this message translates to:
+  /// **'传输层可靠传输'**
+  String get dashboardTopicReliableTransport;
+
+  /// No description provided for @dashboardTopicTcpCongestion.
+  ///
+  /// In zh, this message translates to:
+  /// **'TCP 拥塞控制'**
+  String get dashboardTopicTcpCongestion;
+
+  /// No description provided for @dashboardSignalManyRecentTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'近期任务较多'**
+  String get dashboardSignalManyRecentTasks;
+
+  /// No description provided for @dashboardSignalSomeIncomplete.
+  ///
+  /// In zh, this message translates to:
+  /// **'存在少量未完成任务'**
+  String get dashboardSignalSomeIncomplete;
+
+  /// No description provided for @dashboardSignalEveningInterrupted.
+  ///
+  /// In zh, this message translates to:
+  /// **'晚间学习容易被打断'**
+  String get dashboardSignalEveningInterrupted;
+
+  /// No description provided for @dashboardSignalRecent24hActive.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近24小时持续活跃'**
+  String get dashboardSignalRecent24hActive;
+
+  /// No description provided for @dashboardSignalPriorityPending.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前仍有重点待办'**
+  String get dashboardSignalPriorityPending;
+
+  /// No description provided for @dashboardLabelContinuePriority.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续重点任务'**
+  String get dashboardLabelContinuePriority;
+
+  /// No description provided for @dashboardLabelStart25Min.
+  ///
+  /// In zh, this message translates to:
+  /// **'先做 25 分钟'**
+  String get dashboardLabelStart25Min;
+
+  /// No description provided for @multiAgentSwitchMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'切换到{mode}模式'**
+  String multiAgentSwitchMode(String mode);
 }
 
 class _AppLocalizationsDelegate

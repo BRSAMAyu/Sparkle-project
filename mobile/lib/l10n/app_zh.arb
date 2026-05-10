@@ -8334,6 +8334,15 @@
   },
   "statisticsRetry": "重试",
   "statisticsVsLast": "较上期",
+  "statisticsEmptyFocus": "暂无专注记录",
+  "statisticsEmptyFocusSubtitle": "开始专注后会在这里看到统计数据",
+  "statisticsEmptyAgent": "暂无智能体使用记录",
+  "statisticsEmptyAgentSubtitle": "使用智能体后会在这里看到统计数据",
+  "statisticsEmptyCapsule": "暂无好奇心胶囊",
+  "statisticsEmptyCapsuleSubtitle": "探索胶囊后会在这里看到统计数据",
+  "statisticsEmptyLearning": "暂无学习数据",
+  "statisticsEmptyLearningSubtitle": "学习后会在这里看到统计数据",
+  "statisticsFailedToLoad": "加载失败",
   "statisticsExportImageReport": "图片报告",
   "statisticsExportPDFReport": "PDF报告",
   "interventionStartNow": "开始",
@@ -15047,5 +15056,93 @@
   "syncCenterLoading": "加载中...",
   "securityLogLoading": "加载中...",
   "socialAccountsLoading": "加载中...",
-  "sessionManagementLoading": "加载中..."
+  "sessionManagementLoading": "加载中...",
+
+  "intentPredictionSprint": "冲刺！",
+  "intentPredictionCreateTask": "创建任务",
+  "intentPredictionStartFocus": "开始专注",
+  "intentPredictionViewCalendar": "查看日历",
+  "intentPredictionCuriosityCapsule": "好奇心胶囊",
+  "intentPredictionSendToAI": "发送给AI",
+  "intentPredictionNoteIdea": "记录想法",
+  "intentPredictionContinue": "继续",
+  "intentPredictionSetReminder": "设置提醒",
+  "intentPredictionNoteThought": "记录想法",
+  "intentPredictionCognitivePrism": "认知棱镜",
+  "intentPredictionTranslate": "翻译",
+  "intentPredictionLearnLanguage": "学习语言",
+  "intentPredictionContinueTask": "继续「{taskTitle}」",
+  "@intentPredictionContinueTask": {
+    "placeholders": {
+      "taskTitle": {"type": "String"}
+    }
+  },
+
+  "auroraCorrectInChat": "去聊天里纠正",
+  "auroraQuickCalibration": "快速校准",
+  "auroraExpandHint": "双击展开校准选项",
+  "auroraCollapseHint": "双击收起校准选项",
+  "auroraCoolingDownResumingSoon": "即将恢复",
+  "auroraCooldownSec": "{seconds}秒后恢复",
+  "@auroraCooldownSec": {
+    "placeholders": {
+      "seconds": {"type": "int"}
+    }
+  },
+  "auroraCooldownMin": "{minutes}分钟后恢复",
+  "@auroraCooldownMin": {
+    "placeholders": {
+      "minutes": {"type": "int"}
+    }
+  },
+  "auroraCooldownHr": "{hours}小时{remainMinutes}分钟后恢复",
+  "@auroraCooldownHr": {
+    "placeholders": {
+      "hours": {"type": "int"},
+      "remainMinutes": {"type": "int"}
+    }
+  },
+  "auroraExpandedExplanationDefault": "Aurora 会先轻量判断当前状态，重要判断都可以被你纠正。",
+  "auroraIfReadOffCorrectHere": "如果我判断错了，直接改一下：",
+
+  "auroraSensing": "Aurora · 轻量感知中",
+  "auroraCalibrated": "Aurora · 已校准",
+  "auroraRiskDetected": "Aurora · 发现策略风险",
+  "auroraNeedsConfirm": "Aurora · 需要确认一个判断",
+  "auroraCalibrationAvailable": "Aurora · 深度校准可用",
+  "auroraCoolingDown": "Aurora · 冷却中",
+  "auroraSourceAware": "Aurora · 已参考当前任务资料",
+  "auroraNoSourcesUsed": "Aurora · 本轮未调用课件",
+  "auroraStrategyActive": "Aurora · 策略已激活",
+
+  "dashboardSectionsLabel": "页面分区",
+  "dashboardWorkspaceCards": "工作区卡片",
+  "dashboardLeanView": "回到精简",
+  "dashboardAllSectionsVisible": "所有分区默认可见。开关隐藏，拖拽排序，按让低频分区收成 64px 标题条。",
+
+  "notificationWelcomeTitle": "欢迎使用星火AI学习助手",
+  "notificationWelcomeContent": "开始您的学习之旅吧！",
+  "notificationNewTaskTitle": "新任务提醒",
+  "notificationNewTaskContent": "您有一个即将到期的任务",
+  "notificationAchievementTitle": "学习成就解锁",
+  "notificationAchievementContent": "恭喜您获得「连续学习7天」成就",
+
+  "dashboardPlanName": "计算机网络考前冲刺",
+  "dashboardSubject": "计算机网络",
+  "dashboardTopicReliableTransport": "传输层可靠传输",
+  "dashboardTopicTcpCongestion": "TCP 拥塞控制",
+  "dashboardSignalManyRecentTasks": "近期任务较多",
+  "dashboardSignalSomeIncomplete": "存在少量未完成任务",
+  "dashboardSignalEveningInterrupted": "晚间学习容易被打断",
+  "dashboardSignalRecent24hActive": "最近24小时持续活跃",
+  "dashboardSignalPriorityPending": "当前仍有重点待办",
+  "dashboardLabelContinuePriority": "继续重点任务",
+  "dashboardLabelStart25Min": "先做 25 分钟",
+
+  "multiAgentSwitchMode": "切换到{mode}模式",
+  "@multiAgentSwitchMode": {
+    "placeholders": {
+      "mode": {"type": "String"}
+    }
+  }
 }

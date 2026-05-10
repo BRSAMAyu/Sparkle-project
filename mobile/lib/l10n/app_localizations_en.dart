@@ -18832,6 +18832,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statisticsChartMonth12 => 'Dec';
 
   @override
+  String get statisticsNoDataYet => 'No statistics data yet';
+
+  @override
+  String statisticsLoadingFailed(String error) {
+    return 'Failed to load: $error';
+  }
+
+  @override
+  String get statisticsRetry => 'Retry';
+
+  @override
+  String get statisticsVsLast => 'vs last';
+
+  @override
   String get statisticsExportImageReport => 'Image Report';
 
   @override
@@ -19216,7 +19230,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String intentPredictionContinue(Object title) {
-    return 'Continue \"$title\"';
+    return 'Continue';
   }
 
   @override
@@ -19830,7 +19844,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get auroraEvidence => 'Based on';
 
   @override
-  String get auroraNeedsConfirm => 'Aurora needs confirmation';
+  String get auroraNeedsConfirm => 'Aurora · Confirmation Needed';
 
   @override
   String get auroraStrategyRisk => 'Aurora strategy risk elevated';
@@ -34352,4 +34366,150 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sessionManagementLoading => 'Loading...';
+
+  @override
+  String get intentPredictionSprint => 'Sprint!';
+
+  @override
+  String get intentPredictionNoteThought => 'Note Thought';
+
+  @override
+  String intentPredictionContinueTask(String taskTitle) {
+    return 'Continue \"$taskTitle\"';
+  }
+
+  @override
+  String get auroraCorrectInChat => 'Correct in chat';
+
+  @override
+  String get auroraQuickCalibration => 'Quick Calibration';
+
+  @override
+  String get auroraExpandHint => 'Double tap to expand calibration options';
+
+  @override
+  String get auroraCollapseHint => 'Double tap to collapse calibration options';
+
+  @override
+  String get auroraCoolingDownResumingSoon => 'Resuming soon';
+
+  @override
+  String auroraCooldownSec(int seconds) {
+    return 'Resuming in $seconds sec';
+  }
+
+  @override
+  String auroraCooldownMin(int minutes) {
+    return 'Resuming in $minutes min';
+  }
+
+  @override
+  String auroraCooldownHr(int hours, int remainMinutes) {
+    return 'Resuming in $hours hr $remainMinutes min';
+  }
+
+  @override
+  String get auroraExpandedExplanationDefault =>
+      'Aurora is making a lightweight read; important judgments remain correctable.';
+
+  @override
+  String get auroraIfReadOffCorrectHere =>
+      'If this read is off, correct it here:';
+
+  @override
+  String get auroraSensing => 'Aurora · Lightweight Sensing';
+
+  @override
+  String get auroraCalibrated => 'Aurora · Calibrated';
+
+  @override
+  String get auroraRiskDetected => 'Aurora · Strategy Risk Detected';
+
+  @override
+  String get auroraCalibrationAvailable =>
+      'Aurora · Deep Calibration Available';
+
+  @override
+  String get auroraCoolingDown => 'Aurora · Cooling Down';
+
+  @override
+  String get auroraSourceAware => 'Aurora · Referenced Current Task Materials';
+
+  @override
+  String get auroraNoSourcesUsed => 'Aurora · No Materials Used This Round';
+
+  @override
+  String get auroraStrategyActive => 'Aurora · Strategy Active';
+
+  @override
+  String get dashboardSectionsLabel => 'Sections';
+
+  @override
+  String get dashboardWorkspaceCards => 'Workspace cards';
+
+  @override
+  String get dashboardLeanView => 'Lean view';
+
+  @override
+  String get dashboardAllSectionsVisible =>
+      'All sections start visible. Switch to hide, drag to reorder, tap to collapse low-glance sections into a 64px header.';
+
+  @override
+  String get notificationWelcomeTitle =>
+      'Welcome to Sparkle AI Learning Assistant';
+
+  @override
+  String get notificationWelcomeContent => 'Start your learning journey!';
+
+  @override
+  String get notificationNewTaskTitle => 'New Task Reminder';
+
+  @override
+  String get notificationNewTaskContent => 'You have a task due soon';
+
+  @override
+  String get notificationAchievementTitle => 'Learning Achievement Unlocked';
+
+  @override
+  String get notificationAchievementContent =>
+      'Congratulations! You\'ve unlocked \"7-Day Learning Streak\"';
+
+  @override
+  String get dashboardPlanName => 'Computer Networks Exam Sprint';
+
+  @override
+  String get dashboardSubject => 'Computer Networks';
+
+  @override
+  String get dashboardTopicReliableTransport => 'Reliable Transport Layer';
+
+  @override
+  String get dashboardTopicTcpCongestion => 'TCP Congestion Control';
+
+  @override
+  String get dashboardSignalManyRecentTasks => 'Many recent tasks';
+
+  @override
+  String get dashboardSignalSomeIncomplete => 'Some incomplete tasks remain';
+
+  @override
+  String get dashboardSignalEveningInterrupted =>
+      'Evening study sessions are easily interrupted';
+
+  @override
+  String get dashboardSignalRecent24hActive => 'Active in the last 24 hours';
+
+  @override
+  String get dashboardSignalPriorityPending => 'Priority tasks still pending';
+
+  @override
+  String get dashboardLabelContinuePriority => 'Continue Priority Task';
+
+  @override
+  String get dashboardLabelStart25Min => 'Start a 25-min Focus';
+
+  @override
+  String multiAgentSwitchMode(String mode) {
+    return 'Switch to $mode mode';
+  }
 }
