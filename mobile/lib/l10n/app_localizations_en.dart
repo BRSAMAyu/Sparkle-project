@@ -17410,6 +17410,81 @@ class AppLocalizationsEn extends AppLocalizations {
   String get galaxyNodeAddMaterial => 'Add material to this node';
 
   @override
+  String get galaxyNodeGeneratePlan => 'Generate Learning Plan';
+
+  @override
+  String get galaxyNodeGeneratePlanDesc =>
+      'AI generates a personalized learning path with tasks';
+
+  @override
+  String get galaxyNodeWhyToday => 'Why today?';
+
+  @override
+  String get galaxyNodeReasonNew =>
+      'You haven\'t started this yet — it\'s unblocked and ready to begin.';
+
+  @override
+  String get galaxyNodeReasonEarly =>
+      'Early stage — building a foundation here will unlock dependent topics.';
+
+  @override
+  String get galaxyNodeReasonMid =>
+      'Making progress! Reviewing now will solidify your understanding.';
+
+  @override
+  String get galaxyNodeReasonLate =>
+      'Almost mastered — a final review will help lock this in.';
+
+  @override
+  String get galaxyNodeCommunityInsights => 'Community Insights';
+
+  @override
+  String get galaxyNodeCommunityNoData => 'No community data yet';
+
+  @override
+  String galaxyNodeCommunityPattern(Object errorType, Object userCount) {
+    return '$errorType: $userCount users';
+  }
+
+  @override
+  String get galaxyNodeCommunityUnknown => 'Unknown';
+
+  @override
+  String galaxyNodeSourceSummary(Object chunks, Object documents) {
+    return '$documents documents · $chunks knowledge chunks';
+  }
+
+  @override
+  String galaxyNodeSourceEmptyBody(Object topic) {
+    return 'Add your own notes about $topic to make the knowledge node traceable.';
+  }
+
+  @override
+  String galaxyNodeSourceAddNotes(Object topic) {
+    return 'Add notes about $topic';
+  }
+
+  @override
+  String galaxyNodeSourceUploadSaved(Object filename) {
+    return '$filename uploaded. It will appear here after processing and attachment.';
+  }
+
+  @override
+  String galaxyNodeSourcePage(Object number) {
+    return 'Page $number';
+  }
+
+  @override
+  String galaxyNodeSourcePages(Object pages) {
+    return 'Pages $pages';
+  }
+
+  @override
+  String galaxyNodeSourceExcerpt(Object index) {
+    return 'Excerpt $index';
+  }
+
+  @override
   String get galaxyUploadTargetGalaxyCore => 'Galaxy core';
 
   @override
@@ -23696,6 +23771,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get lpTitle => 'Learning Path';
+
+  @override
   String get lpMainPath => 'Main Path';
 
   @override
@@ -23735,6 +23813,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get lpPlanGenerated => 'Study plan generated';
+
+  @override
+  String get lpFullPlanGenerated => 'Learning plan generated';
 
   @override
   String get lpGeneratingFullPath =>
@@ -27972,6 +28053,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get userTraitsColdstartHint =>
       'Used only as a weak prior, will be corrected by real interactions.';
+
+  @override
+  String get userTraitsToggleHint => 'Tap to expand/collapse';
 
   @override
   String get userSkip => 'Skip';

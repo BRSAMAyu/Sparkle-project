@@ -9480,6 +9480,7 @@
   "userCurrentProgress": "Current Progress",
   "userTraitsColdstart": "Initial Profile",
   "userTraitsColdstartHint": "Used only as a weak prior, will be corrected by real interactions.",
+  "userTraitsToggleHint": "Tap to expand/collapse",
   "userSkip": "Skip",
   "userSubmitting": "Submitting...",
   "userSave": "Save",

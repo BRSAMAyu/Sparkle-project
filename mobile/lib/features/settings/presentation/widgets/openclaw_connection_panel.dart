@@ -1124,13 +1124,13 @@ class _OpenClawConnectionPanelState
                       ? null
                       : () => unawaited(_saveConnection(service)),
                   child: _saving
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 18,
                           height: 18,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
                             valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
+                              DS.neutral0,
                             ),
                           ),
                         )

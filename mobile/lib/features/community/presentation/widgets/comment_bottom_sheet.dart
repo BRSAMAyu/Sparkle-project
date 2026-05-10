@@ -68,7 +68,7 @@ class _CommentSheetContentState extends ConsumerState<_CommentSheetContent> {
     });
     try {
       final api = ref.read(apiClientProvider);
-      final resp = await api.dio.get(
+      final resp = await api.dio.get<Map<String, dynamic>>(
         ApiEndpoints.communityPostComments(widget.postId),
       );
       if (!mounted) return;
@@ -98,7 +98,7 @@ class _CommentSheetContentState extends ConsumerState<_CommentSheetContent> {
     setState(() => _submitting = true);
     try {
       final api = ref.read(apiClientProvider);
-      await api.dio.post(
+      await api.dio.post<Map<String, dynamic>>(
         ApiEndpoints.communityPostComments(widget.postId),
         data: {'content': content},
       );
@@ -122,7 +122,7 @@ class _CommentSheetContentState extends ConsumerState<_CommentSheetContent> {
   Future<void> _deleteComment(String commentId) async {
     try {
       final api = ref.read(apiClientProvider);
-      await api.dio.delete(
+      await api.dio.delete<Map<String, dynamic>>(
         ApiEndpoints.communityPostComment(widget.postId, commentId),
       );
       if (!mounted) return;

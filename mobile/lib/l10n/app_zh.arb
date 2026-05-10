@@ -11533,6 +11533,7 @@
   "userCurrentProgress": "当前推进",
   "userTraitsColdstart": "初始画像",
   "userTraitsColdstartHint": "只会作为弱先验，后续会被真实互动修正。",
+  "userTraitsToggleHint": "点击展开/收起",
   "userSkip": "跳过",
   "userSubmitting": "提交中...",
   "userSave": "保存",

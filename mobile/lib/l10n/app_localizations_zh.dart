@@ -16659,6 +16659,76 @@ class AppLocalizationsZh extends AppLocalizations {
   String get galaxyNodeAddMaterial => '将资料添加到这个节点';
 
   @override
+  String get galaxyNodeGeneratePlan => '生成学习计划';
+
+  @override
+  String get galaxyNodeGeneratePlanDesc => 'AI 生成个性化学习路径与任务';
+
+  @override
+  String get galaxyNodeWhyToday => '为什么是今天？';
+
+  @override
+  String get galaxyNodeReasonNew => '你还没有开始学习这个节点——它已解锁，随时可以开始。';
+
+  @override
+  String get galaxyNodeReasonEarly => '刚开始——在这里打好基础，将解锁后续的依赖主题。';
+
+  @override
+  String get galaxyNodeReasonMid => '进展不错！现在复习一下能巩固你的理解。';
+
+  @override
+  String get galaxyNodeReasonLate => '快要掌握了——最后一次复习帮你彻底锁定这个知识点。';
+
+  @override
+  String get galaxyNodeCommunityInsights => '社区洞察';
+
+  @override
+  String get galaxyNodeCommunityNoData => '暂无社区数据';
+
+  @override
+  String galaxyNodeCommunityPattern(Object errorType, Object userCount) {
+    return '$errorType：$userCount 位同学';
+  }
+
+  @override
+  String get galaxyNodeCommunityUnknown => '未知';
+
+  @override
+  String galaxyNodeSourceSummary(Object chunks, Object documents) {
+    return '$documents 份文档 · $chunks 个知识片段';
+  }
+
+  @override
+  String galaxyNodeSourceEmptyBody(Object topic) {
+    return '为「$topic」补充自己的讲义或笔记，让知识真正可追溯。';
+  }
+
+  @override
+  String galaxyNodeSourceAddNotes(Object topic) {
+    return '添加关于「$topic」的笔记';
+  }
+
+  @override
+  String galaxyNodeSourceUploadSaved(Object filename) {
+    return '$filename 已上传，处理并挂接后会显示在这里。';
+  }
+
+  @override
+  String galaxyNodeSourcePage(Object number) {
+    return '第 $number 页';
+  }
+
+  @override
+  String galaxyNodeSourcePages(Object pages) {
+    return '第 $pages 页';
+  }
+
+  @override
+  String galaxyNodeSourceExcerpt(Object index) {
+    return '片段 $index';
+  }
+
+  @override
   String get galaxyUploadTargetGalaxyCore => '银河核心';
 
   @override
@@ -22707,6 +22777,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get lpTitle => '学习路径';
+
+  @override
   String get lpMainPath => '主干路径';
 
   @override
@@ -22744,6 +22817,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get lpPlanGenerated => '学习计划已生成';
+
+  @override
+  String get lpFullPlanGenerated => '学习计划已生成';
 
   @override
   String get lpGeneratingFullPath => '正在生成完整学习路径计划，这可能需要十几秒...';
@@ -26824,6 +26900,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get userTraitsColdstartHint => '只会作为弱先验，后续会被真实互动修正。';
+
+  @override
+  String get userTraitsToggleHint => '点击展开/收起';
 
   @override
   String get userSkip => '跳过';

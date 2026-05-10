@@ -30283,6 +30283,114 @@ abstract class AppLocalizations {
   /// **'将资料添加到这个节点'**
   String get galaxyNodeAddMaterial;
 
+  /// No description provided for @galaxyNodeGeneratePlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成学习计划'**
+  String get galaxyNodeGeneratePlan;
+
+  /// No description provided for @galaxyNodeGeneratePlanDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 生成个性化学习路径与任务'**
+  String get galaxyNodeGeneratePlanDesc;
+
+  /// No description provided for @galaxyNodeWhyToday.
+  ///
+  /// In zh, this message translates to:
+  /// **'为什么是今天？'**
+  String get galaxyNodeWhyToday;
+
+  /// No description provided for @galaxyNodeReasonNew.
+  ///
+  /// In zh, this message translates to:
+  /// **'你还没有开始学习这个节点——它已解锁，随时可以开始。'**
+  String get galaxyNodeReasonNew;
+
+  /// No description provided for @galaxyNodeReasonEarly.
+  ///
+  /// In zh, this message translates to:
+  /// **'刚开始——在这里打好基础，将解锁后续的依赖主题。'**
+  String get galaxyNodeReasonEarly;
+
+  /// No description provided for @galaxyNodeReasonMid.
+  ///
+  /// In zh, this message translates to:
+  /// **'进展不错！现在复习一下能巩固你的理解。'**
+  String get galaxyNodeReasonMid;
+
+  /// No description provided for @galaxyNodeReasonLate.
+  ///
+  /// In zh, this message translates to:
+  /// **'快要掌握了——最后一次复习帮你彻底锁定这个知识点。'**
+  String get galaxyNodeReasonLate;
+
+  /// No description provided for @galaxyNodeCommunityInsights.
+  ///
+  /// In zh, this message translates to:
+  /// **'社区洞察'**
+  String get galaxyNodeCommunityInsights;
+
+  /// No description provided for @galaxyNodeCommunityNoData.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无社区数据'**
+  String get galaxyNodeCommunityNoData;
+
+  /// No description provided for @galaxyNodeCommunityPattern.
+  ///
+  /// In zh, this message translates to:
+  /// **'{errorType}：{userCount} 位同学'**
+  String galaxyNodeCommunityPattern(Object errorType, Object userCount);
+
+  /// No description provided for @galaxyNodeCommunityUnknown.
+  ///
+  /// In zh, this message translates to:
+  /// **'未知'**
+  String get galaxyNodeCommunityUnknown;
+
+  /// No description provided for @galaxyNodeSourceSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'{documents} 份文档 · {chunks} 个知识片段'**
+  String galaxyNodeSourceSummary(Object chunks, Object documents);
+
+  /// No description provided for @galaxyNodeSourceEmptyBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'为「{topic}」补充自己的讲义或笔记，让知识真正可追溯。'**
+  String galaxyNodeSourceEmptyBody(Object topic);
+
+  /// No description provided for @galaxyNodeSourceAddNotes.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加关于「{topic}」的笔记'**
+  String galaxyNodeSourceAddNotes(Object topic);
+
+  /// No description provided for @galaxyNodeSourceUploadSaved.
+  ///
+  /// In zh, this message translates to:
+  /// **'{filename} 已上传，处理并挂接后会显示在这里。'**
+  String galaxyNodeSourceUploadSaved(Object filename);
+
+  /// No description provided for @galaxyNodeSourcePage.
+  ///
+  /// In zh, this message translates to:
+  /// **'第 {number} 页'**
+  String galaxyNodeSourcePage(Object number);
+
+  /// No description provided for @galaxyNodeSourcePages.
+  ///
+  /// In zh, this message translates to:
+  /// **'第 {pages} 页'**
+  String galaxyNodeSourcePages(Object pages);
+
+  /// No description provided for @galaxyNodeSourceExcerpt.
+  ///
+  /// In zh, this message translates to:
+  /// **'片段 {index}'**
+  String galaxyNodeSourceExcerpt(Object index);
+
   /// No description provided for @galaxyUploadTargetGalaxyCore.
   ///
   /// In zh, this message translates to:
@@ -41431,6 +41539,12 @@ abstract class AppLocalizations {
   /// **'目标：{name}'**
   String lpTarget(String name);
 
+  /// No description provided for @lpTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习路径'**
+  String get lpTitle;
+
   /// No description provided for @lpMainPath.
   ///
   /// In zh, this message translates to:
@@ -41496,6 +41610,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'学习计划已生成'**
   String get lpPlanGenerated;
+
+  /// No description provided for @lpFullPlanGenerated.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习计划已生成'**
+  String get lpFullPlanGenerated;
 
   /// No description provided for @lpGeneratingFullPath.
   ///
@@ -48891,6 +49011,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'只会作为弱先验，后续会被真实互动修正。'**
   String get userTraitsColdstartHint;
+
+  /// No description provided for @userTraitsToggleHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'点击展开/收起'**
+  String get userTraitsToggleHint;
 
   /// No description provided for @userSkip.
   ///

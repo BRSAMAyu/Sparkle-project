@@ -23,6 +23,7 @@ class _TraitsColdstartQuestionnaireState
     extends State<TraitsColdstartQuestionnaire> {
   final Map<String, String> _answers = <String, String>{};
   bool _submitting = false;
+  bool _isExpanded = false;
 
   @override
   Widget build(BuildContext context) {
@@ -31,31 +32,62 @@ class _TraitsColdstartQuestionnaireState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            context.l10n.userTraitsColdstart,
-            style: Theme.of(context).textTheme.titleMedium,
+          GestureDetector(
+            onTap: () => setState(() => _isExpanded = !_isExpanded),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        context.l10n.userTraitsColdstart,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: DS.spacing4),
+                      Text(
+                        context.l10n.userTraitsToggleHint,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: DS.textTertiary,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+                AnimatedRotation(
+                  turns: _isExpanded ? 0.5 : 0,
+                  duration: const Duration(milliseconds: 200),
+                  child: Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: DS.textSecondary,
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: DS.spacing8),
-          Text(
-            context.l10n.userTraitsColdstartHint,
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          const SizedBox(height: DS.spacing12),
-          ...widget.questions.map(_buildQuestion),
-          const SizedBox(height: DS.spacing12),
-          Row(
-            children: [
-              TextButton(
-                onPressed: _submitting ? null : () async => widget.onSkip(),
-                child: Text(context.l10n.userSkip),
-              ),
-              const Spacer(),
-              FilledButton(
-                onPressed: _submitting ? null : _handleSubmit,
-                child: Text(_submitting ? context.l10n.userSubmitting : context.l10n.userSave),
-              ),
-            ],
-          ),
+          if (_isExpanded) ...[
+            const SizedBox(height: DS.spacing8),
+            Text(
+              context.l10n.userTraitsColdstartHint,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: DS.spacing12),
+            ...widget.questions.map(_buildQuestion),
+            const SizedBox(height: DS.spacing12),
+            Row(
+              children: [
+                TextButton(
+                  onPressed: _submitting ? null : () async => widget.onSkip(),
+                  child: Text(context.l10n.userSkip),
+                ),
+                const Spacer(),
+                FilledButton(
+                  onPressed: _submitting ? null : _handleSubmit,
+                  child: Text(_submitting ? context.l10n.userSubmitting : context.l10n.userSave),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

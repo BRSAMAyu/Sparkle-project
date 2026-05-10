@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -1553,9 +1554,9 @@ class _FocusReasonSection extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.all(DS.spacing12),
           decoration: BoxDecoration(
-            color: DS.warning.withOpacity(0.06),
+            color: DS.warning.withValues(alpha: 0.06),
             borderRadius: BorderRadius.circular(DS.radius8),
-            border: Border.all(color: DS.warning.withOpacity(0.15)),
+            border: Border.all(color: DS.warning.withValues(alpha: 0.15)),
           ),
           child: Text(
             reason,
@@ -1680,7 +1681,8 @@ class _CommunityInsightContentState
         return detailResult.data!.node.communitySignal;
       }
       return null;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Error fetching community signal: $e');
       return null;
     }
   }
