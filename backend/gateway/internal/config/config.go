@@ -674,8 +674,7 @@ func Load() *Config {
 			cfg.JWTAlgorithm = "HS256"
 		}
 		if cfg.JWTAlgorithm == "HS256" && cfg.JWTSecret == "" {
-			log.Println("WARNING: JWT_SECRET not set. Using insecure development default.")
-			cfg.JWTSecret = "sparkle-dev-jwt-secret-change-in-production"
+			log.Fatal("JWT_SECRET must be set even in development. Generate one with: openssl rand -hex 32")
 		}
 	}
 

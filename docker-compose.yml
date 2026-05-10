@@ -462,6 +462,15 @@ services:
       - MINIO_BUCKET=${MINIO_BUCKET:-sparkle-files}
       - MINIO_USE_SSL=${MINIO_USE_SSL:-false}
       - JWT_SECRET=${JWT_SECRET}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
+      - JWT_PRIVATE_KEY=${JWT_PRIVATE_KEY:-}
+      - JWT_PUBLIC_KEY=${JWT_PUBLIC_KEY:-}
+      - ADMIN_SECRET=${ADMIN_SECRET:-}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY:-}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
+      - CORS_ENABLED=${CORS_ENABLED:-true}
+      - ALLOW_WS_QUERY_TOKEN=${ALLOW_WS_QUERY_TOKEN:-false}
 
     depends_on:
       sparkle_api:

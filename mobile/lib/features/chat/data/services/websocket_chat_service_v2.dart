@@ -1695,12 +1695,10 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       }
       if (wsTicket != null && wsTicket.isNotEmpty) {
         queryParameters['ticket'] = wsTicket;
-      } else if (effectiveToken != null && effectiveToken.isNotEmpty) {
-        // SECURITY: Prefer ticket-based auth. Direct token in URL leaks to
-        // server logs / proxy logs / browser history. Only use as last resort
-        // when ticket exchange is unavailable, and log a warning.
-        queryParameters['token'] = effectiveToken;
-        _log('⚠️ WS ticket unavailable, falling back to token-in-URL (less secure)');
+      } else {
+        // SECURITY: Never put JWT in URL query params — it leaks to server
+        // logs, proxy logs, and browser history. Rely on Authorization header instead.
+        _log('⚠️ WS ticket unavailable, using Authorization header only');
       }
 
       final wsUri = Uri.parse(

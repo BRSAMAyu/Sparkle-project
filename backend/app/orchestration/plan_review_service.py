@@ -27,6 +27,7 @@ from uuid import UUID
 from loguru import logger
 
 from app.config import settings
+from app.core.llm_secure_io import sanitize_text_for_llm
 from app.core.business_metrics import (
     PHASE4_OPERATION_DURATION_SECONDS,
     PLAN_REASONING_GENERATED_TOTAL,
@@ -1244,6 +1245,8 @@ Respond in JSON format:
         user_context: dict[str, Any],
     ) -> str:
         """Build prompt for LLM review"""
+        safe_message = sanitize_text_for_llm(user_message)
+        safe_rationale = sanitize_text_for_llm(plan.rationale or "")
         tool_summary = []
         for tc in plan.tool_calls:
             tool_summary.append(f"- {tc.name}: {json.dumps(tc.params, ensure_ascii=False)}")
@@ -1251,10 +1254,10 @@ Respond in JSON format:
         return f"""Review the following executable plan:
 
 **User Request:**
-{user_message}
+{safe_message}
 
 **Plan Summary:**
-{plan.rationale}
+{safe_rationale}
 
 **Confidence:** {plan.confidence}
 **Risk Flags:** {plan.risk_flags if plan.risk_flags else "None"}

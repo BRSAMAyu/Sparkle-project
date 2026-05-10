@@ -203,6 +203,7 @@ async def serve():
     use_tls = settings.GRPC_REQUIRE_TLS or (
         settings.GRPC_TLS_CERT_PATH and settings.GRPC_TLS_KEY_PATH
     )
+    _ca_cert_path = getattr(settings, "GRPC_TLS_CA_CERT_PATH", "")
     if use_tls:
         with open(settings.GRPC_TLS_CERT_PATH, "rb") as cert_file:
             cert_chain = cert_file.read()
@@ -223,7 +224,6 @@ async def serve():
     else:
         server.add_insecure_port(listen_addr)
 
-    _ca_cert_path = getattr(settings, "GRPC_TLS_CA_CERT_PATH", "")
     tls_mode = "mTLS" if (use_tls and _ca_cert_path) else ("TLS" if use_tls else "PLAINTEXT")
     logger.info("=" * 60)
     logger.info("🚀 Sparkle AI Agent gRPC Server Starting...")

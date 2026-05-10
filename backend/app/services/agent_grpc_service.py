@@ -394,7 +394,10 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                 finish_reason=agent_service_pb2.ERROR,
             )
             response.event_time.FromDatetime(datetime.now(UTC))
-            yield response
+            try:
+                yield response
+            except (StopAsyncIteration, grpc.aio.AioRpcError):
+                logger.debug("StreamChat: could not send error response, context already cancelled")
 
     async def SubmitResponseFeedback(
         self,
