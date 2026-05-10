@@ -1357,48 +1357,63 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               child: ContentConstraint(
                 child: Column(
                   children: [
-                    if (chatState.isLoading)
-                      LinearProgressIndicator(
-                        backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(DS.primaryBase),
-                        minHeight: 2,
+                    // Header panels — scrollable, capped at 25% height
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: MediaQuery.of(context).size.height * 0.25,
                       ),
-                    ChatWorkingMemoryPanel(
-                      sessionId: chatState.conversationId,
-                      onViewSource: _showWorkingMemorySource,
+                      child: SingleChildScrollView(
+                        physics: const ClampingScrollPhysics(),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (chatState.isLoading)
+                              LinearProgressIndicator(
+                                backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(DS.primaryBase),
+                                minHeight: 2,
+                              ),
+                            ChatWorkingMemoryPanel(
+                              sessionId: chatState.conversationId,
+                              onViewSource: _showWorkingMemorySource,
+                            ),
+                            StatusAwarenessBar(
+                              conversationId: chatState.conversationId,
+                              hasActiveRun: chatState.hasActiveRun,
+                            ),
+                            if (!chatPureMode) const ChatUnderstandingDrawerButton(),
+                            AuroraCoreSessionResumeBanner(
+                              conversationId: chatState.conversationId,
+                            ),
+                            if (chatState.dualCoreMode != null)
+                              _DualCoreModeChip(mode: chatState.dualCoreMode!),
+                            if (_reviewNodeLabel != null)
+                              _ReviewNodeBanner(
+                                nodeLabel: _reviewNodeLabel!,
+                                mastery: _reviewNodeMastery,
+                              ),
+                            if (_dailyStartupRetryBannerVisible)
+                              DailyStartupRetryBanner(
+                                isRetrying: _dailyStartupRetryInFlight,
+                                onRetry: _retryDailyStartupHydration,
+                              ),
+                            if (_showComebackBanner && _comebackContext != null)
+                              ComebackBanner(
+                                contextData: _comebackContext!,
+                                onDismiss: _dismissComebackBanner,
+                                onContinue: _continueFromComebackBanner,
+                                onResumeCoreSession:
+                                    _comebackContext!.hasActiveCoreSession
+                                        ? () => unawaited(_resumeComebackCoreSession())
+                                        : null,
+                                onItemSelected: _handleComebackItemSelected,
+                              ),
+                          ],
+                        ),
+                      ),
                     ),
-                    StatusAwarenessBar(
-                      conversationId: chatState.conversationId,
-                      hasActiveRun: chatState.hasActiveRun,
-                    ),
-                    if (!chatPureMode) const ChatUnderstandingDrawerButton(),
-                    AuroraCoreSessionResumeBanner(
-                      conversationId: chatState.conversationId,
-                    ),
-                    if (chatState.dualCoreMode != null)
-                      _DualCoreModeChip(mode: chatState.dualCoreMode!),
-                    if (_reviewNodeLabel != null)
-                      _ReviewNodeBanner(
-                        nodeLabel: _reviewNodeLabel!,
-                        mastery: _reviewNodeMastery,
-                      ),
-                    if (_dailyStartupRetryBannerVisible)
-                      DailyStartupRetryBanner(
-                        isRetrying: _dailyStartupRetryInFlight,
-                        onRetry: _retryDailyStartupHydration,
-                      ),
-                    if (_showComebackBanner && _comebackContext != null)
-                      ComebackBanner(
-                        contextData: _comebackContext!,
-                        onDismiss: _dismissComebackBanner,
-                        onContinue: _continueFromComebackBanner,
-                        onResumeCoreSession:
-                            _comebackContext!.hasActiveCoreSession
-                                ? () => unawaited(_resumeComebackCoreSession())
-                                : null,
-                        onItemSelected: _handleComebackItemSelected,
-                      ),
+                    // Messages list — takes remaining space
                     Expanded(
                       child: messages.isEmpty &&
                               chatState.streamingContent.isEmpty &&
