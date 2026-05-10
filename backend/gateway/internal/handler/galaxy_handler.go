@@ -187,8 +187,10 @@ func (h *GalaxyHandler) SparkNode(c *gin.Context) {
 	}
 
 	if h.galaxyClient != nil {
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+		defer cancel()
 		resp, grpcErr := h.galaxyClient.RecordNodeInteraction(
-			context.Background(), userID, nodeID, "study", metadata,
+			ctx, userID, nodeID, "study", metadata,
 		)
 		if grpcErr == nil && resp != nil && resp.Success {
 			c.JSON(http.StatusOK, gin.H{
