@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.cache import cache_service
+from app.core.datetime_utils import _utcnow
 from app.core.event_bus import GroupFileDeletedEvent, event_bus
 from app.core.websocket import manager
 from app.models.community import (
@@ -58,11 +59,6 @@ from app.schemas.community import (
 )
 from app.services.community_signal_collector import CommunitySignalCollector
 from app.services.group_file_service import GroupFileService
-
-
-def _utcnow() -> datetime:
-    """Return naive UTC datetime compatible with existing DB fields."""
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _record_community_signal(

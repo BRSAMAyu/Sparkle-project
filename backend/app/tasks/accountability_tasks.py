@@ -18,6 +18,7 @@ from loguru import logger
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.datetime_utils import _utcnow, _user_display_name
 from app.db.session import get_db_context
 from app.models.accountability import (
     AccountabilityCheckin,
@@ -29,16 +30,6 @@ from app.models.notification_interaction import NotificationPreferences
 from app.models.user import User
 from app.services.accountability_notification_service import AccountabilityNotificationType
 from app.services.policy_scheduler_service import PolicySchedulerService
-
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
-
-
-def _user_display_name(user: User | None, default: str) -> str:
-    if not user:
-        return default
-    return user.nickname or user.full_name or user.username or default
 
 
 async def _missed_days_for_user(

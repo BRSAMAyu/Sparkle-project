@@ -39,7 +39,12 @@ class PrivacyBudgetExceeded(RuntimeError):
 
 @dataclass
 class PrivacyBudget:
-    """Differential privacy budget for a user/query."""
+    """Differential privacy budget for a user/query.
+
+    NOTE: This class is for unit tests and simulation only.
+    Production code uses PrivacyBudgetLedger (DB-backed) via the privacy_budget_ledger
+    service.
+    """
     user_id: str
     epsilon: float = 1.0             # Privacy loss parameter (lower = more private)
     delta: float = 1e-5             # Privacy failure probability
@@ -514,7 +519,10 @@ class TemporalPrivacyBudget:
         return {"recorded": True, "remaining_hourly": self.max_hourly_queries - self.hourly_count}
 
     def try_renew(self, current_window_start: str | None = None) -> bool:
-        """Attempt to renew budget (e.g., at hour/day/week boundary)."""
+        """Attempt to renew budget (e.g., at hour/day/week boundary).
+
+        TODO: planned for future use — currently not called from production code.
+        """
         # Simplified: reset if explicitly called with new window
         if current_window_start and current_window_start != self.window_start:
             self.hourly_count = 0
@@ -558,6 +566,8 @@ class CohortDriftDetector:
 
     Key rule: if a cohort changes >20% in size or composition, re-query the
     privacy engine to refresh aggregate stats. Stale cohort stats mislead users.
+
+    TODO: planned for future use — currently not called from production code.
     """
 
     DRIFT_THRESHOLD = 0.2  # 20% change triggers re-query recommendation
@@ -672,8 +682,11 @@ class SecureAggregationEngine:
     - Carry privacy cost (epsilon spent)
     - Require minimum cohort sizes
     - Produce audit trail
+
+    TODO: Methods below are planned for future use — not called from production code.
     """
 
+    # TODO: planned for future use
     @staticmethod
     def federated_average(
         cohort_stats: list[AnonymizedCohortStat],
@@ -724,10 +737,6 @@ class SecureAggregationEngine:
             else:
                 ranked.append({**item, "rank": None})  # Will fill after sorting
 
-        # Sort rankable items by score
-        [r for r in ranked if r["rank"] is not None or r.get("rank_reason") != "below_privacy_floor"]
-
-        # Actually, let me fix the logic:
         visible = [r for r in ranked if r.get("rank_reason") != "below_privacy_floor"]
         suppressed = [r for r in ranked if r.get("rank_reason") == "below_privacy_floor"]
 
@@ -737,6 +746,7 @@ class SecureAggregationEngine:
 
         return visible + suppressed
 
+    # TODO: planned for future use
     @staticmethod
     def audit_trail(
         insight: FederatedInsight,

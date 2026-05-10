@@ -8,12 +8,9 @@ from loguru import logger
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.datetime_utils import _utcnow
 from app.models.error_book import ErrorRecord
 from app.models.galaxy import KnowledgeNode
-
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class CommunityErrorAggregationService:

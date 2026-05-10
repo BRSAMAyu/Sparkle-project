@@ -1838,8 +1838,6 @@ Please review this plan and provide your assessment."""
                     should_trigger = True
 
             if should_trigger:
-
-            if should_trigger:
                 logger.warning(f"Plan {plan_id} rejected {rejection_count} times, triggering information collection")
 
                 # 清理拒绝计数

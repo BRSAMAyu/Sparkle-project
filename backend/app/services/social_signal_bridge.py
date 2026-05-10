@@ -10,7 +10,7 @@ from sqlalchemy import and_, desc, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.event_bus import event_bus
+from app.core.datetime_utils import _utcnow, _user_display_name
 from app.core.event_types import ACCOUNTABILITY_STRUGGLE_DETECTED
 from app.models.accountability import AccountabilityCheckin, AccountabilityPartnership, AccountabilityStatus
 from app.models.community import Group, GroupMember, GroupMessage, GroupType, MessageType
@@ -20,10 +20,6 @@ from app.services.aurora_stage33_kill_switch_service import AuroraStage33KillSwi
 from app.services.community_signal_bridge import CommunitySignalBridge
 from app.services.personalization.preference_service import PreferenceService
 from app.services.social_signal_types import SocialSignalsV1
-
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def get_encouragement_presets(locale: str = "zh") -> tuple[dict[str, str], ...]:
@@ -62,12 +58,6 @@ def get_encouragement_presets(locale: str = "zh") -> tuple[dict[str, str], ...]:
             "message": "别急着证明什么，先把节奏接回来。",
         },
     )
-
-
-def _user_display_name(user: User | None, default: str = "好友") -> str:
-    if user is None:
-        return default
-    return user.nickname or user.full_name or user.username or default
 
 
 PRESET_ENCOURAGEMENTS: tuple[dict[str, str], ...] = (

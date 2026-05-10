@@ -15,6 +15,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.core.datetime_utils import _utcnow
 from app.core.event_bus import event_bus
 from app.core.metrics import (
     COMMUNITY_PRIVACY_AGGREGATE_TOTAL,
@@ -32,10 +33,6 @@ from app.services.community_service import GroupTaskService
 from app.services.galaxy_service import GalaxyService
 from app.services.system_update_service import SystemUpdateService, build_system_update
 from app.signals.privacy_community_intelligence import PrivacyPreservingCommunityEngine
-
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class CommunitySignalBridge:
@@ -598,7 +595,7 @@ class CommunitySignalBridge:
             try:
                 await self.redis.publish(
                     "community:achievements",
-                    __import__("json").dumps(payload, ensure_ascii=False),
+                    json.dumps(payload, ensure_ascii=False),
                 )
             except Exception as e:
                 logger.warning(f"Failed to publish achievement to Redis channel: {e}")

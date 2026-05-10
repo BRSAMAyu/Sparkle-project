@@ -15,11 +15,8 @@ from loguru import logger
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.datetime_utils import _utcnow
 from app.db.session import get_db_context
-
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 async def _send_group_checkin_reminders(db: AsyncSession, *, now: datetime | None = None) -> dict[str, Any]:

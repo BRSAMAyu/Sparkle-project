@@ -34,6 +34,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 
+from app.core.datetime_utils import _utcnow
 from app.models.base import GUID, BaseModel
 
 # ============ 枚举类型定义 ============
@@ -271,8 +272,8 @@ class GroupMember(BaseModel):
     last_checkin_date = Column(DateTime, nullable=True)
 
     # 时间戳
-    joined_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    last_active_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    joined_at = Column(DateTime, default=_utcnow, nullable=False)
+    last_active_at = Column(DateTime, default=_utcnow, nullable=False)
 
     # 关系
     group = relationship("Group", back_populates="members")
@@ -374,7 +375,7 @@ class GroupMessageRead(BaseModel):
         nullable=False,
         index=True,
     )
-    read_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    read_at = Column(DateTime, default=_utcnow, nullable=False)
 
     message = relationship("GroupMessage", back_populates="read_receipts")
     user = relationship("User")

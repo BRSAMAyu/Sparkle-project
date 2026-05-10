@@ -11,13 +11,10 @@ from uuid import UUID
 from loguru import logger
 
 from app.core.cache import cache_service
+from app.core.datetime_utils import _utcnow
 from app.db.session import AsyncSessionLocal
 from app.services.profile_write_service import ProfileWriteService
 from app.services.signal_adaptation import classify_band_with_hysteresis, recency_weight
-
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class CommunitySignalCollector:

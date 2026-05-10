@@ -22,13 +22,10 @@ from app.models.accountability import (
     AccountabilityPartnership,
     AccountabilityStatus,
 )
+from app.core.datetime_utils import _utcnow
 from app.models.achievement import Achievement, AchievementRarity, AchievementType, UserAchievement
 from app.models.user import PushPreference, User
 from app.services.notification_service import notification_service
-
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _normalize_timezone(timezone_name: str | None) -> str:

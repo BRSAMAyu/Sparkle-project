@@ -16,6 +16,7 @@ from uuid import UUID
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.datetime_utils import _utcnow, _user_display_name
 from app.core.i18n import I18n
 from app.models.accountability import AccountabilityPartnership
 from app.models.notification import Notification
@@ -38,16 +39,6 @@ class AccountabilityNotificationType(StrEnum):
     POLICY_TRIGGERED = "accountability_policy_triggered"
     STRUGGLE_ALERT = "accountability_struggle_alert"
     ENCOURAGEMENT_RECEIVED = "accountability_encouragement_received"
-
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
-
-
-def _user_display_name(user: User | None, default: str) -> str:
-    if not user:
-        return default
-    return user.nickname or user.full_name or user.username or default
 
 
 class AccountabilityNotificationService:

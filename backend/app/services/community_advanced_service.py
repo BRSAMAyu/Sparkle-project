@@ -25,6 +25,7 @@ from sqlalchemy import desc, func, or_, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.datetime_utils import _utcnow
 from app.models.community import (
     BroadcastMessage,
     Group,
@@ -55,11 +56,6 @@ from app.schemas.community import (
     MessageSearchRequest,
     OfflineMessageRetryRequest,
 )
-
-
-def _utcnow() -> datetime:
-    """Return naive UTC datetime for compatibility with existing DB columns."""
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _favorite_load_options():

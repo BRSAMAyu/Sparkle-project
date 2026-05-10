@@ -8,11 +8,8 @@ from loguru import logger
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.datetime_utils import _utcnow
 from app.models.community_strategy_outcome import CommunityStrategyOutcome
-
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class CommunityStrategyService:
