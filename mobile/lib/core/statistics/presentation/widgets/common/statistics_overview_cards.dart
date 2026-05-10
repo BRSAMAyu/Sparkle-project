@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/design_system.dart';
 
 /// A single statistics metric card
@@ -145,7 +145,7 @@ class StatisticsMetricCard extends StatelessWidget {
               ),
               const SizedBox(width: DS.xs),
               Text(
-                I18nService.instance.isChinese ? '较上期' : 'vs last',
+                context.l10n.statisticsVsLast,
                 style: DS.captionStyle.copyWith(
                   color: DS.neutral400,
                 ),

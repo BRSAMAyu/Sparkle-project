@@ -1,5 +1,4 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/statistics/data/statistics_data.dart';
 import 'package:sparkle/core/statistics/domain/statistics_domain.dart';
@@ -258,7 +257,7 @@ class FocusStatistics extends _$FocusStatistics {
       );
       state = state.withData(data, newPeriod: period);
     } catch (e) {
-      state = state.withError(I18nService.instance.isChinese ? '加载失败: $e' : 'Failed to load: $e');
+      state = state.withError('Failed to load: $e');
     }
   }
 
