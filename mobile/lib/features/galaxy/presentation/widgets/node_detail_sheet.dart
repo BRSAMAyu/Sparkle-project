@@ -337,15 +337,6 @@ class _HistoryContent extends StatelessWidget {
                             color: DS.textPrimary,
                           ),
                     ),
-                    const SizedBox(height: DS.spacing4),
-                    Text(
-                      nodeId,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: DS.textTertiary,
-                          ),
-                    ),
                   ],
                 ),
               ),

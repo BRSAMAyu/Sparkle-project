@@ -120,7 +120,7 @@ class LearningReportShareCardFactory {
             decoration: BoxDecoration(
               color: isDark
                   ? DS.neutral0.withValues(alpha: 0.08)
-                  : DS.neutral0.withValues(alpha: 0.7),
+                  : DS.neutral100,
               borderRadius: DS.borderRadius12,
             ),
             child: Text(
