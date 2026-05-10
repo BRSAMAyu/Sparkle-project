@@ -13,9 +13,9 @@
 |-------|-------|------|-----------|
 | **P0 Critical** | **8** | **8** | **0** |
 | **P1 High** | **35** | **35** | **0** |
-| P2 Medium | 60 | 22 | 38 |
+| P2 Medium | 60 | 25 | 35 |
 | P3 Low | 32 | 8 | 24 |
-| i18n (net reduction) | ~1070 | ~60 | ~1010 |
+| i18n (files migrated) | 138 | 40 | 98 |
 
 ---
 
@@ -52,7 +52,8 @@ Opus agent verified all 8 commits:
 | **b9e4f00fd** | 17:10 | P3 | semantic labels, form validation, topic focus, server-side filtering, gRPC preflight, utcnow |
 | **04a7813cc** | 17:25 | P2 | debate timeout, IndexError guard, ErrorRecord soft-delete, unused I18nService import |
 | **f2a03da4f** | 17:40 | i18n | core design widgets: app_feedback, compact_error_card, loading_indicator → ARB |
-| **923f3d8c4** | 18:20 | i18n | batch migrate 18 files: 9 achievement widgets + 7 other files → ARB (~60 violations) |
+| **923f3d8c4** | 18:20 | i18n | batch migrate 18 files: 9 achievement widgets + 7 other files → ARB |
+| **53b085bca** | 19:30 | i18n | batch migrate 29 more files: 16 home/goal/experience + 13 other → ARB |
 
 ---
 
