@@ -152,7 +152,7 @@ Opus agent verified all 8 commits:
 | P1-01: _check_perfect_month_for_user uses UTC dates | Uses user's local month boundaries converted to UTC storage timestamps | 631923b94 |
 | P1-01: _count_mutual_checkin_days uses UTC dates | Groups by local date via `_to_local_date` instead of UTC `created_at.date()` | 631923b94 |
 
-### P2 Flutter UX (3 issues) — ✅ FIXED 2026-05-10
+### P2 Flutter UX (4 issues) — ✅ FIXED 2026-05-10
 | Issue | Fix | Commit |
 |-------|-----|--------|
 | P2-08: accountability_detail_screen missing pull-to-refresh | Wrapped `_DashboardView` with `SparkleRefreshIndicator` calling `ref.invalidate(accountabilityDashboardProvider)` | 631923b94 |
@@ -160,6 +160,7 @@ Opus agent verified all 8 commits:
 | P2-08: accountability_detail_screen DateFormat locale mismatch | Added `locale = Localizations.localeOf(context)` to `_PendingPoliciesCard`, `_RecentReflectionsCard`, `_ForesightHintCard` | 631923b94 |
 | P2-09: accountability_detail_screen error leaks raw exception (line 100) | Replaced `'$e'` with `context.l10n.accountabilityDashboardLoadFailedDetail` | 1e785afc4 |
 | P2-09: accountability_detail_screen error leaks raw exception (line 264) | Replaced `${context.l10n.accountabilityOperationFailed}: $e` with `context.l10n.accountabilityOperationFailed` | 1e785afc4 |
+| P2-10: accountability_heatmap hardcoded colors | Color(0xFF2E7D32/9BE9A8) → primaryContainer/secondaryContainer; textColor null → DS.textSecondary/DS.textPrimary | 5f8925741 |
 
 ### DB/Integration P2 (13 issues)
 - DB-P2-01: HNSW m/ef_construction defaults

@@ -162,7 +162,8 @@ class GenerateTasksForPlanTool(BaseTool):
         params: GenerateTasksForPlanParams,
         user_id: str,
         db_session: Any,
-        tool_call_id: str | None = None
+        tool_call_id: str | None = None,
+        locale: str = "en"
     ) -> ToolResult:
         try:
             user_uuid = UUID(user_id)
@@ -240,6 +241,7 @@ class GenerateTasksForPlanTool(BaseTool):
                         task_count=params.task_count,
                         knowledge_context=knowledge_context,
                         persona_constraints=persona_constraints,
+                        locale=locale,
                     ),
                     timeout=30,
                 )
@@ -260,6 +262,7 @@ class GenerateTasksForPlanTool(BaseTool):
                     task_count=params.task_count,
                     persona_constraints=persona_constraints,
                     db_session=db_session,
+                    locale=locale,
                 )
 
             # 第四步: 批量创建任务

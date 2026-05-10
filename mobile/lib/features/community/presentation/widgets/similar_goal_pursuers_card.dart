@@ -6,9 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/compact_error_card.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/goal_value_chip.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
@@ -89,12 +89,12 @@ class SimilarGoalPursuersCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isChinese = I18nService.instance.isChinese;
+    final l10n = context.l10n;
     final pursuersAsync = ref.watch(similarGoalPursuersProvider(goalId));
 
     return Semantics(
       container: true,
-      label: isChinese ? '同目标伙伴' : 'Similar goal pursuers',
+      label: l10n.communitySimilarGoalPursuers,
       child: pursuersAsync.when(
         data: (pursuers) {
           if (pursuers.isEmpty) return const SizedBox.shrink();
@@ -118,9 +118,7 @@ class SimilarGoalPursuersCard extends ConsumerWidget {
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        isChinese
-                            ? '和你追同样目标的 ${pursuers.length} 位伙伴'
-                            : '${pursuers.length} people pursuing similar goals',
+                        l10n.communitySimilarGoalPursuersCount(pursuers.length),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               fontWeight: FontWeight.w600,
                               color: DS.brandPrimary,
@@ -162,7 +160,7 @@ class SimilarGoalPursuersCard extends ConsumerWidget {
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                       child: Text(
-                        isChinese ? '查看全部' : 'View all',
+                        l10n.communityViewAll,
                         style: TextStyle(fontSize: 12, color: DS.brandPrimary),
                       ),
                     ),

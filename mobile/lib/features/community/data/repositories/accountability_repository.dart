@@ -300,9 +300,9 @@ class AccountabilityRepository {
         );
         return AccountabilityPartnershipInfo.fromJson(data);
       }
-      throw Exception(I18nService.instance.isChinese ? '操作失败，请稍后重试' : 'Operation failed, please try again later');
+      throw AccountabilityException(AccountabilityErrorType.operationFailed);
     } on DioException catch (error) {
-      throw Exception(_extractApiError(error, fallback: I18nService.instance.isChinese ? '操作失败，请稍后重试' : 'Operation failed, please try again later'));
+      throw _toException(error, AccountabilityErrorType.operationFailed);
     }
   }
 
