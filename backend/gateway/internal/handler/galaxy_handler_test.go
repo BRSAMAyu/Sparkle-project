@@ -35,7 +35,11 @@ func TestGalaxyHandlerRegistersFrontendEndpoints(t *testing.T) {
 		c.Set("user_id", "user-123")
 		c.Next()
 	}
-	NewGalaxyHandler(nil, nil, nil, backend.URL).RegisterRoutes(router.Group("/api/v1"), auth, nil)
+	handler, err := NewGalaxyHandler(nil, nil, nil, backend.URL)
+	if err != nil {
+		t.Fatalf("NewGalaxyHandler failed: %v", err)
+	}
+	handler.RegisterRoutes(router.Group("/api/v1"), auth, nil)
 	gateway := httptest.NewServer(router)
 	defer gateway.Close()
 
