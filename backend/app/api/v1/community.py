@@ -3200,6 +3200,32 @@ async def claim_group_task(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
+@router.post("/tasks/{task_id}/complete", summary="完成群任务")
+async def complete_group_task(
+    task_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+):
+    """完成当前用户认领的群任务"""
+    # Find the user's claim for this task
+    from app.models.community import GroupTaskClaim
+
+    claim_result = await db.execute(
+        select(GroupTaskClaim).where(
+            GroupTaskClaim.group_task_id == task_id,
+            GroupTaskClaim.user_id == current_user.id,
+            GroupTaskClaim.not_deleted_filter(),
+        )
+    )
+    claim = claim_result.scalar_one_or_none()
+    if not claim:
+        raise HTTPException(status_code=404, detail="No claim found for this task")
+    if claim.is_completed:
+        return {"success": True, "claim_id": str(claim.id), "already_completed": True}
+
+    result = await GroupTaskService.complete_task(db, claim.id)
+    await db.commit()
+    return {"success": True, "claim_id": str(result.id) if result else None}
+
+
 # ============ 火堆状态 ============
 
 

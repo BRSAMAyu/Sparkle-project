@@ -21,7 +21,7 @@ from uuid import UUID
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
-from sqlalchemy import desc, func, or_, select, text
+from sqlalchemy import desc, func, or_, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -150,16 +150,19 @@ class EncryptionService:
         data: EncryptionKeyCreate
     ) -> UserEncryptionKey:
         """注册用户公钥"""
-        # 如果有相同设备的旧密钥，将其设为非活跃
+        # Deactivate old keys for the same device using ORM (respects soft-delete)
         if data.device_id:
-            await db.execute(
-                text("""
-                    UPDATE user_encryption_keys
-                    SET is_active = false, updated_at = NOW()
-                    WHERE user_id = :user_id AND device_id = :device_id AND is_active = true
-                """),
-                {"user_id": str(user_id), "device_id": data.device_id}
+            stmt = (
+                update(UserEncryptionKey)
+                .where(
+                    UserEncryptionKey.user_id == user_id,
+                    UserEncryptionKey.device_id == data.device_id,
+                    UserEncryptionKey.is_active == True,  # noqa: E712
+                    UserEncryptionKey.deleted_at.is_(None),
+                )
+                .values(is_active=False, updated_at=_utcnow())
             )
+            await db.execute(stmt)
 
         key = UserEncryptionKey(
             user_id=user_id,
