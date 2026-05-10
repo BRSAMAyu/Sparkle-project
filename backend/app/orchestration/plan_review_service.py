@@ -885,7 +885,7 @@ class PlanReviewService:
             return False
 
         # Extract user skill level (default to intermediate if unknown)
-        user_context.get("skill_level", "intermediate").lower()
+        skill_level = user_context.get("skill_level", "intermediate").lower()
         user_background = user_context.get("user_background", "")
 
         # Check each tool call for feasibility issues
@@ -958,6 +958,16 @@ class PlanReviewService:
                         )
                         # Don't block, but require LLM review to catch this
                         return False
+
+            # === Check 3: Skill level vs difficulty mismatch ===
+            if skill_level == "beginner" and difficulty in ["advanced", "expert", "master"]:
+                total_tools = len(plan.tool_calls)
+                if total_tools > 5:
+                    logger.warning(
+                        f"Feasibility check: beginner skill with {difficulty} "
+                        f"difficulty and {total_tools} tools"
+                    )
+                    return False
 
         # All feasibility checks passed
         return True
@@ -1934,7 +1944,11 @@ Please review this plan and provide your assessment."""
         )
 
         # Trigger asynchronous task generation
-        asyncio.create_task(
+        def _log_task_exception(task: asyncio.Task) -> None:
+            if not task.cancelled() and task.exception():
+                logger.error(f"Background task failed: {task.exception()}", exc_info=task.exception())
+
+        task_gen = asyncio.create_task(
             self._generate_tasks_after_approval(
                 plan_id=plan_id,
                 user_id=user_id,
@@ -1942,13 +1956,16 @@ Please review this plan and provide your assessment."""
                 auto_delegate_tasks=auto_delegate_tasks,
             )
         )
-        asyncio.create_task(
+        task_gen.add_done_callback(_log_task_exception)
+
+        task_mem = asyncio.create_task(
             self._capture_plan_goal_memory(
                 plan_id=plan_id,
                 user_id=user_id,
                 action_id=action_id,
             )
         )
+        task_mem.add_done_callback(_log_task_exception)
 
         return {
             "status": "success",

@@ -1632,6 +1632,7 @@ async def build_prompt_with_seed_examples(
     messages = [{"role": "system", "content": system_prompt}]
 
     # 尝试获取 few-shot 示例
+    db_gen = None
     if db is None:
         db_gen = get_db()
         db = await db_gen.__anext__()
@@ -1663,8 +1664,8 @@ async def build_prompt_with_seed_examples(
     except Exception as e:
         logger.warning(f"Failed to fetch few-shot examples: {e}, using original prompt")
     finally:
-        # db 是从 get_db() 获取的，不要关闭
-        pass
+        if db_gen is not None:
+            await db_gen.aclose()
 
     messages.append({"role": "user", "content": user_message})
     return messages
