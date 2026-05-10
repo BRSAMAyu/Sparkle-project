@@ -1,4 +1,3 @@
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/task/data/models/execution_intent_model.dart';
 
 ExecutionMode _parseTemplateExecutionMode(String? value) {

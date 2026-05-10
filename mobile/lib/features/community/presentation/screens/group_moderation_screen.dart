@@ -133,11 +133,6 @@ class _GroupModerationScreenState
               const SizedBox(height: DS.md),
               SparkleButton.primary(
                 label: context.l10n.accountabilityRetry,
-                style: TextStyle(color: DS.error),
-              ),
-              const SizedBox(height: DS.md),
-              SparkleButton.primary(
-                label: context.l10n.accountabilityRetry,
                 onPressed: () => ref
                     .read(groupModerationProvider(widget.groupId).notifier)
                     .load(),

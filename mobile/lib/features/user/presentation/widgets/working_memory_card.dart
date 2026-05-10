@@ -3,7 +3,6 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/models/user_state_models.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
 class WorkingMemoryCard extends StatelessWidget {
   const WorkingMemoryCard({required this.snapshot, super.key});

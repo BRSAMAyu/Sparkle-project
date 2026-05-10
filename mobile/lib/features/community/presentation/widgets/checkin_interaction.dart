@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 /// 责任伙伴打卡互动组件
@@ -335,7 +334,7 @@ class EncouragementMessage {
         id: json['id'] as String,
         authorId: json['user_id'] as String,
         authorName: json['author_name'] as String? ??
-            context.l10n.communityPartnerFallback,
+            'Partner',
         message: json['message'] as String,
         createdAt: DateTime.parse(json['created_at'] as String),
       );

@@ -306,7 +306,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                       TextFormField(
                         controller: _goalController,
                         decoration: InputDecoration(
-                          labelText: context.l10n.communitySprintGoal,
+                          labelText: context.l10n.communitySprintGoalLabel,
                           hintText: context.l10n.communityCreateGroupGoalHint,
                           border: OutlineInputBorder(),
                         ),

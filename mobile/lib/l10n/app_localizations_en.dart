@@ -7163,6 +7163,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashboardSubject => 'Computer Networks';
 
   @override
+  String get dashboardLoadError => 'Could not load dashboard.';
+
+  @override
+  String get dashboardGrowthLoadError => 'Could not load growth dashboard.';
+
+  @override
+  String get dashboardExamSprintLoadError =>
+      'Could not load exam sprint dashboard.';
+
+  @override
+  String get dashboardPredictiveLoadError =>
+      'Could not load predictive dashboard.';
+
+  @override
   String get reflectionDaily => 'Daily Reflection';
 
   @override
@@ -8482,6 +8496,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get communitySprintGoalLabel => 'Sprint Goal';
+
+  @override
   String get communitySprintGoalRequired => 'Enter a sprint goal';
 
   @override
@@ -9214,6 +9231,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get galaxyLoadingTitle => 'Loading galaxy';
+
+  @override
+  String get galaxyInvalidNodeId => 'Invalid node ID';
 
   @override
   String get galaxyNodeFocus => 'Focus node';
@@ -28950,6 +28970,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityPlanFallback => 'Plan';
 
   @override
+  String communityPlanProgress(String progress) {
+    return 'Progress: $progress%';
+  }
+
+  @override
   String communityProgressColon(Object percent) {
     return 'Progress: $percent%';
   }
@@ -29304,6 +29329,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get communityShareRarity => 'Rarity';
+
+  @override
+  String get achievementRarityFallback => 'Glory';
 
   @override
   String get communityShareUnlocked => 'Unlocked';
@@ -34998,6 +35026,14 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String communityGoalProgressFormat(String title, int percent) {
+    return '$title · $percent%';
+  }
+
+  @override
+  String get communityDefaultUserName => 'User';
+
+  @override
   String get communitySimilarGoalConnectMessage =>
       'We are pursuing similar goals. Want to connect?';
 
@@ -35571,4 +35607,51 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get seedLibStatusFailed =>
       'Failed to load library status. Please try again later.';
+
+  @override
+  String get communitySquad => 'Squad';
+
+  @override
+  String communityGroupStats(Object flamePower, Object memberCount) {
+    return '$memberCount members | $flamePower flame';
+  }
+
+  @override
+  String communityFriendsInside(Object count) {
+    return '$count friends inside';
+  }
+
+  @override
+  String get communityFriendsInsideLabel => 'Friends inside';
+
+  @override
+  String communityMatches(Object tags) {
+    return 'Matches: $tags';
+  }
+
+  @override
+  String get communityMatchesFocus => 'Matches your focus';
+
+  @override
+  String get communityTrendingNow => 'Trending now';
+
+  @override
+  String get communityNewGroup => 'New group';
+
+  @override
+  String get communityApprovalNeeded => 'Approval needed';
+
+  @override
+  String get communityRecommended => 'Recommended';
+
+  @override
+  String get chatReadReceipt => 'Read';
+
+  @override
+  String get partnersEmptyState => 'Empty state';
+
+  @override
+  String communityDateMonthDay(int month, int day) {
+    return '$month-$day';
+  }
 }

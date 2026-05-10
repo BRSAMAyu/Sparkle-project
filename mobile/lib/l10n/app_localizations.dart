@@ -12854,6 +12854,30 @@ abstract class AppLocalizations {
   /// **'计算机网络'**
   String get dashboardSubject;
 
+  /// No description provided for @dashboardLoadError.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法加载仪表盘。'**
+  String get dashboardLoadError;
+
+  /// No description provided for @dashboardGrowthLoadError.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法加载成长仪表盘。'**
+  String get dashboardGrowthLoadError;
+
+  /// No description provided for @dashboardExamSprintLoadError.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法加载考前冲刺仪表盘。'**
+  String get dashboardExamSprintLoadError;
+
+  /// No description provided for @dashboardPredictiveLoadError.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法加载预测仪表盘。'**
+  String get dashboardPredictiveLoadError;
+
   /// No description provided for @reflectionDaily.
   ///
   /// In zh, this message translates to:
@@ -15140,6 +15164,12 @@ abstract class AppLocalizations {
   /// **'冲刺目标: {goal}'**
   String communitySprintGoal(String goal);
 
+  /// No description provided for @communitySprintGoalLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺目标'**
+  String get communitySprintGoalLabel;
+
   /// No description provided for @communitySprintGoalRequired.
   ///
   /// In zh, this message translates to:
@@ -16435,6 +16465,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'加载中'**
   String get galaxyLoadingTitle;
+
+  /// No description provided for @galaxyInvalidNodeId.
+  ///
+  /// In zh, this message translates to:
+  /// **'无效的节点 ID'**
+  String get galaxyInvalidNodeId;
 
   /// No description provided for @galaxyNodeFocus.
   ///
@@ -20364,7 +20400,7 @@ abstract class AppLocalizations {
   /// No description provided for @aiOpsFallback.
   ///
   /// In zh, this message translates to:
-  /// **'fallback'**
+  /// **'Fallback'**
   String get aiOpsFallback;
 
   /// No description provided for @aiOpsTotalCost.
@@ -50662,6 +50698,12 @@ abstract class AppLocalizations {
   /// **'计划'**
   String get communityPlanFallback;
 
+  /// No description provided for @communityPlanProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'进度: {progress}%'**
+  String communityPlanProgress(String progress);
+
   /// No description provided for @communityProgressColon.
   ///
   /// In zh, this message translates to:
@@ -51037,7 +51079,7 @@ abstract class AppLocalizations {
   /// No description provided for @communityNoCommunitySpark.
   ///
   /// In zh, this message translates to:
-  /// **'No community spark yet'**
+  /// **'还没有社区火花'**
   String get communityNoCommunitySpark;
 
   /// No description provided for @communityRefreshFeed.
@@ -51255,6 +51297,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'稀有度'**
   String get communityShareRarity;
+
+  /// No description provided for @achievementRarityFallback.
+  ///
+  /// In zh, this message translates to:
+  /// **'荣耀'**
+  String get achievementRarityFallback;
 
   /// No description provided for @communityShareUnlocked.
   ///
@@ -61093,6 +61141,18 @@ abstract class AppLocalizations {
   /// **'{count} 位共同好友'**
   String communityMutualFriendsCount(int count);
 
+  /// No description provided for @communityGoalProgressFormat.
+  ///
+  /// In zh, this message translates to:
+  /// **'{title} · {percent}%'**
+  String communityGoalProgressFormat(String title, int percent);
+
+  /// No description provided for @communityDefaultUserName.
+  ///
+  /// In zh, this message translates to:
+  /// **'用户'**
+  String get communityDefaultUserName;
+
   /// No description provided for @communitySimilarGoalConnectMessage.
   ///
   /// In zh, this message translates to:
@@ -62070,6 +62130,84 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'种子库状态加载失败，请稍后再试'**
   String get seedLibStatusFailed;
+
+  /// No description provided for @communitySquad.
+  ///
+  /// In zh, this message translates to:
+  /// **'小队'**
+  String get communitySquad;
+
+  /// No description provided for @communityGroupStats.
+  ///
+  /// In zh, this message translates to:
+  /// **'{memberCount} 成员 | {flamePower} 火力'**
+  String communityGroupStats(Object flamePower, Object memberCount);
+
+  /// No description provided for @communityFriendsInside.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 位好友在内'**
+  String communityFriendsInside(Object count);
+
+  /// No description provided for @communityFriendsInsideLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'好友在内'**
+  String get communityFriendsInsideLabel;
+
+  /// No description provided for @communityMatches.
+  ///
+  /// In zh, this message translates to:
+  /// **'匹配：{tags}'**
+  String communityMatches(Object tags);
+
+  /// No description provided for @communityMatchesFocus.
+  ///
+  /// In zh, this message translates to:
+  /// **'匹配你的专注方向'**
+  String get communityMatchesFocus;
+
+  /// No description provided for @communityTrendingNow.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在热门'**
+  String get communityTrendingNow;
+
+  /// No description provided for @communityNewGroup.
+  ///
+  /// In zh, this message translates to:
+  /// **'新群组'**
+  String get communityNewGroup;
+
+  /// No description provided for @communityApprovalNeeded.
+  ///
+  /// In zh, this message translates to:
+  /// **'需要审批'**
+  String get communityApprovalNeeded;
+
+  /// No description provided for @communityRecommended.
+  ///
+  /// In zh, this message translates to:
+  /// **'推荐'**
+  String get communityRecommended;
+
+  /// No description provided for @chatReadReceipt.
+  ///
+  /// In zh, this message translates to:
+  /// **'已读'**
+  String get chatReadReceipt;
+
+  /// No description provided for @partnersEmptyState.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无伙伴'**
+  String get partnersEmptyState;
+
+  /// No description provided for @communityDateMonthDay.
+  ///
+  /// In zh, this message translates to:
+  /// **'{month}-{day}'**
+  String communityDateMonthDay(int month, int day);
 }
 
 class _AppLocalizationsDelegate

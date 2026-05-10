@@ -6887,6 +6887,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dashboardSubject => '计算机网络';
 
   @override
+  String get dashboardLoadError => '无法加载仪表盘。';
+
+  @override
+  String get dashboardGrowthLoadError => '无法加载成长仪表盘。';
+
+  @override
+  String get dashboardExamSprintLoadError => '无法加载考前冲刺仪表盘。';
+
+  @override
+  String get dashboardPredictiveLoadError => '无法加载预测仪表盘。';
+
+  @override
   String get reflectionDaily => '每日反思';
 
   @override
@@ -8171,6 +8183,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get communitySprintGoalLabel => '冲刺目标';
+
+  @override
   String get communitySprintGoalRequired => '请输入冲刺目标';
 
   @override
@@ -8879,6 +8894,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get galaxyLoadingTitle => '加载中';
+
+  @override
+  String get galaxyInvalidNodeId => '无效的节点 ID';
 
   @override
   String get galaxyNodeFocus => '聚焦节点';
@@ -11023,7 +11041,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiOpsTotalRequests => '请求总量';
 
   @override
-  String get aiOpsFallback => 'fallback';
+  String get aiOpsFallback => 'Fallback';
 
   @override
   String get aiOpsTotalCost => '总成本';
@@ -27749,6 +27767,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get communityPlanFallback => '计划';
 
   @override
+  String communityPlanProgress(String progress) {
+    return '进度: $progress%';
+  }
+
+  @override
   String communityProgressColon(Object percent) {
     return '进度: $percent%';
   }
@@ -27969,7 +27992,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get communityRetry => '重试';
 
   @override
-  String get communityNoCommunitySpark => 'No community spark yet';
+  String get communityNoCommunitySpark => '还没有社区火花';
 
   @override
   String get communityRefreshFeed => '刷新动态';
@@ -28097,6 +28120,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get communityShareRarity => '稀有度';
+
+  @override
+  String get achievementRarityFallback => '荣耀';
 
   @override
   String get communityShareUnlocked => '已解锁';
@@ -33570,6 +33596,14 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String communityGoalProgressFormat(String title, int percent) {
+    return '$title · $percent%';
+  }
+
+  @override
+  String get communityDefaultUserName => '用户';
+
+  @override
   String get communitySimilarGoalConnectMessage => '我们正在追相似目标，一起加油？';
 
   @override
@@ -34101,4 +34135,51 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get seedLibStatusFailed => '种子库状态加载失败，请稍后再试';
+
+  @override
+  String get communitySquad => '小队';
+
+  @override
+  String communityGroupStats(Object flamePower, Object memberCount) {
+    return '$memberCount 成员 | $flamePower 火力';
+  }
+
+  @override
+  String communityFriendsInside(Object count) {
+    return '$count 位好友在内';
+  }
+
+  @override
+  String get communityFriendsInsideLabel => '好友在内';
+
+  @override
+  String communityMatches(Object tags) {
+    return '匹配：$tags';
+  }
+
+  @override
+  String get communityMatchesFocus => '匹配你的专注方向';
+
+  @override
+  String get communityTrendingNow => '正在热门';
+
+  @override
+  String get communityNewGroup => '新群组';
+
+  @override
+  String get communityApprovalNeeded => '需要审批';
+
+  @override
+  String get communityRecommended => '推荐';
+
+  @override
+  String get chatReadReceipt => '已读';
+
+  @override
+  String get partnersEmptyState => '暂无伙伴';
+
+  @override
+  String communityDateMonthDay(int month, int day) {
+    return '$month-$day';
+  }
 }

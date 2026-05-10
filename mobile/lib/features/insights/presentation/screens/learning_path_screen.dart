@@ -34,7 +34,7 @@ class LearningPathScreen extends ConsumerWidget {
         elevation: 0,
         iconTheme: IconThemeData(color: DS.textPrimary),
       ),
-      body: SafeArea(
+      child: SafeArea(
         child: LearningPathDialog(
           targetNodeId: nodeId,
           targetNodeName: nodeName,

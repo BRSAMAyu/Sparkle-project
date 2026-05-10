@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
 /// 责任伙伴成就徽章组件
 class AchievementBadge extends StatelessWidget {

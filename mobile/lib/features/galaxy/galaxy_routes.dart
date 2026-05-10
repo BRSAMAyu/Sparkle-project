@@ -1,6 +1,8 @@
 import 'package:animations/animations.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/experience/experience_profile.dart';
 import 'package:sparkle/core/navigation/sparkle_route_transition.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
@@ -55,7 +57,7 @@ class GalaxyRoutes {
                 child: Scaffold(
                   body: Center(
                     child: Text(
-                      'Invalid node ID',
+                      context.l10n.galaxyInvalidNodeId,
                       style: Theme.of(context).textTheme.bodyLarge,
                     ),
                   ),
