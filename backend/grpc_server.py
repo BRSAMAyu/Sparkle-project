@@ -150,9 +150,9 @@ async def serve():
         futures.ThreadPoolExecutor(max_workers=10),
         interceptors=[AuthInterceptor()],
         options=[
-            ('grpc.max_send_message_length', 50 * 1024 * 1024),  # 50MB
-            ('grpc.max_receive_message_length', 50 * 1024 * 1024),  # 50MB
-            ('grpc.max_concurrent_streams', 1000),
+            ('grpc.max_send_message_length', 10 * 1024 * 1024),  # 10MB
+            ('grpc.max_receive_message_length', 10 * 1024 * 1024),  # 10MB
+            ('grpc.max_concurrent_streams', 200),
             ('grpc.keepalive_time_ms', 10000),
             ('grpc.keepalive_timeout_ms', 5000),
             ('grpc.keepalive_permit_without_calls', True),

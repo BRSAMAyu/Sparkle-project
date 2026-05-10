@@ -72,7 +72,7 @@ def _store_active_collaborative_session(galaxy_id: str, service: CollaborativeGa
     _active_collaborative_sessions.move_to_end(galaxy_id)
     _prune_inactive_collaborative_sessions()
 
-class GalaxyGrpcServiceImpl:
+class GalaxyGrpcServiceImpl(galaxy_service_pb2_grpc.GalaxyServiceServicer if galaxy_service_pb2_grpc else object):
     def __init__(self, db_session_factory):
         self.db_session_factory = db_session_factory
 

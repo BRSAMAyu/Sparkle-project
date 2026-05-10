@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from contextlib import aclosing
 import time
 import uuid
 from collections.abc import AsyncIterator, Callable
@@ -294,8 +295,10 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
             effective_session_id = str(request.session_id or "").strip()
             async with self.db_session_factory() as db_session:
                 try:
-                    # Delegate to Orchestrator
-                    async for response in self.orchestrator.process_stream(
+                    # Delegate to Orchestrator — use aclosing to guarantee
+                    # the async generator's finally block runs even if the
+                    # gRPC client disconnects mid-stream.
+                    stream_gen = self.orchestrator.process_stream(
                         request,
                         db_session=db_session,
                         context_data={
@@ -304,28 +307,30 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                             "workflow_id": workflow_id,
                             "prompt_version": prompt_version,
                         },
-                    ):
-                        # Track whether we actually streamed any text content
-                        if response.WhichOneof("content") in ("delta", "full_text"):
-                            has_text_content = True
-                        response.trace_id = trace_id
-                        if not response.workflow_id:
-                            response.workflow_id = workflow_id
-                        if not response.prompt_version:
-                            response.prompt_version = prompt_version
-                        # Ensure session_id is always set for conversation continuity
-                        effective_session_id = self._ensure_response_session_id(
-                            response,
-                            effective_session_id,
-                            request_id=request.request_id,
-                            trace_id=trace_id,
-                        )
-                        if not request.session_id:
-                            request.session_id = effective_session_id
-                        if calibration_receipt and not calibration_receipt_attached:
-                            self._attach_calibration_receipt_metadata(response, calibration_receipt)
-                            calibration_receipt_attached = True
-                        yield self._normalize_v2_response(response)
+                    )
+                    async with aclosing(stream_gen):
+                        async for response in stream_gen:
+                            # Track whether we actually streamed any text content
+                            if response.WhichOneof("content") in ("delta", "full_text"):
+                                has_text_content = True
+                            response.trace_id = trace_id
+                            if not response.workflow_id:
+                                response.workflow_id = workflow_id
+                            if not response.prompt_version:
+                                response.prompt_version = prompt_version
+                            # Ensure session_id is always set for conversation continuity
+                            effective_session_id = self._ensure_response_session_id(
+                                response,
+                                effective_session_id,
+                                request_id=request.request_id,
+                                trace_id=trace_id,
+                            )
+                            if not request.session_id:
+                                request.session_id = effective_session_id
+                            if calibration_receipt and not calibration_receipt_attached:
+                                self._attach_calibration_receipt_metadata(response, calibration_receipt)
+                                calibration_receipt_attached = True
+                            yield self._normalize_v2_response(response)
                     await db_session.commit()
                 except Exception as exc:
                     logger.warning("StreamChat transaction failed; rolling back db session: {}", exc, exc_info=True)

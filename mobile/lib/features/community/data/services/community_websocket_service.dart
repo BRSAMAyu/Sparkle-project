@@ -141,7 +141,7 @@ class CommunityWebSocketService {
       return;
     }
 
-    final wsUrl = '${ApiConstants.wsBaseUrl}/api/v1/community/groups/$groupId/ws?token=$token';
+    final wsUrl = '${ApiConstants.wsBaseUrl}/api/v1/community/groups/$groupId/ws';
 
     debugPrint('[WS] Connecting to group: $groupId');
 
@@ -152,6 +152,7 @@ class CommunityWebSocketService {
       _groupChannel = WebSocketChannel.connect(
         Uri.parse(wsUrl),
         protocols: ['json'],
+        headers: {'Authorization': 'Bearer $token'},
       );
 
       _setGroupState(WsConnectionState.connecting);
@@ -192,17 +193,17 @@ class CommunityWebSocketService {
       return;
     }
 
-    final wsUrl = '${ApiConstants.wsBaseUrl}/api/v1/community/ws/connect?token=$token';
+    final wsUrl = '${ApiConstants.wsBaseUrl}/api/v1/community/ws/connect';
 
     debugPrint('[WS] Connecting to personal channel');
 
     try {
       _personalReconnectAttempts = 0;
-      // Token already embedded in URL
 
       _personalChannel = WebSocketChannel.connect(
         Uri.parse(wsUrl),
         protocols: ['json'],
+        headers: {'Authorization': 'Bearer $token'},
       );
 
       _setPersonalState(WsConnectionState.connecting);

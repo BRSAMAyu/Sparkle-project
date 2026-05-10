@@ -1536,9 +1536,17 @@ class ChatOrchestrator(
         )
 
     def _track_task(self, task: asyncio.Task) -> None:
-        """Track background tasks for graceful shutdown."""
+        """Track background tasks for graceful shutdown with exception logging."""
+
+        def _on_task_done(t: asyncio.Task) -> None:
+            self._bg_tasks.discard(t)
+            if t.cancelled():
+                return
+            if exc := t.exception():
+                logger.error(f"Background task {t.get_coro().__name__ if t.get_coro() else t} failed: {exc}", exc_info=exc)
+
         self._bg_tasks.add(task)
-        task.add_done_callback(self._bg_tasks.discard)
+        task.add_done_callback(_on_task_done)
 
     async def shutdown(self) -> None:
         """Cancel background tasks started by the orchestrator."""
@@ -3663,6 +3671,7 @@ class ChatOrchestrator(
                     ),
                 )
         finally:
+            ACTIVE_SESSIONS.dec()
             span.end()
 
 

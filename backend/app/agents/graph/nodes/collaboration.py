@@ -595,7 +595,7 @@ async def _merge_parallel_results(
             "messages": [AIMessage(content="所有专家分析均未成功，请重试。")],
             "collaboration_index": len(results),
             "collaboration_mode": "parallel",
-            "next_step": "aggregator",
+            "next_step": "end",
             "active_agent": "collaboration",
         }
 

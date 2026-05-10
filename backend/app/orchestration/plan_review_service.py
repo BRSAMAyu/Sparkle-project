@@ -1818,9 +1818,21 @@ Please review this plan and provide your assessment."""
             rejection_count = await self.track_rejection_count(plan_id, user_id)
             logger.info(f"Plan {plan_id} rejection count: {rejection_count}")
 
-            # 两次拒绝，触发信息收集（回到对话澄清需求）
+            # Use a short-lived lock to prevent duplicate trigger from concurrent requests
+            trigger_lock_key = f"plan_rejection_trigger:{plan_id}:{user_id}"
+            should_trigger = False
             if rejection_count >= 2:
-                logger.warning(f"Plan {plan_id} rejected {rejection_count} times, " "triggering information collection")
+                if self.redis:
+                    # SET NX with 60s TTL — only one request gets the lock
+                    acquired = await self.redis.set(trigger_lock_key, "1", nx=True, ex=60)
+                    should_trigger = acquired is not None
+                else:
+                    should_trigger = True
+
+            if should_trigger:
+
+            if should_trigger:
+                logger.warning(f"Plan {plan_id} rejected {rejection_count} times, triggering information collection")
 
                 # 清理拒绝计数
                 await self.reset_rejection_count(plan_id, user_id)
