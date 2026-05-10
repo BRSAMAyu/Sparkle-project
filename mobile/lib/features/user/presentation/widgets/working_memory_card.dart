@@ -85,9 +85,9 @@ class WorkingMemoryCard extends StatelessWidget {
       item.subjectType,
       context.l10n.workMemMentioned(item.mentionCount),
       if (item.consolidated)
-        (I18nService.instance.isChinese ? '已巩固' : 'Consolidated')
+        context.l10n.workMemConsolidated
       else
-        (I18nService.instance.isChinese ? '仍在前台' : 'Still in foreground'),
+        context.l10n.workMemStillInForeground,
     ];
     if (item.lastSeenAt != null) {
       parts.add(DateFormat(context.l10n.workMemDateFormat)

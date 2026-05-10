@@ -11819,6 +11819,108 @@
   "communityFilterAll": "全部",
   "communityUncategorized": "未分类",
   "communityLoadFailed": "加载失败: {error}",
+  "blockedUsersTitle": "黑名单用户",
+  "blockedNoBlockedUsers": "暂无拉黑用户",
+  "blockedReason": "原因: {reason}",
+  "blockedUnblock": "解除拉黑",
+  "blockedUnblockConfirmTitle": "解除拉黑",
+  "blockedUnblockConfirmBody": "确定要解除对 {name} 的拉黑吗？\n\n解除后对方可以重新发送好友请求和消息给您。",
+  "blockedCancel": "取消",
+  "blockedConfirm": "确定",
+  "blockedUnblockedSuccess": "已解除对 {name} 的拉黑",
+  "blockedOperationFailed": "操作失败: {error}",
+  "groupSearchMembers": "搜索成员...",
+  "groupNoMembersYet": "暂无成员",
+  "groupNoMembersFound": "未找到成员",
+  "groupOwner": "群主",
+  "groupAdmin": "管理员",
+  "groupMember": "成员",
+  "groupDemoteToMember": "降为普通成员",
+  "groupPromoteToAdmin": "晋升为管理员",
+  "groupTransferOwnership": "转让群主",
+  "userTimeEstimation": "时间预估",
+  "userTimeEstimationBias": "你过去 10 次对完成时间估得偏乐观 {hours} 小时。",
+  "userTrendStabilizing": "最近几周正在变稳。",
+  "userWorkingMemorySnapshot": "工作记忆快照",
+  "userRecentForegroundItems": "英语长难句拆解还卡在倒装句，下一次练习先回看第 3 题。",
+  "userWeeklyGoal": "这周要把概率论错题本整理成 2 页复盘卡片。",
+  "userWeeklyStreakAchievement": "七日连学",
+  "userDeepWorkAchievement": "深度专注 10 次",
+  "userChunkingSkill": "分块推进",
+  "userReplanSkill": "轻量重排",
+  "userForesightToday": "你今天后半段更容易被切碎，先把最难的一题压到午前完成。",
+  "userIdiographicDisclaimer": "这只是你数据中的模式，不代表因果关系。",
+  "userCapacityHealthy": "当前容量健康，可继续观察 AI 高峰时段的首包时延。",
+  "userPrometheusWarning": "规则回退正在抬头，请检查 free/free_fast 健康度",
+  "userOnboardingPreviewEmpty": "先告诉我你现在最想推进的学习目标，我会立刻帮你判断难度并给出第一版起步建议。",
+  "userOnboardingPreviewGoal": "我已经理解你想先推进「{goal}」。接下来我会先补齐画像，再给你第一版学习路径和任务建议。",
+  "userFastMode": "敏捷",
+  "userBalancedMode": "均衡",
+  "userDeepMode": "深思",
+  "authGuestLoginFailed": "访客登录失败",
+  "taskSnoozeMessage": "已推迟到明天，今天先把节奏放轻一点。",
+  "taskTooHardMessage": "我把它拆成 3 小步了，先做「{title}」。",
+  "taskSkipMessage": "已跳过，这张卡不会再挤在今天了。",
+  "taskTooHardStep1": "先找出最卡的一点",
+  "taskTooHardStep2": "把这个卡点讲成一句人话",
+  "taskTooHardStep3": "做一个最小验证动作",
+  "taskTooHardGuidance1": "只定位卡点，不解决整张任务卡。",
+  "taskTooHardGuidance2": "先讲清楚，再决定下一步。",
+  "taskTooHardGuidance3": "只验证刚拆出来的这一步。",
+  "taskDiagnosisStuck": "你现在最像卡在哪一步？",
+  "taskDiagnosisOptions": ["概念没想清", "步骤顺序乱了", "题目条件不会用"],
+  "taskDiagnosisFix": "先只做一个 5 分钟内能完成的小动作。",
+  "taskDiagnosisCheck": "下一步你能先写下哪一句？",
+  "taskDiagnosisMessage": "Aurora 已根据当前任务状态给出诊断。",
+  "taskNextActionQuickReview": "快速回顾",
+  "taskNextActionReview": "回顾刚才的核心要点",
+  "taskNextActionExpand": "拓展: 相关概念",
+  "taskNextActionExplore": "了解相关知识点",
+  "taskNextActionReason1": "及时回顾对抗遗忘",
+  "taskNextActionReason2": "加深理解",
+  "taskPreferencesUpdatedDemo": "偏好已更新（演示模式）",
+  "@blockedUnblockConfirmBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@blockedUnblockedSuccess": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@blockedOperationFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@userTimeEstimationBias": {
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      }
+    }
+  },
+  "@userOnboardingPreviewGoal": {
+    "placeholders": {
+      "goal": {
+        "type": "String"
+      }
+    }
+  },
+  "@taskTooHardMessage": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "communityUploadedOn": "{date} 上传",
   "communityGroupGalaxy": "群星图",
   "communityClickToPreview": "点击查看预览与详情",
@@ -13964,7 +14066,16 @@
   "sprintAdjustPlan": "调整计划",
   "achieveTotalScore": "总成就分 {score}",
   "workMemMentioned": "提及 {count} 次",
+  "@workMemMentioned": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "workMemDateFormat": "M月d日 HH:mm",
+  "workMemConsolidated": "已巩固",
+  "workMemStillInForeground": "仍在前台",
   "sprintProgressLabel": "{name}：已完成 {percent}%，还剩 {daysLeft} 天",
   "sprintBottleneckLabel": "{name}：{reason}",
   "sprintAlertSignificantlyBehindDetail": "任务完成率显著低于预期。建议重新评估每日任务量或调整冲刺范围。",
