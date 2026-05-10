@@ -71,8 +71,11 @@
 | `c7f28b30b` | fix(P1): BFS depth limits, avg_mastery query, race-safe _get_or_create_status |
 | `f1334c8b6` | fix(P1): Flutter null-safety, Go nil handler, CommunityInsight cache |
 | `e7ff32e0a` | fix(P1): feedback_service mastery uses round() not int() truncation |
+| `34cd35c3f` | fix(P1): update galaxy_handler_test.go to match NewGalaxyHandler signature |
+| `b5a0db9c6` | fix(P2): RecordStudy is_unlocked check, add study_records indexes |
+| `fb31384f7` | fix(P2): galaxy_sync TTL, node_relations unique constraint |
 
-**总计**: 9 个 commit，包含 6 P0 + 14 P1（共 20 项修复）
+**总计**: 12 个 commit，包含 6 P0 + 14 P1 + 8 P2（共 28 项修复）
 
 ---
 
