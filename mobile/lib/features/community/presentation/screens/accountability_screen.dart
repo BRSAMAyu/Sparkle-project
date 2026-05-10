@@ -7,7 +7,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/compact_error_card.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/data/models/accountability_model.dart';
@@ -32,7 +32,7 @@ class AccountabilityScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: Text(I18nService.instance.isChinese ? '责任伙伴' : 'Accountability'),
+        title: Text(context.l10n.accountabilityTitle),
         actions: [
           SparkleIconButton(
             variant: ButtonVariant.ghost,
@@ -47,10 +47,10 @@ class AccountabilityScreen extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(I18nService.instance.isChinese ? '加载失败: $e' : 'Load failed: $e', style: TextStyle(color: DS.error)),
+              Text(context.l10n.accountabilityLoadFailed(e.toString()), style: TextStyle(color: DS.error)),
               const SizedBox(height: DS.md),
               SparkleButton.primary(
-                label: I18nService.instance.isChinese ? '重试' : 'Retry',
+                label: context.l10n.accountabilityRetry,
                 onPressed: () =>
                     ref.read(myPartnershipsProvider.notifier).load(),
               ),
@@ -61,7 +61,7 @@ class AccountabilityScreen extends ConsumerWidget {
           if (partnerships.isEmpty) {
             return Center(
               child: CompactEmptyState(
-                message: I18nService.instance.isChinese ? '还没有责任伙伴\n从好友列表发起邀请' : 'No accountability partner yet\nInvite from friends list',
+                message: context.l10n.accountabilityNoPartnerYet,
                 icon: Icons.people_outline,
               ),
             );
@@ -104,7 +104,7 @@ class _PartnershipCard extends ConsumerWidget {
     final partner = isInitiator ? partnership.partner : partnership.initiator;
     final myGoal = isInitiator
         ? partnership.initiatorGoal
-        : partnership.partnerGoal ?? (I18nService.instance.isChinese ? '(未设置)' : '(Not set)');
+        : partnership.partnerGoal ?? context.l10n.accountabilityNotSet;
 
     return GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.card,
@@ -144,7 +144,7 @@ class _PartnershipCard extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          partner?.displayName ?? (I18nService.instance.isChinese ? '未知用户' : 'Unknown User'),
+                          partner?.displayName ?? context.l10n.accountabilityUnknownUser,
                           style: const TextStyle(
                             fontWeight: DS.fontWeightBold,
                             fontSize: DS.fontSizeBase,
@@ -160,12 +160,12 @@ class _PartnershipCard extends ConsumerWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         SparkleButton.primary(
-                          label: I18nService.instance.isChinese ? '接受' : 'Accept',
+                          label: context.l10n.accountabilityAccept,
                           onPressed: () => _accept(context, ref),
                         ),
                         const SizedBox(width: DS.sm),
                         SparkleButton.ghost(
-                          label: I18nService.instance.isChinese ? '拒绝' : 'Decline',
+                          label: context.l10n.accountabilityDecline,
                           onPressed: () => _decline(context, ref),
                         ),
                       ],
@@ -173,7 +173,7 @@ class _PartnershipCard extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: DS.spacing12),
-              _GoalRow(label: I18nService.instance.isChinese ? '我的目标' : 'My Goal', goal: myGoal),
+              _GoalRow(label: context.l10n.accountabilityMyGoalLabel, goal: myGoal),
               if (isActive) ...[
                 const SizedBox(height: DS.spacing8),
                 _StreakRow(partnership: partnership),
@@ -202,7 +202,7 @@ class _PartnershipCard extends ConsumerWidget {
             ref.invalidate(accountabilityOverviewProvider),
       );
       if (!context.mounted) return;
-      AppFeedback.success(context, I18nService.instance.isChinese ? '已接受责任伙伴邀请！' : 'Accountability invite accepted!');
+      AppFeedback.success(context, context.l10n.accountabilityInviteAccepted);
       context.go(resolution.route);
     } catch (e) {
       if (!context.mounted) {
@@ -215,7 +215,7 @@ class _PartnershipCard extends ConsumerWidget {
         );
         AppFeedback.info(
           context,
-          I18nService.instance.isChinese ? '你当前已经有核心责任伙伴，先进入现有工作台继续协作。' : 'You already have a core accountability partner. Continue in your current workspace.',
+          context.l10n.accountabilityAlreadyHavePartner,
         );
         if (route != null) {
           context.go(route);
@@ -241,7 +241,7 @@ class _PartnershipCard extends ConsumerWidget {
         invalidateOverview: () =>
             ref.invalidate(accountabilityOverviewProvider),
       );
-      if (context.mounted) AppFeedback.info(context, I18nService.instance.isChinese ? '已拒绝邀请' : 'Invite declined');
+      if (context.mounted) AppFeedback.info(context, context.l10n.accountabilityInviteDeclined);
     } catch (e) {
       if (!context.mounted) {
         return;
@@ -258,12 +258,12 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zh = I18nService.instance.isChinese;
+    final l10n = context.l10n;
     final (label, color) = switch (status) {
-      AccountabilityStatus.pending => (zh ? '待确认' : 'Pending', DS.warning),
-      AccountabilityStatus.active => (zh ? '进行中' : 'Active', DS.success),
-      AccountabilityStatus.paused => (zh ? '已暂停' : 'Paused', DS.neutral500),
-      AccountabilityStatus.ended => (zh ? '已结束' : 'Ended', DS.neutral400),
+      AccountabilityStatus.pending => (l10n.accountabilityPending, DS.warning),
+      AccountabilityStatus.active => (l10n.accountabilityActive, DS.success),
+      AccountabilityStatus.paused => (l10n.accountabilityPaused, DS.neutral500),
+      AccountabilityStatus.ended => (l10n.accountabilityEnded, DS.neutral400),
     };
 
     return Container(
@@ -345,7 +345,7 @@ class _StreakRow extends ConsumerWidget {
           ),
           const SizedBox(width: DS.xs),
           Text(
-            I18nService.instance.isChinese ? '我: ${stats.myStreakDays} 天 · 伙伴: ${stats.partnerStreakDays} 天' : 'Me: ${stats.myStreakDays}d · Partner: ${stats.partnerStreakDays}d',
+            context.l10n.accountabilityMePartnerStreak(stats.myStreakDays, stats.partnerStreakDays),
             style: TextStyle(
               fontSize: DS.fontSizeSm,
               color: DS.brandPrimary,
@@ -358,7 +358,7 @@ class _StreakRow extends ConsumerWidget {
             Icon(Icons.access_time, size: 16, color: DS.neutral500),
           const SizedBox(width: DS.xs),
           Text(
-            stats.partnerCheckedInToday ? (I18nService.instance.isChinese ? '伙伴已打卡' : 'Partner checked in') : (I18nService.instance.isChinese ? '伙伴未打卡' : 'Partner not checked in'),
+            stats.partnerCheckedInToday ? context.l10n.accountabilityPartnerCheckedIn : context.l10n.accountabilityPartnerNotCheckedIn,
             style: TextStyle(
               fontSize: DS.fontSizeXs,
               color: stats.partnerCheckedInToday ? DS.success : DS.neutral500,

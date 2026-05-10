@@ -75,9 +75,9 @@ String _goalDetailLocation(String? goalId) {
 /// Shows a text input dialog for freeform Aurora correction.
 /// Returns trimmed text only when the user submits; cancel returns null.
 Future<String?> showAuroraFreeformCorrectionInputDialog(BuildContext context) {
-  final zh = I18nService.instance.isChinese;
   final controller = TextEditingController();
   final focusNode = FocusNode();
+  final l10n = AppLocalizations.of(context)!;
 
   return showDialog<String?>(
     context: context,
@@ -88,9 +88,7 @@ Future<String?> showAuroraFreeformCorrectionInputDialog(BuildContext context) {
       }
 
       return AlertDialog(
-        title: Text(
-          zh ? '你想告诉 Sparkle 什么？' : 'What would you like to tell Sparkle?',
-        ),
+        title: Text(l10n.homeAuroraDialogTitle),
         content: TextField(
           controller: controller,
           focusNode: focusNode,
@@ -98,9 +96,7 @@ Future<String?> showAuroraFreeformCorrectionInputDialog(BuildContext context) {
           maxLines: 3,
           minLines: 2,
           decoration: InputDecoration(
-            hintText: zh
-                ? '哪里判断错了？说说你的想法…'
-                : 'What did Aurora get wrong? Share your thoughts…',
+            hintText: l10n.homeAuroraDialogHint,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(DS.radius12),
             ),
@@ -117,11 +113,11 @@ Future<String?> showAuroraFreeformCorrectionInputDialog(BuildContext context) {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(zh ? '取消' : 'Cancel'),
+            child: Text(l10n.homeAuroraDialogCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(submittedText()),
-            child: Text(zh ? '发送' : 'Send'),
+            child: Text(l10n.homeAuroraDialogSend),
           ),
         ],
       );
@@ -477,9 +473,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       onPressed: () => context.go('/goals/new'),
                     ),
                     SparkleButton.ghost(
-                      label: I18nService.instance.isChinese
-                          ? '快速创建'
-                          : 'Quick create',
+                      label: context.l10n.homeQuickCreate,
                       onPressed: () => context.go('/chat'),
                     ),
                     SparkleButton.ghost(
@@ -513,42 +507,30 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   iconSize: 44,
                   accentColor: DS.brandPrimary,
                   title: context.l10n.chatWelcomeTitle,
-                  summary: I18nService.instance.isChinese
-                      ? '我是你的AI成长伙伴。设定目标，我来帮你一步步达成。'
-                      : 'I\'m your AI growth companion. Set a goal and I\'ll help you achieve it step by step.',
+                  summary: context.l10n.homeOnboardingSummary,
                 ),
                 const SizedBox(height: DS.spacing20),
                 _OnboardingQuickCard(
                   icon: Icons.flag_outlined,
                   color: DS.brandPrimary,
-                  title: I18nService.instance.isChinese ? '设定目标' : 'Set a goal',
-                  subtitle: I18nService.instance.isChinese
-                      ? '告诉我你想达成什么，我来帮你制定计划'
-                      : 'Tell me what you want to achieve',
+                  title: context.l10n.homeOnboardingSetGoal,
+                  subtitle: context.l10n.homeOnboardingSetGoalSubtitle,
                   onTap: () => context.go('/goals/new'),
                 ),
                 const SizedBox(height: DS.spacing8),
                 _OnboardingQuickCard(
                   icon: Icons.chat_bubble_outline,
                   color: DS.success,
-                  title: I18nService.instance.isChinese
-                      ? '跟Sparkle聊聊'
-                      : 'Chat with Sparkle',
-                  subtitle: I18nService.instance.isChinese
-                      ? '聊聊你的想法，获得个性化建议'
-                      : 'Share your thoughts, get personalized guidance',
+                  title: context.l10n.homeOnboardingChatSparkle,
+                  subtitle: context.l10n.homeOnboardingChatSubtitle,
                   onTap: () => context.go('/chat'),
                 ),
                 const SizedBox(height: DS.spacing8),
                 _OnboardingQuickCard(
                   icon: Icons.explore_outlined,
                   color: DS.info,
-                  title: I18nService.instance.isChinese
-                      ? '探索知识星图'
-                      : 'Explore knowledge map',
-                  subtitle: I18nService.instance.isChinese
-                      ? '发现你的知识结构，找到提升方向'
-                      : 'Discover your knowledge structure and growth areas',
+                  title: context.l10n.homeOnboardingExploreGalaxy,
+                  subtitle: context.l10n.homeOnboardingExploreSubtitle,
                   onTap: () => context.go('/galaxy'),
                 ),
               ],

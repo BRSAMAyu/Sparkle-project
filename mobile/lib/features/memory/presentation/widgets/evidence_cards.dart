@@ -115,7 +115,7 @@ class _EvidenceCardState extends State<EvidenceCard> {
       );
     }
     final payload = item.payload ?? const {};
-    final pairs = _extractKeyPairs(payload);
+    final pairs = _extractKeyPairs(context, payload);
     if (pairs.isEmpty) {
       return Text(context.l10n.memEvidenceRecord, style: DS.bodySmall);
     }
@@ -152,7 +152,7 @@ class _EvidenceCardState extends State<EvidenceCard> {
 
   Widget _buildAllFields(BuildContext context, EvidenceResolveItem item) {
     final payload = item.payload ?? const {};
-    final pairs = _extractKeyPairs(payload);
+    final pairs = _extractKeyPairs(context, payload);
     if (pairs.length <= 4) return const SizedBox.shrink();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -187,10 +187,20 @@ class _EvidenceCardState extends State<EvidenceCard> {
 
   bool _hasExtraFields(EvidenceResolveItem item) {
     final payload = item.payload ?? const {};
-    return _extractKeyPairs(payload).length > 4;
+    var count = 0;
+    for (final entry in payload.entries) {
+      if (entry.value is Map<String, dynamic>) {
+        final inner = entry.value as Map<String, dynamic>;
+        for (final innerEntry in inner.entries) {
+          final v = innerEntry.value?.toString().trim() ?? '';
+          if (v.isNotEmpty && v != '-') count++;
+        }
+      }
+    }
+    return count > 4;
   }
 
-  List<_KVPair> _extractKeyPairs(Map<String, dynamic> payload) {
+  List<_KVPair> _extractKeyPairs(BuildContext context, Map<String, dynamic> payload) {
     final pairs = <_KVPair>[];
     for (final entry in payload.entries) {
       if (entry.value is Map<String, dynamic>) {
@@ -198,7 +208,7 @@ class _EvidenceCardState extends State<EvidenceCard> {
         for (final innerEntry in inner.entries) {
           final v = innerEntry.value?.toString().trim() ?? '';
           if (v.isNotEmpty && v != '-') {
-            pairs.add(_KVPair(_fieldLabel(innerEntry.key), v));
+            pairs.add(_KVPair(_fieldLabel(context, innerEntry.key), v));
           }
         }
       }
@@ -206,30 +216,31 @@ class _EvidenceCardState extends State<EvidenceCard> {
     return pairs;
   }
 
-  String _fieldLabel(String key) {
+  String _fieldLabel(BuildContext context, String key) {
+    final l10n = context.l10n;
     final labels = <String, String>{
-      'event_type': I18nService.instance.isChinese ? '类型' : 'Type',
-      'ts_ms': I18nService.instance.isChinese ? '时间' : 'Time',
-      'role': I18nService.instance.isChinese ? '角色' : 'Role',
-      'created_at': I18nService.instance.isChinese ? '创建' : 'Created',
-      'content': I18nService.instance.isChinese ? '内容' : 'Content',
-      'subject_code': I18nService.instance.isChinese ? '科目' : 'Subject',
-      'root_cause': I18nService.instance.isChinese ? '根因' : 'Root cause',
-      'study_suggestion': I18nService.instance.isChinese ? '建议' : 'Suggestion',
-      'review_performance': I18nService.instance.isChinese ? '表现' : 'Performance',
-      'mastery_level': I18nService.instance.isChinese ? '掌握' : 'Mastery',
-      'reviewed_at': I18nService.instance.isChinese ? '复习时间' : 'Reviewed',
-      'summary': I18nService.instance.isChinese ? '摘要' : 'Summary',
-      'summary_text': I18nService.instance.isChinese ? '摘要' : 'Summary',
-      'review_date': I18nService.instance.isChinese ? '日期' : 'Date',
-      'name': I18nService.instance.isChinese ? '名称' : 'Name',
-      'description': I18nService.instance.isChinese ? '描述' : 'Description',
-      'title': I18nService.instance.isChinese ? '标题' : 'Title',
-      'status': I18nService.instance.isChinese ? '状态' : 'Status',
-      'due_date': I18nService.instance.isChinese ? '截止' : 'Due',
-      'focus_mode': I18nService.instance.isChinese ? '专注' : 'Focus',
-      'cognitive_load': I18nService.instance.isChinese ? '负荷' : 'Load',
-      'sprint_mode': I18nService.instance.isChinese ? '冲刺' : 'Sprint',
+      'event_type': l10n.memoryFieldType,
+      'ts_ms': l10n.memoryFieldTime,
+      'role': l10n.memoryFieldRole,
+      'created_at': l10n.memoryFieldCreatedAt,
+      'content': l10n.memoryFieldContent,
+      'subject_code': l10n.memoryFieldSubject,
+      'root_cause': l10n.memoryFieldRootCause,
+      'study_suggestion': l10n.memoryFieldSuggestion,
+      'review_performance': l10n.memoryFieldPerformance,
+      'mastery_level': l10n.memoryFieldMastery,
+      'reviewed_at': l10n.memoryFieldReviewedAt,
+      'summary': l10n.memoryFieldSummary,
+      'summary_text': l10n.memoryFieldSummary,
+      'review_date': l10n.memoryFieldDate,
+      'name': l10n.memoryFieldName,
+      'description': l10n.memoryFieldDescription,
+      'title': l10n.memoryFieldTitle,
+      'status': l10n.memoryFieldStatus,
+      'due_date': l10n.memoryFieldDue,
+      'focus_mode': l10n.memoryFieldFocus,
+      'cognitive_load': l10n.memoryFieldLoad,
+      'sprint_mode': l10n.memoryFieldSprint,
     };
     return labels[key] ?? key;
   }
@@ -341,7 +352,7 @@ class _Tier1Summary extends StatelessWidget {
     final summary = _buildSummary(context);
     return Semantics(
       button: true,
-      label: I18nService.instance.isChinese ? '展开证据详情' : 'Expand evidence details',
+      label: context.l10n.memoryExpandEvidenceDetails,
       child: InkWell(
       onTap: onToggleDetails,
       borderRadius: DS.borderRadius8,
@@ -387,41 +398,41 @@ class _Tier1Summary extends StatelessWidget {
   }
 
   String _buildSummary(BuildContext context) {
+    final l10n = context.l10n;
     if (item.status == 'missing') {
-      return I18nService.instance.isChinese ? '证据缺失' : 'Evidence missing';
+      return l10n.memoryEvidenceMissing;
     }
     if (item.status == 'redacted') {
-      return item.redactionReason ??
-          (I18nService.instance.isChinese ? '证据已隐藏' : 'Evidence redacted');
+      return item.redactionReason ?? l10n.memoryEvidenceRedacted;
     }
     final payload = item.payload ?? const {};
     final concept = payload['concept'] as Map<String, dynamic>?;
     if (concept != null) {
       final name = concept['name']?.toString() ?? '';
       return name.isNotEmpty
-          ? '${I18nService.instance.isChinese ? '概念' : 'Concept'}: $name'
-          : context.l10n.memEvidenceRecord;
+          ? l10n.memoryConceptLabel(name)
+          : l10n.memEvidenceRecord;
     }
     final error = payload['error'] as Map<String, dynamic>?;
     if (error != null) {
       final subject = error['subject_code']?.toString() ?? '';
       return subject.isNotEmpty
-          ? '${I18nService.instance.isChinese ? '错题' : 'Error'}: $subject'
-          : context.l10n.memEvidenceRecord;
+          ? l10n.memoryErrorLabel(subject)
+          : l10n.memEvidenceRecord;
     }
     final task = payload['task'] as Map<String, dynamic>?;
     if (task != null) {
       final title = task['title']?.toString() ?? '';
       return title.isNotEmpty
-          ? '${I18nService.instance.isChinese ? '任务' : 'Task'}: $title'
-          : context.l10n.memEvidenceRecord;
+          ? l10n.memoryTaskLabel(title)
+          : l10n.memEvidenceRecord;
     }
     final event = payload['event'] as Map<String, dynamic>?;
     if (event != null) {
       final eventType = event['event_type']?.toString() ?? '';
       return eventType.isNotEmpty
-          ? '${I18nService.instance.isChinese ? '事件' : 'Event'}: $eventType'
-          : context.l10n.memEvidenceRecord;
+          ? l10n.memoryEventLabel(eventType)
+          : l10n.memEvidenceRecord;
     }
     final practiceOutcome = payload['practice_outcome'] as Map<String, dynamic>?;
     if (practiceOutcome != null) {
@@ -430,7 +441,7 @@ class _Tier1Summary extends StatelessWidget {
       final label = summary.isNotEmpty
           ? summary
           : perf.isNotEmpty
-              ? '${I18nService.instance.isChinese ? '练习结果' : 'Practice'}: $perf'
+              ? l10n.memoryPracticeLabel(perf)
               : '';
       if (label.isNotEmpty) return label;
     }
@@ -438,10 +449,10 @@ class _Tier1Summary extends StatelessWidget {
     if (chatTurn != null) {
       final role = chatTurn['role']?.toString() ?? '';
       return role.isNotEmpty
-          ? '${I18nService.instance.isChinese ? '对话' : 'Chat'} ($role)'
-          : context.l10n.memEvidenceRecord;
+          ? l10n.memoryChatLabel(role)
+          : l10n.memEvidenceRecord;
     }
-    return context.l10n.memEvidenceRecord;
+    return l10n.memEvidenceRecord;
   }
 }
 
@@ -505,7 +516,7 @@ class _ShowAllToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zh = I18nService.instance.isChinese;
+    final l10n = context.l10n;
     return GestureDetector(
       onTap: onToggle,
       child: Row(
@@ -518,9 +529,7 @@ class _ShowAllToggle extends StatelessWidget {
           ),
           const SizedBox(width: DS.spacing4),
           Text(
-            showAll
-                ? (zh ? '收起详情' : 'Show less')
-                : (zh ? '查看全部' : 'Show all'),
+            showAll ? l10n.memoryShowLess : l10n.memoryShowAll,
             style: DS.labelSmall.copyWith(color: DS.textSecondary),
           ),
         ],

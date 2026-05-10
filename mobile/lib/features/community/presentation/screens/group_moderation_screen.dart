@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
@@ -88,12 +88,12 @@ class _GroupModerationScreenState
             ),
           );
       if (!mounted) return;
-      AppFeedback.success(context, I18nService.instance.isChinese ? '设置已保存' : 'Settings saved');
+      AppFeedback.success(context, context.l10n.communitySettingsSaved);
     } catch (e) {
       if (!mounted) return;
       AppFeedback.error(
         context,
-        I18nService.instance.isChinese ? '保存失败: $e' : 'Save failed: $e',
+        context.l10n.communitySaveFailed(e.toString()),
       );
     }
   }
@@ -111,7 +111,7 @@ class _GroupModerationScreenState
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: Text(I18nService.instance.isChinese ? '社群管理' : 'Group Moderation'),
+        title: Text(context.l10n.communityGroupModeration),
         actions: [
           SparkleIconButton(
             variant: ButtonVariant.ghost,
@@ -127,12 +127,17 @@ class _GroupModerationScreenState
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                I18nService.instance.isChinese ? '加载失败: $e' : 'Load failed: $e',
+                context.l10n.communitySaveFailed(e.toString()),
                 style: TextStyle(color: DS.error),
               ),
               const SizedBox(height: DS.md),
               SparkleButton.primary(
-                label: I18nService.instance.isChinese ? '重试' : 'Retry',
+                label: context.l10n.accountabilityRetry,
+                style: TextStyle(color: DS.error),
+              ),
+              const SizedBox(height: DS.md),
+              SparkleButton.primary(
+                label: context.l10n.accountabilityRetry,
                 onPressed: () => ref
                     .read(groupModerationProvider(widget.groupId).notifier)
                     .load(),
@@ -161,8 +166,8 @@ class _GroupModerationScreenState
                     child: Column(
                       children: [
                         SwitchListTile(
-                          title: Text(I18nService.instance.isChinese ? '全员禁言' : 'Mute All'),
-                          subtitle: Text(I18nService.instance.isChinese ? '开启后仅管理员可发言' : 'Only admins can speak when enabled'),
+                          title: Text(context.l10n.communityMuteAll),
+                          subtitle: Text(context.l10n.communityMuteAllHint),
                           value: _muteAll,
                           onChanged: (v) {
                             unawaited(
@@ -191,7 +196,7 @@ class _GroupModerationScreenState
                         children: [
                         Row(
                           children: [
-                            Text(I18nService.instance.isChinese ? '慢速模式' : 'Slow Mode',
+                            Text(context.l10n.communitySlowMode,
                                 style: TextStyle(
                                     fontWeight: DS.fontWeightBold,
                                     fontSize: DS.fontSizeBase,),),
@@ -214,9 +219,7 @@ class _GroupModerationScreenState
                         if (_slowModeSeconds > 0) ...[
                           const SizedBox(height: DS.spacing8),
                           Text(
-                            I18nService.instance.isChinese
-                                ? '发言间隔: $_slowModeSeconds 秒'
-                                : 'Slow mode: $_slowModeSeconds s',
+                            context.l10n.communitySlowModeInterval(_slowModeSeconds),
                             style: TextStyle(color: DS.textSecondary),
                           ),
                           Slider(
@@ -224,9 +227,7 @@ class _GroupModerationScreenState
                             min: 5,
                             max: 300,
                             divisions: 59,
-                            label: I18nService.instance.isChinese
-                                ? '$_slowModeSeconds 秒'
-                                : '$_slowModeSeconds s',
+                            label: context.l10n.communitySlowModeLabel(_slowModeSeconds),
                             onChanged: (v) =>
                                 setState(() => _slowModeSeconds = v.toInt()),
                           ),
@@ -248,15 +249,13 @@ class _GroupModerationScreenState
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                        Text(I18nService.instance.isChinese ? '关键词过滤' : 'Keyword Filter',
+                        Text(context.l10n.communityKeywordFilter,
                             style: TextStyle(
                                 fontWeight: DS.fontWeightBold,
                                 fontSize: DS.fontSizeBase,),),
                         const SizedBox(height: DS.spacing8),
                         Text(
-                          I18nService.instance.isChinese
-                              ? '包含以下关键词的消息将被自动屏蔽'
-                              : 'Messages with these keywords will be auto-blocked',
+                          context.l10n.communityKeywordFilterHint,
                           style: TextStyle(fontSize: DS.fontSizeSm),
                         ),
                         const SizedBox(height: DS.spacing12),
@@ -282,7 +281,7 @@ class _GroupModerationScreenState
                               child: TextField(
                                 controller: _keywordController,
                                 decoration: InputDecoration(
-                                  hintText: I18nService.instance.isChinese ? '添加关键词' : 'Add keyword',
+                                  hintText: context.l10n.communityAddKeyword,
                                   border: OutlineInputBorder(),
                                 ),
                                 onSubmitted: (_) => _addKeyword(),
@@ -309,7 +308,7 @@ class _GroupModerationScreenState
                 ),
                 const SizedBox(height: DS.spacing24),
                 SparkleButton.primary(
-                  label: I18nService.instance.isChinese ? '保存' : 'Save',
+                  label: context.l10n.communitySave,
                   onPressed: _save,
                 ),
               ],

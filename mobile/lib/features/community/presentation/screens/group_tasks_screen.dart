@@ -275,7 +275,7 @@ class _TaskCard extends StatelessWidget {
                 )
               else if (onComplete != null)
                 SparkleButton.primary(
-                  label: I18nService.instance.isChinese ? '完成' : 'Complete',
+                  label: context.l10n.communityTaskComplete,
                   onPressed: onComplete!,
                 ),
             ],
@@ -300,7 +300,7 @@ extension on GroupTasksScreen {
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
           title: Text(
-              I18nService.instance.isChinese ? '创建群组任务' : 'Create Group Task'),
+              context.l10n.communityCreateTaskTitle),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -310,10 +310,8 @@ extension on GroupTasksScreen {
                   controller: titleController,
                   decoration: InputDecoration(
                     labelText:
-                        I18nService.instance.isChinese ? '任务标题' : 'Task Title',
-                    hintText: I18nService.instance.isChinese
-                        ? '例如：完成第三章练习'
-                        : 'e.g. Complete Chapter 3 exercises',
+                        context.l10n.communityTaskTitleField,
+                    hintText: context.l10n.communityTaskTitleHint,
                     border: const OutlineInputBorder(),
                   ),
                   autofocus: true,
@@ -322,19 +320,15 @@ extension on GroupTasksScreen {
                 TextField(
                   controller: descriptionController,
                   decoration: InputDecoration(
-                    labelText: I18nService.instance.isChinese
-                        ? '任务描述（可选）'
-                        : 'Description (optional)',
-                    hintText: I18nService.instance.isChinese
-                        ? '详细描述任务内容...'
-                        : 'Describe the task...',
+                    labelText: context.l10n.communityTaskDescription,
+                    hintText: context.l10n.communityTaskDescriptionHint,
                     border: const OutlineInputBorder(),
                   ),
                   maxLines: 3,
                 ),
                 const SizedBox(height: DS.md),
                 Text(
-                  '${I18nService.instance.isChinese ? '预计时间' : 'Est. time'}: $estimatedMinutes ${I18nService.instance.isChinese ? '分钟' : 'min'}',
+                  '${context.l10n.communityTaskEstimatedTime}: $estimatedMinutes ${context.l10n.communityTaskMinutes}',
                   style: const TextStyle(fontWeight: DS.fontWeightBold),
                 ),
                 Slider(
@@ -343,7 +337,7 @@ extension on GroupTasksScreen {
                   max: 180,
                   divisions: 35,
                   label:
-                      '$estimatedMinutes ${I18nService.instance.isChinese ? '分钟' : 'min'}',
+                      '$estimatedMinutes ${context.l10n.communityTaskMinutes}',
                   onChanged: (value) {
                     setState(() {
                       estimatedMinutes = value.toInt();
@@ -352,7 +346,7 @@ extension on GroupTasksScreen {
                 ),
                 const SizedBox(height: DS.md),
                 Text(
-                  '${I18nService.instance.isChinese ? '难度' : 'Difficulty'}: $difficulty/5',
+                  '${context.l10n.communityTaskDifficulty}: $difficulty/5',
                   style: const TextStyle(fontWeight: DS.fontWeightBold),
                 ),
                 Slider(
@@ -372,19 +366,17 @@ extension on GroupTasksScreen {
           ),
           actions: [
             SparkleButton.ghost(
-              label: I18nService.instance.isChinese ? '取消' : 'Cancel',
+              label: context.l10n.communityCancel,
               onPressed: () => Navigator.pop(context),
             ),
             SparkleButton.primary(
-              label: I18nService.instance.isChinese ? '创建' : 'Create',
+              label: context.l10n.communityCreate,
               onPressed: () async {
                 final title = titleController.text.trim();
                 if (title.isEmpty) {
                   AppFeedback.info(
                     context,
-                    I18nService.instance.isChinese
-                        ? '请输入任务标题'
-                        : 'Enter a task title',
+                    context.l10n.communityEnterTaskTitle,
                   );
                   return;
                 }
@@ -408,16 +400,14 @@ extension on GroupTasksScreen {
                   if (context.mounted) {
                     AppFeedback.success(
                       context,
-                      I18nService.instance.isChinese
-                          ? '任务创建成功'
-                          : 'Task created',
+                      context.l10n.communityTaskCreated,
                     );
                   }
                 } catch (e) {
                   if (context.mounted) {
                     AppFeedback.error(
                       context,
-                      '${I18nService.instance.isChinese ? '创建失败' : 'Create failed'}: $e',
+                      context.l10n.communityCreateTaskFailed(e.toString()),
                     );
                   }
                 }

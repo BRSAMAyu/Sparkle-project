@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/widgets/unsaved_changes_guard.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
@@ -127,7 +126,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
       setState(() {
         _questionImageReference = buildSparkleFileReference(storedFile.id);
       });
-      AppFeedback.success(context, I18nService.instance.isChinese ? '题目图片上传成功' : 'Question image uploaded');
+      AppFeedback.success(context, context.l10n.ebQuestionImageUploadSuccess);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -156,13 +155,13 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
   String? _validateQuestionText(String? value) {
     final content = value?.trim() ?? '';
     if (content.isEmpty && !_hasQuestionImage) {
-      return I18nService.instance.isChinese ? '请输入题目内容或上传题目图片' : 'Enter the question or upload an image';
+      return context.l10n.ebQuestionOrImageRequired;
     }
     if (content.isNotEmpty && content.length < 5) {
-      return I18nService.instance.isChinese ? '题目内容至少需要 5 个字符' : 'Question must be at least 5 characters';
+      return context.l10n.ebQuestionTooShort;
     }
     if (content.length > 5000) {
-      return I18nService.instance.isChinese ? '题目内容过长（最多 5000 字符）' : 'Question too long (max 5000 characters)';
+      return context.l10n.ebQuestionTooLong;
     }
     return null;
   }
@@ -188,7 +187,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (_isSubmitting) return;
     if (_isUploadingImage) {
-      AppFeedback.info(context, I18nService.instance.isChinese ? '题目图片仍在上传，请稍候' : 'Image still uploading, please wait');
+      AppFeedback.info(context, context.l10n.ebImageStillUploading);
       return;
     }
 
@@ -225,8 +224,8 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
       AppFeedback.success(
         context,
         widget.isEditMode
-            ? (I18nService.instance.isChinese ? '错题已更新' : 'Error updated')
-            : (I18nService.instance.isChinese ? '错题已添加，AI 正在分析中...' : 'Error added, AI analyzing...'),
+            ? context.l10n.ebErrorUpdated
+            : context.l10n.ebErrorAdded,
       );
       Navigator.of(context).pop(true);
     } catch (e) {
@@ -234,8 +233,8 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
         AppFeedback.error(
           context,
           widget.isEditMode
-              ? (I18nService.instance.isChinese ? '更新失败: $e' : 'Update failed: $e')
-              : (I18nService.instance.isChinese ? '添加失败: $e' : 'Add failed: $e'),
+              ? context.l10n.ebUpdateFailed(e.toString())
+              : context.l10n.ebAddFailed(e.toString()),
         );
       }
     } finally {
@@ -266,7 +265,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
               Icon(Icons.image_outlined, color: theme.colorScheme.primary),
               const SizedBox(width: DS.spacing8),
               Text(
-                I18nService.instance.isChinese ? '题目图片（可选）' : 'Question Image (optional)',
+                context.l10n.ebQuestionImageOptional,
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: DS.fontWeightSemibold,
                 ),
@@ -282,7 +281,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
           ),
           const SizedBox(height: DS.spacing8),
           Text(
-            I18nService.instance.isChinese ? '支持拍照后的题目截图或试卷照片。若未填写题干，AI 会优先尝试 OCR 识别图片文字。' : 'Supports photos of exam questions. If no text is entered, AI will try OCR on the image first.',
+            context.l10n.ebQuestionImageHint,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
               height: 1.5,
@@ -316,7 +315,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
                               ),
                               const SizedBox(height: DS.spacing12),
                               Text(
-                                I18nService.instance.isChinese ? '还没有上传题目图片' : 'No question image uploaded yet',
+                                context.l10n.ebNoImageUploaded,
                                 style: theme.textTheme.bodyMedium?.copyWith(
                                   color: theme.colorScheme.onSurfaceVariant,
                                 ),
@@ -331,7 +330,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
             LinearProgressIndicator(value: _uploadProgress),
             const SizedBox(height: DS.spacing8),
             Text(
-              I18nService.instance.isChinese ? '上传中 ${(_uploadProgress * 100).toStringAsFixed(0)}%' : 'Uploading ${(_uploadProgress * 100).toStringAsFixed(0)}%',
+              context.l10n.ebUploadProgress('${(_uploadProgress * 100).toStringAsFixed(0)}%'),
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -436,7 +435,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
               _buildInfoCard(context),
               const SizedBox(height: 20),
               Text(
-                I18nService.instance.isChinese ? '选择科目 *' : 'Subject *',
+                context.l10n.ebSubjectLabel,
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: DS.fontWeightSemibold,
                 ),
@@ -498,10 +497,10 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
                 textInputAction: TextInputAction.newline,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return I18nService.instance.isChinese ? '请输入你的答案' : 'Enter your answer';
+                    return context.l10n.ebEnterAnswer;
                   }
                   if (value.trim().length > 2000) {
-                    return I18nService.instance.isChinese ? '答案内容过长（最多 2000 字符）' : 'Answer too long (max 2000 characters)';
+                    return context.l10n.ebAnswerTooLong;
                   }
                   return null;
                 },
@@ -521,10 +520,10 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
                 onFieldSubmitted: (_) => _submit(),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return I18nService.instance.isChinese ? '请输入正确答案' : 'Enter the correct answer';
+                    return context.l10n.ebCorrectAnswerRequired;
                   }
                   if (value.trim().length > 2000) {
-                    return I18nService.instance.isChinese ? '答案内容过长（最多 2000 字符）' : 'Answer too long (max 2000 characters)';
+                    return context.l10n.ebAnswerTooLong;
                   }
                   return null;
                 },
@@ -541,10 +540,10 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
                     : const Icon(Icons.save),
                 label: Text(
                   _isSubmitting
-                      ? (I18nService.instance.isChinese ? '保存中，请稍候...' : 'Saving...')
+                      ? context.l10n.ebSavingPleaseWait
                       : (widget.isEditMode
-                          ? (I18nService.instance.isChinese ? '保存修改' : 'Save Changes')
-                          : (I18nService.instance.isChinese ? '保存错题' : 'Save Error')),
+                          ? context.l10n.ebSaveChanges
+                          : context.l10n.ebSaveError),
                 ),
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
@@ -583,8 +582,8 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
           Expanded(
             child: Text(
               widget.isEditMode
-                  ? (I18nService.instance.isChinese ? '更新后的题目、答案和图片会重新用于后续复习与分析。' : 'Updated question, answer, and image will be used for future reviews and analysis.')
-                  : (I18nService.instance.isChinese ? '记录越完整，AI 越容易定位错误原因并推荐下一次复习时间。' : 'The more complete the record, the easier AI can identify the cause and suggest review times.'),
+                  ? context.l10n.ebEditHintInfo
+                  : context.l10n.ebNewHintInfo,
               style: theme.textTheme.bodyMedium?.copyWith(
                 height: 1.5,
               ),

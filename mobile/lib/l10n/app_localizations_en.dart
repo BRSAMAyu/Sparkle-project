@@ -5668,6 +5668,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatReviewRegenerationRequested => 'Regeneration requested';
 
   @override
+  String get chatReviewRegenerationFailed =>
+      'Regeneration failed, please try again';
+
+  @override
   String get chatReviewHumanReviewRequested => 'Manual review requested';
 
   @override
@@ -6507,6 +6511,45 @@ class AppLocalizationsEn extends AppLocalizations {
   String get seedLibraryContent => 'Content';
 
   @override
+  String get seedMarketplaceTitle => 'Skill Marketplace';
+
+  @override
+  String get seedMarketplaceSkills => 'Skills';
+
+  @override
+  String get seedMarketplacePacks => 'Packs';
+
+  @override
+  String get seedMarketplaceNoSkills => 'No active marketplace skills yet.';
+
+  @override
+  String get seedMarketplaceNoPacks => 'No active domain packs yet.';
+
+  @override
+  String get seedMarketplaceAdoptSkill => 'Adopt skill';
+
+  @override
+  String seedMarketplaceSkillAdopted(String name) {
+    return '$name adopted';
+  }
+
+  @override
+  String get seedMarketplaceAdoptPack => 'Adopt pack';
+
+  @override
+  String seedMarketplacePackAdopted(String name) {
+    return '$name adopted';
+  }
+
+  @override
+  String seedMarketplaceQuality(String score) {
+    return 'Quality $score';
+  }
+
+  @override
+  String get seedMarketplaceCancel => 'Cancel';
+
+  @override
   String get seedLibrarySubscribers => 'Subscribers';
 
   @override
@@ -6847,6 +6890,114 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get memoryEvidenceContent => 'Content';
+
+  @override
+  String memoryChatLabel(String role) {
+    return 'Chat ($role)';
+  }
+
+  @override
+  String memoryConceptLabel(String name) {
+    return 'Concept: $name';
+  }
+
+  @override
+  String memoryErrorLabel(String subject) {
+    return 'Error: $subject';
+  }
+
+  @override
+  String memoryEventLabel(String eventType) {
+    return 'Event: $eventType';
+  }
+
+  @override
+  String get memoryEvidenceMissing => 'Evidence missing';
+
+  @override
+  String get memoryEvidenceRedacted => 'Evidence redacted';
+
+  @override
+  String get memoryExpandEvidenceDetails => 'Expand evidence details';
+
+  @override
+  String get memoryFieldContent => 'Content';
+
+  @override
+  String get memoryFieldCreatedAt => 'Created';
+
+  @override
+  String get memoryFieldDate => 'Date';
+
+  @override
+  String get memoryFieldDescription => 'Description';
+
+  @override
+  String get memoryFieldDue => 'Due';
+
+  @override
+  String get memoryFieldFocus => 'Focus';
+
+  @override
+  String get memoryFieldLoad => 'Load';
+
+  @override
+  String get memoryFieldMastery => 'Mastery';
+
+  @override
+  String get memoryFieldName => 'Name';
+
+  @override
+  String get memoryFieldPerformance => 'Performance';
+
+  @override
+  String get memoryFieldReviewedAt => 'Reviewed';
+
+  @override
+  String get memoryFieldRole => 'Role';
+
+  @override
+  String get memoryFieldRootCause => 'Root cause';
+
+  @override
+  String get memoryFieldSprint => 'Sprint';
+
+  @override
+  String get memoryFieldStatus => 'Status';
+
+  @override
+  String get memoryFieldSubject => 'Subject';
+
+  @override
+  String get memoryFieldSuggestion => 'Suggestion';
+
+  @override
+  String get memoryFieldSummary => 'Summary';
+
+  @override
+  String get memoryFieldTime => 'Time';
+
+  @override
+  String get memoryFieldTitle => 'Title';
+
+  @override
+  String get memoryFieldType => 'Type';
+
+  @override
+  String memoryPracticeLabel(String performance) {
+    return 'Practice: $performance';
+  }
+
+  @override
+  String get memoryShowAll => 'Show all';
+
+  @override
+  String get memoryShowLess => 'Show less';
+
+  @override
+  String memoryTaskLabel(String title) {
+    return 'Task: $title';
+  }
 
   @override
   String get shareOptionsTitle => 'Share Achievement';
@@ -8134,6 +8285,199 @@ class AppLocalizationsEn extends AppLocalizations {
   String communityGroupMembersCount(Object arg0) {
     return '$arg0';
   }
+
+  @override
+  String get communityDiscardGroupCreation => 'Discard group creation?';
+
+  @override
+  String get communityUnsavedChanges => 'You have unsaved changes. Discard?';
+
+  @override
+  String get communityKeepEditing => 'Keep Editing';
+
+  @override
+  String get communityDiscard => 'Discard';
+
+  @override
+  String get communitySprintDeadlineRequired =>
+      'Please select a deadline for the sprint group';
+
+  @override
+  String communityCreateGroupFailed(Object error) {
+    return 'Failed to create group: $error';
+  }
+
+  @override
+  String get communityCreateGroupTitle => 'Create Group';
+
+  @override
+  String get communityGroupName => 'Group Name';
+
+  @override
+  String get communityGroupNameHint => 'e.g. Daily Algorithm Sprint';
+
+  @override
+  String get communityGroupNameRequired => 'Enter a group name';
+
+  @override
+  String get communityGroupNameMinLength =>
+      'Name must be at least 2 characters';
+
+  @override
+  String get communityGroupType => 'Group Type';
+
+  @override
+  String get communityStudySquad => 'Study Squad';
+
+  @override
+  String get communitySprintGroup => 'Sprint Group';
+
+  @override
+  String get communityGroupDescription => 'Description';
+
+  @override
+  String get communityGroupTags => 'Tags';
+
+  @override
+  String get communityGroupTagsHint =>
+      'Comma-separated, e.g. math, algorithms, exam';
+
+  @override
+  String get communitySprintSettings => 'Sprint Settings';
+
+  @override
+  String get communitySprintDeadline => 'Deadline';
+
+  @override
+  String get communitySelectDate => 'Select Date';
+
+  @override
+  String get communitySprintGoal => 'Sprint Goal';
+
+  @override
+  String get communitySprintGoalRequired => 'Enter a sprint goal';
+
+  @override
+  String get communityCreating => 'Creating...';
+
+  @override
+  String get communityCreateGroupButton => 'Create Group';
+
+  @override
+  String get communityGroupTasks => 'Group Tasks';
+
+  @override
+  String get communityNoTasks => 'No tasks yet';
+
+  @override
+  String get communityInProgress => 'In Progress';
+
+  @override
+  String get communityUnclaimed => 'Unclaimed';
+
+  @override
+  String get communityCompleted => 'Completed';
+
+  @override
+  String get communityTaskCompleted => 'Completed';
+
+  @override
+  String communityOperationFailed(Object error) {
+    return 'Operation failed: $error';
+  }
+
+  @override
+  String get communityTaskMinutes => 'min';
+
+  @override
+  String get communityTaskClaimed => 'claimed';
+
+  @override
+  String get communityTaskClaim => 'Claim';
+
+  @override
+  String get communityTaskComplete => 'Complete';
+
+  @override
+  String get communityCreateTaskTitle => 'Create Group Task';
+
+  @override
+  String get communityTaskTitleField => 'Task Title';
+
+  @override
+  String get communityTaskTitleHint => 'e.g. Complete Chapter 3 exercises';
+
+  @override
+  String get communityTaskDescription => 'Description (optional)';
+
+  @override
+  String get communityTaskDescriptionHint => 'Describe the task...';
+
+  @override
+  String get communityTaskEstimatedTime => 'Est. time';
+
+  @override
+  String get communityTaskDifficulty => 'Difficulty';
+
+  @override
+  String get communityCancel => 'Cancel';
+
+  @override
+  String get communityCreate => 'Create';
+
+  @override
+  String get communityEnterTaskTitle => 'Enter a task title';
+
+  @override
+  String get communityTaskCreated => 'Task created';
+
+  @override
+  String communityCreateTaskFailed(Object error) {
+    return 'Create failed: $error';
+  }
+
+  @override
+  String get communityGroupModeration => 'Group Moderation';
+
+  @override
+  String get communitySettingsSaved => 'Settings saved';
+
+  @override
+  String communitySaveFailed(Object error) {
+    return 'Save failed: $error';
+  }
+
+  @override
+  String get communityMuteAll => 'Mute All';
+
+  @override
+  String get communityMuteAllHint => 'Only admins can speak when enabled';
+
+  @override
+  String get communitySlowMode => 'Slow Mode';
+
+  @override
+  String communitySlowModeInterval(int seconds) {
+    return 'Slow mode: $seconds s';
+  }
+
+  @override
+  String communitySlowModeLabel(int seconds) {
+    return '$seconds s';
+  }
+
+  @override
+  String get communityKeywordFilter => 'Keyword Filter';
+
+  @override
+  String get communityKeywordFilterHint =>
+      'Messages with these keywords will be auto-blocked';
+
+  @override
+  String get communityAddKeyword => 'Add keyword';
+
+  @override
+  String get communitySave => 'Save';
 
   @override
   String get groupKnowledgeBase => 'Knowledge Base';
@@ -15033,6 +15377,116 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountabilityPartnerDefault => 'Accountability Partner';
+
+  @override
+  String get accountabilityTitle => 'Accountability';
+
+  @override
+  String accountabilityLoadFailed(Object error) {
+    return 'Load failed: $error';
+  }
+
+  @override
+  String get accountabilityRetry => 'Retry';
+
+  @override
+  String get accountabilityNoPartnerYet =>
+      'No accountability partner yet\nInvite from friends list';
+
+  @override
+  String get accountabilityNotSet => '(Not set)';
+
+  @override
+  String get accountabilityUnknownUser => 'Unknown User';
+
+  @override
+  String get accountabilityAccept => 'Accept';
+
+  @override
+  String get accountabilityDecline => 'Decline';
+
+  @override
+  String get accountabilityMyGoalLabel => 'My Goal';
+
+  @override
+  String get accountabilityInviteAccepted => 'Accountability invite accepted!';
+
+  @override
+  String get accountabilityAlreadyHavePartner =>
+      'You already have a core accountability partner. Continue in your current workspace.';
+
+  @override
+  String get accountabilityInviteDeclined => 'Invite declined';
+
+  @override
+  String get accountabilityPending => 'Pending';
+
+  @override
+  String get accountabilityActive => 'Active';
+
+  @override
+  String get accountabilityPaused => 'Paused';
+
+  @override
+  String get accountabilityEnded => 'Ended';
+
+  @override
+  String accountabilityMePartnerStreak(int myDays, int partnerDays) {
+    return 'Me: ${myDays}d · Partner: ${partnerDays}d';
+  }
+
+  @override
+  String get accountabilityPartnerCheckedIn => 'Partner checked in';
+
+  @override
+  String get accountabilityPartnerNotCheckedIn => 'Partner not checked in';
+
+  @override
+  String get favoritesTitle => 'My Favorites';
+
+  @override
+  String favoritesLoadFailed(Object error) {
+    return 'Load failed: $error';
+  }
+
+  @override
+  String get favoritesRetry => 'Retry';
+
+  @override
+  String get favoritesNoFavorites => 'No favorites yet';
+
+  @override
+  String get favoritesRichMediaMessage => '(Rich media message)';
+
+  @override
+  String get favoritesUnknownUser => 'Unknown User';
+
+  @override
+  String get favoritesRemoveFavorite => 'Remove Favorite';
+
+  @override
+  String get favoritesRemoveConfirm =>
+      'Are you sure you want to remove this favorite?';
+
+  @override
+  String get favoritesCancel => 'Cancel';
+
+  @override
+  String get favoritesConfirm => 'Confirm';
+
+  @override
+  String get favoritesRemoved => 'Favorite removed';
+
+  @override
+  String favoritesOperationFailed(Object error) {
+    return 'Operation failed: $error';
+  }
+
+  @override
+  String get favoritesNote => 'Favorite Note';
+
+  @override
+  String get favoritesClose => 'Close';
 
   @override
   String get accountabilityEndPartnership => 'End partnership';
@@ -22985,6 +23439,56 @@ class AppLocalizationsEn extends AppLocalizations {
   String get toolsBreathReset => 'Reset';
 
   @override
+  String get toolsBreathReady => 'Ready';
+
+  @override
+  String get toolsBreathPracticeComplete => 'Practice Complete';
+
+  @override
+  String toolsBreathPausedRounds(int completed, int total) {
+    return 'Paused · $completed / $total rounds';
+  }
+
+  @override
+  String toolsBreathRoundsProgress(int completed, int total) {
+    return '$completed / $total rounds';
+  }
+
+  @override
+  String toolsBreathDurationLabel(int duration) {
+    return '$duration min';
+  }
+
+  @override
+  String get toolsBreathStageDescPaused =>
+      'Practice paused, will resume from current phase with voice guidance.';
+
+  @override
+  String get toolsBreathStageDescActive =>
+      'Follow the central instruction to inhale, hold, and exhale.';
+
+  @override
+  String get toolsBreathCaptionRhythm => 'Inhale / Hold / Exhale / Hold';
+
+  @override
+  String get toolsBreathCaptionAutoEstimate => 'Auto-estimated by duration';
+
+  @override
+  String get toolsBreathConfigPaused =>
+      'Practice paused, will resume from current phase.';
+
+  @override
+  String get toolsBreathConfigActive =>
+      'Practice in progress, config adjustable after current round.';
+
+  @override
+  String get toolsBreathConfigIdle => 'Select pattern, then duration.';
+
+  @override
+  String get toolsBreathNotificationBody =>
+      'This breathing session has ended. Return and feel your body state.';
+
+  @override
   String get toolsCalcTitle => 'Calculator';
 
   @override
@@ -23459,6 +23963,62 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get toolsVocabGenerateExample => 'Generate Example';
+
+  @override
+  String get toolsVocabOfflinePackagesTitle => 'Offline Dictionary Packages';
+
+  @override
+  String get toolsVocabOfflinePackagesDesc =>
+      'Prefer local Oxford dictionary to reduce network dependency and cloud server load.';
+
+  @override
+  String get toolsVocabInstalledBadge => 'Installed';
+
+  @override
+  String get toolsVocabDefaultPackageDesc =>
+      'Oxford Preferred Offline Dictionary Package';
+
+  @override
+  String get toolsVocabInstalledAtPrefix => 'Installed';
+
+  @override
+  String get toolsVocabRedownload => 'Re-download';
+
+  @override
+  String get toolsVocabDownloadLocally => 'Download Locally';
+
+  @override
+  String get toolsVocabWaitingAssociations => 'Waiting for associations';
+
+  @override
+  String toolsVocabAssocCount(int count) {
+    return '$count associations';
+  }
+
+  @override
+  String toolsVocabOfflineDictCount(int count) {
+    return '$count offline dictionaries';
+  }
+
+  @override
+  String get toolsVocabNoOfflineDict => 'No offline dictionary';
+
+  @override
+  String toolsVocabPartOfSpeech(String pos) {
+    return 'Part of Speech · $pos';
+  }
+
+  @override
+  String get toolsVocabDefinitionsLabel => 'Definitions';
+
+  @override
+  String get toolsVocabDictExamplesLabel => 'Dictionary Examples';
+
+  @override
+  String get toolsVocabModelExampleLabel => 'Model Generated Example';
+
+  @override
+  String get toolsVocabRelatedWordsLabel => 'Related Words';
 
   @override
   String get toolsStatsTitle => 'Focus Stats';
@@ -24815,6 +25375,65 @@ class AppLocalizationsEn extends AppLocalizations {
   String get insHasContinue => 'Content available to continue';
 
   @override
+  String get insCreateTask => 'Create Learning Task';
+
+  @override
+  String get insDecisionLogTitle => 'AI Decision Log';
+
+  @override
+  String get insDecisionLogSubtitle =>
+      'Review recent notify, skip, downgrade, and replan decisions';
+
+  @override
+  String get insDecisionLogStatus => 'Causal Control OS Audit';
+
+  @override
+  String get insDecisionLogOpen => 'Open Log';
+
+  @override
+  String get insContinueView => 'Continue';
+
+  @override
+  String get insStartFromRecommended => 'Start from Recommended';
+
+  @override
+  String get insStartSimulation => 'Start Simulation';
+
+  @override
+  String get insTheaterFallback => 'Break a goal into multiple learning paths';
+
+  @override
+  String get insSimFallback =>
+      'Bring a knowledge point into multi-role live discussion';
+
+  @override
+  String get insFocusedSim => 'Focused: Learning Simulation';
+
+  @override
+  String get insFocusedTheater => 'Focused: Scenario Theater';
+
+  @override
+  String get insFocusedReport => 'Focused: Learning Report';
+
+  @override
+  String get insFocusedDefault => 'Simulation, theater & reports in one place';
+
+  @override
+  String get insFlowTitle =>
+      'Connect \"spot problems, simulate discussions, draw conclusions\" into one flow.';
+
+  @override
+  String get insFlowSubtitle =>
+      'Only the entries you actually need next — no clutter.';
+
+  @override
+  String get insSwipeHint =>
+      'Learning Insights is in the customizable card area on the home screen. Default: calendar, swipe left for insights, right for tools.';
+
+  @override
+  String get insRecommended => 'Recommended';
+
+  @override
   String get insNoPrereq => 'No prerequisites needed — dive right in!';
 
   @override
@@ -25125,7 +25744,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ebDetailFailed => 'Failed to fetch error detail';
 
   @override
-  String get ebUpdateFailed => 'Failed to update error record';
+  String ebUpdateFailed(String e) {
+    return 'Update failed: $e';
+  }
 
   @override
   String get ebDeleteFailed => 'Failed to delete error record';
@@ -25333,6 +25954,77 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ebOther => 'Other';
+
+  @override
+  String get ebAnswerTooLong => 'Answer too long (max 2000 characters)';
+
+  @override
+  String get ebCorrectAnswerRequired => 'Enter the correct answer';
+
+  @override
+  String get ebEditHintInfo =>
+      'Updated question, answer, and image will be used for future reviews and analysis.';
+
+  @override
+  String get ebEnterAnswer => 'Enter your answer';
+
+  @override
+  String get ebErrorAdded => 'Error added, AI analyzing...';
+
+  @override
+  String get ebErrorUpdated => 'Error updated';
+
+  @override
+  String get ebImageStillUploading => 'Image still uploading, please wait';
+
+  @override
+  String get ebNewHintInfo =>
+      'The more complete the record, the easier AI can identify the cause and suggest review times.';
+
+  @override
+  String get ebNoImageUploaded => 'No question image uploaded yet';
+
+  @override
+  String get ebQuestionImageOptional => 'Question Image (optional)';
+
+  @override
+  String get ebQuestionImageUploadSuccess => 'Question image uploaded';
+
+  @override
+  String get ebQuestionImageHint =>
+      'Supports photos of exam questions. If no text is entered, AI will try OCR on the image first.';
+
+  @override
+  String get ebQuestionOrImageRequired =>
+      'Enter the question or upload an image';
+
+  @override
+  String get ebQuestionTooLong => 'Question too long (max 5000 characters)';
+
+  @override
+  String get ebQuestionTooShort => 'Question must be at least 5 characters';
+
+  @override
+  String get ebSaveChanges => 'Save Changes';
+
+  @override
+  String get ebSaveError => 'Save Error';
+
+  @override
+  String get ebSavingPleaseWait => 'Saving...';
+
+  @override
+  String get ebSubjectLabel => 'Subject *';
+
+  @override
+  String ebUploadProgress(String progress) {
+    return 'Uploading $progress%';
+  }
+
+  @override
+  String ebAddFailed(String e) {
+    return 'Add failed: $e';
+  }
 
   @override
   String get memDetailMissing => 'Memory detail parameter missing';
@@ -27500,9 +28192,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityTaskPaused => 'Paused';
 
   @override
-  String get communityTaskCompleted => 'Completed';
-
-  @override
   String get communityTaskInProgress => 'In Progress';
 
   @override
@@ -27534,11 +28223,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get communitySavedToLibrary => 'Saved to my library';
-
-  @override
-  String communitySaveFailed(Object error) {
-    return 'Save failed: $error';
-  }
 
   @override
   String get communityMarkedOfficial => 'Marked as official';
@@ -27774,11 +28458,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String communityUnblocked(Object name) {
     return 'Unblocked $name';
-  }
-
-  @override
-  String communityOperationFailed(Object error) {
-    return 'Operation failed: $error';
   }
 
   @override
@@ -29751,6 +30430,72 @@ class AppLocalizationsEn extends AppLocalizations {
   String calTaskWithDue(String type, String due) {
     return '$type · $due';
   }
+
+  @override
+  String get calNoTimeSet => 'No time set';
+
+  @override
+  String get calHeatView => 'Heat';
+
+  @override
+  String get calNoHeatData => 'No heat data available';
+
+  @override
+  String get calStreakDetail => 'Keep your achievement rhythm';
+
+  @override
+  String get calActiveDaysDetail => 'Active days this month';
+
+  @override
+  String get calCompletedTasksDetail => 'Tasks completed this month';
+
+  @override
+  String get calFocusDurationDetail => 'Total focus time this month';
+
+  @override
+  String get calLearningHeatmap => 'Learning Heatmap';
+
+  @override
+  String get calHeatmapDesc =>
+      'View continuity, completion, and learning engagement through heatmaps, instead of repeatedly browsing the schedule.';
+
+  @override
+  String get calHeatLow => 'Low';
+
+  @override
+  String get calHeatHigh => 'High';
+
+  @override
+  String get calMonthlyHighlights => 'Monthly Highlights';
+
+  @override
+  String get calNotAvailable => 'N/A';
+
+  @override
+  String get calNoActivePlan => 'No active plan this month';
+
+  @override
+  String get calGreatStreak => 'Great streak! Time to sprint for milestones';
+
+  @override
+  String get calBuildConsistency =>
+      'Build your consistency first to trigger achievement loops';
+
+  @override
+  String get calNoScheduleDay => 'No tasks or events scheduled for this day';
+
+  @override
+  String get calEventUpdated => 'Event updated';
+
+  @override
+  String get calEventCreated => 'Event created';
+
+  @override
+  String get calSavedLocally =>
+      'Saved locally, will sync to cloud automatically.';
+
+  @override
+  String get calEditEvent => 'Edit Event';
 
   @override
   String picEstimatedHours(String hours) {
@@ -31951,6 +32696,277 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeNextActionTypePlanning => 'Planning';
+
+  @override
+  String get homeAuroraDialogTitle => 'What would you like to tell Sparkle?';
+
+  @override
+  String get homeAuroraDialogHint =>
+      'What did Aurora get wrong? Share your thoughts…';
+
+  @override
+  String get homeAuroraDialogCancel => 'Cancel';
+
+  @override
+  String get homeAuroraDialogSend => 'Send';
+
+  @override
+  String get homeQuickCreate => 'Quick create';
+
+  @override
+  String get homeOnboardingSummary =>
+      'I\'m your AI growth companion. Set a goal and I\'ll help you achieve it step by step.';
+
+  @override
+  String get homeOnboardingSetGoal => 'Set a goal';
+
+  @override
+  String get homeOnboardingSetGoalSubtitle =>
+      'Tell me what you want to achieve';
+
+  @override
+  String get homeOnboardingChatSparkle => 'Chat with Sparkle';
+
+  @override
+  String get homeOnboardingChatSubtitle =>
+      'Share your thoughts, get personalized guidance';
+
+  @override
+  String get homeOnboardingExploreGalaxy => 'Explore knowledge map';
+
+  @override
+  String get homeOnboardingExploreSubtitle =>
+      'Discover your knowledge structure and growth areas';
+
+  @override
+  String get homeSlotDailyBriefing => 'Daily briefing';
+
+  @override
+  String homeSlotDailyBriefingReady(int count) {
+    return '$count next actions · ready to start';
+  }
+
+  @override
+  String get homeSlotDailyBriefingFallback => 'Today\'s status & pace';
+
+  @override
+  String get homeSlotKeyMetrics => 'Key metrics';
+
+  @override
+  String homeSlotKeyMetricsStreak(int streak) {
+    return '🔥 $streak-day streak';
+  }
+
+  @override
+  String get homeSlotKeyMetricsFallback => 'Progress, streak, momentum';
+
+  @override
+  String get homeSlotCommandCenter => 'Command center';
+
+  @override
+  String homeSlotCommandCenterNext(String label) {
+    return 'Next: $label';
+  }
+
+  @override
+  String get homeSlotCommandCenterFallback => 'Pick up the next action';
+
+  @override
+  String get homeSlotUnderstanding => 'Understanding';
+
+  @override
+  String get homeSlotUnderstandingSummary => 'How Sparkle reads you';
+
+  @override
+  String get homeSlotReturnCaseFile => 'Return case file';
+
+  @override
+  String get homeSlotReturnCaseFileSummary => 'Where you left off';
+
+  @override
+  String get homeSlotGoalSnapshot => 'Goal snapshot';
+
+  @override
+  String get homeSlotGoalSnapshotFallback => 'Active goal snapshot';
+
+  @override
+  String get homeSlotMultiGoalBoard => 'Multi-goal board';
+
+  @override
+  String homeSlotMultiGoalDone(int done, int total) {
+    return '$done of $total done';
+  }
+
+  @override
+  String get homeSlotMultiGoalFallback => 'All goals at a glance';
+
+  @override
+  String get homeSlotTaskBoard => 'Task board';
+
+  @override
+  String homeSlotTaskBoardProgress(int done, int total) {
+    return '$done/$total done';
+  }
+
+  @override
+  String homeSlotTaskBoardGoalHit(int done, int total) {
+    return '$done/$total done · today\'s goal hit';
+  }
+
+  @override
+  String homeSlotTaskBoardToGo(int done, int total, int remaining) {
+    return '$done/$total done · $remaining to go';
+  }
+
+  @override
+  String get homeSlotTaskBoardFallback => 'Today\'s tasks & progress';
+
+  @override
+  String get homeSlotExamSprint => 'Exam sprint';
+
+  @override
+  String homeSlotExamSprintDaysLeft(String subject, int days) {
+    return '$subject · ${days}d left';
+  }
+
+  @override
+  String get homeSlotExamSprintNotStarted => 'Not started · tap to set up';
+
+  @override
+  String get homeSlotExamSprintEmptyTitle => 'Exam sprint';
+
+  @override
+  String get homeSlotExamSprintEmptyBody =>
+      'No active sprint yet. Set a target to see daily cadence and days left.';
+
+  @override
+  String get homeSlotExamSprintEmptyAction => 'Create sprint';
+
+  @override
+  String get homeSlotUpdates => 'Updates';
+
+  @override
+  String get homeSlotUpdatesSummary => 'Notifications & insights';
+
+  @override
+  String get homeSlotGrowthQuality => 'Growth quality';
+
+  @override
+  String get homeSlotGrowthQualitySummary => 'Depth, stability, balance';
+
+  @override
+  String get homeSlotWeeklyNarrative => 'Weekly narrative';
+
+  @override
+  String get homeSlotWeeklyNarrativeSummary => 'This week\'s story';
+
+  @override
+  String get homeSlotCommunity => 'Community';
+
+  @override
+  String get homeSlotCommunitySummary => 'Partners & accountability';
+
+  @override
+  String get homeSlotAchievements => 'Achievements';
+
+  @override
+  String get homeSlotAchievementsSummary => 'Recent unlocks & milestones';
+
+  @override
+  String get homeSlotLearningHeatmap => 'Learning heatmap';
+
+  @override
+  String get homeSlotLearningHeatmapSummary => 'Last 30 days of activity';
+
+  @override
+  String get homeSlotWorkspaceCards => 'Workspace cards';
+
+  @override
+  String homeSlotWorkspaceCardsVisible(int count) {
+    return '$count cards visible';
+  }
+
+  @override
+  String get homeSlotWorkspaceCardsNone => 'No cards enabled';
+
+  @override
+  String get homeEmptyDashboardTitle => 'Your dashboard is empty';
+
+  @override
+  String get homeEmptyDashboardBody =>
+      'Tap \"Customize\" below to bring slots back.';
+
+  @override
+  String get homeCustomizeDashboard => 'Customize dashboard';
+
+  @override
+  String get homeFailureAuthTitle => 'Sign-in needed';
+
+  @override
+  String get homeFailureServerTitle => 'Service issue';
+
+  @override
+  String get homeFailureValidationTitle => 'Check request';
+
+  @override
+  String get homeFailureNetworkTitle => 'Connection issue';
+
+  @override
+  String get homeFailureOfflineTitle => 'Offline';
+
+  @override
+  String get homeFailureUnknownTitle => 'Dashboard unavailable';
+
+  @override
+  String get homeFailureAuthAction => 'Sign in';
+
+  @override
+  String get homeFailureOfflineAction => 'Retry online';
+
+  @override
+  String get homeCommandCenterEyebrow => 'Command Center';
+
+  @override
+  String get homeCommandCenterNoTasks => 'No tasks today';
+
+  @override
+  String homeCommandCenterHealth(int percent) {
+    return '$percent% health';
+  }
+
+  @override
+  String get homeHighPriority => 'High priority';
+
+  @override
+  String get homeCompletingUpdatesProgress =>
+      'Completing it updates your plan progress';
+
+  @override
+  String get homeNoUrgentAction =>
+      'No urgent action is queued. Review, add context, or let Aurora reprioritize.';
+
+  @override
+  String get homeSparkleWillTurn =>
+      'Sparkle will turn it into a next step, progress, and risk signal.';
+
+  @override
+  String homeRiskBottleneck(String topic) {
+    return 'Risk: $topic is slowing progress';
+  }
+
+  @override
+  String homeRiskDeadline(String label) {
+    return 'Risk: $label';
+  }
+
+  @override
+  String get homeRiskLowHealth =>
+      'Risk: plan health is low; recalibration may help';
+
+  @override
+  String homeSelectGoal(String label) {
+    return 'Select goal: $label';
+  }
 
   @override
   String get goalIntentTitle => 'Tell me what you want to achieve';

@@ -5432,6 +5432,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatReviewRegenerationRequested => '已请求重新生成';
 
   @override
+  String get chatReviewRegenerationFailed => '重新生成失败，请重试';
+
+  @override
   String get chatReviewHumanReviewRequested => '已提交人工审查请求';
 
   @override
@@ -6254,6 +6257,45 @@ class AppLocalizationsZh extends AppLocalizations {
   String get seedLibraryContent => '内容';
 
   @override
+  String get seedMarketplaceTitle => '技能市场';
+
+  @override
+  String get seedMarketplaceSkills => '技能';
+
+  @override
+  String get seedMarketplacePacks => '技能包';
+
+  @override
+  String get seedMarketplaceNoSkills => '暂无上线技能';
+
+  @override
+  String get seedMarketplaceNoPacks => '暂无上线技能包';
+
+  @override
+  String get seedMarketplaceAdoptSkill => '采纳技能';
+
+  @override
+  String seedMarketplaceSkillAdopted(String name) {
+    return '已采纳 $name';
+  }
+
+  @override
+  String get seedMarketplaceAdoptPack => '采纳技能包';
+
+  @override
+  String seedMarketplacePackAdopted(String name) {
+    return '已采纳 $name';
+  }
+
+  @override
+  String seedMarketplaceQuality(String score) {
+    return '质量 $score';
+  }
+
+  @override
+  String get seedMarketplaceCancel => '取消';
+
+  @override
   String get seedLibrarySubscribers => '订阅者';
 
   @override
@@ -6578,6 +6620,114 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get memoryEvidenceContent => '内容';
+
+  @override
+  String memoryChatLabel(String role) {
+    return '对话 ($role)';
+  }
+
+  @override
+  String memoryConceptLabel(String name) {
+    return '概念: $name';
+  }
+
+  @override
+  String memoryErrorLabel(String subject) {
+    return '错题: $subject';
+  }
+
+  @override
+  String memoryEventLabel(String eventType) {
+    return '事件: $eventType';
+  }
+
+  @override
+  String get memoryEvidenceMissing => '证据缺失';
+
+  @override
+  String get memoryEvidenceRedacted => '证据已隐藏';
+
+  @override
+  String get memoryExpandEvidenceDetails => '展开证据详情';
+
+  @override
+  String get memoryFieldContent => '内容';
+
+  @override
+  String get memoryFieldCreatedAt => '创建';
+
+  @override
+  String get memoryFieldDate => '日期';
+
+  @override
+  String get memoryFieldDescription => '描述';
+
+  @override
+  String get memoryFieldDue => '截止';
+
+  @override
+  String get memoryFieldFocus => '专注';
+
+  @override
+  String get memoryFieldLoad => '负荷';
+
+  @override
+  String get memoryFieldMastery => '掌握';
+
+  @override
+  String get memoryFieldName => '名称';
+
+  @override
+  String get memoryFieldPerformance => '表现';
+
+  @override
+  String get memoryFieldReviewedAt => '复习时间';
+
+  @override
+  String get memoryFieldRole => '角色';
+
+  @override
+  String get memoryFieldRootCause => '根因';
+
+  @override
+  String get memoryFieldSprint => '冲刺';
+
+  @override
+  String get memoryFieldStatus => '状态';
+
+  @override
+  String get memoryFieldSubject => '科目';
+
+  @override
+  String get memoryFieldSuggestion => '建议';
+
+  @override
+  String get memoryFieldSummary => '摘要';
+
+  @override
+  String get memoryFieldTime => '时间';
+
+  @override
+  String get memoryFieldTitle => '标题';
+
+  @override
+  String get memoryFieldType => '类型';
+
+  @override
+  String memoryPracticeLabel(String performance) {
+    return '练习结果: $performance';
+  }
+
+  @override
+  String get memoryShowAll => '查看全部';
+
+  @override
+  String get memoryShowLess => '收起详情';
+
+  @override
+  String memoryTaskLabel(String title) {
+    return '任务: $title';
+  }
 
   @override
   String get shareOptionsTitle => '分享成就';
@@ -7828,6 +7978,195 @@ class AppLocalizationsZh extends AppLocalizations {
   String communityGroupMembersCount(Object arg0) {
     return '$arg0';
   }
+
+  @override
+  String get communityDiscardGroupCreation => '放弃创建社群？';
+
+  @override
+  String get communityUnsavedChanges => '你有未保存的更改，确定放弃？';
+
+  @override
+  String get communityKeepEditing => '继续编辑';
+
+  @override
+  String get communityDiscard => '放弃';
+
+  @override
+  String get communitySprintDeadlineRequired => '请选择冲刺社群的截止时间';
+
+  @override
+  String communityCreateGroupFailed(Object error) {
+    return '创建社群失败: $error';
+  }
+
+  @override
+  String get communityCreateGroupTitle => '创建社群';
+
+  @override
+  String get communityGroupName => '社群名称';
+
+  @override
+  String get communityGroupNameHint => '例如：每日算法冲刺';
+
+  @override
+  String get communityGroupNameRequired => '请输入社群名称';
+
+  @override
+  String get communityGroupNameMinLength => '名称至少 2 个字符';
+
+  @override
+  String get communityGroupType => '小组类型';
+
+  @override
+  String get communityStudySquad => '学习小组';
+
+  @override
+  String get communitySprintGroup => '冲刺小组';
+
+  @override
+  String get communityGroupDescription => '社群介绍';
+
+  @override
+  String get communityGroupTags => '主题标签';
+
+  @override
+  String get communityGroupTagsHint => '用逗号分隔，例如：数学, 算法, 考研';
+
+  @override
+  String get communitySprintSettings => '冲刺设置';
+
+  @override
+  String get communitySprintDeadline => '截止日期';
+
+  @override
+  String get communitySelectDate => '选择日期';
+
+  @override
+  String get communitySprintGoal => '冲刺目标';
+
+  @override
+  String get communitySprintGoalRequired => '请输入冲刺目标';
+
+  @override
+  String get communityCreating => '创建中...';
+
+  @override
+  String get communityCreateGroupButton => '创建社群';
+
+  @override
+  String get communityGroupTasks => '社群任务';
+
+  @override
+  String get communityNoTasks => '还没有任务';
+
+  @override
+  String get communityInProgress => '进行中';
+
+  @override
+  String get communityUnclaimed => '待认领';
+
+  @override
+  String get communityCompleted => '已完成';
+
+  @override
+  String get communityTaskCompleted => '已完成';
+
+  @override
+  String communityOperationFailed(Object error) {
+    return '操作失败: $error';
+  }
+
+  @override
+  String get communityTaskMinutes => '分钟';
+
+  @override
+  String get communityTaskClaimed => '已认领';
+
+  @override
+  String get communityTaskClaim => '认领';
+
+  @override
+  String get communityTaskComplete => '完成';
+
+  @override
+  String get communityCreateTaskTitle => '创建群组任务';
+
+  @override
+  String get communityTaskTitleField => '任务标题';
+
+  @override
+  String get communityTaskTitleHint => '例如：完成第三章练习';
+
+  @override
+  String get communityTaskDescription => '任务描述（可选）';
+
+  @override
+  String get communityTaskDescriptionHint => '详细描述任务内容...';
+
+  @override
+  String get communityTaskEstimatedTime => '预计时间';
+
+  @override
+  String get communityTaskDifficulty => '难度';
+
+  @override
+  String get communityCancel => '取消';
+
+  @override
+  String get communityCreate => '创建';
+
+  @override
+  String get communityEnterTaskTitle => '请输入任务标题';
+
+  @override
+  String get communityTaskCreated => '任务创建成功';
+
+  @override
+  String communityCreateTaskFailed(Object error) {
+    return '创建失败: $error';
+  }
+
+  @override
+  String get communityGroupModeration => '社群管理';
+
+  @override
+  String get communitySettingsSaved => '设置已保存';
+
+  @override
+  String communitySaveFailed(Object error) {
+    return '保存失败: $error';
+  }
+
+  @override
+  String get communityMuteAll => '全员禁言';
+
+  @override
+  String get communityMuteAllHint => '开启后仅管理员可发言';
+
+  @override
+  String get communitySlowMode => '慢速模式';
+
+  @override
+  String communitySlowModeInterval(int seconds) {
+    return '发言间隔: $seconds 秒';
+  }
+
+  @override
+  String communitySlowModeLabel(int seconds) {
+    return '$seconds 秒';
+  }
+
+  @override
+  String get communityKeywordFilter => '关键词过滤';
+
+  @override
+  String get communityKeywordFilterHint => '包含以下关键词的消息将被自动屏蔽';
+
+  @override
+  String get communityAddKeyword => '添加关键词';
+
+  @override
+  String get communitySave => '保存';
 
   @override
   String get groupKnowledgeBase => '知识库';
@@ -14407,6 +14746,113 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get accountabilityPartnerDefault => '责任伙伴';
+
+  @override
+  String get accountabilityTitle => '责任伙伴';
+
+  @override
+  String accountabilityLoadFailed(Object error) {
+    return '加载失败: $error';
+  }
+
+  @override
+  String get accountabilityRetry => '重试';
+
+  @override
+  String get accountabilityNoPartnerYet => '还没有责任伙伴\n从好友列表发起邀请';
+
+  @override
+  String get accountabilityNotSet => '(未设置)';
+
+  @override
+  String get accountabilityUnknownUser => '未知用户';
+
+  @override
+  String get accountabilityAccept => '接受';
+
+  @override
+  String get accountabilityDecline => '拒绝';
+
+  @override
+  String get accountabilityMyGoalLabel => '我的目标';
+
+  @override
+  String get accountabilityInviteAccepted => '已接受责任伙伴邀请！';
+
+  @override
+  String get accountabilityAlreadyHavePartner => '你当前已经有核心责任伙伴，先进入现有工作台继续协作。';
+
+  @override
+  String get accountabilityInviteDeclined => '已拒绝邀请';
+
+  @override
+  String get accountabilityPending => '待确认';
+
+  @override
+  String get accountabilityActive => '进行中';
+
+  @override
+  String get accountabilityPaused => '已暂停';
+
+  @override
+  String get accountabilityEnded => '已结束';
+
+  @override
+  String accountabilityMePartnerStreak(int myDays, int partnerDays) {
+    return '我: $myDays 天 · 伙伴: $partnerDays 天';
+  }
+
+  @override
+  String get accountabilityPartnerCheckedIn => '伙伴已打卡';
+
+  @override
+  String get accountabilityPartnerNotCheckedIn => '伙伴未打卡';
+
+  @override
+  String get favoritesTitle => '我的收藏';
+
+  @override
+  String favoritesLoadFailed(Object error) {
+    return '加载失败: $error';
+  }
+
+  @override
+  String get favoritesRetry => '重试';
+
+  @override
+  String get favoritesNoFavorites => '还没有收藏';
+
+  @override
+  String get favoritesRichMediaMessage => '（富媒体消息）';
+
+  @override
+  String get favoritesUnknownUser => '未知用户';
+
+  @override
+  String get favoritesRemoveFavorite => '移除收藏';
+
+  @override
+  String get favoritesRemoveConfirm => '确定要移除这条收藏吗？';
+
+  @override
+  String get favoritesCancel => '取消';
+
+  @override
+  String get favoritesConfirm => '确定';
+
+  @override
+  String get favoritesRemoved => '已移除收藏';
+
+  @override
+  String favoritesOperationFailed(Object error) {
+    return '操作失败: $error';
+  }
+
+  @override
+  String get favoritesNote => '收藏备注';
+
+  @override
+  String get favoritesClose => '关闭';
 
   @override
   String get accountabilityEndPartnership => '结束伙伴关系';
@@ -22033,6 +22479,51 @@ class AppLocalizationsZh extends AppLocalizations {
   String get toolsBreathReset => '重置';
 
   @override
+  String get toolsBreathReady => '准备';
+
+  @override
+  String get toolsBreathPracticeComplete => '练习完成';
+
+  @override
+  String toolsBreathPausedRounds(int completed, int total) {
+    return '已暂停 · $completed / $total 轮';
+  }
+
+  @override
+  String toolsBreathRoundsProgress(int completed, int total) {
+    return '$completed / $total 轮';
+  }
+
+  @override
+  String toolsBreathDurationLabel(int duration) {
+    return '$duration 分钟';
+  }
+
+  @override
+  String get toolsBreathStageDescPaused => '练习已暂停，恢复后会从当前阶段继续，并继续语音提示。';
+
+  @override
+  String get toolsBreathStageDescActive => '跟着中央指令吸气、停留和呼气。';
+
+  @override
+  String get toolsBreathCaptionRhythm => '吸 / 停 / 呼 / 停';
+
+  @override
+  String get toolsBreathCaptionAutoEstimate => '按当前时长自动估算';
+
+  @override
+  String get toolsBreathConfigPaused => '练习已暂停，恢复后会从当前阶段继续。';
+
+  @override
+  String get toolsBreathConfigActive => '练习进行中，配置会在本轮结束后可调整。';
+
+  @override
+  String get toolsBreathConfigIdle => '先选模式，再选练习时长。';
+
+  @override
+  String get toolsBreathNotificationBody => '本轮呼吸练习已经结束，回来感受一下身体状态。';
+
+  @override
   String get toolsCalcTitle => '计算器';
 
   @override
@@ -22481,6 +22972,61 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get toolsVocabGenerateExample => '生成例句';
+
+  @override
+  String get toolsVocabOfflinePackagesTitle => '离线词典包';
+
+  @override
+  String get toolsVocabOfflinePackagesDesc =>
+      '优先使用本地 Oxford 词典，减少网络依赖，也能减轻云端服务器压力。';
+
+  @override
+  String get toolsVocabInstalledBadge => '已安装';
+
+  @override
+  String get toolsVocabDefaultPackageDesc => 'Oxford 优先离线词典包';
+
+  @override
+  String get toolsVocabInstalledAtPrefix => '安装于';
+
+  @override
+  String get toolsVocabRedownload => '重新下载';
+
+  @override
+  String get toolsVocabDownloadLocally => '下载到本地';
+
+  @override
+  String get toolsVocabWaitingAssociations => '等待关联词';
+
+  @override
+  String toolsVocabAssocCount(int count) {
+    return '$count 个关联词';
+  }
+
+  @override
+  String toolsVocabOfflineDictCount(int count) {
+    return '$count 个离线词典包';
+  }
+
+  @override
+  String get toolsVocabNoOfflineDict => '未下载离线词典';
+
+  @override
+  String toolsVocabPartOfSpeech(String pos) {
+    return '词性 · $pos';
+  }
+
+  @override
+  String get toolsVocabDefinitionsLabel => '释义';
+
+  @override
+  String get toolsVocabDictExamplesLabel => '词典例句';
+
+  @override
+  String get toolsVocabModelExampleLabel => '模型生成例句';
+
+  @override
+  String get toolsVocabRelatedWordsLabel => '关联词汇';
 
   @override
   String get toolsStatsTitle => '专注统计';
@@ -23782,6 +24328,60 @@ class AppLocalizationsZh extends AppLocalizations {
   String get insHasContinue => '已有可继续内容';
 
   @override
+  String get insCreateTask => '去创建学习任务';
+
+  @override
+  String get insDecisionLogTitle => 'AI 决策日志';
+
+  @override
+  String get insDecisionLogSubtitle => '查看最近的提醒、跳过、降级和重规划依据';
+
+  @override
+  String get insDecisionLogStatus => 'Causal Control OS 审计';
+
+  @override
+  String get insDecisionLogOpen => '查看日志';
+
+  @override
+  String get insContinueView => '继续查看';
+
+  @override
+  String get insStartFromRecommended => '从推荐开始';
+
+  @override
+  String get insStartSimulation => '开始模拟';
+
+  @override
+  String get insTheaterFallback => '把一个目标拆成多条学习路径';
+
+  @override
+  String get insSimFallback => '把一个知识点拉进多角色现场讨论';
+
+  @override
+  String get insFocusedSim => '已聚焦：学习仿真';
+
+  @override
+  String get insFocusedTheater => '已聚焦：推演剧场';
+
+  @override
+  String get insFocusedReport => '已聚焦：学习报告';
+
+  @override
+  String get insFocusedDefault => '仿真、推演、报告统一收在这里';
+
+  @override
+  String get insFlowTitle => '把学习里的“看见问题、模拟讨论、沉淀结论”放到同一条动线里。';
+
+  @override
+  String get insFlowSubtitle => '这里只保留你下一步真正需要的入口，不再堆叠多余说明。';
+
+  @override
+  String get insSwipeHint => '首页已经把学习洞察放进可定制卡牌区。默认先看日历，左滑就是洞察，右滑是工具快捷。';
+
+  @override
+  String get insRecommended => '推荐先看';
+
+  @override
   String get insNoPrereq => '无需前置知识，可以直接开始学习！';
 
   @override
@@ -24091,7 +24691,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ebDetailFailed => '获取错题详情失败';
 
   @override
-  String get ebUpdateFailed => '更新错题失败';
+  String ebUpdateFailed(String e) {
+    return '更新失败: $e';
+  }
 
   @override
   String get ebDeleteFailed => '删除错题失败';
@@ -24296,6 +24898,74 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get ebOther => '其他';
+
+  @override
+  String get ebAnswerTooLong => '答案内容过长（最多 2000 字符）';
+
+  @override
+  String get ebCorrectAnswerRequired => '请输入正确答案';
+
+  @override
+  String get ebEditHintInfo => '更新后的题目、答案和图片会重新用于后续复习与分析。';
+
+  @override
+  String get ebEnterAnswer => '请输入你的答案';
+
+  @override
+  String get ebErrorAdded => '错题已添加，AI 正在分析中...';
+
+  @override
+  String get ebErrorUpdated => '错题已更新';
+
+  @override
+  String get ebImageStillUploading => '题目图片仍在上传，请稍候';
+
+  @override
+  String get ebNewHintInfo => '记录越完整，AI 越容易定位错误原因并推荐下一次复习时间。';
+
+  @override
+  String get ebNoImageUploaded => '还没有上传题目图片';
+
+  @override
+  String get ebQuestionImageOptional => '题目图片（可选）';
+
+  @override
+  String get ebQuestionImageUploadSuccess => '题目图片上传成功';
+
+  @override
+  String get ebQuestionImageHint =>
+      '支持拍照后的题目截图或试卷照片。若未填写题干，AI 会优先尝试 OCR 识别图片文字。';
+
+  @override
+  String get ebQuestionOrImageRequired => '请输入题目内容或上传题目图片';
+
+  @override
+  String get ebQuestionTooLong => '题目内容过长（最多 5000 字符）';
+
+  @override
+  String get ebQuestionTooShort => '题目内容至少需要 5 个字符';
+
+  @override
+  String get ebSaveChanges => '保存修改';
+
+  @override
+  String get ebSaveError => '保存错题';
+
+  @override
+  String get ebSavingPleaseWait => '保存中，请稍候...';
+
+  @override
+  String get ebSubjectLabel => '选择科目 *';
+
+  @override
+  String ebUploadProgress(String progress) {
+    return '上传中 $progress%';
+  }
+
+  @override
+  String ebAddFailed(String e) {
+    return '添加失败: $e';
+  }
 
   @override
   String get memDetailMissing => '记忆详情参数缺失';
@@ -26363,9 +27033,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get communityTaskPaused => '已暂停';
 
   @override
-  String get communityTaskCompleted => '已完成';
-
-  @override
   String get communityTaskInProgress => '进行中';
 
   @override
@@ -26397,11 +27064,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get communitySavedToLibrary => '已保存到我的资料库';
-
-  @override
-  String communitySaveFailed(Object error) {
-    return '保存失败: $error';
-  }
 
   @override
   String get communityMarkedOfficial => '已标记为官方资料';
@@ -26627,11 +27289,6 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String communityUnblocked(Object name) {
     return '已解除对 $name 的拉黑';
-  }
-
-  @override
-  String communityOperationFailed(Object error) {
-    return '操作失败: $error';
   }
 
   @override
@@ -28524,6 +29181,69 @@ class AppLocalizationsZh extends AppLocalizations {
   String calTaskWithDue(String type, String due) {
     return '$type · $due';
   }
+
+  @override
+  String get calNoTimeSet => '未安排时间';
+
+  @override
+  String get calHeatView => '热力';
+
+  @override
+  String get calNoHeatData => '暂无热力数据';
+
+  @override
+  String get calStreakDetail => '保持你的成就节奏';
+
+  @override
+  String get calActiveDaysDetail => '本月有行动的日期';
+
+  @override
+  String get calCompletedTasksDetail => '本月完成的任务数';
+
+  @override
+  String get calFocusDurationDetail => '本月累计专注';
+
+  @override
+  String get calLearningHeatmap => '学习热力';
+
+  @override
+  String get calHeatmapDesc => '用热力看连续性、完成度和学习投入，而不是重复浏览日程表。';
+
+  @override
+  String get calHeatLow => '低';
+
+  @override
+  String get calHeatHigh => '高';
+
+  @override
+  String get calMonthlyHighlights => '月度亮点';
+
+  @override
+  String get calNotAvailable => '暂无';
+
+  @override
+  String get calNoActivePlan => '本月暂无活跃计划';
+
+  @override
+  String get calGreatStreak => '连续状态很好，适合冲刺里程碑';
+
+  @override
+  String get calBuildConsistency => '先把连续性拉起来，会更容易触发成就闭环';
+
+  @override
+  String get calNoScheduleDay => '这一天还没有安排任务或日程';
+
+  @override
+  String get calEventUpdated => '日程已更新';
+
+  @override
+  String get calEventCreated => '日程已创建';
+
+  @override
+  String get calSavedLocally => '已保存到本地，稍后会自动同步到云端。';
+
+  @override
+  String get calEditEvent => '编辑日程';
 
   @override
   String picEstimatedHours(String hours) {
@@ -30631,6 +31351,266 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get homeNextActionTypePlanning => '计划';
+
+  @override
+  String get homeAuroraDialogTitle => '你想告诉 Sparkle 什么？';
+
+  @override
+  String get homeAuroraDialogHint => '哪里判断错了？说说你的想法…';
+
+  @override
+  String get homeAuroraDialogCancel => '取消';
+
+  @override
+  String get homeAuroraDialogSend => '发送';
+
+  @override
+  String get homeQuickCreate => '快速创建';
+
+  @override
+  String get homeOnboardingSummary => '我是你的AI成长伙伴。设定目标，我来帮你一步步达成。';
+
+  @override
+  String get homeOnboardingSetGoal => '设定目标';
+
+  @override
+  String get homeOnboardingSetGoalSubtitle => '告诉我你想达成什么，我来帮你制定计划';
+
+  @override
+  String get homeOnboardingChatSparkle => '跟Sparkle聊聊';
+
+  @override
+  String get homeOnboardingChatSubtitle => '聊聊你的想法，获得个性化建议';
+
+  @override
+  String get homeOnboardingExploreGalaxy => '探索知识星图';
+
+  @override
+  String get homeOnboardingExploreSubtitle => '发现你的知识结构，找到提升方向';
+
+  @override
+  String get homeSlotDailyBriefing => '今日简报';
+
+  @override
+  String homeSlotDailyBriefingReady(int count) {
+    return '今天 $count 件待办 · 已就绪';
+  }
+
+  @override
+  String get homeSlotDailyBriefingFallback => '当天的状态与节奏';
+
+  @override
+  String get homeSlotKeyMetrics => '关键指标';
+
+  @override
+  String homeSlotKeyMetricsStreak(int streak) {
+    return '🔥 连续 $streak 天';
+  }
+
+  @override
+  String get homeSlotKeyMetricsFallback => '进度、连续天数、动力';
+
+  @override
+  String get homeSlotCommandCenter => '指挥中心';
+
+  @override
+  String homeSlotCommandCenterNext(String label) {
+    return '下一步：$label';
+  }
+
+  @override
+  String get homeSlotCommandCenterFallback => '下一步行动入口';
+
+  @override
+  String get homeSlotUnderstanding => '理解面板';
+
+  @override
+  String get homeSlotUnderstandingSummary => 'Sparkle 对你的认知拆解';
+
+  @override
+  String get homeSlotReturnCaseFile => '回归档案';
+
+  @override
+  String get homeSlotReturnCaseFileSummary => '上次离开时的现场';
+
+  @override
+  String get homeSlotGoalSnapshot => '目标详情';
+
+  @override
+  String get homeSlotGoalSnapshotFallback => '当前目标的近况';
+
+  @override
+  String get homeSlotMultiGoalBoard => '多目标看板';
+
+  @override
+  String homeSlotMultiGoalDone(int done, int total) {
+    return '$done/$total 件已完成';
+  }
+
+  @override
+  String get homeSlotMultiGoalFallback => '所有目标的总览';
+
+  @override
+  String get homeSlotTaskBoard => '任务面板';
+
+  @override
+  String homeSlotTaskBoardProgress(int done, int total) {
+    return '完成 $done/$total';
+  }
+
+  @override
+  String homeSlotTaskBoardGoalHit(int done, int total) {
+    return '完成 $done/$total · 今日达标';
+  }
+
+  @override
+  String homeSlotTaskBoardToGo(int done, int total, int remaining) {
+    return '完成 $done/$total · 再 $remaining 件冲刺';
+  }
+
+  @override
+  String get homeSlotTaskBoardFallback => '今日待办与进度';
+
+  @override
+  String get homeSlotExamSprint => '考试冲刺';
+
+  @override
+  String homeSlotExamSprintDaysLeft(String subject, int days) {
+    return '$subject · $days 天后';
+  }
+
+  @override
+  String get homeSlotExamSprintNotStarted => '尚未启动 · 点开创建';
+
+  @override
+  String get homeSlotExamSprintEmptyTitle => '考试冲刺';
+
+  @override
+  String get homeSlotExamSprintEmptyBody => '还没有进行中的冲刺。设置一个目标，看到每日节奏与剩余天数。';
+
+  @override
+  String get homeSlotExamSprintEmptyAction => '创建冲刺';
+
+  @override
+  String get homeSlotUpdates => '动态';
+
+  @override
+  String get homeSlotUpdatesSummary => '通知、洞察、提醒';
+
+  @override
+  String get homeSlotGrowthQuality => '成长质量';
+
+  @override
+  String get homeSlotGrowthQualitySummary => '深度、稳定性、平衡';
+
+  @override
+  String get homeSlotWeeklyNarrative => '本周叙事';
+
+  @override
+  String get homeSlotWeeklyNarrativeSummary => '一周变化的故事线';
+
+  @override
+  String get homeSlotCommunity => '同行社群';
+
+  @override
+  String get homeSlotCommunitySummary => '伙伴动态与监督';
+
+  @override
+  String get homeSlotAchievements => '成就进度';
+
+  @override
+  String get homeSlotAchievementsSummary => '近期解锁与里程碑';
+
+  @override
+  String get homeSlotLearningHeatmap => '学习热力图';
+
+  @override
+  String get homeSlotLearningHeatmapSummary => '过去30天的活跃度';
+
+  @override
+  String get homeSlotWorkspaceCards => '工作区卡片';
+
+  @override
+  String homeSlotWorkspaceCardsVisible(int count) {
+    return '$count 张已显示';
+  }
+
+  @override
+  String get homeSlotWorkspaceCardsNone => '尚未启用任何卡片';
+
+  @override
+  String get homeEmptyDashboardTitle => '驾驶舱已经清空';
+
+  @override
+  String get homeEmptyDashboardBody => '点开下方“自定义”重新选择想要常驻的模块。';
+
+  @override
+  String get homeCustomizeDashboard => '自定义驾驶舱';
+
+  @override
+  String get homeFailureAuthTitle => '需要重新登录';
+
+  @override
+  String get homeFailureServerTitle => '服务暂时不稳';
+
+  @override
+  String get homeFailureValidationTitle => '需要调整请求';
+
+  @override
+  String get homeFailureNetworkTitle => '网络不稳定';
+
+  @override
+  String get homeFailureOfflineTitle => '离线了';
+
+  @override
+  String get homeFailureUnknownTitle => '首页暂时加载失败';
+
+  @override
+  String get homeFailureAuthAction => '去登录';
+
+  @override
+  String get homeFailureOfflineAction => '连网后重试';
+
+  @override
+  String get homeCommandCenterEyebrow => '现在的指挥台';
+
+  @override
+  String get homeCommandCenterNoTasks => '今天未排任务';
+
+  @override
+  String homeCommandCenterHealth(int percent) {
+    return '健康度 $percent%';
+  }
+
+  @override
+  String get homeHighPriority => '高优先级';
+
+  @override
+  String get homeCompletingUpdatesProgress => '完成后会更新计划进度';
+
+  @override
+  String get homeNoUrgentAction => '今天没有更急的动作。可以复盘、补资料，或让 Aurora 重新排一下。';
+
+  @override
+  String get homeSparkleWillTurn => 'Sparkle 会把目标拆成下一步、进度和风险提醒。';
+
+  @override
+  String homeRiskBottleneck(String topic) {
+    return '风险：$topic 正在卡住进度';
+  }
+
+  @override
+  String homeRiskDeadline(String label) {
+    return '风险：$label';
+  }
+
+  @override
+  String get homeRiskLowHealth => '风险：计划健康度偏低，需要重新校准';
+
+  @override
+  String homeSelectGoal(String label) {
+    return '选择目标: $label';
+  }
 
   @override
   String get goalIntentTitle => '告诉我你想达成什么';

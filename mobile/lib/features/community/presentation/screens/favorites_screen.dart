@@ -8,7 +8,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
 
@@ -61,7 +61,7 @@ class FavoritesScreen extends ConsumerWidget {
           onPressed: () =>
               context.canPop() ? context.pop() : context.go('/community'),
         ),
-        title: Text(I18nService.instance.isChinese ? '我的收藏' : 'My Favorites'),
+        title: Text(context.l10n.favoritesTitle),
         actions: [
           SparkleIconButton(
             variant: ButtonVariant.ghost,
