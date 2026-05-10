@@ -374,7 +374,7 @@ func (s *GalaxyCommandService) RecordStudy(ctx context.Context, userID, nodeID u
 		}
 
 		// Update mastery score
-		_, err = txCtx.Tx().Exec(ctx, `
+		result, err := txCtx.Tx().Exec(ctx, `
 			UPDATE user_node_status
 			SET mastery_score = LEAST(GREATEST(mastery_score + $3, 0), 100),
 			    total_study_minutes = total_study_minutes + $4,
@@ -394,13 +394,9 @@ func (s *GalaxyCommandService) RecordStudy(ctx context.Context, userID, nodeID u
 			return fmt.Errorf("failed to update mastery after study: %w", err)
 		}
 
-		// Return error if node is locked (no rows affected)
-		rows, _ := txCtx.Tx().Query(ctx, `
-			SELECT is_unlocked FROM user_node_status
-			WHERE user_id = $1 AND node_id = $2 AND is_unlocked = true
-		`, pgtype.UUID{Bytes: userID, Valid: true}, pgtype.UUID{Bytes: nodeID, Valid: true})
-		defer rows.Close()
-		if !rows.Next() {
+		// P2-5: Return error if node is locked (no rows affected)
+		rowsAffected := result.RowsAffected()
+		if rowsAffected == 0 {
 			return fmt.Errorf("node is locked")
 		}
 
