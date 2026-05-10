@@ -138,7 +138,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                 label: context.l10n.communityPost,
                 onPressed:
                     _contentController.text.trim().isEmpty || _isPosting
-                        ? () {}
+                        ? null
                         : _submit,
                 loading: _isPosting,
               ),
@@ -307,10 +307,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                       icon: Icons.tag_rounded,
                       label: context.l10n.communityTopic,
                       onPressed: () {
-                        _topicController.text = _topicController.text.isEmpty
-                            ? ''
-                            : _topicController.text;
-                        FocusScope.of(context).requestFocus();
+                        _contentFocus.unfocus();
+                        FocusScope.of(context).requestFocus(_topicController);
                       },
                     ),
                   ],

@@ -82,7 +82,7 @@ class _TraitsColdstartQuestionnaireState
                 ),
                 const Spacer(),
                 FilledButton(
-                  onPressed: _submitting ? null : _handleSubmit,
+                  onPressed: _submitting || _answers.length < widget.questions.length ? null : _handleSubmit,
                   child: Text(_submitting ? context.l10n.userSubmitting : context.l10n.userSave),
                 ),
               ],

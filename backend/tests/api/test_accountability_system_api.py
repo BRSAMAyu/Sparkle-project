@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from uuid import uuid4
@@ -224,10 +224,10 @@ async def _create_partnership(
         check_in_days=1,
         slot_type=AccountabilitySlotType.CORE,
         status=status,
-        started_at=datetime.utcnow() - timedelta(days=5)
+        started_at=datetime.now(UTC) - timedelta(days=5)
         if status == AccountabilityStatus.ACTIVE
         else None,
-        created_at=datetime.utcnow() - timedelta(days=5),
+        created_at=datetime.now(UTC) - timedelta(days=5),
     )
     await _commit_all(db_session, partnership)
     return partnership
@@ -421,7 +421,7 @@ async def test_friends_endpoint_enriches_and_sorts_accountability_relationships(
         partner_goal=None,
     )
 
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
     await _create_checkin(
         db_session,
         partnership=active_partnership,
@@ -478,7 +478,7 @@ async def test_overview_dashboard_nudge_friend_profile_and_context_are_populated
         status=AccountabilityStatus.ACTIVE,
     )
 
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
     await _create_checkin(
         db_session,
         partnership=partnership,

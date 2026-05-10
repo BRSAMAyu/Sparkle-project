@@ -116,6 +116,14 @@ def _check_http(name: str, url: str) -> CheckResult:
     return CheckResult(name, "PASS", f"{url} -> HTTP {resp.status_code}")
 
 
+def _check_grpc_port(name: str, host: str, port: int) -> CheckResult:
+    try:
+        with socket.create_connection((host, port), timeout=3):
+            return CheckResult(name, "PASS", f"{host}:{port} accepting connections")
+    except OSError as exc:
+        return CheckResult(name, "FAIL", f"{host}:{port} -> {exc}")
+
+
 def _check_alembic_head() -> CheckResult:
     backend_dir = os.path.dirname(os.path.dirname(__file__))
     result = subprocess.run(
@@ -215,6 +223,7 @@ async def main() -> int:
     results.append(await _check_postgres())
     results.append(_check_redis())
     results.append(_check_http("backend_health", "http://127.0.0.1:8000/health"))
+    results.append(_check_grpc_port("grpc_engine", "127.0.0.1", 50051))
     results.append(_check_http("gateway_health", "http://127.0.0.1:8080/api/v1/health"))
     # CQRS health requires auth token, skip in preflight (gateway_health covers basic readiness)
     # results.append(_check_http("gateway_cqrs_health", "http://127.0.0.1:8080/api/v1/health/cqrs"))

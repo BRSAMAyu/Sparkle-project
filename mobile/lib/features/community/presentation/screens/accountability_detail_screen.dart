@@ -879,7 +879,7 @@ class _PersonStat extends StatelessWidget {
                 radius: 30,
                 backgroundColor: DS.brandPrimary.withValues(alpha: 0.15),
                 child: Text(
-                  name,
+                  name.isNotEmpty ? name[0].toUpperCase() : '?',
                   style: TextStyle(
                     color: DS.brandPrimary,
                     fontWeight: DS.fontWeightBold,

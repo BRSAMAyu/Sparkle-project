@@ -429,10 +429,9 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
   Future<List<TaskModel>> _loadRelatedTasks(String nodeId) async {
     final response = await ref.read(taskRepositoryProvider).getTasks(
           pageSize: 50,
+          filters: {'knowledge_node_id': nodeId},
         );
-    return response.items
-        .where((task) => task.knowledgeNodeId == nodeId)
-        .toList(growable: false);
+    return response.items;
   }
 
   void _handleOpenNode(
@@ -870,7 +869,7 @@ class _LearningPathInlineFeedback extends StatelessWidget {
             SparkleIconButton(
               icon: Icon(Icons.close_rounded, color: DS.textSecondary),
               onPressed: onDismiss,
-              semanticLabel: 'dismiss feedback',
+              semanticLabel: AppLocalizations.of(context)!.commonDismiss,
               variant: ButtonVariant.ghost,
             ),
         ],
