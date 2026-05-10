@@ -9717,7 +9717,6 @@
   "taskTooHardGuidance2": "Explain it clearly first, then decide next steps.",
   "taskTooHardGuidance3": "Only verify this one sub-step you just broke out.",
   "taskDiagnosisStuck": "Which step feels most stuck right now?",
-  "taskDiagnosisOptions": ["Concept not clear", "Step order confused", "Can't use given conditions"],
   "taskDiagnosisFix": "Just do one small action you can finish in 5 minutes.",
   "taskDiagnosisCheck": "What can you write down first for the next step?",
   "taskDiagnosisMessage": "Aurora has diagnosed based on your current task state.",
@@ -14471,6 +14470,7 @@
   "bottleneckAlertAction": "Take a look?",
   "compactStatusKeepRhythm": "Keep your rhythm today",
   "longTermPlan": "Long-term Plan",
+  "intentPredictionSuggested": "Suggested next step",
   "@bottleneckAlertMessage": {
     "placeholders": {
       "topic": {

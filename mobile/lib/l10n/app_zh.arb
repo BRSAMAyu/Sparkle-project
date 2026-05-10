@@ -11922,7 +11922,6 @@
   "taskTooHardGuidance2": "先讲清楚，再决定下一步。",
   "taskTooHardGuidance3": "只验证刚拆出来的这一步。",
   "taskDiagnosisStuck": "你现在最像卡在哪一步？",
-  "taskDiagnosisOptions": ["概念没想清", "步骤顺序乱了", "题目条件不会用"],
   "taskDiagnosisFix": "先只做一个 5 分钟内能完成的小动作。",
   "taskDiagnosisCheck": "下一步你能先写下哪一句？",
   "taskDiagnosisMessage": "Aurora 已根据当前任务状态给出诊断。",
@@ -13942,6 +13941,87 @@
   "cahDeclineReminder": "拒绝",
   "cahLaterReminder": "稍后",
   "cahTooFrequentReminder": "太频繁",
+  "cahReminderAccepted": "已开启提醒",
+  "cahReminderDeclined": "已拒绝本次提醒",
+  "cahReminderLater": "稍后再提醒",
+  "cahReminderReduced": "已降低提醒频率",
+  "cahUndo": "撤销",
+  "cahBoundaryChanged": "提醒边界已更新",
+  "cahLoadFailed": "责任伙伴空间加载失败",
+  "cahDueDate": "截止 {value}",
+  "@cahDueDate": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "cahPercent": "{value}%",
+  "cahPartnerGoal": "{name} 的目标",
+  "@cahPartnerGoal": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "cahStrategies": "社区策略推荐",
+  "cahStrategyCreateTitle": "创建你的第一个承诺",
+  "cahStrategyCreateDesc": "公开承诺能有效提升执行力和责任感。设定一个明确的目标开始吧。",
+  "cahStrategyCreateAction": "创建承诺",
+  "cahStrategyPartnerTitle": "寻找责任伙伴",
+  "cahStrategyPartnerDesc": "有一位伙伴同行能让坚持变得更容易，互相监督和鼓励。",
+  "cahStrategyPartnerAction": "寻找伙伴",
+  "cahStrategySharedGoalTitle": "加入共同目标",
+  "cahStrategySharedGoalDesc": "和一群人追求相同目标，集体的力量会带来意想不到的动力。",
+  "cahStrategySharedGoalAction": "浏览目标",
+  "cahStrategySquadRiskTitle": "关注团队风险",
+  "cahStrategySquadRiskDesc": "你的团队中有需要关注的风险项，及时处理可以避免更大的问题。",
+  "cahStrategySquadRiskAction": "查看详情",
+  "cahEmptyTitle": "还没有责任承诺",
+  "cahEmptyBody": "先邀请一位伙伴，或从 Feed 里找到同目标的人一起前进。",
+  "cahRetry": "重试",
+  "cahSuccessCriteria": "成功标准",
+  "cahMilestones": "里程碑",
+  "cahEvidence": "证据链",
+  "cahNoEvidence": "还没有证据",
+  "cahProgress": "进度",
+  "cahWitnesses": "见证人",
+  "cahDueSoon": "即将到期",
+  "cahActive": "进行中",
+  "cahCompleted": "已完成",
+  "cahViolated": "已违反",
+  "cahTogetherNotRanking": "不是排名，是一起往前走",
+  "cahTodayDone": "今日已同步",
+  "cahTodayWaiting": "今日待同步",
+  "cahFriendsEntry": "好友",
+  "cahGroupsEntry": "小组",
+  "cahFindPartners": "寻找伙伴",
+  "cahCreateCommitment": "创建承诺",
+  "communityContentHint": "分享你此刻的想法、学习心得、或今天的进步...",
+  "partnersEmptyTitle": "找到你的学习伙伴",
+  "partnersEmptyDesc": "和一个目标相近的伙伴结对，互相监督，坚持率翻倍。",
+  "partnersEmptyAction": "发现伙伴",
+  "partnersMyPartners": "我的伙伴",
+  "partnersViewAll": "查看全部",
+  "partnersMoreFriends": "还有 {count} 位好友",
+  "@partnersMoreFriends": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "partnersEncourage": "鼓励",
+  "partnersNudge": "提醒",
+  "partnersCheer": "加油",
+  "partnersFriendLabel": "好友",
+  "partnersDayStreak": "{count} 天连续",
+  "partnersCheckedIn": "今日已打卡",
+  "partnersNotCheckedIn": "今日未打卡",
+  "partnersDoneToday": "今日完成",
+  "partnersPending": "今日未完成",
+  "partnersPartner": "伙伴",
   "goalDetailTitle": "目标详情",
   "goalDetailProgress": "总体进度",
   "goalDetailMastery": "掌握度",
@@ -14389,6 +14469,7 @@
   "bottleneckAlertAction": "看看?",
   "compactStatusKeepRhythm": "今天适合保持节奏",
   "longTermPlan": "长期计划",
+  "intentPredictionSuggested": "建议下一步",
   "@bottleneckAlertMessage": {
     "placeholders": {
       "topic": {

@@ -170,7 +170,7 @@ class _IntentPredictionBarState extends ConsumerState<IntentPredictionBar> {
               const SizedBox(width: DS.spacing8),
               Expanded(
                 child: Text(
-                  I18nService.instance.isChinese ? '建议下一步' : 'Suggested next step',
+                  context.l10n.intentPredictionSuggested,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: context.sparkleTypography.labelSmall.copyWith(
