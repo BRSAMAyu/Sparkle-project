@@ -15,7 +15,7 @@
 | **P1 High** | **35** | **35** | **0** |
 | P2 Medium | 60 | 7 | 53 |
 | P3 Low | 32 | 0 | 32 |
-| i18n (net reduction) | ~1070 | ~24 | ~1046 |
+| i18n (net reduction) | ~1070 | ~32 | ~1038 |
 
 ---
 
@@ -47,6 +47,8 @@ Opus agent verified all 8 commits:
 | **c797ce7ac** | 16:10 | mobile | remove unused I18nService import from node_detail_sheet.dart |
 | **19d5a2663** | 16:15 | backend | ErrorReplanBridge DEBUG log for unsupported error types (DB-P1-08) |
 | **d033b5020** | 16:20 | backend | TaskEventConsumer session isolation (DB-P1-07) |
+| **e7ae6e608** | 16:35 | i18n | statistics_empty_state.dart → ARB (11 keys) |
+| **43622a674** | 16:40 | i18n | statistics providers + overview_cards → remove I18nService |
 
 ---
 
@@ -150,12 +152,14 @@ Opus agent verified all 8 commits:
 | P1-01: _check_perfect_month_for_user uses UTC dates | Uses user's local month boundaries converted to UTC storage timestamps | 631923b94 |
 | P1-01: _count_mutual_checkin_days uses UTC dates | Groups by local date via `_to_local_date` instead of UTC `created_at.date()` | 631923b94 |
 
-### P2 Flutter UX (2 issues) — ✅ FIXED 2026-05-10
+### P2 Flutter UX (3 issues) — ✅ FIXED 2026-05-10
 | Issue | Fix | Commit |
 |-------|-----|--------|
 | P2-08: accountability_detail_screen missing pull-to-refresh | Wrapped `_DashboardView` with `SparkleRefreshIndicator` calling `ref.invalidate(accountabilityDashboardProvider)` | 631923b94 |
 | P2-07: _PartnershipCard shows wrong goal (always initiatorGoal) | Now shows `initiatorGoal` if current user is initiator, `partnerGoal` otherwise | 631923b94 |
 | P2-08: accountability_detail_screen DateFormat locale mismatch | Added `locale = Localizations.localeOf(context)` to `_PendingPoliciesCard`, `_RecentReflectionsCard`, `_ForesightHintCard` | 631923b94 |
+| P2-09: accountability_detail_screen error leaks raw exception (line 100) | Replaced `'$e'` with `context.l10n.accountabilityDashboardLoadFailedDetail` | 1e785afc4 |
+| P2-09: accountability_detail_screen error leaks raw exception (line 264) | Replaced `${context.l10n.accountabilityOperationFailed}: $e` with `context.l10n.accountabilityOperationFailed` | 1e785afc4 |
 
 ### DB/Integration P2 (13 issues)
 - DB-P2-01: HNSW m/ef_construction defaults
