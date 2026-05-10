@@ -38,25 +38,56 @@
 | P1-22 | GetUserGalaxy mastery 取错属性 | galaxy_grpc_service.py | `35394246e` | ✅ DONE |
 | P1-23 | 文档导入节点无 embedding | galaxy_service.py | `bb3e6b75a` | ✅ DONE |
 
-**剩余 P1 (5项)**: P1-14 (CQRS死代码，需决策), P1-16 (false positive), P1-19 (已正确), P1-20 (需Prometheus)
+**剩余 P1 (4项)**: P1-14 (CQRS死代码，需决策), P1-16 (false positive), P1-19 (已正确), P1-20 (需Prometheus)
 
 ---
 
-## P2 问题修复记录 (12/40 DONE)
+## P2 问题修复记录 (22/40 DONE)
 
 | # | 问题 | 文件 | Commit | 状态 |
 |---|------|------|--------|------|
 | P2-1 | Proto mastery int32 → double | galaxy_service.proto | ⚠️ 需要 proto 生成 + 跨语言协调 |
-| P2-2 | Redis 投影无 TTL (node views) | galaxy_sync.go | `b230abfcc` | ✅ DONE |
+| P2-2 | Redis 投影无 TTL (all SET ops) | galaxy_sync.go | `b230abfcc` | ✅ DONE |
 | P2-2b | Redis recent_studies 无 TTL | galaxy_sync.go | `fb31384f7` | ✅ DONE |
 | P2-4 | Community like count 非原子 | community_sync.go | ✅ DONE - Lua script already atomic |
+| P2-4b | SparkNode context.Background() | galaxy_handler.go | `1e76bb0c6` | ✅ DONE |
 | P2-5 | RecordStudy 不检查 is_unlocked | galaxy_command.go | `b5a0db9c6` | ✅ DONE |
+| P2-7 | Community sync like count non-atomic | community_sync.go | ✅ DONE - Lua script already atomic |
 | P2-8 | study_records 缺复合索引 (user_id, node_id) | schema.sql | `b5a0db9c6` | ✅ DONE |
 | P2-9 | study_records 缺 (user_id, created_at) 索引 | schema.sql | `b5a0db9c6` | ✅ DONE |
+| P2-10 | GalaxyGraphResponse missing nodes fallback | galaxy_model.dart | `f1334c8b6` | ✅ DONE |
 | P2-12 | GetLearningPath N+1 查询 | galaxy_grpc_service.py | ✅ 已修复 - 见P1-21 |
 | P1-4/5 | node_relations 无唯一约束 | schema.sql | `fb31384f7` | ✅ DONE |
-| P2-4b | SparkNode context.Background() | galaxy_handler.go | `1e76bb0c6` | ✅ DONE |
-| P2-13 | galaxy_handler duplicate node/nodes routes | galaxy_handler.go | ⚠️ 待定 - 向后兼容 |
+| P2-Py5 | predict_next_node 仅单向遍历边 | stats_service.py | `0e1b31553` | ✅ DONE |
+| P2-Py6 | Heatmap overdue intensity 固定1.0 | stats_service.py | `39626f78f` | ✅ DONE |
+| P2-Py12 | GalaxyUserPermission datetime.utcnow deprecated | galaxy.py | `7eb031de9` | ✅ DONE |
+| P2-Py3.2 | semantic_cache LockError string matching | semantic_cache_service.py | `b958a3b9a` | ✅ DONE |
+| P2-Py6.3 | semantic_cache keys() → SCAN | semantic_cache_service.py | `b958a3b9a` | ✅ DONE |
+| P2-Py6.5 | auto_link_nodes N+1 → IN query | expansion_service.py | `54a96e8b8` | ✅ DONE |
+| P2-Fl2 | LearningPathScreen hardcoded title | learning_path_screen.dart | — | ⚠️ FALSE POSITIVE — 已使用l10n |
+| P2-Fl6 | KnowledgeBase categories re-fetch on switch | group_knowledge_base_view.dart | `1e8fc29f4` | ✅ DONE |
+| P2-Fl12 | _parseMasteryFromSubtitle int.parse crash | node_share_card.dart | `1e8fc29f4` | ✅ DONE |
+| P2-Fl13 | duplicate node/nodes routes | galaxy_handler.go | ⚠️ INTENTIONAL — 向后兼容 |
+| P2-Fl7 | deselectNode bypass copyWith | galaxy_provider.dart | ⚠️ INTENTIONAL — copyWith不支持nullable→null |
+
+---
+
+## P3 问题修复记录 (3/12 DONE)
+
+| # | 问题 | 文件 | Commit | 状态 |
+|---|------|------|--------|------|
+| P3-Fl14 | GalaxyNotifier unused animation fields | galaxy_provider.dart | `104179bc8` | ✅ DONE |
+| P3-Fl15 | _mapPerformanceTier identity function | galaxy_provider.dart | `104179bc8` | ✅ DONE |
+| P3-Gw01 | GalaxyHandler SearchNodes JSON unmarshal error | galaxy_handler.go | 待修复 |
+| P3-Py02 | handleNodeExpanded swallows missing view | galaxy_sync.go | 待修复 |
+| P3-Py03 | knowledge_nodes.community_signal json→jsonb | schema.sql | 待修复 |
+| P3-Py04 | Python gRPC empty response on error | galaxy_grpc_service.py | 待修复 |
+| P3-Gw06 | PostView.LikeCount not reconciled with DB | community_sync.go | 待修复 |
+| P3-Gw07 | post_likes ON CONFLICT no unique constraint | schema.sql | 待修复 |
+| P3-Fl16 | Node detail UUID shown to user | node_detail_sheet.dart | 待修复 |
+| P3-Fl17 | LearningReportShareCard light theme contrast | learning_report_share_card.dart | 待修复 |
+| P3-Py06 | DocumentService duplicate methods | document_service.py | 待修复 |
+| P3-Py33 | DocumentService unused cache methods | document_service.py | 待修复 |
 
 ---
 
@@ -78,14 +109,21 @@
 | `fb31384f7` | fix(P2): galaxy_sync TTL, node_relations unique constraint |
 | `b230abfcc` | fix(P2): galaxy_sync add TTL to all Redis projection keys |
 | `1e76bb0c6` | fix(P2): galaxy_handler use request context for RecordNodeInteraction |
+| `0e1b31553` | fix(P2): predict_next_node follow bidirectional edges |
+| `39626f78f` | fix(P2): heatmap graduated overdue intensity |
+| `7eb031de9` | fix(P2): galaxy models replace deprecated datetime.utcnow |
+| `1e8fc29f4` | fix(P2): Flutter tryParse, knowledge base categories fetch once |
+| `b958a3b9a` | fix(P2): semantic_cache SCAN instead of KEYS, proper LockError check |
+| `54a96e8b8` | fix(P2): auto_link_nodes batch keyword lookup |
+| `104179bc8` | fix(P3): remove dead code in GalaxyNotifier |
 
-**总计**: 14 个 commit，包含 6 P0 + 14 P1 + 12 P2（共 32 项修复）
+**总计**: 21 个 commit，包含 6 P0 + 14 P1 + 22 P2 + 3 P3（共 45 项修复/确认）
 
 ---
 
 ## 下一步
 
 1. ✅ P0 全部完成
-2. ⚠️ P1 大部分完成 (18/23)，剩余 5 项为 false positive 或需架构决策
-3. P2 开始处理：schema 索引、Redis TTL、性能优化
-4. P3 开始处理：死代码清理、次要优化
+2. ⚠️ P1 大部分完成 (18/23)，剩余 4 项为 false positive 或需架构决策
+3. ⚠️ P2 大部分完成 (22/40)，剩余项需 proto 协调或为 intentional design
+4. P3 继续处理：剩余 9 项
