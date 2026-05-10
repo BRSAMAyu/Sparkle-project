@@ -4,10 +4,30 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/community/data/models/accountability_model.dart';
 import 'package:sparkle/features/community/data/repositories/mock_community_repository.dart';
 import 'package:sparkle/shared/entities/user_brief.dart';
+
+/// Structured error types for accountability operations.
+/// These enum values are used for localization at the UI layer.
+enum AccountabilityErrorType {
+  requestFailed,
+  operationFailed,
+  partnerNudged,
+  partnerNudgedWithMessage,
+  notFound,
+  alreadyCheckedIn,
+}
+
+/// Thrown when accountability operations fail.
+class AccountabilityException implements Exception {
+  AccountabilityException(this.type, [this.detail]);
+  final AccountabilityErrorType type;
+  final String? detail;
+
+  @override
+  String toString() => 'AccountabilityException($type, $detail)';
+}
 
 final accountabilityRepositoryProvider =
     Provider<AccountabilityRepository>((ref) {
@@ -19,8 +39,7 @@ class AccountabilityRepository {
   AccountabilityRepository(this._apiClient);
   final ApiClient _apiClient;
 
-  String _extractApiError(Object error, {String? fallback}) {
-    final fb = fallback ?? (I18nService.instance.isChinese ? '请求失败' : 'Request failed');
+  String _extractApiErrorString(Object error, {String? fallback}) {
     if (error is DioException) {
       final data = error.response?.data;
       if (data is Map<String, dynamic>) {
@@ -41,7 +60,12 @@ class AccountabilityRepository {
         return error.message!.trim();
       }
     }
-    return fb;
+    return fallback ?? '';
+  }
+
+  AccountabilityException _toException(Object error, AccountabilityErrorType type) {
+    final detail = _extractApiErrorString(error);
+    return detail.isNotEmpty ? AccountabilityException(type, detail) : AccountabilityException(type);
   }
 
   static const _demoCurrentUserId = MockCommunityRepository.currentUserId;

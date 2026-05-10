@@ -103,7 +103,6 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
     final nextActions = dashboardState.nextActions;
 
     final l10n = I18nService.instance.l10n;
-    final isChinese = I18nService.instance.isChinese;
     final predictions = <PredictedAction>[
       // Sprint-based prediction
       if (sprint != null && sprint.daysLeft <= 3)
@@ -264,6 +263,7 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
   }
 
   List<PredictedAction> _predictionsFromInsight(PredictionInsightData insight) {
+    final l10n = I18nService.instance.l10n;
     final actions = insight.recommendedActions.isNotEmpty
         ? insight.recommendedActions
         : [

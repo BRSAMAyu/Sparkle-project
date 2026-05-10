@@ -2196,6 +2196,10 @@ class ChatOrchestrator(
                     return
 
                 if chat_mode == CHAT_MODE_STANDARD and not request.HasField("tool_result"):
+                    # Extract locale from user profile for localized tool responses
+                    locale = "en"
+                    if request.HasField("user_profile") and request.user_profile.language:
+                        locale = request.user_profile.language
                     bridge_responses = await self._maybe_short_circuit_bridge_tool(
                         active_tools=resolved_active_tools,
                         user_message=user_message,
@@ -2207,6 +2211,7 @@ class ChatOrchestrator(
                         workflow_id=workflow_id,
                         prompt_version=prompt_version,
                         active_db=active_db,
+                        locale=locale,
                     )
                     if bridge_responses:
                         for bridge_response in bridge_responses:
