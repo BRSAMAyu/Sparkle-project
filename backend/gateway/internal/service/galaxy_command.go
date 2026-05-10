@@ -350,7 +350,9 @@ func (s *GalaxyCommandService) RecordStudy(ctx context.Context, userID, nodeID u
 			SELECT COALESCE(mastery_score, 0) FROM user_node_status
 			WHERE user_id = $1 AND node_id = $2
 		`, pgtype.UUID{Bytes: userID, Valid: true}, pgtype.UUID{Bytes: nodeID, Valid: true})
-		row.Scan(&currentMastery)
+		if err := row.Scan(&currentMastery); err != nil {
+			return fmt.Errorf("node not found or not unlocked: %w", err)
+		}
 
 		// Insert study record — match actual schema.sql columns:
 		// study_minutes, mastery_delta, initial_mastery, record_type
@@ -397,7 +399,7 @@ func (s *GalaxyCommandService) RecordStudy(ctx context.Context, userID, nodeID u
 		// P2-5: Return error if node is locked (no rows affected)
 		rowsAffected := result.RowsAffected()
 		if rowsAffected == 0 {
-			return fmt.Errorf("node is locked")
+			return fmt.Errorf("node not found or not unlocked")
 		}
 
 		// Create domain event

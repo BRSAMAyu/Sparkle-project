@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -303,7 +303,6 @@ class GalaxyStatsService:
         target_node_id = None
 
         if last_status:
-            from sqlalchemy import or_
             relations_query = (
                 select(NodeRelation)
                 .where(or_(
@@ -341,6 +340,7 @@ class GalaxyStatsService:
             fallback_query = (
                 select(KnowledgeNode)
                 .where(KnowledgeNode.importance_level >= 4)
+                .order_by(func.random())
                 .limit(10)
             )
             fallback_result = await self.db.execute(fallback_query)
