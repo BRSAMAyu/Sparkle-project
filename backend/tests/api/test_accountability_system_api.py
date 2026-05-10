@@ -960,8 +960,14 @@ async def test_accountability_routes_publish_profile_refresh_events(
         )
 
     assert checkin_response.status_code == 201
-    third_call = publish.await_args_list[0]
-    assert third_call.args[0] == ACCOUNTABILITY_CHECKIN_CREATED
-    assert third_call.args[1]["user_ids"] == [str(partner.id)]
-    assert third_call.args[1]["action"] == "created"
-    assert third_call.args[1]["partnership_id"] == partnership_id
+    checkin_call = next(
+        (c for c in publish.await_args_list if c.args[0] == ACCOUNTABILITY_CHECKIN_CREATED),
+        None,
+    )
+    assert checkin_call is not None, (
+        f"ACCOUNTABILITY_CHECKIN_CREATED not found among events: "
+        f"{[c.args[0] for c in publish.await_args_list]}"
+    )
+    assert checkin_call.args[1]["user_ids"] == [str(partner.id)]
+    assert checkin_call.args[1]["action"] == "created"
+    assert checkin_call.args[1]["partnership_id"] == partnership_id

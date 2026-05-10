@@ -1209,27 +1209,27 @@ List<_CheckinMoodVisual> _checkinMoodVisuals(BuildContext context) => [
       _CheckinMoodVisual(
         icon: Icons.sentiment_very_dissatisfied_rounded,
         label: context.l10n.accountabilityMoodLow,
-        color: Color(0xFFE57373),
+        color: DS.semanticError,
       ),
       _CheckinMoodVisual(
         icon: Icons.sentiment_dissatisfied_rounded,
         label: context.l10n.accountabilityMoodOkay,
-        color: Color(0xFFFFB74D),
+        color: DS.warning,
       ),
       _CheckinMoodVisual(
         icon: Icons.sentiment_neutral_rounded,
         label: context.l10n.accountabilityMoodSteady,
-        color: Color(0xFF90A4AE),
+        color: DS.neutral500,
       ),
       _CheckinMoodVisual(
         icon: Icons.sentiment_satisfied_alt_rounded,
         label: context.l10n.accountabilityMoodGood,
-        color: Color(0xFF66BB6A),
+        color: DS.semanticSuccess,
       ),
       _CheckinMoodVisual(
         icon: Icons.mood_rounded,
         label: context.l10n.accountabilityMoodGreat,
-        color: Color(0xFF26A69A),
+        color: DS.brandSecondary,
       ),
     ];
 

@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/presentation/widgets/feed_tab_content.dart';
 import 'package:sparkle/features/community/presentation/widgets/groups_tab.dart';
@@ -51,11 +51,10 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
 
   @override
   Widget build(BuildContext context) {
-    final zh = I18nService.instance.isChinese;
     final tabLabels = [
-      zh ? '伙伴' : 'Partners',
-      zh ? '动态' : 'Feed',
-      zh ? '群组' : 'Groups',
+      context.l10n.communityTabPartners,
+      context.l10n.communityTabFeed,
+      context.l10n.communityTabGroups,
     ];
 
     return SparklePageScaffold(
@@ -80,7 +79,7 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      zh ? '社群' : 'Community',
+                      context.l10n.communityTitle,
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: DS.fontWeightBold,
@@ -90,7 +89,7 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
                     ),
                     const SizedBox(height: DS.sm),
                     Text(
-                      zh ? '和伙伴一起成长' : 'Grow together with partners',
+                      context.l10n.communitySubtitle,
                       style: TextStyle(fontSize: 14, color: DS.textSecondary),
                     ),
                   ],
@@ -147,7 +146,7 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
     bool overlapsContent,
   ) =>
       Container(
-        color: Theme.of(context).colorScheme.surface,
+        color: DS.surfacePrimary,
         child: tabBar,
       );
 

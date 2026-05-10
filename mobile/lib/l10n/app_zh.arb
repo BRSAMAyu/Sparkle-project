@@ -2309,8 +2309,10 @@
   "communityFocusModeOff": "开启专注模式",
   "communityFocusModeEnabled": "已开启专注模式，消息将不会打扰您",
   "communityFocusModeDisabled": "已关闭专注模式",
+  "communityTabFeed": "动态",
   "communityTabFriends": "好友",
   "communityTabGroups": "群组",
+  "communityTabPartners": "伙伴",
   "communityAddFriend": "添加好友",
   "communityMembers": "{count} 成员",
   "@communityMembers": {
@@ -10455,6 +10457,20 @@
   "insRiskMedium": "中等风险",
   "insRiskHigh": "高风险",
   "insRiskUnknown": "未知",
+  "insDecisionLog": "AI 决策日志",
+  "insDecisionLogEmpty": "暂无决策日志",
+  "insFilterAll": "全部",
+  "insFilter24h": "24 小时",
+  "insFilter7d": "7 天",
+  "insFilter30d": "30 天",
+  "insNoSignalRecorded": "未记录信号",
+  "insNoPolicyRecorded": "未记录策略",
+  "insResultPending": "待观察",
+  "insResultApplied": "已应用",
+  "insResultNeedsReview": "有偏差",
+  "insSignalLabel": "触发信号",
+  "insPolicyLabel": "策略",
+  "insLoadFailedDecisionLog": "加载失败",
   "rcfWelcomeBack": "欢迎回来 — 这是我对你的记忆",
   "rcfClose": "关闭",
   "rcfConfirmedStrategies": "你确认过对你有效的策略：",
@@ -11403,6 +11419,7 @@
   "communityForward": "转发",
   "communityReport": "举报",
   "communityStreakDaysSuffix": "{count} 天",
+  "communitySubtitle": "和伙伴一起成长",
   "communityGroupDetails": "社群详情",
   "communityWelcomeToGroup": "欢迎加入社群！",
   "communityLeaveGroupFailed": "退出群组失败，请重试",
@@ -13630,6 +13647,96 @@
   "homeAuroraCorrectionSubmit": "发送",
   "homeWeatherWithSummary": "今天适合{hint}，{summary}",
   "homeWeatherOnlyHint": "今天适合{hint}",
+  "homeNextActionTitle": "下一步",
+  "homeNextActionAllClear": "清空啦",
+  "homeNextActionNoPending": "当前没有待推进任务",
+  "homeNextActionMostCritical": "最关键的待办",
+  "homeNextActionPrioritize": "优先处理最关键的 {count} 项行动",
+  "@homeNextActionPrioritize": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeNextActionCount": "{count}项",
+  "@homeNextActionCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeNextActionNoPendingToday": "今天没有待推进的行动",
+  "homeNextActionSeeMore": "其余 {count} 项见任务页",
+  "@homeNextActionSeeMore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeNextActionViewAll": "查看全部 →",
+  "homeNextActionTaskOverview": "任务总览 →",
+  "homeNextActionStart": "开始",
+  "homeNextActionMinLabel": "{minutes} 分钟 · {type}",
+  "@homeNextActionMinLabel": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      },
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "homeToolbarTitle": "快捷工具",
+  "homeToolbarFocusMode": "专注模式",
+  "homeToolbarPomodoro": "番茄钟",
+  "homeToolbarQuickNote": "闪念笔记",
+  "homeToolbarErrorBook": "错题本",
+  "homeToolbarCognitiveMode": "认知模式",
+  "homeToolbarCuriosityCapsule": "好奇心胶囊",
+  "homeToolbarReviewPlan": "复习计划",
+  "homeToolbarLearningForecast": "学习预测",
+  "homeSprintNoActive": "暂无活跃冲刺",
+  "homeSprintCreate": "直接创建冲刺",
+  "homeSprintNewGrowthPlan": "新建成长计划",
+  "homeSprintNoPendingTasks": "{name} 暂无待办任务",
+  "@homeSprintNoPendingTasks": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "homeSprintTasksRemaining": "剩余 {taskCount} 个任务 · {daysLeft} 天",
+  "@homeSprintTasksRemaining": {
+    "placeholders": {
+      "taskCount": {
+        "type": "int"
+      },
+      "daysLeft": {
+        "type": "int"
+      }
+    }
+  },
+  "homeSprintHistory": "冲刺历史",
+  "homeSprintMoreActions": "更多操作",
+  "homeSprintComplete": "完成冲刺",
+  "homeSprintExtend": "延长冲刺",
+  "homeSprintAbandon": "放弃冲刺",
+  "homeSprintFilterAll": "全部",
+  "homeSprintFilterTodo": "待办",
+  "homeSprintFilterInProgress": "进行中",
+  "homeSprintFilterDone": "已完成",
+  "homeNextActionTaskDefault": "任务",
+  "homeNextActionTypeLearning": "学习",
+  "homeNextActionTypeTraining": "训练",
+  "homeNextActionTypeErrorFix": "错题",
+  "homeNextActionTypeReflection": "复盘",
+  "homeNextActionTypeSocial": "社群",
+  "homeNextActionTypePlanning": "计划",
   "goalIntentTitle": "告诉我你想达成什么",
   "goalIntentHint": "一句话就好，比如「7天后计网考试基本没学想先别挂」",
   "goalIntentTypeHere": "在这里输入",
@@ -13906,6 +14013,35 @@
   "communityCommentRetry": "重试",
   "communityCommentEmpty": "暂无评论",
   "communityCommentHint": "写评论...",
+  "sharedResourceTitle": "共享资源",
+  "sharedResourceBySharer": "分享者 {name}",
+  "@sharedResourceBySharer": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sharedResourceAdoptIntoPlan": "采纳并加入我的计划",
+  "sharedResourceFeatured": "精选",
+  "sharedResourceRecommended": "推荐",
+  "sharedResourceBeginnerFriendly": "新手友好",
+  "sharedResourceAdoptions": "采纳 {count} 次",
+  "@sharedResourceAdoptions": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sharedResourceAvgRating": "平均评分 {rating}",
+  "@sharedResourceAvgRating": {
+    "placeholders": {
+      "rating": {
+        "type": "String"
+      }
+    }
+  },
   "goalDetailOverdue": "已过期",
   "goalDetailCompletedTitle": "标记为完成？",
   "goalDetailCompletedBody": "将当前步骤标记为完成并进入下一步？",

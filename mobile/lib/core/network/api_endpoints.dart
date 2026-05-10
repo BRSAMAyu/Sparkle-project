@@ -429,7 +429,7 @@ class ApiEndpoints {
   static String groupMemberMute(String groupId, String userId) =>
       '/community/groups/$groupId/members/$userId/mute';
   static String groupMemberUnmute(String groupId, String userId) =>
-      '/community/groups/$groupId/members/$userId/unmute';
+      '/community/groups/$groupId/members/$userId/mute';
   static String groupMemberWarn(String groupId, String userId) =>
       '/community/groups/$groupId/members/$userId/warn';
   static String groupReports(String groupId) =>

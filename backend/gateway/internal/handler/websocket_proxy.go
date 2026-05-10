@@ -596,6 +596,11 @@ func buildBackendWebSocketHeaders(r *http.Request, authToken string) http.Header
 	if realIP := r.Header.Get("X-Real-IP"); realIP != "" {
 		headers.Set("X-Real-IP", realIP)
 	}
+	for _, key := range []string{"X-Request-ID", "X-Trace-ID", "Accept-Language", "X-Device-ID", "X-Device-Platform"} {
+		if val := r.Header.Get(key); val != "" {
+			headers.Set(key, val)
+		}
+	}
 	return headers
 }
 

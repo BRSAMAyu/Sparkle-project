@@ -19,7 +19,11 @@ class DashboardCardGrid extends StatelessWidget {
         slideOffset: Offset.zero,
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final crossAxisCount = constraints.maxWidth < 300 ? 1 : 2;
+            final crossAxisCount =
+                constraints.maxWidth < 340 ? 1 : 2;
+            final double columnWidth = (constraints.maxWidth -
+                    (crossAxisCount - 1) * DS.spacing12) /
+                crossAxisCount;
             return AlignedGridView.count(
               crossAxisCount: crossAxisCount,
               mainAxisSpacing: DS.spacing12,
@@ -28,6 +32,7 @@ class DashboardCardGrid extends StatelessWidget {
               physics: const NeverScrollableScrollPhysics(),
               itemCount: cards.length,
               itemBuilder: (context, index) => SizedBox(
+                width: columnWidth,
                 height: DashboardCardGrid.gridCardHeight,
                 child: SparkleStaggerItem(
                   index: index,

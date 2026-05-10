@@ -232,13 +232,13 @@ class _AccountabilityHeatmapState extends State<AccountabilityHeatmap> {
           const SizedBox(width: 8),
           _legendItem(
             context,
-            color: const Color(0xFF9BE9A8),
+            color: DS.semanticSuccess.withValues(alpha: 0.5),
             label: context.l10n.communitySingleChecked,
           ),
           const SizedBox(width: 8),
           _legendItem(
             context,
-            color: const Color(0xFF2E7D32),
+            color: DS.semanticSuccess,
             label: context.l10n.communityBothChecked,
           ),
         ],

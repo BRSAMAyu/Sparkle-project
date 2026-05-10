@@ -551,6 +551,7 @@ class SparkleColors {
   factory SparkleColors.dark({bool highContrast = false, bool colorBlindFriendly = false}) {
     if (colorBlindFriendly) {
       // Wong 2011 CB-safe palette — lighter/more saturated for dark backgrounds
+      // Neutral gray palette — no blue tint, premium dark aesthetic
       return const SparkleColors(
         brandPrimary: Color(0xFF56B4E9),        // Sky Blue
         brandSecondary: Color(0xFF009E73),      // Bluish Green
@@ -558,10 +559,10 @@ class SparkleColors {
         semanticWarning: Color(0xFFF0E442),     // Yellow
         semanticError: Color(0xFFD55E00),       // Vermillion
         semanticInfo: Color(0xFF56B4E9),        // Sky Blue
-        surfacePrimary: Color(0xFF0F1218),
-        surfaceSecondary: Color(0xFF181D26),
-        surfaceTertiary: Color(0xFF242C38),
-        surfaceAmbient: Color(0xFF090C10),
+        surfacePrimary: Color(0xFF1A1A1E),
+        surfaceSecondary: Color(0xFF222226),
+        surfaceTertiary: Color(0xFF2C2C30),
+        surfaceAmbient: Color(0xFF0E0E10),
         rimLight: Color(0x33FFFFFF),
         glowPrimary: Color(0x4256B4E9),
         noiseColor: Color(0x08FFFFFF),
@@ -580,17 +581,17 @@ class SparkleColors {
         statusOnline: Color(0xFF009E73),
         statusOffline: Color(0xFF6B737E),
         statusInvisible: Color(0xFF555555),
-        neutral200: Color(0xFF252C36),
-        neutral300: Color(0xFF3A4354),
-        neutral400: Color(0xFF5E6874),
-        neutral500: Color(0xFF808996),
-        neutral600: Color(0xFFADB7C8),
-        chatBubbleUser: Color(0xFF0072B2),
+        neutral200: Color(0xFF2A2A2E),
+        neutral300: Color(0xFF3A3A3E),
+        neutral400: Color(0xFF4E4E52),
+        neutral500: Color(0xFF6E6E72),
+        neutral600: Color(0xFFA8A8AE),
+        chatBubbleUser: Color(0xFF5A5A62),
         chatBubbleUserText: Colors.white,
-        chatBubbleOther: Color(0xFF20262D),
+        chatBubbleOther: Color(0xFF2A2A2E),
         chatBubbleOtherText: Color(0xFFF4F1EB),
-        galaxyBackground: Color(0xFF070B12),
-        galaxyShadow: Color(0xFF04070C),
+        galaxyBackground: Color(0xFF0A0A0E),
+        galaxyShadow: Color(0xFF050508),
       );
     }
     if (highContrast) {
@@ -602,10 +603,10 @@ class SparkleColors {
         semanticError: Color(0xFFFF0000),
         semanticInfo: Color(0xFF00FFFF),
         // High contrast dark: deeper blacks with subtle elevation hints
-        surfacePrimary: Color(0xFF0E1013),
-        surfaceSecondary: Color(0xFF171A1F),
-        surfaceTertiary: Color(0xFF23272E),
-        surfaceAmbient: Color(0xFF090B0E),
+        surfacePrimary: Color(0xFF0A0A0C),
+        surfaceSecondary: Color(0xFF141418),
+        surfaceTertiary: Color(0xFF1E1E22),
+        surfaceAmbient: Color(0xFF060608),
         rimLight: Color(0xFFFFFFFF),
         glowPrimary: Color(0x00000000),
         noiseColor: Color(0x00000000),
@@ -647,10 +648,11 @@ class SparkleColors {
       semanticError: Color(0xFFD37B72),
       semanticInfo: Color(0xFF8CA5C8),
       // Dark mode surface hierarchy (Material 3 elevation system)
-      surfacePrimary: Color(0xFF0F1218),
-      surfaceSecondary: Color(0xFF181D26),
-      surfaceTertiary: Color(0xFF242C38),
-      surfaceAmbient: Color(0xFF090C10),
+      // Neutral gray palette — no blue tint, more like iOS system dark
+      surfacePrimary: Color(0xFF1A1A1E),
+      surfaceSecondary: Color(0xFF222226),
+      surfaceTertiary: Color(0xFF2C2C30),
+      surfaceAmbient: Color(0xFF0E0E10),
       rimLight: Color(0x33FFFFFF), // white 0.2
       glowPrimary: Color(0x42C97A43),
       noiseColor: Color(0x08FFFFFF), // white 0.03
@@ -669,19 +671,19 @@ class SparkleColors {
       statusOnline: Color(0xFF2ECC71),
       statusOffline: Color(0xFF95A5A6),
       statusInvisible: Color(0xFF34495E),
-      neutral200: Color(0xFF252C36),
-      neutral300: Color(0xFF3A4354),
-      neutral400: Color(0xFF5E6874),
-      neutral500: Color(0xFF808996),
-      neutral600: Color(0xFFADB7C8),
+      neutral200: Color(0xFF2A2A2E),
+      neutral300: Color(0xFF3A3A3E),
+      neutral400: Color(0xFF4E4E52),
+      neutral500: Color(0xFF6E6E72),
+      neutral600: Color(0xFFA8A8AE),
       // Chat bubble colors
-      chatBubbleUser: Color(0xFF657A96),
+      chatBubbleUser: Color(0xFF5A5A62),
       chatBubbleUserText: Colors.white,
-      chatBubbleOther: Color(0xFF20262D),
+      chatBubbleOther: Color(0xFF2A2A2E),
       chatBubbleOtherText: Color(0xFFF4F1EB),
       // Galaxy colors
-      galaxyBackground: Color(0xFF070B12),
-      galaxyShadow: Color(0xFF04070C),
+      galaxyBackground: Color(0xFF0A0A0E),
+      galaxyShadow: Color(0xFF050508),
     );
   }
   final Color brandPrimary;

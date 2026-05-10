@@ -116,6 +116,14 @@ class AppThemes {
           colors.semanticError,
           darkText: colors.textPrimary,
         ),
+      ).copyWith(
+        surfaceContainerLowest: colors.surfaceAmbient,
+        surfaceContainerLow: colors.surfacePrimary,
+        surfaceContainer: colors.surfaceSecondary,
+        surfaceContainerHigh: colors.surfaceSecondary,
+        surfaceContainerHighest: colors.surfaceTertiary,
+        outline: colors.textDisabled,
+        outlineVariant: colors.neutral300,
       ),
       textTheme: textTheme,
       appBarTheme: AppBarTheme(

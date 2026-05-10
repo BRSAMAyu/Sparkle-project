@@ -2919,6 +2919,29 @@ class AppLocalizationsZh extends AppLocalizations {
   String get learningModeSave => '保存偏好';
 
   @override
+  String get learningPathTitle => '学习路径';
+
+  @override
+  String get routerPageNotFound => '页面未找到';
+
+  @override
+  String routerPageNotFoundMessage(Object path) {
+    return '页面未找到：$path';
+  }
+
+  @override
+  String get routerGoHome => '返回首页';
+
+  @override
+  String get voiceInputStart => '开始语音输入';
+
+  @override
+  String get voiceInputStop => '停止语音录制';
+
+  @override
+  String get chatOpenclawHub => 'OpenClaw 中心';
+
+  @override
   String get notificationReceiveSmartPush => '接收智能推送和学习提醒';
 
   @override
@@ -5784,10 +5807,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get communityFocusModeDisabled => '已关闭专注模式';
 
   @override
+  String get communityTabFeed => '动态';
+
+  @override
   String get communityTabFriends => '好友';
 
   @override
   String get communityTabGroups => '群组';
+
+  @override
+  String get communityTabPartners => '伙伴';
 
   @override
   String get communityAddFriend => '添加好友';
@@ -23880,6 +23909,48 @@ class AppLocalizationsZh extends AppLocalizations {
   String get insRiskUnknown => '未知';
 
   @override
+  String get insDecisionLog => 'AI 决策日志';
+
+  @override
+  String get insDecisionLogEmpty => '暂无决策日志';
+
+  @override
+  String get insFilterAll => '全部';
+
+  @override
+  String get insFilter24h => '24 小时';
+
+  @override
+  String get insFilter7d => '7 天';
+
+  @override
+  String get insFilter30d => '30 天';
+
+  @override
+  String get insNoSignalRecorded => '未记录信号';
+
+  @override
+  String get insNoPolicyRecorded => '未记录策略';
+
+  @override
+  String get insResultPending => '待观察';
+
+  @override
+  String get insResultApplied => '已应用';
+
+  @override
+  String get insResultNeedsReview => '有偏差';
+
+  @override
+  String get insSignalLabel => '触发信号';
+
+  @override
+  String get insPolicyLabel => '策略';
+
+  @override
+  String get insLoadFailedDecisionLog => '加载失败';
+
+  @override
   String get rcfWelcomeBack => '欢迎回来 — 这是我对你的记忆';
 
   @override
@@ -26454,6 +26525,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String communityStreakDaysSuffix(Object count) {
     return '$count 天';
   }
+
+  @override
+  String get communitySubtitle => '和伙伴一起成长';
 
   @override
   String get communityGroupDetails => '社群详情';
@@ -30410,6 +30484,144 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get homeNextActionTitle => '下一步';
+
+  @override
+  String get homeNextActionAllClear => '清空啦';
+
+  @override
+  String get homeNextActionNoPending => '当前没有待推进任务';
+
+  @override
+  String get homeNextActionMostCritical => '最关键的待办';
+
+  @override
+  String homeNextActionPrioritize(int count) {
+    return '优先处理最关键的 $count 项行动';
+  }
+
+  @override
+  String homeNextActionCount(int count) {
+    return '$count项';
+  }
+
+  @override
+  String get homeNextActionNoPendingToday => '今天没有待推进的行动';
+
+  @override
+  String homeNextActionSeeMore(int count) {
+    return '其余 $count 项见任务页';
+  }
+
+  @override
+  String get homeNextActionViewAll => '查看全部 →';
+
+  @override
+  String get homeNextActionTaskOverview => '任务总览 →';
+
+  @override
+  String get homeNextActionStart => '开始';
+
+  @override
+  String homeNextActionMinLabel(int minutes, String type) {
+    return '$minutes 分钟 · $type';
+  }
+
+  @override
+  String get homeToolbarTitle => '快捷工具';
+
+  @override
+  String get homeToolbarFocusMode => '专注模式';
+
+  @override
+  String get homeToolbarPomodoro => '番茄钟';
+
+  @override
+  String get homeToolbarQuickNote => '闪念笔记';
+
+  @override
+  String get homeToolbarErrorBook => '错题本';
+
+  @override
+  String get homeToolbarCognitiveMode => '认知模式';
+
+  @override
+  String get homeToolbarCuriosityCapsule => '好奇心胶囊';
+
+  @override
+  String get homeToolbarReviewPlan => '复习计划';
+
+  @override
+  String get homeToolbarLearningForecast => '学习预测';
+
+  @override
+  String get homeSprintNoActive => '暂无活跃冲刺';
+
+  @override
+  String get homeSprintCreate => '直接创建冲刺';
+
+  @override
+  String get homeSprintNewGrowthPlan => '新建成长计划';
+
+  @override
+  String homeSprintNoPendingTasks(String name) {
+    return '$name 暂无待办任务';
+  }
+
+  @override
+  String homeSprintTasksRemaining(int taskCount, int daysLeft) {
+    return '剩余 $taskCount 个任务 · $daysLeft 天';
+  }
+
+  @override
+  String get homeSprintHistory => '冲刺历史';
+
+  @override
+  String get homeSprintMoreActions => '更多操作';
+
+  @override
+  String get homeSprintComplete => '完成冲刺';
+
+  @override
+  String get homeSprintExtend => '延长冲刺';
+
+  @override
+  String get homeSprintAbandon => '放弃冲刺';
+
+  @override
+  String get homeSprintFilterAll => '全部';
+
+  @override
+  String get homeSprintFilterTodo => '待办';
+
+  @override
+  String get homeSprintFilterInProgress => '进行中';
+
+  @override
+  String get homeSprintFilterDone => '已完成';
+
+  @override
+  String get homeNextActionTaskDefault => '任务';
+
+  @override
+  String get homeNextActionTypeLearning => '学习';
+
+  @override
+  String get homeNextActionTypeTraining => '训练';
+
+  @override
+  String get homeNextActionTypeErrorFix => '错题';
+
+  @override
+  String get homeNextActionTypeReflection => '复盘';
+
+  @override
+  String get homeNextActionTypeSocial => '社群';
+
+  @override
+  String get homeNextActionTypePlanning => '计划';
+
+  @override
   String get goalIntentTitle => '告诉我你想达成什么';
 
   @override
@@ -31006,6 +31218,36 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get communityCommentHint => '写评论...';
+
+  @override
+  String get sharedResourceTitle => '共享资源';
+
+  @override
+  String sharedResourceBySharer(String name) {
+    return '分享者 $name';
+  }
+
+  @override
+  String get sharedResourceAdoptIntoPlan => '采纳并加入我的计划';
+
+  @override
+  String get sharedResourceFeatured => '精选';
+
+  @override
+  String get sharedResourceRecommended => '推荐';
+
+  @override
+  String get sharedResourceBeginnerFriendly => '新手友好';
+
+  @override
+  String sharedResourceAdoptions(int count) {
+    return '采纳 $count 次';
+  }
+
+  @override
+  String sharedResourceAvgRating(String rating) {
+    return '平均评分 $rating';
+  }
 
   @override
   String get goalDetailOverdue => '已过期';

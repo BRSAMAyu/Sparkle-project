@@ -3055,6 +3055,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get learningModeSave => 'Save preferences';
 
   @override
+  String get learningPathTitle => 'Learning Path';
+
+  @override
+  String get routerPageNotFound => 'Page Not Found';
+
+  @override
+  String routerPageNotFoundMessage(Object path) {
+    return 'Page not found: $path';
+  }
+
+  @override
+  String get routerGoHome => 'Go Home';
+
+  @override
+  String get voiceInputStart => 'Start voice input';
+
+  @override
+  String get voiceInputStop => 'Stop voice input recording';
+
+  @override
+  String get chatOpenclawHub => 'OpenClaw Hub';
+
+  @override
   String get notificationReceiveSmartPush =>
       'Receive smart notifications and study reminders';
 
@@ -6025,10 +6048,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityFocusModeDisabled => 'Focus mode disabled';
 
   @override
+  String get communityTabFeed => 'Feed';
+
+  @override
   String get communityTabFriends => 'Friends';
 
   @override
   String get communityTabGroups => 'Groups';
+
+  @override
+  String get communityTabPartners => 'Partners';
 
   @override
   String get communityAddFriend => 'Add Friend';
@@ -24911,6 +24940,48 @@ class AppLocalizationsEn extends AppLocalizations {
   String get insRiskUnknown => 'Unknown';
 
   @override
+  String get insDecisionLog => 'AI Decision Log';
+
+  @override
+  String get insDecisionLogEmpty => 'No decision logs yet';
+
+  @override
+  String get insFilterAll => 'All';
+
+  @override
+  String get insFilter24h => '24h';
+
+  @override
+  String get insFilter7d => '7d';
+
+  @override
+  String get insFilter30d => '30d';
+
+  @override
+  String get insNoSignalRecorded => 'No signal recorded';
+
+  @override
+  String get insNoPolicyRecorded => 'No policy recorded';
+
+  @override
+  String get insResultPending => 'Pending';
+
+  @override
+  String get insResultApplied => 'Applied';
+
+  @override
+  String get insResultNeedsReview => 'Needs Review';
+
+  @override
+  String get insSignalLabel => 'Signal';
+
+  @override
+  String get insPolicyLabel => 'Policy';
+
+  @override
+  String get insLoadFailedDecisionLog => 'Failed to load';
+
+  @override
   String get rcfWelcomeBack =>
       'Welcome back — here is what I remember about you';
 
@@ -27599,6 +27670,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String communityStreakDaysSuffix(Object count) {
     return '${count}d';
   }
+
+  @override
+  String get communitySubtitle => 'Grow together with partners';
 
   @override
   String get communityGroupDetails => 'Group Details';
@@ -31728,6 +31802,144 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get homeNextActionTitle => 'Next';
+
+  @override
+  String get homeNextActionAllClear => 'All clear';
+
+  @override
+  String get homeNextActionNoPending => 'No pending actions';
+
+  @override
+  String get homeNextActionMostCritical => 'Most critical task';
+
+  @override
+  String homeNextActionPrioritize(int count) {
+    return 'Prioritize $count critical actions';
+  }
+
+  @override
+  String homeNextActionCount(int count) {
+    return '$count';
+  }
+
+  @override
+  String get homeNextActionNoPendingToday => 'No pending actions for today';
+
+  @override
+  String homeNextActionSeeMore(int count) {
+    return 'See $count more in tasks';
+  }
+
+  @override
+  String get homeNextActionViewAll => 'View all →';
+
+  @override
+  String get homeNextActionTaskOverview => 'Task overview →';
+
+  @override
+  String get homeNextActionStart => 'Start';
+
+  @override
+  String homeNextActionMinLabel(int minutes, String type) {
+    return '$minutes min · $type';
+  }
+
+  @override
+  String get homeToolbarTitle => 'Quick Tools';
+
+  @override
+  String get homeToolbarFocusMode => 'Focus Mode';
+
+  @override
+  String get homeToolbarPomodoro => 'Pomodoro';
+
+  @override
+  String get homeToolbarQuickNote => 'Quick Note';
+
+  @override
+  String get homeToolbarErrorBook => 'Error Book';
+
+  @override
+  String get homeToolbarCognitiveMode => 'Cognitive Mode';
+
+  @override
+  String get homeToolbarCuriosityCapsule => 'Curiosity Capsule';
+
+  @override
+  String get homeToolbarReviewPlan => 'Review Plan';
+
+  @override
+  String get homeToolbarLearningForecast => 'Learning Forecast';
+
+  @override
+  String get homeSprintNoActive => 'No active sprint';
+
+  @override
+  String get homeSprintCreate => 'Create Sprint';
+
+  @override
+  String get homeSprintNewGrowthPlan => 'New Growth Plan';
+
+  @override
+  String homeSprintNoPendingTasks(String name) {
+    return '$name has no pending tasks';
+  }
+
+  @override
+  String homeSprintTasksRemaining(int taskCount, int daysLeft) {
+    return '$taskCount tasks left · ${daysLeft}d remaining';
+  }
+
+  @override
+  String get homeSprintHistory => 'Sprint History';
+
+  @override
+  String get homeSprintMoreActions => 'More Actions';
+
+  @override
+  String get homeSprintComplete => 'Complete Sprint';
+
+  @override
+  String get homeSprintExtend => 'Extend Sprint';
+
+  @override
+  String get homeSprintAbandon => 'Abandon Sprint';
+
+  @override
+  String get homeSprintFilterAll => 'All';
+
+  @override
+  String get homeSprintFilterTodo => 'To Do';
+
+  @override
+  String get homeSprintFilterInProgress => 'In Progress';
+
+  @override
+  String get homeSprintFilterDone => 'Done';
+
+  @override
+  String get homeNextActionTaskDefault => 'Task';
+
+  @override
+  String get homeNextActionTypeLearning => 'Learning';
+
+  @override
+  String get homeNextActionTypeTraining => 'Training';
+
+  @override
+  String get homeNextActionTypeErrorFix => 'Error Fix';
+
+  @override
+  String get homeNextActionTypeReflection => 'Reflection';
+
+  @override
+  String get homeNextActionTypeSocial => 'Community';
+
+  @override
+  String get homeNextActionTypePlanning => 'Planning';
+
+  @override
   String get goalIntentTitle => 'Tell me what you want to achieve';
 
   @override
@@ -32346,6 +32558,36 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get communityCommentHint => 'Write a comment...';
+
+  @override
+  String get sharedResourceTitle => 'Shared Resource';
+
+  @override
+  String sharedResourceBySharer(String name) {
+    return 'By $name';
+  }
+
+  @override
+  String get sharedResourceAdoptIntoPlan => 'Adopt into my plan';
+
+  @override
+  String get sharedResourceFeatured => 'Featured';
+
+  @override
+  String get sharedResourceRecommended => 'Recommended';
+
+  @override
+  String get sharedResourceBeginnerFriendly => 'Beginner-friendly';
+
+  @override
+  String sharedResourceAdoptions(int count) {
+    return '$count adoptions';
+  }
+
+  @override
+  String sharedResourceAvgRating(String rating) {
+    return 'Avg rating $rating';
+  }
 
   @override
   String get goalDetailOverdue => 'Overdue';

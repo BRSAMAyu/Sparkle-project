@@ -369,7 +369,7 @@ class _GroupKnowledgeBaseViewState
                                   _MetaChip(
                                     icon: Icons.star_rounded,
                                     label: context.l10n.communityOfficialFile,
-                                    accentColor: Color(0xFFE0A800),
+                                    accentColor: DS.warning,
                                   ),
                               ],
                             ),
@@ -384,7 +384,7 @@ class _GroupKnowledgeBaseViewState
                                 ? Icons.star_rounded
                                 : Icons.star_outline_rounded,
                             color: _isOfficial(file)
-                                ? const Color(0xFFE0A800)
+                                ? DS.warning
                                 : DS.textSecondary,
                           ),
                           onPressed: () => _toggleOfficial(file),
@@ -838,11 +838,11 @@ class _KnowledgeBaseListCard extends StatelessWidget {
                             ),
                           ),
                           if (isOfficial)
-                            const Padding(
-                              padding: EdgeInsets.only(left: DS.spacing8),
+                            Padding(
+                              padding: const EdgeInsets.only(left: DS.spacing8),
                               child: Icon(
                                 Icons.star_rounded,
-                                color: Color(0xFFE0A800),
+                                color: DS.warning,
                               ),
                             ),
                         ],
@@ -1024,9 +1024,9 @@ class _KnowledgeBaseGridCard extends StatelessWidget {
                   ),
                   const Spacer(),
                   if (isOfficial)
-                    const Icon(
+                    Icon(
                       Icons.star_rounded,
-                      color: Color(0xFFE0A800),
+                      color: DS.warning,
                     ),
                 ],
               ),

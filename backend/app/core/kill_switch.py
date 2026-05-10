@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Any
 
 from app.config import settings
 from app.core.metrics import KILL_SWITCH_MODE
+
+_logger = logging.getLogger(__name__)
 
 TRI_STATE_MODES = frozenset({"off", "shadow", "live"})
 _MODE_ALIASES = {
@@ -100,12 +103,22 @@ async def read_mode(
 ) -> str:
     mode = resolve_settings_mode(binding)
     if redis_client is not None:
-        raw = await redis_client.get(f"{prefix}{binding.redis_key}")
-        if raw is not None:
-            mode = normalize_mode(
-                raw,
-                allowed_modes=binding.allowed_modes,
-                fallback=binding.fallback_mode,
+        try:
+            raw = await redis_client.get(f"{prefix}{binding.redis_key}")
+            if raw is not None:
+                mode = normalize_mode(
+                    raw,
+                    allowed_modes=binding.allowed_modes,
+                    fallback=binding.fallback_mode,
+                )
+        except Exception:
+            _logger.warning(
+                "kill_switch read_mode Redis error for %s/%s, "
+                "falling back to settings mode %r",
+                binding.stage,
+                binding.feature,
+                mode,
+                exc_info=True,
             )
     if record_gauge:
         record_mode_gauge(binding.stage, binding.feature, mode)
@@ -126,10 +139,13 @@ async def write_mode(
         fallback=binding.fallback_mode,
     )
     if redis_client is None:
-        if binding.settings_attr:
-            setattr(settings, binding.settings_attr, normalized)
-        if binding.legacy_bool_attr:
-            setattr(settings, binding.legacy_bool_attr, normalized in binding.enabled_legacy_modes)
+        _logger.warning(
+            "kill_switch write_mode called without Redis for %s/%s; "
+            "write ignored (mode=%s)",
+            binding.stage,
+            binding.feature,
+            normalized,
+        )
     else:
         await redis_client.set(f"{prefix}{binding.redis_key}", normalized)
 

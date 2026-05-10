@@ -576,7 +576,7 @@ __all__ = [
     "ConversationWorkflowEvent",
     "ConversationWorkflowState",
     "RegenerationRequest",
-    "ResponseFeedback",
+    "WorkflowResponseFeedback",
     "ResponseQualityMeasure",
     "WorkflowAgent",
     "WorkflowCheckpoint",

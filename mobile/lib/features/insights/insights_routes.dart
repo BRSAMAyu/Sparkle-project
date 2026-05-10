@@ -4,9 +4,11 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/experience/experience_profile.dart';
 import 'package:sparkle/core/navigation/sparkle_route_transition.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
+import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/scene_audio_policy.dart';
 import 'package:sparkle/core/widgets/scene_audio_scope.dart';
 import 'package:sparkle/features/insights/insights.dart';
+import 'package:sparkle/features/insights/presentation/screens/learning_path_screen.dart';
 
 class InsightsRoutes {
   static const String learningInsightsOverview = '/learning/insights';
@@ -14,6 +16,7 @@ class InsightsRoutes {
   static const String growthChronicle = '/learning/insights/growth-chronicle';
   static const String learningDashboard = '/learning/insights/dashboard';
   static const String directiveAudit = '/learning/insights/directives';
+  static const String learningPath = '/learning-path';
 
   static String overviewLocation({String? initialPanel}) {
     if (initialPanel == null || initialPanel.isEmpty) {
@@ -104,6 +107,24 @@ class InsightsRoutes {
               child: const DirectiveAuditScreen(),
             ),
           ),
+        ),
+        GoRoute(
+          path: learningPath,
+          name: 'learning-path',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) {
+            final nodeId = state.uri.queryParameters['node_id'] ?? '';
+            final nodeLabel = state.uri.queryParameters['node_label'] ?? '';
+            return buildSparkleTransitionPage(
+              state: state,
+              motionToken: SparkleMotionToken.scene,
+              type: SharedAxisTransitionType.scaled,
+              child: LearningPathScreen(
+                nodeId: nodeId,
+                nodeName: nodeLabel,
+              ),
+            );
+          },
         ),
       ];
 }

@@ -1447,6 +1447,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       nodeLabel: node.name,
       packId: widget.initialPackId,
       onAddMaterial: _handleNodeMaterialUploadRequested,
+      onGenerateLearningPlan: _handleNodeLearningPlanRequested,
     );
   }
 
@@ -1464,6 +1465,19 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
         nodeId: nodeId,
         worldPosition: _renderPositions[nodeId],
       ),
+    );
+  }
+
+  void _handleNodeLearningPlanRequested(String nodeId, String label) {
+    final router = GoRouter.of(context);
+    router.push(
+      Uri(
+        path: '/learning-path',
+        queryParameters: {
+          'node_id': nodeId,
+          'node_label': label,
+        },
+      ).toString(),
     );
   }
 

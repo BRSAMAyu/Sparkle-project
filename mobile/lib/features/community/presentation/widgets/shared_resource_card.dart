@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 
 /// Shared resource card with quality badge overlay.
@@ -25,11 +25,11 @@ class SharedResourceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isChinese = I18nService.instance.isChinese;
+    final l10n = context.l10n;
 
     return Semantics(
       button: true,
-      label: resource.resourceTitle ?? (isChinese ? '共享资源' : 'Shared Resource'),
+      label: resource.resourceTitle ?? l10n.sharedResourceTitle,
       child: GestureDetector(
         onTap: onTap,
         child: Container(
@@ -48,7 +48,7 @@ class SharedResourceCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     resource.resourceTitle ??
-                        (isChinese ? '共享资源' : 'Shared Resource'),
+                        l10n.sharedResourceTitle,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
@@ -66,7 +66,7 @@ class SharedResourceCard extends StatelessWidget {
               // Sharer info
               if (resource.sharer != null)
                 Text(
-                  '${isChinese ? '分享者' : 'By'} ${resource.sharer!.nickname ?? resource.sharer!.username}',
+                  l10n.sharedResourceBySharer(resource.sharer!.nickname ?? resource.sharer!.username),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: DS.textSecondary,
                       ),
@@ -105,7 +105,7 @@ class SharedResourceCard extends StatelessWidget {
                       ),
                     ),
                     child: Text(
-                      isChinese ? '采纳并加入我的计划' : 'Adopt into my plan',
+                      l10n.sharedResourceAdoptIntoPlan,
                     ),
                   ),
                 ),
@@ -127,32 +127,32 @@ class _QualityBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isChinese = I18nService.instance.isChinese;
+    final l10n = context.l10n;
 
     if (score >= 0.8) {
       return _badge(
         context,
-        label: isChinese ? '精选' : 'Featured',
+        label: l10n.sharedResourceFeatured,
         icon: Icons.verified,
-        backgroundColor: const Color(0xFFFFD700).withValues(alpha: 0.15),
-        iconColor: const Color(0xFFFFD700),
-        textColor: const Color(0xFFB8860B),
+        backgroundColor: DS.warning.withValues(alpha: 0.15),
+        iconColor: DS.warning,
+        textColor: DS.warning,
       );
     }
     if (score >= 0.6) {
       return _badge(
         context,
-        label: isChinese ? '推荐' : 'Recommended',
+        label: l10n.sharedResourceRecommended,
         icon: Icons.thumb_up_outlined,
-        backgroundColor: const Color(0xFFC0C0C0).withValues(alpha: 0.15),
-        iconColor: const Color(0xFF808080),
-        textColor: const Color(0xFF606060),
+        backgroundColor: DS.neutral400.withValues(alpha: 0.15),
+        iconColor: DS.neutral500,
+        textColor: DS.neutral600,
       );
     }
     if (score < 0.4 && score > 0) {
       return _badge(
         context,
-        label: isChinese ? '新手友好' : 'Beginner-friendly',
+        label: l10n.sharedResourceBeginnerFriendly,
         icon: Icons.eco_outlined,
         backgroundColor: DS.neutral200.withValues(alpha: 0.65),
         iconColor: DS.neutral600,

@@ -172,9 +172,7 @@ class _TaskBoardCardState extends ConsumerState<TaskBoardCard> {
                   child: _buildView(mode),
                 ),
                 const SizedBox(width: DS.spacing16),
-                // Right column: Quick stats or related info
-                SizedBox(
-                  width: 280,
+                Expanded(
                   child: _buildSidePanel(context, mode, isChinese: isChinese),
                 ),
               ],

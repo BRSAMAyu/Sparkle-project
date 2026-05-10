@@ -2309,8 +2309,10 @@
   "communityFocusModeOff": "Enable focus mode",
   "communityFocusModeEnabled": "Focus mode enabled. You won't be disturbed",
   "communityFocusModeDisabled": "Focus mode disabled",
+  "communityTabFeed": "Feed",
   "communityTabFriends": "Friends",
   "communityTabGroups": "Groups",
+  "communityTabPartners": "Partners",
   "communityAddFriend": "Add Friend",
   "communityMembers": "{count} members",
   "@communityMembers": {
@@ -9350,6 +9352,7 @@
   "communityForward": "Forward",
   "communityReport": "Report",
   "communityStreakDaysSuffix": "{count}d",
+  "communitySubtitle": "Grow together with partners",
   "communityGroupDetails": "Group Details",
   "communityWelcomeToGroup": "Welcome to the group!",
   "communityLeaveGroupFailed": "Failed to leave group, please retry",
@@ -11046,6 +11049,20 @@
   "insRiskMedium": "Medium Risk",
   "insRiskHigh": "High Risk",
   "insRiskUnknown": "Unknown",
+  "insDecisionLog": "AI Decision Log",
+  "insDecisionLogEmpty": "No decision logs yet",
+  "insFilterAll": "All",
+  "insFilter24h": "24h",
+  "insFilter7d": "7d",
+  "insFilter30d": "30d",
+  "insNoSignalRecorded": "No signal recorded",
+  "insNoPolicyRecorded": "No policy recorded",
+  "insResultPending": "Pending",
+  "insResultApplied": "Applied",
+  "insResultNeedsReview": "Needs Review",
+  "insSignalLabel": "Signal",
+  "insPolicyLabel": "Policy",
+  "insLoadFailedDecisionLog": "Failed to load",
   "rcfWelcomeBack": "Welcome back — here is what I remember about you",
   "rcfClose": "Close",
   "rcfConfirmedStrategies": "Strategies you confirmed work for you:",
@@ -13609,6 +13626,96 @@
   "homeAuroraCorrectionSubmit": "Submit",
   "homeWeatherWithSummary": "Great for {hint}, {summary}",
   "homeWeatherOnlyHint": "Great for {hint}",
+  "homeNextActionTitle": "Next",
+  "homeNextActionAllClear": "All clear",
+  "homeNextActionNoPending": "No pending actions",
+  "homeNextActionMostCritical": "Most critical task",
+  "homeNextActionPrioritize": "Prioritize {count} critical actions",
+  "@homeNextActionPrioritize": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeNextActionCount": "{count}",
+  "@homeNextActionCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeNextActionNoPendingToday": "No pending actions for today",
+  "homeNextActionSeeMore": "See {count} more in tasks",
+  "@homeNextActionSeeMore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeNextActionViewAll": "View all →",
+  "homeNextActionTaskOverview": "Task overview →",
+  "homeNextActionStart": "Start",
+  "homeNextActionMinLabel": "{minutes} min · {type}",
+  "@homeNextActionMinLabel": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      },
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "homeToolbarTitle": "Quick Tools",
+  "homeToolbarFocusMode": "Focus Mode",
+  "homeToolbarPomodoro": "Pomodoro",
+  "homeToolbarQuickNote": "Quick Note",
+  "homeToolbarErrorBook": "Error Book",
+  "homeToolbarCognitiveMode": "Cognitive Mode",
+  "homeToolbarCuriosityCapsule": "Curiosity Capsule",
+  "homeToolbarReviewPlan": "Review Plan",
+  "homeToolbarLearningForecast": "Learning Forecast",
+  "homeSprintNoActive": "No active sprint",
+  "homeSprintCreate": "Create Sprint",
+  "homeSprintNewGrowthPlan": "New Growth Plan",
+  "homeSprintNoPendingTasks": "{name} has no pending tasks",
+  "@homeSprintNoPendingTasks": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "homeSprintTasksRemaining": "{taskCount} tasks left · {daysLeft}d remaining",
+  "@homeSprintTasksRemaining": {
+    "placeholders": {
+      "taskCount": {
+        "type": "int"
+      },
+      "daysLeft": {
+        "type": "int"
+      }
+    }
+  },
+  "homeSprintHistory": "Sprint History",
+  "homeSprintMoreActions": "More Actions",
+  "homeSprintComplete": "Complete Sprint",
+  "homeSprintExtend": "Extend Sprint",
+  "homeSprintAbandon": "Abandon Sprint",
+  "homeSprintFilterAll": "All",
+  "homeSprintFilterTodo": "To Do",
+  "homeSprintFilterInProgress": "In Progress",
+  "homeSprintFilterDone": "Done",
+  "homeNextActionTaskDefault": "Task",
+  "homeNextActionTypeLearning": "Learning",
+  "homeNextActionTypeTraining": "Training",
+  "homeNextActionTypeErrorFix": "Error Fix",
+  "homeNextActionTypeReflection": "Reflection",
+  "homeNextActionTypeSocial": "Community",
+  "homeNextActionTypePlanning": "Planning",
   "goalIntentTitle": "Tell me what you want to achieve",
   "goalIntentHint": "One sentence works, e.g. \"Computer Networks final in 7 days, barely studied\"",
   "goalIntentTypeHere": "Type here",
@@ -13885,6 +13992,35 @@
   "communityCommentRetry": "Retry",
   "communityCommentEmpty": "No comments yet",
   "communityCommentHint": "Write a comment...",
+  "sharedResourceTitle": "Shared Resource",
+  "sharedResourceBySharer": "By {name}",
+  "@sharedResourceBySharer": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sharedResourceAdoptIntoPlan": "Adopt into my plan",
+  "sharedResourceFeatured": "Featured",
+  "sharedResourceRecommended": "Recommended",
+  "sharedResourceBeginnerFriendly": "Beginner-friendly",
+  "sharedResourceAdoptions": "{count} adoptions",
+  "@sharedResourceAdoptions": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sharedResourceAvgRating": "Avg rating {rating}",
+  "@sharedResourceAvgRating": {
+    "placeholders": {
+      "rating": {
+        "type": "String"
+      }
+    }
+  },
   "goalDetailOverdue": "Overdue",
   "goalDetailCompletedTitle": "Mark as Complete?",
   "goalDetailCompletedBody": "Mark the current step as completed and move to the next one?",

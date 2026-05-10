@@ -86,6 +86,10 @@ class CollapsibleSlot extends ConsumerWidget {
               )
             : _ExpandedSurface(
                 onLongPress: openEditSheet,
+                onCollapse: toggle,
+                title: title,
+                icon: icon,
+                accent: accent,
                 child: child,
               ),
       ),
@@ -198,15 +202,23 @@ class _CollapsedHeader extends StatelessWidget {
   }
 }
 
-/// Expanded slots stay clean — no extra header bar. Long-press anywhere
-/// opens the edit sheet so users can reorder, hide, or collapse.
+/// Expanded slots show the child with a subtle collapse affordance at the top.
+/// Long-press anywhere opens the edit sheet so users can reorder, hide, or collapse.
 class _ExpandedSurface extends StatelessWidget {
   const _ExpandedSurface({
     required this.onLongPress,
+    required this.onCollapse,
+    required this.title,
+    required this.icon,
+    required this.accent,
     required this.child,
   });
 
   final VoidCallback onLongPress;
+  final VoidCallback onCollapse;
+  final String title;
+  final IconData icon;
+  final Color accent;
   final Widget child;
 
   @override
@@ -216,7 +228,59 @@ class _ExpandedSurface extends StatelessWidget {
         child: GestureDetector(
           behavior: HitTestBehavior.deferToChild,
           onLongPress: onLongPress,
-          child: child,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Tap-to-collapse header bar
+              GestureDetector(
+                onTap: onCollapse,
+                behavior: HitTestBehavior.opaque,
+                child: DashboardSectionShell(
+                  tone: DashboardSurfaceTone.summary,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: DS.spacing12,
+                    vertical: DS.spacing6,
+                  ),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(16),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 3,
+                        height: 18,
+                        decoration: BoxDecoration(
+                          color: accent.withValues(alpha: 0.85),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(width: DS.spacing10),
+                      Icon(icon, size: 14, color: accent),
+                      const SizedBox(width: DS.spacing8),
+                      Expanded(
+                        child: Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: context.sparkleTypography.labelSmall.copyWith(
+                            fontWeight: DS.fontWeightSemiBold,
+                            color: DS.textSecondary,
+                          ),
+                        ),
+                      ),
+                      Icon(
+                        Icons.expand_less_rounded,
+                        size: 18,
+                        color: accent.withValues(alpha: 0.55),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Flexible(child: child),
+            ],
+          ),
         ),
       );
 }

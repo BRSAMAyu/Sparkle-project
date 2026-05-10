@@ -13,22 +13,27 @@ class LearningReportShareCardFactory {
     return Builder(
       builder: (context) {
         final l10n = context.l10n;
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         return GestureDetector(
           onTap: onTap,
           child: Container(
             padding: EdgeInsets.all(isCompact ? DS.spacing10 : DS.spacing12),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFFEAF3FF),
-                  Color(0xFFDCE7FF),
-                ],
+                colors: isDark
+                    ? [DS.surfaceTertiary, DS.surfaceSecondary]
+                    : [
+                        DS.brandPrimary.withValues(alpha: 0.08),
+                        DS.brandSecondary.withValues(alpha: 0.08),
+                      ],
               ),
               borderRadius: DS.borderRadius16,
               border: Border.all(
-                color: const Color(0xFF8FB5F5).withValues(alpha: 0.58),
+                color: isDark
+                    ? DS.neutral400.withValues(alpha: 0.3)
+                    : DS.brandPrimary.withValues(alpha: 0.2),
               ),
             ),
             child: Column(
@@ -41,12 +46,14 @@ class LearningReportShareCardFactory {
                       width: isCompact ? 34 : 40,
                       height: isCompact ? 34 : 40,
                       decoration: BoxDecoration(
-                        color: DS.neutral0.withValues(alpha: 0.72),
+                        color: isDark
+                            ? DS.neutral0.withValues(alpha: 0.08)
+                            : DS.neutral0.withValues(alpha: 0.72),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.insights_rounded,
-                        color: Color(0xFF3F6FD9),
+                        color: DS.brandPrimary,
                       ),
                     ),
                     const SizedBox(width: DS.spacing10),
@@ -58,7 +65,7 @@ class LearningReportShareCardFactory {
                         style: TextStyle(
                           fontSize: isCompact ? DS.fontSizeSm : DS.fontSizeBase,
                           fontWeight: DS.fontWeightBold,
-                          color: const Color(0xFF1B315C),
+                          color: DS.textPrimary,
                           height: 1.15,
                         ),
                       ),
@@ -71,9 +78,9 @@ class LearningReportShareCardFactory {
                     payload.subtitle!,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: DS.fontSizeXs,
-                      color: Color(0xFF516B93),
+                      color: DS.textSecondary,
                       height: 1.35,
                     ),
                   ),
@@ -102,21 +109,28 @@ class LearningReportShareCardFactory {
     );
   }
 
-  static Widget _chip(String label, String value) => Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing8,
-          vertical: DS.spacing4,
-        ),
-        decoration: BoxDecoration(
-          color: DS.neutral0.withValues(alpha: 0.7),
-          borderRadius: DS.borderRadius12,
-        ),
-        child: Text(
-          '$label · $value',
-          style: DS.labelSmall.copyWith(
-            color: const Color(0xFF31507C),
-            fontWeight: DS.fontWeightSemibold,
-          ),
-        ),
+  static Widget _chip(String label, String value) => Builder(
+        builder: (context) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          return Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: DS.spacing8,
+              vertical: DS.spacing4,
+            ),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? DS.neutral0.withValues(alpha: 0.08)
+                  : DS.neutral0.withValues(alpha: 0.7),
+              borderRadius: DS.borderRadius12,
+            ),
+            child: Text(
+              '$label · $value',
+              style: DS.labelSmall.copyWith(
+                color: DS.textPrimary,
+                fontWeight: DS.fontWeightSemibold,
+              ),
+            ),
+          );
+        },
       );
 }

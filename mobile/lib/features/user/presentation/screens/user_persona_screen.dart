@@ -32,8 +32,8 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
   final ScrollController _scrollController = ScrollController();
   final Map<String, GlobalKey> _inferredItemKeys = <String, GlobalKey>{};
   final Map<String, bool> _expandedSections = <String, bool>{
-    'summary': true,
-    'l3': true,
+    'summary': false,
+    'l3': false,
     'l1': false,
     'l2': false,
     'inference': false,

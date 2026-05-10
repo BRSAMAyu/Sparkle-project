@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/features/insights/data/models/directive_audit_entry.dart';
 import 'package:sparkle/features/insights/presentation/providers/directive_audit_provider.dart';
@@ -22,7 +22,6 @@ class _DirectiveAuditScreenState extends ConsumerState<DirectiveAuditScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final zh = I18nService.instance.isChinese;
     final filter = DirectiveAuditFilter(
       directiveType: _directiveType == 'all' ? null : _directiveType,
       hours: _hours,
@@ -39,7 +38,7 @@ class _DirectiveAuditScreenState extends ConsumerState<DirectiveAuditScreen> {
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Text(zh ? 'AI 决策日志' : 'AI Decision Log'),
+        title: Text(context.l10n.insDecisionLog),
       ),
       child: ContentConstraint(
         child: SparkleRefreshIndicator(
@@ -101,18 +100,17 @@ class _DirectiveAuditFilters extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zh = I18nService.instance.isChinese;
     final typeOptions = <String, String>{
-      'all': zh ? '全部' : 'All',
+      'all': context.l10n.insFilterAll,
       'NotifyUser': 'NotifyUser',
       'SkipReminder': 'SkipReminder',
       'DowngradeIntensity': 'DowngradeIntensity',
       'ReplanLocally': 'ReplanLocally',
     };
     final timeOptions = <int, String>{
-      24: zh ? '24 小时' : '24h',
-      24 * 7: zh ? '7 天' : '7d',
-      24 * 30: zh ? '30 天' : '30d',
+      24: context.l10n.insFilter24h,
+      24 * 7: context.l10n.insFilter7d,
+      24 * 30: context.l10n.insFilter30d,
     };
 
     return GraphiteCardSurface(
@@ -158,7 +156,6 @@ class DirectiveAuditTimeline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zh = I18nService.instance.isChinese;
     if (entries.isEmpty) {
       return GraphiteCardSurface(
         padding: const EdgeInsets.all(DS.spacing24),
@@ -167,7 +164,7 @@ class DirectiveAuditTimeline extends StatelessWidget {
             Icon(Icons.timeline_rounded, size: 40, color: DS.textSecondary),
             const SizedBox(height: DS.spacing12),
             Text(
-              zh ? '暂无决策日志' : 'No decision logs yet',
+              context.l10n.insDecisionLogEmpty,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: DS.fontWeightBold,
                   ),
@@ -195,18 +192,17 @@ class DirectiveAuditCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zh = I18nService.instance.isChinese;
     final time = DateFormat('MM/dd HH:mm').format(entry.createdAt.toLocal());
     final signal = entry.triggerSignal?['claim']?.toString() ??
         entry.triggerSignal?['state_key']?.toString() ??
-        (zh ? '未记录信号' : 'No signal recorded');
+        context.l10n.insNoSignalRecorded;
     final policy = entry.policy?['primary_strategy']?.toString() ??
-        (zh ? '未记录策略' : 'No policy recorded');
+        context.l10n.insNoPolicyRecorded;
     final result = entry.actualResult == null
-        ? (zh ? '待观察' : 'Pending')
+        ? context.l10n.insResultPending
         : entry.wasApplied
-            ? (zh ? '已应用' : 'Applied')
-            : (zh ? '有偏差' : 'Needs Review');
+            ? context.l10n.insResultApplied
+            : context.l10n.insResultNeedsReview;
     final resultColor = entry.actualResult == null
         ? DS.textSecondary
         : entry.wasApplied
@@ -294,13 +290,13 @@ class DirectiveAuditCard extends StatelessWidget {
           const SizedBox(height: DS.spacing12),
           _DirectiveAuditFactRow(
             icon: Icons.sensors_rounded,
-            label: zh ? '触发信号' : 'Signal',
+            label: context.l10n.insSignalLabel,
             value: signal,
           ),
           const SizedBox(height: DS.spacing8),
           _DirectiveAuditFactRow(
             icon: Icons.rule_rounded,
-            label: zh ? '策略' : 'Policy',
+            label: context.l10n.insPolicyLabel,
             value: policy,
           ),
         ],
@@ -374,14 +370,13 @@ class _DirectiveAuditError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zh = I18nService.instance.isChinese;
     return GraphiteCardSurface(
       child: Column(
         children: [
           Icon(Icons.error_outline_rounded, color: DS.error),
           const SizedBox(height: DS.spacing8),
           Text(
-            zh ? '加载失败' : 'Failed to load',
+            context.l10n.insLoadFailedDecisionLog,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: DS.fontWeightBold,
                 ),
@@ -398,7 +393,7 @@ class _DirectiveAuditError extends StatelessWidget {
           const SizedBox(height: DS.spacing12),
           TextButton(
             onPressed: onRetry,
-            child: Text(zh ? '重试' : 'Retry'),
+            child: Text(context.l10n.insRetry),
           ),
         ],
       ),

@@ -35,6 +35,8 @@ func SendToDLQ(ctx context.Context, client *redis.Client, entry DLQEntry) error 
 
 	_, err = client.XAdd(ctx, &redis.XAddArgs{
 		Stream: DLQStreamKey,
+		MaxLen: 10000,
+		Approx: true,
 		Values: map[string]interface{}{
 			"payload":             string(payload),
 			"original_stream":     entry.OriginalStream,
@@ -221,6 +223,8 @@ func (h *DLQHandler) RetryEntry(ctx context.Context, messageID string) error {
 
 	_, err = h.redis.XAdd(ctx, &redis.XAddArgs{
 		Stream: entry.OriginalStream,
+		MaxLen: 10000,
+		Approx: true,
 		Values: values,
 	}).Result()
 

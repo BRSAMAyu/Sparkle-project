@@ -5498,6 +5498,48 @@ abstract class AppLocalizations {
   /// **'保存偏好'**
   String get learningModeSave;
 
+  /// No description provided for @learningPathTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习路径'**
+  String get learningPathTitle;
+
+  /// No description provided for @routerPageNotFound.
+  ///
+  /// In zh, this message translates to:
+  /// **'页面未找到'**
+  String get routerPageNotFound;
+
+  /// No description provided for @routerPageNotFoundMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'页面未找到：{path}'**
+  String routerPageNotFoundMessage(Object path);
+
+  /// No description provided for @routerGoHome.
+  ///
+  /// In zh, this message translates to:
+  /// **'返回首页'**
+  String get routerGoHome;
+
+  /// No description provided for @voiceInputStart.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始语音输入'**
+  String get voiceInputStart;
+
+  /// No description provided for @voiceInputStop.
+  ///
+  /// In zh, this message translates to:
+  /// **'停止语音录制'**
+  String get voiceInputStop;
+
+  /// No description provided for @chatOpenclawHub.
+  ///
+  /// In zh, this message translates to:
+  /// **'OpenClaw 中心'**
+  String get chatOpenclawHub;
+
   /// No description provided for @notificationReceiveSmartPush.
   ///
   /// In zh, this message translates to:
@@ -10796,6 +10838,12 @@ abstract class AppLocalizations {
   /// **'已关闭专注模式'**
   String get communityFocusModeDisabled;
 
+  /// No description provided for @communityTabFeed.
+  ///
+  /// In zh, this message translates to:
+  /// **'动态'**
+  String get communityTabFeed;
+
   /// No description provided for @communityTabFriends.
   ///
   /// In zh, this message translates to:
@@ -10807,6 +10855,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'群组'**
   String get communityTabGroups;
+
+  /// No description provided for @communityTabPartners.
+  ///
+  /// In zh, this message translates to:
+  /// **'伙伴'**
+  String get communityTabPartners;
 
   /// No description provided for @communityAddFriend.
   ///
@@ -43603,6 +43657,90 @@ abstract class AppLocalizations {
   /// **'未知'**
   String get insRiskUnknown;
 
+  /// No description provided for @insDecisionLog.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 决策日志'**
+  String get insDecisionLog;
+
+  /// No description provided for @insDecisionLogEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无决策日志'**
+  String get insDecisionLogEmpty;
+
+  /// No description provided for @insFilterAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'全部'**
+  String get insFilterAll;
+
+  /// No description provided for @insFilter24h.
+  ///
+  /// In zh, this message translates to:
+  /// **'24 小时'**
+  String get insFilter24h;
+
+  /// No description provided for @insFilter7d.
+  ///
+  /// In zh, this message translates to:
+  /// **'7 天'**
+  String get insFilter7d;
+
+  /// No description provided for @insFilter30d.
+  ///
+  /// In zh, this message translates to:
+  /// **'30 天'**
+  String get insFilter30d;
+
+  /// No description provided for @insNoSignalRecorded.
+  ///
+  /// In zh, this message translates to:
+  /// **'未记录信号'**
+  String get insNoSignalRecorded;
+
+  /// No description provided for @insNoPolicyRecorded.
+  ///
+  /// In zh, this message translates to:
+  /// **'未记录策略'**
+  String get insNoPolicyRecorded;
+
+  /// No description provided for @insResultPending.
+  ///
+  /// In zh, this message translates to:
+  /// **'待观察'**
+  String get insResultPending;
+
+  /// No description provided for @insResultApplied.
+  ///
+  /// In zh, this message translates to:
+  /// **'已应用'**
+  String get insResultApplied;
+
+  /// No description provided for @insResultNeedsReview.
+  ///
+  /// In zh, this message translates to:
+  /// **'有偏差'**
+  String get insResultNeedsReview;
+
+  /// No description provided for @insSignalLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'触发信号'**
+  String get insSignalLabel;
+
+  /// No description provided for @insPolicyLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'策略'**
+  String get insPolicyLabel;
+
+  /// No description provided for @insLoadFailedDecisionLog.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载失败'**
+  String get insLoadFailedDecisionLog;
+
   /// No description provided for @rcfWelcomeBack.
   ///
   /// In zh, this message translates to:
@@ -48273,6 +48411,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'{count} 天'**
   String communityStreakDaysSuffix(Object count);
+
+  /// No description provided for @communitySubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'和伙伴一起成长'**
+  String get communitySubtitle;
 
   /// No description provided for @communityGroupDetails.
   ///
@@ -55267,6 +55411,258 @@ abstract class AppLocalizations {
   /// **'今天适合{hint}'**
   String homeWeatherOnlyHint(Object hint);
 
+  /// No description provided for @homeNextActionTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'下一步'**
+  String get homeNextActionTitle;
+
+  /// No description provided for @homeNextActionAllClear.
+  ///
+  /// In zh, this message translates to:
+  /// **'清空啦'**
+  String get homeNextActionAllClear;
+
+  /// No description provided for @homeNextActionNoPending.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前没有待推进任务'**
+  String get homeNextActionNoPending;
+
+  /// No description provided for @homeNextActionMostCritical.
+  ///
+  /// In zh, this message translates to:
+  /// **'最关键的待办'**
+  String get homeNextActionMostCritical;
+
+  /// No description provided for @homeNextActionPrioritize.
+  ///
+  /// In zh, this message translates to:
+  /// **'优先处理最关键的 {count} 项行动'**
+  String homeNextActionPrioritize(int count);
+
+  /// No description provided for @homeNextActionCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count}项'**
+  String homeNextActionCount(int count);
+
+  /// No description provided for @homeNextActionNoPendingToday.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天没有待推进的行动'**
+  String get homeNextActionNoPendingToday;
+
+  /// No description provided for @homeNextActionSeeMore.
+  ///
+  /// In zh, this message translates to:
+  /// **'其余 {count} 项见任务页'**
+  String homeNextActionSeeMore(int count);
+
+  /// No description provided for @homeNextActionViewAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看全部 →'**
+  String get homeNextActionViewAll;
+
+  /// No description provided for @homeNextActionTaskOverview.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务总览 →'**
+  String get homeNextActionTaskOverview;
+
+  /// No description provided for @homeNextActionStart.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始'**
+  String get homeNextActionStart;
+
+  /// No description provided for @homeNextActionMinLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'{minutes} 分钟 · {type}'**
+  String homeNextActionMinLabel(int minutes, String type);
+
+  /// No description provided for @homeToolbarTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'快捷工具'**
+  String get homeToolbarTitle;
+
+  /// No description provided for @homeToolbarFocusMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'专注模式'**
+  String get homeToolbarFocusMode;
+
+  /// No description provided for @homeToolbarPomodoro.
+  ///
+  /// In zh, this message translates to:
+  /// **'番茄钟'**
+  String get homeToolbarPomodoro;
+
+  /// No description provided for @homeToolbarQuickNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'闪念笔记'**
+  String get homeToolbarQuickNote;
+
+  /// No description provided for @homeToolbarErrorBook.
+  ///
+  /// In zh, this message translates to:
+  /// **'错题本'**
+  String get homeToolbarErrorBook;
+
+  /// No description provided for @homeToolbarCognitiveMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'认知模式'**
+  String get homeToolbarCognitiveMode;
+
+  /// No description provided for @homeToolbarCuriosityCapsule.
+  ///
+  /// In zh, this message translates to:
+  /// **'好奇心胶囊'**
+  String get homeToolbarCuriosityCapsule;
+
+  /// No description provided for @homeToolbarReviewPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'复习计划'**
+  String get homeToolbarReviewPlan;
+
+  /// No description provided for @homeToolbarLearningForecast.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习预测'**
+  String get homeToolbarLearningForecast;
+
+  /// No description provided for @homeSprintNoActive.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无活跃冲刺'**
+  String get homeSprintNoActive;
+
+  /// No description provided for @homeSprintCreate.
+  ///
+  /// In zh, this message translates to:
+  /// **'直接创建冲刺'**
+  String get homeSprintCreate;
+
+  /// No description provided for @homeSprintNewGrowthPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'新建成长计划'**
+  String get homeSprintNewGrowthPlan;
+
+  /// No description provided for @homeSprintNoPendingTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'{name} 暂无待办任务'**
+  String homeSprintNoPendingTasks(String name);
+
+  /// No description provided for @homeSprintTasksRemaining.
+  ///
+  /// In zh, this message translates to:
+  /// **'剩余 {taskCount} 个任务 · {daysLeft} 天'**
+  String homeSprintTasksRemaining(int taskCount, int daysLeft);
+
+  /// No description provided for @homeSprintHistory.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺历史'**
+  String get homeSprintHistory;
+
+  /// No description provided for @homeSprintMoreActions.
+  ///
+  /// In zh, this message translates to:
+  /// **'更多操作'**
+  String get homeSprintMoreActions;
+
+  /// No description provided for @homeSprintComplete.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成冲刺'**
+  String get homeSprintComplete;
+
+  /// No description provided for @homeSprintExtend.
+  ///
+  /// In zh, this message translates to:
+  /// **'延长冲刺'**
+  String get homeSprintExtend;
+
+  /// No description provided for @homeSprintAbandon.
+  ///
+  /// In zh, this message translates to:
+  /// **'放弃冲刺'**
+  String get homeSprintAbandon;
+
+  /// No description provided for @homeSprintFilterAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'全部'**
+  String get homeSprintFilterAll;
+
+  /// No description provided for @homeSprintFilterTodo.
+  ///
+  /// In zh, this message translates to:
+  /// **'待办'**
+  String get homeSprintFilterTodo;
+
+  /// No description provided for @homeSprintFilterInProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'进行中'**
+  String get homeSprintFilterInProgress;
+
+  /// No description provided for @homeSprintFilterDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'已完成'**
+  String get homeSprintFilterDone;
+
+  /// No description provided for @homeNextActionTaskDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务'**
+  String get homeNextActionTaskDefault;
+
+  /// No description provided for @homeNextActionTypeLearning.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习'**
+  String get homeNextActionTypeLearning;
+
+  /// No description provided for @homeNextActionTypeTraining.
+  ///
+  /// In zh, this message translates to:
+  /// **'训练'**
+  String get homeNextActionTypeTraining;
+
+  /// No description provided for @homeNextActionTypeErrorFix.
+  ///
+  /// In zh, this message translates to:
+  /// **'错题'**
+  String get homeNextActionTypeErrorFix;
+
+  /// No description provided for @homeNextActionTypeReflection.
+  ///
+  /// In zh, this message translates to:
+  /// **'复盘'**
+  String get homeNextActionTypeReflection;
+
+  /// No description provided for @homeNextActionTypeSocial.
+  ///
+  /// In zh, this message translates to:
+  /// **'社群'**
+  String get homeNextActionTypeSocial;
+
+  /// No description provided for @homeNextActionTypePlanning.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划'**
+  String get homeNextActionTypePlanning;
+
   /// No description provided for @goalIntentTitle.
   ///
   /// In zh, this message translates to:
@@ -56394,6 +56790,54 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'写评论...'**
   String get communityCommentHint;
+
+  /// No description provided for @sharedResourceTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'共享资源'**
+  String get sharedResourceTitle;
+
+  /// No description provided for @sharedResourceBySharer.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享者 {name}'**
+  String sharedResourceBySharer(String name);
+
+  /// No description provided for @sharedResourceAdoptIntoPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'采纳并加入我的计划'**
+  String get sharedResourceAdoptIntoPlan;
+
+  /// No description provided for @sharedResourceFeatured.
+  ///
+  /// In zh, this message translates to:
+  /// **'精选'**
+  String get sharedResourceFeatured;
+
+  /// No description provided for @sharedResourceRecommended.
+  ///
+  /// In zh, this message translates to:
+  /// **'推荐'**
+  String get sharedResourceRecommended;
+
+  /// No description provided for @sharedResourceBeginnerFriendly.
+  ///
+  /// In zh, this message translates to:
+  /// **'新手友好'**
+  String get sharedResourceBeginnerFriendly;
+
+  /// No description provided for @sharedResourceAdoptions.
+  ///
+  /// In zh, this message translates to:
+  /// **'采纳 {count} 次'**
+  String sharedResourceAdoptions(int count);
+
+  /// No description provided for @sharedResourceAvgRating.
+  ///
+  /// In zh, this message translates to:
+  /// **'平均评分 {rating}'**
+  String sharedResourceAvgRating(String rating);
 
   /// No description provided for @goalDetailOverdue.
   ///

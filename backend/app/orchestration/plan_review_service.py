@@ -186,6 +186,13 @@ class PlanReviewService:
         self.redis = redis_client
         self.quality_gate = PlanQualityGate()
 
+    def _ensure_redis(self):
+        """Lazily initialize Redis from cache_service if not set."""
+        if self.redis is None:
+            from app.core.cache import cache_service
+            self.redis = cache_service.redis
+        return self.redis
+
     def set_redis(self, redis_client):
         """Configure Redis client"""
         self.redis = redis_client
@@ -1545,6 +1552,7 @@ Please review this plan and provide your assessment."""
                     return UUID(str(candidate))
             except Exception:
                 continue
+        logger.debug("_extract_user_id: no valid user_id found in user_context keys: {}", list((user_context or {}).keys()))
         return None
 
     def _get_review_description(self, review: PlanReviewResult) -> str:
@@ -2457,7 +2465,8 @@ Please review this plan and provide your assessment."""
         """
         key = f"plan_rejection_count:{plan_id}:{user_id}"
 
-        if not self.redis:
+        redis = self._ensure_redis()
+        if not redis:
             logger.warning("Redis not available for rejection tracking")
             return 1
 
@@ -2478,11 +2487,12 @@ Please review this plan and provide your assessment."""
             user_id: 用户ID
         """
         key = f"plan_rejection_count:{plan_id}:{user_id}"
-        if not self.redis:
+        redis = self._ensure_redis()
+        if not redis:
             logger.warning("Redis not available for rejection reset")
             return
         try:
-            await self.redis.delete(key)
+            await redis.delete(key)
             logger.info(f"Reset rejection count for plan {plan_id}")
         except Exception as e:
             logger.warning(f"Failed to reset rejection count: {e}")

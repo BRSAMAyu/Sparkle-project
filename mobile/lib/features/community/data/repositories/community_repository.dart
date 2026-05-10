@@ -983,7 +983,7 @@ class CommunityRepository {
   }
 
   Future<void> unmuteMember(String groupId, String userId) async {
-    await _apiClient.post<dynamic>(
+    await _apiClient.delete<dynamic>(
       ApiEndpoints.groupMemberUnmute(groupId, userId),
     );
   }
