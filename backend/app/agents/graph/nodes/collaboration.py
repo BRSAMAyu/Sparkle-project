@@ -741,10 +741,11 @@ async def _execute_delegation(
 ) -> dict[str, Any]:
     user_query = _get_latest_human_message(state.get("messages") or [])
     if not delegate_agents:
+        logger.warning(f"No delegate agents for delegation mode, falling back to primary agent: {primary_agent}")
         return {
             "messages": [],
             "next_step": primary_agent,
-            "active_agent": "collaboration",
+            "active_agent": primary_agent,
             "collaboration_mode": "single",
         }
 

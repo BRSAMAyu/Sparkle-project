@@ -1,3 +1,5 @@
+import threading
+
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 from langgraph.prebuilt import ToolNode
@@ -339,6 +341,12 @@ def route_after_agent_in_collaboration(state: SparkleState):
     collaboration_order = state.get("collaboration_order", [])
     collaboration_index = state.get("collaboration_index", 0)
 
+    # Safety guard: prevent infinite collaboration loops
+    max_iterations = len(collaboration_order) * 2 if collaboration_order else 10
+    if collaboration_index >= max_iterations:
+        logger.error(f"Collaboration loop detected (index={collaboration_index}, max={max_iterations}), routing to aggregator")
+        return "aggregator"
+
     if collaboration_mode != "single" and len(collaboration_order) > 1:
         # Check if more agents need to execute
         if collaboration_index < len(collaboration_order):
@@ -349,16 +357,20 @@ def route_after_agent_in_collaboration(state: SparkleState):
 
 # Singleton instance for planning graph
 _planning_graph = None
+_planning_graph_lock = threading.Lock()
 
 
 def get_planning_graph():
     """Get the planning-only graph instance (singleton) (Phase 3: with collaboration support)."""
     global _planning_graph
     if _planning_graph is None:
-        _planning_graph = create_planning_graph()
-        logger.info("Planning-only graph created (Phase 3: with collaboration support)")
+        with _planning_graph_lock:
+            if _planning_graph is None:
+                _planning_graph = create_planning_graph()
+                logger.info("Planning-only graph created (Phase 3: with collaboration support)")
     return _planning_graph
 
 
-# Export for use in LangGraphPlanner
-sparkle_planning_graph = get_planning_graph()
+# Lazy accessor for use in LangGraphPlanner
+# Instead of eagerly creating the graph at import time, the caller should use get_planning_graph()
+sparkle_planning_graph = None  # Will be lazily initialized via get_planning_graph()

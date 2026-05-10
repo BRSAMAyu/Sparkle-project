@@ -16,7 +16,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 from loguru import logger
 
 from app.agents.graph.state import SparkleState
-from app.agents.graph.workflow import sparkle_planning_graph  # Phase 2: Use planning-only graph
+from app.agents.graph.workflow import get_planning_graph  # Phase 2: Use planning-only graph
 from app.core.i18n import I18n
 from app.orchestration.ai_strategy_renderer import build_semantic_control, format_semantic_control_lines
 from app.orchestration.rendered_plan_artifact import parse_rendered_plan_artifact
@@ -63,7 +63,7 @@ class LangGraphPlanner:
         self.redis = redis_client
         # Phase 2: Use planning-only graph (no ToolNode)
         # This ensures planner does NOT execute tools
-        self.graph = sparkle_planning_graph
+        self.graph = get_planning_graph()
         # Optional: Inject circuit breaker for resilience
         self.circuit_breaker = circuit_breaker
         self._rendered_plan_artifacts_by_session: dict[str, dict[str, Any]] = {}
