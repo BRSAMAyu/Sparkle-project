@@ -370,15 +370,16 @@ func (w *GalaxySyncWorker) handleMasteryUpdated(ctx context.Context, evt cqrsEve
 		return fmt.Errorf("unmarshal view: %w", err)
 	}
 
-	// Check if newly mastered
-	wasMastered := view.MasteryScore >= 0.8
-	view.MasteryScore = clamp(view.MasteryScore+masteryDelta, 0, 1)
+	// Check if newly mastered (threshold 80 out of 100)
+	wasMastered := view.MasteryScore >= 80.0
+	// P1-1 fix: clamp to 0-100 (matching DB scale), not 0-1
+	view.MasteryScore = clamp(view.MasteryScore+masteryDelta, 0, 100)
 	view.TotalMinutes += int32(studyMinutes)
 	view.StudyCount++
 	now := time.Now()
 	view.LastStudyAt = &now
 	view.UpdatedAt = now
-	isMastered := view.MasteryScore >= 0.8
+	isMastered := view.MasteryScore >= 80.0
 
 	updatedJSON, err := json.Marshal(view)
 	if err != nil {

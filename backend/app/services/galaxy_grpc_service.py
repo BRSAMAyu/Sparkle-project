@@ -241,8 +241,12 @@ class GalaxyGrpcServiceImpl(galaxy_service_pb2_grpc.GalaxyServiceServicer if gal
                         node_id=str(node.node_id if hasattr(node, 'node_id') else node.id),
                         label=node.label if hasattr(node, 'label') else node.name,
                         node_type=node.node_type if hasattr(node, 'node_type') else "unknown",
-                        mastery=int(node.mastery * 100) if isinstance(getattr(node, 'mastery', 0), float) else getattr(node, 'mastery', 0),
-                        tags=getattr(node, 'tags', []) or [],
+                        # P1-22 fix: mastery is at node.user_status.mastery_score (0-100 scale),
+                        # not node.mastery which doesn't exist on NodeWithStatus → always 0
+                        mastery=int(node.user_status.mastery_score) if node.user_status else 0,
+                        # P1-5/6 fix: use keywords (node.keywords) instead of non-existent node.tags
+                        tags=(node.keywords if hasattr(node, 'keywords') and node.keywords else
+                              getattr(node, 'tags', None) or []),
                     )
                     for node in (graph.nodes or [])
                 ]
@@ -326,7 +330,7 @@ class GalaxyGrpcServiceImpl(galaxy_service_pb2_grpc.GalaxyServiceServicer if gal
                     node_type=node.source_type if node else "unknown",
                     mastery=int(stats.mastery_score) if stats and hasattr(stats, 'mastery_score') else 0,
                     description=node.description or "" if node else "",
-                    tags=node.tags or [] if node else [],
+                    tags=(node.keywords or []) if node else [],
                     parent_ids=[str(node.parent_id)] if node and node.parent_id else [],
                     child_ids=[],
                     metadata=doc_meta,
@@ -350,13 +354,28 @@ class GalaxyGrpcServiceImpl(galaxy_service_pb2_grpc.GalaxyServiceServicer if gal
                     limit=limit,
                 )
 
+                # P1-7 fix: look up mastery from UserNodeStatus for each result
+                # P1-5/6 fix: use keywords instead of non-existent tags
+                from app.models.galaxy import UserNodeStatus
+                from sqlalchemy import select
+
+                node_ids = [r.node.id for r in results]
+                status_rows = (await db.execute(
+                    select(UserNodeStatus.node_id, UserNodeStatus.mastery_score)
+                    .where(
+                        UserNodeStatus.user_id == UUID(request.user_id),
+                        UserNodeStatus.node_id.in_(node_ids)
+                    )
+                )).all()
+                mastery_map = {row[0]: int(row[1]) for row in status_rows}
+
                 result = [
                     galaxy_service_pb2.GalaxyNode(
                         node_id=str(r.node.id),
                         label=r.node.name,
                         node_type=r.node.source_type or "unknown",
-                        mastery=0,
-                        tags=r.node.tags or [],
+                        mastery=mastery_map.get(r.node.id, 0),
+                        tags=r.node.keywords if hasattr(r.node, 'keywords') and r.node.keywords else [],
                     )
                     for r in results
                 ]
