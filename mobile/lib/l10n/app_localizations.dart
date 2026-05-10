@@ -61314,6 +61314,180 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'轻触重试'**
   String get compactErrorTapRetry;
+
+  /// No description provided for @celebrationDismiss.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭庆祝动画'**
+  String get celebrationDismiss;
+
+  /// No description provided for @achievementMapNodeSemantics.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看成就节点 {name}'**
+  String achievementMapNodeSemantics(String name);
+
+  /// No description provided for @streakInsightBanner.
+  ///
+  /// In zh, this message translates to:
+  /// **'过去7天你有{totalCheckins}天完成了任务。当前连续打卡{currentStreak}天。'**
+  String streakInsightBanner(int totalCheckins, int currentStreak);
+
+  /// No description provided for @achievementViewDetailsSemantics.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看成就详情 {name}'**
+  String achievementViewDetailsSemantics(String name);
+
+  /// No description provided for @achievementVisualRewardBadge.
+  ///
+  /// In zh, this message translates to:
+  /// **'视觉元素奖励徽章'**
+  String get achievementVisualRewardBadge;
+
+  /// No description provided for @achievementViewMyAchievements.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看我的成就'**
+  String get achievementViewMyAchievements;
+
+  /// No description provided for @shareTemplateSelectSemantics.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择分享模板 {name}'**
+  String shareTemplateSelectSemantics(String name);
+
+  /// No description provided for @authGuestTokenFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'游客登录未获取到有效登录令牌'**
+  String get authGuestTokenFailed;
+
+  /// No description provided for @patternLastObserved.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近观察 {time}'**
+  String patternLastObserved(String time);
+
+  /// No description provided for @guestDisplayName.
+  ///
+  /// In zh, this message translates to:
+  /// **'访客'**
+  String get guestDisplayName;
+
+  /// No description provided for @statisticsTrendUp.
+  ///
+  /// In zh, this message translates to:
+  /// **'上升'**
+  String get statisticsTrendUp;
+
+  /// No description provided for @statisticsTrendDown.
+  ///
+  /// In zh, this message translates to:
+  /// **'下降'**
+  String get statisticsTrendDown;
+
+  /// No description provided for @statisticsTrendStable.
+  ///
+  /// In zh, this message translates to:
+  /// **'持平'**
+  String get statisticsTrendStable;
+
+  /// No description provided for @demoCommitmentExamSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'今晚 21:30 前完成积分换元错题复盘'**
+  String get demoCommitmentExamSummary;
+
+  /// No description provided for @demoCommitmentExamCriteria1.
+  ///
+  /// In zh, this message translates to:
+  /// **'复盘 5 道错题'**
+  String get demoCommitmentExamCriteria1;
+
+  /// No description provided for @demoCommitmentExamCriteria2.
+  ///
+  /// In zh, this message translates to:
+  /// **'写出下一次避坑规则'**
+  String get demoCommitmentExamCriteria2;
+
+  /// No description provided for @demoCommitmentExamMilestone1.
+  ///
+  /// In zh, this message translates to:
+  /// **'错题归类'**
+  String get demoCommitmentExamMilestone1;
+
+  /// No description provided for @demoCommitmentExamMilestone2.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新演算'**
+  String get demoCommitmentExamMilestone2;
+
+  /// No description provided for @demoCommitmentExamMilestone3.
+  ///
+  /// In zh, this message translates to:
+  /// **'提交证据'**
+  String get demoCommitmentExamMilestone3;
+
+  /// No description provided for @demoCommitmentSpeakingSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'把英语自我介绍缩短到 90 秒版本'**
+  String get demoCommitmentSpeakingSummary;
+
+  /// No description provided for @demoCommitmentSpeakingCriteria1.
+  ///
+  /// In zh, this message translates to:
+  /// **'录音时长 90 秒以内'**
+  String get demoCommitmentSpeakingCriteria1;
+
+  /// No description provided for @demoCommitmentSpeakingCriteria2.
+  ///
+  /// In zh, this message translates to:
+  /// **'伙伴听后能复述重点'**
+  String get demoCommitmentSpeakingCriteria2;
+
+  /// No description provided for @demoCommitmentSpeakingMilestone1.
+  ///
+  /// In zh, this message translates to:
+  /// **'列关键词'**
+  String get demoCommitmentSpeakingMilestone1;
+
+  /// No description provided for @demoCommitmentSpeakingMilestone2.
+  ///
+  /// In zh, this message translates to:
+  /// **'试录'**
+  String get demoCommitmentSpeakingMilestone2;
+
+  /// No description provided for @demoPartnerGoalFeedback.
+  ///
+  /// In zh, this message translates to:
+  /// **'每天给伙伴一句具体反馈'**
+  String get demoPartnerGoalFeedback;
+
+  /// No description provided for @demoPartnerGoalReflection.
+  ///
+  /// In zh, this message translates to:
+  /// **'稳定周末复盘节奏'**
+  String get demoPartnerGoalReflection;
+
+  /// No description provided for @demoSharedGoalTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'本周把微积分薄弱点补齐'**
+  String get demoSharedGoalTitle;
+
+  /// No description provided for @demoSquadRiskNoSync.
+  ///
+  /// In zh, this message translates to:
+  /// **'两天没有同步进展'**
+  String get demoSquadRiskNoSync;
+
+  /// No description provided for @demoHelpableNudge.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天还没打卡，可以发一句轻提醒'**
+  String get demoHelpableNudge;
 }
 
 class _AppLocalizationsDelegate

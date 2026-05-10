@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/achievement/presentation/providers/close_to_unlock_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -101,7 +100,7 @@ class _AchievementProgressBannerState
         position: _slideAnimation,
         child: Semantics(
           button: true,
-          label: I18nService.instance.isChinese ? '查看成就详情 ${achievement.name}' : 'View achievement details ${achievement.name}',
+          label: l10n.achievementViewDetailsSemantics(achievement.name),
           child: GestureDetector(
             onTap: () {
               unawaited(

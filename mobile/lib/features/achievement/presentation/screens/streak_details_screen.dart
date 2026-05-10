@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/streak_indicator.dart';
@@ -987,9 +986,7 @@ class _StreakInsightBanner extends StatelessWidget {
           const SizedBox(width: DS.spacing8),
           Expanded(
             child: Text(
-              I18nService.instance.isChinese
-                  ? '过去7天你有$totalCheckins天完成了任务。当前连续打卡${stats.currentStreak}天。'
-                  : 'In the past 7 days you completed tasks on $totalCheckins days. Current streak: ${stats.currentStreak} days.',
+              context.l10n.streakInsightBanner(totalCheckins, stats.currentStreak),
               style: TextStyle(
                 fontSize: DS.fontSizeSm,
                 color: DS.textPrimary,

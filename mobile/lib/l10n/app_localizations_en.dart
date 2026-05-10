@@ -35122,4 +35122,106 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get compactErrorTapRetry => 'Tap to retry';
+
+  @override
+  String get celebrationDismiss => 'Dismiss celebration';
+
+  @override
+  String achievementMapNodeSemantics(String name) {
+    return 'View achievement node $name';
+  }
+
+  @override
+  String streakInsightBanner(int totalCheckins, int currentStreak) {
+    return 'In the past 7 days you completed tasks on $totalCheckins days. Current streak: $currentStreak days.';
+  }
+
+  @override
+  String achievementViewDetailsSemantics(String name) {
+    return 'View achievement details $name';
+  }
+
+  @override
+  String get achievementVisualRewardBadge => 'Visual element reward badge';
+
+  @override
+  String get achievementViewMyAchievements => 'View my achievements';
+
+  @override
+  String shareTemplateSelectSemantics(String name) {
+    return 'Select share template $name';
+  }
+
+  @override
+  String get authGuestTokenFailed => 'Guest login failed to obtain valid token';
+
+  @override
+  String patternLastObserved(String time) {
+    return 'Last observed $time';
+  }
+
+  @override
+  String get guestDisplayName => 'Guest';
+
+  @override
+  String get statisticsTrendUp => 'Up';
+
+  @override
+  String get statisticsTrendDown => 'Down';
+
+  @override
+  String get statisticsTrendStable => 'Stable';
+
+  @override
+  String get demoCommitmentExamSummary =>
+      'Finish integration-substitution mistake review before 21:30';
+
+  @override
+  String get demoCommitmentExamCriteria1 => 'Review 5 missed problems';
+
+  @override
+  String get demoCommitmentExamCriteria2 => 'Write the next avoidance rule';
+
+  @override
+  String get demoCommitmentExamMilestone1 => 'Group mistakes';
+
+  @override
+  String get demoCommitmentExamMilestone2 => 'Re-solve';
+
+  @override
+  String get demoCommitmentExamMilestone3 => 'Submit evidence';
+
+  @override
+  String get demoCommitmentSpeakingSummary =>
+      'Trim my English self-intro to a 90-second version';
+
+  @override
+  String get demoCommitmentSpeakingCriteria1 => 'Recording is under 90 seconds';
+
+  @override
+  String get demoCommitmentSpeakingCriteria2 =>
+      'Partner can repeat the key points';
+
+  @override
+  String get demoCommitmentSpeakingMilestone1 => 'List keywords';
+
+  @override
+  String get demoCommitmentSpeakingMilestone2 => 'Draft recording';
+
+  @override
+  String get demoPartnerGoalFeedback =>
+      'Give one specific partner feedback each day';
+
+  @override
+  String get demoPartnerGoalReflection => 'Stabilize weekend reflection rhythm';
+
+  @override
+  String get demoSharedGoalTitle => 'Close the calculus weak spots this week';
+
+  @override
+  String get demoSquadRiskNoSync => 'No progress sync for two days';
+
+  @override
+  String get demoHelpableNudge =>
+      'No check-in yet today, a gentle nudge may help';
 }

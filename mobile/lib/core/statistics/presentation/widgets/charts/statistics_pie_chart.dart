@@ -1,7 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// Data class for pie chart sections
 class PieChartSection {
@@ -70,7 +70,7 @@ class StatisticsPieChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (sections.isEmpty) {
-      return _buildEmptyState();
+      return _buildEmptyState(context);
     }
 
     final chart = _buildChart();
@@ -223,7 +223,7 @@ class StatisticsPieChart extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState() => Container(
+  Widget _buildEmptyState(BuildContext context) => Container(
         height: 200,
         alignment: Alignment.center,
         child: Column(
@@ -236,7 +236,7 @@ class StatisticsPieChart extends StatelessWidget {
             ),
             const SizedBox(height: DS.md),
             Text(
-              I18nService.instance.isChinese ? '暂无数据' : 'No data',
+              context.l10n.noData,
               style: DS.bodyStyle.copyWith(
                 color: DS.neutral400,
               ),

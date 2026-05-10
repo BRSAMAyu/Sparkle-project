@@ -42,49 +42,44 @@ class CommunityAccountabilityRepository {
   }
 
   CommunityAccountabilityHub _demoHub() {
-    final zh = I18nService.instance.isChinese;
+    final l10n = I18nService.instance.l10n;
     final now = DateTime.now();
     return CommunityAccountabilityHub(
       myCommitments: [
         CommitmentCardPayload(
           id: 'demo_commitment_exam_review',
-          summary: zh
-              ? '今晚 21:30 前完成积分换元错题复盘'
-              : 'Finish integration-substitution mistake review before 21:30',
+          summary: l10n.demoCommitmentExamSummary,
           dueAt: now.add(const Duration(hours: 7)),
           witnessNames: const ['Lena', 'Nora'],
           progress: 0.62,
           status: 'due_soon',
-          successCriteria: zh
-              ? const ['复盘 5 道错题', '写出下一次避坑规则']
-              : const [
-                  'Review 5 missed problems',
-                  'Write the next avoidance rule',
-                ],
-          milestones: zh
-              ? const ['错题归类', '重新演算', '提交证据']
-              : const ['Group mistakes', 'Re-solve', 'Submit evidence'],
+          successCriteria: [
+            l10n.demoCommitmentExamCriteria1,
+            l10n.demoCommitmentExamCriteria2,
+          ],
+          milestones: [
+            l10n.demoCommitmentExamMilestone1,
+            l10n.demoCommitmentExamMilestone2,
+            l10n.demoCommitmentExamMilestone3,
+          ],
           evidenceRefs: const ['demo-evidence-token'],
           allowPartnerReminders: true,
         ),
         CommitmentCardPayload(
           id: 'demo_commitment_speaking',
-          summary: zh
-              ? '把英语自我介绍缩短到 90 秒版本'
-              : 'Trim my English self-intro to a 90-second version',
+          summary: l10n.demoCommitmentSpeakingSummary,
           dueAt: now.add(const Duration(days: 2)),
           witnessNames: const ['Lena'],
           progress: 0.35,
           status: 'active',
-          successCriteria: zh
-              ? const ['录音时长 90 秒以内', '伙伴听后能复述重点']
-              : const [
-                  'Recording is under 90 seconds',
-                  'Partner can repeat the key points',
-                ],
-          milestones: zh
-              ? const ['列关键词', '试录']
-              : const ['List keywords', 'Draft recording'],
+          successCriteria: [
+            l10n.demoCommitmentSpeakingCriteria1,
+            l10n.demoCommitmentSpeakingCriteria2,
+          ],
+          milestones: [
+            l10n.demoCommitmentSpeakingMilestone1,
+            l10n.demoCommitmentSpeakingMilestone2,
+          ],
           allowPartnerReminders: false,
         ),
       ],
@@ -93,9 +88,7 @@ class CommunityAccountabilityRepository {
           partnershipId: 'demo_core_partner',
           partnerId: 'user_lena',
           partnerName: 'Lena',
-          goalSummary: zh
-              ? '每天给伙伴一句具体反馈'
-              : 'Give one specific partner feedback each day',
+          goalSummary: l10n.demoPartnerGoalFeedback,
           todayDone: true,
           myTodayDone: false,
           weeklyProgress: 0.72,
@@ -105,7 +98,7 @@ class CommunityAccountabilityRepository {
           partnershipId: 'demo_goal_mate',
           partnerId: 'user_nora',
           partnerName: 'Nora',
-          goalSummary: zh ? '稳定周末复盘节奏' : 'Stabilize weekend reflection rhythm',
+          goalSummary: l10n.demoPartnerGoalReflection,
           todayDone: false,
           myTodayDone: false,
           weeklyProgress: 0.44,
@@ -115,7 +108,7 @@ class CommunityAccountabilityRepository {
       sharedGoals: [
         SharedGoalItem(
           id: 'demo_shared_exam',
-          title: zh ? '本周把微积分薄弱点补齐' : 'Close the calculus weak spots this week',
+          title: l10n.demoSharedGoalTitle,
           progress: 0.58,
           memberNames: const ['Mika', 'Lena', 'Nora'],
           status: 'active',
@@ -125,7 +118,7 @@ class CommunityAccountabilityRepository {
         SquadRiskItem(
           partnershipId: 'demo_goal_mate',
           memberName: 'Nora',
-          reason: zh ? '两天没有同步进展' : 'No progress sync for two days',
+          reason: l10n.demoSquadRiskNoSync,
           severity: 'medium',
           suggestedAction: 'send_gentle_checkin',
         ),
@@ -134,9 +127,7 @@ class CommunityAccountabilityRepository {
         HelpableItem(
           partnershipId: 'demo_goal_mate',
           memberName: 'Nora',
-          need: zh
-              ? '今天还没打卡，可以发一句轻提醒'
-              : 'No check-in yet today, a gentle nudge may help',
+          need: l10n.demoHelpableNudge,
           action: 'encourage',
         ),
       ],

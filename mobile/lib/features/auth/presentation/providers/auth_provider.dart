@@ -255,9 +255,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final user = await _authRepository.guestLogin(guestId);
       final accessToken = await _authRepository.getAccessToken();
       if (accessToken == null || accessToken.isEmpty) {
-        throw Exception(I18nService.instance.isChinese
-            ? '游客登录未获取到有效登录令牌'
-            : 'Guest login failed to obtain valid token');
+        throw Exception(I18nService.instance.l10n.authGuestTokenFailed);
       }
       state = state.copyWith(
         isLoading: false,

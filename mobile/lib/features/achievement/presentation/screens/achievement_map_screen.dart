@@ -15,7 +15,6 @@ import 'package:sparkle/features/achievement/presentation/providers/achievement_
 import 'package:sparkle/features/achievement/presentation/widgets/achievement_milestone_badge.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/rarity_badge.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
 class AchievementMapScreen extends ConsumerStatefulWidget {
   const AchievementMapScreen({super.key});
@@ -1267,9 +1266,7 @@ class _CosmicNodeWidget extends StatelessWidget {
 
     return Semantics(
       button: true,
-      label: I18nService.instance.isChinese
-          ? '查看成就节点 ${node.name}'
-          : 'View achievement node ${node.name}',
+      label: context.l10n.achievementMapNodeSemantics(node.name),
       child: GestureDetector(
         onTap: () => onTap(node),
         child: SizedBox(

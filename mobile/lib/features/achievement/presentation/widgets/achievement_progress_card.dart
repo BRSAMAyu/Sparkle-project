@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/adaptive/emotion_responsive_theme.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/achievement/achievement_routes.dart';
 import 'package:sparkle/features/achievement/presentation/providers/home_close_to_unlock_provider.dart';
@@ -308,7 +307,7 @@ class _VisualRewardBadgeState extends State<_VisualRewardBadge>
 
     return Semantics(
       button: true,
-      label: I18nService.instance.isChinese ? '视觉元素奖励徽章' : 'Visual element reward badge',
+      label: widget.l10n.achievementVisualRewardBadge,
       child: GestureDetector(
         onTapDown: (_) {
           setState(() => _isPressed = true);

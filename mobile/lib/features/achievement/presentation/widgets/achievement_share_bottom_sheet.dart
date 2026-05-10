@@ -13,7 +13,6 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_permission_dialog.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/services/share_service.dart';
 import 'package:sparkle/core/services/wechat_share_service.dart';
@@ -718,7 +717,7 @@ class _AchievementShareBottomSheetState
           AppFeedback.error(
           context,
           context.l10n.shareFailed(
-            I18nService.instance.isChinese ? '未知错误' : 'Unknown error',
+            context.l10n.errorUnknown,
           ),
         );
         }

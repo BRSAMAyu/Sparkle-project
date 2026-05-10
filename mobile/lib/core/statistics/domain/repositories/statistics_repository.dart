@@ -195,14 +195,14 @@ enum StatisticsTrend {
 /// Extension for StatisticsTrend
 extension StatisticsTrendExt on StatisticsTrend {
   String get label {
-    final zh = I18nService.instance.isChinese;
+    final l10n = I18nService.instance.l10n;
     switch (this) {
       case StatisticsTrend.up:
-        return zh ? '上升' : 'Up';
+        return l10n.statisticsTrendUp;
       case StatisticsTrend.down:
-        return zh ? '下降' : 'Down';
+        return l10n.statisticsTrendDown;
       case StatisticsTrend.stable:
-        return zh ? '持平' : 'Stable';
+        return l10n.statisticsTrendStable;
     }
   }
 

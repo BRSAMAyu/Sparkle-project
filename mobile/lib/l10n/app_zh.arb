@@ -15429,5 +15429,72 @@
     }
   },
   "compactErrorLoadFailed": "加载失败",
-  "compactErrorTapRetry": "轻触重试"
+  "compactErrorTapRetry": "轻触重试",
+  "celebrationDismiss": "关闭庆祝动画",
+  "achievementMapNodeSemantics": "查看成就节点 {name}",
+  "@achievementMapNodeSemantics": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "streakInsightBanner": "过去7天你有{totalCheckins}天完成了任务。当前连续打卡{currentStreak}天。",
+  "@streakInsightBanner": {
+    "placeholders": {
+      "totalCheckins": {
+        "type": "int"
+      },
+      "currentStreak": {
+        "type": "int"
+      }
+    }
+  },
+  "achievementViewDetailsSemantics": "查看成就详情 {name}",
+  "@achievementViewDetailsSemantics": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "achievementVisualRewardBadge": "视觉元素奖励徽章",
+  "achievementViewMyAchievements": "查看我的成就",
+  "shareTemplateSelectSemantics": "选择分享模板 {name}",
+  "@shareTemplateSelectSemantics": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "authGuestTokenFailed": "游客登录未获取到有效登录令牌",
+  "patternLastObserved": "最近观察 {time}",
+  "@patternLastObserved": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "guestDisplayName": "访客",
+  "statisticsTrendUp": "上升",
+  "statisticsTrendDown": "下降",
+  "statisticsTrendStable": "持平",
+  "demoCommitmentExamSummary": "今晚 21:30 前完成积分换元错题复盘",
+  "demoCommitmentExamCriteria1": "复盘 5 道错题",
+  "demoCommitmentExamCriteria2": "写出下一次避坑规则",
+  "demoCommitmentExamMilestone1": "错题归类",
+  "demoCommitmentExamMilestone2": "重新演算",
+  "demoCommitmentExamMilestone3": "提交证据",
+  "demoCommitmentSpeakingSummary": "把英语自我介绍缩短到 90 秒版本",
+  "demoCommitmentSpeakingCriteria1": "录音时长 90 秒以内",
+  "demoCommitmentSpeakingCriteria2": "伙伴听后能复述重点",
+  "demoCommitmentSpeakingMilestone1": "列关键词",
+  "demoCommitmentSpeakingMilestone2": "试录",
+  "demoPartnerGoalFeedback": "每天给伙伴一句具体反馈",
+  "demoPartnerGoalReflection": "稳定周末复盘节奏",
+  "demoSharedGoalTitle": "本周把微积分薄弱点补齐",
+  "demoSquadRiskNoSync": "两天没有同步进展",
+  "demoHelpableNudge": "今天还没打卡，可以发一句轻提醒"
 }

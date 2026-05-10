@@ -33679,4 +33679,101 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get compactErrorTapRetry => '轻触重试';
+
+  @override
+  String get celebrationDismiss => '关闭庆祝动画';
+
+  @override
+  String achievementMapNodeSemantics(String name) {
+    return '查看成就节点 $name';
+  }
+
+  @override
+  String streakInsightBanner(int totalCheckins, int currentStreak) {
+    return '过去7天你有$totalCheckins天完成了任务。当前连续打卡$currentStreak天。';
+  }
+
+  @override
+  String achievementViewDetailsSemantics(String name) {
+    return '查看成就详情 $name';
+  }
+
+  @override
+  String get achievementVisualRewardBadge => '视觉元素奖励徽章';
+
+  @override
+  String get achievementViewMyAchievements => '查看我的成就';
+
+  @override
+  String shareTemplateSelectSemantics(String name) {
+    return '选择分享模板 $name';
+  }
+
+  @override
+  String get authGuestTokenFailed => '游客登录未获取到有效登录令牌';
+
+  @override
+  String patternLastObserved(String time) {
+    return '最近观察 $time';
+  }
+
+  @override
+  String get guestDisplayName => '访客';
+
+  @override
+  String get statisticsTrendUp => '上升';
+
+  @override
+  String get statisticsTrendDown => '下降';
+
+  @override
+  String get statisticsTrendStable => '持平';
+
+  @override
+  String get demoCommitmentExamSummary => '今晚 21:30 前完成积分换元错题复盘';
+
+  @override
+  String get demoCommitmentExamCriteria1 => '复盘 5 道错题';
+
+  @override
+  String get demoCommitmentExamCriteria2 => '写出下一次避坑规则';
+
+  @override
+  String get demoCommitmentExamMilestone1 => '错题归类';
+
+  @override
+  String get demoCommitmentExamMilestone2 => '重新演算';
+
+  @override
+  String get demoCommitmentExamMilestone3 => '提交证据';
+
+  @override
+  String get demoCommitmentSpeakingSummary => '把英语自我介绍缩短到 90 秒版本';
+
+  @override
+  String get demoCommitmentSpeakingCriteria1 => '录音时长 90 秒以内';
+
+  @override
+  String get demoCommitmentSpeakingCriteria2 => '伙伴听后能复述重点';
+
+  @override
+  String get demoCommitmentSpeakingMilestone1 => '列关键词';
+
+  @override
+  String get demoCommitmentSpeakingMilestone2 => '试录';
+
+  @override
+  String get demoPartnerGoalFeedback => '每天给伙伴一句具体反馈';
+
+  @override
+  String get demoPartnerGoalReflection => '稳定周末复盘节奏';
+
+  @override
+  String get demoSharedGoalTitle => '本周把微积分薄弱点补齐';
+
+  @override
+  String get demoSquadRiskNoSync => '两天没有同步进展';
+
+  @override
+  String get demoHelpableNudge => '今天还没打卡，可以发一句轻提醒';
 }

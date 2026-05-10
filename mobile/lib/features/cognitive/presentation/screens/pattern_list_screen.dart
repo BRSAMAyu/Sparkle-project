@@ -384,9 +384,7 @@ class _PatternCard extends StatelessWidget {
       return discovered;
     }
     final lastObserved = Formatters.formatRelativeTime(pattern.lastObservedAt!);
-    return I18nService.instance.isChinese
-        ? '$discovered · 最近观察 $lastObserved'
-        : '$discovered · Last observed $lastObserved';
+    return '$discovered · ${context.l10n.patternLastObserved(lastObserved)}';
   }
 
   Color _getTypeColor(PatternType type) {

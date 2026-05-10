@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/rarity_badge.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
@@ -13,8 +13,6 @@ class SparkleAchievementUnlockedDialog extends StatelessWidget {
 
   final AchievementModel achievement;
   final VoidCallback onViewAchievements;
-
-  String _t(String zh, String en) => I18nService.instance.isChinese ? zh : en;
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +55,7 @@ class SparkleAchievementUnlockedDialog extends StatelessWidget {
           ),
           const SizedBox(height: DS.spacing16),
           Text(
-            _t('成就解锁！', 'Achievement Unlocked!'),
+            context.l10n.achievementUnlocked,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: DS.fontWeightBold,
@@ -102,7 +100,7 @@ class SparkleAchievementUnlockedDialog extends StatelessWidget {
               borderRadius: DS.borderRadius12,
             ),
           ),
-          child: Text(_t('查看我的成就', 'View my achievements')),
+          child: Text(context.l10n.achievementViewMyAchievements),
         ),
       ],
       actionsAlignment: MainAxisAlignment.center,

@@ -15422,5 +15422,72 @@
   "dashboardContinuePriority": "Continue Priority Task",
   "dashboardStart25Min": "Start a 25-min Focus",
   "compactErrorLoadFailed": "Failed to load",
-  "compactErrorTapRetry": "Tap to retry"
+  "compactErrorTapRetry": "Tap to retry",
+  "celebrationDismiss": "Dismiss celebration",
+  "achievementMapNodeSemantics": "View achievement node {name}",
+  "@achievementMapNodeSemantics": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "streakInsightBanner": "In the past 7 days you completed tasks on {totalCheckins} days. Current streak: {currentStreak} days.",
+  "@streakInsightBanner": {
+    "placeholders": {
+      "totalCheckins": {
+        "type": "int"
+      },
+      "currentStreak": {
+        "type": "int"
+      }
+    }
+  },
+  "achievementViewDetailsSemantics": "View achievement details {name}",
+  "@achievementViewDetailsSemantics": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "achievementVisualRewardBadge": "Visual element reward badge",
+  "achievementViewMyAchievements": "View my achievements",
+  "shareTemplateSelectSemantics": "Select share template {name}",
+  "@shareTemplateSelectSemantics": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "authGuestTokenFailed": "Guest login failed to obtain valid token",
+  "patternLastObserved": "Last observed {time}",
+  "@patternLastObserved": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "guestDisplayName": "Guest",
+  "statisticsTrendUp": "Up",
+  "statisticsTrendDown": "Down",
+  "statisticsTrendStable": "Stable",
+  "demoCommitmentExamSummary": "Finish integration-substitution mistake review before 21:30",
+  "demoCommitmentExamCriteria1": "Review 5 missed problems",
+  "demoCommitmentExamCriteria2": "Write the next avoidance rule",
+  "demoCommitmentExamMilestone1": "Group mistakes",
+  "demoCommitmentExamMilestone2": "Re-solve",
+  "demoCommitmentExamMilestone3": "Submit evidence",
+  "demoCommitmentSpeakingSummary": "Trim my English self-intro to a 90-second version",
+  "demoCommitmentSpeakingCriteria1": "Recording is under 90 seconds",
+  "demoCommitmentSpeakingCriteria2": "Partner can repeat the key points",
+  "demoCommitmentSpeakingMilestone1": "List keywords",
+  "demoCommitmentSpeakingMilestone2": "Draft recording",
+  "demoPartnerGoalFeedback": "Give one specific partner feedback each day",
+  "demoPartnerGoalReflection": "Stabilize weekend reflection rhythm",
+  "demoSharedGoalTitle": "Close the calculus weak spots this week",
+  "demoSquadRiskNoSync": "No progress sync for two days",
+  "demoHelpableNudge": "No check-in yet today, a gentle nudge may help"
 }

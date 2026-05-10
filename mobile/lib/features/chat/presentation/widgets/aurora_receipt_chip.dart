@@ -642,7 +642,7 @@ class _ReceiptActionChips extends StatelessWidget {
         label: S.chatAuroraExcludeSource,
         prompt: usedNames.isEmpty
             ? S.chatAuroraExcludeSourcePrompt
-            : S.chatAuroraExcludeSourcesPrompt(usedNames.join(I18nService.instance.isChinese ? '、' : ', ')),
+            : S.chatAuroraExcludeSourcesPrompt(usedNames.join(S.recommendationListSeparator)),
       ),
       _ReceiptAction(
         icon: Icons.history_edu_outlined,
