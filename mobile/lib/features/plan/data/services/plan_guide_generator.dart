@@ -90,6 +90,7 @@ class PlanGuideGenerator {
     required PlanGuideAudience audience,
   }) {
     final l10n = S;
+    final zh = I18nService.instance.isChinese;
     final typeLabel = draft.type == PlanType.growth
         ? l10n.planTypeGrowth
         : l10n.planTypeSprint;

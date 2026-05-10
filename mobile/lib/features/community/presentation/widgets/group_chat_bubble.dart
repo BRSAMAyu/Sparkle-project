@@ -801,7 +801,9 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
           widget.message.content ??
           context.l10n.communityPlanFallback,
       subtitle: progress != null
-          ? '进度: ${(progress * 100).toStringAsFixed(0)}%'
+          ? context.l10n.communityPlanProgress(
+              (progress * 100).toStringAsFixed(0),
+            )
           : null,
       metadata: {
         'progress': progress,

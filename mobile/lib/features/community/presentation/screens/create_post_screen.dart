@@ -25,6 +25,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   final _contentController = TextEditingController();
   final _topicController = TextEditingController();
   final _contentFocus = FocusNode();
+  final _topicFocus = FocusNode();
   bool _isPosting = false;
   int _moodIndex = -1;
 
@@ -111,6 +112,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     _contentController.dispose();
     _topicController.dispose();
     _contentFocus.dispose();
+    _topicFocus.dispose();
     super.dispose();
   }
 
@@ -138,7 +140,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                 label: context.l10n.communityPost,
                 onPressed:
                     _contentController.text.trim().isEmpty || _isPosting
-                        ? null
+                        ? () {}
                         : _submit,
                 loading: _isPosting,
               ),
@@ -308,7 +310,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                       label: context.l10n.communityTopic,
                       onPressed: () {
                         _contentFocus.unfocus();
-                        FocusScope.of(context).requestFocus(_topicController);
+                        FocusScope.of(context).requestFocus(_topicFocus);
                       },
                     ),
                   ],

@@ -94,7 +94,7 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
                       const SizedBox(height: 2),
                       if (isMe && widget.message.isRead)
                         Text(
-                          'Read',
+                          context.l10n.chatReadReceipt,
                           style: TextStyle(
                             fontSize: 10,
                             color: context.sparkleColors.textSecondary,

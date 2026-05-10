@@ -100,19 +100,19 @@ class AchievementShareCardFactory {
                   runSpacing: DS.spacing6,
                   children: [
                     _chip(
-                      S.communityShareRarity,
-                      metadata['rarity']?.toString() ?? '荣耀',
+                      l10n.communityShareRarity,
+                      metadata['rarity']?.toString() ?? l10n.achievementRarityFallback,
                       palette,
                     ),
                     if (metadata['unlocked_count'] != null)
                       _chip(
-                        S.communityShareUnlocked,
+                        l10n.communityShareUnlocked,
                         '${metadata['unlocked_count']}',
                         palette,
                       ),
                     if (metadata['flame_level'] != null)
                       _chip(
-                        S.communityShareLevel,
+                        l10n.communityShareLevel,
                         'Lv.${metadata['flame_level']}',
                         palette,
                       ),

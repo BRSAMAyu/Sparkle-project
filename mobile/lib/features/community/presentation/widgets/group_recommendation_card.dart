@@ -63,7 +63,7 @@ class GroupRecommendationCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isSprint ? 'Sprint group' : 'Squad',
+                        isSprint ? l10n.communitySprintGroup : l10n.communitySquad,
                         style: context.typo.labelSmall
                             .copyWith(color: DS.textSecondary),
                       ),
@@ -76,7 +76,7 @@ class GroupRecommendationCard extends StatelessWidget {
                       ),
                       SizedBox(height: context.space.xs),
                       Text(
-                        '${group.memberCount} members | ${group.totalFlamePower} flame',
+                        l10n.communityGroupStats(group.memberCount, group.totalFlamePower),
                         style: context.typo.bodyMedium
                             .copyWith(color: DS.textSecondary),
                       ),
@@ -99,7 +99,7 @@ class GroupRecommendationCard extends StatelessWidget {
                 children: reasons
                     .map(
                       (reason) => SemanticPill(
-                        label: _reasonLabel(reason),
+                        label: _reasonLabel(context, reason),
                         tone: _reasonTone(reason),
                         icon: _reasonIcon(reason),
                         dense: true,
@@ -161,25 +161,28 @@ class GroupRecommendationCard extends StatelessWidget {
     );
   }
 
-  String _reasonLabel(GroupRecommendationReason reason) {
+  String _reasonLabel(BuildContext context, GroupRecommendationReason reason) {
+    final l10n = context.l10n;
     switch (reason.type) {
       case 'friend_overlap':
         final count = (reason.data?['friend_count'] as num?)?.toInt() ?? 0;
-        return count > 0 ? '$count friends inside' : 'Friends inside';
+        return count > 0
+            ? l10n.communityFriendsInside(count)
+            : l10n.communityFriendsInsideLabel;
       case 'tag_overlap':
         final tags = reason.data?['tags'];
         if (tags is List && tags.isNotEmpty) {
-          return 'Matches: ${tags.take(2).join('/')}';
+          return l10n.communityMatches(tags.take(2).join('/'));
         }
-        return 'Matches your focus';
+        return l10n.communityMatchesFocus;
       case 'trending':
-        return 'Trending now';
+        return l10n.communityTrendingNow;
       case 'fresh':
-        return 'New group';
+        return l10n.communityNewGroup;
       case 'approval_required':
-        return 'Approval needed';
+        return l10n.communityApprovalNeeded;
       default:
-        return 'Recommended';
+        return l10n.communityRecommended;
     }
   }
 

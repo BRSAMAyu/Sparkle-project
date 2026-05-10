@@ -309,7 +309,7 @@ class CheckinInteraction extends StatelessWidget {
     } else if (difference.inDays < 7) {
       return context.l10n.communityDaysAgo(difference.inDays);
     } else {
-      return '${time.month}-${time.day}';
+      return context.l10n.communityDateMonthDay(time.month, time.day);
     }
   }
 }

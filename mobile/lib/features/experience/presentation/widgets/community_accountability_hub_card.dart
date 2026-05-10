@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/compact_error_card.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/experience/data/experience_models.dart';
 import 'package:sparkle/features/experience/presentation/providers/experience_provider.dart';
@@ -25,7 +26,7 @@ class CommunityAccountabilityHubCard extends ConsumerWidget {
         onCreateCommitment: onCreateCommitment,
         onFindPartners: onFindPartners,
       ),
-      loading: () => const SizedBox(
+      loading: () => SizedBox(
         height: 160,
         child: Center(child: SparkleListSkeleton(count: 1)),
       ),
