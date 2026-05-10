@@ -97,7 +97,7 @@ class _AccountabilityDetailScreenState
                 ),
                 const SizedBox(height: DS.spacing8),
                 Text(
-                  '$e',
+                  context.l10n.accountabilityOperationFailed,
                   style: DS.bodySmall.copyWith(color: DS.textSecondary),
                   textAlign: TextAlign.center,
                 ),
@@ -261,7 +261,7 @@ class _AccountabilityDetailScreenState
       } catch (e) {
         if (mounted) {
           AppFeedback.error(
-              context, '${context.l10n.accountabilityOperationFailed}: $e');
+              context, context.l10n.accountabilityOperationFailed);
         }
       }
     }

@@ -14910,6 +14910,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get accountabilityDashboardLoadFailed => '伙伴工作台加载失败';
 
   @override
+  String get accountabilityDashboardLoadFailedDetail => '请重试，如问题持续存在请联系支持';
+
+  @override
   String get accountabilityNudgeSentDefault => '已通过站内提醒发送，对方在线时会实时看到';
 
   @override
@@ -18045,6 +18048,33 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get statisticsVsLast => '较上期';
+
+  @override
+  String get statisticsEmptyFocus => '暂无专注记录';
+
+  @override
+  String get statisticsEmptyFocusSubtitle => '开始专注后会在这里看到统计数据';
+
+  @override
+  String get statisticsEmptyAgent => '暂无智能体使用记录';
+
+  @override
+  String get statisticsEmptyAgentSubtitle => '使用智能体后会在这里看到统计数据';
+
+  @override
+  String get statisticsEmptyCapsule => '暂无好奇心胶囊';
+
+  @override
+  String get statisticsEmptyCapsuleSubtitle => '探索胶囊后会在这里看到统计数据';
+
+  @override
+  String get statisticsEmptyLearning => '暂无学习数据';
+
+  @override
+  String get statisticsEmptyLearningSubtitle => '学习后会在这里看到统计数据';
+
+  @override
+  String get statisticsFailedToLoad => '加载失败';
 
   @override
   String get statisticsExportImageReport => '图片报告';
@@ -33096,4 +33126,59 @@ class AppLocalizationsZh extends AppLocalizations {
   String multiAgentSwitchMode(String mode) {
     return '切换到$mode模式';
   }
+
+  @override
+  String get intentTaskCreate => '创建任务';
+
+  @override
+  String get intentTaskSetReminder => '设置提醒';
+
+  @override
+  String get intentCapsuleNoteIdea => '记录想法';
+
+  @override
+  String get intentCapsuleCognitivePrism => '认知棱镜';
+
+  @override
+  String get intentTranslationTranslate => '翻译';
+
+  @override
+  String get intentTranslationLearnLang => '学习语言';
+
+  @override
+  String intentTranslationHelpLearn(String text) {
+    return '帮我学习 $text';
+  }
+
+  @override
+  String get intentPrismView => '查看认知棱镜';
+
+  @override
+  String get intentPrismBehaviorAnalysis => '行为分析';
+
+  @override
+  String get intentSprintStart => '开始冲刺';
+
+  @override
+  String get intentSprintFocusMode => '专注模式';
+
+  @override
+  String get intentLearnStart => '开始学习';
+
+  @override
+  String get intentLearnCreatePlan => '创建学习计划';
+
+  @override
+  String get intentReviewStart => '开始复习';
+
+  @override
+  String intentReviewHelpReview(String text) {
+    return '帮我复习：$text';
+  }
+
+  @override
+  String get intentReviewErrorBook => '查看错题本';
+
+  @override
+  String get intentChatSendToAI => '发送给AI';
 }

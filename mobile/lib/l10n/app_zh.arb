@@ -6635,6 +6635,7 @@
   "favoritesClose": "关闭",
   "accountabilityEndPartnership": "结束伙伴关系",
   "accountabilityDashboardLoadFailed": "伙伴工作台加载失败",
+  "accountabilityDashboardLoadFailedDetail": "请重试，如问题持续存在请联系支持",
   "accountabilityNudgeSentDefault": "已通过站内提醒发送，对方在线时会实时看到",
   "accountabilityNudgeCooldown": "刚提醒过，冷却期内不会重复发送。提醒会以站内提示的形式送达，对方在线时会实时看到。",
   "accountabilityNudgeFailed": "提醒发送失败，请稍后再试",
@@ -15173,4 +15174,27 @@
   },
   "intentReviewErrorBook": "查看错题本",
   "intentChatSendToAI": "发送给AI"
-}
+}  "communitySendFriendRequest": "发送好友请求",
+  "userSearchHint": "按姓名或用户名搜索...",
+  "userSearchEmptyInitial": "按姓名或用户名搜索",
+  "userSearchEmptyNoResults": "未找到用户",
+  "searchFailedRetry": "搜索失败，请检查网络后重试",
+  "retryButton": "重试",
+  "groupSearchHint": "搜索社群...",
+  "groupSearchEmpty": "搜索学习小组或冲刺小组",
+  "membersCount": "{count} 名成员",
+  "@membersCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "flamePower": "{power} 火焰",
+  "@flamePower": {
+    "placeholders": {
+      "power": {"type": "int"}
+    }
+  },
+  "communityCenterTitle": "社群中心",
+  "createGroupButton": "创建社群",
+  "groupKnowledgeBase": "群知识库"
+EOF

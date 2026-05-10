@@ -15545,6 +15545,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Partner dashboard failed to load';
 
   @override
+  String get accountabilityDashboardLoadFailedDetail =>
+      'Please try again or contact support if the problem persists.';
+
+  @override
   String get accountabilityNudgeSentDefault =>
       'Sent as an in-app reminder. They will see it in real time when online.';
 
@@ -18844,6 +18848,37 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get statisticsVsLast => 'vs last';
+
+  @override
+  String get statisticsEmptyFocus => 'No focus records';
+
+  @override
+  String get statisticsEmptyFocusSubtitle =>
+      'Statistics will appear after you start focusing';
+
+  @override
+  String get statisticsEmptyAgent => 'No agent usage records';
+
+  @override
+  String get statisticsEmptyAgentSubtitle =>
+      'Statistics will appear after using the agent';
+
+  @override
+  String get statisticsEmptyCapsule => 'No curiosity capsules';
+
+  @override
+  String get statisticsEmptyCapsuleSubtitle =>
+      'Statistics will appear after exploring capsules';
+
+  @override
+  String get statisticsEmptyLearning => 'No learning data';
+
+  @override
+  String get statisticsEmptyLearningSubtitle =>
+      'Statistics will appear after learning';
+
+  @override
+  String get statisticsFailedToLoad => 'Failed to load';
 
   @override
   String get statisticsExportImageReport => 'Image Report';
@@ -34512,4 +34547,59 @@ class AppLocalizationsEn extends AppLocalizations {
   String multiAgentSwitchMode(String mode) {
     return 'Switch to $mode mode';
   }
+
+  @override
+  String get intentTaskCreate => 'Create Task';
+
+  @override
+  String get intentTaskSetReminder => 'Set Reminder';
+
+  @override
+  String get intentCapsuleNoteIdea => 'Note Idea';
+
+  @override
+  String get intentCapsuleCognitivePrism => 'Cognitive Prism';
+
+  @override
+  String get intentTranslationTranslate => 'Translate';
+
+  @override
+  String get intentTranslationLearnLang => 'Learn Language';
+
+  @override
+  String intentTranslationHelpLearn(String text) {
+    return 'Help me learn $text';
+  }
+
+  @override
+  String get intentPrismView => 'View Cognitive Prism';
+
+  @override
+  String get intentPrismBehaviorAnalysis => 'Behavior Analysis';
+
+  @override
+  String get intentSprintStart => 'Start Sprint';
+
+  @override
+  String get intentSprintFocusMode => 'Focus Mode';
+
+  @override
+  String get intentLearnStart => 'Start Learning';
+
+  @override
+  String get intentLearnCreatePlan => 'Create Study Plan';
+
+  @override
+  String get intentReviewStart => 'Start Review';
+
+  @override
+  String intentReviewHelpReview(String text) {
+    return 'Help me review: $text';
+  }
+
+  @override
+  String get intentReviewErrorBook => 'View Error Book';
+
+  @override
+  String get intentChatSendToAI => 'Send to AI';
 }

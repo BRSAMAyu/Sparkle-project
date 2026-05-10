@@ -6642,6 +6642,7 @@
   "favoritesClose": "Close",
   "accountabilityEndPartnership": "End partnership",
   "accountabilityDashboardLoadFailed": "Partner dashboard failed to load",
+  "accountabilityDashboardLoadFailedDetail": "Please try again or contact support if the problem persists.",
   "accountabilityNudgeSentDefault": "Sent as an in-app reminder. They will see it in real time when online.",
   "accountabilityNudgeCooldown": "Already nudged recently. The reminder was delivered as an in-app notification. They will see it in real time when online.",
   "accountabilityNudgeFailed": "Failed to send nudge. Please try again later.",
@@ -15167,4 +15168,27 @@
   },
   "intentReviewErrorBook": "View Error Book",
   "intentChatSendToAI": "Send to AI"
-}
+}  "communitySendFriendRequest": "Send Friend Request",
+  "userSearchHint": "Search users by name or username...",
+  "userSearchEmptyInitial": "Search for users by name or username",
+  "userSearchEmptyNoResults": "No users found",
+  "searchFailedRetry": "Search failed, check your network and retry",
+  "retryButton": "Retry",
+  "groupSearchHint": "Search groups...",
+  "groupSearchEmpty": "Search for squads or sprint groups",
+  "membersCount": "{count} members",
+  "@membersCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "flamePower": "{power} flame",
+  "@flamePower": {
+    "placeholders": {
+      "power": {"type": "int"}
+    }
+  },
+  "communityCenterTitle": "Community",
+  "createGroupButton": "Create Group",
+  "groupKnowledgeBase": "Group Knowledge Base"
+EOF

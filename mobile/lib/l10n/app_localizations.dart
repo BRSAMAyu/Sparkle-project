@@ -27187,6 +27187,12 @@ abstract class AppLocalizations {
   /// **'伙伴工作台加载失败'**
   String get accountabilityDashboardLoadFailed;
 
+  /// No description provided for @accountabilityDashboardLoadFailedDetail.
+  ///
+  /// In zh, this message translates to:
+  /// **'请重试，如问题持续存在请联系支持'**
+  String get accountabilityDashboardLoadFailedDetail;
+
   /// No description provided for @accountabilityNudgeSentDefault.
   ///
   /// In zh, this message translates to:
@@ -32832,6 +32838,60 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'较上期'**
   String get statisticsVsLast;
+
+  /// No description provided for @statisticsEmptyFocus.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无专注记录'**
+  String get statisticsEmptyFocus;
+
+  /// No description provided for @statisticsEmptyFocusSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始专注后会在这里看到统计数据'**
+  String get statisticsEmptyFocusSubtitle;
+
+  /// No description provided for @statisticsEmptyAgent.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无智能体使用记录'**
+  String get statisticsEmptyAgent;
+
+  /// No description provided for @statisticsEmptyAgentSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'使用智能体后会在这里看到统计数据'**
+  String get statisticsEmptyAgentSubtitle;
+
+  /// No description provided for @statisticsEmptyCapsule.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无好奇心胶囊'**
+  String get statisticsEmptyCapsule;
+
+  /// No description provided for @statisticsEmptyCapsuleSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'探索胶囊后会在这里看到统计数据'**
+  String get statisticsEmptyCapsuleSubtitle;
+
+  /// No description provided for @statisticsEmptyLearning.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无学习数据'**
+  String get statisticsEmptyLearning;
+
+  /// No description provided for @statisticsEmptyLearningSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习后会在这里看到统计数据'**
+  String get statisticsEmptyLearningSubtitle;
+
+  /// No description provided for @statisticsFailedToLoad.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载失败'**
+  String get statisticsFailedToLoad;
 
   /// No description provided for @statisticsExportImageReport.
   ///
@@ -60216,6 +60276,108 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'切换到{mode}模式'**
   String multiAgentSwitchMode(String mode);
+
+  /// No description provided for @intentTaskCreate.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建任务'**
+  String get intentTaskCreate;
+
+  /// No description provided for @intentTaskSetReminder.
+  ///
+  /// In zh, this message translates to:
+  /// **'设置提醒'**
+  String get intentTaskSetReminder;
+
+  /// No description provided for @intentCapsuleNoteIdea.
+  ///
+  /// In zh, this message translates to:
+  /// **'记录想法'**
+  String get intentCapsuleNoteIdea;
+
+  /// No description provided for @intentCapsuleCognitivePrism.
+  ///
+  /// In zh, this message translates to:
+  /// **'认知棱镜'**
+  String get intentCapsuleCognitivePrism;
+
+  /// No description provided for @intentTranslationTranslate.
+  ///
+  /// In zh, this message translates to:
+  /// **'翻译'**
+  String get intentTranslationTranslate;
+
+  /// No description provided for @intentTranslationLearnLang.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习语言'**
+  String get intentTranslationLearnLang;
+
+  /// No description provided for @intentTranslationHelpLearn.
+  ///
+  /// In zh, this message translates to:
+  /// **'帮我学习 {text}'**
+  String intentTranslationHelpLearn(String text);
+
+  /// No description provided for @intentPrismView.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看认知棱镜'**
+  String get intentPrismView;
+
+  /// No description provided for @intentPrismBehaviorAnalysis.
+  ///
+  /// In zh, this message translates to:
+  /// **'行为分析'**
+  String get intentPrismBehaviorAnalysis;
+
+  /// No description provided for @intentSprintStart.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始冲刺'**
+  String get intentSprintStart;
+
+  /// No description provided for @intentSprintFocusMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'专注模式'**
+  String get intentSprintFocusMode;
+
+  /// No description provided for @intentLearnStart.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始学习'**
+  String get intentLearnStart;
+
+  /// No description provided for @intentLearnCreatePlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建学习计划'**
+  String get intentLearnCreatePlan;
+
+  /// No description provided for @intentReviewStart.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始复习'**
+  String get intentReviewStart;
+
+  /// No description provided for @intentReviewHelpReview.
+  ///
+  /// In zh, this message translates to:
+  /// **'帮我复习：{text}'**
+  String intentReviewHelpReview(String text);
+
+  /// No description provided for @intentReviewErrorBook.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看错题本'**
+  String get intentReviewErrorBook;
+
+  /// No description provided for @intentChatSendToAI.
+  ///
+  /// In zh, this message translates to:
+  /// **'发送给AI'**
+  String get intentChatSendToAI;
 }
 
 class _AppLocalizationsDelegate
