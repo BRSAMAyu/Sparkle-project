@@ -463,20 +463,14 @@ class AccountabilityAchievementService:
         db: AsyncSession,
         user_id: UUID,
     ) -> bool:
-        """检查是否是第一个伙伴关系"""
+        """检查是否是第一个伙伴关系（即该用户尚未获得此成就）"""
         result = await db.execute(
-            select(func.count(AccountabilityPartnership.id)).where(
-                and_(
-                    AccountabilityPartnership.status == AccountabilityStatus.ACTIVE,
-                    or_(
-                        AccountabilityPartnership.initiator_id == user_id,
-                        AccountabilityPartnership.partner_id == user_id,
-                    ),
-                )
+            select(UserAchievement).where(
+                UserAchievement.user_id == user_id,
+                UserAchievement.achievement_id == "accountability_first_partnership",
             )
         )
-        count = result.scalar() or 0
-        return count == 1
+        return result.scalar_one_or_none() is None
 
     async def _count_mutual_checkin_days(
         self,

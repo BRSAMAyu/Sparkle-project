@@ -242,7 +242,8 @@ class PrivacyPreservingCommunityEngine:
         # Inverse-CDF Laplace sampling keeps the production path aligned with
         # the documented differential-privacy contract.
         u = random.random() - 0.5
-        noise = -scale * (1 if u >= 0 else -1) * math.log(1 - 2 * abs(u))
+        abs_u = min(abs(u), 0.499999)
+        noise = -scale * (1 if u >= 0 else -1) * math.log(1 - 2 * abs_u)
         noise_std = math.sqrt(2) * scale
 
         return value + noise, noise_std

@@ -199,7 +199,7 @@ class CommunitySignalBridge:
                 "resource_id": str(resource_id),
                 "target_group_id": str(target_group_id) if target_group_id else None,
                 "share_id": str(share_id),
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": _utcnow().isoformat(),
             },
         )
 

@@ -44,7 +44,7 @@ class CommunityStrategyService:
             source=source,
         )
         self.db.add(outcome)
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(outcome)
         logger.info(
             "CommunityStrategyOutcome recorded: user=%s directive=%s decision=%s trigger=%s",

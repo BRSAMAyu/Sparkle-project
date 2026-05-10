@@ -1,7 +1,7 @@
 """Aggregate anonymous community error patterns and annotate knowledge nodes."""
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger
@@ -10,6 +10,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.error_book import ErrorRecord
 from app.models.galaxy import KnowledgeNode
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class CommunityErrorAggregationService:
@@ -35,7 +39,7 @@ class CommunityErrorAggregationService:
             )
             .where(
                 ErrorRecord.knowledge_node_id == node_id,
-                ErrorRecord.created_at >= datetime.utcnow() - timedelta(days=self.SIGNAL_TTL_DAYS),
+                ErrorRecord.created_at >= _utcnow() - timedelta(days=self.SIGNAL_TTL_DAYS),
                 ErrorRecord.deleted_at.is_(None),
             )
             .group_by(
@@ -63,7 +67,7 @@ class CommunityErrorAggregationService:
 
         signal = {
             "common_mistake_patterns": patterns,
-            "aggregated_at": datetime.utcnow().isoformat(),
+            "aggregated_at": _utcnow().isoformat(),
             "privacy_level": "aggregate_only",
         }
 
@@ -72,11 +76,11 @@ class CommunityErrorAggregationService:
             return None
 
         node.community_signal = signal
-        await self.db.commit()
+        await self.db.flush()
         return signal
 
     async def aggregate_for_nodes_with_recent_errors(self) -> int:
-        recent_cutoff = datetime.utcnow() - timedelta(days=7)
+        recent_cutoff = _utcnow() - timedelta(days=7)
         node_ids = await self.db.execute(
             select(func.distinct(ErrorRecord.knowledge_node_id))
             .where(
