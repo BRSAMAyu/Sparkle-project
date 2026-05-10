@@ -4132,6 +4132,47 @@ async def adopt_shared_resource(
     }
 
 
+@router.post(
+    "/shared-resources/{shared_resource_id}/reject",
+    summary="拒绝推荐资源",
+)
+async def reject_shared_resource(
+    shared_resource_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Record a rejection so the recommendation engine can downweight similar resources."""
+    shared_result = await db.execute(
+        select(SharedResource).where(
+            SharedResource.id == shared_resource_id,
+            SharedResource.not_deleted_filter(),
+        )
+    )
+    shared = shared_result.scalar_one_or_none()
+    if not shared:
+        raise HTTPException(status_code=404, detail="共享资源不存在")
+
+    shared.negative_feedback_count = (shared.negative_feedback_count or 0) + 1
+    db.add(shared)
+    await db.flush()
+
+    # Publish rejection event for recommendation engine
+    from app.core.event_bus import event_bus
+
+    await event_bus.publish(
+        "COMMUNITY_RESOURCE_REJECTED",
+        {
+            "user_id": str(current_user.id),
+            "shared_resource_id": str(shared_resource_id),
+            "shared_by": str(shared.shared_by),
+            "group_id": str(shared.group_id) if shared.group_id else None,
+        },
+    )
+
+    await db.commit()
+    return {"success": True}
+
+
 # ============ 端到端加密 ============
 
 
@@ -4229,6 +4270,35 @@ async def update_group_announcement(
 
 
 # route-tier: authed
+@router.get("/groups/{group_id}/moderation", summary="获取群管理设置")
+async def get_group_moderation_settings(
+    group_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取群管理设置（需为群成员）"""
+    member_result = await db.execute(
+        select(GroupMember).where(
+            GroupMember.group_id == group_id,
+            GroupMember.user_id == current_user.id,
+            GroupMember.not_deleted_filter(),
+        )
+    )
+    member = member_result.scalar_one_or_none()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a group member")
+
+    group = await Group.get_by_id(db, group_id)
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+
+    return {
+        "keyword_filters": group.keyword_filters or [],
+        "mute_all": group.mute_all or False,
+        "slow_mode_seconds": group.slow_mode_seconds or 0,
+    }
+
+
 @router.put("/groups/{group_id}/moderation", summary="更新群管理设置")
 async def update_group_moderation_settings(
     group_id: UUID,
