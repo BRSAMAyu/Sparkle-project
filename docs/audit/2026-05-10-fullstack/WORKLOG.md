@@ -13,7 +13,7 @@
 |-------|-------|------|-----------|
 | **P0 Critical** | **8** | **8** | **0** |
 | **P1 High** | **35** | **35** | **0** |
-| P2 Medium | 60 | 16 | 44 |
+| P2 Medium | 60 | 19 | 41 |
 | P3 Low | 32 | 8 | 24 |
 | i18n (net reduction) | ~1070 | ~32 | ~1038 |
 
@@ -51,6 +51,7 @@ Opus agent verified all 8 commits:
 | **43622a674** | 16:40 | i18n | statistics providers + overview_cards → remove I18nService |
 | **b9e4f00fd** | 17:10 | P3 | semantic labels, form validation, topic focus, server-side filtering, gRPC preflight, utcnow |
 | **04a7813cc** | 17:25 | P2 | debate timeout, IndexError guard, ErrorRecord soft-delete, unused I18nService import |
+| **f2a03da4f** | 17:40 | i18n | core design widgets: app_feedback, compact_error_card, loading_indicator → ARB |
 
 ---
 
