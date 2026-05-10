@@ -457,7 +457,7 @@ class GroupTaskClaim(BaseModel):
     completed_at = Column(DateTime, nullable=True)
 
     # 认领时间
-    claimed_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    claimed_at = Column(DateTime, default=_utcnow, nullable=False)
 
     # 关系
     group_task = relationship("GroupTask", back_populates="claims")
@@ -789,7 +789,7 @@ class PostLike(BaseModel):
 
     user_id = Column(GUID(), ForeignKey("users.id"), nullable=False)
     post_id = Column(GUID(), ForeignKey("posts.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
 
     # 关系
     user = relationship("User")
