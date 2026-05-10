@@ -315,7 +315,7 @@ class GalaxyGrpcServiceImpl(galaxy_service_pb2_grpc.GalaxyServiceServicer if gal
                     node_id=str(node_id),
                     label=node.name if node else "",
                     node_type=node.source_type if node else "unknown",
-                    mastery=int(stats.mastery_score * 100) if stats and hasattr(stats, 'mastery_score') else 0,
+                    mastery=int(stats.mastery_score) if stats and hasattr(stats, 'mastery_score') else 0,
                     description=node.description or "" if node else "",
                     tags=node.tags or [] if node else [],
                     parent_ids=[str(node.parent_id)] if node and node.parent_id else [],

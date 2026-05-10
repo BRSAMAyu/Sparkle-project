@@ -578,6 +578,13 @@ class KnowledgeRetrievalService:
         # 1. ILIKE for Name/Description
         # 2. @> for exact keyword match (using GIN index)
         # 3. jsonb_path_exists for partial keyword match
+        # Escape LIKE wildcards and regex metacharacters to prevent injection
+        # Both ILIKE patterns and jsonb_path_exists regex are vulnerable
+        escaped_query = query.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
+        # For regex injection in jsonb_path_exists, also escape regex special chars
+        import re
+        regex_safe_query = re.escape(query)
+
         stmt = (
             select(KnowledgeNode)
             .options(
@@ -586,12 +593,12 @@ class KnowledgeRetrievalService:
             )
             .where(
                 or_(
-                    KnowledgeNode.name.ilike(f"%{query}%"),
-                    KnowledgeNode.description.ilike(f"%{query}%"),
+                    KnowledgeNode.name.ilike(f"%{escaped_query}%"),
+                    KnowledgeNode.description.ilike(f"%{escaped_query}%"),
                     KnowledgeNode.keywords.contains([query]),
                     func.jsonb_path_exists(
                         KnowledgeNode.keywords,
-                        f'$[*] ? (@ like_regex "{query}" flag "i")'
+                        f'$[*] ? (@ like_regex "{regex_safe_query}" flag "i")'
                     )
                 )
             )

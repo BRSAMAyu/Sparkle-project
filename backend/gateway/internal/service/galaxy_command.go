@@ -339,27 +339,39 @@ func (s *GalaxyCommandService) RecordStudy(ctx context.Context, userID, nodeID u
 	return s.unitOfWork.ExecuteInTransaction(ctx, func(txCtx *outbox.TransactionContext) error {
 		recordID := uuid.New()
 
-		// Insert study record
+		// Calculate mastery delta on the same 0-100 scale used by Python/user_node_status.
+		// performanceScore is already on 0-100 scale from Go side; convert to mastery delta
+		// capped at maxMasteryScore (100.0)
+		masteryDelta := math.Min(performanceScore*0.1, maxMasteryScore)
+
+		// Get current mastery for initial_mastery field
+		var currentMastery float64
+		row := txCtx.Tx().QueryRow(ctx, `
+			SELECT COALESCE(mastery_score, 0) FROM user_node_status
+			WHERE user_id = $1 AND node_id = $2
+		`, pgtype.UUID{Bytes: userID, Valid: true}, pgtype.UUID{Bytes: nodeID, Valid: true})
+		row.Scan(&currentMastery)
+
+		// Insert study record — match actual schema.sql columns:
+		// study_minutes, mastery_delta, initial_mastery, record_type
 		_, err := txCtx.Tx().Exec(ctx, `
 			INSERT INTO study_records (
-				id, user_id, node_id, duration_minutes, performance_score,
-				created_at
+				id, user_id, node_id, study_minutes, mastery_delta,
+				initial_mastery, record_type, created_at, updated_at
 			)
-			VALUES ($1, $2, $3, $4, $5, NOW())
+			VALUES ($1, $2, $3, $4, $5, $6, 'study', NOW(), NOW())
 		`,
 			pgtype.UUID{Bytes: recordID, Valid: true},
 			pgtype.UUID{Bytes: userID, Valid: true},
 			pgtype.UUID{Bytes: nodeID, Valid: true},
 			minutes,
-			performanceScore,
+			masteryDelta,
+			currentMastery,
 		)
 
 		if err != nil {
 			return fmt.Errorf("failed to record study: %w", err)
 		}
-
-		// Calculate mastery delta on the same 0-100 scale used by Python/user_node_status.
-		masteryDelta := math.Min(performanceScore*0.1, maxMasteryScore)
 
 		// Update mastery score
 		_, err = txCtx.Tx().Exec(ctx, `
