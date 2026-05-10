@@ -62,7 +62,7 @@ class AppUsageService {
       final result = await _channel.invokeMethod<String>('getForegroundApp');
       return result;
     } on PlatformException catch (e) {
-      print('Error getting foreground app: ${e.message}');
+      debugPrint('Error getting foreground app: ${e.message}');
       return null;
     } on MissingPluginException {
       // Plugin not available on this platform/build.
