@@ -2570,6 +2570,16 @@
   "seedLibraryApply": "Apply",
   "seedLibrarySubscribe": "Subscribe",
   "seedLibraryUnsubscribe": "Unsubscribe",
+  "seedOfficial": "Official",
+  "seedLibrarySubtitle": "Knowledge repository",
+  "seedLibraryStats": "{count} official libs · Community picks",
+  "@seedLibraryStats": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
   "seedLibraryContentItems": "Content Items",
   "seedLibraryNoContent": "No content yet",
   "seedLibraryContent": "Content",
@@ -3226,8 +3236,18 @@
   "communityFileSharedSuccess": "Community File Shared Success",
   "communityGroupFiles": "Community Group Files",
   "communityGroupMembersCount": "{arg0}",
+  "communityDiscardDraft": "Discard draft?",
+  "communityUnsavedContent": "You have unsaved content. Discard?",
   "communityDiscardGroupCreation": "Discard group creation?",
   "communityUnsavedChanges": "You have unsaved changes. Discard?",
+  "communityPostFailed": "Post failed, please try again later",
+  "communityNewPost": "New Post",
+  "communityPost": "Post",
+  "communityMoodPrompt": "How are you feeling?",
+  "communityAttachment": "Attachment",
+  "communityTopicHint": "Add a topic tag (optional)",
+  "communityPhoto": "Photo",
+  "communityTopic": "Topic",
   "communityKeepEditing": "Keep Editing",
   "communityDiscard": "Discard",
   "communitySprintDeadlineRequired": "Please select a deadline for the sprint group",
@@ -14150,6 +14170,7 @@
   "workMemConsolidated": "Consolidated",
   "workMemStillInForeground": "Still in foreground",
   "collapsibleSlotLongPressEdit": "Long press to edit panel",
+  "dailyContextDefault": "Good morning. Start with one small step today—finding your rhythm is enough.",
   "sprintProgressLabel": "{name}: {percent}% complete, {daysLeft} days left",
   "sprintBottleneckLabel": "{name}: {reason}",
   "sprintAlertSignificantlyBehindDetail": "Task completion rate significantly below expectations. Consider re-evaluating daily workload or adjusting sprint scope.",

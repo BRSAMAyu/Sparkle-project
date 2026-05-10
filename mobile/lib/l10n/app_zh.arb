@@ -2577,6 +2577,16 @@
   "seedLibraryApply": "应用",
   "seedLibrarySubscribe": "订阅",
   "seedLibraryUnsubscribe": "取消订阅",
+  "seedOfficial": "官方",
+  "seedLibrarySubtitle": "知识内容仓库",
+  "seedLibraryStats": "{count} 个官方库 · 社区精选",
+  "@seedLibraryStats": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
   "seedLibraryContentItems": "内容项",
   "seedLibraryNoContent": "暂无内容",
   "seedLibraryContent": "内容",
@@ -3219,8 +3229,18 @@
   "communityFileSharedSuccess": "文件分享成功",
   "communityGroupFiles": "群文件",
   "communityGroupMembersCount": "{arg0}",
+  "communityDiscardDraft": "放弃编辑？",
+  "communityUnsavedContent": "你有未发布的内容，确定放弃吗？",
   "communityDiscardGroupCreation": "放弃创建社群？",
   "communityUnsavedChanges": "你有未保存的更改，确定放弃？",
+  "communityPostFailed": "发布失败，请稍后重试",
+  "communityNewPost": "发布动态",
+  "communityPost": "发布",
+  "communityMoodPrompt": "选择心情",
+  "communityAttachment": "附图",
+  "communityTopicHint": "添加话题标签（可选）",
+  "communityPhoto": "图片",
+  "communityTopic": "话题",
   "communityKeepEditing": "继续编辑",
   "communityDiscard": "放弃",
   "communitySprintDeadlineRequired": "请选择冲刺社群的截止时间",
@@ -12918,9 +12938,70 @@
   },
   "gmKickConfirmMsg": "该成员将被移出群组。",
   "gmKicked": "{name} 已被移出群组",
+  "gmPromoteConfirm": "晋升 {name}？",
+  "gmPromoteConfirmMsg": "此成员将成为管理员，可以管理群组。",
+  "gmPromoted": "{name} 已晋升为管理员",
+  "gmPromoteFailed": "晋升失败：{error}",
+  "gmDemoteConfirm": "降权 {name}？",
+  "gmDemoteConfirmMsg": "此管理员将成为普通成员。",
+  "gmDemoted": "{name} 已降为普通成员",
+  "gmDemoteFailed": "降权失败：{error}",
+  "gmTransferConfirm": "将群主转让给 {name}？",
+  "gmTransferConfirmMsg": "你将成为普通成员。此操作无法撤销。",
+  "gmTransferSucceeded": "群主已转让给 {name}",
+  "gmTransferFailed": "转让失败：{error}",
   "@gmKicked": {
     "placeholders": {
       "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@gmPromoted": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@gmPromoteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@gmDemoted": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@gmDemoteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@gmTransferConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@gmTransferSucceeded": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@gmTransferFailed": {
+    "placeholders": {
+      "error": {
         "type": "String"
       }
     }
@@ -14110,6 +14191,7 @@
   "workMemConsolidated": "已巩固",
   "workMemStillInForeground": "仍在前台",
   "collapsibleSlotLongPressEdit": "长按编辑面板",
+  "dailyContextDefault": "早上好，今天先从一小步开始，把节奏找回来就很好。",
   "sprintProgressLabel": "{name}：已完成 {percent}%，还剩 {daysLeft} 天",
   "sprintBottleneckLabel": "{name}：{reason}",
   "sprintAlertSignificantlyBehindDetail": "任务完成率显著低于预期。建议重新评估每日任务量或调整冲刺范围。",

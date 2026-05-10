@@ -30,9 +30,7 @@ class DailyContextLine extends StatelessWidget {
               ? const _DailyContextLineSkeleton()
               : Text(
                   line == null || line.isEmpty
-                      ? (I18nService.instance.isChinese
-                          ? '早上好，今天先从一小步开始，把节奏找回来就很好。'
-                          : 'Good morning. Start with one small step today—finding your rhythm is enough.')
+                      ? context.l10n.dailyContextDefault
                       : line,
                   key: ValueKey(line),
                   maxLines: 3,

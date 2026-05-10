@@ -64,7 +64,7 @@ class SeedLibraryDashboardCard extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    I18nService.instance.isChinese ? '官方' : 'Official',
+                    context.l10n.seedOfficial,
                     style: context.sparkleTypography.labelSmall.copyWith(
                       fontWeight: DS.fontWeightBold,
                       fontSize: 9,
@@ -77,7 +77,7 @@ class SeedLibraryDashboardCard extends ConsumerWidget {
             const Spacer(),
             // Title
             Text(
-              I18nService.instance.isChinese ? '种子库' : 'Seed Library',
+              context.l10n.seedLibraryTitle,
               style: context.sparkleTypography.labelLarge.copyWith(
                 fontSize: dense ? 13 : null,
                 fontWeight: DS.fontWeightBold,
@@ -89,7 +89,7 @@ class SeedLibraryDashboardCard extends ConsumerWidget {
             const SizedBox(height: DS.xs),
             // Subtitle
             Text(
-              I18nService.instance.isChinese ? '知识内容仓库' : 'Knowledge repository',
+              context.l10n.seedLibrarySubtitle,
               style: context.sparkleTypography.labelSmall.copyWith(
                 color: DS.textSecondary,
               ),
@@ -97,7 +97,7 @@ class SeedLibraryDashboardCard extends ConsumerWidget {
             SizedBox(height: dense ? DS.spacing4 : DS.spacing6),
             // Stats
             Text(
-              I18nService.instance.isChinese ? '3 个官方库 · 社区精选' : '3 official libs · Community picks',
+              context.l10n.seedLibraryStats('3'),
               style: context.sparkleTypography.labelSmall.copyWith(
                 color: DS.textSecondary,
                 height: 1.4,
