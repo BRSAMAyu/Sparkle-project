@@ -303,9 +303,13 @@ class GalaxyStatsService:
         target_node_id = None
 
         if last_status:
+            from sqlalchemy import or_
             relations_query = (
                 select(NodeRelation)
-                .where(NodeRelation.source_node_id == last_status.node_id)
+                .where(or_(
+                    NodeRelation.source_node_id == last_status.node_id,
+                    NodeRelation.target_node_id == last_status.node_id
+                ))
                 .order_by(NodeRelation.strength.desc())
             )
             rel_result = await self.db.execute(relations_query)
@@ -315,7 +319,9 @@ class GalaxyStatsService:
             best_score = -1.0
 
             for rel in relations:
-                target_status = await self._get_user_status(user_id, rel.target_node_id)
+                # Bidirectional: if current node is source, target is candidate; if current node is target, source is candidate
+                candidate_id = rel.target_node_id if rel.source_node_id == last_status.node_id else rel.source_node_id
+                target_status = await self._get_user_status(user_id, candidate_id)
 
                 score = 0.0
                 if not target_status or not target_status.is_unlocked:
@@ -329,9 +335,7 @@ class GalaxyStatsService:
 
                 if score > best_score:
                     best_score = score
-                    best_candidate = rel.target_node_id
-
-            target_node_id = best_candidate
+                    target_node_id = candidate_id
 
         if not target_node_id:
             fallback_query = (
