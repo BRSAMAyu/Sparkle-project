@@ -76,7 +76,7 @@ LEFT JOIN LATERAL (
   ORDER BY created_at DESC
   LIMIT 1
 ) cm ON true
-WHERE cs.user_id = $1 AND cs.is_active = true
+WHERE cs.user_id = $1 AND cs.is_active = true AND cs.deleted_at IS NULL
 ORDER BY cs.last_message_at DESC
 LIMIT $2;
 

@@ -264,8 +264,16 @@ func (s *SlidingWindowRateLimiter) Allow(ctx context.Context, key string) (bool,
 		return false, 0, fmt.Errorf("redis script execution failed: %w", err)
 	}
 
-	allowed := result[0].(int64) == 1
-	remaining := int(result[1].(int64))
+	allowedRaw, err := parseScriptInt(result[0])
+	if err != nil {
+		return false, 0, fmt.Errorf("parse allowed flag: %w", err)
+	}
+	remainingRaw, err := parseScriptInt(result[1])
+	if err != nil {
+		return false, 0, fmt.Errorf("parse remaining count: %w", err)
+	}
+	allowed := allowedRaw == 1
+	remaining := int(remainingRaw)
 
 	return allowed, remaining, nil
 }

@@ -171,6 +171,10 @@ func (p *WebSocketProxy) HandlePersonalWS(c *gin.Context) {
 
 	// P0-1: Forward session_id for reconnect context restoration
 	if sessionID := c.Query("session_id"); sessionID != "" {
+		if !isValidUUID(sessionID) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid session_id format"})
+			return
+		}
 		if !p.checkReconnectAllowed(userID) {
 			p.logger.Warn("WS reconnect rate limit exceeded",
 				zap.String("user_id_hash", hashUserIDForLog(userID)),
