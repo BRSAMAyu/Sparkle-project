@@ -181,7 +181,7 @@ class AchievementBadge extends StatelessWidget {
             ),
             const SizedBox(width: 4),
             Text(
-              '+$points',
+              context.l10n.achievementBadgePoints(points),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.neutral0,
                     fontWeight: DS.fontWeightBold,
@@ -454,7 +454,7 @@ class AchievementDetailDialog extends StatelessWidget {
                     const Icon(Icons.star, size: 16),
                     const SizedBox(width: 8),
                     Text(
-                      '+${achievement.points} 积分',
+                      context.l10n.achievementEarnedPoints(achievement.points),
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             fontWeight: DS.fontWeightBold,
                           ),

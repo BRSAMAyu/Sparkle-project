@@ -785,14 +785,16 @@ class AccountabilityRepository {
   }) async {
     if (DemoDataService.isDemoMode) {
       final trimmedMessage = message?.trim();
+      // Return structured data with error type for UI layer to localize
       return {
         'success': true,
         'partnership_id': partnershipId,
         'partner_id': 'user_alice',
         'cooldown_seconds': 7200,
-        'message': trimmedMessage?.isNotEmpty ?? false
-            ? (I18nService.instance.isChinese ? '已提醒伙伴：$trimmedMessage' : 'Partner nudged: $trimmedMessage')
-            : (I18nService.instance.isChinese ? '已提醒伙伴查看今天的目标' : 'Partner nudged to check today\'s goals'),
+        'nudge_type': trimmedMessage?.isNotEmpty ?? false
+            ? 'with_message'
+            : 'without_message',
+        'message': trimmedMessage ?? '',
       };
     }
 
@@ -808,7 +810,7 @@ class AccountabilityRepository {
         action: 'nudgePartner',
       );
     }
-    throw Exception('Failed to nudge partner');
+    throw AccountabilityException(AccountabilityErrorType.operationFailed);
   }
 
   Future<void> dismissInAppHint(String notificationId) async {

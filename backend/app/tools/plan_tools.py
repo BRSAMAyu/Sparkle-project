@@ -392,10 +392,16 @@ class GenerateTasksForPlanTool(BaseTool):
         task_count: int,
         persona_constraints: Any | None,
         db_session: Any,
+        locale: str = "en",
     ) -> list[dict[str, Any]]:
         """Deterministic fallback tasks when LLM output is unavailable or malformed."""
+        from app.core.i18n import I18n
+
+        def t(key: str, **kwargs) -> str:
+            return I18n.t(key, locale=locale, **kwargs)
+
         max_session_minutes = self._resolve_max_session_minutes(persona_constraints)
-        topic_name = (topic or getattr(plan, "subject", None) or getattr(plan, "name", None) or "当前主题").strip()
+        topic_name = (topic or getattr(plan, "subject", None) or getattr(plan, "name", None) or t("planner.fallback_topic_default")).strip()
         node_names = await self._get_learning_path_node_names(plan, db_session)
         tasks: list[dict[str, Any]] = []
 
@@ -406,8 +412,8 @@ class GenerateTasksForPlanTool(BaseTool):
             for index, node_name in enumerate(prerequisite_nodes, start=1):
                 tasks.append(
                     {
-                        "title": f"补齐前置知识：{node_name}",
-                        "description": f"用一轮短时学习梳理「{node_name}」的核心定义、关键公式与典型应用，为后续学习 {target_node} 做准备。",
+                        "title": t("planner.fallback_prerequisite_title", node=node_name),
+                        "description": t("planner.fallback_prerequisite_desc", node=node_name, target=target_node),
                         "type": "learning",
                         "estimated_minutes": min(max_session_minutes, 25),
                         "priority": min(index + 1, 3),
@@ -417,22 +423,22 @@ class GenerateTasksForPlanTool(BaseTool):
             tasks.extend(
                 [
                     {
-                        "title": f"建立 {target_node} 核心概念框架",
-                        "description": f"整理 {target_node} 的核心概念、关键模型与常见场景，画出与前置知识的连接关系。",
+                        "title": t("planner.fallback_concept_framework", target=target_node),
+                        "description": t("planner.fallback_concept_framework_desc", target=target_node),
                         "type": "learning",
                         "estimated_minutes": min(max_session_minutes, 35),
                         "priority": 3,
                     },
                     {
-                        "title": f"完成 {target_node} 专项练习",
-                        "description": f"围绕 {target_node} 做一组由浅入深的练习，记录每道题使用的知识点与卡住的位置。",
+                        "title": t("planner.fallback_practice", target=target_node),
+                        "description": t("planner.fallback_practice_desc", target=target_node),
                         "type": "training",
                         "estimated_minutes": min(max_session_minutes, 40),
                         "priority": 4,
                     },
                     {
-                        "title": f"复盘 {target_node} 易错点",
-                        "description": f"回顾今天学习中的易错点，补写一份可复用的纠错清单，并确认是否真正理解 {target_node} 与前置知识的联系。",
+                        "title": t("planner.fallback_review", target=target_node),
+                        "description": t("planner.fallback_review_desc", target=target_node),
                         "type": "reflection",
                         "estimated_minutes": min(max_session_minutes, 20),
                         "priority": 4,
@@ -443,29 +449,29 @@ class GenerateTasksForPlanTool(BaseTool):
             tasks.extend(
                 [
                     {
-                        "title": f"梳理 {topic_name} 核心概念",
-                        "description": f"阅读材料并提炼 {topic_name} 的核心概念、关键术语和基本结构，形成一页摘要。",
+                        "title": t("planner.fallback_core_concepts", topic=topic_name),
+                        "description": t("planner.fallback_core_concepts_desc", topic=topic_name),
                         "type": "learning",
                         "estimated_minutes": min(max_session_minutes, 25),
                         "priority": 2,
                     },
                     {
-                        "title": f"完成 {topic_name} 基础练习",
-                        "description": f"选择 3-5 道基础题或一个小练习，验证自己是否能正确应用 {topic_name} 的核心方法。",
+                        "title": t("planner.fallback_basic_practice", topic=topic_name),
+                        "description": t("planner.fallback_basic_practice_desc", topic=topic_name),
                         "type": "training",
                         "estimated_minutes": min(max_session_minutes, 35),
                         "priority": 3,
                     },
                     {
-                        "title": f"定位 {topic_name} 易错点",
-                        "description": "回顾练习结果，记录最容易混淆的概念、公式或步骤，并补齐对应薄弱点。",
+                        "title": t("planner.fallback_locate_errors", topic=topic_name),
+                        "description": t("planner.fallback_locate_errors_desc", topic=topic_name),
                         "type": "error_fix",
                         "estimated_minutes": min(max_session_minutes, 20),
                         "priority": 4,
                     },
                     {
-                        "title": f"输出 {topic_name} 学习总结",
-                        "description": f"用自己的话总结 {topic_name} 的学习收获，整理下一次继续推进时要优先处理的问题。",
+                        "title": t("planner.fallback_summary", topic=topic_name),
+                        "description": t("planner.fallback_summary_desc", topic=topic_name),
                         "type": "reflection",
                         "estimated_minutes": min(max_session_minutes, 15),
                         "priority": 3,
@@ -478,8 +484,8 @@ class GenerateTasksForPlanTool(BaseTool):
             while len(tasks) < task_count:
                 tasks.append(
                     {
-                        "title": f"{topic_name} 巩固任务 {next_index}",
-                        "description": f"围绕 {topic_name} 再完成一轮针对性巩固，重点检查上一轮中尚未完全掌握的内容。",
+                        "title": t("planner.fallback_consolidation", topic=topic_name, index=next_index),
+                        "description": t("planner.fallback_consolidation_desc", topic=topic_name),
                         "type": "training",
                         "estimated_minutes": min(max_session_minutes, 25),
                         "priority": 3,
@@ -556,22 +562,28 @@ class GenerateTasksForPlanTool(BaseTool):
         task_count: int,
         knowledge_context: str = "",
         persona_constraints: Any | None = None,
+        locale: str = "en",
     ) -> list[dict] | None:
         """
         使用 LLM 生成结构化的任务建议 (支持 GraphRAG 上下文)
         """
+        from app.core.i18n import I18n
+
+        # Helper for localized strings
+        def t(key: str, **kwargs) -> str:
+            return I18n.t(key, locale=locale, **kwargs)
 
         context_prompt = ""
         if knowledge_context:
             context_prompt = f"""
-参考以下知识图谱上下文 (包含相关概念、前置知识和用户当前的掌握情况):
+{t("planner.graph_context_header")}
 --------------------------------------------------
 {knowledge_context}
 --------------------------------------------------
-请根据上述上下文调整任务：
-1. 优先安排用户尚未掌握 (Status: Locked 或 Mastery 低) 的前置知识。
-2. 对于已掌握的知识，可以生成复习或高阶应用任务。
-3. 确保任务覆盖上下文中的关键盲点。
+{t("planner.graph_context_instructions")}:
+1. {t("planner.instruction_priority_locked")}
+2. {t("planner.instruction_mastery_review")}
+3. {t("planner.instruction_cover_gaps")}
 """
 
         persona_prompt = ""
@@ -580,32 +592,32 @@ class GenerateTasksForPlanTool(BaseTool):
             persona_prompt = persona_constraints.to_prompt_block()
 
         prompt = f"""
-你是一个学习规划专家。根据以下学习计划信息，生成 {task_count} 个具体可执行的微任务。
+{t("planner.llm_prompt_header", count=task_count)}
 
-计划信息:
-- 计划名称: {plan_title}
-- 计划描述: {plan_description or "未提供"}
-- 学习主题: {topic}
-- 难度级别: {difficulty}
+{t("planner.plan_info")}:
+- {t("planner.plan_name")}: {plan_title}
+- {t("planner.plan_description")}: {plan_description or t("planner.description_unavailable")}
+- {t("planner.learning_topic")}: {topic}
+- {t("planner.difficulty_level")}: {difficulty}
 
 {context_prompt}
 
 {persona_prompt}
 
-任务要求:
-1. 每个任务必须在 5-{max_session_minutes} 分钟内可完成，并尽量贴合 persona 约束中的 session 长度
-2. 任务要具体可执行，不要模糊（例如"完成第 3-5 题练习题"而非"学习微积分概念"）
-3. 若存在前置知识盲点，必须优先安排前置补齐任务，再进入主任务
-4. 按难度递进顺序排列 (简单→中等→困难)
-5. 任务类型选择: learning/training/error_fix/reflection
-6. 优先级分配: 简单任务 1-2，中等 2-3，困难 4-5
+{t("planner.task_requirements")}:
+1. {t("planner.task_requirement_duration", max=max_session_minutes)}
+2. {t("planner.task_requirement_specific")}
+3. {t("planner.task_requirement_prerequisite")}
+4. {t("planner.task_requirement_order")}
+5. {t("planner.task_types")}
+6. {t("planner.priority_allocation")}
 
-返回格式必须是有效的 JSON 数组，包含 {task_count} 个任务对象:
+{t("planner.return_format", count=task_count)}
 ```json
 [
   {{
-    "title": "具体任务标题",
-    "description": "任务描述和要求",
+    "title": "{t("planner.json_title_example")}",
+    "description": "{t("planner.json_desc_example")}",
     "type": "learning|training|error_fix|reflection",
     "estimated_minutes": 25,
     "priority": 2
@@ -614,7 +626,7 @@ class GenerateTasksForPlanTool(BaseTool):
 ]
 ```
 
-严格返回 JSON 格式，不要其他文本。
+{t("planner.strict_json")}
 """
 
         try:

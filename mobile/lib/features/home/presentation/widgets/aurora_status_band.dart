@@ -350,8 +350,7 @@ class _AuroraStatusBandState extends State<AuroraStatusBand>
     if (label.isEmpty) {
       return l10n.auroraExpandedExplanationDefault;
     }
-    final l10n = I18nService.instance.l10n;
-    return '${l10n.auroraExpandedExplanationPrefix}$label${l10n.auroraExpandedExplanationLabelSuffix}';
+    return '${l10n.auroraExpandedExplanationPrefix}$label';
   }
 
   _AuroraBandConfig get _stateConfig {

@@ -269,7 +269,7 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
         : [
             PredictionActionData(
               id: '${insight.predictionId}:chat',
-              label: l10n.intentPredictionContinue,
+              label: l10n.intentPredictionContinue(''),
               actionType: insight.predictedActionType,
               targetRoute: '/chat',
               suggestedPrompt: insight.suggestedPrompt,

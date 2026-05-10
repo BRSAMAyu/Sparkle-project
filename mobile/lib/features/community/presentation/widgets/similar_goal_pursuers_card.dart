@@ -187,24 +187,22 @@ class SimilarGoalPursuersCard extends ConsumerWidget {
       onAddFriend!(pursuer.userId);
       return;
     }
-    final isChinese = I18nService.instance.isChinese;
+    final l10n = context.l10n;
     try {
       await ref.read(communityRepositoryProvider).sendFriendRequest(
             pursuer.userId,
-            message: isChinese
-                ? '我们正在追相似目标，一起加油？'
-                : 'We are pursuing similar goals. Want to connect?',
+            message: l10n.communitySimilarGoalConnectMessage,
           );
       if (!context.mounted) return;
       AppFeedback.success(
         context,
-        isChinese ? '好友请求已发送' : 'Friend request sent',
+        l10n.communityFriendRequestSent,
       );
     } catch (error) {
       if (!context.mounted) return;
       AppFeedback.error(
         context,
-        isChinese ? '暂时无法发送好友请求' : 'Could not send friend request',
+        l10n.communityFriendRequestFailed,
       );
     }
   }
@@ -214,7 +212,7 @@ class SimilarGoalPursuersCard extends ConsumerWidget {
     WidgetRef ref,
     List<SimilarGoalPursuer> pursuers,
   ) {
-    final isChinese = I18nService.instance.isChinese;
+    final l10n = context.l10n;
     unawaited(
       showSensoryModalBottomSheet<void>(
         context: context,
@@ -229,7 +227,7 @@ class SimilarGoalPursuersCard extends ConsumerWidget {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Text(
-                    isChinese ? '同目标伙伴' : 'Similar goal pursuers',
+                    l10n.communitySimilarGoalPursuers,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
@@ -251,7 +249,7 @@ class SimilarGoalPursuersCard extends ConsumerWidget {
                     Navigator.of(sheetContext).pop();
                     unawaited(_handlePursuerTap(context, ref, pursuer));
                   },
-                  child: Text(isChinese ? '加好友' : 'Add'),
+                  child: Text(l10n.communityAddFriend),
                 ),
               );
             },
@@ -274,7 +272,7 @@ class _PursuerChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isChinese = I18nService.instance.isChinese;
+    final l10n = context.l10n;
 
     return InkWell(
       onTap: onTap,
@@ -296,9 +294,7 @@ class _PursuerChip extends StatelessWidget {
             ),
             if (pursuer.mutualFriendsCount > 0)
               Text(
-                isChinese
-                    ? '${pursuer.mutualFriendsCount} 位共同好友'
-                    : '${pursuer.mutualFriendsCount} mutual',
+                l10n.communityMutualFriendsCount(pursuer.mutualFriendsCount),
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       fontSize: 8,
                       color: DS.textTertiary,

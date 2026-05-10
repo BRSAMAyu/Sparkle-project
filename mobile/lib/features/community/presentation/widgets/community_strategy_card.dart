@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// A community engagement strategy recommendation.
 class CommunityStrategy {
