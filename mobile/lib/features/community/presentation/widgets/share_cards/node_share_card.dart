@@ -391,7 +391,8 @@ class NodeShareCardFactory {
   static double? _parseMasteryFromSubtitle(String subtitle) {
     final match = RegExp(r'(\d+)%').firstMatch(subtitle);
     if (match != null) {
-      return int.parse(match.group(1)!) / 100.0;
+      final value = int.tryParse(match.group(1) ?? '');
+      return value != null ? value / 100.0 : null;
     }
     return null;
   }

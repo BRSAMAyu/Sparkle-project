@@ -54,10 +54,12 @@ class _GroupKnowledgeBaseViewState
   @override
   void initState() {
     super.initState();
-    _reload();
+    final repo = ref.read(fileRepositoryProvider);
+    _categoriesFuture = repo.getGroupFileCategories(widget.groupId);
+    _reloadFiles();
   }
 
-  void _reload() {
+  void _reloadFiles() {
     final repo = ref.read(fileRepositoryProvider);
     setState(() {
       _filesFuture = repo.listGroupFiles(
@@ -65,8 +67,11 @@ class _GroupKnowledgeBaseViewState
         category: _selectedCategory,
         limit: 200,
       );
-      _categoriesFuture = repo.getGroupFileCategories(widget.groupId);
     });
+  }
+
+  void _reload() {
+    _reloadFiles();
   }
 
   List<GroupFileInfo> _applySearchAndSort(List<GroupFileInfo> files) {
