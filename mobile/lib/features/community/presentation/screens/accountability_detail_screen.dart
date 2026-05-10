@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/components/organisms/expandable_section.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/design/widgets/sparkle_refresh_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
@@ -137,29 +138,34 @@ class _AccountabilityDetailScreenState
             );
           }
 
-          return _DashboardView(
-            dashboard: dashboard,
-            currentUserId: currentUserId,
-            onCheckin: canCheckin ? _showCheckinSheet : null,
-            onNudge: canNudge ? () => _sendNudge(widget.partnershipId) : null,
-            onShare: canShare
-                ? () => unawaited(context.push('/achievements'))
-                : null,
-            onChat: canChat
-                ? () {
-                    final partnerId =
-                        dashboard.partnership.initiatorId == currentUserId
-                            ? dashboard.partnership.partnerId
-                            : dashboard.partnership.initiatorId;
-                    final partnerName = _partnerName(
-                      dashboard.partnership,
-                      currentUserId,
-                    );
-                    unawaited(context.push(
-                      '/chat/private/$partnerId?name=${Uri.encodeComponent(partnerName)}',
-                    ));
-                  }
-                : null,
+          return SparkleRefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(accountabilityDashboardProvider(widget.partnershipId));
+            },
+            child: _DashboardView(
+              dashboard: dashboard,
+              currentUserId: currentUserId,
+              onCheckin: canCheckin ? _showCheckinSheet : null,
+              onNudge: canNudge ? () => _sendNudge(widget.partnershipId) : null,
+              onShare: canShare
+                  ? () => unawaited(context.push('/achievements'))
+                  : null,
+              onChat: canChat
+                  ? () {
+                      final partnerId =
+                          dashboard.partnership.initiatorId == currentUserId
+                              ? dashboard.partnership.partnerId
+                              : dashboard.partnership.initiatorId;
+                      final partnerName = _partnerName(
+                        dashboard.partnership,
+                        currentUserId,
+                      );
+                      unawaited(context.push(
+                        '/chat/private/$partnerId?name=${Uri.encodeComponent(partnerName)}',
+                      ));
+                    }
+                  : null,
+            ),
           );
         },
       ),
@@ -945,6 +951,7 @@ class _PendingPoliciesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context);
     final count = summary?.count ?? 0;
     final nextTriggerAt = summary?.nextTriggerAt;
     final subtitle = count <= 0
@@ -995,6 +1002,7 @@ class _RecentReflectionsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context);
     final count = summary?.count ?? 0;
     final lastCategory = summary?.lastCategory;
     final lastAt = summary?.lastAt;
@@ -1070,6 +1078,7 @@ class _ForesightHintCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context);
     final hintText = summary?.hintText;
     final generatedAt = summary?.generatedAt;
     final deviationCount = summary?.deviationCount ?? 0;

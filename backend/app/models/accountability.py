@@ -160,4 +160,10 @@ class AccountabilityCheckin(BaseModel):
             "idx_accountability_checkin_created_at",
             "created_at",
         ),
+        Index(
+            "idx_checkin_partnership_user_created",
+            "partnership_id",
+            "user_id",
+            "created_at",
+        ),
     )

@@ -480,7 +480,7 @@ class AccountabilityAchievementService:
         partner_id: UUID,
         days: int = 7,
     ) -> int:
-        """统计双方在2小时内互相打卡的天数 — single query, group-by-date in Python."""
+        """统计双方在2小时内互相打卡的天数 — single query, group-by-local-date in Python."""
         cutoff = _utcnow() - timedelta(days=days)
 
         # One query fetches all checkins for both users in the window
@@ -496,13 +496,19 @@ class AccountabilityAchievementService:
         )
         rows = result.all()
 
-        # Group checkin times by date and user
+        # 获取用户的时区
+        timezone_result = await db.execute(
+            select(PushPreference.timezone).where(PushPreference.user_id == user_id)
+        )
+        timezone_name = _normalize_timezone(timezone_result.scalar_one_or_none())
+
+        # Group checkin times by LOCAL date and user
         from collections import defaultdict
 
         user_by_date: dict[object, list[datetime]] = defaultdict(list)
         partner_by_date: dict[object, list[datetime]] = defaultdict(list)
         for uid, created_at in rows:
-            day_key = created_at.date()
+            day_key = _to_local_date(created_at, timezone_name)
             if uid == user_id:
                 user_by_date[day_key].append(created_at)
             else:
@@ -534,24 +540,37 @@ class AccountabilityAchievementService:
         month: int,
         days_in_month: int,
     ) -> bool:
-        """检查用户在指定月份是否每天打卡"""
-        month_start = datetime(year, month, 1).replace(tzinfo=UTC)
-        month_end = datetime(year, month, days_in_month, 23, 59, 59).replace(tzinfo=UTC)
+        """检查用户在指定月份是否每天打卡 (timezone-aware)"""
+        # 获取用户时区
+        timezone_result = await db.execute(
+            select(PushPreference.timezone).where(PushPreference.user_id == user_id)
+        )
+        timezone_name = _normalize_timezone(timezone_result.scalar_one_or_none())
 
-        # 统计该月份的打卡天数
+        # 构建用户本地的月份边界
+        zone = ZoneInfo(timezone_name)
+        month_start_local = datetime(year, month, 1)
+        month_end_local = datetime(year, month, days_in_month, 23, 59, 59, tzinfo=zone)
+
+        # 转换为 UTC 存储的时间戳
+        month_start_utc = month_start_local.astimezone(UTC)
+        month_end_utc = month_end_local.astimezone(UTC)
+
+        # 统计该月份的打卡天数 (按本地日期去重)
         result = await db.execute(
-            select(func.distinct(func.date(AccountabilityCheckin.created_at))).where(
+            select(AccountabilityCheckin.created_at).where(
                 and_(
                     AccountabilityCheckin.partnership_id == partnership_id,
                     AccountabilityCheckin.user_id == user_id,
-                    AccountabilityCheckin.created_at >= month_start,
-                    AccountabilityCheckin.created_at <= month_end,
+                    AccountabilityCheckin.created_at >= month_start_utc,
+                    AccountabilityCheckin.created_at <= month_end_utc,
                 )
             )
         )
-        checkin_days = len(result.all())
+        created_at_list = [row[0] for row in result.all()]
+        local_dates = {_to_local_date(ts, timezone_name) for ts in created_at_list}
 
-        return checkin_days >= days_in_month
+        return len(local_dates) >= days_in_month
 
     async def _unlock_achievement(
         self,

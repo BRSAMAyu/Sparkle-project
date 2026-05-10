@@ -217,9 +217,10 @@ class _PartnershipCard extends StatelessWidget {
     final zh = I18nService.instance.isChinese;
     final isInitiator = partnership.initiatorId == currentUserId;
     final partner = isInitiator ? partnership.partner : partnership.initiator;
+    // Show the current user's own goal, not always initiatorGoal
     final goalLabel = isInitiator
-        ? (partnership.partnerGoal ?? partnership.initiatorGoal)
-        : partnership.initiatorGoal;
+        ? (partnership.initiatorGoal)
+        : (partnership.partnerGoal ?? partnership.initiatorGoal);
     final streak = partnership.myStreakDays ?? 0;
     final partnerCheckedIn = partnership.partnerCheckedInToday ?? false;
 

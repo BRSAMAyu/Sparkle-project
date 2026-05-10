@@ -605,21 +605,30 @@ async def _check_partner_progress(db: AsyncSession) -> dict[str, Any]:
                         queue="default",
                     )
 
-            # 检查今天双方是否都打卡 (完美一天)
-            today_start = _utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-            checkin_query = select(AccountabilityCheckin).where(
-                and_(
-                    AccountabilityCheckin.partnership_id == partnership.id,
-                    AccountabilityCheckin.created_at >= today_start,
+            # 检查今天双方是否都打卡 (完美一天) — per-user timezone-aware
+            users_by_id: dict[UUID, User | None] = {
+                partnership.initiator_id: await db.get(User, partnership.initiator_id),
+                partnership.partner_id: await db.get(User, partnership.partner_id),
+            }
+            today_checkins: set[UUID] = set()
+            for uid, user in users_by_id.items():
+                if user is None:
+                    continue
+                tz = _user_timezone_name(user)
+                day_start, day_end = _local_day_window(tz, _utcnow())
+                checkin_query = select(AccountabilityCheckin).where(
+                    and_(
+                        AccountabilityCheckin.partnership_id == partnership.id,
+                        AccountabilityCheckin.user_id == uid,
+                        AccountabilityCheckin.created_at >= day_start,
+                        AccountabilityCheckin.created_at <= day_end,
+                    )
                 )
-            )
-            checkin_result = await db.execute(checkin_query)
-            today_checkins = {c.user_id for c in checkin_result.scalars().all()}
+                checkin_result = await db.execute(checkin_query)
+                if checkin_result.scalars().first():
+                    today_checkins.add(uid)
 
-            if (
-                partnership.initiator_id in today_checkins
-                and partnership.partner_id in today_checkins
-            ):
+            if len(today_checkins) >= 2:
                 stats["perfect_days"].append(str(partnership.id))
 
         except Exception as e:
@@ -744,16 +753,19 @@ async def _calculate_streak(
     partnership_id: UUID,
     user_id: UUID,
     *,
-    quality_threshold: bool = True,
+    quality_threshold: bool = False,
 ) -> int:
-    """计算用户的连续打卡天数。
+    """计算用户的连续打卡天数 (timezone-aware, quality-aware).
 
-    当 quality_threshold=True 时，只有"高质量"打卡才计入连续天数：
-    满足 mood >= 4 或 minutes >= 15 的打卡才视为有效日。
-    这避免纯二进制计数——任何活动≠高质量日。
+    默认 quality_threshold=False，与 AccountabilityAchievementService 保持一致。
+    quality_threshold=True 时，只有 mood >= 4 或 minutes >= 15 的打卡才计入连续天数。
     """
     from collections import defaultdict
     from datetime import date
+
+    # 获取用户时区
+    user = await db.get(User, user_id)
+    timezone_name = _user_timezone_name(user)
 
     result = await db.execute(
         select(
@@ -770,12 +782,12 @@ async def _calculate_streak(
         .order_by(AccountabilityCheckin.created_at.desc())
     )
 
-    # 按日期分组，记录每日最高质量的检查
+    # 按本地日期分组，记录每日最高质量的检查
     daily_best: dict[date, dict] = defaultdict(lambda: {"mood": 0, "minutes": 0})
     for ts, mood, minutes in result.all():
         if ts.tzinfo is None:
             ts = ts.replace(tzinfo=UTC)
-        d = ts.date()
+        d = _local_date(ts, timezone_name)
         if mood and mood > daily_best[d]["mood"]:
             daily_best[d]["mood"] = mood
         if minutes and minutes > daily_best[d]["minutes"]:
@@ -789,10 +801,10 @@ async def _calculate_streak(
             return False
         return best["mood"] >= 4 or best["minutes"] >= 15
 
-    # 计算连续天数
-    today_utc = _utcnow().date()
+    # 计算连续天数 (使用用户本地日期)
+    today_local = _local_date(_utcnow(), timezone_name)
     streak = 0
-    current = today_utc
+    current = today_local
 
     while _is_quality_day(current):
         streak += 1
