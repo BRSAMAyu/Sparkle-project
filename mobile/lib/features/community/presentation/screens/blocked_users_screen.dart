@@ -150,7 +150,7 @@ class _BlockedUserTile extends ConsumerWidget {
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SparkleSnackBar.error(I18nService.instance.isChinese ? '操作失败: $e' : 'Operation failed: $e'),
+            SparkleSnackBar.error(context.l10n.blockedOperationFailed(e.toString())),
           );
         }
       }

@@ -177,9 +177,7 @@ class _NodeDetailSheetState extends ConsumerState<NodeDetailSheet> {
     final uri = Uri(
       path: '/chat',
       queryParameters: {
-        'prompt': I18nService.instance.isChinese
-            ? '带我复习「$label」。请先基于这个知识节点定位我最该补的薄弱点，再给我一组短练习。'
-            : 'Help me review "$label". First identify the weakest point around this knowledge node, then give me a short practice set.',
+        'prompt': context.l10n.galaxyNodeReviewPrompt(label),
         'chat_mode': 'study_plan',
         'review_node': widget.nodeId,
         'node_label': label,

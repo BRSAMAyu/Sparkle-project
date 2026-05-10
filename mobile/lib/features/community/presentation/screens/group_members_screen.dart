@@ -94,9 +94,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                   child: TextField(
                     controller: _searchController,
                     decoration: InputDecoration(
-                      hintText: I18nService.instance.isChinese
-                          ? '搜索成员...'
-                          : 'Search members...',
+                      hintText: context.l10n.groupSearchMembers,
                       prefixIcon: const Icon(Icons.search),
                       suffixIcon: _searchQuery.isNotEmpty
                           ? SparkleIconButton(
@@ -141,12 +139,8 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                         return Center(
                           child: Text(
                             _searchQuery.isEmpty
-                                ? I18nService.instance.isChinese
-                                    ? '暂无成员'
-                                    : 'No members yet'
-                                : I18nService.instance.isChinese
-                                    ? '未找到成员'
-                                    : 'No members found',
+                                ? context.l10n.groupNoMembersYet
+                                : context.l10n.groupNoMembersFound,
                             style:
                                 TextStyle(color: DS.neutral500, fontSize: 16),
                           ),
@@ -168,9 +162,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                         children: [
                           if (owners.isNotEmpty) ...[
                             _buildSectionHeader(
-                              I18nService.instance.isChinese
-                                  ? '群主 (${owners.length})'
-                                  : 'Owner (${owners.length})',
+                              context.l10n.groupOwnerCount(owners.length),
                             ),
                             ...owners.asMap().entries.map(
                                   (entry) => SparkleStaggerItem(
@@ -181,9 +173,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                           ],
                           if (admins.isNotEmpty) ...[
                             _buildSectionHeader(
-                              I18nService.instance.isChinese
-                                  ? '管理员 (${admins.length})'
-                                  : 'Admins (${admins.length})',
+                              context.l10n.groupAdminCount(admins.length),
                             ),
                             ...admins.asMap().entries.map(
                                   (entry) => SparkleStaggerItem(
@@ -194,9 +184,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                           ],
                           if (regularMembers.isNotEmpty) ...[
                             _buildSectionHeader(
-                              I18nService.instance.isChinese
-                                  ? '成员 (${regularMembers.length})'
-                                  : 'Members (${regularMembers.length})',
+                              context.l10n.groupMemberCount(regularMembers.length),
                             ),
                             ...regularMembers.asMap().entries.map(
                                   (entry) => SparkleStaggerItem(
@@ -478,7 +466,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                             children: [
                               Icon(Icons.arrow_downward, size: 18),
                               SizedBox(width: DS.sm),
-                              Text(I18nService.instance.isChinese ? '降为普通成员' : 'Demote to Member'),
+                              Text(context.l10n.groupDemoteToMember),
                             ],
                           ),
                         ),
@@ -491,7 +479,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                             children: [
                               Icon(Icons.arrow_upward, size: 18),
                               SizedBox(width: DS.sm),
-                              Text(I18nService.instance.isChinese ? '晋升为管理员' : 'Promote to Admin'),
+                              Text(context.l10n.groupPromoteToAdmin),
                             ],
                           ),
                         ),
@@ -509,7 +497,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                             ),
                             const SizedBox(width: DS.sm),
                             Text(
-                              I18nService.instance.isChinese ? '转让群主' : 'Transfer Ownership',
+                              context.l10n.groupTransferOwnership,
                               style: TextStyle(color: DS.warning),
                             ),
                           ],
@@ -608,10 +596,9 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
   ) async {
     switch (action) {
       case 'promote':
-        final zh = I18nService.instance.isChinese;
         final confirmed = await _showConfirmDialog(
-          zh ? '晋升 ${member.user.displayName}？' : 'Promote ${member.user.displayName}?',
-          zh ? '此成员将成为管理员，可以管理群组。' : 'This member will become an admin and can manage the group.',
+          context.l10n.gmPromoteConfirm(member.user.displayName),
+          context.l10n.gmPromoteConfirmMsg,
         );
         if ((confirmed ?? false) && mounted) {
           try {
@@ -621,21 +608,20 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
             if (mounted) {
               AppFeedback.success(
                 context,
-                zh ? '${member.user.displayName} 已晋升为管理员' : '${member.user.displayName} promoted to admin',
+                context.l10n.gmPromoted(member.user.displayName),
               );
             }
           } catch (e) {
             if (mounted) {
-              AppFeedback.error(context, zh ? '晋升失败：$e' : 'Failed to promote: $e');
+              AppFeedback.error(context, context.l10n.gmPromoteFailed(e.toString()));
             }
           }
         }
 
       case 'demote':
-        final zh = I18nService.instance.isChinese;
         final confirmed = await _showConfirmDialog(
-          zh ? '降权 ${member.user.displayName}？' : 'Demote ${member.user.displayName}?',
-          zh ? '此管理员将成为普通成员。' : 'This admin will become a regular member.',
+          context.l10n.gmDemoteConfirm(member.user.displayName),
+          context.l10n.gmDemoteConfirmMsg,
         );
         if ((confirmed ?? false) && mounted) {
           try {
@@ -645,21 +631,20 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
             if (mounted) {
               AppFeedback.success(
                 context,
-                zh ? '${member.user.displayName} 已降为普通成员' : '${member.user.displayName} demoted to member',
+                context.l10n.gmDemoted(member.user.displayName),
               );
             }
           } catch (e) {
             if (mounted) {
-              AppFeedback.error(context, zh ? '降权失败：$e' : 'Failed to demote: $e');
+              AppFeedback.error(context, context.l10n.gmDemoteFailed(e.toString()));
             }
           }
         }
 
       case 'transfer':
-        final zh = I18nService.instance.isChinese;
         final confirmed = await _showConfirmDialog(
-          zh ? '将群主转让给 ${member.user.displayName}？' : 'Transfer ownership to ${member.user.displayName}?',
-          zh ? '你将成为普通成员。此操作无法撤销。' : 'You will become a regular member. This action cannot be undone.',
+          context.l10n.gmTransferConfirm(member.user.displayName),
+          context.l10n.gmTransferConfirmMsg,
           isDestructive: true,
         );
         if ((confirmed ?? false) && mounted) {
@@ -670,13 +655,13 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
             if (mounted) {
               AppFeedback.success(
                 context,
-                zh ? '群主已转让给 ${member.user.displayName}' : 'Ownership transferred to ${member.user.displayName}',
+                context.l10n.gmTransferSucceeded(member.user.displayName),
               );
               context.pop(); // Go back to group detail
             }
           } catch (e) {
             if (mounted) {
-              AppFeedback.error(context, zh ? '转让失败：$e' : 'Failed to transfer: $e');
+              AppFeedback.error(context, context.l10n.gmTransferFailed(e.toString()));
             }
           }
         }

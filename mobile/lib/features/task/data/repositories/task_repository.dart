@@ -470,12 +470,12 @@ class TaskRepository {
       return [
         ExecutionTemplateModel(
           templateId: 'web_research_brief',
-          name: zh ? '网页调研简报' : 'Web Research Brief',
-          description: zh ? '适合搜索与总结' : 'Great for search and summarization',
+          name: I18nService.instance.l10n.taskWebResearchBrief,
+          description: I18nService.instance.l10n.taskWebResearchDesc,
           executionMode: ExecutionMode.agent,
           targetEnv: 'browser',
           matchScore: 0.91,
-          matchReasons: zh ? ['keyword:搜索'] : ['keyword:search'],
+          matchReasons: [I18nService.instance.l10n.taskWebResearchReason],
         ),
       ];
     }

@@ -76,10 +76,10 @@ class FavoritesScreen extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(I18nService.instance.isChinese ? '加载失败: $e' : 'Load failed: $e', style: TextStyle(color: DS.error)),
+              Text(context.l10n.favoritesLoadFailed(e), style: TextStyle(color: DS.error)),
               const SizedBox(height: DS.md),
               SparkleButton.primary(
-                label: I18nService.instance.isChinese ? '重试' : 'Retry',
+                label: context.l10n.favoritesRetry,
                 onPressed: () => ref.read(favoritesProvider.notifier).load(),
               ),
             ],
@@ -89,7 +89,7 @@ class FavoritesScreen extends ConsumerWidget {
           if (favorites.isEmpty) {
             return Center(
               child: CompactEmptyState(
-                message: I18nService.instance.isChinese ? '还没有收藏' : 'No favorites yet',
+                message: context.l10n.favoritesNoFavorites,
                 icon: Icons.bookmark_border,
               ),
             );
@@ -119,8 +119,8 @@ class _FavoriteTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final content = favorite.groupMessage?.content ??
         favorite.privateMessage?.content ??
-        (I18nService.instance.isChinese ? '（富媒体消息）' : '(Rich media message)');
-    final sender = favorite.groupMessage?.sender?.displayName ?? (I18nService.instance.isChinese ? '未知用户' : 'Unknown User');
+        context.l10n.favoritesRichMediaMessage;
+    final sender = favorite.groupMessage?.sender?.displayName ?? context.l10n.favoritesUnknownUser;
     final dateStr = DateFormat('yyyy-MM-dd HH:mm').format(favorite.createdAt);
 
     return GraphiteCardSurface(
@@ -144,15 +144,15 @@ class _FavoriteTile extends ConsumerWidget {
             final confirmed = await showSensoryDialog<bool>(
               context: context,
               builder: (ctx) => AlertDialog(
-                title: Text(I18nService.instance.isChinese ? '移除收藏' : 'Remove Favorite'),
-                content: Text(I18nService.instance.isChinese ? '确定要移除这条收藏吗？' : 'Are you sure you want to remove this favorite?'),
+                title: Text(context.l10n.favoritesRemoveFavorite),
+                content: Text(context.l10n.favoritesRemoveConfirm),
                 actions: [
                   SparkleButton.ghost(
-                    label: I18nService.instance.isChinese ? '取消' : 'Cancel',
+                    label: context.l10n.favoritesCancel,
                     onPressed: () => Navigator.pop(ctx, false),
                   ),
                   SparkleButton.primary(
-                    label: I18nService.instance.isChinese ? '确定' : 'Confirm',
+                    label: context.l10n.favoritesConfirm,
                     onPressed: () => Navigator.pop(ctx, true),
                   ),
                 ],
@@ -165,10 +165,10 @@ class _FavoriteTile extends ConsumerWidget {
                     .remove(favorite.id)
                     .then((_) {
                   if (!context.mounted) return;
-                  AppFeedback.success(context, I18nService.instance.isChinese ? '已移除收藏' : 'Favorite removed');
+                  AppFeedback.success(context, context.l10n.favoritesRemoved);
                 }).catchError((Object e) {
                   if (!context.mounted) return;
-                  AppFeedback.error(context, I18nService.instance.isChinese ? '操作失败: $e' : 'Operation failed: $e');
+                  AppFeedback.error(context, context.l10n.favoritesOperationFailed(e.toString()));
                 }),
               );
             }
@@ -179,11 +179,11 @@ class _FavoriteTile extends ConsumerWidget {
             showSensoryDialog<void>(
               context: context,
               builder: (ctx) => AlertDialog(
-                title: Text(I18nService.instance.isChinese ? '收藏备注' : 'Favorite Note'),
+                title: Text(context.l10n.favoritesNote),
                 content: Text(favorite.note!),
                 actions: [
                   SparkleButton.ghost(
-                    label: I18nService.instance.isChinese ? '关闭' : 'Close',
+                    label: context.l10n.favoritesClose,
                     onPressed: () => Navigator.pop(ctx),
                   ),
                 ],

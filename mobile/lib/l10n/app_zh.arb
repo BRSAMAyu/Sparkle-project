@@ -7933,6 +7933,7 @@
   "galaxyUploadFabLabel": "添加学习资料",
   "galaxyUploadDocumentHere": "在这里上传文档",
   "galaxyNodeAddMaterial": "将资料添加到这个节点",
+  "galaxyNodeReviewPrompt": "带我复习「{label}」。请先基于这个知识节点定位我最该补的薄弱点，再给我一组短练习。",
   "galaxyNodeGeneratePlan": "生成学习计划",
   "galaxyNodeGeneratePlanDesc": "AI 生成个性化学习路径与任务",
   "galaxyNodeWhyToday": "为什么是今天？",

@@ -335,18 +335,14 @@ class AuthRepository {
   Future<String> setPassword(String newPassword) async {
     try {
       if (DemoDataService.isDemoMode) {
-        return I18nService.instance.isChinese
-            ? '密码设置成功'
-            : 'Password set successfully';
+        return I18nService.instance.l10n.authPasswordSet;
       }
       final response = await _apiClient.post<Map<String, dynamic>>(
         ApiEndpoints.setPassword,
         data: {'new_password': newPassword},
       );
       return _extractErrorMessage(response.data) ??
-          (I18nService.instance.isChinese
-              ? '密码设置成功'
-              : 'Password set successfully');
+          I18nService.instance.l10n.authPasswordSet;
     } on DioException catch (e) {
       final detail =
           (e.response?.data as Map<String, dynamic>?)?['detail'] as String?;
@@ -363,9 +359,7 @@ class AuthRepository {
         data: {'email': email},
       );
       return _extractErrorMessage(response.data) ??
-          (I18nService.instance.isChinese
-              ? '如果该邮箱已注册，重置邮件已发送'
-              : 'If this email is registered, a reset link has been sent');
+          (I18nService.instance.l10n.authResetEmailSent);
     } on DioException catch (e) {
       final message = _extractErrorMessage(e.response?.data);
       throw Exception(message ?? 'Could not request password reset.');
@@ -387,9 +381,7 @@ class AuthRepository {
         },
       );
       return _extractErrorMessage(response.data) ??
-          (I18nService.instance.isChinese
-              ? '密码已重置，请重新登录'
-              : 'Password reset, please log in again');
+          (I18nService.instance.l10n.authPasswordReset);
     } on DioException catch (e) {
       final message = _extractErrorMessage(e.response?.data);
       throw Exception(message ?? 'Could not reset password.');
@@ -404,9 +396,7 @@ class AuthRepository {
         ApiEndpoints.sendVerification,
       );
       return _extractErrorMessage(response.data) ??
-          (I18nService.instance.isChinese
-              ? '验证邮件已发送'
-              : 'Verification email sent');
+          (I18nService.instance.l10n.authVerifyEmailSent);
     } on DioException catch (e) {
       final message = _extractErrorMessage(e.response?.data);
       throw Exception(message ?? 'Could not send verification email.');
@@ -422,9 +412,7 @@ class AuthRepository {
         data: {'token': token},
       );
       return _extractErrorMessage(response.data) ??
-          (I18nService.instance.isChinese
-              ? '邮箱验证成功'
-              : 'Email verified successfully');
+          (I18nService.instance.l10n.authEmailVerified);
     } on DioException catch (e) {
       final message = _extractErrorMessage(e.response?.data);
       throw Exception(message ?? 'Could not verify email.');
@@ -458,9 +446,7 @@ class AuthRepository {
         },
       );
       return _extractErrorMessage(response.data) ??
-          (I18nService.instance.isChinese
-              ? '绑定成功'
-              : 'Account linked successfully');
+          I18nService.instance.l10n.authBound;
     } on DioException catch (e) {
       throw Exception(
         _extractErrorMessage(e.response?.data) ??
@@ -476,9 +462,7 @@ class AuthRepository {
         data: {'provider': provider},
       );
       return _extractErrorMessage(response.data) ??
-          (I18nService.instance.isChinese
-              ? '解绑成功'
-              : 'Account unlinked successfully');
+          I18nService.instance.l10n.authUnbound;
     } on DioException catch (e) {
       throw Exception(
         _extractErrorMessage(e.response?.data) ??
@@ -503,7 +487,7 @@ class AuthRepository {
         '${ApiEndpoints.userSessions}/$sessionId',
       );
       return _extractErrorMessage(response.data) ??
-          (I18nService.instance.isChinese ? '设备已下线' : 'Device logged out');
+          (I18nService.instance.l10n.authDeviceOffline);
     } on DioException catch (e) {
       throw Exception(
         _extractErrorMessage(e.response?.data) ?? 'Could not revoke session.',
@@ -517,9 +501,7 @@ class AuthRepository {
         ApiEndpoints.userSessions,
       );
       return _extractErrorMessage(response.data) ??
-          (I18nService.instance.isChinese
-              ? '其他设备已下线'
-              : 'Other devices logged out');
+          (I18nService.instance.l10n.authOtherDeviceOffline);
     } on DioException catch (e) {
       throw Exception(
         _extractErrorMessage(e.response?.data) ??
@@ -564,7 +546,7 @@ class AuthRepository {
         },
       );
       return _extractErrorMessage(response.data) ??
-          (I18nService.instance.isChinese ? '账号已注销' : 'Account deleted');
+          (I18nService.instance.l10n.authAccountDeleted);
     } on DioException catch (e) {
       throw Exception(
         _extractErrorMessage(e.response?.data) ?? 'Could not delete account.',
@@ -742,7 +724,7 @@ class AuthRepository {
       }
       final message = _extractErrorMessage(e.response?.data);
       throw Exception(message ??
-          (I18nService.instance.isChinese ? '访客登录失败' : 'Guest login failed'));
+          (I18nService.instance.l10n.authGuestLoginFailed));
     } catch (e) {
       if (DemoDataService.isDemoMode) {
         debugPrint('⚠️ Guest API failed, using demo user as fallback: $e');

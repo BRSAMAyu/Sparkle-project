@@ -98,10 +98,10 @@ class UserRepository {
           'cards': [
             {
               'dim': 'time_estimation_bias',
-              'title': I18nService.instance.isChinese ? '时间预估' : 'Time Estimation',
+              'title': I18nService.instance.l10n.userTimeEstimation,
               'status': 'ready',
-              'body': I18nService.instance.isChinese ? '你过去 10 次对完成时间估得偏乐观 2.3 小时。' : 'You were 2.3 hours too optimistic in your last 10 completion time estimates.',
-              'trend_text': I18nService.instance.isChinese ? '最近几周正在变稳。' : 'Stabilizing in recent weeks.',
+              'body': I18nService.instance.l10n.userTimeEstimationBias('2.3'),
+              'trend_text': I18nService.instance.l10n.userTrendStabilizing,
             },
           ],
         },
@@ -112,14 +112,14 @@ class UserRepository {
               'active_session_id': 'session-stage35-demo',
               'items': [
                 {
-                  'summary': I18nService.instance.isChinese ? '英语长难句拆解还卡在倒装句，下一次练习先回看第 3 题。' : 'Still stuck on inverted sentences in complex English sentence breakdown; review question 3 in next practice.',
+                  'summary': I18nService.instance.l10n.userRecentForegroundItems,
                   'subject_type': 'study_focus',
                   'mention_count': 3,
                   'consolidated': false,
                   'last_seen_at': '2026-04-22T09:40:00',
                 },
                 {
-                  'summary': I18nService.instance.isChinese ? '这周要把概率论错题本整理成 2 页复盘卡片。' : 'Organize probability theory error book into 2 review cards this week.',
+                  'summary': I18nService.instance.l10n.userWeeklyGoal,
                   'subject_type': 'task',
                   'mention_count': 2,
                   'consolidated': true,
@@ -136,7 +136,7 @@ class UserRepository {
               'recent_unlocks': [
                 {
                   'achievement_id': 'weekly-streak',
-                  'name': I18nService.instance.isChinese ? '七日连学' : '7-Day Learning Streak',
+                  'name': I18nService.instance.l10n.userWeeklyStreakAchievement,
                   'rarity': 'rare',
                   'unlocked_at': '2026-04-21T21:00:00',
                 },
@@ -144,7 +144,7 @@ class UserRepository {
               'in_progress_achievements': [
                 {
                   'achievement_id': 'deep-work-10',
-                  'name': I18nService.instance.isChinese ? '深度专注 10 次' : 'Deep Work 10 Times',
+                  'name': I18nService.instance.l10n.userDeepWorkAchievement,
                   'progress': 0.7,
                 },
               ],
@@ -159,12 +159,12 @@ class UserRepository {
               'items': [
                 {
                   'skill_id': 'chunking',
-                  'name': I18nService.instance.isChinese ? '分块推进' : 'Chunking Progress',
+                  'name': I18nService.instance.l10n.userChunkingSkill,
                   'activation_match_score': 0.92,
                 },
                 {
                   'skill_id': 'replan',
-                  'name': I18nService.instance.isChinese ? '轻量重排' : 'Lightweight Replan',
+                  'name': I18nService.instance.l10n.userReplanSkill,
                   'activation_match_score': 0.78,
                 },
               ],
@@ -185,7 +185,7 @@ class UserRepository {
           },
           'foresight_hint': {
             'value': {
-              'hint_text': I18nService.instance.isChinese ? '你今天后半段更容易被切碎，先把最难的一题压到午前完成。' : 'Your focus is more fragmented later today; tackle the hardest problem before noon.',
+              'hint_text': I18nService.instance.l10n.userForesightToday,
               'generated_at': '2026-04-22T09:55:00',
               'deviation_count': 2,
               'attractor_confidences': [
@@ -238,7 +238,7 @@ class UserRepository {
         'idiographic_summary': {
           'mode': 'shadow',
           'confidence': 0.42,
-          'disclaimer_text': I18nService.instance.isChinese ? '这只是你数据中的模式，不代表因果关系。' : 'These are patterns in your data, not causal relationships.',
+          'disclaimer_text': I18nService.instance.l10n.userIdiographicDisclaimer,
           'top_associations': <dynamic>[],
         },
       };
@@ -351,8 +351,8 @@ class UserRepository {
     if (DemoDataService.isDemoMode) {
       return {
         'message': goal.isEmpty
-            ? (I18nService.instance.isChinese ? '先告诉我你现在最想推进的学习目标，我会立刻帮你判断难度并给出第一版起步建议。' : 'Tell me your top learning goal first, and I\'ll immediately assess difficulty and provide initial recommendations.')
-            : (I18nService.instance.isChinese ? '我已经理解你想先推进「$goal」。接下来我会先补齐画像，再给你第一版学习路径和任务建议。' : "I understand you want to prioritize \"$goal\". Next, I'll complete your profile and provide your first learning path and task recommendations."),
+            ? I18nService.instance.l10n.userOnboardingPreviewEmpty
+            : I18nService.instance.l10n.userOnboardingPreviewGoal(goal),
         'source': 'demo_fallback',
         'fallback_used': true,
       };
@@ -562,7 +562,7 @@ class UserRepository {
         'items': [
           {
             'mode': 'fast',
-            'label': I18nService.instance.isChinese ? '敏捷' : 'Fast',
+            'label': I18nService.instance.l10n.userFastMode,
             'requests_used': 12,
             'requests_limit': 120,
             'requests_remaining': 108,
@@ -575,7 +575,7 @@ class UserRepository {
           },
           {
             'mode': 'balanced',
-            'label': I18nService.instance.isChinese ? '均衡' : 'Balanced',
+            'label': I18nService.instance.l10n.userBalancedMode,
             'requests_used': 6,
             'requests_limit': 60,
             'requests_remaining': 54,
@@ -588,7 +588,7 @@ class UserRepository {
           },
           {
             'mode': 'deep',
-            'label': I18nService.instance.isChinese ? '深思' : 'Deep',
+            'label': I18nService.instance.l10n.userDeepMode,
             'requests_used': 1,
             'requests_limit': 24,
             'requests_remaining': 23,
@@ -975,10 +975,7 @@ class UserRepository {
           'db_probe_warning_ms': 200,
         },
         'recommendations': <String>[
-          if (I18nService.instance.isChinese)
-            '当前容量健康，可继续观察 AI 高峰时段的首包时延。'
-          else
-            'Current capacity is healthy; continue monitoring first-token latency during AI peak hours.',
+          I18nService.instance.l10n.userCapacityHealthy,
         ],
       };
     }
@@ -998,7 +995,7 @@ class UserRepository {
           {
             'severity': 'warning',
             'name': 'SparklePredictionRulesFallbackSpike',
-            'message': I18nService.instance.isChinese ? '规则回退正在抬头，请检查 free/free_fast 健康度' : 'Rule fallback is increasing; check free/free_fast health',
+            'message': I18nService.instance.l10n.userPrometheusWarning,
             'value': 14,
           },
         ],

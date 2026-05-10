@@ -97,10 +97,9 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       if (mounted) {
         debugPrint('Post failed: $e');
         AppFeedback.error(
-            context,
-            I18nService.instance.isChinese
-                ? '发布失败，请稍后重试'
-                : 'Post failed, please try again later');
+          context,
+          context.l10n.communityPostFailed,
+        );
       }
     } finally {
       if (mounted) setState(() => _isPosting = false);
@@ -117,13 +116,12 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final zh = I18nService.instance.isChinese;
     return UnsavedChangesGuard(
       isDirty: _isDirty,
-      discardTitle: zh ? '放弃编辑？' : 'Discard draft?',
-      discardMessage: zh ? '你有未发布的内容，确定放弃吗？' : 'You have unsaved content. Discard?',
-      keepEditingLabel: zh ? '继续编辑' : 'Keep Editing',
-      discardLabel: zh ? '放弃' : 'Discard',
+      discardTitle: context.l10n.communityDiscardDraft,
+      discardMessage: context.l10n.communityUnsavedContent,
+      keepEditingLabel: context.l10n.communityKeepEditing,
+      discardLabel: context.l10n.communityDiscard,
       child: SparklePageScaffold(
         role: SparklePageRole.content,
         appBar: AppBar(
@@ -132,12 +130,12 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             icon: const Icon(Icons.close_rounded),
             onPressed: () => context.pop(),
           ),
-          title: Text(zh ? '发布动态' : 'New Post'),
+          title: Text(context.l10n.communityNewPost),
           actions: [
             Padding(
               padding: const EdgeInsets.only(right: DS.md),
               child: SparkleButton.primary(
-                label: zh ? '发布' : 'Post',
+                label: context.l10n.communityPost,
                 onPressed:
                     _contentController.text.trim().isEmpty || _isPosting
                         ? () {}
@@ -165,7 +163,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                     children: [
                       // Mood selector row
                       Text(
-                        zh ? '选择心情' : 'How are you feeling?',
+                        context.l10n.communityMoodPrompt,
                         style: TextStyle(
                           fontSize: DS.fontSizeSm,
                           fontWeight: DS.fontWeightSemibold,
@@ -237,7 +235,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                                 size: 16, color: DS.brandPrimary),
                             const SizedBox(width: DS.spacing8),
                             Text(
-                              zh ? '附图' : 'Attachment',
+                              context.l10n.communityAttachment,
                               style: TextStyle(
                                 fontSize: DS.fontSizeSm,
                                 fontWeight: DS.fontWeightSemibold,
@@ -290,7 +288,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                         fontWeight: DS.fontWeightBold,
                         fontSize: DS.fontSizeBase,
                       ),
-                      hintText: zh ? '添加话题标签（可选）' : 'Add a topic tag (optional)',
+                      hintText: context.l10n.communityTopicHint,
                       hintStyle: TextStyle(color: DS.textTertiary),
                       border: InputBorder.none,
                     ),
@@ -303,13 +301,13 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                   children: [
                     _ToolbarButton(
                       icon: Icons.image_outlined,
-                      label: zh ? '图片' : 'Photo',
+                      label: context.l10n.communityPhoto,
                       onPressed: _pickImage,
                     ),
                     const SizedBox(width: DS.spacing8),
                     _ToolbarButton(
                       icon: Icons.tag_rounded,
-                      label: zh ? '话题' : 'Topic',
+                      label: context.l10n.communityTopic,
                       onPressed: () {
                         _topicController.text = _topicController.text.isEmpty
                             ? ''
