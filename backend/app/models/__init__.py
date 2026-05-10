@@ -221,6 +221,7 @@ from app.models.subject import Subject
 from app.models.task import Task, TaskStatus, TaskType
 from app.models.task_document import TaskDocument
 from app.models.task_feedback import TaskFeedback, TaskFeedbackCategory
+from app.models.task_resources import TaskKnowledgeLink, TaskResourceLink, TaskResourceType
 try:
     from app.models.task_history import TaskHistory
 except ImportError:
@@ -247,7 +248,7 @@ try:
         ConversationWorkflowEvent,
         ConversationWorkflowState,
         RegenerationRequest,
-        ResponseFeedback,
+        ResponseFeedback as WorkflowResponseFeedback,
         ResponseQualityMeasure,
         WorkflowAgent,
         WorkflowCheckpoint,

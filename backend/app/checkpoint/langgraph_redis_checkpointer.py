@@ -7,6 +7,7 @@ Survives service restarts — checkpoint state persists for the configured TTL.
 
 from __future__ import annotations
 
+import base64
 import json
 from typing import Any, AsyncIterator, Iterator, Sequence
 
@@ -71,7 +72,7 @@ class LangGraphRedisCheckpointer(BaseCheckpointSaver):
         for k, v in new_versions.items():
             blob_data = self.serde.dumps_typed(values[k]) if k in values else ("empty", b"")
             bk = _blob_key(thread_id, checkpoint_ns, k, v)
-            pipe.set(bk, json.dumps([blob_data[0], blob_data[1].decode("latin-1")]), ex=self.ttl)
+            pipe.set(bk, json.dumps([blob_data[0], base64.b64encode(blob_data[1]).decode("ascii")]), ex=self.ttl)
 
         # Store checkpoint metadata (without channel_values, which are in blobs)
         checkpoint_id = checkpoint["id"]
@@ -135,7 +136,7 @@ class LangGraphRedisCheckpointer(BaseCheckpointSaver):
                 blob_raw = await self.redis.get(bk)
                 if blob_raw:
                     blob_parts = json.loads(blob_raw)
-                    channel_values[ch] = self.serde.loads_typed((blob_parts[0], blob_parts[1].encode("latin-1")))
+                    channel_values[ch] = self.serde.loads_typed((blob_parts[0], base64.b64decode(blob_parts[1])))
             except Exception as e:
                 logger.warning(f"Failed to decode blob for channel {ch} (thread={thread_id}): {e}")
 
@@ -232,7 +233,7 @@ class LangGraphRedisCheckpointer(BaseCheckpointSaver):
                 blob_raw = await self.redis.get(bk)
                 if blob_raw:
                     blob_parts = json.loads(blob_raw)
-                    channel_values[ch] = self.serde.loads_typed((blob_parts[0], blob_parts[1].encode("latin-1")))
+                    channel_values[ch] = self.serde.loads_typed((blob_parts[0], base64.b64decode(blob_parts[1])))
 
             checkpoint: Checkpoint = {
                 "v": cp_data[0],

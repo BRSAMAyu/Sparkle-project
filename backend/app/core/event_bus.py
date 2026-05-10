@@ -688,6 +688,9 @@ class EventBus:
         )
         # Idempotency store for deduplication
         self._idempotency = None  # Lazy initialized
+        # Connection failure cooldown to prevent reconnection thrashing
+        self._last_connect_failure: float = 0
+        self._connect_cooldown_seconds: float = 5.0
 
     def _dlq_stream(self, stream: str) -> str:
         return f"{stream}{self.dlq_suffix}"
@@ -933,6 +936,10 @@ class EventBus:
 
     async def _publish_once(self, event_type: str, payload: dict[str, Any], stream: str) -> str:
         if not self.redis:
+            import time as _time
+            elapsed = _time.monotonic() - self._last_connect_failure
+            if elapsed < self._connect_cooldown_seconds:
+                raise RuntimeError(f"redis_connect_cooldown ({elapsed:.1f}s < {self._connect_cooldown_seconds}s)")
             await self.connect()
             if not self.redis:
                 raise RuntimeError("redis_not_connected")
@@ -998,6 +1005,8 @@ class EventBus:
             except Exception as e:
                 logger.error(f"Failed to connect to Redis: {e}")
                 self.redis = None
+                import time as _time
+                self._last_connect_failure = _time.monotonic()
 
     async def close(self):
         """Close connection and stop consumers"""

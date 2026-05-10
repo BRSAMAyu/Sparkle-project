@@ -6,6 +6,9 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import uuid4
@@ -239,7 +242,7 @@ class PendingActionsStore:
                 break
             except Exception as e:
                 # 记录错误但不中断清理任务
-                print(f"清理过期操作时出错: {e}")
+                logger.warning("清理过期操作时出错: %s", e)
 
     async def get_all_by_user(self, user_id: str) -> list[dict[str, Any]]:
         """

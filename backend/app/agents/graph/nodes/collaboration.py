@@ -168,9 +168,11 @@ def _normalize_order(order: list[Any], default_task: str) -> list[dict[str, str]
         if isinstance(item, dict):
             agent = item.get("agent")
             if not agent:
+                logger.debug(f"Dropped collaboration order item with no agent: {item}")
                 continue
             resolved = _normalize_agent_identifier(str(agent))
             if not resolved:
+                logger.debug(f"Dropped collaboration order item with unresolvable agent: {agent}")
                 continue
             task_value = str(item.get("task") or "").strip()
             if not task_value or task_value == "mode_required":
@@ -180,6 +182,8 @@ def _normalize_order(order: list[Any], default_task: str) -> list[dict[str, str]
             resolved = _normalize_agent_identifier(item)
             if resolved:
                 normalized.append({"agent": resolved, "task": default_task})
+            else:
+                logger.debug(f"Dropped unresolvable string agent in collaboration order: {item}")
     return normalized
 
 
