@@ -41,14 +41,14 @@ class ScheduleView extends ConsumerWidget {
           ),
           const SizedBox(height: DS.spacing12),
           Text(
-            I18nService.instance.isChinese ? '暂无任务' : 'No tasks',
+            context.l10n.taskNoTasks,
             style: context.sparkleTypography.bodyMedium.copyWith(
               color: DS.textSecondary,
             ),
           ),
           const SizedBox(height: DS.spacing6),
           Text(
-            I18nService.instance.isChinese ? '在 OmniBar 中输入创建新任务' : 'Type in the OmniBar to create a new task',
+            context.l10n.taskOmniBarHint,
             style: context.sparkleTypography.labelSmall.copyWith(
               color: DS.textTertiary,
             ),

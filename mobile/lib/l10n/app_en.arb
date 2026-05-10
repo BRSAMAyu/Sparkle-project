@@ -13946,7 +13946,7 @@
   "@cahPercent": {
     "placeholders": {
       "value": {
-        "type": "int"
+        "type": "Object"
       }
     }
   },
@@ -14471,6 +14471,8 @@
   "compactStatusKeepRhythm": "Keep your rhythm today",
   "longTermPlan": "Long-term Plan",
   "intentPredictionSuggested": "Suggested next step",
+  "taskNoTasks": "No tasks",
+  "taskOmniBarHint": "Type in the OmniBar to create a new task",
   "@bottleneckAlertMessage": {
     "placeholders": {
       "topic": {

@@ -11937,6 +11937,13 @@
   "taskWebResearchReason": "keyword:搜索",
   "taskPlanningOptimismBias": "检测到规划乐观偏差",
   "taskPlanningOptimismSuggestion": "根据您的历史行为模式，建议将预估时间调整为 {minutes} 分钟",
+  "@taskPlanningOptimismSuggestion": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
   "taskAiGuideTitle": "AI 执行指南",
   "taskAiGuideStep1": "准备阶段",
   "taskAiGuideStep2": "执行阶段",
@@ -14470,6 +14477,8 @@
   "compactStatusKeepRhythm": "今天适合保持节奏",
   "longTermPlan": "长期计划",
   "intentPredictionSuggested": "建议下一步",
+  "taskNoTasks": "暂无任务",
+  "taskOmniBarHint": "在 OmniBar 中输入创建新任务",
   "@bottleneckAlertMessage": {
     "placeholders": {
       "topic": {

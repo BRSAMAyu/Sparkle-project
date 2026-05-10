@@ -85,7 +85,7 @@ class PriorityView extends ConsumerWidget {
           ),
           const SizedBox(height: DS.spacing12),
           Text(
-            I18nService.instance.isChinese ? '暂无任务' : 'No tasks',
+            context.l10n.taskNoTasks,
             style: context.sparkleTypography.bodyMedium.copyWith(
               color: DS.textSecondary,
             ),
