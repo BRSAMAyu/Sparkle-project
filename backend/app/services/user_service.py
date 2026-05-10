@@ -224,7 +224,7 @@ class UserService:
                     await self.redis.setex(
                         cache_key,
                         self.cache_ttl,
-                        json.dumps(context.dict(), ensure_ascii=False)
+                        json.dumps(context.model_dump(), ensure_ascii=False)
                     )
                     logger.debug(f"Cache WRITE for user {user_id}")
                 except Exception as e:

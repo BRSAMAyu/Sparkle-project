@@ -92,7 +92,7 @@ class CreateExperimentRequest(BaseModel):
     hypothesis: str = Field(..., description="Research hypothesis")
     variants: list[VariantConfig] = Field(
         ...,
-        min_items=2,
+        min_length=2,
         description="Experiment variants (at least 2: control + treatment)",
     )
     metrics: list[str] = Field(

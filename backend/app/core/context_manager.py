@@ -566,7 +566,7 @@ class ContextOrchestrator:
         """Fetch Galaxy stats and recent mastery"""
         # 1. Stats
         stats_model = await self.galaxy_service.stats.calculate_user_stats(user_id)
-        stats = stats_model.dict() if stats_model else {}
+        stats = stats_model.model_dump() if stats_model else {}
 
         # 2. Recent Mastery (This might require a specialized query in GalaxyService or StatsService)
         # For now, we can infer or leave empty if not easily available without custom query.

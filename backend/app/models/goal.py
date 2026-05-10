@@ -61,7 +61,7 @@ class Goal(BaseModel):
 
     # Associations
     domain_pack_id = Column(String(64), nullable=True)
-    plan_id = Column(GUID(), ForeignKey("plans.id"), nullable=True)
+    plan_id = Column(GUID(), ForeignKey("plans.id", use_alter=True), nullable=True)
     source = Column(String(32), nullable=True, comment="exam_sprint | manual | community")
     source_metadata = Column(JSON, nullable=True)
 
