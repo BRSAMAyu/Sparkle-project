@@ -11942,6 +11942,12 @@
   "taskAiGuideStep1": "准备阶段",
   "taskAiGuideStep2": "执行阶段",
   "taskAiGuideStep3": "复习阶段",
+  "taskFindBlock": "先找出最卡的一点",
+  "taskFindBlockGuidance": "只定位卡点，不解决整张任务卡。",
+  "taskDescribeBlock": "把这个卡点讲成一句人话",
+  "taskDescribeBlockGuidance": "先讲清楚，再决定下一步。",
+  "taskVerifyBlock": "做一个最小验证动作",
+  "taskVerifyBlockGuidance": "只验证刚拆出来的这一步。",
   "@blockedUnblockConfirmBody": {
     "placeholders": {
       "name": {
@@ -14373,6 +14379,7 @@
   "curiosityExplore": "探索未知",
   "bottleneckAlertMessage": "我注意到你在{topic}上有点卡，不是你的问题，可能是路径需要调整",
   "bottleneckAlertAction": "看看?",
+  "compactStatusKeepRhythm": "今天适合保持节奏",
   "@bottleneckAlertMessage": {
     "placeholders": {
       "topic": {

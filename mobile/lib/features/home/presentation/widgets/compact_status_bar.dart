@@ -105,7 +105,7 @@ class CompactStatusBar extends StatelessWidget {
                                             weatherPresentation,
                                             weatherSummary,
                                           )
-                                        : I18nService.instance.isChinese ? '今天适合保持节奏' : 'Keep your rhythm today',
+                                        : context.l10n.compactStatusKeepRhythm,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: context.sparkleTypography.labelSmall

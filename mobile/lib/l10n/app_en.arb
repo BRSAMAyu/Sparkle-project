@@ -9737,6 +9737,12 @@
   "taskAiGuideStep1": "Preparation",
   "taskAiGuideStep2": "Execution",
   "taskAiGuideStep3": "Review",
+  "taskFindBlock": "Find the single point that blocks you",
+  "taskFindBlockGuidance": "Just locate the block — don't solve the whole task.",
+  "taskDescribeBlock": "Describe the block in one plain sentence",
+  "taskDescribeBlockGuidance": "Explain it clearly first, then decide next steps.",
+  "taskVerifyBlock": "Do one smallest verification action",
+  "taskVerifyBlockGuidance": "Only verify this one sub-step you just broke out.",
   "@taskPlanningOptimismSuggestion": {
     "placeholders": {
       "minutes": {
@@ -14359,6 +14365,7 @@
   "curiosityExplore": "Explore the unknown",
   "bottleneckAlertMessage": "I noticed you're stuck on {topic}. Not your fault—may need path adjustment.",
   "bottleneckAlertAction": "Take a look?",
+  "compactStatusKeepRhythm": "Keep your rhythm today",
   "@bottleneckAlertMessage": {
     "placeholders": {
       "topic": {
