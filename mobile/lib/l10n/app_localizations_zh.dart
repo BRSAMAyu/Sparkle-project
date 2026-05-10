@@ -2942,6 +2942,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatOpenclawHub => 'OpenClaw 中心';
 
   @override
+  String get openclawErrorUnavailable => 'OpenClaw 执行当前不可用';
+
+  @override
+  String get openclawErrorNotFound => 'OpenClaw 执行接口不可用（/v1/responses 未找到）';
+
+  @override
+  String openclawErrorHttp(Object code) {
+    return 'OpenClaw 执行接口异常（HTTP $code）';
+  }
+
+  @override
   String get notificationReceiveSmartPush => '接收智能推送和学习提醒';
 
   @override

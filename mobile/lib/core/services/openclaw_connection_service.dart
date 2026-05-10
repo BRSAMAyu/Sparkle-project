@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/network/response_parser.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 typedef OpenClawBackendStatusLoader = Future<Map<String, dynamic>?> Function();
 typedef OpenClawBackendDiagnosticsLoader = Future<Map<String, dynamic>?> Function();
@@ -573,7 +574,7 @@ class OpenClawConnectionService extends ChangeNotifier {
     final normalized = message.trim();
     _info = _info.copyWith(
       status: OpenClawConnectionStatus.error,
-      errorMessage: normalized.isEmpty ? 'OpenClaw 执行当前不可用' : normalized,
+      errorMessage: normalized.isEmpty ? S.openclawErrorUnavailable : normalized,
       lastCheckedAt: DateTime.now(),
     );
     notifyListeners();
@@ -964,7 +965,7 @@ class OpenClawConnectionService extends ChangeNotifier {
       if (response.statusCode == 404) {
         return OpenClawConnectionInfo(
           status: OpenClawConnectionStatus.error,
-          errorMessage: 'OpenClaw 执行接口不可用（/v1/responses 未找到）',
+          errorMessage: S.openclawErrorNotFound,
           lastCheckedAt: DateTime.now(),
         );
       }
@@ -975,7 +976,7 @@ class OpenClawConnectionService extends ChangeNotifier {
             : OpenClawConnectionStatus.error,
         errorMessage: response.statusCode < 500
             ? null
-            : 'OpenClaw 执行接口异常（HTTP ${response.statusCode}）',
+            : S.openclawErrorHttp(response.statusCode),
         lastCheckedAt: DateTime.now(),
       );
     } catch (e) {

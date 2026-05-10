@@ -34,6 +34,7 @@ class SyncEngine {
   final Connectivity _connectivity;
 
   StreamSubscription<void>? _subscription;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   bool _isProcessing = false;
   static const int _batchSize = 20;
   static const int _maxAttempts = 5;
@@ -53,7 +54,7 @@ class SyncEngine {
     });
 
     // Also listen for connectivity changes
-    _connectivity.onConnectivityChanged.listen((result) {
+    _connectivitySubscription = _connectivity.onConnectivityChanged.listen((result) {
       if (!result.contains(ConnectivityResult.none)) {
         _processOutbox();
       }
@@ -62,6 +63,7 @@ class SyncEngine {
 
   void stop() {
     _subscription?.cancel();
+    _connectivitySubscription?.cancel();
   }
 
   Future<void> enqueue({

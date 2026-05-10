@@ -5540,6 +5540,24 @@ abstract class AppLocalizations {
   /// **'OpenClaw 中心'**
   String get chatOpenclawHub;
 
+  /// No description provided for @openclawErrorUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'OpenClaw 执行当前不可用'**
+  String get openclawErrorUnavailable;
+
+  /// No description provided for @openclawErrorNotFound.
+  ///
+  /// In zh, this message translates to:
+  /// **'OpenClaw 执行接口不可用（/v1/responses 未找到）'**
+  String get openclawErrorNotFound;
+
+  /// No description provided for @openclawErrorHttp.
+  ///
+  /// In zh, this message translates to:
+  /// **'OpenClaw 执行接口异常（HTTP {code}）'**
+  String openclawErrorHttp(Object code);
+
   /// No description provided for @notificationReceiveSmartPush.
   ///
   /// In zh, this message translates to:

@@ -976,6 +976,9 @@
   "voiceInputStart": "开始语音输入",
   "voiceInputStop": "停止语音录制",
   "chatOpenclawHub": "OpenClaw 中心",
+  "openclawErrorUnavailable": "OpenClaw 执行当前不可用",
+  "openclawErrorNotFound": "OpenClaw 执行接口不可用（/v1/responses 未找到）",
+  "openclawErrorHttp": "OpenClaw 执行接口异常（HTTP {code}）",
   "notificationReceiveSmartPush": "接收智能推送和学习提醒",
   "schedulePreferencesHint": "设置你的碎片时间段，接收主动任务建议。",
   "scheduleCommuteTime": "通勤时间",
@@ -2708,6 +2711,80 @@
   "memoryEvidenceType": "证据类型",
   "memoryEvidenceSource": "来源",
   "memoryEvidenceContent": "内容",
+  "memoryChatLabel": "对话 ({role})",
+  "@memoryChatLabel": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryConceptLabel": "概念: {name}",
+  "@memoryConceptLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryErrorLabel": "错题: {subject}",
+  "@memoryErrorLabel": {
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryEventLabel": "事件: {eventType}",
+  "@memoryEventLabel": {
+    "placeholders": {
+      "eventType": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryEvidenceMissing": "证据缺失",
+  "memoryEvidenceRedacted": "证据已隐藏",
+  "memoryExpandEvidenceDetails": "展开证据详情",
+  "memoryFieldContent": "内容",
+  "memoryFieldCreatedAt": "创建",
+  "memoryFieldDate": "日期",
+  "memoryFieldDescription": "描述",
+  "memoryFieldDue": "截止",
+  "memoryFieldFocus": "专注",
+  "memoryFieldLoad": "负荷",
+  "memoryFieldMastery": "掌握",
+  "memoryFieldName": "名称",
+  "memoryFieldPerformance": "表现",
+  "memoryFieldReviewedAt": "复习时间",
+  "memoryFieldRole": "角色",
+  "memoryFieldRootCause": "根因",
+  "memoryFieldSprint": "冲刺",
+  "memoryFieldStatus": "状态",
+  "memoryFieldSubject": "科目",
+  "memoryFieldSuggestion": "建议",
+  "memoryFieldSummary": "摘要",
+  "memoryFieldTime": "时间",
+  "memoryFieldTitle": "标题",
+  "memoryFieldType": "类型",
+  "memoryPracticeLabel": "练习结果: {performance}",
+  "@memoryPracticeLabel": {
+    "placeholders": {
+      "performance": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryShowAll": "查看全部",
+  "memoryShowLess": "收起详情",
+  "memoryTaskLabel": "任务: {title}",
+  "@memoryTaskLabel": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "shareOptionsTitle": "分享成就",
   "shareToWeChatFriends": "分享到微信好友",
   "shareToWeChatMoments": "分享到朋友圈",
@@ -3100,6 +3177,100 @@
   "communityFileSharedSuccess": "文件分享成功",
   "communityGroupFiles": "群文件",
   "communityGroupMembersCount": "{arg0}",
+  "communityDiscardGroupCreation": "放弃创建社群？",
+  "communityUnsavedChanges": "你有未保存的更改，确定放弃？",
+  "communityKeepEditing": "继续编辑",
+  "communityDiscard": "放弃",
+  "communitySprintDeadlineRequired": "请选择冲刺社群的截止时间",
+  "communityCreateGroupFailed": "创建社群失败: {error}",
+  "@communityCreateGroupFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "communityCreateGroupTitle": "创建社群",
+  "communityGroupName": "社群名称",
+  "communityGroupNameHint": "例如：每日算法冲刺",
+  "communityGroupNameRequired": "请输入社群名称",
+  "communityGroupNameMinLength": "名称至少 2 个字符",
+  "communityGroupType": "小组类型",
+  "communityStudySquad": "学习小组",
+  "communitySprintGroup": "冲刺小组",
+  "communityGroupDescription": "社群介绍",
+  "communityGroupTags": "主题标签",
+  "communityGroupTagsHint": "用逗号分隔，例如：数学, 算法, 考研",
+  "communitySprintSettings": "冲刺设置",
+  "communitySprintDeadline": "截止日期",
+  "communitySelectDate": "选择日期",
+  "communitySprintGoal": "冲刺目标",
+  "communitySprintGoalRequired": "请输入冲刺目标",
+  "communityCreating": "创建中...",
+  "communityCreateGroupButton": "创建社群",
+  "communityGroupTasks": "社群任务",
+  "communityNoTasks": "还没有任务",
+  "communityInProgress": "进行中",
+  "communityUnclaimed": "待认领",
+  "communityCompleted": "已完成",
+  "communityTaskCompleted": "任务已完成！",
+  "communityOperationFailed": "操作失败",
+  "communityTaskMinutes": "分钟",
+  "communityTaskClaimed": "已认领",
+  "communityTaskClaim": "认领",
+  "communityTaskComplete": "完成",
+  "communityCreateTaskTitle": "创建群组任务",
+  "communityTaskTitleField": "任务标题",
+  "communityTaskTitleHint": "例如：完成第三章练习",
+  "communityTaskDescription": "任务描述（可选）",
+  "communityTaskDescriptionHint": "详细描述任务内容...",
+  "communityTaskEstimatedTime": "预计时间",
+  "communityTaskDifficulty": "难度",
+  "communityCancel": "取消",
+  "communityCreate": "创建",
+  "communityEnterTaskTitle": "请输入任务标题",
+  "communityTaskCreated": "任务创建成功",
+  "communityCreateTaskFailed": "创建失败: {error}",
+  "@communityCreateTaskFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "communityGroupModeration": "社群管理",
+  "communitySettingsSaved": "设置已保存",
+  "communitySaveFailed": "保存失败: {error}",
+  "@communitySaveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "communityMuteAll": "全员禁言",
+  "communityMuteAllHint": "开启后仅管理员可发言",
+  "communitySlowMode": "慢速模式",
+  "communitySlowModeInterval": "发言间隔: {seconds} 秒",
+  "@communitySlowModeInterval": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "communitySlowModeLabel": "{seconds} 秒",
+  "@communitySlowModeLabel": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "communityKeywordFilter": "关键词过滤",
+  "communityKeywordFilterHint": "包含以下关键词的消息将被自动屏蔽",
+  "communityAddKeyword": "添加关键词",
+  "communitySave": "保存",
   "groupKnowledgeBase": "知识库",
   "groupFiles": "学习资料",
   "saveToMyLibrary": "保存到我的库",
@@ -6336,6 +6507,70 @@
   "openclawSaveConfig": "保存配置",
   "openclawRetryQueue": "重试队列",
   "accountabilityPartnerDefault": "责任伙伴",
+  "accountabilityTitle": "责任伙伴",
+  "accountabilityLoadFailed": "加载失败: {error}",
+  "@accountabilityLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "accountabilityRetry": "重试",
+  "accountabilityNoPartnerYet": "还没有责任伙伴\n从好友列表发起邀请",
+  "accountabilityNotSet": "(未设置)",
+  "accountabilityUnknownUser": "未知用户",
+  "accountabilityAccept": "接受",
+  "accountabilityDecline": "拒绝",
+  "accountabilityMyGoalLabel": "我的目标",
+  "accountabilityInviteAccepted": "已接受责任伙伴邀请！",
+  "accountabilityAlreadyHavePartner": "你当前已经有核心责任伙伴，先进入现有工作台继续协作。",
+  "accountabilityInviteDeclined": "已拒绝邀请",
+  "accountabilityPending": "待确认",
+  "accountabilityActive": "进行中",
+  "accountabilityPaused": "已暂停",
+  "accountabilityEnded": "已结束",
+  "accountabilityMePartnerStreak": "我: {myDays} 天 · 伙伴: {partnerDays} 天",
+  "@accountabilityMePartnerStreak": {
+    "placeholders": {
+      "myDays": {
+        "type": "int"
+      },
+      "partnerDays": {
+        "type": "int"
+      }
+    }
+  },
+  "accountabilityPartnerCheckedIn": "伙伴已打卡",
+  "accountabilityPartnerNotCheckedIn": "伙伴未打卡",
+  "favoritesTitle": "我的收藏",
+  "favoritesLoadFailed": "加载失败: {error}",
+  "@favoritesLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "favoritesRetry": "重试",
+  "favoritesNoFavorites": "还没有收藏",
+  "favoritesRichMediaMessage": "（富媒体消息）",
+  "favoritesUnknownUser": "未知用户",
+  "favoritesRemoveFavorite": "移除收藏",
+  "favoritesRemoveConfirm": "确定要移除这条收藏吗？",
+  "favoritesCancel": "取消",
+  "favoritesConfirm": "确定",
+  "favoritesRemoved": "已移除收藏",
+  "favoritesOperationFailed": "操作失败: {error}",
+  "@favoritesOperationFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "favoritesNote": "收藏备注",
+  "favoritesClose": "关闭",
   "accountabilityEndPartnership": "结束伙伴关系",
   "accountabilityDashboardLoadFailed": "伙伴工作台加载失败",
   "accountabilityNudgeSentDefault": "已通过站内提醒发送，对方在线时会实时看到",
@@ -10607,6 +10842,49 @@
   "ebEnglish": "英语",
   "ebChinese": "语文",
   "ebOther": "其他",
+  "ebAnswerTooLong": "答案内容过长（最多 2000 字符）",
+  "ebCorrectAnswerRequired": "请输入正确答案",
+  "ebEditHintInfo": "更新后的题目、答案和图片会重新用于后续复习与分析。",
+  "ebEnterAnswer": "请输入你的答案",
+  "ebErrorAdded": "错题已添加，AI 正在分析中...",
+  "ebErrorUpdated": "错题已更新",
+  "ebImageStillUploading": "题目图片仍在上传，请稍候",
+  "ebNewHintInfo": "记录越完整，AI 越容易定位错误原因并推荐下一次复习时间。",
+  "ebNoImageUploaded": "还没有上传题目图片",
+  "ebQuestionImageOptional": "题目图片（可选）",
+  "ebQuestionImageUploadSuccess": "题目图片上传成功",
+  "ebQuestionImageHint": "支持拍照后的题目截图或试卷照片。若未填写题干，AI 会优先尝试 OCR 识别图片文字。",
+  "ebQuestionOrImageRequired": "请输入题目内容或上传题目图片",
+  "ebQuestionTooLong": "题目内容过长（最多 5000 字符）",
+  "ebQuestionTooShort": "题目内容至少需要 5 个字符",
+  "ebSaveChanges": "保存修改",
+  "ebSaveError": "保存错题",
+  "ebSavingPleaseWait": "保存中，请稍候...",
+  "ebSubjectLabel": "选择科目 *",
+  "ebUploadProgress": "上传中 {progress}%",
+  "@ebUploadProgress": {
+    "placeholders": {
+      "progress": {
+        "type": "String"
+      }
+    }
+  },
+  "ebAddFailed": "添加失败: {e}",
+  "@ebAddFailed": {
+    "placeholders": {
+      "e": {
+        "type": "String"
+      }
+    }
+  },
+  "ebUpdateFailed": "更新失败: {e}",
+  "@ebUpdateFailed": {
+    "placeholders": {
+      "e": {
+        "type": "String"
+      }
+    }
+  },
   "memDetailMissing": "记忆详情参数缺失",
   "memNotEnabled": "记忆控制未启用",
   "memLoadSettingsFailed": "加载记忆设置失败: {e}",

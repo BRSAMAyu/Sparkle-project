@@ -203,22 +203,20 @@ class _StatsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isChinese = I18nService.instance.isChinese;
+    final l10n = context.l10n;
     final parts = <String>[];
 
     final adoption = resource.adoptionCount ?? 0;
     if (adoption > 0) {
       parts.add(
-        isChinese ? '采纳 $adoption 次' : '$adoption adoptions',
+        l10n.sharedResourceAdoptions(adoption),
       );
     }
 
     final rating = resource.avgRating ?? ((resource.qualityScore ?? 0) * 5);
     if (rating > 0) {
       parts.add(
-        isChinese
-            ? '平均评分 ${rating.toStringAsFixed(1)}'
-            : 'Avg rating ${rating.toStringAsFixed(1)}',
+        l10n.sharedResourceAvgRating(rating.toStringAsFixed(1)),
       );
     }
 

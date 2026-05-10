@@ -203,13 +203,18 @@ class _PartnershipsSection extends StatelessWidget {
 }
 
 class _PartnershipCard extends StatelessWidget {
-  const _PartnershipCard({required this.partnership});
+  const _PartnershipCard({required this.partnership, required this.currentUserId});
   final AccountabilityPartnershipInfo partnership;
+  final String currentUserId;
 
   @override
   Widget build(BuildContext context) {
     final zh = I18nService.instance.isChinese;
-    final partner = partnership.partner;
+    final isInitiator = partnership.initiatorId == currentUserId;
+    final partner = isInitiator ? partnership.partner : partnership.initiator;
+    final goalLabel = isInitiator
+        ? (partnership.partnerGoal ?? partnership.initiatorGoal)
+        : partnership.initiatorGoal;
     final streak = partnership.myStreakDays ?? 0;
     final partnerCheckedIn = partnership.partnerCheckedInToday ?? false;
 
@@ -694,7 +699,7 @@ class _FriendTile extends StatelessWidget {
                     : null,
                 child: user.avatarUrl == null
                     ? Text(
-                        user.displayName[0].toUpperCase(),
+                        (user.displayName.isNotEmpty ? user.displayName[0] : '?').toUpperCase(),
                         style: TextStyle(
                           color: DS.brandPrimary,
                           fontWeight: FontWeight.w600,

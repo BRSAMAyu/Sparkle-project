@@ -3078,6 +3078,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatOpenclawHub => 'OpenClaw Hub';
 
   @override
+  String get openclawErrorUnavailable =>
+      'OpenClaw execution is currently unavailable';
+
+  @override
+  String get openclawErrorNotFound =>
+      'OpenClaw execution endpoint not available (/v1/responses not found)';
+
+  @override
+  String openclawErrorHttp(Object code) {
+    return 'OpenClaw execution error (HTTP $code)';
+  }
+
+  @override
   String get notificationReceiveSmartPush =>
       'Receive smart notifications and study reminders';
 

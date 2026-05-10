@@ -629,7 +629,7 @@ IconData _getTypeIcon(String type) {
 }
 
 String _taskLabel(String type) {
-  final l10n = I18nService.instance.l10n!;
+  final l10n = I18nService.instance.l10n;
   switch (type) {
     case 'learning':
       return l10n.homeNextActionTypeLearning;

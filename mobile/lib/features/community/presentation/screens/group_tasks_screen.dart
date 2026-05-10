@@ -8,7 +8,7 @@ import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
@@ -30,7 +30,7 @@ class GroupTasksScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: Text(I18nService.instance.isChinese ? '社群任务' : 'Group Tasks'),
+        title: Text(context.l10n.communityGroupTasks),
       ),
       floatingActionButton: SparkleIconButton(
         icon: const Icon(Icons.add),
@@ -45,7 +45,7 @@ class GroupTasksScreen extends ConsumerWidget {
             return Center(
               child: CompactEmptyState(
                 message:
-                    I18nService.instance.isChinese ? '还没有任务' : 'No tasks yet',
+                    context.l10n.communityNoTasks,
                 icon: Icons.assignment_outlined,
               ),
             );
@@ -69,7 +69,7 @@ class GroupTasksScreen extends ConsumerWidget {
                 children: [
                   if (inProgress.isNotEmpty) ...[
                     _sectionHeader(
-                      I18nService.instance.isChinese ? '进行中' : 'In Progress',
+                      context.l10n.communityInProgress,
                       DS.brandPrimary,
                     ),
                     ...inProgress.indexed.map(
@@ -92,15 +92,13 @@ class GroupTasksScreen extends ConsumerWidget {
                               if (context.mounted) {
                                 AppFeedback.success(
                                     context,
-                                    I18nService.instance.isChinese
-                                        ? '任务已完成！'
-                                        : 'Task completed!');
+                                    context.l10n.communityTaskCompleted);
                               }
                             } catch (e) {
                               if (context.mounted) {
                                 AppFeedback.error(
                                   context,
-                                  '${I18nService.instance.isChinese ? '操作失败' : 'Operation failed'}: $e',
+                                  '${context.l10n.communityOperationFailed}: $e',
                                 );
                               }
                             }
@@ -111,7 +109,7 @@ class GroupTasksScreen extends ConsumerWidget {
                   ],
                   if (unclaimed.isNotEmpty) ...[
                     _sectionHeader(
-                      I18nService.instance.isChinese ? '待认领' : 'Unclaimed',
+                      context.l10n.communityUnclaimed,
                       DS.neutral500,
                     ),
                     ...unclaimed.indexed.map(
@@ -136,7 +134,7 @@ class GroupTasksScreen extends ConsumerWidget {
                   ],
                   if (completed.isNotEmpty) ...[
                     _sectionHeader(
-                      I18nService.instance.isChinese ? '已完成' : 'Completed',
+                      context.l10n.communityCompleted,
                       DS.success,
                     ),
                     ...completed.indexed.map(
@@ -257,7 +255,7 @@ class _TaskCard extends StatelessWidget {
               Icon(Icons.timer, size: 14, color: DS.textSecondary),
               const SizedBox(width: DS.xs),
               Text(
-                '${task.estimatedMinutes} ${I18nService.instance.isChinese ? '分钟' : 'min'}',
+                '${task.estimatedMinutes} ${context.l10n.communityTaskMinutes}',
                 style:
                     TextStyle(fontSize: DS.fontSizeSm, color: DS.textSecondary),
               ),
@@ -265,14 +263,14 @@ class _TaskCard extends StatelessWidget {
               Icon(Icons.people, size: 14, color: DS.textSecondary),
               const SizedBox(width: DS.xs),
               Text(
-                '${task.totalClaims} ${I18nService.instance.isChinese ? '已认领' : 'claimed'}',
+                '${task.totalClaims} ${context.l10n.communityTaskClaimed}',
                 style:
                     TextStyle(fontSize: DS.fontSizeSm, color: DS.textSecondary),
               ),
               const Spacer(),
               if (onClaim != null)
                 SparkleButton.primary(
-                  label: I18nService.instance.isChinese ? '认领' : 'Claim',
+                  label: context.l10n.communityTaskClaim,
                   onPressed: onClaim!,
                 )
               else if (onComplete != null)

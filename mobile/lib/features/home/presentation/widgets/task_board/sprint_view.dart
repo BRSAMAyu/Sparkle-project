@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
@@ -51,7 +52,7 @@ class SprintView extends ConsumerWidget {
             ),
             const SizedBox(height: DS.spacing12),
             Text(
-              I18nService.instance.isChinese ? '暂无活跃冲刺' : 'No active sprint',
+              context.l10n.homeSprintNoActive,
               style: context.sparkleTypography.bodyMedium.copyWith(
                 color: DS.textSecondary,
               ),
@@ -64,12 +65,12 @@ class SprintView extends ConsumerWidget {
                 SparkleButton(
                   onPressed: () => context.push('/plans/new?type=sprint'),
                   icon: const Icon(Icons.flash_on_rounded),
-                  label: I18nService.instance.isChinese ? '直接创建冲刺' : 'Create Sprint',
+                  label: context.l10n.homeSprintCreate,
                 ),
                 SparkleButton.ghost(
                   onPressed: () => context.push('/plans/new?type=growth'),
                   icon: const Icon(Icons.trending_up_rounded),
-                  label: I18nService.instance.isChinese ? '新建成长计划' : 'New Growth Plan',
+                  label: context.l10n.homeSprintNewGrowthPlan,
                 ),
               ],
             ),
@@ -121,7 +122,7 @@ class SprintView extends ConsumerWidget {
             ),
             const SizedBox(height: DS.spacing12),
             Text(
-              I18nService.instance.isChinese ? '${sprint.name} 暂无待办任务' : '${sprint.name} has no pending tasks',
+              context.l10n.homeSprintNoPendingTasks(sprint.name),
               style: context.sparkleTypography.bodyMedium.copyWith(
                 color: DS.textSecondary,
               ),
@@ -178,7 +179,7 @@ class _SprintHeader extends ConsumerWidget {
                   ),
                   const SizedBox(height: DS.spacing4),
                   Text(
-                    I18nService.instance.isChinese ? '剩余 $taskCount 个任务 · ${sprint.daysLeft} 天' : '$taskCount tasks left · ${sprint.daysLeft}d remaining',
+                    context.l10n.homeSprintTasksRemaining(taskCount, sprint.daysLeft),
                     style: context.sparkleTypography.labelSmall.copyWith(
                       color: DS.textSecondary,
                     ),
@@ -191,7 +192,7 @@ class _SprintHeader extends ConsumerWidget {
               icon: const Icon(Icons.history_rounded),
               onPressed: () => context.push(PlanRoutes.sprintHistory),
               variant: ButtonVariant.ghost,
-              semanticLabel: I18nService.instance.isChinese ? '冲刺历史' : 'Sprint History',
+              semanticLabel: context.l10n.homeSprintHistory,
             ),
             const SizedBox(width: DS.spacing4),
             // Actions menu button
@@ -200,7 +201,7 @@ class _SprintHeader extends ConsumerWidget {
                 Icons.more_vert_rounded,
                 color: DS.brandPrimaryConst,
               ),
-              tooltip: I18nService.instance.isChinese ? '更多操作' : 'More Actions',
+              tooltip: context.l10n.homeSprintMoreActions,
               padding: const EdgeInsets.all(DS.spacing4),
               constraints: const BoxConstraints(
                 minWidth: 36,
@@ -227,7 +228,7 @@ class _SprintHeader extends ConsumerWidget {
                         color: DS.semanticSuccess,
                       ),
                       const SizedBox(width: DS.spacing12),
-                      Text(I18nService.instance.isChinese ? '完成冲刺' : 'Complete Sprint'),
+                      Text(context.l10n.homeSprintComplete),
                     ],
                   ),
                 ),
@@ -237,7 +238,7 @@ class _SprintHeader extends ConsumerWidget {
                     children: [
                       Icon(Icons.date_range_rounded, color: DS.info),
                       const SizedBox(width: DS.spacing12),
-                      Text(I18nService.instance.isChinese ? '延长冲刺' : 'Extend Sprint'),
+                      Text(context.l10n.homeSprintExtend),
                     ],
                   ),
                 ),
@@ -247,7 +248,7 @@ class _SprintHeader extends ConsumerWidget {
                     children: [
                       Icon(Icons.cancel_rounded, color: DS.semanticError),
                       const SizedBox(width: DS.spacing12),
-                      Text(I18nService.instance.isChinese ? '放弃冲刺' : 'Abandon Sprint'),
+                      Text(context.l10n.homeSprintAbandon),
                     ],
                   ),
                 ),
@@ -332,12 +333,12 @@ class _SprintFilterChips extends ConsumerWidget {
   const _SprintFilterChips();
 
   static Map<SprintTaskFilter, String> _filterLabels() {
-    final zh = I18nService.instance.isChinese;
+    final l10n = I18nService.instance.l10n;
     return {
-      SprintTaskFilter.all: zh ? '全部' : 'All',
-      SprintTaskFilter.todo: zh ? '待办' : 'To Do',
-      SprintTaskFilter.inProgress: zh ? '进行中' : 'In Progress',
-      SprintTaskFilter.done: zh ? '已完成' : 'Done',
+      SprintTaskFilter.all: l10n.homeSprintFilterAll,
+      SprintTaskFilter.todo: l10n.homeSprintFilterTodo,
+      SprintTaskFilter.inProgress: l10n.homeSprintFilterInProgress,
+      SprintTaskFilter.done: l10n.homeSprintFilterDone,
     };
   }
 

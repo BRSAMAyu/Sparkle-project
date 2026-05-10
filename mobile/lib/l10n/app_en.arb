@@ -976,6 +976,9 @@
   "voiceInputStart": "Start voice input",
   "voiceInputStop": "Stop voice input recording",
   "chatOpenclawHub": "OpenClaw Hub",
+  "openclawErrorUnavailable": "OpenClaw execution is currently unavailable",
+  "openclawErrorNotFound": "OpenClaw execution endpoint not available (/v1/responses not found)",
+  "openclawErrorHttp": "OpenClaw execution error (HTTP {code})",
   "notificationReceiveSmartPush": "Receive smart notifications and study reminders",
   "schedulePreferencesHint": "Set your fragmented time slots to receive proactive task suggestions.",
   "scheduleCommuteTime": "Commute Time",
@@ -2694,6 +2697,80 @@
   "memoryEvidenceType": "Evidence Type",
   "memoryEvidenceSource": "Source",
   "memoryEvidenceContent": "Content",
+  "memoryChatLabel": "Chat ({role})",
+  "@memoryChatLabel": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryConceptLabel": "Concept: {name}",
+  "@memoryConceptLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryErrorLabel": "Error: {subject}",
+  "@memoryErrorLabel": {
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryEventLabel": "Event: {eventType}",
+  "@memoryEventLabel": {
+    "placeholders": {
+      "eventType": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryEvidenceMissing": "Evidence missing",
+  "memoryEvidenceRedacted": "Evidence redacted",
+  "memoryExpandEvidenceDetails": "Expand evidence details",
+  "memoryFieldContent": "Content",
+  "memoryFieldCreatedAt": "Created",
+  "memoryFieldDate": "Date",
+  "memoryFieldDescription": "Description",
+  "memoryFieldDue": "Due",
+  "memoryFieldFocus": "Focus",
+  "memoryFieldLoad": "Load",
+  "memoryFieldMastery": "Mastery",
+  "memoryFieldName": "Name",
+  "memoryFieldPerformance": "Performance",
+  "memoryFieldReviewedAt": "Reviewed",
+  "memoryFieldRole": "Role",
+  "memoryFieldRootCause": "Root cause",
+  "memoryFieldSprint": "Sprint",
+  "memoryFieldStatus": "Status",
+  "memoryFieldSubject": "Subject",
+  "memoryFieldSuggestion": "Suggestion",
+  "memoryFieldSummary": "Summary",
+  "memoryFieldTime": "Time",
+  "memoryFieldTitle": "Title",
+  "memoryFieldType": "Type",
+  "memoryPracticeLabel": "Practice: {performance}",
+  "@memoryPracticeLabel": {
+    "placeholders": {
+      "performance": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryShowAll": "Show all",
+  "memoryShowLess": "Show less",
+  "memoryTaskLabel": "Task: {title}",
+  "@memoryTaskLabel": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "shareOptionsTitle": "Share Achievement",
   "shareToWeChatFriends": "Share to WeChat Friends",
   "shareToWeChatMoments": "Share to Moments",
@@ -3107,6 +3184,100 @@
   "communityFileSharedSuccess": "Community File Shared Success",
   "communityGroupFiles": "Community Group Files",
   "communityGroupMembersCount": "{arg0}",
+  "communityDiscardGroupCreation": "Discard group creation?",
+  "communityUnsavedChanges": "You have unsaved changes. Discard?",
+  "communityKeepEditing": "Keep Editing",
+  "communityDiscard": "Discard",
+  "communitySprintDeadlineRequired": "Please select a deadline for the sprint group",
+  "communityCreateGroupFailed": "Failed to create group: {error}",
+  "@communityCreateGroupFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "communityCreateGroupTitle": "Create Group",
+  "communityGroupName": "Group Name",
+  "communityGroupNameHint": "e.g. Daily Algorithm Sprint",
+  "communityGroupNameRequired": "Enter a group name",
+  "communityGroupNameMinLength": "Name must be at least 2 characters",
+  "communityGroupType": "Group Type",
+  "communityStudySquad": "Study Squad",
+  "communitySprintGroup": "Sprint Group",
+  "communityGroupDescription": "Description",
+  "communityGroupTags": "Tags",
+  "communityGroupTagsHint": "Comma-separated, e.g. math, algorithms, exam",
+  "communitySprintSettings": "Sprint Settings",
+  "communitySprintDeadline": "Deadline",
+  "communitySelectDate": "Select Date",
+  "communitySprintGoal": "Sprint Goal",
+  "communitySprintGoalRequired": "Enter a sprint goal",
+  "communityCreating": "Creating...",
+  "communityCreateGroupButton": "Create Group",
+  "communityGroupTasks": "Group Tasks",
+  "communityNoTasks": "No tasks yet",
+  "communityInProgress": "In Progress",
+  "communityUnclaimed": "Unclaimed",
+  "communityCompleted": "Completed",
+  "communityTaskCompleted": "Task completed!",
+  "communityOperationFailed": "Operation failed",
+  "communityTaskMinutes": "min",
+  "communityTaskClaimed": "claimed",
+  "communityTaskClaim": "Claim",
+  "communityTaskComplete": "Complete",
+  "communityCreateTaskTitle": "Create Group Task",
+  "communityTaskTitleField": "Task Title",
+  "communityTaskTitleHint": "e.g. Complete Chapter 3 exercises",
+  "communityTaskDescription": "Description (optional)",
+  "communityTaskDescriptionHint": "Describe the task...",
+  "communityTaskEstimatedTime": "Est. time",
+  "communityTaskDifficulty": "Difficulty",
+  "communityCancel": "Cancel",
+  "communityCreate": "Create",
+  "communityEnterTaskTitle": "Enter a task title",
+  "communityTaskCreated": "Task created",
+  "communityCreateTaskFailed": "Create failed: {error}",
+  "@communityCreateTaskFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "communityGroupModeration": "Group Moderation",
+  "communitySettingsSaved": "Settings saved",
+  "communitySaveFailed": "Save failed: {error}",
+  "@communitySaveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "communityMuteAll": "Mute All",
+  "communityMuteAllHint": "Only admins can speak when enabled",
+  "communitySlowMode": "Slow Mode",
+  "communitySlowModeInterval": "Slow mode: {seconds} s",
+  "@communitySlowModeInterval": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "communitySlowModeLabel": "{seconds} s",
+  "@communitySlowModeLabel": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "communityKeywordFilter": "Keyword Filter",
+  "communityKeywordFilterHint": "Messages with these keywords will be auto-blocked",
+  "communityAddKeyword": "Add keyword",
+  "communitySave": "Save",
   "groupKnowledgeBase": "Knowledge Base",
   "groupFiles": "Study Materials",
   "saveToMyLibrary": "Save to My Library",
@@ -6343,6 +6514,70 @@
   "openclawSaveConfig": "Save config",
   "openclawRetryQueue": "Retry queue",
   "accountabilityPartnerDefault": "Accountability Partner",
+  "accountabilityTitle": "Accountability",
+  "accountabilityLoadFailed": "Load failed: {error}",
+  "@accountabilityLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "accountabilityRetry": "Retry",
+  "accountabilityNoPartnerYet": "No accountability partner yet\nInvite from friends list",
+  "accountabilityNotSet": "(Not set)",
+  "accountabilityUnknownUser": "Unknown User",
+  "accountabilityAccept": "Accept",
+  "accountabilityDecline": "Decline",
+  "accountabilityMyGoalLabel": "My Goal",
+  "accountabilityInviteAccepted": "Accountability invite accepted!",
+  "accountabilityAlreadyHavePartner": "You already have a core accountability partner. Continue in your current workspace.",
+  "accountabilityInviteDeclined": "Invite declined",
+  "accountabilityPending": "Pending",
+  "accountabilityActive": "Active",
+  "accountabilityPaused": "Paused",
+  "accountabilityEnded": "Ended",
+  "accountabilityMePartnerStreak": "Me: {myDays}d · Partner: {partnerDays}d",
+  "@accountabilityMePartnerStreak": {
+    "placeholders": {
+      "myDays": {
+        "type": "int"
+      },
+      "partnerDays": {
+        "type": "int"
+      }
+    }
+  },
+  "accountabilityPartnerCheckedIn": "Partner checked in",
+  "accountabilityPartnerNotCheckedIn": "Partner not checked in",
+  "favoritesTitle": "My Favorites",
+  "favoritesLoadFailed": "Load failed: {error}",
+  "@favoritesLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "favoritesRetry": "Retry",
+  "favoritesNoFavorites": "No favorites yet",
+  "favoritesRichMediaMessage": "(Rich media message)",
+  "favoritesUnknownUser": "Unknown User",
+  "favoritesRemoveFavorite": "Remove Favorite",
+  "favoritesRemoveConfirm": "Are you sure you want to remove this favorite?",
+  "favoritesCancel": "Cancel",
+  "favoritesConfirm": "Confirm",
+  "favoritesRemoved": "Favorite removed",
+  "favoritesOperationFailed": "Operation failed: {error}",
+  "@favoritesOperationFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "favoritesNote": "Favorite Note",
+  "favoritesClose": "Close",
   "accountabilityEndPartnership": "End partnership",
   "accountabilityDashboardLoadFailed": "Partner dashboard failed to load",
   "accountabilityNudgeSentDefault": "Sent as an in-app reminder. They will see it in real time when online.",
@@ -10139,6 +10374,46 @@
   "toolsBreathStart": "Start",
   "toolsBreathStop": "Stop",
   "toolsBreathReset": "Reset",
+  "toolsBreathReady": "Ready",
+  "toolsBreathPracticeComplete": "Practice Complete",
+  "toolsBreathPausedRounds": "Paused · {completed} / {total} rounds",
+  "@toolsBreathPausedRounds": {
+    "placeholders": {
+      "completed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "toolsBreathRoundsProgress": "{completed} / {total} rounds",
+  "@toolsBreathRoundsProgress": {
+    "placeholders": {
+      "completed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "toolsBreathDurationLabel": "{duration} min",
+  "@toolsBreathDurationLabel": {
+    "placeholders": {
+      "duration": {
+        "type": "int"
+      }
+    }
+  },
+  "toolsBreathStageDescPaused": "Practice paused, will resume from current phase with voice guidance.",
+  "toolsBreathStageDescActive": "Follow the central instruction to inhale, hold, and exhale.",
+  "toolsBreathCaptionRhythm": "Inhale / Hold / Exhale / Hold",
+  "toolsBreathCaptionAutoEstimate": "Auto-estimated by duration",
+  "toolsBreathConfigPaused": "Practice paused, will resume from current phase.",
+  "toolsBreathConfigActive": "Practice in progress, config adjustable after current round.",
+  "toolsBreathConfigIdle": "Select pattern, then duration.",
+  "toolsBreathNotificationBody": "This breathing session has ended. Return and feel your body state.",
   "toolsCalcTitle": "Calculator",
   "toolsCalcSubtitle": "Quick math for task execution, expression checks, and multi-step derivations. Recent history kept.",
   "toolsCalcNoHistory": "No history",
@@ -10336,6 +10611,43 @@
   "toolsVocabRemoveFromWordbook": "Remove from Wordbook",
   "toolsVocabAddToWordbookAction": "Add to Wordbook",
   "toolsVocabGenerateExample": "Generate Example",
+  "toolsVocabOfflinePackagesTitle": "Offline Dictionary Packages",
+  "toolsVocabOfflinePackagesDesc": "Prefer local Oxford dictionary to reduce network dependency and cloud server load.",
+  "toolsVocabInstalledBadge": "Installed",
+  "toolsVocabDefaultPackageDesc": "Oxford Preferred Offline Dictionary Package",
+  "toolsVocabInstalledAtPrefix": "Installed",
+  "toolsVocabRedownload": "Re-download",
+  "toolsVocabDownloadLocally": "Download Locally",
+  "toolsVocabWaitingAssociations": "Waiting for associations",
+  "toolsVocabAssocCount": "{count} associations",
+  "@toolsVocabAssocCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "toolsVocabOfflineDictCount": "{count} offline dictionaries",
+  "@toolsVocabOfflineDictCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "toolsVocabNoOfflineDict": "No offline dictionary",
+  "toolsVocabPartOfSpeech": "Part of Speech · {pos}",
+  "@toolsVocabPartOfSpeech": {
+    "placeholders": {
+      "pos": {
+        "type": "String"
+      }
+    }
+  },
+  "toolsVocabDefinitionsLabel": "Definitions",
+  "toolsVocabDictExamplesLabel": "Dictionary Examples",
+  "toolsVocabModelExampleLabel": "Model Generated Example",
+  "toolsVocabRelatedWordsLabel": "Related Words",
   "toolsStatsTitle": "Focus Stats",
   "toolsStatsSubtitle": "Turn timer and focus behavior into structured insights. Check if your rhythm is steady or needs tuning.",
   "toolsStatsStreak": "{days}-day focus streak",
@@ -11199,6 +11511,49 @@
   "ebEnglish": "English",
   "ebChinese": "Chinese",
   "ebOther": "Other",
+  "ebAnswerTooLong": "Answer too long (max 2000 characters)",
+  "ebCorrectAnswerRequired": "Enter the correct answer",
+  "ebEditHintInfo": "Updated question, answer, and image will be used for future reviews and analysis.",
+  "ebEnterAnswer": "Enter your answer",
+  "ebErrorAdded": "Error added, AI analyzing...",
+  "ebErrorUpdated": "Error updated",
+  "ebImageStillUploading": "Image still uploading, please wait",
+  "ebNewHintInfo": "The more complete the record, the easier AI can identify the cause and suggest review times.",
+  "ebNoImageUploaded": "No question image uploaded yet",
+  "ebQuestionImageOptional": "Question Image (optional)",
+  "ebQuestionImageUploadSuccess": "Question image uploaded",
+  "ebQuestionImageHint": "Supports photos of exam questions. If no text is entered, AI will try OCR on the image first.",
+  "ebQuestionOrImageRequired": "Enter the question or upload an image",
+  "ebQuestionTooLong": "Question too long (max 5000 characters)",
+  "ebQuestionTooShort": "Question must be at least 5 characters",
+  "ebSaveChanges": "Save Changes",
+  "ebSaveError": "Save Error",
+  "ebSavingPleaseWait": "Saving...",
+  "ebSubjectLabel": "Subject *",
+  "ebUploadProgress": "Uploading {progress}%",
+  "@ebUploadProgress": {
+    "placeholders": {
+      "progress": {
+        "type": "String"
+      }
+    }
+  },
+  "ebAddFailed": "Add failed: {e}",
+  "@ebAddFailed": {
+    "placeholders": {
+      "e": {
+        "type": "String"
+      }
+    }
+  },
+  "ebUpdateFailed": "Update failed: {e}",
+  "@ebUpdateFailed": {
+    "placeholders": {
+      "e": {
+        "type": "String"
+      }
+    }
+  },
   "memDetailMissing": "Memory detail parameter missing",
   "memNotEnabled": "Memory control is not enabled",
   "memLoadSettingsFailed": "Failed to load memory settings: {e}",
@@ -12639,6 +12994,27 @@
       }
     }
   },
+  "calNoTimeSet": "No time set",
+  "calHeatView": "Heat",
+  "calNoHeatData": "No heat data available",
+  "calStreakDetail": "Keep your achievement rhythm",
+  "calActiveDaysDetail": "Active days this month",
+  "calCompletedTasksDetail": "Tasks completed this month",
+  "calFocusDurationDetail": "Total focus time this month",
+  "calLearningHeatmap": "Learning Heatmap",
+  "calHeatmapDesc": "View continuity, completion, and learning engagement through heatmaps, instead of repeatedly browsing the schedule.",
+  "calHeatLow": "Low",
+  "calHeatHigh": "High",
+  "calMonthlyHighlights": "Monthly Highlights",
+  "calNotAvailable": "N/A",
+  "calNoActivePlan": "No active plan this month",
+  "calGreatStreak": "Great streak! Time to sprint for milestones",
+  "calBuildConsistency": "Build your consistency first to trigger achievement loops",
+  "calNoScheduleDay": "No tasks or events scheduled for this day",
+  "calEventUpdated": "Event updated",
+  "calEventCreated": "Event created",
+  "calSavedLocally": "Saved locally, will sync to cloud automatically.",
+  "calEditEvent": "Edit Event",
   "picEstimatedHours": "Estimated study time: {hours} hours",
   "@picEstimatedHours": {
     "placeholders": {
