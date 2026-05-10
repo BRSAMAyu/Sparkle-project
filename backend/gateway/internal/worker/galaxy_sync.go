@@ -301,7 +301,25 @@ func (w *GalaxySyncWorker) handleNodeExpanded(ctx context.Context, evt cqrsEvent
 	viewJSON, err := w.redis.Get(ctx, viewKey).Bytes()
 	if err != nil {
 		if err == redis.Nil {
-			w.logger.Warn("User node view not found", zap.String("node_id", nodeIDStr))
+			// P3-02: Fall back to DB to fetch user node status and create view
+			nodeID, _ := uuid.Parse(nodeIDStr)
+			userID, _ := uuid.Parse(userIDStr)
+			status, dbErr := w.getUserNodeStatus(ctx, userID, nodeID)
+			if dbErr != nil {
+				w.logger.Warn("User node view not found in Redis or DB",
+					zap.String("node_id", nodeIDStr), zap.Error(dbErr))
+				return nil
+			}
+			view := UserNodeView{
+				NodeID:       nodeIDStr,
+				UserID:       userIDStr,
+				MasteryScore: float64(status.MasteryScore),
+				IsUnlocked:   status.IsUnlocked,
+				IsCollapsed:  false,
+				UpdatedAt:    time.Now(),
+			}
+			viewData, _ := json.Marshal(view)
+			w.redis.Set(ctx, viewKey, viewData, 24*time.Hour)
 			return nil
 		}
 		return fmt.Errorf("get user node view: %w", err)
@@ -320,7 +338,7 @@ func (w *GalaxySyncWorker) handleNodeExpanded(ctx context.Context, evt cqrsEvent
 		return fmt.Errorf("marshal updated view: %w", err)
 	}
 
-	if err := w.redis.Set(ctx, viewKey, updatedJSON, 0).Err(); err != nil {
+	if err := w.redis.Set(ctx, viewKey, updatedJSON, 24*time.Hour).Err(); err != nil {
 		return fmt.Errorf("update redis: %w", err)
 	}
 
