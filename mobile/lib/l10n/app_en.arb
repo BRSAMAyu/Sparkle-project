@@ -2867,6 +2867,8 @@
   "shareContentKnowledgeNode": "Knowledge Node",
   "shareContentLearningReport": "Learning Report",
   "shareContentCognitivePrism": "Cognitive Prism",
+  "dashboardPlanName": "Computer Networks Exam Sprint",
+  "dashboardSubject": "Computer Networks",
   "reflectionDaily": "Daily Reflection",
   "reflectionLoadFailed": "Failed to load",
   "reflectionNoRecords": "No reflections yet\nReflections appear here after you complete focus sessions",
