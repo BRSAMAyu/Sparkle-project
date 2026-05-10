@@ -15144,5 +15144,33 @@
     "placeholders": {
       "mode": {"type": "String"}
     }
-  }
+  },
+
+  "intentTaskCreate": "创建任务",
+  "intentTaskSetReminder": "设置提醒",
+  "intentCapsuleNoteIdea": "记录想法",
+  "intentCapsuleCognitivePrism": "认知棱镜",
+  "intentTranslationTranslate": "翻译",
+  "intentTranslationLearnLang": "学习语言",
+  "intentTranslationHelpLearn": "帮我学习 {text}",
+  "@intentTranslationHelpLearn": {
+    "placeholders": {
+      "text": {"type": "String"}
+    }
+  },
+  "intentPrismView": "查看认知棱镜",
+  "intentPrismBehaviorAnalysis": "行为分析",
+  "intentSprintStart": "开始冲刺",
+  "intentSprintFocusMode": "专注模式",
+  "intentLearnStart": "开始学习",
+  "intentLearnCreatePlan": "创建学习计划",
+  "intentReviewStart": "开始复习",
+  "intentReviewHelpReview": "帮我复习：{text}",
+  "@intentReviewHelpReview": {
+    "placeholders": {
+      "text": {"type": "String"}
+    }
+  },
+  "intentReviewErrorBook": "查看错题本",
+  "intentChatSendToAI": "发送给AI"
 }

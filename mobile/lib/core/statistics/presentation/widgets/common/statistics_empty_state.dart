@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 /// Empty state widget for when no statistics data is available
 class StatisticsEmptyState extends StatelessWidget {
@@ -38,12 +39,14 @@ class StatisticsEmptyState extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if (isLoading) _buildLoading() else _buildContent(),
+            if (isLoading) _buildLoading() else _buildContent(context),
           ],
         ),
       );
 
-  Widget _buildContent() => TweenAnimationBuilder<double>(
+  Widget _buildContent(BuildContext context) {
+    final l10n = context.l10n;
+    return TweenAnimationBuilder<double>(
         tween: Tween(begin: 0.0, end: 1.0),
         duration: StatisticsAnimationConfig.medium,
         curve: StatisticsAnimationConfig.easeOut,
@@ -58,7 +61,7 @@ class StatisticsEmptyState extends StatelessWidget {
           children: [
             _buildIcon(),
             const SizedBox(height: DS.lg),
-            _buildMessage(),
+            _buildMessage(context, l10n),
             if (subtitle != null) ...[
               const SizedBox(height: DS.sm),
               _buildSubtitle(),
@@ -70,6 +73,7 @@ class StatisticsEmptyState extends StatelessWidget {
           ],
         ),
       );
+  }
 
   Widget _buildIcon() {
     final iconData = icon ?? Icons.bar_chart_outlined;
@@ -89,10 +93,9 @@ class StatisticsEmptyState extends StatelessWidget {
     );
   }
 
-  Widget _buildMessage() {
-    final defaultMessage = I18nService.instance.isChinese ? '暂无统计数据' : 'No statistics data yet';
+  Widget _buildMessage(BuildContext context, AppLocalizations l10n) {
     return Text(
-      message ?? defaultMessage,
+      message ?? l10n.statisticsNoDataYet,
       style: DS.headlineStyle.copyWith(
         color: DS.neutral600,
         fontSize: 18,
@@ -142,39 +145,39 @@ class StatisticsEmptyStateForType extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => StatisticsEmptyState(
-        message: _getMessage(),
-        subtitle: _getSubtitle(),
+        message: _getMessage(context),
+        subtitle: _getSubtitle(context),
         icon: _getIcon(),
         actionLabel: actionLabel,
         onAction: onAction,
         isLoading: isLoading,
       );
 
-  String _getMessage() {
-    final zh = I18nService.instance.isChinese;
+  String _getMessage(BuildContext context) {
+    final l10n = context.l10n;
     switch (type) {
       case StatisticsType.focus:
-        return zh ? '暂无专注记录' : 'No focus records';
+        return l10n.statisticsEmptyFocus;
       case StatisticsType.agent:
-        return zh ? '暂无智能体使用记录' : 'No agent usage records';
+        return l10n.statisticsEmptyAgent;
       case StatisticsType.capsule:
-        return zh ? '暂无好奇心胶囊' : 'No curiosity capsules';
+        return l10n.statisticsEmptyCapsule;
       case StatisticsType.learning:
-        return zh ? '暂无学习数据' : 'No learning data';
+        return l10n.statisticsEmptyLearning;
     }
   }
 
-  String? _getSubtitle() {
-    final zh = I18nService.instance.isChinese;
+  String? _getSubtitle(BuildContext context) {
+    final l10n = context.l10n;
     switch (type) {
       case StatisticsType.focus:
-        return zh ? '开始专注后会在这里看到统计数据' : 'Statistics will appear after you start focusing';
+        return l10n.statisticsEmptyFocusSubtitle;
       case StatisticsType.agent:
-        return zh ? '使用智能体后会在这里看到统计数据' : 'Statistics will appear after using the agent';
+        return l10n.statisticsEmptyAgentSubtitle;
       case StatisticsType.capsule:
-        return zh ? '探索胶囊后会在这里看到统计数据' : 'Statistics will appear after exploring capsules';
+        return l10n.statisticsEmptyCapsuleSubtitle;
       case StatisticsType.learning:
-        return zh ? '学习后会在这里看到统计数据' : 'Statistics will appear after learning';
+        return l10n.statisticsEmptyLearningSubtitle;
     }
   }
 
@@ -203,7 +206,9 @@ class StatisticsErrorState extends StatelessWidget {
   final VoidCallback? onRetry;
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Container(
         padding: const EdgeInsets.all(DS.xl),
         child: TweenAnimationBuilder<double>(
           tween: Tween(begin: 0.0, end: 1.0),
@@ -231,7 +236,7 @@ class StatisticsErrorState extends StatelessWidget {
               ),
               const SizedBox(height: DS.lg),
               Text(
-                message ?? (I18nService.instance.isChinese ? '加载失败' : 'Failed to load'),
+                message ?? l10n.statisticsFailedToLoad,
                 style: DS.headlineStyle.copyWith(
                   color: DS.neutral600,
                   fontSize: 18,
@@ -241,7 +246,7 @@ class StatisticsErrorState extends StatelessWidget {
               if (onRetry != null) ...[
                 const SizedBox(height: DS.xl),
                 SparkleButton.outline(
-                  label: I18nService.instance.isChinese ? '重试' : 'Retry',
+                  label: l10n.statisticsRetry,
                   onPressed: onRetry!,
                   icon: const Icon(Icons.refresh),
                 ),
@@ -250,4 +255,5 @@ class StatisticsErrorState extends StatelessWidget {
           ),
         ),
       );
+  }
 }

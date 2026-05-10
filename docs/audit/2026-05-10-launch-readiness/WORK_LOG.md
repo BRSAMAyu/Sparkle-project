@@ -85,3 +85,58 @@ b4381be72 fix(backend): Pydantic V2 migration + FK cycle SAWarning
 04f96d773 fix(infra): add missing production env vars to docker-compose.prod.yml
 dcaa2f6c1 fix(chat): restore itemBuilder dispatch + AuroraCoreSessionResumeBanner + header scroll
 ```
+---
+
+## P3 Python Backend Cleanup (2026-05-10)
+
+### Commits
+
+| Commit | Hash | Description |
+|--------|------|-------------|
+| datetime_utils + duplicate consolidation | 041d2805d | Created shared _utcnow() and _user_display_name() utilities |
+| datetime.utcnow fixes | 49510c5c5 | Fixed datetime.utcnow → _utcnow in GroupTaskClaim and PostLike |
+| privacy signals TODO docs | 4d81ff786 | Fixed __import__ pattern + added TODO docs |
+
+### Fixes Applied
+
+| Issue | Fix | Commit |
+|-------|-----|--------|
+| P3-01: Duplicate _utcnow() definitions | Moved to datetime_utils.py, updated 12 files | 041d2805d |
+| P3-02: Duplicate _user_display_name | Moved to datetime_utils.py, updated 3 files | 041d2805d |
+| P3-03: __import__("json") pattern | Replaced with json.dumps | 4d81ff786 |
+| P3-04: TemporalPrivacyBudget.try_renew undocumented | Added TODO comment | 4d81ff786 |
+| P3-05: PrivacyBudget test-only undocumented | Added docstring note | 4d81ff786 |
+| P3-06: CohortDriftDetector unused | Added TODO comment | 4d81ff786 |
+| P3-07: SecureAggregationEngine methods unused | Added TODO comments | 4d81ff786 |
+| P3-08: Dead code in privacy_preserving_rank | Removed dead list comprehension | 4d81ff786 |
+| P3-09: GroupTaskClaim.claimed_at deprecated | Changed to _utcnow | 49510c5c5 |
+| P3-10: PostLike.created_at deprecated | Changed to _utcnow | 49510c5c5 |
+| P3-11: community_error_aggregation_service | Already uses _utcnow (from 041d2805d) | N/A |
+| P3-12: community_strategy_service flush | Already uses flush() (no change) | N/A |
+| P3-13: community_signal_bridge datetime | Already uses _utcnow (from 041d2805d) | N/A |
+
+---
+
+## P3 i18n Bypass Migration (2026-05-10)
+
+### Commits
+
+| Commit | Hash | Description |
+|--------|------|-------------|
+| i18n: migrate community screens from isChinese bypass to ARB l10n | See staged changes | Migrated 12+ files |
+
+### Fixes Applied
+
+| Issue | Fix | Files |
+|-------|-----|-------|
+| I18n-01: partners_tab.dart isChinese bypass | Replaced 12 isChinese patterns with context.l10n | partners_tab.dart |
+| I18n-02: create_post_screen.dart hardcoded hint | Replaced hardcoded hint with communityContentHint key | create_post_screen.dart |
+| I18n-03: community_accountability_hub_l10n.dart extension | Removed custom extension, all keys now in ARB | Removed, 3 files updated |
+| I18n-04: 60+ new ARB keys added | partnersEmptyTitle, partnersMyPartners, partnersViewAll, partnersMoreFriends, partnersEncourage, partnersNudge, partnersCheer, partnersDayStreak, partnersCheckedIn, partnersNotCheckedIn, partnersDoneToday, partnersPending, partnersPartner, cahReminderAccepted, cahReminderDeclined, cahReminderLater, cahReminderReduced, cahUndo, cahBoundaryChanged, etc. | app_en.arb, app_zh.arb |
+
+### Verification
+
+- grep -c "I18nService" partners_tab.dart: 0 (was 12)
+- grep -c "I18nService" create_post_screen.dart: 0 (was 1)
+- flutter analyze: 0 errors on modified files
+- JSON validation: Both ARB files valid
