@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
 import 'package:sparkle/features/community/presentation/widgets/group_knowledge_base_view.dart';
 
@@ -23,7 +23,7 @@ class GroupFilesScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: Text(I18nService.instance.isChinese ? '群知识库' : 'Group Knowledge Base'),
+        title: Text(context.l10n.groupKnowledgeBase),
       ),
       child: ContentConstraint(
         child: GroupKnowledgeBaseView(

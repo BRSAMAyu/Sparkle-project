@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -51,7 +51,7 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
           controller: _searchController,
           autofocus: true,
           decoration: InputDecoration(
-            hintText: I18nService.instance.isChinese ? '搜索社群...' : 'Search groups...',
+            hintText: context.l10n.groupSearchHint,
             filled: true,
             fillColor: Color.alphaBlend(
               DS.info.withValues(alpha: 0.03),
@@ -80,7 +80,7 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
           if (groups.isEmpty) {
             return Center(
               child: CompactEmptyState(
-                message: I18nService.instance.isChinese ? '搜索学习小组或冲刺小组' : 'Search for squads or sprint groups',
+                message: context.l10n.groupSearchEmpty,
                 icon: Icons.search,
               ),
             );
@@ -109,7 +109,7 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
                       ),
                       title: Text(group.name),
                       subtitle: Text(
-                        '${group.memberCount} ${I18nService.instance.isChinese ? '成员' : 'members'} \u2022 ${group.totalFlamePower} ${I18nService.instance.isChinese ? '火焰' : 'flame'}',
+                        '${context.l10n.membersCount(group.memberCount)} • ${context.l10n.flamePower(group.totalFlamePower)}',
                       ),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () {
@@ -132,7 +132,7 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
             children: [
               Icon(Icons.search_off, size: 48, color: DS.textSecondary),
               const SizedBox(height: DS.spacing12),
-              Text(I18nService.instance.isChinese ? '搜索失败，请检查网络后重试' : 'Search failed, check your network and retry', style: TextStyle(color: DS.textSecondary)),
+              Text(context.l10n.searchFailedRetry, style: TextStyle(color: DS.textSecondary)),
             ],
           ),
         ),

@@ -136,9 +136,7 @@ class AchievementBadge extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Text(
-                I18nService.instance.isChinese
-                    ? '在 ${_formatDate(unlockedAt!)} 解锁'
-                    : 'Unlocked on ${_formatDate(unlockedAt!)}',
+                context.l10n.accountabilityUnlockedOn(_formatDate(unlockedAt!)),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.primary,
                     ),
@@ -197,21 +195,16 @@ class AchievementBadge extends StatelessWidget {
     final now = DateTime.now();
     final difference = now.difference(date);
 
-    if (difference.inDays == 0) {
-      return S.communityShareTodayDate;
-    } else if (difference.inDays == 1) {
-      return S.communityShareYesterday;
-    } else if (difference.inDays < 7) {
-      return S.communityDaysAgo(difference.inDays);
-    } else if (difference.inDays < 30) {
+    if (difference.inDays < 30) {
       final weeks = (difference.inDays / 7).floor();
-      return I18nService.instance.isChinese ? '$weeks 周前' : '$weeks weeks ago';
+      // Return just the number; localization handles "weeks ago"
+      return '$weeks';
     } else if (difference.inDays < 365) {
       final months = (difference.inDays / 30).floor();
-      return I18nService.instance.isChinese
-          ? '$months 个月前'
-          : '$months months ago';
+      // Return just the number; localization handles "months ago"
+      return '$months';
     } else {
+      // For year+, return formatted date
       return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
     }
   }

@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -62,9 +61,7 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
               const Divider(),
               ListTile(
                 leading: Icon(Icons.person_add, color: DS.primaryBase),
-                title: Text(I18nService.instance.isChinese
-                    ? '发送好友请求'
-                    : 'Send Friend Request'),
+                title: Text(context.l10n.communitySendFriendRequest),
                 onTap: () async {
                   Navigator.pop(context);
                   try {
@@ -118,9 +115,7 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
           controller: _searchController,
           autofocus: true,
           decoration: InputDecoration(
-            hintText: I18nService.instance.isChinese
-                ? '按姓名或用户名搜索...'
-                : 'Search users by name or username...',
+            hintText: context.l10n.userSearchHint,
             border: InputBorder.none,
             hintStyle: TextStyle(color: DS.textSecondary),
           ),
@@ -142,12 +137,8 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
             return Center(
               child: CompactEmptyState(
                 message: _searchController.text.isEmpty
-                    ? I18nService.instance.isChinese
-                        ? '按姓名或用户名搜索'
-                        : 'Search for users by name or username'
-                    : I18nService.instance.isChinese
-                        ? '未找到用户'
-                        : 'No users found',
+                    ? context.l10n.userSearchEmptyInitial
+                    : context.l10n.userSearchEmptyNoResults,
                 icon: Icons.search,
               ),
             );
@@ -259,14 +250,11 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
             children: [
               Icon(Icons.error_outline, size: 48, color: DS.error),
               const SizedBox(height: DS.lg),
-              Text(
-                  I18nService.instance.isChinese
-                      ? '搜索失败，请检查网络后重试'
-                      : 'Search failed, check your network and retry',
-                  style: TextStyle(color: DS.textSecondary)),
+              Text(context.l10n.searchFailedRetry,
+                      style: TextStyle(color: DS.textSecondary)),
               const SizedBox(height: DS.md),
               SparkleButton.primary(
-                label: I18nService.instance.isChinese ? '重试' : 'Retry',
+                label: context.l10n.retryButton,
                 onPressed: _handleSearch,
               ),
             ],

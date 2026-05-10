@@ -335,7 +335,7 @@ class EncouragementMessage {
         id: json['id'] as String,
         authorId: json['user_id'] as String,
         authorName: json['author_name'] as String? ??
-            (I18nService.instance.isChinese ? '伙伴' : 'Partner'),
+            context.l10n.communityPartnerFallback,
         message: json['message'] as String,
         createdAt: DateTime.parse(json['created_at'] as String),
       );
