@@ -1356,14 +1356,14 @@ class ChatOrchestrator(
             return
 
         normalized_mode = normalize_chat_mode(chat_mode)
-        headline = "已收到，正在快速组织首轮回复。"
+        headline = "Message received, preparing response..."
         stage = "intake"
-        detail = "Sparkle Flash 已开始接管首屏交互。"
+        detail = "Sparkle Flash is handling first-screen interaction."
 
         if normalized_mode != CHAT_MODE_STANDARD:
-            headline = "已收到，正在拉起协作链路并准备首轮反馈。"
+            headline = "Message received, initiating collaboration..."
             stage = "handoff"
-            detail = "我会先快速回应你，再进入更深入的协作流程。"
+            detail = "Preparing a quick response before deeper collaboration."
 
         try:
             await stream_callback(
@@ -2076,7 +2076,7 @@ class ChatOrchestrator(
                             created_at=int(datetime.now().timestamp()),
                             request_id=request_id,
                             error=agent_service_pb2.Error(
-                                message="会话正在处理另一个请求，请稍候",
+                                message="Session is busy processing another request, please wait.",
                                 retryable=True,
                                 error_code=agent_service_pb2.ERROR_CODE_CONFLICT,
                             ),
@@ -3249,7 +3249,7 @@ class ChatOrchestrator(
                         step_id="mode_strategy",
                         label="模式策略",
                         decision=(
-                            f"{chat_mode} 模式要求 {', '.join(mode_strategy_metadata.get('required_agents') or mode_strategy_metadata.get('preferred_agents') or ['系统自动选择'])} 协作"
+                            f"{chat_mode} mode requires {', '.join(mode_strategy_metadata.get('required_agents') or mode_strategy_metadata.get('preferred_agents') or ['auto-selected'])} collaboration"
                         ),
                         reason=(
                             f"当前模式会优先使用 {mode_strategy_metadata.get('collaboration_mode', 'auto')} 协同，"

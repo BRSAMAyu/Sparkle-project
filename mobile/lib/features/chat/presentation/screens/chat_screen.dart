@@ -257,8 +257,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             if (mounted) {
               final currentError = ref.read(chatProvider).error;
               if (currentError == next) {
-                final notifier = ref.read(chatProvider.notifier);
-                notifier.state = notifier.state.copyWith(clearError: true);
+                ref.read(chatProvider.notifier).clearError();
               }
             }
           });

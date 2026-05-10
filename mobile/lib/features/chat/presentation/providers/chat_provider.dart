@@ -109,6 +109,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
   int _streamGeneration = 0;
   int _runSequence = 0;
 
+  /// Clear the current error state
+  void clearError() {
+    state = state.copyWith(clearError: true);
+  }
+
   /// 手动触发重连
   Future<void> reconnect() async {
     await _chatRepository.reconnect();
