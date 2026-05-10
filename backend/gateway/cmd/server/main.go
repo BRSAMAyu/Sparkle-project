@@ -118,6 +118,9 @@ func main() {
 	// Cancel background workers so they stop accepting new work immediately.
 	bgCancel()
 
+	// Stop rate limiter cleanup goroutines to prevent goroutine leaks.
+	middleware.StopAllRateLimiters()
+
 	shutdownTimeout := 15
 	if cfg.ShutdownTimeoutSeconds > 0 {
 		shutdownTimeout = cfg.ShutdownTimeoutSeconds

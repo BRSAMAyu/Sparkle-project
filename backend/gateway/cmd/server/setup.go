@@ -536,6 +536,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 	// route-tier: internal
 	api := r.Group("/api/v1")
 	api.Use(apiRateLimit)
+	api.Use(middleware.MaxBodySizeMiddleware(middleware.DefaultMaxBodyBytes))
 	api.Use(middleware.TimeoutMiddleware(time.Duration(requestTimeout) * time.Second))
 	{
 		api.POST("/auth/apple", authRateLimit, handlers.authHandler.AppleLogin)

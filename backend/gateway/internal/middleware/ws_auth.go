@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -14,6 +13,7 @@ import (
 	"github.com/sparkle/gateway/internal/config"
 	"github.com/sparkle/gateway/internal/logsafe"
 	"github.com/sparkle/gateway/internal/metrics"
+	"go.uber.org/zap"
 )
 
 var wsTicketGetDel = redis.NewScript(`
@@ -33,9 +33,16 @@ type wsTicketPayload struct {
 
 func WsAuthMiddleware(cfg *config.Config, rdb *redis.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Debug logging for real device testing
-		log.Printf("[WsAuth] Request to %s from %s, Origin: %s, Upgrade: %s",
-			c.Request.URL.Path, c.ClientIP(), c.GetHeader("Origin"), c.GetHeader("Upgrade"))
+		// Debug logging — only in development to avoid leaking connection
+		// metadata in production logs.
+		if cfg.IsDevelopment() {
+			zap.L().Debug("[WsAuth] request",
+				zap.String("path", c.Request.URL.Path),
+				zap.String("client_ip", c.ClientIP()),
+				zap.String("origin", c.GetHeader("Origin")),
+				zap.String("upgrade", c.GetHeader("Upgrade")),
+			)
+		}
 
 		authHeader := c.GetHeader("Authorization")
 		if authHeader != "" {
@@ -43,12 +50,12 @@ func WsAuthMiddleware(cfg *config.Config, rdb *redis.Client) gin.HandlerFunc {
 				tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 				userID, isAdmin, err := validateJWT(cfg, rdb, tokenString)
 				if err != nil {
-					log.Printf("[WsAuth] JWT header validation failed: %v", err)
+					zap.L().Warn("[WsAuth] JWT header validation failed", zap.Error(err))
 					metrics.WSConnectionError.WithLabelValues(wsEndpointLabel(c), "jwt_header", "invalid_token").Inc()
 					abortWithAPIError(c, http.StatusUnauthorized, "invalid_or_expired_token", "Invalid or expired token")
 					return
 				}
-				log.Printf("[WsAuth] JWT header validation success for user: %s", logsafe.UserIDHash(userID))
+				zap.L().Debug("[WsAuth] JWT header validation success", zap.String("user_hash", logsafe.UserIDHash(userID)))
 				c.Set("user_id", userID)
 				c.Set("is_admin", isAdmin)
 				c.Set("auth_token", tokenString)
@@ -61,15 +68,15 @@ func WsAuthMiddleware(cfg *config.Config, rdb *redis.Client) gin.HandlerFunc {
 		// Support JWT token via query param (for clients that can't send custom headers, like Flutter)
 		if cfg.AllowWsQueryToken {
 			if queryToken := c.Query("token"); queryToken != "" {
-				log.Printf("[WsAuth] Attempting JWT query validation, AllowWsQueryToken=%v (token omitted from log)", cfg.AllowWsQueryToken)
+				zap.L().Debug("[WsAuth] JWT query validation attempt", zap.Bool("allow_ws_query_token", cfg.AllowWsQueryToken))
 				userID, isAdmin, err := validateJWT(cfg, rdb, queryToken)
 				if err != nil {
-					log.Printf("[WsAuth] JWT query validation failed: %v", err)
+					zap.L().Warn("[WsAuth] JWT query validation failed", zap.Error(err))
 					metrics.WSConnectionError.WithLabelValues(wsEndpointLabel(c), "jwt_query", "invalid_token").Inc()
 					abortWithAPIError(c, http.StatusUnauthorized, "invalid_or_expired_token", "Invalid or expired token")
 					return
 				}
-				log.Printf("[WsAuth] JWT query validation success for user: %s", logsafe.UserIDHash(userID))
+				zap.L().Debug("[WsAuth] JWT query validation success", zap.String("user_hash", logsafe.UserIDHash(userID)))
 				c.Set("user_id", userID)
 				c.Set("is_admin", isAdmin)
 				c.Set("auth_token", queryToken)

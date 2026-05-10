@@ -1,9 +1,25 @@
 package middleware
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/sparkle/gateway/internal/config"
 )
+
+// DefaultMaxBodyBytes is the default maximum request body size (10 MB).
+const DefaultMaxBodyBytes = 10 << 20 // 10 MB
+
+// MaxBodySizeMiddleware rejects requests whose body exceeds maxBytes.
+// This prevents OOM attacks from oversized payloads on proxy routes.
+func MaxBodySizeMiddleware(maxBytes int64) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if c.Request.Body != nil {
+			c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxBytes)
+		}
+		c.Next()
+	}
+}
 
 // SecurityHeadersMiddleware adds security-related headers to every response
 func SecurityHeadersMiddleware(cfg ...*config.Config) gin.HandlerFunc {

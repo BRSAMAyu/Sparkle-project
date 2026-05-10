@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 	"sync"
@@ -213,13 +212,13 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 		upgrader = h.wsFactory.CreateUpgrader()
 	} else {
 		if !isDevelopmentEnv() {
-			log.Printf("[ERROR] WebSocketFactory missing in non-development environment")
+			zap.L().Error("WebSocketFactory missing in non-development environment")
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "WebSocket configuration error"})
 			return
 		}
 		// Fallback to development upgrader (for backward compatibility)
 		upgrader = DefaultUpgrader()
-		log.Printf("[WARNING] Using development WebSocket upgrader - configure WebSocketFactory for production")
+		zap.L().Warn("Using development WebSocket upgrader — configure WebSocketFactory for production")
 	}
 	if selected := selectWebSocketSubprotocol(c.Request); selected != "" {
 		upgrader.Subprotocols = []string{selected}
@@ -297,17 +296,17 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 	// Require authenticated user_id from context (must be set by AuthMiddleware)
 	userID := c.GetString("user_id")
 	if userID == "" {
-		log.Printf("WebSocket rejected: missing authentication")
+		zap.L().Warn("WebSocket rejected: missing authentication")
 		writeWSMessageLogged(writer, "authentication close frame", websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseUnsupportedData, "Authentication required"))
 		_ = writer.Close() // Explicitly close rejected connection
 		return
 	}
 	authToken := c.GetString("auth_token")
 
-	log.Printf("WebSocket connected for user: %s", hashUserIDForLog(userID))
+	zap.L().Info("WebSocket connected", zap.String("user_hash", hashUserIDForLog(userID)))
 	// P0-1: Log reconnect context if session_id provided via query param
 	if reconnectSID := c.Query("session_id"); reconnectSID != "" {
-		log.Printf("WebSocket reconnect for user: %s with session_id: %s", hashUserIDForLog(userID), reconnectSID)
+		zap.L().Info("WebSocket reconnect", zap.String("user_hash", hashUserIDForLog(userID)), zap.String("session_id", reconnectSID))
 	}
 	authMethod := c.GetString("ws_auth_method")
 	if authMethod == "" {
@@ -347,7 +346,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 		var err error
 		select {
 		case <-idleTimer.C:
-			log.Printf("WebSocket idle timeout for connection, closing")
+			zap.L().Info("WebSocket idle timeout, closing connection")
 			closeCode = websocket.CloseGoingAway
 			closeReason = "idle timeout"
 			return
@@ -365,7 +364,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				closeReason = "Message too large"
 			}
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("WebSocket error: %v", err)
+				zap.L().Warn("WebSocket read error", zap.Error(err))
 			}
 			break
 		}
@@ -402,7 +401,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				// First, check message type (legacy JSON)
 				msgMap := make(map[string]interface{})
 				if err := json.Unmarshal(msg, &msgMap); err != nil {
-					log.Printf("Failed to parse message: %v", err)
+					zap.L().Warn("Failed to parse message", zap.Error(err))
 					if !writeWSJSONLogged(writer, "invalid legacy JSON error", gin.H{"type": "message_nack", "message_id": generateRequestID(), "error_code": "invalid_json", "error_message": "Invalid JSON format", "permanent": true}) {
 						return true
 					}
@@ -487,7 +486,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				case "message", "":
 					// Continue with normal chat message handling
 				default:
-					log.Printf("Unknown message type: %s", msgType)
+					zap.L().Warn("Unknown message type", zap.String("type", msgType))
 					requestIDForNack, _ := msgMap["request_id"].(string)
 					if requestIDForNack == "" {
 						requestIDForNack = generateRequestID()
@@ -510,7 +509,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 
 				// Parse JSON input
 				if err := json.Unmarshal(msg, input); err != nil {
-					log.Printf("Failed to parse message: %v", err)
+					zap.L().Warn("Failed to parse chat message", zap.Error(err))
 					if !writeWSJSONLogged(writer, "invalid chat JSON error", gin.H{"type": "message_nack", "message_id": generateRequestID(), "error_code": "invalid_json", "error_message": "Invalid JSON format", "permanent": true}) {
 						return true
 					}
@@ -695,7 +694,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 		}
 	}
 
-	log.Printf("WebSocket disconnected for user: %s", hashUserIDForLog(userID))
+	zap.L().Info("WebSocket disconnected", zap.String("user_hash", hashUserIDForLog(userID)))
 }
 
 // PushIntervention sends an intervention push message to all active WebSocket connections for a user.

@@ -345,6 +345,7 @@ func NewRateLimiterWithCleanup(r rate.Limit, b int, cleanupInterval time.Duratio
 
 	// Start cleanup goroutine with custom interval
 	go rl.cleanupVisitorsWithInterval(cleanupInterval)
+	RegisterRateLimiter(rl)
 
 	return rl
 }

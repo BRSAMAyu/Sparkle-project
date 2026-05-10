@@ -114,13 +114,10 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		// route-tier: authed
 	}
 
-	// ==================== Error Book Extended Routes ====================
-	errors := api.Group("/errors")
-	errors.Use(authMiddleware)
+	// ==================== Tasks Action Routes ====================
+	// Task state-transition and action routes registered on the tasks group,
+	// not inside the errors group — they belong to the tasks resource.
 	{
-		errors.GET("/remediable-patterns", h.proxyWithHeaders)
-		errors.POST("/patterns/:pattern_id/generate-template", h.proxyWithHeaders)
-		errors.POST("/patterns/:pattern_id/accept-template", h.proxyWithHeaders)
 		// route-tier: authed
 		tasks.POST("/:id/generate-guide", h.proxyWithHeaders)
 		tasks.POST("/:id/start", h.proxyWithHeaders)
@@ -146,6 +143,15 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		tasks.GET("/:id/feedback", h.proxyWithHeaders)
 		// route-tier: authed
 		tasks.POST("/:id/next-action-selection", h.proxyWithHeaders)
+	}
+
+	// ==================== Error Book Extended Routes ====================
+	errors := api.Group("/errors")
+	errors.Use(authMiddleware)
+	{
+		errors.GET("/remediable-patterns", h.proxyWithHeaders)
+		errors.POST("/patterns/:pattern_id/generate-template", h.proxyWithHeaders)
+		errors.POST("/patterns/:pattern_id/accept-template", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered tasks proxy routes")
 

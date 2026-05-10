@@ -17,6 +17,31 @@ import (
 
 const defaultMaxVisitors = 10000
 
+// rateLimiterRegistry tracks all created rate limiters so they can be
+// stopped together on graceful shutdown, preventing goroutine leaks.
+var (
+	rateLimiterRegistryMu sync.Mutex
+	rateLimiterRegistry   []*RateLimiter
+)
+
+// RegisterRateLimiter adds a rate limiter to the global registry.
+func RegisterRateLimiter(rl *RateLimiter) {
+	rateLimiterRegistryMu.Lock()
+	defer rateLimiterRegistryMu.Unlock()
+	rateLimiterRegistry = append(rateLimiterRegistry, rl)
+}
+
+// StopAllRateLimiters stops all registered rate limiters' background
+// goroutines. Call this during graceful shutdown.
+func StopAllRateLimiters() {
+	rateLimiterRegistryMu.Lock()
+	defer rateLimiterRegistryMu.Unlock()
+	for _, rl := range rateLimiterRegistry {
+		rl.Stop()
+	}
+	rateLimiterRegistry = nil
+}
+
 // RateLimiter 速率限制器
 type RateLimiter struct {
 	visitors           map[string]*visitor
