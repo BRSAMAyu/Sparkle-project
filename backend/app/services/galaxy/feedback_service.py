@@ -259,7 +259,9 @@ class GalaxyFeedbackService:
                 }
 
             old_mastery = status.mastery_score
-            new_mastery = max(self.MIN_MASTERY, min(self.MAX_MASTERY, int(old_mastery + score * 10)))
+            # P1-10 fix: use round() instead of int() for consistent mastery calculation
+            # (int() truncates toward zero, round() gives nearest integer)
+            new_mastery = max(self.MIN_MASTERY, min(self.MAX_MASTERY, round(old_mastery + score * 10)))
 
             if new_mastery != old_mastery:
                 status.mastery_score = new_mastery
