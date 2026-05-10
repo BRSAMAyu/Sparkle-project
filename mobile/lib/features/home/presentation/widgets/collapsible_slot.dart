@@ -224,7 +224,7 @@ class _ExpandedSurface extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Semantics(
         button: true,
-        label: I18nService.instance.isChinese ? '长按编辑面板' : 'Long press to edit panel',
+        label: context.l10n.collapsibleSlotLongPressEdit,
         child: GestureDetector(
           behavior: HitTestBehavior.deferToChild,
           onLongPress: onLongPress,

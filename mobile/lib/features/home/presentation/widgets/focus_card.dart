@@ -78,7 +78,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
               children: [
                 Expanded(
                   child: Text(
-                    I18nService.instance.isChinese ? '专注核心' : 'Focus Core',
+                    context.l10n.focusCore,
                     style: context.sparkleTypography.labelSmall.copyWith(
                       color: DS.textSecondary,
                       fontWeight: DS.fontWeightSemibold,
@@ -185,7 +185,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
                             ),
                           ),
                           Text(
-                            I18nService.instance.isChinese ? '$tasksCompleted完成' : '$tasksCompleted done',
+                            context.l10n.focusTasksDone(tasksCompleted),
                             style:
                                 context.sparkleTypography.labelSmall.copyWith(
                               fontSize: 10,

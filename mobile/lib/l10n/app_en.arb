@@ -598,6 +598,15 @@
   "focusStatsMinutes": "{count} minutes",
   "focusStatsHours": "{count} hours",
   "focusStatsStreak": "{count} day streak",
+  "focusCore": "Focus Core",
+  "focusTasksDone": "{count} done",
+  "@focusTasksDone": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "focusStatsBestDay": "Best: {time}",
   "focusStatsScreenTitle": "Focus Statistics",
   "focusStatsTrendTitle": "Focus Trend",
@@ -9633,6 +9642,30 @@
   "groupDemoteToMember": "Demote to Member",
   "groupPromoteToAdmin": "Promote to Admin",
   "groupTransferOwnership": "Transfer Ownership",
+  "groupOwnerCount": "Owner ({count})",
+  "groupAdminCount": "Admins ({count})",
+  "groupMemberCount": "Members ({count})",
+  "@groupOwnerCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@groupAdminCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@groupMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "userTimeEstimation": "Time Estimation",
   "userTimeEstimationBias": "You were {hours} hours too optimistic in your last 10 completion time estimates.",
   "userTrendStabilizing": "Stabilizing in recent weeks.",
@@ -12864,9 +12897,70 @@
   },
   "gmKickConfirmMsg": "This member will be removed from the group.",
   "gmKicked": "{name} has been removed",
+  "gmPromoteConfirm": "Promote {name}?",
+  "gmPromoteConfirmMsg": "This member will become an admin and can manage the group.",
+  "gmPromoted": "{name} promoted to admin",
+  "gmPromoteFailed": "Failed to promote: {error}",
+  "gmDemoteConfirm": "Demote {name}?",
+  "gmDemoteConfirmMsg": "This admin will become a regular member.",
+  "gmDemoted": "{name} demoted to member",
+  "gmDemoteFailed": "Failed to demote: {error}",
+  "gmTransferConfirm": "Transfer ownership to {name}?",
+  "gmTransferConfirmMsg": "You will become a regular member. This action cannot be undone.",
+  "gmTransferSucceeded": "Ownership transferred to {name}",
+  "gmTransferFailed": "Failed to transfer: {error}",
   "@gmKicked": {
     "placeholders": {
       "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@gmPromoted": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@gmPromoteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@gmDemoted": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@gmDemoteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@gmTransferConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@gmTransferSucceeded": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@gmTransferFailed": {
+    "placeholders": {
+      "error": {
         "type": "String"
       }
     }
@@ -14055,6 +14149,7 @@
   "workMemDateFormat": "MMM d, HH:mm",
   "workMemConsolidated": "Consolidated",
   "workMemStillInForeground": "Still in foreground",
+  "collapsibleSlotLongPressEdit": "Long press to edit panel",
   "sprintProgressLabel": "{name}: {percent}% complete, {daysLeft} days left",
   "sprintBottleneckLabel": "{name}: {reason}",
   "sprintAlertSignificantlyBehindDetail": "Task completion rate significantly below expectations. Consider re-evaluating daily workload or adjusting sprint scope.",

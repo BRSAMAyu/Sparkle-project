@@ -598,6 +598,15 @@
   "focusStatsMinutes": "{count} 分钟",
   "focusStatsHours": "{count} 小时",
   "focusStatsStreak": "连续 {count} 天",
+  "focusCore": "专注核心",
+  "focusTasksDone": "{count}完成",
+  "@focusTasksDone": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "focusStatsBestDay": "最佳：{time}",
   "focusStatsScreenTitle": "专注统计",
   "focusStatsTrendTitle": "专注趋势",
@@ -11838,6 +11847,30 @@
   "groupDemoteToMember": "降为普通成员",
   "groupPromoteToAdmin": "晋升为管理员",
   "groupTransferOwnership": "转让群主",
+  "groupOwnerCount": "群主 ({count})",
+  "groupAdminCount": "管理员 ({count})",
+  "groupMemberCount": "成员 ({count})",
+  "@groupOwnerCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@groupAdminCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@groupMemberCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "userTimeEstimation": "时间预估",
   "userTimeEstimationBias": "你过去 10 次对完成时间估得偏乐观 {hours} 小时。",
   "userTrendStabilizing": "最近几周正在变稳。",
@@ -14076,6 +14109,7 @@
   "workMemDateFormat": "M月d日 HH:mm",
   "workMemConsolidated": "已巩固",
   "workMemStillInForeground": "仍在前台",
+  "collapsibleSlotLongPressEdit": "长按编辑面板",
   "sprintProgressLabel": "{name}：已完成 {percent}%，还剩 {daysLeft} 天",
   "sprintBottleneckLabel": "{name}：{reason}",
   "sprintAlertSignificantlyBehindDetail": "任务完成率显著低于预期。建议重新评估每日任务量或调整冲刺范围。",
