@@ -9614,6 +9614,108 @@
   "communityFilterAll": "All",
   "communityUncategorized": "Uncategorized",
   "communityLoadFailed": "Load failed: {error}",
+  "blockedUsersTitle": "Blocked Users",
+  "blockedNoBlockedUsers": "No blocked users",
+  "blockedReason": "Reason: {reason}",
+  "blockedUnblock": "Unblock",
+  "blockedUnblockConfirmTitle": "Unblock",
+  "blockedUnblockConfirmBody": "Unblock {name}?\n\nThey will be able to send friend requests and messages again.",
+  "blockedCancel": "Cancel",
+  "blockedConfirm": "Confirm",
+  "blockedUnblockedSuccess": "{name} unblocked",
+  "blockedOperationFailed": "Operation failed: {error}",
+  "groupSearchMembers": "Search members...",
+  "groupNoMembersYet": "No members yet",
+  "groupNoMembersFound": "No members found",
+  "groupOwner": "Owner",
+  "groupAdmin": "Admins",
+  "groupMember": "Members",
+  "groupDemoteToMember": "Demote to Member",
+  "groupPromoteToAdmin": "Promote to Admin",
+  "groupTransferOwnership": "Transfer Ownership",
+  "userTimeEstimation": "Time Estimation",
+  "userTimeEstimationBias": "You were {hours} hours too optimistic in your last 10 completion time estimates.",
+  "userTrendStabilizing": "Stabilizing in recent weeks.",
+  "userWorkingMemorySnapshot": "Working Memory Snapshot",
+  "userRecentForegroundItems": "Still stuck on inverted sentences in complex English sentence breakdown; review question 3 in next practice.",
+  "userWeeklyGoal": "Organize probability theory error book into 2 review cards this week.",
+  "userWeeklyStreakAchievement": "7-Day Learning Streak",
+  "userDeepWorkAchievement": "Deep Work 10 Times",
+  "userChunkingSkill": "Chunking Progress",
+  "userReplanSkill": "Lightweight Replan",
+  "userForesightToday": "Your focus is more fragmented later today; tackle the hardest problem before noon.",
+  "userIdiographicDisclaimer": "These are patterns in your data, not causal relationships.",
+  "userCapacityHealthy": "Current capacity is healthy; continue monitoring first-token latency during AI peak hours.",
+  "userPrometheusWarning": "Rule fallback is increasing; check free/free_fast health",
+  "userOnboardingPreviewEmpty": "Tell me your top learning goal first, and I'll immediately assess difficulty and provide initial recommendations.",
+  "userOnboardingPreviewGoal": "I understand you want to prioritize \"{goal}\". Next, I'll complete your profile and provide your first learning path and task recommendations.",
+  "userFastMode": "Fast",
+  "userBalancedMode": "Balanced",
+  "userDeepMode": "Deep",
+  "authGuestLoginFailed": "Guest login failed",
+  "taskSnoozeMessage": "Snoozed until tomorrow — take it easy today.",
+  "taskTooHardMessage": "Broke it into 3 small steps — start with \"{title}\".",
+  "taskSkipMessage": "Skipped — this card won't crowd your day anymore.",
+  "taskTooHardStep1": "Find the single point that blocks you",
+  "taskTooHardStep2": "Describe the block in one plain sentence",
+  "taskTooHardStep3": "Do one smallest verification action",
+  "taskTooHardGuidance1": "Just locate the block — don't solve the whole task.",
+  "taskTooHardGuidance2": "Explain it clearly first, then decide next steps.",
+  "taskTooHardGuidance3": "Only verify this one sub-step you just broke out.",
+  "taskDiagnosisStuck": "Which step feels most stuck right now?",
+  "taskDiagnosisOptions": ["Concept not clear", "Step order confused", "Can't use given conditions"],
+  "taskDiagnosisFix": "Just do one small action you can finish in 5 minutes.",
+  "taskDiagnosisCheck": "What can you write down first for the next step?",
+  "taskDiagnosisMessage": "Aurora has diagnosed based on your current task state.",
+  "taskNextActionQuickReview": "Quick Review",
+  "taskNextActionReview": "Review the key points just covered",
+  "taskNextActionExpand": "Expand: Related Concepts",
+  "taskNextActionExplore": "Explore related knowledge points",
+  "taskNextActionReason1": "Timely review combats forgetting",
+  "taskNextActionReason2": "Deepen understanding",
+  "taskPreferencesUpdatedDemo": "Preferences updated (demo mode)",
+  "@blockedUnblockConfirmBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@blockedUnblockedSuccess": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@blockedOperationFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@userTimeEstimationBias": {
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      }
+    }
+  },
+  "@userOnboardingPreviewGoal": {
+    "placeholders": {
+      "goal": {
+        "type": "String"
+      }
+    }
+  },
+  "@taskTooHardMessage": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "communityUploadedOn": "Uploaded {date}",
   "communityGroupGalaxy": "Galaxy",
   "communityClickToPreview": "Tap to preview and view details",
@@ -13943,7 +14045,16 @@
   "sprintAdjustPlan": "Adjust Plan",
   "achieveTotalScore": "Total score {score}",
   "workMemMentioned": "Mentioned {count} times",
+  "@workMemMentioned": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "workMemDateFormat": "MMM d, HH:mm",
+  "workMemConsolidated": "Consolidated",
+  "workMemStillInForeground": "Still in foreground",
   "sprintProgressLabel": "{name}: {percent}% complete, {daysLeft} days left",
   "sprintBottleneckLabel": "{name}: {reason}",
   "sprintAlertSignificantlyBehindDetail": "Task completion rate significantly below expectations. Consider re-evaluating daily workload or adjusting sprint scope.",
