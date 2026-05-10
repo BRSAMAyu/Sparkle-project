@@ -206,10 +206,12 @@ class ErrorReplanBridge:
 
             error_type = self._classify_trigger_type(error)
             if error_type is None:
+                raw_type = self._extract_error_type(error)
+                logger.debug("ErrorReplanBridge: unsupported error_type=%r for error_id=%s", raw_type, error_id)
                 return self._blocked(
                     mode=mode,
                     gate="unsupported_error_type",
-                    reason=f"unsupported_error_type:{self._extract_error_type(error)}",
+                    reason=f"unsupported_error_type:{raw_type}",
                 )
 
             try:
