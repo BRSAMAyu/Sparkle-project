@@ -42,17 +42,19 @@
 
 ---
 
-## P2 问题修复记录 (4/40 DONE)
+## P2 问题修复记录 (8/40 DONE)
 
-| # | 问题 | 文件 | 状态 |
-|---|------|------|------|
+| # | 问题 | 文件 | Commit | 状态 |
+|---|------|------|--------|------|
 | P2-1 | Proto mastery int32 → double | galaxy_service.proto | ⚠️ 需要 proto 生成 + 跨语言协调 |
-| P2-2 | Redis 投影无 TTL | galaxy_sync.go | ✅ 已修复 - 见P1-1 |
-| P2-4 | Community like count 非原子 | community_sync.go | 待修复 |
-| P2-5 | RecordStudy 不检查 is_unlocked | galaxy_command.go | 待修复 |
-| P2-8 | study_records 缺复合索引 | schema.sql | 待修复 |
-| P2-9 | study_records 缺 (user_id, created_at) 索引 | schema.sql | 待修复 |
+| P2-2 | Redis 投影无 TTL | galaxy_sync.go | ✅ DONE - 见上 |
+| P2-4 | Community like count 非原子 | community_sync.go | ✅ DONE - Lua script already atomic |
+| P2-5 | RecordStudy 不检查 is_unlocked | galaxy_command.go | `b5a0db9c6` | ✅ DONE |
+| P2-8 | study_records 缺复合索引 | schema.sql | `b5a0db9c6` | ✅ DONE |
+| P2-9 | study_records 缺 (user_id, created_at) 索引 | schema.sql | `b5a0db9c6` | ✅ DONE |
 | P2-12 | GetLearningPath N+1 查询 | galaxy_grpc_service.py | ✅ 已修复 - 见P1-21 |
+| P1-4/5 | node_relations 无唯一约束 | schema.sql | `fb31384f7` | ✅ DONE |
+| P2-2b | galaxy_sync recent_studies 无 TTL | galaxy_sync.go | `fb31384f7` | ✅ DONE |
 
 ---
 
