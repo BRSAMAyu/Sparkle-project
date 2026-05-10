@@ -381,10 +381,10 @@ class _DayCell extends StatelessWidget {
     final cellColor = totalCheckins == 0
         ? surface
         : bothCheckedIn
-            ? const Color(0xFF2E7D32)
-            : const Color(0xFF9BE9A8);
+            ? Theme.of(context).colorScheme.primaryContainer
+            : Theme.of(context).colorScheme.secondaryContainer;
 
-    final textColor = totalCheckins == 0 ? null : DS.neutral0;
+    final textColor = totalCheckins == 0 ? DS.textSecondary : DS.textPrimary;
 
     return Container(
       height: 44,
