@@ -1021,26 +1021,24 @@ sector_weights 必须返回整数百分比，总和必须为 100，可多星域�
 
         # 2. Outgoing Links (Forward Lookup):
         # For each keyword in target_node, find nodes with that EXACT name.
-        # This uses the B-Tree index on name.
+        # Batch all keywords into a single query to avoid N+1.
         if target_node.keywords:
-            for keyword in target_node.keywords:
-                # Find nodes with exact name match
-                candidates_query = select(KnowledgeNode).where(KnowledgeNode.name == keyword)
-                candidates = (await self.db.execute(candidates_query)).scalars().all()
+            candidates_query = select(KnowledgeNode).where(KnowledgeNode.name.in_(target_node.keywords))
+            candidates = (await self.db.execute(candidates_query)).scalars().all()
 
-                for cand in candidates:
-                    if cand.id != node_id:
-                        exists = await self._check_link_exists(target_node.id, cand.id)
-                        if not exists:
-                            link = NodeRelation(
-                                source_node_id=target_node.id,
-                                target_node_id=cand.id,
-                                relation_type="mention",
-                                strength=0.5,
-                                created_by="auto_linker"
-                            )
-                            self.db.add(link)
-                            links_created += 1
+            for cand in candidates:
+                if cand.id != node_id:
+                    exists = await self._check_link_exists(target_node.id, cand.id)
+                    if not exists:
+                        link = NodeRelation(
+                            source_node_id=target_node.id,
+                            target_node_id=cand.id,
+                            relation_type="mention",
+                            strength=0.5,
+                            created_by="auto_linker"
+                        )
+                        self.db.add(link)
+                        links_created += 1
 
         if links_created > 0:
             await self.db.commit()
