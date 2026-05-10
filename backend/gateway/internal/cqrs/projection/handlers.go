@@ -116,15 +116,8 @@ func (h *CommunityProjectionHandler) handlePostCreated(ctx context.Context, evt 
 		return fmt.Errorf("invalid post_id: %w", err)
 	}
 
-	createdAt := evt.Timestamp
-	if raw, ok := evt.Payload["created_at"]; ok {
-		if ts, err := parseEventTime(raw); err == nil {
-			createdAt = ts
-		}
-	}
 	post, err := h.queries.GetPost(ctx, db.GetPostParams{
-		ID:        pgtype.UUID{Bytes: postID, Valid: true},
-		CreatedAt: pgtype.Timestamp{Time: createdAt, Valid: true},
+		ID: pgtype.UUID{Bytes: postID, Valid: true},
 	})
 	if err != nil {
 		return fmt.Errorf("fetch post: %w", err)

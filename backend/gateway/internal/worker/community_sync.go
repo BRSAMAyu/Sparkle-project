@@ -126,12 +126,6 @@ func (w *CommunitySyncWorker) handlePostCreated(ctx context.Context, evt cqrsEve
 	}
 
 	// Fetch post from database
-	createdAt := evt.Timestamp
-	if raw, ok := evt.Payload["created_at"]; ok {
-		if ts, err := parseEventTime(raw); err == nil {
-			createdAt = ts
-		}
-	}
 	post, err := w.queries.GetPost(ctx, db.GetPostParams{
 		ID: pgtype.UUID{Bytes: postID, Valid: true},
 	})
