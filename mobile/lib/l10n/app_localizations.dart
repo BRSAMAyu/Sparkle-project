@@ -12896,6 +12896,24 @@ abstract class AppLocalizations {
   /// **'亮点'**
   String get reflectionHighlights;
 
+  /// No description provided for @reflectionChallenges.
+  ///
+  /// In zh, this message translates to:
+  /// **'挑战'**
+  String get reflectionChallenges;
+
+  /// No description provided for @reflectionWhatHelped.
+  ///
+  /// In zh, this message translates to:
+  /// **'帮助'**
+  String get reflectionWhatHelped;
+
+  /// No description provided for @reflectionChangeNextTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'改进'**
+  String get reflectionChangeNextTime;
+
   /// No description provided for @notificationPermissionStatus.
   ///
   /// In zh, this message translates to:

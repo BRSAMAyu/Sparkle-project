@@ -6908,6 +6908,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get reflectionHighlights => '亮点';
 
   @override
+  String get reflectionChallenges => '挑战';
+
+  @override
+  String get reflectionWhatHelped => '帮助';
+
+  @override
+  String get reflectionChangeNextTime => '改进';
+
+  @override
   String get notificationPermissionStatus => '通知权限状态';
 
   @override

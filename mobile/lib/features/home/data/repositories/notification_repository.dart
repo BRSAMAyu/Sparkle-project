@@ -19,14 +19,14 @@ class NotificationRepository {
     bool unreadOnly = false,
   }) async {
     if (DemoDataService.isDemoMode) {
-      final zh = I18nService.instance.isChinese;
+      final l10n = I18nService.instance.l10n;
       // Return mock notifications for demo mode
       return [
         NotificationModel(
           id: 'demo-1',
           userId: 'demo-user',
-          title: zh ? '欢迎使用星火AI学习助手' : 'Welcome to Sparkle AI Learning Assistant',
-          content: zh ? '开始您的学习之旅吧！' : 'Start your learning journey!',
+          title: l10n.notificationWelcomeTitle,
+          content: l10n.notificationWelcomeContent,
           type: 'system',
           isRead: false,
           createdAt: DateTime.now().subtract(const Duration(hours: 1)),
@@ -34,8 +34,8 @@ class NotificationRepository {
         NotificationModel(
           id: 'demo-2',
           userId: 'demo-user',
-          title: zh ? '新任务提醒' : 'New Task Reminder',
-          content: zh ? '您有一个即将到期的任务' : 'You have a task due soon',
+          title: l10n.notificationNewTaskTitle,
+          content: l10n.notificationNewTaskContent,
           type: 'task',
           isRead: false,
           createdAt: DateTime.now().subtract(const Duration(hours: 3)),
@@ -43,8 +43,8 @@ class NotificationRepository {
         NotificationModel(
           id: 'demo-3',
           userId: 'demo-user',
-          title: zh ? '学习成就解锁' : 'Learning Achievement Unlocked',
-          content: zh ? '恭喜您获得"连续学习7天"成就' : 'Congratulations! You\'ve unlocked "7-Day Learning Streak"',
+          title: l10n.notificationAchievementTitle,
+          content: l10n.notificationAchievementContent,
           type: 'achievement',
           isRead: true,
           createdAt: DateTime.now().subtract(const Duration(days: 1)),

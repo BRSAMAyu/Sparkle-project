@@ -7185,6 +7185,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reflectionHighlights => 'Highlights';
 
   @override
+  String get reflectionChallenges => 'Challenges';
+
+  @override
+  String get reflectionWhatHelped => 'What helped';
+
+  @override
+  String get reflectionChangeNextTime => 'Change next time';
+
+  @override
   String get notificationPermissionStatus => 'Notification Permission';
 
   @override
