@@ -72,22 +72,22 @@
 
 ---
 
-## P3 问题修复记录 (3/12 DONE)
+## P3 问题修复记录 (9/12 DONE)
 
 | # | 问题 | 文件 | Commit | 状态 |
 |---|------|------|--------|------|
 | P3-Fl14 | GalaxyNotifier unused animation fields | galaxy_provider.dart | `104179bc8` | ✅ DONE |
 | P3-Fl15 | _mapPerformanceTier identity function | galaxy_provider.dart | `104179bc8` | ✅ DONE |
-| P3-Gw01 | GalaxyHandler SearchNodes JSON unmarshal error | galaxy_handler.go | 待修复 |
-| P3-Py02 | handleNodeExpanded swallows missing view | galaxy_sync.go | 待修复 |
-| P3-Py03 | knowledge_nodes.community_signal json→jsonb | schema.sql | 待修复 |
-| P3-Py04 | Python gRPC empty response on error | galaxy_grpc_service.py | 待修复 |
-| P3-Gw06 | PostView.LikeCount not reconciled with DB | community_sync.go | 待修复 |
-| P3-Gw07 | post_likes ON CONFLICT no unique constraint | schema.sql | 待修复 |
-| P3-Fl16 | Node detail UUID shown to user | node_detail_sheet.dart | 待修复 |
-| P3-Fl17 | LearningReportShareCard light theme contrast | learning_report_share_card.dart | 待修复 |
-| P3-Py06 | DocumentService duplicate methods | document_service.py | 待修复 |
-| P3-Py33 | DocumentService unused cache methods | document_service.py | 待修复 |
+| P3-Gw01 | GalaxyHandler SearchNodes JSON unmarshal error | galaxy_handler.go | `432f4c1ff` | ✅ DONE |
+| P3-Py02 | handleNodeExpanded swallows missing view | galaxy_sync.go | `966ea6753` | ✅ DONE |
+| P3-Py03 | knowledge_nodes.community_signal json→jsonb | schema.sql | `432f4c1ff` | ✅ DONE |
+| P3-Gw06 | PostView.LikeCount not reconciled with DB | community_sync.go | — | ⚠️ DEFER — 需定期对账job |
+| P3-Gw07 | post_likes ON CONFLICT no unique constraint | schema.sql | — | ⚠️ FALSE POSITIVE — uq_post_like已存在 |
+| P3-Fl16 | Node detail UUID shown to user | node_detail_sheet.dart | `081c667a1` | ✅ DONE |
+| P3-Fl17 | LearningReportShareCard light theme contrast | learning_report_share_card.dart | `081c667a1` | ✅ DONE |
+| P3-Py06 | DocumentService duplicate methods | document_service.py | `8089d1c57` | ✅ DONE |
+| P3-Py04 | Python gRPC empty response on error | galaxy_grpc_service.py | — | ⚠️ DEFER — 可能影响Go客户端行为 |
+| P3-Py33 | DocumentService unused cache methods | document_service.py | — | ⚠️ DEFER — 需确认未使用 |
 
 ---
 
@@ -116,14 +116,30 @@
 | `b958a3b9a` | fix(P2): semantic_cache SCAN instead of KEYS, proper LockError check |
 | `54a96e8b8` | fix(P2): auto_link_nodes batch keyword lookup |
 | `104179bc8` | fix(P3): remove dead code in GalaxyNotifier |
+| `432f4c1ff` | fix(P3): SearchNodes JSON error logging, community_signal json→jsonb |
+| `966ea6753` | fix(P3): handleNodeExpanded fall back to DB when Redis view missing |
+| `081c667a1` | fix(P3): remove UUID from node detail sheet, fix light mode chip contrast |
+| `8089d1c57` | fix(P3): remove dead duplicate methods in document_service.py |
 
-**总计**: 21 个 commit，包含 6 P0 + 14 P1 + 22 P2 + 3 P3（共 45 项修复/确认）
+**总计**: 25 个 commit，包含 6 P0 + 14 P1 + 22 P2 + 9 P3（共 51 项修复/确认）
 
 ---
 
-## 下一步
+## 状态总结
 
-1. ✅ P0 全部完成
-2. ⚠️ P1 大部分完成 (18/23)，剩余 4 项为 false positive 或需架构决策
-3. ⚠️ P2 大部分完成 (22/40)，剩余项需 proto 协调或为 intentional design
-4. P3 继续处理：剩余 9 项
+| 优先级 | 完成 | 总计 | 剩余 |
+|--------|------|------|------|
+| P0 | 6 | 6 | 0 ✅ |
+| P1 | 18 | 23 | 4 (false positive/defer/需决策) |
+| P2 | 22 | 40 | 18 (已修复/确认/false positive/intentional/需proto协调) |
+| P3 | 9 | 12 | 3 (defer/false positive) |
+
+### 剩余未修复项（全部为 defer/false positive/intentional）
+- **P1-14**: CQRS dead code — 需架构决策
+- **P1-20**: spark_node Prometheus metrics — 需基础设施
+- **P2-1**: Proto mastery int32→double — 需proto生成+跨语言协调
+- **P2-Fl13**: duplicate node/nodes routes — 向后兼容设计
+- **P2-Fl7**: deselectNode bypass copyWith — copyWith不支持nullable→null
+- **P3-Gw06**: PostView like count reconciliation — 需定期对账job
+- **P3-Py04**: Python gRPC empty response — 可能影响Go客户端
+- **P3-Py33**: DocumentService unused cache methods — 需确认未使用
