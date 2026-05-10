@@ -141,7 +141,7 @@ class CalendarHeatmapCard extends ConsumerWidget {
     final selectedLabel = selectedDate == null
         ? null
         : selectedSummary != null && selectedSummary.hasTasks
-            ? context.l10n.heatmapSelectedDayTasks(selectedSummary.total, selectedDate.day)
+            ? context.l10n.heatmapSelectedDayTasks(selectedDate.day, selectedSummary.total)
             : context.l10n.heatmapSelectedDayNoTasks(selectedDate.day);
 
     return GestureDetector(

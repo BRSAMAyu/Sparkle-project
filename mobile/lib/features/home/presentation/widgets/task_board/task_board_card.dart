@@ -270,8 +270,8 @@ class _TaskBoardCardState extends ConsumerState<TaskBoardCard> {
       return context.l10n.taskBoardNoTasksToday;
     }
     return context.l10n.taskBoardTodaySummary(
-      summary.totalCount.toString(),
-      summary.completedCount.toString(),
+      summary.totalCount,
+      summary.completedCount,
     );
   }
 }

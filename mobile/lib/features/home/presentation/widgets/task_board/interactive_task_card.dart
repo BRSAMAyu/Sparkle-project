@@ -324,7 +324,7 @@ class InteractiveTaskCard extends ConsumerWidget {
       if (dueDay == tomorrow) {
         label = context.l10n.taskDueTomorrow;
       } else {
-        label = context.l10n.taskDueDateLabel(dueDate.day, dueDate.month);
+        label = context.l10n.taskDueDateLabel('${dueDate.month}', '${dueDate.day}');
       }
     }
 

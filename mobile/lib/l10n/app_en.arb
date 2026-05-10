@@ -630,6 +630,12 @@
     "focusEstimated": "Estimated {minutes} minutes",
     "focusCoachTitle": "AI Focus Coach",
     "focusCoachSummary": "Task: {task} · Focused for {minutes} min",
+    "@focusCoachSummary": {
+        "placeholders": {
+            "task": { "type": "String" },
+            "minutes": { "type": "int" }
+        }
+    },
     "focusCoachPromptBreakdown": "Plan the next 15 min",
     "focusCoachPromptRefocus": "Refocus me",
     "focusCoachPromptNextAction": "Next action",
@@ -1055,9 +1061,21 @@
     "achievementStreakRecord": "Streak Record",
     "achievementStreakDays": "{days} days",
     "achievementStreakDesc": "{username} has been learning for {days} consecutive days\nThe power of persistence is unstoppable!",
+    "@achievementStreakDesc": {
+        "placeholders": {
+            "username": { "type": "String" },
+            "days": { "type": "int" }
+        }
+    },
     "achievementMasteryTitle": "Domain Mastery",
     "achievementMasteryPercent": "{percent}% mastery",
     "achievementMasteryDesc": "{username} has reached mastery level in {domain}\nKeep it up!",
+    "@achievementMasteryDesc": {
+        "placeholders": {
+            "username": { "type": "String" },
+            "domain": { "type": "String" }
+        }
+    },
     "achievementTaskComplete": "Mission Accomplished",
     "achievementTaskCount": "Completed {count} tasks",
     "achievementTaskDesc": "{username} performed excellently in this sprint\nYou truly deserve the efficiency star!",
@@ -7985,6 +8003,12 @@
     "galaxyNodeCommunityPattern": "{errorType}: {userCount} users",
     "galaxyNodeCommunityUnknown": "Unknown",
     "galaxyNodeSourceSummary": "{documents} documents · {chunks} knowledge chunks",
+    "@galaxyNodeSourceSummary": {
+        "placeholders": {
+            "documents": { "type": "int" },
+            "chunks": { "type": "int" }
+        }
+    },
     "galaxyNodeSourceEmptyBody": "Add your own notes about {topic} to make the knowledge node traceable.",
     "galaxyNodeSourceAddNotes": "Add notes about {topic}",
     "galaxyNodeSourceUploadSaved": "{filename} uploaded. It will appear here after processing and attachment.",
@@ -9049,6 +9073,12 @@
     "taskBoardSprintFocusDesc": "Only tasks from the active sprint are shown.",
     "taskBoardSprintTimingDesc": "Keep an eye on remaining days and progress.",
     "taskBoardTodaySummary": "Today {total} items · {completed} done",
+    "@taskBoardTodaySummary": {
+        "placeholders": {
+            "total": { "type": "int" },
+            "completed": { "type": "int" }
+        }
+    },
     "taskBoardTitle": "Task Board",
     "taskBoardExpand": "Expand",
     "taskBoardCollapse": "Collapse",
@@ -9172,6 +9202,12 @@
     "heatmapTodayNoSchedule": "No intensive schedule today",
     "heatmapToday": "Today",
     "heatmapSelectedDayTasks": "Day {day} · {count} items",
+    "@heatmapSelectedDayTasks": {
+        "placeholders": {
+            "day": { "type": "int" },
+            "count": { "type": "int" }
+        }
+    },
     "heatmapSelectedDayNoTasks": "Day {day} · No tasks",
     "heatmapWeekdayMon": "M",
     "heatmapWeekdayTue": "T",
@@ -9241,6 +9277,12 @@
     "taskTypeErrorFix": "Debugging",
     "taskDueOverdue": "Overdue",
     "taskDueDateLabel": "{month}/{day}",
+    "@taskDueDateLabel": {
+        "placeholders": {
+            "month": { "type": "String" },
+            "day": { "type": "String" }
+        }
+    },
     "planViewCurrentSession": "Current Session",
     "share": "Share",
     "achievementShareTemplateCosmic": "Starry Sky",
@@ -9458,6 +9500,13 @@
     "focusSessionMinutes": "{minutes} min",
     "focusSessionFlameEarned": "+{flame} flame",
     "focusSessionMasteryUpdate": "Today's focus raised {nodeName} mastery from {oldMastery} to {newMastery}",
+    "@focusSessionMasteryUpdate": {
+        "placeholders": {
+            "nodeName": { "type": "String" },
+            "oldMastery": { "type": "int" },
+            "newMastery": { "type": "int" }
+        }
+    },
     "focusReflectionTitleLabel": "Focus review",
     "focusReflectionStuckLabel": "Stuck point: {content}",
     "focusReflectionMethodLabel": "Effective method: {content}",
@@ -14403,6 +14452,13 @@
     "collapsibleSlotLongPressEdit": "Long press to edit panel",
     "dailyContextDefault": "Good morning. Start with one small step today—finding your rhythm is enough.",
     "sprintProgressLabel": "{name}: {percent}% complete, {daysLeft} days left",
+    "@sprintProgressLabel": {
+        "placeholders": {
+            "name": { "type": "String" },
+            "percent": { "type": "int" },
+            "daysLeft": { "type": "int" }
+        }
+    },
     "sprintBottleneckLabel": "{name}: {reason}",
     "sprintAlertSignificantlyBehindDetail": "Task completion rate significantly below expectations. Consider re-evaluating daily workload or adjusting sprint scope.",
     "sprintAlertSlowerDetail": "Progress is being made but slower than expected. Consider adjusting study strategies or time allocation.",
@@ -15709,6 +15765,12 @@
     "seedLibStatusFailed": "Failed to load library status. Please try again later.",
     "communitySquad": "Squad",
     "communityGroupStats": "{memberCount} members | {flamePower} flame",
+    "@communityGroupStats": {
+        "placeholders": {
+            "memberCount": { "type": "int" },
+            "flamePower": { "type": "int" }
+        }
+    },
     "communityFriendsInside": "{count} friends inside",
     "communityFriendsInsideLabel": "Friends inside",
     "communityMatches": "Matches: {tags}",

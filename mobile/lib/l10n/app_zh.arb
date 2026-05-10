@@ -630,6 +630,12 @@
     "focusEstimated": "预计 {minutes} 分钟",
     "focusCoachTitle": "AI专注教练",
     "focusCoachSummary": "任务：{task} · 已专注 {minutes} 分钟",
+    "@focusCoachSummary": {
+        "placeholders": {
+            "task": { "type": "String" },
+            "minutes": { "type": "int" }
+        }
+    },
     "focusCoachPromptBreakdown": "拆解接下来15分钟",
     "focusCoachPromptRefocus": "分心提醒",
     "focusCoachPromptNextAction": "下一步行动",
@@ -1055,9 +1061,21 @@
     "achievementStreakRecord": "连续学习记录",
     "achievementStreakDays": "{days} 天",
     "achievementStreakDesc": "{username} 已连续学习 {days} 天\n坚持的力量无可阻挡！",
+    "@achievementStreakDesc": {
+        "placeholders": {
+            "username": { "type": "String" },
+            "days": { "type": "int" }
+        }
+    },
     "achievementMasteryTitle": "领域精通",
     "achievementMasteryPercent": "{percent}% 掌握度",
     "achievementMasteryDesc": "{username} 在 {domain} 领域已达到精通水平\n继续保持！",
+    "@achievementMasteryDesc": {
+        "placeholders": {
+            "username": { "type": "String" },
+            "domain": { "type": "String" }
+        }
+    },
     "achievementTaskComplete": "任务圆满完成",
     "achievementTaskCount": "完成 {count} 项任务",
     "achievementTaskDesc": "{username} 在本次冲刺中表现卓越\n效率之星实至名归！",
@@ -7978,6 +7996,12 @@
     "galaxyNodeCommunityPattern": "{errorType}：{userCount} 位同学",
     "galaxyNodeCommunityUnknown": "未知",
     "galaxyNodeSourceSummary": "{documents} 份文档 · {chunks} 个知识片段",
+    "@galaxyNodeSourceSummary": {
+        "placeholders": {
+            "documents": { "type": "int" },
+            "chunks": { "type": "int" }
+        }
+    },
     "galaxyNodeSourceEmptyBody": "为「{topic}」补充自己的讲义或笔记，让知识真正可追溯。",
     "galaxyNodeSourceAddNotes": "添加关于「{topic}」的笔记",
     "galaxyNodeSourceUploadSaved": "{filename} 已上传，处理并挂接后会显示在这里。",
@@ -8851,6 +8875,12 @@
     "taskBoardSprintFocusDesc": "只显示当前冲刺的任务",
     "taskBoardSprintTimingDesc": "关注剩余天数和进度",
     "taskBoardTodaySummary": "今日{total}项·已完成{completed}",
+    "@taskBoardTodaySummary": {
+        "placeholders": {
+            "total": { "type": "int" },
+            "completed": { "type": "int" }
+        }
+    },
     "taskBoardTitle": "任务看板",
     "taskBoardExpand": "展开",
     "taskBoardCollapse": "收起",
@@ -8974,6 +9004,12 @@
     "heatmapTodayNoSchedule": "今天还没有密集安排",
     "heatmapToday": "今日",
     "heatmapSelectedDayTasks": "{day}日 · {count}项",
+    "@heatmapSelectedDayTasks": {
+        "placeholders": {
+            "day": { "type": "int" },
+            "count": { "type": "int" }
+        }
+    },
     "heatmapSelectedDayNoTasks": "{day}日 · 暂无任务",
     "heatmapWeekdayMon": "一",
     "heatmapWeekdayTue": "二",
@@ -9043,6 +9079,12 @@
     "taskTypeErrorFix": "排错",
     "taskDueOverdue": "已逾期",
     "taskDueDateLabel": "{month}月{day}日",
+    "@taskDueDateLabel": {
+        "placeholders": {
+            "month": { "type": "String" },
+            "day": { "type": "String" }
+        }
+    },
     "planViewCurrentSession": "当前对话",
     "share": "分享",
     "achievementShareTemplateCosmic": "星空",
@@ -9260,6 +9302,13 @@
     "focusSessionMinutes": "{minutes} 分钟",
     "focusSessionFlameEarned": "+{flame} 火苗",
     "focusSessionMasteryUpdate": "今天的专注让你的 {nodeName} 掌握度从 {oldMastery} 提升到了 {newMastery} 分",
+    "@focusSessionMasteryUpdate": {
+        "placeholders": {
+            "nodeName": { "type": "String" },
+            "oldMastery": { "type": "int" },
+            "newMastery": { "type": "int" }
+        }
+    },
     "focusReflectionTitleLabel": "专注复盘",
     "focusReflectionStuckLabel": "卡点：{content}",
     "focusReflectionMethodLabel": "有效方法：{content}",
@@ -14409,6 +14458,13 @@
     "collapsibleSlotLongPressEdit": "长按编辑面板",
     "dailyContextDefault": "早上好，今天先从一小步开始，把节奏找回来就很好。",
     "sprintProgressLabel": "{name}：已完成 {percent}%，还剩 {daysLeft} 天",
+    "@sprintProgressLabel": {
+        "placeholders": {
+            "name": { "type": "String" },
+            "percent": { "type": "int" },
+            "daysLeft": { "type": "int" }
+        }
+    },
     "sprintBottleneckLabel": "{name}：{reason}",
     "sprintAlertSignificantlyBehindDetail": "任务完成率显著低于预期。建议重新评估每日任务量或调整冲刺范围。",
     "sprintAlertSlowerDetail": "虽然仍有进展，但速度不如预期。可能需要调整学习策略或时间分配。",
@@ -15715,6 +15771,12 @@
     "seedLibStatusFailed": "种子库状态加载失败，请稍后再试",
     "communitySquad": "小队",
     "communityGroupStats": "{memberCount} 成员 | {flamePower} 火力",
+    "@communityGroupStats": {
+        "placeholders": {
+            "memberCount": { "type": "int" },
+            "flamePower": { "type": "int" }
+        }
+    },
     "communityFriendsInside": "{count} 位好友在内",
     "communityFriendsInsideLabel": "好友在内",
     "communityMatches": "匹配：{tags}",
