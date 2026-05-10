@@ -340,9 +340,12 @@ class LLMService:
 
     @property
     def provider(self) -> LLMProvider | None:
-        """获取当前provider（向后兼容）"""
+        """获取当前provider（向后兼容，缓存结果）"""
         if self._provider is None and self._provider_error is None:
             self._init_with_router()
+            # Cache the error state to prevent re-initialization on every access
+            if self._provider is None and self._provider_error is None:
+                self._provider_error = RuntimeError("Provider initialization returned None")
         return self._provider
 
     @property
@@ -520,10 +523,17 @@ class LLMService:
         messages: list[dict[str, str]],
         model: str | None = None,
         temperature: float = 0.7,
+        *,
+        task_type: TaskType | None = None,
         **kwargs
     ) -> str:
         """
         Send a chat request to the LLM with automatic fallback support.
+
+        Args:
+            task_type: Optional task type for cascade routing. When provided
+                       with dynamic routing enabled, selects the appropriate
+                       model tier (e.g. ROUTING → FAST, STANDARD_RESPONSE → STANDARD).
         """
         await refresh_llm_safety_mode()
         kwargs = dict(kwargs)
@@ -535,6 +545,20 @@ class LLMService:
             wrap_user_messages=True,
         )
         model = model or self.chat_model
+
+        # Cascade routing: when task_type is provided, select tier-appropriate model
+        cascade_selection: LLMSelection | None = None
+        if (
+            task_type is not None
+            and self.enable_dynamic_routing
+            and model == self.chat_model
+        ):
+            try:
+                cascade_selection = llm_router.select_model(self.agent_role, task_type)
+                model = cascade_selection.config.model_name
+            except Exception:
+                pass  # fall back to default model
+
         with tracer.start_as_current_span("llm_chat") as span:
             span.set_attribute("llm.model", model)
             span.set_attribute("llm.temperature", temperature)
@@ -595,9 +619,10 @@ class LLMService:
                 await circuit_breaker_service.check("primary_llm")
 
                 # 使用回退管理器执行
-                if self._current_selection:
+                active_selection = cascade_selection or self._current_selection
+                if active_selection:
                     response = await llm_fallback_manager.execute_with_fallback(
-                        self._current_selection,
+                        active_selection,
                         _call_with_selection,
                         operation_type="chat",
                     )
@@ -1471,10 +1496,12 @@ llm_service = LLMSecurityWrapper(
     config=SecurityConfig()
 )
 
-# 创建专用角色的服务实例（按需使用）
+# 创建专用角色的服务实例（按需使用，按角色缓存）
+_llm_service_cache: dict[str, LLMService] = {}
+
 def get_llm_service(agent_role: AgentRole | str) -> LLMService:
     """
-    获取指定角色的LLM服务实例
+    获取指定角色的LLM服务实例（缓存，避免重复创建HTTP连接池）
 
     Args:
         agent_role: Agent角色（如 "galaxy_guide", "exam_oracle" 等）
@@ -1484,7 +1511,10 @@ def get_llm_service(agent_role: AgentRole | str) -> LLMService:
         galaxy_llm = get_llm_service("galaxy_guide")
         response = await galaxy_llm.chat(messages)
     """
-    return LLMService(agent_role=agent_role, enable_dynamic_routing=True)
+    key = str(agent_role)
+    if key not in _llm_service_cache:
+        _llm_service_cache[key] = LLMService(agent_role=agent_role, enable_dynamic_routing=True)
+    return _llm_service_cache[key]
 
 
 async def get_configured_llm_service(

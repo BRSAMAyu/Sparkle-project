@@ -3161,9 +3161,10 @@ def create_standard_chat_graph() -> StateGraph:
     # - failed → __end__
     def reflection_condition(state: WorkflowState) -> str:
         next_step = state.next_step or "__end__"
-        review_context = getattr(state, "review_context", None)
-        if review_context is None and isinstance(state, dict):
-            review_context = state.get("review_context")
+        review_context = state.context_data.get("review_context")
+        if review_context is None:
+            # Fallback: check if state has review_context as attribute (graph state)
+            review_context = getattr(state, "review_context", None)
         reflection_round = (review_context or {}).get("reflection_round", 0)
         MAX_ROUNDS = 3
 
