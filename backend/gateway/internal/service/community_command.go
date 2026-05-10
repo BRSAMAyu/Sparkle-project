@@ -120,7 +120,7 @@ func (s *CommunityCommandService) LikePost(ctx context.Context, userID, postID u
 	return s.unitOfWork.ExecuteInTransaction(ctx, func(txCtx *outbox.TransactionContext) error {
 		likeID := uuid.New()
 		// Create like in transaction
-		_, err := txCtx.Tx().Exec(ctx, `
+		result, err := txCtx.Tx().Exec(ctx, `
 			INSERT INTO post_likes (id, user_id, post_id, created_at, updated_at)
 			VALUES ($1, $2, $3, NOW(), NOW())
 			ON CONFLICT DO NOTHING
@@ -132,6 +132,11 @@ func (s *CommunityCommandService) LikePost(ctx context.Context, userID, postID u
 
 		if err != nil {
 			return fmt.Errorf("failed to create like: %w", err)
+		}
+
+		// Skip event on duplicate like (ON CONFLICT DO NOTHING)
+		if result.RowsAffected() == 0 {
+			return nil
 		}
 
 		// Create domain event

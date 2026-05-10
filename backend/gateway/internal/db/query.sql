@@ -108,7 +108,7 @@ RETURNING *;
 
 -- name: GetPost :one
 SELECT * FROM posts
-WHERE id = $1 AND created_at = $2 AND deleted_at IS NULL;
+WHERE id = $1 AND deleted_at IS NULL;
 
 -- name: CreatePostLike :exec
 INSERT INTO post_likes (user_id, post_id, created_at)

@@ -133,8 +133,7 @@ func (w *CommunitySyncWorker) handlePostCreated(ctx context.Context, evt cqrsEve
 		}
 	}
 	post, err := w.queries.GetPost(ctx, db.GetPostParams{
-		ID:        pgtype.UUID{Bytes: postID, Valid: true},
-		CreatedAt: pgtype.Timestamp{Time: createdAt, Valid: true},
+		ID: pgtype.UUID{Bytes: postID, Valid: true},
 	})
 	if err != nil {
 		return fmt.Errorf("fetch post: %w", err)

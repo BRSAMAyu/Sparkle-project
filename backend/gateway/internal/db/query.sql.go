@@ -775,12 +775,11 @@ WHERE id = $1 AND created_at = $2 AND deleted_at IS NULL
 `
 
 type GetPostParams struct {
-	ID        pgtype.UUID      `json:"id"`
-	CreatedAt pgtype.Timestamp `json:"created_at"`
+	ID pgtype.UUID `json:"id"`
 }
 
 func (q *Queries) GetPost(ctx context.Context, arg GetPostParams) (Post, error) {
-	row := q.db.QueryRow(ctx, getPost, arg.ID, arg.CreatedAt)
+	row := q.db.QueryRow(ctx, getPost, arg.ID)
 	var i Post
 	err := row.Scan(
 		&i.UserID,
