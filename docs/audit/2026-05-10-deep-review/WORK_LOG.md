@@ -26,7 +26,7 @@
 | P0-4 | Docker gateway missing env vars | FIXED | 11 env vars added |
 | P0-5 | gRPC TLS variable ordering | FIXED | _ca_cert_path moved before use |
 | P0-6 | JWT token URL fallback | FIXED | Removed token-in-URL fallback |
-| P0-7 | 749 i18n hardcoded strings | IN PROGRESS | Migrated ~77 instances, 672 remaining |
+| P0-7 | 749 i18n hardcoded strings | IN PROGRESS | Migrated ~150+ instances, ~600 remaining |
 
 ## P1 Issues — ALL FIXED
 
