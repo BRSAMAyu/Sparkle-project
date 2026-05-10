@@ -35044,4 +35044,76 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get communitySeeEmotionState => 'See my emotional / energy state';
+
+  @override
+  String get dashboardSprintTask1 =>
+      'Closed-book: TCP 3-way handshake & 4-way teardown';
+
+  @override
+  String get dashboardSprintTask2 => 'Correct 3 reliable transport mistakes';
+
+  @override
+  String get dashboardSprintTask3 => 'Review congestion control algorithms';
+
+  @override
+  String get dashboardSprintTask4 => 'Practice exam questions (chapter 3)';
+
+  @override
+  String get dashboardSprintTask5 => 'Review error correction techniques';
+
+  @override
+  String get dashboardGrowthSignalMorning =>
+      'Morning energy is high today, good for tackling difficult topics';
+
+  @override
+  String get dashboardGrowthSignalAfternoon =>
+      'Afternoon focus is stable, suitable for review';
+
+  @override
+  String get dashboardGrowthSignalEvening =>
+      'Evening is best for light review and planning';
+
+  @override
+  String get dashboardGrowthSignalWeekend =>
+      'Weekend momentum is slightly lower than weekdays';
+
+  @override
+  String get dashboardDropoutRiskSummary =>
+      'No significant dropout risk now, but it will rise if you skip two consecutive days of focus.';
+
+  @override
+  String get dashboardOptimalTimeSummary =>
+      '3–5 PM is your most stable study window; evenings are best for wrap-ups and reviews.';
+
+  @override
+  String get dashboardPredictionTitle =>
+      'Prediction: you\'ll continue pushing your most critical task';
+
+  @override
+  String get dashboardPredictionSummary =>
+      'Based on the last 24 hours, tackling your current priority task makes the most sense.';
+
+  @override
+  String get dashboardSuggestedPrompt =>
+      'Help me continue today\'s most critical task';
+
+  @override
+  String get dashboardRecent24hActive => 'Active in the last 24 hours';
+
+  @override
+  String get dashboardRecent7dStable => 'Steady progress over the past 7 days';
+
+  @override
+  String get dashboardProfileTendency =>
+      'You tend to pick up existing priority tasks';
+
+  @override
+  String get dashboardFocusNatural25 =>
+      'A 25-minute focused block feels natural first';
+
+  @override
+  String get dashboardContinuePriority => 'Continue Priority Task';
+
+  @override
+  String get dashboardStart25Min => 'Start a 25-min Focus';
 }

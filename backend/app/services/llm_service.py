@@ -493,11 +493,12 @@ class LLMService:
             logger.info(f"⚡ [DEMO MODE] Exact match for: {user_content}")
             return DEMO_MOCK_RESPONSES[user_content]
 
-        # 模糊匹配 (包含关键词)
-        for key, response in DEMO_MOCK_RESPONSES.items():
-            if key in user_content or user_content in key:
-                logger.info(f"⚡ [DEMO MODE] Fuzzy match for: {user_content} -> {key}")
-                return response
+        # 模糊匹配 (包含关键词) - requires minimum length to avoid false matches
+        if len(user_content) >= 3:
+            for key, response in DEMO_MOCK_RESPONSES.items():
+                if len(key) >= 3 and (key in user_content or user_content in key):
+                    logger.info(f"⚡ [DEMO MODE] Fuzzy match for: {user_content} -> {key}")
+                    return response
         logger.info("⚡ [DEMO MODE] No match found, returning generic response")
         return (
             "已收到你的请求。当前处于演示模式，我先给出一个可执行的通用建议：\n"

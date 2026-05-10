@@ -15364,6 +15364,28 @@
   "communityHidden": "已隐藏",
   "communityAllowObservationDesc": "关闭后，对方不再收到任何关于你的信号或观察提醒",
   "communitySeeEmotionState": "看到我的情绪/能量状态",
+
+  "dashboardSprintTask1": "闭卷默写 TCP 三次握手与四次挥手",
+  "dashboardSprintTask2": "订正 3 道可靠传输错题",
+  "dashboardSprintTask3": "复习拥塞控制算法",
+  "dashboardSprintTask4": "练习第三章习题",
+  "dashboardSprintTask5": "复习错题纠正技巧",
+  "dashboardGrowthSignalMorning": "今早能量高，适合攻克难点",
+  "dashboardGrowthSignalAfternoon": "下午专注力稳定，适合复习",
+  "dashboardGrowthSignalEvening": "晚上适合轻松复习和规划",
+  "dashboardGrowthSignalWeekend": "周末动能略低于工作日",
+  "dashboardDropoutRiskSummary": "当前没有明显流失风险，但如果连续两天没有专注记录，风险会抬升。",
+  "dashboardOptimalTimeSummary": "下午 3 点到 5 点是你最稳定的学习窗口，晚上适合做收尾与复盘。",
+  "dashboardPredictionTitle": "系统预测你接下来会继续推进最关键任务",
+  "dashboardPredictionSummary": "根据最近 24 小时的节奏，先推进当前重点任务最合适。",
+  "dashboardSuggestedPrompt": "帮我继续推进今天最关键的任务",
+  "dashboardRecent24hActive": "最近24小时持续活跃",
+  "dashboardRecent7dStable": "过去7天保持稳定推进",
+  "dashboardProfileTendency": "你更容易承接已有重点任务",
+  "dashboardFocusNatural25": "先推进一个25分钟小段更自然",
+  "dashboardContinuePriority": "继续重点任务",
+  "dashboardStart25Min": "先做 25 分钟",
+
   "@communitySimilarGoalPursuersCount": {
     "placeholders": {
       "count": {

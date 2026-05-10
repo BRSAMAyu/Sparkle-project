@@ -61182,6 +61182,126 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'看到我的情绪/能量状态'**
   String get communitySeeEmotionState;
+
+  /// No description provided for @dashboardSprintTask1.
+  ///
+  /// In zh, this message translates to:
+  /// **'闭卷默写 TCP 三次握手与四次挥手'**
+  String get dashboardSprintTask1;
+
+  /// No description provided for @dashboardSprintTask2.
+  ///
+  /// In zh, this message translates to:
+  /// **'订正 3 道可靠传输错题'**
+  String get dashboardSprintTask2;
+
+  /// No description provided for @dashboardSprintTask3.
+  ///
+  /// In zh, this message translates to:
+  /// **'复习拥塞控制算法'**
+  String get dashboardSprintTask3;
+
+  /// No description provided for @dashboardSprintTask4.
+  ///
+  /// In zh, this message translates to:
+  /// **'练习第三章习题'**
+  String get dashboardSprintTask4;
+
+  /// No description provided for @dashboardSprintTask5.
+  ///
+  /// In zh, this message translates to:
+  /// **'复习错题纠正技巧'**
+  String get dashboardSprintTask5;
+
+  /// No description provided for @dashboardGrowthSignalMorning.
+  ///
+  /// In zh, this message translates to:
+  /// **'今早能量高，适合攻克难点'**
+  String get dashboardGrowthSignalMorning;
+
+  /// No description provided for @dashboardGrowthSignalAfternoon.
+  ///
+  /// In zh, this message translates to:
+  /// **'下午专注力稳定，适合复习'**
+  String get dashboardGrowthSignalAfternoon;
+
+  /// No description provided for @dashboardGrowthSignalEvening.
+  ///
+  /// In zh, this message translates to:
+  /// **'晚上适合轻松复习和规划'**
+  String get dashboardGrowthSignalEvening;
+
+  /// No description provided for @dashboardGrowthSignalWeekend.
+  ///
+  /// In zh, this message translates to:
+  /// **'周末动能略低于工作日'**
+  String get dashboardGrowthSignalWeekend;
+
+  /// No description provided for @dashboardDropoutRiskSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前没有明显流失风险，但如果连续两天没有专注记录，风险会抬升。'**
+  String get dashboardDropoutRiskSummary;
+
+  /// No description provided for @dashboardOptimalTimeSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'下午 3 点到 5 点是你最稳定的学习窗口，晚上适合做收尾与复盘。'**
+  String get dashboardOptimalTimeSummary;
+
+  /// No description provided for @dashboardPredictionTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'系统预测你接下来会继续推进最关键任务'**
+  String get dashboardPredictionTitle;
+
+  /// No description provided for @dashboardPredictionSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'根据最近 24 小时的节奏，先推进当前重点任务最合适。'**
+  String get dashboardPredictionSummary;
+
+  /// No description provided for @dashboardSuggestedPrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'帮我继续推进今天最关键的任务'**
+  String get dashboardSuggestedPrompt;
+
+  /// No description provided for @dashboardRecent24hActive.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近24小时持续活跃'**
+  String get dashboardRecent24hActive;
+
+  /// No description provided for @dashboardRecent7dStable.
+  ///
+  /// In zh, this message translates to:
+  /// **'过去7天保持稳定推进'**
+  String get dashboardRecent7dStable;
+
+  /// No description provided for @dashboardProfileTendency.
+  ///
+  /// In zh, this message translates to:
+  /// **'你更容易承接已有重点任务'**
+  String get dashboardProfileTendency;
+
+  /// No description provided for @dashboardFocusNatural25.
+  ///
+  /// In zh, this message translates to:
+  /// **'先推进一个25分钟小段更自然'**
+  String get dashboardFocusNatural25;
+
+  /// No description provided for @dashboardContinuePriority.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续重点任务'**
+  String get dashboardContinuePriority;
+
+  /// No description provided for @dashboardStart25Min.
+  ///
+  /// In zh, this message translates to:
+  /// **'先做 25 分钟'**
+  String get dashboardStart25Min;
 }
 
 class _AppLocalizationsDelegate

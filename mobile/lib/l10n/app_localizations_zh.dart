@@ -33613,4 +33613,64 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get communitySeeEmotionState => '看到我的情绪/能量状态';
+
+  @override
+  String get dashboardSprintTask1 => '闭卷默写 TCP 三次握手与四次挥手';
+
+  @override
+  String get dashboardSprintTask2 => '订正 3 道可靠传输错题';
+
+  @override
+  String get dashboardSprintTask3 => '复习拥塞控制算法';
+
+  @override
+  String get dashboardSprintTask4 => '练习第三章习题';
+
+  @override
+  String get dashboardSprintTask5 => '复习错题纠正技巧';
+
+  @override
+  String get dashboardGrowthSignalMorning => '今早能量高，适合攻克难点';
+
+  @override
+  String get dashboardGrowthSignalAfternoon => '下午专注力稳定，适合复习';
+
+  @override
+  String get dashboardGrowthSignalEvening => '晚上适合轻松复习和规划';
+
+  @override
+  String get dashboardGrowthSignalWeekend => '周末动能略低于工作日';
+
+  @override
+  String get dashboardDropoutRiskSummary => '当前没有明显流失风险，但如果连续两天没有专注记录，风险会抬升。';
+
+  @override
+  String get dashboardOptimalTimeSummary => '下午 3 点到 5 点是你最稳定的学习窗口，晚上适合做收尾与复盘。';
+
+  @override
+  String get dashboardPredictionTitle => '系统预测你接下来会继续推进最关键任务';
+
+  @override
+  String get dashboardPredictionSummary => '根据最近 24 小时的节奏，先推进当前重点任务最合适。';
+
+  @override
+  String get dashboardSuggestedPrompt => '帮我继续推进今天最关键的任务';
+
+  @override
+  String get dashboardRecent24hActive => '最近24小时持续活跃';
+
+  @override
+  String get dashboardRecent7dStable => '过去7天保持稳定推进';
+
+  @override
+  String get dashboardProfileTendency => '你更容易承接已有重点任务';
+
+  @override
+  String get dashboardFocusNatural25 => '先推进一个25分钟小段更自然';
+
+  @override
+  String get dashboardContinuePriority => '继续重点任务';
+
+  @override
+  String get dashboardStart25Min => '先做 25 分钟';
 }
