@@ -443,7 +443,7 @@ class _PortfolioEntryCard extends StatelessWidget {
                 entry.weakestPoints.isNotEmpty
                     ? entry.weakestPoints
                     : <String>[
-                        ...?[
+                        ...[
                           entry.growthArea,
                         ].whereType<String>()
                       ],
@@ -457,7 +457,7 @@ class _PortfolioEntryCard extends StatelessWidget {
                 entry.proudNodes.isNotEmpty
                     ? entry.proudNodes
                     : <String>[
-                        ...?[
+                        ...[
                           entry.strongestArea,
                         ].whereType<String>()
                       ],

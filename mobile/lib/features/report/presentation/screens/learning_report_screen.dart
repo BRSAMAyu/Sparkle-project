@@ -1411,7 +1411,7 @@ class _MasteryTrendChartState extends State<_MasteryTrendChart> {
               ),
               if (selectedMinutes != null)
                 Text(
-                  context.l10n.reportChartStudyMinutes(selectedMinutes!),
+                  context.l10n.reportChartStudyMinutes(selectedMinutes),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: DS.warning,
                         fontWeight: DS.fontWeightBold,

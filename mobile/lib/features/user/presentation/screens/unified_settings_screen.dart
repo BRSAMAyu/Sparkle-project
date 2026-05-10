@@ -506,7 +506,6 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final isCompact = MediaQuery.sizeOf(context).width < 380;
     final enterToSend = ref.watch(enterToSendProvider);
     final transparentMode = ref.watch(transparentModeProvider);
     final transparencyLevel = normalizeTransparencyLevelSetting(

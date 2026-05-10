@@ -29,8 +29,6 @@ class _DashboardEditSheetState extends ConsumerState<DashboardEditSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final zh = I18nService.instance.isChinese;
-
     return GraphiteModalSurface(
       title: context.l10n.dashboardEditTitle,
       child: ConstrainedBox(

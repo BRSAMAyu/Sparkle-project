@@ -324,7 +324,7 @@ class NextMoveCardData {
 // Provider
 final dashboardProvider =
     StateNotifierProvider<DashboardNotifier, DashboardState>(
-  (ref) => DashboardNotifier(ref.watch(dashboardRepositoryProvider), ref),
+  (ref) => DashboardNotifier(ref.watch(dashboardRepositoryProvider)),
 );
 
 Map<String, dynamic>? _asStringKeyedMap(dynamic value) {
@@ -417,11 +417,10 @@ bool _asBool(dynamic value, {bool fallback = false}) {
 }
 
 class DashboardNotifier extends StateNotifier<DashboardState> {
-  DashboardNotifier(this._repository, this._ref) : super(DashboardState.loading()) {
+  DashboardNotifier(this._repository) : super(DashboardState.loading()) {
     unawaited(Future<void>.microtask(fetchData));
   }
   final DashboardRepository _repository;
-  final Ref _ref;
 
   Future<void> fetchData() async {
     try {

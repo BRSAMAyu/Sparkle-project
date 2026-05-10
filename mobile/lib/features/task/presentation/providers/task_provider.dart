@@ -125,7 +125,7 @@ class TaskNotifier extends StateNotifier<TaskListState> {
       loadTodayTasks(),
       loadRecommendedTasks(),
       loadTasks(),
-    ]).catchError((_) {}));
+    ]).catchError((_) => <void>[]));
   }
   final TaskRepository _taskRepository;
   final TaskNotificationScheduler _notificationScheduler;

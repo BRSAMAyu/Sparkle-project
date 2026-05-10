@@ -233,7 +233,6 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
 
     final l10n = context.l10n;
     final message = response?.message ?? l10n.taskFeedbackSubmitted;
-    final hasPreferenceUpdates = response?.preferenceUpdates != null;
 
     ScaffoldMessenger.of(context).showSnackBar(
       SparkleSnackBar.create(

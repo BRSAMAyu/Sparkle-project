@@ -263,7 +263,6 @@ class _GoalHeader extends StatelessWidget {
     String? targetDate,
     dynamic l10n,
   ) {
-    final isZh = Localizations.localeOf(context).languageCode == 'zh';
     if (targetDate == null) {
       return _InfoChip(
         icon: Icons.event_outlined,

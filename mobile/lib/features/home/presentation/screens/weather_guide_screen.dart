@@ -170,7 +170,7 @@ class _WeatherGuideScreenState extends ConsumerState<WeatherGuideScreen>
               padding: const EdgeInsets.only(top: DS.spacing12),
               child: Text(
                 context.l10n.weatherGuideDisclaimer,
-                style: context.sparkleTypography.labelSmall?.copyWith(
+                style: context.sparkleTypography.labelSmall.copyWith(
                   color: DS.textSecondary,
                   height: 1.52,
                 ),
