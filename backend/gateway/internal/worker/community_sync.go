@@ -244,6 +244,19 @@ func (w *CommunitySyncWorker) handlePostLiked(ctx context.Context, evt cqrsEvent
 		return fmt.Errorf("set post view: %w", err)
 	}
 
+	// Track which users liked this post for isLikedByMe checks
+	userIDStr, _ := evt.Payload["user_id"].(string)
+	if userIDStr != "" {
+		likesKey := "post:likes:" + postIDStr
+		if err := w.redis.SAdd(ctx, likesKey, userIDStr).Err(); err != nil {
+			w.logger.Warn("Failed to track user like in Redis set",
+				zap.String("post_id", postIDStr),
+				zap.String("user_id", userIDStr),
+				zap.Error(err),
+			)
+		}
+	}
+
 	w.logger.Debug("Post like count incremented",
 		zap.String("post_id", postIDStr),
 		zap.Int("new_count", view.LikeCount),
@@ -288,6 +301,19 @@ func (w *CommunitySyncWorker) handlePostUnliked(ctx context.Context, evt cqrsEve
 
 	if err := w.redis.Set(ctx, viewKey, updatedJSON, 0).Err(); err != nil {
 		return fmt.Errorf("set post view: %w", err)
+	}
+
+	// Remove user from the liked set for isLikedByMe checks
+	userIDStr, _ := evt.Payload["user_id"].(string)
+	if userIDStr != "" {
+		likesKey := "post:likes:" + postIDStr
+		if err := w.redis.SRem(ctx, likesKey, userIDStr).Err(); err != nil {
+			w.logger.Warn("Failed to remove user like from Redis set",
+				zap.String("post_id", postIDStr),
+				zap.String("user_id", userIDStr),
+				zap.Error(err),
+			)
+		}
 	}
 
 	w.logger.Debug("Post like count decremented",

@@ -117,7 +117,7 @@ func (s *CommunityQueryService) fetchPostsFromDB(ctx context.Context, ids []stri
 	query := `
 		SELECT p.id, p.user_id, p.content, p.image_urls, p.topic, p.like_count, p.created_at,
 		       u.id, u.username, u.avatar_url
-		FROM community_posts p
+		FROM posts p
 		JOIN users u ON p.user_id = u.id
 		WHERE p.id = ANY($1)
 		ORDER BY p.created_at DESC
@@ -153,7 +153,7 @@ func (s *CommunityQueryService) fetchRecentPostsFromDB(ctx context.Context, limi
 	query := `
 		SELECT p.id, p.user_id, p.content, p.image_urls, p.topic, p.like_count, p.created_at,
 		       u.id, u.username, u.avatar_url
-		FROM community_posts p
+		FROM posts p
 		JOIN users u ON p.user_id = u.id
 		ORDER BY p.created_at DESC
 		LIMIT $1

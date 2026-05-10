@@ -220,6 +220,13 @@ func (h *CommunityProjectionHandler) handlePostLiked(ctx context.Context, evt cq
 		return fmt.Errorf("set post view: %w", err)
 	}
 
+	// Track which users liked this post for isLikedByMe checks
+	userIDStr, _ := evt.Payload["user_id"].(string)
+	if userIDStr != "" {
+		likesKey := "post:likes:" + postIDStr
+		_ = h.redis.SAdd(ctx, likesKey, userIDStr).Err()
+	}
+
 	return nil
 }
 
@@ -254,6 +261,13 @@ func (h *CommunityProjectionHandler) handlePostUnliked(ctx context.Context, evt 
 
 	if err := h.redis.Set(ctx, viewKey, updatedJSON, 0).Err(); err != nil {
 		return fmt.Errorf("set post view: %w", err)
+	}
+
+	// Remove user from the liked set for isLikedByMe checks
+	userIDStr, _ := evt.Payload["user_id"].(string)
+	if userIDStr != "" {
+		likesKey := "post:likes:" + postIDStr
+		_ = h.redis.SRem(ctx, likesKey, userIDStr).Err()
 	}
 
 	return nil
