@@ -58,7 +58,7 @@ class StatisticsMetricCard extends StatelessWidget {
                   _buildTitle(),
                   const SizedBox(height: DS.sm),
                   _buildValue(),
-                  if (changePercentage != null) _buildChange(),
+                  if (changePercentage != null) _buildChange(context),
                 ],
               ),
       );
@@ -120,7 +120,7 @@ class StatisticsMetricCard extends StatelessWidget {
     );
   }
 
-  Widget _buildChange() {
+  Widget _buildChange(BuildContext context) {
     final isPositive = (changePercentage ?? 0) >= 0;
     final color = StatisticsChartConfig.getTrendColor(changePercentage);
     final arrow = isPositive ? '↑' : '↓';

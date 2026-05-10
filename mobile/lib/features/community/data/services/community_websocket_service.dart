@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
+import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 /// WebSocket connection state
@@ -149,7 +150,7 @@ class CommunityWebSocketService {
       _groupReconnectAttempts = 0;
       _currentGroupId = groupId;
 
-      _groupChannel = WebSocketChannel.connect(
+      _groupChannel = IOWebSocketChannel.connect(
         Uri.parse(wsUrl),
         protocols: ['json'],
         headers: {'Authorization': 'Bearer $token'},
@@ -200,7 +201,7 @@ class CommunityWebSocketService {
     try {
       _personalReconnectAttempts = 0;
 
-      _personalChannel = WebSocketChannel.connect(
+      _personalChannel = IOWebSocketChannel.connect(
         Uri.parse(wsUrl),
         protocols: ['json'],
         headers: {'Authorization': 'Bearer $token'},

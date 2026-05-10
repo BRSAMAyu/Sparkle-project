@@ -222,9 +222,11 @@ from app.models.task import Task, TaskStatus, TaskType
 from app.models.task_document import TaskDocument
 from app.models.task_feedback import TaskFeedback, TaskFeedbackCategory
 from app.models.task_resources import TaskKnowledgeLink, TaskResourceLink, TaskResourceType
+_task_history_available = True
 try:
     from app.models.task_history import TaskHistory
 except ImportError:
+    _task_history_available = False
     import logging
     logging.getLogger(__name__).debug("task_history model not available", exc_info=True)
     TaskHistory = None
@@ -236,6 +238,7 @@ from app.models.user_settings import UserSettings
 from app.models.user_state import UserStateSnapshot
 from app.models.visual_element import UserVisualConfig, UserVisualElement, VisualElement
 from app.models.vocabulary import DictionaryEntry, WordBook
+_workflow_conversation_available = True
 try:
     from app.models.workflow_conversation import (
         ContentReview,
@@ -256,6 +259,7 @@ try:
         WorkflowCheckpoint,
     )
 except ImportError:
+    _workflow_conversation_available = False
     import logging
     logging.getLogger(__name__).debug("workflow_conversation model not available", exc_info=True)
 
@@ -546,7 +550,6 @@ __all__ = [
     "TaskDocument",
     "TaskFeedback",
     "TaskFeedbackCategory",
-    "TaskHistory",
     "TaskStatus",
     "TaskType",
     # Theater
@@ -566,21 +569,27 @@ __all__ = [
     # Vocabulary
     "DictionaryEntry",
     "WordBook",
-    # Workflow
-    "ContentReview",
-    "ContentReviewFeedback",
-    "ConversationAnalysis",
-    "ConversationPattern",
-    "ConversationRoutine",
-    "ConversationTrace",
-    "ConversationTraceEvent",
-    "ConversationTurn",
-    "ConversationWorkflow",
-    "ConversationWorkflowEvent",
-    "ConversationWorkflowState",
-    "RegenerationRequest",
-    "WorkflowResponseFeedback",
-    "ResponseQualityMeasure",
-    "WorkflowAgent",
-    "WorkflowCheckpoint",
 ]
+
+if _workflow_conversation_available:
+    __all__.extend([
+        "ContentReview",
+        "ContentReviewFeedback",
+        "ConversationAnalysis",
+        "ConversationPattern",
+        "ConversationRoutine",
+        "ConversationTrace",
+        "ConversationTraceEvent",
+        "ConversationTurn",
+        "ConversationWorkflow",
+        "ConversationWorkflowEvent",
+        "ConversationWorkflowState",
+        "RegenerationRequest",
+        "WorkflowResponseFeedback",
+        "ResponseQualityMeasure",
+        "WorkflowAgent",
+        "WorkflowCheckpoint",
+    ])
+
+if _task_history_available:
+    __all__.append("TaskHistory")

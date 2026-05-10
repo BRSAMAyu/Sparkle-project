@@ -188,7 +188,7 @@ class _AchievementNodeBottomSheet extends StatelessWidget {
                 children: [
                   _MetaChip(label: node.laneLabel, color: color),
                   _MetaChip(
-                    label: _displayStateLabel(node.displayState),
+                    label: _displayStateLabel(context, node.displayState),
                     color: Colors.white70,
                   ),
                   _MetaChip(
@@ -268,8 +268,8 @@ class _AchievementNodeBottomSheet extends StatelessWidget {
     );
   }
 
-  String _displayStateLabel(String state) {
-    final l10n = S;
+  String _displayStateLabel(BuildContext context, String state) {
+    final l10n = context.l10n;
     switch (state) {
       case 'unlocked':
         return l10n.achievementMapStateUnlocked;
