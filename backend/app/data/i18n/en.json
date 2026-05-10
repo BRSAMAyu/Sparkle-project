@@ -11,7 +11,49 @@
   "planner": {
     "constraints_header": "Planning Constraints (must be met if possible):",
     "ai_study_plan": "AI Study Plan",
-    "start_task_with": "Before starting the target task, arrange a 「{topic}」"
+    "start_task_with": "Before starting the target task, arrange a 「{topic}」",
+    "graph_context_header": "Reference the following knowledge graph context (including related concepts, prerequisite knowledge, and user's current mastery):",
+    "graph_context_instructions": "Please adjust tasks based on the above context:",
+    "instruction_priority_locked": "Prioritize prerequisite knowledge user hasn't mastered (Status: Locked or low Mastery).",
+    "instruction_mastery_review": "For mastered knowledge, generate review or advanced application tasks.",
+    "instruction_cover_gaps": "Ensure tasks cover key blind spots in the context.",
+    "llm_prompt_header": "You are a learning planning expert. Based on the following learning plan information, generate {count} specific executable micro-tasks.",
+    "plan_info": "Plan Information",
+    "plan_name": "Plan Name",
+    "plan_description": "Plan Description",
+    "description_unavailable": "Not provided",
+    "learning_topic": "Learning Topic",
+    "difficulty_level": "Difficulty Level",
+    "task_requirements": "Task Requirements",
+    "task_requirement_duration": "Each task must be completable within 5-{max} minutes",
+    "task_requirement_specific": "Tasks must be specific and executable (e.g., 'Complete exercises 3-5' not 'Learn calculus')",
+    "task_requirement_prerequisite": "If prerequisite gaps exist, prioritize completing them first",
+    "task_requirement_order": "Arrange in order of increasing difficulty (easy → medium → hard)",
+    "task_types": "Task types: learning/training/error_fix/reflection",
+    "priority_allocation": "Priority: Easy tasks 1-2, medium 2-3, hard 4-5",
+    "return_format": "Return format must be a valid JSON array containing {count} task objects:",
+    "strict_json": "Return strictly in JSON format, no other text.",
+    "json_title_example": "Specific task title",
+    "json_desc_example": "Task description and requirements",
+    "fallback_topic_default": "Current Topic",
+    "fallback_prerequisite_title": "Fill prerequisite knowledge: {node}",
+    "fallback_prerequisite_desc": "Use a short learning session to organize {node}'s core definitions, key formulas, and typical applications, preparing for {target}.",
+    "fallback_concept_framework": "Build core concept framework for {target}",
+    "fallback_concept_framework_desc": "Organize {target}'s core concepts, key models, and common scenarios.",
+    "fallback_practice": "Complete {target} specialized practice",
+    "fallback_practice_desc": "Complete progressive exercises around {target}, record knowledge points and where stuck.",
+    "fallback_review": "Review {target} common mistakes",
+    "fallback_review_desc": "Review today's mistakes, write an error checklist, confirm understanding of {target}.",
+    "fallback_core_concepts": "Organize core concepts of {topic}",
+    "fallback_core_concepts_desc": "Extract {topic}'s core concepts, key terms, and structure into a one-page summary.",
+    "fallback_basic_practice": "Complete basic practice for {topic}",
+    "fallback_basic_practice_desc": "Select 3-5 basic questions to verify correct application of {topic}'s methods.",
+    "fallback_locate_errors": "Locate common mistakes for {topic}",
+    "fallback_locate_errors_desc": "Record most confused concepts, formulas, or steps, fill in weak points.",
+    "fallback_summary": "Output learning summary for {topic}",
+    "fallback_summary_desc": "Summarize learning gains for {topic} in your own words.",
+    "fallback_consolidation": "{topic} consolidation task {index}",
+    "fallback_consolidation_desc": "Complete another round of consolidation for {topic}, focusing on unmastered content."
   },
   "workflow": {
     "analyzing": "Analyzing and planning tasks...",
@@ -447,5 +489,67 @@
     "rhythm_deepening_focus": "; this turn can be more expansive, but keep it structured.",
     "rhythm_patience_drop": "The user may be losing patience recently. This turn, proactively converge, give conclusions first.",
     "rhythm_stalled_followup": "The user has been asking follow-ups on the same point for multiple turns. This turn, change the approach or use a different example."
+  },
+  "entity_cards": {
+    "task": {
+      "untitled": "Unnamed Task",
+      "view": "View Task",
+      "share": "Share Task"
+    },
+    "plan": {
+      "untitled": "Unnamed Plan",
+      "view": "View Plan",
+      "share": "Share Plan"
+    },
+    "task_list": {
+      "title_with_count": "{count} executable tasks",
+      "summary_ai_generated": "AI has organized these into an executable task list",
+      "view_plan": "View Plan",
+      "view_tasks": "View Tasks",
+      "share_plan": "Share Plan"
+    },
+    "knowledge_node": {
+      "untitled": "Unnamed Knowledge Node",
+      "view": "View Knowledge",
+      "share": "Share Knowledge Card"
+    },
+    "source_document": {
+      "default_title": "Source Material",
+      "view": "View Source",
+      "correct": "Correct Source",
+      "correct_prompt": "This source citation is inaccurate, please reselect source based on my correction.",
+      "convert": "Convert to Knowledge Node"
+    },
+    "review": {
+      "default_title": "Review Suggestion",
+      "start": "Start Review",
+      "share": "Share Review"
+    },
+    "vocabulary": {
+      "default_title": "Vocabulary Card",
+      "view": "View Vocabulary",
+      "wordbook": "Go to Wordbook"
+    },
+    "seed": {
+      "default_title": "Seed Content",
+      "view": "View Seed",
+      "adopt": "Adopt Seed",
+      "share": "Share Seed"
+    },
+    "learning_path": {
+      "title": "Learning Path: {target}",
+      "summary": "AI has generated learning path and executable tasks",
+      "view_plan": "View Study Plan",
+      "share": "Share Learning Path"
+    },
+    "prediction": {
+      "continue": "Continue by Prediction",
+      "view_reasons": "View Reasons"
+    },
+    "shared_resource": {
+      "view": "View Resource",
+      "adopt": "Adopt to My Space"
+    },
+    "execution_tasks": "Contains {count} executable tasks"
   }
 }

@@ -364,6 +364,7 @@ class GenerateTasksForPlanTool(BaseTool):
                         plan_id=params.plan_id,
                         plan_title=plan_snapshot.name,
                         rag_quality=rag_quality,
+                        locale=locale,
                     ),
                 ),
             )

@@ -192,9 +192,12 @@ def build_task_entity_card(
     tool_name: str,
     tool_result_id: str | None = None,
     source_channel: str = "ai_tool",
+    locale: str = "en",
 ) -> dict[str, Any]:
+    from app.core.i18n import I18n
+    t = lambda key, **kwargs: I18n.t(key, locale=locale, **kwargs)
     task_id = str(task.get("id")) if task.get("id") is not None else None
-    title = task.get("title") or "未命名任务"
+    title = task.get("title") or t("entity_cards.task.untitled")
     guide_content = task.get("guide_content") or task.get("description")
     plan_id = task.get("plan_id")
     return build_entity_card(
@@ -213,7 +216,7 @@ def build_task_entity_card(
         primary_action=build_entity_action(
             action_id="open_task",
             action_type="open_detail",
-            label="查看任务",
+            label=t("entity_cards.task.view"),
             route=f"/tasks/{task_id}" if task_id else None,
         ),
         secondary_actions=(
@@ -221,7 +224,7 @@ def build_task_entity_card(
                 build_entity_action(
                     action_id="share_task",
                     action_type="share_resource",
-                    label="分享卡片",
+                    label=t("entity_cards.task.share"),
                     payload={"resource_type": "task", "resource_id": task_id},
                 )
             ]
@@ -261,9 +264,12 @@ def build_plan_entity_card(
     tool_name: str,
     tool_result_id: str | None = None,
     source_channel: str = "ai_tool",
+    locale: str = "en",
 ) -> dict[str, Any]:
+    from app.core.i18n import I18n
+    t = lambda key, **kwargs: I18n.t(key, locale=locale, **kwargs)
     plan_id = str(plan.get("id") or plan.get("plan_id")) if (plan.get("id") or plan.get("plan_id")) else None
-    title = plan.get("title") or plan.get("name") or "未命名计划"
+    title = plan.get("title") or plan.get("name") or t("entity_cards.plan.untitled")
     description = plan.get("description")
     return build_entity_card(
         entity_type="plan",
@@ -276,7 +282,7 @@ def build_plan_entity_card(
         primary_action=build_entity_action(
             action_id="open_plan",
             action_type="open_detail",
-            label="查看计划",
+            label=t("entity_cards.plan.view"),
             route=f"/plans/{plan_id}" if plan_id else None,
         ),
         secondary_actions=(
@@ -284,7 +290,7 @@ def build_plan_entity_card(
                 build_entity_action(
                     action_id="share_plan",
                     action_type="share_resource",
-                    label="分享计划",
+                    label=t("entity_cards.plan.share"),
                     payload={"resource_type": "plan", "resource_id": plan_id},
                 )
             ]
@@ -328,22 +334,27 @@ def build_task_list_entity_card(
     plan_title: str | None = None,
     source_channel: str = "ai_tool",
     rag_quality: str | None = None,
+    locale: str = "en",
 ) -> dict[str, Any]:
+    from app.core.i18n import I18n
+    t = lambda key, **kwargs: I18n.t(key, locale=locale, **kwargs)
+
     children = [
         build_task_entity_card(
             task,
             tool_name=tool_name,
             tool_result_id=tool_result_id,
             source_channel=source_channel,
+            locale=locale,
         )
         for task in tasks
     ]
-    title = plan_title or f"{len(tasks)} 个可执行任务"
+    title = plan_title or t("entity_cards.task_list.title_with_count", count=len(tasks))
     return build_entity_card(
         entity_type="task_list",
         entity_id=tool_result_id,
         title=title,
-        summary="AI 已将建议整理成可执行任务列表",
+        summary=t("entity_cards.task_list.summary_ai_generated"),
         status="batch",
         execution_state="draft",
         source=_compact_dict({"channel": source_channel, "tool_name": tool_name}),
@@ -351,14 +362,14 @@ def build_task_list_entity_card(
             build_entity_action(
                 action_id="open_plan",
                 action_type="open_detail",
-                label="查看计划",
+                label=t("entity_cards.task_list.view_plan"),
                 route=f"/plans/{plan_id}" if plan_id else None,
             )
             if plan_id
             else build_entity_action(
                 action_id="open_tasks",
                 action_type="open_detail",
-                label="查看任务",
+                label=t("entity_cards.task_list.view_tasks"),
                 route="/tasks",
             )
         ),
@@ -367,7 +378,7 @@ def build_task_list_entity_card(
                 build_entity_action(
                     action_id="share_plan",
                     action_type="share_resource",
-                    label="分享计划",
+                    label=t("entity_cards.task_list.share_plan"),
                     payload={"resource_type": "plan", "resource_id": plan_id},
                 )
             ]
@@ -379,7 +390,7 @@ def build_task_list_entity_card(
                 resource_type="plan" if plan_id else "task",
                 resource_id=plan_id or str(tasks[0].get("id")) if tasks else "",
                 title=title,
-                subtitle=f"包含 {len(tasks)} 个可执行任务",
+                subtitle=t("entity_cards.execution_tasks", count=len(tasks)),
                 meta=_compact_dict({"plan_title": plan_title, "rag_quality": rag_quality}),
             )
             if tasks
@@ -795,34 +806,41 @@ def build_learning_path_entity_card(
     tool_name: str,
     tool_result_id: str | None = None,
     source_channel: str = "learning_path",
+    locale: str = "en",
 ) -> dict[str, Any]:
+    from app.core.i18n import I18n
+    t = lambda key, **kwargs: I18n.t(key, locale=locale, **kwargs)
+
     plan_card = build_plan_entity_card(
         plan,
         tool_name=tool_name,
         tool_result_id=tool_result_id,
         source_channel=source_channel,
+        locale=locale,
     )
+    plan_title = str(plan.get("name") or plan.get("title") or t("entity_cards.learning_path.title", target=target_name))
     task_list_card = build_task_list_entity_card(
         tasks,
         tool_name=tool_name,
         tool_result_id=tool_result_id,
         plan_id=str(plan.get("id") or plan.get("plan_id") or ""),
-        plan_title=str(plan.get("name") or plan.get("title") or f"学习路径：{target_name}"),
+        plan_title=plan_title,
         source_channel=source_channel,
+        locale=locale,
     )
     plan_id = plan_card.get("entity_id")
     return build_entity_card(
         entity_type="learning_path",
         entity_id=plan_id,
-        title=f"学习路径：{target_name}",
-        summary=plan_card.get("summary") or "AI 已生成学习路径与可执行任务",
+        title=t("entity_cards.learning_path.title", target=target_name),
+        summary=plan_card.get("summary") or t("entity_cards.learning_path.summary"),
         status="generated",
         execution_state="draft",
         source=_compact_dict({"channel": source_channel, "tool_name": tool_name}),
         primary_action=build_entity_action(
             action_id="open_learning_path_plan",
             action_type="open_detail",
-            label="查看学习计划",
+            label=t("entity_cards.learning_path.view_plan"),
             route=f"/plans/{plan_id}" if plan_id else "/plans",
         ),
         secondary_actions=(
@@ -830,7 +848,7 @@ def build_learning_path_entity_card(
                 build_entity_action(
                     action_id="share_learning_path",
                     action_type="share_resource",
-                    label="分享学习路径",
+                    label=t("entity_cards.learning_path.share"),
                     payload={"resource_type": "plan", "resource_id": plan_id},
                 )
             ]
@@ -841,7 +859,7 @@ def build_learning_path_entity_card(
             build_share_payload(
                 resource_type="plan",
                 resource_id=plan_id or "",
-                title=f"学习路径：{target_name}",
+                title=t("entity_cards.learning_path.title", target=target_name),
                 subtitle=plan_card.get("summary"),
                 meta=_compact_dict({"task_count": len(tasks), "target_name": target_name}),
             )

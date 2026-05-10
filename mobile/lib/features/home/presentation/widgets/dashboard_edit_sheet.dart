@@ -49,8 +49,8 @@ class _DashboardEditSheetState extends ConsumerState<DashboardEditSheet> {
                 );
                 setState(() => _tab = tab);
               },
-              sectionsLabel: zh ? '页面分区' : 'Sections',
-              workspaceLabel: zh ? '工作区卡片' : 'Workspace cards',
+              sectionsLabel: context.l10n.dashboardSectionsLabel,
+              workspaceLabel: context.l10n.dashboardWorkspaceCards,
             ),
             const SizedBox(height: DS.spacing16),
             Expanded(
@@ -133,7 +133,7 @@ class _SlotEditor extends ConsumerWidget {
                 );
                 notifier.resetToLeanView();
               },
-              child: Text(zh ? '回到精简' : 'Lean view'),
+              child: Text(context.l10n.dashboardLeanView),
             ),
             TextButton(
               onPressed: () {
@@ -264,8 +264,8 @@ class _EditableSlotTile extends StatelessWidget {
             ),
             IconButton(
               tooltip: isCollapsed
-                  ? (zh ? '展开' : 'Expand')
-                  : (zh ? '收起' : 'Collapse'),
+                  ? context.l10n.slotEditorExpand
+                  : context.l10n.slotEditorCollapse,
               visualDensity: VisualDensity.compact,
               onPressed: isVisible ? onToggleCollapsed : null,
               icon: Icon(

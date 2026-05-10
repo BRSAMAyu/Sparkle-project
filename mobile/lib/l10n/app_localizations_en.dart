@@ -7124,6 +7124,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shareRegenerateCard => 'Regenerate';
 
   @override
+  String get shareCaptionStyleFlex => 'Flex';
+
+  @override
+  String get shareCaptionStyleCinematic => 'Cinematic';
+
+  @override
+  String get shareCaptionStyleHumble => 'Low-key';
+
+  @override
+  String get shareCaptionStyleInvite => 'Invite';
+
+  @override
+  String get shareContentAchievement => 'Achievement';
+
+  @override
+  String get shareContentTaskCompletion => 'Task Done';
+
+  @override
+  String get shareContentPlanProgress => 'Study Plan';
+
+  @override
+  String get shareContentCapsule => 'Time Capsule';
+
+  @override
+  String get shareContentKnowledgeNode => 'Knowledge Node';
+
+  @override
+  String get shareContentLearningReport => 'Learning Report';
+
+  @override
+  String get shareContentCognitivePrism => 'Cognitive Prism';
+
+  @override
   String get notificationPermissionStatus => 'Notification Permission';
 
   @override
@@ -34501,6 +34534,25 @@ class AppLocalizationsEn extends AppLocalizations {
       'If this read is off, correct it here:';
 
   @override
+  String get dashboardSectionsLabel => 'Sections';
+
+  @override
+  String get dashboardWorkspaceCards => 'Workspace cards';
+
+  @override
+  String get dashboardLeanView => 'Lean view';
+
+  @override
+  String get slotEditorExpand => 'Expand';
+
+  @override
+  String get slotEditorCollapse => 'Collapse';
+
+  @override
+  String get dashboardAllSectionsVisible =>
+      'All sections start visible. Switch to hide, drag to reorder, tap to collapse low-glance sections into a 64px header.';
+
+  @override
   String get auroraSensing => 'Aurora · Lightweight Sensing';
 
   @override
@@ -34524,19 +34576,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get auroraStrategyActive => 'Aurora · Strategy Active';
-
-  @override
-  String get dashboardSectionsLabel => 'Sections';
-
-  @override
-  String get dashboardWorkspaceCards => 'Workspace cards';
-
-  @override
-  String get dashboardLeanView => 'Lean view';
-
-  @override
-  String get dashboardAllSectionsVisible =>
-      'All sections start visible. Switch to hide, drag to reorder, tap to collapse low-glance sections into a 64px header.';
 
   @override
   String get notificationWelcomeTitle =>

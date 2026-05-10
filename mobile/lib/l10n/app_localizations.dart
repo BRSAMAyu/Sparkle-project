@@ -12776,6 +12776,72 @@ abstract class AppLocalizations {
   /// **'重新生成'**
   String get shareRegenerateCard;
 
+  /// No description provided for @shareCaptionStyleFlex.
+  ///
+  /// In zh, this message translates to:
+  /// **'高光炫耀'**
+  String get shareCaptionStyleFlex;
+
+  /// No description provided for @shareCaptionStyleCinematic.
+  ///
+  /// In zh, this message translates to:
+  /// **'氛围感'**
+  String get shareCaptionStyleCinematic;
+
+  /// No description provided for @shareCaptionStyleHumble.
+  ///
+  /// In zh, this message translates to:
+  /// **'低调分享'**
+  String get shareCaptionStyleHumble;
+
+  /// No description provided for @shareCaptionStyleInvite.
+  ///
+  /// In zh, this message translates to:
+  /// **'邀请同行'**
+  String get shareCaptionStyleInvite;
+
+  /// No description provided for @shareContentAchievement.
+  ///
+  /// In zh, this message translates to:
+  /// **'成就分享'**
+  String get shareContentAchievement;
+
+  /// No description provided for @shareContentTaskCompletion.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务完成'**
+  String get shareContentTaskCompletion;
+
+  /// No description provided for @shareContentPlanProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习计划'**
+  String get shareContentPlanProgress;
+
+  /// No description provided for @shareContentCapsule.
+  ///
+  /// In zh, this message translates to:
+  /// **'时光胶囊'**
+  String get shareContentCapsule;
+
+  /// No description provided for @shareContentKnowledgeNode.
+  ///
+  /// In zh, this message translates to:
+  /// **'知识节点'**
+  String get shareContentKnowledgeNode;
+
+  /// No description provided for @shareContentLearningReport.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习报告'**
+  String get shareContentLearningReport;
+
+  /// No description provided for @shareContentCognitivePrism.
+  ///
+  /// In zh, this message translates to:
+  /// **'认知棱镜'**
+  String get shareContentCognitivePrism;
+
   /// No description provided for @notificationPermissionStatus.
   ///
   /// In zh, this message translates to:
@@ -60175,6 +60241,42 @@ abstract class AppLocalizations {
   /// **'如果我判断错了，直接改一下：'**
   String get auroraIfReadOffCorrectHere;
 
+  /// No description provided for @dashboardSectionsLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'页面分区'**
+  String get dashboardSectionsLabel;
+
+  /// No description provided for @dashboardWorkspaceCards.
+  ///
+  /// In zh, this message translates to:
+  /// **'工作区卡片'**
+  String get dashboardWorkspaceCards;
+
+  /// No description provided for @dashboardLeanView.
+  ///
+  /// In zh, this message translates to:
+  /// **'回到精简'**
+  String get dashboardLeanView;
+
+  /// No description provided for @slotEditorExpand.
+  ///
+  /// In zh, this message translates to:
+  /// **'展开'**
+  String get slotEditorExpand;
+
+  /// No description provided for @slotEditorCollapse.
+  ///
+  /// In zh, this message translates to:
+  /// **'收起'**
+  String get slotEditorCollapse;
+
+  /// No description provided for @dashboardAllSectionsVisible.
+  ///
+  /// In zh, this message translates to:
+  /// **'所有分区默认可见。开关隐藏，拖拽排序，按让低频分区收成 64px 标题条。'**
+  String get dashboardAllSectionsVisible;
+
   /// No description provided for @auroraSensing.
   ///
   /// In zh, this message translates to:
@@ -60222,30 +60324,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'Aurora · 策略已激活'**
   String get auroraStrategyActive;
-
-  /// No description provided for @dashboardSectionsLabel.
-  ///
-  /// In zh, this message translates to:
-  /// **'页面分区'**
-  String get dashboardSectionsLabel;
-
-  /// No description provided for @dashboardWorkspaceCards.
-  ///
-  /// In zh, this message translates to:
-  /// **'工作区卡片'**
-  String get dashboardWorkspaceCards;
-
-  /// No description provided for @dashboardLeanView.
-  ///
-  /// In zh, this message translates to:
-  /// **'回到精简'**
-  String get dashboardLeanView;
-
-  /// No description provided for @dashboardAllSectionsVisible.
-  ///
-  /// In zh, this message translates to:
-  /// **'所有分区默认可见。开关隐藏，拖拽排序，按让低频分区收成 64px 标题条。'**
-  String get dashboardAllSectionsVisible;
 
   /// No description provided for @notificationWelcomeTitle.
   ///

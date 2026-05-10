@@ -11,7 +11,49 @@
   "planner": {
     "constraints_header": "规划约束（必须尽量满足）：",
     "ai_study_plan": "AI 学习计划",
-    "start_task_with": "在开始目标任务前，先安排一个针对「{topic}」"
+    "start_task_with": "在开始目标任务前，先安排一个针对「{topic}」",
+    "graph_context_header": "参考以下知识图谱上下文（包含相关概念、前置知识和用户当前的掌握情况）：",
+    "graph_context_instructions": "请根据上述上下文调整任务：",
+    "instruction_priority_locked": "优先安排用户尚未掌握的前置知识（Status: Locked 或 Mastery 低）。",
+    "instruction_mastery_review": "对于已掌握的知识，可以生成复习或高阶应用任务。",
+    "instruction_cover_gaps": "确保任务覆盖上下文中的关键盲点。",
+    "llm_prompt_header": "你是一个学习规划专家。根据以下学习计划信息，生成 {count} 个具体可执行的微任务。",
+    "plan_info": "计划信息",
+    "plan_name": "计划名称",
+    "plan_description": "计划描述",
+    "description_unavailable": "未提供",
+    "learning_topic": "学习主题",
+    "difficulty_level": "难度级别",
+    "task_requirements": "任务要求",
+    "task_requirement_duration": "每个任务必须在 5-{max} 分钟内可完成",
+    "task_requirement_specific": "任务要具体可执行，不要模糊（例如'完成第 3-5 题练习题'而非'学习微积分概念'）",
+    "task_requirement_prerequisite": "若存在前置知识盲点，必须优先安排前置补齐任务",
+    "task_requirement_order": "按难度递进顺序排列（简单→中等→困难）",
+    "task_types": "任务类型: learning/training/error_fix/reflection",
+    "priority_allocation": "优先级分配: 简单任务 1-2，中等 2-3，困难 4-5",
+    "return_format": "返回格式必须是有效的 JSON 数组，包含 {count} 个任务对象：",
+    "strict_json": "严格返回 JSON 格式，不要其他文本。",
+    "json_title_example": "具体任务标题",
+    "json_desc_example": "任务描述和要求",
+    "fallback_topic_default": "当前主题",
+    "fallback_prerequisite_title": "补齐前置知识：{node}",
+    "fallback_prerequisite_desc": "用一轮短时学习梳理「{node}」的核心定义、关键公式与典型应用，为后续学习 {target} 做准备。",
+    "fallback_concept_framework": "建立 {target} 核心概念框架",
+    "fallback_concept_framework_desc": "整理 {target} 的核心概念、关键模型与常见场景。",
+    "fallback_practice": "完成 {target} 专项练习",
+    "fallback_practice_desc": "围绕 {target} 做一组由浅入深的练习，记录每道题使用的知识点和卡住的位置。",
+    "fallback_review": "复盘 {target} 易错点",
+    "fallback_review_desc": "回顾今天的易错点，补写一份纠错清单，并确认是否真正理解 {target}。",
+    "fallback_core_concepts": "梳理 {topic} 核心概念",
+    "fallback_core_concepts_desc": "阅读材料并提炼 {topic} 的核心概念、关键术语和基本结构，形成一页摘要。",
+    "fallback_basic_practice": "完成 {topic} 基础练习",
+    "fallback_basic_practice_desc": "选择 3-5 道基础题或一个小练习，验证自己是否能正确应用 {topic} 的核心方法。",
+    "fallback_locate_errors": "定位 {topic} 易错点",
+    "fallback_locate_errors_desc": "记录最容易混淆的概念、公式或步骤，补齐对应薄弱点。",
+    "fallback_summary": "输出 {topic} 学习总结",
+    "fallback_summary_desc": "用自己的话总结 {topic} 的学习收获，整理下一次继续推进时要优先处理的问题。",
+    "fallback_consolidation": "{topic} 巩固任务 {index}",
+    "fallback_consolidation_desc": "围绕 {topic} 再完成一轮针对性巩固，重点检查上一轮中尚未完全掌握的内容。"
   },
   "workflow": {
     "analyzing": "正在分析并规划任务...",
@@ -447,5 +489,67 @@
     "rhythm_deepening_focus": "；这轮允许更展开，但保持结构化。",
     "rhythm_patience_drop": "用户最近可能正在失去耐心；这轮请主动收敛，先给结论。",
     "rhythm_stalled_followup": "用户已经连续多轮围绕同一点追问；这轮请换一种讲法或换一个例子。"
+  },
+  "entity_cards": {
+    "task": {
+      "untitled": "未命名任务",
+      "view": "查看任务",
+      "share": "分享任务"
+    },
+    "plan": {
+      "untitled": "未命名计划",
+      "view": "查看计划",
+      "share": "分享计划"
+    },
+    "task_list": {
+      "title_with_count": "{count} 个可执行任务",
+      "summary_ai_generated": "AI 已将建议整理成可执行任务列表",
+      "view_plan": "查看计划",
+      "view_tasks": "查看任务",
+      "share_plan": "分享计划"
+    },
+    "knowledge_node": {
+      "untitled": "未命名知识节点",
+      "view": "查看知识点",
+      "share": "分享知识卡"
+    },
+    "source_document": {
+      "default_title": "来源资料",
+      "view": "查看资料来源",
+      "correct": "纠正来源",
+      "correct_prompt": "这条资料引用不准确，请按我的纠正重新选择来源。",
+      "convert": "转成知识点"
+    },
+    "review": {
+      "default_title": "复盘建议",
+      "start": "开始复盘",
+      "share": "分享复盘"
+    },
+    "vocabulary": {
+      "default_title": "词汇卡片",
+      "view": "查看词汇",
+      "wordbook": "去单词本复习"
+    },
+    "seed": {
+      "default_title": "种子内容",
+      "view": "查看种子",
+      "adopt": "采纳种子",
+      "share": "分享种子"
+    },
+    "learning_path": {
+      "title": "学习路径：{target}",
+      "summary": "AI 已生成学习路径与可执行任务",
+      "view_plan": "查看学习计划",
+      "share": "分享学习路径"
+    },
+    "prediction": {
+      "continue": "按预测继续",
+      "view_reasons": "查看原因"
+    },
+    "shared_resource": {
+      "view": "查看资源",
+      "adopt": "采纳到我的空间"
+    },
+    "execution_tasks": "包含 {count} 个可执行任务"
   }
 }

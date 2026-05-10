@@ -6848,6 +6848,39 @@ class AppLocalizationsZh extends AppLocalizations {
   String get shareRegenerateCard => '重新生成';
 
   @override
+  String get shareCaptionStyleFlex => '高光炫耀';
+
+  @override
+  String get shareCaptionStyleCinematic => '氛围感';
+
+  @override
+  String get shareCaptionStyleHumble => '低调分享';
+
+  @override
+  String get shareCaptionStyleInvite => '邀请同行';
+
+  @override
+  String get shareContentAchievement => '成就分享';
+
+  @override
+  String get shareContentTaskCompletion => '任务完成';
+
+  @override
+  String get shareContentPlanProgress => '学习计划';
+
+  @override
+  String get shareContentCapsule => '时光胶囊';
+
+  @override
+  String get shareContentKnowledgeNode => '知识节点';
+
+  @override
+  String get shareContentLearningReport => '学习报告';
+
+  @override
+  String get shareContentCognitivePrism => '认知棱镜';
+
+  @override
   String get notificationPermissionStatus => '通知权限状态';
 
   @override
@@ -33080,6 +33113,25 @@ class AppLocalizationsZh extends AppLocalizations {
   String get auroraIfReadOffCorrectHere => '如果我判断错了，直接改一下：';
 
   @override
+  String get dashboardSectionsLabel => '页面分区';
+
+  @override
+  String get dashboardWorkspaceCards => '工作区卡片';
+
+  @override
+  String get dashboardLeanView => '回到精简';
+
+  @override
+  String get slotEditorExpand => '展开';
+
+  @override
+  String get slotEditorCollapse => '收起';
+
+  @override
+  String get dashboardAllSectionsVisible =>
+      '所有分区默认可见。开关隐藏，拖拽排序，按让低频分区收成 64px 标题条。';
+
+  @override
   String get auroraSensing => 'Aurora · 轻量感知中';
 
   @override
@@ -33102,19 +33154,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get auroraStrategyActive => 'Aurora · 策略已激活';
-
-  @override
-  String get dashboardSectionsLabel => '页面分区';
-
-  @override
-  String get dashboardWorkspaceCards => '工作区卡片';
-
-  @override
-  String get dashboardLeanView => '回到精简';
-
-  @override
-  String get dashboardAllSectionsVisible =>
-      '所有分区默认可见。开关隐藏，拖拽排序，按让低频分区收成 64px 标题条。';
 
   @override
   String get notificationWelcomeTitle => '欢迎使用星火AI学习助手';

@@ -37,11 +37,11 @@ class CommunityStrategyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isChinese = I18nService.instance.isChinese;
+    final l10n = context.l10n;
 
     return Semantics(
       container: true,
-      label: isChinese ? '社区策略：${strategy.title}' : 'Community strategy: ${strategy.title}',
+      label: l10n.communityStrategyLabel,
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(

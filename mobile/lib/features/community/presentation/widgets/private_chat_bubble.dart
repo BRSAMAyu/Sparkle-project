@@ -292,7 +292,7 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
       }
       AppFeedback.error(
         context,
-        context.isChinese ? '采纳失败: $e' : 'Adoption failed: $e',
+        context.l10n.communityAdoptFailed(e.toString()),
       );
     }
   }
