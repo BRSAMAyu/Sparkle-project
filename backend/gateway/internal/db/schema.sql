@@ -280,6 +280,8 @@ ALTER TYPE focustype OWNER TO postgres;
 CREATE TYPE friendshipstatus AS ENUM (
     'PENDING',
     'ACCEPTED',
+    'REJECTED',
+    'CANCELLED',
     'BLOCKED'
 );
 
@@ -4224,14 +4226,17 @@ CREATE TABLE posts (
     image_urls json,
     topic character varying(100),
     visibility character varying(20) NOT NULL,
-    like_count integer,
-    comment_count integer,
+    like_count integer NOT NULL DEFAULT 0,
+    comment_count integer NOT NULL DEFAULT 0,
     id uuid NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
     deleted_at timestamp without time zone
 );
 
+-- Indexes for posts table (performance optimization)
+CREATE INDEX idx_posts_created_at ON posts (created_at DESC);
+CREATE INDEX idx_posts_not_deleted_created ON posts (deleted_at, created_at DESC) WHERE deleted_at IS NULL;
 
 ALTER TABLE posts OWNER TO postgres;
 
