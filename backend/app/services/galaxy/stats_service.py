@@ -183,13 +183,15 @@ class GalaxyStatsService:
                     mastery_score=status.mastery_score,
                 )
 
-            # Perfectionist achievement (100% mastery)
+            # Perfectionist achievement (100% mastery) — use HIDDEN_TRIGGER so
+            # AchievementEventConsumer._handle_node_updated can reach PERFECTIONIST
             if status.mastery_score >= 100:
                 await achievement_engine.process_event(
                     user_id=str(user_id),
-                    event_type=AchievementEvent.NODE_MASTERED,
+                    event_type=AchievementEvent.HIDDEN_TRIGGER,
                     node_id=str(node_id),
                     mastery_score=status.mastery_score,
+                    hidden_trigger_code="PERFECTIONIST",
                 )
         except Exception as e:
             logger.warning(f"Achievement processing failed in spark_node: {e}")
