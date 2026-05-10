@@ -3,6 +3,7 @@ Galaxy 事件消费者 - 处理错题创建事件
 """
 
 import asyncio
+import os
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -50,7 +51,7 @@ class GalaxyEventConsumer:
                 await self.event_bus.subscribe(
                     stream=self.STREAM_NAME,
                     group_name=self.GROUP_NAME,
-                    consumer_name=f"galaxy-{_utcnow().timestamp()}",
+                    consumer_name=f"galaxy-{os.getpid()}",
                     callback=self.handle_event,
                 )
                 break  # subscribe 内部是循环，成功后跳出
