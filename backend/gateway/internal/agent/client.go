@@ -186,18 +186,23 @@ func (c *Client) reconnect(ctx context.Context) error {
 		return ErrServiceUnavailable
 	}
 
-	c.reconnectMu.Lock()
-	defer c.reconnectMu.Unlock()
-
-	// R5-G07: Rate-limit reconnect attempts (minimum 2s between attempts)
+	// P1-12 fix: calculate sleep outside the lock to avoid blocking
+	// other goroutines that want to reconnect
 	minGap := c.minReconnectGap
 	if minGap == 0 {
 		minGap = 2 * time.Second
 	}
+	var sleepDur time.Duration
+	c.reconnectMu.Lock()
 	if elapsed := time.Since(c.lastReconnectAt); elapsed < minGap {
-		time.Sleep(minGap - elapsed)
+		sleepDur = minGap - elapsed
 	}
 	c.lastReconnectAt = time.Now()
+	c.reconnectMu.Unlock()
+
+	if sleepDur > 0 {
+		time.Sleep(sleepDur)
+	}
 
 	if conn := c.currentConn(); conn != nil {
 		state := conn.GetState()
