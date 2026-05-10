@@ -170,7 +170,7 @@ def _record_token_usage(model: str, prompt_tokens: int, completion_tokens: int, 
             output_tokens=completion_tokens, endpoint=source,
         )
     except Exception:
-        logger.debug("_record_token_usage: monitoring failed", exc_info=True)
+        logger.warning("_record_token_usage: monitoring failed for model=%s", model, exc_info=True)
 
 
 async def _track_daily_user_tokens(user_id: str | None, total_tokens: int) -> None:

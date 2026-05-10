@@ -47,6 +47,16 @@ def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
+_LIBERAL_ARTS_KEYWORDS = frozenset({"liberal_arts", "文科", "arts", "humanities", "文学", "人文"})
+
+
+def _is_liberal_arts(background: str | None) -> bool:
+    if not background:
+        return False
+    bg = str(background).strip().lower()
+    return bg in _LIBERAL_ARTS_KEYWORDS or any(kw in bg for kw in _LIBERAL_ARTS_KEYWORDS)
+
+
 class ReviewDecision(Enum):
     """Plan review decision types"""
 
@@ -920,7 +930,7 @@ class PlanReviewService:
                     return False
 
                 # Additional check: liberal arts background needs more time for technical goals
-                if user_background == "liberal_arts" and daily_hours < 3:
+                if _is_liberal_arts(user_background) and daily_hours < 3:
                     logger.warning(
                         f"Feasibility check failed: liberal arts user attempting {difficulty} "
                         f"technical goal with only {daily_hours}h/day"
@@ -947,7 +957,7 @@ class PlanReviewService:
                         return False
 
             # === Check 2: Liberal arts student attempting advanced technical goals ===
-            if user_background == "liberal_arts" or "文科" in str(user_background):
+            if _is_liberal_arts(user_background):
                 # If user indicated they don't know code, advanced programming goals need review
                 if any(word in title for word in ["爬虫", "web开发", "全栈", "crawler"]):
                     # Check if plan includes setup/basics
@@ -1912,7 +1922,8 @@ Please review this plan and provide your assessment."""
         """
         # This would integrate with a plan storage system
         # For now, plans are stored in orchestrator state
-        logger.info(f"Retrieving stored plan {plan_id} for user {user_id}")
+        logger.info("Retrieving stored plan %s for user %s", plan_id, user_id)
+        logger.debug("get_stored_plan: plan storage integration not yet implemented")
         return None
 
     async def resume_plan_after_approval(

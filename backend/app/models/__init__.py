@@ -225,6 +225,8 @@ from app.models.task_resources import TaskKnowledgeLink, TaskResourceLink, TaskR
 try:
     from app.models.task_history import TaskHistory
 except ImportError:
+    import logging
+    logging.getLogger(__name__).debug("task_history model not available", exc_info=True)
     TaskHistory = None
 from app.models.theater_prediction import TheaterPrediction
 from app.models.tool_history import UserToolHistory
@@ -254,7 +256,8 @@ try:
         WorkflowCheckpoint,
     )
 except ImportError:
-    pass
+    import logging
+    logging.getLogger(__name__).debug("workflow_conversation model not available", exc_info=True)
 
 __all__ = [
     # Base

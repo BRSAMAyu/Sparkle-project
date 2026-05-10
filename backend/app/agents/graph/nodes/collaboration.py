@@ -634,7 +634,8 @@ async def _merge_parallel_results(
         )
         llm = LLMFactory.get_llm("aggregator")
         merged_response = await llm.ainvoke([HumanMessage(content=merge_prompt)])
-        merged_messages.append(merged_response)
+        if merged_response is not None:
+            merged_messages.append(merged_response)
 
     return {
         "messages": merged_messages,

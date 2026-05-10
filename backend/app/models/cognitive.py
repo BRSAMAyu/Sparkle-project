@@ -5,7 +5,7 @@ Cognitive Prism Models
 import enum
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import JSON, Boolean, Column, DateTime, Enum, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Boolean, CheckConstraint, Column, DateTime, Enum, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import deferred, relationship
 
 from app.models.base import GUID, BaseModel
@@ -65,7 +65,10 @@ class CognitiveFragment(BaseModel):
     context_tags = Column(JSON, nullable=True) # Context: { "location": "library", "mood": "anxious", "people": "alone" }
 
     # 严重程度 (v2.3)
-    severity = Column(Integer, default=1, nullable=False) # 1-5
+    severity = Column(Integer, default=1, nullable=False)  # 1-5
+    __table_args__ = (
+        CheckConstraint("severity >= 1 AND severity <= 5", name="ck_cognitive_fragment_severity"),
+    )
 
     # 语义向量
     embedding = deferred(Column(VectorCompat, nullable=True))
