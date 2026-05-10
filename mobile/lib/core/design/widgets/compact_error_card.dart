@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// Compact error indicator for inline cards — replaces SizedBox.shrink()
 /// so users see a visible hint + tap-to-retry instead of silent disappearance.
@@ -11,7 +11,6 @@ class CompactErrorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zh = I18nService.instance.isChinese;
     return GestureDetector(
       onTap: onRetry,
       child: Padding(
@@ -25,13 +24,13 @@ class CompactErrorCard extends StatelessWidget {
             Icon(Icons.error_outline, size: 14, color: DS.textTertiary),
             const SizedBox(width: DS.spacing6),
             Text(
-              zh ? '加载失败' : 'Failed to load',
+              context.l10n.compactErrorLoadFailed,
               style: TextStyle(fontSize: 12, color: DS.textTertiary),
             ),
             if (onRetry != null) ...[
               const SizedBox(width: DS.spacing6),
               Text(
-                zh ? '轻触重试' : 'Tap to retry',
+                context.l10n.compactErrorTapRetry,
                 style: TextStyle(fontSize: 12, color: DS.brandPrimary),
               ),
             ],

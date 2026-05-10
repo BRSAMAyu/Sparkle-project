@@ -15427,5 +15427,7 @@
         "type": "int"
       }
     }
-  }
+  },
+  "compactErrorLoadFailed": "加载失败",
+  "compactErrorTapRetry": "轻触重试"
 }

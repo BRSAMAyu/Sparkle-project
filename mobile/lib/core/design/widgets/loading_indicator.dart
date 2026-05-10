@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// 加载指示器类型
 enum LoadingType {
@@ -136,14 +136,14 @@ class LoadingIndicator extends StatelessWidget {
       return Semantics(
         container: true,
         liveRegion: true,
-        label: loadingText ?? (I18nService.instance.isChinese ? '加载中' : 'Loading'),
+        label: loadingText ?? context.l10n.commonLoading,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             indicator,
             const SizedBox(height: DS.spacing12),
             Text(
-              loadingText ?? (I18nService.instance.isChinese ? '加载中...' : 'Loading...'),
+              loadingText ?? context.l10n.commonLoading,
               style: TextStyle(
                 fontSize: DS.fontSizeSm,
                 color: context.colors.textSecondary,
@@ -157,7 +157,7 @@ class LoadingIndicator extends StatelessWidget {
     return Semantics(
       container: true,
       liveRegion: true,
-      label: loadingText ?? (I18nService.instance.isChinese ? '加载中' : 'Loading'),
+      label: loadingText ?? context.l10n.commonLoading,
       child: indicator,
     );
   }
@@ -195,7 +195,7 @@ class LoadingIndicator extends StatelessWidget {
   Widget _buildLinearLoading(BuildContext context) => Semantics(
         container: true,
         liveRegion: true,
-        label: loadingText ?? (I18nService.instance.isChinese ? '加载中' : 'Loading'),
+        label: loadingText ?? context.l10n.commonLoading,
         child: LinearProgressIndicator(
           valueColor: AlwaysStoppedAnimation<Color>(
             color ?? DS.primaryBase,
@@ -210,7 +210,7 @@ class LoadingIndicator extends StatelessWidget {
           child: Semantics(
             container: true,
             liveRegion: true,
-            label: loadingText ?? (I18nService.instance.isChinese ? '加载中' : 'Loading'),
+            label: loadingText ?? context.l10n.commonLoading,
             child: SparkleStaggerItem(
               index: 0,
               motionToken: SparkleMotionToken.micro,

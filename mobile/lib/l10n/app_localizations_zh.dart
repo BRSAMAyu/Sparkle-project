@@ -33673,4 +33673,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get dashboardStart25Min => '先做 25 分钟';
+
+  @override
+  String get compactErrorLoadFailed => '加载失败';
+
+  @override
+  String get compactErrorTapRetry => '轻触重试';
 }

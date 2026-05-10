@@ -35116,4 +35116,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dashboardStart25Min => 'Start a 25-min Focus';
+
+  @override
+  String get compactErrorLoadFailed => 'Failed to load';
+
+  @override
+  String get compactErrorTapRetry => 'Tap to retry';
 }

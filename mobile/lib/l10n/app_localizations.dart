@@ -61302,6 +61302,18 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'先做 25 分钟'**
   String get dashboardStart25Min;
+
+  /// No description provided for @compactErrorLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载失败'**
+  String get compactErrorLoadFailed;
+
+  /// No description provided for @compactErrorTapRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'轻触重试'**
+  String get compactErrorTapRetry;
 }
 
 class _AppLocalizationsDelegate

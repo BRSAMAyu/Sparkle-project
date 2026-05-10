@@ -15420,5 +15420,7 @@
   "dashboardProfileTendency": "You tend to pick up existing priority tasks",
   "dashboardFocusNatural25": "A 25-minute focused block feels natural first",
   "dashboardContinuePriority": "Continue Priority Task",
-  "dashboardStart25Min": "Start a 25-min Focus"
+  "dashboardStart25Min": "Start a 25-min Focus",
+  "compactErrorLoadFailed": "Failed to load",
+  "compactErrorTapRetry": "Tap to retry"
 }

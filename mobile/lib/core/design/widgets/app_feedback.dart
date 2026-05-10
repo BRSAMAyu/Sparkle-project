@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/theme_utils.dart';
@@ -147,8 +146,7 @@ class SparkleSnackBar {
     VoidCallback? onRetry,
     String? retryLabel,
   }) {
-    final resolvedLabel = retryLabel ??
-        (I18nService.instance.isChinese ? '重试' : 'Retry');
+    final resolvedLabel = retryLabel ?? 'Retry';
     return create(
       key: key,
       message: message,
