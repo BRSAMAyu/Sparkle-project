@@ -200,6 +200,24 @@ func parseEventTime(value interface{}) (time.Time, error) {
 	}
 }
 
+// incrLikeCount atomically increments/decrements the like_count in the post view JSON using a Lua script.
+// This avoids race conditions in read-modify-write scenarios.
+func (w *CommunitySyncWorker) incrLikeCount(ctx context.Context, postIDStr string, delta int) error {
+	viewKey := "post:view:" + postIDStr
+	script := redis.NewScript(`
+		local view_json = redis.call('GET', KEYS[1])
+		if not view_json then
+			return nil
+		end
+		local view = cjson.decode(view_json)
+		view.like_count = view.like_count + tonumber(ARGV[1])
+		if view.like_count < 0 then view.like_count = 0 end
+		return redis.call('SET', KEYS[1], cjson.encode(view))
+	`)
+	_, err := script.Run(ctx, w.redis, []string{viewKey}, delta).Result()
+	return err
+}
+
 // handlePostLiked processes a PostLiked event.
 func (w *CommunitySyncWorker) handlePostLiked(ctx context.Context, evt cqrsEvent.DomainEvent) error {
 	postIDStr, ok := evt.Payload["post_id"].(string)
@@ -207,34 +225,14 @@ func (w *CommunitySyncWorker) handlePostLiked(ctx context.Context, evt cqrsEvent
 		return fmt.Errorf("missing post_id in payload")
 	}
 
-	// Increment like count in Redis
-	viewKey := "post:view:" + postIDStr
-	viewJSON, err := w.redis.Get(ctx, viewKey).Bytes()
-	if err != nil {
-		if err == redis.Nil {
-			// Post view doesn't exist, this might be a race condition
-			w.logger.Warn("Post view not found for like",
-				zap.String("post_id", postIDStr),
-			)
-			return nil // Non-fatal, projection will be rebuilt
-		}
-		return fmt.Errorf("get post view: %w", err)
-	}
-
-	var view service.PostView
-	if err := json.Unmarshal(viewJSON, &view); err != nil {
-		return fmt.Errorf("unmarshal view: %w", err)
-	}
-
-	view.LikeCount++
-
-	updatedJSON, err := json.Marshal(view)
-	if err != nil {
-		return fmt.Errorf("marshal updated view: %w", err)
-	}
-
-	if err := w.redis.Set(ctx, viewKey, updatedJSON, 0).Err(); err != nil {
-		return fmt.Errorf("set post view: %w", err)
+	// Increment like count atomically via Lua script
+	if err := w.incrLikeCount(ctx, postIDStr, 1); err != nil {
+		w.logger.Warn("Failed to increment like count via Lua",
+			zap.String("post_id", postIDStr),
+			zap.Error(err),
+		)
+		// Non-fatal, projection will be rebuilt
+		return nil
 	}
 
 	// Track which users liked this post for isLikedByMe checks
@@ -252,7 +250,6 @@ func (w *CommunitySyncWorker) handlePostLiked(ctx context.Context, evt cqrsEvent
 
 	w.logger.Debug("Post like count incremented",
 		zap.String("post_id", postIDStr),
-		zap.Int("new_count", view.LikeCount),
 	)
 
 	return nil
@@ -265,35 +262,14 @@ func (w *CommunitySyncWorker) handlePostUnliked(ctx context.Context, evt cqrsEve
 		return fmt.Errorf("missing post_id in payload")
 	}
 
-	// Decrement like count in Redis
-	viewKey := "post:view:" + postIDStr
-	viewJSON, err := w.redis.Get(ctx, viewKey).Bytes()
-	if err != nil {
-		if err == redis.Nil {
-			w.logger.Warn("Post view not found for unlike",
-				zap.String("post_id", postIDStr),
-			)
-			return nil
-		}
-		return fmt.Errorf("get post view: %w", err)
-	}
-
-	var view service.PostView
-	if err := json.Unmarshal(viewJSON, &view); err != nil {
-		return fmt.Errorf("unmarshal view: %w", err)
-	}
-
-	if view.LikeCount > 0 {
-		view.LikeCount--
-	}
-
-	updatedJSON, err := json.Marshal(view)
-	if err != nil {
-		return fmt.Errorf("marshal updated view: %w", err)
-	}
-
-	if err := w.redis.Set(ctx, viewKey, updatedJSON, 0).Err(); err != nil {
-		return fmt.Errorf("set post view: %w", err)
+	// Decrement like count atomically via Lua script
+	if err := w.incrLikeCount(ctx, postIDStr, -1); err != nil {
+		w.logger.Warn("Failed to decrement like count via Lua",
+			zap.String("post_id", postIDStr),
+			zap.Error(err),
+		)
+		// Non-fatal, projection will be rebuilt
+		return nil
 	}
 
 	// Remove user from the liked set for isLikedByMe checks
@@ -311,7 +287,6 @@ func (w *CommunitySyncWorker) handlePostUnliked(ctx context.Context, evt cqrsEve
 
 	w.logger.Debug("Post like count decremented",
 		zap.String("post_id", postIDStr),
-		zap.Int("new_count", view.LikeCount),
 	)
 
 	return nil
