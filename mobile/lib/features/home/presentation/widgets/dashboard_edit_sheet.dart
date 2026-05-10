@@ -574,101 +574,102 @@ class _SlotEditorMeta {
 }
 
 _SlotEditorMeta _slotEditorMeta(String slotId, {required bool zh}) {
+  final l10n = I18nService.instance.l10n;
   switch (slotId) {
     case DashboardSlotIds.dailyBriefing:
       return _SlotEditorMeta(
-        title: zh ? '今日简报' : 'Daily briefing',
-        subtitle: zh ? '当天的状态、节奏与重点' : 'Today\'s status, pace, focus',
+        title: l10n.slotDailyBriefingTitle,
+        subtitle: l10n.slotDailyBriefingSubtitle,
         icon: Icons.wb_sunny_outlined,
       );
     case DashboardSlotIds.metricsRow:
       return _SlotEditorMeta(
-        title: zh ? '关键指标' : 'Key metrics',
-        subtitle: zh ? '进度、连续天数、动力' : 'Progress, streak, momentum',
+        title: l10n.slotMetricsRowTitle,
+        subtitle: l10n.slotMetricsRowSubtitle,
         icon: Icons.insights_rounded,
       );
     case DashboardSlotIds.commandCenter:
       return _SlotEditorMeta(
-        title: zh ? '指挥中心' : 'Command center',
-        subtitle: zh ? '下一步行动入口' : 'Pick up the next action',
+        title: l10n.slotCommandCenterTitle,
+        subtitle: l10n.slotCommandCenterSubtitle,
         icon: Icons.bolt_rounded,
       );
     case DashboardSlotIds.understanding:
       return _SlotEditorMeta(
-        title: zh ? '理解面板' : 'Understanding',
-        subtitle: zh ? 'Sparkle 对你的认知拆解' : 'How Sparkle reads you',
+        title: l10n.slotUnderstandingTitle,
+        subtitle: l10n.slotUnderstandingSubtitle,
         icon: Icons.psychology_outlined,
       );
     case DashboardSlotIds.returnCaseFile:
       return _SlotEditorMeta(
-        title: zh ? '回归档案' : 'Return case file',
-        subtitle: zh ? '上次离开时的现场' : 'Where you left off',
+        title: l10n.slotReturnCaseFileTitle,
+        subtitle: l10n.slotReturnCaseFileSubtitle,
         icon: Icons.history_edu_rounded,
       );
     case DashboardSlotIds.goalDetailSnapshot:
       return _SlotEditorMeta(
-        title: zh ? '目标详情' : 'Goal snapshot',
-        subtitle: zh ? '当前目标的近况' : 'Active goal snapshot',
+        title: l10n.slotGoalDetailSnapshotTitle,
+        subtitle: l10n.slotGoalDetailSnapshotSubtitle,
         icon: Icons.flag_outlined,
       );
     case DashboardSlotIds.multiGoalDashboard:
       return _SlotEditorMeta(
-        title: zh ? '多目标看板' : 'Multi-goal board',
-        subtitle: zh ? '所有目标的总览' : 'All goals at a glance',
+        title: l10n.slotMultiGoalDashboardTitle,
+        subtitle: l10n.slotMultiGoalDashboardSubtitle,
         icon: Icons.dashboard_customize_outlined,
       );
     case DashboardSlotIds.taskBoard:
       return _SlotEditorMeta(
-        title: zh ? '任务面板' : 'Task board',
-        subtitle: zh ? '今日待办与进度' : 'Today\'s tasks & progress',
+        title: l10n.slotTaskBoardTitle,
+        subtitle: l10n.slotTaskBoardSubtitle,
         icon: Icons.checklist_rounded,
       );
     case DashboardSlotIds.examSprint:
       return _SlotEditorMeta(
-        title: zh ? '考试冲刺' : 'Exam sprint',
-        subtitle: zh ? '剩余天数与节奏' : 'Days left & cadence',
+        title: l10n.slotExamSprintTitle,
+        subtitle: l10n.slotExamSprintSubtitle,
         icon: Icons.local_fire_department_outlined,
       );
     case DashboardSlotIds.dashboardUpdates:
       return _SlotEditorMeta(
-        title: zh ? '动态' : 'Updates',
-        subtitle: zh ? '通知、洞察、提醒' : 'Notifications & insights',
+        title: l10n.slotDashboardUpdatesTitle,
+        subtitle: l10n.slotDashboardUpdatesSubtitle,
         icon: Icons.notifications_outlined,
       );
     case DashboardSlotIds.growthQuality:
       return _SlotEditorMeta(
-        title: zh ? '成长质量' : 'Growth quality',
-        subtitle: zh ? '深度、稳定性、平衡' : 'Depth, stability, balance',
+        title: l10n.slotGrowthQualityTitle,
+        subtitle: l10n.slotGrowthQualitySubtitle,
         icon: Icons.trending_up_rounded,
       );
     case DashboardSlotIds.weeklyNarrative:
       return _SlotEditorMeta(
-        title: zh ? '本周叙事' : 'Weekly narrative',
-        subtitle: zh ? '一周变化的故事线' : 'This week\'s story',
+        title: l10n.slotWeeklyNarrativeTitle,
+        subtitle: l10n.slotWeeklyNarrativeSubtitle,
         icon: Icons.menu_book_outlined,
       );
     case DashboardSlotIds.community:
       return _SlotEditorMeta(
-        title: zh ? '同行社群' : 'Community',
-        subtitle: zh ? '伙伴动态与监督' : 'Partners & accountability',
+        title: l10n.slotCommunityTitle,
+        subtitle: l10n.slotCommunitySubtitle,
         icon: Icons.group_outlined,
       );
     case DashboardSlotIds.achievementProgress:
       return _SlotEditorMeta(
-        title: zh ? '成就进度' : 'Achievements',
-        subtitle: zh ? '近期解锁与里程碑' : 'Recent unlocks & milestones',
+        title: l10n.slotAchievementProgressTitle,
+        subtitle: l10n.slotAchievementProgressSubtitle,
         icon: Icons.emoji_events_outlined,
       );
     case DashboardSlotIds.learningHeatmap:
       return _SlotEditorMeta(
-        title: zh ? '学习热力图' : 'Learning heatmap',
-        subtitle: zh ? '过去30天的活跃度' : 'Last 30 days of activity',
+        title: l10n.slotLearningHeatmapTitle,
+        subtitle: l10n.slotLearningHeatmapSubtitle,
         icon: Icons.calendar_view_month_rounded,
       );
     case DashboardSlotIds.workspaceCards:
       return _SlotEditorMeta(
-        title: zh ? '工作区卡片' : 'Workspace cards',
-        subtitle: zh ? '可滑动 / 网格的功能卡' : 'Swipe or grid feature cards',
+        title: l10n.slotWorkspaceCardsTitle,
+        subtitle: l10n.slotWorkspaceCardsSubtitle,
         icon: Icons.view_module_outlined,
       );
   }

@@ -548,7 +548,7 @@
   "taskListReorderDisabledHint": "Drag-to-reorder is only available in the \"All Tasks\" list.",
   "taskListPartialErrorHint": "Some data failed to refresh. Showing loaded tasks.",
   "taskListFilterTooltip": "Priority Filter",
-  "taskNoTasks": "No tasks yet",
+  "taskNoTasks": "No tasks",
   "taskAddNew": "Add Task",
   "taskDueDate": "Due {date}",
   "taskOverdue": "Overdue",
@@ -2326,7 +2326,7 @@
   "communityTabFriends": "Friends",
   "communityTabGroups": "Groups",
   "communityTabPartners": "Partners",
-  "communityAddFriend": "Add Friend",
+  "communityAddFriend": "Add",
   "communityMembers": "{count} members",
   "@communityMembers": {
     "placeholders": {
@@ -2876,6 +2876,9 @@
   "reflectionCommonThemes": "Common Themes",
   "reflectionTimeline": "Reflection Timeline",
   "reflectionHighlights": "Highlights",
+  "reflectionChallenges": "Challenges",
+  "reflectionWhatHelped": "What helped",
+  "reflectionChangeNextTime": "Change next time",
   "notificationPermissionStatus": "Notification Permission",
   "notificationPermissionGranted": "Granted",
   "notificationPermissionDenied": "Notification permission denied, please enable in system settings",
@@ -3293,7 +3296,7 @@
   "communitySprintSettings": "Sprint Settings",
   "communitySprintDeadline": "Deadline",
   "communitySelectDate": "Select Date",
-  "communitySprintGoal": "Sprint Goal",
+  "communitySprintGoal": "Sprint goal: {goal}",
   "communitySprintGoalRequired": "Enter a sprint goal",
   "communityCreating": "Creating...",
   "communityCreateGroupButton": "Create Group",
@@ -3302,8 +3305,8 @@
   "communityInProgress": "In Progress",
   "communityUnclaimed": "Unclaimed",
   "communityCompleted": "Completed",
-  "communityTaskCompleted": "Task completed!",
-  "communityOperationFailed": "Operation failed",
+  "communityTaskCompleted": "Completed",
+  "communityOperationFailed": "Operation failed: {error}",
   "communityTaskMinutes": "min",
   "communityTaskClaimed": "claimed",
   "communityTaskClaim": "Claim",
@@ -3360,7 +3363,7 @@
   "communityKeywordFilterHint": "Messages with these keywords will be auto-blocked",
   "communityAddKeyword": "Add keyword",
   "communitySave": "Save",
-  "groupKnowledgeBase": "Knowledge Base",
+  "groupKnowledgeBase": "Group Knowledge Base",
   "groupFiles": "Study Materials",
   "saveToMyLibrary": "Save to My Library",
   "savedToLibrary": "Saved to your library",
@@ -6755,7 +6758,7 @@
   "accountabilityInvestedTime": "Time invested: {minutes} min",
   "accountabilityMinutes": "{minutes} min",
   "accountabilityEnd": "End",
-  "accountabilityOperationFailed": "Operation failed",
+  "accountabilityOperationFailed": "Operation failed, please try again later",
   "accountabilityLikeFailed": "Like failed",
   "accountabilitySendFailed": "Send failed",
   "accountabilityCheckinFailed": "Check-in failed",
@@ -8357,7 +8360,9 @@
   "statisticsLoadingFailed": "Failed to load: {error}",
   "@statisticsLoadingFailed": {
     "placeholders": {
-      "error": {"type": "String"}
+      "error": {
+        "type": "String"
+      }
     }
   },
   "statisticsRetry": "Retry",
@@ -8486,7 +8491,7 @@
   "weatherGuideDisclaimer": "This page helps you understand the weather system's visuals and logic. Real weather still follows your actual tasks, sprints, and state.",
   "weatherGuideTriggerPrefix": "Real trigger: {trigger}",
   "intentPredictionSprintSprint": "Sprint!",
-  "intentPredictionContinue": "Continue \"{title}\"",
+  "intentPredictionContinue": "Continue",
   "intentPredictionCreateTask": "Create Task",
   "intentPredictionStartFocus": "Start Focus",
   "intentPredictionViewCalendar": "View Calendar",
@@ -8891,7 +8896,7 @@
   "auroraActionCloseDetails": "Close",
   "auroraLoading": "Aurora loading",
   "auroraEvidence": "Based on",
-  "auroraNeedsConfirm": "Aurora needs confirmation",
+  "auroraNeedsConfirm": "Aurora · Confirmation Needed",
   "auroraStrategyRisk": "Aurora strategy risk elevated",
   "auroraBackground": "Aurora in background",
   "auroraCalibrationTitle": "Aurora recalibrating",
@@ -9063,7 +9068,7 @@
   "taskBoardCustomPriorityDesc": "Adjust task priority from the editor.",
   "taskBoardSprintFocusDesc": "Only tasks from the active sprint are shown.",
   "taskBoardSprintTimingDesc": "Keep an eye on remaining days and progress.",
-  "taskBoardTodaySummary": "{completedCount} of {totalCount} completed today",
+  "taskBoardTodaySummary": "Today {total} items · {completed} done",
   "taskBoardTitle": "Task Board",
   "taskBoardExpand": "Expand",
   "taskBoardCollapse": "Collapse",
@@ -9245,7 +9250,6 @@
   "taskBoardLater": "Later",
   "taskBoardNoDate": "No Date",
   "taskBoardTodayNoTasks": "No tasks today",
-  "taskBoardTodaySummary": "Today {total} items · {completed} done",
   "unnamedTask": "Unnamed Task",
   "taskConfirmAbandon": "Are you sure you want to abandon \"{title}\"?",
   "taskAbandonTitle": "Abandon Task",
@@ -9586,28 +9590,35 @@
   "accountabilityUnlockedOn": "Unlocked on {date}",
   "@accountabilityUnlockedOn": {
     "placeholders": {
-      "date": {"type": "String"}
+      "date": {
+        "type": "String"
+      }
     }
   },
-  "communityWeeksAgo": "{count} weeks ago",
+  "communityWeeksAgo": "{count}w ago",
   "@communityWeeksAgo": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
-  "communityMonthsAgo": "{count} months ago",
+  "communityMonthsAgo": "{count}mo ago",
   "@communityMonthsAgo": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
-  "accountabilityRequestFailed": "Failed to send partnership request. Please try again later.",
-  "accountabilityOperationFailed": "Operation failed. Please try again later.",
+  "accountabilityRequestFailed": "Failed to request partnership",
   "accountabilityPartnerNudged": "Partner nudged to check today's goals",
   "accountabilityPartnerNudgedWithMessage": "Partner nudged: {message}",
   "@accountabilityPartnerNudgedWithMessage": {
     "placeholders": {
-      "message": {"type": "String"}
+      "message": {
+        "type": "String"
+      }
     }
   },
   "communityFirstSideBySide": "First Side by Side",
@@ -9620,7 +9631,9 @@
   "communityPointsLabel": "+{points}",
   "@communityPointsLabel": {
     "placeholders": {
-      "points": {"type": "String"}
+      "points": {
+        "type": "String"
+      }
     }
   },
   "communityTotalCheckins": "{count} times",
@@ -9661,9 +9674,8 @@
   "communityMyCheckin": "My check-in",
   "communityLikesCount": "{count} likes",
   "communityEncourage": "Encourage",
-  "communityEncouragementsCount": "{count} encouragements",
+  "communityEncouragementsCount": "{count}",
   "communityEncouragementMessages": "Encouragements",
-  "communityUserFallback": "User",
   "communitySendEncouragement": "Send Encouragement",
   "communityWriteEncouragement": "Write your encouragement...",
   "communityNoCheckinYet": "No check-in records yet",
@@ -9671,8 +9683,6 @@
   "communityMinutesAgo": "{count}m ago",
   "communityHoursAgo": "{count}h ago",
   "communityDaysAgo": "{count}d ago",
-  "communityWeeksAgo": "{count}w ago",
-  "communityMonthsAgo": "{count}mo ago",
   "communityBadgeUnlockedOn": "Unlocked on {date}",
   "communityQuickShare": "Quick Share",
   "communityTabAchievements": "Achievements",
@@ -9684,7 +9694,6 @@
   "communityNoTasksYet": "No completed tasks yet",
   "communityNoKnowledgeYet": "No knowledge nodes studied yet",
   "communityTaskPaused": "Paused",
-  "communityTaskCompleted": "Completed",
   "communityTaskInProgress": "In Progress",
   "communityTaskStuck": "Stuck",
   "communityTaskPending": "Pending",
@@ -9694,7 +9703,6 @@
   "communityMasteryScore": "Mastery: {score}%",
   "communityNoDownloadPermission": "No download permission",
   "communitySavedToLibrary": "Saved to my library",
-  "communitySaveFailed": "Save failed: {error}",
   "communityMarkedOfficial": "Marked as official",
   "communityRemovedOfficial": "Removed official mark",
   "communityAddToKnowledgeBase": "Add to Knowledge Base",
@@ -9905,14 +9913,14 @@
   "communityTaskFallback": "Task",
   "communityPlanFallback": "Plan",
   "communityProgressColon": "Progress: {percent}%",
-  "communityKnowledgeNode": "Knowledge Node",
-  "communityTimeCapsule": "Time Capsule",
+  "communityKnowledgeNode": "Knowledge node",
+  "communityTimeCapsule": "Time capsule",
   "communitySeedLibrary": "Seed Library",
   "communitySeedContent": "Seed Content",
   "communitySeedLibraryShare": "Seed Library Share",
   "communitySeedContentShare": "Seed Content Share",
   "communityAdoptedRedirecting": "Adopted, redirecting...",
-  "communityAdoptFailed": "Adopt failed: {error}",
+  "communityAdoptFailed": "Adoption failed: {error}",
   "communityCognitivePrism": "Cognitive Prism",
   "communityLearningModeAnalysis": "Learning Mode Analysis",
   "communityAchievementUnlocked": "Achievement Unlocked",
@@ -9920,7 +9928,6 @@
   "communityLinkCopied": "Link copied",
   "communityUnblockConfirm": "Are you sure you want to unblock {name}?\n\nThey will be able to send friend requests and messages again.",
   "communityUnblocked": "Unblocked {name}",
-  "communityOperationFailed": "Operation failed: {error}",
   "communityMuteMember": "Mute {name}",
   "communityMute24h": "24h",
   "communityMuteMinutes": "{minutes}m",
@@ -9937,6 +9944,8 @@
   "communityFeedFilterSquad": "My Squad",
   "communityFeedFilterGoalMates": "Goal Mates",
   "communityFeedFilterFollowing": "Following",
+  "communityFeedGlobal": "Global Feed",
+  "communityFeedMySquad": "My Squad",
   "communityNoFeedYetTitle": "No community spark yet",
   "communityNoFeedYetDescription": "Share a plan, insight, or small win to start the first conversation here.",
   "communitySharePostAction": "Share a post",
@@ -9947,11 +9956,10 @@
   "communityFeedback": "Feedback",
   "communityShareSource": "Source",
   "communityAdoptFailedWithError": "Adoption failed: {error}",
-  "communityUserFallback": "User",
   "communityOwnerFullView": "You see the full view",
   "communityPartnerSummaryView": "Partner sees summary only",
   "communityHiddenFields": "Hidden: {fields}",
-  "communityPartnerObservationPermissions": "{name}'s observation permissions",
+  "communityPartnerObservationPermissions": "{name} observation permissions",
   "communityAllowObservation": "Allow observation",
   "communityObservationDisabled": "When off, this buddy no longer receives any signals or observations about you",
   "communitySeeStudyTime": "See my study time",
@@ -11782,7 +11790,7 @@
   "ebCreateFailed": "Failed to create error record",
   "ebListFailed": "Failed to fetch error list",
   "ebDetailFailed": "Failed to fetch error detail",
-  "ebUpdateFailed": "Failed to update error record",
+  "ebUpdateFailed": "Update failed: {e}",
   "ebDeleteFailed": "Failed to delete error record",
   "ebAnalysisFailed": "Re-analysis failed",
   "ebReviewFailed": "Failed to submit review record",
@@ -11898,7 +11906,6 @@
       }
     }
   },
-  "ebUpdateFailed": "Update failed: {e}",
   "@ebUpdateFailed": {
     "placeholders": {
       "e": {
@@ -14580,7 +14587,6 @@
   "compactStatusKeepRhythm": "Keep your rhythm today",
   "longTermPlan": "Long-term Plan",
   "intentPredictionSuggested": "Suggested next step",
-  "taskNoTasks": "No tasks",
   "taskOmniBarHint": "Type in the OmniBar to create a new task",
   "@bottleneckAlertMessage": {
     "placeholders": {
@@ -15028,7 +15034,6 @@
       }
     }
   },
-  "chatExpertStudyBuddy": "Study Buddy",
   "chatActionTaskLabel": "Task",
   "chatActionContinue": "Continue",
   "chatBubbleCollapse": "Collapse",
@@ -15142,27 +15147,16 @@
   "securityLogLoading": "Loading...",
   "socialAccountsLoading": "Loading...",
   "sessionManagementLoading": "Loading...",
-
   "intentPredictionSprint": "Sprint!",
-  "intentPredictionCreateTask": "Create Task",
-  "intentPredictionStartFocus": "Start Focus",
-  "intentPredictionViewCalendar": "View Calendar",
-  "intentPredictionCuriosityCapsule": "Curiosity Capsule",
-  "intentPredictionSendToAI": "Send to AI",
-  "intentPredictionNoteIdea": "Note Idea",
-  "intentPredictionContinue": "Continue",
-  "intentPredictionSetReminder": "Set Reminder",
   "intentPredictionNoteThought": "Note Thought",
-  "intentPredictionCognitivePrism": "Cognitive Prism",
-  "intentPredictionTranslate": "Translate",
-  "intentPredictionLearnLanguage": "Learn Language",
   "intentPredictionContinueTask": "Continue \"{taskTitle}\"",
   "@intentPredictionContinueTask": {
     "placeholders": {
-      "taskTitle": {"type": "String"}
+      "taskTitle": {
+        "type": "String"
+      }
     }
   },
-
   "auroraCorrectInChat": "Correct in chat",
   "auroraQuickCalibration": "Quick Calibration",
   "auroraExpandHint": "Double tap to expand calibration options",
@@ -15171,33 +15165,39 @@
   "auroraCooldownSec": "Resuming in {seconds} sec",
   "@auroraCooldownSec": {
     "placeholders": {
-      "seconds": {"type": "int"}
+      "seconds": {
+        "type": "int"
+      }
     }
   },
   "auroraCooldownMin": "Resuming in {minutes} min",
   "@auroraCooldownMin": {
     "placeholders": {
-      "minutes": {"type": "int"}
+      "minutes": {
+        "type": "int"
+      }
     }
   },
   "auroraCooldownHr": "Resuming in {hours} hr {remainMinutes} min",
   "@auroraCooldownHr": {
     "placeholders": {
-      "hours": {"type": "int"},
-      "remainMinutes": {"type": "int"}
+      "hours": {
+        "type": "int"
+      },
+      "remainMinutes": {
+        "type": "int"
+      }
     }
   },
   "auroraExpandedExplanationDefault": "Aurora is making a lightweight read; important judgments remain correctable.",
   "auroraExpandedExplanationPrefix": "Current read: ",
   "auroraIfReadOffCorrectHere": "If this read is off, correct it here:",
-
   "dashboardSectionsLabel": "Sections",
   "dashboardWorkspaceCards": "Workspace cards",
   "dashboardLeanView": "Lean view",
   "slotEditorExpand": "Expand",
   "slotEditorCollapse": "Collapse",
   "dashboardAllSectionsVisible": "All sections start visible. Switch to hide, drag to reorder, tap to collapse low-glance sections into a 64px header.",
-
   "slotDailyBriefingTitle": "Daily briefing",
   "slotDailyBriefingSubtitle": "Today's status, pace, focus",
   "slotMetricsRowTitle": "Key metrics",
@@ -15230,29 +15230,20 @@
   "slotLearningHeatmapSubtitle": "Last 30 days of activity",
   "slotWorkspaceCardsTitle": "Workspace cards",
   "slotWorkspaceCardsSubtitle": "Swipe or grid feature cards",
-
   "auroraSensing": "Aurora · Lightweight Sensing",
   "auroraCalibrated": "Aurora · Calibrated",
   "auroraRiskDetected": "Aurora · Strategy Risk Detected",
-  "auroraNeedsConfirm": "Aurora · Confirmation Needed",
   "auroraCalibrationAvailable": "Aurora · Deep Calibration Available",
   "auroraCoolingDown": "Aurora · Cooling Down",
   "auroraSourceAware": "Aurora · Referenced Current Task Materials",
   "auroraNoSourcesUsed": "Aurora · No Materials Used This Round",
   "auroraStrategyActive": "Aurora · Strategy Active",
-
-  "dashboardSectionsLabel": "Sections",
-  "dashboardWorkspaceCards": "Workspace cards",
-  "dashboardLeanView": "Lean view",
-  "dashboardAllSectionsVisible": "All sections start visible. Switch to hide, drag to reorder, tap to collapse low-glance sections into a 64px header.",
-
   "notificationWelcomeTitle": "Welcome to Sparkle AI Learning Assistant",
   "notificationWelcomeContent": "Start your learning journey!",
   "notificationNewTaskTitle": "New Task Reminder",
   "notificationNewTaskContent": "You have a task due soon",
   "notificationAchievementTitle": "Learning Achievement Unlocked",
   "notificationAchievementContent": "Congratulations! You've unlocked \"7-Day Learning Streak\"",
-
   "dashboardPlanName": "Computer Networks Exam Sprint",
   "dashboardSubject": "Computer Networks",
   "dashboardTopicReliableTransport": "Reliable Transport Layer",
@@ -15264,14 +15255,14 @@
   "dashboardSignalPriorityPending": "Priority tasks still pending",
   "dashboardLabelContinuePriority": "Continue Priority Task",
   "dashboardLabelStart25Min": "Start a 25-min Focus",
-
   "multiAgentSwitchMode": "Switch to {mode} mode",
   "@multiAgentSwitchMode": {
     "placeholders": {
-      "mode": {"type": "String"}
+      "mode": {
+        "type": "String"
+      }
     }
   },
-
   "intentTaskCreate": "Create Task",
   "intentTaskSetReminder": "Set Reminder",
   "intentCapsuleNoteIdea": "Note Idea",
@@ -15281,7 +15272,9 @@
   "intentTranslationHelpLearn": "Help me learn {text}",
   "@intentTranslationHelpLearn": {
     "placeholders": {
-      "text": {"type": "String"}
+      "text": {
+        "type": "String"
+      }
     }
   },
   "intentPrismView": "View Cognitive Prism",
@@ -15294,7 +15287,9 @@
   "intentReviewHelpReview": "Help me review: {text}",
   "@intentReviewHelpReview": {
     "placeholders": {
-      "text": {"type": "String"}
+      "text": {
+        "type": "String"
+      }
     }
   },
   "intentReviewErrorBook": "View Error Book",
@@ -15310,29 +15305,21 @@
   "membersCount": "{count} members",
   "@membersCount": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "flamePower": "{power} flame",
   "@flamePower": {
     "placeholders": {
-      "power": {"type": "int"}
+      "power": {
+        "type": "int"
+      }
     }
   },
   "communityCenterTitle": "Community",
   "createGroupButton": "Create Group",
-  "groupKnowledgeBase": "Group Knowledge Base",
-  "accountabilityRequestFailed": "Failed to request partnership",
-  "accountabilityOperationFailed": "Operation failed, please try again later",
-  "accountabilityPartnerNudged": "Partner nudged to check today's goals",
-  "accountabilityPartnerNudgedWithMessage": "Partner nudged: {message}",
-  "@accountabilityPartnerNudgedWithMessage": {
-    "placeholders": {
-      "message": {
-        "type": "String"
-      }
-    }
-  },
   "achievementBadgePoints": "+{points}",
   "@achievementBadgePoints": {
     "placeholders": {
@@ -15350,5 +15337,65 @@
     }
   },
   "communityCheckinLike": "Like",
-  "communityEncourageLabel": "Encourage"
+  "communityEncourageLabel": "Encourage",
+  "communitySimilarGoalPursuers": "Similar goal pursuers",
+  "communitySimilarGoalPursuersCount": "{count} people pursuing similar goals",
+  "@communitySimilarGoalPursuersCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "communityMutualFriendsCount": "{count} mutual",
+  "@communityMutualFriendsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "communitySimilarGoalConnectMessage": "We are pursuing similar goals. Want to connect?",
+  "communityFriendRequestSent": "Friend request sent",
+  "communityFriendRequestFailed": "Could not send friend request",
+  "communityStrategyLabel": "Community strategy",
+  "communityFeedGoalMates": "Goal Mates",
+  "communityFeedFollowing": "Following",
+  "communityNoCommunitySparkDesc": "Share a plan, insight, or small win to start the first conversation here.",
+  "communitySharePost": "Share a post",
+  "@communityAdoptFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "communityApplyToJoin": "Apply",
+  "communityJoin": "Join",
+  "@communitySprintGoal": {
+    "placeholders": {
+      "goal": {
+        "type": "String"
+      }
+    }
+  },
+  "communityYouSeeFullView": "You see the full view",
+  "communityPartnerSeesSummary": "Partner sees summary only",
+  "communityHidden": "Hidden",
+  "@communityPartnerObservationPermissions": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "communityAllowObservationDesc": "When off, this buddy no longer receives any signals or observations about you",
+  "communitySeeEmotionState": "See my emotional / energy state",
+  "@communityEncouragementsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

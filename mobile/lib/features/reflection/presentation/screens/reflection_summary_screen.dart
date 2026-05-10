@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
-import 'package:sparkle/core/providers/locale_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
 /// Aggregated reflection data from the summary API.
@@ -84,41 +84,42 @@ class ReflectionSummaryScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isChinese = ref.watch(localeProvider).languageCode == 'zh';
     final summary = ref.watch(reflectionSummaryProvider(7));
+    final l10n = context.l10n;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(isChinese ? '每日反思' : 'Daily Reflection'),
+        title: Text(l10n.reflectionDaily),
       ),
       body: summary.when(
-        data: (data) => _buildContent(context, data, isChinese),
+        data: (ReflectionSummaryData data) => _buildContent(context, data),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
-          child: Text(isChinese ? '加载失败' : 'Failed to load'),
+          child: Text(l10n.reflectionLoadFailed),
         ),
       ),
     );
   }
 
   Widget _buildContent(
-      BuildContext context, ReflectionSummaryData data, bool isChinese) {
+      BuildContext context, ReflectionSummaryData data) {
+    final l10n = context.l10n;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _buildStatsCard(context, data, isChinese),
+        _buildStatsCard(context, data, l10n),
         const SizedBox(height: 16),
         if (data.topThemes.isNotEmpty) ...[
-          _buildThemesCard(context, data, isChinese),
+          _buildThemesCard(context, data, l10n),
           const SizedBox(height: 16),
         ],
-        _buildTimelineHeader(context, data, isChinese),
-        ...data.timeline.map((e) => _buildTimelineItem(context, e, isChinese)),
+        _buildTimelineHeader(context, data, l10n),
+        ...data.timeline.map((e) => _buildTimelineItem(context, e)),
         if (data.timeline.isEmpty)
           Padding(
             padding: const EdgeInsets.all(32),
             child: Text(
-              isChinese ? '暂无反思记录\n完成专注任务后可以在这里回顾你的思考' : 'No reflections yet\nReflections appear here after you complete focus sessions',
+              l10n.reflectionNoRecords,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -129,7 +130,7 @@ class ReflectionSummaryScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatsCard(BuildContext context, ReflectionSummaryData data, bool isChinese) {
+  Widget _buildStatsCard(BuildContext context, ReflectionSummaryData data, AppLocalizations l10n) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -137,17 +138,17 @@ class ReflectionSummaryScreen extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             _StatItem(
-              label: isChinese ? '反思次数' : 'Reflections',
+              label: l10n.reflectionCount,
               value: data.totalReflections.toString(),
             ),
             _StatItem(
-              label: isChinese ? '平均心情' : 'Avg Mood',
+              label: l10n.reflectionAvgMood,
               value: data.avgMood != null
                   ? '${data.avgMood!.toStringAsFixed(1)}/5'
                   : '--',
             ),
             _StatItem(
-              label: isChinese ? '统计天数' : 'Days',
+              label: l10n.reflectionDays,
               value: data.days.toString(),
             ),
           ],
@@ -156,7 +157,7 @@ class ReflectionSummaryScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildThemesCard(BuildContext context, ReflectionSummaryData data, bool isChinese) {
+  Widget _buildThemesCard(BuildContext context, ReflectionSummaryData data, AppLocalizations l10n) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -164,7 +165,7 @@ class ReflectionSummaryScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              isChinese ? '常见主题' : 'Common Themes',
+              l10n.reflectionCommonThemes,
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: 8),
@@ -187,17 +188,18 @@ class ReflectionSummaryScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildTimelineHeader(BuildContext context, ReflectionSummaryData data, bool isChinese) {
+  Widget _buildTimelineHeader(BuildContext context, ReflectionSummaryData data, AppLocalizations l10n) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
-        isChinese ? '反思时间线' : 'Reflection Timeline',
+        l10n.reflectionTimeline,
         style: Theme.of(context).textTheme.titleSmall,
       ),
     );
   }
 
-  Widget _buildTimelineItem(BuildContext context, _TimelineEntry entry, bool isChinese) {
+  Widget _buildTimelineItem(BuildContext context, _TimelineEntry entry) {
+    final l10n = context.l10n;
     final dateStr = entry.createdAt ?? '';
     final quality = entry.completionQuality;
     final highlights = entry.payload['highlights'] as String?;
@@ -235,28 +237,28 @@ class ReflectionSummaryScreen extends ConsumerWidget {
             if (highlights != null && highlights.isNotEmpty) ...[
               const SizedBox(height: 4),
               Text(
-                '${isChinese ? "亮点" : "Highlights"}: $highlights',
+                '${l10n.reflectionHighlights}: $highlights',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
             if (challenges != null && challenges.isNotEmpty) ...[
               const SizedBox(height: 2),
               Text(
-                '${isChinese ? "挑战" : "Challenges"}: $challenges',
+                '${l10n.reflectionChallenges}: $challenges',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
             if (whatHelped != null && whatHelped.isNotEmpty) ...[
               const SizedBox(height: 2),
               Text(
-                '${isChinese ? "帮助" : "What helped"}: $whatHelped',
+                '${l10n.reflectionWhatHelped}: $whatHelped',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
             if (whatWouldChange != null && whatWouldChange.isNotEmpty) ...[
               const SizedBox(height: 2),
               Text(
-                '${isChinese ? "改进" : "Change next time"}: $whatWouldChange',
+                '${l10n.reflectionChangeNextTime}: $whatWouldChange',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],

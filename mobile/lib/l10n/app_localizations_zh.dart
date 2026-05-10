@@ -5841,7 +5841,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get communityTabPartners => '伙伴';
 
   @override
-  String get communityAddFriend => '添加好友';
+  String get communityAddFriend => '加好友';
 
   @override
   String communityMembers(Object count) {
@@ -6879,6 +6879,33 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get shareContentCognitivePrism => '认知棱镜';
+
+  @override
+  String get reflectionDaily => '每日反思';
+
+  @override
+  String get reflectionLoadFailed => '加载失败';
+
+  @override
+  String get reflectionNoRecords => '暂无反思记录\n完成专注任务后可以在这里回顾你的思考';
+
+  @override
+  String get reflectionCount => '反思次数';
+
+  @override
+  String get reflectionAvgMood => '平均心情';
+
+  @override
+  String get reflectionDays => '统计天数';
+
+  @override
+  String get reflectionCommonThemes => '常见主题';
+
+  @override
+  String get reflectionTimeline => '反思时间线';
+
+  @override
+  String get reflectionHighlights => '亮点';
 
   @override
   String get notificationPermissionStatus => '通知权限状态';
@@ -8124,7 +8151,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get communitySelectDate => '选择日期';
 
   @override
-  String get communitySprintGoal => '冲刺目标';
+  String communitySprintGoal(String goal) {
+    return '冲刺目标: $goal';
+  }
 
   @override
   String get communitySprintGoalRequired => '请输入冲刺目标';
@@ -26919,7 +26948,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get communityRecommendedForYou => '为你推荐';
 
   @override
-  String get communityViewAll => '看全部';
+  String get communityViewAll => '查看全部';
 
   @override
   String get communityRecommendLoadError => '推荐暂时加载失败，稍后下拉刷新即可。';
@@ -27154,8 +27183,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get communityEncourage => '鼓励';
 
   @override
-  String communityEncouragementsCount(Object count) {
-    return '$count 条鼓励';
+  String communityEncouragementsCount(int count) {
+    return '$count';
   }
 
   @override
@@ -27731,7 +27760,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get communityAdoptedRedirecting => '已采纳，跳转中...';
 
   @override
-  String communityAdoptFailed(Object error) {
+  String communityAdoptFailed(String error) {
     return '采纳失败: $error';
   }
 
@@ -27811,6 +27840,106 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get communityFeedFilterGlobal => '全局动态';
+
+  @override
+  String get communityFeedFilterSquad => '我的小队';
+
+  @override
+  String get communityFeedFilterGoalMates => '目标伙伴';
+
+  @override
+  String get communityFeedFilterFollowing => '我的关注';
+
+  @override
+  String get communityFeedGlobal => '全局动态';
+
+  @override
+  String get communityFeedMySquad => '我的小队';
+
+  @override
+  String get communityNoFeedYetTitle => '社区还没有火花';
+
+  @override
+  String get communityNoFeedYetDescription => '分享一个计划、洞察或小胜利，开始这里的第一次对话。';
+
+  @override
+  String get communitySharePostAction => '发一条动态';
+
+  @override
+  String get communityRefreshFeedAction => '刷新动态';
+
+  @override
+  String get communityGroupTypeSprint => '冲刺群组';
+
+  @override
+  String get communityGroupTypeSquad => '小队';
+
+  @override
+  String communitySprintGoalChip(Object goal) {
+    return '冲刺目标: $goal';
+  }
+
+  @override
+  String get communityFeedback => '评价';
+
+  @override
+  String get communityShareSource => '来源';
+
+  @override
+  String communityAdoptFailedWithError(Object error) {
+    return '采纳失败: $error';
+  }
+
+  @override
+  String get communityOwnerFullView => '你看到完整视图';
+
+  @override
+  String get communityPartnerSummaryView => '伙伴只看到摘要';
+
+  @override
+  String communityHiddenFields(Object fields) {
+    return '已隐藏: $fields';
+  }
+
+  @override
+  String communityPartnerObservationPermissions(String name) {
+    return '$name 的观察权限';
+  }
+
+  @override
+  String get communityAllowObservation => '允许观察我';
+
+  @override
+  String get communityObservationDisabled => '关闭后，对方不再收到任何关于你的信号或观察提醒';
+
+  @override
+  String get communitySeeStudyTime => '看到我的学习时间';
+
+  @override
+  String get communitySeeTaskContent => '看到我的具体任务内容';
+
+  @override
+  String get communitySeeEmotionalState => '看到我的情绪/能量状态';
+
+  @override
+  String communityShareProgressPercent(Object percent) {
+    return '进度: $percent%';
+  }
+
+  @override
+  String get communityKnowledgeNodeLabel => '知识节点';
+
+  @override
+  String get communityTimeCapsuleLabel => '时光胶囊';
+
+  @override
+  String get communityPartnersLabel => '伙伴';
+
+  @override
+  String get communityFriendsLabel => '好友';
+
+  @override
   String communityBoundMilestone(Object label) {
     return '绑定里程碑：$label';
   }
@@ -27828,7 +27957,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get communityNoCommunitySpark => 'No community spark yet';
 
   @override
-  String get communityRefreshFeed => 'Refresh feed';
+  String get communityRefreshFeed => '刷新动态';
 
   @override
   String get communityShareFailedRetry => '分享失败，请稍后再试';
@@ -33132,6 +33261,102 @@ class AppLocalizationsZh extends AppLocalizations {
       '所有分区默认可见。开关隐藏，拖拽排序，按让低频分区收成 64px 标题条。';
 
   @override
+  String get slotDailyBriefingTitle => '今日简报';
+
+  @override
+  String get slotDailyBriefingSubtitle => '当天的状态、节奏与重点';
+
+  @override
+  String get slotMetricsRowTitle => '关键指标';
+
+  @override
+  String get slotMetricsRowSubtitle => '进度、连续天数、动力';
+
+  @override
+  String get slotCommandCenterTitle => '指挥中心';
+
+  @override
+  String get slotCommandCenterSubtitle => '下一步行动入口';
+
+  @override
+  String get slotUnderstandingTitle => '理解面板';
+
+  @override
+  String get slotUnderstandingSubtitle => 'Sparkle 对你的认知拆解';
+
+  @override
+  String get slotReturnCaseFileTitle => '回归档案';
+
+  @override
+  String get slotReturnCaseFileSubtitle => '上次离开时的现场';
+
+  @override
+  String get slotGoalDetailSnapshotTitle => '目标详情';
+
+  @override
+  String get slotGoalDetailSnapshotSubtitle => '当前目标的近况';
+
+  @override
+  String get slotMultiGoalDashboardTitle => '多目标看板';
+
+  @override
+  String get slotMultiGoalDashboardSubtitle => '所有目标的总览';
+
+  @override
+  String get slotTaskBoardTitle => '任务面板';
+
+  @override
+  String get slotTaskBoardSubtitle => '今日待办与进度';
+
+  @override
+  String get slotExamSprintTitle => '考试冲刺';
+
+  @override
+  String get slotExamSprintSubtitle => '剩余天数与节奏';
+
+  @override
+  String get slotDashboardUpdatesTitle => '动态';
+
+  @override
+  String get slotDashboardUpdatesSubtitle => '通知、洞察、提醒';
+
+  @override
+  String get slotGrowthQualityTitle => '成长质量';
+
+  @override
+  String get slotGrowthQualitySubtitle => '深度、稳定性、平衡';
+
+  @override
+  String get slotWeeklyNarrativeTitle => '本周叙事';
+
+  @override
+  String get slotWeeklyNarrativeSubtitle => '一周变化的故事线';
+
+  @override
+  String get slotCommunityTitle => '同行社群';
+
+  @override
+  String get slotCommunitySubtitle => '伙伴动态与监督';
+
+  @override
+  String get slotAchievementProgressTitle => '成就进度';
+
+  @override
+  String get slotAchievementProgressSubtitle => '近期解锁与里程碑';
+
+  @override
+  String get slotLearningHeatmapTitle => '学习热力图';
+
+  @override
+  String get slotLearningHeatmapSubtitle => '过去30天的活跃度';
+
+  @override
+  String get slotWorkspaceCardsTitle => '工作区卡片';
+
+  @override
+  String get slotWorkspaceCardsSubtitle => '可滑动 / 网格的功能卡';
+
+  @override
   String get auroraSensing => 'Aurora · 轻量感知中';
 
   @override
@@ -33321,4 +33546,62 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get communityEncourageLabel => '鼓励';
+
+  @override
+  String get communitySimilarGoalPursuers => '同目标伙伴';
+
+  @override
+  String communitySimilarGoalPursuersCount(int count) {
+    return '和你追同样目标的 $count 位伙伴';
+  }
+
+  @override
+  String communityMutualFriendsCount(int count) {
+    return '$count 位共同好友';
+  }
+
+  @override
+  String get communitySimilarGoalConnectMessage => '我们正在追相似目标，一起加油？';
+
+  @override
+  String get communityFriendRequestSent => '好友请求已发送';
+
+  @override
+  String get communityFriendRequestFailed => '暂时无法发送好友请求';
+
+  @override
+  String get communityStrategyLabel => '社区策略';
+
+  @override
+  String get communityFeedGoalMates => '目标伙伴';
+
+  @override
+  String get communityFeedFollowing => '我的关注';
+
+  @override
+  String get communityNoCommunitySparkDesc => '分享一个计划、洞察或小胜利，开始这里的第一次对话。';
+
+  @override
+  String get communitySharePost => '发一条动态';
+
+  @override
+  String get communityApplyToJoin => '申请加入';
+
+  @override
+  String get communityJoin => '加入';
+
+  @override
+  String get communityYouSeeFullView => '你看到完整视图';
+
+  @override
+  String get communityPartnerSeesSummary => '伙伴只看到摘要';
+
+  @override
+  String get communityHidden => '已隐藏';
+
+  @override
+  String get communityAllowObservationDesc => '关闭后，对方不再收到任何关于你的信号或观察提醒';
+
+  @override
+  String get communitySeeEmotionState => '看到我的情绪/能量状态';
 }

@@ -382,7 +382,7 @@ func (s *GalaxyCommandService) RecordStudy(ctx context.Context, userID, nodeID u
 			    last_study_at = NOW(),
 			    last_interacted_at = NOW(),
 			    updated_at = NOW()
-			WHERE user_id = $1 AND node_id = $2
+			WHERE user_id = $1 AND node_id = $2 AND is_unlocked = true
 		`,
 			pgtype.UUID{Bytes: userID, Valid: true},
 			pgtype.UUID{Bytes: nodeID, Valid: true},
@@ -392,6 +392,16 @@ func (s *GalaxyCommandService) RecordStudy(ctx context.Context, userID, nodeID u
 
 		if err != nil {
 			return fmt.Errorf("failed to update mastery after study: %w", err)
+		}
+
+		// Return error if node is locked (no rows affected)
+		rows, _ := txCtx.Tx().Query(ctx, `
+			SELECT is_unlocked FROM user_node_status
+			WHERE user_id = $1 AND node_id = $2 AND is_unlocked = true
+		`, pgtype.UUID{Bytes: userID, Valid: true}, pgtype.UUID{Bytes: nodeID, Valid: true})
+		defer rows.Close()
+		if !rows.Next() {
+			return fmt.Errorf("node is locked")
 		}
 
 		// Create domain event

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/features/visual_elements/presentation/shared/visual_element_palette.dart';
 
@@ -13,6 +13,7 @@ class AchievementShareCardFactory {
     final metadata = payload.metadata ?? const <String, dynamic>{};
     return Builder(
       builder: (context) {
+        final l10n = context.l10n;
         final palette = VisualElementPalette.of(context);
         final provenance = metadata['earned_from']?.toString() ??
             metadata['equipped_title']?.toString();
@@ -88,7 +89,7 @@ class AchievementShareCardFactory {
                 if (provenance != null && provenance.trim().isNotEmpty) ...[
                   const SizedBox(height: DS.spacing8),
                   _chip(
-                    I18nService.instance.isChinese ? '来源' : 'Source',
+                    l10n.communityShareSource,
                     provenance,
                     palette,
                   ),

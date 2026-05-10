@@ -32,9 +32,6 @@ class PartnerObservationSettings extends StatelessWidget {
     bool? emotion,
   }) onChanged;
 
-  static String _t(String zh, String en) =>
-      I18nService.instance.isChinese ? zh : en;
-
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;

@@ -2326,7 +2326,7 @@
   "communityTabFriends": "好友",
   "communityTabGroups": "群组",
   "communityTabPartners": "伙伴",
-  "communityAddFriend": "添加好友",
+  "communityAddFriend": "加好友",
   "communityMembers": "{count} 成员",
   "@communityMembers": {
     "placeholders": {
@@ -3286,7 +3286,7 @@
   "communitySprintSettings": "冲刺设置",
   "communitySprintDeadline": "截止日期",
   "communitySelectDate": "选择日期",
-  "communitySprintGoal": "冲刺目标",
+  "communitySprintGoal": "冲刺目标: {goal}",
   "communitySprintGoalRequired": "请输入冲刺目标",
   "communityCreating": "创建中...",
   "communityCreateGroupButton": "创建社群",
@@ -3295,8 +3295,8 @@
   "communityInProgress": "进行中",
   "communityUnclaimed": "待认领",
   "communityCompleted": "已完成",
-  "communityTaskCompleted": "任务已完成！",
-  "communityOperationFailed": "操作失败",
+  "communityTaskCompleted": "已完成",
+  "communityOperationFailed": "操作失败: {error}",
   "communityTaskMinutes": "分钟",
   "communityTaskClaimed": "已认领",
   "communityTaskClaim": "认领",
@@ -3353,7 +3353,7 @@
   "communityKeywordFilterHint": "包含以下关键词的消息将被自动屏蔽",
   "communityAddKeyword": "添加关键词",
   "communitySave": "保存",
-  "groupKnowledgeBase": "知识库",
+  "groupKnowledgeBase": "群知识库",
   "groupFiles": "学习资料",
   "saveToMyLibrary": "保存到我的库",
   "savedToLibrary": "已保存到你的库",
@@ -6748,7 +6748,7 @@
   "accountabilityInvestedTime": "投入时长: {minutes} 分钟",
   "accountabilityMinutes": "{minutes} 分钟",
   "accountabilityEnd": "结束",
-  "accountabilityOperationFailed": "操作失败",
+  "accountabilityOperationFailed": "操作失败，请稍后重试",
   "accountabilityLikeFailed": "点赞失败",
   "accountabilitySendFailed": "发送失败",
   "accountabilityCheckinFailed": "打卡失败",
@@ -8350,7 +8350,9 @@
   "statisticsLoadingFailed": "加载失败: {error}",
   "@statisticsLoadingFailed": {
     "placeholders": {
-      "error": {"type": "String"}
+      "error": {
+        "type": "String"
+      }
     }
   },
   "statisticsRetry": "重试",
@@ -8479,7 +8481,7 @@
   "weatherGuideDisclaimer": "这个页面用于理解天气系统的视觉效果与判定逻辑。真正显示给你的天气，仍然会跟随你的真实任务、冲刺和状态数据动态更新。",
   "weatherGuideTriggerPrefix": "真实触发参考：{trigger}",
   "intentPredictionSprintSprint": "冲刺冲刺",
-  "intentPredictionContinue": "继续\"{title}\"",
+  "intentPredictionContinue": "继续",
   "intentPredictionCreateTask": "创建任务",
   "intentPredictionStartFocus": "开始专注",
   "intentPredictionViewCalendar": "查看日历",
@@ -8488,7 +8490,7 @@
   "intentPredictionNoteIdea": "记录想法",
   "intentPredictionSetReminder": "设置提醒",
   "intentPredictionCognitivePrism": "认知棱镜",
-  "intentPredictionTranslate": "翻译文本",
+  "intentPredictionTranslate": "翻译",
   "intentPredictionLearnLanguage": "学习语言",
   "intentPredictionViewPrism": "查看认知棱镜",
   "intentPredictionBehaviorAnalysis": "行为分析",
@@ -8665,7 +8667,7 @@
   "auroraActionCloseDetails": "关闭",
   "auroraLoading": "Aurora 加载中",
   "auroraEvidence": "基于",
-  "auroraNeedsConfirm": "Aurora 需要确认",
+  "auroraNeedsConfirm": "Aurora · 需要确认一个判断",
   "auroraStrategyRisk": "Aurora 策略风险升高",
   "auroraBackground": "Aurora 已退回后台",
   "auroraCalibrationTitle": "Aurora 正在校准",
@@ -8837,7 +8839,7 @@
   "taskBoardCustomPriorityDesc": "在任务编辑中调整优先级",
   "taskBoardSprintFocusDesc": "只显示当前冲刺的任务",
   "taskBoardSprintTimingDesc": "关注剩余天数和进度",
-  "taskBoardTodaySummary": "今日{totalCount}项·已完成{completedCount}",
+  "taskBoardTodaySummary": "今日{total}项·已完成{completed}",
   "taskBoardTitle": "任务看板",
   "taskBoardExpand": "展开",
   "taskBoardCollapse": "收起",
@@ -9019,7 +9021,6 @@
   "taskBoardLater": "更晚",
   "taskBoardNoDate": "无日期",
   "taskBoardTodayNoTasks": "今日无任务",
-  "taskBoardTodaySummary": "今日{total}项·已完成{completed}",
   "unnamedTask": "未命名任务",
   "taskConfirmAbandon": "确定要放弃「{title}」吗？",
   "taskAbandonTitle": "放弃任务",
@@ -9384,7 +9385,7 @@
   "chatExpertMath": "数学专家",
   "chatExpertScience": "科学专家",
   "chatExpertSearch": "搜索专家",
-  "chatExpertStudyBuddy": "学习伙伴",
+  "chatExpertStudyBuddy": "学伴",
   "chatExpertTimeCoach": "时间导师",
   "chatExpertWriting": "写作专家",
   "chatFeedbackHelpful": "已收到你的反馈，这条回复已标记为有帮助",
@@ -10965,7 +10966,7 @@
   "ebCreateFailed": "创建错题失败",
   "ebListFailed": "获取错题列表失败",
   "ebDetailFailed": "获取错题详情失败",
-  "ebUpdateFailed": "更新错题失败",
+  "ebUpdateFailed": "更新失败: {e}",
   "ebDeleteFailed": "删除错题失败",
   "ebAnalysisFailed": "重新分析失败",
   "ebReviewFailed": "提交复习记录失败",
@@ -11081,7 +11082,6 @@
       }
     }
   },
-  "ebUpdateFailed": "更新失败: {e}",
   "@ebUpdateFailed": {
     "placeholders": {
       "e": {
@@ -11731,7 +11731,7 @@
   "communityDiscoverFilterHint": "支持热度、最新、随机发现。这块可以长期收起，不再占用大段空间。",
   "communityBrowseGroups": "浏览社群",
   "communityRecommendedForYou": "为你推荐",
-  "communityViewAll": "看全部",
+  "communityViewAll": "查看全部",
   "communityRecommendLoadError": "推荐暂时加载失败，稍后下拉刷新即可。",
   "communityNoGroupsYet": "你还没有加入社群，先去逛一逛公开社群广场吧。",
   "communityDiscoverGroups": "去发现社群",
@@ -11791,28 +11791,35 @@
   "accountabilityUnlockedOn": "在 {date} 解锁",
   "@accountabilityUnlockedOn": {
     "placeholders": {
-      "date": {"type": "String"}
+      "date": {
+        "type": "String"
+      }
     }
   },
-  "communityWeeksAgo": "{count} 周前",
+  "communityWeeksAgo": "{count}周前",
   "@communityWeeksAgo": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
-  "communityMonthsAgo": "{count} 个月前",
+  "communityMonthsAgo": "{count}个月前",
   "@communityMonthsAgo": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
-  "accountabilityRequestFailed": "发送请求失败，请稍后重试",
-  "accountabilityOperationFailed": "操作失败，请稍后重试",
+  "accountabilityRequestFailed": "请求失败",
   "accountabilityPartnerNudged": "已提醒伙伴查看今天的目标",
   "accountabilityPartnerNudgedWithMessage": "已提醒伙伴：{message}",
   "@accountabilityPartnerNudgedWithMessage": {
     "placeholders": {
-      "message": {"type": "String"}
+      "message": {
+        "type": "String"
+      }
     }
   },
   "communityFirstSideBySide": "第一次并肩前进",
@@ -11825,7 +11832,9 @@
   "communityPointsLabel": "+{points}",
   "@communityPointsLabel": {
     "placeholders": {
-      "points": {"type": "String"}
+      "points": {
+        "type": "String"
+      }
     }
   },
   "communityTotalCheckins": "{count} 次",
@@ -11866,9 +11875,8 @@
   "communityMyCheckin": "我的打卡",
   "communityLikesCount": "{count} 点赞",
   "communityEncourage": "鼓励",
-  "communityEncouragementsCount": "{count} 条鼓励",
+  "communityEncouragementsCount": "{count}",
   "communityEncouragementMessages": "鼓励消息",
-  "communityUserFallback": "用户",
   "communitySendEncouragement": "发送鼓励",
   "communityWriteEncouragement": "写下你的鼓励...",
   "communityNoCheckinYet": "暂无打卡记录",
@@ -11876,8 +11884,6 @@
   "communityMinutesAgo": "{count}分钟前",
   "communityHoursAgo": "{count}小时前",
   "communityDaysAgo": "{count}天前",
-  "communityWeeksAgo": "{count}周前",
-  "communityMonthsAgo": "{count}个月前",
   "communityBadgeUnlockedOn": "解锁于 {date}",
   "communityQuickShare": "快捷分享",
   "communityTabAchievements": "成就",
@@ -11889,7 +11895,6 @@
   "communityNoTasksYet": "还没有完成的任务",
   "communityNoKnowledgeYet": "还没有学习知识节点",
   "communityTaskPaused": "已暂停",
-  "communityTaskCompleted": "已完成",
   "communityTaskInProgress": "进行中",
   "communityTaskStuck": "卡住了",
   "communityTaskPending": "待开始",
@@ -11899,7 +11904,6 @@
   "communityMasteryScore": "掌握度: {score}%",
   "communityNoDownloadPermission": "暂无下载权限",
   "communitySavedToLibrary": "已保存到我的资料库",
-  "communitySaveFailed": "保存失败: {error}",
   "communityMarkedOfficial": "已标记为官方资料",
   "communityRemovedOfficial": "已移除官方资料标记",
   "communityAddToKnowledgeBase": "添加到知识库",
@@ -12125,7 +12129,6 @@
   "communityLinkCopied": "链接已复制",
   "communityUnblockConfirm": "确定要解除对 {name} 的拉黑吗？\n\n解除后对方可以重新发送好友请求和消息给您。",
   "communityUnblocked": "已解除对 {name} 的拉黑",
-  "communityOperationFailed": "操作失败: {error}",
   "communityMuteMember": "禁言 {name}",
   "communityMute24h": "24小时",
   "communityMuteMinutes": "{minutes} 分钟",
@@ -12142,6 +12145,8 @@
   "communityFeedFilterSquad": "我的小队",
   "communityFeedFilterGoalMates": "目标伙伴",
   "communityFeedFilterFollowing": "我的关注",
+  "communityFeedGlobal": "全局动态",
+  "communityFeedMySquad": "我的小队",
   "communityNoFeedYetTitle": "社区还没有火花",
   "communityNoFeedYetDescription": "分享一个计划、洞察或小胜利，开始这里的第一次对话。",
   "communitySharePostAction": "发一条动态",
@@ -12152,7 +12157,6 @@
   "communityFeedback": "评价",
   "communityShareSource": "来源",
   "communityAdoptFailedWithError": "采纳失败: {error}",
-  "communityUserFallback": "用户",
   "communityOwnerFullView": "你看到完整视图",
   "communityPartnerSummaryView": "伙伴只看到摘要",
   "communityHiddenFields": "已隐藏: {fields}",
@@ -12172,7 +12176,7 @@
   "communityLoadFailedTitle": "加载失败",
   "communityRetry": "重试",
   "communityNoCommunitySpark": "No community spark yet",
-  "communityRefreshFeed": "Refresh feed",
+  "communityRefreshFeed": "刷新动态",
   "communityShareFailedRetry": "分享失败，请稍后再试",
   "communityCorePartnerInvitePending": "责任伙伴邀请待确认",
   "communityNudgeDelivered": "已通过站内提醒发送，对方在线时会实时看到",
@@ -14586,7 +14590,6 @@
   "compactStatusKeepRhythm": "今天适合保持节奏",
   "longTermPlan": "长期计划",
   "intentPredictionSuggested": "建议下一步",
-  "taskNoTasks": "暂无任务",
   "taskOmniBarHint": "在 OmniBar 中输入创建新任务",
   "@bottleneckAlertMessage": {
     "placeholders": {
@@ -15034,7 +15037,6 @@
       }
     }
   },
-  "chatExpertStudyBuddy": "学伴",
   "chatActionTaskLabel": "任务",
   "chatActionContinue": "接着聊",
   "chatBubbleCollapse": "收起",
@@ -15148,27 +15150,16 @@
   "securityLogLoading": "加载中...",
   "socialAccountsLoading": "加载中...",
   "sessionManagementLoading": "加载中...",
-
   "intentPredictionSprint": "冲刺！",
-  "intentPredictionCreateTask": "创建任务",
-  "intentPredictionStartFocus": "开始专注",
-  "intentPredictionViewCalendar": "查看日历",
-  "intentPredictionCuriosityCapsule": "好奇心胶囊",
-  "intentPredictionSendToAI": "发送给AI",
-  "intentPredictionNoteIdea": "记录想法",
-  "intentPredictionContinue": "继续",
-  "intentPredictionSetReminder": "设置提醒",
   "intentPredictionNoteThought": "记录想法",
-  "intentPredictionCognitivePrism": "认知棱镜",
-  "intentPredictionTranslate": "翻译",
-  "intentPredictionLearnLanguage": "学习语言",
   "intentPredictionContinueTask": "继续「{taskTitle}」",
   "@intentPredictionContinueTask": {
     "placeholders": {
-      "taskTitle": {"type": "String"}
+      "taskTitle": {
+        "type": "String"
+      }
     }
   },
-
   "auroraCorrectInChat": "去聊天里纠正",
   "auroraQuickCalibration": "快速校准",
   "auroraExpandHint": "双击展开校准选项",
@@ -15177,55 +15168,85 @@
   "auroraCooldownSec": "{seconds}秒后恢复",
   "@auroraCooldownSec": {
     "placeholders": {
-      "seconds": {"type": "int"}
+      "seconds": {
+        "type": "int"
+      }
     }
   },
   "auroraCooldownMin": "{minutes}分钟后恢复",
   "@auroraCooldownMin": {
     "placeholders": {
-      "minutes": {"type": "int"}
+      "minutes": {
+        "type": "int"
+      }
     }
   },
   "auroraCooldownHr": "{hours}小时{remainMinutes}分钟后恢复",
   "@auroraCooldownHr": {
     "placeholders": {
-      "hours": {"type": "int"},
-      "remainMinutes": {"type": "int"}
+      "hours": {
+        "type": "int"
+      },
+      "remainMinutes": {
+        "type": "int"
+      }
     }
   },
   "auroraExpandedExplanationDefault": "Aurora 会先轻量判断当前状态，重要判断都可以被你纠正。",
   "auroraExpandedExplanationPrefix": "当前判断：",
   "auroraIfReadOffCorrectHere": "如果我判断错了，直接改一下：",
-
   "dashboardSectionsLabel": "页面分区",
   "dashboardWorkspaceCards": "工作区卡片",
   "dashboardLeanView": "回到精简",
   "slotEditorExpand": "展开",
   "slotEditorCollapse": "收起",
   "dashboardAllSectionsVisible": "所有分区默认可见。开关隐藏，拖拽排序，按让低频分区收成 64px 标题条。",
-
+  "slotDailyBriefingTitle": "今日简报",
+  "slotDailyBriefingSubtitle": "当天的状态、节奏与重点",
+  "slotMetricsRowTitle": "关键指标",
+  "slotMetricsRowSubtitle": "进度、连续天数、动力",
+  "slotCommandCenterTitle": "指挥中心",
+  "slotCommandCenterSubtitle": "下一步行动入口",
+  "slotUnderstandingTitle": "理解面板",
+  "slotUnderstandingSubtitle": "Sparkle 对你的认知拆解",
+  "slotReturnCaseFileTitle": "回归档案",
+  "slotReturnCaseFileSubtitle": "上次离开时的现场",
+  "slotGoalDetailSnapshotTitle": "目标详情",
+  "slotGoalDetailSnapshotSubtitle": "当前目标的近况",
+  "slotMultiGoalDashboardTitle": "多目标看板",
+  "slotMultiGoalDashboardSubtitle": "所有目标的总览",
+  "slotTaskBoardTitle": "任务面板",
+  "slotTaskBoardSubtitle": "今日待办与进度",
+  "slotExamSprintTitle": "考试冲刺",
+  "slotExamSprintSubtitle": "剩余天数与节奏",
+  "slotDashboardUpdatesTitle": "动态",
+  "slotDashboardUpdatesSubtitle": "通知、洞察、提醒",
+  "slotGrowthQualityTitle": "成长质量",
+  "slotGrowthQualitySubtitle": "深度、稳定性、平衡",
+  "slotWeeklyNarrativeTitle": "本周叙事",
+  "slotWeeklyNarrativeSubtitle": "一周变化的故事线",
+  "slotCommunityTitle": "同行社群",
+  "slotCommunitySubtitle": "伙伴动态与监督",
+  "slotAchievementProgressTitle": "成就进度",
+  "slotAchievementProgressSubtitle": "近期解锁与里程碑",
+  "slotLearningHeatmapTitle": "学习热力图",
+  "slotLearningHeatmapSubtitle": "过去30天的活跃度",
+  "slotWorkspaceCardsTitle": "工作区卡片",
+  "slotWorkspaceCardsSubtitle": "可滑动 / 网格的功能卡",
   "auroraSensing": "Aurora · 轻量感知中",
   "auroraCalibrated": "Aurora · 已校准",
   "auroraRiskDetected": "Aurora · 发现策略风险",
-  "auroraNeedsConfirm": "Aurora · 需要确认一个判断",
   "auroraCalibrationAvailable": "Aurora · 深度校准可用",
   "auroraCoolingDown": "Aurora · 冷却中",
   "auroraSourceAware": "Aurora · 已参考当前任务资料",
   "auroraNoSourcesUsed": "Aurora · 本轮未调用课件",
   "auroraStrategyActive": "Aurora · 策略已激活",
-
-  "dashboardSectionsLabel": "页面分区",
-  "dashboardWorkspaceCards": "工作区卡片",
-  "dashboardLeanView": "回到精简",
-  "dashboardAllSectionsVisible": "所有分区默认可见。开关隐藏，拖拽排序，按让低频分区收成 64px 标题条。",
-
   "notificationWelcomeTitle": "欢迎使用星火AI学习助手",
   "notificationWelcomeContent": "开始您的学习之旅吧！",
   "notificationNewTaskTitle": "新任务提醒",
   "notificationNewTaskContent": "您有一个即将到期的任务",
   "notificationAchievementTitle": "学习成就解锁",
   "notificationAchievementContent": "恭喜您获得「连续学习7天」成就",
-
   "dashboardPlanName": "计算机网络考前冲刺",
   "dashboardSubject": "计算机网络",
   "dashboardTopicReliableTransport": "传输层可靠传输",
@@ -15237,14 +15258,14 @@
   "dashboardSignalPriorityPending": "当前仍有重点待办",
   "dashboardLabelContinuePriority": "继续重点任务",
   "dashboardLabelStart25Min": "先做 25 分钟",
-
   "multiAgentSwitchMode": "切换到{mode}模式",
   "@multiAgentSwitchMode": {
     "placeholders": {
-      "mode": {"type": "String"}
+      "mode": {
+        "type": "String"
+      }
     }
   },
-
   "intentTaskCreate": "创建任务",
   "intentTaskSetReminder": "设置提醒",
   "intentCapsuleNoteIdea": "记录想法",
@@ -15254,7 +15275,9 @@
   "intentTranslationHelpLearn": "帮我学习 {text}",
   "@intentTranslationHelpLearn": {
     "placeholders": {
-      "text": {"type": "String"}
+      "text": {
+        "type": "String"
+      }
     }
   },
   "intentPrismView": "查看认知棱镜",
@@ -15267,7 +15290,9 @@
   "intentReviewHelpReview": "帮我复习：{text}",
   "@intentReviewHelpReview": {
     "placeholders": {
-      "text": {"type": "String"}
+      "text": {
+        "type": "String"
+      }
     }
   },
   "intentReviewErrorBook": "查看错题本",
@@ -15283,29 +15308,21 @@
   "membersCount": "{count} 名成员",
   "@membersCount": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "flamePower": "{power} 火焰",
   "@flamePower": {
     "placeholders": {
-      "power": {"type": "int"}
+      "power": {
+        "type": "int"
+      }
     }
   },
   "communityCenterTitle": "社群中心",
   "createGroupButton": "创建社群",
-  "groupKnowledgeBase": "群知识库",
-  "accountabilityRequestFailed": "请求失败",
-  "accountabilityOperationFailed": "操作失败，请稍后重试",
-  "accountabilityPartnerNudged": "已提醒伙伴查看今天的目标",
-  "accountabilityPartnerNudgedWithMessage": "已提醒伙伴：{message}",
-  "@accountabilityPartnerNudgedWithMessage": {
-    "placeholders": {
-      "message": {
-        "type": "String"
-      }
-    }
-  },
   "achievementBadgePoints": "+{points}",
   "@achievementBadgePoints": {
     "placeholders": {
@@ -15323,5 +15340,65 @@
     }
   },
   "communityCheckinLike": "点赞",
-  "communityEncourageLabel": "鼓励"
+  "communityEncourageLabel": "鼓励",
+  "communitySimilarGoalPursuers": "同目标伙伴",
+  "communitySimilarGoalPursuersCount": "和你追同样目标的 {count} 位伙伴",
+  "communityMutualFriendsCount": "{count} 位共同好友",
+  "communitySimilarGoalConnectMessage": "我们正在追相似目标，一起加油？",
+  "communityFriendRequestSent": "好友请求已发送",
+  "communityFriendRequestFailed": "暂时无法发送好友请求",
+  "communityStrategyLabel": "社区策略",
+  "communityFeedGoalMates": "目标伙伴",
+  "communityFeedFollowing": "我的关注",
+  "communityNoCommunitySparkDesc": "分享一个计划、洞察或小胜利，开始这里的第一次对话。",
+  "communitySharePost": "发一条动态",
+  "communityApplyToJoin": "申请加入",
+  "communityJoin": "加入",
+  "communityYouSeeFullView": "你看到完整视图",
+  "communityPartnerSeesSummary": "伙伴只看到摘要",
+  "communityHidden": "已隐藏",
+  "communityAllowObservationDesc": "关闭后，对方不再收到任何关于你的信号或观察提醒",
+  "communitySeeEmotionState": "看到我的情绪/能量状态",
+  "@communitySimilarGoalPursuersCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@communityMutualFriendsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@communityAdoptFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@communitySprintGoal": {
+    "placeholders": {
+      "goal": {
+        "type": "String"
+      }
+    }
+  },
+  "@communityPartnerObservationPermissions": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@communityEncouragementsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

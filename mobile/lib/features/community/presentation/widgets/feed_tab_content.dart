@@ -54,7 +54,6 @@ class _FeedTabContentState extends ConsumerState<FeedTabContent> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
     final feedState = ref.watch(feedProvider);
 
     return ContentConstraint(

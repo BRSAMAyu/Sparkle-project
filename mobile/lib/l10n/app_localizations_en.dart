@@ -6085,7 +6085,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityTabPartners => 'Partners';
 
   @override
-  String get communityAddFriend => 'Add Friend';
+  String get communityAddFriend => 'Add';
 
   @override
   String communityMembers(Object count) {
@@ -7155,6 +7155,34 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get shareContentCognitivePrism => 'Cognitive Prism';
+
+  @override
+  String get reflectionDaily => 'Daily Reflection';
+
+  @override
+  String get reflectionLoadFailed => 'Failed to load';
+
+  @override
+  String get reflectionNoRecords =>
+      'No reflections yet\nReflections appear here after you complete focus sessions';
+
+  @override
+  String get reflectionCount => 'Reflections';
+
+  @override
+  String get reflectionAvgMood => 'Avg Mood';
+
+  @override
+  String get reflectionDays => 'Days';
+
+  @override
+  String get reflectionCommonThemes => 'Common Themes';
+
+  @override
+  String get reflectionTimeline => 'Reflection Timeline';
+
+  @override
+  String get reflectionHighlights => 'Highlights';
 
   @override
   String get notificationPermissionStatus => 'Notification Permission';
@@ -8434,7 +8462,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communitySelectDate => 'Select Date';
 
   @override
-  String get communitySprintGoal => 'Sprint Goal';
+  String communitySprintGoal(String goal) {
+    return 'Sprint goal: $goal';
+  }
 
   @override
   String get communitySprintGoalRequired => 'Enter a sprint goal';
@@ -28327,8 +28357,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityEncourage => 'Encourage';
 
   @override
-  String communityEncouragementsCount(Object count) {
-    return '$count encouragements';
+  String communityEncouragementsCount(int count) {
+    return '$count';
   }
 
   @override
@@ -28910,10 +28940,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get communityKnowledgeNode => 'Knowledge Node';
+  String get communityKnowledgeNode => 'Knowledge node';
 
   @override
-  String get communityTimeCapsule => 'Time Capsule';
+  String get communityTimeCapsule => 'Time capsule';
 
   @override
   String get communitySeedLibrary => 'Seed Library';
@@ -28931,8 +28961,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityAdoptedRedirecting => 'Adopted, redirecting...';
 
   @override
-  String communityAdoptFailed(Object error) {
-    return 'Adopt failed: $error';
+  String communityAdoptFailed(String error) {
+    return 'Adoption failed: $error';
   }
 
   @override
@@ -29010,6 +29040,108 @@ class AppLocalizationsEn extends AppLocalizations {
   String communityCadenceReminder(Object days, Object time) {
     return 'Every $days days, next reminder at $time';
   }
+
+  @override
+  String get communityFeedFilterGlobal => 'Global Feed';
+
+  @override
+  String get communityFeedFilterSquad => 'My Squad';
+
+  @override
+  String get communityFeedFilterGoalMates => 'Goal Mates';
+
+  @override
+  String get communityFeedFilterFollowing => 'Following';
+
+  @override
+  String get communityFeedGlobal => 'Global Feed';
+
+  @override
+  String get communityFeedMySquad => 'My Squad';
+
+  @override
+  String get communityNoFeedYetTitle => 'No community spark yet';
+
+  @override
+  String get communityNoFeedYetDescription =>
+      'Share a plan, insight, or small win to start the first conversation here.';
+
+  @override
+  String get communitySharePostAction => 'Share a post';
+
+  @override
+  String get communityRefreshFeedAction => 'Refresh feed';
+
+  @override
+  String get communityGroupTypeSprint => 'Sprint group';
+
+  @override
+  String get communityGroupTypeSquad => 'Squad';
+
+  @override
+  String communitySprintGoalChip(Object goal) {
+    return 'Sprint goal: $goal';
+  }
+
+  @override
+  String get communityFeedback => 'Feedback';
+
+  @override
+  String get communityShareSource => 'Source';
+
+  @override
+  String communityAdoptFailedWithError(Object error) {
+    return 'Adoption failed: $error';
+  }
+
+  @override
+  String get communityOwnerFullView => 'You see the full view';
+
+  @override
+  String get communityPartnerSummaryView => 'Partner sees summary only';
+
+  @override
+  String communityHiddenFields(Object fields) {
+    return 'Hidden: $fields';
+  }
+
+  @override
+  String communityPartnerObservationPermissions(String name) {
+    return '$name observation permissions';
+  }
+
+  @override
+  String get communityAllowObservation => 'Allow observation';
+
+  @override
+  String get communityObservationDisabled =>
+      'When off, this buddy no longer receives any signals or observations about you';
+
+  @override
+  String get communitySeeStudyTime => 'See my study time';
+
+  @override
+  String get communitySeeTaskContent => 'See specific task content';
+
+  @override
+  String get communitySeeEmotionalState => 'See my emotional / energy state';
+
+  @override
+  String communityShareProgressPercent(Object percent) {
+    return 'Progress: $percent%';
+  }
+
+  @override
+  String get communityKnowledgeNodeLabel => 'Knowledge Node';
+
+  @override
+  String get communityTimeCapsuleLabel => 'Time Capsule';
+
+  @override
+  String get communityPartnersLabel => 'Partners';
+
+  @override
+  String get communityFriendsLabel => 'Friends';
 
   @override
   String communityBoundMilestone(Object label) {
@@ -34553,6 +34685,102 @@ class AppLocalizationsEn extends AppLocalizations {
       'All sections start visible. Switch to hide, drag to reorder, tap to collapse low-glance sections into a 64px header.';
 
   @override
+  String get slotDailyBriefingTitle => 'Daily briefing';
+
+  @override
+  String get slotDailyBriefingSubtitle => 'Today\'s status, pace, focus';
+
+  @override
+  String get slotMetricsRowTitle => 'Key metrics';
+
+  @override
+  String get slotMetricsRowSubtitle => 'Progress, streak, momentum';
+
+  @override
+  String get slotCommandCenterTitle => 'Command center';
+
+  @override
+  String get slotCommandCenterSubtitle => 'Pick up the next action';
+
+  @override
+  String get slotUnderstandingTitle => 'Understanding';
+
+  @override
+  String get slotUnderstandingSubtitle => 'How Sparkle reads you';
+
+  @override
+  String get slotReturnCaseFileTitle => 'Return case file';
+
+  @override
+  String get slotReturnCaseFileSubtitle => 'Where you left off';
+
+  @override
+  String get slotGoalDetailSnapshotTitle => 'Goal snapshot';
+
+  @override
+  String get slotGoalDetailSnapshotSubtitle => 'Active goal snapshot';
+
+  @override
+  String get slotMultiGoalDashboardTitle => 'Multi-goal board';
+
+  @override
+  String get slotMultiGoalDashboardSubtitle => 'All goals at a glance';
+
+  @override
+  String get slotTaskBoardTitle => 'Task board';
+
+  @override
+  String get slotTaskBoardSubtitle => 'Today\'s tasks & progress';
+
+  @override
+  String get slotExamSprintTitle => 'Exam sprint';
+
+  @override
+  String get slotExamSprintSubtitle => 'Days left & cadence';
+
+  @override
+  String get slotDashboardUpdatesTitle => 'Updates';
+
+  @override
+  String get slotDashboardUpdatesSubtitle => 'Notifications & insights';
+
+  @override
+  String get slotGrowthQualityTitle => 'Growth quality';
+
+  @override
+  String get slotGrowthQualitySubtitle => 'Depth, stability, balance';
+
+  @override
+  String get slotWeeklyNarrativeTitle => 'Weekly narrative';
+
+  @override
+  String get slotWeeklyNarrativeSubtitle => 'This week\'s story';
+
+  @override
+  String get slotCommunityTitle => 'Community';
+
+  @override
+  String get slotCommunitySubtitle => 'Partners & accountability';
+
+  @override
+  String get slotAchievementProgressTitle => 'Achievements';
+
+  @override
+  String get slotAchievementProgressSubtitle => 'Recent unlocks & milestones';
+
+  @override
+  String get slotLearningHeatmapTitle => 'Learning heatmap';
+
+  @override
+  String get slotLearningHeatmapSubtitle => 'Last 30 days of activity';
+
+  @override
+  String get slotWorkspaceCardsTitle => 'Workspace cards';
+
+  @override
+  String get slotWorkspaceCardsSubtitle => 'Swipe or grid feature cards';
+
+  @override
   String get auroraSensing => 'Aurora · Lightweight Sensing';
 
   @override
@@ -34746,4 +34974,65 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get communityEncourageLabel => 'Encourage';
+
+  @override
+  String get communitySimilarGoalPursuers => 'Similar goal pursuers';
+
+  @override
+  String communitySimilarGoalPursuersCount(int count) {
+    return '$count people pursuing similar goals';
+  }
+
+  @override
+  String communityMutualFriendsCount(int count) {
+    return '$count mutual';
+  }
+
+  @override
+  String get communitySimilarGoalConnectMessage =>
+      'We are pursuing similar goals. Want to connect?';
+
+  @override
+  String get communityFriendRequestSent => 'Friend request sent';
+
+  @override
+  String get communityFriendRequestFailed => 'Could not send friend request';
+
+  @override
+  String get communityStrategyLabel => 'Community strategy';
+
+  @override
+  String get communityFeedGoalMates => 'Goal Mates';
+
+  @override
+  String get communityFeedFollowing => 'Following';
+
+  @override
+  String get communityNoCommunitySparkDesc =>
+      'Share a plan, insight, or small win to start the first conversation here.';
+
+  @override
+  String get communitySharePost => 'Share a post';
+
+  @override
+  String get communityApplyToJoin => 'Apply';
+
+  @override
+  String get communityJoin => 'Join';
+
+  @override
+  String get communityYouSeeFullView => 'You see the full view';
+
+  @override
+  String get communityPartnerSeesSummary => 'Partner sees summary only';
+
+  @override
+  String get communityHidden => 'Hidden';
+
+  @override
+  String get communityAllowObservationDesc =>
+      'When off, this buddy no longer receives any signals or observations about you';
+
+  @override
+  String get communitySeeEmotionState => 'See my emotional / energy state';
 }

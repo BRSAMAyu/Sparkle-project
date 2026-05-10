@@ -10901,7 +10901,7 @@ abstract class AppLocalizations {
   /// No description provided for @communityAddFriend.
   ///
   /// In zh, this message translates to:
-  /// **'添加好友'**
+  /// **'加好友'**
   String get communityAddFriend;
 
   /// No description provided for @communityMembers.
@@ -12841,6 +12841,60 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'认知棱镜'**
   String get shareContentCognitivePrism;
+
+  /// No description provided for @reflectionDaily.
+  ///
+  /// In zh, this message translates to:
+  /// **'每日反思'**
+  String get reflectionDaily;
+
+  /// No description provided for @reflectionLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载失败'**
+  String get reflectionLoadFailed;
+
+  /// No description provided for @reflectionNoRecords.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无反思记录\n完成专注任务后可以在这里回顾你的思考'**
+  String get reflectionNoRecords;
+
+  /// No description provided for @reflectionCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'反思次数'**
+  String get reflectionCount;
+
+  /// No description provided for @reflectionAvgMood.
+  ///
+  /// In zh, this message translates to:
+  /// **'平均心情'**
+  String get reflectionAvgMood;
+
+  /// No description provided for @reflectionDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'统计天数'**
+  String get reflectionDays;
+
+  /// No description provided for @reflectionCommonThemes.
+  ///
+  /// In zh, this message translates to:
+  /// **'常见主题'**
+  String get reflectionCommonThemes;
+
+  /// No description provided for @reflectionTimeline.
+  ///
+  /// In zh, this message translates to:
+  /// **'反思时间线'**
+  String get reflectionTimeline;
+
+  /// No description provided for @reflectionHighlights.
+  ///
+  /// In zh, this message translates to:
+  /// **'亮点'**
+  String get reflectionHighlights;
 
   /// No description provided for @notificationPermissionStatus.
   ///
@@ -15053,8 +15107,8 @@ abstract class AppLocalizations {
   /// No description provided for @communitySprintGoal.
   ///
   /// In zh, this message translates to:
-  /// **'冲刺目标'**
-  String get communitySprintGoal;
+  /// **'冲刺目标: {goal}'**
+  String communitySprintGoal(String goal);
 
   /// No description provided for @communitySprintGoalRequired.
   ///
@@ -49171,7 +49225,7 @@ abstract class AppLocalizations {
   /// No description provided for @communityViewAll.
   ///
   /// In zh, this message translates to:
-  /// **'看全部'**
+  /// **'查看全部'**
   String get communityViewAll;
 
   /// No description provided for @communityRecommendLoadError.
@@ -49573,8 +49627,8 @@ abstract class AppLocalizations {
   /// No description provided for @communityEncouragementsCount.
   ///
   /// In zh, this message translates to:
-  /// **'{count} 条鼓励'**
-  String communityEncouragementsCount(Object count);
+  /// **'{count}'**
+  String communityEncouragementsCount(int count);
 
   /// No description provided for @communityEncouragementMessages.
   ///
@@ -50630,7 +50684,7 @@ abstract class AppLocalizations {
   ///
   /// In zh, this message translates to:
   /// **'采纳失败: {error}'**
-  String communityAdoptFailed(Object error);
+  String communityAdoptFailed(String error);
 
   /// No description provided for @communityCognitivePrism.
   ///
@@ -50746,6 +50800,186 @@ abstract class AppLocalizations {
   /// **'{days} 天一次，下一次提醒是 {time}'**
   String communityCadenceReminder(Object days, Object time);
 
+  /// No description provided for @communityFeedFilterGlobal.
+  ///
+  /// In zh, this message translates to:
+  /// **'全局动态'**
+  String get communityFeedFilterGlobal;
+
+  /// No description provided for @communityFeedFilterSquad.
+  ///
+  /// In zh, this message translates to:
+  /// **'我的小队'**
+  String get communityFeedFilterSquad;
+
+  /// No description provided for @communityFeedFilterGoalMates.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标伙伴'**
+  String get communityFeedFilterGoalMates;
+
+  /// No description provided for @communityFeedFilterFollowing.
+  ///
+  /// In zh, this message translates to:
+  /// **'我的关注'**
+  String get communityFeedFilterFollowing;
+
+  /// No description provided for @communityFeedGlobal.
+  ///
+  /// In zh, this message translates to:
+  /// **'全局动态'**
+  String get communityFeedGlobal;
+
+  /// No description provided for @communityFeedMySquad.
+  ///
+  /// In zh, this message translates to:
+  /// **'我的小队'**
+  String get communityFeedMySquad;
+
+  /// No description provided for @communityNoFeedYetTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'社区还没有火花'**
+  String get communityNoFeedYetTitle;
+
+  /// No description provided for @communityNoFeedYetDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享一个计划、洞察或小胜利，开始这里的第一次对话。'**
+  String get communityNoFeedYetDescription;
+
+  /// No description provided for @communitySharePostAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'发一条动态'**
+  String get communitySharePostAction;
+
+  /// No description provided for @communityRefreshFeedAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'刷新动态'**
+  String get communityRefreshFeedAction;
+
+  /// No description provided for @communityGroupTypeSprint.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺群组'**
+  String get communityGroupTypeSprint;
+
+  /// No description provided for @communityGroupTypeSquad.
+  ///
+  /// In zh, this message translates to:
+  /// **'小队'**
+  String get communityGroupTypeSquad;
+
+  /// No description provided for @communitySprintGoalChip.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺目标: {goal}'**
+  String communitySprintGoalChip(Object goal);
+
+  /// No description provided for @communityFeedback.
+  ///
+  /// In zh, this message translates to:
+  /// **'评价'**
+  String get communityFeedback;
+
+  /// No description provided for @communityShareSource.
+  ///
+  /// In zh, this message translates to:
+  /// **'来源'**
+  String get communityShareSource;
+
+  /// No description provided for @communityAdoptFailedWithError.
+  ///
+  /// In zh, this message translates to:
+  /// **'采纳失败: {error}'**
+  String communityAdoptFailedWithError(Object error);
+
+  /// No description provided for @communityOwnerFullView.
+  ///
+  /// In zh, this message translates to:
+  /// **'你看到完整视图'**
+  String get communityOwnerFullView;
+
+  /// No description provided for @communityPartnerSummaryView.
+  ///
+  /// In zh, this message translates to:
+  /// **'伙伴只看到摘要'**
+  String get communityPartnerSummaryView;
+
+  /// No description provided for @communityHiddenFields.
+  ///
+  /// In zh, this message translates to:
+  /// **'已隐藏: {fields}'**
+  String communityHiddenFields(Object fields);
+
+  /// No description provided for @communityPartnerObservationPermissions.
+  ///
+  /// In zh, this message translates to:
+  /// **'{name} 的观察权限'**
+  String communityPartnerObservationPermissions(String name);
+
+  /// No description provided for @communityAllowObservation.
+  ///
+  /// In zh, this message translates to:
+  /// **'允许观察我'**
+  String get communityAllowObservation;
+
+  /// No description provided for @communityObservationDisabled.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭后，对方不再收到任何关于你的信号或观察提醒'**
+  String get communityObservationDisabled;
+
+  /// No description provided for @communitySeeStudyTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'看到我的学习时间'**
+  String get communitySeeStudyTime;
+
+  /// No description provided for @communitySeeTaskContent.
+  ///
+  /// In zh, this message translates to:
+  /// **'看到我的具体任务内容'**
+  String get communitySeeTaskContent;
+
+  /// No description provided for @communitySeeEmotionalState.
+  ///
+  /// In zh, this message translates to:
+  /// **'看到我的情绪/能量状态'**
+  String get communitySeeEmotionalState;
+
+  /// No description provided for @communityShareProgressPercent.
+  ///
+  /// In zh, this message translates to:
+  /// **'进度: {percent}%'**
+  String communityShareProgressPercent(Object percent);
+
+  /// No description provided for @communityKnowledgeNodeLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'知识节点'**
+  String get communityKnowledgeNodeLabel;
+
+  /// No description provided for @communityTimeCapsuleLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'时光胶囊'**
+  String get communityTimeCapsuleLabel;
+
+  /// No description provided for @communityPartnersLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'伙伴'**
+  String get communityPartnersLabel;
+
+  /// No description provided for @communityFriendsLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'好友'**
+  String get communityFriendsLabel;
+
   /// No description provided for @communityBoundMilestone.
   ///
   /// In zh, this message translates to:
@@ -50779,7 +51013,7 @@ abstract class AppLocalizations {
   /// No description provided for @communityRefreshFeed.
   ///
   /// In zh, this message translates to:
-  /// **'Refresh feed'**
+  /// **'刷新动态'**
   String get communityRefreshFeed;
 
   /// No description provided for @communityShareFailedRetry.
@@ -60277,6 +60511,198 @@ abstract class AppLocalizations {
   /// **'所有分区默认可见。开关隐藏，拖拽排序，按让低频分区收成 64px 标题条。'**
   String get dashboardAllSectionsVisible;
 
+  /// No description provided for @slotDailyBriefingTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'今日简报'**
+  String get slotDailyBriefingTitle;
+
+  /// No description provided for @slotDailyBriefingSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'当天的状态、节奏与重点'**
+  String get slotDailyBriefingSubtitle;
+
+  /// No description provided for @slotMetricsRowTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'关键指标'**
+  String get slotMetricsRowTitle;
+
+  /// No description provided for @slotMetricsRowSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'进度、连续天数、动力'**
+  String get slotMetricsRowSubtitle;
+
+  /// No description provided for @slotCommandCenterTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'指挥中心'**
+  String get slotCommandCenterTitle;
+
+  /// No description provided for @slotCommandCenterSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'下一步行动入口'**
+  String get slotCommandCenterSubtitle;
+
+  /// No description provided for @slotUnderstandingTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'理解面板'**
+  String get slotUnderstandingTitle;
+
+  /// No description provided for @slotUnderstandingSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sparkle 对你的认知拆解'**
+  String get slotUnderstandingSubtitle;
+
+  /// No description provided for @slotReturnCaseFileTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'回归档案'**
+  String get slotReturnCaseFileTitle;
+
+  /// No description provided for @slotReturnCaseFileSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'上次离开时的现场'**
+  String get slotReturnCaseFileSubtitle;
+
+  /// No description provided for @slotGoalDetailSnapshotTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标详情'**
+  String get slotGoalDetailSnapshotTitle;
+
+  /// No description provided for @slotGoalDetailSnapshotSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前目标的近况'**
+  String get slotGoalDetailSnapshotSubtitle;
+
+  /// No description provided for @slotMultiGoalDashboardTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'多目标看板'**
+  String get slotMultiGoalDashboardTitle;
+
+  /// No description provided for @slotMultiGoalDashboardSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'所有目标的总览'**
+  String get slotMultiGoalDashboardSubtitle;
+
+  /// No description provided for @slotTaskBoardTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务面板'**
+  String get slotTaskBoardTitle;
+
+  /// No description provided for @slotTaskBoardSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'今日待办与进度'**
+  String get slotTaskBoardSubtitle;
+
+  /// No description provided for @slotExamSprintTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'考试冲刺'**
+  String get slotExamSprintTitle;
+
+  /// No description provided for @slotExamSprintSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'剩余天数与节奏'**
+  String get slotExamSprintSubtitle;
+
+  /// No description provided for @slotDashboardUpdatesTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'动态'**
+  String get slotDashboardUpdatesTitle;
+
+  /// No description provided for @slotDashboardUpdatesSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'通知、洞察、提醒'**
+  String get slotDashboardUpdatesSubtitle;
+
+  /// No description provided for @slotGrowthQualityTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'成长质量'**
+  String get slotGrowthQualityTitle;
+
+  /// No description provided for @slotGrowthQualitySubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'深度、稳定性、平衡'**
+  String get slotGrowthQualitySubtitle;
+
+  /// No description provided for @slotWeeklyNarrativeTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'本周叙事'**
+  String get slotWeeklyNarrativeTitle;
+
+  /// No description provided for @slotWeeklyNarrativeSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'一周变化的故事线'**
+  String get slotWeeklyNarrativeSubtitle;
+
+  /// No description provided for @slotCommunityTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'同行社群'**
+  String get slotCommunityTitle;
+
+  /// No description provided for @slotCommunitySubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'伙伴动态与监督'**
+  String get slotCommunitySubtitle;
+
+  /// No description provided for @slotAchievementProgressTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'成就进度'**
+  String get slotAchievementProgressTitle;
+
+  /// No description provided for @slotAchievementProgressSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'近期解锁与里程碑'**
+  String get slotAchievementProgressSubtitle;
+
+  /// No description provided for @slotLearningHeatmapTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习热力图'**
+  String get slotLearningHeatmapTitle;
+
+  /// No description provided for @slotLearningHeatmapSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'过去30天的活跃度'**
+  String get slotLearningHeatmapSubtitle;
+
+  /// No description provided for @slotWorkspaceCardsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'工作区卡片'**
+  String get slotWorkspaceCardsTitle;
+
+  /// No description provided for @slotWorkspaceCardsSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'可滑动 / 网格的功能卡'**
+  String get slotWorkspaceCardsSubtitle;
+
   /// No description provided for @auroraSensing.
   ///
   /// In zh, this message translates to:
@@ -60630,6 +61056,114 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'鼓励'**
   String get communityEncourageLabel;
+
+  /// No description provided for @communitySimilarGoalPursuers.
+  ///
+  /// In zh, this message translates to:
+  /// **'同目标伙伴'**
+  String get communitySimilarGoalPursuers;
+
+  /// No description provided for @communitySimilarGoalPursuersCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'和你追同样目标的 {count} 位伙伴'**
+  String communitySimilarGoalPursuersCount(int count);
+
+  /// No description provided for @communityMutualFriendsCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 位共同好友'**
+  String communityMutualFriendsCount(int count);
+
+  /// No description provided for @communitySimilarGoalConnectMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'我们正在追相似目标，一起加油？'**
+  String get communitySimilarGoalConnectMessage;
+
+  /// No description provided for @communityFriendRequestSent.
+  ///
+  /// In zh, this message translates to:
+  /// **'好友请求已发送'**
+  String get communityFriendRequestSent;
+
+  /// No description provided for @communityFriendRequestFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂时无法发送好友请求'**
+  String get communityFriendRequestFailed;
+
+  /// No description provided for @communityStrategyLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'社区策略'**
+  String get communityStrategyLabel;
+
+  /// No description provided for @communityFeedGoalMates.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标伙伴'**
+  String get communityFeedGoalMates;
+
+  /// No description provided for @communityFeedFollowing.
+  ///
+  /// In zh, this message translates to:
+  /// **'我的关注'**
+  String get communityFeedFollowing;
+
+  /// No description provided for @communityNoCommunitySparkDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享一个计划、洞察或小胜利，开始这里的第一次对话。'**
+  String get communityNoCommunitySparkDesc;
+
+  /// No description provided for @communitySharePost.
+  ///
+  /// In zh, this message translates to:
+  /// **'发一条动态'**
+  String get communitySharePost;
+
+  /// No description provided for @communityApplyToJoin.
+  ///
+  /// In zh, this message translates to:
+  /// **'申请加入'**
+  String get communityApplyToJoin;
+
+  /// No description provided for @communityJoin.
+  ///
+  /// In zh, this message translates to:
+  /// **'加入'**
+  String get communityJoin;
+
+  /// No description provided for @communityYouSeeFullView.
+  ///
+  /// In zh, this message translates to:
+  /// **'你看到完整视图'**
+  String get communityYouSeeFullView;
+
+  /// No description provided for @communityPartnerSeesSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'伙伴只看到摘要'**
+  String get communityPartnerSeesSummary;
+
+  /// No description provided for @communityHidden.
+  ///
+  /// In zh, this message translates to:
+  /// **'已隐藏'**
+  String get communityHidden;
+
+  /// No description provided for @communityAllowObservationDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭后，对方不再收到任何关于你的信号或观察提醒'**
+  String get communityAllowObservationDesc;
+
+  /// No description provided for @communitySeeEmotionState.
+  ///
+  /// In zh, this message translates to:
+  /// **'看到我的情绪/能量状态'**
+  String get communitySeeEmotionState;
 }
 
 class _AppLocalizationsDelegate

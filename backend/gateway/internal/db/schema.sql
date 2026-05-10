@@ -16121,6 +16121,18 @@ CREATE INDEX ix_study_records_node_id ON study_records USING btree (node_id);
 
 CREATE INDEX ix_study_records_user_id ON study_records USING btree (user_id);
 
+--
+-- Name: ix_study_records_user_id_node_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_study_records_user_id_node_id ON study_records USING btree (user_id, node_id);
+
+--
+-- Name: ix_study_records_user_id_created_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_study_records_user_id_created_at ON study_records USING btree (user_id, created_at);
+
 
 --
 -- Name: ix_subjects_category; Type: INDEX; Schema: public; Owner: postgres
