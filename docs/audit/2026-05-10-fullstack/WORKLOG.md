@@ -12,21 +12,25 @@
 | Phase | Total | Done | Remaining |
 |-------|-------|------|-----------|
 | **P0 Critical** | **8** | **8** | **0** |
-| **P1 High** | **35** | **18** | **17** |
+| **P1 High** | **35** | **35** | **0** |
 | P2 Medium | 60 | 7 | 53 |
 | P3 Low | 32 | 0 | 32 |
 | i18n (net reduction) | ~1070 | ~24 | ~1046 |
 
 ---
 
-## Verification: ALL 5 COMMITS PASSED ✅
+## Verification: ALL 8 COMMITS PASSED ✅
 
-Opus agent verified all 5 commits:
+Opus agent verified all 8 commits:
 - **9d80efa4e** (P0): ✅ error_widget EN fallbacks, error_messages bilingual, client.go fresh retry timeout, chat_provider partial msg dedup
 - **a665f0cfd** (Backend P1): ✅ kill_switch try/except + no mut, plan_review done-callback
 - **416b7bd76** (Mobile SM P1): ✅ sync_engine listener cancel, gRPC dispose, debouncer cancel, catchError
 - **38acc0616** (DB P1): ✅ 7 indexes, FK ON DELETE SET NULL, galaxy consumer pid
 - **87808c549** (i18n): ✅ 7 new ARB keys + task_board_card full migration
+- **631923b94** (P2): ✅ timezone consistency + streak + Flutter UX (7 issues)
+- **c797ce7ac** (mobile): ✅ remove unused I18nService import from node_detail_sheet
+- **19d5a2663** (backend): ✅ ErrorReplanBridge DEBUG log for unsupported error types
+- **d033b5020** (backend): ✅ TaskEventConsumer session isolation (10 independent sessions)
 
 ---
 
@@ -40,6 +44,9 @@ Opus agent verified all 5 commits:
 | **38acc0616** | 14:42 | DB P1 | 7 composite indexes migration, goals.plan_id FK ON DELETE SET NULL, galaxy_event_consumer.py stable consumer name |
 | **87808c549** | 14:45 | i18n | task_board_card.dart 8 isChinese → ARB migration |
 | **631923b94** | 15:30 | P2 | timezone consistency + streak unification + Flutter UX (7 issues) |
+| **c797ce7ac** | 16:10 | mobile | remove unused I18nService import from node_detail_sheet.dart |
+| **19d5a2663** | 16:15 | backend | ErrorReplanBridge DEBUG log for unsupported error types (DB-P1-08) |
+| **d033b5020** | 16:20 | backend | TaskEventConsumer session isolation (DB-P1-07) |
 
 ---
 
@@ -87,8 +94,8 @@ Opus agent verified all 5 commits:
 ### ⏳ Remaining P1s
 | Issue | File | Status | Notes |
 |-------|------|--------|-------|
-| DB-P1-07 | task_event_consumer.py:103-206 | **TO FIX** | Single session risk — needs independent sessions/savepoints |
-| DB-P1-08 | error_replan_bridge.py:82-97 | **TO FIX** | Silent ignore of non-triggering types — needs metric + DEBUG log |
+| DB-P1-07 | task_event_consumer.py:103-206 | ✅ FIXED | Each operation in own AsyncSessionLocal session, commits per op |
+| DB-P1-08 | error_replan_bridge.py:82-97 | ✅ FIXED | Added logger.debug() for unsupported error_type |
 | FE-P1-04 | community_main_screen.dart | ✅ FALSE POSITIVE | Already uses `context.l10n.*` (verified 2026-05-10) |
 | FE-P1-05 | create_post_screen.dart | ✅ FALSE POSITIVE | Already uses `context.l10n.*` (verified 2026-05-10) |
 | FE-P1-06 | create_post_screen.dart | ✅ ALREADY FIXED | Line 101 uses `context.l10n.communityPostFailed` |
