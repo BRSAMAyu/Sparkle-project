@@ -72,7 +72,7 @@ class _TimelineEntry {
 final reflectionSummaryProvider =
     FutureProvider.family<ReflectionSummaryData, int>((ref, days) async {
   final api = ref.read(apiClientProvider);
-  final response = await api.dio.get(
+  final response = await api.dio.get<Map<String, dynamic>>(
     '${ApiEndpoints.reflectionSummary}?days=$days',
   );
   return ReflectionSummaryData.fromJson(response.data as Map<String, dynamic>);

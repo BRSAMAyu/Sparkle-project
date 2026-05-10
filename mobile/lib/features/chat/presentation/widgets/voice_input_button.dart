@@ -395,9 +395,6 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
   }
 
   Widget _buildButtonContent({required bool isDark}) {
-    final idleIconColor =
-        isDark ? DS.textSecondary.withValues(alpha: 0.92) : DS.neutral600;
-    // 根据按钮尺寸动态调整图标大小
     final iconSize = (widget.size * 0.42).clamp(16.0, 28.0);
     final progressSize = (widget.size * 0.46).clamp(18.0, 26.0);
     final fontSize = (widget.size * 0.17).clamp(6.0, 10.0);

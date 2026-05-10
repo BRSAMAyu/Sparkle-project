@@ -78,7 +78,7 @@ class _CommentSheetContentState extends ConsumerState<_CommentSheetContent> {
       );
       setState(() {
         _comments = items
-            .whereType<Map>()
+            .whereType<Map<String, dynamic>>()
             .map((item) => Map<String, dynamic>.from(item))
             .toList(growable: false);
         _loading = false;

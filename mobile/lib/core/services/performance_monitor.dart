@@ -437,7 +437,7 @@ class PerformanceMonitor {
   /// 估算内存使用 (通过dart:developer API)
   int _estimateMemoryUsage() {
     try {
-      final info = developer.Service.getIsolateID(Isolate.current);
+      developer.Service.getIsolateId(Isolate.current);
       // dart:developer 不直接暴露 heap size, 返回 -1 表示不可用
       // 真实内存需通过 platform channel 获取
       return -1;
