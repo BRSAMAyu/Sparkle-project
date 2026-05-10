@@ -68,7 +68,12 @@ class BaseTool(ABC):
 
     @abstractmethod
     async def execute(
-        self, params: BaseModel, user_id: str, db_session: Any, tool_call_id: str | None = None
+        self,
+        params: BaseModel,
+        user_id: str,
+        db_session: Any,
+        tool_call_id: str | None = None,
+        locale: str = "en",
     ) -> ToolResult:
         """
         执行工具逻辑
@@ -78,6 +83,7 @@ class BaseTool(ABC):
             user_id: 当前用户 ID
             db_session: 数据库会话
             tool_call_id: 当前工具调用的唯一 ID
+            locale: 用户语言偏好 (en/zh)，用于本地化 prompt
 
         Returns:
             ToolResult: 统一格式的执行结果

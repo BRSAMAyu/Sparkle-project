@@ -155,6 +155,7 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
   void onInputChanged(String text) {
     final isTyping = text.isNotEmpty;
     final result = IntentClassifier.classify(text);
+    final l10n = I18nService.instance.l10n;
 
     final typingPredictions = <PredictedAction>[];
     var localTopConfidence = 0.0;
