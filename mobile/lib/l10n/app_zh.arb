@@ -11948,6 +11948,14 @@
   "taskDescribeBlockGuidance": "先讲清楚，再决定下一步。",
   "taskVerifyBlock": "做一个最小验证动作",
   "taskVerifyBlockGuidance": "只验证刚拆出来的这一步。",
+  "taskDemoGuideTitle": "任务目标",
+  "taskDemoGuidePreparation": "准备清单",
+  "taskDemoGuideSteps": "执行步骤",
+  "taskDemoGuideStep1": "理解与拆解",
+  "taskDemoGuideStep2": "核心执行",
+  "taskDemoGuideStep3": "检查与总结",
+  "taskDemoGuideTips": "注意事项",
+  "taskDemoGuideCriteria": "完成标准",
   "@blockedUnblockConfirmBody": {
     "placeholders": {
       "name": {
@@ -14380,6 +14388,7 @@
   "bottleneckAlertMessage": "我注意到你在{topic}上有点卡，不是你的问题，可能是路径需要调整",
   "bottleneckAlertAction": "看看?",
   "compactStatusKeepRhythm": "今天适合保持节奏",
+  "longTermPlan": "长期计划",
   "@bottleneckAlertMessage": {
     "placeholders": {
       "topic": {

@@ -9743,6 +9743,14 @@
   "taskDescribeBlockGuidance": "Explain it clearly first, then decide next steps.",
   "taskVerifyBlock": "Do one smallest verification action",
   "taskVerifyBlockGuidance": "Only verify this one sub-step you just broke out.",
+  "taskDemoGuideTitle": "Objective",
+  "taskDemoGuidePreparation": "Preparation",
+  "taskDemoGuideSteps": "Steps",
+  "taskDemoGuideStep1": "Understand & Break Down",
+  "taskDemoGuideStep2": "Core Execution",
+  "taskDemoGuideStep3": "Review & Summarize",
+  "taskDemoGuideTips": "Tips",
+  "taskDemoGuideCriteria": "Completion Criteria",
   "@taskPlanningOptimismSuggestion": {
     "placeholders": {
       "minutes": {
@@ -13920,6 +13928,102 @@
   "cahDeclineReminder": "Decline",
   "cahLaterReminder": "Later",
   "cahTooFrequentReminder": "Too frequent",
+  "cahReminderAccepted": "Reminder enabled",
+  "cahReminderDeclined": "Declined this reminder",
+  "cahReminderLater": "Reminder snoozed",
+  "cahReminderReduced": "Reminder frequency reduced",
+  "cahUndo": "Undo",
+  "cahBoundaryChanged": "Reminder boundary updated",
+  "cahLoadFailed": "Failed to load accountability hub",
+  "cahDueDate": "Due {value}",
+  "@cahDueDate": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "cahPercent": "{value}%",
+  "@cahPercent": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
+  "cahPartnerGoal": "{name} goal",
+  "@cahPartnerGoal": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "cahStrategies": "Strategy suggestions",
+  "cahStrategyCreateTitle": "Create your first commitment",
+  "cahStrategyCreateDesc": "Public commitments boost follow-through and accountability. Set a clear goal to start.",
+  "cahStrategyCreateAction": "Create commitment",
+  "cahStrategyPartnerTitle": "Find an accountability partner",
+  "cahStrategyPartnerDesc": "A partner makes persistence easier with mutual check-ins and encouragement.",
+  "cahStrategyPartnerAction": "Find partners",
+  "cahStrategySharedGoalTitle": "Join a shared goal",
+  "cahStrategySharedGoalDesc": "Pursue a goal with others — collective momentum brings unexpected motivation.",
+  "cahStrategySharedGoalAction": "Browse goals",
+  "cahStrategySquadRiskTitle": "Squad risks need attention",
+  "cahStrategySquadRiskDesc": "Your squad has risks that need attention — addressing them early prevents bigger issues.",
+  "cahStrategySquadRiskAction": "View details",
+  "cahEmptyTitle": "No accountability commitments yet",
+  "cahEmptyBody": "Invite a partner or find people with similar goals from the feed.",
+  "cahRetry": "Retry",
+  "cahSuccessCriteria": "Success criteria",
+  "cahMilestones": "Milestones",
+  "cahEvidence": "Evidence",
+  "cahNoEvidence": "No evidence yet",
+  "cahProgress": "Progress",
+  "cahWitnesses": "Witnesses",
+  "cahDueSoon": "Due soon",
+  "cahActive": "Active",
+  "cahCompleted": "Completed",
+  "cahViolated": "Violated",
+  "cahTogetherNotRanking": "Not a ranking, just moving together",
+  "cahTodayDone": "Synced today",
+  "cahTodayWaiting": "Waiting today",
+  "cahFriendsEntry": "Friends",
+  "cahGroupsEntry": "Groups",
+  "cahFindPartners": "Find partners",
+  "cahCreateCommitment": "Create commitment",
+  "communityContentHint": "Share what's on your mind, a learning insight, or today's progress...",
+  "partnersEmptyTitle": "Find your study partners",
+  "partnersEmptyDesc": "Pair up with someone pursuing similar goals. Accountability doubles consistency.",
+  "partnersEmptyAction": "Discover partners",
+  "partnersMyPartners": "My Partners",
+  "partnersEmptyState": "Empty state",
+  "partnersViewAll": "View all",
+  "partnersMoreFriends": "{count} more friends",
+  "@partnersMoreFriends": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "partnersEncourage": "Encourage",
+  "partnersNudge": "Nudge",
+  "partnersCheer": "Cheer",
+  "partnersFriendLabel": "Friend",
+  "partnersDayStreak": "{count}d streak",
+  "@partnersDayStreak": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "partnersCheckedIn": "Checked in",
+  "partnersNotCheckedIn": "Not yet today",
+  "partnersDoneToday": "Done today",
+  "partnersPending": "Pending",
+  "partnersPartner": "Partner",
   "goalDetailTitle": "Goal detail",
   "goalDetailProgress": "Overall progress",
   "goalDetailMastery": "Mastery",
@@ -14366,6 +14470,7 @@
   "bottleneckAlertMessage": "I noticed you're stuck on {topic}. Not your fault—may need path adjustment.",
   "bottleneckAlertAction": "Take a look?",
   "compactStatusKeepRhythm": "Keep your rhythm today",
+  "longTermPlan": "Long-term Plan",
   "@bottleneckAlertMessage": {
     "placeholders": {
       "topic": {

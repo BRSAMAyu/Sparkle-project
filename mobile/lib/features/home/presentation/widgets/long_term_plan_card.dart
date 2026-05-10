@@ -52,7 +52,7 @@ class LongTermPlanCard extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                I18nService.instance.isChinese ? '长期计划' : 'Long-term Plan',
+                context.l10n.longTermPlan,
                 style: TextStyle(
                   fontSize: dense ? 10 : (compact ? 11 : 12),
                   fontWeight: DS.fontWeightMedium,
