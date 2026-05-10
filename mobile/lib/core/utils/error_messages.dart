@@ -8,28 +8,55 @@ class ErrorMessages {
     String errorCode,
     String? technicalMessage,
   ) {
-    // 1. 尝试基于技术消息（可能是后端返回的中文）进行匹配映射
+    // 1. Try matching based on technical message (backend may return Chinese or English)
     if (technicalMessage != null) {
-      if (technicalMessage.contains('没有找到') ||
-          technicalMessage.contains('不存在')) {
+      final msg = technicalMessage.toLowerCase();
+      // Not-found patterns (CN + EN)
+      if (msg.contains('没有找到') ||
+          msg.contains('不存在') ||
+          msg.contains('not found')) {
         return l10n.errorNotFound;
       }
-      if (technicalMessage.contains('登录信息已过期') ||
-          technicalMessage.contains('令牌无效') ||
-          technicalMessage.contains('重新登录')) {
+      // Auth/token expired patterns (CN + EN)
+      if (msg.contains('登录信息已过期') ||
+          msg.contains('令牌无效') ||
+          msg.contains('重新登录') ||
+          msg.contains('登录已失效') ||
+          msg.contains('token') ||
+          msg.contains('expired') ||
+          msg.contains('unauthorized') ||
+          msg.contains('invalid or expired')) {
         return l10n.errorTokenExpired;
       }
-      if (technicalMessage.contains('网络') || technicalMessage.contains('连接')) {
+      // Network/connection patterns (CN + EN)
+      if (msg.contains('网络') ||
+          msg.contains('连接') ||
+          msg.contains('network') ||
+          msg.contains('connection')) {
         return l10n.errorConnectionFailed;
       }
-      if (technicalMessage.contains('服务器') || technicalMessage.contains('打盹')) {
+      // Server error patterns (CN + EN)
+      if (msg.contains('服务器') ||
+          msg.contains('打盹') ||
+          msg.contains('server') ||
+          msg.contains('internal') ||
+          msg.contains('upstream') ||
+          msg.contains('unavailable')) {
         return l10n.errorServerIssue;
       }
-      if (technicalMessage.contains('太频繁') ||
-          technicalMessage.contains('休息一下')) {
+      // Rate limit patterns (CN + EN)
+      if (msg.contains('太频繁') ||
+          msg.contains('休息一下') ||
+          msg.contains('too many') ||
+          msg.contains('rate limit')) {
         return l10n.errorRateLimit;
       }
-      if (technicalMessage.contains('权限') || technicalMessage.contains('管理员')) {
+      // Permission patterns (CN + EN)
+      if (msg.contains('权限') ||
+          msg.contains('管理员') ||
+          msg.contains('forbidden') ||
+          msg.contains('permission') ||
+          msg.contains('admin')) {
         return l10n.errorAuthRequired;
       }
     }
@@ -107,46 +134,45 @@ class ErrorMessages {
       return getLocalizedMessage(l10n, errorCode, technicalMessage);
     }
 
-    // 回退到默认中文逻辑
+    // Fallback to English when l10n is unavailable
     if (technicalMessage != null &&
         (technicalMessage.contains('Exception: ') ||
             technicalMessage.contains('~') ||
             technicalMessage.contains('啦'))) {
-      // 看起来已经是中文友好文案或包含异常前缀
       return technicalMessage.replaceFirst('Exception: ', '');
     }
 
     switch (errorCode.toUpperCase()) {
       case 'CONNECTION_ERROR':
       case 'WEBSOCKET_ERROR':
-        return '连接中断了，我没法继续拿到后续结果。';
+        return 'Connection lost. Could not receive the full response.';
       case 'OFFLINE':
       case 'NO_INTERNET':
-        return '看起来已经离线了。已保留本地内容，连网后可以重试。';
+        return 'You appear to be offline. Content has been saved locally.';
       case 'CONNECTION_TIMEOUT':
       case 'STREAM_TIMEOUT':
-        return '这轮等待超时了，我只拿到部分结果。';
+        return 'The request timed out. Only partial results were received.';
       case 'MAX_RETRIES_EXCEEDED':
-        return '重试次数已经用完，这轮链路没有稳定恢复。';
+        return 'Maximum retries exceeded. The connection did not stabilize.';
       case 'UNAUTHORIZED':
       case 'AUTH_REQUIRED':
-        return '当前登录状态无效，这轮请求没有被服务端接受。';
+        return 'Authentication is invalid. Please sign in again.';
       case 'TOKEN_EXPIRED':
-        return '登录已过期，需要重新建立会话。';
+        return 'Session expired. Please sign in again.';
       case 'SERVER_ERROR':
       case 'INTERNAL_ERROR':
-        return '服务端处理这轮请求时出错了。';
+        return 'The server encountered an error processing this request.';
       case 'SERVICE_UNAVAILABLE':
-        return '当前能力暂时不可用，这轮只能中断。';
+        return 'This service is temporarily unavailable.';
       case 'RATE_LIMIT_EXCEEDED':
-        return '请求过于频繁，这轮被限流了。';
+        return 'Too many requests. Please try again later.';
       case 'LLM_ERROR':
       case 'AI_ERROR':
-        return '模型服务这轮没有稳定返回结果。';
+        return 'The AI service did not return a stable response.';
       case 'CONTEXT_LENGTH_EXCEEDED':
-        return '上下文太长，这轮无法继续带着全部历史处理。';
+        return 'Context is too long to process with full history.';
       default:
-        return technicalMessage ?? '这轮请求遇到了未分类错误。';
+        return technicalMessage ?? 'An unexpected error occurred.';
     }
   }
 
@@ -185,19 +211,19 @@ class ErrorMessages {
       case 'STREAM_TIMEOUT':
       case 'OFFLINE':
       case 'NO_INTERNET':
-        return '检查网络后重试，或先看当前已返回的部分结果';
+        return 'Check your connection and retry, or view partial results';
       case 'UNAUTHORIZED':
       case 'AUTH_REQUIRED':
       case 'TOKEN_EXPIRED':
-        return '请重新登录';
+        return 'Please sign in again';
       case 'LLM_ERROR':
       case 'AI_ERROR':
       case 'SERVICE_UNAVAILABLE':
-        return '稍后重试，或切换到标准模式先拿主结论';
+        return 'Retry later, or switch to standard mode';
       case 'CONTEXT_LENGTH_EXCEEDED':
-        return '新开一个会话，或把问题缩短后再发';
+        return 'Start a new session or shorten your message';
       default:
-        return '请稍后重试';
+        return 'Please try again later';
     }
   }
 }

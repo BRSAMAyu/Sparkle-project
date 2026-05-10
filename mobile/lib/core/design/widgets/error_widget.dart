@@ -193,15 +193,15 @@ class CustomErrorWidget extends StatelessWidget {
   String _getDefaultTitle() {
     switch (severity) {
       case ErrorSeverity.error:
-        return l10n?.errorTitle ?? l10n?.errorDefaultTitle ?? '哎呀，出错了';
+        return l10n?.errorTitle ?? l10n?.errorDefaultTitle ?? 'Oops, something went wrong';
       case ErrorSeverity.warning:
-        return l10n?.warningTitle ?? l10n?.warningDefaultTitle ?? '温馨提示';
+        return l10n?.warningTitle ?? l10n?.warningDefaultTitle ?? 'Friendly Reminder';
       case ErrorSeverity.info:
-        return l10n?.infoTitle ?? l10n?.infoDefaultTitle ?? '小提示';
+        return l10n?.infoTitle ?? l10n?.infoDefaultTitle ?? 'Quick Tip';
     }
   }
 
-  String _getRetryText() => l10n?.retry ?? l10n?.retryLabel ?? '重试';
+  String _getRetryText() => l10n?.retry ?? l10n?.retryLabel ?? 'Retry';
 
   void _handleRetry() {
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));

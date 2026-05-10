@@ -1100,7 +1100,16 @@ class ChatNotifier extends StateNotifier<ChatState> {
           accumulatedCollaboration != null ||
           accumulatedUxEnvelope != null;
 
-      if (hasRenderableMessage) {
+      // For failed streams, only preserve as a message if there's meaningful
+      // structured content (widgets/envelope). Bare partial text from a
+      // disrupted stream should not be rendered — the user will retry and
+      // get the full response, avoiding duplicate partial+full messages.
+      final shouldPreserveMessage = phase == ChatRunPhase.completed ||
+          accumulatedWidgets.isNotEmpty ||
+          accumulatedUxEnvelope != null ||
+          accumulatedCollaboration != null;
+
+      if (hasRenderableMessage && shouldPreserveMessage) {
         var resolvedContent = accumulatedContent;
         if (resolvedContent.trim().isEmpty && phase == ChatRunPhase.completed) {
           if (accumulatedWidgets.isNotEmpty || accumulatedUxEnvelope != null) {

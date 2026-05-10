@@ -359,7 +359,13 @@ func (c *Client) StreamChat(ctx context.Context, req *agentv1.ChatRequest) (agen
 		return nil, err
 	}
 	// Use fresh context with fresh timeout after reconnection
-	retryCtx := c.injectMetadata(ctx, req.UserId)
+	retryTimeout := 120 * time.Second
+	if c.config.GRPCTimeoutSeconds > 0 {
+		retryTimeout = time.Duration(c.config.GRPCTimeoutSeconds) * time.Second
+	}
+	retryCtx, retryCancel := context.WithTimeout(context.Background(), retryTimeout)
+	defer retryCancel()
+	retryCtx = c.injectMetadata(retryCtx, req.UserId)
 	stream, retryErr := c.currentAPI().StreamChat(retryCtx, req)
 	grpcCallDuration.WithLabelValues("StreamChat", statusCodeLabel(retryErr)).Observe(time.Since(start).Seconds())
 	return stream, retryErr

@@ -8,7 +8,7 @@ services:
         AGE_REF: PG16/v1.6.0-rc0
     container_name: sparkle_db
     ports:
-      - "${SPARKLE_DB_PORT:-5432}:5432"
+      - "127.0.0.1:${SPARKLE_DB_PORT:-5432}:5432"
     environment:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
@@ -56,7 +56,7 @@ services:
     container_name: sparkle_redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     command: redis-stack-server --requirepass ${REDIS_PASSWORD} --maxmemory 512mb --maxmemory-policy volatile-lru
     volumes:
       - sparkle_redis_data:/data
@@ -67,7 +67,7 @@ services:
         reservations:
           memory: 128M
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      test: ["CMD-SHELL", "REDISCLI_AUTH=$$REDIS_PASSWORD redis-cli ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -80,8 +80,8 @@ services:
     entrypoint: ["minio"]
     command: server /data --console-address ":9001"
     ports:
-      - "${SPARKLE_MINIO_API_PORT:-9000}:9000"
-      - "${SPARKLE_MINIO_CONSOLE_PORT:-9001}:9001"
+      - "127.0.0.1:${SPARKLE_MINIO_API_PORT:-9000}:9000"
+      - "127.0.0.1:${SPARKLE_MINIO_CONSOLE_PORT:-9001}:9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
@@ -111,7 +111,7 @@ services:
       - .env
     user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
     ports:
-      - "${SPARKLE_API_PORT:-8000}:8000"
+      - "127.0.0.1:${SPARKLE_API_PORT:-8000}:8000"
     environment:
       # Override localhost URLs from .env with correct Docker service names
       - SPARKLE_RBAC_ENABLED=${SPARKLE_RBAC_ENABLED:-false}
@@ -213,7 +213,7 @@ services:
     command: python grpc_server.py
     user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
     ports:
-      - "${SPARKLE_AGENT_PORT:-50051}:50051"
+      - "127.0.0.1:${SPARKLE_AGENT_PORT:-50051}:50051"
     environment:
       # Override localhost URLs from .env with correct Docker service names
       - SPARKLE_RBAC_ENABLED=${SPARKLE_RBAC_ENABLED:-false}

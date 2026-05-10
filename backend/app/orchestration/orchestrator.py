@@ -445,7 +445,7 @@ class ChatOrchestrator(
             ):
                 planning_context["calendar_context"] = user_context_payload["cognitive_context"]["calendar_context"]
 
-            planning_response = await manager.process_planning_turn(
+            planning_response = await asyncio.timeout(30)(manager.process_planning_turn)(
                 db=active_db,  # type: ignore[arg-type]
                 user_id=parsed_user_id,
                 chat_session_id=session_id,
@@ -751,7 +751,7 @@ class ChatOrchestrator(
             if fast_track_context:
                 planning_context["exam_sprint_fast_track"] = fast_track_context
 
-            planning_response = await manager.process_planning_turn(
+            planning_response = await asyncio.timeout(30)(manager.process_planning_turn)(
                 db=active_db,  # type: ignore[arg-type]
                 user_id=parsed_user_id,
                 chat_session_id=session_id,
