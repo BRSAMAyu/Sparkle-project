@@ -2253,7 +2253,7 @@ Please review this plan and provide your assessment."""
                 logger.warning(f"Failed to publish replan notification: {e}")
 
         # Auto-execute replanning in background to avoid queued actions
-        asyncio.create_task(
+        replan_task = asyncio.create_task(
             self._execute_replan_action(
                 action_id=action_id,
                 user_id=user_id,
@@ -2262,6 +2262,16 @@ Please review this plan and provide your assessment."""
                 feedback=feedback,
             )
         )
+
+        def _log_replan_exception(task: asyncio.Task) -> None:
+            if not task.cancelled() and task.exception():
+                logger.error(
+                    "Replan background task failed: %s",
+                    task.exception(),
+                    exc_info=task.exception(),
+                )
+
+        replan_task.add_done_callback(_log_replan_exception)
         await event_bus.publish(
             "plan.replanned",
             {
