@@ -42,19 +42,21 @@
 
 ---
 
-## P2 问题修复记录 (8/40 DONE)
+## P2 问题修复记录 (12/40 DONE)
 
 | # | 问题 | 文件 | Commit | 状态 |
 |---|------|------|--------|------|
 | P2-1 | Proto mastery int32 → double | galaxy_service.proto | ⚠️ 需要 proto 生成 + 跨语言协调 |
-| P2-2 | Redis 投影无 TTL | galaxy_sync.go | ✅ DONE - 见上 |
+| P2-2 | Redis 投影无 TTL (node views) | galaxy_sync.go | `b230abfcc` | ✅ DONE |
+| P2-2b | Redis recent_studies 无 TTL | galaxy_sync.go | `fb31384f7` | ✅ DONE |
 | P2-4 | Community like count 非原子 | community_sync.go | ✅ DONE - Lua script already atomic |
 | P2-5 | RecordStudy 不检查 is_unlocked | galaxy_command.go | `b5a0db9c6` | ✅ DONE |
-| P2-8 | study_records 缺复合索引 | schema.sql | `b5a0db9c6` | ✅ DONE |
+| P2-8 | study_records 缺复合索引 (user_id, node_id) | schema.sql | `b5a0db9c6` | ✅ DONE |
 | P2-9 | study_records 缺 (user_id, created_at) 索引 | schema.sql | `b5a0db9c6` | ✅ DONE |
 | P2-12 | GetLearningPath N+1 查询 | galaxy_grpc_service.py | ✅ 已修复 - 见P1-21 |
 | P1-4/5 | node_relations 无唯一约束 | schema.sql | `fb31384f7` | ✅ DONE |
-| P2-2b | galaxy_sync recent_studies 无 TTL | galaxy_sync.go | `fb31384f7` | ✅ DONE |
+| P2-4b | SparkNode context.Background() | galaxy_handler.go | `1e76bb0c6` | ✅ DONE |
+| P2-13 | galaxy_handler duplicate node/nodes routes | galaxy_handler.go | ⚠️ 待定 - 向后兼容 |
 
 ---
 
@@ -74,8 +76,10 @@
 | `34cd35c3f` | fix(P1): update galaxy_handler_test.go to match NewGalaxyHandler signature |
 | `b5a0db9c6` | fix(P2): RecordStudy is_unlocked check, add study_records indexes |
 | `fb31384f7` | fix(P2): galaxy_sync TTL, node_relations unique constraint |
+| `b230abfcc` | fix(P2): galaxy_sync add TTL to all Redis projection keys |
+| `1e76bb0c6` | fix(P2): galaxy_handler use request context for RecordNodeInteraction |
 
-**总计**: 12 个 commit，包含 6 P0 + 14 P1 + 8 P2（共 28 项修复）
+**总计**: 14 个 commit，包含 6 P0 + 14 P1 + 12 P2（共 32 项修复）
 
 ---
 
