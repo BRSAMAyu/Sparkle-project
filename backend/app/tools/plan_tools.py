@@ -29,6 +29,7 @@ from app.services.llm_fallback_utils import plan_llm
 from app.services.plan_service import PlanService
 from app.services.task_service import TaskService
 
+from app.core.i18n import I18n
 from .base import BaseTool, ToolCategory, ToolResult
 from .entity_cards import (
     build_plan_entity_card,
@@ -126,7 +127,7 @@ class CreatePlanTool(BaseTool):
                 success=False,
                 tool_name=self.name,
                 error_message=str(e),
-                suggestion="请检查计划参数或稍后再试"
+                suggestion=I18n.t("plan_errors.create_plan_error_suggestion", locale=locale)
             )
 
 
@@ -177,8 +178,8 @@ class GenerateTasksForPlanTool(BaseTool):
                 return ToolResult(
                     success=False,
                     tool_name=self.name,
-                    error_message=f"计划 {params.plan_id} 不存在或无权访问",
-                    suggestion="请检查计划 ID 是否正确"
+                    error_message=I18n.t("plan_errors.plan_not_found", locale=locale, plan_id=params.plan_id),
+                    suggestion=I18n.t("plan_errors.plan_not_found_suggestion", locale=locale)
                 )
             plan_snapshot = SimpleNamespace(
                 id=plan.id,
@@ -324,8 +325,8 @@ class GenerateTasksForPlanTool(BaseTool):
                 return ToolResult(
                     success=False,
                     tool_name=self.name,
-                    error_message="无法创建任何任务",
-                    suggestion="请检查计划信息并重试"
+                    error_message=I18n.t("plan_errors.tasks_create_failed", locale=locale),
+                    suggestion=I18n.t("plan_errors.tasks_create_failed_suggestion", locale=locale)
                 )
 
             logger.info(f"Generated {len(created_tasks)} tasks for plan {plan_uuid}")
@@ -376,16 +377,16 @@ class GenerateTasksForPlanTool(BaseTool):
             return ToolResult(
                 success=False,
                 tool_name=self.name,
-                error_message="计划 ID 格式错误",
-                suggestion="请使用有效的 UUID 格式"
+                error_message=I18n.t("plan_errors.plan_id_invalid", locale=locale),
+                suggestion=I18n.t("plan_errors.plan_id_invalid_suggestion", locale=locale)
             )
         except Exception as e:
             logger.error(f"Generate tasks failed: {e}")
             return ToolResult(
                 success=False,
                 tool_name=self.name,
-                error_message=f"生成任务失败: {str(e)}",
-                suggestion="请检查参数或稍后重试"
+                error_message=I18n.t("plan_errors.tasks_generate_failed", locale=locale, error=str(e)),
+                suggestion=I18n.t("plan_errors.tasks_generate_failed_suggestion", locale=locale)
             )
 
     async def _build_fallback_tasks(

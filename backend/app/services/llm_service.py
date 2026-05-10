@@ -907,8 +907,11 @@ class LLMService:
                 start_idx = text.find(start_ch)
                 if start_idx < 0:
                     continue
+                last_close = text.rfind(end_ch)
+                if last_close <= start_idx:
+                    continue
                 # Try progressively shorter substrings from each closing bracket
-                for end_idx in range(text.rfind(end_ch), start_idx, -1):
+                for end_idx in range(last_close, start_idx, -1):
                     if text[end_idx] != end_ch:
                         continue
                     candidate = text[start_idx:end_idx + 1]
