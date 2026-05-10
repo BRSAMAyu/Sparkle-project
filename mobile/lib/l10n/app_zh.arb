@@ -11933,6 +11933,15 @@
   "taskNextActionReason1": "及时回顾对抗遗忘",
   "taskNextActionReason2": "加深理解",
   "taskPreferencesUpdatedDemo": "偏好已更新（演示模式）",
+  "taskWebResearchBrief": "网页调研简报",
+  "taskWebResearchDesc": "适合搜索与总结",
+  "taskWebResearchReason": "keyword:搜索",
+  "taskPlanningOptimismBias": "检测到规划乐观偏差",
+  "taskPlanningOptimismSuggestion": "根据您的历史行为模式，建议将预估时间调整为 {minutes} 分钟",
+  "taskAiGuideTitle": "AI 执行指南",
+  "taskAiGuideStep1": "准备阶段",
+  "taskAiGuideStep2": "执行阶段",
+  "taskAiGuideStep3": "复习阶段",
   "@blockedUnblockConfirmBody": {
     "placeholders": {
       "name": {
@@ -14362,6 +14371,15 @@
   "homeToolbarReviewPlan": "复习计划",
   "homeToolbarLearningForecast": "学习预测",
   "curiosityExplore": "探索未知",
+  "bottleneckAlertMessage": "我注意到你在{topic}上有点卡，不是你的问题，可能是路径需要调整",
+  "bottleneckAlertAction": "看看?",
+  "@bottleneckAlertMessage": {
+    "placeholders": {
+      "topic": {
+        "type": "String"
+      }
+    }
+  },
   "homeSprintNoActive": "暂无活跃冲刺",
   "homeSprintCreate": "直接创建冲刺",
   "homeSprintNewGrowthPlan": "新建成长计划",

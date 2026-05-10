@@ -9728,6 +9728,22 @@
   "taskNextActionReason1": "Timely review combats forgetting",
   "taskNextActionReason2": "Deepen understanding",
   "taskPreferencesUpdatedDemo": "Preferences updated (demo mode)",
+  "taskWebResearchBrief": "Web Research Brief",
+  "taskWebResearchDesc": "Great for search and summarization",
+  "taskWebResearchReason": "keyword:search",
+  "taskPlanningOptimismBias": "Planning optimism bias detected",
+  "taskPlanningOptimismSuggestion": "Based on your history, consider adjusting the estimate to {minutes} min",
+  "taskAiGuideTitle": "AI Execution Guide",
+  "taskAiGuideStep1": "Preparation",
+  "taskAiGuideStep2": "Execution",
+  "taskAiGuideStep3": "Review",
+  "@taskPlanningOptimismSuggestion": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
   "@blockedUnblockConfirmBody": {
     "placeholders": {
       "name": {
@@ -14341,6 +14357,15 @@
   "homeToolbarReviewPlan": "Review Plan",
   "homeToolbarLearningForecast": "Learning Forecast",
   "curiosityExplore": "Explore the unknown",
+  "bottleneckAlertMessage": "I noticed you're stuck on {topic}. Not your fault—may need path adjustment.",
+  "bottleneckAlertAction": "Take a look?",
+  "@bottleneckAlertMessage": {
+    "placeholders": {
+      "topic": {
+        "type": "String"
+      }
+    }
+  },
   "homeSprintNoActive": "No active sprint",
   "homeSprintCreate": "Create Sprint",
   "homeSprintNewGrowthPlan": "New Growth Plan",

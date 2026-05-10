@@ -70,7 +70,7 @@ class ActiveBottleneckAlert extends StatelessWidget {
                 const SizedBox(width: DS.spacing12),
                 Expanded(
                   child: Text(
-                    I18nService.instance.isChinese ? '我注意到你在${activeBottleneck.topic}上有点卡，不是你的问题，可能是路径需要调整' : 'I noticed you\'re stuck on ${activeBottleneck.topic}. Not your fault—may need path adjustment.',
+                    context.l10n.bottleneckAlertMessage(activeBottleneck.topic),
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                     style: context.sparkleTypography.bodyMedium.copyWith(
@@ -86,7 +86,7 @@ class ActiveBottleneckAlert extends StatelessWidget {
                       ? null
                       : () => onOpenChat!(activeBottleneck),
                   child: Text(
-                    I18nService.instance.isChinese ? '看看?' : 'Take a look?',
+                    context.l10n.bottleneckAlertAction,
                     style: context.sparkleTypography.labelLarge.copyWith(
                       color: DS.warning,
                       fontWeight: DS.fontWeightBold,
