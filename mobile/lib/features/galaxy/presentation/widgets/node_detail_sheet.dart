@@ -15,7 +15,6 @@ import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_reposi
 import 'package:sparkle/features/galaxy/presentation/providers/node_source_materials_provider.dart';
 import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
 typedef NodeReviewContextCallback = void Function(
