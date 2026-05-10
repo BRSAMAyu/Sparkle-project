@@ -71,14 +71,14 @@ class DashboardRepository {
 
   Future<Map<String, dynamic>> getExamSprintDashboard() async {
     if (DemoDataService.isDemoMode) {
-      final zh = I18nService.instance.isChinese;
+      final l10n = I18nService.instance.l10n;
       final today = DateTime.now();
       final tomorrow = today.add(const Duration(days: 1));
       return {
         'active': true,
         'plan_id': 'demo-exam-sprint-plan',
-        'plan_name': zh ? '计算机网络考前冲刺' : 'Computer Networks Exam Sprint',
-        'subject': zh ? '计算机网络' : 'Computer Networks',
+        'plan_name': l10n.dashboardPlanName,
+        'subject': l10n.dashboardSubject,
         'days_left': 5,
         'target_mode': 'pass',
         'estimated_score_now': 71.0,
@@ -98,8 +98,8 @@ class DashboardRepository {
         'total_mistake_count': 25,
         'streak_days': 9,
         'high_yield_low_mastery_topics': [
-          zh ? '传输层可靠传输' : 'Reliable Transport Layer',
-          zh ? 'TCP 拥塞控制' : 'TCP Congestion Control'
+          l10n.dashboardTopicReliableTransport,
+          l10n.dashboardTopicTcpCongestion
         ],
         'task_groups': [
           {

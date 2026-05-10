@@ -7157,6 +7157,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shareContentCognitivePrism => 'Cognitive Prism';
 
   @override
+  String get dashboardPlanName => 'Computer Networks Exam Sprint';
+
+  @override
+  String get dashboardSubject => 'Computer Networks';
+
+  @override
   String get reflectionDaily => 'Daily Reflection';
 
   @override
@@ -34833,12 +34839,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get notificationAchievementContent =>
       'Congratulations! You\'ve unlocked \"7-Day Learning Streak\"';
-
-  @override
-  String get dashboardPlanName => 'Computer Networks Exam Sprint';
-
-  @override
-  String get dashboardSubject => 'Computer Networks';
 
   @override
   String get dashboardTopicReliableTransport => 'Reliable Transport Layer';

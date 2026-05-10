@@ -15399,5 +15399,26 @@
         "type": "int"
       }
     }
-  }
+  },
+
+  "dashboardSprintTask1": "Closed-book: TCP 3-way handshake & 4-way teardown",
+  "dashboardSprintTask2": "Correct 3 reliable transport mistakes",
+  "dashboardSprintTask3": "Review congestion control algorithms",
+  "dashboardSprintTask4": "Practice exam questions (chapter 3)",
+  "dashboardSprintTask5": "Review error correction techniques",
+  "dashboardGrowthSignalMorning": "Morning energy is high today, good for tackling difficult topics",
+  "dashboardGrowthSignalAfternoon": "Afternoon focus is stable, suitable for review",
+  "dashboardGrowthSignalEvening": "Evening is best for light review and planning",
+  "dashboardGrowthSignalWeekend": "Weekend momentum is slightly lower than weekdays",
+  "dashboardDropoutRiskSummary": "No significant dropout risk now, but it will rise if you skip two consecutive days of focus.",
+  "dashboardOptimalTimeSummary": "3–5 PM is your most stable study window; evenings are best for wrap-ups and reviews.",
+  "dashboardPredictionTitle": "Prediction: you'll continue pushing your most critical task",
+  "dashboardPredictionSummary": "Based on the last 24 hours, tackling your current priority task makes the most sense.",
+  "dashboardSuggestedPrompt": "Help me continue today's most critical task",
+  "dashboardRecent24hActive": "Active in the last 24 hours",
+  "dashboardRecent7dStable": "Steady progress over the past 7 days",
+  "dashboardProfileTendency": "You tend to pick up existing priority tasks",
+  "dashboardFocusNatural25": "A 25-minute focused block feels natural first",
+  "dashboardContinuePriority": "Continue Priority Task",
+  "dashboardStart25Min": "Start a 25-min Focus"
 }

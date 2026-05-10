@@ -12842,6 +12842,18 @@ abstract class AppLocalizations {
   /// **'认知棱镜'**
   String get shareContentCognitivePrism;
 
+  /// No description provided for @dashboardPlanName.
+  ///
+  /// In zh, this message translates to:
+  /// **'计算机网络考前冲刺'**
+  String get dashboardPlanName;
+
+  /// No description provided for @dashboardSubject.
+  ///
+  /// In zh, this message translates to:
+  /// **'计算机网络'**
+  String get dashboardSubject;
+
   /// No description provided for @reflectionDaily.
   ///
   /// In zh, this message translates to:
@@ -60804,18 +60816,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'恭喜您获得「连续学习7天」成就'**
   String get notificationAchievementContent;
-
-  /// No description provided for @dashboardPlanName.
-  ///
-  /// In zh, this message translates to:
-  /// **'计算机网络考前冲刺'**
-  String get dashboardPlanName;
-
-  /// No description provided for @dashboardSubject.
-  ///
-  /// In zh, this message translates to:
-  /// **'计算机网络'**
-  String get dashboardSubject;
 
   /// No description provided for @dashboardTopicReliableTransport.
   ///

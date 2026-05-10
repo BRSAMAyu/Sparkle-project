@@ -6881,6 +6881,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get shareContentCognitivePrism => '认知棱镜';
 
   @override
+  String get dashboardPlanName => '计算机网络考前冲刺';
+
+  @override
+  String get dashboardSubject => '计算机网络';
+
+  @override
   String get reflectionDaily => '每日反思';
 
   @override
@@ -33406,12 +33412,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get notificationAchievementContent => '恭喜您获得「连续学习7天」成就';
-
-  @override
-  String get dashboardPlanName => '计算机网络考前冲刺';
-
-  @override
-  String get dashboardSubject => '计算机网络';
 
   @override
   String get dashboardTopicReliableTransport => '传输层可靠传输';
