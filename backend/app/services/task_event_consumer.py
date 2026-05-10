@@ -99,39 +99,57 @@ class TaskEventConsumer:
                 return
             user_id = UUID(str(user_id_raw))
             task_id = UUID(str(task_id_raw))
+            estimated = event.get("estimated_minutes", 0)
+            actual = event.get("actual_minutes", 0)
+            completion_rate = event.get("completion_rate")
+            if completion_rate is None:
+                completion_rate = actual / estimated if estimated > 0 else 1.0
 
-            async with AsyncSessionLocal() as db:
-                collector = BehaviorSignalCollector(db, cache_service.redis, self.event_bus)
-                bridge = CommunitySignalBridge(db, cache_service.redis)
+            # Signal collection: independent session, commit-on-success
+            try:
+                async with AsyncSessionLocal() as db:
+                    collector = BehaviorSignalCollector(db, cache_service.redis, self.event_bus)
+                    await collector.handle_task_completed_event(event)
+                    await db.commit()
+            except Exception as exc:
+                logger.warning("BehaviorSignalCollector failed for task %s: %s", task_id, exc)
 
-                estimated = event.get("estimated_minutes", 0)
-                actual = event.get("actual_minutes", 0)
-                completion_rate = event.get("completion_rate")
-                if completion_rate is None:
-                    completion_rate = actual / estimated if estimated > 0 else 1.0
-                await collector.handle_task_completed_event(event)
-                await MetacognitionService(db, cache_service.redis, self.event_bus).refresh_snapshot(user_id)
-                await bridge.handle_group_task_completed(event)
+            # Metacognition snapshot: independent session
+            try:
+                async with AsyncSessionLocal() as db:
+                    await MetacognitionService(db, cache_service.redis, self.event_bus).refresh_snapshot(user_id)
+                    await db.commit()
+            except Exception as exc:
+                logger.warning("MetacognitionService.refresh_snapshot failed for user %s: %s", user_id, exc)
 
-                # Resolve a previously issued Spine directive with this new behavior
-                # before on_task_completed potentially registers a fresh expectation.
-                try:
-                    await self._record_task_outcome(
-                        user_id=str(user_id),
-                        task_id=str(task_id),
-                        plan_id=event.get("plan_id"),
-                        completed=True,
-                        actual_minutes=actual,
-                        estimated_minutes=estimated,
-                        completion_rate=completion_rate,
-                    )
-                except Exception as outcome_exc:
-                    logger.warning("Outcome recording failed for task {}: {}", task_id, outcome_exc)
+            # Community bridge: independent session
+            try:
+                async with AsyncSessionLocal() as db:
+                    bridge = CommunitySignalBridge(db, cache_service.redis)
+                    await bridge.handle_group_task_completed(event)
+                    await db.commit()
+            except Exception as exc:
+                logger.warning("CommunitySignalBridge failed for task %s: %s", task_id, exc)
 
-                # Signal-to-Action Spine: task.completed → signal detection
-                try:
-                    from app.signals.spine_orchestrator import get_spine_orchestrator
-                    spine = get_spine_orchestrator(cache_service.redis)
+            # Spine outcome recording: independent session
+            try:
+                await self._record_task_outcome(
+                    user_id=str(user_id),
+                    task_id=str(task_id),
+                    plan_id=event.get("plan_id"),
+                    completed=True,
+                    actual_minutes=actual,
+                    estimated_minutes=estimated,
+                    completion_rate=completion_rate,
+                )
+            except Exception as outcome_exc:
+                logger.warning("Outcome recording failed for task %s: %s", task_id, outcome_exc)
+
+            # Signal-to-Action Spine: independent session
+            try:
+                from app.signals.spine_orchestrator import get_spine_orchestrator
+                spine = get_spine_orchestrator(cache_service.redis)
+                async with AsyncSessionLocal() as db:
                     await spine.on_task_completed(
                         user_id=str(user_id),
                         task_id=str(task_id),
@@ -139,10 +157,13 @@ class TaskEventConsumer:
                         actual_minutes=actual,
                         plan_id=event.get("plan_id"),
                     )
-                except Exception as spine_exc:
-                    logger.warning("Spine pipeline error for task {}: {}", task_id, spine_exc)
+                    await db.commit()
+            except Exception as spine_exc:
+                logger.warning("Spine pipeline error for task %s: %s", task_id, spine_exc)
 
-                try:
+            # Auto fragment collection: independent session
+            try:
+                async with AsyncSessionLocal() as db:
                     auto_collector = AutoFragmentCollector(db)
                     await auto_collector.collect_from_task_completion(
                         user_id=user_id,
@@ -152,38 +173,51 @@ class TaskEventConsumer:
                         completion_rate=completion_rate,
                         difficulty=event.get("difficulty"),
                     )
-                except Exception as exc:
-                    logger.warning(f"Auto fragment collection failed for task {task_id}: {exc}")
+                    await db.commit()
+            except Exception as exc:
+                logger.warning(f"Auto fragment collection failed for task {task_id}: {exc}")
 
-                plan_id = event.get("plan_id")
-                if not plan_id or plan_id == "None":
-                    result = await db.execute(
-                        select(Task.plan_id).where(
-                            Task.id == task_id,
-                            Task.user_id == user_id,
-                        )
-                    )
-                    plan_id = result.scalar_one_or_none()
-
-                if plan_id:
-                    adaptive_replanner = AdaptiveReplanner(db, cache_service.redis)
-                    await adaptive_replanner.on_task_completed(
-                        user_id=user_id,
-                        plan_id=UUID(str(plan_id)),
-                        task_id=task_id,
-                        completion_rate=completion_rate,
-                    )
-
-                # Update Goal.progress based on task completion for the associated plan
+            # Adaptive replanner: independent session
+            plan_id = event.get("plan_id")
+            if not plan_id or plan_id == "None":
                 try:
-                    plan_uuid = UUID(str(plan_id)) if plan_id else None
-                    if plan_uuid:
+                    async with AsyncSessionLocal() as db:
+                        result = await db.execute(
+                            select(Task.plan_id).where(
+                                Task.id == task_id,
+                                Task.user_id == user_id,
+                            )
+                        )
+                        plan_id = result.scalar_one_or_none()
+                        await db.commit()
+                except Exception as exc:
+                    logger.warning("Failed to fetch plan_id for task %s: %s", task_id, exc)
+
+            if plan_id:
+                try:
+                    async with AsyncSessionLocal() as db:
+                        adaptive_replanner = AdaptiveReplanner(db, cache_service.redis)
+                        await adaptive_replanner.on_task_completed(
+                            user_id=user_id,
+                            plan_id=UUID(str(plan_id)),
+                            task_id=task_id,
+                            completion_rate=completion_rate,
+                        )
+                        await db.commit()
+                except Exception as exc:
+                    logger.warning("AdaptiveReplanner failed for plan %s: %s", plan_id, exc)
+
+            # Goal progress update: independent session
+            try:
+                plan_uuid = UUID(str(plan_id)) if plan_id else None
+                if plan_uuid:
+                    async with AsyncSessionLocal() as db:
+                        from sqlalchemy import func as sa_func
                         result = await db.execute(
                             select(Goal).where(Goal.plan_id == plan_uuid, Goal.user_id == user_id)
                         )
                         goal = result.scalar_one_or_none()
                         if goal:
-                            from sqlalchemy import func as sa_func
                             total = await db.scalar(
                                 select(sa_func.count(Task.id)).where(
                                     Task.plan_id == plan_uuid,
@@ -200,9 +234,9 @@ class TaskEventConsumer:
                             goal.progress = (completed / total) if total and total > 0 else 0.0
                             db.add(goal)
                             await db.commit()
-                            logger.debug("Updated Goal {} progress to {:.2f}", goal.id, goal.progress)
-                except Exception as goal_exc:
-                    logger.warning("Failed to update goal progress: {}", goal_exc)
+                            logger.debug("Updated Goal %s progress to %.2f", goal.id, goal.progress)
+            except Exception as goal_exc:
+                logger.warning("Failed to update goal progress: %s", goal_exc)
 
         except Exception as e:
             logger.error(f"Failed to handle task.completed: {e}")
