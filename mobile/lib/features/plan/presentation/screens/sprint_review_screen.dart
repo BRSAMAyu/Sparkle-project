@@ -156,7 +156,7 @@ class _ProgressHero extends StatelessWidget {
     return Semantics(
       container: true,
       explicitChildNodes: true,
-      label: context.l10n.sprintProgressLabel(name, '$percent', '$daysLeft'),
+      label: context.l10n.sprintProgressLabel(name, percent, daysLeft),
       child: Container(
         padding: const EdgeInsets.all(DS.spacing20),
         decoration: BoxDecoration(
