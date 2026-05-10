@@ -387,8 +387,9 @@ class GalaxyStatsService:
             intensity = 0.0
             if next_review:
                 if now >= next_review:
-                    # Overdue: High intensity
-                    intensity = 1.0
+                    # Overdue: graduated intensity based on days overdue
+                    days_overdue = (now - next_review).total_seconds() / 86400
+                    intensity = min(1.0, 0.5 + min(days_overdue, 14) / 28)
                 else:
                     # Approaching: 0.0 to 1.0
                     delta = (next_review - now).total_seconds() / 3600 # hours
