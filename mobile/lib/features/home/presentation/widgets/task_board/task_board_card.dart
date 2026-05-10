@@ -223,17 +223,13 @@ class _TaskBoardCardState extends ConsumerState<TaskBoardCard> {
               _PanelItem(
                 icon: Icons.calendar_today_rounded,
                 title: context.l10n.taskBoardBrowseByDate,
-                description: isChinese
-                    ? '任务按到期日期分组显示'
-                    : 'Tasks are grouped by due date.',
+                description: context.l10n.taskBoardBrowseByDateDesc,
               ),
               const SizedBox(height: DS.spacing12),
               _PanelItem(
                 icon: Icons.warning_rounded,
                 title: context.l10n.taskBoardOverdueTasks,
-                description: isChinese
-                    ? '红色高亮显示已逾期的任务'
-                    : 'Overdue tasks are highlighted in red.',
+                description: context.l10n.taskBoardOverdueTasksDesc,
                 color: DS.semanticError,
               ),
             ],
@@ -244,17 +240,13 @@ class _TaskBoardCardState extends ConsumerState<TaskBoardCard> {
               _PanelItem(
                 icon: Icons.flag_rounded,
                 title: context.l10n.taskBoardPriorityOrder,
-                description: isChinese
-                    ? '高优先级任务显示在前面'
-                    : 'Higher-priority tasks rise to the top.',
+                description: context.l10n.taskBoardPriorityOrderDesc,
               ),
               const SizedBox(height: DS.spacing12),
               _PanelItem(
                 icon: Icons.tune_rounded,
                 title: context.l10n.taskBoardCustomPriority,
-                description: isChinese
-                    ? '在任务编辑中调整优先级'
-                    : 'Adjust task priority from the editor.',
+                description: context.l10n.taskBoardCustomPriorityDesc,
               ),
             ],
           ),
@@ -265,17 +257,13 @@ class _TaskBoardCardState extends ConsumerState<TaskBoardCard> {
               _PanelItem(
                 icon: Icons.flash_on_rounded,
                 title: context.l10n.taskBoardSprintFocus,
-                description: isChinese
-                    ? '只显示当前冲刺的任务'
-                    : 'Only tasks from the active sprint are shown.',
+                description: context.l10n.taskBoardSprintFocusDesc,
               ),
               const SizedBox(height: DS.spacing12),
               _PanelItem(
                 icon: Icons.timer_rounded,
                 title: context.l10n.taskBoardSprintTiming,
-                description: isChinese
-                    ? '关注剩余天数和进度'
-                    : 'Keep an eye on remaining days and progress.',
+                description: context.l10n.taskBoardSprintTimingDesc,
               ),
             ],
           ),
@@ -288,9 +276,10 @@ class _TaskBoardCardState extends ConsumerState<TaskBoardCard> {
     if (summary.totalCount == 0) {
       return context.l10n.taskBoardNoTasksToday;
     }
-    return isChinese
-        ? '今日${summary.totalCount}项·已完成${summary.completedCount}'
-        : '${summary.completedCount} of ${summary.totalCount} completed today';
+    return context.l10n.taskBoardTodaySummary(
+      summary.totalCount.toString(),
+      summary.completedCount.toString(),
+    );
   }
 }
 
