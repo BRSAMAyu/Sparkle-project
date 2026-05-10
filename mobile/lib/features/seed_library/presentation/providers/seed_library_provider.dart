@@ -186,11 +186,10 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
   final SeedLibraryRepository _repository;
   final String libraryId;
 
-  String _friendlyError(Object error, String fallbackZh, [String? fallbackEn]) {
+  String _friendlyError(Object error, String fallbackMessage) {
     final raw = error.toString().replaceFirst('Exception: ', '').trim();
     if (raw.isEmpty || raw.toLowerCase() == 'null') {
-      final zh = I18nService.instance.isChinese;
-      return zh ? fallbackZh : (fallbackEn ?? fallbackZh);
+      return fallbackMessage;
     }
     return raw;
   }
@@ -211,8 +210,7 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
     } catch (e) {
       state = state.copyWith(
         isLoadingLibrary: false,
-        error: _friendlyError(e, '种子库详情加载失败，请稍后再试',
-            'Failed to load library details. Please try again later.'),
+        error: _friendlyError(e, S.seedLibLoadFailed),
       );
       return;
     }
@@ -240,8 +238,7 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
         subscription: null,
         activeSubscriptions: const [],
         error: state.library == null
-            ? _friendlyError(e, '种子库状态加载失败，请稍后再试',
-                'Failed to load library status. Please try again later.')
+            ? _friendlyError(e, S.seedLibStatusFailed)
             : null,
       );
     }

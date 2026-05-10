@@ -40,18 +40,14 @@ class GrowthDashboard {
   }
 
   factory GrowthDashboard.placeholder() {
-    final zh = I18nService.instance.isChinese;
+    final l10n = S;
     return GrowthDashboard(
       chronicleEntries: [
         GrowthChronicleEntry(
           id: 'demo-turning-point',
           entryType: 'turning_point',
-          title: zh
-              ? '转折点：把复盘提前到任务结束后'
-              : 'Turning point: reflection moved closer to the task',
-          narrative: zh
-              ? 'Pattern: 复盘越靠近完成时刻，遗漏越少。Action: 把复盘压缩成 3 分钟。Outcome: 下次计划会优先保留这个轻量动作。'
-              : 'Pattern: reflection works better while the task is still fresh. Action: keep it to three minutes. Outcome: future plans will protect this lightweight step.',
+          title: l10n.growthPlaceholderTurningPointTitle,
+          narrative: l10n.growthPlaceholderTurningPointNarrative,
           evidenceRefs: const ['demo-focus-session', 'demo-task-review'],
           timestamp: DateTime.now().toIso8601String(),
           userStatus: 'pending',
@@ -59,19 +55,14 @@ class GrowthDashboard {
         ),
       ],
       weeklyNarrative: WeeklyDashboardNarrative(
-        title: zh ? '本周成长故事' : 'This week\'s growth story',
-        story: zh
-            ? 'Pattern: 你在短专注后更容易继续推进。\nAction: 下周先安排 25 分钟的启动任务。\nOutcome: Sparkle 会观察这个节奏是否稳定。'
-            : 'Pattern: shorter focus starts are easier to continue.\nAction: start next week with a 25-minute task.\nOutcome: Sparkle will watch whether this rhythm holds.',
+        title: l10n.growthPlaceholderWeeklyTitle,
+        story: l10n.growthPlaceholderWeeklyStory,
         keyInsights: [
-          zh ? '短启动比长任务更稳定。' : 'Short starts are more stable than long tasks.',
-          zh
-              ? '薄弱点需要更早被放进当天计划。'
-              : 'Weak areas need to enter the day plan earlier.',
+          l10n.growthPlaceholderInsight1,
+          l10n.growthPlaceholderInsight2,
         ],
         rejectedInsights: const [],
-        nextWeekSuggestion:
-            zh ? '先做一个 25 分钟的最小推进。' : 'Start with one 25-minute minimum step.',
+        nextWeekSuggestion: l10n.growthPlaceholderSuggestion,
       ),
       timeDistribution: const [
         TimeDistributionItem(category: 'LEARNING', hours: 3.5, trend: 'up'),
@@ -108,16 +99,10 @@ class GrowthDashboard {
       ),
       modelUpdates: [
         ModelUpdateItem(
-          triggerEvent: zh ? '完成二次函数练习' : 'Completed quadratic practice',
-          whatSparkleLearned: zh
-              ? '你在有例题对照时更容易恢复手感。'
-              : 'You recover momentum faster when worked examples are nearby.',
-          whatChanged: zh
-              ? '后续薄弱点任务会优先附带例题。'
-              : 'Future weak-area tasks will prefer worked examples.',
-          whatWasNotWritten: zh
-              ? '没有写入身份判断或隐藏备注。'
-              : 'No identity judgment or hidden note was written.',
+          triggerEvent: l10n.growthPlaceholderTriggerEvent,
+          whatSparkleLearned: l10n.growthPlaceholderLearned,
+          whatChanged: l10n.growthPlaceholderChanged,
+          whatWasNotWritten: l10n.growthPlaceholderNotWritten,
         ),
       ],
     );

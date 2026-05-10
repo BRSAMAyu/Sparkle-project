@@ -15489,5 +15489,230 @@
   "demoPartnerGoalReflection": "Stabilize weekend reflection rhythm",
   "demoSharedGoalTitle": "Close the calculus weak spots this week",
   "demoSquadRiskNoSync": "No progress sync for two days",
-  "demoHelpableNudge": "No check-in yet today, a gentle nudge may help"
+  "demoHelpableNudge": "No check-in yet today, a gentle nudge may help",
+  "accountabilitySpaceTitle": "Accountability space",
+  "accountabilitySpaceSummary": "Commitments, partner progress, and goal mates come first here.",
+  "accountabilitySetCommitment": "Set commitment",
+  "accountabilityFindPartners": "Find partners",
+  "streakQualityLabel": "Streak quality",
+  "streakQualityDefaultSummary": "Today counts quality, not just check-ins.",
+  "streakQualityFocusMin7d": "{minutes} focus min / 7d",
+  "@streakQualityFocusMin7d": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "streakQualityTasksCompleted": "{completed}/{total} tasks",
+  "@streakQualityTasksCompleted": {
+    "placeholders": {
+      "completed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "streakQualityDayStreak": "{days} day streak",
+  "@streakQualityDayStreak": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "goalDetailOpenGoal": "Open goal",
+  "goalCreatedPlanReady": "Your growth plan is ready",
+  "goalCreatedLearningPath": "Learning path",
+  "goalCreatedFirstMilestone": "First milestone",
+  "goalCreatedMinBarTip": "Meeting the minimum criteria counts as success. You can always adjust if it feels too hard.",
+  "goalCreatedSeeFullPlan": "See full plan",
+  "goalCreatedStartFirstTask": "Start first task",
+  "goalIntentTitle": "Tell me what you want to achieve",
+  "goalIntentHint": "One sentence works, e.g. \"Computer Networks final in 7 days, barely studied\"",
+  "goalIntentInputHint": "Type here",
+  "goalIntentUnderstanding": "Understanding…",
+  "goalIntentAnalyze": "Let me read your situation",
+  "journeyPersonalizing": "AI is personalizing your journey...",
+  "journeyDayOfTotal": "Day {day} of {total}",
+  "@journeyDayOfTotal": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "journeyDay": "Day {day}",
+  "@journeyDay": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      }
+    }
+  },
+  "journeyProgressSemantics": "Journey progress: {percent}%",
+  "@journeyProgressSemantics": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "journeyBackboneTooltip": "The backbone is your guided learning path. Free exploration is encouraged and won't affect your progress.",
+  "journeyOffBackbone": "Off backbone — exploring",
+  "journeyPhase": "Phase {phase}",
+  "@journeyPhase": {
+    "placeholders": {
+      "phase": {
+        "type": "int"
+      }
+    }
+  },
+  "spineStatusDefaultLabel": "Lightweight Sensing",
+  "weatherSentenceWithSummary": "Great for {hint}, {summary}",
+  "@weatherSentenceWithSummary": {
+    "placeholders": {
+      "hint": {
+        "type": "String"
+      },
+      "summary": {
+        "type": "String"
+      }
+    }
+  },
+  "weatherSentenceNoSummary": "Great for {hint}",
+  "@weatherSentenceNoSummary": {
+    "placeholders": {
+      "hint": {
+        "type": "String"
+      }
+    }
+  },
+  "goalSwitcherNoFocusGoal": "No focus goal",
+  "goalSwitcherTooltip": "Switch focus goal",
+  "prismCognitivePattern": "Cognitive Prism",
+  "prismAnxietyPeak": "#AnxietyPeak",
+  "prismPatternUpdated": "Behavioral pattern analysis updated",
+  "prismErrorAnalysis": "Error analysis",
+  "prismReviewWeakAnalysis": "Review weak area: Analysis",
+  "prismDiscoverPatterns": "Sync your thoughts to discover behavioral patterns",
+  "prismSemanticsLabel": "Cognitive pattern analysis",
+  "recentInsightsCollapsedSummary": "Recent insights are collapsed. Expand them whenever you want another look.",
+  "recentInsightsExpandedSummary": "Latest {count} updates related to your learning flow.",
+  "@recentInsightsExpandedSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "planViewFilteredEmpty": "{planName} has no tasks",
+  "@planViewFilteredEmpty": {
+    "placeholders": {
+      "planName": {
+        "type": "String"
+      }
+    }
+  },
+  "taskViewSchedule": "Schedule",
+  "taskViewPriority": "Priority",
+  "taskViewPlan": "Plan",
+  "taskViewSprint": "Sprint",
+  "knowledgeMapReminder": "Knowledge map: {bottleneck}",
+  "@knowledgeMapReminder": {
+    "placeholders": {
+      "bottleneck": {
+        "type": "String"
+      }
+    }
+  },
+  "remediablePatternsTitle": "Remediable Patterns",
+  "remediablePatternsDesc": "Recent mistakes that are ready to become focused practice.",
+  "remediableTaskAdded": "Remediation task added to today",
+  "remediableGenerateFailed": "Failed to generate task: {error}",
+  "@remediableGenerateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errorCountLabel": "{count} errors",
+  "@errorCountLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "minutesLabel": "{count} min",
+  "@minutesLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "generateRemedialTask": "Generate Task",
+  "minimumOutputLabel": "Minimum Output",
+  "successCriteriaLabel": "Success Criteria",
+  "practiceStepsLabel": "Practice Steps",
+  "acceptAndAddToday": "Accept and Add",
+  "noLearningReportData": "No learning report data available.",
+  "conflictRecordsTitle": "Conflict Records",
+  "masteryRadarTitle": "Mastery Radar",
+  "errorBookCreateFailedMsg": "Failed to create error record",
+  "errorBookListFailedMsg": "Failed to get error list",
+  "errorBookDetailFailedMsg": "Failed to get error details",
+  "errorBookUpdateFailedMsg": "Failed to update error record",
+  "errorBookDeleteFailedMsg": "Failed to delete error record",
+  "errorBookAnalyzeFailedMsg": "Failed to re-analyze error",
+  "errorBookReviewFailedMsg": "Failed to submit review record",
+  "errorBookTodayReviewFailedMsg": "Failed to get today's review list",
+  "errorBookStatsFailedMsg": "Failed to get statistics",
+  "errorBookSemanticFailedMsg": "Failed to get semantic summary",
+  "errorBookRemediableFailedMsg": "Failed to get remediable patterns",
+  "errorBookGenerateTaskFailedMsg": "Failed to generate remediation task",
+  "errorBookAcceptFailedMsg": "Failed to add remediation task",
+  "errorBookNotFoundDeleted": "Error not found or deleted",
+  "errorBookAuthExpired": "Not logged in or session expired",
+  "errorBookInvalidParams": "Invalid request parameters",
+  "errorBookNetworkTimeoutMsg": "Network timeout, please check your connection",
+  "errorBookNetworkErrorMsg": "Network error, please check your connection",
+  "growthPlaceholderTurningPointTitle": "Turning point: reflection moved closer to the task",
+  "growthPlaceholderTurningPointNarrative": "Pattern: reflection works better while the task is still fresh. Action: keep it to three minutes. Outcome: future plans will protect this lightweight step.",
+  "growthPlaceholderWeeklyTitle": "This week's growth story",
+  "growthPlaceholderWeeklyStory": "Pattern: shorter focus starts are easier to continue.\nAction: start next week with a 25-minute task.\nOutcome: Sparkle will watch whether this rhythm holds.",
+  "growthPlaceholderInsight1": "Short starts are more stable than long tasks.",
+  "growthPlaceholderInsight2": "Weak areas need to enter the day plan earlier.",
+  "growthPlaceholderSuggestion": "Start with one 25-minute minimum step.",
+  "growthPlaceholderTriggerEvent": "Completed quadratic practice",
+  "growthPlaceholderLearned": "You recover momentum faster when worked examples are nearby.",
+  "growthPlaceholderChanged": "Future weak-area tasks will prefer worked examples.",
+  "growthPlaceholderNotWritten": "No identity judgment or hidden note was written.",
+  "planGeneratePhaseTaskTitle": "{name} - Phase {number} Task",
+  "@planGeneratePhaseTaskTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "planGuideNoPresetTasks": "No preset tasks yet. Please output an execution backbone suitable for future task breakdown.",
+  "planGuideDifficulty": "difficulty",
+  "planGuideMin": "min",
+  "taskDiagnosisOption1": "Concept not clear",
+  "taskDiagnosisOption2": "Step order confused",
+  "taskDiagnosisOption3": "Can't use given conditions",
+  "taskOpQueuedSuffix": ", added to wait queue.",
+  "seedLibLoadFailed": "Failed to load library details. Please try again later.",
+  "seedLibStatusFailed": "Failed to load library status. Please try again later."
 }

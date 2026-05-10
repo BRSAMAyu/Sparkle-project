@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/compact_error_card.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/error_book/data/models/remediable_pattern.dart';
 import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
@@ -98,17 +98,14 @@ class RemediablePatternsCard extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _t('可补救错因', 'Remediable Patterns'),
+                        context.l10n.remediablePatternsTitle,
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: DS.fontWeightSemibold,
                         ),
                       ),
                       const SizedBox(height: DS.spacing4),
                       Text(
-                        _t(
-                          '从最近错题里挑出最值得转成练习任务的薄弱点。',
-                          'Recent mistakes that are ready to become focused practice.',
-                        ),
+                        context.l10n.remediablePatternsDesc,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: DS.textSecondary,
                           height: 1.35,
@@ -170,14 +167,14 @@ class RemediablePatternsCard extends ConsumerWidget {
       if (context.mounted && (accepted ?? false)) {
         AppFeedback.success(
           context,
-          _t('补救任务已加入今日计划', 'Remediation task added to today'),
+          context.l10n.remediableTaskAdded,
         );
       }
     } catch (error) {
       if (!context.mounted) return;
       AppFeedback.error(
         context,
-        _t('生成补救任务失败：$error', 'Failed to generate task: $error'),
+        context.l10n.remediableGenerateFailed(error.toString()),
       );
     }
   }
@@ -224,10 +221,7 @@ class _RemediablePatternRow extends StatelessWidget {
                 children: [
                   _MetricPill(
                     icon: Icons.error_outline,
-                    label: _t(
-                      '${pattern.errorCount} 道错题',
-                      '${pattern.errorCount} errors',
-                    ),
+                    label: context.l10n.errorCountLabel(pattern.errorCount),
                   ),
                   _MetricPill(
                     icon: Icons.hub_outlined,
@@ -235,10 +229,7 @@ class _RemediablePatternRow extends StatelessWidget {
                   ),
                   _MetricPill(
                     icon: Icons.timer_outlined,
-                    label: _t(
-                      '${pattern.suggestedDurationMinutes} 分钟',
-                      '${pattern.suggestedDurationMinutes} min',
-                    ),
+                    label: context.l10n.minutesLabel(pattern.suggestedDurationMinutes),
                   ),
                 ],
               ),
@@ -260,7 +251,7 @@ class _RemediablePatternRow extends StatelessWidget {
           final action = FilledButton.icon(
             onPressed: onPressed,
             icon: const Icon(Icons.add_task_outlined, size: 18),
-            label: Text(_t('生成补救任务', 'Generate Task')),
+            label: Text(context.l10n.generateRemedialTask),
           );
 
           if (compact) {
@@ -362,13 +353,13 @@ class _TaskTemplatePreviewDialogState
               const SizedBox(height: DS.spacing12),
               _PreviewSection(
                 icon: Icons.flag_outlined,
-                title: _t('最低产出', 'Minimum Output'),
+                title: context.l10n.minimumOutputLabel,
                 child: Text(widget.template.minimumOutput),
               ),
               const SizedBox(height: DS.spacing12),
               _PreviewSection(
                 icon: Icons.check_circle_outline,
-                title: _t('完成标准', 'Success Criteria'),
+                title: context.l10n.successCriteriaLabel,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: widget.template.successCriteria
@@ -379,7 +370,7 @@ class _TaskTemplatePreviewDialogState
               const SizedBox(height: DS.spacing12),
               _PreviewSection(
                 icon: Icons.format_list_numbered,
-                title: _t('练习步骤', 'Practice Steps'),
+                title: context.l10n.practiceStepsLabel,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: widget.template.structuredSteps
@@ -404,7 +395,7 @@ class _TaskTemplatePreviewDialogState
       actions: [
         TextButton(
           onPressed: _accepting ? null : () => Navigator.of(context).pop(false),
-          child: Text(_t('取消', 'Cancel')),
+          child: Text(context.l10n.cancel),
         ),
         FilledButton.icon(
           onPressed: _accepting ? null : _acceptTemplate,
@@ -415,7 +406,7 @@ class _TaskTemplatePreviewDialogState
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : const Icon(Icons.playlist_add_check_rounded),
-          label: Text(_t('接受并加入今日计划', 'Accept and Add')),
+          label: Text(context.l10n.acceptAndAddToday),
         ),
       ],
     );
@@ -473,5 +464,3 @@ class _PreviewSection extends StatelessWidget {
         ],
       );
 }
-
-String _t(String zh, String en) => I18nService.instance.isChinese ? zh : en;

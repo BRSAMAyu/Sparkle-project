@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart' hide AnimatedSlide;
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/simulation/data/models/simulation_models.dart';
 import 'package:sparkle/features/simulation/presentation/support/simulation_copy.dart';
 
@@ -417,17 +416,16 @@ class _SimulationChatBubbleState extends State<SimulationChatBubble> {
         .toLowerCase();
     final stance = localizeSimulationStance(participant?.stance)
         .toLowerCase();
-    final zh = I18nService.instance.isChinese;
-    if (role.contains(zh ? '质疑' : 'challenge') || stance.contains(zh ? '反' : 'oppos')) {
+    if (role.contains('challenge') || role.contains('质疑') || stance.contains('oppos') || stance.contains('反')) {
       return Icons.gavel_rounded;
     }
-    if (role.contains(zh ? '联想' : 'associat') || role.contains(zh ? '创意' : 'creat')) {
+    if (role.contains('associat') || role.contains('联想') || role.contains('creat') || role.contains('创意')) {
       return Icons.auto_awesome_rounded;
     }
-    if (role.contains(zh ? '导航' : 'navigat') || role.contains(zh ? '教练' : 'coach')) {
+    if (role.contains('navigat') || role.contains('导航') || role.contains('coach') || role.contains('教练')) {
       return Icons.explore_rounded;
     }
-    if (role.contains(zh ? '分析' : 'analys') || role.contains(zh ? '专家' : 'expert')) {
+    if (role.contains('analys') || role.contains('分析') || role.contains('expert') || role.contains('专家')) {
       return Icons.psychology_alt_rounded;
     }
     return Icons.person_rounded;

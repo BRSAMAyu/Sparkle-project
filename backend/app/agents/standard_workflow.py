@@ -3299,6 +3299,7 @@ async def _execute_single_tool(
                 "adaptation_records": (state.context_data.get("user_context_payload", {}) or {}).get(
                     "adaptation_records"
                 ),
+                "locale": state.context_data.get("locale", "en"),
             },
         )
 

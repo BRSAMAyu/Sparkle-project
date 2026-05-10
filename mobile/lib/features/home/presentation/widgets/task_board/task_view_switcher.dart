@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
 
 /// Task view switcher - Tab switcher for task board views
@@ -135,7 +135,7 @@ class _ViewTab extends StatelessWidget {
               ),
               const SizedBox(width: DS.spacing6),
               Text(
-                _getLabel(mode),
+                _getLabel(context, mode),
                 style: context.sparkleTypography.labelLarge.copyWith(
                   color: isSelected ? selectedTextColor : unselectedTextColor,
                   fontWeight: isSelected ? DS.fontWeightSemibold : DS.fontWeightMedium,
@@ -158,13 +158,13 @@ class _ViewTab extends StatelessWidget {
         TaskViewMode.sprint => Icons.flash_on_rounded,
       };
 
-  String _getLabel(TaskViewMode mode) {
-    final zh = I18nService.instance.isChinese;
+  String _getLabel(BuildContext context, TaskViewMode mode) {
+    final l10n = context.l10n;
     return switch (mode) {
-      TaskViewMode.schedule => zh ? '日程' : 'Schedule',
-      TaskViewMode.priority => zh ? '重要性' : 'Priority',
-      TaskViewMode.plan => zh ? '方案' : 'Plan',
-      TaskViewMode.sprint => zh ? '冲刺' : 'Sprint',
+      TaskViewMode.schedule => l10n.taskViewSchedule,
+      TaskViewMode.priority => l10n.taskViewPriority,
+      TaskViewMode.plan => l10n.taskViewPlan,
+      TaskViewMode.sprint => l10n.taskViewSprint,
     };
   }
 }

@@ -1039,9 +1039,8 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     );
     connection.markExecutionUnavailable(message);
     if (mounted) {
-      final zh = I18nService.instance.isChinese;
       state = state.copyWith(
-          error: zh ? '$message，已加入等待队列。' : '$message, added to wait queue.');
+          error: '$message${S.taskOpQueuedSuffix}');
     }
     return true;
   }

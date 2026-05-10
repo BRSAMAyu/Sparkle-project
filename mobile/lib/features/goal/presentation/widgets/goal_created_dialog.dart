@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class SparkleGoalCreatedDialog extends StatelessWidget {
   const SparkleGoalCreatedDialog({
@@ -20,12 +20,10 @@ class SparkleGoalCreatedDialog extends StatelessWidget {
   final VoidCallback onSeePlan;
   final VoidCallback onStartFirstTask;
 
-  String _t(String zh, String en) => I18nService.instance.isChinese ? zh : en;
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final l10n = _t;
+    final l10n = context.l10n;
 
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: DS.borderRadius20),
@@ -42,7 +40,7 @@ class SparkleGoalCreatedDialog extends StatelessWidget {
           ),
           const SizedBox(height: DS.spacing16),
           Text(
-            l10n('你的成长计划已就绪', 'Your growth plan is ready'),
+            l10n.goalCreatedPlanReady,
             textAlign: TextAlign.center,
             style: theme.textTheme.headlineSmall?.copyWith(
               fontWeight: DS.fontWeightBold,
@@ -67,18 +65,15 @@ class SparkleGoalCreatedDialog extends StatelessWidget {
             if (packName != null) ...[
               _InfoRow(
                 icon: Icons.map_outlined,
-                label: l10n('学习路线', 'Learning path'),
+                label: l10n.goalCreatedLearningPath,
                 value: packDurationLabel != null
-                    ? l10n(
-                        '$packName · $packDurationLabel',
-                        '$packName · $packDurationLabel',
-                      )
+                    ? '$packName · $packDurationLabel'
                     : packName!,
               ),
             ],
             _InfoRow(
               icon: Icons.flag_outlined,
-              label: l10n('第一个里程碑', 'First milestone'),
+              label: l10n.goalCreatedFirstMilestone,
               value: firstMilestone,
             ),
             const SizedBox(height: DS.spacing8),
@@ -95,10 +90,7 @@ class SparkleGoalCreatedDialog extends StatelessWidget {
                   const SizedBox(width: DS.spacing8),
                   Expanded(
                     child: Text(
-                      l10n(
-                        '达到最低达标线就算成功。如果过程中觉得太难，可以随时调整。',
-                        'Meeting the minimum criteria counts as success. You can always adjust if it feels too hard.',
-                      ),
+                      l10n.goalCreatedMinBarTip,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: DS.textSecondary,
                       ),
@@ -118,7 +110,7 @@ class SparkleGoalCreatedDialog extends StatelessWidget {
               borderRadius: DS.borderRadius12,
             ),
           ),
-          child: Text(l10n('查看完整计划', 'See full plan')),
+          child: Text(l10n.goalCreatedSeeFullPlan),
         ),
         FilledButton(
           onPressed: onStartFirstTask,
@@ -127,7 +119,7 @@ class SparkleGoalCreatedDialog extends StatelessWidget {
               borderRadius: DS.borderRadius12,
             ),
           ),
-          child: Text(l10n('开始第一个任务', 'Start first task')),
+          child: Text(l10n.goalCreatedStartFirstTask),
         ),
       ],
       actionsAlignment: MainAxisAlignment.spaceBetween,

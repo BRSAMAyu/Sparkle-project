@@ -89,16 +89,16 @@ class PlanGuideGenerator {
     PlanDraft draft, {
     required PlanGuideAudience audience,
   }) {
-    final zh = I18nService.instance.isChinese;
-    final typeLabel = zh
-        ? (draft.type == PlanType.growth ? '成长计划' : '冲刺计划')
-        : (draft.type == PlanType.growth ? 'Growth Plan' : 'Sprint Plan');
+    final l10n = S;
+    final typeLabel = draft.type == PlanType.growth
+        ? l10n.planTypeGrowth
+        : l10n.planTypeSprint;
     final tasks = draft.taskDrafts.isEmpty
-        ? (zh ? '当前还没有预置任务，请输出适合后续拆解任务的执行主线。' : 'No preset tasks yet. Please output an execution backbone suitable for future task breakdown.')
+        ? l10n.planGuideNoPresetTasks
         : draft.taskDrafts
             .map(
               (task) =>
-                  '- ${task.title} (${task.estimatedMinutes} ${zh ? '分钟' : 'min'}, ${zh ? '难度' : 'difficulty'} ${task.difficulty})',
+                  '- ${task.title} (${task.estimatedMinutes} ${l10n.planGuideMin}, ${l10n.planGuideDifficulty} ${task.difficulty})',
             )
             .join('\n');
 

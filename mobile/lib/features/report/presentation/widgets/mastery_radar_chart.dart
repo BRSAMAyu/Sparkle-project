@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
 class MasteryRadarChart extends StatelessWidget {
   const MasteryRadarChart({
@@ -53,7 +52,7 @@ class MasteryRadarChart extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            I18nService.instance.isChinese ? '知识掌握度雷达图' : 'Mastery Radar',
+            context.l10n.masteryRadarTitle,
             style: const TextStyle(fontWeight: DS.fontWeightBold),
           ),
           const SizedBox(height: 16),

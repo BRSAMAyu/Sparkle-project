@@ -416,6 +416,7 @@ class ToolExecutor:
                         db_session=db_session,
                         owns_session=owns_session,
                         reason="tool_failed",
+                        runtime_context=runtime_context,
                     )
                 else:
                     await self._publish_tool_event(
@@ -468,6 +469,7 @@ class ToolExecutor:
                         db_session=db_session,
                         owns_session=owns_session,
                         reason="tool_timeout",
+                        runtime_context=runtime_context,
                     )
                 return ToolResult(
                     success=False,
@@ -514,6 +516,7 @@ class ToolExecutor:
                         db_session=db_session,
                         owns_session=owns_session,
                         reason="tool_exception",
+                        runtime_context=runtime_context,
                     )
                 return ToolResult(
                     success=False,
@@ -645,6 +648,7 @@ class ToolExecutor:
         db_session: Any,
         owns_session: bool,
         reason: str,
+        runtime_context: dict[str, Any] | None = None,
     ) -> None:
         if not compensation_spec:
             return
@@ -660,6 +664,7 @@ class ToolExecutor:
                 tool_call_id=None,
                 owns_session=owns_session,
                 compensation_call=None,
+                runtime_context=runtime_context,
             )
         except Exception as e:
             logger.warning(f"Compensation tool failed: {tool_name} - {e}")

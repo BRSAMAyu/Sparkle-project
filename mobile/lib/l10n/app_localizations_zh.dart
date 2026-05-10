@@ -25705,7 +25705,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskContinueNext => '继续下一个';
 
   @override
-  String get taskViewPlan => '查看计划';
+  String get taskViewPlan => '方案';
 
   @override
   String get taskSharePlan => '分享计划';
@@ -33776,4 +33776,329 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get demoHelpableNudge => '今天还没打卡，可以发一句轻提醒';
+
+  @override
+  String get accountabilitySpaceTitle => '目标责任空间';
+
+  @override
+  String get accountabilitySpaceSummary => '这里优先展示承诺、伙伴进度和与你目标相同的人。';
+
+  @override
+  String get accountabilitySetCommitment => '设定承诺';
+
+  @override
+  String get accountabilityFindPartners => '找目标伙伴';
+
+  @override
+  String get streakQualityLabel => '坚持质量';
+
+  @override
+  String get streakQualityDefaultSummary => '今天不只看打卡，也看推进质量。';
+
+  @override
+  String streakQualityFocusMin7d(int minutes) {
+    return '7天专注 $minutes 分钟';
+  }
+
+  @override
+  String streakQualityTasksCompleted(int completed, int total) {
+    return '完成 $completed/$total';
+  }
+
+  @override
+  String streakQualityDayStreak(int days) {
+    return '连续 $days 天';
+  }
+
+  @override
+  String get goalDetailOpenGoal => '打开目标详情';
+
+  @override
+  String get goalCreatedPlanReady => '你的成长计划已就绪';
+
+  @override
+  String get goalCreatedLearningPath => '学习路线';
+
+  @override
+  String get goalCreatedFirstMilestone => '第一个里程碑';
+
+  @override
+  String get goalCreatedMinBarTip => '达到最低达标线就算成功。如果过程中觉得太难，可以随时调整。';
+
+  @override
+  String get goalCreatedSeeFullPlan => '查看完整计划';
+
+  @override
+  String get goalCreatedStartFirstTask => '开始第一个任务';
+
+  @override
+  String get goalIntentInputHint => '在这里输入';
+
+  @override
+  String get goalIntentAnalyze => '让我先看看你的情况';
+
+  @override
+  String get journeyPersonalizing => 'AI 正在为你定制学习路径...';
+
+  @override
+  String journeyDayOfTotal(int day, int total) {
+    return '第 $day 天 / 共 $total 天';
+  }
+
+  @override
+  String journeyDay(int day) {
+    return '第 $day 天';
+  }
+
+  @override
+  String journeyProgressSemantics(int percent) {
+    return '旅程进度：$percent%';
+  }
+
+  @override
+  String get journeyBackboneTooltip => '主线是为你定制的学习路径。自由探索是被鼓励的，不影响进度。';
+
+  @override
+  String get journeyOffBackbone => '偏离主线，自主探索中';
+
+  @override
+  String journeyPhase(int phase) {
+    return '阶段 $phase';
+  }
+
+  @override
+  String get spineStatusDefaultLabel => '轻量感知中';
+
+  @override
+  String weatherSentenceWithSummary(String hint, String summary) {
+    return '今天适合$hint，$summary';
+  }
+
+  @override
+  String weatherSentenceNoSummary(String hint) {
+    return '今天适合$hint';
+  }
+
+  @override
+  String get goalSwitcherNoFocusGoal => '暂无关注目标';
+
+  @override
+  String get goalSwitcherTooltip => '切换当前关注目标';
+
+  @override
+  String get prismCognitivePattern => '认知棱镜';
+
+  @override
+  String get prismAnxietyPeak => '#焦虑波峰';
+
+  @override
+  String get prismPatternUpdated => '行为定式分析已更新';
+
+  @override
+  String get prismErrorAnalysis => '错误分析';
+
+  @override
+  String get prismReviewWeakAnalysis => '复习弱项: 分析';
+
+  @override
+  String get prismDiscoverPatterns => '点击同步闪念，发现你的行为定式';
+
+  @override
+  String get prismSemanticsLabel => '认知模式分析';
+
+  @override
+  String get recentInsightsCollapsedSummary => '已收起最近洞察，需要时可随时展开查看。';
+
+  @override
+  String recentInsightsExpandedSummary(int count) {
+    return '最近 $count 条与你学习动线相关的更新。';
+  }
+
+  @override
+  String planViewFilteredEmpty(String planName) {
+    return '$planName 暂无任务';
+  }
+
+  @override
+  String get taskViewSchedule => '日程';
+
+  @override
+  String get taskViewPriority => '重要性';
+
+  @override
+  String get taskViewSprint => '冲刺';
+
+  @override
+  String knowledgeMapReminder(String bottleneck) {
+    return '知识地图提醒：$bottleneck';
+  }
+
+  @override
+  String get remediablePatternsTitle => '可补救错因';
+
+  @override
+  String get remediablePatternsDesc => '从最近错题里挑出最值得转成练习任务的薄弱点。';
+
+  @override
+  String get remediableTaskAdded => '补救任务已加入今日计划';
+
+  @override
+  String remediableGenerateFailed(String error) {
+    return '生成补救任务失败：$error';
+  }
+
+  @override
+  String errorCountLabel(int count) {
+    return '$count 道错题';
+  }
+
+  @override
+  String minutesLabel(int count) {
+    return '$count 分钟';
+  }
+
+  @override
+  String get generateRemedialTask => '生成补救任务';
+
+  @override
+  String get minimumOutputLabel => '最低产出';
+
+  @override
+  String get successCriteriaLabel => '完成标准';
+
+  @override
+  String get practiceStepsLabel => '练习步骤';
+
+  @override
+  String get acceptAndAddToday => '接受并加入今日计划';
+
+  @override
+  String get noLearningReportData => '暂无学习报告数据。';
+
+  @override
+  String get conflictRecordsTitle => '冲突记录';
+
+  @override
+  String get masteryRadarTitle => '知识掌握度雷达图';
+
+  @override
+  String get errorBookCreateFailedMsg => '创建错题失败';
+
+  @override
+  String get errorBookListFailedMsg => '获取错题列表失败';
+
+  @override
+  String get errorBookDetailFailedMsg => '获取错题详情失败';
+
+  @override
+  String get errorBookUpdateFailedMsg => '更新错题失败';
+
+  @override
+  String get errorBookDeleteFailedMsg => '删除错题失败';
+
+  @override
+  String get errorBookAnalyzeFailedMsg => '重新分析错题失败';
+
+  @override
+  String get errorBookReviewFailedMsg => '提交复习记录失败';
+
+  @override
+  String get errorBookTodayReviewFailedMsg => '获取今日待复习列表失败';
+
+  @override
+  String get errorBookStatsFailedMsg => '获取统计数据失败';
+
+  @override
+  String get errorBookSemanticFailedMsg => '获取语义摘要失败';
+
+  @override
+  String get errorBookRemediableFailedMsg => '获取可补救错因失败';
+
+  @override
+  String get errorBookGenerateTaskFailedMsg => '生成补救任务失败';
+
+  @override
+  String get errorBookAcceptFailedMsg => '加入今日计划失败';
+
+  @override
+  String get errorBookNotFoundDeleted => '错题不存在或已删除';
+
+  @override
+  String get errorBookAuthExpired => '未登录或登录已过期';
+
+  @override
+  String get errorBookInvalidParams => '请求参数错误';
+
+  @override
+  String get errorBookNetworkTimeoutMsg => '网络超时，请检查网络连接';
+
+  @override
+  String get errorBookNetworkErrorMsg => '网络错误，请检查网络连接';
+
+  @override
+  String get growthPlaceholderTurningPointTitle => '转折点：把复盘提前到任务结束后';
+
+  @override
+  String get growthPlaceholderTurningPointNarrative =>
+      'Pattern: 复盘越靠近完成时刻，遗漏越少。Action: 把复盘压缩成 3 分钟。Outcome: 下次计划会优先保留这个轻量动作。';
+
+  @override
+  String get growthPlaceholderWeeklyTitle => '本周成长故事';
+
+  @override
+  String get growthPlaceholderWeeklyStory =>
+      'Pattern: 你在短专注后更容易继续推进。\nAction: 下周先安排 25 分钟的启动任务。\nOutcome: Sparkle 会观察这个节奏是否稳定。';
+
+  @override
+  String get growthPlaceholderInsight1 => '短启动比长任务更稳定。';
+
+  @override
+  String get growthPlaceholderInsight2 => '薄弱点需要更早被放进当天计划。';
+
+  @override
+  String get growthPlaceholderSuggestion => '先做一个 25 分钟的最小推进。';
+
+  @override
+  String get growthPlaceholderTriggerEvent => '完成二次函数练习';
+
+  @override
+  String get growthPlaceholderLearned => '你在有例题对照时更容易恢复手感。';
+
+  @override
+  String get growthPlaceholderChanged => '后续薄弱点任务会优先附带例题。';
+
+  @override
+  String get growthPlaceholderNotWritten => '没有写入身份判断或隐藏备注。';
+
+  @override
+  String planGeneratePhaseTaskTitle(String name, int number) {
+    return '$name - 第$number阶段任务';
+  }
+
+  @override
+  String get planGuideNoPresetTasks => '当前还没有预置任务，请输出适合后续拆解任务的执行主线。';
+
+  @override
+  String get planGuideDifficulty => '难度';
+
+  @override
+  String get planGuideMin => '分钟';
+
+  @override
+  String get taskDiagnosisOption1 => '概念没想清';
+
+  @override
+  String get taskDiagnosisOption2 => '步骤顺序乱了';
+
+  @override
+  String get taskDiagnosisOption3 => '题目条件不会用';
+
+  @override
+  String get taskOpQueuedSuffix => '，已加入等待队列。';
+
+  @override
+  String get seedLibLoadFailed => '种子库详情加载失败，请稍后再试';
+
+  @override
+  String get seedLibStatusFailed => '种子库状态加载失败，请稍后再试';
 }

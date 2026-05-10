@@ -1329,13 +1329,11 @@ Clarify the core output and completion criteria.
       final existing = DemoDataService().demoTasks[existingIndex];
       final diagnosis = <String, dynamic>{
         'diagnosis_question': I18nService.instance.l10n.taskDiagnosisStuck,
-        'diagnosis_options': I18nService.instance.isChinese
-            ? ['概念没想清', '步骤顺序乱了', '题目条件不会用']
-            : [
-                'Concept not clear',
-                'Step order confused',
-                'Can\'t use given conditions',
-              ],
+        'diagnosis_options': [
+            S.taskDiagnosisOption1,
+            S.taskDiagnosisOption2,
+            S.taskDiagnosisOption3,
+          ],
         'targeted_fix': I18nService.instance.l10n.taskDiagnosisFix,
         'check_question': I18nService.instance.l10n.taskDiagnosisCheck,
         'source': 'demo',

@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_goal_provider.dart';
 
 class GoalSwitcher extends ConsumerWidget {
@@ -48,12 +48,12 @@ class _GoalSwitcherContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final zh = I18nService.instance.isChinese;
+    final l10n = context.l10n;
     if (overview.goals.isEmpty) {
       return _GoalSwitcherFrame(
         dense: dense,
         child: Text(
-          zh ? '暂无关注目标' : 'No focus goal',
+          l10n.goalSwitcherNoFocusGoal,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: context.sparkleTypography.bodySmall.copyWith(
@@ -68,7 +68,7 @@ class _GoalSwitcherContent extends ConsumerWidget {
     return _GoalSwitcherFrame(
       dense: dense,
       child: PopupMenuButton<String>(
-        tooltip: zh ? '切换当前关注目标' : 'Switch focus goal',
+        tooltip: l10n.goalSwitcherTooltip,
         initialValue: selectedGoal.id,
         onSelected: (goalId) {
           unawaited(ref.read(activeGoalProvider.notifier).selectGoal(goalId));

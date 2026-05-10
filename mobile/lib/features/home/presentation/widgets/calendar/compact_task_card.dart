@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
@@ -53,7 +53,7 @@ class CompactTaskCard extends ConsumerWidget {
                       const SizedBox(height: DS.spacing4),
                       Row(
                         children: [
-                          _buildTaskTypeChip(task.type),
+                          _buildTaskTypeChip(context, task.type),
                           const SizedBox(width: DS.spacing8),
                           Text(
                             '${task.estimatedMinutes}m',
@@ -96,16 +96,16 @@ class CompactTaskCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildTaskTypeChip(TaskType type) {
-    final zh = I18nService.instance.isChinese;
+  Widget _buildTaskTypeChip(BuildContext context, TaskType type) {
+    final l10n = context.l10n;
     final (label, color) = switch (type) {
-      TaskType.learning => (zh ? '学习' : 'Learning', DS.brandPrimary),
-      TaskType.training => (zh ? '训练' : 'Training', DS.success),
-      TaskType.errorFix => (zh ? '排错' : 'Fix', DS.error),
-      TaskType.reflection => (zh ? '反思' : 'Reflection', DS.prismPurple),
-      TaskType.social => (zh ? '社交' : 'Social', DS.info),
-      TaskType.planning => (zh ? '规划' : 'Planning', DS.warning),
-      TaskType.ocr => ('OCR', DS.textSecondary),
+      TaskType.learning => (l10n.taskTypeLearning, DS.brandPrimary),
+      TaskType.training => (l10n.taskTypeTraining, DS.success),
+      TaskType.errorFix => (l10n.taskTypeErrorFix, DS.error),
+      TaskType.reflection => (l10n.taskTypeReflection, DS.prismPurple),
+      TaskType.social => (l10n.taskTypeSocial, DS.info),
+      TaskType.planning => (l10n.taskTypePlanning, DS.warning),
+      TaskType.ocr => (l10n.taskTypeOcr, DS.textSecondary),
     };
 
     return Container(

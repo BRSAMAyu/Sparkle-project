@@ -47050,7 +47050,7 @@ abstract class AppLocalizations {
   /// No description provided for @taskViewPlan.
   ///
   /// In zh, this message translates to:
-  /// **'查看计划'**
+  /// **'方案'**
   String get taskViewPlan;
 
   /// No description provided for @taskSharePlan.
@@ -61488,6 +61488,588 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'今天还没打卡，可以发一句轻提醒'**
   String get demoHelpableNudge;
+
+  /// No description provided for @accountabilitySpaceTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标责任空间'**
+  String get accountabilitySpaceTitle;
+
+  /// No description provided for @accountabilitySpaceSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'这里优先展示承诺、伙伴进度和与你目标相同的人。'**
+  String get accountabilitySpaceSummary;
+
+  /// No description provided for @accountabilitySetCommitment.
+  ///
+  /// In zh, this message translates to:
+  /// **'设定承诺'**
+  String get accountabilitySetCommitment;
+
+  /// No description provided for @accountabilityFindPartners.
+  ///
+  /// In zh, this message translates to:
+  /// **'找目标伙伴'**
+  String get accountabilityFindPartners;
+
+  /// No description provided for @streakQualityLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'坚持质量'**
+  String get streakQualityLabel;
+
+  /// No description provided for @streakQualityDefaultSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天不只看打卡，也看推进质量。'**
+  String get streakQualityDefaultSummary;
+
+  /// No description provided for @streakQualityFocusMin7d.
+  ///
+  /// In zh, this message translates to:
+  /// **'7天专注 {minutes} 分钟'**
+  String streakQualityFocusMin7d(int minutes);
+
+  /// No description provided for @streakQualityTasksCompleted.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成 {completed}/{total}'**
+  String streakQualityTasksCompleted(int completed, int total);
+
+  /// No description provided for @streakQualityDayStreak.
+  ///
+  /// In zh, this message translates to:
+  /// **'连续 {days} 天'**
+  String streakQualityDayStreak(int days);
+
+  /// No description provided for @goalDetailOpenGoal.
+  ///
+  /// In zh, this message translates to:
+  /// **'打开目标详情'**
+  String get goalDetailOpenGoal;
+
+  /// No description provided for @goalCreatedPlanReady.
+  ///
+  /// In zh, this message translates to:
+  /// **'你的成长计划已就绪'**
+  String get goalCreatedPlanReady;
+
+  /// No description provided for @goalCreatedLearningPath.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习路线'**
+  String get goalCreatedLearningPath;
+
+  /// No description provided for @goalCreatedFirstMilestone.
+  ///
+  /// In zh, this message translates to:
+  /// **'第一个里程碑'**
+  String get goalCreatedFirstMilestone;
+
+  /// No description provided for @goalCreatedMinBarTip.
+  ///
+  /// In zh, this message translates to:
+  /// **'达到最低达标线就算成功。如果过程中觉得太难，可以随时调整。'**
+  String get goalCreatedMinBarTip;
+
+  /// No description provided for @goalCreatedSeeFullPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看完整计划'**
+  String get goalCreatedSeeFullPlan;
+
+  /// No description provided for @goalCreatedStartFirstTask.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始第一个任务'**
+  String get goalCreatedStartFirstTask;
+
+  /// No description provided for @goalIntentInputHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'在这里输入'**
+  String get goalIntentInputHint;
+
+  /// No description provided for @goalIntentAnalyze.
+  ///
+  /// In zh, this message translates to:
+  /// **'让我先看看你的情况'**
+  String get goalIntentAnalyze;
+
+  /// No description provided for @journeyPersonalizing.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 正在为你定制学习路径...'**
+  String get journeyPersonalizing;
+
+  /// No description provided for @journeyDayOfTotal.
+  ///
+  /// In zh, this message translates to:
+  /// **'第 {day} 天 / 共 {total} 天'**
+  String journeyDayOfTotal(int day, int total);
+
+  /// No description provided for @journeyDay.
+  ///
+  /// In zh, this message translates to:
+  /// **'第 {day} 天'**
+  String journeyDay(int day);
+
+  /// No description provided for @journeyProgressSemantics.
+  ///
+  /// In zh, this message translates to:
+  /// **'旅程进度：{percent}%'**
+  String journeyProgressSemantics(int percent);
+
+  /// No description provided for @journeyBackboneTooltip.
+  ///
+  /// In zh, this message translates to:
+  /// **'主线是为你定制的学习路径。自由探索是被鼓励的，不影响进度。'**
+  String get journeyBackboneTooltip;
+
+  /// No description provided for @journeyOffBackbone.
+  ///
+  /// In zh, this message translates to:
+  /// **'偏离主线，自主探索中'**
+  String get journeyOffBackbone;
+
+  /// No description provided for @journeyPhase.
+  ///
+  /// In zh, this message translates to:
+  /// **'阶段 {phase}'**
+  String journeyPhase(int phase);
+
+  /// No description provided for @spineStatusDefaultLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'轻量感知中'**
+  String get spineStatusDefaultLabel;
+
+  /// No description provided for @weatherSentenceWithSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天适合{hint}，{summary}'**
+  String weatherSentenceWithSummary(String hint, String summary);
+
+  /// No description provided for @weatherSentenceNoSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天适合{hint}'**
+  String weatherSentenceNoSummary(String hint);
+
+  /// No description provided for @goalSwitcherNoFocusGoal.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无关注目标'**
+  String get goalSwitcherNoFocusGoal;
+
+  /// No description provided for @goalSwitcherTooltip.
+  ///
+  /// In zh, this message translates to:
+  /// **'切换当前关注目标'**
+  String get goalSwitcherTooltip;
+
+  /// No description provided for @prismCognitivePattern.
+  ///
+  /// In zh, this message translates to:
+  /// **'认知棱镜'**
+  String get prismCognitivePattern;
+
+  /// No description provided for @prismAnxietyPeak.
+  ///
+  /// In zh, this message translates to:
+  /// **'#焦虑波峰'**
+  String get prismAnxietyPeak;
+
+  /// No description provided for @prismPatternUpdated.
+  ///
+  /// In zh, this message translates to:
+  /// **'行为定式分析已更新'**
+  String get prismPatternUpdated;
+
+  /// No description provided for @prismErrorAnalysis.
+  ///
+  /// In zh, this message translates to:
+  /// **'错误分析'**
+  String get prismErrorAnalysis;
+
+  /// No description provided for @prismReviewWeakAnalysis.
+  ///
+  /// In zh, this message translates to:
+  /// **'复习弱项: 分析'**
+  String get prismReviewWeakAnalysis;
+
+  /// No description provided for @prismDiscoverPatterns.
+  ///
+  /// In zh, this message translates to:
+  /// **'点击同步闪念，发现你的行为定式'**
+  String get prismDiscoverPatterns;
+
+  /// No description provided for @prismSemanticsLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'认知模式分析'**
+  String get prismSemanticsLabel;
+
+  /// No description provided for @recentInsightsCollapsedSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'已收起最近洞察，需要时可随时展开查看。'**
+  String get recentInsightsCollapsedSummary;
+
+  /// No description provided for @recentInsightsExpandedSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近 {count} 条与你学习动线相关的更新。'**
+  String recentInsightsExpandedSummary(int count);
+
+  /// No description provided for @planViewFilteredEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'{planName} 暂无任务'**
+  String planViewFilteredEmpty(String planName);
+
+  /// No description provided for @taskViewSchedule.
+  ///
+  /// In zh, this message translates to:
+  /// **'日程'**
+  String get taskViewSchedule;
+
+  /// No description provided for @taskViewPriority.
+  ///
+  /// In zh, this message translates to:
+  /// **'重要性'**
+  String get taskViewPriority;
+
+  /// No description provided for @taskViewSprint.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺'**
+  String get taskViewSprint;
+
+  /// No description provided for @knowledgeMapReminder.
+  ///
+  /// In zh, this message translates to:
+  /// **'知识地图提醒：{bottleneck}'**
+  String knowledgeMapReminder(String bottleneck);
+
+  /// No description provided for @remediablePatternsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'可补救错因'**
+  String get remediablePatternsTitle;
+
+  /// No description provided for @remediablePatternsDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'从最近错题里挑出最值得转成练习任务的薄弱点。'**
+  String get remediablePatternsDesc;
+
+  /// No description provided for @remediableTaskAdded.
+  ///
+  /// In zh, this message translates to:
+  /// **'补救任务已加入今日计划'**
+  String get remediableTaskAdded;
+
+  /// No description provided for @remediableGenerateFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成补救任务失败：{error}'**
+  String remediableGenerateFailed(String error);
+
+  /// No description provided for @errorCountLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 道错题'**
+  String errorCountLabel(int count);
+
+  /// No description provided for @minutesLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 分钟'**
+  String minutesLabel(int count);
+
+  /// No description provided for @generateRemedialTask.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成补救任务'**
+  String get generateRemedialTask;
+
+  /// No description provided for @minimumOutputLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'最低产出'**
+  String get minimumOutputLabel;
+
+  /// No description provided for @successCriteriaLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成标准'**
+  String get successCriteriaLabel;
+
+  /// No description provided for @practiceStepsLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'练习步骤'**
+  String get practiceStepsLabel;
+
+  /// No description provided for @acceptAndAddToday.
+  ///
+  /// In zh, this message translates to:
+  /// **'接受并加入今日计划'**
+  String get acceptAndAddToday;
+
+  /// No description provided for @noLearningReportData.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无学习报告数据。'**
+  String get noLearningReportData;
+
+  /// No description provided for @conflictRecordsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲突记录'**
+  String get conflictRecordsTitle;
+
+  /// No description provided for @masteryRadarTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'知识掌握度雷达图'**
+  String get masteryRadarTitle;
+
+  /// No description provided for @errorBookCreateFailedMsg.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建错题失败'**
+  String get errorBookCreateFailedMsg;
+
+  /// No description provided for @errorBookListFailedMsg.
+  ///
+  /// In zh, this message translates to:
+  /// **'获取错题列表失败'**
+  String get errorBookListFailedMsg;
+
+  /// No description provided for @errorBookDetailFailedMsg.
+  ///
+  /// In zh, this message translates to:
+  /// **'获取错题详情失败'**
+  String get errorBookDetailFailedMsg;
+
+  /// No description provided for @errorBookUpdateFailedMsg.
+  ///
+  /// In zh, this message translates to:
+  /// **'更新错题失败'**
+  String get errorBookUpdateFailedMsg;
+
+  /// No description provided for @errorBookDeleteFailedMsg.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除错题失败'**
+  String get errorBookDeleteFailedMsg;
+
+  /// No description provided for @errorBookAnalyzeFailedMsg.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新分析错题失败'**
+  String get errorBookAnalyzeFailedMsg;
+
+  /// No description provided for @errorBookReviewFailedMsg.
+  ///
+  /// In zh, this message translates to:
+  /// **'提交复习记录失败'**
+  String get errorBookReviewFailedMsg;
+
+  /// No description provided for @errorBookTodayReviewFailedMsg.
+  ///
+  /// In zh, this message translates to:
+  /// **'获取今日待复习列表失败'**
+  String get errorBookTodayReviewFailedMsg;
+
+  /// No description provided for @errorBookStatsFailedMsg.
+  ///
+  /// In zh, this message translates to:
+  /// **'获取统计数据失败'**
+  String get errorBookStatsFailedMsg;
+
+  /// No description provided for @errorBookSemanticFailedMsg.
+  ///
+  /// In zh, this message translates to:
+  /// **'获取语义摘要失败'**
+  String get errorBookSemanticFailedMsg;
+
+  /// No description provided for @errorBookRemediableFailedMsg.
+  ///
+  /// In zh, this message translates to:
+  /// **'获取可补救错因失败'**
+  String get errorBookRemediableFailedMsg;
+
+  /// No description provided for @errorBookGenerateTaskFailedMsg.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成补救任务失败'**
+  String get errorBookGenerateTaskFailedMsg;
+
+  /// No description provided for @errorBookAcceptFailedMsg.
+  ///
+  /// In zh, this message translates to:
+  /// **'加入今日计划失败'**
+  String get errorBookAcceptFailedMsg;
+
+  /// No description provided for @errorBookNotFoundDeleted.
+  ///
+  /// In zh, this message translates to:
+  /// **'错题不存在或已删除'**
+  String get errorBookNotFoundDeleted;
+
+  /// No description provided for @errorBookAuthExpired.
+  ///
+  /// In zh, this message translates to:
+  /// **'未登录或登录已过期'**
+  String get errorBookAuthExpired;
+
+  /// No description provided for @errorBookInvalidParams.
+  ///
+  /// In zh, this message translates to:
+  /// **'请求参数错误'**
+  String get errorBookInvalidParams;
+
+  /// No description provided for @errorBookNetworkTimeoutMsg.
+  ///
+  /// In zh, this message translates to:
+  /// **'网络超时，请检查网络连接'**
+  String get errorBookNetworkTimeoutMsg;
+
+  /// No description provided for @errorBookNetworkErrorMsg.
+  ///
+  /// In zh, this message translates to:
+  /// **'网络错误，请检查网络连接'**
+  String get errorBookNetworkErrorMsg;
+
+  /// No description provided for @growthPlaceholderTurningPointTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'转折点：把复盘提前到任务结束后'**
+  String get growthPlaceholderTurningPointTitle;
+
+  /// No description provided for @growthPlaceholderTurningPointNarrative.
+  ///
+  /// In zh, this message translates to:
+  /// **'Pattern: 复盘越靠近完成时刻，遗漏越少。Action: 把复盘压缩成 3 分钟。Outcome: 下次计划会优先保留这个轻量动作。'**
+  String get growthPlaceholderTurningPointNarrative;
+
+  /// No description provided for @growthPlaceholderWeeklyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'本周成长故事'**
+  String get growthPlaceholderWeeklyTitle;
+
+  /// No description provided for @growthPlaceholderWeeklyStory.
+  ///
+  /// In zh, this message translates to:
+  /// **'Pattern: 你在短专注后更容易继续推进。\nAction: 下周先安排 25 分钟的启动任务。\nOutcome: Sparkle 会观察这个节奏是否稳定。'**
+  String get growthPlaceholderWeeklyStory;
+
+  /// No description provided for @growthPlaceholderInsight1.
+  ///
+  /// In zh, this message translates to:
+  /// **'短启动比长任务更稳定。'**
+  String get growthPlaceholderInsight1;
+
+  /// No description provided for @growthPlaceholderInsight2.
+  ///
+  /// In zh, this message translates to:
+  /// **'薄弱点需要更早被放进当天计划。'**
+  String get growthPlaceholderInsight2;
+
+  /// No description provided for @growthPlaceholderSuggestion.
+  ///
+  /// In zh, this message translates to:
+  /// **'先做一个 25 分钟的最小推进。'**
+  String get growthPlaceholderSuggestion;
+
+  /// No description provided for @growthPlaceholderTriggerEvent.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成二次函数练习'**
+  String get growthPlaceholderTriggerEvent;
+
+  /// No description provided for @growthPlaceholderLearned.
+  ///
+  /// In zh, this message translates to:
+  /// **'你在有例题对照时更容易恢复手感。'**
+  String get growthPlaceholderLearned;
+
+  /// No description provided for @growthPlaceholderChanged.
+  ///
+  /// In zh, this message translates to:
+  /// **'后续薄弱点任务会优先附带例题。'**
+  String get growthPlaceholderChanged;
+
+  /// No description provided for @growthPlaceholderNotWritten.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有写入身份判断或隐藏备注。'**
+  String get growthPlaceholderNotWritten;
+
+  /// No description provided for @planGeneratePhaseTaskTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'{name} - 第{number}阶段任务'**
+  String planGeneratePhaseTaskTitle(String name, int number);
+
+  /// No description provided for @planGuideNoPresetTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前还没有预置任务，请输出适合后续拆解任务的执行主线。'**
+  String get planGuideNoPresetTasks;
+
+  /// No description provided for @planGuideDifficulty.
+  ///
+  /// In zh, this message translates to:
+  /// **'难度'**
+  String get planGuideDifficulty;
+
+  /// No description provided for @planGuideMin.
+  ///
+  /// In zh, this message translates to:
+  /// **'分钟'**
+  String get planGuideMin;
+
+  /// No description provided for @taskDiagnosisOption1.
+  ///
+  /// In zh, this message translates to:
+  /// **'概念没想清'**
+  String get taskDiagnosisOption1;
+
+  /// No description provided for @taskDiagnosisOption2.
+  ///
+  /// In zh, this message translates to:
+  /// **'步骤顺序乱了'**
+  String get taskDiagnosisOption2;
+
+  /// No description provided for @taskDiagnosisOption3.
+  ///
+  /// In zh, this message translates to:
+  /// **'题目条件不会用'**
+  String get taskDiagnosisOption3;
+
+  /// No description provided for @taskOpQueuedSuffix.
+  ///
+  /// In zh, this message translates to:
+  /// **'，已加入等待队列。'**
+  String get taskOpQueuedSuffix;
+
+  /// No description provided for @seedLibLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'种子库详情加载失败，请稍后再试'**
+  String get seedLibLoadFailed;
+
+  /// No description provided for @seedLibStatusFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'种子库状态加载失败，请稍后再试'**
+  String get seedLibStatusFailed;
 }
 
 class _AppLocalizationsDelegate

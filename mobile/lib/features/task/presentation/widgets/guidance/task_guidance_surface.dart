@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/utils/text_rendering.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
@@ -110,12 +109,12 @@ class _TaskGuidanceSurfaceState extends ConsumerState<TaskGuidanceSurface> {
         regenerate: regenerate,
       );
       if (!mounted) return;
-      final zh = I18nService.instance.isChinese;
+      final l10n = context.l10n;
       AppFeedback.success(
         context,
         regenerate
-            ? (zh ? '$label已刷新' : '$label refreshed')
-            : (zh ? '$label已生成' : '$label generated'),
+            ? l10n.taskGuidanceRefreshed(label)
+            : l10n.taskGuidanceGenerated(label),
       );
     } catch (error) {
       if (!mounted) return;

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/compact_error_card.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/experience/data/experience_models.dart';
 import 'package:sparkle/features/experience/presentation/providers/experience_provider.dart';
 
@@ -29,7 +29,7 @@ class _GrowthQualitySurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zh = I18nService.instance.isChinese;
+    final l10n = context.l10n;
     final quality = data.streakQuality;
     final dashboard = data.learningDashboard;
     final accent = quality.score >= 0.72
@@ -61,7 +61,7 @@ class _GrowthQualitySurface extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        zh ? '坚持质量' : 'Streak quality',
+                        l10n.streakQualityLabel,
                         style: TextStyle(
                           color: DS.textSecondary,
                           fontSize: DS.fontSizeXs,
@@ -72,9 +72,7 @@ class _GrowthQualitySurface extends StatelessWidget {
                       Text(
                         quality.label.isNotEmpty
                             ? quality.label
-                            : (zh
-                                ? '今天不只看打卡，也看推进质量。'
-                                : 'Today counts quality, not just check-ins.'),
+                            : l10n.streakQualityDefaultSummary,
                         style: TextStyle(
                           color: DS.textPrimary,
                           fontSize: DS.fontSizeBase,
@@ -93,22 +91,16 @@ class _GrowthQualitySurface extends StatelessWidget {
               children: [
                 _MetricChip(
                   icon: Icons.timer_rounded,
-                  label: zh
-                      ? '7天专注 ${dashboard.focusMinutes7d} 分钟'
-                      : '${dashboard.focusMinutes7d} focus min / 7d',
+                  label: l10n.streakQualityFocusMin7d(dashboard.focusMinutes7d),
                 ),
                 _MetricChip(
                   icon: Icons.task_alt_rounded,
-                  label: zh
-                      ? '完成 ${dashboard.tasksCompleted}/${dashboard.tasksTotal}'
-                      : '${dashboard.tasksCompleted}/${dashboard.tasksTotal} tasks',
+                  label: l10n.streakQualityTasksCompleted(dashboard.tasksCompleted, dashboard.tasksTotal),
                 ),
                 if (quality.currentStreak > 0)
                   _MetricChip(
                     icon: Icons.local_fire_department_rounded,
-                    label: zh
-                        ? '连续 ${quality.currentStreak} 天'
-                        : '${quality.currentStreak} day streak',
+                    label: l10n.streakQualityDayStreak(quality.currentStreak),
                   ),
               ],
             ),

@@ -64,7 +64,8 @@ class CreatePlanTool(BaseTool):
         params: CreatePlanParams,
         user_id: str,
         db_session: Any,
-        tool_call_id: str | None = None
+        tool_call_id: str | None = None,
+        locale: str = "en",
     ) -> ToolResult:
         try:
             user_uuid = UUID(user_id)
@@ -116,6 +117,7 @@ class CreatePlanTool(BaseTool):
                         plan_payload,
                         tool_name=self.name,
                         tool_result_id=tool_call_id,
+                        locale=locale,
                     ),
                 ),
             )

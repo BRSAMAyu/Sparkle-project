@@ -56,7 +56,6 @@ class SpineStatusBand {
   });
 
   factory SpineStatusBand.fromJson(Map<String, dynamic> json) {
-    final zh = I18nService.instance.isChinese;
     return SpineStatusBand(
       strategyRisk: json['strategy_risk'] as bool? ?? false,
       materialAware: json['material_aware'] as bool? ?? false,
@@ -64,7 +63,7 @@ class SpineStatusBand {
       staleGuard: json['stale_guard'] as bool? ?? false,
       bandSeverity: json['band_severity'] as String? ?? 'none',
       bandStatus: _parseBandStatus(json['band_status'] as String?),
-      bandLabel: json['band_label'] as String? ?? (zh ? '轻量感知中' : 'Lightweight Sensing'),
+      bandLabel: json['band_label'] as String? ?? S.spineStatusDefaultLabel,
       bandSummary: json['band_summary'] as String? ?? '',
       bandEnergy: json['band_energy'] as String? ?? 'L0',
       correctionOptions: _parseCorrectionOptions(json['correction_options']),

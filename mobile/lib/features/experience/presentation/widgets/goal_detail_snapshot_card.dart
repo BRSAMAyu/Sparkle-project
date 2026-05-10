@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/compact_error_card.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/experience/data/experience_models.dart';
 import 'package:sparkle/features/experience/presentation/providers/experience_provider.dart';
 
@@ -44,7 +44,7 @@ class _GoalDetailSnapshotSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zh = I18nService.instance.isChinese;
+    final l10n = context.l10n;
     final percent = (snapshot.progress * 100).round();
     final bottleneck = snapshot.graphNodes.isNotEmpty
         ? snapshot.graphNodes.first
@@ -72,7 +72,7 @@ class _GoalDetailSnapshotSurface extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        zh ? '当前目标' : 'Current goal',
+                        l10n.simulationCurrentGoal,
                         style: TextStyle(
                           color: DS.textSecondary,
                           fontSize: DS.fontSizeXs,
@@ -101,7 +101,7 @@ class _GoalDetailSnapshotSurface extends StatelessWidget {
             if (snapshot.criteria.isNotEmpty) ...[
               const SizedBox(height: DS.spacing12),
               Text(
-                zh ? '最低达标线' : 'Minimum bar',
+                l10n.goalDetailMinimumLine,
                 style: TextStyle(
                   color: DS.textSecondary,
                   fontSize: DS.fontSizeXs,
@@ -147,7 +147,7 @@ class _GoalDetailSnapshotSurface extends StatelessWidget {
                   border: Border.all(color: DS.info.withValues(alpha: 0.16)),
                 ),
                 child: Text(
-                  zh ? '知识地图提醒：$bottleneck' : 'Knowledge map: $bottleneck',
+                  l10n.knowledgeMapReminder(bottleneck),
                   style: TextStyle(
                     color: DS.textPrimary,
                     fontSize: DS.fontSizeSm,
@@ -169,7 +169,7 @@ class _GoalDetailSnapshotSurface extends StatelessWidget {
                     ),
                   if (onOpenGoal != null)
                     SparkleButton.ghost(
-                      label: zh ? '打开目标详情' : 'Open goal',
+                      label: l10n.goalDetailOpenGoal,
                       icon: const Icon(Icons.arrow_forward_rounded),
                       onPressed: () => onOpenGoal!(snapshot.goalId),
                     ),

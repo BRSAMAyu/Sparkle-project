@@ -53,7 +53,7 @@ class ErrorBookRepository {
 
       return ErrorRecord.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
-      throw _handleError(e, zh: '创建错题失败', en: 'Failed to create error record');
+      throw _handleError(e, S.errorBookCreateFailedMsg);
     }
   }
 
@@ -100,7 +100,7 @@ class ErrorBookRepository {
 
       return ErrorListResponse.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
-      throw _handleError(e, zh: '获取错题列表失败', en: 'Failed to get error list');
+      throw _handleError(e, S.errorBookListFailedMsg);
     }
   }
 
@@ -114,7 +114,7 @@ class ErrorBookRepository {
           await _dio.get<Map<String, dynamic>>('$_basePath/$errorId');
       return ErrorRecord.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
-      throw _handleError(e, zh: '获取错题详情失败', en: 'Failed to get error details');
+      throw _handleError(e, S.errorBookDetailFailedMsg);
     }
   }
 
@@ -148,7 +148,7 @@ class ErrorBookRepository {
 
       return ErrorRecord.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
-      throw _handleError(e, zh: '更新错题失败', en: 'Failed to update error record');
+      throw _handleError(e, S.errorBookUpdateFailedMsg);
     }
   }
 
@@ -160,7 +160,7 @@ class ErrorBookRepository {
     try {
       await _dio.delete<void>('$_basePath/$errorId');
     } on DioException catch (e) {
-      throw _handleError(e, zh: '删除错题失败', en: 'Failed to delete error record');
+      throw _handleError(e, S.errorBookDeleteFailedMsg);
     }
   }
 
@@ -172,7 +172,7 @@ class ErrorBookRepository {
     try {
       await _dio.post<void>('$_basePath/$errorId/analyze');
     } on DioException catch (e) {
-      throw _handleError(e, zh: '重新分析错题失败', en: 'Failed to re-analyze error');
+      throw _handleError(e, S.errorBookAnalyzeFailedMsg);
     }
   }
 
@@ -204,8 +204,7 @@ class ErrorBookRepository {
 
       return ErrorRecord.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
-      throw _handleError(e,
-          zh: '提交复习记录失败', en: 'Failed to submit review record');
+      throw _handleError(e, S.errorBookReviewFailedMsg);
     }
   }
 
@@ -228,8 +227,7 @@ class ErrorBookRepository {
 
       return ErrorListResponse.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
-      throw _handleError(e,
-          zh: '获取今日待复习列表失败', en: 'Failed to get today\'s review list');
+      throw _handleError(e, S.errorBookTodayReviewFailedMsg);
     }
   }
 
@@ -247,7 +245,7 @@ class ErrorBookRepository {
       final response = await _dio.get<Map<String, dynamic>>('$_basePath/stats');
       return ReviewStats.fromJson(response.data ?? <String, dynamic>{});
     } on DioException catch (e) {
-      throw _handleError(e, zh: '获取统计数据失败', en: 'Failed to get statistics');
+      throw _handleError(e, S.errorBookStatsFailedMsg);
     }
   }
 
@@ -262,8 +260,7 @@ class ErrorBookRepository {
         response.data ?? <String, dynamic>{},
       );
     } on DioException catch (e) {
-      throw _handleError(e,
-          zh: '获取语义摘要失败', en: 'Failed to get semantic summary');
+      throw _handleError(e, S.errorBookSemanticFailedMsg);
     }
   }
 
@@ -293,8 +290,7 @@ class ErrorBookRepository {
     } on DioException catch (e) {
       throw _handleError(
         e,
-        zh: '获取可补救错因失败',
-        en: 'Failed to get remediable patterns',
+        S.errorBookRemediableFailedMsg,
       );
     }
   }
@@ -313,8 +309,7 @@ class ErrorBookRepository {
     } on DioException catch (e) {
       throw _handleError(
         e,
-        zh: '生成补救任务失败',
-        en: 'Failed to generate remediation task',
+        S.errorBookGenerateTaskFailedMsg,
       );
     }
   }
@@ -331,8 +326,7 @@ class ErrorBookRepository {
     } on DioException catch (e) {
       throw _handleError(
         e,
-        zh: '加入今日计划失败',
-        en: 'Failed to add remediation task',
+        S.errorBookAcceptFailedMsg,
       );
     }
   }
@@ -340,31 +334,25 @@ class ErrorBookRepository {
   /// 统一错误处理
   ///
   /// 将 HTTP 异常转换为用户友好的错误消息
-  Exception _handleError(DioException e,
-      {required String zh, required String en}) {
-    final isZh = I18nService.instance.isChinese;
-    final defaultMessage = isZh ? zh : en;
+  Exception _handleError(DioException e, String fallbackMessage) {
+    final l10n = S;
     if (e.response?.statusCode == 404) {
-      return Exception(isZh ? '错题不存在或已删除' : 'Error not found or deleted');
+      return Exception(l10n.errorBookNotFoundDeleted);
     } else if (e.response?.statusCode == 401) {
-      return Exception(isZh ? '未登录或登录已过期' : 'Not logged in or session expired');
+      return Exception(l10n.errorBookAuthExpired);
     } else if (e.response?.statusCode == 400) {
       final data = e.response?.data;
       final errorDetail =
           data is Map<String, dynamic> ? data['detail'] as String? : null;
       return Exception(
-          errorDetail ?? (isZh ? '请求参数错误' : 'Invalid request parameters'));
+          errorDetail ?? l10n.errorBookInvalidParams);
     } else if (e.type == DioExceptionType.connectionTimeout ||
         e.type == DioExceptionType.receiveTimeout) {
-      return Exception(isZh
-          ? '网络超时，请检查网络连接'
-          : 'Network timeout, please check your connection');
+      return Exception(l10n.errorBookNetworkTimeoutMsg);
     } else if (e.type == DioExceptionType.unknown) {
-      return Exception(isZh
-          ? '网络错误，请检查网络连接'
-          : 'Network error, please check your connection');
+      return Exception(l10n.errorBookNetworkErrorMsg);
     }
 
-    return Exception(defaultMessage);
+    return Exception(fallbackMessage);
   }
 }

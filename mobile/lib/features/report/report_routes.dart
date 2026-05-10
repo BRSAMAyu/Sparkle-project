@@ -1,6 +1,6 @@
 import 'package:go_router/go_router.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/navigation/sparkle_route_transition.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/scene_audio_policy.dart';
 import 'package:sparkle/core/widgets/scene_audio_scope.dart';
@@ -19,9 +19,7 @@ class ReportRoutes {
                 ? state.extra as LearningReport
                 : LearningReport(
                     reportId: 'empty',
-                    markdown: I18nService.instance.isChinese
-                        ? '暂无学习报告数据。'
-                        : 'No learning report data available.',
+                    markdown: context.l10n.noLearningReportData,
                     sections: const <String>[],
                     mastery: const <LearningMasteryDatum>[],
                   );

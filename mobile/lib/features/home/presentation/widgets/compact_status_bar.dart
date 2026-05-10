@@ -4,7 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/home/home_routes.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
@@ -102,6 +102,7 @@ class CompactStatusBar extends StatelessWidget {
                                   Text(
                                     showWeatherLabel
                                         ? _weatherSentence(
+                                            context,
                                             weatherPresentation,
                                             weatherSummary,
                                           )
@@ -191,14 +192,15 @@ class CompactStatusBar extends StatelessWidget {
   }
 
   String _weatherSentence(
+    BuildContext context,
     WeatherPresentationData presentation,
     String weatherSummary,
   ) {
-    final zh = I18nService.instance.isChinese;
+    final l10n = context.l10n;
     if (weatherSummary.trim().isNotEmpty) {
-      return zh ? '今天适合${presentation.compactHint}，$weatherSummary' : 'Great for ${presentation.compactHint}, $weatherSummary';
+      return l10n.weatherSentenceWithSummary(presentation.compactHint, weatherSummary);
     }
-    return zh ? '今天适合${presentation.compactHint}' : 'Great for ${presentation.compactHint}';
+    return l10n.weatherSentenceNoSummary(presentation.compactHint);
   }
 }
 

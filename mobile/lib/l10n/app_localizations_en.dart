@@ -26804,7 +26804,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskContinueNext => 'Next';
 
   @override
-  String get taskViewPlan => 'View Plan';
+  String get taskViewPlan => 'Plan';
 
   @override
   String get taskSharePlan => 'Share Plan';
@@ -33915,7 +33915,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get goalIntentTypeHere => 'Type here';
 
   @override
-  String get goalIntentUnderstanding => 'Understanding...';
+  String get goalIntentUnderstanding => 'Understanding…';
 
   @override
   String get goalIntentReadSituation => 'Let me read your situation';
@@ -35224,4 +35224,351 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get demoHelpableNudge =>
       'No check-in yet today, a gentle nudge may help';
+
+  @override
+  String get accountabilitySpaceTitle => 'Accountability space';
+
+  @override
+  String get accountabilitySpaceSummary =>
+      'Commitments, partner progress, and goal mates come first here.';
+
+  @override
+  String get accountabilitySetCommitment => 'Set commitment';
+
+  @override
+  String get accountabilityFindPartners => 'Find partners';
+
+  @override
+  String get streakQualityLabel => 'Streak quality';
+
+  @override
+  String get streakQualityDefaultSummary =>
+      'Today counts quality, not just check-ins.';
+
+  @override
+  String streakQualityFocusMin7d(int minutes) {
+    return '$minutes focus min / 7d';
+  }
+
+  @override
+  String streakQualityTasksCompleted(int completed, int total) {
+    return '$completed/$total tasks';
+  }
+
+  @override
+  String streakQualityDayStreak(int days) {
+    return '$days day streak';
+  }
+
+  @override
+  String get goalDetailOpenGoal => 'Open goal';
+
+  @override
+  String get goalCreatedPlanReady => 'Your growth plan is ready';
+
+  @override
+  String get goalCreatedLearningPath => 'Learning path';
+
+  @override
+  String get goalCreatedFirstMilestone => 'First milestone';
+
+  @override
+  String get goalCreatedMinBarTip =>
+      'Meeting the minimum criteria counts as success. You can always adjust if it feels too hard.';
+
+  @override
+  String get goalCreatedSeeFullPlan => 'See full plan';
+
+  @override
+  String get goalCreatedStartFirstTask => 'Start first task';
+
+  @override
+  String get goalIntentInputHint => 'Type here';
+
+  @override
+  String get goalIntentAnalyze => 'Let me read your situation';
+
+  @override
+  String get journeyPersonalizing => 'AI is personalizing your journey...';
+
+  @override
+  String journeyDayOfTotal(int day, int total) {
+    return 'Day $day of $total';
+  }
+
+  @override
+  String journeyDay(int day) {
+    return 'Day $day';
+  }
+
+  @override
+  String journeyProgressSemantics(int percent) {
+    return 'Journey progress: $percent%';
+  }
+
+  @override
+  String get journeyBackboneTooltip =>
+      'The backbone is your guided learning path. Free exploration is encouraged and won\'t affect your progress.';
+
+  @override
+  String get journeyOffBackbone => 'Off backbone — exploring';
+
+  @override
+  String journeyPhase(int phase) {
+    return 'Phase $phase';
+  }
+
+  @override
+  String get spineStatusDefaultLabel => 'Lightweight Sensing';
+
+  @override
+  String weatherSentenceWithSummary(String hint, String summary) {
+    return 'Great for $hint, $summary';
+  }
+
+  @override
+  String weatherSentenceNoSummary(String hint) {
+    return 'Great for $hint';
+  }
+
+  @override
+  String get goalSwitcherNoFocusGoal => 'No focus goal';
+
+  @override
+  String get goalSwitcherTooltip => 'Switch focus goal';
+
+  @override
+  String get prismCognitivePattern => 'Cognitive Prism';
+
+  @override
+  String get prismAnxietyPeak => '#AnxietyPeak';
+
+  @override
+  String get prismPatternUpdated => 'Behavioral pattern analysis updated';
+
+  @override
+  String get prismErrorAnalysis => 'Error analysis';
+
+  @override
+  String get prismReviewWeakAnalysis => 'Review weak area: Analysis';
+
+  @override
+  String get prismDiscoverPatterns =>
+      'Sync your thoughts to discover behavioral patterns';
+
+  @override
+  String get prismSemanticsLabel => 'Cognitive pattern analysis';
+
+  @override
+  String get recentInsightsCollapsedSummary =>
+      'Recent insights are collapsed. Expand them whenever you want another look.';
+
+  @override
+  String recentInsightsExpandedSummary(int count) {
+    return 'Latest $count updates related to your learning flow.';
+  }
+
+  @override
+  String planViewFilteredEmpty(String planName) {
+    return '$planName has no tasks';
+  }
+
+  @override
+  String get taskViewSchedule => 'Schedule';
+
+  @override
+  String get taskViewPriority => 'Priority';
+
+  @override
+  String get taskViewSprint => 'Sprint';
+
+  @override
+  String knowledgeMapReminder(String bottleneck) {
+    return 'Knowledge map: $bottleneck';
+  }
+
+  @override
+  String get remediablePatternsTitle => 'Remediable Patterns';
+
+  @override
+  String get remediablePatternsDesc =>
+      'Recent mistakes that are ready to become focused practice.';
+
+  @override
+  String get remediableTaskAdded => 'Remediation task added to today';
+
+  @override
+  String remediableGenerateFailed(String error) {
+    return 'Failed to generate task: $error';
+  }
+
+  @override
+  String errorCountLabel(int count) {
+    return '$count errors';
+  }
+
+  @override
+  String minutesLabel(int count) {
+    return '$count min';
+  }
+
+  @override
+  String get generateRemedialTask => 'Generate Task';
+
+  @override
+  String get minimumOutputLabel => 'Minimum Output';
+
+  @override
+  String get successCriteriaLabel => 'Success Criteria';
+
+  @override
+  String get practiceStepsLabel => 'Practice Steps';
+
+  @override
+  String get acceptAndAddToday => 'Accept and Add';
+
+  @override
+  String get noLearningReportData => 'No learning report data available.';
+
+  @override
+  String get conflictRecordsTitle => 'Conflict Records';
+
+  @override
+  String get masteryRadarTitle => 'Mastery Radar';
+
+  @override
+  String get errorBookCreateFailedMsg => 'Failed to create error record';
+
+  @override
+  String get errorBookListFailedMsg => 'Failed to get error list';
+
+  @override
+  String get errorBookDetailFailedMsg => 'Failed to get error details';
+
+  @override
+  String get errorBookUpdateFailedMsg => 'Failed to update error record';
+
+  @override
+  String get errorBookDeleteFailedMsg => 'Failed to delete error record';
+
+  @override
+  String get errorBookAnalyzeFailedMsg => 'Failed to re-analyze error';
+
+  @override
+  String get errorBookReviewFailedMsg => 'Failed to submit review record';
+
+  @override
+  String get errorBookTodayReviewFailedMsg =>
+      'Failed to get today\'s review list';
+
+  @override
+  String get errorBookStatsFailedMsg => 'Failed to get statistics';
+
+  @override
+  String get errorBookSemanticFailedMsg => 'Failed to get semantic summary';
+
+  @override
+  String get errorBookRemediableFailedMsg =>
+      'Failed to get remediable patterns';
+
+  @override
+  String get errorBookGenerateTaskFailedMsg =>
+      'Failed to generate remediation task';
+
+  @override
+  String get errorBookAcceptFailedMsg => 'Failed to add remediation task';
+
+  @override
+  String get errorBookNotFoundDeleted => 'Error not found or deleted';
+
+  @override
+  String get errorBookAuthExpired => 'Not logged in or session expired';
+
+  @override
+  String get errorBookInvalidParams => 'Invalid request parameters';
+
+  @override
+  String get errorBookNetworkTimeoutMsg =>
+      'Network timeout, please check your connection';
+
+  @override
+  String get errorBookNetworkErrorMsg =>
+      'Network error, please check your connection';
+
+  @override
+  String get growthPlaceholderTurningPointTitle =>
+      'Turning point: reflection moved closer to the task';
+
+  @override
+  String get growthPlaceholderTurningPointNarrative =>
+      'Pattern: reflection works better while the task is still fresh. Action: keep it to three minutes. Outcome: future plans will protect this lightweight step.';
+
+  @override
+  String get growthPlaceholderWeeklyTitle => 'This week\'s growth story';
+
+  @override
+  String get growthPlaceholderWeeklyStory =>
+      'Pattern: shorter focus starts are easier to continue.\nAction: start next week with a 25-minute task.\nOutcome: Sparkle will watch whether this rhythm holds.';
+
+  @override
+  String get growthPlaceholderInsight1 =>
+      'Short starts are more stable than long tasks.';
+
+  @override
+  String get growthPlaceholderInsight2 =>
+      'Weak areas need to enter the day plan earlier.';
+
+  @override
+  String get growthPlaceholderSuggestion =>
+      'Start with one 25-minute minimum step.';
+
+  @override
+  String get growthPlaceholderTriggerEvent => 'Completed quadratic practice';
+
+  @override
+  String get growthPlaceholderLearned =>
+      'You recover momentum faster when worked examples are nearby.';
+
+  @override
+  String get growthPlaceholderChanged =>
+      'Future weak-area tasks will prefer worked examples.';
+
+  @override
+  String get growthPlaceholderNotWritten =>
+      'No identity judgment or hidden note was written.';
+
+  @override
+  String planGeneratePhaseTaskTitle(String name, int number) {
+    return '$name - Phase $number Task';
+  }
+
+  @override
+  String get planGuideNoPresetTasks =>
+      'No preset tasks yet. Please output an execution backbone suitable for future task breakdown.';
+
+  @override
+  String get planGuideDifficulty => 'difficulty';
+
+  @override
+  String get planGuideMin => 'min';
+
+  @override
+  String get taskDiagnosisOption1 => 'Concept not clear';
+
+  @override
+  String get taskDiagnosisOption2 => 'Step order confused';
+
+  @override
+  String get taskDiagnosisOption3 => 'Can\'t use given conditions';
+
+  @override
+  String get taskOpQueuedSuffix => ', added to wait queue.';
+
+  @override
+  String get seedLibLoadFailed =>
+      'Failed to load library details. Please try again later.';
+
+  @override
+  String get seedLibStatusFailed =>
+      'Failed to load library status. Please try again later.';
 }

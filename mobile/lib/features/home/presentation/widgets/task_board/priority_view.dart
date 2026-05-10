@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/task_board/interactive_task_card.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
@@ -33,7 +33,7 @@ class PriorityView extends ConsumerWidget {
       }
     }
 
-    final zh = I18nService.instance.isChinese;
+    final l10n = context.l10n;
 
     return ListView.separated(
       shrinkWrap: true,
@@ -46,7 +46,7 @@ class PriorityView extends ConsumerWidget {
           case 0:
             return highPriority.isNotEmpty
                 ? _PrioritySection(
-                    title: zh ? '高优先级' : 'High Priority',
+                    title: l10n.taskPriorityHigh,
                     color: DS.error,
                     tasks: highPriority,
                   )
@@ -54,7 +54,7 @@ class PriorityView extends ConsumerWidget {
           case 1:
             return mediumPriority.isNotEmpty
                 ? _PrioritySection(
-                    title: zh ? '中优先级' : 'Medium Priority',
+                    title: l10n.taskPriorityMedium,
                     color: DS.warning,
                     tasks: mediumPriority,
                   )
@@ -62,7 +62,7 @@ class PriorityView extends ConsumerWidget {
           case 2:
             return lowPriority.isNotEmpty
                 ? _PrioritySection(
-                    title: zh ? '低优先级' : 'Low Priority',
+                    title: l10n.taskPriorityLow,
                     color: DS.success,
                     tasks: lowPriority,
                   )

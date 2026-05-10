@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/compact_error_card.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/experience/data/experience_models.dart';
 import 'package:sparkle/features/experience/presentation/providers/experience_provider.dart';
 
@@ -49,7 +49,7 @@ class _CommunityAccountabilitySurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zh = I18nService.instance.isChinese;
+    final l10n = context.l10n;
     return Padding(
       padding: const EdgeInsets.only(top: DS.spacing14),
       child: GraphiteCardSurface(
@@ -81,7 +81,7 @@ class _CommunityAccountabilitySurface extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        zh ? '目标责任空间' : 'Accountability space',
+                        l10n.accountabilitySpaceTitle,
                         style: TextStyle(
                           color: DS.textSecondary,
                           fontSize: DS.fontSizeXs,
@@ -92,9 +92,7 @@ class _CommunityAccountabilitySurface extends StatelessWidget {
                       Text(
                         snapshot.summary.isNotEmpty
                             ? snapshot.summary
-                            : (zh
-                                ? '这里优先展示承诺、伙伴进度和与你目标相同的人。'
-                                : 'Commitments, partner progress, and goal mates come first here.'),
+                            : l10n.accountabilitySpaceSummary,
                         style: TextStyle(
                           color: DS.textPrimary,
                           fontSize: DS.fontSizeSm,
@@ -114,13 +112,13 @@ class _CommunityAccountabilitySurface extends StatelessWidget {
               children: [
                 if (onCreateCommitment != null)
                   SparkleButton.primary(
-                    label: zh ? '设定承诺' : 'Set commitment',
+                    label: l10n.accountabilitySetCommitment,
                     icon: const Icon(Icons.flag_rounded),
                     onPressed: onCreateCommitment!,
                   ),
                 if (onFindPartners != null)
                   SparkleButton.ghost(
-                    label: zh ? '找目标伙伴' : 'Find partners',
+                    label: l10n.accountabilityFindPartners,
                     icon: const Icon(Icons.group_add_rounded),
                     onPressed: onFindPartners!,
                   ),

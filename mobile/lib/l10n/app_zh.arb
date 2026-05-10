@@ -15496,5 +15496,230 @@
   "demoPartnerGoalReflection": "稳定周末复盘节奏",
   "demoSharedGoalTitle": "本周把微积分薄弱点补齐",
   "demoSquadRiskNoSync": "两天没有同步进展",
-  "demoHelpableNudge": "今天还没打卡，可以发一句轻提醒"
+  "demoHelpableNudge": "今天还没打卡，可以发一句轻提醒",
+  "accountabilitySpaceTitle": "目标责任空间",
+  "accountabilitySpaceSummary": "这里优先展示承诺、伙伴进度和与你目标相同的人。",
+  "accountabilitySetCommitment": "设定承诺",
+  "accountabilityFindPartners": "找目标伙伴",
+  "streakQualityLabel": "坚持质量",
+  "streakQualityDefaultSummary": "今天不只看打卡，也看推进质量。",
+  "streakQualityFocusMin7d": "7天专注 {minutes} 分钟",
+  "@streakQualityFocusMin7d": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "streakQualityTasksCompleted": "完成 {completed}/{total}",
+  "@streakQualityTasksCompleted": {
+    "placeholders": {
+      "completed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "streakQualityDayStreak": "连续 {days} 天",
+  "@streakQualityDayStreak": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "goalDetailOpenGoal": "打开目标详情",
+  "goalCreatedPlanReady": "你的成长计划已就绪",
+  "goalCreatedLearningPath": "学习路线",
+  "goalCreatedFirstMilestone": "第一个里程碑",
+  "goalCreatedMinBarTip": "达到最低达标线就算成功。如果过程中觉得太难，可以随时调整。",
+  "goalCreatedSeeFullPlan": "查看完整计划",
+  "goalCreatedStartFirstTask": "开始第一个任务",
+  "goalIntentTitle": "告诉我你想达成什么",
+  "goalIntentHint": "一句话就好，比如「7天后计网考试基本没学想先别挂」",
+  "goalIntentInputHint": "在这里输入",
+  "goalIntentUnderstanding": "正在理解…",
+  "goalIntentAnalyze": "让我先看看你的情况",
+  "journeyPersonalizing": "AI 正在为你定制学习路径...",
+  "journeyDayOfTotal": "第 {day} 天 / 共 {total} 天",
+  "@journeyDayOfTotal": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "journeyDay": "第 {day} 天",
+  "@journeyDay": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      }
+    }
+  },
+  "journeyProgressSemantics": "旅程进度：{percent}%",
+  "@journeyProgressSemantics": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "journeyBackboneTooltip": "主线是为你定制的学习路径。自由探索是被鼓励的，不影响进度。",
+  "journeyOffBackbone": "偏离主线，自主探索中",
+  "journeyPhase": "阶段 {phase}",
+  "@journeyPhase": {
+    "placeholders": {
+      "phase": {
+        "type": "int"
+      }
+    }
+  },
+  "spineStatusDefaultLabel": "轻量感知中",
+  "weatherSentenceWithSummary": "今天适合{hint}，{summary}",
+  "@weatherSentenceWithSummary": {
+    "placeholders": {
+      "hint": {
+        "type": "String"
+      },
+      "summary": {
+        "type": "String"
+      }
+    }
+  },
+  "weatherSentenceNoSummary": "今天适合{hint}",
+  "@weatherSentenceNoSummary": {
+    "placeholders": {
+      "hint": {
+        "type": "String"
+      }
+    }
+  },
+  "goalSwitcherNoFocusGoal": "暂无关注目标",
+  "goalSwitcherTooltip": "切换当前关注目标",
+  "prismCognitivePattern": "认知棱镜",
+  "prismAnxietyPeak": "#焦虑波峰",
+  "prismPatternUpdated": "行为定式分析已更新",
+  "prismErrorAnalysis": "错误分析",
+  "prismReviewWeakAnalysis": "复习弱项: 分析",
+  "prismDiscoverPatterns": "点击同步闪念，发现你的行为定式",
+  "prismSemanticsLabel": "认知模式分析",
+  "recentInsightsCollapsedSummary": "已收起最近洞察，需要时可随时展开查看。",
+  "recentInsightsExpandedSummary": "最近 {count} 条与你学习动线相关的更新。",
+  "@recentInsightsExpandedSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "planViewFilteredEmpty": "{planName} 暂无任务",
+  "@planViewFilteredEmpty": {
+    "placeholders": {
+      "planName": {
+        "type": "String"
+      }
+    }
+  },
+  "taskViewSchedule": "日程",
+  "taskViewPriority": "重要性",
+  "taskViewPlan": "方案",
+  "taskViewSprint": "冲刺",
+  "knowledgeMapReminder": "知识地图提醒：{bottleneck}",
+  "@knowledgeMapReminder": {
+    "placeholders": {
+      "bottleneck": {
+        "type": "String"
+      }
+    }
+  },
+  "remediablePatternsTitle": "可补救错因",
+  "remediablePatternsDesc": "从最近错题里挑出最值得转成练习任务的薄弱点。",
+  "remediableTaskAdded": "补救任务已加入今日计划",
+  "remediableGenerateFailed": "生成补救任务失败：{error}",
+  "@remediableGenerateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errorCountLabel": "{count} 道错题",
+  "@errorCountLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "minutesLabel": "{count} 分钟",
+  "@minutesLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "generateRemedialTask": "生成补救任务",
+  "minimumOutputLabel": "最低产出",
+  "successCriteriaLabel": "完成标准",
+  "practiceStepsLabel": "练习步骤",
+  "acceptAndAddToday": "接受并加入今日计划",
+  "noLearningReportData": "暂无学习报告数据。",
+  "conflictRecordsTitle": "冲突记录",
+  "masteryRadarTitle": "知识掌握度雷达图",
+  "errorBookCreateFailedMsg": "创建错题失败",
+  "errorBookListFailedMsg": "获取错题列表失败",
+  "errorBookDetailFailedMsg": "获取错题详情失败",
+  "errorBookUpdateFailedMsg": "更新错题失败",
+  "errorBookDeleteFailedMsg": "删除错题失败",
+  "errorBookAnalyzeFailedMsg": "重新分析错题失败",
+  "errorBookReviewFailedMsg": "提交复习记录失败",
+  "errorBookTodayReviewFailedMsg": "获取今日待复习列表失败",
+  "errorBookStatsFailedMsg": "获取统计数据失败",
+  "errorBookSemanticFailedMsg": "获取语义摘要失败",
+  "errorBookRemediableFailedMsg": "获取可补救错因失败",
+  "errorBookGenerateTaskFailedMsg": "生成补救任务失败",
+  "errorBookAcceptFailedMsg": "加入今日计划失败",
+  "errorBookNotFoundDeleted": "错题不存在或已删除",
+  "errorBookAuthExpired": "未登录或登录已过期",
+  "errorBookInvalidParams": "请求参数错误",
+  "errorBookNetworkTimeoutMsg": "网络超时，请检查网络连接",
+  "errorBookNetworkErrorMsg": "网络错误，请检查网络连接",
+  "growthPlaceholderTurningPointTitle": "转折点：把复盘提前到任务结束后",
+  "growthPlaceholderTurningPointNarrative": "Pattern: 复盘越靠近完成时刻，遗漏越少。Action: 把复盘压缩成 3 分钟。Outcome: 下次计划会优先保留这个轻量动作。",
+  "growthPlaceholderWeeklyTitle": "本周成长故事",
+  "growthPlaceholderWeeklyStory": "Pattern: 你在短专注后更容易继续推进。\nAction: 下周先安排 25 分钟的启动任务。\nOutcome: Sparkle 会观察这个节奏是否稳定。",
+  "growthPlaceholderInsight1": "短启动比长任务更稳定。",
+  "growthPlaceholderInsight2": "薄弱点需要更早被放进当天计划。",
+  "growthPlaceholderSuggestion": "先做一个 25 分钟的最小推进。",
+  "growthPlaceholderTriggerEvent": "完成二次函数练习",
+  "growthPlaceholderLearned": "你在有例题对照时更容易恢复手感。",
+  "growthPlaceholderChanged": "后续薄弱点任务会优先附带例题。",
+  "growthPlaceholderNotWritten": "没有写入身份判断或隐藏备注。",
+  "planGeneratePhaseTaskTitle": "{name} - 第{number}阶段任务",
+  "@planGeneratePhaseTaskTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "planGuideNoPresetTasks": "当前还没有预置任务，请输出适合后续拆解任务的执行主线。",
+  "planGuideDifficulty": "难度",
+  "planGuideMin": "分钟",
+  "taskDiagnosisOption1": "概念没想清",
+  "taskDiagnosisOption2": "步骤顺序乱了",
+  "taskDiagnosisOption3": "题目条件不会用",
+  "taskOpQueuedSuffix": "，已加入等待队列。",
+  "seedLibLoadFailed": "种子库详情加载失败，请稍后再试",
+  "seedLibStatusFailed": "种子库状态加载失败，请稍后再试"
 }

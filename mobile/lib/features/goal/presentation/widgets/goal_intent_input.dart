@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// Phase-1 Entry Wire — single natural-language input that replaces step 0
 /// of the legacy 5-step wizard.
@@ -19,27 +19,22 @@ class GoalIntentInput extends StatelessWidget {
   final Future<void> Function() onSubmit;
   final bool analyzing;
 
-  static String _t(String zh, String en) =>
-      I18nService.instance.isChinese ? zh : en;
-
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Column(
       key: const ValueKey('goal-intent-input'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          _t('告诉我你想达成什么', 'Tell me what you want to achieve'),
+          l10n.goalIntentTitle,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w700,
               ),
         ),
         const SizedBox(height: 6),
         Text(
-          _t(
-            '一句话就好，比如「7天后计网考试基本没学想先别挂」',
-            'One sentence works, e.g. "Computer Networks final in 7 days, barely studied"',
-          ),
+          l10n.goalIntentHint,
           style: TextStyle(color: DS.textSecondary, fontSize: 13),
         ),
         const SizedBox(height: 14),
@@ -51,7 +46,7 @@ class GoalIntentInput extends StatelessWidget {
           textInputAction: TextInputAction.send,
           onSubmitted: (_) => onSubmit(),
           decoration: InputDecoration(
-            hintText: _t('在这里输入', 'Type here'),
+            hintText: l10n.goalIntentInputHint,
             prefixIcon: const Icon(Icons.flag_outlined),
           ),
         ),
@@ -66,9 +61,7 @@ class GoalIntentInput extends StatelessWidget {
                 )
               : const Icon(Icons.auto_awesome_rounded),
           label: Text(
-            analyzing
-                ? _t('正在理解…', 'Understanding…')
-                : _t('让我先看看你的情况', 'Let me read your situation'),
+            analyzing ? l10n.goalIntentUnderstanding : l10n.goalIntentAnalyze,
           ),
         ),
       ],

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/goal/data/models/scenario_pack_models.dart';
 
 /// Compact card showing the user's journey progress through a scenario pack.
@@ -16,10 +16,9 @@ class JourneyProgressCard extends StatelessWidget {
   final JourneyProgress progress;
   final VoidCallback? onTap;
 
-  String _t(String zh, String en) => I18nService.instance.isChinese ? zh : en;
-
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     if (!progress.hasPack) {
       return Container(
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -35,7 +34,7 @@ class JourneyProgressCard extends StatelessWidget {
             const SizedBox(width: DS.spacing8),
             Expanded(
               child: Text(
-                _t('AI 正在为你定制学习路径...', 'AI is personalizing your journey...'),
+                l10n.journeyPersonalizing,
                 style: DS.bodySmall.copyWith(color: DS.textSecondary),
               ),
             ),
@@ -46,18 +45,12 @@ class JourneyProgressCard extends StatelessWidget {
 
     final pct = (progress.progress * 100).round();
     final dayLabel = progress.horizonDays > 0
-        ? _t(
-            '第 ${progress.dayNumber} 天 / 共 ${progress.horizonDays} 天',
-            'Day ${progress.dayNumber} of ${progress.horizonDays}',
-          )
-        : _t('第 ${progress.dayNumber} 天', 'Day ${progress.dayNumber}');
+        ? l10n.journeyDayOfTotal(progress.dayNumber, progress.horizonDays)
+        : l10n.journeyDay(progress.dayNumber);
 
     return Semantics(
       container: true,
-      label: _t(
-        '旅程进度：$pct%',
-        'Journey progress: $pct%',
-      ),
+      label: l10n.journeyProgressSemantics(pct),
       child: GestureDetector(
         onTap: onTap,
         child: Container(
@@ -115,7 +108,7 @@ class JourneyProgressCard extends StatelessWidget {
                 ),
                 if (progress.currentNode != null)
                   Text(
-                    _currentNodeLabel(progress.currentNodeIndex),
+                    _currentNodeLabel(context, progress.currentNodeIndex),
                     style: DS.labelSmall.copyWith(color: DS.textSecondary),
                   ),
               ],
@@ -123,16 +116,13 @@ class JourneyProgressCard extends StatelessWidget {
             if (!progress.isOnBackbone) ...[
               const SizedBox(height: 6),
               Tooltip(
-                message: _t(
-                  '主线是为你定制的学习路径。自由探索是被鼓励的，不影响进度。',
-                  'The backbone is your guided learning path. Free exploration is encouraged and won\'t affect your progress.',
-                ),
+                message: l10n.journeyBackboneTooltip,
                 child: Row(
                   children: [
                     Icon(Icons.explore_outlined, size: 14, color: DS.warning),
                     const SizedBox(width: 4),
                     Text(
-                      _t('偏离主线，自主探索中', 'Off backbone — exploring'),
+                      l10n.journeyOffBackbone,
                       style: DS.labelSmall.copyWith(color: DS.warning),
                     ),
                   ],
@@ -146,8 +136,7 @@ class JourneyProgressCard extends StatelessWidget {
     );
   }
 
-  String _currentNodeLabel(int index) {
-    final phase = index + 1;
-    return _t('阶段 $phase', 'Phase $phase');
+  String _currentNodeLabel(BuildContext context, int index) {
+    return context.l10n.journeyPhase(index + 1);
   }
 }
