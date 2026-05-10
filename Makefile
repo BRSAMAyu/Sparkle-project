@@ -1,7 +1,7 @@
 .PHONY: dev-up sync-db sync-equipment proto-gen proto-lint proto-breaking proto-check-generated proto-deprecation-check proto-tools-build db-migrate db-dump db-sqlc db-validate env-check smoke openclaw-ready openclaw-smoke quality-baseline quality-baseline-full quality-budget-check openapi-contract-check flutter-analyze-gate mobile-design-lint fixture-init local-config-check local-ai-check local-backend-smoke local-mobile-smoke local-acceptance local-signoff-preflight local-final-signoff auth-test community-test file-pipeline-test worker-test china-mirrors-setup mobile-setup-china pip-install-china uv-install-china mobile-build-china mobile-build-intl mobile-build-china-ios mobile-build-intl-ios init-minio-buckets integration-test e2e-multiturn
 
-# Load environment variables from .env
-include .env
+# Load environment variables from .env (optional — won't error if missing)
+-include .env
 
 DB_CONTAINER=sparkle_db
 DB_USER?=$(if $(POSTGRES_USER),$(POSTGRES_USER),postgres)
