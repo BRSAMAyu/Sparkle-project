@@ -203,7 +203,7 @@ Widget _buildDashboardProviderHarness({
 
 class _StaticDashboardNotifier extends DashboardNotifier {
   _StaticDashboardNotifier(DashboardState initialState)
-      : super(_UnusedDashboardRepository(), _UnusedRef()) {
+      : super(_UnusedDashboardRepository()) {
     state = initialState;
   }
 
