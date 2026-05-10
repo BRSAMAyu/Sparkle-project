@@ -54,6 +54,7 @@ class _FeedTabContentState extends ConsumerState<FeedTabContent> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final feedState = ref.watch(feedProvider);
 
     return ContentConstraint(
@@ -118,10 +119,13 @@ class _FeedTabContentState extends ConsumerState<FeedTabContent> {
 
   Widget _buildFilterHeader(BuildContext context, WidgetRef ref) {
     final selectedIndex = ref.watch(communityFeedFilterProvider);
-    final isChinese = Localizations.localeOf(context).languageCode == 'zh';
-    final filters = isChinese
-        ? ['全局动态', '我的小队', '目标伙伴', '我的关注']
-        : ['Global Feed', 'My Squad', 'Goal Mates', 'Following'];
+    final l10n = context.l10n;
+    final filters = [
+      l10n.communityFeedGlobal,
+      l10n.communityFeedMySquad,
+      l10n.communityFeedGoalMates,
+      l10n.communityFeedFollowing,
+    ];
     const scopes = [null, 'squad', 'goal_mates', 'following'];
     return Padding(
       padding: const EdgeInsets.fromLTRB(DS.lg, DS.lg, DS.lg, DS.sm),
@@ -152,7 +156,7 @@ class _FeedTabContentState extends ConsumerState<FeedTabContent> {
   }
 
   Widget _buildEmptyState(BuildContext context, WidgetRef ref) {
-    final isChinese = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n = context.l10n;
     return ScrollEdgeHaptics(
       child: ListView(
         children: [
@@ -161,12 +165,10 @@ class _FeedTabContentState extends ConsumerState<FeedTabContent> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
             child: EmptyState(
-              title: isChinese ? '社区还没有火花' : 'No community spark yet',
-              description: isChinese
-                  ? '分享一个计划、洞察或小胜利，开始这里的第一次对话。'
-                  : 'Share a plan, insight, or small win to start the first conversation here.',
+              title: l10n.communityNoCommunitySpark,
+              description: l10n.communityNoCommunitySparkDesc,
               icon: Icons.forum_outlined,
-              actionText: isChinese ? '发一条动态' : 'Share a post',
+              actionText: l10n.communitySharePost,
               onAction: () {
                 unawaited(
                   SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
@@ -178,7 +180,7 @@ class _FeedTabContentState extends ConsumerState<FeedTabContent> {
                 }
               },
               customAction: SparkleButton.ghost(
-                label: isChinese ? '刷新动态' : 'Refresh feed',
+                label: l10n.communityRefreshFeed,
                 onPressed: () =>
                     unawaited(ref.read(feedProvider.notifier).refresh()),
               ),

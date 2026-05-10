@@ -15153,6 +15153,13 @@
   "auroraExpandedExplanationPrefix": "Current read: ",
   "auroraIfReadOffCorrectHere": "If this read is off, correct it here:",
 
+  "dashboardSectionsLabel": "Sections",
+  "dashboardWorkspaceCards": "Workspace cards",
+  "dashboardLeanView": "Lean view",
+  "slotEditorExpand": "Expand",
+  "slotEditorCollapse": "Collapse",
+  "dashboardAllSectionsVisible": "All sections start visible. Switch to hide, drag to reorder, tap to collapse low-glance sections into a 64px header.",
+
   "auroraSensing": "Aurora · Lightweight Sensing",
   "auroraCalibrated": "Aurora · Calibrated",
   "auroraRiskDetected": "Aurora · Strategy Risk Detected",

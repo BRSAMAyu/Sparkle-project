@@ -27002,7 +27002,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get accountabilityRequestFailed => '发送请求失败，请稍后重试';
+  String get accountabilityRequestFailed => '请求失败';
 
   @override
   String get accountabilityPartnerNudged => '已提醒伙伴查看今天的目标';
@@ -33074,6 +33074,9 @@ class AppLocalizationsZh extends AppLocalizations {
       'Aurora 会先轻量判断当前状态，重要判断都可以被你纠正。';
 
   @override
+  String get auroraExpandedExplanationPrefix => '当前判断：';
+
+  @override
   String get auroraIfReadOffCorrectHere => '如果我判断错了，直接改一下：';
 
   @override
@@ -33263,4 +33266,20 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get createGroupButton => '创建社群';
+
+  @override
+  String achievementBadgePoints(int points) {
+    return '+$points';
+  }
+
+  @override
+  String achievementEarnedPoints(int points) {
+    return '+$points 积分';
+  }
+
+  @override
+  String get communityCheckinLike => '点赞';
+
+  @override
+  String get communityEncourageLabel => '鼓励';
 }

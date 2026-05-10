@@ -3,7 +3,7 @@ import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/goal_value_chip.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 
 class GroupRecommendationCard extends StatelessWidget {
@@ -27,10 +27,10 @@ class GroupRecommendationCard extends StatelessWidget {
     final group = recommendation.group;
     final isSprint = group.isSprint;
     final reasons = recommendation.reasons.take(2).toList();
-    final isChinese = I18nService.instance.isChinese;
+    final l10n = context.l10n;
     final joinLabel = recommendation.requiresApproval
-        ? (isChinese ? '申请加入' : 'Apply')
-        : (isChinese ? '加入' : 'Join');
+        ? l10n.communityApplyToJoin
+        : l10n.communityJoin;
 
     return GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.card,
@@ -121,9 +121,7 @@ class GroupRecommendationCard extends StatelessWidget {
             if (group.sprintGoal != null && group.sprintGoal!.isNotEmpty) ...[
               SizedBox(height: context.space.sm),
               GoalValueChip(
-                text: isChinese
-                    ? '冲刺目标: ${group.sprintGoal}'
-                    : 'Sprint goal: ${group.sprintGoal}',
+                text: l10n.communitySprintGoal(group.sprintGoal!),
               ),
             ],
             SizedBox(height: context.space.md),
@@ -145,7 +143,7 @@ class GroupRecommendationCard extends StatelessWidget {
                   ),
                 if (onFeedback != null)
                   SparkleButton(
-                    label: isChinese ? '评价' : 'Feedback',
+                    label: l10n.communityFeedback,
                     size: ButtonSize.small,
                     variant: ButtonVariant.secondary,
                     onPressed: onFeedback,

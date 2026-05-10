@@ -834,7 +834,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
         title: data['resource_title'] as String? ??
             data['title'] as String? ??
             widget.message.content ??
-            (context.isChinese ? '知识节点' : 'Knowledge node'),
+            context.l10n.communityKnowledgeNode,
         subtitle:
             data['resource_summary'] as String? ?? data['summary'] as String?,
         metadata: {
@@ -868,7 +868,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
       title: data['resource_title'] as String? ??
           data['title'] as String? ??
           widget.message.content ??
-          (context.isChinese ? '时光胶囊' : 'Time capsule'),
+          context.l10n.communityTimeCapsule,
       subtitle:
           data['resource_summary'] as String? ?? data['summary'] as String?,
       metadata: {
@@ -1027,7 +1027,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
       if (!context.mounted) return;
       AppFeedback.error(
         context,
-        context.isChinese ? '采纳失败: $e' : 'Adoption failed: $e',
+        context.l10n.communityAdoptFailed(e.toString()),
       );
     }
   }

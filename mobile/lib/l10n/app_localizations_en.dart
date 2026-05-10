@@ -15877,7 +15877,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountabilityOperationFailed =>
-      'Operation failed. Please try again later.';
+      'Operation failed, please try again later';
 
   @override
   String get accountabilityLikeFailed => 'Like failed';
@@ -28169,8 +28169,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get accountabilityRequestFailed =>
-      'Failed to send partnership request. Please try again later.';
+  String get accountabilityRequestFailed => 'Failed to request partnership';
 
   @override
   String get accountabilityPartnerNudged =>
@@ -34495,6 +34494,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Aurora is making a lightweight read; important judgments remain correctable.';
 
   @override
+  String get auroraExpandedExplanationPrefix => 'Current read: ';
+
+  @override
   String get auroraIfReadOffCorrectHere =>
       'If this read is off, correct it here:';
 
@@ -34689,4 +34691,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get createGroupButton => 'Create Group';
+
+  @override
+  String achievementBadgePoints(int points) {
+    return '+$points';
+  }
+
+  @override
+  String achievementEarnedPoints(int points) {
+    return '+$points points';
+  }
+
+  @override
+  String get communityCheckinLike => 'Like';
+
+  @override
+  String get communityEncourageLabel => 'Encourage';
 }

@@ -49297,7 +49297,7 @@ abstract class AppLocalizations {
   /// No description provided for @accountabilityRequestFailed.
   ///
   /// In zh, this message translates to:
-  /// **'发送请求失败，请稍后重试'**
+  /// **'请求失败'**
   String get accountabilityRequestFailed;
 
   /// No description provided for @accountabilityPartnerNudged.
@@ -60163,6 +60163,12 @@ abstract class AppLocalizations {
   /// **'Aurora 会先轻量判断当前状态，重要判断都可以被你纠正。'**
   String get auroraExpandedExplanationDefault;
 
+  /// No description provided for @auroraExpandedExplanationPrefix.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前判断：'**
+  String get auroraExpandedExplanationPrefix;
+
   /// No description provided for @auroraIfReadOffCorrectHere.
   ///
   /// In zh, this message translates to:
@@ -60522,6 +60528,30 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'创建社群'**
   String get createGroupButton;
+
+  /// No description provided for @achievementBadgePoints.
+  ///
+  /// In zh, this message translates to:
+  /// **'+{points}'**
+  String achievementBadgePoints(int points);
+
+  /// No description provided for @achievementEarnedPoints.
+  ///
+  /// In zh, this message translates to:
+  /// **'+{points} 积分'**
+  String achievementEarnedPoints(int points);
+
+  /// No description provided for @communityCheckinLike.
+  ///
+  /// In zh, this message translates to:
+  /// **'点赞'**
+  String get communityCheckinLike;
+
+  /// No description provided for @communityEncourageLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'鼓励'**
+  String get communityEncourageLabel;
 }
 
 class _AppLocalizationsDelegate
