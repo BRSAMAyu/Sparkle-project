@@ -190,7 +190,7 @@ class GalaxyNodeModel {
     final userStatus = json['user_status'] as Map<String, dynamic>?;
 
     return GalaxyNodeModel(
-      id: json['id'] as String,
+      id: json['id']?.toString() ?? '',  // P1-13 fix: null-safety for id field
       parentId: json['parent_id']?.toString(),
       name: json['name'] as String,
       importance:
@@ -523,7 +523,7 @@ class GalaxyGraphResponse {
         as List<dynamic>;
 
     return GalaxyGraphResponse(
-      nodes: (json['nodes'] as List<dynamic>)
+      nodes: ((json['nodes'] ?? const <dynamic>[]) as List<dynamic>)
           .map((e) => GalaxyNodeModel.fromJson(e as Map<String, dynamic>))
           .toList(),
       userFlameIntensity:

@@ -281,7 +281,10 @@ func initHandlers(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client,
 	if dbh.pool != nil {
 		galaxyCommandService = service.NewGalaxyCommandService(dbh.pool)
 	}
-	galaxyHandler := handler.NewGalaxyHandler(galaxyClient, galaxyCommandService, rdb, cfg.BackendURL)
+	galaxyHandler, err := handler.NewGalaxyHandler(galaxyClient, galaxyCommandService, rdb, cfg.BackendURL)
+	if err != nil {
+		log.Fatalf("Failed to create galaxy handler (invalid backend URL %q): %v", cfg.BackendURL, err)
+	}
 
 	return &handlerBundle{
 		wsFactory:               wsFactory,

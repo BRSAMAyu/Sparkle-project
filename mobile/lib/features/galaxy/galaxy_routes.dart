@@ -47,7 +47,21 @@ class GalaxyRoutes {
           name: 'knowledgeDetail',
           parentNavigatorKey: navigatorKey,
           pageBuilder: (context, state) {
-            final nodeId = state.pathParameters['id']!;
+            // P1-12 fix: null-safety for path parameter
+            final nodeId = state.pathParameters['id'];
+            if (nodeId == null) {
+              return buildSparkleTransitionPage(
+                state: state,
+                child: Scaffold(
+                  body: Center(
+                    child: Text(
+                      'Invalid node ID',
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                  ),
+                ),
+              );
+            }
             return buildSparkleTransitionPage(
               state: state,
               motionToken: SparkleMotionToken.scene,

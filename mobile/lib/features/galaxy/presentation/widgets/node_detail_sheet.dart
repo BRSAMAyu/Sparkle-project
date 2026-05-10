@@ -1612,10 +1612,19 @@ class _CommunityInsightContent extends ConsumerStatefulWidget {
 
 class _CommunityInsightContentState
     extends ConsumerState<_CommunityInsightContent> {
+  // P1-17 fix: cache the future in initState to avoid re-fetching on every build
+  late final Future<Map<String, dynamic>?> _communityFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _communityFuture = _fetchCommunitySignal();
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<Map<String, dynamic>?>(
-      future: _fetchCommunitySignal(),
+      future: _communityFuture,
       builder: (context, snapshot) {
         if (!snapshot.hasData || snapshot.data == null) {
           return Text(

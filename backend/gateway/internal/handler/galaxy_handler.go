@@ -37,11 +37,10 @@ func NewGalaxyHandler(
 	galaxyCommand *service.GalaxyCommandService,
 	cache *redisv9.Client,
 	backendURL string,
-) *GalaxyHandler {
+) (*GalaxyHandler, error) {
 	targetURL, err := url.Parse(backendURL)
 	if err != nil {
-		log.Printf("Failed to parse backend URL: %v", err)
-		return nil
+		return nil, fmt.Errorf("failed to parse backend URL %q: %w", backendURL, err)
 	}
 
 	proxy := httputil.NewSingleHostReverseProxy(targetURL)
@@ -57,7 +56,7 @@ func NewGalaxyHandler(
 		cache:         cache,
 		backendURL:    backendURL,
 		proxy:         proxy,
-	}
+	}, nil
 }
 
 // RegisterRoutes registers the galaxy routes with authentication and rate limiting.

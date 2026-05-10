@@ -123,12 +123,18 @@ class _GroupKnowledgeBaseViewState
       AppFeedback.info(context, context.l10n.communityNoDownloadPermission);
       return;
     }
-    final presigned = await ref
-        .read(fileRepositoryProvider)
-        .getDownloadUrl(file.fileId, groupId: widget.groupId);
-    final uri = Uri.tryParse(presigned.url);
-    if (uri == null) return;
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
+    try {
+      final presigned = await ref
+          .read(fileRepositoryProvider)
+          .getDownloadUrl(file.fileId, groupId: widget.groupId);
+      final uri = Uri.tryParse(presigned.url);
+      if (uri == null) return;
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      // P1-18 fix: add error handling for network failures
+      if (!mounted) return;
+      AppFeedback.error(context, context.l10n.communitySaveFailed(e.toString()));
+    }
   }
 
   Future<void> _saveToMyLibrary(GroupFileInfo file) async {
