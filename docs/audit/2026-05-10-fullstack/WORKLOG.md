@@ -13,7 +13,7 @@
 |-------|-------|------|-----------|
 | **P0 Critical** | **8** | **8** | **0** |
 | **P1 High** | **35** | **18** | **17** |
-| P2 Medium | 60 | 0 | 60 |
+| P2 Medium | 60 | 7 | 53 |
 | P3 Low | 32 | 0 | 32 |
 | i18n (net reduction) | ~1070 | ~24 | ~1046 |
 
@@ -39,6 +39,7 @@ Opus agent verified all 5 commits:
 | **416b7bd76** | 14:38 | Mobile SM P1 | sync_engine.dart listener leak, chat_provider.dart gRPC dispose + debouncer cancel, chat_notifier_reviews.dart catchError + l10n key |
 | **38acc0616** | 14:42 | DB P1 | 7 composite indexes migration, goals.plan_id FK ON DELETE SET NULL, galaxy_event_consumer.py stable consumer name |
 | **87808c549** | 14:45 | i18n | task_board_card.dart 8 isChinese → ARB migration |
+| **631923b94** | 15:30 | P2 | timezone consistency + streak unification + Flutter UX (7 issues) |
 
 ---
 
@@ -84,16 +85,16 @@ Opus agent verified all 5 commits:
 | BE-P1-07 demo fuzzy match | Report notes this was downgraded to P1. |
 
 ### ⏳ Remaining P1s
-| Issue | File | Notes |
-|-------|------|-------|
-| DB-P1-07 | task_event_consumer.py:103-206 | Single session risk — needs independent sessions/savepoints |
-| DB-P1-08 | error_replan_bridge.py:82-97 | Silent ignore of non-triggering types — needs metric + DEBUG log |
-| FE-P1-04 | community_main_screen.dart | 5 isChinese instances |
-| FE-P1-05 | create_post_screen.dart | 15+ isChinese instances |
-| FE-P1-06 | create_post_screen.dart | **ALREADY FIXED** — line 73 checks `content.length > 500` |
-| FE-P1-07 | node_detail_sheet.dart | AI prompt hardcoded isChinese |
-| FE-P1-01 | chat_screen.dart:1266 | `'OpenClaw Hub'` — file already changed, verified no longer exists |
-| FE-P1-02 | voice_input_button.dart:304 | English semantic labels |
+| Issue | File | Status | Notes |
+|-------|------|--------|-------|
+| DB-P1-07 | task_event_consumer.py:103-206 | **TO FIX** | Single session risk — needs independent sessions/savepoints |
+| DB-P1-08 | error_replan_bridge.py:82-97 | **TO FIX** | Silent ignore of non-triggering types — needs metric + DEBUG log |
+| FE-P1-04 | community_main_screen.dart | ✅ FALSE POSITIVE | Already uses `context.l10n.*` (verified 2026-05-10) |
+| FE-P1-05 | create_post_screen.dart | ✅ FALSE POSITIVE | Already uses `context.l10n.*` (verified 2026-05-10) |
+| FE-P1-06 | create_post_screen.dart | ✅ ALREADY FIXED | Line 101 uses `context.l10n.communityPostFailed` |
+| FE-P1-07 | node_detail_sheet.dart | ✅ FALSE POSITIVE | Already uses `context.l10n.galaxyNodeReviewPrompt` (verified 2026-05-10) |
+| FE-P1-01 | chat_screen.dart:1266 | ✅ FALSE POSITIVE | File already changed, `'OpenClaw Hub'` does not exist |
+| FE-P1-02 | voice_input_button.dart:304 | ✅ FALSE POSITIVE | Line 304 uses `context.l10n.voiceInputStop/Start` (verified 2026-05-10) |
 
 ---
 
@@ -132,6 +133,22 @@ Opus agent verified all 5 commits:
 - BE-P2-12: models/__init__.py swallowed ImportErrors
 - BE-P2-13: cognitive.py no severity check constraint
 - BE-P2-14: error_book.py uses Base instead of BaseModel
+
+### P2 Timezone + Streak (5 issues) — ✅ FIXED 2026-05-10
+| Issue | Fix | Commit |
+|-------|-----|--------|
+| P2-09: accountability_tasks _check_partner_progress UTC day boundary | Per-user timezone via `_user_timezone_name` + `_local_day_window` | 631923b94 |
+| P1-02: streak calculation inconsistency (tasks vs achievement service) | Unified: `_calculate_streak` in tasks defaults to `quality_threshold=False`, uses local date grouping, consistent with achievement service | 631923b94 |
+| P2-11: missing idx_checkin_partnership_user_created index | Added covering index on `(partnership_id, user_id, created_at)` | 631923b94 |
+| P1-01: _check_perfect_month_for_user uses UTC dates | Uses user's local month boundaries converted to UTC storage timestamps | 631923b94 |
+| P1-01: _count_mutual_checkin_days uses UTC dates | Groups by local date via `_to_local_date` instead of UTC `created_at.date()` | 631923b94 |
+
+### P2 Flutter UX (2 issues) — ✅ FIXED 2026-05-10
+| Issue | Fix | Commit |
+|-------|-----|--------|
+| P2-08: accountability_detail_screen missing pull-to-refresh | Wrapped `_DashboardView` with `SparkleRefreshIndicator` calling `ref.invalidate(accountabilityDashboardProvider)` | 631923b94 |
+| P2-07: _PartnershipCard shows wrong goal (always initiatorGoal) | Now shows `initiatorGoal` if current user is initiator, `partnerGoal` otherwise | 631923b94 |
+| P2-08: accountability_detail_screen DateFormat locale mismatch | Added `locale = Localizations.localeOf(context)` to `_PendingPoliciesCard`, `_RecentReflectionsCard`, `_ForesightHintCard` | 631923b94 |
 
 ### DB/Integration P2 (13 issues)
 - DB-P2-01: HNSW m/ef_construction defaults
