@@ -182,7 +182,8 @@ func TestCreateAccessToken_DifferentSessions(t *testing.T) {
 func TestRandomString_Length(t *testing.T) {
 	h := &AuthHandler{cfg: &config.Config{}}
 	for _, n := range []int{8, 16, 32} {
-		s := h.randomString(n)
+		s, err := h.randomString(n)
+		assert.NoError(t, err)
 		assert.Equal(t, n, len(s))
 	}
 }
@@ -191,7 +192,8 @@ func TestRandomString_Uniqueness(t *testing.T) {
 	h := &AuthHandler{cfg: &config.Config{}}
 	seen := make(map[string]bool)
 	for i := 0; i < 100; i++ {
-		s := h.randomString(16)
+		s, err := h.randomString(16)
+		assert.NoError(t, err)
 		assert.False(t, seen[s])
 		seen[s] = true
 	}
@@ -199,7 +201,8 @@ func TestRandomString_Uniqueness(t *testing.T) {
 
 func TestRandomString_HexFormat(t *testing.T) {
 	h := &AuthHandler{cfg: &config.Config{}}
-	s := h.randomString(16)
+	s, err := h.randomString(16)
+	assert.NoError(t, err)
 	for _, c := range s {
 		assert.True(t, (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'),
 			"randomString should be hex, got: %c", c)

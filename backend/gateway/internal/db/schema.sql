@@ -131,8 +131,7 @@ CREATE TYPE achievementtype AS ENUM (
     'STUDY_TIME',
     'NODE_EXPLORE',
     'SPRINT',
-    'planning',
-    'PLANNING'
+    'planning'
 );
 
 

@@ -205,7 +205,13 @@ def _classify_primary_agent(message: str) -> str:
     return "time_tutor"
 
 
-def _analyze_collaboration_needs_fast(message: str) -> dict[str, Any] | None:
+def _analyze_collaboration_needs_fast(message: str) -> tuple[dict[str, Any], float] | None:
+    """Keyword-based fast path for collaboration analysis.
+
+    Returns (plan, confidence) or None.
+    Confidence is 1.0 for exact matches, lower when multiple keyword sets
+    partially match or the match is short relative to message length.
+    """
     msg_lower = message.lower()
     collaboration_keywords = {
         ("复习计划", "学习计划", "study plan", "复习策略"): {
@@ -243,10 +249,27 @@ def _analyze_collaboration_needs_fast(message: str) -> dict[str, Any] | None:
             ],
         },
     }
+
+    matches: list[tuple[dict[str, Any], float]] = []
     for keywords, plan in collaboration_keywords.items():
-        if any(keyword in msg_lower for keyword in keywords):
-            return plan
-    return None
+        matched_keywords = [kw for kw in keywords if kw in msg_lower]
+        if not matched_keywords:
+            continue
+        best_match_len = max(len(kw) for kw in matched_keywords)
+        coverage = best_match_len / max(len(msg_lower), 1)
+        confidence = min(1.0, 0.5 + coverage * 2.5)
+        matches.append((plan, confidence))
+
+    if not matches:
+        return None
+
+    matches.sort(key=lambda x: x[1], reverse=True)
+
+    if len(matches) > 1:
+        best_plan, best_conf = matches[0]
+        return best_plan, best_conf * 0.7
+
+    return matches[0]
 
 
 def _sort_plan_by_quality(
@@ -418,7 +441,7 @@ async def analyze_collaboration_plan(
         if str(agent).strip()
     }
     scoring_service = AgentScoringService(redis_client)
-    fast_plan = _analyze_collaboration_needs_fast(message)
+    fast_result = _analyze_collaboration_needs_fast(message)
     available_agents = await _build_available_agents(user_id=user_id, redis_client=redis_client)
     if excluded_agents:
         available_agents = [
@@ -426,39 +449,47 @@ async def analyze_collaboration_plan(
         ]
     quality_by_agent = {item["id"]: float(item.get("quality_score") or 0.5) for item in available_agents}
 
-    if fast_plan is not None:
-        plan = _sort_plan_by_quality(fast_plan, quality_by_agent, message)
-        AGENT_COLLAB_DECISION_TOTAL.labels(source="keyword", intent_type=intent_type).inc()
-    else:
-        plan = None
-        if settings.ENABLE_AGENT_LLM_COLLAB_ROUTING and available_agents:
-            try:
-                combination_hints = (
-                    await scoring_service.analyze_best_combinations(
-                        user_id=user_id,
-                        intent_type=intent_type,
-                        min_samples=5,
-                    )
-                    if redis_client and user_id
-                    else []
+    # Confidence threshold: below this, escalate to LLM even if keywords matched
+    _KEYWORD_CONFIDENCE_THRESHOLD = 0.65
+
+    plan = None
+    if fast_result is not None:
+        fast_plan, fast_confidence = fast_result
+        if fast_confidence >= _KEYWORD_CONFIDENCE_THRESHOLD or not settings.ENABLE_AGENT_LLM_COLLAB_ROUTING:
+            plan = _sort_plan_by_quality(fast_plan, quality_by_agent, message)
+            AGENT_COLLAB_DECISION_TOTAL.labels(source="keyword", intent_type=intent_type).inc()
+        else:
+            logger.debug(f"Keyword match confidence {fast_confidence:.2f} below threshold, escalating to LLM")
+
+    if plan is None and settings.ENABLE_AGENT_LLM_COLLAB_ROUTING and available_agents:
+        try:
+            combination_hints = (
+                await scoring_service.analyze_best_combinations(
+                    user_id=user_id,
+                    intent_type=intent_type,
+                    min_samples=5,
                 )
-                plan = await _analyze_collaboration_needs_llm(
-                    message=message,
-                    available_agents=available_agents,
-                    combination_hints=combination_hints,
-                )
-                plan = _sort_plan_by_quality(plan, quality_by_agent, message)
-                AGENT_COLLAB_DECISION_TOTAL.labels(source="llm", intent_type=intent_type).inc()
-            except Exception as exc:
-                logger.warning(f"LLM collaboration analysis failed: {exc}")
-        if plan is None:
-            AGENT_COLLAB_DECISION_TOTAL.labels(source="fallback_single", intent_type=intent_type).inc()
-            return {
-                "mode": "single",
-                "primary_agent": _normalize_agent_identifier(state.get("next_step")) or _classify_primary_agent(message),
-                "agents": [],
-                "order": [],
-            }
+                if redis_client and user_id
+                else []
+            )
+            plan = await _analyze_collaboration_needs_llm(
+                message=message,
+                available_agents=available_agents,
+                combination_hints=combination_hints,
+            )
+            plan = _sort_plan_by_quality(plan, quality_by_agent, message)
+            AGENT_COLLAB_DECISION_TOTAL.labels(source="llm", intent_type=intent_type).inc()
+        except Exception as exc:
+            logger.warning(f"LLM collaboration analysis failed: {exc}")
+
+    if plan is None:
+        AGENT_COLLAB_DECISION_TOTAL.labels(source="fallback_single", intent_type=intent_type).inc()
+        return {
+            "mode": "single",
+            "primary_agent": _normalize_agent_identifier(state.get("next_step")) or _classify_primary_agent(message),
+            "agents": [],
+            "order": [],
+        }
 
     if excluded_agents and isinstance(plan, dict):
         filtered_agents = [
@@ -817,10 +848,11 @@ async def collaboration_node(state: SparkleState, config: dict | None = None) ->
         mode = "sequential"
 
     if mode == "single":
-        state["next_step"] = _normalize_agent_identifier(collaboration_plan.get("primary_agent")) or "study_buddy"
-        state["active_agent"] = "router"
-        state["collaboration_mode"] = "single"
-        return state
+        return {
+            "next_step": _normalize_agent_identifier(collaboration_plan.get("primary_agent")) or "study_buddy",
+            "active_agent": "router",
+            "collaboration_mode": "single",
+        }
 
     agents = [str(agent).strip() for agent in (collaboration_plan.get("agents") or []) if str(agent).strip()]
     order = _normalize_order(collaboration_plan.get("order") or [], default_task=user_message)
@@ -828,38 +860,57 @@ async def collaboration_node(state: SparkleState, config: dict | None = None) ->
 
     logger.info(f"Multi-agent collaboration: mode={mode}, agents={agents}")
 
-    state["collaboration_mode"] = mode
-    state["collaboration_agents"] = agents
-    state["collaboration_order"] = order
+    # Build a local state view with collaboration config for sub-functions
+    local_state = {**state, "collaboration_mode": mode, "collaboration_agents": agents, "collaboration_order": order}
 
     if mode in {"parallel", "debate", "delegation"}:
         await _emit_initial_agent_states(agents, stream_cb=stream_cb, mode=mode)
         if mode == "parallel":
-            results = await _execute_agents_parallel(agents, state, config, stream_cb, task_map=task_map)
-            return await _merge_parallel_results(results, state, config)
+            results = await _execute_agents_parallel(agents, local_state, config, stream_cb, task_map=task_map)
+            result = await _merge_parallel_results(results, local_state, config)
+            result["collaboration_mode"] = mode
+            result["collaboration_agents"] = agents
+            result["collaboration_order"] = order
+            return result
         if mode == "debate":
-            return await _execute_debate(agents, state, config, stream_cb, task_map=task_map)
+            result = await _execute_debate(agents, local_state, config, stream_cb, task_map=task_map)
+            result["collaboration_mode"] = mode
+            result["collaboration_agents"] = agents
+            result["collaboration_order"] = order
+            return result
         primary_agent = _normalize_agent_identifier(collaboration_plan.get("primary_agent")) or (agents[0] if agents else "study_buddy")
         delegates = [agent for agent in agents if agent != primary_agent]
-        return await _execute_delegation(primary_agent, delegates, state, config, stream_cb, task_map=task_map)
+        result = await _execute_delegation(primary_agent, delegates, local_state, config, stream_cb, task_map=task_map)
+        result["collaboration_mode"] = mode
+        result["collaboration_agents"] = agents
+        result["collaboration_order"] = order
+        return result
 
     collaboration_index = state.get("collaboration_index", 0)
     if collaboration_index == 0 and agents:
         await _emit_initial_agent_states(agents, stream_cb=stream_cb, mode=mode)
     if collaboration_index >= len(order):
-        state["next_step"] = "aggregator"
-        state["active_agent"] = "collaboration"
-        return state
+        return {
+            "next_step": "aggregator",
+            "active_agent": "collaboration",
+            "collaboration_mode": mode,
+            "collaboration_agents": agents,
+            "collaboration_order": order,
+        }
 
     agent_spec = order[collaboration_index]
     agent_name = agent_spec["agent"]
     agent_task = agent_spec.get("task", user_message)
     logger.info(f"Executing agent: {agent_name} with task: {agent_task[:50]}...")
-    state["next_step"] = agent_name
-    state["active_agent"] = agent_name
-    state["collaboration_context"] = agent_task
-    state["collaboration_index"] = collaboration_index + 1
-    return state
+    return {
+        "next_step": agent_name,
+        "active_agent": agent_name,
+        "collaboration_context": agent_task,
+        "collaboration_index": collaboration_index + 1,
+        "collaboration_mode": mode,
+        "collaboration_agents": agents,
+        "collaboration_order": order,
+    }
 
 
 async def collaboration_aggregator_node(state: SparkleState) -> SparkleState:
@@ -893,7 +944,8 @@ async def collaboration_aggregator_node(state: SparkleState) -> SparkleState:
         "tool_calls_count": len(all_tool_calls),
         "collaboration_mode": collaboration_mode,
     }
-    state["collaboration_results"] = collaboration_results
+
+    result: dict = {"collaboration_results": collaboration_results}
 
     narrative = ""
     if agents_involved:
@@ -909,11 +961,11 @@ async def collaboration_aggregator_node(state: SparkleState) -> SparkleState:
                 "sequential": "分步协作",
             }.get(collaboration_mode, "协作")
             narrative = f"本次回答由 {'、'.join(display_names)} 以{mode_prefix}方式共同完成。"
-            state["collaboration_narrative"] = narrative
+            result["collaboration_narrative"] = narrative
             collaboration_results["narrative"] = narrative
 
     logger.info(
         f"Collaboration aggregated: {len(agents_involved)} agents, "
         f"{len(all_tool_calls)} tool calls, mode={collaboration_mode}"
     )
-    return state
+    return result

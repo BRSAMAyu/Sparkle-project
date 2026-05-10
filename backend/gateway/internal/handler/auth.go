@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -136,12 +137,12 @@ func (h *AuthHandler) AppleLogin(c *gin.Context) {
 	})
 }
 
-func (h *AuthHandler) randomString(n int) string {
+func (h *AuthHandler) randomString(n int) (string, error) {
 	b := make([]byte, n/2)
 	if _, err := rand.Read(b); err != nil {
-		panic("crypto/rand.Read failed: " + err.Error())
+		return "", fmt.Errorf("crypto/rand.Read failed: %w", err)
 	}
-	return hex.EncodeToString(b)
+	return hex.EncodeToString(b), nil
 }
 
 func (h *AuthHandler) createAccessToken(userID pgtype.UUID, sessionID string) (string, error) {

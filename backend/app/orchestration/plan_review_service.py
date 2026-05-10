@@ -360,6 +360,37 @@ class PlanReviewService:
 
         decision = llm_result.get("decision", ReviewDecision.REQUIRES_CONFIRMATION.value)
         reasoning_source = "llm_fallback" if llm_result.get("fallback_used") else "llm_review"
+
+        # Step 2.5: Cross-model review for high-risk plans
+        cross_review_comments: list[ReviewComment] = []
+        if self._should_cross_review(plan, llm_result):
+            logger.info(f"Plan {plan.plan_id} flagged for cross-model review")
+            cross_result = await self._cross_model_review(plan, user_message, user_context)
+            if cross_result:
+                cross_decision = cross_result.get("decision")
+                cross_confidence = cross_result.get("confidence", 0.5)
+                # If the second model disagrees with approval, escalate
+                if decision == ReviewDecision.APPROVED.value and cross_decision in (
+                    ReviewDecision.NEEDS_MODIFICATION.value,
+                    ReviewDecision.REJECTED.value,
+                ):
+                    logger.warning(
+                        f"Cross-review override: {decision} -> {cross_decision} "
+                        f"(primary_conf={llm_result.get('confidence', 0.5):.2f}, "
+                        f"cross_conf={cross_confidence:.2f})"
+                    )
+                    decision = ReviewDecision.NEEDS_MODIFICATION.value
+                    reasoning_source = "cross_review_override"
+                for c in cross_result.get("comments", []):
+                    cross_review_comments.append(
+                        ReviewComment(
+                            category=c.get("category", ReviewCategory.SUGGESTION.value),
+                            severity=c.get("severity", SeverityLevel.INFO.value),
+                            message=f"[交叉审查] {c.get('message', '')}",
+                            suggested_fix=c.get("suggested_fix"),
+                            affected_tool_calls=c.get("affected_tool_calls", []),
+                        )
+                    )
         calibration_service = StrategyCalibrationService(redis=self.redis)
         user_uuid = self._extract_user_id(user_context)
         persona_strategy_mapping = self._build_persona_strategy_mapping(user_context)
@@ -388,6 +419,7 @@ class PlanReviewService:
             )
             for c in llm_result.get("comments", [])
         ]
+        comments.extend(cross_review_comments)
         if decision == ReviewDecision.APPROVED.value and alignment_score is not None and alignment_score < 0.55:
             severity = SeverityLevel.WARNING.value
             if mode_strategy.get("require_alignment_check"):
@@ -1000,6 +1032,70 @@ class PlanReviewService:
         # LLM review failed after all retries - use rule-based fallback
         logger.error(f"LLM review failed after {self.MAX_LLM_REVIEW_RETRIES} attempts: {last_error}")
         return await self._llm_review_fallback(plan, user_message, user_context)
+
+    def _should_cross_review(
+        self,
+        plan: ExecutablePlan,
+        llm_result: dict[str, Any],
+    ) -> bool:
+        """Decide whether a plan needs a second model's opinion.
+
+        Triggers on: low primary confidence, high-risk tools, many tool calls,
+        or the primary review flags concerns but still approves.
+        """
+        confidence = float(llm_result.get("confidence") or 0.5)
+        if confidence < 0.7:
+            return True
+
+        tool_names = [tc.tool_name for tc in (plan.tool_calls or []) if hasattr(tc, "tool_name")]
+        if any(t in self.HIGH_RISK_TOOLS for t in tool_names):
+            return True
+
+        if len(plan.tool_calls or []) > 8:
+            return True
+
+        if llm_result.get("decision") == ReviewDecision.APPROVED.value:
+            critical_comments = [
+                c for c in llm_result.get("comments", [])
+                if c.get("severity") == SeverityLevel.CRITICAL.value
+            ]
+            if critical_comments:
+                return True
+
+        return False
+
+    async def _cross_model_review(
+        self,
+        plan: ExecutablePlan,
+        user_message: str,
+        user_context: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        """Run a second review using a different model (chat tier instead of reasoning).
+
+        Returns None on failure so the primary review stands.
+        """
+        prompt = self._build_review_prompt(plan, user_message, user_context)
+        prompt = (
+            "你是一位独立的二次审查员。以下计划已经过初步审查，请从不同角度验证其安全性和可行性。\n\n"
+            + prompt
+        )
+        messages = [
+            {"role": "system", "content": self._get_review_system_prompt()},
+            {"role": "user", "content": prompt},
+        ]
+        try:
+            result = await llm_service.chat_json(
+                messages=messages,
+                temperature=0.3,
+            )
+            if result and isinstance(result, dict):
+                decision = result.get("decision", "")
+                if decision not in {d.value for d in ReviewDecision}:
+                    result["decision"] = ReviewDecision.REQUIRES_CONFIRMATION.value
+                return result
+        except Exception as exc:
+            logger.warning(f"Cross-model review failed (non-blocking): {exc}")
+        return None
 
     async def _llm_review_fallback(
         self,
@@ -2329,6 +2425,10 @@ Please review this plan and provide your assessment."""
         """
         key = f"plan_rejection_count:{plan_id}:{user_id}"
 
+        if not self.redis:
+            logger.warning("Redis not available for rejection tracking")
+            return 1
+
         try:
             count = await self.redis.incr(key)
             await self.redis.expire(key, 3600)  # 1小时过期
@@ -2346,6 +2446,9 @@ Please review this plan and provide your assessment."""
             user_id: 用户ID
         """
         key = f"plan_rejection_count:{plan_id}:{user_id}"
+        if not self.redis:
+            logger.warning("Redis not available for rejection reset")
+            return
         try:
             await self.redis.delete(key)
             logger.info(f"Reset rejection count for plan {plan_id}")
