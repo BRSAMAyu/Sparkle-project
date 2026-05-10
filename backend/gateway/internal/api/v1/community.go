@@ -32,7 +32,7 @@ func (h *CommunityHandler) RegisterRoutes(router *gin.RouterGroup, authMiddlewar
 		protected.Use(authMiddleware)
 		protected.POST("/posts", h.CreatePost)
 		protected.POST("/posts/:id/like", h.LikePost)
-		group.GET("/feed", h.GetFeed)
+		protected.GET("/feed", h.GetFeed)  // P1-6 fix: moved to protected group
 	}
 }
 

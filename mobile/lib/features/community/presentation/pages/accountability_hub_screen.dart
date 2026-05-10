@@ -7,7 +7,6 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/data/models/community_accountability_hub_model.dart';
-import 'package:sparkle/features/community/presentation/l10n/community_accountability_hub_l10n.dart';
 import 'package:sparkle/features/community/presentation/providers/accountability_hub_provider.dart';
 import 'package:sparkle/features/community/presentation/widgets/accountability_hub/commitment_card.dart';
 import 'package:sparkle/features/community/presentation/widgets/accountability_hub/partner_observation_control.dart';

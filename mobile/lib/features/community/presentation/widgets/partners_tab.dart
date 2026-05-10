@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -8,7 +7,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/compact_error_card.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/data/models/accountability_model.dart';
@@ -164,16 +163,13 @@ class PartnersTab extends ConsumerWidget {
 
     if (hasPartners || hasHubData || hasFriends) return const SizedBox.shrink();
 
-    final zh = I18nService.instance.isChinese;
     return Padding(
       padding: const EdgeInsets.only(top: DS.spacing32),
       child: EmptyState(
-        title: zh ? '找到你的学习伙伴' : 'Find your study partners',
-        description: zh
-            ? '和一个目标相近的伙伴结对，互相监督，坚持率翻倍。'
-            : 'Pair up with someone pursuing similar goals. Accountability doubles consistency.',
+        title: context.l10n.partnersEmptyTitle,
+        description: context.l10n.partnersEmptyDesc,
         icon: Icons.handshake_outlined,
-        actionText: zh ? '发现伙伴' : 'Discover partners',
+        actionText: context.l10n.partnersEmptyAction,
         onAction: () => unawaited(context.push(CommunityRoutes.friends)),
       ),
     );
@@ -189,7 +185,6 @@ class _PartnershipsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zh = I18nService.instance.isChinese;
     return Padding(
       padding: const EdgeInsets.fromLTRB(DS.lg, DS.md, DS.lg, 0),
       child: Column(
@@ -197,7 +192,7 @@ class _PartnershipsSection extends StatelessWidget {
         children: [
           _SectionTitle(
             icon: Icons.people_rounded,
-            title: zh ? '我的伙伴' : 'My Partners',
+            title: context.l10n.partnersMyPartners,
           ),
           const SizedBox(height: DS.sm),
           ...partnerships.map((p) => _PartnershipCard(partnership: p, currentUserId: currentUserId)),
@@ -214,7 +209,6 @@ class _PartnershipCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zh = I18nService.instance.isChinese;
     final isInitiator = partnership.initiatorId == currentUserId;
     final partner = isInitiator ? partnership.partner : partnership.initiator;
     // Show the current user's own goal, not always initiatorGoal
@@ -223,6 +217,7 @@ class _PartnershipCard extends StatelessWidget {
         : (partnership.partnerGoal ?? partnership.initiatorGoal);
     final streak = partnership.myStreakDays ?? 0;
     final partnerCheckedIn = partnership.partnerCheckedInToday ?? false;
+    final l10n = context.l10n;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: DS.sm),
@@ -238,7 +233,7 @@ class _PartnershipCard extends StatelessWidget {
         },
         child: Semantics(
           button: true,
-          label: '${partner?.nickname ?? (zh ? "伙伴" : "Partner")}, $streak day streak',
+          label: '${partner?.nickname ?? l10n.partnersPartner}, $streak day streak',
           child: Container(
             padding: const EdgeInsets.all(DS.md),
             decoration: BoxDecoration(
@@ -259,9 +254,7 @@ class _PartnershipCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        partner?.nickname ??
-                            partner?.username ??
-                            (zh ? '伙伴' : 'Partner'),
+                        partner?.nickname ?? partner?.username ?? l10n.partnersPartner,
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
                           color: DS.textPrimary,
@@ -291,7 +284,7 @@ class _PartnershipCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(DS.radius8),
                         ),
                         child: Text(
-                          '$streak ${zh ? '天连续' : 'd streak'}',
+                          l10n.partnersDayStreak(streak),
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
@@ -315,8 +308,8 @@ class _PartnershipCard extends StatelessWidget {
                         const SizedBox(width: 4),
                         Text(
                           partnerCheckedIn
-                              ? (zh ? '今日已打卡' : 'Checked in')
-                              : (zh ? '今日未打卡' : 'Not yet today'),
+                              ? l10n.partnersCheckedIn
+                              : l10n.partnersNotCheckedIn,
                           style: TextStyle(
                             fontSize: 11,
                             color:
@@ -342,7 +335,6 @@ class _HubSections extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zh = I18nService.instance.isChinese;
     return Padding(
       padding: const EdgeInsets.fromLTRB(DS.lg, DS.md, DS.lg, 0),
       child: Column(
@@ -352,7 +344,7 @@ class _HubSections extends StatelessWidget {
           if (hub.myCommitments.isNotEmpty) ...[
             _SectionTitle(
               icon: Icons.flag_rounded,
-              title: zh ? '我的承诺' : 'My Commitments',
+              title: context.l10n.cahMyCommitments,
             ),
             const SizedBox(height: DS.sm),
             ...hub.myCommitments.map((c) => _CommitmentCard(commitment: c)),
@@ -363,7 +355,7 @@ class _HubSections extends StatelessWidget {
           if (hub.partnerProgress.isNotEmpty) ...[
             _SectionTitle(
               icon: Icons.trending_up_rounded,
-              title: zh ? '伙伴进度' : 'Partner Progress',
+              title: context.l10n.cahPartnerProgress,
             ),
             const SizedBox(height: DS.sm),
             ...hub.partnerProgress.map((p) => _ProgressCard(item: p)),
@@ -374,7 +366,7 @@ class _HubSections extends StatelessWidget {
           if (hub.squadRisks.isNotEmpty) ...[
             _SectionTitle(
               icon: Icons.warning_amber_rounded,
-              title: zh ? '需要关注' : 'Needs Attention',
+              title: context.l10n.cahNeedsAttention,
             ),
             const SizedBox(height: DS.sm),
             ...hub.squadRisks.map((r) => _RiskCard(item: r)),
@@ -385,7 +377,7 @@ class _HubSections extends StatelessWidget {
           if (hub.helpable.isNotEmpty) ...[
             _SectionTitle(
               icon: Icons.favorite_outline,
-              title: zh ? '鼓励一下' : 'Encourage',
+              title: context.l10n.partnersEncourage,
             ),
             const SizedBox(height: DS.sm),
             ...hub.helpable.map((h) => _HelpableCard(item: h)),
@@ -435,7 +427,7 @@ class _CommitmentCard extends StatelessWidget {
             ),
             const SizedBox(height: DS.spacing4),
             Text(
-              '${(commitment.progress * 100).toStringAsFixed(0)}%',
+              context.l10n.cahPercent((commitment.progress * 100).round()),
               style: TextStyle(fontSize: 11, color: DS.textTertiary),
             ),
           ],
@@ -451,7 +443,6 @@ class _ProgressCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zh = I18nService.instance.isChinese;
     return Padding(
       padding: const EdgeInsets.only(bottom: DS.sm),
       child: Container(
@@ -487,7 +478,7 @@ class _ProgressCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  '${(item.weeklyProgress * 100).toStringAsFixed(0)}%',
+                  context.l10n.cahPercent((item.weeklyProgress * 100).round()),
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
@@ -496,8 +487,8 @@ class _ProgressCard extends StatelessWidget {
                 ),
                 Text(
                   item.todayDone
-                      ? (zh ? '今日完成' : 'Done today')
-                      : (zh ? '今日未完成' : 'Pending'),
+                      ? context.l10n.partnersDoneToday
+                      : context.l10n.partnersPending,
                   style: TextStyle(
                     fontSize: 11,
                     color: item.todayDone ? DS.success : DS.textTertiary,
@@ -518,7 +509,6 @@ class _RiskCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zh = I18nService.instance.isChinese;
     final severityColor = switch (item.severity) {
       'high' => DS.error,
       'medium' => DS.warning,
@@ -558,7 +548,7 @@ class _RiskCard extends StatelessWidget {
               ),
             ),
             SparkleButton.ghost(
-              label: zh ? '关心' : 'Nudge',
+              label: context.l10n.partnersNudge,
               onPressed: () => unawaited(
                 context.push(
                   CommunityRoutes.accountabilityDetail
@@ -579,7 +569,6 @@ class _HelpableCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zh = I18nService.instance.isChinese;
     return Padding(
       padding: const EdgeInsets.only(bottom: DS.sm),
       child: Container(
@@ -614,7 +603,7 @@ class _HelpableCard extends StatelessWidget {
               ),
             ),
             SparkleButton.ghost(
-              label: zh ? '鼓励' : 'Cheer',
+              label: context.l10n.partnersCheer,
               onPressed: () => unawaited(
                 context.push(
                   CommunityRoutes.accountabilityDetail
@@ -629,13 +618,12 @@ class _HelpableCard extends StatelessWidget {
   }
 }
 
-class _FriendsSection extends ConsumerWidget {
+class _FriendsSection extends StatelessWidget {
   const _FriendsSection({required this.friends});
   final List<FriendshipInfo> friends;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final zh = I18nService.instance.isChinese;
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(DS.lg, DS.md, DS.lg, 0),
       child: Column(
@@ -646,10 +634,10 @@ class _FriendsSection extends ConsumerWidget {
             children: [
               _SectionTitle(
                 icon: Icons.group_outlined,
-                title: zh ? '好友' : 'Friends',
+                title: context.l10n.partnersFriendLabel,
               ),
               SparkleButton.ghost(
-                label: zh ? '查看全部' : 'View all',
+                label: context.l10n.partnersViewAll,
                 onPressed: () =>
                     unawaited(context.push(CommunityRoutes.friends)),
               ),
@@ -662,9 +650,7 @@ class _FriendsSection extends ConsumerWidget {
               padding: const EdgeInsets.only(top: DS.sm),
               child: Center(
                 child: SparkleButton.ghost(
-                  label: zh
-                      ? '还有 ${friends.length - 5} 位好友'
-                      : '${friends.length - 5} more friends',
+                  label: context.l10n.partnersMoreFriends(friends.length - 5),
                   onPressed: () =>
                       unawaited(context.push(CommunityRoutes.friends)),
                 ),
@@ -805,4 +791,3 @@ class _PartnerAvatar extends StatelessWidget {
         ],
       );
 }
-

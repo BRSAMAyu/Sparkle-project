@@ -9,7 +9,7 @@ import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/widgets/unsaved_changes_guard.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/community/presentation/providers/community_providers.dart';
 import 'package:sparkle/features/file/data/services/file_upload_service.dart';
@@ -188,9 +188,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                           height: 1.6,
                         ),
                         decoration: InputDecoration(
-                          hintText: zh
-                              ? '分享你此刻的想法、学习心得、或今天的进步...'
-                              : "Share what's on your mind, a learning insight, or today's progress...",
+                          hintText: context.l10n.communityContentHint,
                           hintStyle: TextStyle(
                             color: DS.textTertiary,
                             height: 1.6,

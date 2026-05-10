@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/community/data/models/community_accountability_hub_model.dart';
-import 'package:sparkle/features/community/presentation/l10n/community_accountability_hub_l10n.dart';
 
 class CommitmentCard extends StatefulWidget {
   const CommitmentCard({
