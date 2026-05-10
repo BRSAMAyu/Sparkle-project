@@ -45,7 +45,7 @@ class DashboardRepository {
     } catch (error) {
       throw AppFailureMapper.from(
         error,
-        fallbackMessage: 'Could not load dashboard.',
+        fallbackMessage: I18nService.instance.l10n.dashboardLoadError,
       );
     }
   }
@@ -64,7 +64,7 @@ class DashboardRepository {
     } catch (error) {
       throw AppFailureMapper.from(
         error,
-        fallbackMessage: 'Could not load growth dashboard.',
+        fallbackMessage: I18nService.instance.l10n.dashboardGrowthLoadError,
       );
     }
   }
@@ -179,7 +179,7 @@ class DashboardRepository {
     } catch (error) {
       throw AppFailureMapper.from(
         error,
-        fallbackMessage: 'Could not load exam sprint dashboard.',
+        fallbackMessage: I18nService.instance.l10n.dashboardExamSprintLoadError,
       );
     }
   }
@@ -311,7 +311,7 @@ class DashboardRepository {
     } catch (error) {
       throw AppFailureMapper.from(
         error,
-        fallbackMessage: 'Could not load predictive dashboard.',
+        fallbackMessage: I18nService.instance.l10n.dashboardPredictiveLoadError,
       );
     }
   }

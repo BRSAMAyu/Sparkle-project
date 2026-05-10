@@ -414,9 +414,13 @@ def build_knowledge_entity_card(
     tool_name: str,
     tool_result_id: str | None = None,
     source_channel: str = "ai_tool",
+    locale: str = "en",
 ) -> dict[str, Any]:
+    from app.core.i18n import I18n
+    t = lambda key, **kwargs: I18n.t(key, locale=locale, **kwargs)
+
     node_id = str(node.get("id")) if node.get("id") is not None else None
-    title = node.get("title") or node.get("name") or "未命名知识节点"
+    title = node.get("title") or node.get("name") or t("entity_cards.knowledge_node.untitled")
     summary = node.get("summary") or node.get("description")
     tags = node.get("tags")
     return build_entity_card(
@@ -430,7 +434,7 @@ def build_knowledge_entity_card(
         primary_action=build_entity_action(
             action_id="open_knowledge",
             action_type="open_detail",
-            label="查看知识点",
+            label=t("entity_cards.knowledge_node.view"),
             route=f"/galaxy?nodeId={node_id}" if node_id else "/galaxy",
         ),
         secondary_actions=(
@@ -438,7 +442,7 @@ def build_knowledge_entity_card(
                 build_entity_action(
                     action_id="share_knowledge",
                     action_type="share_resource",
-                    label="分享知识卡",
+                    label=t("entity_cards.knowledge_node.share"),
                     payload={"resource_type": "knowledge_node", "resource_id": node_id},
                 )
             ]
@@ -468,7 +472,11 @@ def build_source_document_entity_card(
     tool_name: str,
     tool_result_id: str | None = None,
     source_channel: str = "source_tray",
+    locale: str = "en",
 ) -> dict[str, Any]:
+    from app.core.i18n import I18n
+    t = lambda key, **kwargs: I18n.t(key, locale=locale, **kwargs)
+
     source_id = (
         str(source.get("id") or source.get("source_id") or source.get("document_id") or source.get("file_id"))
         if (source.get("id") or source.get("source_id") or source.get("document_id") or source.get("file_id"))
@@ -479,7 +487,7 @@ def build_source_document_entity_card(
         or source.get("name")
         or source.get("filename")
         or source.get("file_name")
-        or "来源资料"
+        or t("entity_cards.source_document.default_title")
     )
     summary = source.get("summary") or source.get("snippet") or source.get("reason") or source.get("answer_basis")
     route_query = _compact_dict(
@@ -509,7 +517,7 @@ def build_source_document_entity_card(
         primary_action=build_entity_action(
             action_id="open_source",
             action_type="open_detail",
-            label="查看资料来源",
+            label=t("entity_cards.source_document.view"),
             route=route,
             payload=_compact_dict({"source_id": source_id, "chunk_id": source.get("chunk_id")}),
         ),
@@ -517,11 +525,11 @@ def build_source_document_entity_card(
             build_entity_action(
                 action_id="correct_source",
                 action_type="continue_chat",
-                label="纠正来源",
+                label=t("entity_cards.source_document.correct"),
                 route="/chat",
                 payload=_compact_dict(
                     {
-                        "prompt": "这条资料引用不准确，请按我的纠正重新选择来源。",
+                        "prompt": t("entity_cards.source_document.correct_prompt"),
                         "source_id": source_id,
                     }
                 ),
@@ -529,7 +537,7 @@ def build_source_document_entity_card(
             build_entity_action(
                 action_id="create_knowledge_node",
                 action_type="open_detail",
-                label="转成知识点",
+                label=t("entity_cards.source_document.convert"),
                 route="/galaxy",
                 payload=_compact_dict({"source_id": source_id}),
             ),
@@ -550,7 +558,7 @@ def build_source_document_entity_card(
                 adoption_action=build_entity_action(
                     action_id="adopt_source_private_copy",
                     action_type="adopt_resource",
-                    label="保存为我的资料",
+                    label=t("entity_cards.source_document.save_copy"),
                     payload={"resource_type": "source_document", "resource_id": source_id},
                 ),
             )
@@ -584,13 +592,17 @@ def build_review_entity_card(
     tool_name: str,
     tool_result_id: str | None = None,
     source_channel: str = "ai_tool",
+    locale: str = "en",
 ) -> dict[str, Any]:
+    from app.core.i18n import I18n
+    t = lambda key, **kwargs: I18n.t(key, locale=locale, **kwargs)
+
     review_id = (
         str(review.get("id") or review.get("review_id")) if (review.get("id") or review.get("review_id")) else None
     )
     plan_id = str(review.get("plan_id")) if review.get("plan_id") else None
     subject = review.get("subject") or review.get("subject_code")
-    title = review.get("title") or review.get("name") or "复盘建议"
+    title = review.get("title") or review.get("name") or t("entity_cards.review.default_title")
     summary = review.get("summary") or review.get("description") or review.get("diagnosis")
     route_query = _compact_dict(
         {
@@ -612,7 +624,7 @@ def build_review_entity_card(
         primary_action=build_entity_action(
             action_id="open_review",
             action_type="open_detail",
-            label="开始复盘",
+            label=t("entity_cards.review.start"),
             route=route,
         ),
         secondary_actions=(
@@ -620,7 +632,7 @@ def build_review_entity_card(
                 build_entity_action(
                     action_id="share_review",
                     action_type="share_resource",
-                    label="分享复盘",
+                    label=t("entity_cards.review.share"),
                     payload={"resource_type": "review", "resource_id": review_id},
                 )
             ]
@@ -658,14 +670,18 @@ def build_vocabulary_entity_card(
     tool_name: str,
     tool_result_id: str | None = None,
     source_channel: str = "ai_tool",
+    locale: str = "en",
 ) -> dict[str, Any]:
+    from app.core.i18n import I18n
+    t = lambda key, **kwargs: I18n.t(key, locale=locale, **kwargs)
+
     word = str(vocabulary.get("word") or vocabulary.get("term") or "").strip()
     word_id = (
         str(vocabulary.get("id") or vocabulary.get("word_id"))
         if (vocabulary.get("id") or vocabulary.get("word_id"))
         else None
     )
-    title = vocabulary.get("title") or word or "词汇卡片"
+    title = vocabulary.get("title") or word or t("entity_cards.vocabulary.default_title")
     summary = vocabulary.get("definition") or vocabulary.get("translation") or vocabulary.get("summary")
     route_query = _compact_dict({"word": word or None})
     route = f"/tools/vocabulary_lookup?{urlencode(route_query)}" if route_query else "/tools/vocabulary_lookup"
@@ -680,7 +696,7 @@ def build_vocabulary_entity_card(
         primary_action=build_entity_action(
             action_id="open_vocabulary",
             action_type="open_detail",
-            label="查看词汇",
+            label=t("entity_cards.vocabulary.view"),
             route=route,
             payload=_compact_dict({"word": word or None, "word_id": word_id}),
         ),
@@ -688,7 +704,7 @@ def build_vocabulary_entity_card(
             build_entity_action(
                 action_id="review_wordbook",
                 action_type="open_detail",
-                label="去单词本复习",
+                label=t("entity_cards.vocabulary.wordbook"),
                 route="/tools/wordbook",
                 payload={"tool_id": "wordbook"},
             )
@@ -728,13 +744,17 @@ def build_seed_entity_card(
     tool_name: str,
     tool_result_id: str | None = None,
     source_channel: str = "ai_tool",
+    locale: str = "en",
 ) -> dict[str, Any]:
+    from app.core.i18n import I18n
+    t = lambda key, **kwargs: I18n.t(key, locale=locale, **kwargs)
+
     seed_id = (
         str(seed.get("id") or seed.get("library_id") or seed.get("seed_id"))
         if (seed.get("id") or seed.get("library_id") or seed.get("seed_id"))
         else None
     )
-    title = seed.get("title") or seed.get("name") or "种子内容"
+    title = seed.get("title") or seed.get("name") or t("entity_cards.seed.default_title")
     summary = seed.get("summary") or seed.get("description") or seed.get("content")
     return build_entity_card(
         entity_type="seed",
@@ -747,7 +767,7 @@ def build_seed_entity_card(
         primary_action=build_entity_action(
             action_id="open_seed",
             action_type="open_detail",
-            label="查看种子",
+            label=t("entity_cards.seed.view"),
             route=f"/seed-libraries/{seed_id}" if seed_id else "/seed-libraries",
         ),
         secondary_actions=(
@@ -755,13 +775,13 @@ def build_seed_entity_card(
                 build_entity_action(
                     action_id="adopt_seed",
                     action_type="adopt_resource",
-                    label="采纳种子",
+                    label=t("entity_cards.seed.adopt"),
                     payload={"resource_type": "seed", "resource_id": seed_id},
                 ),
                 build_entity_action(
                     action_id="share_seed",
                     action_type="share_resource",
-                    label="分享种子",
+                    label=t("entity_cards.seed.share"),
                     payload={"resource_type": "seed", "resource_id": seed_id},
                 ),
             ]
@@ -892,7 +912,11 @@ def build_prediction_entity_card(
     source: str | None = None,
     tier: str | None = None,
     recommended_actions: list[dict[str, Any]] | None = None,
+    locale: str = "en",
 ) -> dict[str, Any]:
+    from app.core.i18n import I18n
+    t = lambda key, **kwargs: I18n.t(key, locale=locale, **kwargs)
+
     primary_route = "/chat"
     if recommended_actions:
         first_route = recommended_actions[0].get("target_route")
@@ -910,7 +934,7 @@ def build_prediction_entity_card(
         primary_action=build_entity_action(
             action_id="apply_prediction",
             action_type="continue_chat" if primary_route == "/chat" else "open_detail",
-            label="按预测继续",
+            label=t("entity_cards.prediction.continue"),
             route=primary_route,
             payload=_compact_dict(
                 {
@@ -926,7 +950,7 @@ def build_prediction_entity_card(
                 build_entity_action(
                     action_id="view_prediction_reason",
                     action_type="show_explanation",
-                    label="查看原因",
+                    label=t("entity_cards.prediction.view_reasons"),
                     payload={"reasons": reasons or []},
                 )
             ]
@@ -975,7 +999,11 @@ def build_shared_resource_entity_card(
     expires_at: str | None = None,
     revoked_at: str | None = None,
     availability: str | None = None,
+    locale: str = "en",
 ) -> dict[str, Any]:
+    from app.core.i18n import I18n
+    t = lambda key, **kwargs: I18n.t(key, locale=locale, **kwargs)
+
     adoptable_resource_types = {
         "plan",
         "task",
@@ -1002,7 +1030,7 @@ def build_shared_resource_entity_card(
         build_entity_action(
             action_id="adopt_shared_resource",
             action_type="adopt_resource",
-            label="采纳到我的空间",
+            label=t("entity_cards.shared_resource.adopt"),
             route=f"/community/shared-resources/{shared_resource_id}/adopt",
             payload={
                 "shared_resource_id": shared_resource_id,
@@ -1050,7 +1078,7 @@ def build_shared_resource_entity_card(
         primary_action=build_entity_action(
             action_id="open_shared_resource",
             action_type="open_detail",
-            label="查看资源",
+            label=t("entity_cards.shared_resource.view"),
             route=default_route,
         ),
         secondary_actions=[adoption_action] if adoption_action else None,
@@ -1103,6 +1131,7 @@ def build_unavailable_shared_resource_entity_card(
     visibility: str | None = None,
     expires_at: str | None = None,
     revoked_at: str | None = None,
+    locale: str = "en",
 ) -> dict[str, Any]:
     return build_shared_resource_entity_card(
         shared_resource_id=shared_resource_id,
@@ -1117,4 +1146,5 @@ def build_unavailable_shared_resource_entity_card(
         expires_at=expires_at,
         revoked_at=revoked_at,
         availability="revoked" if revoked_at else "expired" if expires_at else "private",
+        locale=locale,
     )

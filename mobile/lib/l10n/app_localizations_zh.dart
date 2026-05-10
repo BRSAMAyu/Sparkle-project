@@ -1799,7 +1799,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get focusCoachTitle => 'AI专注教练';
 
   @override
-  String focusCoachSummary(Object minutes, Object task) {
+  String focusCoachSummary(String task, int minutes) {
     return '任务：$task · 已专注 $minutes 分钟';
   }
 
@@ -3195,7 +3195,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String achievementStreakDesc(Object days, Object username) {
+  String achievementStreakDesc(String username, int days) {
     return '$username 已连续学习 $days 天\n坚持的力量无可阻挡！';
   }
 
@@ -3208,7 +3208,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String achievementMasteryDesc(Object domain, Object username) {
+  String achievementMasteryDesc(String username, String domain) {
     return '$username 在 $domain 领域已达到精通水平\n继续保持！';
   }
 
@@ -17332,7 +17332,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get galaxyNodeCommunityUnknown => '未知';
 
   @override
-  String galaxyNodeSourceSummary(Object chunks, Object documents) {
+  String galaxyNodeSourceSummary(int documents, int chunks) {
     return '$documents 份文档 · $chunks 个知识片段';
   }
 
@@ -19607,7 +19607,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskBoardSprintTimingDesc => '关注剩余天数和进度';
 
   @override
-  String taskBoardTodaySummary(Object completed, Object total) {
+  String taskBoardTodaySummary(int total, int completed) {
     return '今日$total项·已完成$completed';
   }
 
@@ -20037,7 +20037,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get heatmapToday => '今日';
 
   @override
-  String heatmapSelectedDayTasks(Object count, Object day) {
+  String heatmapSelectedDayTasks(int day, int count) {
     return '$day日 · $count项';
   }
 
@@ -20254,7 +20254,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskDueOverdue => '已逾期';
 
   @override
-  String taskDueDateLabel(Object day, Object month) {
+  String taskDueDateLabel(String month, String day) {
     return '$month月$day日';
   }
 
@@ -20968,7 +20968,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String focusSessionMasteryUpdate(
-      Object newMastery, Object nodeName, Object oldMastery) {
+      String nodeName, int oldMastery, int newMastery) {
     return '今天的专注让你的 $nodeName 掌握度从 $oldMastery 提升到了 $newMastery 分';
   }
 
@@ -31725,7 +31725,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dailyContextDefault => '早上好，今天先从一小步开始，把节奏找回来就很好。';
 
   @override
-  String sprintProgressLabel(Object daysLeft, Object name, Object percent) {
+  String sprintProgressLabel(String name, int percent, int daysLeft) {
     return '$name：已完成 $percent%，还剩 $daysLeft 天';
   }
 
@@ -34140,7 +34140,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get communitySquad => '小队';
 
   @override
-  String communityGroupStats(Object flamePower, Object memberCount) {
+  String communityGroupStats(int memberCount, int flamePower) {
     return '$memberCount 成员 | $flamePower 火力';
   }
 

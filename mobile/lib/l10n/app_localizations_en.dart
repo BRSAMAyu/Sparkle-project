@@ -1834,7 +1834,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get focusCoachTitle => 'AI Focus Coach';
 
   @override
-  String focusCoachSummary(Object minutes, Object task) {
+  String focusCoachSummary(String task, int minutes) {
     return 'Task: $task · Focused for $minutes min';
   }
 
@@ -3337,7 +3337,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String achievementStreakDesc(Object days, Object username) {
+  String achievementStreakDesc(String username, int days) {
     return '$username has been learning for $days consecutive days\nThe power of persistence is unstoppable!';
   }
 
@@ -3350,7 +3350,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String achievementMasteryDesc(Object domain, Object username) {
+  String achievementMasteryDesc(String username, String domain) {
     return '$username has reached mastery level in $domain\nKeep it up!';
   }
 
@@ -18103,7 +18103,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get galaxyNodeCommunityUnknown => 'Unknown';
 
   @override
-  String galaxyNodeSourceSummary(Object chunks, Object documents) {
+  String galaxyNodeSourceSummary(int documents, int chunks) {
     return '$documents documents · $chunks knowledge chunks';
   }
 
@@ -20459,7 +20459,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Keep an eye on remaining days and progress.';
 
   @override
-  String taskBoardTodaySummary(Object completed, Object total) {
+  String taskBoardTodaySummary(int total, int completed) {
     return 'Today $total items · $completed done';
   }
 
@@ -20894,7 +20894,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get heatmapToday => 'Today';
 
   @override
-  String heatmapSelectedDayTasks(Object count, Object day) {
+  String heatmapSelectedDayTasks(int day, int count) {
     return 'Day $day · $count items';
   }
 
@@ -21119,7 +21119,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskDueOverdue => 'Overdue';
 
   @override
-  String taskDueDateLabel(Object day, Object month) {
+  String taskDueDateLabel(String month, String day) {
     return '$month/$day';
   }
 
@@ -21853,7 +21853,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String focusSessionMasteryUpdate(
-      Object newMastery, Object nodeName, Object oldMastery) {
+      String nodeName, int oldMastery, int newMastery) {
     return 'Today\'s focus raised $nodeName mastery from $oldMastery to $newMastery';
   }
 
@@ -33082,7 +33082,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Good morning. Start with one small step today—finding your rhythm is enough.';
 
   @override
-  String sprintProgressLabel(Object daysLeft, Object name, Object percent) {
+  String sprintProgressLabel(String name, int percent, int daysLeft) {
     return '$name: $percent% complete, $daysLeft days left';
   }
 
@@ -35612,7 +35612,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communitySquad => 'Squad';
 
   @override
-  String communityGroupStats(Object flamePower, Object memberCount) {
+  String communityGroupStats(int memberCount, int flamePower) {
     return '$memberCount members | $flamePower flame';
   }
 

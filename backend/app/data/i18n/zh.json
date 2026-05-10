@@ -163,10 +163,10 @@
     "focus_decay_solution": "把长任务拆成 25-40 分钟一段，每段结束后强制站起、换环境或做简短回顾。",
     "doubt_revision_loop_name": "怀疑驱动的反复修改循环",
     "doubt_revision_loop_desc": "你容易在做出初步判断后立刻怀疑自己，于是频繁回头修改，消耗了推进节奏和决策信心。",
-    "doubt_revision_loop_solution": "给关键题目或任务设置一次\u201c首答承诺\u201d：先在限定时间内完成第一版，再只做一轮必要修订。",
+    "doubt_revision_loop_solution": "给关键题目或任务设置一次“首答承诺”：先在限定时间内完成第一版，再只做一轮必要修订。",
     "cognitive_blindspot_name": "认知盲点",
     "cognitive_blindspot_desc": "你已经形成了某种稳定误区，自己在当下却不容易察觉，所以会在相似场景里重复犯错。",
-    "cognitive_blindspot_solution": "每次做错后补一句\u201c我刚才默认了什么\u201d，把盲点写成一句可反驳的判断。"
+    "cognitive_blindspot_solution": "每次做错后补一句“我刚才默认了什么”，把盲点写成一句可反驳的判断。"
   },
   "metacognition": {
     "dashboard_insufficient": "样本不足，继续观察中。",
@@ -176,9 +176,9 @@
     "process_template_time_more_support": "你之前预估用 {predicted_value} 小时完成，实际用了 {actual_value} 小时。你预估时主要考虑了哪些因素？",
     "process_template_time_more_support_pattern": "这是最近第 {repeat_count} 次类似任务比预估更久。你注意到自己在估时上漏掉了哪类成本吗？",
     "process_template_time_less_support": "你最近通常会比预估更早完成。你是在哪一步留了更稳的缓冲，还是把任务拆得更清楚了？",
-    "process_template_completion_more_support": "你最近对完成比例的预估常常高于结果。你判断\u201c已经能完成\u201d时，最看重的依据是什么？",
+    "process_template_completion_more_support": "你最近对完成比例的预估常常高于结果。你判断“已经能完成”时，最看重的依据是什么？",
     "process_template_completion_less_support": "你最近的完成比例经常高于自己原先的预估。下次设目标时，哪些证据能帮助你更敢于按真实能力估计？",
-    "process_template_mastery_more_support": "你最近对掌握度的预估偏高一些。你通常用什么信号判断\u201c我已经掌握了\u201d？",
+    "process_template_mastery_more_support": "你最近对掌握度的预估偏高一些。你通常用什么信号判断“我已经掌握了”？",
     "process_template_mastery_less_support": "你最近对掌握度常常估得偏保守。回头看时，哪些证据说明你其实已经比自己想得更稳了？",
     "process_template_cross_dim_repeat": "这已经是本周第 {repeat_count} 次出现相似判断偏差。你觉得自己当时用了哪套固定判断模式？",
     "dashboard_template_time_more_support": "你过去 {sample_size} 次对完成时间估得偏乐观 {display_value} 小时。",
@@ -518,7 +518,8 @@
       "view": "查看资料来源",
       "correct": "纠正来源",
       "correct_prompt": "这条资料引用不准确，请按我的纠正重新选择来源。",
-      "convert": "转成知识点"
+      "convert": "转成知识点",
+      "save_copy": "保存为我的资料"
     },
     "review": {
       "default_title": "复盘建议",
@@ -551,5 +552,16 @@
       "adopt": "采纳到我的空间"
     },
     "execution_tasks": "包含 {count} 个可执行任务"
+  },
+  "plan_errors": {
+    "plan_not_found": "计划 {plan_id} 不存在或无权访问",
+    "plan_not_found_suggestion": "请检查计划 ID 是否正确",
+    "tasks_create_failed": "无法创建任何任务",
+    "tasks_create_failed_suggestion": "请检查计划信息并重试",
+    "plan_id_invalid": "计划 ID 格式错误",
+    "plan_id_invalid_suggestion": "请使用有效的 UUID 格式",
+    "tasks_generate_failed": "生成任务失败: {error}",
+    "tasks_generate_failed_suggestion": "请检查参数或稍后重试",
+    "create_plan_error_suggestion": "请检查计划参数或稍后再试"
   }
 }

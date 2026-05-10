@@ -518,7 +518,8 @@
       "view": "View Source",
       "correct": "Correct Source",
       "correct_prompt": "This source citation is inaccurate, please reselect source based on my correction.",
-      "convert": "Convert to Knowledge Node"
+      "convert": "Convert to Knowledge Node",
+      "save_copy": "Save as My Material"
     },
     "review": {
       "default_title": "Review Suggestion",
@@ -551,5 +552,16 @@
       "adopt": "Adopt to My Space"
     },
     "execution_tasks": "Contains {count} executable tasks"
+  },
+  "plan_errors": {
+    "plan_not_found": "Plan {plan_id} does not exist or no access",
+    "plan_not_found_suggestion": "Please check if the plan ID is correct",
+    "tasks_create_failed": "Unable to create any tasks",
+    "tasks_create_failed_suggestion": "Please check plan info and retry",
+    "plan_id_invalid": "Invalid plan ID format",
+    "plan_id_invalid_suggestion": "Please use a valid UUID format",
+    "tasks_generate_failed": "Failed to generate tasks: {error}",
+    "tasks_generate_failed_suggestion": "Please check parameters or try again later",
+    "create_plan_error_suggestion": "Please check plan parameters or try again later"
   }
 }
