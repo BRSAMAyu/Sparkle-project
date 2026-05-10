@@ -68,6 +68,11 @@ class CommunitySignalBridge:
     def __init__(self, db: AsyncSession, redis=None) -> None:
         self.db = db
         self.redis = redis
+        # NOTE: PrivacyPreservingCommunityEngine is used only for its
+        # stateless aggregation math (Laplace noise, cohort binning).
+        # Privacy budget enforcement is handled by the DB-backed
+        # _check_daily_budget / PrivacyBudgetLedger path — the in-memory
+        # budget tracking inside the engine is NOT authoritative.
         self.privacy_engine = PrivacyPreservingCommunityEngine()
         self.kill_switch = AuroraStage33KillSwitchService()
 
@@ -473,13 +478,16 @@ class CommunitySignalBridge:
     ) -> PrivacyBudgetLedger:
         max_epsilon = float(getattr(settings, "COMMUNITY_INTELLIGENCE_DAILY_EPSILON", 3.0))
         check = await self._check_daily_budget(subject_id, query_type=query_type, query_cost=0.0)
+        # With query_cost=0, check.remaining_epsilon = max - already_spent (not yet
+        # reduced by this query's cost). Subtract here to get the true post-spend remainder.
+        pre_spend_remaining = float(check.get("remaining_epsilon", max_epsilon))
         record = PrivacyBudgetLedger(
             subject_id=subject_id,
             subject_type="user",
             query_type=query_type,
             epsilon_spent=epsilon_spent,
             max_epsilon=max_epsilon,
-            remaining_epsilon=max(0.0, float(check.get("remaining_epsilon", max_epsilon)) - epsilon_spent),
+            remaining_epsilon=max(0.0, pre_spend_remaining - epsilon_spent),
             window_key=self._window_key(),
             allowed=allowed,
             denial_reason=denial_reason,
