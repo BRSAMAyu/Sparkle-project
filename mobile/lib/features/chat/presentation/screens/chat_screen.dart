@@ -1263,7 +1263,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             semanticLabel: showOpenClawAttention
                 ? context.l10n.chatOpenclawHubQueued(
                     openClawConnection.queuedRequestCount)
-                : 'OpenClaw Hub',
+                : context.l10n.chatOpenclawHub,
             variant: ButtonVariant.ghost,
           ),
           SparkleIconButton(

@@ -301,7 +301,7 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
 
     return Semantics(
       button: true,
-      label: _isRecording ? 'Stop voice input recording' : 'Start voice input',
+      label: _isRecording ? context.l10n.voiceInputStop : context.l10n.voiceInputStart,
       child: GestureDetector(
         onTap: widget.interactionMode == VoiceInputInteractionMode.tapToggle
             ? () {
@@ -436,7 +436,7 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
 
     return Icon(
       Icons.mic_none,
-      color: idleIconColor,
+      color: isDark ? DS.textPrimary : DS.neutral700,
       size: iconSize,
     );
   }

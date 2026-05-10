@@ -15,12 +15,17 @@ import 'package:sparkle/features/galaxy/presentation/providers/node_source_mater
 import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 typedef NodeReviewContextCallback = void Function(
   Map<String, dynamic> initialContext,
 );
 typedef NodeErrorFilterCallback = void Function(String nodeId, String label);
 typedef NodeAddMaterialCallback = void Function(String nodeId, String label);
+typedef NodeGenerateLearningPlanCallback = void Function(
+  String nodeId,
+  String nodeLabel,
+);
 
 class NodeDetailSheet extends ConsumerStatefulWidget {
   const NodeDetailSheet({
@@ -31,6 +36,7 @@ class NodeDetailSheet extends ConsumerStatefulWidget {
     this.onStartReview,
     this.onViewErrors,
     this.onAddMaterial,
+    this.onGenerateLearningPlan,
     super.key,
   });
 
@@ -41,6 +47,7 @@ class NodeDetailSheet extends ConsumerStatefulWidget {
   final NodeReviewContextCallback? onStartReview;
   final NodeErrorFilterCallback? onViewErrors;
   final NodeAddMaterialCallback? onAddMaterial;
+  final NodeGenerateLearningPlanCallback? onGenerateLearningPlan;
 
   static Future<void> show({
     required BuildContext context,
@@ -48,6 +55,7 @@ class NodeDetailSheet extends ConsumerStatefulWidget {
     required String nodeLabel,
     String? packId,
     NodeAddMaterialCallback? onAddMaterial,
+    NodeGenerateLearningPlanCallback? onGenerateLearningPlan,
   }) =>
       showSensoryModalBottomSheet<void>(
         context: context,
@@ -59,6 +67,7 @@ class NodeDetailSheet extends ConsumerStatefulWidget {
           nodeLabel: nodeLabel,
           packId: packId,
           onAddMaterial: onAddMaterial,
+          onGenerateLearningPlan: onGenerateLearningPlan,
         ),
       );
 
@@ -110,6 +119,7 @@ class _NodeDetailSheetState extends ConsumerState<NodeDetailSheet> {
                   onStartReview: _handleStartReview,
                   onViewErrors: _handleViewErrors,
                   onAddMaterial: _handleAddMaterial,
+                  onGenerateLearningPlan: _handleGenerateLearningPlan,
                 )
               : FutureBuilder<GalaxyNodeHistory>(
                   future: _historyFuture,
@@ -127,6 +137,7 @@ class _NodeDetailSheetState extends ConsumerState<NodeDetailSheet> {
                       onStartReview: _handleStartReview,
                       onViewErrors: _handleViewErrors,
                       onAddMaterial: _handleAddMaterial,
+                      onGenerateLearningPlan: _handleGenerateLearningPlan,
                     );
                   },
                 ),
@@ -222,6 +233,28 @@ class _NodeDetailSheetState extends ConsumerState<NodeDetailSheet> {
     });
   }
 
+  void _handleGenerateLearningPlan(String nodeId, String label) {
+    final callback = widget.onGenerateLearningPlan;
+    if (callback != null) {
+      callback(nodeId, label);
+      return;
+    }
+    // Default: Navigate to learning path dialog
+    Navigator.of(context).pop();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final router = GoRouter.of(context);
+      router.push(
+        Uri(
+          path: '/learning-path',
+          queryParameters: {
+            'node_id': nodeId,
+            'node_label': label,
+          },
+        ).toString(),
+      );
+    });
+  }
+
   String _effectiveLabel(GalaxyNodeHistory history) =>
       widget.nodeLabel.trim().isNotEmpty
           ? widget.nodeLabel.trim()
@@ -248,6 +281,7 @@ class _HistoryContent extends StatelessWidget {
     required this.onStartReview,
     required this.onViewErrors,
     required this.onAddMaterial,
+    required this.onGenerateLearningPlan,
   });
 
   final GalaxyNodeHistory history;
@@ -256,6 +290,7 @@ class _HistoryContent extends StatelessWidget {
   final void Function(GalaxyNodeHistory history) onStartReview;
   final void Function(GalaxyNodeHistory history) onViewErrors;
   final void Function(GalaxyNodeHistory history) onAddMaterial;
+  final void Function(String nodeId, String label) onGenerateLearningPlan;
 
   @override
   Widget build(BuildContext context) {
@@ -368,7 +403,7 @@ class _HistoryContent extends StatelessWidget {
                 label: history.lastStudiedAt == null
                     ? context.l10n.galaxyNodeNoRecord
                     : context.l10n.galaxyNodeLastStudy(
-                        _relativeTime(history.lastStudiedAt!)),
+                        _relativeTime(history.lastStudiedAt!, context.l10n)),
               ),
               _MetricChip(
                 icon: Icons.assignment_late_rounded,
@@ -445,23 +480,35 @@ class _HistoryContent extends StatelessWidget {
               label: Text(context.l10n.galaxyNodeAddMaterial),
             ),
           ),
+          const SizedBox(height: DS.spacing12),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.tonalIcon(
+              onPressed: () {
+                unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+                onGenerateLearningPlan(nodeId, label);
+              },
+              icon: const Icon(Icons.route_rounded),
+              label: Text(context.l10n.galaxyNodeGeneratePlan),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  static String _relativeTime(DateTime dateTime) {
+  static String _relativeTime(DateTime dateTime, AppLocalizations l10n) {
     final diff = DateTime.now().difference(dateTime);
     if (diff.inDays >= 1) {
-      return S.galaxyNodeDaysAgo(diff.inDays);
+      return l10n.galaxyNodeDaysAgo(diff.inDays);
     }
     if (diff.inHours >= 1) {
-      return S.galaxyNodeHoursAgo(diff.inHours);
+      return l10n.galaxyNodeHoursAgo(diff.inHours);
     }
     if (diff.inMinutes >= 1) {
-      return S.galaxyNodeMinutesAgo(diff.inMinutes);
+      return l10n.galaxyNodeMinutesAgo(diff.inMinutes);
     }
-    return S.galaxyNodeJustNow;
+    return l10n.galaxyNodeJustNow;
   }
 }
 
@@ -1000,7 +1047,7 @@ class _BadgeLayer extends StatelessWidget {
 }
 
 class _SourceMaterialsEmptyState extends StatelessWidget {
-  const _SourceMaterialsEmptyState({
+  _SourceMaterialsEmptyState({
     required this.copy,
     required this.nodeLabel,
     required this.onAddNotes,
@@ -1049,7 +1096,7 @@ class _SourceMaterialsEmptyState extends StatelessWidget {
 }
 
 class _DocumentExcerptCard extends StatelessWidget {
-  const _DocumentExcerptCard({
+  _DocumentExcerptCard({
     required this.copy,
     required this.excerpt,
     required this.onReadMore,
@@ -1369,151 +1416,47 @@ class _HistoryErrorState extends StatelessWidget {
 }
 
 class _SourceMaterialsCopy {
-  const _SourceMaterialsCopy._({
-    required this.title,
-    required this.personalBadge,
-    required this.systemBadge,
-    required this.chunkUnit,
-    required this.emptyTitle,
-    required this.readMore,
-    required this.noPreview,
-    required this.openFailed,
-    required this.retry,
-    required this.pageLabel,
-    required this.pagesLabel,
-    required this.excerptLabel,
-    required this.summaryLabel,
-    required this.uploadDateLabel,
-    required this.emptyBodyLabel,
-    required this.addNotesLabel,
-    required this.uploadSavedLabel,
-  });
+  _SourceMaterialsCopy._(this.l10n);
 
-  factory _SourceMaterialsCopy.of(BuildContext context) {
-    if (context.isEnglish) {
-      return const _SourceMaterialsCopy._(
-        title: 'Source Materials',
-        personalBadge: 'Personal upload',
-        systemBadge: 'No personal notes attached yet',
-        chunkUnit: 'chunks',
-        emptyTitle: 'Trace this node back to your own notes',
-        readMore: 'Read more',
-        noPreview: 'No excerpt preview is available yet.',
-        openFailed: 'Unable to open the source material right now.',
-        retry: 'Retry',
-        pageLabel: 'Page',
-        pagesLabel: 'Pages',
-        excerptLabel: 'Excerpt',
-        summaryLabel: 'documents · knowledge chunks',
-        uploadDateLabel: 'Uploaded',
-        emptyBodyLabel:
-            'Add your own notes about this topic to make the knowledge node traceable.',
-        addNotesLabel: 'Add notes about',
-        uploadSavedLabel:
-            'uploaded. It will appear here after processing and attachment.',
-      );
-    }
-    return _SourceMaterialsCopy._(
-      title: context.l10n.galaxyNodeSourceAssets,
-      personalBadge: context.l10n.galaxyNodePersonalBadge,
-      systemBadge: context.l10n.galaxyNodeNoPersonalNote,
-      chunkUnit: context.l10n.galaxyNodeChunkUnit,
-      emptyTitle: context.l10n.galaxyNodeEmptySourceTitle,
-      readMore: context.l10n.galaxyNodeReadMore,
-      noPreview: context.l10n.galaxyNodeNoPreview,
-      openFailed: context.l10n.galaxyNodeOpenFailed,
-      retry: context.l10n.galaxyNodeRetry,
-      pageLabel: context.l10n.galaxyNodePageLabel,
-      pagesLabel: context.l10n.galaxyNodePagesLabel,
-      excerptLabel: context.l10n.galaxyNodeExcerptLabel,
-      summaryLabel:
-          context.l10n.galaxyNodeUploadDateLabel, // TODO: check this mapping
-      uploadDateLabel: context.l10n.galaxyNodeUploadDateLabel,
-      emptyBodyLabel: context.l10n.galaxyNodeEmptySourceBody,
-      addNotesLabel: context.l10n.galaxyNodeAddNotesLabel,
-      uploadSavedLabel: context.l10n.galaxyNodeUploadSaved,
-    );
-  }
+  factory _SourceMaterialsCopy.of(BuildContext context) =>
+      _SourceMaterialsCopy._(context.l10n);
 
-  final String title;
-  final String personalBadge;
-  final String systemBadge;
-  final String chunkUnit;
-  final String emptyTitle;
-  final String readMore;
-  final String noPreview;
-  final String openFailed;
-  final String retry;
-  final String pageLabel;
-  final String pagesLabel;
-  final String excerptLabel;
-  final String summaryLabel;
-  final String uploadDateLabel;
-  final String emptyBodyLabel;
-  final String addNotesLabel;
-  final String uploadSavedLabel;
+  final AppLocalizations l10n;
 
-  String summary(int documents, int chunks) {
-    if (uploadDateLabel == 'Uploaded') {
-      return '$documents documents · $chunks knowledge chunks';
-    }
-    return I18nService.instance.isChinese
-        ? '$documents 份文档 · $chunks 个知识片段'
-        : '$documents documents · $chunks knowledge chunks';
-  }
+  String get title => l10n.galaxyNodeSourceAssets;
+  String get personalBadge => l10n.galaxyNodePersonalBadge;
+  String get systemBadge => l10n.galaxyNodeNoPersonalNote;
+  String get chunkUnit => l10n.galaxyNodeChunkUnit;
+  String get emptyTitle => l10n.galaxyNodeEmptySourceTitle;
+  String get readMore => l10n.galaxyNodeReadMore;
+  String get noPreview => l10n.galaxyNodeNoPreview;
+  String get openFailed => l10n.galaxyNodeOpenFailed;
+  String get retry => l10n.galaxyNodeRetry;
 
-  String uploadDate(String date) => '$uploadDateLabel $date';
+  String summary(int documents, int chunks) =>
+      l10n.galaxyNodeSourceSummary(documents, chunks);
+
+  String uploadDate(String date) =>
+      '${l10n.galaxyNodeUploadDateLabel} $date';
 
   String emptyBody(String topic) {
-    if (topic.trim().isEmpty) {
-      return emptyBodyLabel;
-    }
-    if (uploadDateLabel == 'Uploaded') {
-      return 'Add your own notes about $topic to make the knowledge node traceable.';
-    }
-    return I18nService.instance.isChinese
-        ? '为「$topic」补充自己的讲义或笔记，让知识真正可追溯。'
-        : 'Add your own notes about $topic to make the knowledge node traceable.';
+    if (topic.trim().isEmpty) return l10n.galaxyNodeEmptySourceBody;
+    return l10n.galaxyNodeSourceEmptyBody(topic);
   }
 
   String addNotes(String topic) {
-    if (topic.trim().isEmpty) {
-      return addNotesLabel;
-    }
-    if (uploadDateLabel == 'Uploaded') {
-      return '$addNotesLabel $topic';
-    }
-    return I18nService.instance.isChinese
-        ? '$addNotesLabel「$topic」的笔记'
-        : '$addNotesLabel $topic';
+    if (topic.trim().isEmpty) return l10n.galaxyNodeAddNotesLabel;
+    return l10n.galaxyNodeSourceAddNotes(topic);
   }
 
-  String uploadSaved(String filename) {
-    if (uploadDateLabel == 'Uploaded') {
-      return '$filename $uploadSavedLabel';
-    }
-    return '$filename $uploadSavedLabel';
-  }
+  String uploadSaved(String filename) =>
+      l10n.galaxyNodeSourceUploadSaved(filename);
 
-  String page(int number) {
-    if (uploadDateLabel == 'Uploaded') {
-      return '$pageLabel $number';
-    }
-    return I18nService.instance.isChinese
-        ? '$pageLabel $number 页'
-        : '$pageLabel $number';
-  }
+  String page(int number) => l10n.galaxyNodeSourcePage(number);
 
-  String pages(String pages) {
-    if (uploadDateLabel == 'Uploaded') {
-      return '$pagesLabel $pages';
-    }
-    return I18nService.instance.isChinese
-        ? '$pagesLabel $pages 页'
-        : '$pagesLabel $pages';
-  }
+  String pages(String pages) => l10n.galaxyNodeSourcePages(pages);
 
-  String excerpt(int index) => '$excerptLabel $index';
+  String excerpt(int index) => l10n.galaxyNodeSourceExcerpt(index);
 }
 
 IconData _documentIcon(NodeSourceDocumentRef document) {
@@ -1587,7 +1530,7 @@ class _FocusReasonSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final reason = _computeReason(mastery);
+    final reason = _computeReason(context, mastery);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1597,7 +1540,7 @@ class _FocusReasonSection extends StatelessWidget {
                 size: DS.iconSizeSm, color: DS.warning),
             const SizedBox(width: DS.spacing8),
             Text(
-              'Why today?',
+              context.l10n.galaxyNodeWhyToday,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
                     color: DS.textPrimary,
                     fontWeight: FontWeight.w700,
@@ -1626,14 +1569,12 @@ class _FocusReasonSection extends StatelessWidget {
     );
   }
 
-  String _computeReason(double m) {
-    if (m <= 0)
-      return 'You haven\'t started this yet — it\'s unblocked and ready to begin.';
-    if (m < 0.3)
-      return 'Early stage — building a foundation here will unlock dependent topics.';
-    if (m < 0.7)
-      return 'Making progress! Reviewing now will solidify your understanding.';
-    return 'Almost mastered — a final review will help lock this in.';
+  String _computeReason(BuildContext context, double m) {
+    final l10n = context.l10n;
+    if (m <= 0) return l10n.galaxyNodeReasonNew;
+    if (m < 0.3) return l10n.galaxyNodeReasonEarly;
+    if (m < 0.7) return l10n.galaxyNodeReasonMid;
+    return l10n.galaxyNodeReasonLate;
   }
 }
 
@@ -1648,7 +1589,7 @@ class _CommunityInsightSection extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Community Insights',
+          context.l10n.galaxyNodeCommunityInsights,
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
                 color: DS.textPrimary,
                 fontWeight: FontWeight.w700,
@@ -1680,7 +1621,7 @@ class _CommunityInsightContentState
       builder: (context, snapshot) {
         if (!snapshot.hasData || snapshot.data == null) {
           return Text(
-            'No community data yet',
+            context.l10n.galaxyNodeCommunityNoData,
             style: Theme.of(context)
                 .textTheme
                 .bodyMedium
@@ -1691,7 +1632,7 @@ class _CommunityInsightContentState
         final patterns = signal['common_mistake_patterns'] as List? ?? [];
         if (patterns.isEmpty) {
           return Text(
-            'No community data yet',
+            context.l10n.galaxyNodeCommunityNoData,
             style: Theme.of(context)
                 .textTheme
                 .bodyMedium
@@ -1710,7 +1651,11 @@ class _CommunityInsightContentState
                   const SizedBox(width: DS.spacing6),
                   Expanded(
                     child: Text(
-                      '${p['error_type'] ?? 'Unknown'}: ${p['user_count']} users',
+                      context.l10n.galaxyNodeCommunityPattern(
+                        p['error_type']?.toString() ??
+                            context.l10n.galaxyNodeCommunityUnknown,
+                        p['user_count'].toString(),
+                      ),
                       style: Theme.of(context)
                           .textTheme
                           .bodySmall

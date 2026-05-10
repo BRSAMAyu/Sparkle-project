@@ -48,7 +48,8 @@ type localBlacklistCache struct {
 	jtiSet         map[string]time.Time // JTI -> expiry time
 	jtiAddedAt     map[string]time.Time
 	userRevoked    map[string]localRevocation
-	cleanupRunning bool // Prevent goroutine leak
+	cleanupRunning bool          // Prevent goroutine leak
+	stopCh         chan struct{} // Signal cleanup goroutines to stop
 }
 
 type localRevocation struct {
@@ -61,6 +62,7 @@ var globalLocalBlacklist = &localBlacklistCache{
 	jtiSet:      make(map[string]time.Time),
 	jtiAddedAt:  make(map[string]time.Time),
 	userRevoked: make(map[string]localRevocation),
+	stopCh:      make(chan struct{}),
 }
 
 // AddJTI adds a JTI to the local blacklist cache
@@ -205,6 +207,11 @@ func (c *localBlacklistCache) cleanupExpired() {
 
 	// Do multiple cleanup passes with small batches to avoid long lock times
 	for i := 0; i < 3; i++ {
+		select {
+		case <-c.stopCh:
+			return // Shutdown requested
+		default:
+		}
 		c.mu.Lock()
 		now := time.Now()
 		removed := 0
@@ -232,7 +239,21 @@ func (c *localBlacklistCache) cleanupExpired() {
 		if removed == 0 {
 			break // No more expired entries
 		}
-		time.Sleep(10 * time.Millisecond) // Yield between batches
+		select {
+		case <-c.stopCh:
+			return
+		case <-time.After(10 * time.Millisecond):
+		}
+	}
+}
+
+// Stop signals any running cleanup goroutines to stop
+func (c *localBlacklistCache) Stop() {
+	select {
+	case <-c.stopCh:
+		// Already closed
+	default:
+		close(c.stopCh)
 	}
 }
 

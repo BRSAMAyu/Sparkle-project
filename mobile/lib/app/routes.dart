@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/experience/experience_profile.dart';
 import 'package:sparkle/core/navigation/sensory_navigation_observer.dart';
 import 'package:sparkle/core/navigation/shell_navigation.dart';
@@ -70,19 +71,20 @@ final routerProvider = Provider<GoRouter>((ref) {
     observers: [navigationObserver],
     refreshListenable: routerRefreshNotifier,
     errorBuilder: (context, state) => Scaffold(
-      appBar: AppBar(title: const Text('Page Not Found')),
+      appBar: AppBar(title: Text(context.l10n.routerPageNotFound)),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(Icons.explore_off, size: 64, color: Colors.grey),
             const SizedBox(height: 16),
-            Text('Page not found: ${state.error?.message ?? state.uri.path}',
-                style: Theme.of(context).textTheme.bodyLarge),
+            Text(context.l10n.routerPageNotFoundMessage(
+              state.error?.message ?? state.uri.path,
+            ), style: Theme.of(context).textTheme.bodyLarge),
             const SizedBox(height: 16),
             FilledButton(
               onPressed: () => context.go('/'),
-              child: const Text('Go Home'),
+              child: Text(context.l10n.routerGoHome),
             ),
           ],
         ),
