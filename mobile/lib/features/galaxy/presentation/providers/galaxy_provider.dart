@@ -3,7 +3,6 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/core/design/theme/performance_tier.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/providers/persistent_state_notifier.dart';
 import 'package:sparkle/core/services/performance_service.dart';
@@ -350,11 +349,6 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
 
   // Animation timer for bloom/shrink effects
   Timer? _animationTimer;
-  // ignore: unused_field
-  static const double _animationDuration = 300; // ms
-  static const int _animationFps = 60;
-  // ignore: unused_field
-  static const double _animationStep = 1000 / _animationFps; // ~16.67ms
 
   // Performance Monitor
   VoidCallback? _tierListener;
@@ -381,9 +375,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     GalaxyPerformanceMonitor.instance.startMonitoring();
 
     // Set initial config
-    final initialTier = _mapPerformanceTier(
-      PerformanceService.instance.currentTier.value,
-    );
+    final initialTier = PerformanceService.instance.currentTier.value;
     state = state.copyWith(
       optimizationConfig: GalaxyOptimizationConfig.fromTier(initialTier),
     );
@@ -391,9 +383,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     // Listen for changes
     _tierListener = () {
       if (!mounted) return;
-      final tier = _mapPerformanceTier(
-        PerformanceService.instance.currentTier.value,
-      );
+      final tier = PerformanceService.instance.currentTier.value;
       state = state.copyWith(
         optimizationConfig: GalaxyOptimizationConfig.fromTier(tier),
       );
@@ -418,8 +408,6 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
     GalaxyPerformanceMonitor.instance.stopMonitoring();
     super.dispose();
   }
-
-  PerformanceTier _mapPerformanceTier(PerformanceTier tier) => tier;
 
   void _initEventsListener() {
     final currentSubscription = _eventsSubscription;
