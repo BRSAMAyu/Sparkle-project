@@ -720,7 +720,10 @@ async def _execute_debate(
         + "\n\n要求：保留分歧、指出共识、最后给出用户可执行建议。"
     )
     llm = LLMFactory.get_llm("aggregator")
-    final_response = await llm.ainvoke([HumanMessage(content=judge_prompt)])
+    final_response = await asyncio.wait_for(
+        llm.ainvoke([HumanMessage(content=judge_prompt)]),
+        timeout=120,
+    )
 
     messages: list[BaseMessage] = []
     for result in successful_round1:

@@ -51,6 +51,8 @@ def route_after_router(state: SparkleState):
 
 def route_after_agent(state: SparkleState):
     """Agent 节点后的逻辑 (处理工具调用)"""
+    if not state.get("messages"):
+        return END
     last_message = state["messages"][-1]
 
     # 如果 Agent 想要调用工具
@@ -66,6 +68,8 @@ def route_after_agent_planning(state: SparkleState):
     Phase 2: 在规划模式下，当 Agent 生成 tool_calls 时，
     我们停止执行并返回计划，不实际执行工具。
     """
+    if not state.get("messages"):
+        return END
     last_message = state["messages"][-1]
 
     # 如果 Agent 想要调用工具，在规划模式下我们直接结束

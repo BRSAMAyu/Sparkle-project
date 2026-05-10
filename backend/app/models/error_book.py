@@ -8,7 +8,7 @@ from sqlalchemy import JSON, Boolean, Column, DateTime, Float, ForeignKey, Index
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import relationship
 
-from app.db.session import Base
+from app.models.base import BaseModel
 
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 ArrayStringCompat = ARRAY(String).with_variant(JSON(), "sqlite")
@@ -16,7 +16,7 @@ ArrayUUIDCompat = ARRAY(UUID(as_uuid=True)).with_variant(JSON(), "sqlite")
 ArrayTextCompat = ARRAY(Text).with_variant(JSON(), "sqlite")
 
 
-class ErrorRecord(Base):
+class ErrorRecord(BaseModel):
     """
     ErrorRecord - 错题本核心模型
     采用 "Flat Table" 设计，利用 PostgreSQL 的 JSONB 和 ARRAY 特性减少 JOIN 查询。
