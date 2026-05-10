@@ -585,6 +585,18 @@ class GalaxyService:
 
         await self.db.commit()
         await expansion_service._invalidate_after_graph_mutation(user_id)
+
+        # P1-23 fix: schedule background embedding for all document-imported nodes
+        # (upsert_node_from_candidate used generate_embedding=False above)
+        from app.core.task_manager import task_manager
+        all_nodes = [root_node, *created_nodes]
+        for node in all_nodes:
+            await task_manager.spawn(
+                self._process_node_background(node.id, node.name, node.description or ""),
+                task_name="doc_node_embedding",
+                user_id=str(user_id),
+            )
+
         return {
             "root_node": root_node,
             "created_nodes": created_nodes,
