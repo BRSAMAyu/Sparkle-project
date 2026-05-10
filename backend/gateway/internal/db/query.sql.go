@@ -771,7 +771,7 @@ func (q *Queries) GetOutboxPendingCount(ctx context.Context) (int64, error) {
 
 const getPost = `-- name: GetPost :one
 SELECT user_id, content, image_urls, topic, visibility, like_count, comment_count, id, created_at, updated_at, deleted_at FROM posts
-WHERE id = $1 AND created_at = $2 AND deleted_at IS NULL
+WHERE id = $1 AND deleted_at IS NULL
 `
 
 type GetPostParams struct {
