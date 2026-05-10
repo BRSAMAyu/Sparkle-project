@@ -18,6 +18,8 @@ from sqlalchemy import (
     Integer,
     Text,
     UniqueConstraint,
+    func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
@@ -107,6 +109,13 @@ class AccountabilityPartnership(BaseModel):
             "idx_accountability_slot_status",
             "slot_type",
             "status",
+        ),
+        Index(
+            "uq_partnership_active_pair_bidirectional",
+            func.Least(initiator_id, partner_id),
+            func.Greatest(initiator_id, partner_id),
+            unique=True,
+            postgresql_where=text("deleted_at IS NULL"),
         ),
     )
 

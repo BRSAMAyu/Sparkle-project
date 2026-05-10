@@ -486,48 +486,47 @@ class AccountabilityAchievementService:
         partner_id: UUID,
         days: int = 7,
     ) -> int:
-        """统计双方在2小时内互相打卡的天数"""
+        """统计双方在2小时内互相打卡的天数 — single query, group-by-date in Python."""
+        cutoff = _utcnow() - timedelta(days=days)
+
+        # One query fetches all checkins for both users in the window
+        result = await db.execute(
+            select(
+                AccountabilityCheckin.user_id,
+                AccountabilityCheckin.created_at,
+            ).where(
+                AccountabilityCheckin.partnership_id == partnership_id,
+                AccountabilityCheckin.user_id.in_([user_id, partner_id]),
+                AccountabilityCheckin.created_at >= cutoff,
+            )
+        )
+        rows = result.all()
+
+        # Group checkin times by date and user
+        from collections import defaultdict
+
+        user_by_date: dict[object, list[datetime]] = defaultdict(list)
+        partner_by_date: dict[object, list[datetime]] = defaultdict(list)
+        for uid, created_at in rows:
+            day_key = created_at.date()
+            if uid == user_id:
+                user_by_date[day_key].append(created_at)
+            else:
+                partner_by_date[day_key].append(created_at)
+
+        # Check each day for mutual support (any pair within 2 hours)
         mutual_days = 0
-
-        for i in range(days):
-            target_date = (_utcnow() - timedelta(days=i)).date()
-            day_start = datetime.combine(target_date, datetime.min.time()).replace(tzinfo=UTC)
-            day_end = datetime.combine(target_date, datetime.max.time()).replace(tzinfo=UTC)
-
-            # 获取双方当天的打卡时间
-            user_checkins = await db.execute(
-                select(AccountabilityCheckin.created_at).where(
-                    and_(
-                        AccountabilityCheckin.partnership_id == partnership_id,
-                        AccountabilityCheckin.user_id == user_id,
-                        AccountabilityCheckin.created_at >= day_start,
-                        AccountabilityCheckin.created_at <= day_end,
-                    )
-                )
-            )
-            user_times = [t[0] for t in user_checkins.all()]
-
-            partner_checkins = await db.execute(
-                select(AccountabilityCheckin.created_at).where(
-                    and_(
-                        AccountabilityCheckin.partnership_id == partnership_id,
-                        AccountabilityCheckin.user_id == partner_id,
-                        AccountabilityCheckin.created_at >= day_start,
-                        AccountabilityCheckin.created_at <= day_end,
-                    )
-                )
-            )
-            partner_times = [t[0] for t in partner_checkins.all()]
-
-            # 检查是否有在2小时内的打卡
-            found_mutual = False
-            for user_time in user_times:
-                for partner_time in partner_times:
-                    if abs((user_time - partner_time).total_seconds()) <= 7200:  # 2小时
+        for day_key in user_by_date:
+            if day_key not in partner_by_date:
+                continue
+            found = False
+            for u_time in user_by_date[day_key]:
+                for p_time in partner_by_date[day_key]:
+                    if abs((u_time - p_time).total_seconds()) <= 7200:
                         mutual_days += 1
-                        found_mutual = True
+                        found = True
                         break
-                if found_mutual:
+                if found:
                     break
 
         return mutual_days
