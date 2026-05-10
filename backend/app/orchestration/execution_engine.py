@@ -144,6 +144,7 @@ class ExecutionEngineMixin:
         workflow_id: str,
         prompt_version: str,
         active_db: AsyncSession | None,
+        locale: str = "en",
     ) -> list[agent_service_pb2.ChatResponse] | None:
         bridge_tool_name = next(
             (
@@ -182,6 +183,7 @@ class ExecutionEngineMixin:
             runtime_context={
                 "session_id": session_id,
                 "redis_client": getattr(self, "redis", None),
+                "locale": locale,
             },
         )
         if not result.success or not isinstance(result.data, dict):

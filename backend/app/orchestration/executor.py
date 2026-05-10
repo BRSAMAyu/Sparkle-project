@@ -344,6 +344,11 @@ class ToolExecutor:
 
             try:
                 executed_tool = True
+                # Extract locale from runtime_context for localized prompts
+                locale = "en"
+                if runtime_context and isinstance(runtime_context, dict):
+                    locale = runtime_context.get("locale", "en")
+
                 if getattr(tool, "is_long_running", False) and progress_callback:
                     execution_coro = tool.execute(
                         validated_params,
@@ -351,6 +356,7 @@ class ToolExecutor:
                         db_session,
                         tool_call_id=tool_call_id,
                         progress_callback=progress_callback,
+                        locale=locale,
                     )
                 else:
                     execution_coro = tool.execute(
@@ -358,6 +364,7 @@ class ToolExecutor:
                         user_id,
                         db_session,
                         tool_call_id=tool_call_id,
+                        locale=locale,
                     )
                 result = await asyncio.wait_for(execution_coro, timeout=timeout_seconds)
                 if result.tool_call_id is None:

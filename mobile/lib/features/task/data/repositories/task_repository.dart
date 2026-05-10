@@ -466,7 +466,6 @@ class TaskRepository {
     String taskId,
   ) async {
     if (DemoDataService.isDemoMode) {
-      final zh = I18nService.instance.isChinese;
       return [
         ExecutionTemplateModel(
           templateId: 'web_research_brief',
@@ -734,9 +733,7 @@ class TaskRepository {
         updatedAt: DateTime.now(),
         dueDate: task.dueDate,
         guideContent: generateGuide
-            ? (I18nService.instance.isChinese
-                ? '# AI 执行指南\n\n1. 准备阶段\n2. 执行阶段\n3. 复习阶段'
-                : '# AI Execution Guide\n\n1. Preparation\n2. Execution\n3. Review')
+            ? '${I18nService.instance.l10n.taskAiGuideTitle}\n\n1. ${I18nService.instance.l10n.taskAiGuideStep1}\n2. ${I18nService.instance.l10n.taskAiGuideStep2}\n3. ${I18nService.instance.l10n.taskAiGuideStep3}'
             : null,
       );
       DemoDataService().demoTasks.add(newTask);
@@ -768,12 +765,8 @@ class TaskRepository {
           ? [
               TaskNudge(
                 type: 'time_adjustment',
-                title: I18nService.instance.isChinese
-                    ? '检测到规划乐观偏差'
-                    : 'Planning optimism bias detected',
-                message: I18nService.instance.isChinese
-                    ? '根据您的历史行为模式，建议将预估时间调整为 ${task.estimatedMinutes * 130 ~/ 100} 分钟'
-                    : 'Based on your history, consider adjusting the estimate to ${task.estimatedMinutes * 130 ~/ 100} min',
+                title: I18nService.instance.l10n.taskPlanningOptimismBias,
+                message: I18nService.instance.l10n.taskPlanningOptimismSuggestion(task.estimatedMinutes * 130 ~/ 100),
                 suggestedValue: task.estimatedMinutes * 130 ~/ 100,
                 confidence: 0.8,
               ),
@@ -1038,9 +1031,7 @@ class TaskRepository {
       DemoDataService().demoTasks[existingIndex] = updated;
       return TaskQuickActionResult(
         action: 'snooze',
-        message: I18nService.instance.isChinese
-            ? '已推迟到明天，今天先把节奏放轻一点。'
-            : 'Snoozed until tomorrow — take it easy today.',
+        message: I18nService.instance.l10n.taskSnoozeMessage,
         task: updated,
       );
     }
@@ -1073,47 +1064,39 @@ class TaskRepository {
       }
       final existing = DemoDataService().demoTasks[existingIndex];
       final now = DateTime.now();
-      final zh = I18nService.instance.isChinese;
       final subtasks = [
         SubTaskModel(
           id: 'demo_${id}_step_1',
           parentTaskId: id,
-          title: zh ? '先找出最卡的一点' : 'Find the single point that blocks you',
+          title: I18nService.instance.l10n.taskFindBlock,
           order: 0,
           status: SubTaskStatus.pending,
           createdAt: now,
           updatedAt: now,
           estimatedMinutes: 5,
-          guideContent: zh
-              ? '只定位卡点，不解决整张任务卡。'
-              : 'Just locate the block — don\'t solve the whole task.',
+          guideContent: I18nService.instance.l10n.taskFindBlockGuidance,
         ),
         SubTaskModel(
           id: 'demo_${id}_step_2',
           parentTaskId: id,
-          title:
-              zh ? '把这个卡点讲成一句人话' : 'Describe the block in one plain sentence',
+          title: I18nService.instance.l10n.taskDescribeBlock,
           order: 1,
           status: SubTaskStatus.pending,
           createdAt: now,
           updatedAt: now,
           estimatedMinutes: 10,
-          guideContent: zh
-              ? '先讲清楚，再决定下一步。'
-              : 'Explain it clearly first, then decide next steps.',
+          guideContent: I18nService.instance.l10n.taskDescribeBlockGuidance,
         ),
         SubTaskModel(
           id: 'demo_${id}_step_3',
           parentTaskId: id,
-          title: zh ? '做一个最小验证动作' : 'Do one smallest verification action',
+          title: I18nService.instance.l10n.taskVerifyBlock,
           order: 2,
           status: SubTaskStatus.pending,
           createdAt: now,
           updatedAt: now,
           estimatedMinutes: 10,
-          guideContent: zh
-              ? '只验证刚拆出来的这一步。'
-              : 'Only verify this one sub-step you just broke out.',
+          guideContent: I18nService.instance.l10n.taskVerifyBlockGuidance,
         ),
       ];
       final updated = existing.copyWith(
@@ -1129,9 +1112,7 @@ class TaskRepository {
       DemoDataService().demoTasks[existingIndex] = updated;
       return TaskQuickActionResult(
         action: 'too_hard',
-        message: zh
-            ? '我把它拆成 3 小步了，先做「${subtasks.first.title}」。'
-            : 'Broke it into 3 small steps — start with "${subtasks.first.title}".',
+        message: I18nService.instance.l10n.taskTooHardMessage(subtasks.first.title),
         task: updated,
         subtasks: subtasks,
       );
@@ -1172,9 +1153,7 @@ class TaskRepository {
       DemoDataService().demoTasks[existingIndex] = updated;
       return TaskQuickActionResult(
         action: 'skip',
-        message: I18nService.instance.isChinese
-            ? '已跳过，这张卡不会再挤在今天了。'
-            : 'Skipped — this card won\'t crowd your day anymore.',
+        message: I18nService.instance.l10n.taskSkipMessage,
         task: updated,
       );
     }
@@ -1193,75 +1172,38 @@ class TaskRepository {
   }
 
   String _demoGuide(String title) {
-    final zh = I18nService.instance.isChinese;
-    if (zh) {
-      return '''
-# $title
-
-## 🎯 任务目标
-明确任务的核心产出和完成标准。
-
-## 📋 准备清单
-- [ ] 确认相关资料已就绪
-- [ ] 设定专注时间段
-- [ ] 排除干扰因素
-
-## 📍 执行步骤
-
-### 步骤 1: 理解与拆解
-- 梳理任务要求和关键点
-- 将大任务拆分为可执行的小步骤
-
-### 步骤 2: 核心执行
-- 按优先级逐步完成各项子任务
-- 及时记录关键发现和笔记
-
-### 步骤 3: 检查与总结
-- 对照完成标准自查
-- 记录经验教训和改进点
-
-## 💡 注意事项
-- 保持专注，使用番茄工作法
-- 遇到难点先标记，后续集中攻克
-- 完成后及时在星火中记录反思
-
-## ✅ 完成标准
-- [ ] 核心内容已完成
-- [ ] 质量达到预期标准
-- [ ] 已记录总结和反思
-''';
-    }
+    final l10n = I18nService.instance.l10n;
     return '''
 # $title
 
-## 🎯 Objective
+## 🎯 ${l10n.taskDemoGuideTitle}
 Clarify the core output and completion criteria.
 
-## 📋 Preparation
+## 📋 ${l10n.taskDemoGuidePreparation}
 - [ ] Confirm relevant materials are ready
 - [ ] Set a focused time block
 - [ ] Remove distractions
 
-## 📍 Steps
+## 📍 ${l10n.taskDemoGuideSteps}
 
-### Step 1: Understand & Break Down
+### ${l10n.taskDemoGuideStep1}
 - Outline task requirements and key points
 - Break the task into executable sub-steps
 
-### Step 2: Core Execution
+### ${l10n.taskDemoGuideStep2}
 - Complete sub-tasks by priority
 - Record key findings and notes promptly
 
-### Step 3: Review & Summarize
+### ${l10n.taskDemoGuideStep3}
 - Self-check against completion criteria
 - Document lessons learned and improvements
 
-## 💡 Tips
+## 💡 ${l10n.taskDemoGuideTips}
 - Stay focused — try the Pomodoro technique
 - Mark difficult points for later, tackle them together
 - Log your reflection in Sparkle after completion
 
-## ✅ Completion Criteria
+## ✅ ${l10n.taskDemoGuideCriteria}
 - [ ] Core content completed
 - [ ] Quality meets expected standard
 - [ ] Summary and reflection recorded
@@ -1385,23 +1327,17 @@ Clarify the core output and completion criteria.
         throw Exception('Task not found in demo data');
       }
       final existing = DemoDataService().demoTasks[existingIndex];
-      final zh = I18nService.instance.isChinese;
       final diagnosis = <String, dynamic>{
-        'diagnosis_question':
-            zh ? '你现在最像卡在哪一步？' : 'Which step feels most stuck right now?',
-        'diagnosis_options': zh
+        'diagnosis_question': I18nService.instance.l10n.taskDiagnosisStuck,
+        'diagnosis_options': I18nService.instance.isChinese
             ? ['概念没想清', '步骤顺序乱了', '题目条件不会用']
             : [
                 'Concept not clear',
                 'Step order confused',
                 'Can\'t use given conditions',
               ],
-        'targeted_fix': zh
-            ? '先只做一个 5 分钟内能完成的小动作。'
-            : 'Just do one small action you can finish in 5 minutes.',
-        'check_question': zh
-            ? '下一步你能先写下哪一句？'
-            : 'What can you write down first for the next step?',
+        'targeted_fix': I18nService.instance.l10n.taskDiagnosisFix,
+        'check_question': I18nService.instance.l10n.taskDiagnosisCheck,
         'source': 'demo',
       };
       final updated = existing.copyWith(
@@ -1416,9 +1352,7 @@ Clarify the core output and completion criteria.
       return TaskStuckResult(
         task: updated,
         diagnosis: diagnosis,
-        message: zh
-            ? 'Aurora 已根据当前任务状态给出诊断。'
-            : 'Aurora has diagnosed based on your current task state.',
+        message: I18nService.instance.l10n.taskDiagnosisMessage,
       );
     }
 
@@ -1457,7 +1391,6 @@ Clarify the core output and completion criteria.
             );
         DemoDataService().demoTasks[existingIndex] = updated;
         // Demo mode: include mock next actions
-        final zh = I18nService.instance.isChinese;
         return TaskCompletionResult(
           task: updated.toJson(),
           feedback: 'Mock feedback: Great job!',
@@ -1466,22 +1399,21 @@ Clarify the core output and completion criteria.
           nextActions: [
             NextAction(
               type: NextActionType.quickReview,
-              title: zh ? '快速回顾' : 'Quick Review',
-              description:
-                  zh ? '回顾刚才的核心要点' : 'Review the key points just covered',
+              title: I18nService.instance.l10n.taskNextActionQuickReview,
+              description: I18nService.instance.l10n.taskNextActionReview,
               estimatedMinutes: 5,
               energyCost: 1,
               difficulty: 1,
-              reason: zh ? '及时回顾对抗遗忘' : 'Timely review combats forgetting',
+              reason: I18nService.instance.l10n.taskNextActionReason1,
             ),
             NextAction(
               type: NextActionType.lightExpand,
-              title: zh ? '拓展: 相关概念' : 'Expand: Related Concepts',
-              description: zh ? '了解相关知识点' : 'Explore related knowledge points',
+              title: I18nService.instance.l10n.taskNextActionExpand,
+              description: I18nService.instance.l10n.taskNextActionExplore,
               estimatedMinutes: 10,
               energyCost: 2,
               difficulty: 2,
-              reason: zh ? '加深理解' : 'Deepen understanding',
+              reason: I18nService.instance.l10n.taskNextActionReason2,
             ),
           ],
         );
@@ -1583,9 +1515,7 @@ Clarify the core output and completion criteria.
       // Demo mode: return mock response
       return TaskFeedbackResponse(
         success: true,
-        message: I18nService.instance.isChinese
-            ? '偏好已更新（演示模式）'
-            : 'Preferences updated (demo mode)',
+        message: I18nService.instance.l10n.taskPreferencesUpdatedDemo,
         preferenceUpdates: const PreferenceUpdates(
           depthPreference: 0.02,
           difficultyPreference: -0.01,
