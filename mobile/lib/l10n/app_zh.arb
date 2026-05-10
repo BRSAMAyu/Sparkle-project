@@ -8325,6 +8325,15 @@
   "statisticsChartMonth10": "十月",
   "statisticsChartMonth11": "十一月",
   "statisticsChartMonth12": "十二月",
+  "statisticsNoDataYet": "暂无统计数据",
+  "statisticsLoadingFailed": "加载失败: {error}",
+  "@statisticsLoadingFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "statisticsRetry": "重试",
+  "statisticsVsLast": "较上期",
   "statisticsExportImageReport": "图片报告",
   "statisticsExportPDFReport": "PDF报告",
   "interventionStartNow": "开始",

@@ -1579,7 +1579,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskListFilterTooltip => 'Priority Filter';
 
   @override
-  String get taskNoTasks => 'No tasks yet';
+  String get taskNoTasks => 'No tasks';
 
   @override
   String get taskAddNew => 'Add Task';
@@ -1749,6 +1749,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String focusStatsStreak(Object count) {
     return '$count day streak';
+  }
+
+  @override
+  String get focusCore => 'Focus Core';
+
+  @override
+  String focusTasksDone(int count) {
+    return '$count done';
   }
 
   @override
@@ -6502,6 +6510,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get seedLibraryUnsubscribe => 'Unsubscribe';
 
   @override
+  String get seedOfficial => 'Official';
+
+  @override
+  String get seedLibrarySubtitle => 'Knowledge repository';
+
+  @override
+  String seedLibraryStats(String count) {
+    return '$count official libs · Community picks';
+  }
+
+  @override
   String get seedLibraryContentItems => 'Content Items';
 
   @override
@@ -8287,10 +8306,40 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get communityDiscardDraft => 'Discard draft?';
+
+  @override
+  String get communityUnsavedContent => 'You have unsaved content. Discard?';
+
+  @override
   String get communityDiscardGroupCreation => 'Discard group creation?';
 
   @override
   String get communityUnsavedChanges => 'You have unsaved changes. Discard?';
+
+  @override
+  String get communityPostFailed => 'Post failed, please try again later';
+
+  @override
+  String get communityNewPost => 'New Post';
+
+  @override
+  String get communityPost => 'Post';
+
+  @override
+  String get communityMoodPrompt => 'How are you feeling?';
+
+  @override
+  String get communityAttachment => 'Attachment';
+
+  @override
+  String get communityTopicHint => 'Add a topic tag (optional)';
+
+  @override
+  String get communityPhoto => 'Photo';
+
+  @override
+  String get communityTopic => 'Topic';
 
   @override
   String get communityKeepEditing => 'Keep Editing';
@@ -17906,6 +17955,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get galaxyNodeAddMaterial => 'Add material to this node';
 
   @override
+  String galaxyNodeReviewPrompt(Object label) {
+    return 'Help me review \"$label\". First identify the weakest point around this knowledge node, then give me a short practice set.';
+  }
+
+  @override
   String get galaxyNodeGeneratePlan => 'Generate Learning Plan';
 
   @override
@@ -20234,6 +20288,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskBoardNoTasksToday => 'No tasks due today';
 
   @override
+  String get taskBoardBrowseByDateDesc => 'Tasks are grouped by due date.';
+
+  @override
+  String get taskBoardOverdueTasksDesc =>
+      'Overdue tasks are highlighted in red.';
+
+  @override
+  String get taskBoardPriorityOrderDesc =>
+      'Higher-priority tasks rise to the top.';
+
+  @override
+  String get taskBoardCustomPriorityDesc =>
+      'Adjust task priority from the editor.';
+
+  @override
+  String get taskBoardSprintFocusDesc =>
+      'Only tasks from the active sprint are shown.';
+
+  @override
+  String get taskBoardSprintTimingDesc =>
+      'Keep an eye on remaining days and progress.';
+
+  @override
+  String taskBoardTodaySummary(Object completed, Object total) {
+    return 'Today $total items · $completed done';
+  }
+
+  @override
   String get taskBoardTitle => 'Task Board';
 
   @override
@@ -20853,11 +20935,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get taskBoardTodayNoTasks => 'No tasks today';
-
-  @override
-  String taskBoardTodaySummary(Object completed, Object total) {
-    return 'Today $total items · $completed done';
-  }
 
   @override
   String get unnamedTask => 'Unnamed Task';
@@ -28323,6 +28400,301 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get blockedUsersTitle => 'Blocked Users';
+
+  @override
+  String get blockedNoBlockedUsers => 'No blocked users';
+
+  @override
+  String blockedReason(Object reason) {
+    return 'Reason: $reason';
+  }
+
+  @override
+  String get blockedUnblock => 'Unblock';
+
+  @override
+  String get blockedUnblockConfirmTitle => 'Unblock';
+
+  @override
+  String blockedUnblockConfirmBody(String name) {
+    return 'Unblock $name?\n\nThey will be able to send friend requests and messages again.';
+  }
+
+  @override
+  String get blockedCancel => 'Cancel';
+
+  @override
+  String get blockedConfirm => 'Confirm';
+
+  @override
+  String blockedUnblockedSuccess(String name) {
+    return '$name unblocked';
+  }
+
+  @override
+  String blockedOperationFailed(String error) {
+    return 'Operation failed: $error';
+  }
+
+  @override
+  String get groupSearchMembers => 'Search members...';
+
+  @override
+  String get groupNoMembersYet => 'No members yet';
+
+  @override
+  String get groupNoMembersFound => 'No members found';
+
+  @override
+  String get groupOwner => 'Owner';
+
+  @override
+  String get groupAdmin => 'Admins';
+
+  @override
+  String get groupMember => 'Members';
+
+  @override
+  String get groupDemoteToMember => 'Demote to Member';
+
+  @override
+  String get groupPromoteToAdmin => 'Promote to Admin';
+
+  @override
+  String get groupTransferOwnership => 'Transfer Ownership';
+
+  @override
+  String groupOwnerCount(int count) {
+    return 'Owner ($count)';
+  }
+
+  @override
+  String groupAdminCount(int count) {
+    return 'Admins ($count)';
+  }
+
+  @override
+  String groupMemberCount(int count) {
+    return 'Members ($count)';
+  }
+
+  @override
+  String get userTimeEstimation => 'Time Estimation';
+
+  @override
+  String userTimeEstimationBias(String hours) {
+    return 'You were $hours hours too optimistic in your last 10 completion time estimates.';
+  }
+
+  @override
+  String get userTrendStabilizing => 'Stabilizing in recent weeks.';
+
+  @override
+  String get userWorkingMemorySnapshot => 'Working Memory Snapshot';
+
+  @override
+  String get userRecentForegroundItems =>
+      'Still stuck on inverted sentences in complex English sentence breakdown; review question 3 in next practice.';
+
+  @override
+  String get userWeeklyGoal =>
+      'Organize probability theory error book into 2 review cards this week.';
+
+  @override
+  String get userWeeklyStreakAchievement => '7-Day Learning Streak';
+
+  @override
+  String get userDeepWorkAchievement => 'Deep Work 10 Times';
+
+  @override
+  String get userChunkingSkill => 'Chunking Progress';
+
+  @override
+  String get userReplanSkill => 'Lightweight Replan';
+
+  @override
+  String get userForesightToday =>
+      'Your focus is more fragmented later today; tackle the hardest problem before noon.';
+
+  @override
+  String get userIdiographicDisclaimer =>
+      'These are patterns in your data, not causal relationships.';
+
+  @override
+  String get userCapacityHealthy =>
+      'Current capacity is healthy; continue monitoring first-token latency during AI peak hours.';
+
+  @override
+  String get userPrometheusWarning =>
+      'Rule fallback is increasing; check free/free_fast health';
+
+  @override
+  String get userOnboardingPreviewEmpty =>
+      'Tell me your top learning goal first, and I\'ll immediately assess difficulty and provide initial recommendations.';
+
+  @override
+  String userOnboardingPreviewGoal(String goal) {
+    return 'I understand you want to prioritize \"$goal\". Next, I\'ll complete your profile and provide your first learning path and task recommendations.';
+  }
+
+  @override
+  String get userFastMode => 'Fast';
+
+  @override
+  String get userBalancedMode => 'Balanced';
+
+  @override
+  String get userDeepMode => 'Deep';
+
+  @override
+  String get authGuestLoginFailed => 'Guest login failed';
+
+  @override
+  String get taskSnoozeMessage =>
+      'Snoozed until tomorrow — take it easy today.';
+
+  @override
+  String taskTooHardMessage(String title) {
+    return 'Broke it into 3 small steps — start with \"$title\".';
+  }
+
+  @override
+  String get taskSkipMessage =>
+      'Skipped — this card won\'t crowd your day anymore.';
+
+  @override
+  String get taskTooHardStep1 => 'Find the single point that blocks you';
+
+  @override
+  String get taskTooHardStep2 => 'Describe the block in one plain sentence';
+
+  @override
+  String get taskTooHardStep3 => 'Do one smallest verification action';
+
+  @override
+  String get taskTooHardGuidance1 =>
+      'Just locate the block — don\'t solve the whole task.';
+
+  @override
+  String get taskTooHardGuidance2 =>
+      'Explain it clearly first, then decide next steps.';
+
+  @override
+  String get taskTooHardGuidance3 =>
+      'Only verify this one sub-step you just broke out.';
+
+  @override
+  String get taskDiagnosisStuck => 'Which step feels most stuck right now?';
+
+  @override
+  String get taskDiagnosisFix =>
+      'Just do one small action you can finish in 5 minutes.';
+
+  @override
+  String get taskDiagnosisCheck =>
+      'What can you write down first for the next step?';
+
+  @override
+  String get taskDiagnosisMessage =>
+      'Aurora has diagnosed based on your current task state.';
+
+  @override
+  String get taskNextActionQuickReview => 'Quick Review';
+
+  @override
+  String get taskNextActionReview => 'Review the key points just covered';
+
+  @override
+  String get taskNextActionExpand => 'Expand: Related Concepts';
+
+  @override
+  String get taskNextActionExplore => 'Explore related knowledge points';
+
+  @override
+  String get taskNextActionReason1 => 'Timely review combats forgetting';
+
+  @override
+  String get taskNextActionReason2 => 'Deepen understanding';
+
+  @override
+  String get taskPreferencesUpdatedDemo => 'Preferences updated (demo mode)';
+
+  @override
+  String get taskWebResearchBrief => 'Web Research Brief';
+
+  @override
+  String get taskWebResearchDesc => 'Great for search and summarization';
+
+  @override
+  String get taskWebResearchReason => 'keyword:search';
+
+  @override
+  String get taskPlanningOptimismBias => 'Planning optimism bias detected';
+
+  @override
+  String taskPlanningOptimismSuggestion(int minutes) {
+    return 'Based on your history, consider adjusting the estimate to $minutes min';
+  }
+
+  @override
+  String get taskAiGuideTitle => 'AI Execution Guide';
+
+  @override
+  String get taskAiGuideStep1 => 'Preparation';
+
+  @override
+  String get taskAiGuideStep2 => 'Execution';
+
+  @override
+  String get taskAiGuideStep3 => 'Review';
+
+  @override
+  String get taskFindBlock => 'Find the single point that blocks you';
+
+  @override
+  String get taskFindBlockGuidance =>
+      'Just locate the block — don\'t solve the whole task.';
+
+  @override
+  String get taskDescribeBlock => 'Describe the block in one plain sentence';
+
+  @override
+  String get taskDescribeBlockGuidance =>
+      'Explain it clearly first, then decide next steps.';
+
+  @override
+  String get taskVerifyBlock => 'Do one smallest verification action';
+
+  @override
+  String get taskVerifyBlockGuidance =>
+      'Only verify this one sub-step you just broke out.';
+
+  @override
+  String get taskDemoGuideTitle => 'Objective';
+
+  @override
+  String get taskDemoGuidePreparation => 'Preparation';
+
+  @override
+  String get taskDemoGuideSteps => 'Steps';
+
+  @override
+  String get taskDemoGuideStep1 => 'Understand & Break Down';
+
+  @override
+  String get taskDemoGuideStep2 => 'Core Execution';
+
+  @override
+  String get taskDemoGuideStep3 => 'Review & Summarize';
+
+  @override
+  String get taskDemoGuideTips => 'Tips';
+
+  @override
+  String get taskDemoGuideCriteria => 'Completion Criteria';
+
+  @override
   String communityUploadedOn(Object date) {
     return 'Uploaded $date';
   }
@@ -30129,6 +30501,62 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String gmPromoteConfirm(Object name) {
+    return 'Promote $name?';
+  }
+
+  @override
+  String get gmPromoteConfirmMsg =>
+      'This member will become an admin and can manage the group.';
+
+  @override
+  String gmPromoted(String name) {
+    return '$name promoted to admin';
+  }
+
+  @override
+  String gmPromoteFailed(String error) {
+    return 'Failed to promote: $error';
+  }
+
+  @override
+  String gmDemoteConfirm(Object name) {
+    return 'Demote $name?';
+  }
+
+  @override
+  String get gmDemoteConfirmMsg => 'This admin will become a regular member.';
+
+  @override
+  String gmDemoted(String name) {
+    return '$name demoted to member';
+  }
+
+  @override
+  String gmDemoteFailed(String error) {
+    return 'Failed to demote: $error';
+  }
+
+  @override
+  String gmTransferConfirm(String name) {
+    return 'Transfer ownership to $name?';
+  }
+
+  @override
+  String get gmTransferConfirmMsg =>
+      'You will become a regular member. This action cannot be undone.';
+
+  @override
+  String gmTransferSucceeded(String name) {
+    return 'Ownership transferred to $name';
+  }
+
+  @override
+  String gmTransferFailed(String error) {
+    return 'Failed to transfer: $error';
+  }
+
+  @override
   String gmActionFailed(String error) {
     return 'Action failed: $error';
   }
@@ -31337,6 +31765,203 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cahTooFrequentReminder => 'Too frequent';
 
   @override
+  String get cahReminderAccepted => 'Reminder enabled';
+
+  @override
+  String get cahReminderDeclined => 'Declined this reminder';
+
+  @override
+  String get cahReminderLater => 'Reminder snoozed';
+
+  @override
+  String get cahReminderReduced => 'Reminder frequency reduced';
+
+  @override
+  String get cahUndo => 'Undo';
+
+  @override
+  String get cahBoundaryChanged => 'Reminder boundary updated';
+
+  @override
+  String get cahLoadFailed => 'Failed to load accountability hub';
+
+  @override
+  String cahDueDate(String value) {
+    return 'Due $value';
+  }
+
+  @override
+  String cahPercent(Object value) {
+    return '$value%';
+  }
+
+  @override
+  String cahPartnerGoal(String name) {
+    return '$name goal';
+  }
+
+  @override
+  String get cahStrategies => 'Strategy suggestions';
+
+  @override
+  String get cahStrategyCreateTitle => 'Create your first commitment';
+
+  @override
+  String get cahStrategyCreateDesc =>
+      'Public commitments boost follow-through and accountability. Set a clear goal to start.';
+
+  @override
+  String get cahStrategyCreateAction => 'Create commitment';
+
+  @override
+  String get cahStrategyPartnerTitle => 'Find an accountability partner';
+
+  @override
+  String get cahStrategyPartnerDesc =>
+      'A partner makes persistence easier with mutual check-ins and encouragement.';
+
+  @override
+  String get cahStrategyPartnerAction => 'Find partners';
+
+  @override
+  String get cahStrategySharedGoalTitle => 'Join a shared goal';
+
+  @override
+  String get cahStrategySharedGoalDesc =>
+      'Pursue a goal with others — collective momentum brings unexpected motivation.';
+
+  @override
+  String get cahStrategySharedGoalAction => 'Browse goals';
+
+  @override
+  String get cahStrategySquadRiskTitle => 'Squad risks need attention';
+
+  @override
+  String get cahStrategySquadRiskDesc =>
+      'Your squad has risks that need attention — addressing them early prevents bigger issues.';
+
+  @override
+  String get cahStrategySquadRiskAction => 'View details';
+
+  @override
+  String get cahEmptyTitle => 'No accountability commitments yet';
+
+  @override
+  String get cahEmptyBody =>
+      'Invite a partner or find people with similar goals from the feed.';
+
+  @override
+  String get cahRetry => 'Retry';
+
+  @override
+  String get cahSuccessCriteria => 'Success criteria';
+
+  @override
+  String get cahMilestones => 'Milestones';
+
+  @override
+  String get cahEvidence => 'Evidence';
+
+  @override
+  String get cahNoEvidence => 'No evidence yet';
+
+  @override
+  String get cahProgress => 'Progress';
+
+  @override
+  String get cahWitnesses => 'Witnesses';
+
+  @override
+  String get cahDueSoon => 'Due soon';
+
+  @override
+  String get cahActive => 'Active';
+
+  @override
+  String get cahCompleted => 'Completed';
+
+  @override
+  String get cahViolated => 'Violated';
+
+  @override
+  String get cahTogetherNotRanking => 'Not a ranking, just moving together';
+
+  @override
+  String get cahTodayDone => 'Synced today';
+
+  @override
+  String get cahTodayWaiting => 'Waiting today';
+
+  @override
+  String get cahFriendsEntry => 'Friends';
+
+  @override
+  String get cahGroupsEntry => 'Groups';
+
+  @override
+  String get cahFindPartners => 'Find partners';
+
+  @override
+  String get cahCreateCommitment => 'Create commitment';
+
+  @override
+  String get communityContentHint =>
+      'Share what\'s on your mind, a learning insight, or today\'s progress...';
+
+  @override
+  String get partnersEmptyTitle => 'Find your study partners';
+
+  @override
+  String get partnersEmptyDesc =>
+      'Pair up with someone pursuing similar goals. Accountability doubles consistency.';
+
+  @override
+  String get partnersEmptyAction => 'Discover partners';
+
+  @override
+  String get partnersMyPartners => 'My Partners';
+
+  @override
+  String get partnersViewAll => 'View all';
+
+  @override
+  String partnersMoreFriends(int count) {
+    return '$count more friends';
+  }
+
+  @override
+  String get partnersEncourage => 'Encourage';
+
+  @override
+  String get partnersNudge => 'Nudge';
+
+  @override
+  String get partnersCheer => 'Cheer';
+
+  @override
+  String get partnersFriendLabel => 'Friend';
+
+  @override
+  String partnersDayStreak(Object count) {
+    return '${count}d streak';
+  }
+
+  @override
+  String get partnersCheckedIn => 'Checked in';
+
+  @override
+  String get partnersNotCheckedIn => 'Not yet today';
+
+  @override
+  String get partnersDoneToday => 'Done today';
+
+  @override
+  String get partnersPending => 'Pending';
+
+  @override
+  String get partnersPartner => 'Partner';
+
+  @override
   String get goalDetailTitle => 'Goal detail';
 
   @override
@@ -32133,12 +32758,25 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String workMemMentioned(Object count) {
+  String workMemMentioned(int count) {
     return 'Mentioned $count times';
   }
 
   @override
   String get workMemDateFormat => 'MMM d, HH:mm';
+
+  @override
+  String get workMemConsolidated => 'Consolidated';
+
+  @override
+  String get workMemStillInForeground => 'Still in foreground';
+
+  @override
+  String get collapsibleSlotLongPressEdit => 'Long press to edit panel';
+
+  @override
+  String get dailyContextDefault =>
+      'Good morning. Start with one small step today—finding your rhythm is enough.';
 
   @override
   String sprintProgressLabel(Object daysLeft, Object name, Object percent) {
@@ -32629,6 +33267,29 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeToolbarLearningForecast => 'Learning Forecast';
+
+  @override
+  String get curiosityExplore => 'Explore the unknown';
+
+  @override
+  String bottleneckAlertMessage(String topic) {
+    return 'I noticed you\'re stuck on $topic. Not your fault—may need path adjustment.';
+  }
+
+  @override
+  String get bottleneckAlertAction => 'Take a look?';
+
+  @override
+  String get compactStatusKeepRhythm => 'Keep your rhythm today';
+
+  @override
+  String get longTermPlan => 'Long-term Plan';
+
+  @override
+  String get intentPredictionSuggested => 'Suggested next step';
+
+  @override
+  String get taskOmniBarHint => 'Type in the OmniBar to create a new task';
 
   @override
   String get homeSprintNoActive => 'No active sprint';

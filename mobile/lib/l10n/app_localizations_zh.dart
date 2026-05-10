@@ -1717,6 +1717,14 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get focusCore => '专注核心';
+
+  @override
+  String focusTasksDone(int count) {
+    return '$count完成';
+  }
+
+  @override
   String focusStatsBestDay(Object time) {
     return '最佳：$time';
   }
@@ -6248,6 +6256,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get seedLibraryUnsubscribe => '取消订阅';
 
   @override
+  String get seedOfficial => '官方';
+
+  @override
+  String get seedLibrarySubtitle => '知识内容仓库';
+
+  @override
+  String seedLibraryStats(String count) {
+    return '$count 个官方库 · 社区精选';
+  }
+
+  @override
   String get seedLibraryContentItems => '内容项';
 
   @override
@@ -7980,10 +7999,40 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get communityDiscardDraft => '放弃编辑？';
+
+  @override
+  String get communityUnsavedContent => '你有未发布的内容，确定放弃吗？';
+
+  @override
   String get communityDiscardGroupCreation => '放弃创建社群？';
 
   @override
   String get communityUnsavedChanges => '你有未保存的更改，确定放弃？';
+
+  @override
+  String get communityPostFailed => '发布失败，请稍后重试';
+
+  @override
+  String get communityNewPost => '发布动态';
+
+  @override
+  String get communityPost => '发布';
+
+  @override
+  String get communityMoodPrompt => '选择心情';
+
+  @override
+  String get communityAttachment => '附图';
+
+  @override
+  String get communityTopicHint => '添加话题标签（可选）';
+
+  @override
+  String get communityPhoto => '图片';
+
+  @override
+  String get communityTopic => '话题';
 
   @override
   String get communityKeepEditing => '继续编辑';
@@ -17145,6 +17194,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get galaxyNodeAddMaterial => '将资料添加到这个节点';
 
   @override
+  String galaxyNodeReviewPrompt(Object label) {
+    return '带我复习「$label」。请先基于这个知识节点定位我最该补的薄弱点，再给我一组短练习。';
+  }
+
+  @override
   String get galaxyNodeGeneratePlan => '生成学习计划';
 
   @override
@@ -19396,6 +19450,29 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskBoardNoTasksToday => '今日无任务';
 
   @override
+  String get taskBoardBrowseByDateDesc => '任务按到期日期分组显示';
+
+  @override
+  String get taskBoardOverdueTasksDesc => '红色高亮显示已逾期的任务';
+
+  @override
+  String get taskBoardPriorityOrderDesc => '高优先级任务显示在前面';
+
+  @override
+  String get taskBoardCustomPriorityDesc => '在任务编辑中调整优先级';
+
+  @override
+  String get taskBoardSprintFocusDesc => '只显示当前冲刺的任务';
+
+  @override
+  String get taskBoardSprintTimingDesc => '关注剩余天数和进度';
+
+  @override
+  String taskBoardTodaySummary(Object completed, Object total) {
+    return '今日$total项·已完成$completed';
+  }
+
+  @override
   String get taskBoardTitle => '任务看板';
 
   @override
@@ -20002,11 +20079,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get taskBoardTodayNoTasks => '今日无任务';
-
-  @override
-  String taskBoardTodaySummary(Object completed, Object total) {
-    return '今日$total项·已完成$completed';
-  }
 
   @override
   String get unnamedTask => '未命名任务';
@@ -27157,6 +27229,284 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get blockedUsersTitle => '黑名单用户';
+
+  @override
+  String get blockedNoBlockedUsers => '暂无拉黑用户';
+
+  @override
+  String blockedReason(Object reason) {
+    return '原因: $reason';
+  }
+
+  @override
+  String get blockedUnblock => '解除拉黑';
+
+  @override
+  String get blockedUnblockConfirmTitle => '解除拉黑';
+
+  @override
+  String blockedUnblockConfirmBody(String name) {
+    return '确定要解除对 $name 的拉黑吗？\n\n解除后对方可以重新发送好友请求和消息给您。';
+  }
+
+  @override
+  String get blockedCancel => '取消';
+
+  @override
+  String get blockedConfirm => '确定';
+
+  @override
+  String blockedUnblockedSuccess(String name) {
+    return '已解除对 $name 的拉黑';
+  }
+
+  @override
+  String blockedOperationFailed(String error) {
+    return '操作失败: $error';
+  }
+
+  @override
+  String get groupSearchMembers => '搜索成员...';
+
+  @override
+  String get groupNoMembersYet => '暂无成员';
+
+  @override
+  String get groupNoMembersFound => '未找到成员';
+
+  @override
+  String get groupOwner => '群主';
+
+  @override
+  String get groupAdmin => '管理员';
+
+  @override
+  String get groupMember => '成员';
+
+  @override
+  String get groupDemoteToMember => '降为普通成员';
+
+  @override
+  String get groupPromoteToAdmin => '晋升为管理员';
+
+  @override
+  String get groupTransferOwnership => '转让群主';
+
+  @override
+  String groupOwnerCount(int count) {
+    return '群主 ($count)';
+  }
+
+  @override
+  String groupAdminCount(int count) {
+    return '管理员 ($count)';
+  }
+
+  @override
+  String groupMemberCount(int count) {
+    return '成员 ($count)';
+  }
+
+  @override
+  String get userTimeEstimation => '时间预估';
+
+  @override
+  String userTimeEstimationBias(String hours) {
+    return '你过去 10 次对完成时间估得偏乐观 $hours 小时。';
+  }
+
+  @override
+  String get userTrendStabilizing => '最近几周正在变稳。';
+
+  @override
+  String get userWorkingMemorySnapshot => '工作记忆快照';
+
+  @override
+  String get userRecentForegroundItems => '英语长难句拆解还卡在倒装句，下一次练习先回看第 3 题。';
+
+  @override
+  String get userWeeklyGoal => '这周要把概率论错题本整理成 2 页复盘卡片。';
+
+  @override
+  String get userWeeklyStreakAchievement => '七日连学';
+
+  @override
+  String get userDeepWorkAchievement => '深度专注 10 次';
+
+  @override
+  String get userChunkingSkill => '分块推进';
+
+  @override
+  String get userReplanSkill => '轻量重排';
+
+  @override
+  String get userForesightToday => '你今天后半段更容易被切碎，先把最难的一题压到午前完成。';
+
+  @override
+  String get userIdiographicDisclaimer => '这只是你数据中的模式，不代表因果关系。';
+
+  @override
+  String get userCapacityHealthy => '当前容量健康，可继续观察 AI 高峰时段的首包时延。';
+
+  @override
+  String get userPrometheusWarning => '规则回退正在抬头，请检查 free/free_fast 健康度';
+
+  @override
+  String get userOnboardingPreviewEmpty =>
+      '先告诉我你现在最想推进的学习目标，我会立刻帮你判断难度并给出第一版起步建议。';
+
+  @override
+  String userOnboardingPreviewGoal(String goal) {
+    return '我已经理解你想先推进「$goal」。接下来我会先补齐画像，再给你第一版学习路径和任务建议。';
+  }
+
+  @override
+  String get userFastMode => '敏捷';
+
+  @override
+  String get userBalancedMode => '均衡';
+
+  @override
+  String get userDeepMode => '深思';
+
+  @override
+  String get authGuestLoginFailed => '访客登录失败';
+
+  @override
+  String get taskSnoozeMessage => '已推迟到明天，今天先把节奏放轻一点。';
+
+  @override
+  String taskTooHardMessage(String title) {
+    return '我把它拆成 3 小步了，先做「$title」。';
+  }
+
+  @override
+  String get taskSkipMessage => '已跳过，这张卡不会再挤在今天了。';
+
+  @override
+  String get taskTooHardStep1 => '先找出最卡的一点';
+
+  @override
+  String get taskTooHardStep2 => '把这个卡点讲成一句人话';
+
+  @override
+  String get taskTooHardStep3 => '做一个最小验证动作';
+
+  @override
+  String get taskTooHardGuidance1 => '只定位卡点，不解决整张任务卡。';
+
+  @override
+  String get taskTooHardGuidance2 => '先讲清楚，再决定下一步。';
+
+  @override
+  String get taskTooHardGuidance3 => '只验证刚拆出来的这一步。';
+
+  @override
+  String get taskDiagnosisStuck => '你现在最像卡在哪一步？';
+
+  @override
+  String get taskDiagnosisFix => '先只做一个 5 分钟内能完成的小动作。';
+
+  @override
+  String get taskDiagnosisCheck => '下一步你能先写下哪一句？';
+
+  @override
+  String get taskDiagnosisMessage => 'Aurora 已根据当前任务状态给出诊断。';
+
+  @override
+  String get taskNextActionQuickReview => '快速回顾';
+
+  @override
+  String get taskNextActionReview => '回顾刚才的核心要点';
+
+  @override
+  String get taskNextActionExpand => '拓展: 相关概念';
+
+  @override
+  String get taskNextActionExplore => '了解相关知识点';
+
+  @override
+  String get taskNextActionReason1 => '及时回顾对抗遗忘';
+
+  @override
+  String get taskNextActionReason2 => '加深理解';
+
+  @override
+  String get taskPreferencesUpdatedDemo => '偏好已更新（演示模式）';
+
+  @override
+  String get taskWebResearchBrief => '网页调研简报';
+
+  @override
+  String get taskWebResearchDesc => '适合搜索与总结';
+
+  @override
+  String get taskWebResearchReason => 'keyword:搜索';
+
+  @override
+  String get taskPlanningOptimismBias => '检测到规划乐观偏差';
+
+  @override
+  String taskPlanningOptimismSuggestion(int minutes) {
+    return '根据您的历史行为模式，建议将预估时间调整为 $minutes 分钟';
+  }
+
+  @override
+  String get taskAiGuideTitle => 'AI 执行指南';
+
+  @override
+  String get taskAiGuideStep1 => '准备阶段';
+
+  @override
+  String get taskAiGuideStep2 => '执行阶段';
+
+  @override
+  String get taskAiGuideStep3 => '复习阶段';
+
+  @override
+  String get taskFindBlock => '先找出最卡的一点';
+
+  @override
+  String get taskFindBlockGuidance => '只定位卡点，不解决整张任务卡。';
+
+  @override
+  String get taskDescribeBlock => '把这个卡点讲成一句人话';
+
+  @override
+  String get taskDescribeBlockGuidance => '先讲清楚，再决定下一步。';
+
+  @override
+  String get taskVerifyBlock => '做一个最小验证动作';
+
+  @override
+  String get taskVerifyBlockGuidance => '只验证刚拆出来的这一步。';
+
+  @override
+  String get taskDemoGuideTitle => '任务目标';
+
+  @override
+  String get taskDemoGuidePreparation => '准备清单';
+
+  @override
+  String get taskDemoGuideSteps => '执行步骤';
+
+  @override
+  String get taskDemoGuideStep1 => '理解与拆解';
+
+  @override
+  String get taskDemoGuideStep2 => '核心执行';
+
+  @override
+  String get taskDemoGuideStep3 => '检查与总结';
+
+  @override
+  String get taskDemoGuideTips => '注意事项';
+
+  @override
+  String get taskDemoGuideCriteria => '完成标准';
+
+  @override
   String communityUploadedOn(Object date) {
     return '$date 上传';
   }
@@ -28886,6 +29236,60 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String gmPromoteConfirm(Object name) {
+    return '晋升 $name？';
+  }
+
+  @override
+  String get gmPromoteConfirmMsg => '此成员将成为管理员，可以管理群组。';
+
+  @override
+  String gmPromoted(String name) {
+    return '$name 已晋升为管理员';
+  }
+
+  @override
+  String gmPromoteFailed(String error) {
+    return '晋升失败：$error';
+  }
+
+  @override
+  String gmDemoteConfirm(Object name) {
+    return '降权 $name？';
+  }
+
+  @override
+  String get gmDemoteConfirmMsg => '此管理员将成为普通成员。';
+
+  @override
+  String gmDemoted(String name) {
+    return '$name 已降为普通成员';
+  }
+
+  @override
+  String gmDemoteFailed(String error) {
+    return '降权失败：$error';
+  }
+
+  @override
+  String gmTransferConfirm(String name) {
+    return '将群主转让给 $name？';
+  }
+
+  @override
+  String get gmTransferConfirmMsg => '你将成为普通成员。此操作无法撤销。';
+
+  @override
+  String gmTransferSucceeded(String name) {
+    return '群主已转让给 $name';
+  }
+
+  @override
+  String gmTransferFailed(String error) {
+    return '转让失败：$error';
+  }
+
+  @override
   String gmActionFailed(String error) {
     return '操作失败: $error';
   }
@@ -30059,6 +30463,196 @@ class AppLocalizationsZh extends AppLocalizations {
   String get cahTooFrequentReminder => '太频繁';
 
   @override
+  String get cahReminderAccepted => '已开启提醒';
+
+  @override
+  String get cahReminderDeclined => '已拒绝本次提醒';
+
+  @override
+  String get cahReminderLater => '稍后再提醒';
+
+  @override
+  String get cahReminderReduced => '已降低提醒频率';
+
+  @override
+  String get cahUndo => '撤销';
+
+  @override
+  String get cahBoundaryChanged => '提醒边界已更新';
+
+  @override
+  String get cahLoadFailed => '责任伙伴空间加载失败';
+
+  @override
+  String cahDueDate(String value) {
+    return '截止 $value';
+  }
+
+  @override
+  String cahPercent(Object value) {
+    return '$value%';
+  }
+
+  @override
+  String cahPartnerGoal(String name) {
+    return '$name 的目标';
+  }
+
+  @override
+  String get cahStrategies => '社区策略推荐';
+
+  @override
+  String get cahStrategyCreateTitle => '创建你的第一个承诺';
+
+  @override
+  String get cahStrategyCreateDesc => '公开承诺能有效提升执行力和责任感。设定一个明确的目标开始吧。';
+
+  @override
+  String get cahStrategyCreateAction => '创建承诺';
+
+  @override
+  String get cahStrategyPartnerTitle => '寻找责任伙伴';
+
+  @override
+  String get cahStrategyPartnerDesc => '有一位伙伴同行能让坚持变得更容易，互相监督和鼓励。';
+
+  @override
+  String get cahStrategyPartnerAction => '寻找伙伴';
+
+  @override
+  String get cahStrategySharedGoalTitle => '加入共同目标';
+
+  @override
+  String get cahStrategySharedGoalDesc => '和一群人追求相同目标，集体的力量会带来意想不到的动力。';
+
+  @override
+  String get cahStrategySharedGoalAction => '浏览目标';
+
+  @override
+  String get cahStrategySquadRiskTitle => '关注团队风险';
+
+  @override
+  String get cahStrategySquadRiskDesc => '你的团队中有需要关注的风险项，及时处理可以避免更大的问题。';
+
+  @override
+  String get cahStrategySquadRiskAction => '查看详情';
+
+  @override
+  String get cahEmptyTitle => '还没有责任承诺';
+
+  @override
+  String get cahEmptyBody => '先邀请一位伙伴，或从 Feed 里找到同目标的人一起前进。';
+
+  @override
+  String get cahRetry => '重试';
+
+  @override
+  String get cahSuccessCriteria => '成功标准';
+
+  @override
+  String get cahMilestones => '里程碑';
+
+  @override
+  String get cahEvidence => '证据链';
+
+  @override
+  String get cahNoEvidence => '还没有证据';
+
+  @override
+  String get cahProgress => '进度';
+
+  @override
+  String get cahWitnesses => '见证人';
+
+  @override
+  String get cahDueSoon => '即将到期';
+
+  @override
+  String get cahActive => '进行中';
+
+  @override
+  String get cahCompleted => '已完成';
+
+  @override
+  String get cahViolated => '已违反';
+
+  @override
+  String get cahTogetherNotRanking => '不是排名，是一起往前走';
+
+  @override
+  String get cahTodayDone => '今日已同步';
+
+  @override
+  String get cahTodayWaiting => '今日待同步';
+
+  @override
+  String get cahFriendsEntry => '好友';
+
+  @override
+  String get cahGroupsEntry => '小组';
+
+  @override
+  String get cahFindPartners => '寻找伙伴';
+
+  @override
+  String get cahCreateCommitment => '创建承诺';
+
+  @override
+  String get communityContentHint => '分享你此刻的想法、学习心得、或今天的进步...';
+
+  @override
+  String get partnersEmptyTitle => '找到你的学习伙伴';
+
+  @override
+  String get partnersEmptyDesc => '和一个目标相近的伙伴结对，互相监督，坚持率翻倍。';
+
+  @override
+  String get partnersEmptyAction => '发现伙伴';
+
+  @override
+  String get partnersMyPartners => '我的伙伴';
+
+  @override
+  String get partnersViewAll => '查看全部';
+
+  @override
+  String partnersMoreFriends(int count) {
+    return '还有 $count 位好友';
+  }
+
+  @override
+  String get partnersEncourage => '鼓励';
+
+  @override
+  String get partnersNudge => '提醒';
+
+  @override
+  String get partnersCheer => '加油';
+
+  @override
+  String get partnersFriendLabel => '好友';
+
+  @override
+  String partnersDayStreak(Object count) {
+    return '$count 天连续';
+  }
+
+  @override
+  String get partnersCheckedIn => '今日已打卡';
+
+  @override
+  String get partnersNotCheckedIn => '今日未打卡';
+
+  @override
+  String get partnersDoneToday => '今日完成';
+
+  @override
+  String get partnersPending => '今日未完成';
+
+  @override
+  String get partnersPartner => '伙伴';
+
+  @override
   String get goalDetailTitle => '目标详情';
 
   @override
@@ -30822,12 +31416,24 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String workMemMentioned(Object count) {
+  String workMemMentioned(int count) {
     return '提及 $count 次';
   }
 
   @override
   String get workMemDateFormat => 'M月d日 HH:mm';
+
+  @override
+  String get workMemConsolidated => '已巩固';
+
+  @override
+  String get workMemStillInForeground => '仍在前台';
+
+  @override
+  String get collapsibleSlotLongPressEdit => '长按编辑面板';
+
+  @override
+  String get dailyContextDefault => '早上好，今天先从一小步开始，把节奏找回来就很好。';
 
   @override
   String sprintProgressLabel(Object daysLeft, Object name, Object percent) {
@@ -31284,6 +31890,29 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get homeToolbarLearningForecast => '学习预测';
+
+  @override
+  String get curiosityExplore => '探索未知';
+
+  @override
+  String bottleneckAlertMessage(String topic) {
+    return '我注意到你在$topic上有点卡，不是你的问题，可能是路径需要调整';
+  }
+
+  @override
+  String get bottleneckAlertAction => '看看?';
+
+  @override
+  String get compactStatusKeepRhythm => '今天适合保持节奏';
+
+  @override
+  String get longTermPlan => '长期计划';
+
+  @override
+  String get intentPredictionSuggested => '建议下一步';
+
+  @override
+  String get taskOmniBarHint => '在 OmniBar 中输入创建新任务';
 
   @override
   String get homeSprintNoActive => '暂无活跃冲刺';

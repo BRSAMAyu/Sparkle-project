@@ -8332,6 +8332,15 @@
   "statisticsChartMonth10": "Oct",
   "statisticsChartMonth11": "Nov",
   "statisticsChartMonth12": "Dec",
+  "statisticsNoDataYet": "No statistics data yet",
+  "statisticsLoadingFailed": "Failed to load: {error}",
+  "@statisticsLoadingFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "statisticsRetry": "Retry",
+  "statisticsVsLast": "vs last",
   "statisticsExportImageReport": "Image Report",
   "statisticsExportPDFReport": "PDF Report",
   "interventionStartNow": "Start Now",
