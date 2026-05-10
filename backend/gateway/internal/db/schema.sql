@@ -3290,7 +3290,7 @@ CREATE TABLE knowledge_nodes (
     sector_classification_status character varying(20) DEFAULT 'pending'::character varying NOT NULL,
     sector_classification_model character varying(100),
     sector_classified_at timestamp without time zone,
-    community_signal json,
+    community_signal jsonb,
     exam_weight double precision DEFAULT '0'::double precision NOT NULL,
     difficulty double precision DEFAULT '0.5'::double precision NOT NULL,
     trainability double precision DEFAULT '0.5'::double precision NOT NULL,

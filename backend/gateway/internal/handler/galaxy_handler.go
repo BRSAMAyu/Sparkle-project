@@ -437,7 +437,9 @@ func (h *GalaxyHandler) SearchNodesGPRC(c *gin.Context) {
 		rawBody, _ := io.ReadAll(c.Request.Body)
 		c.Request.Body = io.NopCloser(bytes.NewReader(rawBody))
 		if len(rawBody) > 0 {
-			json.Unmarshal(rawBody, &body)
+			if err := json.Unmarshal(rawBody, &body); err != nil {
+					log.Printf("SearchNodes JSON unmarshal fallback failed: %v", err)
+				}
 			query = body.Query
 		}
 	}
