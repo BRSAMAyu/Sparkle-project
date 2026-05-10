@@ -224,6 +224,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       return;
     }
     debugPrint('[Chat] cancelActiveRun: $reason');
+    _streamDebouncer.cancel();
     _invalidateActiveStreamState();
   }
 
@@ -231,6 +232,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
   void dispose() {
     _streamDebouncer.cancel();
     _chatRepository.dispose();
+    _planReviewService?.close();
+    _reviewService?.close();
     _isDisposed = true;
     unawaited(_historyLoadOperation?.cancel());
     _historyLoadOperation = null;

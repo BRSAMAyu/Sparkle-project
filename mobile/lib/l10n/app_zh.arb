@@ -2098,6 +2098,7 @@
   "chatMetadataCollaboration": "协作",
   "chatLoginRequired": "请先登录",
   "chatReviewRegenerationRequested": "已请求重新生成",
+  "chatReviewRegenerationFailed": "重新生成失败，请重试",
   "chatReviewHumanReviewRequested": "已提交人工审查请求",
   "chatReviewOverrideAcceptedEvenFail": "已接受内容（尽管未通过审查）",
   "chatReviewOverrideRejectedEvenPass": "已拒绝内容（尽管审查通过）",
@@ -2570,6 +2571,38 @@
   "seedLibraryContentItems": "内容项",
   "seedLibraryNoContent": "暂无内容",
   "seedLibraryContent": "内容",
+  "seedMarketplaceTitle": "技能市场",
+  "seedMarketplaceSkills": "技能",
+  "seedMarketplacePacks": "技能包",
+  "seedMarketplaceNoSkills": "暂无上线技能",
+  "seedMarketplaceNoPacks": "暂无上线技能包",
+  "seedMarketplaceAdoptSkill": "采纳技能",
+  "seedMarketplaceSkillAdopted": "已采纳 {name}",
+  "@seedMarketplaceSkillAdopted": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "seedMarketplaceAdoptPack": "采纳技能包",
+  "seedMarketplacePackAdopted": "已采纳 {name}",
+  "@seedMarketplacePackAdopted": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "seedMarketplaceQuality": "质量 {score}",
+  "@seedMarketplaceQuality": {
+    "placeholders": {
+      "score": {
+        "type": "String"
+      }
+    }
+  },
+  "seedMarketplaceCancel": "取消",
   "seedLibrarySubscribers": "订阅者",
   "seedLibraryUsage": "使用",
   "seedLibraryQualityScore": "质量分",
@@ -9761,6 +9794,46 @@
   "toolsBreathStart": "开始练习",
   "toolsBreathStop": "停止练习",
   "toolsBreathReset": "重置",
+  "toolsBreathReady": "准备",
+  "toolsBreathPracticeComplete": "练习完成",
+  "toolsBreathPausedRounds": "已暂停 · {completed} / {total} 轮",
+  "@toolsBreathPausedRounds": {
+    "placeholders": {
+      "completed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "toolsBreathRoundsProgress": "{completed} / {total} 轮",
+  "@toolsBreathRoundsProgress": {
+    "placeholders": {
+      "completed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "toolsBreathDurationLabel": "{duration} 分钟",
+  "@toolsBreathDurationLabel": {
+    "placeholders": {
+      "duration": {
+        "type": "int"
+      }
+    }
+  },
+  "toolsBreathStageDescPaused": "练习已暂停，恢复后会从当前阶段继续，并继续语音提示。",
+  "toolsBreathStageDescActive": "跟着中央指令吸气、停留和呼气。",
+  "toolsBreathCaptionRhythm": "吸 / 停 / 呼 / 停",
+  "toolsBreathCaptionAutoEstimate": "按当前时长自动估算",
+  "toolsBreathConfigPaused": "练习已暂停，恢复后会从当前阶段继续。",
+  "toolsBreathConfigActive": "练习进行中，配置会在本轮结束后可调整。",
+  "toolsBreathConfigIdle": "先选模式，再选练习时长。",
+  "toolsBreathNotificationBody": "本轮呼吸练习已经结束，回来感受一下身体状态。",
   "toolsCalcTitle": "计算器",
   "toolsCalcSubtitle": "适合任务执行中的快算、表达式验算和连贯多步推导，结果会保留最近记录。",
   "toolsCalcNoHistory": "无历史",
@@ -9958,6 +10031,43 @@
   "toolsVocabRemoveFromWordbook": "移出生词本",
   "toolsVocabAddToWordbookAction": "加入生词本",
   "toolsVocabGenerateExample": "生成例句",
+  "toolsVocabOfflinePackagesTitle": "离线词典包",
+  "toolsVocabOfflinePackagesDesc": "优先使用本地 Oxford 词典，减少网络依赖，也能减轻云端服务器压力。",
+  "toolsVocabInstalledBadge": "已安装",
+  "toolsVocabDefaultPackageDesc": "Oxford 优先离线词典包",
+  "toolsVocabInstalledAtPrefix": "安装于",
+  "toolsVocabRedownload": "重新下载",
+  "toolsVocabDownloadLocally": "下载到本地",
+  "toolsVocabWaitingAssociations": "等待关联词",
+  "toolsVocabAssocCount": "{count} 个关联词",
+  "@toolsVocabAssocCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "toolsVocabOfflineDictCount": "{count} 个离线词典包",
+  "@toolsVocabOfflineDictCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "toolsVocabNoOfflineDict": "未下载离线词典",
+  "toolsVocabPartOfSpeech": "词性 · {pos}",
+  "@toolsVocabPartOfSpeech": {
+    "placeholders": {
+      "pos": {
+        "type": "String"
+      }
+    }
+  },
+  "toolsVocabDefinitionsLabel": "释义",
+  "toolsVocabDictExamplesLabel": "词典例句",
+  "toolsVocabModelExampleLabel": "模型生成例句",
+  "toolsVocabRelatedWordsLabel": "关联词汇",
   "toolsStatsTitle": "专注统计",
   "toolsStatsSubtitle": "把计时和专注行为沉淀成结构化洞察，方便你判断节奏是否稳定、是否需要调整工作块长度。",
   "toolsStatsStreak": "{days} 天连续专注",
@@ -10596,6 +10706,24 @@
   "insContinueSim": "继续上次推演",
   "insContinueLearnSim": "继续上次学习仿真",
   "insHasContinue": "已有可继续内容",
+  "insCreateTask": "去创建学习任务",
+  "insDecisionLogTitle": "AI 决策日志",
+  "insDecisionLogSubtitle": "查看最近的提醒、跳过、降级和重规划依据",
+  "insDecisionLogStatus": "Causal Control OS 审计",
+  "insDecisionLogOpen": "查看日志",
+  "insContinueView": "继续查看",
+  "insStartFromRecommended": "从推荐开始",
+  "insStartSimulation": "开始模拟",
+  "insTheaterFallback": "把一个目标拆成多条学习路径",
+  "insSimFallback": "把一个知识点拉进多角色现场讨论",
+  "insFocusedSim": "已聚焦：学习仿真",
+  "insFocusedTheater": "已聚焦：推演剧场",
+  "insFocusedReport": "已聚焦：学习报告",
+  "insFocusedDefault": "仿真、推演、报告统一收在这里",
+  "insFlowTitle": "把学习里的"看见问题、模拟讨论、沉淀结论"放到同一条动线里。",
+  "insFlowSubtitle": "这里只保留你下一步真正需要的入口，不再堆叠多余说明。",
+  "insSwipeHint": "首页已经把学习洞察放进可定制卡牌区。默认先看日历，左滑就是洞察，右滑是工具快捷。",
+  "insRecommended": "推荐先看",
   "insNoPrereq": "无需前置知识，可以直接开始学习！",
   "insGenerating": "正在生成...",
   "insQuickPath": "快速生成任务路径",
@@ -12938,6 +13066,27 @@
       }
     }
   },
+  "calNoTimeSet": "未安排时间",
+  "calHeatView": "热力",
+  "calNoHeatData": "暂无热力数据",
+  "calStreakDetail": "保持你的成就节奏",
+  "calActiveDaysDetail": "本月有行动的日期",
+  "calCompletedTasksDetail": "本月完成的任务数",
+  "calFocusDurationDetail": "本月累计专注",
+  "calLearningHeatmap": "学习热力",
+  "calHeatmapDesc": "用热力看连续性、完成度和学习投入，而不是重复浏览日程表。",
+  "calHeatLow": "低",
+  "calHeatHigh": "高",
+  "calMonthlyHighlights": "月度亮点",
+  "calNotAvailable": "暂无",
+  "calNoActivePlan": "本月暂无活跃计划",
+  "calGreatStreak": "连续状态很好，适合冲刺里程碑",
+  "calBuildConsistency": "先把连续性拉起来，会更容易触发成就闭环",
+  "calNoScheduleDay": "这一天还没有安排任务或日程",
+  "calEventUpdated": "日程已更新",
+  "calEventCreated": "日程已创建",
+  "calSavedLocally": "已保存到本地，稍后会自动同步到云端。",
+  "calEditEvent": "编辑日程",
   "picEstimatedHours": "预计学习时长: {hours} 小时",
   "@picEstimatedHours": {
     "placeholders": {
@@ -14015,6 +14164,193 @@
   "homeNextActionTypeReflection": "复盘",
   "homeNextActionTypeSocial": "社群",
   "homeNextActionTypePlanning": "计划",
+  "homeAuroraDialogTitle": "你想告诉 Sparkle 什么？",
+  "homeAuroraDialogHint": "哪里判断错了？说说你的想法…",
+  "homeAuroraDialogCancel": "取消",
+  "homeAuroraDialogSend": "发送",
+  "homeQuickCreate": "快速创建",
+  "homeOnboardingSummary": "我是你的AI成长伙伴。设定目标，我来帮你一步步达成。",
+  "homeOnboardingSetGoal": "设定目标",
+  "homeOnboardingSetGoalSubtitle": "告诉我你想达成什么，我来帮你制定计划",
+  "homeOnboardingChatSparkle": "跟Sparkle聊聊",
+  "homeOnboardingChatSubtitle": "聊聊你的想法，获得个性化建议",
+  "homeOnboardingExploreGalaxy": "探索知识星图",
+  "homeOnboardingExploreSubtitle": "发现你的知识结构，找到提升方向",
+  "homeSlotDailyBriefing": "今日简报",
+  "homeSlotDailyBriefingReady": "今天 {count} 件待办 · 已就绪",
+  "@homeSlotDailyBriefingReady": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeSlotDailyBriefingFallback": "当天的状态与节奏",
+  "homeSlotKeyMetrics": "关键指标",
+  "homeSlotKeyMetricsStreak": "🔥 连续 {streak} 天",
+  "@homeSlotKeyMetricsStreak": {
+    "placeholders": {
+      "streak": {
+        "type": "int"
+      }
+    }
+  },
+  "homeSlotKeyMetricsFallback": "进度、连续天数、动力",
+  "homeSlotCommandCenter": "指挥中心",
+  "homeSlotCommandCenterNext": "下一步：{label}",
+  "@homeSlotCommandCenterNext": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "homeSlotCommandCenterFallback": "下一步行动入口",
+  "homeSlotUnderstanding": "理解面板",
+  "homeSlotUnderstandingSummary": "Sparkle 对你的认知拆解",
+  "homeSlotReturnCaseFile": "回归档案",
+  "homeSlotReturnCaseFileSummary": "上次离开时的现场",
+  "homeSlotGoalSnapshot": "目标详情",
+  "homeSlotGoalSnapshotFallback": "当前目标的近况",
+  "homeSlotMultiGoalBoard": "多目标看板",
+  "homeSlotMultiGoalDone": "{done}/{total} 件已完成",
+  "@homeSlotMultiGoalDone": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "homeSlotMultiGoalFallback": "所有目标的总览",
+  "homeSlotTaskBoard": "任务面板",
+  "homeSlotTaskBoardProgress": "完成 {done}/{total}",
+  "@homeSlotTaskBoardProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "homeSlotTaskBoardGoalHit": "完成 {done}/{total} · 今日达标",
+  "@homeSlotTaskBoardGoalHit": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "homeSlotTaskBoardToGo": "完成 {done}/{total} · 再 {remaining} 件冲刺",
+  "@homeSlotTaskBoardToGo": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "remaining": {
+        "type": "int"
+      }
+    }
+  },
+  "homeSlotTaskBoardFallback": "今日待办与进度",
+  "homeSlotExamSprint": "考试冲刺",
+  "homeSlotExamSprintDaysLeft": "{subject} · {days} 天后",
+  "@homeSlotExamSprintDaysLeft": {
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      },
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "homeSlotExamSprintNotStarted": "尚未启动 · 点开创建",
+  "homeSlotExamSprintEmptyTitle": "考试冲刺",
+  "homeSlotExamSprintEmptyBody": "还没有进行中的冲刺。设置一个目标，看到每日节奏与剩余天数。",
+  "homeSlotExamSprintEmptyAction": "创建冲刺",
+  "homeSlotUpdates": "动态",
+  "homeSlotUpdatesSummary": "通知、洞察、提醒",
+  "homeSlotGrowthQuality": "成长质量",
+  "homeSlotGrowthQualitySummary": "深度、稳定性、平衡",
+  "homeSlotWeeklyNarrative": "本周叙事",
+  "homeSlotWeeklyNarrativeSummary": "一周变化的故事线",
+  "homeSlotCommunity": "同行社群",
+  "homeSlotCommunitySummary": "伙伴动态与监督",
+  "homeSlotAchievements": "成就进度",
+  "homeSlotAchievementsSummary": "近期解锁与里程碑",
+  "homeSlotLearningHeatmap": "学习热力图",
+  "homeSlotLearningHeatmapSummary": "过去30天的活跃度",
+  "homeSlotWorkspaceCards": "工作区卡片",
+  "homeSlotWorkspaceCardsVisible": "{count} 张已显示",
+  "@homeSlotWorkspaceCardsVisible": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeSlotWorkspaceCardsNone": "尚未启用任何卡片",
+  "homeEmptyDashboardTitle": "驾驶舱已经清空",
+  "homeEmptyDashboardBody": "点开下方"自定义"重新选择想要常驻的模块。",
+  "homeCustomizeDashboard": "自定义驾驶舱",
+  "homeFailureAuthTitle": "需要重新登录",
+  "homeFailureServerTitle": "服务暂时不稳",
+  "homeFailureValidationTitle": "需要调整请求",
+  "homeFailureNetworkTitle": "网络不稳定",
+  "homeFailureOfflineTitle": "离线了",
+  "homeFailureUnknownTitle": "首页暂时加载失败",
+  "homeFailureAuthAction": "去登录",
+  "homeFailureOfflineAction": "连网后重试",
+  "homeCommandCenterEyebrow": "现在的指挥台",
+  "homeCommandCenterNoTasks": "今天未排任务",
+  "homeCommandCenterHealth": "健康度 {percent}%",
+  "@homeCommandCenterHealth": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "homeHighPriority": "高优先级",
+  "homeCompletingUpdatesProgress": "完成后会更新计划进度",
+  "homeNoUrgentAction": "今天没有更急的动作。可以复盘、补资料，或让 Aurora 重新排一下。",
+  "homeSparkleWillTurn": "Sparkle 会把目标拆成下一步、进度和风险提醒。",
+  "homeRiskBottleneck": "风险：{topic} 正在卡住进度",
+  "@homeRiskBottleneck": {
+    "placeholders": {
+      "topic": {
+        "type": "String"
+      }
+    }
+  },
+  "homeRiskDeadline": "风险：{label}",
+  "@homeRiskDeadline": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "homeRiskLowHealth": "风险：计划健康度偏低，需要重新校准",
+  "homeSelectGoal": "选择目标: {label}",
+  "@homeSelectGoal": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
   "goalIntentTitle": "告诉我你想达成什么",
   "goalIntentHint": "一句话就好，比如「7天后计网考试基本没学想先别挂」",
   "goalIntentTypeHere": "在这里输入",

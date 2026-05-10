@@ -2098,6 +2098,7 @@
   "chatMetadataCollaboration": "Collaboration",
   "chatLoginRequired": "Please log in first",
   "chatReviewRegenerationRequested": "Regeneration requested",
+  "chatReviewRegenerationFailed": "Regeneration failed, please try again",
   "chatReviewHumanReviewRequested": "Manual review requested",
   "chatReviewOverrideAcceptedEvenFail": "Accepted content (despite failing review)",
   "chatReviewOverrideRejectedEvenPass": "Rejected content (despite passing review)",
@@ -2563,6 +2564,38 @@
   "seedLibraryContentItems": "Content Items",
   "seedLibraryNoContent": "No content yet",
   "seedLibraryContent": "Content",
+  "seedMarketplaceTitle": "Skill Marketplace",
+  "seedMarketplaceSkills": "Skills",
+  "seedMarketplacePacks": "Packs",
+  "seedMarketplaceNoSkills": "No active marketplace skills yet.",
+  "seedMarketplaceNoPacks": "No active domain packs yet.",
+  "seedMarketplaceAdoptSkill": "Adopt skill",
+  "seedMarketplaceSkillAdopted": "{name} adopted",
+  "@seedMarketplaceSkillAdopted": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "seedMarketplaceAdoptPack": "Adopt pack",
+  "seedMarketplacePackAdopted": "{name} adopted",
+  "@seedMarketplacePackAdopted": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "seedMarketplaceQuality": "Quality {score}",
+  "@seedMarketplaceQuality": {
+    "placeholders": {
+      "score": {
+        "type": "String"
+      }
+    }
+  },
+  "seedMarketplaceCancel": "Cancel",
   "seedLibrarySubscribers": "Subscribers",
   "seedLibraryUsage": "Usage",
   "seedLibraryQualityScore": "Quality Score",
@@ -11286,6 +11319,24 @@
   "insContinueSim": "Continue Simulation",
   "insContinueLearnSim": "Continue Learning Simulation",
   "insHasContinue": "Content available to continue",
+  "insCreateTask": "Create Learning Task",
+  "insDecisionLogTitle": "AI Decision Log",
+  "insDecisionLogSubtitle": "Review recent notify, skip, downgrade, and replan decisions",
+  "insDecisionLogStatus": "Causal Control OS Audit",
+  "insDecisionLogOpen": "Open Log",
+  "insContinueView": "Continue",
+  "insStartFromRecommended": "Start from Recommended",
+  "insStartSimulation": "Start Simulation",
+  "insTheaterFallback": "Break a goal into multiple learning paths",
+  "insSimFallback": "Bring a knowledge point into multi-role live discussion",
+  "insFocusedSim": "Focused: Learning Simulation",
+  "insFocusedTheater": "Focused: Scenario Theater",
+  "insFocusedReport": "Focused: Learning Report",
+  "insFocusedDefault": "Simulation, theater & reports in one place",
+  "insFlowTitle": "Connect \"spot problems, simulate discussions, draw conclusions\" into one flow.",
+  "insFlowSubtitle": "Only the entries you actually need next — no clutter.",
+  "insSwipeHint": "Learning Insights is in the customizable card area on the home screen. Default: calendar, swipe left for insights, right for tools.",
+  "insRecommended": "Recommended",
   "insNoPrereq": "No prerequisites needed — dive right in!",
   "insGenerating": "Generating...",
   "insQuickPath": "Quick Task Path",
@@ -14092,6 +14143,193 @@
   "homeNextActionTypeReflection": "Reflection",
   "homeNextActionTypeSocial": "Community",
   "homeNextActionTypePlanning": "Planning",
+  "homeAuroraDialogTitle": "What would you like to tell Sparkle?",
+  "homeAuroraDialogHint": "What did Aurora get wrong? Share your thoughts…",
+  "homeAuroraDialogCancel": "Cancel",
+  "homeAuroraDialogSend": "Send",
+  "homeQuickCreate": "Quick create",
+  "homeOnboardingSummary": "I'm your AI growth companion. Set a goal and I'll help you achieve it step by step.",
+  "homeOnboardingSetGoal": "Set a goal",
+  "homeOnboardingSetGoalSubtitle": "Tell me what you want to achieve",
+  "homeOnboardingChatSparkle": "Chat with Sparkle",
+  "homeOnboardingChatSubtitle": "Share your thoughts, get personalized guidance",
+  "homeOnboardingExploreGalaxy": "Explore knowledge map",
+  "homeOnboardingExploreSubtitle": "Discover your knowledge structure and growth areas",
+  "homeSlotDailyBriefing": "Daily briefing",
+  "homeSlotDailyBriefingReady": "{count} next actions · ready to start",
+  "@homeSlotDailyBriefingReady": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeSlotDailyBriefingFallback": "Today's status & pace",
+  "homeSlotKeyMetrics": "Key metrics",
+  "homeSlotKeyMetricsStreak": "🔥 {streak}-day streak",
+  "@homeSlotKeyMetricsStreak": {
+    "placeholders": {
+      "streak": {
+        "type": "int"
+      }
+    }
+  },
+  "homeSlotKeyMetricsFallback": "Progress, streak, momentum",
+  "homeSlotCommandCenter": "Command center",
+  "homeSlotCommandCenterNext": "Next: {label}",
+  "@homeSlotCommandCenterNext": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "homeSlotCommandCenterFallback": "Pick up the next action",
+  "homeSlotUnderstanding": "Understanding",
+  "homeSlotUnderstandingSummary": "How Sparkle reads you",
+  "homeSlotReturnCaseFile": "Return case file",
+  "homeSlotReturnCaseFileSummary": "Where you left off",
+  "homeSlotGoalSnapshot": "Goal snapshot",
+  "homeSlotGoalSnapshotFallback": "Active goal snapshot",
+  "homeSlotMultiGoalBoard": "Multi-goal board",
+  "homeSlotMultiGoalDone": "{done} of {total} done",
+  "@homeSlotMultiGoalDone": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "homeSlotMultiGoalFallback": "All goals at a glance",
+  "homeSlotTaskBoard": "Task board",
+  "homeSlotTaskBoardProgress": "{done}/{total} done",
+  "@homeSlotTaskBoardProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "homeSlotTaskBoardGoalHit": "{done}/{total} done · today's goal hit",
+  "@homeSlotTaskBoardGoalHit": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "homeSlotTaskBoardToGo": "{done}/{total} done · {remaining} to go",
+  "@homeSlotTaskBoardToGo": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "remaining": {
+        "type": "int"
+      }
+    }
+  },
+  "homeSlotTaskBoardFallback": "Today's tasks & progress",
+  "homeSlotExamSprint": "Exam sprint",
+  "homeSlotExamSprintDaysLeft": "{subject} · {days}d left",
+  "@homeSlotExamSprintDaysLeft": {
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      },
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "homeSlotExamSprintNotStarted": "Not started · tap to set up",
+  "homeSlotExamSprintEmptyTitle": "Exam sprint",
+  "homeSlotExamSprintEmptyBody": "No active sprint yet. Set a target to see daily cadence and days left.",
+  "homeSlotExamSprintEmptyAction": "Create sprint",
+  "homeSlotUpdates": "Updates",
+  "homeSlotUpdatesSummary": "Notifications & insights",
+  "homeSlotGrowthQuality": "Growth quality",
+  "homeSlotGrowthQualitySummary": "Depth, stability, balance",
+  "homeSlotWeeklyNarrative": "Weekly narrative",
+  "homeSlotWeeklyNarrativeSummary": "This week's story",
+  "homeSlotCommunity": "Community",
+  "homeSlotCommunitySummary": "Partners & accountability",
+  "homeSlotAchievements": "Achievements",
+  "homeSlotAchievementsSummary": "Recent unlocks & milestones",
+  "homeSlotLearningHeatmap": "Learning heatmap",
+  "homeSlotLearningHeatmapSummary": "Last 30 days of activity",
+  "homeSlotWorkspaceCards": "Workspace cards",
+  "homeSlotWorkspaceCardsVisible": "{count} cards visible",
+  "@homeSlotWorkspaceCardsVisible": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeSlotWorkspaceCardsNone": "No cards enabled",
+  "homeEmptyDashboardTitle": "Your dashboard is empty",
+  "homeEmptyDashboardBody": "Tap \"Customize\" below to bring slots back.",
+  "homeCustomizeDashboard": "Customize dashboard",
+  "homeFailureAuthTitle": "Sign-in needed",
+  "homeFailureServerTitle": "Service issue",
+  "homeFailureValidationTitle": "Check request",
+  "homeFailureNetworkTitle": "Connection issue",
+  "homeFailureOfflineTitle": "Offline",
+  "homeFailureUnknownTitle": "Dashboard unavailable",
+  "homeFailureAuthAction": "Sign in",
+  "homeFailureOfflineAction": "Retry online",
+  "homeCommandCenterEyebrow": "Command Center",
+  "homeCommandCenterNoTasks": "No tasks today",
+  "homeCommandCenterHealth": "{percent}% health",
+  "@homeCommandCenterHealth": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "homeHighPriority": "High priority",
+  "homeCompletingUpdatesProgress": "Completing it updates your plan progress",
+  "homeNoUrgentAction": "No urgent action is queued. Review, add context, or let Aurora reprioritize.",
+  "homeSparkleWillTurn": "Sparkle will turn it into a next step, progress, and risk signal.",
+  "homeRiskBottleneck": "Risk: {topic} is slowing progress",
+  "@homeRiskBottleneck": {
+    "placeholders": {
+      "topic": {
+        "type": "String"
+      }
+    }
+  },
+  "homeRiskDeadline": "Risk: {label}",
+  "@homeRiskDeadline": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "homeRiskLowHealth": "Risk: plan health is low; recalibration may help",
+  "homeSelectGoal": "Select goal: {label}",
+  "@homeSelectGoal": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
   "goalIntentTitle": "Tell me what you want to achieve",
   "goalIntentHint": "One sentence works, e.g. \"Computer Networks final in 7 days, barely studied\"",
   "goalIntentTypeHere": "Type here",
