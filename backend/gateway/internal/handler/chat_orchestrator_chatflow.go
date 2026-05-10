@@ -584,6 +584,8 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 			} else {
 				log.Printf("Failed to load daily usage: %v", err)
 			}
+		} else if dailyLimit > 0 && isDevelopmentEnv() {
+			log.Printf("WARN: Daily quota check skipped in development mode (limit=%d)", dailyLimit)
 		}
 	}
 

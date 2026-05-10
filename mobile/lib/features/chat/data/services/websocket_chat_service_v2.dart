@@ -1999,7 +1999,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       }
 
       // Fast pong check without full JSON decode (avoids main-thread overhead for large frames)
-      if (data.length < 64 && data.contains('"pong"')) {
+      if (data == '{"type":"pong"}' || data == '{"type": "pong"}') {
         _onPongReceived();
         _log('💓 Pong received');
         return;
