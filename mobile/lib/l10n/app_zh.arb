@@ -11767,6 +11767,47 @@
       }
     }
   },
+  "communityUserFallback": "用户",
+  "accountabilityUnlockedOn": "在 {date} 解锁",
+  "@accountabilityUnlockedOn": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "communityWeeksAgo": "{count} 周前",
+  "@communityWeeksAgo": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "communityMonthsAgo": "{count} 个月前",
+  "@communityMonthsAgo": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "accountabilityRequestFailed": "发送请求失败，请稍后重试",
+  "accountabilityOperationFailed": "操作失败，请稍后重试",
+  "accountabilityPartnerNudged": "已提醒伙伴查看今天的目标",
+  "accountabilityPartnerNudgedWithMessage": "已提醒伙伴：{message}",
+  "@accountabilityPartnerNudgedWithMessage": {
+    "placeholders": {
+      "message": {"type": "String"}
+    }
+  },
+  "communityFirstSideBySide": "第一次并肩前进",
+  "communityFirstSideBySideDesc": "成功建立第一个责任伙伴关系",
+  "communitySevenDayStreak": "七日共进",
+  "communitySevenDayStreakDesc": "在责任伙伴关系中连续7天打卡",
+  "communitySevenDayCheckin": "7 天连续打卡成就",
+  "communityEnglishSprintPlan": "本周英语冲刺计划",
+  "communityShareProgressLabel": "进度",
+  "communityPointsLabel": "+{points}",
+  "@communityPointsLabel": {
+    "placeholders": {
+      "points": {"type": "String"}
+    }
+  },
   "communityTotalCheckins": "{count} 次",
   "@communityTotalCheckins": {
     "placeholders": {
@@ -15173,8 +15214,8 @@
     }
   },
   "intentReviewErrorBook": "查看错题本",
-  "intentChatSendToAI": "发送给AI"
-}  "communitySendFriendRequest": "发送好友请求",
+  "intentChatSendToAI": "发送给AI",
+  "communitySendFriendRequest": "发送好友请求",
   "userSearchHint": "按姓名或用户名搜索...",
   "userSearchEmptyInitial": "按姓名或用户名搜索",
   "userSearchEmptyNoResults": "未找到用户",
@@ -15196,5 +15237,34 @@
   },
   "communityCenterTitle": "社群中心",
   "createGroupButton": "创建社群",
-  "groupKnowledgeBase": "群知识库"
-EOF
+  "groupKnowledgeBase": "群知识库",
+  "accountabilityRequestFailed": "请求失败",
+  "accountabilityOperationFailed": "操作失败，请稍后重试",
+  "accountabilityPartnerNudged": "已提醒伙伴查看今天的目标",
+  "accountabilityPartnerNudgedWithMessage": "已提醒伙伴：{message}",
+  "@accountabilityPartnerNudgedWithMessage": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "achievementBadgePoints": "+{points}",
+  "@achievementBadgePoints": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
+  },
+  "achievementEarnedPoints": "+{points} 积分",
+  "@achievementEarnedPoints": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
+  },
+  "communityCheckinLike": "点赞",
+  "communityEncourageLabel": "鼓励"
+}

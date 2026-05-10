@@ -188,9 +188,7 @@ class _AuroraStatusBandState extends State<AuroraStatusBand>
                           onPressed: widget.onTap,
                           icon: const Icon(Icons.chat_bubble_outline, size: 14),
                           label: Text(
-                            I18nService.instance.isChinese
-                                ? '去聊天里纠正'
-                                : 'Correct in chat',
+                            I18nService.instance.l10n.auroraCorrectInChat,
                             style: DS.labelSmall.copyWith(fontSize: 11),
                           ),
                           style: TextButton.styleFrom(
@@ -211,9 +209,7 @@ class _AuroraStatusBandState extends State<AuroraStatusBand>
                     ],
                     const SizedBox(height: 8),
                     Text(
-                      I18nService.instance.isChinese
-                          ? '如果我判断错了，直接改一下：'
-                          : 'If this read is off, correct it here:',
+                      I18nService.instance.l10n.auroraIfReadOffCorrectHere,
                       style: DS.labelSmall.copyWith(
                         color: DS.textTertiary,
                         fontSize: 11,
@@ -289,9 +285,7 @@ class _AuroraStatusBandState extends State<AuroraStatusBand>
                               ),
                             ),
                             child: Text(
-                              I18nService.instance.isChinese
-                                  ? '快速校准'
-                                  : 'Quick Calibration',
+                              I18nService.instance.l10n.auroraQuickCalibration,
                               style: DS.labelSmall.copyWith(
                                 color: DS.brandPrimary,
                                 fontSize: 11,
@@ -333,48 +327,40 @@ class _AuroraStatusBandState extends State<AuroraStatusBand>
   }
 
   String get _expandHint {
-    final zh = I18nService.instance.isChinese;
     if (_expanded) {
-      return zh ? '双击收起校准选项' : 'Double tap to collapse calibration options';
+      return I18nService.instance.l10n.auroraCollapseHint;
     }
-    return zh ? '双击展开校准选项' : 'Double tap to expand calibration options';
+    return I18nService.instance.l10n.auroraExpandHint;
   }
 
   String _formatCooldown(int seconds) {
-    final zh = I18nService.instance.isChinese;
-    if (seconds <= 0) return zh ? '即将恢复' : 'Resuming soon';
-    if (seconds < 60) return zh ? '$seconds秒后恢复' : 'Resuming in $seconds sec';
+    final l10n = I18nService.instance.l10n;
+    if (seconds <= 0) return l10n.auroraCoolingDownResumingSoon;
+    if (seconds < 60) return l10n.auroraCooldownSec(seconds);
     final minutes = seconds ~/ 60;
-    if (minutes < 60) return zh ? '$minutes分钟后恢复' : 'Resuming in $minutes min';
+    if (minutes < 60) return l10n.auroraCooldownMin(minutes);
     final hours = minutes ~/ 60;
     final remainMinutes = minutes % 60;
-    return zh
-        ? '$hours小时$remainMinutes分钟后恢复'
-        : 'Resuming in $hours hr $remainMinutes min';
+    return l10n.auroraCooldownHr(hours, remainMinutes);
   }
 
   String get _expandedExplanation {
-    final zh = I18nService.instance.isChinese;
+    final l10n = I18nService.instance.l10n;
     final label = widget.label?.trim() ?? '';
     if (label.isEmpty) {
-      return zh
-          ? 'Aurora 会先轻量判断当前状态，重要判断都可以被你纠正。'
-          : 'Aurora is making a lightweight read; important judgments remain correctable.';
+      return l10n.auroraExpandedExplanationDefault;
     }
-    final prefix = zh ? '当前判断：' : 'Current read: ';
-    final suffix = zh
-        ? ' 我可能会误读，所以这里保留纠正入口。'
-        : ' I may be misreading it, so this stays correctable.';
-    return '$prefix$label$suffix';
+    final l10n = I18nService.instance.l10n;
+    return '${l10n.auroraExpandedExplanationPrefix}$label${l10n.auroraExpandedExplanationLabelSuffix}';
   }
 
   _AuroraBandConfig get _stateConfig {
-    final zh = I18nService.instance.isChinese;
+    final l10n = I18nService.instance.l10n;
     switch (widget.state) {
       case AuroraBandState.sensing:
         return _AuroraBandConfig(
           icon: Icons.wifi_tethering_rounded,
-          title: zh ? 'Aurora · 轻量感知中' : 'Aurora · Lightweight Sensing',
+          title: l10n.auroraSensing,
           iconColor: DS.textTertiary,
           iconBgColor: DS.surfaceSecondary,
           bgColor: DS.surfaceHigh,
@@ -383,7 +369,7 @@ class _AuroraStatusBandState extends State<AuroraStatusBand>
       case AuroraBandState.calibrated:
         return _AuroraBandConfig(
           icon: Icons.check_circle_outline,
-          title: zh ? 'Aurora · 已校准' : 'Aurora · Calibrated',
+          title: l10n.auroraCalibrated,
           iconColor: DS.success,
           iconBgColor: DS.success.withValues(alpha: 0.1),
           bgColor: DS.success.withValues(alpha: 0.04),
@@ -392,7 +378,7 @@ class _AuroraStatusBandState extends State<AuroraStatusBand>
       case AuroraBandState.riskDetected:
         return _AuroraBandConfig(
           icon: Icons.shield_outlined,
-          title: zh ? 'Aurora · 发现策略风险' : 'Aurora · Strategy Risk Detected',
+          title: l10n.auroraRiskDetected,
           iconColor: DS.warning,
           iconBgColor: DS.warning.withValues(alpha: 0.1),
           bgColor: DS.warning.withValues(alpha: 0.04),
@@ -401,7 +387,7 @@ class _AuroraStatusBandState extends State<AuroraStatusBand>
       case AuroraBandState.needsConfirmation:
         return _AuroraBandConfig(
           icon: Icons.help_outline,
-          title: zh ? 'Aurora · 需要确认一个判断' : 'Aurora · Confirmation Needed',
+          title: l10n.auroraNeedsConfirm,
           iconColor: DS.brandPrimary,
           iconBgColor: DS.brandPrimary.withValues(alpha: 0.1),
           bgColor: DS.brandPrimary.withValues(alpha: 0.04),
@@ -410,7 +396,7 @@ class _AuroraStatusBandState extends State<AuroraStatusBand>
       case AuroraBandState.calibrationAvailable:
         return _AuroraBandConfig(
           icon: Icons.tune_rounded,
-          title: zh ? 'Aurora · 深度校准可用' : 'Aurora · Deep Calibration Available',
+          title: l10n.auroraCalibrationAvailable,
           iconColor: DS.info,
           iconBgColor: DS.info.withValues(alpha: 0.1),
           bgColor: DS.info.withValues(alpha: 0.04),
@@ -419,7 +405,7 @@ class _AuroraStatusBandState extends State<AuroraStatusBand>
       case AuroraBandState.coolingDown:
         return _AuroraBandConfig(
           icon: Icons.ac_unit_rounded,
-          title: zh ? 'Aurora · 冷却中' : 'Aurora · Cooling Down',
+          title: l10n.auroraCoolingDown,
           iconColor: DS.textTertiary,
           iconBgColor: DS.surfaceSecondary,
           bgColor: DS.surfaceHigh,
@@ -428,9 +414,7 @@ class _AuroraStatusBandState extends State<AuroraStatusBand>
       case AuroraBandState.sourceAware:
         return _AuroraBandConfig(
           icon: Icons.menu_book_outlined,
-          title: zh
-              ? 'Aurora · 已参考当前任务资料'
-              : 'Aurora · Referenced Current Task Materials',
+          title: l10n.auroraSourceAware,
           iconColor: DS.info,
           iconBgColor: DS.info.withValues(alpha: 0.1),
           bgColor: DS.info.withValues(alpha: 0.04),
@@ -439,8 +423,7 @@ class _AuroraStatusBandState extends State<AuroraStatusBand>
       case AuroraBandState.noSourcesUsed:
         return _AuroraBandConfig(
           icon: Icons.auto_awesome_outlined,
-          title:
-              zh ? 'Aurora · 本轮未调用课件' : 'Aurora · No Materials Used This Round',
+          title: l10n.auroraNoSourcesUsed,
           iconColor: DS.textTertiary,
           iconBgColor: DS.surfaceSecondary,
           bgColor: DS.surfaceHigh,
@@ -449,7 +432,7 @@ class _AuroraStatusBandState extends State<AuroraStatusBand>
       case AuroraBandState.strategyActive:
         return _AuroraBandConfig(
           icon: Icons.trending_up_rounded,
-          title: zh ? 'Aurora · 策略已激活' : 'Aurora · Strategy Active',
+          title: l10n.auroraStrategyActive,
           iconColor: DS.success,
           iconBgColor: DS.success.withValues(alpha: 0.1),
           bgColor: DS.success.withValues(alpha: 0.04),

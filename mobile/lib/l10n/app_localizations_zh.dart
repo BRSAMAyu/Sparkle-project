@@ -8218,7 +8218,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get communitySave => '保存';
 
   @override
-  String get groupKnowledgeBase => '知识库';
+  String get groupKnowledgeBase => '群知识库';
 
   @override
   String get groupFiles => '学习资料';
@@ -15226,7 +15226,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get accountabilityEnd => '结束';
 
   @override
-  String get accountabilityOperationFailed => '操作失败';
+  String get accountabilityOperationFailed => '操作失败，请稍后重试';
 
   @override
   String get accountabilityLikeFailed => '点赞失败';
@@ -26984,6 +26984,61 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get communityUserFallback => '用户';
+
+  @override
+  String accountabilityUnlockedOn(String date) {
+    return '在 $date 解锁';
+  }
+
+  @override
+  String communityWeeksAgo(int count) {
+    return '$count周前';
+  }
+
+  @override
+  String communityMonthsAgo(int count) {
+    return '$count个月前';
+  }
+
+  @override
+  String get accountabilityRequestFailed => '发送请求失败，请稍后重试';
+
+  @override
+  String get accountabilityPartnerNudged => '已提醒伙伴查看今天的目标';
+
+  @override
+  String accountabilityPartnerNudgedWithMessage(String message) {
+    return '已提醒伙伴：$message';
+  }
+
+  @override
+  String get communityFirstSideBySide => '第一次并肩前进';
+
+  @override
+  String get communityFirstSideBySideDesc => '成功建立第一个责任伙伴关系';
+
+  @override
+  String get communitySevenDayStreak => '七日共进';
+
+  @override
+  String get communitySevenDayStreakDesc => '在责任伙伴关系中连续7天打卡';
+
+  @override
+  String get communitySevenDayCheckin => '7 天连续打卡成就';
+
+  @override
+  String get communityEnglishSprintPlan => '本周英语冲刺计划';
+
+  @override
+  String get communityShareProgressLabel => '进度';
+
+  @override
+  String communityPointsLabel(String points) {
+    return '+$points';
+  }
+
+  @override
   String communityTotalCheckins(int count) {
     return '$count 次';
   }
@@ -27074,9 +27129,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get communityEncouragementMessages => '鼓励消息';
 
   @override
-  String get communityUserFallback => '用户';
-
-  @override
   String get communitySendEncouragement => '发送鼓励';
 
   @override
@@ -27101,16 +27153,6 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String communityDaysAgo(Object count) {
     return '$count天前';
-  }
-
-  @override
-  String communityWeeksAgo(Object count) {
-    return '$count周前';
-  }
-
-  @override
-  String communityMonthsAgo(Object count) {
-    return '$count个月前';
   }
 
   @override
@@ -33181,4 +33223,44 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get intentChatSendToAI => '发送给AI';
+
+  @override
+  String get communitySendFriendRequest => '发送好友请求';
+
+  @override
+  String get userSearchHint => '按姓名或用户名搜索...';
+
+  @override
+  String get userSearchEmptyInitial => '按姓名或用户名搜索';
+
+  @override
+  String get userSearchEmptyNoResults => '未找到用户';
+
+  @override
+  String get searchFailedRetry => '搜索失败，请检查网络后重试';
+
+  @override
+  String get retryButton => '重试';
+
+  @override
+  String get groupSearchHint => '搜索社群...';
+
+  @override
+  String get groupSearchEmpty => '搜索学习小组或冲刺小组';
+
+  @override
+  String membersCount(int count) {
+    return '$count 名成员';
+  }
+
+  @override
+  String flamePower(int power) {
+    return '$power 火焰';
+  }
+
+  @override
+  String get communityCenterTitle => '社群中心';
+
+  @override
+  String get createGroupButton => '创建社群';
 }

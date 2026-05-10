@@ -9562,6 +9562,47 @@
       }
     }
   },
+  "communityUserFallback": "User",
+  "accountabilityUnlockedOn": "Unlocked on {date}",
+  "@accountabilityUnlockedOn": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "communityWeeksAgo": "{count} weeks ago",
+  "@communityWeeksAgo": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "communityMonthsAgo": "{count} months ago",
+  "@communityMonthsAgo": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "accountabilityRequestFailed": "Failed to send partnership request. Please try again later.",
+  "accountabilityOperationFailed": "Operation failed. Please try again later.",
+  "accountabilityPartnerNudged": "Partner nudged to check today's goals",
+  "accountabilityPartnerNudgedWithMessage": "Partner nudged: {message}",
+  "@accountabilityPartnerNudgedWithMessage": {
+    "placeholders": {
+      "message": {"type": "String"}
+    }
+  },
+  "communityFirstSideBySide": "First Side by Side",
+  "communityFirstSideBySideDesc": "Successfully established your first accountability partnership",
+  "communitySevenDayStreak": "7-Day Streak Together",
+  "communitySevenDayStreakDesc": "Check in for 7 consecutive days in a partnership",
+  "communitySevenDayCheckin": "7-Day Check-in Streak",
+  "communityEnglishSprintPlan": "This Week's English Sprint Plan",
+  "communityShareProgressLabel": "Progress",
+  "communityPointsLabel": "+{points}",
+  "@communityPointsLabel": {
+    "placeholders": {
+      "points": {"type": "String"}
+    }
+  },
   "communityTotalCheckins": "{count} times",
   "@communityTotalCheckins": {
     "placeholders": {
@@ -15167,8 +15208,8 @@
     }
   },
   "intentReviewErrorBook": "View Error Book",
-  "intentChatSendToAI": "Send to AI"
-}  "communitySendFriendRequest": "Send Friend Request",
+  "intentChatSendToAI": "Send to AI",
+  "communitySendFriendRequest": "Send Friend Request",
   "userSearchHint": "Search users by name or username...",
   "userSearchEmptyInitial": "Search for users by name or username",
   "userSearchEmptyNoResults": "No users found",
@@ -15190,5 +15231,34 @@
   },
   "communityCenterTitle": "Community",
   "createGroupButton": "Create Group",
-  "groupKnowledgeBase": "Group Knowledge Base"
-EOF
+  "groupKnowledgeBase": "Group Knowledge Base",
+  "accountabilityRequestFailed": "Failed to request partnership",
+  "accountabilityOperationFailed": "Operation failed, please try again later",
+  "accountabilityPartnerNudged": "Partner nudged to check today's goals",
+  "accountabilityPartnerNudgedWithMessage": "Partner nudged: {message}",
+  "@accountabilityPartnerNudgedWithMessage": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "achievementBadgePoints": "+{points}",
+  "@achievementBadgePoints": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
+  },
+  "achievementEarnedPoints": "+{points} points",
+  "@achievementEarnedPoints": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
+  },
+  "communityCheckinLike": "Like",
+  "communityEncourageLabel": "Encourage"
+}

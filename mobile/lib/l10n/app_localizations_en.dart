@@ -8529,7 +8529,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communitySave => 'Save';
 
   @override
-  String get groupKnowledgeBase => 'Knowledge Base';
+  String get groupKnowledgeBase => 'Group Knowledge Base';
 
   @override
   String get groupFiles => 'Study Materials';
@@ -15876,7 +15876,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountabilityEnd => 'End';
 
   @override
-  String get accountabilityOperationFailed => 'Operation failed';
+  String get accountabilityOperationFailed =>
+      'Operation failed. Please try again later.';
 
   @override
   String get accountabilityLikeFailed => 'Like failed';
@@ -28150,6 +28151,65 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get communityUserFallback => 'User';
+
+  @override
+  String accountabilityUnlockedOn(String date) {
+    return 'Unlocked on $date';
+  }
+
+  @override
+  String communityWeeksAgo(int count) {
+    return '${count}w ago';
+  }
+
+  @override
+  String communityMonthsAgo(int count) {
+    return '${count}mo ago';
+  }
+
+  @override
+  String get accountabilityRequestFailed =>
+      'Failed to send partnership request. Please try again later.';
+
+  @override
+  String get accountabilityPartnerNudged =>
+      'Partner nudged to check today\'s goals';
+
+  @override
+  String accountabilityPartnerNudgedWithMessage(String message) {
+    return 'Partner nudged: $message';
+  }
+
+  @override
+  String get communityFirstSideBySide => 'First Side by Side';
+
+  @override
+  String get communityFirstSideBySideDesc =>
+      'Successfully established your first accountability partnership';
+
+  @override
+  String get communitySevenDayStreak => '7-Day Streak Together';
+
+  @override
+  String get communitySevenDayStreakDesc =>
+      'Check in for 7 consecutive days in a partnership';
+
+  @override
+  String get communitySevenDayCheckin => '7-Day Check-in Streak';
+
+  @override
+  String get communityEnglishSprintPlan => 'This Week\'s English Sprint Plan';
+
+  @override
+  String get communityShareProgressLabel => 'Progress';
+
+  @override
+  String communityPointsLabel(String points) {
+    return '+$points';
+  }
+
+  @override
   String communityTotalCheckins(int count) {
     return '$count times';
   }
@@ -28243,9 +28303,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityEncouragementMessages => 'Encouragements';
 
   @override
-  String get communityUserFallback => 'User';
-
-  @override
   String get communitySendEncouragement => 'Send Encouragement';
 
   @override
@@ -28270,16 +28327,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String communityDaysAgo(Object count) {
     return '${count}d ago';
-  }
-
-  @override
-  String communityWeeksAgo(Object count) {
-    return '${count}w ago';
-  }
-
-  @override
-  String communityMonthsAgo(Object count) {
-    return '${count}mo ago';
   }
 
   @override
@@ -34602,4 +34649,44 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get intentChatSendToAI => 'Send to AI';
+
+  @override
+  String get communitySendFriendRequest => 'Send Friend Request';
+
+  @override
+  String get userSearchHint => 'Search users by name or username...';
+
+  @override
+  String get userSearchEmptyInitial => 'Search for users by name or username';
+
+  @override
+  String get userSearchEmptyNoResults => 'No users found';
+
+  @override
+  String get searchFailedRetry => 'Search failed, check your network and retry';
+
+  @override
+  String get retryButton => 'Retry';
+
+  @override
+  String get groupSearchHint => 'Search groups...';
+
+  @override
+  String get groupSearchEmpty => 'Search for squads or sprint groups';
+
+  @override
+  String membersCount(int count) {
+    return '$count members';
+  }
+
+  @override
+  String flamePower(int power) {
+    return '$power flame';
+  }
+
+  @override
+  String get communityCenterTitle => 'Community';
+
+  @override
+  String get createGroupButton => 'Create Group';
 }

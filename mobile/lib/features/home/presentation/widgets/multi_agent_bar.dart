@@ -131,11 +131,10 @@ class _ModeChipState extends State<_ModeChip> {
   Widget build(BuildContext context) {
     final colors = context.colorExtensions;
     final foregroundColor = colors.adaptiveTextPrimary;
+    final l10n = I18nService.instance.l10n;
     return Semantics(
       button: true,
-      label: I18nService.instance.isChinese
-          ? '切换到${widget.mode.label}模式'
-          : 'Switch to ${widget.mode.label} mode',
+      label: l10n.multiAgentSwitchMode(widget.mode.label),
       child: GestureDetector(
         onTapDown: (_) => setState(() => _isPressed = true),
         onTapUp: (_) {

@@ -15221,7 +15221,7 @@ abstract class AppLocalizations {
   /// No description provided for @groupKnowledgeBase.
   ///
   /// In zh, this message translates to:
-  /// **'知识库'**
+  /// **'群知识库'**
   String get groupKnowledgeBase;
 
   /// No description provided for @groupFiles.
@@ -27748,7 +27748,7 @@ abstract class AppLocalizations {
   /// No description provided for @accountabilityOperationFailed.
   ///
   /// In zh, this message translates to:
-  /// **'操作失败'**
+  /// **'操作失败，请稍后重试'**
   String get accountabilityOperationFailed;
 
   /// No description provided for @accountabilityLikeFailed.
@@ -49270,6 +49270,96 @@ abstract class AppLocalizations {
   /// **'{count} 天连胜'**
   String communityPartnerStreakDays(int count);
 
+  /// No description provided for @communityUserFallback.
+  ///
+  /// In zh, this message translates to:
+  /// **'用户'**
+  String get communityUserFallback;
+
+  /// No description provided for @accountabilityUnlockedOn.
+  ///
+  /// In zh, this message translates to:
+  /// **'在 {date} 解锁'**
+  String accountabilityUnlockedOn(String date);
+
+  /// No description provided for @communityWeeksAgo.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count}周前'**
+  String communityWeeksAgo(int count);
+
+  /// No description provided for @communityMonthsAgo.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count}个月前'**
+  String communityMonthsAgo(int count);
+
+  /// No description provided for @accountabilityRequestFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'发送请求失败，请稍后重试'**
+  String get accountabilityRequestFailed;
+
+  /// No description provided for @accountabilityPartnerNudged.
+  ///
+  /// In zh, this message translates to:
+  /// **'已提醒伙伴查看今天的目标'**
+  String get accountabilityPartnerNudged;
+
+  /// No description provided for @accountabilityPartnerNudgedWithMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'已提醒伙伴：{message}'**
+  String accountabilityPartnerNudgedWithMessage(String message);
+
+  /// No description provided for @communityFirstSideBySide.
+  ///
+  /// In zh, this message translates to:
+  /// **'第一次并肩前进'**
+  String get communityFirstSideBySide;
+
+  /// No description provided for @communityFirstSideBySideDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'成功建立第一个责任伙伴关系'**
+  String get communityFirstSideBySideDesc;
+
+  /// No description provided for @communitySevenDayStreak.
+  ///
+  /// In zh, this message translates to:
+  /// **'七日共进'**
+  String get communitySevenDayStreak;
+
+  /// No description provided for @communitySevenDayStreakDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'在责任伙伴关系中连续7天打卡'**
+  String get communitySevenDayStreakDesc;
+
+  /// No description provided for @communitySevenDayCheckin.
+  ///
+  /// In zh, this message translates to:
+  /// **'7 天连续打卡成就'**
+  String get communitySevenDayCheckin;
+
+  /// No description provided for @communityEnglishSprintPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'本周英语冲刺计划'**
+  String get communityEnglishSprintPlan;
+
+  /// No description provided for @communityShareProgressLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'进度'**
+  String get communityShareProgressLabel;
+
+  /// No description provided for @communityPointsLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'+{points}'**
+  String communityPointsLabel(String points);
+
   /// No description provided for @communityTotalCheckins.
   ///
   /// In zh, this message translates to:
@@ -49426,12 +49516,6 @@ abstract class AppLocalizations {
   /// **'鼓励消息'**
   String get communityEncouragementMessages;
 
-  /// No description provided for @communityUserFallback.
-  ///
-  /// In zh, this message translates to:
-  /// **'用户'**
-  String get communityUserFallback;
-
   /// No description provided for @communitySendEncouragement.
   ///
   /// In zh, this message translates to:
@@ -49473,18 +49557,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'{count}天前'**
   String communityDaysAgo(Object count);
-
-  /// No description provided for @communityWeeksAgo.
-  ///
-  /// In zh, this message translates to:
-  /// **'{count}周前'**
-  String communityWeeksAgo(Object count);
-
-  /// No description provided for @communityMonthsAgo.
-  ///
-  /// In zh, this message translates to:
-  /// **'{count}个月前'**
-  String communityMonthsAgo(Object count);
 
   /// No description provided for @communityBadgeUnlockedOn.
   ///
@@ -60378,6 +60450,78 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'发送给AI'**
   String get intentChatSendToAI;
+
+  /// No description provided for @communitySendFriendRequest.
+  ///
+  /// In zh, this message translates to:
+  /// **'发送好友请求'**
+  String get communitySendFriendRequest;
+
+  /// No description provided for @userSearchHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'按姓名或用户名搜索...'**
+  String get userSearchHint;
+
+  /// No description provided for @userSearchEmptyInitial.
+  ///
+  /// In zh, this message translates to:
+  /// **'按姓名或用户名搜索'**
+  String get userSearchEmptyInitial;
+
+  /// No description provided for @userSearchEmptyNoResults.
+  ///
+  /// In zh, this message translates to:
+  /// **'未找到用户'**
+  String get userSearchEmptyNoResults;
+
+  /// No description provided for @searchFailedRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索失败，请检查网络后重试'**
+  String get searchFailedRetry;
+
+  /// No description provided for @retryButton.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get retryButton;
+
+  /// No description provided for @groupSearchHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索社群...'**
+  String get groupSearchHint;
+
+  /// No description provided for @groupSearchEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索学习小组或冲刺小组'**
+  String get groupSearchEmpty;
+
+  /// No description provided for @membersCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 名成员'**
+  String membersCount(int count);
+
+  /// No description provided for @flamePower.
+  ///
+  /// In zh, this message translates to:
+  /// **'{power} 火焰'**
+  String flamePower(int power);
+
+  /// No description provided for @communityCenterTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'社群中心'**
+  String get communityCenterTitle;
+
+  /// No description provided for @createGroupButton.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建社群'**
+  String get createGroupButton;
 }
 
 class _AppLocalizationsDelegate
