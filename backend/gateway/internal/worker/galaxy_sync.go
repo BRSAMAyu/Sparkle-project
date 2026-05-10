@@ -189,7 +189,7 @@ func (w *GalaxySyncWorker) handleNodeCreated(ctx context.Context, evt cqrsEvent.
 	pipe := w.redis.Pipeline()
 
 	// Node view
-	pipe.Set(ctx, "galaxy:node:"+nodeIDStr, viewJSON, 0)
+	pipe.Set(ctx, "galaxy:node:"+nodeIDStr, viewJSON, 24*time.Hour)
 
 	// Add to global node set (for graph queries)
 	pipe.SAdd(ctx, "galaxy:nodes:all", nodeIDStr)
@@ -263,7 +263,7 @@ func (w *GalaxySyncWorker) handleNodeUnlocked(ctx context.Context, evt cqrsEvent
 	pipe := w.redis.Pipeline()
 
 	// User node view
-	pipe.Set(ctx, "galaxy:user:"+userIDStr+":node:"+nodeIDStr, viewJSON, 0)
+	pipe.Set(ctx, "galaxy:user:"+userIDStr+":node:"+nodeIDStr, viewJSON, 24*time.Hour)
 
 	// Add to user's unlocked nodes set
 	pipe.SAdd(ctx, "galaxy:user:"+userIDStr+":unlocked", nodeIDStr)
@@ -387,7 +387,7 @@ func (w *GalaxySyncWorker) handleMasteryUpdated(ctx context.Context, evt cqrsEve
 	}
 
 	pipe := w.redis.Pipeline()
-	pipe.Set(ctx, viewKey, updatedJSON, 0)
+	pipe.Set(ctx, viewKey, updatedJSON, 1*time.Hour)
 
 	// Update user stats
 	pipe.HIncrBy(ctx, "galaxy:user:"+userIDStr+":stats", "total_study_minutes", studyMinutes)
@@ -446,7 +446,7 @@ func (w *GalaxySyncWorker) handleRelationCreated(ctx context.Context, evt cqrsEv
 	}
 
 	pipe := w.redis.Pipeline()
-	pipe.Set(ctx, relationKey, relationJSON, 0)
+	pipe.Set(ctx, relationKey, relationJSON, 24*time.Hour)
 	pipe.SAdd(ctx, "galaxy:node:"+sourceNodeIDStr+":relations:out", targetNodeIDStr)
 	pipe.SAdd(ctx, "galaxy:node:"+targetNodeIDStr+":relations:in", sourceNodeIDStr)
 	_, err = pipe.Exec(ctx)
