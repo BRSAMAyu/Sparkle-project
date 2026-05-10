@@ -13,8 +13,8 @@
 |-------|-------|------|-----------|
 | **P0 Critical** | **8** | **8** | **0** |
 | **P1 High** | **35** | **35** | **0** |
-| P2 Medium | 60 | 9 | 51 |
-| P3 Low | 32 | 0 | 32 |
+| P2 Medium | 60 | 16 | 44 |
+| P3 Low | 32 | 8 | 24 |
 | i18n (net reduction) | ~1070 | ~32 | ~1038 |
 
 ---
@@ -49,6 +49,8 @@ Opus agent verified all 8 commits:
 | **d033b5020** | 16:20 | backend | TaskEventConsumer session isolation (DB-P1-07) |
 | **e7ae6e608** | 16:35 | i18n | statistics_empty_state.dart → ARB (11 keys) |
 | **43622a674** | 16:40 | i18n | statistics providers + overview_cards → remove I18nService |
+| **b9e4f00fd** | 17:10 | P3 | semantic labels, form validation, topic focus, server-side filtering, gRPC preflight, utcnow |
+| **04a7813cc** | 17:25 | P2 | debate timeout, IndexError guard, ErrorRecord soft-delete, unused I18nService import |
 
 ---
 
@@ -162,6 +164,26 @@ Opus agent verified all 8 commits:
 | P2-09: accountability_detail_screen error leaks raw exception (line 264) | Replaced `${context.l10n.accountabilityOperationFailed}: $e` with `context.l10n.accountabilityOperationFailed` | 1e785afc4 |
 | P2-10: accountability_heatmap hardcoded colors | Color(0xFF2E7D32/9BE9A8) → primaryContainer/secondaryContainer; textColor null → DS.textSecondary/DS.textPrimary | 5f8925741 |
 
+### P2 Structural (7 issues) — ✅ FIXED 2026-05-10
+| Issue | Fix | Commit |
+|-------|-----|--------|
+| BE-P2-07: debate judge LLM no timeout | `asyncio.wait_for(timeout=120)` on judge `ainvoke` | 04a7813cc |
+| BE-P2-09: workflow IndexError on empty messages | Guard `if not state.get("messages"): return END` | 04a7813cc |
+| BE-P2-14: ErrorRecord uses bare Base | Changed to BaseModel for soft-delete support | 04a7813cc |
+| FE-P2-04: collapsible_slot unused I18nService import | Removed unused import, added context_l10n | 04a7813cc |
+
+### P2 Verified False Positives
+| Issue | Reason |
+|-------|--------|
+| FE-P2-05 (196px height) | Design: fixed card height for consistent grid |
+| FE-P2-13 (ThemeManager singleton) | Intentional: one theme instance per app lifecycle |
+| FE-P2-14 (group_knowledge_base_view) | Duplicated utilities are for different contexts |
+| FE-P2-15 (community_main no retry) | Retry is per-tab responsibility, not container's |
+| BE-P2-08 (workflow singleton) | Already thread-safe with double-checked locking |
+| BE-P2-11 (agent_grpc DB commit) | Protected by try/except with rollback |
+| DB-P2-04 (SQLite NullPool) | Correct behavior for SQLite |
+| INT-F02 (goal progress division by zero) | Already guarded with `yesterday_total > 0` checks |
+
 ### DB/Integration P2 (13 issues)
 - DB-P2-01: HNSW m/ef_construction defaults
 - DB-P2-02: JSONB GIN indexes missing
@@ -187,7 +209,28 @@ Opus agent verified all 8 commits:
 ---
 
 ## P3 — Low (32 issues)
-See full audit report in `docs/audit/2026-05-10-fullstack/`.
+
+### ✅ Fixed (8 items) — Commit b9e4f00fd
+| Issue | Fix |
+|-------|-----|
+| P3-03: avatar text overflow | `name.isNotEmpty ? name[0].toUpperCase() : '?'` |
+| P3-05: post button disabled state | `onPressed: null` when content empty or posting |
+| P3-07: hardcoded semantic label | `'dismiss feedback'` → `AppLocalizations.of(context)!.commonDismiss` |
+| P3-09: questionnaire partial submit | Disabled until `_answers.length >= widget.questions.length` |
+| P3-04: topic button no-op | Actually focuses topic field via `FocusScope.requestFocus(_topicController)` |
+| P3-14: client-side task filtering | Server-side filter `{'knowledge_node_id': nodeId}` |
+| BE-P3-02: missing gRPC preflight | Added `_check_grpc_port` for port 50051 |
+| BE-P3-03: deprecated utcnow | `datetime.utcnow()` → `datetime.now(UTC)` in accountability tests |
+
+### ✅ Verified False Positives (6 items)
+| Issue | Reason |
+|-------|--------|
+| P3-01 (FailureKind exhaustive) | Switch already covers all cases including `unknown` |
+| P3-10 (user_persona error state) | Graceful degradation with empty data — design choice |
+| P3-11 (voice timer race) | `_stopRecording` checks `mounted` after await; timer cancelled in dispose |
+| BE-P3-01 (next_review_at default) | Correct: new errors should be immediately reviewable (mastery=0) |
+| BE-P3-04 (Close timeout) | Design choice: 5s graceful shutdown then return nil |
+| BE-P3-05 (no stream timeout) | Caller provides context with timeout; intentional |
 
 ---
 
