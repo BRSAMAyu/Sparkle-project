@@ -3,6 +3,8 @@ from langgraph.graph import END, StateGraph
 from langgraph.prebuilt import ToolNode
 from loguru import logger
 
+from app.core.cache import cache_service
+
 from app.agents.graph.expert_registry import (
     get_graph_expert_specs,
     resolve_node_name,
@@ -152,10 +154,45 @@ workflow.add_edge("human_node", "router")
 
 # --- 4. 编译标准图 (Compile) ---
 
-checkpointer = MemorySaver()
+
+class _LazyCheckpointer:
+    """Proxy that defers checkpointer creation until first actual use."""
+
+    def __init__(self):
+        self._real = None
+
+    def _resolve(self):
+        if self._real is None:
+            self._real = _make_checkpointer()
+        return self._real
+
+    async def aput(self, config, checkpoint, metadata, new_versions):
+        return await self._resolve().aput(config, checkpoint, metadata, new_versions)
+
+    async def aget_tuple(self, config):
+        return await self._resolve().aget_tuple(config)
+
+    async def alist(self, config, *, before=None, after=None, filter=None, limit=None):
+        return await self._resolve().alist(config, before=before, after=after, filter=filter, limit=limit)
+
+    async def aput_writes(self, config, writes, task_id):
+        return await self._resolve().aput_writes(config, writes, task_id)
+
+
+def _make_checkpointer():
+    """Create a Redis-backed checkpointer when available, fallback to MemorySaver."""
+    try:
+        redis_client = cache_service.redis
+        if redis_client:
+            from app.checkpoint.langgraph_redis_checkpointer import LangGraphRedisCheckpointer
+            return LangGraphRedisCheckpointer(redis_client)
+    except Exception as exc:
+        logger.warning(f"Redis checkpointer unavailable, falling back to MemorySaver: {exc}")
+    return MemorySaver()
+
 
 sparkle_graph = workflow.compile(
-    checkpointer=checkpointer,
+    checkpointer=_LazyCheckpointer(),
     interrupt_before=["human_node"]
 )
 
@@ -235,7 +272,7 @@ def create_planning_graph():
     planning_workflow.add_edge("aggregator", END)
 
     # Compile with checkpointer
-    planning_checkpointer = MemorySaver()
+    planning_checkpointer = _LazyCheckpointer()
 
     return planning_workflow.compile(
         checkpointer=planning_checkpointer

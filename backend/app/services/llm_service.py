@@ -556,8 +556,8 @@ class LLMService:
             try:
                 cascade_selection = llm_router.select_model(self.agent_role, task_type)
                 model = cascade_selection.config.model_name
-            except Exception:
-                pass  # fall back to default model
+            except Exception as exc:
+                logger.debug(f"Cascade model selection failed: {exc}")
 
         with tracer.start_as_current_span("llm_chat") as span:
             span.set_attribute("llm.model", model)
@@ -631,7 +631,8 @@ class LLMService:
                     await circuit_breaker_service.record_success("primary_llm")
                     return response
                 else:
-                    # 没有当前选择，直接调用
+                    # No current selection — use legacy provider path
+                    logger.warning("No LLM selection available, using legacy provider")
                     response = await _call_with_selection(
                         type('obj', (object,), {'config': type('obj', (object,), {
                             'model_name': model,
@@ -961,12 +962,11 @@ class LLMService:
 
             # Budget preflight: fail fast if LLM daily budget is exhausted
             if not await is_llm_within_budget():
-                logger.warning("LLM daily budget exhausted, returning fallback stream")
-                fallback = "今天的 AI 使用额度已用完，额度将在明天重置。请先回顾今天的学习成果吧。"
-                for i in range(0, len(fallback), 8):
-                    yield fallback[i:i + 8]
-                    await asyncio.sleep(0.02)
-                return
+                logger.warning("LLM daily budget exhausted, raising error")
+                raise RuntimeError(
+                    "LLM_DAILY_BUDGET_EXHAUSTED: Daily AI usage quota exhausted. "
+                    "Quota resets at midnight."
+                )
 
             if not self.provider:
                 raise HTTPException(
