@@ -952,7 +952,7 @@ class _PendingPoliciesCard extends StatelessWidget {
         : nextTriggerAt == null
             ? context.l10n.accountabilityPoliciesReady(count)
             : context.l10n.accountabilityPoliciesPending(
-                count, DateFormat('M月d日 HH:mm').format(nextTriggerAt));
+                count, DateFormat.yMMMd(locale).add_Hm().format(nextTriggerAt));
     return GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.panel,
       child: Column(
@@ -972,7 +972,7 @@ class _PendingPoliciesCard extends StatelessWidget {
           ),
           const SizedBox(height: DS.spacing8),
           Text(
-            count <= 0 ? context.l10n.accountabilityZeroItems : '$count 条',
+            count <= 0 ? context.l10n.accountabilityZeroItems : context.l10n.accountabilityItemCount(count),
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: DS.fontWeightBold,
                 ),
@@ -1004,7 +1004,7 @@ class _RecentReflectionsCard extends StatelessWidget {
             ? context.l10n.accountabilityReflectionsGenerated(count)
             : context.l10n.accountabilityReflectionsLatest(
                 _labelForCategory(context, lastCategory),
-                DateFormat('M月d日 HH:mm').format(lastAt));
+                DateFormat.yMMMd(locale).add_Hm().format(lastAt));
     return GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.panel,
       child: Column(
@@ -1024,7 +1024,7 @@ class _RecentReflectionsCard extends StatelessWidget {
           ),
           const SizedBox(height: DS.spacing8),
           Text(
-            count <= 0 ? context.l10n.accountabilityZeroItems : '$count 条',
+            count <= 0 ? context.l10n.accountabilityZeroItems : context.l10n.accountabilityItemCount(count),
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: DS.fontWeightBold,
                 ),
@@ -1079,7 +1079,7 @@ class _ForesightHintCard extends StatelessWidget {
         context.l10n.accountabilityDeviationsDetected(deviationCount),
       if (generatedAt != null)
         context.l10n.accountabilityUpdatedAt(
-            DateFormat('M月d日 HH:mm').format(generatedAt)),
+            DateFormat.yMMMd(locale).add_Hm().format(generatedAt)),
     ].join(' · ');
     return GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.panel,
@@ -1246,7 +1246,8 @@ class _CheckinTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final dateStr = DateFormat('MM-dd HH:mm').format(checkin.createdAt);
+    final locale = Localizations.localeOf(context);
+    final dateStr = DateFormat.yMMMd(locale).add_Hm().format(checkin.createdAt);
     final moodVisual = _resolveCheckinMoodVisual(context, checkin.mood);
     final authorName = checkin.author?.displayName ??
         (isMe

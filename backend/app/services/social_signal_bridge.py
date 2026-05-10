@@ -26,6 +26,44 @@ def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
+def get_encouragement_presets(locale: str = "zh") -> tuple[dict[str, str], ...]:
+    if locale == "en":
+        return (
+            {
+                "id": "spark_small_step",
+                "emoji": "👏",
+                "message": "Just finishing one small piece is great. I'm watching you.",
+            },
+            {
+                "id": "spark_restart",
+                "emoji": "💪",
+                "message": "Starting with 5 minutes today still counts. Go for it.",
+            },
+            {
+                "id": "spark_warm",
+                "emoji": "✨",
+                "message": "No need to prove anything. Just get your rhythm back.",
+            },
+        )
+    return (
+        {
+            "id": "spark_small_step",
+            "emoji": "👏",
+            "message": "先完成一个小块就很好，我在看着你。",
+        },
+        {
+            "id": "spark_restart",
+            "emoji": "💪",
+            "message": "今天从 5 分钟开始也算数，加油。",
+        },
+        {
+            "id": "spark_warm",
+            "emoji": "✨",
+            "message": "别急着证明什么，先把节奏接回来。",
+        },
+    )
+
+
 def _user_display_name(user: User | None, default: str = "好友") -> str:
     if user is None:
         return default
@@ -525,7 +563,7 @@ class SocialSignalBridge:
                 no_completion_days=int(event.get("no_completion_days") or 2),
                 struggle_score=float(event.get("struggle_score") or 0.0),
                 dedupe_key=str(event.get("dedupe_key") or ""),
-                preset_encouragements=list(PRESET_ENCOURAGEMENTS),
+                preset_encouragements=list(get_encouragement_presets()),
             )
             sent_count += 1
 
@@ -546,6 +584,7 @@ class SocialSignalBridge:
                     AccountabilityPartnership.partner_id == user_id,
                 ),
             )
+            .limit(50)
         )
         return list(result.scalars().all())
 

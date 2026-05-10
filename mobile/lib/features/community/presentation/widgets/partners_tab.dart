@@ -235,95 +235,99 @@ class _PartnershipCard extends StatelessWidget {
             ),
           );
         },
-        child: Container(
-          padding: const EdgeInsets.all(DS.md),
-          decoration: BoxDecoration(
-            color: DS.surfaceRoleColor(SparkleSurfaceRole.panel),
-            borderRadius: BorderRadius.circular(DS.radius12),
-            border: Border.all(color: DS.borderSubtle),
-          ),
-          child: Row(
-            children: [
-              _PartnerAvatar(
-                avatarUrl: partner?.avatarUrl,
-                name: partner?.nickname ?? partner?.username ?? '?',
-                isOnline: partnerCheckedIn,
-              ),
-              const SizedBox(width: DS.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      partner?.nickname ??
-                          partner?.username ??
-                          (zh ? '伙伴' : 'Partner'),
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: DS.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      goalLabel,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 12, color: DS.textSecondary),
-                    ),
-                  ],
+        child: Semantics(
+          button: true,
+          label: '${partner?.nickname ?? (zh ? "伙伴" : "Partner")}, $streak day streak',
+          child: Container(
+            padding: const EdgeInsets.all(DS.md),
+            decoration: BoxDecoration(
+              color: DS.surfaceRoleColor(SparkleSurfaceRole.panel),
+              borderRadius: BorderRadius.circular(DS.radius12),
+              border: Border.all(color: DS.borderSubtle),
+            ),
+            child: Row(
+              children: [
+                _PartnerAvatar(
+                  avatarUrl: partner?.avatarUrl,
+                  name: partner?.nickname ?? partner?.username ?? '?',
+                  isOnline: partnerCheckedIn,
                 ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  if (streak > 0)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: DS.spacing8,
-                        vertical: DS.spacing4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: DS.warning.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(DS.radius8),
-                      ),
-                      child: Text(
-                        '$streak ${zh ? '天连续' : 'd streak'}',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: DS.warning,
-                        ),
-                      ),
-                    ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
+                const SizedBox(width: DS.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color:
-                              partnerCheckedIn ? DS.success : DS.textTertiary,
+                      Text(
+                        partner?.nickname ??
+                            partner?.username ??
+                            (zh ? '伙伴' : 'Partner'),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: DS.textPrimary,
                         ),
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(height: 2),
                       Text(
-                        partnerCheckedIn
-                            ? (zh ? '今日已打卡' : 'Checked in')
-                            : (zh ? '今日未打卡' : 'Not yet today'),
-                        style: TextStyle(
-                          fontSize: 11,
-                          color:
-                              partnerCheckedIn ? DS.success : DS.textTertiary,
-                        ),
+                        goalLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 12, color: DS.textSecondary),
                       ),
                     ],
                   ),
-                ],
-              ),
-            ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    if (streak > 0)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: DS.spacing8,
+                          vertical: DS.spacing4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: DS.warning.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(DS.radius8),
+                        ),
+                        child: Text(
+                          '$streak ${zh ? '天连续' : 'd streak'}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: DS.warning,
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color:
+                                partnerCheckedIn ? DS.success : DS.textTertiary,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          partnerCheckedIn
+                              ? (zh ? '今日已打卡' : 'Checked in')
+                              : (zh ? '今日未打卡' : 'Not yet today'),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color:
+                                partnerCheckedIn ? DS.success : DS.textTertiary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

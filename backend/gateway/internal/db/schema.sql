@@ -4225,7 +4225,7 @@ CREATE TABLE posts (
     content text,
     image_urls json,
     topic character varying(100),
-    visibility character varying(20) NOT NULL,
+    visibility character varying(20) NOT NULL CHECK (visibility IN ('public', 'friends', 'private')),
     like_count integer NOT NULL DEFAULT 0,
     comment_count integer NOT NULL DEFAULT 0,
     id uuid NOT NULL,
@@ -18895,7 +18895,7 @@ ALTER TABLE ONLY plans
 --
 
 ALTER TABLE ONLY post_likes
-    ADD CONSTRAINT post_likes_post_id_fkey FOREIGN KEY (post_id) REFERENCES posts(id);
+    ADD CONSTRAINT post_likes_post_id_fkey FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE;
 
 
 --
@@ -18903,7 +18903,7 @@ ALTER TABLE ONLY post_likes
 --
 
 ALTER TABLE ONLY post_likes
-    ADD CONSTRAINT post_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+    ADD CONSTRAINT post_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --

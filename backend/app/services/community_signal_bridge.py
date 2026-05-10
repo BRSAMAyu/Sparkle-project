@@ -421,10 +421,37 @@ class CommunitySignalBridge:
 
     async def _filter_opted_in_values(self, contributor_values: list[float | int | dict]) -> list[float]:
         values: list[float] = []
+        # Batch query: extract contributor IDs, check all at once
+        contributor_ids = [
+            item["user_id"] for item in contributor_values
+            if isinstance(item, dict) and item.get("user_id")
+        ]
+        if not contributor_ids:
+            # No dict items with user_id - process non-dict values only
+            for item in contributor_values:
+                if not isinstance(item, dict):
+                    try:
+                        values.append(float(item))
+                    except (TypeError, ValueError):
+                        continue
+            return values
+
+        # Batch query for community intelligence settings
+        settings_result = await self.db.execute(
+            select(UserSettings.user_id, UserSettings.community_intelligence_enabled)
+            .where(UserSettings.user_id.in_(contributor_ids))
+        )
+        opted_in = {row[0] for row in settings_result.all() if row[1]}
+        opted_out = {row[0] for row in settings_result.all() if not row[1]}
+        # Default to opted-in for users without settings row
+        all_ids_set = set(contributor_ids)
+        unknown_ids = all_ids_set - opted_in - opted_out
+        opted_in.update(unknown_ids)
+
         for item in contributor_values:
             if isinstance(item, dict):
                 contributor_id = item.get("user_id")
-                if contributor_id and not await self._community_intelligence_enabled(contributor_id):
+                if contributor_id and contributor_id not in opted_in:
                     continue
                 raw_value = item.get("value")
             else:

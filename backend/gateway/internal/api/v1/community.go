@@ -1,3 +1,7 @@
+// NOTE: CommunityHandler is currently unused (routes proxy to Python).
+// The CQRS implementation here is retained as a potential future optimization.
+// To enable: call h.RegisterRoutes(api, authMiddleware) in setup.go
+
 package v1
 
 import (
