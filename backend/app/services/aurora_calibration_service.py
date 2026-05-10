@@ -39,7 +39,7 @@ class AuroraCalibrationService:
             .where(
                 ErrorRecord.user_id == user_id,
                 ErrorRecord.created_at >= since,
-                ErrorRecord.deleted_at.is_(None),
+                ErrorRecord.is_deleted.is_(False),
             )
             .group_by(ErrorRecord.knowledge_node_id)
             .order_by(desc("error_count"))

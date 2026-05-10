@@ -37,7 +37,7 @@ class CommunityErrorAggregationService:
             .where(
                 ErrorRecord.knowledge_node_id == node_id,
                 ErrorRecord.created_at >= _utcnow() - timedelta(days=self.SIGNAL_TTL_DAYS),
-                ErrorRecord.deleted_at.is_(None),
+                ErrorRecord.is_deleted.is_(False),
             )
             .group_by(
                 ErrorRecord.knowledge_node_id,
@@ -83,7 +83,7 @@ class CommunityErrorAggregationService:
             .where(
                 ErrorRecord.created_at >= recent_cutoff,
                 ErrorRecord.knowledge_node_id.isnot(None),
-                ErrorRecord.deleted_at.is_(None),
+                ErrorRecord.is_deleted.is_(False),
             )
         )
         updated = 0
