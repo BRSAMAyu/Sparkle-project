@@ -41,9 +41,17 @@ class CommunityShareRepository {
     }
 
     final data = response.data;
-    if (data is! List) return [];
+    // Backend returns {"resources": [...], "total": N, ...}
+    List<dynamic> items;
+    if (data is List) {
+      items = data;
+    } else if (data is Map<String, dynamic> && data['resources'] is List) {
+      items = data['resources'] as List;
+    } else {
+      return [];
+    }
 
-    return data
+    return items
         .whereType<Map<String, dynamic>>()
         .map((json) => SharedResourceInfo.fromJson(json))
         .toList();

@@ -452,7 +452,6 @@ class SocialSignalBridge:
             "event_type": ACCOUNTABILITY_STRUGGLE_DETECTED,
             "user_id": str(user_uuid),
             "plan_id": str(plan_uuid),
-            "target_name": target_name,  # Only used by accountability partner consumer
             "struggle_score": score,
             "primary_signal": struggle_context.get("primary_signal"),
             "no_completion_days": no_completion_days,
@@ -512,13 +511,17 @@ class SocialSignalBridge:
             ):
                 continue
 
+            # Resolve target_name from DB instead of event payload (PII hygiene)
+            target_user = await self.db.get(User, target_user_id)
+            resolved_name = _user_display_name(target_user, "你的伙伴")
+
             await accountability_notification_service.send_struggle_alert(
                 self.db,
                 partner_id=partner_id,
                 target_user_id=target_user_id,
                 partnership_id=partnership.id,
                 plan_id=UUID(str(plan_id)),
-                target_name=str(event.get("target_name") or "你的伙伴"),
+                target_name=resolved_name,
                 no_completion_days=int(event.get("no_completion_days") or 2),
                 struggle_score=float(event.get("struggle_score") or 0.0),
                 dedupe_key=str(event.get("dedupe_key") or ""),
