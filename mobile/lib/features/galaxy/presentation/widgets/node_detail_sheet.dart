@@ -128,7 +128,8 @@ class _NodeDetailSheetState extends ConsumerState<NodeDetailSheet> {
                       return const _HistoryLoadingState();
                     }
                     if (snapshot.hasError || snapshot.data == null) {
-                      return _HistoryErrorState(onRetry: _retry);
+                      final errorMsg = snapshot.error?.toString();
+                      return _HistoryErrorState(onRetry: _retry, errorMessage: errorMsg);
                     }
                     return _HistoryContent(
                       history: snapshot.data!,
@@ -1377,9 +1378,10 @@ class _HistoryLoadingState extends StatelessWidget {
 }
 
 class _HistoryErrorState extends StatelessWidget {
-  const _HistoryErrorState({required this.onRetry});
+  const _HistoryErrorState({required this.onRetry, this.errorMessage});
 
   final VoidCallback onRetry;
+  final String? errorMessage;
 
   @override
   Widget build(BuildContext context) => SizedBox(
@@ -1393,6 +1395,16 @@ class _HistoryErrorState extends StatelessWidget {
               context.l10n.galaxyNodeHistoryFailed,
               style: Theme.of(context).textTheme.titleSmall,
             ),
+            if (errorMessage != null && errorMessage!.isNotEmpty) ...[
+              const SizedBox(height: DS.spacing8),
+              Text(
+                errorMessage!,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: DS.textTertiary),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
             const SizedBox(height: DS.spacing12),
             TextButton.icon(
               onPressed: onRetry,

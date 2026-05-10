@@ -81,7 +81,7 @@ class RedisCheckpointer:
             data["completed_at"] = datetime.now(UTC).replace(tzinfo=None).isoformat()
             await self.redis.set(key, json.dumps(data, ensure_ascii=False), ex=min(self.ttl, 6 * 3600))
         except Exception as e:
-            logger.debug(f"Failed to mark checkpoint completed: {e}")
+            logger.warning(f"Failed to mark checkpoint completed: {e}")
 
     async def load(self, session_id: str) -> WorkflowState | None:
         """Load state from checkpoint."""

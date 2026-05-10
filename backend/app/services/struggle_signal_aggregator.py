@@ -528,7 +528,7 @@ class StruggleSignalAggregator:
         try:
             await self._redis_call(redis, "setex", self._redis_key(user_id), self.REDIS_TTL, str(score))
         except Exception as exc:
-            logger.debug("Failed to cache struggle score for user {}: {}", user_id, exc)
+            logger.warning("Failed to cache struggle score for user {}: {}", user_id, exc)
 
     def _redis_key(self, user_id: str) -> str:
         return self.REDIS_KEY_TEMPLATE.format(user_id=user_id)

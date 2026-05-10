@@ -903,9 +903,20 @@ class LLMService:
         cleaned = raw.replace("```json", "").replace("```", "").strip()
 
         def _extract_json_block(text: str) -> str | None:
-            for start, end in (("{", "}"), ("[", "]")):
-                if start in text and end in text:
-                    return text[text.find(start):text.rfind(end) + 1]
+            for start_ch, end_ch in (("{", "}"), ("[", "]")):
+                start_idx = text.find(start_ch)
+                if start_idx < 0:
+                    continue
+                # Try progressively shorter substrings from each closing bracket
+                for end_idx in range(text.rfind(end_ch), start_idx, -1):
+                    if text[end_idx] != end_ch:
+                        continue
+                    candidate = text[start_idx:end_idx + 1]
+                    try:
+                        json.loads(candidate)
+                        return candidate
+                    except json.JSONDecodeError:
+                        continue
             return None
 
         try:

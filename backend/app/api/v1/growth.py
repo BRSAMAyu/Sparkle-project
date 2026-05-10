@@ -1,6 +1,7 @@
 import json
 
 from fastapi import APIRouter, Depends, Query
+from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
@@ -100,6 +101,6 @@ async def get_return_case_file(
         try:
             await redis.set(user_key, json.dumps(case, default=str), ex=7 * 24 * 3600)
         except Exception:  # noqa: BLE001
-            pass
+            logger.warning("growth: cache write failed for user_key=%s", user_key, exc_info=True)
 
     return case

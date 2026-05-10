@@ -22,6 +22,7 @@ from typing import Any
 
 from loguru import logger
 
+from app.core.llm_secure_io import sanitize_tool_payload
 from app.agents.workflow_experience import (
     build_plan_review_prompt,
     build_response_review_prompt,
@@ -516,7 +517,8 @@ class ReviewerAgent:
         for tc in tool_calls:
             name = tc.get("name") if isinstance(tc, dict) else getattr(tc, "name", "unknown")
             params = tc.get("params") if isinstance(tc, dict) else getattr(tc, "params", {})
-            tool_summary.append(f"- {name}: {json.dumps(params, ensure_ascii=False)[:100]}")
+            safe_params = sanitize_tool_payload(params) if isinstance(params, dict) else params
+            tool_summary.append(f"- {name}: {json.dumps(safe_params, ensure_ascii=False)[:100]}")
 
         profile = get_review_profile(
             review_profile_id=review_profile_id,

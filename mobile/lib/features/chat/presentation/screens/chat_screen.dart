@@ -1163,6 +1163,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       messages,
       offlineSnapshot.entries,
     );
+    final auroraStatus = ref.watch(auroraStatusProvider);
     final listItemCount = messages.length +
         (showStreamingBubble ? 1 : 0) +
         (showStatusIndicator ? 1 : 0) +
@@ -1627,9 +1628,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                     if (showCorrectionBar)
                                       Builder(
                                         builder: (ctx) {
-                                          final auroraStatus = ref.watch(
-                                            auroraStatusProvider,
-                                          );
                                           final l10n = ctx.l10n;
                                           return ContextualCorrectionBar(
                                             predictedReplyGroups: auroraStatus

@@ -81,10 +81,13 @@ class PendingActionsStore:
         if self.redis:
             key = f"{self.ACTION_KEY_PREFIX}{action_id}"
             ttl_seconds = int(self._expire_minutes * 60)
-            await self.redis.setex(key, ttl_seconds, json.dumps(_serialize_payload(payload)))
-            user_index_key = f"{self.USER_INDEX_PREFIX}{user_id}"
-            await self.redis.sadd(user_index_key, action_id)
-            await self.redis.expire(user_index_key, ttl_seconds)
+            try:
+                await self.redis.setex(key, ttl_seconds, json.dumps(_serialize_payload(payload)))
+                user_index_key = f"{self.USER_INDEX_PREFIX}{user_id}"
+                await self.redis.sadd(user_index_key, action_id)
+                await self.redis.expire(user_index_key, ttl_seconds)
+            except Exception:
+                logger.warning("pending_actions: Redis write failed for action=%s user=%s", action_id, user_id, exc_info=True)
         else:
             self._store[action_id] = payload
             # 启动清理任务（如果尚未启动）

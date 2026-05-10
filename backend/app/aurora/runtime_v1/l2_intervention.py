@@ -178,4 +178,4 @@ class L2InterventionEngine:
         try:
             await self.redis.set(key, "1", ex=_L2_COOLDOWN_SECONDS)
         except Exception:
-            pass
+            logger.warning("L2 intervention cooldown write failed for user=%s pattern=%s", user_id, pattern_name, exc_info=True)

@@ -72,6 +72,7 @@ class DashboardRepository {
   Future<Map<String, dynamic>> getExamSprintDashboard() async {
     if (DemoDataService.isDemoMode) {
       final l10n = I18nService.instance.l10n;
+      final zh = I18nService.instance.isChinese;
       final today = DateTime.now();
       final tomorrow = today.add(const Duration(days: 1));
       return {

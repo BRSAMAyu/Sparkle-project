@@ -33,12 +33,14 @@ class TaskBoardState {
     this.expandedTaskIds = const {},
     this.selectedPlanId,
     this.sprintFilter = SprintTaskFilter.all,
+    this.isCollapsed = true,
   });
 
   final TaskViewMode currentView;
   final Set<String> expandedTaskIds;
   final String? selectedPlanId;
   final SprintTaskFilter sprintFilter;
+  final bool isCollapsed;
 
   /// Serialize state to JSON for persistence
   Map<String, dynamic> toJson() => {
@@ -46,6 +48,7 @@ class TaskBoardState {
         'expandedTaskIds': expandedTaskIds.toList(),
         'selectedPlanId': selectedPlanId,
         'sprintFilter': sprintFilter.name,
+        'isCollapsed': isCollapsed,
       };
 
   /// Create state from JSON (for persistence)
@@ -65,6 +68,7 @@ class TaskBoardState {
           (e) => e.name == json['sprintFilter'],
           orElse: () => SprintTaskFilter.all,
         ),
+        isCollapsed: json['isCollapsed'] as bool? ?? true,
       );
     } catch (e) {
       return null;
@@ -76,6 +80,7 @@ class TaskBoardState {
     Set<String>? expandedTaskIds,
     String? selectedPlanId,
     SprintTaskFilter? sprintFilter,
+    bool? isCollapsed,
     bool clearSelectedPlan = false,
   }) =>
       TaskBoardState(
@@ -84,6 +89,7 @@ class TaskBoardState {
         selectedPlanId:
             clearSelectedPlan ? null : selectedPlanId ?? this.selectedPlanId,
         sprintFilter: sprintFilter ?? this.sprintFilter,
+        isCollapsed: isCollapsed ?? this.isCollapsed,
       );
 }
 
@@ -181,6 +187,10 @@ class TaskBoardNotifier extends PersistentStateNotifier<TaskBoardState> {
 
   void setSprintFilter(SprintTaskFilter filter) {
     state = state.copyWith(sprintFilter: filter);
+  }
+
+  void toggleCollapsed() {
+    state = state.copyWith(isCollapsed: !state.isCollapsed);
   }
 }
 

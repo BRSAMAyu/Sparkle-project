@@ -21,17 +21,10 @@ class TaskBoardCard extends ConsumerStatefulWidget {
 }
 
 class _TaskBoardCardState extends ConsumerState<TaskBoardCard> {
-  bool _isCollapsed = true;
-
-  void _toggleCollapsed() {
-    setState(() {
-      _isCollapsed = !_isCollapsed;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final boardState = ref.watch(taskBoardProvider);
+    final isCollapsed = boardState.isCollapsed;
     final summary = ref.watch(taskBoardTodaySummaryProvider);
     final isDualColumn = context.isTablet || context.isDesktop;
     final isChinese = Localizations.localeOf(context)
@@ -56,11 +49,11 @@ class _TaskBoardCardState extends ConsumerState<TaskBoardCard> {
             children: [
               _TaskBoardHeader(
                 summary: summaryLabel,
-                isCollapsed: _isCollapsed,
-                onToggle: _toggleCollapsed,
+                isCollapsed: isCollapsed,
+                onToggle: () => ref.read(taskBoardProvider.notifier).toggleCollapsed(),
                 onOpenTasks: () => context.push('/tasks'),
               ),
-              if (_isCollapsed) ...[
+              if (isCollapsed) ...[
                 const SizedBox(height: DS.spacing12),
                 _CollapsedWorkspacePreview(
                   summary: summaryLabel,
@@ -72,7 +65,7 @@ class _TaskBoardCardState extends ConsumerState<TaskBoardCard> {
                   duration: DS.quick,
                   curve: DS.motionCurve(SparkleMotionToken.standard),
                   alignment: Alignment.topCenter,
-                  child: _isCollapsed
+                  child: isCollapsed
                       ? const SizedBox.shrink()
                       : Padding(
                           padding: const EdgeInsets.only(top: DS.spacing12),

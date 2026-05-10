@@ -27,7 +27,7 @@ from uuid import UUID
 from loguru import logger
 
 from app.config import settings
-from app.core.llm_secure_io import sanitize_text_for_llm
+from app.core.llm_secure_io import sanitize_text_for_llm, sanitize_tool_payload
 from app.core.business_metrics import (
     PHASE4_OPERATION_DURATION_SECONDS,
     PLAN_REASONING_GENERATED_TOTAL,
@@ -1276,7 +1276,8 @@ Respond in JSON format:
         safe_rationale = sanitize_text_for_llm(plan.rationale or "")
         tool_summary = []
         for tc in plan.tool_calls:
-            tool_summary.append(f"- {tc.name}: {json.dumps(tc.params, ensure_ascii=False)}")
+            safe_params = sanitize_tool_payload(tc.params) if isinstance(tc.params, dict) else tc.params
+            tool_summary.append(f"- {tc.name}: {json.dumps(safe_params, ensure_ascii=False)}")
 
         return f"""Review the following executable plan:
 
