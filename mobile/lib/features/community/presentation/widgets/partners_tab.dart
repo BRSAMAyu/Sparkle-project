@@ -14,6 +14,7 @@ import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/data/models/accountability_model.dart';
 import 'package:sparkle/features/community/data/models/community_accountability_hub_model.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
+import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/community/presentation/providers/accountability_hub_provider.dart';
 import 'package:sparkle/features/community/presentation/providers/accountability_provider.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
@@ -65,7 +66,10 @@ class PartnersTab extends ConsumerWidget {
                         .where((p) => p.status == AccountabilityStatus.active)
                         .toList();
                     if (active.isEmpty) return const SizedBox.shrink();
-                    return _PartnershipsSection(partnerships: active);
+                    return _PartnershipsSection(
+                      partnerships: active,
+                      currentUserId: ref.watch(currentUserProvider)?.id ?? '',
+                    );
                   },
                   loading: () => const Padding(
                     padding: EdgeInsets.symmetric(horizontal: DS.lg, vertical: DS.md),
@@ -179,8 +183,9 @@ class PartnersTab extends ConsumerWidget {
 // ─── Subsections ────────────────────────────────────────────────────────────
 
 class _PartnershipsSection extends StatelessWidget {
-  const _PartnershipsSection({required this.partnerships});
+  const _PartnershipsSection({required this.partnerships, required this.currentUserId});
   final List<AccountabilityPartnershipInfo> partnerships;
+  final String currentUserId;
 
   @override
   Widget build(BuildContext context) {
@@ -195,7 +200,7 @@ class _PartnershipsSection extends StatelessWidget {
             title: zh ? '我的伙伴' : 'My Partners',
           ),
           const SizedBox(height: DS.sm),
-          ...partnerships.map((p) => _PartnershipCard(partnership: p)),
+          ...partnerships.map((p) => _PartnershipCard(partnership: p, currentUserId: currentUserId)),
         ],
       ),
     );
@@ -260,7 +265,7 @@ class _PartnershipCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      partnership.initiatorGoal,
+                      goalLabel,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(fontSize: 12, color: DS.textSecondary),
