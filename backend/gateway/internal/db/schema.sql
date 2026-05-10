@@ -8529,6 +8529,14 @@ ALTER TABLE ONLY node_expansion_queue
 ALTER TABLE ONLY node_relations
     ADD CONSTRAINT node_relations_pkey PRIMARY KEY (id);
 
+--
+-- Name: node_relations_source_target_type_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY node_relations
+    ADD CONSTRAINT node_relations_source_target_type_unique
+    UNIQUE (source_node_id, target_node_id, relation_type);
+
 
 --
 -- Name: north_star_metric_events north_star_metric_events_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama

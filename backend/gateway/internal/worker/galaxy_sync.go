@@ -494,6 +494,7 @@ func (w *GalaxySyncWorker) handleStudyRecordAdded(ctx context.Context, evt cqrsE
 	// Add to recent studies (keep last 50)
 	pipe.LPush(ctx, "galaxy:user:"+userIDStr+":recent_studies", recordJSON)
 	pipe.LTrim(ctx, "galaxy:user:"+userIDStr+":recent_studies", 0, 49)
+	pipe.Expire(ctx, "galaxy:user:"+userIDStr+":recent_studies", 30*24*time.Hour)
 
 	// Update daily study count
 	today := time.Now().Format("2006-01-02")
