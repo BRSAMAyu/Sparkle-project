@@ -1,6 +1,7 @@
 from collections import OrderedDict
+import asyncio
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 import grpc
@@ -35,9 +36,13 @@ class _CollaborativeSessionEntry:
 
 _active_collaborative_sessions: OrderedDict[str, _CollaborativeSessionEntry] = OrderedDict()
 
+# P0-5 fix: asyncio.Lock for thread-safe access to module-level dict
+_sessions_lock = asyncio.Lock()
+
 
 def _utcnow() -> datetime:
-    return datetime.utcnow()
+    # P0-5 fix: replace deprecated datetime.utcnow() with timezone-aware UTC now
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 def _prune_inactive_collaborative_sessions() -> None:
@@ -54,23 +59,27 @@ def _prune_inactive_collaborative_sessions() -> None:
         _active_collaborative_sessions.popitem(last=False)
 
 
-def _get_active_collaborative_session(galaxy_id: str) -> CollaborativeGalaxyService | None:
-    _prune_inactive_collaborative_sessions()
-    entry = _active_collaborative_sessions.get(galaxy_id)
-    if entry is None:
-        return None
-    entry.last_accessed_at = _utcnow()
-    _active_collaborative_sessions.move_to_end(galaxy_id)
-    return entry.service
+async def _get_active_collaborative_session(galaxy_id: str) -> CollaborativeGalaxyService | None:
+    """P0-5 fix: lock-protected read of collaborative session dict."""
+    async with _sessions_lock:
+        _prune_inactive_collaborative_sessions()
+        entry = _active_collaborative_sessions.get(galaxy_id)
+        if entry is None:
+            return None
+        entry.last_accessed_at = _utcnow()
+        _active_collaborative_sessions.move_to_end(galaxy_id)
+        return entry.service
 
 
-def _store_active_collaborative_session(galaxy_id: str, service: CollaborativeGalaxyService) -> None:
-    _active_collaborative_sessions[galaxy_id] = _CollaborativeSessionEntry(
-        service=service,
-        last_accessed_at=_utcnow(),
-    )
-    _active_collaborative_sessions.move_to_end(galaxy_id)
-    _prune_inactive_collaborative_sessions()
+async def _store_active_collaborative_session(galaxy_id: str, service: CollaborativeGalaxyService) -> None:
+    """P0-5 fix: lock-protected write to collaborative session dict."""
+    async with _sessions_lock:
+        _active_collaborative_sessions[galaxy_id] = _CollaborativeSessionEntry(
+            service=service,
+            last_accessed_at=_utcnow(),
+        )
+        _active_collaborative_sessions.move_to_end(galaxy_id)
+        _prune_inactive_collaborative_sessions()
 
 class GalaxyGrpcServiceImpl(galaxy_service_pb2_grpc.GalaxyServiceServicer if galaxy_service_pb2_grpc else object):
     def __init__(self, db_session_factory):
@@ -179,13 +188,13 @@ class GalaxyGrpcServiceImpl(galaxy_service_pb2_grpc.GalaxyServiceServicer if gal
             persistence_manager = CRDTPersistenceManager(cache_service.redis, db)
 
             # 1. Get or create collaborative session
-            collab_service = _get_active_collaborative_session(galaxy_id)
+            collab_service = await _get_active_collaborative_session(galaxy_id)
             if collab_service is None:
                 # Restore from persistence (Redis or DB)
                 ydoc = await persistence_manager.restore(galaxy_id)
                 collab_service = CollaborativeGalaxyService(galaxy_id)
                 collab_service.ydoc = ydoc
-                _store_active_collaborative_session(galaxy_id, collab_service)
+                await _store_active_collaborative_session(galaxy_id, collab_service)
 
             try:
                 # 2. Apply client update
@@ -205,7 +214,7 @@ class GalaxyGrpcServiceImpl(galaxy_service_pb2_grpc.GalaxyServiceServicer if gal
 
                 # 4. Get server update
                 server_update = collab_service.get_update()
-                _store_active_collaborative_session(galaxy_id, collab_service)
+                await _store_active_collaborative_session(galaxy_id, collab_service)
 
                 return galaxy_service_pb2.SyncCollaborativeGalaxyResponse(
                     success=True,

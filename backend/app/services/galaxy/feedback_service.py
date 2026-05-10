@@ -100,6 +100,12 @@ class GalaxyFeedbackService:
             metadata=event_data
         )
 
+        # P0-2 fix: skip _update_mastery_from_feedback for event types that are
+        # already handled by batch_update_from_task -> spark_node (task_completed,
+        # study_session). These events would otherwise double-update mastery.
+        if event_type in ("task_completed", "study_session"):
+            return None
+
         # 更新掌握度
         result = await self._update_mastery_from_feedback(
             user_id=user_id,
