@@ -514,8 +514,7 @@ class CheckinWithInteraction {
       CheckinWithInteraction(
         id: json['id'] as String,
         userId: json['user_id'] as String,
-        authorName: json['author_name'] as String? ??
-            (I18nService.instance.isChinese ? '用户' : 'User'),
+        authorName: json['author_name'] as String? ?? 'User',
         content: json['content'] as String,
         likes: json['likes'] as int? ?? 0,
         encouragements: (json['encouragements'] as List? ?? [])

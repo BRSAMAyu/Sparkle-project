@@ -15145,6 +15145,7 @@
     }
   },
   "auroraExpandedExplanationDefault": "Aurora 会先轻量判断当前状态，重要判断都可以被你纠正。",
+  "auroraExpandedExplanationPrefix": "当前判断：",
   "auroraIfReadOffCorrectHere": "如果我判断错了，直接改一下：",
 
   "auroraSensing": "Aurora · 轻量感知中",
