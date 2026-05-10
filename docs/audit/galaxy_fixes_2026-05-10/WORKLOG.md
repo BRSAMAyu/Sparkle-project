@@ -120,8 +120,9 @@
 | `966ea6753` | fix(P3): handleNodeExpanded fall back to DB when Redis view missing |
 | `081c667a1` | fix(P3): remove UUID from node detail sheet, fix light mode chip contrast |
 | `8089d1c57` | fix(P3): remove dead duplicate methods in document_service.py |
+| `715edadd3` | fix(review): self-audit — RecordStudy scan error, UUID validation, imports, ORDER BY |
 
-**总计**: 25 个 commit，包含 6 P0 + 14 P1 + 22 P2 + 9 P3（共 51 项修复/确认）
+**总计**: 26 个 commit，包含 6 P0 + 14 P1 + 22 P2 + 9 P3 + 5 review（共 56 项修复/确认）
 
 ---
 
