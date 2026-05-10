@@ -58,7 +58,7 @@ class DashboardCuriosityCard extends ConsumerWidget {
             ),
             const Spacer(),
             Text(
-              cognitive.weeklyPattern ?? (I18nService.instance.isChinese ? '探索未知' : 'Explore the unknown'),
+              cognitive.weeklyPattern ?? context.l10n.curiosityExplore,
               style: context.sparkleTypography.labelLarge.copyWith(
                 fontSize: dense ? 13 : null,
                 fontWeight: DS.fontWeightBold,
@@ -69,7 +69,7 @@ class DashboardCuriosityCard extends ConsumerWidget {
             ),
             const SizedBox(height: DS.xs),
             Text(
-              I18nService.instance.isChinese ? '好奇心胶囊' : 'Curiosity Capsule',
+              context.l10n.homeToolbarCuriosityCapsule,
               style: context.sparkleTypography.labelSmall.copyWith(
                 color: DS.textSecondary,
               ),
