@@ -356,7 +356,7 @@ class SemanticCacheService:
 
         except Exception as e:
             # redis.exceptions.LockError 可能会在锁获取超时抛出
-            if "LockError" in str(type(e)):
+            if type(e).__name__ == "LockError":
                  logger.warning(f"Failed to acquire lock for {cache_key} (Timeout). Waiting...")
                  # 稍微等待一下再尝试获取（降级策略）
                  await asyncio.sleep(0.1)
@@ -472,12 +472,16 @@ class SemanticCacheService:
             return 0
 
         try:
-            # 查找所有缓存键
-            keys = await self.redis.keys(f"{self.CACHE_PREFIX}*")
-            emb_keys = await self.redis.keys(f"{self.EMBED_PREFIX}*")
+            # Use SCAN instead of KEYS for production safety
+            keys = []
+            async for key in self.redis.scan_iter(match=f"{self.CACHE_PREFIX}*"):
+                keys.append(key)
+            emb_keys = []
+            async for key in self.redis.scan_iter(match=f"{self.EMBED_PREFIX}*"):
+                emb_keys.append(key)
 
             if keys or emb_keys:
-                delete_keys = list(keys or []) + list(emb_keys or []) + [self.KEY_SET]
+                delete_keys = list(keys) + list(emb_keys) + [self.KEY_SET]
                 deleted = await self.redis.delete(*delete_keys)
                 logger.warning(f"Cache CLEAR_ALL: deleted {deleted} keys")
                 return deleted
@@ -529,8 +533,10 @@ class SemanticCacheService:
             return 0
 
         try:
-            keys = await self.redis.keys(f"{self.CACHE_PREFIX}*")
-            return len(keys)
+            count = 0
+            async for _ in self.redis.scan_iter(match=f"{self.CACHE_PREFIX}*"):
+                count += 1
+            return count
 
         except Exception as e:
             logger.error(f"Cache SIZE error: {e}")
