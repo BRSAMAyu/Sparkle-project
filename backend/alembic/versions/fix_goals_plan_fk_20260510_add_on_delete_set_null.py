@@ -5,6 +5,8 @@ Revises: comp_idx_20260510
 Create Date: 2026-05-10
 """
 
+from alembic import op
+
 revision = 'fix_goals_plan_fk_20260510'
 down_revision = 'comp_idx_20260510'
 branch_labels = None

@@ -197,8 +197,17 @@ def _make_checkpointer():
     return MemorySaver()
 
 
+def _init_checkpointer():
+    """Initialize checkpointer at compile time with Redis or MemorySaver."""
+    try:
+        return _make_checkpointer()
+    except Exception:
+        from langgraph.checkpoint.memory import MemorySaver
+        return MemorySaver()
+
+
 sparkle_graph = workflow.compile(
-    checkpointer=_LazyCheckpointer(),
+    checkpointer=_init_checkpointer(),
     interrupt_before=["human_node"]
 )
 
@@ -278,7 +287,7 @@ def create_planning_graph():
     planning_workflow.add_edge("aggregator", END)
 
     # Compile with checkpointer
-    planning_checkpointer = _LazyCheckpointer()
+    planning_checkpointer = _init_checkpointer()
 
     return planning_workflow.compile(
         checkpointer=planning_checkpointer
