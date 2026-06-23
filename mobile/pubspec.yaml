@@ -45,7 +45,7 @@ dependencies:
   package_info_plus: ^8.0.0
 
   # Navigation
-  go_router: ^13.0.0
+  go_router: ^17.2.3
   app_links: ^6.4.0
 
   # Notifications
