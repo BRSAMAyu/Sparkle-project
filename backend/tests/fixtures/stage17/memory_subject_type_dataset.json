@@ -1,0 +1,33 @@
+[
+  {"name": "self-1", "user_message": "最近我在整理错题。", "subject_type": "self", "label": "positive"},
+  {"name": "self-2", "user_message": "今天我准备把线代笔记补完。", "subject_type": "commitment", "label": "positive"},
+  {"name": "self-3", "user_message": "这周我在复习概率论。", "subject_type": "self", "label": "positive"},
+  {"name": "self-4", "user_message": "明天我想把英语阅读再练两篇。", "subject_type": "commitment", "label": "positive"},
+  {"name": "self-neg-1", "user_message": "天气不错。", "subject_type": "self", "label": "negative"},
+  {"name": "self-neg-2", "user_message": "不错。", "subject_type": "self", "label": "negative"},
+
+  {"name": "person-1", "user_message": "我和老张约好一起刷题。", "subject_type": "person_mention", "label": "positive"},
+  {"name": "person-2", "user_message": "我妈最近总提醒我早点休息。", "subject_type": "person_mention", "label": "positive"},
+  {"name": "person-3", "user_message": "老师今天说我这章要多练。", "subject_type": "person_mention", "label": "positive"},
+  {"name": "person-4", "user_message": "朋友说她这周也在准备雅思。", "subject_type": "person_mention", "label": "positive"},
+  {"name": "person-neg-1", "user_message": "他。", "subject_type": "person_mention", "label": "negative"},
+  {"name": "person-neg-2", "user_message": "她很好。", "subject_type": "person_mention", "label": "negative"},
+
+  {"name": "relationship-1", "user_message": "我和室友的关系这周有点紧张。", "subject_type": "relationship", "label": "positive"},
+  {"name": "relationship-2", "user_message": "跟妈妈相处最近轻松多了。", "subject_type": "relationship", "label": "positive"},
+  {"name": "relationship-3", "user_message": "我和老师的关系一直挺顺。", "subject_type": "relationship", "label": "positive"},
+  {"name": "relationship-4", "user_message": "与同学相处最近没那么别扭了。", "subject_type": "relationship", "label": "positive"},
+  {"name": "relationship-neg-1", "user_message": "关系不错。", "subject_type": "relationship", "label": "negative"},
+  {"name": "relationship-neg-2", "user_message": "相处还行。", "subject_type": "relationship", "label": "negative"},
+
+  {"name": "commit-1", "user_message": "我明天要把提纲补完。", "subject_type": "commitment", "label": "positive"},
+  {"name": "commit-2", "user_message": "这周我要把错题本整理完。", "subject_type": "commitment", "label": "positive"},
+  {"name": "commit-3", "user_message": "月底前我要交完申请。", "subject_type": "commitment", "label": "positive"},
+  {"name": "commit-4", "user_message": "我计划 5月3日 前完成复盘。", "subject_type": "commitment", "label": "positive"},
+  {"name": "commit-5", "user_message": "今天我要把两套卷子做完。", "subject_type": "commitment", "label": "positive"},
+  {"name": "commit-6", "user_message": "明天下午我要去图书馆补化学。", "subject_type": "commitment", "label": "positive"},
+  {"name": "commit-7", "user_message": "3天内我要把口语素材整理完。", "subject_type": "commitment", "label": "positive"},
+  {"name": "commit-8", "user_message": "我准备这个月底把简历改完。", "subject_type": "commitment", "label": "positive"},
+  {"name": "commit-neg-1", "user_message": "我会继续认真学习。", "subject_type": "commitment", "label": "negative"},
+  {"name": "commit-neg-2", "user_message": "我打算之后再说。", "subject_type": "commitment", "label": "negative"}
+]

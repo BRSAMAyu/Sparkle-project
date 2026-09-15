@@ -1,0 +1,326 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+part of 'knowledge_detail_model.dart';
+
+// **************************************************************************
+// JsonSerializableGenerator
+// **************************************************************************
+
+KnowledgeDetailResponse _$KnowledgeDetailResponseFromJson(
+        Map<String, dynamic> json) =>
+    KnowledgeDetailResponse(
+      node: KnowledgeNodeDetail.fromJson(json['node'] as Map<String, dynamic>),
+      userStats: KnowledgeUserStats.fromJson(
+          json['userStats'] as Map<String, dynamic>),
+      relations: (json['relations'] as List<dynamic>?)
+              ?.map((e) => NodeRelation.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+      relatedTasks: (json['relatedTasks'] as List<dynamic>?)
+              ?.map((e) => TaskModel.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+      relatedPlans: (json['relatedPlans'] as List<dynamic>?)
+              ?.map((e) => RelatedPlan.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+      sourceDocuments: (json['source_documents'] as List<dynamic>?)
+              ?.map((e) =>
+                  NodeSourceDocumentRef.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+      knowledgeStats: json['knowledge_stats'] == null
+          ? const NodeKnowledgeStats()
+          : NodeKnowledgeStats.fromJson(
+              json['knowledge_stats'] as Map<String, dynamic>),
+      learningPathSnapshot: json['learningPathSnapshot'] == null
+          ? null
+          : LearningPathSnapshot.fromJson(
+              json['learningPathSnapshot'] as Map<String, dynamic>),
+    );
+
+Map<String, dynamic> _$KnowledgeDetailResponseToJson(
+        KnowledgeDetailResponse instance) =>
+    <String, dynamic>{
+      'node': instance.node,
+      'relations': instance.relations,
+      'relatedTasks': instance.relatedTasks,
+      'relatedPlans': instance.relatedPlans,
+      'source_documents': instance.sourceDocuments,
+      'knowledge_stats': instance.knowledgeStats,
+      'userStats': instance.userStats,
+      'learningPathSnapshot': instance.learningPathSnapshot,
+    };
+
+KnowledgeNodeDetail _$KnowledgeNodeDetailFromJson(Map<String, dynamic> json) =>
+    KnowledgeNodeDetail(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      nameEn: json['name_en'] as String?,
+      description: json['description'] as String?,
+      keywords: (json['keywords'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+      importanceLevel: (json['importance_level'] as num?)?.toInt() ?? 1,
+      sectorCode: json['sector_code'] as String? ?? 'VOID',
+      isSeed: json['is_seed'] as bool? ?? false,
+      sourceType: json['source_type'] as String? ?? 'seed',
+      parentId: json['parent_id'] as String?,
+      subjectId: (json['subject_id'] as num?)?.toInt(),
+      subjectName: json['subject_name'] as String?,
+      createdAt: json['created_at'] == null
+          ? null
+          : DateTime.parse(json['created_at'] as String),
+      communitySignal: json['community_signal'] as Map<String, dynamic>?,
+    );
+
+Map<String, dynamic> _$KnowledgeNodeDetailToJson(
+        KnowledgeNodeDetail instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'name': instance.name,
+      'name_en': instance.nameEn,
+      'description': instance.description,
+      'keywords': instance.keywords,
+      'importance_level': instance.importanceLevel,
+      'sector_code': instance.sectorCode,
+      'is_seed': instance.isSeed,
+      'source_type': instance.sourceType,
+      'parent_id': instance.parentId,
+      'subject_id': instance.subjectId,
+      'subject_name': instance.subjectName,
+      'created_at': instance.createdAt?.toIso8601String(),
+      'community_signal': instance.communitySignal,
+    };
+
+NodeRelation _$NodeRelationFromJson(Map<String, dynamic> json) => NodeRelation(
+      id: json['id'] as String,
+      sourceNodeId: json['source_node_id'] as String,
+      targetNodeId: json['target_node_id'] as String,
+      relationType: json['relation_type'] as String,
+      strength: (json['strength'] as num?)?.toDouble() ?? 0.5,
+      sourceNodeName: json['source_node_name'] as String?,
+      targetNodeName: json['target_node_name'] as String?,
+    );
+
+Map<String, dynamic> _$NodeRelationToJson(NodeRelation instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'source_node_id': instance.sourceNodeId,
+      'target_node_id': instance.targetNodeId,
+      'relation_type': instance.relationType,
+      'strength': instance.strength,
+      'source_node_name': instance.sourceNodeName,
+      'target_node_name': instance.targetNodeName,
+    };
+
+RelatedPlan _$RelatedPlanFromJson(Map<String, dynamic> json) => RelatedPlan(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      planType: json['plan_type'] as String,
+      status: json['status'] as String,
+      targetDate: json['target_date'] == null
+          ? null
+          : DateTime.parse(json['target_date'] as String),
+    );
+
+Map<String, dynamic> _$RelatedPlanToJson(RelatedPlan instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'title': instance.title,
+      'plan_type': instance.planType,
+      'status': instance.status,
+      'target_date': instance.targetDate?.toIso8601String(),
+    };
+
+KnowledgeUserStats _$KnowledgeUserStatsFromJson(Map<String, dynamic> json) =>
+    KnowledgeUserStats(
+      masteryScore: (json['mastery_score'] as num?)?.toDouble() ?? 0,
+      totalStudyMinutes: (json['total_study_minutes'] as num?)?.toInt() ?? 0,
+      studyCount: (json['study_count'] as num?)?.toInt() ?? 0,
+      isUnlocked: json['is_unlocked'] as bool? ?? false,
+      isFavorite: json['is_favorite'] as bool? ?? false,
+      lastStudyAt: json['last_study_at'] == null
+          ? null
+          : DateTime.parse(json['last_study_at'] as String),
+      nextReviewAt: json['next_review_at'] == null
+          ? null
+          : DateTime.parse(json['next_review_at'] as String),
+      decayPaused: json['decay_paused'] as bool? ?? false,
+    );
+
+Map<String, dynamic> _$KnowledgeUserStatsToJson(KnowledgeUserStats instance) =>
+    <String, dynamic>{
+      'mastery_score': instance.masteryScore,
+      'total_study_minutes': instance.totalStudyMinutes,
+      'study_count': instance.studyCount,
+      'is_unlocked': instance.isUnlocked,
+      'is_favorite': instance.isFavorite,
+      'last_study_at': instance.lastStudyAt?.toIso8601String(),
+      'next_review_at': instance.nextReviewAt?.toIso8601String(),
+      'decay_paused': instance.decayPaused,
+    };
+
+NodeSourceDocumentRef _$NodeSourceDocumentRefFromJson(
+        Map<String, dynamic> json) =>
+    NodeSourceDocumentRef(
+      fileId: json['file_id'] as String,
+      filename: json['filename'] as String,
+      fileType: json['file_type'] as String?,
+      uploadDate: json['upload_date'] == null
+          ? null
+          : DateTime.parse(json['upload_date'] as String),
+      chunkCount: (json['chunk_count'] as num?)?.toInt() ?? 0,
+      previewChunks: (json['preview_chunks'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+    );
+
+Map<String, dynamic> _$NodeSourceDocumentRefToJson(
+        NodeSourceDocumentRef instance) =>
+    <String, dynamic>{
+      'file_id': instance.fileId,
+      'filename': instance.filename,
+      'file_type': instance.fileType,
+      'upload_date': instance.uploadDate?.toIso8601String(),
+      'chunk_count': instance.chunkCount,
+      'preview_chunks': instance.previewChunks,
+    };
+
+NodeKnowledgeStats _$NodeKnowledgeStatsFromJson(Map<String, dynamic> json) =>
+    NodeKnowledgeStats(
+      totalDocuments: (json['total_documents'] as num?)?.toInt() ?? 0,
+      totalChunks: (json['total_chunks'] as num?)?.toInt() ?? 0,
+      hasPersonalUploads: json['has_personal_uploads'] as bool? ?? false,
+      lastMaterialAdded: json['last_material_added'] == null
+          ? null
+          : DateTime.parse(json['last_material_added'] as String),
+    );
+
+Map<String, dynamic> _$NodeKnowledgeStatsToJson(NodeKnowledgeStats instance) =>
+    <String, dynamic>{
+      'total_documents': instance.totalDocuments,
+      'total_chunks': instance.totalChunks,
+      'has_personal_uploads': instance.hasPersonalUploads,
+      'last_material_added': instance.lastMaterialAdded?.toIso8601String(),
+    };
+
+NodeSourceChunk _$NodeSourceChunkFromJson(Map<String, dynamic> json) =>
+    NodeSourceChunk(
+      chunkId: json['chunk_id'] as String,
+      fileId: json['file_id'] as String,
+      filename: json['filename'] as String,
+      chunkIndex: (json['chunk_index'] as num).toInt(),
+      content: json['content'] as String,
+      preview: json['preview'] as String,
+      fileType: json['file_type'] as String?,
+      pageNumbers: (json['page_numbers'] as List<dynamic>?)
+              ?.map((e) => (e as num).toInt())
+              .toList() ??
+          const [],
+      sectionTitle: json['section_title'] as String?,
+      qualityScore: (json['quality_score'] as num?)?.toDouble(),
+      createdAt: json['created_at'] == null
+          ? null
+          : DateTime.parse(json['created_at'] as String),
+    );
+
+Map<String, dynamic> _$NodeSourceChunkToJson(NodeSourceChunk instance) =>
+    <String, dynamic>{
+      'chunk_id': instance.chunkId,
+      'file_id': instance.fileId,
+      'filename': instance.filename,
+      'file_type': instance.fileType,
+      'chunk_index': instance.chunkIndex,
+      'content': instance.content,
+      'preview': instance.preview,
+      'page_numbers': instance.pageNumbers,
+      'section_title': instance.sectionTitle,
+      'quality_score': instance.qualityScore,
+      'created_at': instance.createdAt?.toIso8601String(),
+    };
+
+NodeChunksResponse _$NodeChunksResponseFromJson(Map<String, dynamic> json) =>
+    NodeChunksResponse(
+      nodeId: json['node_id'] as String,
+      chunks: (json['chunks'] as List<dynamic>?)
+              ?.map((e) => NodeSourceChunk.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+      total: (json['total'] as num?)?.toInt() ?? 0,
+      page: (json['page'] as num?)?.toInt() ?? 1,
+      pageSize: (json['page_size'] as num?)?.toInt() ?? 20,
+      totalPages: (json['total_pages'] as num?)?.toInt() ?? 0,
+      hasNext: json['has_next'] as bool? ?? false,
+      hasPrev: json['has_prev'] as bool? ?? false,
+    );
+
+Map<String, dynamic> _$NodeChunksResponseToJson(NodeChunksResponse instance) =>
+    <String, dynamic>{
+      'node_id': instance.nodeId,
+      'chunks': instance.chunks,
+      'total': instance.total,
+      'page': instance.page,
+      'page_size': instance.pageSize,
+      'total_pages': instance.totalPages,
+      'has_next': instance.hasNext,
+      'has_prev': instance.hasPrev,
+    };
+
+LearningPathSnapshot _$LearningPathSnapshotFromJson(
+        Map<String, dynamic> json) =>
+    LearningPathSnapshot(
+      mode: json['mode'] as String,
+      summary: json['summary'] as String,
+      taskCount: (json['task_count'] as num?)?.toInt() ?? 0,
+      tasks: (json['tasks'] as List<dynamic>?)
+              ?.map((e) =>
+                  LearningPathSnapshotTask.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+      selectedRelatedNodeIds:
+          (json['selected_related_node_ids'] as List<dynamic>?)
+                  ?.map((e) => e as String)
+                  .toList() ??
+              const [],
+      generatedAt: json['generated_at'] == null
+          ? null
+          : DateTime.parse(json['generated_at'] as String),
+    );
+
+Map<String, dynamic> _$LearningPathSnapshotToJson(
+        LearningPathSnapshot instance) =>
+    <String, dynamic>{
+      'mode': instance.mode,
+      'summary': instance.summary,
+      'task_count': instance.taskCount,
+      'tasks': instance.tasks,
+      'selected_related_node_ids': instance.selectedRelatedNodeIds,
+      'generated_at': instance.generatedAt?.toIso8601String(),
+    };
+
+LearningPathSnapshotTask _$LearningPathSnapshotTaskFromJson(
+        Map<String, dynamic> json) =>
+    LearningPathSnapshotTask(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      type: json['type'] as String,
+      estimatedMinutes: (json['estimated_minutes'] as num).toInt(),
+      status: json['status'] as String,
+      knowledgeNodeId: json['knowledge_node_id'] as String?,
+      guideContent: json['guide_content'] as String?,
+    );
+
+Map<String, dynamic> _$LearningPathSnapshotTaskToJson(
+        LearningPathSnapshotTask instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'title': instance.title,
+      'type': instance.type,
+      'estimated_minutes': instance.estimatedMinutes,
+      'status': instance.status,
+      'knowledge_node_id': instance.knowledgeNodeId,
+      'guide_content': instance.guideContent,
+    };

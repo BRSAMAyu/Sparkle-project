@@ -1,0 +1,390 @@
+import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+
+class PreferenceController2D extends StatefulWidget {
+  const PreferenceController2D({
+    required this.onPreferenceChanged,
+    super.key,
+    this.initialDepth = 0.5,
+    this.initialCuriosity = 0.5,
+  });
+  final double initialDepth; // 0.0 to 1.0 (Top is 1.0)
+  final double initialCuriosity; // 0.0 to 1.0 (Right is 1.0)
+  final ValueChanged<Offset> onPreferenceChanged;
+
+  @override
+  State<PreferenceController2D> createState() => _PreferenceController2DState();
+}
+
+class _PreferenceController2DState extends State<PreferenceController2D> {
+  Offset _currentPosition = Offset.zero; // Normalized to 0.0-1.0 for x and y
+
+  @override
+  void initState() {
+    super.initState();
+    // Map initial values to normalized coordinates
+    // Curiosity (X): 0.0 (Left) -> 1.0 (Right)
+    // Depth (Y): 1.0 (Top) -> 0.0 (Bottom) => Inverted for UI Y-axis (0 is Top)
+    _currentPosition =
+        Offset(widget.initialCuriosity, 1.0 - widget.initialDepth);
+  }
+
+  @override
+  void didUpdateWidget(covariant PreferenceController2D oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialCuriosity != widget.initialCuriosity ||
+        oldWidget.initialDepth != widget.initialDepth) {
+      _currentPosition =
+          Offset(widget.initialCuriosity, 1.0 - widget.initialDepth);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(
+        children: [
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final size = constraints.biggest.shortestSide;
+              const double handleSize = 40; // Size of the draggable flame icon
+              final glowColor = Color.lerp(
+                    DS.info,
+                    DS.semanticSuccess,
+                    _currentPosition.dx.clamp(0.0, 1.0),
+                  ) ??
+                  DS.primaryBase;
+              final axisColor = Theme.of(context).brightness == Brightness.dark
+                  ? DS.neutral600
+                  : DS.neutral300;
+
+              // Convert normalized position to local pixel coordinates
+              var x = _currentPosition.dx * size;
+              var y = _currentPosition.dy * size;
+
+              // Clamp to ensure the center of the handle stays within bounds
+              x = x.clamp(handleSize / 2, size - handleSize / 2);
+              y = y.clamp(handleSize / 2, size - handleSize / 2);
+
+              return GestureDetector(
+                onPanUpdate: (details) {
+                  final renderBox = context.findRenderObject() as RenderBox;
+                  final localPosition =
+                      renderBox.globalToLocal(details.globalPosition);
+
+                  // Normalize to 0.0 - 1.0 range
+                  final newCuriosity =
+                      (localPosition.dx / size).clamp(0.0, 1.0);
+                  final newDepth = 1.0 -
+                      (localPosition.dy / size)
+                          .clamp(0.0, 1.0); // Y-axis inverted
+
+                  setState(() {
+                    _currentPosition = Offset(newCuriosity, 1.0 - newDepth);
+                  });
+                  widget.onPreferenceChanged(Offset(newCuriosity, newDepth));
+                },
+                onTapDown: (details) {
+                  final renderBox = context.findRenderObject() as RenderBox;
+                  final localPosition =
+                      renderBox.globalToLocal(details.globalPosition);
+
+                  final newCuriosity =
+                      (localPosition.dx / size).clamp(0.0, 1.0);
+                  final newDepth =
+                      1.0 - (localPosition.dy / size).clamp(0.0, 1.0);
+
+                  setState(() {
+                    _currentPosition = Offset(newCuriosity, 1.0 - newDepth);
+                  });
+                  widget.onPreferenceChanged(Offset(newCuriosity, newDepth));
+                },
+                child: Container(
+                  width: size,
+                  height: size,
+                  decoration: BoxDecoration(
+                    borderRadius: DS.borderRadius16,
+                    border: Border.all(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? DS.neutral700
+                          : DS.neutral400,
+                      width: 2,
+                    ),
+                    // Use theme-aware background with better contrast
+                    // In dark mode: use surfaceTertiary (darker) to contrast with white control point
+                    // In light mode: use surfaceSecondary (lighter) for better visibility
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color.alphaBlend(
+                          DS.info.withValues(
+                              alpha: 0.12 + (_currentPosition.dy * 0.08),),
+                          Theme.of(context).brightness == Brightness.dark
+                              ? DS.surfaceTertiary
+                              : DS.surfaceSecondary,
+                        ),
+                        Color.alphaBlend(
+                          DS.semanticSuccess.withValues(
+                            alpha: 0.08 + (_currentPosition.dx * 0.1),
+                          ),
+                          Theme.of(context).brightness == Brightness.dark
+                              ? DS.surfaceSecondary
+                              : DS.surfacePrimary,
+                        ),
+                      ],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: glowColor.withValues(alpha: 0.08),
+                        blurRadius: 28,
+                        offset: const Offset(0, 16),
+                      ),
+                    ],
+                  ),
+                  child: Stack(
+                    children: [
+                      // Vertical gradient for depth axis (top=deep, bottom=shallow)
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: DS.borderRadius16,
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              DS.info
+                                  .withValues(alpha: 0.25), // Deep - blue tint
+                              DS.warning.withValues(
+                                alpha: 0.15,
+                              ), // Shallow - warm tint
+                            ],
+                          ),
+                        ),
+                      ),
+                      // Horizontal gradient for curiosity axis (left=focus, right=curious)
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: DS.borderRadius16,
+                          gradient: LinearGradient(
+                            colors: [
+                              DS.brandSecondary.withValues(
+                                alpha: 0.15,
+                              ), // Focus - purple tint
+                              DS.semanticSuccess.withValues(
+                                alpha: 0.2,
+                              ), // Curious - green tint
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      // Grid lines and axes
+                      CustomPaint(
+                        size: Size(size, size),
+                        painter: _GridAxisPainter(axisColor: axisColor),
+                      ),
+
+                      Positioned(
+                        left: x - 52,
+                        top: y - 52,
+                        child: IgnorePointer(
+                          child: Container(
+                            width: 104,
+                            height: 104,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: RadialGradient(
+                                colors: [
+                                  glowColor.withValues(alpha: 0.26),
+                                  glowColor.withValues(alpha: 0.08),
+                                  Colors.transparent,
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      // Labels
+                      _buildQuadrantLabels(),
+
+                      // Draggable Flame Icon
+                      Positioned(
+                        left: x - handleSize / 2,
+                        top: y - handleSize / 2,
+                        child: Container(
+                          width: handleSize,
+                          height: handleSize,
+                          decoration: BoxDecoration(
+                            gradient:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? null
+                                    : DS.primaryGradient,
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? DS.neutral0
+                                    : null,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: glowColor.withValues(
+                                  alpha: Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? 0.34
+                                      : 0.28,
+                                ),
+                                blurRadius: 16,
+                                spreadRadius: 3,
+                              ),
+                            ],
+                            border: Border.all(
+                              color: Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? DS.neutral0.withValues(alpha: 0.5)
+                                  : DS.brandPrimaryConst,
+                              width: 2,
+                            ),
+                          ),
+                          child: Icon(
+                            Icons.local_fire_department,
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? DS.neutral900
+                                    : DS.brandPrimaryConst,
+                            size: 24,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      );
+
+  Widget _buildQuadrantLabels() {
+    const labelPadding = 8.0;
+    final textStyle = TextStyle(
+      fontSize: 10,
+      fontWeight: DS.fontWeightBold,
+      color: DS.textSecondary,
+    );
+
+    return Stack(
+      children: [
+        // Depth+ at top center
+        Align(
+          alignment: Alignment.topCenter,
+          child: Padding(
+            padding: const EdgeInsets.only(top: labelPadding),
+            child: Text(context.l10n.learningModeDepthHigh, style: textStyle),
+          ),
+        ),
+        // Depth- at bottom center
+        Align(
+          alignment: Alignment.bottomCenter,
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: labelPadding),
+            child: Text(context.l10n.learningModeDepthLow, style: textStyle),
+          ),
+        ),
+        // Curiosity- (Focus) at left center
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Padding(
+            padding: const EdgeInsets.only(left: labelPadding),
+            child: RotatedBox(
+              quarterTurns: 3,
+              child:
+                  Text(context.l10n.learningModeCuriosityLow, style: textStyle),
+            ),
+          ),
+        ),
+        // Curiosity+ at right center
+        Align(
+          alignment: Alignment.centerRight,
+          child: Padding(
+            padding: const EdgeInsets.only(right: labelPadding),
+            child: RotatedBox(
+              quarterTurns: 1,
+              child: Text(
+                context.l10n.learningModeCuriosityHigh,
+                style: textStyle,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _GridAxisPainter extends CustomPainter {
+  const _GridAxisPainter({required this.axisColor});
+
+  final Color axisColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = axisColor
+      ..strokeWidth = 1;
+
+    // Center Cross
+    canvas.drawLine(
+      Offset(0, size.height / 2),
+      Offset(size.width, size.height / 2),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(size.width / 2, 0),
+      Offset(size.width / 2, size.height),
+      paint,
+    );
+
+    // Axis Arrows
+    _drawArrow(
+      canvas,
+      Offset(size.width / 2, 0),
+      paint,
+      isVertical: true,
+      isStart: true,
+    ); // Top
+    _drawArrow(
+      canvas,
+      Offset(size.width, size.height / 2),
+      paint,
+      isVertical: false,
+      isStart: false,
+    ); // Right
+  }
+
+  void _drawArrow(
+    Canvas canvas,
+    Offset tip,
+    Paint paint, {
+    required bool isVertical,
+    required bool isStart,
+  }) {
+    const arrowSize = 6.0;
+    final path = Path();
+    if (isVertical) {
+      // Up arrow at Top
+      path.moveTo(tip.dx, tip.dy);
+      path.lineTo(tip.dx - arrowSize, tip.dy + arrowSize);
+      path.lineTo(tip.dx + arrowSize, tip.dy + arrowSize);
+    } else {
+      // Right arrow
+      path.moveTo(tip.dx, tip.dy);
+      path.lineTo(tip.dx - arrowSize, tip.dy - arrowSize);
+      path.lineTo(tip.dx - arrowSize, tip.dy + arrowSize);
+    }
+    path.close();
+    canvas.drawPath(path, paint..style = PaintingStyle.fill);
+  }
+
+  @override
+  bool shouldRepaint(covariant _GridAxisPainter oldDelegate) =>
+      oldDelegate.axisColor != axisColor;
+}

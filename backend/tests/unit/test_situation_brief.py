@@ -1,0 +1,693 @@
+import pytest
+
+from app.core.user_insight_state import UserInsightState
+from app.orchestration.prompts import _normalize_user_context
+from app.orchestration.learning_state_fragment import build_learning_state_fragment
+from app.orchestration.residual_diagnosis import ResidualDiagnosisRuntime
+from app.orchestration.situation_brief import SituationBriefBuilder, format_situation_brief_section
+from app.semantic.state_primitives import StudyDomainSemanticAdapter
+
+
+@pytest.mark.asyncio
+async def test_situation_brief_builder_uses_existing_context_sources() -> None:
+    brief = (await SituationBriefBuilder().build(
+        user_context_payload={
+            "learning_gaps_summary": "热力学第二定律相关概念仍然容易混淆。",
+            "context_focus": {
+                "focus_mode": "knowledge_focus",
+                "route_intent": "knowledge",
+            },
+            "profile_context": {
+                "knowledge_summary": {
+                    "weak_spots": [
+                        {"node_id": "thermo-entropy-direction", "node_name": "熵增方向判断", "mastery": 42},
+                    ],
+                    "recent_mastery_changes": [
+                        {
+                            "node_id": "thermo-efficiency",
+                            "node_name": "热机效率",
+                            "old_mastery": 31,
+                            "new_mastery": 46,
+                            "changed_at": "2026-04-04T08:30:00",
+                        }
+                    ],
+                    "active_learning_subjects": ["热力学", "数学"],
+                },
+                "cognitive_summary": {
+                    "active_patterns": [
+                        {
+                            "pattern_name": "完美主义回避循环",
+                            "pattern_type": "execution",
+                            "confidence": 0.76,
+                        }
+                    ]
+                },
+            },
+            "active_goals": [{"title": "在期中前拿下热力学第二章"}],
+            "evolution_highlights": ["最近 7 天你在 3 个知识点上有推进。"],
+            "active_interventions": [
+                {
+                    "intervention_id": "iv-1",
+                    "label": "降载微调",
+                    "acceptance_status": "accepted",
+                    "source": "pending_record",
+                }
+            ],
+            "last_feedback_binding": {
+                "intervention_id": "iv-1",
+                "sentiment": "helped",
+                "user_words": "这样轻一点我就能开始了。",
+            },
+            "validated_outcome_learning": {
+                "plan_generation_hints_from_outcomes": ["Default to a lighter first step."],
+                "known_failure_avoidance_rules": ["Avoid dense first steps when similar conditions recur."],
+                "validated_learnings": [{"learning_key": "dense_first_step_overloads_user"}],
+            },
+        },
+        plan_context={
+            "plan_title": "热力学冲刺计划",
+            "goal": "掌握热力学第二章",
+            "plan_stage": "冲刺阶段",
+        },
+        focused_memory={},
+        context_briefing_note="当前重点：先补第二定律，再推进题目训练。",
+        visible_update_context={
+            "proactive_opening_message": "我注意到你最近在条件判断题上连续卡住了几次。",
+        },
+        dual_core_snapshot={
+            "decision": {"mode": "balanced"},
+            "signal_snapshot": {"current_guidance": "先搭桥澄清概念卡点，再给执行动作。"},
+            "prompt_instruction": "优先澄清概念，再推进执行。",
+        },
+        session_feedback_signal={"signal_type": "simplify"},
+        progress_snapshot={
+            "highlights": ["最近 7 天你在 3 个知识点上有推进。"],
+            "attention_areas": ["知识掌握推进速度比上一周期慢了一些。"],
+            "generated_at": "2026-04-04T09:00:00",
+        },
+        adaptation_records=[{"strategy_name": "降载微调", "effectiveness": "accepted"}],
+    )).to_dict()
+
+    assert "在期中前拿下热力学第二章" in brief["focus_question"]
+    assert brief["summary"].startswith("目标图景是")
+    assert brief["vision"]["active_plan"] == "热力学冲刺计划"
+    assert brief["current_state"]["focus_mode"] == "knowledge_focus"
+    assert brief["primary_obstacle"]["source"] == "dual_core_signal_snapshot.current_guidance"
+    assert brief["intervention"]["active"] is True
+    assert brief["outcome"]["status"] == "progressing"
+    assert brief["sparkle_self_state"]["dual_core_mode"] == "balanced"
+    assert brief["sparkle_self_state"]["confidence_estimate"] > 0.5
+    assert brief["decision_context"]["primary_residual"] == "R_e"
+    assert brief["decision_context"]["loop_type"] == "truth_seeking"
+    assert brief["decision_context"]["grounding_priority"][0] == "user_materials"
+    assert brief["decision_context"]["experience_mode"] == "explain"
+    assert brief["decision_context"]["intervention_family"] == "understanding_repair"
+    assert brief["decision_context"]["system_adjustments"][0]["field"] == "retrieval_emphasis"
+    assert brief["decision_context"]["body_awareness_guidance"]["primary_subsystem"]["id"] == "galaxy"
+    assert brief["body_map"]["available_organs"]
+    assert brief["capability_requirements"]["grounding_required"] == "mandatory"
+    assert brief["capability_selection"]["summary"]["retrieval_mode"] == "user_materials_first"
+    assert brief["capability_selection"]["model_selection"]["preferred_tier"] in {"standard", "plus"}
+    assert brief["decision_context"]["planning_readiness"] in {"medium", "high"}
+    assert "planning_strategy_mode" not in brief["decision_context"]
+    assert "planning_depth" not in brief["decision_context"]
+    assert "planning_pacing_profile" not in brief["decision_context"]
+    assert "planning_grounding_mode" not in brief["decision_context"]
+    assert "planning_fallback_policy" not in brief["decision_context"]
+    assert "planning_required_sections" not in brief["decision_context"]
+    assert "semantic_control" in brief
+    assert brief["semantic_control"]["selected_terms"]
+    assert brief["semantic_control"]["rendered_doctrine_summary"]["summary"]
+    assert "progress_snapshot" in brief["source_trace"]["used_sources"]
+    assert "outcome_learning" in brief["source_trace"]["used_sources"]
+    assert brief["outcome_learning"]["plan_generation_hints_from_outcomes"][0] == "Default to a lighter first step."
+    assert brief["source_trace"]["semantic_layer"]["adapter_name"] == StudyDomainSemanticAdapter.adapter_name
+    assert "vision" in brief["semantic_primitives"]["source_mapping"]
+
+
+def test_format_situation_brief_section_renders_compact_prompt_block() -> None:
+    section = format_situation_brief_section(
+        {
+            "focus_question": "为了继续推进「热力学第二章」，这轮最该先处理的阻力是什么，为什么是现在？",
+            "summary": "目标图景是「热力学第二章」；当前状态是第二定律相关概念仍然容易混淆；主要阻力是概念混淆；最近证据是最近 7 天你在 3 个知识点上有推进；本轮宜先抓住最关键阻力，再给结构化推进。",
+            "vision": {
+                "primary_goal": "热力学第二章",
+                "active_plan": "热力学冲刺计划",
+                "why_now": "考试倒计时 12 天",
+            },
+            "current_state": {
+                "snapshot": "热力学第二定律相关概念仍然容易混淆；最近 7 天你在 3 个知识点上有推进。",
+            },
+            "primary_obstacle": {
+                "summary": "先搭桥澄清概念卡点，再给执行动作。",
+            },
+            "evidence": {
+                "freshest_items": [
+                    "最近 7 天你在 3 个知识点上有推进。",
+                    "热机效率 最近掌握度变化约 +15.0",
+                ]
+            },
+            "intervention": {
+                "summary": "当前正在跟踪的支持动作是「降载微调」，状态 accepted，最近反馈 helped",
+            },
+            "outcome": {
+                "summary": "最近结果信号显示 这样轻一点我就能开始了。",
+            },
+            "recommended_stance": {
+                "stance": "先抓住最关键阻力，再给结构化推进。",
+            },
+            "decision_context": {
+                "what_matters_now": "先找出真正没想通的点，并用用户材料把概念校准清楚。",
+                "primary_residual_label": "cognitive",
+                "loop_type": "truth_seeking",
+                "confidence_label": "high",
+                "experience_mode": "explain",
+                "intervention_family": "understanding_repair",
+                "reversibility_level": "medium",
+                "planning_readiness": "low",
+                "planning_readiness_action": "ask",
+                "planning_blocking_unknowns": ["baseline_mastery", "capacity_hours"],
+                "strategic_clarification_questions": ["你目前对这个主题的掌握大概在哪个水平？"],
+                "body_awareness_guidance": {
+                    "primary_subsystem": {
+                        "label": "Galaxy Knowledge Systems",
+                        "why": "This turn benefits from grounded retrieval and structure-aware knowledge support.",
+                    }
+                },
+            },
+            "planning_strategy": {
+                "plan_mode": "next_step_only",
+                "plan_depth": "light",
+                "pacing_profile": "light",
+                "grounding_mode": "mandatory",
+                "fallback_policy": "ask_more",
+                "required_plan_sections": ["goal_frame", "withhold_reason", "next_action", "unlock_question"],
+            },
+            "user_strategy_state": {
+                "session_mode": "recovery",
+                "explanation_style": "step_by_step",
+                "retrieval_emphasis": "user_materials",
+                "push_vs_support": 0.2,
+                "intervention_intensity": "low",
+            },
+        }
+    )
+
+    assert "## Situation Brief [L0 简报]" in section
+    assert "目标图景: 热力学第二章 / 当前计划 热力学冲刺计划" in section
+    assert "最新证据" in section
+    assert "当前干预" in section
+    assert "最近结果" in section
+    assert "当前判断" in section
+    assert "当前语义控制" in section
+    assert "规划语义约束" in section
+    assert "当前交互策略" in section
+    assert "计划前仍需补齐" in section
+    assert "优先澄清问题" in section
+    assert "残差诊断" not in section
+    assert "决策策略" not in section
+    assert "系统器官协同" in section
+    assert "本轮站位" in section
+
+
+def test_residual_diagnosis_runtime_detects_normative_loop() -> None:
+    diagnosis = ResidualDiagnosisRuntime().diagnose(
+        user_context_payload={
+            "current_query": "I do not want the answer. Help me decide whether I should drop this course.",
+        },
+        plan_context={"plan_title": "Course recovery"},
+        context_briefing_note="User wants help deciding between staying and withdrawing.",
+        visible_update_context={},
+        session_feedback_signal={},
+        user_strategy_state={"session_mode": "guided"},
+        vision={"primary_goal": "Protect GPA"},
+        current_state={"route_intent": "decision", "focus_mode": "general_focus"},
+        primary_obstacle={"summary": "The user is torn between two futures.", "obstacle_type": "alignment_gap"},
+        evidence={"summary": "They have conflicting priorities."},
+        intervention={},
+        outcome={},
+        sparkle_self_state={"confidence_estimate": 0.72},
+    ).to_dict()
+
+    assert diagnosis["primary_residual"] == "R_n"
+    assert diagnosis["loop_type"] == "normative"
+    assert diagnosis["grounding_priority"][0] == "user_values_and_constraints"
+
+
+@pytest.mark.asyncio
+async def test_situation_brief_surfaces_recent_pain_points_and_wins_from_signal_context() -> None:
+    brief = (await SituationBriefBuilder().build(
+        user_context_payload={
+            "current_query": "帮我判断下一步怎么学更稳",
+            "cognitive_context": {
+                "error_summary": {
+                    "total_errors": 6,
+                    "need_review_count": 2,
+                    "subject_distribution": {"thermo": 4},
+                },
+                "recent_errors": [
+                    {
+                        "question_preview": "熵增方向判断",
+                        "subject": "thermo",
+                        "error_type": "概念混淆",
+                    }
+                ],
+                "recent_mastery_changes": [
+                    {
+                        "node_name": "热机效率",
+                        "old_mastery": 31,
+                        "new_mastery": 46,
+                    }
+                ],
+            },
+            "profile_context": {
+                "knowledge_summary": {
+                    "recent_mastery_changes": [
+                        {
+                            "node_id": "thermo-efficiency",
+                            "node_name": "热机效率",
+                            "old_mastery": 31,
+                            "new_mastery": 46,
+                            "changed_at": "2026-04-04T08:30:00",
+                        }
+                    ],
+                }
+            },
+        },
+        plan_context={"goal": "热力学冲刺"},
+        focused_memory={},
+        context_briefing_note=None,
+        visible_update_context={},
+        dual_core_snapshot={},
+        session_feedback_signal={},
+    )).to_dict()
+
+    assert brief["evidence"]["recent_pain_points"][0].startswith("累计错题 6")
+    assert "熵增方向判断" in brief["evidence"]["recent_pain_points"][1]
+    assert "热机效率" in brief["evidence"]["recent_wins"][0]
+    assert any("近期痛点" in item for item in brief["evidence"]["freshest_items"])
+    assert any("近期进展" in item for item in brief["evidence"]["freshest_items"])
+    assert brief["learning_state_fragment"]["available"] is True
+    assert brief["learning_state_fragment"]["status"] == "active"
+    assert brief["learning_state_fragment"]["recent_pain_points"][0].startswith("累计错题 6")
+    assert brief["learning_state_fragment"]["recent_wins"][0].startswith("热机效率")
+    assert brief["learning_state_fragment"]["budget"]["truncated"] is False
+
+
+def test_learning_state_fragment_falls_back_cleanly_for_empty_context() -> None:
+    fragment = build_learning_state_fragment(user_context={}).to_dict()
+
+    assert fragment["available"] is False
+    assert fragment["status"] == "cold_start"
+    assert fragment["signals"] == []
+    assert fragment["recent_pain_points"] == []
+    assert fragment["recent_wins"] == []
+    assert fragment["budget"]["truncated"] is False
+    assert "冷启动" in fragment["summary"]
+
+
+@pytest.mark.asyncio
+async def test_situation_brief_truncates_learning_state_fragment_for_large_signal_sets() -> None:
+    brief = await SituationBriefBuilder().build(
+        user_context_payload={
+            "current_query": "帮我看一下最近学习状态",
+            "cognitive_context": {
+                "error_summary": {
+                    "total_errors": 18,
+                    "need_review_count": 7,
+                    "subject_distribution": {"thermo": 12, "math": 6},
+                },
+                "recent_errors": [
+                    {
+                        "question_preview": "超长题干 " + "A" * 160,
+                        "subject": "thermo",
+                        "error_type": "概念混淆",
+                    },
+                    {
+                        "question_preview": "第二道题",
+                        "subject": "thermo",
+                        "error_type": "推理跳步",
+                    },
+                    {
+                        "question_preview": "第三道题",
+                        "subject": "math",
+                        "error_type": "步骤缺失",
+                    },
+                    {
+                        "question_preview": "第四道题",
+                        "subject": "math",
+                        "error_type": "审题遗漏",
+                    },
+                ],
+                "recent_mastery_changes": [
+                    {
+                        "node_name": "超长节点名 " + "B" * 160,
+                        "old_mastery": 22,
+                        "new_mastery": 49,
+                    },
+                    {
+                        "node_name": "卡诺循环",
+                        "old_mastery": 40,
+                        "new_mastery": 55,
+                    },
+                    {
+                        "node_name": "热机效率",
+                        "old_mastery": 31,
+                        "new_mastery": 46,
+                    },
+                    {
+                        "node_name": "熵增方向",
+                        "old_mastery": 33,
+                        "new_mastery": 44,
+                    },
+                ],
+            },
+        },
+        plan_context={},
+        focused_memory={},
+        context_briefing_note=None,
+        visible_update_context={},
+        dual_core_snapshot={},
+        session_feedback_signal={},
+        adaptation_records=[],
+    )
+
+    fragment = brief.learning_state_fragment
+
+    assert fragment["status"] == "active"
+    assert fragment["available"] is True
+    assert fragment["budget"]["truncated"] is True
+    assert len(fragment["recent_pain_points"]) == 3
+    assert len(fragment["recent_wins"]) == 3
+    assert len(fragment["signals"]) == 6
+    assert len(fragment["summary"]) <= fragment["budget"]["max_summary_length"]
+    assert any(item["text"].endswith("…") for item in fragment["signals"])
+
+
+def test_five_layer_growth_summary_reports_active_and_inactive_outcome_learning_states() -> None:
+    summary = SituationBriefBuilder()._build_five_layer_growth_summary(
+        user_context={
+            "layer_alignment": {
+                "contract_version": "2026-04-05.phase_e.v1",
+                "active_conflicts": [{"conflict_id": "companion-conflict"}],
+                "stale_items": [],
+            },
+            "user_strategy_state": {"meta": {}},
+        },
+        outcome_learning={
+            "active_validated_learnings": [{"learning_key": "grounded_plans_work_better"}],
+            "inactive_validated_learnings": [
+                {"learning_key": "dense_first_step_overloads_user", "governance_status": "demoted"},
+                {"learning_key": "needs_revalidation", "governance_status": "review_due"},
+            ],
+            "pending_reviews": [{"learning_key": "needs_revalidation", "status": "review_due"}],
+            "stale_items": [
+                {"learning_key": "needs_revalidation", "status": "review_due"},
+                {"learning_key": "expired_pattern", "status": "stale"},
+            ],
+            "shared_conflict_reports": [{"conflict_id": "outcome-conflict"}],
+            "governance_summary": {
+                "policy": {
+                    "effective_runtime_statuses": ["active"],
+                    "inactive_runtime_statuses": ["blocked", "demoted", "review_due", "stale"],
+                    "review_due_runtime_policy": "exclude_until_revalidated",
+                }
+            },
+            "episode_layer_active": True,
+            "profile_layer_active": False,
+        },
+        registry={"system_layer_knobs": [{"id": "session_mode"}]},
+        capability_selection={"bounded_adjustments": [{"field": "session_mode"}]},
+    )
+
+    assert summary["active_conflict_count"] == 2
+    assert summary["review_due_count"] == 1
+    assert summary["stale_item_count"] == 2
+    assert summary["outcome_learning_state"]["active_learning_count"] == 1
+    assert summary["outcome_learning_state"]["inactive_learning_count"] == 2
+    assert summary["outcome_learning_state"]["review_due_count"] == 1
+    assert summary["outcome_learning_state"]["stale_learning_count"] == 1
+    assert summary["outcome_learning_state"]["governance_policy"]["review_due_runtime_policy"] == "exclude_until_revalidated"
+
+
+@pytest.mark.asyncio
+async def test_situation_brief_compiles_decision_policy_for_control_overload() -> None:
+    brief = (await SituationBriefBuilder().build(
+        user_context_payload={
+            "current_query": "This is too much and I still cannot start.",
+            "context_focus": {"focus_mode": "general_focus", "route_intent": "chat"},
+            "user_strategy_state": {
+                "difficulty_level": 4,
+                "session_mode": "guided",
+                "intervention_intensity": "medium",
+                "push_vs_support": 0.6,
+            },
+            "profile_context": {
+                "cognitive_summary": {
+                    "active_patterns": [
+                        {"pattern_name": "启动困难", "pattern_type": "execution", "confidence": 0.83}
+                    ]
+                }
+            },
+        },
+        plan_context={"plan_title": "Thermo sprint", "goal": "Finish thermo review"},
+        focused_memory={},
+        context_briefing_note="User is overloaded and struggling to start.",
+        visible_update_context={},
+        dual_core_snapshot={"decision": {"mode": "execution_first"}},
+        session_feedback_signal={},
+        progress_snapshot={"attention_areas": ["Load is too high this week."]},
+        adaptation_records=[],
+    )).to_dict()
+
+    decision_context = brief["decision_context"]
+    assert decision_context["experience_mode"] == "stabilize"
+    assert decision_context["intervention_family"] == "load_shedding"
+    assert decision_context["system_adjustments"][0]["field"] == "session_mode"
+    assert decision_context["system_adjustments"][0]["recommended_value"] == "recovery"
+
+
+@pytest.mark.asyncio
+async def test_situation_brief_merges_dual_core_strategy_adjustments_into_bounded_adjustments() -> None:
+    brief = (await SituationBriefBuilder().build(
+        user_context_payload={
+            "current_query": "I keep overthinking and still cannot start.",
+            "context_focus": {"focus_mode": "general_focus", "route_intent": "plan"},
+            "user_strategy_state": {
+                "difficulty_level": 3,
+                "session_mode": "guided",
+                "intervention_intensity": "medium",
+                "push_vs_support": 0.5,
+                "explanation_style": "conceptual",
+            },
+            "profile_context": {
+                "knowledge_summary": {
+                    "overall_mastery": 0.52,
+                    "weak_spots": [],
+                    "recent_mastery_changes": [],
+                    "active_learning_subjects": ["Thermodynamics"],
+                },
+                "cognitive_summary": {
+                    "active_patterns": [
+                        {"pattern_name": "启动困难", "pattern_type": "execution", "confidence": 0.83}
+                    ]
+                },
+            },
+        },
+        plan_context={"plan_title": "Thermo sprint", "goal": "Finish thermo review"},
+        focused_memory={},
+        context_briefing_note="User is overloaded and stuck before starting.",
+        visible_update_context={},
+        dual_core_snapshot={
+            "decision": {
+                "mode": "cognitive_first",
+                "strategy_adjustments": [
+                    {
+                        "field": "session_mode",
+                        "recommended_value": "recovery",
+                        "target_layer": "session",
+                        "reversible": True,
+                        "source": "dual_core_router",
+                    },
+                    {
+                        "field": "difficulty_level",
+                        "recommended_value": 2,
+                        "target_layer": "session",
+                        "reversible": True,
+                        "source": "dual_core_router",
+                    },
+                ],
+            }
+        },
+        session_feedback_signal={},
+        progress_snapshot={"attention_areas": ["Load is too high this week."]},
+        adaptation_records=[],
+    )).to_dict()
+
+    adjustments = brief["decision_context"]["capability_bounded_adjustments"]
+    fields = {item["field"] for item in adjustments}
+    assert "session_mode" in fields
+    assert "difficulty_level" in fields
+    session_mode_adjustment = next(item for item in adjustments if item["field"] == "session_mode")
+    assert session_mode_adjustment["recommended_value"] == "recovery"
+    assert session_mode_adjustment["source"] == "dual_core_router"
+
+
+@pytest.mark.asyncio
+async def test_situation_brief_uses_phase_a_gate_to_force_clarify_before_planning() -> None:
+    brief = await SituationBriefBuilder().build(
+        user_context_payload={
+            "current_query": "帮我做一个两周内通过热力学考试的计划。",
+            "context_focus": {"focus_mode": "knowledge_focus", "route_intent": "plan"},
+            "profile_context": {
+                "knowledge_summary": {
+                    "overall_mastery": 0.0,
+                    "weak_spots": [],
+                    "recent_mastery_changes": [],
+                    "active_learning_subjects": [],
+                },
+                "cognitive_summary": {
+                    "active_patterns": [],
+                    "dominant_pattern_type": None,
+                    "risk_signals": [],
+                },
+            },
+        },
+        plan_context={},
+        focused_memory={},
+        context_briefing_note=None,
+        visible_update_context={},
+        dual_core_snapshot={},
+        session_feedback_signal={},
+        adaptation_records=[],
+    )
+
+    assert brief.insight_state["readiness_level"] == "low"
+    assert brief.decision_context["planning_readiness"] == "low"
+    assert brief.decision_context["planning_readiness_action"] == "ask"
+    assert brief.decision_context["experience_mode"] == "clarify"
+    assert brief.decision_context["phase_a_guardrail"] == "ask_before_plan"
+    assert brief.decision_context["strategic_clarification_questions"]
+
+
+@pytest.mark.asyncio
+async def test_situation_brief_selects_specialist_path_when_error_diagnosis_is_required() -> None:
+    brief = await SituationBriefBuilder().build(
+        user_context_payload={
+            "current_query": "Help me debug the root cause of why I keep missing the sign in this thermodynamics derivation.",
+            "context_focus": {"focus_mode": "knowledge_focus", "route_intent": "error_diagnosis"},
+            "profile_context": {
+                "knowledge_summary": {"overall_mastery": 0.52},
+                "cognitive_summary": {"active_patterns": []},
+            },
+            "attached_materials": [{"file_id": "file-1"}],
+        },
+        plan_context={},
+        focused_memory={},
+        context_briefing_note="User wants a root-cause diagnosis, not a generic explanation.",
+        visible_update_context={},
+        dual_core_snapshot={},
+        session_feedback_signal={},
+        adaptation_records=[],
+    )
+
+    assert brief.capability_requirements["specialization_required"] is True
+    assert brief.capability_selection["summary"]["specialist_strategy"] == "specialist_required"
+    assert brief.capability_selection["specialist_selection"]["selected_experts"]
+    assert "mandatory" == brief.capability_requirements["grounding_required"]
+
+
+@pytest.mark.asyncio
+async def test_situation_brief_surfaces_prediction_summary_into_decision_context() -> None:
+    brief = await SituationBriefBuilder().build(
+        user_context_payload={
+            "current_query": "帮我做一个复习计划",
+            "context_focus": {"route_intent": "plan"},
+            "profile_context": {
+                "preferences": {},
+                "knowledge_summary": {
+                    "overall_mastery": 0.52,
+                    "weak_spots": [],
+                    "recent_mastery_changes": [],
+                    "active_learning_subjects": ["热力学"],
+                },
+                "cognitive_summary": {"active_patterns": [], "risk_signals": []},
+                "user_insight_state": {
+                    "multi_span_analysis": {
+                        "short_span": {"overload_pressure": "high"},
+                    },
+                    "prediction_summaries": {
+                        "overload_risk": {"level": "high", "score": 0.8},
+                        "schedule_fit": {"level": "medium", "score": 0.58},
+                        "plan_slippage_risk": {"level": "high", "score": 0.77},
+                        "intervention_receptivity": {"level": "medium", "score": 0.55},
+                    },
+                },
+            },
+        },
+        plan_context={"goal": "完成热力学冲刺"},
+        focused_memory={},
+        context_briefing_note="",
+        visible_update_context={},
+        dual_core_snapshot={},
+        session_feedback_signal={},
+        adaptation_records=[],
+    )
+
+    assert brief.decision_context["predicted_overload_risk"] == "high"
+    assert brief.decision_context["predicted_schedule_fit"] == "medium"
+    assert brief.decision_context["predicted_plan_slippage_risk"] == "high"
+    assert brief.decision_context["predicted_intervention_receptivity"] == "medium"
+
+
+@pytest.mark.asyncio
+async def test_situation_brief_and_prompt_share_canonical_preferred_tools_signal() -> None:
+    canonical = UserInsightState(
+        stable_preferences={"learning_style": "structured"},
+        inferred_work_style={"preferred_tools": ["flashcard"]},
+        current_state={"overall_mastery": 0.58, "active_subjects": ["Physics"]},
+        constraints=[
+            {
+                "id": "cognitive:start_friction",
+                "label": "Start Friction",
+                "type": "behavioral",
+                "policy_signals": ["task.difficulty.start_easy"],
+            }
+        ],
+        active_bottlenecks=[{"id": "knowledge:entropy", "label": "Entropy", "type": "knowledge_gap"}],
+    )
+    profile_context_payload = {
+        "preferences": {},
+        "preference_version": 1,
+        "knowledge_summary": {
+            "overall_mastery": 0.58,
+            "weak_spots": [],
+            "recent_mastery_changes": [],
+            "active_learning_subjects": ["Physics"],
+        },
+        "cognitive_summary": {
+            "active_patterns": [],
+            "dominant_pattern_type": None,
+            "risk_signals": [],
+        },
+        "user_insight_state": canonical.model_dump(mode="json"),
+    }
+
+    prompt_normalized = _normalize_user_context({"profile_context": profile_context_payload})
+    brief = (await SituationBriefBuilder().build(
+        user_context_payload={
+            "current_query": "帮我规划下一步怎么复习物理。",
+            "profile_context": profile_context_payload,
+            "context_focus": {"route_intent": "plan"},
+        },
+        plan_context={"goal": "复习物理"},
+        focused_memory={},
+        context_briefing_note=None,
+        visible_update_context={},
+        dual_core_snapshot={},
+        session_feedback_signal={},
+    )).to_dict()
+
+    assert prompt_normalized["preferred_tools"] == ["flashcard"]
+    assert brief["insight_state"]["stable_traits"]["preferred_tools"] == ["flashcard"]
+    assert brief["insight_state"]["active_constraints"][0]["id"] == "cognitive:start_friction"

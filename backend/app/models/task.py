@@ -1,0 +1,249 @@
+"""
+Core: <cognitive|execution|bridge|infra>
+Phase: <sense|clarify|plan|execute|reflect|reinforce|adapt|none>
+Stage: <首次引入 Stage 号>
+
+任务模型
+Task Model - 学习任务卡片系统
+"""
+
+import enum
+
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    event,
+    inspect,
+    update,
+)
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import relationship
+
+from app.models.base import GUID, BaseModel
+
+JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
+
+
+class TaskType(enum.StrEnum):
+    LEARNING = "LEARNING"
+    TRAINING = "TRAINING"
+    ERROR_FIX = "ERROR_FIX"
+    REFLECTION = "REFLECTION"
+    SOCIAL = "SOCIAL"
+    PLANNING = "PLANNING"
+    OCR = "OCR"
+
+
+class TaskStatus(enum.StrEnum):
+    PENDING = "PENDING"
+    IN_PROGRESS = "IN_PROGRESS"
+    PAUSED = "PAUSED"
+    RESTORE = "RESTORE"
+    STUCK = "STUCK"
+    COMPLETED = "COMPLETED"
+    ABANDONED = "ABANDONED"
+
+
+class SubTaskStatus(enum.StrEnum):
+    PENDING = "PENDING"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+
+
+class Task(BaseModel):
+    __tablename__ = "tasks"
+
+    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    plan_id = Column(GUID(), ForeignKey("plans.id"), nullable=True, index=True)
+
+    # 任务基本信息
+    title = Column(String(255), nullable=False)
+    type = Column(Enum(TaskType), nullable=False)
+    tags = Column(JSONBCompat, default=list, nullable=False)  # 标签列表 (使用 JSONB)
+
+    # 时间和难度
+    estimated_minutes = Column(Integer, nullable=False)
+    difficulty = Column(Integer, default=1, nullable=False)  # 1-5
+    energy_cost = Column(Integer, default=1, nullable=False)  # 1-5
+
+    # AI生成内容
+    guide_content = Column(Text, nullable=True)
+    guide_json = Column(JSONBCompat, nullable=True)
+    ai_prompt = Column(Text, nullable=True)
+    source_planning_session_id = Column(String(64), nullable=True, index=True)
+    phase_index = Column(Integer, nullable=True)
+    success_criteria = Column(Text, nullable=True)
+
+    # 状态信息
+    status = Column(Enum(TaskStatus), default=TaskStatus.PENDING, nullable=False, index=True)
+    started_at = Column(DateTime, nullable=True)
+    confirmed_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+
+    # 追溯信息
+    tool_result_id = Column(String(50), nullable=True, index=True)
+    execution_mode = Column(String(20), nullable=True, default=None)
+
+    # 暂停信息
+    paused_at = Column(DateTime, nullable=True)
+    paused_reason = Column(Text, nullable=True)
+
+    # 完成信息
+    actual_minutes = Column(Integer, nullable=True)
+    user_note = Column(Text, nullable=True)
+
+    # 优先级和截止日期
+    priority = Column(Integer, default=0, nullable=False)
+    order_index = Column(Integer, default=0, nullable=False)
+    due_date = Column(Date, nullable=True)
+
+    # Knowledge Galaxy Integration
+    knowledge_node_id = Column(GUID(), ForeignKey("knowledge_nodes.id"), nullable=True)
+    auto_expand_enabled = Column(Boolean, default=True)
+
+    # Subtask counters
+    subtasks_total = Column(Integer, default=0, nullable=False)
+    subtasks_completed = Column(Integer, default=0, nullable=False)
+
+    # 关系定义
+    user = relationship("User", back_populates="tasks")
+    plan = relationship("Plan", back_populates="tasks")
+    knowledge_node = relationship("KnowledgeNode")
+    chat_messages = relationship("ChatMessage", back_populates="task", cascade="all, delete-orphan", lazy="dynamic")
+
+    curiosity_capsules = relationship(
+        "CuriosityCapsule", back_populates="task", cascade="all, delete-orphan", lazy="dynamic"
+    )
+
+    # Subtasks relationship
+    subtasks = relationship(
+        "SubTask", back_populates="parent_task", cascade="all, delete-orphan", lazy="dynamic", order_by="SubTask.order"
+    )
+
+    # Task feedbacks relationship
+    feedbacks = relationship("TaskFeedback", back_populates="task", cascade="all, delete-orphan", lazy="dynamic")
+
+    resource_links = relationship(
+        "TaskResourceLink",
+        back_populates="task",
+        cascade="all, delete-orphan",
+        lazy="dynamic",
+    )
+
+    knowledge_links = relationship(
+        "TaskKnowledgeLink",
+        back_populates="task",
+        cascade="all, delete-orphan",
+        lazy="dynamic",
+    )
+
+    document_links = relationship(
+        "TaskDocument",
+        back_populates="task",
+        cascade="all, delete-orphan",
+        lazy="dynamic",
+    )
+
+    def __repr__(self):
+        return f"<Task(title={self.title}, status={self.status})>"
+
+
+# 创建索引
+Index("idx_tasks_user_id", Task.user_id)
+Index("idx_tasks_plan_id", Task.plan_id)
+Index("idx_tasks_status", Task.status)
+Index("idx_tasks_created_at", Task.created_at)
+Index("idx_tasks_due_date", Task.due_date)
+Index("idx_tasks_user_order_index", Task.user_id, Task.order_index)
+
+
+class SubTask(BaseModel):
+    """子任务模型 - 用于任务的细分"""
+
+    __tablename__ = "subtasks"
+
+    parent_task_id = Column(GUID(), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True)
+    knowledge_node_id = Column(GUID(), ForeignKey("knowledge_nodes.id", ondelete="SET NULL"), nullable=True, index=True)
+
+    # 基本信息
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+
+    # 学习指导
+    estimated_minutes = Column(Integer, default=25, nullable=False)
+    guide_content = Column(Text, nullable=True)
+
+    # 排序和状态
+    order = Column(Integer, default=0, nullable=False)
+    status = Column(Enum(SubTaskStatus), default=SubTaskStatus.PENDING, nullable=False, index=True)
+    completed_at = Column(DateTime, nullable=True)
+
+    # 关系
+    parent_task = relationship("Task", back_populates="subtasks")
+
+    def __repr__(self):
+        return f"<SubTask(title={self.title}, status={self.status})>"
+
+
+# SubTask 索引
+Index("idx_subtasks_parent_task_id", SubTask.parent_task_id)
+Index("idx_subtasks_status", SubTask.status)
+Index("idx_subtasks_order", SubTask.order)
+
+
+# SQLAlchemy 事件监听器 - 自动更新父任务的子任务计数
+@event.listens_for(SubTask, "after_insert")
+def update_total_on_subtask_insert(mapper, connection, target):
+    """创建子任务时自动增加父任务的 subtasks_total"""
+    connection.execute(
+        update(Task).where(Task.id == target.parent_task_id).values(subtasks_total=Task.subtasks_total + 1)
+    )
+
+
+@event.listens_for(SubTask, "after_delete")
+def update_total_on_subtask_delete(mapper, connection, target):
+    """删除子任务时自动减少父任务的 subtasks_total"""
+    connection.execute(
+        update(Task)
+        .where(Task.id == target.parent_task_id)
+        .values(
+            subtasks_total=Task.subtasks_total - 1,
+            subtasks_completed=Task.subtasks_completed - (1 if target.status == SubTaskStatus.COMPLETED else 0),
+        )
+    )
+
+
+@event.listens_for(SubTask, "after_update")
+def update_completed_on_subtask_status_change(mapper, connection, target):
+    """子任务状态变更时自动更新父任务的 subtasks_completed"""
+    state = inspect(target)
+    status_history = state.attrs.status.history
+    if not status_history.has_changes():
+        return
+
+    old_status = status_history.deleted[0] if status_history.deleted else None
+    new_status = status_history.added[0] if status_history.added else target.status
+    if old_status == new_status:
+        return
+
+    delta = 0
+    if new_status == SubTaskStatus.COMPLETED:
+        delta = 1
+    elif old_status == SubTaskStatus.COMPLETED:
+        delta = -1
+
+    if delta != 0:
+        connection.execute(
+            update(Task)
+            .where(Task.id == target.parent_task_id)
+            .values(subtasks_completed=Task.subtasks_completed + delta)
+        )

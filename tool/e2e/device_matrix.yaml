@@ -1,0 +1,53 @@
+# tool/e2e/device_matrix.yaml
+# Supported test devices and configurations
+
+simulators:
+  ios:
+    - name: "iPhone 16"
+      os: "iOS 18"
+      min_version: "16.0"
+    - name: "iPhone 16 Pro"
+      os: "iOS 18"
+      min_version: "16.0"
+    - name: "iPhone 15"
+      os: "iOS 17"
+      min_version: "16.0"
+    - name: "iPhone SE (3rd generation)"
+      os: "iOS 17"
+      min_version: "16.0"
+
+  android:
+    - name: "Pixel 8"
+      api: 34
+      abi: "x86_64"
+    - name: "Pixel 7"
+      api: 33
+      abi: "x86_64"
+    - name: "Pixel 6"
+      api: 33
+      abi: "x86_64"
+
+real_devices:
+  ios:
+    - name: "iPhone (USB)"
+      requirements:
+        - "USB connection"
+        - "Xcode signing configured"
+        - "Developer mode enabled"
+  android:
+    - name: "Android (USB)"
+      requirements:
+        - "USB debugging enabled"
+        - "ADB authorized"
+
+test_accounts:
+  - name: "guest"
+    type: "guest"
+    description: "Guest login — no credentials needed"
+  - name: "demo"
+    type: "demo"
+    description: "Demo account via loginAsDemoAccount()"
+  - name: "e2e_test"
+    type: "registered"
+    email: "${E2E_TEST_EMAIL:-test@sparkle.test}"
+    password: "${E2E_TEST_PASSWORD:-test-password-123}"

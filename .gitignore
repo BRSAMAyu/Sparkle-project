@@ -1,0 +1,302 @@
+# ========================================
+# Python Backend
+# ========================================
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.pytest_cache/
+.hypothesis/
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+.env.*
+!.env.example
+!.env.*.example
+**/.env
+**/.env.local
+**/.env.*.local
+**/.env.*
+!**/.env.example
+!**/.env.*.example
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-shm
+*.db-wal
+*.sqlite-journal
+*.sqlite-shm
+*.sqlite-wal
+postgres_data/
+redis_data/
+
+# Alembic
+alembic/versions/*.pyc
+
+# IDEs
+.idea/
+*.swp
+*.swo
+*~
+.vscode/
+*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+*.meta
+
+# ========================================
+# Flutter Mobile
+# ========================================
+
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.buildlog/
+.history
+.svn/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# Visual Studio Code related
+.vscode/
+.classpath
+.project
+.settings/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+flutter_*.png
+linked_*.ds
+unlinked.ds
+unlinked_spec.ds
+
+# Android related
+**/android/**/gradle-wrapper.jar
+**/android/.gradle
+**/android/captures/
+**/android/gradlew
+**/android/gradlew.bat
+**/android/local.properties
+**/android/**/GeneratedPluginRegistrant.java
+**/android/key.properties
+*.jks
+
+# iOS/XCode related
+**/ios/**/*.mode1v3
+**/ios/**/*.mode2v3
+**/ios/**/*.moved-aside
+**/ios/**/*.pbxuser
+**/ios/**/*.perspectivev3
+**/ios/**/*sync/
+**/ios/**/.sconsign.dblite
+**/ios/**/.tags*
+**/ios/**/.vagrant/
+**/ios/**/DerivedData/
+**/ios/**/Icon?
+**/ios/**/Pods/
+**/ios/**/.symlinks/
+**/ios/**/profile
+**/ios/**/xcuserdata
+**/ios/.generated/
+**/ios/Flutter/.last_build_id
+**/ios/Flutter/App.framework
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/app.flx
+**/ios/Flutter/app.zip
+**/ios/Flutter/flutter_assets/
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/ServiceDefinitions.json
+**/ios/Runner/GeneratedPluginRegistrant.*
+
+# macOS
+**/macos/Flutter/GeneratedPluginRegistrant.swift
+**/macos/Flutter/Flutter-Debug.xcconfig
+**/macos/Flutter/Flutter-Release.xcconfig
+**/macos/Flutter/Flutter-Profile.xcconfig
+
+# Coverage
+coverage/
+
+# Symbols
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# ========================================
+# Docs & Project Files
+# ========================================
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+tmp*.py
+
+# Logs
+logs/
+*.log
+
+# Node (if using any JS tools)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+.gemini/
+gha-creds-*.json
+.gocache/
+
+# macOS metadata
+._*
+**/.DS_Store
+
+# Python
+**/__pycache__/
+
+# Data
+postgres_data/
+redis_data/
+minio_data/
+celerybeat-schedule
+*.pid
+# Quality generated artifacts
+mobile/local_audio_overrides/
+quality/flutter_analyze_report.json
+quality/openapi_snapshot.generated.json
+
+# ========================================
+# Generated Proto Code (use make proto-gen)
+# ========================================
+mobile/lib/gen/
+backend/gateway/gen/
+backend/app/gen/
+*.pb.go
+agent_service.pb.go
+
+# ========================================
+# Compiled Binaries (rebuild with go build / make)
+# ========================================
+backend/gateway/gateway
+backend/gateway/server
+backend/gateway/openclaw-gateway
+backend/gateway/bin/
+backend/gateway/chat-orchestrator-test
+
+# ========================================
+# Runtime / Debug Artifacts
+# ========================================
+dump.rdb
+tmp/
+backend/coverage.json
+mobile/libisar.dylib
+login_debug_res.json
+login_new_res.json
+register_res.json
+
+# ========================================
+# Local Runtime State (never commit)
+# ========================================
+.sgw_state/
+.local_runtime/
+.codex-backups/
+
+# ========================================
+# Claude Code local state (never commit)
+# Keep plan docs under .claude/plans/ but not runtime state
+# ========================================
+.claude/worktrees/
+.claude/scheduled_tasks.json
+.claude/scheduled_tasks.lock
+.claude/settings.local.json
+.claude/ide/
+.claude/workflow/
+.claude/fix-progress/
+
+# ========================================
+# Agent session outputs (never commit)
+# ========================================
+outputs/
+
+# ========================================
+# Session continuation artifacts (Claude Code)
+# ========================================
+2026-*-this-session-is-being-continued-from-a-previous-*.txt
+
+# ========================================
+# SGW & E2E runtime artifacts (databases, checkpoints, debug output)
+# ========================================
+artifacts/sgw*/
+artifacts/e2e/
+
+# Keep dictionaries directory (MDX files for vocabulary lookup)
+# data/dictionaries/

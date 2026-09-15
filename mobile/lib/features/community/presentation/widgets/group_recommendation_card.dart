@@ -1,0 +1,222 @@
+import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
+import 'package:sparkle/core/design/widgets/goal_value_chip.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/features/community/data/models/community_model.dart';
+
+class GroupRecommendationCard extends StatelessWidget {
+  const GroupRecommendationCard({
+    required this.recommendation,
+    super.key,
+    this.onTap,
+    this.onJoin,
+    this.onDismiss,
+    this.onFeedback,
+  });
+
+  final GroupRecommendationItem recommendation;
+  final VoidCallback? onTap;
+  final VoidCallback? onJoin;
+  final VoidCallback? onDismiss;
+  final VoidCallback? onFeedback;
+
+  @override
+  Widget build(BuildContext context) {
+    final group = recommendation.group;
+    final isSprint = group.isSprint;
+    final reasons = recommendation.reasons.take(2).toList();
+    final l10n = context.l10n;
+    final joinLabel = recommendation.requiresApproval
+        ? l10n.communityApplyToJoin
+        : l10n.communityJoin;
+
+    return GraphiteCardSurface(
+      surfaceRole: SparkleSurfaceRole.card,
+      padding: EdgeInsets.zero,
+      onTap: onTap,
+      child: SingleChildScrollView(
+        padding: context.space.edge(all: context.space.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: DS.surfaceRoleColor(SparkleSurfaceRole.panel),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Icon(
+                    isSprint ? Icons.timer_outlined : Icons.group_outlined,
+                    color: DS.textSecondary,
+                  ),
+                ),
+                SizedBox(width: context.space.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isSprint ? l10n.communitySprintGroup : l10n.communitySquad,
+                        style: context.typo.labelSmall
+                            .copyWith(color: DS.textSecondary),
+                      ),
+                      SizedBox(height: context.space.xs),
+                      Text(
+                        group.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      SizedBox(height: context.space.xs),
+                      Text(
+                        l10n.communityGroupStats(group.memberCount, group.totalFlamePower),
+                        style: context.typo.bodyMedium
+                            .copyWith(color: DS.textSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+                if (onDismiss != null)
+                  SparkleIconButton(
+                    variant: ButtonVariant.ghost,
+                    icon: const Icon(Icons.close),
+                    onPressed: onDismiss,
+                  ),
+              ],
+            ),
+            if (reasons.isNotEmpty) ...[
+              SizedBox(height: context.space.sm),
+              Wrap(
+                spacing: context.space.xs,
+                runSpacing: context.space.xs,
+                children: reasons
+                    .map(
+                      (reason) => SemanticPill(
+                        label: _reasonLabel(context, reason),
+                        tone: _reasonTone(reason),
+                        icon: _reasonIcon(reason),
+                        dense: true,
+                      ),
+                    )
+                    .toList(),
+              ),
+            ],
+            if (group.description != null && group.description!.isNotEmpty) ...[
+              SizedBox(height: context.space.sm),
+              Text(
+                group.description!,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: context.typo.bodyMedium
+                    .copyWith(color: DS.textSecondary, height: 1.35),
+              ),
+            ],
+            if (group.sprintGoal != null && group.sprintGoal!.isNotEmpty) ...[
+              SizedBox(height: context.space.sm),
+              GoalValueChip(
+                text: l10n.communitySprintGoal(group.sprintGoal!),
+              ),
+            ],
+            SizedBox(height: context.space.md),
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: context.space.xs,
+              runSpacing: context.space.xs,
+              children: [
+                if (group.focusTags.isNotEmpty)
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 180),
+                    child: Text(
+                      group.focusTags.take(2).join(' / '),
+                      style: context.typo.bodyMedium
+                          .copyWith(color: DS.textSecondary),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                if (onFeedback != null)
+                  SparkleButton(
+                    label: l10n.communityFeedback,
+                    size: ButtonSize.small,
+                    variant: ButtonVariant.secondary,
+                    onPressed: onFeedback,
+                  ),
+                SparkleButton(
+                  label: joinLabel,
+                  size: ButtonSize.small,
+                  onPressed: onJoin,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _reasonLabel(BuildContext context, GroupRecommendationReason reason) {
+    final l10n = context.l10n;
+    switch (reason.type) {
+      case 'friend_overlap':
+        final count = (reason.data?['friend_count'] as num?)?.toInt() ?? 0;
+        return count > 0
+            ? l10n.communityFriendsInside(count)
+            : l10n.communityFriendsInsideLabel;
+      case 'tag_overlap':
+        final tags = reason.data?['tags'];
+        if (tags is List && tags.isNotEmpty) {
+          return l10n.communityMatches(tags.take(2).join('/'));
+        }
+        return l10n.communityMatchesFocus;
+      case 'trending':
+        return l10n.communityTrendingNow;
+      case 'fresh':
+        return l10n.communityNewGroup;
+      case 'approval_required':
+        return l10n.communityApprovalNeeded;
+      default:
+        return l10n.communityRecommended;
+    }
+  }
+
+  IconData? _reasonIcon(GroupRecommendationReason reason) {
+    switch (reason.type) {
+      case 'friend_overlap':
+        return Icons.group_outlined;
+      case 'tag_overlap':
+        return Icons.auto_awesome;
+      case 'trending':
+        return Icons.local_fire_department_outlined;
+      case 'fresh':
+        return Icons.fiber_new_outlined;
+      case 'approval_required':
+        return Icons.verified_outlined;
+      default:
+        return null;
+    }
+  }
+
+  PillTone _reasonTone(GroupRecommendationReason reason) {
+    switch (reason.type) {
+      case 'friend_overlap':
+        return PillTone.success;
+      case 'tag_overlap':
+        return PillTone.brand;
+      case 'trending':
+        return PillTone.warning;
+      case 'fresh':
+        return PillTone.info;
+      case 'approval_required':
+        return PillTone.neutral;
+      default:
+        return PillTone.neutral;
+    }
+  }
+}

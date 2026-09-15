@@ -1,0 +1,18 @@
+{
+  "streakQualityTitle": "Quality Streak",
+  "streakQualitySubtitle": "Streaks count effective minutes, core tasks, hard breakthroughs, and plan consistency.",
+  "streakQualityDaysShort": "quality",
+  "streakQualityTodayBreakdown": "Today's quality breakdown",
+  "streakQualityEffectiveMinutes": "Effective time",
+  "streakQualityCoreTasks": "Core tasks",
+  "streakQualityBreakthroughs": "Breakthroughs",
+  "streakQualityPlanConsistency": "Plan match",
+  "streakQualityWeeklyTrend": "Weekly quality trend",
+  "streakQualityEvidence": "Why this is worth celebrating",
+  "streakQualityEmpty": "Start a learning session and the quality trend will appear here.",
+  "streakQualityUnavailable": "Quality data unavailable",
+  "streakQualityViewDetails": "View streak details",
+  "streakQualityScoreLabel": "Quality {score}%",
+  "streakQualityMinutesValue": "{minutes} min",
+  "streakQualitySemantics": "Quality streak {qualityDays} days, current streak {currentDays} days. Tap for breakdown."
+}

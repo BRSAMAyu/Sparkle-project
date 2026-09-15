@@ -1,0 +1,11 @@
+{
+  "generated_at": "2026-02-07T14:18:42.090035+00:00",
+  "metrics": {
+    "backend_datetime_utcnow": 467,
+    "backend_pydantic_class_config": 61,
+    "backend_pydantic_json_encoders": 1,
+    "backend_pydantic_min_items": 1,
+    "backend_asyncmock_unawaited_test_refs": 0
+  },
+  "checks": {}
+}

@@ -1,0 +1,1332 @@
+from __future__ import annotations
+
+import uuid
+from dataclasses import dataclass, field, replace
+from typing import TYPE_CHECKING, Any
+
+from app.config import settings
+from app.core.time_utils import utcnow
+from app.services.social_signal_types import SocialSignalsV1
+from app.services.srl_phase_types import SRLPhaseHint
+from app.state_aggregator.schema import MetacognitionHintV1
+
+if TYPE_CHECKING:
+    from app.orchestration.routing_parameter_registry import RoutingParameterSnapshot
+    from app.services.evidence.belief_state import BeliefState
+
+
+@dataclass(frozen=True)
+class AdaptationRecord:
+    what_changed: str
+    why: str
+    expected_effect: str
+    user_facing_message: str
+    source: str
+    created_at: str = field(default_factory=lambda: utcnow().isoformat())
+    record_id: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        payload = {
+            "what_changed": self.what_changed,
+            "why": self.why,
+            "expected_effect": self.expected_effect,
+            "user_facing_message": self.user_facing_message,
+            "source": self.source,
+            "created_at": self.created_at,
+        }
+        if self.record_id:
+            payload["record_id"] = self.record_id
+        return payload
+
+
+@dataclass(frozen=True)
+class DualCoreRoutingInput:
+    intent: str
+    intent_confidence: float
+    information_sufficient: bool
+    primary_challenge_area: str | None
+    recent_sentiment_distribution: dict[str, int]
+    has_active_plan: bool
+    plan_health_status: str | None
+    recent_task_feedback_distribution: dict[str, int]
+    behavior_pattern_names: list[str] = field(default_factory=list)
+    behavior_pattern_types: dict[str, int] = field(default_factory=dict)
+    behavior_pattern_details: list[dict[str, Any]] = field(default_factory=list)
+    session_length_preference: int | None = None
+    difficulty_preference: float | None = None
+    emotional_block_detected: bool = False
+    procrastination_pattern: bool = False
+    cognitive_mode_suggested: bool = False
+    suggested_verbosity: str | None = None
+    current_guidance: str | None = None
+    routing_profile: dict[str, float] = field(default_factory=dict)
+    adaptive_adjustments: dict[str, Any] = field(default_factory=dict)
+    social_signals: SocialSignalsV1 | None = None
+    srl_phase_hint: SRLPhaseHint | None = None
+    metacognition_hint: MetacognitionHintV1 | None = None
+    cognitive_load: float | None = None
+    capsule_preferences: dict[str, Any] = field(default_factory=dict)
+    spine_active_states: list[dict[str, Any]] = field(default_factory=list)
+    scaffolding_snapshot: dict[str, Any] = field(default_factory=dict)
+    aurora_preferences: dict[str, str] = field(default_factory=dict)
+    recent_corrections: list[dict[str, Any]] = field(default_factory=list)
+    recent_route_outcomes: list[dict[str, Any]] = field(default_factory=list)
+    belief_state: BeliefState | dict[str, Any] | None = None
+    previous_mode_state: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class CognitiveAdjustment:
+    """Structured cognitive adjustment from Dual-Core Router."""
+
+    dimension: str  # tone, verbosity, challenge_level, explanation_depth, etc.
+    value: str | int | float
+    reason: str
+    evidence: list[str] = field(default_factory=list)
+    scope: str = "turn"  # turn, session, sprint
+    user_visible: bool = False
+    ttl: str | None = None
+
+    def to_text(self) -> str:
+        return f"{self.dimension}={self.value} ({self.reason})"
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "dimension": self.dimension,
+            "value": self.value,
+            "reason": self.reason,
+            "evidence": list(self.evidence),
+            "scope": self.scope,
+            "user_visible": self.user_visible,
+            "ttl": self.ttl,
+        }
+
+
+@dataclass(frozen=True)
+class DualCoreDecision:
+    mode: str
+    reason: str
+    cognitive_adjustments: list[str]
+    execution_constraints: list[str]
+    routing_debug: dict[str, Any] = field(default_factory=dict)
+    strategy_adjustments: list[dict[str, Any]] = field(default_factory=list)
+    structured_adjustments: list[CognitiveAdjustment] = field(default_factory=list)
+    signal_scores: dict[str, float] = field(default_factory=dict)
+    routing_trace_id: str = field(default_factory=lambda: f"dcr_{uuid.uuid4().hex}")
+    scaffolding_zone: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "mode": self.mode,
+            "reason": self.reason,
+            "cognitive_adjustments": list(self.cognitive_adjustments),
+            "structured_adjustments": [a.to_dict() for a in self.structured_adjustments],
+            "execution_constraints": list(self.execution_constraints),
+            "routing_debug": dict(self.routing_debug or {}),
+            "strategy_adjustments": [dict(item) for item in self.strategy_adjustments if isinstance(item, dict)],
+            "signal_scores": {str(k): float(v) for k, v in (self.signal_scores or {}).items()},
+            "routing_trace_id": self.routing_trace_id,
+            "scaffolding_zone": self.scaffolding_zone,
+        }
+
+    @property
+    def ux_mode(self) -> str:
+        if self.mode == "execution_first":
+            return "execution"
+        if self.mode == "cognitive_first":
+            return "cognitive"
+        return "balanced"
+
+    @property
+    def prompt_instruction(self) -> str:
+        sections: list[str] = []
+        if self.cognitive_adjustments:
+            sections.append("## 双核心认知调制\n" + "\n".join(f"- {item}" for item in self.cognitive_adjustments))
+        if self.structured_adjustments:
+            lines = [f"- {adj.to_text()}" for adj in self.structured_adjustments]
+            if lines:
+                sections.append("## 结构化认知调整\n" + "\n".join(lines))
+        if self.execution_constraints:
+            sections.append("## 双核心执行约束\n" + "\n".join(f"- {item}" for item in self.execution_constraints))
+        return "\n\n".join(section for section in sections if section).strip()
+
+
+class DualCoreRouter:
+    DEFAULT_ROUTING_PROFILE = {
+        "procrastination_threshold": 0.6,
+        "emotional_sensitivity": 0.5,
+        "directness_preference": 0.5,
+    }
+
+    def __init__(self, parameter_snapshot: RoutingParameterSnapshot | None = None):
+        self._parameter_snapshot = parameter_snapshot
+
+    def _param(self, key: str, default: float | int) -> float | int:
+        if self._parameter_snapshot is not None:
+            return self._parameter_snapshot.get(key, default)
+        return default
+
+    NEGATIVE_SENTIMENTS = {
+        "anxious",
+        "burnout",
+        "depressed",
+        "stressed",
+        "overwhelmed",
+        "frustrated",
+        "negative",
+        "sad",
+    }
+    CLEAR_INTENTS = {
+        "plan",
+        "task",
+        "sprint_plan",
+        "error_diagnosis",
+        "translation",
+        "knowledge",
+    }
+    PROCRASTINATION_KEYWORDS = {
+        "procrast",
+        "avoid",
+        "拖延",
+        "回避",
+        "启动困难",
+        "执行阻力",
+    }
+    PERFECTIONISM_KEYWORDS = {
+        "perfection",
+        "完美主义",
+        "过度打磨",
+        "高标准卡住",
+    }
+    PLANNING_FALLACY_KEYWORDS = {
+        "planning fallacy",
+        "计划谬误",
+        "时间估计偏差",
+        "低估耗时",
+    }
+
+    def route(self, routing_input: DualCoreRoutingInput) -> DualCoreDecision:
+        profile = self._resolved_profile(routing_input)
+        goal_clarity_score = self._goal_clarity_score(routing_input)
+        if self._parameter_snapshot is not None:
+            goal_clear_threshold = self._goal_clear_threshold_from_params(profile)
+            low_conf_threshold = self._low_confidence_threshold_from_params(profile)
+        else:
+            goal_clear_threshold = self._goal_clear_threshold(profile)
+            low_conf_threshold = self._low_confidence_threshold(profile)
+        emotional_block_score = self._emotional_block_score(routing_input)
+        procrastination_score = self._procrastination_score(routing_input)
+        cognitive_load_value = float(routing_input.cognitive_load or 0.0)
+        cognitive_load_available = routing_input.cognitive_load is not None
+        belief_signal_snapshot = self._belief_signal_snapshot(routing_input)
+        belief_targets = belief_signal_snapshot.get("targets", {})
+
+        goal_clear = goal_clarity_score >= goal_clear_threshold
+        emotional_block = self._has_emotional_block(routing_input, emotional_block_score, profile)
+        procrastination_pattern = self._has_procrastination_pattern(
+            routing_input,
+            procrastination_score,
+            profile,
+        )
+        if belief_signal_snapshot.get("active"):
+            goal_belief = belief_targets.get("goal_clarity", {})
+            if goal_belief.get("observed"):
+                goal_clarity_score = float(goal_belief["mean"])
+                goal_clear = bool(goal_belief.get("confident")) and goal_clarity_score >= goal_clear_threshold
+
+            emotional_belief = belief_targets.get("emotional_block", {})
+            if emotional_belief.get("observed"):
+                emotional_block_score = float(emotional_belief["mean"])
+                emotional_block = (
+                    bool(emotional_belief.get("confident"))
+                    and emotional_block_score >= profile["emotional_sensitivity"]
+                )
+
+            aversion_belief = belief_targets.get("task_aversion", {})
+            if aversion_belief.get("observed"):
+                procrastination_score = float(aversion_belief["mean"])
+                procrastination_pattern = (
+                    bool(aversion_belief.get("confident"))
+                    and procrastination_score >= profile["procrastination_threshold"]
+                )
+
+            load_belief = belief_targets.get("cognitive_load", {})
+            if load_belief.get("observed"):
+                cognitive_load_value = float(load_belief["mean"])
+                cognitive_load_available = True
+        load_belief = belief_targets.get("cognitive_load", {})
+        cognitive_load_confident = (
+            bool(load_belief.get("confident")) if belief_signal_snapshot.get("active") and load_belief else True
+        )
+
+        # Compute explicit precedence scores (higher = more override authority)
+        pw = {
+            k: float(self._param(k, v))
+            for k, v in {
+                "emotional_block": 9.0,
+                "procrastination": 8.0,
+                "cognitive_mode": 7.0,
+                "low_metacognition": 6.0,
+                "high_cognitive_load": 5.0,
+                "spine_fatigue": 4.0,
+                "reflection_phase": 3.0,
+                "goal_clarity": 1.0,
+                "scaffolding_frustration": 6.5,
+                "scaffolding_boredom": 2.5,
+                "route_outcome_failure": 7.5,
+                "route_outcome_over_scaffolded": 4.5,
+            }.items()
+        }
+        precedence = {
+            "emotional_block": pw["emotional_block"] if emotional_block else 0.0,
+            "procrastination": pw["procrastination"] if procrastination_pattern else 0.0,
+            "cognitive_mode": pw["cognitive_mode"] if routing_input.cognitive_mode_suggested else 0.0,
+            "low_metacognition": 0.0,  # set later via low_metacognition_accuracy at finalize (line 687)
+            "high_cognitive_load": (
+                pw["high_cognitive_load"]
+                if (
+                    cognitive_load_available
+                    and cognitive_load_confident
+                    and cognitive_load_value >= float(self._param("high_cognitive_load", 0.55))
+                )
+                else 0.0
+            ),
+            "spine_fatigue": pw["spine_fatigue"],  # set later
+            "reflection_phase": pw["reflection_phase"],  # set later
+            "goal_clarity": pw["goal_clarity"] * goal_clarity_score,
+            "route_outcome_failure": 0.0,
+            "route_outcome_over_scaffolded": 0.0,
+        }
+        cognitive_mode_suggested = bool(routing_input.cognitive_mode_suggested)
+        pattern_guidance = self._pattern_guidance(routing_input)
+        high_cognitive_load = (
+            cognitive_load_available
+            and cognitive_load_confident
+            and cognitive_load_value >= float(self._param("high_cognitive_load_threshold", 0.55))
+        )
+        very_high_cognitive_load = (
+            cognitive_load_available
+            and cognitive_load_confident
+            and cognitive_load_value >= float(self._param("very_high_cognitive_load", 0.78))
+        )
+        capsule_preferences = self._normalized_capsule_preferences(routing_input)
+        capsule_method_preferences = capsule_preferences.get("method_preferences", [])
+
+        cognitive_adjustments: list[str] = []
+        execution_constraints: list[str] = []
+        strategy_adjustments: list[dict[str, Any]] = []
+        confidence_gate = round(max(0.55, min(0.95, float(routing_input.intent_confidence or 0.7))), 2)
+
+        def recommend_strategy(field: str, recommended_value: Any, *, reason: str) -> None:
+            if any(str(item.get("field") or "").strip() == field for item in strategy_adjustments):
+                return
+            strategy_adjustments.append(
+                {
+                    "field": field,
+                    "recommended_value": recommended_value,
+                    "target_layer": "session",
+                    "reversible": True,
+                    "confidence_gate": confidence_gate,
+                    "reason": reason,
+                    "source": "dual_core_router",
+                }
+            )
+
+        if emotional_block:
+            cognitive_adjustments.append("Address the user's current emotional resistance before entering planning discussion.")
+            recommend_strategy(
+                "session_mode",
+                "recovery",
+                reason="Emotional blockage should switch the session into a lighter recovery stance before planning.",
+            )
+            recommend_strategy(
+                "intervention_intensity",
+                "low",
+                reason="High-friction turns need softer intervention intensity so the move stays reversible.",
+            )
+        if not goal_clear:
+            cognitive_adjustments.append("Help the user clarify goals, constraints, and success criteria before diving into specifics.")
+            recommend_strategy(
+                "explanation_style",
+                "step_by_step",
+                reason="When the goal boundary is still blurry, the explanation path should slow down and clarify one step at a time.",
+            )
+        if procrastination_pattern:
+            cognitive_adjustments.append("Identify recent execution friction first, then narrow suggestions to easier-to-start actions.")
+            recommend_strategy(
+                "difficulty_level",
+                2,
+                reason="Execution friction should lower the startup bar before the system asks for another push.",
+            )
+        if cognitive_mode_suggested:
+            cognitive_adjustments.append("Calibrate understanding gaps or conceptual blocks before deciding on an execution plan.")
+            recommend_strategy(
+                "explanation_style",
+                "step_by_step",
+                reason="Conceptual confusion benefits from a slower, incremental explanation mode.",
+            )
+        cognitive_adjustments.extend(pattern_guidance["cognitive"])
+        if routing_input.suggested_verbosity == "supportive":
+            cognitive_adjustments.append("Use a more supportive, lower-pressure tone; avoid framing suggestions as urgent must-dos.")
+            recommend_strategy(
+                "push_vs_support",
+                0.25,
+                reason="Supportive delivery should reduce pressure and keep the tone on the user's side.",
+            )
+        if high_cognitive_load:
+            cognitive_adjustments.append("Cognitive load is currently high; reduce plan complexity first, then offer an easier next step.")
+            recommend_strategy(
+                "explanation_style",
+                "step_by_step",
+                reason="High cognitive load benefits from simpler, more incremental explanations.",
+            )
+            recommend_strategy(
+                "intervention_intensity",
+                "low",
+                reason="High cognitive load should lower intervention intensity so the turn stays easy to absorb.",
+            )
+            if very_high_cognitive_load:
+                recommend_strategy(
+                    "planning_granularity",
+                    "startup_ready",
+                    reason="Very high cognitive load should compress planning into the smallest viable starting slice.",
+                )
+        social_signals = routing_input.social_signals
+        metacognition_hint = routing_input.metacognition_hint
+        if social_signals is not None:
+            if social_signals.pending_commitments_count > 0:
+                execution_constraints.append("If scheduling a next step, respect the user's existing external commitments and avoid stacking new long-term obligations.")
+            if (
+                social_signals.social_learning_preference is not None
+                and social_signals.social_learning_preference >= 0.65
+                and social_signals.mention_count > 0
+            ):
+                execution_constraints.append(
+                    "If the task naturally suits collaboration, allow the user to leverage peers or groups, but do not make social interaction a hard requirement."
+                )
+            if social_signals.relationship_count > 0:
+                cognitive_adjustments.append("When involving others or collaborative contexts, maintain boundaries; do not make promises on behalf of the user or assume others' positions.")
+
+        srl_phase_hint = routing_input.srl_phase_hint
+        reflection_phase_detected = False
+        if srl_phase_hint is not None:
+            if srl_phase_hint.current_phase == "forethought":
+                cognitive_adjustments.append("The user is in the forethought phase; help clarify goals, constraints, and launch criteria before expanding into details.")
+                recommend_strategy(
+                    "planning_granularity",
+                    "startup_ready",
+                    reason="Forethought users benefit from tighter success criteria and a clear launch point before more detail is added.",
+                )
+            elif srl_phase_hint.current_phase == "performance":
+                execution_constraints.append("The user is in the performance phase; prioritize maintaining execution continuity with immediately actionable short steps.")
+                recommend_strategy(
+                    "execution_window",
+                    "momentum_preserving",
+                    reason="Performance-phase support should preserve momentum instead of reopening broad planning loops.",
+                )
+            elif srl_phase_hint.current_phase == "reflection":
+                reflection_phase_detected = srl_phase_hint.confidence >= 0.55
+                cognitive_adjustments.append(
+                    "The user is in the reflection phase; summarize what worked and what failed before deciding how to adjust the next cycle."
+                )
+                recommend_strategy(
+                    "session_mode",
+                    "reflection",
+                    reason="Reflection-phase turns should surface what worked or failed before pushing the user back into execution.",
+                )
+
+        low_metacognition_accuracy = False
+        strong_metacognition_execution_bias = False
+        low_metacognition_adjustment_added = False
+        if metacognition_hint is not None:
+            low_metacognition_accuracy = metacognition_hint.accuracy < 0.5
+            strong_metacognition_execution_bias = (
+                metacognition_hint.accuracy > 0.8 and metacognition_hint.awareness == "strong"
+            )
+            if low_metacognition_accuracy:
+                low_metacognition_adjustment_added = True
+                cognitive_adjustments.append("The user's recent self-assessment of state or time has been inaccurate; recalibrate judgment before pushing execution.")
+                recommend_strategy(
+                    "intervention_intensity",
+                    "low",
+                    reason="Low metacognitive accuracy means the system should reduce proactive pushing and recalibrate first.",
+                )
+                recommend_strategy(
+                    "push_vs_support",
+                    0.2,
+                    reason="When self-monitoring is noisy, the delivery should skew toward support instead of pressure.",
+                )
+            elif strong_metacognition_execution_bias:
+                execution_constraints.append("The user shows strong self-awareness; reduce redundant confirmations and interruptions, directly provide an actionable next step.")
+                recommend_strategy(
+                    "check_in_frequency",
+                    "minimal",
+                    reason="Strong metacognitive awareness allows the system to reduce interruptions and trust the user to self-monitor.",
+                )
+                recommend_strategy(
+                    "intervention_intensity",
+                    "low",
+                    reason="High metacognitive accuracy supports a lower-friction execution path with fewer interruptions.",
+                )
+        if belief_signal_snapshot.get("active"):
+            metacognition_belief = belief_targets.get("metacognition_accuracy", {})
+            if metacognition_belief.get("observed"):
+                low_metacognition_accuracy = (
+                    bool(metacognition_belief.get("confident"))
+                    and float(metacognition_belief["mean"]) < float(self._param("low_metacognition_accuracy", 0.5))
+                )
+                if low_metacognition_accuracy and not low_metacognition_adjustment_added:
+                    cognitive_adjustments.append(
+                        "Belief state indicates noisy self-monitoring; recalibrate judgment before pushing execution."
+                    )
+                    recommend_strategy(
+                        "intervention_intensity",
+                        "low",
+                        reason="Belief-state metacognition signal suggests reducing proactive pushing and recalibrating first.",
+                    )
+                    recommend_strategy(
+                        "push_vs_support",
+                        0.2,
+                        reason="Noisy self-monitoring should skew delivery toward support instead of pressure.",
+                    )
+
+        # ── Spine StateRegister signals ──
+        spine_states = routing_input.spine_active_states
+        spine_fatigue_detected = False
+        spine_execution_low = False
+        spine_knowledge_bottleneck = False
+        for ss in spine_states:
+            key = str(ss.get("state_key", ""))
+            value = str(ss.get("value", ""))
+            conf = float(ss.get("confidence", 0))
+            if conf < float(self._param("spine_state_confidence_min", 0.45)):
+                continue
+            if (
+                key in ("fatigue_accumulated", "affective_pressure", "cognitive_load", "notification_fatigue")
+                or value in {"high_load", "high_load_detected", "overloaded", "anxious", "tense"}
+            ) and conf >= float(self._param("spine_fatigue_confidence_min", 0.6)):
+                spine_fatigue_detected = True
+                cognitive_adjustments.append("Spine detected accumulated fatigue or emotional pressure; prioritize reducing load and offering recovery suggestions.")
+                recommend_strategy(
+                    "intervention_intensity",
+                    "low",
+                    reason="Spine fatigue signal suggests reducing proactive pressure and offering recovery-oriented support.",
+                )
+            if key in ("execution_consistency", "task_granularity_fit") and conf >= 0.55:
+                spine_execution_low = True
+                execution_constraints.append("Spine detected execution consistency or task granularity drift; prioritize easier-to-start short actions.")
+                recommend_strategy(
+                    "planning_granularity",
+                    "startup_ready",
+                    reason="Spine execution-consistency signal suggests preserving momentum with smaller steps.",
+                )
+            if key in ("knowledge_bottleneck", "knowledge_transfer") and conf >= 0.55:
+                spine_knowledge_bottleneck = True
+                cognitive_adjustments.append("Spine detected a knowledge bottleneck; help the user understand core concepts before pushing forward.")
+                recommend_strategy(
+                    "explanation_style",
+                    "step_by_step",
+                    reason="Knowledge bottleneck should slow down explanation and focus on foundational understanding.",
+                )
+            if key == "reward_engagement" and conf >= 0.55:
+                recommend_strategy(
+                    "push_vs_support",
+                    0.6,
+                    reason="Recent reward engagement indicates user is invested; moderate encouragement can sustain momentum.",
+                )
+            if key == "deadline_pressure" and conf >= 0.6:
+                execution_constraints.append("Spine detected deadline pressure; prioritize review or sprint tasks related to the deadline.")
+                recommend_strategy(
+                    "planning_granularity",
+                    "startup_ready",
+                    reason="Deadline pressure should focus planning into immediately actionable steps.",
+                )
+                recommend_strategy(
+                    "execution_window",
+                    "momentum_preserving",
+                    reason="Deadline pressure should preserve momentum and avoid opening new planning loops.",
+                )
+
+        # ── T3.4.4: Aurora user preferences ──
+        aurora_prefs = routing_input.aurora_preferences or {}
+        aurora_directness = str(aurora_prefs.get("aurora_directness", "guided"))
+        aurora_pressure = str(aurora_prefs.get("aurora_pressure_style", "motivating"))
+        aurora_explanation = str(aurora_prefs.get("aurora_explanation_level", "detailed"))
+        aurora_analysis = str(aurora_prefs.get("aurora_analysis_depth", "deep"))
+
+        # ── Recent corrections bridge (BP1) ──
+        recent_corrections = routing_input.recent_corrections or []
+        corrections_count = len(recent_corrections)
+        corrections_addressed_topics: set[str] = set()
+        for correction in recent_corrections:
+            topic = str(correction.get("correction_type") or correction.get("topic") or "").strip().lower()
+            if topic:
+                corrections_addressed_topics.add(topic)
+        if corrections_count >= int(self._param("corrections_threshold", 3)):
+            cognitive_adjustments.append("The user has been corrected multiple times recently; verify whether prior corrections have taken effect before issuing new ones.")
+            recommend_strategy(
+                "intervention_intensity",
+                "low",
+                reason="Multiple recent corrections suggest the system should pause and verify calibration before pushing more changes.",
+            )
+        if "difficulty_mismatch" in corrections_addressed_topics:
+            execution_constraints.append("The user has had a difficulty correction before; this round's task difficulty should follow the corrected standard.")
+            recommend_strategy(
+                "difficulty_level",
+                2,
+                reason="Prior difficulty correction should cap task difficulty at a user-validated level.",
+            )
+
+        recent_route_outcomes = [
+            item for item in (routing_input.recent_route_outcomes or []) if isinstance(item, dict)
+        ][:8]
+        failed_execution_count = 0
+        failed_cognitive_count = 0
+        successful_execution_count = 0
+        successful_cognitive_count = 0
+        pending_route_count = 0
+        for item in recent_route_outcomes:
+            outcome = str(item.get("outcome") or "").strip()
+            mode = str(item.get("mode") or item.get("decision_type") or "").strip()
+            if not outcome or outcome == "pending":
+                pending_route_count += 1
+                continue
+            if outcome in {"user_correction", "timeout"}:
+                if mode == "execution_first":
+                    failed_execution_count += 1
+                elif mode == "cognitive_first":
+                    failed_cognitive_count += 1
+            elif outcome in {"task_completion", "plan_success"}:
+                if mode == "execution_first":
+                    successful_execution_count += 1
+                elif mode == "cognitive_first":
+                    successful_cognitive_count += 1
+
+        route_outcome_support_needed = failed_execution_count >= 2
+        route_outcome_over_scaffolded = failed_cognitive_count >= 2 and successful_execution_count >= 1
+        if route_outcome_support_needed:
+            cognitive_adjustments.append("Recent direct-push outcomes were corrected or timed out multiple times; confirm understanding first and make the next step smaller.")
+            recommend_strategy(
+                "planning_granularity",
+                "startup_ready",
+                reason="Recent route outcomes show execution-first decisions were corrected or timed out.",
+            )
+            recommend_strategy(
+                "intervention_intensity",
+                "low",
+                reason="Failed direct-routing outcomes should increase support without adding pressure.",
+            )
+        elif route_outcome_over_scaffolded:
+            execution_constraints.append("Recent cognitive-first support was over-corrected; reduce explanations this round and provide a single actionable step.")
+            recommend_strategy(
+                "check_in_frequency",
+                "minimal",
+                reason="Recent route outcomes show cognitive-first support may have been too much.",
+            )
+            recommend_strategy(
+                "explanation_style",
+                "concise",
+                reason="Over-scaffolded route outcomes should shorten the next explanation.",
+            )
+        elif successful_execution_count >= 3 and failed_execution_count == 0:
+            execution_constraints.append("Recent execution-first outcomes have been stable; reduce unnecessary scaffolding and redundant confirmations this round.")
+            recommend_strategy(
+                "check_in_frequency",
+                "minimal",
+                reason="Repeated successful execution-first outcomes support a lower-friction route.",
+            )
+
+        if aurora_directness == "direct":
+            recommend_strategy(
+                "directness_mode",
+                "action_oriented",
+                reason="User prefers direct, action-oriented communication (aurora_directness=direct).",
+            )
+
+        if aurora_pressure == "gentle":
+            execution_constraints.append("The user prefers gentle reminders; do not use pressure-driven nudging strategies.")
+            recommend_strategy(
+                "push_vs_support",
+                0.2,
+                reason="User prefers gentle pressure style (aurora_pressure_style=gentle).",
+            )
+
+        if aurora_explanation == "brief":
+            recommend_strategy(
+                "explanation_style",
+                "concise",
+                reason="User prefers brief explanations (aurora_explanation_level=brief).",
+            )
+
+        if aurora_analysis == "light":
+            cognitive_adjustments.append("The user prefers light analysis; reduce deep behavioral interpretations and prioritize an actionable next step.")
+            recommend_strategy(
+                "intervention_intensity",
+                "low",
+                reason="User prefers light analysis depth (aurora_analysis_depth=light).",
+            )
+
+        if routing_input.session_length_preference and routing_input.session_length_preference <= 25:
+            execution_constraints.append(
+                f"User prefers short sprints; keep single-task duration within {routing_input.session_length_preference} minutes by default."
+            )
+        if routing_input.difficulty_preference is not None and routing_input.difficulty_preference < 0.4:
+            execution_constraints.append("Lower initial task difficulty; avoid high-pressure challenges at the outset.")
+        if routing_input.recent_task_feedback_distribution.get("too_difficult", 0) >= 2:
+            execution_constraints.append("Recent consecutive feedback says 'too difficult'; avoid increasing task intensity in this response.")
+        if routing_input.recent_task_feedback_distribution.get("too_long", 0) >= 2:
+            execution_constraints.append("Recent consecutive feedback says 'too long'; prioritize breaking into shorter, easier-to-start steps.")
+        if capsule_method_preferences:
+            top_method = capsule_method_preferences[0]
+            method_label = str(top_method.get("label") or "").strip()
+            method_key = str(top_method.get("key") or "").strip()
+            if method_label:
+                execution_constraints.append(
+                    f"User prefers {method_label}; when this round suits a learning or execution rhythm, prioritize organizing the next step with that method, but do not force-fit it."
+                )
+                recommend_strategy(
+                    "execution_method",
+                    method_key or method_label,
+                    reason="Favorite capsule history indicates this execution method is personally salient for the user.",
+                )
+        execution_constraints.extend(pattern_guidance["execution"])
+
+        scaffolding_snapshot = routing_input.scaffolding_snapshot or {}
+        scaffolding_zone = (
+            str(
+                scaffolding_snapshot.get("current_scaffolding_stage") or scaffolding_snapshot.get("current_zone") or ""
+            ).strip()
+            or None
+        )
+        scaffolding_support = float(
+            scaffolding_snapshot.get("template_support_level") or scaffolding_snapshot.get("support_level") or 0.0
+        )
+        scaffolding_failures = int(scaffolding_snapshot.get("consecutive_failures") or 0)
+        scaffolding_successes = int(scaffolding_snapshot.get("consecutive_successes") or 0)
+        if scaffolding_zone == "frustration" or scaffolding_support >= 4 or scaffolding_failures >= 2:
+            cognitive_adjustments.append("SGW scaffolding indicates the user may be in a frustration zone; increase support density and lower task resistance first.")
+            recommend_strategy(
+                "planning_granularity",
+                "startup_ready",
+                reason="Scaffolding FSM indicates frustration/high support need; the next action should be easier to start.",
+            )
+            recommend_strategy(
+                "intervention_intensity",
+                "low",
+                reason="High scaffolding support means Aurora should feel helpful rather than pushy.",
+            )
+        elif scaffolding_zone == "boredom" or scaffolding_successes >= 3:
+            execution_constraints.append("SGW scaffolding indicates the user has been progressing smoothly; reduce explanations and offer a more challenging but manageable next step.")
+            recommend_strategy(
+                "difficulty_level",
+                4,
+                reason="Scaffolding FSM indicates recent success; the next action can be slightly more challenging.",
+            )
+
+        # Translate numeric adaptive adjustments from ParameterCompiler
+        if routing_input.adaptive_adjustments:
+            diff_shift = routing_input.adaptive_adjustments.get("difficulty_shift", 0.0)
+            if diff_shift < 0:
+                cognitive_adjustments.append("Consider lowering sub-task difficulty and providing simpler, easier-to-start steps.")
+            elif diff_shift > 0:
+                cognitive_adjustments.append("Consider moderately increasing challenge level; provide more advanced content or tasks.")
+
+            time_mult = routing_input.adaptive_adjustments.get("time_multiplier", 1.0)
+            if time_mult > 1.0:
+                extra_pct = int((time_mult - 1.0) * 100)
+                execution_constraints.append(f"Increase estimated execution time by {extra_pct}% to allow more buffer.")
+            elif time_mult < 1.0:
+                less_pct = int((1.0 - time_mult) * 100)
+                execution_constraints.append(f"Estimated execution time can be reduced by {less_pct}%; suggest a tighter pace.")
+
+            if routing_input.adaptive_adjustments.get("insert_prerequisite_review"):
+                execution_constraints.append("Must insert a prerequisite knowledge review step.")
+
+            max_tasks = routing_input.adaptive_adjustments.get("max_concurrent_tasks")
+            if max_tasks is not None and max_tasks < 3:
+                execution_constraints.append(f"Control concurrent task count; do not exceed {max_tasks} tasks in a single push.")
+
+        # Finalize precedence scores with late-computed signals
+        precedence["reflection_phase"] = pw["reflection_phase"] if reflection_phase_detected else 0.0
+        precedence["low_metacognition"] = pw["low_metacognition"] if low_metacognition_accuracy else 0.0
+        precedence["spine_fatigue"] = pw["spine_fatigue"] if spine_fatigue_detected else 0.0
+        precedence["scaffolding_frustration"] = (
+            pw["scaffolding_frustration"] if scaffolding_zone == "frustration" or scaffolding_failures >= 2 else 0.0
+        )
+        precedence["scaffolding_boredom"] = pw["scaffolding_boredom"] if scaffolding_zone == "boredom" else 0.0
+        precedence["route_outcome_failure"] = pw["route_outcome_failure"] if route_outcome_support_needed else 0.0
+        precedence["route_outcome_over_scaffolded"] = (
+            pw["route_outcome_over_scaffolded"] if route_outcome_over_scaffolded else 0.0
+        )
+        dominant_signal = max(precedence, key=lambda k: precedence[k])
+        signal_scores = {
+            "goal_clarity": round(goal_clarity_score, 3),
+            "emotional_block": round(emotional_block_score, 3),
+            "procrastination": round(procrastination_score, 3),
+            "cognitive_load": round(cognitive_load_value, 3) if cognitive_load_available else 0.0,
+            "low_metacognition": 1.0 if low_metacognition_accuracy else 0.0,
+            "spine_fatigue": 1.0 if spine_fatigue_detected else 0.0,
+            "spine_execution_low": 1.0 if spine_execution_low else 0.0,
+            "spine_knowledge_bottleneck": 1.0 if spine_knowledge_bottleneck else 0.0,
+            "recent_corrections": min(1.0, corrections_count / 5.0),
+            "scaffolding_frustration": 1.0 if precedence["scaffolding_frustration"] > 0 else 0.0,
+            "scaffolding_boredom": 1.0 if precedence["scaffolding_boredom"] > 0 else 0.0,
+            "route_outcome_failure": min(1.0, failed_execution_count / 3.0),
+            "route_outcome_over_scaffolded": min(1.0, failed_cognitive_count / 3.0),
+        }
+        routing_debug = {
+            "dominant_signal": dominant_signal,
+            "precedence_scores": {k: round(v, 2) for k, v in precedence.items() if v > 0},
+            "goal_clarity_score": round(goal_clarity_score, 3),
+            "goal_clear_threshold": round(goal_clear_threshold, 3),
+            "procrastination_score": round(procrastination_score, 3),
+            "procrastination_threshold": round(profile["procrastination_threshold"], 3),
+            "emotional_block_score": round(emotional_block_score, 3),
+            "emotional_sensitivity": round(profile["emotional_sensitivity"], 3),
+            "directness_preference": round(profile["directness_preference"], 3),
+            "explicit_procrastination_signal": bool(routing_input.procrastination_pattern),
+            "explicit_emotional_signal": bool(routing_input.emotional_block_detected),
+            "explicit_cognitive_signal": cognitive_mode_suggested,
+            "belief_signals_enabled": bool(belief_signal_snapshot.get("enabled")),
+            "belief_signals_active": bool(belief_signal_snapshot.get("active")),
+            "belief_uncertainty_max": belief_signal_snapshot.get("uncertainty_max"),
+            "belief_signal_targets": belief_targets if belief_signal_snapshot.get("active") else {},
+            "explicit_social_signal": social_signals is not None,
+            "social_signal_payload": social_signals.to_payload() if social_signals is not None else None,
+            "explicit_srl_signal": srl_phase_hint is not None,
+            "srl_phase_payload": srl_phase_hint.to_payload() if srl_phase_hint is not None else None,
+            "explicit_metacognition_signal": metacognition_hint is not None,
+            "cognitive_load": round(cognitive_load_value, 4) if cognitive_load_available else None,
+            "metacognition_hint_payload": (
+                {
+                    "accuracy": round(metacognition_hint.accuracy, 4),
+                    "awareness": metacognition_hint.awareness,
+                    "last_updated": metacognition_hint.last_updated.isoformat(),
+                }
+                if metacognition_hint is not None
+                else None
+            ),
+            "explicit_capsule_signal": bool(capsule_preferences),
+            "capsule_preferences": capsule_preferences or None,
+            "capsule_method_preferences": capsule_method_preferences,
+            "explicit_spine_state_signal": bool(spine_states),
+            "spine_state_count": len(spine_states),
+            "spine_fatigue_detected": spine_fatigue_detected,
+            "spine_execution_low": spine_execution_low,
+            "spine_knowledge_bottleneck": spine_knowledge_bottleneck,
+            "spine_state_keys": [
+                str(item.get("state_key", ""))
+                for item in spine_states[:8]
+                if isinstance(item, dict) and item.get("state_key")
+            ],
+            "aurora_preferences": {
+                "directness": aurora_directness,
+                "pressure": aurora_pressure,
+                "explanation": aurora_explanation,
+                "analysis": aurora_analysis,
+            },
+            "corrections_count": corrections_count,
+            "corrections_topics": sorted(corrections_addressed_topics),
+            "recent_route_outcome_summary": {
+                "count": len(recent_route_outcomes),
+                "failed_execution_count": failed_execution_count,
+                "failed_cognitive_count": failed_cognitive_count,
+                "successful_execution_count": successful_execution_count,
+                "successful_cognitive_count": successful_cognitive_count,
+                "pending_count": pending_route_count,
+                "support_needed": route_outcome_support_needed,
+                "over_scaffolded": route_outcome_over_scaffolded,
+            },
+            "recent_route_outcomes": recent_route_outcomes[:5],
+            "scaffolding_snapshot": scaffolding_snapshot or None,
+            "scaffolding_zone": scaffolding_zone,
+            "parameter_version": self._parameter_snapshot.version if self._parameter_snapshot else "defaults",
+            "parameter_source": self._parameter_snapshot.source if self._parameter_snapshot else "defaults",
+        }
+        if social_signals is not None:
+            routing_debug["social_relationship_count"] = social_signals.relationship_count
+            routing_debug["social_pending_commitments_count"] = social_signals.pending_commitments_count
+            routing_debug["social_learning_preference"] = social_signals.social_learning_preference
+        if srl_phase_hint is not None:
+            routing_debug["srl_phase"] = srl_phase_hint.current_phase
+            routing_debug["srl_confidence"] = srl_phase_hint.confidence
+        if metacognition_hint is not None:
+            routing_debug["metacognition_accuracy"] = round(metacognition_hint.accuracy, 4)
+            routing_debug["metacognition_awareness"] = metacognition_hint.awareness
+
+        if (
+            (goal_clear or strong_metacognition_execution_bias)
+            and routing_input.information_sufficient
+            and not emotional_block
+            and not procrastination_pattern
+            and not cognitive_mode_suggested
+            and not reflection_phase_detected
+            and not low_metacognition_accuracy
+            and not high_cognitive_load
+            and not spine_fatigue_detected
+            and not spine_knowledge_bottleneck
+            and not route_outcome_support_needed
+        ):
+            return self._stabilize_decision(
+                routing_input,
+                DualCoreDecision(
+                mode="execution_first",
+                reason=(
+                    "用户对自身状态觉察稳定，且当前没有明显情绪或执行阻塞，适合减少打扰并直接推进执行路径。"
+                    if strong_metacognition_execution_bias
+                    else "目标清晰、信息充分，且当前没有明显情绪或执行阻塞，适合直接推进执行路径。"
+                ),
+                cognitive_adjustments=cognitive_adjustments[-10:],
+                execution_constraints=execution_constraints[:10],
+                routing_debug=routing_debug,
+                strategy_adjustments=strategy_adjustments[:10],
+                signal_scores=signal_scores,
+                scaffolding_zone=scaffolding_zone,
+                ),
+            )
+
+        if (
+            not routing_input.information_sufficient
+            or emotional_block
+            or procrastination_pattern
+            or reflection_phase_detected
+            or low_metacognition_accuracy
+            or very_high_cognitive_load
+            or spine_fatigue_detected
+            or spine_knowledge_bottleneck
+            or route_outcome_support_needed
+            or (cognitive_mode_suggested and not goal_clear)
+            or (not goal_clear and routing_input.intent_confidence < low_conf_threshold)
+        ):
+            return self._stabilize_decision(
+                routing_input,
+                DualCoreDecision(
+                mode="cognitive_first",
+                reason=self._cognitive_reason(
+                    goal_clear=goal_clear,
+                    information_sufficient=routing_input.information_sufficient,
+                    emotional_block=emotional_block,
+                    procrastination_pattern=procrastination_pattern,
+                    cognitive_mode_suggested=cognitive_mode_suggested,
+                ),
+                cognitive_adjustments=cognitive_adjustments[-10:],
+                execution_constraints=execution_constraints[:10],
+                routing_debug=routing_debug,
+                strategy_adjustments=strategy_adjustments[:10],
+                signal_scores=signal_scores,
+                scaffolding_zone=scaffolding_zone,
+                ),
+            )
+
+        balanced_reason = "当前同时存在推进任务和理解用户状态的需求，先保持双核心并行。"
+        if goal_clear and high_cognitive_load:
+            balanced_reason = "目标已经清楚，但当前还存在认知或执行摩擦，先在推进方案时同时做状态调制。"
+        elif spine_execution_low:
+            balanced_reason = "目标可以推进，但 Spine 状态寄存器提示近期执行连续性或任务颗粒度有风险，先压缩下一步。"
+        elif not goal_clear:
+            balanced_reason = "目标还有部分边界要澄清，但已经可以先给出轻量推进方向。"
+        return self._stabilize_decision(
+            routing_input,
+            DualCoreDecision(
+            mode="balanced",
+            reason=balanced_reason,
+            cognitive_adjustments=cognitive_adjustments[-10:],
+            execution_constraints=execution_constraints[:10],
+            routing_debug=routing_debug,
+            strategy_adjustments=strategy_adjustments[:10],
+            signal_scores=signal_scores,
+            scaffolding_zone=scaffolding_zone,
+            ),
+        )
+
+    def _stabilize_decision(self, routing_input: DualCoreRoutingInput, decision: DualCoreDecision) -> DualCoreDecision:
+        previous = routing_input.previous_mode_state if isinstance(routing_input.previous_mode_state, dict) else {}
+        previous_mode = str(previous.get("mode") or "").strip()
+        raw_mode = decision.mode
+        signal_scores = dict(decision.signal_scores or {})
+        high_support = (
+            float(signal_scores.get("emotional_block") or 0.0) >= 0.75
+            or float(signal_scores.get("cognitive_load") or 0.0) >= 0.78
+            or float(signal_scores.get("spine_fatigue") or 0.0) >= 1.0
+            or float(signal_scores.get("route_outcome_failure") or 0.0) >= 0.67
+        )
+        low_risk = (
+            float(signal_scores.get("emotional_block") or 0.0) <= 0.35
+            and float(signal_scores.get("procrastination") or 0.0) <= 0.35
+            and float(signal_scores.get("cognitive_load") or 0.0) <= 0.45
+            and float(signal_scores.get("goal_clarity") or 0.0) >= 0.70
+        )
+        critical_support = (
+            float(signal_scores.get("emotional_block") or 0.0) >= 0.86
+            or float(signal_scores.get("spine_fatigue") or 0.0) >= 1.0
+            or float(signal_scores.get("cognitive_load") or 0.0) >= 0.90
+        )
+        high_support_streak = int(previous.get("high_support_streak") or 0)
+        low_risk_streak = int(previous.get("low_risk_streak") or 0)
+        commitment_remaining = int(previous.get("commitment_remaining") or 0)
+        stabilized_mode = raw_mode
+        reason = "raw_mode_accepted"
+
+        if high_support:
+            high_support_streak += 1
+        else:
+            high_support_streak = 0
+        if low_risk:
+            low_risk_streak += 1
+        else:
+            low_risk_streak = 0
+
+        if commitment_remaining > 0 and previous_mode in {"execution_first", "cognitive_first"}:
+            if previous_mode == "cognitive_first" and raw_mode == "execution_first" and not (low_risk and low_risk_streak >= 2):
+                stabilized_mode = "cognitive_first"
+                reason = "mode_commitment_hold_cognitive"
+            elif previous_mode == "execution_first" and raw_mode == "cognitive_first" and not critical_support:
+                stabilized_mode = "execution_first"
+                reason = "mode_commitment_hold_execution"
+
+        if previous_mode == "execution_first" and raw_mode == "cognitive_first" and not critical_support:
+            if high_support_streak < 2:
+                stabilized_mode = "balanced"
+                reason = "execution_to_cognitive_requires_sustained_support_signal"
+        elif previous_mode == "cognitive_first" and raw_mode == "execution_first":
+            if low_risk_streak < 2:
+                stabilized_mode = "balanced"
+                reason = "cognitive_to_execution_requires_sustained_low_risk"
+
+        next_commitment = max(0, commitment_remaining - 1)
+        if stabilized_mode in {"execution_first", "cognitive_first"} and stabilized_mode != previous_mode:
+            next_commitment = 2
+        elif stabilized_mode in {"execution_first", "cognitive_first"} and next_commitment == 0 and raw_mode == stabilized_mode:
+            next_commitment = 1
+        if stabilized_mode != raw_mode:
+            routing_debug = dict(decision.routing_debug or {})
+            routing_debug["mode_stability"] = {
+                "raw_mode": raw_mode,
+                "stabilized_mode": stabilized_mode,
+                "reason": reason,
+                "previous_mode": previous_mode or None,
+                "commitment_remaining": next_commitment,
+                "high_support_streak": high_support_streak,
+                "low_risk_streak": low_risk_streak,
+            }
+            signal_scores["raw_mode_changed_by_stabilizer"] = 1.0
+            return replace(
+                decision,
+                mode=stabilized_mode,
+                reason=f"{decision.reason}（模式稳定器：{reason}）",
+                routing_debug=routing_debug,
+                signal_scores=signal_scores,
+            )
+        routing_debug = dict(decision.routing_debug or {})
+        routing_debug["mode_stability"] = {
+            "raw_mode": raw_mode,
+            "stabilized_mode": stabilized_mode,
+            "reason": reason,
+            "previous_mode": previous_mode or None,
+            "commitment_remaining": next_commitment,
+            "high_support_streak": high_support_streak,
+            "low_risk_streak": low_risk_streak,
+        }
+        return replace(decision, routing_debug=routing_debug)
+
+    def _belief_signal_snapshot(self, routing_input: DualCoreRoutingInput) -> dict[str, Any]:
+        uncertainty_max = float(getattr(settings, "SPARKLE_DUAL_CORE_BELIEF_UNCERTAINTY_MAX", 0.10))
+        enabled = bool(getattr(settings, "SPARKLE_DUAL_CORE_BELIEF_SIGNALS_ENABLED", False))
+        belief_state = routing_input.belief_state
+        snapshot: dict[str, Any] = {
+            "enabled": enabled,
+            "active": False,
+            "uncertainty_max": round(uncertainty_max, 4),
+            "targets": {},
+        }
+        if not enabled or belief_state is None:
+            return snapshot
+
+        targets: dict[str, dict[str, Any]] = {}
+        for target in (
+            "emotional_block",
+            "task_aversion",
+            "cognitive_load",
+            "goal_clarity",
+            "execution_capacity",
+            "metacognition_accuracy",
+            "system_dissatisfaction",
+        ):
+            mean, variance = self._belief_mean_variance(belief_state, target)
+            observed = mean is not None and variance is not None
+            entry = {
+                "observed": observed,
+                "mean": round(float(mean), 4) if observed else None,
+                "variance": round(float(variance), 4) if observed else None,
+                "confident": bool(observed and float(variance) <= uncertainty_max),
+            }
+            targets[target] = entry
+        snapshot["targets"] = targets
+        snapshot["active"] = any(item["observed"] for item in targets.values())
+        return snapshot
+
+    def _belief_mean_variance(self, belief_state: Any, target: str) -> tuple[float | None, float | None]:
+        if belief_state is None:
+            return None, None
+
+        try:
+            from app.services.evidence.unified_evidence import EvidenceTarget
+
+            evidence_target = EvidenceTarget(target)
+            if hasattr(belief_state, "peek_variable"):
+                variable = belief_state.peek_variable(evidence_target)
+                if variable is not None:
+                    return self._coerce_unit_float(variable.mean), self._coerce_unit_float(variable.variance)
+        except Exception:
+            pass
+
+        if isinstance(belief_state, dict):
+            variables = belief_state.get("variables")
+            if isinstance(variables, dict) and isinstance(variables.get(target), dict):
+                item = variables[target]
+                return self._coerce_unit_float(item.get("mean")), self._coerce_unit_float(item.get("variance"))
+
+            state_vector = belief_state.get("state_vector")
+            if isinstance(state_vector, dict):
+                mean = state_vector.get(f"{target}_mean")
+                variance = state_vector.get(f"{target}_variance")
+                return self._coerce_unit_float(mean), self._coerce_unit_float(variance)
+
+            mean = belief_state.get(f"{target}_mean")
+            variance = belief_state.get(f"{target}_variance")
+            if mean is not None or variance is not None:
+                return self._coerce_unit_float(mean), self._coerce_unit_float(variance)
+
+        return None, None
+
+    @staticmethod
+    def _coerce_unit_float(value: Any) -> float | None:
+        if not isinstance(value, (int, float)):
+            return None
+        return max(0.0, min(1.0, float(value)))
+
+    def _goal_clarity_score(self, routing_input: DualCoreRoutingInput) -> float:
+        intent = (routing_input.intent or "").strip().lower()
+        base = float(routing_input.intent_confidence or 0.0)
+        if intent not in self.CLEAR_INTENTS:
+            base *= 0.7
+        if routing_input.procrastination_pattern:
+            base -= 0.1
+        if routing_input.cognitive_mode_suggested:
+            base -= 0.08
+        return max(0.0, min(base, 1.0))
+
+    def _has_emotional_block(
+        self,
+        routing_input: DualCoreRoutingInput,
+        emotional_block_score: float,
+        profile: dict[str, float],
+    ) -> bool:
+        if routing_input.emotional_block_detected:
+            return True
+        return emotional_block_score >= profile["emotional_sensitivity"]
+
+    def _emotional_block_score(self, routing_input: DualCoreRoutingInput) -> float:
+        sentiments = routing_input.recent_sentiment_distribution or {}
+        negative = sum(count for sentiment, count in sentiments.items() if sentiment in self.NEGATIVE_SENTIMENTS)
+        total = sum(sentiments.values())
+        ratio = (negative / total) if total else 0.0
+        score = ratio
+        if routing_input.primary_challenge_area == "emotional":
+            score = max(score, 0.75)
+        if negative >= 2:
+            score = max(score, float(self._param("emotional_block_negative_ratio", 0.6)))
+        if self._pattern_details_include(routing_input, {"overload", "burnout", "anxiety"}):
+            score = max(score, 0.7)
+        return max(0.0, min(score, 1.0))
+
+    def _has_procrastination_pattern(
+        self,
+        routing_input: DualCoreRoutingInput,
+        procrastination_score: float,
+        profile: dict[str, float],
+    ) -> bool:
+        if routing_input.procrastination_pattern:
+            return True
+        return procrastination_score >= profile["procrastination_threshold"]
+
+    def _procrastination_score(self, routing_input: DualCoreRoutingInput) -> float:
+        feedback = routing_input.recent_task_feedback_distribution or {}
+        friction_signals = feedback.get("too_long", 0) + feedback.get("unclear", 0) + feedback.get("irrelevant", 0)
+        pattern_names = self._normalized_pattern_names(routing_input)
+        score = min(0.95, friction_signals * float(self._param("procrastination_friction_weight", 0.18)))
+        if feedback.get("too_difficult", 0) >= 3:
+            score = max(score, 0.72)
+        if routing_input.plan_health_status == "critical":
+            score = max(score, 0.68)
+        if self._contains_any(pattern_names, self.PROCRASTINATION_KEYWORDS):
+            score = max(score, 0.78)
+        if self._pattern_details_include(
+            routing_input,
+            {"procrastination", "avoidance", "focus_decay", "perfectionism_avoidance"},
+        ):
+            score = max(score, 0.8)
+        return max(0.0, min(score, 1.0))
+
+    def _pattern_guidance(self, routing_input: DualCoreRoutingInput) -> dict[str, list[str]]:
+        pattern_names = self._normalized_pattern_names(routing_input)
+        pattern_types = routing_input.behavior_pattern_types or {}
+        cognitive: list[str] = []
+        execution: list[str] = []
+
+        if self._contains_any(pattern_names, self.PROCRASTINATION_KEYWORDS):
+            cognitive.append("结合你最近的执行型模式信号，先把第一步降到几分钟内可启动。")
+        if self._contains_any(pattern_names, self.PERFECTIONISM_KEYWORDS):
+            cognitive.append("先缓解'必须一次做到最好'的压力，再讨论下一步。")
+            execution.append("给出最小可交付版本，明确'先完成再优化'的边界。")
+        if self._contains_any(pattern_names, self.PLANNING_FALLACY_KEYWORDS):
+            execution.append("对时间预估加入缓冲，避免按理想速度承诺。")
+        if pattern_types.get("emotional", 0) >= 2:
+            cognitive.append("近期情绪型模式较集中，先用更稳的节奏降低心理摩擦。")
+        if pattern_types.get("execution", 0) >= 2:
+            execution.append("把建议压缩成更具体的动作和检查点，减少执行摩擦。")
+        if pattern_types.get("cognitive", 0) >= 2:
+            cognitive.append("先澄清理解偏差和决策依据，再推进复杂方案。")
+
+        return {
+            "cognitive": cognitive,
+            "execution": execution,
+        }
+
+    @staticmethod
+    def _normalized_capsule_preferences(routing_input: DualCoreRoutingInput) -> dict[str, Any]:
+        raw = routing_input.capsule_preferences if isinstance(routing_input.capsule_preferences, dict) else {}
+        if not raw:
+            return {}
+
+        methods: list[dict[str, Any]] = []
+        for method in list(raw.get("method_preferences") or raw.get("capsule_method_preferences") or []):
+            if not isinstance(method, dict):
+                continue
+            label = str(method.get("label") or method.get("name") or "").strip()
+            if not label:
+                continue
+            methods.append(
+                {
+                    "key": str(method.get("key") or label).strip(),
+                    "label": label,
+                    "count": int(method.get("count") or 1),
+                    "confidence": float(method.get("confidence") or 0.6),
+                }
+            )
+
+        summaries = [
+            str(item).strip() for item in list(raw.get("method_preference_summary") or []) if str(item).strip()
+        ]
+        if not methods:
+            for summary in summaries:
+                label = summary.replace("用户偏好", "", 1).strip()
+                if label:
+                    methods.append({"key": label, "label": label, "count": 1, "confidence": 0.6})
+
+        normalized = {
+            "favorite_count": int(raw.get("favorite_count") or 0),
+            "content_depth_preference": str(raw.get("content_depth_preference") or "").strip() or None,
+            "subject_affinity": [
+                str(subject).strip()
+                for subject in list(raw.get("subject_affinity") or raw.get("content_subject_affinities") or [])
+                if str(subject).strip()
+            ][:3],
+            "method_preferences": methods[:3],
+            "method_preference_summary": summaries[:3] or [f"用户偏好{method['label']}" for method in methods[:3]],
+        }
+        return normalized if any(normalized.values()) else {}
+
+    def _normalized_pattern_names(self, routing_input: DualCoreRoutingInput) -> list[str]:
+        names = [
+            str(name).strip().lower() for name in (routing_input.behavior_pattern_names or []) if str(name).strip()
+        ]
+        for item in routing_input.behavior_pattern_details or []:
+            if not isinstance(item, dict):
+                continue
+            for key in ("pattern_name", "raw_pattern_name", "canonical_key"):
+                raw = str(item.get(key) or "").strip().lower()
+                if raw:
+                    names.append(raw)
+        return names
+
+    def _contains_any(self, pattern_names: list[str], keywords: set[str]) -> bool:
+        if not pattern_names:
+            return False
+        return any(keyword in name for name in pattern_names for keyword in keywords)
+
+    def _pattern_details_include(
+        self,
+        routing_input: DualCoreRoutingInput,
+        keywords: set[str],
+    ) -> bool:
+        for item in routing_input.behavior_pattern_details or []:
+            if not isinstance(item, dict):
+                continue
+            haystacks = [
+                str(item.get("canonical_key") or "").strip().lower(),
+                str(item.get("raw_pattern_name") or "").strip().lower(),
+                str(item.get("pattern_name") or "").strip().lower(),
+                str(item.get("description") or "").strip().lower(),
+            ]
+            if any(keyword in haystack for haystack in haystacks for keyword in keywords):
+                return True
+        return False
+
+    def _resolved_profile(self, routing_input: DualCoreRoutingInput) -> dict[str, float]:
+        profile = dict(self.DEFAULT_ROUTING_PROFILE)
+        raw = routing_input.routing_profile or {}
+        for key, default in self.DEFAULT_ROUTING_PROFILE.items():
+            value = raw.get(key, default)
+            if isinstance(value, (int, float)):
+                profile[key] = max(0.2, min(0.85, float(value)))
+        return profile
+
+    @staticmethod
+    def _goal_clear_threshold(profile: dict[str, float]) -> float:
+        directness = profile.get("directness_preference", 0.5)
+        return max(0.55, min(0.8, 0.72 - (directness - 0.5) * 0.2))
+
+    def _goal_clear_threshold_from_params(self, profile: dict[str, float]) -> float:
+        directness = profile.get("directness_preference", 0.5)
+        base = float(self._param("goal_clear_threshold_base", 0.72))
+        sensitivity = float(self._param("goal_clear_threshold_sensitivity", 0.2))
+        return max(0.55, min(0.8, base - (directness - 0.5) * sensitivity))
+
+    @staticmethod
+    def _low_confidence_threshold(profile: dict[str, float]) -> float:
+        directness = profile.get("directness_preference", 0.5)
+        return max(0.35, min(0.7, 0.6 - (directness - 0.5) * 0.2))
+
+    def _low_confidence_threshold_from_params(self, profile: dict[str, float]) -> float:
+        directness = profile.get("directness_preference", 0.5)
+        base = float(self._param("low_confidence_threshold_base", 0.6))
+        sensitivity = float(self._param("low_confidence_threshold_sensitivity", 0.2))
+        return max(0.35, min(0.7, base - (directness - 0.5) * sensitivity))
+
+    def _cognitive_reason(
+        self,
+        *,
+        goal_clear: bool,
+        information_sufficient: bool,
+        emotional_block: bool,
+        procrastination_pattern: bool,
+        cognitive_mode_suggested: bool,
+    ) -> str:
+        reasons: list[str] = []
+        if not goal_clear:
+            reasons.append("目标还不够清晰")
+        if not information_sufficient:
+            reasons.append("当前信息还不够支撑高质量方案")
+        if emotional_block:
+            reasons.append("当前存在明显情绪阻力")
+        if procrastination_pattern:
+            reasons.append("最近的执行反馈显示阻力在累积")
+        if cognitive_mode_suggested:
+            reasons.append("当前更像是理解卡点而不是单纯执行问题")
+        if not reasons:
+            return "当前更适合先做状态澄清，再进入执行路径。"
+        return "；".join(reasons) + "，所以这轮先走认知支持路径。"
+
+
+dual_core_router = DualCoreRouter()

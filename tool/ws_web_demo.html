@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Sparkle WebSocket Ticket 联调工具</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; line-height: 1.6; max-width: 800px; margin: 0 auto; background: #f4f7f9; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .input-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; }
+        input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-family: monospace; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        button:hover { background: #0056b3; }
+        #log { background: #222; color: #0f0; padding: 15px; border-radius: 4px; height: 300px; overflow-y: auto; font-family: monospace; margin-top: 20px; white-space: pre-wrap; }
+        .status { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 12px; margin-left: 10px; }
+        .status-off { background: #ddd; }
+        .status-on { background: #28a745; color: white; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>✨ Sparkle WS 联调工具</h2>
+        <div class="input-group">
+            <label>API 基础地址</label>
+            <input type="text" id="baseUrl" value="http://localhost:8080">
+        </div>
+        <div class="input-group">
+            <label>JWT Access Token</label>
+            <input type="text" id="token" placeholder="粘贴你的 JWT Token...">
+        </div>
+        <button onclick="startTest()">开始连接测试</button>
+        <span id="connStatus" class="status status-off">未连接</span>
+
+        <div id="log">等待操作...</div>
+    </div>
+
+    <script>
+        const logEl = document.getElementById('log');
+        const statusEl = document.getElementById('connStatus');
+
+        function log(msg, type = 'info') {
+            const time = new Date().toLocaleTimeString();
+            let color = '#0f0';
+            if (type === 'error') color = '#ff4d4d';
+            if (type === 'warn') color = '#ffcc00';
+            logEl.innerHTML += `<span style="color: ${color}">[${time}] ${msg}</span>\n`;
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        async function startTest() {
+            const baseUrl = document.getElementById('baseUrl').value;
+            const token = document.getElementById('token').value;
+            
+            if (!token) {
+                log('错误: 请先输入 JWT Token', 'error');
+                return;
+            }
+
+            try {
+                // 1. 获取 Ticket
+                log(`正在请求 Ticket: ${baseUrl}/api/v1/ws/ticket ...`);
+                const ticketResp = await fetch(`${baseUrl}/api/v1/ws/ticket`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!ticketResp.ok) {
+                    throw new Error(`获取 Ticket 失败: ${ticketResp.status}`);
+                }
+
+                const { ticket, expires_in } = await ticketResp.json();
+                log(`成功获得 Ticket: ${ticket} (有效期 ${expires_in}s)`);
+
+                // 2. 建立 WebSocket 连接
+                const wsUrl = baseUrl.replace('http', 'ws') + '/ws/chat';
+                log(`正在建立 WS 连接: ${wsUrl} ...`);
+                
+                // 使用子协议传递票据 (业界标准做法)
+                const socket = new WebSocket(wsUrl, [`ticket=${ticket}`]);
+
+                socket.onopen = () => {
+                    log('✅ WebSocket 连接成功！', 'info');
+                    statusEl.innerText = '已连接';
+                    statusEl.className = 'status status-on';
+                    
+                    // 发送测试消息
+                    const hello = { type: 'message', message: 'Hello Sparkle!', session_id: 'test_web_session' };
+                    socket.send(JSON.stringify(hello));
+                    log('已发送测试消息: Hello Sparkle!');
+                };
+
+                socket.onmessage = (event) => {
+                    log(`📩 收到消息: ${event.data.substring(0, 100)}...`);
+                };
+
+                socket.onclose = (event) => {
+                    log(`🔌 连接关闭: 代码=${event.code}, 原因=${event.reason || '无'}`, 'warn');
+                    statusEl.innerText = '已断开';
+                    statusEl.className = 'status status-off';
+                };
+
+                socket.onerror = (error) => {
+                    log('❌ WebSocket 发生错误', 'error');
+                };
+
+            } catch (err) {
+                log(`发生异常: ${err.message}`, 'error');
+            }
+        }
+    </script>
+</body>
+</html>

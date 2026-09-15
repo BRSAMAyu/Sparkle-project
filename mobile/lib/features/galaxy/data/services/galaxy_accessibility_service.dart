@@ -1,0 +1,530 @@
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
+import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
+import 'package:sparkle/shared/entities/galaxy_model.dart';
+
+/// Galaxy accessibility service for screen readers and haptic feedback
+///
+/// Features:
+/// 1. Semantic labels for nodes and clusters
+/// 2. Haptic feedback for interactions
+/// 3. VoiceOver/TalkBack support
+/// 4. Reduced motion support
+/// 5. High contrast mode detection
+class GalaxyAccessibilityService {
+  GalaxyAccessibilityService();
+
+  static const String _centralAccessibilitySettingsKey =
+      'settings_accessibility_central';
+
+  bool _isScreenReaderEnabled = false;
+  bool _reduceMotionEnabled = false;
+  bool _highContrastEnabled = false;
+
+  /// Check if screen reader is enabled
+  bool get isScreenReaderEnabled => _isScreenReaderEnabled;
+
+  /// Check if reduce motion is enabled
+  bool get reduceMotionEnabled => _reduceMotionEnabled;
+
+  /// Check if high contrast is enabled
+  bool get highContrastEnabled => _highContrastEnabled;
+
+  /// Whether haptic feedback is enabled (can be changed at runtime)
+  bool hapticEnabled = true;
+
+  /// Initialize accessibility settings from platform
+  void initialize(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    _isScreenReaderEnabled = mediaQuery.accessibleNavigation;
+    _reduceMotionEnabled = mediaQuery.disableAnimations;
+    _highContrastEnabled = mediaQuery.highContrast;
+    unawaited(_applyCentralDefaults());
+  }
+
+  /// Update accessibility settings
+  void update({
+    bool? screenReaderEnabled,
+    bool? reduceMotion,
+    bool? highContrast,
+    bool? hapticEnabled,
+  }) {
+    if (screenReaderEnabled != null) {
+      _isScreenReaderEnabled = screenReaderEnabled;
+    }
+    if (reduceMotion != null) _reduceMotionEnabled = reduceMotion;
+    if (highContrast != null) _highContrastEnabled = highContrast;
+    if (hapticEnabled != null) this.hapticEnabled = hapticEnabled;
+  }
+
+  Future<void> _applyCentralDefaults() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_centralAccessibilitySettingsKey);
+      if (raw == null || raw.isEmpty) {
+        return;
+      }
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) {
+        return;
+      }
+      update(
+        screenReaderEnabled: _readBool(
+          decoded['screen_reader_optimized'],
+          fallback: _isScreenReaderEnabled,
+        ),
+        reduceMotion: _readBool(
+          decoded['reduce_motion'],
+          fallback: _reduceMotionEnabled,
+        ),
+        highContrast: _readBool(
+          decoded['high_contrast'],
+          fallback: _highContrastEnabled,
+        ),
+        hapticEnabled: _readBool(
+          decoded['haptic_feedback'],
+          fallback: hapticEnabled,
+        ),
+      );
+    } catch (_) {
+      // Per-feature settings remain available if central defaults cannot load.
+    }
+  }
+
+  bool _readBool(Object? rawValue, {required bool fallback}) {
+    if (rawValue is bool) {
+      return rawValue;
+    }
+    final value = rawValue?.toString().trim().toLowerCase();
+    return switch (value) {
+      'true' || '1' || 'yes' || 'on' => true,
+      'false' || '0' || 'no' || 'off' => false,
+      _ => fallback,
+    };
+  }
+
+  // ============================================
+  // Haptic Feedback
+  // ============================================
+
+  /// Light haptic for subtle interactions
+  Future<void> lightHaptic() async {
+    if (!hapticEnabled || !await SensoryFeedbackService.isHapticEnabled()) {
+      return;
+    }
+    await HapticFeedback.lightImpact();
+  }
+
+  /// Medium haptic for standard interactions
+  Future<void> mediumHaptic() async {
+    if (!hapticEnabled || !await SensoryFeedbackService.isHapticEnabled()) {
+      return;
+    }
+    await HapticFeedback.mediumImpact();
+  }
+
+  /// Heavy haptic for significant actions
+  Future<void> heavyHaptic() async {
+    if (!hapticEnabled || !await SensoryFeedbackService.isHapticEnabled()) {
+      return;
+    }
+    await HapticFeedback.heavyImpact();
+  }
+
+  /// Selection haptic for UI selection
+  Future<void> selectionHaptic() async {
+    if (!hapticEnabled || !await SensoryFeedbackService.isHapticEnabled()) {
+      return;
+    }
+    await HapticFeedback.selectionClick();
+  }
+
+  /// Vibration pattern for special events
+  Future<void> patternHaptic(HapticPattern pattern) async {
+    if (!hapticEnabled || !await SensoryFeedbackService.isHapticEnabled()) {
+      return;
+    }
+
+    switch (pattern) {
+      case HapticPattern.success:
+        await HapticFeedback.lightImpact();
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+        await HapticFeedback.lightImpact();
+
+      case HapticPattern.error:
+        await HapticFeedback.heavyImpact();
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+        await HapticFeedback.heavyImpact();
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+        await HapticFeedback.heavyImpact();
+
+      case HapticPattern.warning:
+        await HapticFeedback.mediumImpact();
+        await Future<void>.delayed(const Duration(milliseconds: 150));
+        await HapticFeedback.mediumImpact();
+
+      case HapticPattern.unlock:
+        await HapticFeedback.lightImpact();
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        await HapticFeedback.mediumImpact();
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        await HapticFeedback.heavyImpact();
+
+      case HapticPattern.sparkle:
+        for (var i = 0; i < 3; i++) {
+          await HapticFeedback.selectionClick();
+          await Future<void>.delayed(const Duration(milliseconds: 80));
+        }
+    }
+  }
+
+  // ============================================
+  // Semantic Labels
+  // ============================================
+
+  /// Generate semantic label for a node
+  String getNodeSemanticLabel(GalaxyNodeModel node) {
+    final l10n = I18nService.instance.l10n;
+    final sectorName = SectorConfig.getLocalizedName(node.sector);
+    final buffer = StringBuffer()
+      ..write(l10n.galaxyA11yNodePrefix(sectorName, node.name));
+
+    if (node.isUnlocked) {
+      buffer
+        ..write(l10n.galaxyA11yNodeUnlocked)
+        ..write(
+          l10n.galaxyA11yNodeMastery(
+            node.masteryScore.toStringAsFixed(0),
+          ),
+        )
+        ..write(l10n.galaxyA11yNodeStudyCount(node.studyCount));
+    } else {
+      buffer.write(l10n.galaxyA11yNodeLocked);
+    }
+
+    buffer.write(
+      l10n.galaxyA11yNodeImportance(_importanceLabel(node.importance)),
+    );
+
+    return buffer.toString();
+  }
+
+  String _importanceLabel(int importance) => switch (importance) {
+        1 => I18nService.instance.l10n.galaxyImportanceEntry,
+        2 => I18nService.instance.l10n.galaxyImportanceBasic,
+        3 => I18nService.instance.l10n.galaxyImportanceIntermediate,
+        4 => I18nService.instance.l10n.galaxyImportanceAdvanced,
+        5 => I18nService.instance.l10n.galaxyImportanceCore,
+        _ => I18nService.instance.l10n.galaxyImportanceNormal,
+      };
+
+  /// Generate semantic label for a cluster
+  String getClusterSemanticLabel(
+    String name,
+    int nodeCount,
+    double avgMastery,
+  ) =>
+      I18nService.instance.l10n.galaxyA11yClusterLabel(
+        name,
+        nodeCount,
+        avgMastery.toStringAsFixed(0),
+      );
+
+  /// Generate semantic label for a sector
+  String getSectorSemanticLabel(SectorEnum sector, int nodeCount) {
+    final sectorName = SectorConfig.getLocalizedName(sector);
+    return I18nService.instance.l10n.galaxyA11ySectorLabel(
+      sectorName,
+      nodeCount,
+    );
+  }
+
+  /// Generate hint for navigation
+  String getNavigationHint() =>
+      I18nService.instance.l10n.galaxyA11yNavigationHint;
+
+  // ============================================
+  // Accessibility Actions
+  // ============================================
+
+  /// Build semantic node for a galaxy node
+  CustomSemanticsAction buildNodeAction(GalaxyNodeModel node) =>
+      CustomSemanticsAction(
+        label: node.isUnlocked
+            ? I18nService.instance.l10n.galaxyA11yActionStartLearning
+            : I18nService.instance.l10n.galaxyA11yActionUnlockNode,
+      );
+
+  /// Announce message for screen readers
+  Future<void> announce(String message) async {
+    // Use the non-deprecated API for announcements
+    // ignore: deprecated_member_use
+    await SemanticsService.announce(message, TextDirection.ltr);
+  }
+
+  /// Announce node selection
+  Future<void> announceNodeSelection(GalaxyNodeModel node) async {
+    final label = getNodeSemanticLabel(node);
+    await announce(label);
+
+    // Haptic feedback for selection
+    await selectionHaptic();
+  }
+
+  /// Announce zoom level change
+  Future<void> announceZoomLevel(double scale) async {
+    final percentage = (scale * 100).toStringAsFixed(0);
+    await announce(
+      I18nService.instance.l10n.galaxyA11yZoomLevel(percentage),
+    );
+  }
+
+  /// Announce navigation to new area
+  Future<void> announceNavigation(String areaName) async {
+    await announce(I18nService.instance.l10n.galaxyA11yNavigateTo(areaName));
+  }
+
+  // ============================================
+  // Animation Settings
+  // ============================================
+
+  /// Get animation duration based on accessibility settings
+  Duration getAnimationDuration(Duration normalDuration) {
+    if (_reduceMotionEnabled) {
+      // Reduce animation duration significantly
+      return Duration(
+        milliseconds: (normalDuration.inMilliseconds * 0.1).round(),
+      );
+    }
+    return normalDuration;
+  }
+
+  /// Check if animations should be disabled
+  bool get shouldDisableAnimations => _reduceMotionEnabled;
+
+  /// Get appropriate curve for animations
+  Curve getAnimationCurve() =>
+      _reduceMotionEnabled ? Curves.linear : Curves.easeOutCubic;
+
+  // ============================================
+  // Color Adjustments
+  // ============================================
+
+  /// Adjust color for high contrast mode
+  Color adjustColorForContrast(Color color, {bool isBackground = false}) {
+    if (!_highContrastEnabled) return color;
+
+    // Increase saturation and adjust brightness for high contrast
+    final hsl = HSLColor.fromColor(color);
+
+    if (isBackground) {
+      // Make backgrounds darker
+      return hsl.withLightness((hsl.lightness * 0.3).clamp(0.0, 1.0)).toColor();
+    } else {
+      // Make foregrounds brighter and more saturated
+      return hsl
+          .withLightness((hsl.lightness * 1.3).clamp(0.0, 1.0))
+          .withSaturation((hsl.saturation * 1.2).clamp(0.0, 1.0))
+          .toColor();
+    }
+  }
+
+  /// Get contrasting text color
+  Color getContrastingTextColor(Color background) {
+    final luminance = background.computeLuminance();
+    return luminance > 0.5 ? DS.galaxyShadow : DS.neutral0;
+  }
+}
+
+/// Haptic feedback patterns
+enum HapticPattern {
+  success,
+  error,
+  warning,
+  unlock,
+  sparkle,
+}
+
+/// Accessibility wrapper widget for galaxy nodes
+class GalaxyNodeSemantics extends StatelessWidget {
+  const GalaxyNodeSemantics({
+    required this.node,
+    required this.child,
+    required this.accessibilityService,
+    this.onTap,
+    this.onDoubleTap,
+    this.onLongPress,
+    super.key,
+  });
+
+  final GalaxyNodeModel node;
+  final Widget child;
+  final GalaxyAccessibilityService accessibilityService;
+  final VoidCallback? onTap;
+  final VoidCallback? onDoubleTap;
+  final VoidCallback? onLongPress;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        label: accessibilityService.getNodeSemanticLabel(node),
+        hint: node.isUnlocked
+            ? I18nService.instance.l10n.galaxyA11yHintStartLearning
+            : I18nService.instance.l10n.galaxyA11yHintUnlockNode,
+        button: true,
+        onTap: onTap,
+        onLongPress: onLongPress,
+        child: child,
+      );
+}
+
+/// Focus management for galaxy navigation
+class GalaxyFocusManager {
+  GalaxyFocusManager();
+
+  final Map<String, FocusNode> _focusNodes = {};
+  String? _currentFocusedNodeId;
+
+  /// Get or create focus node for a galaxy node
+  FocusNode getFocusNode(String nodeId) {
+    _focusNodes.putIfAbsent(nodeId, FocusNode.new);
+    return _focusNodes[nodeId]!;
+  }
+
+  /// Focus a specific node
+  void focusNode(String nodeId) {
+    final focusNode = _focusNodes[nodeId];
+    if (focusNode != null) {
+      focusNode.requestFocus();
+      _currentFocusedNodeId = nodeId;
+    }
+  }
+
+  /// Get currently focused node ID
+  String? get currentFocusedNodeId => _currentFocusedNodeId;
+
+  /// Move focus to next node in list
+  void focusNext(List<String> orderedNodeIds) {
+    if (_currentFocusedNodeId == null) {
+      if (orderedNodeIds.isNotEmpty) {
+        focusNode(orderedNodeIds.first);
+      }
+      return;
+    }
+
+    final currentIndex = orderedNodeIds.indexOf(_currentFocusedNodeId!);
+    if (currentIndex < orderedNodeIds.length - 1) {
+      focusNode(orderedNodeIds[currentIndex + 1]);
+    }
+  }
+
+  /// Move focus to previous node in list
+  void focusPrevious(List<String> orderedNodeIds) {
+    if (_currentFocusedNodeId == null) {
+      if (orderedNodeIds.isNotEmpty) {
+        focusNode(orderedNodeIds.last);
+      }
+      return;
+    }
+
+    final currentIndex = orderedNodeIds.indexOf(_currentFocusedNodeId!);
+    if (currentIndex > 0) {
+      focusNode(orderedNodeIds[currentIndex - 1]);
+    }
+  }
+
+  /// Clear focus
+  void clearFocus() {
+    _currentFocusedNodeId = null;
+    for (final node in _focusNodes.values) {
+      node.unfocus();
+    }
+  }
+
+  /// Dispose all focus nodes
+  void dispose() {
+    for (final node in _focusNodes.values) {
+      node.dispose();
+    }
+    _focusNodes.clear();
+  }
+}
+
+/// Keyboard navigation support for galaxy
+class GalaxyKeyboardNavigation {
+  GalaxyKeyboardNavigation({
+    required this.focusManager,
+    required this.onNodeSelected,
+    required this.onZoom,
+    required this.onPan,
+  });
+
+  final GalaxyFocusManager focusManager;
+  final void Function(String nodeId) onNodeSelected;
+  final void Function(double deltaScale) onZoom;
+  final void Function(Offset delta) onPan;
+
+  /// Handle keyboard event
+  KeyEventResult handleKeyEvent(KeyEvent event, List<String> orderedNodeIds) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+
+    switch (event.logicalKey) {
+      case LogicalKeyboardKey.arrowRight:
+      case LogicalKeyboardKey.arrowDown:
+        focusManager.focusNext(orderedNodeIds);
+        return KeyEventResult.handled;
+
+      case LogicalKeyboardKey.arrowLeft:
+      case LogicalKeyboardKey.arrowUp:
+        focusManager.focusPrevious(orderedNodeIds);
+        return KeyEventResult.handled;
+
+      case LogicalKeyboardKey.enter:
+      case LogicalKeyboardKey.space:
+        final focusedId = focusManager.currentFocusedNodeId;
+        if (focusedId != null) {
+          onNodeSelected(focusedId);
+        }
+        return KeyEventResult.handled;
+
+      case LogicalKeyboardKey.equal:
+      case LogicalKeyboardKey.add:
+        onZoom(0.1);
+        return KeyEventResult.handled;
+
+      case LogicalKeyboardKey.minus:
+        onZoom(-0.1);
+        return KeyEventResult.handled;
+
+      case LogicalKeyboardKey.keyW:
+        onPan(const Offset(0, -50));
+        return KeyEventResult.handled;
+
+      case LogicalKeyboardKey.keyS:
+        onPan(const Offset(0, 50));
+        return KeyEventResult.handled;
+
+      case LogicalKeyboardKey.keyA:
+        onPan(const Offset(-50, 0));
+        return KeyEventResult.handled;
+
+      case LogicalKeyboardKey.keyD:
+        onPan(const Offset(50, 0));
+        return KeyEventResult.handled;
+
+      case LogicalKeyboardKey.escape:
+        focusManager.clearFocus();
+        return KeyEventResult.handled;
+
+      default:
+        return KeyEventResult.ignored;
+    }
+  }
+}

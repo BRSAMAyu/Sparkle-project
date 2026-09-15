@@ -1,0 +1,389 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/errors/user_facing_error.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
+import 'package:sparkle/features/galaxy/data/repositories/galaxy_repository.dart';
+import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.dart';
+import 'package:sparkle/features/translation/data/services/knowledge_integration_service.dart';
+import 'package:sparkle/features/translation/data/services/translation_service.dart';
+import 'package:sparkle/features/translation/presentation/providers/translation_history_provider.dart';
+
+/// Lightweight popover for word/phrase translation
+///
+/// Shows: translation + 1-line note, no scrolling
+/// Design: Minimal, non-intrusive, quick to dismiss
+class TranslationPopover extends ConsumerStatefulWidget {
+  const TranslationPopover({
+    required this.sourceText,
+    this.sourceLang = 'en',
+    this.targetLang = 'zh-CN',
+    this.domain = 'general',
+    this.readingContext,
+    this.sourceUrl,
+    this.sourceDocumentId,
+    this.onSaved,
+    super.key,
+  });
+
+  final String sourceText;
+  final String sourceLang;
+  final String targetLang;
+  final String domain;
+  final String? readingContext;
+  final String? sourceUrl;
+  final String? sourceDocumentId;
+  final VoidCallback? onSaved;
+
+  @override
+  ConsumerState<TranslationPopover> createState() => _TranslationPopoverState();
+}
+
+class _TranslationPopoverState extends ConsumerState<TranslationPopover> {
+  TranslationResult? _result;
+  bool _isLoading = true;
+  String? _errorMessage;
+  bool _isSaving = false;
+  bool _saved = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_loadTranslation());
+  }
+
+  Future<void> _loadTranslation() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final service = ref.read(translationServiceProvider);
+      final result = await service.translate(
+        text: widget.sourceText,
+        sourceLang: widget.sourceLang,
+        targetLang: widget.targetLang,
+        domain: widget.domain,
+        style: 'concise', // Use concise style for popover
+      );
+
+      if (mounted) {
+        setState(() {
+          _result = result;
+          _isLoading = false;
+        });
+      }
+      if (result.success && result.translation.isNotEmpty) {
+        await ref.read(translationHistoryProvider.notifier).saveTranslation(
+              originalText: widget.sourceText,
+              translatedText: result.translation,
+              sourceLanguage: widget.sourceLang,
+              targetLanguage: widget.targetLang,
+            );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = UserFacingError.from(e);
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _saveToKnowledgeGraph() async {
+    if (_result == null || _isSaving || _saved) return;
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      final apiClient = ref.read(apiClientProvider);
+      final knowledgeService = KnowledgeIntegrationService(apiClient.dio);
+
+      final result = await knowledgeService.createVocabularyNode(
+        sourceText: widget.sourceText,
+        translation: _result!.translation,
+        context: widget.readingContext ?? widget.sourceText,
+        sourceUrl: widget.sourceUrl,
+        sourceDocumentId: widget.sourceDocumentId,
+        language: widget.sourceLang,
+        domain: widget.domain,
+      );
+
+      if (result != null && result.success) {
+        if (mounted) {
+          setState(() {
+            _saved = true;
+            _isSaving = false;
+          });
+
+          AppFeedback.success(
+            context,
+            context.l10n.transAddedToFlashcardsReviewLater,
+          );
+          ref
+            ..invalidate(galaxyRepositoryProvider)
+            ..invalidate(enhancedGalaxyRepositoryProvider)
+            ..invalidate(galaxyProvider);
+
+          // Call callback
+          widget.onSaved?.call();
+
+          // Auto-close after 1 second
+          Future.delayed(const Duration(seconds: 1), () {
+            if (mounted) {
+              Navigator.of(context).pop();
+            }
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _isSaving = false;
+          });
+
+          AppFeedback.error(context, context.l10n.transSaveFailed);
+        }
+      }
+    } on ServiceUnavailableException catch (e) {
+      // 503 - Circuit breaker open
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+        AppFeedback.info(context, e.message);
+      }
+    } on RateLimitException catch (e) {
+      // 429 - Rate limited
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+        AppFeedback.info(context, e.toString());
+      }
+    } on NetworkException catch (e) {
+      // Network errors (timeout, connection failed)
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+        AppFeedback.error(context, e.message);
+      }
+    } catch (e) {
+      // Unexpected errors
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+        AppFeedback.error(
+          context,
+          context.l10n.transUnknownError(e.toString()),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Container(
+        constraints: const BoxConstraints(maxWidth: 300),
+        padding: const EdgeInsets.all(DS.md),
+        decoration: BoxDecoration(
+          color: DS.surfacePrimaryElevated,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: DS.textPrimary.withValues(alpha: 0.15),
+              blurRadius: 20,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header: Source text (truncated)
+            Text(
+              widget.sourceText,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                color: DS.neutral600,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+            const SizedBox(height: DS.sm),
+
+            // Content: Translation or loading/error
+            if (_isLoading)
+              _buildLoading()
+            else if (_errorMessage != null)
+              _buildError()
+            else
+              _buildTranslation(),
+
+            // Actions: Save buttons
+            if (_result != null) ...[
+              const SizedBox(height: DS.md),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  SparkleButton(
+                    label: _saved
+                        ? context.l10n.transSaved
+                        : (_isSaving
+                            ? context.l10n.transSaving
+                            : context.l10n.transWordCard),
+                    icon: Icon(
+                      _saved ? Icons.bookmark : Icons.bookmark_add_outlined,
+                      size: DS.iconSizeXs,
+                    ),
+                    onPressed:
+                        _saved || _isSaving ? null : _saveToKnowledgeGraph,
+                    variant: ButtonVariant.ghost,
+                    size: ButtonSize.small,
+                    loading: _isSaving,
+                    disabled: _saved || _isSaving,
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      );
+
+  Widget _buildLoading() => Row(
+        children: [
+          const SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          const SizedBox(width: DS.sm),
+          Text(
+            context.l10n.transTranslating,
+            style: const TextStyle(fontSize: 14),
+          ),
+        ],
+      );
+
+  Widget _buildError() => Row(
+        children: [
+          Icon(Icons.error_outline, size: 16, color: DS.error),
+          const SizedBox(width: DS.sm),
+          Expanded(
+            child: Text(
+              context.l10n.transTranslationFailed,
+              style: TextStyle(fontSize: 14, color: DS.error),
+            ),
+          ),
+        ],
+      );
+
+  Widget _buildTranslation() {
+    if (_result == null) return const SizedBox.shrink();
+
+    // Extract first note if available
+    final firstNote =
+        _result!.segments.isNotEmpty && _result!.segments.first.notes.isNotEmpty
+            ? _result!.segments.first.notes.first
+            : null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Main translation
+        SelectableText(
+          _result!.translation,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: DS.fontWeightMedium,
+            height: 1.4,
+          ),
+        ),
+
+        // Terminology note (if any)
+        if (firstNote != null) ...[
+          const SizedBox(height: DS.xs),
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: DS.xs,
+              vertical: 2,
+            ),
+            decoration: BoxDecoration(
+              color: DS.brandPrimary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              firstNote,
+              style: TextStyle(
+                fontSize: 11,
+                color: DS.brandPrimaryConst,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+
+        // Cache hint (for debugging)
+        if (_result!.isCacheHit) ...[
+          const SizedBox(height: DS.xs),
+          Row(
+            children: [
+              Icon(Icons.flash_on, size: 12, color: DS.neutral400),
+              const SizedBox(width: 2),
+              Text(
+                'cached',
+                style: TextStyle(fontSize: 10, color: DS.neutral400),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Show translation popover as a dialog
+void showTranslationPopover(
+  BuildContext context, {
+  required String sourceText,
+  String sourceLang = 'en',
+  String targetLang = 'zh-CN',
+  String domain = 'general',
+  String? readingContext,
+  String? sourceUrl,
+  String? sourceDocumentId,
+  VoidCallback? onSaved,
+}) {
+  unawaited(
+    showDialog<void>(
+      context: context,
+      barrierColor: DS.textPrimary.withValues(alpha: 0.26),
+      builder: (context) => Dialog(
+        backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
+        elevation: 0,
+        child: TranslationPopover(
+          sourceText: sourceText,
+          sourceLang: sourceLang,
+          targetLang: targetLang,
+          domain: domain,
+          readingContext: readingContext,
+          sourceUrl: sourceUrl,
+          sourceDocumentId: sourceDocumentId,
+          onSaved: onSaved,
+        ),
+      ),
+    ),
+  );
+}

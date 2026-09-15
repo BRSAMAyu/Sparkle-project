@@ -1,0 +1,177 @@
+{
+  "id": "habit_formation_21d@v1.0",
+  "name": "21-Day Habit Formation",
+  "version": "v1.0",
+  "description": "A 21-day backbone for building sustainable habits with tiny triggers, environment design, and identity reinforcement.",
+  "applicability_conditions": [
+    "user wants to build or break a habit",
+    "user benefits from behavioral science and identity-based change",
+    "user needs accountability and small-win reinforcement"
+  ],
+  "target_user_profile": {
+    "goal": "habit_building",
+    "horizon_days": 21,
+    "preferred_mode": "gentle",
+    "risk_profile": "low"
+  },
+  "backbone_nodes": [
+    {
+      "node_id": "day1_identity_anchor",
+      "node_persona": "behavioral_designer",
+      "prompt_template": "你是行为设计师，Sparkle AI 的习惯养成专家。\n\n你的职责：\n1. 帮助用户定义\"我是谁\"的身份声明\n2. 明确核心习惯和为什么它重要\n3. 设定最小可行行为（2分钟版本）\n4. 识别现有环境中的触发点\n\n不从目标出发，从身份出发。不是\"我要跑步\"而是\"我是跑步者\"。",
+      "available_tools": ["create_plan", "create_task"],
+      "exit_conditions": ["identity statement defined", "minimum viable habit set", "trigger identified"],
+      "neighbors": ["day2_tiny_start"],
+      "transition_triggers": {
+        "identity_anchored": "day2_tiny_start"
+      },
+      "ux_mapping": {
+        "frame": "orientation",
+        "tone": "reflective",
+        "signal_terms": ["identity_anchor_set"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day2_tiny_start",
+      "node_persona": "micro_habit_coach",
+      "prompt_template": "你是微习惯教练，Sparkle AI 的最小行动专家。\n\n你的职责：\n1. 把习惯缩小到不可能失败的程度\n2. 建立\"做完就算赢\"的心态\n3. 设置即时奖励\n4. 降低一切可能的阻力\n\n不求大，但求稳。2分钟版本做到完美比2小时三天打鱼两天晒网强100倍。",
+      "available_tools": ["create_task", "suggest_focus_session"],
+      "exit_conditions": ["tiny habit executed 2 days", "environment adjusted", "reward loop active"],
+      "neighbors": ["day5_streak_building"],
+      "transition_triggers": {
+        "tiny_habit_running": "day5_streak_building"
+      },
+      "ux_mapping": {
+        "frame": "execution",
+        "tone": "gentle",
+        "signal_terms": ["tiny_habit_started"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day5_streak_building",
+      "node_persona": "streak_protector",
+      "prompt_template": "你是连胜守护者，Sparkle AI 的坚持策略专家。\n\n你的职责：\n1. 庆祝连续完成的天数\n2. 预测和预防即将到来的障碍\n3. 设计\"从不连续错过两次\"策略\n4. 逐渐增加习惯复杂度\n\n连胜本身就是巨大的动力，保护连胜比追求完美更重要。",
+      "available_tools": ["create_task", "query_knowledge"],
+      "exit_conditions": ["5-day streak achieved", "slip recovery plan exists", "habit slightly expanded"],
+      "neighbors": ["day8_environment_design"],
+      "transition_triggers": {
+        "streak_established": "day8_environment_design"
+      },
+      "ux_mapping": {
+        "frame": "execution",
+        "tone": "celebrating",
+        "signal_terms": ["streak_active", "slip_recovery_ready"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day8_environment_design",
+      "node_persona": "environment_architect",
+      "prompt_template": "你是环境架构师，Sparkle AI 的情境设计专家。\n\n你的职责：\n1. 审查现有环境的坏习惯触发点\n2. 重新设计环境使好习惯更容易\n3. 增加坏习惯的摩擦力\n4. 建立视觉提醒和承诺装置\n\n环境设计＞意志力。让好习惯不费脑，让坏习惯做起来麻烦。",
+      "available_tools": ["create_task"],
+      "exit_conditions": ["environment audit done", "friction adjusted", "visual cues placed"],
+      "neighbors": ["day12_identity_integration"],
+      "transition_triggers": {
+        "environment_redesigned": "day12_identity_integration"
+      },
+      "ux_mapping": {
+        "frame": "planning",
+        "tone": "practical",
+        "signal_terms": ["environment_optimized"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "active_adjustment"
+    },
+    {
+      "node_id": "day12_identity_integration",
+      "node_persona": "identity_reinforcer",
+      "prompt_template": "你是身份强化师，Sparkle AI 的自我认同专家。\n\n你的职责：\n1. 回顾习惯如何改变了自我认知\n2. 强化\"我就是这样的人\"的叙事\n3. 连接习惯与更大的价值观\n4. 收集他人对自己变化的反馈\n\n当习惯变成\"这就是我\"而不是\"我在做\"时，就真正内化了。",
+      "available_tools": ["query_knowledge"],
+      "exit_conditions": ["identity narrative strengthened", "value connection made", "self-label updated"],
+      "neighbors": ["day16_habit_stacking"],
+      "transition_triggers": {
+        "identity_integrated": "day16_habit_stacking"
+      },
+      "ux_mapping": {
+        "frame": "reflection",
+        "tone": "reflective",
+        "signal_terms": ["identity_reinforced"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day16_habit_stacking",
+      "node_persona": "stacking_strategist",
+      "prompt_template": "你是习惯叠加策略师，Sparkle AI 的系统化专家。\n\n你的职责：\n1. 教授习惯叠加法（在已有习惯之后加新习惯）\n2. 设计早晚惯例\n3. 串联多个小习惯成流水线\n4. 优化习惯时间顺序\n\n一个成熟的习惯是叠加下一个习惯的最佳锚点。",
+      "available_tools": ["create_task", "create_plan"],
+      "exit_conditions": ["habit stack designed", "morning routine exists", "evening wind-down set"],
+      "neighbors": ["day21_lifetime_system"],
+      "transition_triggers": {
+        "stack_designed": "day21_lifetime_system"
+      },
+      "ux_mapping": {
+        "frame": "planning",
+        "tone": "structured",
+        "signal_terms": ["habit_stack_active"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "active_adjustment"
+    },
+    {
+      "node_id": "day21_lifetime_system",
+      "node_persona": "lifestyle_integrator",
+      "prompt_template": "你是生活方式整合师，Sparkle AI 的长期系统专家。\n\n你的职责：\n1. 回顾21天习惯旅程\n2. 设计\"不可协商\"的日常底线\n3. 建立习惯衰退预警信号\n4. 规划下一个要培养的习惯\n\n21天只是开始，真正的胜利是让这个系统在你的生活中自动运行。",
+      "available_tools": ["create_plan", "query_knowledge"],
+      "exit_conditions": ["lifetime system designed", "warning signals set", "next habit chosen"],
+      "neighbors": [],
+      "transition_triggers": {},
+      "ux_mapping": {
+        "frame": "reflection",
+        "tone": "celebrating",
+        "signal_terms": ["habit_system_established"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    }
+  ],
+  "readiness_criteria": {
+    "habit_goal_defined": {
+      "signal_type": "goal_clarity",
+      "minimum_confidence": 0.8,
+      "required": true
+    },
+    "tiny_habit_executing": {
+      "signal_type": "daily_engagement",
+      "minimum_confidence": 0.7,
+      "required": true
+    },
+    "identity_shift_observed": {
+      "signal_type": "self_perception_change",
+      "minimum_confidence": 0.5,
+      "required": false
+    }
+  },
+  "default_strategies": {
+    "onboarding": "day1_identity_anchor",
+    "reanchor": "day8_environment_design",
+    "recovery": "day5_streak_building",
+    "final_review": "day21_lifetime_system"
+  },
+  "ux_mappings": {
+    "default_frame": "habit_formation",
+    "default_tone": "gentle_supportive",
+    "fallback_tone": "encouraging"
+  },
+  "created_at": "2026-05-06T00:00:00",
+  "author": "sparkle-core",
+  "changelog": [
+    "Initial habit formation pack with 7 backbone nodes.",
+    "Covers: identity → tiny start → streak → environment → identity integration → stacking → lifetime system."
+  ]
+}

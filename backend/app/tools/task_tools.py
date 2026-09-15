@@ -1,0 +1,533 @@
+from __future__ import annotations
+
+import logging
+from typing import Any
+from uuid import UUID
+
+from pydantic import BaseModel, Field, ValidationError
+from sqlalchemy import and_, asc, desc, select
+
+from app.models.task import Task
+from app.models.task import TaskStatus as ModelTaskStatus
+from app.models.task import TaskType as ModelTaskType
+from app.orchestration.persona_aware_planner import PersonaAwarePlanner
+from app.schemas.task import TaskCreate, TaskStatus, TaskUpdate, coerce_task_type
+from app.services.focus_service import focus_service
+from app.services.task_service import TaskService
+
+logger = logging.getLogger(__name__)
+
+from .base import BaseTool, ToolCategory, ToolResult
+from .entity_cards import (
+    build_task_entity_card,
+    build_task_list_entity_card,
+    wrap_widget_payload,
+)
+from .schemas import (
+    BatchCreateTasksParams,
+    BreakdownTaskParams,
+    CreateTaskParams,
+    SuggestQuickTaskParams,
+    UpdateTaskStatusParams,
+)
+
+
+class _BreakdownSubtaskSchema(BaseModel):
+    title: str = Field(min_length=2, max_length=120)
+    estimated_minutes: int = Field(ge=5, le=90)
+    type: str = Field(pattern="^(learning|practice|review|exercise)$")
+
+
+class CreateTaskTool(BaseTool):
+    """创建单个学习任务"""
+    name = "create_task"
+    description = """创建一个新的学习任务卡片。
+    当用户表达想要做某件学习相关的事情时使用，例如：
+    - "帮我创建一个复习高数的任务"
+    - "我想学习 Python，帮我规划一下"
+    - "把刚才讨论的内容整理成任务"
+    """
+    category = ToolCategory.TASK
+    parameters_schema = CreateTaskParams
+    requires_confirmation = False
+
+    async def execute(
+        self,
+        params: CreateTaskParams,
+        user_id: str,
+        db_session: Any,
+        tool_call_id: str | None = None
+    ) -> ToolResult:
+        try:
+            # Convert string user_id to UUID
+            user_uuid = UUID(user_id)
+
+            # Map params to TaskCreate schema
+            # Note: subject_id is not directly supported in Task model yet, ignoring for now
+            task_create = TaskCreate(
+                title=params.title,
+                type=coerce_task_type(params.task_type.value, default=ModelTaskType.LEARNING),
+                estimated_minutes=params.estimated_minutes or 30, # Default to 30 if None
+                guide_content=params.description,
+                priority=params.priority,
+                due_date=params.due_date.date() if params.due_date else None,
+                tags=[], # tags not provided in params, defaulting to empty
+                tool_result_id=tool_call_id
+            )
+
+            task = await TaskService.create(
+                db=db_session,
+                obj_in=task_create,
+                user_id=user_uuid
+            )
+
+            task_payload = {
+                "id": str(task.id),
+                "title": task.title,
+                "guide_content": task.guide_content,
+                "type": task.type.value,
+                "status": task.status.value,
+                "plan_id": str(task.plan_id) if task.plan_id else None,
+                "estimated_minutes": task.estimated_minutes,
+                "priority": task.priority,
+                "created_at": task.created_at.isoformat(),
+                "user_id": str(user_uuid),
+                "tags": [],
+                "difficulty": 1,
+                "energy_cost": 1,
+            }
+            return ToolResult(
+                success=True,
+                tool_name=self.name,
+                data={"task_id": str(task.id)},
+                widget_type="task_card",  # 前端渲染类型
+                widget_data=wrap_widget_payload(
+                    widget_type="task_card",
+                    widget_data=task_payload,
+                    entity_card=build_task_entity_card(
+                        task_payload,
+                        tool_name=self.name,
+                        tool_result_id=tool_call_id,
+                    ),
+                ),
+            )
+        except Exception as e:
+            return ToolResult(
+                success=False,
+                tool_name=self.name,
+                error_message=str(e),
+                suggestion="请检查参数是否正确，或稍后重试"
+            )
+
+class UpdateTaskStatusTool(BaseTool):
+    """更新任务状态"""
+    name = "update_task_status"
+    description = """更新任务的状态。
+    当用户表达完成、放弃或开始某个任务时使用，例如：
+    - "我完成了这个任务"
+    - "把这个任务标记为进行中"
+    - "放弃这个任务"
+    """
+    category = ToolCategory.TASK
+    parameters_schema = UpdateTaskStatusParams
+    requires_confirmation = False
+
+    async def execute(
+        self,
+        params: UpdateTaskStatusParams,
+        user_id: str,
+        db_session: Any,
+        tool_call_id: str | None = None
+    ) -> ToolResult:
+        try:
+            user_uuid = UUID(user_id)
+            task_uuid = UUID(params.task_id)
+
+            task = await TaskService.get_by_id(db_session, task_uuid, user_uuid)
+            if not task:
+                raise ValueError("Task not found")
+
+            new_status = params.status
+            _VALID_STATUSES = {"in_progress", "completed", "abandoned", "pending"}
+            if new_status not in _VALID_STATUSES:
+                raise ValueError(f"不支持的状态: {new_status}。可选: {', '.join(sorted(_VALID_STATUSES))}")
+
+            if new_status == "in_progress":
+                task = await TaskService.start(db_session, task)
+            elif new_status == "completed":
+                actual_minutes = params.actual_minutes or task.estimated_minutes
+                task = await TaskService.complete(db_session, task, actual_minutes=actual_minutes)
+            elif new_status == "abandoned":
+                task = await TaskService.abandon(db_session, task, reason="User requested via chat")
+            elif new_status == "pending":
+                task_update = TaskUpdate(status=TaskStatus.PENDING)
+                task = await TaskService.update(db_session, task, task_update)
+
+            task_payload = {
+                "id": str(task.id),
+                "title": task.title,
+                "guide_content": task.guide_content,
+                "type": task.type.value,
+                "status": task.status.value,
+                "plan_id": str(task.plan_id) if task.plan_id else None,
+                "estimated_minutes": task.estimated_minutes,
+                "priority": task.priority,
+                "actual_minutes": task.actual_minutes,
+                "created_at": task.created_at.isoformat(),
+                "user_id": str(user_uuid),
+                "tags": [],
+                "difficulty": 1,
+                "energy_cost": 1,
+            }
+            return ToolResult(
+                success=True,
+                tool_name=self.name,
+                data={"task_id": str(task.id), "new_status": task.status.value},
+                widget_type="task_card",
+                widget_data=wrap_widget_payload(
+                    widget_type="task_card",
+                    widget_data=task_payload,
+                    entity_card=build_task_entity_card(
+                        task_payload,
+                        tool_name=self.name,
+                        tool_result_id=tool_call_id,
+                    ),
+                ),
+            )
+        except Exception as e:
+            return ToolResult(
+                success=False,
+                tool_name=self.name,
+                error_message=str(e),
+                suggestion="请确认任务 ID 是否正确"
+            )
+
+class BatchCreateTasksTool(BaseTool):
+    """批量创建任务"""
+    name = "batch_create_tasks"
+    description = """批量创建多个学习任务。
+    当需要一次性创建多个相关任务时使用，例如：
+    - "帮我制定本周的学习计划，包含 5 个任务"
+    - "把这个知识点拆解成几个小任务"
+    """
+    category = ToolCategory.TASK
+    parameters_schema = BatchCreateTasksParams
+    requires_confirmation = True  # 批量操作需要确认
+
+    async def execute(
+        self,
+        params: BatchCreateTasksParams,
+        user_id: str,
+        db_session: Any,
+        tool_call_id: str | None = None
+    ) -> ToolResult:
+        try:
+            user_uuid = UUID(user_id)
+            created_tasks = []
+            failed_tasks = []
+
+            # Reuse logic from CreateTaskTool implicitly or just call service loop
+            for task_params in params.tasks:
+                try:
+                    task_create = TaskCreate(
+                        title=task_params.title,
+                        type=coerce_task_type(task_params.task_type.value, default=ModelTaskType.LEARNING),
+                        estimated_minutes=task_params.estimated_minutes or 30,
+                        guide_content=task_params.description,
+                        priority=task_params.priority,
+                        due_date=task_params.due_date.date() if task_params.due_date else None,
+                        tags=[],
+                        tool_result_id=tool_call_id
+                    )
+
+                    task = await TaskService.create(
+                        db=db_session,
+                        obj_in=task_create,
+                        user_id=user_uuid
+                    )
+
+                    created_tasks.append({
+                        "id": str(task.id),
+                        "title": task.title,
+                        "guide_content": task.guide_content,
+                        "type": task.type.value,
+                        "status": task.status.value,
+                        "plan_id": str(task.plan_id) if task.plan_id else None,
+                        "estimated_minutes": task.estimated_minutes,
+                        "priority": task.priority,
+                        "created_at": task.created_at.isoformat(),
+                        "user_id": str(user_uuid),
+                        "tags": [],
+                        "difficulty": 1,
+                        "energy_cost": 1,
+                    })
+                except Exception as e:
+                    logger.warning(f"BatchCreateTasksTool: failed to create task '{task_params.title}': {e}")
+                    failed_tasks.append({"title": task_params.title, "error": str(e)})
+                    continue
+
+            if not created_tasks and failed_tasks:
+                return ToolResult(
+                    success=False,
+                    tool_name=self.name,
+                    error_message=f"所有任务创建失败: {'; '.join(f['error'] for f in failed_tasks)}",
+                    suggestion="请检查参数或减少任务数量后重试"
+                )
+
+            task_list_payload = {
+                "tasks": created_tasks,
+                "tool_result_id": tool_call_id,
+                "task_count": len(created_tasks),
+                "failed_count": len(failed_tasks),
+            }
+            return ToolResult(
+                success=True,
+                tool_name=self.name,
+                data={"task_count": len(created_tasks), "failed_count": len(failed_tasks)},
+                widget_type="task_list",
+                widget_data=wrap_widget_payload(
+                    widget_type="task_list",
+                    widget_data=task_list_payload,
+                    entity_card=build_task_list_entity_card(
+                        created_tasks,
+                        tool_name=self.name,
+                        tool_result_id=tool_call_id,
+                    ),
+                ),
+            )
+        except Exception as e:
+            return ToolResult(
+                success=False,
+                tool_name=self.name,
+                error_message=str(e),
+                suggestion="批量创建失败，请检查参数或减少任务数量后重试"
+            )
+
+
+class SuggestQuickTaskTool(BaseTool):
+    """碎片时间推荐任务"""
+    name = "suggest_quick_task"
+    description = """根据用户可用时间，推荐一个可立即开始的微任务。
+    适用场景：
+    - "我只有20分钟，做点什么？"
+    - "帮我找个短任务"
+    """
+    category = ToolCategory.FOCUS
+    parameters_schema = SuggestQuickTaskParams
+    requires_confirmation = False
+
+    async def execute(
+        self,
+        params: SuggestQuickTaskParams,
+        user_id: str,
+        db_session: Any,
+        tool_call_id: str | None = None
+    ) -> ToolResult:
+        try:
+            user_uuid = UUID(user_id)
+            query = select(Task).where(
+                and_(
+                    Task.user_id == user_uuid,
+                    Task.status.in_(
+                        [ModelTaskStatus.PENDING, ModelTaskStatus.IN_PROGRESS]
+                        if params.include_in_progress else [ModelTaskStatus.PENDING]
+                    ),
+                    Task.estimated_minutes <= params.available_minutes
+                )
+            )
+
+            if params.preferred_types:
+                preferred_types = [
+                    task_type
+                    for task_type in (
+                        coerce_task_type(t.value, default=None)
+                        for t in params.preferred_types
+                    )
+                    if task_type is not None
+                ]
+                if preferred_types:
+                    query = query.where(Task.type.in_(preferred_types))
+
+            query = query.order_by(
+                desc(Task.priority),
+                asc(Task.due_date),
+                asc(Task.estimated_minutes)
+            ).limit(1)
+
+            result = await db_session.execute(query)
+            task = result.scalar_one_or_none()
+            if not task:
+                return ToolResult(
+                    success=False,
+                    tool_name=self.name,
+                    error_message="暂无匹配的短任务",
+                    suggestion="可以尝试拆解一个复杂任务，或创建一个新的微任务"
+                )
+
+            widget_task = {
+                "id": str(task.id),
+                "title": task.title,
+                "type": task.type.value,
+                "status": task.status.value,
+                "estimated_minutes": task.estimated_minutes,
+                "priority": task.priority,
+                "difficulty": task.difficulty,
+                "energy_cost": task.energy_cost,
+                "tags": task.tags or [],
+                "created_at": task.created_at.isoformat(),
+                "updated_at": task.updated_at.isoformat(),
+            }
+
+            return ToolResult(
+                success=True,
+                tool_name=self.name,
+                data={"task_id": str(task.id)},
+                widget_type="focus_card",
+                widget_data={
+                    "title": f"{params.available_minutes}分钟专注冲刺",
+                    "duration_minutes": min(params.available_minutes, task.estimated_minutes),
+                    "reason": "基于你的待办与优先级推荐",
+                    "task": widget_task,
+                }
+            )
+        except Exception as e:
+            return ToolResult(
+                success=False,
+                tool_name=self.name,
+                error_message=str(e),
+                suggestion="请稍后再试或直接创建一个微任务"
+            )
+
+
+class BreakdownTaskTool(BaseTool):
+    """任务拆解为微任务"""
+    name = "breakdown_task"
+    description = """将复杂任务拆解为多个可在 15-45 分钟完成的微任务，并生成任务清单。
+    适用场景：
+    - "帮我拆解一下这个任务"
+    - "把期末复习分成几个小步骤"
+    """
+    category = ToolCategory.TASK
+    parameters_schema = BreakdownTaskParams
+    requires_confirmation = False
+
+    async def execute(
+        self,
+        params: BreakdownTaskParams,
+        user_id: str,
+        db_session: Any,
+        tool_call_id: str | None = None
+    ) -> ToolResult:
+        try:
+            user_uuid = UUID(user_id)
+            persona_constraints = await PersonaAwarePlanner(db_session).build_constraints(
+                user_id=user_id,
+                user_context_payload={},
+                plan_context={},
+                plan_id=None,
+            )
+            subtasks = await focus_service.breakdown_task_via_llm(
+                task_title=params.title,
+                task_description=params.description or "",
+                persona_prompt=persona_constraints.to_prompt_block(),
+            )
+
+            if not isinstance(subtasks, list) or not subtasks:
+                return ToolResult(
+                    success=False,
+                    tool_name=self.name,
+                    error_message="未能生成可用的微任务",
+                    suggestion="请提供更具体的任务描述或减少任务范围"
+                )
+
+            created_tasks = []
+            for subtask in subtasks[:params.max_tasks]:
+                normalized = {
+                    "title": subtask.get("title") or "微任务",
+                    "estimated_minutes": subtask.get("estimated_minutes")
+                    or subtask.get("minutes")
+                    or subtask.get("duration")
+                    or 25,
+                    "type": subtask.get("type") or "learning",
+                }
+                try:
+                    validated = _BreakdownSubtaskSchema.model_validate(normalized)
+                except ValidationError:
+                    continue
+
+                title = validated.title
+                minutes = validated.estimated_minutes
+                type_mapping = {
+                    "learning": ModelTaskType.LEARNING,
+                    "practice": ModelTaskType.TRAINING,
+                    "review": ModelTaskType.REFLECTION,
+                    "exercise": ModelTaskType.TRAINING,
+                }
+
+                task_create = TaskCreate(
+                    title=title,
+                    type=type_mapping.get(
+                        validated.type,
+                        coerce_task_type(params.task_type.value, default=ModelTaskType.LEARNING),
+                    ),
+                    estimated_minutes=minutes,
+                    guide_content=f"来自任务拆解：{params.title}",
+                    priority=2,
+                    tags=[f"parent:{params.title}", "micro"],
+                    tool_result_id=tool_call_id
+                )
+
+                task = await TaskService.create(
+                    db=db_session,
+                    obj_in=task_create,
+                    user_id=user_uuid
+                )
+
+                created_tasks.append({
+                    "id": str(task.id),
+                    "title": task.title,
+                    "type": task.type.value,
+                    "status": task.status.value,
+                    "estimated_minutes": task.estimated_minutes
+                })
+
+            if not created_tasks:
+                return ToolResult(
+                    success=False,
+                    tool_name=self.name,
+                    error_message="任务拆解结果未通过结构化校验",
+                    suggestion="请补充更具体的任务目标或缩小范围后重试",
+                )
+
+            return ToolResult(
+                success=True,
+                tool_name=self.name,
+                data={"task_count": len(created_tasks)},
+                widget_type="task_list",
+                widget_data=wrap_widget_payload(
+                    widget_type="task_list",
+                    widget_data={
+                        "tasks": created_tasks,
+                        "tool_result_id": tool_call_id,
+                        "persona_applied": True,
+                        "persona_highlights": {
+                            "max_session": persona_constraints.max_session_minutes,
+                            "task_size": persona_constraints.preferred_task_size,
+                            "time_multiplier": persona_constraints.time_multiplier,
+                            "warmup_included": persona_constraints.require_warmup_task,
+                        },
+                    },
+                    entity_card=build_task_list_entity_card(
+                        created_tasks,
+                        tool_name=self.name,
+                        tool_result_id=tool_call_id,
+                    ),
+                ),
+            )
+        except Exception as e:
+            return ToolResult(
+                success=False,
+                tool_name=self.name,
+                error_message=str(e),
+                suggestion="拆解失败，请稍后再试"
+            )

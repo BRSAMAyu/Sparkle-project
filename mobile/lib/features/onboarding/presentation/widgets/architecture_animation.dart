@@ -1,0 +1,494 @@
+import 'dart:async';
+import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
+
+/// 架构可视化动画 - 必杀技 C
+///
+/// 展示 Sparkle 系统架构的动画说明
+/// - Flutter 移动端
+/// - Go Gateway (WebSocket)
+/// - Python Agent Engine (gRPC)
+/// - PostgreSQL + Redis
+///
+/// 用于 Onboarding 流程，帮助用户理解系统工作原理
+class ArchitectureAnimation extends StatefulWidget {
+  const ArchitectureAnimation({
+    this.onComplete,
+    this.autoPlay = true,
+    super.key,
+  });
+  final VoidCallback? onComplete;
+  final bool autoPlay;
+
+  @override
+  State<ArchitectureAnimation> createState() => _ArchitectureAnimationState();
+}
+
+class _ArchitectureAnimationState extends State<ArchitectureAnimation>
+    with TickerProviderStateMixin {
+  late AnimationController _mainController;
+  late AnimationController _pulseController;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _slideAnimation;
+
+  int _currentStep = 0;
+  final int _totalSteps = 5;
+  Timer? _stepTimer;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Main animation controller for step transitions
+    _mainController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+
+    // Pulse animation for data flow
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    );
+    unawaited(_pulseController.repeat());
+
+    _fadeAnimation = CurvedAnimation(
+      parent: _mainController,
+      curve: Curves.easeInOut,
+    );
+
+    _slideAnimation = CurvedAnimation(
+      parent: _mainController,
+      curve: Curves.easeOutCubic,
+    );
+
+    if (widget.autoPlay) {
+      _scheduleStep(0);
+    }
+  }
+
+  void _scheduleStep(int step) {
+    if (!mounted) {
+      return;
+    }
+    if (step >= _totalSteps) {
+      widget.onComplete?.call();
+      return;
+    }
+
+    setState(() => _currentStep = step);
+    unawaited(_mainController.forward(from: 0));
+    _stepTimer?.cancel();
+    _stepTimer = Timer(
+      const Duration(seconds: 3),
+      () => _scheduleStep(step + 1),
+    );
+  }
+
+  @override
+  void dispose() {
+    _stepTimer?.cancel();
+    _mainController.dispose();
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Container(
+        height: 500,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              DS.deepSpaceStart,
+              DS.deepSpaceEnd,
+            ],
+          ),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Stack(
+          children: [
+            // Background stars
+            _buildStarField(),
+
+            // Architecture diagram
+            Positioned.fill(
+              child: CustomPaint(
+                painter: _ArchitecturePainter(
+                  currentStep: _currentStep,
+                  fadeValue: _fadeAnimation.value,
+                  pulseValue: _pulseController.value,
+                ),
+              ),
+            ),
+
+            // Step indicator
+            Positioned(
+              bottom: 20,
+              left: 0,
+              right: 0,
+              child: _buildStepIndicator(),
+            ),
+
+            // Description overlay
+            if (_currentStep < _totalSteps)
+              Positioned(
+                top: 20,
+                left: 20,
+                right: 20,
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0, -0.5),
+                      end: Offset.zero,
+                    ).animate(_slideAnimation),
+                    child: _buildStepDescription(),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+
+  Widget _buildStarField() => CustomPaint(
+        painter: _StarFieldPainter(
+          starColor: DS.brandPrimary.withValues(alpha: 0.3),
+        ),
+      );
+
+  Widget _buildStepIndicator() => Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(
+          _totalSteps,
+          (index) => Container(
+            width: index == _currentStep ? 24 : 8,
+            height: 8,
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            decoration: BoxDecoration(
+              color: index <= _currentStep
+                  ? DS.brandPrimary
+                  : DS.brandPrimary.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+        ),
+      );
+
+  Widget _buildStepDescription() {
+    final steps = [
+      {
+        'title': context.l10n.onboardingArchitectureStep1Title,
+        'description': context.l10n.onboardingArchitectureStep1Desc,
+        'icon': Icons.phone_android,
+      },
+      {
+        'title': context.l10n.onboardingArchitectureStep2Title,
+        'description': context.l10n.onboardingArchitectureStep2Desc,
+        'icon': Icons.swap_horiz,
+      },
+      {
+        'title': context.l10n.onboardingArchitectureStep3Title,
+        'description': context.l10n.onboardingArchitectureStep3Desc,
+        'icon': Icons.psychology,
+      },
+      {
+        'title': context.l10n.onboardingArchitectureStep4Title,
+        'description': context.l10n.onboardingArchitectureStep4Desc,
+        'icon': Icons.storage,
+      },
+      {
+        'title': context.l10n.onboardingArchitectureStep5Title,
+        'description': context.l10n.onboardingArchitectureStep5Desc,
+        'icon': Icons.rocket_launch,
+      },
+    ];
+
+    final step = steps[_currentStep];
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: DS.brandPrimary.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(DS.md),
+            decoration: BoxDecoration(
+              color: DS.brandPrimary.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              step['icon'] as IconData,
+              color: DS.brandPrimaryConst,
+              size: 32,
+            ),
+          ),
+          const SizedBox(width: DS.lg),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  step['title'] as String,
+                  style: TextStyle(
+                    color: DS.brandPrimaryConst,
+                    fontSize: 18,
+                    fontWeight: DS.fontWeightBold,
+                  ),
+                ),
+                const SizedBox(height: DS.xs),
+                Text(
+                  step['description'] as String,
+                  style: TextStyle(
+                    color: DS.brandPrimary.withValues(alpha: 0.8),
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ArchitecturePainter extends CustomPainter {
+  _ArchitecturePainter({
+    required this.currentStep,
+    required this.fadeValue,
+    required this.pulseValue,
+  });
+  final int currentStep;
+  final double fadeValue;
+  final double pulseValue;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty || size.width == 0 || size.height == 0) {
+      return;
+    }
+    final center = Offset(size.width / 2, size.height / 2);
+
+    // Layer positions
+    final mobilePos = Offset(center.dx, size.height * 0.15);
+    final gatewayPos = Offset(center.dx, size.height * 0.35);
+    final agentPos = Offset(center.dx, size.height * 0.55);
+    final dbPos = Offset(center.dx, size.height * 0.75);
+
+    // Draw connections
+    if (currentStep >= 1) {
+      _drawConnection(
+        canvas,
+        mobilePos,
+        gatewayPos,
+        currentStep >= 1 ? fadeValue : 0,
+      );
+    }
+    if (currentStep >= 2) {
+      _drawConnection(
+        canvas,
+        gatewayPos,
+        agentPos,
+        currentStep >= 2 ? fadeValue : 0,
+      );
+    }
+    if (currentStep >= 3) {
+      _drawConnection(
+        canvas,
+        agentPos,
+        dbPos,
+        currentStep >= 3 ? fadeValue : 0,
+      );
+    }
+
+    // Draw data flow particles
+    if (currentStep == 4) {
+      _drawDataFlow(canvas, mobilePos, gatewayPos, pulseValue);
+      _drawDataFlow(canvas, gatewayPos, agentPos, (pulseValue + 0.3) % 1.0);
+      _drawDataFlow(canvas, agentPos, dbPos, (pulseValue + 0.6) % 1.0);
+    }
+
+    // Draw layers
+    if (currentStep >= 0) {
+      _drawLayer(
+        canvas,
+        mobilePos,
+        'Flutter\nMobile',
+        Icons.phone_android.codePoint,
+        currentStep >= 0 ? fadeValue : 0,
+        DS.brandPrimary.shade400,
+      );
+    }
+    if (currentStep >= 1) {
+      _drawLayer(
+        canvas,
+        gatewayPos,
+        'Go\nGateway',
+        Icons.swap_horiz.codePoint,
+        currentStep >= 1 ? fadeValue : 0,
+        DS.success.shade400,
+      );
+    }
+    if (currentStep >= 2) {
+      _drawLayer(
+        canvas,
+        agentPos,
+        'Python\nAgent',
+        Icons.psychology.codePoint,
+        currentStep >= 2 ? fadeValue : 0,
+        DS.prismPurple,
+      );
+    }
+    if (currentStep >= 3) {
+      _drawLayer(
+        canvas,
+        dbPos,
+        'PostgreSQL\n+ Redis',
+        Icons.storage.codePoint,
+        currentStep >= 3 ? fadeValue : 0,
+        DS.brandPrimary.shade400,
+      );
+    }
+  }
+
+  void _drawLayer(
+    Canvas canvas,
+    Offset position,
+    String label,
+    int iconCode,
+    double opacity,
+    Color color,
+  ) {
+    final paint = Paint()
+      ..color = color.withValues(alpha: opacity * 0.3)
+      ..style = PaintingStyle.fill;
+
+    final borderPaint = Paint()
+      ..color = color.withValues(alpha: opacity)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+
+    // Draw rectangle
+    final rect = Rect.fromCenter(center: position, width: 200, height: 80);
+    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(12));
+
+    canvas
+      ..drawRRect(rrect, paint)
+      ..drawRRect(rrect, borderPaint);
+
+    // Draw label
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: label,
+        style: TextStyle(
+          color: DS.brandPrimary.withValues(alpha: opacity),
+          fontSize: 16,
+          fontWeight: DS.fontWeightBold,
+          fontFamilyFallback: sparkleFontFallback,
+        ),
+      ),
+      textAlign: TextAlign.center,
+      textDirection: TextDirection.ltr,
+    )..layout(maxWidth: 160);
+    final textOffset = Offset(
+      position.dx - textPainter.width / 2,
+      position.dy - textPainter.height / 2,
+    );
+    textPainter.paint(canvas, textOffset);
+  }
+
+  void _drawConnection(
+    Canvas canvas,
+    Offset start,
+    Offset end,
+    double opacity,
+  ) {
+    final paint = Paint()
+      ..color = DS.brandPrimary.withValues(alpha: opacity * 0.5)
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+
+    // Draw arrow
+    canvas.drawLine(start, end, paint);
+
+    // Draw arrowhead
+    final arrowPaint = Paint()
+      ..color = DS.brandPrimary.withValues(alpha: opacity * 0.5)
+      ..style = PaintingStyle.fill;
+
+    final angle = math.atan2(end.dy - start.dy, end.dx - start.dx);
+    const arrowSize = 10.0;
+
+    final path = Path()
+      ..moveTo(end.dx, end.dy)
+      ..lineTo(
+        end.dx - arrowSize * math.cos(angle - math.pi / 6),
+        end.dy - arrowSize * math.sin(angle - math.pi / 6),
+      )
+      ..lineTo(
+        end.dx - arrowSize * math.cos(angle + math.pi / 6),
+        end.dy - arrowSize * math.sin(angle + math.pi / 6),
+      )
+      ..close();
+
+    canvas.drawPath(path, arrowPaint);
+  }
+
+  void _drawDataFlow(Canvas canvas, Offset start, Offset end, double progress) {
+    final position = Offset.lerp(start, end, progress) ?? start;
+
+    final paint = Paint()
+      ..color = DS.info.withValues(alpha: 0.8)
+      ..style = PaintingStyle.fill;
+
+    canvas.drawCircle(position, 6, paint);
+
+    // Glow effect
+    final glowPaint = Paint()
+      ..color = DS.info.withValues(alpha: 0.3)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
+
+    canvas.drawCircle(position, 12, glowPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _ArchitecturePainter oldDelegate) =>
+      oldDelegate.currentStep != currentStep ||
+      oldDelegate.fadeValue != fadeValue ||
+      oldDelegate.pulseValue != pulseValue;
+}
+
+class _StarFieldPainter extends CustomPainter {
+  const _StarFieldPainter({required this.starColor});
+
+  final Color starColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = starColor;
+
+    final random = math.Random(42); // Fixed seed for consistent stars
+
+    for (var i = 0; i < 50; i++) {
+      final x = random.nextDouble() * size.width;
+      final y = random.nextDouble() * size.height;
+      final radius = random.nextDouble() * 2;
+
+      canvas.drawCircle(Offset(x, y), radius, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _StarFieldPainter oldDelegate) =>
+      oldDelegate.starColor != starColor;
+}

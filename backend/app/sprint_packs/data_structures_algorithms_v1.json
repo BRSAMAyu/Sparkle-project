@@ -1,0 +1,323 @@
+{
+  "id": "data_structures_algorithms@v1",
+  "name": "数据结构与算法冲刺包",
+  "version": "v1.0",
+  "description": "面向数据结构与算法设计期末考试的冲刺知识包，覆盖线性结构、树、图、查找、排序、复杂度与常见算法设计范式。",
+  "subject": "数据结构与算法设计",
+  "author": "sparkle-core",
+  "created_at": "2026-04-25T00:00:00",
+  "changelog": [
+    "Initial release: 45 knowledge nodes for data structures and algorithms sprint mode."
+  ],
+  "knowledge_nodes": [
+    {"node_id": "ds.array", "label": "顺序表", "layer": "linear", "prerequisites": [], "exam_weight": 0.75, "frequency": 0.8, "trainability": 0.9, "time_cost": 20, "difficulty": 2, "minimum_pass_required": true, "score_max_required": false, "common_mistakes": ["mistake.boundary_index"], "recommended_action": "手写顺序表插入、删除、查找操作并标注移动区间"},
+    {"node_id": "ds.linked_list", "label": "链表", "layer": "linear", "prerequisites": [], "exam_weight": 0.85, "frequency": 0.85, "trainability": 0.85, "time_cost": 25, "difficulty": 3, "minimum_pass_required": true, "score_max_required": false, "common_mistakes": ["mistake.pointer_update"], "recommended_action": "画带头结点链表的插入删除指针变化图"},
+    {"node_id": "ds.stack", "label": "栈", "layer": "linear", "prerequisites": ["ds.array"], "exam_weight": 0.8, "frequency": 0.8, "trainability": 0.9, "time_cost": 20, "difficulty": 2, "minimum_pass_required": true, "score_max_required": false, "common_mistakes": ["mistake.stack_queue_boundary"], "recommended_action": "用栈模拟表达式求值和括号匹配过程"},
+    {"node_id": "ds.queue", "label": "队列", "layer": "linear", "prerequisites": ["ds.array"], "exam_weight": 0.75, "frequency": 0.75, "trainability": 0.9, "time_cost": 20, "difficulty": 2, "minimum_pass_required": true, "score_max_required": false, "common_mistakes": ["mistake.stack_queue_boundary"], "recommended_action": "写出链队和顺序队的入队出队指针变化"},
+    {"node_id": "ds.circular_queue", "label": "循环队列", "layer": "linear", "prerequisites": ["ds.queue"], "exam_weight": 0.85, "frequency": 0.8, "trainability": 0.85, "time_cost": 25, "difficulty": 3, "minimum_pass_required": true, "score_max_required": false, "common_mistakes": ["mistake.circular_queue_full"], "recommended_action": "闭卷写出循环队列判空、判满和长度公式"},
+    {"node_id": "ds.string_matching", "label": "串匹配", "layer": "linear", "prerequisites": ["ds.array"], "exam_weight": 0.55, "frequency": 0.5, "trainability": 0.7, "time_cost": 35, "difficulty": 4, "minimum_pass_required": false, "score_max_required": true, "common_mistakes": ["mistake.kmp_next"], "recommended_action": "手算一个 KMP next 数组并走一遍匹配流程"},
+    {"node_id": "ds.recursion", "label": "递归与递归栈", "layer": "algorithm_basics", "prerequisites": ["ds.stack"], "exam_weight": 0.7, "frequency": 0.75, "trainability": 0.8, "time_cost": 30, "difficulty": 3, "minimum_pass_required": true, "score_max_required": false, "common_mistakes": ["mistake.recursion_base_case"], "recommended_action": "为递归题写出终止条件、递推式和调用栈前三层"},
+    {"node_id": "ds.binary_tree", "label": "二叉树性质", "layer": "tree", "prerequisites": [], "exam_weight": 0.9, "frequency": 0.9, "trainability": 0.85, "time_cost": 25, "difficulty": 2, "minimum_pass_required": true, "score_max_required": false, "common_mistakes": ["mistake.tree_formula"], "recommended_action": "默写满二叉树、完全二叉树和度数关系公式"},
+    {"node_id": "ds.tree_traversal", "label": "二叉树遍历", "layer": "tree", "prerequisites": ["ds.binary_tree"], "exam_weight": 1.0, "frequency": 0.95, "trainability": 0.9, "time_cost": 35, "difficulty": 3, "minimum_pass_required": true, "score_max_required": true, "common_mistakes": ["mistake.traversal_order"], "recommended_action": "由先序和中序重建二叉树并推出后序"},
+    {"node_id": "ds.threaded_tree", "label": "线索二叉树", "layer": "tree", "prerequisites": ["ds.tree_traversal"], "exam_weight": 0.45, "frequency": 0.45, "trainability": 0.65, "time_cost": 30, "difficulty": 4, "minimum_pass_required": false, "score_max_required": true, "common_mistakes": ["mistake.thread_tag"], "recommended_action": "画中序线索化过程并标注 ltag 与 rtag"},
+    {"node_id": "ds.heap", "label": "堆", "layer": "tree", "prerequisites": ["ds.binary_tree"], "exam_weight": 0.8, "frequency": 0.8, "trainability": 0.85, "time_cost": 30, "difficulty": 3, "minimum_pass_required": true, "score_max_required": true, "common_mistakes": ["mistake.heap_adjust"], "recommended_action": "手算建大根堆和删除堆顶后的下滤过程"},
+    {"node_id": "ds.huffman_tree", "label": "哈夫曼树", "layer": "tree", "prerequisites": ["ds.binary_tree"], "exam_weight": 0.75, "frequency": 0.75, "trainability": 0.85, "time_cost": 30, "difficulty": 3, "minimum_pass_required": true, "score_max_required": false, "common_mistakes": ["mistake.huffman_weight"], "recommended_action": "按权值合并构造哈夫曼树并计算带权路径长度"},
+    {"node_id": "ds.bst", "label": "二叉排序树", "layer": "search", "prerequisites": ["ds.binary_tree"], "exam_weight": 0.75, "frequency": 0.75, "trainability": 0.8, "time_cost": 30, "difficulty": 3, "minimum_pass_required": true, "score_max_required": false, "common_mistakes": ["mistake.bst_delete"], "recommended_action": "手算 BST 插入、查找和删除两子女结点"},
+    {"node_id": "ds.avl_tree", "label": "平衡二叉树", "layer": "search", "prerequisites": ["ds.bst"], "exam_weight": 0.6, "frequency": 0.6, "trainability": 0.65, "time_cost": 40, "difficulty": 4, "minimum_pass_required": false, "score_max_required": true, "common_mistakes": ["mistake.avl_rotation"], "recommended_action": "对 LL、RR、LR、RL 四种失衡各画一次旋转过程"},
+    {"node_id": "ds.graph_representation", "label": "图的存储结构", "layer": "graph", "prerequisites": [], "exam_weight": 0.85, "frequency": 0.85, "trainability": 0.85, "time_cost": 25, "difficulty": 2, "minimum_pass_required": true, "score_max_required": false, "common_mistakes": ["mistake.graph_matrix_list"], "recommended_action": "对比邻接矩阵、邻接表和十字链表的空间与遍历特点"},
+    {"node_id": "ds.bfs", "label": "广度优先搜索", "layer": "graph", "prerequisites": ["ds.graph_representation", "ds.queue"], "exam_weight": 0.9, "frequency": 0.9, "trainability": 0.85, "time_cost": 30, "difficulty": 3, "minimum_pass_required": true, "score_max_required": false, "common_mistakes": ["mistake.graph_visit_order"], "recommended_action": "按队列变化手算一次 BFS 访问序列"},
+    {"node_id": "ds.dfs", "label": "深度优先搜索", "layer": "graph", "prerequisites": ["ds.graph_representation", "ds.stack"], "exam_weight": 0.9, "frequency": 0.9, "trainability": 0.85, "time_cost": 30, "difficulty": 3, "minimum_pass_required": true, "score_max_required": false, "common_mistakes": ["mistake.graph_visit_order"], "recommended_action": "按递归栈变化手算一次 DFS 访问序列"},
+    {"node_id": "ds.topological_sort", "label": "拓扑排序", "layer": "graph", "prerequisites": ["ds.graph_representation"], "exam_weight": 0.75, "frequency": 0.75, "trainability": 0.8, "time_cost": 30, "difficulty": 3, "minimum_pass_required": true, "score_max_required": true, "common_mistakes": ["mistake.indegree_update"], "recommended_action": "逐轮删除入度为 0 的顶点并更新入度表"},
+    {"node_id": "ds.critical_path", "label": "关键路径", "layer": "graph", "prerequisites": ["ds.topological_sort"], "exam_weight": 0.6, "frequency": 0.55, "trainability": 0.65, "time_cost": 45, "difficulty": 5, "minimum_pass_required": false, "score_max_required": true, "common_mistakes": ["mistake.critical_activity"], "recommended_action": "按拓扑序计算 ve、vl、e、l 并圈出关键活动"},
+    {"node_id": "ds.dijkstra", "label": "Dijkstra 最短路径", "layer": "graph", "prerequisites": ["ds.graph_representation"], "exam_weight": 0.95, "frequency": 0.9, "trainability": 0.8, "time_cost": 40, "difficulty": 4, "minimum_pass_required": true, "score_max_required": true, "common_mistakes": ["mistake.graph_relaxation"], "recommended_action": "逐轮记录已确定集合、dist 数组和 path 前驱"},
+    {"node_id": "ds.floyd", "label": "Floyd 最短路径", "layer": "graph", "prerequisites": ["ds.graph_representation"], "exam_weight": 0.75, "frequency": 0.7, "trainability": 0.7, "time_cost": 35, "difficulty": 4, "minimum_pass_required": false, "score_max_required": true, "common_mistakes": ["mistake.floyd_intermediate"], "recommended_action": "手算一个三到四个顶点的 Floyd 中转更新表"},
+    {"node_id": "ds.prim", "label": "Prim 最小生成树", "layer": "graph", "prerequisites": ["ds.graph_representation"], "exam_weight": 0.75, "frequency": 0.75, "trainability": 0.8, "time_cost": 30, "difficulty": 3, "minimum_pass_required": true, "score_max_required": false, "common_mistakes": ["mistake.mst_edge_choice"], "recommended_action": "从一个起点逐轮选择跨割最小边并画生成树"},
+    {"node_id": "ds.kruskal", "label": "Kruskal 最小生成树", "layer": "graph", "prerequisites": ["ds.graph_representation"], "exam_weight": 0.75, "frequency": 0.75, "trainability": 0.8, "time_cost": 30, "difficulty": 3, "minimum_pass_required": true, "score_max_required": false, "common_mistakes": ["mistake.mst_cycle"], "recommended_action": "按边权排序并用并查集判断是否成环"},
+    {"node_id": "ds.sequential_search", "label": "顺序查找", "layer": "search", "prerequisites": ["ds.array"], "exam_weight": 0.45, "frequency": 0.45, "trainability": 0.9, "time_cost": 15, "difficulty": 1, "minimum_pass_required": false, "score_max_required": false, "common_mistakes": ["mistake.search_asl"], "recommended_action": "计算成功和失败平均查找长度"},
+    {"node_id": "ds.binary_search", "label": "折半查找", "layer": "search", "prerequisites": ["ds.array"], "exam_weight": 0.8, "frequency": 0.8, "trainability": 0.85, "time_cost": 25, "difficulty": 2, "minimum_pass_required": true, "score_max_required": false, "common_mistakes": ["mistake.binary_search_boundary"], "recommended_action": "手写 low、high、mid 更新并计算判定树高度"},
+    {"node_id": "ds.hash_table", "label": "散列表", "layer": "search", "prerequisites": ["ds.array"], "exam_weight": 0.8, "frequency": 0.75, "trainability": 0.75, "time_cost": 35, "difficulty": 3, "minimum_pass_required": true, "score_max_required": true, "common_mistakes": ["mistake.hash_probe"], "recommended_action": "练习线性探测、二次探测和链地址法的插入查找过程"},
+    {"node_id": "ds.insertion_sort", "label": "直接插入排序", "layer": "sorting", "prerequisites": ["ds.array"], "exam_weight": 0.7, "frequency": 0.7, "trainability": 0.9, "time_cost": 25, "difficulty": 2, "minimum_pass_required": true, "score_max_required": false, "common_mistakes": ["mistake.sort_stability_complexity"], "recommended_action": "逐趟写出有序区和待插入元素位置"},
+    {"node_id": "ds.shell_sort", "label": "希尔排序", "layer": "sorting", "prerequisites": ["ds.insertion_sort"], "exam_weight": 0.45, "frequency": 0.45, "trainability": 0.65, "time_cost": 30, "difficulty": 4, "minimum_pass_required": false, "score_max_required": true, "common_mistakes": ["mistake.shell_gap"], "recommended_action": "按给定增量序列逐组做插入排序"},
+    {"node_id": "ds.bubble_sort", "label": "冒泡排序", "layer": "sorting", "prerequisites": ["ds.array"], "exam_weight": 0.65, "frequency": 0.65, "trainability": 0.9, "time_cost": 20, "difficulty": 2, "minimum_pass_required": true, "score_max_required": false, "common_mistakes": ["mistake.sort_pass_boundary"], "recommended_action": "写出每一趟比较范围和最大元素归位位置"},
+    {"node_id": "ds.quicksort", "label": "快速排序", "layer": "sorting", "prerequisites": ["ds.array", "ds.recursion"], "exam_weight": 1.0, "frequency": 0.95, "trainability": 0.8, "time_cost": 40, "difficulty": 4, "minimum_pass_required": true, "score_max_required": true, "common_mistakes": ["mistake.quicksort_partition_boundary", "mistake.quicksort_pivot_recursion"], "recommended_action": "手算一次 partition，标出左右指针移动、枢轴归位和递归区间"},
+    {"node_id": "ds.selection_sort", "label": "简单选择排序", "layer": "sorting", "prerequisites": ["ds.array"], "exam_weight": 0.6, "frequency": 0.6, "trainability": 0.85, "time_cost": 20, "difficulty": 2, "minimum_pass_required": false, "score_max_required": false, "common_mistakes": ["mistake.sort_stability_complexity"], "recommended_action": "逐趟标出未排序区最小值和交换位置"},
+    {"node_id": "ds.heap_sort", "label": "堆排序", "layer": "sorting", "prerequisites": ["ds.heap"], "exam_weight": 0.8, "frequency": 0.75, "trainability": 0.75, "time_cost": 35, "difficulty": 4, "minimum_pass_required": true, "score_max_required": true, "common_mistakes": ["mistake.heap_adjust"], "recommended_action": "先建大根堆，再逐次交换堆顶与末尾并下滤"},
+    {"node_id": "ds.merge_sort", "label": "归并排序", "layer": "sorting", "prerequisites": ["ds.recursion"], "exam_weight": 0.75, "frequency": 0.7, "trainability": 0.75, "time_cost": 35, "difficulty": 3, "minimum_pass_required": true, "score_max_required": true, "common_mistakes": ["mistake.merge_boundary"], "recommended_action": "画分治树并手算一轮二路归并"},
+    {"node_id": "ds.radix_sort", "label": "基数排序", "layer": "sorting", "prerequisites": ["ds.queue"], "exam_weight": 0.45, "frequency": 0.4, "trainability": 0.65, "time_cost": 30, "difficulty": 4, "minimum_pass_required": false, "score_max_required": true, "common_mistakes": ["mistake.radix_bucket"], "recommended_action": "按个位、十位、百位分配和收集队列"},
+    {"node_id": "ds.time_complexity", "label": "时间复杂度分析", "layer": "algorithm_basics", "prerequisites": [], "exam_weight": 0.9, "frequency": 0.9, "trainability": 0.8, "time_cost": 30, "difficulty": 3, "minimum_pass_required": true, "score_max_required": true, "common_mistakes": ["mistake.complexity_growth"], "recommended_action": "对循环、嵌套循环、递归式各做一道复杂度推导"},
+    {"node_id": "ds.space_complexity", "label": "空间复杂度分析", "layer": "algorithm_basics", "prerequisites": [], "exam_weight": 0.55, "frequency": 0.55, "trainability": 0.75, "time_cost": 20, "difficulty": 2, "minimum_pass_required": false, "score_max_required": true, "common_mistakes": ["mistake.space_auxiliary"], "recommended_action": "区分输入空间和额外辅助空间"},
+    {"node_id": "ds.greedy", "label": "贪心算法", "layer": "algorithm_design", "prerequisites": ["ds.time_complexity"], "exam_weight": 0.65, "frequency": 0.6, "trainability": 0.65, "time_cost": 35, "difficulty": 4, "minimum_pass_required": false, "score_max_required": true, "common_mistakes": ["mistake.paradigm_choice"], "recommended_action": "写出局部选择规则并检查贪心选择性质"},
+    {"node_id": "ds.divide_conquer", "label": "分治算法", "layer": "algorithm_design", "prerequisites": ["ds.recursion"], "exam_weight": 0.7, "frequency": 0.65, "trainability": 0.7, "time_cost": 35, "difficulty": 4, "minimum_pass_required": false, "score_max_required": true, "common_mistakes": ["mistake.recurrence_formula"], "recommended_action": "写分解、求解、合并三步并列递归式"},
+    {"node_id": "ds.dynamic_programming", "label": "动态规划", "layer": "algorithm_design", "prerequisites": ["ds.recursion", "ds.time_complexity"], "exam_weight": 0.8, "frequency": 0.7, "trainability": 0.55, "time_cost": 50, "difficulty": 5, "minimum_pass_required": false, "score_max_required": true, "common_mistakes": ["mistake.dp_state"], "recommended_action": "为背包或最长子序列题写出状态、转移、初始化和遍历顺序"},
+    {"node_id": "ds.backtracking", "label": "回溯法", "layer": "algorithm_design", "prerequisites": ["ds.recursion"], "exam_weight": 0.55, "frequency": 0.5, "trainability": 0.6, "time_cost": 40, "difficulty": 4, "minimum_pass_required": false, "score_max_required": true, "common_mistakes": ["mistake.backtracking_prune"], "recommended_action": "画状态空间树并标出剪枝条件"},
+    {"node_id": "ds.branch_bound", "label": "分支限界法", "layer": "algorithm_design", "prerequisites": ["ds.queue", "ds.heap"], "exam_weight": 0.35, "frequency": 0.3, "trainability": 0.45, "time_cost": 40, "difficulty": 5, "minimum_pass_required": false, "score_max_required": true, "common_mistakes": ["mistake.bound_function"], "recommended_action": "写优先队列扩展顺序和界函数含义"},
+    {"node_id": "ds.union_find", "label": "并查集", "layer": "graph", "prerequisites": ["ds.array"], "exam_weight": 0.6, "frequency": 0.55, "trainability": 0.8, "time_cost": 25, "difficulty": 3, "minimum_pass_required": false, "score_max_required": true, "common_mistakes": ["mistake.union_find_parent"], "recommended_action": "手算路径压缩和按秩合并后的 parent 数组"},
+    {"node_id": "ds.skip_list", "label": "跳表基础", "layer": "search", "prerequisites": ["ds.linked_list"], "exam_weight": 0.25, "frequency": 0.2, "trainability": 0.4, "time_cost": 25, "difficulty": 4, "minimum_pass_required": false, "score_max_required": false, "common_mistakes": ["mistake.level_pointer"], "recommended_action": "画多级索引链表并模拟查找路径"},
+    {"node_id": "ds.external_sort", "label": "外部排序", "layer": "sorting", "prerequisites": ["ds.merge_sort"], "exam_weight": 0.4, "frequency": 0.35, "trainability": 0.45, "time_cost": 40, "difficulty": 5, "minimum_pass_required": false, "score_max_required": true, "common_mistakes": ["mistake.external_merge_pass"], "recommended_action": "计算初始归并段数、归并趟数和败者树作用"},
+    {"node_id": "ds.algorithm_proof", "label": "算法正确性证明", "layer": "algorithm_design", "prerequisites": ["ds.greedy", "ds.divide_conquer"], "exam_weight": 0.45, "frequency": 0.4, "trainability": 0.45, "time_cost": 35, "difficulty": 5, "minimum_pass_required": false, "score_max_required": true, "common_mistakes": ["mistake.proof_invariant"], "recommended_action": "为一个循环或贪心算法写不变式、初始化、保持和终止"}
+  ],
+  "question_archetypes": [
+    {"archetype_id": "ds.archetype.linear_operation", "label": "线性表操作题", "knowledge_nodes": ["ds.array", "ds.linked_list"], "strategy": "先确定存储结构，再画元素或指针移动区间"},
+    {"archetype_id": "ds.archetype.stack_queue_trace", "label": "栈队列过程追踪题", "knowledge_nodes": ["ds.stack", "ds.queue", "ds.circular_queue"], "strategy": "逐步记录 top、front、rear 和输出序列"},
+    {"archetype_id": "ds.archetype.kmp_next", "label": "KMP next 数组题", "knowledge_nodes": ["ds.string_matching"], "strategy": "从前缀后缀最长相等长度推导 next 值"},
+    {"archetype_id": "ds.archetype.tree_reconstruction", "label": "二叉树重建题", "knowledge_nodes": ["ds.tree_traversal"], "strategy": "先用先序定位根，再用中序切分左右子树"},
+    {"archetype_id": "ds.archetype.huffman_wpl", "label": "哈夫曼 WPL 计算题", "knowledge_nodes": ["ds.huffman_tree"], "strategy": "每轮合并最小两个权值并累计带权路径长度"},
+    {"archetype_id": "ds.archetype.avl_rotation", "label": "AVL 旋转题", "knowledge_nodes": ["ds.avl_tree"], "strategy": "先判定失衡类型，再执行单旋或双旋"},
+    {"archetype_id": "ds.archetype.graph_traversal", "label": "图遍历题", "knowledge_nodes": ["ds.bfs", "ds.dfs"], "strategy": "固定邻接点访问顺序，分别记录队列或递归栈"},
+    {"archetype_id": "ds.archetype.shortest_path", "label": "最短路径表格题", "knowledge_nodes": ["ds.dijkstra", "ds.floyd"], "strategy": "逐轮更新 dist、path 或中转矩阵"},
+    {"archetype_id": "ds.archetype.mst_trace", "label": "最小生成树构造题", "knowledge_nodes": ["ds.prim", "ds.kruskal"], "strategy": "分别按跨割最小边或全局最小非环边选择"},
+    {"archetype_id": "ds.archetype.search_asl", "label": "查找平均长度题", "knowledge_nodes": ["ds.binary_search", "ds.hash_table"], "strategy": "构造判定树或探测序列后按概率加权"},
+    {"archetype_id": "ds.archetype.sort_trace", "label": "排序过程追踪题", "knowledge_nodes": ["ds.insertion_sort", "ds.bubble_sort", "ds.quicksort", "ds.heap_sort", "ds.merge_sort"], "strategy": "按趟写出序列变化并标注比较或交换位置"},
+    {"archetype_id": "ds.archetype.quicksort_partition", "label": "快速排序划分题", "knowledge_nodes": ["ds.quicksort"], "strategy": "固定枢轴，按左右指针移动顺序记录一次 partition"},
+    {"archetype_id": "ds.archetype.complexity", "label": "复杂度分析题", "knowledge_nodes": ["ds.time_complexity", "ds.space_complexity"], "strategy": "先抽象基本操作次数，再保留最高阶项"},
+    {"archetype_id": "ds.archetype.dp_state", "label": "动态规划状态题", "knowledge_nodes": ["ds.dynamic_programming"], "strategy": "写状态定义、转移、边界和遍历顺序"},
+    {"archetype_id": "ds.archetype.proof", "label": "正确性证明题", "knowledge_nodes": ["ds.algorithm_proof"], "strategy": "使用循环不变式或归纳法组织证明"}
+  ],
+  "mistake_types": [
+    {"mistake_id": "mistake.boundary_index", "label": "数组下标边界错误", "related_nodes": ["ds.array"], "fix": "先写合法下标范围，再处理移动方向"},
+    {"mistake_id": "mistake.pointer_update", "label": "链表指针更新顺序错误", "related_nodes": ["ds.linked_list"], "fix": "先保留后继指针，再改前驱指针"},
+    {"mistake_id": "mistake.stack_queue_boundary", "label": "栈队判空判满混淆", "related_nodes": ["ds.stack", "ds.queue"], "fix": "固定 top、front、rear 的语义后再写条件"},
+    {"mistake_id": "mistake.circular_queue_full", "label": "循环队列满队条件错误", "related_nodes": ["ds.circular_queue"], "fix": "用牺牲一个单元或 size 字段二选一，不混用公式"},
+    {"mistake_id": "mistake.kmp_next", "label": "KMP next 数组推导错误", "related_nodes": ["ds.string_matching"], "fix": "逐位比较最长相等真前后缀"},
+    {"mistake_id": "mistake.recursion_base_case", "label": "递归出口遗漏", "related_nodes": ["ds.recursion"], "fix": "先写最小规模输入的返回值"},
+    {"mistake_id": "mistake.tree_formula", "label": "二叉树性质公式混淆", "related_nodes": ["ds.binary_tree"], "fix": "按结点数、叶子数、度数关系分组记忆"},
+    {"mistake_id": "mistake.traversal_order", "label": "遍历顺序混淆", "related_nodes": ["ds.tree_traversal"], "fix": "先定位根节点，再递归处理左右子树"},
+    {"mistake_id": "mistake.thread_tag", "label": "线索标志位错误", "related_nodes": ["ds.threaded_tree"], "fix": "区分孩子指针和前驱后继线索"},
+    {"mistake_id": "mistake.heap_adjust", "label": "堆调整方向错误", "related_nodes": ["ds.heap", "ds.heap_sort"], "fix": "建堆从最后一个非叶子结点向前下滤"},
+    {"mistake_id": "mistake.huffman_weight", "label": "哈夫曼权值合并错误", "related_nodes": ["ds.huffman_tree"], "fix": "每轮只合并当前最小的两个权值"},
+    {"mistake_id": "mistake.bst_delete", "label": "BST 删除替代结点错误", "related_nodes": ["ds.bst"], "fix": "两子女结点使用中序前驱或后继替代"},
+    {"mistake_id": "mistake.avl_rotation", "label": "AVL 旋转类型误判", "related_nodes": ["ds.avl_tree"], "fix": "根据插入路径的前两步判断 LL、RR、LR、RL"},
+    {"mistake_id": "mistake.graph_matrix_list", "label": "图存储结构适用性混淆", "related_nodes": ["ds.graph_representation"], "fix": "稠密图优先矩阵，稀疏图优先邻接表"},
+    {"mistake_id": "mistake.graph_visit_order", "label": "图遍历访问顺序不稳定", "related_nodes": ["ds.bfs", "ds.dfs"], "fix": "先固定邻接点顺序，再记录队列或栈"},
+    {"mistake_id": "mistake.indegree_update", "label": "拓扑排序入度更新遗漏", "related_nodes": ["ds.topological_sort"], "fix": "每删除一个顶点，立即更新所有后继入度"},
+    {"mistake_id": "mistake.critical_activity", "label": "关键活动判断错误", "related_nodes": ["ds.critical_path"], "fix": "活动最早开始等于最迟开始才是关键活动"},
+    {"mistake_id": "mistake.graph_relaxation", "label": "最短路径松弛错误", "related_nodes": ["ds.dijkstra"], "fix": "只从当前新确定顶点向外更新候选距离"},
+    {"mistake_id": "mistake.floyd_intermediate", "label": "Floyd 中转点顺序错误", "related_nodes": ["ds.floyd"], "fix": "外层循环固定中转点 k"},
+    {"mistake_id": "mistake.mst_edge_choice", "label": "Prim 选边范围错误", "related_nodes": ["ds.prim"], "fix": "只选连接已选集合和未选集合的最小边"},
+    {"mistake_id": "mistake.mst_cycle", "label": "Kruskal 成环判断遗漏", "related_nodes": ["ds.kruskal", "ds.union_find"], "fix": "选边前先判断两个端点是否同属一个集合"},
+    {"mistake_id": "mistake.search_asl", "label": "平均查找长度权重错误", "related_nodes": ["ds.sequential_search"], "fix": "按成功和失败情况分别加权计算"},
+    {"mistake_id": "mistake.binary_search_boundary", "label": "折半查找边界更新错误", "related_nodes": ["ds.binary_search"], "fix": "确认 mid 已排除后再更新 low 或 high"},
+    {"mistake_id": "mistake.hash_probe", "label": "散列冲突探测序列错误", "related_nodes": ["ds.hash_table"], "fix": "按指定装填因子和探测方式逐位检查"},
+    {"mistake_id": "mistake.sort_stability_complexity", "label": "排序稳定性和复杂度混淆", "related_nodes": ["ds.insertion_sort", "ds.selection_sort"], "fix": "用表格固定平均、最坏、空间和稳定性"},
+    {"mistake_id": "mistake.shell_gap", "label": "希尔排序分组错误", "related_nodes": ["ds.shell_sort"], "fix": "按相同下标模增量分组"},
+    {"mistake_id": "mistake.sort_pass_boundary", "label": "排序趟数和比较范围错误", "related_nodes": ["ds.bubble_sort"], "fix": "每趟结束后缩小一位已排序区"},
+    {"mistake_id": "mistake.quicksort_partition_boundary", "label": "快速排序划分边界错误", "related_nodes": ["ds.quicksort"], "fix": "记录 i、j 指针停止条件和枢轴最终位置"},
+    {"mistake_id": "mistake.quicksort_pivot_recursion", "label": "快速排序递归区间错误", "related_nodes": ["ds.quicksort"], "fix": "枢轴归位后只递归处理左右两个开出的子区间"},
+    {"mistake_id": "mistake.merge_boundary", "label": "归并边界错误", "related_nodes": ["ds.merge_sort"], "fix": "每次归并前写清左右段起止下标"},
+    {"mistake_id": "mistake.radix_bucket", "label": "基数排序收集顺序错误", "related_nodes": ["ds.radix_sort"], "fix": "保持桶内先进先出并按桶号从小到大收集"},
+    {"mistake_id": "mistake.complexity_growth", "label": "复杂度增长阶判断错误", "related_nodes": ["ds.time_complexity"], "fix": "忽略低阶项和常数，只比较主导项"},
+    {"mistake_id": "mistake.space_auxiliary", "label": "辅助空间和输入空间混淆", "related_nodes": ["ds.space_complexity"], "fix": "只统计算法额外申请的空间"},
+    {"mistake_id": "mistake.paradigm_choice", "label": "算法范式选择错误", "related_nodes": ["ds.greedy"], "fix": "检查是否满足贪心选择性质和最优子结构"},
+    {"mistake_id": "mistake.recurrence_formula", "label": "分治递归式错误", "related_nodes": ["ds.divide_conquer"], "fix": "按子问题个数、规模和合并代价写 T(n)"},
+    {"mistake_id": "mistake.dp_state", "label": "动态规划状态定义不清", "related_nodes": ["ds.dynamic_programming"], "fix": "状态必须能唯一表示子问题并支持转移"},
+    {"mistake_id": "mistake.backtracking_prune", "label": "回溯剪枝条件遗漏", "related_nodes": ["ds.backtracking"], "fix": "在扩展前检查约束条件和上界条件"},
+    {"mistake_id": "mistake.bound_function", "label": "分支限界界函数错误", "related_nodes": ["ds.branch_bound"], "fix": "界函数必须能排除不可能优于当前最优的分支"},
+    {"mistake_id": "mistake.union_find_parent", "label": "并查集父指针更新错误", "related_nodes": ["ds.union_find"], "fix": "find 后压缩路径，union 时只改集合根"},
+    {"mistake_id": "mistake.level_pointer", "label": "跳表层级指针混淆", "related_nodes": ["ds.skip_list"], "fix": "从最高层向右、向下记录查找路径"},
+    {"mistake_id": "mistake.external_merge_pass", "label": "外部排序归并趟数错误", "related_nodes": ["ds.external_sort"], "fix": "用归并路数递推归并段数量"},
+    {"mistake_id": "mistake.proof_invariant", "label": "循环不变式证明缺项", "related_nodes": ["ds.algorithm_proof"], "fix": "按初始化、保持、终止三段证明"}
+  ],
+  "paths": {
+    "minimum_pass": {
+      "ordered_nodes": [
+        "ds.array",
+        "ds.linked_list",
+        "ds.stack",
+        "ds.queue",
+        "ds.circular_queue",
+        "ds.recursion",
+        "ds.binary_tree",
+        "ds.tree_traversal",
+        "ds.heap",
+        "ds.huffman_tree",
+        "ds.bst",
+        "ds.graph_representation",
+        "ds.bfs",
+        "ds.dfs",
+        "ds.topological_sort",
+        "ds.dijkstra",
+        "ds.prim",
+        "ds.kruskal",
+        "ds.binary_search",
+        "ds.hash_table",
+        "ds.insertion_sort",
+        "ds.bubble_sort",
+        "ds.quicksort",
+        "ds.heap_sort",
+        "ds.merge_sort",
+        "ds.time_complexity"
+      ]
+    },
+    "score_max": {
+      "ordered_nodes": [
+        "ds.time_complexity",
+        "ds.tree_traversal",
+        "ds.graph_representation",
+        "ds.dijkstra",
+        "ds.quicksort",
+        "ds.heap_sort",
+        "ds.merge_sort",
+        "ds.hash_table",
+        "ds.avl_tree",
+        "ds.critical_path",
+        "ds.floyd",
+        "ds.dynamic_programming",
+        "ds.greedy",
+        "ds.divide_conquer",
+        "ds.algorithm_proof"
+      ]
+    }
+  },
+  "strategy_presets": {
+    "7d": {
+      "daily_ratio": {
+        "concept_recall": 0.2,
+        "worked_examples": 0.25,
+        "trace_drills": 0.3,
+        "error_review": 0.15,
+        "mock": 0.1
+      }
+    },
+    "14d": {
+      "daily_ratio": {
+        "concept_recall": 0.2,
+        "worked_examples": 0.25,
+        "trace_drills": 0.25,
+        "error_review": 0.2,
+        "mock": 0.1
+      }
+    }
+  },
+  "task_card_templates": [
+    {
+      "template_id": "ds.trace_card",
+      "label": "过程追踪卡",
+      "description": "手算树、图、查找、排序或队列栈题的完整状态变化，保留每一轮中间结果",
+      "steps": [
+        "写出初始结构、指针、队列/栈、数组或 dist 表",
+        "逐轮记录关键状态变化，不跳步",
+        "圈出边界条件、入队出队、比较交换或松弛动作",
+        "对照答案检查第一次分歧点并重算"
+      ],
+      "done_criteria": "中间状态表完整，最终结果正确，并能指出至少一个易错边界",
+      "duration_minutes": 30
+    },
+    {
+      "template_id": "ds.comparison_table",
+      "label": "算法对比表",
+      "description": "对比同类算法的数据结构、复杂度、稳定性、适用条件和常见陷阱",
+      "steps": [
+        "选择一组易混算法或结构",
+        "闭卷填写时间复杂度、空间复杂度、稳定性和适用场景",
+        "补充典型题型和常见错误",
+        "用一句话写出区分它们的判断规则"
+      ],
+      "done_criteria": "对比表至少覆盖 5 个维度，复杂度和适用条件无关键错误",
+      "duration_minutes": 20
+    },
+    {
+      "template_id": "ds.error_fix",
+      "label": "错因修复卡",
+      "description": "围绕一个数据结构或算法错题做最小闭环修复",
+      "steps": [
+        "选择一个 mistake_id 或最近错题",
+        "写出错误触发点和遗漏的检查动作",
+        "不看答案重做原题",
+        "再做一道同型题验证修复是否生效"
+      ],
+      "done_criteria": "原题和同型题都能独立正确完成，并写出下次检查顺序",
+      "duration_minutes": 25
+    },
+    {
+      "template_id": "ds.closed_book",
+      "label": "闭卷默写卡",
+      "description": "闭卷写出定义、核心步骤、复杂度和易错边界，用输出倒逼记忆",
+      "steps": [
+        "只看知识点标题，不展开笔记",
+        "闭卷写出定义、核心操作、复杂度和边界条件",
+        "对照教材或笔记标记遗漏",
+        "补齐后立刻再闭卷默写一次"
+      ],
+      "done_criteria": "核心定义、步骤和复杂度覆盖 90% 以上，边界条件无混淆",
+      "duration_minutes": 20
+    },
+    {
+      "template_id": "ds.mixed_mock",
+      "label": "混合短模拟卡",
+      "description": "用少量高频题覆盖线性表、树、图、查找、排序和复杂度核心得分点",
+      "steps": [
+        "限时完成 5-7 道混合题",
+        "标注每题所属知识节点和 mistake_id",
+        "统计错因最高频的 1-2 类问题",
+        "只重做这些错因对应的题目"
+      ],
+      "done_criteria": "完成订正并能说明每类错因的下次防错动作",
+      "duration_minutes": 45
+    }
+  ],
+  "checkpoint_rules": {
+    "pass_threshold": 60,
+    "high_score_threshold": 80,
+    "mastery_minimum": {
+      "minimum_pass_nodes": 65,
+      "score_max_nodes": 75
+    },
+    "checkpoint_intervals": {
+      "7d": [
+        3,
+        5,
+        7
+      ],
+      "14d": [
+        4,
+        7,
+        10,
+        14
+      ]
+    },
+    "upgrade_criteria": {
+      "minimum_pass_to_score_max": {
+        "condition": "minimum_pass 节点掌握度 >= 70% 且树、图、排序查找过程题正确率 >= 70%",
+        "action": "加入 AVL、关键路径、Floyd、动态规划和算法证明节点"
+      }
+    },
+    "downgrade_criteria": {
+      "score_max_to_minimum_pass": {
+        "condition": "连续 2 次检查点基础过程追踪题正确率低于 55%",
+        "action": "回退到 minimum_pass 路线，暂停低频算法设计和证明题"
+      }
+    }
+  },
+  "aurora_rules": {
+    "last_day_compact": {
+      "trigger_conditions": [
+        "days_left <= 1"
+      ],
+      "action": "只保留树、图、查找、排序、复杂度和错题过程追踪。"
+    }
+  },
+  "last_24h_strategy": {
+    "label": "数据结构与算法考前24小时策略",
+    "description": "最后一天只做高频算法过程追踪、复杂度表和错题修复。",
+    "focus": [
+      {"node_id": "ds.tree_traversal"},
+      {"node_id": "ds.dijkstra"},
+      {"node_id": "ds.quicksort"},
+      {"node_id": "ds.hash_table"},
+      {"node_id": "ds.time_complexity"}
+    ],
+    "forbidden_actions": [
+      "不展开新算法专题",
+      "不背孤立代码模板",
+      "不做超过15分钟的单题"
+    ],
+    "mock_exam": {
+      "duration_minutes": 30,
+      "question_count": 6,
+      "instruction": "做 2 道树图题、2 道排序查找题、2 道复杂度或算法设计题。"
+    }
+  },
+  "priority_matrix": {
+    "formula": "exam_weight * frequency * gap * trainability / (time_cost * difficulty)"
+  }
+}

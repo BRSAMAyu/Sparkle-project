@@ -1,0 +1,188 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+part of 'error_record.dart';
+
+// **************************************************************************
+// JsonSerializableGenerator
+// **************************************************************************
+
+_$ErrorRecordImpl _$$ErrorRecordImplFromJson(Map<String, dynamic> json) =>
+    _$ErrorRecordImpl(
+      id: json['id'] as String,
+      questionText: _stringFromJson(json['question_text']),
+      userAnswer: _stringFromJson(json['user_answer']),
+      correctAnswer: _stringFromJson(json['correct_answer']),
+      subject: _stringFromJson(json['subject_code']),
+      masteryLevel: (json['mastery_level'] as num).toDouble(),
+      reviewCount: (json['review_count'] as num).toInt(),
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: DateTime.parse(json['updated_at'] as String),
+      questionImageUrl: json['question_image_url'] as String?,
+      chapter: json['chapter'] as String?,
+      difficulty: (json['difficulty'] as num?)?.toInt(),
+      nextReviewAt: json['next_review_at'] == null
+          ? null
+          : DateTime.parse(json['next_review_at'] as String),
+      lastReviewedAt: json['last_reviewed_at'] == null
+          ? null
+          : DateTime.parse(json['last_reviewed_at'] as String),
+      latestAnalysis: json['latest_analysis'] == null
+          ? null
+          : ErrorAnalysis.fromJson(
+              json['latest_analysis'] as Map<String, dynamic>),
+      knowledgeLinks: (json['knowledge_links'] as List<dynamic>?)
+              ?.map((e) => KnowledgeLink.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+      affectedNodeId: _nullableStringFromJson(json['affected_node_id']),
+      masteryDelta: _nullableDoubleFromJson(json['mastery_delta']),
+      cognitiveTags: (json['cognitive_tags'] as List<dynamic>?)
+              ?.map((e) => $enumDecode(_$CognitiveDimensionEnumMap, e))
+              .toList() ??
+          const [],
+      aiAnalysisSummary: json['ai_analysis_summary'] as String?,
+    );
+
+Map<String, dynamic> _$$ErrorRecordImplToJson(_$ErrorRecordImpl instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'question_text': instance.questionText,
+      'user_answer': instance.userAnswer,
+      'correct_answer': instance.correctAnswer,
+      'subject_code': instance.subject,
+      'mastery_level': instance.masteryLevel,
+      'review_count': instance.reviewCount,
+      'created_at': instance.createdAt.toIso8601String(),
+      'updated_at': instance.updatedAt.toIso8601String(),
+      'question_image_url': instance.questionImageUrl,
+      'chapter': instance.chapter,
+      'difficulty': instance.difficulty,
+      'next_review_at': instance.nextReviewAt?.toIso8601String(),
+      'last_reviewed_at': instance.lastReviewedAt?.toIso8601String(),
+      'latest_analysis': instance.latestAnalysis,
+      'knowledge_links': instance.knowledgeLinks,
+      'affected_node_id': instance.affectedNodeId,
+      'mastery_delta': instance.masteryDelta,
+      'cognitive_tags': instance.cognitiveTags
+          .map((e) => _$CognitiveDimensionEnumMap[e]!)
+          .toList(),
+      'ai_analysis_summary': instance.aiAnalysisSummary,
+    };
+
+const _$CognitiveDimensionEnumMap = {
+  CognitiveDimension.memory: 'memory',
+  CognitiveDimension.understanding: 'understanding',
+  CognitiveDimension.application: 'application',
+  CognitiveDimension.analysis: 'analysis',
+  CognitiveDimension.evaluation: 'evaluation',
+  CognitiveDimension.creation: 'creation',
+};
+
+_$ErrorAnalysisImpl _$$ErrorAnalysisImplFromJson(Map<String, dynamic> json) =>
+    _$ErrorAnalysisImpl(
+      errorType: json['error_type'] as String,
+      errorTypeLabel: json['error_type_label'] as String,
+      rootCause: json['root_cause'] as String,
+      correctApproach: json['correct_approach'] as String,
+      studySuggestion: json['study_suggestion'] as String,
+      analyzedAt: json['analyzed_at'] == null
+          ? null
+          : DateTime.parse(json['analyzed_at'] as String),
+      similarTraps: (json['similar_traps'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+      recommendedKnowledge: (json['recommended_knowledge'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+      linkingHint: json['linking_hint'] == null
+          ? null
+          : ErrorLinkingHint.fromJson(
+              json['linking_hint'] as Map<String, dynamic>),
+    );
+
+Map<String, dynamic> _$$ErrorAnalysisImplToJson(_$ErrorAnalysisImpl instance) =>
+    <String, dynamic>{
+      'error_type': instance.errorType,
+      'error_type_label': instance.errorTypeLabel,
+      'root_cause': instance.rootCause,
+      'correct_approach': instance.correctApproach,
+      'study_suggestion': instance.studySuggestion,
+      'analyzed_at': instance.analyzedAt?.toIso8601String(),
+      'similar_traps': instance.similarTraps,
+      'recommended_knowledge': instance.recommendedKnowledge,
+      'linking_hint': instance.linkingHint,
+    };
+
+_$ErrorLinkingHintImpl _$$ErrorLinkingHintImplFromJson(
+        Map<String, dynamic> json) =>
+    _$ErrorLinkingHintImpl(
+      code: json['code'] as String,
+      message: json['message'] as String,
+      action: json['action'] as String?,
+    );
+
+Map<String, dynamic> _$$ErrorLinkingHintImplToJson(
+        _$ErrorLinkingHintImpl instance) =>
+    <String, dynamic>{
+      'code': instance.code,
+      'message': instance.message,
+      'action': instance.action,
+    };
+
+_$KnowledgeLinkImpl _$$KnowledgeLinkImplFromJson(Map<String, dynamic> json) =>
+    _$KnowledgeLinkImpl(
+      nodeId: json['id'] as String,
+      nodeName: json['name'] as String,
+      relevance: (json['relevance'] as num?)?.toDouble() ?? 1.0,
+      isPrimary: json['is_primary'] as bool? ?? false,
+    );
+
+Map<String, dynamic> _$$KnowledgeLinkImplToJson(_$KnowledgeLinkImpl instance) =>
+    <String, dynamic>{
+      'id': instance.nodeId,
+      'name': instance.nodeName,
+      'relevance': instance.relevance,
+      'is_primary': instance.isPrimary,
+    };
+
+_$ErrorListResponseImpl _$$ErrorListResponseImplFromJson(
+        Map<String, dynamic> json) =>
+    _$ErrorListResponseImpl(
+      items: (json['items'] as List<dynamic>)
+          .map((e) => ErrorRecord.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      total: _intFromJson(json['total']),
+      page: (json['page'] as num).toInt(),
+      pageSize: (json['page_size'] as num).toInt(),
+      hasNext: json['has_next'] as bool,
+    );
+
+Map<String, dynamic> _$$ErrorListResponseImplToJson(
+        _$ErrorListResponseImpl instance) =>
+    <String, dynamic>{
+      'items': instance.items,
+      'total': instance.total,
+      'page': instance.page,
+      'page_size': instance.pageSize,
+      'has_next': instance.hasNext,
+    };
+
+_$ReviewStatsImpl _$$ReviewStatsImplFromJson(Map<String, dynamic> json) =>
+    _$ReviewStatsImpl(
+      totalErrors: _intFromJson(json['total_errors']),
+      masteredCount: _intFromJson(json['mastered_count']),
+      needReviewCount: _intFromJson(json['need_review_count']),
+      reviewStreakDays: (json['review_streak_days'] as num).toInt(),
+      subjectDistribution: _intMapFromJson(json['subject_distribution']),
+    );
+
+Map<String, dynamic> _$$ReviewStatsImplToJson(_$ReviewStatsImpl instance) =>
+    <String, dynamic>{
+      'total_errors': instance.totalErrors,
+      'mastered_count': instance.masteredCount,
+      'need_review_count': instance.needReviewCount,
+      'review_streak_days': instance.reviewStreakDays,
+      'subject_distribution': instance.subjectDistribution,
+    };

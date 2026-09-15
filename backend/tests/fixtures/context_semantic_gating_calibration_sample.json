@@ -1,0 +1,52 @@
+[
+  {
+    "intent_type": "task_query",
+    "query": "我今天先做什么任务",
+    "expected_keep_ids": ["pref_task_order", "goal_math_review"],
+    "candidate_items": [
+      {"id": "pref_task_order", "section": "preferences", "text": "喜欢先做阻力最小的任务", "evidence_score": 0.82},
+      {"id": "pref_english_reading", "section": "preferences", "text": "英语阅读时喜欢先背单词", "evidence_score": 0.71},
+      {"id": "goal_math_review", "section": "goals", "text": "高数复习 active 2026-03-20", "evidence_score": 0.88}
+    ]
+  },
+  {
+    "intent_type": "emotional_support",
+    "query": "我最近好崩溃，完全学不进去",
+    "expected_keep_ids": ["epi_burnout", "pref_tone_warm"],
+    "candidate_items": [
+      {"id": "epi_burnout", "section": "episodic", "text": "昨天复盘时提到最近学不进去 情绪低落 0.9", "evidence_score": 0.84},
+      {"id": "pref_tone_warm", "section": "preferences", "text": "偏好温和支持性的语气", "evidence_score": 0.79},
+      {"id": "goal_mock_exam", "section": "goals", "text": "英语模考 active 2026-03-25", "evidence_score": 0.67}
+    ]
+  },
+  {
+    "intent_type": "plan_adjustment",
+    "query": "帮我调整这周复习计划",
+    "expected_keep_ids": ["goal_week_plan", "epi_recent_overload"],
+    "candidate_items": [
+      {"id": "goal_week_plan", "section": "goals", "text": "这周复习计划 active 2026-03-16", "evidence_score": 0.9},
+      {"id": "epi_recent_overload", "section": "episodic", "text": "上次复习计划太满导致超时 overload 0.8", "evidence_score": 0.8},
+      {"id": "pref_matrix_examples", "section": "preferences", "text": "讲矩阵乘法时喜欢先看例题", "evidence_score": 0.7}
+    ]
+  },
+  {
+    "intent_type": "knowledge",
+    "query": "给我讲一下矩阵乘法",
+    "expected_keep_ids": ["pref_matrix_examples", "goal_linear_algebra"],
+    "candidate_items": [
+      {"id": "pref_matrix_examples", "section": "preferences", "text": "讲矩阵乘法时喜欢先看例题", "evidence_score": 0.85},
+      {"id": "goal_linear_algebra", "section": "goals", "text": "线代矩阵专项 active 2026-03-30", "evidence_score": 0.83},
+      {"id": "epi_english_reading", "section": "episodic", "text": "上周做了英语阅读训练 english 0.6", "evidence_score": 0.62}
+    ]
+  },
+  {
+    "intent_type": "chat",
+    "query": "最近怎么样",
+    "expected_keep_ids": ["pref_tone_warm"],
+    "candidate_items": [
+      {"id": "pref_tone_warm", "section": "preferences", "text": "偏好温和支持性的语气", "evidence_score": 0.76},
+      {"id": "goal_python", "section": "goals", "text": "Python 入门 active 2026-04-01", "evidence_score": 0.74},
+      {"id": "epi_focus_drift", "section": "episodic", "text": "最近专注后半段容易走神 0.7", "evidence_score": 0.7}
+    ]
+  }
+]

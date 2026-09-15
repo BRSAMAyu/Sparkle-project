@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sparkle-gateway
+  namespace: production
+spec:
+  selector:
+    app: sparkle-gateway
+    version: blue # Default to blue
+  ports:
+  - port: 80
+    targetPort: 8080
+  type: LoadBalancer # Or ClusterIP if using Ingress

@@ -1,0 +1,106 @@
+{
+  "id": "writing_craft_14d@v1.0",
+  "name": "14-Day Writing Craft",
+  "version": "v1.0",
+  "description": "A 14-day backbone for developing writing skills with daily output, structured feedback, and revision cycles.",
+  "applicability_conditions": [
+    "user wants to improve writing in a specific genre",
+    "user can commit to daily writing output",
+    "user benefits from feedback and revision cycles"
+  ],
+  "target_user_profile": {
+    "goal": "writing_improvement",
+    "horizon_days": 14,
+    "preferred_mode": "structured",
+    "risk_profile": "low"
+  },
+  "backbone_nodes": [
+    {
+      "node_id": "day1_genre_blueprint",
+      "node_persona": "writing_mentor",
+      "prompt_template": "你是写作导师，Sparkle AI 的文体分析专家。\n\n你的职责：\n1. 分析目标文体的结构和特征\n2. 拆解优秀范文的写作技巧\n3. 明确用户当前的写作短板\n4. 设定14天写作目标\n\n先搞清楚好文章长什么样，再动笔。",
+      "available_tools": ["query_knowledge", "create_plan"],
+      "exit_conditions": ["genre structure analyzed", "exemplars studied", "writing goal set"],
+      "neighbors": ["day3_daily_pages"],
+      "transition_triggers": {"blueprint_done": "day3_daily_pages"},
+      "ux_mapping": {"frame": "planning", "tone": "analytical", "signal_terms": ["genre_blueprint_ready"]},
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day3_daily_pages",
+      "node_persona": "output_disciplinarian",
+      "prompt_template": "你是输出纪律官，Sparkle AI 的写作习惯训练师。\n\n你的职责：\n1. 设定每日最低字数目标\n2. 建立\"先写完再修改\"的纪律\n3. 克服写作恐惧和完美主义\n4. 记录每日写作状态和产出\n\n写出来，不管好坏。先有量，再有质。",
+      "available_tools": ["create_task", "suggest_focus_session"],
+      "exit_conditions": ["daily output habit formed", "word count tracked", "inner critic managed"],
+      "neighbors": ["day7_structural_edit"],
+      "transition_triggers": {"daily_output_established": "day7_structural_edit"},
+      "ux_mapping": {"frame": "execution", "tone": "disciplined", "signal_terms": ["daily_writing_active"]},
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day7_structural_edit",
+      "node_persona": "structural_editor",
+      "prompt_template": "你是结构编辑，Sparkle AI 的文章架构专家。\n\n你的职责：\n1. 审查文章整体结构是否清晰\n2. 检查逻辑流和论证链\n3. 删减无关内容和重复\n4. 重组段落提升节奏\n\n先看骨架，不看措辞。结构不对，词藻再好也白搭。",
+      "available_tools": ["create_task", "query_knowledge"],
+      "exit_conditions": ["structure reviewed", "logic flow improved", "redundancy removed"],
+      "neighbors": ["day10_line_edit"],
+      "transition_triggers": {"structural_edit_done": "day10_line_edit"},
+      "ux_mapping": {"frame": "review", "tone": "precise", "signal_terms": ["structure_optimized"]},
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "active_adjustment"
+    },
+    {
+      "node_id": "day10_line_edit",
+      "node_persona": "line_editor",
+      "prompt_template": "你是逐行编辑，Sparkle AI 的语言精修专家。\n\n你的职责：\n1. 逐句打磨措辞和节奏\n2. 消除陈词滥调和模糊表达\n3. 强化动词和具体名词\n4. 朗读检查语感和流畅度\n\n每一句话都要经得起朗读的检验。",
+      "available_tools": ["create_task", "query_knowledge"],
+      "exit_conditions": ["language polished", "cliches removed", "read-aloud test passed"],
+      "neighbors": ["day12_reader_feedback"],
+      "transition_triggers": {"line_edit_done": "day12_reader_feedback"},
+      "ux_mapping": {"frame": "deep_work", "tone": "meticulous", "signal_terms": ["language_polished"]},
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "active_adjustment"
+    },
+    {
+      "node_id": "day12_reader_feedback",
+      "node_persona": "beta_reader",
+      "prompt_template": "你是试读员，Sparkle AI 的读者视角模拟器。\n\n你的职责：\n1. 从目标读者视角阅读文章\n2. 标记理解困难或无聊的地方\n3. 反馈情感冲击力\n4. 检验文章是否达到了写作目的\n\n作者觉得好的文章读者不一定买账，用读者视角验证。",
+      "available_tools": ["query_knowledge"],
+      "exit_conditions": ["reader feedback collected", "impact assessed", "final tweaks applied"],
+      "neighbors": ["day14_publishing_system"],
+      "transition_triggers": {"reader_validated": "day14_publishing_system"},
+      "ux_mapping": {"frame": "review", "tone": "honest", "signal_terms": ["reader_feedback_done"]},
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day14_publishing_system",
+      "node_persona": "publishing_strategist",
+      "prompt_template": "你是发布策略师，Sparkle AI 的写作变现专家。\n\n你的职责：\n1. 选择合适的发布平台\n2. 优化标题和摘要\n3. 建立持续写作的系统\n4. 规划下一篇选题\n\n写作不只是艺术，也是产品。建立你的写作-发布-反馈飞轮。",
+      "available_tools": ["create_plan", "query_knowledge"],
+      "exit_conditions": ["publishing plan ready", "writing system established", "next topic chosen"],
+      "neighbors": [],
+      "transition_triggers": {},
+      "ux_mapping": {"frame": "reflection", "tone": "empowering", "signal_terms": ["publishing_system_ready"]},
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    }
+  ],
+  "readiness_criteria": {
+    "writing_goal_defined": {"signal_type": "goal_clarity", "minimum_confidence": 0.8, "required": true},
+    "daily_output_active": {"signal_type": "daily_engagement", "minimum_confidence": 0.7, "required": true},
+    "revision_cycle_complete": {"signal_type": "edit_completion", "minimum_confidence": 0.6, "required": false}
+  },
+  "default_strategies": {
+    "onboarding": "day1_genre_blueprint",
+    "reanchor": "day7_structural_edit",
+    "recovery": "day3_daily_pages",
+    "final_review": "day14_publishing_system"
+  },
+  "ux_mappings": {"default_frame": "writing_craft", "default_tone": "disciplined", "fallback_tone": "encouraging"},
+  "created_at": "2026-05-06T00:00:00",
+  "author": "sparkle-core",
+  "changelog": ["Initial writing craft pack with 6 backbone nodes."]
+}

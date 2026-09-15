@@ -1,0 +1,987 @@
+from __future__ import annotations
+
+"""
+Reflection Agent - 自我反思与修正Agent
+
+核心功能：
+1. 基于审查意见分析问题
+2. 生成修正策略
+3. 执行内容修正
+4. 多轮迭代管理
+5. 反思历史追踪与学习
+
+与ReviewerAgent配合使用，形成完整的审查-反思-修正闭环。
+
+作者: Claude Code (Opus 4.5)
+创建时间: 2026-01-25
+"""
+
+import json
+import math
+import time
+import uuid
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from enum import StrEnum
+from typing import Any
+
+from loguru import logger
+
+from app.agents.reviewer_agent import (
+    Issue,
+    ReviewDecision,
+    ReviewerAgent,
+    ReviewResult,
+)
+from app.agents.workflow_experience import build_reflection_system_prompt, get_review_profile
+from app.core.llm_router import ModelProvider
+
+# ============================================
+# 反思策略定义
+# ============================================
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
+class ReflectionStrategy(StrEnum):
+    """反思修正策略"""
+    DIRECT_FIX = "direct_fix"           # 直接修复：根据建议直接修改
+    REGENERATE = "regenerate"            # 重新生成：完全重新生成内容
+    TARGETED_REFINE = "targeted_refine"  # 精准优化：只修改问题部分
+    CLARIFY_AND_FIX = "clarify_and_fix"  # 澄清后修复：先理解再修正
+    ESCALATE = "escalate"                # 升级处理：无法自动修正
+
+
+class ReflectionOutcome(StrEnum):
+    """反思结果"""
+    FIXED = "fixed"                     # 已修正
+    IMPROVED = "improved"               # 有改善
+    NO_CHANGE = "no_change"             # 无变化
+    DEGRADED = "degraded"               # 变差了
+    FAILED = "failed"                   # 修正失败
+
+
+@dataclass
+class ReflectionRound:
+    """单轮反思记录"""
+    round_number: int
+    timestamp: str
+    original_score: float
+    original_content: str
+    strategy: ReflectionStrategy
+    fixed_content: str
+    new_score: float
+    issues_addressed: list[str]        # 本轮解决的问题
+    issues_remaining: list[str]        # 仍存在的问题
+    outcome: ReflectionOutcome
+    reasoning: str                      # 反思推理过程
+
+
+@dataclass
+class ReflectionResult:
+    """反思结果"""
+    reflection_id: str
+    target_id: str                      # 原始审查ID
+    total_rounds: int
+    final_outcome: ReflectionOutcome
+    initial_score: float
+    final_score: float
+    score_delta: float
+    rounds: list[ReflectionRound]
+    success: bool
+    final_content: str
+    reasoning: str                      # 总体推理说明
+    early_stop_reason: str | None = None
+    best_round_number: int = 0
+    issue_delta: int = 0
+    review_profile_id: str = "default_response"
+    best_review_result: dict[str, Any] | None = None
+
+
+@dataclass
+class TriggeredReflectionResult:
+    """Stage 25 trigger-based reflection output."""
+    reflection_id: str
+    user_id: str
+    category: str
+    summary: str
+    confidence: float
+    reasoning: str
+    evidence: list[str]
+    llm_latency_ms: int
+    estimated_cost_usd: float
+    context_tokens: int
+    context_truncated: bool
+    raw_payload: dict[str, Any]
+
+
+# ============================================
+# 反思提示词模板
+# ============================================
+
+REFLECTION_SYSTEM_PROMPT = """你是一位内容优化专家，负责基于审查反馈修正AI生成的内容。
+
+## 修正原则
+
+1. **精准定位**：针对审查中指出的具体问题进行修正
+2. **保持优势**：保留原内容中做得好的部分
+3. **适度调整**：修正幅度以解决问题为限，不过度调整
+4. **用户导向**：始终考虑用户的原始需求和意图
+
+## 修正流程
+
+1. **理解审查意见**：
+   - 仔细阅读审查结果，理解每个问题的核心
+   - 识别问题优先级（critical > warning > info）
+
+2. **分析修正策略**：
+   - critical问题：必须修复
+   - warning问题：应该修复
+   - info问题：可选修复
+
+3. **执行修正**：
+   - 准确修改问题部分
+   - 保持整体结构和风格
+   - 确保不引入新问题
+
+4. **自我验证**：
+   - 修正后重新检查
+   - 确认所有关键问题已解决
+
+## 输出要求
+
+请直接输出修正后的内容，不需要解释或说明。
+保持原内容的格式和风格。"""
+
+
+DIRECT_FIX_PROMPT = """请修正以下内容中的问题：
+
+【原始内容】
+{original_content}
+
+【需要修复的问题】
+{issues_summary}
+
+【具体修复建议】
+{fix_suggestions}
+
+请直接输出修正后的完整内容。"""
+
+
+REGENERATE_PROMPT = """审查发现当前内容存在严重问题，需要重新生成：
+
+【用户问题】
+{user_query}
+
+【当前内容（存在严重问题）】
+{original_content}
+
+【审查发现的问题】
+{critical_issues}
+
+请重新生成一个更好的回答，确保解决上述所有问题。"""
+
+
+TARGETED_REFINE_PROMPT = """请精准优化以下内容中的特定部分：
+
+【原始内容】
+{original_content}
+
+【需要优化的部分】
+{targeted_sections}
+
+【优化建议】
+{fix_suggestions}
+
+只修改需要优化的部分，保持其他内容不变。输出完整修正后的内容。"""
+
+
+TRIGGER_REFLECTION_SYSTEM_PROMPT = """你是一位学习反思分析师，负责基于用户自己的历史决策→结果链做跨事件归因。
+
+硬规则：
+1. 只根据提供的 route_history 证据和触发事件推断，不得补造事实。
+2. 不得使用诊断性标签，不得做跨用户比较。
+3. 输出必须稳定、克制、可被用户纠正。
+4. 如果证据不足，明确说明不足，不要强行归因。
+
+请输出 JSON：
+{
+  "summary": "一条可写入长期记忆的简短反思",
+  "reasoning": "为什么得出这个归因",
+  "confidence": 0.0,
+  "evidence": ["证据1", "证据2", "证据3"]
+}
+"""
+
+
+TRIGGER_REFLECTION_PROMPT = """请基于以下触发事件和最近历史，生成一次反思归因。
+
+【触发类别】
+{trigger_category}
+
+【触发事件】
+{trigger_payload}
+
+【最近 route_history 证据】
+{route_history_context}
+
+要求：
+- `summary` 必须是关于“最近一段时间可观察到的模式”，不能使用人格化或永久性表述
+- `confidence` 控制在 0.55-0.9
+- `evidence` 最多 3 条，必须来自给定历史
+"""
+
+
+# ============================================
+# ReflectionAgent 实现
+# ============================================
+
+class ReflectionAgent:
+    """
+    反思修正Agent - 基于审查结果自动修正内容
+
+    特点：
+    1. 智能选择修正策略
+    2. 多轮迭代管理
+    3. 反思历史追踪
+    4. 自动终止判断
+    """
+
+    # 默认配置
+    DEFAULT_MAX_ROUNDS = 3
+    DEFAULT_MIN_IMPROVEMENT = 0.05  # 最小改善幅度
+    DEFAULT_TARGET_SCORE = 0.8      # 目标分数
+
+    def __init__(
+        self,
+        generator_llm=None,
+        reviewer: ReviewerAgent | None = None,
+        avoid_providers: list[ModelProvider] | None = None,
+        max_rounds: int = DEFAULT_MAX_ROUNDS,
+        min_improvement: float = DEFAULT_MIN_IMPROVEMENT,
+        target_score: float = DEFAULT_TARGET_SCORE
+    ):
+        """
+        初始化反思Agent
+
+        Args:
+            generator_llm: 用于生成修正内容的LLM
+            reviewer: 用于重新审查的ReviewerAgent
+            max_rounds: 最大反思轮次
+            min_improvement: 最小改善幅度（低于此值停止迭代）
+            target_score: 目标分数（达到此值停止迭代）
+        """
+        if generator_llm is None:
+            from app.agents.reviewer_agent import TaskType
+            from app.services.llm_service import get_llm_service_for_task
+            generator_llm = get_llm_service_for_task(
+                TaskType.STANDARD_RESPONSE,
+                avoid_providers=avoid_providers,
+            )
+
+        self.generator = generator_llm
+        self.reviewer = reviewer or ReviewerAgent()
+        self.max_rounds = max_rounds
+        self.min_improvement = min_improvement
+        self.target_score = target_score
+
+        logger.info(
+            f"[ReflectionAgent] Initialized: max_rounds={max_rounds}, "
+            f"min_improvement={min_improvement}, target_score={target_score}"
+        )
+
+    async def reflect(
+        self,
+        *,
+        user_id: str | None = None,
+        user_query: str | None = None,
+        original_content: str | None = None,
+        review_result: ReviewResult | None = None,
+        trigger_category: str | None = None,
+        trigger_payload: dict[str, Any] | None = None,
+        context: dict[str, Any] | None = None,
+        review_profile_id: str | None = None,
+        workflow_context: dict[str, Any] | None = None,
+    ) -> ReflectionResult | TriggeredReflectionResult:
+        assert str(user_id or "").strip(), "ReflectionAgent.reflect requires a non-empty user_id"
+        if review_result is not None:
+            assert user_query is not None and original_content is not None, (
+                "Review-mode reflection requires user_query and original_content"
+            )
+            return await self._reflect_review_fix(
+                user_id=user_id,
+                user_query=user_query,
+                original_content=original_content,
+                review_result=review_result,
+                context=context,
+                review_profile_id=review_profile_id,
+                workflow_context=workflow_context,
+            )
+        assert str(trigger_category or "").strip(), "Trigger-mode reflection requires trigger_category"
+        return await self._reflect_trigger(
+            user_id=user_id,
+            trigger_category=str(trigger_category),
+            trigger_payload=trigger_payload or {},
+            context=context or {},
+        )
+
+    async def reflect_and_fix(
+        self,
+        *,
+        user_id: str | None = None,
+        user_query: str,
+        original_content: str,
+        review_result: ReviewResult,
+        context: dict[str, Any] | None = None,
+        review_profile_id: str | None = None,
+        workflow_context: dict[str, Any] | None = None,
+    ) -> ReflectionResult:
+        result = await self.reflect(
+            user_id=user_id,
+            user_query=user_query,
+            original_content=original_content,
+            review_result=review_result,
+            context=context,
+            review_profile_id=review_profile_id,
+            workflow_context=workflow_context,
+        )
+        assert isinstance(result, ReflectionResult)
+        return result
+
+    async def _reflect_review_fix(
+        self,
+        *,
+        user_id: str,
+        user_query: str,
+        original_content: str,
+        review_result: ReviewResult,
+        context: dict[str, Any] | None = None,
+        review_profile_id: str | None = None,
+        workflow_context: dict[str, Any] | None = None,
+    ) -> ReflectionResult:
+        """
+        基于审查结果进行反思和修正
+
+        Args:
+            user_query: 用户原始问题
+            original_content: 原始生成内容
+            review_result: 审查结果
+            context: 额外上下文
+
+        Returns:
+            ReflectionResult: 反思结果
+        """
+        reflection_id = f"reflection_{uuid.uuid4().hex[:12]}"
+        logger.info(f"[ReflectionAgent] Starting reflection {reflection_id}")
+
+        profile = get_review_profile(
+            review_profile_id=review_profile_id or review_result.review_profile_id,
+            workflow_context=workflow_context or review_result.workflow_context,
+            target_type=review_result.target_type,
+        )
+        rounds_history: list[ReflectionRound] = []
+        initial_review = review_result
+        initial_score = review_result.overall_score
+        current_content = original_content
+        current_score = review_result.overall_score
+        best_content = original_content
+        best_review = review_result
+        best_round_number = 0
+        early_stop_reason: str | None = None
+
+        for round_num in range(1, self.max_rounds + 1):
+            logger.info(
+                f"[ReflectionAgent] Round {round_num}/{self.max_rounds}, "
+                f"current_score={current_score:.2f}"
+            )
+
+            # 1. 分析问题并选择策略
+            strategy = self._select_strategy(
+                review_result,
+                round_num,
+                current_score
+            )
+
+            # 2. 执行修正
+            fixed_content, reasoning = await self._execute_fix(
+                user_query=user_query,
+                current_content=current_content,
+                review_result=review_result,
+                strategy=strategy,
+                context={
+                    **(context or {}),
+                    "user_id": user_id,
+                    "review_profile_id": profile.id,
+                    "workflow_context": workflow_context or review_result.workflow_context or {},
+                },
+                review_profile_id=profile.id,
+                workflow_context=workflow_context or review_result.workflow_context or {},
+            )
+
+            # 3. 重新审查
+            new_review = await self.reviewer.review_llm_response(
+                user_query=user_query,
+                llm_response=fixed_content,
+                context={
+                    **(context or {}),
+                    "timestamp": _utcnow().isoformat()
+                },
+                review_profile_id=profile.id,
+                workflow_context=workflow_context or review_result.workflow_context or {},
+            )
+
+            # 4. 评估本轮结果
+            outcome = self._evaluate_outcome(
+                current_score,
+                new_review.overall_score,
+                review_result,
+                new_review
+            )
+
+            # 5. 记录本轮
+            round_record = ReflectionRound(
+                round_number=round_num,
+                timestamp=_utcnow().isoformat(),
+                original_score=current_score,
+                original_content=current_content,
+                strategy=strategy,
+                fixed_content=fixed_content,
+                new_score=new_review.overall_score,
+                issues_addressed=self._get_addressed_issues(review_result, new_review),
+                issues_remaining=[i.description for i in new_review.issues],
+                outcome=outcome,
+                reasoning=reasoning
+            )
+            rounds_history.append(round_record)
+
+            if self._is_better_review(new_review, best_review):
+                best_review = new_review
+                best_content = fixed_content
+                best_round_number = round_num
+
+            logger.info(
+                f"[ReflectionAgent] Round {round_num} complete: "
+                f"{outcome.value}, {current_score:.2f} -> {new_review.overall_score:.2f}"
+            )
+
+            # 6. 决定是否继续
+            if new_review.passed or new_review.overall_score >= self.target_score:
+                logger.info("[ReflectionAgent] Target achieved, stopping")
+                best_review = new_review
+                best_content = fixed_content
+                best_round_number = round_num
+                early_stop_reason = "target_achieved"
+                current_content = fixed_content
+                current_score = new_review.overall_score
+                break
+
+            if outcome == ReflectionOutcome.DEGRADED:
+                logger.warning("[ReflectionAgent] Content degraded, reverting")
+                early_stop_reason = "degraded_reverted_to_best"
+                current_content = best_content
+                current_score = best_review.overall_score
+                review_result = best_review
+                break
+
+            if self._should_early_stop(round_num, review_result, new_review):
+                logger.info("[ReflectionAgent] Early stop triggered after marginal improvement")
+                early_stop_reason = "low_marginal_gain"
+                current_content = best_content
+                current_score = best_review.overall_score
+                review_result = best_review
+                break
+
+            if outcome == ReflectionOutcome.NO_CHANGE:
+                logger.warning("[ReflectionAgent] No improvement, stopping")
+                early_stop_reason = "no_change"
+                break
+
+            # 继续下一轮
+            current_content = fixed_content
+            current_score = new_review.overall_score
+            review_result = new_review
+
+        # 7. 构建最终结果
+        success = (
+            best_review.overall_score >= self.target_score or
+            best_review.passed
+        )
+        final_score = best_review.overall_score
+        final_outcome = rounds_history[-1].outcome if rounds_history else ReflectionOutcome.FAILED
+        if success:
+            final_outcome = ReflectionOutcome.FIXED if final_score > initial_score else ReflectionOutcome.IMPROVED
+        elif final_score > initial_score:
+            final_outcome = ReflectionOutcome.IMPROVED
+        elif final_score < initial_score:
+            final_outcome = ReflectionOutcome.DEGRADED
+        elif early_stop_reason == "no_change":
+            final_outcome = ReflectionOutcome.NO_CHANGE
+
+        result = ReflectionResult(
+            reflection_id=reflection_id,
+            target_id=initial_review.review_id,
+            total_rounds=len(rounds_history),
+            final_outcome=final_outcome,
+            initial_score=initial_score,
+            final_score=final_score,
+            score_delta=final_score - initial_score,
+            rounds=rounds_history,
+            success=success,
+            final_content=best_content,
+            reasoning=self._generate_summary_reasoning(rounds_history),
+            early_stop_reason=early_stop_reason,
+            best_round_number=best_round_number,
+            issue_delta=len(best_review.issues) - len(initial_review.issues),
+            review_profile_id=profile.id,
+            best_review_result=best_review.to_dict(),
+        )
+
+        logger.info(
+            f"[ReflectionAgent] Reflection complete: "
+            f"success={success}, score_delta={result.score_delta:.2f}, "
+            f"rounds={result.total_rounds}"
+        )
+
+        return result
+
+    async def _reflect_trigger(
+        self,
+        *,
+        user_id: str,
+        trigger_category: str,
+        trigger_payload: dict[str, Any],
+        context: dict[str, Any],
+    ) -> TriggeredReflectionResult:
+        reflection_id = f"reflection_trigger_{uuid.uuid4().hex[:12]}"
+        route_history_context = str(context.get("route_history_context") or "No route history context.")
+        context_tokens = int(context.get("route_history_context_tokens") or self._estimate_tokens(route_history_context))
+        context_truncated = bool(context.get("route_history_context_truncated"))
+        prompt = TRIGGER_REFLECTION_PROMPT.format(
+            trigger_category=trigger_category,
+            trigger_payload=json.dumps(trigger_payload, ensure_ascii=False, sort_keys=True),
+            route_history_context=route_history_context,
+        )
+        started = time.monotonic()
+        raw_response = await self.generator.chat(
+            system_prompt=TRIGGER_REFLECTION_SYSTEM_PROMPT,
+            user_message=prompt,
+            temperature=0.3,
+        )
+        latency_ms = int((time.monotonic() - started) * 1000)
+        payload = self._parse_trigger_response(
+            trigger_category=trigger_category,
+            raw_response=raw_response,
+            route_history_context=route_history_context,
+        )
+        estimated_cost_usd = self._estimate_cost_usd(
+            total_tokens=(
+                self._estimate_tokens(TRIGGER_REFLECTION_SYSTEM_PROMPT)
+                + self._estimate_tokens(prompt)
+                + self._estimate_tokens(raw_response)
+            ),
+        )
+        return TriggeredReflectionResult(
+            reflection_id=reflection_id,
+            user_id=str(user_id),
+            category=trigger_category,
+            summary=str(payload.get("summary") or "").strip(),
+            confidence=float(payload.get("confidence") or 0.0),
+            reasoning=str(payload.get("reasoning") or "").strip(),
+            evidence=[str(item) for item in (payload.get("evidence") or []) if str(item).strip()],
+            llm_latency_ms=latency_ms,
+            estimated_cost_usd=estimated_cost_usd,
+            context_tokens=context_tokens,
+            context_truncated=context_truncated,
+            raw_payload=payload,
+        )
+
+    def _select_strategy(
+        self,
+        review_result: ReviewResult,
+        round_num: int,
+        current_score: float
+    ) -> ReflectionStrategy:
+        """
+        选择修正策略
+
+        Args:
+            review_result: 当前审查结果
+            round_num: 当前轮次
+            current_score: 当前分数
+
+        Returns:
+            ReflectionStrategy: 选择的策略
+        """
+        critical_count = len(review_result.critical_issues)
+        len(review_result.warning_issues)
+
+        # 严重问题多，直接重新生成
+        if critical_count >= 2 or (critical_count >= 1 and current_score < 0.4):
+            return ReflectionStrategy.REGENERATE
+
+        # 第一轮且分数很低，重新生成
+        if round_num == 1 and current_score < 0.3:
+            return ReflectionStrategy.REGENERATE
+
+        # 问题集中在特定部分，精准优化
+        if review_result.issues and self._are_issues_localized(review_result.issues):
+            return ReflectionStrategy.TARGETED_REFINE
+
+        # 默认直接修复
+        return ReflectionStrategy.DIRECT_FIX
+
+    def _are_issues_localized(self, issues: list[Issue]) -> bool:
+        """检查问题是否集中在特定部分"""
+        if not issues:
+            return False
+
+        # 检查问题位置是否有共同特征
+        locations = [i.location for i in issues if i.location]
+        if len(locations) < 2:
+            return True
+
+        # 检查是否有超过50%的问题在同一位置
+        location_counts = {}
+        for loc in locations:
+            location_counts[loc] = location_counts.get(loc, 0) + 1
+
+        max_count = max(location_counts.values()) if location_counts else 0
+        return max_count >= len(issues) / 2
+
+    async def _execute_fix(
+        self,
+        user_query: str,
+        current_content: str,
+        review_result: ReviewResult,
+        strategy: ReflectionStrategy,
+        context: dict[str, Any],
+        review_profile_id: str,
+        workflow_context: dict[str, Any],
+    ) -> tuple[str, str]:
+        """
+        执行修正
+
+        Args:
+            user_query: 用户问题
+            current_content: 当前内容
+            review_result: 审查结果
+            strategy: 修正策略
+            context: 上下文
+
+        Returns:
+            (fixed_content, reasoning): 修正后的内容和推理说明
+        """
+        # 构建问题描述
+        issues_summary = self._format_issues(review_result.issues)
+        fix_suggestions = self._format_suggestions(review_result)
+
+        if strategy == ReflectionStrategy.REGENERATE:
+            prompt = REGENERATE_PROMPT.format(
+                user_query=user_query,
+                original_content=current_content[:1000],
+                critical_issues=self._format_issues(review_result.critical_issues)
+            )
+            reasoning = f"重新生成（发现{len(review_result.critical_issues)}个严重问题）"
+
+        elif strategy == ReflectionStrategy.TARGETED_REFINE:
+            # 找出需要优化的部分
+            targeted_sections = self._extract_targeted_sections(review_result.issues, current_content)
+            prompt = TARGETED_REFINE_PROMPT.format(
+                original_content=current_content,
+                targeted_sections=targeted_sections,
+                fix_suggestions=fix_suggestions
+            )
+            reasoning = f"精准优化（{len(review_result.issues)}个问题）"
+
+        else:  # DIRECT_FIX
+            prompt = DIRECT_FIX_PROMPT.format(
+                original_content=current_content,
+                issues_summary=issues_summary,
+                fix_suggestions=fix_suggestions
+            )
+            reasoning = f"直接修复（{len(review_result.issues)}个问题）"
+
+        try:
+            fixed_content = await self.generator.chat(
+                system_prompt=build_reflection_system_prompt(
+                    get_review_profile(
+                        review_profile_id=review_profile_id,
+                        workflow_context=workflow_context,
+                        target_type=review_result.target_type,
+                    )
+                ),
+                user_message=prompt,
+                temperature=0.3
+            )
+
+            return fixed_content, reasoning
+
+        except Exception as e:
+            logger.error(f"[ReflectionAgent] Fix execution failed: {e}")
+            return current_content, f"修正失败: {str(e)}"
+
+    def _format_issues(self, issues: list[Issue]) -> str:
+        """格式化问题列表"""
+        if not issues:
+            return "无问题"
+
+        lines = []
+        for i, issue in enumerate(issues, 1):
+            severity_marker = {"critical": "!!", "warning": "!", "info": "i"}
+            marker = severity_marker.get(issue.severity, "?")
+            lines.append(f"{i}. [{marker}] {issue.description}")
+            if issue.suggested_fix:
+                lines.append(f"   建议: {issue.suggested_fix}")
+
+        return "\n".join(lines)
+
+    def _format_suggestions(self, review_result: ReviewResult) -> str:
+        """格式化改进建议"""
+        suggestions = review_result.improvement_suggestions
+        if not suggestions:
+            return "无具体建议"
+        return "\n".join(f"- {s}" for s in suggestions)
+
+    def _extract_targeted_sections(
+        self,
+        issues: list[Issue],
+        content: str
+    ) -> str:
+        """提取需要优化的内容部分"""
+        sections = []
+        for issue in issues:
+            if issue.affected_content:
+                sections.append(f"- {issue.category}: {issue.affected_content[:100]}...")
+            else:
+                sections.append(f"- {issue.category}: {issue.location}")
+        return "\n".join(sections) if sections else "需要审查的部分"
+
+    def _get_addressed_issues(
+        self,
+        old_review: ReviewResult,
+        new_review: ReviewResult
+    ) -> list[str]:
+        """获取本轮已解决的问题"""
+        old_descriptions = {i.description for i in old_review.issues}
+        new_descriptions = {i.description for i in new_review.issues}
+
+        addressed = old_descriptions - new_descriptions
+        return list(addressed)
+
+    def _evaluate_outcome(
+        self,
+        old_score: float,
+        new_score: float,
+        old_review: ReviewResult,
+        new_review: ReviewResult
+    ) -> ReflectionOutcome:
+        """
+        评估本轮反思结果
+
+        Args:
+            old_score: 修正前分数
+            new_score: 修正后分数
+            old_review: 修正前审查结果
+            new_review: 修正后审查结果
+
+        Returns:
+            ReflectionOutcome: 反思结果
+        """
+        score_delta = new_score - old_score
+
+        # 检查是否通过
+        if new_review.passed:
+            if score_delta > 0:
+                return ReflectionOutcome.FIXED
+            return ReflectionOutcome.IMPROVED
+
+        # 检查改善幅度
+        if score_delta >= self.min_improvement:
+            return ReflectionOutcome.IMPROVED
+
+        # 检查是否变差
+        if score_delta < -self.min_improvement:
+            return ReflectionOutcome.DEGRADED
+
+        # 检查问题数量变化
+        if len(new_review.issues) < len(old_review.issues):
+            return ReflectionOutcome.IMPROVED
+
+        return ReflectionOutcome.NO_CHANGE
+
+    def _should_early_stop(
+        self,
+        round_num: int,
+        old_review: ReviewResult,
+        new_review: ReviewResult,
+    ) -> bool:
+        if round_num < 2:
+            return False
+        score_delta = new_review.overall_score - old_review.overall_score
+        critical_reduced = len(new_review.critical_issues) < len(old_review.critical_issues)
+        issues_reduced = len(new_review.issues) < len(old_review.issues)
+        return score_delta < self.min_improvement and not critical_reduced and not issues_reduced
+
+    def _is_better_review(self, candidate: ReviewResult, baseline: ReviewResult) -> bool:
+        if candidate.passed and not baseline.passed:
+            return True
+        if candidate.overall_score > baseline.overall_score + 1e-9:
+            return True
+        if len(candidate.critical_issues) < len(baseline.critical_issues):
+            return True
+        return len(candidate.issues) < len(baseline.issues)
+
+    def _generate_summary_reasoning(self, rounds: list[ReflectionRound]) -> str:
+        """生成总体推理说明"""
+        if not rounds:
+            return "无反思记录"
+
+        parts = []
+        parts.append(f"共执行 {len(rounds)} 轮反思")
+
+        for round_record in rounds:
+            parts.append(
+                f"第{round_record.round_number}轮: "
+                f"{round_record.strategy.value}, "
+                f"{round_record.original_score:.2f} → {round_record.new_score:.2f}, "
+                f"结果: {round_record.outcome.value}"
+            )
+
+        final_outcome = rounds[-1].outcome
+        parts.append(f"最终结果: {final_outcome.value}")
+
+        return "\n".join(parts)
+
+    @staticmethod
+    def _estimate_tokens(text: str) -> int:
+        return max(1, math.ceil(len(text or "") / 4))
+
+    def _estimate_cost_usd(self, *, total_tokens: int) -> float:
+        selection = getattr(self.generator, "get_current_selection", lambda: None)()
+        estimated_cost_per_1k = float(getattr(selection, "estimated_cost_per_1k", 0.0) or 0.0)
+        if estimated_cost_per_1k <= 0:
+            return 0.0
+        return round((float(total_tokens) / 1000.0) * estimated_cost_per_1k, 6)
+
+    def _parse_trigger_response(
+        self,
+        *,
+        trigger_category: str,
+        raw_response: str,
+        route_history_context: str,
+    ) -> dict[str, Any]:
+        try:
+            parsed = json.loads(raw_response)
+        except Exception:
+            parsed = {}
+
+        summary = str(parsed.get("summary") or "").strip()
+        reasoning = str(parsed.get("reasoning") or "").strip()
+        evidence = parsed.get("evidence")
+        if not isinstance(evidence, list):
+            evidence = []
+        if not summary:
+            summary = self._fallback_trigger_summary(trigger_category, route_history_context)
+        if not reasoning:
+            reasoning = "Evidence-backed attribution was generated from the recent route history slice."
+        confidence = parsed.get("confidence")
+        try:
+            bounded_confidence = max(0.55, min(0.9, float(confidence)))
+        except (TypeError, ValueError):
+            bounded_confidence = 0.62
+        if not evidence:
+            evidence = [line for line in route_history_context.splitlines() if line.strip()][:3]
+        return {
+            "summary": summary,
+            "reasoning": reasoning,
+            "confidence": round(bounded_confidence, 2),
+            "evidence": evidence[:3],
+        }
+
+    @staticmethod
+    def _fallback_trigger_summary(trigger_category: str, route_history_context: str) -> str:
+        first_line = next((line.strip("- ").strip() for line in route_history_context.splitlines() if line.strip()), "")
+        category_map = {
+            "intervention_ineffective": "最近接受建议后，执行结果仍然没有稳定转正，说明当前干预路径还没有真正贴合你的阻力点。",
+            "plan_stall": "最近一段时间计划推进反复停住，说明当前推进颗粒度或节奏仍然偏重。",
+            "overload": "最近失败和取消集中在同一天出现，说明负荷压力已经在影响实际执行。",
+            "too_difficult": "最近遇到的阻力更像是任务门槛偏高，而不是单次状态波动。",
+            "unclear": "最近停滞更多来自起步不清晰，说明任务入口还不够明确。",
+            "abandoned": "最近放下任务的模式更像是阻力积累，而不是单次临时放弃。",
+        }
+        if first_line:
+            return f"{category_map.get(trigger_category, '最近的执行模式出现了重复阻力。')} 相关证据：{first_line}"
+        return category_map.get(trigger_category, "最近的执行模式出现了重复阻力。")
+
+
+# ============================================
+# 全局单例
+# ============================================
+
+_reflection_agent_instance: ReflectionAgent | None = None
+
+
+def get_reflection_agent(
+    avoid_providers: list[ModelProvider] | None = None,
+    reviewer: ReviewerAgent | None = None,
+) -> ReflectionAgent:
+    """获取反思Agent单例"""
+    if avoid_providers or reviewer is not None:
+        return ReflectionAgent(avoid_providers=avoid_providers, reviewer=reviewer)
+
+    global _reflection_agent_instance
+    if _reflection_agent_instance is None:
+        _reflection_agent_instance = ReflectionAgent()
+    return _reflection_agent_instance
+
+
+# ============================================
+# 使用示例
+# ============================================
+
+if __name__ == "__main__":
+
+    async def test_reflection():
+        """测试反思功能"""
+        from app.agents.reviewer_agent import Issue, ReviewSeverity
+
+        # 创建模拟的审查结果
+        mock_review = ReviewResult(
+            review_id="test_review",
+            target_type="response",
+            target_id="test_123",
+            decision=ReviewDecision.NEEDS_REFINEMENT.value,
+            overall_score=0.5,
+            metrics=[],
+            issues=[
+                Issue(
+                    category="completeness",
+                    severity=ReviewSeverity.WARNING.value,
+                    location="整体",
+                    description="回答不够完整，缺少关键细节",
+                    affected_content="...",
+                    suggested_fix="补充更多细节和例子",
+                    confidence=0.8
+                )
+            ],
+            improvement_suggestions=["添加具体例子", "提供更多细节"],
+            requires_reflection=True,
+            reviewer_model="test_model",
+            review_timestamp=""
+        )
+
+        reflector = ReflectionAgent()
+
+        result = await reflector.reflect(
+            user_id="example-user",
+            user_query="什么是机器学习？",
+            original_content="机器学习是人工智能的一个分支。",
+            review_result=mock_review
+        )
+
+        print(f"反思完成: {result.final_outcome}")
+        print(f"分数变化: {result.initial_score:.2f} → {result.final_score:.2f}")
+        print(f"执行轮数: {result.total_rounds}")
+
+    # asyncio.run(test_reflection())

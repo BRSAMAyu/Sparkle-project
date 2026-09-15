@@ -1,0 +1,102 @@
+{
+  "minimumDurationSeconds": 150,
+  "albums": [
+    {
+      "name": "Artur Rubinstein/Chopin_ 19 Nocturnes [Disc 1]",
+      "sceneTags": ["reading", "reflection", "reflective", "soft", "profile", "insights", "chat"],
+      "paletteTags": ["classical", "adaptive", "piano"],
+      "includePatterns": [
+        "1-02 Chopin_ Nocturne #2 In E Flat, Op. 9_2, CT 109.m4a",
+        "1-08 Chopin_ Nocturne #8 In D Flat, Op. 27_2, CT 115.m4a",
+        "1-10 Chopin_ Nocturne #10 In A Flat, Op. 32_2, CT 117.m4a"
+      ],
+      "energy": 0.18,
+      "density": 0.14,
+      "baseGain": 0.88,
+      "loopable": false,
+      "releaseApproved": true,
+      "minimumDurationSeconds": 240
+    },
+    {
+      "name": "钢琴内田光子/莫扎特第6、7、8钢琴奏鸣曲",
+      "sceneTags": ["focus", "productivity", "reading", "structured", "calm", "plan", "task", "calendar", "dashboard"],
+      "paletteTags": ["classical", "adaptive", "piano"],
+      "includePatterns": [
+        "2-05 Mozart_ Piano Sonata #7 In C, K 309 - 2. Andante Un Poco Adagio.m4a",
+        "2-08 Mozart_ Piano Sonata #8 In A Minor, K 310 - 2. Andante Cantable Con Espressione.m4a"
+      ],
+      "energy": 0.20,
+      "density": 0.18,
+      "baseGain": 0.88,
+      "loopable": false,
+      "releaseApproved": true,
+      "minimumDurationSeconds": 240
+    },
+    {
+      "name": "Compilations/大師•古琴",
+      "sceneTags": ["insights", "reflection", "exploration", "meditative", "gallery", "profile"],
+      "paletteTags": ["classical", "adaptive", "airy"],
+      "includePatterns": [
+        "07 憶故人.m4a",
+        "11 梅花三弄.m4a"
+      ],
+      "energy": 0.16,
+      "density": 0.12,
+      "baseGain": 0.84,
+      "loopable": false,
+      "releaseApproved": true,
+      "minimumDurationSeconds": 300
+    },
+    {
+      "name": "吕思清/吕思清小提琴独奏_ 爱的主题",
+      "sceneTags": ["warm", "achievement", "celebration", "reflection", "story", "social"],
+      "paletteTags": ["classical", "adaptive", "warm"],
+      "includePatterns": [
+        "05 沉思.m4a",
+        "06 圣母颂.m4a",
+        "09 思乡曲.m4a"
+      ],
+      "energy": 0.24,
+      "density": 0.18,
+      "baseGain": 0.86,
+      "loopable": false,
+      "releaseApproved": true,
+      "minimumDurationSeconds": 220
+    },
+    {
+      "name": "久石譲/The Best of Cinema Music",
+      "sceneTags": ["dashboard", "warm", "home", "social", "community", "story", "reflection", "exploration"],
+      "paletteTags": ["adaptive", "warm", "classical", "airy"],
+      "includePatterns": [
+        "01 NAUSICAA.m4a",
+        "05 HANA-BI.m4a",
+        "06 Kids Return.m4a",
+        "09 One Summer's Day.m4a",
+        "10 Summer.m4a",
+        "13 My Neighbour TOTORO.m4a"
+      ],
+      "energy": 0.28,
+      "density": 0.20,
+      "baseGain": 0.88,
+      "loopable": false,
+      "releaseApproved": true,
+      "minimumDurationSeconds": 200
+    },
+    {
+      "name": "Tokyo Quartet/Beethoven 弦楽四重奏曲 第9番　Tokyo SQ",
+      "sceneTags": ["focus", "productivity", "reading", "structured", "reflection", "deep"],
+      "paletteTags": ["classical", "adaptive", "airy"],
+      "includePatterns": [
+        "02 死と乙女 II. 弦楽四重奏曲 No.14 Andante Con Moto.m4a",
+        "06 ラズモフスキー第3番 II.弦楽四重奏曲 Andante Con Moto Quasi Allegretto.m4a",
+        "07 ラズモフスキー第3番 III.弦楽四重奏曲 Menuetto_ Grazioso.m4a"
+      ],
+      "energy": 0.20,
+      "density": 0.18,
+      "baseGain": 0.84,
+      "loopable": false,
+      "releaseApproved": true,
+      "minimumDurationSeconds": 240
+    }
+  ]
+}

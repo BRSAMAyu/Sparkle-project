@@ -1,0 +1,211 @@
+# Celery 告警规则
+# Prometheus AlertManager 配置
+
+groups:
+  - name: celery_alerts
+    interval: 30s
+    rules:
+
+      # 告警: Celery Worker 宕机
+      - alert: CeleryWorkerDown
+        expr: up{job="celery_worker"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: celery
+        annotations:
+          summary: "Celery Worker 宕机"
+          description: "Worker {{ $labels.instance }} 已停止响应超过2分钟"
+          runbook: "检查 docker logs sparkle_celery_worker"
+
+      # 告警: Celery Beat 宕机
+      - alert: CeleryBeatDown
+        expr: up{job="celery_beat"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: celery
+        annotations:
+          summary: "Celery Beat 宕机"
+          description: "Beat 调度器 {{ $labels.instance }} 已停止响应"
+          runbook: "检查定时任务调度是否正常"
+
+      # 告警: 任务队列积压
+      - alert: CeleryQueueBacklog
+        expr: celery_queue_length > 100
+        for: 5m
+        labels:
+          severity: warning
+          service: celery
+        annotations:
+          summary: "Celery 队列积压"
+          description: "队列 {{ $labels.queue }} 长度为 {{ $value }}，超过阈值100"
+          runbook: "检查 Worker 是否正常，考虑增加并发数"
+
+      # 告警: 任务失败率过高
+      - alert: CeleryHighFailureRate
+        expr: rate(celery_task_failed_total[5m]) / rate(celery_task_started_total[5m]) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+          service: celery
+        annotations:
+          summary: "任务失败率过高"
+          description: "5分钟内失败率 {{ $value | humanizePercentage }}，超过5%"
+          runbook: "检查任务日志，分析失败原因"
+
+      # 告警: 任务执行时间过长
+      - alert: CelerySlowTasks
+        expr: histogram_quantile(0.95, rate(celery_task_runtime_seconds_bucket[5m])) > 60
+        for: 10m
+        labels:
+          severity: warning
+          service: celery
+        annotations:
+          summary: "任务执行缓慢"
+          description: "95%的任务执行时间超过60秒"
+          runbook: "优化任务逻辑或增加 Worker 资源"
+
+      # 告警: Worker 内存使用过高
+      - alert: CeleryWorkerHighMemory
+        expr: process_resident_memory_bytes{job="celery_worker"} > 2 * 1024 * 1024 * 1024
+        for: 5m
+        labels:
+          severity: warning
+          service: celery
+        annotations:
+          summary: "Worker 内存使用过高"
+          description: "Worker 内存使用超过2GB"
+          runbook: "检查是否有内存泄漏，考虑重启 Worker"
+
+      # 告警: Worker CPU 使用过高
+      - alert: CeleryWorkerHighCPU
+        expr: rate(process_cpu_seconds_total{job="celery_worker"}[5m]) > 0.8
+        for: 10m
+        labels:
+          severity: warning
+          service: celery
+        annotations:
+          summary: "Worker CPU 使用过高"
+          description: "Worker CPU 使用率持续超过80%"
+          runbook: "检查任务负载，考虑增加 Worker 数量"
+
+      # 告警: 任务执行时间超过限制
+      - alert: CeleryTaskTimeLimitExceeded
+        expr: celery_task_runtime_seconds > 3600
+        for: 1m
+        labels:
+          severity: critical
+          service: celery
+        annotations:
+          summary: "任务执行超时"
+          description: "任务 {{ $labels.name }} 执行时间超过1小时"
+          runbook: "检查任务是否卡死，考虑重启"
+
+      # 告警: Redis 连接问题
+      - alert: CeleryRedisConnectionError
+        expr: increase(celery_task_failed_total{reason="connection_error"}[5m]) > 5
+        for: 5m
+        labels:
+          severity: critical
+          service: celery
+        annotations:
+          summary: "Redis 连接错误"
+          description: "5分钟内出现 {{ $value }} 次 Redis 连接错误"
+          runbook: "检查 Redis 服务状态和网络连接"
+
+      # 告警: 任务调度延迟
+      - alert: CelerySchedulerDelay
+        expr: time() - celery_schedule_last_run_timestamp > 300
+        for: 5m
+        labels:
+          severity: warning
+          service: celery
+        annotations:
+          summary: "任务调度延迟"
+          description: "调度器延迟超过5分钟"
+          runbook: "检查 Beat 服务状态"
+
+      # 告警: 死信队列有任务
+      - alert: CeleryDeadLetterQueue
+        expr: celery_queue_length{queue="dead-letter"} > 0
+        for: 10m
+        labels:
+          severity: warning
+          service: celery
+        annotations:
+          summary: "死信队列有任务"
+          description: "死信队列中有 {{ $value }} 个任务"
+          runbook: "检查失败任务，手动处理或重试"
+
+      # 告警: Worker 数量不足
+      - alert: CeleryWorkerCountLow
+        expr: count(up{job="celery_worker"}) < 2
+        for: 5m
+        labels:
+          severity: warning
+          service: celery
+        annotations:
+          summary: "Worker 数量不足"
+          description: "当前只有 {{ $value }} 个 Worker 在线，建议至少2个"
+          runbook: "启动更多 Worker 实例"
+
+      # 告警: 任务吞吐量下降
+      - alert: CeleryThroughputDrop
+        expr: rate(celery_task_completed_total[10m]) < rate(celery_task_completed_total[30m]) * 0.5
+        for: 10m
+        labels:
+          severity: warning
+          service: celery
+        annotations:
+          summary: "任务吞吐量下降"
+          description: "当前吞吐量低于历史平均的50%"
+          runbook: "检查系统负载和 Worker 状态"
+
+      # 告警: 内存泄漏检测
+      - alert: CeleryMemoryLeak
+        expr: increase(process_resident_memory_bytes{job="celery_worker"}[30m]) > 500 * 1024 * 1024
+        for: 30m
+        labels:
+          severity: critical
+          service: celery
+        annotations:
+          summary: "检测到内存泄漏"
+          description: "30分钟内内存增长超过500MB"
+          runbook: "立即重启 Worker，检查任务代码"
+
+      # 告警: 任务重试次数过多
+      - alert: CeleryExcessiveRetries
+        expr: rate(celery_task_retry_total[5m]) > 10
+        for: 10m
+        labels:
+          severity: warning
+          service: celery
+        annotations:
+          summary: "任务重试过多"
+          description: "每分钟重试次数超过10次"
+          runbook: "检查任务失败原因，优化重试策略"
+
+      # 告警: 系统资源不足
+      - alert: CelerySystemResourcesLow
+        expr: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) < 0.1
+        for: 5m
+        labels:
+          severity: critical
+          service: system
+        annotations:
+          summary: "系统内存不足"
+          description: "系统可用内存低于10%"
+          runbook: "立即释放内存或扩容"
+
+      # 告警: 磁盘空间不足
+      - alert: CeleryDiskSpaceLow
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.15
+        for: 5m
+        labels:
+          severity: critical
+          service: system
+        annotations:
+          summary: "磁盘空间不足"
+          description: "磁盘可用空间低于15%"
+          runbook: "清理日志文件或扩容磁盘"

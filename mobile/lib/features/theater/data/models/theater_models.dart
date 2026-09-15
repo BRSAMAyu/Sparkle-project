@@ -1,0 +1,854 @@
+class TheaterGraphNode {
+  const TheaterGraphNode({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.currentMastery,
+    required this.predictedMastery,
+    required this.riskLevel,
+    this.sourceType = 'freeform',
+    this.mappedGalaxyNodeId,
+    this.candidateStatus,
+    this.isTarget = false,
+    this.aliases = const <String>[],
+    this.sectorWeights = const <String, double>{},
+  });
+
+  factory TheaterGraphNode.fromJson(Map<String, dynamic> json) =>
+      TheaterGraphNode(
+        id: json['id']?.toString() ?? '',
+        name: json['name']?.toString() ?? '',
+        description: json['description']?.toString() ?? '',
+        currentMastery: (json['current_mastery'] as num?)?.toDouble() ?? 0,
+        predictedMastery: (json['predicted_mastery'] as num?)?.toDouble() ?? 0,
+        riskLevel: json['risk_level']?.toString() ?? 'low',
+        sourceType: json['source_type']?.toString() ?? 'freeform',
+        mappedGalaxyNodeId: json['mapped_galaxy_node_id']?.toString(),
+        candidateStatus: json['candidate_status']?.toString(),
+        isTarget: json['is_target'] as bool? ?? false,
+        aliases: (json['aliases'] as List<dynamic>? ?? const [])
+            .map((item) => item.toString())
+            .toList(),
+        sectorWeights: ((json['sector_weights'] as Map<String, dynamic>?) ??
+                const <String, dynamic>{})
+            .map(
+          (key, value) => MapEntry(key, (value as num?)?.toDouble() ?? 0),
+        ),
+      );
+
+  final String id;
+  final String name;
+  final String description;
+  final double currentMastery;
+  final double predictedMastery;
+  final String riskLevel;
+  final String sourceType;
+  final String? mappedGalaxyNodeId;
+  final String? candidateStatus;
+  final bool isTarget;
+  final List<String> aliases;
+  final Map<String, double> sectorWeights;
+
+  TheaterGraphNode copyWith({
+    String? mappedGalaxyNodeId,
+    String? candidateStatus,
+    bool clearCandidateStatus = false,
+  }) =>
+      TheaterGraphNode(
+        id: id,
+        name: name,
+        description: description,
+        currentMastery: currentMastery,
+        predictedMastery: predictedMastery,
+        riskLevel: riskLevel,
+        sourceType: sourceType,
+        mappedGalaxyNodeId: mappedGalaxyNodeId ?? this.mappedGalaxyNodeId,
+        candidateStatus: clearCandidateStatus
+            ? null
+            : (candidateStatus ?? this.candidateStatus),
+        isTarget: isTarget,
+        aliases: aliases,
+        sectorWeights: sectorWeights,
+      );
+}
+
+class TheaterGraphEdge {
+  const TheaterGraphEdge({
+    required this.id,
+    required this.sourceId,
+    required this.targetId,
+    required this.relationType,
+    required this.strength,
+    this.confidence = 0.5,
+    this.evidence,
+    this.sourceType = 'freeform',
+  });
+
+  factory TheaterGraphEdge.fromJson(Map<String, dynamic> json) =>
+      TheaterGraphEdge(
+        id: json['id']?.toString() ?? '',
+        sourceId: json['source_id']?.toString() ?? '',
+        targetId: json['target_id']?.toString() ?? '',
+        relationType: json['relation_type']?.toString() ?? 'related',
+        strength: (json['strength'] as num?)?.toDouble() ?? 0.5,
+        confidence: (json['confidence'] as num?)?.toDouble() ?? 0.5,
+        evidence: json['evidence']?.toString(),
+        sourceType: json['source_type']?.toString() ?? 'freeform',
+      );
+
+  final String id;
+  final String sourceId;
+  final String targetId;
+  final String relationType;
+  final double strength;
+  final double confidence;
+  final String? evidence;
+  final String sourceType;
+}
+
+class TheaterDiscussionTurn {
+  const TheaterDiscussionTurn({
+    required this.turnIndex,
+    required this.agentId,
+    required this.displayName,
+    required this.turnType,
+    required this.content,
+    required this.relatedNodeIds,
+  });
+
+  factory TheaterDiscussionTurn.fromJson(Map<String, dynamic> json) =>
+      TheaterDiscussionTurn(
+        turnIndex: (json['turn_index'] as num?)?.toInt() ?? 0,
+        agentId: json['agent_id']?.toString() ?? '',
+        displayName: json['display_name']?.toString() ?? '',
+        turnType: json['turn_type']?.toString() ?? 'analysis',
+        content: json['content']?.toString() ?? '',
+        relatedNodeIds: (json['related_node_ids'] as List<dynamic>? ?? const [])
+            .map((item) => item.toString())
+            .toList(),
+      );
+
+  final int turnIndex;
+  final String agentId;
+  final String displayName;
+  final String turnType;
+  final String content;
+  final List<String> relatedNodeIds;
+}
+
+class TheaterPathStep {
+  const TheaterPathStep({
+    required this.index,
+    required this.nodeId,
+    required this.nodeName,
+    required this.rationale,
+    required this.currentMastery,
+    required this.predictedMastery,
+    required this.riskLevel,
+    required this.estimatedMinutes,
+    required this.dayLabel,
+    this.checkpointLabel,
+    this.mappedGalaxyNodeId,
+  });
+
+  factory TheaterPathStep.fromJson(Map<String, dynamic> json) =>
+      TheaterPathStep(
+        index: (json['index'] as num?)?.toInt() ?? 0,
+        nodeId: json['node_id']?.toString() ?? '',
+        nodeName: json['node_name']?.toString() ?? '',
+        rationale: json['rationale']?.toString() ?? '',
+        currentMastery: (json['current_mastery'] as num?)?.toDouble() ?? 0,
+        predictedMastery: (json['predicted_mastery'] as num?)?.toDouble() ?? 0,
+        riskLevel: json['risk_level']?.toString() ?? 'low',
+        estimatedMinutes: (json['estimated_minutes'] as num?)?.toInt() ?? 25,
+        dayLabel: json['day_label']?.toString() ?? '',
+        checkpointLabel: json['checkpoint_label']?.toString(),
+        mappedGalaxyNodeId: json['mapped_galaxy_node_id']?.toString(),
+      );
+
+  final int index;
+  final String nodeId;
+  final String nodeName;
+  final String rationale;
+  final double currentMastery;
+  final double predictedMastery;
+  final String riskLevel;
+  final int estimatedMinutes;
+  final String dayLabel;
+  final String? checkpointLabel;
+  final String? mappedGalaxyNodeId;
+
+  TheaterPathStep copyWith({
+    String? mappedGalaxyNodeId,
+  }) =>
+      TheaterPathStep(
+        index: index,
+        nodeId: nodeId,
+        nodeName: nodeName,
+        rationale: rationale,
+        currentMastery: currentMastery,
+        predictedMastery: predictedMastery,
+        riskLevel: riskLevel,
+        estimatedMinutes: estimatedMinutes,
+        dayLabel: dayLabel,
+        checkpointLabel: checkpointLabel,
+        mappedGalaxyNodeId: mappedGalaxyNodeId ?? this.mappedGalaxyNodeId,
+      );
+}
+
+class TheaterSemanticMatch {
+  const TheaterSemanticMatch({
+    required this.freeformNodeId,
+    required this.freeformNodeName,
+    required this.galaxyNodeId,
+    required this.galaxyNodeName,
+    required this.confidence,
+    required this.evidence,
+  });
+
+  factory TheaterSemanticMatch.fromJson(Map<String, dynamic> json) =>
+      TheaterSemanticMatch(
+        freeformNodeId: json['freeform_node_id']?.toString() ?? '',
+        freeformNodeName: json['freeform_node_name']?.toString() ?? '',
+        galaxyNodeId: json['galaxy_node_id']?.toString() ?? '',
+        galaxyNodeName: json['galaxy_node_name']?.toString() ?? '',
+        confidence: (json['confidence'] as num?)?.toDouble() ?? 0,
+        evidence: json['evidence']?.toString() ?? '',
+      );
+
+  final String freeformNodeId;
+  final String freeformNodeName;
+  final String galaxyNodeId;
+  final String galaxyNodeName;
+  final double confidence;
+  final String evidence;
+}
+
+class TheaterTaskBrief {
+  const TheaterTaskBrief({
+    required this.title,
+    required this.nodeId,
+    required this.estimatedMinutes,
+    required this.dayLabel,
+    this.checkpointLabel,
+    this.summary,
+    this.taskId,
+    this.dueDate,
+    this.taskType,
+  });
+
+  factory TheaterTaskBrief.fromJson(Map<String, dynamic> json) =>
+      TheaterTaskBrief(
+        title: json['title']?.toString() ?? '',
+        nodeId: json['node_id']?.toString() ?? '',
+        estimatedMinutes: (json['estimated_minutes'] as num?)?.toInt() ??
+            ((json['estimated_minutes'] as num?)?.toInt() ?? 25),
+        dayLabel: json['day_label']?.toString() ?? '',
+        checkpointLabel: json['checkpoint_label']?.toString(),
+        summary: json['summary']?.toString(),
+        taskId: json['task_id']?.toString(),
+        dueDate: json['due_date']?.toString(),
+        taskType: json['task_type']?.toString(),
+      );
+
+  final String title;
+  final String nodeId;
+  final int estimatedMinutes;
+  final String dayLabel;
+  final String? checkpointLabel;
+  final String? summary;
+  final String? taskId;
+  final String? dueDate;
+  final String? taskType;
+}
+
+class TheaterPathOption {
+  const TheaterPathOption({
+    required this.id,
+    required this.title,
+    required this.summary,
+    required this.strategyType,
+    required this.expertIds,
+    required this.estimatedCompletionRate,
+    required this.estimatedMastery,
+    required this.dailyMinutes,
+    required this.risks,
+    required this.steps,
+    this.routeScore = 0,
+    this.checkpointDays = const [],
+    this.weekOneTasks = const [],
+    this.dataSufficiencyScore = 0,
+    this.dataQuality,
+    this.completionRangeLow = 0,
+    this.completionRangeHigh = 0,
+    this.masteryRangeLow = 0,
+    this.masteryRangeHigh = 0,
+    this.calibrationBasis,
+  });
+
+  factory TheaterPathOption.fromJson(Map<String, dynamic> json) =>
+      TheaterPathOption(
+        id: json['id']?.toString() ?? '',
+        title: json['title']?.toString() ?? '',
+        summary: json['summary']?.toString() ?? '',
+        strategyType: json['strategy_type']?.toString() ?? '',
+        expertIds: (json['expert_ids'] as List<dynamic>? ?? const [])
+            .map((item) => item.toString())
+            .toList(),
+        estimatedCompletionRate:
+            (json['estimated_completion_rate'] as num?)?.toDouble() ?? 0,
+        estimatedMastery: (json['estimated_mastery'] as num?)?.toDouble() ?? 0,
+        dailyMinutes: (json['daily_minutes'] as num?)?.toInt() ?? 40,
+        risks: (json['risks'] as List<dynamic>? ?? const [])
+            .map((item) => item.toString())
+            .toList(),
+        routeScore: (json['route_score'] as num?)?.toDouble() ?? 0,
+        dataSufficiencyScore:
+            (json['data_sufficiency_score'] as num?)?.toDouble() ??
+                (json['confidence_score'] as num?)?.toDouble() ??
+                0,
+        dataQuality: json['data_quality']?.toString(),
+        completionRangeLow:
+            (json['completion_range_low'] as num?)?.toDouble() ?? 0,
+        completionRangeHigh:
+            (json['completion_range_high'] as num?)?.toDouble() ?? 0,
+        masteryRangeLow: (json['mastery_range_low'] as num?)?.toDouble() ?? 0,
+        masteryRangeHigh: (json['mastery_range_high'] as num?)?.toDouble() ?? 0,
+        calibrationBasis: json['calibration_basis']?.toString(),
+        checkpointDays: (json['checkpoint_days'] as List<dynamic>? ?? const [])
+            .map((item) => (item as num?)?.toInt() ?? 0)
+            .where((item) => item > 0)
+            .toList(),
+        weekOneTasks: (json['week_one_tasks'] as List<dynamic>? ?? const [])
+            .whereType<Map<String, dynamic>>()
+            .map(TheaterTaskBrief.fromJson)
+            .toList(),
+        steps: (json['steps'] as List<dynamic>? ?? const [])
+            .whereType<Map<String, dynamic>>()
+            .map(TheaterPathStep.fromJson)
+            .toList(),
+      );
+
+  final String id;
+  final String title;
+  final String summary;
+  final String strategyType;
+  final List<String> expertIds;
+  final double estimatedCompletionRate;
+  final double estimatedMastery;
+  final int dailyMinutes;
+  final List<String> risks;
+  final List<TheaterPathStep> steps;
+  final double routeScore;
+  final double dataSufficiencyScore;
+  final String? dataQuality;
+  final double completionRangeLow;
+  final double completionRangeHigh;
+  final double masteryRangeLow;
+  final double masteryRangeHigh;
+  final String? calibrationBasis;
+  final List<int> checkpointDays;
+  final List<TheaterTaskBrief> weekOneTasks;
+
+  TheaterPathOption copyWith({
+    List<TheaterPathStep>? steps,
+  }) =>
+      TheaterPathOption(
+        id: id,
+        title: title,
+        summary: summary,
+        strategyType: strategyType,
+        expertIds: expertIds,
+        estimatedCompletionRate: estimatedCompletionRate,
+        estimatedMastery: estimatedMastery,
+        dailyMinutes: dailyMinutes,
+        risks: risks,
+        steps: steps ?? this.steps,
+        routeScore: routeScore,
+        dataSufficiencyScore: dataSufficiencyScore,
+        dataQuality: dataQuality,
+        completionRangeLow: completionRangeLow,
+        completionRangeHigh: completionRangeHigh,
+        masteryRangeLow: masteryRangeLow,
+        masteryRangeHigh: masteryRangeHigh,
+        calibrationBasis: calibrationBasis,
+        checkpointDays: checkpointDays,
+        weekOneTasks: weekOneTasks,
+      );
+}
+
+class TheaterTimelineFrame {
+  const TheaterTimelineFrame({
+    required this.index,
+    required this.label,
+    required this.dayIndex,
+    required this.routeId,
+    required this.focusNodeIds,
+    required this.discussionTurnIndex,
+    this.projectedMastery = 0,
+    this.projectedCompletionRate = 0,
+    this.activeStepNodeId,
+    this.activeStepTitle,
+    this.compareLabel,
+    this.branchType,
+  });
+
+  factory TheaterTimelineFrame.fromJson(Map<String, dynamic> json) =>
+      TheaterTimelineFrame(
+        index: (json['index'] as num?)?.toInt() ?? 0,
+        label: json['label']?.toString() ?? '',
+        dayIndex: (json['day_index'] as num?)?.toInt() ?? 0,
+        routeId: json['route_id']?.toString() ?? '',
+        focusNodeIds: (json['focus_node_ids'] as List<dynamic>? ?? const [])
+            .map((item) => item.toString())
+            .toList(),
+        discussionTurnIndex:
+            (json['discussion_turn_index'] as num?)?.toInt() ?? 0,
+        projectedMastery: (json['projected_mastery'] as num?)?.toDouble() ?? 0,
+        projectedCompletionRate:
+            (json['projected_completion_rate'] as num?)?.toDouble() ?? 0,
+        activeStepNodeId: json['active_step_node_id']?.toString(),
+        activeStepTitle: json['active_step_title']?.toString(),
+        compareLabel: json['compare_label']?.toString(),
+        branchType: json['branch_type']?.toString(),
+      );
+
+  final int index;
+  final String label;
+  final int dayIndex;
+  final String routeId;
+  final List<String> focusNodeIds;
+  final int discussionTurnIndex;
+  final double projectedMastery;
+  final double projectedCompletionRate;
+  final String? activeStepNodeId;
+  final String? activeStepTitle;
+  final String? compareLabel;
+  final String? branchType;
+}
+
+class TheaterAccuracyTracking {
+  const TheaterAccuracyTracking({
+    required this.predictionId,
+    required this.status,
+    required this.dueOn,
+    required this.summaryHint,
+    this.sampleCount = 0,
+    this.avgAccuracyScore = 0,
+    this.modelConfidence = 0,
+    this.coverageRate,
+    this.dataStatus = 'cold_start',
+    this.recordedAt,
+  });
+
+  factory TheaterAccuracyTracking.fromJson(Map<String, dynamic> json) =>
+      TheaterAccuracyTracking(
+        predictionId: json['prediction_id']?.toString() ?? '',
+        status: json['status']?.toString() ?? 'pending_feedback',
+        dueOn: json['due_on']?.toString() ?? '',
+        summaryHint: json['summary_hint']?.toString() ?? '',
+        sampleCount: (json['sample_count'] as num?)?.toInt() ?? 0,
+        avgAccuracyScore: (json['avg_accuracy_score'] as num?)?.toDouble() ?? 0,
+        modelConfidence: (json['model_confidence'] as num?)?.toDouble() ?? 0,
+        coverageRate: (json['coverage_rate'] as num?)?.toDouble(),
+        dataStatus: json['data_status']?.toString() ?? 'cold_start',
+        recordedAt: json['recorded_at']?.toString(),
+      );
+
+  final String predictionId;
+  final String status;
+  final String dueOn;
+  final String summaryHint;
+  final int sampleCount;
+  final double avgAccuracyScore;
+  final double modelConfidence;
+  final double? coverageRate;
+  final String dataStatus;
+  final String? recordedAt;
+}
+
+class TheaterPrediction {
+  const TheaterPrediction({
+    required this.predictionId,
+    required this.topic,
+    required this.targetNodeId,
+    required this.targetName,
+    required this.horizonDays,
+    required this.paths,
+    required this.discussionTurns,
+    required this.graphNodes,
+    required this.graphEdges,
+    required this.timeline,
+    this.recommendedRouteId = '',
+    this.targetResolutionMode = '',
+    this.candidateBundleId = '',
+    this.semanticMatches = const <TheaterSemanticMatch>[],
+    this.disclaimer,
+    this.accuracyTracking,
+    this.evidenceSummary = const <String, dynamic>{},
+    this.recommendedNextAction = const <String, dynamic>{},
+  });
+
+  factory TheaterPrediction.fromJson(Map<String, dynamic> json) {
+    final graph = json['graph'] as Map<String, dynamic>? ?? const {};
+    return TheaterPrediction(
+      predictionId: json['prediction_id']?.toString() ?? '',
+      topic: json['topic']?.toString() ?? '',
+      targetNodeId: json['target_node_id']?.toString() ?? '',
+      targetName: json['target_name']?.toString() ?? '',
+      horizonDays: (json['horizon_days'] as num?)?.toInt() ?? 14,
+      paths: (json['paths'] as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map(TheaterPathOption.fromJson)
+          .toList(),
+      discussionTurns: (json['discussion_turns'] as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map(TheaterDiscussionTurn.fromJson)
+          .toList(),
+      graphNodes: (graph['nodes'] as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map(TheaterGraphNode.fromJson)
+          .toList(),
+      graphEdges: (graph['edges'] as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map(TheaterGraphEdge.fromJson)
+          .toList(),
+      timeline: (json['timeline'] as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map(TheaterTimelineFrame.fromJson)
+          .toList(),
+      recommendedRouteId: json['recommended_route_id']?.toString() ?? '',
+      targetResolutionMode: json['target_resolution_mode']?.toString() ??
+          (json['routing_notes'] is Map<String, dynamic>
+              ? (json['routing_notes']
+                          as Map<String, dynamic>)['target_resolution_mode']
+                      ?.toString() ??
+                  ''
+              : ''),
+      candidateBundleId: json['candidate_bundle_id']?.toString() ?? '',
+      semanticMatches: json['routing_notes'] is Map<String, dynamic>
+          ? ((((json['routing_notes']
+                          as Map<String, dynamic>)['semantic_matches']
+                      as List<dynamic>?) ??
+                  const [])
+              .whereType<Map<String, dynamic>>()
+              .map(TheaterSemanticMatch.fromJson)
+              .toList())
+          : const <TheaterSemanticMatch>[],
+      disclaimer: json['disclaimer']?.toString(),
+      accuracyTracking: json['accuracy_tracking'] is Map<String, dynamic>
+          ? TheaterAccuracyTracking.fromJson(
+              json['accuracy_tracking'] as Map<String, dynamic>,
+            )
+          : null,
+      evidenceSummary: json['evidence_summary'] is Map
+          ? Map<String, dynamic>.from(json['evidence_summary'] as Map)
+          : const <String, dynamic>{},
+      recommendedNextAction: json['recommended_next_action'] is Map
+          ? Map<String, dynamic>.from(json['recommended_next_action'] as Map)
+          : const <String, dynamic>{},
+    );
+  }
+
+  final String predictionId;
+  final String topic;
+  final String targetNodeId;
+  final String targetName;
+  final int horizonDays;
+  final List<TheaterPathOption> paths;
+  final List<TheaterDiscussionTurn> discussionTurns;
+  final List<TheaterGraphNode> graphNodes;
+  final List<TheaterGraphEdge> graphEdges;
+  final List<TheaterTimelineFrame> timeline;
+  final String recommendedRouteId;
+  final String targetResolutionMode;
+  final String candidateBundleId;
+  final List<TheaterSemanticMatch> semanticMatches;
+  final String? disclaimer;
+  final TheaterAccuracyTracking? accuracyTracking;
+  final Map<String, dynamic> evidenceSummary;
+  final Map<String, dynamic> recommendedNextAction;
+
+  bool get hasMappedGalaxyReferences =>
+      graphNodes.any((node) => (node.mappedGalaxyNodeId ?? '').isNotEmpty) ||
+      paths.any(
+        (path) => path.steps.any(
+          (step) => (step.mappedGalaxyNodeId ?? '').isNotEmpty,
+        ),
+      );
+
+  TheaterPrediction copyWith({
+    List<TheaterGraphNode>? graphNodes,
+    List<TheaterPathOption>? paths,
+  }) =>
+      TheaterPrediction(
+        predictionId: predictionId,
+        topic: topic,
+        targetNodeId: targetNodeId,
+        targetName: targetName,
+        horizonDays: horizonDays,
+        paths: paths ?? this.paths,
+        discussionTurns: discussionTurns,
+        graphNodes: graphNodes ?? this.graphNodes,
+        graphEdges: graphEdges,
+        timeline: timeline,
+        recommendedRouteId: recommendedRouteId,
+        targetResolutionMode: targetResolutionMode,
+        candidateBundleId: candidateBundleId,
+        semanticMatches: semanticMatches,
+        disclaimer: disclaimer,
+        accuracyTracking: accuracyTracking,
+        evidenceSummary: evidenceSummary,
+        recommendedNextAction: recommendedNextAction,
+      );
+}
+
+class TheaterNodePromotionResult {
+  const TheaterNodePromotionResult({
+    required this.predictionId,
+    required this.theaterNodeId,
+    required this.nodeName,
+    required this.galaxyNodeId,
+    required this.created,
+  });
+
+  factory TheaterNodePromotionResult.fromJson(Map<String, dynamic> json) =>
+      TheaterNodePromotionResult(
+        predictionId: json['prediction_id']?.toString() ?? '',
+        theaterNodeId: json['theater_node_id']?.toString() ?? '',
+        nodeName: json['node_name']?.toString() ?? '',
+        galaxyNodeId: json['galaxy_node_id']?.toString() ?? '',
+        created: json['created'] as bool? ?? false,
+      );
+
+  final String predictionId;
+  final String theaterNodeId;
+  final String nodeName;
+  final String galaxyNodeId;
+  final bool created;
+}
+
+class TheaterWhatIfResult {
+  const TheaterWhatIfResult({
+    required this.skipNodeName,
+    required this.predictedMastery,
+    required this.predictedCompletionRate,
+    required this.deltaMastery,
+    required this.deltaCompletionRate,
+    required this.consequences,
+    required this.suggestion,
+    this.skipNodeIds = const [],
+    this.skipNodeNames = const [],
+    this.originalMastery = 0,
+    this.originalCompletionRate = 0,
+    this.remainingPath = const [],
+    this.branchTimeline = const [],
+    this.branchLabel,
+    this.branchFocusNodeIds = const [],
+  });
+
+  factory TheaterWhatIfResult.fromJson(Map<String, dynamic> json) =>
+      TheaterWhatIfResult(
+        skipNodeName: json['skip_node_name']?.toString() ?? '',
+        skipNodeIds: (json['skip_node_ids'] as List<dynamic>? ?? const [])
+            .map((item) => item.toString())
+            .toList(),
+        skipNodeNames: (json['skip_node_names'] as List<dynamic>? ?? const [])
+            .map((item) => item.toString())
+            .toList(),
+        originalMastery: (json['original_mastery'] as num?)?.toDouble() ?? 0,
+        originalCompletionRate:
+            (json['original_completion_rate'] as num?)?.toDouble() ?? 0,
+        predictedMastery: (json['predicted_mastery'] as num?)?.toDouble() ?? 0,
+        predictedCompletionRate:
+            (json['predicted_completion_rate'] as num?)?.toDouble() ?? 0,
+        deltaMastery: (json['delta_mastery'] as num?)?.toDouble() ?? 0,
+        deltaCompletionRate:
+            (json['delta_completion_rate'] as num?)?.toDouble() ?? 0,
+        consequences: (json['consequences'] as List<dynamic>? ?? const [])
+            .map((item) => item.toString())
+            .toList(),
+        suggestion: json['suggestion']?.toString() ?? '',
+        remainingPath: (json['remaining_path'] as List<dynamic>? ?? const [])
+            .whereType<Map<String, dynamic>>()
+            .map(TheaterPathStep.fromJson)
+            .toList(),
+        branchTimeline: (json['branch_timeline'] as List<dynamic>? ?? const [])
+            .whereType<Map<String, dynamic>>()
+            .map(TheaterTimelineFrame.fromJson)
+            .toList(),
+        branchLabel: json['branch_label']?.toString(),
+        branchFocusNodeIds:
+            (json['branch_focus_node_ids'] as List<dynamic>? ?? const [])
+                .map((item) => item.toString())
+                .toList(),
+      );
+
+  final String skipNodeName;
+  final List<String> skipNodeIds;
+  final List<String> skipNodeNames;
+  final double originalMastery;
+  final double originalCompletionRate;
+  final double predictedMastery;
+  final double predictedCompletionRate;
+  final double deltaMastery;
+  final double deltaCompletionRate;
+  final List<String> consequences;
+  final String suggestion;
+  final List<TheaterPathStep> remainingPath;
+  final List<TheaterTimelineFrame> branchTimeline;
+  final String? branchLabel;
+  final List<String> branchFocusNodeIds;
+}
+
+class TheaterSnapshot {
+  const TheaterSnapshot({
+    required this.snapshotId,
+    required this.title,
+    required this.topic,
+    required this.shareResourceType,
+  });
+
+  factory TheaterSnapshot.fromJson(Map<String, dynamic> json) {
+    final shareHint = json['share_hint'] as Map<String, dynamic>? ?? const {};
+    return TheaterSnapshot(
+      snapshotId: json['snapshot_id']?.toString() ?? '',
+      title: json['title']?.toString() ?? '',
+      topic: json['topic']?.toString() ?? '',
+      shareResourceType: shareHint['resource_type']?.toString() ?? '',
+    );
+  }
+
+  final String snapshotId;
+  final String title;
+  final String topic;
+  final String shareResourceType;
+}
+
+class TheaterAdoptionResult {
+  const TheaterAdoptionResult({
+    required this.planId,
+    required this.planName,
+    this.createdTasks = const [],
+    this.checkpointDates = const [],
+    this.reviewDueOn,
+  });
+
+  factory TheaterAdoptionResult.fromJson(Map<String, dynamic> json) =>
+      TheaterAdoptionResult(
+        planId: json['plan_id']?.toString() ?? '',
+        planName: json['plan_name']?.toString() ?? '',
+        createdTasks: (json['created_tasks'] as List<dynamic>? ?? const [])
+            .whereType<Map<String, dynamic>>()
+            .map(TheaterTaskBrief.fromJson)
+            .toList(),
+        checkpointDates:
+            (json['checkpoint_dates'] as List<dynamic>? ?? const [])
+                .whereType<Map<String, dynamic>>()
+                .map(Map<String, dynamic>.from)
+                .toList(),
+        reviewDueOn: json['review_due_on']?.toString(),
+      );
+
+  final String planId;
+  final String planName;
+  final List<TheaterTaskBrief> createdTasks;
+  final List<Map<String, dynamic>> checkpointDates;
+  final String? reviewDueOn;
+}
+
+class TheaterAccuracySummary {
+  const TheaterAccuracySummary({
+    required this.predictedCompletionRate,
+    required this.predictedMastery,
+    required this.actualCompletionRate,
+    required this.actualMastery,
+    required this.accuracyScore,
+    this.withinCompletionRange = false,
+    this.withinMasteryRange = false,
+    this.withinPredictedRange = false,
+  });
+
+  factory TheaterAccuracySummary.fromJson(Map<String, dynamic> json) =>
+      TheaterAccuracySummary(
+        predictedCompletionRate:
+            (json['predicted_completion_rate'] as num?)?.toDouble() ?? 0,
+        predictedMastery: (json['predicted_mastery'] as num?)?.toDouble() ?? 0,
+        actualCompletionRate:
+            (json['actual_completion_rate'] as num?)?.toDouble() ?? 0,
+        actualMastery: (json['actual_mastery'] as num?)?.toDouble() ?? 0,
+        accuracyScore: (json['accuracy_score'] as num?)?.toDouble() ?? 0,
+        withinCompletionRange:
+            json['within_completion_range'] as bool? ?? false,
+        withinMasteryRange: json['within_mastery_range'] as bool? ?? false,
+        withinPredictedRange: json['within_predicted_range'] as bool? ?? false,
+      );
+
+  final double predictedCompletionRate;
+  final double predictedMastery;
+  final double actualCompletionRate;
+  final double actualMastery;
+  final double accuracyScore;
+  final bool withinCompletionRange;
+  final bool withinMasteryRange;
+  final bool withinPredictedRange;
+}
+
+class TheaterAccuracyOverview {
+  const TheaterAccuracyOverview({
+    required this.sampleCount,
+    required this.avgAccuracyScore,
+    required this.completionBiasMean,
+    required this.masteryBiasMean,
+    required this.completionMae,
+    required this.masteryMae,
+    required this.confidenceScore,
+    required this.dataStatus,
+    required this.trend,
+    this.coverageRate,
+  });
+
+  factory TheaterAccuracyOverview.fromJson(Map<String, dynamic> json) =>
+      TheaterAccuracyOverview(
+        sampleCount: (json['sample_count'] as num?)?.toInt() ?? 0,
+        avgAccuracyScore: (json['avg_accuracy_score'] as num?)?.toDouble() ?? 0,
+        completionBiasMean:
+            (json['completion_bias_mean'] as num?)?.toDouble() ?? 0,
+        masteryBiasMean: (json['mastery_bias_mean'] as num?)?.toDouble() ?? 0,
+        completionMae: (json['completion_mae'] as num?)?.toDouble() ?? 0,
+        masteryMae: (json['mastery_mae'] as num?)?.toDouble() ?? 0,
+        coverageRate: (json['coverage_rate'] as num?)?.toDouble(),
+        confidenceScore: (json['confidence_score'] as num?)?.toDouble() ?? 0,
+        dataStatus: json['data_status']?.toString() ?? 'cold_start',
+        trend: json['trend']?.toString() ?? 'insufficient_data',
+      );
+
+  final int sampleCount;
+  final double avgAccuracyScore;
+  final double completionBiasMean;
+  final double masteryBiasMean;
+  final double completionMae;
+  final double masteryMae;
+  final double? coverageRate;
+  final double confidenceScore;
+  final String dataStatus;
+  final String trend;
+}
+
+class TheaterGalaxyOverlay {
+  const TheaterGalaxyOverlay({
+    required this.title,
+    required this.topic,
+    required this.focusNodeIds,
+    required this.highlightEdgeIds,
+    required this.nodeRiskLevels,
+    required this.predictedMasteryByNodeId,
+  });
+
+  final String title;
+  final String topic;
+  final List<String> focusNodeIds;
+  final List<String> highlightEdgeIds;
+  final Map<String, String> nodeRiskLevels;
+  final Map<String, double> predictedMasteryByNodeId;
+}

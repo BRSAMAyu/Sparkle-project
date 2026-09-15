@@ -1,0 +1,642 @@
+"""
+Translation Service - Focus Translate v2
+
+Provides segment-based translation with caching, glossary support, and timeout handling.
+"""
+from __future__ import annotations
+
+import asyncio
+import hashlib
+import json
+import re
+import time
+from dataclasses import asdict, dataclass
+from typing import Any
+from uuid import UUID
+
+from loguru import logger
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.config.settings import settings
+from app.core.cache import cache_service
+from app.core.cost_controller import is_llm_within_budget
+from app.core.llm_client import SecureLLMClient
+from app.services.circuit_breaker import CircuitBreakerOpenException, circuit_breaker_service
+from app.services.llm_service import llm_service
+from app.services.vocabulary_service import vocabulary_service
+
+
+@dataclass
+class TranslationSegment:
+    """Input segment for translation"""
+    id: str
+    text: str
+
+
+@dataclass
+class TranslatedSegment:
+    """Translated segment with metadata"""
+    id: str
+    translation: str
+    notes: list[str]
+    spans: list[dict[str, Any]]  # Alignment spans (future enhancement)
+
+
+@dataclass
+class TranslationResult:
+    """Complete translation result"""
+    segments: list[TranslatedSegment]
+    provider: str
+    model_id: str
+    cache_hit: bool
+    latency_ms: int
+    recommendation: dict[str, Any] | None = None
+
+
+class TranslationService:
+    """
+    Translation service with segmentation, caching, and terminology support.
+
+    Features:
+    - Segment-based translation for better caching
+    - L2 cache with stable keys (segmenter_version + prompt_version)
+    - Glossary support for terminology consistency
+    - Timeout fallback for reliability
+    """
+
+    VERSION = "v2"
+    SEGMENTER_VERSION = "seg_v2"
+    PROMPT_VERSION = "focus_translate_v3"
+
+    def __init__(self):
+        self.segmenter_version = self.SEGMENTER_VERSION
+        self.prompt_version = self.PROMPT_VERSION
+        self.primary_provider = self._normalize_provider(settings.TRANSLATION_PRIMARY_PROVIDER)
+        self.backup_provider = self._normalize_provider(settings.TRANSLATION_BACKUP_PROVIDER)
+
+    async def translate(
+        self,
+        segments: list[TranslationSegment],
+        source_lang: str,
+        target_lang: str,
+        domain: str = "general",
+        style: str = "natural",
+        glossary_id: str | None = None,
+        timeout: float = 15.0,
+        # v2 Signals
+        user_id: UUID | None = None,
+        fingerprint: str | None = None,
+        db: AsyncSession | None = None
+    ) -> TranslationResult:
+        """
+        Translate text segments with caching and terminology support.
+
+        Args:
+            segments: Text segments to translate
+            source_lang: Source language code (e.g., "en")
+            target_lang: Target language code (e.g., "zh-CN")
+            domain: Domain for terminology ("cs", "math", "business", "general")
+            style: Translation style ("concise", "literal", "natural")
+            glossary_id: Optional glossary for terminology consistency
+            timeout: Max time per segment (default: 15.0s)
+            user_id: User ID for quota tracking
+            fingerprint: Content hash for signal tracking
+            db: Database session for quota check
+
+        Returns:
+            TranslationResult with translated segments
+        """
+        # R4-P0-5: Budget preflight check - translation uses LLM APIs
+        if not await is_llm_within_budget():
+            logger.warning("Translation blocked: LLM daily budget exhausted")
+            return TranslationResult(
+                segments=[],
+                provider="blocked",
+                model_id="blocked",
+                cache_hit=False,
+                latency_ms=0,
+                recommendation=None
+            )
+
+        start_time = time.time()
+
+        # 0. Evaluate signals (Async, non-blocking for translation)
+        recommendation = None
+        if user_id and db:
+            try:
+                recommendation = await self._evaluate_signals(user_id, fingerprint, db)
+            except Exception as e:
+                logger.warning(f"Signal evaluation failed: {e}")
+
+        # 1. Check L2 cache (by segment hash)
+        cache_key = self._generate_cache_key(
+            segments, source_lang, target_lang, domain, style, glossary_id
+        )
+
+        cached = await cache_service.get(cache_key)
+        if cached:
+            logger.info(f"Translation cache hit: {cache_key}")
+            return TranslationResult(
+                segments=[
+                    TranslatedSegment(**seg) for seg in cached["segments"]
+                ],
+                provider="cache",
+                model_id="cached",
+                cache_hit=True,
+                latency_ms=int((time.time() - start_time) * 1000),
+                recommendation=recommendation
+            )
+
+        # 2. Load glossary if specified
+        glossary_terms = await self._load_glossary(glossary_id) if glossary_id else []
+
+        # 3. Translate each segment
+        translated_segments = []
+        actual_provider = "llm"
+        actual_model = llm_service.chat_model
+
+        for segment in segments:
+            try:
+                # _translate_segment now returns a dict with provider info
+                tx_result = await asyncio.wait_for(
+                    self._translate_segment(
+                        segment, source_lang, target_lang,
+                        domain, style, glossary_terms
+                    ),
+                    timeout=timeout
+                )
+                translated_segments.append(tx_result["segment"])
+
+                # Update provider info from the last successful segment
+                actual_provider = tx_result["provider"]
+                actual_model = tx_result["model"]
+            except TimeoutError:
+                logger.warning(f"Translation timeout for segment {segment.id}: {segment.text[:50]}...")
+                # Fallback: simple placeholder
+                translated_segments.append(TranslatedSegment(
+                    id=segment.id,
+                    translation=f"[Translation timeout: {segment.text[:50]}...]",
+                    notes=["Translation service timeout"],
+                    spans=[]
+                ))
+            except Exception as e:
+                logger.error(f"Translation error for segment {segment.id}: {e}")
+                translated_segments.append(TranslatedSegment(
+                    id=segment.id,
+                    translation=f"[Translation error: {str(e)}]",
+                    notes=[f"Error: {type(e).__name__}"],
+                    spans=[]
+                ))
+
+        # 4. Store in cache
+        result = TranslationResult(
+            segments=translated_segments,
+            provider=actual_provider,
+            model_id=actual_model,
+            cache_hit=False,
+            latency_ms=int((time.time() - start_time) * 1000),
+            recommendation=recommendation
+        )
+
+        # Cache for 24 hours
+        await cache_service.set(cache_key, {
+            "segments": [asdict(s) for s in translated_segments]
+        }, ttl=86400)
+
+        logger.info(
+            f"Translation completed: {len(segments)} segments, "
+            f"{result.latency_ms}ms, cache_key={cache_key[:16]}..."
+        )
+
+        return result
+
+    async def _evaluate_signals(
+        self,
+        user_id: UUID | str | None,
+        fingerprint: str | None,
+        db: AsyncSession
+    ) -> dict[str, Any]:
+        """
+        Evaluate user signals to generate recommendations.
+
+        Rules:
+        1. Daily Quota: Max cards/day (configurable).
+        2. Repetition: If fingerprint seen > 1 times in 1 hour -> Suggest card.
+        """
+        daily_limit = settings.TRANSLATION_DAILY_CARD_LIMIT
+
+        # Convert user_id to UUID if it's a string
+        user_uuid = None
+        if user_id:
+            try:
+                user_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
+            except ValueError:
+                logger.warning(f"Invalid user_id format: {user_id}")
+                return {
+                    "should_create_card": False,
+                    "reason": None,
+                    "daily_quota_remaining": daily_limit
+                }
+
+        # 1. Check Quota (Fast DB query)
+        quota_remaining = daily_limit
+        if user_uuid:
+            try:
+                created_today = await vocabulary_service.get_today_creation_count(db, user_uuid)
+                quota_remaining = max(0, daily_limit - created_today)
+            except Exception as e:
+                logger.warning(f"Failed to check quota: {e}")
+                quota_remaining = daily_limit  # Assume full quota on error
+
+        should_create = False
+        reason = None
+
+        if quota_remaining > 0 and fingerprint:
+            # 2. Check Repetition (Redis)
+            # Key: translation:signal:freq:{user_id}:{fingerprint}
+            # TTL: 1 hour (short term memory)
+            freq_key = f"translation:signal:freq:{user_id}:{fingerprint}"
+            count = await cache_service.incr(freq_key)
+            await cache_service.expire(freq_key, 3600)
+
+            if count >= 2:
+                should_create = True
+                reason = "repeated_query"
+
+        return {
+            "should_create_card": should_create,
+            "reason": reason,
+            "daily_quota_remaining": quota_remaining
+        }
+
+    async def _translate_segment(
+        self,
+        segment: TranslationSegment,
+        source_lang: str,
+        target_lang: str,
+        domain: str,
+        style: str,
+        glossary_terms: list[dict[str, str]]
+    ) -> dict[str, Any]:
+        """使用翻译专用模型（经由 Hunyuan 或 SiliconFlow），失败时 fallback 到通用 LLM。"""
+
+        # Language name mapping for clearer prompts
+        LANGUAGE_NAMES = {
+            "zh-CN": "Chinese (Simplified)", "zh": "Chinese",
+            "en": "English",
+            "ja": "Japanese", "ko": "Korean",
+            "fr": "French", "de": "German",
+            "es": "Spanish", "ru": "Russian",
+            "ar": "Arabic", "pt": "Portuguese",
+            "it": "Italian", "nl": "Dutch",
+            "auto": "auto-detected language"
+        }
+
+        source_name = LANGUAGE_NAMES.get(source_lang, source_lang)
+        target_name = LANGUAGE_NAMES.get(target_lang, target_lang)
+
+        # Build prompt with glossary
+        glossary_text = ""
+        if glossary_terms:
+            glossary_text = "\n\nTerminology:\n" + "\n".join(
+                [f"- {t['source']}: {t['target']}" for t in glossary_terms[:10]]
+            )
+
+        system_prompt = (
+            "You are a professional translation engine. "
+            "Return only the translated text. "
+            "Do not add labels, markdown headings, notes, or explanations."
+        )
+        user_prompt = (
+            f"Source language: {source_name}\n"
+            f"Target language: {target_name}\n"
+            f"Domain: {domain}\n"
+            f"Style: {style}{glossary_text}\n\n"
+            f"Text:\n{segment.text}"
+        )
+
+        used_provider = "llm"
+        used_model = llm_service.chat_model
+
+        translation = ""
+        last_error: Exception | None = None
+        for provider_name in self._provider_order():
+            config = self._provider_config(provider_name)
+            if not config:
+                continue
+            try:
+                await circuit_breaker_service.check(self._circuit_key(provider_name))
+                translate_client = SecureLLMClient.get(
+                    api_key=config["api_key"],
+                    base_url=config["base_url"],
+                    timeout_seconds=settings.TRANSLATION_PROVIDER_TIMEOUT_SECONDS,
+                )
+                translation = await translate_client.chat(
+                    model=config["model"],
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    temperature=0.3,
+                )
+                translation = translation.strip()
+                if not self._is_valid_translation_output(
+                    translation,
+                    segment.text,
+                    source_lang=source_lang,
+                    target_lang=target_lang,
+                ):
+                    raise ValueError("translation model returned prompt echo instead of translated text")
+                await circuit_breaker_service.record_success(self._circuit_key(provider_name))
+                used_provider = provider_name
+                used_model = config["model"]
+                break
+            except CircuitBreakerOpenException as exc:
+                logger.warning(f"Translation provider {provider_name} skipped because circuit breaker is open: {exc}")
+                last_error = exc
+            except Exception as exc:
+                logger.warning(f"Translation provider {provider_name} failed: {exc}")
+                await circuit_breaker_service.record_failure(self._circuit_key(provider_name))
+                last_error = exc
+
+        if not translation:
+            logger.warning(f"Translation specialists failed, using fallback LLM: {last_error}")
+            response = await llm_service.chat(
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                model=llm_service.chat_model
+            )
+            translation = response.strip()
+            if not self._is_valid_translation_output(
+                translation,
+                segment.text,
+                source_lang=source_lang,
+                target_lang=target_lang,
+            ):
+                raise ValueError("fallback translation returned prompt echo instead of translated text")
+            used_provider = "llm"
+            used_model = llm_service.chat_model
+
+        # Extract terminology notes (simple heuristic)
+        notes = []
+        for term in glossary_terms:
+            if term["source"].lower() in segment.text.lower():
+                notes.append(f"{term['source']} = {term['target']}")
+
+        return {
+            "segment": TranslatedSegment(
+                id=segment.id,
+                translation=translation,
+                notes=notes,
+                spans=[]
+            ),
+            "provider": used_provider,
+            "model": used_model
+        }
+
+    @staticmethod
+    def _normalize_language_family(language_code: str | None) -> str:
+        normalized = (language_code or "").strip().lower()
+        if normalized.startswith("zh"):
+            return "zh"
+        if normalized.startswith("en"):
+            return "en"
+        if normalized.startswith("ja"):
+            return "ja"
+        if normalized.startswith("ko"):
+            return "ko"
+        return "unknown"
+
+    @staticmethod
+    def _detect_language_family(text: str) -> str:
+        sample = text or ""
+        latin_chars = len(re.findall(r"[A-Za-z]", sample))
+        cjk_chars = len(re.findall(r"[\u4e00-\u9fff]", sample))
+        kana_chars = len(re.findall(r"[\u3040-\u30ff]", sample))
+        hangul_chars = len(re.findall(r"[\uac00-\ud7af]", sample))
+
+        if kana_chars > 0:
+            return "ja"
+        if hangul_chars > 0:
+            return "ko"
+        if cjk_chars >= 4 and cjk_chars * 2 >= latin_chars:
+            return "zh"
+        if cjk_chars > latin_chars:
+            return "zh"
+        if latin_chars > 0:
+            return "en"
+        return "unknown"
+
+    @staticmethod
+    def _looks_like_prompt_echo(text: str) -> bool:
+        normalized = text.strip().lower()
+        markers = (
+            "translate the following text",
+            "output only the translation",
+            "source language:",
+            "target language:",
+            "domain:",
+            "style:",
+            "source text:",
+            "translated text:",
+            "仅输出翻译结果",
+        )
+
+        if normalized.startswith(("translate the following text", "output only the translation")):
+            return True
+
+        marker_hits = sum(1 for marker in markers if marker in normalized)
+        if marker_hits >= 2:
+            return True
+
+        prefixed_lines = 0
+        for line in normalized.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            if any(line.startswith(marker) for marker in markers[2:]):
+                prefixed_lines += 1
+        return prefixed_lines >= 2
+
+    @classmethod
+    def _is_valid_translation_output(
+        cls,
+        translation: str,
+        source_text: str,
+        *,
+        source_lang: str | None = None,
+        target_lang: str | None = None,
+    ) -> bool:
+        """Reject prompt echoes and instruction leakage from model output."""
+        normalized = translation.strip().lower()
+        if not normalized:
+            return False
+
+        if normalized == source_text.strip().lower():
+            return False
+
+        target_family = cls._normalize_language_family(target_lang)
+        source_family = cls._normalize_language_family(source_lang)
+        detected_family = cls._detect_language_family(translation)
+        looks_like_prompt_echo = cls._looks_like_prompt_echo(translation)
+
+        if looks_like_prompt_echo and target_family != "unknown":
+            if detected_family in {"unknown", source_family}:
+                return False
+            if detected_family != target_family:
+                return False
+
+        if (
+            target_family != "unknown"
+            and source_family != "unknown"
+            and source_family != target_family
+            and detected_family == source_family
+            and len(translation.strip()) >= max(12, len(source_text.strip()) // 2)
+        ):
+            return False
+
+        return True
+
+    @staticmethod
+    def _normalize_provider(provider_name: str | None) -> str:
+        normalized = (provider_name or "").strip().lower()
+        return normalized or "hunyuan"
+
+    def _provider_order(self) -> list[str]:
+        ordered: list[str] = []
+        for provider in (
+            self.primary_provider,
+            self.backup_provider,
+            "hunyuan",
+            "siliconflow",
+        ):
+            if provider and provider not in ordered:
+                ordered.append(provider)
+        return ordered
+
+    def _provider_config(self, provider_name: str) -> dict[str, str] | None:
+        if provider_name == "hunyuan":
+            api_key = settings.HUNYUAN_API_KEY
+            if not api_key:
+                return None
+            return {
+                "api_key": api_key,
+                "base_url": settings.HUNYUAN_BASE_URL,
+                "model": settings.HUNYUAN_TRANSLATE_MODEL,
+            }
+        if provider_name == "siliconflow":
+            api_key = settings.SILICONFLOW_API_KEY
+            if not api_key:
+                return None
+            return {
+                "api_key": api_key,
+                "base_url": settings.SILICONFLOW_BASE_URL,
+                "model": settings.SILICONFLOW_TRANSLATE_MODEL,
+            }
+        return None
+
+    def _circuit_key(self, provider_name: str) -> str:
+        return f"translation:{provider_name}"
+
+    def _generate_cache_key(
+        self,
+        segments: list[TranslationSegment],
+        source_lang: str,
+        target_lang: str,
+        domain: str,
+        style: str,
+        glossary_id: str | None
+    ) -> str:
+        """
+        Generate stable cache key.
+
+        Includes:
+        - Normalized segment text (lowercase, trimmed)
+        - Language pair
+        - Domain and style
+        - Glossary ID
+        - Segmenter version
+        - Prompt version
+        """
+        # Normalize text
+        normalized = [s.text.strip().lower() for s in segments]
+
+        key_data = {
+            "segments": normalized,
+            "source_lang": source_lang,
+            "target_lang": target_lang,
+            "domain": domain,
+            "style": style,
+            "glossary_id": glossary_id or "",
+            "segmenter_version": self.segmenter_version,
+            "prompt_version": self.prompt_version
+        }
+
+        key_str = json.dumps(key_data, sort_keys=True)
+        hash_val = hashlib.sha256(key_str.encode()).hexdigest()[:16]
+        return f"translation:{hash_val}"
+
+    async def _load_glossary(self, glossary_id: str) -> list[dict[str, str]]:
+        """
+        Load glossary terms from database or config.
+
+        Args:
+            glossary_id: Glossary identifier
+
+        Returns:
+            List of term mappings [{"source": "cache", "target": "缓存"}, ...]
+        """
+        # TRACKED(TD-007): Implement glossary storage in database
+        # For MVP, return built-in CS glossary
+
+        if glossary_id == "cs_terms_v1":
+            return [
+                {"source": "cache", "target": "缓存"},
+                {"source": "database", "target": "数据库"},
+                {"source": "API", "target": "应用程序接口"},
+                {"source": "function", "target": "函数"},
+                {"source": "variable", "target": "变量"},
+                {"source": "loop", "target": "循环"},
+                {"source": "condition", "target": "条件"},
+                {"source": "array", "target": "数组"},
+                {"source": "object", "target": "对象"},
+                {"source": "class", "target": "类"},
+            ]
+
+        return []
+
+    def segment_text(self, text: str) -> list[TranslationSegment]:
+        """
+        Segment text into translation units.
+
+        Uses simple sentence splitting for MVP.
+        TRACKED(TD-007): Use proper sentence tokenizer (spacy, nltk) in Phase 2.
+
+        Args:
+            text: Input text to segment
+
+        Returns:
+            List of TranslationSegment objects
+        """
+        import re
+
+        # Split by sentence terminators
+        sentences = re.split(r'[.!?。！？]+', text)
+
+        # Filter empty and create segments
+        segments = []
+        for i, sentence in enumerate(sentences):
+            cleaned = sentence.strip()
+            if cleaned:
+                segments.append(TranslationSegment(
+                    id=f"s{i}",
+                    text=cleaned
+                ))
+
+        return segments
+
+
+# Singleton instance
+translation_service = TranslationService()

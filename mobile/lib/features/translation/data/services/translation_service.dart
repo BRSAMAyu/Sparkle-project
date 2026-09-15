@@ -1,0 +1,173 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/network/api_client.dart';
+
+/// Translation service provider
+final translationServiceProvider = Provider<TranslationService>((ref) {
+  final apiClient = ref.watch(apiClientProvider);
+  return TranslationService(apiClient);
+});
+
+/// Translation segment data
+class TranslationSegmentData {
+
+  TranslationSegmentData({
+    required this.id,
+    required this.translation,
+    required this.notes,
+  });
+
+  factory TranslationSegmentData.fromJson(Map<String, dynamic> json) => TranslationSegmentData(
+      id: json['id'] as String,
+      translation: json['translation'] as String,
+      notes: (json['notes'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          [],
+    );
+  final String id;
+  final String translation;
+  final List<String> notes;
+}
+
+/// Translation recommendation data
+class TranslationRecommendation {
+
+  TranslationRecommendation({
+    required this.shouldCreateCard,
+    required this.dailyQuotaRemaining, this.reason,
+  });
+
+  factory TranslationRecommendation.fromJson(Map<String, dynamic> json) => TranslationRecommendation(
+      shouldCreateCard: json['should_create_card'] as bool? ?? false,
+      reason: json['reason'] as String?,
+      dailyQuotaRemaining: json['daily_quota_remaining'] as int? ?? 0,
+    );
+  final bool shouldCreateCard;
+  final String? reason;
+  final int dailyQuotaRemaining;
+}
+
+/// Translation result
+class TranslationResult {
+
+  TranslationResult({
+    required this.success,
+    required this.translation,
+    required this.segments,
+    required this.meta, this.recommendation,
+  });
+
+  factory TranslationResult.fromJson(Map<String, dynamic> json) => TranslationResult(
+      success: json['success'] as bool? ?? false,
+      translation: json['translation'] as String? ?? '',
+      segments: (json['segments'] as List<dynamic>?)
+              ?.map((e) => TranslationSegmentData.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+      recommendation: json['recommendation'] != null
+          ? TranslationRecommendation.fromJson(
+              json['recommendation'] as Map<String, dynamic>,)
+          : null,
+      meta: (json['meta'] as Map<String, dynamic>?) ?? {},
+    );
+  final bool success;
+  final String translation;
+  final List<TranslationSegmentData> segments;
+  final TranslationRecommendation? recommendation;
+  final Map<String, dynamic> meta;
+
+  /// Check if result was from cache
+  bool get isCacheHit => meta['cache_hit'] == true;
+
+
+  /// Get provider name
+  String get provider => meta['provider'] as String? ?? 'unknown';
+
+  /// Get latency in milliseconds
+  int get latencyMs => meta['latency_ms'] as int? ?? 0;
+
+  /// Get source language
+  String get sourceLang => meta['source_lang'] as String? ?? 'en';
+
+  /// Get target language
+  String get targetLang => meta['target_lang'] as String? ?? 'zh-CN';
+}
+
+/// Translation service for API calls
+class TranslationService {
+
+  TranslationService(this._apiClient);
+  final ApiClient _apiClient;
+
+  /// Translate text from one language to another
+  ///
+  /// [text] - Text to translate
+  /// [sourceLang] - Source language code (default: 'en')
+  /// [targetLang] - Target language code (default: 'zh-CN')
+  /// [domain] - Domain for terminology: 'cs', 'math', 'business', 'general'
+  /// [style] - Translation style: 'concise', 'literal', 'natural'
+  /// [glossaryId] - Optional glossary ID for terminology consistency
+  /// [fingerprint] - Optional context fingerprint for signal tracking
+  /// [contextBefore] - Text preceding selection
+  /// [contextAfter] - Text following selection
+  /// [pageNo] - Page number in document
+  /// [sourceFileId] - Document identifier
+  Future<TranslationResult> translate({
+    required String text,
+    String sourceLang = 'en',
+    String targetLang = 'zh-CN',
+    String domain = 'general',
+    String style = 'natural',
+    String? glossaryId,
+    String? fingerprint,
+    String? contextBefore,
+    String? contextAfter,
+    int? pageNo,
+    String? sourceFileId,
+  }) async {
+    final response = await _apiClient.post<Map<String, dynamic>>(
+      '/translation/translate',
+      data: {
+        'text': text,
+        'source_lang': sourceLang,
+        'target_lang': targetLang,
+        'domain': domain,
+        'style': style,
+        if (glossaryId != null) 'glossary_id': glossaryId,
+        // v2 Signals
+        if (fingerprint != null) 'fingerprint': fingerprint,
+        if (contextBefore != null) 'context_before': contextBefore,
+        if (contextAfter != null) 'context_after': contextAfter,
+        if (pageNo != null) 'page_no': pageNo,
+        if (sourceFileId != null) 'source_file_id': sourceFileId,
+      },
+    );
+
+    final data = response.data;
+    if (data == null) {
+      return TranslationResult(
+        success: false,
+        translation: '',
+        segments: [],
+        meta: {'error': 'Empty response from translation service'},
+      );
+    }
+    return TranslationResult.fromJson(data);
+  }
+
+  /// Get available glossaries
+  Future<List<Map<String, dynamic>>> getGlossaries() async {
+    final response = await _apiClient.get<Map<String, dynamic>>('/translation/glossaries');
+    final data = response.data;
+    if (data == null) {
+      return [];
+    }
+    final glossaries = data['glossaries'];
+    if (glossaries is! List<dynamic>) {
+      return [];
+    }
+    return glossaries
+        .whereType<Map<String, dynamic>>()
+        .toList();
+  }
+}

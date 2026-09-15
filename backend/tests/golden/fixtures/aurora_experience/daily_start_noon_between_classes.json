@@ -1,0 +1,19 @@
+{
+  "id": "daily_start_noon_between_classes",
+  "family": "daily_start",
+  "kind": "daily_start",
+  "title": "每日开场：午间碎片时间",
+  "input": {
+    "greeting": "下午好",
+    "display_name": "",
+    "plan_name": "计算机网络冲刺",
+    "subject": "计算机网络",
+    "day_index": 2,
+    "today_focus": "TCP 流量控制",
+    "estimated_minutes": 45,
+    "completion_rate": 0.55,
+    "adjustment_reason": "昨天完成率 55%，今天稳住节奏，先完成一个闭环。",
+    "day_recommendation": "午间只做概念回忆，晚上再补题",
+    "calendar_note": "今天 14:00-15:30 你有「高数考试」，建议把「TCP 流量控制」放在 16:00-17:00 的空档里"
+  }
+}

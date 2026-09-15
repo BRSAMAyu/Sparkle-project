@@ -1,0 +1,585 @@
+import 'dart:async';
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/features/document/controllers/document_controller.dart';
+import 'package:sparkle/features/document/models/document_cleaning_model.dart';
+import 'package:sparkle/features/tools/models/tool_definition.dart';
+import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
+
+class DocumentCleanerSheet extends StatelessWidget {
+  const DocumentCleanerSheet({required this.onResult, super.key});
+
+  final ValueChanged<String> onResult;
+
+  @override
+  Widget build(BuildContext context) => DocumentCleanerPanel(
+        onResult: onResult,
+        surface: ToolSurface.sheet,
+      );
+}
+
+class DocumentCleanerPanel extends ConsumerStatefulWidget {
+  const DocumentCleanerPanel({
+    super.key,
+    this.onResult,
+    this.surface = ToolSurface.page,
+  });
+
+  final ValueChanged<String>? onResult;
+  final ToolSurface surface;
+
+  @override
+  ConsumerState<DocumentCleanerPanel> createState() =>
+      _DocumentCleanerPanelState();
+}
+
+class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
+  File? _selectedFile;
+  bool _enableOcr = true;
+  String _ocrEngine = 'zhipu';
+
+  bool get _isSheet => widget.surface == ToolSurface.sheet;
+
+  @override
+  void dispose() {
+    ref.read(documentControllerProvider.notifier).reset();
+    super.dispose();
+  }
+
+  Future<void> _pickFile() async {
+    unawaited(
+      SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen),
+    );
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf', 'docx', 'pptx', 'jpg', 'jpeg', 'png', 'webp', 'gif'],
+    );
+
+    if (result == null || result.files.single.path == null) {
+      return;
+    }
+
+    setState(() {
+      _selectedFile = File(result.files.single.path!);
+    });
+    unawaited(
+      SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+    );
+  }
+
+  Future<void> _startCleaning() async {
+    if (_selectedFile == null) {
+      AppFeedback.info(context, context.l10n.docCleanerSelectFileFirst);
+      return;
+    }
+
+    unawaited(
+      SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
+    );
+    await ref.read(documentControllerProvider.notifier).startCleaning(
+          _selectedFile!,
+          enableOcr: _enableOcr,
+          ocrEngine: _ocrEngine,
+        );
+
+    try {
+      await FilePicker.platform.clearTemporaryFiles();
+    } catch (e) {
+      debugPrint('Error clearing temp files: $e');
+    }
+  }
+
+  Future<void> _copyResult(String text) async {
+    await Clipboard.setData(ClipboardData(text: text));
+    if (!mounted) {
+      return;
+    }
+    unawaited(
+      SensoryFeedbackService.emit(SensoryFeedbackEvent.success),
+    );
+    AppFeedback.success(context, context.l10n.docCleanerResultCopied);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(documentControllerProvider);
+    final accent = DS.brandPrimary;
+    final fileName = _selectedFile?.path.split('/').last;
+    final extension = fileName?.split('.').last.toUpperCase();
+    final fileSize = _selectedFile == null
+        ? null
+        : '${(_selectedFile!.lengthSync() / (1024 * 1024)).toStringAsFixed(1)} MB';
+
+    return ToolShell(
+      surface: widget.surface,
+      icon: Icons.auto_awesome_motion_rounded,
+      title: context.l10n.docCleanerTitle,
+      subtitle: context.l10n.docCleanerSubtitle,
+      accentColor: accent,
+      compactHeader: true,
+      fillHeight: true,
+      headerAction: _isSheet
+          ? SparkleIconButton(
+              icon: const Icon(Icons.close_rounded),
+              onPressed: () => Navigator.of(context).pop(),
+              variant: ButtonVariant.ghost,
+            )
+          : null,
+      heroChips: [
+        ToolHeroChip(
+          label: _enableOcr ? context.l10n.docCleanerOcrOn : context.l10n.docCleanerPlainText,
+          accentColor: accent,
+          icon: _enableOcr ? Icons.visibility_rounded : Icons.notes_rounded,
+        ),
+        ToolHeroChip(
+          label:
+              fileName == null ? context.l10n.docCleanerSupportFormats : extension ?? context.l10n.docCleanerFileSelected,
+          accentColor: accent,
+          icon: Icons.insert_drive_file_rounded,
+        ),
+      ],
+      body: state.when(
+        data: (taskStatus) => SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Wrap(
+                spacing: DS.spacing12,
+                runSpacing: DS.spacing12,
+                children: [
+                  ToolMetricCard(
+                    label: context.l10n.docCleanerEngine,
+                    value: _enableOcr
+                        ? (_ocrEngine == 'zhipu' ? 'GLM OCR' : context.l10n.docCleanerLocalFast)
+                        : context.l10n.docCleanerSkipOcr,
+                    accentColor: accent,
+                    icon: Icons.tune_rounded,
+                    caption: context.l10n.docCleanerScanOcrHint,
+                  ),
+                  ToolMetricCard(
+                    label: context.l10n.docCleanerFileSize,
+                    value: fileSize ?? '--',
+                    accentColor: accent,
+                    icon: Icons.sd_storage_rounded,
+                    caption: fileName == null ? context.l10n.docCleanerNoFile : context.l10n.docCleanerCurrentFile,
+                  ),
+                ],
+              ),
+              const SizedBox(height: DS.spacing16),
+              if (taskStatus == null)
+                _buildSetupCard(accent, fileName, extension),
+              if (taskStatus != null &&
+                  (taskStatus.status == 'queued' ||
+                      taskStatus.status == 'processing'))
+                _buildProgress(taskStatus, accent),
+              if (taskStatus != null &&
+                  taskStatus.status == 'completed' &&
+                  taskStatus.result != null)
+                _buildSuccess(taskStatus.result!, accent),
+              if (taskStatus != null &&
+                  taskStatus.status != 'queued' &&
+                  taskStatus.status != 'processing' &&
+                  !(taskStatus.status == 'completed' &&
+                      taskStatus.result != null))
+                _buildError(taskStatus.message, accent),
+            ],
+          ),
+        ),
+        error: (err, stack) => _buildError(err.toString(), accent),
+        loading: () => Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: DS.spacing32),
+            child: CircularProgressIndicator(color: accent),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSetupCard(Color accent, String? fileName, String? extension) =>
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ToolSectionCard(
+            accentColor: accent,
+            title: context.l10n.docCleanerFileSelectTitle,
+            subtitle: context.l10n.docCleanerFileSelectSubtitle,
+            child: InkWell(
+              onTap: _pickFile,
+              borderRadius: BorderRadius.circular(24),
+              child: Ink(
+                padding: const EdgeInsets.all(DS.spacing20),
+                decoration: BoxDecoration(
+                  color: DS.surfacePrimary,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: DS.borderSubtle),
+                ),
+                child: fileName == null
+                    ? Column(
+                        children: [
+                          Icon(
+                            Icons.cloud_upload_rounded,
+                            size: 44,
+                            color: accent,
+                          ),
+                          const SizedBox(height: DS.spacing12),
+                          Text(
+                            context.l10n.docCleanerClickSelect,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(
+                                  color: DS.textPrimary,
+                                  fontWeight: DS.fontWeightBold,
+                                ),
+                          ),
+                          const SizedBox(height: DS.spacing6),
+                          Text(
+                            context.l10n.docCleanerSupportedTypes,
+                            textAlign: TextAlign.center,
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: DS.textSecondary,
+                                      height: 1.5,
+                                    ),
+                          ),
+                        ],
+                      )
+                    : LayoutBuilder(
+                        builder: (context, constraints) {
+                          final compact = constraints.maxWidth < 620;
+                          Widget buildFileInfo() => Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    fileName,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(
+                                          color: DS.textPrimary,
+                                          fontWeight: DS.fontWeightBold,
+                                        ),
+                                  ),
+                                  const SizedBox(height: DS.spacing4),
+                                  Text(
+                                    extension ?? context.l10n.docCleanerDocFile,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(color: DS.textSecondary),
+                                  ),
+                                ],
+                              );
+
+                          if (compact) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  width: 52,
+                                  height: 52,
+                                  decoration: BoxDecoration(
+                                    color: accent.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Icon(
+                                    Icons.insert_drive_file_rounded,
+                                    color: accent,
+                                  ),
+                                ),
+                                const SizedBox(height: DS.spacing12),
+                                buildFileInfo(),
+                                const SizedBox(height: DS.spacing12),
+                                SparkleButton(
+                                  label: context.l10n.docCleanerChangeFile,
+                                  variant: ButtonVariant.ghost,
+                                  onPressed: _pickFile,
+                                  expand: true,
+                                ),
+                              ],
+                            );
+                          }
+
+                          return Row(
+                            children: [
+                              Container(
+                                width: 52,
+                                height: 52,
+                                decoration: BoxDecoration(
+                                  color: accent.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Icon(
+                                  Icons.insert_drive_file_rounded,
+                                  color: accent,
+                                ),
+                              ),
+                              const SizedBox(width: DS.spacing16),
+                              Expanded(child: buildFileInfo()),
+                              const SizedBox(width: DS.spacing12),
+                              SparkleButton(
+                                label: context.l10n.docCleanerChange,
+                                variant: ButtonVariant.ghost,
+                                onPressed: _pickFile,
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+              ),
+            ),
+          ),
+          const SizedBox(height: DS.spacing16),
+          ToolSectionCard(
+            accentColor: accent,
+            title: context.l10n.docCleanerStrategyTitle,
+            subtitle: context.l10n.docCleanerStrategySubtitle,
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        context.l10n.docCleanerEnableOcr,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: DS.textPrimary,
+                              fontWeight: DS.fontWeightSemiBold,
+                            ),
+                      ),
+                    ),
+                    Switch(
+                      value: _enableOcr,
+                      onChanged: (value) => setState(() => _enableOcr = value),
+                    ),
+                  ],
+                ),
+                if (_enableOcr) ...[
+                  const SizedBox(height: DS.spacing16),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Wrap(
+                      spacing: DS.spacing10,
+                      runSpacing: DS.spacing10,
+                      children: [
+                        ToolChoiceChip(
+                          label: context.l10n.docCleanerLocalFast,
+                          selected: _ocrEngine == 'local',
+                          onTap: () => setState(() => _ocrEngine = 'local'),
+                          accentColor: accent,
+                          icon: Icons.speed_rounded,
+                        ),
+                        ToolChoiceChip(
+                          label: 'GLM OCR 高精',
+                          selected: _ocrEngine == 'zhipu',
+                          onTap: () => setState(() => _ocrEngine = 'zhipu'),
+                          accentColor: accent,
+                          icon: Icons.auto_awesome_rounded,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: DS.spacing20),
+          SparkleButton(
+            expand: true,
+            label: context.l10n.docCleanerStartClean,
+            onPressed: _selectedFile == null ? null : _startCleaning,
+            icon: const Icon(Icons.auto_fix_high_rounded),
+          ),
+        ],
+      );
+
+  Widget _buildProgress(CleaningTaskStatus status, Color accent) =>
+      ToolSectionCard(
+        accentColor: accent,
+        title: context.l10n.docCleanerProcessingTitle,
+        subtitle: context.l10n.docCleanerProcessingSubtitle,
+        child: Column(
+          children: [
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                SizedBox(
+                  width: 104,
+                  height: 104,
+                  child: CircularProgressIndicator(
+                    value: status.percent / 100,
+                    strokeWidth: 10,
+                    backgroundColor: DS.surfaceTertiary,
+                    valueColor: AlwaysStoppedAnimation<Color>(accent),
+                  ),
+                ),
+                Text(
+                  '${status.percent}%',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        color: DS.textPrimary,
+                        fontWeight: DS.fontWeightBold,
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: DS.spacing20),
+            Text(
+              status.message,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: DS.textPrimary,
+                    fontWeight: DS.fontWeightSemiBold,
+                  ),
+            ),
+          ],
+        ),
+      );
+
+  Widget _buildSuccess(CleaningResult result, Color accent) => Column(
+        children: [
+          ToolSectionCard(
+            accentColor: accent,
+            title: context.l10n.docCleanerSuccessTitle,
+            subtitle: context.l10n.docCleanerSuccessSubtitle,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Wrap(
+                  spacing: DS.spacing12,
+                  runSpacing: DS.spacing12,
+                  children: [
+                    ToolMetricCard(
+                      label: context.l10n.docCleanerCharCount,
+                      value: '${result.charCount ?? 0}',
+                      accentColor: accent,
+                      icon: Icons.text_fields_rounded,
+                    ),
+                    ToolMetricCard(
+                      label: context.l10n.docCleanerMode,
+                      value: result.mode == 'map_reduce' ? context.l10n.docCleanerDeepSummary : context.l10n.docCleanerFullClean,
+                      accentColor: accent,
+                      icon: Icons.layers_rounded,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: DS.spacing16),
+                Container(
+                  padding: const EdgeInsets.all(DS.spacing18),
+                  decoration: BoxDecoration(
+                    color: DS.surfacePrimary,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: DS.borderSubtle),
+                  ),
+                  child: Text(
+                    result.summary,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: DS.textPrimary,
+                          height: 1.65,
+                        ),
+                  ),
+                ),
+                if ((result.fullTextPreview ?? '').isNotEmpty) ...[
+                  const SizedBox(height: DS.spacing16),
+                  Text(
+                    context.l10n.docCleanerFullPreview,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: DS.textPrimary,
+                          fontWeight: DS.fontWeightBold,
+                        ),
+                  ),
+                  const SizedBox(height: DS.spacing8),
+                  Text(
+                    result.fullTextPreview!,
+                    maxLines: 8,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: DS.textSecondary,
+                          height: 1.6,
+                        ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: DS.spacing16),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final compact = constraints.maxWidth < 520;
+              final primary = SparkleButton(
+                label: _isSheet ? context.l10n.docCleanerSendChat : context.l10n.docCleanerUseResult,
+                onPressed: () {
+                  widget.onResult?.call(result.summary);
+                  if (_isSheet) {
+                    Navigator.pop(context);
+                  }
+                },
+                icon: Icon(
+                  _isSheet ? Icons.send_rounded : Icons.arrow_forward_rounded,
+                ),
+                expand: true,
+              );
+              final secondary = SparkleButton(
+                label: context.l10n.docCleanerCopySummary,
+                variant: ButtonVariant.ghost,
+                onPressed: () => _copyResult(result.summary),
+                icon: const Icon(Icons.copy_rounded),
+                expand: true,
+              );
+
+              if (compact) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    primary,
+                    const SizedBox(height: DS.spacing12),
+                    secondary,
+                  ],
+                );
+              }
+
+              return Row(
+                children: [
+                  Expanded(child: primary),
+                  const SizedBox(width: DS.spacing12),
+                  Expanded(child: secondary),
+                ],
+              );
+            },
+          ),
+        ],
+      );
+
+  Widget _buildError(String message, Color accent) => ToolSectionCard(
+        accentColor: DS.error,
+        title: context.l10n.docCleanerFailedTitle,
+        subtitle: context.l10n.docCleanerFailedSubtitle,
+        child: Column(
+          children: [
+            ToolEmptyState(
+              icon: Icons.error_outline_rounded,
+              title: context.l10n.docCleanerIncompleteTitle,
+              description: message,
+              accentColor: DS.error,
+            ),
+            const SizedBox(height: DS.spacing16),
+            SparkleButton(
+              label: context.l10n.docCleanerRetry,
+              variant: ButtonVariant.ghost,
+              onPressed: () =>
+                  ref.read(documentControllerProvider.notifier).reset(),
+              icon: const Icon(Icons.refresh_rounded),
+            ),
+          ],
+        ),
+      );
+}

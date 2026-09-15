@@ -1,0 +1,339 @@
+package worker
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
+	cqrsEvent "github.com/sparkle/gateway/internal/cqrs/event"
+	"github.com/sparkle/gateway/internal/cqrs/metrics"
+	"github.com/sparkle/gateway/internal/cqrs/outbox"
+	cqrsWorker "github.com/sparkle/gateway/internal/cqrs/worker"
+	"github.com/sparkle/gateway/internal/db"
+	"github.com/sparkle/gateway/internal/service"
+	"go.uber.org/zap"
+)
+
+const (
+	// CommunityStreamKey is the Redis stream for community events.
+	CommunityStreamKey = "cqrs:stream:community"
+	// CommunityConsumerGroup is the consumer group for community projection.
+	CommunityConsumerGroup = "community_projection_group"
+)
+
+// CommunitySyncWorker synchronizes community events to Redis read models.
+type CommunitySyncWorker struct {
+	baseWorker *cqrsWorker.BaseWorker
+	redis      *redis.Client
+	queries    *db.Queries
+	logger     *zap.Logger
+}
+
+// CommunitySyncWorkerConfig configures the community sync worker.
+type CommunitySyncWorkerConfig struct {
+	ConsumerName string
+	Options      cqrsWorker.WorkerOptions
+}
+
+// DefaultCommunitySyncWorkerConfig returns sensible defaults.
+func DefaultCommunitySyncWorkerConfig() CommunitySyncWorkerConfig {
+	return CommunitySyncWorkerConfig{
+		ConsumerName: "community_worker_1",
+		Options:      cqrsWorker.DefaultWorkerOptions(),
+	}
+}
+
+// NewCommunitySyncWorker creates a new community sync worker using the enhanced BaseWorker.
+func NewCommunitySyncWorker(
+	rdb *redis.Client,
+	pool *pgxpool.Pool,
+	cqrsMetrics *metrics.CQRSMetrics,
+	logger *zap.Logger,
+	config ...CommunitySyncWorkerConfig,
+) *CommunitySyncWorker {
+	cfg := DefaultCommunitySyncWorkerConfig()
+	if len(config) > 0 {
+		cfg = config[0]
+	}
+
+	queries := db.New(pool)
+	processedEvents := outbox.NewProcessedEventsRepository(pool)
+
+	baseWorker := cqrsWorker.NewBaseWorker(
+		rdb,
+		processedEvents,
+		cqrsMetrics,
+		logger,
+		CommunityStreamKey,
+		CommunityConsumerGroup,
+		cfg.ConsumerName,
+		cfg.Options,
+	)
+
+	return &CommunitySyncWorker{
+		baseWorker: baseWorker,
+		redis:      rdb,
+		queries:    queries,
+		logger:     logger.Named("community-sync"),
+	}
+}
+
+// Run starts the worker. Blocks until context is cancelled.
+func (w *CommunitySyncWorker) Run(ctx context.Context) error {
+	return w.baseWorker.Run(ctx, w.handleEvent)
+}
+
+// IsRunning returns true if the worker is currently running.
+func (w *CommunitySyncWorker) IsRunning() bool {
+	return w.baseWorker.IsRunning()
+}
+
+// handleEvent processes a single community event.
+func (w *CommunitySyncWorker) handleEvent(ctx context.Context, evt cqrsEvent.DomainEvent, messageID string) error {
+	switch evt.Type {
+	case cqrsEvent.EventPostCreated:
+		return w.handlePostCreated(ctx, evt)
+	case cqrsEvent.EventPostLiked:
+		return w.handlePostLiked(ctx, evt)
+	case cqrsEvent.EventPostUnliked:
+		return w.handlePostUnliked(ctx, evt)
+	case cqrsEvent.EventPostDeleted:
+		return w.handlePostDeleted(ctx, evt)
+	default:
+		w.logger.Debug("Ignoring unhandled event type",
+			zap.String("event_type", string(evt.Type)),
+			zap.String("event_id", evt.ID),
+		)
+		return nil
+	}
+}
+
+// handlePostCreated processes a PostCreated event.
+func (w *CommunitySyncWorker) handlePostCreated(ctx context.Context, evt cqrsEvent.DomainEvent) error {
+	postIDStr, ok := evt.Payload["post_id"].(string)
+	if !ok {
+		return fmt.Errorf("missing post_id in payload")
+	}
+
+	postID, err := uuid.Parse(postIDStr)
+	if err != nil {
+		return fmt.Errorf("invalid post_id: %w", err)
+	}
+
+	// Fetch post from database
+	post, err := w.queries.GetPost(ctx, db.GetPostParams{
+		ID: pgtype.UUID{Bytes: postID, Valid: true},
+	})
+	if err != nil {
+		return fmt.Errorf("fetch post: %w", err)
+	}
+
+	// Fetch user
+	user, err := w.queries.GetUser(ctx, post.UserID)
+	if err != nil {
+		return fmt.Errorf("fetch user: %w", err)
+	}
+
+	// Build view model
+	var imageUrls []string
+	if post.ImageUrls != nil {
+		_ = json.Unmarshal(post.ImageUrls, &imageUrls)
+	}
+
+	userID, _ := uuid.FromBytes(user.ID.Bytes[:])
+
+	view := service.PostView{
+		ID:        postIDStr,
+		UserID:    userID.String(),
+		Content:   post.Content.String,
+		ImageURLs: imageUrls,
+		Topic:     post.Topic.String,
+		LikeCount: 0,
+		CreatedAt: post.CreatedAt.Time,
+		User: service.UserView{
+			ID:        userID.String(),
+			Username:  user.Username,
+			AvatarURL: user.AvatarUrl.String,
+		},
+	}
+
+	viewJSON, err := json.Marshal(view)
+	if err != nil {
+		return fmt.Errorf("marshal view: %w", err)
+	}
+
+	// Update Redis read model
+	pipe := w.redis.Pipeline()
+	pipe.Set(ctx, "post:view:"+postIDStr, viewJSON, 0)
+	pipe.ZAdd(ctx, "feed:global", redis.Z{
+		Score:  float64(post.CreatedAt.Time.Unix()),
+		Member: postIDStr,
+	})
+	_, err = pipe.Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("update redis: %w", err)
+	}
+
+	w.logger.Info("Post view created",
+		zap.String("post_id", postIDStr),
+		zap.String("user_id", userID.String()),
+	)
+
+	return nil
+}
+
+func parseEventTime(value interface{}) (time.Time, error) {
+	switch v := value.(type) {
+	case string:
+		return time.Parse(time.RFC3339Nano, v)
+	case time.Time:
+		return v, nil
+	case float64:
+		return time.Unix(int64(v), 0).UTC(), nil
+	default:
+		return time.Time{}, fmt.Errorf("unsupported time type")
+	}
+}
+
+// incrLikeCount atomically increments/decrements the like_count in the post view JSON using a Lua script.
+// This avoids race conditions in read-modify-write scenarios.
+func (w *CommunitySyncWorker) incrLikeCount(ctx context.Context, postIDStr string, delta int) error {
+	viewKey := "post:view:" + postIDStr
+	script := redis.NewScript(`
+		local view_json = redis.call('GET', KEYS[1])
+		if not view_json then
+			return nil
+		end
+		local view = cjson.decode(view_json)
+		view.like_count = view.like_count + tonumber(ARGV[1])
+		if view.like_count < 0 then view.like_count = 0 end
+		return redis.call('SET', KEYS[1], cjson.encode(view))
+	`)
+	_, err := script.Run(ctx, w.redis, []string{viewKey}, delta).Result()
+	return err
+}
+
+// handlePostLiked processes a PostLiked event.
+func (w *CommunitySyncWorker) handlePostLiked(ctx context.Context, evt cqrsEvent.DomainEvent) error {
+	postIDStr, ok := evt.Payload["post_id"].(string)
+	if !ok {
+		return fmt.Errorf("missing post_id in payload")
+	}
+
+	// Increment like count atomically via Lua script
+	if err := w.incrLikeCount(ctx, postIDStr, 1); err != nil {
+		w.logger.Warn("Failed to increment like count via Lua",
+			zap.String("post_id", postIDStr),
+			zap.Error(err),
+		)
+		// Non-fatal, projection will be rebuilt
+		return nil
+	}
+
+	// Track which users liked this post for isLikedByMe checks
+	userIDStr, _ := evt.Payload["user_id"].(string)
+	if userIDStr != "" {
+		likesKey := "post:likes:" + postIDStr
+		if err := w.redis.SAdd(ctx, likesKey, userIDStr).Err(); err != nil {
+			w.logger.Warn("Failed to track user like in Redis set",
+				zap.String("post_id", postIDStr),
+				zap.String("user_id", userIDStr),
+				zap.Error(err),
+			)
+		}
+	}
+
+	w.logger.Debug("Post like count incremented",
+		zap.String("post_id", postIDStr),
+	)
+
+	return nil
+}
+
+// handlePostUnliked processes a PostUnliked event.
+func (w *CommunitySyncWorker) handlePostUnliked(ctx context.Context, evt cqrsEvent.DomainEvent) error {
+	postIDStr, ok := evt.Payload["post_id"].(string)
+	if !ok {
+		return fmt.Errorf("missing post_id in payload")
+	}
+
+	// Decrement like count atomically via Lua script
+	if err := w.incrLikeCount(ctx, postIDStr, -1); err != nil {
+		w.logger.Warn("Failed to decrement like count via Lua",
+			zap.String("post_id", postIDStr),
+			zap.Error(err),
+		)
+		// Non-fatal, projection will be rebuilt
+		return nil
+	}
+
+	// Remove user from the liked set for isLikedByMe checks
+	userIDStr, _ := evt.Payload["user_id"].(string)
+	if userIDStr != "" {
+		likesKey := "post:likes:" + postIDStr
+		if err := w.redis.SRem(ctx, likesKey, userIDStr).Err(); err != nil {
+			w.logger.Warn("Failed to remove user like from Redis set",
+				zap.String("post_id", postIDStr),
+				zap.String("user_id", userIDStr),
+				zap.Error(err),
+			)
+		}
+	}
+
+	w.logger.Debug("Post like count decremented",
+		zap.String("post_id", postIDStr),
+	)
+
+	return nil
+}
+
+// handlePostDeleted processes a PostDeleted event.
+func (w *CommunitySyncWorker) handlePostDeleted(ctx context.Context, evt cqrsEvent.DomainEvent) error {
+	postIDStr, ok := evt.Payload["post_id"].(string)
+	if !ok {
+		return fmt.Errorf("missing post_id in payload")
+	}
+
+	// Remove from Redis
+	pipe := w.redis.Pipeline()
+	pipe.Del(ctx, "post:view:"+postIDStr)
+	pipe.ZRem(ctx, "feed:global", postIDStr)
+	_, err := pipe.Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("remove from redis: %w", err)
+	}
+
+	w.logger.Info("Post view deleted",
+		zap.String("post_id", postIDStr),
+	)
+
+	return nil
+}
+
+// Legacy constructor for backwards compatibility.
+// Deprecated: Use NewCommunitySyncWorker with proper dependencies instead.
+func NewCommunitySyncWorkerLegacy(rdb *redis.Client, queries *db.Queries) *CommunitySyncWorkerLegacy {
+	return &CommunitySyncWorkerLegacy{
+		redis:   rdb,
+		queries: queries,
+	}
+}
+
+// CommunitySyncWorkerLegacy is the legacy worker without BaseWorker integration.
+// Deprecated: Use CommunitySyncWorker instead.
+type CommunitySyncWorkerLegacy struct {
+	redis   *redis.Client
+	queries *db.Queries
+}
+
+// Run starts the legacy worker. For backwards compatibility only.
+func (w *CommunitySyncWorkerLegacy) Run(ctx context.Context) {
+	// This is a stub for backwards compatibility
+	// New code should use CommunitySyncWorker.Run(ctx)
+	<-ctx.Done()
+}

@@ -1,0 +1,17 @@
+# buf.gen.yaml - Buf Code Generation Configuration
+# P1: Keep buf generation limited to Go.
+# Python stubs are generated locally via grpc_tools so their runtime version
+# stays compatible with the backend container's protobuf package.
+version: v2
+plugins:
+  # Go code generation
+  - remote: buf.build/protocolbuffers/go:v1.36.5
+    out: backend/gateway
+    opt:
+      - paths=import
+      - module=github.com/sparkle/gateway
+  - remote: buf.build/grpc/go:v1.5.1
+    out: backend/gateway
+    opt:
+      - paths=import
+      - module=github.com/sparkle/gateway

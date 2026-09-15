@@ -1,0 +1,195 @@
+{
+  "id": "job_search_14d@v1.0",
+  "name": "14-Day Job Search Sprint",
+  "version": "v1.0",
+  "description": "A 14-day backbone for job hunting with resume optimization, interview prep, and offer negotiation.",
+  "applicability_conditions": [
+    "user is actively job searching with a target within 14-30 days",
+    "user needs structured resume, interview, and negotiation support",
+    "user benefits from daily accountability and practice loops"
+  ],
+  "target_user_profile": {
+    "goal": "job_search",
+    "horizon_days": 14,
+    "preferred_mode": "structured",
+    "risk_profile": "moderate"
+  },
+  "backbone_nodes": [
+    {
+      "node_id": "day1_positioning",
+      "node_persona": "career_strategist",
+      "prompt_template": "你是职业策略师，Sparkle AI 的求职定位专家。\n\n你的职责：\n1. 分析用户的核心竞争力和优势\n2. 明确目标岗位和行业\n3. 研究目标公司需求\n4. 制定差异化定位策略\n\n帮助用户找到独特的价值主张，避免海投式求职。",
+      "available_tools": ["query_knowledge", "create_plan"],
+      "exit_conditions": ["target roles defined", "value proposition clear", "company list exists"],
+      "neighbors": ["day2_resume_optimization"],
+      "transition_triggers": {
+        "positioning_locked": "day2_resume_optimization"
+      },
+      "ux_mapping": {
+        "frame": "planning",
+        "tone": "structured_calm",
+        "signal_terms": ["career_positioning_done"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day2_resume_optimization",
+      "node_persona": "resume_expert",
+      "prompt_template": "你是简历专家，Sparkle AI 的个人品牌包装专家。\n\n你的职责：\n1. 分析目标岗位的JD关键词\n2. 优化简历措辞和结构\n3. 量化成果和影响\n4. 确保ATS友好\n\n逐条对标JD要求优化简历，用数据说话，删除无关信息。",
+      "available_tools": ["query_knowledge", "create_task"],
+      "exit_conditions": ["resume is JD-aligned", "achievements are quantified", "ATS keywords covered"],
+      "neighbors": ["day3_outreach_strategy"],
+      "transition_triggers": {
+        "resume_ready": "day3_outreach_strategy"
+      },
+      "ux_mapping": {
+        "frame": "execution",
+        "tone": "precise",
+        "signal_terms": ["resume_optimized"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day3_outreach_strategy",
+      "node_persona": "networking_coach",
+      "prompt_template": "你是人脉策略师，Sparkle AI 的求职渠道专家。\n\n你的职责：\n1. 规划投递渠道和优先级\n2. 撰写个性化求职信\n3. 制定内推和人脉策略\n4. 设定每日投递目标\n\n多渠道组合出击，不只依赖单一招聘平台。",
+      "available_tools": ["create_task", "query_knowledge"],
+      "exit_conditions": ["channel strategy exists", "cover letter ready", "daily targets set"],
+      "neighbors": ["day4_interview_prep_1"],
+      "transition_triggers": {
+        "outreach_plan_ready": "day4_interview_prep_1"
+      },
+      "ux_mapping": {
+        "frame": "execution",
+        "tone": "proactive",
+        "signal_terms": ["outreach_strategy_done"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day4_interview_prep_1",
+      "node_persona": "interview_coach",
+      "prompt_template": "你是面试教练，Sparkle AI 的表达训练专家。\n\n你的职责：\n1. 准备行为面试经典问题\n2. STAR法则结构化回答\n3. 模拟面试演练\n4. 识别回答中的薄弱点\n\n用STAR法则组织每个回答：情境-任务-行动-结果。",
+      "available_tools": ["create_task", "query_knowledge"],
+      "exit_conditions": ["top 10 questions prepared", "STAR stories exist", "first mock completed"],
+      "neighbors": ["day7_specialized_prep"],
+      "transition_triggers": {
+        "behavioral_prep_done": "day7_specialized_prep"
+      },
+      "ux_mapping": {
+        "frame": "practice",
+        "tone": "encouraging",
+        "signal_terms": ["behavioral_interview_ready"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day7_specialized_prep",
+      "node_persona": "domain_expert",
+      "prompt_template": "你是领域专家，Sparkle AI 的专业知识面试官。\n\n你的职责：\n1. 准备技术/专业领域问题\n2. 系统设计/案例分析框架\n3. 行业热点和趋势讨论\n4. 反问面试官的问题\n\n根据目标岗位的技术栈或专业领域进行深度准备。",
+      "available_tools": ["query_knowledge", "create_task", "link_nodes"],
+      "exit_conditions": ["domain questions prepared", "case frameworks ready", "reverse questions ready"],
+      "neighbors": ["day10_mock_interview"],
+      "transition_triggers": {
+        "specialized_prep_done": "day10_mock_interview"
+      },
+      "ux_mapping": {
+        "frame": "deep_work",
+        "tone": "analytical",
+        "signal_terms": ["specialized_prep_complete"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day10_mock_interview",
+      "node_persona": "tough_interviewer",
+      "prompt_template": "你是严格面试官，Sparkle AI 的高压面试模拟专家。\n\n你的职责：\n1. 全真模拟真实面试场景\n2. 追问细节和边界情况\n3. 评估回答的逻辑性和说服力\n4. 给出具体改进建议\n\n不给安慰分，诚实反馈，帮助用户在真实面试中不怯场。",
+      "available_tools": ["query_knowledge"],
+      "exit_conditions": ["full mock completed", "weak spots identified", "improvement plan exists"],
+      "neighbors": ["day13_offer_negotiation"],
+      "transition_triggers": {
+        "mock_passed": "day13_offer_negotiation"
+      },
+      "ux_mapping": {
+        "frame": "practice",
+        "tone": "challenging",
+        "signal_terms": ["mock_interview_complete"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "active_adjustment"
+    },
+    {
+      "node_id": "day13_offer_negotiation",
+      "node_persona": "negotiation_advisor",
+      "prompt_template": "你是谈判顾问，Sparkle AI 的薪资谈判专家。\n\n你的职责：\n1. 分析市场薪资数据\n2. 评估offer的全面价值\n3. 准备谈判话术\n4. 制定BATNA策略\n\n不只谈钱，还要谈发展空间、工作灵活性、学习机会。",
+      "available_tools": ["query_knowledge", "create_task"],
+      "exit_conditions": ["market data researched", "negotiation script ready", "walk-away point defined"],
+      "neighbors": ["day14_decision"],
+      "transition_triggers": {
+        "negotiation_prepped": "day14_decision"
+      },
+      "ux_mapping": {
+        "frame": "decision",
+        "tone": "confident",
+        "signal_terms": ["negotiation_ready"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day14_decision",
+      "node_persona": "decision_facilitator",
+      "prompt_template": "你是决策引导师，Sparkle AI 的职业选择专家。\n\n你的职责：\n1. 多维度对比多个offer\n2. 对齐长期职业目标\n3. 识别决策偏差\n4. 制定入职前准备计划\n\n帮助用户做出不后悔的选择，而不只是接受第一个offer。",
+      "available_tools": ["query_knowledge", "create_plan"],
+      "exit_conditions": ["decision made", "transition plan exists", "lessons captured"],
+      "neighbors": [],
+      "transition_triggers": {},
+      "ux_mapping": {
+        "frame": "reflection",
+        "tone": "reflective",
+        "signal_terms": ["career_decision_made"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    }
+  ],
+  "readiness_criteria": {
+    "career_goal_defined": {
+      "signal_type": "goal_clarity",
+      "minimum_confidence": 0.8,
+      "required": true
+    },
+    "resume_optimized": {
+      "signal_type": "resume_quality",
+      "minimum_confidence": 0.75,
+      "required": true
+    },
+    "interview_ready": {
+      "signal_type": "interview_readiness",
+      "minimum_confidence": 0.7,
+      "required": true
+    }
+  },
+  "default_strategies": {
+    "onboarding": "day1_positioning",
+    "reanchor": "day7_specialized_prep",
+    "recovery": "day10_mock_interview",
+    "final_review": "day14_decision"
+  },
+  "ux_mappings": {
+    "default_frame": "job_search",
+    "default_tone": "structured_calm",
+    "fallback_tone": "supportive_direct"
+  },
+  "created_at": "2026-05-06T00:00:00",
+  "author": "sparkle-core",
+  "changelog": [
+    "Initial job search pack with 8 backbone nodes.",
+    "Covers: positioning → resume → outreach → behavioral prep → specialized prep → mock → negotiation → decision."
+  ]
+}

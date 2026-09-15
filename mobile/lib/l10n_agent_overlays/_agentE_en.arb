@@ -1,0 +1,23 @@
+{
+  "sourceExplanationSemantics": "Source explanation for this answer",
+  "sourceExplanationUsedSummary": "This answer used {count} source(s)",
+  "sourceExplanationUsedSources": "Used sources",
+  "sourceExplanationUnusedSources": "{count} unused source(s)",
+  "sourceExplanationUnusedSourcesTitle": "Unused sources",
+  "sourceExplanationNoSources": "No source detail available yet",
+  "sourceExplanationRelevance": "Relevance {percent}%",
+  "sourceExplanationConfidence": "{percent}% confidence",
+  "sourceExplanationCorrectSource": "Correct this source",
+  "sourceExplanationCorrectionSent": "Source correction recorded",
+  "sourceExplanationCorrectionFailed": "Could not record the correction",
+  "sourceExplanationUndo": "Undo",
+  "goalGraphPanelSemantics": "Open goal knowledge graph panel",
+  "goalGraphPanelTitle": "Goal graph",
+  "goalGraphNoGoal": "Choose an active goal to see why each knowledge point matters.",
+  "goalGraphLoading": "Loading goal graph",
+  "goalGraphRetry": "Retry",
+  "goalGraphEmpty": "No goal graph nodes are available yet.",
+  "goalGraphBottlenecks": "Bottlenecks",
+  "goalGraphLearning": "To learn",
+  "goalGraphMastered": "Mastered"
+}

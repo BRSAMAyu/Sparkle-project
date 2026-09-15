@@ -1,0 +1,114 @@
+# Web Framework
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.5.3
+pydantic-settings>=2.1.0
+python-multipart>=0.0.6
+
+# Database
+sqlalchemy>=2.0.25
+greenlet>=3.0.0
+alembic>=1.13.1
+psycopg2-binary>=2.9.9
+asyncpg>=0.29.0
+aiosqlite>=0.22.0
+pgvector>=0.2.4
+redis>=5.0.1
+aiokafka>=0.10.0
+boto3>=1.34.0
+hvac>=2.0.0
+
+# Authentication & Security
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+bcrypt>=4.0.1,<4.1.0  # passlib 1.7.4 expects bcrypt.__about__, removed in newer 4.x
+python-dotenv>=1.0.0
+PyYAML>=6.0.1
+
+# Task Scheduling
+apscheduler>=3.10.4
+pika>=1.3.2
+
+# HTTP Client & Tools
+httpx>=0.26.0
+aiofiles>=23.2.1
+aiosmtplib>=3.0.1
+
+# Development & Testing
+pytest>=7.4.4
+pytest-asyncio>=0.23.3
+fakeredis>=2.31.0
+pytest-cov>=4.1.0
+pytest-benchmark>=4.0.0
+pytest-timeout>=2.2.0
+psutil>=5.9.0
+black>=24.1.1
+ruff>=0.1.9
+flake8>=7.0.0
+mypy>=1.8.0
+locust>=2.18.0
+prometheus-api-client>=0.1.1
+websockets>=12.0
+aiohttp>=3.9.0
+
+# LLM & AI
+openai>=1.10.0
+dashscope>=1.20.0
+langchain-core>=0.3.0
+langchain-openai>=0.2.0
+langchain-text-splitters>=0.0.1
+langgraph>=0.2.0
+tiktoken>=0.5.2
+numpy>=1.26.0
+scipy>=1.11.0
+pypdf>=3.0.0
+pdfplumber>=0.10.0
+
+# Discovered Dependencies
+sse-starlette
+loguru
+structlog>=24.1.0
+json-repair
+typing-extensions
+email-validator>=2.0.0
+slowapi>=0.1.9
+tenacity
+prometheus-fastapi-instrumentator
+
+# Observability
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-exporter-otlp
+opentelemetry-instrumentation-fastapi
+opentelemetry-instrumentation-grpc
+opentelemetry-instrumentation-sqlalchemy
+opentelemetry-instrumentation-requests
+opentelemetry-instrumentation-redis
+networkx>=3.2.1
+
+# gRPC
+grpcio>=1.60.0
+grpcio-tools>=1.60.0
+grpcio-reflection>=1.60.0
+protobuf>=6.33.5
+
+# Document Processing (Office formats & OCR)
+python-docx>=1.0.0      # DOCX document processing
+python-pptx>=1.0.0      # PPTX presentation processing
+Pillow>=10.0.0          # Image processing for OCR/thumbnails
+pytesseract>=0.3.10     # Tesseract OCR wrapper
+
+# PDF Generation & Reporting
+weasyprint>=60.0
+jinja2>=3.1.0
+celery>=5.3.6
+y-py>=0.6.0
+
+# Dictionary/HTML parsing
+readmdict>=0.1.1
+python-lzo>=1.15
+beautifulsoup4>=4.12.0
+lxml>=5.0.0
+
+# Firebase Admin SDK for Push Notifications
+firebase-admin>=6.4.0

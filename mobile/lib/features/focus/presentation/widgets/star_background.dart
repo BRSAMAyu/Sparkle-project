@@ -1,0 +1,235 @@
+import 'dart:async';
+import 'dart:math';
+
+import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+
+/// 星星数据
+class _Star {
+  // 闪烁相位偏移
+
+  const _Star({
+    required this.x,
+    required this.y,
+    required this.size,
+    required this.twinkleSpeed,
+    required this.twinkleOffset,
+  });
+  final double x;
+  final double y;
+  final double size;
+  final double twinkleSpeed; // 闪烁速度因子
+  final double twinkleOffset;
+}
+
+/// 星空背景组件
+class StarBackground extends StatefulWidget {
+  const StarBackground({
+    super.key,
+    this.starCount = 100,
+    this.enableTwinkle = true,
+    this.intensity = 1,
+  });
+  final int starCount;
+  final bool enableTwinkle;
+  final double intensity;
+
+  @override
+  State<StarBackground> createState() => _StarBackgroundState();
+}
+
+class _StarBackgroundState extends State<StarBackground>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late List<_Star> _stars;
+  final Random _random = Random();
+
+  @override
+  void initState() {
+    super.initState();
+
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    );
+
+    if (widget.enableTwinkle) {
+      unawaited(_controller.repeat());
+    }
+
+    _generateStars();
+  }
+
+  void _generateStars() {
+    _stars = List.generate(
+      widget.starCount,
+      (_) => _Star(
+        x: _random.nextDouble(),
+        y: _random.nextDouble(),
+        size: _random.nextDouble() * 2 + 0.5, // 0.5 - 2.5
+        twinkleSpeed: _random.nextDouble() * 2 + 0.5, // 0.5 - 2.5
+        twinkleOffset: _random.nextDouble() * 2 * pi,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+        animation: _controller,
+        builder: (context, _) => CustomPaint(
+          painter: _StarPainter(
+            stars: _stars,
+            animationValue: _controller.value,
+            enableTwinkle: widget.enableTwinkle,
+            intensity: widget.intensity,
+            backgroundStart: DS.deepSpaceStart,
+            backgroundEnd: DS.deepSpaceEnd,
+            starColor: DS.brandPrimary,
+          ),
+          size: Size.infinite,
+        ),
+      );
+}
+
+/// 星空绘制器
+class _StarPainter extends CustomPainter {
+  _StarPainter({
+    required this.stars,
+    required this.animationValue,
+    required this.enableTwinkle,
+    required this.intensity,
+    required this.backgroundStart,
+    required this.backgroundEnd,
+    required this.starColor,
+  });
+  final List<_Star> stars;
+  final double animationValue;
+  final bool enableTwinkle;
+  final double intensity;
+  final Color backgroundStart;
+  final Color backgroundEnd;
+  final Color starColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // 绘制深空背景渐变
+    final bgRect = Rect.fromLTWH(0, 0, size.width, size.height);
+    final bgPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          backgroundStart,
+          backgroundEnd,
+        ],
+      ).createShader(bgRect);
+
+    canvas.drawRect(bgRect, bgPaint);
+
+    // 绘制星星
+    for (final star in stars) {
+      double opacity;
+      if (enableTwinkle) {
+        // 使用正弦函数实现闪烁效果
+        final twinkle = sin(
+          animationValue * 2 * pi * star.twinkleSpeed + star.twinkleOffset,
+        );
+        opacity = (0.3 + (twinkle + 1) / 2 * 0.7) * intensity.clamp(0.2, 1.4);
+      } else {
+        opacity = 0.8 * intensity.clamp(0.2, 1.4);
+      }
+      opacity = opacity.clamp(0.0, 1.0);
+
+      final starPaint = Paint()..color = starColor.withValues(alpha: opacity);
+
+      // 绘制星星光晕
+      if (star.size > 1.5) {
+        final glowPaint = Paint()
+          ..color = starColor.withValues(alpha: opacity * 0.3)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
+
+        canvas.drawCircle(
+          Offset(star.x * size.width, star.y * size.height),
+          star.size * 2,
+          glowPaint,
+        );
+      }
+
+      // 绘制星星本体
+      canvas.drawCircle(
+        Offset(star.x * size.width, star.y * size.height),
+        star.size,
+        starPaint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _StarPainter oldDelegate) =>
+      oldDelegate.animationValue != animationValue ||
+      oldDelegate.enableTwinkle != enableTwinkle ||
+      oldDelegate.intensity != intensity ||
+      oldDelegate.backgroundStart != backgroundStart ||
+      oldDelegate.backgroundEnd != backgroundEnd ||
+      oldDelegate.starColor != starColor;
+}
+
+/// 带渐入动画的星空背景
+class AnimatedStarBackground extends StatefulWidget {
+  const AnimatedStarBackground({
+    super.key,
+    this.fadeInDuration = const Duration(milliseconds: 500),
+    this.starCount = 100,
+    this.enableTwinkle = true,
+    this.intensity = 1,
+  });
+  final Duration fadeInDuration;
+  final int starCount;
+  final bool enableTwinkle;
+  final double intensity;
+
+  @override
+  State<AnimatedStarBackground> createState() => _AnimatedStarBackgroundState();
+}
+
+class _AnimatedStarBackgroundState extends State<AnimatedStarBackground>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: widget.fadeInDuration,
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeIn,
+    );
+    unawaited(_fadeController.forward());
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => FadeTransition(
+        opacity: _fadeAnimation,
+        child: StarBackground(
+          starCount: widget.starCount,
+          enableTwinkle: widget.enableTwinkle,
+          intensity: widget.intensity,
+        ),
+      );
+}

@@ -1,0 +1,1036 @@
+import 'dart:ui';
+
+import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/rarity_visual_wrapper.dart';
+import 'package:sparkle/core/design/widgets/sparkle_tappable.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/features/visual_elements/presentation/shared/visual_element_palette.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
+import 'package:sparkle/shared/entities/visual_element_model.dart';
+
+/// 视觉元素卡片组件
+class VisualElementCard extends StatefulWidget {
+  const VisualElementCard({
+    required this.element,
+    super.key,
+    this.onTap,
+    this.onLongPress,
+    this.isCompact = false,
+    this.showStatus = true,
+    this.bundleOwnedCount = 0,
+    this.bundleTotalCount = 0,
+  });
+
+  final VisualElementModel element;
+  final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
+  final bool isCompact;
+  final bool showStatus;
+  final int bundleOwnedCount;
+  final int bundleTotalCount;
+
+  @override
+  State<VisualElementCard> createState() => _VisualElementCardState();
+}
+
+class _VisualElementCardState extends State<VisualElementCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _breathingController;
+  late Animation<double> _breathingAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _breathingController = AnimationController(
+      duration: const Duration(milliseconds: 1600),
+      vsync: this,
+    );
+    _breathingAnimation = Tween<double>(begin: 0.3, end: 0.7).animate(
+      CurvedAnimation(
+        parent: _breathingController,
+        curve: Curves.easeInOut,
+      ),
+    );
+
+    // 已装备卡片启动呼吸动画
+    if (widget.element.isEquipped) {
+      _breathingController.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(VisualElementCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 装备状态变化时更新动画
+    if (widget.element.isEquipped != oldWidget.element.isEquipped) {
+      if (widget.element.isEquipped) {
+        _breathingController.repeat(reverse: true);
+      } else {
+        _breathingController.stop();
+        _breathingController.reset();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _breathingController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final palette = VisualElementPalette.of(context);
+    final colors = _getRarityColors(widget.element.rarity);
+    final borderRadius =
+        widget.isCompact ? DS.borderRadius12 : DS.borderRadius16;
+    final accent =
+        Color.lerp(colors.border, colors.text, 0.35) ?? colors.border;
+
+    // Determine if we should show rarity effects
+    final shouldShimmer = widget.element.isUnlocked &&
+        _shouldShimmerForRarity(widget.element.rarity);
+    final isNewlyUnlocked = _isElementNewlyUnlocked;
+
+    return SparkleTappable(
+      onTap: widget.onTap,
+      onLongPress: widget.onLongPress,
+      enableHaptic: true,
+      borderRadius: borderRadius,
+      child: RarityVisualWrapper(
+        rarity: widget.element.rarity,
+        borderRadius: borderRadius,
+        showShimmer: shouldShimmer,
+        showGlow: isNewlyUnlocked,
+        isNewlyUnlocked: isNewlyUnlocked,
+        unlockedAt: widget.element.unlockedAt,
+        child: Stack(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    palette.moonless,
+                    palette.surface,
+                    palette.elevatedTint(accent, 0.08),
+                  ],
+                ),
+                borderRadius: borderRadius,
+                border: Border.all(
+                  color: widget.element.isEquipped
+                      ? colors.border
+                      : colors.border.withValues(alpha: 0.22),
+                  width: widget.element.isEquipped ? 2 : 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.32),
+                    blurRadius: 20,
+                    offset: const Offset(0, 12),
+                  ),
+                  if (widget.element.isEquipped ||
+                      widget.element.rarity == VisualElementRarity.legendary)
+                    BoxShadow(
+                      color: colors.border.withValues(alpha: 0.20),
+                      blurRadius: 28,
+                      spreadRadius: 1,
+                    ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: borderRadius,
+                child: Stack(
+                  children: [
+                    _buildPreviewBackground(colors),
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topRight,
+                              end: Alignment.bottomLeft,
+                              colors: [
+                                accent.withValues(alpha: 0.18),
+                                Colors.transparent,
+                                palette.gold.withValues(alpha: 0.10),
+                              ],
+                              stops: const [0.0, 0.38, 1.0],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.all(
+                        widget.isCompact ? DS.spacing8 : DS.spacing12,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              _buildTypeIcon(),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _buildPreviewHint(accent),
+                                  const SizedBox(width: DS.spacing6),
+                                  _buildRarityBadge(colors, l10n),
+                                ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: DS.spacing8),
+                          Wrap(
+                            spacing: DS.spacing6,
+                            runSpacing: DS.spacing6,
+                            children: [
+                              _buildMetaChip(
+                                widget.element.displaySlotLabel,
+                                accent,
+                              ),
+                              if (!widget.isCompact &&
+                                  widget.element.prestigeLabel != null)
+                                _buildMetaChip(
+                                  widget.element.prestigeLabel!,
+                                  colors.text,
+                                ),
+                            ],
+                          ),
+                          if (widget.isCompact)
+                            const SizedBox(height: DS.spacing10)
+                          else
+                            const Spacer(),
+                          if (widget.isCompact)
+                            _buildTextBlock(accent, colors, l10n)
+                          else
+                            Flexible(
+                              child: _buildTextBlock(accent, colors, l10n),
+                            ),
+                        ],
+                      ),
+                    ),
+                    if (!widget.element.isUnlocked)
+                      _buildLockedOverlay(l10n, colors),
+                  ],
+                ),
+              ),
+            ),
+            if (widget.element.isEquipped)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: AnimatedBuilder(
+                    animation: _breathingAnimation,
+                    builder: (context, child) => CustomPaint(
+                      painter: _BreathingBorderPainter(
+                        animation: _breathingAnimation,
+                        color: colors.border,
+                        borderRadius: borderRadius,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextBlock(
+    Color accent,
+    VisualElementRarityColors colors,
+    AppLocalizations l10n,
+  ) =>
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            widget.element.name,
+            style: TextStyle(
+              fontSize: widget.isCompact ? DS.fontSizeSm : DS.fontSizeBase,
+              fontWeight: DS.fontWeightSemibold,
+              color: VisualElementPalette.of(context).textPrimary,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          if (widget.element.description != null && !widget.isCompact) ...[
+            const SizedBox(height: DS.spacing4),
+            Text(
+              widget.element.description!,
+              style: TextStyle(
+                fontSize: DS.fontSizeXs,
+                color: VisualElementPalette.of(context).textSecondary,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+          const SizedBox(height: DS.spacing6),
+          Wrap(
+            spacing: DS.spacing6,
+            runSpacing: DS.spacing6,
+            children: [
+              if (!widget.isCompact)
+                _buildMetaChip(
+                  widget.element.unlockSourceLabel,
+                  accent,
+                ),
+              if (widget.element.setId != null && !widget.isCompact)
+                _buildMetaChip(
+                  widget.element.setId!,
+                  colors.border,
+                ),
+            ],
+          ),
+          if (widget.element.isBundle &&
+              widget.bundleTotalCount > 0 &&
+              !widget.isCompact) ...[
+            const SizedBox(height: DS.spacing6),
+            _buildBundleProgressChip(colors),
+          ],
+          if (widget.showStatus && !widget.isCompact) ...[
+            const SizedBox(height: DS.spacing8),
+            _buildStatusRow(l10n),
+          ],
+        ],
+      );
+
+  bool _shouldShimmerForRarity(VisualElementRarity rarity) =>
+      rarity == VisualElementRarity.rare ||
+      rarity == VisualElementRarity.epic ||
+      rarity == VisualElementRarity.legendary;
+
+  bool get _isElementNewlyUnlocked {
+    final unlockedAt = widget.element.unlockedAt;
+    if (unlockedAt == null) return false;
+    return DateTime.now().difference(unlockedAt) < newlyUnlockedWindow;
+  }
+
+  Widget _buildPreviewBackground(VisualElementRarityColors colors) {
+    final palette = VisualElementPalette.of(context);
+    // 根据元素类型生成预览背景
+    return Positioned.fill(
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: _getPreviewGradientColors(),
+          ),
+        ),
+        child: Stack(
+          children: [
+            CustomPaint(
+              painter: _ElementPreviewPainter(
+                element: widget.element,
+                elementType: widget.element.elementType,
+                config: widget.element.config,
+                seed: widget.element.id.hashCode,
+                colors: colors,
+              ),
+            ),
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      colors.border.withValues(alpha: 0.2),
+                      Colors.transparent,
+                      colors.background.withValues(alpha: 0.16),
+                    ],
+                    stops: const [0.0, 0.42, 1.0],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: -24,
+              right: -8,
+              child: IgnorePointer(
+                child: Container(
+                  width: widget.isCompact ? 72 : 92,
+                  height: widget.isCompact ? 72 : 92,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        Colors.white.withValues(alpha: 0.18),
+                        Colors.white.withValues(alpha: 0.04),
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.45, 1.0],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        palette.surface.withValues(alpha: 0.06),
+                        palette.surface.withValues(alpha: 0.24),
+                      ],
+                      stops: const [0.0, 0.58, 1.0],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Color> _getPreviewGradientColors() {
+    // 从配置中提取渐变颜色，否则使用默认
+    final gradientConfig =
+        widget.element.config['gradient'] as Map<String, dynamic>?;
+    if (gradientConfig != null) {
+      final colors = gradientConfig['colors'] as List<dynamic>?;
+      if (colors != null && colors.isNotEmpty) {
+        return colors.map((c) => _parseColor(c.toString())).toList();
+      }
+    }
+    // 默认渐变
+    final palette = VisualElementPalette.of(context);
+    return [
+      palette.moonless,
+      palette.surface,
+      palette.blueWash,
+    ];
+  }
+
+  Color _parseColor(String hexColor) {
+    try {
+      hexColor = hexColor.replaceAll('#', '');
+      if (hexColor.length == 6) {
+        return Color(int.parse('FF$hexColor', radix: 16));
+      } else if (hexColor.length == 8) {
+        return Color(int.parse(hexColor, radix: 16));
+      }
+    } catch (_) {}
+    return VisualElementPalette.of(context).surface;
+  }
+
+  Widget _buildTypeIcon() {
+    final icon = _getTypeIcon(widget.element.elementType);
+    final palette = VisualElementPalette.of(context);
+    final rarityColors = _getRarityColors(widget.element.rarity);
+    return Container(
+      padding: const EdgeInsets.all(DS.spacing6),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            palette.surface.withValues(alpha: 0.94),
+            palette.elevatedTint(rarityColors.border, 0.18),
+          ],
+        ),
+        borderRadius: DS.borderRadius8,
+        border: Border.all(
+          color: rarityColors.border.withValues(alpha: 0.26),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: rarityColors.border.withValues(alpha: 0.08),
+            blurRadius: 16,
+            spreadRadius: 1,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Icon(
+        icon,
+        size: widget.isCompact ? DS.iconSizeXs : DS.iconSizeSm,
+        color: Color.lerp(
+          palette.textSecondary,
+          rarityColors.text,
+          0.52,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPreviewHint(Color accent) {
+    final palette = VisualElementPalette.of(context);
+    final zh = I18nService.instance.isChinese;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing8,
+        vertical: DS.spacing4,
+      ),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.13),
+        borderRadius: DS.borderRadiusFull,
+        border: Border.all(color: accent.withValues(alpha: 0.24)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.visibility_outlined,
+            size: DS.iconSizeXs,
+            color: Color.lerp(accent, palette.textPrimary, 0.18),
+          ),
+          const SizedBox(width: DS.spacing4),
+          Text(
+            zh ? '预览' : 'Preview',
+            style: TextStyle(
+              fontSize: DS.fontSizeXs,
+              color: Color.lerp(accent, palette.textPrimary, 0.18),
+              fontWeight: DS.fontWeightMedium,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  IconData _getTypeIcon(VisualElementType type) {
+    switch (type) {
+      case VisualElementType.background:
+        return Icons.gradient;
+      case VisualElementType.particle:
+        return Icons.auto_awesome;
+      case VisualElementType.effect:
+        return Icons.blur_on;
+      case VisualElementType.bundle:
+        return Icons.inventory_2;
+    }
+  }
+
+  Widget _buildRarityBadge(
+          VisualElementRarityColors colors, AppLocalizations l10n) =>
+      Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: widget.isCompact ? DS.spacing6 : DS.spacing8,
+          vertical: DS.spacing4,
+        ),
+        decoration: BoxDecoration(
+          color: colors.background.withValues(alpha: 0.92),
+          borderRadius: DS.borderRadius8,
+          border: Border.all(color: colors.border.withValues(alpha: 0.55)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              _getRarityIcon(widget.element.rarity),
+              size: widget.isCompact ? 10 : DS.iconSizeXs,
+              color: colors.text,
+            ),
+            if (!widget.isCompact) ...[
+              const SizedBox(width: DS.spacing4),
+              Text(
+                _getRarityName(widget.element.rarity, l10n),
+                style: TextStyle(
+                  fontSize: DS.fontSizeXs,
+                  fontWeight: DS.fontWeightMedium,
+                  color: colors.text,
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
+
+  IconData _getRarityIcon(VisualElementRarity rarity) {
+    switch (rarity) {
+      case VisualElementRarity.common:
+        return Icons.circle_outlined;
+      case VisualElementRarity.rare:
+        return Icons.star_border;
+      case VisualElementRarity.epic:
+        return Icons.auto_awesome;
+      case VisualElementRarity.legendary:
+        return Icons.diamond_outlined;
+    }
+  }
+
+  String _getRarityName(VisualElementRarity rarity, AppLocalizations l10n) {
+    switch (rarity) {
+      case VisualElementRarity.common:
+        return l10n.achievementRarityCommon;
+      case VisualElementRarity.rare:
+        return l10n.achievementRarityRare;
+      case VisualElementRarity.epic:
+        return l10n.achievementRarityEpic;
+      case VisualElementRarity.legendary:
+        return l10n.achievementRarityLegendary;
+    }
+  }
+
+  Widget _buildStatusRow(AppLocalizations l10n) {
+    String statusText;
+    Color statusColor;
+    IconData statusIcon;
+
+    if (widget.element.isEquipped) {
+      statusText = l10n.visualElementEquipped;
+      statusColor = DS.success;
+      statusIcon = Icons.check_circle;
+    } else if (widget.element.isUnlocked) {
+      statusText = l10n.visualElementUnlocked;
+      statusColor = DS.info;
+      statusIcon = Icons.lock_open;
+    } else {
+      statusText = _getUnlockSourceText(l10n);
+      statusColor = VisualElementPalette.of(context).textSecondary;
+      statusIcon = Icons.lock;
+    }
+
+    return Row(
+      children: [
+        Icon(
+          statusIcon,
+          size: DS.iconSizeXs,
+          color: statusColor,
+        ),
+        const SizedBox(width: DS.spacing4),
+        Expanded(
+          child: Text(
+            statusText,
+            style: TextStyle(
+              fontSize: DS.fontSizeXs,
+              color: statusColor,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMetaChip(String label, Color color) => Container(
+        constraints: BoxConstraints(
+          maxWidth: widget.isCompact ? 96 : 136,
+        ),
+        padding: EdgeInsets.symmetric(
+          horizontal: widget.isCompact ? DS.spacing6 : DS.spacing8,
+          vertical: DS.spacing4,
+        ),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.13),
+          borderRadius: DS.borderRadiusFull,
+          border: Border.all(color: color.withValues(alpha: 0.24)),
+        ),
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: DS.fontSizeXs,
+            color: Color.lerp(
+              color,
+              VisualElementPalette.of(context).textPrimary,
+              0.14,
+            ),
+            fontWeight: DS.fontWeightMedium,
+          ),
+        ),
+      );
+
+  Widget _buildBundleProgressChip(VisualElementRarityColors colors) {
+    final zh = I18nService.instance.isChinese;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing8,
+        vertical: DS.spacing4,
+      ),
+      decoration: BoxDecoration(
+        color: colors.border.withValues(alpha: 0.13),
+        borderRadius: DS.borderRadius8,
+        border: Border.all(color: colors.border.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.inventory_2_rounded,
+            size: DS.iconSizeXs,
+            color: colors.text,
+          ),
+          const SizedBox(width: DS.spacing4),
+          Text(
+            '${widget.bundleOwnedCount}/${widget.bundleTotalCount} ${zh ? '已集齐' : 'Collected'}',
+            style: TextStyle(
+              fontSize: DS.fontSizeXs,
+              color: colors.text,
+              fontWeight: DS.fontWeightMedium,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getUnlockSourceText(AppLocalizations l10n) {
+    switch (widget.element.unlockSource) {
+      case VisualElementUnlockSource.system:
+        return l10n.visualElementUnlockSystem;
+      case VisualElementUnlockSource.achievement:
+        return l10n.visualElementUnlockAchievement;
+      case VisualElementUnlockSource.shop:
+        return l10n.visualElementUnlockShop;
+      case VisualElementUnlockSource.event:
+        return l10n.visualElementUnlockEvent;
+      case VisualElementUnlockSource.season:
+        return l10n.visualElementUnlockSeason;
+    }
+  }
+
+  /// 磨砂玻璃锁定遮罩
+  Widget _buildLockedOverlay(
+          AppLocalizations l10n, VisualElementRarityColors colors) =>
+      Positioned.fill(
+        child: ClipRRect(
+          borderRadius:
+              widget.isCompact ? DS.borderRadius12 : DS.borderRadius16,
+          child: Stack(
+            children: [
+              // 磨砂玻璃背景
+              BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0),
+                child: Container(
+                  color: VisualElementPalette.of(context)
+                      .moonless
+                      .withValues(alpha: 0.78),
+                ),
+              ),
+              // 内容
+              Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.lock_outline,
+                      size: widget.isCompact ? DS.iconSizeMd : DS.iconSizeLg,
+                      color: DS.textTertiary,
+                    ),
+                    if (!widget.isCompact) ...[
+                      const SizedBox(height: DS.spacing8),
+                      Text(
+                        _getUnlockConditionSummary(l10n),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: DS.fontSizeXs,
+                          color: DS.textTertiary,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+
+  String _getUnlockConditionSummary(AppLocalizations l10n) {
+    switch (widget.element.unlockSource) {
+      case VisualElementUnlockSource.system:
+        return l10n.visualElementUnlockHintSystem;
+      case VisualElementUnlockSource.achievement:
+        final achievementId =
+            widget.element.unlockRequirement?['achievement_id'];
+        if (achievementId != null) {
+          return l10n.visualElementUnlockHintAchievement(
+            achievementId.toString(),
+          );
+        }
+        return l10n.visualElementUnlockHintAchievementDefault;
+      case VisualElementUnlockSource.shop:
+        final price = widget.element.unlockRequirement?['price_photons'];
+        if (price != null) {
+          return l10n.visualElementUnlockHintShop(price.toString());
+        }
+        return l10n.visualElementUnlockHintShopDefault;
+      case VisualElementUnlockSource.event:
+        return l10n.visualElementUnlockHintEvent;
+      case VisualElementUnlockSource.season:
+        return l10n.visualElementUnlockHintSeason;
+    }
+  }
+
+  VisualElementRarityColors _getRarityColors(VisualElementRarity rarity) =>
+      VisualElementPalette.of(context).rarityColors(rarity);
+}
+
+/// 呼吸边框画笔
+class _BreathingBorderPainter extends CustomPainter {
+  _BreathingBorderPainter({
+    required this.animation,
+    required this.color,
+    required this.borderRadius,
+  });
+
+  final Animation<double> animation;
+  final Color color;
+  final BorderRadius borderRadius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final opacity = animation.value;
+    final paint = Paint()
+      ..color = color.withValues(alpha: opacity)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5;
+
+    final rrect = borderRadius.toRRect(Offset.zero & size);
+    canvas.drawRRect(rrect, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _BreathingBorderPainter oldDelegate) =>
+      animation.value != oldDelegate.animation.value;
+}
+
+/// 元素预览画笔
+class _ElementPreviewPainter extends CustomPainter {
+  _ElementPreviewPainter({
+    required this.element,
+    required this.elementType,
+    required this.config,
+    required this.seed,
+    required this.colors,
+  });
+
+  final VisualElementModel element;
+  final VisualElementType elementType;
+  final Map<String, dynamic> config;
+  final int seed;
+  final VisualElementRarityColors colors;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    switch (elementType) {
+      case VisualElementType.background:
+        _drawBackgroundPreview(canvas, size);
+        break;
+      case VisualElementType.particle:
+        _drawParticlePreview(canvas, size);
+        break;
+      case VisualElementType.effect:
+        _drawEffectPreview(canvas, size);
+        break;
+      case VisualElementType.bundle:
+        _drawBundlePreview(canvas, size);
+        break;
+    }
+  }
+
+  void _drawBackgroundPreview(Canvas canvas, Size size) {
+    // 绘制渐变背景效果
+    final rect = Offset.zero & size;
+    final gradient = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        colors.border.withValues(alpha: 0.1),
+        colors.border.withValues(alpha: 0.3),
+      ],
+    );
+    final paint = Paint()
+      ..shader = gradient.createShader(rect)
+      ..style = PaintingStyle.fill;
+    canvas.drawRect(rect, paint);
+    _drawAuroraBands(canvas, size, colors.border);
+    _drawConstellation(canvas, size, colors.text.withValues(alpha: 0.55));
+  }
+
+  void _drawParticlePreview(Canvas canvas, Size size) {
+    // 绘制粒子点
+    final particleColors =
+        config['colors'] as List<dynamic>? ?? ['#ffffff', '#ffd700'];
+    final count = config['count'] as int? ?? 10;
+
+    final random = _SeededRandom(seed);
+    for (var i = 0; i < count.clamp(5, 15); i++) {
+      final x = random.nextDouble() * size.width;
+      final y = random.nextDouble() * size.height;
+      final radius = 1.5 + random.nextDouble() * 2.5;
+      final colorIndex = i % particleColors.length;
+
+      final color = _parseColor(particleColors[colorIndex].toString());
+      final paint = Paint()
+        ..color = color.withValues(alpha: 0.6)
+        ..style = PaintingStyle.fill;
+
+      canvas.drawCircle(Offset(x, y), radius, paint);
+    }
+    _drawSparkStreaks(canvas, size, colors.border);
+  }
+
+  void _drawEffectPreview(Canvas canvas, Size size) {
+    // 绘制特效效果
+    final center = Offset(size.width / 2, size.height / 2);
+    final effectColor = config['color'] as String? ?? '#ffffff';
+    final color = _parseColor(effectColor);
+
+    final paint = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          color.withValues(alpha: 0.4),
+          color.withValues(alpha: 0.0),
+        ],
+      ).createShader(Rect.fromCircle(center: center, radius: size.width / 2))
+      ..style = PaintingStyle.fill;
+
+    canvas.drawCircle(center, size.width / 2.5, paint);
+    _drawOrbitRings(canvas, size, color);
+  }
+
+  void _drawBundlePreview(Canvas canvas, Size size) {
+    // 绘制套装效果
+    _drawBackgroundPreview(canvas, size);
+    _drawParticlePreview(canvas, size);
+    _drawEffectPreview(canvas, size);
+  }
+
+  void _drawAuroraBands(Canvas canvas, Size size, Color color) {
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 10
+      ..strokeCap = StrokeCap.round
+      ..color = color.withValues(alpha: 0.18);
+
+    final path = Path()
+      ..moveTo(-size.width * 0.1, size.height * 0.72)
+      ..quadraticBezierTo(
+        size.width * 0.28,
+        size.height * 0.48,
+        size.width * 0.62,
+        size.height * 0.68,
+      )
+      ..quadraticBezierTo(
+        size.width * 0.86,
+        size.height * 0.82,
+        size.width * 1.1,
+        size.height * 0.42,
+      );
+    canvas.drawPath(path, paint);
+  }
+
+  void _drawConstellation(Canvas canvas, Size size, Color color) {
+    final random = _SeededRandom(seed + 11);
+    final stars = <Offset>[];
+    for (var i = 0; i < 6; i++) {
+      stars.add(
+        Offset(
+          random.nextDouble() * size.width,
+          random.nextDouble() * size.height * 0.72,
+        ),
+      );
+    }
+
+    final linePaint = Paint()
+      ..color = color.withValues(alpha: 0.22)
+      ..strokeWidth = 1.2;
+    for (var i = 0; i < stars.length - 1; i++) {
+      canvas.drawLine(stars[i], stars[i + 1], linePaint);
+    }
+
+    final starPaint = Paint()..color = color;
+    for (final star in stars) {
+      canvas.drawCircle(star, 1.8, starPaint);
+    }
+  }
+
+  void _drawSparkStreaks(Canvas canvas, Size size, Color color) {
+    final random = _SeededRandom(seed + 29);
+    final paint = Paint()
+      ..color = color.withValues(alpha: 0.24)
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+
+    for (var i = 0; i < 5; i++) {
+      final start = Offset(
+        random.nextDouble() * size.width,
+        random.nextDouble() * size.height,
+      );
+      final end = Offset(
+        start.dx + 12 + random.nextDouble() * 20,
+        start.dy - 6 - random.nextDouble() * 16,
+      );
+      canvas.drawLine(start, end, paint);
+    }
+  }
+
+  void _drawOrbitRings(Canvas canvas, Size size, Color color) {
+    final center = Offset(size.width * 0.72, size.height * 0.3);
+    final paint = Paint()
+      ..color = color.withValues(alpha: 0.22)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.6;
+
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: center,
+        width: size.width * 0.46,
+        height: size.height * 0.18,
+      ),
+      paint,
+    );
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: center.translate(-10, 12),
+        width: size.width * 0.3,
+        height: size.height * 0.12,
+      ),
+      paint..color = color.withValues(alpha: 0.14),
+    );
+  }
+
+  Color _parseColor(String hexColor) {
+    try {
+      hexColor = hexColor.replaceAll('#', '');
+      if (hexColor.length == 6) {
+        return Color(int.parse('FF$hexColor', radix: 16));
+      } else if (hexColor.length == 8) {
+        return Color(int.parse(hexColor, radix: 16));
+      }
+    } catch (_) {}
+    return DS.surfaceSecondary;
+  }
+
+  @override
+  bool shouldRepaint(covariant _ElementPreviewPainter oldDelegate) =>
+      elementType != oldDelegate.elementType ||
+      config != oldDelegate.config ||
+      element.id != oldDelegate.element.id;
+}
+
+/// 确定性随机数生成器（用于预览）
+class _SeededRandom {
+  _SeededRandom(this.seed);
+
+  final int seed;
+  int _current = 0;
+
+  double nextDouble() {
+    _current = (_current * 1103515245 + 12345 + seed) & 0x7FFFFFFF;
+    return _current / 0x7FFFFFFF;
+  }
+}

@@ -1,0 +1,151 @@
+import org.yaml.snakeyaml.Yaml
+
+group 'com.jarvan.fluwx'
+version '1.0-SNAPSHOT'
+
+Map projectYaml = loadPubspec()
+
+buildscript {
+    ext.kotlin_version = '2.2.20'
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.11.1'
+        classpath "org.yaml:snakeyaml:2.0"
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+android {
+    namespace 'com.jarvan.fluwx'
+    compileSdk 36
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    sourceSets {
+        main.java.srcDirs += ['src/main/kotlin', "${buildDir}/generated/src/kotlin"]
+        test.java.srcDirs += 'src/test/kotlin'
+    }
+
+    defaultConfig {
+        minSdkVersion 19
+        consumerProguardFiles 'consumer-proguard-rules.txt'
+    }
+
+    dependencies {
+        api 'com.tencent.mm.opensdk:wechat-sdk-android:6.8.30'
+        implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4'
+        implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4'
+        implementation 'id.zelory:compressor:3.0.1'
+        implementation 'com.squareup.okhttp3:okhttp:4.10.0'
+        testImplementation 'org.jetbrains.kotlin:kotlin-test'
+        testImplementation 'org.mockito:mockito-core:5.0.0'
+    }
+
+    testOptions {
+        unitTests.all {
+            useJUnitPlatform()
+
+            testLogging {
+                events "passed", "skipped", "failed", "standardOut", "standardError"
+                outputs.upToDateWhen { false }
+                showStandardStreams = true
+            }
+        }
+    }
+}
+
+Map loadPubspec() {
+    def yamlDir = rootProject.hasProperty('yamlDir') ? rootProject.ext.yamlDir : ''
+    def path = rootProject.projectDir.parent + File.separator +yamlDir +"pubspec.yaml"
+    InputStream input = new FileInputStream(new File(path))
+    Yaml yaml = new Yaml()
+    Map projectConfig = yaml.load(input)
+
+    return projectConfig
+}
+
+
+tasks.register("generateFluwxHelperFile") {
+   doFirst {
+       Map config = loadPubspec()
+       Map fluwx = (Map) config.get("fluwx")
+       String enableLogging = "false"
+       String interruptWeChatRequestByFluwx = "true"
+       String flutterActivity = ""
+       if (fluwx) {
+           Map android = (Map) fluwx.get("android")
+           if (android) {
+               def iwr = android.get("interrupt_wx_request")
+               if (iwr && iwr == "true" || iwr == "false") {
+                   interruptWeChatRequestByFluwx = (String) iwr
+               }
+
+               def activity = android.get("flutter_activity")
+               if (activity) {
+                   flutterActivity = (String) activity
+               }
+           }
+
+           def logging = fluwx.get("debug_logging")
+           if (logging && logging == "true" || logging == "false") {
+               enableLogging = (String) logging
+           }
+       }
+
+       generateFluwxConfigurations(interruptWeChatRequestByFluwx, flutterActivity, enableLogging)
+   }
+}
+
+def generateFluwxConfigurations(String interruptWeChatRequestByFluwx, String flutterActivity, String enableLogging) {
+    File generateFolder = new File("${buildDir}/generated/src/kotlin/com/jarvan/fluwx")
+
+    String template = "package com.jarvan.fluwx\n" +
+            "\n" +
+            "// auto generated\n" +
+            "internal object FluwxConfigurations {\n" +
+            "    val flutterActivity: String = \"&&flutterActivity&&\"\n" +
+            "    val enableLogging: Boolean = &&enableLogging&&\n" +
+            "    val interruptWeChatRequestByFluwx: Boolean = &&interruptWeChatRequestByFluwx&&\n" +
+            "}"
+    if (!generateFolder.exists()) {
+        generateFolder.mkdirs()
+    }
+
+    String source = template.replace("&&interruptWeChatRequestByFluwx&&", interruptWeChatRequestByFluwx)
+            .replace("&&flutterActivity&&", flutterActivity)
+            .replace("&&enableLogging&&", enableLogging)
+    file("${generateFolder.absolutePath}/FluwxConfigurations.kt").text = source
+}
+
+//tasks.withType(JavaCompile) { javaCompile ->
+//    javaCompile.configure {
+//        dependsOn("generateFluwxHelperFile")
+//    }
+//}
+tasks.matching { it.name == "preBuild" || (it.name.startsWith("compile") && it.name.endsWith("Kotlin")) }.configureEach {
+    dependsOn("generateFluwxHelperFile")
+}
+
+android.libraryVariants.configureEach {
+    it.registerGeneratedResFolders(project.files(new File("${buildDir}/generated/src/kotlin/com/jarvan/fluwx")).builtBy(tasks.named("generateFluwxHelperFile")))
+}

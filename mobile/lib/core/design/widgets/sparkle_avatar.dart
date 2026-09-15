@@ -1,0 +1,140 @@
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sparkle_network_image.dart';
+import 'package:sparkle/shared/entities/user_model.dart';
+
+String _avatarPendingLabel(BuildContext context) {
+  final zh = Localizations.localeOf(context).languageCode == 'zh';
+  return zh ? '审核中' : 'Under Review';
+}
+
+class SparkleAvatar extends StatelessWidget {
+  const SparkleAvatar({
+    super.key,
+    this.url,
+    this.radius = 20,
+    this.fallbackText,
+    this.backgroundColor,
+    this.status = AvatarStatus.approved,
+    this.semanticLabel,
+  });
+  final String? url;
+  final double radius;
+  final String? fallbackText;
+  final Color? backgroundColor;
+  final AvatarStatus status;
+  final String? semanticLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final effectiveBackgroundColor =
+        backgroundColor ?? DS.avatarFallbackBackground;
+
+    Widget avatar;
+    if (url == null || url!.isEmpty) {
+      avatar = _buildFallback(effectiveBackgroundColor);
+    } else if (!url!.startsWith('http')) {
+      avatar = CircleAvatar(
+        radius: radius,
+        backgroundColor: effectiveBackgroundColor,
+        backgroundImage: FileImage(File(url!)),
+      );
+    } else if (url!.toLowerCase().contains('/svg') ||
+        url!.toLowerCase().endsWith('.svg')) {
+      avatar = Container(
+        key: ValueKey('svg_$url'),
+        width: radius * 2,
+        height: radius * 2,
+        decoration: BoxDecoration(
+          color: effectiveBackgroundColor,
+          shape: BoxShape.circle,
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: SvgPicture.network(
+          url!,
+          placeholderBuilder: (context) =>
+              _buildFallback(effectiveBackgroundColor),
+          errorBuilder: (context, error, stackTrace) =>
+              _buildFallback(effectiveBackgroundColor),
+        ),
+      );
+    } else {
+      avatar = SparkleNetworkImage(
+        key: ValueKey('img_$url'),
+        imageUrl: url!,
+        imageBuilder: (context, imageProvider) => CircleAvatar(
+          radius: radius,
+          backgroundColor: effectiveBackgroundColor,
+          backgroundImage: imageProvider,
+        ),
+        placeholder: _buildFallback(effectiveBackgroundColor),
+        errorWidget: _buildFallback(effectiveBackgroundColor),
+      );
+    }
+
+    if (status == AvatarStatus.pending) {
+      avatar = Stack(
+        alignment: Alignment.center,
+        children: [
+          avatar,
+          Container(
+            width: radius * 2,
+            height: radius * 2,
+            decoration: BoxDecoration(
+              color: DS.brandPrimary.withValues(alpha: 0.5),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: radius * 0.6,
+                    height: radius * 0.6,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(DS.brandPrimary70),
+                    ),
+                  ),
+                  if (radius > 25) ...[
+                    const SizedBox(height: DS.xs),
+                    Text(
+                      _avatarPendingLabel(context),
+                      style: TextStyle(
+                        color: DS.brandPrimaryConst,
+                        fontSize: radius * 0.3,
+                        fontWeight: DS.fontWeightBold,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    final label = semanticLabel ?? '${fallbackText ?? "User"} avatar';
+    return Semantics(image: true, label: label, child: avatar);
+  }
+
+  Widget _buildFallback(Color bgColor) => CircleAvatar(
+        radius: radius,
+        backgroundColor: bgColor,
+        child: Text(
+          (fallbackText != null && fallbackText!.isNotEmpty)
+              ? fallbackText![0].toUpperCase()
+              : '?',
+          style: TextStyle(
+            color: DS.avatarFallbackForeground,
+            fontSize: radius * 0.8,
+            fontWeight: DS.fontWeightBold,
+          ),
+        ),
+      );
+}

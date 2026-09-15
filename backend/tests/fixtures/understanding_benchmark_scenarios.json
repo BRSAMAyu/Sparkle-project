@@ -1,0 +1,70 @@
+[
+  {
+    "scenario_id": "cold_start_understanding",
+    "title": "Cold-start understanding should ask before pretending certainty",
+    "benchmark_family": "cold_start_understanding",
+    "comparison_focus": "Sparkle should expose missing information and ask the highest-value first question instead of hallucinating a full plan.",
+    "expected_signal_ids": [],
+    "expected_prediction_ids": [
+      "planning_readiness"
+    ],
+    "expected_unknown_ids": [
+      "goal_specificity",
+      "capacity_hours"
+    ],
+    "expected_clarification_hint": "Which subject matters most right now?"
+  },
+  {
+    "scenario_id": "exam_planning_continuity",
+    "title": "14-day exam planning should recognize pressure and continuity",
+    "benchmark_family": "exam_planning",
+    "comparison_focus": "Sparkle should combine exam pressure, recent wins, and schedule fit instead of producing a generic sprint.",
+    "expected_signal_ids": [
+      "recent_mastery_changes",
+      "peak_focus_hours",
+      "exam_urgency"
+    ],
+    "expected_prediction_ids": [
+      "planning_readiness",
+      "overload_risk",
+      "schedule_fit",
+      "plan_slippage_risk"
+    ],
+    "expected_unknown_ids": []
+  },
+  {
+    "scenario_id": "continuity_understanding",
+    "title": "Continuity understanding should preserve stable patterns and recent changes",
+    "benchmark_family": "continuity_understanding",
+    "comparison_focus": "Sparkle should keep stable work-style signals while still surfacing fresh pain points and corrections.",
+    "expected_signal_ids": [
+      "workflow_tool_affinity",
+      "accountability_support",
+      "recent_errors"
+    ],
+    "expected_prediction_ids": [
+      "intervention_receptivity",
+      "seed_effectiveness"
+    ],
+    "expected_unknown_ids": [
+      "refresh:workflow_tool_reliability"
+    ]
+  },
+  {
+    "scenario_id": "trust_and_recognition",
+    "title": "Trust and recognition should show claims, predictions, and calibration",
+    "benchmark_family": "trust_and_recognition",
+    "comparison_focus": "Sparkle should let the user see what it believes, how confident it is, and what is still uncertain.",
+    "expected_signal_ids": [
+      "achievement_motivation_response",
+      "achievement_reward_sensitivity"
+    ],
+    "expected_prediction_ids": [
+      "planning_readiness",
+      "overload_risk"
+    ],
+    "expected_unknown_ids": [
+      "uncertainty:capacity_hours"
+    ]
+  }
+]

@@ -1,0 +1,287 @@
+import 'dart:ui';
+
+import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
+import 'package:sparkle/shared/entities/galaxy_model.dart';
+
+class GalaxySearchPanel extends StatelessWidget {
+  const GalaxySearchPanel({
+    required this.controller,
+    required this.query,
+    required this.results,
+    required this.isDarkMode,
+    required this.onQueryChanged,
+    required this.onClose,
+    required this.onNodeSelected,
+    super.key,
+  });
+
+  final TextEditingController controller;
+  final String query;
+  final List<GalaxyNodeModel> results;
+  final bool isDarkMode;
+  final ValueChanged<String> onQueryChanged;
+  final VoidCallback onClose;
+  final ValueChanged<GalaxyNodeModel> onNodeSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final colors = context.colorExtensions;
+    final foreground = colors.adaptiveForeground;
+    final secondary = isDarkMode
+        ? DS.neutral0.withValues(alpha: 0.64)
+        : DS.galaxyShadow.withValues(alpha: 0.56);
+    final responsiveMaxHeight = MediaQuery.sizeOf(context).height * 0.44;
+    final panelMaxHeight =
+        responsiveMaxHeight < 360 ? responsiveMaxHeight : 360.0;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                isDarkMode
+                    ? colors.panelDarkOverlayLighter
+                    : DS.neutral0.withValues(alpha: 0.88),
+                isDarkMode
+                    ? DS.neutral0.withValues(alpha: 0.03)
+                    : DS.info.withValues(alpha: 0.03),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: isDarkMode
+                  ? DS.neutral0.withValues(alpha: 0.12)
+                  : DS.galaxyShadow.withValues(alpha: 0.08),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color:
+                    DS.galaxyShadow.withValues(alpha: isDarkMode ? 0.22 : 0.08),
+                blurRadius: 24,
+                offset: const Offset(0, 16),
+              ),
+            ],
+          ),
+          child: ConstrainedBox(
+            constraints:
+                BoxConstraints(maxWidth: 360, maxHeight: panelMaxHeight),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          l10n.galaxySearchTitle,
+                          style: TextStyle(
+                            color: foreground,
+                            fontSize: 16,
+                            fontWeight: DS.fontWeightBold,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: onClose,
+                        icon: Icon(Icons.close_rounded, color: secondary),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: controller,
+                    autofocus: true,
+                    onChanged: onQueryChanged,
+                    style: TextStyle(
+                      color: foreground,
+                      fontSize: 14,
+                      fontWeight: DS.fontWeightMedium,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: l10n.galaxySearchHint,
+                      hintStyle: TextStyle(color: secondary),
+                      prefixIcon: Icon(Icons.search_rounded, color: secondary),
+                      filled: true,
+                      fillColor: (isDarkMode ? DS.neutral0 : DS.neutral900)
+                          .withValues(alpha: isDarkMode ? 0.05 : 0.03),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(
+                          color: (isDarkMode ? DS.neutral0 : DS.neutral900)
+                              .withValues(alpha: 0.08),
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(
+                          color: DS.info.withValues(alpha: 0.35),
+                        ),
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Expanded(
+                    child: query.trim().isEmpty
+                        ? _SearchHint(isDarkMode: isDarkMode)
+                        : results.isEmpty
+                            ? Center(
+                                child: Text(
+                                  l10n.galaxySearchNoResults,
+                                  style: TextStyle(
+                                    color: secondary,
+                                    fontSize: 13,
+                                    fontWeight: DS.fontWeightMedium,
+                                  ),
+                                ),
+                              )
+                            : ListView.separated(
+                                padding: EdgeInsets.zero,
+                                itemCount: results.length,
+                                separatorBuilder: (_, __) => Divider(
+                                  height: 1,
+                                  color:
+                                      (isDarkMode ? DS.neutral0 : DS.neutral900)
+                                          .withValues(alpha: 0.08),
+                                ),
+                                itemBuilder: (context, index) {
+                                  final node = results[index];
+                                  final sectorStyle =
+                                      SectorConfig.getStyle(node.sector);
+                                  final sectorName =
+                                      SectorConfig.getLocalizedName(
+                                    node.sector,
+                                  );
+                                  final color = sectorStyle.primaryColorFor(
+                                    isDarkMode: isDarkMode,
+                                  );
+
+                                  return SparklePressable(
+                                    onTap: () => onNodeSelected(node),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 8,
+                                    ),
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 12,
+                                          height: 12,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color:
+                                                color.withValues(alpha: 0.92),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: color.withValues(
+                                                  alpha: 0.22,
+                                                ),
+                                                blurRadius: 8,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                node.name,
+                                                style: TextStyle(
+                                                  color: foreground,
+                                                  fontSize: 14,
+                                                  fontWeight: DS.fontWeightBold,
+                                                ),
+                                              ),
+                                              Text(
+                                                l10n.galaxySearchResultSubtitle(
+                                                  sectorName,
+                                                  node.masteryScore,
+                                                  node.importance,
+                                                ),
+                                                style: TextStyle(
+                                                  color: secondary,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Icon(
+                                          Icons.north_east_rounded,
+                                          color: color,
+                                          size: 18,
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SearchHint extends StatelessWidget {
+  const _SearchHint({required this.isDarkMode});
+
+  final bool isDarkMode;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final secondary = isDarkMode
+        ? DS.neutral0.withValues(alpha: 0.62)
+        : DS.galaxyShadow.withValues(alpha: 0.56);
+
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.travel_explore_rounded,
+            size: 28,
+            color: secondary,
+          ),
+          const SizedBox(height: 10),
+          Text(
+            l10n.galaxySearchHintDetail,
+            style: TextStyle(
+              color: secondary,
+              fontSize: 13,
+              fontWeight: DS.fontWeightSemibold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

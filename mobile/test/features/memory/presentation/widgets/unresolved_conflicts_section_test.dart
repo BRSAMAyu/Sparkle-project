@@ -1,0 +1,50 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:sparkle/core/models/memory_models.dart';
+import 'package:sparkle/features/memory/presentation/widgets/unresolved_conflicts_section.dart';
+import '../../../../shared/i18n_test_helper.dart';
+
+void main() {
+
+  setUp(setUpI18nForTesting);
+  testWidgets('unresolved conflicts section renders candidates and actions', (
+    WidgetTester tester,
+  ) async {
+    String? tapped;
+    await tester.pumpWidget(
+      testMaterialApp(home: Scaffold(
+          body: UnresolvedConflictsSection(
+            items: [
+              UnresolvedConflictItem(
+                id: 'conflict_1',
+                conflictKey: 'commitment:probability',
+                status: 'pending_user',
+                leftCandidate: UnresolvedConflictCandidate(
+                  summary: '准备今晚复习概率论',
+                  lane: 'inferred_extraction',
+                  evidenceToken: 'turn-left',
+                ),
+                rightCandidate: UnresolvedConflictCandidate(
+                  summary: '今晚先刷概率论错题',
+                  lane: 'inferred_extraction',
+                  evidenceToken: 'turn-right',
+                ),
+              ),
+            ],
+            processingIds: const <String>{},
+            onSelectLeft: (item) async => tapped = 'left:${item.id}',
+            onSelectRight: (item) async => tapped = 'right:${item.id}',
+            onSelectNone: (item) async => tapped = 'none:${item.id}',
+          ),
+        ),),
+    );
+
+    expect(find.text('冲突记录'), findsOneWidget);
+    expect(find.textContaining('准备今晚复习概率论'), findsOneWidget);
+
+    await tester.tap(find.text('B'));
+    await tester.pumpAndSettle();
+
+    expect(tapped, 'right:conflict_1');
+  });
+}

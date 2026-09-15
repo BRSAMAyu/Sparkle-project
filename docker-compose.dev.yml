@@ -1,0 +1,33 @@
+# Development-only overlay — lightweight mode without monitoring stack
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+#
+# This disables: Prometheus, Grafana, Loki, Tempo, Promtail, Alertmanager
+# Saves ~1.5GB RAM on 16GB machines
+#
+# To start WITH monitoring (full stack): docker compose up -d
+# To start WITHOUT monitoring (dev mode): docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+
+services:
+  tempo:
+    profiles:
+      - monitoring
+
+  prometheus:
+    profiles:
+      - monitoring
+
+  alertmanager:
+    profiles:
+      - monitoring
+
+  loki:
+    profiles:
+      - monitoring
+
+  promtail:
+    profiles:
+      - monitoring
+
+  grafana:
+    profiles:
+      - monitoring

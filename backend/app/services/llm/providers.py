@@ -1,0 +1,156 @@
+from collections.abc import AsyncGenerator
+
+from fastapi import HTTPException
+from loguru import logger
+
+try:
+    from openai import APIError, AsyncOpenAI, Timeout as OpenAITimeout
+    HAS_OPENAI = True
+except ImportError:
+    AsyncOpenAI = None
+    APIError = Exception
+    OpenAITimeout = None
+    HAS_OPENAI = False
+
+import httpx
+
+from app.services.llm.base import LLMProvider
+from app.services.llm.concurrency import llm_concurrency
+from app.core.exceptions import LLMServiceError
+
+
+class OpenAICompatibleProvider(LLMProvider):
+    """
+    Provider for OpenAI-compatible APIs (OpenAI, DeepSeek, Qwen, etc.)
+    """
+    def __init__(self, api_key: str, base_url: str, timeout_seconds: float = 60.0):
+        if not HAS_OPENAI:
+            raise HTTPException(
+                status_code=501,
+                detail="OpenAI client not installed. Install llm extras to enable LLM features."
+            )
+        if not api_key:
+            logger.error(f"LLM Provider Initialization Error: api_key is empty for base_url={base_url}")
+            # Do not raise here to allow fallback/demo mode to handle it, but log it clearly
+            self.has_api_key = False
+        else:
+            self.has_api_key = True
+
+        self.base_url = base_url
+
+        # Set explicit timeout:
+        # - connect: 10s for initial connection
+        # - read: 60s for response (covers GLM thinking mode which can take 30s+)
+        # - write: 30s for request upload
+        # - pool: 10s for connection pool acquisition
+        if OpenAITimeout:
+            timeout_config = OpenAITimeout(
+                timeout=timeout_seconds,
+                connect=10.0,
+            )
+        else:
+            logger.warning(
+                "openai.Timeout not available; falling back to httpx.Timeout. "
+                "Upgrade openai package for full timeout support."
+            )
+            timeout_config = httpx.Timeout(
+                timeout=timeout_seconds,
+                connect=10.0,
+            )
+
+        self.client = AsyncOpenAI(
+            api_key=api_key,
+            base_url=base_url,
+            timeout=timeout_config,
+        )
+
+    def _get_provider_name(self) -> str:
+        """从 base_url 提取提供商名称"""
+        url_lower = self.base_url.lower()
+        if "bigmodel" in url_lower or "zhipu" in url_lower:
+            if "/api/coding/" in url_lower:
+                return "zhipu_coding"
+            return "zhipu"
+        elif "deepseek" in url_lower:
+            return "deepseek"
+        elif "xiaomi" in url_lower or "mimo" in url_lower:
+            return "xiaomi"
+        elif "dashscope" in url_lower or "aliyun" in url_lower:
+            return "dashscope"
+        elif "siliconflow" in url_lower:
+            return "siliconflow"
+        return "default"
+
+    @staticmethod
+    def _is_rate_limited_error(error: Exception) -> bool:
+        error_text = str(error).lower()
+        status_code = getattr(error, "status_code", None)
+        return status_code == 429 or "429" in error_text or "rate limit" in error_text or "too many request" in error_text
+
+    async def chat(
+        self,
+        messages: list[dict[str, str]],
+        model: str,
+        temperature: float = 0.7,
+        **kwargs
+    ) -> str:
+        provider = self._get_provider_name()
+        try:
+            async with llm_concurrency.acquire(provider):
+                response = await self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=temperature,
+                    **kwargs
+                )
+                await llm_concurrency.report_success(provider)
+                return response.choices[0].message.content or ""
+        except TimeoutError:
+            logger.error(f"[LLMConcurrency] Timeout acquiring semaphore for {provider}")
+            raise HTTPException(status_code=503, detail="LLM service is busy, please try again") from None
+        except APIError as e:
+            if self._is_rate_limited_error(e):
+                await llm_concurrency.report_rate_limit(provider)
+            logger.error(f"LLM API Error: {e}")
+            raise e
+        except Exception as e:
+            if self._is_rate_limited_error(e):
+                await llm_concurrency.report_rate_limit(provider)
+            logger.error(f"Unexpected LLM Error: {e}")
+            raise e
+
+    async def stream_chat(
+        self,
+        messages: list[dict[str, str]],
+        model: str,
+        temperature: float = 0.7,
+        **kwargs
+    ) -> AsyncGenerator[str, None]:
+        provider = self._get_provider_name()
+        try:
+            async with llm_concurrency.acquire(provider):
+                stream = await self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=temperature,
+                    stream=True,
+                    **kwargs
+                )
+                async for chunk in stream:
+                    content = chunk.choices[0].delta.content
+                    if content:
+                        yield content
+                await llm_concurrency.report_success(provider)
+        except TimeoutError:
+            logger.error(f"[LLMConcurrency] Timeout acquiring semaphore for {provider}")
+            raise LLMServiceError(f"Timeout acquiring semaphore for {provider}") from None
+        except APIError as e:
+            if self._is_rate_limited_error(e):
+                await llm_concurrency.report_rate_limit(provider)
+            logger.error(f"LLM Stream API Error: {e}")
+            raise e
+        except Exception as e:
+            if self._is_rate_limited_error(e):
+                await llm_concurrency.report_rate_limit(provider)
+            logger.error(f"Unexpected LLM Stream Error: {e}")
+            raise e

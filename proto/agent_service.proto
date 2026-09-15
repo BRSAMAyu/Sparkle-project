@@ -1,0 +1,784 @@
+syntax = "proto3";
+
+package agent.v1;
+
+option go_package = "github.com/sparkle/gateway/gen/agent/v1;agentv1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+
+// AgentService defines the interface for the AI Agent Engine.
+// It handles complex reasoning, long-term memory retrieval, and tool orchestration.
+service AgentService {
+  // StreamChat handles the bi-directional communication for AI chat.
+  // It supports streaming responses for a "typewriter" effect and tool execution flows.
+  rpc StreamChat(ChatRequest) returns (stream ChatResponse);
+
+  // RetrieveMemory allows the gateway (or other services) to query the AI's long-term memory store (Vector DB).
+  // This is used for RAG (Retrieval-Augmented Generation) or context building.
+  rpc RetrieveMemory(MemoryQuery) returns (MemoryResult);
+
+  // GetUserProfile retrieves the user's profile data.
+  rpc GetUserProfile(ProfileRequest) returns (UserProfile);
+
+  // GetWeeklyReport generates or retrieves a weekly summary for the user.
+  rpc GetWeeklyReport(WeeklyReportRequest) returns (WeeklyReport);
+
+  // SubmitResponseFeedback records user feedback for an AI response.
+  rpc SubmitResponseFeedback(ResponseFeedbackRequest) returns (ResponseFeedbackResponse);
+
+  // SubmitPlanReview submits user feedback for a plan review.
+  rpc SubmitPlanReview(PlanReviewRequest) returns (PlanReviewResponse);
+
+  // SubmitContentReviewFeedback submits user feedback for a content review (Phase 2c).
+  rpc SubmitContentReviewFeedback(ContentReviewFeedbackRequest) returns (ContentReviewFeedbackResponse);
+
+  // Phase 2e: Review Override & Appeal
+  // SubmitReviewOverride allows user to override a review decision
+  rpc SubmitReviewOverride(ReviewOverrideRequest) returns (ReviewOverrideResponse);
+
+  // SubmitReviewAppeal submits an appeal against a review
+  rpc SubmitReviewAppeal(ReviewAppealRequest) returns (ReviewAppealResponse);
+
+  // GetAppealStatus retrieves the status of an appeal
+  rpc GetAppealStatus(AppealStatusRequest) returns (AppealStatusResponse);
+
+  // Phase 2f: Review Feedback & Regeneration
+  // SubmitReviewFeedback allows user to rate and provide feedback on reviews
+  rpc SubmitReviewFeedback(ReviewFeedbackRequest) returns (ReviewFeedbackResponse);
+
+  // RequestRegeneration requests content regeneration based on feedback
+  rpc RequestRegeneration(RegenerationRequest) returns (RegenerationResponse);
+
+  // GetFeedbackStatistics retrieves feedback statistics
+  rpc GetFeedbackStatistics(FeedbackStatisticsRequest) returns (FeedbackStatisticsResponse);
+
+  // Phase 2g: Arbitration System
+  // GetArbitrationQueue retrieves pending arbitration cases for admins
+  rpc GetArbitrationQueue(GetArbitrationQueueRequest) returns (GetArbitrationQueueResponse);
+
+  // AssignArbitrationCase assigns a case to an arbitrator
+  rpc AssignArbitrationCase(AssignArbitrationCaseRequest) returns (AssignArbitrationCaseResponse);
+
+  // SubmitArbitrationDecision submits an arbitrator's decision
+  rpc SubmitArbitrationDecision(SubmitArbitrationDecisionRequest) returns (SubmitArbitrationDecisionResponse);
+
+  // GetArbitrationQueueStats retrieves queue statistics
+  rpc GetArbitrationQueueStats(GetArbitrationQueueStatsRequest) returns (GetArbitrationQueueStatsResponse);
+}
+
+// ============================================================================
+// Chat Definitions
+// ============================================================================
+
+// ChatRequest encapsulates the user's input and necessary context for the AI.
+message ChatRequest {
+  // Unique identifier of the user interacting with the agent.
+  // SECURITY NOTE: Server MUST validate this matches the authenticated user_id
+  // from the gRPC auth context, not trust the client-supplied value.
+  string user_id = 1;
+
+  // Session ID to track the conversation thread.
+  // If empty, the agent may treat it as a new stateless interaction or generate a new session.
+  string session_id = 2;
+
+  // The input can be either a new text message from the user OR a result from a requested tool execution.
+  oneof input {
+      string message = 3; // The user's text input.
+      ToolResult tool_result = 7; // The result of a tool execution requested by the Agent.
+  }
+
+  // Core user profile context (Strongly Typed).
+  // This data is usually fetched from the primary DB by the Gateway.
+  UserProfile user_profile = 4;
+
+  // Extra dynamic context (Flexible).
+  // Used for temporary or extension data (e.g. "current_weather", "frontend_version").
+  google.protobuf.Struct extra_context = 5;
+
+  // Optional: Recent conversation history if the client/gateway manages state.
+  // This history field is mainly for passing frontend temporary context, or when Session is stateless.
+  // By default, Python should prioritize reading history from the database.
+  repeated ChatMessage history = 6;
+
+  // Configuration for this specific request.
+  ChatConfig config = 8;
+
+  // Unique identifier for this specific request/message (Trace ID).
+  string request_id = 9;
+
+  // Optional: document IDs to scope RAG retrieval to specific files.
+  repeated string file_ids = 10;
+
+  // Optional: include document references in streaming responses.
+  bool include_references = 11;
+
+  // Optional: List of tools currently active/available for this request
+  repeated string active_tools = 12;
+
+  // Chat mode for AI collaboration strategy.
+  // Values: "standard" (default), "deep_analysis", "study_plan", "error_diagnosis",
+  //         "expert_auto", "expert::<expert_id>"
+  string chat_mode = 13;
+
+  // Optional: whether this conversation turn may use the user's study documents.
+  // Intentionally proto3 optional: unset means "use the session default", while
+  // false explicitly disables document grounding for this turn.
+  optional bool use_document_context = 14;
+
+  // Optional: session-scoped document filter for retrieval.
+  repeated string document_filter = 15;
+}
+
+// UserProfile defines key user attributes for personalization.
+message UserProfile {
+    string nickname = 1;
+    string timezone = 2;
+    string language = 3;
+
+    // Pro status might determine access to advanced models or tools.
+    bool is_pro = 4;
+
+    // Dynamic preferences (e.g., "concise_mode", "role_play_enabled")
+    map<string, string> preferences = 5;
+
+    // P0: Extra context (JSON string) containing user state for context propagation
+    // Includes pending_tasks, active_plans, focus_stats, recent_progress (set by Go Gateway)
+    string extra_context = 6;
+    
+    // User level/experience
+    int32 level = 7;
+    
+    // URL to user's avatar image
+    string avatar_url = 8;
+}
+
+// Request to get user profile
+message ProfileRequest {
+    string user_id = 1;
+}
+
+message WeeklyReportRequest {
+  string user_id = 1;
+  string week_id = 2;
+}
+
+message WeeklyReport {
+  string summary = 1;
+  int32 tasks_completed = 2;
+}
+
+// ToolResult represents the output of a tool execution performed by the Client/Gateway.
+message ToolResult {
+    string tool_call_id = 1;
+    string tool_name = 2;
+    
+    // The result payload, typically JSON.
+    string result_json = 3; 
+    
+    bool is_error = 4;
+    string error_message = 5;
+}
+
+// ChatConfig allows overriding default behaviors for a specific request.
+message ChatConfig {
+    string model = 1;
+    float temperature = 2;
+    int32 max_tokens = 3;
+    bool tools_enabled = 4;
+}
+
+// ChatMessage represents a single message in the conversation history.
+message ChatMessage {
+    string role = 1; // "user", "assistant", "system", "tool"
+    string content = 2;
+    string name = 3; 
+    string tool_call_id = 4; // Required if role is "tool"
+    map<string, string> metadata = 5;
+}
+
+// ChatResponse represents a chunk of the stream from the Agent.
+message ChatResponse {
+  string response_id = 1;
+  int64 created_at = 2; 
+
+  // The ID of the request that triggered this response (for tracing).
+  string request_id = 10;
+  // Trace ID for end-to-end logging correlation.
+  string trace_id = 15;
+  // Workflow identifier for this response.
+  string workflow_id = 16;
+  // Prompt version used to generate this response.
+  string prompt_version = 17;
+  // Additional response metadata (e.g., preference version).
+  map<string, string> metadata = 18;
+
+  // The main payload of the response.
+  oneof content {
+    // Text delta for the typewriter effect.
+    string delta = 3;
+    
+    // Request for the client/gateway to execute a tool.
+    // Note: If the model supports parallel function calling, multiple ToolCall frames may be streamed.
+    ToolCall tool_call = 4;
+    
+    // Log message for internal agent actions/thoughts.
+    AgentStatus status_update = 5;
+    
+    // Final complete response text.
+    string full_text = 6;
+    
+    // Error information.
+    Error error = 7;
+    
+    // Usage statistics.
+    Usage usage = 8;
+
+    // Citations from RAG.
+    CitationBlock citations = 11;
+
+    // Tool execution result (for UI rendering).
+    ToolResultPayload tool_result = 12;
+
+    // Intervention payload (contract-based UI).
+    InterventionPayload intervention = 14;
+  }
+  
+  // Indicates why the generation finished.
+  FinishReason finish_reason = 9;
+
+  // Session/Conversation ID - returned to client for conversation continuity
+  // This is essential for maintaining context across multiple messages
+  string session_id = 20;
+
+  reserved 13;
+  reserved "timestamp";
+  // Preferred event timestamp for new clients.
+  google.protobuf.Timestamp event_time = 19;
+}
+
+// Feedback enums for response quality.
+enum FeedbackType {
+  FEEDBACK_TYPE_UP = 0;
+  FEEDBACK_TYPE_DOWN = 1;
+}
+
+enum FeedbackReason {
+  FEEDBACK_REASON_UNSPECIFIED = 0;
+  FEEDBACK_REASON_INACCURATE = 1;
+  FEEDBACK_REASON_INCOMPLETE = 2;
+  FEEDBACK_REASON_VERBOSE = 3;
+  FEEDBACK_REASON_FORMATTING = 4;
+  FEEDBACK_REASON_MISALIGNED = 5;
+  FEEDBACK_REASON_TOO_HARD = 6;
+  FEEDBACK_REASON_TOO_SIMPLE = 7;
+}
+
+message ResponseFeedbackRequest {
+  string user_id = 1;
+  string response_id = 2;
+  string trace_id = 3;
+  FeedbackType feedback_type = 4;
+  repeated FeedbackReason reasons = 5;
+  string free_text = 6;
+  string workflow_id = 7;
+  string prompt_version = 8;
+  map<string, string> meta = 9;
+}
+
+message ResponseFeedbackResponse {
+  bool success = 1;
+  string message = 2;
+  string response_id = 3;
+}
+
+// ============================================================================
+// Plan Review Definitions
+// ============================================================================
+
+// User decision on a plan review
+enum PlanReviewDecision {
+  PLAN_REVIEW_DECISION_UNSPECIFIED = 0;
+  APPROVE = 1;           // User approves the plan as-is
+  REJECT = 2;            // User rejects the plan completely
+  MODIFY = 3;            // User requests modifications
+  ACKNOWLEDGE = 4;       // User acknowledges the review (info-only)
+}
+
+message PlanReviewRequest {
+  string user_id = 1;
+  string plan_id = 2;
+  string review_id = 3;
+  PlanReviewDecision decision = 4;
+  string user_comment = 5;
+  string trace_id = 6;
+  string workflow_id = 7;
+  string prompt_version = 8;
+  map<string, string> meta = 9;
+}
+
+message PlanReviewResponse {
+  bool success = 1;
+  string message = 2;
+  string review_id = 3;
+  string updated_plan_id = 4;  // Set if decision was MODIFY
+}
+
+// ============================================================================
+// Content Review Feedback (Phase 2c)
+// ============================================================================
+
+enum ContentReviewFeedbackType {
+  SATISFIED = 0;          // 用户满意，接受审查结果
+  UNSATISFIED = 1;        // 用户不满意，拒绝内容
+  MODIFIED = 2;           // 用户修改后接受
+  REPORTED_ERROR = 3;     // 用户报告错误
+  SKIPPED = 4;            // 用户跳过审查
+}
+
+message ContentReviewFeedbackRequest {
+  string user_id = 1;
+  string review_id = 2;
+  string response_id = 3;           // 关联的响应ID
+  ContentReviewFeedbackType feedback_type = 4;
+  int32 rating = 5;                 // 可选：1-5评分
+  string comment = 6;               // 可选：用户评论
+  repeated string issues_reported = 7;  // 可选：用户报告的问题
+  string session_id = 8;
+  map<string, string> meta = 9;
+}
+
+message ContentReviewFeedbackResponse {
+  bool success = 1;
+  string message = 2;
+  string feedback_id = 3;
+}
+
+// ============================================================================
+// Review Override & Appeal (Phase 2e)
+// ============================================================================
+
+// User overrides review decision
+message ReviewOverrideRequest {
+  string user_id = 1;
+  string review_id = 2;
+  string original_decision = 3;      // Original review decision: passed/failed/needs_refinement
+  string new_decision = 4;           // User's new decision: passed/failed
+  string reason = 5;                 // User's reason for override
+  string session_id = 6;
+  map<string, string> meta = 7;
+}
+
+message ReviewOverrideResponse {
+  bool success = 1;
+  string message = 2;
+  string override_id = 3;
+}
+
+// User appeals against a review
+message ReviewAppealRequest {
+  string user_id = 1;
+  string review_id = 2;
+  string appeal_reason = 3;                    // Main reason for appeal
+  repeated string issues_with_review = 4;      // Specific issues with the review
+  string session_id = 5;
+  map<string, string> meta = 6;
+}
+
+message ReviewAppealResponse {
+  bool success = 1;
+  string appeal_id = 2;
+  string status = 3;                           // pending, in_review, resolved, rejected, escalated
+  string message = 4;
+}
+
+// Get appeal status
+message AppealStatusRequest {
+  string user_id = 1;
+  string appeal_id = 2;
+}
+
+message AppealStatusResponse {
+  string appeal_id = 1;
+  string review_id = 2;
+  string status = 3;
+  string submitted_at = 4;
+  string appeal_reason = 5;
+  string resolution = 6;
+  string resolved_by = 7;
+  string resolved_at = 8;
+  string secondary_decision = 9;
+  double secondary_score = 10;
+}
+
+// ============================================================================
+// Phase 2f: Review Feedback & Regeneration Messages
+// ============================================================================
+
+// ReviewFeedbackRequest - submit feedback on a review
+message ReviewFeedbackRequest {
+  string user_id = 1;
+  string review_id = 2;
+  string feedback_type = 3; // rating, quality, accuracy, specificity
+
+  // Rating feedback (1-5)
+  int32 rating = 4;
+
+  // Quality feedback
+  bool was_helpful = 5;
+
+  // Accuracy feedback
+  bool was_accurate = 6;
+  repeated string inaccurate_points = 7;
+
+  // Specificity feedback: too_vague, appropriate, too_detailed
+  string specificity_level = 8;
+
+  // Free-form comments
+  string comments = 9;
+
+  // Tags
+  repeated string tags = 10;
+}
+
+// ReviewFeedbackResponse - response to feedback submission
+message ReviewFeedbackResponse {
+  bool success = 1;
+  string feedback_id = 2;
+  string message = 3;
+}
+
+// RegenerationRequest - request content regeneration
+message RegenerationRequest {
+  string user_id = 1;
+  string original_content_id = 2;
+  string review_id = 3;
+
+  // Regeneration type: improve_quality, fix_issues, change_style, add_details, simplify, custom
+  string regeneration_type = 4;
+
+  // Improvement hints
+  repeated string improvement_hints = 5;
+
+  // Focus areas
+  repeated string focus_areas = 6;
+
+  // Custom instructions
+  string custom_instructions = 7;
+}
+
+// RegenerationResponse - response to regeneration request
+message RegenerationResponse {
+  bool success = 1;
+  string request_id = 2;
+  string new_content = 3;
+  string new_content_id = 4;
+  string improvement_summary = 5;
+  repeated string changes_made = 6;
+  double score_improvement = 7;
+  int32 generation_time_ms = 8;
+}
+
+// FeedbackStatisticsRequest - request feedback statistics
+message FeedbackStatisticsRequest {
+  string user_id = 1;
+  int32 period_days = 2; // Statistics period in days
+}
+
+// FeedbackStatisticsResponse - feedback statistics
+message FeedbackStatisticsResponse {
+  int32 total_feedbacks = 1;
+  double avg_rating = 2;
+  double helpful_rate = 3;
+  double accuracy_rate = 4;
+  int32 regeneration_requests = 5;
+  int32 successful_regenerations = 6;
+  int32 period_days = 7;
+}
+
+// ============================================================================
+// Phase 2g: Arbitration System Messages
+// ============================================================================
+
+// GetArbitrationQueueRequest - request arbitration queue
+message GetArbitrationQueueRequest {
+  int32 limit = 1; // Maximum number of cases to return
+  string priority_filter = 2; // Filter by priority: low, normal, high, urgent
+  string status_filter = 3; // Filter by status: pending, assigned, in_review
+}
+
+// ArbitrationCaseInfo - information about an arbitration case
+message ArbitrationCaseInfo {
+  string case_id = 1;
+  string appeal_id = 2;
+  string review_id = 3;
+  string user_id = 4;
+  string escalation_reason = 5;
+  string priority = 6;
+  string created_at = 7;
+  string status = 8;
+  string assigned_to = 9;
+  string assigned_at = 10;
+  double original_review_score = 11;
+  double secondary_review_score = 12;
+  double score_discrepancy = 13;
+  string resolution = 14;
+  string final_decision = 15;
+  string resolved_at = 16;
+  string resolved_by = 17;
+  repeated string notes = 18;
+}
+
+// GetArbitrationQueueResponse - response with arbitration cases
+message GetArbitrationQueueResponse {
+  repeated ArbitrationCaseInfo cases = 1;
+  int32 total_count = 2;
+}
+
+// AssignArbitrationCaseRequest - assign a case to an arbitrator
+message AssignArbitrationCaseRequest {
+  string case_id = 1;
+  string arbitrator_id = 2;
+  string arbitrator_role = 3; // reviewer, senior, admin
+}
+
+// AssignArbitrationCaseResponse - response to case assignment
+message AssignArbitrationCaseResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// SubmitArbitrationDecisionRequest - submit an arbitration decision
+message SubmitArbitrationDecisionRequest {
+  string case_id = 1;
+  string decision = 2; // approved, rejected, partially_approved, escalated
+  string explanation = 3;
+  string arbitrator_id = 4;
+  string arbitrator_role = 5;
+  string feedback_for_model = 6;
+}
+
+// SubmitArbitrationDecisionResponse - response to decision submission
+message SubmitArbitrationDecisionResponse {
+  bool success = 1;
+  string decision_id = 2;
+  string message = 3;
+}
+
+// GetArbitrationQueueStatsRequest - request queue statistics
+message GetArbitrationQueueStatsRequest {
+  // No parameters needed for now
+}
+
+// ArbitrationQueueStatsInfo - queue statistics
+message ArbitrationQueueStatsInfo {
+  int32 total_pending = 1;
+  int32 total_assigned = 2;
+  int32 total_in_review = 3;
+  int32 total_resolved_today = 4;
+  double avg_resolution_time_hours = 5;
+  map<string, int32> by_priority = 6;
+  map<string, int32> by_reason = 7;
+}
+
+// GetArbitrationQueueStatsResponse - response with queue statistics
+message GetArbitrationQueueStatsResponse {
+  ArbitrationQueueStatsInfo stats = 1;
+}
+
+message CitationBlock {
+    repeated Citation citations = 1;
+}
+
+message Citation {
+    string id = 1;
+    string title = 2; 
+    string content = 3; 
+    string source_type = 4; 
+    string url = 5; 
+    float score = 6;
+    string file_id = 7;
+    int32 page_number = 8;
+    int32 chunk_index = 9;
+    string section_title = 10;
+}
+
+enum FinishReason {
+    NULL = 0;
+    STOP = 1; // Natural completion
+    LENGTH = 2; // Hit max tokens
+    TOOL_CALLS = 3; // Paused to wait for tool execution
+    CONTENT_FILTER = 4; // Blocked by safety filter
+    ERROR = 5;
+    CONTINUE = 6; // Aurora runtime will continue emitting more messages in the same stream
+}
+
+message ToolCall {
+    string id = 1;
+    string name = 2;
+    string arguments = 3;
+}
+
+message ToolResultPayload {
+    string tool_name = 1;
+    bool success = 2;
+    google.protobuf.Struct data = 3;
+    string error_message = 4;
+    string suggestion = 5;
+    string widget_type = 6;
+    google.protobuf.Struct widget_data = 7;
+    string tool_call_id = 8;
+}
+
+// ============================================================================
+// Intervention Contract (Phase 0.5)
+// ============================================================================
+
+message EvidenceRef {
+  string type = 1;        // "event" | "user_state" | "error" | "concept" | "strategy" | "task" | "summary"
+  string id = 2;
+  string schema_version = 3;
+  bool user_deleted = 4;
+}
+
+enum InterventionLevel {
+  SILENT_MARKER = 0;
+  TOAST = 1;
+  CARD = 2;
+  FULL_SCREEN_MODAL = 3;
+}
+
+message CoolDownPolicy {
+  string policy = 1;   // "MUTE_TOPIC_24H" | "MUTE_ALL_2H" | ...
+  int64 until_ms = 2;
+}
+
+message InterventionReason {
+  string trigger_event_id = 1;
+  string explanation_text = 2;
+  float confidence = 3;
+  repeated EvidenceRef evidence_refs = 4;
+  repeated string decision_trace = 5;
+}
+
+message InterventionRequest {
+  string id = 1;
+  string dedupe_key = 2;
+  string topic = 3;
+  int64 created_at_ms = 4;
+  int64 expires_at_ms = 5;
+  bool is_retractable = 6;
+  string supersedes_id = 7;
+
+  string schema_version = 8;  // "intervention.v1"
+  string policy_version = 9;
+  string model_version = 10;
+
+  InterventionReason reason = 11;
+  InterventionLevel level = 12;
+  CoolDownPolicy on_reject = 13;
+
+  google.protobuf.Struct content = 14;
+}
+
+message InterventionPayload {
+  InterventionRequest request = 1;
+}
+
+// AgentType defines the different types of specialized agents in the system.
+enum AgentType {
+    AGENT_UNKNOWN = 0;
+    ORCHESTRATOR = 1; // Main brain - understands intent, decomposes tasks, aggregates results
+    KNOWLEDGE = 2; // Librarian - handles GraphRAG retrieval, document search
+    MATH = 3; // Calculator - numerical computation, formula derivation
+    CODE = 4; // Engineer - code generation, debugging, execution
+    DATA_ANALYSIS = 5; // Data Scientist - data processing, statistics, visualization
+    TRANSLATION = 6; // Translator - language translation, localization
+    IMAGE = 7; // Image Specialist - image generation, editing, analysis
+    AUDIO = 8; // Audio Engineer - audio processing, speech-to-text, music
+    WRITING = 9; // Writer - content creation, summarization, editing
+    REASONING = 10; // Logic Expert - complex reasoning, problem solving
+}
+
+message AgentStatus {
+    enum State {
+        UNKNOWN = 0;
+        THINKING = 1;
+        SEARCHING = 2;
+        EXECUTING_TOOL = 3;
+        GENERATING = 4;
+        IDLE = 5;
+    }
+    State state = 1;
+    string details = 2;
+    string current_agent_name = 3; // Legacy: Human-readable agent name
+    AgentType active_agent = 4; // Type-safe agent identifier for UI visualization
+}
+
+enum ErrorCode {
+    ERROR_CODE_UNSPECIFIED = 0;
+    ERROR_CODE_UNKNOWN = 1;
+    ERROR_CODE_INVALID_ARGUMENT = 2;
+    ERROR_CODE_UNAUTHORIZED = 3;
+    ERROR_CODE_FORBIDDEN = 4;
+    ERROR_CODE_NOT_FOUND = 5;
+    ERROR_CODE_CONFLICT = 6;
+    ERROR_CODE_RATE_LIMITED = 7;
+    ERROR_CODE_UNAVAILABLE = 8;
+    ERROR_CODE_TIMEOUT = 9;
+    ERROR_CODE_INTERNAL = 10;
+}
+
+message Error {
+    reserved 1;
+    reserved "code";
+    string message = 2;
+    bool retryable = 3;
+    map<string, string> details = 4;
+    ErrorCode error_code = 5;
+}
+
+message Usage {
+    int32 prompt_tokens = 1;
+    int32 completion_tokens = 2;
+    int32 total_tokens = 3;
+    int64 cost_micro_usd = 4;
+}
+
+// ============================================================================
+// Memory Definitions
+// ============================================================================
+
+message MemoryQuery {
+  string user_id = 1;
+  string query_text = 2;
+  int32 limit = 3;
+  float min_score = 4;
+  MemoryFilter filter = 5;
+  
+  // Hybrid search parameter.
+  // 0.0 = Keyword Search (BM25)
+  // 1.0 = Vector Search (Dense)
+  // 0.5 = Hybrid
+  float hybrid_alpha = 6;
+}
+
+message MemoryFilter {
+    repeated string tags = 1;
+    google.protobuf.Timestamp start_time = 2;
+    google.protobuf.Timestamp end_time = 3;
+    repeated string source_types = 4;
+}
+
+message MemoryResult {
+  repeated MemoryItem items = 1;
+  int32 total_found = 2;
+}
+
+message MemoryItem {
+  string id = 1;
+  string content = 2;
+  float score = 3;
+  google.protobuf.Timestamp created_at = 4;
+  map<string, string> metadata = 5;
+}

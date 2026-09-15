@@ -1,0 +1,325 @@
+import 'package:dio/dio.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/features/achievement/data/repositories/achievement_repository.dart';
+import '../../../../shared/i18n_test_helper.dart';
+
+class TestApiClient implements ApiClient {
+  Future<Response<dynamic>> Function(
+    String path,
+    Map<String, dynamic>? queryParameters,
+  )? getHandler;
+  Future<Response<dynamic>> Function(
+    String path,
+    Object? data,
+    Map<String, dynamic>? queryParameters,
+  )? postHandler;
+
+  @override
+  Dio get dio => throw UnimplementedError();
+
+  @override
+  Future<Response<T>> get<T>(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    final handler = getHandler;
+    if (handler == null) {
+      throw UnimplementedError('No get handler configured');
+    }
+
+    final response = await handler(path, queryParameters);
+    return Response<T>(
+      data: response.data as T,
+      requestOptions: response.requestOptions,
+      statusCode: response.statusCode,
+      statusMessage: response.statusMessage,
+      isRedirect: response.isRedirect,
+      redirects: response.redirects,
+      extra: response.extra,
+      headers: response.headers,
+    );
+  }
+
+  @override
+  Future<Response<T>> post<T>(
+    String path, {
+    Object? data,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    final handler = postHandler;
+    if (handler == null) {
+      throw UnimplementedError('No post handler configured');
+    }
+
+    final response = await handler(path, data, queryParameters);
+    return Response<T>(
+      data: response.data as T,
+      requestOptions: response.requestOptions,
+      statusCode: response.statusCode,
+      statusMessage: response.statusMessage,
+      isRedirect: response.isRedirect,
+      redirects: response.redirects,
+      extra: response.extra,
+      headers: response.headers,
+    );
+  }
+
+  @override
+  Future<Response<T>> put<T>(
+    String path, {
+    Object? data,
+    Map<String, dynamic>? queryParameters,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Response<T>> patch<T>(
+    String path, {
+    Object? data,
+    Map<String, dynamic>? queryParameters,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Response<T>> delete<T>(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Stream<SSEEvent> getStream(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    Map<String, dynamic>? headers,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Stream<SSEEvent> postStream(String path, {Object? data}) {
+    throw UnimplementedError();
+  }
+}
+
+void main() {
+  late TestApiClient apiClient;
+  late AchievementRepository repository;
+
+  setUp(() {
+    setUpI18nForTesting();
+    DemoDataService.isDemoMode = false;
+    apiClient = TestApiClient();
+    repository = AchievementRepository(apiClient);
+  });
+
+  tearDown(() {
+    DemoDataService.isDemoMode = false;
+  });
+
+  test('getCloseToUnlockAchievements parses nested payload shape', () async {
+    apiClient.getHandler = (path, queryParameters) async {
+      expect(path, ApiEndpoints.achievementsCloseToUnlock);
+      expect(queryParameters?['category'], 'sprint');
+      expect(queryParameters?['threshold'], 0.8);
+
+      return Response(
+        requestOptions:
+            RequestOptions(path: ApiEndpoints.achievementsCloseToUnlock),
+        data: {
+          'data': [
+            {
+              'achievement': {
+                'id': 'speed_learner',
+                'name': '速通大师',
+                'description': '24小时内解锁20个新知识点',
+                'icon_url': '/icons/achievements/speed_learner.png',
+                'type': 'hidden',
+                'rarity': 'epic',
+                'category': 'hidden',
+                'is_hidden': true,
+                'hint': '效率至上...',
+                'sort_order': 103,
+                'parent_id': null,
+                'trigger_code': 'SPEED_UNLOCK',
+                'trigger_config': {'count': 20, 'hours': 24},
+                'prerequisites': null,
+                'visual_effect_type': 'supernova',
+                'visual_config': {
+                  'particle_count': 100,
+                  'expansion_speed': 2.0,
+                },
+                'reward_config': [
+                  {
+                    'type': 'title',
+                    'value': 'speed_learner',
+                    'display': '速通大师',
+                  },
+                ],
+                'total_unlocked': 0,
+                'created_at': '2026-03-10T00:00:00Z',
+                'updated_at': '2026-03-10T00:00:00Z',
+              },
+              'user_progress': {
+                'achievement_id': 'speed_learner',
+                'progress': 0.8,
+                'progress_value': 16,
+                'progress_target': 20,
+                'is_pinned': false,
+                'share_count': 0,
+                'is_first_unlocker': false,
+                'unlocked_at': null,
+                'last_progress_update': null,
+              },
+              'is_unlocked': false,
+              'progress_percentage': 80,
+            },
+          ],
+          'count': 1,
+        },
+      );
+    };
+
+    final result = await repository.getCloseToUnlockAchievements(
+      category: 'sprint',
+    );
+
+    expect(result.length, 1);
+    expect(result.first.achievement.id, 'speed_learner');
+    expect(result.first.userProgress?.progressValue, 16);
+    expect(result.first.progressPercentage, 80);
+    expect(result.first.isUnlocked, isFalse);
+  });
+
+  test('shareAchievement parses canonical share card payload', () async {
+    apiClient.postHandler = (path, data, queryParameters) async {
+      expect(path, ApiEndpoints.achievementShare('speed_learner'));
+      expect(queryParameters, {'locale': 'zh'});
+      expect(
+        data,
+        {
+          'template_id': 'cosmic',
+          'privacy': null,
+        },
+      );
+
+      return Response(
+        requestOptions: RequestOptions(
+          path: ApiEndpoints.achievementShare('speed_learner'),
+        ),
+        data: {
+          'card_url':
+              '/uploads/achievement-cards/user-1/speed_learner_cosmic_abc123.png',
+          'mime_type': 'image/png',
+          'width': 1080,
+          'height': 1440,
+          'generated_at': '2026-03-10T10:00:00Z',
+          'achievement': {
+            'id': 'speed_learner',
+            'name': '速通大师',
+            'description': '24小时内解锁20个新知识点',
+            'type': 'hidden',
+            'rarity': 'epic',
+            'category': 'hidden',
+            'is_hidden': true,
+            'sort_order': 103,
+            'trigger_code': 'SPEED_UNLOCK',
+            'trigger_config': {'count': 20, 'hours': 24},
+            'visual_effect_type': 'supernova',
+            'visual_config': {'particle_count': 100},
+            'reward_config': [
+              {
+                'type': 'title',
+                'value': 'speed_learner',
+                'display': '速通大师',
+              },
+            ],
+            'total_unlocked': 0,
+            'created_at': '2026-03-10T00:00:00Z',
+            'updated_at': '2026-03-10T00:00:00Z',
+          },
+        },
+      );
+    };
+
+    final result = await repository.shareAchievement('speed_learner');
+
+    expect(
+      result.cardUrl,
+      '/uploads/achievement-cards/user-1/speed_learner_cosmic_abc123.png',
+    );
+    expect(result.mimeType, 'image/png');
+    expect(result.width, 1080);
+    expect(result.height, 1440);
+    expect(result.templateId, 'cosmic');
+    expect(result.privacySettings, isNull);
+    expect(result.achievement.id, 'speed_learner');
+    expect(result.achievement.name, '速通大师');
+  });
+
+  test('getAchievementDetail parses unlock context story', () async {
+    apiClient.getHandler = (path, queryParameters) async {
+      expect(path, ApiEndpoints.achievementDetail('streak_7'));
+      expect(queryParameters, {'locale': 'zh'});
+
+      return Response(
+        requestOptions: RequestOptions(
+          path: ApiEndpoints.achievementDetail('streak_7'),
+        ),
+        data: {
+          'data': {
+            'id': 'streak_7',
+            'name': '连续7天学习',
+            'description': '连续学习7天',
+            'type': 'streak',
+            'rarity': 'rare',
+            'category': 'streak',
+            'is_hidden': false,
+            'sort_order': 1,
+            'trigger_code': 'STREAK_DAYS',
+            'trigger_config': {'days': 7},
+            'visual_effect_type': 'none',
+            'total_unlocked': 1,
+            'created_at': '2026-03-10T00:00:00Z',
+            'updated_at': '2026-03-10T00:00:00Z',
+          },
+          'is_unlocked': true,
+          'user_progress': {
+            'achievement_id': 'streak_7',
+            'progress': 1.0,
+            'progress_value': 7,
+            'progress_target': 7,
+            'is_pinned': false,
+            'share_count': 0,
+            'is_first_unlocker': true,
+            'unlocked_at': '2026-03-10T10:00:00Z',
+            'last_progress_update': '2026-03-10T10:00:00Z',
+            'context_snapshot': {
+              'current_plan': {'name': '考前冲刺', 'days_to_target': 5},
+              'task': {'title': '导数专项练习'},
+            },
+            'context_story':
+                '2026年3月10日，在「考前冲刺」目标日前 5 天，完成了 7 天连续学习，解锁了「连续7天学习」。',
+          },
+        },
+      );
+    };
+
+    final result = await repository.getAchievementDetail('streak_7');
+
+    expect(result.isUnlocked, isTrue);
+    expect(result.progressPercentage, 100);
+    expect(
+      result.userProgress?.unlockedAt,
+      DateTime.parse('2026-03-10T10:00:00Z'),
+    );
+    expect(result.userProgress?.contextSnapshot?['task']['title'], '导数专项练习');
+    expect(result.userProgress?.contextStory, contains('考前冲刺'));
+  });
+}

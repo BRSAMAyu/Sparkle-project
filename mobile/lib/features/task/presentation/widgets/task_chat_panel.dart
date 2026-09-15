@@ -1,0 +1,267 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
+import 'package:sparkle/features/chat/presentation/widgets/chat_bubble.dart';
+import 'package:sparkle/features/task/presentation/providers/task_chat_provider.dart';
+
+class TaskChatPanel extends ConsumerStatefulWidget {
+  const TaskChatPanel({
+    required this.taskId,
+    this.isAvailable = true,
+    this.initialExpanded = false,
+    this.initialPrompt,
+    this.initialExtraContext,
+    super.key,
+  });
+  final String taskId;
+  final bool isAvailable;
+  final bool initialExpanded;
+  final String? initialPrompt;
+  final Map<String, dynamic>? initialExtraContext;
+
+  @override
+  ConsumerState<TaskChatPanel> createState() => _TaskChatPanelState();
+}
+
+class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
+  final TextEditingController _controller = TextEditingController();
+  bool _isExpanded = false;
+  String? _sentInitialPrompt;
+
+  @override
+  void initState() {
+    super.initState();
+    _isExpanded = widget.initialExpanded;
+    _queueInitialPrompt();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant TaskChatPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.taskId != widget.taskId) {
+      _sentInitialPrompt = null;
+      _isExpanded = widget.initialExpanded;
+    }
+    _queueInitialPrompt();
+  }
+
+  void _sendMessage() {
+    final text = _controller.text;
+    if (text.isNotEmpty) {
+      unawaited(
+        ref.read(taskChatProvider(widget.taskId).notifier).sendMessage(text),
+      );
+      _controller.clear();
+      if (!_isExpanded) {
+        setState(() => _isExpanded = true);
+      }
+    }
+  }
+
+  void _queueInitialPrompt() {
+    final prompt = widget.initialPrompt?.trim();
+    if (!widget.isAvailable ||
+        widget.taskId.isEmpty ||
+        prompt == null ||
+        prompt.isEmpty ||
+        prompt == _sentInitialPrompt) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final nextPrompt = widget.initialPrompt?.trim();
+      if (nextPrompt == null ||
+          nextPrompt.isEmpty ||
+          nextPrompt == _sentInitialPrompt) {
+        return;
+      }
+      _sentInitialPrompt = nextPrompt;
+      unawaited(
+        ref.read(taskChatProvider(widget.taskId).notifier).sendMessage(
+              nextPrompt,
+              extraContext: widget.initialExtraContext,
+            ),
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.isAvailable) {
+      return GraphiteCardSurface(
+        child: Padding(
+          padding: const EdgeInsets.all(DS.spacing16),
+          child: Text(
+            context.l10n.taskAssistantServerOnly,
+            style: TextStyle(color: DS.neutral500),
+          ),
+        ),
+      );
+    }
+
+    final chatState = ref.watch(taskChatProvider(widget.taskId));
+    final messages = chatState.messages;
+    final lastMessage = messages.isNotEmpty ? messages.last : null;
+    final dormantInjection = chatState.dormantInjection;
+
+    return GraphiteCardSurface(
+      padding: EdgeInsets.zero,
+      child: Column(
+        children: [
+          // Header
+          InkWell(
+            onTap: () => setState(() => _isExpanded = !_isExpanded),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            child: Padding(
+              padding: const EdgeInsets.all(DS.spacing12),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(DS.sm),
+                    decoration: BoxDecoration(
+                      color: DS.surfaceSecondary,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: DS.borderSubtle),
+                    ),
+                    child: Icon(
+                      Icons.auto_awesome,
+                      color: DS.primaryBase,
+                      size: 18,
+                    ),
+                  ),
+                  const SizedBox(width: DS.spacing12),
+                  Text(
+                    context.l10n.taskChatAssistantTitle,
+                    style: TextStyle(
+                      fontWeight: DS.fontWeightBold,
+                      color: DS.neutral900,
+                    ),
+                  ),
+                  const Spacer(),
+                  // Dormant indicator chip
+                  if (dormantInjection?.hasInjection ?? false)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: DS.primaryBase.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'context',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: DS.primaryBase,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(width: DS.spacing8),
+                  Icon(
+                    _isExpanded ? Icons.expand_less : Icons.expand_more,
+                    color: DS.neutral500,
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          if (!_isExpanded && lastMessage != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Text(
+                '${lastMessage.role == MessageRole.user ? context.l10n.chatLabelMe : context.l10n.chatLabelAssistant}: ${lastMessage.content}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: DS.neutral600, fontSize: 12),
+              ),
+            ),
+
+          if (_isExpanded) ...[
+            const Divider(height: 1),
+            if (chatState.error != null)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DS.spacing16,
+                  vertical: DS.spacing10,
+                ),
+                color: DS.error.withValues(alpha: 0.08),
+                child: Text(
+                  chatState.error!,
+                  style: TextStyle(
+                    color: DS.error,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            Container(
+              height: 300,
+              color: DS.surfaceSecondary,
+              child: messages.isEmpty
+                  ? Center(
+                      child: Text(
+                        context.l10n.taskChatEmptyPrompt,
+                        style: TextStyle(color: DS.neutral400),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(DS.lg),
+                      itemCount: messages.length,
+                      itemBuilder: (context, index) =>
+                          ChatBubble(message: messages[index]),
+                    ),
+            ),
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.all(DS.sm),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      decoration: InputDecoration(
+                        hintText: context.l10n.taskChatInputHint,
+                        border: InputBorder.none,
+                        contentPadding:
+                            const EdgeInsets.symmetric(horizontal: 16),
+                      ),
+                      onSubmitted: (_) => _sendMessage(),
+                    ),
+                  ),
+                  if (chatState.isLoading)
+                    const Padding(
+                      padding: EdgeInsets.all(DS.sm),
+                      child: SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  else
+                    SparkleIconButton(
+                      variant: ButtonVariant.ghost,
+                      size: 36,
+                      icon: Icon(Icons.send, color: DS.primaryBase),
+                      onPressed: _sendMessage,
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}

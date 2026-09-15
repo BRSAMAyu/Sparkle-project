@@ -1,0 +1,535 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+
+/// 预测洞察卡片 - 显示AI预测的学习建议
+///
+/// 支持三种类型：
+/// - engagement: 活跃度预测
+/// - difficulty: 难度预测
+/// - risk: 流失风险预警
+class PredictiveInsightsCard extends StatelessWidget {
+  const PredictiveInsightsCard({
+    required this.type,
+    required this.data,
+    this.onTap,
+    super.key,
+  });
+  final String type;
+  final Map<String, dynamic> data;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) => Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(DS.lg),
+            child: _buildContent(context),
+          ),
+        ),
+      );
+
+  Widget _buildContent(BuildContext context) {
+    switch (type) {
+      case 'engagement':
+        return _buildEngagementCard(context);
+      case 'difficulty':
+        return _buildDifficultyCard(context);
+      case 'risk':
+        return _buildRiskCard(context);
+      default:
+        return Text(context.l10n.insUnknownType);
+    }
+  }
+
+  // 活跃度预测卡片
+  Widget _buildEngagementCard(BuildContext context) {
+    final nextActiveTime = data['next_active_time'] != null
+        ? DateTime.parse(data['next_active_time'] as String)
+        : null;
+    final confidence = (data['confidence'] as num?)?.toDouble() ?? 0.0;
+    final dropoutRisk = data['dropout_risk'] as String? ?? 'low';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(DS.sm),
+              decoration: BoxDecoration(
+                color: DS.brandPrimary.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(Icons.trending_up,
+                  color: DS.brandPrimary.shade600, size: 24,),
+            ),
+            const SizedBox(width: DS.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.l10n.insEngagementForecast,
+                    style: const TextStyle(
+                      fontSize: DS.fontSizeBase,
+                      fontWeight: DS.fontWeightBold,
+                    ),
+                  ),
+                  Text(
+                    context.l10n.insEngagementSubtitle,
+                    style: TextStyle(
+                      fontSize: DS.fontSizeXs,
+                      color: DS.neutral500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            _buildConfidenceBadge(confidence),
+          ],
+        ),
+        const SizedBox(height: DS.lg),
+
+        // Next Active Time
+        if (nextActiveTime != null) ...[
+          Container(
+            padding: const EdgeInsets.all(DS.md),
+            decoration: BoxDecoration(
+              color: DS.brandPrimary.shade50,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.access_time,
+                    color: DS.brandPrimary.shade700, size: 20,),
+                const SizedBox(width: DS.sm),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(context.l10n.insPredictNext, style: const TextStyle(fontSize: 12)),
+                    Text(
+                      _formatDateTime(context, nextActiveTime),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: DS.fontWeightBold,
+                        color: DS.brandPrimary.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: DS.md),
+        ],
+
+        // Dropout Risk
+        _buildRiskIndicator(context, dropoutRisk),
+      ],
+    );
+  }
+
+  // 难度预测卡片
+  Widget _buildDifficultyCard(BuildContext context) {
+    final difficultyScore = (data['difficulty_score'] as num?)?.toDouble() ?? 0.0;
+    final estimatedHours = (data['estimated_time_hours'] as num?)?.toDouble() ?? 0.0;
+    final prerequisitesReady = data['prerequisites_ready'] as bool? ?? false;
+    final missingCount = (data['missing_prerequisites'] as List?)?.length ?? 0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(DS.sm),
+              decoration: BoxDecoration(
+                color:
+                    _getDifficultyColor(difficultyScore).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.analytics_outlined,
+                color: _getDifficultyColor(difficultyScore),
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: DS.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.l10n.insDifficultyForecast,
+                    style: const TextStyle(
+                      fontSize: DS.fontSizeBase,
+                      fontWeight: DS.fontWeightBold,
+                    ),
+                  ),
+                  Text(
+                    context.l10n.insDifficultySubtitle,
+                    style: TextStyle(
+                      fontSize: DS.fontSizeXs,
+                      color: DS.neutral500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            _buildDifficultyBadge(difficultyScore, context),
+          ],
+        ),
+        const SizedBox(height: DS.lg),
+
+        // Difficulty Bar
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  context.l10n.insPredictedDifficulty,
+                  style: const TextStyle(fontSize: DS.fontSizeXs),
+                ),
+                Text(
+                  _getDifficultyLabel(difficultyScore, context),
+                  style: TextStyle(
+                    fontSize: DS.fontSizeXs,
+                    fontWeight: DS.fontWeightBold,
+                    color: _getDifficultyColor(difficultyScore),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: DS.sm),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: LinearProgressIndicator(
+                value: difficultyScore,
+                minHeight: 8,
+                backgroundColor: DS.brandPrimary.shade200,
+                valueColor: AlwaysStoppedAnimation(
+                    _getDifficultyColor(difficultyScore),),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: DS.lg),
+
+        // Estimated Time
+        Row(
+          children: [
+            Icon(
+              Icons.schedule,
+              color: DS.neutral500,
+              size: DS.iconSizeXs,
+            ),
+            const SizedBox(width: DS.spacing8),
+            Text(
+              context.l10n.picEstimatedHours(estimatedHours.toStringAsFixed(1)),
+              style: const TextStyle(fontSize: DS.fontSizeSm),
+            ),
+          ],
+        ),
+        const SizedBox(height: DS.sm),
+
+        // Prerequisites Status
+        if (!prerequisitesReady)
+          Container(
+            padding: const EdgeInsets.all(DS.spacing8),
+            decoration: BoxDecoration(
+              color: DS.warning.withValues(alpha: 0.1),
+              borderRadius: DS.borderRadius8,
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.warning_amber,
+                  color: DS.warning,
+                  size: DS.iconSizeXs,
+                ),
+                const SizedBox(width: DS.spacing8),
+                Text(
+                  context.l10n.insPrerequisitesWarning(missingCount),
+                  style: TextStyle(
+                    fontSize: DS.fontSizeXs,
+                    color: DS.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  // 流失风险卡片
+  Widget _buildRiskCard(BuildContext context) {
+    final riskScore = (data['risk_score'] as num?)?.toDouble() ?? 0.0;
+    final riskLevel = data['risk_level'] as String? ?? 'low';
+    final suggestions = data['intervention_suggestions'] as List? ?? [];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(DS.sm),
+              decoration: BoxDecoration(
+                color: _getRiskColor(riskLevel).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.shield_outlined,
+                color: _getRiskColor(riskLevel),
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: DS.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.l10n.insRiskAssessment,
+                    style: const TextStyle(
+                      fontSize: DS.fontSizeBase,
+                      fontWeight: DS.fontWeightBold,
+                    ),
+                  ),
+                  Text(
+                    context.l10n.insRiskSubtitle,
+                    style: TextStyle(
+                      fontSize: DS.fontSizeXs,
+                      color: DS.neutral500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            _buildRiskLevelBadge(riskLevel, context),
+          ],
+        ),
+        const SizedBox(height: DS.lg),
+
+        // Risk Score
+        Text(
+          context.l10n.picRiskScore(riskScore.toInt().toString()),
+          style: TextStyle(
+            fontSize: DS.fontSizeSm,
+            color: _getRiskColor(riskLevel),
+            fontWeight: DS.fontWeightBold,
+          ),
+        ),
+        const SizedBox(height: DS.sm),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: LinearProgressIndicator(
+            value: riskScore / 100,
+            minHeight: 8,
+            backgroundColor: DS.brandPrimary.shade200,
+            valueColor: AlwaysStoppedAnimation(_getRiskColor(riskLevel)),
+          ),
+        ),
+        const SizedBox(height: DS.lg),
+
+        // Suggestions
+        if (suggestions.isNotEmpty) ...[
+          Text(
+            context.l10n.insAiSuggestions,
+            style: const TextStyle(
+              fontSize: DS.fontSizeSm,
+              fontWeight: DS.fontWeightBold,
+            ),
+          ),
+          const SizedBox(height: DS.spacing8),
+          ...suggestions.take(2).map(
+                (suggestion) => Padding(
+                  padding: const EdgeInsets.only(bottom: DS.spacing4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.lightbulb_outline,
+                        color: DS.accent,
+                        size: DS.iconSizeXs,
+                      ),
+                      const SizedBox(width: DS.spacing8),
+                      Expanded(
+                        child: Text(
+                          suggestion.toString(),
+                          style: const TextStyle(
+                            fontSize: DS.fontSizeXs,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+        ],
+      ],
+    );
+  }
+
+  // Helper Widgets
+  Widget _buildConfidenceBadge(double confidence) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color:
+              confidence > 0.7 ? DS.success.shade50 : DS.brandPrimary.shade50,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              confidence > 0.7 ? Icons.verified : Icons.info_outline,
+              size: 12,
+              color: confidence > 0.7
+                  ? DS.success.shade700
+                  : DS.brandPrimary.shade700,
+            ),
+            const SizedBox(width: DS.xs),
+            Text(
+              '${(confidence * 100).toInt()}%',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: DS.fontWeightBold,
+                color: confidence > 0.7
+                    ? DS.success.shade700
+                    : DS.brandPrimary.shade700,
+              ),
+            ),
+          ],
+        ),
+      );
+
+  Widget _buildDifficultyBadge(double score, BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: _getDifficultyColor(score).withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          _getDifficultyLabel(score, context),
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: DS.fontWeightBold,
+            color: _getDifficultyColor(score),
+          ),
+        ),
+      );
+
+  Widget _buildRiskLevelBadge(String level, BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: _getRiskColor(level).withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          _getRiskLevelText(level, context),
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: DS.fontWeightBold,
+            color: _getRiskColor(level),
+          ),
+        ),
+      );
+
+  Widget _buildRiskIndicator(BuildContext context, String risk) => Container(
+        padding: const EdgeInsets.all(DS.sm),
+        decoration: BoxDecoration(
+          color: _getRiskColor(risk).withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Icon(_getRiskIcon(risk), color: _getRiskColor(risk), size: 16),
+            const SizedBox(width: DS.sm),
+            Text(
+              context.l10n.picChurnRisk(_getRiskLevelText(risk, context)),
+              style: TextStyle(fontSize: 12, color: _getRiskColor(risk)),
+            ),
+          ],
+        ),
+      );
+
+  // Helper Methods
+  String _formatDateTime(BuildContext context, DateTime dt) {
+    final now = DateTime.now();
+    final diff = dt.difference(now);
+
+    if (diff.inHours < 1) {
+      return context.l10n.picMinutesLater(diff.inMinutes);
+    } else if (diff.inHours < 24) {
+      return context.l10n.picTodayTime(DateFormat('HH:mm').format(dt));
+    } else if (diff.inDays == 1) {
+      return context.l10n.picTomorrowTime(DateFormat('HH:mm').format(dt));
+    } else {
+      return DateFormat('MM-dd HH:mm').format(dt);
+    }
+  }
+
+  Color _getDifficultyColor(double score) {
+    if (score < 0.3) return DS.success.shade600;
+    if (score < 0.6) return DS.brandPrimary.shade600;
+    return DS.error.shade600;
+  }
+
+  String _getDifficultyLabel(double score, BuildContext context) {
+    if (score < 0.3) return context.l10n.insDifficultyEasy;
+    if (score < 0.6) return context.l10n.insDifficultyMedium;
+    return context.l10n.insDifficultyHard;
+  }
+
+  Color _getRiskColor(String level) {
+    switch (level) {
+      case 'low':
+        return DS.success.shade600;
+      case 'medium':
+        return DS.brandPrimary.shade600;
+      case 'high':
+        return DS.error.shade600;
+      default:
+        return DS.brandPrimary.shade600;
+    }
+  }
+
+  String _getRiskLevelText(String level, BuildContext context) {
+    switch (level) {
+      case 'low':
+        return context.l10n.insRiskLow;
+      case 'medium':
+        return context.l10n.insRiskMedium;
+      case 'high':
+        return context.l10n.insRiskHigh;
+      default:
+        return context.l10n.insRiskUnknown;
+    }
+  }
+
+  IconData _getRiskIcon(String level) {
+    switch (level) {
+      case 'low':
+        return Icons.check_circle;
+      case 'medium':
+        return Icons.warning_amber;
+      case 'high':
+        return Icons.error;
+      default:
+        return Icons.help;
+    }
+  }
+}

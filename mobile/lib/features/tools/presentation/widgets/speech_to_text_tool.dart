@@ -1,0 +1,198 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/chat/presentation/widgets/voice_input_button.dart';
+import 'package:sparkle/features/tools/models/tool_definition.dart';
+import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
+
+
+class SpeechToTextTool extends StatefulWidget {
+  const SpeechToTextTool({
+    super.key,
+    this.surface = ToolSurface.page,
+    this.onTextResult,
+  });
+
+  final ToolSurface surface;
+  final ValueChanged<String>? onTextResult;
+
+  @override
+  State<SpeechToTextTool> createState() => _SpeechToTextToolState();
+}
+
+class _SpeechToTextToolState extends State<SpeechToTextTool> {
+  String _transcript = '';
+  DateTime? _lastCapturedAt;
+
+  int get _charCount => _transcript.trim().length;
+  int get _wordCount => _transcript.trim().isEmpty
+      ? 0
+      : _transcript.trim().split(RegExp(r'\s+')).length;
+
+  Future<void> _copyTranscript() async {
+    if (_transcript.trim().isEmpty) {
+      return;
+    }
+    await Clipboard.setData(ClipboardData(text: _transcript));
+    if (!mounted) {
+      return;
+    }
+    AppFeedback.success(context,
+        context.l10n.auto_transcriptcopied);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final zh = I18nService.instance.isChinese;
+    final accent = DS.info;
+    final hasText = _transcript.trim().isNotEmpty;
+
+    return ToolShell(
+      surface: widget.surface,
+      icon: Icons.mic_rounded,
+      title: context.l10n.toolsSttTitle,
+      subtitle: context.l10n.toolsSttSubtitle,
+      accentColor: accent,
+      compactHeader: true,
+      heroChips: [
+        ToolHeroChip(
+          label: hasText
+              ? context.l10n.toolsSttCharCount(_charCount)
+              : context.l10n.toolsSttRecordingInfo,
+          accentColor: accent,
+          icon: Icons.graphic_eq_rounded,
+        ),
+        ToolHeroChip(
+          label: _lastCapturedAt == null
+              ? (zh ? '实时转写' : 'Live transcription')
+              : (zh
+                  ? '${_lastCapturedAt!.hour.toString().padLeft(2, '0')}:${_lastCapturedAt!.minute.toString().padLeft(2, '0')} 更新'
+                  : '${_lastCapturedAt!.hour.toString().padLeft(2, '0')}:${_lastCapturedAt!.minute.toString().padLeft(2, '0')} updated'),
+          accentColor: accent,
+          icon: Icons.bolt_rounded,
+        ),
+      ],
+      body: Column(
+        children: [
+          ToolMetricRow(
+            children: [
+              ToolMetricCard(
+                label: context.l10n.toolsSttCharCountLabel,
+                value: '$_charCount',
+                accentColor: accent,
+                icon: Icons.notes_rounded,
+                caption: zh ? '适合直接发送或整理' : 'Ready to send or organize',
+              ),
+              ToolMetricCard(
+                label: context.l10n.toolsSttWordCountLabel,
+                value: '$_wordCount',
+                accentColor: accent,
+                icon: Icons.subject_rounded,
+                caption: zh ? '便于快速判断长度' : 'Quick length reference',
+              ),
+            ],
+          ),
+          const SizedBox(height: DS.spacing16),
+          ToolSectionCard(
+            accentColor: accent,
+            title: context.l10n.toolsSttRecordControl,
+            subtitle: context.l10n.toolsSttRecordDesc,
+            child: Center(
+              child: VoiceInputButton(
+                onTranscription: (text) {
+                  setState(() {
+                    _transcript = text;
+                    _lastCapturedAt = DateTime.now();
+                  });
+                },
+                onError: (error) {
+                  AppFeedback.error(context, error);
+                },
+              ),
+            ),
+          ),
+          const SizedBox(height: DS.spacing16),
+          ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 200),
+            child: ToolSectionCard(
+              accentColor: accent,
+              title: context.l10n.toolsSttResult,
+              subtitle: context.l10n.toolsSttResultDesc,
+              child: hasText
+                  ? SingleChildScrollView(
+                      child: SelectableText(
+                        _transcript,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: DS.textPrimary,
+                              height: 1.65,
+                            ),
+                      ),
+                    )
+                  : SingleChildScrollView(
+                      child: ToolEmptyState(
+                        icon: Icons.hearing_rounded,
+                        title: context.l10n.toolsSttEmpty,
+                        description: context.l10n.toolsSttEmptyDesc,
+                        accentColor: accent,
+                      ),
+                    ),
+            ),
+          ),
+        ],
+      ),
+      footer: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 620;
+          final actions = <Widget>[
+            SparkleButton(
+              label: context.l10n.toolsSttClear,
+              variant: ButtonVariant.ghost,
+              onPressed:
+                  hasText ? () => setState(() => _transcript = '') : null,
+              expand: true,
+            ),
+            SparkleButton(
+              label: context.l10n.toolsSttCopy,
+              onPressed: hasText ? _copyTranscript : null,
+              icon: const Icon(Icons.copy_rounded),
+              expand: true,
+            ),
+            if (widget.onTextResult != null)
+              SparkleButton(
+                label: context.l10n.toolsSttInsert,
+                onPressed: hasText
+                    ? () => widget.onTextResult!.call(_transcript.trim())
+                    : null,
+                icon: const Icon(Icons.arrow_forward_rounded),
+                expand: true,
+              ),
+          ];
+
+          if (compact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var index = 0; index < actions.length; index++) ...[
+                  if (index > 0) const SizedBox(height: DS.spacing12),
+                  actions[index],
+                ],
+              ],
+            );
+          }
+
+          return Row(
+            children: [
+              for (var index = 0; index < actions.length; index++) ...[
+                if (index > 0) const SizedBox(width: DS.spacing12),
+                Expanded(child: actions[index]),
+              ],
+            ],
+          );
+        },
+      ),
+    );
+  }
+}

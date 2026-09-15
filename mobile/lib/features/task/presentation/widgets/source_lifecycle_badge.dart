@@ -1,0 +1,291 @@
+import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
+import 'package:sparkle/shared/entities/task_model.dart';
+
+class SourceLifecycleBadgeGroup extends StatelessWidget {
+  const SourceLifecycleBadgeGroup({
+    required this.sources,
+    super.key,
+    this.compact = false,
+    this.maxVisible = 3,
+    this.onSwitchSource,
+    this.onReselectSource,
+    this.onFindSimilar,
+  });
+
+  final List<SourceAssetBinding> sources;
+  final bool compact;
+  final int maxVisible;
+  final ValueChanged<SourceAssetBinding>? onSwitchSource;
+  final ValueChanged<SourceAssetBinding>? onReselectSource;
+  final ValueChanged<SourceAssetBinding>? onFindSimilar;
+
+  @override
+  Widget build(BuildContext context) {
+    final visible = sources.take(maxVisible).toList();
+    if (visible.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var i = 0; i < visible.length; i++) ...[
+          if (i > 0) const SizedBox(height: DS.spacing8),
+          SourceLifecycleBadge(
+            source: visible[i],
+            compact: compact,
+            onSwitchSource: onSwitchSource == null
+                ? null
+                : () => onSwitchSource!(visible[i]),
+            onReselectSource: onReselectSource == null
+                ? null
+                : () => onReselectSource!(visible[i]),
+            onFindSimilar:
+                onFindSimilar == null ? null : () => onFindSimilar!(visible[i]),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class SourceLifecycleBadge extends StatelessWidget {
+  const SourceLifecycleBadge({
+    required this.source,
+    super.key,
+    this.compact = false,
+    this.onSwitchSource,
+    this.onReselectSource,
+    this.onFindSimilar,
+  });
+
+  final SourceAssetBinding source;
+  final bool compact;
+  final VoidCallback? onSwitchSource;
+  final VoidCallback? onReselectSource;
+  final VoidCallback? onFindSimilar;
+
+  @override
+  Widget build(BuildContext context) {
+    final spec = _SourceLifecycleSpec.from(source.lifecycleStatus);
+    final l10n = context.l10n;
+    final title = source.title.trim().isEmpty
+        ? l10n.taskUntitledSource
+        : source.title.trim();
+    final action = _actionForStatus(context);
+
+    return Semantics(
+      label: '${spec.label(l10n)} $title',
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(compact ? DS.spacing10 : DS.spacing12),
+        decoration: BoxDecoration(
+          color: spec.color.withValues(alpha: 0.09),
+          borderRadius: DS.borderRadius12,
+          border: Border.all(color: spec.color.withValues(alpha: 0.24)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(spec.icon, size: compact ? 16 : 18, color: spec.color),
+                const SizedBox(width: DS.spacing8),
+                Expanded(
+                  child: Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: DS.spacing8,
+                    runSpacing: DS.spacing4,
+                    children: [
+                      _StatusPill(spec: spec, l10n: l10n),
+                      Text(
+                        title,
+                        maxLines: compact ? 1 : 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: DS.textPrimary,
+                              fontWeight: DS.fontWeightBold,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (!compact && spec.warning(l10n).isNotEmpty) ...[
+              const SizedBox(height: DS.spacing8),
+              Text(
+                spec.warning(l10n),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DS.textSecondary,
+                      height: 1.35,
+                    ),
+              ),
+            ],
+            if (!compact && action != null) ...[
+              const SizedBox(height: DS.spacing10),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: SparkleButton(
+                  label: action.label,
+                  size: ButtonSize.small,
+                  variant: ButtonVariant.ghost,
+                  icon: Icon(action.icon),
+                  onPressed: action.onPressed,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  _SourceAction? _actionForStatus(BuildContext context) {
+    final l10n = context.l10n;
+    switch (source.lifecycleStatus) {
+      case SourceLifecycleStatus.active:
+        return null;
+      case SourceLifecycleStatus.archived:
+        if (onSwitchSource == null) return null;
+        return _SourceAction(
+          label: l10n.taskSwitchSource,
+          icon: Icons.swap_horiz_rounded,
+          onPressed: onSwitchSource!,
+        );
+      case SourceLifecycleStatus.revoked:
+        if (onReselectSource == null) return null;
+        return _SourceAction(
+          label: l10n.taskChooseAgain,
+          icon: Icons.folder_open_rounded,
+          onPressed: onReselectSource!,
+        );
+      case SourceLifecycleStatus.orphaned:
+        if (onFindSimilar == null) return null;
+        return _SourceAction(
+          label: l10n.taskFindSimilar,
+          icon: Icons.manage_search_rounded,
+          onPressed: onFindSimilar!,
+        );
+    }
+  }
+}
+
+class _StatusPill extends StatelessWidget {
+  const _StatusPill({required this.spec, required this.l10n});
+
+  final _SourceLifecycleSpec spec;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing8,
+          vertical: DS.spacing4,
+        ),
+        decoration: BoxDecoration(
+          color: spec.color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: spec.color.withValues(alpha: 0.28)),
+        ),
+        child: Text(
+          spec.label(l10n),
+          style: TextStyle(
+            color: spec.color,
+            fontSize: DS.fontSizeXs,
+            fontWeight: DS.fontWeightBold,
+          ),
+        ),
+      );
+}
+
+class _SourceLifecycleSpec {
+  const _SourceLifecycleSpec({
+    required this.color,
+    required this.icon,
+    required this.labelKey,
+    this.warningKey,
+  });
+
+  factory _SourceLifecycleSpec.from(SourceLifecycleStatus status) {
+    switch (status) {
+      case SourceLifecycleStatus.active:
+        return _SourceLifecycleSpec(
+          color: DS.success,
+          icon: Icons.link_rounded,
+          labelKey: #taskSourceBound,
+        );
+      case SourceLifecycleStatus.archived:
+        return _SourceLifecycleSpec(
+          color: DS.textSecondary,
+          icon: Icons.archive_outlined,
+          labelKey: #taskSourceArchived,
+          warningKey: #taskSourceArchivedWarning,
+        );
+      case SourceLifecycleStatus.revoked:
+        return _SourceLifecycleSpec(
+          color: DS.error,
+          icon: Icons.warning_amber_rounded,
+          labelKey: #taskSourceRevoked,
+          warningKey: #taskSourceRevokedWarning,
+        );
+      case SourceLifecycleStatus.orphaned:
+        return _SourceLifecycleSpec(
+          color: DS.warning,
+          icon: Icons.link_off_rounded,
+          labelKey: #taskSourceMissing,
+          warningKey: #taskSourceMissingWarning,
+        );
+    }
+  }
+
+  final Color color;
+  final IconData icon;
+  final Symbol labelKey;
+  final Symbol? warningKey;
+
+  String label(AppLocalizations l10n) {
+    switch (labelKey) {
+      case #taskSourceBound:
+        return l10n.taskSourceBound;
+      case #taskSourceArchived:
+        return l10n.taskSourceArchived;
+      case #taskSourceRevoked:
+        return l10n.taskSourceRevoked;
+      case #taskSourceMissing:
+        return l10n.taskSourceMissing;
+      default:
+        return '';
+    }
+  }
+
+  String warning(AppLocalizations l10n) {
+    switch (warningKey) {
+      case #taskSourceArchivedWarning:
+        return l10n.taskSourceArchivedWarning;
+      case #taskSourceRevokedWarning:
+        return l10n.taskSourceRevokedWarning;
+      case #taskSourceMissingWarning:
+        return l10n.taskSourceMissingWarning;
+      default:
+        return '';
+    }
+  }
+}
+
+class _SourceAction {
+  const _SourceAction({
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback onPressed;
+}

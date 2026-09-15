@@ -1,0 +1,35 @@
+# 参赛材料工作入口
+
+维护日期：2026-09-08。用途：定位当前报名材料及历史来源，维护事实与计划口径。
+
+## 当前计划书定稿
+
+- [星火项目计划书PDF](../../outputs/competition_plan_refined/星火项目计划书_完善版.pdf)：32页，建议上传本文件。
+- [星火项目计划书Word](../../outputs/competition_plan_refined/星火项目计划书_完善版.docx)：可编辑，已嵌入中文字体。
+- 本版基于原90页完整计划书修订，保留产品与技术论证、原型界面，重绘三张示意图，并补充市场、实施与预算。两文件均小于2MB，生成物位于忽略目录，不入库。
+
+## 工作文档
+
+- [报名填写指南](./报名填写指南.md)：逐项填写建议、可粘贴概述、材料位置与待确认事实。
+- [项目计划书内容源](./项目计划书报名稿.md)：当前32页定稿的正文源；图示、目录与分页以PDF为准。
+- [继续投入判断与验证计划](./继续投入判断与验证计划.md)：四周验证、继续条件及知识产权准备建议。
+- [早期简版Word](./星火项目计划书_2026-09.docx)：历史简版，已由上方32页完善版替代，不用于本次上传。
+- [assets/星火logo_1024.png](./assets/星火logo_1024.png)：应用图标（1024×1024 PNG，约 11KB），作为旧火焰 logo 的备选，两者均低于表单五兆限制。
+- 早期导出保留于 `outputs/competition_registration/`；本次定稿位于 `outputs/competition_plan_refined/`。
+
+## 找回的原始材料
+
+| 材料 | 原位置 | 使用方式 |
+|---|---|---|
+| 五月商业计划书 | `/Users/brsama/Downloads/Sparkle商业计划书.docx` | 历史参考，不能直接照搬数据 |
+| 五月精修商业计划书 | `/Users/brsama/Downloads/Sparkle_BP_Output/Sparkle商业计划书_精修版_V1.docx` | 保留结构思路，重新核验事实 |
+| 五月表单填写指南 | `/Users/brsama/Downloads/Sparkle_BP_Output/01_表单填写指南.md` | 部分指标口径错误，勿直接复制 |
+| 软件创新大赛旧计划书 | `/Users/brsama/Documents/文稿归档/02_项目与竞赛/第十九届全国大学生软件创新大赛-项目计划书sparkle.pdf` | 已完整提取并复核90页，作为本次定稿的主要底稿 |
+| 鸿雁杯最终路演 | `/Users/brsama/Downloads/sparkle鸿雁杯路演final.pptx` | 找回后用于回忆展示内容，重新核验效果陈述 |
+| 挑战杯报名表 | `/Users/brsama/Documents/文稿归档/03_行政证件与申请/附件1：北京邮电大学2026年“挑战杯”竞赛（“小挑”）校内选拔赛报名表邓博仁.docx` | 历史报名信息，问卷及效果数据需要原始证据 |
+| 软件创新大赛晋级通知 | `/Users/brsama/Downloads/第十九届全国大学生软件创新大赛-华北区域初赛评审结果通知.pdf` | 同名提取 PNG 可见 Sparkle 团队进入区域复赛；不等于获奖 |
+| 三月技术参赛源稿 | 本地归档 `~/code/GitHub/Sparkle-archive-20260915/docs-archive/`（2026-09 仓库重置时移出） | 团队信息、开发、测试、创新分析、研究、知识准备等 |
+| 校内路演叙事 | 本地归档 `~/code/GitHub/Sparkle-archive-20260915/docs-archive/presentations/` | 参考叙事，不将案例设定当真实效果 |
+| 旧 logo | 本地归档 `~/code/GitHub/Sparkle-archive-20260915/docs-archive/`（含历史归档目录内 competition/assets） | PNG，340×360，63,045 字节；符合所贴表单格式和大小要求 |
+
+原文件均保留在原处。联系信息与学号继续从本人确认的原始资料取得，不在新计划书中重复扩散。

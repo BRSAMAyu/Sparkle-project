@@ -1,0 +1,16 @@
+{
+  "id": "checkpoint_return_31_days",
+  "family": "checkpoint_return",
+  "kind": "checkpoint_return",
+  "title": "Checkpoint 回归：长间隔",
+  "input": {
+    "plan_name": "考研英语长线计划",
+    "checkpoint_day": 31,
+    "checkpoint_description": "月度节奏检查",
+    "previous_summary": "",
+    "open_threads": [],
+    "unclosed_questions": ["阅读错题是词汇问题还是句子结构问题？"],
+    "progress_facts": ["最近 7 天完成 4 天", "阅读正确率波动比较大"],
+    "previous_openings": []
+  }
+}

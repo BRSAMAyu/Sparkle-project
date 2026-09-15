@@ -1,0 +1,63 @@
+{
+  "title": "Sparkle Marketplace",
+  "uid": "sparkle-marketplace",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "tags": ["sparkle", "marketplace", "fv-04"],
+  "timezone": "browser",
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Adoption transitions",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {
+          "expr": "sum by (asset_type, status) (rate(sparkle_marketplace_adoptions_total[5m]))",
+          "legendFormat": "{{asset_type}} {{status}}"
+        }
+      ],
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Privacy listing rejections",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {
+          "expr": "sum by (asset_type) (increase(sparkle_marketplace_privacy_rejections_total[1h]))",
+          "legendFormat": "{{asset_type}}"
+        }
+      ],
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Outcome-weighted quality score",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {
+          "expr": "avg by (asset_type, domain, status) (sparkle_marketplace_quality_score)",
+          "legendFormat": "{{asset_type}} {{domain}} {{status}}"
+        }
+      ],
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Auto-deprecation guardrails",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {
+          "expr": "sum by (asset_type, reason) (increase(sparkle_marketplace_auto_deprecations_total[1h]))",
+          "legendFormat": "{{asset_type}} {{reason}}"
+        }
+      ],
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+    }
+  ]
+}

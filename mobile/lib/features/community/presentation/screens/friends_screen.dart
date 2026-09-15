@@ -1,0 +1,1315 @@
+import 'package:cached_network_image/cached_network_image.dart';
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
+import 'package:sparkle/core/design/widgets/empty_state.dart';
+import 'package:sparkle/core/design/widgets/error_widget.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
+import 'package:sparkle/core/errors/user_facing_error.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/features/community/community_routes.dart';
+import 'package:sparkle/features/community/data/models/accountability_model.dart';
+import 'package:sparkle/features/community/data/models/community_model.dart';
+import 'package:sparkle/features/community/data/repositories/accountability_repository.dart';
+import 'package:sparkle/features/community/data/repositories/community_repository.dart';
+import 'package:sparkle/features/community/presentation/providers/accountability_provider.dart';
+import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
+import 'package:sparkle/features/community/presentation/utils/accountability_invite_flow.dart';
+import 'package:sparkle/features/community/presentation/widgets/friends_hub_view.dart';
+import 'package:sparkle/features/community/presentation/widgets/recommendation_feedback_widgets.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
+
+class FriendsScreen extends StatelessWidget {
+  const FriendsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return DefaultTabController(
+      length: 2,
+      child: SparklePageScaffold(
+        role: SparklePageRole.content,
+        appBar: AppBar(
+          leading: SparkleIconButton(
+            variant: ButtonVariant.ghost,
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.pop(),
+          ),
+          title: Text(l10n.community),
+          bottom: TabBar(
+            tabs: [
+              Tab(text: context.l10n.friendsMyFriends),
+              Tab(text: context.l10n.friendsFriendRequests),
+            ],
+          ),
+        ),
+        child: const ContentConstraint(
+          child: TabBarView(
+            children: [
+              SparkleStaggerItem(index: 0, child: _MyFriendsTab()),
+              SparkleStaggerItem(index: 1, child: _PendingRequestsTab()),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class FriendRequestsScreen extends StatelessWidget {
+  const FriendRequestsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
+      appBar: AppBar(
+        leading: SparkleIconButton(
+          variant: ButtonVariant.ghost,
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.canPop()
+              ? context.pop()
+              : context.go(CommunityRoutes.home),
+        ),
+        title: Text(context.l10n.friendsFriendRequests),
+      ),
+      child: const ContentConstraint(
+        child: SparkleStaggerItem(index: 0, child: _PendingRequestsTab()),
+      ),
+    );
+  }
+}
+
+class FriendsDiscoverScreen extends StatelessWidget {
+  const FriendsDiscoverScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return SparklePageScaffold(
+      role: SparklePageRole.content,
+      appBar: AppBar(
+        leading: SparkleIconButton(
+          variant: ButtonVariant.ghost,
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.canPop()
+              ? context.pop()
+              : context.go(CommunityRoutes.home),
+        ),
+        title: Text(context.l10n.friendsDiscoverFriends),
+      ),
+      child: const ContentConstraint(
+        child: SparkleStaggerItem(index: 0, child: _RecommendationsTab()),
+      ),
+    );
+  }
+}
+
+class _MyFriendsTab extends ConsumerWidget {
+  const _MyFriendsTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => FriendsHubView(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+        onFriendLongPress: (friend) =>
+            _showFriendContextMenu(context, ref, friend),
+      );
+
+  void _showFriendContextMenu(
+    BuildContext context,
+    WidgetRef ref,
+    FriendshipInfo friendInfo,
+  ) {
+    final friend = friendInfo.friend;
+    unawaited(
+      showSensoryModalBottomSheet<void>(
+        context: context,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) => Container(
+          decoration: BoxDecoration(
+            color: Theme.of(ctx).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header with user info
+                Padding(
+                  padding: const EdgeInsets.all(DS.spacing16),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundImage: friend.avatarUrl != null
+                            ? CachedNetworkImageProvider(friend.avatarUrl!)
+                            : null,
+                        child: friend.avatarUrl == null
+                            ? Text(friend.displayName[0])
+                            : null,
+                      ),
+                      const SizedBox(width: DS.spacing12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              friend.displayName,
+                              style: DS.titleLarge
+                                  .copyWith(fontWeight: DS.fontWeightBold),
+                            ),
+                            Text(
+                              'Lv.${friend.flameLevel}',
+                              style: DS.bodySmall
+                                  .copyWith(color: DS.brandPrimaryConst),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                // Delete friend option
+                ListTile(
+                  leading: Icon(Icons.person_remove, color: DS.neutral600),
+                  title: Text(context.l10n.friendsDeleteFriend),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _handleDeleteFriend(context, ref, friendInfo);
+                  },
+                ),
+                // Block user option
+                ListTile(
+                  leading: Icon(Icons.block, color: DS.error),
+                  title: Text(context.l10n.friendsBlockUser,
+                      style: TextStyle(color: DS.error)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _handleBlockUser(context, ref, friendInfo);
+                  },
+                ),
+                // Blocked users management
+                ListTile(
+                  leading: Icon(Icons.block_outlined, color: DS.neutral600),
+                  title: Text(context.l10n.friendsBlockedUsersManagement),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    context.push(CommunityRoutes.blockedUsers);
+                  },
+                ),
+                const SizedBox(height: DS.spacing8),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleDeleteFriend(
+    BuildContext context,
+    WidgetRef ref,
+    FriendshipInfo friendInfo,
+  ) async {
+    final confirmed = await showSensoryDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(context.l10n.friendsDeleteFriend),
+        content: Text(context.l10n
+            .friendsConfirmDeleteFriend(friendInfo.friend.displayName)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(context.l10n.friendsCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: DS.error),
+            child: Text(context.l10n.friendsDelete),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      try {
+        await ref.read(friendsProvider.notifier).deleteFriend(friendInfo.id);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SparkleSnackBar.success(context.l10n
+                .friendsFriendDeleted(friendInfo.friend.displayName)),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SparkleSnackBar.error(
+                context.l10n.friendsDeleteFailed(e.toString())),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _handleBlockUser(
+    BuildContext context,
+    WidgetRef ref,
+    FriendshipInfo friendInfo,
+  ) async {
+    final confirmed = await showSensoryDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(context.l10n.friendsBlockUser),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(context.l10n
+                .friendsAfterBlockingHint(friendInfo.friend.displayName)),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Container(
+                  width: 5,
+                  height: 5,
+                  margin: const EdgeInsets.only(right: 8),
+                  decoration: BoxDecoration(
+                    color: DS.textPrimary,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                Expanded(child: Text(context.l10n.friendsRemoveFromFriendList)),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Container(
+                  width: 5,
+                  height: 5,
+                  margin: const EdgeInsets.only(right: 8),
+                  decoration: BoxDecoration(
+                    color: DS.textPrimary,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                Expanded(child: Text(context.l10n.friendsCannotMessageYou)),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Container(
+                  width: 5,
+                  height: 5,
+                  margin: const EdgeInsets.only(right: 8),
+                  decoration: BoxDecoration(
+                    color: DS.textPrimary,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                Expanded(child: Text(context.l10n.friendsCannotSendRequest)),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(context.l10n.friendsCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: DS.error),
+            child: Text(context.l10n.friendsBlock),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      try {
+        await ref
+            .read(friendsProvider.notifier)
+            .blockUser(friendInfo.friend.id);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SparkleSnackBar.success(context.l10n
+                .friendsBlockedSuccess(friendInfo.friend.displayName)),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SparkleSnackBar.error(
+                context.l10n.friendsBlockFailed(e.toString())),
+          );
+        }
+      }
+    }
+  }
+}
+
+class _PendingRequestsTab extends ConsumerWidget {
+  const _PendingRequestsTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final requestsState = ref.watch(pendingRequestsProvider);
+    final overviewAsync = ref.watch(accountabilityOverviewProvider);
+
+    return requestsState.when(
+      data: (requests) {
+        final pendingPartnerships =
+            overviewAsync.valueOrNull?.pendingPartnerships ??
+                const <AccountabilityPartnershipInfo>[];
+        if (requests.isEmpty && pendingPartnerships.isEmpty) {
+          return EmptyState(
+            type: EmptyStateType.general,
+            title: context.l10n.friendsNoPendingRequests,
+            icon: Icons.people_outline,
+          );
+        }
+        return SparkleRefreshIndicator(
+          onRefresh: () async {
+            await ref.read(pendingRequestsProvider.notifier).refresh();
+            await ref.read(myPartnershipsProvider.notifier).load();
+            ref.invalidate(accountabilityOverviewProvider);
+          },
+          child: ListView.builder(
+            itemCount: requests.length + pendingPartnerships.length + 2,
+            padding: const EdgeInsets.all(DS.lg),
+            itemBuilder: (context, index) {
+              if (index == 0) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: DS.md),
+                  child: Text(
+                    context.l10n.friendsFriendRequests,
+                    style:
+                        DS.titleLarge.copyWith(fontWeight: DS.fontWeightBold),
+                  ),
+                );
+              }
+              if (index <= requests.length) {
+                final request = requests[index - 1];
+                final user = request.friend;
+                return Card(
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundImage: user.avatarUrl != null
+                          ? CachedNetworkImageProvider(user.avatarUrl!)
+                          : null,
+                      child: user.avatarUrl == null
+                          ? Text(user.displayName[0])
+                          : null,
+                    ),
+                    title: Text(user.displayName),
+                    subtitle: Text(context.l10n.friendsWantsToBeYourFriend),
+                    onTap: () => context.push(
+                      '/community/users/${user.id}?name=${Uri.encodeComponent(user.displayName)}',
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SparkleIconButton(
+                          variant: ButtonVariant.ghost,
+                          size: 36,
+                          icon: Icon(Icons.check, color: DS.success),
+                          onPressed: () {
+                            ref
+                                .read(pendingRequestsProvider.notifier)
+                                .respondToRequest(request.id, true);
+                            ref.read(friendsProvider.notifier).refresh();
+                          },
+                        ),
+                        SparkleIconButton(
+                          variant: ButtonVariant.ghost,
+                          size: 36,
+                          icon: Icon(Icons.close, color: DS.error),
+                          onPressed: () {
+                            ref
+                                .read(pendingRequestsProvider.notifier)
+                                .respondToRequest(request.id, false);
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+              if (index == requests.length + 1) {
+                return Padding(
+                  padding: const EdgeInsets.only(top: DS.lg, bottom: DS.md),
+                  child: Text(
+                    context.l10n.friendPartnerInviteTitle,
+                    style:
+                        DS.titleLarge.copyWith(fontWeight: DS.fontWeightBold),
+                  ),
+                );
+              }
+              final partnership =
+                  pendingPartnerships[index - requests.length - 2];
+              final partner = partnership.initiator ?? partnership.partner;
+              return Card(
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundImage: partner?.avatarUrl != null
+                        ? CachedNetworkImageProvider(partner!.avatarUrl!)
+                        : null,
+                    child: partner?.avatarUrl == null
+                        ? Text((partner?.displayName ??
+                            context.l10n.communityPartnerFallback)[0])
+                        : null,
+                  ),
+                  title: Text(partner?.displayName ??
+                      context.l10n.friendPartnerInviteTitle),
+                  subtitle: Text(partnership.initiatorGoal),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SparkleIconButton(
+                        variant: ButtonVariant.ghost,
+                        size: 36,
+                        icon: Icon(Icons.check, color: DS.success),
+                        onPressed: () async {
+                          try {
+                            final repo =
+                                ref.read(accountabilityRepositoryProvider);
+                            final resolution =
+                                await acceptAccountabilityInviteWithRefresh(
+                              repository: repo,
+                              partnershipId: partnership.id,
+                              reloadPartnerships: () => ref
+                                  .read(myPartnershipsProvider.notifier)
+                                  .load(),
+                              refreshPendingRequests: () => ref
+                                  .read(pendingRequestsProvider.notifier)
+                                  .refresh(),
+                              invalidateOverview: () => ref
+                                  .invalidate(accountabilityOverviewProvider),
+                            );
+                            if (!context.mounted) return;
+                            AppFeedback.success(
+                                context, context.l10n.friendPartnerAccepted);
+                            context.go(resolution.route);
+                          } catch (e) {
+                            if (context.mounted) {
+                              final message =
+                                  normalizeAccountabilityInviteError(e);
+                              final hasActiveCoreConflict = message.contains(
+                                  'already has a core accountability partner');
+                              if (hasActiveCoreConflict) {
+                                final route =
+                                    await resolveExistingAccountabilityRouteOnConflict(
+                                  ref.read(accountabilityRepositoryProvider),
+                                );
+                                AppFeedback.info(
+                                  context,
+                                  context.l10n.friendPartnerConflict,
+                                );
+                                if (route != null) {
+                                  context.go(route);
+                                  return;
+                                }
+                              }
+                              AppFeedback.error(context, message);
+                            }
+                          }
+                        },
+                      ),
+                      SparkleIconButton(
+                        variant: ButtonVariant.ghost,
+                        size: 36,
+                        icon: Icon(Icons.close, color: DS.error),
+                        onPressed: () async {
+                          try {
+                            await declineAccountabilityInviteWithRefresh(
+                              repository:
+                                  ref.read(accountabilityRepositoryProvider),
+                              partnershipId: partnership.id,
+                              reloadPartnerships: () => ref
+                                  .read(myPartnershipsProvider.notifier)
+                                  .load(),
+                              refreshPendingRequests: () => ref
+                                  .read(pendingRequestsProvider.notifier)
+                                  .refresh(),
+                              invalidateOverview: () => ref
+                                  .invalidate(accountabilityOverviewProvider),
+                            );
+                            if (context.mounted) {
+                              AppFeedback.info(
+                                  context, context.l10n.friendInviteDeclined);
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              final message =
+                                  normalizeAccountabilityInviteError(e);
+                              AppFeedback.error(context, message);
+                            }
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
+      loading: () => const SparkleListSkeleton(),
+      error: (e, s) => Center(
+        child: CustomErrorWidget.page(
+          context: context,
+          message: UserFacingError.from(e),
+          onRetry: () => ref.read(pendingRequestsProvider.notifier).refresh(),
+        ),
+      ),
+    );
+  }
+}
+
+class _RecommendationsTab extends ConsumerWidget {
+  const _RecommendationsTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final recommendationsState = ref.watch(friendRecommendationsProvider);
+    final strategy = ref.watch(friendRecommendationStrategyProvider);
+    final promptsState = ref.watch(recommendationFeedbackPromptsProvider);
+    final insightsState = ref.watch(recommendationFeedbackInsightsProvider);
+    final friendPrompts = (promptsState.valueOrNull ?? const [])
+        .where((prompt) => prompt.itemType == RecommendationItemType.friend)
+        .toList();
+    final friendInsight = (insightsState.valueOrNull ?? const [])
+        .where((insight) => insight.itemType == RecommendationItemType.friend)
+        .cast<RecommendationFeedbackInsight?>()
+        .firstWhere((insight) => insight != null, orElse: () => null);
+
+    return recommendationsState.when(
+      data: (recommendations) => SparkleRefreshIndicator(
+        onRefresh: () =>
+            ref.read(friendRecommendationsProvider.notifier).refresh(),
+        child: ListView(
+          padding: const EdgeInsets.all(DS.lg),
+          children: [
+            Text(
+              context.l10n.friendMatchingTitle,
+              style: DS.titleLarge.copyWith(fontWeight: DS.fontWeightBold),
+            ),
+            const SizedBox(height: DS.xs),
+            Text(
+              context.l10n.friendMatchingDescription,
+              style: DS.bodyMedium.copyWith(color: DS.textSecondary),
+            ),
+            const SizedBox(height: DS.md),
+            Wrap(
+              spacing: DS.sm,
+              runSpacing: DS.sm,
+              children: FriendMatchStrategy.values.map((item) {
+                final selected = strategy == item;
+                return FilterChip(
+                  label: Text(_strategyLabel(item, context.l10n)),
+                  selected: selected,
+                  onSelected: (_) {
+                    ref
+                        .read(friendRecommendationStrategyProvider.notifier)
+                        .state = item;
+                    ref
+                        .read(friendRecommendationsProvider.notifier)
+                        .setStrategy(item);
+                  },
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: DS.md),
+            Container(
+              padding: const EdgeInsets.all(DS.md),
+              decoration: BoxDecoration(
+                color: DS.surfaceSecondary,
+                borderRadius: BorderRadius.circular(DS.borderRadiusLG),
+                border: Border.all(color: DS.neutral200),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.privacy_tip_outlined,
+                    size: 18,
+                    color: DS.brandPrimaryConst,
+                  ),
+                  const SizedBox(width: DS.sm),
+                  Expanded(
+                    child: Text(
+                      context.l10n.friendPrivacyNotice,
+                      style: DS.bodySmall.copyWith(color: DS.textSecondary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (friendPrompts.isNotEmpty) ...[
+              const SizedBox(height: DS.md),
+              Text(
+                context.l10n.friendCalibrationTitle,
+                style: DS.titleLarge.copyWith(fontWeight: DS.fontWeightBold),
+              ),
+              const SizedBox(height: DS.xs),
+              Text(
+                context.l10n.friendCalibrationDescription,
+                style: DS.bodySmall.copyWith(color: DS.textSecondary),
+              ),
+              const SizedBox(height: DS.sm),
+              ...friendPrompts.take(2).map(
+                    (prompt) => Padding(
+                      padding: const EdgeInsets.only(bottom: DS.sm),
+                      child: RecommendationFeedbackPromptCard(
+                        prompt: prompt,
+                        onRespond: () => _handlePromptFeedback(
+                          context,
+                          ref,
+                          prompt,
+                        ),
+                      ),
+                    ),
+                  ),
+            ],
+            if (friendInsight != null && friendInsight.recentFeedbackCount > 0)
+              Padding(
+                padding: const EdgeInsets.only(top: DS.md),
+                child: RecommendationFeedbackInsightCard(
+                  insight: friendInsight,
+                ),
+              ),
+            const SizedBox(height: DS.md),
+            if (recommendations.isEmpty)
+              EmptyState(
+                icon: Icons.people_outline,
+                title: context.l10n.friendEmptyTitle,
+                description: context.l10n.friendEmptyDescription,
+              )
+            else
+              ...recommendations.map(
+                (rec) => Padding(
+                  padding: const EdgeInsets.only(bottom: DS.md),
+                  child: _RecommendationCard(
+                    recommendation: rec,
+                    onPrimaryAction: () =>
+                        _handlePrimaryAction(context, ref, rec),
+                    onDismiss: () => _dismissRecommendation(context, ref, rec),
+                    onFeedback: () => _handleInlineFeedback(context, ref, rec),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+      loading: () => const SparkleListSkeleton(),
+      error: (e, s) => Center(
+        child: CustomErrorWidget.page(
+          context: context,
+          message: UserFacingError.from(e),
+          onRetry: () =>
+              ref.read(friendRecommendationsProvider.notifier).refresh(),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handlePromptFeedback(
+    BuildContext context,
+    WidgetRef ref,
+    RecommendationFeedbackPrompt prompt,
+  ) async {
+    final draft = await showRecommendationFeedbackSheet(
+      context: context,
+      itemType: RecommendationItemType.friend,
+      prompt: prompt,
+      user: prompt.user,
+      strategy: prompt.strategy,
+      target: prompt.target,
+    );
+    if (draft == null) return;
+
+    await _submitFriendFeedback(
+      context,
+      ref,
+      targetUserId: prompt.user?.id ?? prompt.itemId,
+      strategy: _parseStrategy(prompt.strategy),
+      target: _parseTarget(prompt.target),
+      action: _friendActionFromTrigger(prompt.triggerAction),
+      source: 'friends_prompt',
+      draft: draft,
+    );
+  }
+
+  Future<void> _handleInlineFeedback(
+    BuildContext context,
+    WidgetRef ref,
+    FriendRecommendation recommendation,
+  ) async {
+    final draft = await showRecommendationFeedbackSheet(
+      context: context,
+      itemType: RecommendationItemType.friend,
+      user: recommendation.user,
+      strategy: recommendation.strategy,
+      target: recommendation.target,
+    );
+    if (draft == null) return;
+
+    await _submitFriendFeedback(
+      context,
+      ref,
+      targetUserId: recommendation.user.id,
+      strategy: _parseStrategy(recommendation.strategy),
+      target: _parseTarget(recommendation.target),
+      action: 'view',
+      source: 'friends_card_feedback',
+      draft: draft,
+      score: recommendation.matchScore,
+    );
+  }
+
+  Future<void> _submitFriendFeedback(
+    BuildContext context,
+    WidgetRef ref, {
+    required String targetUserId,
+    required FriendMatchStrategy strategy,
+    required FriendRecommendationTarget target,
+    required String action,
+    required String source,
+    required RecommendationFeedbackDraft draft,
+    double? score,
+  }) async {
+    try {
+      await ref
+          .read(communityRepositoryProvider)
+          .sendFriendRecommendationFeedback(
+            targetUserId: targetUserId,
+            strategy: strategy,
+            target: target,
+            action: action,
+            source: source,
+            score: score,
+            promptId: draft.promptId,
+            stage: draft.stage,
+            questionnaireVersion: 1,
+            overallScore: draft.overallScore,
+            relevanceScore: draft.relevanceScore,
+            explanationScore: draft.explanationScore,
+            actionabilityScore: draft.actionabilityScore,
+            similarityScore: draft.similarityScore,
+            complementaryScore: draft.complementaryScore,
+            comfortScore: draft.comfortScore,
+            selectedIssues: draft.selectedIssues,
+            selectedStrengths: draft.selectedStrengths,
+            freeText: draft.freeText,
+          );
+      ref.invalidate(recommendationFeedbackPromptsProvider);
+      ref.invalidate(recommendationFeedbackInsightsProvider);
+      ref.invalidate(friendRecommendationsProvider);
+      if (context.mounted) {
+        AppFeedback.success(context, context.l10n.friendFeedbackSubmitted);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        AppFeedback.error(
+            context, context.l10n.friendSubmitFailed(e.toString()));
+      }
+    }
+  }
+
+  Future<void> _dismissRecommendation(
+    BuildContext context,
+    WidgetRef ref,
+    FriendRecommendation recommendation,
+  ) async {
+    try {
+      await ref
+          .read(friendRecommendationsProvider.notifier)
+          .dismiss(recommendation);
+      if (context.mounted) {
+        AppFeedback.info(context, context.l10n.friendRecommendationHidden);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        AppFeedback.error(
+            context, context.l10n.friendActionFailed(e.toString()));
+      }
+    }
+  }
+
+  Future<void> _handlePrimaryAction(
+    BuildContext context,
+    WidgetRef ref,
+    FriendRecommendation recommendation,
+  ) async {
+    try {
+      if (recommendation.canInviteAccountability) {
+        final invited = await _showAccountabilityInvite(
+          context,
+          ref,
+          recommendation.user,
+        );
+        if (invited) {
+          await ref
+              .read(friendRecommendationsProvider.notifier)
+              .recordAccountabilityInvite(recommendation);
+        }
+        return;
+      }
+      if (!recommendation.isExistingFriend) {
+        await ref
+            .read(friendRecommendationsProvider.notifier)
+            .sendRequest(recommendation);
+        if (context.mounted) {
+          AppFeedback.success(context, context.l10n.friendRequestSent);
+        }
+        return;
+      }
+      if (context.mounted) {
+        unawaited(
+          context.pushNamed(
+            'userProfile',
+            pathParameters: {'id': recommendation.user.id},
+            queryParameters: {'name': recommendation.user.displayName},
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        AppFeedback.error(
+            context, context.l10n.friendActionFailed(e.toString()));
+      }
+    }
+  }
+
+  Future<bool> _showAccountabilityInvite(
+    BuildContext context,
+    WidgetRef ref,
+    UserBrief user,
+  ) async {
+    final goalController = TextEditingController();
+    var checkInDays = 1;
+
+    final confirmed = await showSensoryDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          title: Text(context.l10n.friendInviteDialogTitle),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                context.l10n.friendInviteDialogContent(user.displayName),
+                style: TextStyle(color: DS.textSecondary, fontSize: 13),
+              ),
+              const SizedBox(height: DS.spacing16),
+              TextField(
+                controller: goalController,
+                decoration: InputDecoration(
+                  labelText: context.l10n.friendGoalLabel,
+                  hintText: context.l10n.communityFriendGoalHint,
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 2,
+              ),
+              const SizedBox(height: DS.spacing16),
+              Text(
+                context.l10n.friendCheckInFrequency,
+                style: TextStyle(fontWeight: DS.fontWeightBold),
+              ),
+              const SizedBox(height: DS.xs),
+              Wrap(
+                spacing: DS.sm,
+                children: [1, 2, 3, 7].map((d) {
+                  final selected = checkInDays == d;
+                  return FilterChip(
+                    label: Text(d == 1
+                        ? context.l10n.friendCheckInEveryDay
+                        : context.l10n.friendCheckInEveryDays(d)),
+                    selected: selected,
+                    onSelected: (_) => setState(() => checkInDays = d),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(context.l10n.friendCancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(context.l10n.friendSendInvite),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed != true) return false;
+    final goal = goalController.text.trim();
+    if (goal.isEmpty) {
+      if (context.mounted)
+        AppFeedback.info(context, context.l10n.friendGoalRequired);
+      return false;
+    }
+
+    await ref.read(myPartnershipsProvider.notifier).requestPartnership(
+          partnerId: user.id,
+          initiatorGoal: goal,
+          checkInDays: checkInDays,
+        );
+    ref.invalidate(accountabilityOverviewProvider);
+    if (context.mounted) {
+      AppFeedback.success(context, context.l10n.friendInviteSent);
+    }
+    return true;
+  }
+
+  String _strategyLabel(FriendMatchStrategy strategy, AppLocalizations l10n) {
+    switch (strategy) {
+      case FriendMatchStrategy.compatibility:
+        return l10n.friendStrategyCompatibility;
+      case FriendMatchStrategy.complementary:
+        return l10n.friendStrategyComplementary;
+    }
+  }
+
+  FriendMatchStrategy _parseStrategy(String? raw) =>
+      FriendMatchStrategy.values.firstWhere(
+        (item) => item.name == raw,
+        orElse: () => FriendMatchStrategy.compatibility,
+      );
+
+  FriendRecommendationTarget _parseTarget(String? raw) =>
+      FriendRecommendationTarget.values.firstWhere(
+        (item) => item.name == raw,
+        orElse: () => FriendRecommendationTarget.accountability,
+      );
+
+  String _friendActionFromTrigger(String trigger) {
+    if (trigger.contains('accountability_invite')) {
+      return 'accountability_invite';
+    }
+    if (trigger.contains('friend_request')) {
+      return 'friend_request';
+    }
+    if (trigger.contains('dismiss')) {
+      return 'dismiss';
+    }
+    return 'view';
+  }
+}
+
+class _RecommendationCard extends StatelessWidget {
+  const _RecommendationCard({
+    required this.recommendation,
+    required this.onPrimaryAction,
+    required this.onDismiss,
+    required this.onFeedback,
+  });
+
+  final FriendRecommendation recommendation;
+  final VoidCallback onPrimaryAction;
+  final VoidCallback onDismiss;
+  final VoidCallback onFeedback;
+
+  @override
+  Widget build(BuildContext context) {
+    final accentColor = recommendation.canInviteAccountability
+        ? DS.brandPrimaryConst
+        : DS.warning;
+    return Container(
+      padding: const EdgeInsets.all(DS.md),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(DS.borderRadiusLG),
+        gradient: LinearGradient(
+          colors: recommendation.canInviteAccountability
+              ? [
+                  DS.brandPrimary.withValues(alpha: 0.12),
+                  DS.brandPrimary.withValues(alpha: 0.04),
+                ]
+              : [
+                  DS.warning.withValues(alpha: 0.12),
+                  DS.surfaceSecondary,
+                ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(
+          color: recommendation.canInviteAccountability
+              ? DS.brandPrimary.withValues(alpha: 0.25)
+              : DS.warning.withValues(alpha: 0.25),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleAvatar(
+                radius: 24,
+                backgroundImage: recommendation.user.avatarUrl != null
+                    ? CachedNetworkImageProvider(recommendation.user.avatarUrl!)
+                    : null,
+                child: recommendation.user.avatarUrl == null
+                    ? Text(recommendation.user.displayName[0])
+                    : null,
+              ),
+              const SizedBox(width: DS.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            recommendation.user.displayName,
+                            style: DS.titleLarge
+                                .copyWith(fontWeight: DS.fontWeightBold),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: DS.sm,
+                            vertical: DS.xs,
+                          ),
+                          decoration: BoxDecoration(
+                            color: accentColor.withValues(alpha: 0.12),
+                            borderRadius: DS.borderRadiusFull,
+                          ),
+                          child: Text(
+                            '${(recommendation.matchScore * 100).round()}%',
+                            style: DS.labelSmall.copyWith(
+                              color: accentColor,
+                              fontWeight: DS.fontWeightBold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: DS.xs),
+                    Text(
+                      recommendation.summary ?? '适合作为下一位学习搭子',
+                      style: DS.bodySmall.copyWith(color: DS.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: onDismiss,
+                icon: const Icon(Icons.close),
+                tooltip: context.l10n.friendHide,
+              ),
+            ],
+          ),
+          const SizedBox(height: DS.sm),
+          Wrap(
+            spacing: DS.sm,
+            runSpacing: DS.sm,
+            children: [
+              _RecommendationBadge(
+                label: recommendation.canInviteAccountability
+                    ? context.l10n.friendCanInviteDirectly
+                    : recommendation.isExistingFriend
+                        ? context.l10n.friendAlreadyFriend
+                        : context.l10n.friendAddFriendFirst,
+                color: accentColor,
+              ),
+              _RecommendationBadge(
+                label: recommendation.strategy == 'complementary'
+                    ? context.l10n.friendComplementaryRecommendation
+                    : context.l10n.friendCompatibilityRecommendation,
+                color: DS.info,
+              ),
+            ],
+          ),
+          const SizedBox(height: DS.sm),
+          ...recommendation.matchReasons.map(
+            (reason) => Padding(
+              padding: const EdgeInsets.only(bottom: DS.xs),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.auto_awesome,
+                    size: 16,
+                    color: accentColor,
+                  ),
+                  const SizedBox(width: DS.xs),
+                  Expanded(
+                    child: Text(
+                      reason,
+                      style: DS.bodySmall,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: DS.sm),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton(
+                  onPressed: onPrimaryAction,
+                  child:
+                      Text(_primaryActionLabel(recommendation, context.l10n)),
+                ),
+              ),
+              const SizedBox(width: DS.sm),
+              OutlinedButton(
+                onPressed: onFeedback,
+                child: Text(context.l10n.friendRateRecommendation),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _primaryActionLabel(
+      FriendRecommendation recommendation, AppLocalizations l10n) {
+    if (recommendation.canInviteAccountability) {
+      return l10n.friendStartPartnership;
+    }
+    if (!recommendation.isExistingFriend) {
+      return l10n.friendAddFriendFirst;
+    }
+    return l10n.friendViewProfile;
+  }
+}
+
+class _RecommendationBadge extends StatelessWidget {
+  const _RecommendationBadge({
+    required this.label,
+    required this.color,
+  });
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.sm,
+          vertical: DS.xs,
+        ),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: DS.borderRadiusFull,
+        ),
+        child: Text(
+          label,
+          style: DS.labelSmall.copyWith(
+            color: color,
+            fontWeight: DS.fontWeightBold,
+          ),
+        ),
+      );
+}
+
+/// 责任伙伴入口卡片（显示在好友列表顶部）
+// ignore: unused_element
+class _AccountabilityPartnersCard extends StatelessWidget {
+  const _AccountabilityPartnersCard({required this.partnershipsState});
+
+  final AsyncValue<List<AccountabilityPartnershipInfo>> partnershipsState;
+
+  @override
+  Widget build(BuildContext context) => partnershipsState.when(
+        loading: _buildSkeleton,
+        error: (_, __) => Padding(
+          padding:
+              const EdgeInsets.symmetric(horizontal: DS.lg, vertical: DS.sm),
+          child: Text(
+            context.l10n.friendPartnersLoadFailed,
+            style: TextStyle(fontSize: DS.fontSizeSm, color: DS.textSecondary),
+          ),
+        ),
+        data: (partnerships) {
+          final activeCount = partnerships
+              .where((p) => p.status == AccountabilityStatus.active)
+              .length;
+          final pendingCount = partnerships
+              .where((p) => p.status == AccountabilityStatus.pending)
+              .length;
+
+          return GraphiteCardSurface(
+            surfaceRole: SparkleSurfaceRole.card,
+            margin: const EdgeInsets.fromLTRB(DS.lg, DS.lg, DS.lg, DS.sm),
+            onTap: () => context.push(CommunityRoutes.accountability),
+            child: Row(
+              children: [
+                // 图标
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: DS.brandPrimary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(DS.borderRadiusMD),
+                  ),
+                  child: Icon(
+                    Icons.handshake_outlined,
+                    color: DS.brandPrimaryConst,
+                  ),
+                ),
+                const SizedBox(width: DS.md),
+                // 文字
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        context.l10n.friendMyPartnersTitle,
+                        style: DS.titleLarge.copyWith(
+                          fontWeight: DS.fontWeightBold,
+                        ),
+                      ),
+                      const SizedBox(height: DS.xs),
+                      Text(
+                        _buildSubtitle(context, activeCount, pendingCount),
+                        style: DS.bodySmall.copyWith(color: DS.textSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+                // 箭头
+                Icon(Icons.chevron_right, color: DS.neutral400),
+              ],
+            ),
+          );
+        },
+      );
+
+  String _buildSubtitle(BuildContext context, int active, int pending) {
+    final l10n = context.l10n;
+    if (active == 0 && pending == 0) {
+      return l10n.friendAddPartnerPrompt;
+    }
+    final parts = <String>[];
+    if (active > 0) parts.add(l10n.friendActiveCount(active));
+    if (pending > 0) parts.add(l10n.friendPendingCount(pending));
+    return parts.join(' · ');
+  }
+
+  Widget _buildSkeleton() => Container(
+        margin: const EdgeInsets.fromLTRB(DS.lg, DS.lg, DS.lg, DS.sm),
+        height: 80,
+        decoration: BoxDecoration(
+          color: DS.surfaceSecondary,
+          borderRadius: BorderRadius.circular(DS.borderRadiusMD),
+        ),
+      );
+}

@@ -1,0 +1,429 @@
+from __future__ import annotations
+
+import json
+import time
+import uuid
+from collections import Counter
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+from typing import Any
+
+from loguru import logger
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.config import settings
+from app.core.metrics import (
+    AGENT_FEEDBACK_LINKED_TOTAL,
+    RESPONSE_FEEDBACK_DEDUPE_TOTAL,
+    RESPONSE_FEEDBACK_INGESTED,
+)
+from app.learning.prompt_bandit import PromptBandit
+from app.models.context_pack import ContextPackFeedback, ContextPackRun
+from app.models.response_feedback import ResponseFeedback
+from app.orchestration.agent_memory import AgentMemoryService
+from app.orchestration.agent_scoring import AgentScoringService
+from app.orchestration.run_ledger import RunLedgerStore
+from app.services.budget_tuning_service import BudgetTuningService
+from app.services.content_quality_evaluator import ContentQualityEvaluator
+
+MAX_REASONS = 3
+MAX_FREE_TEXT_LEN = 120
+
+
+FEEDBACK_REASON_MAP = {
+    0: "unspecified",
+    1: "inaccurate",
+    2: "incomplete",
+    3: "verbose",
+    4: "formatting",
+    5: "misaligned",
+    6: "too_hard",
+    7: "too_simple",
+}
+
+
+@dataclass
+class FeedbackResult:
+    success: bool
+    already_recorded: bool
+    response_id: str
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
+class ResponseFeedbackService:
+    def __init__(self, db: AsyncSession, redis_client=None):
+        self.db = db
+        self.redis = redis_client
+
+    def _validate(self, feedback_type: int, reasons: list[str], free_text: str | None) -> None:
+        if feedback_type not in (ResponseFeedback.FEEDBACK_UP, ResponseFeedback.FEEDBACK_DOWN):
+            raise ValueError("invalid feedback_type")
+        if reasons and len(reasons) > MAX_REASONS:
+            raise ValueError("too many reasons")
+        if free_text and len(free_text) > MAX_FREE_TEXT_LEN:
+            raise ValueError("free_text too long")
+
+    async def submit_feedback(
+        self,
+        *,
+        user_id: str,
+        response_id: str,
+        trace_id: str,
+        feedback_type: int,
+        reasons: list[str] | None = None,
+        free_text: str | None = None,
+        workflow_id: str | None = None,
+        prompt_version: str | None = None,
+        meta: dict[str, Any] | None = None,
+    ) -> FeedbackResult:
+        reasons = reasons or []
+        self._validate(feedback_type, reasons, free_text)
+
+        try:
+            user_uuid = uuid.UUID(user_id)
+            response_uuid = uuid.UUID(response_id)
+        except ValueError as exc:
+            raise ValueError("invalid uuid") from exc
+
+        feedback = ResponseFeedback(
+            user_id=user_uuid,
+            response_id=response_uuid,
+            trace_id=trace_id,
+            workflow_id=workflow_id,
+            prompt_version=prompt_version,
+            feedback_type=feedback_type,
+            reasons=reasons,
+            free_text=free_text,
+            meta=meta or None,
+        )
+        self.db.add(feedback)
+
+        try:
+            await self.db.commit()
+        except IntegrityError:
+            await self.db.rollback()
+            RESPONSE_FEEDBACK_DEDUPE_TOTAL.inc()
+            return FeedbackResult(
+                success=True,
+                already_recorded=True,
+                response_id=response_id,
+            )
+
+        RESPONSE_FEEDBACK_INGESTED.labels(
+            feedback_type="up" if feedback_type == ResponseFeedback.FEEDBACK_UP else "down"
+        ).inc()
+        await RunLedgerStore.append_external_event(
+            self.redis,
+            trace_id=trace_id,
+            event_type="feedback_received",
+            label="收到用户反馈",
+            workflow_stage="feedback",
+            metadata={
+                "feedback_type": "up" if feedback_type == ResponseFeedback.FEEDBACK_UP else "down",
+                "reasons": reasons,
+                "response_id": response_id,
+            },
+        )
+
+        await self._record_feedback_ts(user_id, workflow_id, prompt_version)
+        await self._update_bandit(workflow_id, prompt_version, feedback_type)
+        if workflow_id and prompt_version:
+            await RunLedgerStore.append_external_event(
+                self.redis,
+                trace_id=trace_id,
+                event_type="strategy_effect_applied",
+                label="Prompt bandit 已更新",
+                workflow_stage="feedback",
+                metadata={
+                    "effect_target": "prompt_bandit",
+                    "status": "applied",
+                    "detail": f"{workflow_id}:{prompt_version}",
+                },
+            )
+        await self._handle_context_pack_feedback(
+            user_uuid,
+            feedback_type,
+            reasons,
+            meta or {},
+            trace_id=trace_id,
+        )
+        if self.redis:
+            linked_agents = await AgentScoringService(self.redis).apply_response_feedback(
+                user_id=user_id,
+                response_id=response_id,
+                feedback_type="up" if feedback_type == ResponseFeedback.FEEDBACK_UP else "down",
+            )
+            if linked_agents:
+                AGENT_FEEDBACK_LINKED_TOTAL.labels(
+                    feedback_type="up" if feedback_type == ResponseFeedback.FEEDBACK_UP else "down"
+                ).inc()
+                await RunLedgerStore.append_external_event(
+                    self.redis,
+                    trace_id=trace_id,
+                    event_type="strategy_effect_applied",
+                    label="Agent 质量映射已更新",
+                    workflow_stage="feedback",
+                    metadata={
+                        "effect_target": "agent_scoring",
+                        "status": "applied",
+                        "detail": ",".join(linked_agents[:5]),
+                    },
+                )
+                try:
+                    memory_service = AgentMemoryService(self.redis)
+                    safe_ints = []
+                    for r in (reasons or []):
+                        try:
+                            safe_ints.append(int(r))
+                        except (ValueError, TypeError):
+                            pass
+                    normalized_reasons = self.normalize_reasons(safe_ints)
+                    for agent_id in linked_agents:
+                        await memory_service.infer_preferences_from_feedback(
+                            agent_id=agent_id,
+                            user_id=user_id,
+                            feedback_type="up" if feedback_type == ResponseFeedback.FEEDBACK_UP else "down",
+                            reasons=normalized_reasons,
+                        )
+                    await RunLedgerStore.append_external_event(
+                        self.redis,
+                        trace_id=trace_id,
+                        event_type="strategy_effect_applied",
+                        label="Agent 记忆偏好已更新",
+                        workflow_stage="feedback",
+                        metadata={
+                            "effect_target": "agent_memory",
+                            "status": "applied",
+                            "detail": f"agents={len(linked_agents)}",
+                        },
+                    )
+                except Exception as exc:
+                    logger.debug(f"Failed to propagate feedback to agent memory: {exc}")
+
+        # Opportunistically evaluate and auto-seed high-quality responses.
+        try:
+            evaluator = ContentQualityEvaluator(self.db)
+            evaluation = await evaluator.evaluate_response_quality(response_id)
+            if evaluation.get("should_seed"):
+                await evaluator.auto_seed_to_library(response_id)
+        except Exception as exc:
+            logger.warning(f"Auto-seed evaluation failed: {exc}")
+
+        logger.info(
+            "Response feedback stored trace_id=%s response_id=%s workflow_id=%s prompt_version=%s",
+            trace_id,
+            response_id,
+            workflow_id,
+            prompt_version,
+        )
+        return FeedbackResult(
+            success=True,
+            already_recorded=False,
+            response_id=response_id,
+        )
+
+    async def _handle_context_pack_feedback(
+        self,
+        user_id: uuid.UUID,
+        feedback_type: int,
+        reasons: list[str],
+        meta: dict[str, Any],
+        trace_id: str | None = None,
+    ) -> None:
+        if not settings.ENABLE_BUDGET_TUNING:
+            return
+
+        pack_run = await self._resolve_pack_run(user_id, meta)
+        if pack_run is None:
+            return
+
+        score = 1.0 if feedback_type == ResponseFeedback.FEEDBACK_UP else -1.0
+        feedback = ContextPackFeedback(
+            pack_run_id=pack_run.id,
+            feedback_type="up" if score > 0 else "down",
+            reasons=reasons or None,
+            score=score,
+        )
+        self.db.add(feedback)
+        await self.db.commit()
+
+        tuning = BudgetTuningService(self.db)
+        await tuning.apply_feedback(pack_run.intent, reasons, score)
+        await RunLedgerStore.append_external_event(
+            self.redis,
+            trace_id=trace_id or str(pack_run.trace_id or ""),
+            event_type="strategy_effect_applied",
+            label="上下文预算策略已更新",
+            workflow_stage="feedback",
+            metadata={
+                "effect_target": "context_budget_profile",
+                "status": "applied",
+                "detail": str(pack_run.intent),
+            },
+        )
+
+        # 推断用户偏好
+        try:
+            from app.services.personalization.preference_inference_service import PreferenceInferenceService
+            inference_service = PreferenceInferenceService(self.db, self.redis)
+            normalized_reasons = self.normalize_reasons([int(r) for r in reasons] if reasons else [])
+
+            result = await inference_service.process_feedback(
+                user_id=user_id,
+                feedback_type=feedback_type,
+                reasons=normalized_reasons,
+                metadata=meta
+            )
+
+            if result.get("changes"):
+                logger.info(f"Preference inference applied: {result['changes']}")
+                await RunLedgerStore.append_external_event(
+                    self.redis,
+                    trace_id=trace_id or str(pack_run.trace_id or ""),
+                    event_type="strategy_effect_applied",
+                    label="用户偏好推断已更新",
+                    workflow_stage="feedback",
+                    metadata={
+                        "effect_target": "preference_inference",
+                        "status": "applied",
+                        "detail": json.dumps(result.get("changes"), ensure_ascii=False)[:200],
+                    },
+                )
+        except Exception as e:
+            logger.warning(f"Failed to apply preference inference: {e}")
+
+    async def _resolve_pack_run(
+        self,
+        user_id: uuid.UUID,
+        meta: dict[str, Any],
+    ) -> ContextPackRun | None:
+        pack_id = meta.get("pack_id") or meta.get("context_pack_id")
+        if pack_id:
+            try:
+                pack_uuid = uuid.UUID(str(pack_id))
+            except ValueError:
+                pack_uuid = None
+            if pack_uuid:
+                result = await self.db.execute(
+                    select(ContextPackRun).where(
+                        ContextPackRun.id == pack_uuid,
+                        ContextPackRun.user_id == user_id,
+                        ContextPackRun.deleted_at.is_(None),
+                    )
+                )
+                pack_run = result.scalar_one_or_none()
+                if pack_run is not None:
+                    return pack_run
+
+        cutoff = _utcnow() - timedelta(minutes=settings.CONTEXT_PACK_FEEDBACK_WINDOW_MINUTES)
+        result = await self.db.execute(
+            select(ContextPackRun)
+            .where(
+                ContextPackRun.user_id == user_id,
+                ContextPackRun.created_at >= cutoff,
+                ContextPackRun.deleted_at.is_(None),
+            )
+            .order_by(ContextPackRun.created_at.desc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
+    async def _update_bandit(
+        self,
+        workflow_id: str | None,
+        prompt_version: str | None,
+        feedback_type: int,
+    ) -> None:
+        if not workflow_id or not prompt_version:
+            return
+        reward = 1 if feedback_type == ResponseFeedback.FEEDBACK_UP else 0
+        bandit = PromptBandit(redis_client=self.redis)
+        await bandit.update(workflow_id, prompt_version, reward)
+
+    async def _record_feedback_ts(
+        self,
+        user_id: str,
+        workflow_id: str | None,
+        prompt_version: str | None,
+    ) -> None:
+        if not self.redis:
+            return
+        if not workflow_id or not prompt_version:
+            return
+        key = f"bandit:last_feedback_ts:{user_id}:{workflow_id}:{prompt_version}"
+        await self.redis.setex(key, settings.FEEDBACK_EFFECT_TTL_SECONDS, int(time.time()))
+
+    async def get_summary(self, window: timedelta) -> dict[str, Any]:
+        since = _utcnow() - window
+        stmt = select(ResponseFeedback).where(
+            ResponseFeedback.created_at >= since,
+            ResponseFeedback.deleted_at.is_(None),
+        )
+        rows = (await self.db.execute(stmt)).scalars().all()
+
+        total = len(rows)
+        up_count = 0
+        down_count = 0
+        reasons_counter: Counter[str] = Counter()
+        by_prompt: dict[str, dict[str, int]] = {}
+        by_workflow: dict[str, dict[str, int]] = {}
+
+        for row in rows:
+            if row.feedback_type == ResponseFeedback.FEEDBACK_UP:
+                up_count += 1
+                self._accumulate(by_prompt, row.prompt_version, True)
+                self._accumulate(by_workflow, row.workflow_id, True)
+            else:
+                down_count += 1
+                self._accumulate(by_prompt, row.prompt_version, False)
+                self._accumulate(by_workflow, row.workflow_id, False)
+
+            if row.reasons:
+                for reason in row.reasons:
+                    reasons_counter[str(reason)] += 1
+
+        return {
+            "feedback_count": total,
+            "up_count": up_count,
+            "down_count": down_count,
+            "down_rate": (down_count / total) if total else 0.0,
+            "top_reasons": dict(reasons_counter.most_common(5)),
+            "by_prompt_version": self._finalize_groups(by_prompt),
+            "by_workflow_id": self._finalize_groups(by_workflow),
+        }
+
+    @staticmethod
+    def _accumulate(target: dict[str, dict[str, int]], key: str | None, is_up: bool) -> None:
+        bucket_key = key or "unknown"
+        if bucket_key not in target:
+            target[bucket_key] = {"up": 0, "down": 0}
+        if is_up:
+            target[bucket_key]["up"] += 1
+        else:
+            target[bucket_key]["down"] += 1
+
+    @staticmethod
+    def _finalize_groups(groups: dict[str, dict[str, int]]) -> dict[str, dict[str, float]]:
+        finalized: dict[str, dict[str, float]] = {}
+        for key, counts in groups.items():
+            up = counts.get("up", 0)
+            down = counts.get("down", 0)
+            total = up + down
+            finalized[key] = {
+                "up": up,
+                "down": down,
+                "down_rate": (down / total) if total else 0.0,
+            }
+        return finalized
+
+    @staticmethod
+    def normalize_reasons(reasons: list[int]) -> list[str]:
+        normalized = []
+        for reason in reasons:
+            normalized.append(FEEDBACK_REASON_MAP.get(int(reason), "unspecified"))
+        return normalized

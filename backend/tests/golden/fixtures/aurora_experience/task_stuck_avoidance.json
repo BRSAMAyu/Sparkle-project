@@ -1,0 +1,12 @@
+{
+  "id": "task_stuck_avoidance",
+  "family": "task_stuck",
+  "kind": "task_stuck",
+  "title": "任务卡点：启动回避",
+  "input": {
+    "description": "连续 3 张任务都在开始前被放弃",
+    "task_titles": ["阅读长难句精读", "错题本整理", "作文素材复盘"],
+    "dominant_issue": "abandoned",
+    "next_task_title": "长难句 10 分钟拆句"
+  }
+}

@@ -1,0 +1,45 @@
+# tool/e2e/test_accounts.yaml
+# Test account configuration for E2E tests
+# These accounts are used by integration tests
+# DO NOT put real credentials here — use environment variables
+
+accounts:
+  guest:
+    type: guest
+    method: loginAsGuest
+    description: "Guest user for basic flow testing"
+
+  demo:
+    type: demo
+    method: loginAsDemoAccount
+    description: "Demo account with pre-seeded data"
+
+  e2e_test:
+    type: registered
+    method: login
+    email_env: E2E_TEST_EMAIL
+    password_env: E2E_TEST_PASSWORD
+    description: "Registered test user for authenticated flow testing"
+    setup: "python scripts/seed_demo_user_enhanced.py --user-type e2e"
+
+fixtures:
+  plan_computer_network_7days:
+    description: "7-day computer networking review plan"
+    file: "fixtures/e2e/plan_computer_network_7days.json"
+    use_for: "plan_generation_test"
+
+  goal_study_7days:
+    description: "7-day study goal"
+    file: "fixtures/e2e/goal_study_7days.json"
+    use_for: "goal_creation_test"
+
+modes:
+  e2e_test:
+    E2E_TEST_MODE: "true"
+    LLM_PROVIDER: "mock"
+    description: "Mock LLM for stable E2E testing"
+
+  e2e_live:
+    E2E_TEST_MODE: "false"
+    LLM_PROVIDER: "default"
+    description: "Live LLM for quality evaluation (non-blocking)"

@@ -1,0 +1,180 @@
+from datetime import UTC, datetime, timedelta
+from uuid import uuid4
+
+import pytest
+from sqlalchemy import select
+
+from app.config import settings
+from app.core.context_budget import ContextBudgetScheduler
+from app.core.context_pack import ContextPackBuilder
+from app.models.memory import MemoryPreference
+from app.models.user import User
+from app.services.memory_service import MemoryService
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
+@pytest.mark.asyncio
+async def test_context_pack_ranking_applied(db_session, monkeypatch):
+    monkeypatch.setattr(settings, "ENABLE_CONTEXT_RANKING", True, raising=False)
+    monkeypatch.setattr(settings, "CONTEXT_RANKING_SOFT_CAP_EPISODIC", 10, raising=False)
+    monkeypatch.setattr(settings, "CONTEXT_RANKING_SOFT_CAP_GOALS", 10, raising=False)
+
+    user_id = uuid4()
+    user = User(
+        id=user_id,
+        username=f"user_{user_id.hex[:8]}",
+        email=f"{user_id.hex[:8]}@example.com",
+        hashed_password="test",
+    )
+    db_session.add(user)
+    await db_session.commit()
+
+    memory_service = MemoryService(db_session)
+    await memory_service.upsert_preference(
+        user_id=user_id,
+        pref_key="response_style",
+        pref_value={"value": "x"},
+        evidence_refs=[{"type": "event", "id": "evt_1"}, {"type": "concept", "id": "c_1"}],
+    )
+    await memory_service.upsert_preference(
+        user_id=user_id,
+        pref_key="learning_style",
+        pref_value={"value": "y"},
+        evidence_refs=[{"type": "event", "id": "evt_2"}],
+    )
+
+    result = await db_session.execute(
+        select(MemoryPreference).where(
+            MemoryPreference.user_id == user_id,
+            MemoryPreference.pref_key == "response_style",
+        )
+    )
+    stale_record = result.scalar_one()
+    stale_record.updated_at = _utcnow() - timedelta(days=200)
+    await db_session.commit()
+
+    scheduler = ContextBudgetScheduler(
+        budgets={"chat": {"preferences": 10, "goals": 50, "episodic": 50}}
+    )
+    builder = ContextPackBuilder(db_session, scheduler=scheduler)
+    pack = await builder.build(user_id, intent="chat")
+
+    assert "learning_style" in pack.preferences
+    assert "response_style" not in pack.preferences
+    assert pack.metadata is not None
+    assert "ranking" in pack.metadata
+
+
+@pytest.mark.asyncio
+async def test_context_pack_soft_caps(db_session, monkeypatch):
+    monkeypatch.setattr(settings, "ENABLE_CONTEXT_RANKING", True, raising=False)
+    monkeypatch.setattr(settings, "CONTEXT_RANKING_SOFT_CAP_EPISODIC", 1, raising=False)
+    monkeypatch.setattr(settings, "CONTEXT_RANKING_SOFT_CAP_GOALS", 1, raising=False)
+
+    user_id = uuid4()
+    user = User(
+        id=user_id,
+        username=f"user_{user_id.hex[:8]}",
+        email=f"{user_id.hex[:8]}@example.com",
+        hashed_password="test",
+    )
+    db_session.add(user)
+    await db_session.commit()
+
+    memory_service = MemoryService(db_session)
+    for idx in range(3):
+        await memory_service.create_goal(
+            user_id=user_id,
+            title=f"Goal {idx}",
+            status="active",
+            evidence_refs=[{"type": "event", "id": f"evt_goal_{idx}"}],
+        )
+
+    now = _utcnow()
+    for idx in range(3):
+        await memory_service.create_episodic_memory(
+            user_id=user_id,
+            summary=f"Memory {idx}",
+            source_type="analysis",
+            source_id=f"src_{idx}",
+            occurred_at=now - timedelta(hours=idx),
+            importance_score=0.5,
+            tags=["tag_a" if idx == 0 else "tag_b"],
+            evidence_refs=[{"type": "event", "id": f"evt_epi_{idx}"}],
+        )
+
+    scheduler = ContextBudgetScheduler(
+        budgets={"chat": {"preferences": 50, "goals": 50, "episodic": 50}}
+    )
+    builder = ContextPackBuilder(db_session, scheduler=scheduler)
+    pack = await builder.build(user_id, intent="chat")
+
+    assert len(pack.goals) <= 1
+    assert len(pack.episodic_memories) <= 1
+
+
+@pytest.mark.asyncio
+async def test_context_pack_marks_inferred_claims_and_correction_actions(db_session, monkeypatch):
+    monkeypatch.setattr(settings, "ENABLE_CONTEXT_RANKING", True, raising=False)
+    monkeypatch.setattr(settings, "CONTEXT_RANKING_SOFT_CAP_EPISODIC", 10, raising=False)
+
+    user_id = uuid4()
+    user = User(
+        id=user_id,
+        username=f"user_{user_id.hex[:8]}",
+        email=f"{user_id.hex[:8]}@example.com",
+        hashed_password="test",
+    )
+    db_session.add(user)
+    await db_session.commit()
+
+    now = _utcnow()
+    memory_service = MemoryService(db_session)
+    confirmed = await memory_service.create_episodic_memory(
+        user_id=user_id,
+        summary="TCP flow control is the current networking sprint blocker",
+        source_type="task",
+        source_id="task_tcp",
+        occurred_at=now - timedelta(days=2),
+        importance_score=0.9,
+        confidence=0.92,
+        tags=["networking", "tcp"],
+        evidence_refs=[{"type": "task", "id": "task_tcp"}],
+        semantic_key="networking_sprint",
+        emit_system_update=False,
+    )
+    inferred = await memory_service.create_episodic_memory(
+        user_id=user_id,
+        summary="User probably prefers ambient music while studying",
+        source_type="ai_inferred",
+        source_id="infer_music",
+        source_lane="inferred_extraction",
+        occurred_at=now - timedelta(hours=1),
+        importance_score=0.2,
+        confidence=0.4,
+        tags=["music"],
+        evidence_refs=[{"type": "ai_inferred", "id": "infer_music"}],
+        emit_system_update=False,
+    )
+
+    scheduler = ContextBudgetScheduler(
+        budgets={"chat": {"preferences": 50, "goals": 80, "episodic": 2000}}
+    )
+    builder = ContextPackBuilder(db_session, scheduler=scheduler)
+    pack = await builder.build(user_id, intent="chat", query_text="TCP networking sprint")
+
+    assert confirmed is not None
+    assert inferred is not None
+    assert pack.episodic_memories[0]["id"] == str(confirmed.id)
+    by_id = {item["id"]: item for item in pack.episodic_memories}
+    assert by_id[str(confirmed.id)]["claim_status"] == "confirmed"
+    assert by_id[str(inferred.id)]["claim_status"] == "inferred"
+    assert by_id[str(inferred.id)]["user_confirmed"] is False
+    assert by_id[str(inferred.id)]["source_label"] == "AI 推断，待你确认"
+    assert by_id[str(inferred.id)]["correction_actions"][0]["endpoint"] == "/memory/episodic"
+    assert by_id[str(inferred.id)]["correction_actions"][1]["payload"]["action"] == "lower_confidence"
+    assert pack.metadata is not None
+    assert pack.metadata["memory_claims"]["episodic"][0]["correction_actions"]

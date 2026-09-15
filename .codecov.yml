@@ -1,0 +1,121 @@
+# Codecov Configuration for Sparkle Project
+# Production-grade test coverage management
+
+codecov:
+  require_ci_to_pass: true
+  notify:
+    wait_for_ci: true
+
+coverage:
+  precision: 2
+  round: down
+  range: "60...90"
+  status:
+    project:
+      default:
+        target: 70%
+        threshold: 2%
+        if_ci_failed: error
+        informational: false
+      backend-python:
+        paths:
+          - "backend/app/**"
+        target: 75%
+        threshold: 2%
+      backend-go:
+        paths:
+          - "backend/gateway/**"
+        target: 70%
+        threshold: 2%
+      mobile-flutter:
+        paths:
+          - "mobile/lib/**"
+        target: 60%
+        threshold: 3%
+    patch:
+      default:
+        target: 80%
+        threshold: 5%
+        if_ci_failed: error
+    changes:
+      default:
+        informational: true
+
+parsers:
+  gcov:
+    branch_detection:
+      conditional: true
+      loop: true
+      macro: false
+      method: false
+  javascript:
+    enable_partials: true
+
+comment:
+  layout: "header, diff, flags, components, footer"
+  behavior: default
+  require_changes: false
+  require_base: true
+  require_head: true
+
+flags:
+  backend-python:
+    paths:
+      - backend/app/
+    carryforward: true
+    after_n_builds: 1
+  backend-go:
+    paths:
+      - backend/gateway/
+    carryforward: true
+    after_n_builds: 1
+  mobile:
+    paths:
+      - mobile/lib/
+    carryforward: true
+    after_n_builds: 1
+
+component_management:
+  default_rules:
+    statuses:
+      - type: project
+        target: auto
+        threshold: 1%
+  individual_components:
+    - component_id: backend_python_core
+      name: Python Backend Core
+      paths:
+        - backend/app/orchestrator/**
+        - backend/app/services/**
+        - backend/app/tools/**
+    - component_id: backend_go_gateway
+      name: Go Gateway
+      paths:
+        - backend/gateway/internal/**
+    - component_id: mobile_providers
+      name: Mobile State Management
+      paths:
+        - mobile/lib/providers/**
+        - mobile/lib/core/services/**
+    - component_id: mobile_widgets
+      name: Mobile UI Components
+      paths:
+        - mobile/lib/presentation/**
+
+ignore:
+  - "**/*_test.go"
+  - "**/*_test.py"
+  - "**/test/**"
+  - "**/tests/**"
+  - "**/*.pb.go"
+  - "**/*_pb2.py"
+  - "**/*_pb2_grpc.py"
+  - "**/generated/**"
+  - "**/mocks/**"
+  - "**/*.g.dart"
+  - "**/*.freezed.dart"
+  - "**/migrations/**"
+  - "**/alembic/**"
+
+github_checks:
+  annotations: true

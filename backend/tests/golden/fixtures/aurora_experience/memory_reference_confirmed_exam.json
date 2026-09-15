@@ -1,0 +1,15 @@
+{
+  "id": "memory_reference_confirmed_exam",
+  "family": "memory_reference",
+  "kind": "memory_reference",
+  "title": "记忆引用：用户确认的考试信息",
+  "input": {
+    "memory": "明天上午有高数考试",
+    "time_ago": "昨天",
+    "source_label": "你告诉我的",
+    "confidence": 0.96,
+    "user_confirmed": true,
+    "current_need": "考前复盘",
+    "next_step": "先过 3 道导数错题"
+  }
+}

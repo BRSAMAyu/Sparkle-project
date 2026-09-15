@@ -1,0 +1,177 @@
+{
+  "id": "language_boost_21d@v1.0",
+  "name": "21-Day Language Boost",
+  "version": "v1.0",
+  "description": "A 21-day backbone for language acquisition with immersion, spaced repetition, and output practice.",
+  "applicability_conditions": [
+    "user is learning a new language with a target proficiency level",
+    "user needs structured daily practice with varied modalities",
+    "user benefits from spaced repetition and output accountability"
+  ],
+  "target_user_profile": {
+    "goal": "language_learning",
+    "horizon_days": 21,
+    "preferred_mode": "structured",
+    "risk_profile": "low"
+  },
+  "backbone_nodes": [
+    {
+      "node_id": "day1_baseline_assessment",
+      "node_persona": "language_diagnostician",
+      "prompt_template": "你是语言诊断师，Sparkle AI 的语言能力评估专家。\n\n你的职责：\n1. 评估当前听说读写水平\n2. 明确目标（如：B1→B2）\n3. 识别最大短板\n4. 设定可衡量的里程碑\n\n如实评估不做假，找准一个突破口而不是全攻。",
+      "available_tools": ["query_knowledge", "create_plan"],
+      "exit_conditions": ["current level assessed", "target level defined", "top weakness identified"],
+      "neighbors": ["day3_input_flood"],
+      "transition_triggers": {
+        "baseline_done": "day3_input_flood"
+      },
+      "ux_mapping": {
+        "frame": "orientation",
+        "tone": "analytical",
+        "signal_terms": ["language_baseline_done"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day3_input_flood",
+      "node_persona": "immersion_guide",
+      "prompt_template": "你是沉浸式导师，Sparkle AI 的语言输入专家。\n\n你的职责：\n1. 推荐适合水平的内容（播客/视频/文章）\n2. 设计每日听力/阅读任务\n3. 教授主动听读技巧\n4. 建立可理解的输入习惯\n\n大量可理解输入是语言习得的基础，不求完美理解，但求持续接触。",
+      "available_tools": ["create_task", "query_knowledge"],
+      "exit_conditions": ["daily input plan exists", "content sources curated", "listening habit started"],
+      "neighbors": ["day7_vocabulary_system"],
+      "transition_triggers": {
+        "input_habit_established": "day7_vocabulary_system"
+      },
+      "ux_mapping": {
+        "frame": "execution",
+        "tone": "encouraging",
+        "signal_terms": ["input_routine_active"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day7_vocabulary_system",
+      "node_persona": "memory_scientist",
+      "prompt_template": "你是记忆科学家，Sparkle AI 的间隔重复专家。\n\n你的职责：\n1. 建立生词本和间隔重复系统\n2. 教授记忆宫殿和联想法\n3. 按频率和实用性排序词汇\n4. 每日微复习计划\n\n不是背字典，而是建立可持续的词汇增长系统。",
+      "available_tools": ["create_task", "create_knowledge_node", "link_nodes"],
+      "exit_conditions": ["vocab system active", "daily review habit set", "top 500 words covered"],
+      "neighbors": ["day10_output_push"],
+      "transition_triggers": {
+        "vocab_system_ready": "day10_output_push"
+      },
+      "ux_mapping": {
+        "frame": "execution",
+        "tone": "structured",
+        "signal_terms": ["vocabulary_system_active"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day10_output_push",
+      "node_persona": "speaking_coach",
+      "prompt_template": "你是口语教练，Sparkle AI 的语言输出专家。\n\n你的职责：\n1. 设计每日说写输出任务\n2. 纠正语法和发音错误\n3. 提供表达替换建议\n4. 克服输出恐惧\n\n不等到完美才开口，从第一天就输出，错误是最好的老师。",
+      "available_tools": ["create_task", "query_knowledge"],
+      "exit_conditions": ["daily speaking habit formed", "writing practice active", "comfort with mistakes"],
+      "neighbors": ["day14_grammar_surgery"],
+      "transition_triggers": {
+        "output_habit_established": "day14_grammar_surgery"
+      },
+      "ux_mapping": {
+        "frame": "practice",
+        "tone": "supportive",
+        "signal_terms": ["output_practice_active"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "active_adjustment"
+    },
+    {
+      "node_id": "day14_grammar_surgery",
+      "node_persona": "linguistic_surgeon",
+      "prompt_template": "你是语言外科医生，Sparkle AI 的语法精准修正专家。\n\n你的职责：\n1. 从输出中提取高频语法错误\n2. 精准修正一个模式不泛化\n3. 设计针对性练习\n4. 建立语法自查清单\n\n一次只手术一个语法模式，深度解决而不是泛泛而谈。",
+      "available_tools": ["create_task", "query_knowledge"],
+      "exit_conditions": ["top 3 grammar patterns fixed", "self-check habit formed", "error log established"],
+      "neighbors": ["day18_real_world_sim"],
+      "transition_triggers": {
+        "grammar_patterns_fixed": "day18_real_world_sim"
+      },
+      "ux_mapping": {
+        "frame": "deep_work",
+        "tone": "precise",
+        "signal_terms": ["grammar_surgery_done"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "active_adjustment"
+    },
+    {
+      "node_id": "day18_real_world_sim",
+      "node_persona": "real_world_simulator",
+      "prompt_template": "你是真实世界模拟器，Sparkle AI 的场景实战专家。\n\n你的职责：\n1. 模拟真实交流场景（点餐/开会/面试/约会）\n2. 制造意外和压力测试\n3. 评估交流有效性而非语法完美度\n4. 建立实战信心\n\n真正的语言能力是在不确定的真实场景中仍能有效沟通。",
+      "available_tools": ["query_knowledge", "create_task"],
+      "exit_conditions": ["5 scenarios practiced", "spontaneous response improved", "real-world confidence built"],
+      "neighbors": ["day21_maintenance_plan"],
+      "transition_triggers": {
+        "real_world_ready": "day21_maintenance_plan"
+      },
+      "ux_mapping": {
+        "frame": "practice",
+        "tone": "challenging",
+        "signal_terms": ["real_world_simulation_done"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day21_maintenance_plan",
+      "node_persona": "habit_architect",
+      "prompt_template": "你是习惯建筑师，Sparkle AI 的长期维持专家。\n\n你的职责：\n1. 总结21天的进步和变化\n2. 设计最小维持计划（每天15分钟）\n3. 设定下一个阶段目标\n4. 建立语言环境保持策略\n\n语言不用就会退化，设计一个不费力的日常维持系统。",
+      "available_tools": ["create_plan", "create_task"],
+      "exit_conditions": ["maintenance plan exists", "next milestone set", "confidence in self-sustaining"],
+      "neighbors": [],
+      "transition_triggers": {},
+      "ux_mapping": {
+        "frame": "reflection",
+        "tone": "reflective",
+        "signal_terms": ["maintenance_plan_ready"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    }
+  ],
+  "readiness_criteria": {
+    "language_goal_defined": {
+      "signal_type": "goal_clarity",
+      "minimum_confidence": 0.8,
+      "required": true
+    },
+    "input_habit_active": {
+      "signal_type": "daily_engagement",
+      "minimum_confidence": 0.7,
+      "required": true
+    },
+    "output_confidence_built": {
+      "signal_type": "speaking_readiness",
+      "minimum_confidence": 0.6,
+      "required": false
+    }
+  },
+  "default_strategies": {
+    "onboarding": "day1_baseline_assessment",
+    "reanchor": "day10_output_push",
+    "recovery": "day14_grammar_surgery",
+    "final_review": "day21_maintenance_plan"
+  },
+  "ux_mappings": {
+    "default_frame": "language_learning",
+    "default_tone": "encouraging",
+    "fallback_tone": "gentle_supportive"
+  },
+  "created_at": "2026-05-06T00:00:00",
+  "author": "sparkle-core",
+  "changelog": [
+    "Initial language boost pack with 7 backbone nodes.",
+    "Covers: baseline → input flood → vocab system → output push → grammar surgery → real-world sim → maintenance."
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "id": "memory_reference_uncertain_music",
+  "family": "memory_reference",
+  "kind": "memory_reference",
+  "title": "记忆引用：低置信偏好",
+  "input": {
+    "memory": "白噪声比音乐更容易让你进入状态",
+    "time_ago": "3天前",
+    "source_label": "从对话里推断的",
+    "confidence": 0.61,
+    "user_confirmed": false,
+    "current_need": "开始今晚的英语听力",
+    "next_step": "开一个无背景音乐的 15 分钟启动段"
+  }
+}

@@ -1,0 +1,649 @@
+# Unified Sparkle Docker Infrastructure - Stabilized Communication
+services:
+  sparkle_db:
+    build:
+      context: .
+      dockerfile: docker/pgvector-age.Dockerfile
+      args:
+        AGE_REF: PG16/v1.6.0-rc0
+    container_name: sparkle_db
+    ports:
+      - "127.0.0.1:${SPARKLE_DB_PORT:-5432}:5432"
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - sparkle_postgres_data:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  sparkle_age_init:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sparkle_age_init
+    env_file:
+      - .env
+    command: python scripts/init_age_extension.py
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
+      - POSTGRES_HOST=sparkle_db
+      - POSTGRES_PORT=5432
+      - SERVICE_ROLE=age-init
+    volumes:
+      - ./backend:/app
+    depends_on:
+      sparkle_db:
+        condition: service_healthy
+    restart: "no"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  redis:
+    image: redis/redis-stack-server:7.4.0-v8
+    container_name: sparkle_redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    command: redis-stack-server --requirepass ${REDIS_PASSWORD} --maxmemory 512mb --maxmemory-policy volatile-lru
+    volumes:
+      - sparkle_redis_data:/data
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+        reservations:
+          memory: 128M
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=$$REDIS_PASSWORD redis-cli ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    container_name: sparkle_minio
+    restart: unless-stopped
+    hostname: minio
+    entrypoint: ["minio"]
+    command: server /data --console-address ":9001"
+    ports:
+      - "127.0.0.1:${SPARKLE_MINIO_API_PORT:-9000}:9000"
+      - "127.0.0.1:${SPARKLE_MINIO_CONSOLE_PORT:-9001}:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
+    volumes:
+      - sparkle_minio_data:/data
+    user: "${SPARKLE_MINIO_UID:-1000}:${SPARKLE_MINIO_GID:-1000}"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 128M
+
+  sparkle_api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sparkle_api
+    restart: unless-stopped
+    env_file:
+      - .env
+    user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
+    ports:
+      - "127.0.0.1:${SPARKLE_API_PORT:-8000}:8000"
+    environment:
+      # Override localhost URLs from .env with correct Docker service names
+      - SPARKLE_RBAC_ENABLED=${SPARKLE_RBAC_ENABLED:-false}
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/0
+      - POSTGRES_HOST=sparkle_db
+      - POSTGRES_PORT=5432
+      - REDIS_HOST=sparkle_redis
+      # OpenClaw runs on the host machine, not inside this container.
+      - OPENCLAW_GATEWAY_URL=http://host.docker.internal:18789
+      - OPENCLAW_WS_URL=ws://host.docker.internal:18789
+      - OPENCLAW_WS_DEVICE_IDENTITY_PATH=/app/.openclaw/device.json
+      - OPENCLAW_DEFAULT_WORKDIR=${PWD}
+      - SERVICE_ROLE=api
+      - RUN_MIGRATIONS=true
+      - ENABLE_AURORA_RUNTIME_V1=${ENABLE_AURORA_RUNTIME_V1:-true}
+      # Aurora shadow→live: Bayesian, Idiographic, Stage33-35, Stage38, DocContext
+      - AURORA_BAYESIAN_MODE=${AURORA_BAYESIAN_MODE:-live}
+      - AURORA_IDIOGRAPHIC_MODE=${AURORA_IDIOGRAPHIC_MODE:-live}
+      - AURORA_STAGE33_MODE=${AURORA_STAGE33_MODE:-live}
+      - AURORA_STAGE33_EVENTS_MODE=${AURORA_STAGE33_EVENTS_MODE:-live}
+      - AURORA_STAGE33_SRL_MODE=${AURORA_STAGE33_SRL_MODE:-live}
+      - AURORA_STAGE33_WM_PROMPT_MODE=${AURORA_STAGE33_WM_PROMPT_MODE:-live}
+      - AURORA_STAGE34_MODE=${AURORA_STAGE34_MODE:-live}
+      - AURORA_STAGE34_CAPSULE_MODE=${AURORA_STAGE34_CAPSULE_MODE:-live}
+      - AURORA_STAGE34_ERROR_BRIDGE_MODE=${AURORA_STAGE34_ERROR_BRIDGE_MODE:-live}
+      - AURORA_STAGE35_MODE=${AURORA_STAGE35_MODE:-live}
+      - AURORA_STAGE35_METACOG_ROUTER_MODE=${AURORA_STAGE35_METACOG_ROUTER_MODE:-live}
+      - AURORA_STAGE38_ERR_REPLAN_MODE=${AURORA_STAGE38_ERR_REPLAN_MODE:-live}
+      - AURORA_STAGE38_PUSH_SCHEDULER_MODE=${AURORA_STAGE38_PUSH_SCHEDULER_MODE:-live}
+      - AURORA_DOC_CONTEXT_DOCUMENT_CONTEXT_INJECTION_MODE=${AURORA_DOC_CONTEXT_DOCUMENT_CONTEXT_INJECTION_MODE:-live}
+      # Aurora off→live: PushPolicy, Traits, SRL (3 critical)
+      - AURORA_STAGE18_PUSH_POLICY_MODE=${AURORA_STAGE18_PUSH_POLICY_MODE:-live}
+      - AURORA_STAGE18_PUSH_DELIVERY_MODE=${AURORA_STAGE18_PUSH_DELIVERY_MODE:-live}
+      - AURORA_TRAITS_MODE=${AURORA_TRAITS_MODE:-live}
+      - AURORA_TRAITS_COLDSTART_MODE=${AURORA_TRAITS_COLDSTART_MODE:-live}
+      - AURORA_SRL_MODE=${AURORA_SRL_MODE:-live}
+      - AURORA_SRL_BRIDGE_MODE=${AURORA_SRL_BRIDGE_MODE:-live}
+      - AURORA_SRL_TRACKER_MODE=${AURORA_SRL_TRACKER_MODE:-live}
+      - AURORA_SRL_SCAFFOLDING_CONSUME_MODE=${AURORA_SRL_SCAFFOLDING_CONSUME_MODE:-live}
+      - AURORA_FORESIGHT_MODE=${AURORA_FORESIGHT_MODE:-live}
+      - AURORA_METACOG_MODE=${AURORA_METACOG_MODE:-live}
+      - AURORA_POLICY_COMPILER_MODE=${AURORA_POLICY_COMPILER_MODE:-live}
+      - AURORA_REFLECTION_WIRE_MODE=${AURORA_REFLECTION_WIRE_MODE:-live}
+      - AURORA_SCENE_MODE=${AURORA_SCENE_MODE:-live}
+      - AURORA_STAGE19_CONSOLIDATION_MODE=${AURORA_STAGE19_CONSOLIDATION_MODE:-live}
+      - AURORA_STAGE19_LLM_EXTRACTOR_MODE=${AURORA_STAGE19_LLM_EXTRACTOR_MODE:-live}
+      - AURORA_STAGE19_WORKING_MEMORY_MODE=${AURORA_STAGE19_WORKING_MEMORY_MODE:-live}
+      - AURORA_STAGE21_SKILL_SELECTION_MODE=${AURORA_STAGE21_SKILL_SELECTION_MODE:-live}
+      - AURORA_STAGE21_SKILL_SHARE_MODE=${AURORA_STAGE21_SKILL_SHARE_MODE:-live}
+      - AURORA_TRAITS_NLP_MODE=${AURORA_TRAITS_NLP_MODE:-live}
+      # Aurora: Stage 37-40, DualCore, Privacy
+      - AURORA_STAGE37_LLM_SAFETY_MODE=${AURORA_STAGE37_LLM_SAFETY_MODE:-live}
+      - AURORA_STAGE39_MODE=${AURORA_STAGE39_MODE:-live}
+      - AURORA_STAGE39_SCAFFOLDING_PROMPT_MODE=${AURORA_STAGE39_SCAFFOLDING_PROMPT_MODE:-live}
+      - AURORA_STAGE39_COGLOAD_ROUTE_MODE=${AURORA_STAGE39_COGLOAD_ROUTE_MODE:-live}
+      - AURORA_STAGE39_GALAXY_INJECT_MODE=${AURORA_STAGE39_GALAXY_INJECT_MODE:-live}
+      - AURORA_STAGE40_CALENDAR_MODE=${AURORA_STAGE40_CALENDAR_MODE:-live}
+      - AURORA_DUAL_CORE_ROUTER_MODE=${AURORA_DUAL_CORE_ROUTER_MODE:-live}
+      - AURORA_PRIVACY_PII_REDACTION_MODE=${AURORA_PRIVACY_PII_REDACTION_MODE:-live}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://sparkle_tempo:4317
+    volumes:
+      - ./backend:/app
+      - sparkle_backend_logs:/app/logs
+      - sparkle_backend_uploads:/app/uploads
+      - sparkle_backend_cache:/app/.cache
+      - ./data/dictionaries:/app/data/dictionaries:ro
+      - ${HOME}/.openclaw/sparkle-backend:/app/.openclaw:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      sparkle_db:
+        condition: service_healthy
+      sparkle_age_init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  sparkle_agent:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sparkle_agent
+    restart: unless-stopped
+    env_file:
+      - .env
+    command: python grpc_server.py
+    user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
+    ports:
+      - "127.0.0.1:${SPARKLE_AGENT_PORT:-50051}:50051"
+    environment:
+      # Override localhost URLs from .env with correct Docker service names
+      - SPARKLE_RBAC_ENABLED=${SPARKLE_RBAC_ENABLED:-false}
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/0
+      - POSTGRES_HOST=sparkle_db
+      - POSTGRES_PORT=5432
+      - REDIS_HOST=sparkle_redis
+      - OPENCLAW_GATEWAY_URL=http://host.docker.internal:18789
+      - OPENCLAW_WS_URL=ws://host.docker.internal:18789
+      - OPENCLAW_WS_DEVICE_IDENTITY_PATH=/app/.openclaw/device.json
+      - OPENCLAW_DEFAULT_WORKDIR=${PWD}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - SERVICE_ROLE=grpc
+      - ENABLE_AURORA_RUNTIME_V1=${ENABLE_AURORA_RUNTIME_V1:-true}
+      # Aurora shadow→live: Bayesian, Idiographic, Stage33-35, Stage38, DocContext
+      - AURORA_BAYESIAN_MODE=${AURORA_BAYESIAN_MODE:-live}
+      - AURORA_IDIOGRAPHIC_MODE=${AURORA_IDIOGRAPHIC_MODE:-live}
+      - AURORA_STAGE33_MODE=${AURORA_STAGE33_MODE:-live}
+      - AURORA_STAGE33_EVENTS_MODE=${AURORA_STAGE33_EVENTS_MODE:-live}
+      - AURORA_STAGE33_SRL_MODE=${AURORA_STAGE33_SRL_MODE:-live}
+      - AURORA_STAGE33_WM_PROMPT_MODE=${AURORA_STAGE33_WM_PROMPT_MODE:-live}
+      - AURORA_STAGE34_MODE=${AURORA_STAGE34_MODE:-live}
+      - AURORA_STAGE34_CAPSULE_MODE=${AURORA_STAGE34_CAPSULE_MODE:-live}
+      - AURORA_STAGE34_ERROR_BRIDGE_MODE=${AURORA_STAGE34_ERROR_BRIDGE_MODE:-live}
+      - AURORA_STAGE35_MODE=${AURORA_STAGE35_MODE:-live}
+      - AURORA_STAGE35_METACOG_ROUTER_MODE=${AURORA_STAGE35_METACOG_ROUTER_MODE:-live}
+      - AURORA_STAGE38_ERR_REPLAN_MODE=${AURORA_STAGE38_ERR_REPLAN_MODE:-live}
+      - AURORA_STAGE38_PUSH_SCHEDULER_MODE=${AURORA_STAGE38_PUSH_SCHEDULER_MODE:-live}
+      - AURORA_DOC_CONTEXT_DOCUMENT_CONTEXT_INJECTION_MODE=${AURORA_DOC_CONTEXT_DOCUMENT_CONTEXT_INJECTION_MODE:-live}
+      # Aurora off→live: PushPolicy, Traits, SRL (3 critical)
+      - AURORA_STAGE18_PUSH_POLICY_MODE=${AURORA_STAGE18_PUSH_POLICY_MODE:-live}
+      - AURORA_STAGE18_PUSH_DELIVERY_MODE=${AURORA_STAGE18_PUSH_DELIVERY_MODE:-live}
+      - AURORA_TRAITS_MODE=${AURORA_TRAITS_MODE:-live}
+      - AURORA_TRAITS_COLDSTART_MODE=${AURORA_TRAITS_COLDSTART_MODE:-live}
+      - AURORA_SRL_MODE=${AURORA_SRL_MODE:-live}
+      - AURORA_SRL_BRIDGE_MODE=${AURORA_SRL_BRIDGE_MODE:-live}
+      - AURORA_SRL_TRACKER_MODE=${AURORA_SRL_TRACKER_MODE:-live}
+      - AURORA_SRL_SCAFFOLDING_CONSUME_MODE=${AURORA_SRL_SCAFFOLDING_CONSUME_MODE:-live}
+      - AURORA_FORESIGHT_MODE=${AURORA_FORESIGHT_MODE:-live}
+      - AURORA_METACOG_MODE=${AURORA_METACOG_MODE:-live}
+      - AURORA_POLICY_COMPILER_MODE=${AURORA_POLICY_COMPILER_MODE:-live}
+      - AURORA_REFLECTION_WIRE_MODE=${AURORA_REFLECTION_WIRE_MODE:-live}
+      - AURORA_SCENE_MODE=${AURORA_SCENE_MODE:-live}
+      - AURORA_STAGE19_CONSOLIDATION_MODE=${AURORA_STAGE19_CONSOLIDATION_MODE:-live}
+      - AURORA_STAGE19_LLM_EXTRACTOR_MODE=${AURORA_STAGE19_LLM_EXTRACTOR_MODE:-live}
+      - AURORA_STAGE19_WORKING_MEMORY_MODE=${AURORA_STAGE19_WORKING_MEMORY_MODE:-live}
+      - AURORA_STAGE21_SKILL_SELECTION_MODE=${AURORA_STAGE21_SKILL_SELECTION_MODE:-live}
+      - AURORA_STAGE21_SKILL_SHARE_MODE=${AURORA_STAGE21_SKILL_SHARE_MODE:-live}
+      - AURORA_TRAITS_NLP_MODE=${AURORA_TRAITS_NLP_MODE:-live}
+      # Aurora: Stage 37-40, DualCore, Privacy
+      - AURORA_STAGE37_LLM_SAFETY_MODE=${AURORA_STAGE37_LLM_SAFETY_MODE:-live}
+      - AURORA_STAGE39_MODE=${AURORA_STAGE39_MODE:-live}
+      - AURORA_STAGE39_SCAFFOLDING_PROMPT_MODE=${AURORA_STAGE39_SCAFFOLDING_PROMPT_MODE:-live}
+      - AURORA_STAGE39_COGLOAD_ROUTE_MODE=${AURORA_STAGE39_COGLOAD_ROUTE_MODE:-live}
+      - AURORA_STAGE39_GALAXY_INJECT_MODE=${AURORA_STAGE39_GALAXY_INJECT_MODE:-live}
+      - AURORA_STAGE40_CALENDAR_MODE=${AURORA_STAGE40_CALENDAR_MODE:-live}
+      - AURORA_DUAL_CORE_ROUTER_MODE=${AURORA_DUAL_CORE_ROUTER_MODE:-live}
+      - AURORA_PRIVACY_PII_REDACTION_MODE=${AURORA_PRIVACY_PII_REDACTION_MODE:-live}
+    volumes:
+      - ./backend:/app
+      - sparkle_backend_logs:/app/logs
+      - sparkle_backend_uploads:/app/uploads
+      - sparkle_backend_cache:/app/.cache
+      - ${HOME}/.openclaw/sparkle-backend:/app/.openclaw:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      sparkle_db:
+        condition: service_healthy
+      sparkle_age_init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 2G  # LLM processing requires more memory
+        reservations:
+          memory: 1G
+    # Probe gRPC port directly: a TCP connection to 50051 means the server is up
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; s=socket.socket(); s.settimeout(3); s.connect(('localhost',50051)); s.close()\" 2>/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    command: celery -A app.core.celery_app worker -l info -Q high_priority,default,low_priority --concurrency=4
+    user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
+    environment:
+      # Override localhost URLs from .env with correct Docker service names
+      - SPARKLE_RBAC_ENABLED=${SPARKLE_RBAC_ENABLED:-false}
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/0
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/2
+      - POSTGRES_HOST=sparkle_db
+      - POSTGRES_PORT=5432
+      - REDIS_HOST=sparkle_redis
+      - SERVICE_ROLE=celery
+    depends_on:
+      sparkle_db:
+        condition: service_healthy
+      sparkle_age_init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - sparkle_backend_logs:/app/logs
+      - sparkle_backend_uploads:/app/uploads
+      - sparkle_backend_cache:/app/.cache
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.core.celery_app inspect ping -d celery@$${HOSTNAME} 2>/dev/null || exit 1"]
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 45s
+
+  celery_glm_batch_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    command: celery -A app.core.celery_app worker -l info -Q glm_batch --autoscale=6,2 --hostname=glm-batch@%h
+    user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
+    environment:
+      - SPARKLE_RBAC_ENABLED=${SPARKLE_RBAC_ENABLED:-false}
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/0
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/2
+      - POSTGRES_HOST=sparkle_db
+      - POSTGRES_PORT=5432
+      - REDIS_HOST=sparkle_redis
+      - SERVICE_ROLE=celery-glm-batch
+      - GLM_BATCH_MAX_CONCURRENCY=6
+    depends_on:
+      sparkle_db:
+        condition: service_healthy
+      sparkle_age_init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - sparkle_backend_logs:/app/logs
+      - sparkle_backend_uploads:/app/uploads
+      - sparkle_backend_cache:/app/.cache
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.core.celery_app inspect ping -d glm-batch@$${HOSTNAME} 2>/dev/null || exit 1"]
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 45s
+
+  celery_beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sparkle_celery_beat
+    restart: unless-stopped
+    env_file:
+      - .env
+    command: celery -A app.core.celery_app beat -l warning
+    user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
+    environment:
+      # Override localhost URLs from .env with correct Docker service names
+      - SPARKLE_RBAC_ENABLED=${SPARKLE_RBAC_ENABLED:-false}
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/0
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/2
+      - POSTGRES_HOST=sparkle_db
+      - POSTGRES_PORT=5432
+      - REDIS_HOST=sparkle_redis
+      - SERVICE_ROLE=beat
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - sparkle_backend_logs:/app/logs
+      - sparkle_backend_cache:/app/.cache
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 128M
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'celery.*beat' || exit 1"]
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 30s
+
+  sparkle_gateway:
+    build:
+      context: ./backend/gateway
+      dockerfile: Dockerfile
+    container_name: sparkle_gateway
+    restart: unless-stopped
+    env_file:
+      - .env
+    user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
+    ports:
+      - "${SPARKLE_GATEWAY_PORT:-8080}:8080"
+    environment:
+      # Explicit container-internal addresses (override .env localhost values)
+      - SPARKLE_RBAC_ENABLED=${SPARKLE_RBAC_ENABLED:-false}
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
+      - POSTGRES_HOST=sparkle_db
+      - POSTGRES_PORT=5432
+      - REDIS_HOST=sparkle_redis
+      - REDIS_URL=sparkle_redis:6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - AGENT_ADDRESS=sparkle_agent:50051
+      - BACKEND_URL=http://sparkle_api:8000
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio:9000}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY must be set}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:?MINIO_SECRET_KEY must be set}
+      - MINIO_BUCKET=${MINIO_BUCKET:-sparkle-files}
+      - MINIO_USE_SSL=${MINIO_USE_SSL:-false}
+      - JWT_SECRET=${JWT_SECRET}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
+      - JWT_PRIVATE_KEY=${JWT_PRIVATE_KEY:-}
+      - JWT_PUBLIC_KEY=${JWT_PUBLIC_KEY:-}
+      - ADMIN_SECRET=${ADMIN_SECRET:-}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY:-}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
+      - CORS_ENABLED=${CORS_ENABLED:-true}
+      - ALLOW_WS_QUERY_TOKEN=${ALLOW_WS_QUERY_TOKEN:-false}
+
+    depends_on:
+      sparkle_api:
+        condition: service_started
+      sparkle_agent:
+        condition: service_started
+      sparkle_db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # ==================== Monitoring Simplified ====================
+  tempo:
+    image: grafana/tempo:2.4.1
+    container_name: sparkle_tempo
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    volumes:
+      - ./monitoring/tempo.yaml:/etc/tempo.yaml
+    ports:
+      - "127.0.0.1:4317:4317"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3200/ready || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  prometheus:
+    image: quay.io/prometheus/prometheus:v2.53.4
+    container_name: sparkle_prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/celery_alerts.yml:/etc/prometheus/celery_alerts.yml:ro
+      - ./monitoring/sparkle_slo_alerts.yml:/etc/prometheus/sparkle_slo_alerts.yml:ro
+      - ./monitoring/sparkle_production_baseline_alerts.yml:/etc/prometheus/sparkle_production_baseline_alerts.yml:ro
+      - ./monitoring/sparkle_t6_slo_alerts.yml:/etc/prometheus/sparkle_t6_slo_alerts.yml:ro
+      - ./monitoring/sparkle_recording_rules.yml:/etc/prometheus/sparkle_recording_rules.yml:ro
+      - ./monitoring/sqam_alerts.yml:/etc/prometheus/sqam_alerts.yml:ro
+    ports:
+      - "127.0.0.1:9090:9090"
+    depends_on:
+      - sparkle_api
+      - sparkle_gateway
+      - alertmanager
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9090/-/healthy || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 128M
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: sparkle_alertmanager
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "envsubst < /etc/alertmanager/alertmanager.yml > /tmp/alertmanager.yml && /bin/alertmanager --config.file=/tmp/alertmanager.yml"
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    ports:
+      - "127.0.0.1:9093:9093"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9093/-/healthy || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  loki:
+    image: grafana/loki:2.9.8
+    container_name: sparkle_loki
+    command: [ "-config.file=/etc/loki/local-config.yaml" ]
+    volumes:
+      - ./monitoring/loki-config.yaml:/etc/loki/local-config.yaml:ro
+    ports:
+      - "127.0.0.1:3100:3100"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3100/ready || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  promtail:
+    image: grafana/promtail:2.9.8
+    container_name: sparkle_promtail
+    command: [ "-config.file=/etc/promtail/config.yml" ]
+    volumes:
+      - ./monitoring/promtail-config.yaml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - loki
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3101/ready || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  grafana:
+    image: grafana/grafana-oss:11.1.4
+    container_name: sparkle_grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD must be set for security}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./monitoring/grafana-provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./monitoring/grafana-provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana-dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 64M
+
+volumes:
+  sparkle_redis_data:
+  sparkle_minio_data:
+  sparkle_backend_logs:
+  sparkle_backend_uploads:
+  sparkle_backend_cache:
+  sparkle_postgres_data:

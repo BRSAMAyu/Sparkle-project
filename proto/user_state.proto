@@ -1,0 +1,328 @@
+syntax = "proto3";
+
+package sparkle.userstate.v1;
+
+option go_package = "github.com/sparkle/gateway/gen/userstate/v1;userstatev1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+
+message StateFieldMetadata {
+  google.protobuf.Timestamp computed_at = 1;
+  repeated string source_snapshot_ids = 2;
+  int32 freshness_seconds = 3;
+}
+
+message CommitmentSummaryValue {
+  int32 overdue_count = 1;
+  google.protobuf.Timestamp next_due_at = 2;
+  repeated string pending_commitment_ids = 3;
+}
+
+message PendingPoliciesSummaryValue {
+  int32 count = 1;
+  google.protobuf.Timestamp next_trigger_at = 2;
+  repeated string policy_ids = 3;
+}
+
+message RecentReflectionsSummaryValue {
+  int32 count = 1;
+  string last_category = 2;
+  google.protobuf.Timestamp last_at = 3;
+}
+
+message RecentSceneItemValue {
+  string scene_id = 1;
+  string title = 2;
+  google.protobuf.Timestamp time_start = 3;
+  google.protobuf.Timestamp time_end = 4;
+  int32 member_count = 5;
+  double quality_score = 6;
+}
+
+message RecentScenesSummaryValue {
+  repeated RecentSceneItemValue items = 1;
+}
+
+message ForesightConfidenceItemValue {
+  string dim = 1;
+  double confidence = 2;
+}
+
+message ForesightHintSummaryValue {
+  string hint_text = 1;
+  google.protobuf.Timestamp generated_at = 2;
+  int32 deviation_count = 3;
+  repeated ForesightConfidenceItemValue attractor_confidences = 4;
+}
+
+message SocialMentionValue {
+  string summary = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+}
+
+message RecentPersonMentionsValue {
+  repeated SocialMentionValue mentions = 1;
+  int32 relationship_count = 2;
+}
+
+message SocialSignalsSummaryValue {
+  string summary_text = 1;
+  int32 mention_count = 2;
+  int32 relationship_count = 3;
+  int32 pending_commitments_count = 4;
+  string community_engagement_level = 5;
+  double social_learning_preference = 6;
+  double content_contribution_rate = 7;
+}
+
+message EngagementStateValue {
+  google.protobuf.Timestamp last_active_at = 1;
+  int32 session_count_7d = 2;
+  int32 streak = 3;
+}
+
+message LearningStateValue {
+  string within_category_preference_json = 1;
+}
+
+message WorkingMemorySnapshotValueItem {
+  string summary = 1;
+  string subject_type = 2;
+  int32 mention_count = 3;
+  bool consolidated = 4;
+  google.protobuf.Timestamp last_seen_at = 5;
+}
+
+message WorkingMemorySnapshotValue {
+  string active_session_id = 1;
+  repeated WorkingMemorySnapshotValueItem items = 2;
+}
+
+message TraitPriorDimensionValue {
+  string dim = 1;
+  double value = 2;
+  double confidence = 3;
+  string source = 4;
+}
+
+message TraitsPriorSummaryValue {
+  repeated TraitPriorDimensionValue items = 1;
+}
+
+message SRLPhaseSummaryValue {
+  string current_phase = 1;
+  google.protobuf.Timestamp phase_started_at = 2;
+  double confidence = 3;
+  string source = 4;
+}
+
+message CommitmentSummaryField {
+  CommitmentSummaryValue value = 1;
+  StateFieldMetadata metadata = 2;
+}
+
+message PendingPoliciesSummaryField {
+  PendingPoliciesSummaryValue value = 1;
+  StateFieldMetadata metadata = 2;
+}
+
+message RecentReflectionsSummaryField {
+  RecentReflectionsSummaryValue value = 1;
+  StateFieldMetadata metadata = 2;
+}
+
+message RecentScenesSummaryField {
+  RecentScenesSummaryValue value = 1;
+  StateFieldMetadata metadata = 2;
+}
+
+message ForesightHintSummaryField {
+  ForesightHintSummaryValue value = 1;
+  StateFieldMetadata metadata = 2;
+}
+
+message RecentPersonMentionsField {
+  RecentPersonMentionsValue value = 1;
+  StateFieldMetadata metadata = 2;
+}
+
+message SocialSignalsSummaryField {
+  SocialSignalsSummaryValue value = 1;
+  StateFieldMetadata metadata = 2;
+}
+
+message EngagementStateField {
+  EngagementStateValue value = 1;
+  StateFieldMetadata metadata = 2;
+}
+
+message LearningStateField {
+  LearningStateValue value = 1;
+  StateFieldMetadata metadata = 2;
+}
+
+message WorkingMemorySnapshotField {
+  WorkingMemorySnapshotValue value = 1;
+  StateFieldMetadata metadata = 2;
+}
+
+message TraitsPriorSummaryField {
+  TraitsPriorSummaryValue value = 1;
+  StateFieldMetadata metadata = 2;
+}
+
+message SRLPhaseSummaryField {
+  SRLPhaseSummaryValue value = 1;
+  StateFieldMetadata metadata = 2;
+}
+
+message SufficiencySummaryValue {
+  double score = 1;
+  repeated string top_missing_dimensions = 2;
+}
+
+message SufficiencySummaryField {
+  SufficiencySummaryValue value = 1;
+  StateFieldMetadata metadata = 2;
+}
+
+message ActiveSkillSummaryItemValue {
+  string skill_id = 1;
+  string name = 2;
+  double activation_match_score = 3;
+}
+
+message ActiveSkillsSummaryValue {
+  repeated ActiveSkillSummaryItemValue items = 1;
+}
+
+message ActiveSkillsSummaryField {
+  ActiveSkillsSummaryValue value = 1;
+  StateFieldMetadata metadata = 2;
+}
+
+message AchievementUnlockSummaryItemValue {
+  string achievement_id = 1;
+  string name = 2;
+  string rarity = 3;
+  google.protobuf.Timestamp unlocked_at = 4;
+}
+
+message AchievementProgressSummaryItemValue {
+  string achievement_id = 1;
+  string name = 2;
+  double progress = 3;
+}
+
+message AchievementSummaryValue {
+  repeated AchievementUnlockSummaryItemValue recent_unlocks = 1;
+  repeated AchievementProgressSummaryItemValue in_progress_achievements = 2;
+  double total_achievement_score = 3;
+}
+
+message AchievementSummaryField {
+  AchievementSummaryValue value = 1;
+  StateFieldMetadata metadata = 2;
+}
+
+message CalendarDeadlineItemValue {
+  string title = 1;
+  google.protobuf.Timestamp start_time = 2;
+  google.protobuf.Timestamp end_time = 3;
+  string source = 4;
+}
+
+message CalendarTimeBlockItemValue {
+  string start = 1;
+  string end = 2;
+}
+
+message CalendarContextValue {
+  repeated CalendarDeadlineItemValue upcoming_deadlines = 1;
+  repeated CalendarTimeBlockItemValue time_blocks_today = 2;
+  string workload_density = 3;
+  google.protobuf.Struct exam_urgency = 4;
+}
+
+message CalendarContextField {
+  CalendarContextValue value = 1;
+  StateFieldMetadata metadata = 2;
+}
+
+message MetacognitionDimensionSummaryValue {
+  string dim = 1;
+  int32 sample_size = 2;
+  double bias_mean = 3;
+  string trend = 4;
+}
+
+message MetacognitionProfileSummaryValue {
+  repeated MetacognitionDimensionSummaryValue items = 1;
+}
+
+message MetacognitionProfileField {
+  MetacognitionProfileSummaryValue value = 1;
+  StateFieldMetadata metadata = 2;
+}
+
+message AssociationPairValue {
+  string dim_pair = 1;
+  string dim_a = 2;
+  string dim_b = 3;
+  double correlation = 4;
+  double q_value = 5;
+  double confidence = 6;
+  string direction = 7;
+  string strength_label = 8;
+  string rendered_text = 9;
+  bool displayed = 10;
+  bool density_insufficient = 11;
+  int32 sample_days = 12;
+}
+
+message ChangePointItemValue {
+  string dim = 1;
+  google.protobuf.Timestamp change_date = 2;
+  double confidence = 3;
+  string rendered_text = 4;
+}
+
+message IdiographicSummaryValue {
+  repeated AssociationPairValue top_associations = 1;
+  repeated ChangePointItemValue change_points_30d = 2;
+  int32 sample_days = 3;
+  double confidence = 4;
+  string disclaimer_text = 5;
+}
+
+message IdiographicSummaryField {
+  IdiographicSummaryValue value = 1;
+  StateFieldMetadata metadata = 2;
+}
+
+message UserStateV1 {
+  string user_id = 1;
+  string schema_version = 2;
+  CommitmentSummaryField commitment_summary = 3;
+  PendingPoliciesSummaryField pending_policies = 4;
+  RecentPersonMentionsField recent_person_mentions = 5;
+  EngagementStateField engagement_state = 6;
+  LearningStateField learning_state = 7;
+  // Reserved for Stage 19C emotion work; intentionally unset in Stage 18.
+  string emotion_hint_reserved = 8;
+  WorkingMemorySnapshotField working_memory_snapshot = 9;
+  SufficiencySummaryField task_sufficiency_summary = 10;
+  SufficiencySummaryField context_sufficiency_summary = 11;
+  RecentReflectionsSummaryField recent_reflections = 12;
+  RecentScenesSummaryField recent_scenes = 13;
+  ForesightHintSummaryField foresight_hint = 14;
+  TraitsPriorSummaryField traits_prior = 15;
+  SRLPhaseSummaryField srl_phase = 16;
+  ActiveSkillsSummaryField active_skills_summary = 17;
+  AchievementSummaryField achievement_summary = 18;
+  CalendarContextField calendar_context = 19;
+  MetacognitionProfileField metacognition_profile = 20;
+  IdiographicSummaryField idiographic_summary = 21;
+  SocialSignalsSummaryField social_signals_summary = 22;
+}

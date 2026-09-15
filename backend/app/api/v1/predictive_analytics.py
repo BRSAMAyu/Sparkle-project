@@ -1,0 +1,310 @@
+"""
+Predictive Analytics API - 预测分析接口
+
+Endpoints:
+- GET /predictive/engagement - 用户活跃度预测
+- GET /predictive/difficulty/{topic_id} - 主题难度预测
+- GET /predictive/optimal-time - 最佳学习时间推荐
+- GET /predictive/dropout-risk - 流失风险评估
+"""
+
+from typing import Any
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException
+from loguru import logger
+from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.api.deps import get_current_user
+from app.db.session import get_db
+from app.models.user import User
+from app.services.predictive_service import PredictiveService
+
+router = APIRouter()
+
+
+class RealtimeNextStepRequest(BaseModel):
+    partial_text: str = Field(default="", description="当前输入或最近一句话")
+    active_plan_id: str | None = Field(default=None, description="当前激活计划 ID")
+    surface: str = Field(default="chat_input", description="触发预测的界面")
+
+
+@router.get("/engagement")
+async def get_engagement_forecast(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    获取用户活跃度预测
+
+    Returns:
+        - next_active_time: 预测下次活跃时间
+        - confidence: 预测置信度 (0-1)
+        - dropout_risk: 流失风险 (low/medium/high)
+        - typical_weekdays: 典型活跃日
+        - typical_hours: 典型活跃时段
+    """
+    try:
+        service = PredictiveService(db)
+        forecast = await service.predict_engagement(current_user.id)
+
+        return {
+            "status": "success",
+            "data": {
+                "next_active_time": forecast.next_active_time.isoformat() if forecast.next_active_time else None,
+                "confidence": forecast.confidence,
+                "dropout_risk": forecast.risk_level,
+                "typical_weekdays": [],
+                "typical_hours": [],
+                "prediction_factors": [],
+                "recommended_intervention": forecast.recommended_intervention,
+            }
+        }
+
+    except Exception as e:
+        logger.error(f"Prediction error: {e}")
+        raise HTTPException(status_code=500, detail="Prediction service unavailable") from e
+
+
+@router.get("/difficulty/{topic_id}")
+async def get_difficulty_prediction(
+    topic_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    获取主题难度预测
+
+    Args:
+        topic_id: 主题ID
+
+    Returns:
+        - difficulty_score: 难度分数 (0-1)
+        - estimated_time_hours: 预估学习时长（小时）
+        - prerequisites_ready: 前置知识是否就绪
+        - missing_prerequisites: 缺失的前置知识
+        - difficulty_factors: 难度因素分析
+    """
+    try:
+        service = PredictiveService(db)
+        prediction = await service.predict_difficulty(current_user.id, topic_id)
+
+        return {
+            "status": "success",
+            "data": {
+                "difficulty_score": prediction.predicted_difficulty,
+                "estimated_time_hours": prediction.estimated_time_hours,
+                "prerequisites_ready": len(prediction.suggested_prerequisites) == 0,
+                "missing_prerequisites": [
+                    {
+                        "name": prerequisite,
+                    }
+                    for prerequisite in prediction.suggested_prerequisites
+                ],
+                "difficulty_factors": [],
+            }
+        }
+
+    except Exception as e:
+        logger.error(f"Prediction error: {e}")
+        raise HTTPException(status_code=500, detail="Prediction service unavailable") from e
+
+
+@router.get("/optimal-time")
+async def get_optimal_time_recommendation(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    获取最佳学习时间推荐
+
+    Returns:
+        - best_hours: 最佳学习时段（0-23小时）
+        - best_weekdays: 最佳学习日（0=周一, 6=周日）
+        - performance_by_hour: 按小时的表现统计
+        - performance_by_weekday: 按星期的表现统计
+    """
+    try:
+        service = PredictiveService(db)
+        recommendation = await service.recommend_optimal_time(current_user.id)
+
+        return {
+            "status": "success",
+            "data": {
+                "best_hours": recommendation["best_hours"],
+                "best_weekdays": recommendation["best_weekdays"],
+                "performance_by_hour": recommendation["performance_by_hour"],
+                "performance_by_weekday": recommendation["performance_by_weekday"],
+                "reason": recommendation["reason"],
+                "data_status": recommendation.get("data_status"),
+                "sample_size": recommendation.get("sample_size"),
+                "confidence": recommendation.get("confidence"),
+            }
+        }
+
+    except Exception as e:
+        logger.error(f"Prediction error: {e}")
+        raise HTTPException(status_code=500, detail="Prediction service unavailable") from e
+
+
+@router.get("/dropout-risk")
+async def get_dropout_risk_assessment(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    获取流失风险评估
+
+    Returns:
+        - risk_score: 风险分数 (0-100)
+        - risk_level: 风险等级 (low/medium/high)
+        - intervention_suggestions: 干预建议
+        - risk_factors: 风险因素分析
+    """
+    try:
+        service = PredictiveService(db)
+        assessment = await service.detect_dropout_risk(current_user.id)
+        metrics = assessment.get("metrics", {})
+
+        return {
+            "status": "success",
+            "data": {
+                "risk_score": assessment["risk_score"],
+                "risk_level": assessment["risk_level"],
+                "intervention_suggestions": [assessment["recommendation"]],
+                "risk_factors": [
+                    {
+                        "name": "activity_change",
+                        "value": metrics.get("activity_change_percent", 0),
+                    },
+                    {
+                        "name": "completion_rate",
+                        "value": metrics.get("completion_rate_percent", 0),
+                    },
+                    {
+                        "name": "recent_7d_count",
+                        "value": metrics.get("recent_7d_activities", 0),
+                    },
+                ],
+            }
+        }
+
+    except Exception as e:
+        logger.error(f"Prediction error: {e}")
+        raise HTTPException(status_code=500, detail="Prediction service unavailable") from e
+
+
+@router.get("/dashboard")
+async def get_predictive_dashboard(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    获取预测分析仪表板（综合数据）
+
+    Returns:
+        - engagement_forecast: 活跃度预测
+        - dropout_risk: 流失风险
+        - optimal_time: 最佳学习时间
+        - upcoming_topics: 即将学习的主题难度预测
+    """
+    try:
+        service = PredictiveService(db)
+
+        # 获取各项预测
+        engagement = await service.predict_engagement(current_user.id)
+        dropout = await service.detect_dropout_risk(current_user.id)
+        optimal = await service.recommend_optimal_time(current_user.id)
+
+        return {
+            "status": "success",
+            "data": {
+                "engagement_forecast": {
+                    "next_active_time": engagement.next_active_time.isoformat() if engagement.next_active_time else None,
+                    "confidence": engagement.confidence,
+                    "dropout_risk": engagement.risk_level,
+                    "recommended_intervention": engagement.recommended_intervention,
+                },
+                "dropout_risk": {
+                    "risk_score": dropout["risk_score"],
+                    "risk_level": dropout["risk_level"],
+                    "intervention_suggestions": [dropout["recommendation"]],
+                },
+                "optimal_time": {
+                    "best_hours": optimal["best_hours"],
+                    "best_weekdays": optimal["best_weekdays"],
+                    "reason": optimal.get("reason"),
+                    "data_status": optimal.get("data_status"),
+                    "sample_size": optimal.get("sample_size"),
+                    "confidence": optimal.get("confidence"),
+                },
+                "next_intent_forecast": await service.get_next_intent_forecast(current_user.id),
+                "generated_at": service._get_current_time().isoformat(),
+            }
+        }
+
+    except Exception as e:
+        logger.error(f"Prediction error: {e}")
+        raise HTTPException(status_code=500, detail="Prediction service unavailable") from e
+
+
+@router.get("/next-intent")
+async def get_next_intent_forecast(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        service = PredictiveService(db)
+        forecast = await service.get_next_intent_forecast(current_user.id)
+        return {
+            "status": "success",
+            "data": forecast,
+        }
+    except Exception as e:
+        logger.error(f"Prediction error: {e}")
+        raise HTTPException(status_code=500, detail="Prediction service unavailable") from e
+
+
+@router.post("/realtime-next-step")
+async def get_realtime_next_step_prediction(
+    request: RealtimeNextStepRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        service = PredictiveService(db)
+        forecast = await service.get_realtime_next_step_forecast(
+            current_user.id,
+            partial_text=request.partial_text,
+            active_plan_id=request.active_plan_id,
+            surface=request.surface,
+        )
+        return {
+            "status": "success",
+            "data": forecast,
+        }
+    except Exception as e:
+        logger.error(f"Prediction error: {e}")
+        raise HTTPException(status_code=500, detail="Prediction service unavailable") from e
+
+
+@router.get("/analytics")
+async def get_prediction_analytics(
+    days: int = 7,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        service = PredictiveService(db)
+        analytics: dict[str, Any] = await service.get_prediction_analytics(
+            current_user.id,
+            days=days,
+        )
+        return {
+            "status": "success",
+            "data": analytics,
+        }
+    except Exception as e:
+        logger.error(f"Prediction error: {e}")
+        raise HTTPException(status_code=500, detail="Prediction service unavailable") from e

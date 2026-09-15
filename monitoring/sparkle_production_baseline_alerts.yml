@@ -1,0 +1,83 @@
+groups:
+  - name: sparkle_production_baseline
+    interval: 30s
+    rules:
+      - alert: SparkleAIFirstTokenLatencyHigh
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(sparkle_ai_response_first_token_duration_seconds_bucket[10m])) by (le, chat_mode, reasoning_mode)
+          ) > 4
+        for: 15m
+        labels:
+          severity: warning
+          tier: P2
+          service: ai
+        annotations:
+          summary: "AI 首包延迟过高"
+          description: "AI 首包 P95 超过 4s，持续 15 分钟"
+          runbook: "monitoring/runbooks/incident_response.md#p2-ai-first-token-latency-high"
+
+      - alert: SparkleAITotalDurationHigh
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(sparkle_ai_response_total_duration_seconds_bucket[10m])) by (le, chat_mode, reasoning_mode, model_tier)
+          ) > 25
+        for: 15m
+        labels:
+          severity: warning
+          tier: P2
+          service: ai
+        annotations:
+          summary: "AI 总耗时过高"
+          description: "AI 总耗时 P95 超过 25s，持续 15 分钟"
+          runbook: "monitoring/runbooks/incident_response.md#p2-ai-total-duration-high"
+
+      - alert: SparklePredictionRulesFallbackSpike
+        expr: increase(sparkle_ai_prediction_fallback_total{to_source="rules"}[15m]) > 20
+        for: 10m
+        labels:
+          severity: warning
+          tier: P2
+          service: prediction
+        annotations:
+          summary: "实时预测规则回退激增"
+          description: "15 分钟内预测链回退到 rules 超过 20 次"
+          runbook: "monitoring/runbooks/incident_response.md#p2-prediction-rules-fallback-spike"
+
+      - alert: SparkleOutboxBacklogHigh
+        expr: sparkle_outbox_pending_events > 1000
+        for: 10m
+        labels:
+          severity: warning
+          tier: P2
+          service: backend
+        annotations:
+          summary: "Outbox 积压过高"
+          description: "待派发事件超过 1000 条，持续 10 分钟"
+          runbook: "monitoring/runbooks/incident_response.md#p2-outbox-backlog-high"
+
+      - alert: SparkleBackendMemoryHigh
+        expr: process_resident_memory_bytes{job="sparkle_backend"} > 1500 * 1024 * 1024
+        for: 10m
+        labels:
+          severity: warning
+          tier: P2
+          service: backend
+        annotations:
+          summary: "Backend 内存使用过高"
+          description: "backend 常驻内存超过 1.5GB，持续 10 分钟"
+          runbook: "monitoring/runbooks/incident_response.md#p2-backend-memory-high"
+
+      - alert: SparkleGatewayGoroutinesHigh
+        expr: go_goroutines{job="sparkle_gateway"} > 3000
+        for: 10m
+        labels:
+          severity: warning
+          tier: P3
+          service: gateway
+        annotations:
+          summary: "Gateway goroutine 数过高"
+          description: "gateway goroutine 持续高于 3000"
+          runbook: "monitoring/runbooks/incident_response.md#p3-gateway-goroutines-high"

@@ -1,0 +1,126 @@
+import asyncio
+from types import SimpleNamespace
+import uuid
+from unittest.mock import AsyncMock
+
+import pytest
+from redis.commands.search.query import Query
+
+from app.config import settings
+from app.core.redis_search_client import redis_search_client
+from app.services.embedding_service import embedding_service
+from app.services.galaxy.retrieval_service import KnowledgeRetrievalService
+
+
+@pytest.mark.asyncio
+async def test_hybrid_search_fallback_on_timeout(monkeypatch):
+    db = AsyncMock()
+    service = KnowledgeRetrievalService(db)
+    monkeypatch.setattr(settings, "ENABLE_REDIS_HYBRID_FALLBACK", True)
+    monkeypatch.setattr(embedding_service, "get_embedding", AsyncMock(return_value=[0.1, 0.2]))
+
+    monkeypatch.setattr(redis_search_client, "hybrid_search", AsyncMock(side_effect=asyncio.TimeoutError()))
+    monkeypatch.setattr(redis_search_client, "search", AsyncMock(side_effect=asyncio.TimeoutError()))
+
+    fallback_result = ["fallback"]
+    monkeypatch.setattr(service, "_pgvector_fallback", AsyncMock(return_value=fallback_result))
+
+    results = await service._execute_hybrid_search(
+        user_id_uuid=uuid.uuid4(),
+        query_str="test query",
+        limit=2,
+        threshold=0.3,
+        use_reranker=False,
+    )
+
+    assert results == fallback_result
+
+
+@pytest.mark.asyncio
+async def test_pgvector_fallback_uses_keyword_search_when_vectors_empty(monkeypatch):
+    db = AsyncMock()
+    service = KnowledgeRetrievalService(db)
+
+    monkeypatch.setattr(service, "_vector_runtime_available", AsyncMock(return_value=True))
+    monkeypatch.setattr(service, "semantic_search_nodes", AsyncMock(return_value=[]))
+    monkeypatch.setattr(service, "keyword_search", AsyncMock(return_value=["keyword-node"]))
+    monkeypatch.setattr(service, "_build_results_from_nodes", AsyncMock(return_value=["keyword-result"]))
+
+    results = await service._pgvector_fallback(
+        user_id_uuid=uuid.uuid4(),
+        query_str="test query",
+        subject_id=None,
+        limit=2,
+        threshold=0.3,
+        use_reranker=False,
+    )
+
+    assert results == ["keyword-result"]
+
+
+@pytest.mark.asyncio
+async def test_pgvector_fallback_short_circuits_when_vector_runtime_unavailable(monkeypatch):
+    db = AsyncMock()
+    service = KnowledgeRetrievalService(db)
+
+    monkeypatch.setattr(service, "_vector_runtime_available", AsyncMock(return_value=False))
+    monkeypatch.setattr(service, "keyword_search", AsyncMock(return_value=["keyword-node"]))
+    monkeypatch.setattr(service, "_build_results_from_nodes", AsyncMock(return_value=["keyword-result"]))
+
+    results = await service._pgvector_fallback(
+        user_id_uuid=uuid.uuid4(),
+        query_str="test query",
+        subject_id=None,
+        limit=2,
+        threshold=0.3,
+        use_reranker=False,
+    )
+
+    assert results == ["keyword-result"]
+
+
+@pytest.mark.asyncio
+async def test_semantic_search_nodes_disables_runtime_on_vector_error(monkeypatch):
+    db = AsyncMock()
+    db.execute = AsyncMock(side_effect=RuntimeError("could not load library \"vector.so\""))
+    service = KnowledgeRetrievalService(db)
+
+    monkeypatch.setattr(service, "_vector_runtime_available", AsyncMock(return_value=True))
+    monkeypatch.setattr(embedding_service, "get_embedding", AsyncMock(return_value=[0.1, 0.2]))
+
+    results = await service.semantic_search_nodes("test query")
+
+    assert results == []
+
+
+@pytest.mark.asyncio
+async def test_redis_search_client_retries_after_missing_index(monkeypatch):
+    expected_result = SimpleNamespace(docs=["chunk-1"])
+
+    class _FakeFT:
+        def __init__(self):
+            self.calls = 0
+
+        async def search(self, query, query_params=None):
+            del query, query_params
+            self.calls += 1
+            if self.calls == 1:
+                raise RuntimeError("No such index")
+            return expected_result
+
+    class _FakeRedis:
+        def __init__(self):
+            self.ft_client = _FakeFT()
+
+        def ft(self, index_name):
+            assert index_name == redis_search_client.index_name
+            return self.ft_client
+
+    monkeypatch.setattr(redis_search_client, "redis", _FakeRedis())
+    ensure_index = AsyncMock(return_value=True)
+    monkeypatch.setattr(redis_search_client, "ensure_index", ensure_index)
+
+    result = await redis_search_client.search(Query("*"))
+
+    assert result is expected_result
+    ensure_index.assert_awaited_once()

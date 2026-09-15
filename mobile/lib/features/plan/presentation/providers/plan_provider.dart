@@ -1,0 +1,174 @@
+import 'dart:async';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/features/plan/data/models/plan_model.dart';
+import 'package:sparkle/features/plan/data/repositories/plan_repository.dart';
+import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
+import 'package:sparkle/features/task/task.dart';
+import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
+
+// 1. PlanListState Class
+class PlanListState {
+  PlanListState({
+    this.isLoading = false,
+    this.plans = const [],
+    this.activePlans = const [],
+    this.error,
+  });
+  final bool isLoading;
+  final List<PlanModel> plans;
+  final List<PlanModel> activePlans;
+  final String? error;
+
+  PlanListState copyWith({
+    bool? isLoading,
+    List<PlanModel>? plans,
+    List<PlanModel>? activePlans,
+    String? error,
+    bool clearError = false,
+  }) =>
+      PlanListState(
+        isLoading: isLoading ?? this.isLoading,
+        plans: plans ?? this.plans,
+        activePlans: activePlans ?? this.activePlans,
+        error: clearError ? null : error ?? this.error,
+      );
+}
+
+// 2. PlanNotifier Class
+class PlanNotifier extends StateNotifier<PlanListState> {
+  PlanNotifier(this._planRepository, this._ref) : super(PlanListState()) {
+    loadPlans();
+    loadActivePlans();
+  }
+  final PlanRepository _planRepository;
+  final Ref _ref;
+
+  Future<void> _runWithErrorHandling(Future<void> Function() action) async {
+    if (!mounted) return;
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      await action();
+    } catch (e) {
+      if (!mounted) return;
+      state = state.copyWith(isLoading: false, error: e.toString());
+    } finally {
+      if (!mounted) return;
+      // In case the action itself doesn't set isLoading to false
+      if (state.isLoading) {
+        state = state.copyWith(isLoading: false);
+      }
+    }
+  }
+
+  Future<void> loadPlans({PlanType? type}) async {
+    await _runWithErrorHandling(() async {
+      final plans = await _planRepository.getPlans(type: type);
+      if (!mounted) return;
+      state = state.copyWith(plans: plans);
+    });
+  }
+
+  Future<void> loadActivePlans() async {
+    await _runWithErrorHandling(() async {
+      final activePlans = await _planRepository.getActivePlans();
+      if (!mounted) return;
+      state = state.copyWith(activePlans: activePlans);
+    });
+  }
+
+  Future<void> createPlan(PlanCreate plan) async {
+    await _runWithErrorHandling(() async {
+      await _planRepository.createPlan(plan);
+      await refresh();
+    });
+  }
+
+  Future<void> updatePlan(String id, PlanUpdate planUpdate) async {
+    await _runWithErrorHandling(() async {
+      await _planRepository.updatePlan(id, planUpdate);
+      await refresh();
+    });
+  }
+
+  Future<void> deletePlan(String id) async {
+    await _runWithErrorHandling(() async {
+      await _planRepository.deletePlan(id);
+      await refresh();
+    });
+  }
+
+  Future<void> activatePlan(String id) async {
+    await _runWithErrorHandling(() async {
+      await _planRepository.activatePlan(id);
+      await refresh();
+    });
+  }
+
+  Future<void> deactivatePlan(String id) async {
+    await _runWithErrorHandling(() async {
+      await _planRepository.deactivatePlan(id);
+      await refresh();
+    });
+  }
+
+  Future<void> setPrimaryPlan(String id) async {
+    await _runWithErrorHandling(() async {
+      await _planRepository.setPrimaryPlan(id);
+      await refresh();
+    });
+  }
+
+  Future<void> generateTasks(String planId, int count) async {
+    await _runWithErrorHandling(() async {
+      await _planRepository.generateTasks(planId, count: count);
+      // Also refresh the tasks list
+      _ref.read(taskListProvider.notifier).refreshTasks();
+      // Invalidate the plan details to show the new tasks
+      _ref.invalidate(planDetailProvider(planId));
+      _ref.invalidate(dashboardProvider);
+    });
+  }
+
+  Future<void> archivePlan(String id) async {
+    await _runWithErrorHandling(() async {
+      await _planRepository.archivePlan(id);
+      final activePlanId = _ref.read(activePlanProvider);
+      if (activePlanId == id) {
+        _ref.read(activePlanProvider.notifier).clearSelection();
+      }
+      await refresh();
+    });
+  }
+
+  Future<void> restorePlan(String id) async {
+    await _runWithErrorHandling(() async {
+      await _planRepository.restorePlan(id);
+      await refresh();
+    });
+  }
+
+  Future<void> refresh() async {
+    await loadPlans();
+    await loadActivePlans();
+    _ref.invalidate(dashboardProvider);
+  }
+}
+
+// 3. Providers
+
+/// Core keepAlive provider: the plan list/current plan overview is shared by
+/// the shell, chat context, and plan tab, so it survives tab switches.
+final planListProvider = StateNotifierProvider<PlanNotifier, PlanListState>(
+  (ref) => PlanNotifier(ref.watch(planRepositoryProvider), ref),
+);
+
+final planDetailProvider =
+    FutureProvider.autoDispose.family<PlanModel, String>((ref, id) async {
+  // Keep alive for 30s to avoid loading flash on tab switches
+  final link = ref.keepAlive();
+  final timer = Timer(const Duration(seconds: 30), link.close);
+  ref.onDispose(timer.cancel);
+  final planRepo = ref.watch(planRepositoryProvider);
+  return planRepo.getPlan(id);
+});

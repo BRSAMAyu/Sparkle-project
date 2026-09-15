@@ -1,0 +1,215 @@
+import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
+
+
+/// Service for integrating translations into knowledge graph
+class KnowledgeIntegrationService {
+  KnowledgeIntegrationService(this._dio);
+
+  final Dio _dio;
+
+  /// Create vocabulary node from translation
+  ///
+  /// Sends translation to backend to create a knowledge node
+  /// that will be scheduled for spaced repetition review immediately.
+  /// Handles idempotency (if node exists, it updates context).
+  ///
+  /// Returns:
+  /// - VocabularyNodeResult on success
+  /// - null on error (check error type via exception)
+  ///
+  /// Throws:
+  /// - ServiceUnavailableException on 503 (circuit breaker triggered)
+  /// - NetworkException on network errors
+  Future<VocabularyNodeResult?> createVocabularyNode({
+    required String sourceText,
+    required String translation,
+    required String context,
+    String? sourceUrl,
+    String? sourceDocumentId,
+    String language = 'en',
+    String? domain,
+    int? subjectId,
+  }) async {
+    try {
+      debugPrint('📚 Creating vocabulary node: $sourceText → $translation');
+
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/galaxy/vocabulary',
+        data: {
+          'source_text': sourceText,
+          'translation': translation,
+          'context': context,
+          'source_url': sourceUrl,
+          'source_document_id': sourceDocumentId,
+          'language': language,
+          'domain': domain,
+          'subject_id': subjectId,
+        },
+      );
+
+      if (response.statusCode == 200 && response.data?['success'] == true) {
+        debugPrint('✅ Vocabulary node created/updated: ${response.data?['node_id']}');
+        return VocabularyNodeResult.fromJson(response.data!);
+      } else {
+        debugPrint('⚠️ Failed to create vocabulary node: ${response.data}');
+        return null;
+      }
+    } on DioException catch (e) {
+      final zh = I18nService.instance.isChinese;
+      if (e.response?.statusCode == 503) {
+        debugPrint('🚨 Service unavailable (circuit breaker): ${e.message}');
+        throw ServiceUnavailableException(
+          zh ? '服务繁忙，请稍后重试' : 'Service busy, please try again later',
+          originalError: e,
+        );
+      } else if (e.response?.statusCode == 429) {
+        debugPrint('⚠️ Rate limited: ${e.message}');
+        throw RateLimitException(
+          zh ? '请求过于频繁，请稍后再试' : 'Too many requests, please try again later',
+          retryAfter: _parseRetryAfter(e.response?.headers),
+        );
+      } else if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout) {
+        debugPrint('⏱️ Timeout: ${e.message}');
+        throw NetworkException(
+          zh ? '网络连接超时，请检查网络' : 'Network timeout, please check your connection',
+          originalError: e,
+        );
+      } else {
+        debugPrint('❌ Failed to create vocabulary node: $e');
+        throw NetworkException(
+          zh ? '保存失败，请重试' : 'Save failed, please retry',
+          originalError: e,
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Unexpected error: $e');
+      throw NetworkException(
+        I18nService.instance.l10n.auto_unknownerrorpleaseretry,
+        originalError: e,
+      );
+    }
+  }
+
+  int? _parseRetryAfter(Headers? headers) {
+    try {
+      final retryAfter = headers?.value('retry-after');
+      if (retryAfter != null) {
+        return int.tryParse(retryAfter);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Delete a draft node
+  Future<bool> deleteDraftNode(String nodeId) async {
+    try {
+      debugPrint('🗑️ Deleting draft node: $nodeId');
+
+      final response = await _dio.delete<Map<String, dynamic>>('/galaxy/node/$nodeId/draft');
+
+      if (response.statusCode == 200 && response.data?['success'] == true) {
+        debugPrint('✅ Draft node deleted: $nodeId');
+        return true;
+      } else {
+        debugPrint('⚠️ Failed to delete draft node: ${response.data}');
+        return false;
+      }
+    } catch (e) {
+      debugPrint('❌ Failed to delete draft node: $e');
+      return false;
+    }
+  }
+
+  /// Update node content before publishing
+  Future<bool> updateNodeContent({
+    required String nodeId,
+    String? name,
+    String? description,
+    List<String>? keywords,
+  }) async {
+    try {
+      debugPrint('✏️ Updating node content: $nodeId');
+
+      final response = await _dio.patch<Map<String, dynamic>>(
+        '/galaxy/node/$nodeId/content',
+        data: {
+          if (name != null) 'name': name,
+          if (description != null) 'description': description,
+          if (keywords != null) 'keywords': keywords,
+        },
+      );
+
+      if (response.statusCode == 200 && response.data?['success'] == true) {
+        debugPrint('✅ Node content updated: $nodeId');
+        return true;
+      } else {
+        debugPrint('⚠️ Failed to update node content: ${response.data}');
+        return false;
+      }
+    } catch (e) {
+      debugPrint('❌ Failed to update node content: $e');
+      return false;
+    }
+  }
+}
+
+/// Result of vocabulary node creation
+class VocabularyNodeResult {
+  const VocabularyNodeResult({
+    required this.success,
+    required this.nodeId,
+    required this.status,
+    required this.message,
+  });
+
+  factory VocabularyNodeResult.fromJson(Map<String, dynamic> json) => VocabularyNodeResult(
+      success: json['success'] as bool,
+      nodeId: json['node_id'] as String,
+      status: json['status'] as String,
+      message: json['message'] as String,
+    );
+
+  final bool success;
+  final String nodeId;
+  final String status;
+  final String message;
+}
+
+/// Exception thrown when service is unavailable (503)
+/// Usually indicates circuit breaker is open
+class ServiceUnavailableException implements Exception {
+  const ServiceUnavailableException(this.message, {this.originalError});
+
+  final String message;
+  final Object? originalError;
+
+  @override
+  String toString() => message;
+}
+
+/// Exception thrown when rate limit is exceeded (429)
+class RateLimitException implements Exception {
+  const RateLimitException(this.message, {this.retryAfter});
+
+  final String message;
+  final int? retryAfter; // Seconds to wait
+
+  @override
+  String toString() =>
+      retryAfter != null ? '$message (${I18nService.instance.l10n.auto_retryafter}: $retryAfter${I18nService.instance.l10n.auto_s})' : message;
+}
+
+/// Generic network exception
+class NetworkException implements Exception {
+  const NetworkException(this.message, {this.originalError});
+
+  final String message;
+  final Object? originalError;
+
+  @override
+  String toString() => message;
+}

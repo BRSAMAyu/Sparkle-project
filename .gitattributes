@@ -1,0 +1,2 @@
+data/dictionaries/*.mdx filter=lfs diff=lfs merge=lfs -text
+data/dictionaries/*.mdd filter=lfs diff=lfs merge=lfs -text

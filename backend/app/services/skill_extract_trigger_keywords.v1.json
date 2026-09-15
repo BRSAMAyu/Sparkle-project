@@ -1,0 +1,36 @@
+{
+  "zh_patterns": [
+    "以后这样",
+    "以后就这样",
+    "以后按这个方式",
+    "记住这种方式",
+    "记住这个方式",
+    "记住这个套路",
+    "下次还这样做",
+    "下次继续这样",
+    "下次也这样",
+    "以后都这么做",
+    "这个方式很好",
+    "把这种做法记下来",
+    "以后用这个风格",
+    "保持这种处理方式",
+    "就按这个方法来",
+    "以后照这个来",
+    "这个模板很好",
+    "这种回答方式记住",
+    "这个处理方式保留",
+    "以后延续这种方式"
+  ],
+  "en_patterns": [
+    "remember this approach",
+    "use this style next time",
+    "do it like this next time",
+    "keep this approach",
+    "save this pattern",
+    "remember this style",
+    "use this workflow again",
+    "let's keep doing it this way",
+    "remember this method",
+    "use this method next time"
+  ]
+}

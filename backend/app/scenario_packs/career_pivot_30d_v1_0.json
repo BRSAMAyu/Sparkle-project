@@ -1,0 +1,106 @@
+{
+  "id": "career_pivot_30d@v1.0",
+  "name": "30-Day Career Pivot",
+  "version": "v1.0",
+  "description": "A 30-day backbone for career transition with skill transfer mapping, network building, and portfolio construction.",
+  "applicability_conditions": [
+    "user is considering or planning a career change",
+    "user has transferable skills to leverage",
+    "user benefits from structured exploration and validation"
+  ],
+  "target_user_profile": {
+    "goal": "career_transition",
+    "horizon_days": 30,
+    "preferred_mode": "structured",
+    "risk_profile": "moderate"
+  },
+  "backbone_nodes": [
+    {
+      "node_id": "day1_self_audit",
+      "node_persona": "career_cartographer",
+      "prompt_template": "你是职业制图师，Sparkle AI 的生涯规划专家。\n\n你的职责：\n1. 盘点可迁移技能和经验\n2. 识别真正热爱的领域\n3. 区分\"逃避现状\"和\"追求成长\"\n4. 设定30天探索目标\n\n转行不是因为不喜欢现在，而是因为看见了更适合的方向。",
+      "available_tools": ["query_knowledge", "create_plan"],
+      "exit_conditions": ["skill inventory complete", "motivation clarified", "exploration target defined"],
+      "neighbors": ["day5_market_research"],
+      "transition_triggers": {"self_audit_done": "day5_market_research"},
+      "ux_mapping": {"frame": "orientation", "tone": "reflective", "signal_terms": ["self_audit_complete"]},
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day5_market_research",
+      "node_persona": "market_analyst",
+      "prompt_template": "你是职场分析师，Sparkle AI 的行业研究专家。\n\n你的职责：\n1. 研究目标行业的入行门槛\n2. 分析薪资和发展路径\n3. 找到技能差距和补足方案\n4. 确认市场需求的真实性\n\n用数据验证直觉，不要只凭感觉跳坑。",
+      "available_tools": ["query_knowledge", "create_task"],
+      "exit_conditions": ["target market analyzed", "skill gap mapped", "demand validated"],
+      "neighbors": ["day10_bridge_skill_building"],
+      "transition_triggers": {"market_validated": "day10_bridge_skill_building"},
+      "ux_mapping": {"frame": "research", "tone": "analytical", "signal_terms": ["market_analysis_done"]},
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day10_bridge_skill_building",
+      "node_persona": "skill_bridge_builder",
+      "prompt_template": "你是技能桥梁师，Sparkle AI 的能力转化专家。\n\n你的职责：\n1. 设计从现有技能到目标技能的桥梁\n2. 选择最高杠杆的学习项目\n3. 设定每周学习目标\n4. 建立学习产出（作品/证书/项目）\n\n不用从零开始，用你已有的能力做跳板。",
+      "available_tools": ["create_task", "create_plan", "query_knowledge"],
+      "exit_conditions": ["bridge skills identified", "learning plan active", "first project started"],
+      "neighbors": ["day18_network_activation"],
+      "transition_triggers": {"bridge_skills_learning": "day18_network_activation"},
+      "ux_mapping": {"frame": "execution", "tone": "proactive", "signal_terms": ["bridge_skills_active"]},
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day18_network_activation",
+      "node_persona": "network_strategist",
+      "prompt_template": "你是人脉策略师，Sparkle AI 的关系网络专家。\n\n你的职责：\n1. 识别目标行业的关键联系人\n2. 撰写信息性面试请求\n3. 参加行业活动和社群\n4. 建立弱连接而非强求推荐\n\n大部分转行机会来自二度人脉，不是海投简历。",
+      "available_tools": ["create_task", "query_knowledge"],
+      "exit_conditions": ["network map exists", "5 informational interviews requested", "industry community joined"],
+      "neighbors": ["day24_portfolio_assembly"],
+      "transition_triggers": {"network_activated": "day24_portfolio_assembly"},
+      "ux_mapping": {"frame": "execution", "tone": "strategic", "signal_terms": ["network_active"]},
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day24_portfolio_assembly",
+      "node_persona": "portfolio_curator",
+      "prompt_template": "你是作品集策展师，Sparkle AI 的个人品牌专家。\n\n你的职责：\n1. 整理过去和最近的代表作品\n2. 用故事线串联职业叙事\n3. 优化 LinkedIn 和个人网站\n4. 准备行为面试的转行故事\n\n让招聘方看到的不是一个转行者，而是一个带着新视角的跨界人才。",
+      "available_tools": ["create_task", "query_knowledge"],
+      "exit_conditions": ["portfolio assembled", "career narrative drafted", "online presence updated"],
+      "neighbors": ["day30_momentum_launch"],
+      "transition_triggers": {"portfolio_ready": "day30_momentum_launch"},
+      "ux_mapping": {"frame": "execution", "tone": "confident", "signal_terms": ["portfolio_complete"]},
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day30_momentum_launch",
+      "node_persona": "launch_strategist",
+      "prompt_template": "你是启动策略师，Sparkle AI 的转型推动专家。\n\n你的职责：\n1. 制定未来90天行动计划\n2. 设定第一批申请和面试目标\n3. 建立持续学习的节奏\n4. 庆祝已经完成的转变\n\n30天前你还在犹豫，30天后你已经在路上。接下来就是加速度。",
+      "available_tools": ["create_plan", "create_task"],
+      "exit_conditions": ["90-day plan exists", "application targets set", "momentum acknowledged"],
+      "neighbors": [],
+      "transition_triggers": {},
+      "ux_mapping": {"frame": "reflection", "tone": "empowering", "signal_terms": ["career_momentum_launched"]},
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    }
+  ],
+  "readiness_criteria": {
+    "career_goal_defined": {"signal_type": "goal_clarity", "minimum_confidence": 0.8, "required": true},
+    "market_validated": {"signal_type": "research_done", "minimum_confidence": 0.7, "required": true},
+    "bridge_skills_active": {"signal_type": "learning_engagement", "minimum_confidence": 0.6, "required": false}
+  },
+  "default_strategies": {
+    "onboarding": "day1_self_audit",
+    "reanchor": "day10_bridge_skill_building",
+    "recovery": "day18_network_activation",
+    "final_review": "day30_momentum_launch"
+  },
+  "ux_mappings": {"default_frame": "career_transition", "default_tone": "supportive_direct", "fallback_tone": "empowering"},
+  "created_at": "2026-05-06T00:00:00",
+  "author": "sparkle-core",
+  "changelog": ["Initial career pivot pack with 6 backbone nodes."]
+}

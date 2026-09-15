@@ -1,0 +1,126 @@
+[
+  {
+    "scenario_id": "thermodynamics_exam_14_day_journey",
+    "turns": [
+      {
+        "label": "concept_repair_with_user_notes",
+        "expected_residual": "R_e",
+        "expected_loop_type": "truth_seeking",
+        "expected_mode": "explain",
+        "expected_grounding": "user_materials",
+        "decision_context": {
+          "primary_residual": "R_e",
+          "loop_type": "truth_seeking",
+          "experience_mode": "explain",
+          "grounding_priority": ["user_materials", "general_knowledge"]
+        },
+        "auto_strategy_adjustments": [
+          {"field": "retrieval_emphasis", "layer": "session"},
+          {"field": "explanation_style", "layer": "session"}
+        ],
+        "user_material_grounding": {
+          "status": "grounded",
+          "results": [
+            {"file_name": "thermo-notes.pdf", "snippet": "先看系统边界再判断熵增方向。"}
+          ]
+        },
+        "user_signal": "clearer",
+        "freedom_preservation": 0.84
+      },
+      {
+        "label": "overload_recovery",
+        "expected_residual": "R_c",
+        "expected_loop_type": "truth_seeking",
+        "expected_mode": "stabilize",
+        "decision_context": {
+          "primary_residual": "R_c",
+          "loop_type": "truth_seeking",
+          "experience_mode": "stabilize",
+          "grounding_priority": ["user_history_and_errors", "current_plan_and_strategy_state"]
+        },
+        "auto_strategy_adjustments": [
+          {"field": "session_mode", "layer": "session"},
+          {"field": "difficulty_level", "layer": "session"}
+        ],
+        "user_signal": "accepted",
+        "freedom_preservation": 0.86
+      },
+      {
+        "label": "intervention_feedback_binding",
+        "expected_residual": "R_c",
+        "expected_loop_type": "truth_seeking",
+        "expected_mode": "mobilize",
+        "decision_context": {
+          "primary_residual": "R_c",
+          "loop_type": "truth_seeking",
+          "experience_mode": "mobilize",
+          "grounding_priority": ["current_plan_and_strategy_state", "user_materials"]
+        },
+        "active_interventions": [
+          {"intervention_id": "iv-thermo-1"}
+        ],
+        "auto_feedback_binding": {
+          "bound": true,
+          "detected_sentiment": "helped"
+        },
+        "user_signal": "started",
+        "freedom_preservation": 0.9
+      }
+    ],
+    "outcomes": {
+      "misconception_reduction": 0.82,
+      "task_execution": 0.79,
+      "consistency": 0.74,
+      "real_world_performance": 0.69
+    },
+    "experience": {
+      "felt_understood": 0.84,
+      "timely_guidance": 0.81,
+      "real_change": 0.88,
+      "continuity_and_trust": 0.83
+    },
+    "current_runtime": {
+      "effective_companion_state": {
+        "warmth_calibration": 0.66,
+        "candor_calibration": 0.62,
+        "relationship_stage": "building"
+      },
+      "recent_revisions": [
+        {
+          "change_summary": "ground in user materials first",
+          "has_measurable_outcome": true
+        },
+        {
+          "change_summary": "switch to recovery mode when load spikes",
+          "has_measurable_outcome": true
+        }
+      ]
+    },
+    "previous_runtime": {
+      "effective_companion_state": {
+        "warmth_calibration": 0.61,
+        "candor_calibration": 0.61,
+        "relationship_stage": "building"
+      },
+      "recent_revisions": [
+        {
+          "change_summary": "baseline tutoring mode",
+          "has_measurable_outcome": true
+        }
+      ]
+    },
+    "drift_outcomes": {
+      "residual_resolution": 0.83,
+      "leap_support": 0.79,
+      "freedom_preservation": 0.87,
+      "felt_understanding": 0.85
+    },
+    "drift_signals": {
+      "outcome_delta": 0.29,
+      "vividness_signal": 0.58,
+      "stylized_note_signal": 0.14,
+      "constitution_adjacent_proposal_count": 0,
+      "self_authored_note_ratio": 0.08
+    }
+  }
+]

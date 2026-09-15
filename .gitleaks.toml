@@ -1,0 +1,49 @@
+# Gitleaks configuration for secret detection
+# P3: Security scanning configuration
+
+title = "Sparkle Gitleaks Configuration"
+
+[extend]
+# Use the default gitleaks configuration as a base
+useDefault = true
+
+# Custom rules
+[[rules]]
+id = "sparkle-api-key"
+description = "Sparkle API Key"
+regex = '''(?i)sparkle[_-]?api[_-]?key\s*[:=]\s*['"]?([a-zA-Z0-9_-]{32,})['"]?'''
+secretGroup = 1
+
+[[rules]]
+id = "jwt-secret"
+description = "JWT Secret"
+regex = '''(?i)jwt[_-]?secret\s*[:=]\s*['"]?([a-zA-Z0-9_-]{32,})['"]?'''
+secretGroup = 1
+
+# Allowlist for false positives
+[allowlist]
+description = "Global Allowlist"
+
+# Allow test files and example configurations
+paths = [
+  '''.*_test\.go$''',
+  '''.*_test\.py$''',
+  '''.*\.example$''',
+  '''.*\.example\..*$''',
+  '''test_.*\.py$''',
+  '''.*mock.*\.go$''',
+  '''.*fixture.*''',
+]
+
+# Allow specific patterns in code comments and documentation
+regexes = [
+  '''(?i)example[_-]?api[_-]?key''',
+  '''(?i)your[_-]?api[_-]?key[_-]?here''',
+  '''(?i)placeholder''',
+  '''(?i)dummy''',
+  '''REDACTED''',
+  '''xxx+''',
+]
+
+# Specific commits to ignore (if needed)
+# commits = ["commit-sha"]

@@ -1,0 +1,38 @@
+{
+  "sector": "WISDOM",
+  "subject_name": "学习方法",
+  "nodes": [
+    {
+      "name": "费曼学习法",
+      "name_en": "Feynman Technique",
+      "description": "通过教授他人来加深理解的学习方法",
+      "importance_level": 3,
+      "is_seed": true,
+      "keywords": ["学习方法", "费曼", "教学", "理解"]
+    },
+    {
+      "name": "间隔重复",
+      "name_en": "Spaced Repetition",
+      "description": "基于遗忘曲线的高效记忆方法",
+      "importance_level": 3,
+      "is_seed": true,
+      "keywords": ["记忆", "复习", "遗忘曲线", "间隔"]
+    },
+    {
+      "name": "深度工作",
+      "name_en": "Deep Work",
+      "description": "专注力管理和高质量工作时间的方法论",
+      "importance_level": 4,
+      "is_seed": true,
+      "keywords": ["专注", "工作", "效率", "时间管理"]
+    },
+    {
+      "name": "目标设定",
+      "name_en": "Goal Setting",
+      "description": "SMART原则和OKR目标管理方法",
+      "importance_level": 2,
+      "is_seed": true,
+      "keywords": ["目标", "SMART", "OKR", "管理"]
+    }
+  ]
+}

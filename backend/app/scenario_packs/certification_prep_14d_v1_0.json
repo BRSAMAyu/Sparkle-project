@@ -1,0 +1,106 @@
+{
+  "id": "certification_prep_14d@v1.0",
+  "name": "14-Day Certification Prep",
+  "version": "v1.0",
+  "description": "A 14-day backbone for professional certification exam preparation with syllabus mapping, practice tests, and weak-point drilling.",
+  "applicability_conditions": [
+    "user is preparing for a professional certification exam",
+    "user has access to exam syllabus and practice materials",
+    "user benefits from structured syllabus coverage and test simulation"
+  ],
+  "target_user_profile": {
+    "goal": "certification_exam",
+    "horizon_days": 14,
+    "preferred_mode": "structured",
+    "risk_profile": "moderate"
+  },
+  "backbone_nodes": [
+    {
+      "node_id": "day1_syllabus_mapping",
+      "node_persona": "certification_strategist",
+      "prompt_template": "你是认证策略师，Sparkle AI 的考试规划专家。\n\n你的职责：\n1. 解读考试大纲和权重分布\n2. 评估当前水平和目标分数的差距\n3. 制定14天覆盖计划\n4. 识别高ROI复习领域\n\n不平均用力，按考分权重分配复习时间。",
+      "available_tools": ["query_knowledge", "create_plan"],
+      "exit_conditions": ["syllabus mapped", "gap assessed", "weighted plan exists"],
+      "neighbors": ["day3_core_concept_deep_dive"],
+      "transition_triggers": {"syllabus_mapped": "day3_core_concept_deep_dive"},
+      "ux_mapping": {"frame": "planning", "tone": "analytical", "signal_terms": ["syllabus_analysis_done"]},
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day3_core_concept_deep_dive",
+      "node_persona": "concept_clarifier",
+      "prompt_template": "你是概念澄清师，Sparkle AI 的知识精讲专家。\n\n你的职责：\n1. 讲解高频考点和核心概念\n2. 用费曼技巧检验理解深度\n3. 对比易混淆概念\n4. 建立知识间的联系\n\n不满足于能选对，要达到能讲清楚为什么对为什么错。",
+      "available_tools": ["query_knowledge", "create_knowledge_node", "link_nodes"],
+      "exit_conditions": ["core concepts understood", "confusion points clarified", "knowledge graph built"],
+      "neighbors": ["day6_practice_test_1"],
+      "transition_triggers": {"concepts_mastered": "day6_practice_test_1"},
+      "ux_mapping": {"frame": "deep_work", "tone": "structured", "signal_terms": ["concept_clarity_achieved"]},
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day6_practice_test_1",
+      "node_persona": "mock_examiner",
+      "prompt_template": "你是模拟考官，Sparkle AI 的考试模拟专家。\n\n你的职责：\n1. 全真模拟考试环境\n2. 严格计时和评分\n3. 分析错误类型分布\n4. 给出失分最多领域的分析\n\n严肃对待模拟考，真实考试的意外才会少。",
+      "available_tools": ["create_task", "query_knowledge"],
+      "exit_conditions": ["first mock completed", "error analysis done", "weak areas ranked"],
+      "neighbors": ["day9_weak_point_drilling"],
+      "transition_triggers": {"mock_1_complete": "day9_weak_point_drilling"},
+      "ux_mapping": {"frame": "practice", "tone": "challenging", "signal_terms": ["first_mock_done"]},
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "active_adjustment"
+    },
+    {
+      "node_id": "day9_weak_point_drilling",
+      "node_persona": "drill_sergeant",
+      "prompt_template": "你是专项训练官，Sparkle AI 的弱点攻克专家。\n\n你的职责：\n1. 针对错题最多的领域进行密集训练\n2. 分析错误根源（知识/技巧/粗心）\n3. 建立防错检查清单\n4. 变式练习直到稳定正确\n\n只练不会的，练到变成条件反射。",
+      "available_tools": ["create_task", "query_knowledge"],
+      "exit_conditions": ["weak areas improved 30%", "error patterns documented", "confidence in weak areas"],
+      "neighbors": ["day12_practice_test_2"],
+      "transition_triggers": {"weak_points_drilled": "day12_practice_test_2"},
+      "ux_mapping": {"frame": "execution", "tone": "intense", "signal_terms": ["weak_point_improved"]},
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "active_adjustment"
+    },
+    {
+      "node_id": "day12_practice_test_2",
+      "node_persona": "final_examiner",
+      "prompt_template": "你是终审考官，Sparkle AI 的最终检验专家。\n\n你的职责：\n1. 第二次全真模拟\n2. 对比两次模拟的进步\n3. 评估是否达到目标分数\n4. 给出最后48小时的冲刺建议\n\n这次模拟决定了最后两天的复习方向。",
+      "available_tools": ["create_task", "query_knowledge"],
+      "exit_conditions": ["mock 2 scored", "progress measured", "final sprint plan ready"],
+      "neighbors": ["day14_exam_ready"],
+      "transition_triggers": {"mock_2_complete": "day14_exam_ready"},
+      "ux_mapping": {"frame": "review", "tone": "focused", "signal_terms": ["second_mock_done"]},
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "active_adjustment"
+    },
+    {
+      "node_id": "day14_exam_ready",
+      "node_persona": "readiness_certifier",
+      "prompt_template": "你是状态认证官，Sparkle AI 的考前状态管理专家。\n\n你的职责：\n1. 最终状态检查和心理调适\n2. 考前物资和时间清单\n3. 考试策略和节奏规划\n4. 考后复盘框架\n\n准备好了就去考，考后无论结果如何都有下一步。",
+      "available_tools": ["create_task"],
+      "exit_conditions": ["readiness confirmed", "exam strategy set", "post-exam plan exists"],
+      "neighbors": [],
+      "transition_triggers": {},
+      "ux_mapping": {"frame": "reflection", "tone": "calm", "signal_terms": ["exam_ready"]},
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    }
+  ],
+  "readiness_criteria": {
+    "cert_goal_defined": {"signal_type": "goal_clarity", "minimum_confidence": 0.8, "required": true},
+    "syllabus_covered": {"signal_type": "coverage_complete", "minimum_confidence": 0.75, "required": true},
+    "mock_passed": {"signal_type": "practice_score", "minimum_confidence": 0.7, "required": true}
+  },
+  "default_strategies": {
+    "onboarding": "day1_syllabus_mapping",
+    "reanchor": "day9_weak_point_drilling",
+    "recovery": "day3_core_concept_deep_dive",
+    "final_review": "day14_exam_ready"
+  },
+  "ux_mappings": {"default_frame": "certification_prep", "default_tone": "structured_calm", "fallback_tone": "encouraging"},
+  "created_at": "2026-05-06T00:00:00",
+  "author": "sparkle-core",
+  "changelog": ["Initial certification prep pack with 6 backbone nodes."]
+}

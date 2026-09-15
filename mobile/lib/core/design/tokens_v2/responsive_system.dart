@@ -1,0 +1,510 @@
+import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/breakpoints.dart';
+
+/// 高级响应式断点系统
+class ResponsiveSystem {
+  const ResponsiveSystem._();
+
+  /// 设备类别映射
+  static DeviceCategory categorize(double width) {
+    // Backward-compatible helper that only considers width.
+    if (width <= 240) return DeviceCategory.watch;
+    if (width <= 480) return DeviceCategory.phone;
+    if (width <= LayoutBreakpoints.tablet) return DeviceCategory.phablet;
+    if (width < LayoutBreakpoints.desktop) return DeviceCategory.tablet;
+    if (width <= LayoutBreakpoints.wideDesktop) return DeviceCategory.desktop;
+    return DeviceCategory.tv;
+  }
+
+  /// 设备类别映射（基于尺寸，更稳健地处理横屏手机）
+  static DeviceCategory categorizeSize(Size size) {
+    final width = size.width;
+    final shortestSide = size.shortestSide;
+
+    if (width <= 240) return DeviceCategory.watch;
+    // Treat any device with a narrow shortest side as mobile, even in landscape.
+    if (shortestSide < LayoutBreakpoints.tablet) {
+      if (width <= 480) return DeviceCategory.phone;
+      return DeviceCategory.phablet;
+    }
+    if (width < LayoutBreakpoints.desktop) return DeviceCategory.tablet;
+    if (width <= LayoutBreakpoints.wideDesktop) return DeviceCategory.desktop;
+    return DeviceCategory.tv;
+  }
+
+  /// 获取当前设备类别
+  static DeviceCategory getCategory(BuildContext context) =>
+      categorizeSize(MediaQuery.of(context).size);
+
+  /// 获取密度等级
+  static Density getDensity(BuildContext context) {
+    final category = getCategory(context);
+    return {
+      DeviceCategory.watch: Density.compact,
+      DeviceCategory.phone: Density.compact,
+      DeviceCategory.phablet: Density.normal,
+      DeviceCategory.tablet: Density.comfortable,
+      DeviceCategory.desktop: Density.expanded,
+      DeviceCategory.tv: Density.large,
+    }[category]!;
+  }
+
+  /// 是否为移动设备
+  static bool isMobile(BuildContext context) {
+    final category = getCategory(context);
+    return category == DeviceCategory.watch ||
+        category == DeviceCategory.phone ||
+        category == DeviceCategory.phablet;
+  }
+
+  /// 是否为平板
+  static bool isTablet(BuildContext context) =>
+      getCategory(context) == DeviceCategory.tablet;
+
+  /// 是否为桌面
+  static bool isDesktop(BuildContext context) {
+    final category = getCategory(context);
+    return category == DeviceCategory.desktop || category == DeviceCategory.tv;
+  }
+
+  /// 屏幕宽度
+  static double width(BuildContext context) =>
+      MediaQuery.of(context).size.width;
+
+  /// 屏幕高度
+  static double height(BuildContext context) =>
+      MediaQuery.of(context).size.height;
+
+  /// 屏幕方向
+  static Orientation orientation(BuildContext context) =>
+      MediaQuery.of(context).orientation;
+
+  /// 是否横屏
+  static bool isLandscape(BuildContext context) =>
+      orientation(context) == Orientation.landscape;
+
+  /// 像素密度
+  static double pixelRatio(BuildContext context) =>
+      MediaQuery.of(context).devicePixelRatio;
+
+  /// 文本比例
+  static double textScaleFactor(BuildContext context) =>
+      MediaQuery.textScalerOf(context).scale(1.0);
+
+  /// 安全区域
+  static EdgeInsets safeArea(BuildContext context) =>
+      MediaQuery.of(context).padding;
+
+  /// 响应式值解析
+  static T resolve<T>({
+    required BuildContext context,
+    required T mobile,
+    T? tablet,
+    T? desktop,
+    T? wide,
+  }) {
+    final width = MediaQuery.of(context).size.width;
+    final shortestSide = MediaQuery.of(context).size.shortestSide;
+
+    // Keep landscape phones on mobile values.
+    if (shortestSide < LayoutBreakpoints.tablet) return mobile;
+
+    if (width >= LayoutBreakpoints.wideDesktop && wide != null) return wide;
+    if (width >= LayoutBreakpoints.desktop && desktop != null) return desktop;
+    if (width >= LayoutBreakpoints.tablet && tablet != null) return tablet;
+    return mobile;
+  }
+
+  /// 比例缩放
+  static double scale(BuildContext context, double base,
+      {double min = 0.75, double max = 1.5,}) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final ratio = screenWidth / 375.0;
+    return (base * ratio).clamp(base * min, base * max);
+  }
+
+  /// 生成响应式断点信息
+  static BreakpointInfo getBreakpointInfo(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final screenWidth = size.width;
+    final shortestSide = size.shortestSide;
+    final category = categorizeSize(size);
+    final density = getDensity(context);
+
+    return BreakpointInfo(
+      context: context,
+      width: screenWidth,
+      shortestSide: shortestSide,
+      category: category,
+      density: density,
+      isMobile: isMobile(context),
+      isTablet: isTablet(context),
+      isDesktop: isDesktop(context),
+      orientation: orientation(context),
+      isLandscapeMobile: isLandscapeMobile(context),
+    );
+  }
+
+  /// 是否为横屏手机（避免误用平板/桌面布局）
+  static bool isLandscapeMobile(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    return size.width > size.height &&
+        size.shortestSide < LayoutBreakpoints.tablet;
+  }
+}
+
+enum DeviceCategory {
+  watch, // 0-240px
+  phone, // 241-480px
+  phablet, // 481-767px (and landscape phones)
+  tablet, // 768-1199px
+  desktop, // 1200-1440px
+  tv, // 1441px+
+}
+
+enum Density {
+  compact, // 紧凑 - 小屏幕
+  normal, // 正常 - 标准手机
+  comfortable, // 舒适 - 平板
+  expanded, // 扩展 - 桌面
+  large, // 大屏 - TV
+}
+
+@immutable
+class BreakpointInfo {
+  const BreakpointInfo({
+    required this.context,
+    required this.width,
+    required this.category,
+    required this.density,
+    required this.isMobile,
+    required this.isTablet,
+    required this.isDesktop,
+    required this.orientation,
+    this.shortestSide = 0,
+    this.isLandscapeMobile = false,
+  });
+  final BuildContext context;
+  final double width;
+  final double shortestSide;
+  final DeviceCategory category;
+  final Density density;
+  final bool isMobile;
+  final bool isTablet;
+  final bool isDesktop;
+  final Orientation orientation;
+  final bool isLandscapeMobile;
+
+  bool get isPortrait => orientation == Orientation.portrait;
+  bool get isLandscape => orientation == Orientation.landscape;
+
+  @override
+  String toString() =>
+      'BreakpointInfo(${category.name}, ${width.toStringAsFixed(0)}px, $density)';
+}
+
+/// 响应式值容器
+@immutable
+class ResponsiveValue<T> {
+  const ResponsiveValue({
+    required this.mobile,
+    this.tablet,
+    this.desktop,
+    this.wide,
+  });
+  final T mobile;
+  final T? tablet;
+  final T? desktop;
+  final T? wide;
+
+  T resolve(BuildContext context) => ResponsiveSystem.resolve(
+        context: context,
+        mobile: mobile,
+        tablet: tablet,
+        desktop: desktop,
+        wide: wide,
+      );
+
+  /// 便捷方法
+  static ResponsiveValue<double> spacing({
+    required double mobile,
+    double? tablet,
+    double? desktop,
+    double? wide,
+  }) =>
+      ResponsiveValue(
+        mobile: mobile,
+        tablet: tablet,
+        desktop: desktop,
+        wide: wide,
+      );
+
+  static ResponsiveValue<EdgeInsets> padding({
+    required EdgeInsets mobile,
+    EdgeInsets? tablet,
+    EdgeInsets? desktop,
+    EdgeInsets? wide,
+  }) =>
+      ResponsiveValue(
+        mobile: mobile,
+        tablet: tablet,
+        desktop: desktop,
+        wide: wide,
+      );
+
+  static ResponsiveValue<TextStyle> textStyle({
+    required TextStyle mobile,
+    TextStyle? tablet,
+    TextStyle? desktop,
+    TextStyle? wide,
+  }) =>
+      ResponsiveValue(
+        mobile: mobile,
+        tablet: tablet,
+        desktop: desktop,
+        wide: wide,
+      );
+}
+
+/// 响应式组件构建器
+class ResponsiveBuilder extends StatelessWidget {
+  const ResponsiveBuilder({
+    required this.builder,
+    super.key,
+  });
+  final Widget Function(BuildContext, BreakpointInfo) builder;
+
+  @override
+  Widget build(BuildContext context) {
+    final info = ResponsiveSystem.getBreakpointInfo(context);
+    return builder(context, info);
+  }
+}
+
+/// 自适应布局包装器
+class AdaptiveLayout extends StatelessWidget {
+  const AdaptiveLayout({
+    required this.mobile,
+    this.tablet,
+    this.desktop,
+    this.wide,
+    super.key,
+  });
+  final Widget mobile;
+  final Widget? tablet;
+  final Widget? desktop;
+  final Widget? wide;
+
+  @override
+  Widget build(BuildContext context) => ResponsiveSystem.resolve(
+        context: context,
+        mobile: mobile,
+        tablet: tablet,
+        desktop: desktop,
+        wide: wide,
+      );
+}
+
+/// 响应式网格系统
+class ResponsiveGridSystem {
+  /// 计算列数
+  static int columns(BuildContext context) {
+    final info = ResponsiveSystem.getBreakpointInfo(context);
+    switch (info.category) {
+      case DeviceCategory.watch:
+      case DeviceCategory.phone:
+        return 1;
+      case DeviceCategory.phablet:
+        return 2;
+      case DeviceCategory.tablet:
+        return 3;
+      case DeviceCategory.desktop:
+        return 4;
+      case DeviceCategory.tv:
+        return 6;
+    }
+  }
+
+  /// 计算间距
+  static double spacing(BuildContext context) {
+    final info = ResponsiveSystem.getBreakpointInfo(context);
+    switch (info.density) {
+      case Density.compact:
+        return 8.0;
+      case Density.normal:
+        return 12.0;
+      case Density.comfortable:
+        return 16.0;
+      case Density.expanded:
+        return 20.0;
+      case Density.large:
+        return 24.0;
+    }
+  }
+
+  /// 计算子项宽高比
+  static double aspectRatio(BuildContext context) {
+    final info = ResponsiveSystem.getBreakpointInfo(context);
+    if (info.isLandscape) return 1.5;
+    switch (info.category) {
+      case DeviceCategory.watch:
+      case DeviceCategory.phone:
+        return 1.2;
+      case DeviceCategory.phablet:
+        return 1.3;
+      case DeviceCategory.tablet:
+        return 1.4;
+      case DeviceCategory.desktop:
+      case DeviceCategory.tv:
+        return 1.6;
+    }
+  }
+
+  /// 创建响应式网格代理
+  static SliverGridDelegateWithFixedCrossAxisCount delegate(
+          BuildContext context,) =>
+      SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: columns(context),
+        crossAxisSpacing: spacing(context),
+        mainAxisSpacing: spacing(context),
+        childAspectRatio: aspectRatio(context),
+      );
+}
+
+/// 响应式间距工具
+///
+/// 提供基于设备类别的响应式尺寸值，用于替换硬编码的固定宽度/高度值。
+class ResponsiveSpacing {
+  const ResponsiveSpacing._();
+
+  /// 侧边栏/抽屉宽度
+  static double sidebarWidth(BuildContext context) =>
+      ResponsiveSystem.resolve(
+        context: context,
+        mobile: 280.0,
+        tablet: 300.0,
+        desktop: 320.0,
+        wide: 360.0,
+      );
+
+  /// 底部面板高度
+  static double bottomSheetHeight(BuildContext context) =>
+      ResponsiveSystem.resolve(
+        context: context,
+        mobile: 280.0,
+        tablet: 320.0,
+        desktop: 360.0,
+      );
+
+  /// 卡片最大宽度
+  static double cardMaxWidth(BuildContext context) =>
+      ResponsiveSystem.resolve(
+        context: context,
+        mobile: double.infinity,
+        tablet: 400.0,
+        desktop: 480.0,
+      );
+
+  /// 列表项最小高度
+  static double listItemMinHeight(BuildContext context) =>
+      ResponsiveSystem.resolve(
+        context: context,
+        mobile: 56.0,
+        tablet: 64.0,
+        desktop: 72.0,
+      );
+
+  /// 对话框最大宽度
+  static double dialogMaxWidth(BuildContext context) =>
+      ResponsiveSystem.resolve(
+        context: context,
+        mobile: 320.0,
+        tablet: 480.0,
+        desktop: 560.0,
+      );
+
+  /// 图标尺寸
+  static double iconSize(BuildContext context) =>
+      ResponsiveSystem.resolve(
+        context: context,
+        mobile: 24.0,
+        tablet: 28.0,
+        desktop: 32.0,
+      );
+
+  /// 按钮高度
+  static double buttonHeight(BuildContext context) =>
+      ResponsiveSystem.resolve(
+        context: context,
+        mobile: 44.0,
+        tablet: 48.0,
+        desktop: 52.0,
+      );
+
+  /// 输入框高度
+  static double inputHeight(BuildContext context) =>
+      ResponsiveSystem.resolve(
+        context: context,
+        mobile: 48.0,
+        tablet: 52.0,
+        desktop: 56.0,
+      );
+
+  /// 卡片圆角
+  static double cardBorderRadius(BuildContext context) =>
+      ResponsiveSystem.resolve(
+        context: context,
+        mobile: 12.0,
+        tablet: 16.0,
+        desktop: 20.0,
+      );
+}
+
+/// 内容约束系统
+class ContentConstraintSystem {
+  /// 最大内容宽度
+  static double maxWidth(BuildContext context) {
+    final info = ResponsiveSystem.getBreakpointInfo(context);
+    switch (info.category) {
+      case DeviceCategory.watch:
+      case DeviceCategory.phone:
+      case DeviceCategory.phablet:
+        return double.infinity;
+      case DeviceCategory.tablet:
+        return 720.0;
+      case DeviceCategory.desktop:
+        return 1200.0;
+      case DeviceCategory.tv:
+        return 1600.0;
+    }
+  }
+
+  /// 水平边距
+  static double horizontalPadding(BuildContext context) {
+    final info = ResponsiveSystem.getBreakpointInfo(context);
+    switch (info.density) {
+      case Density.compact:
+        return 16.0;
+      case Density.normal:
+        return 20.0;
+      case Density.comfortable:
+        return 24.0;
+      case Density.expanded:
+        return 32.0;
+      case Density.large:
+        return 48.0;
+    }
+  }
+
+  /// 应用内容约束
+  static Widget apply(BuildContext context, {required Widget child}) => Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: maxWidth(context)),
+          child: Padding(
+            padding:
+                EdgeInsets.symmetric(horizontal: horizontalPadding(context)),
+            child: child,
+          ),
+        ),
+      );
+}

@@ -1,0 +1,700 @@
+from __future__ import annotations
+
+import asyncio
+import time
+from dataclasses import dataclass
+from uuid import UUID
+
+from loguru import logger
+from redis.commands.search.query import Query
+from sqlalchemy import and_, false, func, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+from app.config import settings
+from app.core.cache import cache_service
+from app.core.metrics import RAG_RETRIEVAL_LATENCY, RETRIEVAL_ERROR_TOTAL, RETRIEVAL_TIMEOUT_TOTAL
+from app.core.redis_search_client import redis_search_client
+from app.db.extensions import is_vector_extension_available
+from app.models.community import GroupMember
+from app.models.document_chunks import DocumentChunk
+from app.models.file_storage import SourceLifecycleStatus, StoredFile
+from app.models.galaxy import KnowledgeNode, UserNodeStatus
+from app.models.group_files import GroupFile
+from app.schemas.galaxy import NodeBase, SearchResultItem, UserStatusInfo
+from app.services.embedding_service import embedding_service
+from app.services.rerank_service import rerank_service
+
+try:
+    from app.services.group_file_service import GroupFileService
+except ImportError:
+    GroupFileService = None
+
+try:
+    from app.services.semantic_cache_service import semantic_cache_service
+except ImportError:
+    # Handle circular import or missing dependency during tests
+    semantic_cache_service = None
+
+_PGVECTOR_RUNTIME_ENABLED = True
+
+class KnowledgeRetrievalService:
+    def __init__(self, db: AsyncSession):
+        self.db = db
+
+    @staticmethod
+    def _is_vector_runtime_error(exc: Exception) -> bool:
+        lowered = str(exc).lower()
+        markers = (
+            "vector.so",
+            "pgvector",
+            'type "vector" does not exist',
+            "could not load library",
+            "operator does not exist: vector",
+        )
+        return any(marker in lowered for marker in markers)
+
+    @staticmethod
+    def _disable_vector_runtime(reason: str) -> None:
+        global _PGVECTOR_RUNTIME_ENABLED
+        if _PGVECTOR_RUNTIME_ENABLED:
+            logger.warning(f"Disabling retrieval pgvector runtime fallback: {reason}")
+        _PGVECTOR_RUNTIME_ENABLED = False
+
+    async def _vector_runtime_available(self) -> bool:
+        if not _PGVECTOR_RUNTIME_ENABLED:
+            return False
+        available = await is_vector_extension_available(self.db)
+        if not available:
+            self._disable_vector_runtime("pgvector extension unavailable")
+        return available
+
+    async def _keyword_fallback(
+        self,
+        user_id_uuid: UUID,
+        query_str: str,
+        subject_id: int | None,
+        limit: int,
+    ) -> list[SearchResultItem]:
+        try:
+            keyword_nodes = await self.keyword_search(
+                user_id=user_id_uuid,
+                query=query_str,
+                subject_id=subject_id,
+                limit=limit,
+            )
+        except Exception as e:
+            logger.warning(f"Keyword fallback search failed: {e}")
+            RETRIEVAL_ERROR_TOTAL.labels(source="keyword_fallback", stage="retrieve").inc()
+            return []
+
+        if not keyword_nodes:
+            return []
+
+        return await self._build_results_from_nodes(keyword_nodes[:limit], user_id_uuid)
+
+    async def _get_knowledge_version(self) -> str | None:
+        if not cache_service.redis:
+            return await self._compute_knowledge_version()
+
+        cache_key = "knowledge:version:v1"
+        cached = await cache_service.get(cache_key)
+        if cached:
+            return cached
+
+        version = await self._compute_knowledge_version()
+        if version:
+            await cache_service.set(cache_key, version, ttl=settings.KNOWLEDGE_VERSION_CACHE_TTL_SECONDS)
+        return version
+
+    async def _compute_knowledge_version(self) -> str | None:
+        try:
+            node_max_stmt = select(func.max(KnowledgeNode.updated_at))
+            chunk_max_stmt = select(func.max(DocumentChunk.updated_at))
+
+            node_result = await self.db.execute(node_max_stmt)
+            chunk_result = await self.db.execute(chunk_max_stmt)
+
+            node_max = node_result.scalar()
+            chunk_max = chunk_result.scalar()
+
+            candidates = [dt for dt in (node_max, chunk_max) if dt]
+            if not candidates:
+                return "tsms:0"
+
+            latest = max(candidates)
+            return f"tsms:{int(latest.timestamp() * 1000)}"
+        except Exception:
+            return None
+
+    async def hybrid_search(
+        self,
+        user_id: UUID,
+        query: str,
+        vector_query: str | None = None,
+        subject_id: int | None = None,
+        limit: int = 5,
+        threshold: float = 0.6,
+        use_reranker: bool = True
+    ) -> list[SearchResultItem]:
+        """
+        RAG v2.0 Hybrid Search with Cache Stampede Protection.
+        """
+        if not semantic_cache_service:
+            return await self._execute_hybrid_search(user_id, query, vector_query, subject_id, limit, threshold, use_reranker)
+
+        knowledge_version = await self._get_knowledge_version()
+
+        # Use get_with_lock to prevent redundant heavy retrieval tasks
+        return await semantic_cache_service.get_with_lock(
+            query=query,
+            factory_func=self._execute_hybrid_search,
+            user_id=str(user_id), # Optional: could be global if knowledge is shared
+            similarity_threshold=settings.SEMANTIC_CACHE_SIM_THRESHOLD,
+            knowledge_version=knowledge_version,
+            # factory_func arguments
+            user_id_uuid=user_id,
+            query_str=query,
+            vector_query=vector_query,
+            subject_id=subject_id,
+            limit=limit,
+            threshold=threshold,
+            use_reranker=use_reranker
+        )
+
+    async def _execute_hybrid_search(
+        self,
+        user_id_uuid: UUID,
+        query_str: str,
+        vector_query: str | None = None,
+        subject_id: int | None = None,
+        limit: int = 5,
+        threshold: float = 0.6,
+        use_reranker: bool = True
+    ) -> list[SearchResultItem]:
+        """
+        Internal implementation of hybrid search.
+        """
+        # 2. Prepare Queries
+        start_time = time.time()
+        actual_vector_text = vector_query if vector_query else query_str
+        try:
+            query_embedding = await embedding_service.get_embedding(actual_vector_text, text_type="query")
+        except Exception as e:
+            logger.warning(f"Embedding generation failed for hybrid search: {e}")
+            RETRIEVAL_ERROR_TOTAL.labels(source="redis_hybrid", stage="embedding").inc()
+            return await self._keyword_fallback(user_id_uuid, query_str, subject_id, limit)
+
+        # 3. Parallel Retrieval
+        vector_limit = limit * 10
+        keyword_limit = limit * 10
+
+        cleaned_query = " ".join([w for w in query_str.split() if len(w) > 1]) or "*"
+
+        bm25_q = (
+            Query(cleaned_query)
+            .paging(0, keyword_limit)
+            .return_fields("id", "parent_id", "content", "parent_name", "importance")
+            .dialect(2)
+        )
+
+        vector_task = redis_search_client.hybrid_search(
+            text_query="*",
+            vector=query_embedding,
+            top_k=vector_limit
+        )
+        keyword_task = redis_search_client.search(bm25_q)
+
+        try:
+            vector_res, keyword_res = await asyncio.gather(
+                asyncio.wait_for(vector_task, timeout=settings.REDIS_HYBRID_TIMEOUT_SECONDS),
+                asyncio.wait_for(keyword_task, timeout=settings.REDIS_HYBRID_TIMEOUT_SECONDS),
+            )
+            RAG_RETRIEVAL_LATENCY.labels(source="redis_hybrid", stage="retrieve").observe(time.time() - start_time)
+        except TimeoutError:
+            logger.warning("Redis hybrid search timed out, fallback_enabled=%s", settings.ENABLE_REDIS_HYBRID_FALLBACK)
+            RETRIEVAL_TIMEOUT_TOTAL.labels(source="redis_hybrid", stage="retrieve").inc()
+            if settings.ENABLE_REDIS_HYBRID_FALLBACK:
+                return await self._pgvector_fallback(user_id_uuid, query_str, subject_id, limit, threshold, use_reranker)
+            raise
+        except Exception as e:
+            logger.warning(f"Redis hybrid search failed: {e}, fallback_enabled={settings.ENABLE_REDIS_HYBRID_FALLBACK}")
+            RETRIEVAL_ERROR_TOTAL.labels(source="redis_hybrid", stage="retrieve").inc()
+            if settings.ENABLE_REDIS_HYBRID_FALLBACK:
+                return await self._pgvector_fallback(user_id_uuid, query_str, subject_id, limit, threshold, use_reranker)
+            raise
+
+        vec_docs = vector_res.docs if vector_res else []
+        kw_docs = keyword_res.docs if keyword_res else []
+
+        if not vec_docs and not kw_docs and settings.ENABLE_REDIS_HYBRID_FALLBACK:
+            return await self._pgvector_fallback(user_id_uuid, query_str, subject_id, limit, threshold, use_reranker)
+
+        # 4. RRF Fusion
+        fused_results = rerank_service.reciprocal_rank_fusion([vec_docs, kw_docs])
+        candidates = [item for item, score in fused_results]
+
+        # 5. Reranking
+        rerank_start = time.time()
+        if use_reranker and candidates:
+            try:
+                final_chunks = await asyncio.wait_for(
+                    rerank_service.rerank(query_str, candidates, top_k=limit),
+                    timeout=settings.RERANK_TIMEOUT_SECONDS,
+                )
+            except TimeoutError:
+                logger.warning("Rerank timed out, returning fused candidates.")
+                RETRIEVAL_TIMEOUT_TOTAL.labels(source="redis_hybrid", stage="rerank").inc()
+                final_chunks = candidates[:limit]
+            except Exception as e:
+                logger.warning(f"Rerank failed, returning fused candidates: {e}")
+                RETRIEVAL_ERROR_TOTAL.labels(source="redis_hybrid", stage="rerank").inc()
+                final_chunks = candidates[:limit]
+        else:
+            final_chunks = candidates[:limit]
+        RAG_RETRIEVAL_LATENCY.labels(source="redis_hybrid", stage="rerank").observe(time.time() - rerank_start)
+
+        # 6. Fetch Nodes from DB (Optimized with Status Join to avoid N+1)
+        parent_ids = list({chunk.parent_id for chunk in final_chunks})
+        if not parent_ids:
+            return []
+
+        stmt = (
+            select(KnowledgeNode, UserNodeStatus)
+            .outerjoin(
+                UserNodeStatus,
+                (UserNodeStatus.node_id == KnowledgeNode.id) & (UserNodeStatus.user_id == user_id_uuid)
+            )
+            .options(
+                selectinload(KnowledgeNode.subject),
+                selectinload(KnowledgeNode.parent)
+            )
+            .where(KnowledgeNode.id.in_(parent_ids))
+        )
+        result = await self.db.execute(stmt)
+        rows = result.all()
+        nodes_map = {str(node.id): (node, status) for node, status in rows}
+
+        # 7. Assemble Result
+        search_results = []
+        seen_parents = set()
+
+        for chunk in final_chunks:
+            pid = chunk.parent_id
+            if pid not in nodes_map or pid in seen_parents:
+                continue
+
+            seen_parents.add(pid)
+            node, user_status = nodes_map[pid]
+            search_results.append(self._format_search_result(node, user_status, 1.0))
+
+        return search_results
+
+    async def _build_results_from_nodes(
+        self,
+        nodes: list[KnowledgeNode],
+        user_id_uuid: UUID,
+    ) -> list[SearchResultItem]:
+        if not nodes:
+            return []
+
+        node_ids = list({node.id for node in nodes})
+        stmt = (
+            select(KnowledgeNode, UserNodeStatus)
+            .outerjoin(
+                UserNodeStatus,
+                (UserNodeStatus.node_id == KnowledgeNode.id) & (UserNodeStatus.user_id == user_id_uuid)
+            )
+            .options(
+                selectinload(KnowledgeNode.subject),
+                selectinload(KnowledgeNode.parent)
+            )
+            .where(KnowledgeNode.id.in_(node_ids))
+        )
+        result = await self.db.execute(stmt)
+        rows = result.all()
+        nodes_map = {node.id: (node, status) for node, status in rows}
+
+        search_results = []
+        for node in nodes:
+            entry = nodes_map.get(node.id)
+            if not entry:
+                continue
+            search_results.append(self._format_search_result(entry[0], entry[1], 1.0))
+        return search_results
+
+    async def _pgvector_fallback(
+        self,
+        user_id_uuid: UUID,
+        query_str: str,
+        subject_id: int | None,
+        limit: int,
+        threshold: float,
+        use_reranker: bool,
+    ) -> list[SearchResultItem]:
+        if not await self._vector_runtime_available():
+            logger.info("Skipping pgvector fallback because vector runtime is unavailable")
+            return await self._keyword_fallback(user_id_uuid, query_str, subject_id, limit)
+
+        fallback_start = time.time()
+        candidate_limit = max(limit * 5, limit)
+
+        try:
+            candidates = await self.semantic_search_nodes(
+                query=query_str,
+                subject_id=subject_id,
+                limit=candidate_limit,
+                threshold=threshold,
+            )
+        except Exception as e:
+            if self._is_vector_runtime_error(e):
+                self._disable_vector_runtime(str(e))
+                return await self._keyword_fallback(user_id_uuid, query_str, subject_id, limit)
+            logger.warning(f"pgvector fallback search failed: {e}")
+            RETRIEVAL_ERROR_TOTAL.labels(source="pgvector_fallback", stage="retrieve").inc()
+            return []
+
+        RAG_RETRIEVAL_LATENCY.labels(source="pgvector_fallback", stage="retrieve").observe(
+            time.time() - fallback_start
+        )
+
+        if not candidates:
+            logger.info("pgvector fallback returned no candidates, trying keyword fallback")
+            return await self._keyword_fallback(user_id_uuid, query_str, subject_id, limit)
+
+        rerank_start = time.time()
+        if use_reranker:
+            try:
+                reranked = await asyncio.wait_for(
+                    rerank_service.rerank(query_str, candidates, top_k=limit),
+                    timeout=settings.RERANK_TIMEOUT_SECONDS,
+                )
+            except TimeoutError:
+                logger.warning("pgvector rerank timed out, returning original candidates.")
+                RETRIEVAL_TIMEOUT_TOTAL.labels(source="pgvector_fallback", stage="rerank").inc()
+                reranked = candidates[:limit]
+            except Exception as e:
+                logger.warning(f"pgvector rerank failed: {e}")
+                RETRIEVAL_ERROR_TOTAL.labels(source="pgvector_fallback", stage="rerank").inc()
+                reranked = candidates[:limit]
+        else:
+            reranked = candidates[:limit]
+
+        RAG_RETRIEVAL_LATENCY.labels(source="pgvector_fallback", stage="rerank").observe(
+            time.time() - rerank_start
+        )
+
+        results = await self._build_results_from_nodes(reranked, user_id_uuid)
+        if results:
+            return results
+
+        logger.info("pgvector fallback produced no assembled results, trying keyword fallback")
+        return await self._keyword_fallback(user_id_uuid, query_str, subject_id, limit)
+
+    async def document_vector_search(
+        self,
+        user_id: UUID,
+        query: str,
+        file_ids: list[UUID],
+        vector_query: str | None = None,
+        limit: int = 5,
+        threshold: float = 0.6,
+        include_group_documents: bool = False,
+        group_ids: list[UUID | str] | None = None,
+    ) -> list[DocumentChunkResult]:
+        """
+        Vector search over document chunks with forced file scope.
+        """
+        if not query or not file_ids:
+            return []
+        if not await self._vector_runtime_available():
+            return []
+
+        actual_vector_text = vector_query if vector_query else query
+        query_embedding = await embedding_service.get_embedding(actual_vector_text, text_type="query")
+        accessible_group_ids: list[UUID] = []
+        if include_group_documents and GroupFileService is not None:
+            accessible_group_ids = await GroupFileService.list_accessible_group_ids(
+                self.db,
+                user_id,
+                requested_group_ids=group_ids,
+            )
+
+        stmt = (
+            select(
+                DocumentChunk,
+                StoredFile.file_name,
+                GroupFile.group_id,
+                GroupFile.shared_by_id,
+                DocumentChunk.embedding.cosine_distance(query_embedding).label("distance")
+            )
+            .join(StoredFile, StoredFile.id == DocumentChunk.file_id)
+            .outerjoin(
+                GroupFile,
+                and_(
+                    GroupFile.file_id == DocumentChunk.file_id,
+                    GroupFile.not_deleted_filter(),
+                    GroupFile.group_id.in_(accessible_group_ids) if accessible_group_ids else false(),
+                ),
+            )
+            .outerjoin(
+                GroupMember,
+                and_(
+                    GroupMember.group_id == GroupFile.group_id,
+                    GroupMember.user_id == user_id,
+                    GroupMember.not_deleted_filter(),
+                ),
+            )
+            .where(
+                or_(
+                    DocumentChunk.user_id == user_id,
+                    GroupMember.id.isnot(None),
+                )
+            )
+            .where(DocumentChunk.file_id.in_(file_ids))
+            .where(StoredFile.lifecycle_status == SourceLifecycleStatus.ACTIVE.value)
+            .where(DocumentChunk.embedding.isnot(None))
+            .order_by("distance")
+            .limit(limit * 5)
+        )
+
+        try:
+            result = await self.db.execute(stmt)
+        except Exception as exc:
+            if not self._is_vector_runtime_error(exc):
+                raise
+            self._disable_vector_runtime(str(exc))
+            return []
+        rows = result.all()
+
+        results: list[DocumentChunkResult] = []
+        seen: set[tuple[str, str]] = set()
+        for chunk, file_name, group_id, shared_by_id, distance in rows:
+            if distance is None:
+                continue
+            if distance <= threshold:
+                score = max(0.0, 1.0 - float(distance))
+                dedupe_key = (str(chunk.id), str(group_id or "personal"))
+                if dedupe_key in seen:
+                    continue
+                seen.add(dedupe_key)
+                results.append(
+                    DocumentChunkResult(
+                        chunk=chunk,
+                        file_name=file_name,
+                        score=score,
+                        group_id=group_id,
+                        shared_by_user_id=shared_by_id,
+                    )
+                )
+
+        return results[:limit]
+
+    async def semantic_search_nodes(
+        self,
+        query: str,
+        subject_id: int | None = None,
+        limit: int = 10,
+        threshold: float = 0.3
+    ) -> list[KnowledgeNode]:
+        """Internal semantic search that returns KnowledgeNode models."""
+        ranked_nodes = await self.semantic_search_ranked_nodes(
+            query=query,
+            subject_id=subject_id,
+            limit=limit,
+            threshold=threshold,
+        )
+        return [node for node, _score in ranked_nodes]
+
+    async def semantic_search_ranked_nodes(
+        self,
+        query: str,
+        subject_id: int | None = None,
+        limit: int = 10,
+        threshold: float = 0.6,
+    ) -> list[tuple[KnowledgeNode, float]]:
+        """Internal semantic search that returns nodes with normalized scores.
+        threshold is cosine DISTANCE (0=identical, 1=opposite).
+        Default 0.6 ≈ similarity>0.4, suitable for Chinese DashScope embeddings.
+        """
+        if not await self._vector_runtime_available():
+            return []
+
+        query_embedding = await embedding_service.get_embedding(query, text_type="query")
+
+        search_query = (
+            select(
+                KnowledgeNode,
+                KnowledgeNode.embedding.cosine_distance(query_embedding).label('distance')
+            )
+            .options(
+                selectinload(KnowledgeNode.subject),
+                selectinload(KnowledgeNode.parent)
+            )
+            .where(KnowledgeNode.embedding.isnot(None))
+            .where(or_(KnowledgeNode.status.is_(None), KnowledgeNode.status == "published"))
+        )
+
+        if subject_id:
+            search_query = search_query.where(KnowledgeNode.subject_id == subject_id)
+
+        search_query = (
+            search_query
+            .order_by('distance')
+            .limit(limit)
+        )
+
+        try:
+            result = await self.db.execute(search_query)
+        except Exception as exc:
+            if not self._is_vector_runtime_error(exc):
+                raise
+            self._disable_vector_runtime(str(exc))
+            return []
+        matches = result.all()
+
+        ranked_matches: list[tuple[KnowledgeNode, float]] = []
+        for node, distance in matches:
+            if distance is None or distance > threshold:
+                continue
+            score = max(0.0, min(1.0, 1.0 - float(distance)))
+            ranked_matches.append((node, score))
+
+        return ranked_matches
+
+    async def keyword_search(
+        self,
+        user_id: UUID,
+        query: str,
+        subject_id: int | None = None,
+        limit: int = 20
+    ) -> list[KnowledgeNode]:
+        """Keyword search for nodes (Sparse Retrieval).
+
+        R6-P0-7: previously accepted ``user_id`` but ignored it. Now the query
+        is restricted to nodes the user can access — either seed/system nodes
+        (``is_seed=True`` or ``source_type='seed'``) or nodes the user has a
+        ``UserNodeStatus`` row for. This matches what callers expect when they
+        pass ``user_id``.
+        """
+        from sqlalchemy import func
+
+        # Optimized JSONB search using @> operator for exact tags match
+        # and jsonb_path_exists for partial match inside array if needed (requires PG 12+)
+        # Here we use a hybrid approach:
+        # 1. ILIKE for Name/Description
+        # 2. @> for exact keyword match (using GIN index)
+        # 3. jsonb_path_exists for partial keyword match
+        # Escape LIKE wildcards and regex metacharacters to prevent injection
+        # Both ILIKE patterns and jsonb_path_exists regex are vulnerable
+        escaped_query = query.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
+        # For regex injection in jsonb_path_exists, also escape regex special chars
+        import re
+        regex_safe_query = re.escape(query)
+
+        # R6-P0-7: tenant isolation — node must be seed OR user has UserNodeStatus
+        user_status_exists = (
+            select(UserNodeStatus.node_id)
+            .where(
+                UserNodeStatus.node_id == KnowledgeNode.id,
+                UserNodeStatus.user_id == user_id,
+            )
+            .exists()
+        )
+
+        stmt = (
+            select(KnowledgeNode)
+            .options(
+                selectinload(KnowledgeNode.subject),
+                selectinload(KnowledgeNode.parent)
+            )
+            .where(
+                or_(
+                    KnowledgeNode.name.ilike(f"%{escaped_query}%"),
+                    KnowledgeNode.description.ilike(f"%{escaped_query}%"),
+                    KnowledgeNode.keywords.contains([query]),
+                    func.jsonb_path_exists(
+                        KnowledgeNode.keywords,
+                        f'$[*] ? (@ like_regex "{regex_safe_query}" flag "i")'
+                    )
+                )
+            )
+            .where(or_(KnowledgeNode.status.is_(None), KnowledgeNode.status == "published"))
+            .where(
+                or_(
+                    KnowledgeNode.is_seed.is_(True),
+                    KnowledgeNode.source_type == "seed",
+                    user_status_exists,
+                )
+            )
+        )
+
+        if subject_id:
+            stmt = stmt.where(KnowledgeNode.subject_id == subject_id)
+
+        stmt = stmt.limit(limit)
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
+
+
+    # --- Helpers ---
+    async def get_user_node_status(self, user_id: UUID, node_id: UUID) -> UserNodeStatus | None:
+        """Public alias for _get_user_status."""
+        return await self._get_user_status(user_id, node_id)
+
+    async def _get_user_status(self, user_id: UUID, node_id: UUID) -> UserNodeStatus | None:
+        stmt = select(UserNodeStatus).where(
+            UserNodeStatus.user_id == user_id,
+            UserNodeStatus.node_id == node_id
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
+
+    def _format_search_result(self, node: KnowledgeNode, status: UserNodeStatus | None, score: float) -> SearchResultItem:
+        node_base = NodeBase.from_model(node)
+
+        user_status_info = None
+        if status:
+            # Note: We duplicate logic from StatsService for formatting to avoid circular deps
+            # Ideally this formatting logic belongs to a Schema Mapper
+            brightness = 0.3 + (status.mastery_score / 100.0) * 0.7
+            if not status.is_unlocked: brightness = 0.2
+
+            from app.schemas.galaxy import NodeStatus
+            visual_status = NodeStatus.UNLIT
+            if status.is_unlocked:
+                if status.mastery_score >= 80: visual_status = NodeStatus.BRILLIANT
+                elif status.mastery_score > 0: visual_status = NodeStatus.GLIMMER
+            else:
+                visual_status = NodeStatus.LOCKED
+
+            user_status_info = UserStatusInfo(
+                mastery_score=status.mastery_score,
+                total_study_minutes=status.total_study_minutes,
+                study_count=status.study_count,
+                is_unlocked=status.is_unlocked,
+                is_collapsed=status.is_collapsed,
+                is_favorite=status.is_favorite,
+                first_unlock_at=status.first_unlock_at,
+                last_study_at=status.last_study_at,
+                next_review_at=status.next_review_at,
+                decay_paused=status.decay_paused,
+                status=visual_status,
+                brightness=brightness
+            )
+
+        return SearchResultItem(
+            node=node_base,
+            similarity=score,
+            user_status=user_status_info
+        )
+
+
+@dataclass
+class DocumentChunkResult:
+    chunk: DocumentChunk
+    file_name: str
+    score: float
+    group_id: UUID | None = None
+    shared_by_user_id: UUID | None = None
+    trust_level: str | None = None

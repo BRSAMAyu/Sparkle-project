@@ -1,0 +1,82 @@
+{
+  "timestamp": "2026-05-17T09:52:27",
+  "user_id": "50f0ce31-fc15-4ae5-8e82-75a1767087c3",
+  "results": [
+    {
+      "test": "Go Gateway Health",
+      "passed": true,
+      "details": {
+        "status_code": 200,
+        "body": "{\"live\":\"/live\",\"ready\":\"/ready\",\"status\":\"ok\"}"
+      }
+    },
+    {
+      "test": "Go Gateway gRPC Proxy",
+      "passed": true,
+      "details": {
+        "agent_status": "healthy",
+        "all_components": {
+          "database": "healthy",
+          "grpc_agent": "healthy",
+          "redis": "healthy"
+        }
+      }
+    },
+    {
+      "test": "Database Data Integrity",
+      "passed": true,
+      "details": {
+        "users": 7,
+        "achievements": 39,
+        "plans": 3,
+        "tasks": 16,
+        "goals": 0
+      }
+    },
+    {
+      "test": "BeliefState Pipeline",
+      "passed": true,
+      "details": {
+        "belief_state_keys": 4,
+        "trace_keys": 4,
+        "total_traces": 5,
+        "disagreement_count": 5,
+        "sample_traces": [
+          {
+            "user": "chat_test",
+            "shadow": "cognitive_first",
+            "actual": "execution_first",
+            "disagreement": true
+          },
+          {
+            "user": "00000000-000",
+            "shadow": "cognitive_first",
+            "actual": "execution_first",
+            "disagreement": true
+          },
+          {
+            "user": "00000000-000",
+            "shadow": "cognitive_first",
+            "actual": "execution_first",
+            "disagreement": true
+          }
+        ]
+      }
+    },
+    {
+      "test": "gRPC StreamChat",
+      "passed": true,
+      "details": {
+        "chunks": 4,
+        "response_length": 155,
+        "states_seen": [
+          "THINKING",
+          "THINKING"
+        ],
+        "elapsed_seconds": 6.41,
+        "error": null,
+        "has_meaningful_response": true
+      }
+    }
+  ]
+}

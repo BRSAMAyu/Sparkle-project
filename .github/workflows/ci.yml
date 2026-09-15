@@ -1,0 +1,670 @@
+name: Sparkle CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  GO_VERSION: '1.24.0'
+  PYTHON_VERSION: '3.11'
+  FLUTTER_VERSION: '3.24.0'
+  COVERAGE_RULES_FILE: 'quality/coverage_thresholds.json'
+  COVERAGE_THRESHOLD_GO: '30'
+  COVERAGE_THRESHOLD_PYTHON: '50'
+  COVERAGE_THRESHOLD_FLUTTER: '25'
+
+jobs:
+  # ==================== JOB 1: LINT ====================
+  lint:
+    name: Code Quality & Linting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Go Linting
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Go Vet
+        working-directory: backend/gateway
+        run: go vet ./...
+
+      - name: Go Lint (golangci-lint)
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: backend/gateway
+          args: --timeout=5m
+
+      # Python Linting
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Python Lint Tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.lock
+
+      - name: Install quality gate runtime deps
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
+      - name: Python Lint (Ruff)
+        run: ruff check backend/app --output-format=github
+
+      - name: Python Type Check (MyPy)
+        run: mypy backend/app --ignore-missing-imports --no-error-summary
+
+      # Flutter Linting
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v3
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Flutter Analyze Gate
+        run: |
+          python3 scripts/check_flutter_analyze_gate.py \
+            --project-dir mobile \
+            --budget-file quality/flutter_analyze_allowlist.json \
+            --write-report quality/flutter_analyze_report_ci.json
+
+      - name: Technical Debt Budget Gate
+        run: python3 scripts/check_tech_debt_budget.py
+
+      - name: Detect Duplicate Code Blocks
+        run: python3 scripts/check_duplicate_code_blocks.py backend/app/signals/spine_orchestrator.py
+
+  # ==================== JOB 1B: RULE GUARDS ====================
+  all-rule-guards:
+    name: All Rule Guards
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.lock
+
+      - name: Install Guard Runtime Deps
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
+      - name: Run Stage 22 Baseline Artifact Refresh
+        run: |
+          python3 scripts/check_prompt_render_coverage.py --write
+          python3 scripts/render_stage22_precheck.py
+
+      - name: Run All Rule Guards (includes Rule AR SQAM)
+        run: bash scripts/run_all_rule_guards.sh --jobs 4
+
+  # ==================== JOB 2: BACKEND TEST ====================
+  backend-test:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    needs: lint
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: sparkle_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Go Tests
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: backend/gateway/go.sum
+
+      - name: Go Test with Coverage
+        working-directory: backend/gateway
+        run: |
+          go test -v -race -coverprofile=coverage.out ./...
+          go tool cover -func=coverage.out | tee coverage.txt
+
+      - name: Go Critical Risk Suites
+        working-directory: backend/gateway
+        run: |
+          go test -v ./internal/handler/... ./internal/service/... ./internal/db/...
+
+      - name: Go Proto Serialization Contract
+        working-directory: backend/gateway
+        run: |
+          go test -v -run TestProtoSerialization ./internal/handler/
+
+      - name: Enforce Go Coverage Threshold
+        run: |
+          python3 scripts/check_coverage_thresholds.py \
+            --kind go \
+            --report backend/gateway/coverage.out \
+            --rules-file "${{ env.COVERAGE_RULES_FILE }}"
+
+      - name: Upload Go Coverage
+        uses: codecov/codecov-action@v5
+        with:
+          files: backend/gateway/coverage.out
+          flags: go-backend
+          fail_ci_if_error: true
+
+      # Python Tests
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache Python Dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.lock
+
+      - name: Python Test with Coverage
+        env:
+          DATABASE_URL: postgresql://postgres:password@localhost:5432/sparkle_test
+          REDIS_URL: redis://localhost:6379/0
+          TESTING: 'true'
+        run: |
+          pytest backend/tests -v --cov=backend/app --cov-report=xml
+
+      - name: Aurora Golden Text Snapshot Tests
+        env:
+          DATABASE_URL: postgresql://postgres:password@localhost:5432/sparkle_test
+          REDIS_URL: redis://localhost:6379/0
+          TESTING: 'true'
+        run: |
+          pytest backend/tests/golden -v
+
+      - name: Python Contract and Workflow Risk Suites
+        env:
+          DATABASE_URL: postgresql://postgres:password@localhost:5432/sparkle_test
+          REDIS_URL: redis://localhost:6379/0
+          TESTING: 'true'
+        run: |
+          pytest backend/tests/contract backend/tests/workflow -v
+
+      - name: OpenAPI Contract Check
+        run: python3 scripts/check_openapi_contract.py
+
+      - name: Proto Contract Check
+        run: python3 scripts/check_proto_contract.py
+
+      - name: Proto Serialization Contract
+        env:
+          DATABASE_URL: postgresql://postgres:password@localhost:5432/sparkle_test
+          REDIS_URL: redis://localhost:6379/0
+          TESTING: 'true'
+        run: |
+          pytest backend/tests/contract/test_proto_serialization_contract.py backend/tests/contract/test_json_wire_format_contract.py -v
+
+      - name: Dependency Contract Check
+        run: python3 scripts/check_dependency_contract.py
+
+      - name: Rule K Write-Path Guard
+        run: python3 scripts/check_rule_k_write_paths.py
+
+      - name: Backend Fixture Replay Gate
+        run: python3 scripts/replay_backend_contract_fixtures.py
+
+      - name: Enforce Python Coverage Threshold
+        run: |
+          python3 scripts/check_coverage_thresholds.py \
+            --kind python \
+            --report coverage.xml \
+            --rules-file "${{ env.COVERAGE_RULES_FILE }}"
+
+      - name: Upload Python Coverage
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.xml
+          flags: python-backend
+          fail_ci_if_error: true
+
+  # ==================== JOB 2B: JOURNEY SMOKE ====================
+  journey-smoke:
+    name: Journey Smoke
+    runs-on: ubuntu-latest
+    needs: [all-rule-guards, backend-test]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.lock
+
+      - name: Run Stage35 Journey Smoke
+        run: bash scripts/journey_smoke.sh all
+
+  # ==================== JOB 2C: SIMULATION BENCHMARK ====================
+  simulation-benchmark:
+    name: Simulation Benchmark
+    runs-on: ubuntu-latest
+    needs: backend-test
+    if: github.event_name == 'pull_request'
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: sparkle_simulation_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d sparkle_simulation_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect benchmark-sensitive changes
+        id: benchmark_changes
+        run: |
+          git fetch origin "${{ github.base_ref }}" --depth=1
+          CHANGED=$(git diff --name-only "origin/${{ github.base_ref }}"...HEAD -- \
+            backend/app/signals/policy_engine.py \
+            backend/app/aurora \
+            backend/app/signals/marketplace.py \
+            'backend/app/signals/skill_*.py')
+          echo "changed_files<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$CHANGED" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+          if [ -n "$CHANGED" ]; then
+            echo "run_benchmark=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_benchmark=false" >> "$GITHUB_OUTPUT"
+            echo "No benchmark-sensitive files changed."
+          fi
+
+      - name: Set up Python
+        if: steps.benchmark_changes.outputs.run_benchmark == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Python Dependencies
+        if: steps.benchmark_changes.outputs.run_benchmark == 'true'
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.lock
+
+      - name: Apply migrations
+        if: steps.benchmark_changes.outputs.run_benchmark == 'true'
+        env:
+          DATABASE_URL: postgresql://postgres:password@localhost:5432/sparkle_simulation_ci
+          ENVIRONMENT: development
+        run: cd backend && alembic upgrade head
+
+      - name: Run SparkleGoalBench regression gate
+        if: steps.benchmark_changes.outputs.run_benchmark == 'true'
+        env:
+          DATABASE_URL: postgresql://postgres:password@localhost:5432/sparkle_simulation_ci
+          TESTING: 'true'
+          PYTHONPATH: backend
+        run: python -m backend.scripts.run_simulation_benchmark --suite=full --commit="${GITHUB_SHA}"
+
+      - name: Upload benchmark report
+        if: always() && steps.benchmark_changes.outputs.run_benchmark == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulation-benchmark-report
+          path: docs/benchmarks/*.md
+          if-no-files-found: warn
+
+  # ==================== JOB 3: FLUTTER TEST ====================
+  flutter-test:
+    name: Flutter Tests
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v3
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Get Dependencies
+        working-directory: mobile
+        run: flutter pub get
+
+      - name: Run Tests with Coverage
+        working-directory: mobile
+        run: flutter test --coverage
+
+      - name: Flutter Critical Smoke and Regression Suites
+        working-directory: mobile
+        run: |
+          flutter test test/app test/integration test/goldens test/widget/visual_elements_layout_regression_test.dart test/widget/chat_action_card_navigation_test.dart -r compact
+
+      - name: Enforce Flutter Coverage Threshold
+        run: |
+          python3 scripts/check_coverage_thresholds.py \
+            --kind flutter \
+            --report mobile/coverage/lcov.info \
+            --rules-file "${{ env.COVERAGE_RULES_FILE }}"
+
+      - name: Upload Flutter Coverage
+        uses: codecov/codecov-action@v5
+        with:
+          files: mobile/coverage/lcov.info
+          flags: flutter
+          fail_ci_if_error: true
+
+  # ==================== JOB 4: SECURITY SCAN ====================
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      # Trivy for container security
+      - name: Run Trivy vulnerability scanner (Backend)
+        uses: aquasecurity/trivy-action@v0.29.0
+        with:
+          scan-type: 'fs'
+          scan-ref: 'backend'
+          format: 'sarif'
+          output: 'trivy-backend-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-backend-results.sarif'
+
+      # Gitleaks for secret detection
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
+      # Dependency audit
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Python Safety Check
+        run: |
+          pip install safety
+          safety check -r backend/requirements.lock --full-report
+
+  # ==================== JOB 5: DB SCHEMA CHECK ====================
+  db-schema-check:
+    name: DB Schema Drift Check
+    runs-on: ubuntu-latest
+    needs: lint
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: sparkle_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d sparkle_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Migration Contract Check
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: origin/main
+        run: python scripts/check_migration_contracts.py
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.lock
+
+      - name: Install PostgreSQL Client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Run Alembic Migrations
+        env:
+          DATABASE_URL: postgresql://postgres:password@localhost:5432/sparkle_ci
+          ENVIRONMENT: development
+        run: cd backend && alembic upgrade head
+
+      - name: Compare Schema Dump
+        id: schema_dump_compare
+        continue-on-error: ${{ github.event_name == 'pull_request' }}
+        env:
+          PGPASSWORD: password
+        run: |
+          pg_dump -h localhost -U postgres -d sparkle_ci --schema-only | grep -v '^\\' > /tmp/schema_ci.sql
+          grep -v '^--' backend/gateway/internal/db/schema.sql | grep -v '^SET ' | grep -v '^SELECT pg_catalog.set_config' | grep -v '^\\' > /tmp/schema_repo.sql
+          grep -v '^--' /tmp/schema_ci.sql | grep -v '^SET ' | grep -v '^SELECT pg_catalog.set_config' | grep -v '^\\' > /tmp/schema_ci_norm.sql
+          diff -u /tmp/schema_repo.sql /tmp/schema_ci_norm.sql
+
+      - name: Warn On Advisory Schema Diff
+        if: steps.schema_dump_compare.outcome == 'failure'
+        run: |
+          echo "::warning title=Advisory schema diff mismatch::Normalized schema diff is non-blocking until the comparison is hardened. Review the step log before merging schema-related changes."
+
+  # ==================== JOB 6: BUILD ====================
+  build:
+    name: Build Artifacts
+    runs-on: ubuntu-latest
+    needs: [all-rule-guards, backend-test, flutter-test, security-scan, db-schema-check, proto-check]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Build Go Gateway
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Build Go Gateway
+        working-directory: backend/gateway
+        run: |
+          CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o bin/gateway ./cmd/server
+
+      # Build Docker Images
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker metadata (gateway)
+        id: meta_gateway
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/sparkle-gateway
+          tags: |
+            type=sha,format=long
+            type=ref,event=tag
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build Gateway Image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend/gateway
+          push: true
+          tags: ${{ steps.meta_gateway.outputs.tags }}
+          labels: ${{ steps.meta_gateway.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Docker metadata (backend)
+        id: meta_backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/sparkle-backend
+          tags: |
+            type=sha,format=long
+            type=ref,event=tag
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build Backend Image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ steps.meta_backend.outputs.tags }}
+          labels: ${{ steps.meta_backend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Build Flutter (APK)
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v3
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Build APK
+        working-directory: mobile
+        run: flutter build apk --release
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sparkle-apk-${{ github.sha }}
+          path: mobile/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 14
+
+  # ==================== JOB 6: PROTO CHECK ====================
+  proto-check:
+    name: Protobuf Validation
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect changed proto files
+        id: proto_changes
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch origin "${BASE_REF}" --depth=1
+            CHANGED_PROTO=$(git diff --name-only "origin/${BASE_REF}"...HEAD -- 'proto/*.proto')
+          else
+            CHANGED_PROTO=$(git diff --name-only HEAD~1...HEAD -- 'proto/*.proto' || true)
+            if [ -z "$CHANGED_PROTO" ]; then
+              CHANGED_PROTO="(none)"
+            fi
+          fi
+          echo "changed_proto<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$CHANGED_PROTO" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+          if [ -n "$CHANGED_PROTO" ] && [ "$CHANGED_PROTO" != "(none)" ]; then
+            echo "has_proto_changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_proto_changes=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build Proto Toolchain Image
+        if: steps.proto_changes.outputs.has_proto_changes == 'true'
+        run: make proto-tools-build
+
+      - name: Buf Breaking Change Detection
+        if: github.event_name == 'pull_request' && steps.proto_changes.outputs.has_proto_changes == 'true'
+        run: |
+          PROTO_TOOLCHAIN_IMAGE=sparkle/proto-toolchain:latest \
+          scripts/proto_toolchain.sh breaking '.git#branch=main'
+
+      - name: Enforce Deprecated Removal Milestones
+        if: steps.proto_changes.outputs.has_proto_changes == 'true'
+        run: python3 scripts/check_proto_deprecated_windows.py
+
+      - name: Enforce Generated Code Consistency
+        if: steps.proto_changes.outputs.has_proto_changes == 'true'
+        run: |
+          PROTO_TOOLCHAIN_IMAGE=sparkle/proto-toolchain:latest \
+          scripts/proto_toolchain.sh check-generated
+
+      - name: Enforce Proto Migration Notes
+        if: github.event_name == 'pull_request' && steps.proto_changes.outputs.has_proto_changes == 'true'
+        run: |
+          if ! git diff --name-only "origin/${{ github.base_ref }}"...HEAD | grep -q '^docs/engineering/proto_dual_stack_migration.md$'; then
+            echo "Proto files changed but migration guide was not updated."
+            echo "Changed proto files:"
+            echo "${{ steps.proto_changes.outputs.changed_proto }}"
+            exit 1
+          fi
+
+      - name: Enforce Proto ADR Update
+        if: github.event_name == 'pull_request' && steps.proto_changes.outputs.has_proto_changes == 'true'
+        run: |
+          if ! git diff --name-only "origin/${{ github.base_ref }}"...HEAD | grep -Eq '^docs/adr/.*proto.*\.md$'; then
+            echo "Proto files changed but no proto ADR was updated."
+            echo "Please add or update an ADR file under docs/adr/ with 'proto' in file name."
+            exit 1
+          fi

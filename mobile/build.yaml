@@ -1,0 +1,33 @@
+targets:
+  $default:
+    builders:
+      hive_generator|hive_generator:
+        enabled: true
+        generate_for:
+          exclude:
+            - lib/gen/**
+      isar_generator|isar_generator:
+        enabled: true
+        generate_for:
+          exclude:
+            - lib/gen/**
+      riverpod_generator|riverpod_generator:
+        enabled: true
+        generate_for:
+          exclude:
+            - lib/gen/**
+      freezed|freezed:
+        enabled: true
+        generate_for:
+          exclude:
+            - lib/gen/**
+      json_serializable|json_serializable:
+        enabled: true
+        generate_for:
+          exclude:
+            - lib/gen/**
+      retrofit_generator|retrofit_generator:
+        enabled: true
+        generate_for:
+          exclude:
+            - lib/gen/**
