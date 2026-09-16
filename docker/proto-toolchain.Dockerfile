@@ -42,7 +42,9 @@ RUN curl -fsSL -o /tmp/dart.zip \
 
 ENV PATH="/usr/local/dart-sdk/bin:/root/.pub-cache/bin:${PATH}"
 RUN dart --disable-analytics \
-    && dart pub global activate protoc_plugin 22.3.0
+    && dart pub global activate protoc_plugin 22.3.0 \
+    && ln -sf /usr/local/dart-sdk/bin/dart /usr/local/bin/dart \
+    && ln -sf /root/.pub-cache/bin/protoc-gen-dart /usr/local/bin/protoc-gen-dart
 
 WORKDIR /workspace
 
