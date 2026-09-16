@@ -29,7 +29,8 @@ RUN curl -fsSL -o /usr/local/bin/buf \
     && chmod +x /usr/local/bin/buf
 
 # Install Python protobuf plugins
-RUN python3 -m pip install --no-cache-dir \
+# --break-system-packages: required by PEP 668 on bookworm's system Python
+RUN python3 -m pip install --no-cache-dir --break-system-packages \
     grpcio-tools==1.68.0 \
     mypy-protobuf==3.6.0
 
