@@ -32,6 +32,9 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          # full history: golangci-lint new-from-rev needs the baseline commit
+          fetch-depth: 0
 
       # Go Linting
       - name: Set up Go
