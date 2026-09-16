@@ -34,6 +34,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r backend/requirements.lock
 
+      - name: Generate Python Proto Code
+        run: |
+          pip install grpcio-tools
+          PYTHON_BIN=python3 bash scripts/generate_python_protos.sh
+
       - name: Python Lint (Ruff)
         run: ruff check backend/app --output-format=github
 
@@ -54,6 +59,9 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           cache-dependency-path: backend/gateway/go.sum
+
+      - name: Generate Go Proto Code
+        run: make proto-tools-build && make proto-gen
 
       - name: Go Vet
         working-directory: backend/gateway
