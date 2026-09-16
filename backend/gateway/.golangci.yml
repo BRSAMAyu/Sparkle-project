@@ -4,13 +4,8 @@
 run:
   timeout: 5m
   modules-download-mode: readonly
-  skip-dirs:
-    - vendor
-    - generated
-    - mocks
 
 output:
-  format: colored-line-number
   print-issued-lines: true
   print-linter-name: true
   sort-results: true
@@ -138,6 +133,9 @@ linters-settings:
     locale: US
 
 issues:
+  exclude-dirs:
+    - vendor
+    - mocks
   exclude-rules:
     # Exclude some linters from running on test files
     - path: _test\.go
