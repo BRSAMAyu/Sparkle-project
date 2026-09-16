@@ -4,8 +4,6 @@ version: v2
 modules:
   - path: proto
     name: buf.build/sparkle/agent
-    excludes:
-      - proto/community_service.proto
 deps:
   - buf.build/googleapis/googleapis
 lint:
@@ -13,6 +11,9 @@ lint:
     - STANDARD
   except:
     - PACKAGE_VERSION_SUFFIX
+  ignore:
+    # generated via its own pipeline; kept out of buf lint/breaking
+    - proto/community_service.proto
   disallow_comment_ignores: false
 breaking:
   use:
@@ -20,3 +21,5 @@ breaking:
   except:
     - EXTENSION_NO_DELETE
     - FIELD_SAME_DEFAULT
+  ignore:
+    - proto/community_service.proto
