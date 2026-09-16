@@ -10,9 +10,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
-	"github.com/sparkle/gateway/internal/i18n"
 	"go.uber.org/zap"
 	"golang.org/x/time/rate"
+
+	"github.com/sparkle/gateway/internal/i18n"
 )
 
 const defaultMaxVisitors = 10000

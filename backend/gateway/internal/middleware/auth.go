@@ -17,10 +17,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
+
 	"github.com/sparkle/gateway/internal/config"
 	"github.com/sparkle/gateway/internal/i18n"
 	"github.com/sparkle/gateway/internal/logsafe"
-	"go.uber.org/zap"
 )
 
 // middlewareConfig holds the application config for config-based environment
@@ -633,8 +634,8 @@ func validateJWT(cfg *config.Config, rdb *redis.Client, tokenString string) (str
 				if err != redis.Nil {
 					if cfg.RedisFailClosed {
 						zap.L().Warn("Redis session revocation check failed with Fail-Closed mode, rejecting token",
-						zap.String("user_hash", logsafe.UserIDHash(userID)),
-						zap.Error(err))
+							zap.String("user_hash", logsafe.UserIDHash(userID)),
+							zap.Error(err))
 						return "", false, fmt.Errorf("token validation unavailable")
 					}
 					zap.L().Warn("Redis session revocation check failed, allowing token (Fail-Open mode)",

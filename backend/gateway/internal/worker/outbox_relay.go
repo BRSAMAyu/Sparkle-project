@@ -9,8 +9,9 @@ import (
 
 	"github.com/lib/pq"
 	amqp "github.com/rabbitmq/amqp091-go"
-	"github.com/sparkle/gateway/internal/cqrs/metrics"
 	"go.uber.org/zap"
+
+	"github.com/sparkle/gateway/internal/cqrs/metrics"
 )
 
 type OutboxEvent struct {

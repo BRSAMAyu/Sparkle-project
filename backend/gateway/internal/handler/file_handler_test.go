@@ -13,9 +13,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/sparkle/gateway/internal/service"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+
+	"github.com/sparkle/gateway/internal/service"
 )
 
 // Mocks

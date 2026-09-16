@@ -6,10 +6,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"golang.org/x/time/rate"
+
 	"github.com/sparkle/gateway/internal/config"
 	"github.com/sparkle/gateway/internal/metrics"
 	"github.com/sparkle/gateway/internal/service"
-	"golang.org/x/time/rate"
 )
 
 type FileEventHandler struct {

@@ -12,8 +12,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/sparkle/gateway/internal/db"
 	"go.uber.org/zap"
+
+	"github.com/sparkle/gateway/internal/db"
 )
 
 // ProjectionStatus represents the status of a projection.

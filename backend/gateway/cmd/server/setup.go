@@ -19,6 +19,11 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	redisv9 "github.com/redis/go-redis/v9"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
+	"go.uber.org/zap"
+
 	"github.com/sparkle/gateway/internal/agent"
 	"github.com/sparkle/gateway/internal/chaos"
 	"github.com/sparkle/gateway/internal/config"
@@ -37,10 +42,6 @@ import (
 	"github.com/sparkle/gateway/internal/middleware"
 	"github.com/sparkle/gateway/internal/service"
 	"github.com/sparkle/gateway/internal/worker"
-	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/propagation"
-	"go.uber.org/zap"
 
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -116,7 +117,7 @@ const (
 	defaultDBMaxConns        int32 = 30
 	defaultDBMinConns        int32 = 5
 	defaultDBMaxConnIdleTime       = 15 * time.Minute
-	defaultDBMaxConnLifetime        = 30 * time.Minute
+	defaultDBMaxConnLifetime       = 30 * time.Minute
 )
 
 func initTracer() func(context.Context) error {
@@ -501,7 +502,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 	)
 
 	// Health endpoints outside rate-limited group for reliable monitoring access
-		// route-tier: public
+	// route-tier: public
 	r.GET("/api/v1/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"status": "ok",
@@ -580,7 +581,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 		// route-tier: internal
 		internal.GET("/files/:file_id/download", handlers.fileHandler.GetInternalDownloadURL)
 		internal.POST("/interventions/push", handlers.interventionPushHandler.HandlePush)
-			// route-tier: internal
+		// route-tier: internal
 		internal.POST("/signals/push", handlers.signalPushHandler.HandlePush)
 	}
 

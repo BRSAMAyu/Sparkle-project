@@ -15,6 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	redisv9 "github.com/redis/go-redis/v9"
+
 	"github.com/sparkle/gateway/internal/galaxy"
 	"github.com/sparkle/gateway/internal/service"
 )
@@ -438,8 +439,8 @@ func (h *GalaxyHandler) SearchNodesGPRC(c *gin.Context) {
 		c.Request.Body = io.NopCloser(bytes.NewReader(rawBody))
 		if len(rawBody) > 0 {
 			if err := json.Unmarshal(rawBody, &body); err != nil {
-					log.Printf("SearchNodes JSON unmarshal fallback failed: %v", err)
-				}
+				log.Printf("SearchNodes JSON unmarshal fallback failed: %v", err)
+			}
 			query = body.Query
 		}
 	}
@@ -477,13 +478,13 @@ func (h *GalaxyHandler) GetGalaxyStatsGPRC(c *gin.Context) {
 		resp, err := h.galaxyClient.GetGalaxyStats(ctx, userID)
 		if err == nil && resp != nil {
 			c.JSON(http.StatusOK, gin.H{
-				"total_nodes":      resp.TotalNodes,
-				"mastered_nodes":   resp.MasteredNodes,
+				"total_nodes":       resp.TotalNodes,
+				"mastered_nodes":    resp.MasteredNodes,
 				"in_progress_nodes": resp.InProgressNodes,
 				"not_started_nodes": resp.NotStartedNodes,
-				"average_mastery":  resp.AverageMastery,
-				"nodes_by_type":    resp.NodesByType,
-				"via":              "grpc",
+				"average_mastery":   resp.AverageMastery,
+				"nodes_by_type":     resp.NodesByType,
+				"via":               "grpc",
 			})
 			return
 		}

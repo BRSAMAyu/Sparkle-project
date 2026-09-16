@@ -7,17 +7,18 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"go.uber.org/zap"
+
 	"github.com/sparkle/gateway/internal/cqrs/event"
 	"github.com/sparkle/gateway/internal/cqrs/metrics"
-	"go.uber.org/zap"
 )
 
 // Publisher polls the outbox table and publishes events to the event bus.
 type Publisher struct {
-	repo         Repository
-	eventBus     event.EventBus
-	metrics      *metrics.CQRSMetrics
-	logger       *zap.Logger
+	repo     Repository
+	eventBus event.EventBus
+	metrics  *metrics.CQRSMetrics
+	logger   *zap.Logger
 
 	// Configuration
 	batchSize    int

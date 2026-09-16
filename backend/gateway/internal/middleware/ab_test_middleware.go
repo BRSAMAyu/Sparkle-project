@@ -18,8 +18,8 @@ import (
 type ABTestConfig struct {
 	BackendURL            string
 	ExperimentServiceAddr string
-	Timeout              time.Duration
-	Enabled              bool
+	Timeout               time.Duration
+	Enabled               bool
 }
 
 // ABTestMiddleware handles experiment variant assignment
@@ -92,9 +92,9 @@ func (m *ABTestMiddleware) AssignVariant() gin.HandlerFunc {
 
 // VariantInfo holds information about assigned variant
 type VariantInfo struct {
-	ExperimentID string
-	VariantID    string
-	VariantName  string
+	ExperimentID    string
+	VariantID       string
+	VariantName     string
 	IsNewAssignment bool
 }
 

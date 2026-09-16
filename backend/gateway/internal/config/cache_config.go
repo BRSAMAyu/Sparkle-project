@@ -54,15 +54,15 @@ func DefaultCacheStrategy() CacheStrategy {
 			TTL: 5 * time.Minute, // UI state
 		},
 		GoRedisCache: GoRedisCacheConfig{
-			ChatHistoryTTL:   30 * time.Minute, // Chat history
-			SemanticCacheTTL: 1 * time.Hour,    // Semantic cache
-			UserContextTTL:   1 * time.Hour,    // User context
-			ConnectionStateTTL: 5 * time.Minute, // Connection state
+			ChatHistoryTTL:     30 * time.Minute, // Chat history
+			SemanticCacheTTL:   1 * time.Hour,    // Semantic cache
+			UserContextTTL:     1 * time.Hour,    // User context
+			ConnectionStateTTL: 5 * time.Minute,  // Connection state
 		},
 		PythonRedisCache: PythonRedisCacheConfig{
-			LLMTTL:        1 * time.Hour,    // LLM cache
-			ToolCacheTTL:  5 * time.Minute,  // Tool cache
-			FSMStateTTL:   10 * time.Minute, // FSM state
+			LLMTTL:       1 * time.Hour,    // LLM cache
+			ToolCacheTTL: 5 * time.Minute,  // Tool cache
+			FSMStateTTL:  10 * time.Minute, // FSM state
 		},
 	}
 }

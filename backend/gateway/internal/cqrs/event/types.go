@@ -39,45 +39,45 @@ const (
 	EventPlanDeleted   EventType = "plan.deleted"
 
 	// Knowledge Galaxy events
-	EventNodeCreated       EventType = "galaxy.node.created"
-	EventNodeUnlocked      EventType = "galaxy.node.unlocked"
-	EventNodeExpanded      EventType = "galaxy.node.expanded"
-	EventMasteryUpdated    EventType = "galaxy.mastery.updated"
-	EventRelationCreated   EventType = "galaxy.relation.created"
-	EventStudyRecordAdded  EventType = "galaxy.study.recorded"
+	EventNodeCreated      EventType = "galaxy.node.created"
+	EventNodeUnlocked     EventType = "galaxy.node.unlocked"
+	EventNodeExpanded     EventType = "galaxy.node.expanded"
+	EventMasteryUpdated   EventType = "galaxy.mastery.updated"
+	EventRelationCreated  EventType = "galaxy.relation.created"
+	EventStudyRecordAdded EventType = "galaxy.study.recorded"
 
 	// Chat events
-	EventMessageSent      EventType = "chat.message.sent"
-	EventMessageReceived  EventType = "chat.message.received"
-	EventSessionCreated   EventType = "chat.session.created"
-	EventSessionEnded     EventType = "chat.session.ended"
+	EventMessageSent     EventType = "chat.message.sent"
+	EventMessageReceived EventType = "chat.message.received"
+	EventSessionCreated  EventType = "chat.session.created"
+	EventSessionEnded    EventType = "chat.session.ended"
 
 	// User events
-	EventUserCreated      EventType = "user.created"
-	EventUserUpdated      EventType = "user.updated"
-	EventUserDeleted      EventType = "user.deleted"
-	EventUserStatusChanged EventType = "user.status.changed"
+	EventUserCreated         EventType = "user.created"
+	EventUserUpdated         EventType = "user.updated"
+	EventUserDeleted         EventType = "user.deleted"
+	EventUserStatusChanged   EventType = "user.status.changed"
 	EventPreferencesUpdated  EventType = "user.preferences.updated"
 	EventPreferencesInferred EventType = "user.preferences.inferred"
 
 	// Push notification events
-	EventPushScheduled    EventType = "push.scheduled"
-	EventPushSent         EventType = "push.sent"
-	EventPushDelivered    EventType = "push.delivered"
-	EventPushClicked      EventType = "push.clicked"
+	EventPushScheduled EventType = "push.scheduled"
+	EventPushSent      EventType = "push.sent"
+	EventPushDelivered EventType = "push.delivered"
+	EventPushClicked   EventType = "push.clicked"
 )
 
 // AggregateType represents the type of aggregate that owns an event.
 type AggregateType string
 
 const (
-	AggregatePost         AggregateType = "Post"
-	AggregateTask         AggregateType = "Task"
-	AggregatePlan         AggregateType = "Plan"
+	AggregatePost          AggregateType = "Post"
+	AggregateTask          AggregateType = "Task"
+	AggregatePlan          AggregateType = "Plan"
 	AggregateKnowledgeNode AggregateType = "KnowledgeNode"
-	AggregateChatSession  AggregateType = "ChatSession"
-	AggregateUser         AggregateType = "User"
-	AggregatePush         AggregateType = "Push"
+	AggregateChatSession   AggregateType = "ChatSession"
+	AggregateUser          AggregateType = "User"
+	AggregatePush          AggregateType = "Push"
 )
 
 // DomainEvent represents a domain event with full metadata.

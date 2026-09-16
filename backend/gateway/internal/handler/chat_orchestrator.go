@@ -21,6 +21,10 @@ import (
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.uber.org/zap"
+
 	pbws "github.com/sparkle/gateway/gen/ws"
 	"github.com/sparkle/gateway/internal/agent"
 	"github.com/sparkle/gateway/internal/config"
@@ -28,9 +32,6 @@ import (
 	"github.com/sparkle/gateway/internal/i18n"
 	"github.com/sparkle/gateway/internal/metrics"
 	"github.com/sparkle/gateway/internal/service"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
-	"go.uber.org/zap"
 )
 
 // P1 Optimization: Object pools to reduce GC pressure in high-concurrency scenarios

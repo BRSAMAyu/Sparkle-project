@@ -11,11 +11,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
+
 	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
 	"github.com/sparkle/gateway/internal/i18n"
 	"github.com/sparkle/gateway/internal/logsafe"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/trace"
 )
 
 type actionStatusSender interface {

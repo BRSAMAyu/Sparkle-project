@@ -10,14 +10,15 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
-	"github.com/sparkle/gateway/internal/config"
-	"github.com/sparkle/gateway/internal/i18n"
-	"github.com/sparkle/gateway/internal/service"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
+	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
+	"github.com/sparkle/gateway/internal/config"
+	"github.com/sparkle/gateway/internal/i18n"
+	"github.com/sparkle/gateway/internal/service"
 )
 
 func TestChatOrchestratorIdleTimeoutClosesFromHandlerLoop(t *testing.T) {

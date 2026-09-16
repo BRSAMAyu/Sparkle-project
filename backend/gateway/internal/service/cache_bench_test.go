@@ -229,8 +229,8 @@ func BenchmarkCache_HitRate(b *testing.B) {
 	ctx := context.Background()
 
 	testCases := []struct {
-		name       string
-		numKeys    int
+		name          string
+		numKeys       int
 		accessPattern string // "sequential", "random", "zipf"
 	}{
 		{"small_cache_sequential", 100, "sequential"},
@@ -274,8 +274,8 @@ func BenchmarkCache_EntrySize(b *testing.B) {
 	ctx := context.Background()
 
 	testCases := []struct {
-		name  string
-		size  int
+		name string
+		size int
 	}{
 		{"64_bytes", 64},
 		{"256_bytes", 256},

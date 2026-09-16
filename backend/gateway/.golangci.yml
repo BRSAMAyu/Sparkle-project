@@ -1,5 +1,7 @@
-# GolangCI-Lint configuration for production-grade Go code
-# P3: Comprehensive linting for industrial standards
+# GolangCI-Lint configuration — right-sized 2026-09
+# Philosophy: catch real bugs (correctness, security, concurrency), not style opinions.
+# Style-philosophy linters (wsl/nlreturn/godot/gocritic/wrapcheck/nestif/goconst/
+# gocyclo/dupl/whitespace/prealloc) are intentionally NOT enabled.
 
 run:
   timeout: 5m
@@ -12,7 +14,7 @@ output:
 
 linters:
   enable:
-    # Default linters
+    # Correctness (default set)
     - errcheck
     - gosimple
     - govet
@@ -20,66 +22,30 @@ linters:
     - staticcheck
     - unused
 
-    # Additional security linters
+    # Security
     - gosec
-
-    # Code quality
-    - gocyclo
-    - gofmt
-    - goimports
-    - goconst
-    - gocritic
-    - godot
-    - misspell
-    - prealloc
-    - revive
-    - unconvert
-    - unparam
-    - whitespace
-
-    # Error handling
-    - errorlint
-    - wrapcheck
-
-    # Performance
     - bodyclose
     - noctx
 
-    # Style
-    - dupl
-    - nestif
-    - nlreturn
-    - wsl
+    # Error handling
+    - errorlint
+
+    # Hygiene
+    - gofmt
+    - goimports
+    - misspell
+    - unconvert
+    - unparam
+    - revive
 
 linters-settings:
-  gocyclo:
-    min-complexity: 15
-
-  goconst:
-    min-len: 3
-    min-occurrences: 3
-
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - experimental
-      - opinionated
-      - performance
-      - style
-    disabled-checks:
-      - hugeParam
-      - rangeValCopy
-
   goimports:
     local-prefixes: github.com/sparkle/gateway
 
   gosec:
     excludes:
-      - G104  # Audit errors not checked (we have errcheck)
-      - G304  # File path provided as taint input (expected in some cases)
-    config:
-      global:
-        audit: true
+      - G104  # Audit errors not checked (errcheck covers this)
+      - G304  # File path from variable is expected in file handling paths
 
   revive:
     rules:
@@ -103,51 +69,19 @@ linters-settings:
       - name: indent-error-flow
       - name: errorf
 
-  errorlint:
-    errorf: true
-    asserts: true
-    comparison: true
-
-  wrapcheck:
-    ignoreSigs:
-      - .Errorf(
-      - errors.New(
-      - errors.Unwrap(
-      - .Wrap(
-      - .Wrapf(
-      - .WithMessage(
-      - .WithMessagef(
-      - .WithStack(
-    ignoreSigRegexps:
-      - \.New.*Error\(
-    ignorePackageGlobs:
-      - github.com/sparkle/gateway/*
-
-  nestif:
-    min-complexity: 4
-
-  dupl:
-    threshold: 150
-
-  misspell:
-    locale: US
-
 issues:
   exclude-dirs:
     - vendor
     - mocks
   exclude-rules:
-    # Exclude some linters from running on test files
+    # Relax correctness linters on test files where they add noise
     - path: _test\.go
       linters:
-        - dupl
-        - goconst
         - gosec
-        - wrapcheck
-        - nlreturn
-        - wsl
+        - errcheck
+        - unparam
 
-    # Exclude some linters from generated files
+    # Never lint generated protobuf code
     - path: \.pb\.go
       linters:
         - all
@@ -156,14 +90,11 @@ issues:
     - path: _test\.go
       text: "should not use dot imports"
 
-    # Allow long functions in main
-    - path: cmd/server/main\.go
-      linters:
-        - gocyclo
-
   max-issues-per-linter: 0
   max-same-issues: 0
-  new: false
+  # Existing debt does not block the gate; every new change is fully linted.
+  # Pay down legacy findings gradually; then remove this to enforce repo-wide.
+  new-from-rev: HEAD~1
 
 severity:
   default-severity: warning

@@ -3,8 +3,9 @@ package handler
 import (
 	"strings"
 
-	"github.com/sparkle/gateway/internal/config"
 	"golang.org/x/time/rate"
+
+	"github.com/sparkle/gateway/internal/config"
 )
 
 const (

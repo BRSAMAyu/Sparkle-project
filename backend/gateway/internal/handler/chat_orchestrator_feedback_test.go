@@ -6,9 +6,10 @@ import (
 
 	"github.com/alicebob/miniredis/v2"
 	"github.com/redis/go-redis/v9"
-	"github.com/sparkle/gateway/internal/service"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/sparkle/gateway/internal/service"
 )
 
 func TestBuildExecutionSummaryToolResultPayload(t *testing.T) {

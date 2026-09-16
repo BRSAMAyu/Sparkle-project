@@ -114,13 +114,13 @@ type Config struct {
 	ShutdownTimeoutSeconds int `mapstructure:"SHUTDOWN_TIMEOUT_SECONDS"` // default 15
 
 	// WebSocket lifecycle
-	WSPongWaitSeconds          int `mapstructure:"WS_PONG_WAIT_SECONDS"`          // default 90
-	WSPingIntervalSeconds      int `mapstructure:"WS_PING_INTERVAL_SECONDS"`      // default 30
-	WSWriteWaitSeconds         int `mapstructure:"WS_WRITE_WAIT_SECONDS"`         // default 10
-	WSIdleTimeoutSeconds       int `mapstructure:"WS_IDLE_TIMEOUT_SECONDS"`       // default 300
-	WSReconnectWindowSeconds   int `mapstructure:"WS_RECONNECT_WINDOW_SECONDS"`   // default 30
-	WSReconnectMaxAttempts     int `mapstructure:"WS_RECONNECT_MAX_ATTEMPTS"`     // default 10
-	WSReconnectBlockSeconds    int `mapstructure:"WS_RECONNECT_BLOCK_SECONDS"`    // default 300
+	WSPongWaitSeconds        int `mapstructure:"WS_PONG_WAIT_SECONDS"`        // default 90
+	WSPingIntervalSeconds    int `mapstructure:"WS_PING_INTERVAL_SECONDS"`    // default 30
+	WSWriteWaitSeconds       int `mapstructure:"WS_WRITE_WAIT_SECONDS"`       // default 10
+	WSIdleTimeoutSeconds     int `mapstructure:"WS_IDLE_TIMEOUT_SECONDS"`     // default 300
+	WSReconnectWindowSeconds int `mapstructure:"WS_RECONNECT_WINDOW_SECONDS"` // default 30
+	WSReconnectMaxAttempts   int `mapstructure:"WS_RECONNECT_MAX_ATTEMPTS"`   // default 10
+	WSReconnectBlockSeconds  int `mapstructure:"WS_RECONNECT_BLOCK_SECONDS"`  // default 300
 
 	// Request timeout
 	RequestTimeoutSeconds int `mapstructure:"REQUEST_TIMEOUT_SECONDS"` // default 30

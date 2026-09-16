@@ -4,8 +4,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/sparkle/gateway/internal/config"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/sparkle/gateway/internal/config"
 )
 
 // TestNewWebSocketFactory tests WebSocketFactory creation

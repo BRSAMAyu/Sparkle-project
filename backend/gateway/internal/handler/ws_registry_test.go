@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+
 	"github.com/sparkle/gateway/internal/service"
 )
 

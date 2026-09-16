@@ -9,19 +9,20 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"regexp"
 	"net/url"
+	"regexp"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"go.uber.org/zap"
+
 	"github.com/sparkle/gateway/internal/config"
 	"github.com/sparkle/gateway/internal/logsafe"
 	"github.com/sparkle/gateway/internal/metrics"
 	"github.com/sparkle/gateway/internal/service"
-	"go.uber.org/zap"
 )
 
 // wsDefaultMaxMessageBytes is the fallback when WSMaxMessageBytes is not

@@ -23,7 +23,7 @@ func (sc *SecurityChecker) IsSQLInjection(input string) bool {
 	patterns := []string{
 		`['"].*?(OR|AND|UNION|SELECT|INSERT|UPDATE|DELETE|DROP)`,
 		`;.*?(DROP|DELETE|UPDATE|INSERT)`,
-		`--`,         // Simple comment check
+		`--`, // Simple comment check
 		`/\*.*\*/`,
 		`\b(UNION|SELECT|INSERT|UPDATE|DELETE|DROP)\s+`, // Raw keywords
 		`WAITFOR\s+DELAY`,

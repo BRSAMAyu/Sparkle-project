@@ -6,13 +6,14 @@ import (
 	"testing"
 	"time"
 
-	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
-	"github.com/sparkle/gateway/internal/config"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/test/bufconn"
+
+	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
+	"github.com/sparkle/gateway/internal/config"
 )
 
 type wrapperAgentServer struct {

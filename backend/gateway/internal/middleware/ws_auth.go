@@ -10,10 +10,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
+
 	"github.com/sparkle/gateway/internal/config"
 	"github.com/sparkle/gateway/internal/logsafe"
 	"github.com/sparkle/gateway/internal/metrics"
-	"go.uber.org/zap"
 )
 
 var wsTicketGetDel = redis.NewScript(`

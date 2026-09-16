@@ -12,9 +12,10 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/sparkle/gateway/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/sparkle/gateway/internal/config"
 )
 
 func newTestReader(s string) io.Reader { return strings.NewReader(s) }

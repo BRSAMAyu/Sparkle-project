@@ -136,7 +136,7 @@ func TestSanitizeFilename(t *testing.T) {
 		{
 			name:     "只有路径",
 			input:    "../../",
-			expected: "..",  // path.Base("../../")返回".."
+			expected: "..", // path.Base("../../")返回".."
 		},
 		{
 			name:     "空字符串",

@@ -10,8 +10,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sparkle/gateway/internal/middleware"
 	"go.uber.org/zap"
+
+	"github.com/sparkle/gateway/internal/middleware"
 )
 
 func TestProxyRoutesHandler_RouteRegistration(t *testing.T) {

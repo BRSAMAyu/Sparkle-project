@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+
 	pbws "github.com/sparkle/gateway/gen/ws"
 )
 

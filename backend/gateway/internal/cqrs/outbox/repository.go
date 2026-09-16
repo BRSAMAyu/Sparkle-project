@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/sparkle/gateway/internal/cqrs/event"
 	"github.com/sparkle/gateway/internal/db"
 )

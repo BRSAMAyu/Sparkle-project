@@ -14,6 +14,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
+
 	"github.com/sparkle/gateway/internal/config"
 	"github.com/sparkle/gateway/internal/i18n"
 	"github.com/sparkle/gateway/internal/service"
@@ -44,10 +45,10 @@ func NewAuthHandler(cfg *config.Config, appleTokenVerifier appleTokenVerifier, a
 }
 
 type SocialLoginRequest struct {
-	Provider       string `json:"provider" binding:"required"`
-	Token          string `json:"token" binding:"required"`
-	AcceptedTOS    bool   `json:"accepted_tos"`
-	AcceptedPrivacy bool  `json:"accepted_privacy"`
+	Provider        string `json:"provider" binding:"required"`
+	Token           string `json:"token" binding:"required"`
+	AcceptedTOS     bool   `json:"accepted_tos"`
+	AcceptedPrivacy bool   `json:"accepted_privacy"`
 }
 
 func (h *AuthHandler) AppleLogin(c *gin.Context) {

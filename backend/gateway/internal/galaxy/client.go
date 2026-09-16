@@ -7,14 +7,15 @@ import (
 	"sync"
 	"time"
 
-	galaxyv1 "github.com/sparkle/gateway/gen/galaxy/v1"
-	"github.com/sparkle/gateway/internal/config"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
+
+	galaxyv1 "github.com/sparkle/gateway/gen/galaxy/v1"
+	"github.com/sparkle/gateway/internal/config"
 )
 
 type Client struct {
@@ -50,10 +51,10 @@ func NewClient(cfg *config.Config) (*Client, error) {
 
 	client := galaxyv1.NewGalaxyServiceClient(conn)
 	return &Client{
-		conn:           conn,
-		api:            client,
-		config:         cfg,
-		dialOptions:    dialOptions,
+		conn:            conn,
+		api:             client,
+		config:          cfg,
+		dialOptions:     dialOptions,
 		minReconnectGap: 2 * time.Second,
 	}, nil
 }
@@ -183,7 +184,7 @@ func (c *Client) UpdateNodeMastery(ctx context.Context, userID, nodeID string, m
 		NodeId:   nodeID,
 		Mastery:  mastery,
 		Revision: version.UnixMilli(),
-		Reason:  reason,
+		Reason:   reason,
 	}
 	return api.UpdateNodeMastery(ctx, req)
 }

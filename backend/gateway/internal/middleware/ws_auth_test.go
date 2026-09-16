@@ -9,9 +9,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/redis/go-redis/v9"
-	"github.com/sparkle/gateway/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/sparkle/gateway/internal/config"
 )
 
 func newWsAuthTestRouter(cfg *config.Config, rdb *redis.Client) *gin.Engine {

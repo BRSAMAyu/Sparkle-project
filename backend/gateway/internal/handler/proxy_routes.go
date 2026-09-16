@@ -11,8 +11,9 @@ import (
 	"net/http/httputil"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sparkle/gateway/internal/middleware"
 	"go.uber.org/zap"
+
+	"github.com/sparkle/gateway/internal/middleware"
 )
 
 // ProxyRoutesHandler handles explicit proxy routes to Python Backend
@@ -1012,7 +1013,6 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		dlq.POST("/replay", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered DLQ admin proxy routes")
-
 
 	// ==================== Admin Catch-All Routes ====================
 	admin := api.Group("/admin")

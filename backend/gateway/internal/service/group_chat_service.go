@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5/pgtype"
+
 	"github.com/sparkle/gateway/internal/db"
 )
 

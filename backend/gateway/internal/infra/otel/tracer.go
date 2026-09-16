@@ -64,7 +64,7 @@ func InitTracer(serviceName string) func(context.Context) error {
 
 	// Set global provider
 	otel.SetTracerProvider(tp)
-	
+
 	// Set global propagator to TraceContext (W3C)
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
 

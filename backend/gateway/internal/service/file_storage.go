@@ -9,8 +9,9 @@ import (
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
-	"github.com/sparkle/gateway/internal/config"
 	"go.uber.org/zap"
+
+	"github.com/sparkle/gateway/internal/config"
 )
 
 type FileStorageService struct {

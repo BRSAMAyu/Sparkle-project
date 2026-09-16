@@ -9,9 +9,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	"github.com/sparkle/gateway/internal/config"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+
+	"github.com/sparkle/gateway/internal/config"
 )
 
 func TestSTTHandlerUsesConfiguredOriginAllowlist(t *testing.T) {

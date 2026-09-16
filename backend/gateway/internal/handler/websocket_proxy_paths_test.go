@@ -8,9 +8,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sparkle/gateway/internal/config"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+
+	"github.com/sparkle/gateway/internal/config"
 )
 
 func TestWebSocketProxyURLValidationAndSanitization(t *testing.T) {

@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+
 	"github.com/sparkle/gateway/internal/db"
 )
 
@@ -20,10 +21,10 @@ type Manager struct {
 }
 
 type Config struct {
-	InjectLatency    bool
-	LatencyDuration  time.Duration
-	InjectError      bool
-	ErrorRate        float64 // 0.0 to 1.0
+	InjectLatency   bool
+	LatencyDuration time.Duration
+	InjectError     bool
+	ErrorRate       float64 // 0.0 to 1.0
 }
 
 func NewManager(database db.DBTX) *Manager {
@@ -82,7 +83,7 @@ func (m *Manager) HandleInject(c *gin.Context) {
 		}
 		m.config.InjectLatency = true
 		m.config.LatencyDuration = duration
-		
+
 		// Auto disable after some time (safety mechanism)
 		go func() {
 			time.Sleep(2 * time.Minute)

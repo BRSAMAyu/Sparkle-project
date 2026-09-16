@@ -10,10 +10,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
-	"github.com/sparkle/gateway/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
+	"github.com/sparkle/gateway/internal/config"
 )
 
 // Regression test for ISSUE-20260504-1430-C6:

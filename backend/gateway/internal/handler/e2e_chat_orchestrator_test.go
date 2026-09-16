@@ -30,8 +30,8 @@ func newTestOrchestrator(t *testing.T) *ChatOrchestrator {
 		t.Skipf("agent client creation failed (gRPC server may be down): %v", err)
 	}
 	return NewChatOrchestrator(
-		ac,                            // agent client
-		nil,                           // galaxy client
+		ac,                                 // agent client
+		nil,                                // galaxy client
 		(service.UserIdentityService)(nil), // userIdentity (nil for integration)
 		(*service.ChatHistoryService)(nil),
 		(*service.QuotaService)(nil),

@@ -9,8 +9,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	"github.com/sparkle/gateway/internal/config"
 	"go.uber.org/zap"
+
+	"github.com/sparkle/gateway/internal/config"
 )
 
 // STTHandler proxies WebSocket connections from Flutter to Python STT service

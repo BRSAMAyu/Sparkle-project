@@ -6,9 +6,10 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/sparkle/gateway/internal/db"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/sparkle/gateway/internal/db"
 )
 
 type fakeGroupChatStore struct {

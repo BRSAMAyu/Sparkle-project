@@ -6,8 +6,9 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sparkle/gateway/internal/config"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/sparkle/gateway/internal/config"
 )
 
 func TestInternalAPIKey_ValidKey(t *testing.T) {

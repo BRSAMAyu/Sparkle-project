@@ -11,10 +11,11 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
+
 	cqrsEvent "github.com/sparkle/gateway/internal/cqrs/event"
 	"github.com/sparkle/gateway/internal/db"
 	"github.com/sparkle/gateway/internal/service"
-	"go.uber.org/zap"
 )
 
 // scanKeys uses SCAN instead of KEYS to avoid blocking the Redis event loop.

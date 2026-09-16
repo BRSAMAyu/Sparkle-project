@@ -17,8 +17,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/hashicorp/golang-lru/v2/expirable"
-	"github.com/sparkle/gateway/internal/service"
 	"golang.org/x/time/rate"
+
+	"github.com/sparkle/gateway/internal/service"
 )
 
 var allowedMimeTypesByExt = map[string]map[string]bool{

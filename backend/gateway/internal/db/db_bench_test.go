@@ -448,10 +448,10 @@ func BenchmarkPoolConfig(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
 			_ = pgxpool.Config{
-				MaxConns:        20,
-				MinConns:        5,
-				MaxConnLifetime: time.Hour,
-				MaxConnIdleTime: 30 * time.Minute,
+				MaxConns:          20,
+				MinConns:          5,
+				MaxConnLifetime:   time.Hour,
+				MaxConnIdleTime:   30 * time.Minute,
 				HealthCheckPeriod: 1 * time.Minute,
 			}
 		}
@@ -461,10 +461,10 @@ func BenchmarkPoolConfig(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
 			_ = pgxpool.Config{
-				MaxConns:        100,
-				MinConns:        10,
-				MaxConnLifetime: 2 * time.Hour,
-				MaxConnIdleTime: 15 * time.Minute,
+				MaxConns:          100,
+				MinConns:          10,
+				MaxConnLifetime:   2 * time.Hour,
+				MaxConnIdleTime:   15 * time.Minute,
 				HealthCheckPeriod: 30 * time.Second,
 			}
 		}

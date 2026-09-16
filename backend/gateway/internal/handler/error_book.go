@@ -6,13 +6,14 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	errorbookv1 "github.com/sparkle/gateway/gen/proto/error_book"
-	"github.com/sparkle/gateway/internal/error_book"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	grpcstatus "google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
+
+	errorbookv1 "github.com/sparkle/gateway/gen/proto/error_book"
+	"github.com/sparkle/gateway/internal/error_book"
 )
 
 type ErrorBookHandler struct {

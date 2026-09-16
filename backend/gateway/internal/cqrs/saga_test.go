@@ -12,10 +12,11 @@ import (
 	"github.com/alicebob/miniredis/v2"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
-	"github.com/sparkle/gateway/internal/cqrs/event"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+
+	"github.com/sparkle/gateway/internal/cqrs/event"
 )
 
 // ---------------------------------------------------------------------------
@@ -558,15 +559,15 @@ func TestTaskCreateSaga_Simulation(t *testing.T) {
 
 	coord.Register(def)
 	inst, err := coord.Execute(context.Background(), "task_create_saga", map[string]interface{}{
-		"title":    "Study math",
-		"user_id":  "user-789",
+		"title":   "Study math",
+		"user_id": "user-789",
 	})
 
 	// Step 3 failed, so compensation should have run for steps 1 and 2.
 	assert.Error(t, err)
 	assert.Equal(t, SagaStatusCompensated, inst.Status)
-	assert.False(t, taskCreated)  // compensated back
-	assert.False(t, notifSent)    // compensated back
+	assert.False(t, taskCreated) // compensated back
+	assert.False(t, notifSent)   // compensated back
 
 	mu.Lock()
 	assert.Equal(t, []string{"cancel_notif", "delete_task"}, compensateOrder)

@@ -4,12 +4,13 @@ import (
 	"context"
 	"testing"
 
-	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
-	"github.com/sparkle/gateway/internal/config"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+
+	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
+	"github.com/sparkle/gateway/internal/config"
 )
 
 // ============================================================
@@ -48,11 +49,11 @@ func TestGetUserProfileRequest(t *testing.T) {
 func TestSubmitContentReviewFeedbackRequest(t *testing.T) {
 	t.Run("valid_feedback_request", func(t *testing.T) {
 		req := &agentv1.ContentReviewFeedbackRequest{
-			UserId:       "user-001",
-			ReviewId:     "review-001",
-			ResponseId:   "resp-001",
-			Rating:       1,
-			Comment:      "inappropriate content",
+			UserId:     "user-001",
+			ReviewId:   "review-001",
+			ResponseId: "resp-001",
+			Rating:     1,
+			Comment:    "inappropriate content",
 		}
 		assert.Equal(t, "user-001", req.UserId)
 		assert.Equal(t, "review-001", req.ReviewId)

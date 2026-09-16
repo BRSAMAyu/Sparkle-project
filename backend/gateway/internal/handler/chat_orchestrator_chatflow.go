@@ -15,10 +15,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
-	"github.com/sparkle/gateway/internal/db"
-	wsmetrics "github.com/sparkle/gateway/internal/metrics"
-	"github.com/sparkle/gateway/internal/service"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -26,6 +22,11 @@ import (
 	grpcstatus "google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
+	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
+	"github.com/sparkle/gateway/internal/db"
+	wsmetrics "github.com/sparkle/gateway/internal/metrics"
+	"github.com/sparkle/gateway/internal/service"
 )
 
 const (

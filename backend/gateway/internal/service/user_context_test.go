@@ -7,9 +7,10 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/sparkle/gateway/internal/db"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/sparkle/gateway/internal/db"
 )
 
 // ============================================================
@@ -101,10 +102,10 @@ func TestBuildFocusLines(t *testing.T) {
 		}
 		lines := buildFocusLines(stats)
 		assert.Equal(t, 1, len(lines))
-		assert.Contains(t, lines[0], "3")   // sessions
-		assert.Contains(t, lines[0], "90")  // minutes
-		assert.Contains(t, lines[0], "30")  // avg
-		assert.Contains(t, lines[0], "5")   // streak
+		assert.Contains(t, lines[0], "3")  // sessions
+		assert.Contains(t, lines[0], "90") // minutes
+		assert.Contains(t, lines[0], "30") // avg
+		assert.Contains(t, lines[0], "5")  // streak
 	})
 
 	t.Run("with_last_session", func(t *testing.T) {

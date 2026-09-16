@@ -4,8 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/sparkle/gateway/internal/config"
 	"go.uber.org/zap"
+
+	"github.com/sparkle/gateway/internal/config"
 )
 
 type FileGCService struct {

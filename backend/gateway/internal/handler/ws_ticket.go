@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
+
 	"github.com/sparkle/gateway/internal/config"
 	"github.com/sparkle/gateway/internal/metrics"
 )
@@ -63,8 +64,8 @@ func (h *WSTicketHandler) Issue(c *gin.Context) {
 
 	metrics.WSTicketIssued.Inc()
 	c.JSON(http.StatusOK, gin.H{
-		"ticket":      ticket,
-		"expires_in":  h.cfg.WSTicketTTLSeconds,
-		"token_type":  "ws_ticket",
+		"ticket":     ticket,
+		"expires_in": h.cfg.WSTicketTTLSeconds,
+		"token_type": "ws_ticket",
 	})
 }

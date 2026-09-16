@@ -14,19 +14,19 @@ import (
 // ============================================================
 
 type PerformanceStats struct {
-	mu                 sync.RWMutex
-	latencies          []float64
-	throughputs        []float64
-	errors             int64
-	totalRequests      int64
-	startTime          time.Time
+	mu            sync.RWMutex
+	latencies     []float64
+	throughputs   []float64
+	errors        int64
+	totalRequests int64
+	startTime     time.Time
 }
 
 func NewPerformanceStats() *PerformanceStats {
 	return &PerformanceStats{
-		latencies:    make([]float64, 0),
-		throughputs:  make([]float64, 0),
-		startTime:    time.Now(),
+		latencies:   make([]float64, 0),
+		throughputs: make([]float64, 0),
+		startTime:   time.Now(),
 	}
 }
 
@@ -645,7 +645,7 @@ func TestSlowClientHandling(t *testing.T) {
 
 	// Slow client shouldn't block fast clients significantly
 	assert.Less(t, avgFast, avgSlow+100.0) // Some overhead acceptable
-	assert.Greater(t, avgSlow, 400.0)       // Slow client is indeed slow
+	assert.Greater(t, avgSlow, 400.0)      // Slow client is indeed slow
 }
 
 // ============================================================

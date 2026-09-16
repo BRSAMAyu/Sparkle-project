@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"testing"
 
-	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
+
+	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
 )
 
 func TestProtoSerializationChatResponseDeltaRoundTrip(t *testing.T) {

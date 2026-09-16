@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/gorilla/websocket"
+
 	"github.com/sparkle/gateway/internal/config"
 )
 

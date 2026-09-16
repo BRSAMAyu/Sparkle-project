@@ -13,9 +13,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"go.uber.org/zap"
+
 	"github.com/sparkle/gateway/internal/cqrs/event"
 	"github.com/sparkle/gateway/internal/cqrs/outbox"
-	"go.uber.org/zap"
 )
 
 // ---------------------------------------------------------------------------
@@ -61,7 +62,7 @@ type SagaStep interface {
 // StepFunc is a convenience adapter that wraps plain functions as a SagaStep.
 type StepFunc struct {
 	StepName     string
-	ExecuteFn   func(ctx context.Context, data map[string]interface{}) (map[string]interface{}, error)
+	ExecuteFn    func(ctx context.Context, data map[string]interface{}) (map[string]interface{}, error)
 	CompensateFn func(ctx context.Context, data map[string]interface{}) error
 }
 
@@ -134,7 +135,7 @@ type SagaInstance struct {
 	CreatedAt     time.Time              `json:"created_at"`
 	UpdatedAt     time.Time              `json:"updated_at"`
 	Error         string                 `json:"error,omitempty"`
-	CorrelationID string                `json:"correlation_id,omitempty"`
+	CorrelationID string                 `json:"correlation_id,omitempty"`
 }
 
 // ---------------------------------------------------------------------------
@@ -154,7 +155,7 @@ var (
 
 	sagaStepDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
 		Namespace: "sparkle", Subsystem: "saga", Name: "step_duration_seconds",
-		Help:   "Duration of individual saga step execution",
+		Help:    "Duration of individual saga step execution",
 		Buckets: []float64{0.01, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10},
 	}, []string{"saga_type", "step_name"})
 

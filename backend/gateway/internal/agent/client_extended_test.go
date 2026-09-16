@@ -6,12 +6,13 @@ import (
 	"testing"
 	"time"
 
-	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
-	"github.com/sparkle/gateway/internal/config"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/status"
+
+	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
+	"github.com/sparkle/gateway/internal/config"
 )
 
 // ============================================================
@@ -140,7 +141,7 @@ func TestStreamChatWithFallback_CircuitOpen(t *testing.T) {
 	h.ForceOpen()
 
 	c := &Client{
-		config:       &config.Config{AgentAddress: "localhost:50051"},
+		config:        &config.Config{AgentAddress: "localhost:50051"},
 		healthChecker: h,
 	}
 
@@ -157,8 +158,8 @@ func TestStreamChatWithFallback_CircuitOpen(t *testing.T) {
 
 func TestShouldReconnect_TableDriven(t *testing.T) {
 	tests := []struct {
-		name       string
-		err        error
+		name        string
+		err         error
 		shouldRecon bool
 	}{
 		{"nil_error", nil, false},

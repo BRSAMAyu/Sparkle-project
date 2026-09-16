@@ -7,13 +7,14 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sparkle/gateway/internal/config"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/sparkle/gateway/internal/config"
 )
 
 func TestInternalIPWhitelist_DevelopmentBypass(t *testing.T) {
 	cfg := &config.Config{
-		Environment:        "development",
+		Environment:         "development",
 		InternalIPWhitelist: []string{"10.0.0.0/8"},
 	}
 	r := gin.New()

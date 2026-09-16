@@ -10,9 +10,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/redis/go-redis/v9"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/sparkle/gateway/internal/config"
 	"github.com/sparkle/gateway/internal/service"
-	"github.com/stretchr/testify/assert"
 )
 
 // TestChatOrchestrator_QuotaIntegration verifies that the WebSocket handler

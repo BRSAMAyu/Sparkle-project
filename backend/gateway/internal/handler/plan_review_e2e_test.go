@@ -275,12 +275,12 @@ func TestPlanReviewRejectionFlow(t *testing.T) {
 		if reviewID != "" {
 			// Reject the review
 			rejectionRequest := map[string]interface{}{
-				"type":       "plan_review_feedback",
-				"reviewId":   reviewID,
-				"decision":   "reject",
-				"reason":     "The plan does not meet my needs",
-				"sessionId":  "test-rejection-flow",
-				"userId":     "test-user-reject",
+				"type":      "plan_review_feedback",
+				"reviewId":  reviewID,
+				"decision":  "reject",
+				"reason":    "The plan does not meet my needs",
+				"sessionId": "test-rejection-flow",
+				"userId":    "test-user-reject",
 			}
 
 			err = wsConn.WriteJSON(rejectionRequest)

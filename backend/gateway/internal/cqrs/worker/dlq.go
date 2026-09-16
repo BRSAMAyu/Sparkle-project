@@ -56,9 +56,9 @@ func SendToDLQ(ctx context.Context, client *redis.Client, entry DLQEntry) error 
 
 // DLQHandler provides operations for managing the dead letter queue.
 type DLQHandler struct {
-	redis   *redis.Client
-	logger  *zap.Logger
-	maxAge  time.Duration
+	redis  *redis.Client
+	logger *zap.Logger
+	maxAge time.Duration
 }
 
 // DLQHandlerConfig configures the DLQ handler.
@@ -312,11 +312,11 @@ func (h *DLQHandler) GetCount(ctx context.Context) (int64, error) {
 
 // GetStats returns statistics about the DLQ.
 type DLQStats struct {
-	TotalCount       int64            `json:"total_count"`
-	ByErrorType      map[string]int64 `json:"by_error_type"`
-	ByConsumerGroup  map[string]int64 `json:"by_consumer_group"`
-	OldestEntryTime  *time.Time       `json:"oldest_entry_time"`
-	NewestEntryTime  *time.Time       `json:"newest_entry_time"`
+	TotalCount      int64            `json:"total_count"`
+	ByErrorType     map[string]int64 `json:"by_error_type"`
+	ByConsumerGroup map[string]int64 `json:"by_consumer_group"`
+	OldestEntryTime *time.Time       `json:"oldest_entry_time"`
+	NewestEntryTime *time.Time       `json:"newest_entry_time"`
 }
 
 // GetStats retrieves statistics about the dead letter queue.

@@ -8,10 +8,11 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
 	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
 	"github.com/sparkle/gateway/internal/db"
 	"github.com/sparkle/gateway/internal/service"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func TestParseEnvelopeJSONAndPayloadType(t *testing.T) {

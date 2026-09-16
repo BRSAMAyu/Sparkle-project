@@ -10,12 +10,13 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
+
 	cqrsEvent "github.com/sparkle/gateway/internal/cqrs/event"
 	"github.com/sparkle/gateway/internal/cqrs/metrics"
 	"github.com/sparkle/gateway/internal/cqrs/outbox"
 	cqrsWorker "github.com/sparkle/gateway/internal/cqrs/worker"
 	"github.com/sparkle/gateway/internal/db"
-	"go.uber.org/zap"
 )
 
 const (
@@ -27,33 +28,33 @@ const (
 
 // NodeView represents the read model for a knowledge node.
 type NodeView struct {
-	ID              string     `json:"id"`
-	Name            string     `json:"name"`
-	NameEn          string     `json:"name_en,omitempty"`
-	Description     string     `json:"description,omitempty"`
-	Keywords        []string   `json:"keywords,omitempty"`
-	ImportanceLevel int32      `json:"importance_level"`
-	IsSeed          bool       `json:"is_seed"`
-	ParentID        string     `json:"parent_id,omitempty"`
-	SubjectID       int32      `json:"subject_id,omitempty"`
-	ChildCount      int        `json:"child_count"`
-	CreatedAt       time.Time  `json:"created_at"`
+	ID              string    `json:"id"`
+	Name            string    `json:"name"`
+	NameEn          string    `json:"name_en,omitempty"`
+	Description     string    `json:"description,omitempty"`
+	Keywords        []string  `json:"keywords,omitempty"`
+	ImportanceLevel int32     `json:"importance_level"`
+	IsSeed          bool      `json:"is_seed"`
+	ParentID        string    `json:"parent_id,omitempty"`
+	SubjectID       int32     `json:"subject_id,omitempty"`
+	ChildCount      int       `json:"child_count"`
+	CreatedAt       time.Time `json:"created_at"`
 }
 
 // UserNodeView represents a user's progress on a knowledge node.
 type UserNodeView struct {
-	NodeID           string     `json:"node_id"`
-	UserID           string     `json:"user_id"`
-	MasteryScore     float64    `json:"mastery_score"`
-	TotalMinutes     int32      `json:"total_minutes"`
-	StudyCount       int32      `json:"study_count"`
-	IsUnlocked       bool       `json:"is_unlocked"`
-	IsCollapsed      bool       `json:"is_collapsed"`
-	IsFavorite       bool       `json:"is_favorite"`
-	LastStudyAt      *time.Time `json:"last_study_at,omitempty"`
-	NextReviewAt     *time.Time `json:"next_review_at,omitempty"`
-	FirstUnlockAt    *time.Time `json:"first_unlock_at,omitempty"`
-	UpdatedAt        time.Time  `json:"updated_at"`
+	NodeID        string     `json:"node_id"`
+	UserID        string     `json:"user_id"`
+	MasteryScore  float64    `json:"mastery_score"`
+	TotalMinutes  int32      `json:"total_minutes"`
+	StudyCount    int32      `json:"study_count"`
+	IsUnlocked    bool       `json:"is_unlocked"`
+	IsCollapsed   bool       `json:"is_collapsed"`
+	IsFavorite    bool       `json:"is_favorite"`
+	LastStudyAt   *time.Time `json:"last_study_at,omitempty"`
+	NextReviewAt  *time.Time `json:"next_review_at,omitempty"`
+	FirstUnlockAt *time.Time `json:"first_unlock_at,omitempty"`
+	UpdatedAt     time.Time  `json:"updated_at"`
 }
 
 // UserGalaxyStats represents aggregated galaxy statistics for a user.

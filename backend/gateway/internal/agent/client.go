@@ -10,8 +10,6 @@ import (
 	"sync"
 	"time"
 
-	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
-	"github.com/sparkle/gateway/internal/config"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
@@ -23,6 +21,9 @@ import (
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+
+	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
+	"github.com/sparkle/gateway/internal/config"
 )
 
 // ErrCircuitOpen is returned when the circuit breaker is open
@@ -538,8 +539,8 @@ func (c *Client) RequestRegeneration(ctx context.Context, req *agentv1.Regenerat
 		return nil, err
 	}
 	retryCtx, retryCancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer retryCancel()
-		return c.currentAPI().RequestRegeneration(c.injectMetadata(retryCtx, req.UserId), req)
+	defer retryCancel()
+	return c.currentAPI().RequestRegeneration(c.injectMetadata(retryCtx, req.UserId), req)
 }
 
 func (c *Client) GetFeedbackStatistics(ctx context.Context, req *agentv1.FeedbackStatisticsRequest) (*agentv1.FeedbackStatisticsResponse, error) {
@@ -552,8 +553,8 @@ func (c *Client) GetFeedbackStatistics(ctx context.Context, req *agentv1.Feedbac
 		return nil, err
 	}
 	retryCtx, retryCancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer retryCancel()
-		return c.currentAPI().GetFeedbackStatistics(c.injectMetadata(retryCtx, req.UserId), req)
+	defer retryCancel()
+	return c.currentAPI().GetFeedbackStatistics(c.injectMetadata(retryCtx, req.UserId), req)
 }
 
 func (c *Client) GetArbitrationQueue(ctx context.Context, req *agentv1.GetArbitrationQueueRequest) (*agentv1.GetArbitrationQueueResponse, error) {
@@ -566,8 +567,8 @@ func (c *Client) GetArbitrationQueue(ctx context.Context, req *agentv1.GetArbitr
 		return nil, err
 	}
 	retryCtx, retryCancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer retryCancel()
-		return c.currentAPI().GetArbitrationQueue(c.injectMetadata(retryCtx, ""), req)
+	defer retryCancel()
+	return c.currentAPI().GetArbitrationQueue(c.injectMetadata(retryCtx, ""), req)
 }
 
 func (c *Client) AssignArbitrationCase(ctx context.Context, req *agentv1.AssignArbitrationCaseRequest) (*agentv1.AssignArbitrationCaseResponse, error) {
@@ -580,8 +581,8 @@ func (c *Client) AssignArbitrationCase(ctx context.Context, req *agentv1.AssignA
 		return nil, err
 	}
 	retryCtx, retryCancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer retryCancel()
-		return c.currentAPI().AssignArbitrationCase(c.injectMetadata(retryCtx, req.ArbitratorId), req)
+	defer retryCancel()
+	return c.currentAPI().AssignArbitrationCase(c.injectMetadata(retryCtx, req.ArbitratorId), req)
 }
 
 func (c *Client) SubmitArbitrationDecision(ctx context.Context, req *agentv1.SubmitArbitrationDecisionRequest) (*agentv1.SubmitArbitrationDecisionResponse, error) {
@@ -594,8 +595,8 @@ func (c *Client) SubmitArbitrationDecision(ctx context.Context, req *agentv1.Sub
 		return nil, err
 	}
 	retryCtx, retryCancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer retryCancel()
-		return c.currentAPI().SubmitArbitrationDecision(c.injectMetadata(retryCtx, req.ArbitratorId), req)
+	defer retryCancel()
+	return c.currentAPI().SubmitArbitrationDecision(c.injectMetadata(retryCtx, req.ArbitratorId), req)
 }
 
 func (c *Client) GetArbitrationQueueStats(ctx context.Context, req *agentv1.GetArbitrationQueueStatsRequest) (*agentv1.GetArbitrationQueueStatsResponse, error) {
@@ -608,8 +609,8 @@ func (c *Client) GetArbitrationQueueStats(ctx context.Context, req *agentv1.GetA
 		return nil, err
 	}
 	retryCtx, retryCancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer retryCancel()
-		return c.currentAPI().GetArbitrationQueueStats(c.injectMetadata(retryCtx, ""), req)
+	defer retryCancel()
+	return c.currentAPI().GetArbitrationQueueStats(c.injectMetadata(retryCtx, ""), req)
 }
 
 // statusCodeLabel returns a short string label for the grpc status code for metrics.

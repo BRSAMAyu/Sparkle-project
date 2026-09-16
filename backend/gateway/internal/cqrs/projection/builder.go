@@ -7,10 +7,11 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.uber.org/zap"
+
 	"github.com/sparkle/gateway/internal/cqrs/event"
 	"github.com/sparkle/gateway/internal/cqrs/metrics"
 	"github.com/sparkle/gateway/internal/db"
-	"go.uber.org/zap"
 )
 
 // RebuildOptions configures projection rebuilding.
@@ -61,13 +62,13 @@ func NewBuilder(
 
 // RebuildProgress contains progress information for a rebuild.
 type RebuildProgress struct {
-	ProjectionName string        `json:"projection_name"`
-	Status         string        `json:"status"`
-	TotalEvents    int64         `json:"total_events"`
-	ProcessedEvents int64        `json:"processed_events"`
-	PercentComplete float64      `json:"percent_complete"`
+	ProjectionName  string        `json:"projection_name"`
+	Status          string        `json:"status"`
+	TotalEvents     int64         `json:"total_events"`
+	ProcessedEvents int64         `json:"processed_events"`
+	PercentComplete float64       `json:"percent_complete"`
 	Duration        time.Duration `json:"duration"`
-	StartedAt       time.Time    `json:"started_at"`
+	StartedAt       time.Time     `json:"started_at"`
 }
 
 // RebuildFromEventStore rebuilds a projection from the event store.

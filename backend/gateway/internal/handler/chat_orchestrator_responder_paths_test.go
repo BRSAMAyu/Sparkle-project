@@ -7,10 +7,11 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
-	pbws "github.com/sparkle/gateway/gen/ws"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
+
+	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
+	pbws "github.com/sparkle/gateway/gen/ws"
 )
 
 func readTextEnvelope(t *testing.T, conn *websocket.Conn) map[string]interface{} {

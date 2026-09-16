@@ -7,9 +7,10 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/sparkle/gateway/internal/config"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+
+	"github.com/sparkle/gateway/internal/config"
 )
 
 func TestBuildBackendWebSocketHeaders_ForwardsAuthAndProxyHeaders(t *testing.T) {

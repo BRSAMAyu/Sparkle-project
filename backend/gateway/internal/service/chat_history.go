@@ -15,8 +15,9 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
-	"github.com/sparkle/gateway/internal/i18n"
 	"go.uber.org/zap"
+
+	"github.com/sparkle/gateway/internal/i18n"
 )
 
 const (

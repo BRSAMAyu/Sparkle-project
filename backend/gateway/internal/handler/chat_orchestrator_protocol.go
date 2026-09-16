@@ -11,10 +11,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
-	pbws "github.com/sparkle/gateway/gen/ws"
-	"github.com/sparkle/gateway/internal/i18n"
-	wsmetrics "github.com/sparkle/gateway/internal/metrics"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
@@ -22,6 +18,11 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
+	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
+	pbws "github.com/sparkle/gateway/gen/ws"
+	"github.com/sparkle/gateway/internal/i18n"
+	wsmetrics "github.com/sparkle/gateway/internal/metrics"
 )
 
 // jsonMetadataKeys lists metadata keys whose values are JSON-serialized objects.

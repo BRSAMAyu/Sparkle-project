@@ -9,9 +9,10 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/require"
+
 	"github.com/sparkle/gateway/internal/config"
 	"github.com/sparkle/gateway/internal/i18n"
-	"github.com/stretchr/testify/require"
 )
 
 func TestSanitizeErrorResponse_ProductionHidesInternalDetails(t *testing.T) {

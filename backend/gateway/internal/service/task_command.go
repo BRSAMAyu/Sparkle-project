@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/sparkle/gateway/internal/cqrs/event"
 	"github.com/sparkle/gateway/internal/cqrs/outbox"
 	"github.com/sparkle/gateway/internal/db"
@@ -556,9 +557,6 @@ func (s *TaskCommandService) ConfirmGeneratedTasks(ctx context.Context, userID u
 	})
 }
 
-
-
-
 // PauseTask pauses an in-progress task and publishes a TaskPaused event.
 func (s *TaskCommandService) PauseTask(ctx context.Context, userID, taskID uuid.UUID) error {
 	return s.unitOfWork.ExecuteInTransaction(ctx, func(txCtx *outbox.TransactionContext) error {
@@ -669,6 +667,7 @@ func (s *TaskCommandService) MarkStuck(ctx context.Context, userID, taskID uuid.
 		return nil
 	})
 }
+
 // Helper functions for nullable types
 func nilOrString(s *string) pgtype.Text {
 	if s == nil {

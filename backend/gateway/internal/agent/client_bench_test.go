@@ -5,10 +5,11 @@ import (
 	"testing"
 	"time"
 
-	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+
+	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
 )
 
 // ============================================================

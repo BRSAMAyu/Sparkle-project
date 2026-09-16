@@ -14,12 +14,13 @@ import (
 	"syscall"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/sparkle/gateway/internal/config"
 	"github.com/sparkle/gateway/internal/handler"
 	"github.com/sparkle/gateway/internal/i18n"
 	"github.com/sparkle/gateway/internal/infra/logger"
 	"github.com/sparkle/gateway/internal/middleware"
-	"go.uber.org/zap"
 )
 
 func main() {

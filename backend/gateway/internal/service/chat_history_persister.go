@@ -326,11 +326,11 @@ func (p *ChatHistoryPersister) GetStats() map[string]interface{} {
 	p.batchMu.Unlock()
 
 	return map[string]interface{}{
-		"total_persisted":  p.totalPersisted,
-		"total_failed":     p.totalFailed,
-		"pending_batch":    batchLen,
-		"last_flush_time":  p.lastFlushTime,
-		"batch_size":       PersisterBatchSize,
-		"flush_interval":   PersisterFlushInterval.String(),
+		"total_persisted": p.totalPersisted,
+		"total_failed":    p.totalFailed,
+		"pending_batch":   batchLen,
+		"last_flush_time": p.lastFlushTime,
+		"batch_size":      PersisterBatchSize,
+		"flush_interval":  PersisterFlushInterval.String(),
 	}
 }

@@ -10,12 +10,13 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
+
 	cqrsEvent "github.com/sparkle/gateway/internal/cqrs/event"
 	"github.com/sparkle/gateway/internal/cqrs/metrics"
 	"github.com/sparkle/gateway/internal/cqrs/outbox"
 	cqrsWorker "github.com/sparkle/gateway/internal/cqrs/worker"
 	"github.com/sparkle/gateway/internal/db"
-	"go.uber.org/zap"
 )
 
 const (

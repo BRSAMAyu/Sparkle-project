@@ -12,10 +12,11 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
+
 	"github.com/sparkle/gateway/internal/cqrs/event"
 	"github.com/sparkle/gateway/internal/cqrs/metrics"
 	"github.com/sparkle/gateway/internal/cqrs/outbox"
-	"go.uber.org/zap"
 )
 
 // BaseWorker provides common functionality for event workers.

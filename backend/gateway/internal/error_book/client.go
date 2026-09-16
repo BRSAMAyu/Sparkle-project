@@ -6,12 +6,13 @@ import (
 	"log"
 	"time"
 
-	errorbookv1 "github.com/sparkle/gateway/gen/proto/error_book"
-	"github.com/sparkle/gateway/internal/config"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+
+	errorbookv1 "github.com/sparkle/gateway/gen/proto/error_book"
+	"github.com/sparkle/gateway/internal/config"
 )
 
 type Client struct {

@@ -8,11 +8,12 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
-	pbws "github.com/sparkle/gateway/gen/ws"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
+	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
+	pbws "github.com/sparkle/gateway/gen/ws"
 )
 
 type envelopeResponder struct {
