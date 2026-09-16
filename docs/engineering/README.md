@@ -14,6 +14,7 @@
 | 文档 | 内容 |
 |------|------|
 | [REPOSITORY_STANDARDS](./REPOSITORY_STANDARDS.md) | **仓库设计规范与整洁标准**（根目录白名单、产物归位、归档规范、提交检查单） |
+| [CI](./CI.md) | **CI 工作流说明**（保留集、设计规则、已删除项、恢复方法） |
 | [KNOWN_CODE_DEBT_LEDGER](./KNOWN_CODE_DEBT_LEDGER.md) | **已知代码债务台账**（当前有效，处置一项划掉一项） |
 | [quality_guardrails](./quality_guardrails.md) | CI 覆盖率与风险阈值 |
 | [contract_guardrails](./contract_guardrails.md) | OpenAPI/Proto 契约校验规则 |
