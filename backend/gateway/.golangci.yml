@@ -92,9 +92,11 @@ issues:
 
   max-issues-per-linter: 0
   max-same-issues: 0
-  # Existing debt does not block the gate; every new change is fully linted.
-  # Pay down legacy findings gradually; then remove this to enforce repo-wide.
-  new-from-rev: HEAD~1
+  # Lint adoption baseline (2026-09-16, post gofmt sweep): findings on or
+  # before this revision do not block CI; every change after it is fully
+  # linted. Pay down the recorded baseline (docs/engineering/KNOWN_CODE_DEBT_LEDGER.md),
+  # then advance the baseline or remove it to enforce repo-wide.
+  new-from-rev: e6256a3
 
 severity:
   default-severity: warning

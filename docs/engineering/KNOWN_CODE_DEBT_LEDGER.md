@@ -41,6 +41,7 @@
 
 | # | 位置 | 现状 | 说明 |
 |---|---|---|---|
+| 0 | `backend/gateway/`（2026-09-16 lint 基线债务） | CI 首次真正执行 lint 后记录的 **185 项**遗留发现：errorlint 34、bodyclose 26、revive 22、noctx 20、errcheck 20、gosec 19、unused 12、staticcheck 11、gosimple 7、unparam 6、unconvert 4、ineffassign 2。基线钉在 `e6256a3`（`.golangci.yml` 的 `new-from-rev`），基线前不挡 CI、基线后全量检查 | 按安全价值排序逐步清偿：先 gosec/errcheck/staticcheck（真 bug 类），后 noctx/bodyclose（资源与超时类），清偿后推进基线 |
 | 7 | `mobile/lib/features/community/data/repositories/mock_community_repository.dart` | demo 模式回退数据源（`community_repository.dart:11-16` 有意接线） | 有意设计，非债务；已注释说明 |
 | 8 | `mobile/third_party_plugins/` 7 个 fork | vendored 原因多为 Apple Silicon/ARM 兼容；具体上游 commit 未登记 | 已补 README 记录；后续可对照上游校验差异 |
 | 9 | 网关 `internal/cqrs/outbox/repository.go:420,427`、`internal/worker/community_sync.go:319,328` 弃用构造函数仍可调用 | Deprecated 注记完备 | 小型清理，随手可做 |
