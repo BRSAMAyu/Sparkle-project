@@ -1,3 +1,9 @@
+// Core: bridge
+// Phase: execute
+// Stage: v1 网关基座
+//
+// 聊天编排流 handler：WS 消息与引擎流桥接.
+
 package handler
 
 import (

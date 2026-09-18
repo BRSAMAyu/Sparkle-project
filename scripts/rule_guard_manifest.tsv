@@ -56,7 +56,8 @@ AY	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_ay_llm_safety.py"
 BB	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_bb_financial_atomicity.py"
 BC	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_bc_idempotency_key.py"
 AV	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_rule_av_kill_switch_mode_enum.py" && "${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_core_phase_header.py"
-BD	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_sgw_readiness.py"
+# BD 停用 2026-09-18：stage40 SGW dogfood 证据文档为 v1 未跟踪产物已丢失，规则要求 PHASE_I_EXIT_READY: YES 的实测证据，不可凭空重建；重跑 dogfood 后恢复（见 KNOWN_CODE_DEBT_LEDGER）
+# BD	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_sgw_readiness.py"
 BE	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_be_shadow_semantics.py"
 BF	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_bf_doc_context_governance.py"
 BH	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_bh_meta_learning_safety.py"
@@ -66,5 +67,6 @@ BI	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_bi_hardcoded_secrets.
 GOV-DATA-MIN	PYTHONPATH="${REPO_ROOT}/backend" "${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_data_minimization_coverage.py"
 FME	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_fme_kill_switch_registered.py"
 AURORA-CONFIG	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_aurora_config_consistency.py"
-CARD-DUAL-WRITE	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_card_protocol_dual_write_consistency.py"
+# CARD-DUAL-WRITE 停用 2026-09-18：守卫 import 的 app.services.card_protocol.consistency_validator 自初始提交起就不存在于仓库（v1 未跟踪遗留），规则不可运行；card_protocol 本身是台账登记债务区，接线时一并恢复
+# CARD-DUAL-WRITE	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_card_protocol_dual_write_consistency.py"
 BJ	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_bj_dead_imports.py"

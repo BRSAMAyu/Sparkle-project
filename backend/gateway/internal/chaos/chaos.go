@@ -1,3 +1,9 @@
+// Core: infra
+// Phase: none
+// Stage: v1 网关基座
+//
+// 故障注入模块（演练用）.
+
 package chaos
 
 import (

@@ -1,4 +1,10 @@
 // Package projection provides projection handlers for CQRS.
+// Core: infra
+// Phase: reflect
+// Stage: v1 网关基座
+//
+// 读侧投影事件处理.
+
 package projection
 
 import (

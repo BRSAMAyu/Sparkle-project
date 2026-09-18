@@ -1,3 +1,9 @@
+// Core: bridge
+// Phase: reinforce
+// Stage: v1 网关基座
+//
+// 星系成长引擎桥接客户端.
+
 package galaxy
 
 import (

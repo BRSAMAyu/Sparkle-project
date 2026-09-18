@@ -1,3 +1,9 @@
+// Core: infra
+// Phase: none
+// Stage: v1 网关基座
+//
+// 缓存配置.
+
 package config
 
 import "time"

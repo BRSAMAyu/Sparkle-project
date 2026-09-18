@@ -1,3 +1,9 @@
+// Core: infra
+// Phase: none
+// Stage: v1 网关基座
+//
+// 网关装配入口：中间件、路由、依赖注入与生命周期编排.
+
 package main
 
 import (

@@ -1,3 +1,9 @@
+// Core: infra
+// Phase: reflect
+// Stage: v1 网关基座
+//
+// 聊天历史 handler.
+
 package handler
 
 import (

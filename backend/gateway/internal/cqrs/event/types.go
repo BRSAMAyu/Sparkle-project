@@ -1,4 +1,10 @@
 // Package event provides domain event types and interfaces for the CQRS architecture.
+// Core: infra
+// Phase: none
+// Stage: v1 网关基座
+//
+// CQRS 事件类型定义.
+
 package event
 
 import (

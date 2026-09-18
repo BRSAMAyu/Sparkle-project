@@ -1,3 +1,9 @@
+// Core: infra
+// Phase: sense
+// Stage: v1 网关基座
+//
+// 文件上传/下载 handler.
+
 package handler
 
 import (

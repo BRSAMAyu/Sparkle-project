@@ -1,3 +1,9 @@
+// Core: infra
+// Phase: none
+// Stage: v1 网关基座
+//
+// 对外错误脱敏.
+
 package handler
 
 import (

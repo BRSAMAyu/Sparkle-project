@@ -1,5 +1,11 @@
 // Package cqrs provides the Saga pattern for distributed transactions with
 // compensation support, integrated with the existing CQRS infrastructure.
+// Core: infra
+// Phase: execute
+// Stage: v1 网关基座
+//
+// Saga 分布式事务协调.
+
 package cqrs
 
 import (

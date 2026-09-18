@@ -816,6 +816,8 @@ class Settings(BaseSettings):
     ENABLE_AGENT_GRAPH_V2: bool = False
     ENABLE_MODE_WORKFLOW_V2: bool = True
     ENABLE_AURORA_RUNTIME_V1: bool = True
+    # .env.example 声明的 Aurora 开关总默认（managed key，Rule AURORA-CONFIG 校验两侧一致）
+    AURORA_DEFAULT_MODE: str = "live"
     ENABLE_EXPERT_ENTRY: bool = True
     ENABLE_UNIFIED_GRAPH_ROUTING: bool = True
     ENABLE_EXPERT_STRATEGY_V1: bool = True

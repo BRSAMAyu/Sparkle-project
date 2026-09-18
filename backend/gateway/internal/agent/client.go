@@ -1,3 +1,9 @@
+// Core: bridge
+// Phase: execute
+// Stage: v1 网关基座
+//
+// 引擎 gRPC 客户端：连接管理、流式转发与重试.
+
 package agent
 
 import (

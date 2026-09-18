@@ -1,3 +1,9 @@
+// Core: bridge
+// Phase: reflect
+// Stage: v1 网关基座
+//
+// 错题本引擎桥接客户端.
+
 package error_book
 
 import (

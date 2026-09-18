@@ -1,3 +1,9 @@
+// Core: bridge
+// Phase: execute
+// Stage: v1 网关基座
+//
+// 聊天编排下行响应器.
+
 package handler
 
 import (

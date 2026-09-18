@@ -1,3 +1,9 @@
+// Core: infra
+// Phase: sense
+// Stage: v1 网关基座
+//
+// 鉴权 handler：登录/注册/会话.
+
 package handler
 
 import (

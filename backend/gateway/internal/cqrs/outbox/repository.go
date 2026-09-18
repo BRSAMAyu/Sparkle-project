@@ -1,4 +1,10 @@
 // Package outbox provides the Outbox pattern implementation for reliable event publishing.
+// Core: infra
+// Phase: execute
+// Stage: v1 网关基座
+//
+// 发件箱存储.
+
 package outbox
 
 import (

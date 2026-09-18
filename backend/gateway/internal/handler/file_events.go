@@ -1,3 +1,9 @@
+// Core: infra
+// Phase: sense
+// Stage: v1 网关基座
+//
+// 文件事件订阅与推送.
+
 package handler
 
 import (

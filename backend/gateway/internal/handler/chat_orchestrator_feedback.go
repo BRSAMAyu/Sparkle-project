@@ -1,3 +1,9 @@
+// Core: bridge
+// Phase: reinforce
+// Stage: v1 网关基座
+//
+// 聊天反馈 handler.
+
 package handler
 
 import (

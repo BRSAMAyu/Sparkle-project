@@ -1,3 +1,9 @@
+// Core: bridge
+// Phase: sense
+// Stage: v1 网关基座
+//
+// 引擎 gRPC 健康探测.
+
 package agent
 
 import (

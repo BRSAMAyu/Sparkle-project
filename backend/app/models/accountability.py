@@ -12,12 +12,14 @@ from sqlalchemy import (
     JSON,
     Column,
     DateTime,
+    DDL,
     Enum,
     ForeignKey,
     Index,
     Integer,
     Text,
     UniqueConstraint,
+    event,
     func,
     text,
 )
@@ -110,14 +112,22 @@ class AccountabilityPartnership(BaseModel):
             "slot_type",
             "status",
         ),
-        Index(
-            "uq_partnership_active_pair_bidirectional",
-            func.Least(initiator_id, partner_id),
-            func.Greatest(initiator_id, partner_id),
-            unique=True,
-            postgresql_where=text("deleted_at IS NULL"),
-        ),
     )
+
+
+# 双向活跃伙伴唯一约束依赖 LEAST/GREATEST 方言函数，SQLite 等方言不支持，
+# 故从 __table_args__ 移出，改为仅在 postgresql 方言上创建（生产 schema 由 Alembic 迁移管理，
+# 此处等价约束服务于 create_all 测试路径）。
+event.listen(
+    AccountabilityPartnership.__table__,
+    "after_create",
+    DDL(
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_partnership_active_pair_bidirectional "
+        "ON accountability_partnership "
+        "(LEAST(initiator_id, partner_id), GREATEST(initiator_id, partner_id)) "
+        "WHERE deleted_at IS NULL"
+    ).execute_if(dialect="postgresql"),
+)
 
 
 class AccountabilityCheckin(BaseModel):

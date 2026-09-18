@@ -1,4 +1,10 @@
 // Package projection provides projection lifecycle management for CQRS.
+// Core: infra
+// Phase: reflect
+// Stage: v1 网关基座
+//
+// 读侧投影生命周期管理.
+
 package projection
 
 import (

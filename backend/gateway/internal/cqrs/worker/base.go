@@ -1,4 +1,10 @@
 // Package worker provides the base worker implementation for event consumers.
+// Core: infra
+// Phase: execute
+// Stage: v1 网关基座
+//
+// CQRS 后台 worker 基座.
+
 package worker
 
 import (

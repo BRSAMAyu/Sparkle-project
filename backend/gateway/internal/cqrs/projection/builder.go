@@ -1,3 +1,9 @@
+// Core: infra
+// Phase: reflect
+// Stage: v1 网关基座
+//
+// 读侧投影构建.
+
 package projection
 
 import (

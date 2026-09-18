@@ -1,4 +1,10 @@
 // Package worker provides dead letter queue handling for failed events.
+// Core: infra
+// Phase: execute
+// Stage: v1 网关基座
+//
+// 死信队列处理.
+
 package worker
 
 import (
