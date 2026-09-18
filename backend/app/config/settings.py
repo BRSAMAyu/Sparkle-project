@@ -456,6 +456,13 @@ class Settings(BaseSettings):
     DEEPSEEK_CHAT_MODEL: str = "deepseek-flash"
     DEEPSEEK_REASON_MODEL: str = "deepseek-v4-pro"
 
+    # MiniMax 异步分析通道（token plan 免费档；只承接后台/离线、非用户直面分析，
+    # 不进主聊天路由；并发钳制 = token plan 并发上限，车道满时快速拒绝）
+    MINIMAX_API_KEY: str = ""
+    MINIMAX_BASE_URL: str = "https://api.minimaxi.com/v1"
+    MINIMAX_CHAT_MODEL: str = "MiniMax-M3"
+    MINIMAX_MAX_CONCURRENCY: int = 8
+
     # Zhipu GLM Configuration (编程/工具调用)
     ZHIPU_API_KEY: str = ""
     ZHIPU_BASE_URL: str = "https://open.bigmodel.cn/api/paas/v4"
@@ -1169,6 +1176,8 @@ class Settings(BaseSettings):
             int(self.GLM_BATCH_ADAPTIVE_RATE_LIMIT_COOLDOWN_SECONDS or 300),
         )
         self.GLM_BATCH_SPILLOVER_BACKLOG_FACTOR = max(1, int(self.GLM_BATCH_SPILLOVER_BACKLOG_FACTOR or 2))
+
+        self.MINIMAX_MAX_CONCURRENCY = max(1, int(self.MINIMAX_MAX_CONCURRENCY or 8))
 
         return self
 

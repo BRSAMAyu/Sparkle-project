@@ -1,0 +1,735 @@
+diff --git a/backend/.env.example b/backend/.env.example
+index a9032802..d80f7618 100755
+--- a/backend/.env.example
++++ b/backend/.env.example
+@@ -105,6 +105,13 @@ DEEPSEEK_BASE_URL=https://api.deepseek.com
+ DEEPSEEK_CHAT_MODEL=deepseek-flash
+ DEEPSEEK_REASON_MODEL=deepseek-v4-pro
+ 
++# MiniMax 异步分析通道（token plan 免费档：后台/离线、非用户直面的分析任务专用，
++# 不进主聊天路由；车道满时快速拒绝并由消费方降级回主通道）
++MINIMAX_API_KEY=your_minimax_api_key
++MINIMAX_BASE_URL=https://api.minimaxi.com/v1
++MINIMAX_CHAT_MODEL=MiniMax-M3
++MINIMAX_MAX_CONCURRENCY=8
++
+ # Zhipu GLM Configuration
+ # GLM-4.7-Flash: 30B级模型，支持思考模式，面向Agentic Coding场景
+ ZHIPU_API_KEY=your_zhipu_api_key
+diff --git a/backend/app/config/settings.py b/backend/app/config/settings.py
+index ce966875..fd0a2834 100755
+--- a/backend/app/config/settings.py
++++ b/backend/app/config/settings.py
+@@ -456,6 +456,13 @@ class Settings(BaseSettings):
+     DEEPSEEK_CHAT_MODEL: str = "deepseek-flash"
+     DEEPSEEK_REASON_MODEL: str = "deepseek-v4-pro"
+ 
++    # MiniMax 异步分析通道（token plan 免费档；只承接后台/离线、非用户直面分析，
++    # 不进主聊天路由；并发钳制 = token plan 并发上限，车道满时快速拒绝）
++    MINIMAX_API_KEY: str = ""
++    MINIMAX_BASE_URL: str = "https://api.minimaxi.com/v1"
++    MINIMAX_CHAT_MODEL: str = "MiniMax-M3"
++    MINIMAX_MAX_CONCURRENCY: int = 8
++
+     # Zhipu GLM Configuration (编程/工具调用)
+     ZHIPU_API_KEY: str = ""
+     ZHIPU_BASE_URL: str = "https://open.bigmodel.cn/api/paas/v4"
+@@ -1170,6 +1177,8 @@ class Settings(BaseSettings):
+         )
+         self.GLM_BATCH_SPILLOVER_BACKLOG_FACTOR = max(1, int(self.GLM_BATCH_SPILLOVER_BACKLOG_FACTOR or 2))
+ 
++        self.MINIMAX_MAX_CONCURRENCY = max(1, int(self.MINIMAX_MAX_CONCURRENCY or 8))
++
+         return self
+ 
+ 
+diff --git a/backend/app/services/error_book_service.py b/backend/app/services/error_book_service.py
+index 970d1e7e..e1b9e5a9 100755
+--- a/backend/app/services/error_book_service.py
++++ b/backend/app/services/error_book_service.py
+@@ -27,6 +27,7 @@ from app.core.event_bus import ErrorCreated, event_bus
+ from app.core.time_utils import utcnow as _utcnow
+ from app.core.i18n import I18n
+ from app.core.llm_client import llm_client
++from app.services.llm.minimax_provider import minimax_provider
+ from app.models.achievement import UserStreakStats
+ from app.models.error_book import ErrorRecord
+ from app.models.galaxy import KnowledgeNode, UserNodeStatus
+@@ -601,17 +602,39 @@ class ErrorBookService:
+         """
+ 
+         try:
+-            response = await asyncio.wait_for(
+-                llm_client.chat_completion(
+-                    messages=[
+-                        {"role": "system", "content": "You are an expert tutor."},
+-                        {"role": "user", "content": prompt},
+-                    ],
+-                    response_format={"type": "json_object"},
+-                    max_tokens=700,
+-                ),
+-                timeout=12.0,
+-            )
++            # 错题分析是后台任务、非用户直面 → 优先走 MiniMax 免费异步车道
++            # （MINIMAX_MAX_CONCURRENCY 钳制，车道满立即快速拒绝不排队）；
++            # 车道 busy/失败时降级回主 LLM 通道，双车道全挂再走规则兜底。
++            # 注意：M3 是推理模型，思维链计入 max_tokens（实测单题 ~1100+），
++            # 预算给 1500 避免思维链耗尽导致空 content。
++            try:
++                response = await asyncio.wait_for(
++                    minimax_provider.analyze(
++                        messages=[
++                            {"role": "system", "content": "You are an expert tutor."},
++                            {"role": "user", "content": prompt},
++                        ],
++                        response_format={"type": "json_object"},
++                        max_tokens=1500,
++                    ),
++                    timeout=25.0,
++                )
++            except Exception as lane_error:
++                logger.warning(
++                    f"[ErrorBook] MiniMax async lane unavailable "
++                    f"({type(lane_error).__name__}: {lane_error}); falling back to primary LLM lane"
++                )
++                response = await asyncio.wait_for(
++                    llm_client.chat_completion(
++                        messages=[
++                            {"role": "system", "content": "You are an expert tutor."},
++                            {"role": "user", "content": prompt},
++                        ],
++                        response_format={"type": "json_object"},
++                        max_tokens=700,
++                    ),
++                    timeout=12.0,
++                )
+             # Parse JSON
+             if isinstance(response, str):
+                 import re
+diff --git a/backend/app/services/llm/minimax_provider.py b/backend/app/services/llm/minimax_provider.py
+new file mode 100644
+index 00000000..88fa3639
+--- /dev/null
++++ b/backend/app/services/llm/minimax_provider.py
+@@ -0,0 +1,256 @@
++"""
++MiniMax M3 异步分析通道（async analysis lane）。
++
++定位（与主聊天路由严格分离）：
++- 主聊天（用户直面、实时流式）走 qwen/dashscope 等主力通道，**永不**路由到本车道；
++- 本车道只承接后台/离线、非用户直面的分析类任务（错题分析、离线摘要、批量质检等），
++  跑在 MiniMax token plan 免费档（MiniMax-M3）上，换Token成本为零；
++- 端点为 OpenAI 兼容 chat completions：``{base}/text/chatcompletion_v2``。
++
++并发语义：
++- 全局 semaphore 钳制（``MINIMAX_MAX_CONCURRENCY``，默认 8，token plan 并发上限）；
++- **快速拒绝、不排队**：车道满时调用方立即收到 :class:`MinimaxLaneBusyError`，
++  而不是排队等待——异步任务应由消费方决定「现在降级」还是「下个周期重试」，
++  排队只会把免费车道的拥堵传染给调用方的事件循环。
++
++降级契约：消费方应捕获 ``MinimaxLaneBusyError`` / ``MinimaxLaneError`` 并回落到
++主 LLM 通道（如 ``llm_client``）或规则兜底；本模块只负责车道本身。
++"""
++
++from __future__ import annotations
++
++import asyncio
++from typing import Any
++
++import httpx
++from loguru import logger
++
++from app.config import settings
++from app.core.llm_secure_io import sanitize_llm_output, secure_messages
++
++# 兼容端点路径：MiniMax 与 OpenAI 请求/响应形态兼容，但路径不同（非 /chat/completions）
++CHAT_COMPLETIONS_PATH = "/text/chatcompletion_v2"
++
++
++class MinimaxLaneBusyError(Exception):
++    """车道并发已满（达到 MINIMAX_MAX_CONCURRENCY），快速拒绝、未排队。"""
++
++
++class MinimaxLaneError(Exception):
++    """车道请求失败（HTTP 5xx/429、超时、响应形态异常等）。"""
++
++
++class MinimaxProvider:
++    """
++    MiniMax 异步分析车道客户端。
++
++    通过 ``transport`` 注入 httpx Transport 以便单测 mock；
++    生产代码直接使用模块级单例 :data:`minimax_provider`。
++    """
++
++    def __init__(
++        self,
++        *,
++        api_key: str,
++        base_url: str,
++        model: str,
++        max_concurrency: int,
++        transport: httpx.AsyncBaseTransport | None = None,
++        output_sanitized: bool = True,
++    ):
++        self.api_key = api_key
++        self.base_url = (base_url or "").rstrip("/")
++        self.model = model
++        self.max_concurrency = max(1, int(max_concurrency))
++        self._transport = transport
++        self._output_sanitized = output_sanitized
++
++        # 并发钳制状态（跨 loop 安全：惰性绑定当前 running loop，
++        # 重建时机参考 LLMConcurrencyManager._ensure_loop_state）
++        self._semaphore: asyncio.Semaphore | None = None
++        self._bound_loop: asyncio.AbstractEventLoop | None = None
++
++        # 轻量运行统计（供观测/测试）
++        self._active = 0
++        self._total_requests = 0
++        self._total_successes = 0
++        self._total_errors = 0
++        self._rejected_busy = 0
++
++    @classmethod
++    def from_settings(cls) -> MinimaxProvider:
++        """从全局 settings 构建车道客户端。"""
++        return cls(
++            api_key=settings.MINIMAX_API_KEY,
++            base_url=settings.MINIMAX_BASE_URL,
++            model=settings.MINIMAX_CHAT_MODEL,
++            max_concurrency=settings.MINIMAX_MAX_CONCURRENCY,
++        )
++
++    # ------------------------------------------------------------------
++    # 并发钳制：全局 semaphore + 快速拒绝
++    # ------------------------------------------------------------------
++
++    def _get_semaphore(self) -> asyncio.Semaphore:
++        loop = asyncio.get_running_loop()
++        if self._semaphore is None or self._bound_loop is not loop:
++            self._semaphore = asyncio.Semaphore(self.max_concurrency)
++            self._bound_loop = loop
++            self._active = 0
++        return self._semaphore
++
++    async def _acquire_nowait(self) -> asyncio.Semaphore:
++        """
++        原子地「有槽则占、无槽则拒」。
++
++        ``locked()`` 检查与 ``acquire()`` 之间没有任何让位点（事件循环单线程
++        协作式调度），因此不会与其它协程竞争：locked() 为 False 时 acquire()
++        必然同步完成（信号量计数 > 0 且无等待者，acquire 不挂起）。
++        """
++        semaphore = self._get_semaphore()
++        if semaphore.locked():
++            self._rejected_busy += 1
++            raise MinimaxLaneBusyError(
++                f"MiniMax async lane is full (max_concurrency={self.max_concurrency}); " "fast-reject, not queueing"
++            )
++        await semaphore.acquire()
++        return semaphore
++
++    # ------------------------------------------------------------------
++    # 分析请求
++    # ------------------------------------------------------------------
++
++    async def analyze(
++        self,
++        messages: list[dict[str, str]],
++        *,
++        temperature: float = 0.3,
++        max_tokens: int | None = None,
++        response_format: dict[str, str] | None = None,
++        timeout_seconds: float = 45.0,
++        user_id: str | None = None,
++        wrap_user_messages: bool = False,
++    ) -> str:
++        """
++        在异步分析车道上执行一次 chat completion，返回最终 content。
++
++        Note:
++            ``wrap_user_messages`` 默认关闭 ``<USER_INPUT>`` 注入防御信封
++            （PII/密钥脱敏在两种模式下均生效）。实测 M3 对带信封的个别 prompt
++            会返回空 content（去掉信封后同一 prompt 正常），而本车道消费者是
++            内部服务拼装的分析 prompt，注入面远小于用户直面聊天，故默认不包信封。
++
++        Raises:
++            MinimaxLaneBusyError: 车道满，立即拒绝（调用方应降级或稍后重试）。
++            MinimaxLaneError: 请求/响应失败（消费方应降级）。
++        """
++        semaphore = await self._acquire_nowait()
++        self._active += 1
++        self._total_requests += 1
++        try:
++            content = await self._request(
++                messages,
++                temperature=temperature,
++                max_tokens=max_tokens,
++                response_format=response_format,
++                timeout_seconds=timeout_seconds,
++                user_id=user_id,
++                wrap_user_messages=wrap_user_messages,
++            )
++            self._total_successes += 1
++            return content
++        except (MinimaxLaneBusyError, MinimaxLaneError):
++            self._total_errors += 1
++            raise
++        except Exception as exc:
++            self._total_errors += 1
++            logger.error(f"[MinimaxLane] Unexpected error: {exc}")
++            raise MinimaxLaneError(f"MiniMax async lane request failed: {exc}") from exc
++        finally:
++            self._active -= 1
++            semaphore.release()
++
++    async def _request(
++        self,
++        messages: list[dict[str, str]],
++        *,
++        temperature: float,
++        max_tokens: int | None,
++        response_format: dict[str, str] | None,
++        timeout_seconds: float,
++        user_id: str | None,
++        wrap_user_messages: bool,
++    ) -> str:
++        # SEC-1 对齐：入参脱敏（两种模式下 PII/密钥脱敏均生效）/ 出参消毒
++        safe_messages = secure_messages(
++            messages,
++            user_id=user_id,
++            wrap_user_messages=wrap_user_messages,
++        )
++
++        payload: dict[str, Any] = {
++            "model": self.model,
++            "messages": safe_messages,
++            "temperature": temperature,
++        }
++        if max_tokens:
++            payload["max_tokens"] = max_tokens
++        if response_format:
++            payload["response_format"] = response_format
++
++        url = f"{self.base_url}{CHAT_COMPLETIONS_PATH}"
++        headers = {
++            "Authorization": f"Bearer {self.api_key}",
++            "Content-Type": "application/json",
++        }
++
++        try:
++            async with httpx.AsyncClient(timeout=timeout_seconds, transport=self._transport) as client:
++                response = await client.post(url, headers=headers, json=payload)
++        except httpx.TimeoutException as exc:
++            raise MinimaxLaneError(f"MiniMax async lane timeout after {timeout_seconds}s") from exc
++        except httpx.HTTPError as exc:
++            raise MinimaxLaneError(f"MiniMax async lane transport error: {exc}") from exc
++
++        if response.status_code >= 400:
++            raise MinimaxLaneError(f"MiniMax async lane HTTP {response.status_code}: {response.text[:200]}")
++
++        try:
++            data = response.json()
++            choices = data["choices"]
++            message = choices[0]["message"]
++        except Exception as exc:
++            raise MinimaxLaneError(f"MiniMax async lane unexpected response shape: {data!r:.200}") from exc
++
++        content = message.get("content")
++        if not content:
++            # M3 为推理模型：思维链在 reasoning_content，content 为空视为失败。
++            # 常见诱因：max_tokens 被思维链耗尽（finish_reason=length）或
++            # <USER_INPUT> 信封触发怪癖 —— 消费方应降级回主通道。
++            finish_reason = choices[0].get("finish_reason")
++            has_reasoning = bool(message.get("reasoning_content"))
++            raise MinimaxLaneError(
++                "MiniMax async lane returned empty content "
++                f"(finish_reason={finish_reason}, has_reasoning_content={has_reasoning})"
++            )
++
++        if self._output_sanitized:
++            return sanitize_llm_output(str(content), context={"type": "minimax_lane.analyze"})
++        return str(content)
++
++    # ------------------------------------------------------------------
++
++    def stats(self) -> dict[str, int]:
++        """车道运行统计（并发观测用）。"""
++        return {
++            "max_concurrency": self.max_concurrency,
++            "active": self._active,
++            "total_requests": self._total_requests,
++            "total_successes": self._total_successes,
++            "total_errors": self._total_errors,
++            "rejected_busy": self._rejected_busy,
++        }
++
++
++# 模块级单例：全局唯一车道，并发钳制因此是全局的
++minimax_provider = MinimaxProvider.from_settings()
+diff --git a/backend/tests/services/test_minimax_provider.py b/backend/tests/services/test_minimax_provider.py
+new file mode 100644
+index 00000000..6e628dc4
+--- /dev/null
++++ b/backend/tests/services/test_minimax_provider.py
+@@ -0,0 +1,359 @@
++"""
++MiniMax M3 异步分析通道单测（mock 传输，零真实请求）。
++
++覆盖面：
++1. 请求形态：URL = {base}/text/chatcompletion_v2、Bearer 鉴权、payload 字段
++2. 并发钳制：max_concurrency=8 时 8 个并发全部放行，峰值 in-flight == 8
++3. 快速拒绝：第 9 个并发请求立即 MinimaxLaneBusyError，不排队等待
++4. 错误处理：HTTP 5xx / 空 choices / 空 content → MinimaxLaneError
++5. 消费点（错题分析）：_run_llm_analysis 优先走 MiniMax 车道，
++   车道 busy 时降级主 LLM 通道，双车道全挂时走规则兜底
++"""
++
++import asyncio
++import json
++import time
++from unittest.mock import AsyncMock, MagicMock, patch
++
++import httpx
++import pytest
++from sqlalchemy.ext.asyncio import AsyncSession
++
++from app.config import settings
++from app.services.error_book_service import ErrorBookService
++from app.services.llm.minimax_provider import (
++    MinimaxLaneBusyError,
++    MinimaxLaneError,
++    MinimaxProvider,
++)
++
++
++def _ok_body(content: str = '{"ok": true}') -> dict:
++    return {
++        "choices": [
++            {
++                "message": {"role": "assistant", "content": content},
++                "finish_reason": "stop",
++            }
++        ],
++        "usage": {"total_tokens": 42},
++    }
++
++
++def _make_provider(handler, *, max_concurrency: int = 8) -> MinimaxProvider:
++    return MinimaxProvider(
++        api_key="test-key",
++        base_url="https://mock.minimaxi.test/v1",
++        model="MiniMax-M3",
++        max_concurrency=max_concurrency,
++        transport=httpx.MockTransport(handler),
++    )
++
++
++def _error_book_service() -> ErrorBookService:
++    db_mock = MagicMock(spec=AsyncSession)
++    return ErrorBookService(db_mock)
++
++
++# ---------------------------------------------------------------------------
++# 1. 请求形态
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.asyncio
++async def test_request_shape_and_content_parsing():
++    captured = {}
++
++    def handler(request: httpx.Request) -> httpx.Response:
++        captured["url"] = str(request.url)
++        captured["auth"] = request.headers.get("Authorization")
++        captured["payload"] = json.loads(request.content)
++        return httpx.Response(200, json=_ok_body('{"error_type": "concept_confusion"}'))
++
++    provider = _make_provider(handler)
++    result = await provider.analyze(
++        messages=[
++            {"role": "system", "content": "You are an expert tutor."},
++            {"role": "user", "content": "分析这道错题"},
++        ],
++        max_tokens=700,
++        response_format={"type": "json_object"},
++    )
++
++    assert result == '{"error_type": "concept_confusion"}'
++    # OpenAI 兼容端点：{base}/text/chatcompletion_v2
++    assert captured["url"] == "https://mock.minimaxi.test/v1/text/chatcompletion_v2"
++    assert captured["auth"] == "Bearer test-key"
++    payload = captured["payload"]
++    assert payload["model"] == "MiniMax-M3"
++    assert payload["messages"][0]["content"] == "You are an expert tutor."
++    # 安全模式开启时 user 内容会被 <USER_INPUT> 包裹，但原文必须保留
++    assert "分析这道错题" in payload["messages"][1]["content"]
++    assert payload["max_tokens"] == 700
++    assert payload["response_format"] == {"type": "json_object"}
++    assert payload.get("stream") is not True  # 异步分析非流式
++
++
++@pytest.mark.asyncio
++async def test_reasoning_content_field_is_ignored_content_wins():
++    """M3 是推理模型：reasoning_content 单独返回，lane 只取最终 content。"""
++
++    def handler(request: httpx.Request) -> httpx.Response:
++        body = _ok_body('{"final": true}')
++        body["choices"][0]["message"]["reasoning_content"] = "让我想想……"
++        return httpx.Response(200, json=body)
++
++    provider = _make_provider(handler)
++    result = await provider.analyze(messages=[{"role": "user", "content": "q"}])
++    assert result == '{"final": true}'
++
++
++# ---------------------------------------------------------------------------
++# 2. 并发钳制到 8
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.asyncio
++async def test_concurrency_clamped_to_max():
++    peak_in_flight = 0
++    in_flight = 0
++    started = asyncio.Event()
++    release = asyncio.Event()
++    completed = 0
++
++    async def _slow(_request: httpx.Request) -> httpx.Response:
++        nonlocal peak_in_flight, in_flight, completed
++        in_flight += 1
++        peak_in_flight = max(peak_in_flight, in_flight)
++        if in_flight >= 8:
++            started.set()
++        try:
++            await release.wait()
++        finally:
++            in_flight -= 1
++            completed += 1
++        return httpx.Response(200, json=_ok_body())
++
++    provider = _make_provider(_slow, max_concurrency=8)
++
++    tasks = [asyncio.create_task(provider.analyze(messages=[{"role": "user", "content": f"q{i}"}])) for i in range(8)]
++    # 8 个请求应全部在途（钳制上限 == 8），而不是拒绝
++    await asyncio.wait_for(started.wait(), timeout=2.0)
++    assert peak_in_flight == 8
++    assert provider.stats()["active"] == 8
++
++    release.set()
++    results = await asyncio.gather(*tasks)
++    assert len(results) == 8
++    assert all(r == '{"ok": true}' for r in results)
++    assert peak_in_flight == 8  # 全程从未超过 8
++    assert provider.stats()["active"] == 0
++    assert provider.stats()["rejected_busy"] == 0
++
++
++# ---------------------------------------------------------------------------
++# 3. 第 9 个快速拒绝（不排队）
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.asyncio
++async def test_ninth_call_fast_rejects_without_queueing():
++    started = asyncio.Event()
++    release = asyncio.Event()
++    in_flight = 0
++
++    async def _slow(_request: httpx.Request) -> httpx.Response:
++        nonlocal in_flight
++        in_flight += 1
++        if in_flight >= 8:
++            started.set()
++        await release.wait()
++        in_flight -= 1
++        return httpx.Response(200, json=_ok_body())
++
++    provider = _make_provider(_slow, max_concurrency=8)
++
++    busy_tasks = [
++        asyncio.create_task(provider.analyze(messages=[{"role": "user", "content": f"q{i}"}])) for i in range(8)
++    ]
++    await asyncio.wait_for(started.wait(), timeout=2.0)
++
++    # 第 9 个：立即拒绝，不允许排队（耗时远小于任何排队等待）
++    reject_start = time.perf_counter()
++    with pytest.raises(MinimaxLaneBusyError):
++        await provider.analyze(messages=[{"role": "user", "content": "overflow"}])
++    elapsed = time.perf_counter() - reject_start
++    assert elapsed < 0.5  # 快速拒绝，无排队
++
++    stats = provider.stats()
++    assert stats["rejected_busy"] == 1
++    assert stats["active"] == 8  # 原 8 个不受影响
++
++    release.set()
++    await asyncio.gather(*busy_tasks)
++
++    # 车道释放后新请求可再次进入
++    def _ok(_request: httpx.Request) -> httpx.Response:
++        return httpx.Response(200, json=_ok_body("recovered"))
++
++    provider._transport = httpx.MockTransport(_ok)
++    assert await provider.analyze(messages=[{"role": "user", "content": "next"}]) == "recovered"
++
++
++@pytest.mark.asyncio
++async def test_busy_rejection_does_not_leak_slot():
++    """快速拒绝路径不得占用/泄漏槽位：单槽被占时拒绝，释放后立即可用。"""
++
++    started = asyncio.Event()
++    release = asyncio.Event()
++
++    async def _slow(_request: httpx.Request) -> httpx.Response:
++        started.set()
++        await release.wait()
++        return httpx.Response(200, json=_ok_body())
++
++    def _ok(_request: httpx.Request) -> httpx.Response:
++        return httpx.Response(200, json=_ok_body("after release"))
++
++    provider = _make_provider(_slow, max_concurrency=1)
++    holder = asyncio.create_task(provider.analyze(messages=[{"role": "user", "content": "hold"}]))
++    await asyncio.wait_for(started.wait(), timeout=2.0)
++
++    with pytest.raises(MinimaxLaneBusyError):
++        await provider.analyze(messages=[{"role": "user", "content": "reject me"}])
++
++    provider._transport = httpx.MockTransport(_ok)
++    release.set()
++    assert await holder == '{"ok": true}'
++
++    # 拒绝路径未泄漏槽位：车道空闲后新请求立即通过
++    assert await provider.analyze(messages=[{"role": "user", "content": "b"}]) == "after release"
++    assert provider.stats()["active"] == 0
++
++
++# ---------------------------------------------------------------------------
++# 4. 错误处理
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.asyncio
++async def test_http_500_raises_lane_error():
++    def handler(_request: httpx.Request) -> httpx.Response:
++        return httpx.Response(500, json={"error": "boom"})
++
++    provider = _make_provider(handler)
++    with pytest.raises(MinimaxLaneError):
++        await provider.analyze(messages=[{"role": "user", "content": "q"}])
++    assert provider.stats()["active"] == 0  # 出错也必须释放槽位
++
++
++@pytest.mark.asyncio
++async def test_rate_limit_429_raises_lane_error():
++    def handler(_request: httpx.Request) -> httpx.Response:
++        return httpx.Response(429, json={"error": "rate limited"})
++
++    provider = _make_provider(handler)
++    with pytest.raises(MinimaxLaneError):
++        await provider.analyze(messages=[{"role": "user", "content": "q"}])
++
++
++@pytest.mark.asyncio
++async def test_empty_choices_raises_lane_error():
++    def handler(_request: httpx.Request) -> httpx.Response:
++        return httpx.Response(200, json={"choices": []})
++
++    provider = _make_provider(handler)
++    with pytest.raises(MinimaxLaneError):
++        await provider.analyze(messages=[{"role": "user", "content": "q"}])
++
++
++@pytest.mark.asyncio
++async def test_empty_content_raises_lane_error():
++    def handler(_request: httpx.Request) -> httpx.Response:
++        return httpx.Response(200, json=_ok_body(""))
++
++    provider = _make_provider(handler)
++    with pytest.raises(MinimaxLaneError):
++        await provider.analyze(messages=[{"role": "user", "content": "q"}])
++
++
++@pytest.mark.asyncio
++async def test_lane_error_releases_slot_for_next_caller():
++    calls = {"n": 0}
++
++    def handler(_request: httpx.Request) -> httpx.Response:
++        calls["n"] += 1
++        if calls["n"] == 1:
++            return httpx.Response(500, json={"error": "boom"})
++        return httpx.Response(200, json=_ok_body("fine"))
++
++    provider = _make_provider(handler, max_concurrency=2)
++    with pytest.raises(MinimaxLaneError):
++        await provider.analyze(messages=[{"role": "user", "content": "fail"}])
++    # 槽位已释放，后续请求正常
++    assert await provider.analyze(messages=[{"role": "user", "content": "ok"}]) == "fine"
++    assert provider.stats()["active"] == 0
++
++
++# ---------------------------------------------------------------------------
++# 5. 配置
++# ---------------------------------------------------------------------------
++
++
++def test_settings_expose_minimax_lane_config():
++    assert settings.MINIMAX_MAX_CONCURRENCY == 8
++    assert settings.MINIMAX_BASE_URL == "https://api.minimaxi.com/v1"
++    assert settings.MINIMAX_CHAT_MODEL == "MiniMax-M3"
++
++
++def test_provider_from_settings_uses_lane_defaults():
++    provider = MinimaxProvider.from_settings()
++    assert provider.model == settings.MINIMAX_CHAT_MODEL
++    assert provider.max_concurrency == settings.MINIMAX_MAX_CONCURRENCY
++
++
++# ---------------------------------------------------------------------------
++# 6. 消费点：错题 analyze 后台任务
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.asyncio
++async def test_error_book_analysis_prefers_minimax_lane():
++    service = _error_book_service()
++    with (
++        patch("app.services.error_book_service.minimax_provider") as mock_lane,
++        patch("app.services.error_book_service.llm_client") as mock_llm,
++    ):
++        mock_lane.analyze = AsyncMock(return_value='{"error_type": "concept_confusion"}')
++        result = await service._run_llm_analysis("math", "1+1=?", "3", "2", [])
++    assert result["error_type"] == "concept_confusion"
++    mock_lane.analyze.assert_awaited_once()
++    mock_llm.chat_completion.assert_not_called()  # 车道可用时不烧主通道
++
++
++@pytest.mark.asyncio
++async def test_error_book_analysis_falls_back_to_primary_lane_on_busy():
++    service = _error_book_service()
++    with (
++        patch("app.services.error_book_service.minimax_provider") as mock_lane,
++        patch("app.services.error_book_service.llm_client") as mock_llm,
++    ):
++        mock_lane.analyze = AsyncMock(side_effect=MinimaxLaneBusyError("lane full"))
++        mock_llm.chat_completion = AsyncMock(return_value='{"error_type": "calculation_error"}')
++        result = await service._run_llm_analysis("math", "1+1=?", "3", "2", [])
++    assert result["error_type"] == "calculation_error"
++    mock_llm.chat_completion.assert_awaited_once()
++
++
++@pytest.mark.asyncio
++async def test_error_book_analysis_rule_fallback_when_both_lanes_fail():
++    service = _error_book_service()
++    with (
++        patch("app.services.error_book_service.minimax_provider") as mock_lane,
++        patch("app.services.error_book_service.llm_client") as mock_llm,
++    ):
++        mock_lane.analyze = AsyncMock(side_effect=MinimaxLaneError("down"))
++        mock_llm.chat_completion = AsyncMock(side_effect=RuntimeError("primary down"))
++        result = await service._run_llm_analysis("math", "1+1=?", "3", "2", [])
++    # 双车道全挂 → 规则兜底，绝不抛出
++    assert "error_type" in result

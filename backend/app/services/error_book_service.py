@@ -27,6 +27,7 @@ from app.core.event_bus import ErrorCreated, event_bus
 from app.core.time_utils import utcnow as _utcnow
 from app.core.i18n import I18n
 from app.core.llm_client import llm_client
+from app.services.llm.minimax_provider import minimax_provider
 from app.models.achievement import UserStreakStats
 from app.models.error_book import ErrorRecord
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
@@ -601,17 +602,39 @@ class ErrorBookService:
         """
 
         try:
-            response = await asyncio.wait_for(
-                llm_client.chat_completion(
-                    messages=[
-                        {"role": "system", "content": "You are an expert tutor."},
-                        {"role": "user", "content": prompt},
-                    ],
-                    response_format={"type": "json_object"},
-                    max_tokens=700,
-                ),
-                timeout=12.0,
-            )
+            # 错题分析是后台任务、非用户直面 → 优先走 MiniMax 免费异步车道
+            # （MINIMAX_MAX_CONCURRENCY 钳制，车道满立即快速拒绝不排队）；
+            # 车道 busy/失败时降级回主 LLM 通道，双车道全挂再走规则兜底。
+            # 注意：M3 是推理模型，思维链计入 max_tokens（实测单题 ~1100+），
+            # 预算给 1500 避免思维链耗尽导致空 content。
+            try:
+                response = await asyncio.wait_for(
+                    minimax_provider.analyze(
+                        messages=[
+                            {"role": "system", "content": "You are an expert tutor."},
+                            {"role": "user", "content": prompt},
+                        ],
+                        response_format={"type": "json_object"},
+                        max_tokens=1500,
+                    ),
+                    timeout=25.0,
+                )
+            except Exception as lane_error:
+                logger.warning(
+                    f"[ErrorBook] MiniMax async lane unavailable "
+                    f"({type(lane_error).__name__}: {lane_error}); falling back to primary LLM lane"
+                )
+                response = await asyncio.wait_for(
+                    llm_client.chat_completion(
+                        messages=[
+                            {"role": "system", "content": "You are an expert tutor."},
+                            {"role": "user", "content": prompt},
+                        ],
+                        response_format={"type": "json_object"},
+                        max_tokens=700,
+                    ),
+                    timeout=12.0,
+                )
             # Parse JSON
             if isinstance(response, str):
                 import re
