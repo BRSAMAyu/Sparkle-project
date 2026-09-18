@@ -25,6 +25,12 @@ _CHECKPOINT_VOLATILE_CONTEXT_KEYS = {
     "conversation_settings",
 }
 
+# RB-11: 容量驱逐白名单——开局写入且不再更新的标识键与运行时依赖键
+# 不得被 MAX_CONTEXT_DATA_KEYS 的 LRU 驱逐淘汰
+_CONTEXT_EVICTION_PROTECTED_KEYS = frozenset(
+    {"session_id", "user_id", "request_id", "workflow_id", *_CHECKPOINT_VOLATILE_CONTEXT_KEYS}
+)
+
 # ==========================================
 # 1. Core Data Structures
 # ==========================================
@@ -94,6 +100,16 @@ def _summarize_context_value(value: Any) -> Any:
     }
 
 
+def _evict_overflow_context_keys(target: dict[str, Any]) -> None:
+    """RB-11: 按插入序淘汰最老的未保护键，白名单键（标识/运行时依赖）永不驱逐。"""
+    overflow = len(target) - settings.MAX_CONTEXT_DATA_KEYS
+    if overflow <= 0:
+        return
+    for key in [k for k in target if k not in _CONTEXT_EVICTION_PROTECTED_KEYS][:overflow]:
+        target.pop(key, None)
+        FSM_CONTEXT_EVICTION_TOTAL.inc()
+
+
 def _merge_context_data(target: dict[str, Any], new_data: dict[str, Any]) -> None:
     if not isinstance(new_data, dict):
         return
@@ -101,10 +117,7 @@ def _merge_context_data(target: dict[str, Any], new_data: dict[str, Any]) -> Non
         if key in target:
             del target[key]
         target[key] = _summarize_context_value(value)
-    while len(target) > settings.MAX_CONTEXT_DATA_KEYS:
-        oldest_key = next(iter(target))
-        del target[oldest_key]
-        FSM_CONTEXT_EVICTION_TOTAL.inc()
+    _evict_overflow_context_keys(target)
     FSM_CONTEXT_SIZE_BYTES.set(_safe_context_bytes(target))
 
 

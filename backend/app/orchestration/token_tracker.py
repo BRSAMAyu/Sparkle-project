@@ -406,7 +406,9 @@ class TokenTracker:
 
         async for key in self.redis.scan_iter(match=pattern):
             # key 格式: user:daily_tokens:{user_id}:{date}
-            parts = key.decode("utf-8").split(":")
+            # RB-05: decode_responses=True 的客户端返回 str，bytes 分支仅作防御
+            key_text = key.decode("utf-8") if isinstance(key, bytes) else str(key)
+            parts = key_text.split(":")
             if len(parts) >= 4:
                 user_id = parts[2]
                 date = parts[3]

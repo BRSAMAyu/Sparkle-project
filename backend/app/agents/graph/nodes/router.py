@@ -72,6 +72,15 @@ async def _build_quality_context(
     return "\nRecent agent quality signals:\n" + "\n".join(quality_lines)
 
 
+def _resolve_router_user_query(messages: list) -> str:
+    """RB-09: tools->router 回环后最后一条是 ToolMessage（工具输出），
+    语义路由必须基于最近一条真实用户消息，而不是把工具结果当提问重新分类。"""
+    for message in reversed(messages):
+        if getattr(message, "type", "") == "human":
+            return str(message.content or "")
+    return str(messages[-1].content or "") if messages else ""
+
+
 async def router_node(state: SparkleState, config: dict | None = None):
     """
     Semantic router node.
@@ -79,8 +88,7 @@ async def router_node(state: SparkleState, config: dict | None = None):
     Routes the latest user query to the best specialist and decides whether
     collaboration should be used.
     """
-    last_message = state["messages"][-1]
-    user_query = last_message.content
+    user_query = _resolve_router_user_query(state["messages"])
 
     current_status = state.get("planning_status")
     if current_status in [None, "completed"]:

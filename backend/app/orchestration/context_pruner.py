@@ -141,6 +141,12 @@ class ContextPruner:
                     fallback_messages = self._compress_with_importance(history)
                     return {"messages": fallback_messages, "summary": None}
 
+        if summary_messages and not str(summary or "").strip():
+            # RB-07: 空摘要（FAST 模型空响应/拒答）视为总结失败，退回二层压缩，
+            # 避免 anchor/recent 之外的中间消息被静默丢弃
+            logger.warning(f"Empty sync summary for session {session_id}; falling back to importance compression")
+            return {"messages": self._compress_with_importance(history), "summary": None}
+
         messages = self._dedupe_messages(anchor_messages + recent_messages)
         return {"messages": messages, "summary": summary}
 

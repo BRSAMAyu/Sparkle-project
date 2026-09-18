@@ -182,9 +182,11 @@ class CircuitBreaker:
                 should_trip = True
                 reason = f"failure_threshold_exceeded ({self._failure_count}/{self.config.failure_threshold})"
 
-            # Check failure rate
+            # Check failure rate — RB-04: require a minimum sample size before
+            # rate-based tripping so a single transient failure cannot open the circuit.
+            min_samples = max(3, self.config.window_size // 2)
             failure_rate = self._calculate_failure_rate()
-            if failure_rate >= self.config.failure_rate_threshold:
+            if len(self._result_window) >= min_samples and failure_rate >= self.config.failure_rate_threshold:
                 should_trip = True
                 reason = f"failure_rate_exceeded ({failure_rate:.2%})"
 

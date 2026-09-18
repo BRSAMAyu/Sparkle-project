@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, fields
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
@@ -198,6 +198,9 @@ class SessionStateManager:
                 new_state = existing
             else:
                 # 创建新状态
+                # RB-12: 与 existing 分支一致过滤未知字段，避免 **kwargs 直接 TypeError
+                valid_fields = {f.name for f in fields(FSMState)}
+                safe_kwargs = {k: v for k, v in kwargs.items() if k in valid_fields}
                 new_state = FSMState(
                     session_id=session_id,
                     state=state,
@@ -205,7 +208,7 @@ class SessionStateManager:
                     request_id=request_id,
                     user_id=user_id,
                     timestamp=datetime.now().timestamp(),
-                    **kwargs
+                    **safe_kwargs
                 )
 
             # 保存到 Redis

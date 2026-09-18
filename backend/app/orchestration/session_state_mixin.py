@@ -863,7 +863,9 @@ class SessionStateMixin:
                 decision_payload=context_plan,
             )
             active_db.add(record)
-            await active_db.commit()
+            # RB-06: active_db 是外层共享会话，中途 commit 会把本轮其它 pending
+            # ORM 写入提前落库并破坏一轮一事务的原子性；flush 后由调用方统一提交
+            await active_db.flush()
         except Exception as exc:
             logger.debug(f"Failed to persist context plan to routing_decision_log: {exc}")
 

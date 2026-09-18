@@ -127,6 +127,9 @@ _OPENCLAW_CHAT_CONTROL_EXPLANATION_HINTS = (
     "how ",
 )
 
+# RB-02: module-level so the graph timeout budget is observable and testable.
+GRAPH_TIMEOUT_SECONDS = 300
+
 
 class ExecutionEngineMixin:
     """Mixin providing execution, planning, and tool-handling methods for ChatOrchestrator."""
@@ -1845,7 +1848,6 @@ class ExecutionEngineMixin:
         total_prompt_tokens = 0
         total_completion_tokens = 0
         start_time = time.time()
-        GRAPH_TIMEOUT_SECONDS = 300
 
         try:
             while not (graph_task.done() and queue.empty()):
@@ -1858,11 +1860,13 @@ class ExecutionEngineMixin:
                 try:
                     item = await asyncio.wait_for(queue.get(), timeout=0.1)
                     if item.HasField("usage"):
-                        total_prompt_tokens = item.usage.prompt_tokens
-                        total_completion_tokens = item.usage.completion_tokens
+                        # RB-03: usage 事件为单次调用用量，一轮内多次生成调用需累加，
+                        # 否则配额/计费链路只记最后一次调用的用量。
+                        total_prompt_tokens += item.usage.prompt_tokens
+                        total_completion_tokens += item.usage.completion_tokens
                         if self.token_tracker:
-                            TOKEN_USAGE.labels(model="gpt-4", type="prompt").inc(total_prompt_tokens)
-                            TOKEN_USAGE.labels(model="gpt-4", type="completion").inc(total_completion_tokens)
+                            TOKEN_USAGE.labels(model="gpt-4", type="prompt").inc(item.usage.prompt_tokens)
+                            TOKEN_USAGE.labels(model="gpt-4", type="completion").inc(item.usage.completion_tokens)
                     yield item
                     queue.task_done()
                 except TimeoutError:
@@ -2584,7 +2588,8 @@ class ExecutionEngineMixin:
                 user_id=user_id,
             )
 
-            asyncio.create_task(
+            # RB-13: 后台任务必须登记引用并记录异常，避免被 GC 提前回收或异常无人消费
+            shadow_task = asyncio.create_task(
                 self.shadow_predictor.predict_and_record(
                     user_message=user_message,
                     user_id=user_id,
@@ -2593,10 +2598,17 @@ class ExecutionEngineMixin:
                     actual_plan=executable_plan,
                 )
             )
+            track_task = getattr(self, "_track_task", None)
+            if callable(track_task):
+                track_task(shadow_task)
             return route_decision, executable_plan, snapshot, False
         except Exception as e:
             logger.error(f"LangGraph planning error: {e}", exc_info=True)
             await self.langgraph_breaker.on_failure(str(e))
-            await stream_callback(agent_service_pb2.ChatResponse(delta=f"\n\n⚠️ 规划失败，使用直接模式: {str(e)}"))
+            # RB-08: 错误文案必须走脱敏通道，禁止把原始异常文本直接流给客户端
+            safe_message, _, _ = build_safe_chat_error(e)
+            await stream_callback(
+                agent_service_pb2.ChatResponse(delta=f"\n\n⚠️ 规划失败，使用直接模式。({safe_message})")
+            )
             route_decision.execution_mode = "direct"
             return route_decision, executable_plan, snapshot, False

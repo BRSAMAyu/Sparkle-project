@@ -287,7 +287,8 @@ class DualCoreRouter:
                 if (
                     cognitive_load_available
                     and cognitive_load_confident
-                    and cognitive_load_value >= float(self._param("high_cognitive_load", 0.55))
+                    # RB-10: 必须用 threshold 参数；"high_cognitive_load" 与优先级权重键冲突
+                    and cognitive_load_value >= float(self._param("high_cognitive_load_threshold", 0.55))
                 )
                 else 0.0
             ),

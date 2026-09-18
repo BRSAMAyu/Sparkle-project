@@ -1143,6 +1143,7 @@ class ResponseBuilderMixin:
             if briefing_note:
                 response_metadata["context_briefing_note"] = briefing_note
             focused_memory = final_state.context_data.get("focused_memory")
+            semantic_meta = None
             if isinstance(focused_memory, dict):
                 summary = {
                     "preferences": len(dict(focused_memory.get("preferences") or {})),

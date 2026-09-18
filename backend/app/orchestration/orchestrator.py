@@ -2830,6 +2830,14 @@ class ChatOrchestrator(
                 if sufficiency_handled:
                     async for queued in self._drain_queue(queue):
                         yield self._bind_response_session_id(queued, session_id, request_id=request_id)
+                    # RB-16: 短路出口也要推进 FSM，避免会话停留在 INIT
+                    await self._update_state(
+                        session_id,
+                        STATE_DONE,
+                        "Sufficiency short-circuit completed",
+                        request_id=request_id,
+                        user_id=user_id,
+                    )
                     return
                 if await self._check_goal_quality(
                     intent_type=intent_type,
@@ -2843,6 +2851,13 @@ class ChatOrchestrator(
                 ):
                     async for queued in self._drain_queue(queue):
                         yield self._bind_response_session_id(queued, session_id, request_id=request_id)
+                    await self._update_state(
+                        session_id,
+                        STATE_DONE,
+                        "Goal quality short-circuit completed",
+                        request_id=request_id,
+                        user_id=user_id,
+                    )
                     return
 
                 if chat_mode != CHAT_MODE_STANDARD and not settings.ENABLE_UNIFIED_GRAPH_ROUTING:
@@ -3456,6 +3471,38 @@ class ChatOrchestrator(
                     state=state, user_id=user_id, queue=queue, result_holder=result_holder
                 ):
                     yield item
+
+                # RB-02: graph timeout path — the graph task was cancelled without a
+                # final_state. Explicitly drain already-generated content, fail the FSM
+                # and terminate the stream with an ERROR frame instead of falling through
+                # to the success accounting with no terminal frame at all.
+                if result_holder.get("timed_out") and result_holder.get("final_state") is None:
+                    async for queued in self._drain_queue(queue):
+                        yield self._bind_response_session_id(queued, session_id, request_id=request_id)
+                    await self._update_state(
+                        session_id,
+                        STATE_FAILED,
+                        "Graph execution timed out",
+                        request_id=request_id,
+                        user_id=user_id,
+                    )
+                    REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="error").inc()
+                    COLLABORATION_SUCCESS.labels(
+                        workflow_type="standard_chat", agents_used="orchestrator", outcome="error"
+                    ).inc()
+                    yield agent_service_pb2.ChatResponse(
+                        response_id=response_id,
+                        created_at=int(datetime.now().timestamp()),
+                        request_id=request_id,
+                        error=agent_service_pb2.Error(
+                            message="Response generation timed out. Please retry.",
+                            retryable=True,
+                            error_code=agent_service_pb2.ERROR_CODE_TIMEOUT,
+                        ),
+                        finish_reason=agent_service_pb2.ERROR,
+                        session_id=session_id,
+                    )
+                    return
 
                 # Step 14: Build & yield final response
                 final_state = result_holder.get("final_state")
