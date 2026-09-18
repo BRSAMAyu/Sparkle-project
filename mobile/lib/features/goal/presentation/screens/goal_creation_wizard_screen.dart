@@ -58,11 +58,26 @@ class _GoalCreationWizardScreenState
   ScenarioPackSummary? _matchedPack;
 
   @override
+  void initState() {
+    super.initState();
+    // N-7 UX 旁路：底部继续键要跟随意图输入文本实时点亮/熄灭。
+    _intentController.addListener(_onIntentTextChanged);
+  }
+
+  void _onIntentTextChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
   void dispose() {
+    _intentController
+      ..removeListener(_onIntentTextChanged)
+      ..dispose();
     _titleController.dispose();
     _motivationController.dispose();
     _descriptionController.dispose();
-    _intentController.dispose();
     super.dispose();
   }
 
@@ -158,11 +173,13 @@ class _GoalCreationWizardScreenState
 
   bool get _primaryActionEnabled {
     if (_loadingPreview || _creating || _analyzingIntent) return false;
-    // Step 0 in Entry Wire mode disables the bottom button — the input
-    // widget owns its own submit button, and the confirmation card uses
-    // chips/action rows. We only re-enable the bottom Continue button once
-    // the user has fallen back to the legacy chooser.
-    if (_step == 0 && _intentAnalysis == null) return false;
+    // Phase-1 Entry Wire，N-7 UX 旁路：第 0 步意图输入未提交时，底部继续键
+    // 在文本非空时点亮，点击复用输入卡内提交的同一分析路径（不再强制
+    // 用户去点输入卡内的按钮）；空文本保持禁用。确认卡（actionable）
+    // 展示时仍由卡内 chips/action rows 主导，底部键保持禁用。
+    if (_step == 0 && _intentAnalysis == null) {
+      return _intentController.text.trim().isNotEmpty;
+    }
     if (_step == 0 &&
         _intentAnalysis != null &&
         _intentAnalysis!.isActionable) {
@@ -245,6 +262,12 @@ class _GoalCreationWizardScreenState
   }
 
   Future<void> _next() async {
+    // N-7 UX 旁路：第 0 步意图输入未提交时，底部继续键复用输入卡内
+    // 提交的同一分析路径（_runIntentAnalysis），不跳步。
+    if (_step == 0 && _intentAnalysis == null) {
+      await _runIntentAnalysis();
+      return;
+    }
     if (_step == 2) {
       await _loadPreview();
       if (!mounted || _preview == null) return;

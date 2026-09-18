@@ -13,6 +13,8 @@ import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart
 import 'package:sparkle/features/chat/chat.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
+import 'package:sparkle/features/community/data/services/community_websocket_service.dart'
+    show isTerminalCommunityWsFailure;
 import 'package:uuid/uuid.dart';
 
 // WebSocket connection state enum
@@ -1079,6 +1081,18 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
   int _error401Count = 0;
   static const int _max401Retries = 1;
 
+  // M-3：终态连接失败（网关透传 retryable:false / 上游 403/404）。
+  // 置位后自动重连彻底停止；原因暴露给 UI surfaced（用户仍可通过
+  // [manualReconnect] 显式重试）。
+  bool _terminalConnectionFailure = false;
+  String? _connectionFailureReason;
+
+  /// 是否已发生终态连接失败（不再自动重连）。
+  bool get hasTerminalConnectionFailure => _terminalConnectionFailure;
+
+  /// 最近一次终态连接失败的原因（null = 无）。
+  String? get connectionFailureReason => _connectionFailureReason;
+
   bool _is401Error(dynamic error) {
     final errorStr = error.toString().toLowerCase();
     return errorStr.contains('status code: 401') ||
@@ -1095,11 +1109,29 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
   }
 
   void _handleConnectionError([Object? error]) {
+    // M-3：终态失败后任何自动重连入口都直接短路（含 onDone 触发）。
+    if (_terminalConnectionFailure) return;
+
     _connectionState = WebSocketConnectionState.disconnected;
 
     if (error != null && _is401Error(error)) {
       debugPrint('🔐 401 Authentication error detected');
       unawaited(_handle401Error());
+      return;
+    }
+
+    // M-3：网关终态拒帧（websocket_upstream_rejected / retryable:false /
+    // 上游 403、404）——换凭据前的同一请求只会再次被拒，立即停重试并
+    // surfaced 明确错误，避免 round1 的 ×N 重连风暴。401 语义仍走上方
+    // 有界的"刷新一次令牌再退"路径。
+    if (error != null && isTerminalCommunityWsFailure(error)) {
+      _terminalConnectionFailure = true;
+      _connectionFailureReason = error.toString();
+      _retryCount = _maxRetries;
+      debugPrint('WS terminal failure, stopping retries: $error');
+      // 复位重发当前列表，让监听方重建并读取 connectionFailureReason
+      // （与 setQuote 相同的 notify 模式）。
+      state = AsyncValue.data(List.of(state.valueOrNull ?? const []));
       return;
     }
 
@@ -1165,6 +1197,9 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
 
   Future<void> manualReconnect() async {
     _retryCount = 0;
+    // 用户显式重试：清除终态标记，恢复自动重连资格。
+    _terminalConnectionFailure = false;
+    _connectionFailureReason = null;
     await _connectWebSocket();
   }
 

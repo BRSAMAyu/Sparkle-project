@@ -535,6 +535,46 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                 ),
               ),
             ),
+            // M-3：终态连接失败（网关拒帧 retryable:false / 上游 403、404）
+            // 时 surfaced 明确错误；自动重连已停，提供用户显式重连入口。
+            if (ref
+                    .read(groupChatProvider(widget.groupId).notifier)
+                    .connectionFailureReason !=
+                null) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DS.spacing16,
+                  vertical: DS.spacing8,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.cloud_off_rounded,
+                      size: DS.fontSizeMd,
+                      color: DS.error,
+                    ),
+                    const SizedBox(width: DS.spacing8),
+                    Expanded(
+                      child: Text(
+                        context.l10n.communityChatConnectionLost,
+                        style: TextStyle(
+                          color: DS.error,
+                          fontSize: DS.fontSizeSm,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => unawaited(
+                        ref
+                            .read(groupChatProvider(widget.groupId).notifier)
+                            .manualReconnect(),
+                      ),
+                      child: Text(context.l10n.communityChatReconnect),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             if (agentState.error != null)
               Padding(
                 padding: const EdgeInsets.symmetric(

@@ -8374,6 +8374,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityChatEmpty => 'Community Chat Empty';
 
   @override
+  String get communityChatConnectionLost =>
+      'Realtime connection rejected by the server. Auto-retry stopped';
+
+  @override
+  String get communityChatReconnect => 'Reconnect';
+
+  @override
   String get communityChatTitle => 'Community Chat Title';
 
   @override

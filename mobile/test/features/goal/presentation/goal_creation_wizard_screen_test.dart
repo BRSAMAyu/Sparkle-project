@@ -17,6 +17,45 @@ class _DisabledGoalIntentService implements GoalIntentService {
       GoalIntentAnalysis.disabled();
 }
 
+/// 记录调用次数的意图分析桩（N-7 旁路测试用）。
+class _RecordingDisabledIntentService implements GoalIntentService {
+  int analyzeCalls = 0;
+
+  @override
+  Future<GoalIntentAnalysis> analyze(String text) async {
+    analyzeCalls++;
+    return GoalIntentAnalysis.disabled();
+  }
+}
+
+/// 可行动（actionable）意图分析桩：模拟命中考试救援判定。
+class _ActionableGoalIntentService implements GoalIntentService {
+  @override
+  Future<GoalIntentAnalysis> analyze(String text) async =>
+      const GoalIntentAnalysis(
+        mode: 'exam_rescue',
+        confidence: 0.9,
+        headline: '高数急救计划',
+        nextBestAction: '先做一次真题摸底',
+        correctionOptions: [],
+        suggestedActions: [
+          GoalIntentSuggestedAction(
+            key: 'baseline_drill',
+            label: '10 分钟摸底练习',
+            estimatedMinutes: 10,
+          ),
+        ],
+      );
+}
+
+FilledButton? _bottomContinueButton(WidgetTester tester) {
+  final finder = find.widgetWithText(FilledButton, '继续');
+  final matched = finder.evaluate().isEmpty
+      ? null
+      : tester.widget<FilledButton>(finder.first);
+  return matched;
+}
+
 void main() {
   setUp(setUpI18nForTesting);
   tearDown(tearDownI18n);
@@ -75,6 +114,108 @@ void main() {
 
     expect(repository.createCalls, 1);
     expect(created?.id, 'goal-1');
+  });
+
+  group('N-7 底部继续键 UX 旁路（Entry Wire 单路径解锁）', () {
+    testWidgets('空文本时底部继续键禁用', (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            goalIntentServiceProvider.overrideWithValue(
+              _RecordingDisabledIntentService(),
+            ),
+          ],
+          child: testMaterialApp(
+            home: const GoalCreationWizardScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(_bottomContinueButton(tester)?.onPressed, isNull,
+          reason: '空意图文本时底部继续键必须保持禁用',);
+    });
+
+    testWidgets('纯空白文本时底部继续键保持禁用', (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            goalIntentServiceProvider.overrideWithValue(
+              _RecordingDisabledIntentService(),
+            ),
+          ],
+          child: testMaterialApp(
+            home: const GoalCreationWizardScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), '   ');
+      await tester.pump();
+
+      expect(_bottomContinueButton(tester)?.onPressed, isNull,
+          reason: '纯空白意图文本视同空文本，继续键保持禁用',);
+    });
+
+    testWidgets('文本非空时点亮继续键，点击走与输入卡提交同一分析路径', (tester) async {
+      final intentService = _RecordingDisabledIntentService();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            goalIntentServiceProvider.overrideWithValue(intentService),
+          ],
+          child: testMaterialApp(
+            home: const GoalCreationWizardScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), '通过高数考试');
+      await tester.pump();
+
+      expect(_bottomContinueButton(tester)?.onPressed, isNotNull,
+          reason: '意图文本非空时底部继续键必须点亮可点',);
+
+      // 点击底部继续键（不点输入卡内的「让我先看看你的情况」），
+      // 必须触发与卡内提交相同的意图分析路径。
+      await tester.tap(find.widgetWithText(FilledButton, '继续'));
+      await tester.pumpAndSettle();
+
+      expect(intentService.analyzeCalls, 1,
+          reason: '底部继续键应复用 Entry Wire 意图分析路径',);
+      // 分析返回 disabled → 回退到传统类型选择器。
+      expect(find.text('学术'), findsOneWidget);
+    });
+
+    testWidgets('分析进行中继续键禁用，确认卡出现后不抢确认卡的路径', (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            goalIntentServiceProvider.overrideWithValue(
+              _ActionableGoalIntentService(),
+            ),
+          ],
+          child: testMaterialApp(
+            home: const GoalCreationWizardScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), '三周内通过高数');
+      await tester.pump();
+      expect(_bottomContinueButton(tester)?.onPressed, isNotNull);
+
+      await tester.tap(find.widgetWithText(FilledButton, '继续'));
+      await tester.pumpAndSettle();
+
+      // actionable 分析 → 确认卡出现，底部继续键重新禁用（不与卡内路径抢道）。
+      expect(find.text('高数急救计划'), findsOneWidget);
+      expect(_bottomContinueButton(tester)?.onPressed, isNull,
+          reason: '确认卡展示时底部继续键应保持禁用',);
+    });
   });
 }
 

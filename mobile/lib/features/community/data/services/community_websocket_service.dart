@@ -69,6 +69,71 @@ class WsReconnectConfig {
 /// Signature for ACK callback
 typedef AckCallback = void Function(String);
 
+/// M-3 客户端终态停重试（配合网关 b62b530b 的终态透传）：
+/// 判断一次 WS 连接失败是否为"终态"——上游明确拒绝（401/403/404）、
+/// 网关标记 `retryable:false`，或 WS 4401/4403/4404 close code。
+/// 终态失败换凭据/路径也不会成功，客户端必须立即停止重试，
+/// 否则会复现 round1 的 ×15 重连风暴。
+bool isTerminalCommunityWsFailure(Object? error) {
+  if (error == null) return false;
+  final text = error.toString();
+  // 网关终态拒帧标记（writeBackendDialFailure 透传体）
+  if (text.contains('websocket_upstream_rejected')) return true;
+  if (text.contains('"retryable":false') ||
+      text.contains('retryable: false')) {
+    return true;
+  }
+  // dart:io 握手失败：'WebSocketException: ... HTTP status code: 403'；
+  // 网关 JSON 拒帧：'"upstream_status":403'。
+  final terminalStatus = RegExp(
+    r'status[\s"_-]*code[\s":_=]*(\d{3})\b'
+    r'|(?:upstream_)?status"?\s*[:=]\s*"?\s*(\d{3})\b',
+    caseSensitive: false,
+  ).firstMatch(text);
+  if (terminalStatus != null) {
+    final status =
+        int.parse(terminalStatus.group(1) ?? terminalStatus.group(2)!);
+    if (status == 401 || status == 403 || status == 404) return true;
+  }
+  // WS close code 约定：4401/4403/4404 表示上游鉴权/路由终态
+  final closeMatch = RegExp(r'close code[:\s]*(\d{4})', caseSensitive: false)
+      .firstMatch(text);
+  if (closeMatch != null) {
+    final code = int.parse(closeMatch.group(1)!);
+    if (code == 4401 || code == 4403 || code == 4404) return true;
+  }
+  if (text.contains('401 unauthorized') || text.contains('403 forbidden')) {
+    return true;
+  }
+  return false;
+}
+
+/// 判断一条带内（already-upgraded socket）错误帧是否为终态拒绝。
+bool isTerminalCommunityWsFrame(Map<String, dynamic> frame) {
+  if (frame['retryable'] == false) return true;
+  final upstream = frame['upstream_status'];
+  final upstreamStatus = upstream is num
+      ? upstream.toInt()
+      : upstream is String
+          ? int.tryParse(upstream)
+          : null;
+  if (upstreamStatus == 401 || upstreamStatus == 403 || upstreamStatus == 404) {
+    return true;
+  }
+  final type = frame['type'];
+  if (type == 'error' || type == 'connection_failed' || type == 'auth_failed') {
+    final errorText = frame['error']?.toString() ?? '';
+    if (errorText.isNotEmpty && isTerminalCommunityWsFailure(errorText)) {
+      return true;
+    }
+    if (frame['status'] is num) {
+      final status = (frame['status'] as num).toInt();
+      if (status == 401 || status == 403 || status == 404) return true;
+    }
+  }
+  return false;
+}
+
 /// Community WebSocket Service
 /// Handles real-time communication for group chats and personal notifications
 class CommunityWebSocketService {
@@ -76,10 +141,16 @@ class CommunityWebSocketService {
   CommunityWebSocketService({
     required AuthRepository authRepository,
     WsReconnectConfig reconnectConfig = const WsReconnectConfig(),
+    /// 测试注入：覆盖 WS 基地址（默认 [ApiConstants.wsBaseUrl]）。
+    String? wsBaseUrlOverride,
   })  : _authRepository = authRepository,
-        _reconnectConfig = reconnectConfig;
+        _reconnectConfig = reconnectConfig,
+        _wsBaseUrlOverride = wsBaseUrlOverride;
   final AuthRepository _authRepository;
   final WsReconnectConfig _reconnectConfig;
+  final String? _wsBaseUrlOverride;
+
+  String get _wsBaseUrl => _wsBaseUrlOverride ?? ApiConstants.wsBaseUrl;
 
   WebSocketChannel? _groupChannel;
   WebSocketChannel? _personalChannel;
@@ -100,6 +171,19 @@ class CommunityWebSocketService {
   Timer? _personalReconnectTimer;
   int _groupReconnectAttempts = 0;
   int _personalReconnectAttempts = 0;
+
+  // M-3：终态失败标记。置位后禁止任何自动重连（含 onDone 触发的那类），
+  // 原因向外暴露供 UI surfaced。
+  bool _groupTerminalFailure = false;
+  bool _personalTerminalFailure = false;
+  String? _groupFailureReason;
+  String? _personalFailureReason;
+
+  /// 最近一次群聊通道终态失败的原因（null = 无终态失败）。
+  String? get groupFailureReason => _groupFailureReason;
+
+  /// 最近一次个人通道终态失败的原因（null = 无终态失败）。
+  String? get personalFailureReason => _personalFailureReason;
 
   // Pending ACK messages (nonce -> callback)
   final Map<String, AckCallback> _pendingAcks = {};
@@ -142,12 +226,14 @@ class CommunityWebSocketService {
       return;
     }
 
-    final wsUrl = '${ApiConstants.wsBaseUrl}/api/v1/community/groups/$groupId/ws';
+    final wsUrl = '$_wsBaseUrl/api/v1/community/groups/$groupId/ws';
 
     debugPrint('[WS] Connecting to group: $groupId');
 
     try {
       _groupReconnectAttempts = 0;
+      _groupTerminalFailure = false;
+      _groupFailureReason = null;
       _currentGroupId = groupId;
 
       _groupChannel = IOWebSocketChannel.connect(
@@ -157,6 +243,14 @@ class CommunityWebSocketService {
       );
 
       _setGroupState(WsConnectionState.connecting);
+
+      // 握手失败会同时打到 stream 的 onError 与 ready；在这里消费 ready 的
+      // 错误，避免未处理的异步异常泄漏（错误本身由 _handleGroupError 分类）。
+      unawaited(
+        _groupChannel!.ready.catchError((Object e) {
+          debugPrint('[WS] Group handshake ready error (handled): $e');
+        }),
+      );
 
       _groupSubscription = _groupChannel!.stream.listen(
         _handleGroupMessage,
@@ -168,12 +262,17 @@ class CommunityWebSocketService {
       // Give connection a moment to establish
       await Future<void>.delayed(const Duration(milliseconds: 100));
 
-      if (_groupChannel != null) {
+      if (_groupChannel != null && !_groupTerminalFailure) {
         _setGroupState(WsConnectionState.connected);
         _groupReconnectAttempts = 0;
         debugPrint('[WS] Group connection established: $groupId');
       }
     } catch (e) {
+      if (isTerminalCommunityWsFailure(e)) {
+        debugPrint('[WS] Group terminal failure (no retry): $e');
+        _failGroupPermanently(e.toString());
+        return;
+      }
       debugPrint('[WS] Group connection error: $e');
       _setGroupState(WsConnectionState.error);
       _scheduleGroupReconnect(groupId);
@@ -194,12 +293,14 @@ class CommunityWebSocketService {
       return;
     }
 
-    final wsUrl = '${ApiConstants.wsBaseUrl}/api/v1/community/ws/connect';
+    final wsUrl = '$_wsBaseUrl/api/v1/community/ws/connect';
 
     debugPrint('[WS] Connecting to personal channel');
 
     try {
       _personalReconnectAttempts = 0;
+      _personalTerminalFailure = false;
+      _personalFailureReason = null;
 
       _personalChannel = IOWebSocketChannel.connect(
         Uri.parse(wsUrl),
@@ -208,6 +309,14 @@ class CommunityWebSocketService {
       );
 
       _setPersonalState(WsConnectionState.connecting);
+
+      // 握手失败会同时打到 stream 的 onError 与 ready；在这里消费 ready 的
+      // 错误，避免未处理的异步异常泄漏（错误本身由 _handlePersonalError 分类）。
+      unawaited(
+        _personalChannel!.ready.catchError((Object e) {
+          debugPrint('[WS] Personal handshake ready error (handled): $e');
+        }),
+      );
 
       _personalSubscription = _personalChannel!.stream.listen(
         _handlePersonalMessage,
@@ -219,12 +328,17 @@ class CommunityWebSocketService {
       // Give connection a moment to establish
       await Future<void>.delayed(const Duration(milliseconds: 100));
 
-      if (_personalChannel != null) {
+      if (_personalChannel != null && !_personalTerminalFailure) {
         _setPersonalState(WsConnectionState.connected);
         _personalReconnectAttempts = 0;
         debugPrint('[WS] Personal connection established');
       }
     } catch (e) {
+      if (isTerminalCommunityWsFailure(e)) {
+        debugPrint('[WS] Personal terminal failure (no retry): $e');
+        _failPersonalPermanently(e.toString());
+        return;
+      }
       debugPrint('[WS] Personal connection error: $e');
       _setPersonalState(WsConnectionState.error);
       _schedulePersonalReconnect();
@@ -276,6 +390,13 @@ class CommunityWebSocketService {
     try {
       final json = jsonDecode(data) as Map<String, dynamic>;
 
+      // M-3：带内终态拒帧（网关透传 / 引擎下发的 retryable:false）。
+      if (isTerminalCommunityWsFrame(json)) {
+        debugPrint('[WS] Group terminal reject frame (no retry): $data');
+        _failGroupPermanently(data);
+        return;
+      }
+
       // Message deduplication
       final msgId = json['id'] as String?;
       if (msgId != null) {
@@ -319,6 +440,13 @@ class CommunityWebSocketService {
 
     try {
       final json = jsonDecode(data) as Map<String, dynamic>;
+
+      // M-3：带内终态拒帧（网关透传 / 引擎下发的 retryable:false）。
+      if (isTerminalCommunityWsFrame(json)) {
+        debugPrint('[WS] Personal terminal reject frame (no retry): $data');
+        _failPersonalPermanently(data);
+        return;
+      }
 
       // Message deduplication
       final msgId = json['id'] as String?;
@@ -367,7 +495,36 @@ class CommunityWebSocketService {
     _personalStateController.add(state);
   }
 
+  /// M-3：群聊通道终态失败——立即清场并停在 failed，绝不自动重连。
+  /// 重新连接的唯一入口是用户显式调用 [connectToGroup]（会复位终态标记）。
+  void _failGroupPermanently(String reason) {
+    if (_groupTerminalFailure) return;
+    _groupTerminalFailure = true;
+    _groupFailureReason = reason;
+    _groupReconnectTimer?.cancel();
+    _groupReconnectTimer = null;
+    _currentGroupId = null;
+    unawaited(_groupSubscription?.cancel());
+    _groupSubscription = null;
+    _groupChannel = null;
+    _setGroupState(WsConnectionState.failed);
+  }
+
+  /// M-3：个人通道终态失败（语义同 [_failGroupPermanently]）。
+  void _failPersonalPermanently(String reason) {
+    if (_personalTerminalFailure) return;
+    _personalTerminalFailure = true;
+    _personalFailureReason = reason;
+    _personalReconnectTimer?.cancel();
+    _personalReconnectTimer = null;
+    unawaited(_personalSubscription?.cancel());
+    _personalSubscription = null;
+    _personalChannel = null;
+    _setPersonalState(WsConnectionState.failed);
+  }
+
   void _scheduleGroupReconnect(String groupId) {
+    if (_groupTerminalFailure) return;
     if (_groupReconnectAttempts >= _reconnectConfig.maxAttempts) {
       _setGroupState(WsConnectionState.failed);
       debugPrint('[WS] Group reconnection failed: max attempts reached');
@@ -389,6 +546,7 @@ class CommunityWebSocketService {
   }
 
   void _schedulePersonalReconnect() {
+    if (_personalTerminalFailure) return;
     if (_personalReconnectAttempts >= _reconnectConfig.maxAttempts) {
       _setPersonalState(WsConnectionState.failed);
       debugPrint('[WS] Personal reconnection failed: max attempts reached');
@@ -410,12 +568,22 @@ class CommunityWebSocketService {
   }
 
   void _handleGroupError(Object error) {
+    // M-3：终态失败（上游 401/403/404、retryable:false）→ 立即停重试。
+    if (isTerminalCommunityWsFailure(error)) {
+      debugPrint('[WS] Group terminal failure (no retry): $error');
+      _failGroupPermanently(error.toString());
+      return;
+    }
     debugPrint('[WS] Group stream error: $error');
     _setGroupState(WsConnectionState.error);
   }
 
   void _handleGroupDone() {
     debugPrint('[WS] Group stream closed');
+    if (_groupTerminalFailure) {
+      _setGroupState(WsConnectionState.failed);
+      return;
+    }
     _setGroupState(WsConnectionState.disconnected);
 
     // Attempt reconnection
@@ -425,12 +593,22 @@ class CommunityWebSocketService {
   }
 
   void _handlePersonalError(Object error) {
+    // M-3：终态失败（上游 401/403/404、retryable:false）→ 立即停重试。
+    if (isTerminalCommunityWsFailure(error)) {
+      debugPrint('[WS] Personal terminal failure (no retry): $error');
+      _failPersonalPermanently(error.toString());
+      return;
+    }
     debugPrint('[WS] Personal stream error: $error');
     _setPersonalState(WsConnectionState.error);
   }
 
   void _handlePersonalDone() {
     debugPrint('[WS] Personal stream closed');
+    if (_personalTerminalFailure) {
+      _setPersonalState(WsConnectionState.failed);
+      return;
+    }
     _setPersonalState(WsConnectionState.disconnected);
 
     // Attempt reconnection
@@ -443,6 +621,8 @@ class CommunityWebSocketService {
     _groupReconnectTimer = null;
     _groupReconnectAttempts = 0;
     _currentGroupId = null;
+    _groupTerminalFailure = false;
+    _groupFailureReason = null;
 
     await _groupSubscription?.cancel();
     _groupSubscription = null;
@@ -461,6 +641,8 @@ class CommunityWebSocketService {
     _personalReconnectTimer?.cancel();
     _personalReconnectTimer = null;
     _personalReconnectAttempts = 0;
+    _personalTerminalFailure = false;
+    _personalFailureReason = null;
 
     await _personalSubscription?.cancel();
     _personalSubscription = null;

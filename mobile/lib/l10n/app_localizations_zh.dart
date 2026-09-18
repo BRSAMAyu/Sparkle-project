@@ -8065,6 +8065,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get communityChatEmpty => '暂无消息';
 
   @override
+  String get communityChatConnectionLost => '实时连接已被服务器拒绝，自动重连已停止';
+
+  @override
+  String get communityChatReconnect => '重新连接';
+
+  @override
   String get communityChatTitle => '社群聊天';
 
   @override

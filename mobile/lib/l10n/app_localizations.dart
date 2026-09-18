@@ -14936,6 +14936,18 @@ abstract class AppLocalizations {
   /// **'暂无消息'**
   String get communityChatEmpty;
 
+  /// No description provided for @communityChatConnectionLost.
+  ///
+  /// In zh, this message translates to:
+  /// **'实时连接已被服务器拒绝，自动重连已停止'**
+  String get communityChatConnectionLost;
+
+  /// No description provided for @communityChatReconnect.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新连接'**
+  String get communityChatReconnect;
+
   /// No description provided for @communityChatTitle.
   ///
   /// In zh, this message translates to:
