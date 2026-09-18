@@ -403,8 +403,8 @@ class Settings(BaseSettings):
     # LLM Service
     LLM_API_BASE_URL: str = ""
     LLM_API_KEY: str = ""
-    LLM_MODEL_NAME: str = "qwen-plus"
-    LLM_REASON_MODEL_NAME: str = "deepseek-reasoner"
+    LLM_MODEL_NAME: str = "deepseek-flash"
+    LLM_REASON_MODEL_NAME: str = "deepseek-v4-pro"
     LLM_PROVIDER: str = "deepseek"  # 'xiaomi' | 'deepseek' | 'zhipu' | 'qwen' | 'openai' | 'hunyuan'
     LLM_QUOTA_ENABLED: bool = False  # Disable token quota checks by default for demo recording
     LLM_DAILY_BUDGET_USD: float = 10.0  # Daily USD budget for LLM calls (cost_controller circuit breaker)
@@ -453,7 +453,7 @@ class Settings(BaseSettings):
     # DeepSeek Configuration (核心模型 - 思考模式)
     DEEPSEEK_API_KEY: str = ""
     DEEPSEEK_BASE_URL: str = "https://api.deepseek.com"
-    DEEPSEEK_CHAT_MODEL: str = "deepseek-v4-flash"
+    DEEPSEEK_CHAT_MODEL: str = "deepseek-flash"
     DEEPSEEK_REASON_MODEL: str = "deepseek-v4-pro"
 
     # Zhipu GLM Configuration (编程/工具调用)
