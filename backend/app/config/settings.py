@@ -510,10 +510,10 @@ class Settings(BaseSettings):
     DASHSCOPE_API_KEY: str = ""
     DASHSCOPE_BASE_HTTP_API_URL: str = "https://dashscope.aliyuncs.com/api/v1"
     DASHSCOPE_BASE_URL_COMPATIBLE: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-    DASHSCOPE_CHAT_MODEL: str = "qwen3.6-plus"  # 标准/推理模型
-    DASHSCOPE_REASON_MODEL: str = "qwen3.6-plus"
-    DASHSCOPE_FAST_MODEL: str = "qwen3.6-flash"  # 快速响应模型
-    DASHSCOPE_STANDARD_MODEL: str = "qwen3.5-flash"
+    DASHSCOPE_CHAT_MODEL: str = "qwen3.8-flash"  # 标准/推理模型
+    DASHSCOPE_REASON_MODEL: str = "qwen3.8-flash"
+    DASHSCOPE_FAST_MODEL: str = "qwen3.8-flash"  # 快速响应模型
+    DASHSCOPE_STANDARD_MODEL: str = "qwen3.8-flash"
     DASHSCOPE_TEMPERATURE: float = 0.7
     DASHSCOPE_EMBEDDING_MODEL: str = "text-embedding-v4"
     DASHSCOPE_RERANK_MODEL: str = "qwen3-rerank"
