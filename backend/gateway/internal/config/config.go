@@ -114,13 +114,14 @@ type Config struct {
 	ShutdownTimeoutSeconds int `mapstructure:"SHUTDOWN_TIMEOUT_SECONDS"` // default 15
 
 	// WebSocket lifecycle
-	WSPongWaitSeconds        int `mapstructure:"WS_PONG_WAIT_SECONDS"`        // default 90
-	WSPingIntervalSeconds    int `mapstructure:"WS_PING_INTERVAL_SECONDS"`    // default 30
-	WSWriteWaitSeconds       int `mapstructure:"WS_WRITE_WAIT_SECONDS"`       // default 10
-	WSIdleTimeoutSeconds     int `mapstructure:"WS_IDLE_TIMEOUT_SECONDS"`     // default 300
-	WSReconnectWindowSeconds int `mapstructure:"WS_RECONNECT_WINDOW_SECONDS"` // default 30
-	WSReconnectMaxAttempts   int `mapstructure:"WS_RECONNECT_MAX_ATTEMPTS"`   // default 10
-	WSReconnectBlockSeconds  int `mapstructure:"WS_RECONNECT_BLOCK_SECONDS"`  // default 300
+	WSPongWaitSeconds           int `mapstructure:"WS_PONG_WAIT_SECONDS"`            // default 90
+	WSPingIntervalSeconds       int `mapstructure:"WS_PING_INTERVAL_SECONDS"`        // default 30
+	WSWriteWaitSeconds          int `mapstructure:"WS_WRITE_WAIT_SECONDS"`           // default 10
+	WSIdleTimeoutSeconds        int `mapstructure:"WS_IDLE_TIMEOUT_SECONDS"`         // default 300
+	WSReconnectWindowSeconds    int `mapstructure:"WS_RECONNECT_WINDOW_SECONDS"`     // default 30
+	WSReconnectMaxAttempts      int `mapstructure:"WS_RECONNECT_MAX_ATTEMPTS"`       // default 10
+	WSReconnectBlockSeconds     int `mapstructure:"WS_RECONNECT_BLOCK_SECONDS"`      // default 300
+	WSBackendDialTimeoutSeconds int `mapstructure:"WS_BACKEND_DIAL_TIMEOUT_SECONDS"` // default 10
 
 	// Request timeout
 	RequestTimeoutSeconds int `mapstructure:"REQUEST_TIMEOUT_SECONDS"` // default 30
@@ -483,6 +484,7 @@ func Load() *Config {
 		"WS_RECONNECT_WINDOW_SECONDS",
 		"WS_RECONNECT_MAX_ATTEMPTS",
 		"WS_RECONNECT_BLOCK_SECONDS",
+		"WS_BACKEND_DIAL_TIMEOUT_SECONDS",
 		"REQUEST_TIMEOUT_SECONDS",
 		"MINIO_ENDPOINT",
 		"MINIO_PUBLIC_ENDPOINT",
@@ -532,6 +534,7 @@ func Load() *Config {
 	viper.SetDefault("WS_TICKET_RATE_RPS", 2.0)
 	viper.SetDefault("WS_TICKET_RATE_BURST", 5)
 	viper.SetDefault("WS_MAX_MESSAGE_BYTES", int64(262144))
+	viper.SetDefault("WS_BACKEND_DIAL_TIMEOUT_SECONDS", 10)
 	viper.SetDefault("WS_MESSAGE_RATE_RPS", DefaultWSMessageRateRPS)
 	viper.SetDefault("WS_MESSAGE_RATE_BURST", DefaultWSMessageRateBurst)
 	viper.SetDefault("WS_MAX_CONNECTIONS_PER_USER", 2)

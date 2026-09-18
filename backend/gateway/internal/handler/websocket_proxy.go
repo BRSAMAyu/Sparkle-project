@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -236,15 +238,17 @@ func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, 
 
 	// 连接到后端，并透传认证/子协议，避免网关后的 Python WS 鉴权失配。
 	dialer := *websocket.DefaultDialer
+	dialer.HandshakeTimeout = p.backendDialTimeout()
 	if subprotocols := websocket.Subprotocols(r); len(subprotocols) > 0 {
 		dialer.Subprotocols = subprotocols
 	}
-	backendConn, _, err := dialer.Dial(backendWSURL, buildBackendWebSocketHeaders(r, authToken))
+	backendConn, backendResp, err := dialer.Dial(backendWSURL, buildBackendWebSocketHeaders(r, authToken))
 	if err != nil {
 		p.logger.Error("Failed to dial backend",
 			zap.String("backend_url", backendWSURL),
+			zap.Int("upstream_status", upstreamStatusCode(backendResp)),
 			zap.Error(err))
-		http.Error(w, "Failed to connect to backend", http.StatusBadGateway)
+		writeBackendDialFailure(w, backendResp, err)
 		return
 	}
 	defer backendConn.Close()
@@ -584,6 +588,67 @@ func (p *WebSocketProxy) communityBackendURL(groupID string) string {
 
 func (p *WebSocketProxy) personalBackendURL() string {
 	return p.pythonBackendURL + "/api/v1/community/ws/connect"
+}
+
+// wsBackendDialTimeoutDefault bounds how long the gateway waits for the
+// backend WebSocket handshake before giving up. The previous behaviour leaned
+// on websocket.DefaultDialer's 45s handshake timeout: when the Python engine's
+// event loop froze (2026-09-18 restore storm, community/ws proxy 19s → 502),
+// every gateway WS request hung for tens of seconds while clients kept
+// retrying. The engine's healthy accept latency is well under 5s, so 10s
+// gives ~3x headroom while failing much faster. Configurable via
+// WS_BACKEND_DIAL_TIMEOUT_SECONDS.
+const wsBackendDialTimeoutDefault = 10 * time.Second
+
+func (p *WebSocketProxy) backendDialTimeout() time.Duration {
+	if p.config != nil && p.config.WSBackendDialTimeoutSeconds > 0 {
+		return time.Duration(p.config.WSBackendDialTimeoutSeconds) * time.Second
+	}
+	return wsBackendDialTimeoutDefault
+}
+
+// upstreamStatusCode extracts the HTTP status the backend returned during a
+// failed WebSocket handshake (gorilla surfaces it even on error); 0 when the
+// dial failed before any HTTP response was received (refused / timeout).
+func upstreamStatusCode(resp *http.Response) int {
+	if resp == nil {
+		return 0
+	}
+	return resp.StatusCode
+}
+
+// writeBackendDialFailure maps a backend WebSocket dial failure onto the
+// client response.
+//
+// M-3 (macOS round): the old code flattened every dial failure into a generic
+// 502. A terminal upstream rejection — engine auth failure (401/403) or a
+// missing engine route (404) — is not transient, but clients saw the same 502
+// as an outage and blind-retried (15 consecutive 502s), amplifying the load
+// exactly when the backend was struggling. Distinguish the cases:
+//   - terminal upstream statuses (401/403/404) are passed through so clients
+//     stop retrying with the same credentials/path;
+//   - dial timeouts surface as 504 (transient, upstream too slow);
+//   - everything else (connection refused, TLS, ...) stays a plain 502.
+func writeBackendDialFailure(w http.ResponseWriter, resp *http.Response, dialErr error) {
+	if resp != nil {
+		switch resp.StatusCode {
+		case http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound:
+			defer resp.Body.Close()
+			_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 4096))
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(resp.StatusCode)
+			_, _ = w.Write([]byte(fmt.Sprintf(
+				`{"error":"websocket_upstream_rejected","upstream_status":%d,"retryable":false}`,
+				resp.StatusCode)))
+			return
+		}
+	}
+	var netErr net.Error
+	if errors.As(dialErr, &netErr) && netErr.Timeout() {
+		http.Error(w, "Backend websocket handshake timeout", http.StatusGatewayTimeout)
+		return
+	}
+	http.Error(w, "Failed to connect to backend", http.StatusBadGateway)
 }
 
 func (p *WebSocketProxy) toWebSocketURL(rawURL string) (string, error) {

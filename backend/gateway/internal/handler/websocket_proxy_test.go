@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -127,4 +129,111 @@ func TestWebSocketProxyRejectsPerConnectionRateLimit(t *testing.T) {
 	_, _, err = conn.ReadMessage()
 	require.Error(t, err)
 	require.True(t, websocket.IsCloseError(err, websocket.ClosePolicyViolation), "expected close policy violation, got %v", err)
+}
+
+// TestWebSocketProxyTerminalUpstreamRejectionsPassThrough covers M-3: terminal
+// upstream handshake rejections (engine auth 401/403, missing route 404) must
+// reach the client with the upstream status and a non-retryable marker instead
+// of a flat 502 that clients blind-retry (15 consecutive 502s during the
+// macOS-round engine restore storm).
+func TestWebSocketProxyTerminalUpstreamRejectionsPassThrough(t *testing.T) {
+	cases := []struct {
+		name           string
+		upstreamStatus int
+	}{
+		{name: "403 auth rejection", upstreamStatus: http.StatusForbidden},
+		{name: "401 auth rejection", upstreamStatus: http.StatusUnauthorized},
+		{name: "404 missing route", upstreamStatus: http.StatusNotFound},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				http.Error(w, "denied", tc.upstreamStatus)
+			}))
+			defer backend.Close()
+
+			proxy := NewWebSocketProxy(backend.URL, zap.NewNop(), &config.Config{}, nil)
+			gateway := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				proxy.proxyWebSocket(w, r, backend.URL, "token-123", "user-1", "personal", "")
+			}))
+			defer gateway.Close()
+
+			conn, resp, err := websocket.DefaultDialer.Dial(toWebSocketTestURL(gateway.URL), nil)
+			require.Error(t, err)
+			require.Nil(t, conn)
+			require.NotNil(t, resp)
+			require.Equal(t, tc.upstreamStatus, resp.StatusCode)
+
+			body, readErr := io.ReadAll(resp.Body)
+			require.NoError(t, readErr)
+			require.Contains(t, string(body), "websocket_upstream_rejected")
+			require.Contains(t, string(body), `"retryable":false`)
+		})
+	}
+}
+
+// TestWebSocketProxyUpstreamUnreachableStays502 keeps the correct mapping for
+// a genuinely transient failure: nothing listening on the upstream port.
+func TestWebSocketProxyUpstreamUnreachableStays502(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	addr := listener.Addr().String()
+	require.NoError(t, listener.Close()) // port now closed → connection refused
+
+	proxy := NewWebSocketProxy("http://"+addr, zap.NewNop(), &config.Config{}, nil)
+	gateway := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		proxy.proxyWebSocket(w, r, "http://"+addr, "token-123", "user-1", "personal", "")
+	}))
+	defer gateway.Close()
+
+	conn, resp, err := websocket.DefaultDialer.Dial(toWebSocketTestURL(gateway.URL), nil)
+	require.Error(t, err)
+	require.Nil(t, conn)
+	require.NotNil(t, resp)
+	require.Equal(t, http.StatusBadGateway, resp.StatusCode)
+}
+
+// TestWebSocketProxyHandshakeTimeoutMapsTo504 verifies that a silent upstream
+// (accepts TCP, never completes the handshake — e.g. a frozen engine event
+// loop) fails fast via the configured dial timeout and surfaces as 504.
+func TestWebSocketProxyHandshakeTimeoutMapsTo504(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer listener.Close()
+	go func() {
+		for {
+			c, err := listener.Accept()
+			if err != nil {
+				return
+			}
+			// Hold the connection open without speaking (frozen backend).
+			go func(c net.Conn) {
+				defer c.Close()
+				time.Sleep(5 * time.Second)
+			}(c)
+		}
+	}()
+
+	proxy := NewWebSocketProxy("http://"+listener.Addr().String(), zap.NewNop(), &config.Config{
+		WSBackendDialTimeoutSeconds: 1,
+	}, nil)
+	gateway := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		proxy.proxyWebSocket(w, r, "http://"+listener.Addr().String(), "token-123", "user-1", "personal", "")
+	}))
+	defer gateway.Close()
+
+	conn, resp, err := websocket.DefaultDialer.Dial(toWebSocketTestURL(gateway.URL), nil)
+	require.Error(t, err)
+	require.Nil(t, conn)
+	require.NotNil(t, resp)
+	require.Equal(t, http.StatusGatewayTimeout, resp.StatusCode)
+}
+
+func TestWebSocketProxyBackendDialTimeoutDefault(t *testing.T) {
+	proxy := NewWebSocketProxy("http://backend.local", zap.NewNop(), &config.Config{}, nil)
+	require.Equal(t, 10*time.Second, proxy.backendDialTimeout())
+
+	proxy = NewWebSocketProxy("http://backend.local", zap.NewNop(), &config.Config{WSBackendDialTimeoutSeconds: 3}, nil)
+	require.Equal(t, 3*time.Second, proxy.backendDialTimeout())
 }
