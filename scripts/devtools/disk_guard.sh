@@ -34,6 +34,20 @@ safe_clean() {
   # 注意：docker prune 不入自动路径——守护进程脆弱时 prune 会挂死守卫循环，仅手动执行
 }
 
+truncate_big_logs() {
+  # /tmp 下实占 >2G 的活跃服务日志：仅截断不删除（写入进程持有 fd，删文件不释放块）。
+  # 用 du 实块而非 stat 表观大小：截断后进程按旧偏移写回会产生稀疏空洞，表观大小
+  # 假大而实块极小，du 判据可避免每轮重复截断。网关 7.7GB 无轮转日志事故后设立。
+  local f kb
+  for f in /private/tmp/*.log /tmp/*.log; do
+    [ -f "$f" ] || continue
+    kb=$(du -k "$f" 2>/dev/null | awk '{print $1}') || continue
+    if [ "${kb:-0}" -gt 2097152 ]; then
+      : > "$f" 2>/dev/null && log "truncated ${f} (real ${kb}KB)"
+    fi
+  done
+}
+
 aggressive_clean() {
   safe_clean
   # 全部工作树构建产物（含活跃）
@@ -48,6 +62,7 @@ aggressive_clean() {
 log "disk_guard started (soft=${SOFT_MB}MB hard=${HARD_MB}MB)"
 while true; do
   mb=$(free_mb)
+  truncate_big_logs  # 每轮都查：日志暴涨快于阈值采样
   if [ "$mb" -lt "$HARD_MB" ]; then
     log "HARD ${mb}MB — aggressive clean"
     aggressive_clean
