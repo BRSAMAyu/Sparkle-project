@@ -199,25 +199,42 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		// R2-08-03: 新版计划阶段/探索管线（引擎 18 条路由此前从移动端不可达）。
 		// Phase cards（activate 兄弟路由；complete/feedback/schedule-regenerate
 		// 为移动端 api_endpoints.dart 既有常量）
+		// route-tier: authed
 		plans.POST("/phases/:phaseCardId/complete", h.proxyWithHeaders)
+		// route-tier: authed
 		plans.POST("/phases/:phaseCardId/design-tasks", h.proxyWithHeaders)
+		// route-tier: authed
 		plans.POST("/phases/:phaseCardId/feedback", h.proxyWithHeaders)
+		// route-tier: authed
 		plans.POST("/phases/:phaseCardId/feedback-gate/start", h.proxyWithHeaders)
+		// route-tier: authed
 		plans.POST("/phases/:phaseCardId/schedule/regenerate", h.proxyWithHeaders)
+		// route-tier: authed
 		plans.POST("/phases/feedback-gate/:sessionId/respond", h.proxyWithHeaders)
 		// Discovery 探索管线
+		// route-tier: authed
 		plans.POST("/discovery/start", h.proxyWithHeaders)
+		// route-tier: authed
 		plans.POST("/discovery/:sessionId/turn", h.proxyWithHeaders)
+		// route-tier: authed
 		plans.POST("/discovery/:sessionId/finalize", h.proxyWithHeaders)
 		// Compass 评审管线
+		// route-tier: authed
 		plans.POST("/compass/:artifactId/approve", h.proxyWithHeaders)
+		// route-tier: authed
 		plans.GET("/:id/compass/review", h.proxyWithHeaders)
 		// Phase sketch + 计划执行状态机
+		// route-tier: authed
 		plans.POST("/:id/phase-sketch/generate", h.proxyWithHeaders)
+		// route-tier: authed
 		plans.POST("/:id/phase-sketch/:artifactId/materialize", h.proxyWithHeaders)
+		// route-tier: authed
 		plans.POST("/:id/advance-phase", h.proxyWithHeaders)
+		// route-tier: authed
 		plans.GET("/:id/planning-context", h.proxyWithHeaders)
+		// route-tier: authed
 		plans.POST("/:id/today", h.proxyWithHeaders)
+		// route-tier: authed
 		plans.POST("/:id/phases", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered plans proxy routes")
@@ -312,11 +329,17 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	calendar := api.Group("/calendar")
 	calendar.Use(authMiddleware)
 	{
+		// route-tier: authed
 		calendar.GET("", h.proxyWithHeaders)
+		// route-tier: authed
 		calendar.POST("", h.proxyWithHeaders)
+		// route-tier: authed
 		calendar.GET("/summary", h.proxyWithHeaders)
+		// route-tier: authed
 		calendar.GET("/:id", h.proxyWithHeaders)
+		// route-tier: authed
 		calendar.PUT("/:id", h.proxyWithHeaders)
+		// route-tier: authed
 		calendar.DELETE("/:id", h.proxyWithHeaders)
 		calendar.POST("/batch", h.proxyWithHeaders)
 		calendar.POST("/suggest-time", h.proxyWithHeaders)
@@ -329,11 +352,17 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	recommendations := api.Group("/recommendations")
 	recommendations.Use(authMiddleware)
 	{
+		// route-tier: authed
 		recommendations.GET("/collaborative", h.proxyWithHeaders)
+		// route-tier: authed
 		recommendations.GET("/similar-users", h.proxyWithHeaders)
+		// route-tier: authed
 		recommendations.GET("/similar-items", h.proxyWithHeaders)
+		// route-tier: authed
 		recommendations.GET("/my-interactions", h.proxyWithHeaders)
+		// route-tier: authed
 		recommendations.POST("/record-interaction", h.proxyWithHeaders)
+		// route-tier: authed
 		recommendations.GET("/stats", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered recommendations proxy routes")
@@ -738,6 +767,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	h.logger.Info("Registered omnibar proxy routes")
 
 	// ==================== Prediction Routes ====================
+	// route-tier: authed
 	prediction := api.Group("/prediction")
 	prediction.Use(authMiddleware)
 	{
@@ -746,6 +776,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	h.logger.Info("Registered prediction proxy routes")
 
 	// ==================== Multi-Intent Routes ====================
+	// route-tier: authed
 	multiIntent := api.Group("/multi-intent")
 	multiIntent.Use(authMiddleware)
 	{
@@ -754,6 +785,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	h.logger.Info("Registered multi-intent proxy routes")
 
 	// ==================== Subjects Routes ====================
+	// route-tier: authed
 	subjects := api.Group("/subjects")
 	subjects.Use(authMiddleware)
 	{
@@ -988,6 +1020,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	}
 	h.logger.Info("Registered photons proxy routes")
 
+	// route-tier: authed
 	inventory := api.Group("/inventory")
 	inventory.Use(authMiddleware)
 	{
@@ -996,6 +1029,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	h.logger.Info("Registered inventory proxy routes")
 
 	// ==================== Aurora Routes ====================
+	// route-tier: authed
 	aurora := api.Group("/aurora")
 	aurora.Use(authMiddleware)
 	{

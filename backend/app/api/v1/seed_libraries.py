@@ -214,6 +214,7 @@ async def list_libraries(
 # NOTE(R2-EI-14): literal routes MUST be declared before same-shape parameterized
 # routes; otherwise "/seed-libraries/my-subscriptions" is captured by
 # "/seed-libraries/{library_id}" below and always fails UUID validation (422).
+# route-tier: authed
 @router.get(
     "/seed-libraries/my-subscriptions",
     response_model=SubscriptionListResponse,

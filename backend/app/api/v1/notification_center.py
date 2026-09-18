@@ -131,6 +131,7 @@ async def mark_all_notifications_read(
 # NOTE(R2-EI-13): literal routes MUST be declared before same-shape parameterized
 # routes; otherwise "/notifications/clear-read" is captured by
 # "/notifications/{notification_id}" below and always fails UUID validation (422).
+# route-tier: authed
 @router.delete("/notifications/clear-read")
 async def clear_read_notifications(
     current_user: User = Depends(get_current_user),
