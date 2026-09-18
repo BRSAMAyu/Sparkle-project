@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -38,6 +39,20 @@ func injectAuthContext(c *gin.Context) {
 	}
 	ctx := metadata.NewOutgoingContext(c.Request.Context(), metadata.Pairs(pairs...))
 	c.Request = c.Request.WithContext(ctx)
+}
+
+func grpcUserAuthContext(ctx context.Context, userID, authToken string) context.Context {
+	if authToken == "" {
+		return ctx
+	}
+	pairs := []string{"authorization", "Bearer " + authToken}
+	// P1-E1/SEC-3: same contract as injectAuthContext above — the engine's
+	// gRPC servicers reject calls that carry a user_id but no authentication
+	// metadata (401 "missing authentication metadata").
+	if userID != "" {
+		pairs = append(pairs, "user-id", userID)
+	}
+	return metadata.NewOutgoingContext(ctx, metadata.Pairs(pairs...))
 }
 
 func writeProtoJSON(c *gin.Context, statusCode int, message proto.Message) {

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -170,6 +171,40 @@ func TestInjectAuthContext_NoUserID_OmitsUserIDMetadata(t *testing.T) {
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/test", nil))
 	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+// grpcUserAuthContext covers WebSocket-issued engine calls (update_node_mastery
+// offline sync) where no gin handler exists to run injectAuthContext.
+func TestGRPCUserAuthContext_SetsBearerAndUserID(t *testing.T) {
+	ctx := grpcUserAuthContext(context.Background(), "user-abc-123", "my-jwt-token")
+
+	md, ok := metadata.FromOutgoingContext(ctx)
+	require.True(t, ok, "expected outgoing gRPC metadata")
+	assert.Equal(t, []string{"user-abc-123"}, md.Get("user-id"))
+	assert.Equal(t, []string{"Bearer my-jwt-token"}, md.Get("authorization"))
+}
+
+func TestGRPCUserAuthContext_NoUserID_OmitsUserIDMetadata(t *testing.T) {
+	ctx := grpcUserAuthContext(context.Background(), "", "my-jwt-token")
+
+	md, ok := metadata.FromOutgoingContext(ctx)
+	require.True(t, ok, "expected outgoing gRPC metadata")
+	assert.Empty(t, md.Get("user-id"))
+	assert.Equal(t, []string{"Bearer my-jwt-token"}, md.Get("authorization"))
+}
+
+func TestGRPCUserAuthContext_NoToken_ReturnsContextUnchanged(t *testing.T) {
+	base := context.Background()
+	ctx := grpcUserAuthContext(base, "user-abc-123", "")
+
+	// no token → no auth metadata injected; the context must not pretend
+	// to be authenticated
+	md, ok := metadata.FromOutgoingContext(ctx)
+	if !ok {
+		return
+	}
+	assert.Empty(t, md.Get("authorization"))
+	assert.Empty(t, md.Get("user-id"))
 }
 
 func TestErrorBookHandler_CreateError_InvalidJSON(t *testing.T) {

@@ -349,6 +349,12 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 	// so an in-flight upstream gRPC stream (and its streamSem slot) is
 	// released instead of running to completion as an orphan.
 	streamCtx, cancelStreams := context.WithCancel(c.Request.Context())
+	// SEC-3: the engine's gRPC servicers require gateway-injected `user-id`
+	// metadata; WebSocket-issued calls (e.g. update_node_mastery offline sync)
+	// have no gin handler to run injectAuthContext, so attach the JWT-verified
+	// identity to the stream's parent context here. agent.Client re-injects a
+	// fresh metadata set per RPC, so this does not double up on those paths.
+	streamCtx = grpcUserAuthContext(streamCtx, userID, authToken)
 	defer cancelStreams()
 	readResults := readWSMessages(conn, connDone, func(error) { cancelStreams() })
 

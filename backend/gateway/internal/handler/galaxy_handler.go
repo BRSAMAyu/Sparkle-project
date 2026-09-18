@@ -153,6 +153,10 @@ func (h *GalaxyHandler) SparkNode(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
+	// SEC-3: the engine's gRPC servicers require the gateway-injected
+	// `user-id` metadata (plus Bearer token); without it the call is
+	// rejected 401 and silently degrades to the REST proxy.
+	injectAuthContext(c)
 
 	nodeID := c.Param("id")
 	if nodeID == "" {
@@ -220,6 +224,10 @@ func (h *GalaxyHandler) UpdateMastery(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
+	// SEC-3: the engine's gRPC servicers require the gateway-injected
+	// `user-id` metadata (plus Bearer token); without it the call is
+	// rejected 401 and silently degrades to the REST proxy.
+	injectAuthContext(c)
 
 	nodeID := c.Param("id")
 	if nodeID == "" {
@@ -387,6 +395,11 @@ func (h *GalaxyHandler) GetNodeDetailGPRC(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
+	// SEC-3: the engine's gRPC servicers require the gateway-injected
+	// `user-id` metadata (plus Bearer token); without it the call is
+	// rejected 401 and silently degrades to the REST proxy.
+	injectAuthContext(c)
+
 	nodeID := c.Param("id")
 	if nodeID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "node_id required"})
@@ -423,6 +436,10 @@ func (h *GalaxyHandler) SearchNodesGPRC(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
+	// SEC-3: the engine's gRPC servicers require the gateway-injected
+	// `user-id` metadata (plus Bearer token); without it the call is
+	// rejected 401 and silently degrades to the REST proxy.
+	injectAuthContext(c)
 
 	if h.galaxyClient == nil {
 		h.ProxyToBackend(c)
@@ -473,6 +490,11 @@ func (h *GalaxyHandler) GetGalaxyStatsGPRC(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
+	// SEC-3: the engine's gRPC servicers require the gateway-injected
+	// `user-id` metadata (plus Bearer token); without it the call is
+	// rejected 401 and silently degrades to the REST proxy.
+	injectAuthContext(c)
+
 	if h.galaxyClient != nil {
 		ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 		defer cancel()
@@ -501,6 +523,11 @@ func (h *GalaxyHandler) GetRecommendedGPRC(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
+	// SEC-3: the engine's gRPC servicers require the gateway-injected
+	// `user-id` metadata (plus Bearer token); without it the call is
+	// rejected 401 and silently degrades to the REST proxy.
+	injectAuthContext(c)
+
 	if h.galaxyClient != nil {
 		ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 		defer cancel()
@@ -525,6 +552,10 @@ func (h *GalaxyHandler) GetGraph(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
+	// SEC-3: the engine's gRPC servicers require the gateway-injected
+	// `user-id` metadata (plus Bearer token); without it the call is
+	// rejected 401 and silently degrades to the REST proxy.
+	injectAuthContext(c)
 
 	if h.galaxyClient != nil {
 		ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
@@ -554,6 +585,10 @@ func (h *GalaxyHandler) SyncGalaxy(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
+	// SEC-3: the engine's gRPC servicers require the gateway-injected
+	// `user-id` metadata (plus Bearer token); without it the call is
+	// rejected 401 and silently degrades to the REST proxy.
+	injectAuthContext(c)
 
 	var req struct {
 		GalaxyID      string          `json:"galaxy_id"`
@@ -604,6 +639,10 @@ func (h *GalaxyHandler) GetLearningPath(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
+	// SEC-3: the engine's gRPC servicers require the gateway-injected
+	// `user-id` metadata (plus Bearer token); without it the call is
+	// rejected 401 and silently degrades to the REST proxy.
+	injectAuthContext(c)
 
 	if h.galaxyClient == nil {
 		h.ProxyToBackend(c)
@@ -643,6 +682,10 @@ func (h *GalaxyHandler) GetNodeDependencies(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
+	// SEC-3: the engine's gRPC servicers require the gateway-injected
+	// `user-id` metadata (plus Bearer token); without it the call is
+	// rejected 401 and silently degrades to the REST proxy.
+	injectAuthContext(c)
 
 	if h.galaxyClient == nil {
 		h.ProxyToBackend(c)
