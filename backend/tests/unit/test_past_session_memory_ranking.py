@@ -58,3 +58,27 @@ class TestPastSessionMemoryRanking:
         assert "用户最喜欢的电影是《星际穿越》" in summaries, (
             f"high-value inferred memory must not be crowded out by seeds: {summaries}"
         )
+
+
+class TestRankerFreshnessUsesIngestTime:
+    def test_old_event_recent_ingest_scores_high(self):
+        from types import SimpleNamespace as NS
+        from datetime import datetime, timedelta
+        from app.core.context_ranker import _score_item
+
+        now = datetime(2026, 9, 19, 4, 0, 0)
+        movie = NS(
+            occurred_at=datetime(2026, 6, 22), created_at=now - timedelta(minutes=5),
+            evidence_score=0.2, correction_count=0, confidence=0.95, importance_score=0.95,
+            tags=["stage16:auto_memory"],
+        )
+        seed = NS(
+            occurred_at=now, created_at=now - timedelta(hours=2),
+            evidence_score=0.2, correction_count=0, confidence=0.72, importance_score=0.72,
+            tags=[],
+        )
+        movie_score = _score_item(movie, kind="episodic", now=now)
+        seed_score = _score_item(seed, kind="episodic", now=now)
+        assert movie_score > seed_score, (
+            f"recently-ingested old-event memory must outrank staler seed: movie={movie_score} seed={seed_score}"
+        )

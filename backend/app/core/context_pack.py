@@ -1260,7 +1260,7 @@ class ContextPackBuilder:
                 reverse=True,
             )
             episodic.sort(
-                key=lambda item: (item.evidence_score or 0.0, item.occurred_at),
+                key=lambda item: (item.evidence_score or 0.0, getattr(item, "created_at", None) or item.occurred_at),
                 reverse=True,
             )
             resolved_pref_records = preference_records

@@ -176,7 +176,11 @@ def _score_item(
     correction_count = getattr(item, "correction_count", 0) or 0
 
     if kind == "episodic":
-        freshness = _freshness_episodic(getattr(item, "occurred_at", None), now)
+        # occurred_at 是事件发生时间（LLM 抽取会给过去日期），freshness 度量
+        # 记忆新鲜度必须用 created_at（入库时间），否则历史事件记忆永远沉底
+        freshness = _freshness_episodic(
+            getattr(item, "created_at", None) or getattr(item, "occurred_at", None), now
+        )
     elif kind == "goals":
         freshness = _freshness_goal(
             getattr(item, "status", None),
@@ -214,7 +218,9 @@ def rank_items(
     ranked.sort(
         key=lambda entry: (
             entry.score,
-            getattr(entry.item, "updated_at", None) or getattr(entry.item, "occurred_at", None),
+            getattr(entry.item, "updated_at", None)
+            or getattr(entry.item, "created_at", None)
+            or getattr(entry.item, "occurred_at", None),
         ),
         reverse=True,
     )
