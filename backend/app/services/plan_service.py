@@ -88,7 +88,9 @@ class PlanService:
         # 事务无死锁风险）。仅 PG 支持，SQLite 测试基座直接跳过。
         if db.get_bind().dialect.name == "postgresql":
             await db.execute(
-                text("SELECT pg_advisory_xact_lock(hashtextextended(:user_id::text, 0))"),
+                # CAST 形式：text() 内 ":param::type" 的 PG cast 会被 SQLAlchemy
+                # 解析成第二个绑定参数（:text），asyncpg 随即报裸 ":" 语法错误。
+                text("SELECT pg_advisory_xact_lock(hashtextextended(CAST(:user_id AS text), 0))"),
                 {"user_id": str(user_id)},
             )
 
