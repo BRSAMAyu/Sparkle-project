@@ -29,3 +29,4 @@ A/B 级问题清零为收敛条件，C 级按性价比排序消化。
 - `rounds/` — 各轮审查报告与修复记录（随轮次创建）
   - `round1-L1-design-system.md` — Round 1 L1 设计系统地基审查（基线 ca86bda8）
   - `round1-batch1-contrast.md` — Round 1 批次 1 修复：浅色模式对比度达标（P0-1 数值校准 + 速查表）
+  - `round1-batch2-single-source.md` — Round 1 批次 2 修复：双事实源收敛（任务色 3→1 / 品牌色 2→1 / 字阶 3→1，P0-2 + P0-3）

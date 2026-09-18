@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
-import 'package:sparkle/core/design/tokens/task_colors.dart';
 import 'package:sparkle/core/design/tokens_v2/theme_manager.dart'
     show SparkleColors, SparkleSpacing, SparkleTypography;
 
@@ -20,7 +19,6 @@ extension SparkleContextExtension on BuildContext {
   SparkleSpacing get space => sparkle.spacing;
   SparkleRadius get radius => sparkle.radius;
   SparkleMotionTokens get motion => sparkle.motion;
-  TaskColors get taskColors => sparkle.taskColors;
 
   bool get canBlur => sparkle.enableBlur;
   bool get canGlow => sparkle.enableGlow;

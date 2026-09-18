@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/text_rendering.dart';
+import 'package:sparkle/shared/entities/task_model.dart' show TaskType;
 
 /// 主题管理器 - 支持动态切换和持久化
 /// 支持商城皮肤系统
@@ -393,6 +394,7 @@ class SparkleColors {
     required this.taskReflection,
     required this.taskSocial,
     required this.taskPlanning,
+    required this.taskOcr,
     required this.planSprint,
     required this.planGrowth,
     required this.statusOnline,
@@ -440,6 +442,7 @@ class SparkleColors {
         taskReflection: Color(0xFFCC79A7),      // Reddish Purple
         taskSocial: Color(0xFF009E73),          // Bluish Green
         taskPlanning: Color(0xFF56B4E9),        // Sky Blue
+        taskOcr: Color(0xFF4F6572),             // Gray — CB-neutral by definition
         planSprint: Color(0xFFD55E00),          // Vermillion
         planGrowth: Color(0xFF009E73),          // Bluish Green
         statusOnline: Color(0xFF009E73),
@@ -483,6 +486,7 @@ class SparkleColors {
         taskReflection: Color(0xFF7B6E8D),
         taskSocial: Color(0xFF5F8672),
         taskPlanning: Color(0xFF50737D),
+        taskOcr: Color(0xFF4F6572),
         planSprint: Color(0xFF9D5B4F),
         planGrowth: Color(0xFF5D7B63),
         statusOnline: Color(0xFF189150), // was 2ECC71 (1.86:1 here) -> 3.58:1 graphic line
@@ -539,6 +543,9 @@ class SparkleColors {
       taskReflection: Color(0xFF6C5C92), // was 9A88B7 (2.91:1) -> 5.35:1
       taskSocial: Color(0xFF456E52), // was 769083 (3.15:1) -> 5.32:1
       taskPlanning: Color(0xFF426D77), // was 6A8790 (3.50:1) -> 5.20:1
+      // OCR slot folded from tokens/task_colors.dart (batch2 single-source
+      // convergence); gray value is the batch1-calibrated ocrLight.
+      taskOcr: Color(0xFF4F6572),
       planSprint: Color(0xFFA0483E), // was B3756B (3.38:1) -> 5.49:1
       planGrowth: Color(0xFF456E52), // was 73907A (3.20:1) -> 5.32:1
       statusOnline: Color(0xFF189150), // was 2ECC71 (1.92:1) -> 3.68:1 (graphic)
@@ -588,6 +595,7 @@ class SparkleColors {
         taskReflection: Color(0xFFCC79A7),      // Reddish Purple
         taskSocial: Color(0xFF009E73),          // Bluish Green
         taskPlanning: Color(0xFF0072B2),        // Blue
+        taskOcr: Color(0xFF78909C),             // Gray — CB-neutral by definition
         planSprint: Color(0xFFD55E00),          // Vermillion
         planGrowth: Color(0xFF009E73),          // Bluish Green
         statusOnline: Color(0xFF009E73),
@@ -632,6 +640,7 @@ class SparkleColors {
         taskReflection: Color(0xFFA696C0),
         taskSocial: Color(0xFF83A18C),
         taskPlanning: Color(0xFF7B9AA3),
+        taskOcr: Color(0xFF78909C),
         planSprint: Color(0xFFD37B72),
         planGrowth: Color(0xFF83A18C),
         statusOnline: Color(0xFF2ECC71),
@@ -678,6 +687,9 @@ class SparkleColors {
       taskReflection: Color(0xFFA08AB8),
       taskSocial: Color(0xFF7A9A83),
       taskPlanning: Color(0xFF7E9AA1),
+      // OCR slot folded from tokens/task_colors.dart (batch2 single-source
+      // convergence); gray value is the pre-existing ocrDark.
+      taskOcr: Color(0xFF78909C),
       planSprint: Color(0xFFCE817A),
       planGrowth: Color(0xFF7A9980),
       statusOnline: Color(0xFF2ECC71),
@@ -726,6 +738,7 @@ class SparkleColors {
   final Color taskReflection;
   final Color taskSocial;
   final Color taskPlanning;
+  final Color taskOcr;
   final Color planSprint;
   final Color planGrowth;
 
@@ -764,11 +777,18 @@ class SparkleColors {
         end: Alignment.bottomRight,
       );
 
-  LinearGradient get userChatBubbleGradient => LinearGradient(
-        colors: [brandSecondary, chatBubbleUser],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      );
+  /// Gradient-depth variant of [brandPrimary], derived toward black so it
+  /// can never drift from the palette anchor (batch2 brand convergence —
+  /// replaces SemanticColors.brandOrangeDeep/brandBlueDeep literals).
+  Color get brandPrimaryDeep =>
+      Color.lerp(brandPrimary, const Color(0xFF000000), 0.16)!;
+
+  /// Gradient-depth variant of [brandSecondary]. See [brandPrimaryDeep].
+  Color get brandSecondaryDeep =>
+      Color.lerp(brandSecondary, const Color(0xFF000000), 0.16)!;
+
+  // userChatBubbleGradient removed (batch2): zero-consumer dead token,
+  // flagged by round1-batch1-contrast.md §6 hand-off.
 
   SparkleColors copyWith({
     Color? brandPrimary,
@@ -793,6 +813,7 @@ class SparkleColors {
     Color? taskReflection,
     Color? taskSocial,
     Color? taskPlanning,
+    Color? taskOcr,
     Color? planSprint,
     Color? planGrowth,
     Color? statusOnline,
@@ -834,6 +855,7 @@ class SparkleColors {
         taskReflection: taskReflection ?? this.taskReflection,
         taskSocial: taskSocial ?? this.taskSocial,
         taskPlanning: taskPlanning ?? this.taskPlanning,
+        taskOcr: taskOcr ?? this.taskOcr,
         planSprint: planSprint ?? this.planSprint,
         planGrowth: planGrowth ?? this.planGrowth,
         statusOnline: statusOnline ?? this.statusOnline,
@@ -877,6 +899,7 @@ class SparkleColors {
         taskReflection: Color.lerp(taskReflection, other.taskReflection, t)!,
         taskSocial: Color.lerp(taskSocial, other.taskSocial, t)!,
         taskPlanning: Color.lerp(taskPlanning, other.taskPlanning, t)!,
+        taskOcr: Color.lerp(taskOcr, other.taskOcr, t)!,
         planSprint: Color.lerp(planSprint, other.planSprint, t)!,
         planGrowth: Color.lerp(planGrowth, other.planGrowth, t)!,
         statusOnline: Color.lerp(statusOnline, other.statusOnline, t)!,
@@ -917,8 +940,32 @@ class SparkleColors {
         return taskSocial;
       case 'planning':
         return taskPlanning;
+      case 'ocr':
+        return taskOcr;
       default:
         return taskLearning;
+    }
+  }
+
+  /// Strongly-typed task color access. The single mapping from
+  /// [TaskType] to palette values (batch2 convergence: the former
+  /// TaskColors class was deleted; its OCR slot folded in here).
+  Color taskColorFor(TaskType type) {
+    switch (type) {
+      case TaskType.learning:
+        return taskLearning;
+      case TaskType.training:
+        return taskTraining;
+      case TaskType.errorFix:
+        return taskErrorFix;
+      case TaskType.reflection:
+        return taskReflection;
+      case TaskType.social:
+        return taskSocial;
+      case TaskType.planning:
+        return taskPlanning;
+      case TaskType.ocr:
+        return taskOcr;
     }
   }
 

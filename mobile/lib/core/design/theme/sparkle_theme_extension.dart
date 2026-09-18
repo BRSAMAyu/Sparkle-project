@@ -3,7 +3,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/motion.dart';
 import 'package:sparkle/core/design/theme/performance_tier.dart';
-import 'package:sparkle/core/design/tokens/task_colors.dart';
 import 'package:sparkle/core/design/tokens_v2/theme_manager.dart'
     show SparkleColors, SparkleSpacing, SparkleTypography, ThemeManager;
 
@@ -19,7 +18,6 @@ class SparkleThemeExtension extends ThemeExtension<SparkleThemeExtension> {
     required this.radius,
     required this.motion,
     required this.performanceTier,
-    required this.taskColors,
   });
 
   factory SparkleThemeExtension.light({
@@ -36,7 +34,6 @@ class SparkleThemeExtension extends ThemeExtension<SparkleThemeExtension> {
         radius: const SparkleRadius(),
         motion: const SparkleMotionTokens(),
         performanceTier: tier,
-        taskColors: const TaskColors(brightness: Brightness.light),
       );
 
   factory SparkleThemeExtension.dark({
@@ -53,7 +50,6 @@ class SparkleThemeExtension extends ThemeExtension<SparkleThemeExtension> {
         radius: const SparkleRadius(),
         motion: const SparkleMotionTokens(),
         performanceTier: tier,
-        taskColors: const TaskColors(brightness: Brightness.dark),
       );
 
   final SparkleColors colors;
@@ -62,7 +58,6 @@ class SparkleThemeExtension extends ThemeExtension<SparkleThemeExtension> {
   final SparkleRadius radius;
   final SparkleMotionTokens motion;
   final PerformanceTier performanceTier;
-  final TaskColors taskColors;
 
   bool get enableBlur => performanceTier == PerformanceTier.high;
   bool get enableGlow => performanceTier == PerformanceTier.high;
@@ -76,7 +71,6 @@ class SparkleThemeExtension extends ThemeExtension<SparkleThemeExtension> {
     SparkleRadius? radius,
     SparkleMotionTokens? motion,
     PerformanceTier? performanceTier,
-    TaskColors? taskColors,
   }) =>
       SparkleThemeExtension(
         colors: colors ?? this.colors,
@@ -85,7 +79,6 @@ class SparkleThemeExtension extends ThemeExtension<SparkleThemeExtension> {
         radius: radius ?? this.radius,
         motion: motion ?? this.motion,
         performanceTier: performanceTier ?? this.performanceTier,
-        taskColors: taskColors ?? this.taskColors,
       );
 
   @override
@@ -101,7 +94,6 @@ class SparkleThemeExtension extends ThemeExtension<SparkleThemeExtension> {
       radius: radius.lerp(other.radius, t),
       motion: t < 0.5 ? motion : other.motion,
       performanceTier: t < 0.5 ? performanceTier : other.performanceTier,
-      taskColors: t < 0.5 ? taskColors : other.taskColors,
     );
   }
 }

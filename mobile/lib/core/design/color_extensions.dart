@@ -118,18 +118,11 @@ class SemanticColors {
   Color get statusInvisibleColor => const Color(0xFF34495E);
 
   // ========== 品牌颜色变体 ==========
-
-  /// 品牌橙色（用于登录等强调场景）
-  Color get brandOrange => const Color(0xFFD9773A);
-
-  /// 品牌橙色深色变体
-  Color get brandOrangeDeep => const Color(0xFFBA5923);
-
-  /// 品牌蓝色（用于次要强调）
-  Color get brandBlue => const Color(0xFF4C78B2);
-
-  /// 品牌蓝色深色变体
-  Color get brandBlueDeep => const Color(0xFF2F588E);
+  //
+  // batch2 收敛：brandOrange/brandOrangeDeep/brandBlue/brandBlueDeep 已删除。
+  // 品牌色的唯一事实源是 tokens_v2/theme_manager.dart 的 SparkleColors
+  // （brandPrimary/brandSecondary 及其 *Deep 派生 getter）。登录页品牌标
+  // 等场景请使用 context.colors.brand*。
 
   // ========== 社交/分享颜色 ==========
 

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
-import 'package:sparkle/core/design/tokens/task_colors.dart';
+import 'package:sparkle/shared/entities/task_model.dart' show TaskType;
 
 /// Tone mapping for task pills.
 enum TaskPillTone { info, success, warning, danger, neutral, brand }
@@ -68,14 +68,16 @@ class TaskPill extends StatelessWidget {
           iconColor = DS.brandPrimary;
       }
     } else {
-      // Use task type-based colors
-      final taskColors = TaskColors(
-        brightness: SparkleContext(context).sparkleColors.brightness,
-      );
-      background = taskColors.getTint(type);
-      border = taskColors.getBorder(type);
-      textColor = taskColors.getLabel(type);
-      iconColor = taskColors.getIcon(type);
+      // Task type colors come from the single palette source
+      // (SparkleColors.task* / taskColorFor — batch2 convergence).
+      // Explicit extension application: design_system.dart's SparkleContext
+      // also exposes `colors` (entry unification lands in batch 3).
+      final taskColor =
+          SparkleContextExtension(context).colors.taskColorFor(type);
+      background = taskColor.withValues(alpha: 0.1);
+      border = taskColor.withValues(alpha: 0.3);
+      textColor = taskColor;
+      iconColor = taskColor;
     }
 
     final horizontal = dense ? context.space.sm : context.space.md;

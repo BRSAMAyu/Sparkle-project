@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -20,11 +21,17 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  // Brand colors - using color_extensions.dart via context.colorExtensions
-  Color get _brandOrange => context.colorExtensions.brandOrange;
-  Color get _brandOrangeDeep => context.colorExtensions.brandOrangeDeep;
-  Color get _brandBlue => context.colorExtensions.brandBlue;
-  Color get _brandBlueDeep => context.colorExtensions.brandBlueDeep;
+  // Brand colors — single source: the SparkleColors palette (batch2
+  // convergence). The login brand mark now shows the product's actual
+  // brand pair (brandPrimary/brandSecondary) instead of the divergent
+  // SemanticColors promo palette; *Deep roles are palette-derived.
+  // Explicit extension application: design_system.dart's SparkleContext
+  // also exposes `colors` (entry unification lands in batch 3).
+  SparkleColors get _brandColors => SparkleContextExtension(context).colors;
+  Color get _brandPrimary => _brandColors.brandPrimary;
+  Color get _brandPrimaryDeep => _brandColors.brandPrimaryDeep;
+  Color get _brandSecondary => _brandColors.brandSecondary;
+  Color get _brandSecondaryDeep => _brandColors.brandSecondaryDeep;
 
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
@@ -117,14 +124,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 children: [
                   const SizedBox(height: DS.spacing24),
                   _BrandMark(
-                    orange: _brandOrange,
-                    orangeDeep: _brandOrangeDeep,
+                    primary: _brandPrimary,
+                    primaryDeep: _brandPrimaryDeep,
                   ),
                   const SizedBox(height: DS.lg),
                   _BrandWordmark(
                     title: l10n.appTitle,
-                    blue: _brandBlue,
-                    blueDeep: _brandBlueDeep,
+                    secondary: _brandSecondary,
+                    secondaryDeep: _brandSecondaryDeep,
                   ),
                   const SizedBox(height: DS.sm),
                   Text(
@@ -296,12 +303,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
 class _BrandMark extends StatelessWidget {
   const _BrandMark({
-    required this.orange,
-    required this.orangeDeep,
+    required this.primary,
+    required this.primaryDeep,
   });
 
-  final Color orange;
-  final Color orangeDeep;
+  final Color primary;
+  final Color primaryDeep;
 
   @override
   Widget build(BuildContext context) => SizedBox(
@@ -316,8 +323,8 @@ class _BrandMark extends StatelessWidget {
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    orange.withValues(alpha: 0.22),
-                    orange.withValues(alpha: 0.08),
+                    primary.withValues(alpha: 0.22),
+                    primary.withValues(alpha: 0.08),
                     Colors.transparent,
                   ],
                   stops: const [0.0, 0.58, 1.0],
@@ -332,11 +339,11 @@ class _BrandMark extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [orange, orangeDeep],
+                  colors: [primary, primaryDeep],
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: orange.withValues(alpha: 0.28),
+                    color: primary.withValues(alpha: 0.28),
                     blurRadius: 20,
                     offset: const Offset(0, 10),
                   ),
@@ -356,13 +363,13 @@ class _BrandMark extends StatelessWidget {
 class _BrandWordmark extends StatelessWidget {
   const _BrandWordmark({
     required this.title,
-    required this.blue,
-    required this.blueDeep,
+    required this.secondary,
+    required this.secondaryDeep,
   });
 
   final String title;
-  final Color blue;
-  final Color blueDeep;
+  final Color secondary;
+  final Color secondaryDeep;
 
   @override
   Widget build(BuildContext context) {
@@ -370,14 +377,14 @@ class _BrandWordmark extends StatelessWidget {
           fontWeight: FontWeight.w800,
           letterSpacing: 0.2,
           height: 1.05,
-          color: blueDeep,
+          color: secondaryDeep,
         );
 
     return ShaderMask(
       shaderCallback: (bounds) => LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [blue, blueDeep],
+        colors: [secondary, secondaryDeep],
       ).createShader(bounds),
       blendMode: BlendMode.srcIn,
       child: Text(
@@ -386,7 +393,7 @@ class _BrandWordmark extends StatelessWidget {
         style: baseStyle?.copyWith(
           shadows: [
             Shadow(
-              color: blue.withValues(alpha: 0.16),
+              color: secondary.withValues(alpha: 0.16),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),

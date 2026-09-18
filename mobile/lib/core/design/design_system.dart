@@ -39,7 +39,6 @@ import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
 import 'package:sparkle/core/design/tokens_v2/animation_token.dart';
 import 'package:sparkle/core/design/tokens_v2/responsive_system.dart';
 import 'package:sparkle/core/design/tokens_v2/theme_manager.dart';
-import 'package:sparkle/core/design/tokens_v2/typography_token.dart';
 import 'package:sparkle/core/utils/theme_utils.dart';
 
 export '../statistics/statistics.dart';
@@ -52,7 +51,6 @@ export 'tokens_v2/animation_token.dart';
 export 'tokens_v2/color_token.dart';
 export 'tokens_v2/responsive_system.dart';
 export 'tokens_v2/theme_manager.dart';
-export 'tokens_v2/typography_token.dart';
 export 'validation/design_validator.dart';
 export 'widgets/app_feedback.dart';
 export 'widgets/graphite_surfaces.dart';
@@ -1043,28 +1041,44 @@ class DS {
   static const double iconSizeXl = 40.0;
   static const double iconSize3xl = 48.0;
 
-  // Typography
+  // Typography — 冻结的数值兼容层（batch2 单一真相源裁决）。
+  // TypographySystem 已删除（L1 P0-3）；以下数值冻结不再演化，
+  // 仅供存量调用点过渡。新代码一律使用 SparkleTypography / context.typo。
   static const double _fontRatio = 1.25;
+  @Deprecated('Use context.typo.labelSmall (12px) instead. Numeric layer is frozen.')
   static const double fontSizeXs = 12.0;
-  @Deprecated(
-    'Use TypographySystem.bodyMedium() instead. fontSizeSm had a value conflict with TypographySystem.sizeSm.',
-  )
-  static const double fontSizeSm = TypographySystem.sizeSm; // 14.0 → 16.0
+  @Deprecated('Use context.typo.labelLarge/bodyMedium (14px) instead. Numeric layer is frozen.')
+  static const double fontSizeSm = 16.0; // frozen legacy value (was TypographySystem.sizeSm)
+  @Deprecated('Use context.typo.bodyLarge (16px) instead. Numeric layer is frozen.')
   static const double fontSizeBase = 16.0;
+  @Deprecated('Use context.typo.bodyLarge instead. Numeric layer is frozen.')
   static const double fontSizeMd = fontSizeBase;
+  @Deprecated('Use context.typo.titleLarge instead. Numeric layer is frozen.')
   static const double fontSizeLg = fontSizeBase * _fontRatio;
+  @Deprecated('Use context.typo.headingMedium instead. Numeric layer is frozen.')
   static const double fontSizeXl = fontSizeLg * _fontRatio;
+  @Deprecated('Use context.typo.headingLarge instead. Numeric layer is frozen.')
   static const double fontSize2xl = fontSizeXl * _fontRatio;
+  @Deprecated('Use context.typo.displayLarge instead. Numeric layer is frozen.')
   static const double fontSize3xl = fontSize2xl * _fontRatio;
+  @Deprecated('Numeric layer is frozen; pick a SparkleTypography role.')
   static const double fontSize4xl = fontSize3xl * _fontRatio;
+  @Deprecated('Numeric layer is frozen; pick a SparkleTypography role.')
   static const double fontSize5xl = fontSize4xl * _fontRatio;
+  @Deprecated('Numeric layer is frozen; pick a SparkleTypography role.')
   static const double fontSize6xl = fontSize5xl * _fontRatio;
-  static const FontWeight fontWeightRegular = TypographySystem.weightRegular;
-  static const FontWeight fontWeightMedium = TypographySystem.weightMedium;
-  static const FontWeight fontWeightSemibold = TypographySystem.weightSemibold;
+  @Deprecated('Use FontWeight.w400 directly or a SparkleTypography role.')
+  static const FontWeight fontWeightRegular = FontWeight.w400;
+  @Deprecated('Use FontWeight.w500 directly or a SparkleTypography role.')
+  static const FontWeight fontWeightMedium = FontWeight.w500;
+  @Deprecated('Use FontWeight.w600 directly or a SparkleTypography role.')
+  static const FontWeight fontWeightSemibold = FontWeight.w600;
+  @Deprecated('Use FontWeight.w600 directly or a SparkleTypography role.')
   static const FontWeight fontWeightSemiBold = fontWeightSemibold;
-  static const FontWeight fontWeightBold = TypographySystem.weightBold;
-  static const double lineHeightNormal = TypographySystem.leadingNormal;
+  @Deprecated('Use FontWeight.w700 directly or a SparkleTypography role.')
+  static const FontWeight fontWeightBold = FontWeight.w700;
+  @Deprecated('Declare line height on the SparkleTypography role you use.')
+  static const double lineHeightNormal = 1.5;
 
   // 动画
   static Duration get quick => AnimationSystem.quick;
@@ -1119,16 +1133,33 @@ class DS {
   static Curve get curveEaseOut => AnimationSystem.easeOut;
   static Curve get curveEaseInOut => Curves.easeInOut;
 
-  // 排版
-  static TextStyle get displayLarge => TypographySystem.displayLarge();
-  static TextStyle get headingLarge => TypographySystem.headingLarge();
-  static TextStyle get titleLarge => TypographySystem.titleLarge();
-  static TextStyle get titleMedium => TypographySystem.titleMedium();
-  static TextStyle get bodyLarge => TypographySystem.bodyLarge();
-  static TextStyle get bodyMedium => TypographySystem.bodyMedium();
-  static TextStyle get bodySmall => TypographySystem.labelSmall();
-  static TextStyle get labelLarge => TypographySystem.labelLarge();
-  static TextStyle get labelSmall => TypographySystem.labelSmall();
+  // 排版 — 单一真相源裁决（batch2, L1 P0-3）：样式唯一来源是
+  // SparkleTypography（tokens_v2/theme_manager.dart）。以下 DS getter 全部
+  // 降级为 deprecated 兼容 shim，仅做转发（存量约 740 处调用点暂不迁移）。
+  // 新代码使用 context.typo.* 或 Material TextTheme。
+  static SparkleTypography get _typography => SparkleTypography.standard();
+
+  @Deprecated('Use context.typo.displayLarge instead.')
+  static TextStyle get displayLarge => _typography.displayLarge;
+  @Deprecated('Use context.typo.headingLarge instead.')
+  static TextStyle get headingLarge => _typography.headingLarge;
+  @Deprecated('Use context.typo.titleLarge instead.')
+  static TextStyle get titleLarge => _typography.titleLarge;
+
+  /// Shim: SparkleTypography has no separate titleMedium role yet; this
+  /// forwards to [SparkleTypography.titleLarge] until the 15-role expansion.
+  @Deprecated('Use context.typo.titleLarge instead.')
+  static TextStyle get titleMedium => _typography.titleLarge;
+  @Deprecated('Use context.typo.bodyLarge instead.')
+  static TextStyle get bodyLarge => _typography.bodyLarge;
+  @Deprecated('Use context.typo.bodyMedium instead.')
+  static TextStyle get bodyMedium => _typography.bodyMedium;
+  @Deprecated('Use context.typo.bodySmall instead.')
+  static TextStyle get bodySmall => _typography.bodySmall;
+  @Deprecated('Use context.typo.labelLarge instead.')
+  static TextStyle get labelLarge => _typography.labelLarge;
+  @Deprecated('Use context.typo.labelSmall instead.')
+  static TextStyle get labelSmall => _typography.labelSmall;
 
   // Shadows
   static List<BoxShadow> get shadowSm => _theme.shadows.small;
@@ -1287,28 +1318,30 @@ class DS {
   // 向后兼容属性（用于统计模块）
   // ============================================
 
-  /// 文本样式快捷方式
+  /// 文本样式快捷方式（统计模块兼容层；数值为冻结值，勿新增使用）
   static TextStyle get textStyle => TextStyle(
-        fontSize: fontSizeBase,
-        fontWeight: fontWeightRegular,
+        fontSize: 16.0,
+        fontWeight: FontWeight.w400,
         color: textPrimary,
       );
 
   static TextStyle get headlineStyle => TextStyle(
-        fontSize: fontSizeLg,
-        fontWeight: fontWeightSemibold,
+        fontSize: 20.0,
+        fontWeight: FontWeight.w600,
         color: textPrimary,
       );
 
   static TextStyle get bodyStyle => TextStyle(
-        fontSize: fontSizeBase,
-        fontWeight: fontWeightRegular,
+        fontSize: 16.0,
+        fontWeight: FontWeight.w400,
         color: textSecondary,
       );
 
   static TextStyle get captionStyle => TextStyle(
-        fontSize: fontSizeSm,
-        fontWeight: fontWeightRegular,
+        // frozen legacy value: this stays 16.0 until per-screen migration
+        // re-labels it as a real caption (labelSmall, 12px).
+        fontSize: 16.0,
+        fontWeight: FontWeight.w400,
         color: textTertiary,
       );
 
@@ -1322,10 +1355,14 @@ class DS {
   static const double borderRadiusLG = radius16;
   static const double borderRadiusXL = radius20;
 
-  /// 字体大小快捷方式（别名）
+  /// 字体大小快捷方式（别名，冻结兼容层）
+  @Deprecated('Numeric layer is frozen; pick a SparkleTypography role.')
   static const double fontSizeSM = fontSizeSm;
+  @Deprecated('Numeric layer is frozen; pick a SparkleTypography role.')
   static const double fontSizeMD = fontSizeBase;
+  @Deprecated('Numeric layer is frozen; pick a SparkleTypography role.')
   static const double fontSizeLG = fontSizeLg;
+  @Deprecated('Numeric layer is frozen; pick a SparkleTypography role.')
   static const double fontSizeXL = fontSizeXl;
 }
 
