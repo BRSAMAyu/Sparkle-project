@@ -144,18 +144,17 @@ func (ns NullAchievementrarity) Value() (driver.Value, error) {
 type Achievementtype string
 
 const (
-	AchievementtypeMILESTONE    Achievementtype = "MILESTONE"
-	AchievementtypeSTREAK       Achievementtype = "STREAK"
-	AchievementtypeMASTERY      Achievementtype = "MASTERY"
-	AchievementtypeTASKCOMPLETE Achievementtype = "TASK_COMPLETE"
-	AchievementtypeHIDDEN       Achievementtype = "HIDDEN"
-	AchievementtypeSOCIAL       Achievementtype = "SOCIAL"
-	AchievementtypeCONTRACT     Achievementtype = "CONTRACT"
-	AchievementtypeSTUDYTIME    Achievementtype = "STUDY_TIME"
-	AchievementtypeNODEEXPLORE  Achievementtype = "NODE_EXPLORE"
-	AchievementtypeSPRINT       Achievementtype = "SPRINT"
+	AchievementtypeMilestone    Achievementtype = "milestone"
+	AchievementtypeStreak       Achievementtype = "streak"
+	AchievementtypeMastery      Achievementtype = "mastery"
+	AchievementtypeTaskComplete Achievementtype = "task_complete"
+	AchievementtypeHidden       Achievementtype = "hidden"
+	AchievementtypeSocial       Achievementtype = "social"
+	AchievementtypeContract     Achievementtype = "contract"
+	AchievementtypeStudyTime    Achievementtype = "study_time"
+	AchievementtypeNodeExplore  Achievementtype = "node_explore"
+	AchievementtypeSprint       Achievementtype = "sprint"
 	AchievementtypePlanning     Achievementtype = "planning"
-	AchievementtypePLANNING     Achievementtype = "PLANNING"
 )
 
 func (e *Achievementtype) Scan(src interface{}) error {
@@ -2435,6 +2434,7 @@ type ChatMessage struct {
 	ModelName     pgtype.Text      `json:"model_name"`
 	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
 	DeletedAt     pgtype.Timestamp `json:"deleted_at"`
+	Metadata      []byte           `json:"metadata"`
 }
 
 type ChatSession struct {
@@ -2533,6 +2533,25 @@ type CommunityAggregateSignal struct {
 	GeneratedAt        pgtype.Timestamp `json:"generated_at"`
 	ExpiresAt          pgtype.Timestamp `json:"expires_at"`
 	Metadata           []byte           `json:"metadata"`
+}
+
+type CommunityStrategyOutcome struct {
+	ID          pgtype.UUID `json:"id"`
+	UserID      pgtype.UUID `json:"user_id"`
+	DirectiveID string      `json:"directive_id"`
+	// What triggered this: cohort_mistake, partner_feedback, resource_recommendation, accountability_checkin
+	TriggerType string `json:"trigger_type"`
+	// User choice: accepted, rejected, dismissed, modified, auto_expired
+	Decision string `json:"decision"`
+	// Snapshot of the directive payload at decision time
+	ContextSnapshot       []byte      `json:"context_snapshot"`
+	TimeToDecisionSeconds pgtype.Int4 `json:"time_to_decision_seconds"`
+	UserFeedback          pgtype.Text `json:"user_feedback"`
+	// How the decision was recorded: user_action, timeout, system
+	Source    string           `json:"source"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+	UpdatedAt pgtype.Timestamp `json:"updated_at"`
+	DeletedAt pgtype.Timestamp `json:"deleted_at"`
 }
 
 type ComplianceCheckLog struct {
@@ -4218,6 +4237,15 @@ type Post struct {
 	DeletedAt    pgtype.Timestamp `json:"deleted_at"`
 }
 
+type PostComment struct {
+	ID        pgtype.UUID      `json:"id"`
+	UserID    pgtype.UUID      `json:"user_id"`
+	PostID    pgtype.UUID      `json:"post_id"`
+	Content   string           `json:"content"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+	UpdatedAt pgtype.Timestamp `json:"updated_at"`
+}
+
 type PostLike struct {
 	UserID    pgtype.UUID      `json:"user_id"`
 	PostID    pgtype.UUID      `json:"post_id"`
@@ -4603,19 +4631,6 @@ type SafeExperimentEpisode struct {
 	IncidentTrace    []byte           `json:"incident_trace"`
 }
 
-type SagaInstance struct {
-	ID            pgtype.UUID        `json:"id"`
-	SagaType      string             `json:"saga_type"`
-	Status        string             `json:"status"`
-	CurrentStep   int32              `json:"current_step"`
-	InputData     []byte             `json:"input_data"`
-	StepResults   []byte             `json:"step_results"`
-	Error         string             `json:"error"`
-	CorrelationID string             `json:"correlation_id"`
-	CreatedAt     pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
-}
-
 type ScaffoldingState struct {
 	UserID                    pgtype.UUID      `json:"user_id"`
 	CapabilityLevel           float64          `json:"capability_level"`
@@ -4734,30 +4749,26 @@ type SessionCompletion struct {
 }
 
 type SharedResource struct {
-	GroupID               pgtype.UUID      `json:"group_id"`
-	TargetUserID          pgtype.UUID      `json:"target_user_id"`
-	SharedBy              pgtype.UUID      `json:"shared_by"`
-	PlanID                pgtype.UUID      `json:"plan_id"`
-	TaskID                pgtype.UUID      `json:"task_id"`
-	CognitiveFragmentID   pgtype.UUID      `json:"cognitive_fragment_id"`
-	CuriosityCapsuleID    pgtype.UUID      `json:"curiosity_capsule_id"`
-	BehaviorPatternID     pgtype.UUID      `json:"behavior_pattern_id"`
-	Permission            string           `json:"permission"`
-	Comment               pgtype.Text      `json:"comment"`
-	ViewCount             pgtype.Int4      `json:"view_count"`
-	SaveCount             pgtype.Int4      `json:"save_count"`
-	ID                    pgtype.UUID      `json:"id"`
-	CreatedAt             pgtype.Timestamp `json:"created_at"`
-	UpdatedAt             pgtype.Timestamp `json:"updated_at"`
-	DeletedAt             pgtype.Timestamp `json:"deleted_at"`
-	KnowledgeNodeID       pgtype.UUID      `json:"knowledge_node_id"`
-	SeedLibraryID         pgtype.UUID      `json:"seed_library_id"`
-	SeedItemID            pgtype.UUID      `json:"seed_item_id"`
-	CardShareRecordID     pgtype.UUID      `json:"card_share_record_id"`
-	AdoptionCount         pgtype.Int4      `json:"adoption_count"`
-	QualityScore          pgtype.Float8    `json:"quality_score"`
-	QualityHidden         pgtype.Bool      `json:"quality_hidden"`
-	NegativeFeedbackCount pgtype.Int4      `json:"negative_feedback_count"`
+	GroupID             pgtype.UUID      `json:"group_id"`
+	TargetUserID        pgtype.UUID      `json:"target_user_id"`
+	SharedBy            pgtype.UUID      `json:"shared_by"`
+	PlanID              pgtype.UUID      `json:"plan_id"`
+	TaskID              pgtype.UUID      `json:"task_id"`
+	CognitiveFragmentID pgtype.UUID      `json:"cognitive_fragment_id"`
+	CuriosityCapsuleID  pgtype.UUID      `json:"curiosity_capsule_id"`
+	BehaviorPatternID   pgtype.UUID      `json:"behavior_pattern_id"`
+	Permission          string           `json:"permission"`
+	Comment             pgtype.Text      `json:"comment"`
+	ViewCount           pgtype.Int4      `json:"view_count"`
+	SaveCount           pgtype.Int4      `json:"save_count"`
+	ID                  pgtype.UUID      `json:"id"`
+	CreatedAt           pgtype.Timestamp `json:"created_at"`
+	UpdatedAt           pgtype.Timestamp `json:"updated_at"`
+	DeletedAt           pgtype.Timestamp `json:"deleted_at"`
+	KnowledgeNodeID     pgtype.UUID      `json:"knowledge_node_id"`
+	SeedLibraryID       pgtype.UUID      `json:"seed_library_id"`
+	SeedItemID          pgtype.UUID      `json:"seed_item_id"`
+	CardShareRecordID   pgtype.UUID      `json:"card_share_record_id"`
 }
 
 type SharedSkill struct {
@@ -4862,14 +4873,6 @@ type SkillShareModerationQueue struct {
 	RejectionReason            pgtype.Text      `json:"rejection_reason"`
 }
 
-type SmokeDocumentVector struct {
-	ID        pgtype.UUID        `json:"id"`
-	FileName  string             `json:"file_name"`
-	ChunkText string             `json:"chunk_text"`
-	Embedding pgvector.Vector    `json:"embedding"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-}
-
 type SparkContract struct {
 	UserID             pgtype.UUID        `json:"user_id"`
 	TargetStudyMinutes pgtype.Int4        `json:"target_study_minutes"`
@@ -4888,89 +4891,6 @@ type SparkContract struct {
 	CreatedAt          pgtype.Timestamp   `json:"created_at"`
 	UpdatedAt          pgtype.Timestamp   `json:"updated_at"`
 	DeletedAt          pgtype.Timestamp   `json:"deleted_at"`
-}
-
-type SparkleGalaxyAPPLICATION struct {
-	ID         interface{} `json:"id"`
-	StartID    interface{} `json:"start_id"`
-	EndID      interface{} `json:"end_id"`
-	Properties interface{} `json:"properties"`
-}
-
-type SparkleGalaxyAPPLIESTO struct {
-	ID         interface{} `json:"id"`
-	StartID    interface{} `json:"start_id"`
-	EndID      interface{} `json:"end_id"`
-	Properties interface{} `json:"properties"`
-}
-
-type SparkleGalaxyAgLabelEdge struct {
-	ID         interface{} `json:"id"`
-	StartID    interface{} `json:"start_id"`
-	EndID      interface{} `json:"end_id"`
-	Properties interface{} `json:"properties"`
-}
-
-type SparkleGalaxyAgLabelVertex struct {
-	ID         interface{} `json:"id"`
-	Properties interface{} `json:"properties"`
-}
-
-type SparkleGalaxyINTERESTEDIN struct {
-	ID         interface{} `json:"id"`
-	StartID    interface{} `json:"start_id"`
-	EndID      interface{} `json:"end_id"`
-	Properties interface{} `json:"properties"`
-}
-
-type SparkleGalaxyKnowledgeNode struct {
-	ID         interface{} `json:"id"`
-	Properties interface{} `json:"properties"`
-}
-
-type SparkleGalaxyMASTERED struct {
-	ID         interface{} `json:"id"`
-	StartID    interface{} `json:"start_id"`
-	EndID      interface{} `json:"end_id"`
-	Properties interface{} `json:"properties"`
-}
-
-type SparkleGalaxyPREREQUISITE struct {
-	ID         interface{} `json:"id"`
-	StartID    interface{} `json:"start_id"`
-	EndID      interface{} `json:"end_id"`
-	Properties interface{} `json:"properties"`
-}
-
-type SparkleGalaxyRELATED struct {
-	ID         interface{} `json:"id"`
-	StartID    interface{} `json:"start_id"`
-	EndID      interface{} `json:"end_id"`
-	Properties interface{} `json:"properties"`
-}
-
-type SparkleGalaxySTUDIED struct {
-	ID         interface{} `json:"id"`
-	StartID    interface{} `json:"start_id"`
-	EndID      interface{} `json:"end_id"`
-	Properties interface{} `json:"properties"`
-}
-
-type SparkleGalaxySTUDY struct {
-	ID         interface{} `json:"id"`
-	StartID    interface{} `json:"start_id"`
-	EndID      interface{} `json:"end_id"`
-	Properties interface{} `json:"properties"`
-}
-
-type SparkleGalaxySchemaSeed struct {
-	ID         interface{} `json:"id"`
-	Properties interface{} `json:"properties"`
-}
-
-type SparkleGalaxyUser struct {
-	ID         interface{} `json:"id"`
-	Properties interface{} `json:"properties"`
 }
 
 type SrlPhaseState struct {
@@ -5402,21 +5322,21 @@ type User struct {
 	DeletedAt             pgtype.Timestamp `json:"deleted_at"`
 	EquippedSkinSource    pgtype.Text      `json:"equipped_skin_source"`
 	EquippedTitleSource   pgtype.Text      `json:"equipped_title_source"`
-	EmailVerified         bool             `json:"email_verified"`
-	TokenRevokedBefore    pgtype.Timestamp `json:"token_revoked_before"`
-	PasswordLoginEnabled  bool             `json:"password_login_enabled"`
-	AgreedToTosAt         pgtype.Timestamp `json:"agreed_to_tos_at"`
-	AgreedToPrivacyAt     pgtype.Timestamp `json:"agreed_to_privacy_at"`
-	TosVersion            pgtype.Text      `json:"tos_version"`
-	PrivacyVersion        pgtype.Text      `json:"privacy_version"`
-	AgreedLocale          pgtype.Text      `json:"agreed_locale"`
 	// 用户搜索隐私设置
-	SearchableBy      Searchvisibility `json:"searchable_by"`
-	UsernameHash      pgtype.Text      `json:"username_hash"`
-	EmailHash         pgtype.Text      `json:"email_hash"`
-	GoogleIDHash      pgtype.Text      `json:"google_id_hash"`
-	AppleIDHash       pgtype.Text      `json:"apple_id_hash"`
-	WechatUnionidHash pgtype.Text      `json:"wechat_unionid_hash"`
+	SearchableBy         Searchvisibility `json:"searchable_by"`
+	EmailVerified        bool             `json:"email_verified"`
+	TokenRevokedBefore   pgtype.Timestamp `json:"token_revoked_before"`
+	PasswordLoginEnabled bool             `json:"password_login_enabled"`
+	AgreedToTosAt        pgtype.Timestamp `json:"agreed_to_tos_at"`
+	AgreedToPrivacyAt    pgtype.Timestamp `json:"agreed_to_privacy_at"`
+	TosVersion           pgtype.Text      `json:"tos_version"`
+	PrivacyVersion       pgtype.Text      `json:"privacy_version"`
+	AgreedLocale         pgtype.Text      `json:"agreed_locale"`
+	UsernameHash         pgtype.Text      `json:"username_hash"`
+	EmailHash            pgtype.Text      `json:"email_hash"`
+	GoogleIDHash         pgtype.Text      `json:"google_id_hash"`
+	AppleIDHash          pgtype.Text      `json:"apple_id_hash"`
+	WechatUnionidHash    pgtype.Text      `json:"wechat_unionid_hash"`
 }
 
 type UserAchievement struct {
@@ -5502,6 +5422,7 @@ type UserDevice struct {
 	CreatedAt      pgtype.Timestamp `json:"created_at"`
 	UpdatedAt      pgtype.Timestamp `json:"updated_at"`
 	DeletedAt      pgtype.Timestamp `json:"deleted_at"`
+	PushTokenHash  pgtype.Text      `json:"push_token_hash"`
 }
 
 type UserEncryptionKey struct {

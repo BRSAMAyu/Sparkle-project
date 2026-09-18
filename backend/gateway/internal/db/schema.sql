@@ -4,7 +4,7 @@
 
 
 -- Dumped from database version 16.15 (Debian 16.15-1.pgdg12+2)
--- Dumped by pg_dump version 16.11 (Homebrew)
+-- Dumped by pg_dump version 16.15 (Debian 16.15-1.pgdg12+2)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -98,16 +98,17 @@ ALTER TYPE achievementrarity OWNER TO postgres;
 --
 
 CREATE TYPE achievementtype AS ENUM (
-    'MILESTONE',
-    'STREAK',
-    'MASTERY',
-    'TASK_COMPLETE',
-    'HIDDEN',
-    'SOCIAL',
-    'CONTRACT',
-    'STUDY_TIME',
-    'NODE_EXPLORE',
-    'SPRINT'
+    'milestone',
+    'streak',
+    'mastery',
+    'task_complete',
+    'hidden',
+    'social',
+    'contract',
+    'study_time',
+    'node_explore',
+    'sprint',
+    'planning'
 );
 
 

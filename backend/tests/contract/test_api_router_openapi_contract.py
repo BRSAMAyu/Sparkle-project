@@ -32,7 +32,12 @@ def test_openapi_contains_critical_v1_paths():
     assert "/api/v1/" in paths
     assert "/api/v1/health/health/live" in paths
     assert "/api/v1/health/health/ready" in paths
-    assert "/api/v1/chat/chat" in paths
+    # R2-08-05: REST chat 挂载在 /api/v1/chat*（与网关代理注册对齐），
+    # 不再是双前缀 /api/v1/chat/chat。
+    assert "/api/v1/chat" in paths
+    assert "/api/v1/chat/stream" in paths
+    assert "/api/v1/chat/confirm" in paths
+    assert "/api/v1/chat/chat" not in paths
     assert "/api/v1/tasks" in paths
 
 

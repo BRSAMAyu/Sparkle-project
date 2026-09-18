@@ -167,6 +167,8 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		plans.GET("/primary", h.proxyWithHeaders)
 		plans.POST("/primary", h.proxyWithHeaders)
 		plans.GET("/archived", h.proxyWithHeaders)
+		// R2-08-03: /plans/active 为移动端首页活跃消费端点（home_growth_provider）。
+		plans.GET("/active", h.proxyWithHeaders)
 		// route-tier: authed
 		plans.GET("/:id", h.proxyWithHeaders)
 		// PUT remains accepted for legacy full-update clients; PATCH is the preferred
@@ -194,6 +196,29 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		plans.POST("/:id/phases/reorder", h.proxyWithHeaders)
 		// route-tier: authed
 		plans.POST("/phases/:phaseCardId/activate", h.proxyWithHeaders)
+		// R2-08-03: 新版计划阶段/探索管线（引擎 18 条路由此前从移动端不可达）。
+		// Phase cards（activate 兄弟路由；complete/feedback/schedule-regenerate
+		// 为移动端 api_endpoints.dart 既有常量）
+		plans.POST("/phases/:phaseCardId/complete", h.proxyWithHeaders)
+		plans.POST("/phases/:phaseCardId/design-tasks", h.proxyWithHeaders)
+		plans.POST("/phases/:phaseCardId/feedback", h.proxyWithHeaders)
+		plans.POST("/phases/:phaseCardId/feedback-gate/start", h.proxyWithHeaders)
+		plans.POST("/phases/:phaseCardId/schedule/regenerate", h.proxyWithHeaders)
+		plans.POST("/phases/feedback-gate/:sessionId/respond", h.proxyWithHeaders)
+		// Discovery 探索管线
+		plans.POST("/discovery/start", h.proxyWithHeaders)
+		plans.POST("/discovery/:sessionId/turn", h.proxyWithHeaders)
+		plans.POST("/discovery/:sessionId/finalize", h.proxyWithHeaders)
+		// Compass 评审管线
+		plans.POST("/compass/:artifactId/approve", h.proxyWithHeaders)
+		plans.GET("/:id/compass/review", h.proxyWithHeaders)
+		// Phase sketch + 计划执行状态机
+		plans.POST("/:id/phase-sketch/generate", h.proxyWithHeaders)
+		plans.POST("/:id/phase-sketch/:artifactId/materialize", h.proxyWithHeaders)
+		plans.POST("/:id/advance-phase", h.proxyWithHeaders)
+		plans.GET("/:id/planning-context", h.proxyWithHeaders)
+		plans.POST("/:id/today", h.proxyWithHeaders)
+		plans.POST("/:id/phases", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered plans proxy routes")
 
@@ -299,11 +324,17 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	h.logger.Info("Registered calendar proxy routes")
 
 	// ==================== Recommendations Routes ====================
+	// R2-08-04: 引擎无 bare GET /recommendations 与 POST /feedback（两条死路由
+	// 已删）；改为注册引擎真实挂载的 6 条（移动端 api_endpoints.dart 全量消费）。
 	recommendations := api.Group("/recommendations")
 	recommendations.Use(authMiddleware)
 	{
-		recommendations.GET("", h.proxyWithHeaders)
-		recommendations.POST("/feedback", h.proxyWithHeaders)
+		recommendations.GET("/collaborative", h.proxyWithHeaders)
+		recommendations.GET("/similar-users", h.proxyWithHeaders)
+		recommendations.GET("/similar-items", h.proxyWithHeaders)
+		recommendations.GET("/my-interactions", h.proxyWithHeaders)
+		recommendations.POST("/record-interaction", h.proxyWithHeaders)
+		recommendations.GET("/stats", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered recommendations proxy routes")
 
@@ -885,14 +916,9 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	h.logger.Info("Registered experience proxy routes")
 
 	// ==================== Observability Routes ====================
-	// route-tier: authed
-	observability := api.Group("/observability")
-	observability.Use(authMiddleware)
-	{
-		// route-tier: authed
-		h.registerREST(observability, "/*path")
-	}
-	h.logger.Info("Registered observability proxy routes")
+	// R2-08-10: /api/v1/observability/* 整组死代理已移除。引擎真身挂载在
+	// /api/v1/admin/observability/*（observability.py prefix），由下方
+	// /admin catch-all 组（RequireAdmin）代理，此处重复注册只会 404。
 
 	// ==================== Knowledge Theater Routes ====================
 	// route-tier: authed
@@ -993,7 +1019,9 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		{"/audit", "audit"},
 		{"/counterfactual", "counterfactual"},
 		{"/error-book", "error-book"},
-		{"/event-bus", "event-bus"},
+		// R2-08-10: "/event-bus" 死代理已移除——引擎真身在
+		// /api/v1/admin/event-bus/*（event_bus_health.py, prefix=/admin），
+		// 由 /admin catch-all 组（RequireAdmin）覆盖，本组只会 404。
 		// Engine mounts /api/v1/release_approvals (underscore); the path must match or every proxied request 404s.
 		{"/release_approvals", "release_approvals"},
 		{"/research", "research"},

@@ -341,7 +341,9 @@ async def chat_with_task_context(
     return ChatResponse(**response_data, conversation_id=session_id_str, dormant_injection=dormant_injection_meta)
 
 
-@router.post("/chat", response_model=ChatResponse)
+# R2-08-05: 路由路径不再内嵌 /chat（include 前缀已是 /chat），
+# 最终挂载 /api/v1/chat、/chat/stream、/chat/confirm，与网关代理注册对齐。
+@router.post("", response_model=ChatResponse)
 async def chat(
     request: ChatRequest,
     req_raw: Request,
@@ -570,7 +572,7 @@ async def chat(
     return ChatResponse(**response_data, conversation_id=session_id_str)
 
 
-@router.post("/chat/stream")
+@router.post("/stream")
 async def chat_stream(
     request: ChatRequest, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)
 ):
@@ -720,7 +722,7 @@ async def chat_stream(
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
-@router.post("/chat/confirm")
+@router.post("/confirm")
 async def confirm_action(
     action_id: str, confirmed: bool, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)
 ):

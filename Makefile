@@ -94,13 +94,33 @@ db-validate:
 	@echo "🔍 Checking if $(DB_CONTAINER) is running..."
 	@docker ps -q -f name=$(DB_CONTAINER) > /dev/null || (echo "❌ Error: Container $(DB_CONTAINER) is not running. Run 'make dev-up' first." && exit 1)
 
+# R2-08-06: schema.sql 的导出源从 dev 库改为一次性 fresh 迁移库。
+# dev 库可能带 out-of-band 污染（如 21 值 achievementtype 枚举、基线外
+# alembic 桩），直接 pg_dump 会把污染写回快照并扩散到 sqlc 产物。
+# 现在每次 dump 前先建 throwaway 库 → alembic upgrade head → 导出 → 删库，
+# 保证 schema.sql 永远是迁移链终态的派生物。
+DB_DUMP_SCRATCH?=sparkle_syncdb_fresh
+ALEMBIC_ABS?=$(abspath $(ALEMBIC))
+
 db-dump: db-validate
-	@echo "🧾 Dumping Schema (Structure Only)..."
+	@echo "🧾 Dumping Schema (from throwaway fresh-migration DB '$(DB_DUMP_SCRATCH)')..."
 	mkdir -p backend/gateway/internal/db
-	docker exec $(DB_CONTAINER) pg_dump -U $(DB_USER) -d $(DB_NAME) --schema-only | \
+	docker exec $(DB_CONTAINER) psql -U $(DB_USER) -d postgres -c "DROP DATABASE IF EXISTS $(DB_DUMP_SCRATCH) WITH (FORCE)"
+	docker exec $(DB_CONTAINER) psql -U $(DB_USER) -d postgres -c "CREATE DATABASE $(DB_DUMP_SCRATCH)"
+	@set -e; \
+		PGPW="$$(docker exec $(DB_CONTAINER) printenv POSTGRES_PASSWORD)"; \
+		cd backend; \
+		DATABASE_URL="postgresql+asyncpg://$(DB_USER):$$PGPW@127.0.0.1:5432/$(DB_DUMP_SCRATCH)" \
+			$(ALEMBIC_ABS) upgrade head >/dev/null || { \
+			echo "❌ Fresh migration scratch DB failed to upgrade; schema.sql NOT overwritten."; exit 1; \
+		}; \
+		cd ..
+	docker exec $(DB_CONTAINER) pg_dump -U $(DB_USER) -d $(DB_DUMP_SCRATCH) --schema-only | \
 		grep -v '^\\' | \
 		sed "s/SELECT pg_catalog.set_config('search_path', '', false);/SELECT pg_catalog.set_config('search_path', 'public', false);/g" | \
 		sed "s/public\.//g" > backend/gateway/internal/db/schema.sql
+	docker exec $(DB_CONTAINER) psql -U $(DB_USER) -d postgres -c "DROP DATABASE IF EXISTS $(DB_DUMP_SCRATCH) WITH (FORCE)"
+	@echo "✅ schema.sql regenerated from migration chain; scratch DB dropped."
 
 db-sqlc:
 	@echo "⚡ Generating Go Code via SQLC..."

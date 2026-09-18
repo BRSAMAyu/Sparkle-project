@@ -123,9 +123,7 @@ func (h *CommunityProjectionHandler) handlePostCreated(ctx context.Context, evt 
 		return fmt.Errorf("invalid post_id: %w", err)
 	}
 
-	post, err := h.queries.GetPost(ctx, db.GetPostParams{
-		ID: pgtype.UUID{Bytes: postID, Valid: true},
-	})
+	post, err := h.queries.GetPost(ctx, pgtype.UUID{Bytes: postID, Valid: true})
 	if err != nil {
 		return fmt.Errorf("fetch post: %w", err)
 	}
