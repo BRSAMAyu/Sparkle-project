@@ -397,6 +397,10 @@ jobs:
           channel: stable
           cache: true
 
+      # gen/ 为 gitignored 生成物，测试前必须再生（docker 工具链已钉 protobuf 6.1.0 ↔ protoc_plugin 25.1.0 配对）
+      - name: Regenerate protobuf bindings
+        run: make proto-gen
+
       - name: Get Dependencies
         working-directory: mobile
         run: flutter pub get

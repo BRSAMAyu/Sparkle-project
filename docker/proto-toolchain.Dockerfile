@@ -41,8 +41,9 @@ RUN curl -fsSL -o /tmp/dart.zip \
     && rm /tmp/dart.zip
 
 ENV PATH="/usr/local/dart-sdk/bin:/root/.pub-cache/bin:${PATH}"
+# protoc_plugin 25.1.0 与 mobile 锁定的 protobuf 6.1.0 运行时配对（22.x 产物需 ^4.x 运行时，编译必断）
 RUN dart --disable-analytics \
-    && dart pub global activate protoc_plugin 22.3.0 \
+    && dart pub global activate protoc_plugin 25.1.0 \
     && ln -sf /usr/local/dart-sdk/bin/dart /usr/local/bin/dart \
     && ln -sf /root/.pub-cache/bin/protoc-gen-dart /usr/local/bin/protoc-gen-dart
 
