@@ -82,6 +82,19 @@ class LLMSecurityWrapper:
 
         logger.info(f"LLMSecurityWrapper initialized (strict_mode={self.config.strict_mode})")
 
+    def __getattr__(self, name: str) -> Any:
+        """转发未定义属性到内部 LLM 服务（如路由元属性 chat_model/reason_model）。
+
+        安全接口（chat/stream_chat/chat_with_tools/generate_embeddings）由包装器
+        自身定义，正常属性查找即命中，不会被转发，安全语义保持不变。
+        """
+        if name.startswith("__"):
+            raise AttributeError(name)
+        inner = self.__dict__.get("llm_service")
+        if inner is None:
+            raise AttributeError(name)
+        return getattr(inner, name)
+
     # =============================================================================
     # 主要接口方法
     # =============================================================================

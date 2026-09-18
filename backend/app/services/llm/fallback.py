@@ -274,20 +274,29 @@ class LLMModelFallbackManager:
                 candidates.append(selection)
 
         # 2. 降级到下一级 tier
+        # E3: 补齐全量 ModelTier 并按成本降序排列。旧列表缺 FREE/TOP/GLM_BATCH/
+        # SPECIALIST 等，.index() 抛 ValueError 后落到 index 0，导致免费层/高层
+        # 失败反而从 PRO 起候选（向上"降级"到昂贵层）。
         tier_order = [
             ModelTier.MAX,
+            ModelTier.TOP,
             ModelTier.PRO,
+            ModelTier.REASONING,
             ModelTier.PLUS,
             ModelTier.STANDARD,
             ModelTier.FAST,
+            ModelTier.SPECIALIST,
+            ModelTier.GLM_BATCH,
             ModelTier.FREE_FAST,
             ModelTier.FREE_REASONING,
+            ModelTier.FREE,
         ]
 
         try:
             current_index = tier_order.index(current_tier)
         except ValueError:
-            current_index = 0
+            # 未知 tier：显式落到 FREE_FAST（其后仅剩免费层），而非从最贵层开始
+            current_index = tier_order.index(ModelTier.FREE_FAST)
 
         for lower_tier in tier_order[current_index + 1:]:
             lower_models = tier_mapping.get(lower_tier, [])

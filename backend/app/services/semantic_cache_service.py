@@ -197,7 +197,9 @@ class SemanticCacheService:
             payload = await self._get_embedding_payload(cache_key)
             if not payload:
                 continue
-            if user_id and payload.get("user_id") not in (None, user_id):
+            # 严格可见性：仅同用户（或双方均为匿名全局条目）可命中，
+            # caller 未带 user_id 时不得读取任何已归属用户的条目（防跨用户泄漏）。
+            if payload.get("user_id") != user_id:
                 continue
             if knowledge_version and payload.get("knowledge_version") != knowledge_version:
                 continue

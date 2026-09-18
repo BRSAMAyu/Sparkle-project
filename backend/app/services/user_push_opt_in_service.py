@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from uuid import UUID
 
 from sqlalchemy import select
@@ -15,6 +16,9 @@ DEFAULTS = {
     "quiet_hours_end": "08:00",
     "timezone": "Asia/Shanghai",
 }
+
+_QUIET_HOURS_PATTERN = re.compile(r"^\d{2}:\d{2}$")
+_QUIET_HOURS_FIELDS = {"quiet_hours_start", "quiet_hours_end"}
 
 
 class UserPushOptInService:
@@ -43,10 +47,20 @@ class UserPushOptInService:
             if value is None:
                 continue
             if hasattr(record, key):
+                if key in _QUIET_HOURS_FIELDS and not self._is_valid_quiet_hours(value):
+                    # P1'：畸形 HH:MM 不入库，避免投递时解析崩溃；API 层另有白名单校验
+                    continue
                 setattr(record, key, value)
         await self.db.commit()
         await self.db.refresh(record)
         return record
+
+    @staticmethod
+    def _is_valid_quiet_hours(value: object) -> bool:
+        if not isinstance(value, str) or not _QUIET_HOURS_PATTERN.match(value):
+            return False
+        hour, minute = (int(part) for part in value.split(":"))
+        return 0 <= hour < 24 and 0 <= minute < 60
 
     async def disable_category(self, user_id: UUID, category: str) -> UserPushOptIn:
         record = await self.get_or_create(user_id)

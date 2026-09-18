@@ -523,7 +523,7 @@ class LLMService:
         self,
         messages: list[dict[str, str]],
         model: str | None = None,
-        temperature: float = 0.7,
+        temperature: float | None = None,
         *,
         task_type: TaskType | None = None,
         **kwargs
@@ -535,6 +535,8 @@ class LLMService:
             task_type: Optional task type for cascade routing. When provided
                        with dynamic routing enabled, selects the appropriate
                        model tier (e.g. ROUTING → FAST, STANDARD_RESPONSE → STANDARD).
+            temperature: E2 — None 表示未显式指定，使用路由 selection 的配置值；
+                         caller 显式传入的值优先于 selection 配置。
         """
         await refresh_llm_safety_mode()
         kwargs = dict(kwargs)
@@ -562,7 +564,7 @@ class LLMService:
 
         with tracer.start_as_current_span("llm_chat") as span:
             span.set_attribute("llm.model", model)
-            span.set_attribute("llm.temperature", temperature)
+            span.set_attribute("llm.temperature", temperature if temperature is not None else 0.7)
 
             # 🎭 Demo Mode 拦截
             mock_response = self._check_demo_match(messages)
@@ -598,7 +600,9 @@ class LLMService:
                             response = await current_provider.chat(
                                 safe_messages,
                                 model=selection.config.model_name,
-                                temperature=selection.config.temperature,
+                                temperature=(
+                                    temperature if temperature is not None else selection.config.temperature
+                                ),
                                 **request_kwargs
                             )
                         llm_router.report_model_success(selection.config.model_name)
@@ -638,7 +642,7 @@ class LLMService:
                     response = await _call_with_selection(
                         type('obj', (object,), {'config': type('obj', (object,), {
                             'model_name': model,
-                            'temperature': temperature,
+                            'temperature': temperature if temperature is not None else 0.7,
                             'provider': type('obj', (object,), {'value': self._get_provider_name_from_url()})
                         })})
                     )
@@ -793,11 +797,14 @@ class LLMService:
         self,
         messages: list[dict[str, str]],
         model: str | None = None,
-        temperature: float = 0.2,
+        temperature: float | None = None,
         **kwargs
     ) -> str:
         """
         Send a deep reasoning request to the LLM.
+
+        E2: `temperature=None` 表示未显式指定，使用路由 selection 的配置值；
+        caller 显式传入的 temperature 优先于 selection 配置。
         """
         await refresh_llm_safety_mode()
         kwargs = dict(kwargs)
@@ -812,7 +819,7 @@ class LLMService:
         resolved_model = model or self.reason_model
         with tracer.start_as_current_span("llm_reason") as span:
             span.set_attribute("llm.model", resolved_model)
-            span.set_attribute("llm.temperature", temperature)
+            span.set_attribute("llm.temperature", temperature if temperature is not None else 0.2)
             mock_response = self._check_demo_match(messages)
             if mock_response:
                 span.set_attribute("llm.demo_mode", True)
@@ -844,7 +851,9 @@ class LLMService:
                                     result = await current_provider.chat(
                                         safe_messages,
                                         model=current_selection.config.model_name,
-                                        temperature=current_selection.config.temperature,
+                                        temperature=(
+                                            temperature if temperature is not None else current_selection.config.temperature
+                                        ),
                                         **merged_kwargs,
                                     )
                             llm_router.report_model_success(current_selection.config.model_name)
@@ -863,7 +872,7 @@ class LLMService:
                         response = await self.provider.chat(
                             safe_messages,
                             model=resolved_model,
-                            temperature=temperature,
+                            temperature=temperature if temperature is not None else 0.2,
                             **kwargs,
                         )
                 await circuit_breaker_service.record_success("primary_llm")

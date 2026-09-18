@@ -33,7 +33,13 @@ class BillingWorker:
     异步计费工作器
 
     采用批量写入策略减少数据库压力，支持异常重试。
+    落库失败时记录回退 Redis 重试或转死信队列，worker 进程不因 flush 失败退出。
     """
+
+    RETRY_METADATA_KEY = "_billing_attempts"
+    MAX_RECORD_ATTEMPTS = 3
+    RETRY_BACKOFF_SECONDS = 1.0
+    BILLING_QUEUE = "queue:billing"
 
     def __init__(
         self,
@@ -59,6 +65,8 @@ class BillingWorker:
         self._batch: list[dict[str, Any]] = []
         self._last_flush_time = time.time()
         self._dead_letter_queue = "queue:billing:dead_letter"
+        # flush 失败后的重试退避（测试可置 0 加速）
+        self._flush_retry_backoff = self.RETRY_BACKOFF_SECONDS
 
     async def start(self):
         """启动工作器"""
@@ -68,7 +76,7 @@ class BillingWorker:
         try:
             while self.is_running:
                 # 尝试从队列获取任务，超时 1 秒
-                result = await self.redis.blpop("queue:billing", timeout=1)
+                result = await self.redis.blpop(self.BILLING_QUEUE, timeout=1)
 
                 if result:
                     _, data = result
@@ -79,9 +87,12 @@ class BillingWorker:
                     except Exception as e:
                         logger.error(f"Failed to parse billing record: {e}")
 
-                # 检查是否需要刷新到数据库
+                # 检查是否需要刷新到数据库（失败不退出进程，走恢复路径）
                 if self._should_flush():
-                    await self._flush_to_db()
+                    try:
+                        await self._flush_to_db()
+                    except Exception as exc:
+                        await self._recover_failed_batch(exc)
 
         except asyncio.CancelledError:
             logger.info("BillingWorker stopping (cancelled)...")
@@ -90,9 +101,12 @@ class BillingWorker:
             raise
         finally:
             self.is_running = False
-            # 停止前尝试刷新最后一批
+            # 停止前尝试刷新最后一批（失败则回退重试/死信，避免静默丢失）
             if self._batch:
-                await self._flush_to_db()
+                try:
+                    await self._flush_to_db()
+                except Exception as exc:
+                    await self._recover_failed_batch(exc)
             await self.redis.aclose()
             await self.engine.dispose()
             logger.info("BillingWorker stopped.")
@@ -120,24 +134,8 @@ class BillingWorker:
         try:
             async with self.async_session_factory() as session:
                 async with session.begin():
-                    # 转换记录格式以匹配模型，并处理可能的 UUID 转换或时间格式转换
-                    stmt_data = []
-                    for r in self._batch:
-                        stmt_data.append(
-                            {
-                                "user_id": r["user_id"],
-                                "session_id": r["session_id"],
-                                "request_id": r["request_id"],
-                                "model": r["model"],
-                                "model_tier": r.get("model_tier"),
-                                "ai_reasoning_mode": r.get("reasoning_mode", "balanced"),
-                                "prompt_tokens": r["prompt_tokens"],
-                                "completion_tokens": r["completion_tokens"],
-                                "total_tokens": r["total_tokens"],
-                                "cost": r.get("cost", 0.0),
-                                "timestamp": datetime.fromtimestamp(r["timestamp"]) if "timestamp" in r else _utcnow(),
-                            }
-                        )
+                    # 转换记录格式以匹配模型（时间戳统一按 UTC 换算，见 _to_stmt_data）
+                    stmt_data = [self._to_stmt_data(r) for r in self._batch]
 
                     # 批量插入
                     await session.execute(insert(TokenUsage), stmt_data)
@@ -186,8 +184,63 @@ class BillingWorker:
             "completion_tokens": record["completion_tokens"],
             "total_tokens": record["total_tokens"],
             "cost": record.get("cost", 0.0),
-            "timestamp": datetime.fromtimestamp(record["timestamp"]) if "timestamp" in record else _utcnow(),
+            # B1: epoch → naive UTC，与 _utcnow() 对齐，避免本地时区漂移
+            "timestamp": (
+                datetime.fromtimestamp(record["timestamp"], tz=UTC).replace(tzinfo=None)
+                if "timestamp" in record
+                else _utcnow()
+            ),
         }
+
+    async def _recover_failed_batch(self, exc: Exception) -> None:
+        """批量 flush 与逐条重试均失败后的兜底：未超限记录回退 Redis 重试，超限转死信。
+
+        本方法绝不抛异常，保证 worker 进程不因落库故障退出（B2）。
+        """
+        logger.error(f"Billing flush failed, recovering {len(self._batch)} records: {exc}")
+        retry_batch: list[dict[str, Any]] = []
+        for record in self._batch:
+            attempts = int(record.get(self.RETRY_METADATA_KEY, 0)) + 1
+            if attempts >= self.MAX_RECORD_ATTEMPTS:
+                try:
+                    await self._move_to_dead_letter(record, str(exc))
+                except Exception as dl_exc:
+                    logger.error(
+                        "Failed to enqueue dead letter for request_id=%s: %s",
+                        record.get("request_id"),
+                        dl_exc,
+                    )
+            else:
+                record[self.RETRY_METADATA_KEY] = attempts
+                retry_batch.append(record)
+
+        self._batch = []
+        self._last_flush_time = time.time()
+
+        if retry_batch:
+            if self._flush_retry_backoff > 0:
+                # 退避，避免 DB 故障期间热循环重试
+                await asyncio.sleep(self._flush_retry_backoff)
+            # blpop 从队头弹出，lpush 逆序回推以保持原顺序
+            for record in reversed(retry_batch):
+                try:
+                    await self.redis.lpush(self.BILLING_QUEUE, json.dumps(record, ensure_ascii=False))
+                except Exception as push_exc:
+                    logger.error(
+                        "Failed to requeue billing record request_id=%s: %s",
+                        record.get("request_id"),
+                        push_exc,
+                    )
+                    try:
+                        await self._move_to_dead_letter(record, f"requeue failed: {push_exc}")
+                    except Exception as dl_exc:
+                        logger.error(
+                            "Failed to enqueue dead letter for request_id=%s: %s",
+                            record.get("request_id"),
+                            dl_exc,
+                        )
+            if retry_batch:
+                logger.warning(f"Requeued {len(retry_batch)} billing records for retry")
 
     async def _move_to_dead_letter(self, record: dict[str, Any], error: str) -> None:
         payload = {

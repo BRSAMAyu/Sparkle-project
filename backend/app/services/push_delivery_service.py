@@ -217,9 +217,34 @@ class PushDeliveryService:
 
     @staticmethod
     def _is_in_quiet_hours(*, now: datetime, quiet_start: str, quiet_end: str) -> bool:
-        start_hour, start_minute = (int(part) for part in quiet_start.split(":"))
-        end_hour, end_minute = (int(part) for part in quiet_end.split(":"))
+        """判断当前时间是否落在静默时段窗口内。
+
+        P1' 修复：
+        - 非跨午夜窗口（如 12:00-14:00）用 `start <= current < end`，
+          旧公式 `current >= start or current < end` 的并集会把全天判为静默；
+        - 跨午夜窗口（如 22:00-08:00）沿用旧公式；
+        - start == end 视为未配置静默；
+        - 畸形 HH:MM 返回 False（不扩大静默面，其余投递守卫照常生效）。
+        """
+
+        def _parse_minutes(value: str) -> int | None:
+            try:
+                parts = str(value).split(":")
+                if len(parts) != 2:
+                    return None
+                hour, minute = int(parts[0]), int(parts[1])
+            except (TypeError, ValueError):
+                return None
+            if not (0 <= hour < 24 and 0 <= minute < 60):
+                return None
+            return hour * 60 + minute
+
+        start_minutes = _parse_minutes(quiet_start)
+        end_minutes = _parse_minutes(quiet_end)
+        if start_minutes is None or end_minutes is None or start_minutes == end_minutes:
+            return False
+
         current_minutes = now.hour * 60 + now.minute
-        start_minutes = start_hour * 60 + start_minute
-        end_minutes = end_hour * 60 + end_minute
+        if start_minutes < end_minutes:
+            return start_minutes <= current_minutes < end_minutes
         return current_minutes >= start_minutes or current_minutes < end_minutes

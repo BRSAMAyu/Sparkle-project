@@ -14,6 +14,7 @@ from app.services.curiosity_capsule_service import curiosity_capsule_service
 from app.services.llm_service import llm_service
 from app.services.notification_service import NotificationService
 from app.services.personalization import PushPolicyProfile, get_personalization_engine
+from app.services.user_push_opt_in_service import UserPushOptInService
 from app.services.push_strategies import (
     CuriosityStrategy,
     EmptyCapsuleStrategy,
@@ -378,12 +379,31 @@ class PushService:
             curiosity_preference=curiosity_preference,
         )
 
+    async def _aurora_push_opt_in_enabled(self, user_id: UUID) -> bool:
+        """P3'：统一推送出口的 Aurora 推送总开关校验。
+
+        UserPushOptIn.enabled 是产品层面的推送总开关（默认 False，不推），
+        PushDeliveryService 已遵守；PushService 系路径（日更/挣扎关怀/recall）
+        此前不校验，导致用户在 push-settings 关闭推送后仍收到推送。
+        偏好查询失败时 fail-open（与其它守卫一致，不因基础设施故障扩大静默面）。
+        """
+        try:
+            opt_in = await UserPushOptInService(self.db).get_or_create(user_id)
+            return bool(getattr(opt_in, "enabled", False))
+        except Exception as exc:
+            logger.warning(f"Failed to check UserPushOptIn for {user_id}: {exc}")
+            return True
+
     async def _send_push(
         self, user: User, trigger_type: str, content: dict[str, str], data: dict, policy: PushPolicyProfile
     ):
         """
         Create Notification and History records.
         """
+        if not await self._aurora_push_opt_in_enabled(user.id):
+            logger.info(f"User {user.id} has Aurora push disabled (UserPushOptIn), skipping {trigger_type} push")
+            return
+
         title = content.get("title", "Sparkle 提醒")
         body = content.get("body", "你有一条新消息")
 
@@ -401,7 +421,10 @@ class PushService:
         self.db.add(history)
 
         # 3. Update User Preferences (Last push time)
-        user.push_preference.last_push_time = datetime.now(UTC)
+        # P2': 用户可能尚无 PushPreference 行（joined 关系下为 None），
+        # 直接解引用会让本次推送整体失败且 recall 队列键被误删。
+        if user.push_preference is not None:
+            user.push_preference.last_push_time = datetime.now(UTC)
 
         await self.db.commit()
         logger.info(f"Push sent to user {user.id} [{trigger_type}]: {title} - {body}")

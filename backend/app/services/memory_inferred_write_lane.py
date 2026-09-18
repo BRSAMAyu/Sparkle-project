@@ -5,6 +5,7 @@ import hashlib
 import hmac
 import json
 import re
+from collections import deque
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
@@ -77,7 +78,11 @@ class MemoryInferredWriteLaneService:
     DRY_RUN_KEY_PREFIX = "inference_cache:memory_inferred_dry_run:"
     SOURCE_LANE = "inferred_extraction"
     _rate_limit_state: dict[str, list[datetime]] = {}
-    _degraded_queue: list[dict[str, object]] = []
+    # M1: 降级候选队列当前无消费者，必须设上限防止进程内存无界增长；
+    # 超限丢弃 oldest 并计数（观测点），后续若接定时 flush 消费者可直接复用。
+    DEGRADED_QUEUE_MAXLEN = 256
+    _degraded_queue: deque[dict[str, object]] = deque(maxlen=DEGRADED_QUEUE_MAXLEN)
+    _degraded_queue_dropped_total = 0
 
     def __init__(self, db: AsyncSession):
         self.db = db
@@ -319,6 +324,14 @@ class MemoryInferredWriteLaneService:
         session_id: UUID,
         candidate: InferredEpisodicCandidate,
     ) -> None:
+        if len(cls._degraded_queue) >= cls.DEGRADED_QUEUE_MAXLEN:
+            cls._degraded_queue_dropped_total += 1
+            if cls._degraded_queue_dropped_total % 50 == 1:
+                logger.warning(
+                    "Inferred write lane degraded queue full (maxlen={}): dropping oldest, dropped_total={}",
+                    cls.DEGRADED_QUEUE_MAXLEN,
+                    cls._degraded_queue_dropped_total,
+                )
         cls._degraded_queue.append(
             {
                 "user_id": str(user_id),

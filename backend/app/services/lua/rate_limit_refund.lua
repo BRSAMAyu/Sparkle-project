@@ -26,8 +26,10 @@ if new_val <= 0 then
   return 0
 end
 
-redis.call("set", key, new_val)
-if ttl > 0 then
+-- KEEPTTL：SET 默认会隐式清除 TTL，需保留原固定窗口；
+-- 历史遗留的无 TTL key 在此补设，且不滑动续期（Q1）
+redis.call("set", key, new_val, "KEEPTTL")
+if ttl > 0 and redis.call("ttl", key) < 0 then
   redis.call("expire", key, ttl)
 end
 

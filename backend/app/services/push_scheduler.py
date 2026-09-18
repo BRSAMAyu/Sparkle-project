@@ -152,6 +152,16 @@ class PushScheduler:
                 engine = get_personalization_engine(self.db, None)
                 policy = await engine.get_push_policy_profile(user.id)
 
+                # P2': recall 路径此前绕过了 process_user_push 的策略守卫
+                # （专注模式/活跃时段/频率上限/静默时段 DND）。发送前统一复用，
+                # 被拦截的触发计入 skipped_policy，队列键照常清理防止堆积。
+                policy_blocks = await self._recall_policy_blocks(user, policy)
+                if policy_blocks:
+                    stats["processed"] += len(raw_triggers)
+                    stats["skipped_policy"] += len(raw_triggers)
+                    await self.redis.delete(key)
+                    continue
+
                 for raw in raw_triggers:
                     stats["processed"] += 1
                     try:
@@ -198,6 +208,23 @@ class PushScheduler:
                 logger.error(f"Error processing recall queue for key {key}: {e}")
 
         return stats
+
+    async def _recall_policy_blocks(self, user: User, policy: Any) -> bool:
+        """复用 PushService 的策略守卫判断 recall 推送是否应被拦截（P2'）。"""
+        push_service = self.push_service
+        try:
+            if getattr(policy, "silent_during_focus", False):
+                return True
+            if not push_service._is_active_time(policy):
+                return True
+            if await push_service._check_frequency_cap(user, policy):
+                return True
+            if await push_service._check_schedule_and_quiet_hours(user.id):
+                return True
+        except Exception as e:
+            logger.warning(f"Recall policy guard check failed for {user.id}: {e}")
+            return True
+        return False
 
     async def _enqueue_trigger(self, trigger: Any) -> None:
         key = f"{_RECALL_QUEUE_PREFIX}{trigger.user_id}"

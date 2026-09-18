@@ -787,7 +787,9 @@ class MemoryService:
         try:
             await self.db.commit()
             await self.db.refresh(record)
-        except SQLAlchemyError as exc:
+        except (SQLAlchemyError, RuntimeError) as exc:
+            # M3: pgvector 运行时缺失可能以裸 RuntimeError 抛出（如 "vector.so unavailable"），
+            # 是否可降级仍由 _is_vector_runtime_error 判定，非向量错误照常上抛。
             await self.db.rollback()
             if not self._is_vector_runtime_error(exc):
                 raise
@@ -823,7 +825,7 @@ class MemoryService:
                 try:
                     await self.db.commit()
                     await self.db.refresh(record)
-                except SQLAlchemyError as retry_exc:
+                except (SQLAlchemyError, RuntimeError) as retry_exc:
                     await self.db.rollback()
                     if not self._is_vector_runtime_error(retry_exc):
                         raise

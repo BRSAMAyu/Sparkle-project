@@ -25,14 +25,26 @@ class WorkingMemoryConsolidationService:
         "就记这个",
         "记一下这个",
     )
-    REJECTION_PHRASES = (
-        "不对",
-        "不是这样",
+    # M2: 拒绝判定分级——记忆显式短语可单独命中；宽泛否定短语必须与记忆语境
+    # 词共现，避免"不对，这道题应该…"这类普通纠正被误判为撤回记忆。
+    STRONG_REJECTION_PHRASES = (
         "别记这个",
         "记错了",
         "别记了",
     )
+    WEAK_REJECTION_PHRASES = (
+        "不对",
+        "不是这样",
+    )
+    REJECTION_MEMORY_CONTEXT_TOKENS = (
+        "记",
+        "记忆",
+        "撤回",
+        "删掉",
+        "删了",
+    )
     CONFIRMATION_ANCHOR_WINDOW = timedelta(minutes=10)
+    REJECTION_ANCHOR_WINDOW = timedelta(minutes=10)
 
     def __init__(self, db, redis_client=None, *, now_fn=_utcnow):
         self.db = db
@@ -48,7 +60,11 @@ class WorkingMemoryConsolidationService:
     @classmethod
     def is_explicit_rejection(cls, user_message: str) -> bool:
         normalized = user_message.strip()
-        return any(phrase in normalized for phrase in cls.REJECTION_PHRASES)
+        if any(phrase in normalized for phrase in cls.STRONG_REJECTION_PHRASES):
+            return True
+        if not any(token in normalized for token in cls.REJECTION_MEMORY_CONTEXT_TOKENS):
+            return False
+        return any(phrase in normalized for phrase in cls.WEAK_REJECTION_PHRASES)
 
     def should_consolidate(self, entry: WorkingMemoryEntry, *, explicit_confirmation: bool, now: datetime) -> bool:
         if entry.rejected or entry.consolidated_to_l1_id is not None:
@@ -94,15 +110,25 @@ class WorkingMemoryConsolidationService:
     ) -> WorkingMemoryEntry | None:
         if not self.is_explicit_rejection(user_message):
             return None
+        now = self._now_fn()
         entries = await self.working_memory.list_entries(
             user_id=str(user_id),
             session_id=str(session_id),
             limit=None,
             include_rejected=True,
         )
-        target = next((entry for entry in entries if entry.consolidated_to_l1_id and not entry.rejected), None)
-        if target is None:
+        # M2: 只允许撤回"时间邻近"的已固化条目，并在候选中取最近活跃的
+        # （list_entries 按 salience 排序，直接取首个会误撤无关重要记忆）。
+        candidates = [
+            entry
+            for entry in entries
+            if entry.consolidated_to_l1_id
+            and not entry.rejected
+            and now - entry.last_seen_at <= self.REJECTION_ANCHOR_WINDOW
+        ]
+        if not candidates:
             return None
+        target = max(candidates, key=lambda entry: entry.last_seen_at)
         memory_service = MemoryService(self.db)
         await memory_service.retract_memory(
             kind="episodic",

@@ -1,5 +1,7 @@
 # Test: Semantic Cache Service (Mutex Lock)
 
+import json
+
 import pytest
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -104,3 +106,40 @@ async def test_get_with_lock_lock_error_fallback(mock_redis):
     
     assert result == "fallback_data"
     factory.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_find_similar_cache_key_denies_anonymous_caller_access_to_user_entries(mock_redis):
+    """Regression (S1): caller without user_id must not read other users' semantic entries."""
+    service = SemanticCacheService(redis_client=mock_redis)
+    payload = json.dumps({"embedding": [0.0, 1.0], "user_id": "user-b"})
+    mock_redis.scard = AsyncMock(return_value=1)
+    mock_redis.smembers = AsyncMock(return_value={b"semantic_cache:abc"})
+    mock_redis.get = AsyncMock(return_value=payload.encode())
+
+    with patch("app.services.semantic_cache_service.embedding_service.get_embedding", AsyncMock(return_value=[0.0, 1.0])):
+        hit = await service._find_similar_cache_key(
+            query_embedding=[0.0, 1.0], user_id=None, threshold=0.8, knowledge_version=None
+        )
+
+    assert hit is None
+
+
+@pytest.mark.asyncio
+async def test_find_similar_cache_key_requires_matching_user(mock_redis):
+    """Regression (S1): entries of user-b must not be visible to user-a."""
+    service = SemanticCacheService(redis_client=mock_redis)
+    payload = json.dumps({"embedding": [0.0, 1.0], "user_id": "user-b"})
+    mock_redis.scard = AsyncMock(return_value=1)
+    mock_redis.smembers = AsyncMock(return_value={b"semantic_cache:abc"})
+    mock_redis.get = AsyncMock(return_value=payload.encode())
+
+    with patch("app.services.semantic_cache_service.embedding_service.get_embedding", AsyncMock(return_value=[0.0, 1.0])):
+        other = await service._find_similar_cache_key(
+            query_embedding=[0.0, 1.0], user_id="user-a", threshold=0.8, knowledge_version=None
+        )
+        same = await service._find_similar_cache_key(
+            query_embedding=[0.0, 1.0], user_id="user-b", threshold=0.8, knowledge_version=None
+        )
+
+    assert other is None
+    assert same is not None

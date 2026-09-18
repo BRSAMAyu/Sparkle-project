@@ -18,7 +18,9 @@ if current + amount > limit then
 end
 
 local new_val = redis.call("incrby", key, amount)
-if ttl > 0 then
+-- 固定窗口：仅当 key 尚无 TTL（首写/历史遗留）时设置，
+-- 避免每次 incrby 滑动续期导致"日"配额永不跨日重置（Q1）
+if ttl > 0 and redis.call("ttl", key) < 0 then
   redis.call("expire", key, ttl)
 end
 

@@ -103,6 +103,58 @@ class AuthSessionService:
         session = result.scalar_one()
         return session
 
+    async def touch_session(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: str,
+        session_id: str,
+        refresh_token_jti: str | None = None,
+        request: Request | None = None,
+    ) -> None:
+        """在途请求的会话元数据更新（touch）。
+
+        仅更新 last_active_at / 设备元数据 / refresh jti：
+        - 不复位 is_active / revoked_at（撤销状态只能由登录/刷新的 upsert 显式重置）
+        - 不删除 Redis 撤销标记
+        避免「登出其他设备」与目标设备在途请求并发时，已撤销会话被 touch 复活（A1）。
+        """
+        metadata = extract_client_metadata(request)
+        now = _utcnow_naive()
+
+        insert_stmt = pg_insert(UserSession).values(
+            user_id=user_id,
+            session_id=session_id,
+            device_id=metadata["device_id"],
+            device_name=metadata["device_name"],
+            device_type=metadata["device_type"],
+            ip_address=metadata["ip_address"],
+            user_agent=metadata["user_agent"],
+            refresh_token_jti=refresh_token_jti,
+            is_active=True,
+            revoked_at=None,
+            last_active_at=now,
+        )
+        update_fields: dict[str, Any] = {
+            "user_id": user_id,
+            "device_id": metadata["device_id"],
+            "device_name": metadata["device_name"],
+            "device_type": metadata["device_type"],
+            "ip_address": metadata["ip_address"],
+            "user_agent": metadata["user_agent"],
+            "last_active_at": now,
+        }
+        if refresh_token_jti:
+            update_fields["refresh_token_jti"] = refresh_token_jti
+
+        await db.execute(
+            insert_stmt.on_conflict_do_update(
+                index_elements=[UserSession.session_id],
+                set_=update_fields,
+            ),
+        )
+        await db.flush()
+
     async def touch_from_payload(
         self,
         db: AsyncSession,
@@ -114,7 +166,7 @@ class AuthSessionService:
         session_id = payload.get("sid")
         if not session_id:
             return
-        await self.upsert_session(
+        await self.touch_session(
             db,
             user_id=user_id,
             session_id=str(session_id),
