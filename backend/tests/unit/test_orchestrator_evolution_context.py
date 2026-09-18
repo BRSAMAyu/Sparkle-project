@@ -54,7 +54,7 @@ async def test_hydrate_evolution_context_backfills_preference_learnings():
     ]
 
     with patch(
-        "app.orchestration.orchestrator.SystemUpdateService.list_updates",
+        "app.orchestration.session_state_mixin.SystemUpdateService.list_updates",
         AsyncMock(return_value=updates),
     ):
         await orchestrator._hydrate_evolution_context(final_state=final_state, user_id="user-1")
@@ -79,7 +79,7 @@ async def test_hydrate_evolution_context_backfills_highlights():
     ]
 
     with patch(
-        "app.orchestration.orchestrator.SystemUpdateService.list_updates",
+        "app.orchestration.session_state_mixin.SystemUpdateService.list_updates",
         AsyncMock(return_value=updates),
     ):
         await orchestrator._hydrate_evolution_context(final_state=final_state, user_id="user-1")
@@ -103,7 +103,7 @@ async def test_hydrate_evolution_context_backfills_perceptible_highlights():
     ]
 
     with patch(
-        "app.orchestration.orchestrator.SystemUpdateService.list_updates",
+        "app.orchestration.session_state_mixin.SystemUpdateService.list_updates",
         AsyncMock(return_value=updates),
     ):
         await orchestrator._hydrate_evolution_context(final_state=final_state, user_id="user-1")
@@ -128,7 +128,7 @@ async def test_drain_system_updates_extracts_understanding_depth_hint():
     ]
 
     with patch(
-        "app.orchestration.orchestrator.SystemUpdateService.drain",
+        "app.orchestration.session_state_mixin.SystemUpdateService.drain",
         AsyncMock(return_value=updates),
     ):
         _, _, _, highlights, _, understanding_depth_update, _ = await orchestrator._drain_system_updates("user-1")

@@ -142,6 +142,14 @@ async def test_attach_stage34_memory_context_injects_goal_and_episodic_top_level
         "app.orchestration.context_builder.MemoryService.list_recent_episodic",
         AsyncMock(return_value=[memory]),
     )
+    monkeypatch.setattr(
+        "app.orchestration.context_builder.MemoryService.get_last_session_mood",
+        AsyncMock(return_value=None),
+    )
+    monkeypatch.setattr(
+        "app.orchestration.context_builder.MemoryService.list_recent_calibration_receipts",
+        AsyncMock(return_value=[]),
+    )
 
     payload = {"cognitive_context": {}}
     result = await orchestrator._attach_stage34_memory_context(
@@ -164,6 +172,14 @@ async def test_attach_stage34_memory_context_returns_empty_lists_when_no_records
     )
     monkeypatch.setattr(
         "app.orchestration.context_builder.MemoryService.list_recent_episodic",
+        AsyncMock(return_value=[]),
+    )
+    monkeypatch.setattr(
+        "app.orchestration.context_builder.MemoryService.get_last_session_mood",
+        AsyncMock(return_value=None),
+    )
+    monkeypatch.setattr(
+        "app.orchestration.context_builder.MemoryService.list_recent_calibration_receipts",
         AsyncMock(return_value=[]),
     )
 

@@ -1847,8 +1847,8 @@ class SpineOrchestrator:
             if trace is not None and l1_result is not None:
                 trace.aurora_energy_level = l1_result.energy_level
                 trace.aurora_upgrade_reason = l1_result.upgrade_reason
-                trace.metadata["l1_should_escalate"] = l1_result.should_escalate
-                trace.metadata["l1_escalation_reason"] = l1_result.escalation_reason
+                trace.aurora_l1_should_escalate = bool(l1_result.should_escalate)
+                trace.aurora_l1_escalation_reason = str(l1_result.escalation_reason or "")
                 await self.trace_store._save_trace(trace)
             return trace
 
@@ -1859,8 +1859,8 @@ class SpineOrchestrator:
         if l1_result is not None:
             trace.aurora_energy_level = l1_result.energy_level
             trace.aurora_upgrade_reason = l1_result.upgrade_reason
-            trace.metadata["l1_should_escalate"] = l1_result.should_escalate
-            trace.metadata["l1_escalation_reason"] = l1_result.escalation_reason
+            trace.aurora_l1_should_escalate = bool(l1_result.should_escalate)
+            trace.aurora_l1_escalation_reason = str(l1_result.escalation_reason or "")
         active_directive = await self.trace_store.get_active_directive(user_id)
         if active_directive:
             trace.directive_ids.append(str(getattr(active_directive, "directive_id", "") or "active_directive"))

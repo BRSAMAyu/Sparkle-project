@@ -358,21 +358,30 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
 
             # Ensure user exists in Python DB — Go Gateway handles auth,
             # but downstream FK constraints require a row in our users table.
-            async with self.db_session_factory() as bootstrap_session:
-                from app.services.user_service import UserService
-                user_service = UserService(bootstrap_session)
-                existing = await user_service.get_user_by_id(uuid.UUID(user_id))
-                if not existing:
-                    from app.models.user import User
-                    new_user = User(
-                        id=uuid.UUID(user_id),
-                        username=f"user_{user_id[:8]}",
-                        email=f"{user_id[:8]}@sparkle.local",
-                        hashed_password="",
-                    )
-                    bootstrap_session.add(new_user)
-                    await bootstrap_session.commit()
-                    logger.info(f"Auto-created Python DB user for gateway user_id={user_id}")
+            # Best-effort：自举失败（如 users 表瞬时不可用）不得抢在
+            # orchestrator 之前把整条流打成 INTERNAL，否则污染错误映射
+            # 契约（TimeoutError→DEADLINE_EXCEEDED 等）；用户行缺失时
+            # 下游持久化会以更精确的错误暴露。
+            try:
+                async with self.db_session_factory() as bootstrap_session:
+                    from app.services.user_service import UserService
+                    user_service = UserService(bootstrap_session)
+                    existing = await user_service.get_user_by_id(uuid.UUID(user_id))
+                    if not existing:
+                        from app.models.user import User
+                        new_user = User(
+                            id=uuid.UUID(user_id),
+                            username=f"user_{user_id[:8]}",
+                            email=f"{user_id[:8]}@sparkle.local",
+                            hashed_password="",
+                        )
+                        bootstrap_session.add(new_user)
+                        await bootstrap_session.commit()
+                        logger.info(f"Auto-created Python DB user for gateway user_id={user_id}")
+            except Exception as bootstrap_err:
+                logger.warning(
+                    "StreamChat user bootstrap failed (non-fatal) for user_id={}: {}", user_id, bootstrap_err
+                )
 
             # Create a dedicated DB session for this stream
             has_text_content = False

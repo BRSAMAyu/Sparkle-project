@@ -44,7 +44,7 @@ class _EchoTool(BaseTool):
     category = ToolCategory.QUERY
     parameters_schema = _EchoParams
 
-    async def execute(self, params, user_id, db_session, tool_call_id=None):
+    async def execute(self, params, user_id, db_session, tool_call_id=None, locale="en"):
         return ToolResult(success=True, tool_name=self.name, data={"echo": params.message})
 
 
@@ -58,7 +58,7 @@ class _FailTool(BaseTool):
     category = ToolCategory.TASK
     parameters_schema = _FailParams
 
-    async def execute(self, params, user_id, db_session, tool_call_id=None):
+    async def execute(self, params, user_id, db_session, tool_call_id=None, locale="en"):
         return ToolResult(
             success=False,
             tool_name=self.name,
@@ -79,7 +79,7 @@ class _WidgetTool(BaseTool):
     category = ToolCategory.KNOWLEDGE
     parameters_schema = _WidgetParams
 
-    async def execute(self, params, user_id, db_session, tool_call_id=None):
+    async def execute(self, params, user_id, db_session, tool_call_id=None, locale="en"):
         return ToolResult(
             success=True,
             tool_name=self.name,
@@ -619,7 +619,8 @@ class TestDualCoreRouting_AuroraPreferences:
         router = DualCoreRouter()
         inp = self._base_input(aurora_preferences={"aurora_pressure_style": "gentle"})
         decision = router.route(inp)
-        assert any("温和" in c for c in decision.execution_constraints)
+        # 约束文案为英文：gentle 风格注入 "gentle reminders / no pressure-driven nudging" 约束
+        assert any("gentle reminders" in c for c in decision.execution_constraints)
         strategies = self._strategy_map(decision)
         assert strategies.get("push_vs_support") == 0.2
 
@@ -627,7 +628,7 @@ class TestDualCoreRouting_AuroraPreferences:
         router = DualCoreRouter()
         inp = self._base_input(aurora_preferences={"aurora_pressure_style": "motivating"})
         decision = router.route(inp)
-        assert not any("温和" in c for c in decision.execution_constraints)
+        assert not any("gentle reminders" in c for c in decision.execution_constraints)
 
     def test_brief_explanation_style(self):
         router = DualCoreRouter()

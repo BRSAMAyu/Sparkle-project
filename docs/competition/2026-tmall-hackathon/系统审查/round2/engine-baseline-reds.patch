@@ -1,0 +1,379 @@
+diff --git a/backend/app/orchestration/routing_engine.py b/backend/app/orchestration/routing_engine.py
+index c4e1614e..bbca9242 100644
+--- a/backend/app/orchestration/routing_engine.py
++++ b/backend/app/orchestration/routing_engine.py
+@@ -2535,13 +2535,29 @@ class RoutingEngineMixin:
+                 "error_book": getattr(self, "error_book_service", None),
+             }
+             aggregator = SignalAggregator(service_map=service_map)
+-            return await aggregator.assemble_snapshot(
++            snapshot = await aggregator.assemble_snapshot(
+                 user_id=user_uuid,
+                 scenario_pack_id="stage4_routing_mode@v1",
+                 policy_version="aurora_policy@v1.0",
+                 budget_limit=4000,
+                 context=conversation_context,
+             )
++            # WS-B.1/WS-B.2 路由接缝的输入契约：user_message 必须在
++            # core_signals，task_card_id / structural_topic_turns 必须在
++            # optional_signals。聚合器只负责丰富上下文，不接管这两个由
++            # seam 注入的路由输入——否则 backbone 分类与 escalation 在
++            # 聚合器开启（默认 live）时恒判 direct，特性整体失效。
++            core_signals = dict(snapshot.core_signals)
++            core_signals.setdefault("user_message", user_message)
++            optional_signals: dict[str, Any] = dict(snapshot.optional_signals)
++            if self._stage4_task_assistant_request(user_message):
++                optional_signals.setdefault("task_card_id", "stage4_task_assistant_candidate")
++            structural_turns = self._count_structural_topic_turns(conversation_context)
++            if structural_turns > 0:
++                optional_signals.setdefault("structural_topic_turns", structural_turns)
++            return snapshot.model_copy(
++                update={"core_signals": core_signals, "optional_signals": optional_signals}
++            )
+ 
+         optional_signals: dict[str, Any] = {}
+         if self._stage4_task_assistant_request(user_message):
+diff --git a/backend/app/services/agent_grpc_service.py b/backend/app/services/agent_grpc_service.py
+index ddc3c52d..48f3c184 100755
+--- a/backend/app/services/agent_grpc_service.py
++++ b/backend/app/services/agent_grpc_service.py
+@@ -358,21 +358,30 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
+ 
+             # Ensure user exists in Python DB — Go Gateway handles auth,
+             # but downstream FK constraints require a row in our users table.
+-            async with self.db_session_factory() as bootstrap_session:
+-                from app.services.user_service import UserService
+-                user_service = UserService(bootstrap_session)
+-                existing = await user_service.get_user_by_id(uuid.UUID(user_id))
+-                if not existing:
+-                    from app.models.user import User
+-                    new_user = User(
+-                        id=uuid.UUID(user_id),
+-                        username=f"user_{user_id[:8]}",
+-                        email=f"{user_id[:8]}@sparkle.local",
+-                        hashed_password="",
+-                    )
+-                    bootstrap_session.add(new_user)
+-                    await bootstrap_session.commit()
+-                    logger.info(f"Auto-created Python DB user for gateway user_id={user_id}")
++            # Best-effort：自举失败（如 users 表瞬时不可用）不得抢在
++            # orchestrator 之前把整条流打成 INTERNAL，否则污染错误映射
++            # 契约（TimeoutError→DEADLINE_EXCEEDED 等）；用户行缺失时
++            # 下游持久化会以更精确的错误暴露。
++            try:
++                async with self.db_session_factory() as bootstrap_session:
++                    from app.services.user_service import UserService
++                    user_service = UserService(bootstrap_session)
++                    existing = await user_service.get_user_by_id(uuid.UUID(user_id))
++                    if not existing:
++                        from app.models.user import User
++                        new_user = User(
++                            id=uuid.UUID(user_id),
++                            username=f"user_{user_id[:8]}",
++                            email=f"{user_id[:8]}@sparkle.local",
++                            hashed_password="",
++                        )
++                        bootstrap_session.add(new_user)
++                        await bootstrap_session.commit()
++                        logger.info(f"Auto-created Python DB user for gateway user_id={user_id}")
++            except Exception as bootstrap_err:
++                logger.warning(
++                    "StreamChat user bootstrap failed (non-fatal) for user_id={}: {}", user_id, bootstrap_err
++                )
+ 
+             # Create a dedicated DB session for this stream
+             has_text_content = False
+diff --git a/backend/app/signals/spine_orchestrator.py b/backend/app/signals/spine_orchestrator.py
+index d52e1afa..c25eea35 100644
+--- a/backend/app/signals/spine_orchestrator.py
++++ b/backend/app/signals/spine_orchestrator.py
+@@ -1847,8 +1847,8 @@ class SpineOrchestrator:
+             if trace is not None and l1_result is not None:
+                 trace.aurora_energy_level = l1_result.energy_level
+                 trace.aurora_upgrade_reason = l1_result.upgrade_reason
+-                trace.metadata["l1_should_escalate"] = l1_result.should_escalate
+-                trace.metadata["l1_escalation_reason"] = l1_result.escalation_reason
++                trace.aurora_l1_should_escalate = bool(l1_result.should_escalate)
++                trace.aurora_l1_escalation_reason = str(l1_result.escalation_reason or "")
+                 await self.trace_store._save_trace(trace)
+             return trace
+ 
+@@ -1859,8 +1859,8 @@ class SpineOrchestrator:
+         if l1_result is not None:
+             trace.aurora_energy_level = l1_result.energy_level
+             trace.aurora_upgrade_reason = l1_result.upgrade_reason
+-            trace.metadata["l1_should_escalate"] = l1_result.should_escalate
+-            trace.metadata["l1_escalation_reason"] = l1_result.escalation_reason
++            trace.aurora_l1_should_escalate = bool(l1_result.should_escalate)
++            trace.aurora_l1_escalation_reason = str(l1_result.escalation_reason or "")
+         active_directive = await self.trace_store.get_active_directive(user_id)
+         if active_directive:
+             trace.directive_ids.append(str(getattr(active_directive, "directive_id", "") or "active_directive"))
+diff --git a/backend/app/signals/types.py b/backend/app/signals/types.py
+index b5dfd10c..36c41822 100644
+--- a/backend/app/signals/types.py
++++ b/backend/app/signals/types.py
+@@ -732,6 +732,8 @@ class CausalTrace:
+     outcome_to_measure: list[str] = field(default_factory=list)
+     aurora_energy_level: str = ""          # T3.1.6: L0/L1/L2/L3 at this turn
+     aurora_upgrade_reason: str = ""        # T3.1.6: why upgraded (or "not_upgraded")
++    aurora_l1_should_escalate: bool | None = None  # L1 escalation verdict at this turn
++    aurora_l1_escalation_reason: str = ""  # why escalated (or "not_upgraded")
+     created_at: str = field(default_factory=_utcnow)
+     updated_at: str = field(default_factory=_utcnow)
+ 
+@@ -748,6 +750,8 @@ class CausalTrace:
+             "outcome_to_measure": self.outcome_to_measure,
+             "aurora_energy_level": self.aurora_energy_level,
+             "aurora_upgrade_reason": self.aurora_upgrade_reason,
++            "aurora_l1_should_escalate": self.aurora_l1_should_escalate,
++            "aurora_l1_escalation_reason": self.aurora_l1_escalation_reason,
+             "created_at": self.created_at,
+             "updated_at": self.updated_at,
+         }
+diff --git a/backend/tests/test_plan_task_service_production.py b/backend/tests/test_plan_task_service_production.py
+index f94df540..16d4e088 100644
+--- a/backend/tests/test_plan_task_service_production.py
++++ b/backend/tests/test_plan_task_service_production.py
+@@ -355,7 +355,9 @@ async def test_task_complete_updates_plan_progress(db_session, mock_task_deps, m
+         plan_id=plan.id,
+         title="t",
+         type=TaskType.LEARNING,
+-        status=TaskStatus.PENDING,
++        # R1A4-P2-2 FSM：PENDING -> COMPLETED 非法（round1 P1-1 确认 400），
++        # 完成前置为 IN_PROGRESS
++        status=TaskStatus.IN_PROGRESS,
+         estimated_minutes=30,
+     )
+     db_session.add_all([plan, task])
+@@ -402,7 +404,8 @@ async def test_task_stuck_raises_for_completed(db_session):
+     )
+     db_session.add(task)
+     await db_session.commit()
+-    with pytest.raises(ValueError, match="Completed or abandoned"):
++    # R1A4-P2-2 FSM：终态 -> STUCK 非法，报错文案为状态机格式
++    with pytest.raises(ValueError, match="Invalid state transition: COMPLETED -> STUCK"):
+         await TaskService.mark_stuck(db_session, task, stuck_point="x")
+ 
+ 
+@@ -418,14 +421,16 @@ async def test_task_stuck_raises_for_abandoned(db_session):
+     )
+     db_session.add(task)
+     await db_session.commit()
+-    with pytest.raises(ValueError, match="Completed or abandoned"):
++    with pytest.raises(ValueError, match="Invalid state transition: ABANDONED -> STUCK"):
+         await TaskService.mark_stuck(db_session, task, stuck_point="x")
+ 
+ 
+ @pytest.mark.asyncio
+ async def test_task_stuck_sets_status_and_diagnosis(db_session, mock_task_deps, monkeypatch):
++    # R1A4-P2-2 FSM：PENDING -> STUCK 非法，卡住前置为 IN_PROGRESS；
++    # started_at 未设时由 mark_stuck 兜底补齐（保留该断言）
+     task = Task(
+-        id=uuid4(), user_id=uuid4(), title="t", type=TaskType.LEARNING, status=TaskStatus.PENDING, estimated_minutes=30
++        id=uuid4(), user_id=uuid4(), title="t", type=TaskType.LEARNING, status=TaskStatus.IN_PROGRESS, estimated_minutes=30
+     )
+     db_session.add(task)
+     await db_session.commit()
+@@ -498,7 +503,8 @@ async def test_task_pause_rejects_terminal_status(db_session, mock_task_deps):
+     db_session.add(task)
+     await db_session.commit()
+ 
+-    with pytest.raises(ValueError, match="Completed or abandoned"):
++    # R1A4-P2-2 FSM：终态 -> PAUSED 非法，报错文案为状态机格式
++    with pytest.raises(ValueError, match="Invalid state transition: COMPLETED -> PAUSED"):
+         await TaskService.pause(db_session, task)
+ 
+ 
+diff --git a/backend/tests/unit/orchestrator/mixins/test_context_builder_mixin.py b/backend/tests/unit/orchestrator/mixins/test_context_builder_mixin.py
+index 240204f8..c53527da 100644
+--- a/backend/tests/unit/orchestrator/mixins/test_context_builder_mixin.py
++++ b/backend/tests/unit/orchestrator/mixins/test_context_builder_mixin.py
+@@ -142,6 +142,14 @@ async def test_attach_stage34_memory_context_injects_goal_and_episodic_top_level
+         "app.orchestration.context_builder.MemoryService.list_recent_episodic",
+         AsyncMock(return_value=[memory]),
+     )
++    monkeypatch.setattr(
++        "app.orchestration.context_builder.MemoryService.get_last_session_mood",
++        AsyncMock(return_value=None),
++    )
++    monkeypatch.setattr(
++        "app.orchestration.context_builder.MemoryService.list_recent_calibration_receipts",
++        AsyncMock(return_value=[]),
++    )
+ 
+     payload = {"cognitive_context": {}}
+     result = await orchestrator._attach_stage34_memory_context(
+@@ -166,6 +174,14 @@ async def test_attach_stage34_memory_context_returns_empty_lists_when_no_records
+         "app.orchestration.context_builder.MemoryService.list_recent_episodic",
+         AsyncMock(return_value=[]),
+     )
++    monkeypatch.setattr(
++        "app.orchestration.context_builder.MemoryService.get_last_session_mood",
++        AsyncMock(return_value=None),
++    )
++    monkeypatch.setattr(
++        "app.orchestration.context_builder.MemoryService.list_recent_calibration_receipts",
++        AsyncMock(return_value=[]),
++    )
+ 
+     result = await orchestrator._attach_stage34_memory_context(
+         {},
+diff --git a/backend/tests/unit/orchestrator/mixins/test_persistence_layer_mixin.py b/backend/tests/unit/orchestrator/mixins/test_persistence_layer_mixin.py
+index 849489ae..aabf5949 100644
+--- a/backend/tests/unit/orchestrator/mixins/test_persistence_layer_mixin.py
++++ b/backend/tests/unit/orchestrator/mixins/test_persistence_layer_mixin.py
+@@ -62,6 +62,7 @@ async def test_persist_assistant_message_saves_to_database(orchestrator):
+     """Test _persist_assistant_message saves message to database."""
+     mock_db = MagicMock()
+     mock_db.is_active = True
++    mock_db.flush = AsyncMock()
+     mock_db.commit = AsyncMock()
+ 
+     user_id = str(uuid.uuid4())
+@@ -75,9 +76,10 @@ async def test_persist_assistant_message_saves_to_database(orchestrator):
+         full_response=full_response,
+     )
+ 
+-    # Should add message and commit
++    # Should add message and flush（RB-06 follow-up：flush 而非 commit，
++    # commit 所有权在 gRPC 流结束的统一提交）
+     assert mock_db.add.called
+-    assert mock_db.commit.called
++    assert mock_db.flush.called
+ 
+     # Verify the message object
+     added_message = mock_db.add.call_args[0][0]
+diff --git a/backend/tests/unit/services/test_agent_grpc_service.py b/backend/tests/unit/services/test_agent_grpc_service.py
+index 5454d71a..186fd8b6 100644
+--- a/backend/tests/unit/services/test_agent_grpc_service.py
++++ b/backend/tests/unit/services/test_agent_grpc_service.py
+@@ -57,6 +57,10 @@ class _FakeContext:
+     def invocation_metadata(self):
+         return self._metadata
+ 
++    def cancelled(self) -> bool:
++        # 对齐 grpc.aio.ServicerContext：流式循环会做客户端断连检查
++        return False
++
+     def set_code(self, code: grpc.StatusCode) -> None:
+         self.code = code
+ 
+diff --git a/backend/tests/unit/spine/test_pipeline_integration.py b/backend/tests/unit/spine/test_pipeline_integration.py
+index 747d4311..dfcc7b5b 100644
+--- a/backend/tests/unit/spine/test_pipeline_integration.py
++++ b/backend/tests/unit/spine/test_pipeline_integration.py
+@@ -380,7 +380,8 @@ def test_orchestrator_imports_spine():
+     source = inspect.getsource(ChatOrchestrator.process_stream)
+     assert "on_first_message" in source
+     assert "on_user_return" in source
+-    assert "SpineOrchestrator" in source
++    # 接线经工厂 get_spine_orchestrator（返回 SpineOrchestrator），不再直呼类名
++    assert "get_spine_orchestrator" in source
+ 
+ 
+ @pytest.mark.asyncio
+diff --git a/backend/tests/unit/test_orchestrator_evolution_context.py b/backend/tests/unit/test_orchestrator_evolution_context.py
+index 88a548e6..6f0912a4 100644
+--- a/backend/tests/unit/test_orchestrator_evolution_context.py
++++ b/backend/tests/unit/test_orchestrator_evolution_context.py
+@@ -54,7 +54,7 @@ async def test_hydrate_evolution_context_backfills_preference_learnings():
+     ]
+ 
+     with patch(
+-        "app.orchestration.orchestrator.SystemUpdateService.list_updates",
++        "app.orchestration.session_state_mixin.SystemUpdateService.list_updates",
+         AsyncMock(return_value=updates),
+     ):
+         await orchestrator._hydrate_evolution_context(final_state=final_state, user_id="user-1")
+@@ -79,7 +79,7 @@ async def test_hydrate_evolution_context_backfills_highlights():
+     ]
+ 
+     with patch(
+-        "app.orchestration.orchestrator.SystemUpdateService.list_updates",
++        "app.orchestration.session_state_mixin.SystemUpdateService.list_updates",
+         AsyncMock(return_value=updates),
+     ):
+         await orchestrator._hydrate_evolution_context(final_state=final_state, user_id="user-1")
+@@ -103,7 +103,7 @@ async def test_hydrate_evolution_context_backfills_perceptible_highlights():
+     ]
+ 
+     with patch(
+-        "app.orchestration.orchestrator.SystemUpdateService.list_updates",
++        "app.orchestration.session_state_mixin.SystemUpdateService.list_updates",
+         AsyncMock(return_value=updates),
+     ):
+         await orchestrator._hydrate_evolution_context(final_state=final_state, user_id="user-1")
+@@ -128,7 +128,7 @@ async def test_drain_system_updates_extracts_understanding_depth_hint():
+     ]
+ 
+     with patch(
+-        "app.orchestration.orchestrator.SystemUpdateService.drain",
++        "app.orchestration.session_state_mixin.SystemUpdateService.drain",
+         AsyncMock(return_value=updates),
+     ):
+         _, _, _, highlights, _, understanding_depth_update, _ = await orchestrator._drain_system_updates("user-1")
+diff --git a/backend/tests/unit/test_orchestrator_real_engine.py b/backend/tests/unit/test_orchestrator_real_engine.py
+index 5abeb2f6..2bfc9861 100644
+--- a/backend/tests/unit/test_orchestrator_real_engine.py
++++ b/backend/tests/unit/test_orchestrator_real_engine.py
+@@ -44,7 +44,7 @@ class _EchoTool(BaseTool):
+     category = ToolCategory.QUERY
+     parameters_schema = _EchoParams
+ 
+-    async def execute(self, params, user_id, db_session, tool_call_id=None):
++    async def execute(self, params, user_id, db_session, tool_call_id=None, locale="en"):
+         return ToolResult(success=True, tool_name=self.name, data={"echo": params.message})
+ 
+ 
+@@ -58,7 +58,7 @@ class _FailTool(BaseTool):
+     category = ToolCategory.TASK
+     parameters_schema = _FailParams
+ 
+-    async def execute(self, params, user_id, db_session, tool_call_id=None):
++    async def execute(self, params, user_id, db_session, tool_call_id=None, locale="en"):
+         return ToolResult(
+             success=False,
+             tool_name=self.name,
+@@ -79,7 +79,7 @@ class _WidgetTool(BaseTool):
+     category = ToolCategory.KNOWLEDGE
+     parameters_schema = _WidgetParams
+ 
+-    async def execute(self, params, user_id, db_session, tool_call_id=None):
++    async def execute(self, params, user_id, db_session, tool_call_id=None, locale="en"):
+         return ToolResult(
+             success=True,
+             tool_name=self.name,
+@@ -619,7 +619,8 @@ class TestDualCoreRouting_AuroraPreferences:
+         router = DualCoreRouter()
+         inp = self._base_input(aurora_preferences={"aurora_pressure_style": "gentle"})
+         decision = router.route(inp)
+-        assert any("温和" in c for c in decision.execution_constraints)
++        # 约束文案为英文：gentle 风格注入 "gentle reminders / no pressure-driven nudging" 约束
++        assert any("gentle reminders" in c for c in decision.execution_constraints)
+         strategies = self._strategy_map(decision)
+         assert strategies.get("push_vs_support") == 0.2
+ 
+@@ -627,7 +628,7 @@ class TestDualCoreRouting_AuroraPreferences:
+         router = DualCoreRouter()
+         inp = self._base_input(aurora_preferences={"aurora_pressure_style": "motivating"})
+         decision = router.route(inp)
+-        assert not any("温和" in c for c in decision.execution_constraints)
++        assert not any("gentle reminders" in c for c in decision.execution_constraints)
+ 
+     def test_brief_explanation_style(self):
+         router = DualCoreRouter()
+diff --git a/backend/tests/unit/test_signal_spine.py b/backend/tests/unit/test_signal_spine.py
+index ea18e49c..f5a95ecb 100644
+--- a/backend/tests/unit/test_signal_spine.py
++++ b/backend/tests/unit/test_signal_spine.py
+@@ -2211,7 +2211,8 @@ def test_orchestrator_imports_spine():
+     source = inspect.getsource(ChatOrchestrator.process_stream)
+     assert "on_first_message" in source
+     assert "on_user_return" in source
+-    assert "SpineOrchestrator" in source
++    # 接线经工厂 get_spine_orchestrator（返回 SpineOrchestrator），不再直呼类名
++    assert "get_spine_orchestrator" in source
+ 
+ 
+ @pytest.mark.asyncio

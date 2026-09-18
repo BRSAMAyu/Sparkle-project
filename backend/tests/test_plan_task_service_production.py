@@ -355,7 +355,9 @@ async def test_task_complete_updates_plan_progress(db_session, mock_task_deps, m
         plan_id=plan.id,
         title="t",
         type=TaskType.LEARNING,
-        status=TaskStatus.PENDING,
+        # R1A4-P2-2 FSM：PENDING -> COMPLETED 非法（round1 P1-1 确认 400），
+        # 完成前置为 IN_PROGRESS
+        status=TaskStatus.IN_PROGRESS,
         estimated_minutes=30,
     )
     db_session.add_all([plan, task])
@@ -402,7 +404,8 @@ async def test_task_stuck_raises_for_completed(db_session):
     )
     db_session.add(task)
     await db_session.commit()
-    with pytest.raises(ValueError, match="Completed or abandoned"):
+    # R1A4-P2-2 FSM：终态 -> STUCK 非法，报错文案为状态机格式
+    with pytest.raises(ValueError, match="Invalid state transition: COMPLETED -> STUCK"):
         await TaskService.mark_stuck(db_session, task, stuck_point="x")
 
 
@@ -418,14 +421,16 @@ async def test_task_stuck_raises_for_abandoned(db_session):
     )
     db_session.add(task)
     await db_session.commit()
-    with pytest.raises(ValueError, match="Completed or abandoned"):
+    with pytest.raises(ValueError, match="Invalid state transition: ABANDONED -> STUCK"):
         await TaskService.mark_stuck(db_session, task, stuck_point="x")
 
 
 @pytest.mark.asyncio
 async def test_task_stuck_sets_status_and_diagnosis(db_session, mock_task_deps, monkeypatch):
+    # R1A4-P2-2 FSM：PENDING -> STUCK 非法，卡住前置为 IN_PROGRESS；
+    # started_at 未设时由 mark_stuck 兜底补齐（保留该断言）
     task = Task(
-        id=uuid4(), user_id=uuid4(), title="t", type=TaskType.LEARNING, status=TaskStatus.PENDING, estimated_minutes=30
+        id=uuid4(), user_id=uuid4(), title="t", type=TaskType.LEARNING, status=TaskStatus.IN_PROGRESS, estimated_minutes=30
     )
     db_session.add(task)
     await db_session.commit()
@@ -498,7 +503,8 @@ async def test_task_pause_rejects_terminal_status(db_session, mock_task_deps):
     db_session.add(task)
     await db_session.commit()
 
-    with pytest.raises(ValueError, match="Completed or abandoned"):
+    # R1A4-P2-2 FSM：终态 -> PAUSED 非法，报错文案为状态机格式
+    with pytest.raises(ValueError, match="Invalid state transition: COMPLETED -> PAUSED"):
         await TaskService.pause(db_session, task)
 
 

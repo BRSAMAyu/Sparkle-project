@@ -380,7 +380,8 @@ def test_orchestrator_imports_spine():
     source = inspect.getsource(ChatOrchestrator.process_stream)
     assert "on_first_message" in source
     assert "on_user_return" in source
-    assert "SpineOrchestrator" in source
+    # 接线经工厂 get_spine_orchestrator（返回 SpineOrchestrator），不再直呼类名
+    assert "get_spine_orchestrator" in source
 
 
 @pytest.mark.asyncio

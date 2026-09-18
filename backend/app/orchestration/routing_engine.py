@@ -2535,12 +2535,28 @@ class RoutingEngineMixin:
                 "error_book": getattr(self, "error_book_service", None),
             }
             aggregator = SignalAggregator(service_map=service_map)
-            return await aggregator.assemble_snapshot(
+            snapshot = await aggregator.assemble_snapshot(
                 user_id=user_uuid,
                 scenario_pack_id="stage4_routing_mode@v1",
                 policy_version="aurora_policy@v1.0",
                 budget_limit=4000,
                 context=conversation_context,
+            )
+            # WS-B.1/WS-B.2 路由接缝的输入契约：user_message 必须在
+            # core_signals，task_card_id / structural_topic_turns 必须在
+            # optional_signals。聚合器只负责丰富上下文，不接管这两个由
+            # seam 注入的路由输入——否则 backbone 分类与 escalation 在
+            # 聚合器开启（默认 live）时恒判 direct，特性整体失效。
+            core_signals = dict(snapshot.core_signals)
+            core_signals.setdefault("user_message", user_message)
+            optional_signals: dict[str, Any] = dict(snapshot.optional_signals)
+            if self._stage4_task_assistant_request(user_message):
+                optional_signals.setdefault("task_card_id", "stage4_task_assistant_candidate")
+            structural_turns = self._count_structural_topic_turns(conversation_context)
+            if structural_turns > 0:
+                optional_signals.setdefault("structural_topic_turns", structural_turns)
+            return snapshot.model_copy(
+                update={"core_signals": core_signals, "optional_signals": optional_signals}
             )
 
         optional_signals: dict[str, Any] = {}

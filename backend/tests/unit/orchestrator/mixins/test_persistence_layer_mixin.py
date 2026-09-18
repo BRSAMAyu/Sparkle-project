@@ -62,6 +62,7 @@ async def test_persist_assistant_message_saves_to_database(orchestrator):
     """Test _persist_assistant_message saves message to database."""
     mock_db = MagicMock()
     mock_db.is_active = True
+    mock_db.flush = AsyncMock()
     mock_db.commit = AsyncMock()
 
     user_id = str(uuid.uuid4())
@@ -75,9 +76,10 @@ async def test_persist_assistant_message_saves_to_database(orchestrator):
         full_response=full_response,
     )
 
-    # Should add message and commit
+    # Should add message and flush（RB-06 follow-up：flush 而非 commit，
+    # commit 所有权在 gRPC 流结束的统一提交）
     assert mock_db.add.called
-    assert mock_db.commit.called
+    assert mock_db.flush.called
 
     # Verify the message object
     added_message = mock_db.add.call_args[0][0]

@@ -732,6 +732,8 @@ class CausalTrace:
     outcome_to_measure: list[str] = field(default_factory=list)
     aurora_energy_level: str = ""          # T3.1.6: L0/L1/L2/L3 at this turn
     aurora_upgrade_reason: str = ""        # T3.1.6: why upgraded (or "not_upgraded")
+    aurora_l1_should_escalate: bool | None = None  # L1 escalation verdict at this turn
+    aurora_l1_escalation_reason: str = ""  # why escalated (or "not_upgraded")
     created_at: str = field(default_factory=_utcnow)
     updated_at: str = field(default_factory=_utcnow)
 
@@ -748,6 +750,8 @@ class CausalTrace:
             "outcome_to_measure": self.outcome_to_measure,
             "aurora_energy_level": self.aurora_energy_level,
             "aurora_upgrade_reason": self.aurora_upgrade_reason,
+            "aurora_l1_should_escalate": self.aurora_l1_should_escalate,
+            "aurora_l1_escalation_reason": self.aurora_l1_escalation_reason,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
         }

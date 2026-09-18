@@ -57,6 +57,10 @@ class _FakeContext:
     def invocation_metadata(self):
         return self._metadata
 
+    def cancelled(self) -> bool:
+        # 对齐 grpc.aio.ServicerContext：流式循环会做客户端断连检查
+        return False
+
     def set_code(self, code: grpc.StatusCode) -> None:
         self.code = code
 
