@@ -77,6 +77,34 @@ def _serialize(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, default=str)
 
 
+# Memory payloads carry client-only metadata (rank_factors / correction_actions /
+# claim_status / ids) that never renders into the LLM prompt. The section budgets
+# bound *prompt* tokens, so trimming must measure the prompt-facing projection —
+# otherwise one enriched episodic payload (~580 envelope tokens vs chat default
+# budget 500) is always dropped and the cross-session memory read path dies.
+_PROMPT_FACING_FIELDS: dict[str, tuple[str, ...]] = {
+    "episodic": (
+        "summary",
+        "subject_type",
+        "source_type",
+        "source_lane",
+        "occurred_at",
+        "tags",
+        "confidence",
+        "user_confirmed",
+    ),
+    "goals": ("title", "status", "target_date"),
+}
+
+
+def _budget_view(payload: dict[str, Any], section: str | None) -> dict[str, Any]:
+    """Project a payload onto the fields the prompt actually renders."""
+    fields = _PROMPT_FACING_FIELDS.get(str(section or ""))
+    if not fields:
+        return payload
+    return {key: payload[key] for key in fields if payload.get(key) not in (None, "", [])}
+
+
 def _truncate_text_to_token_budget(text: str, budget: int) -> str:
     normalized = str(text or "").strip()
     if budget <= 0 or not normalized:
@@ -105,11 +133,11 @@ def _truncate_text_to_token_budget(text: str, budget: int) -> str:
     return candidate if estimate_tokens(candidate) <= budget else ""
 
 
-def _trim_list(items: list[dict[str, Any]], budget: int) -> list[dict[str, Any]]:
+def _trim_list(items: list[dict[str, Any]], budget: int, section: str | None = None) -> list[dict[str, Any]]:
     trimmed: list[dict[str, Any]] = []
     used = 0
     for item in items:
-        item_tokens = estimate_tokens(_serialize(item))
+        item_tokens = estimate_tokens(_serialize(_budget_view(item, section)))
         if used + item_tokens > budget:
             break
         trimmed.append(item)
@@ -158,13 +186,14 @@ def _trim_ranked_list(
     payloads: list[dict[str, Any]],
     scores: dict[str, float],
     budget: int,
+    section: str | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, float]]:
     entries: list[dict[str, Any]] = []
     total = 0
     for payload in payloads:
         item_id = payload.get("id")
         score = scores.get(item_id, 0.0)
-        tokens = estimate_tokens(_serialize(payload))
+        tokens = estimate_tokens(_serialize(_budget_view(payload, section)))
         entries.append({"payload": payload, "score": score, "tokens": tokens, "id": item_id})
         total += tokens
 
@@ -1352,23 +1381,24 @@ class ContextPackBuilder:
 
         original_usage = {
             "preferences": estimate_tokens(_serialize(preferences)),
-            "goals": estimate_tokens(_serialize(goal_payloads)),
-            "episodic": estimate_tokens(_serialize(episodic_payloads)),
+            "goals": estimate_tokens(_serialize([_budget_view(p, "goals") for p in goal_payloads])),
+            "episodic": estimate_tokens(_serialize([_budget_view(p, "episodic") for p in episodic_payloads])),
         }
 
         if ranking_enabled:
             trimmed_preferences, pref_scores = _trim_ranked_preferences(ranked_preferences, pref_budget)
-            trimmed_goals, goal_scores = _trim_ranked_list(goal_payloads, goal_scores, goals_budget)
+            trimmed_goals, goal_scores = _trim_ranked_list(goal_payloads, goal_scores, goals_budget, section="goals")
             trimmed_episodic, episodic_scores = _trim_ranked_list(
                 episodic_payloads,
                 episodic_scores,
                 episodic_budget,
+                section="episodic",
             )
             trimmed_pref_scores = {key: pref_scores.get(key, 0.0) for key in trimmed_preferences}
         else:
             trimmed_preferences = _trim_preferences(preferences, pref_budget)
-            trimmed_goals = _trim_list(goal_payloads, goals_budget)
-            trimmed_episodic = _trim_list(episodic_payloads, episodic_budget)
+            trimmed_goals = _trim_list(goal_payloads, goals_budget, section="goals")
+            trimmed_episodic = _trim_list(episodic_payloads, episodic_budget, section="episodic")
             trimmed_pref_scores = {}
 
         await self._mark_consumed_memory_records(
@@ -1382,8 +1412,8 @@ class ContextPackBuilder:
 
         token_usage = {
             "preferences": estimate_tokens(_serialize(trimmed_preferences)),
-            "goals": estimate_tokens(_serialize(trimmed_goals)),
-            "episodic": estimate_tokens(_serialize(trimmed_episodic)),
+            "goals": estimate_tokens(_serialize([_budget_view(p, "goals") for p in trimmed_goals])),
+            "episodic": estimate_tokens(_serialize([_budget_view(p, "episodic") for p in trimmed_episodic])),
         }
         budget_remaining = {
             "preferences": pref_budget - token_usage["preferences"],

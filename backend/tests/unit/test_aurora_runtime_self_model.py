@@ -84,7 +84,11 @@ async def test_plan_turn_bootstraps_self_model_in_redis_with_ttl_and_readout_sum
     }
 
     assert spy.readout is not None
-    assert spy.readout.self_model["strategy_confidence"] == pytest.approx(DEFAULT_STRATEGY_CONFIDENCE)
+    # 读出层经贝叶斯策略校准折算（0.4*存储值 + 0.6*校准值，冷启动 ≈ 0.62），
+    # 存储态保持默认 0.7；契约同 test_aurora_bayesian_learner。
+    readout_policy = spy.readout.self_model["bayesian_policy"]
+    assert spy.readout.self_model["strategy_confidence"] == pytest.approx(readout_policy["applied_strategy_confidence"])
+    assert spy.readout.self_model["strategy_confidence"] < DEFAULT_STRATEGY_CONFIDENCE
     assert spy.readout.self_model["known_assumptions"][0]["statement"].endswith("90 分钟学习")
 
 
@@ -94,7 +98,9 @@ async def test_task_timeouts_reduce_strategy_confidence_and_trigger_recalibratio
     service = SparkleSelfModelService(redis)
 
     initial = await service.get_readout_summary(user_id="user-timeout")
-    assert initial["strategy_confidence"] == pytest.approx(DEFAULT_STRATEGY_CONFIDENCE)
+    # 冷启动读出为贝叶斯校准折算值（≈0.62，低于默认 0.7），见 test_aurora_bayesian_learner。
+    assert initial["strategy_confidence"] == pytest.approx(initial["bayesian_policy"]["applied_strategy_confidence"])
+    assert initial["strategy_confidence"] < DEFAULT_STRATEGY_CONFIDENCE
 
     for index in range(3):
         await service.record_task_outcome(

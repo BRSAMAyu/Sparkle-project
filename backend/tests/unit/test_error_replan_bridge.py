@@ -313,6 +313,8 @@ async def test_error_replan_bridge_inserts_next_day_first_repair_task_and_comple
             new=AsyncMock(return_value=None),
         ),
     ):
+        # R1A4-P2-2 FSM：PENDING -> COMPLETED 非法，完成前须经 IN_PROGRESS
+        await TaskService.start(db_session, repair_task)
         await TaskService.complete(db_session, repair_task, actual_minutes=15)
 
     await db_session.refresh(repair_task)

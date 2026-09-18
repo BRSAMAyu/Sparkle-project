@@ -389,7 +389,8 @@ async def test_completed_sprint_auto_archives_without_post_exam_review(db_sessio
         estimated_minutes=35,
         difficulty=3,
         energy_cost=3,
-        status=TaskStatus.PENDING,
+        # R1A4-P2-2 FSM：PENDING -> COMPLETED 非法，完成前置为 IN_PROGRESS
+        status=TaskStatus.IN_PROGRESS,
     )
     db_session.add_all([plan, completed_task, final_task])
     await db_session.commit()
