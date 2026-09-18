@@ -4,10 +4,12 @@
 //   1. A single failed connect must schedule exactly ONE reconnect timer
 //      (onError + onDone must not stack timers on top of each other), and
 //      the failed handshake must not leak an unhandled `ready` error.
-//   2. A successfully established connection resets the reconnect budget,
-//      so silent connections never keep the budget exhausted. Consequence:
-//      3 consecutive drops of silent connections still trigger a 4th
-//      reconnect from the FIRST backoff step.
+//   2. A successfully established STABLE connection (uptime >= the
+//      stability threshold) refreshes the reconnect budget when it drops,
+//      so long-lived silent connections never keep the budget exhausted.
+//      (M6-R2-02 narrowed M6-02: only sessions that survived the
+//      threshold refresh the budget; accept-then-drop sessions must
+//      escalate the backoff instead.)
 import 'dart:async';
 import 'dart:io';
 
@@ -126,11 +128,15 @@ void main() {
     });
 
     test(
-        'three consecutive drops of silent connections still trigger a 4th '
-        'reconnect from the first backoff step (budget resets on connect)',
-        () async {
+        'three consecutive drops of STABLE connections still trigger a 4th '
+        'reconnect from the first backoff step (budget refreshes only for '
+        'stable sessions)', () async {
       // Server accepts each client, stays completely silent (no messages:
-      // the sync engine's steady state), then closes cleanly.
+      // the sync engine's steady state), then closes cleanly. Each session
+      // is held for 500ms — past the 200ms stability threshold — so every
+      // drop counts as a stable connection dropping and refreshes the
+      // budget (M6-02 semantics, narrowed by M6-R2-02: short-lived
+      // accept-then-drop sessions must NOT refresh the budget).
       final accepted = <WebSocket>[];
       final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
       addTearDown(server.close);
@@ -138,7 +144,7 @@ void main() {
         final client = await WebSocketTransformer.upgrade(request);
         accepted.add(client);
         unawaited(
-          Future<void>.delayed(const Duration(milliseconds: 120)).then((_) {
+          Future<void>.delayed(const Duration(milliseconds: 500)).then((_) {
             try {
               unawaited(client.close());
             } catch (_) {}
@@ -147,7 +153,9 @@ void main() {
       });
       final url = 'ws://127.0.0.1:${server.port}';
 
-      final service = WebSocketService();
+      final service = WebSocketService(
+        stableConnectionThreshold: const Duration(milliseconds: 200),
+      );
       addTearDown(service.disconnect);
 
       service.connect(url);

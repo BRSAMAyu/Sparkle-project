@@ -569,7 +569,7 @@ final transparentModeProvider = Provider<bool>(
 );
 
 final onboardingCompletedProvider =
-    StateNotifierProvider<OnboardingCompletedNotifier, bool>(
+    StateNotifierProvider<OnboardingCompletedNotifier, bool?>(
   (ref) => OnboardingCompletedNotifier(ref),
 );
 
@@ -938,8 +938,11 @@ class TransparencyLevelNotifier extends StateNotifier<int> {
   }
 }
 
-class OnboardingCompletedNotifier extends StateNotifier<bool> {
-  OnboardingCompletedNotifier(this._ref) : super(false) {
+/// M6-07：onboarding 完成态三语义 —— `null` = 同步未决（不做任何
+/// onboarding 相关跳转）、`true` = 已完成、`false` = 未完成。
+/// 恒初值 `false` 会让老用户在同步窗口被闪跳进 persona 引导。
+class OnboardingCompletedNotifier extends StateNotifier<bool?> {
+  OnboardingCompletedNotifier(this._ref) : super(null) {
     _ref.listen<AuthState>(authProvider, (prev, next) {
       if (prev?.user?.id != next.user?.id ||
           prev?.isAuthenticated != next.isAuthenticated) {
@@ -998,7 +1001,8 @@ class OnboardingCompletedNotifier extends StateNotifier<bool> {
           return;
         }
       } else {
-        state = false;
+        // M6-07：本地无存值 → 保持 null（未决），等 profile context
+        // 判定后再落定；此时置 false 会造成老用户被闪跳进引导。
       }
 
       final profileContext =
@@ -1007,7 +1011,9 @@ class OnboardingCompletedNotifier extends StateNotifier<bool> {
       state = completed;
       await prefs.setBool(_storageKeyForUser(user.id), completed);
     } catch (_) {
-      state = false;
+      // 同步失败的兜底与旧行为一致：视为未完成（宁可多引导一次，
+      // 也不让新用户漏掉引导）。仅在尚未落定时生效。
+      state ??= false;
     }
   }
 

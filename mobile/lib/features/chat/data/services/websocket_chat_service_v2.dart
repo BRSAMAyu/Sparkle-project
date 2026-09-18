@@ -1323,12 +1323,16 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     bool enableReconnect = true,
     bool autoConnect = true,
     Duration terminalDoneFallbackDelay = const Duration(seconds: 2),
+    /// 测试注入：覆盖重连退避表（长度需 ≥ [_maxReconnectAttempts]），
+    /// 便于秒级验证退避升级与 failed 终态可达性（M6-R2-01）。
+    List<Duration>? reconnectSchedule,
   })  : _container = container,
         baseUrl = baseUrl ?? ApiConstants.wsBaseUrl,
         _channelFactory = channelFactory,
         _enableReconnect = enableReconnect,
         _autoConnect = autoConnect,
-        _terminalDoneFallbackDelay = terminalDoneFallbackDelay {
+        _terminalDoneFallbackDelay = terminalDoneFallbackDelay,
+        _reconnectScheduleOverride = reconnectSchedule {
     WidgetsBinding.instance.addObserver(this);
     _offlineQueue = OfflineMessageQueueService(
       _container.read(localDatabaseProvider),
@@ -1345,8 +1349,13 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
   ];
   static const int _maxReconnectAttempts = 6;
 
+  /// M6-R2-01：连接存活达到该阈值才视为"稳定连接"，断开时才刷新
+  /// 重连预算（见 [_settleReconnectBudgetOnDisconnect]）。
+  static const Duration _stableConnectionThreshold = Duration(seconds: 30);
+
   // Factory for creating channels
   final WebSocketChannelFactory? _channelFactory;
+  final List<Duration>? _reconnectScheduleOverride;
   final bool _enableReconnect;
   final bool _autoConnect;
   final Duration _terminalDoneFallbackDelay;
@@ -1376,6 +1385,11 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
 
   // 连接状态
   WsConnectionState _connectionState = WsConnectionState.disconnected;
+
+  // M6-R2-01：本次握手成功（channel.ready 完成）的时刻。断开时据此
+  // 判断是"稳定连接断开"（存活 ≥ 阈值 → 刷新预算）还是"接受即断"
+  // （存活 < 阈值 → 预算照常递增直至 failed 终态）。
+  DateTime? _connectedAt;
 
   // 重连机制
   int _reconnectAttempts = 0;
@@ -1738,23 +1752,48 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
         cancelOnError: false,
       );
 
-      // 连接成功
-      _updateConnectionState(WsConnectionState.connected);
-      _reconnectAttempts = 0;
+      // M6-05 / M6-R2-01：connect() 只是发起异步握手，握手未确认前不得
+      // 置 connected（UI 会闪"已连接"、消息会走直发分支），也不得复位
+      // 重连预算（此前复位在 connect 后立即执行，持续宕机时每轮都被
+      // 清零，退避永远停在第一档，failed/MESSAGES_LOST 终态不可达）。
+      // channel.ready 确认成功后才进入 connected 并启动心跳/补发队列；
+      // ready 失败（含 10s 超时）经 catchError 消费——此前沿 ready
+      // future 泄漏为 unhandled async exception——并入既有
+      // _handleConnectionError 走 401 检测/错误广播/重连排程。
+      final channel = _channel!;
+      unawaited(
+        channel.ready
+            .timeout(const Duration(seconds: 10))
+            .then((_) {
+          if (_disposed || !identical(_channel, channel)) {
+            return;
+          }
+          _connectedAt = DateTime.now();
+          _updateConnectionState(WsConnectionState.connected);
 
-      // 启动心跳
-      _startHeartbeat();
+          // 启动心跳
+          _startHeartbeat();
 
-      // Restore pending messages from offline DB, then flush all pending.
-      // DB restore failure must not prevent flush — use onError callback.
-      _restorePendingFromDb()
-          .then((_) => _flushPendingMessages())
-          .catchError((Object e) {
-        _log('⚠️ DB restore failed, flushing pending messages anyway: $e');
-        _flushPendingMessages();
-      });
+          // Restore pending messages from offline DB, then flush all pending.
+          // DB restore failure must not prevent flush — use onError callback.
+          _restorePendingFromDb()
+              .then((_) => _flushPendingMessages())
+              .catchError((Object e) {
+            _log('⚠️ DB restore failed, flushing pending messages anyway: $e');
+            _flushPendingMessages();
+          });
 
-      _log('✅ WebSocket connected');
+          _log('✅ WebSocket connected');
+        }).catchError((Object e) {
+          if (_disposed || !identical(_channel, channel)) {
+            return;
+          }
+          _log('❌ WebSocket handshake failed: $e');
+          _handleConnectionError(e);
+        }),
+      );
+
+      _log('🔌 Handshake in flight (waiting for channel.ready)');
     } catch (e) {
       _log('❌ Connection failed: $e');
       _handleConnectionError(e);
@@ -2217,6 +2256,27 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
   /// 本地重连开关（用于401后禁用）
   bool _enableReconnectLocal = true;
 
+  /// M6-R2-01：断开时结算重连预算。仅当本次连接存活达到
+  /// [_stableConnectionThreshold] 才复位 attempts（稳定连接断开 =
+  /// 给一份新预算，保住 M6-02 同款"静默长连接断开后仍能重连"的
+  /// 语义）；存活低于阈值的短命会话不复位。握手从未成功
+  /// （[_connectedAt] 为空）时不做任何事。
+  void _settleReconnectBudgetOnDisconnect() {
+    final connectedAt = _connectedAt;
+    _connectedAt = null;
+    if (connectedAt == null) {
+      return;
+    }
+    final uptime = DateTime.now().difference(connectedAt);
+    if (uptime >= _stableConnectionThreshold) {
+      _log(
+        '🔄 Stable connection (up ${uptime.inSeconds}s) dropped — '
+        'refreshing reconnect budget',
+      );
+      _reconnectAttempts = 0;
+    }
+  }
+
   /// 处理连接错误
   void _handleConnectionError(dynamic error) {
     if (_disposed) return;
@@ -2273,6 +2333,11 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       return;
     }
 
+    // M6-R2-01：断开时结算重连预算——稳定连接（存活 ≥ 30s）断开才
+    // 刷新预算；"握手成功即断"的短命会话不复位，退避照常升级直至
+    // reached max → failed/MESSAGES_LOST 终态可达。
+    _settleReconnectBudgetOnDisconnect();
+
     if (_reconnectAttempts >= _maxReconnectAttempts) {
       _log('❌ Max reconnect attempts reached');
       _updateConnectionState(WsConnectionState.failed);
@@ -2303,8 +2368,9 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     _reconnectAttempts++;
     _updateConnectionState(WsConnectionState.reconnecting);
 
-    final baseDelay = _reconnectSchedule[
-        _reconnectAttempts.clamp(1, _maxReconnectAttempts) - 1];
+    final schedule = _reconnectScheduleOverride ?? _reconnectSchedule;
+    final baseDelay =
+        schedule[_reconnectAttempts.clamp(1, _maxReconnectAttempts) - 1];
     final jitterMs = math.Random().nextInt(250);
     final delayMs = baseDelay.inMilliseconds + jitterMs;
 
@@ -2572,6 +2638,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     _log('🔌 Teardown socket (Gen: $gen)');
 
     _stopHeartbeat();
+    _connectedAt = null;
 
     if (!_disposed) {
       _connectionState = WsConnectionState.disconnected;
@@ -2596,6 +2663,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     _log('🔌 Closing connection');
     _stopHeartbeat();
     _reconnectTimer?.cancel();
+    _connectedAt = null;
     final sink = _channel?.sink;
     if (sink != null) {
       unawaited(sink.close());

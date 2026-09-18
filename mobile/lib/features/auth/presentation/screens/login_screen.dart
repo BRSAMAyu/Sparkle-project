@@ -182,7 +182,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     child: TextButton(
                       onPressed: authState.isLoading
                           ? null
-                          : () => context.go('/forgot-password'),
+                          : () => context.push('/forgot-password'),
                       child: Text(l10n.authForgotPassword),
                     ),
                   ),
@@ -256,7 +256,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Center(
                     child: SparkleButton.ghost(
                       label: l10n.noAccount,
-                      onPressed: () => context.go('/register'),
+                      onPressed: () => context.push('/register'),
                     ),
                   ),
                   const SizedBox(height: DS.sm),

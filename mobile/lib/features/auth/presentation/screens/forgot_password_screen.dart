@@ -37,7 +37,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
           .forgotPassword(_emailController.text.trim());
       if (!mounted) return;
       AppFeedback.success(context, message);
-      if (mounted) context.go('/reset-password');
+      if (mounted) context.push('/reset-password');
     } catch (e) {
       if (!mounted) return;
       AppFeedback.error(context, UserFacingError.from(e));
@@ -114,7 +114,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                     index: 3,
                     child: SparkleButton.ghost(
                       label: l10n.authHaveResetCode,
-                      onPressed: () => context.go('/reset-password'),
+                      onPressed: () => context.push('/reset-password'),
                     ),
                   ),
                 ],

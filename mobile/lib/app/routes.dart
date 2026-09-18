@@ -53,6 +53,8 @@ const String _kReturnToQuery = 'return_to';
 
 /// 从当前 location 读取待还原的深链；仅接受站内绝对路径，
 /// 拒绝空串与协议相对形式（`//host`），防开放重定向。
+/// M6-R2-04 加固：`/\host`（浏览器将反斜杠视作斜杠，等价协议相对）、
+/// 控制字符与超长 URL 一并拒绝。
 String? _safePendingRedirect(Uri uri) {
   final pending = uri.queryParameters[_kPendingRedirectQuery] ??
       uri.queryParameters[_kReturnToQuery];
@@ -61,6 +63,17 @@ String? _safePendingRedirect(Uri uri) {
   }
   if (!pending.startsWith('/') || pending.startsWith('//')) {
     return null;
+  }
+  if (pending.contains(r'\')) {
+    return null;
+  }
+  if (pending.length > 2048) {
+    return null;
+  }
+  for (final codeUnit in pending.codeUnits) {
+    if (codeUnit < 0x20 || codeUnit == 0x7f) {
+      return null;
+    }
   }
   return pending;
 }
@@ -77,7 +90,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         routerRefreshNotifier.value++;
       },
     )
-    ..listen<bool>(
+    ..listen<bool?>(
       onboardingCompletedProvider,
       (_, __) {
         routerRefreshNotifier.value++;
@@ -171,14 +184,14 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       if (isAuthenticated &&
           !isGuestUser &&
-          !onboardingCompleted &&
+          onboardingCompleted == false &&
           !isOnPersonaOnboarding &&
           !isOnModelingChat) {
         return UserRoutes.personaOnboarding;
       }
 
       if (isAuthenticated &&
-          (onboardingCompleted || isGuestUser) &&
+          (onboardingCompleted == true || isGuestUser) &&
           isOnPersonaOnboarding) {
         return '/home';
       }

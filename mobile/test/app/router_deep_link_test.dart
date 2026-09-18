@@ -175,6 +175,66 @@ void main() {
 
     await _tearDownHarness(tester, harness);
   });
+
+  testWidgets(
+      'rejects backslash protocol-relative redirect payloads (open-redirect '
+      'hardening)', (tester) async {
+    final harness = await _pumpRouter(
+      tester,
+      authState: AuthState(isAuthenticated: true, user: _buildUser()),
+      onboardingCompleted: true,
+    );
+
+    // `/\evil.com` passes a `//`-prefix-only check but browsers treat a
+    // backslash like a slash, making it protocol-relative.
+    harness.router.go('/?redirect=${Uri.encodeComponent(r'/\evil.com')}');
+    await _pumpFrames(tester);
+
+    final uri = harness.router.routeInformationProvider.value.uri;
+    expect(
+      uri.path,
+      '/home',
+      reason:
+          'An authenticated user hitting splash with a backslash '
+          'protocol-relative redirect payload must fall through to /home, '
+          'not be navigated to the attacker-controlled location '
+          '(observed: ${uri.toString()})',
+    );
+
+    await _tearDownHarness(tester, harness);
+  });
+
+  testWidgets(
+      'keeps the current landing page while onboarding state is pending '
+      '(M6-07 tri-state)', (tester) async {
+    final auth = _MutableFakeAuthNotifier(
+      AuthState(isAuthenticated: true, user: _buildUser()),
+    );
+    final harness = await _pumpRouter(
+      tester,
+      authState: auth.state,
+      onboardingCompleted: false,
+      authNotifierOverride: auth,
+      pendingOnboarding: true,
+    );
+
+    // While the onboarding sync is pending (state == null), the router
+    // must NOT rewrite locations into the persona onboarding flow.
+    harness.router.go(deepLink);
+    await _pumpFrames(tester);
+
+    final uri = harness.router.routeInformationProvider.value.uri;
+    expect(
+      uri.path,
+      '/chat',
+      reason:
+          'During the onboarding-pending window the redirect must not send '
+          'users to the persona onboarding (M6-07 flash); observed: '
+          '${uri.toString()}',
+    );
+
+    await _tearDownHarness(tester, harness);
+  });
 }
 
 Future<_RouterHarness> _pumpRouter(
@@ -182,6 +242,7 @@ Future<_RouterHarness> _pumpRouter(
   required AuthState authState,
   required bool onboardingCompleted,
   AuthNotifier? authNotifierOverride,
+  bool pendingOnboarding = false,
 }) async {
   tester.view.devicePixelRatio = 2.0;
   tester.view.physicalSize = const Size(1440, 2960);
@@ -201,7 +262,9 @@ Future<_RouterHarness> _pumpRouter(
         (ref) => authNotifierOverride ?? _FakeAuthNotifier(authState),
       ),
       onboardingCompletedProvider.overrideWith(
-        (ref) => _FakeOnboardingCompletedNotifier(onboardingCompleted, ref),
+        (ref) => pendingOnboarding
+            ? _PendingOnboardingCompletedNotifier(ref)
+            : _FakeOnboardingCompletedNotifier(onboardingCompleted, ref),
       ),
       enhancedGalaxyRepositoryProvider.overrideWithValue(
         _TestGalaxyRepository(),
@@ -297,6 +360,22 @@ class _FakeOnboardingCompletedNotifier extends OnboardingCompletedNotifier {
   @override
   Future<void> syncForUser(UserModel? user) async {
     state = _completed;
+  }
+
+  @override
+  Future<void> setCompleted(bool value) async {
+    state = value;
+  }
+}
+
+/// M6-07: stays in the pending (null) state for the whole test so the
+/// router redirect's onboarding branches must not fire.
+class _PendingOnboardingCompletedNotifier extends OnboardingCompletedNotifier {
+  _PendingOnboardingCompletedNotifier(Ref ref) : super(ref);
+
+  @override
+  Future<void> syncForUser(UserModel? user) async {
+    state = null;
   }
 
   @override

@@ -415,10 +415,27 @@ bool _asBool(dynamic value, {bool fallback = false}) {
 }
 
 class DashboardNotifier extends StateNotifier<DashboardState> {
-  DashboardNotifier(this._repository) : super(DashboardState.loading()) {
+  DashboardNotifier(
+    this._repository, {
+    /// M6-08：错误自动重试的退避表（指数递增，末档封顶）。
+    /// 测试可注入短表秒级验证；生产默认 5s→15s→45s→120s。
+    List<Duration> retryBackoffSchedule = _defaultRetryBackoffSchedule,
+  })  : _retryBackoffSchedule = retryBackoffSchedule,
+        super(DashboardState.loading()) {
     unawaited(Future<void>.microtask(fetchData));
   }
   final DashboardRepository _repository;
+  final List<Duration> _retryBackoffSchedule;
+
+  /// M6-08：错误自动重试退避表——离线时最坏 2 分钟一次，而非恒 5 秒
+  /// 打满 dashboard/growth/predictive 三接口。
+  static const List<Duration> _defaultRetryBackoffSchedule = <Duration>[
+    Duration(seconds: 5),
+    Duration(seconds: 15),
+    Duration(seconds: 45),
+    Duration(seconds: 120),
+  ];
+  int _errorRetryCount = 0;
 
   Future<void> fetchData() async {
     try {
@@ -639,6 +656,9 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
                   : _asInt(nextMoveMap['days_to_deadline']),
             );
 
+      // M6-08：成功路径复位退避预算（放在全部可抛 await 之后，保证
+      // 失败的连续计数不被误清）。
+      _errorRetryCount = 0;
       state = DashboardState(
         weather: weather,
         flame: flame,
@@ -662,8 +682,13 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
       debugPrint('Error loading dashboard: $failure');
       if (!mounted) return;
       state = DashboardState.error(failure.userMessage, failure: failure);
-      // F-09: Auto-retry once after 5 seconds on error
-      Future.delayed(const Duration(seconds: 5), () {
+      // M6-08：失败自动重试改为指数退避 + 封顶（5s→15s→45s→120s 封顶），
+      // 取代原先固定 5s 的无退避无限轮询。
+      final schedule = _retryBackoffSchedule;
+      final attempt =
+          _errorRetryCount < schedule.length ? _errorRetryCount : schedule.length - 1;
+      _errorRetryCount++;
+      Future.delayed(schedule[attempt], () {
         if (mounted && state.error != null) {
           fetchData();
         }

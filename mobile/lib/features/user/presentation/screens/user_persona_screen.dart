@@ -83,7 +83,9 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
           ref,
           l10n,
           data,
-          onboardingCompleted,
+          // M6-07：null = 同步未决；本屏 banner 仅展示用途，
+          // 未决期按"未完成"提示渲染即可（router 对 null 不跳转）。
+          onboardingCompleted ?? false,
           profileContextAsync,
           inferredAsync,
           policiesAsync,
@@ -95,7 +97,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
           ref,
           l10n,
           const <String, dynamic>{},
-          onboardingCompleted,
+          onboardingCompleted ?? false,
           profileContextAsync,
           inferredAsync,
           policiesAsync,

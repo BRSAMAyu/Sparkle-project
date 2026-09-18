@@ -70,8 +70,9 @@ void main() {
       await _waitFor(
         () => container.read(authProvider).isAuthenticated,
       );
+      // M6-07：state 为 bool?，未决期 null；等待其落定为 true。
       await _waitFor(
-        () => container.read(onboardingCompletedProvider),
+        () => container.read(onboardingCompletedProvider) == true,
       );
 
       final authState = container.read(authProvider);
@@ -118,7 +119,7 @@ void main() {
         () => rebuiltContainer.read(authProvider).isAuthenticated,
       );
       await _waitFor(
-        () => rebuiltContainer.read(onboardingCompletedProvider),
+        () => rebuiltContainer.read(onboardingCompletedProvider) == true,
       );
 
       final rebuiltAuthState = rebuiltContainer.read(authProvider);
