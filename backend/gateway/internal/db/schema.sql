@@ -1547,8 +1547,7 @@ CREATE TABLE cards (
     origin_card_id uuid,
     origin_snapshot_id uuid,
     created_by character varying(16) DEFAULT '''AI'''::character varying NOT NULL,
-    updated_by character varying(16) DEFAULT '''AI'''::character varying NOT NULL,
-    archived_at timestamp without time zone
+    updated_by character varying(16) DEFAULT '''AI'''::character varying NOT NULL
 );
 
 
@@ -1572,8 +1571,7 @@ CREATE TABLE chat_messages (
     tokens_used integer,
     model_name character varying(100),
     updated_at timestamp without time zone NOT NULL,
-    deleted_at timestamp without time zone,
-    metadata jsonb
+    deleted_at timestamp without time zone
 );
 
 
@@ -6350,7 +6348,6 @@ CREATE TABLE user_settings (
     ai_reasoning_mode character varying(16) DEFAULT 'balanced'::character varying NOT NULL,
     current_goal_id character varying(64),
     safe_experiments_opt_out boolean DEFAULT false NOT NULL,
-    accessibility_settings jsonb DEFAULT '{}'::jsonb NOT NULL,
     community_intelligence_enabled boolean DEFAULT true NOT NULL
 );
 

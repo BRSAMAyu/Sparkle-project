@@ -1,0 +1,531 @@
+diff --git a/backend/alembic/versions/gfix03_dead_columns_drop_20260918.py b/backend/alembic/versions/gfix03_dead_columns_drop_20260918.py
+new file mode 100644
+index 00000000..a7589fda
+--- /dev/null
++++ b/backend/alembic/versions/gfix03_dead_columns_drop_20260918.py
+@@ -0,0 +1,56 @@
++"""gfix03: drop 三列 MIG-only 死列（审计 round2 schema-route-tail）
++
++Revision ID: gfix03_20260918
++Revises: gfix02_20260918
++Create Date: 2026-09-18
++
++背景：scripts/devtools/orm_migration_audit.py 三方审计（ORM ↔ 迁移链 ↔ 实库）
++把三个"迁移链有来源、ORM 无映射"的死列登记为 P1 挂账
++（docs/competition/2026-tmall-hackathon/系统审查/round2/schema-consistency-audit.md）。
++全仓 grep（含网关 SQLC query、proto、mobile、裸 SQL）确认零消费后，本迁移
++以 DROP COLUMN IF EXISTS 收口：
++
++  1. cards.archived_at        来源 cp001a2b3c4d5_add_card_protocol_tables
++     （Card ORM 无映射；card_service._transition 对该属性赋值不落库，属死代码）
++  2. chat_messages.metadata   来源 wp19_20260507_add_chat_messages_metadata_jsonb
++     （ChatMessage ORM 无映射；age_gate.SENSITIVE_FIELDS 仅死规格声明）
++  3. user_settings.accessibility_settings
++                                 来源 fv14_20260502_add_accessibility_settings
++     （UserSettings ORM 无映射；UserSettingsService.update_settings 以 hasattr
++       过滤，mobile 上送的该 key 本就被静默丢弃）
++
++IF EXISTS 保证幂等；downgrade 按各来源迁移的原始列定义复原。
++"""
++from typing import Union
++
++import sqlalchemy as sa
++from alembic import op
++from sqlalchemy.dialects import postgresql
++
++revision: str = "gfix03_20260918"
++down_revision: Union[str, tuple, None] = "gfix02_20260918"
++branch_labels = None
++depends_on = None
++
++
++def upgrade() -> None:
++    op.execute("ALTER TABLE cards DROP COLUMN IF EXISTS archived_at")
++    op.execute("ALTER TABLE chat_messages DROP COLUMN IF EXISTS metadata")
++    op.execute("ALTER TABLE user_settings DROP COLUMN IF EXISTS accessibility_settings")
++
++
++def downgrade() -> None:
++    op.add_column("cards", sa.Column("archived_at", sa.DateTime(), nullable=True))
++    op.add_column(
++        "chat_messages",
++        sa.Column("metadata", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
++    )
++    op.add_column(
++        "user_settings",
++        sa.Column(
++            "accessibility_settings",
++            postgresql.JSONB(astext_type=sa.Text()),
++            nullable=False,
++            server_default=sa.text("'{}'::jsonb"),
++        ),
++    )
+diff --git a/backend/app/services/card_service.py b/backend/app/services/card_service.py
+index b70c8458..aed96c8b 100644
+--- a/backend/app/services/card_service.py
++++ b/backend/app/services/card_service.py
+@@ -366,8 +366,6 @@ class CardService:
+         if old_status == target:
+             return card
+         card.lifecycle_status = target
+-        if target == CardLifecycleStatus.ARCHIVED:
+-            card.archived_at = datetime.utcnow()
+         card.version += 1
+         await self.db.flush()
+ 
+diff --git a/backend/gateway/internal/db/models.go b/backend/gateway/internal/db/models.go
+index 7081f683..9547c527 100755
+--- a/backend/gateway/internal/db/models.go
++++ b/backend/gateway/internal/db/models.go
+@@ -2355,7 +2355,6 @@ type Card struct {
+ 	OriginSnapshotID pgtype.UUID      `json:"origin_snapshot_id"`
+ 	CreatedBy        string           `json:"created_by"`
+ 	UpdatedBy        string           `json:"updated_by"`
+-	ArchivedAt       pgtype.Timestamp `json:"archived_at"`
+ }
+ 
+ type CardAdoptionRecord struct {
+@@ -2434,7 +2433,6 @@ type ChatMessage struct {
+ 	ModelName     pgtype.Text      `json:"model_name"`
+ 	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
+ 	DeletedAt     pgtype.Timestamp `json:"deleted_at"`
+-	Metadata      []byte           `json:"metadata"`
+ }
+ 
+ type ChatSession struct {
+@@ -3566,18 +3564,20 @@ type IrtItemParameter struct {
+ }
+ 
+ type ItemSimilarity struct {
+-	ItemID1          pgtype.UUID      `json:"item_id_1"`
+-	ItemType1        string           `json:"item_type_1"`
+-	ItemID2          pgtype.UUID      `json:"item_id_2"`
+-	ItemType2        string           `json:"item_type_2"`
+-	SimilarityScore  float64          `json:"similarity_score"`
+-	CommonLearners   int32            `json:"common_learners"`
+-	LastCalculatedAt pgtype.Timestamp `json:"last_calculated_at"`
+-	Meta             []byte           `json:"meta"`
+-	ID               pgtype.UUID      `json:"id"`
+-	CreatedAt        pgtype.Timestamp `json:"created_at"`
+-	UpdatedAt        pgtype.Timestamp `json:"updated_at"`
+-	DeletedAt        pgtype.Timestamp `json:"deleted_at"`
++	ItemID1             pgtype.UUID      `json:"item_id_1"`
++	ItemType1           string           `json:"item_type_1"`
++	ItemID2             pgtype.UUID      `json:"item_id_2"`
++	ItemType2           string           `json:"item_type_2"`
++	SimilarityScore     float64          `json:"similarity_score"`
++	CommonLearners      int32            `json:"common_learners"`
++	LastCalculatedAt    pgtype.Timestamp `json:"last_calculated_at"`
++	Meta                []byte           `json:"meta"`
++	ID                  pgtype.UUID      `json:"id"`
++	CreatedAt           pgtype.Timestamp `json:"created_at"`
++	UpdatedAt           pgtype.Timestamp `json:"updated_at"`
++	DeletedAt           pgtype.Timestamp `json:"deleted_at"`
++	TotalLearnersEither int32            `json:"total_learners_either"`
++	SubjectID           pgtype.UUID      `json:"subject_id"`
+ }
+ 
+ type Job struct {
+@@ -4182,6 +4182,7 @@ type PlanExecutionRecord struct {
+ 	CreatedAt         pgtype.Timestamp `json:"created_at"`
+ 	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
+ 	DeletedAt         pgtype.Timestamp `json:"deleted_at"`
++	ExecutionIntentID pgtype.UUID      `json:"execution_intent_id"`
+ }
+ 
+ type PlanState struct {
+@@ -4244,6 +4245,7 @@ type PostComment struct {
+ 	Content   string           `json:"content"`
+ 	CreatedAt pgtype.Timestamp `json:"created_at"`
+ 	UpdatedAt pgtype.Timestamp `json:"updated_at"`
++	DeletedAt pgtype.Timestamp `json:"deleted_at"`
+ }
+ 
+ type PostLike struct {
+@@ -4749,26 +4751,30 @@ type SessionCompletion struct {
+ }
+ 
+ type SharedResource struct {
+-	GroupID             pgtype.UUID      `json:"group_id"`
+-	TargetUserID        pgtype.UUID      `json:"target_user_id"`
+-	SharedBy            pgtype.UUID      `json:"shared_by"`
+-	PlanID              pgtype.UUID      `json:"plan_id"`
+-	TaskID              pgtype.UUID      `json:"task_id"`
+-	CognitiveFragmentID pgtype.UUID      `json:"cognitive_fragment_id"`
+-	CuriosityCapsuleID  pgtype.UUID      `json:"curiosity_capsule_id"`
+-	BehaviorPatternID   pgtype.UUID      `json:"behavior_pattern_id"`
+-	Permission          string           `json:"permission"`
+-	Comment             pgtype.Text      `json:"comment"`
+-	ViewCount           pgtype.Int4      `json:"view_count"`
+-	SaveCount           pgtype.Int4      `json:"save_count"`
+-	ID                  pgtype.UUID      `json:"id"`
+-	CreatedAt           pgtype.Timestamp `json:"created_at"`
+-	UpdatedAt           pgtype.Timestamp `json:"updated_at"`
+-	DeletedAt           pgtype.Timestamp `json:"deleted_at"`
+-	KnowledgeNodeID     pgtype.UUID      `json:"knowledge_node_id"`
+-	SeedLibraryID       pgtype.UUID      `json:"seed_library_id"`
+-	SeedItemID          pgtype.UUID      `json:"seed_item_id"`
+-	CardShareRecordID   pgtype.UUID      `json:"card_share_record_id"`
++	GroupID               pgtype.UUID      `json:"group_id"`
++	TargetUserID          pgtype.UUID      `json:"target_user_id"`
++	SharedBy              pgtype.UUID      `json:"shared_by"`
++	PlanID                pgtype.UUID      `json:"plan_id"`
++	TaskID                pgtype.UUID      `json:"task_id"`
++	CognitiveFragmentID   pgtype.UUID      `json:"cognitive_fragment_id"`
++	CuriosityCapsuleID    pgtype.UUID      `json:"curiosity_capsule_id"`
++	BehaviorPatternID     pgtype.UUID      `json:"behavior_pattern_id"`
++	Permission            string           `json:"permission"`
++	Comment               pgtype.Text      `json:"comment"`
++	ViewCount             pgtype.Int4      `json:"view_count"`
++	SaveCount             pgtype.Int4      `json:"save_count"`
++	ID                    pgtype.UUID      `json:"id"`
++	CreatedAt             pgtype.Timestamp `json:"created_at"`
++	UpdatedAt             pgtype.Timestamp `json:"updated_at"`
++	DeletedAt             pgtype.Timestamp `json:"deleted_at"`
++	KnowledgeNodeID       pgtype.UUID      `json:"knowledge_node_id"`
++	SeedLibraryID         pgtype.UUID      `json:"seed_library_id"`
++	SeedItemID            pgtype.UUID      `json:"seed_item_id"`
++	CardShareRecordID     pgtype.UUID      `json:"card_share_record_id"`
++	AdoptionCount         int32            `json:"adoption_count"`
++	NegativeFeedbackCount int32            `json:"negative_feedback_count"`
++	QualityScore          float64          `json:"quality_score"`
++	QualityHidden         bool             `json:"quality_hidden"`
+ }
+ 
+ type SharedSkill struct {
+@@ -5655,7 +5661,6 @@ type UserSetting struct {
+ 	AiReasoningMode              string           `json:"ai_reasoning_mode"`
+ 	CurrentGoalID                pgtype.Text      `json:"current_goal_id"`
+ 	SafeExperimentsOptOut        bool             `json:"safe_experiments_opt_out"`
+-	AccessibilitySettings        []byte           `json:"accessibility_settings"`
+ 	CommunityIntelligenceEnabled bool             `json:"community_intelligence_enabled"`
+ }
+ 
+diff --git a/backend/gateway/internal/db/query.sql.go b/backend/gateway/internal/db/query.sql.go
+index ddeae81a..dec037cf 100755
+--- a/backend/gateway/internal/db/query.sql.go
++++ b/backend/gateway/internal/db/query.sql.go
+@@ -368,7 +368,7 @@ func (q *Queries) GetAllProjectionMetadata(ctx context.Context) ([]ProjectionMet
+ }
+ 
+ const getChatHistory = `-- name: GetChatHistory :many
+-SELECT id, created_at, user_id, task_id, session_id, message_id, role, content, actions, parse_degraded, tokens_used, model_name, updated_at, deleted_at, metadata FROM chat_messages
++SELECT id, created_at, user_id, task_id, session_id, message_id, role, content, actions, parse_degraded, tokens_used, model_name, updated_at, deleted_at FROM chat_messages
+ WHERE session_id = $1
+ AND created_at > $2
+ ORDER BY created_at ASC
+@@ -404,7 +404,6 @@ func (q *Queries) GetChatHistory(ctx context.Context, arg GetChatHistoryParams)
+ 			&i.ModelName,
+ 			&i.UpdatedAt,
+ 			&i.DeletedAt,
+-			&i.Metadata,
+ 		); err != nil {
+ 			return nil, err
+ 		}
+@@ -709,7 +708,7 @@ func (q *Queries) GetLatestSnapshot(ctx context.Context, arg GetLatestSnapshotPa
+ }
+ 
+ const getMessageByID = `-- name: GetMessageByID :one
+-SELECT id, created_at, user_id, task_id, session_id, message_id, role, content, actions, parse_degraded, tokens_used, model_name, updated_at, deleted_at, metadata FROM chat_messages
++SELECT id, created_at, user_id, task_id, session_id, message_id, role, content, actions, parse_degraded, tokens_used, model_name, updated_at, deleted_at FROM chat_messages
+ WHERE id = $1 AND session_id = $2
+ LIMIT 1
+ `
+@@ -737,7 +736,6 @@ func (q *Queries) GetMessageByID(ctx context.Context, arg GetMessageByIDParams)
+ 		&i.ModelName,
+ 		&i.UpdatedAt,
+ 		&i.DeletedAt,
+-		&i.Metadata,
+ 	)
+ 	return i, err
+ }
+@@ -880,7 +878,7 @@ func (q *Queries) GetRecentSessionsFromDB(ctx context.Context, arg GetRecentSess
+ }
+ 
+ const getSessionMessagesFromDB = `-- name: GetSessionMessagesFromDB :many
+-SELECT id, created_at, user_id, task_id, session_id, message_id, role, content, actions, parse_degraded, tokens_used, model_name, updated_at, deleted_at, metadata FROM chat_messages
++SELECT id, created_at, user_id, task_id, session_id, message_id, role, content, actions, parse_degraded, tokens_used, model_name, updated_at, deleted_at FROM chat_messages
+ WHERE session_id = $1 AND user_id = $2
+ ORDER BY created_at ASC
+ LIMIT $3 OFFSET $4
+@@ -922,7 +920,6 @@ func (q *Queries) GetSessionMessagesFromDB(ctx context.Context, arg GetSessionMe
+ 			&i.ModelName,
+ 			&i.UpdatedAt,
+ 			&i.DeletedAt,
+-			&i.Metadata,
+ 		); err != nil {
+ 			return nil, err
+ 		}
+diff --git a/backend/gateway/internal/db/schema.sql b/backend/gateway/internal/db/schema.sql
+index b5245ae3..cb367834 100644
+--- a/backend/gateway/internal/db/schema.sql
++++ b/backend/gateway/internal/db/schema.sql
+@@ -1547,8 +1547,7 @@ CREATE TABLE cards (
+     origin_card_id uuid,
+     origin_snapshot_id uuid,
+     created_by character varying(16) DEFAULT '''AI'''::character varying NOT NULL,
+-    updated_by character varying(16) DEFAULT '''AI'''::character varying NOT NULL,
+-    archived_at timestamp without time zone
++    updated_by character varying(16) DEFAULT '''AI'''::character varying NOT NULL
+ );
+ 
+ 
+@@ -1572,8 +1571,7 @@ CREATE TABLE chat_messages (
+     tokens_used integer,
+     model_name character varying(100),
+     updated_at timestamp without time zone NOT NULL,
+-    deleted_at timestamp without time zone,
+-    metadata jsonb
++    deleted_at timestamp without time zone
+ );
+ 
+ 
+@@ -6350,7 +6348,6 @@ CREATE TABLE user_settings (
+     ai_reasoning_mode character varying(16) DEFAULT 'balanced'::character varying NOT NULL,
+     current_goal_id character varying(64),
+     safe_experiments_opt_out boolean DEFAULT false NOT NULL,
+-    accessibility_settings jsonb DEFAULT '{}'::jsonb NOT NULL,
+     community_intelligence_enabled boolean DEFAULT true NOT NULL
+ );
+ 
+diff --git a/backend/gateway/internal/handler/proxy_routes.go b/backend/gateway/internal/handler/proxy_routes.go
+index e16ef65c..a9959cac 100644
+--- a/backend/gateway/internal/handler/proxy_routes.go
++++ b/backend/gateway/internal/handler/proxy_routes.go
+@@ -235,7 +235,10 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
+ 		// route-tier: authed
+ 		plans.GET("/:id/planning-context", h.proxyWithHeaders)
+ 		// route-tier: authed
+-		plans.POST("/:id/today", h.proxyWithHeaders)
++		// R2 fix (schema-route-tail): method drift corrected POST -> GET; the
++		// engine only serves GET /plans/{plan_id}/today (api/v1/plans.py:851),
++		// engine is source of truth — POST here proxied to 405/404.
++		plans.GET("/:id/today", h.proxyWithHeaders)
+ 		// route-tier: authed
+ 		plans.POST("/:id/phases", h.proxyWithHeaders)
+ 	}
+@@ -419,7 +422,9 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
+ 		goals.GET("/", h.proxyWithHeaders)
+ 		goals.POST("/", h.proxyWithHeaders)
+ 		goals.POST("/decompose-preview", h.proxyWithHeaders)
+-		goals.GET("/:id", h.proxyWithHeaders)
++		// R2 fix (schema-route-tail): GET /:id removed — the engine has no
++		// GET-by-id on goals (only PUT/DELETE /{goal_id}); the GET face here
++		// proxied to engine 404. Mobile reads goal detail from list payloads.
+ 		goals.PUT("/:id", h.proxyWithHeaders)
+ 		// R2-08 §2.2 #13: PATCH /:id removed — the engine only serves
+ 		// PUT /goals/{goal_id}; the PUT sibling above stays.
+diff --git "a/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/schema-consistency-audit.md" "b/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/schema-consistency-audit.md"
+index 66369361..08607154 100644
+--- "a/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/schema-consistency-audit.md"
++++ "b/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/schema-consistency-audit.md"
+@@ -69,6 +69,7 @@
+ ### 3. 移交清单（P1，不阻塞合入）
+ 
+ - [ ] 12 张退役 spine 死 schema：评估 `drop_table` 收敛迁移（连带 3 个死列 `cards.archived_at` 等）
++  - ✅ 2026-09-19 死列部分完成：3 个 MIG-only 死列已由 `gfix03_20260918` drop 迁移收口（零消费 grep + 演练库双向验证 + 三方审计归零，见 [schema-route-tail.md](schema-route-tail.md)）；12 张表本身仍挂账。
+ - [ ] dev 库 29 张会话遗留表 + `sparkle_rt02_probe`/`sparkle_repro_t42` 残库：运维清理（属运行时数据，不入库不入补丁）
+ - [ ] `tasks.scheduled_at/timezone/version`：确认无消费后从 dev 库 drop
+ 
+diff --git "a/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/schema-route-tail.md" "b/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/schema-route-tail.md"
+new file mode 100644
+index 00000000..cf201690
+--- /dev/null
++++ "b/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/schema-route-tail.md"
+@@ -0,0 +1,131 @@
++# Schema/路由长尾收口 — gfix03 死列 drop + BA-ROUTES 两条挂账
++
++> 2026-09-19。基线 `main@b97a0674`（wt9 worktree）。承接
++> [schema-consistency-audit.md](schema-consistency-audit.md) §三 P1 / §四移交清单第 1 条
++> 与 [BA-ROUTES 守卫](../../../../../scripts/guards/check_rule_ba_routes_parity.py)
++> ENGINE_ONLY / GATEWAY_ONLY 台账中的两条挂账。补丁：同目录 `schema-route-tail.patch`。
++
++## 变更一览
++
++| # | 变更 | 文件 |
++|---|---|---|
++| A | 新增 `gfix03_20260918` drop 迁移（三列 MIG-only 死列，带 IF EXISTS） | `backend/alembic/versions/gfix03_dead_columns_drop_20260918.py` |
++| A | 删除对非映射属性 `card.archived_at` 的死赋值（不落库，随列退役） | `backend/app/services/card_service.py` |
++| A | 网关快照/SQLC 产物按流程再生（非手改）：`schema.sql` -5/+2、`models.go`/`query.sql.go` 随动 | `backend/gateway/internal/db/{schema.sql,models.go,query.sql.go}` |
++| A | 审计白名单收窄：3 个死列条目移出（漂移已归零，保留 DB-only tasks 三列） | `scripts/devtools/orm_migration_audit.py`、`scripts/devtools/db_debris_cleanup.py`（注释） |
++| B | `POST /plans/:id/today` 方法漂移修正为 GET（以引擎为准） | `backend/gateway/internal/handler/proxy_routes.go` |
++| B | 删除死路由 `GET /goals/:id`（引擎无 goals GET-by-id） | 同上 |
++| B | BA-ROUTES 台账收窄：移除 `/api/v1/plans/{}/today`（ENGINE_ONLY）与 `/api/v1/goals/{}`、`/api/v1/plans/{}/today`（GATEWAY_ONLY） | `scripts/guards/check_rule_ba_routes_parity.py` |
++| — | 审计移交清单第 1 条的死列部分勾销 | `docs/competition/.../round2/schema-consistency-audit.md` |
++
++## A · MIG-only 死列 alembic drop 迁移
++
++### A1 零消费确认（全仓 grep，含网关 SQLC）
++
++三列在 ORM（`Card`/`ChatMessage`/`UserSettings`）均无映射、proto 无字段、mobile 无引用；
++网关 `query.sql` 无一引用（`GetChatHistory` 等的 `SELECT *` 展开由 sqlc 生成，随 schema
++再生自动收缩）。逐列排查出的"疑似消费"均澄清为非消费：
++
++| 列 | 迁移链来源 | 疑似消费 → 澄清 |
++|---|---|---|
++| `cards.archived_at` | `cp001a2b3c4d5_add_card_protocol_tables` | `card_service._transition` 对 `card.archived_at` 赋值——列未映射，纯实例属性、不落库（本次随迁移删除该死赋值） |
++| `chat_messages.metadata` | `wp19_20260507_add_chat_messages_metadata_jsonb` | `age_gate.SENSITIVE_FIELDS` 声明 `"chat_messages": ["content","metadata"]`——全仓仅声明、无任何 DB 操作（死规格） |
++| `user_settings.accessibility_settings` | `fv14_20260502_add_accessibility_settings` | mobile `kAccessibilitySettingsUserSettingsKey` 经 `PUT /user/settings` 上送——`UserSettingsService.update_settings` 以 `hasattr` 过滤，该 key 本就被静默丢弃（DB 列从未被写） |
++
++注意区分：`cards.metadata`（`metadata_` 映射，活列）与 `chat_messages.metadata`（死列）
++不同表同名列，前者不受影响（演练与实库均复核存活）。
++
++### A2 迁移本体
++
++`gfix03_20260918`，`down_revision = "gfix02_20260918"`，单头链尾。upgrade 用
++`ALTER TABLE … DROP COLUMN IF EXISTS` ×3（幂等）；downgrade 按各来源迁移的原始列定义
++复原（`cards.archived_at` timestamp 可空；`chat_messages.metadata` jsonb 可空；
++`user_settings.accessibility_settings` jsonb NOT NULL DEFAULT '{}'::jsonb）。
++
++### A3 演练库验证（pg_dump 克隆法，串行）
++
++依 [db-debris-cleanup.md](db-debris-cleanup.md) 的流程：`pg_dump -Fc`（1.5 MB）→
++`pg_restore` 克隆出 `sparkle_gfix03_rehearsal`（stamp=`gfix03_20260918`，三列已不在）。
++因克隆库已在后置状态，演练改为**双向驱动迁移文件本体**：
++
++| 步骤 | 结果 |
++|---|---|
++| 克隆库 `alembic downgrade gfix02_20260918` | 三列按原始定义复原（timestamp 可空 / jsonb 可空 / jsonb NOT NULL DEFAULT），stamp=gfix02 ✅ |
++| 克隆库 `alembic upgrade head` | 三列精确删除（`pg_attribute` 逐列复核=0），`cards.metadata` 活列存活，stamp=gfix03 ✅ |
++| 收尾 | `DROP DATABASE … WITH (FORCE)` + dump 文件即删 ✅ |
++
++### A4 实库与快照
++
++特殊情况如实记录：动工前发现 dev 库 `sparkle` 已被此前某会话**带外**删去三列并
++`stamped gfix03_20260918`（当时仓库内并无对应迁移文件）。本次迁移文件的 revision 与该
++stamp 恰好对齐，实库操作退化为确认性空转：
++
++- 实库 `alembic upgrade head`：no-op（stamp 已在 head，且与文件链一致）✅
++- `make sync-db` 等价管线（wt9 无 `backend/.venv`，按 Makefile 同款命令以
++  `/opt/homebrew/bin/python3.11` 串行执行）：
++  - **fresh scratch 库从零全链重放至 gfix03 通过**（顺带证明链对全新环境健康）；
++  - `db-dump` 同款 grep/sed 管线再生 `schema.sql`（-5/+2，三列消失）；
++  - `sqlc generate` 再生 `models.go`/`query.sql.go`：`ChatMessage.Metadata`、
++    `Card` 的 `ArchivedAt`、`UserSetting.AccessibilitySettings` 移除；快照同时补上
++    此前滞后缺失的 gfix02 `item_similarities` 两列。
++- `scripts/devtools/orm_migration_audit.py`（含 scratch 重放）：**三方全绿**
++  ——ORM/迁移/实库 表数 216/233/233，全部漂移桶为 0，`✅ 三方一致` ✅
++- 定向 pytest：`tests/unit/test_card_operations_service.py` +
++  `tests/test_db_partitioning.py` → **7 passed, 2 skipped** ✅
++
++### A 白名单收窄
++
++`orm_migration_audit.py` 的 `WHITELIST_COLUMNS` 移除三行死列登记（保留 tasks 三列
++DB-only 豁免），并留 2026-09-19 消化注记；`db_debris_cleanup.py` docstring 同步注明
++"已由 gfix03 收口、排除条款保留为防 out-of-band 污染的历史依据"。
++
++## B · BA-ROUTES 两条挂账
++
++守卫台账原文（`scripts/guards/check_rule_ba_routes_parity.py`）：
++
++1. **`POST /plans/:id/today` 方法漂移**（ENGINE_ONLY `/api/v1/plans/{}/today`）：
++   引擎只有 `GET /plans/{plan_id}/today`（`api/v1/plans.py:851`，
++   `@router.get("/{plan_id:uuid}/today")`），网关却注册 `plans.POST("/:id/today")`
++   ——POST 打过去引擎 405/404。**以引擎为准**：网关注册改为
++   `plans.GET("/:id/today", h.proxyWithHeaders)`（参照 exam-sprint 补齐先例
++   `35b29ba5` 的注释+route-tier 风格）。双侧 grep：mobile/测试无 POST 调用方；
++   引擎自身测试用的就是 GET。
++2. **`GET /goals/:id` 死路由**（GATEWAY_ONLY `/api/v1/goals/{}`）：引擎 goals 只有
++   GET 列表（`""`/`"/"`）、`GET /arbitrate`，**无 GET-by-id**（仅 PUT/DELETE
++   `/{goal_id}`）。双侧 grep：mobile goal 仓库只用 `PUT /goals/$goalId`
++   （`updateGoal`），`/goals/:id` 其余命中均为 Flutter 导航路由非 API；tests_e2e
++   零引用。→ 删除 `goals.GET("/:id", h.proxyWithHeaders)`，PUT/DELETE 保留，
++   并在白名单注释留档。
++
++白名单收窄：ENGINE_ONLY 删 `/api/v1/plans/{}/today`；GATEWAY_ONLY 删
++`/api/v1/goals/{}` 与 `/api/v1/plans/{}/today`，两处以 2026-09-19 处置注记替代。
++
++### B 验证
++
++- `check_rule_ba_routes_parity.py`：**RULE BA-ROUTES OK**（373 网关路由 ↔ 923 引擎
++  路由，54 catch-all，112 ledgered diffs），exit 0 ✅
++- `check_rule_ax_route_ownership.py` PASS、`check_rule_bm_r208_dead_routes.py` OK ✅
++- 定向 Go：`go test ./internal/handler/ -run "TestRegisterProxyRoutes|TestProxyRoutes"`
++  ok；**`go test ./...`（CGO_ENABLED=0）10 包全 ok**；gofmt 干净 ✅
++- 引擎定向：`pytest tests/api/test_plans_api.py` → **3 passed** ✅
++
++## 全套守卫
++
++`bash scripts/run_all_rule_guards.sh` → **all rule guards passed (71 rules)**
++（含 DB-HEAD：`✅ alembic 单头: gfix03_20260918`）。
++
++注：守卫套件会自动刷新 `docs/product/stage22_prompt_coverage_baseline.md` 的
++`audited_at` 时间戳（运行时副产物，与本次改动无关），已还原，不入补丁。
++
++## 环境备注（复现）
++
++- wt9 为全新 checkout：`backend/gateway/gen/`、`backend/app/gen/`、`mobile/lib/gen/`
++  均为 gitignore 的生成物，需从已构建环境复制（`cp -RL` 解引用；主仓 `app/gen` 内有
++  指向主 worktree 的**绝对符号链接**，直接 `cp -R` 会把链接带进来，导致 Rule K 的
++  rule-z 扫描在越界路径上崩溃——已用 `cp -RL` 规避）。
++- 测试环境变量：`SECRET_KEY=rule-guard-secret-0123456789abcdef`
++  `JWT_SECRET=rule-guard-jwt-0123456789abcdef`
++  `REDIS_URL=redis://:sparkle_dev_redis_2026@localhost:6379/1`
++  `DATABASE_URL=postgresql+psycopg://postgres:sparkle_dev_pg_2026@localhost:5432/sparkle`
++  Go 侧 `CGO_ENABLED=0`。
++- 未 commit/push；演练库/scratch 库用后即删，dev 库本任务全程无业务写入。
+diff --git a/scripts/devtools/db_debris_cleanup.py b/scripts/devtools/db_debris_cleanup.py
+index 6f8c57cd..5419b2e1 100755
+--- a/scripts/devtools/db_debris_cleanup.py
++++ b/scripts/devtools/db_debris_cleanup.py
+@@ -20,8 +20,10 @@
+        （防止 CASCADE 波及主业务对象）；
+     3. DROP COLUMN 不带 CASCADE（同表索引随列自动删除属表内行为，允许）。
+   注意不清理白名单中另外三列（cards.archived_at / chat_messages.metadata /
+-  user_settings.accessibility_settings）：它们是迁移链上的 MIG-only 死列，删除必须走
++  user_settings.accessibility_settings）：它们曾是迁移链上的 MIG-only 死列，删除必须走
+   alembic drop 迁移（审计移交清单第 1 条），绝不能由本脚本动 DB。
++  2026-09-19 更新：三列已由 gfix03_20260918 drop 迁移收口；本脚本对它们的排除
++  条款保留为历史依据（若 dev 库再出现同名列即属 out-of-band 污染）。
+ 
+ 用法：
+   cd <repo-root>
+diff --git a/scripts/devtools/orm_migration_audit.py b/scripts/devtools/orm_migration_audit.py
+index 1349f0ff..0724165e 100644
+--- a/scripts/devtools/orm_migration_audit.py
++++ b/scripts/devtools/orm_migration_audit.py
+@@ -81,14 +81,13 @@ IGNORED_TABLES = {"alembic_version"}
+ # (table, column) 级豁免：即使出现在某个 diff 桶也不算漂移。
+ # 2026-09-18 初次审计登记（round2，处置见 schema-consistency-audit.md）：
+ WHITELIST_COLUMNS: set[tuple[str, str]] = {
+-    # 迁移领先 ORM = 模型已删、迁移未删的死列（P1 挂账，无运行时风险）：
+-    ("cards", "archived_at"),
+-    ("chat_messages", "metadata"),
+-    ("user_settings", "accessibility_settings"),
+     # DB 领先 = dev 库遗留列，ORM/迁移/网关三方均无引用（P1 挂账，可清理 DB 列）：
+     ("tasks", "scheduled_at"),
+     ("tasks", "timezone"),
+     ("tasks", "version"),
++    # 2026-09-19 已消化并移出：cards.archived_at / chat_messages.metadata /
++    # user_settings.accessibility_settings 三个 MIG-only 死列，由 gfix03_20260918
++    # drop 迁移收口（见 schema-route-tail.md）。
+ }
+ # 表级豁免：整表只存在于某一方时豁免报警（仍会在报告中标注）。
+ # 2026-09-18 初次审计登记（round2，处置见 schema-consistency-audit.md）：
+diff --git a/scripts/guards/check_rule_ba_routes_parity.py b/scripts/guards/check_rule_ba_routes_parity.py
+index 86c10a7f..108b9c92 100644
+--- a/scripts/guards/check_rule_ba_routes_parity.py
++++ b/scripts/guards/check_rule_ba_routes_parity.py
+@@ -430,7 +430,6 @@ ENGINE_ONLY: dict[str, str] = {
+     "/api/v1/errors/{}/analyze": "gateway serves /errors natively via gRPC ErrorBookHandler",
+     "/api/v1/errors/{}/review": "gateway serves /errors natively via gRPC ErrorBookHandler",
+     "/api/v1/galaxy/documents/{}/nodes": "galaxy long tail — unreachable via gateway (P3 handoff §6.2)",
+-    "/api/v1/plans/{}/today": "method drift: engine serves GET /plans/{id}/today, gateway registers POST (BM-sweep candidate)",
+ }
+ 
+ GATEWAY_ONLY: dict[str, str] = {
+@@ -440,8 +439,12 @@ GATEWAY_ONLY: dict[str, str] = {
+     "/api/v1/notifications": "bare group artifact — engine serves sub-paths only",
+     "/api/v1/subjects": "bare group artifact — engine serves sub-paths only",
+     "/api/v1/visual-elements": "bare group artifact — engine serves sub-paths only",
+-    "/api/v1/goals/{}": "gateway GET /goals/:id — engine has no GET-by-id (candidate for BM-style sweep)",
+-    "/api/v1/plans/{}/today": "method drift: engine serves GET /plans/{id}/today, gateway POST /plans/:id/today proxies to 404 (BM-sweep candidate)",
++    # 2026-09-19 (schema-route-tail) resolved and removed from this ledger:
++    # "/api/v1/goals/{}"          — gateway GET /:id dead face deleted (engine
++    #                               has no goals GET-by-id; PUT/DELETE stay);
++    # "/api/v1/plans/{}/today"    — gateway method drift fixed POST -> GET
++    #                               (engine GET /plans/{plan_id}/today is the
++    #                               source of truth). Both verified by this guard.
+ }
+ 
+ 

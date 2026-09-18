@@ -69,6 +69,7 @@
 ### 3. 移交清单（P1，不阻塞合入）
 
 - [ ] 12 张退役 spine 死 schema：评估 `drop_table` 收敛迁移（连带 3 个死列 `cards.archived_at` 等）
+  - ✅ 2026-09-19 死列部分完成：3 个 MIG-only 死列已由 `gfix03_20260918` drop 迁移收口（零消费 grep + 演练库双向验证 + 三方审计归零，见 [schema-route-tail.md](schema-route-tail.md)）；12 张表本身仍挂账。
 - [ ] dev 库 29 张会话遗留表 + `sparkle_rt02_probe`/`sparkle_repro_t42` 残库：运维清理（属运行时数据，不入库不入补丁）
 - [ ] `tasks.scheduled_at/timezone/version`：确认无消费后从 dev 库 drop
 

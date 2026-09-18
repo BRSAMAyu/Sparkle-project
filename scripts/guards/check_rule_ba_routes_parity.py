@@ -430,7 +430,6 @@ ENGINE_ONLY: dict[str, str] = {
     "/api/v1/errors/{}/analyze": "gateway serves /errors natively via gRPC ErrorBookHandler",
     "/api/v1/errors/{}/review": "gateway serves /errors natively via gRPC ErrorBookHandler",
     "/api/v1/galaxy/documents/{}/nodes": "galaxy long tail — unreachable via gateway (P3 handoff §6.2)",
-    "/api/v1/plans/{}/today": "method drift: engine serves GET /plans/{id}/today, gateway registers POST (BM-sweep candidate)",
 }
 
 GATEWAY_ONLY: dict[str, str] = {
@@ -440,8 +439,12 @@ GATEWAY_ONLY: dict[str, str] = {
     "/api/v1/notifications": "bare group artifact — engine serves sub-paths only",
     "/api/v1/subjects": "bare group artifact — engine serves sub-paths only",
     "/api/v1/visual-elements": "bare group artifact — engine serves sub-paths only",
-    "/api/v1/goals/{}": "gateway GET /goals/:id — engine has no GET-by-id (candidate for BM-style sweep)",
-    "/api/v1/plans/{}/today": "method drift: engine serves GET /plans/{id}/today, gateway POST /plans/:id/today proxies to 404 (BM-sweep candidate)",
+    # 2026-09-19 (schema-route-tail) resolved and removed from this ledger:
+    # "/api/v1/goals/{}"          — gateway GET /:id dead face deleted (engine
+    #                               has no goals GET-by-id; PUT/DELETE stay);
+    # "/api/v1/plans/{}/today"    — gateway method drift fixed POST -> GET
+    #                               (engine GET /plans/{plan_id}/today is the
+    #                               source of truth). Both verified by this guard.
 }
 
 

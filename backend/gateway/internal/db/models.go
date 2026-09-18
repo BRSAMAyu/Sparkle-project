@@ -2355,7 +2355,6 @@ type Card struct {
 	OriginSnapshotID pgtype.UUID      `json:"origin_snapshot_id"`
 	CreatedBy        string           `json:"created_by"`
 	UpdatedBy        string           `json:"updated_by"`
-	ArchivedAt       pgtype.Timestamp `json:"archived_at"`
 }
 
 type CardAdoptionRecord struct {
@@ -2434,7 +2433,6 @@ type ChatMessage struct {
 	ModelName     pgtype.Text      `json:"model_name"`
 	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
 	DeletedAt     pgtype.Timestamp `json:"deleted_at"`
-	Metadata      []byte           `json:"metadata"`
 }
 
 type ChatSession struct {
@@ -3566,18 +3564,20 @@ type IrtItemParameter struct {
 }
 
 type ItemSimilarity struct {
-	ItemID1          pgtype.UUID      `json:"item_id_1"`
-	ItemType1        string           `json:"item_type_1"`
-	ItemID2          pgtype.UUID      `json:"item_id_2"`
-	ItemType2        string           `json:"item_type_2"`
-	SimilarityScore  float64          `json:"similarity_score"`
-	CommonLearners   int32            `json:"common_learners"`
-	LastCalculatedAt pgtype.Timestamp `json:"last_calculated_at"`
-	Meta             []byte           `json:"meta"`
-	ID               pgtype.UUID      `json:"id"`
-	CreatedAt        pgtype.Timestamp `json:"created_at"`
-	UpdatedAt        pgtype.Timestamp `json:"updated_at"`
-	DeletedAt        pgtype.Timestamp `json:"deleted_at"`
+	ItemID1             pgtype.UUID      `json:"item_id_1"`
+	ItemType1           string           `json:"item_type_1"`
+	ItemID2             pgtype.UUID      `json:"item_id_2"`
+	ItemType2           string           `json:"item_type_2"`
+	SimilarityScore     float64          `json:"similarity_score"`
+	CommonLearners      int32            `json:"common_learners"`
+	LastCalculatedAt    pgtype.Timestamp `json:"last_calculated_at"`
+	Meta                []byte           `json:"meta"`
+	ID                  pgtype.UUID      `json:"id"`
+	CreatedAt           pgtype.Timestamp `json:"created_at"`
+	UpdatedAt           pgtype.Timestamp `json:"updated_at"`
+	DeletedAt           pgtype.Timestamp `json:"deleted_at"`
+	TotalLearnersEither int32            `json:"total_learners_either"`
+	SubjectID           pgtype.UUID      `json:"subject_id"`
 }
 
 type Job struct {
@@ -4182,6 +4182,7 @@ type PlanExecutionRecord struct {
 	CreatedAt         pgtype.Timestamp `json:"created_at"`
 	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
 	DeletedAt         pgtype.Timestamp `json:"deleted_at"`
+	ExecutionIntentID pgtype.UUID      `json:"execution_intent_id"`
 }
 
 type PlanState struct {
@@ -4244,6 +4245,7 @@ type PostComment struct {
 	Content   string           `json:"content"`
 	CreatedAt pgtype.Timestamp `json:"created_at"`
 	UpdatedAt pgtype.Timestamp `json:"updated_at"`
+	DeletedAt pgtype.Timestamp `json:"deleted_at"`
 }
 
 type PostLike struct {
@@ -4749,26 +4751,30 @@ type SessionCompletion struct {
 }
 
 type SharedResource struct {
-	GroupID             pgtype.UUID      `json:"group_id"`
-	TargetUserID        pgtype.UUID      `json:"target_user_id"`
-	SharedBy            pgtype.UUID      `json:"shared_by"`
-	PlanID              pgtype.UUID      `json:"plan_id"`
-	TaskID              pgtype.UUID      `json:"task_id"`
-	CognitiveFragmentID pgtype.UUID      `json:"cognitive_fragment_id"`
-	CuriosityCapsuleID  pgtype.UUID      `json:"curiosity_capsule_id"`
-	BehaviorPatternID   pgtype.UUID      `json:"behavior_pattern_id"`
-	Permission          string           `json:"permission"`
-	Comment             pgtype.Text      `json:"comment"`
-	ViewCount           pgtype.Int4      `json:"view_count"`
-	SaveCount           pgtype.Int4      `json:"save_count"`
-	ID                  pgtype.UUID      `json:"id"`
-	CreatedAt           pgtype.Timestamp `json:"created_at"`
-	UpdatedAt           pgtype.Timestamp `json:"updated_at"`
-	DeletedAt           pgtype.Timestamp `json:"deleted_at"`
-	KnowledgeNodeID     pgtype.UUID      `json:"knowledge_node_id"`
-	SeedLibraryID       pgtype.UUID      `json:"seed_library_id"`
-	SeedItemID          pgtype.UUID      `json:"seed_item_id"`
-	CardShareRecordID   pgtype.UUID      `json:"card_share_record_id"`
+	GroupID               pgtype.UUID      `json:"group_id"`
+	TargetUserID          pgtype.UUID      `json:"target_user_id"`
+	SharedBy              pgtype.UUID      `json:"shared_by"`
+	PlanID                pgtype.UUID      `json:"plan_id"`
+	TaskID                pgtype.UUID      `json:"task_id"`
+	CognitiveFragmentID   pgtype.UUID      `json:"cognitive_fragment_id"`
+	CuriosityCapsuleID    pgtype.UUID      `json:"curiosity_capsule_id"`
+	BehaviorPatternID     pgtype.UUID      `json:"behavior_pattern_id"`
+	Permission            string           `json:"permission"`
+	Comment               pgtype.Text      `json:"comment"`
+	ViewCount             pgtype.Int4      `json:"view_count"`
+	SaveCount             pgtype.Int4      `json:"save_count"`
+	ID                    pgtype.UUID      `json:"id"`
+	CreatedAt             pgtype.Timestamp `json:"created_at"`
+	UpdatedAt             pgtype.Timestamp `json:"updated_at"`
+	DeletedAt             pgtype.Timestamp `json:"deleted_at"`
+	KnowledgeNodeID       pgtype.UUID      `json:"knowledge_node_id"`
+	SeedLibraryID         pgtype.UUID      `json:"seed_library_id"`
+	SeedItemID            pgtype.UUID      `json:"seed_item_id"`
+	CardShareRecordID     pgtype.UUID      `json:"card_share_record_id"`
+	AdoptionCount         int32            `json:"adoption_count"`
+	NegativeFeedbackCount int32            `json:"negative_feedback_count"`
+	QualityScore          float64          `json:"quality_score"`
+	QualityHidden         bool             `json:"quality_hidden"`
 }
 
 type SharedSkill struct {
@@ -5655,7 +5661,6 @@ type UserSetting struct {
 	AiReasoningMode              string           `json:"ai_reasoning_mode"`
 	CurrentGoalID                pgtype.Text      `json:"current_goal_id"`
 	SafeExperimentsOptOut        bool             `json:"safe_experiments_opt_out"`
-	AccessibilitySettings        []byte           `json:"accessibility_settings"`
 	CommunityIntelligenceEnabled bool             `json:"community_intelligence_enabled"`
 }
 

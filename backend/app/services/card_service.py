@@ -366,8 +366,6 @@ class CardService:
         if old_status == target:
             return card
         card.lifecycle_status = target
-        if target == CardLifecycleStatus.ARCHIVED:
-            card.archived_at = datetime.utcnow()
         card.version += 1
         await self.db.flush()
 

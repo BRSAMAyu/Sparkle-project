@@ -20,8 +20,10 @@
        （防止 CASCADE 波及主业务对象）；
     3. DROP COLUMN 不带 CASCADE（同表索引随列自动删除属表内行为，允许）。
   注意不清理白名单中另外三列（cards.archived_at / chat_messages.metadata /
-  user_settings.accessibility_settings）：它们是迁移链上的 MIG-only 死列，删除必须走
+  user_settings.accessibility_settings）：它们曾是迁移链上的 MIG-only 死列，删除必须走
   alembic drop 迁移（审计移交清单第 1 条），绝不能由本脚本动 DB。
+  2026-09-19 更新：三列已由 gfix03_20260918 drop 迁移收口；本脚本对它们的排除
+  条款保留为历史依据（若 dev 库再出现同名列即属 out-of-band 污染）。
 
 用法：
   cd <repo-root>

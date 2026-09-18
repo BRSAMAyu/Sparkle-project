@@ -81,14 +81,13 @@ IGNORED_TABLES = {"alembic_version"}
 # (table, column) 级豁免：即使出现在某个 diff 桶也不算漂移。
 # 2026-09-18 初次审计登记（round2，处置见 schema-consistency-audit.md）：
 WHITELIST_COLUMNS: set[tuple[str, str]] = {
-    # 迁移领先 ORM = 模型已删、迁移未删的死列（P1 挂账，无运行时风险）：
-    ("cards", "archived_at"),
-    ("chat_messages", "metadata"),
-    ("user_settings", "accessibility_settings"),
     # DB 领先 = dev 库遗留列，ORM/迁移/网关三方均无引用（P1 挂账，可清理 DB 列）：
     ("tasks", "scheduled_at"),
     ("tasks", "timezone"),
     ("tasks", "version"),
+    # 2026-09-19 已消化并移出：cards.archived_at / chat_messages.metadata /
+    # user_settings.accessibility_settings 三个 MIG-only 死列，由 gfix03_20260918
+    # drop 迁移收口（见 schema-route-tail.md）。
 }
 # 表级豁免：整表只存在于某一方时豁免报警（仍会在报告中标注）。
 # 2026-09-18 初次审计登记（round2，处置见 schema-consistency-audit.md）：

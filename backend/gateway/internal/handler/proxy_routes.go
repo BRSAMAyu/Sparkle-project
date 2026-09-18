@@ -235,7 +235,10 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		// route-tier: authed
 		plans.GET("/:id/planning-context", h.proxyWithHeaders)
 		// route-tier: authed
-		plans.POST("/:id/today", h.proxyWithHeaders)
+		// R2 fix (schema-route-tail): method drift corrected POST -> GET; the
+		// engine only serves GET /plans/{plan_id}/today (api/v1/plans.py:851),
+		// engine is source of truth — POST here proxied to 405/404.
+		plans.GET("/:id/today", h.proxyWithHeaders)
 		// route-tier: authed
 		plans.POST("/:id/phases", h.proxyWithHeaders)
 	}
@@ -419,7 +422,9 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		goals.GET("/", h.proxyWithHeaders)
 		goals.POST("/", h.proxyWithHeaders)
 		goals.POST("/decompose-preview", h.proxyWithHeaders)
-		goals.GET("/:id", h.proxyWithHeaders)
+		// R2 fix (schema-route-tail): GET /:id removed — the engine has no
+		// GET-by-id on goals (only PUT/DELETE /{goal_id}); the GET face here
+		// proxied to engine 404. Mobile reads goal detail from list payloads.
 		goals.PUT("/:id", h.proxyWithHeaders)
 		// R2-08 §2.2 #13: PATCH /:id removed — the engine only serves
 		// PUT /goals/{goal_id}; the PUT sibling above stays.
