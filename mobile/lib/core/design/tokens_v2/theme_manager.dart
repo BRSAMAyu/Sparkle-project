@@ -485,7 +485,7 @@ class SparkleColors {
         taskPlanning: Color(0xFF50737D),
         planSprint: Color(0xFF9D5B4F),
         planGrowth: Color(0xFF5D7B63),
-        statusOnline: Color(0xFF2ECC71),
+        statusOnline: Color(0xFF189150), // was 2ECC71 (1.86:1 here) -> 3.58:1 graphic line
         statusOffline: Color(0xFF95A5A6),
         statusInvisible: Color(0xFF34495E),
         neutral200: Color(0xFFF0ECE4),
@@ -503,33 +503,45 @@ class SparkleColors {
         galaxyShadow: Color(0xFFD9D0C2),
       );
     }
+    // Light normal palette — WCAG AA calibrated (UIUX round1 batch1).
+    // Text-role colors (brand/semantic/task/plan) are calibrated >=4.5:1
+    // against the realistic light container set (white / surfaceAmbient /
+    // surfacePrimary / surfaceSecondary / chatBubbleOther) and against the
+    // 10%-tint pill background over white/ambient/primary. Residual: the
+    // same color on a 10% tint over surfaceSecondary/tertiary may sit in the
+    // 4.1-4.5 band until the container-pair tokens (xxxContainer/onContainer)
+    // land in batch 2.
     return const SparkleColors(
-      brandPrimary: Color(0xFFA77D63),
+      brandPrimary: Color(0xFF825D49), // was A77D63 (3.33:1 on primary) -> 5.31:1
       brandSecondary: Color(0xFF7A8BA6),
-      semanticSuccess: Color(0xFF7E9C87),
-      semanticWarning: Color(0xFFC59A67),
-      semanticError: Color(0xFFC17A70),
-      semanticInfo: Color(0xFF7590B0),
+      semanticSuccess: Color(0xFF456E52), // was 7E9C87 (2.74:1) -> 5.32:1
+      semanticWarning: Color(0xFF7D5C26), // was C59A67 (2.34:1) -> 5.59:1
+      semanticError: Color(0xFFA0483E), // was C17A70 (3.05:1) -> 5.49:1
+      semanticInfo: Color(0xFF48678D), // was 7590B0 (3.01:1) -> 5.33:1
       surfacePrimary: Color(0xFFF8F4EF),
       surfaceSecondary: Color(0xFFF1EBE4),
       surfaceTertiary: Color(0xFFE7DED4),
       surfaceAmbient: Color(0xFFFCF8F3),
       rimLight: Color(0x99FFFFFF), // white 0.6
-      glowPrimary: Color(0x24A77D63),
+      glowPrimary: Color(0x24825D49), // follows brandPrimary
       noiseColor: Color(0x0D000000), // black 0.05
       textPrimary: Color(0xFF171717),
       textSecondary: Color(0xFF6C655D),
       textDisabled: Color(0xFFA49B90),
       brightness: Brightness.light,
-      taskLearning: Color(0xFF7893B2),
-      taskTraining: Color(0xFFC59A67),
-      taskErrorFix: Color(0xFFC17A70),
-      taskReflection: Color(0xFF9A88B7),
-      taskSocial: Color(0xFF769083),
-      taskPlanning: Color(0xFF6A8790),
-      planSprint: Color(0xFFB3756B),
-      planGrowth: Color(0xFF73907A),
-      statusOnline: Color(0xFF2ECC71),
+      // Task/plan colors converged onto the calibrated semantic values where
+      // the hue families already matched (learning==info slate, training==
+      // warning amber, errorFix/sprint==error terracotta, social/growth==
+      // success sage) so batch 2 inherits one value per hue.
+      taskLearning: Color(0xFF48678D), // was 7893B2 (2.90:1) -> 5.33:1
+      taskTraining: Color(0xFF7D5C26), // was C59A67 (2.34:1) -> 5.59:1
+      taskErrorFix: Color(0xFFA0483E), // was C17A70 (3.05:1) -> 5.49:1
+      taskReflection: Color(0xFF6C5C92), // was 9A88B7 (2.91:1) -> 5.35:1
+      taskSocial: Color(0xFF456E52), // was 769083 (3.15:1) -> 5.32:1
+      taskPlanning: Color(0xFF426D77), // was 6A8790 (3.50:1) -> 5.20:1
+      planSprint: Color(0xFFA0483E), // was B3756B (3.38:1) -> 5.49:1
+      planGrowth: Color(0xFF456E52), // was 73907A (3.20:1) -> 5.32:1
+      statusOnline: Color(0xFF189150), // was 2ECC71 (1.92:1) -> 3.68:1 (graphic)
       statusOffline: Color(0xFF95A5A6),
       statusInvisible: Color(0xFF34495E),
       neutral200: Color(0xFFF4EFE9),
@@ -538,7 +550,7 @@ class SparkleColors {
       neutral500: Color(0xFF958A80),
       neutral600: Color(0xFF6A6057),
       // Chat bubble colors
-      chatBubbleUser: Color(0xFF6B82A0),
+      chatBubbleUser: Color(0xFF566C8C), // was 6B82A0; white text 3.94 -> 5.36:1
       chatBubbleUserText: Colors.white,
       chatBubbleOther: Color(0xFFF5F0E8),
       chatBubbleOtherText: Color(0xFF171717),

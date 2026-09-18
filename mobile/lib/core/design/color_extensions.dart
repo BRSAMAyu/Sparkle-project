@@ -109,7 +109,7 @@ class SemanticColors {
   // ========== 状态颜色 ==========
 
   /// 在线状态颜色
-  Color get statusOnlineColor => const Color(0xFF2ECC71);
+  Color get statusOnlineColor => const Color(0xFF189150); // was 2ECC71 (1.92:1 on light) -> 3.68:1
 
   /// 离线状态颜色
   Color get statusOfflineColor => const Color(0xFF95A5A6);
