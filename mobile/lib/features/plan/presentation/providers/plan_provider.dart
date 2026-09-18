@@ -149,8 +149,9 @@ class PlanNotifier extends StateNotifier<PlanListState> {
   }
 
   Future<void> refresh() async {
-    await loadPlans();
-    await loadActivePlans();
+    // F7-16: fan the two list loads out in parallel — every write op used
+    // to pay two serial round-trips before the dashboard invalidation.
+    await Future.wait([loadPlans(), loadActivePlans()]);
     _ref.invalidate(dashboardProvider);
   }
 }

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
-import 'package:sparkle/features/user/presentation/screens/profile_transparent.dart';
+import 'package:sparkle/features/user/presentation/screens/profile_transparent_screen.dart';
 import '../../shared/i18n_test_helper.dart';
 
 class _FakeUserRepository implements UserRepository {
@@ -77,6 +78,9 @@ void main() {
             userRepositoryProvider.overrideWithValue(repo),
           ],
           child: testMaterialApp(
+            // Post batch-3 theme.dart removal the design tokens live in
+            // SparkleThemeExtension; register it like the A-6 adaptation.
+            theme: ThemeData(extensions: [SparkleThemeExtension.light()]),
             home: ProfileTransparentScreen(),
           ),
         ),

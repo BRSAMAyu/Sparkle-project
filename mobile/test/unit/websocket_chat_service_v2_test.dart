@@ -720,12 +720,18 @@ void main() {
     // ============================================================================
 
     // 1. ✅ Token安全测试
-    test(
-        'Token is passed in both query param and header for WebSocket compatibility',
-        () {
-      // WebSocket authentication strategy:
-      // 1. Token in query parameter (primary - survives WebSocket upgrade)
-      // 2. Token in Authorization header (fallback for compatibility)
+    // Long-tail sweep R2: query-param expectation removed intentionally.
+    // Gateway evidence (backend/gateway/internal/middleware/ws_auth.go):
+    // Authorization Bearer header is the primary production auth path;
+    // query `token` is only honored when ALLOW_WS_QUERY_TOKEN is enabled,
+    // which config.go sets to IsDevelopment() (never in release). Tokens in
+    // URLs leak into proxy/access logs, so the service deliberately sends
+    // the token header-only and the old query-param behavior is deprecated.
+    test('Token is passed via Authorization header, never in query param', () {
+      // WebSocket authentication strategy (security-aligned):
+      // 1. Token in Authorization Bearer header (primary — gateway
+      //    WsAuthMiddleware jwt_header path, survives log-safe transport)
+      // 2. No token in query string (prevents access-log leakage)
       Uri? capturedUri;
       Map<String, dynamic>? capturedHeaders;
 
@@ -741,10 +747,11 @@ void main() {
 
       service.sendMessage(message: 'init', userId: 'u1', token: 'secret-token');
 
-      // Token should be in query parameter (required for WebSocket upgrade)
-      expect(capturedUri.toString(), contains('token=secret-token'));
-      // Authorization header should also be set (fallback)
+      // Authorization header must carry the token (gateway primary path).
       expect(capturedHeaders?['Authorization'], 'Bearer secret-token');
+      // Query string must never contain the token (log-leak prevention).
+      expect(capturedUri!.queryParameters.containsKey('token'), isFalse);
+      expect(capturedUri.toString(), isNot(contains('secret-token')));
     });
 
     // 2. ✅ Dispose竞态防护测试

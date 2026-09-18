@@ -20,8 +20,8 @@ import 'package:sparkle/features/goal/presentation/widgets/minimum_criteria_card
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
-class GoalDetailPage extends ConsumerWidget {
-  const GoalDetailPage({
+class GoalDetailScreen extends ConsumerWidget {
+  const GoalDetailScreen({
     required this.goalId,
     super.key,
   });

@@ -6,7 +6,7 @@ import 'package:sparkle/core/navigation/sparkle_route_transition.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/widgets/scene_audio_scope.dart';
-import 'package:sparkle/features/goal/presentation/pages/goal_detail_page.dart';
+import 'package:sparkle/features/goal/presentation/screens/goal_detail_screen.dart';
 import 'package:sparkle/features/goal/presentation/screens/goal_creation_wizard_screen.dart';
 
 class GoalRoutes {
@@ -46,7 +46,7 @@ class GoalRoutes {
               policy: ExperienceProfiles.dashboardProductive.audioPolicy(
                 trackOverride: BgmTrack.plan,
               ),
-              child: GoalDetailPage(
+              child: GoalDetailScreen(
                 goalId: state.pathParameters['goalId']!,
               ),
             ),

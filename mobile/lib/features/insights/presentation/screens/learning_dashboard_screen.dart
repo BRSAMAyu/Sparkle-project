@@ -11,8 +11,8 @@ import 'package:sparkle/features/insights/data/models/growth_dashboard.dart';
 import 'package:sparkle/features/insights/presentation/providers/growth_dashboard_provider.dart';
 import 'package:sparkle/features/insights/presentation/widgets/model_update_receipt.dart';
 
-class LearningDashboardPage extends ConsumerWidget {
-  const LearningDashboardPage({super.key});
+class LearningDashboardScreen extends ConsumerWidget {
+  const LearningDashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

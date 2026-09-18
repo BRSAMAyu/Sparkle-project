@@ -1,0 +1,600 @@
+diff --git a/mobile/lib/core/errors/user_facing_error.dart b/mobile/lib/core/errors/user_facing_error.dart
+index ad1d1f11..284c9470 100644
+--- a/mobile/lib/core/errors/user_facing_error.dart
++++ b/mobile/lib/core/errors/user_facing_error.dart
+@@ -1,3 +1,4 @@
++import 'package:flutter/foundation.dart';
+ import 'package:sparkle/core/services/i18n_service.dart';
+ 
+ /// Strips internal error details and returns a user-safe error message.
+@@ -6,11 +7,36 @@ import 'package:sparkle/core/services/i18n_service.dart';
+ /// stack traces, class names, and internal details from reaching the UI.
+ ///
+ /// All user-facing messages are localized via ARB keys (error*).
++///
++/// A-3 diagnosability (client-side aid): every mapped message carries a
++/// stable `[ERR-*]` category code so field reports — even a bare
++/// screenshot of a release build — can be traced to a failure category.
++/// The original exception is additionally surfaced via [debugPrint] in
++/// debug builds only (silent in release), e.g. into logcat during
++/// on-device testing.
+ class UserFacingError {
+   UserFacingError._();
+ 
++  /// Stable short category codes appended to the localized copy.
++  ///
++  /// Keep these terse and stable: they are the join key between field
++  /// reports and the error taxonomy above.
++  static const String _codeNetwork = 'ERR-NET';
++  static const String _codeAuth = 'ERR-AUTH';
++  static const String _codeTimeout = 'ERR-TIMEOUT';
++  static const String _codeServer = 'ERR-SERVER';
++  static const String _codeNotFound = 'ERR-NOTFOUND';
++  static const String _codeRateLimit = 'ERR-RATELIMIT';
++  static const String _codeFormat = 'ERR-FORMAT';
++  static const String _codeUnknown = 'ERR-UNKNOWN';
++
+   /// Categories of errors that map to user-friendly messages.
+   static String from(Object error) {
++    // Debug-only root-cause aid: the raw exception never reaches the UI,
++    // but a developer/tester running a debug build gets it in the log.
++    if (kDebugMode) {
++      debugPrint('[UserFacingError] ${error.runtimeType}: $error');
++    }
+     final message = error.toString();
+ 
+     // Common network patterns
+@@ -22,7 +48,7 @@ class UserFacingError {
+       'Network',
+       'CLIENT_CLOSED',
+     ])) {
+-      return S.errorNetworkDetail;
++      return _withCode(S.errorNetworkDetail, _codeNetwork);
+     }
+ 
+     // Auth patterns
+@@ -34,38 +60,40 @@ class UserFacingError {
+       'token',
+       'Token expired',
+     ])) {
+-      return S.errorAuthDetail;
++      return _withCode(S.errorAuthDetail, _codeAuth);
+     }
+ 
+     // Timeout patterns
+     if (_containsAny(message, ['TimeoutException', 'timed out', 'timeout'])) {
+-      return S.errorTimeoutDetail;
++      return _withCode(S.errorTimeoutDetail, _codeTimeout);
+     }
+ 
+     // Server errors
+     if (_containsAny(message, ['500', '502', '503', '504', 'Internal Server'])) {
+-      return S.errorServerDetail;
++      return _withCode(S.errorServerDetail, _codeServer);
+     }
+ 
+     // Not found
+     if (_containsAny(message, ['404', 'Not Found', 'not found'])) {
+-      return S.errorNotFoundDetail;
++      return _withCode(S.errorNotFoundDetail, _codeNotFound);
+     }
+ 
+     // Rate limiting
+     if (_containsAny(message, ['429', 'rate limit', 'Rate limit', 'too many'])) {
+-      return S.errorRateLimitDetail;
++      return _withCode(S.errorRateLimitDetail, _codeRateLimit);
+     }
+ 
+     // Format/validation errors
+     if (_containsAny(message, ['FormatException', 'invalid', 'Invalid'])) {
+-      return S.errorUnknownDetail;
++      return _withCode(S.errorUnknownDetail, _codeFormat);
+     }
+ 
+-    // Default: return a generic message
+-    return S.errorDefaultTitle;
++    // Default: return a generic message, still traceable via its code.
++    return _withCode(S.errorDefaultTitle, _codeUnknown);
+   }
+ 
++  static String _withCode(String message, String code) => '$message [$code]';
++
+   static bool _containsAny(String source, List<String> patterns) {
+     for (final pattern in patterns) {
+       if (source.contains(pattern)) return true;
+diff --git a/mobile/lib/features/focus/presentation/providers/mindfulness_provider.dart b/mobile/lib/features/focus/presentation/providers/mindfulness_provider.dart
+index de15643b..54638305 100755
+--- a/mobile/lib/features/focus/presentation/providers/mindfulness_provider.dart
++++ b/mobile/lib/features/focus/presentation/providers/mindfulness_provider.dart
+@@ -479,6 +479,12 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
+ 
+   Future<void> _restoreSession() async {
+     final prefs = await SharedPreferences.getInstance();
++    // F7-17: start() may begin a fresh session while this restore (fired
++    // unawaited from the constructor) is suspended on the prefs read.
++    // Never clobber a live session with the persisted one.
++    if (state.isActive) {
++      return;
++    }
+     final rawSession = prefs.getString(_sessionStorageKey);
+     if (rawSession == null || rawSession.isEmpty) {
+       return;
+diff --git a/mobile/lib/features/goal/goal.dart b/mobile/lib/features/goal/goal.dart
+index 70766d66..b3f24979 100644
+--- a/mobile/lib/features/goal/goal.dart
++++ b/mobile/lib/features/goal/goal.dart
+@@ -1,6 +1,6 @@
+ export 'goal_routes.dart';
+ export 'presentation/screens/goal_creation_wizard_screen.dart';
+-export 'presentation/pages/goal_detail_page.dart';
++export 'presentation/screens/goal_detail_screen.dart';
+ export 'presentation/providers/goal_detail_provider.dart';
+ export 'presentation/widgets/goal_bottleneck_strip.dart';
+ export 'presentation/widgets/minimum_criteria_card.dart';
+diff --git a/mobile/lib/features/goal/goal_routes.dart b/mobile/lib/features/goal/goal_routes.dart
+index 80019bb5..f6557075 100644
+--- a/mobile/lib/features/goal/goal_routes.dart
++++ b/mobile/lib/features/goal/goal_routes.dart
+@@ -6,7 +6,7 @@ import 'package:sparkle/core/navigation/sparkle_route_transition.dart';
+ import 'package:sparkle/core/services/bgm_service.dart';
+ import 'package:sparkle/core/services/notification_service.dart';
+ import 'package:sparkle/core/widgets/scene_audio_scope.dart';
+-import 'package:sparkle/features/goal/presentation/pages/goal_detail_page.dart';
++import 'package:sparkle/features/goal/presentation/screens/goal_detail_screen.dart';
+ import 'package:sparkle/features/goal/presentation/screens/goal_creation_wizard_screen.dart';
+ 
+ class GoalRoutes {
+@@ -46,7 +46,7 @@ class GoalRoutes {
+               policy: ExperienceProfiles.dashboardProductive.audioPolicy(
+                 trackOverride: BgmTrack.plan,
+               ),
+-              child: GoalDetailPage(
++              child: GoalDetailScreen(
+                 goalId: state.pathParameters['goalId']!,
+               ),
+             ),
+diff --git a/mobile/lib/features/goal/presentation/pages/goal_detail_page.dart b/mobile/lib/features/goal/presentation/screens/goal_detail_screen.dart
+similarity index 99%
+rename from mobile/lib/features/goal/presentation/pages/goal_detail_page.dart
+rename to mobile/lib/features/goal/presentation/screens/goal_detail_screen.dart
+index a2e64996..98ca3322 100644
+--- a/mobile/lib/features/goal/presentation/pages/goal_detail_page.dart
++++ b/mobile/lib/features/goal/presentation/screens/goal_detail_screen.dart
+@@ -20,8 +20,8 @@ import 'package:sparkle/features/goal/presentation/widgets/minimum_criteria_card
+ import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
+ import 'package:sparkle/l10n/app_localizations.dart';
+ 
+-class GoalDetailPage extends ConsumerWidget {
+-  const GoalDetailPage({
++class GoalDetailScreen extends ConsumerWidget {
++  const GoalDetailScreen({
+     required this.goalId,
+     super.key,
+   });
+diff --git a/mobile/lib/features/insights/insights.dart b/mobile/lib/features/insights/insights.dart
+index 48f2cb50..cd897f32 100755
+--- a/mobile/lib/features/insights/insights.dart
++++ b/mobile/lib/features/insights/insights.dart
+@@ -2,8 +2,8 @@ export 'data/models/directive_audit_entry.dart';
+ export 'data/models/growth_dashboard.dart';
+ export 'data/models/weekly_growth_narrative.dart';
+ export 'insights_routes.dart';
+-export 'presentation/pages/growth_chronicle_page.dart';
+-export 'presentation/pages/learning_dashboard_page.dart';
++export 'presentation/screens/growth_chronicle_screen.dart';
++export 'presentation/screens/learning_dashboard_screen.dart';
+ export 'presentation/providers/directive_audit_provider.dart';
+ export 'presentation/providers/growth_dashboard_provider.dart';
+ export 'presentation/providers/learning_path_provider.dart';
+diff --git a/mobile/lib/features/insights/insights_routes.dart b/mobile/lib/features/insights/insights_routes.dart
+index 3d888920..a60f7b83 100755
+--- a/mobile/lib/features/insights/insights_routes.dart
++++ b/mobile/lib/features/insights/insights_routes.dart
+@@ -72,7 +72,7 @@ class InsightsRoutes {
+                 trackOverride: BgmTrack.insights,
+                 atmosphereOverride: ExperienceAtmosphere.insightsMist,
+               ),
+-              child: const GrowthChroniclePage(),
++              child: const GrowthChronicleScreen(),
+             ),
+           ),
+         ),
+@@ -88,7 +88,7 @@ class InsightsRoutes {
+                 trackOverride: BgmTrack.insights,
+                 atmosphereOverride: ExperienceAtmosphere.insightsMist,
+               ),
+-              child: const LearningDashboardPage(),
++              child: const LearningDashboardScreen(),
+             ),
+           ),
+         ),
+diff --git a/mobile/lib/features/insights/presentation/pages/growth_chronicle_page.dart b/mobile/lib/features/insights/presentation/screens/growth_chronicle_screen.dart
+similarity index 99%
+rename from mobile/lib/features/insights/presentation/pages/growth_chronicle_page.dart
+rename to mobile/lib/features/insights/presentation/screens/growth_chronicle_screen.dart
+index 01763b78..fa2212fa 100644
+--- a/mobile/lib/features/insights/presentation/pages/growth_chronicle_page.dart
++++ b/mobile/lib/features/insights/presentation/screens/growth_chronicle_screen.dart
+@@ -9,8 +9,8 @@ import 'package:sparkle/features/insights/data/models/growth_dashboard.dart';
+ import 'package:sparkle/features/insights/presentation/providers/growth_dashboard_provider.dart';
+ import 'package:sparkle/features/insights/presentation/widgets/model_update_receipt.dart';
+ 
+-class GrowthChroniclePage extends ConsumerWidget {
+-  const GrowthChroniclePage({super.key});
++class GrowthChronicleScreen extends ConsumerWidget {
++  const GrowthChronicleScreen({super.key});
+ 
+   @override
+   Widget build(BuildContext context, WidgetRef ref) {
+diff --git a/mobile/lib/features/insights/presentation/pages/learning_dashboard_page.dart b/mobile/lib/features/insights/presentation/screens/learning_dashboard_screen.dart
+similarity index 99%
+rename from mobile/lib/features/insights/presentation/pages/learning_dashboard_page.dart
+rename to mobile/lib/features/insights/presentation/screens/learning_dashboard_screen.dart
+index 09104826..927b7569 100644
+--- a/mobile/lib/features/insights/presentation/pages/learning_dashboard_page.dart
++++ b/mobile/lib/features/insights/presentation/screens/learning_dashboard_screen.dart
+@@ -11,8 +11,8 @@ import 'package:sparkle/features/insights/data/models/growth_dashboard.dart';
+ import 'package:sparkle/features/insights/presentation/providers/growth_dashboard_provider.dart';
+ import 'package:sparkle/features/insights/presentation/widgets/model_update_receipt.dart';
+ 
+-class LearningDashboardPage extends ConsumerWidget {
+-  const LearningDashboardPage({super.key});
++class LearningDashboardScreen extends ConsumerWidget {
++  const LearningDashboardScreen({super.key});
+ 
+   @override
+   Widget build(BuildContext context, WidgetRef ref) {
+diff --git a/mobile/lib/features/plan/presentation/providers/plan_provider.dart b/mobile/lib/features/plan/presentation/providers/plan_provider.dart
+index 8cb52a28..910329b9 100755
+--- a/mobile/lib/features/plan/presentation/providers/plan_provider.dart
++++ b/mobile/lib/features/plan/presentation/providers/plan_provider.dart
+@@ -149,8 +149,9 @@ class PlanNotifier extends StateNotifier<PlanListState> {
+   }
+ 
+   Future<void> refresh() async {
+-    await loadPlans();
+-    await loadActivePlans();
++    // F7-16: fan the two list loads out in parallel — every write op used
++    // to pay two serial round-trips before the dashboard invalidation.
++    await Future.wait([loadPlans(), loadActivePlans()]);
+     _ref.invalidate(dashboardProvider);
+   }
+ }
+diff --git a/mobile/lib/features/user/presentation/screens/profile_transparent.dart b/mobile/lib/features/user/presentation/screens/profile_transparent_screen.dart
+similarity index 100%
+rename from mobile/lib/features/user/presentation/screens/profile_transparent.dart
+rename to mobile/lib/features/user/presentation/screens/profile_transparent_screen.dart
+diff --git a/mobile/test/core/errors/user_facing_error_a3_diag_code_test.dart b/mobile/test/core/errors/user_facing_error_a3_diag_code_test.dart
+new file mode 100644
+index 00000000..0b51c389
+--- /dev/null
++++ b/mobile/test/core/errors/user_facing_error_a3_diag_code_test.dart
+@@ -0,0 +1,29 @@
++import 'dart:async';
++
++import 'package:flutter_test/flutter_test.dart';
++import 'package:sparkle/core/errors/user_facing_error.dart';
++
++/// A-3 (多端实测 android-round1 缺陷 #1) 客户端侧配合修复：
++/// 建模聊天开场白失败曾被兜底成最笼统的 "Oops" 文案，真机实测拿不到任何
++/// 根因线索（后端证据链又被日志轮转吃掉）。本批不改后端，先让兜底文案
++/// 携带稳定的 `[ERR-*]` 类别码——下一轮实测截屏即可定位失败类别；原始
++/// 异常在 debug 构建经 debugPrint 进入 logcat（release 静默）。
++void main() {
++  test('unclassified errors carry the ERR-UNKNOWN diagnostic code', () {
++    final message =
++        UserFacingError.from(Exception('mystery opening-line failure'));
++    expect(message, contains('[ERR-UNKNOWN]'));
++  });
++
++  test('timeout errors carry the ERR-TIMEOUT diagnostic code', () {
++    final message = UserFacingError.from(
++        TimeoutException('no stream events', const Duration(seconds: 45)));
++    expect(message, contains('[ERR-TIMEOUT]'));
++  });
++
++  test('network errors carry the ERR-NET diagnostic code', () {
++    final message =
++        UserFacingError.from(Exception('SocketException: Connection refused'));
++    expect(message, contains('[ERR-NET]'));
++  });
++}
+diff --git a/mobile/test/features/focus/presentation/providers/mindfulness_provider_test.dart b/mobile/test/features/focus/presentation/providers/mindfulness_provider_test.dart
+index 1bdb592d..723fda24 100644
+--- a/mobile/test/features/focus/presentation/providers/mindfulness_provider_test.dart
++++ b/mobile/test/features/focus/presentation/providers/mindfulness_provider_test.dart
+@@ -1,3 +1,5 @@
++import 'dart:convert';
++
+ import 'package:dio/dio.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:flutter_test/flutter_test.dart';
+@@ -72,6 +74,61 @@ void main() {
+     );
+     notifier.dispose();
+   });
++
++  // F7-17 (round1 07-mobile-features / round2 R2-05) red-green: the
++  // constructor fires `_restoreSession()` unawaited while the UI may call
++  // `start()` immediately. The restore used to land after start() and
++  // clobber the fresh session with the persisted one.
++  test('in-flight restore does not clobber a live session started by UI',
++      () async {
++    SharedPreferences.setMockInitialValues({
++      'mindfulness.active_session': jsonEncode({
++        'isActive': true,
++        'startTime': DateTime(2026, 4, 1, 8).toIso8601String(),
++        'elapsedSeconds': 300,
++        'interruptionCount': 0,
++        'interruptions': <dynamic>[],
++        'isDNDEnabled': false,
++        'isPaused': false,
++      }),
++    });
++    // Prime the SharedPreferences completer so the constructor's in-flight
++    // restore deterministically resumes within the test window below.
++    final primedPrefs = await SharedPreferences.getInstance();
++    expect(
++      primedPrefs.getString('mindfulness.active_session'),
++      isNotNull,
++    );
++    final notifier = _buildNotifier(_RecordingTaskRepository());
++
++    // Fresh session starts synchronously while the constructor's restore
++    // is still suspended on SharedPreferences.getInstance().
++    final freshTask = TaskModel(
++      id: 'fresh_session_task',
++      userId: 'u1',
++      title: '新会话',
++      type: TaskType.learning,
++      estimatedMinutes: 25,
++      difficulty: 1,
++      energyCost: 1,
++      priority: 1,
++      tags: const [],
++      status: TaskStatus.pending,
++      createdAt: DateTime(2026, 4, 1),
++      updatedAt: DateTime(2026, 4, 1),
++    );
++    notifier.start(freshTask);
++    expect(notifier.state.isActive, isTrue);
++    expect(notifier.state.currentTask?.id, 'fresh_session_task');
++
++    // Let the in-flight restore land.
++    await Future<void>.delayed(Duration.zero);
++    await Future<void>.delayed(Duration.zero);
++
++    expect(notifier.state.isActive, isTrue);
++    expect(notifier.state.currentTask?.id, 'fresh_session_task');
++    notifier.dispose();
++  });
+ }
+ 
+ MindfulnessNotifier _buildNotifier(_RecordingTaskRepository taskRepository) {
+diff --git a/mobile/test/features/goal/goal_detail_page_a6_l10n_test.dart b/mobile/test/features/goal/goal_detail_screen_a6_l10n_test.dart
+similarity index 96%
+rename from mobile/test/features/goal/goal_detail_page_a6_l10n_test.dart
+rename to mobile/test/features/goal/goal_detail_screen_a6_l10n_test.dart
+index 51744583..31bef1dc 100644
+--- a/mobile/test/features/goal/goal_detail_page_a6_l10n_test.dart
++++ b/mobile/test/features/goal/goal_detail_screen_a6_l10n_test.dart
+@@ -16,7 +16,7 @@ import 'package:shared_preferences/shared_preferences.dart';
+ import 'package:sparkle/core/network/api_client.dart';
+ import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
+ import 'package:sparkle/core/services/view_storage_service.dart';
+-import 'package:sparkle/features/goal/presentation/pages/goal_detail_page.dart';
++import 'package:sparkle/features/goal/presentation/screens/goal_detail_screen.dart';
+ import 'package:sparkle/l10n/app_localizations.dart';
+ 
+ class _StubApiClient implements ApiClient {
+@@ -133,7 +133,7 @@ void main() {
+           locale: const Locale('en'),
+           supportedLocales: const [Locale('en'), Locale('zh')],
+           localizationsDelegates: const [AppLocalizations.delegate],
+-          home: const GoalDetailPage(goalId: 'g1'),
++          home: const GoalDetailScreen(goalId: 'g1'),
+         ),
+       ),
+     );
+@@ -187,7 +187,7 @@ void main() {
+           locale: const Locale('en'),
+           supportedLocales: const [Locale('en'), Locale('zh')],
+           localizationsDelegates: const [AppLocalizations.delegate],
+-          home: const GoalDetailPage(goalId: 'g2'),
++          home: const GoalDetailScreen(goalId: 'g2'),
+         ),
+       ),
+     );
+diff --git a/mobile/test/features/plan/plan_provider_f7_16_refresh_parallel_test.dart b/mobile/test/features/plan/plan_provider_f7_16_refresh_parallel_test.dart
+new file mode 100644
+index 00000000..e0ad7e7b
+--- /dev/null
++++ b/mobile/test/features/plan/plan_provider_f7_16_refresh_parallel_test.dart
+@@ -0,0 +1,75 @@
++import 'dart:async';
++
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import 'package:flutter_test/flutter_test.dart';
++import 'package:sparkle/features/plan/data/models/plan_model.dart';
++import 'package:sparkle/features/plan/data/repositories/plan_repository.dart';
++import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
++
++/// F7-16 (round1 07-mobile-features / round2 R2-06) red-green:
++/// `refresh()` used to run `await loadPlans(); await loadActivePlans();`
++/// serially, so every write operation paid two back-to-back list round
++/// trips before the dashboard invalidation chain. The fix fans both loads
++/// out with `Future.wait`.
++///
++/// The cross-gate repository proves parallelism structurally: each load
++/// only completes once *both* have been entered. Under serial refresh the
++/// first call deadlocks on the second's gate and `refresh()` times out
++/// (red); under `Future.wait` both gates are crossed immediately (green).
++class _CrossGatePlanRepository implements PlanRepository {
++  Completer<void> _enteredPlans = Completer<void>();
++  Completer<void> _enteredActive = Completer<void>();
++
++  /// Fresh gates for the call under test, so the constructor's own
++  /// initial loads cannot pre-satisfy them.
++  void resetGates() {
++    _enteredPlans = Completer<void>();
++    _enteredActive = Completer<void>();
++  }
++
++  bool get plansGateCrossed => _enteredPlans.isCompleted;
++  bool get activeGateCrossed => _enteredActive.isCompleted;
++
++  @override
++  Future<List<PlanModel>> getPlans({PlanType? type, bool? isActive}) async {
++    _enteredPlans.complete();
++    await _enteredActive.future;
++    return const <PlanModel>[];
++  }
++
++  @override
++  Future<List<PlanModel>> getActivePlans() async {
++    _enteredActive.complete();
++    await _enteredPlans.future;
++    return const <PlanModel>[];
++  }
++
++  @override
++  dynamic noSuchMethod(Invocation invocation) =>
++      throw UnimplementedError('${invocation.memberName}');
++}
++
++void main() {
++  TestWidgetsFlutterBinding.ensureInitialized();
++
++  test('F7-16: refresh fans plan list loads out in parallel', () async {
++    final repo = _CrossGatePlanRepository();
++    final container = ProviderContainer(
++      overrides: [planRepositoryProvider.overrideWithValue(repo)],
++    );
++    addTearDown(container.dispose);
++
++    // Construction fires its own initial load pair; let it settle, then
++    // re-arm the gates for the call under test.
++    final notifier = container.read(planListProvider.notifier);
++    await Future<void>.delayed(Duration.zero);
++    repo.resetGates();
++
++    // Serial refresh deadlocks on the cross gate and hits this timeout
++    // (red); parallel refresh crosses it (green).
++    await notifier.refresh().timeout(const Duration(seconds: 3));
++
++    expect(repo.plansGateCrossed, isTrue);
++    expect(repo.activeGateCrossed, isTrue);
++  });
++}
+diff --git a/mobile/test/features/user/profile_transparent_screen_test.dart b/mobile/test/features/user/profile_transparent_screen_test.dart
+index 5a346d83..fbb90cd2 100644
+--- a/mobile/test/features/user/profile_transparent_screen_test.dart
++++ b/mobile/test/features/user/profile_transparent_screen_test.dart
+@@ -1,8 +1,9 @@
+ import 'package:flutter/material.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:flutter_test/flutter_test.dart';
++import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
+ import 'package:sparkle/features/user/data/repositories/user_repository.dart';
+-import 'package:sparkle/features/user/presentation/screens/profile_transparent.dart';
++import 'package:sparkle/features/user/presentation/screens/profile_transparent_screen.dart';
+ import '../../shared/i18n_test_helper.dart';
+ 
+ class _FakeUserRepository implements UserRepository {
+@@ -77,6 +78,9 @@ void main() {
+             userRepositoryProvider.overrideWithValue(repo),
+           ],
+           child: testMaterialApp(
++            // Post batch-3 theme.dart removal the design tokens live in
++            // SparkleThemeExtension; register it like the A-6 adaptation.
++            theme: ThemeData(extensions: [SparkleThemeExtension.light()]),
+             home: ProfileTransparentScreen(),
+           ),
+         ),
+diff --git a/mobile/test/unit/websocket_chat_service_v2_test.dart b/mobile/test/unit/websocket_chat_service_v2_test.dart
+index c8008033..addf66bd 100755
+--- a/mobile/test/unit/websocket_chat_service_v2_test.dart
++++ b/mobile/test/unit/websocket_chat_service_v2_test.dart
+@@ -720,12 +720,18 @@ void main() {
+     // ============================================================================
+ 
+     // 1. ✅ Token安全测试
+-    test(
+-        'Token is passed in both query param and header for WebSocket compatibility',
+-        () {
+-      // WebSocket authentication strategy:
+-      // 1. Token in query parameter (primary - survives WebSocket upgrade)
+-      // 2. Token in Authorization header (fallback for compatibility)
++    // Long-tail sweep R2: query-param expectation removed intentionally.
++    // Gateway evidence (backend/gateway/internal/middleware/ws_auth.go):
++    // Authorization Bearer header is the primary production auth path;
++    // query `token` is only honored when ALLOW_WS_QUERY_TOKEN is enabled,
++    // which config.go sets to IsDevelopment() (never in release). Tokens in
++    // URLs leak into proxy/access logs, so the service deliberately sends
++    // the token header-only and the old query-param behavior is deprecated.
++    test('Token is passed via Authorization header, never in query param', () {
++      // WebSocket authentication strategy (security-aligned):
++      // 1. Token in Authorization Bearer header (primary — gateway
++      //    WsAuthMiddleware jwt_header path, survives log-safe transport)
++      // 2. No token in query string (prevents access-log leakage)
+       Uri? capturedUri;
+       Map<String, dynamic>? capturedHeaders;
+ 
+@@ -741,10 +747,11 @@ void main() {
+ 
+       service.sendMessage(message: 'init', userId: 'u1', token: 'secret-token');
+ 
+-      // Token should be in query parameter (required for WebSocket upgrade)
+-      expect(capturedUri.toString(), contains('token=secret-token'));
+-      // Authorization header should also be set (fallback)
++      // Authorization header must carry the token (gateway primary path).
+       expect(capturedHeaders?['Authorization'], 'Bearer secret-token');
++      // Query string must never contain the token (log-leak prevention).
++      expect(capturedUri!.queryParameters.containsKey('token'), isFalse);
++      expect(capturedUri.toString(), isNot(contains('secret-token')));
+     });
+ 
+     // 2. ✅ Dispose竞态防护测试
+diff --git a/scripts/guards/ui_design_tokens_baseline.json b/scripts/guards/ui_design_tokens_baseline.json
+index bfa6391c..d5a3e752 100644
+--- a/scripts/guards/ui_design_tokens_baseline.json
++++ b/scripts/guards/ui_design_tokens_baseline.json
+@@ -437,10 +437,6 @@
+       "color": 3,
+       "fontSize": 12
+     },
+-    "mobile/lib/features/goal/presentation/pages/goal_detail_page.dart": {
+-      "color": 1,
+-      "fontSize": 0
+-    },
+     "mobile/lib/features/goal/presentation/widgets/goal_conflict_dialog.dart": {
+       "color": 0,
+       "fontSize": 3
+@@ -749,10 +745,6 @@
+       "color": 20,
+       "fontSize": 0
+     },
+-    "mobile/lib/features/user/presentation/screens/profile_transparent.dart": {
+-      "color": 6,
+-      "fontSize": 0
+-    },
+     "mobile/lib/features/user/presentation/screens/schedule_preferences_screen.dart": {
+       "color": 0,
+       "fontSize": 9
+@@ -812,6 +804,14 @@
+     "mobile/lib/features/visual_elements/presentation/shared/visual_element_palette.dart": {
+       "color": 44,
+       "fontSize": 0
++    },
++    "mobile/lib/features/goal/presentation/screens/goal_detail_screen.dart": {
++      "color": 1,
++      "fontSize": 0
++    },
++    "mobile/lib/features/user/presentation/screens/profile_transparent_screen.dart": {
++      "color": 6,
++      "fontSize": 0
+     }
+   }
+-}
++}
+\ No newline at end of file

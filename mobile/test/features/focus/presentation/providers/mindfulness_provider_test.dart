@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -70,6 +72,61 @@ void main() {
       taskRepository.startedTaskIds,
       ['00000000-0000-0000-0000-000000000123'],
     );
+    notifier.dispose();
+  });
+
+  // F7-17 (round1 07-mobile-features / round2 R2-05) red-green: the
+  // constructor fires `_restoreSession()` unawaited while the UI may call
+  // `start()` immediately. The restore used to land after start() and
+  // clobber the fresh session with the persisted one.
+  test('in-flight restore does not clobber a live session started by UI',
+      () async {
+    SharedPreferences.setMockInitialValues({
+      'mindfulness.active_session': jsonEncode({
+        'isActive': true,
+        'startTime': DateTime(2026, 4, 1, 8).toIso8601String(),
+        'elapsedSeconds': 300,
+        'interruptionCount': 0,
+        'interruptions': <dynamic>[],
+        'isDNDEnabled': false,
+        'isPaused': false,
+      }),
+    });
+    // Prime the SharedPreferences completer so the constructor's in-flight
+    // restore deterministically resumes within the test window below.
+    final primedPrefs = await SharedPreferences.getInstance();
+    expect(
+      primedPrefs.getString('mindfulness.active_session'),
+      isNotNull,
+    );
+    final notifier = _buildNotifier(_RecordingTaskRepository());
+
+    // Fresh session starts synchronously while the constructor's restore
+    // is still suspended on SharedPreferences.getInstance().
+    final freshTask = TaskModel(
+      id: 'fresh_session_task',
+      userId: 'u1',
+      title: '新会话',
+      type: TaskType.learning,
+      estimatedMinutes: 25,
+      difficulty: 1,
+      energyCost: 1,
+      priority: 1,
+      tags: const [],
+      status: TaskStatus.pending,
+      createdAt: DateTime(2026, 4, 1),
+      updatedAt: DateTime(2026, 4, 1),
+    );
+    notifier.start(freshTask);
+    expect(notifier.state.isActive, isTrue);
+    expect(notifier.state.currentTask?.id, 'fresh_session_task');
+
+    // Let the in-flight restore land.
+    await Future<void>.delayed(Duration.zero);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(notifier.state.isActive, isTrue);
+    expect(notifier.state.currentTask?.id, 'fresh_session_task');
     notifier.dispose();
   });
 }

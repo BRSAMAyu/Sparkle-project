@@ -16,7 +16,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
 import 'package:sparkle/core/services/view_storage_service.dart';
-import 'package:sparkle/features/goal/presentation/pages/goal_detail_page.dart';
+import 'package:sparkle/features/goal/presentation/screens/goal_detail_screen.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
 class _StubApiClient implements ApiClient {
@@ -133,7 +133,7 @@ void main() {
           locale: const Locale('en'),
           supportedLocales: const [Locale('en'), Locale('zh')],
           localizationsDelegates: const [AppLocalizations.delegate],
-          home: const GoalDetailPage(goalId: 'g1'),
+          home: const GoalDetailScreen(goalId: 'g1'),
         ),
       ),
     );
@@ -187,7 +187,7 @@ void main() {
           locale: const Locale('en'),
           supportedLocales: const [Locale('en'), Locale('zh')],
           localizationsDelegates: const [AppLocalizations.delegate],
-          home: const GoalDetailPage(goalId: 'g2'),
+          home: const GoalDetailScreen(goalId: 'g2'),
         ),
       ),
     );

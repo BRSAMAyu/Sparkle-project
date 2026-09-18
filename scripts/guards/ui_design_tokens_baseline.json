@@ -437,10 +437,6 @@
       "color": 3,
       "fontSize": 12
     },
-    "mobile/lib/features/goal/presentation/pages/goal_detail_page.dart": {
-      "color": 1,
-      "fontSize": 0
-    },
     "mobile/lib/features/goal/presentation/widgets/goal_conflict_dialog.dart": {
       "color": 0,
       "fontSize": 3
@@ -749,10 +745,6 @@
       "color": 20,
       "fontSize": 0
     },
-    "mobile/lib/features/user/presentation/screens/profile_transparent.dart": {
-      "color": 6,
-      "fontSize": 0
-    },
     "mobile/lib/features/user/presentation/screens/schedule_preferences_screen.dart": {
       "color": 0,
       "fontSize": 9
@@ -811,6 +803,14 @@
     },
     "mobile/lib/features/visual_elements/presentation/shared/visual_element_palette.dart": {
       "color": 44,
+      "fontSize": 0
+    },
+    "mobile/lib/features/goal/presentation/screens/goal_detail_screen.dart": {
+      "color": 1,
+      "fontSize": 0
+    },
+    "mobile/lib/features/user/presentation/screens/profile_transparent_screen.dart": {
+      "color": 6,
       "fontSize": 0
     }
   }

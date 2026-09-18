@@ -479,6 +479,12 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
 
   Future<void> _restoreSession() async {
     final prefs = await SharedPreferences.getInstance();
+    // F7-17: start() may begin a fresh session while this restore (fired
+    // unawaited from the constructor) is suspended on the prefs read.
+    // Never clobber a live session with the persisted one.
+    if (state.isActive) {
+      return;
+    }
     final rawSession = prefs.getString(_sessionStorageKey);
     if (rawSession == null || rawSession.isEmpty) {
       return;
