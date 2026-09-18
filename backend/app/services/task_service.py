@@ -655,6 +655,31 @@ class TaskService:
             except Exception as exc:
                 logger.warning("Failed to spark node for task {}: {}", db_obj.id, exc)
 
+        # daily-flow DF-5: everyday tasks without a galaxy anchor (no
+        # knowledge_node_id, no sprint-pack guide) still grow the star map —
+        # match an existing node by title or ignite a stable task-derived star,
+        # then spark it so unlocked/mastered/study_minutes react to real study.
+        if not db_obj.knowledge_node_id:
+            from app.services.galaxy_service import GalaxyService
+
+            try:
+                galaxy_service = GalaxyService(db)
+                anchor_id = await galaxy_service.ensure_task_node(
+                    db_obj.title, task_id=db_obj.id
+                )
+                study_minutes = actual_minutes or db_obj.estimated_minutes or 15
+                await galaxy_service.spark_node(
+                    user_id=db_obj.user_id,
+                    node_id=anchor_id,
+                    study_minutes=study_minutes,
+                    task_id=db_obj.id,
+                    trigger_expansion=False,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Failed to couple completed task {} to galaxy: {}", db_obj.id, exc
+                )
+
         task_id_for_log = str(db_obj.id)
         try:
             await TaskService._update_sprint_pack_mastery_for_completed_task(db, db_obj)

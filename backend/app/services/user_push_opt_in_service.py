@@ -6,10 +6,11 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.models.user_push_opt_in import UserPushOptIn
 
 DEFAULTS = {
-    "enabled": False,
+    "enabled": settings.PUSH_OPT_IN_DEFAULT_ENABLED,
     "allow_commitment_follow_up": False,
     "allow_engagement_recovery": False,
     "quiet_hours_start": "22:00",

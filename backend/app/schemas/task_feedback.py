@@ -3,6 +3,7 @@ Task Feedback Schemas
 """
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -58,8 +59,10 @@ class TaskFeedbackResponse(BaseModel):
     task_type_snapshot: str | None = None
     actual_minutes_snapshot: int | None = None
     reflection_payload: dict[str, Any] | None = None
-    created_at: str
-    updated_at: str
+    # datetime (not str): ORM provides datetime; pydantic serializes to ISO 8601
+    # in JSON. Declaring str made model_validate(orm) a 400 on every submit.
+    created_at: datetime
+    updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 

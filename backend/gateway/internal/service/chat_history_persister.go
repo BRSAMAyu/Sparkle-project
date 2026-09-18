@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -12,6 +14,95 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 )
+
+// chatMessageInsertSQL persists one queued message.
+//
+// DF-2 (daily-flow) fixes, all load-bearing:
+//   - no `metadata` column: dropped by migration gfix03, rich metadata is the
+//     engine-side pipeline's job (see chat_history.go N-2 note);
+//   - `to_timestamp($6::double precision)`: producers enqueue Unix *seconds*
+//     (handler.saveMessage, chat_history.go read-back); the previous
+//     `/ 1000.0` division wrote 1970 rows;
+//   - `ON CONFLICT (id, created_at)`: chat_messages PK is (id, created_at);
+//     bare `(id)` fails with 42P10 against no matching unique index;
+//   - NOT EXISTS dedup: the engine already persists user+assistant rows for
+//     streamed chats (RB-06); without this guard the durable backstop would
+//     duplicate every message in DB-fallback history reads.
+const chatMessageInsertSQL = `
+	INSERT INTO chat_messages (id, session_id, user_id, role, content, created_at, updated_at)
+	SELECT $1, $2, $3, $4, $5, ts, ts
+	FROM (SELECT to_timestamp($6::double precision) AS ts) AS stamp
+	WHERE NOT EXISTS (
+		SELECT 1 FROM chat_messages
+		WHERE session_id = $2
+		  AND role = $4
+		  AND content = $5
+		  AND created_at BETWEEN to_timestamp($6::double precision) - interval '15 seconds'
+		                    AND to_timestamp($6::double precision) + interval '15 seconds'
+	)
+	ON CONFLICT (id, created_at) DO NOTHING
+`
+
+// chatSessionUpsertSQL mirrors the message insert timestamp semantics (epoch
+// seconds) for the session list's last_message_at.
+const chatSessionUpsertSQL = `
+	INSERT INTO chat_sessions (id, user_id, title, last_message_at, is_active, created_at, updated_at)
+	VALUES ($1, $2, $3, to_timestamp($4::double precision), true, NOW(), NOW())
+	ON CONFLICT (id) DO UPDATE SET
+		last_message_at = EXCLUDED.last_message_at,
+		updated_at = NOW(),
+		title = COALESCE(NULLIF(EXCLUDED.title, ''), chat_sessions.title)
+`
+
+// resolveSessionUUID maps a queue session id to a chat_messages.session_uuid.
+// Valid UUIDs pass through. Legacy labels ("df-d2-s1") would fail the NOT NULL
+// uuid column, so they hash to a deterministic pseudo-session: content stays
+// durable and retries/requeues stay idempotent, without colliding with
+// server-generated session UUIDs.
+func resolveSessionUUID(raw string) uuid.UUID {
+	raw = strings.TrimSpace(raw)
+	if raw != "" {
+		if parsed, err := uuid.Parse(raw); err == nil {
+			return parsed
+		}
+		return uuid.NewMD5(uuid.NameSpaceURL, []byte("sparkle:chat-session:"+raw))
+	}
+	return uuid.New()
+}
+
+// parseMessageTimestampSeconds interprets queued timestamps, which producers
+// write as epoch seconds. Tolerates empty values and legacy millisecond or
+// RFC3339 payloads so one bad producer cannot shift history by decades.
+func parseMessageTimestampSeconds(raw string) time.Time {
+	raw = strings.TrimSpace(raw)
+	if raw != "" {
+		if secs, err := strconv.ParseInt(raw, 10, 64); err == nil {
+			if secs > 1_000_000_000_000 { // legacy milliseconds
+				return time.Unix(secs/1000, (secs%1000)*int64(time.Millisecond))
+			}
+			return time.Unix(secs, 0)
+		}
+		if t, err := time.Parse(time.RFC3339Nano, raw); err == nil {
+			return t
+		}
+	}
+	return time.Now()
+}
+
+// normalizeChatRole maps producer roles onto the messagerole enum's stored
+// values, which are SQLAlchemy member NAMES (USER/ASSISTANT/SYSTEM). Empty
+// defaults to USER (legacy behaviour); unknown roles return "" and are skipped.
+func normalizeChatRole(raw string) string {
+	role := strings.ToUpper(strings.TrimSpace(raw))
+	switch role {
+	case "":
+		return "USER"
+	case "USER", "ASSISTANT", "SYSTEM":
+		return role
+	default:
+		return ""
+	}
+}
 
 const (
 	// PersisterBatchSize is the maximum number of messages to batch before writing to DB
@@ -87,6 +178,34 @@ func (p *ChatHistoryPersister) Run(ctx context.Context) error {
 // Stop gracefully stops the persister
 func (p *ChatHistoryPersister) Stop() {
 	close(p.stopCh)
+}
+
+// DrainOnce pops up to PersisterBatchSize queued messages and flushes them to
+// the DB. Exported so ops harnesses can drain the queue without running the
+// full Run loop.
+func (p *ChatHistoryPersister) DrainOnce(ctx context.Context) error {
+	queueKey := "queue:persist:history"
+	for i := 0; i < PersisterBatchSize; i++ {
+		result, err := p.rdb.LPop(ctx, queueKey).Result()
+		if err == redis.Nil {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		var msg ChatHistoryMessage
+		if err := json.Unmarshal([]byte(result), &msg); err != nil {
+			log.Printf("[ChatHistoryPersister] Failed to unmarshal message: %v", err)
+			continue // Skip invalid message
+		}
+		if msg.Timestamp == "" {
+			msg.Timestamp = fmt.Sprintf("%d", time.Now().UnixNano())
+		}
+		p.batchMu.Lock()
+		p.batch = append(p.batch, msg)
+		p.batchMu.Unlock()
+	}
+	return p.flushWithRetry(ctx)
 }
 
 // consumeBatch reads up to BatchSize messages from Redis queue
@@ -193,119 +312,71 @@ func (p *ChatHistoryPersister) writeBatchToDB(ctx context.Context, batch []ChatH
 	defer tx.Rollback(ctx)
 
 	for _, msg := range batch {
-		// Generate stable UUID for message ID
-		messageID := uuid.New().String()
-
-		// Parse session ID or generate if empty
-		sessionID := msg.SessionID
-		if sessionID == "" {
-			sessionID = uuid.New().String()
+		// Stable row id: reuse the producer's UUID so requeued duplicates hit
+		// ON CONFLICT instead of inserting twice.
+		messageID := msg.ID
+		if _, err := uuid.Parse(messageID); err != nil {
+			messageID = uuid.New().String()
 		}
 
-		// Parse user ID
+		// Parse user ID; without an attributable owner the row cannot pass the
+		// users FK, so skip instead of failing the whole batch.
 		var userID uuid.UUID
 		if msg.UserID != "" {
 			if parsed, err := uuid.Parse(msg.UserID); err == nil {
 				userID = parsed
+			} else {
+				log.Printf("[ChatHistoryPersister] Skipping message with unparseable user_id %q", msg.UserID)
+				continue
 			}
+		} else {
+			log.Printf("[ChatHistoryPersister] Skipping message with empty user_id")
+			continue
 		}
 
-		// Parse role
-		role := msg.Role
+		// Normalize role to the messagerole enum's stored (uppercase) names;
+		// unknown roles are skipped, not fatal to the batch.
+		role := normalizeChatRole(msg.Role)
 		if role == "" {
-			role = "user"
+			log.Printf("[ChatHistoryPersister] Skipping message with unknown role %q", msg.Role)
+			continue
 		}
 
-		// Serialize rich metadata (widgets, tool results, reasoning, UX envelope, agent collaboration)
-		metadataJSON := buildMessageMetadata(msg)
-
-		// Insert message with UPSERT (ON CONFLICT DO NOTHING for idempotency)
-		_, err := tx.Exec(ctx, `
-			INSERT INTO chat_messages (id, session_id, user_id, role, content, metadata, created_at)
-			VALUES ($1, $2, $3, $4, $5, $6, to_timestamp($7::bigint / 1000.0))
-			ON CONFLICT (id) DO NOTHING
-		`, messageID, sessionID, userID, role, msg.Content, metadataJSON, msg.Timestamp)
-
+		// Per-message savepoint: one bad row must not poison the rest of the
+		// batch (a failed statement aborts the surrounding transaction).
+		sp, err := tx.Begin(ctx)
 		if err != nil {
+			return fmt.Errorf("failed to begin savepoint: %w", err)
+		}
+
+		// Insert message with UPSERT (idempotent across requeues) and a
+		// dedup guard against rows the engine already persisted.
+		// Rich metadata (widgets, tool results, reasoning, UX envelope) is
+		// the engine-side pipeline's job: chat_messages.metadata was dropped
+		// by migration gfix03.
+		sessionUUID := resolveSessionUUID(msg.SessionID)
+		epochSeconds := float64(parseMessageTimestampSeconds(msg.Timestamp).Unix())
+
+		if _, err := sp.Exec(ctx, chatMessageInsertSQL,
+			messageID, sessionUUID, userID, role, msg.Content, epochSeconds); err != nil {
 			log.Printf("[ChatHistoryPersister] Failed to insert message: %v", err)
+			sp.Rollback(ctx)
 			// Continue with other messages - partial success is acceptable
 			continue
 		}
 
-		// Upsert session metadata
-		if userID != uuid.Nil {
-			_, err := tx.Exec(ctx, `
-				INSERT INTO chat_sessions (id, user_id, title, last_message_at, is_active, created_at, updated_at)
-				VALUES ($1, $2, $3, to_timestamp($4::bigint / 1000.0), true, NOW(), NOW())
-				ON CONFLICT (id) DO UPDATE SET
-					last_message_at = EXCLUDED.last_message_at,
-					updated_at = NOW(),
-					title = COALESCE(NULLIF(EXCLUDED.title, ''), chat_sessions.title)
-			`, sessionID, userID, buildSessionTitle(ctx, role, msg.Content), msg.Timestamp)
+		// Upsert session metadata (drives the cross-device session list).
+		if _, err := sp.Exec(ctx, chatSessionUpsertSQL,
+			sessionUUID, userID, buildSessionTitle(ctx, role, msg.Content), epochSeconds); err != nil {
+			log.Printf("[ChatHistoryPersister] Failed to upsert session: %v", err)
+		}
 
-			if err != nil {
-				log.Printf("[ChatHistoryPersister] Failed to upsert session: %v", err)
-			}
+		if err := sp.Commit(ctx); err != nil {
+			log.Printf("[ChatHistoryPersister] Failed to commit message savepoint: %v", err)
 		}
 	}
 
 	return tx.Commit(ctx)
-}
-
-// buildMessageMetadata serializes rich chat message fields into a JSONB value for DB storage.
-// Preserves widgets, tool results, reasoning steps, UX envelope data, agent collaboration,
-// and other extended attributes that would otherwise be lost on reload.
-func buildMessageMetadata(msg ChatHistoryMessage) []byte {
-	meta := make(map[string]interface{})
-
-	if len(msg.Widgets) > 0 {
-		meta["widgets"] = msg.Widgets
-	}
-	if len(msg.ToolResults) > 0 {
-		meta["tool_results"] = msg.ToolResults
-	}
-	if len(msg.ReasoningSteps) > 0 {
-		meta["reasoning_steps"] = msg.ReasoningSteps
-	}
-	if msg.ReasoningSummary != "" {
-		meta["reasoning_summary"] = msg.ReasoningSummary
-	}
-	if msg.IsReasoningComplete {
-		meta["is_reasoning_complete"] = true
-	}
-	if msg.IsInterrupted {
-		meta["is_interrupted"] = true
-	}
-	if msg.HasErrors {
-		meta["has_errors"] = true
-	}
-	if len(msg.Errors) > 0 {
-		meta["errors"] = msg.Errors
-	}
-	if msg.RequiresConfirmation {
-		meta["requires_confirmation"] = true
-	}
-	if len(msg.ConfirmationData) > 0 {
-		meta["confirmation_data"] = msg.ConfirmationData
-	}
-	if len(msg.Meta) > 0 {
-		for k, v := range msg.Meta {
-			meta[k] = v
-		}
-	}
-	if len(msg.AgentCollaboration) > 0 {
-		meta["agent_collaboration"] = msg.AgentCollaboration
-	}
-
-	if len(meta) == 0 {
-		return nil
-	}
-	data, err := json.Marshal(meta)
-	if err != nil {
-		log.Printf("[ChatHistoryPersister] Failed to marshal message metadata: %v", err)
-		return nil
-	}
-	return data
 }
 
 // requeueMessages pushes failed messages back to Redis queue

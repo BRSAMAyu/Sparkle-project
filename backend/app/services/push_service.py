@@ -55,9 +55,13 @@ class PushService:
         normalized_mode = str(delivery_mode or "live").strip().lower()
         logger.info("Starting push policy processing in {} mode...", normalized_mode)
 
-        # 1. Get all active users with push preferences
+        # 1. Get all active users.
+        # daily-flow DF-9: previously this INNER-JOINed PushPreference, so the
+        # 138/149 users who never touched push settings were invisible to the
+        # smart push cycle (3 days of zero notifications in the eval).
+        # process_user_push already synthesizes defaults for missing prefs.
         # Note: In a real large-scale system, we would paginate or use a job queue.
-        query = select(User).join(PushPreference, User.id == PushPreference.user_id).where(User.is_active)
+        query = select(User).where(User.is_active)
         result = await self.db.execute(query)
         users = result.scalars().all()
 

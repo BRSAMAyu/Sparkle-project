@@ -700,6 +700,10 @@ class Settings(BaseSettings):
     SPARKLE_ROUTER_USE_AGGREGATOR_PROVIDER: bool = True
     SPARKLE_PUSH_POLICY_ENABLED: bool = True
     SPARKLE_PUSH_DELIVERY_ENABLED: bool = True
+    # daily-flow DF-9: 推送总开关默认值。False 意味着从未显式 opt-in 的用户
+    # 永远收不到任何提醒（渠道结构性静默）；默认 True = opt-out 产品语义，
+    # 用户仍可在 push-settings 里一键关闭（落库 enabled=False 后不再打扰）。
+    PUSH_OPT_IN_DEFAULT_ENABLED: bool = True
     SPARKLE_WORKING_MEMORY_ENABLED: bool = True
     SPARKLE_LLM_EXTRACTOR_ENABLED: bool = True
     SPARKLE_LLM_EXTRACTOR_DRY_RUN_ENABLED: bool = False

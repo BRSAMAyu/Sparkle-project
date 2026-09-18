@@ -70,6 +70,8 @@ type Config struct {
 	RedisPort                   int      `mapstructure:"REDIS_PORT"`
 	RedisPassword               string   `mapstructure:"REDIS_PASSWORD"`
 	RedisFailClosed             bool     `mapstructure:"REDIS_FAIL_CLOSED"` // Security: reject tokens on Redis failure
+	// DF-2 (daily-flow): drain queue:persist:history into PostgreSQL.
+	ChatPersisterEnabled        bool     `mapstructure:"CHAT_PERSISTER_ENABLED"`
 	BackendURL                  string   `mapstructure:"BACKEND_URL"`
 	AppleClientID               string   `mapstructure:"APPLE_CLIENT_ID"`
 	AdminSecret                 string   `mapstructure:"ADMIN_SECRET"`
@@ -467,6 +469,7 @@ func Load() *Config {
 		"REDIS_PORT",
 		"REDIS_PASSWORD",
 		"REDIS_FAIL_CLOSED",
+		"CHAT_PERSISTER_ENABLED",
 		"BACKEND_URL",
 		"APPLE_CLIENT_ID",
 		"ADMIN_SECRET",
@@ -546,6 +549,9 @@ func Load() *Config {
 	// Security: Fail-Closed mode for Redis
 	// Defaults to true (Fail-Closed) to reject tokens when Redis is unavailable
 	viper.SetDefault("REDIS_FAIL_CLOSED", true)
+	// DF-2: enabled by default so the durable chat pipeline actually runs;
+	// set CHAT_PERSISTER_ENABLED=false to fall back to engine-only writes.
+	viper.SetDefault("CHAT_PERSISTER_ENABLED", true)
 	viper.SetDefault("BACKEND_URL", "http://localhost:8000")
 	viper.SetDefault("APPLE_CLIENT_ID", "")
 	viper.SetDefault("RABBITMQ_URL", "") // Default to empty (disabled)

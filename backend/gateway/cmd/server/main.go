@@ -21,6 +21,7 @@ import (
 	"github.com/sparkle/gateway/internal/i18n"
 	"github.com/sparkle/gateway/internal/infra/logger"
 	"github.com/sparkle/gateway/internal/middleware"
+	"github.com/sparkle/gateway/internal/service"
 )
 
 func main() {
@@ -89,6 +90,17 @@ func main() {
 
 	cqrs := initCQRS(bgCtx, cfg, dbh, rdb, services, logger.Log)
 	startCQRSWorkers(bgCtx, cqrs, logger.Log)
+
+	// DF-2 (daily-flow): the chat history persister existed but was never
+	// started, so queue:persist:history grew unbounded and the gateway-side
+	// durable copy of chat messages never reached PostgreSQL. It is now the
+	// consumer of that queue, deduplicating against engine-persisted rows.
+	if cfg.ChatPersisterEnabled {
+		chatPersister := service.NewChatHistoryPersister(rdb, dbh.pool)
+		go chatPersister.Run(bgCtx)
+		defer chatPersister.Stop()
+		logger.Log.Info("Chat history persister enabled")
+	}
 
 	proxy, err := setupProxy(cfg, logger.Log)
 	if err != nil {

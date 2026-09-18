@@ -966,6 +966,12 @@ class ExamSprintDiagnosticService:
                     continue
                 resolved.append(DiagnosticKnowledgeNode(**item))
                 seen.add(item["slug"])
+        elif len(resolved) < 5:
+            # daily-flow DF-4：未内置题包的科目（eval 里是「大学物理」）不能拿
+            # 「知识节点覆盖不足」搪塞——即使用户补足节点，模板选择依然无题可出。
+            # 直接给出可行动的错误：指明科目不支持与当前支持的科目清单。
+            hint = f"诊断暂支持的科目：{_SUPPORTED_SUBJECT_HINT}；「{subject or '未指定科目'}」暂未内置诊断题包"
+            raise ValueError(hint)
         if len({item.domain for item in resolved}) < 5:
             raise ValueError("知识节点覆盖不足，至少需要 5 个不同知识领域")
         return resolved

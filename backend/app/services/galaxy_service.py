@@ -73,6 +73,7 @@ def _utcnow() -> datetime:
 
 
 SPRINT_NODE_UUID_NAMESPACE = uuid5(NAMESPACE_URL, "sparkle:sprint-pack-node")
+TASK_NODE_UUID_NAMESPACE = uuid5(NAMESPACE_URL, "sparkle:task-node")
 SPRINT_NODE_ID_ALIASES = {
     "cn.tcp_flow": "cn.tcp_flow_control",
 }
@@ -2609,6 +2610,54 @@ class GalaxyService:
         sprint-pack nodes instead of dropping updates for unknown nodes.
         """
         return await self._resolve_mastery_node_id(external_node_id, create_missing=True)
+
+    @staticmethod
+    def task_node_uuid(title: str) -> UUID:
+        """Stable internal UUID for a task-derived node (whitespace-insensitive)."""
+        normalized = re.sub(r"\s+", "", str(title or "").strip().lower())
+        return uuid5(TASK_NODE_UUID_NAMESPACE, normalized)
+
+    async def ensure_task_node(self, title: str, *, task_id: UUID | None = None) -> UUID:
+        """Resolve the galaxy anchor for an everyday completed task (daily-flow DF-5).
+
+        Matches an existing node by exact (case-insensitive) name first, so
+        completing「TCP 拥塞控制」lights the seeded star instead of duplicating
+        it. Otherwise materializes a deterministic node keyed by the normalized
+        title, so re-studying the same topic accumulates mastery on one star.
+        """
+        clean_title = re.sub(r"\s+", " ", str(title or "").strip())
+        if not clean_title:
+            raise ValueError("task title is required for galaxy anchoring")
+
+        lowered = clean_title.lower()
+        matched = (
+            await self.db.execute(
+                select(KnowledgeNode.id).where(func.lower(KnowledgeNode.name) == lowered).limit(1)
+            )
+        ).scalar_one_or_none()
+        if matched is not None:
+            return matched
+
+        resolved_id = self.task_node_uuid(clean_title)
+        existing = await self.db.get(KnowledgeNode, resolved_id)
+        if existing is not None:
+            return resolved_id
+
+        knowledge_node = KnowledgeNode(
+            id=resolved_id,
+            name=clean_title[:255],
+            description=f"来自任务的学习主题：{clean_title}",
+            keywords=[clean_title],
+            importance_level=3,
+            is_seed=False,
+            source_type="user_created",
+            source_task_id=task_id,
+            status="published",
+        )
+        self.db.add(knowledge_node)
+        await self.db.flush()
+        logger.info("GalaxyService: ignited task star {} for title {!r}", resolved_id, clean_title)
+        return resolved_id
 
     @staticmethod
     def _mastery_ratio(value: object) -> float:

@@ -304,3 +304,25 @@ async def test_exam_sprint_diagnostic_supports_data_structures_subject(db_sessio
     # canonical ds pack nodes carry their Chinese labels from the pack metadata
     assert all(by_id[nid].name for nid in ds_pack_ids)
     assert any("排序" in by_id[nid].name or "堆" in by_id[nid].name for nid in ds_pack_ids)
+
+
+@pytest.mark.asyncio
+async def test_diagnose_unsupported_subject_gives_actionable_error(db_session, test_user):
+    """daily-flow DF-4 regression: a real new student on an unpacked subject
+    (eval used 大学物理) used to hit 422「知识节点覆盖不足，至少需要 5 个不同
+    知识领域」— a dead-end that blamed the request payload even though no
+    template pack exists for the subject (supplying nodes would still 422 at
+    template selection). The error must instead say which subjects are
+    supported and that the subject itself is the blocker."""
+    service = ExamSprintDiagnosticService(db_session)
+
+    with pytest.raises(ValueError) as excinfo:
+        await service.generate(
+            user_id=test_user.id,
+            request=DiagnosticGenerateRequest(subject="大学物理", question_count=10),
+        )
+
+    message = str(excinfo.value)
+    assert "知识节点覆盖不足" not in message
+    assert "大学物理" in message
+    assert "计算机网络" in message and "数据结构" in message
