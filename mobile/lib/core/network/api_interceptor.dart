@@ -215,13 +215,51 @@ class AuthInterceptor extends Interceptor {
 }
 
 class LoggingInterceptor extends Interceptor {
-  final Logger _logger = Logger(
-    printer: PrettyPrinter(
-      methodCount: 0,
-      errorMethodCount: 5,
-      lineLength: 80,
-    ),
-  );
+  LoggingInterceptor({Logger? logger})
+      : _logger = logger ??
+            Logger(
+              printer: PrettyPrinter(
+                methodCount: 0,
+                errorMethodCount: 5,
+                lineLength: 80,
+              ),
+            );
+
+  final Logger _logger;
+
+  /// Body fields whose values must never reach logs (M6-14): login /
+  /// registration / password-reset requests would otherwise leak plaintext
+  /// credentials and tokens into debug output.
+  static const Set<String> _sensitiveBodyFields = <String>{
+    'password',
+    'new_password',
+    'old_password',
+    'current_password',
+    'confirm_password',
+    'password_new',
+    'password_old',
+    'token',
+    'access_token',
+    'refresh_token',
+    'id_token',
+    'verification_code',
+  };
+
+  /// Returns a log-safe copy of the request body with credential values
+  /// masked. Non-map bodies are not loggable in safe form and yield null.
+  @visibleForTesting
+  static Map<String, dynamic>? sanitizeBodyForLog(dynamic data) {
+    if (data is! Map) {
+      return null;
+    }
+    return <String, dynamic>{
+      for (final entry in data.entries)
+        entry.key.toString(): _sensitiveBodyFields
+                .contains(entry.key.toString().toLowerCase())
+            ? '***'
+            : entry.value,
+    };
+  }
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
@@ -229,8 +267,9 @@ class LoggingInterceptor extends Interceptor {
         DateTime.now().millisecondsSinceEpoch;
     if (kDebugMode) {
       _logger.i('Request: ${options.method} ${options.uri}');
-      if (options.data != null) {
-        _logger.d('Data: ${options.data}');
+      final sanitized = sanitizeBodyForLog(options.data);
+      if (sanitized != null) {
+        _logger.d('Data: $sanitized');
       }
     }
     super.onRequest(options, handler);

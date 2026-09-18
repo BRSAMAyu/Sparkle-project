@@ -469,13 +469,6 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     int minutes,
     String? note,
   ) async {
-    // Cancel reminders when completing task
-    try {
-      await _notificationScheduler.cancelTaskReminders(id);
-    } catch (e) {
-      // Ignore errors
-    }
-
     // 1. 乐观更新 UI
     _updateTask(
       id,
@@ -501,6 +494,55 @@ class TaskNotifier extends StateNotifier<TaskListState> {
           // retryToken: updatedTask.retryToken, // Repo needs to return this or we assume updatedTask has it
         ),
       );
+
+      // 4. 服务端已完成：后续本地步骤（归因/埋点/跨模块刷新）失败不得
+      //    覆盖成功状态，单独 catch 记日志即可，否则重试入口会触发服务端
+      //    二次完成。
+      await _runPostCompletionSteps(
+        result: result,
+        updatedTask: updatedTask,
+        taskId: id,
+        minutes: minutes,
+        note: note,
+      );
+
+      return result;
+    } catch (e) {
+      // 5. 🆕 失败：标记为失败状态（不直接回滚）
+      var errorMsg = S.taskOpFailed;
+      if (e is DioException) {
+        errorMsg = e.message ?? S.taskNetworkError;
+      }
+
+      _updateTask(
+        id,
+        (task) => task.copyWith(
+          syncStatus: TaskSyncStatus.failed,
+          syncError: errorMsg,
+        ),
+      );
+      return null;
+    }
+  }
+
+  /// 服务端确认完成之后的本地后置步骤：归因消费、执行埋点与跨模块刷新。
+  /// 失败仅记日志——任务在服务端已是完成态，任何后置异常都不能把本地
+  /// 状态改写为 failed 并诱导用户重试（服务端二次完成风险）。
+  Future<void> _runPostCompletionSteps({
+    required TaskCompletionResult result,
+    required TaskModel updatedTask,
+    required String taskId,
+    required int minutes,
+    required String? note,
+  }) async {
+    try {
+      // 服务端已确认完成，此时才取消提醒（M6-16）：失败路径下任务仍未
+      // 完成，提醒必须保留，否则任务卡在今日列表且永无通知。
+      try {
+        await _notificationScheduler.cancelTaskReminders(taskId);
+      } catch (e) {
+        debugPrint('Failed to cancel reminders for completed task $taskId: $e');
+      }
       _ref.read(galaxyRefreshTriggerProvider.notifier).state++;
       unawaited(
         _ref.read(galaxyProvider.notifier).refreshForTaskCompletion(
@@ -521,11 +563,11 @@ class TaskNotifier extends StateNotifier<TaskListState> {
           .consumeForExecution(
             executionType: 'task',
             entityType: 'task',
-            entityId: id,
+            entityId: taskId,
           );
       await _ref.read(appEventStreamServiceProvider).recordEntityExecution(
         entityType: 'task',
-        entityId: id,
+        entityId: taskId,
         actionType: 'complete_task',
         source: 'task_provider',
         payload: {
@@ -541,23 +583,11 @@ class TaskNotifier extends StateNotifier<TaskListState> {
           },
         },
       );
-
-      return result;
     } catch (e) {
-      // 4. 🆕 失败：标记为失败状态（不直接回滚）
-      var errorMsg = S.taskOpFailed;
-      if (e is DioException) {
-        errorMsg = e.message ?? S.taskNetworkError;
-      }
-
-      _updateTask(
-        id,
-        (task) => task.copyWith(
-          syncStatus: TaskSyncStatus.failed,
-          syncError: errorMsg,
-        ),
+      debugPrint(
+        '[Task] post-completion steps failed for $taskId '
+        '(server state kept): $e',
       );
-      return null;
     }
   }
 
@@ -585,6 +615,15 @@ class TaskNotifier extends StateNotifier<TaskListState> {
 
   /// 🆕 重试完成任务
   Future<void> retryCompleteTask(String id, int minutes, String? note) async {
+    // 幂等跳过：服务端已确认完成（completed + synced）的任务不再重复调用
+    // 完成接口，避免把后置步骤误标失败的历史状态当作真实失败而二次完成。
+    final existing = _findTaskInState(id);
+    if (existing != null &&
+        existing.status == TaskStatus.completed &&
+        existing.syncStatus == TaskSyncStatus.synced) {
+      return;
+    }
+
     _updateTask(
       id,
       (task) => task.copyWith(
@@ -602,44 +641,13 @@ class TaskNotifier extends StateNotifier<TaskListState> {
           syncStatus: TaskSyncStatus.synced,
         ),
       );
-      _ref.read(galaxyRefreshTriggerProvider.notifier).state++;
-      unawaited(
-        _ref.read(galaxyProvider.notifier).refreshForTaskCompletion(
-              galaxyUpdate: result.galaxyUpdate,
-            ),
-      );
-      if (updatedTask.planId != null) {
-        _ref.invalidate(planDetailProvider(updatedTask.planId!));
-      }
-      _ref
-        ..invalidate(learningPortfolioProvider)
-        ..invalidate(achievementProvider)
-        ..invalidate(weeklyGrowthNarrativeProvider)
-        ..invalidate(dashboardProvider);
-      final linkedPrediction = await _ref
-          .read(predictionAttributionServiceProvider)
-          .consumeForExecution(
-            executionType: 'task',
-            entityType: 'task',
-            entityId: id,
-          );
-      await _ref.read(appEventStreamServiceProvider).recordEntityExecution(
-        entityType: 'task',
-        entityId: id,
-        actionType: 'complete_task',
-        source: 'task_provider',
-        payload: {
-          'minutes': minutes,
-          if (note != null && note.isNotEmpty) 'note': note,
-          if (linkedPrediction != null) ...{
-            'prediction_id': linkedPrediction['prediction_id'],
-            'candidate_id': linkedPrediction['candidate_id'],
-            'prediction_action_type': linkedPrediction['action_type'],
-            'prediction_surface': linkedPrediction['surface'],
-            'prediction_horizon': linkedPrediction['horizon'],
-            'prediction_source': linkedPrediction['source'],
-          },
-        },
+      // 服务端已完成：后置步骤失败不改任务同步状态（同 completeTask）。
+      await _runPostCompletionSteps(
+        result: result,
+        updatedTask: updatedTask,
+        taskId: id,
+        minutes: minutes,
+        note: note,
       );
     } catch (e) {
       var errorMsg = S.taskRetryFailed;

@@ -44,6 +44,27 @@ import 'package:sparkle/features/user/user.dart';
 import 'package:sparkle/features/visual_elements/visual_elements_routes.dart';
 
 /// Router configuration provider
+
+/// Splash 暂存深链所用的 query 参数名（loading 期 redirect 中转）。
+const String _kPendingRedirectQuery = 'redirect';
+
+/// 去往 auth 页时携带原始深链的 query 参数名。
+const String _kReturnToQuery = 'return_to';
+
+/// 从当前 location 读取待还原的深链；仅接受站内绝对路径，
+/// 拒绝空串与协议相对形式（`//host`），防开放重定向。
+String? _safePendingRedirect(Uri uri) {
+  final pending = uri.queryParameters[_kPendingRedirectQuery] ??
+      uri.queryParameters[_kReturnToQuery];
+  if (pending == null || pending.isEmpty) {
+    return null;
+  }
+  if (!pending.startsWith('/') || pending.startsWith('//')) {
+    return null;
+  }
+  return pending;
+}
+
 final routerProvider = Provider<GoRouter>((ref) {
   final navigationObserver = SensoryNavigationObserver();
 
@@ -119,16 +140,32 @@ final routerProvider = Provider<GoRouter>((ref) {
         // If we are already on an auth page, let the page handle the loading UI
         if (isOnAuth) return null;
 
-        return isOnSplash ? null : '/';
+        if (isOnSplash) return null;
+
+        // 认证未决期间到达的受保护深链（推送跳转等）不得改写为 '/'：
+        // 将原始 path+query 经 splash 的 redirect 参数中转，认证判定
+        // 完成后由下方 splash/auth 还原分支放行。
+        final target = state.uri.toString();
+        return '/?$_kPendingRedirectQuery=${Uri.encodeComponent(target)}';
       }
 
       // Not authenticated and trying to access protected routes
       if (!isAuthenticated && !isOnAuth) {
-        return '/login';
+        // 深链去 auth 时携带 return_to，登录后仍可还原目标。
+        final pending = _safePendingRedirect(state.uri);
+        final returnTarget = pending ?? state.uri.toString();
+        if (returnTarget.isEmpty || returnTarget == '/') {
+          return '/login';
+        }
+        return '/login?$_kReturnToQuery=${Uri.encodeComponent(returnTarget)}';
       }
 
       // Authenticated but trying to access auth pages or splash
       if (isAuthenticated && (isOnAuth || isOnSplash)) {
+        final pending = _safePendingRedirect(state.uri);
+        if (pending != null) {
+          return pending; // 还原 loading 期暂存的深链
+        }
         return '/home';
       }
 

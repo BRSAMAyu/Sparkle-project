@@ -66,11 +66,33 @@ class WebSocketService {
           'Connecting to WebSocket: $uri (Attempt: $_reconnectAttempts)',);
 
       // 使用headers参数（如果提供）- 使用IOWebSocketChannel支持headers
-      _channel = IOWebSocketChannel.connect(
+      final channel = IOWebSocketChannel.connect(
         uri,
         headers: _customHeaders,
       );
-      _isConnected = true;
+      _channel = channel;
+
+      // 连接建立成功（握手完成）即标记已连接并复位重连预算。
+      // 此前预算只在收到第一条消息时复位——对静默连接（如离线同步引擎
+      // 等待 outbox、无服务端推送）预算保持耗尽，两次真实断线后即永久
+      // 放弃重连。catchError 同时消费 ready 上的失败，避免未处理的
+      // 异步异常泄漏到调用方 zone。
+      unawaited(
+        channel.ready.then((_) {
+          if (_isManualDisconnect || !identical(_channel, channel)) {
+            return;
+          }
+          _isConnected = true;
+          _reconnectAttempts = 0;
+        }).catchError((Object error) {
+          if (_isManualDisconnect || !identical(_channel, channel)) {
+            return;
+          }
+          debugPrint('WebSocket handshake failed: $error');
+          _isConnected = false;
+          _scheduleReconnect();
+        }),
+      );
 
       _channel!.stream.listen(
         (data) {
@@ -79,9 +101,10 @@ class WebSocketService {
               final msg = WebSocketMessage.fromBuffer(data);
               _controller.add(msg);
             } catch (e) {
+              // 解析失败的二进制帧无法被消费方识别（sync_engine 等只认
+              // WebSocketMessage / JSON Map），广播原始字节只会让下游
+              // 崩溃——记日志后丢弃。
               debugPrint('Failed to parse Protobuf message: $e');
-              // Fallback: emit raw binary if it wasn't a valid WebSocketMessage (unlikely)
-              _controller.add(data);
             }
           } else {
             // Text/JSON message
@@ -94,7 +117,6 @@ class WebSocketService {
               _controller.add(data);
             }
           }
-          _reconnectAttempts = 0; // Reset on success
         },
         onError: (Object error) {
           debugPrint('WebSocket stream error: $error');
@@ -127,6 +149,9 @@ class WebSocketService {
     final delay = _reconnectSchedule[index];
     debugPrint('Scheduling reconnect in ${delay}ms');
 
+    // 单一调度路径：onError 与 onDone（以及握手失败）会对同一次断线先后
+    // 进入这里，先取消旧 Timer 再排程，避免叠加 Timer 令重连预算倍速消耗。
+    _cancelReconnectTimer();
     _reconnectTimer = Timer(delay, () {
       _reconnectAttempts++;
       _connectInternal();

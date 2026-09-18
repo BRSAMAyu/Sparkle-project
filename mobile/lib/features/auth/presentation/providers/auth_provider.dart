@@ -37,13 +37,14 @@ class AuthState {
     bool? isLoading,
     bool? isAuthenticated,
     UserModel? user,
+    bool clearUser = false,
     String? error,
     AppFailure? failure,
   }) =>
       AuthState(
         isLoading: isLoading ?? this.isLoading,
         isAuthenticated: isAuthenticated ?? this.isAuthenticated,
-        user: user ?? this.user,
+        user: clearUser ? null : (user ?? this.user),
         error: error, // Don't carry over old errors
         failure: failure,
       );
@@ -94,7 +95,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(
       isLoading: false,
       isAuthenticated: false,
-      user: null,
+      // copyWith 对 user 做空值合并，必须用 clearUser 标志才能真正清掉
+      // 被吊销会话残留的过期用户，否则 currentUserProvider 会继续返回
+      // 已失效的身份。
+      clearUser: true,
     );
   }
 
