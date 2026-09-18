@@ -14,8 +14,8 @@ extension GetTranslationRecordCollection on Isar {
 }
 
 const TranslationRecordSchema = CollectionSchema(
-  name: r'TranslationRecord',
-  id: -641002333582827518,
+  name: r'tr_106',
+  id: 8972329863470705,
   properties: {
     r'createdAt': PropertySchema(
       id: 0,
@@ -69,9 +69,9 @@ const TranslationRecordSchema = CollectionSchema(
   deserializeProp: _translationRecordDeserializeProp,
   idName: r'id',
   indexes: {
-    r'originalText': IndexSchema(
-      id: 6693995755071819741,
-      name: r'originalText',
+    r'i_tr_ot_259': IndexSchema(
+      id: 1807715111723938,
+      name: r'i_tr_ot_259',
       unique: false,
       replace: false,
       properties: [
@@ -82,9 +82,9 @@ const TranslationRecordSchema = CollectionSchema(
         )
       ],
     ),
-    r'createdAt': IndexSchema(
-      id: -3433535483987302584,
-      name: r'createdAt',
+    r'i_tr_ca_383': IndexSchema(
+      id: 522511602410046,
+      name: r'i_tr_ca_383',
       unique: false,
       replace: false,
       properties: [
@@ -97,10 +97,10 @@ const TranslationRecordSchema = CollectionSchema(
     )
   },
   links: {
-    r'extractedWords': LinkSchema(
-      id: -1741083970351173293,
-      name: r'extractedWords',
-      target: r'TranslationWordLink',
+    r'lk_tr_ew_125': LinkSchema(
+      id: 4460552917829598,
+      name: r'lk_tr_ew_125',
+      target: r'twl_1217',
       single: false,
     )
   },
@@ -204,7 +204,7 @@ void _translationRecordAttach(
     IsarCollection<dynamic> col, Id id, TranslationRecord object) {
   object.id = id;
   object.extractedWords.attach(
-      col, col.isar.collection<TranslationWordLink>(), r'extractedWords', id);
+      col, col.isar.collection<TranslationWordLink>(), r'lk_tr_ew_125', id);
 }
 
 extension TranslationRecordQueryWhereSort
@@ -219,7 +219,7 @@ extension TranslationRecordQueryWhereSort
       anyCreatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
-        const IndexWhereClause.any(indexName: r'createdAt'),
+        const IndexWhereClause.any(indexName: r'i_tr_ca_383'),
       );
     });
   }
@@ -299,7 +299,7 @@ extension TranslationRecordQueryWhere
       originalTextEqualTo(String originalText) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'originalText',
+        indexName: r'i_tr_ot_259',
         value: [originalText],
       ));
     });
@@ -311,13 +311,13 @@ extension TranslationRecordQueryWhere
       if (query.whereSort == Sort.asc) {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'originalText',
+              indexName: r'i_tr_ot_259',
               lower: [],
               upper: [originalText],
               includeUpper: false,
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'originalText',
+              indexName: r'i_tr_ot_259',
               lower: [originalText],
               includeLower: false,
               upper: [],
@@ -325,13 +325,13 @@ extension TranslationRecordQueryWhere
       } else {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'originalText',
+              indexName: r'i_tr_ot_259',
               lower: [originalText],
               includeLower: false,
               upper: [],
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'originalText',
+              indexName: r'i_tr_ot_259',
               lower: [],
               upper: [originalText],
               includeUpper: false,
@@ -344,7 +344,7 @@ extension TranslationRecordQueryWhere
       createdAtEqualTo(DateTime createdAt) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'createdAt',
+        indexName: r'i_tr_ca_383',
         value: [createdAt],
       ));
     });
@@ -356,13 +356,13 @@ extension TranslationRecordQueryWhere
       if (query.whereSort == Sort.asc) {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'createdAt',
+              indexName: r'i_tr_ca_383',
               lower: [],
               upper: [createdAt],
               includeUpper: false,
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'createdAt',
+              indexName: r'i_tr_ca_383',
               lower: [createdAt],
               includeLower: false,
               upper: [],
@@ -370,13 +370,13 @@ extension TranslationRecordQueryWhere
       } else {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'createdAt',
+              indexName: r'i_tr_ca_383',
               lower: [createdAt],
               includeLower: false,
               upper: [],
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'createdAt',
+              indexName: r'i_tr_ca_383',
               lower: [],
               upper: [createdAt],
               includeUpper: false,
@@ -392,7 +392,7 @@ extension TranslationRecordQueryWhere
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'createdAt',
+        indexName: r'i_tr_ca_383',
         lower: [createdAt],
         includeLower: include,
         upper: [],
@@ -407,7 +407,7 @@ extension TranslationRecordQueryWhere
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'createdAt',
+        indexName: r'i_tr_ca_383',
         lower: [],
         upper: [createdAt],
         includeUpper: include,
@@ -424,7 +424,7 @@ extension TranslationRecordQueryWhere
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'createdAt',
+        indexName: r'i_tr_ca_383',
         lower: [lowerCreatedAt],
         includeLower: includeLower,
         upper: [upperCreatedAt],
@@ -1297,28 +1297,28 @@ extension TranslationRecordQueryLinks
   QueryBuilder<TranslationRecord, TranslationRecord, QAfterFilterCondition>
       extractedWords(FilterQuery<TranslationWordLink> q) {
     return QueryBuilder.apply(this, (query) {
-      return query.link(q, r'extractedWords');
+      return query.link(q, r'lk_tr_ew_125');
     });
   }
 
   QueryBuilder<TranslationRecord, TranslationRecord, QAfterFilterCondition>
       extractedWordsLengthEqualTo(int length) {
     return QueryBuilder.apply(this, (query) {
-      return query.linkLength(r'extractedWords', length, true, length, true);
+      return query.linkLength(r'lk_tr_ew_125', length, true, length, true);
     });
   }
 
   QueryBuilder<TranslationRecord, TranslationRecord, QAfterFilterCondition>
       extractedWordsIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.linkLength(r'extractedWords', 0, true, 0, true);
+      return query.linkLength(r'lk_tr_ew_125', 0, true, 0, true);
     });
   }
 
   QueryBuilder<TranslationRecord, TranslationRecord, QAfterFilterCondition>
       extractedWordsIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.linkLength(r'extractedWords', 0, false, 999999, true);
+      return query.linkLength(r'lk_tr_ew_125', 0, false, 999999, true);
     });
   }
 
@@ -1328,7 +1328,7 @@ extension TranslationRecordQueryLinks
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.linkLength(r'extractedWords', 0, true, length, include);
+      return query.linkLength(r'lk_tr_ew_125', 0, true, length, include);
     });
   }
 
@@ -1338,7 +1338,7 @@ extension TranslationRecordQueryLinks
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.linkLength(r'extractedWords', length, include, 999999, true);
+      return query.linkLength(r'lk_tr_ew_125', length, include, 999999, true);
     });
   }
 
@@ -1351,7 +1351,7 @@ extension TranslationRecordQueryLinks
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.linkLength(
-          r'extractedWords', lower, includeLower, upper, includeUpper);
+          r'lk_tr_ew_125', lower, includeLower, upper, includeUpper);
     });
   }
 }
@@ -1775,8 +1775,8 @@ extension GetTranslationWordLinkCollection on Isar {
 }
 
 const TranslationWordLinkSchema = CollectionSchema(
-  name: r'TranslationWordLink',
-  id: -2052165459506868265,
+  name: r'twl_1217',
+  id: 7080441244803732,
   properties: {
     r'translationRecordId': PropertySchema(
       id: 0,
@@ -1795,9 +1795,9 @@ const TranslationWordLinkSchema = CollectionSchema(
   deserializeProp: _translationWordLinkDeserializeProp,
   idName: r'id',
   indexes: {
-    r'translationRecordId': IndexSchema(
-      id: -5590309821998644523,
-      name: r'translationRecordId',
+    r'i_twl_tri_85': IndexSchema(
+      id: -6200516612871329,
+      name: r'i_twl_tri_85',
       unique: false,
       replace: false,
       properties: [
@@ -1892,7 +1892,7 @@ extension TranslationWordLinkQueryWhereSort
       anyTranslationRecordId() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
-        const IndexWhereClause.any(indexName: r'translationRecordId'),
+        const IndexWhereClause.any(indexName: r'i_twl_tri_85'),
       );
     });
   }
@@ -1972,7 +1972,7 @@ extension TranslationWordLinkQueryWhere
       translationRecordIdEqualTo(int translationRecordId) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'translationRecordId',
+        indexName: r'i_twl_tri_85',
         value: [translationRecordId],
       ));
     });
@@ -1984,13 +1984,13 @@ extension TranslationWordLinkQueryWhere
       if (query.whereSort == Sort.asc) {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'translationRecordId',
+              indexName: r'i_twl_tri_85',
               lower: [],
               upper: [translationRecordId],
               includeUpper: false,
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'translationRecordId',
+              indexName: r'i_twl_tri_85',
               lower: [translationRecordId],
               includeLower: false,
               upper: [],
@@ -1998,13 +1998,13 @@ extension TranslationWordLinkQueryWhere
       } else {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'translationRecordId',
+              indexName: r'i_twl_tri_85',
               lower: [translationRecordId],
               includeLower: false,
               upper: [],
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'translationRecordId',
+              indexName: r'i_twl_tri_85',
               lower: [],
               upper: [translationRecordId],
               includeUpper: false,
@@ -2020,7 +2020,7 @@ extension TranslationWordLinkQueryWhere
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'translationRecordId',
+        indexName: r'i_twl_tri_85',
         lower: [translationRecordId],
         includeLower: include,
         upper: [],
@@ -2035,7 +2035,7 @@ extension TranslationWordLinkQueryWhere
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'translationRecordId',
+        indexName: r'i_twl_tri_85',
         lower: [],
         upper: [translationRecordId],
         includeUpper: include,
@@ -2052,7 +2052,7 @@ extension TranslationWordLinkQueryWhere
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'translationRecordId',
+        indexName: r'i_twl_tri_85',
         lower: [lowerTranslationRecordId],
         includeLower: includeLower,
         upper: [upperTranslationRecordId],

@@ -13,26 +13,27 @@ enum OfflineMessageStatus {
 /// Offline chat message stored locally for reliable delivery
 /// Used when network is unavailable to queue messages for later sending
 @collection
+@Name('ocm_244')
 class OfflineChatMessage {
   Id id = Isar.autoIncrement;
 
   /// Unique request ID for deduplication and ACK matching
-  @Index(unique: true)
+  @Index(name: 'i_ocm_rq_295', unique: true)
   late String requestId;
 
   /// Session ID this message belongs to
-  @Index()
+  @Index(name: 'i_ocm_si_610')
   late String sessionId;
 
   /// Message content
   late String message;
 
   /// User ID who sent the message
-  @Index()
+  @Index(name: 'i_ocm_ui_38')
   late String userId;
 
   /// When this message was created locally
-  @Index()
+  @Index(name: 'i_ocm_ca_2577')
   late DateTime createdAt;
 
   /// Current status of the message

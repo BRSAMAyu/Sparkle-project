@@ -15,8 +15,8 @@ extension GetFocusSessionRecordCollection on Isar {
 }
 
 const FocusSessionRecordSchema = CollectionSchema(
-  name: r'FocusSessionRecord',
-  id: 6802484664265835181,
+  name: r'fsr_1487',
+  id: 1836348250644354,
   properties: {
     r'createdAt': PropertySchema(
       id: 0,
@@ -100,9 +100,9 @@ const FocusSessionRecordSchema = CollectionSchema(
   deserializeProp: _focusSessionRecordDeserializeProp,
   idName: r'id',
   indexes: {
-    r'serverId': IndexSchema(
-      id: -7950187970872907662,
-      name: r'serverId',
+    r'i_fsr_si_17': IndexSchema(
+      id: -320993792088441,
+      name: r'i_fsr_si_17',
       unique: true,
       replace: false,
       properties: [
@@ -113,9 +113,9 @@ const FocusSessionRecordSchema = CollectionSchema(
         )
       ],
     ),
-    r'startTime': IndexSchema(
-      id: -3870335341264752872,
-      name: r'startTime',
+    r'i_fsr_st_185': IndexSchema(
+      id: -6644950861801982,
+      name: r'i_fsr_st_185',
       unique: false,
       replace: false,
       properties: [
@@ -126,9 +126,9 @@ const FocusSessionRecordSchema = CollectionSchema(
         )
       ],
     ),
-    r'isSynced': IndexSchema(
-      id: -39763503327887510,
-      name: r'isSynced',
+    r'i_fsr_is_272': IndexSchema(
+      id: 2014735712671368,
+      name: r'i_fsr_is_272',
       unique: false,
       replace: false,
       properties: [
@@ -139,9 +139,9 @@ const FocusSessionRecordSchema = CollectionSchema(
         )
       ],
     ),
-    r'createdAt': IndexSchema(
-      id: -3433535483987302584,
-      name: r'createdAt',
+    r'i_fsr_ca_533': IndexSchema(
+      id: 6460655950793718,
+      name: r'i_fsr_ca_533',
       unique: false,
       replace: false,
       properties: [
@@ -309,57 +309,57 @@ void _focusSessionRecordAttach(
 
 extension FocusSessionRecordByIndex on IsarCollection<FocusSessionRecord> {
   Future<FocusSessionRecord?> getByServerId(String? serverId) {
-    return getByIndex(r'serverId', [serverId]);
+    return getByIndex(r'i_fsr_si_17', [serverId]);
   }
 
   FocusSessionRecord? getByServerIdSync(String? serverId) {
-    return getByIndexSync(r'serverId', [serverId]);
+    return getByIndexSync(r'i_fsr_si_17', [serverId]);
   }
 
   Future<bool> deleteByServerId(String? serverId) {
-    return deleteByIndex(r'serverId', [serverId]);
+    return deleteByIndex(r'i_fsr_si_17', [serverId]);
   }
 
   bool deleteByServerIdSync(String? serverId) {
-    return deleteByIndexSync(r'serverId', [serverId]);
+    return deleteByIndexSync(r'i_fsr_si_17', [serverId]);
   }
 
   Future<List<FocusSessionRecord?>> getAllByServerId(
       List<String?> serverIdValues) {
     final values = serverIdValues.map((e) => [e]).toList();
-    return getAllByIndex(r'serverId', values);
+    return getAllByIndex(r'i_fsr_si_17', values);
   }
 
   List<FocusSessionRecord?> getAllByServerIdSync(List<String?> serverIdValues) {
     final values = serverIdValues.map((e) => [e]).toList();
-    return getAllByIndexSync(r'serverId', values);
+    return getAllByIndexSync(r'i_fsr_si_17', values);
   }
 
   Future<int> deleteAllByServerId(List<String?> serverIdValues) {
     final values = serverIdValues.map((e) => [e]).toList();
-    return deleteAllByIndex(r'serverId', values);
+    return deleteAllByIndex(r'i_fsr_si_17', values);
   }
 
   int deleteAllByServerIdSync(List<String?> serverIdValues) {
     final values = serverIdValues.map((e) => [e]).toList();
-    return deleteAllByIndexSync(r'serverId', values);
+    return deleteAllByIndexSync(r'i_fsr_si_17', values);
   }
 
   Future<Id> putByServerId(FocusSessionRecord object) {
-    return putByIndex(r'serverId', object);
+    return putByIndex(r'i_fsr_si_17', object);
   }
 
   Id putByServerIdSync(FocusSessionRecord object, {bool saveLinks = true}) {
-    return putByIndexSync(r'serverId', object, saveLinks: saveLinks);
+    return putByIndexSync(r'i_fsr_si_17', object, saveLinks: saveLinks);
   }
 
   Future<List<Id>> putAllByServerId(List<FocusSessionRecord> objects) {
-    return putAllByIndex(r'serverId', objects);
+    return putAllByIndex(r'i_fsr_si_17', objects);
   }
 
   List<Id> putAllByServerIdSync(List<FocusSessionRecord> objects,
       {bool saveLinks = true}) {
-    return putAllByIndexSync(r'serverId', objects, saveLinks: saveLinks);
+    return putAllByIndexSync(r'i_fsr_si_17', objects, saveLinks: saveLinks);
   }
 }
 
@@ -375,7 +375,7 @@ extension FocusSessionRecordQueryWhereSort
       anyStartTime() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
-        const IndexWhereClause.any(indexName: r'startTime'),
+        const IndexWhereClause.any(indexName: r'i_fsr_st_185'),
       );
     });
   }
@@ -384,7 +384,7 @@ extension FocusSessionRecordQueryWhereSort
       anyIsSynced() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
-        const IndexWhereClause.any(indexName: r'isSynced'),
+        const IndexWhereClause.any(indexName: r'i_fsr_is_272'),
       );
     });
   }
@@ -393,7 +393,7 @@ extension FocusSessionRecordQueryWhereSort
       anyCreatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
-        const IndexWhereClause.any(indexName: r'createdAt'),
+        const IndexWhereClause.any(indexName: r'i_fsr_ca_533'),
       );
     });
   }
@@ -473,7 +473,7 @@ extension FocusSessionRecordQueryWhere
       serverIdIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'serverId',
+        indexName: r'i_fsr_si_17',
         value: [null],
       ));
     });
@@ -483,7 +483,7 @@ extension FocusSessionRecordQueryWhere
       serverIdIsNotNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'serverId',
+        indexName: r'i_fsr_si_17',
         lower: [null],
         includeLower: false,
         upper: [],
@@ -495,7 +495,7 @@ extension FocusSessionRecordQueryWhere
       serverIdEqualTo(String? serverId) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'serverId',
+        indexName: r'i_fsr_si_17',
         value: [serverId],
       ));
     });
@@ -507,13 +507,13 @@ extension FocusSessionRecordQueryWhere
       if (query.whereSort == Sort.asc) {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'serverId',
+              indexName: r'i_fsr_si_17',
               lower: [],
               upper: [serverId],
               includeUpper: false,
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'serverId',
+              indexName: r'i_fsr_si_17',
               lower: [serverId],
               includeLower: false,
               upper: [],
@@ -521,13 +521,13 @@ extension FocusSessionRecordQueryWhere
       } else {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'serverId',
+              indexName: r'i_fsr_si_17',
               lower: [serverId],
               includeLower: false,
               upper: [],
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'serverId',
+              indexName: r'i_fsr_si_17',
               lower: [],
               upper: [serverId],
               includeUpper: false,
@@ -540,7 +540,7 @@ extension FocusSessionRecordQueryWhere
       startTimeEqualTo(DateTime startTime) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'startTime',
+        indexName: r'i_fsr_st_185',
         value: [startTime],
       ));
     });
@@ -552,13 +552,13 @@ extension FocusSessionRecordQueryWhere
       if (query.whereSort == Sort.asc) {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'startTime',
+              indexName: r'i_fsr_st_185',
               lower: [],
               upper: [startTime],
               includeUpper: false,
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'startTime',
+              indexName: r'i_fsr_st_185',
               lower: [startTime],
               includeLower: false,
               upper: [],
@@ -566,13 +566,13 @@ extension FocusSessionRecordQueryWhere
       } else {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'startTime',
+              indexName: r'i_fsr_st_185',
               lower: [startTime],
               includeLower: false,
               upper: [],
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'startTime',
+              indexName: r'i_fsr_st_185',
               lower: [],
               upper: [startTime],
               includeUpper: false,
@@ -588,7 +588,7 @@ extension FocusSessionRecordQueryWhere
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'startTime',
+        indexName: r'i_fsr_st_185',
         lower: [startTime],
         includeLower: include,
         upper: [],
@@ -603,7 +603,7 @@ extension FocusSessionRecordQueryWhere
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'startTime',
+        indexName: r'i_fsr_st_185',
         lower: [],
         upper: [startTime],
         includeUpper: include,
@@ -620,7 +620,7 @@ extension FocusSessionRecordQueryWhere
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'startTime',
+        indexName: r'i_fsr_st_185',
         lower: [lowerStartTime],
         includeLower: includeLower,
         upper: [upperStartTime],
@@ -633,7 +633,7 @@ extension FocusSessionRecordQueryWhere
       isSyncedEqualTo(bool isSynced) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'isSynced',
+        indexName: r'i_fsr_is_272',
         value: [isSynced],
       ));
     });
@@ -645,13 +645,13 @@ extension FocusSessionRecordQueryWhere
       if (query.whereSort == Sort.asc) {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'isSynced',
+              indexName: r'i_fsr_is_272',
               lower: [],
               upper: [isSynced],
               includeUpper: false,
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'isSynced',
+              indexName: r'i_fsr_is_272',
               lower: [isSynced],
               includeLower: false,
               upper: [],
@@ -659,13 +659,13 @@ extension FocusSessionRecordQueryWhere
       } else {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'isSynced',
+              indexName: r'i_fsr_is_272',
               lower: [isSynced],
               includeLower: false,
               upper: [],
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'isSynced',
+              indexName: r'i_fsr_is_272',
               lower: [],
               upper: [isSynced],
               includeUpper: false,
@@ -678,7 +678,7 @@ extension FocusSessionRecordQueryWhere
       createdAtEqualTo(DateTime createdAt) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'createdAt',
+        indexName: r'i_fsr_ca_533',
         value: [createdAt],
       ));
     });
@@ -690,13 +690,13 @@ extension FocusSessionRecordQueryWhere
       if (query.whereSort == Sort.asc) {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'createdAt',
+              indexName: r'i_fsr_ca_533',
               lower: [],
               upper: [createdAt],
               includeUpper: false,
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'createdAt',
+              indexName: r'i_fsr_ca_533',
               lower: [createdAt],
               includeLower: false,
               upper: [],
@@ -704,13 +704,13 @@ extension FocusSessionRecordQueryWhere
       } else {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'createdAt',
+              indexName: r'i_fsr_ca_533',
               lower: [createdAt],
               includeLower: false,
               upper: [],
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'createdAt',
+              indexName: r'i_fsr_ca_533',
               lower: [],
               upper: [createdAt],
               includeUpper: false,
@@ -726,7 +726,7 @@ extension FocusSessionRecordQueryWhere
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'createdAt',
+        indexName: r'i_fsr_ca_533',
         lower: [createdAt],
         includeLower: include,
         upper: [],
@@ -741,7 +741,7 @@ extension FocusSessionRecordQueryWhere
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'createdAt',
+        indexName: r'i_fsr_ca_533',
         lower: [],
         upper: [createdAt],
         includeUpper: include,
@@ -758,7 +758,7 @@ extension FocusSessionRecordQueryWhere
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'createdAt',
+        indexName: r'i_fsr_ca_533',
         lower: [lowerCreatedAt],
         includeLower: includeLower,
         upper: [upperCreatedAt],

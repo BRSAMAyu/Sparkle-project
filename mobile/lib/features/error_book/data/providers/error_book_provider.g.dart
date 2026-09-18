@@ -27,7 +27,7 @@ final errorBookRepositoryProvider =
 );
 
 typedef ErrorBookRepositoryRef = AutoDisposeProviderRef<ErrorBookRepository>;
-String _$errorListHash() => r'696abb7b7e437a87df76482a39936817ba8c9b26';
+String _$errorListHash() => r'487088870ec88fe0bce30f476786517782d8a19f';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -382,7 +382,7 @@ class _ErrorDetailProviderElement
   String get errorId => (origin as ErrorDetailProvider).errorId;
 }
 
-String _$todayReviewListHash() => r'c964bb3217590a4f62045468abc4f2308e11bd86';
+String _$todayReviewListHash() => r'30908742423f34b3cf3f8827c50ff2b6f30b2eed';
 
 /// 今日待复习列表 Provider
 ///
@@ -402,7 +402,7 @@ final todayReviewListProvider =
 );
 
 typedef TodayReviewListRef = AutoDisposeFutureProviderRef<List<ErrorRecord>>;
-String _$errorStatsHash() => r'0dcc00f23a30cdd6bc68f0d680102d741ec58dd4';
+String _$errorStatsHash() => r'08961dd36bbc7355652401fdbda09136e15b7ffc';
 
 /// 错题统计数据 Provider
 ///

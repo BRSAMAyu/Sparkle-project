@@ -8,6 +8,7 @@ part 'cached_statistics_model.g.dart';
 /// This stores serialized statistics data locally for offline access
 /// and faster loading. Supports TTL-based expiration.
 @collection
+@Name('csm_124')
 class CachedStatisticsModel {
   /// Unnamed constructor required by Isar
   CachedStatisticsModel();
@@ -44,7 +45,7 @@ class CachedStatisticsModel {
   Id id = Isar.autoIncrement;
 
   /// Unique cache key (combination of type + period + dates)
-  @Index(unique: true)
+  @Index(name: 'i_csm_ck_2181', unique: true)
   late String cacheKey;
 
   /// Statistics type (focus, agent, capsule, learning)
@@ -65,11 +66,11 @@ class CachedStatisticsModel {
   late List<int> jsonData;
 
   /// When this cache was created
-  @Index()
+  @Index(name: 'i_csm_ca_238')
   late DateTime createdAt;
 
   /// When this cache was last accessed (for LRU eviction)
-  @Index()
+  @Index(name: 'i_csm_la_206')
   late DateTime lastAccessedAt;
 
   /// Time-to-live in seconds (null = never expires)

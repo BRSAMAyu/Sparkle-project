@@ -15,8 +15,8 @@ extension GetCachedStatisticsModelCollection on Isar {
 }
 
 const CachedStatisticsModelSchema = CollectionSchema(
-  name: r'CachedStatisticsModel',
-  id: 1385342800440360539,
+  name: r'csm_124',
+  id: 579289132984479,
   properties: {
     r'ageSeconds': PropertySchema(
       id: 0,
@@ -97,9 +97,9 @@ const CachedStatisticsModelSchema = CollectionSchema(
   deserializeProp: _cachedStatisticsModelDeserializeProp,
   idName: r'id',
   indexes: {
-    r'cacheKey': IndexSchema(
-      id: 5885332021012296610,
-      name: r'cacheKey',
+    r'i_csm_ck_2181': IndexSchema(
+      id: -3734411163201524,
+      name: r'i_csm_ck_2181',
       unique: true,
       replace: false,
       properties: [
@@ -110,9 +110,9 @@ const CachedStatisticsModelSchema = CollectionSchema(
         )
       ],
     ),
-    r'createdAt': IndexSchema(
-      id: -3433535483987302584,
-      name: r'createdAt',
+    r'i_csm_ca_238': IndexSchema(
+      id: 584942112717213,
+      name: r'i_csm_ca_238',
       unique: false,
       replace: false,
       properties: [
@@ -123,9 +123,9 @@ const CachedStatisticsModelSchema = CollectionSchema(
         )
       ],
     ),
-    r'lastAccessedAt': IndexSchema(
-      id: 7637973981624628205,
-      name: r'lastAccessedAt',
+    r'i_csm_la_206': IndexSchema(
+      id: -5357207686884602,
+      name: r'i_csm_la_206',
       unique: false,
       replace: false,
       properties: [
@@ -301,58 +301,58 @@ void _cachedStatisticsModelAttach(
 extension CachedStatisticsModelByIndex
     on IsarCollection<CachedStatisticsModel> {
   Future<CachedStatisticsModel?> getByCacheKey(String cacheKey) {
-    return getByIndex(r'cacheKey', [cacheKey]);
+    return getByIndex(r'i_csm_ck_2181', [cacheKey]);
   }
 
   CachedStatisticsModel? getByCacheKeySync(String cacheKey) {
-    return getByIndexSync(r'cacheKey', [cacheKey]);
+    return getByIndexSync(r'i_csm_ck_2181', [cacheKey]);
   }
 
   Future<bool> deleteByCacheKey(String cacheKey) {
-    return deleteByIndex(r'cacheKey', [cacheKey]);
+    return deleteByIndex(r'i_csm_ck_2181', [cacheKey]);
   }
 
   bool deleteByCacheKeySync(String cacheKey) {
-    return deleteByIndexSync(r'cacheKey', [cacheKey]);
+    return deleteByIndexSync(r'i_csm_ck_2181', [cacheKey]);
   }
 
   Future<List<CachedStatisticsModel?>> getAllByCacheKey(
       List<String> cacheKeyValues) {
     final values = cacheKeyValues.map((e) => [e]).toList();
-    return getAllByIndex(r'cacheKey', values);
+    return getAllByIndex(r'i_csm_ck_2181', values);
   }
 
   List<CachedStatisticsModel?> getAllByCacheKeySync(
       List<String> cacheKeyValues) {
     final values = cacheKeyValues.map((e) => [e]).toList();
-    return getAllByIndexSync(r'cacheKey', values);
+    return getAllByIndexSync(r'i_csm_ck_2181', values);
   }
 
   Future<int> deleteAllByCacheKey(List<String> cacheKeyValues) {
     final values = cacheKeyValues.map((e) => [e]).toList();
-    return deleteAllByIndex(r'cacheKey', values);
+    return deleteAllByIndex(r'i_csm_ck_2181', values);
   }
 
   int deleteAllByCacheKeySync(List<String> cacheKeyValues) {
     final values = cacheKeyValues.map((e) => [e]).toList();
-    return deleteAllByIndexSync(r'cacheKey', values);
+    return deleteAllByIndexSync(r'i_csm_ck_2181', values);
   }
 
   Future<Id> putByCacheKey(CachedStatisticsModel object) {
-    return putByIndex(r'cacheKey', object);
+    return putByIndex(r'i_csm_ck_2181', object);
   }
 
   Id putByCacheKeySync(CachedStatisticsModel object, {bool saveLinks = true}) {
-    return putByIndexSync(r'cacheKey', object, saveLinks: saveLinks);
+    return putByIndexSync(r'i_csm_ck_2181', object, saveLinks: saveLinks);
   }
 
   Future<List<Id>> putAllByCacheKey(List<CachedStatisticsModel> objects) {
-    return putAllByIndex(r'cacheKey', objects);
+    return putAllByIndex(r'i_csm_ck_2181', objects);
   }
 
   List<Id> putAllByCacheKeySync(List<CachedStatisticsModel> objects,
       {bool saveLinks = true}) {
-    return putAllByIndexSync(r'cacheKey', objects, saveLinks: saveLinks);
+    return putAllByIndexSync(r'i_csm_ck_2181', objects, saveLinks: saveLinks);
   }
 }
 
@@ -369,7 +369,7 @@ extension CachedStatisticsModelQueryWhereSort
       anyCreatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
-        const IndexWhereClause.any(indexName: r'createdAt'),
+        const IndexWhereClause.any(indexName: r'i_csm_ca_238'),
       );
     });
   }
@@ -378,7 +378,7 @@ extension CachedStatisticsModelQueryWhereSort
       anyLastAccessedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
-        const IndexWhereClause.any(indexName: r'lastAccessedAt'),
+        const IndexWhereClause.any(indexName: r'i_csm_la_206'),
       );
     });
   }
@@ -458,7 +458,7 @@ extension CachedStatisticsModelQueryWhere on QueryBuilder<CachedStatisticsModel,
       cacheKeyEqualTo(String cacheKey) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'cacheKey',
+        indexName: r'i_csm_ck_2181',
         value: [cacheKey],
       ));
     });
@@ -470,13 +470,13 @@ extension CachedStatisticsModelQueryWhere on QueryBuilder<CachedStatisticsModel,
       if (query.whereSort == Sort.asc) {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'cacheKey',
+              indexName: r'i_csm_ck_2181',
               lower: [],
               upper: [cacheKey],
               includeUpper: false,
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'cacheKey',
+              indexName: r'i_csm_ck_2181',
               lower: [cacheKey],
               includeLower: false,
               upper: [],
@@ -484,13 +484,13 @@ extension CachedStatisticsModelQueryWhere on QueryBuilder<CachedStatisticsModel,
       } else {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'cacheKey',
+              indexName: r'i_csm_ck_2181',
               lower: [cacheKey],
               includeLower: false,
               upper: [],
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'cacheKey',
+              indexName: r'i_csm_ck_2181',
               lower: [],
               upper: [cacheKey],
               includeUpper: false,
@@ -503,7 +503,7 @@ extension CachedStatisticsModelQueryWhere on QueryBuilder<CachedStatisticsModel,
       createdAtEqualTo(DateTime createdAt) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'createdAt',
+        indexName: r'i_csm_ca_238',
         value: [createdAt],
       ));
     });
@@ -515,13 +515,13 @@ extension CachedStatisticsModelQueryWhere on QueryBuilder<CachedStatisticsModel,
       if (query.whereSort == Sort.asc) {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'createdAt',
+              indexName: r'i_csm_ca_238',
               lower: [],
               upper: [createdAt],
               includeUpper: false,
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'createdAt',
+              indexName: r'i_csm_ca_238',
               lower: [createdAt],
               includeLower: false,
               upper: [],
@@ -529,13 +529,13 @@ extension CachedStatisticsModelQueryWhere on QueryBuilder<CachedStatisticsModel,
       } else {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'createdAt',
+              indexName: r'i_csm_ca_238',
               lower: [createdAt],
               includeLower: false,
               upper: [],
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'createdAt',
+              indexName: r'i_csm_ca_238',
               lower: [],
               upper: [createdAt],
               includeUpper: false,
@@ -551,7 +551,7 @@ extension CachedStatisticsModelQueryWhere on QueryBuilder<CachedStatisticsModel,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'createdAt',
+        indexName: r'i_csm_ca_238',
         lower: [createdAt],
         includeLower: include,
         upper: [],
@@ -566,7 +566,7 @@ extension CachedStatisticsModelQueryWhere on QueryBuilder<CachedStatisticsModel,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'createdAt',
+        indexName: r'i_csm_ca_238',
         lower: [],
         upper: [createdAt],
         includeUpper: include,
@@ -583,7 +583,7 @@ extension CachedStatisticsModelQueryWhere on QueryBuilder<CachedStatisticsModel,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'createdAt',
+        indexName: r'i_csm_ca_238',
         lower: [lowerCreatedAt],
         includeLower: includeLower,
         upper: [upperCreatedAt],
@@ -596,7 +596,7 @@ extension CachedStatisticsModelQueryWhere on QueryBuilder<CachedStatisticsModel,
       lastAccessedAtEqualTo(DateTime lastAccessedAt) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'lastAccessedAt',
+        indexName: r'i_csm_la_206',
         value: [lastAccessedAt],
       ));
     });
@@ -608,13 +608,13 @@ extension CachedStatisticsModelQueryWhere on QueryBuilder<CachedStatisticsModel,
       if (query.whereSort == Sort.asc) {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'lastAccessedAt',
+              indexName: r'i_csm_la_206',
               lower: [],
               upper: [lastAccessedAt],
               includeUpper: false,
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'lastAccessedAt',
+              indexName: r'i_csm_la_206',
               lower: [lastAccessedAt],
               includeLower: false,
               upper: [],
@@ -622,13 +622,13 @@ extension CachedStatisticsModelQueryWhere on QueryBuilder<CachedStatisticsModel,
       } else {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'lastAccessedAt',
+              indexName: r'i_csm_la_206',
               lower: [lastAccessedAt],
               includeLower: false,
               upper: [],
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'lastAccessedAt',
+              indexName: r'i_csm_la_206',
               lower: [],
               upper: [lastAccessedAt],
               includeUpper: false,
@@ -644,7 +644,7 @@ extension CachedStatisticsModelQueryWhere on QueryBuilder<CachedStatisticsModel,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'lastAccessedAt',
+        indexName: r'i_csm_la_206',
         lower: [lastAccessedAt],
         includeLower: include,
         upper: [],
@@ -659,7 +659,7 @@ extension CachedStatisticsModelQueryWhere on QueryBuilder<CachedStatisticsModel,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'lastAccessedAt',
+        indexName: r'i_csm_la_206',
         lower: [],
         upper: [lastAccessedAt],
         includeUpper: include,
@@ -676,7 +676,7 @@ extension CachedStatisticsModelQueryWhere on QueryBuilder<CachedStatisticsModel,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'lastAccessedAt',
+        indexName: r'i_csm_la_206',
         lower: [lowerLastAccessedAt],
         includeLower: includeLower,
         upper: [upperLastAccessedAt],

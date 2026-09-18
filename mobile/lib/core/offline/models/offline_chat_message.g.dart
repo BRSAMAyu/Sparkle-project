@@ -15,8 +15,8 @@ extension GetOfflineChatMessageCollection on Isar {
 }
 
 const OfflineChatMessageSchema = CollectionSchema(
-  name: r'OfflineChatMessage',
-  id: -9094545379026422478,
+  name: r'ocm_244',
+  id: -5080771347008345,
   properties: {
     r'ackedAt': PropertySchema(
       id: 0,
@@ -106,9 +106,9 @@ const OfflineChatMessageSchema = CollectionSchema(
   deserializeProp: _offlineChatMessageDeserializeProp,
   idName: r'id',
   indexes: {
-    r'requestId': IndexSchema(
-      id: 938047444593699237,
-      name: r'requestId',
+    r'i_ocm_rq_295': IndexSchema(
+      id: 3096100010182950,
+      name: r'i_ocm_rq_295',
       unique: true,
       replace: false,
       properties: [
@@ -119,9 +119,9 @@ const OfflineChatMessageSchema = CollectionSchema(
         )
       ],
     ),
-    r'sessionId': IndexSchema(
-      id: 6949518585047923839,
-      name: r'sessionId',
+    r'i_ocm_si_610': IndexSchema(
+      id: 5180683070061586,
+      name: r'i_ocm_si_610',
       unique: false,
       replace: false,
       properties: [
@@ -132,9 +132,9 @@ const OfflineChatMessageSchema = CollectionSchema(
         )
       ],
     ),
-    r'userId': IndexSchema(
-      id: -2005826577402374815,
-      name: r'userId',
+    r'i_ocm_ui_38': IndexSchema(
+      id: 6713097858640984,
+      name: r'i_ocm_ui_38',
       unique: false,
       replace: false,
       properties: [
@@ -145,9 +145,9 @@ const OfflineChatMessageSchema = CollectionSchema(
         )
       ],
     ),
-    r'createdAt': IndexSchema(
-      id: -3433535483987302584,
-      name: r'createdAt',
+    r'i_ocm_ca_2577': IndexSchema(
+      id: -7591558783355385,
+      name: r'i_ocm_ca_2577',
       unique: false,
       replace: false,
       properties: [
@@ -344,58 +344,58 @@ void _offlineChatMessageAttach(
 
 extension OfflineChatMessageByIndex on IsarCollection<OfflineChatMessage> {
   Future<OfflineChatMessage?> getByRequestId(String requestId) {
-    return getByIndex(r'requestId', [requestId]);
+    return getByIndex(r'i_ocm_rq_295', [requestId]);
   }
 
   OfflineChatMessage? getByRequestIdSync(String requestId) {
-    return getByIndexSync(r'requestId', [requestId]);
+    return getByIndexSync(r'i_ocm_rq_295', [requestId]);
   }
 
   Future<bool> deleteByRequestId(String requestId) {
-    return deleteByIndex(r'requestId', [requestId]);
+    return deleteByIndex(r'i_ocm_rq_295', [requestId]);
   }
 
   bool deleteByRequestIdSync(String requestId) {
-    return deleteByIndexSync(r'requestId', [requestId]);
+    return deleteByIndexSync(r'i_ocm_rq_295', [requestId]);
   }
 
   Future<List<OfflineChatMessage?>> getAllByRequestId(
       List<String> requestIdValues) {
     final values = requestIdValues.map((e) => [e]).toList();
-    return getAllByIndex(r'requestId', values);
+    return getAllByIndex(r'i_ocm_rq_295', values);
   }
 
   List<OfflineChatMessage?> getAllByRequestIdSync(
       List<String> requestIdValues) {
     final values = requestIdValues.map((e) => [e]).toList();
-    return getAllByIndexSync(r'requestId', values);
+    return getAllByIndexSync(r'i_ocm_rq_295', values);
   }
 
   Future<int> deleteAllByRequestId(List<String> requestIdValues) {
     final values = requestIdValues.map((e) => [e]).toList();
-    return deleteAllByIndex(r'requestId', values);
+    return deleteAllByIndex(r'i_ocm_rq_295', values);
   }
 
   int deleteAllByRequestIdSync(List<String> requestIdValues) {
     final values = requestIdValues.map((e) => [e]).toList();
-    return deleteAllByIndexSync(r'requestId', values);
+    return deleteAllByIndexSync(r'i_ocm_rq_295', values);
   }
 
   Future<Id> putByRequestId(OfflineChatMessage object) {
-    return putByIndex(r'requestId', object);
+    return putByIndex(r'i_ocm_rq_295', object);
   }
 
   Id putByRequestIdSync(OfflineChatMessage object, {bool saveLinks = true}) {
-    return putByIndexSync(r'requestId', object, saveLinks: saveLinks);
+    return putByIndexSync(r'i_ocm_rq_295', object, saveLinks: saveLinks);
   }
 
   Future<List<Id>> putAllByRequestId(List<OfflineChatMessage> objects) {
-    return putAllByIndex(r'requestId', objects);
+    return putAllByIndex(r'i_ocm_rq_295', objects);
   }
 
   List<Id> putAllByRequestIdSync(List<OfflineChatMessage> objects,
       {bool saveLinks = true}) {
-    return putAllByIndexSync(r'requestId', objects, saveLinks: saveLinks);
+    return putAllByIndexSync(r'i_ocm_rq_295', objects, saveLinks: saveLinks);
   }
 }
 
@@ -411,7 +411,7 @@ extension OfflineChatMessageQueryWhereSort
       anyCreatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
-        const IndexWhereClause.any(indexName: r'createdAt'),
+        const IndexWhereClause.any(indexName: r'i_ocm_ca_2577'),
       );
     });
   }
@@ -491,7 +491,7 @@ extension OfflineChatMessageQueryWhere
       requestIdEqualTo(String requestId) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'requestId',
+        indexName: r'i_ocm_rq_295',
         value: [requestId],
       ));
     });
@@ -503,13 +503,13 @@ extension OfflineChatMessageQueryWhere
       if (query.whereSort == Sort.asc) {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'requestId',
+              indexName: r'i_ocm_rq_295',
               lower: [],
               upper: [requestId],
               includeUpper: false,
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'requestId',
+              indexName: r'i_ocm_rq_295',
               lower: [requestId],
               includeLower: false,
               upper: [],
@@ -517,13 +517,13 @@ extension OfflineChatMessageQueryWhere
       } else {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'requestId',
+              indexName: r'i_ocm_rq_295',
               lower: [requestId],
               includeLower: false,
               upper: [],
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'requestId',
+              indexName: r'i_ocm_rq_295',
               lower: [],
               upper: [requestId],
               includeUpper: false,
@@ -536,7 +536,7 @@ extension OfflineChatMessageQueryWhere
       sessionIdEqualTo(String sessionId) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'sessionId',
+        indexName: r'i_ocm_si_610',
         value: [sessionId],
       ));
     });
@@ -548,13 +548,13 @@ extension OfflineChatMessageQueryWhere
       if (query.whereSort == Sort.asc) {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'sessionId',
+              indexName: r'i_ocm_si_610',
               lower: [],
               upper: [sessionId],
               includeUpper: false,
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'sessionId',
+              indexName: r'i_ocm_si_610',
               lower: [sessionId],
               includeLower: false,
               upper: [],
@@ -562,13 +562,13 @@ extension OfflineChatMessageQueryWhere
       } else {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'sessionId',
+              indexName: r'i_ocm_si_610',
               lower: [sessionId],
               includeLower: false,
               upper: [],
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'sessionId',
+              indexName: r'i_ocm_si_610',
               lower: [],
               upper: [sessionId],
               includeUpper: false,
@@ -581,7 +581,7 @@ extension OfflineChatMessageQueryWhere
       userIdEqualTo(String userId) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'userId',
+        indexName: r'i_ocm_ui_38',
         value: [userId],
       ));
     });
@@ -593,13 +593,13 @@ extension OfflineChatMessageQueryWhere
       if (query.whereSort == Sort.asc) {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'userId',
+              indexName: r'i_ocm_ui_38',
               lower: [],
               upper: [userId],
               includeUpper: false,
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'userId',
+              indexName: r'i_ocm_ui_38',
               lower: [userId],
               includeLower: false,
               upper: [],
@@ -607,13 +607,13 @@ extension OfflineChatMessageQueryWhere
       } else {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'userId',
+              indexName: r'i_ocm_ui_38',
               lower: [userId],
               includeLower: false,
               upper: [],
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'userId',
+              indexName: r'i_ocm_ui_38',
               lower: [],
               upper: [userId],
               includeUpper: false,
@@ -626,7 +626,7 @@ extension OfflineChatMessageQueryWhere
       createdAtEqualTo(DateTime createdAt) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'createdAt',
+        indexName: r'i_ocm_ca_2577',
         value: [createdAt],
       ));
     });
@@ -638,13 +638,13 @@ extension OfflineChatMessageQueryWhere
       if (query.whereSort == Sort.asc) {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'createdAt',
+              indexName: r'i_ocm_ca_2577',
               lower: [],
               upper: [createdAt],
               includeUpper: false,
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'createdAt',
+              indexName: r'i_ocm_ca_2577',
               lower: [createdAt],
               includeLower: false,
               upper: [],
@@ -652,13 +652,13 @@ extension OfflineChatMessageQueryWhere
       } else {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'createdAt',
+              indexName: r'i_ocm_ca_2577',
               lower: [createdAt],
               includeLower: false,
               upper: [],
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'createdAt',
+              indexName: r'i_ocm_ca_2577',
               lower: [],
               upper: [createdAt],
               includeUpper: false,
@@ -674,7 +674,7 @@ extension OfflineChatMessageQueryWhere
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'createdAt',
+        indexName: r'i_ocm_ca_2577',
         lower: [createdAt],
         includeLower: include,
         upper: [],
@@ -689,7 +689,7 @@ extension OfflineChatMessageQueryWhere
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'createdAt',
+        indexName: r'i_ocm_ca_2577',
         lower: [],
         upper: [createdAt],
         includeUpper: include,
@@ -706,7 +706,7 @@ extension OfflineChatMessageQueryWhere
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'createdAt',
+        indexName: r'i_ocm_ca_2577',
         lower: [lowerCreatedAt],
         includeLower: includeLower,
         upper: [upperCreatedAt],

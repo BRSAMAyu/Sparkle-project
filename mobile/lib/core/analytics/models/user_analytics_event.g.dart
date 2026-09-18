@@ -15,8 +15,8 @@ extension GetUserAnalyticsEventCollection on Isar {
 }
 
 const UserAnalyticsEventSchema = CollectionSchema(
-  name: r'UserAnalyticsEvent',
-  id: -3318795795869062872,
+  name: r'uae_815',
+  id: 3341237462618802,
   properties: {
     r'eventType': PropertySchema(
       id: 0,
@@ -40,9 +40,9 @@ const UserAnalyticsEventSchema = CollectionSchema(
   deserializeProp: _userAnalyticsEventDeserializeProp,
   idName: r'id',
   indexes: {
-    r'eventType': IndexSchema(
-      id: -3849237371187389498,
-      name: r'eventType',
+    r'i_uae_et_106': IndexSchema(
+      id: -3639151640236431,
+      name: r'i_uae_et_106',
       unique: false,
       replace: false,
       properties: [
@@ -53,9 +53,9 @@ const UserAnalyticsEventSchema = CollectionSchema(
         )
       ],
     ),
-    r'timestamp': IndexSchema(
-      id: 1852253767416892198,
-      name: r'timestamp',
+    r'i_uae_ts_1220': IndexSchema(
+      id: -3200436576927553,
+      name: r'i_uae_ts_1220',
       unique: false,
       replace: false,
       properties: [
@@ -160,7 +160,7 @@ extension UserAnalyticsEventQueryWhereSort
       anyTimestamp() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
-        const IndexWhereClause.any(indexName: r'timestamp'),
+        const IndexWhereClause.any(indexName: r'i_uae_ts_1220'),
       );
     });
   }
@@ -240,7 +240,7 @@ extension UserAnalyticsEventQueryWhere
       eventTypeEqualTo(String eventType) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'eventType',
+        indexName: r'i_uae_et_106',
         value: [eventType],
       ));
     });
@@ -252,13 +252,13 @@ extension UserAnalyticsEventQueryWhere
       if (query.whereSort == Sort.asc) {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'eventType',
+              indexName: r'i_uae_et_106',
               lower: [],
               upper: [eventType],
               includeUpper: false,
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'eventType',
+              indexName: r'i_uae_et_106',
               lower: [eventType],
               includeLower: false,
               upper: [],
@@ -266,13 +266,13 @@ extension UserAnalyticsEventQueryWhere
       } else {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'eventType',
+              indexName: r'i_uae_et_106',
               lower: [eventType],
               includeLower: false,
               upper: [],
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'eventType',
+              indexName: r'i_uae_et_106',
               lower: [],
               upper: [eventType],
               includeUpper: false,
@@ -285,7 +285,7 @@ extension UserAnalyticsEventQueryWhere
       timestampEqualTo(DateTime timestamp) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'timestamp',
+        indexName: r'i_uae_ts_1220',
         value: [timestamp],
       ));
     });
@@ -297,13 +297,13 @@ extension UserAnalyticsEventQueryWhere
       if (query.whereSort == Sort.asc) {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'timestamp',
+              indexName: r'i_uae_ts_1220',
               lower: [],
               upper: [timestamp],
               includeUpper: false,
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'timestamp',
+              indexName: r'i_uae_ts_1220',
               lower: [timestamp],
               includeLower: false,
               upper: [],
@@ -311,13 +311,13 @@ extension UserAnalyticsEventQueryWhere
       } else {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'timestamp',
+              indexName: r'i_uae_ts_1220',
               lower: [timestamp],
               includeLower: false,
               upper: [],
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'timestamp',
+              indexName: r'i_uae_ts_1220',
               lower: [],
               upper: [timestamp],
               includeUpper: false,
@@ -333,7 +333,7 @@ extension UserAnalyticsEventQueryWhere
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'timestamp',
+        indexName: r'i_uae_ts_1220',
         lower: [timestamp],
         includeLower: include,
         upper: [],
@@ -348,7 +348,7 @@ extension UserAnalyticsEventQueryWhere
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'timestamp',
+        indexName: r'i_uae_ts_1220',
         lower: [],
         upper: [timestamp],
         includeUpper: include,
@@ -365,7 +365,7 @@ extension UserAnalyticsEventQueryWhere
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'timestamp',
+        indexName: r'i_uae_ts_1220',
         lower: [lowerTimestamp],
         includeLower: includeLower,
         upper: [upperTimestamp],

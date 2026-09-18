@@ -14,8 +14,8 @@ extension GetVocabWordCollection on Isar {
 }
 
 const VocabWordSchema = CollectionSchema(
-  name: r'VocabWord',
-  id: 5401094777627121794,
+  name: r'vw_1458',
+  id: 2677589235407964,
   properties: {
     r'accuracyRate': PropertySchema(
       id: 0,
@@ -119,9 +119,9 @@ const VocabWordSchema = CollectionSchema(
   deserializeProp: _vocabWordDeserializeProp,
   idName: r'id',
   indexes: {
-    r'word': IndexSchema(
-      id: -2031626334120420267,
-      name: r'word',
+    r'i_vw_wd_1824': IndexSchema(
+      id: -2770437999031517,
+      name: r'i_vw_wd_1824',
       unique: true,
       replace: false,
       properties: [
@@ -132,9 +132,9 @@ const VocabWordSchema = CollectionSchema(
         )
       ],
     ),
-    r'nextReviewAt': IndexSchema(
-      id: -3214419740154650383,
-      name: r'nextReviewAt',
+    r'i_vw_nr_395': IndexSchema(
+      id: -2122125856233114,
+      name: r'i_vw_nr_395',
       unique: false,
       replace: false,
       properties: [
@@ -145,9 +145,9 @@ const VocabWordSchema = CollectionSchema(
         )
       ],
     ),
-    r'createdAt': IndexSchema(
-      id: -3433535483987302584,
-      name: r'createdAt',
+    r'i_vw_ca_2607': IndexSchema(
+      id: -8466026553318978,
+      name: r'i_vw_ca_2607',
       unique: false,
       replace: false,
       properties: [
@@ -338,55 +338,55 @@ void _vocabWordAttach(IsarCollection<dynamic> col, Id id, VocabWord object) {
 
 extension VocabWordByIndex on IsarCollection<VocabWord> {
   Future<VocabWord?> getByWord(String word) {
-    return getByIndex(r'word', [word]);
+    return getByIndex(r'i_vw_wd_1824', [word]);
   }
 
   VocabWord? getByWordSync(String word) {
-    return getByIndexSync(r'word', [word]);
+    return getByIndexSync(r'i_vw_wd_1824', [word]);
   }
 
   Future<bool> deleteByWord(String word) {
-    return deleteByIndex(r'word', [word]);
+    return deleteByIndex(r'i_vw_wd_1824', [word]);
   }
 
   bool deleteByWordSync(String word) {
-    return deleteByIndexSync(r'word', [word]);
+    return deleteByIndexSync(r'i_vw_wd_1824', [word]);
   }
 
   Future<List<VocabWord?>> getAllByWord(List<String> wordValues) {
     final values = wordValues.map((e) => [e]).toList();
-    return getAllByIndex(r'word', values);
+    return getAllByIndex(r'i_vw_wd_1824', values);
   }
 
   List<VocabWord?> getAllByWordSync(List<String> wordValues) {
     final values = wordValues.map((e) => [e]).toList();
-    return getAllByIndexSync(r'word', values);
+    return getAllByIndexSync(r'i_vw_wd_1824', values);
   }
 
   Future<int> deleteAllByWord(List<String> wordValues) {
     final values = wordValues.map((e) => [e]).toList();
-    return deleteAllByIndex(r'word', values);
+    return deleteAllByIndex(r'i_vw_wd_1824', values);
   }
 
   int deleteAllByWordSync(List<String> wordValues) {
     final values = wordValues.map((e) => [e]).toList();
-    return deleteAllByIndexSync(r'word', values);
+    return deleteAllByIndexSync(r'i_vw_wd_1824', values);
   }
 
   Future<Id> putByWord(VocabWord object) {
-    return putByIndex(r'word', object);
+    return putByIndex(r'i_vw_wd_1824', object);
   }
 
   Id putByWordSync(VocabWord object, {bool saveLinks = true}) {
-    return putByIndexSync(r'word', object, saveLinks: saveLinks);
+    return putByIndexSync(r'i_vw_wd_1824', object, saveLinks: saveLinks);
   }
 
   Future<List<Id>> putAllByWord(List<VocabWord> objects) {
-    return putAllByIndex(r'word', objects);
+    return putAllByIndex(r'i_vw_wd_1824', objects);
   }
 
   List<Id> putAllByWordSync(List<VocabWord> objects, {bool saveLinks = true}) {
-    return putAllByIndexSync(r'word', objects, saveLinks: saveLinks);
+    return putAllByIndexSync(r'i_vw_wd_1824', objects, saveLinks: saveLinks);
   }
 }
 
@@ -401,7 +401,7 @@ extension VocabWordQueryWhereSort
   QueryBuilder<VocabWord, VocabWord, QAfterWhere> anyNextReviewAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
-        const IndexWhereClause.any(indexName: r'nextReviewAt'),
+        const IndexWhereClause.any(indexName: r'i_vw_nr_395'),
       );
     });
   }
@@ -409,7 +409,7 @@ extension VocabWordQueryWhereSort
   QueryBuilder<VocabWord, VocabWord, QAfterWhere> anyCreatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
-        const IndexWhereClause.any(indexName: r'createdAt'),
+        const IndexWhereClause.any(indexName: r'i_vw_ca_2607'),
       );
     });
   }
@@ -486,7 +486,7 @@ extension VocabWordQueryWhere
       String word) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'word',
+        indexName: r'i_vw_wd_1824',
         value: [word],
       ));
     });
@@ -498,13 +498,13 @@ extension VocabWordQueryWhere
       if (query.whereSort == Sort.asc) {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'word',
+              indexName: r'i_vw_wd_1824',
               lower: [],
               upper: [word],
               includeUpper: false,
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'word',
+              indexName: r'i_vw_wd_1824',
               lower: [word],
               includeLower: false,
               upper: [],
@@ -512,13 +512,13 @@ extension VocabWordQueryWhere
       } else {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'word',
+              indexName: r'i_vw_wd_1824',
               lower: [word],
               includeLower: false,
               upper: [],
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'word',
+              indexName: r'i_vw_wd_1824',
               lower: [],
               upper: [word],
               includeUpper: false,
@@ -530,7 +530,7 @@ extension VocabWordQueryWhere
   QueryBuilder<VocabWord, VocabWord, QAfterWhereClause> nextReviewAtIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'nextReviewAt',
+        indexName: r'i_vw_nr_395',
         value: [null],
       ));
     });
@@ -540,7 +540,7 @@ extension VocabWordQueryWhere
       nextReviewAtIsNotNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'nextReviewAt',
+        indexName: r'i_vw_nr_395',
         lower: [null],
         includeLower: false,
         upper: [],
@@ -552,7 +552,7 @@ extension VocabWordQueryWhere
       DateTime? nextReviewAt) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'nextReviewAt',
+        indexName: r'i_vw_nr_395',
         value: [nextReviewAt],
       ));
     });
@@ -564,13 +564,13 @@ extension VocabWordQueryWhere
       if (query.whereSort == Sort.asc) {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'nextReviewAt',
+              indexName: r'i_vw_nr_395',
               lower: [],
               upper: [nextReviewAt],
               includeUpper: false,
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'nextReviewAt',
+              indexName: r'i_vw_nr_395',
               lower: [nextReviewAt],
               includeLower: false,
               upper: [],
@@ -578,13 +578,13 @@ extension VocabWordQueryWhere
       } else {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'nextReviewAt',
+              indexName: r'i_vw_nr_395',
               lower: [nextReviewAt],
               includeLower: false,
               upper: [],
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'nextReviewAt',
+              indexName: r'i_vw_nr_395',
               lower: [],
               upper: [nextReviewAt],
               includeUpper: false,
@@ -599,7 +599,7 @@ extension VocabWordQueryWhere
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'nextReviewAt',
+        indexName: r'i_vw_nr_395',
         lower: [nextReviewAt],
         includeLower: include,
         upper: [],
@@ -613,7 +613,7 @@ extension VocabWordQueryWhere
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'nextReviewAt',
+        indexName: r'i_vw_nr_395',
         lower: [],
         upper: [nextReviewAt],
         includeUpper: include,
@@ -629,7 +629,7 @@ extension VocabWordQueryWhere
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'nextReviewAt',
+        indexName: r'i_vw_nr_395',
         lower: [lowerNextReviewAt],
         includeLower: includeLower,
         upper: [upperNextReviewAt],
@@ -642,7 +642,7 @@ extension VocabWordQueryWhere
       DateTime createdAt) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'createdAt',
+        indexName: r'i_vw_ca_2607',
         value: [createdAt],
       ));
     });
@@ -654,13 +654,13 @@ extension VocabWordQueryWhere
       if (query.whereSort == Sort.asc) {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'createdAt',
+              indexName: r'i_vw_ca_2607',
               lower: [],
               upper: [createdAt],
               includeUpper: false,
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'createdAt',
+              indexName: r'i_vw_ca_2607',
               lower: [createdAt],
               includeLower: false,
               upper: [],
@@ -668,13 +668,13 @@ extension VocabWordQueryWhere
       } else {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'createdAt',
+              indexName: r'i_vw_ca_2607',
               lower: [createdAt],
               includeLower: false,
               upper: [],
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'createdAt',
+              indexName: r'i_vw_ca_2607',
               lower: [],
               upper: [createdAt],
               includeUpper: false,
@@ -689,7 +689,7 @@ extension VocabWordQueryWhere
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'createdAt',
+        indexName: r'i_vw_ca_2607',
         lower: [createdAt],
         includeLower: include,
         upper: [],
@@ -703,7 +703,7 @@ extension VocabWordQueryWhere
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'createdAt',
+        indexName: r'i_vw_ca_2607',
         lower: [],
         upper: [createdAt],
         includeUpper: include,
@@ -719,7 +719,7 @@ extension VocabWordQueryWhere
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'createdAt',
+        indexName: r'i_vw_ca_2607',
         lower: [lowerCreatedAt],
         includeLower: includeLower,
         upper: [upperCreatedAt],
@@ -3381,8 +3381,8 @@ extension GetVocabReviewCollection on Isar {
 }
 
 const VocabReviewSchema = CollectionSchema(
-  name: r'VocabReview',
-  id: 1130987134492619130,
+  name: r'vr_85',
+  id: 4012424606900584,
   properties: {
     r'remembered': PropertySchema(
       id: 0,
@@ -3411,9 +3411,9 @@ const VocabReviewSchema = CollectionSchema(
   deserializeProp: _vocabReviewDeserializeProp,
   idName: r'id',
   indexes: {
-    r'vocabWordId': IndexSchema(
-      id: -6719879673897648381,
-      name: r'vocabWordId',
+    r'i_vr_vi_428': IndexSchema(
+      id: -4820060898820937,
+      name: r'i_vr_vi_428',
       unique: false,
       replace: false,
       properties: [
@@ -3513,7 +3513,7 @@ extension VocabReviewQueryWhereSort
   QueryBuilder<VocabReview, VocabReview, QAfterWhere> anyVocabWordId() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
-        const IndexWhereClause.any(indexName: r'vocabWordId'),
+        const IndexWhereClause.any(indexName: r'i_vr_vi_428'),
       );
     });
   }
@@ -3591,7 +3591,7 @@ extension VocabReviewQueryWhere
       int vocabWordId) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'vocabWordId',
+        indexName: r'i_vr_vi_428',
         value: [vocabWordId],
       ));
     });
@@ -3603,13 +3603,13 @@ extension VocabReviewQueryWhere
       if (query.whereSort == Sort.asc) {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'vocabWordId',
+              indexName: r'i_vr_vi_428',
               lower: [],
               upper: [vocabWordId],
               includeUpper: false,
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'vocabWordId',
+              indexName: r'i_vr_vi_428',
               lower: [vocabWordId],
               includeLower: false,
               upper: [],
@@ -3617,13 +3617,13 @@ extension VocabReviewQueryWhere
       } else {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'vocabWordId',
+              indexName: r'i_vr_vi_428',
               lower: [vocabWordId],
               includeLower: false,
               upper: [],
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'vocabWordId',
+              indexName: r'i_vr_vi_428',
               lower: [],
               upper: [vocabWordId],
               includeUpper: false,
@@ -3639,7 +3639,7 @@ extension VocabReviewQueryWhere
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'vocabWordId',
+        indexName: r'i_vr_vi_428',
         lower: [vocabWordId],
         includeLower: include,
         upper: [],
@@ -3653,7 +3653,7 @@ extension VocabReviewQueryWhere
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'vocabWordId',
+        indexName: r'i_vr_vi_428',
         lower: [],
         upper: [vocabWordId],
         includeUpper: include,
@@ -3669,7 +3669,7 @@ extension VocabReviewQueryWhere
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'vocabWordId',
+        indexName: r'i_vr_vi_428',
         lower: [lowerVocabWordId],
         includeLower: includeLower,
         upper: [upperVocabWordId],

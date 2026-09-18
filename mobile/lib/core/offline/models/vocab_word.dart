@@ -3,13 +3,14 @@ import 'package:isar/isar.dart';
 part 'vocab_word.g.dart';
 
 @collection
+@Name('vw_1458')
 class VocabWord {
 
   VocabWord();
   Id id = Isar.autoIncrement;
 
   // Word information
-  @Index(unique: true)
+  @Index(name: 'i_vw_wd_1824', unique: true)
   late String word;
   String? phonetic;
   String? definition;
@@ -20,7 +21,7 @@ class VocabWord {
   late int importance;
 
   // Review system (calculate interval based on importance)
-  @Index()
+  @Index(name: 'i_vw_nr_395')
   DateTime? nextReviewAt;
   late int reviewCount;
   DateTime? lastReviewAt;
@@ -34,7 +35,7 @@ class VocabWord {
   String? taskId;
 
   // Timestamps
-  @Index()
+  @Index(name: 'i_vw_ca_2607')
   late DateTime createdAt;
   late DateTime updatedAt;
 
@@ -176,12 +177,13 @@ class VocabWord {
 
 /// Collection for review history tracking
 @collection
+@Name('vr_85')
 class VocabReview {
 
   VocabReview();
   Id id = Isar.autoIncrement;
 
-  @Index()
+  @Index(name: 'i_vr_vi_428')
   late int vocabWordId;
 
   late bool remembered;

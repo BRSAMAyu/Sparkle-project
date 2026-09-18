@@ -3,11 +3,12 @@ import 'package:isar/isar.dart';
 part 'translation_record.g.dart';
 
 @collection
+@Name('tr_106')
 class TranslationRecord {
   Id id = Isar.autoIncrement;
 
   // Translation content
-  @Index()
+  @Index(name: 'i_tr_ot_259')
   late String originalText;
   late String translatedText;
   late String sourceLanguage;
@@ -22,20 +23,23 @@ class TranslationRecord {
   DateTime? lastViewedAt;
 
   // Timestamp
-  @Index()
+  @Index(name: 'i_tr_ca_383')
   late DateTime createdAt;
 
   // Associated words (extracted keywords)
+  // JS-safe link name: link id = xxh3(name, seed: xxh3('tr_106')) must stay < 2^53 (flutter-web)
+  @Name('lk_tr_ew_125')
   final extractedWords = IsarLinks<TranslationWordLink>();
 }
 
 @collection
+@Name('twl_1217')
 class TranslationWordLink {
 
   TranslationWordLink();
   Id id = Isar.autoIncrement;
 
-  @Index()
+  @Index(name: 'i_twl_tri_85')
   late int translationRecordId;
 
   late String word;

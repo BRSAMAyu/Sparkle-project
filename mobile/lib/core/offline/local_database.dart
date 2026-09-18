@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:sparkle/core/analytics/models/user_analytics_event.dart';
+import 'package:sparkle/core/offline/local_database_store.dart';
 import 'package:sparkle/core/offline/models/focus_session_record.dart';
 import 'package:sparkle/core/offline/models/offline_chat_message.dart';
 import 'package:sparkle/core/offline/models/translation_record.dart';
@@ -27,10 +27,11 @@ enum SyncStatus {
 }
 
 @collection
+@Name('kn_950')
 class LocalKnowledgeNode {
   Id id = Isar.autoIncrement;
 
-  @Index(unique: true)
+  @Index(name: 'i_kn_si_3333', unique: true)
   late String serverId; // Corresponds to server node ID
 
   late String name;
@@ -48,6 +49,7 @@ class LocalKnowledgeNode {
 }
 
 @collection
+@Name('pu_2239')
 class PendingUpdate {
   Id id = Isar.autoIncrement;
 
@@ -56,7 +58,7 @@ class PendingUpdate {
   late DateTime timestamp;
   late bool synced;
 
-  @Index()
+  @Index(name: 'i_pu_ca_1082')
   late DateTime createdAt;
 
   String? requestId; // UUID for ACK matching
@@ -69,10 +71,11 @@ class PendingUpdate {
 }
 
 @collection
+@Name('crdt_2016')
 class LocalCRDTSnapshot {
   Id id = Isar.autoIncrement;
 
-  @Index(unique: true)
+  @Index(name: 'i_crdt_gi_222', unique: true)
   late String galaxyId;
 
   late List<int> updateData;
@@ -81,16 +84,17 @@ class LocalCRDTSnapshot {
 }
 
 @collection
+@Name('obx_669')
 class OutboxItem {
   Id id = Isar.autoIncrement;
 
-  @Index()
+  @Index(name: 'i_obx_ty_2494')
   String? type; // Legacy: e.g. 'mastery_update', 'spark_creation'
 
-  @Index()
+  @Index(name: 'i_obx_uu_2715')
   String? uuid;
 
-  @Index()
+  @Index(name: 'i_obx_tp_285')
   String? topic; // e.g. 'cognitive', 'knowledge', 'analytics'
 
   String? opType; // create/update/delete/patch
@@ -101,10 +105,10 @@ class OutboxItem {
   String? payloadJson; // Serialized JSON payload
   List<int>? payloadBytes; // Optional protobuf payload
 
-  @Index()
+  @Index(name: 'i_obx_dk_92')
   String? dedupeKey;
 
-  @Index()
+  @Index(name: 'i_obx_ca_974')
   late DateTime createdAt;
 
   int attemptCount = 0;
@@ -129,76 +133,78 @@ class LocalDatabase {
   LocalDatabase._internal();
   static final LocalDatabase _instance = LocalDatabase._internal();
 
-  Isar? _isar;
-  bool _initialized = false;
+  /// 平台存储后端（条件导入闸）：io 上为真实 Isar，web 上为 no-op 桩。
+  /// 见 local_database_store.dart 与 local_database_store_web.dart 的 TODO。
+  final LocalDatabaseStore _store = createLocalDatabaseStore();
 
-  /// Returns the Isar instance, or null if not initialized (test mode).
-  Isar? get isarOrNull {
-    if (!_initialized || _isar == null) return null;
-    return _isar!;
-  }
+  /// Test-only injection; takes precedence over [_store] when set.
+  Isar? _isarOverride;
+
+  /// Returns the Isar instance, or null if not initialized (test mode / web stub).
+  Isar? get isarOrNull => _isarOverride ?? _store.isarOrNull;
 
   Isar get isar {
-    if (!_initialized || _isar == null) {
-      if (localDatabaseTestMode) {
-        throw StateError('LocalDatabase.testMode: isar not available');
-      }
-      throw StateError('LocalDatabase not initialized. Call init() first.');
+    final isar = isarOrNull;
+    if (isar != null) {
+      return isar;
     }
-    return _isar!;
+    if (localDatabaseTestMode) {
+      throw StateError('LocalDatabase.testMode: isar not available');
+    }
+    if (_store.kind == 'web-stub') {
+      // TODO(multi-platform): Web 端离线存储（IndexedDB）接入前，依赖 Isar
+      // 的离线队列 / 翻译历史 / 统计缓存 / CRDT 快照在 Web 上降级不可用。
+      throw UnsupportedError(
+        'LocalDatabase: Isar is unavailable on Web (web-stub backend, '
+        'see local_database_store_web.dart).',
+      );
+    }
+    throw StateError('LocalDatabase not initialized. Call init() first.');
   }
 
-  bool get isInitialized => _initialized;
+  bool get isInitialized => _isarOverride != null || _store.isReady;
 
   /// Test-only setter to inject a real Isar instance without calling init().
   set isar(Isar value) {
-    _isar = value;
-    _initialized = true;
+    _isarOverride = value;
   }
 
   Future<void> init() async {
-    final dir = await getApplicationDocumentsDirectory();
-    // In production, you would fetch a secure key from SecureStorage
-    // final secureStorage = const FlutterSecureStorage();
-    // final encryptionKey = await secureStorage.read(key: 'db_key');
-
-    _isar = await Isar.open(
-      [
-        LocalKnowledgeNodeSchema,
-        PendingUpdateSchema,
-        LocalCRDTSnapshotSchema,
-        OutboxItemSchema,
-        UserAnalyticsEventSchema,
-        TranslationRecordSchema,
-        TranslationWordLinkSchema,
-        VocabWordSchema,
-        VocabReviewSchema,
-        FocusSessionRecordSchema, // Added for focus statistics
-        CachedStatisticsModelSchema, // Added for unified statistics caching
-        OfflineChatMessageSchema, // Added for offline message queue
-      ],
-      directory: dir.path,
-    );
-    _initialized = true;
+    if (_isarOverride != null) return; // 测试注入的实例优先，避免被真实打开覆盖
+    await _store.init(<CollectionSchema<dynamic>>[
+      LocalKnowledgeNodeSchema,
+      PendingUpdateSchema,
+      LocalCRDTSnapshotSchema,
+      OutboxItemSchema,
+      UserAnalyticsEventSchema,
+      TranslationRecordSchema,
+      TranslationWordLinkSchema,
+      VocabWordSchema,
+      VocabReviewSchema,
+      FocusSessionRecordSchema, // Added for focus statistics
+      CachedStatisticsModelSchema, // Added for unified statistics caching
+      OfflineChatMessageSchema, // Added for offline message queue
+    ]);
   }
 
   Future<void> clearUserScopedData() async {
-    if (!_initialized || _isar == null || !_isar!.isOpen) {
+    final isar = isarOrNull;
+    if (isar == null || !isar.isOpen) {
       return;
     }
-    await _isar!.writeTxn(() async {
-      await _isar!.localKnowledgeNodes.clear();
-      await _isar!.pendingUpdates.clear();
-      await _isar!.localCRDTSnapshots.clear();
-      await _isar!.outboxItems.clear();
-      await _isar!.userAnalyticsEvents.clear();
-      await _isar!.focusSessionRecords.clear();
-      await _isar!.cachedStatisticsModels.clear();
-      await _isar!.offlineChatMessages.clear();
-      await _isar!.translationWordLinks.clear();
-      await _isar!.translationRecords.clear();
-      await _isar!.vocabReviews.clear();
-      await _isar!.vocabWords.clear();
+    await isar.writeTxn(() async {
+      await isar.localKnowledgeNodes.clear();
+      await isar.pendingUpdates.clear();
+      await isar.localCRDTSnapshots.clear();
+      await isar.outboxItems.clear();
+      await isar.userAnalyticsEvents.clear();
+      await isar.focusSessionRecords.clear();
+      await isar.cachedStatisticsModels.clear();
+      await isar.offlineChatMessages.clear();
+      await isar.translationWordLinks.clear();
+      await isar.translationRecords.clear();
+      await isar.vocabReviews.clear();
+      await isar.vocabWords.clear();
     });
   }
 

@@ -5,15 +5,16 @@ part 'focus_session_record.g.dart';
 /// Focus session record stored locally in Isar database
 /// Enables offline support and automatic sync when online
 @collection
+@Name('fsr_1487')
 class FocusSessionRecord {
   Id id = Isar.autoIncrement;
 
   /// Server ID for deduplication and sync
-  @Index(unique: true)
+  @Index(name: 'i_fsr_si_17', unique: true)
   String? serverId;
 
   /// Session start time
-  @Index()
+  @Index(name: 'i_fsr_st_185')
   late DateTime startTime;
 
   /// Session end time
@@ -44,11 +45,11 @@ class FocusSessionRecord {
   int? qualityScore;
 
   /// Whether this record has been synced to server
-  @Index()
+  @Index(name: 'i_fsr_is_272')
   late bool isSynced;
 
   /// When this record was created locally
-  @Index()
+  @Index(name: 'i_fsr_ca_533')
   late DateTime createdAt;
 
   /// Last sync attempt timestamp

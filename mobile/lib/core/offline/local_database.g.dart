@@ -15,8 +15,8 @@ extension GetLocalKnowledgeNodeCollection on Isar {
 }
 
 const LocalKnowledgeNodeSchema = CollectionSchema(
-  name: r'LocalKnowledgeNode',
-  id: -6001451523696174667,
+  name: r'kn_950',
+  id: 8993238488764258,
   properties: {
     r'error': PropertySchema(
       id: 0,
@@ -66,9 +66,9 @@ const LocalKnowledgeNodeSchema = CollectionSchema(
   deserializeProp: _localKnowledgeNodeDeserializeProp,
   idName: r'id',
   indexes: {
-    r'serverId': IndexSchema(
-      id: -7950187970872907662,
-      name: r'serverId',
+    r'i_kn_si_3333': IndexSchema(
+      id: 4323652823530777,
+      name: r'i_kn_si_3333',
       unique: true,
       replace: false,
       properties: [
@@ -203,57 +203,57 @@ void _localKnowledgeNodeAttach(
 
 extension LocalKnowledgeNodeByIndex on IsarCollection<LocalKnowledgeNode> {
   Future<LocalKnowledgeNode?> getByServerId(String serverId) {
-    return getByIndex(r'serverId', [serverId]);
+    return getByIndex(r'i_kn_si_3333', [serverId]);
   }
 
   LocalKnowledgeNode? getByServerIdSync(String serverId) {
-    return getByIndexSync(r'serverId', [serverId]);
+    return getByIndexSync(r'i_kn_si_3333', [serverId]);
   }
 
   Future<bool> deleteByServerId(String serverId) {
-    return deleteByIndex(r'serverId', [serverId]);
+    return deleteByIndex(r'i_kn_si_3333', [serverId]);
   }
 
   bool deleteByServerIdSync(String serverId) {
-    return deleteByIndexSync(r'serverId', [serverId]);
+    return deleteByIndexSync(r'i_kn_si_3333', [serverId]);
   }
 
   Future<List<LocalKnowledgeNode?>> getAllByServerId(
       List<String> serverIdValues) {
     final values = serverIdValues.map((e) => [e]).toList();
-    return getAllByIndex(r'serverId', values);
+    return getAllByIndex(r'i_kn_si_3333', values);
   }
 
   List<LocalKnowledgeNode?> getAllByServerIdSync(List<String> serverIdValues) {
     final values = serverIdValues.map((e) => [e]).toList();
-    return getAllByIndexSync(r'serverId', values);
+    return getAllByIndexSync(r'i_kn_si_3333', values);
   }
 
   Future<int> deleteAllByServerId(List<String> serverIdValues) {
     final values = serverIdValues.map((e) => [e]).toList();
-    return deleteAllByIndex(r'serverId', values);
+    return deleteAllByIndex(r'i_kn_si_3333', values);
   }
 
   int deleteAllByServerIdSync(List<String> serverIdValues) {
     final values = serverIdValues.map((e) => [e]).toList();
-    return deleteAllByIndexSync(r'serverId', values);
+    return deleteAllByIndexSync(r'i_kn_si_3333', values);
   }
 
   Future<Id> putByServerId(LocalKnowledgeNode object) {
-    return putByIndex(r'serverId', object);
+    return putByIndex(r'i_kn_si_3333', object);
   }
 
   Id putByServerIdSync(LocalKnowledgeNode object, {bool saveLinks = true}) {
-    return putByIndexSync(r'serverId', object, saveLinks: saveLinks);
+    return putByIndexSync(r'i_kn_si_3333', object, saveLinks: saveLinks);
   }
 
   Future<List<Id>> putAllByServerId(List<LocalKnowledgeNode> objects) {
-    return putAllByIndex(r'serverId', objects);
+    return putAllByIndex(r'i_kn_si_3333', objects);
   }
 
   List<Id> putAllByServerIdSync(List<LocalKnowledgeNode> objects,
       {bool saveLinks = true}) {
-    return putAllByIndexSync(r'serverId', objects, saveLinks: saveLinks);
+    return putAllByIndexSync(r'i_kn_si_3333', objects, saveLinks: saveLinks);
   }
 }
 
@@ -340,7 +340,7 @@ extension LocalKnowledgeNodeQueryWhere
       serverIdEqualTo(String serverId) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'serverId',
+        indexName: r'i_kn_si_3333',
         value: [serverId],
       ));
     });
@@ -352,13 +352,13 @@ extension LocalKnowledgeNodeQueryWhere
       if (query.whereSort == Sort.asc) {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'serverId',
+              indexName: r'i_kn_si_3333',
               lower: [],
               upper: [serverId],
               includeUpper: false,
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'serverId',
+              indexName: r'i_kn_si_3333',
               lower: [serverId],
               includeLower: false,
               upper: [],
@@ -366,13 +366,13 @@ extension LocalKnowledgeNodeQueryWhere
       } else {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'serverId',
+              indexName: r'i_kn_si_3333',
               lower: [serverId],
               includeLower: false,
               upper: [],
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'serverId',
+              indexName: r'i_kn_si_3333',
               lower: [],
               upper: [serverId],
               includeUpper: false,
@@ -1525,8 +1525,8 @@ extension GetPendingUpdateCollection on Isar {
 }
 
 const PendingUpdateSchema = CollectionSchema(
-  name: r'PendingUpdate',
-  id: -7191002830170079764,
+  name: r'pu_2239',
+  id: 2244329265253328,
   properties: {
     r'createdAt': PropertySchema(
       id: 0,
@@ -1581,9 +1581,9 @@ const PendingUpdateSchema = CollectionSchema(
   deserializeProp: _pendingUpdateDeserializeProp,
   idName: r'id',
   indexes: {
-    r'createdAt': IndexSchema(
-      id: -3433535483987302584,
-      name: r'createdAt',
+    r'i_pu_ca_1082': IndexSchema(
+      id: 4930828679260741,
+      name: r'i_pu_ca_1082',
       unique: false,
       replace: false,
       properties: [
@@ -1735,7 +1735,7 @@ extension PendingUpdateQueryWhereSort
   QueryBuilder<PendingUpdate, PendingUpdate, QAfterWhere> anyCreatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
-        const IndexWhereClause.any(indexName: r'createdAt'),
+        const IndexWhereClause.any(indexName: r'i_pu_ca_1082'),
       );
     });
   }
@@ -1816,7 +1816,7 @@ extension PendingUpdateQueryWhere
       createdAtEqualTo(DateTime createdAt) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'createdAt',
+        indexName: r'i_pu_ca_1082',
         value: [createdAt],
       ));
     });
@@ -1828,13 +1828,13 @@ extension PendingUpdateQueryWhere
       if (query.whereSort == Sort.asc) {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'createdAt',
+              indexName: r'i_pu_ca_1082',
               lower: [],
               upper: [createdAt],
               includeUpper: false,
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'createdAt',
+              indexName: r'i_pu_ca_1082',
               lower: [createdAt],
               includeLower: false,
               upper: [],
@@ -1842,13 +1842,13 @@ extension PendingUpdateQueryWhere
       } else {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'createdAt',
+              indexName: r'i_pu_ca_1082',
               lower: [createdAt],
               includeLower: false,
               upper: [],
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'createdAt',
+              indexName: r'i_pu_ca_1082',
               lower: [],
               upper: [createdAt],
               includeUpper: false,
@@ -1864,7 +1864,7 @@ extension PendingUpdateQueryWhere
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'createdAt',
+        indexName: r'i_pu_ca_1082',
         lower: [createdAt],
         includeLower: include,
         upper: [],
@@ -1879,7 +1879,7 @@ extension PendingUpdateQueryWhere
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'createdAt',
+        indexName: r'i_pu_ca_1082',
         lower: [],
         upper: [createdAt],
         includeUpper: include,
@@ -1896,7 +1896,7 @@ extension PendingUpdateQueryWhere
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'createdAt',
+        indexName: r'i_pu_ca_1082',
         lower: [lowerCreatedAt],
         includeLower: includeLower,
         upper: [upperCreatedAt],
@@ -3081,8 +3081,8 @@ extension GetLocalCRDTSnapshotCollection on Isar {
 }
 
 const LocalCRDTSnapshotSchema = CollectionSchema(
-  name: r'LocalCRDTSnapshot',
-  id: -7655855584078100351,
+  name: r'crdt_2016',
+  id: 1188525206555705,
   properties: {
     r'galaxyId': PropertySchema(
       id: 0,
@@ -3111,9 +3111,9 @@ const LocalCRDTSnapshotSchema = CollectionSchema(
   deserializeProp: _localCRDTSnapshotDeserializeProp,
   idName: r'id',
   indexes: {
-    r'galaxyId': IndexSchema(
-      id: 5664680132923932384,
-      name: r'galaxyId',
+    r'i_crdt_gi_222': IndexSchema(
+      id: 7111080583039113,
+      name: r'i_crdt_gi_222',
       unique: true,
       replace: false,
       properties: [
@@ -3207,57 +3207,57 @@ void _localCRDTSnapshotAttach(
 
 extension LocalCRDTSnapshotByIndex on IsarCollection<LocalCRDTSnapshot> {
   Future<LocalCRDTSnapshot?> getByGalaxyId(String galaxyId) {
-    return getByIndex(r'galaxyId', [galaxyId]);
+    return getByIndex(r'i_crdt_gi_222', [galaxyId]);
   }
 
   LocalCRDTSnapshot? getByGalaxyIdSync(String galaxyId) {
-    return getByIndexSync(r'galaxyId', [galaxyId]);
+    return getByIndexSync(r'i_crdt_gi_222', [galaxyId]);
   }
 
   Future<bool> deleteByGalaxyId(String galaxyId) {
-    return deleteByIndex(r'galaxyId', [galaxyId]);
+    return deleteByIndex(r'i_crdt_gi_222', [galaxyId]);
   }
 
   bool deleteByGalaxyIdSync(String galaxyId) {
-    return deleteByIndexSync(r'galaxyId', [galaxyId]);
+    return deleteByIndexSync(r'i_crdt_gi_222', [galaxyId]);
   }
 
   Future<List<LocalCRDTSnapshot?>> getAllByGalaxyId(
       List<String> galaxyIdValues) {
     final values = galaxyIdValues.map((e) => [e]).toList();
-    return getAllByIndex(r'galaxyId', values);
+    return getAllByIndex(r'i_crdt_gi_222', values);
   }
 
   List<LocalCRDTSnapshot?> getAllByGalaxyIdSync(List<String> galaxyIdValues) {
     final values = galaxyIdValues.map((e) => [e]).toList();
-    return getAllByIndexSync(r'galaxyId', values);
+    return getAllByIndexSync(r'i_crdt_gi_222', values);
   }
 
   Future<int> deleteAllByGalaxyId(List<String> galaxyIdValues) {
     final values = galaxyIdValues.map((e) => [e]).toList();
-    return deleteAllByIndex(r'galaxyId', values);
+    return deleteAllByIndex(r'i_crdt_gi_222', values);
   }
 
   int deleteAllByGalaxyIdSync(List<String> galaxyIdValues) {
     final values = galaxyIdValues.map((e) => [e]).toList();
-    return deleteAllByIndexSync(r'galaxyId', values);
+    return deleteAllByIndexSync(r'i_crdt_gi_222', values);
   }
 
   Future<Id> putByGalaxyId(LocalCRDTSnapshot object) {
-    return putByIndex(r'galaxyId', object);
+    return putByIndex(r'i_crdt_gi_222', object);
   }
 
   Id putByGalaxyIdSync(LocalCRDTSnapshot object, {bool saveLinks = true}) {
-    return putByIndexSync(r'galaxyId', object, saveLinks: saveLinks);
+    return putByIndexSync(r'i_crdt_gi_222', object, saveLinks: saveLinks);
   }
 
   Future<List<Id>> putAllByGalaxyId(List<LocalCRDTSnapshot> objects) {
-    return putAllByIndex(r'galaxyId', objects);
+    return putAllByIndex(r'i_crdt_gi_222', objects);
   }
 
   List<Id> putAllByGalaxyIdSync(List<LocalCRDTSnapshot> objects,
       {bool saveLinks = true}) {
-    return putAllByIndexSync(r'galaxyId', objects, saveLinks: saveLinks);
+    return putAllByIndexSync(r'i_crdt_gi_222', objects, saveLinks: saveLinks);
   }
 }
 
@@ -3344,7 +3344,7 @@ extension LocalCRDTSnapshotQueryWhere
       galaxyIdEqualTo(String galaxyId) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'galaxyId',
+        indexName: r'i_crdt_gi_222',
         value: [galaxyId],
       ));
     });
@@ -3356,13 +3356,13 @@ extension LocalCRDTSnapshotQueryWhere
       if (query.whereSort == Sort.asc) {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'galaxyId',
+              indexName: r'i_crdt_gi_222',
               lower: [],
               upper: [galaxyId],
               includeUpper: false,
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'galaxyId',
+              indexName: r'i_crdt_gi_222',
               lower: [galaxyId],
               includeLower: false,
               upper: [],
@@ -3370,13 +3370,13 @@ extension LocalCRDTSnapshotQueryWhere
       } else {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'galaxyId',
+              indexName: r'i_crdt_gi_222',
               lower: [galaxyId],
               includeLower: false,
               upper: [],
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'galaxyId',
+              indexName: r'i_crdt_gi_222',
               lower: [],
               upper: [galaxyId],
               includeUpper: false,
@@ -3975,8 +3975,8 @@ extension GetOutboxItemCollection on Isar {
 }
 
 const OutboxItemSchema = CollectionSchema(
-  name: r'OutboxItem',
-  id: 1766147142979069956,
+  name: r'obx_669',
+  id: 4884130198421823,
   properties: {
     r'attemptCount': PropertySchema(
       id: 0,
@@ -4086,9 +4086,9 @@ const OutboxItemSchema = CollectionSchema(
   deserializeProp: _outboxItemDeserializeProp,
   idName: r'id',
   indexes: {
-    r'type': IndexSchema(
-      id: 5117122708147080838,
-      name: r'type',
+    r'i_obx_ty_2494': IndexSchema(
+      id: -3353895660130389,
+      name: r'i_obx_ty_2494',
       unique: false,
       replace: false,
       properties: [
@@ -4099,9 +4099,9 @@ const OutboxItemSchema = CollectionSchema(
         )
       ],
     ),
-    r'uuid': IndexSchema(
-      id: 2134397340427724972,
-      name: r'uuid',
+    r'i_obx_uu_2715': IndexSchema(
+      id: -3240614517893485,
+      name: r'i_obx_uu_2715',
       unique: false,
       replace: false,
       properties: [
@@ -4112,9 +4112,9 @@ const OutboxItemSchema = CollectionSchema(
         )
       ],
     ),
-    r'topic': IndexSchema(
-      id: 1007953096175763270,
-      name: r'topic',
+    r'i_obx_tp_285': IndexSchema(
+      id: -282060520193731,
+      name: r'i_obx_tp_285',
       unique: false,
       replace: false,
       properties: [
@@ -4125,9 +4125,9 @@ const OutboxItemSchema = CollectionSchema(
         )
       ],
     ),
-    r'dedupeKey': IndexSchema(
-      id: -6620796718844543204,
-      name: r'dedupeKey',
+    r'i_obx_dk_92': IndexSchema(
+      id: 5598018337316853,
+      name: r'i_obx_dk_92',
       unique: false,
       replace: false,
       properties: [
@@ -4138,9 +4138,9 @@ const OutboxItemSchema = CollectionSchema(
         )
       ],
     ),
-    r'createdAt': IndexSchema(
-      id: -3433535483987302584,
-      name: r'createdAt',
+    r'i_obx_ca_974': IndexSchema(
+      id: 2834721244162928,
+      name: r'i_obx_ca_974',
       unique: false,
       replace: false,
       properties: [
@@ -4393,7 +4393,7 @@ extension OutboxItemQueryWhereSort
   QueryBuilder<OutboxItem, OutboxItem, QAfterWhere> anyCreatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
-        const IndexWhereClause.any(indexName: r'createdAt'),
+        const IndexWhereClause.any(indexName: r'i_obx_ca_974'),
       );
     });
   }
@@ -4469,7 +4469,7 @@ extension OutboxItemQueryWhere
   QueryBuilder<OutboxItem, OutboxItem, QAfterWhereClause> typeIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'type',
+        indexName: r'i_obx_ty_2494',
         value: [null],
       ));
     });
@@ -4478,7 +4478,7 @@ extension OutboxItemQueryWhere
   QueryBuilder<OutboxItem, OutboxItem, QAfterWhereClause> typeIsNotNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'type',
+        indexName: r'i_obx_ty_2494',
         lower: [null],
         includeLower: false,
         upper: [],
@@ -4490,7 +4490,7 @@ extension OutboxItemQueryWhere
       String? type) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'type',
+        indexName: r'i_obx_ty_2494',
         value: [type],
       ));
     });
@@ -4502,13 +4502,13 @@ extension OutboxItemQueryWhere
       if (query.whereSort == Sort.asc) {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'type',
+              indexName: r'i_obx_ty_2494',
               lower: [],
               upper: [type],
               includeUpper: false,
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'type',
+              indexName: r'i_obx_ty_2494',
               lower: [type],
               includeLower: false,
               upper: [],
@@ -4516,13 +4516,13 @@ extension OutboxItemQueryWhere
       } else {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'type',
+              indexName: r'i_obx_ty_2494',
               lower: [type],
               includeLower: false,
               upper: [],
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'type',
+              indexName: r'i_obx_ty_2494',
               lower: [],
               upper: [type],
               includeUpper: false,
@@ -4534,7 +4534,7 @@ extension OutboxItemQueryWhere
   QueryBuilder<OutboxItem, OutboxItem, QAfterWhereClause> uuidIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'uuid',
+        indexName: r'i_obx_uu_2715',
         value: [null],
       ));
     });
@@ -4543,7 +4543,7 @@ extension OutboxItemQueryWhere
   QueryBuilder<OutboxItem, OutboxItem, QAfterWhereClause> uuidIsNotNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'uuid',
+        indexName: r'i_obx_uu_2715',
         lower: [null],
         includeLower: false,
         upper: [],
@@ -4555,7 +4555,7 @@ extension OutboxItemQueryWhere
       String? uuid) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'uuid',
+        indexName: r'i_obx_uu_2715',
         value: [uuid],
       ));
     });
@@ -4567,13 +4567,13 @@ extension OutboxItemQueryWhere
       if (query.whereSort == Sort.asc) {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'uuid',
+              indexName: r'i_obx_uu_2715',
               lower: [],
               upper: [uuid],
               includeUpper: false,
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'uuid',
+              indexName: r'i_obx_uu_2715',
               lower: [uuid],
               includeLower: false,
               upper: [],
@@ -4581,13 +4581,13 @@ extension OutboxItemQueryWhere
       } else {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'uuid',
+              indexName: r'i_obx_uu_2715',
               lower: [uuid],
               includeLower: false,
               upper: [],
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'uuid',
+              indexName: r'i_obx_uu_2715',
               lower: [],
               upper: [uuid],
               includeUpper: false,
@@ -4599,7 +4599,7 @@ extension OutboxItemQueryWhere
   QueryBuilder<OutboxItem, OutboxItem, QAfterWhereClause> topicIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'topic',
+        indexName: r'i_obx_tp_285',
         value: [null],
       ));
     });
@@ -4608,7 +4608,7 @@ extension OutboxItemQueryWhere
   QueryBuilder<OutboxItem, OutboxItem, QAfterWhereClause> topicIsNotNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'topic',
+        indexName: r'i_obx_tp_285',
         lower: [null],
         includeLower: false,
         upper: [],
@@ -4620,7 +4620,7 @@ extension OutboxItemQueryWhere
       String? topic) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'topic',
+        indexName: r'i_obx_tp_285',
         value: [topic],
       ));
     });
@@ -4632,13 +4632,13 @@ extension OutboxItemQueryWhere
       if (query.whereSort == Sort.asc) {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'topic',
+              indexName: r'i_obx_tp_285',
               lower: [],
               upper: [topic],
               includeUpper: false,
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'topic',
+              indexName: r'i_obx_tp_285',
               lower: [topic],
               includeLower: false,
               upper: [],
@@ -4646,13 +4646,13 @@ extension OutboxItemQueryWhere
       } else {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'topic',
+              indexName: r'i_obx_tp_285',
               lower: [topic],
               includeLower: false,
               upper: [],
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'topic',
+              indexName: r'i_obx_tp_285',
               lower: [],
               upper: [topic],
               includeUpper: false,
@@ -4664,7 +4664,7 @@ extension OutboxItemQueryWhere
   QueryBuilder<OutboxItem, OutboxItem, QAfterWhereClause> dedupeKeyIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'dedupeKey',
+        indexName: r'i_obx_dk_92',
         value: [null],
       ));
     });
@@ -4673,7 +4673,7 @@ extension OutboxItemQueryWhere
   QueryBuilder<OutboxItem, OutboxItem, QAfterWhereClause> dedupeKeyIsNotNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'dedupeKey',
+        indexName: r'i_obx_dk_92',
         lower: [null],
         includeLower: false,
         upper: [],
@@ -4685,7 +4685,7 @@ extension OutboxItemQueryWhere
       String? dedupeKey) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'dedupeKey',
+        indexName: r'i_obx_dk_92',
         value: [dedupeKey],
       ));
     });
@@ -4697,13 +4697,13 @@ extension OutboxItemQueryWhere
       if (query.whereSort == Sort.asc) {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'dedupeKey',
+              indexName: r'i_obx_dk_92',
               lower: [],
               upper: [dedupeKey],
               includeUpper: false,
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'dedupeKey',
+              indexName: r'i_obx_dk_92',
               lower: [dedupeKey],
               includeLower: false,
               upper: [],
@@ -4711,13 +4711,13 @@ extension OutboxItemQueryWhere
       } else {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'dedupeKey',
+              indexName: r'i_obx_dk_92',
               lower: [dedupeKey],
               includeLower: false,
               upper: [],
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'dedupeKey',
+              indexName: r'i_obx_dk_92',
               lower: [],
               upper: [dedupeKey],
               includeUpper: false,
@@ -4730,7 +4730,7 @@ extension OutboxItemQueryWhere
       DateTime createdAt) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'createdAt',
+        indexName: r'i_obx_ca_974',
         value: [createdAt],
       ));
     });
@@ -4742,13 +4742,13 @@ extension OutboxItemQueryWhere
       if (query.whereSort == Sort.asc) {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'createdAt',
+              indexName: r'i_obx_ca_974',
               lower: [],
               upper: [createdAt],
               includeUpper: false,
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'createdAt',
+              indexName: r'i_obx_ca_974',
               lower: [createdAt],
               includeLower: false,
               upper: [],
@@ -4756,13 +4756,13 @@ extension OutboxItemQueryWhere
       } else {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'createdAt',
+              indexName: r'i_obx_ca_974',
               lower: [createdAt],
               includeLower: false,
               upper: [],
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'createdAt',
+              indexName: r'i_obx_ca_974',
               lower: [],
               upper: [createdAt],
               includeUpper: false,
@@ -4777,7 +4777,7 @@ extension OutboxItemQueryWhere
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'createdAt',
+        indexName: r'i_obx_ca_974',
         lower: [createdAt],
         includeLower: include,
         upper: [],
@@ -4791,7 +4791,7 @@ extension OutboxItemQueryWhere
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'createdAt',
+        indexName: r'i_obx_ca_974',
         lower: [],
         upper: [createdAt],
         includeUpper: include,
@@ -4807,7 +4807,7 @@ extension OutboxItemQueryWhere
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'createdAt',
+        indexName: r'i_obx_ca_974',
         lower: [lowerCreatedAt],
         includeLower: includeLower,
         upper: [upperCreatedAt],
