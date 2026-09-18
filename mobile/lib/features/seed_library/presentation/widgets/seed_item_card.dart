@@ -99,28 +99,43 @@ class SeedItemCard extends StatelessWidget {
                         ],
                       ),
 
-                      // Content preview
-                      if (item.content != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: DS.spacing4),
-                          child: IgnorePointer(
-                            child: ClipRect(
-                              child: ConstrainedBox(
-                                constraints:
-                                    const BoxConstraints(maxHeight: 42),
-                                child: SparkleMarkdown(
-                                  content: item.content!,
-                                  textColor: DS.textSecondary,
-                                  codeBackgroundColor: DS.surfaceTertiary,
-                                  linkColor: DS.primaryBase,
-                                  fontSize: 13,
-                                  lineHeight: 1.4,
-                                  contentRole: SparkleMarkdownRole.seedBody,
+                      // Content preview (空态兜底：无正文时显示占位，避免空壳卡片)
+                      Padding(
+                        padding: const EdgeInsets.only(top: DS.spacing4),
+                        child: (item.content != null &&
+                                item.content!.trim().isNotEmpty)
+                            ? IgnorePointer(
+                                child: ClipRect(
+                                  child: ConstrainedBox(
+                                    constraints:
+                                        const BoxConstraints(maxHeight: 42),
+                                    child: SparkleMarkdown(
+                                      content: item.content!,
+                                      textColor: DS.textSecondary,
+                                      codeBackgroundColor:
+                                          DS.surfaceTertiary,
+                                      linkColor: DS.primaryBase,
+                                      fontSize: 13,
+                                      lineHeight: 1.4,
+                                      contentRole:
+                                          SparkleMarkdownRole.seedBody,
+                                    ),
+                                  ),
                                 ),
+                              )
+                            : Text(
+                                context.l10n.seedLibraryNoContent,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: DS.textTertiary,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ),
-                          ),
-                        ),
+                      ),
 
                       // Metadata
                       if (item.subject != null ||

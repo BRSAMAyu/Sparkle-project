@@ -445,7 +445,10 @@ async def lifespan(fastapp: FastAPI):
 
             # 0.5 确保全局成就和皮肤定义存在 (所有用户共享)
             try:
-                from app.data.seed_content_initial import initialize_seed_libraries
+                from app.data.seed_content_initial import (
+                    initialize_seed_libraries,
+                    repair_empty_seed_item_content,
+                )
                 from app.data.shop_seeds import seed_shop_items
                 from app.services.guest_seed_service import (
                     _ensure_achievements,
@@ -457,6 +460,8 @@ async def lifespan(fastapp: FastAPI):
                 await _ensure_galaxy_skins(db)
                 await ensure_global_galaxy_baseline(db)
                 await initialize_seed_libraries(db)
+                # 存量补偿：历史库中 content 为空的官方条目从 content_data 推导回填（幂等）
+                await repair_empty_seed_item_content(db)
                 # 商城物品种子：此前仅手动脚本 scripts/init_shop.py 可触发，
                 # 真实环境 shop_items 常年为空（演示阻断）。seed_shop_items
                 # 自带空表检查（幂等），挂在同一启动引用数据链路。

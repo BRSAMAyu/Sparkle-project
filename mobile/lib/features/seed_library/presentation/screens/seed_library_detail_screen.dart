@@ -1177,6 +1177,36 @@ class _SeedLibraryDetailScreenState
                     ),
                   ),
                 ],
+                // 空态兜底：正文与结构化内容均为空时展示占位，避免点开即白板
+                if ((item.content == null ||
+                        item.content!.trim().isEmpty) &&
+                    (item.contentData == null ||
+                        item.contentData!.isEmpty)) ...[
+                  const SizedBox(height: DS.spacing16),
+                  GraphiteCardSurface(
+                    surfaceRole: SparkleSurfaceRole.panel,
+                    padding: const EdgeInsets.all(DS.spacing16),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.inbox_outlined,
+                          size: 18,
+                          color: DS.textTertiary,
+                        ),
+                        const SizedBox(width: DS.spacing8),
+                        Expanded(
+                          child: Text(
+                            context.l10n.seedLibraryNoContent,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(color: DS.textTertiary),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import defer, selectinload
 
 from app.core.event_bus import event_bus_reliable
+from app.data.seed_content_initial import derive_item_content
 from app.models.seed_content import (
     ItemType,
     LibraryCategory,
@@ -956,6 +957,16 @@ class SeedLibraryService:
         if not library:
             return None
 
+        # 空壳防护：content 缺失时从 content_data 推导回填；双空条目拒绝落库
+        normalized_content = (item_data.content or "").strip()
+        if normalized_content:
+            item_data = item_data.model_copy(update={"content": normalized_content})
+        else:
+            derived = derive_item_content(item_data.item_type.value, item_data.content_data)
+            if not derived:
+                raise ValueError("Seed item requires content or content_data (empty shell rejected)")
+            item_data = item_data.model_copy(update={"content": derived})
+
         # 权限检查
         if library.owner_id != user_id and not is_superuser:
             raise PermissionError("No permission to add items to this library")
@@ -1080,6 +1091,14 @@ class SeedLibraryService:
         result = await db.execute(query)
         items = list(result.scalars().all())
 
+        # 列表展示兜底：存量空壳条目在内存中回填推导内容（不落库，避免写放大；
+        # 持久化由启动 repair 与 get_item 惰性补偿负责）
+        for item in items:
+            if not (item.content and item.content.strip()):
+                derived = derive_item_content(item.item_type, item.content_data)
+                if derived:
+                    item.content = derived
+
         return items, total
 
     async def get_item(
@@ -1087,13 +1106,38 @@ class SeedLibraryService:
         db: AsyncSession,
         item_id: uuid.UUID,
     ) -> SeedItem | None:
-        """获取单个内容项"""
+        """获取单个内容项（含存量空壳惰性补偿：content 空时从 content_data 回填并落库）"""
         result = await db.execute(
             select(SeedItem)
             .options(defer(SeedItem.embedding))
             .where(and_(SeedItem.id == item_id, SeedItem.deleted_at.is_(None)))
         )
-        return result.scalar_one_or_none()
+        item = result.scalar_one_or_none()
+        if item is None:
+            return None
+        await self._heal_empty_content(db, item)
+        return item
+
+    async def _heal_empty_content(self, db: AsyncSession, item: SeedItem) -> None:
+        """
+        惰性补偿：历史空壳条目（content 为空、content_data 可推导）访问时自动补齐。
+
+        推导失败或落库失败均不影响本次读取（best-effort）。
+        """
+        if item.content and item.content.strip():
+            return
+        derived = derive_item_content(item.item_type, item.content_data)
+        if not derived:
+            return
+        item.content = derived
+        try:
+            await db.execute(
+                sa_update(SeedItem)
+                .where(SeedItem.id == item.id)
+                .values(content=derived, updated_at=_utcnow())
+            )
+        except Exception as exc:
+            logger.warning(f"Failed to persist derived content for seed item {item.id}: {exc}")
 
     async def update_item(
         self,

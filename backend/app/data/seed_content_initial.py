@@ -11,7 +11,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import insert
+from sqlalchemy import insert, or_
 
 from app.models.seed_content import (
     DifficultyLevel,
@@ -418,6 +418,142 @@ def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
+def _clean_text(value: Any) -> str | None:
+    """Return trimmed text or None when the value carries no real content."""
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def derive_item_content(item_type: Any, content_data: Any) -> str | None:
+    """
+    从结构化 content_data 推导可读文本内容（content 列的兜底来源）。
+
+    历史上官方库的 4 条种子（3 条 example + 1 条 flashcard）只定义了
+    content_data，content 列为 NULL，移动端点开即空壳卡片。此函数是
+    唯一的推导入口：初始化播种、新增条目、存量惰性补偿共用。
+
+    Args:
+        item_type: 内容类型（ItemType 或其字符串值）
+        content_data: 结构化内容数据（dict）
+
+    Returns:
+        推导出的文本内容；无法推导时返回 None
+    """
+    if not isinstance(content_data, dict):
+        return None
+
+    item_type_value = getattr(item_type, "value", item_type)
+    parts: list[str] = []
+
+    if item_type_value == ItemType.EXAMPLE.value:
+        section = _clean_text(content_data.get("input"))
+        if section:
+            parts.append(f"# 题目\n{section}")
+        section = _clean_text(content_data.get("output"))
+        if section:
+            parts.append(f"# 解答\n{section}")
+    elif item_type_value == ItemType.EXERCISE.value:
+        section = _clean_text(content_data.get("question"))
+        if section:
+            parts.append(f"# 题目\n{section}")
+        section = _clean_text(content_data.get("answer")) or _clean_text(content_data.get("solution"))
+        if section:
+            parts.append(f"# 解答\n{section}")
+    elif item_type_value == ItemType.FLASHCARD.value:
+        section = _clean_text(content_data.get("front"))
+        if section:
+            parts.append(section)
+        section = _clean_text(content_data.get("back"))
+        if section:
+            parts.append(section)
+    elif item_type_value == ItemType.KNOWLEDGE.value:
+        for key, heading in (
+            ("definition", "# 定义"),
+            ("formula", "# 公式"),
+            ("explanation", "# 说明"),
+        ):
+            section = _clean_text(content_data.get(key))
+            if section:
+                parts.append(f"{heading}\n{section}")
+        key_points = content_data.get("key_points")
+        if isinstance(key_points, list) and key_points:
+            bullet_lines = [f"- {_clean_text(kp)}" for kp in key_points[:10] if _clean_text(kp)]
+            if bullet_lines:
+                parts.append("# 要点\n" + "\n".join(bullet_lines))
+
+    if not parts:
+        # 通用兜底：拼接 content_data 中的字符串值，避免任何结构化数据条目落成空壳
+        generic = [
+            cleaned
+            for value in content_data.values()
+            if isinstance(value, str) and (cleaned := _clean_text(value))
+        ]
+        parts = generic[:3]
+
+    return "\n\n".join(parts) if parts else None
+
+
+def _ensure_item_content(item_data: dict[str, Any]) -> dict[str, Any] | None:
+    """
+    规范化单条种子数据：content 为空时从 content_data 推导回填。
+
+    Returns:
+        规范化后的数据；content 与 content_data 双空（纯空壳）时返回 None。
+    """
+    content = _clean_text(item_data.get("content"))
+    if content:
+        item_data["content"] = content
+        return item_data
+
+    derived = derive_item_content(item_data.get("item_type"), item_data.get("content_data"))
+    if derived:
+        item_data["content"] = derived
+        return item_data
+    return None
+
+
+async def repair_empty_seed_item_content(db_session) -> int:
+    """
+    修复存量空壳种子条目：content 为空但 content_data 可推导的官方库条目。
+
+    历史库数据由旧版播种写入（已初始化守卫使其永不重跑），该函数在
+    启动引用数据链路中执行，幂等：已修复的条目不再命中更新条件。
+
+    Args:
+        db_session: SQLAlchemy 异步会话
+
+    Returns:
+        修复的条目数量
+    """
+    from sqlalchemy import select
+
+    logger = __import__("loguru").logger
+    result = await db_session.execute(
+        select(SeedItem).where(
+            SeedItem.deleted_at.is_(None),
+            or_(SeedItem.content.is_(None), SeedItem.content == ""),
+            SeedItem.content_data.isnot(None),
+        )
+    )
+    items = list(result.scalars().all())
+
+    repaired = 0
+    for item in items:
+        derived = derive_item_content(item.item_type, item.content_data)
+        if not derived:
+            continue
+        item.content = derived
+        item.updated_at = _utcnow()
+        repaired += 1
+
+    if repaired:
+        await db_session.flush()
+        logger.info(f"Repaired {repaired} seed items with empty content (derived from content_data)")
+    return repaired
+
+
 async def initialize_seed_libraries(db_session) -> int:
     """
     初始化种子内容库数据
@@ -455,7 +591,14 @@ async def initialize_seed_libraries(db_session) -> int:
 
         # 创建内容项
         for item_data in items_data:
-            normalized_item_data = dict(item_data)
+            # content 缺失时从 content_data 推导回填；双空条目拒绝播种（空壳不落库）
+            normalized_item_data = _ensure_item_content(dict(item_data))
+            if normalized_item_data is None:
+                logger.warning(
+                    f"Skipping seed item '{item_data.get('title')}' in library "
+                    f"'{lib_data.get('name')}': no content or content_data (empty shell)"
+                )
+                continue
             normalized_item_data["library_id"] = library.id
             # 处理枚举类型
             if "item_type" in normalized_item_data:

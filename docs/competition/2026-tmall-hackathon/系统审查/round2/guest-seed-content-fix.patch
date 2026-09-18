@@ -1,0 +1,912 @@
+diff --git a/backend/app/data/seed_content_initial.py b/backend/app/data/seed_content_initial.py
+index fc3692ae..9e3248ef 100644
+--- a/backend/app/data/seed_content_initial.py
++++ b/backend/app/data/seed_content_initial.py
+@@ -11,7 +11,7 @@ import uuid
+ from datetime import UTC, datetime
+ from typing import Any
+ 
+-from sqlalchemy import insert
++from sqlalchemy import insert, or_
+ 
+ from app.models.seed_content import (
+     DifficultyLevel,
+@@ -418,6 +418,142 @@ def _utcnow() -> datetime:
+     return datetime.now(UTC).replace(tzinfo=None)
+ 
+ 
++def _clean_text(value: Any) -> str | None:
++    """Return trimmed text or None when the value carries no real content."""
++    if value is None:
++        return None
++    text = str(value).strip()
++    return text or None
++
++
++def derive_item_content(item_type: Any, content_data: Any) -> str | None:
++    """
++    从结构化 content_data 推导可读文本内容（content 列的兜底来源）。
++
++    历史上官方库的 4 条种子（3 条 example + 1 条 flashcard）只定义了
++    content_data，content 列为 NULL，移动端点开即空壳卡片。此函数是
++    唯一的推导入口：初始化播种、新增条目、存量惰性补偿共用。
++
++    Args:
++        item_type: 内容类型（ItemType 或其字符串值）
++        content_data: 结构化内容数据（dict）
++
++    Returns:
++        推导出的文本内容；无法推导时返回 None
++    """
++    if not isinstance(content_data, dict):
++        return None
++
++    item_type_value = getattr(item_type, "value", item_type)
++    parts: list[str] = []
++
++    if item_type_value == ItemType.EXAMPLE.value:
++        section = _clean_text(content_data.get("input"))
++        if section:
++            parts.append(f"# 题目\n{section}")
++        section = _clean_text(content_data.get("output"))
++        if section:
++            parts.append(f"# 解答\n{section}")
++    elif item_type_value == ItemType.EXERCISE.value:
++        section = _clean_text(content_data.get("question"))
++        if section:
++            parts.append(f"# 题目\n{section}")
++        section = _clean_text(content_data.get("answer")) or _clean_text(content_data.get("solution"))
++        if section:
++            parts.append(f"# 解答\n{section}")
++    elif item_type_value == ItemType.FLASHCARD.value:
++        section = _clean_text(content_data.get("front"))
++        if section:
++            parts.append(section)
++        section = _clean_text(content_data.get("back"))
++        if section:
++            parts.append(section)
++    elif item_type_value == ItemType.KNOWLEDGE.value:
++        for key, heading in (
++            ("definition", "# 定义"),
++            ("formula", "# 公式"),
++            ("explanation", "# 说明"),
++        ):
++            section = _clean_text(content_data.get(key))
++            if section:
++                parts.append(f"{heading}\n{section}")
++        key_points = content_data.get("key_points")
++        if isinstance(key_points, list) and key_points:
++            bullet_lines = [f"- {_clean_text(kp)}" for kp in key_points[:10] if _clean_text(kp)]
++            if bullet_lines:
++                parts.append("# 要点\n" + "\n".join(bullet_lines))
++
++    if not parts:
++        # 通用兜底：拼接 content_data 中的字符串值，避免任何结构化数据条目落成空壳
++        generic = [
++            cleaned
++            for value in content_data.values()
++            if isinstance(value, str) and (cleaned := _clean_text(value))
++        ]
++        parts = generic[:3]
++
++    return "\n\n".join(parts) if parts else None
++
++
++def _ensure_item_content(item_data: dict[str, Any]) -> dict[str, Any] | None:
++    """
++    规范化单条种子数据：content 为空时从 content_data 推导回填。
++
++    Returns:
++        规范化后的数据；content 与 content_data 双空（纯空壳）时返回 None。
++    """
++    content = _clean_text(item_data.get("content"))
++    if content:
++        item_data["content"] = content
++        return item_data
++
++    derived = derive_item_content(item_data.get("item_type"), item_data.get("content_data"))
++    if derived:
++        item_data["content"] = derived
++        return item_data
++    return None
++
++
++async def repair_empty_seed_item_content(db_session) -> int:
++    """
++    修复存量空壳种子条目：content 为空但 content_data 可推导的官方库条目。
++
++    历史库数据由旧版播种写入（已初始化守卫使其永不重跑），该函数在
++    启动引用数据链路中执行，幂等：已修复的条目不再命中更新条件。
++
++    Args:
++        db_session: SQLAlchemy 异步会话
++
++    Returns:
++        修复的条目数量
++    """
++    from sqlalchemy import select
++
++    logger = __import__("loguru").logger
++    result = await db_session.execute(
++        select(SeedItem).where(
++            SeedItem.deleted_at.is_(None),
++            or_(SeedItem.content.is_(None), SeedItem.content == ""),
++            SeedItem.content_data.isnot(None),
++        )
++    )
++    items = list(result.scalars().all())
++
++    repaired = 0
++    for item in items:
++        derived = derive_item_content(item.item_type, item.content_data)
++        if not derived:
++            continue
++        item.content = derived
++        item.updated_at = _utcnow()
++        repaired += 1
++
++    if repaired:
++        await db_session.flush()
++        logger.info(f"Repaired {repaired} seed items with empty content (derived from content_data)")
++    return repaired
++
++
+ async def initialize_seed_libraries(db_session) -> int:
+     """
+     初始化种子内容库数据
+@@ -455,7 +591,14 @@ async def initialize_seed_libraries(db_session) -> int:
+ 
+         # 创建内容项
+         for item_data in items_data:
+-            normalized_item_data = dict(item_data)
++            # content 缺失时从 content_data 推导回填；双空条目拒绝播种（空壳不落库）
++            normalized_item_data = _ensure_item_content(dict(item_data))
++            if normalized_item_data is None:
++                logger.warning(
++                    f"Skipping seed item '{item_data.get('title')}' in library "
++                    f"'{lib_data.get('name')}': no content or content_data (empty shell)"
++                )
++                continue
+             normalized_item_data["library_id"] = library.id
+             # 处理枚举类型
+             if "item_type" in normalized_item_data:
+diff --git a/backend/app/main.py b/backend/app/main.py
+index f158813d..0e250ce1 100755
+--- a/backend/app/main.py
++++ b/backend/app/main.py
+@@ -445,7 +445,10 @@ async def lifespan(fastapp: FastAPI):
+ 
+             # 0.5 确保全局成就和皮肤定义存在 (所有用户共享)
+             try:
+-                from app.data.seed_content_initial import initialize_seed_libraries
++                from app.data.seed_content_initial import (
++                    initialize_seed_libraries,
++                    repair_empty_seed_item_content,
++                )
+                 from app.data.shop_seeds import seed_shop_items
+                 from app.services.guest_seed_service import (
+                     _ensure_achievements,
+@@ -457,6 +460,8 @@ async def lifespan(fastapp: FastAPI):
+                 await _ensure_galaxy_skins(db)
+                 await ensure_global_galaxy_baseline(db)
+                 await initialize_seed_libraries(db)
++                # 存量补偿：历史库中 content 为空的官方条目从 content_data 推导回填（幂等）
++                await repair_empty_seed_item_content(db)
+                 # 商城物品种子：此前仅手动脚本 scripts/init_shop.py 可触发，
+                 # 真实环境 shop_items 常年为空（演示阻断）。seed_shop_items
+                 # 自带空表检查（幂等），挂在同一启动引用数据链路。
+diff --git a/backend/app/services/seed_library_service.py b/backend/app/services/seed_library_service.py
+index 7753cb93..4952182b 100644
+--- a/backend/app/services/seed_library_service.py
++++ b/backend/app/services/seed_library_service.py
+@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
+ from sqlalchemy.orm import defer, selectinload
+ 
+ from app.core.event_bus import event_bus_reliable
++from app.data.seed_content_initial import derive_item_content
+ from app.models.seed_content import (
+     ItemType,
+     LibraryCategory,
+@@ -956,6 +957,16 @@ class SeedLibraryService:
+         if not library:
+             return None
+ 
++        # 空壳防护：content 缺失时从 content_data 推导回填；双空条目拒绝落库
++        normalized_content = (item_data.content or "").strip()
++        if normalized_content:
++            item_data = item_data.model_copy(update={"content": normalized_content})
++        else:
++            derived = derive_item_content(item_data.item_type.value, item_data.content_data)
++            if not derived:
++                raise ValueError("Seed item requires content or content_data (empty shell rejected)")
++            item_data = item_data.model_copy(update={"content": derived})
++
+         # 权限检查
+         if library.owner_id != user_id and not is_superuser:
+             raise PermissionError("No permission to add items to this library")
+@@ -1080,6 +1091,14 @@ class SeedLibraryService:
+         result = await db.execute(query)
+         items = list(result.scalars().all())
+ 
++        # 列表展示兜底：存量空壳条目在内存中回填推导内容（不落库，避免写放大；
++        # 持久化由启动 repair 与 get_item 惰性补偿负责）
++        for item in items:
++            if not (item.content and item.content.strip()):
++                derived = derive_item_content(item.item_type, item.content_data)
++                if derived:
++                    item.content = derived
++
+         return items, total
+ 
+     async def get_item(
+@@ -1087,13 +1106,38 @@ class SeedLibraryService:
+         db: AsyncSession,
+         item_id: uuid.UUID,
+     ) -> SeedItem | None:
+-        """获取单个内容项"""
++        """获取单个内容项（含存量空壳惰性补偿：content 空时从 content_data 回填并落库）"""
+         result = await db.execute(
+             select(SeedItem)
+             .options(defer(SeedItem.embedding))
+             .where(and_(SeedItem.id == item_id, SeedItem.deleted_at.is_(None)))
+         )
+-        return result.scalar_one_or_none()
++        item = result.scalar_one_or_none()
++        if item is None:
++            return None
++        await self._heal_empty_content(db, item)
++        return item
++
++    async def _heal_empty_content(self, db: AsyncSession, item: SeedItem) -> None:
++        """
++        惰性补偿：历史空壳条目（content 为空、content_data 可推导）访问时自动补齐。
++
++        推导失败或落库失败均不影响本次读取（best-effort）。
++        """
++        if item.content and item.content.strip():
++            return
++        derived = derive_item_content(item.item_type, item.content_data)
++        if not derived:
++            return
++        item.content = derived
++        try:
++            await db.execute(
++                sa_update(SeedItem)
++                .where(SeedItem.id == item.id)
++                .values(content=derived, updated_at=_utcnow())
++            )
++        except Exception as exc:
++            logger.warning(f"Failed to persist derived content for seed item {item.id}: {exc}")
+ 
+     async def update_item(
+         self,
+diff --git a/backend/tests/unit/test_seed_content_content_backfill.py b/backend/tests/unit/test_seed_content_content_backfill.py
+new file mode 100644
+index 00000000..78c0daec
+--- /dev/null
++++ b/backend/tests/unit/test_seed_content_content_backfill.py
+@@ -0,0 +1,362 @@
++"""
++Guest Seed Empty-Shell Content Fix — unit tests
++
++多端实测发现官方种子库 10 条中 4 条 content 为空（空壳卡片）：
++数学示例×3 + Python 列表推导式闪卡，均为"只定义 content_data、无 content"的条目。
++本测试覆盖：
++1. derive_item_content：从 content_data 推导可读正文
++2. initialize_seed_libraries：播种时回填 content、纯空壳条目拒绝落库
++3. repair_empty_seed_item_content：存量空壳启动修复（幂等）
++4. SeedLibraryService.add_item：增量空壳防护（推导回填 / 双空拒绝）
++5. SeedLibraryService.get_item / get_items：惰性补偿（访问时回填）
++"""
++
++import uuid
++from unittest.mock import AsyncMock, MagicMock, patch
++
++import pytest
++
++from app.data.seed_content_initial import (
++    OFFICIAL_LIBRARIES,
++    _ensure_item_content,
++    derive_item_content,
++    initialize_seed_libraries,
++    repair_empty_seed_item_content,
++)
++from app.models.seed_content import ItemType, SeedItem
++from app.schemas.seed_content import ItemCreate, ItemListParams
++from app.services.seed_library_service import SeedLibraryService
++
++# ============ 1. derive_item_content ============
++
++
++class TestDeriveItemContent:
++    def test_example_derives_input_and_output(self):
++        content = derive_item_content(
++            ItemType.EXAMPLE,
++            {"input": "求解 x²-5x+6=0", "output": "x₁=2, x₂=3", "explanation": "因式分解"},
++        )
++        assert content is not None
++        assert "求解 x²-5x+6=0" in content
++        assert "x₁=2, x₂=3" in content
++
++    def test_flashcard_derives_front_and_back(self):
++        content = derive_item_content(
++            ItemType.FLASHCARD,
++            {"front": "如何平方？", "back": "[x**2 for x in numbers]"},
++        )
++        assert content is not None
++        assert "如何平方？" in content
++        assert "[x**2 for x in numbers]" in content
++
++    def test_exercise_prefers_solution(self):
++        content = derive_item_content(
++            ItemType.EXERCISE,
++            {"solution": "sum(numbers)", "explanation": "用 sum()"},
++        )
++        assert content is not None
++        assert "sum(numbers)" in content
++
++    def test_knowledge_derives_definition_and_points(self):
++        content = derive_item_content(
++            ItemType.KNOWLEDGE,
++            {"definition": "字典是键值映射", "key_points": ["keys()", "values()"]},
++        )
++        assert content is not None
++        assert "字典是键值映射" in content
++        assert "- keys()" in content
++
++    def test_generic_fallback_joins_string_values(self):
++        content = derive_item_content(ItemType.TEMPLATE, {"body": "模板正文", "note": 123})
++        assert content is not None
++        assert "模板正文" in content
++        assert "123" not in content
++
++    def test_non_dict_content_data_returns_none(self):
++        assert derive_item_content(ItemType.EXAMPLE, None) is None
++        assert derive_item_content(ItemType.EXAMPLE, "text") is None
++
++    def test_blank_values_are_ignored(self):
++        assert derive_item_content(ItemType.FLASHCARD, {"front": "  ", "back": None}) is None
++
++    def test_item_type_accepts_string_value(self):
++        content = derive_item_content("example", {"input": "q", "output": "a"})
++        assert content is not None
++
++
++# ============ 2. 官方种子数据 + initialize_seed_libraries ============
++
++
++class TestOfficialSeedDataIntegrity:
++    def test_all_10_official_items_normalize_to_non_empty_content(self):
++        """实测缺陷回归：官方库 10 条（含 4 条仅 content_data 的空壳）规范化后 content 全部非空。"""
++        total = 0
++        for lib in OFFICIAL_LIBRARIES:
++            for item in lib["items"]:
++                normalized = _ensure_item_content(dict(item))
++                assert normalized is not None, f"item '{item.get('title')}' must not be an empty shell"
++                assert normalized["content"] and normalized["content"].strip()
++                total += 1
++        assert total == 10
++
++    def test_known_blank_entries_get_derived_content(self):
++        """当初 content 为空的 4 条：数学示例×3 + 列表推导式闪卡，回填后含实质内容。"""
++        known_blank_titles = {
++            "一元二次方程求解示例",
++            "几何证明示例 - 三角形内角和",
++            "函数图像分析示例",
++            "Python 列表推导式闪卡",
++        }
++        matched = 0
++        for lib in OFFICIAL_LIBRARIES:
++            for item in lib["items"]:
++                if item["title"] not in known_blank_titles:
++                    continue
++                matched += 1
++                assert "content" not in item  # 原始数据确无 content（缺陷本体）
++                normalized = _ensure_item_content(dict(item))
++                content = normalized["content"]
++                assert len(content) >= 50  # 推导出的正文有实质内容
++        assert matched == 4
++
++
++def _official_lib_item(title: str, *, with_content: bool, content_data: dict | None) -> dict:
++    item: dict = {
++        "item_type": ItemType.EXAMPLE,
++        "title": title,
++        "order_index": 1,
++    }
++    if with_content:
++        item["content"] = "已有正文"
++    if content_data is not None:
++        item["content_data"] = content_data
++    return item
++
++
++class TestInitializeSeedLibraries:
++    def _mock_db(self) -> AsyncMock:
++        db = AsyncMock()
++        db.add = MagicMock()  # add 为同步调用
++        first_result = MagicMock()
++        first_result.scalars.return_value.first.return_value = None  # 未初始化
++        db.execute.return_value = first_result
++        return db
++
++    def _insert_statements(self, db: AsyncMock) -> list:
++        return [call.args[0] for call in db.execute.call_args_list if call.args and "INSERT" in str(call.args[0])]
++
++    async def test_real_official_data_seeds_10_items_with_derived_content(self):
++        db = self._mock_db()
++
++        created = await initialize_seed_libraries(db)
++
++        assert created == 10
++        inserts = self._insert_statements(db)
++        assert len(inserts) == 10
++        for stmt in inserts:
++            params = stmt.compile().params
++            assert params["content"] and str(params["content"]).strip()
++
++    async def test_pure_empty_shell_item_is_skipped(self):
++        """content 与 content_data 双空的条目拒绝落库（空壳不播种）。"""
++        lib_data = {
++            "name": "测试库",
++            "description": "d",
++            "category": "few_shot",
++            "visibility": "official",
++            "language": "zh",
++            "is_official": True,
++            "items": [
++                _official_lib_item("好条目", with_content=True, content_data=None),
++                _official_lib_item("空壳条目", with_content=False, content_data=None),
++            ],
++        }
++        db = self._mock_db()
++
++        with patch("app.data.seed_content_initial.OFFICIAL_LIBRARIES", [lib_data]):
++            created = await initialize_seed_libraries(db)
++
++        assert created == 1
++        assert len(self._insert_statements(db)) == 1
++
++
++# ============ 3. repair_empty_seed_item_content（存量补偿） ============
++
++
++class TestRepairEmptySeedItemContent:
++    def _make_item(self, content=None, content_data=None, item_type=ItemType.FLASHCARD):
++        item = MagicMock(spec=SeedItem)
++        item.id = uuid.uuid4()
++        item.content = content
++        item.content_data = content_data
++        item.item_type = item_type
++        return item
++
++    def _mock_db(self, items: list) -> AsyncMock:
++        db = AsyncMock()
++        result = MagicMock()
++        result.scalars.return_value.all.return_value = items
++        db.execute.return_value = result
++        return db
++
++    async def test_repairs_blank_content_items(self):
++        items = [
++            self._make_item(content=None, content_data={"front": "F", "back": "B"}),
++            self._make_item(content="  ", content_data={"input": "q", "output": "a"}, item_type=ItemType.EXAMPLE),
++        ]
++        db = self._mock_db(items)
++
++        repaired = await repair_empty_seed_item_content(db)
++
++        assert repaired == 2
++        assert "F" in items[0].content
++        assert "q" in items[1].content
++        db.flush.assert_awaited_once()
++
++    async def test_undecorable_items_are_not_repaired(self):
++        items = [self._make_item(content=None, content_data={"n": 123})]
++        db = self._mock_db(items)
++
++        repaired = await repair_empty_seed_item_content(db)
++
++        assert repaired == 0
++        assert items[0].content is None
++        db.flush.assert_not_awaited()
++
++    async def test_idempotent_when_no_blank_items(self):
++        db = self._mock_db([])
++
++        assert await repair_empty_seed_item_content(db) == 0
++
++
++# ============ 4. SeedLibraryService.add_item 增量防护 ============
++
++
++class TestAddItemEmptyShellGuard:
++    def setup_method(self):
++        self.service = SeedLibraryService()
++        self.db = AsyncMock()
++        self.library = MagicMock()
++        self.owner_id = uuid.uuid4()
++        self.library.owner_id = self.owner_id
++        self.db.add = MagicMock()
++        self.db.flush = AsyncMock()
++        self.db.refresh = AsyncMock()
++
++    def _item_data(self, **kwargs) -> ItemCreate:
++        return ItemCreate(item_type=ItemType.FLASHCARD, title="t", **kwargs)
++
++    async def test_blank_content_derived_from_content_data(self):
++        with (
++            patch.object(self.service, "get_library", new_callable=AsyncMock, return_value=self.library),
++            patch("app.services.seed_library_service._SEED_VECTOR_RUNTIME_ENABLED", False),
++        ):
++            item = await self.service.add_item(
++                self.db,
++                uuid.uuid4(),
++                self._item_data(content=None, content_data={"front": "F", "back": "B"}),
++                self.owner_id,
++            )
++
++        assert item is not None
++        assert "F" in item.content and "B" in item.content
++
++    async def test_whitespace_only_content_is_derived(self):
++        with (
++            patch.object(self.service, "get_library", new_callable=AsyncMock, return_value=self.library),
++            patch("app.services.seed_library_service._SEED_VECTOR_RUNTIME_ENABLED", False),
++        ):
++            item = await self.service.add_item(
++                self.db,
++                uuid.uuid4(),
++                self._item_data(content="   ", content_data={"front": "F", "back": "B"}),
++                self.owner_id,
++            )
++
++        assert item.content == "F\n\nB"
++
++    async def test_double_empty_item_rejected(self):
++        with patch.object(self.service, "get_library", new_callable=AsyncMock, return_value=self.library):
++            with pytest.raises(ValueError, match="empty shell"):
++                await self.service.add_item(
++                    self.db,
++                    uuid.uuid4(),
++                    self._item_data(content=None, content_data=None),
++                    self.owner_id,
++                )
++        self.db.add.assert_not_called()
++
++
++# ============ 5. SeedLibraryService.get_item / get_items 惰性补偿 ============
++
++
++class TestLazyHeal:
++    def setup_method(self):
++        self.service = SeedLibraryService()
++        self.db = AsyncMock()
++
++    def _shell_item(self) -> MagicMock:
++        item = MagicMock(spec=SeedItem)
++        item.id = uuid.uuid4()
++        item.content = None
++        item.content_data = {"front": "F", "back": "B"}
++        item.item_type = "flashcard"
++        return item
++
++    async def test_get_item_blank_content_healed_and_persisted(self):
++        item = self._shell_item()
++        result = MagicMock()
++        result.scalar_one_or_none.return_value = item
++        self.db.execute.return_value = result
++
++        loaded = await self.service.get_item(self.db, item.id)
++
++        assert loaded is item
++        assert "F" in loaded.content
++        assert self.db.execute.await_count == 2  # select + 补偿写
++
++    async def test_get_item_heal_failure_does_not_break_read(self):
++        item = self._shell_item()
++        select_result = MagicMock()
++        select_result.scalar_one_or_none.return_value = item
++        state = {"calls": 0}
++
++        async def execute_side_effect(*_args, **_kwargs):
++            state["calls"] += 1
++            if state["calls"] == 1:
++                return select_result
++            raise RuntimeError("db write failed")
++
++        self.db.execute = AsyncMock(side_effect=execute_side_effect)
++
++        loaded = await self.service.get_item(self.db, item.id)
++
++        assert loaded is item
++        assert "F" in loaded.content  # 内存中已回填，落库失败不影响读取
++
++    async def test_get_item_undecorable_left_untouched(self):
++        item = self._shell_item()
++        item.content_data = {"n": 123}
++        result = MagicMock()
++        result.scalar_one_or_none.return_value = item
++        self.db.execute.return_value = result
++
++        loaded = await self.service.get_item(self.db, item.id)
++
++        assert loaded.content is None
++        assert self.db.execute.await_count == 1  # 仅 select，无补偿写
++
++    async def test_get_items_in_memory_backfill_without_write(self):
++        shell = self._shell_item()
++        total_result = MagicMock()
++        total_result.scalar.return_value = 1
++        items_result = MagicMock()
++        items_result.scalars.return_value.all.return_value = [shell]
++        self.db.execute = AsyncMock(side_effect=[total_result, items_result])
++
++        items, total = await self.service.get_items(self.db, ItemListParams(library_id=uuid.uuid4()), user_id=None)
++
++        assert total == 1
++        assert len(items) == 1
++        assert "F" in items[0].content  # 展示兜底
++        assert self.db.execute.await_count == 2  # 仅原有两条查询，无落库写
+diff --git "a/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/guest-seed-content-fix.md" "b/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/guest-seed-content-fix.md"
+new file mode 100644
+index 00000000..99367ed5
+--- /dev/null
++++ "b/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/guest-seed-content-fix.md"
+@@ -0,0 +1,81 @@
++# 游客种子空壳内容修复（guest-seed-content-fix）
++
++- 日期：2026-09-19
++- worktree：`Sparkle-sysrev/wt8`（基于 main `efb1567a`）
++- 关联实测：`docs/competition/2026-tmall-hackathon/多端实测/memory-rag-seedlib-eval.md` C 域——官方种子库 10 条中 4 条 content 为空（空壳卡片，点开无内容），quality_score 却标 8.5–9.0
++- 产物：本文件 + 同目录 `guest-seed-content-fix.patch`（未 commit）
++
++## 一、根因（代码 + 主仓 DB 双重查证）
++
++主仓 DB 只读取证（`docker exec sparkle_db psql -U postgres -d sparkle`，进程只读未写）：
++
++```sql
++SELECT l.name, i.title, length(coalesce(i.content,'')) AS content_len, ...
++FROM seed_items i JOIN seed_libraries l ON l.id=i.library_id;
++```
++
++4/10 空 content（content_len=0）的确切条目，全部对应 `backend/app/data/seed_content_initial.py` 中**只定义了 `content_data`、没有 `content` 键**的条目：
++
++| 库 | 条目 | item_type | 实际内容载体 |
++|---|---|---|---|
++| 数学基础示例库 | 一元二次方程求解示例 | example | content_data.input/output |
++| 数学基础示例库 | 几何证明示例 - 三角形内角和 | example | content_data.input/output |
++| 数学基础示例库 | 函数图像分析示例 | example | content_data.input/output |
++| Python编程练习题库 | Python 列表推导式闪卡 | flashcard | content_data.front/back |
++
++根因链（属"模板数据本身缺字段 + 分支漏兜底"，非 LLM 生成失败）：
++
++1. **数据缺陷**：`seed_content_initial.py` 的 OFFICIAL_LIBRARIES 里上述 4 条只有 `content_data`，`content` 缺省为 NULL。
++2. **播种无回填**：`initialize_seed_libraries` 原样 `insert(content=item.content)`，无任何从 `content_data` 推导的兜底。
++3. **守卫永久化缺陷**：`initialize_seed_libraries` 有"已存在官方库即跳过"守卫，且启动链只在 `initialize` 内插入——**存量空壳行永远不会被修复**。
++4. **增量无防护**：`SeedLibraryService.add_item` 同样允许 content/content_data 双空条目落库。
++5. **展示无兜底**：`SeedItemCard` 仅 `if (item.content != null)` 渲染预览；详情 sheet 正文与结构化内容双空时整页只有标题和 chips——空壳卡片点开无内容。
++
++## 二、修法（4 层防护）
++
++### 1. 唯一推导入口 `derive_item_content(item_type, content_data)`（seed_content_initial.py）
++
++按 item_type 把结构化数据渲染为可读正文：example→题目/解答，exercise→题目/解答(solution)，flashcard→front/back，knowledge→定义/公式/说明/要点；类型未命中时通用兜底拼接字符串值。任何非空 `content_data` 都能产出正文，推导不出返回 None。
++
++### 2. 增量不落空壳（空壳不落库）
++
++- `initialize_seed_libraries`：播种前经 `_ensure_item_content` 规范化——content 缺失自动推导回填；**content 与 content_data 双空的条目跳过播种并 warning**。
++- `SeedLibraryService.add_item`：content 为空白时推导回填；双空条目 `raise ValueError`（端点既有分支映射为 400），拒绝落库。
++
++### 3. 存量补偿（双保险）
++
++- **启动一次性修复**：新增 `repair_empty_seed_item_content(db)`，挂在 `main.py` 启动引用数据链路（`initialize_seed_libraries` 之后，同一非致命 try 块）。把 `content` 为空且 `content_data` 非空的条目推导回填并更新 `updated_at`；幂等（修复后不再命中条件），服务下次重启即生效，无需手工脚本。
++- **惰性补偿（读时自愈）**：`SeedLibraryService.get_item` 命中空壳条目时自动推导、内存回填并 `UPDATE` 落库（best-effort：落库失败仅 warning，不影响本次读取）；`get_items` 列表路径做**仅内存**回填（避免列表写放大），持久化交给启动修复与详情页读时自愈。
++
++### 4. 移动端空态兜底（DS 令牌，零新增 l10n）
++
++- `seed_item_card.dart`：预览条件由 `content != null` 收紧为非空白；无正文时渲染占位文案（既有 `seedLibraryNoContent`="暂无内容"，`DS.textTertiary` + italic）——空壳卡片不再是一片空白。
++- `seed_library_detail_screen.dart` `_showItemDetailSheet`：正文与结构化内容双空时展示 `GraphiteCardSurface` 空态占位（`Icons.inbox_outlined` + `DS.textTertiary`）。
++
++## 三、红绿证据
++
++- **Red**：新测试文件就位、源码还原到 HEAD 时 → `ImportError: cannot import name '_ensure_item_content'`（旧代码无推导/修复能力，collection 失败）。
++- **Green（后端）**：`SECRET_KEY=… python3.11 -m pytest tests/unit/test_seed_content_content_backfill.py -q` → **22 passed**（0.5s）。覆盖：derive 全类型 + 通用兜底 + 空值；官方 10 条全部可规范化出非空 content（4 条缺陷条目专项回归）；双空条目拒绝播种/落库；启动修复、修复幂等、不可推导不修；get_item 惰性回填 + 落库失败不影响读取；get_items 内存回填无落库写。
++- **Green（后端回归）**：`test_seed_library_service.py + test_seed_library_stage22.py + test_workflow_experience_phase62.py` → 53 passed（含新 22）；`tests/integration/test_stage38_event_publishers.py + test_auto_seeding_workflow.py + tests/aurora/test_seed_bridge.py` → 4 passed, 8 skipped。
++- **Green（移动端）**：`flutter test test/features/seed_library/` → **5 passed**（新增 3 条 SeedItemCard 空态 widget 用例：空 content/空白串显示"暂无内容"占位、有正文渲染 Markdown 不显示占位）。
++- **静态检查**：改动文件 ruff 0 error（main.py 的 2 处 I001 与改动无关，HEAD 即有）；black 对新测试文件格式化通过（app 侧三个文件 HEAD 基线本就 non-compliant，未引入新偏差，新增行均 ≤120 列）；`flutter analyze` 改动目录 68 issues = 基线（本次 0 新增）。
++- **治理守卫**：`scripts/run_all_rule_guards.sh` 仅 BG 失败（worktree 缺 Go 生成 pb 文件的环境性缺口，`git stash` 验证 HEAD 同样失败）；K/Z 初次失败系本 worktree 复制生成物时保留符号链接所致，已改为 deref 复制后通过。
++- **已知无关失败**：`test_theater_seed_and_accuracy.py` 2 failed，`git stash` 验证为 HEAD 既有失败，与本次改动无关。
++- 附注：运行 stage22 测试会顺带刷新 `docs/product/stage22_prompt_coverage_baseline.md` 的 audited_at 时间戳（测试副作用），已 `git checkout --` 还原，不进入 patch。
++
++## 四、变更清单
++
++```
++backend/app/data/seed_content_initial.py                 | derive_item_content/_ensure_item_content/repair_empty_seed_item_content + 播种回填与空壳拒收
++backend/app/services/seed_library_service.py             | add_item 空壳防护；get_item 读时自愈；get_items 展示回填
++backend/app/main.py                                      | 启动链挂载 repair_empty_seed_item_content
++backend/tests/unit/test_seed_content_content_backfill.py | 新增 22 用例
++mobile/lib/features/seed_library/presentation/widgets/seed_item_card.dart        | 预览空态兜底
++mobile/lib/features/seed_library/presentation/screens/seed_library_detail_screen.dart | 详情 sheet 空态兜底
++mobile/test/features/seed_library/presentation/widgets/seed_item_card_test.dart  | 新增 3 用例
++```
++
++## 五、验证与遗留
++
++- 主仓 DB 全程只读；修复将在修复版引擎下次启动时由 `repair_empty_seed_item_content` 落库（4 条空壳全部命中推导条件），或用户点开条目时由 `get_item` 惰性补齐。
++- 遗留（不在本任务范围）：种子库 contentData 在详情 sheet 仍是原始 JSON 展示（后端回填后 content 已可读，体验已闭环）；BG 守卫的 Go 生成物需在 worktree 跑 `make proto-gen`（环境项）。
+diff --git a/mobile/lib/features/seed_library/presentation/screens/seed_library_detail_screen.dart b/mobile/lib/features/seed_library/presentation/screens/seed_library_detail_screen.dart
+index d73d2b90..5ea49889 100644
+--- a/mobile/lib/features/seed_library/presentation/screens/seed_library_detail_screen.dart
++++ b/mobile/lib/features/seed_library/presentation/screens/seed_library_detail_screen.dart
+@@ -1177,6 +1177,36 @@ class _SeedLibraryDetailScreenState
+                     ),
+                   ),
+                 ],
++                // 空态兜底：正文与结构化内容均为空时展示占位，避免点开即白板
++                if ((item.content == null ||
++                        item.content!.trim().isEmpty) &&
++                    (item.contentData == null ||
++                        item.contentData!.isEmpty)) ...[
++                  const SizedBox(height: DS.spacing16),
++                  GraphiteCardSurface(
++                    surfaceRole: SparkleSurfaceRole.panel,
++                    padding: const EdgeInsets.all(DS.spacing16),
++                    child: Row(
++                      children: [
++                        Icon(
++                          Icons.inbox_outlined,
++                          size: 18,
++                          color: DS.textTertiary,
++                        ),
++                        const SizedBox(width: DS.spacing8),
++                        Expanded(
++                          child: Text(
++                            context.l10n.seedLibraryNoContent,
++                            style: Theme.of(context)
++                                .textTheme
++                                .bodyMedium
++                                ?.copyWith(color: DS.textTertiary),
++                          ),
++                        ),
++                      ],
++                    ),
++                  ),
++                ],
+               ],
+             ),
+           ),
+diff --git a/mobile/lib/features/seed_library/presentation/widgets/seed_item_card.dart b/mobile/lib/features/seed_library/presentation/widgets/seed_item_card.dart
+index 91635a57..790987aa 100644
+--- a/mobile/lib/features/seed_library/presentation/widgets/seed_item_card.dart
++++ b/mobile/lib/features/seed_library/presentation/widgets/seed_item_card.dart
+@@ -99,28 +99,43 @@ class SeedItemCard extends StatelessWidget {
+                         ],
+                       ),
+ 
+-                      // Content preview
+-                      if (item.content != null)
+-                        Padding(
+-                          padding: const EdgeInsets.only(top: DS.spacing4),
+-                          child: IgnorePointer(
+-                            child: ClipRect(
+-                              child: ConstrainedBox(
+-                                constraints:
+-                                    const BoxConstraints(maxHeight: 42),
+-                                child: SparkleMarkdown(
+-                                  content: item.content!,
+-                                  textColor: DS.textSecondary,
+-                                  codeBackgroundColor: DS.surfaceTertiary,
+-                                  linkColor: DS.primaryBase,
+-                                  fontSize: 13,
+-                                  lineHeight: 1.4,
+-                                  contentRole: SparkleMarkdownRole.seedBody,
++                      // Content preview (空态兜底：无正文时显示占位，避免空壳卡片)
++                      Padding(
++                        padding: const EdgeInsets.only(top: DS.spacing4),
++                        child: (item.content != null &&
++                                item.content!.trim().isNotEmpty)
++                            ? IgnorePointer(
++                                child: ClipRect(
++                                  child: ConstrainedBox(
++                                    constraints:
++                                        const BoxConstraints(maxHeight: 42),
++                                    child: SparkleMarkdown(
++                                      content: item.content!,
++                                      textColor: DS.textSecondary,
++                                      codeBackgroundColor:
++                                          DS.surfaceTertiary,
++                                      linkColor: DS.primaryBase,
++                                      fontSize: 13,
++                                      lineHeight: 1.4,
++                                      contentRole:
++                                          SparkleMarkdownRole.seedBody,
++                                    ),
++                                  ),
+                                 ),
++                              )
++                            : Text(
++                                context.l10n.seedLibraryNoContent,
++                                style: Theme.of(context)
++                                    .textTheme
++                                    .bodySmall
++                                    ?.copyWith(
++                                      color: DS.textTertiary,
++                                      fontStyle: FontStyle.italic,
++                                    ),
++                                maxLines: 1,
++                                overflow: TextOverflow.ellipsis,
+                               ),
+-                            ),
+-                          ),
+-                        ),
++                      ),
+ 
+                       // Metadata
+                       if (item.subject != null ||
+diff --git a/mobile/test/features/seed_library/presentation/widgets/seed_item_card_test.dart b/mobile/test/features/seed_library/presentation/widgets/seed_item_card_test.dart
+new file mode 100644
+index 00000000..3901bf50
+--- /dev/null
++++ b/mobile/test/features/seed_library/presentation/widgets/seed_item_card_test.dart
+@@ -0,0 +1,60 @@
++import 'package:flutter/material.dart';
++import 'package:flutter_localizations/flutter_localizations.dart';
++import 'package:flutter_test/flutter_test.dart';
++import 'package:sparkle/core/widgets/sparkle_markdown.dart';
++import 'package:sparkle/features/seed_library/data/models/seed_library_model.dart';
++import 'package:sparkle/features/seed_library/presentation/widgets/seed_item_card.dart';
++import 'package:sparkle/l10n/app_localizations.dart';
++
++Widget _wrap(SeedItem item) => MaterialApp(
++      locale: const Locale('zh'),
++      localizationsDelegates: const [
++        AppLocalizations.delegate,
++        GlobalMaterialLocalizations.delegate,
++        GlobalWidgetsLocalizations.delegate,
++        GlobalCupertinoLocalizations.delegate,
++      ],
++      supportedLocales: AppLocalizations.supportedLocales,
++      home: Scaffold(
++        body: SeedItemCard(item: item),
++      ),
++    );
++
++SeedItem _item({String? content, Map<String, dynamic>? contentData}) => SeedItem(
++      id: 'item-1',
++      libraryId: 'lib-1',
++      itemType: ItemType.flashcard,
++      isActive: true,
++      createdAt: DateTime.fromMillisecondsSinceEpoch(0),
++      updatedAt: DateTime.fromMillisecondsSinceEpoch(0),
++      title: 'Python 列表推导式闪卡',
++      content: content,
++      contentData: contentData,
++    );
++
++void main() {
++  testWidgets('空壳条目（content 为空）显示空态占位而非空白', (tester) async {
++    await tester.pumpWidget(_wrap(_item()));
++    await tester.pump();
++
++    expect(find.text('暂无内容'), findsOneWidget);
++  });
++
++  testWidgets('空白字符串 content 同样触发空态占位', (tester) async {
++    await tester.pumpWidget(_wrap(_item(content: '   ')));
++    await tester.pump();
++
++    expect(find.text('暂无内容'), findsOneWidget);
++    expect(find.byType(SparkleMarkdown), findsNothing);
++  });
++
++  testWidgets('有正文的条目渲染 Markdown 且不显示空态占位', (tester) async {
++    await tester.pumpWidget(
++      _wrap(_item(content: '**答案：** squared = [x**2 for x in numbers]')),
++    );
++    await tester.pump();
++
++    expect(find.byType(SparkleMarkdown), findsOneWidget);
++    expect(find.text('暂无内容'), findsNothing);
++  });
++}
