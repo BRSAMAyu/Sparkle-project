@@ -7,5 +7,6 @@
 | [android-round1.md](android-round1.md) | Android 模拟器（无头，1080×2400） | ✅ 已完成（三度合轮）：游客模式入口/种子/各 Tab 实证；A-1 注册用户登录 500 已修复（红绿）；A-2..A-11 待修（游客聊天卡队列/建模聊三连坏/Profile type-cast/溢出条纹等）；ANR 定性=资源饥饿非应用缺陷 |
 | [android-round2-verification.md](android-round2-verification.md) | Android 模拟器（无头，1080×2400） | ✅ 已完成（修复复验轮，验 main@37edc68d）：A-2/1/4/7 PASS、A-5 PARTIAL（离线组合态 5px 条纹）、A-6 PARTIAL（代码级确认但 UI 无入口）；0 项修复失效；新发现 N-1/N-3..N-7（含疑似跨账号本地缓存泄漏 N-4、community-accountability 对新客 500 N-5）；含 Gradle/JDK/exFAT 构建排障记录 |
 | [ai-functions-real-eval.md](ai-functions-real-eval.md) | 引擎 LLM 路径（WS/API/直调，DeepSeek 真接入） | ✅ 已完成（@aabc7f1e）：7 路径 12 测点，8 通/2 半通/2 断；P1=plan 创建 500（advisory lock SQL）阻断 LLM 计划链；P2=reason 档 0 次触达 v4-pro（首答强制 fast）、推送文案 JSON 解析失败静默塌陷；A-3 定性=已修复、残留 TTFB 长尾 |
+| [exam-system-eval.md](exam-system-eval.md) | 测试系统（exam-sprint/诊断/错题本，游客+注册双身份 API 实测） | ✅ 已完成（@164a1cd6）：exam-sprint 全端点 12/12 形态正确、判分受控验证 100%；闭环半成立（判分→画像→dashboard 通，galaxy 掌握度/成长值/spine 三段断）；P1×5=错题本网关 gRPC 桥 401（App 全功能不可用）/游客种子场景 422+dashboard 不激活/掌握度写库静默丢弃/grading_payload 答案下发+文本作答判 0/移动端无诊断入口；题目质量 3 题人工 9/9/9（模板题非 LLM，0 解析） |
 
 截图存档：`/Users/brsama/code/GitHub/Sparkle-sysrev/screenshots/{web,macos,android}/`（不入库）

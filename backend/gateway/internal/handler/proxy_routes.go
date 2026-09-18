@@ -891,6 +891,14 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	}
 	h.logger.Info("Registered STT proxy routes")
 
+	// ==================== TTS Synthesis（百炼 qwen3-tts，服务端合成） ====================
+	tts := api.Group("/tts")
+	tts.Use(authMiddleware)
+	{
+		tts.POST("/synthesize", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered TTS proxy routes")
+
 	// ==================== Focus Routes ====================
 	focus := api.Group("/focus")
 	focus.Use(authMiddleware)
