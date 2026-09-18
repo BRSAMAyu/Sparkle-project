@@ -65,6 +65,9 @@ celery_app = Celery(
         "app.tasks.accountability_tasks",
         "app.tasks.absence_scan_task",
         "app.tasks.checkpoint_nudge_task",
+        # EI-02: beat 每天 10:00/20:00 调度 tasks.community.send_checkin_reminders，
+        # 该模块必须随 worker 加载，否则消息按 unregistered task 被静默丢弃。
+        "app.tasks.community_checkin_reminder",
         "app.tasks.policy_tasks",
         "workers.signals_learning_worker",
         "app.aurora.tasks",

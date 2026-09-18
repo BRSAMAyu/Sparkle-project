@@ -7,7 +7,7 @@ from typing import Any, ClassVar
 @dataclass
 class FeatureReadiness:
     feature_key: str
-    current_mode: str  # "off" | "shadow" | "live"
+    current_mode: str  # "off" | "shadow" | "live" | "unknown"（settings 键缺失时为 unknown）
     target_mode: str  # 下一个推荐状态
     ready_for_promotion: bool
     blocking_reasons: list[str] = field(default_factory=list)  # 为空时 ready_for_promotion=True
@@ -34,7 +34,7 @@ class KillSwitchReadinessService:
             ],
         },
         "stage19_working_memory": {
-            "settings_key": "AURORA_STAGE19_WM_MODE",
+            "settings_key": "AURORA_STAGE19_WORKING_MEMORY_MODE",
             "current": "live",
             "target": "live",
             "criteria": [
@@ -43,7 +43,7 @@ class KillSwitchReadinessService:
             ],
         },
         "stage21_skill_system": {
-            "settings_key": "AURORA_STAGE21_SKILL_MODE",
+            "settings_key": "AURORA_STAGE21_SKILL_STORE_MODE",
             "current": "live",
             "target": "live",
             "criteria": [
@@ -62,7 +62,7 @@ class KillSwitchReadinessService:
             ],
         },
         "stage24_policy": {
-            "settings_key": "AURORA_STAGE24_POLICY_MODE",
+            "settings_key": "AURORA_POLICY_COMPILER_MODE",
             "current": "live",
             "target": "live",
             "criteria": [
@@ -71,7 +71,7 @@ class KillSwitchReadinessService:
             ],
         },
         "stage25_reflection": {
-            "settings_key": "AURORA_STAGE25_REFLECTION_MODE",
+            "settings_key": "AURORA_REFLECTION_WIRE_MODE",
             "current": "live",
             "target": "live",
             "criteria": [
@@ -80,7 +80,7 @@ class KillSwitchReadinessService:
             ],
         },
         "stage26_scene": {
-            "settings_key": "AURORA_STAGE26_SCENE_MODE",
+            "settings_key": "AURORA_SCENE_MODE",
             "current": "live",
             "target": "live",
             "criteria": [
@@ -89,7 +89,7 @@ class KillSwitchReadinessService:
             ],
         },
         "stage27_foresight": {
-            "settings_key": "AURORA_STAGE27_FORESIGHT_MODE",
+            "settings_key": "AURORA_FORESIGHT_MODE",
             "current": "live",
             "target": "live",
             "criteria": [
@@ -98,7 +98,7 @@ class KillSwitchReadinessService:
             ],
         },
         "stage28_traits": {
-            "settings_key": "AURORA_STAGE28_TRAITS_MODE",
+            "settings_key": "AURORA_TRAITS_MODE",
             "current": "live",
             "target": "live",
             "criteria": [
@@ -107,7 +107,7 @@ class KillSwitchReadinessService:
             ],
         },
         "stage29_srl": {
-            "settings_key": "AURORA_STAGE29_SRL_MODE",
+            "settings_key": "AURORA_SRL_MODE",
             "current": "live",
             "target": "live",
             "criteria": [
@@ -116,7 +116,7 @@ class KillSwitchReadinessService:
             ],
         },
         "stage30_metacognition": {
-            "settings_key": "AURORA_STAGE30_METACOGNITION_MODE",
+            "settings_key": "AURORA_METACOG_MODE",
             "current": "live",
             "target": "live",
             "criteria": [
@@ -125,7 +125,7 @@ class KillSwitchReadinessService:
             ],
         },
         "stage31_idiographic": {
-            "settings_key": "AURORA_STAGE31_IDIOGRAPHIC_MODE",
+            "settings_key": "AURORA_IDIOGRAPHIC_MODE",
             "current": "live",
             "target": "live",
             "criteria": [
@@ -134,7 +134,7 @@ class KillSwitchReadinessService:
             ],
         },
         "stage33_journey": {
-            "settings_key": "AURORA_STAGE33_JOURNEY_MODE",
+            "settings_key": "AURORA_STAGE33_MODE",
             "current": "live",
             "target": "live",
             "criteria": [
@@ -232,12 +232,15 @@ class KillSwitchReadinessService:
 
     def _current_mode(self, catalog: dict[str, Any], settings: Any) -> str:
         settings_key = str(catalog["settings_key"])
-        fallback = str(catalog.get("current", "off"))
-        raw_value = getattr(settings, settings_key, fallback)
+        raw_value = getattr(settings, settings_key, None)
 
+        if raw_value is None:
+            # EI-06: settings 键缺失时显式标记 unknown（并在 blocking_reasons 中暴露），
+            # 绝不静默回退到 catalog 预期值 —— 否则运维把真实开关拨到 off 也无法从报告察觉。
+            return "unknown"
         if isinstance(raw_value, bool):
             return "live" if raw_value else "off"
-        return self._normalize_mode(raw_value, fallback=fallback)
+        return self._normalize_mode(raw_value, fallback=str(catalog.get("current", "off")))
 
     def _blocking_reasons(self, key: str, catalog: dict[str, Any], current_mode: str) -> list[str]:
         reasons: list[str] = []

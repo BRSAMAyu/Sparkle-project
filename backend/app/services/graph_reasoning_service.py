@@ -89,6 +89,10 @@ class GraphReasoningService:
             if cache_service.redis:
                 raw_cached = await cache_service.redis.get(self.CACHE_KEY)
                 if raw_cached:
+                    # EI-05: cache_service.redis 以 decode_responses=True 创建
+                    # （app/core/cache.py），get() 返回 str；兼容直连 bytes 的客户端。
+                    if isinstance(raw_cached, str):
+                        raw_cached = raw_cached.encode("utf-8")
                     # Format: 64-char hex HMAC + JSON payload
                     if len(raw_cached) < 64:
                         raise ValueError("Cached graph too short for HMAC")

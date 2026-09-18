@@ -1024,6 +1024,15 @@ class EventBus:
                 import time as _time
                 self._last_connect_failure = _time.monotonic()
 
+    def begin_shutdown(self) -> None:
+        """进入关机流程（EI-04）。
+
+        置 ``_running = False``：此后 ``_restart_consume_loop`` 不再把死亡/被取消的
+        消费循环复活。应由应用 lifespan 在关停一开始调用，随后再 ``await close()``
+        完成取消与排空。
+        """
+        self._running = False
+
     async def close(self):
         """Close connection and stop consumers"""
         self._running = False

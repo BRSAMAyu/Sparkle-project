@@ -5,6 +5,8 @@ Database Session Management
 """
 from __future__ import annotations
 
+import asyncio
+import logging
 import ssl
 
 from sqlalchemy.engine import make_url
@@ -14,6 +16,8 @@ from sqlalchemy.pool import NullPool
 
 from app.config import settings
 from app.db.url import to_async_database_url
+
+logger = logging.getLogger(__name__)
 
 _EXTERNAL_TRANSACTION_MANAGED_KEY = "external_transaction_managed"
 
@@ -152,30 +156,40 @@ def get_db_context():
     """
     同步上下文管理器，用于Celery任务中获取数据库会话
 
-    用法:
+    用法（任务体保持同步，在同步体内驱动协程）:
         with get_db_context() as db:
             asyncio.run(async_function(db))
 
     事务管理：
     - 成功时自动提交
     - 异常时自动回滚
+
+    NOTE(EI-01/EI-03):
+    - commit/rollback/close 各自通过 asyncio.run 在独立的短命事件循环上驱动，
+      因此**禁止**在本上下文管理器的 with 体内再嵌套事件循环（如写在 async 函数里
+      由 _run_async 驱动）——那会让 __exit__ 的 asyncio.run 撞上运行中的循环直接
+      RuntimeError。会话生命周期需要跨 await 的任务请改用协程内
+      `async with AsyncSessionLocal()` 模式（见 app/core/celery_tasks.py）。
+    - 回滚/关闭自身的失败仅记录日志，永不替换 with 体内抛出的原始异常。
     """
     session = AsyncSessionLocal()
     try:
         yield session
-        import asyncio
-
-        # Run async commit
         asyncio.run(_commit_session(session))
     except Exception:
-        import asyncio
-
-        asyncio.run(_rollback_session(session))
+        try:
+            asyncio.run(_rollback_session(session))
+        except Exception as rollback_error:
+            logger.warning(
+                "get_db_context rollback failed (original exception preserved): %s",
+                rollback_error,
+            )
         raise
     finally:
-        import asyncio
-
-        asyncio.run(_close_session(session))
+        try:
+            asyncio.run(_close_session(session))
+        except Exception as close_error:
+            logger.warning("get_db_context close failed: %s", close_error)
 
 
 async def _commit_session(session: AsyncSession):

@@ -498,6 +498,11 @@ async def lifespan(fastapp: FastAPI):
     # 停止知识拓展后台任务
     await stop_expansion_worker()
 
+    # EI-04: 进入事件总线关停流程 —— 阻止关机窗口内死亡的消费循环被 _restart_consume_loop 复活。
+    from app.core.event_bus import event_bus
+
+    event_bus.begin_shutdown()
+
     # Stop preference event consumer
     preference_consumer_task = getattr(app.state, "preference_consumer_task", None)
     if preference_consumer_task:
@@ -685,6 +690,15 @@ async def lifespan(fastapp: FastAPI):
     if galaxy_streaming_service:
         galaxy_streaming_service.stop()
         logger.info("GalaxyStreamingService stopped")
+
+    # EI-04: 排空事件总线内部消费任务（subscribe() 挂在 bus 内部的 _consume_loop
+    # 从未被各 *_consumer_task 句柄覆盖）。需在 cache_service.close()（释放 Redis）
+    # 之前执行。
+    try:
+        await event_bus.close()
+        logger.info("Event bus consume loops drained")
+    except Exception as e:
+        logger.warning(f"Event bus shutdown failed: {e}")
 
     # Close Cache
     await cache_service.close()

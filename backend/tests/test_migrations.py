@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import pickle
+import json
 import uuid
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -197,15 +197,30 @@ async def test_graph_caching_preserved(graph_service, mock_db, mock_cache):
 
         graph_service.G = None
 
-        mock_cache.get = AsyncMock(return_value={"cache": "hit"})
+        # EI-05: 生产缓存格式是 JSON + HMAC（64 位 hex 签名前缀），且 cache_service.redis
+        # 以 decode_responses=True 创建（get 返回 str）。此处按真实回读格式喂缓存，
+        # 并断言命中后不再回源 DB。
         cached_graph = nx.DiGraph()
         for node in nodes:
             cached_graph.add_node(node.id, name=node.name, description=node.description)
-        mock_cache.redis.get = AsyncMock(return_value=pickle.dumps(cached_graph, protocol=5))
+        json_payload = json.dumps(
+            nx.node_link_data(cached_graph, edges="edges"), default=str
+        ).encode("utf-8")
+        sig = graph_service._hmac_sign(json_payload)
+        mock_cache.redis.get = AsyncMock(
+            return_value=(sig.encode("ascii") + json_payload).decode("utf-8")
+        )
+        mock_db.execute.reset_mock()
+        mock_db.execute.side_effect = []
 
         await graph_service._load_graph()
         assert graph_service.G is not None
         assert graph_service.G.number_of_nodes() == 2
+        # 缓存命中：UUID 以字符串往返后应被 relabel 回 UUID
+        assert all(isinstance(n, uuid.UUID) for n in graph_service.G.nodes())
+        # 未回源 DB、未重复写缓存
+        mock_db.execute.assert_not_called()
+        mock_cache.redis.set.assert_called_once()
 
 
 @pytest.mark.asyncio
