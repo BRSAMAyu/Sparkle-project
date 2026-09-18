@@ -1067,16 +1067,19 @@ def _document_group_scope(context_data: dict[str, Any] | None) -> tuple[bool, li
 
 async def context_builder_node(state: WorkflowState) -> WorkflowState:
     """Build user and conversation context."""
+    _node_t0 = time.perf_counter()
     logger.info("Building context...")
     user_context = state.context_data.get("user_context")
     if not user_context:
         user_context = {"name": "User", "preferences": {}}
     state.context_data["user_context"] = user_context
+    logger.info("[LATENCY] graph_node=context_builder took {:.0f}ms", (time.perf_counter() - _node_t0) * 1000)
     return state
 
 
 async def retrieval_node(state: WorkflowState) -> WorkflowState:
     """RAG Retrieval."""
+    _node_t0 = time.perf_counter()
     query = state.messages[-1]["content"] if state.messages else ""
     db_session = state.context_data.get("db_session")
     user_id = state.context_data.get("user_id")
@@ -1333,6 +1336,7 @@ async def retrieval_node(state: WorkflowState) -> WorkflowState:
                 agent_service_pb2.ChatResponse(citations=agent_service_pb2.CitationBlock(citations=citations))
             )
 
+    logger.info("[LATENCY] graph_node=retrieval took {:.0f}ms", (time.perf_counter() - _node_t0) * 1000)
     return state
 
 
@@ -1752,6 +1756,8 @@ Ask about their available time and current tasks if needed.
         effective_tools = []
 
     try:
+        _gen_t0 = time.perf_counter()
+        _gen_first_chunk_logged = False
         usage_prompt_tokens = 0
         usage_completion_tokens = 0
         generation_stream = generation_llm.chat_stream_with_tools(
@@ -1764,15 +1770,32 @@ Ask about their available time and current tasks if needed.
                 user_context=user_context,
             )
         )
+        logger.info(
+            "[LATENCY] graph_node=generation pre_llm_prep took {:.0f}ms (system_prompt_chars={})",
+            (time.perf_counter() - _gen_t0) * 1000,
+            len(system_prompt or ""),
+        )
         try:
             async for chunk in _stream_generation_chunks_with_timeout(generation_stream):
+                if not _gen_first_chunk_logged:
+                    logger.info(
+                        "[LATENCY] graph_node=generation first_chunk_after {:.0f}ms (type={})",
+                        (time.perf_counter() - _gen_t0) * 1000,
+                        chunk.type,
+                    )
+                    _gen_first_chunk_logged = True
                 if chunk.type == "text":
                     full_response += chunk.content
                     if stream_callback:
                         delta_buffer.append(chunk.content)
                         now = time.monotonic()
+                        # FT-LAT-5: the very first text chunk is flushed
+                        # immediately so the user's first visible token is not
+                        # held back by the batching window; subsequent deltas
+                        # keep the char/time batching.
                         if (
-                            sum(len(part) for part in delta_buffer) >= _STREAM_DELTA_FLUSH_CHARS
+                            not first_chunk_sent
+                            or sum(len(part) for part in delta_buffer) >= _STREAM_DELTA_FLUSH_CHARS
                             or (now - last_flush_at) >= _STREAM_DELTA_FLUSH_SECONDS
                         ):
                             first_chunk_sent = await _flush_stream_text_buffer(
@@ -3207,6 +3230,7 @@ def create_standard_chat_graph() -> StateGraph:
 
 async def router_node(state: WorkflowState) -> WorkflowState:
     """Intelligent Routing Node."""
+    _router_t0 = time.perf_counter()
     selected_experts = _selected_expert_ids(state)
     if selected_experts:
         chat_mode = str(state.context_data.get("chat_mode") or "").strip()
@@ -3228,7 +3252,9 @@ async def router_node(state: WorkflowState) -> WorkflowState:
     routes = ["generation", "math_agent", "code_agent", "tool_execution"]
 
     router = RouterNode(routes=routes, redis_client=redis_client, user_id=user_id)
-    return await router(state)
+    _result_state = await router(state)
+    logger.info("[LATENCY] graph_node=router took {:.0f}ms", (time.perf_counter() - _router_t0) * 1000)
+    return _result_state
 
 
 # ==========================================

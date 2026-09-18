@@ -2098,6 +2098,7 @@ class ExecutionEngineMixin:
             else:
                 try:
                     locale = user_context_payload.get("profile", {}).get("identity", {}).get("language", "en")
+                    _planner_started = time.perf_counter()
                     executable_plan = await asyncio.wait_for(
                         self.lang_graph_planner.plan(
                             message=user_message,
@@ -2116,6 +2117,11 @@ class ExecutionEngineMixin:
                             locale=locale,
                         ),
                         timeout=_LANGGRAPH_PLANNER_TIMEOUT_SECONDS,
+                    )
+                    logger.info(
+                        "[LATENCY] lang_graph_planner.plan took {:.0f}ms (session={})",
+                        (time.perf_counter() - _planner_started) * 1000,
+                        session_id,
                     )
                 except TimeoutError:
                     logger.warning(

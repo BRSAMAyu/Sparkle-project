@@ -1,0 +1,977 @@
+diff --git a/backend/app/agents/standard_workflow.py b/backend/app/agents/standard_workflow.py
+index 94a4ec4f..df9492aa 100755
+--- a/backend/app/agents/standard_workflow.py
++++ b/backend/app/agents/standard_workflow.py
+@@ -1067,16 +1067,19 @@ def _document_group_scope(context_data: dict[str, Any] | None) -> tuple[bool, li
+ 
+ async def context_builder_node(state: WorkflowState) -> WorkflowState:
+     """Build user and conversation context."""
++    _node_t0 = time.perf_counter()
+     logger.info("Building context...")
+     user_context = state.context_data.get("user_context")
+     if not user_context:
+         user_context = {"name": "User", "preferences": {}}
+     state.context_data["user_context"] = user_context
++    logger.info("[LATENCY] graph_node=context_builder took {:.0f}ms", (time.perf_counter() - _node_t0) * 1000)
+     return state
+ 
+ 
+ async def retrieval_node(state: WorkflowState) -> WorkflowState:
+     """RAG Retrieval."""
++    _node_t0 = time.perf_counter()
+     query = state.messages[-1]["content"] if state.messages else ""
+     db_session = state.context_data.get("db_session")
+     user_id = state.context_data.get("user_id")
+@@ -1333,6 +1336,7 @@ async def retrieval_node(state: WorkflowState) -> WorkflowState:
+                 agent_service_pb2.ChatResponse(citations=agent_service_pb2.CitationBlock(citations=citations))
+             )
+ 
++    logger.info("[LATENCY] graph_node=retrieval took {:.0f}ms", (time.perf_counter() - _node_t0) * 1000)
+     return state
+ 
+ 
+@@ -1752,6 +1756,8 @@ Ask about their available time and current tasks if needed.
+         effective_tools = []
+ 
+     try:
++        _gen_t0 = time.perf_counter()
++        _gen_first_chunk_logged = False
+         usage_prompt_tokens = 0
+         usage_completion_tokens = 0
+         generation_stream = generation_llm.chat_stream_with_tools(
+@@ -1764,15 +1770,32 @@ Ask about their available time and current tasks if needed.
+                 user_context=user_context,
+             )
+         )
++        logger.info(
++            "[LATENCY] graph_node=generation pre_llm_prep took {:.0f}ms (system_prompt_chars={})",
++            (time.perf_counter() - _gen_t0) * 1000,
++            len(system_prompt or ""),
++        )
+         try:
+             async for chunk in _stream_generation_chunks_with_timeout(generation_stream):
++                if not _gen_first_chunk_logged:
++                    logger.info(
++                        "[LATENCY] graph_node=generation first_chunk_after {:.0f}ms (type={})",
++                        (time.perf_counter() - _gen_t0) * 1000,
++                        chunk.type,
++                    )
++                    _gen_first_chunk_logged = True
+                 if chunk.type == "text":
+                     full_response += chunk.content
+                     if stream_callback:
+                         delta_buffer.append(chunk.content)
+                         now = time.monotonic()
++                        # FT-LAT-5: the very first text chunk is flushed
++                        # immediately so the user's first visible token is not
++                        # held back by the batching window; subsequent deltas
++                        # keep the char/time batching.
+                         if (
+-                            sum(len(part) for part in delta_buffer) >= _STREAM_DELTA_FLUSH_CHARS
++                            not first_chunk_sent
++                            or sum(len(part) for part in delta_buffer) >= _STREAM_DELTA_FLUSH_CHARS
+                             or (now - last_flush_at) >= _STREAM_DELTA_FLUSH_SECONDS
+                         ):
+                             first_chunk_sent = await _flush_stream_text_buffer(
+@@ -3207,6 +3230,7 @@ def create_standard_chat_graph() -> StateGraph:
+ 
+ async def router_node(state: WorkflowState) -> WorkflowState:
+     """Intelligent Routing Node."""
++    _router_t0 = time.perf_counter()
+     selected_experts = _selected_expert_ids(state)
+     if selected_experts:
+         chat_mode = str(state.context_data.get("chat_mode") or "").strip()
+@@ -3228,7 +3252,9 @@ async def router_node(state: WorkflowState) -> WorkflowState:
+     routes = ["generation", "math_agent", "code_agent", "tool_execution"]
+ 
+     router = RouterNode(routes=routes, redis_client=redis_client, user_id=user_id)
+-    return await router(state)
++    _result_state = await router(state)
++    logger.info("[LATENCY] graph_node=router took {:.0f}ms", (time.perf_counter() - _router_t0) * 1000)
++    return _result_state
+ 
+ 
+ # ==========================================
+diff --git a/backend/app/core/unified_intent_router.py b/backend/app/core/unified_intent_router.py
+index 94b819c7..a91c6125 100644
+--- a/backend/app/core/unified_intent_router.py
++++ b/backend/app/core/unified_intent_router.py
+@@ -562,8 +562,11 @@ class UnifiedIntentRouter:
+         message = (message or "").strip()
+         if not message:
+             return True
+-        if not conversation_history:
+-            return False
++        # FT-LAT-2: 空历史（会话首条消息）不再强制走 LLM 辅助分类。
++        # 之前首条消息必付一次串行 LLM 分类往返；简单问候/短问题本就可以
++        # 由规则层安全直答。后续守卫（intent=chat、置信度、长度、复杂度、
++        # 动作词）保证只有明确简单的消息才短路，复杂/操作类消息仍会进入
++        # LLM 辅助分类，路由语义不降级。
+         if rule_result.primary_intent != UnifiedIntentType.CHAT:
+             return False
+         if rule_result.confidence < 0.5:
+diff --git a/backend/app/orchestration/context_builder.py b/backend/app/orchestration/context_builder.py
+index 4942001b..5e6140f8 100644
+--- a/backend/app/orchestration/context_builder.py
++++ b/backend/app/orchestration/context_builder.py
+@@ -13,7 +13,9 @@ from __future__ import annotations
+ 
+ import asyncio
+ import contextlib
++import copy
+ import json
++import time
+ import uuid
+ from datetime import datetime, timedelta
+ from app.core.time_utils import utcnow
+@@ -61,6 +63,14 @@ from app.state_aggregator.service import StateAggregatorService
+ class ContextBuilderMixin:
+     """Mixin providing context building methods for ChatOrchestrator."""
+ 
++    # FT-LAT-3: per-user short-TTL cache for the expensive user-context payload.
++    # The full rebuild costs 1-2s warm (and used to spike 10-30s cold); within a
++    # session the payload barely changes between consecutive turns, so later
++    # messages reuse it instead of re-paying the whole serial chain.
++    _USER_CONTEXT_CACHE_TTL_SECONDS = 120.0
++    _USER_CONTEXT_CACHE_MAX_ENTRIES = 128
++    _user_context_cache: dict[str, tuple[float, dict[str, Any]]] = {}
++
+     @staticmethod
+     def _extract_seed_library_nodes(examples: list[dict[str, Any]]) -> list[str]:
+         seen: set[str] = set()
+@@ -481,11 +491,27 @@ class ContextBuilderMixin:
+         return {"has_seed_library": False}
+ 
+     async def _build_learning_gaps_summary(self, user_id: str, db_session: AsyncSession) -> str | None:
++        # FT-LAT-1: This hop used to sit directly on the first-token critical path:
++        # on seed-cache miss the SeedExtractor runs six serial source queries plus a
++        # hidden LLM refine (glm batch, 10-30s observed) just to pick 3 seeds for a
++        # <=300 char summary. The heuristic rank order is deterministic, so the LLM
++        # refine is skipped here (seed content itself is unchanged), and the final
++        # summary is cached per user so only one turn per TTL window pays the DB cost.
++        from app.core.cache import cache_service
++
++        _gaps_cache_key = f"sparkle:ctx:learning_gaps_summary:{user_id}"
++        try:
++            cached_summary = await cache_service.get(_gaps_cache_key)
++        except Exception:
++            cached_summary = None
++        if isinstance(cached_summary, str):
++            return cached_summary or None
+         try:
+             seeds = await SeedExtractor(db_session).get_cached_or_generate(
+                 uuid.UUID(user_id),
+                 scenario_key="chat_context",
+                 limit=3,
++                allow_llm_refine=False,
+             )
+         except Exception as exc:
+             logger.warning(f"Failed to build learning gaps summary for {user_id}: {exc}")
+@@ -500,9 +526,12 @@ class ContextBuilderMixin:
+             item = f"{topic}: {tension}" if tension else topic
+             items.append(item[:96])
+         summary = "；".join(items).strip()
+-        if not summary:
+-            return None
+-        return summary[:300]
++        summary = summary[:300] or ""
++        try:
++            await cache_service.set(_gaps_cache_key, summary, ttl=300)
++        except Exception:
++            pass
++        return summary or None
+ 
+     async def _build_stage33_working_memory_snapshot(
+         self,
+@@ -758,10 +787,20 @@ class ContextBuilderMixin:
+             Dict containing user context and analytics
+         """
+         try:
++            _uc_marks: list[tuple[str, float]] = []
++            _uc_t = time.perf_counter()
++
++            def _uc_mark(name: str) -> None:
++                nonlocal _uc_t
++                _now = time.perf_counter()
++                _uc_marks.append((name, _now - _uc_t))
++                _uc_t = _now
++
+             # Pass redis_client to UserService for caching
+             user_service = UserService(db_session, self.redis)
+             base_user_context = await user_service.get_context(uuid.UUID(user_id))
+             base_user_context_data = base_user_context.model_dump() if base_user_context else None
++            _uc_mark("user_service.get_context")
+             experiment_cohort = self._experiment_cohort_for_user(user_id)
+ 
+             locale = "zh-CN"
+@@ -774,89 +813,105 @@ class ContextBuilderMixin:
+                 db_session=db_session,
+                 locale=locale,
+             )
++            _uc_mark("build_returning_context")
+             understanding_depth = None
+             if settings.ENABLE_PERCEPTIBLE_INTELLIGENCE:
+                 with contextlib.suppress(Exception):
+                     depth_service = UnderstandingDepthService(db_session, self.redis)
+                     understanding_depth = (await depth_service.evaluate(user_id=uuid.UUID(user_id))).__dict__
++            _uc_mark("understanding_depth")
+ 
+             # P1: Task Status Summary
+             task_status_summary = await self._get_task_status_summary(user_id, db_session)
++            _uc_mark("task_status_summary")
+ 
+             llm_profile_data = None
+             preference_version = 0
+-            try:
+-                from app.services.personalization import get_personalization_engine
+-
+-                engine = get_personalization_engine(db_session, self.redis)
+-                llm_profile = await engine.get_llm_profile(uuid.UUID(user_id))
+-                prefs = await engine.pref_service.get_preferences(uuid.UUID(user_id))
+-                preference_version = prefs.version
+-                llm_profile_data = {
+-                    "system_prompt_additions": llm_profile.system_prompt_additions,
+-                    "verbosity_target": llm_profile.verbosity_target,
+-                    "temperature": llm_profile.temperature,
+-                    "should_ask_clarifying": llm_profile.should_ask_clarifying,
+-                    "should_provide_examples": llm_profile.should_provide_examples,
+-                    "exploration_level": llm_profile.exploration_level,
+-                    "tone": llm_profile.tone,
+-                }
+ 
+-                # --- Aurora Profile Integration ---
++            async def _build_llm_profile_bundle(session: AsyncSession) -> tuple[dict[str, Any] | None, int]:
++                bundle_profile_data = None
++                bundle_version = 0
+                 try:
+-                    from app.aurora.ledger import AppendOnlyLedgerStore
+-                    from app.aurora.relationship_state import SparkleRelationshipStateManager
+-                    from app.aurora.profile_translator import ProfileTranslator
+-                    from app.aurora.schemas.primitives import InsightClaim, IdentityEvidence
+-
+-                    # Instantiate ledger (defaults to memory-based if no storage path is mapped)
+-                    ledger = AppendOnlyLedgerStore(storage_path=settings.AURORA_LEDGER_PATH)
+-                    raw_records = ledger.list_records(user_id=user_id, record_types={"insight_claim", "identity_evidence"})
+-
+-                    claims = []
+-                    for r in raw_records:
+-                        if r["record_type"] == "insight_claim":
+-                            try:
+-                                claims.append(InsightClaim.model_validate(r["payload"]))
+-                            except Exception:
+-                                continue
+-
+-                    evidence = []
+-                    for r in raw_records:
+-                        if r["record_type"] == "identity_evidence":
+-                            try:
+-                                evidence.append(IdentityEvidence.model_validate(r["payload"]))
+-                            except Exception:
+-                                continue
+-
+-                    rel_manager = SparkleRelationshipStateManager()
+-                    # Derive maturity from interaction history count + claims
+-                    interaction_metadata = {"interaction_count": len(raw_records)}
+-                    rel_state = rel_manager.derive_state(
+-                        user_id=uuid.UUID(user_id),
+-                        claims=claims,
+-                        identity_evidence=evidence,
+-                        interaction_metadata=interaction_metadata
+-                    )
+-
+-                    translator = ProfileTranslator()
+-                    translation = translator.translate(claims=claims, evidence=evidence, relationship_state=rel_state)
++                    from app.services.personalization import get_personalization_engine
++
++                    engine = get_personalization_engine(session, self.redis)
++                    llm_profile = await engine.get_llm_profile(uuid.UUID(user_id))
++                    prefs = await engine.pref_service.get_preferences(uuid.UUID(user_id))
++                    bundle_version = prefs.version
++                    bundle_profile_data = {
++                        "system_prompt_additions": llm_profile.system_prompt_additions,
++                        "verbosity_target": llm_profile.verbosity_target,
++                        "temperature": llm_profile.temperature,
++                        "should_ask_clarifying": llm_profile.should_ask_clarifying,
++                        "should_provide_examples": llm_profile.should_provide_examples,
++                        "exploration_level": llm_profile.exploration_level,
++                        "tone": llm_profile.tone,
++                    }
+ 
+-                    # Inject into profile context for prompt building
+-                    llm_profile_data["aurora_profile_summary"] = translation.summary
+-                    llm_profile_data["relationship_maturity"] = rel_state.relationship_maturity
+-                    llm_profile_data["relationship_label"] = rel_state.label
+-                except Exception as aurora_err:
+-                    logger.warning(f"Failed to integrate Aurora profile context: {aurora_err}")
+-            except Exception as e:
+-                logger.warning(f"Failed to build LLM profile: {e}")
++                    # --- Aurora Profile Integration ---
++                    try:
++                        from app.aurora.ledger import AppendOnlyLedgerStore
++                        from app.aurora.relationship_state import SparkleRelationshipStateManager
++                        from app.aurora.profile_translator import ProfileTranslator
++                        from app.aurora.schemas.primitives import InsightClaim, IdentityEvidence
++
++                        # Instantiate ledger (defaults to memory-based if no storage path is mapped)
++                        ledger = AppendOnlyLedgerStore(storage_path=settings.AURORA_LEDGER_PATH)
++                        raw_records = ledger.list_records(user_id=user_id, record_types={"insight_claim", "identity_evidence"})
++
++                        claims = []
++                        for r in raw_records:
++                            if r["record_type"] == "insight_claim":
++                                try:
++                                    claims.append(InsightClaim.model_validate(r["payload"]))
++                                except Exception:
++                                    continue
++
++                        evidence = []
++                        for r in raw_records:
++                            if r["record_type"] == "identity_evidence":
++                                try:
++                                    evidence.append(IdentityEvidence.model_validate(r["payload"]))
++                                except Exception:
++                                    continue
++
++                        rel_manager = SparkleRelationshipStateManager()
++                        # Derive maturity from interaction history count + claims
++                        interaction_metadata = {"interaction_count": len(raw_records)}
++                        rel_state = rel_manager.derive_state(
++                            user_id=uuid.UUID(user_id),
++                            claims=claims,
++                            identity_evidence=evidence,
++                            interaction_metadata=interaction_metadata
++                        )
++
++                        translator = ProfileTranslator()
++                        translation = translator.translate(claims=claims, evidence=evidence, relationship_state=rel_state)
++
++                        # Inject into profile context for prompt building
++                        bundle_profile_data["aurora_profile_summary"] = translation.summary
++                        bundle_profile_data["relationship_maturity"] = rel_state.relationship_maturity
++                        bundle_profile_data["relationship_label"] = rel_state.label
++                    except Exception as aurora_err:
++                        logger.warning(f"Failed to integrate Aurora profile context: {aurora_err}")
++                except Exception as e:
++                    logger.warning(f"Failed to build LLM profile: {e}")
++                return bundle_profile_data, bundle_version
+ 
+             # --- Use ContextOrchestrator (P4) ---
+             from app.core.context_manager import ContextOrchestrator
+ 
+-            context_orchestrator = ContextOrchestrator(db_session, self.redis)
+-            # Fetch aggregated context (cached)
+-            cognitive_context = await context_orchestrator.get_user_context(user_id)
++            # FT-LAT-4: personalization (DB-backed) and the aggregated cognitive
++            # context are independent read-only branches — run them concurrently
++            # on separate sessions instead of serially on the shared session.
++            from app.db.session import AsyncSessionLocal
++
++            async with AsyncSessionLocal() as _parallel_session:
++                cognitive_context, (llm_profile_data, preference_version) = await asyncio.gather(
++                    ContextOrchestrator(db_session, self.redis).get_user_context(user_id),
++                    _build_llm_profile_bundle(_parallel_session),
++                )
++            _uc_mark("user_context_parallel_branches")
+ 
+             profile_context_payload = None
+ 
+@@ -893,6 +948,13 @@ class ContextBuilderMixin:
+                 ]
+ 
+                 # P0: 认知棱镜上下文注入 — parallel queries
++                async def _timed(name: str, coro):
++                    _t = time.perf_counter()
++                    try:
++                        return await coro
++                    finally:
++                        logger.info("[LATENCY] prism_query {} took {:.0f}ms", name, (time.perf_counter() - _t) * 1000)
++
+                 (
+                     cognitive_insights,
+                     seed_library_context,
+@@ -900,12 +962,13 @@ class ContextBuilderMixin:
+                     working_memory_snapshot,
+                     recent_tool_usage,
+                 ) = await asyncio.gather(
+-                    self._get_cognitive_insights(user_id, db_session, locale=locale),
+-                    self._get_seed_library_context(user_id, db_session),
+-                    self._build_learning_gaps_summary(user_id, db_session),
+-                    self._build_stage33_working_memory_snapshot(user_id, db_session),
+-                    self._get_recent_tool_usage_context(user_id=user_id, db_session=db_session),
++                    _timed("cognitive_insights", self._get_cognitive_insights(user_id, db_session, locale=locale)),
++                    _timed("seed_library_context", self._get_seed_library_context(user_id, db_session)),
++                    _timed("learning_gaps_summary", self._build_learning_gaps_summary(user_id, db_session)),
++                    _timed("working_memory_snapshot", self._build_stage33_working_memory_snapshot(user_id, db_session)),
++                    _timed("recent_tool_usage", self._get_recent_tool_usage_context(user_id=user_id, db_session=db_session)),
+                 )
++                _uc_mark("prism_parallel_queries")
+ 
+                 profile_payload = self._build_profile_payload(
+                     user_context_data=user_context_data,
+@@ -977,11 +1040,20 @@ class ContextBuilderMixin:
+                     user_id=user_id,
+                     db_session=db_session,
+                 )
+-                return await self._attach_stage39_context(
++                _uc_mark("stage34_memory_context")
++                _final_payload = await self._attach_stage39_context(
+                     payload,
+                     user_id=user_id,
+                     db_session=db_session,
+                 )
++                _uc_mark("stage39_context")
++                if _uc_marks:
++                    logger.info(
++                        "[LATENCY] build_user_context session={} {}",
++                        session_id,
++                        " ".join(f"{name}={delta * 1000:.0f}ms" for name, delta in _uc_marks),
++                    )
++                return _final_payload
+ 
+             # Fallback to legacy logic if new orchestrator returns None (shouldn't happen)
+             logger.warning(f"ContextOrchestrator returned None for {user_id}, falling back to legacy")
+@@ -1387,6 +1459,8 @@ class ContextBuilderMixin:
+                 plan_id = uuid.UUID(grpc_context["plan_id"])
+ 
+         plan_switched = False
++        _ctx_probe_marks: list[tuple[str, float]] = []
++        _ctx_probe_t = time.perf_counter()
+         if not plan_id and user_message and active_db:
+             with tracer.start_as_current_span("orchestrator.auto_switch_plan"):
+                 try:
+@@ -1428,7 +1502,22 @@ class ContextBuilderMixin:
+         plan_context = None
+         with tracer.start_as_current_span("db.build_context"):
+             if active_db and user_id:
+-                local_context = await self._build_user_context(user_id, active_db, session_id=session_id)
++                _h0 = time.perf_counter()
++                _cache_entry = self._user_context_cache.get(user_id)
++                if (
++                    _cache_entry is not None
++                    and (time.monotonic() - _cache_entry[0]) <= self._USER_CONTEXT_CACHE_TTL_SECONDS
++                ):
++                    local_context = copy.deepcopy(_cache_entry[1])
++                    _ctx_probe_marks.append(("build_user_context_cached", time.perf_counter() - _h0))
++                else:
++                    local_context = await self._build_user_context(user_id, active_db, session_id=session_id)
++                    if isinstance(local_context, dict):
++                        self._user_context_cache[user_id] = (time.monotonic(), copy.deepcopy(local_context))
++                        if len(self._user_context_cache) > self._USER_CONTEXT_CACHE_MAX_ENTRIES:
++                            _oldest_key = min(self._user_context_cache, key=lambda k: self._user_context_cache[k][0])
++                            self._user_context_cache.pop(_oldest_key, None)
++                    _ctx_probe_marks.append(("build_user_context", time.perf_counter() - _h0))
+                 user_context_payload = self._merge_user_contexts(local_context, grpc_context)
+                 logger.info(f"Merged user context: {user_context_payload is not None}")
+ 
+@@ -1489,10 +1578,12 @@ class ContextBuilderMixin:
+                 logger.info("Using gRPC context without local DB context")
+ 
+         self._log_context_injection(user_id, user_context_payload)
++        _h1 = time.perf_counter()
+         if self.context_pruner:
+             with tracer.start_as_current_span("db.build_conversation_context"):
+                 conversation_context = await self._build_conversation_context(session_id, user_id)
+-
++        _ctx_probe_marks.append(("build_conversation_context", time.perf_counter() - _h1))
++        _h2 = time.perf_counter()
+         if active_db and user_message:
+             await self._persist_user_message(
+                 active_db=active_db,
+@@ -1501,6 +1592,14 @@ class ContextBuilderMixin:
+                 user_message=user_message,
+                 request_id=request_id,
+             )
++        _ctx_probe_marks.append(("persist_user_message", time.perf_counter() - _h2))
++        if _ctx_probe_marks:
++            _chain = " ".join(f"{name}={delta * 1000:.0f}ms" for name, delta in _ctx_probe_marks)
++            logger.info(
++                "[LATENCY] build_full_context session={} {}",
++                session_id,
++                _chain,
++            )
+ 
+         return grpc_context, plan_id, plan_switched, user_context_payload, conversation_context, plan_context
+ 
+diff --git a/backend/app/orchestration/execution_engine.py b/backend/app/orchestration/execution_engine.py
+index ae93b18b..257bfc3e 100644
+--- a/backend/app/orchestration/execution_engine.py
++++ b/backend/app/orchestration/execution_engine.py
+@@ -2098,6 +2098,7 @@ class ExecutionEngineMixin:
+             else:
+                 try:
+                     locale = user_context_payload.get("profile", {}).get("identity", {}).get("language", "en")
++                    _planner_started = time.perf_counter()
+                     executable_plan = await asyncio.wait_for(
+                         self.lang_graph_planner.plan(
+                             message=user_message,
+@@ -2117,6 +2118,11 @@ class ExecutionEngineMixin:
+                         ),
+                         timeout=_LANGGRAPH_PLANNER_TIMEOUT_SECONDS,
+                     )
++                    logger.info(
++                        "[LATENCY] lang_graph_planner.plan took {:.0f}ms (session={})",
++                        (time.perf_counter() - _planner_started) * 1000,
++                        session_id,
++                    )
+                 except TimeoutError:
+                     logger.warning(
+                         "LangGraph planner timed out after {}s for session {}; using synthesized fallback",
+diff --git a/backend/app/orchestration/latency_probe.py b/backend/app/orchestration/latency_probe.py
+new file mode 100644
+index 00000000..cfdd7097
+--- /dev/null
++++ b/backend/app/orchestration/latency_probe.py
+@@ -0,0 +1,82 @@
++"""First-token latency profiling probe.
++
++ Lightweight helper that records per-hop wall-clock durations inside
++ ``ChatOrchestrator.process_stream`` and emits a single structured log line
++ (``[LATENCY]``) when the probe finishes. The goal is to make the serial
++ pre-first-token hop chain observable so regressions and wins are visible in
++ engine logs without attaching a profiler.
++
++ Usage:
++        probe = LatencyProbe(session_id=session_id, request_id=request_id)
++        ...
++        with probe.hop("build_full_context"):
++            await self._build_full_context(...)
++        ...
++        probe.finish(first_token=bool)
++"""
++
++from __future__ import annotations
++
++import time
++from contextlib import contextmanager
++from typing import Iterator
++
++from loguru import logger
++
++
++class LatencyProbe:
++    """Accumulates named hop durations and logs a compact summary."""
++
++    def __init__(self, *, session_id: str = "", request_id: str = "", enabled: bool = True) -> None:
++        self.enabled = enabled
++        self.session_id = session_id
++        self.request_id = request_id
++        self._t0 = time.perf_counter()
++        self._last = self._t0
++        self._hops: list[tuple[str, float]] = []
++        self._first_token_s: float | None = None
++
++    @contextmanager
++    def hop(self, name: str) -> Iterator[None]:
++        if not self.enabled:
++            yield
++            return
++        start = time.perf_counter()
++        try:
++            yield
++        finally:
++            self._hops.append((name, time.perf_counter() - start))
++
++    def mark(self, name: str) -> None:
++        """Record the gap since the previous mark/step as a hop (non-context form)."""
++        if not self.enabled:
++            return
++        now = time.perf_counter()
++        self._hops.append((name, now - self._last))
++        self._last = now
++
++    def first_token(self) -> None:
++        """Record time-to-first-streamed-content once."""
++        if not self.enabled:
++            return
++        if self._first_token_s is None:
++            self._first_token_s = time.perf_counter() - self._t0
++
++    def finish(self) -> None:
++        if not self.enabled or not self._hops:
++            return
++        total = time.perf_counter() - self._t0
++        chain = " ".join(f"{name}={delta * 1000:.0f}ms" for name, delta in self._hops)
++        first_token_part = (
++            f" first_stream_content={self._first_token_s * 1000:.0f}ms"
++            if self._first_token_s is not None
++            else ""
++        )
++        logger.info(
++            "[LATENCY] session={} request={} total={:.0f}ms{} hops: {}",
++            self.session_id,
++            self.request_id,
++            total * 1000,
++            first_token_part,
++            chain,
++        )
+diff --git a/backend/app/orchestration/orchestrator.py b/backend/app/orchestration/orchestrator.py
+index c48a862c..f6b6d6ae 100755
+--- a/backend/app/orchestration/orchestrator.py
++++ b/backend/app/orchestration/orchestrator.py
+@@ -96,6 +96,7 @@ from app.orchestration.graph_rag import (
+ )
+ from app.orchestration.grounding_validator import GroundingValidator
+ from app.orchestration.lang_graph_planner import LangGraphPlanner
++from app.orchestration.latency_probe import LatencyProbe
+ from app.orchestration.memory_helpers import (
+     build_aurora_modeling_memory_summary,
+     build_error_memory_summary,
+@@ -2026,6 +2027,7 @@ class ChatOrchestrator(
+             ACTIVE_SESSIONS.inc()
+             request_id = request.request_id
+             session_id = str(request.session_id or "").strip()
++            latency_probe = LatencyProbe(session_id=session_id, request_id=request_id)
+             if not session_id:
+                 session_id = str(uuid.uuid4())
+                 request.session_id = session_id
+@@ -2172,6 +2174,7 @@ class ChatOrchestrator(
+                     user_message=user_message,
+                     context=request_extra_context,
+                 )
++                latency_probe.mark("debrief_check")
+                 if debrief_response:
+                     text = str(debrief_response.get("message") or "")
+                     await self._persist_assistant_message(
+@@ -2262,6 +2265,7 @@ class ChatOrchestrator(
+                     request_id=request_id,
+                     tracer=tracer,
+                 )
++                latency_probe.mark("build_full_context")
+                 conversation_context = self._merge_request_history_into_conversation_context(
+                     conversation_context,
+                     list(request.history),
+@@ -2298,6 +2302,7 @@ class ChatOrchestrator(
+                         user_message=user_message,
+                         conversation_context=conversation_context,
+                     )
++                    latency_probe.mark("detect_session_feedback")
+                 session_feedback_signal = self._apply_cohort_to_session_feedback_signal(
+                     session_feedback_signal,
+                     (
+@@ -2433,6 +2438,7 @@ class ChatOrchestrator(
+                         record_spine_degradation("chat_turn", _spine_err)
+                         logger.warning("Spine signal check degraded: {}", _spine_err)
+                         request_extra_context["spine_degraded"] = True
++                    latency_probe.mark("spine_pipeline")
+ 
+                 expert_routing_decision = None
+                 requested_experts: list[str] = []
+@@ -2541,12 +2547,15 @@ class ChatOrchestrator(
+                     user_context_payload=user_context_payload,
+                     state=state,
+                 )
++                latency_probe.mark("aurora_planning_sidecar")
+ 
+                 # Bound stream buffering while preserving critical terminal/content events.
+                 response_dropped = False
+ 
+                 async def stream_callback(resp: agent_service_pb2.ChatResponse):
+                     nonlocal response_dropped
++                    if resp.WhichOneof("content") in ("delta", "full_text"):
++                        latency_probe.first_token()
+                     resp.response_id = response_id
+                     resp.created_at = int(datetime.now().timestamp())
+                     resp.request_id = request_id
+@@ -2830,6 +2839,7 @@ class ChatOrchestrator(
+                     stream_callback=stream_callback,
+                     queue=queue,
+                 )
++                latency_probe.mark("check_sufficiency")
+                 if sufficiency_handled:
+                     async for queued in self._drain_queue(queue):
+                         yield self._bind_response_session_id(queued, session_id, request_id=request_id)
+@@ -2842,7 +2852,7 @@ class ChatOrchestrator(
+                         user_id=user_id,
+                     )
+                     return
+-                if await self._check_goal_quality(
++                _goal_quality_handled = await self._check_goal_quality(
+                     intent_type=intent_type,
+                     user_message=user_message,
+                     user_id=user_id,
+@@ -2851,7 +2861,9 @@ class ChatOrchestrator(
+                     conversation_context=conversation_context,
+                     stream_callback=stream_callback,
+                     state=state,
+-                ):
++                )
++                latency_probe.mark("check_goal_quality")
++                if _goal_quality_handled:
+                     async for queued in self._drain_queue(queue):
+                         yield self._bind_response_session_id(queued, session_id, request_id=request_id)
+                     await self._update_state(
+@@ -3192,6 +3204,7 @@ class ChatOrchestrator(
+                     conversation_context=conversation_context,
+                     state=state,
+                 )
++                latency_probe.mark("route_and_classify")
+                 orchestration_trace.add_step(
+                     step_id="route",
+                     label="路由决策",
+@@ -3313,6 +3326,7 @@ class ChatOrchestrator(
+                     user_message=user_message,
+                     stream_callback=stream_callback,
+                 )
++                latency_probe.mark("dual_core_routing")
+                 dual_core_decision = state.context_data.get("dual_core_decision") or {}
+                 orchestration_trace.add_step(
+                     step_id="dual_core",
+@@ -3435,6 +3449,7 @@ class ChatOrchestrator(
+                     user_context_payload=user_context_payload,
+                     orchestration_trace=orchestration_trace,
+                 )
++                latency_probe.mark("plan_and_validate")
+                 await self._emit_orchestration_trace(
+                     state=state,
+                     orchestration_trace=orchestration_trace,
+@@ -3470,10 +3485,12 @@ class ChatOrchestrator(
+ 
+                 # Step 13: Execute graph
+                 result_holder: dict[str, Any] = {}
++                latency_probe.mark("pre_graph_launch")
+                 async for item in self._execute_graph(
+                     state=state, user_id=user_id, queue=queue, result_holder=result_holder
+                 ):
+                     yield item
++                latency_probe.mark("execute_graph")
+ 
+                 # RB-02: graph timeout path — the graph task was cancelled without a
+                 # final_state. Explicitly drain already-generated content, fail the FSM
+@@ -3778,6 +3795,7 @@ class ChatOrchestrator(
+                 )
+ 
+             finally:
++                latency_probe.finish()
+                 await self._cleanup(
+                     lock_acquired=lock_acquired,
+                     lock_renewal_task=lock_renewal_task,
+diff --git a/backend/app/orchestration/routing_engine.py b/backend/app/orchestration/routing_engine.py
+index 5d814f49..c4e1614e 100644
+--- a/backend/app/orchestration/routing_engine.py
++++ b/backend/app/orchestration/routing_engine.py
+@@ -5,6 +5,7 @@ import contextlib
+ import hashlib
+ import inspect
+ import json
++import time
+ import uuid
+ from dataclasses import replace
+ from datetime import UTC, datetime
+@@ -2136,6 +2137,7 @@ class RoutingEngineMixin:
+         if has_summary:
+             ROUTING_SUMMARY_CONTEXT_TOTAL.labels(phase="router_input").inc()
+         routing_history = self._build_routing_history(conversation_context)
++        _route_llm_started = time.perf_counter()
+         try:
+             unified_routing_result = await self.unified_router.route(
+                 message=user_message,
+@@ -2145,9 +2147,11 @@ class RoutingEngineMixin:
+                 conversation_history=routing_history,
+             )
+             logger.info(
+-                f"Unified routing: {unified_routing_result.primary_intent.value} "
+-                f"(confidence={unified_routing_result.confidence:.2f}, "
+-                f"layer={unified_routing_result.routing_layer})"
++                "[LATENCY] unified_router.route took {:.0f}ms (intent={}, layer={}, mode={})",
++                (time.perf_counter() - _route_llm_started) * 1000,
++                unified_routing_result.primary_intent.value,
++                unified_routing_result.routing_layer,
++                unified_routing_result.execution_mode,
+             )
+         except Exception as e:
+             logger.warning(f"Unified routing failed: {e}")
+diff --git a/backend/tests/unit/test_unified_intent_router_fast_path_first_message.py b/backend/tests/unit/test_unified_intent_router_fast_path_first_message.py
+new file mode 100644
+index 00000000..6cd0196b
+--- /dev/null
++++ b/backend/tests/unit/test_unified_intent_router_fast_path_first_message.py
+@@ -0,0 +1,110 @@
++"""FT-LAT-2: 会话首条消息（空历史）的简单消息短路单元测试。
++
++Before FT-LAT-2 the router unconditionally fell through to the Layer-3 LLM
++classify call whenever conversation history was empty, so the very first
++message of every session paid an extra serial LLM round trip before a single
++token was streamed. After FT-LAT-2, empty history no longer forces the LLM:
++the same light-message guards (chat intent, confidence floor, length cap,
++complexity scan, action keywords) decide, so simple greetings short-circuit
++while complex/action messages still get LLM assist.
++"""
++
++import asyncio
++
++from app.core.unified_intent_router import IntentRoutingResult, UnifiedIntentRouter, UnifiedIntentType
++
++
++def _chat_rule_result() -> IntentRoutingResult:
++    return IntentRoutingResult(
++        primary_intent=UnifiedIntentType.CHAT,
++        confidence=0.5,
++        routing_layer="rule",
++        execution_mode="direct",
++    )
++
++
++def test_simple_first_message_skips_llm_assist_without_history():
++    router = UnifiedIntentRouter()
++
++    should_skip = router._should_skip_llm_assist(
++        message="你好，简单介绍下你能做什么",
++        rule_result=_chat_rule_result(),
++        conversation_history=[],
++    )
++
++    assert should_skip is True
++
++
++def test_route_uses_fast_path_for_simple_first_message_without_llm():
++    """短路路径不调用规划（Layer-3 LLM 辅助分类）。"""
++    router = UnifiedIntentRouter()
++    llm_calls: list[int] = []
++
++    async def _spy_llm_classify(message, conversation_history, rule_hints):
++        llm_calls.append(1)
++        return rule_hints
++
++    router._llm_classify = _spy_llm_classify
++
++    async def _run():
++        return await router.route(
++            message="你好，简单介绍下你能做什么",
++            user_id="user",
++            session_id="session",
++            payload={},
++            conversation_history=[],
++        )
++
++    result = asyncio.run(_run())
++
++    assert llm_calls == []
++    assert result.primary_intent == UnifiedIntentType.CHAT
++    assert result.execution_mode == "direct"
++    assert result.routing_layer == "rule_fast_path"
++    assert (result.context_signals or {}).get("llm_assist_skipped") is True
++
++
++def test_complex_first_message_still_uses_llm_assist():
++    router = UnifiedIntentRouter()
++
++    complex_message = (
++        "我想深入理解一下微积分里的极限、导数和积分这三个概念到底有什么内在联系，"
++        "然后你能不能帮我把这些概念放到物理学的运动学场景里再完整地讲一遍，"
++        "最好再顺便对比一下高中数学和大学数学在讲法与侧重点上的差别。"
++    )
++
++    assert router._is_complex_intent(complex_message) is True
++    should_skip = router._should_skip_llm_assist(
++        message=complex_message,
++        rule_result=_chat_rule_result(),
++        conversation_history=[],
++    )
++
++    assert should_skip is False
++
++
++def test_action_first_message_still_skips_to_direct_but_flags_no_complexity():
++    """带动作词的简单首条消息：动作词守卫生效（不交给 LLM 猜意图，走直答由下游
++    sufficiency/tool_planning 兜底），这里断言守卫返回 False。"""
++    router = UnifiedIntentRouter()
++
++    should_skip = router._should_skip_llm_assist(
++        message="帮我创建一个今晚复习英语单词的任务",
++        rule_result=_chat_rule_result(),
++        conversation_history=[],
++    )
++
++    assert should_skip is False
++
++
++def test_empty_history_no_longer_forces_llm_assist():
++    """回归断言：空历史本身不再强制 LLM 辅助分类。"""
++    router = UnifiedIntentRouter()
++
++    should_skip = router._should_skip_llm_assist(
++        message="在吗？",
++        rule_result=_chat_rule_result(),
++        conversation_history=[],
++    )
++
++    assert should_skip is True
+diff --git "a/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/first-token-latency.md" "b/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/first-token-latency.md"
+new file mode 100644
+index 00000000..ee02d35e
+--- /dev/null
++++ "b/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/first-token-latency.md"
+@@ -0,0 +1,73 @@
++# Round2 — 对话首字延迟优化（first-token latency）
++
++> 工作树：`/Users/brsama/code/GitHub/Sparkle-sysrev/wt5`（基线 commit `35b29ba5`，未 commit）
++> 实测方式：题目给定的 WS 全链路复现脚本（guest 登录 → /ws/chat → 同一问候消息「你好，简单介绍下你能做什么」），DeepSeek 真实 key，每次运行使用全新 guest 用户 + 全新 session（即"新会话首条消息"这一最差真实场景）。WS 请求总数 ≤ 15。
++
++## 1. 延迟画像（优化前，引擎日志 [LATENCY] 计时）
++
++在 `orchestrator.process_stream` 的每个串行跳、`_route_and_classify` 的统一路由、`_plan_and_validate` 的规划器、执行图四个节点（context_builder / retrieval / router / generation）以及 `_build_user_context` 内部全部加了计时代码（`app/orchestration/latency_probe.py` + `[LATENCY]` 日志），实测三轮：
++
++| 跳（优化前） | b1（冷） | b2 | b3 |
++|---|---|---|---|
++| debrief_check | 3ms | 2ms | 2ms |
++| **build_full_context** | **30,342ms** | **12,874ms** | **25,198ms** |
++| ├ build_user_context | 29,911ms | 12,542ms | 25,198ms |
++| │ ├ prism_parallel_queries（5 路并行） | **29,289ms** | **11,744ms** | — |
++| │ │ └ **learning_gaps_summary** | 占满 | **11,719ms** | 占满 |
++| │ ├ personalization_llm_profile | 215ms | 747ms | — |
++| │ └ context_orchestrator.get_user_context | 184ms | 191ms | — |
++| spine_pipeline | 89ms | 80ms | 3ms |
++| route_and_classify（统一路由） | 22ms | 26ms | 16ms |
++| dual_core_routing | 78ms | 144ms | 58ms |
++| plan_and_validate（规划） | 312ms | 119ms | 46ms |
++| execute_graph | 9,044ms | 16,439ms | 7,740ms |
++| **首字（first_text）** | **37.6s** | **26.9s** | **31.0s** |
++
++### 定位出的三个真凶
++
++1. **隐藏 LLM 调用在上下文构建里（最大头，10–30s）**：`_build_user_context → _build_learning_gaps_summary → SeedExtractor.get_cached_or_generate`。种子缓存 TTL 仅 5 分钟且按 user 隔离——新用户/过期后必然走 `extract_seeds`：6 个串行来源查询 + **`_refine_with_llm`（`analysis_llm.json_call` → glm-4.6 batch，实测单次 11.7–14s+）**，而这一切只为产出一条 ≤300 字符的"学习缺口摘要"。引擎日志可见回合开始处 `glm_4_6_batch` 调用吞掉 14s。
++2. **会话首条消息必付一次路由 LLM**：`UnifiedIntentRouter._should_skip_llm_assist` 里 `if not conversation_history: return False`——空历史（恰好是新会话第一条）强制进入 Layer-3 LLM 意图分类（一次串行 LLM 往返）。
++3. **上下文构建全串行**：personalization（~0.9s）与认知上下文（~0.6s）等逐个 await；且整份 user context 每条消息重建（热态 ~2.2s）。
++
++规划跳本身**没有**阻塞简单消息：chat 意图 + `execution_mode=direct` 时 `plan_and_validate` 早退（46–312ms，LangGraph 规划器不执行），双核路由有「通用知识问答优先直接回答」短路（78–242ms）。执行图内部也很干净：retrieval 7ms / router 12–35ms / generation pre_prep 0ms。
++
++**剩余无法回避的部分**：DeepSeek（reasoning 流）首个 text token 前的 provider TTFT，实测 5.6–32s 波动（含一次 glm_4_7_plus 429 降级到 qwen3.6-plus）。这是模型/供应商侧，不在编排链内，也不属于本次可动红线（换模型=产品语义变更，见 §5 建议）。
++
++## 2. 改动清单（FT-LAT-1..5，产品语义不降级）
++
++| # | 文件 | 改动 |
++|---|---|---|
++| FT-LAT-1 | `app/orchestration/context_builder.py` | `_build_learning_gaps_summary`：跳过种子 LLM refine（`allow_llm_refine=False`，启发式排序确定性产出同样 ≤300 字摘要，种子内容不变），摘要按 user 加 Redis 缓存（TTL 300s，含空值负缓存） |
++| FT-LAT-2 | `app/core/unified_intent_router.py` | `_should_skip_llm_assist`：删除「空历史强制 LLM 分类」；简单消息短路（chat 意图 + 置信度 ≥0.5 + ≤120 字 + 非复杂 + 无动作词五个守卫不变）——复杂/操作类消息仍走 LLM 辅助分类 |
++| FT-LAT-3 | `app/orchestration/context_builder.py` | user context 会话级缓存（进程内 per-user，TTL 120s，deepcopy 隔离读写，128 用户 LRU 淘汰）——"首条消息后复用"，后续消息 5ms 命中 |
++| FT-LAT-4 | `app/orchestration/context_builder.py` | personalization 分支与认知上下文分支无依赖，`asyncio.gather` 并行（独立 DB session，只读） |
++| FT-LAT-5 | `app/agents/standard_workflow.py` | 首个 text delta 立即 flush（不被 96 字符批量窗口挡住），后续 delta 保持原批处理 |
++| 观测 | `app/orchestration/latency_probe.py`（新）+ orchestrator/routing_engine/execution_engine/context_builder/standard_workflow | `[LATENCY]` 全链计时日志（本次画像工具，保留为长期观测） |
++
++单测：`backend/tests/unit/test_unified_intent_router_fast_path_first_message.py`（5 条）。核心断言 `test_route_uses_fast_path_for_simple_first_message_without_llm`：**短路路径不调用规划（Layer-3 `_llm_classify` spy 计数为 0）**，且 `execution_mode=direct`、`routing_layer=rule_fast_path`；复杂消息断言仍走 LLM 辅助；动作词守卫断言不短路。连同既有 fast-path/routing/helpers 用例共 **23 passed**。
++
++## 3. 优化前后对比（同一脚本、同一问候消息、各 3 次全新用户/会话）
++
++| 指标 | 优化前 b1/b2/b3 | 优化前均值 | 优化后 o1/o2/o3 | 优化后均值 | 变化 |
++|---|---|---|---|---|---|
++| **首字 first_text** | 37.6 / 26.9 / 31.0 s | **31.8s** | 34.9 / 13.1 / 23.0 s | **23.7s** | **−26%** |
++| **编排侧首字前开销**（build_full_context + 路由/双核/规划 + 图内预处理，剔除 provider TTFT） | 30.8 / 13.2 / 25.4 s | **23.1s** | 2.76 / 1.36 / 1.71 s | **1.94s** | **−92%** |
++| build_full_context | 30.3 / 12.9 / 25.2 s | 22.8s | 2.0 / 0.32 / 0.60 s | 0.97s | −96% |
++| 同会话第二条消息 build_full_context | ~2.3s（全量重建） | — | **0.29s（缓存命中）** | — | −87% |
++| 隐藏种子 LLM（learning_gaps） | 11.7–29.3s | — | 12–23ms | — | ~−99.9% |
++| 路由 LLM（首条消息） | 1 次串行调用 | — | 0（rule_fast_path） | — | 消除 |
++| provider 首 token TTFT（不可控项） | 5.6–13.4s | — | 11.7–32.1s | — | 当晚 DeepSeek/qwen 波动 + 一次 429 降级 |
++| total | 40.3 / 30.1 / 33.2 s | 34.5s | 37.8 / 28.0 / 26.3 s | 30.7s | −11% |
++
++> 注：端到端首字均值受 provider TTFT 波动影响明显（优化后测试窗口恰好赶上更慢的 provider 时段与一次 429 降级），编排侧开销（本任务可控部分）从 **23.1s → 1.9s（−92%）** 是稳定、可复现的收益；端到端数字随 provider 状态波动。
++
++## 4. 红线核对
++
++- 未改任何提示词内容（`prompts.py`、system prompt 拼装逻辑零改动）；
++- 未砍编排功能：复杂/多步/操作类消息仍走 LLM 辅助分类 → langgraph → LangGraphPlanner 全链（守卫单测覆盖）；spine、双核、sufficiency、goal-quality、Aurora、成长卡等全部保留；
++- 引擎保持运行（wt5 起的进程，:50051），网关未动。
++
++## 5. 后续建议（超出本次红线，未实施）
++
++- **轻量消息的生成模型分层**：当前 simple chat 也走 reasoning 流模型（首个 text 前 reasoning 阶段 5–30s，是现在首字的最大项）。`standard_workflow` 已有 `force_fast_first_touch`/ModelTier.FAST 机制，若产品允许"轻量问候走非 reasoning 快档"，首字可再降一个数量级。
++- DeepSeek 429 降级链路（glm_4_7_plus → qwen3.6-plus）失败重试也计入首字，可考虑预热健康度探测。

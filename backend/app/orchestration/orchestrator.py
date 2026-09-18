@@ -96,6 +96,7 @@ from app.orchestration.graph_rag import (
 )
 from app.orchestration.grounding_validator import GroundingValidator
 from app.orchestration.lang_graph_planner import LangGraphPlanner
+from app.orchestration.latency_probe import LatencyProbe
 from app.orchestration.memory_helpers import (
     build_aurora_modeling_memory_summary,
     build_error_memory_summary,
@@ -2026,6 +2027,7 @@ class ChatOrchestrator(
             ACTIVE_SESSIONS.inc()
             request_id = request.request_id
             session_id = str(request.session_id or "").strip()
+            latency_probe = LatencyProbe(session_id=session_id, request_id=request_id)
             if not session_id:
                 session_id = str(uuid.uuid4())
                 request.session_id = session_id
@@ -2172,6 +2174,7 @@ class ChatOrchestrator(
                     user_message=user_message,
                     context=request_extra_context,
                 )
+                latency_probe.mark("debrief_check")
                 if debrief_response:
                     text = str(debrief_response.get("message") or "")
                     await self._persist_assistant_message(
@@ -2262,6 +2265,7 @@ class ChatOrchestrator(
                     request_id=request_id,
                     tracer=tracer,
                 )
+                latency_probe.mark("build_full_context")
                 conversation_context = self._merge_request_history_into_conversation_context(
                     conversation_context,
                     list(request.history),
@@ -2298,6 +2302,7 @@ class ChatOrchestrator(
                         user_message=user_message,
                         conversation_context=conversation_context,
                     )
+                    latency_probe.mark("detect_session_feedback")
                 session_feedback_signal = self._apply_cohort_to_session_feedback_signal(
                     session_feedback_signal,
                     (
@@ -2433,6 +2438,7 @@ class ChatOrchestrator(
                         record_spine_degradation("chat_turn", _spine_err)
                         logger.warning("Spine signal check degraded: {}", _spine_err)
                         request_extra_context["spine_degraded"] = True
+                    latency_probe.mark("spine_pipeline")
 
                 expert_routing_decision = None
                 requested_experts: list[str] = []
@@ -2541,12 +2547,15 @@ class ChatOrchestrator(
                     user_context_payload=user_context_payload,
                     state=state,
                 )
+                latency_probe.mark("aurora_planning_sidecar")
 
                 # Bound stream buffering while preserving critical terminal/content events.
                 response_dropped = False
 
                 async def stream_callback(resp: agent_service_pb2.ChatResponse):
                     nonlocal response_dropped
+                    if resp.WhichOneof("content") in ("delta", "full_text"):
+                        latency_probe.first_token()
                     resp.response_id = response_id
                     resp.created_at = int(datetime.now().timestamp())
                     resp.request_id = request_id
@@ -2830,6 +2839,7 @@ class ChatOrchestrator(
                     stream_callback=stream_callback,
                     queue=queue,
                 )
+                latency_probe.mark("check_sufficiency")
                 if sufficiency_handled:
                     async for queued in self._drain_queue(queue):
                         yield self._bind_response_session_id(queued, session_id, request_id=request_id)
@@ -2842,7 +2852,7 @@ class ChatOrchestrator(
                         user_id=user_id,
                     )
                     return
-                if await self._check_goal_quality(
+                _goal_quality_handled = await self._check_goal_quality(
                     intent_type=intent_type,
                     user_message=user_message,
                     user_id=user_id,
@@ -2851,7 +2861,9 @@ class ChatOrchestrator(
                     conversation_context=conversation_context,
                     stream_callback=stream_callback,
                     state=state,
-                ):
+                )
+                latency_probe.mark("check_goal_quality")
+                if _goal_quality_handled:
                     async for queued in self._drain_queue(queue):
                         yield self._bind_response_session_id(queued, session_id, request_id=request_id)
                     await self._update_state(
@@ -3192,6 +3204,7 @@ class ChatOrchestrator(
                     conversation_context=conversation_context,
                     state=state,
                 )
+                latency_probe.mark("route_and_classify")
                 orchestration_trace.add_step(
                     step_id="route",
                     label="路由决策",
@@ -3313,6 +3326,7 @@ class ChatOrchestrator(
                     user_message=user_message,
                     stream_callback=stream_callback,
                 )
+                latency_probe.mark("dual_core_routing")
                 dual_core_decision = state.context_data.get("dual_core_decision") or {}
                 orchestration_trace.add_step(
                     step_id="dual_core",
@@ -3435,6 +3449,7 @@ class ChatOrchestrator(
                     user_context_payload=user_context_payload,
                     orchestration_trace=orchestration_trace,
                 )
+                latency_probe.mark("plan_and_validate")
                 await self._emit_orchestration_trace(
                     state=state,
                     orchestration_trace=orchestration_trace,
@@ -3470,10 +3485,12 @@ class ChatOrchestrator(
 
                 # Step 13: Execute graph
                 result_holder: dict[str, Any] = {}
+                latency_probe.mark("pre_graph_launch")
                 async for item in self._execute_graph(
                     state=state, user_id=user_id, queue=queue, result_holder=result_holder
                 ):
                     yield item
+                latency_probe.mark("execute_graph")
 
                 # RB-02: graph timeout path — the graph task was cancelled without a
                 # final_state. Explicitly drain already-generated content, fail the FSM
@@ -3778,6 +3795,7 @@ class ChatOrchestrator(
                 )
 
             finally:
+                latency_probe.finish()
                 await self._cleanup(
                     lock_acquired=lock_acquired,
                     lock_renewal_task=lock_renewal_task,

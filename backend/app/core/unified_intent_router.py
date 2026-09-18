@@ -562,8 +562,11 @@ class UnifiedIntentRouter:
         message = (message or "").strip()
         if not message:
             return True
-        if not conversation_history:
-            return False
+        # FT-LAT-2: 空历史（会话首条消息）不再强制走 LLM 辅助分类。
+        # 之前首条消息必付一次串行 LLM 分类往返；简单问候/短问题本就可以
+        # 由规则层安全直答。后续守卫（intent=chat、置信度、长度、复杂度、
+        # 动作词）保证只有明确简单的消息才短路，复杂/操作类消息仍会进入
+        # LLM 辅助分类，路由语义不降级。
         if rule_result.primary_intent != UnifiedIntentType.CHAT:
             return False
         if rule_result.confidence < 0.5:

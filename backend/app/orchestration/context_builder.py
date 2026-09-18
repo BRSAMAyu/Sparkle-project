@@ -13,7 +13,9 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import copy
 import json
+import time
 import uuid
 from datetime import datetime, timedelta
 from app.core.time_utils import utcnow
@@ -60,6 +62,14 @@ from app.state_aggregator.service import StateAggregatorService
 
 class ContextBuilderMixin:
     """Mixin providing context building methods for ChatOrchestrator."""
+
+    # FT-LAT-3: per-user short-TTL cache for the expensive user-context payload.
+    # The full rebuild costs 1-2s warm (and used to spike 10-30s cold); within a
+    # session the payload barely changes between consecutive turns, so later
+    # messages reuse it instead of re-paying the whole serial chain.
+    _USER_CONTEXT_CACHE_TTL_SECONDS = 120.0
+    _USER_CONTEXT_CACHE_MAX_ENTRIES = 128
+    _user_context_cache: dict[str, tuple[float, dict[str, Any]]] = {}
 
     @staticmethod
     def _extract_seed_library_nodes(examples: list[dict[str, Any]]) -> list[str]:
@@ -481,11 +491,27 @@ class ContextBuilderMixin:
         return {"has_seed_library": False}
 
     async def _build_learning_gaps_summary(self, user_id: str, db_session: AsyncSession) -> str | None:
+        # FT-LAT-1: This hop used to sit directly on the first-token critical path:
+        # on seed-cache miss the SeedExtractor runs six serial source queries plus a
+        # hidden LLM refine (glm batch, 10-30s observed) just to pick 3 seeds for a
+        # <=300 char summary. The heuristic rank order is deterministic, so the LLM
+        # refine is skipped here (seed content itself is unchanged), and the final
+        # summary is cached per user so only one turn per TTL window pays the DB cost.
+        from app.core.cache import cache_service
+
+        _gaps_cache_key = f"sparkle:ctx:learning_gaps_summary:{user_id}"
+        try:
+            cached_summary = await cache_service.get(_gaps_cache_key)
+        except Exception:
+            cached_summary = None
+        if isinstance(cached_summary, str):
+            return cached_summary or None
         try:
             seeds = await SeedExtractor(db_session).get_cached_or_generate(
                 uuid.UUID(user_id),
                 scenario_key="chat_context",
                 limit=3,
+                allow_llm_refine=False,
             )
         except Exception as exc:
             logger.warning(f"Failed to build learning gaps summary for {user_id}: {exc}")
@@ -500,9 +526,12 @@ class ContextBuilderMixin:
             item = f"{topic}: {tension}" if tension else topic
             items.append(item[:96])
         summary = "；".join(items).strip()
-        if not summary:
-            return None
-        return summary[:300]
+        summary = summary[:300] or ""
+        try:
+            await cache_service.set(_gaps_cache_key, summary, ttl=300)
+        except Exception:
+            pass
+        return summary or None
 
     async def _build_stage33_working_memory_snapshot(
         self,
@@ -758,10 +787,20 @@ class ContextBuilderMixin:
             Dict containing user context and analytics
         """
         try:
+            _uc_marks: list[tuple[str, float]] = []
+            _uc_t = time.perf_counter()
+
+            def _uc_mark(name: str) -> None:
+                nonlocal _uc_t
+                _now = time.perf_counter()
+                _uc_marks.append((name, _now - _uc_t))
+                _uc_t = _now
+
             # Pass redis_client to UserService for caching
             user_service = UserService(db_session, self.redis)
             base_user_context = await user_service.get_context(uuid.UUID(user_id))
             base_user_context_data = base_user_context.model_dump() if base_user_context else None
+            _uc_mark("user_service.get_context")
             experiment_cohort = self._experiment_cohort_for_user(user_id)
 
             locale = "zh-CN"
@@ -774,89 +813,105 @@ class ContextBuilderMixin:
                 db_session=db_session,
                 locale=locale,
             )
+            _uc_mark("build_returning_context")
             understanding_depth = None
             if settings.ENABLE_PERCEPTIBLE_INTELLIGENCE:
                 with contextlib.suppress(Exception):
                     depth_service = UnderstandingDepthService(db_session, self.redis)
                     understanding_depth = (await depth_service.evaluate(user_id=uuid.UUID(user_id))).__dict__
+            _uc_mark("understanding_depth")
 
             # P1: Task Status Summary
             task_status_summary = await self._get_task_status_summary(user_id, db_session)
+            _uc_mark("task_status_summary")
 
             llm_profile_data = None
             preference_version = 0
-            try:
-                from app.services.personalization import get_personalization_engine
 
-                engine = get_personalization_engine(db_session, self.redis)
-                llm_profile = await engine.get_llm_profile(uuid.UUID(user_id))
-                prefs = await engine.pref_service.get_preferences(uuid.UUID(user_id))
-                preference_version = prefs.version
-                llm_profile_data = {
-                    "system_prompt_additions": llm_profile.system_prompt_additions,
-                    "verbosity_target": llm_profile.verbosity_target,
-                    "temperature": llm_profile.temperature,
-                    "should_ask_clarifying": llm_profile.should_ask_clarifying,
-                    "should_provide_examples": llm_profile.should_provide_examples,
-                    "exploration_level": llm_profile.exploration_level,
-                    "tone": llm_profile.tone,
-                }
-
-                # --- Aurora Profile Integration ---
+            async def _build_llm_profile_bundle(session: AsyncSession) -> tuple[dict[str, Any] | None, int]:
+                bundle_profile_data = None
+                bundle_version = 0
                 try:
-                    from app.aurora.ledger import AppendOnlyLedgerStore
-                    from app.aurora.relationship_state import SparkleRelationshipStateManager
-                    from app.aurora.profile_translator import ProfileTranslator
-                    from app.aurora.schemas.primitives import InsightClaim, IdentityEvidence
+                    from app.services.personalization import get_personalization_engine
 
-                    # Instantiate ledger (defaults to memory-based if no storage path is mapped)
-                    ledger = AppendOnlyLedgerStore(storage_path=settings.AURORA_LEDGER_PATH)
-                    raw_records = ledger.list_records(user_id=user_id, record_types={"insight_claim", "identity_evidence"})
+                    engine = get_personalization_engine(session, self.redis)
+                    llm_profile = await engine.get_llm_profile(uuid.UUID(user_id))
+                    prefs = await engine.pref_service.get_preferences(uuid.UUID(user_id))
+                    bundle_version = prefs.version
+                    bundle_profile_data = {
+                        "system_prompt_additions": llm_profile.system_prompt_additions,
+                        "verbosity_target": llm_profile.verbosity_target,
+                        "temperature": llm_profile.temperature,
+                        "should_ask_clarifying": llm_profile.should_ask_clarifying,
+                        "should_provide_examples": llm_profile.should_provide_examples,
+                        "exploration_level": llm_profile.exploration_level,
+                        "tone": llm_profile.tone,
+                    }
 
-                    claims = []
-                    for r in raw_records:
-                        if r["record_type"] == "insight_claim":
-                            try:
-                                claims.append(InsightClaim.model_validate(r["payload"]))
-                            except Exception:
-                                continue
+                    # --- Aurora Profile Integration ---
+                    try:
+                        from app.aurora.ledger import AppendOnlyLedgerStore
+                        from app.aurora.relationship_state import SparkleRelationshipStateManager
+                        from app.aurora.profile_translator import ProfileTranslator
+                        from app.aurora.schemas.primitives import InsightClaim, IdentityEvidence
 
-                    evidence = []
-                    for r in raw_records:
-                        if r["record_type"] == "identity_evidence":
-                            try:
-                                evidence.append(IdentityEvidence.model_validate(r["payload"]))
-                            except Exception:
-                                continue
+                        # Instantiate ledger (defaults to memory-based if no storage path is mapped)
+                        ledger = AppendOnlyLedgerStore(storage_path=settings.AURORA_LEDGER_PATH)
+                        raw_records = ledger.list_records(user_id=user_id, record_types={"insight_claim", "identity_evidence"})
 
-                    rel_manager = SparkleRelationshipStateManager()
-                    # Derive maturity from interaction history count + claims
-                    interaction_metadata = {"interaction_count": len(raw_records)}
-                    rel_state = rel_manager.derive_state(
-                        user_id=uuid.UUID(user_id),
-                        claims=claims,
-                        identity_evidence=evidence,
-                        interaction_metadata=interaction_metadata
-                    )
+                        claims = []
+                        for r in raw_records:
+                            if r["record_type"] == "insight_claim":
+                                try:
+                                    claims.append(InsightClaim.model_validate(r["payload"]))
+                                except Exception:
+                                    continue
 
-                    translator = ProfileTranslator()
-                    translation = translator.translate(claims=claims, evidence=evidence, relationship_state=rel_state)
+                        evidence = []
+                        for r in raw_records:
+                            if r["record_type"] == "identity_evidence":
+                                try:
+                                    evidence.append(IdentityEvidence.model_validate(r["payload"]))
+                                except Exception:
+                                    continue
 
-                    # Inject into profile context for prompt building
-                    llm_profile_data["aurora_profile_summary"] = translation.summary
-                    llm_profile_data["relationship_maturity"] = rel_state.relationship_maturity
-                    llm_profile_data["relationship_label"] = rel_state.label
-                except Exception as aurora_err:
-                    logger.warning(f"Failed to integrate Aurora profile context: {aurora_err}")
-            except Exception as e:
-                logger.warning(f"Failed to build LLM profile: {e}")
+                        rel_manager = SparkleRelationshipStateManager()
+                        # Derive maturity from interaction history count + claims
+                        interaction_metadata = {"interaction_count": len(raw_records)}
+                        rel_state = rel_manager.derive_state(
+                            user_id=uuid.UUID(user_id),
+                            claims=claims,
+                            identity_evidence=evidence,
+                            interaction_metadata=interaction_metadata
+                        )
+
+                        translator = ProfileTranslator()
+                        translation = translator.translate(claims=claims, evidence=evidence, relationship_state=rel_state)
+
+                        # Inject into profile context for prompt building
+                        bundle_profile_data["aurora_profile_summary"] = translation.summary
+                        bundle_profile_data["relationship_maturity"] = rel_state.relationship_maturity
+                        bundle_profile_data["relationship_label"] = rel_state.label
+                    except Exception as aurora_err:
+                        logger.warning(f"Failed to integrate Aurora profile context: {aurora_err}")
+                except Exception as e:
+                    logger.warning(f"Failed to build LLM profile: {e}")
+                return bundle_profile_data, bundle_version
 
             # --- Use ContextOrchestrator (P4) ---
             from app.core.context_manager import ContextOrchestrator
 
-            context_orchestrator = ContextOrchestrator(db_session, self.redis)
-            # Fetch aggregated context (cached)
-            cognitive_context = await context_orchestrator.get_user_context(user_id)
+            # FT-LAT-4: personalization (DB-backed) and the aggregated cognitive
+            # context are independent read-only branches — run them concurrently
+            # on separate sessions instead of serially on the shared session.
+            from app.db.session import AsyncSessionLocal
+
+            async with AsyncSessionLocal() as _parallel_session:
+                cognitive_context, (llm_profile_data, preference_version) = await asyncio.gather(
+                    ContextOrchestrator(db_session, self.redis).get_user_context(user_id),
+                    _build_llm_profile_bundle(_parallel_session),
+                )
+            _uc_mark("user_context_parallel_branches")
 
             profile_context_payload = None
 
@@ -893,6 +948,13 @@ class ContextBuilderMixin:
                 ]
 
                 # P0: 认知棱镜上下文注入 — parallel queries
+                async def _timed(name: str, coro):
+                    _t = time.perf_counter()
+                    try:
+                        return await coro
+                    finally:
+                        logger.info("[LATENCY] prism_query {} took {:.0f}ms", name, (time.perf_counter() - _t) * 1000)
+
                 (
                     cognitive_insights,
                     seed_library_context,
@@ -900,12 +962,13 @@ class ContextBuilderMixin:
                     working_memory_snapshot,
                     recent_tool_usage,
                 ) = await asyncio.gather(
-                    self._get_cognitive_insights(user_id, db_session, locale=locale),
-                    self._get_seed_library_context(user_id, db_session),
-                    self._build_learning_gaps_summary(user_id, db_session),
-                    self._build_stage33_working_memory_snapshot(user_id, db_session),
-                    self._get_recent_tool_usage_context(user_id=user_id, db_session=db_session),
+                    _timed("cognitive_insights", self._get_cognitive_insights(user_id, db_session, locale=locale)),
+                    _timed("seed_library_context", self._get_seed_library_context(user_id, db_session)),
+                    _timed("learning_gaps_summary", self._build_learning_gaps_summary(user_id, db_session)),
+                    _timed("working_memory_snapshot", self._build_stage33_working_memory_snapshot(user_id, db_session)),
+                    _timed("recent_tool_usage", self._get_recent_tool_usage_context(user_id=user_id, db_session=db_session)),
                 )
+                _uc_mark("prism_parallel_queries")
 
                 profile_payload = self._build_profile_payload(
                     user_context_data=user_context_data,
@@ -977,11 +1040,20 @@ class ContextBuilderMixin:
                     user_id=user_id,
                     db_session=db_session,
                 )
-                return await self._attach_stage39_context(
+                _uc_mark("stage34_memory_context")
+                _final_payload = await self._attach_stage39_context(
                     payload,
                     user_id=user_id,
                     db_session=db_session,
                 )
+                _uc_mark("stage39_context")
+                if _uc_marks:
+                    logger.info(
+                        "[LATENCY] build_user_context session={} {}",
+                        session_id,
+                        " ".join(f"{name}={delta * 1000:.0f}ms" for name, delta in _uc_marks),
+                    )
+                return _final_payload
 
             # Fallback to legacy logic if new orchestrator returns None (shouldn't happen)
             logger.warning(f"ContextOrchestrator returned None for {user_id}, falling back to legacy")
@@ -1387,6 +1459,8 @@ class ContextBuilderMixin:
                 plan_id = uuid.UUID(grpc_context["plan_id"])
 
         plan_switched = False
+        _ctx_probe_marks: list[tuple[str, float]] = []
+        _ctx_probe_t = time.perf_counter()
         if not plan_id and user_message and active_db:
             with tracer.start_as_current_span("orchestrator.auto_switch_plan"):
                 try:
@@ -1428,7 +1502,22 @@ class ContextBuilderMixin:
         plan_context = None
         with tracer.start_as_current_span("db.build_context"):
             if active_db and user_id:
-                local_context = await self._build_user_context(user_id, active_db, session_id=session_id)
+                _h0 = time.perf_counter()
+                _cache_entry = self._user_context_cache.get(user_id)
+                if (
+                    _cache_entry is not None
+                    and (time.monotonic() - _cache_entry[0]) <= self._USER_CONTEXT_CACHE_TTL_SECONDS
+                ):
+                    local_context = copy.deepcopy(_cache_entry[1])
+                    _ctx_probe_marks.append(("build_user_context_cached", time.perf_counter() - _h0))
+                else:
+                    local_context = await self._build_user_context(user_id, active_db, session_id=session_id)
+                    if isinstance(local_context, dict):
+                        self._user_context_cache[user_id] = (time.monotonic(), copy.deepcopy(local_context))
+                        if len(self._user_context_cache) > self._USER_CONTEXT_CACHE_MAX_ENTRIES:
+                            _oldest_key = min(self._user_context_cache, key=lambda k: self._user_context_cache[k][0])
+                            self._user_context_cache.pop(_oldest_key, None)
+                    _ctx_probe_marks.append(("build_user_context", time.perf_counter() - _h0))
                 user_context_payload = self._merge_user_contexts(local_context, grpc_context)
                 logger.info(f"Merged user context: {user_context_payload is not None}")
 
@@ -1489,10 +1578,12 @@ class ContextBuilderMixin:
                 logger.info("Using gRPC context without local DB context")
 
         self._log_context_injection(user_id, user_context_payload)
+        _h1 = time.perf_counter()
         if self.context_pruner:
             with tracer.start_as_current_span("db.build_conversation_context"):
                 conversation_context = await self._build_conversation_context(session_id, user_id)
-
+        _ctx_probe_marks.append(("build_conversation_context", time.perf_counter() - _h1))
+        _h2 = time.perf_counter()
         if active_db and user_message:
             await self._persist_user_message(
                 active_db=active_db,
@@ -1500,6 +1591,14 @@ class ContextBuilderMixin:
                 session_id=session_id,
                 user_message=user_message,
                 request_id=request_id,
+            )
+        _ctx_probe_marks.append(("persist_user_message", time.perf_counter() - _h2))
+        if _ctx_probe_marks:
+            _chain = " ".join(f"{name}={delta * 1000:.0f}ms" for name, delta in _ctx_probe_marks)
+            logger.info(
+                "[LATENCY] build_full_context session={} {}",
+                session_id,
+                _chain,
             )
 
         return grpc_context, plan_id, plan_switched, user_context_payload, conversation_context, plan_context

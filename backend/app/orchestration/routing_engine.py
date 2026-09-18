@@ -5,6 +5,7 @@ import contextlib
 import hashlib
 import inspect
 import json
+import time
 import uuid
 from dataclasses import replace
 from datetime import UTC, datetime
@@ -2136,6 +2137,7 @@ class RoutingEngineMixin:
         if has_summary:
             ROUTING_SUMMARY_CONTEXT_TOTAL.labels(phase="router_input").inc()
         routing_history = self._build_routing_history(conversation_context)
+        _route_llm_started = time.perf_counter()
         try:
             unified_routing_result = await self.unified_router.route(
                 message=user_message,
@@ -2145,9 +2147,11 @@ class RoutingEngineMixin:
                 conversation_history=routing_history,
             )
             logger.info(
-                f"Unified routing: {unified_routing_result.primary_intent.value} "
-                f"(confidence={unified_routing_result.confidence:.2f}, "
-                f"layer={unified_routing_result.routing_layer})"
+                "[LATENCY] unified_router.route took {:.0f}ms (intent={}, layer={}, mode={})",
+                (time.perf_counter() - _route_llm_started) * 1000,
+                unified_routing_result.primary_intent.value,
+                unified_routing_result.routing_layer,
+                unified_routing_result.execution_mode,
             )
         except Exception as e:
             logger.warning(f"Unified routing failed: {e}")
