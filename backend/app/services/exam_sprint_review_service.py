@@ -114,6 +114,20 @@ class ExamSprintReviewService:
         self.db = db
         self.redis = redis_client or cache_service.redis
 
+    @staticmethod
+    def _compute_days_used(*, plan: Plan, today: date) -> int:
+        """Elapsed days since the plan started, capped at the plan length (P2-Q1).
+
+        Previously this reported ``(target_date - created_at) + 1`` — the full
+        plan length — so a plan created today showed「你用了 16 天」on day one.
+        """
+        start_date = plan.created_at.date()
+        elapsed = max(1, (today - start_date).days + 1)
+        if plan.target_date is not None and plan.target_date >= start_date:
+            plan_length = (plan.target_date - start_date).days + 1
+            return min(elapsed, max(1, plan_length))
+        return elapsed
+
     async def analyze_pack_node_effectiveness(self, pack_id: str) -> list[NodeQualityAlert]:
         """Return pack-node difficulty alerts from aggregated Galaxy mastery outcomes."""
         pack = self._load_pack_by_pack_id(pack_id)
@@ -942,8 +956,7 @@ class ExamSprintReviewService:
             exam_date=plan.target_date,
         )
 
-        end_date = plan.target_date or _utcnow().date()
-        days_used = max(1, (end_date - plan.created_at.date()).days + 1)
+        days_used = self._compute_days_used(plan=plan, today=_utcnow().date())
         headline = self._build_headline(days_used=days_used, task_stats=task_stats, top_improvement=top_improvement)
         invitation_status = self._build_invitation_status(plan)
 

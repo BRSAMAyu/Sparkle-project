@@ -16,7 +16,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 BACKEND_DIR="${ROOT_DIR}/backend"
 LOG_FILE="${SPARKLE_CELERY_LOG:-/tmp/sparkle_celery_worker.log}"
 PID_FILE="${SPARKLE_CELERY_PID:-/tmp/sparkle_celery_worker.pid}"
-QUEUES="${SPARKLE_CELERY_QUEUES:-high_priority,default,low_priority}"
+QUEUES="${SPARKLE_CELERY_QUEUES:-high_priority,default,low_priority,glm_batch}"
 CONCURRENCY="${SPARKLE_CELERY_CONCURRENCY:-2}"
 PYTHON_BIN="${SPARKLE_PYTHON:-}"
 

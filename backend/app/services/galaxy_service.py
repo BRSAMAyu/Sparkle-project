@@ -2601,6 +2601,15 @@ class GalaxyService:
         """Stable internal UUID for Sprint Pack node IDs such as `cn.tcp_flow_control`."""
         return uuid5(SPRINT_NODE_UUID_NAMESPACE, str(external_node_id or "").strip())
 
+    async def ensure_sprint_node(self, external_node_id: str) -> UUID:
+        """Resolve (creating the KnowledgeNode if missing) a sprint-pack node id.
+
+        P1-E3: public wrapper so services outside the galaxy module (e.g. the
+        exam-sprint diagnostic service) can anchor topic mastery to canonical
+        sprint-pack nodes instead of dropping updates for unknown nodes.
+        """
+        return await self._resolve_mastery_node_id(external_node_id, create_missing=True)
+
     @staticmethod
     def _mastery_ratio(value: object) -> float:
         try:

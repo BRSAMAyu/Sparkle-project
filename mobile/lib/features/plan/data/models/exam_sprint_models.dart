@@ -527,6 +527,154 @@ class LearningPortfolioResult {
   }
 }
 
+/// One question of a diagnostic mini-quiz (P1-E5).
+///
+/// The API intentionally never exposes answer keys; the client only renders
+/// what the server sends and submits raw answers.
+class DiagnosticQuestion {
+  const DiagnosticQuestion({
+    required this.questionId,
+    required this.domain,
+    required this.questionType,
+    required this.stem,
+    required this.choices,
+    this.expectedSeconds = 50,
+  });
+
+  factory DiagnosticQuestion.fromJson(Map<String, dynamic> json) {
+    final rawChoices = json['choices'];
+    return DiagnosticQuestion(
+      questionId: json['question_id']?.toString() ?? '',
+      domain: json['domain']?.toString() ?? '',
+      questionType: json['question_type']?.toString() ?? 'single_choice',
+      stem: json['stem']?.toString() ?? '',
+      choices: rawChoices is List
+          ? rawChoices.map((dynamic item) => item.toString()).toList()
+          : <String>[],
+      expectedSeconds: (json['expected_seconds'] as num?)?.toInt() ?? 50,
+    );
+  }
+
+  final String questionId;
+  final String domain;
+
+  /// `single_choice` or `short_answer`.
+  final String questionType;
+  final String stem;
+  final List<String> choices;
+  final int expectedSeconds;
+
+  bool get isSingleChoice => questionType == 'single_choice';
+}
+
+/// Result of POST /exam-sprint/diagnose/generate.
+class DiagnosticGenerateResult {
+  const DiagnosticGenerateResult({
+    required this.diagnosticId,
+    required this.subject,
+    required this.questionCount,
+    required this.estimatedMinutes,
+    required this.questions,
+  });
+
+  factory DiagnosticGenerateResult.fromJson(Map<String, dynamic> json) {
+    final rawQuestions = json['questions'];
+    return DiagnosticGenerateResult(
+      diagnosticId: json['diagnostic_id']?.toString() ?? '',
+      subject: json['subject']?.toString() ?? '',
+      questionCount: (json['question_count'] as num?)?.toInt() ?? 0,
+      estimatedMinutes: (json['estimated_minutes'] as num?)?.toInt() ?? 0,
+      questions: rawQuestions is List
+          ? rawQuestions
+                .whereType<Map<String, dynamic>>()
+                .map(DiagnosticQuestion.fromJson)
+                .toList()
+          : <DiagnosticQuestion>[],
+    );
+  }
+
+  final String diagnosticId;
+  final String subject;
+  final int questionCount;
+  final int estimatedMinutes;
+  final List<DiagnosticQuestion> questions;
+}
+
+/// One submitted answer of the diagnostic quiz.
+class DiagnosticAnswerInput {
+  const DiagnosticAnswerInput({
+    required this.questionId,
+    required this.answer,
+    this.confidence = 'fuzzy',
+  });
+
+  final String questionId;
+  final String answer;
+  final String confidence;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'question_id': questionId,
+        'answer': answer,
+        'confidence': confidence,
+      };
+}
+
+/// Weakest topic reported by the grading result.
+class DiagnosticBottleneckResult {
+  const DiagnosticBottleneckResult({
+    required this.nodeName,
+    required this.domain,
+    required this.mastery,
+    this.reason,
+  });
+
+  factory DiagnosticBottleneckResult.fromJson(Map<String, dynamic> json) =>
+      DiagnosticBottleneckResult(
+        nodeName: json['node_name']?.toString() ?? '',
+        domain: json['domain']?.toString() ?? '',
+        mastery: (json['mastery'] as num?)?.toDouble() ?? 0.0,
+        reason: json['reason']?.toString(),
+      );
+
+  final String nodeName;
+  final String domain;
+  final double mastery;
+  final String? reason;
+}
+
+/// Result of POST /exam-sprint/diagnose/grade.
+class DiagnosticGradeResult {
+  const DiagnosticGradeResult({
+    required this.estimatedScoreNow,
+    required this.passProbability,
+    required this.recommendedPath,
+    required this.topBottlenecks,
+  });
+
+  factory DiagnosticGradeResult.fromJson(Map<String, dynamic> json) {
+    final rawBottlenecks = json['top_bottlenecks'];
+    return DiagnosticGradeResult(
+      estimatedScoreNow: (json['estimated_score_now'] as num?)?.toDouble() ?? 0.0,
+      passProbability: (json['pass_probability'] as num?)?.toDouble() ?? 0.0,
+      recommendedPath: json['recommended_path']?.toString() ?? 'minimum_pass',
+      topBottlenecks: rawBottlenecks is List
+          ? rawBottlenecks
+                .whereType<Map<String, dynamic>>()
+                .map(DiagnosticBottleneckResult.fromJson)
+                .toList()
+          : <DiagnosticBottleneckResult>[],
+    );
+  }
+
+  /// 0-100.
+  final double estimatedScoreNow;
+
+  /// 0-1.
+  final double passProbability;
+  final String recommendedPath;
+  final List<DiagnosticBottleneckResult> topBottlenecks;
+}
+
 DateTime? _tryParseDateTime(String? raw) {
   if (raw == null || raw.trim().isEmpty) {
     return null;

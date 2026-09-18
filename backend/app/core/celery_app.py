@@ -98,6 +98,12 @@ celery_app.conf.update(
     # 任务名称配置（支持短名称和完整路径）
     task_create_missing_queues=True,
     # 队列配置
+    # 兜底：未在 task_routes 显式路由的任务默认落 default 队列。
+    # 此前缺省是原生 "celery" 队列，而 worker 只 -Q high/default/low，
+    # 导致 60+ 无路由任务（验证邮件/群组文件/token 计量等）静默积压死亡。
+    task_default_queue="default",
+    task_default_exchange="sparkle",
+    task_default_routing_key="default",
     task_queues={
         "high_priority": {
             "exchange": "sparkle",
@@ -165,6 +171,9 @@ celery_app.conf.update(
         "app.core.celery_tasks.scan_comeback_nudges": {"queue": "default"},
         "app.core.celery_tasks.weekly_growth_narrative_task": {"queue": "default"},
         "app.core.celery_tasks.scan_weekly_growth_narratives": {"queue": "default"},
+        # 记忆复活验收：文件解析任务此前无路由 → 落原生 celery 队列，
+        # worker（-Q high,default,low）不消费 → process_stored_file 永久 queued
+        "process_stored_file": {"queue": "default"},
     },
     # 监控
     worker_send_task_events=True,

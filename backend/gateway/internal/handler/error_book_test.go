@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	grpcstatus "google.golang.org/grpc/status"
 )
 
@@ -119,6 +120,51 @@ func TestInjectAuthContext_NoToken(t *testing.T) {
 	r.GET("/test", func(c *gin.Context) {
 		injectAuthContext(c)
 		c.Status(200)
+	})
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/test", nil))
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+// P1-E1 regression: the engine's error-book gRPC servicer requires `user-id`
+// metadata (SEC-3: trusted identity set by the gateway after JWT validation).
+// Without it, every /errors* call through the gateway fails with 401
+// "missing authentication metadata" while the same token works engine-direct.
+func TestInjectAuthContext_SetsUserIDMetadata(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	// route-tier: internal
+	r.GET("/test", func(c *gin.Context) {
+		c.Set("auth_token", "my-jwt-token")
+		c.Set("user_id", "user-abc-123")
+		injectAuthContext(c)
+
+		md, ok := metadata.FromOutgoingContext(c.Request.Context())
+		require.True(t, ok, "expected outgoing gRPC metadata")
+		assert.Equal(t, []string{"user-abc-123"}, md.Get("user-id"))
+		assert.Equal(t, []string{"Bearer my-jwt-token"}, md.Get("authorization"))
+		c.Status(http.StatusOK)
+	})
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/test", nil))
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestInjectAuthContext_NoUserID_OmitsUserIDMetadata(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	// route-tier: internal
+	r.GET("/test", func(c *gin.Context) {
+		c.Set("auth_token", "my-jwt-token")
+		injectAuthContext(c)
+
+		md, ok := metadata.FromOutgoingContext(c.Request.Context())
+		require.True(t, ok, "expected outgoing gRPC metadata")
+		assert.Empty(t, md.Get("user-id"))
+		assert.Equal(t, []string{"Bearer my-jwt-token"}, md.Get("authorization"))
+		c.Status(http.StatusOK)
 	})
 
 	w := httptest.NewRecorder()

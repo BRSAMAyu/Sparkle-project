@@ -212,6 +212,9 @@ class ApiEndpoints {
       '/exam-sprint/post-exam-review';
   static const String examSprintCompletion = '/exam-sprint/completion';
   static const String examSprintPortfolio = '/exam-sprint/portfolio';
+  static const String examSprintDiagnoseGenerate =
+      '/exam-sprint/diagnose/generate';
+  static const String examSprintDiagnoseGrade = '/exam-sprint/diagnose/grade';
   static const String profileChatOpening = '/profile/chat-opening';
   static const String auroraDailyStartup = '/aurora/daily-startup';
   static const String auroraComebackContext = '/aurora/comeback-context';

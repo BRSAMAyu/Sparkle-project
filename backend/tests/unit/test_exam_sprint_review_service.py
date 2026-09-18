@@ -805,3 +805,29 @@ async def test_analyze_pack_node_effectiveness_skips_insufficient_evidence(db_se
         alerts = await service.analyze_pack_node_effectiveness("computer_networks@v1")
 
     assert all(alert.node_id != "cn.subnetting" for alert in alerts)
+
+
+def test_days_used_counts_elapsed_days_not_plan_length(db_session):
+    """P2-Q1: a plan created today with the exam in 14 days must report
+    days_used=1 on day one (previously 15 = full plan length)."""
+    start = datetime.combine(date.today(), time(hour=8))
+    plan = Plan(
+        user_id=uuid4(),
+        name="15天计算机网络冲刺",
+        target_date=date.today() + timedelta(days=14),
+        created_at=start,
+    )
+    service = ExamSprintReviewService(db_session)
+
+    assert service._compute_days_used(plan=plan, today=date.today()) == 1
+    assert service._compute_days_used(plan=plan, today=date.today() + timedelta(days=4)) == 5
+    # never exceeds the plan length even after the exam date
+    assert service._compute_days_used(plan=plan, today=date.today() + timedelta(days=40)) == 15
+
+
+def test_days_used_without_target_date_counts_elapsed_days(db_session):
+    start = datetime.combine(date.today() - timedelta(days=3), time(hour=8))
+    plan = Plan(user_id=uuid4(), name="无截止计划", target_date=None, created_at=start)
+    service = ExamSprintReviewService(db_session)
+
+    assert service._compute_days_used(plan=plan, today=date.today()) == 4

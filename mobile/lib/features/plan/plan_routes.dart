@@ -7,6 +7,7 @@ import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/widgets/scene_audio_scope.dart';
 import 'package:sparkle/features/plan/data/models/exam_sprint_models.dart';
+import 'package:sparkle/features/plan/presentation/screens/diagnostic_quiz_screen.dart';
 import 'package:sparkle/features/plan/presentation/screens/exam_sprint_setup_screen.dart';
 import 'package:sparkle/features/plan/presentation/screens/growth_screen.dart';
 import 'package:sparkle/features/plan/presentation/screens/learning_portfolio_screen.dart';
@@ -32,6 +33,7 @@ class PlanRoutes {
   static const String sprintHistory = '/sprint/history';
   static const String growth = '/growth';
   static const String examSprintSetup = '/exam-sprint/setup';
+  static const String examSprintDiagnose = '/exam-sprint/diagnose';
   static const String examSprintReview = '/exam-sprint/review';
   static const String examSprintCompletion = '/exam-sprint/completion';
   static const String learningPortfolio = '/exam-sprint/portfolio';
@@ -141,6 +143,28 @@ class PlanRoutes {
             ),
             type: SharedAxisTransitionType.scaled,
           ),
+        ),
+        // P1-E5: diagnostic mini-quiz (minimal app entry)
+        GoRoute(
+          path: examSprintDiagnose,
+          name: 'examSprintDiagnose',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) {
+            final subject = state.uri.queryParameters['subject'] ?? '';
+            return buildSparkleTransitionPage(
+              state: state,
+              motionToken: SparkleMotionToken.scene,
+              child: SceneAudioScope(
+                policy: ExperienceProfiles.dashboardProductive.audioPolicy(
+                  trackOverride: BgmTrack.plan,
+                ),
+                child: DiagnosticQuizScreen(
+                  subject: subject.isEmpty ? '计算机网络' : subject,
+                ),
+              ),
+              type: SharedAxisTransitionType.scaled,
+            );
+          },
         ),
         // Plan create (modal-like, full-screen)
         GoRoute(

@@ -357,6 +357,7 @@ class DiagnosticQuestionGrader(BaseModel):
     template_key: str
     question_type: DiagnoseQuestionType
     correct_choice_index: int | None = None
+    choices: list[str] = Field(default_factory=list)
     accepted_answers: list[str] = Field(default_factory=list)
     required_keywords: list[str] = Field(default_factory=list)
     partial_keywords: list[str] = Field(default_factory=list)
@@ -387,7 +388,8 @@ class DiagnosticGenerateResponse(BaseModel):
     question_archetypes: list[str] = Field(default_factory=list)
     checkpoint_template: str
     questions: list[DiagnosticQuestionPrompt] = Field(default_factory=list)
-    grading_payload: dict[str, DiagnosticQuestionGrader] = Field(default_factory=dict)
+    # P1-E4: grading_payload (answer keys) is intentionally NOT part of the
+    # client contract — it is stored server-side and applied during /grade.
 
 
 class DiagnosticAnswerSubmission(BaseModel):
@@ -400,7 +402,8 @@ class DiagnosticAnswerSubmission(BaseModel):
 class DiagnosticGradeRequest(BaseModel):
     subject: str = Field(..., min_length=1, max_length=100)
     answers: list[DiagnosticAnswerSubmission] = Field(default_factory=list, min_length=1)
-    grading_payload: dict[str, DiagnosticQuestionGrader] = Field(default_factory=dict)
+    diagnostic_id: str | None = Field(default=None, max_length=100, description="Server-held grading session from /diagnose/generate")
+    grading_payload: dict[str, DiagnosticQuestionGrader] = Field(default_factory=dict, description="Legacy stateless path; ignored when diagnostic_id resolves")
     sprint_pack_id: str | None = Field(default=None, max_length=100)
     sprint_pack_path: str | None = Field(default=None, max_length=500)
     days_left: int | None = Field(default=None, ge=1, le=365)

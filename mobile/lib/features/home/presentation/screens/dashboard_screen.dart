@@ -684,6 +684,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ),
             );
           },
+          onStartDiagnostic: () {
+            unawaited(
+              context.push(
+                '/exam-sprint/diagnose?subject=${Uri.encodeComponent(examSprintDashboard.subject.isEmpty ? '计算机网络' : examSprintDashboard.subject)}',
+              ),
+            );
+          },
         );
       case DashboardSlotIds.dashboardUpdates:
         return const _DashboardUpdatesSection();
@@ -1202,6 +1209,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       context.push(
                         '/exam-sprint/review?plan_id=${examSprintDashboard.planId}'
                         '&subject=${Uri.encodeComponent(examSprintDashboard.subject)}',
+                      ),
+                    );
+                  },
+                  onStartDiagnostic: () {
+                    unawaited(
+                      context.push(
+                        '/exam-sprint/diagnose?subject=${Uri.encodeComponent(examSprintDashboard.subject.isEmpty ? '计算机网络' : examSprintDashboard.subject)}',
                       ),
                     );
                   },

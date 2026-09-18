@@ -3,12 +3,13 @@ from __future__ import annotations
 import json
 import math
 import re
+import time
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-from uuid import UUID, uuid4
+from uuid import UUID, NAMESPACE_URL, uuid4, uuid5
 
 from loguru import logger
 from sqlalchemy import select
@@ -33,10 +34,120 @@ from app.schemas.exam_sprint import (
 )
 from app.services.galaxy_service import GalaxyService
 from app.services.profile_write_service import ProfileWriteService
+from app.sprint_packs.sprint_pack_registry import PACKS_DIR
+from app.core.cache import cache_service
 
 
 def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
+
+
+# ---------------------------------------------------------------------------
+# P1-E3: diagnostic topics -> galaxy node resolution
+#
+# Diagnostic question templates link to topic slugs (e.g. ``ip_subnetting``).
+# When no galaxy ``KnowledgeNode`` shares the topic name, mastery updates used
+# to be silently dropped. We now resolve each topic to a canonical sprint-pack
+# node id (created on demand by GalaxyService) so ``update_galaxy=True`` always
+# lands in the knowledge graph.
+# ---------------------------------------------------------------------------
+
+# Curated topic slug -> sprint-pack node id for slugs whose name does not match
+# a pack node suffix. Values must exist in app/sprint_packs/*_v1.json.
+_DIAG_TOPIC_NODE_ALIASES: dict[str, str] = {
+    "layering_protocol_stack": "cn.protocol_stack_concepts",
+    "ip_subnetting": "cn.subnetting",
+    "http_dns": "cn.http",
+    "link_layer_basics": "cn.error_detection",
+}
+
+_DIAGNOSTIC_TOPIC_NODE_NAMESPACE = uuid5(NAMESPACE_URL, "sparkle:diagnostic-topic-node")
+
+_pack_node_suffix_index_cache: dict[str, str] | None = None
+
+
+def _pack_node_suffix_index() -> dict[str, str]:
+    """Map ``<prefix>.<suffix>`` sprint-pack node ids by their unique suffix."""
+    global _pack_node_suffix_index_cache
+    if _pack_node_suffix_index_cache is not None:
+        return _pack_node_suffix_index_cache
+    index: dict[str, str] = {}
+    for path in sorted(PACKS_DIR.glob("*_v1.json")):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError) as exc:
+            logger.debug("diagnostic topic resolver: failed to read pack {}: {}", path, exc)
+            continue
+        for node in payload.get("knowledge_nodes") or []:
+            node_id = str(node.get("node_id") or "").strip()
+            if not node_id or "." not in node_id:
+                continue
+            suffix = node_id.split(".", 1)[1]
+            index.setdefault(suffix, node_id)
+    _pack_node_suffix_index_cache = index
+    return index
+
+
+def _diagnostic_topic_node_uuid(slug: str) -> UUID:
+    """Deterministic galaxy node id for diagnostic topics without a pack node."""
+    return uuid5(_DIAGNOSTIC_TOPIC_NODE_NAMESPACE, slug.strip())
+
+
+# ---------------------------------------------------------------------------
+# P1-E4: server-side grading sessions
+#
+# ``/diagnose/generate`` used to ship grading_payload (answer keys) to the
+# client so that ``/diagnose/grade`` could stay stateless — leaking answers and
+# letting direct consumers submit their own payload. Answer keys now stay in a
+# short-lived session store keyed by diagnostic_id; the client only submits
+# answers. Redis is used when available, with an in-process TTL fallback.
+# ---------------------------------------------------------------------------
+
+_DIAGNOSTIC_SESSION_PREFIX = "exam_sprint:diagnostic:grading_session:"
+_DIAGNOSTIC_SESSION_TTL_SECONDS = 24 * 3600
+
+
+class _DiagnosticSessionStore:
+    def __init__(self) -> None:
+        self._local: dict[str, tuple[float, dict[str, Any]]] = {}
+
+    def _purge_expired(self, now: float) -> None:
+        expired = [key for key, (deadline, _) in self._local.items() if deadline <= now]
+        for key in expired:
+            self._local.pop(key, None)
+
+    async def save(self, diagnostic_id: str, session: dict[str, Any]) -> None:
+        key = _DIAGNOSTIC_SESSION_PREFIX + diagnostic_id
+        deadline = time.monotonic() + _DIAGNOSTIC_SESSION_TTL_SECONDS
+        self._purge_expired(time.monotonic())
+        self._local[key] = (deadline, session)
+        redis = cache_service.redis
+        if redis is not None:
+            try:
+                await cache_service.set(key, session, ttl=_DIAGNOSTIC_SESSION_TTL_SECONDS)
+            except Exception as exc:  # pragma: no cover - redis best-effort
+                logger.debug("diagnostic session redis save failed: {}", exc)
+
+    async def load(self, diagnostic_id: str) -> dict[str, Any] | None:
+        key = _DIAGNOSTIC_SESSION_PREFIX + diagnostic_id
+        entry = self._local.get(key)
+        if entry is not None:
+            deadline, session = entry
+            if deadline > time.monotonic():
+                return session
+            self._local.pop(key, None)
+        redis = cache_service.redis
+        if redis is not None:
+            try:
+                cached = await cache_service.get(key)
+                if isinstance(cached, dict):
+                    return cached
+            except Exception as exc:  # pragma: no cover - redis best-effort
+                logger.debug("diagnostic session redis load failed: {}", exc)
+        return None
+
+
+_diagnostic_session_store = _DiagnosticSessionStore()
 
 
 def _normalize_text(value: str) -> str:
@@ -339,6 +450,258 @@ _CN_CORE_TEMPLATE_KEYS = (
     "cn_link_crc",
 )
 
+# ---------------------------------------------------------------------------
+# P1-E2: data-structures template set
+#
+# The MVP whitelist only accepted computer networks, so the seeded「数据结构」
+# scenario failed with 422. A second template set (content verified against the
+# data_structures_algorithms sprint pack, slugs = pack node suffixes so mastery
+# maps onto canonical ds.* galaxy nodes) unlocks the seed scenario.
+# ---------------------------------------------------------------------------
+
+_DS_DEFAULT_NODES: tuple[dict[str, Any], ...] = (
+    {"slug": "array", "name": "数组与顺序表", "domain": "线性表", "exam_weight": 1.0, "frequency": 1.0, "mistake_tags": ["complexity_confusion"]},
+    {"slug": "linked_list", "name": "链表", "domain": "线性表", "exam_weight": 1.1, "frequency": 1.05, "mistake_tags": ["pointer_order_error"]},
+    {"slug": "stack", "name": "栈", "domain": "栈与队列", "exam_weight": 1.15, "frequency": 1.15, "mistake_tags": ["sequence_permutation_error"]},
+    {"slug": "queue", "name": "队列与循环队列", "domain": "栈与队列", "exam_weight": 1.05, "frequency": 1.0, "mistake_tags": ["boundary_condition_error"]},
+    {"slug": "binary_tree", "name": "二叉树性质", "domain": "树与二叉树", "exam_weight": 1.2, "frequency": 1.2, "mistake_tags": ["property_formula_error"]},
+    {"slug": "bst", "name": "二叉搜索树", "domain": "树与二叉树", "exam_weight": 1.15, "frequency": 1.1, "mistake_tags": ["traversal_confusion"]},
+    {"slug": "graph_representation", "name": "图的存储", "domain": "图", "exam_weight": 1.0, "frequency": 0.95, "mistake_tags": ["storage_confusion"]},
+    {"slug": "bfs", "name": "广度优先搜索", "domain": "图", "exam_weight": 1.1, "frequency": 1.05, "mistake_tags": ["auxiliary_structure_confusion"]},
+    {"slug": "dfs", "name": "深度优先搜索", "domain": "图", "exam_weight": 1.1, "frequency": 1.05, "mistake_tags": ["auxiliary_structure_confusion"]},
+    {"slug": "binary_search", "name": "二分查找", "domain": "查找与哈希", "exam_weight": 1.15, "frequency": 1.15, "mistake_tags": ["complexity_confusion"]},
+    {"slug": "hash_table", "name": "哈希表", "domain": "查找与哈希", "exam_weight": 1.05, "frequency": 1.0, "mistake_tags": ["collision_method_confusion"]},
+    {"slug": "quicksort", "name": "快速排序", "domain": "排序", "exam_weight": 1.25, "frequency": 1.2, "mistake_tags": ["complexity_confusion"]},
+    {"slug": "heap_sort", "name": "堆排序", "domain": "排序", "exam_weight": 1.1, "frequency": 1.0, "mistake_tags": ["heap_property_error"]},
+    {"slug": "time_complexity", "name": "时间复杂度分析", "domain": "复杂度分析", "exam_weight": 1.2, "frequency": 1.15, "mistake_tags": ["complexity_confusion"]},
+)
+
+_DS_QUESTION_ARCHETYPES: tuple[str, ...] = (
+    "high_frequency_concept_judgment",
+    "high_frequency_calculation",
+    "process_trace",
+    "integrated_scenario",
+)
+
+_DS_TEMPLATES: tuple[QuestionTemplate, ...] = (
+    QuestionTemplate(
+        template_key="ds_array_random_access",
+        domain="线性表",
+        archetype="high_frequency_concept_judgment",
+        question_type=DiagnoseQuestionType.SINGLE_CHOICE,
+        stem="含 n 个元素的顺序表（数组）按下标随机访问第 i 个元素，时间复杂度是？",
+        choices=("O(n)", "O(log n)", "O(1)", "O(n log n)"),
+        correct_choice_index=2,
+        error_tags=("complexity_confusion",),
+        linked_node_slugs=("array",),
+        expected_seconds=40,
+    ),
+    QuestionTemplate(
+        template_key="ds_linked_list_insert",
+        domain="线性表",
+        archetype="process_trace",
+        question_type=DiagnoseQuestionType.SINGLE_CHOICE,
+        stem="单链表中指针 p 指向某结点，将新结点 s 插入到 p 之后，正确的操作序列是？",
+        choices=("p.next = s; s.next = p.next", "s.next = p.next; p.next = s", "s.next = p; p = s", "p.next = s.next; s.next = p"),
+        correct_choice_index=1,
+        error_tags=("pointer_order_error",),
+        linked_node_slugs=("linked_list",),
+        expected_seconds=55,
+    ),
+    QuestionTemplate(
+        template_key="ds_stack_permutation",
+        domain="栈与队列",
+        archetype="high_frequency_calculation",
+        question_type=DiagnoseQuestionType.SINGLE_CHOICE,
+        stem="元素 1、2、3 依次进栈（进栈与出栈可交错进行），下列哪个出栈序列不可能得到？",
+        choices=("3 1 2", "3 2 1", "2 3 1", "1 3 2"),
+        correct_choice_index=0,
+        error_tags=("sequence_permutation_error",),
+        linked_node_slugs=("stack",),
+        expected_seconds=60,
+    ),
+    QuestionTemplate(
+        template_key="ds_queue_circular_full",
+        domain="栈与队列",
+        archetype="high_frequency_concept_judgment",
+        question_type=DiagnoseQuestionType.SINGLE_CHOICE,
+        stem="循环队列用大小为 m 的数组实现，front 指向队头、rear 指向队尾的下一位置，牺牲一个存储单元区分队空与队满，则队满条件是？",
+        choices=("rear == front", "(rear + 1) % m == front", "rear - front == m", "front == 0 且 rear == m"),
+        correct_choice_index=1,
+        error_tags=("boundary_condition_error",),
+        linked_node_slugs=("queue",),
+        expected_seconds=50,
+    ),
+    QuestionTemplate(
+        template_key="ds_binary_tree_leaf_count",
+        domain="树与二叉树",
+        archetype="high_frequency_calculation",
+        question_type=DiagnoseQuestionType.SINGLE_CHOICE,
+        stem="某二叉树中有 5 个度为 2 的结点，则叶子结点的个数是？",
+        choices=("5", "6", "4", "7"),
+        correct_choice_index=1,
+        error_tags=("property_formula_error",),
+        linked_node_slugs=("binary_tree",),
+        expected_seconds=50,
+    ),
+    QuestionTemplate(
+        template_key="ds_bst_inorder",
+        domain="树与二叉树",
+        archetype="high_frequency_concept_judgment",
+        question_type=DiagnoseQuestionType.SINGLE_CHOICE,
+        stem="对二叉搜索树（BST）进行中序遍历，得到的关键码序列是？",
+        choices=("递增有序序列", "递减有序序列", "无序序列", "按层访问序列"),
+        correct_choice_index=0,
+        error_tags=("traversal_confusion",),
+        linked_node_slugs=("bst",),
+        expected_seconds=40,
+    ),
+    QuestionTemplate(
+        template_key="ds_graph_bfs_aux",
+        domain="图",
+        archetype="high_frequency_concept_judgment",
+        question_type=DiagnoseQuestionType.SINGLE_CHOICE,
+        stem="对图进行广度优先搜索（BFS）时，通常使用的辅助数据结构是？",
+        choices=("栈", "队列", "优先队列", "散列表"),
+        correct_choice_index=1,
+        error_tags=("auxiliary_structure_confusion",),
+        linked_node_slugs=("bfs", "graph_representation"),
+        expected_seconds=40,
+    ),
+    QuestionTemplate(
+        template_key="ds_graph_dfs_aux",
+        domain="图",
+        archetype="high_frequency_concept_judgment",
+        question_type=DiagnoseQuestionType.SINGLE_CHOICE,
+        stem="对图进行深度优先搜索（DFS）的非递归实现中，通常使用的辅助数据结构是？",
+        choices=("队列", "堆", "栈", "循环队列"),
+        correct_choice_index=2,
+        error_tags=("auxiliary_structure_confusion",),
+        linked_node_slugs=("dfs",),
+        expected_seconds=40,
+    ),
+    QuestionTemplate(
+        template_key="ds_binary_search_worst",
+        domain="查找与哈希",
+        archetype="high_frequency_calculation",
+        question_type=DiagnoseQuestionType.SINGLE_CHOICE,
+        stem="对含 n 个元素的有序顺序表进行二分查找，最坏情况下的时间复杂度是？",
+        choices=("O(1)", "O(n)", "O(n log n)", "O(log n)"),
+        correct_choice_index=3,
+        error_tags=("complexity_confusion",),
+        linked_node_slugs=("binary_search",),
+        expected_seconds=45,
+    ),
+    QuestionTemplate(
+        template_key="ds_hash_collision",
+        domain="查找与哈希",
+        archetype="high_frequency_concept_judgment",
+        question_type=DiagnoseQuestionType.SINGLE_CHOICE,
+        stem="下列哪种方法不属于哈希表解决冲突的常用方法？",
+        choices=("开放定址法（线性探测）", "链地址法", "再哈希法", "二分插入法"),
+        correct_choice_index=3,
+        error_tags=("collision_method_confusion",),
+        linked_node_slugs=("hash_table",),
+        expected_seconds=45,
+    ),
+    QuestionTemplate(
+        template_key="ds_quicksort_complexity",
+        domain="排序",
+        archetype="high_frequency_calculation",
+        question_type=DiagnoseQuestionType.SINGLE_CHOICE,
+        stem="快速排序在平均情况与最坏情况下的时间复杂度分别是？",
+        choices=("O(n log n)，O(n^2)", "O(n^2)，O(n log n)", "O(n log n)，O(n log n)", "O(n^2)，O(n^2)"),
+        correct_choice_index=0,
+        error_tags=("complexity_confusion",),
+        linked_node_slugs=("quicksort",),
+        expected_seconds=50,
+    ),
+    QuestionTemplate(
+        template_key="ds_heap_sort_top",
+        domain="排序",
+        archetype="high_frequency_concept_judgment",
+        question_type=DiagnoseQuestionType.SINGLE_CHOICE,
+        stem="使用最大堆进行堆排序（升序输出）时，堆顶元素是整个序列的？",
+        choices=("最小值", "最大值", "中位数", "随机元素"),
+        correct_choice_index=1,
+        error_tags=("heap_property_error",),
+        linked_node_slugs=("heap_sort",),
+        expected_seconds=40,
+    ),
+    QuestionTemplate(
+        template_key="ds_sa_quicksort_worst",
+        domain="复杂度分析",
+        archetype="high_frequency_calculation",
+        question_type=DiagnoseQuestionType.SHORT_ANSWER,
+        stem="简答：写出快速排序最坏情况下的时间复杂度（用大 O 记号表示，如 O(n^2)）。",
+        accepted_answers=("O(n^2)", "O(n²)", "O(n*n)", "O(n2)", "n^2"),
+        required_keywords=("n^2",),
+        error_tags=("complexity_confusion",),
+        linked_node_slugs=("time_complexity",),
+        expected_seconds=60,
+    ),
+)
+
+_DS_CORE_TEMPLATE_KEYS = (
+    "ds_array_random_access",
+    "ds_stack_permutation",
+    "ds_binary_tree_leaf_count",
+    "ds_graph_bfs_aux",
+    "ds_binary_search_worst",
+    "ds_quicksort_complexity",
+    "ds_sa_quicksort_worst",
+)
+
+
+@dataclass(frozen=True)
+class _SubjectTemplateSet:
+    """Per-subject question templates, core keys and default knowledge nodes."""
+
+    templates: tuple[QuestionTemplate, ...]
+    core_keys: tuple[str, ...]
+    default_nodes: tuple[dict[str, Any], ...]
+    archetypes: tuple[str, ...] = (
+        "high_frequency_concept_judgment",
+        "high_frequency_calculation",
+        "process_trace",
+        "integrated_scenario",
+    )
+
+
+_SUBJECT_TEMPLATE_SETS: dict[str, _SubjectTemplateSet] = {
+    "computer_networks": _SubjectTemplateSet(
+        _CN_TEMPLATES, _CN_CORE_TEMPLATE_KEYS, _CN_DEFAULT_NODES, _CN_QUESTION_ARCHETYPES
+    ),
+    "data_structures_algorithms": _SubjectTemplateSet(
+        _DS_TEMPLATES, _DS_CORE_TEMPLATE_KEYS, _DS_DEFAULT_NODES, _DS_QUESTION_ARCHETYPES
+    ),
+}
+
+_SUPPORTED_SUBJECT_HINT = "计算机网络、数据结构"
+
+
+def _resolve_subject_pack_key(subject: str) -> str | None:
+    """Map free-text subject (incl. titles like「数据结构期中」) to a pack key."""
+    text = str(subject or "").strip()
+    if not text:
+        return None
+    try:
+        from app.sprint_packs.sprint_pack_loader import _SUBJECT_ALIASES
+        from app.sprint_packs.sprint_pack_registry import SprintPackRegistry
+
+        direct = SprintPackRegistry().match_subject(text)
+        if direct:
+            return direct
+        lowered = text.lower()
+        for alias, pack_id in _SUBJECT_ALIASES.items():
+            if lowered.startswith(alias):
+                return pack_id
+    except Exception as exc:  # pragma: no cover - registry is best-effort
+        logger.debug("subject pack resolution failed for {!r}: {}", subject, exc)
+    if _contains_network_subject(text):
+        return "computer_networks"
+    return None
+
 
 class ExamSprintDiagnosticService:
     def __init__(self, db: AsyncSession):
@@ -365,6 +728,7 @@ class ExamSprintDiagnosticService:
         questions: list[DiagnosticQuestionPrompt] = []
         grading_payload: dict[str, DiagnosticQuestionGrader] = {}
         total_seconds = 0
+        diagnostic_id = f"diag-{uuid4()}"
         for index, template in enumerate(templates, start=1):
             question_id = f"diag_{index}_{template.template_key}"
             linked_nodes = [node_index[slug] for slug in template.linked_node_slugs if slug in node_index]
@@ -388,6 +752,7 @@ class ExamSprintDiagnosticService:
                 template_key=template.template_key,
                 question_type=template.question_type,
                 correct_choice_index=template.correct_choice_index,
+                choices=list(template.choices),
                 accepted_answers=list(template.accepted_answers),
                 required_keywords=list(template.required_keywords),
                 partial_keywords=list(template.partial_keywords),
@@ -398,8 +763,21 @@ class ExamSprintDiagnosticService:
                 points=template.points,
             )
 
+        # P1-E4: keep answer keys server-side; the client only receives questions.
+        await _diagnostic_session_store.save(
+            str(diagnostic_id),
+            {
+                "subject": subject,
+                "days_left": request.days_left,
+                "pass_score": request.pass_score,
+                "sprint_pack_id": request.sprint_pack_id,
+                "grading_payload": {key: value.model_dump(mode="json") for key, value in grading_payload.items()},
+                "knowledge_nodes": [node.model_dump(mode="json") for node in nodes],
+            },
+        )
+
         return DiagnosticGenerateResponse(
-            diagnostic_id=f"diag-{uuid4()}",
+            diagnostic_id=diagnostic_id,
             subject=subject,
             sprint_pack_id=str(request.sprint_pack_id or pack_payload.get("id") or EXAM_PREP_14D_PACK_ID),
             question_count=len(questions),
@@ -408,7 +786,6 @@ class ExamSprintDiagnosticService:
             question_archetypes=self._extract_question_archetypes(pack_payload, subject),
             checkpoint_template=self._extract_checkpoint_template(pack_payload, subject),
             questions=questions,
-            grading_payload=grading_payload,
         )
 
     async def grade(
@@ -421,8 +798,36 @@ class ExamSprintDiagnosticService:
         nodes = await self._resolve_nodes(subject=subject, requested_nodes=request.knowledge_nodes)
         node_index = {node.slug or "": node for node in nodes}
         grading_payload = dict(request.grading_payload or {})
+        days_left_override = request.days_left
+        pass_score_override = request.pass_score
+
+        # P1-E4: the server-held session (from /diagnose/generate) is authoritative;
+        # request.grading_payload is only honored as a legacy stateless fallback.
+        session = None
+        if request.diagnostic_id:
+            session = await _diagnostic_session_store.load(str(request.diagnostic_id))
+        if session is not None:
+            raw_payload = session.get("grading_payload") or {}
+            grading_payload = {
+                key: value if isinstance(value, DiagnosticQuestionGrader) else DiagnosticQuestionGrader(**value)
+                for key, value in raw_payload.items()
+            }
+            raw_nodes = session.get("knowledge_nodes") or []
+            if raw_nodes and not request.knowledge_nodes:
+                nodes = await self._resolve_nodes(
+                    subject=subject,
+                    requested_nodes=[DiagnosticKnowledgeNode(**item) for item in raw_nodes],
+                )
+                node_index = {node.slug or "": node for node in nodes}
+            if days_left_override is None and session.get("days_left") is not None:
+                days_left_override = int(session["days_left"])
+            if session.get("pass_score") is not None:
+                pass_score_override = float(session["pass_score"])
         if not grading_payload:
-            raise ValueError("grading_payload is required for stateless grading")
+            raise ValueError(
+                "grading_payload is required: pass the diagnostic_id returned by /diagnose/generate "
+                "(server-held session) or, for legacy stateless calls, the grading_payload"
+            )
 
         answers_by_id = {item.question_id: item for item in request.answers}
         total_points = 0.0
@@ -485,19 +890,19 @@ class ExamSprintDiagnosticService:
                     stats["mistake_tags"].update(grader.error_tags)
 
         estimated_score_now = round((earned_points / max(total_points, 0.001)) * 100.0, 1)
-        days_left = await self._resolve_days_left(user_id=user_id, request_days_left=request.days_left)
+        days_left = await self._resolve_days_left(user_id=user_id, request_days_left=days_left_override)
         all_node_mastery_updates = self._build_node_mastery_updates(node_stats)
         top_bottlenecks = self._build_bottlenecks(node_stats)
         recommended_path = self._recommend_path(
             estimated_score_now=estimated_score_now,
-            pass_score=request.pass_score,
+            pass_score=pass_score_override,
             days_left=days_left,
             bottlenecks=top_bottlenecks,
         )
         pass_probability = round(
             self._estimate_pass_probability(
                 estimated_score_now=estimated_score_now,
-                pass_score=request.pass_score,
+                pass_score=pass_score_override,
                 days_left=days_left,
                 overconfidence_miss=confidence_stats["overconfidence_miss"],
             ),
@@ -553,6 +958,14 @@ class ExamSprintDiagnosticService:
                     continue
                 resolved.append(DiagnosticKnowledgeNode(**item))
                 seen.add(item["slug"])
+        pack_key = _resolve_subject_pack_key(subject)
+        subject_set = _SUBJECT_TEMPLATE_SETS.get(pack_key or "")
+        if subject_set is not None:
+            for item in subject_set.default_nodes:
+                if item["slug"] in seen:
+                    continue
+                resolved.append(DiagnosticKnowledgeNode(**item))
+                seen.add(item["slug"])
         if len({item.domain for item in resolved}) < 5:
             raise ValueError("知识节点覆盖不足，至少需要 5 个不同知识领域")
         return resolved
@@ -564,14 +977,17 @@ class ExamSprintDiagnosticService:
         nodes: list[DiagnosticKnowledgeNode],
         question_count: int,
     ) -> list[QuestionTemplate]:
-        if not _contains_network_subject(subject):
-            raise ValueError("当前 MVP 仅支持计算机网络科目的诊断小测")
+        # P1-E2: subject-driven template selection (was computer-networks only).
+        subject_set = _SUBJECT_TEMPLATE_SETS.get(_resolve_subject_pack_key(subject) or "")
+        if subject_set is None:
+            raise ValueError(f"当前 MVP 支持的科目：{_SUPPORTED_SUBJECT_HINT}，暂不支持「{subject}」的诊断小测")
+        templates = subject_set.templates
         node_index = {node.slug or "": node for node in nodes}
-        core = [item for item in _CN_TEMPLATES if item.template_key in _CN_CORE_TEMPLATE_KEYS]
+        core = [item for item in templates if item.template_key in subject_set.core_keys]
         extras = [
             (self._template_priority(item, node_index), item)
-            for item in _CN_TEMPLATES
-            if item.template_key not in _CN_CORE_TEMPLATE_KEYS
+            for item in templates
+            if item.template_key not in subject_set.core_keys
         ]
         extras.sort(key=lambda item: item[0], reverse=True)
         selected = list(core)
@@ -611,6 +1027,17 @@ class ExamSprintDiagnosticService:
             index = int(normalized)
             if index == grader.correct_choice_index or index - 1 == grader.correct_choice_index:
                 return 1.0
+        # P1-E4 compat: clients may submit the choice TEXT instead of an index.
+        if grader.choices:
+            correct_text = (
+                _normalize_text(grader.choices[grader.correct_choice_index])
+                if 0 <= grader.correct_choice_index < len(grader.choices)
+                else ""
+            )
+            if correct_text and normalized == correct_text:
+                return 1.0
+            if any(normalized == _normalize_text(choice) for choice in grader.choices):
+                return 0.0
         return 0.0
 
     def _score_short_answer(self, answer: str, grader: DiagnosticQuestionGrader) -> float:
@@ -735,11 +1162,60 @@ class ExamSprintDiagnosticService:
         mastery_updates: list[DiagnosticMasteryUpdate],
     ) -> None:
         for item in mastery_updates:
-            if item.node_id is None:
-                item.node_id = await self._resolve_node_id_by_name(item.node_name)  # type: ignore[misc]
-            if item.node_id is None:
+            node_id = item.node_id or await self._resolve_node_id_by_name(item.node_name)
+            if node_id is None:
+                # P1-E3: fall back to sprint-pack/topic node resolution instead of
+                # silently dropping the mastery update when no same-name node exists.
+                node_id = await self._ensure_topic_node(item)
+            if node_id is None:
+                logger.warning("diagnostic mastery update dropped: unresolved topic node for {!r}", item.node_slug)
                 continue
-            await self._write_mastery_value(user_id=user_id, node_id=item.node_id, mastery=item.mastery)
+            item.node_id = node_id
+            await self._write_mastery_value(user_id=user_id, node_id=node_id, mastery=item.mastery)
+
+    async def _ensure_topic_node(self, item: DiagnosticMasteryUpdate) -> UUID | None:
+        """Resolve a diagnostic topic to (creating if needed) a galaxy node id.
+
+        Resolution order: curated alias -> sprint-pack node suffix match ->
+        deterministic diagnostic topic node. The sprint-pack route keeps the
+        node inside the canonical knowledge graph (TECH sector, pack metadata).
+        """
+        slug = str(item.node_slug or "").strip()
+        name = str(item.node_name or slug).strip()
+        if not slug and not name:
+            return None
+
+        pack_node_id = _DIAG_TOPIC_NODE_ALIASES.get(slug)
+        if pack_node_id is None and slug:
+            pack_node_id = _pack_node_suffix_index().get(slug)
+
+        if pack_node_id:
+            galaxy = GalaxyService(self.db)
+            node_id = galaxy.sprint_node_uuid(pack_node_id)
+            if await self.db.get(KnowledgeNode, node_id) is None:
+                metadata = await galaxy.ensure_sprint_node(pack_node_id)
+                if metadata is not None:
+                    return metadata
+            return node_id
+
+        topic_slug = slug or name
+        node_id = _diagnostic_topic_node_uuid(topic_slug)
+        if await self.db.get(KnowledgeNode, node_id) is not None:
+            return node_id
+        self.db.add(
+            KnowledgeNode(
+                id=node_id,
+                name=(name or topic_slug)[:255],
+                description=f"诊断小测主题节点：{name or topic_slug}",
+                keywords=[topic_slug],
+                importance_level=3,
+                is_seed=True,
+                source_type="exam_diagnostic",
+                status="published",
+            )
+        )
+        await self.db.flush()
+        return node_id
 
     async def _write_mastery_value(self, *, user_id: UUID, node_id: UUID, mastery: float) -> None:
         bind = self.db.get_bind()
@@ -901,6 +1377,9 @@ class ExamSprintDiagnosticService:
             return [str(item) for item in raw if str(item).strip()]
         if _contains_network_subject(subject):
             return list(_CN_QUESTION_ARCHETYPES)
+        subject_set = _SUBJECT_TEMPLATE_SETS.get(_resolve_subject_pack_key(subject) or "")
+        if subject_set is not None:
+            return list(subject_set.archetypes)
         return ["high_frequency_concept_judgment", "process_trace"]
 
     def _extract_checkpoint_template(self, pack_payload: dict[str, Any], subject: str) -> str:

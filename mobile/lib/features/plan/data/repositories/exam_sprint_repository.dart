@@ -83,6 +83,68 @@ class ExamSprintRepository {
     }
   }
 
+  /// P1-E5: generate a diagnostic mini-quiz (answer keys stay server-side).
+  Future<DiagnosticGenerateResult> generateDiagnostic({
+    required String subject,
+    int questionCount = 10,
+  }) async {
+    try {
+      final response = await _apiClient.post<dynamic>(
+        ApiEndpoints.examSprintDiagnoseGenerate,
+        data: <String, dynamic>{
+          'subject': subject,
+          'question_count': questionCount,
+        },
+      );
+      final payload = ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'examSprintDiagnoseGenerate',
+      );
+      return DiagnosticGenerateResult.fromJson(payload);
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map<String, dynamic>) {
+        final detail = data['detail']?.toString();
+        if (detail != null && detail.isNotEmpty) {
+          throw Exception(detail);
+        }
+      }
+      throw Exception(e.message ?? 'Failed to generate diagnostic');
+    }
+  }
+
+  /// P1-E5: submit diagnostic answers and receive the grading result.
+  Future<DiagnosticGradeResult> gradeDiagnostic({
+    required String subject,
+    required String diagnosticId,
+    required List<DiagnosticAnswerInput> answers,
+  }) async {
+    try {
+      final response = await _apiClient.post<dynamic>(
+        ApiEndpoints.examSprintDiagnoseGrade,
+        data: <String, dynamic>{
+          'subject': subject,
+          'diagnostic_id': diagnosticId,
+          'answers': answers.map((DiagnosticAnswerInput a) => a.toJson()).toList(),
+        },
+      );
+      final payload = ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'examSprintDiagnoseGrade',
+      );
+      return DiagnosticGradeResult.fromJson(payload);
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map<String, dynamic>) {
+        final detail = data['detail']?.toString();
+        if (detail != null && detail.isNotEmpty) {
+          throw Exception(detail);
+        }
+      }
+      throw Exception(e.message ?? 'Failed to grade diagnostic');
+    }
+  }
+
   Future<LearningPortfolioResult> fetchLearningPortfolio({
     String? userId,
     int page = 1,

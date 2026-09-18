@@ -29,7 +29,14 @@ func injectAuthContext(c *gin.Context) {
 	if token == "" {
 		return
 	}
-	ctx := metadata.NewOutgoingContext(c.Request.Context(), metadata.Pairs("authorization", "Bearer "+token))
+	pairs := []string{"authorization", "Bearer " + token}
+	// P1-E1: the engine's gRPC servicers trust only the `user-id` metadata
+	// (SEC-3) set by the gateway after JWT validation; the request body's
+	// user_id is rejected without it (401 "missing authentication metadata").
+	if userID := c.GetString("user_id"); userID != "" {
+		pairs = append(pairs, "user-id", userID)
+	}
+	ctx := metadata.NewOutgoingContext(c.Request.Context(), metadata.Pairs(pairs...))
 	c.Request = c.Request.WithContext(ctx)
 }
 

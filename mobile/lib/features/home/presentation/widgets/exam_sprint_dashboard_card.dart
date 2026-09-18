@@ -13,10 +13,14 @@ class ExamSprintDashboardCard extends StatefulWidget {
     required this.data,
     super.key,
     this.onRecordResult,
+    this.onStartDiagnostic,
   });
 
   final ExamSprintDashboardData data;
   final VoidCallback? onRecordResult;
+
+  /// P1-E5: entry to the diagnostic mini-quiz.
+  final VoidCallback? onStartDiagnostic;
 
   @override
   State<ExamSprintDashboardCard> createState() =>
@@ -141,6 +145,22 @@ class _ExamSprintDashboardCardState extends State<ExamSprintDashboardCard> {
                         style: context.typo.bodySmall.copyWith(
                           color: DS.textSecondary,
                           height: 1.35,
+                        ),
+                      ),
+                    ],
+                    if (widget.onStartDiagnostic != null) ...[
+                      const SizedBox(height: DS.spacing12),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton.icon(
+                          onPressed: widget.onStartDiagnostic,
+                          icon: const Icon(Icons.quiz_outlined, size: 18),
+                          label: Text(
+                            context.l10n.examDiagnosticStart,
+                            style: context.typo.labelLarge.copyWith(
+                              fontWeight: DS.fontWeightBold,
+                            ),
+                          ),
                         ),
                       ),
                     ],
