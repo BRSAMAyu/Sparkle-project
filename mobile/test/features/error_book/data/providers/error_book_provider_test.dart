@@ -1,14 +1,22 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
+import 'package:sparkle/features/error_book/data/models/remediable_pattern.dart';
 import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
 import 'package:sparkle/features/error_book/data/repositories/error_book_repository.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.dart';
+import 'package:sparkle/shared/entities/cognitive_analysis.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  // submitReview invalidates plan/task providers whose rebuilds run real
+  // Dio error paths; their observability hook reads SharedPreferences, which
+  // must be mocked to keep these unit tests hermetic.
+  SharedPreferences.setMockInitialValues(const <String, Object>{});
 
   group('ErrorOperations galaxy refresh', () {
     late ProviderContainer container;
@@ -56,6 +64,121 @@ void main() {
       expect(triggerAfter, triggerBefore + 1);
     });
   });
+
+  group('F7-01 real API failure surfaces error state', () {
+    late ProviderContainer container;
+
+    setUp(() {
+      DemoDataService.isDemoMode = false;
+      container = ProviderContainer(
+        overrides: [
+          errorBookRepositoryProvider.overrideWithValue(
+            _ThrowingErrorBookRepository(),
+          ),
+        ],
+      );
+    });
+
+    tearDown(() {
+      container.dispose();
+      DemoDataService.isDemoMode = false;
+    });
+
+    test('errorList enters error state instead of demo records', () async {
+      await expectLater(
+        container.read(errorListProvider(const ErrorListQuery()).future),
+        throwsA(isA<Exception>()),
+      );
+
+      final state = container.read(errorListProvider(const ErrorListQuery()));
+      expect(state.hasError, isTrue);
+      expect(state.hasValue, isFalse);
+    });
+
+    test('todayReviewList enters error state instead of demo records',
+        () async {
+      await expectLater(
+        container.read(todayReviewListProvider.future),
+        throwsA(isA<Exception>()),
+      );
+
+      final state = container.read(todayReviewListProvider);
+      expect(state.hasError, isTrue);
+      expect(state.hasValue, isFalse);
+    });
+
+    test('errorStats enters error state instead of demo stats', () async {
+      await expectLater(
+        container.read(errorStatsProvider.future),
+        throwsA(isA<Exception>()),
+      );
+
+      final state = container.read(errorStatsProvider);
+      expect(state.hasError, isTrue);
+      expect(state.hasValue, isFalse);
+    });
+
+    test('remediablePatterns enters error state instead of empty fallback',
+        () async {
+      await expectLater(
+        container.read(remediablePatternsProvider.future),
+        throwsA(isA<Exception>()),
+      );
+
+      final state = container.read(remediablePatternsProvider);
+      expect(state.hasError, isTrue);
+      expect(state.hasValue, isFalse);
+    });
+  });
+
+  group('F7-01 explicit demo mode keeps serving demo data', () {
+    late ProviderContainer container;
+
+    setUp(() {
+      // Repository would throw even in demo mode: the demo branch must
+      // short-circuit before any real request is attempted.
+      DemoDataService.isDemoMode = true;
+      container = ProviderContainer(
+        overrides: [
+          errorBookRepositoryProvider.overrideWithValue(
+            _ThrowingErrorBookRepository(),
+          ),
+        ],
+      );
+    });
+
+    tearDown(() {
+      container.dispose();
+      DemoDataService.isDemoMode = false;
+    });
+
+    test('errorList serves demo records in demo mode', () async {
+      final response = await container
+          .read(errorListProvider(const ErrorListQuery()).future);
+
+      expect(response.items, isNotEmpty);
+      expect(
+        response.items.every((item) => item.id.startsWith('error_')),
+        isTrue,
+      );
+    });
+
+    test('todayReviewList serves demo review records in demo mode', () async {
+      final items = await container.read(todayReviewListProvider.future);
+
+      expect(
+        items.map((item) => item.id),
+        containsAll(<String>['demo_review_1', 'demo_review_2']),
+      );
+    });
+
+    test('errorStats serves demo stats in demo mode', () async {
+      final stats = await container.read(errorStatsProvider.future);
+
+      expect(stats.totalErrors, greaterThan(0));
+      expect(stats.subjectDistribution, isNotEmpty);
+    });
+  });
 }
 
 class _FakeErrorBookRepository extends ErrorBookRepository {
@@ -99,6 +222,46 @@ class _FakeErrorBookRepository extends ErrorBookRepository {
         createdAt: DateTime(2026, 4, 26),
         updatedAt: DateTime(2026, 4, 26),
       );
+}
+
+/// Repository whose read methods always fail, simulating an offline device /
+/// backend 5xx / gateway timeout on the real API path.
+class _ThrowingErrorBookRepository extends ErrorBookRepository {
+  _ThrowingErrorBookRepository() : super(Dio());
+
+  static const _failure = 'network unavailable';
+
+  @override
+  Future<ErrorListResponse> getErrors({
+    String? subject,
+    String? chapter,
+    String? nodeId,
+    bool? needReview,
+    String? keyword,
+    double? masteryMin,
+    double? masteryMax,
+    CognitiveDimension? cognitiveDimension,
+    int page = 1,
+    int pageSize = 20,
+  }) async =>
+      throw Exception(_failure);
+
+  @override
+  Future<ErrorListResponse> getTodayReviewList({
+    int page = 1,
+    int pageSize = 20,
+  }) async =>
+      throw Exception(_failure);
+
+  @override
+  Future<ReviewStats> getStats() async => throw Exception(_failure);
+
+  @override
+  Future<List<RemediablePattern>> getRemediablePatterns({
+    int limit = 3,
+    int lookbackDays = 14,
+  }) async =>
+      throw Exception(_failure);
 }
 
 class _TestNotificationService extends NotificationService {

@@ -192,7 +192,8 @@ class GalaxyNodeModel {
     return GalaxyNodeModel(
       id: json['id']?.toString() ?? '',  // P1-13 fix: null-safety for id field
       parentId: json['parent_id']?.toString(),
-      name: json['name'] as String,
+      // F7-10: name 与 id 同样防御，避免缓存/旧版本响应缺字段时抛 TypeError
+      name: json['name']?.toString() ?? '',
       importance:
           ((json['importance'] ?? json['importance_level']) as num?)?.toInt() ??
               1,

@@ -28,6 +28,7 @@ class _MemoryPanelDataState {
   const _MemoryPanelDataState({
     this.isLoading = true,
     this.error,
+    this.partialError,
     this.preferences = const [],
     this.goals = const [],
     this.episodic = const [],
@@ -41,7 +42,12 @@ class _MemoryPanelDataState {
   });
 
   final bool isLoading;
+
+  /// 全量失败：所有分区都不可用时置位，UI 渲染整页错误态。
   final String? error;
+
+  /// F7-05: 部分分区失败但仍渲染成功分区时置位，以非阻塞反馈提示。
+  final String? partialError;
   final List<MemoryPreferenceItem> preferences;
   final List<MemoryGoalItem> goals;
   final List<EpisodicMemoryItem> episodic;
@@ -56,6 +62,7 @@ class _MemoryPanelDataState {
   _MemoryPanelDataState copyWith({
     bool? isLoading,
     String? error,
+    String? partialError,
     List<MemoryPreferenceItem>? preferences,
     List<MemoryGoalItem>? goals,
     List<EpisodicMemoryItem>? episodic,
@@ -71,6 +78,7 @@ class _MemoryPanelDataState {
       _MemoryPanelDataState(
         isLoading: isLoading ?? this.isLoading,
         error: clearError ? null : error ?? this.error,
+        partialError: clearError ? null : partialError ?? this.partialError,
         preferences: preferences ?? this.preferences,
         goals: goals ?? this.goals,
         episodic: episodic ?? this.episodic,
@@ -98,35 +106,52 @@ class _MemoryPanelDataNotifier extends StateNotifier<_MemoryPanelDataState> {
 
   Future<void> loadAll() async {
     state = state.copyWith(isLoading: true, clearError: true);
-    try {
-      final results = await Future.wait([
-        _service.getPreferences(),
-        _service.getGoals(),
-        _service.getEpisodic(),
-        _service.getRecentScenes(),
-        _service.getForesightHintSummary(),
-        _service.getPendingCommitments(),
-        _service.getUnresolvedConflicts(),
-      ]);
-      if (!mounted) {
-        return;
+
+    // F7-05: 逐分区 settle，单个分区失败不再让整个面板进入全量错误态；
+    // 成功分区照常渲染，失败分区保留旧数据。
+    Future<(Object?, Object?)> settled(Future<Object?> future) async {
+      try {
+        return (await future, null);
+      } catch (e) {
+        return (null, e);
       }
-      state = state.copyWith(
-        preferences: results[0] as List<MemoryPreferenceItem>,
-        goals: results[1] as List<MemoryGoalItem>,
-        episodic: results[2] as List<EpisodicMemoryItem>,
-        recentScenes: results[3] as List<RecentSceneSummaryItem>,
-        foresightHint: results[4] as ForesightHintSummaryItem?,
-        pendingCommitments: results[5] as List<PendingCommitmentItem>,
-        unresolvedConflicts: results[6] as List<UnresolvedConflictItem>,
-        isLoading: false,
-      );
-    } catch (e) {
-      if (!mounted) {
-        return;
-      }
-      state = state.copyWith(isLoading: false, error: '$e');
     }
+
+    final results = await Future.wait<(Object?, Object?)>([
+      settled(_service.getPreferences()),
+      settled(_service.getGoals()),
+      settled(_service.getEpisodic()),
+      settled(_service.getRecentScenes()),
+      settled(_service.getForesightHintSummary()),
+      settled(_service.getPendingCommitments()),
+      settled(_service.getUnresolvedConflicts()),
+    ]);
+    if (!mounted) {
+      return;
+    }
+    Object? firstFailure;
+    var failureCount = 0;
+    for (final (_, failure) in results) {
+      if (failure != null) {
+        firstFailure ??= failure;
+        failureCount++;
+      }
+    }
+    final allFailed = failureCount == results.length;
+    final failureMessage = firstFailure == null ? null : '$firstFailure';
+
+    state = state.copyWith(
+      preferences: results[0].$1 as List<MemoryPreferenceItem>?,
+      goals: results[1].$1 as List<MemoryGoalItem>?,
+      episodic: results[2].$1 as List<EpisodicMemoryItem>?,
+      recentScenes: results[3].$1 as List<RecentSceneSummaryItem>?,
+      foresightHint: results[4].$1 as ForesightHintSummaryItem?,
+      pendingCommitments: results[5].$1 as List<PendingCommitmentItem>?,
+      unresolvedConflicts: results[6].$1 as List<UnresolvedConflictItem>?,
+      isLoading: false,
+      error: allFailed ? failureMessage : null,
+      partialError: allFailed ? null : failureMessage,
+    );
   }
 
   Future<void> revokeAutoMemory(EpisodicMemoryItem item) async {
@@ -316,8 +341,20 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
 
   Set<String> get _processingConflictIds => _data.processingConflictIds;
 
-  Future<void> _loadAll() =>
-      ref.read(_memoryPanelDataProvider.notifier).loadAll();
+  Future<void> _loadAll() async {
+    await ref.read(_memoryPanelDataProvider.notifier).loadAll();
+    if (!mounted) {
+      return;
+    }
+    // F7-05: 部分分区失败时面板数据照常渲染，仅以非阻塞反馈告知。
+    final partialError = ref.read(_memoryPanelDataProvider).partialError;
+    if (partialError != null) {
+      AppFeedback.error(
+        context,
+        context.l10n.memoryPanelLoadFailed(partialError),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) => GraphiteScaffold(

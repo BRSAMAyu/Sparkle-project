@@ -74,4 +74,17 @@ void main() {
     expect(edge.relationType, EdgeRelationType.prerequisite);
     expect(edge.id, contains('node-1_node-2'));
   });
+
+  test('GalaxyNodeModel.fromJson tolerates a missing name field (F7-10)', () {
+    // 网关缓存/旧版本响应缺 name 时不应抛 TypeError，与 id 字段的
+    // P1-13 防御保持一致。
+    final node = GalaxyNodeModel.fromJson({
+      'id': 'node-42',
+      'importance_level': 2,
+      'sector_code': 'TECH',
+    });
+
+    expect(node.id, 'node-42');
+    expect(node.name, isEmpty);
+  });
 }

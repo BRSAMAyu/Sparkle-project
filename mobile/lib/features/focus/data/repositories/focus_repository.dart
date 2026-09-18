@@ -191,8 +191,19 @@ class FocusRepository {
         },
       );
 
-      final payload = ApiResponseParser.unwrapMap(response.data, action: 'getLLMGuidance');
-      return (payload['content'] ?? payload['guidance']) as String;
+      final payload =
+          ApiResponseParser.unwrapMap(response.data, action: 'getLLMGuidance');
+      // F7-13: 防御解析，两个契约字段皆缺/非字符串时抛带上下文的
+      // FormatException，而不是裸 as 转型抛 TypeError。
+      final rawContent = payload['content'] ?? payload['guidance'];
+      final content = rawContent is String ? rawContent : rawContent?.toString();
+      if (content == null || content.isEmpty) {
+        throw FormatException(
+          'getLLMGuidance: response payload is missing a non-empty '
+          '"content" or "guidance" field',
+        );
+      }
+      return content;
     } on DioException catch (e) {
       debugPrint('❌ Failed to get LLM guidance: ${e.message}');
       rethrow;

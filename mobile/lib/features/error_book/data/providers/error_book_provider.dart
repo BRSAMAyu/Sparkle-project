@@ -30,12 +30,12 @@ ErrorBookRepository errorBookRepository(ErrorBookRepositoryRef ref) {
 
 final remediablePatternsProvider =
     FutureProvider.autoDispose<List<RemediablePattern>>((ref) async {
-  final repository = ref.watch(errorBookRepositoryProvider);
-  try {
-    return await repository.getRemediablePatterns();
-  } catch (_) {
+  // F7-01: demo mode has no remediable-pattern fixture, keep the card empty.
+  if (DemoDataService.isDemoMode) {
     return const <RemediablePattern>[];
   }
+  final repository = ref.watch(errorBookRepositoryProvider);
+  return repository.getRemediablePatterns();
 });
 
 // ============================================
@@ -102,19 +102,9 @@ Future<ErrorListResponse> errorList(
   ErrorListRef ref,
   ErrorListQuery query,
 ) async {
-  final repository = ref.watch(errorBookRepositoryProvider);
-  try {
-    return await repository.getErrors(
-      subject: query.subject,
-      chapter: query.chapter,
-      nodeId: query.nodeId,
-      needReview: query.needReview,
-      keyword: query.keyword,
-      cognitiveDimension: query.cognitiveDimension,
-      page: query.page,
-      pageSize: query.pageSize,
-    );
-  } catch (_) {
+  // F7-01: demo 数据仅在显式 demo 模式下提供；真实 API 失败时抛出，
+  // 由 UI 渲染错误态/重试，绝不拿演示数据冒充用户错题。
+  if (DemoDataService.isDemoMode) {
     final items = _demoErrorRecords().where((item) {
       final subjectMatches =
           query.subject == null || query.subject == item.subject;
@@ -147,6 +137,18 @@ Future<ErrorListResponse> errorList(
       hasNext: false,
     );
   }
+
+  final repository = ref.watch(errorBookRepositoryProvider);
+  return repository.getErrors(
+    subject: query.subject,
+    chapter: query.chapter,
+    nodeId: query.nodeId,
+    needReview: query.needReview,
+    keyword: query.keyword,
+    cognitiveDimension: query.cognitiveDimension,
+    page: query.page,
+    pageSize: query.pageSize,
+  );
 }
 
 // ============================================
@@ -182,11 +184,8 @@ final errorSemanticSummaryProvider =
 /// 自动获取需要在今天复习的错题
 @riverpod
 Future<List<ErrorRecord>> todayReviewList(TodayReviewListRef ref) async {
-  final repository = ref.watch(errorBookRepositoryProvider);
-  try {
-    final response = await repository.getTodayReviewList();
-    return response.items;
-  } catch (_) {
+  // F7-01: demo 数据仅在显式 demo 模式下提供；真实 API 失败时抛出错误态。
+  if (DemoDataService.isDemoMode) {
     final now = DateTime.now();
     final l10n = I18nService.instance.l10n;
     return [
@@ -218,6 +217,10 @@ Future<List<ErrorRecord>> todayReviewList(TodayReviewListRef ref) async {
       ),
     ];
   }
+
+  final repository = ref.watch(errorBookRepositoryProvider);
+  final response = await repository.getTodayReviewList();
+  return response.items;
 }
 
 // ============================================
@@ -227,10 +230,8 @@ Future<List<ErrorRecord>> todayReviewList(TodayReviewListRef ref) async {
 /// 错题统计数据 Provider
 @riverpod
 Future<ReviewStats> errorStats(ErrorStatsRef ref) async {
-  final repository = ref.watch(errorBookRepositoryProvider);
-  try {
-    return await repository.getStats();
-  } catch (_) {
+  // F7-01: demo 数据仅在显式 demo 模式下提供；真实 API 失败时抛出错误态。
+  if (DemoDataService.isDemoMode) {
     final items = _demoErrorRecords();
     final now = DateTime.now();
     final subjectDistribution = <String, int>{};
@@ -251,6 +252,9 @@ Future<ReviewStats> errorStats(ErrorStatsRef ref) async {
       subjectDistribution: subjectDistribution,
     );
   }
+
+  final repository = ref.watch(errorBookRepositoryProvider);
+  return repository.getStats();
 }
 
 List<ErrorRecord> _demoErrorRecords() => DemoDataService()
