@@ -32,25 +32,30 @@ class PersistenceLayerMixin:
         if not active_db or not full_response:
             return
         try:
-            assistant_msg = ChatMessage(
-                user_id=uuid.UUID(str(user_id)),
-                session_id=self._coerce_session_uuid(session_id),
-                role=MessageRole.ASSISTANT,
-                content=full_response,
-                model_name=getattr(llm_service, "default_model", None),
-            )
-            active_db.add(assistant_msg)
-            # RB-06 follow-up（R2 全仓中途 commit 审计）：flush 而非 commit——
-            # active_db 是 gRPC 流的共享会话，提交所有权在 agent_grpc_service
-            # （stream 结束统一 commit）。flush 已分配 PK，写 lane 的
-            # assistant_message_id 语义不变。
-            await active_db.flush()
-            MemoryInferredWriteLaneService.enqueue_from_session(
-                user_id=uuid.UUID(str(user_id)),
-                session_id=self._coerce_session_uuid(session_id),
-                assistant_message_id=str(assistant_msg.id),
-                assistant_message=full_response,
-            )
+            # 共享 gRPC 流 session 可能已被本轮更早的无关异常（如计划执行写
+            # plan_states 的 FK violation）滚进 poisoned 状态，直接复用会让
+            # 聊天持久化以 "transaction has been rolled back" 陪葬，记忆写入
+            # lane 随之失去触发点。assistant 消息无外键依赖共享事务内未提交
+            # 行（user 消息由网关侧先独立落库），改用独立 session 自持提交。
+            from app.db.session import AsyncSessionLocal
+
+            async with AsyncSessionLocal() as persist_session:
+                assistant_msg = ChatMessage(
+                    user_id=uuid.UUID(str(user_id)),
+                    session_id=self._coerce_session_uuid(session_id),
+                    role=MessageRole.ASSISTANT,
+                    content=full_response,
+                    model_name=getattr(llm_service, "default_model", None),
+                )
+                persist_session.add(assistant_msg)
+                await persist_session.flush()
+                MemoryInferredWriteLaneService.enqueue_from_session(
+                    user_id=uuid.UUID(str(user_id)),
+                    session_id=self._coerce_session_uuid(session_id),
+                    assistant_message_id=str(assistant_msg.id),
+                    assistant_message=full_response,
+                )
+                await persist_session.commit()
         except Exception as e:
             logger.warning(f"Failed to persist assistant chat message: {e}")
             with contextlib.suppress(Exception):

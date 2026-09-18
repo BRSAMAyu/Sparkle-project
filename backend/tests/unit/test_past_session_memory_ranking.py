@@ -82,3 +82,64 @@ class TestRankerFreshnessUsesIngestTime:
         assert movie_score > seed_score, (
             f"recently-ingested old-event memory must outrank staler seed: movie={movie_score} seed={seed_score}"
         )
+
+
+class TestAssistantPersistSurvivesPoisonedSharedSession:
+    @pytest.mark.asyncio
+    async def test_persist_uses_independent_session(self, monkeypatch):
+        """共享 session poisoned（FK violation 后）时 assistant 消息仍须落库。"""
+        import app.orchestration.persistence_layer as pl
+
+        created = {}
+
+        class _FakeMsg:
+            id = "00000000-0000-0000-0000-000000000001"
+
+        class _FakeSession:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *a):
+                return False
+
+            def add(self, obj):
+                created["added"] = obj
+
+            async def flush(self):
+                pass
+
+            async def commit(self):
+                created["committed"] = True
+
+        class _PoisonedShared:
+            """模拟 flush FK violation 之后的共享 session：任何操作都抛 rollback 错。"""
+
+            async def rollback(self):
+                raise RuntimeError("already rolled back")
+
+        captured = {}
+
+        def fake_enqueue(**kwargs):
+            captured.update(kwargs)
+
+        class _Layer(pl.PersistenceLayerMixin):
+            _coerce_session_uuid = staticmethod(lambda s: s)
+
+        monkeypatch.setattr(pl, "AsyncSessionLocal", lambda: _FakeSession(), raising=False)
+        # import 在函数内，直接 patch 模块级引用无效——改为注入到 app.db.session
+        import app.db.session as dbs
+
+        monkeypatch.setattr(dbs, "AsyncSessionLocal", lambda: _FakeSession(), raising=False)
+        monkeypatch.setattr(pl.MemoryInferredWriteLaneService, "enqueue_from_session", staticmethod(fake_enqueue))
+        monkeypatch.setattr(pl, "ChatMessage", lambda **kw: _FakeMsg(), raising=False)
+        monkeypatch.setattr(pl, "llm_service", type("L", (), {"default_model": "m"})(), raising=False)
+
+        layer = _Layer()
+        await layer._persist_assistant_message(
+            active_db=_PoisonedShared(),
+            user_id="11111111-1111-1111-1111-111111111111",
+            session_id="22222222-2222-2222-2222-222222222222",
+            full_response="已记下：下周三有数据结构期中考试",
+        )
+        assert created.get("committed") is True, "assistant message must persist via independent session"
+        assert captured.get("assistant_message", "").startswith("已记下")
