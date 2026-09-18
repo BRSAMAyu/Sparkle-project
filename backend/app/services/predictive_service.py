@@ -29,6 +29,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.cost_controller import is_llm_within_budget
 
 try:
+    from openai import APIError as OpenAIAPIError
+except ImportError:  # pragma: no cover - openai is optional in unit tests
+    OpenAIAPIError = None  # type: ignore[assignment]
+
+try:
     from redis.exceptions import RedisError
 except ImportError:  # pragma: no cover - redis is optional in unit tests
     RedisError = ConnectionError  # type: ignore[assignment]
@@ -77,7 +82,7 @@ PREDICTION_DATA_ERRORS = (
     ValueError,
     statistics.StatisticsError,
 )
-PREDICTION_MODEL_ERRORS = (
+_PREDICTION_MODEL_ERRORS: tuple[type[Exception], ...] = (
     ConnectionError,
     OSError,
     RuntimeError,
@@ -85,6 +90,12 @@ PREDICTION_MODEL_ERRORS = (
     TypeError,
     ValueError,
 )
+if OpenAIAPIError is not None:
+    # openai SDK 的 APIError 家族（BadRequestError/RateLimitError/
+    # APIConnectionError/APITimeoutError 等）不属于任何内建异常分支；
+    # 不捕获会让 realtime/long-horizon 预测的逐档降级失效并 500。
+    _PREDICTION_MODEL_ERRORS = (*_PREDICTION_MODEL_ERRORS, OpenAIAPIError)
+PREDICTION_MODEL_ERRORS = _PREDICTION_MODEL_ERRORS
 PREDICTION_CACHE_ERRORS = (
     ConnectionError,
     OSError,

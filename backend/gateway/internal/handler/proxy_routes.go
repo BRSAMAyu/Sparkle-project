@@ -673,6 +673,17 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		// route-tier: authed
 		examSprint.POST("/intake", h.proxyWithHeaders)
 		// route-tier: authed
+		// R2 fix (M-5): engine also serves GET /dashboard, POST /diagnose/generate,
+		// POST /diagnose/grade and GET /sprint-summary; without them the gateway
+		// answers 404 while the engine route exists (engine is source of truth).
+		examSprint.GET("/dashboard", h.proxyWithHeaders)
+		// route-tier: authed
+		examSprint.POST("/diagnose/generate", h.proxyWithHeaders)
+		// route-tier: authed
+		examSprint.POST("/diagnose/grade", h.proxyWithHeaders)
+		// route-tier: authed
+		examSprint.GET("/sprint-summary", h.proxyWithHeaders)
+		// route-tier: authed
 		// R2-08 §2.2 #10: method corrected POST -> GET; the engine only
 		// serves GET /completion (plan_id query param).
 		examSprint.GET("/completion", h.proxyWithHeaders)

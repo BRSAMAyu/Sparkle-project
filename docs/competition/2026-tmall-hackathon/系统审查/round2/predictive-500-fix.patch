@@ -1,0 +1,231 @@
+diff --git a/backend/app/services/predictive_service.py b/backend/app/services/predictive_service.py
+index 3ff5f255..fa496e5f 100755
+--- a/backend/app/services/predictive_service.py
++++ b/backend/app/services/predictive_service.py
+@@ -28,6 +28,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
+ 
+ from app.core.cost_controller import is_llm_within_budget
+ 
++try:
++    from openai import APIError as OpenAIAPIError
++except ImportError:  # pragma: no cover - openai is optional in unit tests
++    OpenAIAPIError = None  # type: ignore[assignment]
++
+ try:
+     from redis.exceptions import RedisError
+ except ImportError:  # pragma: no cover - redis is optional in unit tests
+@@ -77,7 +82,7 @@ PREDICTION_DATA_ERRORS = (
+     ValueError,
+     statistics.StatisticsError,
+ )
+-PREDICTION_MODEL_ERRORS = (
++_PREDICTION_MODEL_ERRORS: tuple[type[Exception], ...] = (
+     ConnectionError,
+     OSError,
+     RuntimeError,
+@@ -85,6 +90,12 @@ PREDICTION_MODEL_ERRORS = (
+     TypeError,
+     ValueError,
+ )
++if OpenAIAPIError is not None:
++    # openai SDK 的 APIError 家族（BadRequestError/RateLimitError/
++    # APIConnectionError/APITimeoutError 等）不属于任何内建异常分支；
++    # 不捕获会让 realtime/long-horizon 预测的逐档降级失效并 500。
++    _PREDICTION_MODEL_ERRORS = (*_PREDICTION_MODEL_ERRORS, OpenAIAPIError)
++PREDICTION_MODEL_ERRORS = _PREDICTION_MODEL_ERRORS
+ PREDICTION_CACHE_ERRORS = (
+     ConnectionError,
+     OSError,
+diff --git a/backend/gateway/internal/handler/proxy_routes.go b/backend/gateway/internal/handler/proxy_routes.go
+index 4e91f3ae..e16ef65c 100644
+--- a/backend/gateway/internal/handler/proxy_routes.go
++++ b/backend/gateway/internal/handler/proxy_routes.go
+@@ -673,6 +673,17 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
+ 		// route-tier: authed
+ 		examSprint.POST("/intake", h.proxyWithHeaders)
+ 		// route-tier: authed
++		// R2 fix (M-5): engine also serves GET /dashboard, POST /diagnose/generate,
++		// POST /diagnose/grade and GET /sprint-summary; without them the gateway
++		// answers 404 while the engine route exists (engine is source of truth).
++		examSprint.GET("/dashboard", h.proxyWithHeaders)
++		// route-tier: authed
++		examSprint.POST("/diagnose/generate", h.proxyWithHeaders)
++		// route-tier: authed
++		examSprint.POST("/diagnose/grade", h.proxyWithHeaders)
++		// route-tier: authed
++		examSprint.GET("/sprint-summary", h.proxyWithHeaders)
++		// route-tier: authed
+ 		// R2-08 §2.2 #10: method corrected POST -> GET; the engine only
+ 		// serves GET /completion (plan_id query param).
+ 		examSprint.GET("/completion", h.proxyWithHeaders)
+diff --git a/backend/gateway/internal/handler/proxy_routes_test.go b/backend/gateway/internal/handler/proxy_routes_test.go
+index 3a901a70..a73516af 100644
+--- a/backend/gateway/internal/handler/proxy_routes_test.go
++++ b/backend/gateway/internal/handler/proxy_routes_test.go
+@@ -195,6 +195,10 @@ func TestProxyRoutesHandler_RegisterProxyRoutes(t *testing.T) {
+ 		"GET /api/v1/prediction/*path",
+ 		"GET /api/v1/growth/*path",
+ 		"POST /api/v1/exam-sprint/intake",
++		"GET /api/v1/exam-sprint/dashboard",
++		"POST /api/v1/exam-sprint/diagnose/generate",
++		"POST /api/v1/exam-sprint/diagnose/grade",
++		"GET /api/v1/exam-sprint/sprint-summary",
+ 		"GET /api/v1/multi-intent/*path",
+ 		"GET /api/v1/multi-agent/*path",
+ 		"GET /api/v1/subjects",
+diff --git a/backend/tests/services/test_predictive_realtime_degrade.py b/backend/tests/services/test_predictive_realtime_degrade.py
+new file mode 100644
+index 00000000..678282ea
+--- /dev/null
++++ b/backend/tests/services/test_predictive_realtime_degrade.py
+@@ -0,0 +1,150 @@
++"""realtime-next-step 有界降级回归测试。
++
++背景（round2 P2 复现）：POST /api/v1/predictive/realtime-next-step 500。
++根因：实时预测模型链（free → free_fast → fast）逐档尝试时，
++openai SDK 抛出的 ``BadRequestError``（"Unsupported model mimo-v2-flash"）
++不属于 ``PREDICTION_MODEL_ERRORS``，逃逸出逐档捕获循环直达 API 层，
++被 handler 兜底成 500，规则基线（rule-based base）再也无法兜底。
++
++契约：LLM 单档失败（含 openai APIError 家族、熔断 HTTPException、
++LLMServiceError）只允许跳过该档，最终必须返回规则基线或 None，
++绝不向上抛异常。
++"""
++
++import httpx
++import pytest
++from openai import BadRequestError, RateLimitError
++from unittest.mock import AsyncMock, MagicMock, patch
++
++import app.services.predictive_service as predictive_service_module
++from app.core.agent_profiles import ModelTier
++from app.services.predictive_service import PREDICTION_MODEL_ERRORS, PredictiveService
++
++
++def _make_status_error(cls, message: str, status_code: int):
++    request = httpx.Request("POST", "https://api.example.com/v1/chat/completions")
++    response = httpx.Response(
++        status_code,
++        request=request,
++        json={"error": {"code": str(status_code), "message": message}},
++    )
++    return cls(message, response=response, body=None)
++
++
++def _minimal_base() -> dict:
++    return {
++        "title": "继续当前任务",
++        "summary": "规则基线",
++        "confidence": 0.4,
++        "predicted_action_type": "continue_task",
++        "predicted_window": "now",
++        "reasons": ["rule"],
++        "suggested_prompt": "继续",
++        "signals": {"surface": "chat_input"},
++    }
++
++
++def _service() -> PredictiveService:
++    return PredictiveService(db=MagicMock())
++
++
++class TestPredictionModelErrorsCoverOpenAIFamily:
++    def test_openai_api_status_error_is_in_prediction_model_errors(self):
++        err = _make_status_error(
++            BadRequestError, "Unsupported model mimo-v2-flash", 400
++        )
++        assert isinstance(err, PREDICTION_MODEL_ERRORS), (
++            "openai 4xx/5xx APIError 必须被逐档降级捕获，否则 realtime-next-step 会 500"
++        )
++
++    def test_openai_rate_limit_error_is_in_prediction_model_errors(self):
++        err = _make_status_error(RateLimitError, "rate limited", 429)
++        assert isinstance(err, PREDICTION_MODEL_ERRORS)
++
++
++@pytest.mark.asyncio
++async def test_realtime_llm_bad_request_degrades_instead_of_raising():
++    """单档模型抛 openai 4xx 时，整条链应降级返回 None（由规则基线兜底）。"""
++    service = _service()
++    boom = _make_status_error(
++        BadRequestError, "Unsupported model mimo-v2-flash", 400
++    )
++
++    async def _raise_for_specific_model(model_key, agent_role=None):
++        raise boom
++
++    with (
++        patch.object(
++            predictive_service_module,
++            "is_llm_within_budget",
++            new=AsyncMock(return_value=True),
++        ),
++        patch.object(
++            predictive_service_module,
++            "get_llm_service_for_specific_model",
++            new=_raise_for_specific_model,
++        ),
++        patch.object(
++            PredictiveService,
++            "_realtime_model_attempts",
++            return_value=[("xiaomi_chat", ModelTier.FAST, 1.0)],
++        ),
++    ):
++        result = await service._generate_realtime_llm_prediction(
++            "00000000-0000-0000-0000-000000000001",
++            partial_text="帮我复习密码学",
++            base=_minimal_base(),
++            surface="chat_input",
++        )
++
++    assert result is None
++
++
++@pytest.mark.asyncio
++async def test_realtime_forecast_returns_rule_base_when_all_tiers_fail():
++    """端到端契约：所有 LLM 档失败后，realtime forecast 必须返回规则基线而非异常。"""
++    service = _service()
++    base = _minimal_base()
++    boom = _make_status_error(
++        BadRequestError, "Unsupported model mimo-v2-flash", 400
++    )
++
++    async def _raise_for_specific_model(model_key, agent_role=None):
++        raise boom
++
++    async def _rule_base(*args, **kwargs):
++        return base
++
++    with (
++        patch.object(
++            PredictiveService,
++            "_build_rule_based_realtime_next_step",
++            new=_rule_base,
++        ),
++        patch.object(
++            predictive_service_module,
++            "is_llm_within_budget",
++            new=AsyncMock(return_value=True),
++        ),
++        patch.object(
++            predictive_service_module,
++            "get_llm_service_for_specific_model",
++            new=_raise_for_specific_model,
++        ),
++        patch.object(
++            PredictiveService,
++            "_realtime_model_attempts",
++            return_value=[
++                ("siliconflow_free", ModelTier.FREE, 1.0),
++                ("glm_4_5_air_free", ModelTier.FREE_FAST, 1.0),
++                ("xiaomi_chat", ModelTier.FAST, 1.0),
++            ],
++        ),
++    ):
++        forecast = await service.get_realtime_next_step_forecast(
++            "00000000-0000-0000-0000-000000000002",
++            partial_text="帮我复习密码学",
++            surface="chat_input",
++        )
++
++    assert forecast is base
