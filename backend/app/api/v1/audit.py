@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_active_superuser, get_db
 from app.aurora.runtime_v1.telemetry import AuroraDecisionTelemetryService, AuroraEffectivenessReport
 from app.core.cache import cache_service
+from app.core.config import settings
 from app.middleware.admin_audit import archive_due_admin_audit_logs, audit_admin_action
 from app.models.audit_log import AdminAuditLog
 from app.models.user import User
@@ -114,7 +115,7 @@ async def get_kill_switch_readiness(
 ):
     """返回所有 Aurora kill switch 的升级就绪报告（管理员专用）"""
     svc = KillSwitchReadinessService()
-    report = svc.get_readiness_report()
+    report = await svc.get_readiness_report(settings)
     return report
 
 
