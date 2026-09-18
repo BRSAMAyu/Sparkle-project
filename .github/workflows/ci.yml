@@ -119,6 +119,18 @@ jobs:
       - name: Install Guard Runtime Deps
         run: sudo apt-get update && sudo apt-get install -y ripgrep
 
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: backend/gateway/go.sum
+
+      # Guards AQ/BG parse generated artifacts (backend/app/gen, gateway gen,
+      # mobile lib/gen) which are gitignored — regenerate before guarding or
+      # AQ dies on ModuleNotFoundError and BG reports phantom violations.
+      - name: Generate Proto Code for Guards
+        run: make proto-tools-build && make proto-gen
+
       - name: Run Stage 22 Baseline Artifact Refresh
         run: |
           python3 scripts/check_prompt_render_coverage.py --write
