@@ -131,6 +131,8 @@ dev_dependencies:
   stream_channel: ^2.1.0
 
 dependency_overrides:
+  # gen/ 产物由 protoc_plugin 25.x 生成，运行时需要 protobuf 6.1.0；锁 ^6.1.0 防止 pub 解析回 6.0.0
+  protobuf: ^6.1.0
   file_picker:
     path: third_party_plugins/file_picker
   fluwx:
