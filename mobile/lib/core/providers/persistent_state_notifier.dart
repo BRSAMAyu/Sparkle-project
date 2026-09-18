@@ -116,8 +116,11 @@ abstract class PersistentStateNotifier<T> extends StateNotifier<T> {
   void _scheduleSave() {
     if (!enabled) return;
 
+    final epoch = _storage.epoch;
     _saveTimer?.cancel();
     _saveTimer = Timer(debounce, () async {
+      // N-4：清理世代已变（期间 clearAllViewState），丢弃过期写入。
+      if (_storage.epoch != epoch) return;
       await _saveState();
     });
   }
@@ -298,8 +301,11 @@ class PersistentNotifier<T> extends StateNotifier<T> {
   void _scheduleSave() {
     if (!enabled) return;
 
+    final epoch = _storage.epoch;
     _saveTimer?.cancel();
     _saveTimer = Timer(debounce, () async {
+      // N-4：清理世代已变（期间 clearAllViewState），丢弃过期写入。
+      if (_storage.epoch != epoch) return;
       await _saveState();
     });
   }
@@ -553,8 +559,11 @@ class StringSetPersistentNotifier extends StateNotifier<Set<String>> {
   void _scheduleSave() {
     if (!enabled) return;
 
+    final epoch = _storage.epoch;
     _saveTimer?.cancel();
     _saveTimer = Timer(debounce, () async {
+      // N-4：清理世代已变（期间 clearAllViewState），丢弃过期写入。
+      if (_storage.epoch != epoch) return;
       await _saveState();
     });
   }

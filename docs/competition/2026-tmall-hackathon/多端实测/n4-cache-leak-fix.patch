@@ -1,0 +1,1106 @@
+diff --git a/backend/app/api/v1/experience/community_router.py b/backend/app/api/v1/experience/community_router.py
+index 6de7e7a9..2f9dbdaa 100644
+--- a/backend/app/api/v1/experience/community_router.py
++++ b/backend/app/api/v1/experience/community_router.py
+@@ -30,6 +30,20 @@ def _utcnow() -> datetime:
+     return datetime.now(UTC).replace(tzinfo=None)
+ 
+ 
++def _as_naive_utc(value: datetime | None) -> datetime | None:
++    """把 DB 返回的 datetime 归一化为 naive UTC（代码库 canonical 形态）。
++
++    N-5 根因：Alembic 线上 schema 中 ``accountability_checkin.created_at``
++    实际为 timestamptz（模型却声明 naive ``DateTime``），asyncpg 对
++    timestamptz 列返回 tz-aware datetime；与 naive ``_utcnow()`` 直接比较
++    抛 ``can't compare offset-naive and offset-aware datetimes`` →
++    新访客（种子数据带 ACTIVE partnership）社群首屏稳定 500。
++    """
++    if value is not None and value.tzinfo is not None:
++        return value.astimezone(UTC).replace(tzinfo=None)
++    return value
++
++
+ def _display_name(user: User | None) -> str:
+     if user is None:
+         return "Accountability Partner"
+@@ -243,6 +257,11 @@ async def get_community_accountability(
+             check_in_days=partnership.check_in_days,
+             since=week_start,
+         )
++        # N-5：last_checkin_at 来自 timestamptz 列（aware），归一化后才能
++        # 与 naive now 参与冷却判断；响应体保留原值（pydantic 可序列化）。
++        is_rhythm_cooling = last_partner_checkin is None or _as_naive_utc(
++            last_partner_checkin,
++        ) < now - timedelta(days=max(2, partnership.check_in_days))
+ 
+         partner_progress.append(
+             PartnerProgressItem(
+@@ -274,9 +293,6 @@ async def get_community_accountability(
+                     action="send_gentle_checkin",
+                 )
+             )
+-        is_rhythm_cooling = last_partner_checkin is None or last_partner_checkin < now - timedelta(
+-            days=max(2, partnership.check_in_days),
+-        )
+         if is_rhythm_cooling:
+             squad_risks.append(
+                 SquadRiskItem(
+diff --git a/backend/tests/api/test_community_accountability_new_guest_500.py b/backend/tests/api/test_community_accountability_new_guest_500.py
+new file mode 100644
+index 00000000..72334712
+--- /dev/null
++++ b/backend/tests/api/test_community_accountability_new_guest_500.py
+@@ -0,0 +1,198 @@
++"""N-5 回归：/experience/community-accountability 对新访客 500。
++
++现象（Android round-2 实测 + 网关日志 23:12:48/23:14:19）：
++新注册访客（guest 种子数据带 1 条 ACTIVE accountability partnership）
++请求该接口稳定 500，detail =
++``can't compare offset-naive and offset-aware datetimes``。
++
++根因：Alembic 线上 schema 中 ``accountability_checkin.created_at`` 为
++``timestamptz``（timestamp with time zone），而 SQLAlchemy 模型
++``BaseModel.created_at`` 声明为 naive ``DateTime``；asyncpg 对 timestamptz
++列返回 **tz-aware** datetime。endpoint 内
++``last_partner_checkin < now - timedelta(...)`` 把 aware 值与 naive 的
++``_utcnow()`` 直接比较 → TypeError → 500。
++（无 partnership 的用户不进循环，因此旧的 fieldtester20 不触发，掩盖了该 bug。）
++
++修复：比较前把 DB 返回的 datetime 归一化为 naive UTC（与代码库 canonical
++时间形态一致，见 app/core/time_utils.utcnow）。
++
++本测试用脚本化 FakeDB 模拟 asyncpg 的 aware 返回值，不依赖真实数据库。
++"""
++
++from __future__ import annotations
++
++import importlib.util
++from datetime import UTC, datetime, timedelta, timezone
++from pathlib import Path
++from types import SimpleNamespace
++from uuid import uuid4
++
++from fastapi import FastAPI
++from fastapi.testclient import TestClient
++
++from app.api.deps import get_current_user, get_db
++from app.models.accountability import AccountabilityStatus
++from app.models.user import User
++
++_COMMUNITY_ROUTER = (
++    Path(__file__).resolve().parents[2]
++    / "app"
++    / "api"
++    / "v1"
++    / "experience"
++    / "community_router.py"
++)
++
++
++def _load_router():
++    spec = importlib.util.spec_from_file_location(
++        "app.api.v1.experience_closeout_community_router_test",
++        _COMMUNITY_ROUTER,
++    )
++    assert spec is not None and spec.loader is not None
++    module = importlib.util.module_from_spec(spec)
++    spec.loader.exec_module(module)
++    return module
++
++
++def _make_user() -> User:
++    suffix = uuid4().hex[:8]
++    return User(
++        username=f"n5_guest_{suffix}",
++        email=f"n5_guest_{suffix}@example.com",
++        hashed_password="hashed",
++        registration_source="guest",
++        is_active=True,
++    )
++
++
++class _FakeResult:
++    """按调用脚本化返回的 SQLAlchemy Result 桩。"""
++
++    def __init__(
++        self,
++        *,
++        scalars_all=None,
++        scalar_one_or_none=None,
++        scalar_one=None,
++    ) -> None:
++        self._scalars_all = scalars_all if scalars_all is not None else []
++        self._scalar_one_or_none = scalar_one_or_none
++        self._scalar_one = scalar_one
++
++    class _Scalars:
++        def __init__(self, items) -> None:
++            self._items = items
++
++        def all(self):
++            return list(self._items)
++
++    def scalars(self):
++        return _FakeResult._Scalars(self._scalars_all)
++
++    def scalar_one_or_none(self):
++        return self._scalar_one_or_none
++
++    def scalar_one(self):
++        assert self._scalar_one is not None, "unexpected scalar_one() call"
++        return self._scalar_one
++
++
++class _FakeDB:
++    """按顺序弹出脚本的 AsyncSession 桩。"""
++
++    def __init__(self, results) -> None:
++        self._results = list(results)
++
++    async def execute(self, _query):  # noqa: ANN001
++        assert self._results, "more queries than scripted results"
++        return self._results.pop(0)
++
++
++def _build_client() -> TestClient:
++    module = _load_router()
++    app = FastAPI()
++    app.include_router(module.router)
++
++    me = _make_user()
++    partner_user = SimpleNamespace(nickname="伙伴甲", full_name=None, username="partner_a")
++    other_id = uuid4()
++    partnership = SimpleNamespace(
++        id=uuid4(),
++        initiator_id=other_id,
++        partner_id=me.id,
++        status=AccountabilityStatus.ACTIVE,
++        initiator_goal="顺利通过期末考试",
++        partner_goal="陪我复盘错题",
++        check_in_days=3,
++        updated_at=datetime(2026, 9, 18),
++        initiator=partner_user,
++        partner=me,
++    )
++
++    # asyncpg 对 timestamptz 列返回 tz-aware datetime —— 复现线上形态。
++    aware_last_checkin = datetime.now(UTC).replace(tzinfo=UTC)
++
++    fake_db = _FakeDB(
++        [
++            _FakeResult(scalars_all=[partnership]),  # partnerships 查询
++            _FakeResult(scalars_all=[]),  # pending commitments（episodic）
++            _FakeResult(scalar_one_or_none=None),  # partner 今日打卡
++            _FakeResult(scalar_one_or_none=None),  # 我的今日打卡
++            _FakeResult(scalar_one_or_none=aware_last_checkin),  # 最近一次打卡（timestamptz → aware）
++            _FakeResult(scalar_one=2),  # 周打卡计数
++            _FakeResult(scalar_one_or_none=None),  # my_commitments 兜底分支：今日打卡
++        ]
++    )
++
++    async def _override_db():
++        yield fake_db
++
++    async def _override_user():
++        return me
++
++    app.dependency_overrides[get_db] = _override_db
++    app.dependency_overrides[get_current_user] = _override_user
++    return TestClient(app)
++
++
++def test_new_guest_with_seeded_partnership_gets_empty_ok_not_500():
++    client = _build_client()
++    response = client.get("/experience/community-accountability")
++
++    assert response.status_code == 200, (
++        f"期望 200，实际 {response.status_code}: {response.text[:300]}"
++    )
++    payload = response.json()
++    # 无 pending commitment 时回退用 ACTIVE partnership 生成 1 张承诺卡；
++    # 当前用户是 partner 侧，goal 取 partner_goal（见 _my_goal）
++    assert len(payload["my_commitments"]) == 1
++    assert payload["my_commitments"][0]["summary"] == "陪我复盘错题"
++    # 伙伴今日未打卡 → 出现在 helpable；最近打卡在 2 天冷却阈值内/外由
++    # 数据决定，这里只断言结构完整。
++    assert isinstance(payload["squad_risks"], list)
++    assert isinstance(payload["partner_progress"], list)
++    assert len(payload["partner_progress"]) == 1
++
++
++def test_aware_last_checkin_is_compared_against_naive_now_safely():
++    """直接钉住根因：aware 值参与冷却判断不再抛 TypeError。"""
++    module = _load_router()
++    aware = datetime.now(UTC).replace(tzinfo=UTC)
++    naive_now = datetime(2026, 9, 18, 12, 0, 0)
++
++    normalized = module._as_naive_utc(aware)
++    # 不抛 "can't compare offset-naive and offset-aware datetimes"
++    assert (normalized < naive_now) or (normalized >= naive_now)
++    assert normalized.tzinfo is None
++
++    # naive 值原样通过
++    naive = datetime(2026, 9, 18, 11, 0, 0)
++    assert module._as_naive_utc(naive) == naive
++
++    # None 原样通过（冷却逻辑依赖 None 语义）
++    assert module._as_naive_utc(None) is None
++
++    # aware 归一化保留真实时刻（UTC 换算，不是简单剥 tzinfo）
++    aware_cst = datetime(2026, 9, 18, 20, 0, 0, tzinfo=timezone(timedelta(hours=8)))
++    assert module._as_naive_utc(aware_cst) == naive_now
+diff --git a/mobile/lib/core/offline/offline_providers.dart b/mobile/lib/core/offline/offline_providers.dart
+index 0bf35cc6..f1e7e1b0 100644
+--- a/mobile/lib/core/offline/offline_providers.dart
++++ b/mobile/lib/core/offline/offline_providers.dart
+@@ -97,6 +97,47 @@ final offlineQueueSnapshotProvider =
+       .asyncMap((_) => load());
+ });
+ 
++/// 队列横幅阶段（N-1/N-3）。
++enum OfflineQueuePhase { hidden, queued, sending }
++
++/// 排队横幅状态机（纯函数核心，可单测）。
++///
++/// N-1：横幅计数只含**未投递**消息（pending + sent/in-flight）。
++/// 此前用 `max(pendingCount, activeCount)`，而 activeCount 把永久失败
++/// 的行也计入 —— 出网成功/失败后计数纹丝不动。
++/// N-3：只剩失败项时横幅必须隐藏（气泡自带「发送失败·重试」可见态），
++/// 不再出现「气泡失败可重试」与「横幅正在发送」并存的矛盾。
++class OfflineQueueIndicatorModel {
++  const OfflineQueueIndicatorModel({
++    required this.phase,
++    required this.count,
++  });
++
++  const OfflineQueueIndicatorModel.hidden()
++      : phase = OfflineQueuePhase.hidden,
++        count = 0;
++
++  final OfflineQueuePhase phase;
++  final int count;
++
++  static OfflineQueueIndicatorModel resolve({
++    required int pendingCount,
++    required int sendingCount,
++    required int failedCount,
++    required bool wsConnected,
++  }) {
++    final deliverable = pendingCount + sendingCount;
++    if (deliverable <= 0) {
++      return const OfflineQueueIndicatorModel.hidden();
++    }
++    final isSending = wsConnected || sendingCount > 0;
++    return OfflineQueueIndicatorModel(
++      phase: isSending ? OfflineQueuePhase.sending : OfflineQueuePhase.queued,
++      count: deliverable,
++    );
++  }
++}
++
+ final syncEngineProvider = Provider<SyncEngine>((ref) {
+   final localDb = ref.watch(localDatabaseProvider);
+   final wsService = ref.watch(webSocketServiceProvider);
+diff --git a/mobile/lib/core/providers/persistent_state_notifier.dart b/mobile/lib/core/providers/persistent_state_notifier.dart
+index 4df45418..d494eded 100644
+--- a/mobile/lib/core/providers/persistent_state_notifier.dart
++++ b/mobile/lib/core/providers/persistent_state_notifier.dart
+@@ -116,8 +116,11 @@ abstract class PersistentStateNotifier<T> extends StateNotifier<T> {
+   void _scheduleSave() {
+     if (!enabled) return;
+ 
++    final epoch = _storage.epoch;
+     _saveTimer?.cancel();
+     _saveTimer = Timer(debounce, () async {
++      // N-4：清理世代已变（期间 clearAllViewState），丢弃过期写入。
++      if (_storage.epoch != epoch) return;
+       await _saveState();
+     });
+   }
+@@ -298,8 +301,11 @@ class PersistentNotifier<T> extends StateNotifier<T> {
+   void _scheduleSave() {
+     if (!enabled) return;
+ 
++    final epoch = _storage.epoch;
+     _saveTimer?.cancel();
+     _saveTimer = Timer(debounce, () async {
++      // N-4：清理世代已变（期间 clearAllViewState），丢弃过期写入。
++      if (_storage.epoch != epoch) return;
+       await _saveState();
+     });
+   }
+@@ -553,8 +559,11 @@ class StringSetPersistentNotifier extends StateNotifier<Set<String>> {
+   void _scheduleSave() {
+     if (!enabled) return;
+ 
++    final epoch = _storage.epoch;
+     _saveTimer?.cancel();
+     _saveTimer = Timer(debounce, () async {
++      // N-4：清理世代已变（期间 clearAllViewState），丢弃过期写入。
++      if (_storage.epoch != epoch) return;
+       await _saveState();
+     });
+   }
+diff --git a/mobile/lib/core/services/session_refresh_service.dart b/mobile/lib/core/services/session_refresh_service.dart
+index 2c55117f..7349700b 100644
+--- a/mobile/lib/core/services/session_refresh_service.dart
++++ b/mobile/lib/core/services/session_refresh_service.dart
+@@ -12,16 +12,33 @@ import 'package:sparkle/features/focus/presentation/providers/focus_statistics_p
+ import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
+ import 'package:sparkle/features/galaxy/data/repositories/galaxy_repository.dart';
+ import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.dart';
++import 'package:sparkle/features/home/presentation/providers/calendar_preview_provider.dart';
+ import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
++import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboard_provider.dart';
++import 'package:sparkle/features/home/presentation/providers/home_growth_provider.dart';
++import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
+ import 'package:sparkle/features/home/presentation/providers/notification_provider.dart';
++import 'package:sparkle/features/home/presentation/providers/spine_status_band_provider.dart';
++import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
++import 'package:sparkle/features/home/presentation/providers/understanding_snapshot_provider.dart';
+ import 'package:sparkle/features/leaderboard/presentation/providers/leaderboard_provider.dart';
+ import 'package:sparkle/features/notification_center/presentation/providers/notification_center_provider.dart';
++import 'package:sparkle/features/plan/presentation/providers/active_goal_provider.dart';
+ import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
+ import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
+ import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
+ import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
+ import 'package:sparkle/features/user/presentation/providers/profile_context_provider.dart';
+ 
++/// 会话绑定的 provider 清单：认证状态切换（login/logout/guest 切换）时
++/// 由 [SessionRefreshService.refreshSessionBoundProviders] 全部失效重算。
++///
++/// ⚠️ 完整性约束（N-4 跨账号缓存泄漏）：任何持有**用户态数据**的长生命周期
++/// provider 都必须登记在这里 —— 否则登出后其内存态跨账号存活，下一个账号
++/// 首屏会直接渲染上一账号的数据（Android round-2 实测：新访客驾驶舱显示
++/// fieldtester20 的目标 `round4_nodate_goal`）。
++/// 回归测试：
++/// test/features/auth/presentation/providers/n4_session_user_state_isolation_test.dart
+ final sessionBoundProvidersProvider = Provider<List<ProviderOrFamily>>(
+   (ref) => [
+     dashboardProvider,
+@@ -32,8 +49,21 @@ final sessionBoundProvidersProvider = Provider<List<ProviderOrFamily>>(
+     auroraStatusProvider,
+     auroraPreferencesProvider,
+     taskListProvider,
++    taskBoardProvider,
+     planListProvider,
+     activePlanProvider,
++    // N-4：驾驶舱目标链
++    activeGoalProvider,
++    multiGoalOverviewProvider,
++    understandingSnapshotProvider,
++    // N-4：驾驶舱增长/预测/考试冲刺/脊柱状态带（用户态数据面）
++    homeGrowthDashboardSnapshotProvider,
++    homeDailyContextLineProvider,
++    homeTodayTasksSnapshotProvider,
++    examSprintDashboardProvider,
++    spineStatusBandProvider,
++    intentPredictionProvider,
++    calendarPreviewProvider,
+     calendarProvider,
+     unifiedCalendarProvider,
+     friendsProvider,
+diff --git a/mobile/lib/core/services/view_storage_service.dart b/mobile/lib/core/services/view_storage_service.dart
+index 1ce08cc7..50d852e3 100644
+--- a/mobile/lib/core/services/view_storage_service.dart
++++ b/mobile/lib/core/services/view_storage_service.dart
+@@ -29,6 +29,15 @@ class ViewStorageService {
+   final SharedPreferences _prefs;
+   final Map<String, Timer> _debounceTimers = {};
+ 
++  /// 清理世代（N-4）：每次全量清理自增。持久化 notifier 在调度 debounced
++  /// 写入时记下当时世代，写入前发现世代已变（期间发生过 clearAllViewState）
++  /// 则丢弃写入 —— 否则登出清理后，在途定时器会把已删除的键复活，
++  /// 下一账号读到上一账号的数据。
++  int _epoch = 0;
++
++  /// 当前清理世代。
++  int get epoch => _epoch;
++
+   /// Get the singleton instance
+   static ViewStorageService? _instance;
+ 
+@@ -80,6 +89,8 @@ class ViewStorageService {
+     for (final key in keys) {
+       await _prefs.remove(key);
+     }
++    // 作废所有清理前调度的 debounced 写入（见 _epoch 注释）。
++    _epoch++;
+   }
+ 
+   // ==================== Primitive Get/Set ====================
+diff --git a/mobile/lib/features/auth/presentation/providers/auth_provider.dart b/mobile/lib/features/auth/presentation/providers/auth_provider.dart
+index 60ce0869..e70cdb74 100755
+--- a/mobile/lib/features/auth/presentation/providers/auth_provider.dart
++++ b/mobile/lib/features/auth/presentation/providers/auth_provider.dart
+@@ -177,6 +177,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
+       await _ref
+           .read(sharedPreferencesProvider)
+           .setBool(_demoGuestModePreferenceKey, false);
++      // N-4：登录即切换身份 —— 先清上一身份的本地用户态（含上次会话
++      // 未走 logout 的崩溃残留），避免新账号读到旧账号数据。
++      await _clearUserScopedLocalData();
+       await _ref.read(guestServiceProvider).clearGuestData();
+       final user = await _authRepository.login(usernameOrEmail, password);
+       if (_isStaleSessionOp(generation)) return;
+@@ -211,6 +214,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
+       await _ref
+           .read(sharedPreferencesProvider)
+           .setBool(_demoGuestModePreferenceKey, false);
++      // N-4：登录即切换身份，见 login() 内注释。
++      await _clearUserScopedLocalData();
+       await _ref.read(guestServiceProvider).clearGuestData();
+       final user = await _authRepository.socialLogin(
+         provider: provider,
+@@ -254,6 +259,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
+       await _ref
+           .read(sharedPreferencesProvider)
+           .setBool(_demoGuestModePreferenceKey, false);
++      // N-4：登录即切换身份，见 login() 内注释。
++      await _clearUserScopedLocalData();
+       await _ref.read(guestServiceProvider).clearGuestData();
+       final user = await _authRepository.register(
+         username,
+@@ -291,6 +298,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
+       await _ref
+           .read(sharedPreferencesProvider)
+           .setBool(_demoGuestModePreferenceKey, false);
++      // N-4：登录即切换身份，见 login() 内注释。
++      await _clearUserScopedLocalData();
+       debugPrint('🎭 Guest login using real backend token + seeded data');
+ 
+       final guestService = _ref.read(guestServiceProvider);
+diff --git a/mobile/lib/features/chat/data/services/websocket_chat_service_v2.dart b/mobile/lib/features/chat/data/services/websocket_chat_service_v2.dart
+index 38d9ecab..ab163518 100755
+--- a/mobile/lib/features/chat/data/services/websocket_chat_service_v2.dart
++++ b/mobile/lib/features/chat/data/services/websocket_chat_service_v2.dart
+@@ -2124,6 +2124,25 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
+           (payload) => payload['request_id']?.toString() == requestId,
+         );
+       }
++      // N-1: 孤儿 ACK / 完成事件也要落库。离线重放（flush）的消息没有
++      // 活的 request controller（无人开流监听），此前 AckEvent 在
++      // _routeEventToRequest 里因 controller 缺失被提前 return，离线行
++      // 永远停在 sent —— 「正在发送 N 条」计数永不递减。
++      // DoneEvent 是比 ACK 更强的投递凭证（服务端已完整处理），无论
++      // controller 是否存活都据它销账（markAcked 幂等，行不存在即 no-op）。
++      if (event is DoneEvent && requestId != null && requestId.isNotEmpty) {
++        unawaited(_offlineQueue.markAcked(requestId));
++      } else if (event is AckEvent &&
++          requestId != null &&
++          requestId.isNotEmpty &&
++          !_requestControllers.containsKey(requestId)) {
++        unawaited(
++          _offlineQueue.markAcked(
++            requestId,
++            serverMessageId: event.messageId,
++          ),
++        );
++      }
+       _routeEventToRequest(requestId, event);
+       if (event is AuroraStateBandEvent) {
+         _container
+diff --git a/mobile/lib/features/chat/presentation/screens/chat_screen.dart b/mobile/lib/features/chat/presentation/screens/chat_screen.dart
+index c2b2a82f..9ebf928f 100755
+--- a/mobile/lib/features/chat/presentation/screens/chat_screen.dart
++++ b/mobile/lib/features/chat/presentation/screens/chat_screen.dart
+@@ -2925,6 +2925,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
+           _OfflineQueueIndicatorHost(
+             snapshot: offlineSnapshot,
+             connectionState: chatState.wsConnectionState,
++            keyboardOpen: MediaQuery.of(context).viewInsets.bottom > 0,
+           ),
+           ChatInput(
+             enabled: !chatState.hasActiveRun,
+@@ -3452,11 +3453,15 @@ class _OfflineQueueIndicatorHost extends StatefulWidget {
+   const _OfflineQueueIndicatorHost({
+     required this.snapshot,
+     required this.connectionState,
++    required this.keyboardOpen,
+   });
+ 
+   final OfflineQueueSnapshot snapshot;
+   final WsConnectionState connectionState;
+ 
++  /// A-5/N-6：键盘拉起时横幅切压缩态，回收垂直空间防止输入行溢出。
++  final bool keyboardOpen;
++
+   @override
+   State<_OfflineQueueIndicatorHost> createState() =>
+       _OfflineQueueIndicatorHostState();
+@@ -3466,22 +3471,31 @@ class _OfflineQueueIndicatorHostState
+     extends State<_OfflineQueueIndicatorHost> {
+   Timer? _completeTimer;
+   var _showComplete = false;
+-  var _hadActiveQueue = false;
++  var _hadDeliverableQueue = false;
++
++  int get _deliverableCount =>
++      widget.snapshot.pendingCount + widget.snapshot.sendingCount;
+ 
+   @override
+   void didUpdateWidget(_OfflineQueueIndicatorHost oldWidget) {
+     super.didUpdateWidget(oldWidget);
+-    final hasActiveQueue = widget.snapshot.hasActiveQueue;
+-    if (_hadActiveQueue && !hasActiveQueue) {
+-      _showComplete = true;
++    final deliverable = _deliverableCount;
++    // N-1/N-3：以「未投递数」清零作为完成信号，且仅当没有失败项时才
++    // 显示「已全部发送」——失败项有气泡级「发送失败·重试」可见态，
++    // 横幅宣称成功/发送中都与事实矛盾。
++    if (_hadDeliverableQueue && deliverable == 0) {
++      final allDelivered = widget.snapshot.failedCount == 0;
++      _showComplete = allDelivered;
+       _completeTimer?.cancel();
+-      _completeTimer = Timer(const Duration(seconds: 2), () {
+-        if (mounted) {
+-          setState(() => _showComplete = false);
+-        }
+-      });
++      if (allDelivered) {
++        _completeTimer = Timer(const Duration(seconds: 2), () {
++          if (mounted) {
++            setState(() => _showComplete = false);
++          }
++        });
++      }
+     }
+-    _hadActiveQueue = hasActiveQueue;
++    _hadDeliverableQueue = deliverable > 0;
+   }
+ 
+   @override
+@@ -3493,28 +3507,35 @@ class _OfflineQueueIndicatorHostState
+   @override
+   Widget build(BuildContext context) {
+     final snapshot = widget.snapshot;
+-    if (_showComplete && !snapshot.hasActiveQueue) {
+-      return const OfflineQueueIndicator(
+-        status: OfflineQueueIndicatorStatus.complete,
+-        pendingCount: 0,
+-      );
+-    }
+-    if (!snapshot.hasActiveQueue) {
++    // N-1/N-3：横幅状态机统一走纯函数解析器 —— 计数只含未投递消息
++    // （pending + sent），失败项不并入「正在发送 N 条」。
++    final model = OfflineQueueIndicatorModel.resolve(
++      pendingCount: snapshot.pendingCount,
++      sendingCount: snapshot.sendingCount,
++      failedCount: snapshot.failedCount,
++      wsConnected: widget.connectionState == WsConnectionState.connected ||
++          widget.connectionState == WsConnectionState.connecting ||
++          widget.connectionState == WsConnectionState.reconnecting,
++    );
++    if (model.phase == OfflineQueuePhase.hidden) {
++      if (_showComplete) {
++        return const OfflineQueueIndicator(
++          status: OfflineQueueIndicatorStatus.complete,
++          pendingCount: 0,
++        );
++      }
+       return const OfflineQueueIndicator(
+         status: OfflineQueueIndicatorStatus.hidden,
+         pendingCount: 0,
+       );
+     }
+ 
+-    final isSending = widget.connectionState == WsConnectionState.connected ||
+-        widget.connectionState == WsConnectionState.connecting ||
+-        widget.connectionState == WsConnectionState.reconnecting ||
+-        snapshot.sendingCount > 0;
+     return OfflineQueueIndicator(
+-      status: isSending
++      status: model.phase == OfflineQueuePhase.sending
+           ? OfflineQueueIndicatorStatus.sending
+           : OfflineQueueIndicatorStatus.queued,
+-      pendingCount: max(1, max(snapshot.pendingCount, snapshot.activeCount)),
++      pendingCount: model.count,
++      compact: widget.keyboardOpen,
+     );
+   }
+ }
+diff --git a/mobile/lib/features/chat/presentation/widgets/offline_queue_indicator.dart b/mobile/lib/features/chat/presentation/widgets/offline_queue_indicator.dart
+index 22a580fe..b38f6763 100644
+--- a/mobile/lib/features/chat/presentation/widgets/offline_queue_indicator.dart
++++ b/mobile/lib/features/chat/presentation/widgets/offline_queue_indicator.dart
+@@ -13,12 +13,19 @@ class OfflineQueueIndicator extends StatelessWidget {
+   const OfflineQueueIndicator({
+     required this.status,
+     required this.pendingCount,
++    this.compact = false,
+     super.key,
+   });
+ 
+   final OfflineQueueIndicatorStatus status;
+   final int pendingCount;
+ 
++  /// A-5/N-6：键盘拉起时压缩横幅的垂直占位（外边距 8→2、内边距 8→5，
++  /// 共回收 9px）。离线横幅 + 键盘组合态下，聊天页主 Column 的不可压缩
++  /// 子项曾比可用高度多出 5px，产生
++  /// `BOTTOM OVERFLOWED BY 5.0 PIXELS` 黄黑条纹并盖住输入行。
++  final bool compact;
++
+   @override
+   Widget build(BuildContext context) {
+     if (status == OfflineQueueIndicatorStatus.hidden) {
+@@ -38,15 +45,15 @@ class OfflineQueueIndicator extends StatelessWidget {
+         switchOutCurve: Curves.easeInCubic,
+         child: Container(
+           key: ValueKey<String>('${status.name}-$pendingCount'),
+-          margin: const EdgeInsets.fromLTRB(
++          margin: EdgeInsets.fromLTRB(
+             DS.spacing16,
+             0,
+             DS.spacing16,
+-            DS.spacing8,
++            compact ? 2 : DS.spacing8,
+           ),
+-          padding: const EdgeInsets.symmetric(
++          padding: EdgeInsets.symmetric(
+             horizontal: DS.spacing12,
+-            vertical: DS.spacing8,
++            vertical: compact ? 5 : DS.spacing8,
+           ),
+           decoration: BoxDecoration(
+             color: material.$1,
+diff --git a/mobile/test/core/offline/offline_queue_indicator_model_test.dart b/mobile/test/core/offline/offline_queue_indicator_model_test.dart
+new file mode 100644
+index 00000000..88176c53
+--- /dev/null
++++ b/mobile/test/core/offline/offline_queue_indicator_model_test.dart
+@@ -0,0 +1,79 @@
++import 'package:flutter_test/flutter_test.dart';
++import 'package:sparkle/core/offline/offline_providers.dart';
++
++/// N-1/N-3 排队横幅状态机红绿测试。
++///
++/// N-1（Android round-2 实测）：横幅计数用
++/// `max(pendingCount, activeCount)`，activeCount 把永久失败的行也计入，
++/// 消息出网后「正在发送 3 条…」永不递减。
++/// 绿：计数只含未投递消息（pending + sent/in-flight），失败项不计入。
++///
++/// N-3：气泡「发送失败·重试」与全局「正在发送…」并存的语义矛盾。
++/// 绿：只剩失败项时横幅隐藏，失败态由气泡自身承载。
++void main() {
++  test('离线且有 pending：queued，计数 = pending 数', () {
++    final model = OfflineQueueIndicatorModel.resolve(
++      pendingCount: 2,
++      sendingCount: 0,
++      failedCount: 0,
++      wsConnected: false,
++    );
++    expect(model.phase, OfflineQueuePhase.queued);
++    expect(model.count, 2);
++  });
++
++  test('已连接且在途：sending，计数 = pending + sent（N-1 核心断言）', () {
++    final model = OfflineQueueIndicatorModel.resolve(
++      pendingCount: 1,
++      sendingCount: 2,
++      failedCount: 0,
++      wsConnected: true,
++    );
++    expect(model.phase, OfflineQueuePhase.sending);
++    expect(model.count, 3);
++  });
++
++  test('混合态：失败项不计入计数，只报未投递数（N-1 红点）', () {
++    // 现场实录：2 条已出网 + 1 条永久失败残留，旧逻辑恒显「3 条」。
++    final model = OfflineQueueIndicatorModel.resolve(
++      pendingCount: 0,
++      sendingCount: 2,
++      failedCount: 1,
++      wsConnected: true,
++    );
++    expect(model.phase, OfflineQueuePhase.sending);
++    expect(model.count, 2);
++  });
++
++  test('全部出网成功：隐藏（宿主负责短暂 complete 提示）', () {
++    final model = OfflineQueueIndicatorModel.resolve(
++      pendingCount: 0,
++      sendingCount: 0,
++      failedCount: 0,
++      wsConnected: true,
++    );
++    expect(model.phase, OfflineQueuePhase.hidden);
++    expect(model.count, 0);
++  });
++
++  test('只剩失败项：横幅隐藏，不与气泡「发送失败·重试」矛盾（N-3 红点）', () {
++    final model = OfflineQueueIndicatorModel.resolve(
++      pendingCount: 0,
++      sendingCount: 0,
++      failedCount: 3,
++      wsConnected: true,
++    );
++    expect(model.phase, OfflineQueuePhase.hidden);
++  });
++
++  test('断网但在途（sent 未达 ACK）：仍算 sending（等重连接管）', () {
++    final model = OfflineQueueIndicatorModel.resolve(
++      pendingCount: 0,
++      sendingCount: 1,
++      failedCount: 0,
++      wsConnected: false,
++    );
++    expect(model.phase, OfflineQueuePhase.sending);
++    expect(model.count, 1);
++  });
++}
+diff --git a/mobile/test/features/auth/presentation/providers/n4_session_user_state_isolation_test.dart b/mobile/test/features/auth/presentation/providers/n4_session_user_state_isolation_test.dart
+new file mode 100644
+index 00000000..bb3bc75e
+--- /dev/null
++++ b/mobile/test/features/auth/presentation/providers/n4_session_user_state_isolation_test.dart
+@@ -0,0 +1,280 @@
++import 'dart:async';
++
++import 'package:dio/dio.dart';
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import 'package:flutter_test/flutter_test.dart';
++import 'package:shared_preferences/shared_preferences.dart';
++import 'package:sparkle/core/network/api_client.dart';
++import 'package:sparkle/core/services/session_refresh_service.dart';
++import 'package:sparkle/core/services/view_storage_service.dart';
++import 'package:sparkle/core/storage/token_storage.dart';
++import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
++import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
++import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
++import 'package:sparkle/features/chat/data/repositories/chat_repository.dart';
++import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
++import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
++import 'package:sparkle/features/home/presentation/providers/understanding_snapshot_provider.dart';
++import 'package:sparkle/features/plan/presentation/providers/active_goal_provider.dart';
++
++/// N-4 跨账号本地状态泄漏 红绿测试。
++///
++/// Android round-2 实测（docs/competition/.../android-round2-verification.md
++/// N-4）：登出 fieldtester20 后，新访客的驾驶舱仍显示前一账号的
++/// 目标 `round4_nodate_goal`。
++///
++/// 根因：驾驶舱目标链（multiGoalOverviewProvider / activeGoalProvider）与
++/// 理解快照（understandingSnapshotProvider）都是长生命周期（keep-alive）
++/// provider，持有用户态数据，但**不在** sessionBoundProvidersProvider 的
++/// 登出失效清单里 —— 登出只清了存储层（view_state.*），这些 provider 的
++/// 内存态跨账号存活，下一账号首屏直接渲染上一账号的数据。
++///
++/// 红（修复前）：logout 后 activeGoalProvider 仍返回前一账号 goal id；
++/// multiGoalOverviewProvider / understandingSnapshotProvider 不重算，
++/// 继续吐出前一账号的数据。
++/// 绿（修复后）：三者都在登出时失效重算，新账号读到新身份的数据。
++const userAGoalId = 'goal-A-fieldtester20';
++const userAGoalTitle = 'round4_nodate_goal';
++
++void main() {
++  TestWidgetsFlutterBinding.ensureInitialized();
++
++  const activeGoalStorageKey = 'view_state.active_goal.current_goal_id';
++
++  Future<ProviderContainer> buildContainer(
++    _GatedAuthRepository repo,
++    _IdentityApiClient apiClient,
++    SharedPreferences prefs,
++  ) async {
++    final container = ProviderContainer(
++      overrides: [
++        authRepositoryProvider.overrideWithValue(repo),
++        sharedPreferencesProvider.overrideWithValue(prefs),
++        apiClientProvider.overrideWithValue(apiClient),
++        chatRepositoryProvider.overrideWithValue(_FakeChatRepository()),
++      ],
++    );
++    return container;
++  }
++
++  Future<void> settle() async {
++    for (var i = 0; i < 5; i++) {
++      await Future<void>.delayed(Duration.zero);
++    }
++    await Future<void>.delayed(const Duration(milliseconds: 10));
++  }
++
++  test('session 失效清单包含驾驶舱目标链与理解快照 providers', () async {
++    SharedPreferences.setMockInitialValues(<String, Object>{});
++    final prefs = await SharedPreferences.getInstance();
++    final container = await buildContainer(
++      _GatedAuthRepository(),
++      _IdentityApiClient(),
++      prefs,
++    );
++    addTearDown(container.dispose);
++
++    final sessionBound = container.read(sessionBoundProvidersProvider);
++
++    // 目标链（N-4 实测泄漏源：驾驶舱显示上一账号的 goal）
++    expect(
++      sessionBound,
++      contains(activeGoalProvider),
++      reason: 'activeGoalProvider 持有跨账号的 current_goal_id',
++    );
++    expect(
++      sessionBound,
++      contains(multiGoalOverviewProvider),
++      reason: 'multiGoalOverviewProvider 持有上一账号的目标列表',
++    );
++    // 理解快照（同屏泄漏面）
++    expect(sessionBound, contains(understandingSnapshotProvider));
++  });
++
++  test('登出后新账号不得看到前一账号的目标与理解快照', () async {
++    // 用户 A 的本地持久化目标选择（真实路径：
++    // multiGoalOverviewProvider → activeGoalProvider.selectGoal → prefs）
++    SharedPreferences.setMockInitialValues(<String, Object>{
++      activeGoalStorageKey: userAGoalId,
++    });
++    final prefs = await SharedPreferences.getInstance();
++    await ViewStorageService.ensureInitialized();
++
++    final apiClient = _IdentityApiClient();
++    final container = await buildContainer(
++      _GatedAuthRepository(),
++      apiClient,
++      prefs,
++    );
++    addTearDown(container.dispose);
++
++    // ── 用户 A 会话 ──────────────────────────────────────────────
++    // 本地残留的 A 的目标选择被 provider 恢复（登录态内存值）。
++    expect(container.read(activeGoalProvider), userAGoalId);
++
++    // A 的驾驶舱目标链渲染出 A 的目标（fake spine 返回 A 的数据）。
++    final overviewA = await container.read(multiGoalOverviewProvider.future);
++    expect(
++      overviewA.goals.map((goal) => goal.id),
++      contains(userAGoalId),
++    );
++    expect(
++      overviewA.goals.map((goal) => goal.title),
++      contains(userAGoalTitle),
++    );
++
++    // A 的理解快照。
++    final snapshotA =
++        await container.read(understandingSnapshotProvider.future);
++    expect(
++      snapshotA?.claims.map((claim) => claim.claimId),
++      contains('claim-A'),
++    );
++
++    // ── 登出 → 新访客 B ─────────────────────────────────────────
++    await container.read(authProvider.notifier).logout();
++    await settle();
++
++    // 服务器侧此刻属于新身份 B：返回空数据（模拟 B 的后端状态）。
++    apiClient.serveIdentityAData = false;
++
++    // 绿：activeGoalProvider 已失效重建，不再持有 A 的 goal id。
++    expect(
++      container.read(activeGoalProvider),
++      isNull,
++      reason: '登出后 A 的 current_goal_id 内存态必须被清掉',
++    );
++
++    // 绿：本地存储里 A 的目标选择也被清除。
++    expect(prefs.getString(activeGoalStorageKey), isNull);
++
++    // 绿：目标链与理解快照被登出失效，重算后反映新身份 B（空数据），
++    // 而不是继续吐出 A 的缓存。
++    final overviewB = await container.read(multiGoalOverviewProvider.future);
++    expect(
++      overviewB.goals.map((goal) => goal.id),
++      isNot(contains(userAGoalId)),
++      reason: 'multiGoalOverviewProvider 未在登出时失效，B 首屏直接渲染 A 的目标',
++    );
++
++    final snapshotB =
++        await container.read(understandingSnapshotProvider.future);
++    expect(
++      snapshotB?.claims.map((claim) => claim.claimId),
++      isNot(contains('claim-A')),
++      reason: 'understandingSnapshotProvider 未在登出时失效，B 首屏直接渲染 A 的理解快照',
++    );
++  });
++}
++
++class _GatedAuthRepository extends AuthRepository {
++  _GatedAuthRepository() : super(_UnusedApiClient(), _MemoryTokenStorage());
++
++  @override
++  Future<bool> isLoggedIn() async => await getAccessToken() != null;
++
++  @override
++  Future<void> logout({bool keepDemoMode = false}) async {
++    await clearTokens();
++  }
++}
++
++/// 按身份返回驾驶舱数据的 fake ApiClient。
++///
++/// [serveIdentityAData] 为 true 时模拟用户 A 的后端状态（spine goals、
++/// 理解快照都有数据）；为 false 时模拟新身份 B（空数据）。
++class _IdentityApiClient implements ApiClient {
++  bool serveIdentityAData = true;
++
++  @override
++  dynamic noSuchMethod(Invocation invocation) {
++    if (invocation.memberName == #get) {
++      final path = invocation.positionalArguments.first as String;
++      return Future<Response<Map<String, dynamic>>>.value(
++        Response<Map<String, dynamic>>(
++          requestOptions: RequestOptions(path: path),
++          data: _dataFor(path),
++        ),
++      );
++    }
++    return Future<Response<Map<String, dynamic>>>.value(
++      Response<Map<String, dynamic>>(
++        requestOptions: RequestOptions(),
++        data: const <String, dynamic>{},
++      ),
++    );
++  }
++
++  Map<String, dynamic> _dataFor(String path) {
++    if (!serveIdentityAData) {
++      return const <String, dynamic>{};
++    }
++    if (path == '/aurora/spine/goals') {
++      return <String, dynamic>{
++        'goals': <Map<String, dynamic>>[
++          <String, dynamic>{
++            'goal_id': userAGoalId,
++            'title': userAGoalTitle,
++            'goal_type': 'exam',
++          },
++        ],
++      };
++    }
++    if (path == '/experience/understanding-snapshot') {
++      return <String, dynamic>{
++        'claims': <Map<String, dynamic>>[
++          <String, dynamic>{
++            'claim_id': 'claim-A',
++            'claim': '用户A的目标 claim',
++            'confidence': 0.9,
++            'confidence_label': 'high',
++            'evidence_summary': 'evidence',
++            'scope': 'memory_claim',
++            'user_can_correct': true,
++          },
++        ],
++      };
++    }
++    return const <String, dynamic>{};
++  }
++}
++
++class _MemoryTokenStorage implements TokenStorage {
++  final Map<String, String> _values = <String, String>{};
++
++  @override
++  Future<String?> read(String key) async => _values[key];
++
++  @override
++  Future<void> write(String key, String value) async {
++    _values[key] = value;
++  }
++
++  @override
++  Future<void> delete(String key) async {
++    _values.remove(key);
++  }
++}
++
++class _UnusedApiClient implements ApiClient {
++  @override
++  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
++}
++
++class _FakeChatRepository extends ChatRepository {
++  _FakeChatRepository() : super(Dio(), container: ProviderContainer());
++
++  final _connectionController = StreamController<WsConnectionState>.broadcast();
++
++  @override
++  Stream<WsConnectionState> get connectionStateStream =>
++      _connectionController.stream;
++
++  @override
++  WsConnectionState get connectionState => WsConnectionState.disconnected;
++
++  @override
++  void dispose() {
++    unawaited(_connectionController.close());
++  }
++}
+diff --git a/mobile/test/features/chat/presentation/widgets/offline_queue_indicator_compact_test.dart b/mobile/test/features/chat/presentation/widgets/offline_queue_indicator_compact_test.dart
+new file mode 100644
+index 00000000..1142ca22
+--- /dev/null
++++ b/mobile/test/features/chat/presentation/widgets/offline_queue_indicator_compact_test.dart
+@@ -0,0 +1,63 @@
++import 'package:flutter/material.dart';
++import 'package:flutter_test/flutter_test.dart';
++import 'package:sparkle/features/chat/presentation/widgets/offline_queue_indicator.dart';
++
++import '../../../../shared/i18n_test_helper.dart';
++
++/// A-5 残余 / N-6 红绿测试：聊天页「离线横幅 + 键盘」组合态的
++/// `BOTTOM OVERFLOWED BY 5.0 PIXELS` 条纹（Android round-2 A2-13/A2-14）。
++///
++/// 修复：键盘拉起时 OfflineQueueIndicator 切 compact 态
++/// （外边距 bottom 8→2、内边距 vertical 8→5，合计回收 9px ≥ 5px 实测溢出），
++/// 主 Column 的不可压缩子项重新放得下，条纹消失、发送键不再被盖。
++void main() {
++  setUp(setUpI18nForTesting);
++  tearDown(tearDownI18n);
++
++  Future<Size> pumpIndicator(WidgetTester tester, bool compact) async {
++    await tester.binding.setSurfaceSize(const Size(400, 800));
++    addTearDown(() => tester.binding.setSurfaceSize(null));
++    final key = GlobalKey();
++    await tester.pumpWidget(
++      testMaterialApp(
++        home: Scaffold(
++          body: RepaintBoundary(
++            child: Align(
++              alignment: Alignment.topCenter,
++              child: OfflineQueueIndicator(
++                key: key,
++                status: OfflineQueueIndicatorStatus.sending,
++                pendingCount: 3,
++                compact: compact,
++              ),
++            ),
++          ),
++        ),
++      ),
++    );
++    await tester.pump();
++    // sending 态有无穷旋转指示器，不能 pumpAndSettle；等 AnimatedSwitcher 完成。
++    await tester.pump(const Duration(milliseconds: 250));
++    final box = key.currentContext!.findRenderObject()! as RenderBox;
++    return box.size;
++  }
++
++  testWidgets('compact 态比常规态至少矮 5px（覆盖实测溢出量）', (tester) async {
++    final regular = await pumpIndicator(tester, false);
++    final compact = await pumpIndicator(tester, true);
++
++    expect(compact.height, lessThan(regular.height));
++    final reclaimed = regular.height - compact.height;
++    expect(
++      reclaimed,
++      greaterThanOrEqualTo(5.0),
++      reason: '实测组合态溢出 5px，键盘态横幅必须至少回收 5px，实际回收 $reclaimed px',
++    );
++  });
++
++  testWidgets('常规态保持原尺寸语义（回归保护）', (tester) async {
++    final regular = await pumpIndicator(tester, false);
++    // margin bottom 8 + padding v 8*2 + 文本行高
++    expect(regular.height, greaterThanOrEqualTo(30.0));
++  });
++}

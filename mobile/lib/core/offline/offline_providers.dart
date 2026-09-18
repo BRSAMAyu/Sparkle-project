@@ -97,6 +97,47 @@ final offlineQueueSnapshotProvider =
       .asyncMap((_) => load());
 });
 
+/// 队列横幅阶段（N-1/N-3）。
+enum OfflineQueuePhase { hidden, queued, sending }
+
+/// 排队横幅状态机（纯函数核心，可单测）。
+///
+/// N-1：横幅计数只含**未投递**消息（pending + sent/in-flight）。
+/// 此前用 `max(pendingCount, activeCount)`，而 activeCount 把永久失败
+/// 的行也计入 —— 出网成功/失败后计数纹丝不动。
+/// N-3：只剩失败项时横幅必须隐藏（气泡自带「发送失败·重试」可见态），
+/// 不再出现「气泡失败可重试」与「横幅正在发送」并存的矛盾。
+class OfflineQueueIndicatorModel {
+  const OfflineQueueIndicatorModel({
+    required this.phase,
+    required this.count,
+  });
+
+  const OfflineQueueIndicatorModel.hidden()
+      : phase = OfflineQueuePhase.hidden,
+        count = 0;
+
+  final OfflineQueuePhase phase;
+  final int count;
+
+  static OfflineQueueIndicatorModel resolve({
+    required int pendingCount,
+    required int sendingCount,
+    required int failedCount,
+    required bool wsConnected,
+  }) {
+    final deliverable = pendingCount + sendingCount;
+    if (deliverable <= 0) {
+      return const OfflineQueueIndicatorModel.hidden();
+    }
+    final isSending = wsConnected || sendingCount > 0;
+    return OfflineQueueIndicatorModel(
+      phase: isSending ? OfflineQueuePhase.sending : OfflineQueuePhase.queued,
+      count: deliverable,
+    );
+  }
+}
+
 final syncEngineProvider = Provider<SyncEngine>((ref) {
   final localDb = ref.watch(localDatabaseProvider);
   final wsService = ref.watch(webSocketServiceProvider);

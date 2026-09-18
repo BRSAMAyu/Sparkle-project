@@ -13,11 +13,18 @@ class OfflineQueueIndicator extends StatelessWidget {
   const OfflineQueueIndicator({
     required this.status,
     required this.pendingCount,
+    this.compact = false,
     super.key,
   });
 
   final OfflineQueueIndicatorStatus status;
   final int pendingCount;
+
+  /// A-5/N-6：键盘拉起时压缩横幅的垂直占位（外边距 8→2、内边距 8→5，
+  /// 共回收 9px）。离线横幅 + 键盘组合态下，聊天页主 Column 的不可压缩
+  /// 子项曾比可用高度多出 5px，产生
+  /// `BOTTOM OVERFLOWED BY 5.0 PIXELS` 黄黑条纹并盖住输入行。
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -38,15 +45,15 @@ class OfflineQueueIndicator extends StatelessWidget {
         switchOutCurve: Curves.easeInCubic,
         child: Container(
           key: ValueKey<String>('${status.name}-$pendingCount'),
-          margin: const EdgeInsets.fromLTRB(
+          margin: EdgeInsets.fromLTRB(
             DS.spacing16,
             0,
             DS.spacing16,
-            DS.spacing8,
+            compact ? 2 : DS.spacing8,
           ),
-          padding: const EdgeInsets.symmetric(
+          padding: EdgeInsets.symmetric(
             horizontal: DS.spacing12,
-            vertical: DS.spacing8,
+            vertical: compact ? 5 : DS.spacing8,
           ),
           decoration: BoxDecoration(
             color: material.$1,

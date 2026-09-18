@@ -177,6 +177,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _ref
           .read(sharedPreferencesProvider)
           .setBool(_demoGuestModePreferenceKey, false);
+      // N-4：登录即切换身份 —— 先清上一身份的本地用户态（含上次会话
+      // 未走 logout 的崩溃残留），避免新账号读到旧账号数据。
+      await _clearUserScopedLocalData();
       await _ref.read(guestServiceProvider).clearGuestData();
       final user = await _authRepository.login(usernameOrEmail, password);
       if (_isStaleSessionOp(generation)) return;
@@ -211,6 +214,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _ref
           .read(sharedPreferencesProvider)
           .setBool(_demoGuestModePreferenceKey, false);
+      // N-4：登录即切换身份，见 login() 内注释。
+      await _clearUserScopedLocalData();
       await _ref.read(guestServiceProvider).clearGuestData();
       final user = await _authRepository.socialLogin(
         provider: provider,
@@ -254,6 +259,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _ref
           .read(sharedPreferencesProvider)
           .setBool(_demoGuestModePreferenceKey, false);
+      // N-4：登录即切换身份，见 login() 内注释。
+      await _clearUserScopedLocalData();
       await _ref.read(guestServiceProvider).clearGuestData();
       final user = await _authRepository.register(
         username,
@@ -291,6 +298,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _ref
           .read(sharedPreferencesProvider)
           .setBool(_demoGuestModePreferenceKey, false);
+      // N-4：登录即切换身份，见 login() 内注释。
+      await _clearUserScopedLocalData();
       debugPrint('🎭 Guest login using real backend token + seeded data');
 
       final guestService = _ref.read(guestServiceProvider);

@@ -30,6 +30,20 @@ def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
+def _as_naive_utc(value: datetime | None) -> datetime | None:
+    """把 DB 返回的 datetime 归一化为 naive UTC（代码库 canonical 形态）。
+
+    N-5 根因：Alembic 线上 schema 中 ``accountability_checkin.created_at``
+    实际为 timestamptz（模型却声明 naive ``DateTime``），asyncpg 对
+    timestamptz 列返回 tz-aware datetime；与 naive ``_utcnow()`` 直接比较
+    抛 ``can't compare offset-naive and offset-aware datetimes`` →
+    新访客（种子数据带 ACTIVE partnership）社群首屏稳定 500。
+    """
+    if value is not None and value.tzinfo is not None:
+        return value.astimezone(UTC).replace(tzinfo=None)
+    return value
+
+
 def _display_name(user: User | None) -> str:
     if user is None:
         return "Accountability Partner"
@@ -243,6 +257,11 @@ async def get_community_accountability(
             check_in_days=partnership.check_in_days,
             since=week_start,
         )
+        # N-5：last_checkin_at 来自 timestamptz 列（aware），归一化后才能
+        # 与 naive now 参与冷却判断；响应体保留原值（pydantic 可序列化）。
+        is_rhythm_cooling = last_partner_checkin is None or _as_naive_utc(
+            last_partner_checkin,
+        ) < now - timedelta(days=max(2, partnership.check_in_days))
 
         partner_progress.append(
             PartnerProgressItem(
@@ -274,9 +293,6 @@ async def get_community_accountability(
                     action="send_gentle_checkin",
                 )
             )
-        is_rhythm_cooling = last_partner_checkin is None or last_partner_checkin < now - timedelta(
-            days=max(2, partnership.check_in_days),
-        )
         if is_rhythm_cooling:
             squad_risks.append(
                 SquadRiskItem(

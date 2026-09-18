@@ -2925,6 +2925,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           _OfflineQueueIndicatorHost(
             snapshot: offlineSnapshot,
             connectionState: chatState.wsConnectionState,
+            keyboardOpen: MediaQuery.of(context).viewInsets.bottom > 0,
           ),
           ChatInput(
             enabled: !chatState.hasActiveRun,
@@ -3452,10 +3453,14 @@ class _OfflineQueueIndicatorHost extends StatefulWidget {
   const _OfflineQueueIndicatorHost({
     required this.snapshot,
     required this.connectionState,
+    required this.keyboardOpen,
   });
 
   final OfflineQueueSnapshot snapshot;
   final WsConnectionState connectionState;
+
+  /// A-5/N-6：键盘拉起时横幅切压缩态，回收垂直空间防止输入行溢出。
+  final bool keyboardOpen;
 
   @override
   State<_OfflineQueueIndicatorHost> createState() =>
@@ -3466,22 +3471,31 @@ class _OfflineQueueIndicatorHostState
     extends State<_OfflineQueueIndicatorHost> {
   Timer? _completeTimer;
   var _showComplete = false;
-  var _hadActiveQueue = false;
+  var _hadDeliverableQueue = false;
+
+  int get _deliverableCount =>
+      widget.snapshot.pendingCount + widget.snapshot.sendingCount;
 
   @override
   void didUpdateWidget(_OfflineQueueIndicatorHost oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final hasActiveQueue = widget.snapshot.hasActiveQueue;
-    if (_hadActiveQueue && !hasActiveQueue) {
-      _showComplete = true;
+    final deliverable = _deliverableCount;
+    // N-1/N-3：以「未投递数」清零作为完成信号，且仅当没有失败项时才
+    // 显示「已全部发送」——失败项有气泡级「发送失败·重试」可见态，
+    // 横幅宣称成功/发送中都与事实矛盾。
+    if (_hadDeliverableQueue && deliverable == 0) {
+      final allDelivered = widget.snapshot.failedCount == 0;
+      _showComplete = allDelivered;
       _completeTimer?.cancel();
-      _completeTimer = Timer(const Duration(seconds: 2), () {
-        if (mounted) {
-          setState(() => _showComplete = false);
-        }
-      });
+      if (allDelivered) {
+        _completeTimer = Timer(const Duration(seconds: 2), () {
+          if (mounted) {
+            setState(() => _showComplete = false);
+          }
+        });
+      }
     }
-    _hadActiveQueue = hasActiveQueue;
+    _hadDeliverableQueue = deliverable > 0;
   }
 
   @override
@@ -3493,28 +3507,35 @@ class _OfflineQueueIndicatorHostState
   @override
   Widget build(BuildContext context) {
     final snapshot = widget.snapshot;
-    if (_showComplete && !snapshot.hasActiveQueue) {
-      return const OfflineQueueIndicator(
-        status: OfflineQueueIndicatorStatus.complete,
-        pendingCount: 0,
-      );
-    }
-    if (!snapshot.hasActiveQueue) {
+    // N-1/N-3：横幅状态机统一走纯函数解析器 —— 计数只含未投递消息
+    // （pending + sent），失败项不并入「正在发送 N 条」。
+    final model = OfflineQueueIndicatorModel.resolve(
+      pendingCount: snapshot.pendingCount,
+      sendingCount: snapshot.sendingCount,
+      failedCount: snapshot.failedCount,
+      wsConnected: widget.connectionState == WsConnectionState.connected ||
+          widget.connectionState == WsConnectionState.connecting ||
+          widget.connectionState == WsConnectionState.reconnecting,
+    );
+    if (model.phase == OfflineQueuePhase.hidden) {
+      if (_showComplete) {
+        return const OfflineQueueIndicator(
+          status: OfflineQueueIndicatorStatus.complete,
+          pendingCount: 0,
+        );
+      }
       return const OfflineQueueIndicator(
         status: OfflineQueueIndicatorStatus.hidden,
         pendingCount: 0,
       );
     }
 
-    final isSending = widget.connectionState == WsConnectionState.connected ||
-        widget.connectionState == WsConnectionState.connecting ||
-        widget.connectionState == WsConnectionState.reconnecting ||
-        snapshot.sendingCount > 0;
     return OfflineQueueIndicator(
-      status: isSending
+      status: model.phase == OfflineQueuePhase.sending
           ? OfflineQueueIndicatorStatus.sending
           : OfflineQueueIndicatorStatus.queued,
-      pendingCount: max(1, max(snapshot.pendingCount, snapshot.activeCount)),
+      pendingCount: model.count,
+      compact: widget.keyboardOpen,
     );
   }
 }

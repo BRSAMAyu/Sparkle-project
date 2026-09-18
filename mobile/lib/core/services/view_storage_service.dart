@@ -29,6 +29,15 @@ class ViewStorageService {
   final SharedPreferences _prefs;
   final Map<String, Timer> _debounceTimers = {};
 
+  /// 清理世代（N-4）：每次全量清理自增。持久化 notifier 在调度 debounced
+  /// 写入时记下当时世代，写入前发现世代已变（期间发生过 clearAllViewState）
+  /// 则丢弃写入 —— 否则登出清理后，在途定时器会把已删除的键复活，
+  /// 下一账号读到上一账号的数据。
+  int _epoch = 0;
+
+  /// 当前清理世代。
+  int get epoch => _epoch;
+
   /// Get the singleton instance
   static ViewStorageService? _instance;
 
@@ -80,6 +89,8 @@ class ViewStorageService {
     for (final key in keys) {
       await _prefs.remove(key);
     }
+    // 作废所有清理前调度的 debounced 写入（见 _epoch 注释）。
+    _epoch++;
   }
 
   // ==================== Primitive Get/Set ====================

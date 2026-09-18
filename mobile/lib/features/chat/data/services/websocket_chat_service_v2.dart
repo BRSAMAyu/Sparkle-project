@@ -2124,6 +2124,25 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
           (payload) => payload['request_id']?.toString() == requestId,
         );
       }
+      // N-1: 孤儿 ACK / 完成事件也要落库。离线重放（flush）的消息没有
+      // 活的 request controller（无人开流监听），此前 AckEvent 在
+      // _routeEventToRequest 里因 controller 缺失被提前 return，离线行
+      // 永远停在 sent —— 「正在发送 N 条」计数永不递减。
+      // DoneEvent 是比 ACK 更强的投递凭证（服务端已完整处理），无论
+      // controller 是否存活都据它销账（markAcked 幂等，行不存在即 no-op）。
+      if (event is DoneEvent && requestId != null && requestId.isNotEmpty) {
+        unawaited(_offlineQueue.markAcked(requestId));
+      } else if (event is AckEvent &&
+          requestId != null &&
+          requestId.isNotEmpty &&
+          !_requestControllers.containsKey(requestId)) {
+        unawaited(
+          _offlineQueue.markAcked(
+            requestId,
+            serverMessageId: event.messageId,
+          ),
+        );
+      }
       _routeEventToRequest(requestId, event);
       if (event is AuroraStateBandEvent) {
         _container
