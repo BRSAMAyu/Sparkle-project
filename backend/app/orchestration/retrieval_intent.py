@@ -294,6 +294,23 @@ class RetrievalIntentClassifier:
 
         base = self._classify_without_overrides(text, route_intent=route_intent, context=context, budgets=budgets, scope=scope)
         if not base.should_retrieve:
+            # Explicit opt-in must guarantee retrieval: use_document_context=True is the
+            # user asking for document-grounded answers, so a heuristic miss (e.g.
+            # "MRV-7749 是什么？请根据我上传的资料回答" matching no pattern) may not
+            # silently downgrade to no_retrieval. Emotional / simple-task turns keep
+            # their guards — they are separate reasons, never this fallback reason.
+            if use_document_context is True and base.reason == "no_document_retrieval_signal":
+                return ContextPlan(
+                    retrieval_mode="targeted_source_rag",
+                    should_retrieve=True,
+                    budget_tokens=budgets.aggressive,
+                    reason="session_use_document_context_true",
+                    source_scope=base.source_scope,
+                    pollution_guard="strict",
+                    citation_required=True,
+                    user_visible_receipt=True,
+                    reason_for_user="参考了你上传的资料来回答",
+                )
             return base
 
         # Aurora mode caps

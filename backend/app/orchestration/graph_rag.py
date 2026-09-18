@@ -282,6 +282,12 @@ def _build_filtered_chunk(
         page_number = _first_page_number(metadata.get("page_number", getattr(chunk, "page_number", None)))
 
     source_file_id = getattr(chunk, "file_id", None) or metadata.get("source_file_id") or metadata.get("file_id")
+    if source_file_id is None and str(metadata.get("source_type") or "") == "document_chunk":
+        # Redis dense search does not project file_id/chunk_id (index schema gap),
+        # but the document_chunk indexing contract stores the file id in parent_id
+        # (rag_indexing_service.build_document_chunk_document). Knowledge-node docs
+        # keep parent_id = node id, hence the explicit source_type guard.
+        source_file_id = metadata.get("parent_id")
     chunk_id = getattr(chunk, "id", None) or metadata.get("chunk_id") or metadata.get("id")
     filename = getattr(item, "file_name", None) or metadata.get("filename") or metadata.get("file_name")
     chunk_index = getattr(chunk, "chunk_index", None)
