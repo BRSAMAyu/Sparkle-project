@@ -373,7 +373,19 @@ class ContextOrchestrator:
     ) -> list[dict[str, Any]]:
         try:
             service = MemoryService(db_session or self.db)
-            rows = await service.get_recent_episodic(user_id, limit=limit)
+            # occurred_at 是"事件发生时间"（LLM 抽取常给过去日期，如用户上周看的电影），
+            # 不能当"记忆新鲜度"排序：种子记忆（播种时刻）会永远挤掉刚推断出的记忆。
+            # 拉宽候选池后按记忆价值（importance/confidence）+ 入库时间重排取 top-N。
+            rows = await service.get_recent_episodic(user_id, limit=max(limit * 4, 12))
+            rows = sorted(
+                rows,
+                key=lambda m: (
+                    float(getattr(m, "importance_score", 0.0) or 0.0),
+                    float(getattr(m, "confidence", 0.0) or 0.0),
+                    str(getattr(m, "created_at", "") or ""),
+                ),
+                reverse=True,
+            )[:limit]
         except Exception as exc:
             logger.warning("Failed to load past session memory: {}", exc)
             return []
