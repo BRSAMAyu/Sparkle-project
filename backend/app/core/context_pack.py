@@ -850,8 +850,10 @@ class ContextBudgetManager:
             document_text = _truncate_text_to_token_budget(document_text, doc_budget)
         else:
             raw_document_text = _as_prompt_text(document_context)
+            # 指令强化：qwen3.8-flash 偶发无视中性标题下的注入材料（回复称
+            # "没有看到正文"），显式声明这是用户上传资料原文、回答必须优先依据
             document_text = self._section(
-                "Retrieved Documents",
+                "Retrieved Documents（用户上传资料原文——回答相关问题必须优先引用，禁止声称未看到）",
                 raw_document_text,
                 doc_budget,
                 CONTEXT_SOURCE_DOCUMENTS,
