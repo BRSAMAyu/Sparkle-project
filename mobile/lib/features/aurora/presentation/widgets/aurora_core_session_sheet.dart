@@ -135,7 +135,11 @@ class AuroraCoreSessionStateNotifier
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_prefsKey);
-    } catch (_) {}
+    } catch (_) {
+      // Non-critical cleanup: failing to clear the snapshot only means the
+      // resume banner may appear once more after restart.
+      debugPrint('AuroraCoreSessionSheet: failed to clear resume snapshot');
+    }
   }
 
   Future<void> _restore() async {
@@ -176,7 +180,11 @@ class AuroraCoreSessionStateNotifier
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_prefsKey, jsonEncode(state.toJson()));
-    } catch (_) {}
+    } catch (_) {
+      // Best-effort persistence: without it the resume banner simply does not
+      // appear after a restart.
+      debugPrint('AuroraCoreSessionSheet: failed to persist resume snapshot');
+    }
   }
 }
 

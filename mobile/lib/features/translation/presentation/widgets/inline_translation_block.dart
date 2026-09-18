@@ -4,8 +4,6 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/features/translation/data/services/translation_service.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 
 
 /// Inline translation block for sentences/paragraphs

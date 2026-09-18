@@ -6,7 +6,6 @@ import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 
 
 class LongTermPlanCard extends ConsumerWidget {

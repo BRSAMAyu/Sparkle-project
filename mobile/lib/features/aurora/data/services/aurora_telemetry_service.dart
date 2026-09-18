@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/features/chat/presentation/providers/aurora_status_provider.dart';
+import 'package:flutter/foundation.dart';
 
 /// Records user interactions with Aurora predicted reply chips.
 ///
@@ -73,6 +74,9 @@ class AuroraTelemetryService {
           if (groupId != null) 'group_id': groupId,
         },
       );
-    } catch (_) {}
+    } catch (_) {
+      // Telemetry must never break its caller; dropping the event is safe.
+      debugPrint('AuroraTelemetryService: failed to record telemetry event');
+    }
   }
 }

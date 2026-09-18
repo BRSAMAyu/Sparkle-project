@@ -18,7 +18,6 @@ import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/cognitive/data/models/curiosity_capsule_model.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/capsule_provider.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 
 
 /// 胶囊详情页

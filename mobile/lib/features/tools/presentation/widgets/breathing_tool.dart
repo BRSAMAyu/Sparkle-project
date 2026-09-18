@@ -14,7 +14,6 @@ import 'package:sparkle/features/tools/data/repositories/tool_history_repository
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_context_effect_feedback.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 
 
 class _BreathingPattern {

@@ -106,18 +106,26 @@ class _TraitsColdstartQuestionnaireState
         children: [
           Text(question['title']?.toString() ?? ''),
           const SizedBox(height: DS.spacing8),
-          ...options.map(
-            (option) => RadioListTile<String>(
-              contentPadding: EdgeInsets.zero,
-              title: Text(option['label']?.toString() ?? ''),
-              value: option['id']?.toString() ?? '',
-              groupValue: _answers[questionId],
-              onChanged: (value) {
-                if (value == null) return;
-                setState(() {
-                  _answers[questionId] = value;
-                });
-              },
+          // F7-09: migrated from the deprecated per-tile groupValue/onChanged
+          // to the RadioGroup ancestor API (tiles carry `value` only).
+          RadioGroup<String>(
+            groupValue: _answers[questionId],
+            onChanged: (value) {
+              if (value == null) return;
+              setState(() {
+                _answers[questionId] = value;
+              });
+            },
+            child: Column(
+              children: options
+                  .map(
+                    (option) => RadioListTile<String>(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(option['label']?.toString() ?? ''),
+                      value: option['id']?.toString() ?? '',
+                    ),
+                  )
+                  .toList(),
             ),
           ),
         ],

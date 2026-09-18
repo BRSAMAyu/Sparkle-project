@@ -804,7 +804,10 @@ class MockCommunityRepository implements CommunityRepository {
       if (messages != null) {
         try {
           quotedMessage = messages.firstWhere((m) => m.id == message.replyToId);
-        } catch (_) {}
+        } catch (_) {
+          // quotedMessage intentionally stays null when the reply target does
+          // not exist in the mock dataset.
+        }
       }
     }
 

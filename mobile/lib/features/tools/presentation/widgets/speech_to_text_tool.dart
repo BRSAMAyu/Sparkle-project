@@ -6,7 +6,6 @@ import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 
 
 class SpeechToTextTool extends StatefulWidget {

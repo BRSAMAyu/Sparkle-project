@@ -3,7 +3,6 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 
 
 class PendingCommitmentsSection extends StatelessWidget {

@@ -805,7 +805,11 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
             }
           }
         }
-      } catch (_) {}
+      } catch (e) {
+        // Deep-link enrichment only: the code below falls back to the
+        // planId-based route when the payload cannot be inspected.
+        debugPrint('ModelingChatScreen: failed to resolve plan route: $e');
+      }
     }
 
     if (planRoute == null && planId != null && planId.isNotEmpty) {

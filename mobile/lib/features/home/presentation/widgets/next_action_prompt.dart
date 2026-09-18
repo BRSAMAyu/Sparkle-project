@@ -4,7 +4,6 @@ import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/home/presentation/providers/home_growth_provider.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 
 
 class NextActionPrompt extends StatelessWidget {

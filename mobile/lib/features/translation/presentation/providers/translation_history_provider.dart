@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
 import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/features/translation/data/repositories/local_translation_repository.dart';
+import 'package:flutter/foundation.dart';
 
 /// Translation history state
 class TranslationHistoryState {
@@ -79,7 +80,10 @@ class TranslationHistoryNotifier extends StateNotifier<TranslationHistoryState> 
     try {
       final stats = await _repository.getStatistics();
       state = state.copyWith(statistics: stats);
-    } catch (_) {}
+    } catch (e) {
+      // Statistics are non-critical: the history list works without them.
+      debugPrint('TranslationHistoryProvider: failed to load statistics: $e');
+    }
   }
 
   /// Set filter

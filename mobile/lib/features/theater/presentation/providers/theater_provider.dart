@@ -8,7 +8,6 @@ import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.d
 import 'package:sparkle/features/theater/data/models/theater_models.dart';
 import 'package:sparkle/features/theater/data/repositories/theater_repository.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 
 
 final theaterOverlayProvider = StateProvider<TheaterGalaxyOverlay?>(

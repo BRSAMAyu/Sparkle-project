@@ -1,7 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 
 
 /// Service for integrating translations into knowledge graph
@@ -100,7 +99,11 @@ class KnowledgeIntegrationService {
       if (retryAfter != null) {
         return int.tryParse(retryAfter);
       }
-    } catch (_) {}
+    } catch (_) {
+      // A malformed retry-after header is not actionable; fall through to a
+      // null retry hint.
+      debugPrint('KnowledgeIntegrationService: failed to parse retry-after');
+    }
     return null;
   }
 

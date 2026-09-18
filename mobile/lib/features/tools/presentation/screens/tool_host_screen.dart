@@ -4,7 +4,6 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/tool_registry.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 
 
 class ToolHostScreen extends StatelessWidget {

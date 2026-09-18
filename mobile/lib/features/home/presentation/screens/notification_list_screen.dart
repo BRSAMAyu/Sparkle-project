@@ -13,7 +13,6 @@ import 'package:sparkle/core/services/deep_link_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/home/data/models/notification_model.dart';
 import 'package:sparkle/features/home/presentation/providers/notification_provider.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 
 
 class NotificationListScreen extends ConsumerWidget {

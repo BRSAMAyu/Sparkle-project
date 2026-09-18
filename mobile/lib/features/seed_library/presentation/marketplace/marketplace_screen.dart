@@ -9,7 +9,6 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/seed_library/presentation/marketplace/marketplace_models.dart';
 import 'package:sparkle/features/seed_library/presentation/marketplace/marketplace_provider.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 
 
 class MarketplaceScreen extends ConsumerWidget {

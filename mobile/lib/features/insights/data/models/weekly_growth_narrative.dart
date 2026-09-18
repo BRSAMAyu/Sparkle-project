@@ -1,5 +1,4 @@
 import 'package:sparkle/core/services/i18n_service.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 
 
 class WeeklyGrowthNarrative {

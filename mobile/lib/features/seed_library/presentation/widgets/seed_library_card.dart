@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/seed_library/data/models/seed_library_model.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 
 
 /// Seed Library Card Widget

@@ -58,7 +58,10 @@ Future<AccountabilityInviteAcceptResolution>
   AccountabilityOverviewInfo? freshOverview;
   try {
     freshOverview = await repository.getOverview();
-  } catch (_) {}
+  } catch (_) {
+    // Overview refresh is optional: the resolution carries a null overview
+    // and the caller falls back to cached data.
+  }
 
   return AccountabilityInviteAcceptResolution(
     updated: updated,

@@ -18,7 +18,6 @@ import 'package:sparkle/features/translation/data/services/translation_service.d
 import 'package:sparkle/features/translation/presentation/providers/translation_history_provider.dart';
 import 'package:sparkle/features/translation/translation_routes.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 
 
 class Language {
@@ -266,7 +265,11 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
         }
         phonetic = lookup['phonetic'] as String?;
         partOfSpeech = lookup['pos'] as String?;
-      } catch (_) {}
+      } catch (_) {
+        // Dictionary lookup is an enrichment; the word is still added to the
+        // wordbook without definitions.
+        debugPrint('TranslatorTool: dictionary lookup failed for $word');
+      }
 
       await repository.addToWordbook(
         word: word,

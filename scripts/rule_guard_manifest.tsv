@@ -70,3 +70,4 @@ AURORA-CONFIG	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_aurora_config_consiste
 # CARD-DUAL-WRITE 停用 2026-09-18：守卫 import 的 app.services.card_protocol.consistency_validator 自初始提交起就不存在于仓库（v1 未跟踪遗留），规则不可运行；card_protocol 本身是台账登记债务区，接线时一并恢复
 # CARD-DUAL-WRITE	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_card_protocol_dual_write_consistency.py"
 BJ	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_bj_dead_imports.py"
+UI-TOKENS	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_ui_design_tokens_ratchet.py"

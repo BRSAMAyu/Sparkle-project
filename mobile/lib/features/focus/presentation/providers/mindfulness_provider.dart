@@ -291,6 +291,7 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
     var syncedRemotely = false;
     var flameEarned = 0;
     var masteryUpdates = const <FocusMasteryUpdate>[];
+    var saveFailed = false;
     String? resultMessage;
 
     state = snapshot.copyWith(isLoggingSession: true);
@@ -377,7 +378,14 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
           resultMessage = S.focusOfflineSaved;
         }
       } catch (e) {
-        state = state.copyWith(loggingError: e.toString());
+        // R2-03: keep the session alive when saving fails. The SharedPreferences
+        // snapshot written at stop() entry stays in place so _restoreSession()
+        // can recover the session on next launch and the user can retry stop.
+        saveFailed = true;
+        state = state.copyWith(
+          loggingError: e.toString(),
+          isLoggingSession: false,
+        );
         resultMessage = S.focusSaveFailed(e.toString());
       }
 
@@ -402,12 +410,17 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
       }
     }
 
-    _timer?.cancel();
-    _timer = null;
-    _accumulatedPaused = Duration.zero;
-    _lastPauseTime = null;
-    await _clearPersistedSession();
-    state = const MindfulnessState();
+    // R2-03: only tear down the session and clear its persisted snapshot after
+    // a successful save (or when there was nothing to save). Clearing the
+    // snapshot on failure destroyed the only recoverable copy of the session.
+    if (!saveFailed) {
+      _timer?.cancel();
+      _timer = null;
+      _accumulatedPaused = Duration.zero;
+      _lastPauseTime = null;
+      await _clearPersistedSession();
+      state = const MindfulnessState();
+    }
     return MindfulnessStopResult(
       savedLocally: savedLocally,
       syncedRemotely: syncedRemotely,

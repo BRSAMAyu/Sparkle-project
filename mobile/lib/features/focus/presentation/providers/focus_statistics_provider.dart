@@ -174,9 +174,12 @@ class FocusStatistics extends _$FocusStatistics {
       _connectivitySub?.cancel();
     });
 
-    // Initialize repositories
-    final db = ref.read(localDatabaseProvider);
-    _localRepo = FocusStatisticsRepository(db.isar);
+    // Initialize repositories.
+    // R2-03: use isarOrNull so an Isar init failure degrades this provider to
+    // API-only mode instead of crashing build(); saveSession() then fails
+    // loudly instead of pretending the session was saved offline.
+    final isar = ref.read(localDatabaseProvider).isarOrNull;
+    _localRepo = isar == null ? null : FocusStatisticsRepository(isar);
     _apiRepo = ref.read(focusRepositoryProvider);
 
     // Get the persisted period
@@ -474,7 +477,14 @@ class FocusStatistics extends _$FocusStatistics {
     int interruptionCount = 0,
     int? qualityScore,
   }) async {
-    if (_localRepo == null) return null;
+    // R2-03: null means "saved locally, sync pending". With no local repo the
+    // session is NOT persisted anywhere, so we must throw instead of returning
+    // null (which the caller maps to a misleading "saved offline" message).
+    if (_localRepo == null) {
+      throw StateError(
+        'local focus repository unavailable — focus session NOT saved',
+      );
+    }
 
     final record = status == 'interrupted'
         ? FocusSessionRecordExtension.createInterrupted(

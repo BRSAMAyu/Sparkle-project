@@ -8,26 +8,6 @@ class MemoryApiService {
 
   final ApiClient _apiClient;
 
-  static final MemorySettingsModel _defaultMemorySettings = MemorySettingsModel(
-    enabled: true,
-    allowPreferences: true,
-    allowGoals: true,
-    allowEpisodic: true,
-    allowInferredEpisodic: true,
-    captureLevel: 'medium',
-    blockedPrefKeys: <String>[],
-    blockedSources: <String>[],
-  );
-  static final PushOptInSettingsModel _defaultPushSettings =
-      PushOptInSettingsModel(
-    enabled: false,
-    allowCommitmentFollowUp: false,
-    allowEngagementRecovery: false,
-    quietHoursStart: '22:00',
-    quietHoursEnd: '08:00',
-    timezone: 'Asia/Shanghai',
-  );
-
   Future<List<MemoryPreferenceItem>> getPreferences() async {
     final response =
         await _apiClient.get<Map<String, dynamic>>('/memory/preferences');
@@ -228,73 +208,47 @@ class MemoryApiService {
     return MemoryCorrectionResult.fromJson(item);
   }
 
+  /// R2-01: this is a thin API layer — read failures (auth, 5xx, network)
+  /// propagate to the caller, which decides whether a 404 ("no config yet")
+  /// may be replaced by defaults. Never fabricate user settings here.
   Future<MemorySettingsModel> getMemorySettings() async {
-    try {
-      final response =
-          await _apiClient.get<Map<String, dynamic>>('/memory/settings');
-      final payload = response.data ?? <String, dynamic>{};
-      return MemorySettingsModel.fromJson(payload);
-    } on DioException catch (error) {
-      if (_shouldUseLocalFallback(error)) {
-        return _defaultMemorySettings;
-      }
-      rethrow;
-    }
+    final response =
+        await _apiClient.get<Map<String, dynamic>>('/memory/settings');
+    final payload = response.data ?? <String, dynamic>{};
+    return MemorySettingsModel.fromJson(payload);
   }
 
+  /// R2-01: save failures always propagate — echoing the payload back would
+  /// fake a successful save and silently overwrite nothing on the server.
   Future<MemorySettingsModel> updateMemorySettings(
     MemorySettingsModel settings,
   ) async {
-    try {
-      final response = await _apiClient.put<Map<String, dynamic>>(
-        '/memory/settings',
-        data: settings.toJson(),
-      );
-      final payload = response.data ?? <String, dynamic>{};
-      return MemorySettingsModel.fromJson(payload);
-    } on DioException catch (error) {
-      if (_shouldUseLocalFallback(error)) {
-        return settings;
-      }
-      rethrow;
-    }
+    final response = await _apiClient.put<Map<String, dynamic>>(
+      '/memory/settings',
+      data: settings.toJson(),
+    );
+    final payload = response.data ?? <String, dynamic>{};
+    return MemorySettingsModel.fromJson(payload);
   }
 
+  /// See [getMemorySettings].
   Future<PushOptInSettingsModel> getPushSettings() async {
-    try {
-      final response =
-          await _apiClient.get<Map<String, dynamic>>('/memory/push-settings');
-      final payload = response.data ?? <String, dynamic>{};
-      return PushOptInSettingsModel.fromJson(payload);
-    } on DioException catch (error) {
-      if (_shouldUseLocalFallback(error)) {
-        return _defaultPushSettings;
-      }
-      rethrow;
-    }
+    final response =
+        await _apiClient.get<Map<String, dynamic>>('/memory/push-settings');
+    final payload = response.data ?? <String, dynamic>{};
+    return PushOptInSettingsModel.fromJson(payload);
   }
 
+  /// See [updateMemorySettings].
   Future<PushOptInSettingsModel> updatePushSettings(
     PushOptInSettingsModel settings,
   ) async {
-    try {
-      final response = await _apiClient.put<Map<String, dynamic>>(
-        '/memory/push-settings',
-        data: settings.toJson(),
-      );
-      final payload = response.data ?? <String, dynamic>{};
-      return PushOptInSettingsModel.fromJson(payload);
-    } on DioException catch (error) {
-      if (_shouldUseLocalFallback(error)) {
-        return settings;
-      }
-      rethrow;
-    }
-  }
-
-  bool _shouldUseLocalFallback(DioException error) {
-    final statusCode = error.response?.statusCode;
-    return statusCode == 401 || statusCode == 403;
+    final response = await _apiClient.put<Map<String, dynamic>>(
+      '/memory/push-settings',
+      data: settings.toJson(),
+    );
+    final payload = response.data ?? <String, dynamic>{};
+    return PushOptInSettingsModel.fromJson(payload);
   }
 }
 

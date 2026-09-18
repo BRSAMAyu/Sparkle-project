@@ -426,7 +426,10 @@ class _VisualElementCardState extends State<VisualElementCard>
       } else if (hexColor.length == 8) {
         return Color(int.parse(hexColor, radix: 16));
       }
-    } catch (_) {}
+    } catch (_) {
+      // Malformed hex falls back to the surface color returned below.
+      debugPrint('VisualElementCard: failed to parse color "$hexColor"');
+    }
     return VisualElementPalette.of(context).surface;
   }
 
@@ -1011,7 +1014,10 @@ class _ElementPreviewPainter extends CustomPainter {
       } else if (hexColor.length == 8) {
         return Color(int.parse(hexColor, radix: 16));
       }
-    } catch (_) {}
+    } catch (_) {
+      // Malformed hex falls back to the surface color returned below.
+      debugPrint('VisualElementCard: failed to parse color "$hexColor"');
+    }
     return DS.surfaceSecondary;
   }
 

@@ -7,6 +7,14 @@ import '../shared/i18n_test_helper.dart';
 void main() {
 
   setUp(setUpI18nForTesting);
+
+  /// The questionnaire renders collapsed; expand it before asserting on
+  /// questions/buttons (baseline suite was red because this step was missing).
+  Future<void> expandQuestionnaire(WidgetTester tester) async {
+    await tester.tap(find.text('初始画像'));
+    await tester.pumpAndSettle();
+  }
+
   final questions = <Map<String, dynamic>>[
     {
       'id': 'q1',
@@ -29,8 +37,8 @@ void main() {
           ),
         ),),
     );
+    await expandQuestionnaire(tester);
 
-    expect(find.text('初始画像'), findsOneWidget);
     expect(find.text('先搭结构再行动'), findsOneWidget);
     expect(find.text('跳过'), findsAtLeastNWidgets(1));
   });
@@ -49,6 +57,7 @@ void main() {
           ),
         ),),
     );
+    await expandQuestionnaire(tester);
 
     await tester.tap(find.text('先搭结构再行动'));
     await tester.pump();
@@ -71,6 +80,7 @@ void main() {
           ),
         ),),
     );
+    await expandQuestionnaire(tester);
 
     await tester.tap(find.widgetWithText(TextButton, '跳过'));
     await tester.pumpAndSettle();
@@ -92,6 +102,10 @@ void main() {
           ),
         ),),
     );
+    await expandQuestionnaire(tester);
+    // 保存 stays disabled until every question is answered.
+    await tester.tap(find.text('先搭结构再行动'));
+    await tester.pump();
 
     await tester.tap(find.text('保存'));
     await tester.pump();

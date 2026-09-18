@@ -5,13 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/compact_error_card.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart'
     as chat;
+import 'package:sparkle/features/focus/data/repositories/focus_repository.dart'
+    as focus_repo;
 import 'package:sparkle/features/focus/presentation/providers/focus_statistics_provider.dart'
     as focus_stats;
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
@@ -397,16 +398,41 @@ class _FocusTimerToolState extends ConsumerState<FocusTimerTool>
       return;
     }
 
-    final response = await ref
-        .read(focus_stats.focusStatisticsProvider.notifier)
-        .saveSession(
-          startTime: startTime,
-          endTime: endTime,
-          durationMinutes: durationMinutes,
-          focusType: isPomodoro ? 'pomodoro' : 'stopwatch',
-          whiteNoiseType:
-              _ambientScene == AmbientScene.none ? null : _ambientScene.name,
+    // R2-03: saveSession throws when the session could NOT be persisted
+    // (it previously returned null, which read as "saved offline").
+    Object? saveError;
+    focus_repo.LoggedFocusSession? response;
+    try {
+      response = await ref
+          .read(focus_stats.focusStatisticsProvider.notifier)
+          .saveSession(
+            startTime: startTime,
+            endTime: endTime,
+            durationMinutes: durationMinutes,
+            focusType: isPomodoro ? 'pomodoro' : 'stopwatch',
+            whiteNoiseType:
+                _ambientScene == AmbientScene.none ? null : _ambientScene.name,
+          );
+    } catch (e) {
+      saveError = e;
+    }
+    if (saveError != null) {
+      debugPrint('Focus session save failed: $saveError');
+      if (!suppressForegroundNotification) {
+        final notificationService = ref.read(notificationServiceProvider);
+        await notificationService.showSmartPush(
+          title: isPomodoro
+              ? context.l10n.toolsFocusPomodoroComplete
+              : context.l10n.toolsFocusComplete,
+          body: context.l10n.focusSaveFailed('$saveError'),
+          payload: <String, dynamic>{
+            'type': 'focus_complete',
+            'duration_minutes': durationMinutes,
+          },
         );
+      }
+      return;
+    }
     if (!suppressForegroundNotification) {
       final notificationService = ref.read(notificationServiceProvider);
       await notificationService.showSmartPush(

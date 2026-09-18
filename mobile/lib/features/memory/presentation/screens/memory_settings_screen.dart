@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -54,36 +55,46 @@ class _MemorySettingsDataNotifier
 
   final MemoryApiService _service;
 
+  /// R2-01: defaults are ONLY applied when the server confirms it has no
+  /// stored configuration (404). Any other read failure surfaces as an error
+  /// state with retry — filling the form with defaults would let one "save"
+  /// silently overwrite the user's real server-side settings.
+  static final MemorySettingsModel _defaultMemorySettings = MemorySettingsModel(
+    enabled: true,
+    allowPreferences: true,
+    allowGoals: true,
+    allowEpisodic: true,
+    allowInferredEpisodic: true,
+    captureLevel: 'medium',
+    blockedPrefKeys: [],
+    blockedSources: [],
+  );
+  static final PushOptInSettingsModel _defaultPushSettings =
+      PushOptInSettingsModel(
+    enabled: false,
+    allowCommitmentFollowUp: false,
+    allowEngagementRecovery: false,
+    quietHoursStart: '22:00',
+    quietHoursEnd: '08:00',
+    timezone: 'Asia/Shanghai',
+  );
+
   Future<_MemorySettingsDataState> loadSettings() async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       MemorySettingsModel settings;
-      PushOptInSettingsModel pushSettings;
       try {
         settings = await _service.getMemorySettings();
-      } catch (_) {
-        settings = MemorySettingsModel(
-          enabled: true,
-          allowPreferences: true,
-          allowGoals: true,
-          allowEpisodic: true,
-          allowInferredEpisodic: true,
-          captureLevel: 'medium',
-          blockedPrefKeys: [],
-          blockedSources: [],
-        );
+      } on DioException catch (e) {
+        if (e.response?.statusCode != 404) rethrow;
+        settings = _defaultMemorySettings;
       }
+      PushOptInSettingsModel pushSettings;
       try {
         pushSettings = await _service.getPushSettings();
-      } catch (_) {
-        pushSettings = PushOptInSettingsModel(
-          enabled: false,
-          allowCommitmentFollowUp: false,
-          allowEngagementRecovery: false,
-          quietHoursStart: '22:00',
-          quietHoursEnd: '08:00',
-          timezone: 'Asia/Shanghai',
-        );
+      } on DioException catch (e) {
+        if (e.response?.statusCode != 404) rethrow;
+        pushSettings = _defaultPushSettings;
       }
       if (!mounted) {
         return state;
