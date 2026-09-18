@@ -496,6 +496,14 @@ async def login(
     except Exception as exc:
         logger.warning(f"Failed to record security monitor event: {exc}")
 
+    # 监控写入失败时 record_login_attempt 会 rollback，令 user 属性过期；
+    # 过期后访问 user.id 将在无 greenlet 上下文触发同步 IO（MissingGreenlet 500）。
+    # 显式刷新，保证登录返回路径只依赖已加载属性。
+    try:
+        await db.refresh(user)
+    except Exception as exc:
+        logger.warning(f"Failed to refresh user after login: {exc}")
+
     return {
         **await _issue_auth_tokens(db=db, user=user, request=request),
         "user": _build_user_profile(user),

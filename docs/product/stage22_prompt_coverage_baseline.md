@@ -1,6 +1,6 @@
 # Stage 22 Prompt Coverage Baseline
 
-- audited_at: 1789690567.1669972
+- audited_at: 1789725918.8437471
 - audited_fields: 13
 - covered_fields: 12
 - coverage_ratio: 0.923
