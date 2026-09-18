@@ -109,6 +109,7 @@ async def get_shop_item_detail(
 async def purchase_item(
     request: PurchaseRequest,
     idempotency_key: str | None = Header(None, alias="Idempotency-Key"),
+    x_idempotency_key: str | None = Header(None, alias="X-Idempotency-Key"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -116,7 +117,12 @@ async def purchase_item(
     购买商城物品
 
     Purchases an item from the shop. Deducts photons and adds item to user inventory.
+
+    R2-8 契约复审：移动端 IdempotencyInterceptor 统一注入 ``X-Idempotency-Key``
+    （app/api/middleware.py 全局幂等中间件同款头名），本端点却只认
+    ``Idempotency-Key``——移动端购买必 400。两个别名都接受，兼容既有调用方。
     """
+    idempotency_key = idempotency_key or x_idempotency_key
     if not idempotency_key:
         raise HTTPException(status_code=400, detail="Idempotency-Key header is required")
 

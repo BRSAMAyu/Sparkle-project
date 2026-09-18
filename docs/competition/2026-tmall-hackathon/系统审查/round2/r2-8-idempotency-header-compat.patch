@@ -1,0 +1,171 @@
+diff --git a/backend/app/api/v1/achievements.py b/backend/app/api/v1/achievements.py
+index f0b1e96c..628a6917 100644
+--- a/backend/app/api/v1/achievements.py
++++ b/backend/app/api/v1/achievements.py
+@@ -344,6 +344,7 @@ async def get_contract_status(current_user: User = Depends(get_current_user), db
+ async def create_contract(
+     request: ContractCreateRequest,
+     idempotency_key: str | None = Header(None, alias="Idempotency-Key"),
++    x_idempotency_key: str | None = Header(None, alias="X-Idempotency-Key"),
+     current_user: User = Depends(get_current_user),
+     db: AsyncSession = Depends(get_db),
+ ):
+@@ -351,7 +352,11 @@ async def create_contract(
+     创建星火契约
+ 
+     Creates a new study contract with photon stake.
++
++    R2-8 契约复审：同时接受 ``X-Idempotency-Key``（移动端拦截器注入的头名），
++    与 shop/purchase、photons/transfer 同一修复类。
+     """
++    idempotency_key = idempotency_key or x_idempotency_key
+     if not idempotency_key:
+         raise HTTPException(status_code=400, detail="Idempotency-Key header is required")
+ 
+@@ -375,6 +380,7 @@ async def create_contract(
+ @router.delete("/contracts", response_model=dict[str, Any])
+ async def cancel_contract(
+     idempotency_key: str | None = Header(None, alias="Idempotency-Key"),
++    x_idempotency_key: str | None = Header(None, alias="X-Idempotency-Key"),
+     current_user: User = Depends(get_current_user),
+     db: AsyncSession = Depends(get_db),
+ ):
+@@ -382,7 +388,11 @@ async def cancel_contract(
+     取消当前契约
+ 
+     Cancels active contract (forfeits staked photons).
++
++    R2-8 契约复审：同时接受 ``X-Idempotency-Key``（移动端拦截器注入的头名，
++    DELETE 亦在拦截器覆盖范围内）。
+     """
++    idempotency_key = idempotency_key or x_idempotency_key
+     if not idempotency_key:
+         raise HTTPException(status_code=400, detail="Idempotency-Key header is required")
+ 
+diff --git a/backend/app/api/v1/photons.py b/backend/app/api/v1/photons.py
+index 062c8963..94befbdd 100644
+--- a/backend/app/api/v1/photons.py
++++ b/backend/app/api/v1/photons.py
+@@ -109,6 +109,7 @@ async def transfer_photons(
+     request: PhotonTransferRequest,
+     http_request: Request,
+     idempotency_key: str | None = Header(None, alias="Idempotency-Key"),
++    x_idempotency_key: str | None = Header(None, alias="X-Idempotency-Key"),
+     current_user: User = Depends(get_current_user),
+     db: AsyncSession = Depends(get_db)
+ ):
+@@ -116,6 +117,9 @@ async def transfer_photons(
+     转账光子给其他用户
+ 
+     Transfers photons from current user to another user.
++
++    R2-8 契约复审：移动端 IdempotencyInterceptor 注入的是 ``X-Idempotency-Key``，
++    本端点同时接受两个头别名（与 shop/purchase 同一修复类）。
+     """
+     # 访客禁止转账：以 JWT 的 is_guest 声明为准（网关/引擎签发访客令牌时
+     # 都注入 is_guest=True）。旧实现只比对遗留演示常量
+@@ -127,6 +131,7 @@ async def transfer_photons(
+             status_code=403,
+             detail="Guest users cannot transfer photons. Please register for a full account."
+         )
++    idempotency_key = idempotency_key or x_idempotency_key
+     if not idempotency_key:
+         raise HTTPException(status_code=400, detail="Idempotency-Key header is required")
+ 
+diff --git a/backend/app/api/v1/shop.py b/backend/app/api/v1/shop.py
+index 40a361df..a9f19bfb 100644
+--- a/backend/app/api/v1/shop.py
++++ b/backend/app/api/v1/shop.py
+@@ -109,6 +109,7 @@ async def get_shop_item_detail(
+ async def purchase_item(
+     request: PurchaseRequest,
+     idempotency_key: str | None = Header(None, alias="Idempotency-Key"),
++    x_idempotency_key: str | None = Header(None, alias="X-Idempotency-Key"),
+     current_user: User = Depends(get_current_user),
+     db: AsyncSession = Depends(get_db)
+ ):
+@@ -116,7 +117,12 @@ async def purchase_item(
+     购买商城物品
+ 
+     Purchases an item from the shop. Deducts photons and adds item to user inventory.
++
++    R2-8 契约复审：移动端 IdempotencyInterceptor 统一注入 ``X-Idempotency-Key``
++    （app/api/middleware.py 全局幂等中间件同款头名），本端点却只认
++    ``Idempotency-Key``——移动端购买必 400。两个别名都接受，兼容既有调用方。
+     """
++    idempotency_key = idempotency_key or x_idempotency_key
+     if not idempotency_key:
+         raise HTTPException(status_code=400, detail="Idempotency-Key header is required")
+ 
+diff --git a/backend/tests/api/test_shop_api.py b/backend/tests/api/test_shop_api.py
+index 8a470cc2..af7d8eff 100644
+--- a/backend/tests/api/test_shop_api.py
++++ b/backend/tests/api/test_shop_api.py
+@@ -78,3 +78,48 @@ def test_purchase_passes_idempotency_header_to_service():
+     assert response.status_code == 200
+     assert response.json()["success"] is True
+     assert mock_service.purchase_item.await_args.kwargs["idempotency_key"] == "purchase-key-1"
++
++
++def test_purchase_accepts_x_idempotency_key_alias():
++    """R2-8 契约复审回归：移动端 IdempotencyInterceptor 注入的是 X-Idempotency-Key。
++
++    修复前该请求得到 400（端点只认 Idempotency-Key），移动端购买/转账/契约全断。
++    """
++    app = _build_app()
++
++    async def _override_get_db():
++        yield MagicMock(spec=AsyncSession)
++
++    async def _override_user():
++        return SimpleNamespace(id=uuid4())
++
++    mock_service = SimpleNamespace(
++        purchase_item=AsyncMock(
++            return_value={
++                "success": True,
++                "purchase_id": str(uuid4()),
++                "item_id": "item-1",
++                "item_name": "Item 1",
++                "price_paid": 100,
++                "balance_before": 500,
++                "balance_after": 400,
++                "item_type": "consumable",
++                "rarity": "common",
++                "replayed": False,
++            }
++        )
++    )
++    app.dependency_overrides[get_db] = _override_get_db
++    app.dependency_overrides[get_current_user] = _override_user
++
++    with patch("app.api.v1.shop.get_shop_service", return_value=mock_service):
++        with TestClient(app) as client:
++            response = client.post(
++                "/shop/purchase",
++                json={"item_id": "item-1"},
++                headers={"X-Idempotency-Key": "mobile-key-1"},
++            )
++
++    assert response.status_code == 200
++    assert response.json()["success"] is True
++    assert mock_service.purchase_item.await_args.kwargs["idempotency_key"] == "mobile-key-1"
+diff --git a/mobile/lib/core/network/idempotency_interceptor.dart b/mobile/lib/core/network/idempotency_interceptor.dart
+index 54bef989..9a24487c 100755
+--- a/mobile/lib/core/network/idempotency_interceptor.dart
++++ b/mobile/lib/core/network/idempotency_interceptor.dart
+@@ -6,8 +6,12 @@ import 'package:uuid/uuid.dart';
+ class IdempotencyInterceptor extends Interceptor {
+   @override
+   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+-    // 对 POST/PUT/PATCH 请求自动添加幂等键
+-    if (['POST', 'PUT', 'PATCH'].contains(options.method.toUpperCase())) {
++    // 对 POST/PUT/PATCH/DELETE 请求自动添加幂等键
++    // R2-8 契约复审：DELETE 也要带键——engine 的 DELETE /achievements/contracts
++    //（取消契约=没收押金光子）是经济类 mutation 且强制要求幂等键，
++    // 拦截器此前不覆盖 DELETE 导致移动端取消契约必 400。
++    const idempotentMethods = {'POST', 'PUT', 'PATCH', 'DELETE'};
++    if (idempotentMethods.contains(options.method.toUpperCase())) {
+       // 检查是否已有幂等键
+       if (!options.headers.containsKey('X-Idempotency-Key')) {
+         options.headers['X-Idempotency-Key'] = const Uuid().v4();

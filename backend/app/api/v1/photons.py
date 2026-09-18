@@ -109,6 +109,7 @@ async def transfer_photons(
     request: PhotonTransferRequest,
     http_request: Request,
     idempotency_key: str | None = Header(None, alias="Idempotency-Key"),
+    x_idempotency_key: str | None = Header(None, alias="X-Idempotency-Key"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -116,6 +117,9 @@ async def transfer_photons(
     转账光子给其他用户
 
     Transfers photons from current user to another user.
+
+    R2-8 契约复审：移动端 IdempotencyInterceptor 注入的是 ``X-Idempotency-Key``，
+    本端点同时接受两个头别名（与 shop/purchase 同一修复类）。
     """
     # 访客禁止转账：以 JWT 的 is_guest 声明为准（网关/引擎签发访客令牌时
     # 都注入 is_guest=True）。旧实现只比对遗留演示常量
@@ -127,6 +131,7 @@ async def transfer_photons(
             status_code=403,
             detail="Guest users cannot transfer photons. Please register for a full account."
         )
+    idempotency_key = idempotency_key or x_idempotency_key
     if not idempotency_key:
         raise HTTPException(status_code=400, detail="Idempotency-Key header is required")
 

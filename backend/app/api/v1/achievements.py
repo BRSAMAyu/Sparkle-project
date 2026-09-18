@@ -344,6 +344,7 @@ async def get_contract_status(current_user: User = Depends(get_current_user), db
 async def create_contract(
     request: ContractCreateRequest,
     idempotency_key: str | None = Header(None, alias="Idempotency-Key"),
+    x_idempotency_key: str | None = Header(None, alias="X-Idempotency-Key"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -351,7 +352,11 @@ async def create_contract(
     创建星火契约
 
     Creates a new study contract with photon stake.
+
+    R2-8 契约复审：同时接受 ``X-Idempotency-Key``（移动端拦截器注入的头名），
+    与 shop/purchase、photons/transfer 同一修复类。
     """
+    idempotency_key = idempotency_key or x_idempotency_key
     if not idempotency_key:
         raise HTTPException(status_code=400, detail="Idempotency-Key header is required")
 
@@ -375,6 +380,7 @@ async def create_contract(
 @router.delete("/contracts", response_model=dict[str, Any])
 async def cancel_contract(
     idempotency_key: str | None = Header(None, alias="Idempotency-Key"),
+    x_idempotency_key: str | None = Header(None, alias="X-Idempotency-Key"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -382,7 +388,11 @@ async def cancel_contract(
     取消当前契约
 
     Cancels active contract (forfeits staked photons).
+
+    R2-8 契约复审：同时接受 ``X-Idempotency-Key``（移动端拦截器注入的头名，
+    DELETE 亦在拦截器覆盖范围内）。
     """
+    idempotency_key = idempotency_key or x_idempotency_key
     if not idempotency_key:
         raise HTTPException(status_code=400, detail="Idempotency-Key header is required")
 

@@ -78,3 +78,48 @@ def test_purchase_passes_idempotency_header_to_service():
     assert response.status_code == 200
     assert response.json()["success"] is True
     assert mock_service.purchase_item.await_args.kwargs["idempotency_key"] == "purchase-key-1"
+
+
+def test_purchase_accepts_x_idempotency_key_alias():
+    """R2-8 契约复审回归：移动端 IdempotencyInterceptor 注入的是 X-Idempotency-Key。
+
+    修复前该请求得到 400（端点只认 Idempotency-Key），移动端购买/转账/契约全断。
+    """
+    app = _build_app()
+
+    async def _override_get_db():
+        yield MagicMock(spec=AsyncSession)
+
+    async def _override_user():
+        return SimpleNamespace(id=uuid4())
+
+    mock_service = SimpleNamespace(
+        purchase_item=AsyncMock(
+            return_value={
+                "success": True,
+                "purchase_id": str(uuid4()),
+                "item_id": "item-1",
+                "item_name": "Item 1",
+                "price_paid": 100,
+                "balance_before": 500,
+                "balance_after": 400,
+                "item_type": "consumable",
+                "rarity": "common",
+                "replayed": False,
+            }
+        )
+    )
+    app.dependency_overrides[get_db] = _override_get_db
+    app.dependency_overrides[get_current_user] = _override_user
+
+    with patch("app.api.v1.shop.get_shop_service", return_value=mock_service):
+        with TestClient(app) as client:
+            response = client.post(
+                "/shop/purchase",
+                json={"item_id": "item-1"},
+                headers={"X-Idempotency-Key": "mobile-key-1"},
+            )
+
+    assert response.status_code == 200
+    assert response.json()["success"] is True
+    assert mock_service.purchase_item.await_args.kwargs["idempotency_key"] == "mobile-key-1"
