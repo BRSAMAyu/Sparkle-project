@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/compact_error_card.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -224,7 +225,7 @@ class _SuggestionCard extends ConsumerWidget {
               Expanded(
                 child: Text(
                   zh ? '今天我建议先做' : 'Suggested first today',
-                  style: context.sparkleTypography.labelLarge.copyWith(
+                  style: context.typo.labelLarge.copyWith(
                     color: DS.textPrimary,
                     fontWeight: DS.fontWeightBold,
                   ),
@@ -237,7 +238,7 @@ class _SuggestionCard extends ConsumerWidget {
             suggestion.rationale,
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
-            style: context.sparkleTypography.bodySmall.copyWith(
+            style: context.typo.bodySmall.copyWith(
               color: DS.textSecondary,
               height: 1.35,
             ),
@@ -358,7 +359,7 @@ class _GoalRow extends StatelessWidget {
                       goal.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: context.sparkleTypography.bodyMedium.copyWith(
+                      style: context.typo.bodyMedium.copyWith(
                         color: DS.textPrimary,
                         fontWeight: DS.fontWeightBold,
                       ),
@@ -422,7 +423,7 @@ class _HealthPill extends StatelessWidget {
         ),
         child: Text(
           '${(score * 100).round()}%',
-          style: context.sparkleTypography.labelSmall.copyWith(
+          style: context.typo.labelSmall.copyWith(
             color: color,
             fontWeight: DS.fontWeightBold,
           ),
@@ -457,7 +458,7 @@ class _MetaPill extends StatelessWidget {
             const SizedBox(width: DS.spacing4),
             Text(
               label,
-              style: context.sparkleTypography.labelSmall.copyWith(
+              style: context.typo.labelSmall.copyWith(
                 color: DS.textSecondary,
                 fontWeight: DS.fontWeightMedium,
               ),

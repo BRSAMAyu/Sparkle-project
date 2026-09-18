@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
@@ -35,7 +36,7 @@ class DailyContextLine extends StatelessWidget {
                   key: ValueKey(line),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
-                  style: context.sparkleTypography.titleLarge.copyWith(
+                  style: context.typo.titleLarge.copyWith(
                     color: DS.textPrimary,
                     fontWeight: DS.fontWeightBold,
                     height: 1.28,

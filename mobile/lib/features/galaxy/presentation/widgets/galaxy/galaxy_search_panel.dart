@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
@@ -30,8 +31,7 @@ class GalaxySearchPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final colors = context.colorExtensions;
-    final foreground = colors.adaptiveForeground;
+    final foreground = context.colors.textPrimary;
     final secondary = isDarkMode
         ? DS.neutral0.withValues(alpha: 0.64)
         : DS.galaxyShadow.withValues(alpha: 0.56);
@@ -50,7 +50,7 @@ class GalaxySearchPanel extends StatelessWidget {
               end: Alignment.bottomRight,
               colors: [
                 isDarkMode
-                    ? colors.panelDarkOverlayLighter
+                    ? galaxyPanelOverlayDark // core/design 领域装饰色（单拷贝）
                     : DS.neutral0.withValues(alpha: 0.88),
                 isDarkMode
                     ? DS.neutral0.withValues(alpha: 0.03)

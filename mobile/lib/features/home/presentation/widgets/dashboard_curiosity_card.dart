@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -59,7 +60,7 @@ class DashboardCuriosityCard extends ConsumerWidget {
             const Spacer(),
             Text(
               cognitive.weeklyPattern ?? context.l10n.curiosityExplore,
-              style: context.sparkleTypography.labelLarge.copyWith(
+              style: context.typo.labelLarge.copyWith(
                 fontSize: dense ? 13 : null,
                 fontWeight: DS.fontWeightBold,
                 color: DS.textPrimary,
@@ -70,7 +71,7 @@ class DashboardCuriosityCard extends ConsumerWidget {
             const SizedBox(height: DS.xs),
             Text(
               context.l10n.homeToolbarCuriosityCapsule,
-              style: context.sparkleTypography.labelSmall.copyWith(
+              style: context.typo.labelSmall.copyWith(
                 color: DS.textSecondary,
               ),
             ),
@@ -80,7 +81,7 @@ class DashboardCuriosityCard extends ConsumerWidget {
                 snippet,
                 maxLines: dense ? 2 : 3,
                 overflow: TextOverflow.ellipsis,
-                style: context.sparkleTypography.labelSmall.copyWith(
+                style: context.typo.labelSmall.copyWith(
                   color: DS.textSecondary,
                   height: 1.4,
                 ),

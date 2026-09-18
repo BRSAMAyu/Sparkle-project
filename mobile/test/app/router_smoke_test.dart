@@ -11,7 +11,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:isar/isar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/app/routes.dart';
-import 'package:sparkle/app/theme.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/analytics/models/user_analytics_event.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/offline/local_database.dart';

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/domain/services/emotion_visual_blending_service.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -170,7 +171,7 @@ class _WeatherGuideScreenState extends ConsumerState<WeatherGuideScreen>
               padding: const EdgeInsets.only(top: DS.spacing12),
               child: Text(
                 context.l10n.weatherGuideDisclaimer,
-                style: context.sparkleTypography.labelSmall.copyWith(
+                style: context.typo.labelSmall.copyWith(
                   color: DS.textSecondary,
                   height: 1.52,
                 ),
@@ -203,7 +204,7 @@ class _CurrentWeatherPanel extends StatelessWidget {
                 Expanded(
                   child: Text(
                     context.l10n.weatherGuideCurrentWeather,
-                    style: context.sparkleTypography.titleLarge.copyWith(
+                    style: context.typo.titleLarge.copyWith(
                       fontWeight: DS.fontWeightBold,
                       color: DS.textPrimary,
                     ),
@@ -219,7 +220,7 @@ class _CurrentWeatherPanel extends StatelessWidget {
             const SizedBox(height: DS.spacing12),
             Text(
               presentation.subtitle,
-              style: context.sparkleTypography.bodyMedium.copyWith(
+              style: context.typo.bodyMedium.copyWith(
                 color: DS.textSecondary,
                 height: 1.52,
               ),
@@ -244,7 +245,7 @@ class _CurrentWeatherPanel extends StatelessWidget {
                 condition.trim().isEmpty
                     ? context.l10n.weatherGuideConditionFallback
                     : context.l10n.weatherGuideConditionPrefix(condition),
-                style: context.sparkleTypography.labelSmall.copyWith(
+                style: context.typo.labelSmall.copyWith(
                   color: DS.textSecondary,
                   height: 1.52,
                 ),
@@ -334,7 +335,7 @@ class _WeatherPreviewCard extends StatelessWidget {
                                 ),
                                 child: Text(
                                   context.l10n.weatherGuideCurrent,
-                                  style: context.sparkleTypography.labelSmall
+                                  style: context.typo.labelSmall
                                       .copyWith(
                                     color: DS.textPrimary,
                                     fontWeight: DS.fontWeightBold,
@@ -347,7 +348,7 @@ class _WeatherPreviewCard extends StatelessWidget {
                         const SizedBox(height: DS.spacing8),
                         Text(
                           spec.title,
-                          style: context.sparkleTypography.titleLarge.copyWith(
+                          style: context.typo.titleLarge.copyWith(
                             color: DS.textPrimary,
                             fontWeight: DS.fontWeightBold,
                           ),
@@ -357,7 +358,7 @@ class _WeatherPreviewCard extends StatelessWidget {
                           presentation.ambientHint,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: context.sparkleTypography.labelSmall.copyWith(
+                          style: context.typo.labelSmall.copyWith(
                             color: DS.textSecondary,
                             height: 1.52,
                           ),
@@ -375,7 +376,7 @@ class _WeatherPreviewCard extends StatelessWidget {
                 children: [
                   Text(
                     spec.detail,
-                    style: context.sparkleTypography.bodyMedium.copyWith(
+                    style: context.typo.bodyMedium.copyWith(
                       color: DS.textSecondary,
                       height: 1.52,
                     ),
@@ -393,7 +394,7 @@ class _WeatherPreviewCard extends StatelessWidget {
                     ),
                     child: Text(
                       context.l10n.weatherGuideTriggerPrefix(spec.trigger),
-                      style: context.sparkleTypography.labelSmall.copyWith(
+                      style: context.typo.labelSmall.copyWith(
                         color: DS.textSecondary,
                         height: 1.52,
                       ),
@@ -458,7 +459,7 @@ class _SectionHeader extends StatelessWidget {
         children: [
           Text(
             title,
-            style: context.sparkleTypography.titleLarge.copyWith(
+            style: context.typo.titleLarge.copyWith(
               color: DS.textPrimary,
               fontWeight: DS.fontWeightBold,
             ),
@@ -466,7 +467,7 @@ class _SectionHeader extends StatelessWidget {
           const SizedBox(height: DS.spacing6),
           Text(
             subtitle,
-            style: context.sparkleTypography.labelSmall.copyWith(
+            style: context.typo.labelSmall.copyWith(
               color: DS.textSecondary,
               height: 1.52,
             ),
@@ -494,7 +495,7 @@ class _WeatherRuleTile extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: context.sparkleTypography.labelLarge.copyWith(
+                style: context.typo.labelLarge.copyWith(
                   color: DS.textPrimary,
                   fontWeight: DS.fontWeightBold,
                 ),
@@ -502,7 +503,7 @@ class _WeatherRuleTile extends StatelessWidget {
               const SizedBox(height: DS.spacing6),
               Text(
                 body,
-                style: context.sparkleTypography.bodyMedium.copyWith(
+                style: context.typo.bodyMedium.copyWith(
                   color: DS.textSecondary,
                   height: 1.52,
                 ),

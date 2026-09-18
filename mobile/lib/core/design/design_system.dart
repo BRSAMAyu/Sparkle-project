@@ -473,31 +473,23 @@ class _SparkleThemeExtension extends ThemeExtension<_SparkleThemeExtension> {
   }
 }
 
-/// 便捷上下文扩展
+/// 便捷上下文扩展（theme-data 根入口 + 响应式助手）。
+///
+/// Token 家族的唯一 context 入口是 `SparkleContextExtension`
+/// （`theme/sparkle_context_extension.dart`）：`context.colors` /
+/// `context.typo` / `context.space` / `context.radius` / `context.motion`。
+/// batch3 入口统一：本扩展原样的 `colors`（SparkleColorAliases 门面）、
+/// `sparkleColors`/`sparkleTypography`/`sparkleSpacing`/`sparkleAnimations`/
+/// `sparkleShadows` 派生 getter 与重复的 `reduceMotion` 已删除，
+/// 请勿在此再挂 token 家族 getter，避免双入口复发。
 extension SparkleContext on BuildContext {
-  /// 访问当前主题数据
+  /// 访问当前主题数据（SparkleThemeData 根；阴影等未入 extension 的
+  /// 家族经 `sparkleTheme.shadows` 取用，唯一事实源仍是
+  /// tokens_v2/theme_manager.dart 的 SparkleShadows）。
   SparkleThemeData get sparkleTheme {
     final extension = Theme.of(this).extension<_SparkleThemeExtension>();
     return extension?.sparkle ?? ThemeManager().current;
   }
-
-  /// 访问颜色
-  SparkleColors get sparkleColors => sparkleTheme.colors;
-
-  /// 访问排版
-  SparkleTypography get sparkleTypography => sparkleTheme.typography;
-
-  /// 访问间距
-  SparkleSpacing get sparkleSpacing => sparkleTheme.spacing;
-
-  /// 访问动画
-  SparkleAnimations get sparkleAnimations => sparkleTheme.animations;
-
-  /// 访问阴影
-  SparkleShadows get sparkleShadows => sparkleTheme.shadows;
-
-  /// Legacy shorthand used across the UI
-  SparkleColorAliases get colors => SparkleColorAliases(sparkleTheme);
 
   /// 响应式信息
   BreakpointInfo get breakpointInfo => ResponsiveSystem.getBreakpointInfo(this);
@@ -513,32 +505,6 @@ extension SparkleContext on BuildContext {
 
   /// 是否横屏
   bool get isLandscape => ResponsiveSystem.isLandscape(this);
-
-  /// Whether the OS requests reduced motion or simplified navigation effects.
-  bool get reduceMotion {
-    final mediaQuery = MediaQuery.maybeOf(this);
-    if (mediaQuery == null) return false;
-    return mediaQuery.disableAnimations || mediaQuery.accessibleNavigation;
-  }
-}
-
-/// Legacy color aliases used by older widgets.
-@immutable
-class SparkleColorAliases {
-  const SparkleColorAliases(this._theme);
-  final SparkleThemeData _theme;
-
-  Color get surfaceCard => _theme.colors.surfaceSecondary;
-  Color get surfaceElevated => _theme.colors.surfaceTertiary;
-  Color get surfaceGlass => _theme.colors.surfacePrimary;
-  Color get border => DS.border;
-  Color get textPrimary => _theme.colors.textPrimary;
-  Color get textSecondary => _theme.colors.textSecondary;
-
-  LinearGradient getTaskGradient(String taskType) =>
-      _theme.colors.getTaskGradient(taskType);
-  Color getTaskColor(String taskType) => _theme.colors.getTaskColor(taskType);
-  Color getPlanColor(String planType) => _theme.colors.getPlanColor(planType);
 }
 
 enum SparkleSurfaceRole {
@@ -653,21 +619,11 @@ class DS {
   static Color get surfaceSecondary => _theme.colors.surfaceSecondary;
   static Color get surfaceTertiary => _theme.colors.surfaceTertiary;
   static Color get surfaceAmbient => _theme.colors.surfaceAmbient;
-  static Color get surfacePrimaryElevated => _blend(
-        surfacePrimary,
-        surfaceTertiary,
-        _isDark ? 0.35 : 0.12,
-      );
-  static Color get surfacePanel => _blend(
-        surfaceSecondary,
-        surfaceTertiary,
-        _isDark ? 0.18 : 0.06,
-      );
-  static Color get surfaceOverlay => _isDark
-      ? surfaceSecondary.withValues(alpha: 0.92)
-      : surfacePrimary.withValues(alpha: 0.92);
-  static Color get surfaceCanvas =>
-      _blend(surfaceAmbient, surfacePrimary, 0.75);
+  static Color get surfacePrimaryElevated =>
+      _theme.colors.surfacePrimaryElevated;
+  static Color get surfacePanel => _theme.colors.surfacePanel;
+  static Color get surfaceOverlay => _theme.colors.surfaceOverlay;
+  static Color get surfaceCanvas => _theme.colors.surfaceCanvas;
   static Color get surfaceHigh =>
       _theme.colors.surfaceSecondary; // Alias for surfaceSecondary
   static Color get surface => surfaceSecondary;
@@ -687,11 +643,11 @@ class DS {
   static Color onColor(Color background) =>
       ThemeUtils.getContrastSafeText(background);
   static Color get onBrandPrimary => textOnPrimary;
-  static Color get border => _isDark ? neutral600 : neutral300;
-  static Color get borderStrong =>
-      _blend(border, textPrimary, _isDark ? 0.16 : 0.08);
-  static Color get borderSubtle =>
-      border.withValues(alpha: _isDark ? 0.6 : 0.72);
+  // batch3 四件套收敛：边框/容器面派生公式上收至 SparkleColors（值恒等），
+  // DS 仅做转发。唯一事实源：tokens_v2/theme_manager.dart。
+  static Color get border => _theme.colors.border;
+  static Color get borderStrong => _theme.colors.borderStrong;
+  static Color get borderSubtle => _theme.colors.borderSubtle;
   static Color get overlay30 =>
       (_isDark ? Colors.white : Colors.black).withValues(alpha: 0.3);
   static Color get overlay50 =>
@@ -775,10 +731,8 @@ class DS {
   static Color get deepSpaceSurface => _isDark
       ? _theme.colors.surfacePrimary
       : _blend(surfacePrimary, deepSpaceStart, 0.6);
-  static Color get glassBackground =>
-      surfacePrimary.withValues(alpha: _isDark ? 0.2 : 0.7);
-  static Color get glassBorder =>
-      _blend(surfaceTertiary, brandPrimary, 0.4).withValues(alpha: 0.25);
+  static Color get glassBackground => _theme.colors.glassBackground;
+  static Color get glassBorder => _theme.colors.glassBorder;
   static Color get avatarFallbackBackground => _isDark
       ? _blend(surfaceTertiary, brandSecondary, 0.18)
       : _blend(surfaceSecondary, brandSecondary, 0.12);
@@ -1006,6 +960,10 @@ class DS {
   static const double breakpointWide = Breakpoints.wide;
   static const double contentMaxWidthTablet = 720.0;
   static const double contentMaxWidthDesktop = 1200.0;
+
+  /// Max width for form-factor screens (login/register/otp): forms read
+  /// poorly when stretched to content widths on desktop/web (batch3 W-7).
+  static const double contentMaxWidthForm = 480.0;
   static const double touchTargetMinSize = 48.0;
   static const double opacityDisabled = 0.4;
 
@@ -1172,13 +1130,7 @@ class DS {
           offset: const Offset(0, 12),
         ),
       ];
-  static List<BoxShadow> get shadowPrimary => [
-        BoxShadow(
-          color: brandPrimary.withValues(alpha: _isDark ? 0.18 : 0.12),
-          blurRadius: 18,
-          offset: const Offset(0, 10),
-        ),
-      ];
+
 
   // 任务类型颜色
   static Color getTaskColor(String taskType) =>

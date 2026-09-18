@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/plan/domain/entities/sprint_statistics.dart';
 import 'package:sparkle/features/plan/presentation/providers/sprint_statistics_provider.dart';
@@ -48,7 +49,7 @@ class SprintStatisticsCard extends ConsumerWidget {
               const SizedBox(width: DS.spacing8),
               Text(
                 l10n.sprintStatsTitle,
-                style: context.sparkleTypography.labelLarge.copyWith(
+                style: context.typo.labelLarge.copyWith(
                   fontWeight: DS.fontWeightSemibold,
                 ),
               ),
@@ -95,7 +96,7 @@ class SprintStatisticsCard extends ConsumerWidget {
             const SizedBox(height: DS.spacing8),
             Text(
               l10n.sprintStatsEmpty,
-              style: context.sparkleTypography.bodyMedium.copyWith(
+              style: context.typo.bodyMedium.copyWith(
                 color: DS.textSecondary,
               ),
             ),
@@ -151,7 +152,7 @@ class SprintStatisticsCard extends ConsumerWidget {
                 children: [
                   Text(
                     '${(stats.completionRate * 100).toInt()}%',
-                    style: context.sparkleTypography.labelLarge.copyWith(
+                    style: context.typo.labelLarge.copyWith(
                       fontWeight: DS.fontWeightBold,
                       fontSize: 15,
                       fontFeatures: const [FontFeature.tabularFigures()],
@@ -159,7 +160,7 @@ class SprintStatisticsCard extends ConsumerWidget {
                   ),
                   Text(
                     l10n.sprintCompletionRate,
-                    style: context.sparkleTypography.labelSmall.copyWith(
+                    style: context.typo.labelSmall.copyWith(
                       fontSize: 8,
                       color: DS.textSecondary,
                     ),
@@ -272,7 +273,7 @@ class SprintStatisticsCard extends ConsumerWidget {
       children: [
         Text(
           l10n.sprintDailyCompletion,
-          style: context.sparkleTypography.labelSmall.copyWith(
+          style: context.typo.labelSmall.copyWith(
             color: DS.textSecondary,
             fontWeight: DS.fontWeightMedium,
           ),
@@ -350,13 +351,13 @@ class SprintStatisticsCard extends ConsumerWidget {
         children: [
           Text(
             label,
-            style: context.sparkleTypography.labelSmall.copyWith(
+            style: context.typo.labelSmall.copyWith(
               color: DS.textSecondary,
             ),
           ),
           Text(
             value,
-            style: context.sparkleTypography.labelSmall.copyWith(
+            style: context.typo.labelSmall.copyWith(
               color: color,
               fontWeight: DS.fontWeightMedium,
             ),
@@ -374,14 +375,14 @@ class SprintStatisticsCard extends ConsumerWidget {
         children: [
           Text(
             count.toString(),
-            style: context.sparkleTypography.labelLarge.copyWith(
+            style: context.typo.labelLarge.copyWith(
               color: color,
               fontWeight: DS.fontWeightBold,
             ),
           ),
           Text(
             label,
-            style: context.sparkleTypography.labelSmall.copyWith(
+            style: context.typo.labelSmall.copyWith(
               color: DS.textSecondary,
               fontSize: 10,
             ),

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -62,7 +63,7 @@ class InteractiveTaskCard extends ConsumerWidget {
                       children: [
                         Text(
                           task.title,
-                          style: context.sparkleTypography.bodyMedium.copyWith(
+                          style: context.typo.bodyMedium.copyWith(
                             fontWeight: DS.fontWeightMedium,
                             color: DS.textPrimary,
                           ),
@@ -77,7 +78,7 @@ class InteractiveTaskCard extends ConsumerWidget {
                               const SizedBox(width: DS.spacing6),
                               Text(
                                 '${task.estimatedMinutes}m',
-                                style: context.sparkleTypography.labelSmall
+                                style: context.typo.labelSmall
                                     .copyWith(
                                   color: DS.textSecondary,
                                 ),
@@ -158,7 +159,7 @@ class InteractiveTaskCard extends ConsumerWidget {
                 _buildPriorityChip(context, task.priority),
                 Text(
                   context.l10n.taskEstimatedMinutes(task.estimatedMinutes),
-                  style: context.sparkleTypography.labelSmall.copyWith(
+                  style: context.typo.labelSmall.copyWith(
                     color: DS.textSecondary,
                   ),
                 ),
@@ -176,7 +177,7 @@ class InteractiveTaskCard extends ConsumerWidget {
                       (tag) => Chip(
                         label: Text(
                           tag,
-                          style: context.sparkleTypography.labelSmall.copyWith(
+                          style: context.typo.labelSmall.copyWith(
                             fontSize: 10,
                           ),
                         ),
@@ -459,7 +460,7 @@ class _ActionButton extends StatelessWidget {
               const SizedBox(width: DS.spacing4),
               Text(
                 label,
-                style: context.sparkleTypography.labelSmall.copyWith(
+                style: context.typo.labelSmall.copyWith(
                   color: color,
                   fontWeight: DS.fontWeightMedium,
                 ),

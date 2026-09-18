@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/task_board/interactive_task_card.dart';
@@ -86,7 +87,7 @@ class PriorityView extends ConsumerWidget {
           const SizedBox(height: DS.spacing12),
           Text(
             context.l10n.taskNoTasks,
-            style: context.sparkleTypography.bodyMedium.copyWith(
+            style: context.typo.bodyMedium.copyWith(
               color: DS.textSecondary,
             ),
           ),
@@ -126,7 +127,7 @@ class _PrioritySection extends StatelessWidget {
               const SizedBox(width: DS.spacing8),
               Text(
                 '$title (${tasks.length})',
-                style: context.sparkleTypography.labelLarge.copyWith(
+                style: context.typo.labelLarge.copyWith(
                   color: color,
                   fontWeight: DS.fontWeightSemibold,
                 ),

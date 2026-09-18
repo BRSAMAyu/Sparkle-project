@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 
@@ -210,7 +211,7 @@ class EmptyState extends StatelessWidget {
                   if (showIcon) const SizedBox(height: DS.spacing24),
                   Text(
                     title ?? _getDefaultTitle(context),
-                    style: context.sparkleTypography.titleLarge.copyWith(
+                    style: context.typo.titleLarge.copyWith(
                       color: context.colors.textPrimary,
                     ),
                     textAlign: TextAlign.center,
@@ -218,7 +219,7 @@ class EmptyState extends StatelessWidget {
                   const SizedBox(height: DS.spacing12),
                   Text(
                     description ?? _getDefaultDescription(context),
-                    style: context.sparkleTypography.bodyMedium.copyWith(
+                    style: context.typo.bodyMedium.copyWith(
                       color: context.colors.textSecondary,
                     ),
                     maxLines: 2,
@@ -291,7 +292,7 @@ class CompactEmptyState extends StatelessWidget {
               ],
               Text(
                 message,
-                style: context.sparkleTypography.bodyMedium.copyWith(
+                style: context.typo.bodyMedium.copyWith(
                   color: context.colors.textSecondary,
                 ),
                 maxLines: 2,

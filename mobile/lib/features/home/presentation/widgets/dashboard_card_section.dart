@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/streak_indicator.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_card_config_provider.dart';
@@ -177,7 +178,7 @@ class _DashboardStreakCard extends StatelessWidget {
                 const SizedBox(width: DS.spacing8),
                 Text(
                   l10n.winStreak,
-                  style: context.sparkleTypography.labelLarge.copyWith(
+                  style: context.typo.labelLarge.copyWith(
                     fontWeight: DS.fontWeightBold,
                   ),
                 ),
@@ -194,7 +195,7 @@ class _DashboardStreakCard extends StatelessWidget {
             const Spacer(),
             Text(
               l10n.achievementViewStreakStatus,
-              style: context.sparkleTypography.labelSmall.copyWith(
+              style: context.typo.labelSmall.copyWith(
                 color: DS.textSecondary,
               ),
               maxLines: 2,
@@ -221,7 +222,7 @@ class _EmptyDashboardCardSection extends StatelessWidget {
         ),
         child: Text(
           AppLocalizations.of(context)!.dashboardEmptyHint,
-          style: context.sparkleTypography.bodyMedium.copyWith(
+          style: context.typo.bodyMedium.copyWith(
             color: DS.textSecondary,
           ),
         ),

@@ -3,7 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sparkle/app/theme.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/models/skill_models.dart';
 import 'package:sparkle/core/services/skill_api_service.dart';
 import 'package:sparkle/features/user/user_routes.dart';

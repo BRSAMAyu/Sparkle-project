@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 
 /// Capsule indicator for AI status.
 class AiStatusCapsule extends StatelessWidget {
@@ -21,7 +22,7 @@ class AiStatusCapsule extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final baseColor = color ?? context.sparkleColors.brandPrimary;
+    final baseColor = color ?? context.colors.brandPrimary;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final background = isDark
         ? Color.alphaBlend(

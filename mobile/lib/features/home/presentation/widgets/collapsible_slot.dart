@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -169,7 +170,7 @@ class _CollapsedHeader extends StatelessWidget {
                       title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: context.sparkleTypography.labelLarge.copyWith(
+                      style: context.typo.labelLarge.copyWith(
                         fontWeight: DS.fontWeightSemiBold,
                         color: DS.textPrimary,
                       ),
@@ -180,7 +181,7 @@ class _CollapsedHeader extends StatelessWidget {
                         summary!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: context.sparkleTypography.bodySmall.copyWith(
+                        style: context.typo.bodySmall.copyWith(
                           color: DS.textTertiary,
                         ),
                       ),
@@ -263,7 +264,7 @@ class _ExpandedSurface extends StatelessWidget {
                           title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: context.sparkleTypography.labelSmall.copyWith(
+                          style: context.typo.labelSmall.copyWith(
                             fontWeight: DS.fontWeightSemiBold,
                             color: DS.textSecondary,
                           ),

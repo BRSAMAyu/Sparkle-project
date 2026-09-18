@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 
@@ -50,7 +51,7 @@ class SprintCard extends ConsumerWidget {
         // Header
         Text(
           zh ? '冲刺' : 'Sprint',
-          style: context.sparkleTypography.labelSmall.copyWith(
+          style: context.typo.labelSmall.copyWith(
             color: DS.textSecondary,
             fontWeight: DS.fontWeightMedium,
           ),
@@ -96,7 +97,7 @@ class SprintCard extends ConsumerWidget {
                         Text(
                           '$daysLeft',
                           style:
-                              context.sparkleTypography.headingMedium.copyWith(
+                              context.typo.headingMedium.copyWith(
                             fontSize: ringSize * 0.3,
                             fontWeight: DS.fontWeightBold,
                             color: isUrgent ? DS.error : DS.brandPrimary,
@@ -105,7 +106,7 @@ class SprintCard extends ConsumerWidget {
                         ),
                         Text(
                           zh ? '天' : 'd',
-                          style: context.sparkleTypography.labelSmall.copyWith(
+                          style: context.typo.labelSmall.copyWith(
                             fontSize: ringSize * 0.17,
                             color: DS.textSecondary,
                           ),
@@ -126,7 +127,7 @@ class SprintCard extends ConsumerWidget {
           index: 0,
           child: Text(
             sprint.name,
-            style: context.sparkleTypography.labelSmall.copyWith(
+            style: context.typo.labelSmall.copyWith(
               fontWeight: DS.fontWeightSemibold,
               color: DS.textPrimary,
             ),
@@ -136,7 +137,7 @@ class SprintCard extends ConsumerWidget {
           index: 1,
           child: Text(
             '${(progress * 100).toInt()}${zh ? '% 完成' : '% done'}',
-            style: context.sparkleTypography.labelSmall.copyWith(
+            style: context.typo.labelSmall.copyWith(
               fontSize: 10,
               color: DS.textSecondary,
             ),
@@ -167,7 +168,7 @@ class SprintCard extends ConsumerWidget {
           const Expanded(child: SizedBox()),
           Text(
             zh ? '无冲刺计划' : 'No Sprint',
-            style: context.sparkleTypography.labelSmall.copyWith(
+            style: context.typo.labelSmall.copyWith(
               fontSize: 13,
               fontWeight: DS.fontWeightSemibold,
               color: DS.textPrimary,

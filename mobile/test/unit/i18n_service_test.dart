@@ -23,9 +23,9 @@ void main() {
     expect(locale.languageCode, 'zh');
   });
 
-  test('resolveSupportedLocale falls back to en for unsupported locale', () {
+  test('resolveSupportedLocale falls back to zh (Chinese-first default)', () {
     final locale = I18nService.resolveSupportedLocale(const Locale('xx'));
-    expect(locale.languageCode, 'en');
+    expect(locale.languageCode, 'zh');
   });
 
   test('isChinese returns true after updating to zh locale', () {

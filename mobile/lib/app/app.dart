@@ -93,6 +93,18 @@ class _SparkleAppState extends ConsumerState<SparkleApp> {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
+      // Chinese-first resolution (batch3 W-7): any unmatched locale —
+      // including the basicLocaleListResolution tie-break path — lands on zh.
+      localeResolutionCallback: (locale, supportedLocales) {
+        if (locale != null) {
+          for (final supported in supportedLocales) {
+            if (supported.languageCode == locale.languageCode) {
+              return supported;
+            }
+          }
+        }
+        return const Locale('zh');
+      },
       builder: (context, child) {
         final mediaQuery = MediaQuery.of(context);
         final accessibility = ref.watch(accessibilitySettingsProvider);

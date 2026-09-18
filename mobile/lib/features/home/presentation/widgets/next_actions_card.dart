@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -171,7 +172,7 @@ class _CompactNextActions extends StatelessWidget {
                       context.l10n.homeNextActionTitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: context.sparkleTypography.labelLarge.copyWith(
+                      style: context.typo.labelLarge.copyWith(
                         fontWeight: DS.fontWeightBold,
                       ),
                     ),
@@ -183,7 +184,7 @@ class _CompactNextActions extends StatelessWidget {
                               : context.l10n.homeNextActionPrioritize(actions.length),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: context.sparkleTypography.labelSmall.copyWith(
+                      style: context.typo.labelSmall.copyWith(
                         color: DS.textSecondary,
                       ),
                     ),
@@ -203,7 +204,7 @@ class _CompactNextActions extends StatelessWidget {
                   ),
                   child: Text(
                     context.l10n.homeNextActionCount(actions.length),
-                    style: context.sparkleTypography.labelSmall.copyWith(
+                    style: context.typo.labelSmall.copyWith(
                       color: DS.textSecondary,
                       fontWeight: DS.fontWeightBold,
                     ),
@@ -221,7 +222,7 @@ class _CompactNextActions extends StatelessWidget {
                     maxLines: 2,
                     textAlign: TextAlign.center,
                     overflow: TextOverflow.ellipsis,
-                    style: context.sparkleTypography.labelLarge.copyWith(
+                    style: context.typo.labelLarge.copyWith(
                       color: DS.textSecondary,
                     ),
                   ),
@@ -232,7 +233,7 @@ class _CompactNextActions extends StatelessWidget {
                 context.l10n.homeNextActionNoPendingToday,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: context.sparkleTypography.labelLarge.copyWith(
+                style: context.typo.labelLarge.copyWith(
                   color: DS.textSecondary,
                 ),
               )
@@ -318,7 +319,7 @@ class _EmbeddedActionBody extends StatelessWidget {
                 context.l10n.homeNextActionSeeMore(allActionCount - actions.length),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: context.sparkleTypography.labelSmall.copyWith(
+                style: context.typo.labelSmall.copyWith(
                   color: DS.textSecondary,
                 ),
               ),
@@ -373,7 +374,7 @@ class _FlowActionBody extends StatelessWidget {
                     allActionCount > actions.length
                         ? context.l10n.homeNextActionViewAll
                         : context.l10n.homeNextActionTaskOverview,
-                    style: context.sparkleTypography.labelLarge.copyWith(
+                    style: context.typo.labelLarge.copyWith(
                       color: DS.brandPrimary,
                       fontWeight: DS.fontWeightBold,
                     ),
@@ -435,7 +436,7 @@ class _CompactNextActionRow extends ConsumerWidget {
                     )
                   : Text(
                       context.l10n.homeNextActionStart,
-                      style: context.sparkleTypography.labelSmall.copyWith(
+                      style: context.typo.labelSmall.copyWith(
                         color: DS.brandPrimary,
                         fontWeight: DS.fontWeightBold,
                       ),
@@ -468,7 +469,7 @@ class _CompactNextActionRow extends ConsumerWidget {
                         task.title,
                         maxLines: embedded ? 2 : (dense ? 1 : 2),
                         overflow: TextOverflow.ellipsis,
-                        style: context.sparkleTypography.labelLarge.copyWith(
+                        style: context.typo.labelLarge.copyWith(
                           color: DS.textPrimary,
                           fontSize: dense ? 12 : null,
                           fontWeight: DS.fontWeightSemiBold,
@@ -479,7 +480,7 @@ class _CompactNextActionRow extends ConsumerWidget {
                         context.l10n.homeNextActionMinLabel(task.estimatedMinutes, _taskLabel(task.type)),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: context.sparkleTypography.labelSmall.copyWith(
+                        style: context.typo.labelSmall.copyWith(
                           color: DS.textSecondary,
                         ),
                       ),

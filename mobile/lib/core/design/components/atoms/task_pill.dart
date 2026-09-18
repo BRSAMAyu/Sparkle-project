@@ -73,7 +73,7 @@ class TaskPill extends StatelessWidget {
       // Explicit extension application: design_system.dart's SparkleContext
       // also exposes `colors` (entry unification lands in batch 3).
       final taskColor =
-          SparkleContextExtension(context).colors.taskColorFor(type);
+          context.colors.taskColorFor(type);
       background = taskColor.withValues(alpha: 0.1);
       border = taskColor.withValues(alpha: 0.3);
       textColor = taskColor;

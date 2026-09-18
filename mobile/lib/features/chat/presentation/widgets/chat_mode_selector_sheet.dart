@@ -219,7 +219,9 @@ class _TeamEntryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = context.colorExtensions.chatModeIndigo;
+    // chatModeIndigo folded into the intent categorical palette (same
+    // 0xFF5C6BC0 value: SemanticColors.chatModeIndigo == intentIndigo).
+    final color = getIntentColor('chat');
     return Semantics(
       button: true,
       label: 'Chat chat mode selector sheet control 2',

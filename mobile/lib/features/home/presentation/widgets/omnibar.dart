@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/app_permission_dialog.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
@@ -255,7 +256,7 @@ class _OmniBarState extends ConsumerState<OmniBar>
             final material = AppMaterials.neoGlass(context).copyWith(
               // Higher opacity for floating dock
               backgroundColor:
-                  context.sparkleColors.surfacePrimary.withValues(alpha: 0.1),
+                  context.colors.surfacePrimary.withValues(alpha: 0.1),
               // Dynamic border based on glow
               borderColor: glowColor.withValues(alpha: 0.3 + glowValue * 0.4),
               borderWidth: 1.5,
@@ -266,7 +267,7 @@ class _OmniBarState extends ConsumerState<OmniBar>
                   blurRadius: glowBlur,
                   spreadRadius: glowSpread,
                 ),
-                ...context.sparkleShadows.medium,
+                ...DS.shadowMd,
               ],
             );
 
@@ -292,14 +293,14 @@ class _OmniBarState extends ConsumerState<OmniBar>
                   onSubmitted:
                       enterToSend ? (_) => _submitIfNotComposing() : null,
                   keyboardType: TextInputType.text,
-                  style: context.sparkleTypography.bodyLarge.copyWith(
+                  style: context.typo.bodyLarge.copyWith(
                     color: DS.textPrimary,
                   ),
                   decoration: InputDecoration(
                     hintText: _isListening
                         ? l10n.omnibarListeningHint
                         : (widget.hintText ?? l10n.omnibarDefaultHint),
-                    hintStyle: context.sparkleTypography.bodyLarge.copyWith(
+                    hintStyle: context.typo.bodyLarge.copyWith(
                       color: _isListening
                           ? accentColor
                           : DS.textSecondary.withValues(alpha: 0.5),

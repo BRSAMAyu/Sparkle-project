@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/compact_error_card.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/features/aurora/data/models/aurora_calibration_card.dart';

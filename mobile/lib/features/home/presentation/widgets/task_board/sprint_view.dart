@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
@@ -53,7 +54,7 @@ class SprintView extends ConsumerWidget {
             const SizedBox(height: DS.spacing12),
             Text(
               context.l10n.homeSprintNoActive,
-              style: context.sparkleTypography.bodyMedium.copyWith(
+              style: context.typo.bodyMedium.copyWith(
                 color: DS.textSecondary,
               ),
             ),
@@ -123,7 +124,7 @@ class SprintView extends ConsumerWidget {
             const SizedBox(height: DS.spacing12),
             Text(
               context.l10n.homeSprintNoPendingTasks(sprint.name),
-              style: context.sparkleTypography.bodyMedium.copyWith(
+              style: context.typo.bodyMedium.copyWith(
                 color: DS.textSecondary,
               ),
             ),
@@ -172,7 +173,7 @@ class _SprintHeader extends ConsumerWidget {
                 children: [
                   Text(
                     sprint.name,
-                    style: context.sparkleTypography.labelLarge.copyWith(
+                    style: context.typo.labelLarge.copyWith(
                       color: DS.textPrimary,
                       fontWeight: DS.fontWeightSemibold,
                     ),
@@ -180,7 +181,7 @@ class _SprintHeader extends ConsumerWidget {
                   const SizedBox(height: DS.spacing4),
                   Text(
                     context.l10n.homeSprintTasksRemaining(taskCount, sprint.daysLeft),
-                    style: context.sparkleTypography.labelSmall.copyWith(
+                    style: context.typo.labelSmall.copyWith(
                       color: DS.textSecondary,
                     ),
                   ),
@@ -275,7 +276,7 @@ class _SprintHeader extends ConsumerWidget {
                   ),
                   Text(
                     '${(sprint.progress * 100).toInt()}%',
-                    style: context.sparkleTypography.labelSmall.copyWith(
+                    style: context.typo.labelSmall.copyWith(
                       color: DS.textPrimary,
                       fontWeight: DS.fontWeightSemibold,
                       fontSize: 9,
@@ -377,7 +378,7 @@ class _SprintFilterChips extends ConsumerWidget {
               children: [
                 Text(
                   filterLabels[filter] ?? '',
-                  style: context.sparkleTypography.labelSmall.copyWith(
+                  style: context.typo.labelSmall.copyWith(
                     color: isSelected ? DS.onBrandPrimary : DS.textSecondary,
                     fontWeight:
                         isSelected ? DS.fontWeightSemibold : FontWeight.normal,
@@ -398,7 +399,7 @@ class _SprintFilterChips extends ConsumerWidget {
                     ),
                     child: Text(
                       count.toString(),
-                      style: context.sparkleTypography.labelSmall.copyWith(
+                      style: context.typo.labelSmall.copyWith(
                         color:
                             isSelected ? DS.onBrandPrimary : DS.textSecondary,
                         fontSize: 10,

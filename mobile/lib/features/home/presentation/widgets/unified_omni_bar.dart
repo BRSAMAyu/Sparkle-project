@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/app_permission_dialog.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -149,7 +150,7 @@ class _UnifiedOmniBarState extends ConsumerState<UnifiedOmniBar>
                   ? (_intentType == null ? 0 : 1)
                   : _glowAnimation.value;
               final material = AppMaterials.neoGlass(context).copyWith(
-                backgroundColor: context.sparkleColors.surfacePrimary
+                backgroundColor: context.colors.surfacePrimary
                     .withValues(alpha: 0.14),
                 borderColor: glowColor.withValues(alpha: 0.3 + glowValue * 0.4),
                 borderWidth: 1.5,
@@ -159,7 +160,7 @@ class _UnifiedOmniBarState extends ConsumerState<UnifiedOmniBar>
                     blurRadius: isNarrow ? 8 : 12,
                     spreadRadius: isNarrow ? 1 : 2,
                   ),
-                  ...context.sparkleShadows.medium,
+                  ...DS.shadowMd,
                 ],
               );
 
@@ -344,14 +345,14 @@ class _UnifiedOmniBarState extends ConsumerState<UnifiedOmniBar>
                 onSubmitted:
                     enterToSend ? (_) => _submitIfNotComposing() : null,
                 keyboardType: TextInputType.text,
-                style: context.sparkleTypography.bodyLarge.copyWith(
+                style: context.typo.bodyLarge.copyWith(
                   color: DS.textPrimary,
                 ),
                 decoration: InputDecoration(
                   hintText: _isListening
                       ? context.l10n.omnibarListeningHint
                       : (widget.hintText ?? context.l10n.omnibarDefaultHint),
-                  hintStyle: context.sparkleTypography.bodyLarge.copyWith(
+                  hintStyle: context.typo.bodyLarge.copyWith(
                     color: _isListening
                         ? accentColor
                         : DS.textSecondary.withValues(alpha: 0.5),
@@ -730,7 +731,7 @@ class _IntentChip extends StatelessWidget {
               const SizedBox(width: DS.spacing6),
               Text(
                 prediction.label,
-                style: context.sparkleTypography.labelSmall.copyWith(
+                style: context.typo.labelSmall.copyWith(
                   color: prediction.color ?? DS.brandPrimary,
                   fontWeight: DS.fontWeightMedium,
                 ),

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
@@ -79,7 +80,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
                 Expanded(
                   child: Text(
                     context.l10n.focusCore,
-                    style: context.sparkleTypography.labelSmall.copyWith(
+                    style: context.typo.labelSmall.copyWith(
                       color: DS.textSecondary,
                       fontWeight: DS.fontWeightSemibold,
                     ),
@@ -97,7 +98,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
                   ),
                   child: Text(
                     'Lv.$flameLevel',
-                    style: context.sparkleTypography.labelSmall.copyWith(
+                    style: context.typo.labelSmall.copyWith(
                       fontWeight: DS.fontWeightBold,
                       fontSize: 10,
                       color: DS.textPrimary,
@@ -152,7 +153,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
                             child: Text(
                               nudgeMessage,
                               style:
-                                  context.sparkleTypography.bodyMedium.copyWith(
+                                  context.typo.bodyMedium.copyWith(
                                 fontSize: DS.fontSizeXs,
                                 height: 1.4,
                                 color: DS.textSecondary,
@@ -171,7 +172,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
                           Text(
                             _formatFocusTime(todayMinutes),
                             style:
-                                context.sparkleTypography.titleLarge.copyWith(
+                                context.typo.titleLarge.copyWith(
                               fontSize: 14,
                               fontWeight: DS.fontWeightBold,
                               color: DS.textPrimary,
@@ -187,7 +188,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
                           Text(
                             context.l10n.focusTasksDone(tasksCompleted),
                             style:
-                                context.sparkleTypography.labelSmall.copyWith(
+                                context.typo.labelSmall.copyWith(
                               fontSize: 10,
                               color: DS.textSecondary,
                             ),

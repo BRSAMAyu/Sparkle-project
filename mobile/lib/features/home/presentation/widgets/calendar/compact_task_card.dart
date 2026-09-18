@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/task/task.dart';
@@ -43,7 +44,7 @@ class CompactTaskCard extends ConsumerWidget {
                     children: [
                       Text(
                         task.title,
-                        style: context.sparkleTypography.bodyMedium.copyWith(
+                        style: context.typo.bodyMedium.copyWith(
                           fontWeight: DS.fontWeightMedium,
                           color: DS.textPrimary,
                         ),
@@ -58,7 +59,7 @@ class CompactTaskCard extends ConsumerWidget {
                           Text(
                             '${task.estimatedMinutes}m',
                             style:
-                                context.sparkleTypography.labelSmall.copyWith(
+                                context.typo.labelSmall.copyWith(
                               color: DS.textSecondary,
                             ),
                           ),

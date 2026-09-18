@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/core/network/dio_provider.dart';
@@ -172,7 +173,7 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
               const SizedBox(height: 14),
               Text(
                 forecast.title,
-                style: context.sparkleTypography.titleLarge.copyWith(
+                style: context.typo.titleLarge.copyWith(
                   fontWeight: DS.fontWeightBold,
                   height: 1.15,
                 ),
@@ -180,7 +181,7 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
               const SizedBox(height: DS.spacing8),
               Text(
                 forecast.summary,
-                style: context.sparkleTypography.bodyMedium.copyWith(
+                style: context.typo.bodyMedium.copyWith(
                   color: DS.textSecondary,
                   height: 1.5,
                 ),
@@ -203,7 +204,7 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
                   children: [
                     Text(
                       l10n.predictedIntentSuggestedCont,
-                      style: context.sparkleTypography.labelSmall.copyWith(
+                      style: context.typo.labelSmall.copyWith(
                         color: DS.textTertiary,
                         fontWeight: DS.fontWeightBold,
                       ),
@@ -215,7 +216,7 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
                           : promptPreview,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: context.sparkleTypography.bodyMedium.copyWith(
+                      style: context.typo.bodyMedium.copyWith(
                         color: DS.textPrimary,
                         height: 1.45,
                       ),
@@ -250,7 +251,7 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
                     isChinese
                         ? '可信度 $confidencePercent%'
                         : 'Confidence $confidencePercent%',
-                    style: context.sparkleTypography.labelSmall.copyWith(
+                    style: context.typo.labelSmall.copyWith(
                       color: DS.textSecondary,
                       fontWeight: DS.fontWeightBold,
                     ),
@@ -289,7 +290,7 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
                     children: [
                       Text(
                         l10n.predictedIntentWhy,
-                        style: context.sparkleTypography.labelSmall.copyWith(
+                        style: context.typo.labelSmall.copyWith(
                           color: DS.textTertiary,
                           fontWeight: DS.fontWeightBold,
                         ),
@@ -316,8 +317,7 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
                                   Expanded(
                                     child: Text(
                                       line,
-                                      style: context
-                                          .sparkleTypography.bodyMedium
+                                      style: context.typo.bodyMedium
                                           .copyWith(
                                         color: DS.textSecondary,
                                         height: 1.45,
@@ -580,7 +580,7 @@ class _WithinCategoryPreferencePanel extends StatelessWidget {
         children: [
           Text(
             context.l10n.intentRecentCategorySignal,
-            style: context.sparkleTypography.labelSmall.copyWith(
+            style: context.typo.labelSmall.copyWith(
               color: DS.textTertiary,
               fontWeight: DS.fontWeightBold,
             ),
@@ -588,7 +588,7 @@ class _WithinCategoryPreferencePanel extends StatelessWidget {
           const SizedBox(height: DS.spacing6),
           Text(
             _hintText(),
-            style: context.sparkleTypography.bodyMedium.copyWith(
+            style: context.typo.bodyMedium.copyWith(
               color: DS.textPrimary,
               height: 1.45,
             ),
@@ -596,7 +596,7 @@ class _WithinCategoryPreferencePanel extends StatelessWidget {
           const SizedBox(height: DS.spacing8),
           Text(
             _caveatText(),
-            style: context.sparkleTypography.bodySmall.copyWith(
+            style: context.typo.bodySmall.copyWith(
               color: DS.textSecondary,
               height: 1.45,
             ),
@@ -783,7 +783,7 @@ class _Chip extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: context.sparkleTypography.labelSmall.copyWith(
+          style: context.typo.labelSmall.copyWith(
             color: subdued ? DS.textSecondary : DS.info,
             fontWeight: DS.fontWeightBold,
           ),

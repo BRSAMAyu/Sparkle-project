@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_motion.dart';
@@ -226,8 +227,8 @@ class _MetricCell extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: (compact
-                                ? context.sparkleTypography.bodyLarge
-                                : context.sparkleTypography.titleLarge)
+                                ? context.typo.bodyLarge
+                                : context.typo.titleLarge)
                             .copyWith(
                           color: DS.textPrimary,
                           fontWeight: DS.fontWeightBold,
@@ -240,7 +241,7 @@ class _MetricCell extends StatelessWidget {
                       label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: context.sparkleTypography.labelSmall.copyWith(
+                      style: context.typo.labelSmall.copyWith(
                         color: DS.textSecondary,
                       ),
                     ),

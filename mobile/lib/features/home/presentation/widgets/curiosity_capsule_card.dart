@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -35,12 +36,12 @@ class CuriosityCapsuleCard extends ConsumerWidget {
       material = material.copyWith(
         // Stronger rim light
         rimLightColor:
-            context.sparkleColors.brandPrimary.withValues(alpha: 0.8),
+            context.colors.brandPrimary.withValues(alpha: 0.8),
         // Active glow
-        glowColor: context.sparkleColors.brandPrimary.withValues(alpha: 0.15),
+        glowColor: context.colors.brandPrimary.withValues(alpha: 0.15),
         // Border
         borderWidth: 1.5,
-        borderColor: context.sparkleColors.brandPrimary.withValues(alpha: 0.5),
+        borderColor: context.colors.brandPrimary.withValues(alpha: 0.5),
       );
     }
 
@@ -74,7 +75,7 @@ class CuriosityCapsuleCard extends ConsumerWidget {
                 decoration: BoxDecoration(
                   gradient: DS.secondaryGradient,
                   shape: BoxShape.circle,
-                  boxShadow: context.sparkleShadows.small,
+                  boxShadow: DS.shadowSm,
                 ),
                 child: Icon(
                   Icons.lightbulb_outline,
@@ -87,7 +88,7 @@ class CuriosityCapsuleCard extends ConsumerWidget {
             // Title
             title: Text(
               capsule.title,
-              style: context.sparkleTypography.headingMedium.copyWith(
+              style: context.typo.headingMedium.copyWith(
                 fontSize: 18,
               ),
             ),
@@ -96,11 +97,11 @@ class CuriosityCapsuleCard extends ConsumerWidget {
             subtitle: capsule.isRead
                 ? null
                 : SparkleAttentionPulse(
-                    glowColor: context.sparkleColors.brandPrimary,
+                    glowColor: context.colors.brandPrimary,
                     child: Text(
                       context.l10n.capsuleNewDiscovery,
-                      style: context.sparkleTypography.labelSmall.copyWith(
-                        color: context.sparkleColors.brandPrimary,
+                      style: context.typo.labelSmall.copyWith(
+                        color: context.colors.brandPrimary,
                         fontWeight: DS.fontWeightBold,
                       ),
                     ),
@@ -149,9 +150,9 @@ class CuriosityCapsuleCard extends ConsumerWidget {
                       Chip(
                         label: Text(
                           capsule.relatedSubject!,
-                          style: context.sparkleTypography.labelSmall,
+                          style: context.typo.labelSmall,
                         ),
-                        backgroundColor: context.sparkleColors.surfaceTertiary
+                        backgroundColor: context.colors.surfaceTertiary
                             .withValues(alpha: 0.5),
                         side: BorderSide.none,
                         padding: EdgeInsets.zero,

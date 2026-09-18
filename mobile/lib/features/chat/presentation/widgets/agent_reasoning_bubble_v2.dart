@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -180,7 +181,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
         onTap: _toggleExpand,
         borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: EdgeInsets.all(context.sparkleSpacing.md),
+          padding: EdgeInsets.all(context.space.md),
           child: Row(
             children: [
               // Animated Agent Icon
@@ -221,7 +222,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                 ),
               ),
 
-              SizedBox(width: context.sparkleSpacing.md),
+              SizedBox(width: context.space.md),
 
               // Status Text
               Expanded(
@@ -230,7 +231,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                   children: [
                     Text(
                       _getStatusText(activeStep, isCompleted),
-                      style: context.sparkleTypography.bodyMedium.copyWith(
+                      style: context.typo.bodyMedium.copyWith(
                         fontWeight: DS.fontWeightSemibold,
                         color:
                             _getStatusColor(activeStep, isCompleted, context),
@@ -241,7 +242,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                         context.l10n.chatDurationLabel(
                           (widget.totalDurationMs! / 1000).toStringAsFixed(1),
                         ),
-                        style: context.sparkleTypography.labelSmall.copyWith(
+                        style: context.typo.labelSmall.copyWith(
                           color: DS.textSecondary,
                         ),
                       ),
@@ -323,7 +324,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
 
   Widget _buildStepStream(BuildContext context) => Container(
         margin: const EdgeInsets.fromLTRB(DS.md, 0, DS.md, DS.md),
-        padding: EdgeInsets.all(context.sparkleSpacing.md),
+        padding: EdgeInsets.all(context.space.md),
         decoration: BoxDecoration(
           color: DS.surfacePrimary,
           borderRadius: BorderRadius.circular(12),
@@ -345,7 +346,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                 const SizedBox(width: 6),
                 Text(
                   context.l10n.chatReasoningProcess,
-                  style: context.sparkleTypography.labelLarge.copyWith(
+                  style: context.typo.labelLarge.copyWith(
                     color: DS.brandPrimary,
                     fontWeight: DS.fontWeightSemibold,
                   ),
@@ -353,14 +354,14 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                 const Spacer(),
                 Text(
                   context.l10n.chatReasoningStepsCount(widget.steps.length),
-                  style: context.sparkleTypography.labelSmall.copyWith(
+                  style: context.typo.labelSmall.copyWith(
                     color: DS.textSecondary,
                   ),
                 ),
               ],
             ),
 
-            SizedBox(height: context.sparkleSpacing.md),
+            SizedBox(height: context.space.md),
 
             // Steps List
             ...widget.steps.asMap().entries.map((entry) {
@@ -393,7 +394,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                 child: _buildStepStatusIcon(context, step.status),
               ),
 
-              SizedBox(width: context.sparkleSpacing.sm),
+              SizedBox(width: context.space.sm),
 
               // Step Content
               Expanded(
@@ -403,7 +404,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                     // Description
                     Text(
                       step.description,
-                      style: context.sparkleTypography.labelSmall.copyWith(
+                      style: context.typo.labelSmall.copyWith(
                         fontWeight: DS.fontWeightMedium,
                         color: DS.textPrimary,
                       ),
@@ -413,7 +414,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                     if (step.toolOutput != null && step.toolOutput!.isNotEmpty)
                       Container(
                         margin: const EdgeInsets.only(top: 6),
-                        padding: EdgeInsets.all(context.sparkleSpacing.sm),
+                        padding: EdgeInsets.all(context.space.sm),
                         decoration: BoxDecoration(
                           color: DS.surfaceTertiary,
                           borderRadius: BorderRadius.circular(6),
@@ -494,7 +495,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                         margin: const EdgeInsets.only(top: 4),
                         child: Text(
                           '${step.durationMs}ms',
-                          style: context.sparkleTypography.labelSmall.copyWith(
+                          style: context.typo.labelSmall.copyWith(
                             color: DS.textSecondary,
                             fontSize: 10,
                           ),

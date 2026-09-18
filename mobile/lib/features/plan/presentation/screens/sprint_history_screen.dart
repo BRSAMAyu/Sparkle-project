@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/scroll_edge_haptics.dart';
@@ -111,14 +112,14 @@ class SprintHistoryScreen extends ConsumerWidget {
             const SizedBox(height: DS.spacing12),
             Text(
               l10n.loadingFailed(error),
-              style: context.sparkleTypography.bodyMedium.copyWith(
+              style: context.typo.bodyMedium.copyWith(
                 color: DS.textSecondary,
               ),
             ),
             const SizedBox(height: DS.spacing8),
             Text(
               error,
-              style: context.sparkleTypography.labelSmall.copyWith(
+              style: context.typo.labelSmall.copyWith(
                 color: DS.semanticError,
               ),
               textAlign: TextAlign.center,
@@ -164,7 +165,7 @@ class _SprintHistoryCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     item.name,
-                    style: context.sparkleTypography.labelLarge.copyWith(
+                    style: context.typo.labelLarge.copyWith(
                       fontWeight: DS.fontWeightSemibold,
                     ),
                   ),
@@ -188,7 +189,7 @@ class _SprintHistoryCard extends StatelessWidget {
                 const SizedBox(width: DS.spacing4),
                 Text(
                   '${dateFormat.format(item.startDate)} - ${item.endDate != null ? dateFormat.format(item.endDate!) : l10n.ongoing}',
-                  style: context.sparkleTypography.labelSmall.copyWith(
+                  style: context.typo.labelSmall.copyWith(
                     color: DS.textSecondary,
                   ),
                 ),
@@ -205,7 +206,7 @@ class _SprintHistoryCard extends StatelessWidget {
                     children: [
                       Text(
                         l10n.completionProgress,
-                        style: context.sparkleTypography.labelSmall.copyWith(
+                        style: context.typo.labelSmall.copyWith(
                           color: DS.textSecondary,
                         ),
                       ),
@@ -248,7 +249,7 @@ class _SprintHistoryCard extends StatelessWidget {
                   children: [
                     Text(
                       '${(item.finalProgress * 100).toInt()}%',
-                      style: context.sparkleTypography.labelLarge.copyWith(
+                      style: context.typo.labelLarge.copyWith(
                         fontWeight: DS.fontWeightBold,
                         color: _getProgressColor(item.finalProgress),
                       ),
@@ -258,7 +259,7 @@ class _SprintHistoryCard extends StatelessWidget {
                         item.completedTasks.toString(),
                         item.totalTasks.toString(),
                       ),
-                      style: context.sparkleTypography.labelSmall.copyWith(
+                      style: context.typo.labelSmall.copyWith(
                         color: DS.textSecondary,
                         fontSize: 10,
                       ),
@@ -331,7 +332,7 @@ class _StatusChip extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: context.sparkleTypography.labelSmall.copyWith(
+        style: context.typo.labelSmall.copyWith(
           color: color,
           fontWeight: DS.fontWeightMedium,
           fontSize: 10,

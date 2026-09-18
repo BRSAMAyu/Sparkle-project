@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/animation_lifecycle_mixin.dart';
 import 'package:sparkle/core/design/widgets/global_particle_counter.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';

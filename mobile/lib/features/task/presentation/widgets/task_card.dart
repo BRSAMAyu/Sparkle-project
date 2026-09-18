@@ -76,10 +76,10 @@ class _TaskCardState extends ConsumerState<TaskCard> {
       _sparkleTheme(context)?.colors.semanticSuccess ?? DS.success;
 
   LinearGradient _getTypeGradient(BuildContext context, TaskType type) =>
-      context.sparkleColors.getTaskGradient(type.name);
+      context.colors.getTaskGradient(type.name);
 
   LinearGradient _getBackgroundGradient(BuildContext context, TaskType type) {
-    final taskColor = context.sparkleColors.getTaskColor(type.name);
+    final taskColor = context.colors.getTaskColor(type.name);
     return LinearGradient(
       colors: [
         taskColor.withValues(alpha: 0.035),
@@ -240,7 +240,7 @@ class _TaskCardState extends ConsumerState<TaskCard> {
                     gradient: _getBackgroundGradient(context, widget.task.type),
                     borderRadius: _radius(context),
                     border: Border.all(
-                      color: context.sparkleColors
+                      color: context.colors
                           .getTaskColor(widget.task.type.name)
                           .withValues(alpha: 0.12),
                     ),
@@ -258,7 +258,7 @@ class _TaskCardState extends ConsumerState<TaskCard> {
                       colors: [
                         Colors.white.withValues(alpha: 0),
                         Colors.white.withValues(alpha: 0.05),
-                        context.sparkleColors.brandPrimary.withValues(alpha: 0),
+                        context.colors.brandPrimary.withValues(alpha: 0),
                       ],
                       stops: const [0.0, 0.5, 1.0],
                       begin: Alignment.topLeft,
@@ -415,9 +415,7 @@ class _TaskCardState extends ConsumerState<TaskCard> {
                                                                   .restart_alt_rounded
                                                               : Icons
                                                                   .play_arrow,
-                                                      color: context
-                                                          .sparkleColors
-                                                          .brandPrimary,
+                                                      color: context.colors.brandPrimary,
                                                       onPressed: widget.task
                                                                       .status ==
                                                                   TaskStatus
@@ -611,7 +609,7 @@ class _TaskCardState extends ConsumerState<TaskCard> {
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
                                 valueColor: AlwaysStoppedAnimation<Color>(
-                                  context.sparkleColors.brandPrimary,
+                                  context.colors.brandPrimary,
                                 ),
                               ),
                             ),
@@ -772,7 +770,7 @@ class _DifficultyStars extends StatelessWidget {
               shaderCallback: (bounds) => LinearGradient(
                 colors: [
                   DS.semanticWarning,
-                  SparkleContextExtension(context).colors.brandPrimary,
+                  context.colors.brandPrimary,
                 ],
               ).createShader(bounds),
               child: Icon(

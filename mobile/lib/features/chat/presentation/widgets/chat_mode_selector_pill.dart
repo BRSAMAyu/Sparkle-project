@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
@@ -185,8 +186,7 @@ class _SelectedPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final colors = context.colorExtensions;
-    final foregroundColor = colors.adaptiveTextPrimary;
+    final foregroundColor = context.colors.textPrimary;
     final chevronColor =
         isDark ? foregroundColor.withValues(alpha: 0.72) : DS.textSecondary;
     return Padding(

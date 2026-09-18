@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -92,7 +93,7 @@ class _IntentPredictionBarState extends ConsumerState<IntentPredictionBar> {
                     insight.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: context.sparkleTypography.labelSmall.copyWith(
+                    style: context.typo.labelSmall.copyWith(
                       color: DS.textSecondary,
                       fontWeight: DS.fontWeightBold,
                     ),
@@ -124,7 +125,7 @@ class _IntentPredictionBarState extends ConsumerState<IntentPredictionBar> {
               insight.summary,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: context.sparkleTypography.labelSmall.copyWith(
+              style: context.typo.labelSmall.copyWith(
                 color: DS.textTertiary,
               ),
             ),
@@ -173,7 +174,7 @@ class _IntentPredictionBarState extends ConsumerState<IntentPredictionBar> {
                   context.l10n.intentPredictionSuggested,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: context.sparkleTypography.labelSmall.copyWith(
+                  style: context.typo.labelSmall.copyWith(
                     color: DS.textPrimary,
                     fontWeight: DS.fontWeightBold,
                   ),
@@ -187,7 +188,7 @@ class _IntentPredictionBarState extends ConsumerState<IntentPredictionBar> {
               insight.title,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: context.sparkleTypography.bodyMedium.copyWith(
+              style: context.typo.bodyMedium.copyWith(
                 color: DS.textPrimary,
                 fontWeight: DS.fontWeightMedium,
                 height: 1.35,
@@ -218,7 +219,7 @@ class _IntentPredictionBarState extends ConsumerState<IntentPredictionBar> {
               insight.summary,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: context.sparkleTypography.labelSmall.copyWith(
+              style: context.typo.labelSmall.copyWith(
                 color: DS.textTertiary,
                 height: 1.35,
               ),
@@ -305,7 +306,7 @@ class _PredictionChip extends StatelessWidget {
                   prediction.label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: context.sparkleTypography.labelSmall.copyWith(
+                  style: context.typo.labelSmall.copyWith(
                     color: prediction.color ?? DS.brandPrimary,
                     fontWeight: DS.fontWeightMedium,
                   ),

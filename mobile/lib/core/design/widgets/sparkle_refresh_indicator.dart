@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 /// Branded pull-to-refresh indicator with light haptic feedback on trigger.
@@ -26,7 +27,7 @@ class SparkleRefreshIndicator extends StatelessWidget {
           await onRefresh();
         },
         color: DS.brandPrimary,
-        backgroundColor: context.colors.surfaceCard,
+        backgroundColor: context.colors.surfaceSecondary,
         strokeWidth: 2.5,
         displacement: 50,
         child: child,

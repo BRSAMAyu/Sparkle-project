@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_section.dart';
@@ -137,7 +138,7 @@ class _ExamSprintDashboardCardState extends State<ExamSprintDashboardCard> {
                       Text(
                         context.l10n.examHighYieldWeakSpots(
                             data.highYieldLowMasteryTopics.join(' · ')),
-                        style: context.sparkleTypography.bodySmall.copyWith(
+                        style: context.typo.bodySmall.copyWith(
                           color: DS.textSecondary,
                           height: 1.35,
                         ),
@@ -166,7 +167,7 @@ class _ExamSprintDashboardCardState extends State<ExamSprintDashboardCard> {
                     else
                       Text(
                         context.l10n.examNoSprintScheduled,
-                        style: context.sparkleTypography.bodySmall.copyWith(
+                        style: context.typo.bodySmall.copyWith(
                           color: DS.textSecondary,
                         ),
                       ),
@@ -273,7 +274,7 @@ class _DayZeroBannerState extends State<_DayZeroBanner>
           children: [
             Text(
               context.l10n.examDayReady,
-              style: context.sparkleTypography.headingLarge.copyWith(
+              style: context.typo.headingLarge.copyWith(
                 color: DS.textOnPrimary,
                 fontWeight: DS.fontWeightBold,
                 height: 1.2,
@@ -284,7 +285,7 @@ class _DayZeroBannerState extends State<_DayZeroBanner>
               const SizedBox(height: DS.spacing8),
               Text(
                 data.subject,
-                style: context.sparkleTypography.labelLarge.copyWith(
+                style: context.typo.labelLarge.copyWith(
                   color: DS.textOnPrimary.withValues(alpha: 0.75),
                   fontWeight: DS.fontWeightMedium,
                 ),
@@ -308,7 +309,7 @@ class _DayZeroBannerState extends State<_DayZeroBanner>
                   children: [
                     Text(
                       context.l10n.examTips,
-                      style: context.sparkleTypography.labelSmall.copyWith(
+                      style: context.typo.labelSmall.copyWith(
                         color: DS.textOnPrimary.withValues(alpha: 0.65),
                         fontWeight: DS.fontWeightBold,
                       ),
@@ -316,7 +317,7 @@ class _DayZeroBannerState extends State<_DayZeroBanner>
                     const SizedBox(height: DS.spacing6),
                     Text(
                       tipText,
-                      style: context.sparkleTypography.bodyMedium.copyWith(
+                      style: context.typo.bodyMedium.copyWith(
                         color: DS.textOnPrimary.withValues(alpha: 0.9),
                         height: 1.45,
                       ),
@@ -343,7 +344,7 @@ class _DayZeroBannerState extends State<_DayZeroBanner>
                 ),
                 child: Text(
                   context.l10n.examRecordResult,
-                  style: context.sparkleTypography.labelLarge.copyWith(
+                  style: context.typo.labelLarge.copyWith(
                     fontWeight: DS.fontWeightBold,
                   ),
                 ),
@@ -392,7 +393,7 @@ class _CardHeader extends StatelessWidget {
         Expanded(
           child: Text(
             title,
-            style: context.sparkleTypography.titleLarge.copyWith(
+            style: context.typo.titleLarge.copyWith(
               color: DS.textPrimary,
               fontWeight: DS.fontWeightBold,
             ),
@@ -431,7 +432,7 @@ class _HeadlineBlock extends StatelessWidget {
       children: [
         Text(
           countdown,
-          style: context.sparkleTypography.headingLarge.copyWith(
+          style: context.typo.headingLarge.copyWith(
             color: DS.textPrimary,
             fontWeight: DS.fontWeightBold,
             height: 1.06,
@@ -440,7 +441,7 @@ class _HeadlineBlock extends StatelessWidget {
         const SizedBox(height: DS.spacing10),
         Text(
           progress,
-          style: context.sparkleTypography.labelLarge.copyWith(
+          style: context.typo.labelLarge.copyWith(
             color: DS.textSecondary,
             fontWeight: DS.fontWeightMedium,
           ),
@@ -460,7 +461,7 @@ class _HeadlineBlock extends StatelessWidget {
           ),
           child: Text(
             '${data.planName}${data.subject.isNotEmpty ? ' · ${data.subject}' : ''}',
-            style: context.sparkleTypography.bodySmall.copyWith(
+            style: context.typo.bodySmall.copyWith(
               color: DS.textPrimary,
               height: 1.35,
             ),
@@ -546,7 +547,7 @@ class _PassProbabilityArcState extends State<_PassProbabilityArc>
                     child: isNull
                         ? Text(
                             '--',
-                            style: context.sparkleTypography.headingLarge
+                            style: context.typo.headingLarge
                                 .copyWith(
                               color: DS.textSecondary,
                               fontWeight: DS.fontWeightBold,
@@ -554,7 +555,7 @@ class _PassProbabilityArcState extends State<_PassProbabilityArc>
                           )
                         : Text(
                             _formatPercent(value),
-                            style: context.sparkleTypography.headingLarge
+                            style: context.typo.headingLarge
                                 .copyWith(
                               color: DS.textPrimary,
                               fontWeight: DS.fontWeightBold,
@@ -576,7 +577,7 @@ class _PassProbabilityArcState extends State<_PassProbabilityArc>
                   widget.data.daysLeft == 0
                       ? context.l10n.examDay
                       : context.l10n.examDaysLeft(widget.data.daysLeft),
-                  style: context.sparkleTypography.labelLarge.copyWith(
+                  style: context.typo.labelLarge.copyWith(
                     color: DS.textSecondary,
                     fontWeight: DS.fontWeightMedium,
                   ),
@@ -586,7 +587,7 @@ class _PassProbabilityArcState extends State<_PassProbabilityArc>
                   context.l10n.examTodayCompleted(
                       widget.data.todayProgress.completed,
                       widget.data.todayProgress.total),
-                  style: context.sparkleTypography.bodySmall.copyWith(
+                  style: context.typo.bodySmall.copyWith(
                     color: DS.textSecondary,
                   ),
                 ),
@@ -681,14 +682,14 @@ class _MetricPill extends StatelessWidget {
           children: [
             Text(
               label,
-              style: context.sparkleTypography.labelSmall.copyWith(
+              style: context.typo.labelSmall.copyWith(
                 color: DS.textSecondary,
               ),
             ),
             const SizedBox(height: DS.spacing6),
             Text(
               value,
-              style: context.sparkleTypography.titleLarge.copyWith(
+              style: context.typo.titleLarge.copyWith(
                 color: DS.textPrimary,
                 fontWeight: DS.fontWeightBold,
               ),
@@ -696,7 +697,7 @@ class _MetricPill extends StatelessWidget {
             const SizedBox(height: DS.spacing2),
             Text(
               detail,
-              style: context.sparkleTypography.bodySmall.copyWith(
+              style: context.typo.bodySmall.copyWith(
                 color: DS.textSecondary,
               ),
             ),
@@ -728,7 +729,7 @@ class _TaskSectionHeader extends StatelessWidget {
             title,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: context.sparkleTypography.titleLarge.copyWith(
+            style: context.typo.titleLarge.copyWith(
               color: DS.textPrimary,
               fontWeight: DS.fontWeightBold,
             ),
@@ -789,7 +790,7 @@ class _TaskGroupCard extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: context.sparkleTypography.labelLarge.copyWith(
+                style: context.typo.labelLarge.copyWith(
                   color: DS.textPrimary,
                   fontWeight: DS.fontWeightBold,
                 ),
@@ -798,7 +799,7 @@ class _TaskGroupCard extends StatelessWidget {
                 const SizedBox(width: DS.spacing8),
                 Text(
                   subtitle,
-                  style: context.sparkleTypography.bodySmall.copyWith(
+                  style: context.typo.bodySmall.copyWith(
                     color: DS.textSecondary,
                   ),
                 ),
@@ -806,7 +807,7 @@ class _TaskGroupCard extends StatelessWidget {
               const Spacer(),
               Text(
                 '${group.completedCount}/${group.totalCount}',
-                style: context.sparkleTypography.labelLarge.copyWith(
+                style: context.typo.labelLarge.copyWith(
                   color: accentColor,
                   fontWeight: DS.fontWeightBold,
                 ),
@@ -817,7 +818,7 @@ class _TaskGroupCard extends StatelessWidget {
           if (group.tasks.isEmpty)
             Text(
               context.l10n.examNoSprintTasks,
-              style: context.sparkleTypography.bodySmall.copyWith(
+              style: context.typo.bodySmall.copyWith(
                 color: DS.textSecondary,
               ),
             )
@@ -888,7 +889,7 @@ class _TaskRow extends StatelessWidget {
             children: [
               Text(
                 task.title,
-                style: context.sparkleTypography.bodyMedium.copyWith(
+                style: context.typo.bodyMedium.copyWith(
                   color: DS.textPrimary,
                   height: 1.3,
                   fontWeight: task.isCompleted
@@ -899,7 +900,7 @@ class _TaskRow extends StatelessWidget {
               const SizedBox(height: DS.spacing4),
               Text(
                 '${context.l10n.examTaskMinutes(task.estimatedMinutes)} · ${_statusLabel(task, l: context.l10n)}',
-                style: context.sparkleTypography.bodySmall.copyWith(
+                style: context.typo.bodySmall.copyWith(
                   color: DS.textSecondary,
                 ),
               ),
@@ -942,7 +943,7 @@ class _ModePill extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: context.sparkleTypography.labelSmall.copyWith(
+          style: context.typo.labelSmall.copyWith(
             color: accentColor,
             fontWeight: DS.fontWeightBold,
           ),

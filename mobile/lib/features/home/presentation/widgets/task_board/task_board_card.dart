@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_motion.dart';
@@ -191,7 +192,7 @@ class _TaskBoardCardState extends ConsumerState<TaskBoardCard> {
           children: [
             Text(
               _panelTitle(context, mode),
-              style: context.sparkleTypography.labelLarge.copyWith(
+              style: context.typo.labelLarge.copyWith(
                 color: DS.textSecondary,
                 fontWeight: DS.fontWeightSemibold,
               ),
@@ -366,7 +367,7 @@ class _CollapsedWorkspacePreview extends StatelessWidget {
                 children: [
                   Text(
                     context.l10n.taskBoardWorkspaceSummary,
-                    style: context.sparkleTypography.labelSmall.copyWith(
+                    style: context.typo.labelSmall.copyWith(
                       color: DS.textSecondary,
                       fontWeight: DS.fontWeightBold,
                     ),
@@ -374,7 +375,7 @@ class _CollapsedWorkspacePreview extends StatelessWidget {
                   const SizedBox(height: DS.spacing4),
                   Text(
                     summary,
-                    style: context.sparkleTypography.bodyMedium.copyWith(
+                    style: context.typo.bodyMedium.copyWith(
                       color: DS.textPrimary,
                     ),
                   ),
@@ -394,7 +395,7 @@ class _CollapsedWorkspacePreview extends StatelessWidget {
               ),
               child: Text(
                 _viewLabel(context, view),
-                style: context.sparkleTypography.labelSmall.copyWith(
+                style: context.typo.labelSmall.copyWith(
                   color: DS.textSecondary,
                   fontWeight: DS.fontWeightBold,
                 ),
@@ -452,7 +453,7 @@ class _PanelItem extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: context.sparkleTypography.labelLarge.copyWith(
+                style: context.typo.labelLarge.copyWith(
                   color: DS.textPrimary,
                   fontWeight: DS.fontWeightMedium,
                 ),
@@ -460,7 +461,7 @@ class _PanelItem extends StatelessWidget {
               const SizedBox(height: DS.spacing4),
               Text(
                 description,
-                style: context.sparkleTypography.labelSmall.copyWith(
+                style: context.typo.labelSmall.copyWith(
                   color: DS.textSecondary,
                 ),
               ),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/providers/theme_provider.dart';
 import '../../shared/i18n_test_helper.dart';
 
@@ -166,7 +167,7 @@ class _SystemThemeHarnessState extends ConsumerState<_SystemThemeHarness> {
         child: Builder(
           builder: (context) {
             final themeBrightness = Theme.of(context).brightness.name;
-            final tokenBrightness = context.sparkleColors.brightness.name;
+            final tokenBrightness = context.colors.brightness.name;
 
             return Column(
               children: [

@@ -8,7 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sparkle/app/theme.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';

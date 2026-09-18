@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -129,8 +130,7 @@ class _ModeChipState extends State<_ModeChip> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.colorExtensions;
-    final foregroundColor = colors.adaptiveTextPrimary;
+    final foregroundColor = context.colors.textPrimary;
     final l10n = I18nService.instance.l10n;
     return Semantics(
       button: true,

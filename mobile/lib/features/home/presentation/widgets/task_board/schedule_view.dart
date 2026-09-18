@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -42,14 +43,14 @@ class ScheduleView extends ConsumerWidget {
           const SizedBox(height: DS.spacing12),
           Text(
             context.l10n.taskNoTasks,
-            style: context.sparkleTypography.bodyMedium.copyWith(
+            style: context.typo.bodyMedium.copyWith(
               color: DS.textSecondary,
             ),
           ),
           const SizedBox(height: DS.spacing6),
           Text(
             context.l10n.taskOmniBarHint,
-            style: context.sparkleTypography.labelSmall.copyWith(
+            style: context.typo.labelSmall.copyWith(
               color: DS.textTertiary,
             ),
           ),
@@ -75,7 +76,7 @@ class _ScheduleGroup extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(DS.spacing4, DS.spacing4, DS.spacing12, DS.spacing8),
           child: Text(
             group.title,
-            style: context.sparkleTypography.labelLarge.copyWith(
+            style: context.typo.labelLarge.copyWith(
               color: DS.textSecondary,
               fontWeight: DS.fontWeightSemibold,
             ),

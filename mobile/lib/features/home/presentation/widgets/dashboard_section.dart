@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 
 enum DashboardSurfaceTone { hero, summary, workspace }
 
@@ -133,7 +134,7 @@ class DashboardSectionHeader extends StatelessWidget {
                 title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: context.sparkleTypography.labelLarge.copyWith(
+                style: context.typo.labelLarge.copyWith(
                   fontWeight: DS.fontWeightBold,
                   color: DS.textPrimary,
                 ),
@@ -144,7 +145,7 @@ class DashboardSectionHeader extends StatelessWidget {
                   summary!,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: context.sparkleTypography.bodySmall.copyWith(
+                  style: context.typo.bodySmall.copyWith(
                     color: DS.textSecondary,
                     height: 1.35,
                   ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
 
@@ -136,7 +137,7 @@ class _ViewTab extends StatelessWidget {
               const SizedBox(width: DS.spacing6),
               Text(
                 _getLabel(context, mode),
-                style: context.sparkleTypography.labelLarge.copyWith(
+                style: context.typo.labelLarge.copyWith(
                   color: isSelected ? selectedTextColor : unselectedTextColor,
                   fontWeight: isSelected ? DS.fontWeightSemibold : DS.fontWeightMedium,
                   fontSize: fontSize,

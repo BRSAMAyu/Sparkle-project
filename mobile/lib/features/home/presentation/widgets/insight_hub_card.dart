@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/insights/insights_routes.dart';
@@ -333,7 +334,7 @@ class _CompactInsightHubCard extends ConsumerWidget {
                                 context.l10n.insightHubTitle,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: context.sparkleTypography.labelLarge
+                                style: context.typo.labelLarge
                                     .copyWith(
                                   fontWeight: DS.fontWeightBold,
                                 ),
@@ -343,7 +344,7 @@ class _CompactInsightHubCard extends ConsumerWidget {
                                 summary,
                                 maxLines: dense ? 1 : 2,
                                 overflow: TextOverflow.ellipsis,
-                                style: context.sparkleTypography.labelSmall
+                                style: context.typo.labelSmall
                                     .copyWith(
                                   color: DS.textSecondary,
                                   height: 1.3,
@@ -371,7 +372,7 @@ class _CompactInsightHubCard extends ConsumerWidget {
                       ),
                       child: Text(
                         context.l10n.insightHubEnterOverview,
-                        style: context.sparkleTypography.labelSmall.copyWith(
+                        style: context.typo.labelSmall.copyWith(
                           color: DS.info,
                           fontWeight: DS.fontWeightBold,
                         ),
@@ -476,7 +477,7 @@ class _CompactInsightHubCard extends ConsumerWidget {
                 context.l10n.insightHubRefreshWarning,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: context.sparkleTypography.labelSmall.copyWith(
+                style: context.typo.labelSmall.copyWith(
                   color: DS.textSecondary,
                 ),
               ),

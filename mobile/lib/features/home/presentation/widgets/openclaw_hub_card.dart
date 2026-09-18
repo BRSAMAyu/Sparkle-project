@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
@@ -156,14 +157,14 @@ class OpenClawHubCard extends ConsumerWidget {
                     children: [
                       Text(
                         'OpenClaw',
-                        style: context.sparkleTypography.labelLarge.copyWith(
+                        style: context.typo.labelLarge.copyWith(
                           fontWeight: DS.fontWeightBold,
                         ),
                       ),
                       const SizedBox(height: DS.spacing4),
                       Text(
                         headline,
-                        style: context.sparkleTypography.labelSmall.copyWith(
+                        style: context.typo.labelSmall.copyWith(
                           color: DS.textSecondary,
                         ),
                         maxLines: isTightCard ? 1 : 2,
@@ -216,7 +217,7 @@ class OpenClawHubCard extends ConsumerWidget {
             SizedBox(height: isTightCard ? DS.spacing8 : DS.spacing12),
             Text(
               summary,
-              style: context.sparkleTypography.labelSmall.copyWith(
+              style: context.typo.labelSmall.copyWith(
                 color: DS.textSecondary,
                 height: 1.45,
               ),
@@ -230,11 +231,11 @@ class OpenClawHubCard extends ConsumerWidget {
               child: Text(
                 actionLabel,
                 style: (isTightCard
-                        ? context.sparkleTypography.labelLarge.copyWith(
+                        ? context.typo.labelLarge.copyWith(
                             fontSize: 13,
                             height: 1.1,
                           )
-                        : context.sparkleTypography.labelLarge)
+                        : context.typo.labelLarge)
                     .copyWith(
                   color: DS.brandPrimaryConst,
                   fontWeight: DS.fontWeightBold,

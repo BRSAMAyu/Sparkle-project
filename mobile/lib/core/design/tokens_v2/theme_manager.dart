@@ -771,6 +771,61 @@ class SparkleColors {
   Color get borderDefault => neutral200;
   Color get divider => borderDefault;
 
+  // ============ 容器/装饰四件套（batch3 收敛：背景·边框·阴影·圆角） ============
+  // 边框与容器面的派生公式从 design_system.dart 的 DS 静态层上收到这里，
+  // 值恒等迁移（round1-batch3.md 案四）。从此所有颜色值的唯一事实源是
+  // SparkleColors 本体 + 下列派生 getter；DS 同名符号全部转发到此。
+  // 阴影唯一源是本文件 SparkleShadows；圆角唯一源是 SparkleRadius
+  // （context 侧）与 DS.radius* 常量档（数值一致，TRACKED(TD-010)）。
+
+  /// 标准描边（hairline 级）。原 DS.border 公式原样上收。
+  Color get border =>
+      brightness == Brightness.dark ? neutral600 : neutral300;
+
+  /// 强调描边。原 DS.borderStrong 公式原样上收。
+  Color get borderStrong => Color.lerp(
+        border,
+        textPrimary,
+        brightness == Brightness.dark ? 0.16 : 0.08,
+      )!;
+
+  /// 弱化描边。原 DS.borderSubtle 公式原样上收。
+  Color get borderSubtle =>
+      border.withValues(alpha: brightness == Brightness.dark ? 0.6 : 0.72);
+
+  /// 面板底（介于 secondary 与 tertiary 之间）。原 DS.surfacePanel 公式。
+  Color get surfacePanel => Color.lerp(
+        surfaceSecondary,
+        surfaceTertiary,
+        brightness == Brightness.dark ? 0.18 : 0.06,
+      )!;
+
+  /// 遮罩/浮层底。原 DS.surfaceOverlay 公式。
+  Color get surfaceOverlay => (brightness == Brightness.dark
+          ? surfaceSecondary
+          : surfacePrimary)
+      .withValues(alpha: 0.92);
+
+  /// 画布底（ambient 与 primary 之间）。原 DS.surfaceCanvas 公式。
+  Color get surfaceCanvas =>
+      Color.lerp(surfaceAmbient, surfacePrimary, 0.75)!;
+
+  /// 抬升底。原 DS.surfacePrimaryElevated 公式。
+  Color get surfacePrimaryElevated => Color.lerp(
+        surfacePrimary,
+        surfaceTertiary,
+        brightness == Brightness.dark ? 0.35 : 0.12,
+      )!;
+
+  /// 玻璃拟态底。原 DS.glassBackground 公式。
+  Color get glassBackground => surfacePrimary.withValues(
+        alpha: brightness == Brightness.dark ? 0.2 : 0.7,
+      );
+
+  /// 玻璃拟态描边。原 DS.glassBorder 公式。
+  Color get glassBorder => (Color.lerp(surfaceTertiary, brandPrimary, 0.4)!)
+      .withValues(alpha: 0.25);
+
   LinearGradient get brandGradient => LinearGradient(
         colors: [brandSecondary, brandPrimary],
         begin: Alignment.topLeft,

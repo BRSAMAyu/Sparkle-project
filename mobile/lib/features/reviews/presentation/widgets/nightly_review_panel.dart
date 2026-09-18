@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/compact_error_card.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_motion.dart';
@@ -69,7 +70,7 @@ class NightlyReviewPanel extends ConsumerWidget {
                           context.l10n.nightlyReviewPending,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: context.sparkleTypography.labelLarge.copyWith(
+                          style: context.typo.labelLarge.copyWith(
                             color: DS.textPrimary,
                             fontWeight: DS.fontWeightSemiBold,
                           ),
@@ -86,7 +87,7 @@ class NightlyReviewPanel extends ConsumerWidget {
                           child: Text(
                             context.l10n.nightlyReviewStart,
                             style:
-                                context.sparkleTypography.labelLarge.copyWith(
+                                context.typo.labelLarge.copyWith(
                               color: DS.brandPrimary,
                               fontWeight: DS.fontWeightBold,
                             ),

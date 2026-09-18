@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/home/presentation/providers/home_growth_provider.dart';
@@ -63,7 +64,7 @@ class TodayGrowthStatusCard extends StatelessWidget {
                     taskLabel,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: context.sparkleTypography.titleLarge.copyWith(
+                    style: context.typo.titleLarge.copyWith(
                       color: DS.textPrimary,
                       fontWeight: DS.fontWeightBold,
                     ),
@@ -73,7 +74,7 @@ class TodayGrowthStatusCard extends StatelessWidget {
                     zh ? '计划健康度 ${_healthDots(growthState.planHealth)}' : 'Plan Health ${_healthDots(growthState.planHealth)}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: context.sparkleTypography.bodyMedium.copyWith(
+                    style: context.typo.bodyMedium.copyWith(
                       color: DS.textSecondary,
                       height: 1.25,
                     ),
@@ -83,7 +84,7 @@ class TodayGrowthStatusCard extends StatelessWidget {
                     zh ? '连续学习 ${growthState.streak} 天 🔥' : '${growthState.streak} day streak 🔥',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: context.sparkleTypography.bodyMedium.copyWith(
+                    style: context.typo.bodyMedium.copyWith(
                       color: DS.textSecondary,
                       height: 1.25,
                     ),
@@ -93,7 +94,7 @@ class TodayGrowthStatusCard extends StatelessWidget {
                     tone.message(growthState.nextAction),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: context.sparkleTypography.bodySmall.copyWith(
+                    style: context.typo.bodySmall.copyWith(
                       color: tone.color,
                       fontWeight: DS.fontWeightBold,
                       height: 1.3,
@@ -225,7 +226,7 @@ class _NoActivePlanContent extends StatelessWidget {
                 children: [
                   Text(
                     zh ? '开始制定你的第一个计划' : 'Create Your First Plan',
-                    style: context.sparkleTypography.titleLarge.copyWith(
+                    style: context.typo.titleLarge.copyWith(
                       color: DS.textPrimary,
                       fontWeight: DS.fontWeightBold,
                     ),
@@ -233,7 +234,7 @@ class _NoActivePlanContent extends StatelessWidget {
                   const SizedBox(height: DS.spacing6),
                   Text(
                     zh ? '我会把目标拆成今天就能迈出的一小步。' : 'I will break down your goal into small, actionable steps for today.',
-                    style: context.sparkleTypography.bodySmall.copyWith(
+                    style: context.typo.bodySmall.copyWith(
                       color: DS.textSecondary,
                       height: 1.35,
                     ),
@@ -288,7 +289,7 @@ class _ProgressRing extends StatelessWidget {
           ),
           Text(
             '$percent%',
-            style: context.sparkleTypography.labelLarge.copyWith(
+            style: context.typo.labelLarge.copyWith(
               color: DS.textPrimary,
               fontWeight: DS.fontWeightBold,
             ),
@@ -326,7 +327,7 @@ class _PhasePill extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
-            style: context.sparkleTypography.labelSmall.copyWith(
+            style: context.typo.labelSmall.copyWith(
               color: accentColor,
               fontWeight: DS.fontWeightBold,
               height: 1.2,

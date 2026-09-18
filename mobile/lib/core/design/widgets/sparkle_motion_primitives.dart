@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart' hide AnimatedSlide;
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/pulse_scope.dart';
 
 class SparkleStaggerItem extends StatefulWidget {

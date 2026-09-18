@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
@@ -83,7 +84,7 @@ class TaskPreviewPanel extends ConsumerWidget {
                         : (zh
                             ? DateFormat('M月d日', 'zh_CN').format(selectedDate)
                             : DateFormat('MMM d', 'en_US').format(selectedDate)),
-                    style: context.sparkleTypography.titleLarge.copyWith(
+                    style: context.typo.titleLarge.copyWith(
                       fontWeight: DS.fontWeightSemibold,
                       color: DS.textPrimary,
                     ),
@@ -92,7 +93,7 @@ class TaskPreviewPanel extends ConsumerWidget {
                     const SizedBox(width: DS.spacing6),
                     Text(
                       _getWeekdayName(selectedDate),
-                      style: context.sparkleTypography.labelSmall.copyWith(
+                      style: context.typo.labelSmall.copyWith(
                         color: DS.textSecondary,
                       ),
                     ),
@@ -102,7 +103,7 @@ class TaskPreviewPanel extends ConsumerWidget {
               const SizedBox(height: DS.spacing4),
               Text(
                 zh ? '$taskCount 个任务' : '$taskCount task${taskCount == 1 ? '' : 's'}',
-                style: context.sparkleTypography.labelSmall.copyWith(
+                style: context.typo.labelSmall.copyWith(
                   color: DS.textSecondary,
                 ),
               ),
@@ -186,14 +187,14 @@ class TaskPreviewPanel extends ConsumerWidget {
           const SizedBox(height: DS.spacing12),
           Text(
             zh ? '今天没有任务' : 'No tasks today',
-            style: context.sparkleTypography.bodyMedium.copyWith(
+            style: context.typo.bodyMedium.copyWith(
               color: DS.textSecondary,
             ),
           ),
           const SizedBox(height: DS.spacing4),
           Text(
             zh ? '享受你的自由时间' : 'Enjoy your free time',
-            style: context.sparkleTypography.labelSmall.copyWith(
+            style: context.typo.labelSmall.copyWith(
               color: DS.textTertiary,
             ),
           ),
@@ -214,7 +215,7 @@ class TaskPreviewPanel extends ConsumerWidget {
       padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
       child: Text(
         context.l10n.taskPreviewLoadFailed,
-        style: context.sparkleTypography.bodyMedium.copyWith(
+        style: context.typo.bodyMedium.copyWith(
           color: DS.error,
         ),
         textAlign: TextAlign.center,
@@ -237,7 +238,7 @@ class TaskPreviewPanel extends ConsumerWidget {
           children: [
             Text(
               zh ? '查看全部 $totalCount 个任务' : 'View all $totalCount task${totalCount == 1 ? '' : 's'}',
-              style: context.sparkleTypography.labelSmall.copyWith(
+              style: context.typo.labelSmall.copyWith(
                 color: DS.brandPrimaryConst,
                 fontWeight: DS.fontWeightMedium,
               ),
@@ -312,7 +313,7 @@ class _StreakStatusCard extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: context.sparkleTypography.labelSmall.copyWith(
+                  style: context.typo.labelSmall.copyWith(
                     color: color,
                     fontWeight: DS.fontWeightBold,
                   ),
@@ -322,7 +323,7 @@ class _StreakStatusCard extends StatelessWidget {
                   subtitle,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: context.sparkleTypography.labelSmall.copyWith(
+                  style: context.typo.labelSmall.copyWith(
                     color: DS.textSecondary,
                     height: 1.35,
                   ),

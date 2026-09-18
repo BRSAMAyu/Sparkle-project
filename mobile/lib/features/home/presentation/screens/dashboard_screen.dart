@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/scroll_edge_haptics.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
@@ -2102,7 +2103,7 @@ class _CommandCenterContent extends StatelessWidget {
                 children: [
                   Text(
                     l10n.dashboardCommandCenterNow,
-                    style: context.sparkleTypography.labelSmall.copyWith(
+                    style: context.typo.labelSmall.copyWith(
                       color: DS.textSecondary,
                       fontWeight: DS.fontWeightBold,
                     ),
@@ -2112,7 +2113,7 @@ class _CommandCenterContent extends StatelessWidget {
                     title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: context.sparkleTypography.titleLarge.copyWith(
+                    style: context.typo.titleLarge.copyWith(
                       color: DS.textPrimary,
                       fontWeight: DS.fontWeightBold,
                       height: 1.18,
@@ -2124,7 +2125,7 @@ class _CommandCenterContent extends StatelessWidget {
                       summary,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: context.sparkleTypography.bodySmall.copyWith(
+                      style: context.typo.bodySmall.copyWith(
                         color: DS.textSecondary,
                         height: 1.52,
                       ),
@@ -2358,7 +2359,7 @@ class _CommandCenterRiskBanner extends StatelessWidget {
                   text,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: context.sparkleTypography.bodySmall.copyWith(
+                  style: context.typo.bodySmall.copyWith(
                     color: DS.textPrimary,
                     fontWeight: DS.fontWeightMedium,
                     height: 1.52,
@@ -2588,7 +2589,7 @@ class _DailyBriefingCard extends StatelessWidget {
                                 context.l10n.dashboardMoreTasksQueued(
                                   nextActionCount - 1,
                                 ),
-                                style: context.sparkleTypography.bodySmall
+                                style: context.typo.bodySmall
                                     .copyWith(
                                   color: DS.textSecondary,
                                   height: 1.52,
@@ -2649,7 +2650,7 @@ class _BriefingBlock extends StatelessWidget {
           children: [
             Text(
               eyebrow,
-              style: context.sparkleTypography.labelSmall.copyWith(
+              style: context.typo.labelSmall.copyWith(
                 color: DS.textSecondary,
                 fontWeight: DS.fontWeightBold,
               ),
@@ -2657,7 +2658,7 @@ class _BriefingBlock extends StatelessWidget {
             const SizedBox(height: DS.spacing6),
             Text(
               title,
-              style: context.sparkleTypography.titleLarge.copyWith(
+              style: context.typo.titleLarge.copyWith(
                 fontWeight: DS.fontWeightBold,
               ),
             ),
@@ -2665,7 +2666,7 @@ class _BriefingBlock extends StatelessWidget {
               const SizedBox(height: DS.spacing8),
               Text(
                 summary,
-                style: context.sparkleTypography.bodyMedium.copyWith(
+                style: context.typo.bodyMedium.copyWith(
                   color: DS.textSecondary,
                   height: 1.52,
                 ),
@@ -2772,7 +2773,7 @@ class _BriefingDetailTile extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: context.sparkleTypography.labelSmall.copyWith(
+                    style: context.typo.labelSmall.copyWith(
                       color: DS.textSecondary,
                       fontWeight: DS.fontWeightBold,
                     ),
@@ -2780,14 +2781,14 @@ class _BriefingDetailTile extends StatelessWidget {
                   const SizedBox(height: DS.spacing4),
                   Text(
                     headline,
-                    style: context.sparkleTypography.labelLarge.copyWith(
+                    style: context.typo.labelLarge.copyWith(
                       fontWeight: DS.fontWeightBold,
                     ),
                   ),
                   const SizedBox(height: DS.spacing4),
                   Text(
                     summary,
-                    style: context.sparkleTypography.bodySmall.copyWith(
+                    style: context.typo.bodySmall.copyWith(
                       color: DS.textSecondary,
                       height: 1.52,
                     ),
@@ -2801,7 +2802,7 @@ class _BriefingDetailTile extends StatelessWidget {
                 child: Text(
                   trailing!,
                   textAlign: TextAlign.right,
-                  style: context.sparkleTypography.labelSmall.copyWith(
+                  style: context.typo.labelSmall.copyWith(
                     color: DS.textSecondary,
                   ),
                 ),
@@ -2836,7 +2837,7 @@ class _PlanProgressTile extends StatelessWidget {
                 Expanded(
                   child: Text(
                     context.l10n.dashboardActivePlan,
-                    style: context.sparkleTypography.labelSmall.copyWith(
+                    style: context.typo.labelSmall.copyWith(
                       color: DS.textSecondary,
                       fontWeight: DS.fontWeightBold,
                     ),
@@ -2844,7 +2845,7 @@ class _PlanProgressTile extends StatelessWidget {
                 ),
                 Text(
                   '${(plan.progress * 100).round()}%',
-                  style: context.sparkleTypography.labelLarge.copyWith(
+                  style: context.typo.labelLarge.copyWith(
                     fontWeight: DS.fontWeightBold,
                   ),
                 ),
@@ -2853,7 +2854,7 @@ class _PlanProgressTile extends StatelessWidget {
             const SizedBox(height: DS.spacing6),
             Text(
               plan.name,
-              style: context.sparkleTypography.labelLarge.copyWith(
+              style: context.typo.labelLarge.copyWith(
                 fontWeight: DS.fontWeightBold,
               ),
             ),
@@ -2874,7 +2875,7 @@ class _PlanProgressTile extends StatelessWidget {
                     ? context.l10n.dashboardPhaseInProgress
                     : plan.phase,
               ),
-              style: context.sparkleTypography.bodySmall.copyWith(
+              style: context.typo.bodySmall.copyWith(
                 color: DS.textSecondary,
               ),
             ),
@@ -2882,7 +2883,7 @@ class _PlanProgressTile extends StatelessWidget {
               const SizedBox(height: DS.spacing4),
               Text(
                 context.l10n.dashboardDaysToDeadline(plan.daysToDeadline!),
-                style: context.sparkleTypography.bodySmall.copyWith(
+                style: context.typo.bodySmall.copyWith(
                   color: DS.textSecondary,
                 ),
               ),
@@ -3080,7 +3081,7 @@ class _SectionCountPill extends StatelessWidget {
         ),
         child: Text(
           '$count',
-          style: context.sparkleTypography.labelSmall.copyWith(
+          style: context.typo.labelSmall.copyWith(
             color: DS.textSecondary,
             fontWeight: DS.fontWeightBold,
           ),
@@ -3115,7 +3116,7 @@ class _DashboardChip extends StatelessWidget {
             const SizedBox(width: DS.spacing6),
             Text(
               label,
-              style: context.sparkleTypography.labelSmall.copyWith(
+              style: context.typo.labelSmall.copyWith(
                 color: DS.textSecondary,
                 fontWeight: DS.fontWeightBold,
               ),

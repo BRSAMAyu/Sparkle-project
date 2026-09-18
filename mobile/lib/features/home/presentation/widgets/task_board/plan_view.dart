@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/presentation/providers/plan_name_provider.dart';
@@ -95,7 +96,7 @@ class PlanView extends ConsumerWidget {
             isFiltered
                 ? context.l10n.planViewFilteredEmpty(selectedPlanName ?? context.l10n.planViewCurrentPlan)
                 : context.l10n.planViewNoPlanTasks,
-            style: context.sparkleTypography.bodyMedium.copyWith(
+            style: context.typo.bodyMedium.copyWith(
               color: DS.textSecondary,
             ),
           ),
@@ -216,7 +217,7 @@ class DashboardPlanManager extends ConsumerWidget {
               const SizedBox(height: DS.spacing16),
               Text(
                 compact ? context.l10n.planViewRecoverablePlans : context.l10n.planViewPlanLibrary,
-                style: context.sparkleTypography.labelLarge.copyWith(
+                style: context.typo.labelLarge.copyWith(
                   fontWeight: DS.fontWeightSemibold,
                   color: DS.textPrimary,
                 ),
@@ -355,7 +356,7 @@ class _PlanFilterBanner extends ConsumerWidget {
             Expanded(
               child: Text(
                 context.l10n.planViewCurrentFocus(planName),
-                style: context.sparkleTypography.labelLarge.copyWith(
+                style: context.typo.labelLarge.copyWith(
                   color: DS.textPrimary,
                   fontWeight: DS.fontWeightSemibold,
                 ),
@@ -459,7 +460,7 @@ class _ActivePlanSlot extends ConsumerWidget {
                       plan.name,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: context.sparkleTypography.labelLarge.copyWith(
+                      style: context.typo.labelLarge.copyWith(
                         color: DS.textPrimary,
                         fontWeight: DS.fontWeightBold,
                       ),
@@ -615,7 +616,7 @@ class _EmptyPlanSlot extends StatelessWidget {
           children: [
             Text(
               context.l10n.planViewEmptySlot,
-              style: context.sparkleTypography.labelLarge.copyWith(
+              style: context.typo.labelLarge.copyWith(
                 color: DS.textPrimary,
                 fontWeight: DS.fontWeightSemibold,
               ),
@@ -689,7 +690,7 @@ class _InactivePlanRow extends ConsumerWidget {
                         plan.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: context.sparkleTypography.labelLarge.copyWith(
+                        style: context.typo.labelLarge.copyWith(
                           color: DS.textPrimary,
                           fontWeight: DS.fontWeightSemibold,
                         ),
@@ -755,7 +756,7 @@ class _PlanTag extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: context.sparkleTypography.labelSmall.copyWith(
+          style: context.typo.labelSmall.copyWith(
             color: highlighted ? DS.brandPrimary : DS.textSecondary,
             fontWeight: DS.fontWeightSemibold,
           ),
@@ -795,7 +796,7 @@ class _PlanSection extends ConsumerWidget {
               const SizedBox(width: DS.spacing8),
               Text(
                 planName ?? planId ?? context.l10n.planViewUncategorized,
-                style: context.sparkleTypography.labelLarge.copyWith(
+                style: context.typo.labelLarge.copyWith(
                   color: (planName != null || planId != null)
                       ? DS.textPrimary
                       : DS.textSecondary,
@@ -814,7 +815,7 @@ class _PlanSection extends ConsumerWidget {
                 ),
                 child: Text(
                   '${tasks.length}',
-                  style: context.sparkleTypography.labelSmall.copyWith(
+                  style: context.typo.labelSmall.copyWith(
                     color: DS.brandPrimaryConst,
                     fontWeight: DS.fontWeightSemibold,
                   ),

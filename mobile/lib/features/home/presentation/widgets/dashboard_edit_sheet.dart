@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -119,7 +120,7 @@ class _SlotEditor extends ConsumerWidget {
                 zh
                     ? '所有分区默认可见。开关隐藏，拖拽排序，按 ⇕ 让低频分区收成 64px 标题条。'
                     : 'All sections start visible. Switch to hide, drag to reorder, tap ⇕ to collapse low-glance sections into a 64px header.',
-                style: context.sparkleTypography.bodySmall.copyWith(
+                style: context.typo.bodySmall.copyWith(
                   color: DS.textSecondary,
                 ),
               ),
@@ -246,14 +247,14 @@ class _EditableSlotTile extends StatelessWidget {
                 children: [
                   Text(
                     meta.title,
-                    style: context.sparkleTypography.labelLarge.copyWith(
+                    style: context.typo.labelLarge.copyWith(
                       fontWeight: DS.fontWeightSemiBold,
                       color: isVisible ? DS.textPrimary : DS.textTertiary,
                     ),
                   ),
                   Text(
                     meta.subtitle,
-                    style: context.sparkleTypography.labelSmall.copyWith(
+                    style: context.typo.labelSmall.copyWith(
                       color: DS.textSecondary,
                     ),
                   ),
@@ -306,7 +307,7 @@ class _WorkspaceCardEditor extends ConsumerWidget {
       children: [
         Text(
           context.l10n.dashboardLayoutMode,
-          style: context.sparkleTypography.labelLarge.copyWith(
+          style: context.typo.labelLarge.copyWith(
             fontWeight: DS.fontWeightBold,
           ),
         ),
@@ -357,7 +358,7 @@ class _WorkspaceCardEditor extends ConsumerWidget {
           children: [
             Text(
               context.l10n.dashboardDisplayAndSort,
-              style: context.sparkleTypography.labelLarge.copyWith(
+              style: context.typo.labelLarge.copyWith(
                 fontWeight: DS.fontWeightBold,
               ),
             ),
@@ -440,7 +441,7 @@ class _LayoutModeButton extends StatelessWidget {
           child: Center(
             child: Text(
               label,
-              style: context.sparkleTypography.labelLarge.copyWith(
+              style: context.typo.labelLarge.copyWith(
                 color: selected ? DS.brandPrimary : DS.textPrimary,
                 fontWeight: DS.fontWeightBold,
               ),
@@ -480,13 +481,13 @@ class _EditableCardTile extends StatelessWidget {
           ),
           title: Text(
             _titleForCard(context, cardId),
-            style: context.sparkleTypography.labelLarge.copyWith(
+            style: context.typo.labelLarge.copyWith(
               fontWeight: DS.fontWeightSemiBold,
             ),
           ),
           subtitle: Text(
             _subtitleForCard(context, cardId),
-            style: context.sparkleTypography.labelSmall.copyWith(
+            style: context.typo.labelSmall.copyWith(
               color: DS.textSecondary,
             ),
           ),

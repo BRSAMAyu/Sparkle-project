@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart' hide AnimatedSlide;
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';

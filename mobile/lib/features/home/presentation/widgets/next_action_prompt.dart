@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
@@ -67,7 +68,7 @@ class NextActionPrompt extends StatelessWidget {
                                   : 'Best move right now: ${activeTask.title}'),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: context.sparkleTypography.bodyMedium.copyWith(
+                          style: context.typo.bodyMedium.copyWith(
                             color: DS.textPrimary,
                             fontWeight: DS.fontWeightBold,
                             height: 1.3,

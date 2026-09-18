@@ -1,4 +1,4 @@
-import 'dart:ui' show Locale, PlatformDispatcher;
+import 'dart:ui' show Locale;
 
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/l10n/app_localizations_en.dart';
@@ -27,23 +27,31 @@ class I18nService {
   Locale? _currentLocale;
   AppLocalizations? _l10n;
 
+  /// 中文优先解析（batch3 W-7 裁决：竞赛产品中文优先）。
+  ///
+  /// - 显式偏好（设置页选择 / 持久化恢复）按语言码匹配支持档；
+  /// - 无偏好或不可匹配（含系统 locale 不在支持档）一律回退 zh——
+  ///   不再跟随系统 locale 猜测默认语言。en 仍可在设置中显式选择
+  ///   （持久化后经 [preferred] 分支命中）。
   static Locale resolveSupportedLocale([Locale? preferred]) {
-    final candidate = preferred ?? PlatformDispatcher.instance.locale;
-    for (final locale in AppLocalizations.supportedLocales) {
-      if (locale.languageCode == candidate.languageCode) {
-        return locale;
+    if (preferred != null) {
+      for (final locale in AppLocalizations.supportedLocales) {
+        if (locale.languageCode == preferred.languageCode) {
+          return locale;
+        }
       }
     }
-    return const Locale('en');
+    return const Locale('zh');
   }
 
   static AppLocalizations _buildFallbackLocalizations(Locale locale) {
     switch (locale.languageCode) {
-      case 'zh':
-        return AppLocalizationsZh();
       case 'en':
-      default:
         return AppLocalizationsEn();
+      case 'zh':
+      default:
+        // Chinese-first fallback (batch3 W-7): unknown codes land on zh.
+        return AppLocalizationsZh();
     }
   }
 

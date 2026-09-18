@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -65,7 +66,7 @@ class SeedLibraryDashboardCard extends ConsumerWidget {
                   ),
                   child: Text(
                     context.l10n.seedOfficial,
-                    style: context.sparkleTypography.labelSmall.copyWith(
+                    style: context.typo.labelSmall.copyWith(
                       fontWeight: DS.fontWeightBold,
                       fontSize: 9,
                       color: DS.success,
@@ -78,7 +79,7 @@ class SeedLibraryDashboardCard extends ConsumerWidget {
             // Title
             Text(
               context.l10n.seedLibraryTitle,
-              style: context.sparkleTypography.labelLarge.copyWith(
+              style: context.typo.labelLarge.copyWith(
                 fontSize: dense ? 13 : null,
                 fontWeight: DS.fontWeightBold,
                 color: DS.textPrimary,
@@ -90,7 +91,7 @@ class SeedLibraryDashboardCard extends ConsumerWidget {
             // Subtitle
             Text(
               context.l10n.seedLibrarySubtitle,
-              style: context.sparkleTypography.labelSmall.copyWith(
+              style: context.typo.labelSmall.copyWith(
                 color: DS.textSecondary,
               ),
             ),
@@ -98,7 +99,7 @@ class SeedLibraryDashboardCard extends ConsumerWidget {
             // Stats
             Text(
               context.l10n.seedLibraryStats('3'),
-              style: context.sparkleTypography.labelSmall.copyWith(
+              style: context.typo.labelSmall.copyWith(
                 color: DS.textSecondary,
                 height: 1.4,
               ),

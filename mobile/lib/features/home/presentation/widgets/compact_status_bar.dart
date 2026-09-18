@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/home/home_routes.dart';
@@ -93,7 +94,7 @@ class CompactStatusBar extends StatelessWidget {
                                     nickname,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: context.sparkleTypography.labelLarge
+                                    style: context.typo.labelLarge
                                         .copyWith(
                                       color: DS.textPrimary,
                                       fontWeight: DS.fontWeightBold,
@@ -109,7 +110,7 @@ class CompactStatusBar extends StatelessWidget {
                                         : context.l10n.compactStatusKeepRhythm,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: context.sparkleTypography.labelSmall
+                                    style: context.typo.labelSmall
                                         .copyWith(
                                       color: DS.textSecondary,
                                     ),
@@ -222,7 +223,7 @@ class _MiniBadge extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: context.sparkleTypography.labelSmall.copyWith(
+          style: context.typo.labelSmall.copyWith(
             color: DS.textSecondary,
             fontWeight: DS.fontWeightBold,
           ),
@@ -285,7 +286,7 @@ class _MiniInfoChip extends StatelessWidget {
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: context.sparkleTypography.labelSmall.copyWith(
+                  style: context.typo.labelSmall.copyWith(
                     color: DS.textPrimary,
                     fontWeight: DS.fontWeightSemiBold,
                   ),

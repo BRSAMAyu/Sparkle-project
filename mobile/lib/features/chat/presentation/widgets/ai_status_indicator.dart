@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/components/atoms/ai_status_capsule.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/utils/ai_status_mapper.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/widgets/bgm_scope.dart';
@@ -148,7 +149,7 @@ class _AiStatusIndicatorState extends State<AiStatusIndicator> {
                       label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: context.sparkleTypography.labelLarge.copyWith(
+                      style: context.typo.labelLarge.copyWith(
                         color: DS.textPrimary,
                         fontWeight: DS.fontWeightBold,
                       ),
@@ -160,7 +161,7 @@ class _AiStatusIndicatorState extends State<AiStatusIndicator> {
                           : context.l10n.chatStatusRealtimeThinking,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: context.sparkleTypography.labelSmall.copyWith(
+                      style: context.typo.labelSmall.copyWith(
                         color: DS.textSecondary,
                       ),
                     ),
@@ -379,7 +380,7 @@ class _ElapsedBadge extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: context.sparkleTypography.labelSmall.copyWith(
+          style: context.typo.labelSmall.copyWith(
             color: color,
             fontWeight: DS.fontWeightBold,
             fontFeatures: const [FontFeature.tabularFigures()],

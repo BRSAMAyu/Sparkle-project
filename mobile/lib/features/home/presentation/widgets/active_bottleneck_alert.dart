@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/home/presentation/providers/home_growth_provider.dart';
@@ -62,7 +63,7 @@ class ActiveBottleneckAlert extends StatelessWidget {
                   ),
                   child: Text(
                     '⚡',
-                    style: context.sparkleTypography.titleLarge.copyWith(
+                    style: context.typo.titleLarge.copyWith(
                       color: DS.warning,
                     ),
                   ),
@@ -73,7 +74,7 @@ class ActiveBottleneckAlert extends StatelessWidget {
                     context.l10n.bottleneckAlertMessage(activeBottleneck.topic),
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
-                    style: context.sparkleTypography.bodyMedium.copyWith(
+                    style: context.typo.bodyMedium.copyWith(
                       color: DS.textPrimary,
                       height: 1.35,
                     ),
@@ -87,7 +88,7 @@ class ActiveBottleneckAlert extends StatelessWidget {
                       : () => onOpenChat!(activeBottleneck),
                   child: Text(
                     context.l10n.bottleneckAlertAction,
-                    style: context.sparkleTypography.labelLarge.copyWith(
+                    style: context.typo.labelLarge.copyWith(
                       color: DS.warning,
                       fontWeight: DS.fontWeightBold,
                     ),

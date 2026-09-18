@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/plan/presentation/providers/sprint_history_provider.dart';
@@ -53,14 +54,14 @@ class SprintHistoryDetailSheet extends StatelessWidget {
                     children: [
                       Text(
                         item.name,
-                        style: context.sparkleTypography.headingLarge.copyWith(
+                        style: context.typo.headingLarge.copyWith(
                           fontWeight: DS.fontWeightBold,
                         ),
                       ),
                       const SizedBox(height: DS.spacing4),
                       Text(
                         '$startDateLabel - $endDateLabel',
-                        style: context.sparkleTypography.bodyMedium.copyWith(
+                        style: context.typo.bodyMedium.copyWith(
                           color: DS.textSecondary,
                         ),
                       ),
@@ -103,7 +104,7 @@ class SprintHistoryDetailSheet extends StatelessWidget {
         children: [
           Text(
             context.l10n.sprintProgressTitle,
-            style: context.sparkleTypography.labelLarge.copyWith(
+            style: context.typo.labelLarge.copyWith(
               fontWeight: DS.fontWeightSemibold,
             ),
           ),
@@ -135,14 +136,14 @@ class SprintHistoryDetailSheet extends StatelessWidget {
                       children: [
                         Text(
                           '${(item.finalProgress * 100).toInt()}%',
-                          style: context.sparkleTypography.headingLarge.copyWith(
+                          style: context.typo.headingLarge.copyWith(
                             fontWeight: DS.fontWeightBold,
                             fontSize: 24,
                           ),
                         ),
                         Text(
                           context.l10n.sprintCompletionRate,
-                          style: context.sparkleTypography.labelSmall.copyWith(
+                          style: context.typo.labelSmall.copyWith(
                             color: DS.textSecondary,
                           ),
                         ),
@@ -194,7 +195,7 @@ class SprintHistoryDetailSheet extends StatelessWidget {
           children: [
             Text(
               context.l10n.sprintTaskSummaryTitle,
-              style: context.sparkleTypography.labelLarge.copyWith(
+              style: context.typo.labelLarge.copyWith(
                 fontWeight: DS.fontWeightSemibold,
               ),
             ),
@@ -240,7 +241,7 @@ class SprintHistoryDetailSheet extends StatelessWidget {
           children: [
             Text(
               context.l10n.sprintInfoTitle,
-              style: context.sparkleTypography.labelLarge.copyWith(
+              style: context.typo.labelLarge.copyWith(
                 fontWeight: DS.fontWeightSemibold,
               ),
             ),
@@ -278,13 +279,13 @@ class SprintHistoryDetailSheet extends StatelessWidget {
         children: [
           Text(
             label,
-            style: context.sparkleTypography.bodyMedium.copyWith(
+            style: context.typo.bodyMedium.copyWith(
               color: DS.textSecondary,
             ),
           ),
           Text(
             value,
-            style: context.sparkleTypography.bodyMedium.copyWith(
+            style: context.typo.bodyMedium.copyWith(
               color: color ?? DS.textPrimary,
               fontWeight: DS.fontWeightSemibold,
             ),
@@ -316,14 +317,14 @@ class SprintHistoryDetailSheet extends StatelessWidget {
           const SizedBox(height: DS.spacing8),
           Text(
             value,
-            style: context.sparkleTypography.labelLarge.copyWith(
+            style: context.typo.labelLarge.copyWith(
               fontWeight: DS.fontWeightBold,
               color: color,
             ),
           ),
           Text(
             label,
-            style: context.sparkleTypography.labelSmall.copyWith(
+            style: context.typo.labelSmall.copyWith(
               color: DS.textSecondary,
               fontSize: 10,
             ),
@@ -341,13 +342,13 @@ class SprintHistoryDetailSheet extends StatelessWidget {
         children: [
           Text(
             label,
-            style: context.sparkleTypography.labelSmall.copyWith(
+            style: context.typo.labelSmall.copyWith(
               color: DS.textSecondary,
             ),
           ),
           Text(
             value,
-            style: context.sparkleTypography.labelSmall.copyWith(
+            style: context.typo.labelSmall.copyWith(
               color: DS.textPrimary,
             ),
           ),

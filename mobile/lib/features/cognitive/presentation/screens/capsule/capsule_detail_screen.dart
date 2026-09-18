@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
@@ -133,7 +134,7 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
                 index: 1,
                 child: Text(
                   capsule.title,
-                  style: context.sparkleTypography.headingMedium,
+                  style: context.typo.headingMedium,
                 ),
               ),
               const SizedBox(height: DS.spacing8),
@@ -182,7 +183,7 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
                         avatar: const Icon(Icons.tag, size: 14),
                         label: Text(
                           capsule.relatedSubject!,
-                          style: context.sparkleTypography.labelSmall,
+                          style: context.typo.labelSmall,
                         ),
                         backgroundColor: DS.surfaceSecondary,
                         side: BorderSide(color: DS.border, width: 0.5),
@@ -635,7 +636,7 @@ class _FeedbackBottomSheetState extends State<_FeedbackBottomSheet> {
             children: [
               Text(
                 l10n.capsuleSubmitFeedback,
-                style: context.sparkleTypography.titleLarge,
+                style: context.typo.titleLarge,
               ),
               SparkleIconButton(
                 icon: const Icon(Icons.close),
@@ -736,7 +737,7 @@ class _FeedbackBottomSheetState extends State<_FeedbackBottomSheet> {
             controller: _commentController,
             maxLines: 3,
             maxLength: 200,
-            style: context.sparkleTypography.bodyMedium,
+            style: context.typo.bodyMedium,
             decoration: InputDecoration(
               hintText: l10n.capsuleFeedbackHint,
               hintStyle: TextStyle(color: DS.textSecondary, fontSize: 14),

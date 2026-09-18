@@ -17,11 +17,11 @@ void main() {
     expect(locale.languageCode, 'zh');
   });
 
-  test('resolveSupportedLocale falls back to English for unsupported locales',
+  test('resolveSupportedLocale falls back to zh for unsupported locales',
       () {
     final locale = I18nService.resolveSupportedLocale(const Locale('fr'));
 
-    expect(locale.languageCode, 'en');
+    expect(locale.languageCode, 'zh');
   });
 
   test('updateLocale switches the singleton into Chinese mode', () {
@@ -59,7 +59,7 @@ void main() {
     expect(I18nService.instance.l10n, isNotNull);
     expect(
       I18nService.resolveSupportedLocale(const Locale('zz')).languageCode,
-      'en',
+      'zh',
     );
   });
 }

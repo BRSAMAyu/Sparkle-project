@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -136,13 +137,13 @@ class _SprintActionsSheetState extends ConsumerState<_SprintActionsSheet> {
                       children: [
                         Text(
                           l10n.sprintActionsTitle,
-                          style: context.sparkleTypography.labelLarge.copyWith(
+                          style: context.typo.labelLarge.copyWith(
                             fontWeight: DS.fontWeightBold,
                           ),
                         ),
                         Text(
                           widget.planName,
-                          style: context.sparkleTypography.labelSmall.copyWith(
+                          style: context.typo.labelSmall.copyWith(
                             color: DS.textSecondary,
                           ),
                         ),
@@ -280,13 +281,13 @@ class _ActionTile extends StatelessWidget {
         ),
         title: Text(
           title,
-          style: context.sparkleTypography.bodyLarge.copyWith(
+          style: context.typo.bodyLarge.copyWith(
             fontWeight: DS.fontWeightMedium,
           ),
         ),
         subtitle: Text(
           subtitle,
-          style: context.sparkleTypography.labelSmall.copyWith(
+          style: context.typo.labelSmall.copyWith(
             color: DS.textSecondary,
           ),
         ),
@@ -315,12 +316,12 @@ class _ConfirmCompleteDialog extends StatelessWidget {
             const SizedBox(height: DS.spacing16),
             Text(
               context.l10n.sprintConfirmCompleteMessage(planName),
-              style: context.sparkleTypography.bodyMedium,
+              style: context.typo.bodyMedium,
             ),
             const SizedBox(height: DS.spacing8),
             Text(
               context.l10n.sprintConfirmCompleteDesc,
-              style: context.sparkleTypography.labelSmall.copyWith(
+              style: context.typo.labelSmall.copyWith(
                 color: DS.textSecondary,
               ),
             ),
@@ -362,12 +363,12 @@ class _ConfirmAbandonDialog extends StatelessWidget {
             const SizedBox(height: DS.spacing16),
             Text(
               context.l10n.sprintConfirmAbandonMessage(planName),
-              style: context.sparkleTypography.bodyMedium,
+              style: context.typo.bodyMedium,
             ),
             const SizedBox(height: DS.spacing8),
             Text(
               context.l10n.sprintConfirmAbandonDesc,
-              style: context.sparkleTypography.labelSmall.copyWith(
+              style: context.typo.labelSmall.copyWith(
                 color: DS.textSecondary,
               ),
             ),
@@ -417,12 +418,12 @@ class _ExtendSprintDialogState extends State<_ExtendSprintDialog> {
             const SizedBox(height: DS.spacing16),
             Text(
               context.l10n.sprintExtendMessage(widget.planName),
-              style: context.sparkleTypography.bodyMedium,
+              style: context.typo.bodyMedium,
             ),
             const SizedBox(height: DS.spacing16),
             Text(
               context.l10n.sprintExtendSelectDays,
-              style: context.sparkleTypography.labelSmall.copyWith(
+              style: context.typo.labelSmall.copyWith(
                 color: DS.textSecondary,
               ),
             ),
@@ -448,7 +449,7 @@ class _ExtendSprintDialogState extends State<_ExtendSprintDialog> {
                     ),
                     child: Text(
                       context.l10n.sprintExtendOptionDays(days),
-                      style: context.sparkleTypography.bodyMedium.copyWith(
+                      style: context.typo.bodyMedium.copyWith(
                         color: isSelected ? DS.white : DS.textPrimary,
                         fontWeight:
                             isSelected ? DS.fontWeightSemibold : FontWeight.normal,

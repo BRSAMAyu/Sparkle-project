@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/motion.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart'
     show CustomButton, CustomButtonSize;
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -360,7 +361,7 @@ class _ActionCardState extends ConsumerState<ActionCard>
           animation: _pressController,
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: context.colors.surfaceCard,
+              color: context.colors.surfaceSecondary,
               borderRadius: DS.borderRadius16,
               boxShadow: DS.shadowMd,
             ),

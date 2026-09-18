@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/motion.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -379,7 +380,7 @@ class _PlanReviewCardState extends State<PlanReviewCard>
               child: Container(
                 margin: const EdgeInsets.symmetric(vertical: DS.spacing8),
                 decoration: BoxDecoration(
-                  color: context.colors.surfaceCard,
+                  color: context.colors.surfaceSecondary,
                   borderRadius: DS.borderRadius16,
                   boxShadow: DS.shadowMd,
                   border: Border.all(

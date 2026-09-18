@@ -184,8 +184,7 @@ class DesignSystemLinter {
             !relativePath.contains('/data/') &&
             relativePath != 'core/design/design_system.dart' &&
             relativePath != 'core/design/materials.dart' &&
-            relativePath != 'core/utils/theme_utils.dart' &&
-            relativePath != 'app/theme.dart') {
+            relativePath != 'core/utils/theme_utils.dart') {
           dartFiles.add(entity.path);
         }
       }
@@ -202,7 +201,7 @@ class DesignSystemLinter {
     // 检查常见的硬编码颜色模式
     final patterns = [
       RegExp(r'Color\(0x[0-9a-fA-F]{8}\)'), // Color(0xFF6B35)
-      // Require a word boundary to avoid false positives like `sparkleColors` or `primaryColor`.
+      // Require a word boundary to avoid false positives like `context.colors` or `primaryColor`.
       RegExp(r'\bColors\.\w+'), // Colors.white
     ];
 
@@ -211,7 +210,7 @@ class DesignSystemLinter {
         // 排除设计系统文件本身
         if (line.contains('AppDesignTokens') ||
             line.contains('DS.') ||
-            line.contains('sparkleColors') ||
+            line.contains('context.colors') ||
             line.contains('sparkleTheme')) {
           return false;
         }
@@ -235,7 +234,7 @@ class DesignSystemLinter {
       // 排除设计系统使用
       if (line.contains('DS.') ||
           line.contains('AppDesignTokens') ||
-          line.contains('sparkleSpacing')) {
+          line.contains('context.space')) {
         return false;
       }
       return true;

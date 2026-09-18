@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/reviews/reviews_routes.dart';
 
@@ -30,7 +31,7 @@ class ExpandedToolbarSection extends ConsumerWidget {
         children: [
           Text(
             context.l10n.homeToolbarTitle,
-            style: context.sparkleTypography.labelLarge.copyWith(
+            style: context.typo.labelLarge.copyWith(
               color: DS.textSecondary,
               fontWeight: DS.fontWeightSemibold,
             ),
@@ -140,7 +141,7 @@ class _ToolButton extends StatelessWidget {
             const SizedBox(height: DS.spacing6),
             Text(
               label,
-              style: context.sparkleTypography.labelSmall.copyWith(
+              style: context.typo.labelSmall.copyWith(
                 fontSize: 10,
                 color: DS.textPrimary,
                 fontWeight: DS.fontWeightMedium,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/cognitive/data/models/behavior_pattern_model.dart';
 
@@ -108,7 +109,7 @@ class PrismBehaviorCard extends StatelessWidget {
                   const SizedBox(width: DS.sm),
                   Text(
                     context.l10n.prismTitle,
-                    style: context.sparkleTypography.labelLarge.copyWith(
+                    style: context.typo.labelLarge.copyWith(
                       fontWeight: DS.fontWeightSemibold,
                     ),
                   ),
@@ -152,7 +153,7 @@ class PrismBehaviorCard extends StatelessWidget {
           const SizedBox(width: DS.sm),
           Text(
             context.l10n.prismTitle,
-            style: context.sparkleTypography.labelLarge.copyWith(
+            style: context.typo.labelLarge.copyWith(
               fontWeight: DS.fontWeightSemibold,
             ),
           ),

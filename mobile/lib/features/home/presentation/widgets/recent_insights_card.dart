@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_section.dart';
 import 'package:sparkle/features/notification_center/presentation/providers/notification_center_provider.dart';
@@ -151,7 +152,7 @@ class _RecentInsightsCardState extends ConsumerState<RecentInsightsCard> {
                       ),
                       child: Text(
                         '${recentEntries.length}',
-                        style: context.sparkleTypography.labelSmall.copyWith(
+                        style: context.typo.labelSmall.copyWith(
                           color: DS.textSecondary,
                           fontWeight: DS.fontWeightBold,
                         ),
@@ -333,7 +334,7 @@ class _InsightRow extends StatelessWidget {
                       title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: context.sparkleTypography.labelLarge.copyWith(
+                      style: context.typo.labelLarge.copyWith(
                         fontWeight: DS.fontWeightBold,
                       ),
                     ),
@@ -342,7 +343,7 @@ class _InsightRow extends StatelessWidget {
                       subtitle,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: context.sparkleTypography.bodySmall.copyWith(
+                      style: context.typo.bodySmall.copyWith(
                         color: DS.textSecondary,
                         height: 1.35,
                       ),

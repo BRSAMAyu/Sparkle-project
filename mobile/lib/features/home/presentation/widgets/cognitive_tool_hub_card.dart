@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/reviews/reviews_routes.dart';
@@ -103,7 +104,7 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
                           title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: context.sparkleTypography.labelLarge.copyWith(
+                          style: context.typo.labelLarge.copyWith(
                             fontWeight: DS.fontWeightBold,
                             height: 1.0,
                           ),
@@ -128,7 +129,7 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.right,
-                        style: context.sparkleTypography.labelSmall.copyWith(
+                        style: context.typo.labelSmall.copyWith(
                           color: DS.textSecondary,
                         ),
                       ),
@@ -188,7 +189,7 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
                     children: [
                       Text(
                         context.l10n.cognitiveToolHubQuickToolsSection,
-                        style: context.sparkleTypography.labelLarge.copyWith(
+                        style: context.typo.labelLarge.copyWith(
                           fontWeight: DS.fontWeightBold,
                         ),
                       ),
@@ -270,7 +271,7 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
                   const SizedBox(width: DS.spacing8),
                   Text(
                     context.l10n.cognitiveToolCognitivePrism,
-                    style: context.sparkleTypography.labelSmall.copyWith(
+                    style: context.typo.labelSmall.copyWith(
                       fontWeight: DS.fontWeightBold,
                     ),
                   ),
@@ -331,7 +332,7 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
                       ),
                       child: Text(
                         context.l10n.cognitiveToolReviewWeakness,
-                        style: context.sparkleTypography.labelSmall.copyWith(
+                        style: context.typo.labelSmall.copyWith(
                           fontWeight: DS.fontWeightSemiBold,
                         ),
                       ),
@@ -510,7 +511,7 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
               const SizedBox(height: DS.spacing8),
               Text(
                 context.l10n.cognitiveToolNoPinnedTools,
-                style: context.sparkleTypography.labelLarge.copyWith(
+                style: context.typo.labelLarge.copyWith(
                   fontWeight: DS.fontWeightBold,
                 ),
               ),
@@ -537,7 +538,7 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
         ),
         child: Text(
           text,
-          style: context.sparkleTypography.labelSmall.copyWith(
+          style: context.typo.labelSmall.copyWith(
             fontWeight: DS.fontWeightSemiBold,
           ),
         ),
@@ -699,7 +700,7 @@ class _CompactToolTile extends ConsumerWidget {
                         tool.getLocalizedTitle(l10n: context.l10n),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: context.sparkleTypography.labelSmall.copyWith(
+                        style: context.typo.labelSmall.copyWith(
                           color: DS.textPrimary,
                           fontSize: dense ? 10 : 10.5,
                           height: 1.15,

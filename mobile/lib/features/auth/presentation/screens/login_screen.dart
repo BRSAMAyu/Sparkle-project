@@ -22,12 +22,8 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   // Brand colors — single source: the SparkleColors palette (batch2
-  // convergence). The login brand mark now shows the product's actual
-  // brand pair (brandPrimary/brandSecondary) instead of the divergent
-  // SemanticColors promo palette; *Deep roles are palette-derived.
-  // Explicit extension application: design_system.dart's SparkleContext
-  // also exposes `colors` (entry unification lands in batch 3).
-  SparkleColors get _brandColors => SparkleContextExtension(context).colors;
+  // convergence, read via the unified context.colors entry from batch3).
+  SparkleColors get _brandColors => context.colors;
   Color get _brandPrimary => _brandColors.brandPrimary;
   Color get _brandPrimaryDeep => _brandColors.brandPrimaryDeep;
   Color get _brandSecondary => _brandColors.brandSecondary;
@@ -117,9 +113,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           child: SingleChildScrollView(
             keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             padding: const EdgeInsets.all(DS.xl),
-            child: Form(
-              key: _formKey,
-              child: Column(
+            // Form-factor constraint (batch3 W-7): keep the login form a
+            // centered column on desktop/web instead of a 1200px stretch.
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: DS.contentMaxWidthForm,
+                ),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: DS.spacing24),
@@ -274,7 +277,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     children: [
                       Text(
                         l10n.authLoginAgreement,
-                        style: Theme.of(context).textTheme.bodySmall,
+                        style: context.typo.bodySmall,
                       ),
                       TextButton(
                         onPressed: () => context.push('/legal/terms'),
@@ -282,7 +285,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                       Text(
                         l10n.authAnd,
-                        style: Theme.of(context).textTheme.bodySmall,
+                        style: context.typo.bodySmall,
                       ),
                       TextButton(
                         onPressed: () => context.push('/legal/privacy'),
@@ -292,10 +295,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   const SizedBox(height: DS.spacing12),
                 ],
+                ),
               ),
             ),
           ),
         ),
+      ),
       ),
     );
   }
@@ -373,7 +378,10 @@ class _BrandWordmark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final baseStyle = Theme.of(context).textTheme.headlineSmall?.copyWith(
+    // SparkleTypography role (batch3 W-7): Material headlineSmall is not
+    // mapped by _buildTextTheme, so the wordmark previously fell back to
+    // the M3 default scale instead of the design system's.
+    final baseStyle = context.typo.headingMedium.copyWith(
           fontWeight: FontWeight.w800,
           letterSpacing: 0.2,
           height: 1.05,
@@ -390,7 +398,7 @@ class _BrandWordmark extends StatelessWidget {
       child: Text(
         title,
         textAlign: TextAlign.center,
-        style: baseStyle?.copyWith(
+        style: baseStyle.copyWith(
           shadows: [
             Shadow(
               color: secondary.withValues(alpha: 0.16),

@@ -30,3 +30,4 @@ A/B 级问题清零为收敛条件，C 级按性价比排序消化。
   - `round1-L1-design-system.md` — Round 1 L1 设计系统地基审查（基线 ca86bda8）
   - `round1-batch1-contrast.md` — Round 1 批次 1 修复：浅色模式对比度达标（P0-1 数值校准 + 速查表）
   - `round1-batch2-single-source.md` — Round 1 批次 2 修复：双事实源收敛（任务色 3→1 / 品牌色 2→1 / 字阶 3→1，P0-2 + P0-3）
+  - `round1-batch3.md` — Round 1 批次 3 修复：入口统一 + 孤立色清零 + W-7 中文优先（colors/typo 单一 context 入口、SemanticColors 69 成员与 app/theme.dart 删除、container 四件套收敛、locale zh 默认/回退链、登录页字阶与 480 约束）
