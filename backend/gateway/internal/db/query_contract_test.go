@@ -76,18 +76,31 @@ func TestQueryDefinitionsMatchGeneratedCriticalMethods(t *testing.T) {
 	}
 }
 
-func TestLuaScriptsExistForQuotaContract(t *testing.T) {
-	scripts := []string{
-		"scripts/decr_quota.lua",
+func TestLuaScriptsMatchQuotaContract(t *testing.T) {
+	// Live quota chain: usage metering scripts must exist and stay non-empty.
+	liveScripts := []string{
 		"scripts/record_usage.lua",
 		"scripts/record_usage_segment.lua",
-		"scripts/reserve_quota.lua",
 	}
-
-	for _, scriptPath := range scripts {
+	for _, scriptPath := range liveScripts {
 		content := readGatewayFile(t, scriptPath)
 		if strings.TrimSpace(content) == "" {
 			t.Fatalf("%s should not be empty", scriptPath)
+		}
+	}
+
+	// Deletion ratchet (R2-05 §4.1 option 1): the reserve/refund/decr family
+	// was dead code — zero production callers and no initializer for its
+	// user:quota:* keys. These scripts must stay deleted; reintroducing them
+	// requires reviving this test consciously.
+	deadScripts := []string{
+		"scripts/decr_quota.lua",
+		"scripts/reserve_quota.lua",
+		"scripts/refund_quota.lua",
+	}
+	for _, scriptPath := range deadScripts {
+		if _, err := os.Stat(filepath.Join(gatewayDBDir(t), scriptPath)); err == nil {
+			t.Fatalf("%s must stay deleted (dead reserve/refund/decr family, R2-05 §4.1)", scriptPath)
 		}
 	}
 }

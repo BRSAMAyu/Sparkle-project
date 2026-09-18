@@ -4,14 +4,11 @@ import (
 	_ "embed"
 )
 
-//go:embed scripts/decr_quota.lua
-var DecrQuotaScript string
-
-//go:embed scripts/reserve_quota.lua
-var ReserveQuotaScript string
-
-//go:embed scripts/refund_quota.lua
-var RefundQuotaScript string
+// Quota Lua scripts — the production quota chain is usage-metering based
+// (GetDailyUsage / RecordUsage / RecordUsageSegment). The former
+// reserve/refund/decr family was deleted as dead code (zero production
+// callers; R2-05 §4.1 option 1, executed by the P3 gateway handoff trio) —
+// see query_contract_test.go for the deletion ratchet.
 
 //go:embed scripts/record_usage.lua
 var RecordUsageScript string

@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -11,98 +10,20 @@ import (
 	"github.com/sparkle/gateway/internal/db"
 )
 
+// QuotaService implements the production quota chain: usage metering on
+// date-suffixed keys (llm_tokens:{uid}:{YYYY-MM-DD} + weekly aggregate) with
+// request-scoped idempotency. The former reserve/refund/decr family
+// (ReserveRequest / RefundReservation / DecrQuota + their Lua scripts) was
+// deleted as dead code — it had zero production callers and no initializer for
+// its user:quota:* keys (R2-05 §4.1 option 1, executed by the P3 gateway
+// handoff trio). Admission control is the pre-stream usage read (GW-P2-4
+// bounded degrade) plus in-stream segment checks and post-stream accounting.
 type QuotaService struct {
 	rdb *redis.Client
 }
 
-var ErrQuotaInsufficient = errors.New("quota_insufficient")
-
 func NewQuotaService(rdb *redis.Client) *QuotaService {
 	return &QuotaService{rdb: rdb}
-}
-
-func (s *QuotaService) DecrQuota(ctx context.Context, uid string) (int64, error) {
-	// Use script exported from internal/db
-	script := redis.NewScript(db.DecrQuotaScript)
-
-	val, err := script.Run(ctx, s.rdb,
-		[]string{fmt.Sprintf("user:quota:%s", uid)},
-	).Int64()
-
-	if err != nil {
-		return 0, err
-	}
-	if val < 0 {
-		return 0, ErrQuotaInsufficient
-	}
-	return val, nil
-}
-
-func (s *QuotaService) ReserveRequest(ctx context.Context, uid, requestID string, ttl time.Duration) (int64, error) {
-	if requestID == "" {
-		return 0, fmt.Errorf("request_id is required for reserve")
-	}
-
-	script := redis.NewScript(db.ReserveQuotaScript)
-
-	result, err := script.Run(ctx, s.rdb,
-		[]string{
-			fmt.Sprintf("user:quota:%s", uid),
-			fmt.Sprintf("quota:request:%s:%s", uid, requestID),
-		},
-		int64(ttl.Seconds()),
-	).Slice()
-	if err != nil {
-		return 0, err
-	}
-
-	if len(result) < 2 {
-		return 0, fmt.Errorf("unexpected reserve result")
-	}
-
-	status, ok := result[0].(int64)
-	if !ok {
-		return 0, fmt.Errorf("unexpected reserve status type")
-	}
-
-	remaining, ok := result[1].(int64)
-	if !ok {
-		return 0, fmt.Errorf("unexpected reserve remaining type")
-	}
-
-	if status == -1 {
-		return remaining, ErrQuotaInsufficient
-	}
-
-	return remaining, nil
-}
-
-func (s *QuotaService) RefundReservation(ctx context.Context, uid, requestID string, ttl time.Duration) (int64, error) {
-	if requestID == "" {
-		return 0, fmt.Errorf("request_id is required for refund")
-	}
-
-	script := redis.NewScript(db.RefundQuotaScript)
-
-	result, err := script.Run(ctx, s.rdb,
-		[]string{
-			fmt.Sprintf("user:quota:%s", uid),
-			fmt.Sprintf("quota:request:%s:%s", uid, requestID),
-		},
-		int64(ttl.Seconds()),
-	).Slice()
-	if err != nil {
-		return 0, err
-	}
-	if len(result) < 2 {
-		return 0, fmt.Errorf("unexpected refund result")
-	}
-
-	remaining, ok := result[1].(int64)
-	if !ok {
-		return 0, fmt.Errorf("unexpected refund remaining type")
-	}
-	return remaining, nil
 }
 
 func (s *QuotaService) RecordUsage(ctx context.Context, uid, requestID string, totalTokens int64, ttl time.Duration) (bool, error) {

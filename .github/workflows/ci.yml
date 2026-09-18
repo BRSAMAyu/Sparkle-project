@@ -167,8 +167,11 @@ jobs:
 
       - name: Go Test with Coverage
         working-directory: backend/gateway
+        # -race needs cgo (default enabled on ubuntu runners). -timeout is an
+        # explicit per-package budget so race-mode slowdowns (2-20x) cannot hit
+        # the 10m go-test default; the 40m job timeout still bounds the step.
         run: |
-          go test -v -race -coverprofile=coverage.out ./...
+          go test -v -race -timeout=20m -coverprofile=coverage.out ./...
           go tool cover -func=coverage.out | tee coverage.txt
 
       - name: Go Critical Risk Suites

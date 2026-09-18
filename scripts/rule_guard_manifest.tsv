@@ -72,4 +72,5 @@ AURORA-CONFIG	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_aurora_config_consiste
 BJ	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_bj_dead_imports.py"
 UI-TOKENS	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_ui_design_tokens_ratchet.py"
 BM	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_bm_r208_dead_routes.py"
+BA-ROUTES	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_ba_routes_parity.py"
 DB-HEAD	PYTHONPATH="${REPO_ROOT}/backend" "${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_alembic_single_head.py"

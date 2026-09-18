@@ -79,7 +79,9 @@ jobs:
 
       - name: Go Test
         working-directory: backend/gateway
-        run: go test -v -race ./...
+        # explicit per-package budget: race-mode slowdowns must not hit the 10m
+        # go-test default on slower runners
+        run: go test -v -race -timeout=20m ./...
 
   # ── Proto Lint ────────────────────────────────────────────────────────────
   proto-check:
