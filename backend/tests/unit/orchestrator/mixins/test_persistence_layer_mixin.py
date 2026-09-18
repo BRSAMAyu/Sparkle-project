@@ -58,12 +58,30 @@ async def test_persist_assistant_message_returns_early_for_empty_response(orches
 
 
 @pytest.mark.asyncio
-async def test_persist_assistant_message_saves_to_database(orchestrator):
-    """Test _persist_assistant_message saves message to database."""
+async def test_persist_assistant_message_saves_to_database(orchestrator, monkeypatch):
+    """9050650f 语义：assistant 消息经独立 session 自持提交（共享流 session 可能
+    被本轮更早的异常毒化，聊天持久化不能陪葬）；断言独立 session 的
+    add/flush/commit 而非共享 session。"""
     mock_db = MagicMock()
     mock_db.is_active = True
     mock_db.flush = AsyncMock()
     mock_db.commit = AsyncMock()
+
+    persist_session = MagicMock()
+    persist_session.add = MagicMock()
+    persist_session.flush = AsyncMock()
+    persist_session.commit = AsyncMock()
+
+    class _SessionCtx:
+        async def __aenter__(self):
+            return persist_session
+
+        async def __aexit__(self, *args):
+            return False
+
+    import app.db.session as dbs
+
+    monkeypatch.setattr(dbs, "AsyncSessionLocal", lambda: _SessionCtx())
 
     user_id = str(uuid.uuid4())
     session_id = str(uuid.uuid4())
@@ -76,13 +94,14 @@ async def test_persist_assistant_message_saves_to_database(orchestrator):
         full_response=full_response,
     )
 
-    # Should add message and flush（RB-06 follow-up：flush 而非 commit，
-    # commit 所有权在 gRPC 流结束的统一提交）
-    assert mock_db.add.called
-    assert mock_db.flush.called
+    # 独立 session 收到消息并自持提交；共享 session 不再被写入
+    assert persist_session.add.called
+    assert persist_session.flush.called
+    assert persist_session.commit.called
+    assert not mock_db.add.called
 
     # Verify the message object
-    added_message = mock_db.add.call_args[0][0]
+    added_message = persist_session.add.call_args[0][0]
     assert added_message.content == full_response
     assert str(added_message.user_id) == user_id
 
