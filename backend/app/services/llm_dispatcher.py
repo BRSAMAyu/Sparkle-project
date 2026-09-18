@@ -60,7 +60,14 @@ class LLMDispatcher:
         if request.task_type == inference_pb2.PREDICT_NEXT_ACTIONS:
             return await self._handle_predict_next_actions(request)
 
-        cache_key = self._cache_key(request)
+        # R2 N3：缓存键构造（含 _select_model 的 wrapper 属性访问）单独捕获，
+        # 映射为 SCHEMA_VIOLATION，避免绕过统一错误映射直达 gRPC INTERNAL。
+        try:
+            cache_key = self._cache_key(request)
+        except Exception as exc:
+            logger.exception("Inference cache key construction failed")
+            return self._error_response(request, inference_pb2.SCHEMA_VIOLATION, str(exc))
+
         cached = await self._cache_get(cache_key)
         if cached:
             return inference_pb2.InferenceResponse(

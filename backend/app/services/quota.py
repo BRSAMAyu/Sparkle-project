@@ -2,13 +2,19 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass
+from pathlib import Path
 
 from loguru import logger
 
 from app.core.cache import cache_service
 
-RATE_LIMIT_LUA_PATH = "backend/app/services/lua/rate_limit.lua"
-RATE_LIMIT_REFUND_LUA_PATH = "backend/app/services/lua/rate_limit_refund.lua"
+# R2 N1：以模块位置锚定，禁止 CWD 相对路径（CWD=backend/ 或容器内会拼出
+# 不存在的路径导致脚本加载失败 → 配额静默 fail-open）。
+# quota.py 与 lua/ 同在 app/services/ 下，故取 parent（报告建议的 parents[1]
+# 会指到 app/lua，以 chdir 红测试实测为准绳）。
+_LUA_DIR = Path(__file__).resolve().parent / "lua"
+RATE_LIMIT_LUA_PATH = str(_LUA_DIR / "rate_limit.lua")
+RATE_LIMIT_REFUND_LUA_PATH = str(_LUA_DIR / "rate_limit_refund.lua")
 
 
 @dataclass

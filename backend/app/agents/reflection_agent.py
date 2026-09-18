@@ -563,9 +563,13 @@ class ReflectionAgent:
             route_history_context=route_history_context,
         )
         started = time.monotonic()
+        # N2 修复：裸 LLMService.chat 是 messages-first 签名，
+        # 原 chat(system_prompt=, user_message=) 签名在任何实现上都不存在（必 TypeError）
         raw_response = await self.generator.chat(
-            system_prompt=TRIGGER_REFLECTION_SYSTEM_PROMPT,
-            user_message=prompt,
+            [
+                {"role": "system", "content": TRIGGER_REFLECTION_SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ],
             temperature=0.3,
         )
         latency_ms = int((time.monotonic() - started) * 1000)
@@ -703,15 +707,21 @@ class ReflectionAgent:
             reasoning = f"直接修复（{len(review_result.issues)}个问题）"
 
         try:
+            # N2 修复：构造 messages 列表按裸服务真实签名调用（原 system_prompt=/user_message= 必 TypeError）
             fixed_content = await self.generator.chat(
-                system_prompt=build_reflection_system_prompt(
-                    get_review_profile(
-                        review_profile_id=review_profile_id,
-                        workflow_context=workflow_context,
-                        target_type=review_result.target_type,
-                    )
-                ),
-                user_message=prompt,
+                [
+                    {
+                        "role": "system",
+                        "content": build_reflection_system_prompt(
+                            get_review_profile(
+                                review_profile_id=review_profile_id,
+                                workflow_context=workflow_context,
+                                target_type=review_result.target_type,
+                            )
+                        ),
+                    },
+                    {"role": "user", "content": prompt},
+                ],
                 temperature=0.3
             )
 

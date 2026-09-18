@@ -6,6 +6,20 @@ import pytest
 
 from app.gen.sparkle.inference.v1 import inference_pb2
 from app.services.llm_dispatcher import LLMDispatcher
+from app.services.llm_service import llm_service
+
+
+def _spec_chat_mock(side_effect=None) -> AsyncMock:
+    """以真实 wrapper.chat 绑定方法为 spec 构造 chat mock。
+
+    R2 §2.1.5 mock-oracle 教训：``(*args, **kwargs)`` 裸 mock 不做参数绑定，
+    结构性掩盖签名错位。spec 化后，调用与真实 wrapper.chat 签名不匹配会直接
+    TypeError（进而是 PROVIDER_UNAVAILABLE），测试不再沉默。
+    """
+    mock = AsyncMock(spec=llm_service.chat)
+    if side_effect is not None:
+        mock.side_effect = side_effect
+    return mock
 
 
 class _FakeLimiter:
@@ -49,7 +63,7 @@ async def test_dispatcher_refunds_reserved_quota_on_provider_failure(monkeypatch
     monkeypatch.setattr("app.services.llm_dispatcher.get_rate_limiter", AsyncMock(return_value=limiter))
     monkeypatch.setattr("app.services.llm_dispatcher.circuit_breaker_service.check", AsyncMock(return_value=None))
     monkeypatch.setattr("app.services.llm_dispatcher.circuit_breaker_service.record_failure", AsyncMock(return_value=None))
-    monkeypatch.setattr("app.services.llm_dispatcher.llm_service.chat", _fail_chat)
+    monkeypatch.setattr("app.services.llm_dispatcher.llm_service.chat", _spec_chat_mock(_fail_chat))
 
     response = await dispatcher.run(_request("你好，帮我整理今天的计划"))
 
@@ -71,7 +85,7 @@ async def test_dispatcher_refunds_unused_success_reservation(monkeypatch):
     monkeypatch.setattr("app.services.llm_dispatcher.get_rate_limiter", AsyncMock(return_value=limiter))
     monkeypatch.setattr("app.services.llm_dispatcher.circuit_breaker_service.check", AsyncMock(return_value=None))
     monkeypatch.setattr("app.services.llm_dispatcher.circuit_breaker_service.record_success", AsyncMock(return_value=None))
-    monkeypatch.setattr("app.services.llm_dispatcher.llm_service.chat", _chat)
+    monkeypatch.setattr("app.services.llm_dispatcher.llm_service.chat", _spec_chat_mock(_chat))
 
     response = await dispatcher.run(_request("你好", max_output_tokens=20))
 
@@ -88,3 +102,20 @@ def test_dispatcher_estimates_cjk_without_four_char_discount():
 
     assert cjk == 4
     assert english == 1
+
+
+@pytest.mark.asyncio
+async def test_dispatcher_maps_cache_key_failure_to_schema_violation(monkeypatch):
+    """R2 N3：_cache_key 构造失败不得绕过统一错误映射直达 gRPC INTERNAL。"""
+
+    dispatcher = LLMDispatcher()
+
+    def _boom(request):
+        raise RuntimeError("cache key construction failed")
+
+    monkeypatch.setattr(dispatcher, "_cache_key", _boom)
+
+    response = await dispatcher.run(_request("你好"))
+
+    assert response.ok is False
+    assert response.error_reason == inference_pb2.SCHEMA_VIOLATION

@@ -155,8 +155,11 @@ class OrchestratorAgent(BaseAgent):
         logger.warning("No specialist agents matched, using fallback LLM")
 
         try:
+            # A10 修复：prompt= 不是任何 chat 签名的参数（必 TypeError），改 messages-first
             response_text = await llm_service.chat(
-                prompt=f"User Query: {context.user_query}",
+                messages=[
+                    {"role": "user", "content": f"User Query: {context.user_query}"}
+                ],
                 model="qwen-plus"
             )
 
