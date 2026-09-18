@@ -25,14 +25,15 @@ class STTService:
 
     def _init_provider(self):
         """根据配置初始化STT Provider"""
-        provider_name = (settings.STT_PROVIDER or "zhipu").lower()
+        provider_name = (settings.STT_PROVIDER or "bailian").lower()
         backup_name = (settings.STT_BACKUP_PROVIDER or "").lower()
         self.provider = self._build_provider(provider_name)
         alternate_name = backup_name or ("xunfei" if provider_name == "zhipu" else "zhipu")
         self.backup_provider = self._build_provider(alternate_name)
 
         # 移动端的聊天、群聊、工具页都通过 WebSocket 走流式识别。
-        # 当讯飞凭证可用时，优先用其原生流式协议，避免智谱配额问题直接打断实时链路。
+        # 百炼 qwen3-asr-flash-realtime 为原生流式协议，作为主 provider 时直接承担流式链路；
+        # 仅当智谱为主 provider 时才把备用 provider 用作流式，避免智谱配额问题打断实时链路。
         if provider_name == "zhipu" and self.backup_provider is not None:
             self.stream_provider = self.backup_provider
         else:
@@ -48,6 +49,13 @@ class STTService:
 
     def _build_provider(self, provider_name: str) -> STTProvider | None:
         try:
+            if provider_name == "bailian":
+                from app.services.stt.providers.bailian_provider import BailianProvider
+
+                if not self._is_configured_value(settings.DASHSCOPE_API_KEY):
+                    return None
+                return BailianProvider()
+
             if provider_name == "zhipu":
                 from app.services.stt.providers.zhipu_provider import ZhipuProvider
 

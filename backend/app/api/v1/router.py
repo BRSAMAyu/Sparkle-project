@@ -102,6 +102,7 @@ from app.api.v1 import (
     statistics,
     stt,
     subjects,
+    tts,
     subtasks,
     suggestions,  # Vision Item 3
     tasks,
@@ -208,6 +209,7 @@ api_router.include_router(learning_reports.router)
 api_router.include_router(agent_stats.router)
 api_router.include_router(assets.router)
 api_router.include_router(stt.router, prefix="/stt", tags=["stt"])
+api_router.include_router(tts.router, prefix="/tts", tags=["tts"])
 api_router.include_router(focus.router, prefix="/focus", tags=["focus"])
 api_router.include_router(tool_history.router)
 api_router.include_router(vocabulary.router, prefix="/vocabulary", tags=["vocabulary"])

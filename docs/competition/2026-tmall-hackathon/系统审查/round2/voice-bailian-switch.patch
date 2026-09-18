@@ -1,0 +1,1090 @@
+diff --git a/backend/app/api/v1/router.py b/backend/app/api/v1/router.py
+index b62ea114..221e8dc2 100755
+--- a/backend/app/api/v1/router.py
++++ b/backend/app/api/v1/router.py
+@@ -102,6 +102,7 @@ from app.api.v1 import (
+     statistics,
+     stt,
+     subjects,
++    tts,
+     subtasks,
+     suggestions,  # Vision Item 3
+     tasks,
+@@ -208,6 +209,7 @@ api_router.include_router(learning_reports.router)
+ api_router.include_router(agent_stats.router)
+ api_router.include_router(assets.router)
+ api_router.include_router(stt.router, prefix="/stt", tags=["stt"])
++api_router.include_router(tts.router, prefix="/tts", tags=["tts"])
+ api_router.include_router(focus.router, prefix="/focus", tags=["focus"])
+ api_router.include_router(tool_history.router)
+ api_router.include_router(vocabulary.router, prefix="/vocabulary", tags=["vocabulary"])
+diff --git a/backend/app/api/v1/tts.py b/backend/app/api/v1/tts.py
+new file mode 100644
+index 00000000..5a250393
+--- /dev/null
++++ b/backend/app/api/v1/tts.py
+@@ -0,0 +1,46 @@
++"""
++TTS (Text to Speech) API
++文字转语音服务（阿里云百炼 qwen3-tts-instruct-flash）
++"""
++
++from __future__ import annotations
++
++from fastapi import APIRouter, Depends, Response
++from pydantic import BaseModel, Field
++
++from app.api.deps import get_current_user
++from app.services.tts_service import tts_service
++
++router = APIRouter()
++
++
++class SynthesizeRequest(BaseModel):
++    text: str = Field(..., min_length=1, max_length=2000, description="待合成文本")
++    voice: str | None = Field(None, max_length=64, description="音色（默认取 QWEN_TTS_VOICE）")
++    instructions: str | None = Field(None, max_length=500, description="语音风格指令，仅 qwen3-tts-instruct 系列支持")
++
++
++@router.post("/synthesize")
++async def synthesize_speech(
++    request: SynthesizeRequest,
++    current_user: object = Depends(get_current_user),
++):
++    """
++    Synthesize Chinese/multilingual speech to wav audio bytes.
++    """
++    result = await tts_service.synthesize(
++        request.text,
++        voice=request.voice,
++        instructions=request.instructions,
++    )
++
++    if result.get("error") or not result.get("audio"):
++        from fastapi import HTTPException, status
++
++        raise HTTPException(
++            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
++            detail=str(result.get("error") or "TTS synthesis failed"),
++        )
++
++    media_type = "audio/mpeg" if result.get("format") == "mp3" else "audio/wav"
++    return Response(content=result["audio"], media_type=media_type)
+diff --git a/backend/app/config/settings.py b/backend/app/config/settings.py
+index 0bec7026..ce966875 100755
+--- a/backend/app/config/settings.py
++++ b/backend/app/config/settings.py
+@@ -523,10 +523,27 @@ class Settings(BaseSettings):
+     SILICONFLOW_RERANK_MODEL: str = "Qwen/Qwen3-Reranker-4B"
+ 
+     # STT (Speech to Text) Service
+-    STT_PROVIDER: str = "zhipu"  # zhipu
+-    STT_BACKUP_PROVIDER: str = "xunfei"  # xunfei | zhipu
++    STT_PROVIDER: str = "bailian"  # bailian | zhipu | xunfei
++    STT_BACKUP_PROVIDER: str = "zhipu"  # zhipu | xunfei | bailian
+     STT_ENHANCE_ENABLED: bool = True  # 是否启用LLM后处理增强
+ 
++    # Qwen ASR (Bailian realtime) Configuration
++    # 实时协议: wss://.../api-ws/v1/realtime?model={QWEN_ASR_MODEL}，manual commit 模式
++    QWEN_ASR_WS_URL: str = "wss://dashscope.aliyuncs.com/api-ws/v1/realtime"
++    QWEN_ASR_MODEL: str = "qwen3-asr-flash-realtime"
++    QWEN_ASR_SAMPLE_RATE: int = 16000
++    QWEN_ASR_STREAM_SEGMENT_SECONDS: int = 4
++    QWEN_ASR_MAX_AUDIO_SECONDS: int = 60
++    QWEN_ASR_REQUEST_TIMEOUT_SECONDS: int = 30
++    QWEN_ASR_LANGUAGE: str = "zh"
++
++    # TTS (Text to Speech) Service
++    TTS_PROVIDER: str = "bailian"  # bailian
++    QWEN_TTS_MODEL: str = "qwen3-tts-instruct-flash"
++    QWEN_TTS_VOICE: str = "Cherry"
++    QWEN_TTS_AUDIO_FORMAT: str = "wav"
++    QWEN_TTS_REQUEST_TIMEOUT_SECONDS: int = 60
++
+     # GLM Batch
+     GLM_BATCH_ENABLED: bool = True
+     GLM_BATCH_QUEUE: str = "glm_batch"
+diff --git a/backend/app/services/stt/providers/bailian_provider.py b/backend/app/services/stt/providers/bailian_provider.py
+new file mode 100644
+index 00000000..44654c18
+--- /dev/null
++++ b/backend/app/services/stt/providers/bailian_provider.py
+@@ -0,0 +1,283 @@
++"""
++阿里云百炼 Qwen ASR Provider（qwen3-asr-flash-realtime）。
++
++走 DashScope Realtime WebSocket 协议（manual commit 模式）：
++  wss://dashscope.aliyuncs.com/api-ws/v1/realtime?model=qwen3-asr-flash-realtime
++  - session.update  配置 pcm/16k + turn_detection=null
++  - input_audio_buffer.append 推送 base64 PCM
++  - input_audio_buffer.commit 触发转写
++  - session.finish   结束会话
++  - conversation.item.input_audio_transcription.completed 携带最终文本
++
++流式识别沿用既有"分段转写"模式（与 ZhipuProvider 一致）：每满
++QWEN_ASR_STREAM_SEGMENT_SECONDS 秒 PCM 起一个会话转写并去重增量返回；
++文件转写则将整段音频（≤ QWEN_ASR_MAX_AUDIO_SECONDS）单会话转写。
++"""
++
++from __future__ import annotations
++
++import asyncio
++import base64
++import json
++import os
++import shutil
++import tempfile
++import uuid
++import wave
++from collections.abc import AsyncGenerator
++from pathlib import Path
++
++import websockets
++from loguru import logger
++
++from app.config import settings
++from app.services.stt.providers.base import STTProvider
++
++
++class BailianProvider(STTProvider):
++    """百炼 Qwen3-ASR-Flash-Realtime Provider。"""
++
++    _PCM_CHUNK_BYTES = 3200  # ~0.1s @16kHz 16bit mono
++    _SESSION_OPEN_TIMEOUT_SECONDS = 10.0
++    _FIRST_MESSAGE_TIMEOUT_SECONDS = 15.0
++
++    def __init__(self):
++        self.api_key = settings.DASHSCOPE_API_KEY
++        self.ws_base_url = settings.QWEN_ASR_WS_URL.rstrip("/")
++        self.model = settings.QWEN_ASR_MODEL
++        self.sample_rate = settings.QWEN_ASR_SAMPLE_RATE
++        self.stream_segment_seconds = max(1, settings.QWEN_ASR_STREAM_SEGMENT_SECONDS)
++        self.max_audio_seconds = settings.QWEN_ASR_MAX_AUDIO_SECONDS
++        self.language = settings.QWEN_ASR_LANGUAGE
++        self.timeout = float(settings.QWEN_ASR_REQUEST_TIMEOUT_SECONDS)
++
++        if not self.api_key:
++            logger.warning("DASHSCOPE_API_KEY 未配置，BailianProvider 将无法工作")
++
++    async def transcribe_stream(
++        self,
++        audio_stream: AsyncGenerator[bytes, None],
++        language: str | None = None,
++        sample_rate: int | None = None,
++    ) -> AsyncGenerator[str, None]:
++        self._ensure_api_key()
++
++        del sample_rate  # 固定按 settings.QWEN_ASR_SAMPLE_RATE 分段计长（移动端为 16k PCM）
++        segment_bytes = self.sample_rate * 2 * self.stream_segment_seconds
++        pcm_buffer = bytearray()
++        last_emitted = ""
++
++        async for audio_chunk in audio_stream:
++            if not audio_chunk:
++                continue
++
++            pcm_buffer.extend(audio_chunk)
++            if len(pcm_buffer) >= segment_bytes:
++                text = await self._transcribe_pcm_segment(bytes(pcm_buffer), language)
++                if text and text != last_emitted:
++                    last_emitted = text
++                    yield text
++                pcm_buffer.clear()
++
++        if pcm_buffer:
++            text = await self._transcribe_pcm_segment(bytes(pcm_buffer), language)
++            if text and text != last_emitted:
++                yield text
++
++    async def transcribe_file(
++        self,
++        file_path: str,
++        language: str | None = None,
++    ) -> str:
++        self._ensure_api_key()
++
++        if not os.path.exists(file_path):
++            raise RuntimeError("文件不存在")
++
++        prepared_path, cleanup_dir, detected_sample_rate = await self._prepare_audio_file(file_path)
++        try:
++            pcm_bytes = await asyncio.to_thread(self._read_wav_pcm, prepared_path)
++            duration = len(pcm_bytes) / 2 / (detected_sample_rate or self.sample_rate)
++            if duration > self.max_audio_seconds:
++                raise RuntimeError(f"百炼 ASR 单次会话最长支持 {self.max_audio_seconds} 秒音频")
++
++            return await self._transcribe_pcm_segment(pcm_bytes, language, detected_sample_rate)
++        finally:
++            if cleanup_dir:
++                shutil.rmtree(cleanup_dir, ignore_errors=True)
++
++    async def close(self) -> None:
++        return None
++
++    def _ensure_api_key(self) -> None:
++        if not self.api_key:
++            raise RuntimeError("DASHSCOPE_API_KEY 未配置")
++
++    def _normalize_language(self, language: str | None) -> str | None:
++        target = (language or self.language or "").strip()
++        if not target:
++            return None
++        lowered = target.lower()
++        if lowered.startswith("zh"):
++            return "zh"
++        if lowered.startswith("en"):
++            return "en"
++        return lowered.split("-")[0] or None
++
++    def _build_ws_url(self) -> str:
++        return f"{self.ws_base_url}?model={self.model}"
++
++    def _build_ws_headers(self) -> dict[str, str]:
++        return {
++            "Authorization": f"Bearer {self.api_key}",
++            "OpenAI-Beta": "realtime=v1",
++        }
++
++    def _session_update_event(self, language: str | None) -> dict:
++        session: dict[str, object] = {
++            "modalities": ["text"],
++            "input_audio_format": "pcm",
++            "sample_rate": self.sample_rate,
++            "turn_detection": None,  # manual commit 模式，转写由 commit 显式触发
++        }
++        normalized = self._normalize_language(language)
++        if normalized:
++            session["input_audio_transcription"] = {"language": normalized}
++        return {
++            "event_id": f"event_{uuid.uuid4().hex}",
++            "type": "session.update",
++            "session": session,
++        }
++
++    def _append_event(self, pcm_chunk: bytes) -> dict:
++        return {
++            "event_id": f"event_{uuid.uuid4().hex}",
++            "type": "input_audio_buffer.append",
++            "audio": base64.b64encode(pcm_chunk).decode("utf-8"),
++        }
++
++    def _commit_event(self) -> dict:
++        return {
++            "event_id": f"event_{uuid.uuid4().hex}",
++            "type": "input_audio_buffer.commit",
++        }
++
++    def _finish_event(self) -> dict:
++        return {
++            "event_id": f"event_{uuid.uuid4().hex}",
++            "type": "session.finish",
++        }
++
++    async def _transcribe_pcm_segment(
++        self,
++        pcm_bytes: bytes,
++        language: str | None = None,
++        sample_rate: int | None = None,
++    ) -> str:
++        if not pcm_bytes:
++            return ""
++
++        original_sample_rate = self.sample_rate
++        if sample_rate and sample_rate != self.sample_rate:
++            # 文件场景带真实采样率：临时切换会话采样率，避免重采样
++            self.sample_rate = sample_rate
++        try:
++            async with websockets.connect(
++                self._build_ws_url(),
++                additional_headers=self._build_ws_headers(),
++                max_size=2**22,
++                open_timeout=self._SESSION_OPEN_TIMEOUT_SECONDS,
++                close_timeout=2,
++            ) as websocket:
++                await websocket.send(json.dumps(self._session_update_event(language)))
++
++                for offset in range(0, len(pcm_bytes), self._PCM_CHUNK_BYTES):
++                    chunk = pcm_bytes[offset : offset + self._PCM_CHUNK_BYTES]
++                    await websocket.send(json.dumps(self._append_event(chunk)))
++
++                await websocket.send(json.dumps(self._commit_event()))
++                await websocket.send(json.dumps(self._finish_event()))
++
++                return await self._collect_transcript(websocket)
++        finally:
++            self.sample_rate = original_sample_rate
++
++    async def _collect_transcript(self, websocket) -> str:
++        deadline = asyncio.get_event_loop().time() + self.timeout
++        while True:
++            remaining = deadline - asyncio.get_event_loop().time()
++            if remaining <= 0:
++                raise RuntimeError("百炼 ASR 响应超时")
++            try:
++                raw = await asyncio.wait_for(websocket.recv(), timeout=remaining)
++            except TimeoutError:
++                raise RuntimeError("百炼 ASR 响应超时") from None
++            except websockets.ConnectionClosed:
++                raise RuntimeError("百炼 ASR 连接被服务端关闭") from None
++
++            try:
++                data = json.loads(raw)
++            except (TypeError, json.JSONDecodeError):
++                continue
++
++            event_type = data.get("type")
++            if event_type == "conversation.item.input_audio_transcription.completed":
++                transcript = str(data.get("transcript") or "").strip()
++                logger.debug(f"百炼 ASR 转写完成: {transcript[:80]}")
++                return transcript
++            if event_type == "conversation.item.input_audio_transcription.text":
++                # 部分结果（manual 模式下少见）：仅日志留痕，等 completed
++                continue
++            if event_type == "error":
++                error = data.get("error") or {}
++                message = error.get("message") if isinstance(error, dict) else str(error)
++                raise RuntimeError(f"百炼 ASR 请求失败: {message or data}")
++            if event_type == "session.finished":
++                raise RuntimeError("百炼 ASR 会话结束但未返回转写结果")
++
++    async def _prepare_audio_file(self, file_path: str) -> tuple[str, str | None, int | None]:
++        """统一转成 16k mono wav；返回 (路径, 清理目录, 实际采样率)。"""
++        ext = Path(file_path).suffix.lower()
++        if ext == ".wav":
++            detected = await asyncio.to_thread(self._probe_wav_sample_rate, file_path)
++            return file_path, None, detected
++
++        temp_dir = tempfile.mkdtemp(prefix="bailian-asr-")
++        converted_path = os.path.join(temp_dir, "converted.wav")
++        await self._run_command(
++            "ffmpeg",
++            "-y",
++            "-i",
++            file_path,
++            "-ac",
++            "1",
++            "-ar",
++            str(self.sample_rate),
++            converted_path,
++        )
++        return converted_path, temp_dir, self.sample_rate
++
++    def _probe_wav_sample_rate(self, file_path: str) -> int:
++        with wave.open(file_path, "rb") as wav_file:
++            rate = wav_file.getframerate()
++        if rate <= 0:
++            raise RuntimeError(f"无法识别音频采样率: {file_path}")
++        return rate
++
++    def _read_wav_pcm(self, file_path: str) -> bytes:
++        with wave.open(file_path, "rb") as wav_file:
++            if wav_file.getsampwidth() != 2 or wav_file.getnchannels() != 1:
++                raise RuntimeError("百炼 ASR 仅支持 16bit 单声道 PCM WAV，请先转码")
++            return wav_file.readframes(wav_file.getnframes())
++
++    async def _run_command(self, *command: str) -> str:
++        process = await asyncio.create_subprocess_exec(
++            *command,
++            stdout=asyncio.subprocess.PIPE,
++            stderr=asyncio.subprocess.PIPE,
++        )
++        stdout, stderr = await process.communicate()
++        if process.returncode != 0:
++            message = stderr.decode("utf-8", errors="ignore").strip() or stdout.decode("utf-8", errors="ignore").strip()
++            raise RuntimeError(message or f"命令执行失败: {' '.join(command)}")
++        return stdout.decode("utf-8", errors="ignore")
+diff --git a/backend/app/services/stt_service.py b/backend/app/services/stt_service.py
+index e3485f35..7521f057 100755
+--- a/backend/app/services/stt_service.py
++++ b/backend/app/services/stt_service.py
+@@ -25,14 +25,15 @@ class STTService:
+ 
+     def _init_provider(self):
+         """根据配置初始化STT Provider"""
+-        provider_name = (settings.STT_PROVIDER or "zhipu").lower()
++        provider_name = (settings.STT_PROVIDER or "bailian").lower()
+         backup_name = (settings.STT_BACKUP_PROVIDER or "").lower()
+         self.provider = self._build_provider(provider_name)
+         alternate_name = backup_name or ("xunfei" if provider_name == "zhipu" else "zhipu")
+         self.backup_provider = self._build_provider(alternate_name)
+ 
+         # 移动端的聊天、群聊、工具页都通过 WebSocket 走流式识别。
+-        # 当讯飞凭证可用时，优先用其原生流式协议，避免智谱配额问题直接打断实时链路。
++        # 百炼 qwen3-asr-flash-realtime 为原生流式协议，作为主 provider 时直接承担流式链路；
++        # 仅当智谱为主 provider 时才把备用 provider 用作流式，避免智谱配额问题打断实时链路。
+         if provider_name == "zhipu" and self.backup_provider is not None:
+             self.stream_provider = self.backup_provider
+         else:
+@@ -48,6 +49,13 @@ class STTService:
+ 
+     def _build_provider(self, provider_name: str) -> STTProvider | None:
+         try:
++            if provider_name == "bailian":
++                from app.services.stt.providers.bailian_provider import BailianProvider
++
++                if not self._is_configured_value(settings.DASHSCOPE_API_KEY):
++                    return None
++                return BailianProvider()
++
+             if provider_name == "zhipu":
+                 from app.services.stt.providers.zhipu_provider import ZhipuProvider
+ 
+diff --git a/backend/app/services/tts_service.py b/backend/app/services/tts_service.py
+new file mode 100644
+index 00000000..ea6980ba
+--- /dev/null
++++ b/backend/app/services/tts_service.py
+@@ -0,0 +1,189 @@
++"""
++TTS (Text to Speech) 服务。
++
++比赛主力供应商为阿里云百炼：
++  POST {DASHSCOPE_BASE_HTTP_API_URL}/services/aigc/multimodal-generation/generation
++  model=qwen3-tts-instruct-flash → output.audio.data(base64) / output.audio.url
++
++保留 provider 结构，便于后续接入其他 TTS 供应商。移动端当前使用端上
++flutter_tts，本服务面向服务端合成场景（如通知播报、多模态回复）。
++"""
++
++from __future__ import annotations
++
++import base64
++from typing import Any
++
++import httpx
++from loguru import logger
++
++from app.config import settings
++
++
++class TTSProviderError(RuntimeError):
++    """TTS 合成失败。"""
++
++
++def _is_probably_audio(data: bytes) -> bool:
++    if len(data) < 12:
++        return False
++    if data[:4] == b"RIFF" and data[8:12] == b"WAVE":  # wav
++        return True
++    if data[:3] == b"ID3" or (data[0] == 0xFF and (data[1] & 0xE0) == 0xE0):  # mp3
++        return True
++    return False
++
++
++class BailianTTSProvider:
++    """百炼 Qwen3-TTS-Instruct-Flash Provider（HTTP 非流式）。"""
++
++    def __init__(self):
++        self.api_key = settings.DASHSCOPE_API_KEY
++        self.endpoint = (
++            settings.DASHSCOPE_BASE_HTTP_API_URL.rstrip("/") + "/services/aigc/multimodal-generation/generation"
++        )
++        self.model = settings.QWEN_TTS_MODEL
++        self.voice = settings.QWEN_TTS_VOICE
++        self.audio_format = settings.QWEN_TTS_AUDIO_FORMAT
++        self.timeout = httpx.Timeout(settings.QWEN_TTS_REQUEST_TIMEOUT_SECONDS)
++
++        if not self.api_key:
++            logger.warning("DASHSCOPE_API_KEY 未配置，BailianTTSProvider 将无法工作")
++
++    def _headers(self) -> dict[str, str]:
++        return {
++            "Authorization": f"Bearer {self.api_key}",
++            "Content-Type": "application/json",
++        }
++
++    def _build_payload(
++        self,
++        text: str,
++        voice: str | None = None,
++        instructions: str | None = None,
++    ) -> dict[str, Any]:
++        input_body: dict[str, Any] = {"text": text}
++        resolved_voice = voice or self.voice
++        if resolved_voice:
++            input_body["voice"] = resolved_voice
++        if instructions:
++            # instruction 控制仅 qwen3-tts-instruct 系列支持
++            input_body["instructions"] = instructions
++
++        return {
++            "model": self.model,
++            "input": input_body,
++        }
++
++    async def synthesize(
++        self,
++        text: str,
++        voice: str | None = None,
++        instructions: str | None = None,
++    ) -> bytes:
++        if not self.api_key:
++            raise TTSProviderError("DASHSCOPE_API_KEY 未配置")
++        if not text or not text.strip():
++            raise TTSProviderError("合成文本不能为空")
++
++        async with httpx.AsyncClient(timeout=self.timeout) as client:
++            response = await client.post(
++                self.endpoint,
++                headers=self._headers(),
++                json=self._build_payload(text, voice, instructions),
++            )
++            if response.status_code >= 400:
++                raise TTSProviderError(f"百炼 TTS 请求失败: {self._extract_api_error(response)}")
++
++            payload = response.json()
++            audio = (payload.get("output") or {}).get("audio") or {}
++
++            audio_bytes = b""
++            if audio.get("data"):
++                try:
++                    audio_bytes = base64.b64decode(audio["data"])
++                except Exception as exc:
++                    raise TTSProviderError(f"百炼 TTS 音频解码失败: {exc}") from exc
++            elif audio.get("url"):
++                audio_bytes = await self._download_audio(client, audio["url"])
++
++            if not audio_bytes:
++                raise TTSProviderError(f"百炼 TTS 返回异常（无音频数据）: {payload}")
++
++            if not _is_probably_audio(audio_bytes):
++                raise TTSProviderError("百炼 TTS 返回内容不是有效音频（RIFF/mp3 magic 校验失败）")
++
++            return audio_bytes
++
++    async def _download_audio(self, client: httpx.AsyncClient, url: str) -> bytes:
++        audio_response = await client.get(url)
++        if audio_response.status_code >= 400:
++            raise TTSProviderError(f"百炼 TTS 音频下载失败: HTTP {audio_response.status_code}")
++        return audio_response.content
++
++    def _extract_api_error(self, response: httpx.Response) -> str:
++        try:
++            payload = response.json()
++        except Exception:
++            return response.text
++
++        error = payload.get("error") or {}
++        if isinstance(error, dict):
++            message = error.get("message") or error.get("code")
++            if message:
++                return str(message)
++        return str(payload)[:500]
++
++
++class TTSService:
++    """按配置路由到具体 TTS Provider（当前 bailian）。"""
++
++    def __init__(self):
++        self.provider: BailianTTSProvider | None = None
++        self._init_provider()
++
++    def _init_provider(self):
++        provider_name = (settings.TTS_PROVIDER or "bailian").lower()
++        try:
++            if provider_name == "bailian":
++                if settings.DASHSCOPE_API_KEY and settings.DASHSCOPE_API_KEY.strip():
++                    self.provider = BailianTTSProvider()
++        except Exception as e:
++            logger.error(f"Failed to initialize TTS provider {provider_name}: {e}")
++            self.provider = None
++
++        if self.provider is not None:
++            logger.info(f"TTS provider initialized: {provider_name}")
++        else:
++            logger.warning(f"TTS provider unavailable: {provider_name}")
++
++    async def synthesize(
++        self,
++        text: str,
++        voice: str | None = None,
++        instructions: str | None = None,
++    ) -> dict[str, Any]:
++        """合成语音，返回 {"audio": bytes, "format": str, "error": bool|None}。"""
++        if self.provider is None:
++            return {
++                "audio": b"",
++                "format": settings.QWEN_TTS_AUDIO_FORMAT,
++                "error": "TTS Service Unavailable (Provider Not Initialized)",
++            }
++
++        try:
++            audio_bytes = await self.provider.synthesize(text, voice=voice, instructions=instructions)
++            return {"audio": audio_bytes, "format": self.provider.audio_format, "error": None}
++        except TTSProviderError as e:
++            logger.warning(f"TTS synthesize failed: {e}")
++            return {"audio": b"", "format": settings.QWEN_TTS_AUDIO_FORMAT, "error": str(e)}
++        except Exception as e:
++            logger.error(f"TTS synthesize unexpected error: {e}")
++            return {
++                "audio": b"",
++                "format": settings.QWEN_TTS_AUDIO_FORMAT,
++                "error": "Speech synthesis failed. Please try again later.",
++            }
++
++
++tts_service = TTSService()
+diff --git a/backend/tests/services/stt/providers/test_bailian_provider.py b/backend/tests/services/stt/providers/test_bailian_provider.py
+new file mode 100644
+index 00000000..00fec0bd
+--- /dev/null
++++ b/backend/tests/services/stt/providers/test_bailian_provider.py
+@@ -0,0 +1,210 @@
++"""
++百炼（Qwen3-ASR-Flash-Realtime）STT Provider 测试。
++
++通过 mock WebSocket 层验证请求形态（session.update / append / commit / finish）
++与响应解析（conversation.item.input_audio_transcription.completed / error）。
++"""
++
++import asyncio
++import base64
++import io
++import json
++import wave
++from unittest.mock import Mock, patch
++
++import pytest
++import websockets
++
++from app.services.stt.providers.bailian_provider import BailianProvider
++
++
++def _provider_settings_mock():
++    mock = Mock()
++    mock.DASHSCOPE_API_KEY = "test-dashscope-key"
++    mock.QWEN_ASR_WS_URL = "wss://asr.example.invalid/api-ws/v1/realtime"
++    mock.QWEN_ASR_MODEL = "qwen3-asr-flash-realtime"
++    mock.QWEN_ASR_SAMPLE_RATE = 16000
++    mock.QWEN_ASR_STREAM_SEGMENT_SECONDS = 1
++    mock.QWEN_ASR_MAX_AUDIO_SECONDS = 60
++    mock.QWEN_ASR_REQUEST_TIMEOUT_SECONDS = 5
++    mock.QWEN_ASR_LANGUAGE = "zh"
++    return mock
++
++
++class FakeBailianWebSocket:
++    """按脚本回放服务端事件的假 WebSocket。"""
++
++    def __init__(self, script):
++        self.script = list(script)
++        self.sent = []
++        self.connect_kwargs = None
++
++    async def send(self, raw):
++        self.sent.append(json.loads(raw))
++
++    async def recv(self):
++        if not self.script:
++            raise websockets.ConnectionClosed(None, None)
++        item = self.script.pop(0)
++        if isinstance(item, Exception):
++            raise item
++        await asyncio.sleep(0)
++        return json.dumps(item) if isinstance(item, dict) else item
++
++    async def __aenter__(self):
++        return self
++
++    async def __aexit__(self, *exc_info):
++        return False
++
++
++def _completed(transcript: str) -> dict:
++    return {"type": "conversation.item.input_audio_transcription.completed", "transcript": transcript}
++
++
++def _make_provider(**overrides) -> tuple[BailianProvider, Mock]:
++    settings_mock = _provider_settings_mock()
++    for key, value in overrides.items():
++        setattr(settings_mock, key, value)
++    with patch("app.services.stt.providers.bailian_provider.settings", settings_mock):
++        provider = BailianProvider()
++    return provider, settings_mock
++
++
++def _wav_bytes(duration_seconds: float = 0.2, rate: int = 16000) -> bytes:
++    buffer = io.BytesIO()
++    with wave.open(buffer, "wb") as wav_file:
++        wav_file.setnchannels(1)
++        wav_file.setsampwidth(2)
++        wav_file.setframerate(rate)
++        wav_file.writeframes(b"\x00\x00" * int(rate * duration_seconds))
++    return buffer.getvalue()
++
++
++async def test_transcribe_segment_request_shape_and_parsing():
++    """单段转写：验证 WS URL/头/session.update/append/commit/finish 与文本解析。"""
++    provider, settings_mock = _make_provider()
++    fake_ws = FakeBailianWebSocket(
++        [
++            {"type": "session.created"},
++            _completed("你好我在测试语音识别"),
++        ]
++    )
++    connect_mock = Mock(return_value=fake_ws)
++
++    with patch("app.services.stt.providers.bailian_provider.settings", settings_mock):
++        with patch("app.services.stt.providers.bailian_provider.websockets.connect", connect_mock):
++            text = await provider._transcribe_pcm_segment(b"\x01\x00" * 1600, "zh-CN")
++
++    assert text == "你好我在测试语音识别"
++
++    # 连接形态：realtime 端点 + 模型 query + 鉴权头
++    url = connect_mock.call_args.args[0]
++    assert url == "wss://asr.example.invalid/api-ws/v1/realtime?model=qwen3-asr-flash-realtime"
++    headers = connect_mock.call_args.kwargs["additional_headers"]
++    assert headers["Authorization"] == "Bearer test-dashscope-key"
++    assert headers["OpenAI-Beta"] == "realtime=v1"
++
++    # 事件序列：session.update → append*N → commit → finish
++    types = [event["type"] for event in fake_ws.sent]
++    assert types[0] == "session.update"
++    assert types[-1] == "session.finish"
++    assert types[-2] == "input_audio_buffer.commit"
++    assert set(types[1:-2]) == {"input_audio_buffer.append"}
++
++    session = fake_ws.sent[0]["session"]
++    assert session["modalities"] == ["text"]
++    assert session["input_audio_format"] == "pcm"
++    assert session["sample_rate"] == 16000
++    assert session["turn_detection"] is None  # manual commit 模式
++    assert session["input_audio_transcription"] == {"language": "zh"}
++
++    appended = b"".join(
++        base64.b64decode(event["audio"]) for event in fake_ws.sent if event["type"] == "input_audio_buffer.append"
++    )
++    assert appended == b"\x01\x00" * 1600
++
++
++async def test_transcribe_segment_error_event_raises():
++    provider, settings_mock = _make_provider()
++    fake_ws = FakeBailianWebSocket([{"type": "error", "error": {"code": "InvalidParameter", "message": "bad audio"}}])
++    connect_mock = Mock(return_value=fake_ws)
++
++    with patch("app.services.stt.providers.bailian_provider.settings", settings_mock):
++        with patch("app.services.stt.providers.bailian_provider.websockets.connect", connect_mock):
++            with pytest.raises(RuntimeError, match="bad audio"):
++                await provider._transcribe_pcm_segment(b"\x00\x00" * 100)
++
++
++async def test_transcribe_stream_yields_incremental_segments():
++    """流式：按 QWEN_ASR_STREAM_SEGMENT_SECONDS 分段、去重增量返回。"""
++    provider, settings_mock = _make_provider()
++    segment_bytes = provider.sample_rate * 2 * provider.stream_segment_seconds
++    tail_bytes = 100
++    transcripts = iter(["第一段", "第二段"])
++
++    async def fake_segment(pcm_bytes, language, sample_rate=None):
++        del language, sample_rate
++        assert len(pcm_bytes) in (segment_bytes, tail_bytes)  # 整段 + 流结束尾段
++        return next(transcripts)
++
++    async def audio_stream():
++        yield b"\x00\x00" * (segment_bytes // 4)
++        yield b"\x00\x00" * (segment_bytes // 4)
++        yield b"\x00\x00" * (tail_bytes // 2)  # 不足一段的尾巴
++
++    with patch("app.services.stt.providers.bailian_provider.settings", settings_mock):
++        with patch.object(BailianProvider, "_transcribe_pcm_segment", side_effect=fake_segment):
++            texts = [text async for text in provider.transcribe_stream(audio_stream())]
++
++    assert texts == ["第一段", "第二段"]
++
++
++async def test_transcribe_file_wav():
++    provider, settings_mock = _make_provider()
++    fake_ws = FakeBailianWebSocket([_completed("这是文件转写结果")])
++    connect_mock = Mock(return_value=fake_ws)
++
++    wav_path = "/tmp/fake_bailian_test_16k.wav"
++    with open(wav_path, "wb") as f:
++        f.write(_wav_bytes(duration_seconds=0.2, rate=16000))
++
++    with patch("app.services.stt.providers.bailian_provider.settings", settings_mock):
++        with patch("app.services.stt.providers.bailian_provider.websockets.connect", connect_mock):
++            text = await provider.transcribe_file(wav_path)
++
++    assert text == "这是文件转写结果"
++    assert "input_audio_buffer.commit" in [event["type"] for event in fake_ws.sent]
++
++
++async def test_transcribe_file_wav_non_16k_keeps_native_sample_rate():
++    """非 16k wav 文件按真实采样率声明会话参数，不做重采样。"""
++    provider, settings_mock = _make_provider()
++    fake_ws = FakeBailianWebSocket([_completed("结果")])
++    connect_mock = Mock(return_value=fake_ws)
++
++    wav_path = "/tmp/fake_bailian_test_24k.wav"
++    with patch("app.services.stt.providers.bailian_provider.settings", settings_mock):
++        buffer = io.BytesIO(_wav_bytes(duration_seconds=0.1, rate=24000))
++        with open(wav_path, "wb") as f:
++            f.write(buffer.getvalue())
++        with patch("app.services.stt.providers.bailian_provider.websockets.connect", connect_mock):
++            text = await provider.transcribe_file(wav_path)
++
++    assert text == "结果"
++    session_update = fake_ws.sent[0]["session"]
++    assert session_update["sample_rate"] == 24000
++
++
++async def test_transcribe_file_missing_raises():
++    provider, settings_mock = _make_provider()
++    with patch("app.services.stt.providers.bailian_provider.settings", settings_mock):
++        with pytest.raises(RuntimeError, match="文件不存在"):
++            await provider.transcribe_file("/nonexistent/audio.wav")
++
++
++async def test_missing_api_key_raises():
++    provider, settings_mock = _make_provider(DASHSCOPE_API_KEY="")
++    with patch("app.services.stt.providers.bailian_provider.settings", settings_mock):
++        with pytest.raises(RuntimeError, match="DASHSCOPE_API_KEY"):
++            await provider.transcribe_file("/tmp/whatever.wav")
+diff --git a/backend/tests/services/test_stt_service.py b/backend/tests/services/test_stt_service.py
+index b85cb942..3576dc5f 100644
+--- a/backend/tests/services/test_stt_service.py
++++ b/backend/tests/services/test_stt_service.py
+@@ -352,3 +352,68 @@ async def test_stt_service_falls_back_when_xunfei_times_out():
+                     assert result["error"] is False
+                 finally:
+                     os.unlink(temp_path)
++
++
++@pytest.mark.asyncio
++async def test_stt_service_init_bailian_provider():
++    """测试 bailian 配置会初始化百炼 provider 并直接承担流式链路"""
++    with patch("app.services.stt_service.settings") as mock_settings:
++        mock_settings.STT_PROVIDER = "bailian"
++        mock_settings.STT_BACKUP_PROVIDER = "zhipu"
++        mock_settings.UPLOAD_DIR = "./uploads"
++        mock_settings.DASHSCOPE_API_KEY = "test-dashscope-key"
++        mock_settings.ZHIPU_API_KEY = ""
++        mock_settings.XUNFEI_APP_ID = ""
++        mock_settings.XUNFEI_API_KEY = ""
++        mock_settings.XUNFEI_API_SECRET = ""
++
++        with patch(
++            "app.services.stt.providers.bailian_provider.BailianProvider"
++        ) as mock_bailian:
++            mock_provider = Mock()
++            mock_bailian.return_value = mock_provider
++
++            service = STTService()
++            assert service.provider == mock_provider
++            assert service.stream_provider == mock_provider
++
++
++@pytest.mark.asyncio
++async def test_stt_service_bailian_falls_back_to_zhipu_on_failure():
++    """测试百炼主 provider 失败时回退到备用 zhipu"""
++    with patch("app.services.stt_service.settings") as mock_settings:
++        mock_settings.STT_PROVIDER = "bailian"
++        mock_settings.STT_BACKUP_PROVIDER = "zhipu"
++        mock_settings.UPLOAD_DIR = "./uploads"
++        mock_settings.DEMO_MODE = False
++        mock_settings.DASHSCOPE_API_KEY = "test-dashscope-key"
++        mock_settings.ZHIPU_API_KEY = TEST_ZHIPU_API_KEY
++        mock_settings.XUNFEI_APP_ID = ""
++        mock_settings.XUNFEI_API_KEY = ""
++        mock_settings.XUNFEI_API_SECRET = ""
++
++        with patch(
++            "app.services.stt.providers.bailian_provider.BailianProvider"
++        ) as mock_bailian:
++            with patch("app.services.stt.providers.zhipu_provider.ZhipuProvider") as mock_zhipu:
++                primary_provider = Mock()
++                primary_provider.transcribe_file = AsyncMock(
++                    side_effect=RuntimeError("百炼 ASR 请求失败: Throttling 429")
++                )
++                backup_provider = Mock()
++                backup_provider.transcribe_file = AsyncMock(return_value="智谱兜底结果")
++                mock_bailian.return_value = primary_provider
++                mock_zhipu.return_value = backup_provider
++
++                service = STTService()
++
++                with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
++                    f.write(b"mock audio data")
++                    temp_path = f.name
++
++                try:
++                    result = await service.transcribe_file(temp_path)
++                    assert result["text"] == "智谱兜底结果"
++                    assert result["error"] is False
++                finally:
++                    os.unlink(temp_path)
+diff --git a/backend/tests/services/test_tts_service.py b/backend/tests/services/test_tts_service.py
+new file mode 100644
+index 00000000..43c62396
+--- /dev/null
++++ b/backend/tests/services/test_tts_service.py
+@@ -0,0 +1,169 @@
++"""
++百炼 TTS（qwen3-tts-instruct-flash）服务测试。
++
++通过 mock HTTP 层验证请求形态（multimodal-generation 端点、model/input 字段）
++与响应解析（output.audio.data base64 / output.audio.url 下载、音频 magic 校验）。
++"""
++
++import base64
++import io
++import wave
++from unittest.mock import AsyncMock, Mock, patch
++
++import httpx
++import pytest
++
++from app.services.tts_service import BailianTTSProvider, TTSProviderError, TTSService
++
++
++def _settings_mock():
++    mock = Mock()
++    mock.DASHSCOPE_API_KEY = "test-dashscope-key"
++    mock.DASHSCOPE_BASE_HTTP_API_URL = "https://dashscope.example.invalid/api/v1"
++    mock.TTS_PROVIDER = "bailian"
++    mock.QWEN_TTS_MODEL = "qwen3-tts-instruct-flash"
++    mock.QWEN_TTS_VOICE = "Cherry"
++    mock.QWEN_TTS_AUDIO_FORMAT = "wav"
++    mock.QWEN_TTS_REQUEST_TIMEOUT_SECONDS = 30
++    return mock
++
++
++def _real_wav_bytes() -> bytes:
++    buffer = io.BytesIO()
++    with wave.open(buffer, "wb") as wav_file:
++        wav_file.setnchannels(1)
++        wav_file.setsampwidth(2)
++        wav_file.setframerate(24000)
++        wav_file.writeframes(b"\x00\x00" * 2400)  # 0.1s @24kHz
++    return buffer.getvalue()
++
++
++class FakeAsyncClient:
++    def __init__(self, post_response=None, get_response=None):
++        self.post = AsyncMock(return_value=post_response)
++        self.get = AsyncMock(return_value=get_response)
++
++    async def __aenter__(self):
++        return self
++
++    async def __aexit__(self, *exc_info):
++        return False
++
++
++def _json_response(payload: dict, status_code: int = 200) -> Mock:
++    response = Mock(spec=httpx.Response)
++    response.status_code = status_code
++    response.json.return_value = payload
++    if status_code >= 400:
++        response.text = str(payload)
++    return response
++
++
++def _provider() -> tuple[BailianTTSProvider, Mock]:
++    settings_mock = _settings_mock()
++    with patch("app.services.tts_service.settings", settings_mock):
++        provider = BailianTTSProvider()
++    return provider, settings_mock
++
++
++async def test_synthesize_request_shape_and_base64_data_path():
++    """请求形态 + output.audio.data(base64) 解析。"""
++    provider, settings_mock = _provider()
++    wav = _real_wav_bytes()
++    payload = {
++        "output": {"audio": {"data": base64.b64encode(wav).decode("utf-8"), "expires_at": 123}},
++        "usage": {"input_tokens": 1, "output_tokens": 1},
++    }
++    client = FakeAsyncClient(post_response=_json_response(payload))
++
++    with patch("app.services.tts_service.settings", settings_mock):
++        with patch("app.services.tts_service.httpx.AsyncClient", return_value=client):
++            audio = await provider.synthesize("你好，正在测试语音合成", instructions="用平静的语气说")
++
++    assert audio == wav
++
++    endpoint = client.post.call_args.args[0]
++    assert endpoint == "https://dashscope.example.invalid/api/v1/services/aigc/multimodal-generation/generation"
++    headers = client.post.call_args.kwargs["headers"]
++    assert headers["Authorization"] == "Bearer test-dashscope-key"
++    body = client.post.call_args.kwargs["json"]
++    assert body["model"] == "qwen3-tts-instruct-flash"
++    assert body["input"]["text"] == "你好，正在测试语音合成"
++    assert body["input"]["voice"] == "Cherry"  # 默认音色
++    assert body["input"]["instructions"] == "用平静的语气说"
++
++
++async def test_synthesize_url_download_path():
++    """output.audio.url → 二次 GET 下载音频。"""
++    provider, settings_mock = _provider()
++    wav = _real_wav_bytes()
++    payload = {"output": {"audio": {"url": "https://cdn.example.invalid/tts/audio.wav"}}}
++    client = FakeAsyncClient(
++        post_response=_json_response(payload),
++        get_response=Mock(spec=httpx.Response, status_code=200, content=wav),
++    )
++
++    with patch("app.services.tts_service.settings", settings_mock):
++        with patch("app.services.tts_service.httpx.AsyncClient", return_value=client):
++            audio = await provider.synthesize("测试")
++
++    assert audio == wav
++    assert client.get.call_args.args[0] == "https://cdn.example.invalid/tts/audio.wav"
++
++
++async def test_synthesize_http_error_raises():
++    provider, settings_mock = _provider()
++    client = FakeAsyncClient(post_response=_json_response({"error": {"code": "Throttling", "message": "限流"}}, 429))
++
++    with patch("app.services.tts_service.settings", settings_mock):
++        with patch("app.services.tts_service.httpx.AsyncClient", return_value=client):
++            with pytest.raises(TTSProviderError, match="限流"):
++                await provider.synthesize("测试")
++
++
++async def test_synthesize_invalid_audio_magic_raises():
++    """返回内容不是 RIFF/mp3 时应报错而非静默透传。"""
++    provider, settings_mock = _provider()
++    payload = {"output": {"audio": {"data": base64.b64encode(b"not-audio-at-all!!").decode()}}}
++    client = FakeAsyncClient(post_response=_json_response(payload))
++
++    with patch("app.services.tts_service.settings", settings_mock):
++        with patch("app.services.tts_service.httpx.AsyncClient", return_value=client):
++            with pytest.raises(TTSProviderError, match="有效音频"):
++                await provider.synthesize("测试")
++
++
++async def test_synthesize_empty_text_raises():
++    provider, settings_mock = _provider()
++    with patch("app.services.tts_service.settings", settings_mock):
++        with pytest.raises(TTSProviderError, match="文本不能为空"):
++            await provider.synthesize("  ")
++
++
++async def test_tts_service_wraps_result_and_unavailable_provider():
++    settings_mock = _settings_mock()
++
++    with patch("app.services.tts_service.settings", settings_mock):
++        service = TTSService()
++        # 正常路径
++        with patch.object(BailianTTSProvider, "synthesize", AsyncMock(return_value=b"RIFF____WAVE")):
++            result = await service.synthesize("你好")
++        assert result["audio"] == b"RIFF____WAVE"
++        assert result["error"] is None
++        assert result["format"] == "wav"
++
++        # 失败路径
++        with patch.object(
++            BailianTTSProvider,
++            "synthesize",
++            AsyncMock(side_effect=TTSProviderError("百炼 TTS 请求失败: 限流")),
++        ):
++            result = await service.synthesize("你好")
++        assert result["audio"] == b""
++        assert "限流" in str(result["error"])
++
++    # Provider 未初始化路径
++    with patch("app.services.tts_service.settings", settings_mock):
++        with patch.object(service, "provider", None):
++            result = await service.synthesize("你好")
++        assert "Provider Not Initialized" in str(result["error"])

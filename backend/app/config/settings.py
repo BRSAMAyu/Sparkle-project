@@ -523,9 +523,26 @@ class Settings(BaseSettings):
     SILICONFLOW_RERANK_MODEL: str = "Qwen/Qwen3-Reranker-4B"
 
     # STT (Speech to Text) Service
-    STT_PROVIDER: str = "zhipu"  # zhipu
-    STT_BACKUP_PROVIDER: str = "xunfei"  # xunfei | zhipu
+    STT_PROVIDER: str = "bailian"  # bailian | zhipu | xunfei
+    STT_BACKUP_PROVIDER: str = "zhipu"  # zhipu | xunfei | bailian
     STT_ENHANCE_ENABLED: bool = True  # 是否启用LLM后处理增强
+
+    # Qwen ASR (Bailian realtime) Configuration
+    # 实时协议: wss://.../api-ws/v1/realtime?model={QWEN_ASR_MODEL}，manual commit 模式
+    QWEN_ASR_WS_URL: str = "wss://dashscope.aliyuncs.com/api-ws/v1/realtime"
+    QWEN_ASR_MODEL: str = "qwen3-asr-flash-realtime"
+    QWEN_ASR_SAMPLE_RATE: int = 16000
+    QWEN_ASR_STREAM_SEGMENT_SECONDS: int = 4
+    QWEN_ASR_MAX_AUDIO_SECONDS: int = 60
+    QWEN_ASR_REQUEST_TIMEOUT_SECONDS: int = 30
+    QWEN_ASR_LANGUAGE: str = "zh"
+
+    # TTS (Text to Speech) Service
+    TTS_PROVIDER: str = "bailian"  # bailian
+    QWEN_TTS_MODEL: str = "qwen3-tts-instruct-flash"
+    QWEN_TTS_VOICE: str = "Cherry"
+    QWEN_TTS_AUDIO_FORMAT: str = "wav"
+    QWEN_TTS_REQUEST_TIMEOUT_SECONDS: int = 60
 
     # GLM Batch
     GLM_BATCH_ENABLED: bool = True

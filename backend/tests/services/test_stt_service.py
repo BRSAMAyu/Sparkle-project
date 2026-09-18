@@ -352,3 +352,68 @@ async def test_stt_service_falls_back_when_xunfei_times_out():
                     assert result["error"] is False
                 finally:
                     os.unlink(temp_path)
+
+
+@pytest.mark.asyncio
+async def test_stt_service_init_bailian_provider():
+    """测试 bailian 配置会初始化百炼 provider 并直接承担流式链路"""
+    with patch("app.services.stt_service.settings") as mock_settings:
+        mock_settings.STT_PROVIDER = "bailian"
+        mock_settings.STT_BACKUP_PROVIDER = "zhipu"
+        mock_settings.UPLOAD_DIR = "./uploads"
+        mock_settings.DASHSCOPE_API_KEY = "test-dashscope-key"
+        mock_settings.ZHIPU_API_KEY = ""
+        mock_settings.XUNFEI_APP_ID = ""
+        mock_settings.XUNFEI_API_KEY = ""
+        mock_settings.XUNFEI_API_SECRET = ""
+
+        with patch(
+            "app.services.stt.providers.bailian_provider.BailianProvider"
+        ) as mock_bailian:
+            mock_provider = Mock()
+            mock_bailian.return_value = mock_provider
+
+            service = STTService()
+            assert service.provider == mock_provider
+            assert service.stream_provider == mock_provider
+
+
+@pytest.mark.asyncio
+async def test_stt_service_bailian_falls_back_to_zhipu_on_failure():
+    """测试百炼主 provider 失败时回退到备用 zhipu"""
+    with patch("app.services.stt_service.settings") as mock_settings:
+        mock_settings.STT_PROVIDER = "bailian"
+        mock_settings.STT_BACKUP_PROVIDER = "zhipu"
+        mock_settings.UPLOAD_DIR = "./uploads"
+        mock_settings.DEMO_MODE = False
+        mock_settings.DASHSCOPE_API_KEY = "test-dashscope-key"
+        mock_settings.ZHIPU_API_KEY = TEST_ZHIPU_API_KEY
+        mock_settings.XUNFEI_APP_ID = ""
+        mock_settings.XUNFEI_API_KEY = ""
+        mock_settings.XUNFEI_API_SECRET = ""
+
+        with patch(
+            "app.services.stt.providers.bailian_provider.BailianProvider"
+        ) as mock_bailian:
+            with patch("app.services.stt.providers.zhipu_provider.ZhipuProvider") as mock_zhipu:
+                primary_provider = Mock()
+                primary_provider.transcribe_file = AsyncMock(
+                    side_effect=RuntimeError("百炼 ASR 请求失败: Throttling 429")
+                )
+                backup_provider = Mock()
+                backup_provider.transcribe_file = AsyncMock(return_value="智谱兜底结果")
+                mock_bailian.return_value = primary_provider
+                mock_zhipu.return_value = backup_provider
+
+                service = STTService()
+
+                with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
+                    f.write(b"mock audio data")
+                    temp_path = f.name
+
+                try:
+                    result = await service.transcribe_file(temp_path)
+                    assert result["text"] == "智谱兜底结果"
+                    assert result["error"] is False
+                finally:
+                    os.unlink(temp_path)
