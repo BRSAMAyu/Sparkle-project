@@ -98,29 +98,55 @@ class SparkleCardSkeleton extends StatelessWidget {
 
   final EdgeInsetsGeometry padding;
 
+  /// 固有内容高：22 + 12 + 14 + 8 + 14 + 16 + 10。
+  static const double _fullContentHeight = 96;
+
   @override
-  Widget build(BuildContext context) => Container(
-        padding: padding,
-        decoration: BoxDecoration(
-          color: Theme.of(context).brightness == Brightness.dark
-              ? DS.surfacePrimary
-              : DS.surfacePanel,
-          borderRadius: DS.borderRadius16,
-          border: Border.all(color: DS.borderSubtle),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
-            SparkleSkeleton(width: 148, height: 22, borderRadius: 10),
-            SizedBox(height: DS.spacing12),
-            SparkleSkeleton(height: 14, borderRadius: 8),
-            SizedBox(height: DS.spacing8),
-            SparkleSkeleton(width: 220, height: 14, borderRadius: 8),
-            SizedBox(height: DS.spacing16),
-            SparkleSkeleton(height: 10, borderRadius: 999),
-          ],
-        ),
-      );
+  Widget build(BuildContext context) {
+    final insets = padding.resolve(Directionality.of(context));
+    return Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? DS.surfacePrimary
+            : DS.surfacePanel,
+        borderRadius: DS.borderRadius16,
+        border: Border.all(color: DS.borderSubtle),
+      ),
+      // 批次4 棘轮修复（router_smoke 存量失败根因）：调用方把骨架放进紧凑
+      // 定高槽位（sync_center 72px、dashboard 40/48px）时，完整三行骨架
+      // 放不下，会在晚到帧触发 58px 瞬态溢出。槽位不足时退化为单行骨架，
+      // 骨架是非信息性占位，行数不影响语义。
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final maxInner =
+              constraints.maxHeight - insets.vertical - 2; // 上下边框各 1
+          if (!maxInner.isFinite || maxInner >= _fullContentHeight) {
+            return const Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SparkleSkeleton(width: 148, height: 22, borderRadius: 10),
+                SizedBox(height: DS.spacing12),
+                SparkleSkeleton(height: 14),
+                SizedBox(height: DS.spacing8),
+                SparkleSkeleton(width: 220, height: 14),
+                SizedBox(height: DS.spacing16),
+                SparkleSkeleton(height: 10, borderRadius: 999),
+              ],
+            );
+          }
+          final barHeight = maxInner.clamp(4.0, 14.0);
+          return Center(
+            child: SizedBox(
+              width: double.infinity,
+              child: SparkleSkeleton(height: barHeight),
+            ),
+          );
+        },
+      ),
+    );
+  }
 }
 
 class SparkleListSkeleton extends StatelessWidget {

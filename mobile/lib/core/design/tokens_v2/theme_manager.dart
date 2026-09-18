@@ -1148,6 +1148,30 @@ class SparkleTypography {
         fontSize: 12.0,
         height: 1.52,
       );
+
+  // ---- M3 TextTheme 15 角色补齐（batch4，L1 §4.1）----
+  // 以下派生角色全部复用既有锚定字阶（46/30/24/19/16/14/12），不引入新
+  // fontSize 字面量（UI-TOKENS 棘轮约束）；字重/字号对齐 M3 同名角色的
+  // 契约，使 _buildTextTheme 的完整映射不再回落 Flutter 默认字阶。
+  // displaySmall：M3 36 → 就近收敛 headingLarge 30（36 在 30/46 间取近档）。
+
+  /// M3 displayMedium（45）→ 收敛到 46 档。
+  TextStyle get displayMedium => displayLarge;
+
+  /// M3 displaySmall（36）→ 就近收敛到 30 档。
+  TextStyle get displaySmall => headingLarge;
+
+  /// M3 headlineSmall（24/w600）→ 与 headingMedium 恒等。
+  TextStyle get headlineSmall => headingMedium;
+
+  /// M3 titleMedium（16/w500）→ bodyLarge 16 档加粗到 w500。
+  TextStyle get titleMedium => bodyLarge.copyWith(fontWeight: FontWeight.w500);
+
+  /// M3 titleSmall（14/w500）→ 与 labelLarge（14/w500）恒等。
+  TextStyle get titleSmall => labelLarge;
+
+  /// M3 labelMedium（12/w500）→ 与 labelSmall（12/w500）恒等（元数据下限 12）。
+  TextStyle get labelMedium => labelSmall;
 }
 
 /// 间距系统

@@ -168,7 +168,8 @@ void main() {
         find.byType(TextField).at(1),
         'integration@example.com',
       );
-      await tester.tap(find.text('Save'));
+      // 批次4：locale 已钉 zh，按钮文案为「保存」（此前依赖 en 宿主才命中 Save）。
+      await tester.tap(find.text('保存'));
       await tester.pumpAndSettle();
 
       expect(authNotifier.lastProfileUpdate, isNotNull);
@@ -377,8 +378,19 @@ Future<void> _pumpPage(
     UncontrolledProviderScope(
       container: container,
       child: MaterialApp(
-        theme: AppThemes.lightTheme,
-        darkTheme: AppThemes.darkTheme,
+        theme: AppThemes.lightTheme.copyWith(
+          // 批次4：测试稳态——M3 InkSparkle 需异步加载片元着色器，
+          // flutter_tester 多文件并发下偶发 "shaders/ink_sparkle.frag not
+          // found" 资产竞态。这些测试断言的是交互与路由行为，墨水涟漪
+          // 纯装饰，关闭之（官方测试实践）。
+          splashFactory: NoSplash.splashFactory,
+        ),
+        darkTheme: AppThemes.darkTheme.copyWith(
+          splashFactory: NoSplash.splashFactory,
+        ),
+        // 存量修复（批次4）：钉住 zh。此前随宿主系统 locale 解析，en 宿主下
+        // 「创建社群」「发布」等中文文案断言全部落空（finds 0 widgets）。
+        locale: const Locale('zh'),
         localizationsDelegates: const [
           ...AppLocalizations.localizationsDelegates,
           GlobalMaterialLocalizations.delegate,
@@ -411,9 +423,15 @@ Future<void> _pumpRouterPage(
     UncontrolledProviderScope(
       container: container,
       child: MaterialApp.router(
-        theme: AppThemes.lightTheme,
-        darkTheme: AppThemes.darkTheme,
+        theme: AppThemes.lightTheme.copyWith(
+          splashFactory: NoSplash.splashFactory, // 同 _pumpPage：关闭装饰墨水
+        ),
+        darkTheme: AppThemes.darkTheme.copyWith(
+          splashFactory: NoSplash.splashFactory,
+        ),
         routerConfig: router,
+        // 存量修复（批次4）：同 _pumpPage，钉住 zh 保证文案断言跨宿主稳定。
+        locale: const Locale('zh'),
         localizationsDelegates: const [
           ...AppLocalizations.localizationsDelegates,
           GlobalMaterialLocalizations.delegate,

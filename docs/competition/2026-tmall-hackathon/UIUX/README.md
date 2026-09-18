@@ -31,3 +31,4 @@ A/B 级问题清零为收敛条件，C 级按性价比排序消化。
   - `round1-batch1-contrast.md` — Round 1 批次 1 修复：浅色模式对比度达标（P0-1 数值校准 + 速查表）
   - `round1-batch2-single-source.md` — Round 1 批次 2 修复：双事实源收敛（任务色 3→1 / 品牌色 2→1 / 字阶 3→1，P0-2 + P0-3）
   - `round1-batch3.md` — Round 1 批次 3 修复：入口统一 + 孤立色清零 + W-7 中文优先（colors/typo 单一 context 入口、SemanticColors 69 成员与 app/theme.dart 删除、container 四件套收敛、locale zh 默认/回退链、登录页字阶与 480 约束）
+  - `round1-batch4.md` — Round 1 批次 4 修复：W-5 登录页语义树（web 常开语义 + 无名按钮补名 + 语义树测试）+ W-6/W-9 引擎级定性 + 存量失败测试 7 例清偿（locale 钉定 / 骨架槽位自适应 / 主题挂载）+ SparkleTypography 15 角色与 TextTheme 全映射 + `_experience.py` 正名

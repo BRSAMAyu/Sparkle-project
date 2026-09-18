@@ -338,20 +338,32 @@ class AppThemes {
     );
   }
 
+  // 15 角色完整映射（batch4 兑现 batch3 移交 / L1 §4.1）：此前 headlineSmall/
+  // titleMedium/titleSmall/bodySmall/labelMedium/displayMedium/Small 未映射，
+  // Material 组件在这些角色上回落 Flutter 默认字阶，实际渲染混入第三种字体
+  // 尺度。全部映射到 SparkleTypography 派生角色（值复用既有锚定档，无新增
+  // fontSize 字面量，UI-TOKENS 棘轮不受影响）。
   static TextTheme _buildTextTheme(
     SparkleThemeData theme, {
     required bool highContrast,
   }) =>
       TextTheme(
         displayLarge: theme.typography.displayLarge,
+        displayMedium: theme.typography.displayMedium,
+        displaySmall: theme.typography.displaySmall,
         headlineLarge: theme.typography.headingLarge,
         headlineMedium: theme.typography.headingMedium,
+        headlineSmall: theme.typography.headlineSmall,
         titleLarge: theme.typography.titleLarge,
+        titleMedium: theme.typography.titleMedium,
+        titleSmall: theme.typography.titleSmall,
         bodyLarge: theme.typography.bodyLarge,
         bodyMedium: theme.typography.bodyMedium.copyWith(
           fontWeight: highContrast ? FontWeight.w500 : FontWeight.w400,
         ),
+        bodySmall: theme.typography.bodySmall,
         labelLarge: theme.typography.labelLarge,
+        labelMedium: theme.typography.labelMedium,
         labelSmall: theme.typography.labelSmall,
       );
 

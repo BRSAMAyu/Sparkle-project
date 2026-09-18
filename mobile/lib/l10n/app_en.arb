@@ -2451,6 +2451,8 @@
         }
     },
     "authForgotPassword": "Forgot Password?",
+    "authShowPassword": "Show password",
+    "authHidePassword": "Hide password",
     "authUserAgreement": "User Agreement",
     "authPrivacyPolicy": "Privacy Policy",
     "authLoginAgreement": "By logging in, you agree to",

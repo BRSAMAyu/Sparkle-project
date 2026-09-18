@@ -198,7 +198,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       labelText: l10n.password,
                       border: const OutlineInputBorder(),
                       prefixIcon: const Icon(Icons.lock_outline),
+                      // W-5（round1 web 走查）：图标按钮无可见文字，tooltip
+                      // 同时提供可访问名称与桌面端悬停提示。
                       suffixIcon: IconButton(
+                        tooltip: _isPasswordVisible
+                            ? l10n.authHidePassword
+                            : l10n.authShowPassword,
                         icon: Icon(
                           _isPasswordVisible
                               ? Icons.visibility
@@ -455,27 +460,38 @@ class _SocialLoginButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return InkWell(
+    // W-5（round1 web 走查）：纯图标按钮原本在语义树中是无名节点——
+    // 读屏与语义自动化都无法辨识。显式补 button 语义 + 名称 + 点击动作，
+    // 并 excludeSemantics 避免内部无语义图标产生匿名子节点。
+    return Semantics(
+      button: true,
+      label: label,
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(DS.md),
-        decoration: BoxDecoration(
-          color: colorScheme.surface,
-          border: Border.all(color: colorScheme.outline.withValues(alpha: 0.2)),
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: DS.brandPrimary.withValues(alpha: 0.05),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(DS.md),
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            border: Border.all(
+              color: colorScheme.outline.withValues(alpha: 0.2),
             ),
-          ],
-        ),
-        child: Icon(
-          icon,
-          size: 32,
-          color: colorScheme.onSurface,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: DS.brandPrimary.withValues(alpha: 0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Icon(
+            icon,
+            size: 32,
+            color: colorScheme.onSurface,
+          ),
         ),
       ),
     );

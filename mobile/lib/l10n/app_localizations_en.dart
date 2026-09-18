@@ -6219,6 +6219,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authForgotPassword => 'Forgot Password?';
 
   @override
+  String get authShowPassword => 'Show password';
+
+  @override
+  String get authHidePassword => 'Hide password';
+
+  @override
   String get authUserAgreement => 'User Agreement';
 
   @override

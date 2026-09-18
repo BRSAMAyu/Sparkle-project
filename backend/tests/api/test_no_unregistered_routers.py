@@ -17,9 +17,10 @@ V1_DIR = BACKEND_ROOT / "app" / "api" / "v1"
 
 # 未注册但有意保留的模块（须注明理由）
 # - router: 聚合器自身（定义 api_router）
-# - _experience: 经 app/api/v1/experience/__init__.py 间接注册
-#   （`from app.api.v1._experience import router` → router.py:200 include experience.router）
-ALLOWLIST: set[str] = {"router", "_experience"}
+# - experience_readouts: 经 app/api/v1/experience/__init__.py 间接注册
+#   （`from app.api.v1.experience_readouts import router` → router.py include experience.router）。
+#   批次4 正名：原文件名 `_experience.py` 的下划线前缀暗示私有/死代码，实为活路由。
+ALLOWLIST: set[str] = {"router", "experience_readouts"}
 
 _ROUTER_DEF_RE = re.compile(r"^\w*router\w*\s*=\s*APIRouter\(", re.M)
 

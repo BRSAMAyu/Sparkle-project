@@ -1,0 +1,857 @@
+diff --git a/backend/app/api/v1/experience/__init__.py b/backend/app/api/v1/experience/__init__.py
+index c8a42ec9..ffe62e38 100644
+--- a/backend/app/api/v1/experience/__init__.py
++++ b/backend/app/api/v1/experience/__init__.py
+@@ -1,3 +1,3 @@
+-from app.api.v1._experience import router  # noqa: F401
++from app.api.v1.experience_readouts import router  # noqa: F401
+ 
+ __all__ = ["router"]
+diff --git a/backend/app/api/v1/_experience.py b/backend/app/api/v1/experience_readouts.py
+similarity index 100%
+rename from backend/app/api/v1/_experience.py
+rename to backend/app/api/v1/experience_readouts.py
+diff --git a/backend/tests/api/test_no_unregistered_routers.py b/backend/tests/api/test_no_unregistered_routers.py
+index 2e2875dc..4b610dbe 100644
+--- a/backend/tests/api/test_no_unregistered_routers.py
++++ b/backend/tests/api/test_no_unregistered_routers.py
+@@ -17,9 +17,10 @@ V1_DIR = BACKEND_ROOT / "app" / "api" / "v1"
+ 
+ # 未注册但有意保留的模块（须注明理由）
+ # - router: 聚合器自身（定义 api_router）
+-# - _experience: 经 app/api/v1/experience/__init__.py 间接注册
+-#   （`from app.api.v1._experience import router` → router.py:200 include experience.router）
+-ALLOWLIST: set[str] = {"router", "_experience"}
++# - experience_readouts: 经 app/api/v1/experience/__init__.py 间接注册
++#   （`from app.api.v1.experience_readouts import router` → router.py include experience.router）。
++#   批次4 正名：原文件名 `_experience.py` 的下划线前缀暗示私有/死代码，实为活路由。
++ALLOWLIST: set[str] = {"router", "experience_readouts"}
+ 
+ _ROUTER_DEF_RE = re.compile(r"^\w*router\w*\s*=\s*APIRouter\(", re.M)
+ 
+diff --git a/docs/competition/2026-tmall-hackathon/UIUX/README.md b/docs/competition/2026-tmall-hackathon/UIUX/README.md
+index cda8b031..5d0b4e7f 100644
+--- a/docs/competition/2026-tmall-hackathon/UIUX/README.md
++++ b/docs/competition/2026-tmall-hackathon/UIUX/README.md
+@@ -31,3 +31,4 @@ A/B 级问题清零为收敛条件，C 级按性价比排序消化。
+   - `round1-batch1-contrast.md` — Round 1 批次 1 修复：浅色模式对比度达标（P0-1 数值校准 + 速查表）
+   - `round1-batch2-single-source.md` — Round 1 批次 2 修复：双事实源收敛（任务色 3→1 / 品牌色 2→1 / 字阶 3→1，P0-2 + P0-3）
+   - `round1-batch3.md` — Round 1 批次 3 修复：入口统一 + 孤立色清零 + W-7 中文优先（colors/typo 单一 context 入口、SemanticColors 69 成员与 app/theme.dart 删除、container 四件套收敛、locale zh 默认/回退链、登录页字阶与 480 约束）
++  - `round1-batch4.md` — Round 1 批次 4 修复：W-5 登录页语义树（web 常开语义 + 无名按钮补名 + 语义树测试）+ W-6/W-9 引擎级定性 + 存量失败测试 7 例清偿（locale 钉定 / 骨架槽位自适应 / 主题挂载）+ SparkleTypography 15 角色与 TextTheme 全映射 + `_experience.py` 正名
+diff --git a/docs/competition/2026-tmall-hackathon/UIUX/rounds/round1-batch4.md b/docs/competition/2026-tmall-hackathon/UIUX/rounds/round1-batch4.md
+new file mode 100644
+index 00000000..5a5b4015
+--- /dev/null
++++ b/docs/competition/2026-tmall-hackathon/UIUX/rounds/round1-batch4.md
+@@ -0,0 +1,157 @@
++# Round 1 · 批次 4 — W-5 语义树 + 存量失败测试清偿 + TextTheme 补齐
++
++> 上游：`round1-batch3.md` §7 移交表 + web 走查 `多端实测/web-round1.md`（W-5/W-6/W-9）。
++> 本批边界：**登录页语义树（W-5）、glass-pane 0×0 定性与缓解（W-6）、批次 3 移交项（存量失败测试 /
++> _experience.py 正名 / TextTheme 补齐映射）、W-9 定性**。
++> 基线：main `b21dce46`（批次 3 已落 ac16dc7b）。wt3 经 `worktree add --force` 重置后开工。
++> 纪律：零构建 web；`lib/gen` 与 `backend/app/gen` 为 gitignore 产物（自主 checkout 复制以支撑
++> 定向测试/导入链验证，不入库不入 patch）。
++
++---
++
++## 0. 结果速览
++
++| 指标 | 值 |
++| --- | --- |
++| 改动 | 19 文件（代码 17：mobile 14 + backend 3，含 1 次文件正名与 1 个新测试；+ 记录文档 2） |
++| W-5 | 登录页语义树补全：web 端常开语义 + 3 个无名社交按钮 + 密码可见性 tooltip（新增 arb 键 ×2×2 语言）+ 语义树测试 4 用例绿 |
++| W-6 | 定性为**引擎级高嫌疑**（3.41 平台视图 DOM 变更后 glass-pane 尺寸/生命周期）；应用层缓解 = web 端 `ensureSemantics()`（随 W-5 落地）；升级评估与验证协议见 §3 |
++| 存量失败测试 | **7 例修复**：批次 3 登记的 3 例（main_actions ×2 / router_smoke ×1）+ 过程中确诊同根因的 4 例（main_pages_load_smoke ×4，主题未挂载） |
++| TextTheme | SparkleTypography 补齐 15 角色（6 个派生 getter，零新增 fontSize）；`_buildTextTheme` 全角色映射，Material 组件不再回落 Flutter 默认字阶 |
++| _experience.py | 正名 `experience_readouts.py`（活路由去私有化前缀）；注册守卫 3/3 绿 + 导入链实证（4 条路由） |
++| W-9 | 定性为 go_router 13.2.5 URL 上报路径问题，非一行级可修；升级评估移交（§4） |
++| 验证 | 全仓 `flutter analyze` 错误/警告数与基线**逐字相等（245=245，Δ0）**，改动文件 0 error / 0 warning（仅存量 info）；UI-TOKENS 棘轮 **PASS（color=275/275, fontSize=727/727）**；定向测试：test/app 46 全绿（3 连跑）、test/features/auth 18 全绿、i18n 13/13 绿；test/widget 失败数与基线逐字相等（-65=-65，存量债） |
++
++---
++
++## 1. W-5：登录页语义树（P1 a11y）
++
++### 1.1 根因双层
++
++走查实测「整页只暴露 1 个匿名 textbox + 隐藏 Submit、焦点遍历才懒生成节点」。拆成两层：
++
++1. **树未启用（主因）**：Flutter web 的语义 DOM 默认懒构建——仅当浏览器侧辅助技术被探测
++   （点击 `flt-semantics-placeholder`、Tab 焦点遍历、`SemanticsBinding.ensureSemantics()`）才生成。
++   CDP 级自动化与部分读屏路径拿到的就是空壳。widget 层的 label（`labelText`、按钮文字）本来就会进
++   语义——走查看到「无名字」的直因不是 widget 缺 label，而是树根本没建。
++2. **widget 层真实缺口（次因）**：三个社交登录按钮是 `InkWell + 纯图标`——语义树中是**无名 button
++   节点**；密码可见性 `IconButton` 纯图标无 tooltip——无名。
++
++### 1.2 修复
++
++| 层 | 改动 |
++| --- | --- |
++| 引擎层缓解 | `main.dart`：`kIsWeb` 时 `SemanticsBinding.instance.ensureSemantics()`——web 端常开语义；移动端维持按需构建（不白付构建开销） |
++| 社交按钮 | `_SocialLoginButton` 显式 `Semantics(button: true, label:, onTap:, excludeSemantics: true)`——自包含节点：名称 + button 标志 + tap 动作（读屏可激活），并消除内部图标的匿名子节点 |
++| 可见性切换 | IconButton 加 `tooltip`（新增 `authShowPassword`/`authHidePassword` arb 键，zh/en 双语；`flutter gen-l10n` 实测仅 +28 行，批次 3 手工 zh-first 重排**未被破坏**） |
++| 测试 | 新增 `login_screen_semantics_test.dart` 4 用例：输入框 accessible name + isTextField 标志；登录/访客命名 button；社交按钮 名称+button+tap 三断言；tooltip 名称随切换状态翻转 |
++
++测试基建注记：本 SDK 测试绑定下 `SemanticsFinder`（`find.semantics.byLabel`）依赖的
++`rootSemanticsNode` 不落地（恒 null），语义断言统一走 `bySemanticsLabel` + `tester.getSemantics`；
++`SemanticsHandle` 必须在测试终检前 dispose（`addTearDown` 晚于终检，用 try/finally，同 c18 先例）。
++
++---
++
++## 2. 批次 3 移交项处置
++
++### 2.1 存量失败测试：3 例登记 → 7 例确诊 → 7 例全修
++
++| 测试 | 真实根因 | 修复 |
++| --- | --- | --- |
++| main_actions「create group」/「create post」 | `_pumpPage`/`_pumpRouterPage` 的 MaterialApp **未钉 locale**——文案随宿主系统解析，en 宿主下 `创建社群`/`发布` finder 全部落空（finds 0） | 两 helper 钉 `locale: Locale('zh')`（测试断言与布局基线以 zh 为准） |
++| router_smoke「loads critical secondary routes」 | **产品侧真实缺陷**：`SparkleCardSkeleton`（固有高 96 + 自身 padding/边框 34 ≈ 130）被塞进 72px 定高槽（sync_center loading 占位；dashboard 40/48px 同类）→ 晚到帧 58px 瞬态溢出。全数字吻合（96=38+58、offset 17=padding16+边框1） | `SparkleCardSkeleton` 槽位自适应：`LayoutBuilder` 判定可用高度不足时退化为单行骨架（骨架是非信息性占位，行数不影响语义）；宽槽位路径逐字保留 |
++| main_actions「edit profile」 | 非 base 失败——en 宿主下 `find.text('Save')` 碰巧命中；locale 钉 zh 后暴露硬编码英文 finder | `find.text('保存')` + 注记 |
++| main_pages_load_smoke ×4 | **过程确诊**：该文件 `_pumpPage` 经 `testMaterialApp` 但**未传 theme** → `SparkleThemeExtension is not registered`，页面构建即抛（dashboard ×2 / community / login-semantics） | 传 `theme: AppThemes.lightTheme`；6/6 全绿 |
++
++附带稳态加固：router_smoke/logout 与 edit-profile 在多文件并发下偶发
++`Asset 'shaders/ink_sparkle.frag' not found`（flutter_tester 片元着色器资产竞态，基线 2×0 次 /
++改动后随机出现；单跑冷启动也复现，热跑必绿）。处置：两个测试文件的测试主题
++`copyWith(splashFactory: NoSplash.splashFactory)`——这些测试断言交互与路由，不依赖装饰性墨水。
++3 连跑全绿。
++
++### 2.2 `_experience.py` 正名（P3-engine-sweep 遗留③）
++
++`backend/app/api/v1/_experience.py` → **`experience_readouts.py`**。原下划线前缀暗示私有/死代码，
++实为活路由（understanding-snapshot + corrections + goal-detail + growth-dashboard 四端点，经
++`experience/__init__.py` 间接注册）。选择就地正名而非迁入 `experience/` 包：包内 `*_router.py` 会被
++`_include_experience_routers()` glob 自动加载，与 `experience.router` 显式 include 形成双执行（有
++路由级去重但模块跑两遍），就地正名零注册语义变化。守卫
++`tests/api/test_no_unregistered_routers.py` ALLOWLIST 与注释同步更新；**3/3 绿**；导入链实证：
++`experience.router` 暴露全部 4 条路由。
++
++### 2.3 SparkleTypography 15 角色扩展 + TextTheme 补齐映射（L1 §4.1）
++
++- **新增 6 个派生角色**（全部复用既有锚定字阶 46/30/24/19/16/14/12，零新增 fontSize 字面量）：
++  `displayMedium→displayLarge`（M3 45→46 收敛）、`displaySmall→headingLarge`（M3 36 就近取 30）、
++  `headlineSmall→headingMedium`（M3 24 恒等）、`titleMedium→bodyLarge+copyWith(w500)`（M3 16/w500
++  恒等）、`titleSmall→labelLarge`（M3 14/w500 恒等）、`labelMedium→labelSmall`（元数据下限 12）。
++- **`_buildTextTheme` 8 → 15 角色全映射**：Material 组件（AppBar/Card/ListTile/Tooltip 等）此前在
++  未映射角色上回落 Flutter 默认字阶（Roboto 尺度混入渲染）——补齐后整树单一来源。
++- **`DS.titleMedium` shim 有意保留**（仍转发 titleLarge 19）：该 shim 有 34 个存量消费点，切到新的
++  16/w500 会在无视觉终验的批次里平移 34 处版式；随批次 3 移交的「DS 冻结数值层逐屏横扫」一并迁移
++  （届时直接改用 `context.typo.titleMedium`）。
++- `emotion_responsive_theme` 的 15 角色 lift 从此全部吃到真实映射（此前一半映射到 M3 默认值）。
++
++---
++
++## 3. W-6：`flt-glass-pane` 0×0 点击穿透（P2）——定性与缓解
++
++**定性：引擎级高嫌疑，应用层无 CSS/DOM 干预证据。**
++
++- 架构事实：`flt-glass-pane` 是 Flutter web 引擎的指针拦截层，应铺满 `flutter-view` 宿主；3.41 的
++  平台视图 DOM 变更（platform views 改为 `flt-glass-pane` 直接子元素）使其成为事件/合成层中枢。
++  走查实测其渲染 0×0，而键盘事件（独立通道）正常——与「指针拦截层尺寸/生命周期失效」吻合。
++- 上游检索：未找到与「3.41 + glass-pane 0×0」精确对口的 issue（检索面覆盖 flutter/flutter、
++  engine、"pointer-router"、"semantics 后不重建"组合）；已知近邻包括 M3 平台视图 slots 破坏性变更
++  文档与「web 语义启用后指针事件改经 flt-semantics 节点路由」的行为变化——后者与走查「语义未激活
++  状态下点击全落空」的现象自洽，也解释了为什么语义懒激活会改变事件路由。
++- **应用层缓解（已落地，随 W-5）**：web 端启动即 `ensureSemantics()`——语义启用驱动引擎重建
++  语义/事件宿主层，是对「semantics enable 后 glass-pane 不重建」问题类的定向试探。**未经真机
++  验证**（本批零构建 web）。
++- **升级评估**：本机 Flutter 3.41.3（2026-02-27，7 个月前）。建议下一 web 会话先用最新 stable
++  patch 复测 glass-pane 尺寸（引擎升级不在 UIUX 批次内执行）；同时在修复验证时执行下述协议。
++- **验证协议（下一轮 web 走查执行）**：
++  1. 加载后量测 `document.querySelector('flt-glass-pane').getBoundingClientRect()`（启用语义前后各一次）；
++  2. 真实鼠标（非 CDP 合成）点击「登录」按钮，网关日志交叉验证；
++  3. 若升级后仍 0×0：以 minimal repro（`flutter create` 空应用 + 计数器）分层定责引擎 vs 应用。
++
++---
++
++## 4. W-9：会话恢复后 URL hash 停留 `/#/login`（P3）——定性
++
++源码级定性（go_router 13.2.5 `information_provider.dart`）：URL 更新走
++`routerReportsNewRouteInformation`，`none` 类型下 `replace = (_valueInEngine == _kEmptyRouteInformation)`；
++引擎初始上报（state=null）会把 `_valueInEngine` 重置回空占位。会话恢复路径（isLoading 期停 /login →
++认证完成后 refreshListenable 触发 redirect → /home）理论上应带 `replace: true` 重写 hash，实测未重写
++——嫌疑收敛在 Router 的 reportable-configuration 判定或引擎侧 replace 应用，**非一行级可修**。
++go_router 14.x 重写了该上报路径，升级评估（含 13→14 破坏面盘点）移交独立单；刷新行为正常，
++仅观感问题，不阻塞。
++
++---
++
++## 5. 验证
++
++- **全仓 `flutter analyze`**：错误/警告 **245 = 245（与 stash 基线逐字相等，Δ0）**；改动文件口径
++  0 error / 0 warning（仅存量 info：main.dart 3 例、skeleton discarded_futures 1 例均为改动前存在，
++  经 stash 对照确认）。
++- **UI-TOKENS 棘轮**（wt3 树上 `run_all_rule_guards.sh --rule UI-TOKENS`，PYTHON_BIN=python3.11）：
++  **PASS — color=275/275, fontSize=727/727**。本批零新增字面量（新角色全部 copyWith 派生）。
++- **定向测试**：
++  - `test/app/` + `test/features/auth/`：**46/46 全绿**（含新语义测试 4 例；3 连跑稳定，覆盖本批全部
++    触点与 7 例修复）；
++  - i18n 双文件 **13/13 绿**（l10n gen 后回归）；
++  - `test/widget/`：-65 失败与 stash 基线**逐字相等**（存量债，与本批无关）；
++  - backend 注册守卫 **3/3 绿**（SECRET_KEY 环境变量注入）+ 正名模块导入链实证。
++- 纪律：零构建 web；`lib/gen`、`backend/app/gen` gitignore 产物自主 checkout 复制，不入库不入 patch。
++
++## 6. 残留与移交（批次 5 / 独立单边界）
++
++| 项 | 现状 | 去向 |
++| --- | --- | --- |
++| W-6 真机验证 | 缓解已落（ensureSemantics），未经真机 | 下一 web 走查按 §3 协议验证；必要时 Flutter patch 升级评估 |
++| W-9 hash 重写 | 定性完成，非一行级 | go_router 13→14 升级独立单（含破坏面盘点） |
++| `DS.titleMedium` shim（34 消费） | 有意保留转发 titleLarge | DS 冻结数值层逐屏横扫时切 `context.typo.titleMedium`（16/w500，注意版式平移） |
++| dashboard 40/48px 骨架槽位 | 已被 SparkleCardSkeleton 自适应兜底 | 视觉终验时复核单行骨架观感是否需专用紧凑占位 |
++| test/widget 存量失败 65 例 | 与基线逐字相等，未处置 | 独立修复单（批量基线复扫） |
++| features 层名字键调色板 / galaxy decor 横扫 / textTertiary 静态化 / CB 浅色档重校 | batch3 §7 原样 | batch4 未及，继续顺延 |
++| 语义树可视化回归（SemanticsFinder 全屏巡检） | 本批仅登录页 | 逐屏横扫时按登录页测试模板复制 |
+diff --git a/mobile/lib/core/design/design_system.dart b/mobile/lib/core/design/design_system.dart
+index f3acb145..e1444903 100755
+--- a/mobile/lib/core/design/design_system.dart
++++ b/mobile/lib/core/design/design_system.dart
+@@ -338,20 +338,32 @@ class AppThemes {
+     );
+   }
+ 
++  // 15 角色完整映射（batch4 兑现 batch3 移交 / L1 §4.1）：此前 headlineSmall/
++  // titleMedium/titleSmall/bodySmall/labelMedium/displayMedium/Small 未映射，
++  // Material 组件在这些角色上回落 Flutter 默认字阶，实际渲染混入第三种字体
++  // 尺度。全部映射到 SparkleTypography 派生角色（值复用既有锚定档，无新增
++  // fontSize 字面量，UI-TOKENS 棘轮不受影响）。
+   static TextTheme _buildTextTheme(
+     SparkleThemeData theme, {
+     required bool highContrast,
+   }) =>
+       TextTheme(
+         displayLarge: theme.typography.displayLarge,
++        displayMedium: theme.typography.displayMedium,
++        displaySmall: theme.typography.displaySmall,
+         headlineLarge: theme.typography.headingLarge,
+         headlineMedium: theme.typography.headingMedium,
++        headlineSmall: theme.typography.headlineSmall,
+         titleLarge: theme.typography.titleLarge,
++        titleMedium: theme.typography.titleMedium,
++        titleSmall: theme.typography.titleSmall,
+         bodyLarge: theme.typography.bodyLarge,
+         bodyMedium: theme.typography.bodyMedium.copyWith(
+           fontWeight: highContrast ? FontWeight.w500 : FontWeight.w400,
+         ),
++        bodySmall: theme.typography.bodySmall,
+         labelLarge: theme.typography.labelLarge,
++        labelMedium: theme.typography.labelMedium,
+         labelSmall: theme.typography.labelSmall,
+       );
+ 
+diff --git a/mobile/lib/core/design/tokens_v2/theme_manager.dart b/mobile/lib/core/design/tokens_v2/theme_manager.dart
+index 77f87e58..f2f8ec0a 100755
+--- a/mobile/lib/core/design/tokens_v2/theme_manager.dart
++++ b/mobile/lib/core/design/tokens_v2/theme_manager.dart
+@@ -1148,6 +1148,30 @@ class SparkleTypography {
+         fontSize: 12.0,
+         height: 1.52,
+       );
++
++  // ---- M3 TextTheme 15 角色补齐（batch4，L1 §4.1）----
++  // 以下派生角色全部复用既有锚定字阶（46/30/24/19/16/14/12），不引入新
++  // fontSize 字面量（UI-TOKENS 棘轮约束）；字重/字号对齐 M3 同名角色的
++  // 契约，使 _buildTextTheme 的完整映射不再回落 Flutter 默认字阶。
++  // displaySmall：M3 36 → 就近收敛 headingLarge 30（36 在 30/46 间取近档）。
++
++  /// M3 displayMedium（45）→ 收敛到 46 档。
++  TextStyle get displayMedium => displayLarge;
++
++  /// M3 displaySmall（36）→ 就近收敛到 30 档。
++  TextStyle get displaySmall => headingLarge;
++
++  /// M3 headlineSmall（24/w600）→ 与 headingMedium 恒等。
++  TextStyle get headlineSmall => headingMedium;
++
++  /// M3 titleMedium（16/w500）→ bodyLarge 16 档加粗到 w500。
++  TextStyle get titleMedium => bodyLarge.copyWith(fontWeight: FontWeight.w500);
++
++  /// M3 titleSmall（14/w500）→ 与 labelLarge（14/w500）恒等。
++  TextStyle get titleSmall => labelLarge;
++
++  /// M3 labelMedium（12/w500）→ 与 labelSmall（12/w500）恒等（元数据下限 12）。
++  TextStyle get labelMedium => labelSmall;
+ }
+ 
+ /// 间距系统
+diff --git a/mobile/lib/core/design/widgets/sparkle_skeleton.dart b/mobile/lib/core/design/widgets/sparkle_skeleton.dart
+index 3326dac8..3d1d4164 100644
+--- a/mobile/lib/core/design/widgets/sparkle_skeleton.dart
++++ b/mobile/lib/core/design/widgets/sparkle_skeleton.dart
+@@ -98,29 +98,55 @@ class SparkleCardSkeleton extends StatelessWidget {
+ 
+   final EdgeInsetsGeometry padding;
+ 
++  /// 固有内容高：22 + 12 + 14 + 8 + 14 + 16 + 10。
++  static const double _fullContentHeight = 96;
++
+   @override
+-  Widget build(BuildContext context) => Container(
+-        padding: padding,
+-        decoration: BoxDecoration(
+-          color: Theme.of(context).brightness == Brightness.dark
+-              ? DS.surfacePrimary
+-              : DS.surfacePanel,
+-          borderRadius: DS.borderRadius16,
+-          border: Border.all(color: DS.borderSubtle),
+-        ),
+-        child: Column(
+-          crossAxisAlignment: CrossAxisAlignment.start,
+-          children: const [
+-            SparkleSkeleton(width: 148, height: 22, borderRadius: 10),
+-            SizedBox(height: DS.spacing12),
+-            SparkleSkeleton(height: 14, borderRadius: 8),
+-            SizedBox(height: DS.spacing8),
+-            SparkleSkeleton(width: 220, height: 14, borderRadius: 8),
+-            SizedBox(height: DS.spacing16),
+-            SparkleSkeleton(height: 10, borderRadius: 999),
+-          ],
+-        ),
+-      );
++  Widget build(BuildContext context) {
++    final insets = padding.resolve(Directionality.of(context));
++    return Container(
++      padding: padding,
++      decoration: BoxDecoration(
++        color: Theme.of(context).brightness == Brightness.dark
++            ? DS.surfacePrimary
++            : DS.surfacePanel,
++        borderRadius: DS.borderRadius16,
++        border: Border.all(color: DS.borderSubtle),
++      ),
++      // 批次4 棘轮修复（router_smoke 存量失败根因）：调用方把骨架放进紧凑
++      // 定高槽位（sync_center 72px、dashboard 40/48px）时，完整三行骨架
++      // 放不下，会在晚到帧触发 58px 瞬态溢出。槽位不足时退化为单行骨架，
++      // 骨架是非信息性占位，行数不影响语义。
++      child: LayoutBuilder(
++        builder: (context, constraints) {
++          final maxInner =
++              constraints.maxHeight - insets.vertical - 2; // 上下边框各 1
++          if (!maxInner.isFinite || maxInner >= _fullContentHeight) {
++            return const Column(
++              mainAxisSize: MainAxisSize.min,
++              crossAxisAlignment: CrossAxisAlignment.start,
++              children: [
++                SparkleSkeleton(width: 148, height: 22, borderRadius: 10),
++                SizedBox(height: DS.spacing12),
++                SparkleSkeleton(height: 14),
++                SizedBox(height: DS.spacing8),
++                SparkleSkeleton(width: 220, height: 14),
++                SizedBox(height: DS.spacing16),
++                SparkleSkeleton(height: 10, borderRadius: 999),
++              ],
++            );
++          }
++          final barHeight = maxInner.clamp(4.0, 14.0);
++          return Center(
++            child: SizedBox(
++              width: double.infinity,
++              child: SparkleSkeleton(height: barHeight),
++            ),
++          );
++        },
++      ),
++    );
++  }
+ }
+ 
+ class SparkleListSkeleton extends StatelessWidget {
+diff --git a/mobile/lib/features/auth/presentation/screens/login_screen.dart b/mobile/lib/features/auth/presentation/screens/login_screen.dart
+index 54cfe05d..b0676bbe 100755
+--- a/mobile/lib/features/auth/presentation/screens/login_screen.dart
++++ b/mobile/lib/features/auth/presentation/screens/login_screen.dart
+@@ -198,7 +198,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
+                       labelText: l10n.password,
+                       border: const OutlineInputBorder(),
+                       prefixIcon: const Icon(Icons.lock_outline),
++                      // W-5（round1 web 走查）：图标按钮无可见文字，tooltip
++                      // 同时提供可访问名称与桌面端悬停提示。
+                       suffixIcon: IconButton(
++                        tooltip: _isPasswordVisible
++                            ? l10n.authHidePassword
++                            : l10n.authShowPassword,
+                         icon: Icon(
+                           _isPasswordVisible
+                               ? Icons.visibility
+@@ -455,27 +460,38 @@ class _SocialLoginButton extends StatelessWidget {
+   Widget build(BuildContext context) {
+     final colorScheme = Theme.of(context).colorScheme;
+ 
+-    return InkWell(
++    // W-5（round1 web 走查）：纯图标按钮原本在语义树中是无名节点——
++    // 读屏与语义自动化都无法辨识。显式补 button 语义 + 名称 + 点击动作，
++    // 并 excludeSemantics 避免内部无语义图标产生匿名子节点。
++    return Semantics(
++      button: true,
++      label: label,
+       onTap: onTap,
+-      borderRadius: BorderRadius.circular(12),
+-      child: Container(
+-        padding: const EdgeInsets.all(DS.md),
+-        decoration: BoxDecoration(
+-          color: colorScheme.surface,
+-          border: Border.all(color: colorScheme.outline.withValues(alpha: 0.2)),
+-          borderRadius: BorderRadius.circular(12),
+-          boxShadow: [
+-            BoxShadow(
+-              color: DS.brandPrimary.withValues(alpha: 0.05),
+-              blurRadius: 4,
+-              offset: const Offset(0, 2),
++      excludeSemantics: true,
++      child: InkWell(
++        onTap: onTap,
++        borderRadius: BorderRadius.circular(12),
++        child: Container(
++          padding: const EdgeInsets.all(DS.md),
++          decoration: BoxDecoration(
++            color: colorScheme.surface,
++            border: Border.all(
++              color: colorScheme.outline.withValues(alpha: 0.2),
+             ),
+-          ],
+-        ),
+-        child: Icon(
+-          icon,
+-          size: 32,
+-          color: colorScheme.onSurface,
++            borderRadius: BorderRadius.circular(12),
++            boxShadow: [
++              BoxShadow(
++                color: DS.brandPrimary.withValues(alpha: 0.05),
++                blurRadius: 4,
++                offset: const Offset(0, 2),
++              ),
++            ],
++          ),
++          child: Icon(
++            icon,
++            size: 32,
++            color: colorScheme.onSurface,
++          ),
+         ),
+       ),
+     );
+diff --git a/mobile/lib/l10n/app_en.arb b/mobile/lib/l10n/app_en.arb
+index 2e732aed..30f72520 100755
+--- a/mobile/lib/l10n/app_en.arb
++++ b/mobile/lib/l10n/app_en.arb
+@@ -2451,6 +2451,8 @@
+         }
+     },
+     "authForgotPassword": "Forgot Password?",
++    "authShowPassword": "Show password",
++    "authHidePassword": "Hide password",
+     "authUserAgreement": "User Agreement",
+     "authPrivacyPolicy": "Privacy Policy",
+     "authLoginAgreement": "By logging in, you agree to",
+diff --git a/mobile/lib/l10n/app_localizations.dart b/mobile/lib/l10n/app_localizations.dart
+index b8f4a8b5..f15ab88b 100644
+--- a/mobile/lib/l10n/app_localizations.dart
++++ b/mobile/lib/l10n/app_localizations.dart
+@@ -11132,6 +11132,18 @@ abstract class AppLocalizations {
+   /// **'忘记密码？'**
+   String get authForgotPassword;
+ 
++  /// No description provided for @authShowPassword.
++  ///
++  /// In zh, this message translates to:
++  /// **'显示密码'**
++  String get authShowPassword;
++
++  /// No description provided for @authHidePassword.
++  ///
++  /// In zh, this message translates to:
++  /// **'隐藏密码'**
++  String get authHidePassword;
++
+   /// No description provided for @authUserAgreement.
+   ///
+   /// In zh, this message translates to:
+diff --git a/mobile/lib/l10n/app_localizations_en.dart b/mobile/lib/l10n/app_localizations_en.dart
+index ab29c58a..214fa33c 100644
+--- a/mobile/lib/l10n/app_localizations_en.dart
++++ b/mobile/lib/l10n/app_localizations_en.dart
+@@ -6218,6 +6218,12 @@ class AppLocalizationsEn extends AppLocalizations {
+   @override
+   String get authForgotPassword => 'Forgot Password?';
+ 
++  @override
++  String get authShowPassword => 'Show password';
++
++  @override
++  String get authHidePassword => 'Hide password';
++
+   @override
+   String get authUserAgreement => 'User Agreement';
+ 
+diff --git a/mobile/lib/l10n/app_localizations_zh.dart b/mobile/lib/l10n/app_localizations_zh.dart
+index 809e9876..794e8b46 100644
+--- a/mobile/lib/l10n/app_localizations_zh.dart
++++ b/mobile/lib/l10n/app_localizations_zh.dart
+@@ -5973,6 +5973,12 @@ class AppLocalizationsZh extends AppLocalizations {
+   @override
+   String get authForgotPassword => '忘记密码？';
+ 
++  @override
++  String get authShowPassword => '显示密码';
++
++  @override
++  String get authHidePassword => '隐藏密码';
++
+   @override
+   String get authUserAgreement => '用户协议';
+ 
+diff --git a/mobile/lib/l10n/app_zh.arb b/mobile/lib/l10n/app_zh.arb
+index 1669bf5f..831297d5 100755
+--- a/mobile/lib/l10n/app_zh.arb
++++ b/mobile/lib/l10n/app_zh.arb
+@@ -2451,6 +2451,8 @@
+         }
+     },
+     "authForgotPassword": "忘记密码？",
++    "authShowPassword": "显示密码",
++    "authHidePassword": "隐藏密码",
+     "authUserAgreement": "用户协议",
+     "authPrivacyPolicy": "隐私政策",
+     "authLoginAgreement": "登录即表示你同意",
+diff --git a/mobile/lib/main.dart b/mobile/lib/main.dart
+index 3ad56878..d6e0ae2d 100755
+--- a/mobile/lib/main.dart
++++ b/mobile/lib/main.dart
+@@ -1,7 +1,9 @@
+ import 'dart:async';
+ import 'dart:ui';
+ 
++import 'package:flutter/foundation.dart' show kIsWeb;
+ import 'package:flutter/material.dart';
++import 'package:flutter/semantics.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:hive_flutter/hive_flutter.dart';
+ import 'package:shared_preferences/shared_preferences.dart';
+@@ -29,6 +31,17 @@ void main() async {
+   try {
+     WidgetsFlutterBinding.ensureInitialized();
+ 
++    // W-5/W-6（round1 web 走查）：Flutter web 的语义树默认懒构建——只在
++    // 浏览器侧辅助技术被探测到（点击 flt-semantics-placeholder / Tab 焦点
++    // 遍历）后才生成语义 DOM，走查在未激活状态下整页只见「1 个匿名
++    // textbox + 隐藏 submit」。web 端常开语义，读屏与自动化拿到的都是
++    // 完整语义树；移动端维持按需构建的默认（无障碍激活时才付构建开销）。
++    // 这也是 W-6 glass-pane 0×0 的应用层缓解：语义启用驱动引擎重建事件/
++    // 语义宿主层（详见 round1-batch4.md W-6 定性）。
++    if (kIsWeb) {
++      SemanticsBinding.instance.ensureSemantics();
++    }
++
+     FlutterError.onError = (details) {
+       FlutterError.presentError(details);
+       PerformanceMonitor().reportCrash(
+diff --git a/mobile/test/app/main_actions_smoke_test.dart b/mobile/test/app/main_actions_smoke_test.dart
+index ecf4fbc5..d52126e8 100644
+--- a/mobile/test/app/main_actions_smoke_test.dart
++++ b/mobile/test/app/main_actions_smoke_test.dart
+@@ -168,7 +168,8 @@ void main() {
+         find.byType(TextField).at(1),
+         'integration@example.com',
+       );
+-      await tester.tap(find.text('Save'));
++      // 批次4：locale 已钉 zh，按钮文案为「保存」（此前依赖 en 宿主才命中 Save）。
++      await tester.tap(find.text('保存'));
+       await tester.pumpAndSettle();
+ 
+       expect(authNotifier.lastProfileUpdate, isNotNull);
+@@ -377,8 +378,19 @@ Future<void> _pumpPage(
+     UncontrolledProviderScope(
+       container: container,
+       child: MaterialApp(
+-        theme: AppThemes.lightTheme,
+-        darkTheme: AppThemes.darkTheme,
++        theme: AppThemes.lightTheme.copyWith(
++          // 批次4：测试稳态——M3 InkSparkle 需异步加载片元着色器，
++          // flutter_tester 多文件并发下偶发 "shaders/ink_sparkle.frag not
++          // found" 资产竞态。这些测试断言的是交互与路由行为，墨水涟漪
++          // 纯装饰，关闭之（官方测试实践）。
++          splashFactory: NoSplash.splashFactory,
++        ),
++        darkTheme: AppThemes.darkTheme.copyWith(
++          splashFactory: NoSplash.splashFactory,
++        ),
++        // 存量修复（批次4）：钉住 zh。此前随宿主系统 locale 解析，en 宿主下
++        // 「创建社群」「发布」等中文文案断言全部落空（finds 0 widgets）。
++        locale: const Locale('zh'),
+         localizationsDelegates: const [
+           ...AppLocalizations.localizationsDelegates,
+           GlobalMaterialLocalizations.delegate,
+@@ -411,9 +423,15 @@ Future<void> _pumpRouterPage(
+     UncontrolledProviderScope(
+       container: container,
+       child: MaterialApp.router(
+-        theme: AppThemes.lightTheme,
+-        darkTheme: AppThemes.darkTheme,
++        theme: AppThemes.lightTheme.copyWith(
++          splashFactory: NoSplash.splashFactory, // 同 _pumpPage：关闭装饰墨水
++        ),
++        darkTheme: AppThemes.darkTheme.copyWith(
++          splashFactory: NoSplash.splashFactory,
++        ),
+         routerConfig: router,
++        // 存量修复（批次4）：同 _pumpPage，钉住 zh 保证文案断言跨宿主稳定。
++        locale: const Locale('zh'),
+         localizationsDelegates: const [
+           ...AppLocalizations.localizationsDelegates,
+           GlobalMaterialLocalizations.delegate,
+diff --git a/mobile/test/app/main_pages_load_smoke_test.dart b/mobile/test/app/main_pages_load_smoke_test.dart
+index 27577abb..10bf947e 100644
+--- a/mobile/test/app/main_pages_load_smoke_test.dart
++++ b/mobile/test/app/main_pages_load_smoke_test.dart
+@@ -7,6 +7,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+ import 'package:flutter_test/flutter_test.dart';
+ import 'package:hive_flutter/hive_flutter.dart';
+ import 'package:shared_preferences/shared_preferences.dart';
++import 'package:sparkle/core/design/design_system.dart';
+ import 'package:sparkle/core/network/api_client.dart';
+ import 'package:sparkle/core/services/demo_data_service.dart';
+ import 'package:sparkle/core/services/view_storage_service.dart';
+@@ -182,7 +183,10 @@ Future<void> _pumpPage(
+   await tester.pumpWidget(
+     UncontrolledProviderScope(
+       container: container,
++      // 存量修复（批次4）：此前未挂 DS 主题，SparkleThemeExtension 未注册，
++      // 所有页面构建即抛断言（本文件 4 例存量失败的根因）。
+       child: testMaterialApp(
++        theme: AppThemes.lightTheme,
+         home: page,
+       ),
+     ),
+diff --git a/mobile/test/app/router_smoke_test.dart b/mobile/test/app/router_smoke_test.dart
+index 27b66e4d..5b8d27a5 100644
+--- a/mobile/test/app/router_smoke_test.dart
++++ b/mobile/test/app/router_smoke_test.dart
+@@ -478,8 +478,18 @@ Future<_RouterHarness> _pumpRouter(
+       container: container,
+       child: MaterialApp.router(
+         routerConfig: router,
+-        theme: AppThemes.lightTheme,
+-        darkTheme: AppThemes.darkTheme,
++        theme: AppThemes.lightTheme.copyWith(
++          // 批次4：测试稳态——关闭 M3 InkSparkle 装饰墨水，规避 flutter_tester
++          // 多文件并发下偶发的 "shaders/ink_sparkle.frag not found" 资产竞态。
++          splashFactory: NoSplash.splashFactory,
++        ),
++        darkTheme: AppThemes.darkTheme.copyWith(
++          splashFactory: NoSplash.splashFactory,
++        ),
++        // 存量修复（批次4）：钉住 zh。此前随宿主系统 locale 解析，en 宿主下
++        // 全程渲染英文文案——文案换行差异足以改变布局，且依赖中文的断言
++        // 全部落空。测试布局与断言基线以 zh 为准。
++        locale: const Locale('zh'),
+         localizationsDelegates: const [
+           ...AppLocalizations.localizationsDelegates,
+           GlobalMaterialLocalizations.delegate,
+diff --git a/mobile/test/features/auth/presentation/screens/login_screen_semantics_test.dart b/mobile/test/features/auth/presentation/screens/login_screen_semantics_test.dart
+new file mode 100644
+index 00000000..d06e29f6
+--- /dev/null
++++ b/mobile/test/features/auth/presentation/screens/login_screen_semantics_test.dart
+@@ -0,0 +1,202 @@
++import 'package:flutter/material.dart';
++import 'package:flutter/semantics.dart';
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import 'package:flutter_test/flutter_test.dart';
++import 'package:shared_preferences/shared_preferences.dart';
++import 'package:sparkle/core/design/design_system.dart';
++import 'package:sparkle/core/network/api_client.dart';
++import 'package:sparkle/core/services/session_refresh_service.dart';
++import 'package:sparkle/core/storage/token_storage.dart';
++import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
++import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
++import 'package:sparkle/features/auth/presentation/screens/login_screen.dart';
++import 'package:sparkle/shared/entities/user_model.dart';
++import '../../../../shared/i18n_test_helper.dart';
++
++/// W-5 红绿测试（round1 web 走查）：登录页语义树完整性。
++///
++/// 走查实测：Flutter web 未激活语义时整页只暴露「1 个匿名 textbox + 隐藏
++/// submit」，读屏与语义自动化不可用。本测试在语义开启（tester.ensureSemantics，
++/// 对应 main.dart web 端 ensureSemantics 缓解）的前提下，断言登录页暴露
++/// 完整、可辨识、可操作的语义节点：
++///
++/// - 两个输入框携带 accessible name（用户名/密码）；
++/// - 主按钮（登录/继续以访客身份）为命名 button；
++/// - 三个社交登录按钮（此前是纯图标无名节点）有名称、button 标志与 tap 动作；
++/// - 密码可见性切换按钮有可访问名称（tooltip）。
++void main() {
++  TestWidgetsFlutterBinding.ensureInitialized();
++
++  setUp(setUpI18nForTesting);
++  tearDown(tearDownI18n);
++
++  /// 语义必须在测试验证结束前 dispose（addTearDown 晚于终检），故用
++  /// try/finally 包裹测试体（同 c18_accessibility_semantics_test 先例）。
++  Future<void> withSemantics(
++    WidgetTester tester,
++    Future<void> Function() body,
++  ) async {
++    final semantics = tester.ensureSemantics();
++    try {
++      await body();
++    } finally {
++      semantics.dispose();
++    }
++  }
++
++  Future<void> pumpLoginScreen(WidgetTester tester) async {
++    SharedPreferences.setMockInitialValues({});
++    final prefs = await SharedPreferences.getInstance();
++    final container = ProviderContainer(
++      overrides: [
++        authRepositoryProvider.overrideWithValue(_NoopAuthRepository()),
++        sharedPreferencesProvider.overrideWithValue(prefs),
++        sessionBoundProvidersProvider.overrideWithValue(const []),
++      ],
++    );
++    addTearDown(container.dispose);
++    await tester.pumpWidget(
++      UncontrolledProviderScope(
++        container: container,
++        child: testMaterialApp(
++          theme: AppThemes.lightTheme,
++          home: const LoginScreen(),
++        ),
++      ),
++    );
++    await tester.pumpAndSettle();
++  }
++
++  testWidgets('输入框暴露 accessible name（用户名/密码）', (tester) async {
++    await withSemantics(tester, () => pumpLoginScreen(tester));
++
++    // 用户名输入框：语义树中存在带「用户名」名称的 text field 节点。
++    // 注：本 SDK 测试绑定下 SemanticsFinder（find.semantics.byLabel）依赖的
++    // rootSemanticsNode 不落地，语义断言统一走 bySemanticsLabel + getSemantics。
++    final usernameField = find.bySemanticsLabel('用户名');
++    expect(usernameField, findsOneWidget, reason: '用户名输入框必须有语义名称');
++    expect(
++      tester
++          .getSemantics(usernameField)
++          .getSemanticsData()
++          .flagsCollection.isTextField,
++      isTrue,
++      reason: '「用户名」语义节点应被标记为输入框',
++    );
++
++    final passwordField = find.bySemanticsLabel('密码');
++    expect(passwordField, findsOneWidget, reason: '密码输入框必须有语义名称');
++    expect(
++      tester
++          .getSemantics(passwordField)
++          .getSemanticsData()
++          .flagsCollection.isTextField,
++      isTrue,
++    );
++  });
++
++  testWidgets('登录与访客按钮是可辨识的命名 button', (tester) async {
++    await withSemantics(tester, () => pumpLoginScreen(tester));
++
++    final loginNode =
++        tester.getSemantics(find.widgetWithText(SparkleButton, '登录'));
++    // Semantics label 与子 Text 合并后形如「登录\n登录」，断言包含即可。
++    expect(loginNode.label, contains('登录'));
++    expect(loginNode.getSemanticsData().flagsCollection.isButton, isTrue);
++
++    final guestNode = tester.getSemantics(
++      find.widgetWithText(SparkleButton, '以访客身份继续'),
++    );
++    expect(guestNode.label, contains('以访客身份继续'));
++    expect(guestNode.getSemanticsData().flagsCollection.isButton, isTrue);
++  });
++
++  testWidgets('社交登录按钮有名称、button 标志与 tap 动作（W-5 无名图标修复）', (
++    tester,
++  ) async {
++    await withSemantics(tester, () => pumpLoginScreen(tester));
++
++    final iconByLabel = {
++      'Google': find.byIcon(Icons.g_mobiledata_rounded),
++      'Apple': find.byIcon(Icons.apple_rounded),
++      '微信': find.byIcon(Icons.wechat_rounded),
++    };
++    for (final entry in iconByLabel.entries) {
++      final node = tester.getSemantics(entry.value);
++      expect(
++        node.label,
++        entry.key,
++        reason: '${entry.key} 按钮必须暴露语义名称',
++      );
++      expect(
++        node.getSemanticsData().flagsCollection.isButton,
++        isTrue,
++        reason: '${entry.key} 语义节点应为 button',
++      );
++      expect(
++        node.getSemanticsData().hasAction(SemanticsAction.tap),
++        isTrue,
++        reason: '${entry.key} 语义节点必须带 tap 动作（读屏可激活）',
++      );
++    }
++  });
++
++  testWidgets('密码可见性切换有可访问名称（tooltip）', (tester) async {
++    await withSemantics(tester, () => pumpLoginScreen(tester));
++
++    // Tooltip 语义进的是节点 tooltip 属性而非 label。
++    expect(find.byTooltip('显示密码'), findsOneWidget);
++    final hiddenNode = tester.getSemantics(find.byIcon(Icons.visibility_off));
++    expect(hiddenNode.getSemanticsData().tooltip, '显示密码');
++
++    await tester.tap(find.byIcon(Icons.visibility_off));
++    await tester.pump();
++
++    // 切换后语义名称随状态翻转（隐藏密码）。
++    expect(find.byTooltip('隐藏密码'), findsOneWidget);
++    final shownNode = tester.getSemantics(find.byIcon(Icons.visibility));
++    expect(shownNode.getSemanticsData().tooltip, '隐藏密码');
++  });
++}
++
++class _NoopAuthRepository extends AuthRepository {
++  _NoopAuthRepository() : super(_UnusedApiClient(), _MemoryTokenStorage());
++
++  @override
++  Future<bool> isLoggedIn() async => false;
++
++  @override
++  Future<UserModel> login(String usernameOrEmail, String password) async {
++    throw UnimplementedError('semantics test should not call login');
++  }
++
++  @override
++  Future<UserModel> guestLogin(String guestId) async {
++    throw UnimplementedError('semantics test should not call guestLogin');
++  }
++
++  @override
++  Future<void> logout({bool keepDemoMode = false}) async {}
++}
++
++class _MemoryTokenStorage implements TokenStorage {
++  final Map<String, String> _values = <String, String>{};
++
++  @override
++  Future<String?> read(String key) async => _values[key];
++
++  @override
++  Future<void> write(String key, String value) async {
++    _values[key] = value;
++  }
++
++  @override
++  Future<void> delete(String key) async {
++    _values.remove(key);
++  }
++}
++
++class _UnusedApiClient implements ApiClient {
++  @override
++  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
++}

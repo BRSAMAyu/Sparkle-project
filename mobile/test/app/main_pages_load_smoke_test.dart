@@ -7,6 +7,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/view_storage_service.dart';
@@ -182,7 +183,10 @@ Future<void> _pumpPage(
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,
+      // 存量修复（批次4）：此前未挂 DS 主题，SparkleThemeExtension 未注册，
+      // 所有页面构建即抛断言（本文件 4 例存量失败的根因）。
       child: testMaterialApp(
+        theme: AppThemes.lightTheme,
         home: page,
       ),
     ),

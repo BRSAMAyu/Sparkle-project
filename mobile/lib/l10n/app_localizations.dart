@@ -11132,6 +11132,18 @@ abstract class AppLocalizations {
   /// **'忘记密码？'**
   String get authForgotPassword;
 
+  /// No description provided for @authShowPassword.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示密码'**
+  String get authShowPassword;
+
+  /// No description provided for @authHidePassword.
+  ///
+  /// In zh, this message translates to:
+  /// **'隐藏密码'**
+  String get authHidePassword;
+
   /// No description provided for @authUserAgreement.
   ///
   /// In zh, this message translates to:

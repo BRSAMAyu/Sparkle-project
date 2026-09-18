@@ -478,8 +478,18 @@ Future<_RouterHarness> _pumpRouter(
       container: container,
       child: MaterialApp.router(
         routerConfig: router,
-        theme: AppThemes.lightTheme,
-        darkTheme: AppThemes.darkTheme,
+        theme: AppThemes.lightTheme.copyWith(
+          // 批次4：测试稳态——关闭 M3 InkSparkle 装饰墨水，规避 flutter_tester
+          // 多文件并发下偶发的 "shaders/ink_sparkle.frag not found" 资产竞态。
+          splashFactory: NoSplash.splashFactory,
+        ),
+        darkTheme: AppThemes.darkTheme.copyWith(
+          splashFactory: NoSplash.splashFactory,
+        ),
+        // 存量修复（批次4）：钉住 zh。此前随宿主系统 locale 解析，en 宿主下
+        // 全程渲染英文文案——文案换行差异足以改变布局，且依赖中文的断言
+        // 全部落空。测试布局与断言基线以 zh 为准。
+        locale: const Locale('zh'),
         localizationsDelegates: const [
           ...AppLocalizations.localizationsDelegates,
           GlobalMaterialLocalizations.delegate,

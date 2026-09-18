@@ -2451,6 +2451,8 @@
         }
     },
     "authForgotPassword": "忘记密码？",
+    "authShowPassword": "显示密码",
+    "authHidePassword": "隐藏密码",
     "authUserAgreement": "用户协议",
     "authPrivacyPolicy": "隐私政策",
     "authLoginAgreement": "登录即表示你同意",

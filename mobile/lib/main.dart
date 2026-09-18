@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -28,6 +30,17 @@ void main() async {
   final startupStopwatch = Stopwatch()..start();
   try {
     WidgetsFlutterBinding.ensureInitialized();
+
+    // W-5/W-6（round1 web 走查）：Flutter web 的语义树默认懒构建——只在
+    // 浏览器侧辅助技术被探测到（点击 flt-semantics-placeholder / Tab 焦点
+    // 遍历）后才生成语义 DOM，走查在未激活状态下整页只见「1 个匿名
+    // textbox + 隐藏 submit」。web 端常开语义，读屏与自动化拿到的都是
+    // 完整语义树；移动端维持按需构建的默认（无障碍激活时才付构建开销）。
+    // 这也是 W-6 glass-pane 0×0 的应用层缓解：语义启用驱动引擎重建事件/
+    // 语义宿主层（详见 round1-batch4.md W-6 定性）。
+    if (kIsWeb) {
+      SemanticsBinding.instance.ensureSemantics();
+    }
 
     FlutterError.onError = (details) {
       FlutterError.presentError(details);
