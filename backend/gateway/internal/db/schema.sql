@@ -3237,7 +3237,9 @@ CREATE TABLE item_similarities (
     id uuid NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    deleted_at timestamp without time zone
+    deleted_at timestamp without time zone,
+    total_learners_either integer DEFAULT 0 NOT NULL,
+    subject_id uuid
 );
 
 
@@ -4136,7 +4138,8 @@ CREATE TABLE plan_execution_records (
     id uuid NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    deleted_at timestamp without time zone
+    deleted_at timestamp without time zone,
+    execution_intent_id uuid
 );
 
 
@@ -4236,7 +4239,8 @@ CREATE TABLE post_comments (
     post_id uuid NOT NULL,
     content text NOT NULL,
     created_at timestamp without time zone DEFAULT now() NOT NULL,
-    updated_at timestamp without time zone DEFAULT now() NOT NULL
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    deleted_at timestamp without time zone
 );
 
 
@@ -4995,7 +4999,11 @@ CREATE TABLE shared_resources (
     knowledge_node_id uuid,
     seed_library_id uuid,
     seed_item_id uuid,
-    card_share_record_id uuid
+    card_share_record_id uuid,
+    adoption_count integer DEFAULT 0 NOT NULL,
+    negative_feedback_count integer DEFAULT 0 NOT NULL,
+    quality_score double precision DEFAULT '0'::double precision NOT NULL,
+    quality_hidden boolean DEFAULT false NOT NULL
 );
 
 
@@ -14541,6 +14549,13 @@ CREATE INDEX ix_plans_user_id ON plans USING btree (user_id);
 
 
 --
+-- Name: ix_post_comments_deleted_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_post_comments_deleted_at ON post_comments USING btree (deleted_at);
+
+
+--
 -- Name: ix_post_likes_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -16725,6 +16740,13 @@ CREATE UNIQUE INDEX uq_memory_rank_policies_scope ON memory_rank_policies USING 
 
 
 --
+-- Name: uq_plan_execution_records_intent; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX uq_plan_execution_records_intent ON plan_execution_records USING btree (execution_intent_id) WHERE (execution_intent_id IS NOT NULL);
+
+
+--
 -- Name: uq_research_consent_active_protocol; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -17536,6 +17558,14 @@ ALTER TABLE ONLY ab_experiments
 
 ALTER TABLE ONLY collaborative_galaxies
     ADD CONSTRAINT fk_collaborative_galaxies_group_id FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE;
+
+
+--
+-- Name: plan_execution_records fk_plan_exec_records_intent; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY plan_execution_records
+    ADD CONSTRAINT fk_plan_exec_records_intent FOREIGN KEY (execution_intent_id) REFERENCES execution_intents(id) ON DELETE SET NULL;
 
 
 --

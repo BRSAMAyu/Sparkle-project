@@ -9,6 +9,7 @@
 | `create_test_user.py` | 创建测试用户（真机联调用，见 `backend/docs/REAL_DEVICE_INTEGRATION_TEST.md`） |
 | `check_settings.py` | 检查 backend 配置项完整性 |
 | `force_sync_db.py` | 强制全量同步数据库（导入所有模型后重建 schema，谨慎使用） |
+| `orm_migration_audit.py` | ORM ↔ Alembic 迁移链 ↔ 实库 三方列集审计（scratch 库真重放迁移链；exit 非零=白名单外漂移；见 round2 schema-consistency-audit 报告） |
 | `test_job_service.py` | 手动验证任务服务 |
 | `test_llm_parser.py` | 手动验证 LLM 解析器 |
 | `build_demo.sh` | Demo 版本自动打包（历史演示用途） |
