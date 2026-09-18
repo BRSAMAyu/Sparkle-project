@@ -42,6 +42,24 @@ def _resolve_host_ips(hostname: str) -> list[ipaddress._BaseAddress]:
     return resolved
 
 
+def _trusted_hosts_from_settings() -> frozenset[str]:
+    """Internal infrastructure hosts (e.g. MinIO) exempt from private/loopback blocking.
+
+    The file-processing pipeline downloads from presigned MinIO URLs that legitimately
+    resolve to loopback/private addresses in dev; these URLs are server-generated, not
+    user input, so the SSRF check does not apply to them.
+    """
+    raw = str(getattr(settings, "MINIO_ENDPOINT", "") or "")
+    hosts = {part.split(":", 1)[0].strip().lower() for part in raw.split(",") if part.strip()}
+    return frozenset(h for h in hosts if h)
+
+
+def _is_trusted_host(hostname: str | None, trusted_hosts: frozenset[str] | None) -> bool:
+    if not hostname or not trusted_hosts:
+        return False
+    return hostname.strip().lower() in trusted_hosts
+
+
 def _is_blocked_ip(address: ipaddress._BaseAddress) -> bool:
     return (
         str(address) in METADATA_IPS
@@ -53,7 +71,13 @@ def _is_blocked_ip(address: ipaddress._BaseAddress) -> bool:
     )
 
 
-def _validate_resolved_addresses(hostname: str, addresses: list[ipaddress._BaseAddress]) -> None:
+def _validate_resolved_addresses(
+    hostname: str,
+    addresses: list[ipaddress._BaseAddress],
+    trusted_hosts: frozenset[str] | None = None,
+) -> None:
+    if _is_trusted_host(hostname, trusted_hosts):
+        return
     if not addresses:
         raise SSRFBlocked("unable to resolve target hostname")
     for address in addresses:
@@ -65,6 +89,7 @@ def validate_external_url(
     url: str,
     *,
     resolver=_resolve_host_ips,
+    trusted_hosts: frozenset[str] | None = None,
 ) -> str:
     parsed = urlparse(str(url or "").strip())
     scheme = parsed.scheme.lower()
@@ -74,37 +99,45 @@ def validate_external_url(
     hostname = parsed.hostname
     if not hostname:
         raise SSRFBlocked("missing URL hostname")
-    if hostname.lower() == "localhost":
+    if hostname.lower() == "localhost" and not _is_trusted_host(hostname, trusted_hosts):
         raise SSRFBlocked("blocked localhost target")
 
     addresses = list(resolver(hostname))
-    _validate_resolved_addresses(hostname, addresses)
+    _validate_resolved_addresses(hostname, addresses, trusted_hosts=trusted_hosts)
     return url
 
 
 class SSRFGuardedNetworkBackend:
     """httpcore network backend that resolves and validates hosts at connect time."""
 
-    def __init__(self, *, resolver=_resolve_host_ips):
+    def __init__(self, *, resolver=_resolve_host_ips, trusted_hosts: frozenset[str] | None = None):
         from httpcore._backends.auto import AutoBackend
 
         self._resolver = resolver
+        self._trusted_hosts = trusted_hosts
         self._backend = AutoBackend()
 
     def _safe_connect_hosts(self, host: str | bytes) -> list[str]:
         hostname = host.decode("ascii") if isinstance(host, bytes) else str(host)
-        if hostname.lower() == "localhost":
+        if hostname.lower() == "localhost" and not _is_trusted_host(hostname, self._trusted_hosts):
             raise SSRFBlocked("blocked localhost target")
 
-        try:
-            literal_address = ipaddress.ip_address(hostname)
-        except ValueError:
-            addresses = list(self._resolver(hostname))
-        else:
-            addresses = [literal_address]
+        if not _is_trusted_host(hostname, self._trusted_hosts):
+            try:
+                literal_address = ipaddress.ip_address(hostname)
+            except ValueError:
+                addresses = list(self._resolver(hostname))
+            else:
+                addresses = [literal_address]
 
-        _validate_resolved_addresses(hostname, addresses)
-        return [str(address) for address in addresses]
+            _validate_resolved_addresses(hostname, addresses)
+            return [str(address) for address in addresses]
+
+        try:
+            literal = ipaddress.ip_address(hostname)
+            return [str(literal)]
+        except ValueError:
+            return [hostname]
 
     async def connect_tcp(
         self,
@@ -140,7 +173,7 @@ class SSRFGuardedNetworkBackend:
 class SSRFGuardedAsyncHTTPTransport(httpx.AsyncHTTPTransport):
     """HTTP transport that validates DNS again immediately before TCP connect."""
 
-    def __init__(self, *, resolver=_resolve_host_ips) -> None:
+    def __init__(self, *, resolver=_resolve_host_ips, trusted_hosts: frozenset[str] | None = None) -> None:
         import httpcore
         from httpx._config import DEFAULT_LIMITS, create_ssl_context
 
@@ -154,7 +187,7 @@ class SSRFGuardedAsyncHTTPTransport(httpx.AsyncHTTPTransport):
             http1=True,
             http2=False,
             retries=0,
-            network_backend=SSRFGuardedNetworkBackend(resolver=resolver),
+            network_backend=SSRFGuardedNetworkBackend(resolver=resolver, trusted_hosts=trusted_hosts),
         )
 
 
@@ -177,12 +210,13 @@ async def stream_download_to_path(
     max_bytes: int | None = None,
     resolver=_resolve_host_ips,
     client_factory=httpx.AsyncClient,
+    trusted_hosts: frozenset[str] | None = None,
 ) -> str:
-    safe_url = validate_external_url(download_url, resolver=resolver)
+    safe_url = validate_external_url(download_url, resolver=resolver, trusted_hosts=trusted_hosts)
     limit = max_bytes or _default_max_download_bytes()
     destination = Path(destination_path)
 
-    transport = SSRFGuardedAsyncHTTPTransport(resolver=resolver)
+    transport = SSRFGuardedAsyncHTTPTransport(resolver=resolver, trusted_hosts=trusted_hosts)
     async with client_factory(
         timeout=DEFAULT_OUTBOUND_TIMEOUT,
         follow_redirects=False,
@@ -190,7 +224,7 @@ async def stream_download_to_path(
     ) as client:
         current_url = safe_url
         for _redirect_count in range(MAX_REDIRECTS + 1):
-            current_url = validate_external_url(current_url, resolver=resolver)
+            current_url = validate_external_url(current_url, resolver=resolver, trusted_hosts=trusted_hosts)
             async with client.stream("GET", current_url) as response:
                 if response.status_code in REDIRECT_STATUS_CODES:
                     location = response.headers.get("Location")

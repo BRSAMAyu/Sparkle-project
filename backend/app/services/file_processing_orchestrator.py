@@ -23,7 +23,7 @@ from app.models.group_files import GroupFile
 from app.services.document_service import document_service
 from app.services.document_upload_storage import document_upload_storage
 from app.services.embedding_service import embedding_service
-from app.services.openclaw.url_guard import stream_download_to_path
+from app.services.openclaw.url_guard import _trusted_hosts_from_settings, stream_download_to_path
 from app.services.rag_indexing_service import (
     delete_group_document_chunk_keys,
     get_rag_redis,
@@ -148,7 +148,9 @@ class FileProcessingOrchestrator:
         suffix = os.path.splitext(file_name)[1] or ".bin"
         handle, temp_path = tempfile.mkstemp(prefix="file_process_", suffix=suffix)
         os.close(handle)
-        await stream_download_to_path(download_url, temp_path)
+        # download_url 是服务端生成的 MinIO presigned URL（非用户输入），
+        # dev 下指向 127.0.0.1，需按受信内部主机放行而非按 SSRF 私网规则拦截
+        await stream_download_to_path(download_url, temp_path, trusted_hosts=_trusted_hosts_from_settings())
         return temp_path
 
     async def _replace_chunks(self, file_id: UUID) -> None:
