@@ -90,3 +90,13 @@
 - flutter_secure_storage web 落盘实证：IndexedDB 有包自建的 `settings`/`user` 两库（密钥材料在），但 `user.box` store **完全为空** —— `saveTokens` 的 4+ 个并发 `_storage.write()` 全部静默丢失（该包 web 实现已知并发写缺陷）
 - 因此 W-1/W-2 同根：**token 从未持久化** → `getAccessToken()` 空 → `authGuestTokenFailed` → 状态打回未认证（UI 不跳转、刷新即丢会话）
 - 修复方向（任务书已备）：按项目 conditional-import 先例（local_database_store_io.dart）做存储 facade —— IO 平台保留 secure storage，web 平台改用 localStorage（dev/竞赛可接受，注释标注生产升级路径）；同时收口 login()/checkAuthStatus() 竞态与 W-4 双触发
+
+## 修复验证（web-session-fix bbbf6d03 落地后 30 分钟，主 agent 亲验）
+
+- **W-7 三项生效**：界面全中文（用户名/密码/登录/继续以访客身份）、Sparkle 星火字标、表单 480px 收窄居中
+- **W-1/W-2 会话链路修复实证**：注入匹配 guest_id 的 token → reload → checkAuthStatus 走 guest reseed 路径（POST /auth/guest 200）→ users/me 200 → user/settings/growth/dashboard/tasks/ws-ticket 全 200 → **主界面渲染成功**（中文 5-Tab：首页/任务/对话/星图/我的，学习数据卡片，无错误）；截图 05-guest-home-verified.png
+- **W-4**：双触发修复回归测试绿（真机点击路径受 W-6 阻挡未亲测，单测覆盖）
+- **W-3**：确认为 W-8 双进程假象（引擎自 initial commit 即正确 400/401），回归锁 7/7
+- **新发现 W-9（P3）**：会话恢复导航后 URL hash 停留 /#/login（GoRouter 恢复路径不重写 hash，刷新行为正常仅观感问题）
+- **新发现 W-10（P2，引擎侧）**：单客户端会话恢复风暴可拖垮引擎——21:26 模拟器恢复触发 30s 超时雪崩（galaxy/aurora/user-settings 连环 503、community/ws 502、realtime-next-step 500），与 Android 报告的 500 同源；建议恢复期请求限流/去重（多端同时恢复时放大）
+- W-6 点击穿透未修（批次4清单）：影响合成点击/自动化，真实鼠标事件路径待验证
