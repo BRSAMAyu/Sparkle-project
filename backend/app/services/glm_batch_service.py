@@ -9,6 +9,7 @@ from loguru import logger
 from app.config import settings
 from app.core.agent_profiles import AgentRole, ModelTier, TaskType
 from app.core.celery_app import celery_app
+from app.core.celery_dispatch import dispatch_task_async
 from app.core.llm_router import llm_router
 from app.services.llm.concurrency import llm_concurrency
 
@@ -285,12 +286,18 @@ class GLMBatchService:
             queue=plan.queue,
         )
 
-    def enqueue_node_sector_backfill(
+    async def enqueue_node_sector_backfill(
         self,
         *,
         user_id: UUID,
         node_ids: list[UUID],
-    ):
+    ) -> bool:
+        """异步安全投递星域回填任务（engine-restore-storm 修复）。
+
+        旧实现直接在事件循环线程里同步 ``send_task``：broker/result store 异常时
+        kombu 重连会冻结整个事件循环 ~19s（见 app/core/celery_dispatch.py 模块
+        注释的实证）。现改为 off-loop + 3s 超时 + ignore_result，失败仅记日志。
+        """
         model_key = "glm_4_5_air_batch"
         logger.info(
             "[GLMBatch] enqueue node_sector_backfill user={} node_count={} model={}",
@@ -298,7 +305,7 @@ class GLMBatchService:
             len(node_ids),
             model_key,
         )
-        return celery_app.send_task(
+        return await dispatch_task_async(
             "classify_node_sector_batch",
             args=(str(user_id), [str(node_id) for node_id in node_ids], model_key),
             queue=self.queue_name,

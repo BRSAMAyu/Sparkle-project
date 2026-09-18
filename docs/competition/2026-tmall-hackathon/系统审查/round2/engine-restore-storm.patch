@@ -1,0 +1,1321 @@
+diff --git a/backend/app/api/deps.py b/backend/app/api/deps.py
+index e6b2b977..929e43c6 100755
+--- a/backend/app/api/deps.py
++++ b/backend/app/api/deps.py
+@@ -2,6 +2,7 @@
+ API Dependencies
+ FastAPI 依赖注入函数
+ """
++import asyncio
+ import logging
+ 
+ from fastapi import Depends, HTTPException, Request, status
+@@ -57,37 +58,30 @@ async def get_current_user(
+     user = await db.get(User, user_id)
+     if not user:
+         raise AuthenticationError("该用户不存在，请检查输入")
+-    try:
+-        payload = getattr(request.state, "token_payload", None)
+-        if payload:
+-            await auth_session_service.touch_from_payload(
+-                db,
+-                request=request,
+-                user_id=str(user.id),
+-                payload=payload,
+-            )
+-    except Exception as e:
+-        # H1 Security Fix: Log session touch failure but don't block (fail open)
+-        # Session will eventually expire naturally
+-        try:
+-            import structlog
+-
+-            structlog.get_logger().warning(
+-                "session_touch_failed",
+-                user_id=str(user.id),
+-                error=str(e),
+-                error_type=type(e).__name__,
+-            )
+-        except ImportError:
+-            logger.warning(
+-                "session_touch_failed user_id=%s error=%s error_type=%s",
+-                str(user.id),
+-                str(e),
+-                type(e).__name__,
++    payload = getattr(request.state, "token_payload", None)
++    if payload:
++        # engine-restore-storm 修复：会话 touch 改为独立短事务后台执行。
++        # 旧路径在请求事务里 upsert user_sessions 并把行锁持有到请求结束，
++        # 恢复风暴下同一 session 的并发请求全部在该行锁上串行化超时。
++        # detached touch 锁持有 ~ms、失败不影响请求（H1 fail-open 语义保持）。
++        _schedule_detached_touch(
++            auth_session_service.touch_from_payload_detached(
++                user_id=str(user.id), payload=payload, request=request
+             )
++        )
+     return user
+ 
+ 
++# 防止 fire-and-forget task 被 GC（asyncio 只持弱引用）
++_detached_touch_tasks: set[asyncio.Task] = set()
++
++
++def _schedule_detached_touch(coro) -> None:
++    task = asyncio.get_running_loop().create_task(coro)
++    _detached_touch_tasks.add(task)
++    task.add_done_callback(_detached_touch_tasks.discard)
++
++
+ async def get_optional_current_user(
+     request: Request,
+     db: AsyncSession = Depends(get_db),
+@@ -111,30 +105,13 @@ async def get_optional_current_user(
+         user = await db.get(User, user_id)
+         if not user:
+             return None
+-        try:
+-            await auth_session_service.touch_from_payload(
+-                db,
+-                request=request,
+-                user_id=str(user.id),
+-                payload=payload,
++        # engine-restore-storm 修复：与 get_current_user 相同，touch 改为 detached 短事务，
++        # 消除 user_sessions 行锁在请求生命周期内的串行化。
++        _schedule_detached_touch(
++            auth_session_service.touch_from_payload_detached(
++                user_id=str(user.id), payload=payload, request=request
+             )
+-        except Exception as e:
+-            try:
+-                import structlog
+-
+-                structlog.get_logger().warning(
+-                    "session_touch_failed",
+-                    user_id=str(user.id),
+-                    error=str(e),
+-                    error_type=type(e).__name__,
+-                )
+-            except ImportError:
+-                logger.warning(
+-                    "session_touch_failed user_id=%s error=%s error_type=%s",
+-                    str(user.id),
+-                    str(e),
+-                    type(e).__name__,
+-                )
++        )
+         return user
+     except Exception:
+         return None
+diff --git a/backend/app/api/v1/aurora.py b/backend/app/api/v1/aurora.py
+index 45acc583..4d8017e5 100644
+--- a/backend/app/api/v1/aurora.py
++++ b/backend/app/api/v1/aurora.py
+@@ -17,6 +17,7 @@ from app.aurora.runtime_v1.state import AuroraEnergyStore
+ from app.aurora.runtime_v1.telemetry import AuroraDecisionTelemetryService
+ from app.core.cache import cache_service
+ from app.core.metrics import AURORA_CORRECTION_FAILURE_TOTAL, record_product_loop_event
++from app.core.request_coalescing import EndpointShield
+ from app.models.user import User
+ from app.services.aurora_calibration_card_service import AuroraCalibrationCardService
+ from app.services.aurora_control_surface_service import (
+@@ -27,6 +28,10 @@ logger = logging.getLogger(__name__)
+ 
+ router = APIRouter(prefix="/aurora", tags=["aurora"])
+ 
++# 恢复风暴防护（engine-restore-storm）：恢复期 aurora 三连拉的重端点守卫
++_comeback_context_shield = EndpointShield(name="aurora_comeback_context", max_concurrency=8, ttl=8.0, wait_timeout=8.0)
++_core_session_shield = EndpointShield(name="aurora_core_session", max_concurrency=8, ttl=5.0, wait_timeout=8.0)
++
+ 
+ # ── Request / Response models ──────────────────────────────────────────────────
+ 
+@@ -192,11 +197,16 @@ async def get_comeback_context(
+         )
+ 
+     service = AuroraRuntimeV1Service(cache_service.redis)
+-    payload = await service.get_comeback_context(
+-        active_db=db,
+-        user_id=resolved_user_id,
+-        include_short_gaps=True,
+-    )
++
++    async def _compute() -> dict[str, Any] | None:
++        return await service.get_comeback_context(
++            active_db=db,
++            user_id=resolved_user_id,
++            include_short_gaps=True,
++        )
++
++    # 恢复风暴防护：single-flight + TTL 缓存 + 并发钳制
++    payload = await _comeback_context_shield.run(str(resolved_user_id), _compute)
+     if payload is None:
+         return {}
+     return ComebackContextResponse(**payload).model_dump()
+@@ -410,16 +420,21 @@ async def get_current_core_session(
+     current_user: User = Depends(get_current_user),
+ ) -> dict[str, Any]:
+     """Get the user's current resumable Aurora Core Session, if any."""
+-    service = AuroraCoreSessionService(cache_service.redis, db=db)
+-    session = await service.get_current_session(str(current_user.id))
+-    if session is None:
+-        return {"active": False, "resumable": False, "expired": False, "session": None}
+-    return {
+-        "active": session.status == "active",
+-        "resumable": session.status in ("active", "paused"),
+-        "expired": session.status == "expired",
+-        "session": session.to_dict(),
+-    }
++
++    async def _compute() -> dict[str, Any]:
++        service = AuroraCoreSessionService(cache_service.redis, db=db)
++        session = await service.get_current_session(str(current_user.id))
++        if session is None:
++            return {"active": False, "resumable": False, "expired": False, "session": None}
++        return {
++            "active": session.status == "active",
++            "resumable": session.status in ("active", "paused"),
++            "expired": session.status == "expired",
++            "session": session.to_dict(),
++        }
++
++    # 恢复风暴防护：single-flight + TTL 缓存 + 并发钳制
++    return await _core_session_shield.run(str(current_user.id), _compute)
+ 
+ 
+ # route-tier: authed
+diff --git a/backend/app/api/v1/aurora_status.py b/backend/app/api/v1/aurora_status.py
+index 48bc83c4..8d9d601d 100644
+--- a/backend/app/api/v1/aurora_status.py
++++ b/backend/app/api/v1/aurora_status.py
+@@ -14,11 +14,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
+ from app.api.deps import get_current_user, get_db
+ from app.aurora.runtime_v1.state import CORE_MODELING_DOMAINS
+ from app.core.cache import cache_service
++from app.core.request_coalescing import EndpointShield
+ from app.models.user import User
+ from app.services.aurora_control_surface_service import AuroraControlSurfaceService
+ 
+ router = APIRouter(prefix="/aurora", tags=["aurora"])
+ 
++# 恢复风暴防护（engine-restore-storm）：控制面快照是恢复期必拉端点，
++# 同 user 并发拉取合并为一次计算 + 8s TTL。
++_control_surface_shield = EndpointShield(name="aurora_control_surface", max_concurrency=8, ttl=8.0, wait_timeout=8.0)
++
+ # Domain label mapping (Chinese)
+ _DOMAIN_LABELS: dict[str, str] = {
+     "goal": "\u76ee\u6807\u5efa\u6a21",
+@@ -36,10 +41,16 @@ async def get_control_surface(
+     db: AsyncSession = Depends(get_db),
+ ) -> dict:
+     """Return Aurora's four-facet cognitive control surface for product UI."""
+-    return await AuroraControlSurfaceService(db, cache_service.redis).build_snapshot(
+-        user_id=current_user.id,
+-        conversation_id=conversation_id,
+-    )
++
++    async def _compute() -> dict:
++        return await AuroraControlSurfaceService(db, cache_service.redis).build_snapshot(
++            user_id=current_user.id,
++            conversation_id=conversation_id,
++        )
++
++    # 恢复风暴防护：single-flight + TTL 缓存 + 并发钳制
++    key = f"{current_user.id}:{conversation_id or ''}"
++    return await _control_surface_shield.run(key, _compute)
+ 
+ 
+ @router.get("/modeling-status")
+diff --git a/backend/app/api/v1/galaxy.py b/backend/app/api/v1/galaxy.py
+index a7b2c858..480eecf1 100755
+--- a/backend/app/api/v1/galaxy.py
++++ b/backend/app/api/v1/galaxy.py
+@@ -19,6 +19,7 @@ from sqlalchemy import desc, or_, select
+ from sqlalchemy.ext.asyncio import AsyncSession
+ 
+ from app.api.deps import get_current_user_id, get_db, get_optional_current_user
++from app.core.request_coalescing import EndpointShield
+ from app.models.galaxy import KnowledgeNode, NodeRelation, UserNodeStatus
+ from app.models.plan import Plan
+ from app.models.task import Task
+@@ -59,6 +60,10 @@ from app.services.node_sector_service import dominant_sector_from_weights, resol
+ 
+ router = APIRouter(prefix="/galaxy", tags=["Knowledge Galaxy"])
+ 
++# 恢复风暴防护（engine-restore-storm）：星图全量拉取是恢复期最重端点之一
++# （structure + stats + 回填 + error/goal 聚合），同 user 并发拉取合并为一次计算。
++_galaxy_graph_shield = EndpointShield(name="galaxy_graph", max_concurrency=8, ttl=10.0, wait_timeout=8.0)
++
+ 
+ # ==========================================
+ # 依赖注入
+@@ -195,9 +200,15 @@ async def get_galaxy_graph(
+     - zoom_level < 0.5: 仅返回重要节点 (Level >= 3)
+     - zoom_level >= 0.5: 返回所有节点
+     """
+-    return await galaxy_service.get_galaxy_graph(
+-        user_id=UUID(user_id), sector_code=sector_code, include_locked=include_locked, zoom_level=zoom_level
+-    )
++
++    async def _compute() -> GalaxyGraphResponse:
++        return await galaxy_service.get_galaxy_graph(
++            user_id=UUID(user_id), sector_code=sector_code, include_locked=include_locked, zoom_level=zoom_level
++        )
++
++    # 恢复风暴防护：single-flight 合并同 user 并发拉取 + 10s TTL 缓存 + 并发钳制
++    key = f"{user_id}:{sector_code or ''}:{include_locked}:{zoom_level}"
++    return await _galaxy_graph_shield.run(key, _compute)
+ 
+ 
+ @router.get("/contribution-stats", response_model=UserGalaxyContribution)
+diff --git a/backend/app/api/v1/predictive_analytics.py b/backend/app/api/v1/predictive_analytics.py
+index ffa1cf83..274bddc3 100755
+--- a/backend/app/api/v1/predictive_analytics.py
++++ b/backend/app/api/v1/predictive_analytics.py
+@@ -17,12 +17,19 @@ from pydantic import BaseModel, Field
+ from sqlalchemy.ext.asyncio import AsyncSession
+ 
+ from app.api.deps import get_current_user
++from app.core.request_coalescing import EndpointOverloaded, EndpointShield
+ from app.db.session import get_db
+ from app.models.user import User
+ from app.services.predictive_service import PredictiveService
+ 
+ router = APIRouter()
+ 
++# 恢复风暴防护（engine-restore-storm）：预测端点含 LLM 调用，恢复期重复拉取
++# 会被 single-flight 合并；key 含 body 摘要，不同输入互不影响。短 TTL 5s。
++_realtime_next_step_shield = EndpointShield(
++    name="predictive_next_step", max_concurrency=4, ttl=5.0, wait_timeout=8.0
++)
++
+ 
+ class RealtimeNextStepRequest(BaseModel):
+     partial_text: str = Field(default="", description="当前输入或最近一句话")
+@@ -272,7 +279,7 @@ async def get_realtime_next_step_prediction(
+     current_user: User = Depends(get_current_user),
+     db: AsyncSession = Depends(get_db),
+ ):
+-    try:
++    async def _compute() -> dict[str, Any]:
+         service = PredictiveService(db)
+         forecast = await service.get_realtime_next_step_forecast(
+             current_user.id,
+@@ -284,6 +291,13 @@ async def get_realtime_next_step_prediction(
+             "status": "success",
+             "data": forecast,
+         }
++
++    try:
++        # 恢复风暴防护：single-flight + 短 TTL + 并发钳制（key 含输入摘要）
++        body_key = f"{current_user.id}:{request.surface}:{request.active_plan_id or ''}:{hash(request.partial_text)}"
++        return await _realtime_next_step_shield.run(body_key, _compute)
++    except EndpointOverloaded:
++        raise  # 钳制溢出走全局 503 + Retry-After 处理器，不得降级为 500
+     except Exception as e:
+         logger.error(f"Prediction error: {e}")
+         raise HTTPException(status_code=500, detail="Prediction service unavailable") from e
+diff --git a/backend/app/core/celery_dispatch.py b/backend/app/core/celery_dispatch.py
+new file mode 100644
+index 00000000..384363f3
+--- /dev/null
++++ b/backend/app/core/celery_dispatch.py
+@@ -0,0 +1,77 @@
++"""
++Core: infra
++Phase: execute
++Stage: restore-storm guard (engine-restore-storm)
++
++异步安全的 Celery fire-and-forget 投递。
++
++根因（2026-09-18 会话恢复风暴实证）：在 ``async def`` 路径里直接调用
++``celery_app.send_task(...)`` 是**同步阻塞**网络 I/O；当 broker/result store
++异常时（如 result backend 认证失败），kombu 的重连重试会让调用卡住 ~19s，
++期间**整个 asyncio 事件循环被冻结**，引擎所有并发请求排队超时（网关 30s →
++503 雪崩、community/ws 代理 19s → 502）。engine_api.log 实证::
++
++    21:26:01.766 [GLMBatch] enqueue node_sector_backfill ...
++    21:26:20.942 enqueue failed ... Retry limit exceeded while trying to
++    reconnect to the Celery result store backend   ← 事件循环冻结 19.18s
++
++本 helper 三重防护：
++1. ``run_in_executor`` 把同步 ``send_task`` 挪出事件循环线程（loop 永不冻结）；
++2. ``asyncio.wait_for`` 强制投递超时（默认 3s），超时放弃并记日志；
++3. ``ignore_result=True``（fire-and-forget 语义）避免绑定 result store——
++   正是风暴中重连风暴的源头。
++
++永不抛出：投递失败仅记 WARNING 并返回 False，由调用方决定降级语义。
++"""
++
++from __future__ import annotations
++
++import asyncio
++from typing import Any
++
++from loguru import logger
++
++from app.core.celery_app import celery_app
++
++DEFAULT_DISPATCH_TIMEOUT_SECONDS = 3.0
++
++
++async def dispatch_task_async(
++    task_name: str,
++    *,
++    args: tuple | list | None = None,
++    kwargs: dict[str, Any] | None = None,
++    queue: str | None = None,
++    timeout: float = DEFAULT_DISPATCH_TIMEOUT_SECONDS,
++    ignore_result: bool = True,
++) -> bool:
++    """把 Celery 任务投递挪出事件循环并加超时熔断（fire-and-forget）。
++
++    返回 True 表示投递成功；失败/超时返回 False（不抛异常）。
++    """
++    if timeout <= 0:
++        timeout = DEFAULT_DISPATCH_TIMEOUT_SECONDS
++
++    def _send() -> Any:
++        return celery_app.send_task(
++            task_name,
++            args=tuple(args) if args else None,
++            kwargs=kwargs,
++            queue=queue,
++            ignore_result=ignore_result,
++        )
++
++    loop = asyncio.get_running_loop()
++    try:
++        await asyncio.wait_for(loop.run_in_executor(None, _send), timeout=timeout)
++        return True
++    except asyncio.TimeoutError:
++        logger.warning(
++            "[CeleryDispatch] task {} enqueue timed out after {}s (off-loop, no freeze)",
++            task_name,
++            timeout,
++        )
++        return False
++    except Exception as exc:  # noqa: BLE001 — 投递是 best-effort，不允许打断请求路径
++        logger.warning("[CeleryDispatch] task {} enqueue failed: {}", task_name, exc)
++        return False
+diff --git a/backend/app/core/request_coalescing.py b/backend/app/core/request_coalescing.py
+new file mode 100644
+index 00000000..de55476f
+--- /dev/null
++++ b/backend/app/core/request_coalescing.py
+@@ -0,0 +1,181 @@
++"""
++Core: infra
++Phase: execute
++Stage: restore-storm guard (engine-restore-storm)
++
++请求合并（single-flight）+ 短 TTL 结果缓存 + 端点级并发钳制。
++
++背景（2026-09-18 会话恢复风暴实证）：客户端恢复会在 ~1s 内并发拉取 20+ 端点，
++同一 user 的重端点（galaxy/graph、aurora/control-surface、predictive 等）被重复
++计算；一旦事件循环被慢调用卡住，恢复风暴会把单点放大成全端点雪崩（网关 30s
++超时 → 503 连环）。
++
++三道进程内防线（零外部依赖，Redis 不可用时同样生效）：
++1. 短 TTL 结果缓存 —— 恢复场景下 5-15s 内重复拉取等价，直接命中缓存返回；
++2. single-flight —— 同 key 的并发在飞请求合并为一个 loader 调用，其余等待共享
++   同一结果（去重，不打 DB）；
++3. 并发钳制 —— 端点级 semaphore 限制同时计算的 loader 数（冷启动钳制）；
++   获取槽位/加入在飞计算等待超过 ``wait_timeout`` 时抛出 :class:`EndpointOverloaded`
++   （由 app.main 统一映射为 503 + Retry-After，快速失败优于无限排队）。
++
++用法（路由 handler 内）::
++
++    _shield = EndpointShield(name="galaxy_graph", max_concurrency=8, ttl=10.0)
++
++    @router.get("/graph")
++    async def get_graph(user_id=Depends(...), ...):
++        key = f"{user_id}:{sector_code}:{zoom_level}"
++        return await _shield.run(key, lambda: _compute_graph(...))
++
++loader 抛出的异常不会写入缓存，只会传播给当前这批等待者；后续新请求会重新计算。
++"""
++
++from __future__ import annotations
++
++import asyncio
++import time
++from collections.abc import Awaitable, Callable
++from typing import Any, TypeVar
++
++T = TypeVar("T")
++
++
++class EndpointOverloaded(RuntimeError):
++    """端点并发钳制溢出：等待超过 wait_timeout 仍未获得结果。"""
++
++
++
++class _CachedResult:
++    __slots__ = ("expires_at", "value")
++
++    def __init__(self, value: Any, expires_at: float) -> None:
++        self.value = value
++        self.expires_at = expires_at
++
++
++
++class EndpointShield:
++    """单端点的 single-flight + TTL 缓存 + 并发钳制守卫（进程内）。
++
++    参数：
++        name: 端点名（用于日志与观测）。
++        max_concurrency: 同时执行的 loader 数上限（冷启动并发钳制）。
++        ttl: 结果缓存秒数；``<=0`` 表示只做 single-flight 不缓存结果。
++        wait_timeout: 获取计算槽位或加入在飞计算的最长等待秒数，超时雪崩 shedding。
++        max_entries: TTL 缓存条目上限，防止 key 空间膨胀。
++    """
++
++    def __init__(
++        self,
++        *,
++        name: str,
++        max_concurrency: int = 8,
++        ttl: float = 10.0,
++        wait_timeout: float = 8.0,
++        max_entries: int = 512,
++    ) -> None:
++        self.name = name
++        self.ttl = float(ttl)
++        self.wait_timeout = float(wait_timeout)
++        self.max_entries = int(max_entries)
++        self._semaphore = asyncio.Semaphore(max(1, int(max_concurrency)))
++        self._cache: dict[str, _CachedResult] = {}
++        self._inflight: dict[str, asyncio.Task[Any]] = {}
++        # 观测计数（单事件循环内更新，无需锁）
++        self.hits = 0
++        self.deduped = 0
++        self.shed = 0
++
++    # ── 对外入口 ─────────────────────────────────────────────────────────────
++
++    async def run(self, key: str, loader: Callable[[], Awaitable[T]]) -> T:
++        full_key = f"{self.name}:{key}"
++        cached = self._cache_get(full_key)
++        if cached is not None:
++            self.hits += 1
++            return cached
++
++        inflight = self._inflight.get(full_key)
++        if inflight is not None:
++            self.deduped += 1
++            return await self._join(inflight, full_key)
++
++        try:
++            await asyncio.wait_for(self._semaphore.acquire(), timeout=self.wait_timeout)
++        except asyncio.TimeoutError:
++            self.shed += 1
++            raise EndpointOverloaded(
++                f"[{self.name}] compute slots saturated, key={key}"
++            ) from None
++
++        try:
++            # 拿到槽位后二次检查（等待期间可能已有同 key 计算完成/在飞）
++            cached = self._cache_get(full_key)
++            if cached is not None:
++                self.hits += 1
++                return cached
++            inflight = self._inflight.get(full_key)
++            if inflight is not None:
++                self.deduped += 1
++                return await self._join(inflight, full_key)
++            return await self._compute(full_key, loader)
++        finally:
++            self._semaphore.release()
++
++    def snapshot(self) -> dict[str, int]:
++        """观测用：缓存/在飞/命中/去重/雪崩计数。"""
++        return {
++            "name": self.name,
++            "cache_entries": len(self._cache),
++            "inflight": len(self._inflight),
++            "hits": self.hits,
++            "deduped": self.deduped,
++            "shed": self.shed,
++        }
++
++    # ── 内部实现 ─────────────────────────────────────────────────────────────
++
++    def _cache_get(self, key: str) -> Any | None:
++        entry = self._cache.get(key)
++        if entry is None:
++            return None
++        if entry.expires_at <= time.monotonic():
++            self._cache.pop(key, None)
++            return None
++        return entry.value
++
++    async def _join(self, task: asyncio.Task[Any], key: str) -> T:
++        """加入在飞计算；等待超过 wait_timeout 视为过载（计算本身不受影响）。"""
++        try:
++            return await asyncio.wait_for(asyncio.shield(task), timeout=self.wait_timeout)
++        except asyncio.TimeoutError:
++            self.shed += 1
++            raise EndpointOverloaded(f"[{self.name}] inflight join timed out, key={key}") from None
++
++    async def _compute(self, key: str, loader: Callable[[], Awaitable[T]]) -> T:
++        task: asyncio.Task[T] = asyncio.ensure_future(loader())
++        self._inflight[key] = task
++        deadline = time.monotonic() + self.ttl
++        task.add_done_callback(lambda t, k=key, d=deadline: self._on_compute_done(k, t, d))
++        return await asyncio.shield(task)
++
++    def _on_compute_done(self, key: str, task: asyncio.Task[Any], deadline: float) -> None:
++        self._inflight.pop(key, None)
++        if task.cancelled():
++            return
++        if task.exception() is not None:
++            return  # 失败不写缓存，让下一个请求重试
++        if self.ttl > 0:
++            self._cache[key] = _CachedResult(task.result(), deadline)
++            self._maybe_evict()
++
++    def _maybe_evict(self) -> None:
++        if len(self._cache) <= self.max_entries:
++            return
++        now = time.monotonic()
++        # 先清过期
++        for k in [k for k, v in self._cache.items() if v.expires_at <= now]:
++            self._cache.pop(k, None)
++        # 仍超限时按插入序（近似最旧）丢弃
++        while len(self._cache) > self.max_entries:
++            self._cache.pop(next(iter(self._cache)), None)
+diff --git a/backend/app/main.py b/backend/app/main.py
+index 0453513c..8370454a 100755
+--- a/backend/app/main.py
++++ b/backend/app/main.py
+@@ -37,6 +37,7 @@ from app.consumers.user_profile_bootstrap_consumer import UserProfileBootstrapCo
+ from app.consumers.welcome_onboarding_consumer import WelcomeOnboardingConsumer
+ from app.core.cache import cache_service
+ from app.core.exceptions import SparkleException
++from app.core.request_coalescing import EndpointOverloaded
+ from app.core.idempotency import get_idempotency_store
+ from app.core.pending_actions import pending_actions_store
+ from app.core.rate_limiting import setup_rate_limiting
+@@ -910,6 +911,26 @@ async def sparkle_exception_handler(request: Request, exc: SparkleException):
+     )
+ 
+ 
++@app.exception_handler(EndpointOverloaded)
++async def endpoint_overloaded_handler(request: Request, exc: EndpointOverloaded):
++    """恢复风暴防护：端点并发钳制溢出时快速失败（503 + Retry-After）。
++
++    engine-restore-storm 修复：让客户端立即得到可重试信号，而不是在引擎里
++    无限排队直到网关 30s 超时雪崩。延迟由 request_coalescing.EndpointOverloaded 抛出。
++    """
++    logger.warning(f"Endpoint overloaded (shed): {exc}")
++    return JSONResponse(
++        status_code=503,
++        headers={"Retry-After": "2"},
++        content={
++            "success": False,
++            "error_code": "ENDPOINT_OVERLOADED",
++            "message": "Server is at capacity, please retry shortly",
++            "retry_after_seconds": 2,
++        },
++    )
++
++
+ @app.exception_handler(Exception)
+ async def generic_exception_handler(request: Request, exc: Exception):
+     """全局未捕获异常处理器"""
+diff --git a/backend/app/services/auth_session_service.py b/backend/app/services/auth_session_service.py
+index b1895262..e3da33a6 100644
+--- a/backend/app/services/auth_session_service.py
++++ b/backend/app/services/auth_session_service.py
+@@ -3,7 +3,8 @@ Authentication session tracking service.
+ """
+ from __future__ import annotations
+ 
+-from datetime import UTC, datetime
++import logging
++from datetime import UTC, datetime, timedelta
+ from typing import Any
+ 
+ from fastapi import Request
+@@ -16,6 +17,13 @@ from app.models.auth_security import UserSession
+ 
+ SESSION_REVOKED_PREFIX = "session_revoked:"
+ 
++# engine-restore-storm: 会话 touch 最小间隔。恢复风暴下同一 session 在 ~1s 内
++# 并发拉取 20+ 端点；last_active_at 在该窗口内的重复 touch 直接跳过，
++# 消除 user_sessions 行锁排队与写放大（会话活跃度精度 5s 足够）。
++SESSION_TOUCH_MIN_INTERVAL = 5  # seconds
++
++logger = logging.getLogger(__name__)
++
+ 
+ def _utcnow_naive() -> datetime:
+     return datetime.now(UTC).replace(tzinfo=None)
+@@ -111,6 +119,7 @@ class AuthSessionService:
+         session_id: str,
+         refresh_token_jti: str | None = None,
+         request: Request | None = None,
++        metadata: dict[str, str | None] | None = None,
+     ) -> None:
+         """在途请求的会话元数据更新（touch）。
+ 
+@@ -119,9 +128,25 @@ class AuthSessionService:
+         - 不删除 Redis 撤销标记
+         避免「登出其他设备」与目标设备在途请求并发时，已撤销会话被 touch 复活（A1）。
+         """
+-        metadata = extract_client_metadata(request)
++        if metadata is None:
++            metadata = extract_client_metadata(request)
+         now = _utcnow_naive()
+ 
++        # freshness-skip（engine-restore-storm）：窗口内已活跃的会话跳过重复 touch，
++        # 避免同一 session 并发请求在 user_sessions 行锁上排队（写放大）。
++        # 跳过路径不写库，不可能复活已撤销会话（A1 语义保持）。
++        if not refresh_token_jti:
++            recent = await db.execute(
++                select(UserSession.last_active_at).where(UserSession.session_id == session_id)
++            )
++            row = recent.first()
++            if (
++                row is not None
++                and row[0] is not None
++                and now - row[0] < timedelta(seconds=SESSION_TOUCH_MIN_INTERVAL)
++            ):
++                return
++
+         insert_stmt = pg_insert(UserSession).values(
+             user_id=user_id,
+             session_id=session_id,
+@@ -155,6 +180,43 @@ class AuthSessionService:
+         )
+         await db.flush()
+ 
++    async def touch_from_payload_detached(
++        self,
++        *,
++        user_id: str,
++        payload: dict[str, Any],
++        request: Request | None = None,
++    ) -> None:
++        """独立短事务的会话 touch（engine-restore-storm 修复）。
++
++        旧路径在请求事务里 upsert user_sessions，行锁要持有到请求结束才释放；
++        会话恢复风暴下同一 session 的 ~20 个并发请求在该行锁上排队串行化，
++        轻端点（user/settings、aurora、telemetry）全部超时。
++
++        现改为独立 AsyncSession + 立即 commit（锁持有 ~ms），失败仅记日志、
++        不影响请求。配合 touch_session 的 freshness-skip 消除写放大。
++        注意：metadata 在调度前同步提取，不持有 Request 对象跨生命周期。
++        """
++        from app.db.session import AsyncSessionLocal
++
++        session_id = payload.get("sid")
++        if not session_id:
++            return
++        metadata = extract_client_metadata(request)
++        refresh_token_jti = payload.get("jti") if payload.get("type") == "refresh" else None
++        try:
++            async with AsyncSessionLocal() as db:
++                await self.touch_session(
++                    db,
++                    user_id=user_id,
++                    session_id=str(session_id),
++                    refresh_token_jti=refresh_token_jti,
++                    metadata=metadata,
++                )
++                await db.commit()
++        except Exception as exc:  # noqa: BLE001 — touch 是元数据卫生，绝不阻塞/弄挂请求
++            logger.warning("detached session touch failed for user {}: {}", user_id, exc)
++
+     async def touch_from_payload(
+         self,
+         db: AsyncSession,
+diff --git a/backend/app/services/glm_batch_service.py b/backend/app/services/glm_batch_service.py
+index be9dcf19..1af80692 100644
+--- a/backend/app/services/glm_batch_service.py
++++ b/backend/app/services/glm_batch_service.py
+@@ -9,6 +9,7 @@ from loguru import logger
+ from app.config import settings
+ from app.core.agent_profiles import AgentRole, ModelTier, TaskType
+ from app.core.celery_app import celery_app
++from app.core.celery_dispatch import dispatch_task_async
+ from app.core.llm_router import llm_router
+ from app.services.llm.concurrency import llm_concurrency
+ 
+@@ -285,12 +286,18 @@ class GLMBatchService:
+             queue=plan.queue,
+         )
+ 
+-    def enqueue_node_sector_backfill(
++    async def enqueue_node_sector_backfill(
+         self,
+         *,
+         user_id: UUID,
+         node_ids: list[UUID],
+-    ):
++    ) -> bool:
++        """异步安全投递星域回填任务（engine-restore-storm 修复）。
++
++        旧实现直接在事件循环线程里同步 ``send_task``：broker/result store 异常时
++        kombu 重连会冻结整个事件循环 ~19s（见 app/core/celery_dispatch.py 模块
++        注释的实证）。现改为 off-loop + 3s 超时 + ignore_result，失败仅记日志。
++        """
+         model_key = "glm_4_5_air_batch"
+         logger.info(
+             "[GLMBatch] enqueue node_sector_backfill user={} node_count={} model={}",
+@@ -298,7 +305,7 @@ class GLMBatchService:
+             len(node_ids),
+             model_key,
+         )
+-        return celery_app.send_task(
++        return await dispatch_task_async(
+             "classify_node_sector_batch",
+             args=(str(user_id), [str(node_id) for node_id in node_ids], model_key),
+             queue=self.queue_name,
+diff --git a/backend/app/services/node_sector_service.py b/backend/app/services/node_sector_service.py
+index 2e0d8755..addf0934 100644
+--- a/backend/app/services/node_sector_service.py
++++ b/backend/app/services/node_sector_service.py
+@@ -500,7 +500,8 @@ class NodeSectorService:
+         if not accepted:
+             return False
+         try:
+-            glm_batch_service.enqueue_node_sector_backfill(
++            # dispatch_task_async 内部 off-loop + 超时熔断 + 不抛异常（restore-storm 修复）
++            return await glm_batch_service.enqueue_node_sector_backfill(
+                 user_id=user_id,
+                 node_ids=accepted,
+             )
+@@ -512,7 +513,6 @@ class NodeSectorService:
+                 exc,
+             )
+             return False
+-        return True
+ 
+     async def ensure_backfill_for_user(
+         self,
+diff --git a/backend/app/services/scheduler_service.py b/backend/app/services/scheduler_service.py
+index f3bed563..68de3975 100755
+--- a/backend/app/services/scheduler_service.py
++++ b/backend/app/services/scheduler_service.py
+@@ -395,9 +395,9 @@ class SchedulerService:
+                             stats["skipped_users"] += 1
+                             continue
+ 
+-                        # 通过 Celery 异步生成
+-                        from app.core.celery_app import celery_app
+-                        celery_app.send_task(
++                        # 通过 Celery 异步生成（off-loop + 超时熔断，防事件循环冻结）
++                        from app.core.celery_dispatch import dispatch_task_async
++                        await dispatch_task_async(
+                             "generate_capsules_batch",
+                             args=(
+                                 str(user.id),
+@@ -466,9 +466,9 @@ class SchedulerService:
+                             stats["skipped_users"] += 1
+                             continue
+ 
+-                        # 通过 Celery 异步生成深度胶囊
+-                        from app.core.celery_app import celery_app
+-                        celery_app.send_task(
++                        # 通过 Celery 异步生成深度胶囊（off-loop + 超时熔断，防事件循环冻结）
++                        from app.core.celery_dispatch import dispatch_task_async
++                        await dispatch_task_async(
+                             "generate_capsules_batch",
+                             args=(
+                                 str(user.id),
+diff --git a/backend/tests/core/test_celery_dispatch_async.py b/backend/tests/core/test_celery_dispatch_async.py
+new file mode 100644
+index 00000000..d561040a
+--- /dev/null
++++ b/backend/tests/core/test_celery_dispatch_async.py
+@@ -0,0 +1,76 @@
++"""
++Core: infra
++Phase: execute
++Stage: restore-storm guard
++
++dispatch_task_async 最小单测：同步 send_task 阻塞（模拟 broker/result store
++故障重连）时，事件循环保持响应；超时后返回 False 且不抛异常。
++"""
++
++from __future__ import annotations
++
++import asyncio
++import time
++
++import pytest
++
++from app.core.celery_dispatch import dispatch_task_async
++
++
++@pytest.mark.asyncio
++async def test_event_loop_stays_responsive_while_send_task_blocks(monkeypatch):
++    """send_task 同步卡 5s（模拟 result store 重连风暴）：心跳不被冻结，3s 超时熔断。"""
++
++    def _blocking_send_task(*args, **kwargs):  # 模拟同步 kombu 重连阻塞
++        time.sleep(5.0)
++        return object()
++
++    import app.core.celery_app as celery_app_module
++
++    monkeypatch.setattr(celery_app_module.celery_app, "send_task", _blocking_send_task)
++
++    heartbeats = 0
++
++    async def heartbeat():
++        nonlocal heartbeats
++        while True:
++            heartbeats += 1
++            await asyncio.sleep(0.01)
++
++    hb_task = asyncio.create_task(heartbeat())
++    start = time.monotonic()
++    ok = await dispatch_task_async("some_task", args=(1,), timeout=0.3)
++    elapsed = time.monotonic() - start
++    hb_task.cancel()
++
++    assert ok is False, "阻塞投递超时应返回 False"
++    assert elapsed < 1.0, f"dispatch 应在超时后熔断返回，实际耗时 {elapsed:.2f}s"
++    assert heartbeats >= 10, (
++        f"事件循环在 send_task 阻塞期间被冻结（心跳仅 {heartbeats} 次）——"
++        "这正是恢复风暴雪崩的根因，不允许回归"
++    )
++
++
++@pytest.mark.asyncio
++async def test_dispatch_success_returns_true(monkeypatch):
++    def _fast_send_task(*args, **kwargs):
++        assert kwargs.get("ignore_result") is True, "fire-and-forget 投递不得绑定 result store"
++        return object()
++
++    import app.core.celery_app as celery_app_module
++
++    monkeypatch.setattr(celery_app_module.celery_app, "send_task", _fast_send_task)
++    ok = await dispatch_task_async("some_task", args=(1, 2), queue="default")
++    assert ok is True
++
++
++@pytest.mark.asyncio
++async def test_dispatch_failure_does_not_raise(monkeypatch):
++    def _exploding_send_task(*args, **kwargs):
++        raise ConnectionError("Retry limit exceeded (result store)")
++
++    import app.core.celery_app as celery_app_module
++
++    monkeypatch.setattr(celery_app_module.celery_app, "send_task", _exploding_send_task)
++    ok = await dispatch_task_async("some_task")
++    assert ok is False, "投递失败必须吞掉异常返回 False（best-effort 语义）"
+diff --git a/backend/tests/core/test_request_coalescing.py b/backend/tests/core/test_request_coalescing.py
+new file mode 100644
+index 00000000..ba50b980
+--- /dev/null
++++ b/backend/tests/core/test_request_coalescing.py
+@@ -0,0 +1,157 @@
++"""
++Core: infra
++Phase: execute
++Stage: restore-storm guard
++
++恢复风暴防护最小单测：EndpointShield 的 single-flight 合并、TTL 缓存、
++并发钳制与过载 shedding，以及 dispatch_task_async 的事件循环不被冻结。
++"""
++
++from __future__ import annotations
++
++import asyncio
++import time
++
++import pytest
++
++from app.core.request_coalescing import EndpointOverloaded, EndpointShield
++
++
++@pytest.mark.asyncio
++async def test_single_flight_merges_concurrent_calls():
++    """同 key 的 20 并发只触发一次 loader（恢复风暴去重核心语义）。"""
++    shield = EndpointShield(name="t_merge", max_concurrency=8, ttl=10.0, wait_timeout=5.0)
++    calls = 0
++
++    async def loader() -> dict:
++        nonlocal calls
++        calls += 1
++        await asyncio.sleep(0.05)  # 模拟 DB/图计算
++        return {"v": 42}
++
++    results = await asyncio.gather(*(shield.run("user-a", loader) for _ in range(20)))
++
++    assert calls == 1, "single-flight 应把 20 个并发合并为一次 loader 调用"
++    assert all(r == {"v": 42} for r in results)
++
++
++@pytest.mark.asyncio
++async def test_ttl_cache_hit_and_expiry():
++    """TTL 内直接命中缓存；过期后重新计算。"""
++    shield = EndpointShield(name="t_ttl", max_concurrency=4, ttl=0.2, wait_timeout=5.0)
++    calls = 0
++
++    async def loader() -> int:
++        nonlocal calls
++        calls += 1
++        return calls
++
++    first = await shield.run("k", loader)
++    second = await shield.run("k", loader)
++    assert first == 1 and second == 1, "TTL 内第二次调用应命中缓存"
++    assert calls == 1
++
++    await asyncio.sleep(0.25)  # 超过 ttl
++    third = await shield.run("k", loader)
++    assert third == 2 and calls == 2, "TTL 过期后应重新计算"
++
++
++@pytest.mark.asyncio
++async def test_different_keys_compute_independently():
++    """不同 key 互不合并、互不命中。"""
++    shield = EndpointShield(name="t_keys", max_concurrency=8, ttl=10.0)
++
++    async def loader() -> int:
++        await asyncio.sleep(0.02)
++        return 1
++
++    a, b = await asyncio.gather(shield.run("user-a", loader), shield.run("user-b", loader))
++    assert a == 1 and b == 1
++    assert shield.hits == 0 and shield.deduped == 0
++
++
++@pytest.mark.asyncio
++async def test_loader_failure_not_cached_and_propagates():
++    """loader 异常传播给等待者，但不写缓存——后续请求重新计算。"""
++    shield = EndpointShield(name="t_fail", max_concurrency=8, ttl=10.0, wait_timeout=5.0)
++    calls = 0
++
++    async def failing() -> int:
++        nonlocal calls
++        calls += 1
++        await asyncio.sleep(0.02)
++        raise RuntimeError("boom")
++
++    async def ok() -> int:
++        nonlocal calls
++        calls += 1
++        return 7
++
++    with pytest.raises(RuntimeError):
++        await asyncio.gather(*(shield.run("k", failing) for _ in range(5)))
++
++    assert calls == 1, "并发失败也应只算一次"
++    assert shield.snapshot()["cache_entries"] == 0, "失败不得写缓存"
++
++    assert await shield.run("k", ok) == 7, "失败后新请求应重新计算并成功"
++
++
++@pytest.mark.asyncio
++async def test_concurrency_clamp_limits_parallel_loaders():
++    """并发钳制：同时在飞的 loader 数不超过 max_concurrency。"""
++    max_concurrency = 3
++    shield = EndpointShield(name="t_clamp", max_concurrency=max_concurrency, ttl=0.0, wait_timeout=10.0)
++    current = 0
++    peak = 0
++
++    async def loader() -> int:
++        nonlocal current, peak
++        current += 1
++        peak = max(peak, current)
++        await asyncio.sleep(0.05)
++        current -= 1
++        return 1
++
++    # ttl=0：不缓存结果，强制 20 个请求都走计算路径以验证钳制
++    await asyncio.gather(*(shield.run(f"u-{i}", loader) for i in range(20)))
++
++    assert peak <= max_concurrency, f"峰值并发 {peak} 超过钳制 {max_concurrency}"
++    assert shield.snapshot()["shed"] == 0
++
++
++@pytest.mark.asyncio
++async def test_shed_when_saturated_beyond_wait_timeout():
++    """钳制满载且等待超时 → EndpointOverloaded（快速失败优于无限排队）。"""
++    shield = EndpointShield(name="t_shed", max_concurrency=1, ttl=0.0, wait_timeout=0.1)
++    release = asyncio.Event()
++
++    async def blocked() -> str:
++        await release.wait()
++        return "done"
++
++    holder = asyncio.create_task(shield.run("k", blocked))
++    await asyncio.sleep(0.02)  # 确保 holder 已占住唯一槽位
++
++    start = time.monotonic()
++    with pytest.raises(EndpointOverloaded):
++        await shield.run("k", blocked)
++    assert time.monotonic() - start < 1.0, "过载应在 wait_timeout 内快速失败"
++
++    release.set()
++    assert await holder == "done"
++
++
++@pytest.mark.asyncio
++async def test_snapshot_observability():
++    """snapshot 暴露命中/去重/雪崩计数（观测用）。"""
++    shield = EndpointShield(name="t_obs", max_concurrency=2, ttl=5.0, wait_timeout=5.0)
++
++    async def loader() -> int:
++        await asyncio.sleep(0.01)
++        return 1
++
++    await asyncio.gather(*(shield.run("k", loader) for _ in range(6)))
++    snap = shield.snapshot()
++    assert snap["deduped"] >= 1
++    assert snap["hits"] >= 4  # 首个完成写缓存后，后续调用命中
++    assert snap["shed"] == 0
+diff --git a/backend/tests/unit/test_auth_session_touch.py b/backend/tests/unit/test_auth_session_touch.py
+index 00c03406..82e10121 100644
+--- a/backend/tests/unit/test_auth_session_touch.py
++++ b/backend/tests/unit/test_auth_session_touch.py
+@@ -2,6 +2,7 @@
+ 
+ from __future__ import annotations
+ 
++from datetime import timedelta, datetime, UTC
+ from unittest.mock import MagicMock
+ 
+ import pytest
+@@ -14,13 +15,20 @@ from app.services.auth_session_service import auth_session_service
+ 
+ 
+ class _CaptureDB:
+-    def __init__(self) -> None:
++    def __init__(self, last_active_at: object = None) -> None:
+         self.statements: list[object] = []
++        self._last_active_at = last_active_at
+ 
+     async def execute(self, stmt: object) -> object:
+         self.statements.append(stmt)
+         if isinstance(stmt, Select):
+             result = MagicMock()
++            # 支持 touch_session freshness-skip 的 .first() 读取：
++            # 返回 (last_active_at,) 或 None（无行）
++            if self._last_active_at is None:
++                result.first.return_value = None
++            else:
++                result.first.return_value = (self._last_active_at,)
+             result.scalar_one.return_value = None
+             return result
+         return None
+@@ -44,6 +52,14 @@ class _FakeCache:
+         self.set_calls.append((key, value, ttl))
+ 
+ 
++def _first_insert(db) -> object:
++    """freshness-skip 会在 upsert 前先发 SELECT，这里取第一条真正的 upsert 语句。"""
++    for stmt in db.statements:
++        if isinstance(stmt, InsertBase):
++            return stmt
++    raise AssertionError("no upsert statement captured")
++
++
+ def _on_conflict_updates(stmt: object) -> dict:
+     assert isinstance(stmt, InsertBase)
+     post = getattr(stmt, "_post_values_clause", None)
+@@ -71,7 +87,7 @@ async def test_touch_from_payload_does_not_reset_revocation(capture):
+         payload={"sid": "sess-1", "type": "access", "jti": "jti-1"},
+     )
+ 
+-    updates = _on_conflict_updates(db.statements[0])
++    updates = _on_conflict_updates(_first_insert(db))
+     assert "last_active_at" in updates
+     assert "is_active" not in updates, "touch must not re-activate the session row"
+     assert "revoked_at" not in updates, "touch must not clear the revocation timestamp"
+@@ -90,7 +106,7 @@ async def test_upsert_session_keeps_reactivation_semantics(capture):
+         request=None,
+     )
+ 
+-    updates = _on_conflict_updates(db.statements[0])
++    updates = _on_conflict_updates(_first_insert(db))
+     assert updates.get("is_active") is True
+     assert "revoked_at" in updates
+     assert cache.deleted == [f"{mod.SESSION_REVOKED_PREFIX}sess-1"]
+@@ -100,3 +116,30 @@ def test_pg_insert_construct_used():
+     """确保服务确实走 postgres upsert（防测试对象漂移）。"""
+     stmt = pg_insert(mod.UserSession).values(user_id="u", session_id="s")
+     assert isinstance(stmt, InsertBase)
++
++
++@pytest.mark.asyncio
++async def test_touch_freshness_skip_skips_recent_touch(capture):
++    """restore-storm 防护：SESSION_TOUCH_MIN_INTERVAL 窗口内的重复 touch 直接跳过，
++    不发 upsert（消除恢复风暴下 user_sessions 行锁排队与写放大）。"""
++    db, _ = capture
++    db._last_active_at = datetime.now(UTC).replace(tzinfo=None)  # 刚刚活跃过
++    db.statements.clear()
++
++    await auth_session_service.touch_session(db, user_id="user-1", session_id="sess-1", request=None)
++
++    assert not [s for s in db.statements if isinstance(s, InsertBase)], (
++        "freshness 窗口内的 touch 不得发出 upsert"
++    )
++
++
++@pytest.mark.asyncio
++async def test_touch_stale_session_still_touches(capture):
++    """窗口外的会话照常 touch（活跃度元数据保持准确）。"""
++    db, _ = capture
++    stale = datetime.now(UTC).replace(tzinfo=None) - timedelta(seconds=mod.SESSION_TOUCH_MIN_INTERVAL + 1)
++    db._last_active_at = stale
++
++    await auth_session_service.touch_session(db, user_id="user-1", session_id="sess-1", request=None)
++
++    assert [s for s in db.statements if isinstance(s, InsertBase)], "窗口外的 touch 必须写库"
+diff --git "a/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/README.md" "b/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/README.md"
+index 74747b3c..0be4f87d 100644
+--- "a/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/README.md"
++++ "b/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/README.md"
+@@ -3,7 +3,7 @@
+ 按轮次组织的全系统审查与修复记录。每轮 8 个并行审查员（切片互不重叠）+ 修复波（多修复员并行）。
+ 
+ - `round1/` — 第一轮（基线 90daac8a，2026-09-18）：8 份审查报告（01 引擎编排/02 规划执行/03 关键服务/04 引擎基建/05 网关/06 移动核心/07 移动长尾/08 契约安全），`0N-fixes.md` 为对应修复波记录。
+-- `round2/` — 第二轮复审（基线 ca86bda8，R1 修复已集成）：修复验证 + 运行时/集成视角复审 + 移交专项；`0N-r2-fixes.md`/`0N-r2-fixes.patch` 为对应修复波记录与 diff 快照；`m6-09-interrupt-preserve.md`/`.patch` 为 M6-09「流式取消=中断保留」产品决策的移动端落地记录；`schema-consistency-audit.md`/`.patch` 为 ORM ↔ 迁移链 ↔ 网关快照三方一致性专项（gfix02 + 单头守卫 + 快照重放）。
++- `round2/` — 第二轮复审（基线 ca86bda8，R1 修复已集成）：修复验证 + 运行时/集成视角复审 + 移交专项；`0N-r2-fixes.md`/`0N-r2-fixes.patch` 为对应修复波记录与 diff 快照；`m6-09-interrupt-preserve.md`/`.patch` 为 M6-09「流式取消=中断保留」产品决策的移动端落地记录；`schema-consistency-audit.md`/`.patch` 为 ORM ↔ 迁移链 ↔ 网关快照三方一致性专项（gfix02 + 单头守卫 + 快照重放）；`engine-restore-storm.md`/`.patch` 为会话恢复风暴专项（同步 send_task 冻结事件循环根因 + single-flight/并发钳制/异步投递修复 + 20 并发红绿压测）。
+ - `漏洞台账.md` — 两轮全量发现的清零追踪表（唯一权威状态源）。
+ 
+ 切片边界：splash/onboarding/auth/home/chat/task/settings 归 06，其余 35 个 features 归 07；`gen/` 生成物只对照不审。
+diff --git "a/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/engine-restore-storm.md" "b/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/engine-restore-storm.md"
+new file mode 100644
+index 00000000..abe8d6f7
+--- /dev/null
++++ "b/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/engine-restore-storm.md"
+@@ -0,0 +1,134 @@
++# 引擎恢复风暴专项（engine-restore-storm）
++
++> 2026-09-18 深夜实测实证 → 根因定性 → 引擎侧修复 → 红绿压测对比。
++> 基线：`b21dce46`。产出：本报告 + 同目录 `engine-restore-storm.patch`。
++
++## 0. 一句话根因
++
++**恢复风暴把 ~20 个并发请求打进引擎，galaxy/graph 在 `async def` 路径里同步调用 Celery `send_task`（星域回填投递），因 result store 故障触发 kombu 重连重试，每次同步冻结整个 asyncio 事件循环 ~19s；循环冻结使所有并发请求（aurora、user/settings、telemetry、community/ws 代理）排队超过网关 30s 超时 → 503/502 雪崩。**
++
++次要放大因子：`get_current_user` 在请求事务内 upsert `user_sessions`（同一 session 行锁持有到请求结束），风暴下轻端点在行锁上二次串行化。
++
++## 1. 根因画像（日志 + 代码走读实证）
++
++### 1.1 时间线铁证
++
++网关日志（`/private/tmp/gateway_server.log` 21:25-21:26 窗口）：
++
++| 时刻 | 现象 |
++|---|---|
++| 21:25:46 | 客户端会话恢复，~20 请求在 1s 内涌入（users/me、user/settings、growth/dashboard、tasks、galaxy、aurora×N、community/ws、ws/ticket、telemetry batch…），首波 90-440ms 正常返回 |
++| 21:25:49 | 第二波请求劣化到 2-3.5s（开始排队） |
++| 21:26:20 | `community/ws/connect` **502（19.211s）** —— 与引擎事件循环冻结窗口精确吻合 |
++| 21:26:26 | `galaxy/graph` **503（30.0018s）**；`galaxy/events` 30.0s 后才 200 |
++| 21:26:35 | aurora/control-surface、aurora/core-session/current、user/settings、understanding-snapshot、comeback-context、telemetry batch ×3、galaxy/graph **连环 503，全部精确 30.0s**（网关 REQUEST_TIMEOUT_SECONDS=30） |
++| 21:26:41 | `predictive/realtime-next-step` 500（LLM 400：`Unsupported model mimo-v2-flash`，独立配置问题，见 §6） |
++
++引擎日志（`/private/tmp/engine_api.log`）——事件循环冻结的直接证据，全天共 4 次、每次 ~19.2s：
++
++```
++19:47:33.289  [GLMBatch] enqueue node_sector_backfill ...
++19:47:52.520  enqueue failed ... "Retry limit exceeded while trying to reconnect to
++              the Celery result store backend. The Celery application must be restarted."
++              → 19.23s 冻结
++20:03:29.783 → 20:03:48.936   19.15s 冻结
++21:26:01.766 → 21:26:20.942   19.18s 冻结   ← 与网关 502/503 雪崩窗口精确吻合
++21:26:21.069 → 21:26:40.239   19.17s 冻结
++```
++
++### 1.2 逐项定性（排查过的假设）
++
++| 假设 | 结论 | 证据 |
++|---|---|---|
++| FastAPI 单进程？ | 非主因（单 uvicorn 进程属实，但 20 并发远未到 uvicorn/anyio 上限） | 风暴前首波 90-440ms 全部正常 |
++| 同步阻塞占满事件循环？ | **是，主因** | `glm_batch_service.enqueue_node_sector_backfill`（galaxy graph 路径）与 `scheduler_service` 两处直接 `celery_app.send_task()`（同步 kombu 网络调用）；result store 故障时每次冻结 ~19s（engine log 4 次实测）；RED 压测中 `/health` 最大滞后 45,013ms |
++| DB 连接池耗尽？ | 否 | 全天日志 0 条 `QueuePool limit`；池配置 20+40，风暴并发 ~20 |
++| CPU 密集（galaxy 图计算）？ | 否 | galaxy 单次全量计算 ~50ms 级（GREEN 实测 p50 68ms 含首算）；瓶颈在投递不在计算 |
++| Celery result store 为何坏？ | 引擎进程 REDIS_URL 指向错误密码/db 的 Redis（启动日志 `Redis Cache connection failed: invalid username-password pair`），celery `task_ignore_result=False` 使每次 `send_task` 绑定 AsyncResult → result backend 重连风暴 | grpc_server 19:44 崩溃栈 + engine_api.log 重连失败栈 |
++
++### 1.3 代码走读（放大链）
++
++```
++Flutter 恢复 → 网关代理 → GET /galaxy/graph
++  └─ GalaxyService.get_galaxy_graph()
++      └─ NodeSectorService.ensure_backfill_for_user()        # pending 节点常在
++          └─ glm_batch_service.enqueue_node_sector_backfill()
++              └─ celery_app.send_task(...)                   # 同步！task_ignore_result=False
++                  └─ kombu result-store 重连重试             # 冻结事件循环 ~19s
++                      ↓ 事件循环冻结
++      所有并发请求（含 /health）停摆 → 网关 30s 超时 → 503 雪崩
++```
++
++次级放大：`deps.get_current_user / get_optional_current_user` → `touch_session` 在**请求事务内** upsert `user_sessions`（`get_db` 在请求结束才 commit）→ 恢复风暴同 session 的 12+ 请求在行锁上串行化到请求时长（GREEN 中间态实测：非 galaxy 端点全部 45s 超时）。
++
++## 2. 修复（引擎侧三道防线，15 个文件）
++
++### 2.1 新增
++
++| 文件 | 内容 |
++|---|---|
++| `backend/app/core/celery_dispatch.py` | `dispatch_task_async()`：`run_in_executor` 把同步 `send_task` 挪出事件循环 + `wait_for` 3s 超时熔断 + `ignore_result=True`（fire-and-forget 不绑定 result store）；永不抛出，失败记 WARNING |
++| `backend/app/core/request_coalescing.py` | `EndpointShield`：① 同 key single-flight（在飞合并，恢复期重复拉取只算一次）② 短 TTL 结果缓存（5-10s，恢复场景等价）③ 端点级 semaphore 并发钳制（8/4）④ 过载 shedding：等待超 8s 抛 `EndpointOverloaded` → 全局 503 + Retry-After，快速失败优于无限排队 |
++| `backend/tests/core/test_request_coalescing.py` | 7 测：20 并发合并为 1 次计算、TTL 命中/过期、失败不污染缓存、钳制峰值≤max、过载 shedding、观测计数 |
++| `backend/tests/core/test_celery_dispatch_async.py` | 3 测：send_task 同步卡 5s 时事件循环心跳不冻结、超时熔断返回 False、成功路径必须 `ignore_result=True`、失败吞异常 |
++
++### 2.2 修改
++
++| 文件 | 变更 |
++|---|---|
++| `app/services/glm_batch_service.py` | `enqueue_node_sector_backfill` → async，走 `dispatch_task_async`（根因点） |
++| `app/services/node_sector_service.py` | 调用点 await 适配 |
++| `app/services/scheduler_service.py` | 两处直接 `send_task`（进程内周期 tick，空闲期 14-24s 周期性冻结的来源）→ `dispatch_task_async` |
++| `app/services/auth_session_service.py` | 新增 `touch_from_payload_detached`（独立短事务 + 立即 commit，锁持有 ~ms）；`touch_session` 增加 freshness-skip（`SESSION_TOUCH_MIN_INTERVAL=5s` 内跳过重复 touch，A1 语义保持：跳过不写库不可能复活撤销会话） |
++| `app/api/deps.py` | `get_current_user` / `get_optional_current_user` 的 touch 改为 detached 后台短事务（元数据在调度前同步提取，不跨生命周期持有 Request） |
++| `app/main.py` | `EndpointOverloaded` 全局处理器 → 503 + `Retry-After: 2` |
++| `app/api/v1/galaxy.py` | `/graph`：shield（per-user+查询参数 key，max_concurrency=8，TTL 10s） |
++| `app/api/v1/aurora_status.py` | `/control-surface`：shield（TTL 8s） |
++| `app/api/v1/aurora.py` | `/comeback-context`（TTL 8s）、`/core-session/current`（TTL 5s）：shield |
++| `app/api/v1/predictive_analytics.py` | `/realtime-next-step`：shield（key 含 body 摘要，max_concurrency=4，TTL 5s；`EndpointOverloaded` 不降级为 500） |
++| `tests/unit/test_auth_session_touch.py` | fake DB 适配 freshness-skip；新增 2 守卫：窗口内 touch 必须跳过 upsert、窗口外必须写库 |
++
++## 3. 红绿压测（20 并发恢复风暴，同机同 env A/B）
++
++方法：httpx AsyncClient 模拟会话恢复（8×galaxy/graph + 4×aurora/control-surface + 3×core-session + 3×comeback-context + 1×user/settings + 1×telemetry batch = 20 req/轮 × 3 轮），同时 50ms 间隔 `/health` 探针测事件循环滞后。**受控复现**：同机分别启动 原始 `b21dce46`（RED）与修复版（GREEN），env 完全一致，`CELERY_RESULT_BACKEND` 指向不可路由地址（10.255.255.1，复现生产 result-store 故障形态）；客户端超时 45s。
++
++### 3.1 数字对比
++
++| 指标 | RED（修复前） | GREEN（修复后） |
++|---|---|---|
++| TOTAL p50 | **45,000ms**（全部打满客户端超时） | **68ms** |
++| TOTAL p99 / max | **45,000ms / 45,000ms** | **1,233ms / 1,233ms** |
++| 5xx / 超时错误 | **45/60**（线上等价于网关 30s → 503 雪崩） | **0/60** |
++| galaxy_graph（n=24） | 39,327ms（200 但全在冻结后返回） | p50 68ms / p99 803ms（24 请求 → **1 次计算 + 1 次投递**，其余 single-flight/TTL 命中） |
++| user_settings / aurora / telemetry | 39.5-40.1s 或超时 | p99 ≤ 1,233ms |
++| `/health` 最大滞后（事件循环冻结度量） | **45,013ms**（整窗冻结） | **401ms**（循环始终存活） |
++| 每轮墙钟 | 45.01s ×3 | 1.24s / 0.10s / 0.08s（2-3 轮全走 TTL 缓存） |
++| 引擎日志 GLMBatch 投递次数 | 1 次（19s 冻结）+ `Retry limit exceeded` | 1 次成功（`ignore_result` 不触 result store，无超时告警） |
++
++线上佐证（修复前实测，未重启生产 dev 引擎）：引擎首拉 `/galaxy/graph` 单请求 **19.431s** 返回，与历史 4 次 19.1-19.2s 冻结一致。
++
++判定阈值：`0 个 5xx && P99 < 5s && /health max lag < 1s` → RED 未过，GREEN 全过。
++
++### 3.2 结论
++
++事件循环冻结（19s→0）+ single-flight 合并（24→1）+ 钳制 shedding 兜底三者在同一故障注入下把 P99 从 45s（雪崩）压到 1.2s，且轻端点不再被重端点拖死。
++
++## 4. 网关 30s 超时行为结论（不改动）
++
++- `NetworkResilienceMiddleware`（`REQUEST_TIMEOUT_SECONDS` 默认 30s）为**总超时末路防护**，超时返回 503 —— 行为合理，保留。
++- 主代理路径（`proxyWithHeaders → httputil.ReverseProxy`）**不做上游重试**（`RetryableUpstreamProxy` 仅显式选用），无重试放大 —— 合理，保留。
++- ws 代理 19s → 502：合理（比 30s 更快失败）。
++- 结论：网关配置不雪上加霜，修复责任在引擎侧（本次已修）；`MaxIdleConnsPerHost: 20` 与恢复突发相当，暂不调。
++
++## 5. 验证与守卫
++
++- 定向单测 15 个全绿：`tests/core/test_request_coalescing.py`（7）+ `tests/core/test_celery_dispatch_async.py`（3）+ `tests/unit/test_auth_session_touch.py`（5，含 A1 回归）。
++- 事件循环冻结回归守卫：`test_event_loop_stays_responsive_while_send_task_blocks`（心跳计数断言，防同类问题回流）。
++- 生产 dev 引擎未杀未动（本次全程只读参照）；A/B 用临时实例（:8010/:8011）已清理。
++
++## 6. 遗留与建议（未列入本次 patch）
++
++1. **LLM 模型配置错误**：`realtime-next-step` 500 的直接原因是 `mimo-v2-flash` 上游 400（"Unsupported model"），属模型路由配置问题，与风暴无关，建议单独修（`llm_service` 路由表）。
++2. 其余请求路径上的同步 `send_task`（`api/v1/capsules.py` fallback、`services/milestone_handler.py`、`services/push_strategies/empty_capsule.py`、`aurora/tasks.py`）建议后续统一迁移到 `dispatch_task_async`；`core/celery_tasks.py` 内部为 worker 侧（独立进程），无事件循环风险。
++3. `result store` 指向错误 Redis 是本次故障注入的环境根源：dev 引擎进程的 `REDIS_URL` 与 `CELERY_RESULT_BACKEND` 应对齐 discipline 约定（`redis://:sparkle_dev_redis_2026@localhost:6379/1`）。
++4. 网关侧可选增强：对同 user 同 key 的恢复期 GET 做 single-flight 合并（客户端 20+ 请求去重可再降引擎一个量级负载）；本次未动网关。

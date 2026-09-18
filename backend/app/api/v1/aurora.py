@@ -17,6 +17,7 @@ from app.aurora.runtime_v1.state import AuroraEnergyStore
 from app.aurora.runtime_v1.telemetry import AuroraDecisionTelemetryService
 from app.core.cache import cache_service
 from app.core.metrics import AURORA_CORRECTION_FAILURE_TOTAL, record_product_loop_event
+from app.core.request_coalescing import EndpointShield
 from app.models.user import User
 from app.services.aurora_calibration_card_service import AuroraCalibrationCardService
 from app.services.aurora_control_surface_service import (
@@ -26,6 +27,10 @@ from app.services.aurora_control_surface_service import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/aurora", tags=["aurora"])
+
+# 恢复风暴防护（engine-restore-storm）：恢复期 aurora 三连拉的重端点守卫
+_comeback_context_shield = EndpointShield(name="aurora_comeback_context", max_concurrency=8, ttl=8.0, wait_timeout=8.0)
+_core_session_shield = EndpointShield(name="aurora_core_session", max_concurrency=8, ttl=5.0, wait_timeout=8.0)
 
 
 # ── Request / Response models ──────────────────────────────────────────────────
@@ -192,11 +197,16 @@ async def get_comeback_context(
         )
 
     service = AuroraRuntimeV1Service(cache_service.redis)
-    payload = await service.get_comeback_context(
-        active_db=db,
-        user_id=resolved_user_id,
-        include_short_gaps=True,
-    )
+
+    async def _compute() -> dict[str, Any] | None:
+        return await service.get_comeback_context(
+            active_db=db,
+            user_id=resolved_user_id,
+            include_short_gaps=True,
+        )
+
+    # 恢复风暴防护：single-flight + TTL 缓存 + 并发钳制
+    payload = await _comeback_context_shield.run(str(resolved_user_id), _compute)
     if payload is None:
         return {}
     return ComebackContextResponse(**payload).model_dump()
@@ -410,16 +420,21 @@ async def get_current_core_session(
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     """Get the user's current resumable Aurora Core Session, if any."""
-    service = AuroraCoreSessionService(cache_service.redis, db=db)
-    session = await service.get_current_session(str(current_user.id))
-    if session is None:
-        return {"active": False, "resumable": False, "expired": False, "session": None}
-    return {
-        "active": session.status == "active",
-        "resumable": session.status in ("active", "paused"),
-        "expired": session.status == "expired",
-        "session": session.to_dict(),
-    }
+
+    async def _compute() -> dict[str, Any]:
+        service = AuroraCoreSessionService(cache_service.redis, db=db)
+        session = await service.get_current_session(str(current_user.id))
+        if session is None:
+            return {"active": False, "resumable": False, "expired": False, "session": None}
+        return {
+            "active": session.status == "active",
+            "resumable": session.status in ("active", "paused"),
+            "expired": session.status == "expired",
+            "session": session.to_dict(),
+        }
+
+    # 恢复风暴防护：single-flight + TTL 缓存 + 并发钳制
+    return await _core_session_shield.run(str(current_user.id), _compute)
 
 
 # route-tier: authed

@@ -3,7 +3,8 @@ Authentication session tracking service.
 """
 from __future__ import annotations
 
-from datetime import UTC, datetime
+import logging
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import Request
@@ -15,6 +16,13 @@ from app.core.cache import cache_service
 from app.models.auth_security import UserSession
 
 SESSION_REVOKED_PREFIX = "session_revoked:"
+
+# engine-restore-storm: 会话 touch 最小间隔。恢复风暴下同一 session 在 ~1s 内
+# 并发拉取 20+ 端点；last_active_at 在该窗口内的重复 touch 直接跳过，
+# 消除 user_sessions 行锁排队与写放大（会话活跃度精度 5s 足够）。
+SESSION_TOUCH_MIN_INTERVAL = 5  # seconds
+
+logger = logging.getLogger(__name__)
 
 
 def _utcnow_naive() -> datetime:
@@ -111,6 +119,7 @@ class AuthSessionService:
         session_id: str,
         refresh_token_jti: str | None = None,
         request: Request | None = None,
+        metadata: dict[str, str | None] | None = None,
     ) -> None:
         """在途请求的会话元数据更新（touch）。
 
@@ -119,8 +128,24 @@ class AuthSessionService:
         - 不删除 Redis 撤销标记
         避免「登出其他设备」与目标设备在途请求并发时，已撤销会话被 touch 复活（A1）。
         """
-        metadata = extract_client_metadata(request)
+        if metadata is None:
+            metadata = extract_client_metadata(request)
         now = _utcnow_naive()
+
+        # freshness-skip（engine-restore-storm）：窗口内已活跃的会话跳过重复 touch，
+        # 避免同一 session 并发请求在 user_sessions 行锁上排队（写放大）。
+        # 跳过路径不写库，不可能复活已撤销会话（A1 语义保持）。
+        if not refresh_token_jti:
+            recent = await db.execute(
+                select(UserSession.last_active_at).where(UserSession.session_id == session_id)
+            )
+            row = recent.first()
+            if (
+                row is not None
+                and row[0] is not None
+                and now - row[0] < timedelta(seconds=SESSION_TOUCH_MIN_INTERVAL)
+            ):
+                return
 
         insert_stmt = pg_insert(UserSession).values(
             user_id=user_id,
@@ -154,6 +179,43 @@ class AuthSessionService:
             ),
         )
         await db.flush()
+
+    async def touch_from_payload_detached(
+        self,
+        *,
+        user_id: str,
+        payload: dict[str, Any],
+        request: Request | None = None,
+    ) -> None:
+        """独立短事务的会话 touch（engine-restore-storm 修复）。
+
+        旧路径在请求事务里 upsert user_sessions，行锁要持有到请求结束才释放；
+        会话恢复风暴下同一 session 的 ~20 个并发请求在该行锁上排队串行化，
+        轻端点（user/settings、aurora、telemetry）全部超时。
+
+        现改为独立 AsyncSession + 立即 commit（锁持有 ~ms），失败仅记日志、
+        不影响请求。配合 touch_session 的 freshness-skip 消除写放大。
+        注意：metadata 在调度前同步提取，不持有 Request 对象跨生命周期。
+        """
+        from app.db.session import AsyncSessionLocal
+
+        session_id = payload.get("sid")
+        if not session_id:
+            return
+        metadata = extract_client_metadata(request)
+        refresh_token_jti = payload.get("jti") if payload.get("type") == "refresh" else None
+        try:
+            async with AsyncSessionLocal() as db:
+                await self.touch_session(
+                    db,
+                    user_id=user_id,
+                    session_id=str(session_id),
+                    refresh_token_jti=refresh_token_jti,
+                    metadata=metadata,
+                )
+                await db.commit()
+        except Exception as exc:  # noqa: BLE001 — touch 是元数据卫生，绝不阻塞/弄挂请求
+            logger.warning("detached session touch failed for user {}: {}", user_id, exc)
 
     async def touch_from_payload(
         self,

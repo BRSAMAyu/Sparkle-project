@@ -37,6 +37,7 @@ from app.consumers.user_profile_bootstrap_consumer import UserProfileBootstrapCo
 from app.consumers.welcome_onboarding_consumer import WelcomeOnboardingConsumer
 from app.core.cache import cache_service
 from app.core.exceptions import SparkleException
+from app.core.request_coalescing import EndpointOverloaded
 from app.core.idempotency import get_idempotency_store
 from app.core.pending_actions import pending_actions_store
 from app.core.rate_limiting import setup_rate_limiting
@@ -906,6 +907,26 @@ async def sparkle_exception_handler(request: Request, exc: SparkleException):
             "detail": exc.detail,
             "request_id": request_id,
             "trace_id": trace_id,
+        },
+    )
+
+
+@app.exception_handler(EndpointOverloaded)
+async def endpoint_overloaded_handler(request: Request, exc: EndpointOverloaded):
+    """恢复风暴防护：端点并发钳制溢出时快速失败（503 + Retry-After）。
+
+    engine-restore-storm 修复：让客户端立即得到可重试信号，而不是在引擎里
+    无限排队直到网关 30s 超时雪崩。延迟由 request_coalescing.EndpointOverloaded 抛出。
+    """
+    logger.warning(f"Endpoint overloaded (shed): {exc}")
+    return JSONResponse(
+        status_code=503,
+        headers={"Retry-After": "2"},
+        content={
+            "success": False,
+            "error_code": "ENDPOINT_OVERLOADED",
+            "message": "Server is at capacity, please retry shortly",
+            "retry_after_seconds": 2,
         },
     )
 

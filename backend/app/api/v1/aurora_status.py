@@ -14,10 +14,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user, get_db
 from app.aurora.runtime_v1.state import CORE_MODELING_DOMAINS
 from app.core.cache import cache_service
+from app.core.request_coalescing import EndpointShield
 from app.models.user import User
 from app.services.aurora_control_surface_service import AuroraControlSurfaceService
 
 router = APIRouter(prefix="/aurora", tags=["aurora"])
+
+# 恢复风暴防护（engine-restore-storm）：控制面快照是恢复期必拉端点，
+# 同 user 并发拉取合并为一次计算 + 8s TTL。
+_control_surface_shield = EndpointShield(name="aurora_control_surface", max_concurrency=8, ttl=8.0, wait_timeout=8.0)
 
 # Domain label mapping (Chinese)
 _DOMAIN_LABELS: dict[str, str] = {
@@ -36,10 +41,16 @@ async def get_control_surface(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """Return Aurora's four-facet cognitive control surface for product UI."""
-    return await AuroraControlSurfaceService(db, cache_service.redis).build_snapshot(
-        user_id=current_user.id,
-        conversation_id=conversation_id,
-    )
+
+    async def _compute() -> dict:
+        return await AuroraControlSurfaceService(db, cache_service.redis).build_snapshot(
+            user_id=current_user.id,
+            conversation_id=conversation_id,
+        )
+
+    # 恢复风暴防护：single-flight + TTL 缓存 + 并发钳制
+    key = f"{current_user.id}:{conversation_id or ''}"
+    return await _control_surface_shield.run(key, _compute)
 
 
 @router.get("/modeling-status")

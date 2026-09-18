@@ -500,7 +500,8 @@ class NodeSectorService:
         if not accepted:
             return False
         try:
-            glm_batch_service.enqueue_node_sector_backfill(
+            # dispatch_task_async 内部 off-loop + 超时熔断 + 不抛异常（restore-storm 修复）
+            return await glm_batch_service.enqueue_node_sector_backfill(
                 user_id=user_id,
                 node_ids=accepted,
             )
@@ -512,7 +513,6 @@ class NodeSectorService:
                 exc,
             )
             return False
-        return True
 
     async def ensure_backfill_for_user(
         self,

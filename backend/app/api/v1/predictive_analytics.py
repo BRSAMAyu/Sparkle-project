@@ -17,11 +17,18 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
+from app.core.request_coalescing import EndpointOverloaded, EndpointShield
 from app.db.session import get_db
 from app.models.user import User
 from app.services.predictive_service import PredictiveService
 
 router = APIRouter()
+
+# 恢复风暴防护（engine-restore-storm）：预测端点含 LLM 调用，恢复期重复拉取
+# 会被 single-flight 合并；key 含 body 摘要，不同输入互不影响。短 TTL 5s。
+_realtime_next_step_shield = EndpointShield(
+    name="predictive_next_step", max_concurrency=4, ttl=5.0, wait_timeout=8.0
+)
 
 
 class RealtimeNextStepRequest(BaseModel):
@@ -272,7 +279,7 @@ async def get_realtime_next_step_prediction(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    try:
+    async def _compute() -> dict[str, Any]:
         service = PredictiveService(db)
         forecast = await service.get_realtime_next_step_forecast(
             current_user.id,
@@ -284,6 +291,13 @@ async def get_realtime_next_step_prediction(
             "status": "success",
             "data": forecast,
         }
+
+    try:
+        # 恢复风暴防护：single-flight + 短 TTL + 并发钳制（key 含输入摘要）
+        body_key = f"{current_user.id}:{request.surface}:{request.active_plan_id or ''}:{hash(request.partial_text)}"
+        return await _realtime_next_step_shield.run(body_key, _compute)
+    except EndpointOverloaded:
+        raise  # 钳制溢出走全局 503 + Retry-After 处理器，不得降级为 500
     except Exception as e:
         logger.error(f"Prediction error: {e}")
         raise HTTPException(status_code=500, detail="Prediction service unavailable") from e

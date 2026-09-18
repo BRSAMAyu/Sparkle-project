@@ -2,6 +2,7 @@
 API Dependencies
 FastAPI 依赖注入函数
 """
+import asyncio
 import logging
 
 from fastapi import Depends, HTTPException, Request, status
@@ -57,35 +58,28 @@ async def get_current_user(
     user = await db.get(User, user_id)
     if not user:
         raise AuthenticationError("该用户不存在，请检查输入")
-    try:
-        payload = getattr(request.state, "token_payload", None)
-        if payload:
-            await auth_session_service.touch_from_payload(
-                db,
-                request=request,
-                user_id=str(user.id),
-                payload=payload,
+    payload = getattr(request.state, "token_payload", None)
+    if payload:
+        # engine-restore-storm 修复：会话 touch 改为独立短事务后台执行。
+        # 旧路径在请求事务里 upsert user_sessions 并把行锁持有到请求结束，
+        # 恢复风暴下同一 session 的并发请求全部在该行锁上串行化超时。
+        # detached touch 锁持有 ~ms、失败不影响请求（H1 fail-open 语义保持）。
+        _schedule_detached_touch(
+            auth_session_service.touch_from_payload_detached(
+                user_id=str(user.id), payload=payload, request=request
             )
-    except Exception as e:
-        # H1 Security Fix: Log session touch failure but don't block (fail open)
-        # Session will eventually expire naturally
-        try:
-            import structlog
-
-            structlog.get_logger().warning(
-                "session_touch_failed",
-                user_id=str(user.id),
-                error=str(e),
-                error_type=type(e).__name__,
-            )
-        except ImportError:
-            logger.warning(
-                "session_touch_failed user_id=%s error=%s error_type=%s",
-                str(user.id),
-                str(e),
-                type(e).__name__,
-            )
+        )
     return user
+
+
+# 防止 fire-and-forget task 被 GC（asyncio 只持弱引用）
+_detached_touch_tasks: set[asyncio.Task] = set()
+
+
+def _schedule_detached_touch(coro) -> None:
+    task = asyncio.get_running_loop().create_task(coro)
+    _detached_touch_tasks.add(task)
+    task.add_done_callback(_detached_touch_tasks.discard)
 
 
 async def get_optional_current_user(
@@ -111,30 +105,13 @@ async def get_optional_current_user(
         user = await db.get(User, user_id)
         if not user:
             return None
-        try:
-            await auth_session_service.touch_from_payload(
-                db,
-                request=request,
-                user_id=str(user.id),
-                payload=payload,
+        # engine-restore-storm 修复：与 get_current_user 相同，touch 改为 detached 短事务，
+        # 消除 user_sessions 行锁在请求生命周期内的串行化。
+        _schedule_detached_touch(
+            auth_session_service.touch_from_payload_detached(
+                user_id=str(user.id), payload=payload, request=request
             )
-        except Exception as e:
-            try:
-                import structlog
-
-                structlog.get_logger().warning(
-                    "session_touch_failed",
-                    user_id=str(user.id),
-                    error=str(e),
-                    error_type=type(e).__name__,
-                )
-            except ImportError:
-                logger.warning(
-                    "session_touch_failed user_id=%s error=%s error_type=%s",
-                    str(user.id),
-                    str(e),
-                    type(e).__name__,
-                )
+        )
         return user
     except Exception:
         return None

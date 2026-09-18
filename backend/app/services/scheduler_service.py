@@ -395,9 +395,9 @@ class SchedulerService:
                             stats["skipped_users"] += 1
                             continue
 
-                        # 通过 Celery 异步生成
-                        from app.core.celery_app import celery_app
-                        celery_app.send_task(
+                        # 通过 Celery 异步生成（off-loop + 超时熔断，防事件循环冻结）
+                        from app.core.celery_dispatch import dispatch_task_async
+                        await dispatch_task_async(
                             "generate_capsules_batch",
                             args=(
                                 str(user.id),
@@ -466,9 +466,9 @@ class SchedulerService:
                             stats["skipped_users"] += 1
                             continue
 
-                        # 通过 Celery 异步生成深度胶囊
-                        from app.core.celery_app import celery_app
-                        celery_app.send_task(
+                        # 通过 Celery 异步生成深度胶囊（off-loop + 超时熔断，防事件循环冻结）
+                        from app.core.celery_dispatch import dispatch_task_async
+                        await dispatch_task_async(
                             "generate_capsules_batch",
                             args=(
                                 str(user.id),

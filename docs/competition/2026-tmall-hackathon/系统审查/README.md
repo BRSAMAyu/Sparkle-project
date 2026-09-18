@@ -3,7 +3,7 @@
 按轮次组织的全系统审查与修复记录。每轮 8 个并行审查员（切片互不重叠）+ 修复波（多修复员并行）。
 
 - `round1/` — 第一轮（基线 90daac8a，2026-09-18）：8 份审查报告（01 引擎编排/02 规划执行/03 关键服务/04 引擎基建/05 网关/06 移动核心/07 移动长尾/08 契约安全），`0N-fixes.md` 为对应修复波记录。
-- `round2/` — 第二轮复审（基线 ca86bda8，R1 修复已集成）：修复验证 + 运行时/集成视角复审 + 移交专项；`0N-r2-fixes.md`/`0N-r2-fixes.patch` 为对应修复波记录与 diff 快照；`m6-09-interrupt-preserve.md`/`.patch` 为 M6-09「流式取消=中断保留」产品决策的移动端落地记录；`schema-consistency-audit.md`/`.patch` 为 ORM ↔ 迁移链 ↔ 网关快照三方一致性专项（gfix02 + 单头守卫 + 快照重放）。
+- `round2/` — 第二轮复审（基线 ca86bda8，R1 修复已集成）：修复验证 + 运行时/集成视角复审 + 移交专项；`0N-r2-fixes.md`/`0N-r2-fixes.patch` 为对应修复波记录与 diff 快照；`m6-09-interrupt-preserve.md`/`.patch` 为 M6-09「流式取消=中断保留」产品决策的移动端落地记录；`schema-consistency-audit.md`/`.patch` 为 ORM ↔ 迁移链 ↔ 网关快照三方一致性专项（gfix02 + 单头守卫 + 快照重放）；`engine-restore-storm.md`/`.patch` 为会话恢复风暴专项（同步 send_task 冻结事件循环根因 + single-flight/并发钳制/异步投递修复 + 20 并发红绿压测）。
 - `漏洞台账.md` — 两轮全量发现的清零追踪表（唯一权威状态源）。
 
 切片边界：splash/onboarding/auth/home/chat/task/settings 归 06，其余 35 个 features 归 07；`gen/` 生成物只对照不审。

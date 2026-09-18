@@ -19,6 +19,7 @@ from sqlalchemy import desc, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user_id, get_db, get_optional_current_user
+from app.core.request_coalescing import EndpointShield
 from app.models.galaxy import KnowledgeNode, NodeRelation, UserNodeStatus
 from app.models.plan import Plan
 from app.models.task import Task
@@ -58,6 +59,10 @@ from app.services.knowledge_integration_service import KnowledgeIntegrationServi
 from app.services.node_sector_service import dominant_sector_from_weights, resolve_sector_weights
 
 router = APIRouter(prefix="/galaxy", tags=["Knowledge Galaxy"])
+
+# 恢复风暴防护（engine-restore-storm）：星图全量拉取是恢复期最重端点之一
+# （structure + stats + 回填 + error/goal 聚合），同 user 并发拉取合并为一次计算。
+_galaxy_graph_shield = EndpointShield(name="galaxy_graph", max_concurrency=8, ttl=10.0, wait_timeout=8.0)
 
 
 # ==========================================
@@ -195,9 +200,15 @@ async def get_galaxy_graph(
     - zoom_level < 0.5: 仅返回重要节点 (Level >= 3)
     - zoom_level >= 0.5: 返回所有节点
     """
-    return await galaxy_service.get_galaxy_graph(
-        user_id=UUID(user_id), sector_code=sector_code, include_locked=include_locked, zoom_level=zoom_level
-    )
+
+    async def _compute() -> GalaxyGraphResponse:
+        return await galaxy_service.get_galaxy_graph(
+            user_id=UUID(user_id), sector_code=sector_code, include_locked=include_locked, zoom_level=zoom_level
+        )
+
+    # 恢复风暴防护：single-flight 合并同 user 并发拉取 + 10s TTL 缓存 + 并发钳制
+    key = f"{user_id}:{sector_code or ''}:{include_locked}:{zoom_level}"
+    return await _galaxy_graph_shield.run(key, _compute)
 
 
 @router.get("/contribution-stats", response_model=UserGalaxyContribution)
