@@ -1,7 +1,7 @@
 """add_post_comments_table
 
 Revision ID: 7f807dcd4e5f
-Revises: comp_idx_20260508
+Revises: wp19_20260507
 Create Date: 2026-05-07 10:11:05.274566
 
 """
@@ -21,7 +21,7 @@ from sqlalchemy.dialects.postgresql import UUID
 #   ticket: "COM-P0-03"
 
 revision: str = '7f807dcd4e5f'
-down_revision: Union[str, None] = 'comp_idx_20260508'
+down_revision: Union[str, None] = 'wp19_20260507'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

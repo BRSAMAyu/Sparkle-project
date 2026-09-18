@@ -3,8 +3,8 @@
 --
 
 
--- Dumped from database version 16.13 (Debian 16.13-1.pgdg12+1)
--- Dumped by pg_dump version 16.13 (Debian 16.13-1.pgdg12+1)
+-- Dumped from database version 16.15 (Debian 16.15-1.pgdg12+2)
+-- Dumped by pg_dump version 16.11 (Homebrew)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -18,15 +18,6 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- Name: ag_catalog; Type: SCHEMA; Schema: -; Owner: postgres
---
-
-CREATE SCHEMA ag_catalog;
-
-
-ALTER SCHEMA ag_catalog OWNER TO postgres;
-
---
 -- Name: sparkle_galaxy; Type: SCHEMA; Schema: -; Owner: postgres
 --
 
@@ -34,20 +25,6 @@ CREATE SCHEMA sparkle_galaxy;
 
 
 ALTER SCHEMA sparkle_galaxy OWNER TO postgres;
-
---
--- Name: age; Type: EXTENSION; Schema: -; Owner: -
---
-
-CREATE EXTENSION IF NOT EXISTS age WITH SCHEMA ag_catalog;
-
-
---
--- Name: EXTENSION age; Type: COMMENT; Schema: -; Owner: 
---
-
-COMMENT ON EXTENSION age IS 'AGE database extension';
-
 
 --
 -- Name: pgcrypto; Type: EXTENSION; Schema: -; Owner: -
@@ -130,8 +107,7 @@ CREATE TYPE achievementtype AS ENUM (
     'CONTRACT',
     'STUDY_TIME',
     'NODE_EXPLORE',
-    'SPRINT',
-    'planning'
+    'SPRINT'
 );
 
 
@@ -209,7 +185,7 @@ CREATE TYPE contractstatus AS ENUM (
 ALTER TYPE contractstatus OWNER TO postgres;
 
 --
--- Name: delivery_channel_enum; Type: TYPE; Schema: public; Owner: brsama
+-- Name: delivery_channel_enum; Type: TYPE; Schema: public; Owner: postgres
 --
 
 CREATE TYPE delivery_channel_enum AS ENUM (
@@ -220,10 +196,10 @@ CREATE TYPE delivery_channel_enum AS ENUM (
 );
 
 
-ALTER TYPE delivery_channel_enum OWNER TO brsama;
+ALTER TYPE delivery_channel_enum OWNER TO postgres;
 
 --
--- Name: delivery_strategy_enum; Type: TYPE; Schema: public; Owner: brsama
+-- Name: delivery_strategy_enum; Type: TYPE; Schema: public; Owner: postgres
 --
 
 CREATE TYPE delivery_strategy_enum AS ENUM (
@@ -234,7 +210,7 @@ CREATE TYPE delivery_strategy_enum AS ENUM (
 );
 
 
-ALTER TYPE delivery_strategy_enum OWNER TO brsama;
+ALTER TYPE delivery_strategy_enum OWNER TO postgres;
 
 --
 -- Name: depthlevel; Type: TYPE; Schema: public; Owner: postgres
@@ -280,8 +256,6 @@ ALTER TYPE focustype OWNER TO postgres;
 CREATE TYPE friendshipstatus AS ENUM (
     'PENDING',
     'ACCEPTED',
-    'REJECTED',
-    'CANCELLED',
     'BLOCKED'
 );
 
@@ -289,7 +263,7 @@ CREATE TYPE friendshipstatus AS ENUM (
 ALTER TYPE friendshipstatus OWNER TO postgres;
 
 --
--- Name: groupfiletrustlevel; Type: TYPE; Schema: public; Owner: brsama
+-- Name: groupfiletrustlevel; Type: TYPE; Schema: public; Owner: postgres
 --
 
 CREATE TYPE groupfiletrustlevel AS ENUM (
@@ -299,7 +273,7 @@ CREATE TYPE groupfiletrustlevel AS ENUM (
 );
 
 
-ALTER TYPE groupfiletrustlevel OWNER TO brsama;
+ALTER TYPE groupfiletrustlevel OWNER TO postgres;
 
 --
 -- Name: grouprole; Type: TYPE; Schema: public; Owner: postgres
@@ -328,7 +302,7 @@ CREATE TYPE grouptype AS ENUM (
 ALTER TYPE grouptype OWNER TO postgres;
 
 --
--- Name: intervention_acceptance_enum; Type: TYPE; Schema: public; Owner: brsama
+-- Name: intervention_acceptance_enum; Type: TYPE; Schema: public; Owner: postgres
 --
 
 CREATE TYPE intervention_acceptance_enum AS ENUM (
@@ -342,10 +316,10 @@ CREATE TYPE intervention_acceptance_enum AS ENUM (
 );
 
 
-ALTER TYPE intervention_acceptance_enum OWNER TO brsama;
+ALTER TYPE intervention_acceptance_enum OWNER TO postgres;
 
 --
--- Name: intervention_outcome_enum; Type: TYPE; Schema: public; Owner: brsama
+-- Name: intervention_outcome_enum; Type: TYPE; Schema: public; Owner: postgres
 --
 
 CREATE TYPE intervention_outcome_enum AS ENUM (
@@ -356,10 +330,10 @@ CREATE TYPE intervention_outcome_enum AS ENUM (
 );
 
 
-ALTER TYPE intervention_outcome_enum OWNER TO brsama;
+ALTER TYPE intervention_outcome_enum OWNER TO postgres;
 
 --
--- Name: intervention_trigger_enum; Type: TYPE; Schema: public; Owner: brsama
+-- Name: intervention_trigger_enum; Type: TYPE; Schema: public; Owner: postgres
 --
 
 CREATE TYPE intervention_trigger_enum AS ENUM (
@@ -371,7 +345,7 @@ CREATE TYPE intervention_trigger_enum AS ENUM (
 );
 
 
-ALTER TYPE intervention_trigger_enum OWNER TO brsama;
+ALTER TYPE intervention_trigger_enum OWNER TO postgres;
 
 --
 -- Name: messagerole; Type: TYPE; Schema: public; Owner: postgres
@@ -654,7 +628,7 @@ CREATE TYPE visualelementunlocksource AS ENUM (
 ALTER TYPE visualelementunlocksource OWNER TO postgres;
 
 --
--- Name: admin_audit_log_prevent_mutation(); Type: FUNCTION; Schema: public; Owner: brsama
+-- Name: admin_audit_log_prevent_mutation(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
 CREATE FUNCTION admin_audit_log_prevent_mutation() RETURNS trigger
@@ -666,7 +640,7 @@ CREATE FUNCTION admin_audit_log_prevent_mutation() RETURNS trigger
             $$;
 
 
-ALTER FUNCTION admin_audit_log_prevent_mutation() OWNER TO brsama;
+ALTER FUNCTION admin_audit_log_prevent_mutation() OWNER TO postgres;
 
 SET default_tablespace = '';
 
@@ -812,7 +786,7 @@ CREATE TABLE accountability_partnership (
 ALTER TABLE accountability_partnership OWNER TO postgres;
 
 --
--- Name: accountability_policies; Type: TABLE; Schema: public; Owner: brsama
+-- Name: accountability_policies; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE accountability_policies (
@@ -841,7 +815,7 @@ CREATE TABLE accountability_policies (
 );
 
 
-ALTER TABLE accountability_policies OWNER TO brsama;
+ALTER TABLE accountability_policies OWNER TO postgres;
 
 --
 -- Name: achievements; Type: TABLE; Schema: public; Owner: postgres
@@ -882,7 +856,7 @@ CREATE TABLE achievements (
 ALTER TABLE achievements OWNER TO postgres;
 
 --
--- Name: admin_audit_log; Type: TABLE; Schema: public; Owner: brsama
+-- Name: admin_audit_log; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE admin_audit_log (
@@ -910,7 +884,7 @@ CREATE TABLE admin_audit_log (
 );
 
 
-ALTER TABLE admin_audit_log OWNER TO brsama;
+ALTER TABLE admin_audit_log OWNER TO postgres;
 
 --
 -- Name: agent_execution_stats; Type: TABLE; Schema: public; Owner: postgres
@@ -1076,7 +1050,7 @@ CREATE TABLE asset_suggestion_logs (
 ALTER TABLE asset_suggestion_logs OWNER TO postgres;
 
 --
--- Name: aurora_core_session_snapshots; Type: TABLE; Schema: public; Owner: brsama
+-- Name: aurora_core_session_snapshots; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE aurora_core_session_snapshots (
@@ -1098,10 +1072,10 @@ CREATE TABLE aurora_core_session_snapshots (
 );
 
 
-ALTER TABLE aurora_core_session_snapshots OWNER TO brsama;
+ALTER TABLE aurora_core_session_snapshots OWNER TO postgres;
 
 --
--- Name: aurora_decision_telemetry; Type: TABLE; Schema: public; Owner: brsama
+-- Name: aurora_decision_telemetry; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE aurora_decision_telemetry (
@@ -1130,10 +1104,10 @@ CREATE TABLE aurora_decision_telemetry (
 );
 
 
-ALTER TABLE aurora_decision_telemetry OWNER TO brsama;
+ALTER TABLE aurora_decision_telemetry OWNER TO postgres;
 
 --
--- Name: aurora_judgment_records; Type: TABLE; Schema: public; Owner: brsama
+-- Name: aurora_judgment_records; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE aurora_judgment_records (
@@ -1151,10 +1125,10 @@ CREATE TABLE aurora_judgment_records (
 );
 
 
-ALTER TABLE aurora_judgment_records OWNER TO brsama;
+ALTER TABLE aurora_judgment_records OWNER TO postgres;
 
 --
--- Name: aurora_policy_versions; Type: TABLE; Schema: public; Owner: brsama
+-- Name: aurora_policy_versions; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE aurora_policy_versions (
@@ -1175,10 +1149,10 @@ CREATE TABLE aurora_policy_versions (
 );
 
 
-ALTER TABLE aurora_policy_versions OWNER TO brsama;
+ALTER TABLE aurora_policy_versions OWNER TO postgres;
 
 --
--- Name: aurora_scheduled_wakes; Type: TABLE; Schema: public; Owner: brsama
+-- Name: aurora_scheduled_wakes; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE aurora_scheduled_wakes (
@@ -1204,10 +1178,10 @@ CREATE TABLE aurora_scheduled_wakes (
 );
 
 
-ALTER TABLE aurora_scheduled_wakes OWNER TO brsama;
+ALTER TABLE aurora_scheduled_wakes OWNER TO postgres;
 
 --
--- Name: aurora_state_snapshots; Type: TABLE; Schema: public; Owner: brsama
+-- Name: aurora_state_snapshots; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE aurora_state_snapshots (
@@ -1231,7 +1205,7 @@ CREATE TABLE aurora_state_snapshots (
 );
 
 
-ALTER TABLE aurora_state_snapshots OWNER TO brsama;
+ALTER TABLE aurora_state_snapshots OWNER TO postgres;
 
 --
 -- Name: auth_audit_log; Type: TABLE; Schema: public; Owner: postgres
@@ -1373,7 +1347,7 @@ CREATE TABLE calendar_events (
 ALTER TABLE calendar_events OWNER TO postgres;
 
 --
--- Name: candidate_action_feedback; Type: TABLE; Schema: public; Owner: brsama
+-- Name: candidate_action_feedback; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE candidate_action_feedback (
@@ -1391,7 +1365,7 @@ CREATE TABLE candidate_action_feedback (
 );
 
 
-ALTER TABLE candidate_action_feedback OWNER TO brsama;
+ALTER TABLE candidate_action_feedback OWNER TO postgres;
 
 --
 -- Name: capsule_favorites; Type: TABLE; Schema: public; Owner: postgres
@@ -1462,7 +1436,7 @@ CREATE TABLE capsule_generation_jobs (
 ALTER TABLE capsule_generation_jobs OWNER TO postgres;
 
 --
--- Name: card_adoption_records; Type: TABLE; Schema: public; Owner: brsama
+-- Name: card_adoption_records; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE card_adoption_records (
@@ -1478,10 +1452,10 @@ CREATE TABLE card_adoption_records (
 );
 
 
-ALTER TABLE card_adoption_records OWNER TO brsama;
+ALTER TABLE card_adoption_records OWNER TO postgres;
 
 --
--- Name: card_edges; Type: TABLE; Schema: public; Owner: brsama
+-- Name: card_edges; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE card_edges (
@@ -1502,10 +1476,10 @@ CREATE TABLE card_edges (
 );
 
 
-ALTER TABLE card_edges OWNER TO brsama;
+ALTER TABLE card_edges OWNER TO postgres;
 
 --
--- Name: card_share_records; Type: TABLE; Schema: public; Owner: brsama
+-- Name: card_share_records; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE card_share_records (
@@ -1528,10 +1502,10 @@ CREATE TABLE card_share_records (
 );
 
 
-ALTER TABLE card_share_records OWNER TO brsama;
+ALTER TABLE card_share_records OWNER TO postgres;
 
 --
--- Name: card_snapshots; Type: TABLE; Schema: public; Owner: brsama
+-- Name: card_snapshots; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE card_snapshots (
@@ -1548,10 +1522,10 @@ CREATE TABLE card_snapshots (
 );
 
 
-ALTER TABLE card_snapshots OWNER TO brsama;
+ALTER TABLE card_snapshots OWNER TO postgres;
 
 --
--- Name: cards; Type: TABLE; Schema: public; Owner: brsama
+-- Name: cards; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE cards (
@@ -1577,7 +1551,7 @@ CREATE TABLE cards (
 );
 
 
-ALTER TABLE cards OWNER TO brsama;
+ALTER TABLE cards OWNER TO postgres;
 
 --
 -- Name: chat_messages; Type: TABLE; Schema: public; Owner: postgres
@@ -1597,7 +1571,8 @@ CREATE TABLE chat_messages (
     tokens_used integer,
     model_name character varying(100),
     updated_at timestamp without time zone NOT NULL,
-    deleted_at timestamp without time zone
+    deleted_at timestamp without time zone,
+    metadata jsonb
 );
 
 
@@ -1676,7 +1651,7 @@ CREATE TABLE collaborative_galaxies (
 ALTER TABLE collaborative_galaxies OWNER TO postgres;
 
 --
--- Name: commitments; Type: TABLE; Schema: public; Owner: brsama
+-- Name: commitments; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE commitments (
@@ -1701,10 +1676,10 @@ CREATE TABLE commitments (
 );
 
 
-ALTER TABLE commitments OWNER TO brsama;
+ALTER TABLE commitments OWNER TO postgres;
 
 --
--- Name: community_aggregate_signals; Type: TABLE; Schema: public; Owner: brsama
+-- Name: community_aggregate_signals; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE community_aggregate_signals (
@@ -1734,7 +1709,57 @@ CREATE TABLE community_aggregate_signals (
 );
 
 
-ALTER TABLE community_aggregate_signals OWNER TO brsama;
+ALTER TABLE community_aggregate_signals OWNER TO postgres;
+
+--
+-- Name: community_strategy_outcomes; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE community_strategy_outcomes (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    directive_id character varying(128) NOT NULL,
+    trigger_type character varying(64) NOT NULL,
+    decision character varying(32) NOT NULL,
+    context_snapshot jsonb DEFAULT '{}'::jsonb NOT NULL,
+    time_to_decision_seconds integer,
+    user_feedback text,
+    source character varying(32) DEFAULT 'system'::character varying NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE community_strategy_outcomes OWNER TO postgres;
+
+--
+-- Name: COLUMN community_strategy_outcomes.trigger_type; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN community_strategy_outcomes.trigger_type IS 'What triggered this: cohort_mistake, partner_feedback, resource_recommendation, accountability_checkin';
+
+
+--
+-- Name: COLUMN community_strategy_outcomes.decision; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN community_strategy_outcomes.decision IS 'User choice: accepted, rejected, dismissed, modified, auto_expired';
+
+
+--
+-- Name: COLUMN community_strategy_outcomes.context_snapshot; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN community_strategy_outcomes.context_snapshot IS 'Snapshot of the directive payload at decision time';
+
+
+--
+-- Name: COLUMN community_strategy_outcomes.source; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN community_strategy_outcomes.source IS 'How the decision was recorded: user_action, timeout, system';
+
 
 --
 -- Name: compliance_check_logs; Type: TABLE; Schema: public; Owner: postgres
@@ -1758,7 +1783,7 @@ CREATE TABLE compliance_check_logs (
 ALTER TABLE compliance_check_logs OWNER TO postgres;
 
 --
--- Name: conflict_resolution_records; Type: TABLE; Schema: public; Owner: brsama
+-- Name: conflict_resolution_records; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE conflict_resolution_records (
@@ -1780,7 +1805,7 @@ CREATE TABLE conflict_resolution_records (
 );
 
 
-ALTER TABLE conflict_resolution_records OWNER TO brsama;
+ALTER TABLE conflict_resolution_records OWNER TO postgres;
 
 --
 -- Name: context_budget_profiles; Type: TABLE; Schema: public; Owner: postgres
@@ -1841,7 +1866,7 @@ CREATE TABLE context_pack_runs (
 ALTER TABLE context_pack_runs OWNER TO postgres;
 
 --
--- Name: counterfactual_evaluation_reports; Type: TABLE; Schema: public; Owner: brsama
+-- Name: counterfactual_evaluation_reports; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE counterfactual_evaluation_reports (
@@ -1866,7 +1891,7 @@ CREATE TABLE counterfactual_evaluation_reports (
 );
 
 
-ALTER TABLE counterfactual_evaluation_reports OWNER TO brsama;
+ALTER TABLE counterfactual_evaluation_reports OWNER TO postgres;
 
 --
 -- Name: crdt_operation_log; Type: TABLE; Schema: public; Owner: postgres
@@ -2014,7 +2039,7 @@ CREATE TABLE custom_expert_teams (
 ALTER TABLE custom_expert_teams OWNER TO postgres;
 
 --
--- Name: daily_behavior_vector; Type: TABLE; Schema: public; Owner: brsama
+-- Name: daily_behavior_vector; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE daily_behavior_vector (
@@ -2031,7 +2056,7 @@ CREATE TABLE daily_behavior_vector (
 );
 
 
-ALTER TABLE daily_behavior_vector OWNER TO brsama;
+ALTER TABLE daily_behavior_vector OWNER TO postgres;
 
 --
 -- Name: data_access_logs; Type: TABLE; Schema: public; Owner: postgres
@@ -2097,7 +2122,7 @@ CREATE TABLE dictionary_entries (
 ALTER TABLE dictionary_entries OWNER TO postgres;
 
 --
--- Name: distilled_strategy_cache; Type: TABLE; Schema: public; Owner: brsama
+-- Name: distilled_strategy_cache; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE distilled_strategy_cache (
@@ -2114,7 +2139,7 @@ CREATE TABLE distilled_strategy_cache (
 );
 
 
-ALTER TABLE distilled_strategy_cache OWNER TO brsama;
+ALTER TABLE distilled_strategy_cache OWNER TO postgres;
 
 --
 -- Name: dlq_replay_audit_logs; Type: TABLE; Schema: public; Owner: postgres
@@ -2160,7 +2185,7 @@ CREATE TABLE document_chunks (
 ALTER TABLE document_chunks OWNER TO postgres;
 
 --
--- Name: document_retrieval_feedback; Type: TABLE; Schema: public; Owner: brsama
+-- Name: document_retrieval_feedback; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE document_retrieval_feedback (
@@ -2179,10 +2204,10 @@ CREATE TABLE document_retrieval_feedback (
 );
 
 
-ALTER TABLE document_retrieval_feedback OWNER TO brsama;
+ALTER TABLE document_retrieval_feedback OWNER TO postgres;
 
 --
--- Name: durable_session_state_snapshots; Type: TABLE; Schema: public; Owner: brsama
+-- Name: durable_session_state_snapshots; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE durable_session_state_snapshots (
@@ -2203,7 +2228,7 @@ CREATE TABLE durable_session_state_snapshots (
 );
 
 
-ALTER TABLE durable_session_state_snapshots OWNER TO brsama;
+ALTER TABLE durable_session_state_snapshots OWNER TO postgres;
 
 --
 -- Name: episodic_memories; Type: TABLE; Schema: public; Owner: postgres
@@ -2282,7 +2307,7 @@ CREATE TABLE error_records (
 ALTER TABLE error_records OWNER TO postgres;
 
 --
--- Name: event_bus_dlq; Type: TABLE; Schema: public; Owner: brsama
+-- Name: event_bus_dlq; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE event_bus_dlq (
@@ -2303,7 +2328,7 @@ CREATE TABLE event_bus_dlq (
 );
 
 
-ALTER TABLE event_bus_dlq OWNER TO brsama;
+ALTER TABLE event_bus_dlq OWNER TO postgres;
 
 --
 -- Name: event_outbox; Type: TABLE; Schema: public; Owner: postgres
@@ -2382,7 +2407,7 @@ CREATE TABLE evolution_predictions (
 ALTER TABLE evolution_predictions OWNER TO postgres;
 
 --
--- Name: execution_audit_log; Type: TABLE; Schema: public; Owner: brsama
+-- Name: execution_audit_log; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE execution_audit_log (
@@ -2398,7 +2423,7 @@ CREATE TABLE execution_audit_log (
 );
 
 
-ALTER TABLE execution_audit_log OWNER TO brsama;
+ALTER TABLE execution_audit_log OWNER TO postgres;
 
 --
 -- Name: execution_intents; Type: TABLE; Schema: public; Owner: postgres
@@ -2469,7 +2494,7 @@ CREATE TABLE execution_records (
 ALTER TABLE execution_records OWNER TO postgres;
 
 --
--- Name: execution_schedules; Type: TABLE; Schema: public; Owner: brsama
+-- Name: execution_schedules; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE execution_schedules (
@@ -2488,7 +2513,7 @@ CREATE TABLE execution_schedules (
 );
 
 
-ALTER TABLE execution_schedules OWNER TO brsama;
+ALTER TABLE execution_schedules OWNER TO postgres;
 
 --
 -- Name: expansion_feedback; Type: TABLE; Schema: public; Owner: postgres
@@ -2514,7 +2539,7 @@ CREATE TABLE expansion_feedback (
 ALTER TABLE expansion_feedback OWNER TO postgres;
 
 --
--- Name: focus_contracts; Type: TABLE; Schema: public; Owner: brsama
+-- Name: focus_contracts; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE focus_contracts (
@@ -2535,7 +2560,7 @@ CREATE TABLE focus_contracts (
 );
 
 
-ALTER TABLE focus_contracts OWNER TO brsama;
+ALTER TABLE focus_contracts OWNER TO postgres;
 
 --
 -- Name: focus_sessions; Type: TABLE; Schema: public; Owner: postgres
@@ -2616,7 +2641,7 @@ CREATE TABLE galaxy_user_permissions (
 ALTER TABLE galaxy_user_permissions OWNER TO postgres;
 
 --
--- Name: goal_world_graph_snapshots; Type: TABLE; Schema: public; Owner: brsama
+-- Name: goal_world_graph_snapshots; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE goal_world_graph_snapshots (
@@ -2635,10 +2660,10 @@ CREATE TABLE goal_world_graph_snapshots (
 );
 
 
-ALTER TABLE goal_world_graph_snapshots OWNER TO brsama;
+ALTER TABLE goal_world_graph_snapshots OWNER TO postgres;
 
 --
--- Name: goals; Type: TABLE; Schema: public; Owner: brsama
+-- Name: goals; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE goals (
@@ -2667,7 +2692,7 @@ CREATE TABLE goals (
 );
 
 
-ALTER TABLE goals OWNER TO brsama;
+ALTER TABLE goals OWNER TO postgres;
 
 --
 -- Name: group_files; Type: TABLE; Schema: public; Owner: postgres
@@ -2852,7 +2877,7 @@ CREATE TABLE groups (
 ALTER TABLE groups OWNER TO postgres;
 
 --
--- Name: growth_chronicle_snapshots; Type: TABLE; Schema: public; Owner: brsama
+-- Name: growth_chronicle_snapshots; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE growth_chronicle_snapshots (
@@ -2869,7 +2894,7 @@ CREATE TABLE growth_chronicle_snapshots (
 );
 
 
-ALTER TABLE growth_chronicle_snapshots OWNER TO brsama;
+ALTER TABLE growth_chronicle_snapshots OWNER TO postgres;
 
 --
 -- Name: idempotency_keys; Type: TABLE; Schema: public; Owner: postgres
@@ -2889,7 +2914,7 @@ CREATE TABLE idempotency_keys (
 ALTER TABLE idempotency_keys OWNER TO postgres;
 
 --
--- Name: identity_evidence; Type: TABLE; Schema: public; Owner: brsama
+-- Name: identity_evidence; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE identity_evidence (
@@ -2908,10 +2933,10 @@ CREATE TABLE identity_evidence (
 );
 
 
-ALTER TABLE identity_evidence OWNER TO brsama;
+ALTER TABLE identity_evidence OWNER TO postgres;
 
 --
--- Name: idiographic_associations; Type: TABLE; Schema: public; Owner: brsama
+-- Name: idiographic_associations; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE idiographic_associations (
@@ -2943,10 +2968,10 @@ CREATE TABLE idiographic_associations (
 );
 
 
-ALTER TABLE idiographic_associations OWNER TO brsama;
+ALTER TABLE idiographic_associations OWNER TO postgres;
 
 --
--- Name: idiographic_changepoints; Type: TABLE; Schema: public; Owner: brsama
+-- Name: idiographic_changepoints; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE idiographic_changepoints (
@@ -2965,10 +2990,10 @@ CREATE TABLE idiographic_changepoints (
 );
 
 
-ALTER TABLE idiographic_changepoints OWNER TO brsama;
+ALTER TABLE idiographic_changepoints OWNER TO postgres;
 
 --
--- Name: insight_claims; Type: TABLE; Schema: public; Owner: brsama
+-- Name: insight_claims; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE insight_claims (
@@ -2991,7 +3016,7 @@ CREATE TABLE insight_claims (
 );
 
 
-ALTER TABLE insight_claims OWNER TO brsama;
+ALTER TABLE insight_claims OWNER TO postgres;
 
 --
 -- Name: intervention_audit_logs; Type: TABLE; Schema: public; Owner: postgres
@@ -3039,7 +3064,7 @@ CREATE TABLE intervention_feedback (
 ALTER TABLE intervention_feedback OWNER TO postgres;
 
 --
--- Name: intervention_outcomes; Type: TABLE; Schema: public; Owner: brsama
+-- Name: intervention_outcomes; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE intervention_outcomes (
@@ -3067,10 +3092,10 @@ CREATE TABLE intervention_outcomes (
 );
 
 
-ALTER TABLE intervention_outcomes OWNER TO brsama;
+ALTER TABLE intervention_outcomes OWNER TO postgres;
 
 --
--- Name: intervention_records; Type: TABLE; Schema: public; Owner: brsama
+-- Name: intervention_records; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE intervention_records (
@@ -3097,7 +3122,7 @@ CREATE TABLE intervention_records (
 );
 
 
-ALTER TABLE intervention_records OWNER TO brsama;
+ALTER TABLE intervention_records OWNER TO postgres;
 
 --
 -- Name: intervention_requests; Type: TABLE; Schema: public; Owner: postgres
@@ -3134,7 +3159,7 @@ CREATE TABLE intervention_requests (
 ALTER TABLE intervention_requests OWNER TO postgres;
 
 --
--- Name: intervention_strategy_outcomes; Type: TABLE; Schema: public; Owner: brsama
+-- Name: intervention_strategy_outcomes; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE intervention_strategy_outcomes (
@@ -3154,7 +3179,7 @@ CREATE TABLE intervention_strategy_outcomes (
 );
 
 
-ALTER TABLE intervention_strategy_outcomes OWNER TO brsama;
+ALTER TABLE intervention_strategy_outcomes OWNER TO postgres;
 
 --
 -- Name: intervention_templates; Type: TABLE; Schema: public; Owner: postgres
@@ -3242,7 +3267,7 @@ CREATE TABLE jobs (
 ALTER TABLE jobs OWNER TO postgres;
 
 --
--- Name: knowledge_node_documents; Type: TABLE; Schema: public; Owner: brsama
+-- Name: knowledge_node_documents; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE knowledge_node_documents (
@@ -3257,7 +3282,7 @@ CREATE TABLE knowledge_node_documents (
 );
 
 
-ALTER TABLE knowledge_node_documents OWNER TO brsama;
+ALTER TABLE knowledge_node_documents OWNER TO postgres;
 
 --
 -- Name: knowledge_nodes; Type: TABLE; Schema: public; Owner: postgres
@@ -3290,7 +3315,7 @@ CREATE TABLE knowledge_nodes (
     sector_classification_status character varying(20) DEFAULT 'pending'::character varying NOT NULL,
     sector_classification_model character varying(100),
     sector_classified_at timestamp without time zone,
-    community_signal jsonb,
+    community_signal json,
     exam_weight double precision DEFAULT '0'::double precision NOT NULL,
     difficulty double precision DEFAULT '0.5'::double precision NOT NULL,
     trainability double precision DEFAULT '0.5'::double precision NOT NULL,
@@ -3301,7 +3326,7 @@ CREATE TABLE knowledge_nodes (
 ALTER TABLE knowledge_nodes OWNER TO postgres;
 
 --
--- Name: leaderboard_snapshots; Type: TABLE; Schema: public; Owner: brsama
+-- Name: leaderboard_snapshots; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE leaderboard_snapshots (
@@ -3320,7 +3345,7 @@ CREATE TABLE leaderboard_snapshots (
 );
 
 
-ALTER TABLE leaderboard_snapshots OWNER TO brsama;
+ALTER TABLE leaderboard_snapshots OWNER TO postgres;
 
 --
 -- Name: learning_assets; Type: TABLE; Schema: public; Owner: postgres
@@ -3421,7 +3446,7 @@ CREATE TABLE ltm_daily_snapshots (
 ALTER TABLE ltm_daily_snapshots OWNER TO postgres;
 
 --
--- Name: marketplace_packs; Type: TABLE; Schema: public; Owner: brsama
+-- Name: marketplace_packs; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE marketplace_packs (
@@ -3455,10 +3480,10 @@ CREATE TABLE marketplace_packs (
 );
 
 
-ALTER TABLE marketplace_packs OWNER TO brsama;
+ALTER TABLE marketplace_packs OWNER TO postgres;
 
 --
--- Name: marketplace_skills; Type: TABLE; Schema: public; Owner: brsama
+-- Name: marketplace_skills; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE marketplace_skills (
@@ -3499,7 +3524,7 @@ CREATE TABLE marketplace_skills (
 );
 
 
-ALTER TABLE marketplace_skills OWNER TO brsama;
+ALTER TABLE marketplace_skills OWNER TO postgres;
 
 --
 -- Name: mastery_audit_log; Type: TABLE; Schema: public; Owner: postgres
@@ -3799,7 +3824,7 @@ CREATE TABLE node_relations (
 ALTER TABLE node_relations OWNER TO postgres;
 
 --
--- Name: north_star_metric_events; Type: TABLE; Schema: public; Owner: brsama
+-- Name: north_star_metric_events; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE north_star_metric_events (
@@ -3823,7 +3848,7 @@ CREATE TABLE north_star_metric_events (
 );
 
 
-ALTER TABLE north_star_metric_events OWNER TO brsama;
+ALTER TABLE north_star_metric_events OWNER TO postgres;
 
 --
 -- Name: notification_interactions; Type: TABLE; Schema: public; Owner: postgres
@@ -3943,7 +3968,7 @@ CREATE TABLE offline_message_queue (
 ALTER TABLE offline_message_queue OWNER TO postgres;
 
 --
--- Name: pack_adoption_history; Type: TABLE; Schema: public; Owner: brsama
+-- Name: pack_adoption_history; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE pack_adoption_history (
@@ -3966,7 +3991,7 @@ CREATE TABLE pack_adoption_history (
 );
 
 
-ALTER TABLE pack_adoption_history OWNER TO brsama;
+ALTER TABLE pack_adoption_history OWNER TO postgres;
 
 --
 -- Name: passive_signals; Type: TABLE; Schema: public; Owner: postgres
@@ -3988,7 +4013,7 @@ CREATE TABLE passive_signals (
 ALTER TABLE passive_signals OWNER TO postgres;
 
 --
--- Name: persdyn_attractors; Type: TABLE; Schema: public; Owner: brsama
+-- Name: persdyn_attractors; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE persdyn_attractors (
@@ -4005,7 +4030,7 @@ CREATE TABLE persdyn_attractors (
 );
 
 
-ALTER TABLE persdyn_attractors OWNER TO brsama;
+ALTER TABLE persdyn_attractors OWNER TO postgres;
 
 --
 -- Name: persona_snapshots; Type: TABLE; Schema: public; Owner: postgres
@@ -4146,7 +4171,7 @@ CREATE TABLE plan_states (
 ALTER TABLE plan_states OWNER TO postgres;
 
 --
--- Name: planning_artifacts; Type: TABLE; Schema: public; Owner: brsama
+-- Name: planning_artifacts; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE planning_artifacts (
@@ -4167,7 +4192,7 @@ CREATE TABLE planning_artifacts (
 );
 
 
-ALTER TABLE planning_artifacts OWNER TO brsama;
+ALTER TABLE planning_artifacts OWNER TO postgres;
 
 --
 -- Name: plans; Type: TABLE; Schema: public; Owner: postgres
@@ -4201,6 +4226,22 @@ CREATE TABLE plans (
 ALTER TABLE plans OWNER TO postgres;
 
 --
+-- Name: post_comments; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE post_comments (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    post_id uuid NOT NULL,
+    content text NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE post_comments OWNER TO postgres;
+
+--
 -- Name: post_likes; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -4225,23 +4266,20 @@ CREATE TABLE posts (
     content text,
     image_urls json,
     topic character varying(100),
-    visibility character varying(20) NOT NULL CHECK (visibility IN ('public', 'friends', 'private')),
-    like_count integer NOT NULL DEFAULT 0,
-    comment_count integer NOT NULL DEFAULT 0,
+    visibility character varying(20) NOT NULL,
+    like_count integer,
+    comment_count integer,
     id uuid NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
     deleted_at timestamp without time zone
 );
 
--- Indexes for posts table (performance optimization)
-CREATE INDEX idx_posts_created_at ON posts (created_at DESC);
-CREATE INDEX idx_posts_not_deleted_created ON posts (deleted_at, created_at DESC) WHERE deleted_at IS NULL;
 
 ALTER TABLE posts OWNER TO postgres;
 
 --
--- Name: privacy_budget_ledger; Type: TABLE; Schema: public; Owner: brsama
+-- Name: privacy_budget_ledger; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE privacy_budget_ledger (
@@ -4263,7 +4301,7 @@ CREATE TABLE privacy_budget_ledger (
 );
 
 
-ALTER TABLE privacy_budget_ledger OWNER TO brsama;
+ALTER TABLE privacy_budget_ledger OWNER TO postgres;
 
 --
 -- Name: private_messages; Type: TABLE; Schema: public; Owner: postgres
@@ -4301,7 +4339,7 @@ CREATE TABLE private_messages (
 ALTER TABLE private_messages OWNER TO postgres;
 
 --
--- Name: probe_outcomes; Type: TABLE; Schema: public; Owner: brsama
+-- Name: probe_outcomes; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE probe_outcomes (
@@ -4317,7 +4355,7 @@ CREATE TABLE probe_outcomes (
 );
 
 
-ALTER TABLE probe_outcomes OWNER TO brsama;
+ALTER TABLE probe_outcomes OWNER TO postgres;
 
 --
 -- Name: processed_events; Type: TABLE; Schema: public; Owner: postgres
@@ -4367,7 +4405,7 @@ CREATE TABLE projection_snapshots (
 ALTER TABLE projection_snapshots OWNER TO postgres;
 
 --
--- Name: push_delivery_records; Type: TABLE; Schema: public; Owner: brsama
+-- Name: push_delivery_records; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE push_delivery_records (
@@ -4397,7 +4435,7 @@ CREATE TABLE push_delivery_records (
 );
 
 
-ALTER TABLE push_delivery_records OWNER TO brsama;
+ALTER TABLE push_delivery_records OWNER TO postgres;
 
 --
 -- Name: push_histories; Type: TABLE; Schema: public; Owner: postgres
@@ -4462,7 +4500,7 @@ CREATE TABLE recommendation_cache (
 ALTER TABLE recommendation_cache OWNER TO postgres;
 
 --
--- Name: release_approval_requests; Type: TABLE; Schema: public; Owner: brsama
+-- Name: release_approval_requests; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE release_approval_requests (
@@ -4496,10 +4534,10 @@ CREATE TABLE release_approval_requests (
 );
 
 
-ALTER TABLE release_approval_requests OWNER TO brsama;
+ALTER TABLE release_approval_requests OWNER TO postgres;
 
 --
--- Name: report_snapshots; Type: TABLE; Schema: public; Owner: brsama
+-- Name: report_snapshots; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE report_snapshots (
@@ -4518,10 +4556,10 @@ CREATE TABLE report_snapshots (
 );
 
 
-ALTER TABLE report_snapshots OWNER TO brsama;
+ALTER TABLE report_snapshots OWNER TO postgres;
 
 --
--- Name: research_consent_records; Type: TABLE; Schema: public; Owner: brsama
+-- Name: research_consent_records; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE research_consent_records (
@@ -4546,7 +4584,7 @@ CREATE TABLE research_consent_records (
 );
 
 
-ALTER TABLE research_consent_records OWNER TO brsama;
+ALTER TABLE research_consent_records OWNER TO postgres;
 
 --
 -- Name: response_feedback; Type: TABLE; Schema: public; Owner: postgres
@@ -4665,7 +4703,7 @@ CREATE TABLE review_overrides (
 ALTER TABLE review_overrides OWNER TO postgres;
 
 --
--- Name: routing_decision_log; Type: TABLE; Schema: public; Owner: brsama
+-- Name: routing_decision_log; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE routing_decision_log (
@@ -4690,10 +4728,10 @@ CREATE TABLE routing_decision_log (
 );
 
 
-ALTER TABLE routing_decision_log OWNER TO brsama;
+ALTER TABLE routing_decision_log OWNER TO postgres;
 
 --
--- Name: safe_experiment_episodes; Type: TABLE; Schema: public; Owner: brsama
+-- Name: safe_experiment_episodes; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE safe_experiment_episodes (
@@ -4717,10 +4755,10 @@ CREATE TABLE safe_experiment_episodes (
 );
 
 
-ALTER TABLE safe_experiment_episodes OWNER TO brsama;
+ALTER TABLE safe_experiment_episodes OWNER TO postgres;
 
 --
--- Name: safe_experiments; Type: TABLE; Schema: public; Owner: brsama
+-- Name: safe_experiments; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE safe_experiments (
@@ -4757,27 +4795,7 @@ CREATE TABLE safe_experiments (
 );
 
 
-ALTER TABLE safe_experiments OWNER TO brsama;
-
---
--- Name: saga_instances; Type: TABLE; Schema: public; Owner: brsama
---
-
-CREATE TABLE saga_instances (
-    id uuid NOT NULL,
-    saga_type text NOT NULL,
-    status text DEFAULT 'pending'::text NOT NULL,
-    current_step integer DEFAULT 0 NOT NULL,
-    input_data jsonb DEFAULT '{}'::jsonb NOT NULL,
-    step_results jsonb DEFAULT '[]'::jsonb NOT NULL,
-    error text DEFAULT ''::text NOT NULL,
-    correlation_id text DEFAULT ''::text NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL
-);
-
-
-ALTER TABLE saga_instances OWNER TO brsama;
+ALTER TABLE safe_experiments OWNER TO postgres;
 
 --
 -- Name: scaffolding_states; Type: TABLE; Schema: public; Owner: postgres
@@ -4803,7 +4821,7 @@ CREATE TABLE scaffolding_states (
 ALTER TABLE scaffolding_states OWNER TO postgres;
 
 --
--- Name: scenes; Type: TABLE; Schema: public; Owner: brsama
+-- Name: scenes; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE scenes (
@@ -4824,7 +4842,7 @@ CREATE TABLE scenes (
 );
 
 
-ALTER TABLE scenes OWNER TO brsama;
+ALTER TABLE scenes OWNER TO postgres;
 
 --
 -- Name: security_audit_logs; Type: TABLE; Schema: public; Owner: postgres
@@ -4938,7 +4956,7 @@ CREATE TABLE semantic_links (
 ALTER TABLE semantic_links OWNER TO postgres;
 
 --
--- Name: session_completions; Type: TABLE; Schema: public; Owner: brsama
+-- Name: session_completions; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE session_completions (
@@ -4950,7 +4968,7 @@ CREATE TABLE session_completions (
 );
 
 
-ALTER TABLE session_completions OWNER TO brsama;
+ALTER TABLE session_completions OWNER TO postgres;
 
 --
 -- Name: shared_resources; Type: TABLE; Schema: public; Owner: postgres
@@ -4976,18 +4994,14 @@ CREATE TABLE shared_resources (
     knowledge_node_id uuid,
     seed_library_id uuid,
     seed_item_id uuid,
-    card_share_record_id uuid,
-    adoption_count integer DEFAULT 0,
-    quality_score double precision DEFAULT 0,
-    quality_hidden boolean DEFAULT false,
-    negative_feedback_count integer DEFAULT 0
+    card_share_record_id uuid
 );
 
 
 ALTER TABLE shared_resources OWNER TO postgres;
 
 --
--- Name: shared_skills; Type: TABLE; Schema: public; Owner: brsama
+-- Name: shared_skills; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE shared_skills (
@@ -5006,7 +5020,7 @@ CREATE TABLE shared_skills (
 );
 
 
-ALTER TABLE shared_skills OWNER TO brsama;
+ALTER TABLE shared_skills OWNER TO postgres;
 
 --
 -- Name: shop_items; Type: TABLE; Schema: public; Owner: postgres
@@ -5182,7 +5196,7 @@ COMMENT ON COLUMN shop_purchases.photon_balance_after IS '购买后光子余额'
 
 
 --
--- Name: simulation_runs; Type: TABLE; Schema: public; Owner: brsama
+-- Name: simulation_runs; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE simulation_runs (
@@ -5202,10 +5216,10 @@ CREATE TABLE simulation_runs (
 );
 
 
-ALTER TABLE simulation_runs OWNER TO brsama;
+ALTER TABLE simulation_runs OWNER TO postgres;
 
 --
--- Name: skill_share_moderation_queue; Type: TABLE; Schema: public; Owner: brsama
+-- Name: skill_share_moderation_queue; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE skill_share_moderation_queue (
@@ -5229,7 +5243,7 @@ CREATE TABLE skill_share_moderation_queue (
 );
 
 
-ALTER TABLE skill_share_moderation_queue OWNER TO brsama;
+ALTER TABLE skill_share_moderation_queue OWNER TO postgres;
 
 --
 -- Name: spark_contracts; Type: TABLE; Schema: public; Owner: postgres
@@ -5259,17 +5273,17 @@ CREATE TABLE spark_contracts (
 ALTER TABLE spark_contracts OWNER TO postgres;
 
 --
--- Name: srl_phase_states; Type: TABLE; Schema: public; Owner: brsama
+-- Name: srl_phase_states; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE srl_phase_states (
     user_id uuid NOT NULL,
-    current_phase character varying(32) NOT NULL,
+    current_phase character varying(32) DEFAULT 'UNKNOWN'::character varying NOT NULL,
     phase_started_at timestamp without time zone NOT NULL,
     previous_phase character varying(32),
-    transition_evidence_ids json NOT NULL,
-    confidence double precision NOT NULL,
-    source character varying(32) NOT NULL,
+    transition_evidence_ids jsonb DEFAULT '[]'::jsonb NOT NULL,
+    confidence double precision DEFAULT '0'::double precision NOT NULL,
+    source character varying(32) DEFAULT 'default'::character varying NOT NULL,
     id uuid NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
@@ -5277,7 +5291,7 @@ CREATE TABLE srl_phase_states (
 );
 
 
-ALTER TABLE srl_phase_states OWNER TO brsama;
+ALTER TABLE srl_phase_states OWNER TO postgres;
 
 --
 -- Name: stored_files; Type: TABLE; Schema: public; Owner: postgres
@@ -5316,7 +5330,7 @@ CREATE TABLE stored_files (
 ALTER TABLE stored_files OWNER TO postgres;
 
 --
--- Name: strategy_belief_snapshots; Type: TABLE; Schema: public; Owner: brsama
+-- Name: strategy_belief_snapshots; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE strategy_belief_snapshots (
@@ -5335,7 +5349,7 @@ CREATE TABLE strategy_belief_snapshots (
 );
 
 
-ALTER TABLE strategy_belief_snapshots OWNER TO brsama;
+ALTER TABLE strategy_belief_snapshots OWNER TO postgres;
 
 --
 -- Name: strategy_nodes; Type: TABLE; Schema: public; Owner: postgres
@@ -5491,7 +5505,7 @@ CREATE TABLE system_config_change_logs (
 ALTER TABLE system_config_change_logs OWNER TO postgres;
 
 --
--- Name: task_documents; Type: TABLE; Schema: public; Owner: brsama
+-- Name: task_documents; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE task_documents (
@@ -5507,7 +5521,7 @@ CREATE TABLE task_documents (
 );
 
 
-ALTER TABLE task_documents OWNER TO brsama;
+ALTER TABLE task_documents OWNER TO postgres;
 
 --
 -- Name: task_feedbacks; Type: TABLE; Schema: public; Owner: postgres
@@ -5556,7 +5570,7 @@ CREATE TABLE task_knowledge_links (
 ALTER TABLE task_knowledge_links OWNER TO postgres;
 
 --
--- Name: task_occurrences; Type: TABLE; Schema: public; Owner: brsama
+-- Name: task_occurrences; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE task_occurrences (
@@ -5580,7 +5594,7 @@ CREATE TABLE task_occurrences (
 );
 
 
-ALTER TABLE task_occurrences OWNER TO brsama;
+ALTER TABLE task_occurrences OWNER TO postgres;
 
 --
 -- Name: task_resource_links; Type: TABLE; Schema: public; Owner: postgres
@@ -5651,7 +5665,7 @@ CREATE TABLE tasks (
 ALTER TABLE tasks OWNER TO postgres;
 
 --
--- Name: theater_candidate_bundles; Type: TABLE; Schema: public; Owner: brsama
+-- Name: theater_candidate_bundles; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE theater_candidate_bundles (
@@ -5672,10 +5686,10 @@ CREATE TABLE theater_candidate_bundles (
 );
 
 
-ALTER TABLE theater_candidate_bundles OWNER TO brsama;
+ALTER TABLE theater_candidate_bundles OWNER TO postgres;
 
 --
--- Name: theater_predictions; Type: TABLE; Schema: public; Owner: brsama
+-- Name: theater_predictions; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE theater_predictions (
@@ -5709,7 +5723,7 @@ CREATE TABLE theater_predictions (
 );
 
 
-ALTER TABLE theater_predictions OWNER TO brsama;
+ALTER TABLE theater_predictions OWNER TO postgres;
 
 --
 -- Name: token_usage; Type: TABLE; Schema: public; Owner: postgres
@@ -5759,7 +5773,7 @@ CREATE TABLE tracking_events (
 ALTER TABLE tracking_events OWNER TO postgres;
 
 --
--- Name: transition_decision_records; Type: TABLE; Schema: public; Owner: brsama
+-- Name: transition_decision_records; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE transition_decision_records (
@@ -5787,10 +5801,10 @@ CREATE TABLE transition_decision_records (
 );
 
 
-ALTER TABLE transition_decision_records OWNER TO brsama;
+ALTER TABLE transition_decision_records OWNER TO postgres;
 
 --
--- Name: unresolved_conflicts; Type: TABLE; Schema: public; Owner: brsama
+-- Name: unresolved_conflicts; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE unresolved_conflicts (
@@ -5818,7 +5832,7 @@ CREATE TABLE unresolved_conflicts (
 );
 
 
-ALTER TABLE unresolved_conflicts OWNER TO brsama;
+ALTER TABLE unresolved_conflicts OWNER TO postgres;
 
 --
 -- Name: user_achievements; Type: TABLE; Schema: public; Owner: postgres
@@ -5977,7 +5991,7 @@ CREATE TABLE user_devices (
     user_id uuid NOT NULL,
     device_id character varying(255) NOT NULL,
     platform character varying(50) NOT NULL,
-    push_token character varying(500) NOT NULL,
+    push_token character varying(1024) NOT NULL,
     token_type character varying(50) NOT NULL,
     device_name character varying(100),
     app_version character varying(50),
@@ -5988,7 +6002,8 @@ CREATE TABLE user_devices (
     id uuid NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    deleted_at timestamp without time zone
+    deleted_at timestamp without time zone,
+    push_token_hash character varying(64)
 );
 
 
@@ -6239,7 +6254,7 @@ CREATE TABLE user_preferences_center (
 ALTER TABLE user_preferences_center OWNER TO postgres;
 
 --
--- Name: user_push_opt_in; Type: TABLE; Schema: public; Owner: brsama
+-- Name: user_push_opt_in; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE user_push_opt_in (
@@ -6257,10 +6272,10 @@ CREATE TABLE user_push_opt_in (
 );
 
 
-ALTER TABLE user_push_opt_in OWNER TO brsama;
+ALTER TABLE user_push_opt_in OWNER TO postgres;
 
 --
--- Name: user_scenario_states; Type: TABLE; Schema: public; Owner: brsama
+-- Name: user_scenario_states; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE user_scenario_states (
@@ -6282,7 +6297,7 @@ CREATE TABLE user_scenario_states (
 );
 
 
-ALTER TABLE user_scenario_states OWNER TO brsama;
+ALTER TABLE user_scenario_states OWNER TO postgres;
 
 --
 -- Name: user_sessions; Type: TABLE; Schema: public; Owner: postgres
@@ -6356,7 +6371,7 @@ CREATE TABLE user_similarities (
 ALTER TABLE user_similarities OWNER TO postgres;
 
 --
--- Name: user_skill_adoptions; Type: TABLE; Schema: public; Owner: brsama
+-- Name: user_skill_adoptions; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE user_skill_adoptions (
@@ -6378,10 +6393,10 @@ CREATE TABLE user_skill_adoptions (
 );
 
 
-ALTER TABLE user_skill_adoptions OWNER TO brsama;
+ALTER TABLE user_skill_adoptions OWNER TO postgres;
 
 --
--- Name: user_skills; Type: TABLE; Schema: public; Owner: brsama
+-- Name: user_skills; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE user_skills (
@@ -6405,7 +6420,7 @@ CREATE TABLE user_skills (
 );
 
 
-ALTER TABLE user_skills OWNER TO brsama;
+ALTER TABLE user_skills OWNER TO postgres;
 
 --
 -- Name: user_state_snapshots; Type: TABLE; Schema: public; Owner: postgres
@@ -6605,9 +6620,9 @@ CREATE TABLE users (
     is_active boolean NOT NULL,
     is_superuser boolean NOT NULL,
     status userstatus NOT NULL,
-    google_id character varying(255),
-    apple_id character varying(255),
-    wechat_unionid character varying(255),
+    google_id character varying(512),
+    apple_id character varying(512),
+    wechat_unionid character varying(512),
     registration_source character varying(50) NOT NULL,
     last_login_at timestamp without time zone,
     is_minor boolean,
@@ -6624,6 +6639,7 @@ CREATE TABLE users (
     deleted_at timestamp without time zone,
     equipped_skin_source character varying(20),
     equipped_title_source character varying(20),
+    searchable_by searchvisibility DEFAULT 'everyone'::searchvisibility NOT NULL,
     email_verified boolean DEFAULT false NOT NULL,
     token_revoked_before timestamp without time zone,
     password_login_enabled boolean DEFAULT true NOT NULL,
@@ -6632,7 +6648,6 @@ CREATE TABLE users (
     tos_version character varying(50),
     privacy_version character varying(50),
     agreed_locale character varying(20),
-    searchable_by searchvisibility DEFAULT 'everyone'::searchvisibility NOT NULL,
     username_hash character varying(64),
     email_hash character varying(64),
     google_id_hash character varying(64),
@@ -6682,7 +6697,7 @@ CREATE TABLE visual_elements (
 ALTER TABLE visual_elements OWNER TO postgres;
 
 --
--- Name: window_states; Type: TABLE; Schema: public; Owner: brsama
+-- Name: window_states; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE window_states (
@@ -6699,7 +6714,7 @@ CREATE TABLE window_states (
 );
 
 
-ALTER TABLE window_states OWNER TO brsama;
+ALTER TABLE window_states OWNER TO postgres;
 
 --
 -- Name: word_books; Type: TABLE; Schema: public; Owner: postgres
@@ -6730,442 +6745,6 @@ CREATE TABLE word_books (
 
 
 ALTER TABLE word_books OWNER TO postgres;
-
---
--- Name: _ag_label_edge; Type: TABLE; Schema: sparkle_galaxy; Owner: postgres
---
-
-CREATE TABLE sparkle_galaxy._ag_label_edge (
-    id ag_catalog.graphid NOT NULL,
-    start_id ag_catalog.graphid NOT NULL,
-    end_id ag_catalog.graphid NOT NULL,
-    properties ag_catalog.agtype DEFAULT ag_catalog.agtype_build_map() NOT NULL
-);
-
-
-ALTER TABLE sparkle_galaxy._ag_label_edge OWNER TO postgres;
-
---
--- Name: APPLICATION; Type: TABLE; Schema: sparkle_galaxy; Owner: postgres
---
-
-CREATE TABLE sparkle_galaxy."APPLICATION" (
-)
-INHERITS (sparkle_galaxy._ag_label_edge);
-
-
-ALTER TABLE sparkle_galaxy."APPLICATION" OWNER TO postgres;
-
---
--- Name: APPLICATION_id_seq; Type: SEQUENCE; Schema: sparkle_galaxy; Owner: postgres
---
-
-CREATE SEQUENCE sparkle_galaxy."APPLICATION_id_seq"
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    MAXVALUE 281474976710655
-    CACHE 1;
-
-
-ALTER SEQUENCE sparkle_galaxy."APPLICATION_id_seq" OWNER TO postgres;
-
---
--- Name: APPLICATION_id_seq; Type: SEQUENCE OWNED BY; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER SEQUENCE sparkle_galaxy."APPLICATION_id_seq" OWNED BY sparkle_galaxy."APPLICATION".id;
-
-
---
--- Name: APPLIES_TO; Type: TABLE; Schema: sparkle_galaxy; Owner: postgres
---
-
-CREATE TABLE sparkle_galaxy."APPLIES_TO" (
-)
-INHERITS (sparkle_galaxy._ag_label_edge);
-
-
-ALTER TABLE sparkle_galaxy."APPLIES_TO" OWNER TO postgres;
-
---
--- Name: APPLIES_TO_id_seq; Type: SEQUENCE; Schema: sparkle_galaxy; Owner: postgres
---
-
-CREATE SEQUENCE sparkle_galaxy."APPLIES_TO_id_seq"
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    MAXVALUE 281474976710655
-    CACHE 1;
-
-
-ALTER SEQUENCE sparkle_galaxy."APPLIES_TO_id_seq" OWNER TO postgres;
-
---
--- Name: APPLIES_TO_id_seq; Type: SEQUENCE OWNED BY; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER SEQUENCE sparkle_galaxy."APPLIES_TO_id_seq" OWNED BY sparkle_galaxy."APPLIES_TO".id;
-
-
---
--- Name: INTERESTED_IN; Type: TABLE; Schema: sparkle_galaxy; Owner: postgres
---
-
-CREATE TABLE sparkle_galaxy."INTERESTED_IN" (
-)
-INHERITS (sparkle_galaxy._ag_label_edge);
-
-
-ALTER TABLE sparkle_galaxy."INTERESTED_IN" OWNER TO postgres;
-
---
--- Name: INTERESTED_IN_id_seq; Type: SEQUENCE; Schema: sparkle_galaxy; Owner: postgres
---
-
-CREATE SEQUENCE sparkle_galaxy."INTERESTED_IN_id_seq"
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    MAXVALUE 281474976710655
-    CACHE 1;
-
-
-ALTER SEQUENCE sparkle_galaxy."INTERESTED_IN_id_seq" OWNER TO postgres;
-
---
--- Name: INTERESTED_IN_id_seq; Type: SEQUENCE OWNED BY; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER SEQUENCE sparkle_galaxy."INTERESTED_IN_id_seq" OWNED BY sparkle_galaxy."INTERESTED_IN".id;
-
-
---
--- Name: _ag_label_vertex; Type: TABLE; Schema: sparkle_galaxy; Owner: postgres
---
-
-CREATE TABLE sparkle_galaxy._ag_label_vertex (
-    id ag_catalog.graphid NOT NULL,
-    properties ag_catalog.agtype DEFAULT ag_catalog.agtype_build_map() NOT NULL
-);
-
-
-ALTER TABLE sparkle_galaxy._ag_label_vertex OWNER TO postgres;
-
---
--- Name: KnowledgeNode; Type: TABLE; Schema: sparkle_galaxy; Owner: postgres
---
-
-CREATE TABLE sparkle_galaxy."KnowledgeNode" (
-)
-INHERITS (sparkle_galaxy._ag_label_vertex);
-
-
-ALTER TABLE sparkle_galaxy."KnowledgeNode" OWNER TO postgres;
-
---
--- Name: KnowledgeNode_id_seq; Type: SEQUENCE; Schema: sparkle_galaxy; Owner: postgres
---
-
-CREATE SEQUENCE sparkle_galaxy."KnowledgeNode_id_seq"
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    MAXVALUE 281474976710655
-    CACHE 1;
-
-
-ALTER SEQUENCE sparkle_galaxy."KnowledgeNode_id_seq" OWNER TO postgres;
-
---
--- Name: KnowledgeNode_id_seq; Type: SEQUENCE OWNED BY; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER SEQUENCE sparkle_galaxy."KnowledgeNode_id_seq" OWNED BY sparkle_galaxy."KnowledgeNode".id;
-
-
---
--- Name: MASTERED; Type: TABLE; Schema: sparkle_galaxy; Owner: postgres
---
-
-CREATE TABLE sparkle_galaxy."MASTERED" (
-)
-INHERITS (sparkle_galaxy._ag_label_edge);
-
-
-ALTER TABLE sparkle_galaxy."MASTERED" OWNER TO postgres;
-
---
--- Name: MASTERED_id_seq; Type: SEQUENCE; Schema: sparkle_galaxy; Owner: postgres
---
-
-CREATE SEQUENCE sparkle_galaxy."MASTERED_id_seq"
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    MAXVALUE 281474976710655
-    CACHE 1;
-
-
-ALTER SEQUENCE sparkle_galaxy."MASTERED_id_seq" OWNER TO postgres;
-
---
--- Name: MASTERED_id_seq; Type: SEQUENCE OWNED BY; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER SEQUENCE sparkle_galaxy."MASTERED_id_seq" OWNED BY sparkle_galaxy."MASTERED".id;
-
-
---
--- Name: PREREQUISITE; Type: TABLE; Schema: sparkle_galaxy; Owner: postgres
---
-
-CREATE TABLE sparkle_galaxy."PREREQUISITE" (
-)
-INHERITS (sparkle_galaxy._ag_label_edge);
-
-
-ALTER TABLE sparkle_galaxy."PREREQUISITE" OWNER TO postgres;
-
---
--- Name: PREREQUISITE_id_seq; Type: SEQUENCE; Schema: sparkle_galaxy; Owner: postgres
---
-
-CREATE SEQUENCE sparkle_galaxy."PREREQUISITE_id_seq"
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    MAXVALUE 281474976710655
-    CACHE 1;
-
-
-ALTER SEQUENCE sparkle_galaxy."PREREQUISITE_id_seq" OWNER TO postgres;
-
---
--- Name: PREREQUISITE_id_seq; Type: SEQUENCE OWNED BY; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER SEQUENCE sparkle_galaxy."PREREQUISITE_id_seq" OWNED BY sparkle_galaxy."PREREQUISITE".id;
-
-
---
--- Name: RELATED; Type: TABLE; Schema: sparkle_galaxy; Owner: postgres
---
-
-CREATE TABLE sparkle_galaxy."RELATED" (
-)
-INHERITS (sparkle_galaxy._ag_label_edge);
-
-
-ALTER TABLE sparkle_galaxy."RELATED" OWNER TO postgres;
-
---
--- Name: RELATED_id_seq; Type: SEQUENCE; Schema: sparkle_galaxy; Owner: postgres
---
-
-CREATE SEQUENCE sparkle_galaxy."RELATED_id_seq"
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    MAXVALUE 281474976710655
-    CACHE 1;
-
-
-ALTER SEQUENCE sparkle_galaxy."RELATED_id_seq" OWNER TO postgres;
-
---
--- Name: RELATED_id_seq; Type: SEQUENCE OWNED BY; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER SEQUENCE sparkle_galaxy."RELATED_id_seq" OWNED BY sparkle_galaxy."RELATED".id;
-
-
---
--- Name: STUDIED; Type: TABLE; Schema: sparkle_galaxy; Owner: postgres
---
-
-CREATE TABLE sparkle_galaxy."STUDIED" (
-)
-INHERITS (sparkle_galaxy._ag_label_edge);
-
-
-ALTER TABLE sparkle_galaxy."STUDIED" OWNER TO postgres;
-
---
--- Name: STUDIED_id_seq; Type: SEQUENCE; Schema: sparkle_galaxy; Owner: postgres
---
-
-CREATE SEQUENCE sparkle_galaxy."STUDIED_id_seq"
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    MAXVALUE 281474976710655
-    CACHE 1;
-
-
-ALTER SEQUENCE sparkle_galaxy."STUDIED_id_seq" OWNER TO postgres;
-
---
--- Name: STUDIED_id_seq; Type: SEQUENCE OWNED BY; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER SEQUENCE sparkle_galaxy."STUDIED_id_seq" OWNED BY sparkle_galaxy."STUDIED".id;
-
-
---
--- Name: STUDIES; Type: TABLE; Schema: sparkle_galaxy; Owner: postgres
---
-
-CREATE TABLE sparkle_galaxy."STUDIES" (
-)
-INHERITS (sparkle_galaxy._ag_label_edge);
-
-
-ALTER TABLE sparkle_galaxy."STUDIES" OWNER TO postgres;
-
---
--- Name: STUDIES_id_seq; Type: SEQUENCE; Schema: sparkle_galaxy; Owner: postgres
---
-
-CREATE SEQUENCE sparkle_galaxy."STUDIES_id_seq"
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    MAXVALUE 281474976710655
-    CACHE 1;
-
-
-ALTER SEQUENCE sparkle_galaxy."STUDIES_id_seq" OWNER TO postgres;
-
---
--- Name: STUDIES_id_seq; Type: SEQUENCE OWNED BY; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER SEQUENCE sparkle_galaxy."STUDIES_id_seq" OWNED BY sparkle_galaxy."STUDIES".id;
-
-
---
--- Name: User; Type: TABLE; Schema: sparkle_galaxy; Owner: postgres
---
-
-CREATE TABLE sparkle_galaxy."User" (
-)
-INHERITS (sparkle_galaxy._ag_label_vertex);
-
-
-ALTER TABLE sparkle_galaxy."User" OWNER TO postgres;
-
---
--- Name: User_id_seq; Type: SEQUENCE; Schema: sparkle_galaxy; Owner: postgres
---
-
-CREATE SEQUENCE sparkle_galaxy."User_id_seq"
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    MAXVALUE 281474976710655
-    CACHE 1;
-
-
-ALTER SEQUENCE sparkle_galaxy."User_id_seq" OWNER TO postgres;
-
---
--- Name: User_id_seq; Type: SEQUENCE OWNED BY; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER SEQUENCE sparkle_galaxy."User_id_seq" OWNED BY sparkle_galaxy."User".id;
-
-
---
--- Name: __SchemaSeed; Type: TABLE; Schema: sparkle_galaxy; Owner: postgres
---
-
-CREATE TABLE sparkle_galaxy."__SchemaSeed" (
-)
-INHERITS (sparkle_galaxy._ag_label_vertex);
-
-
-ALTER TABLE sparkle_galaxy."__SchemaSeed" OWNER TO postgres;
-
---
--- Name: __SchemaSeed_id_seq; Type: SEQUENCE; Schema: sparkle_galaxy; Owner: postgres
---
-
-CREATE SEQUENCE sparkle_galaxy."__SchemaSeed_id_seq"
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    MAXVALUE 281474976710655
-    CACHE 1;
-
-
-ALTER SEQUENCE sparkle_galaxy."__SchemaSeed_id_seq" OWNER TO postgres;
-
---
--- Name: __SchemaSeed_id_seq; Type: SEQUENCE OWNED BY; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER SEQUENCE sparkle_galaxy."__SchemaSeed_id_seq" OWNED BY sparkle_galaxy."__SchemaSeed".id;
-
-
---
--- Name: _ag_label_edge_id_seq; Type: SEQUENCE; Schema: sparkle_galaxy; Owner: postgres
---
-
-CREATE SEQUENCE sparkle_galaxy._ag_label_edge_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    MAXVALUE 281474976710655
-    CACHE 1;
-
-
-ALTER SEQUENCE sparkle_galaxy._ag_label_edge_id_seq OWNER TO postgres;
-
---
--- Name: _ag_label_edge_id_seq; Type: SEQUENCE OWNED BY; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER SEQUENCE sparkle_galaxy._ag_label_edge_id_seq OWNED BY sparkle_galaxy._ag_label_edge.id;
-
-
---
--- Name: _ag_label_vertex_id_seq; Type: SEQUENCE; Schema: sparkle_galaxy; Owner: postgres
---
-
-CREATE SEQUENCE sparkle_galaxy._ag_label_vertex_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    MAXVALUE 281474976710655
-    CACHE 1;
-
-
-ALTER SEQUENCE sparkle_galaxy._ag_label_vertex_id_seq OWNER TO postgres;
-
---
--- Name: _ag_label_vertex_id_seq; Type: SEQUENCE OWNED BY; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER SEQUENCE sparkle_galaxy._ag_label_vertex_id_seq OWNED BY sparkle_galaxy._ag_label_vertex.id;
-
-
---
--- Name: _label_id_seq; Type: SEQUENCE; Schema: sparkle_galaxy; Owner: postgres
---
-
-CREATE SEQUENCE sparkle_galaxy._label_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    MAXVALUE 65535
-    CACHE 1
-    CYCLE;
-
-
-ALTER SEQUENCE sparkle_galaxy._label_id_seq OWNER TO postgres;
 
 --
 -- Name: agent_execution_stats id; Type: DEFAULT; Schema: public; Owner: postgres
@@ -7200,174 +6779,6 @@ ALTER TABLE ONLY subjects ALTER COLUMN id SET DEFAULT nextval('subjects_id_seq':
 --
 
 ALTER TABLE ONLY user_tool_history ALTER COLUMN id SET DEFAULT nextval('user_tool_history_id_seq'::regclass);
-
-
---
--- Name: APPLICATION id; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER TABLE ONLY sparkle_galaxy."APPLICATION" ALTER COLUMN id SET DEFAULT ag_catalog._graphid((ag_catalog._label_id('sparkle_galaxy'::name, 'APPLICATION'::name))::integer, nextval('sparkle_galaxy."APPLICATION_id_seq"'::regclass));
-
-
---
--- Name: APPLICATION properties; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER TABLE ONLY sparkle_galaxy."APPLICATION" ALTER COLUMN properties SET DEFAULT ag_catalog.agtype_build_map();
-
-
---
--- Name: APPLIES_TO id; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER TABLE ONLY sparkle_galaxy."APPLIES_TO" ALTER COLUMN id SET DEFAULT ag_catalog._graphid((ag_catalog._label_id('sparkle_galaxy'::name, 'APPLIES_TO'::name))::integer, nextval('sparkle_galaxy."APPLIES_TO_id_seq"'::regclass));
-
-
---
--- Name: APPLIES_TO properties; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER TABLE ONLY sparkle_galaxy."APPLIES_TO" ALTER COLUMN properties SET DEFAULT ag_catalog.agtype_build_map();
-
-
---
--- Name: INTERESTED_IN id; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER TABLE ONLY sparkle_galaxy."INTERESTED_IN" ALTER COLUMN id SET DEFAULT ag_catalog._graphid((ag_catalog._label_id('sparkle_galaxy'::name, 'INTERESTED_IN'::name))::integer, nextval('sparkle_galaxy."INTERESTED_IN_id_seq"'::regclass));
-
-
---
--- Name: INTERESTED_IN properties; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER TABLE ONLY sparkle_galaxy."INTERESTED_IN" ALTER COLUMN properties SET DEFAULT ag_catalog.agtype_build_map();
-
-
---
--- Name: KnowledgeNode id; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER TABLE ONLY sparkle_galaxy."KnowledgeNode" ALTER COLUMN id SET DEFAULT ag_catalog._graphid((ag_catalog._label_id('sparkle_galaxy'::name, 'KnowledgeNode'::name))::integer, nextval('sparkle_galaxy."KnowledgeNode_id_seq"'::regclass));
-
-
---
--- Name: KnowledgeNode properties; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER TABLE ONLY sparkle_galaxy."KnowledgeNode" ALTER COLUMN properties SET DEFAULT ag_catalog.agtype_build_map();
-
-
---
--- Name: MASTERED id; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER TABLE ONLY sparkle_galaxy."MASTERED" ALTER COLUMN id SET DEFAULT ag_catalog._graphid((ag_catalog._label_id('sparkle_galaxy'::name, 'MASTERED'::name))::integer, nextval('sparkle_galaxy."MASTERED_id_seq"'::regclass));
-
-
---
--- Name: MASTERED properties; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER TABLE ONLY sparkle_galaxy."MASTERED" ALTER COLUMN properties SET DEFAULT ag_catalog.agtype_build_map();
-
-
---
--- Name: PREREQUISITE id; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER TABLE ONLY sparkle_galaxy."PREREQUISITE" ALTER COLUMN id SET DEFAULT ag_catalog._graphid((ag_catalog._label_id('sparkle_galaxy'::name, 'PREREQUISITE'::name))::integer, nextval('sparkle_galaxy."PREREQUISITE_id_seq"'::regclass));
-
-
---
--- Name: PREREQUISITE properties; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER TABLE ONLY sparkle_galaxy."PREREQUISITE" ALTER COLUMN properties SET DEFAULT ag_catalog.agtype_build_map();
-
-
---
--- Name: RELATED id; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER TABLE ONLY sparkle_galaxy."RELATED" ALTER COLUMN id SET DEFAULT ag_catalog._graphid((ag_catalog._label_id('sparkle_galaxy'::name, 'RELATED'::name))::integer, nextval('sparkle_galaxy."RELATED_id_seq"'::regclass));
-
-
---
--- Name: RELATED properties; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER TABLE ONLY sparkle_galaxy."RELATED" ALTER COLUMN properties SET DEFAULT ag_catalog.agtype_build_map();
-
-
---
--- Name: STUDIED id; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER TABLE ONLY sparkle_galaxy."STUDIED" ALTER COLUMN id SET DEFAULT ag_catalog._graphid((ag_catalog._label_id('sparkle_galaxy'::name, 'STUDIED'::name))::integer, nextval('sparkle_galaxy."STUDIED_id_seq"'::regclass));
-
-
---
--- Name: STUDIED properties; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER TABLE ONLY sparkle_galaxy."STUDIED" ALTER COLUMN properties SET DEFAULT ag_catalog.agtype_build_map();
-
-
---
--- Name: STUDIES id; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER TABLE ONLY sparkle_galaxy."STUDIES" ALTER COLUMN id SET DEFAULT ag_catalog._graphid((ag_catalog._label_id('sparkle_galaxy'::name, 'STUDIES'::name))::integer, nextval('sparkle_galaxy."STUDIES_id_seq"'::regclass));
-
-
---
--- Name: STUDIES properties; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER TABLE ONLY sparkle_galaxy."STUDIES" ALTER COLUMN properties SET DEFAULT ag_catalog.agtype_build_map();
-
-
---
--- Name: User id; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER TABLE ONLY sparkle_galaxy."User" ALTER COLUMN id SET DEFAULT ag_catalog._graphid((ag_catalog._label_id('sparkle_galaxy'::name, 'User'::name))::integer, nextval('sparkle_galaxy."User_id_seq"'::regclass));
-
-
---
--- Name: User properties; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER TABLE ONLY sparkle_galaxy."User" ALTER COLUMN properties SET DEFAULT ag_catalog.agtype_build_map();
-
-
---
--- Name: __SchemaSeed id; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER TABLE ONLY sparkle_galaxy."__SchemaSeed" ALTER COLUMN id SET DEFAULT ag_catalog._graphid((ag_catalog._label_id('sparkle_galaxy'::name, '__SchemaSeed'::name))::integer, nextval('sparkle_galaxy."__SchemaSeed_id_seq"'::regclass));
-
-
---
--- Name: __SchemaSeed properties; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER TABLE ONLY sparkle_galaxy."__SchemaSeed" ALTER COLUMN properties SET DEFAULT ag_catalog.agtype_build_map();
-
-
---
--- Name: _ag_label_edge id; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER TABLE ONLY sparkle_galaxy._ag_label_edge ALTER COLUMN id SET DEFAULT ag_catalog._graphid((ag_catalog._label_id('sparkle_galaxy'::name, '_ag_label_edge'::name))::integer, nextval('sparkle_galaxy._ag_label_edge_id_seq'::regclass));
-
-
---
--- Name: _ag_label_vertex id; Type: DEFAULT; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER TABLE ONLY sparkle_galaxy._ag_label_vertex ALTER COLUMN id SET DEFAULT ag_catalog._graphid((ag_catalog._label_id('sparkle_galaxy'::name, '_ag_label_vertex'::name))::integer, nextval('sparkle_galaxy._ag_label_vertex_id_seq'::regclass));
 
 
 --
@@ -7419,7 +6830,7 @@ ALTER TABLE ONLY accountability_partnership
 
 
 --
--- Name: accountability_policies accountability_policies_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: accountability_policies accountability_policies_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY accountability_policies
@@ -7427,7 +6838,7 @@ ALTER TABLE ONLY accountability_policies
 
 
 --
--- Name: accountability_policies accountability_policies_policy_id_key; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: accountability_policies accountability_policies_policy_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY accountability_policies
@@ -7443,7 +6854,7 @@ ALTER TABLE ONLY achievements
 
 
 --
--- Name: admin_audit_log admin_audit_log_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: admin_audit_log admin_audit_log_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY admin_audit_log
@@ -7499,7 +6910,7 @@ ALTER TABLE ONLY asset_suggestion_logs
 
 
 --
--- Name: aurora_core_session_snapshots aurora_core_session_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: aurora_core_session_snapshots aurora_core_session_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY aurora_core_session_snapshots
@@ -7507,7 +6918,7 @@ ALTER TABLE ONLY aurora_core_session_snapshots
 
 
 --
--- Name: aurora_decision_telemetry aurora_decision_telemetry_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: aurora_decision_telemetry aurora_decision_telemetry_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY aurora_decision_telemetry
@@ -7515,7 +6926,7 @@ ALTER TABLE ONLY aurora_decision_telemetry
 
 
 --
--- Name: aurora_judgment_records aurora_judgment_records_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: aurora_judgment_records aurora_judgment_records_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY aurora_judgment_records
@@ -7523,7 +6934,7 @@ ALTER TABLE ONLY aurora_judgment_records
 
 
 --
--- Name: aurora_policy_versions aurora_policy_versions_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: aurora_policy_versions aurora_policy_versions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY aurora_policy_versions
@@ -7531,7 +6942,7 @@ ALTER TABLE ONLY aurora_policy_versions
 
 
 --
--- Name: aurora_scheduled_wakes aurora_scheduled_wakes_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: aurora_scheduled_wakes aurora_scheduled_wakes_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY aurora_scheduled_wakes
@@ -7539,7 +6950,7 @@ ALTER TABLE ONLY aurora_scheduled_wakes
 
 
 --
--- Name: aurora_state_snapshots aurora_state_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: aurora_state_snapshots aurora_state_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY aurora_state_snapshots
@@ -7595,7 +7006,7 @@ ALTER TABLE ONLY calendar_events
 
 
 --
--- Name: candidate_action_feedback candidate_action_feedback_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: candidate_action_feedback candidate_action_feedback_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY candidate_action_feedback
@@ -7627,7 +7038,7 @@ ALTER TABLE ONLY capsule_generation_jobs
 
 
 --
--- Name: card_adoption_records card_adoption_records_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: card_adoption_records card_adoption_records_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY card_adoption_records
@@ -7635,7 +7046,7 @@ ALTER TABLE ONLY card_adoption_records
 
 
 --
--- Name: card_edges card_edges_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: card_edges card_edges_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY card_edges
@@ -7643,7 +7054,7 @@ ALTER TABLE ONLY card_edges
 
 
 --
--- Name: card_share_records card_share_records_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: card_share_records card_share_records_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY card_share_records
@@ -7651,7 +7062,7 @@ ALTER TABLE ONLY card_share_records
 
 
 --
--- Name: card_snapshots card_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: card_snapshots card_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY card_snapshots
@@ -7659,7 +7070,7 @@ ALTER TABLE ONLY card_snapshots
 
 
 --
--- Name: cards cards_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: cards cards_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY cards
@@ -7687,7 +7098,7 @@ ALTER TABLE ONLY chat_sessions
 --
 
 ALTER TABLE shop_purchases
-    ADD CONSTRAINT chk_shop_purchases_balance_after_non_negative CHECK ((photon_balance_after >= 0));
+    ADD CONSTRAINT chk_shop_purchases_balance_after_non_negative CHECK ((photon_balance_after >= 0)) NOT VALID;
 
 
 --
@@ -7695,7 +7106,7 @@ ALTER TABLE shop_purchases
 --
 
 ALTER TABLE shop_purchases
-    ADD CONSTRAINT chk_shop_purchases_balance_before_non_negative CHECK ((photon_balance_before >= 0));
+    ADD CONSTRAINT chk_shop_purchases_balance_before_non_negative CHECK ((photon_balance_before >= 0)) NOT VALID;
 
 
 --
@@ -7703,7 +7114,7 @@ ALTER TABLE shop_purchases
 --
 
 ALTER TABLE shop_purchases
-    ADD CONSTRAINT chk_shop_purchases_price_paid_non_negative CHECK ((price_paid >= 0));
+    ADD CONSTRAINT chk_shop_purchases_price_paid_non_negative CHECK ((price_paid >= 0)) NOT VALID;
 
 
 --
@@ -7711,7 +7122,7 @@ ALTER TABLE shop_purchases
 --
 
 ALTER TABLE tasks
-    ADD CONSTRAINT chk_tasks_actual_minutes_non_negative CHECK (((actual_minutes IS NULL) OR (actual_minutes >= 0)));
+    ADD CONSTRAINT chk_tasks_actual_minutes_non_negative CHECK (((actual_minutes IS NULL) OR (actual_minutes >= 0))) NOT VALID;
 
 
 --
@@ -7719,7 +7130,7 @@ ALTER TABLE tasks
 --
 
 ALTER TABLE tasks
-    ADD CONSTRAINT chk_tasks_difficulty_range CHECK (((difficulty >= 1) AND (difficulty <= 5)));
+    ADD CONSTRAINT chk_tasks_difficulty_range CHECK (((difficulty >= 1) AND (difficulty <= 5))) NOT VALID;
 
 
 --
@@ -7727,7 +7138,7 @@ ALTER TABLE tasks
 --
 
 ALTER TABLE tasks
-    ADD CONSTRAINT chk_tasks_energy_cost_range CHECK (((energy_cost >= 1) AND (energy_cost <= 5)));
+    ADD CONSTRAINT chk_tasks_energy_cost_range CHECK (((energy_cost >= 1) AND (energy_cost <= 5))) NOT VALID;
 
 
 --
@@ -7735,7 +7146,7 @@ ALTER TABLE tasks
 --
 
 ALTER TABLE tasks
-    ADD CONSTRAINT chk_tasks_estimated_minutes_non_negative CHECK ((estimated_minutes >= 0));
+    ADD CONSTRAINT chk_tasks_estimated_minutes_non_negative CHECK ((estimated_minutes >= 0)) NOT VALID;
 
 
 --
@@ -7743,7 +7154,7 @@ ALTER TABLE tasks
 --
 
 ALTER TABLE tasks
-    ADD CONSTRAINT chk_tasks_subtask_counts_non_negative CHECK (((subtasks_total >= 0) AND (subtasks_completed >= 0)));
+    ADD CONSTRAINT chk_tasks_subtask_counts_non_negative CHECK (((subtasks_total >= 0) AND (subtasks_completed >= 0))) NOT VALID;
 
 
 --
@@ -7751,7 +7162,7 @@ ALTER TABLE tasks
 --
 
 ALTER TABLE tasks
-    ADD CONSTRAINT chk_tasks_subtasks_completed_lte_total CHECK ((subtasks_completed <= subtasks_total));
+    ADD CONSTRAINT chk_tasks_subtasks_completed_lte_total CHECK ((subtasks_completed <= subtasks_total)) NOT VALID;
 
 
 --
@@ -7759,7 +7170,7 @@ ALTER TABLE tasks
 --
 
 ALTER TABLE users
-    ADD CONSTRAINT chk_users_curiosity_preference_range CHECK (((curiosity_preference >= (0)::double precision) AND (curiosity_preference <= (1)::double precision)));
+    ADD CONSTRAINT chk_users_curiosity_preference_range CHECK (((curiosity_preference >= (0)::double precision) AND (curiosity_preference <= (1)::double precision))) NOT VALID;
 
 
 --
@@ -7767,7 +7178,7 @@ ALTER TABLE users
 --
 
 ALTER TABLE users
-    ADD CONSTRAINT chk_users_depth_preference_range CHECK (((depth_preference >= (0)::double precision) AND (depth_preference <= (1)::double precision)));
+    ADD CONSTRAINT chk_users_depth_preference_range CHECK (((depth_preference >= (0)::double precision) AND (depth_preference <= (1)::double precision))) NOT VALID;
 
 
 --
@@ -7775,7 +7186,7 @@ ALTER TABLE users
 --
 
 ALTER TABLE users
-    ADD CONSTRAINT chk_users_flame_brightness_range CHECK (((flame_brightness >= (0)::double precision) AND (flame_brightness <= (1)::double precision)));
+    ADD CONSTRAINT chk_users_flame_brightness_range CHECK (((flame_brightness >= (0)::double precision) AND (flame_brightness <= (1)::double precision))) NOT VALID;
 
 
 --
@@ -7783,7 +7194,7 @@ ALTER TABLE users
 --
 
 ALTER TABLE users
-    ADD CONSTRAINT chk_users_flame_level_range CHECK (((flame_level >= 0) AND (flame_level <= 100)));
+    ADD CONSTRAINT chk_users_flame_level_range CHECK (((flame_level >= 0) AND (flame_level <= 100))) NOT VALID;
 
 
 --
@@ -7791,7 +7202,7 @@ ALTER TABLE users
 --
 
 ALTER TABLE users
-    ADD CONSTRAINT chk_users_photon_balance_non_negative CHECK ((photon_balance >= 0));
+    ADD CONSTRAINT chk_users_photon_balance_non_negative CHECK ((photon_balance >= 0)) NOT VALID;
 
 
 --
@@ -7811,7 +7222,7 @@ ALTER TABLE ONLY collaborative_galaxies
 
 
 --
--- Name: commitments commitments_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: commitments commitments_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY commitments
@@ -7819,11 +7230,19 @@ ALTER TABLE ONLY commitments
 
 
 --
--- Name: community_aggregate_signals community_aggregate_signals_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: community_aggregate_signals community_aggregate_signals_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY community_aggregate_signals
     ADD CONSTRAINT community_aggregate_signals_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: community_strategy_outcomes community_strategy_outcomes_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY community_strategy_outcomes
+    ADD CONSTRAINT community_strategy_outcomes_pkey PRIMARY KEY (id);
 
 
 --
@@ -7835,7 +7254,7 @@ ALTER TABLE ONLY compliance_check_logs
 
 
 --
--- Name: conflict_resolution_records conflict_resolution_records_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: conflict_resolution_records conflict_resolution_records_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY conflict_resolution_records
@@ -7867,7 +7286,7 @@ ALTER TABLE ONLY context_pack_runs
 
 
 --
--- Name: counterfactual_evaluation_reports counterfactual_evaluation_reports_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: counterfactual_evaluation_reports counterfactual_evaluation_reports_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY counterfactual_evaluation_reports
@@ -7923,7 +7342,7 @@ ALTER TABLE ONLY custom_expert_teams
 
 
 --
--- Name: daily_behavior_vector daily_behavior_vector_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: daily_behavior_vector daily_behavior_vector_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY daily_behavior_vector
@@ -7955,7 +7374,7 @@ ALTER TABLE ONLY dictionary_entries
 
 
 --
--- Name: distilled_strategy_cache distilled_strategy_cache_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: distilled_strategy_cache distilled_strategy_cache_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY distilled_strategy_cache
@@ -7979,7 +7398,7 @@ ALTER TABLE ONLY document_chunks
 
 
 --
--- Name: document_retrieval_feedback document_retrieval_feedback_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: document_retrieval_feedback document_retrieval_feedback_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY document_retrieval_feedback
@@ -7987,7 +7406,7 @@ ALTER TABLE ONLY document_retrieval_feedback
 
 
 --
--- Name: durable_session_state_snapshots durable_session_state_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: durable_session_state_snapshots durable_session_state_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY durable_session_state_snapshots
@@ -8011,7 +7430,7 @@ ALTER TABLE ONLY error_records
 
 
 --
--- Name: event_bus_dlq event_bus_dlq_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: event_bus_dlq event_bus_dlq_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY event_bus_dlq
@@ -8051,7 +7470,7 @@ ALTER TABLE ONLY evolution_predictions
 
 
 --
--- Name: execution_audit_log execution_audit_log_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: execution_audit_log execution_audit_log_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY execution_audit_log
@@ -8091,7 +7510,7 @@ ALTER TABLE ONLY execution_records
 
 
 --
--- Name: execution_schedules execution_schedules_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: execution_schedules execution_schedules_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY execution_schedules
@@ -8107,7 +7526,7 @@ ALTER TABLE ONLY expansion_feedback
 
 
 --
--- Name: focus_contracts focus_contracts_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: focus_contracts focus_contracts_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY focus_contracts
@@ -8129,9 +7548,6 @@ ALTER TABLE ONLY focus_sessions
 ALTER TABLE ONLY friendships
     ADD CONSTRAINT friendships_pkey PRIMARY KEY (id);
 
-ALTER TABLE friendships
-    ADD CONSTRAINT chk_no_self_friendship CHECK (user_id != friend_id);
-
 
 --
 -- Name: galaxy_skins galaxy_skins_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
@@ -8150,7 +7566,7 @@ ALTER TABLE ONLY galaxy_user_permissions
 
 
 --
--- Name: goal_world_graph_snapshots goal_world_graph_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: goal_world_graph_snapshots goal_world_graph_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY goal_world_graph_snapshots
@@ -8158,7 +7574,7 @@ ALTER TABLE ONLY goal_world_graph_snapshots
 
 
 --
--- Name: goals goals_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: goals goals_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY goals
@@ -8222,7 +7638,7 @@ ALTER TABLE ONLY groups
 
 
 --
--- Name: growth_chronicle_snapshots growth_chronicle_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: growth_chronicle_snapshots growth_chronicle_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY growth_chronicle_snapshots
@@ -8238,7 +7654,7 @@ ALTER TABLE ONLY idempotency_keys
 
 
 --
--- Name: identity_evidence identity_evidence_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: identity_evidence identity_evidence_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY identity_evidence
@@ -8246,7 +7662,7 @@ ALTER TABLE ONLY identity_evidence
 
 
 --
--- Name: idiographic_associations idiographic_associations_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: idiographic_associations idiographic_associations_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY idiographic_associations
@@ -8254,7 +7670,7 @@ ALTER TABLE ONLY idiographic_associations
 
 
 --
--- Name: idiographic_changepoints idiographic_changepoints_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: idiographic_changepoints idiographic_changepoints_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY idiographic_changepoints
@@ -8262,7 +7678,7 @@ ALTER TABLE ONLY idiographic_changepoints
 
 
 --
--- Name: insight_claims insight_claims_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: insight_claims insight_claims_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY insight_claims
@@ -8286,7 +7702,7 @@ ALTER TABLE ONLY intervention_feedback
 
 
 --
--- Name: intervention_outcomes intervention_outcomes_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: intervention_outcomes intervention_outcomes_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY intervention_outcomes
@@ -8294,7 +7710,7 @@ ALTER TABLE ONLY intervention_outcomes
 
 
 --
--- Name: intervention_records intervention_records_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: intervention_records intervention_records_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY intervention_records
@@ -8310,7 +7726,7 @@ ALTER TABLE ONLY intervention_requests
 
 
 --
--- Name: intervention_strategy_outcomes intervention_strategy_outcomes_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: intervention_strategy_outcomes intervention_strategy_outcomes_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY intervention_strategy_outcomes
@@ -8350,7 +7766,7 @@ ALTER TABLE ONLY jobs
 
 
 --
--- Name: knowledge_node_documents knowledge_node_documents_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: knowledge_node_documents knowledge_node_documents_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY knowledge_node_documents
@@ -8366,7 +7782,7 @@ ALTER TABLE ONLY knowledge_nodes
 
 
 --
--- Name: leaderboard_snapshots leaderboard_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: leaderboard_snapshots leaderboard_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY leaderboard_snapshots
@@ -8406,7 +7822,7 @@ ALTER TABLE ONLY ltm_daily_snapshots
 
 
 --
--- Name: marketplace_packs marketplace_packs_pack_id_key; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: marketplace_packs marketplace_packs_pack_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY marketplace_packs
@@ -8414,7 +7830,7 @@ ALTER TABLE ONLY marketplace_packs
 
 
 --
--- Name: marketplace_packs marketplace_packs_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: marketplace_packs marketplace_packs_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY marketplace_packs
@@ -8422,7 +7838,7 @@ ALTER TABLE ONLY marketplace_packs
 
 
 --
--- Name: marketplace_skills marketplace_skills_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: marketplace_skills marketplace_skills_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY marketplace_skills
@@ -8430,7 +7846,7 @@ ALTER TABLE ONLY marketplace_skills
 
 
 --
--- Name: marketplace_skills marketplace_skills_skill_id_key; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: marketplace_skills marketplace_skills_skill_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY marketplace_skills
@@ -8532,17 +7948,9 @@ ALTER TABLE ONLY node_expansion_queue
 ALTER TABLE ONLY node_relations
     ADD CONSTRAINT node_relations_pkey PRIMARY KEY (id);
 
---
--- Name: node_relations_source_target_type_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY node_relations
-    ADD CONSTRAINT node_relations_source_target_type_unique
-    UNIQUE (source_node_id, target_node_id, relation_type);
-
 
 --
--- Name: north_star_metric_events north_star_metric_events_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: north_star_metric_events north_star_metric_events_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY north_star_metric_events
@@ -8582,7 +7990,7 @@ ALTER TABLE ONLY offline_message_queue
 
 
 --
--- Name: pack_adoption_history pack_adoption_history_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: pack_adoption_history pack_adoption_history_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY pack_adoption_history
@@ -8598,7 +8006,7 @@ ALTER TABLE ONLY passive_signals
 
 
 --
--- Name: persdyn_attractors persdyn_attractors_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: persdyn_attractors persdyn_attractors_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY persdyn_attractors
@@ -8638,7 +8046,7 @@ ALTER TABLE ONLY plan_states
 
 
 --
--- Name: planning_artifacts planning_artifacts_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: planning_artifacts planning_artifacts_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY planning_artifacts
@@ -8651,6 +8059,14 @@ ALTER TABLE ONLY planning_artifacts
 
 ALTER TABLE ONLY plans
     ADD CONSTRAINT plans_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: post_comments post_comments_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY post_comments
+    ADD CONSTRAINT post_comments_pkey PRIMARY KEY (id);
 
 
 --
@@ -8670,7 +8086,7 @@ ALTER TABLE ONLY posts
 
 
 --
--- Name: privacy_budget_ledger privacy_budget_ledger_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: privacy_budget_ledger privacy_budget_ledger_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY privacy_budget_ledger
@@ -8686,7 +8102,7 @@ ALTER TABLE ONLY private_messages
 
 
 --
--- Name: probe_outcomes probe_outcomes_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: probe_outcomes probe_outcomes_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY probe_outcomes
@@ -8718,7 +8134,7 @@ ALTER TABLE ONLY projection_snapshots
 
 
 --
--- Name: push_delivery_records push_delivery_records_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: push_delivery_records push_delivery_records_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY push_delivery_records
@@ -8750,7 +8166,7 @@ ALTER TABLE ONLY recommendation_cache
 
 
 --
--- Name: release_approval_requests release_approval_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: release_approval_requests release_approval_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY release_approval_requests
@@ -8758,7 +8174,7 @@ ALTER TABLE ONLY release_approval_requests
 
 
 --
--- Name: report_snapshots report_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: report_snapshots report_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY report_snapshots
@@ -8766,7 +8182,7 @@ ALTER TABLE ONLY report_snapshots
 
 
 --
--- Name: research_consent_records research_consent_records_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: research_consent_records research_consent_records_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY research_consent_records
@@ -8806,7 +8222,7 @@ ALTER TABLE ONLY review_overrides
 
 
 --
--- Name: routing_decision_log routing_decision_log_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: routing_decision_log routing_decision_log_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY routing_decision_log
@@ -8814,7 +8230,7 @@ ALTER TABLE ONLY routing_decision_log
 
 
 --
--- Name: safe_experiment_episodes safe_experiment_episodes_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: safe_experiment_episodes safe_experiment_episodes_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY safe_experiment_episodes
@@ -8822,7 +8238,7 @@ ALTER TABLE ONLY safe_experiment_episodes
 
 
 --
--- Name: safe_experiments safe_experiments_experiment_key_key; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: safe_experiments safe_experiments_experiment_key_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY safe_experiments
@@ -8830,19 +8246,11 @@ ALTER TABLE ONLY safe_experiments
 
 
 --
--- Name: safe_experiments safe_experiments_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: safe_experiments safe_experiments_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY safe_experiments
     ADD CONSTRAINT safe_experiments_pkey PRIMARY KEY (id);
-
-
---
--- Name: saga_instances saga_instances_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
---
-
-ALTER TABLE ONLY saga_instances
-    ADD CONSTRAINT saga_instances_pkey PRIMARY KEY (id);
 
 
 --
@@ -8854,7 +8262,7 @@ ALTER TABLE ONLY scaffolding_states
 
 
 --
--- Name: scenes scenes_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: scenes scenes_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY scenes
@@ -8902,7 +8310,7 @@ ALTER TABLE ONLY semantic_links
 
 
 --
--- Name: session_completions session_completions_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: session_completions session_completions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY session_completions
@@ -8918,7 +8326,7 @@ ALTER TABLE ONLY shared_resources
 
 
 --
--- Name: shared_skills shared_skills_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: shared_skills shared_skills_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY shared_skills
@@ -8942,7 +8350,7 @@ ALTER TABLE ONLY shop_purchases
 
 
 --
--- Name: simulation_runs simulation_runs_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: simulation_runs simulation_runs_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY simulation_runs
@@ -8950,7 +8358,7 @@ ALTER TABLE ONLY simulation_runs
 
 
 --
--- Name: skill_share_moderation_queue skill_share_moderation_queue_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: skill_share_moderation_queue skill_share_moderation_queue_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY skill_share_moderation_queue
@@ -8966,11 +8374,19 @@ ALTER TABLE ONLY spark_contracts
 
 
 --
--- Name: srl_phase_states srl_phase_states_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: srl_phase_states srl_phase_states_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY srl_phase_states
     ADD CONSTRAINT srl_phase_states_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: srl_phase_states srl_phase_states_user_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY srl_phase_states
+    ADD CONSTRAINT srl_phase_states_user_id_key UNIQUE (user_id);
 
 
 --
@@ -8990,7 +8406,7 @@ ALTER TABLE ONLY stored_files
 
 
 --
--- Name: strategy_belief_snapshots strategy_belief_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: strategy_belief_snapshots strategy_belief_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY strategy_belief_snapshots
@@ -9046,7 +8462,7 @@ ALTER TABLE ONLY system_config_change_logs
 
 
 --
--- Name: task_documents task_documents_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: task_documents task_documents_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY task_documents
@@ -9070,7 +8486,7 @@ ALTER TABLE ONLY task_knowledge_links
 
 
 --
--- Name: task_occurrences task_occurrences_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: task_occurrences task_occurrences_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY task_occurrences
@@ -9094,7 +8510,7 @@ ALTER TABLE ONLY tasks
 
 
 --
--- Name: theater_candidate_bundles theater_candidate_bundles_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: theater_candidate_bundles theater_candidate_bundles_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY theater_candidate_bundles
@@ -9102,7 +8518,7 @@ ALTER TABLE ONLY theater_candidate_bundles
 
 
 --
--- Name: theater_predictions theater_predictions_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: theater_predictions theater_predictions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY theater_predictions
@@ -9134,7 +8550,7 @@ ALTER TABLE ONLY tracking_events
 
 
 --
--- Name: transition_decision_records transition_decision_records_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: transition_decision_records transition_decision_records_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY transition_decision_records
@@ -9142,7 +8558,7 @@ ALTER TABLE ONLY transition_decision_records
 
 
 --
--- Name: unresolved_conflicts unresolved_conflicts_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: unresolved_conflicts unresolved_conflicts_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY unresolved_conflicts
@@ -9158,7 +8574,7 @@ ALTER TABLE ONLY accountability_partnership
 
 
 --
--- Name: planning_artifacts uq_artifact_version; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: planning_artifacts uq_artifact_version; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY planning_artifacts
@@ -9166,7 +8582,7 @@ ALTER TABLE ONLY planning_artifacts
 
 
 --
--- Name: aurora_core_session_snapshots uq_aurora_core_session_snapshots_resume_token_hash; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: aurora_core_session_snapshots uq_aurora_core_session_snapshots_resume_token_hash; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY aurora_core_session_snapshots
@@ -9174,7 +8590,7 @@ ALTER TABLE ONLY aurora_core_session_snapshots
 
 
 --
--- Name: aurora_core_session_snapshots uq_aurora_core_session_snapshots_session_id; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: aurora_core_session_snapshots uq_aurora_core_session_snapshots_session_id; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY aurora_core_session_snapshots
@@ -9190,7 +8606,7 @@ ALTER TABLE ONLY capsule_favorites
 
 
 --
--- Name: card_edges uq_card_edge_unique; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: card_edges uq_card_edge_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY card_edges
@@ -9206,7 +8622,7 @@ ALTER TABLE ONLY collaborative_galaxies
 
 
 --
--- Name: community_aggregate_signals uq_community_aggregate_signal_id; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: community_aggregate_signals uq_community_aggregate_signal_id; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY community_aggregate_signals
@@ -9214,7 +8630,7 @@ ALTER TABLE ONLY community_aggregate_signals
 
 
 --
--- Name: durable_session_state_snapshots uq_durable_session_state_snapshots_session_id; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: durable_session_state_snapshots uq_durable_session_state_snapshots_session_id; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY durable_session_state_snapshots
@@ -9254,7 +8670,7 @@ ALTER TABLE ONLY group_message_reads
 
 
 --
--- Name: growth_chronicle_snapshots uq_growth_chronicle_snapshots_user_id; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: growth_chronicle_snapshots uq_growth_chronicle_snapshots_user_id; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY growth_chronicle_snapshots
@@ -9278,7 +8694,7 @@ ALTER TABLE ONLY item_similarities
 
 
 --
--- Name: knowledge_node_documents uq_knowledge_node_documents_user_node_file; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: knowledge_node_documents uq_knowledge_node_documents_user_node_file; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY knowledge_node_documents
@@ -9286,7 +8702,7 @@ ALTER TABLE ONLY knowledge_node_documents
 
 
 --
--- Name: north_star_metric_events uq_north_star_metric_events_event_key; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: north_star_metric_events uq_north_star_metric_events_event_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY north_star_metric_events
@@ -9318,7 +8734,7 @@ ALTER TABLE ONLY response_feedback
 
 
 --
--- Name: scenes uq_scenes_scene_id; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: scenes uq_scenes_scene_id; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY scenes
@@ -9334,7 +8750,7 @@ ALTER TABLE ONLY seed_library_ratings
 
 
 --
--- Name: strategy_belief_snapshots uq_strategy_belief_snapshots_user_strategy; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: strategy_belief_snapshots uq_strategy_belief_snapshots_user_strategy; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY strategy_belief_snapshots
@@ -9342,7 +8758,7 @@ ALTER TABLE ONLY strategy_belief_snapshots
 
 
 --
--- Name: intervention_strategy_outcomes uq_strategy_outcome_intervention; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: intervention_strategy_outcomes uq_strategy_outcome_intervention; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY intervention_strategy_outcomes
@@ -9358,7 +8774,7 @@ ALTER TABLE ONLY group_task_claims
 
 
 --
--- Name: task_documents uq_task_documents_task_file; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: task_documents uq_task_documents_task_file; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY task_documents
@@ -9366,7 +8782,7 @@ ALTER TABLE ONLY task_documents
 
 
 --
--- Name: theater_candidate_bundles uq_theater_candidate_bundles_prediction_id; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: theater_candidate_bundles uq_theater_candidate_bundles_prediction_id; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY theater_candidate_bundles
@@ -9374,7 +8790,7 @@ ALTER TABLE ONLY theater_candidate_bundles
 
 
 --
--- Name: theater_predictions uq_theater_predictions_prediction_id; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: theater_predictions uq_theater_predictions_prediction_id; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY theater_predictions
@@ -9406,7 +8822,7 @@ ALTER TABLE ONLY user_learning_profiles
 
 
 --
--- Name: user_skill_adoptions uq_user_marketplace_asset_adoption; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: user_skill_adoptions uq_user_marketplace_asset_adoption; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY user_skill_adoptions
@@ -9558,7 +8974,7 @@ ALTER TABLE ONLY user_preferences_center
 
 
 --
--- Name: user_push_opt_in user_push_opt_in_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: user_push_opt_in user_push_opt_in_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY user_push_opt_in
@@ -9566,7 +8982,7 @@ ALTER TABLE ONLY user_push_opt_in
 
 
 --
--- Name: user_push_opt_in user_push_opt_in_user_id_key; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: user_push_opt_in user_push_opt_in_user_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY user_push_opt_in
@@ -9574,7 +8990,7 @@ ALTER TABLE ONLY user_push_opt_in
 
 
 --
--- Name: user_scenario_states user_scenario_states_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: user_scenario_states user_scenario_states_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY user_scenario_states
@@ -9614,7 +9030,7 @@ ALTER TABLE ONLY user_similarities
 
 
 --
--- Name: user_skill_adoptions user_skill_adoptions_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: user_skill_adoptions user_skill_adoptions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY user_skill_adoptions
@@ -9622,7 +9038,7 @@ ALTER TABLE ONLY user_skill_adoptions
 
 
 --
--- Name: user_skills user_skills_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: user_skills user_skills_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY user_skills
@@ -9718,7 +9134,7 @@ ALTER TABLE ONLY visual_elements
 
 
 --
--- Name: window_states window_states_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+-- Name: window_states window_states_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY window_states
@@ -9731,22 +9147,6 @@ ALTER TABLE ONLY window_states
 
 ALTER TABLE ONLY word_books
     ADD CONSTRAINT word_books_pkey PRIMARY KEY (id);
-
-
---
--- Name: _ag_label_edge _ag_label_edge_pkey; Type: CONSTRAINT; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER TABLE ONLY sparkle_galaxy._ag_label_edge
-    ADD CONSTRAINT _ag_label_edge_pkey PRIMARY KEY (id);
-
-
---
--- Name: _ag_label_vertex _ag_label_vertex_pkey; Type: CONSTRAINT; Schema: sparkle_galaxy; Owner: postgres
---
-
-ALTER TABLE ONLY sparkle_galaxy._ag_label_vertex
-    ADD CONSTRAINT _ag_label_vertex_pkey PRIMARY KEY (id);
 
 
 --
@@ -9778,14 +9178,14 @@ CREATE INDEX idx_accountability_partner_status ON accountability_partnership USI
 
 
 --
--- Name: idx_accountability_policies_commitment_enabled; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_accountability_policies_commitment_enabled; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_accountability_policies_commitment_enabled ON accountability_policies USING btree (commitment_id, is_enabled);
 
 
 --
--- Name: idx_accountability_policies_user_next_trigger; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_accountability_policies_user_next_trigger; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_accountability_policies_user_next_trigger ON accountability_policies USING btree (user_id, next_trigger_at);
@@ -9813,77 +9213,77 @@ CREATE INDEX idx_achievements_type_rarity ON achievements USING btree (type, rar
 
 
 --
--- Name: idx_admin_audit_category_occurred; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_admin_audit_category_occurred; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_admin_audit_category_occurred ON admin_audit_log USING btree (category, occurred_at);
 
 
 --
--- Name: idx_admin_audit_user_occurred; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_admin_audit_user_occurred; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_admin_audit_user_occurred ON admin_audit_log USING btree (admin_user_id, occurred_at);
 
 
 --
--- Name: idx_aurora_core_session_conversation; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_aurora_core_session_conversation; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_aurora_core_session_conversation ON aurora_core_session_snapshots USING btree (user_id, conversation_id, last_activity_at);
 
 
 --
--- Name: idx_aurora_core_session_user_status; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_aurora_core_session_user_status; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_aurora_core_session_user_status ON aurora_core_session_snapshots USING btree (user_id, status, last_activity_at);
 
 
 --
--- Name: idx_aurora_decision_telemetry_scope_ts; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_aurora_decision_telemetry_scope_ts; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_aurora_decision_telemetry_scope_ts ON aurora_decision_telemetry USING btree (user_id, conversation_id, decided_at);
 
 
 --
--- Name: idx_aurora_decision_telemetry_surface_ts; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_aurora_decision_telemetry_surface_ts; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_aurora_decision_telemetry_surface_ts ON aurora_decision_telemetry USING btree (surface, decided_at);
 
 
 --
--- Name: idx_aurora_judgment_records_user_computed; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_aurora_judgment_records_user_computed; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_aurora_judgment_records_user_computed ON aurora_judgment_records USING btree (user_id, computed_at);
 
 
 --
--- Name: idx_aurora_snapshot_scope; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_aurora_snapshot_scope; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_aurora_snapshot_scope ON aurora_state_snapshots USING btree (user_id, surface, conversation_id, snapshot_at);
 
 
 --
--- Name: idx_aurora_wake_due; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_aurora_wake_due; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_aurora_wake_due ON aurora_scheduled_wakes USING btree (status, scheduled_at);
 
 
 --
--- Name: idx_aurora_wake_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_aurora_wake_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_aurora_wake_id ON aurora_scheduled_wakes USING btree (wake_id);
 
 
 --
--- Name: idx_aurora_wake_scope; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_aurora_wake_scope; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_aurora_wake_scope ON aurora_scheduled_wakes USING btree (user_id, surface, conversation_id);
@@ -9911,28 +9311,28 @@ CREATE INDEX idx_background_tasks_user_status ON background_tasks USING btree (u
 
 
 --
--- Name: idx_candidate_feedback_action; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_candidate_feedback_action; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_candidate_feedback_action ON candidate_action_feedback USING btree (action_type);
 
 
 --
--- Name: idx_candidate_feedback_created; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_candidate_feedback_created; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_candidate_feedback_created ON candidate_action_feedback USING btree (created_at);
 
 
 --
--- Name: idx_candidate_feedback_type; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_candidate_feedback_type; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_candidate_feedback_type ON candidate_action_feedback USING btree (feedback_type);
 
 
 --
--- Name: idx_candidate_feedback_user_type; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_candidate_feedback_user_type; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_candidate_feedback_user_type ON candidate_action_feedback USING btree (user_id, action_type);
@@ -10016,35 +9416,35 @@ CREATE INDEX idx_cognitive_fragments_embedding_hnsw ON cognitive_fragments USING
 
 
 --
--- Name: idx_commitments_user_status_deadline; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_commitments_user_status_deadline; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_commitments_user_status_deadline ON commitments USING btree (user_id, status, deadline);
 
 
 --
--- Name: idx_community_aggregate_cohort_stat; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_community_aggregate_cohort_stat; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_community_aggregate_cohort_stat ON community_aggregate_signals USING btree (cohort_key, stat_name, generated_at);
 
 
 --
--- Name: idx_community_aggregate_status_generated; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_community_aggregate_status_generated; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_community_aggregate_status_generated ON community_aggregate_signals USING btree (status, generated_at);
 
 
 --
--- Name: idx_conflict_resolution_records_user_conflict_key; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_conflict_resolution_records_user_conflict_key; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_conflict_resolution_records_user_conflict_key ON conflict_resolution_records USING btree (user_id, conflict_key);
 
 
 --
--- Name: idx_conflict_resolution_records_user_resolved; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_conflict_resolution_records_user_resolved; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_conflict_resolution_records_user_resolved ON conflict_resolution_records USING btree (user_id, resolved_at);
@@ -10072,14 +9472,14 @@ CREATE INDEX idx_context_pack_runs_user_created ON context_pack_runs USING btree
 
 
 --
--- Name: idx_counterfactual_report_pending; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_counterfactual_report_pending; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_counterfactual_report_pending ON counterfactual_evaluation_reports USING btree (promotion_status, generated_at);
 
 
 --
--- Name: idx_counterfactual_report_user_context_policies; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_counterfactual_report_user_context_policies; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_counterfactual_report_user_context_policies ON counterfactual_evaluation_reports USING btree (user_id, context_hash, policy_a, policy_b, generated_at);
@@ -10100,14 +9500,14 @@ CREATE INDEX idx_custom_expert_teams_user_enabled ON custom_expert_teams USING b
 
 
 --
--- Name: idx_daily_behavior_vector_user_active; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_daily_behavior_vector_user_active; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_daily_behavior_vector_user_active ON daily_behavior_vector USING btree (user_id, active_event_count);
 
 
 --
--- Name: idx_daily_behavior_vector_user_date; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_daily_behavior_vector_user_date; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE UNIQUE INDEX idx_daily_behavior_vector_user_date ON daily_behavior_vector USING btree (user_id, vector_date);
@@ -10128,14 +9528,14 @@ CREATE INDEX idx_document_chunks_embedding_hnsw ON document_chunks USING hnsw (e
 
 
 --
--- Name: idx_durable_session_state_recovery; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_durable_session_state_recovery; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_durable_session_state_recovery ON durable_session_state_snapshots USING btree (session_id, recoverable, expires_at);
 
 
 --
--- Name: idx_durable_session_state_user_seen; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_durable_session_state_user_seen; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_durable_session_state_user_seen ON durable_session_state_snapshots USING btree (user_id, last_seen_at);
@@ -10233,6 +9633,13 @@ CREATE INDEX idx_error_records_cognitive_tags ON error_records USING gin (cognit
 
 
 --
+-- Name: idx_error_records_user_created; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_error_records_user_created ON error_records USING btree (user_id, created_at DESC);
+
+
+--
 -- Name: idx_errors_subject; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -10317,14 +9724,14 @@ CREATE INDEX idx_exec_record_user ON execution_records USING btree (user_id);
 
 
 --
--- Name: idx_execution_audit_intent_occurred; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_execution_audit_intent_occurred; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_execution_audit_intent_occurred ON execution_audit_log USING btree (intent_id, occurred_at);
 
 
 --
--- Name: idx_execution_audit_user_action; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_execution_audit_user_action; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_execution_audit_user_action ON execution_audit_log USING btree (user_id, action);
@@ -10352,14 +9759,14 @@ CREATE INDEX idx_execution_records_status ON plan_execution_records USING btree 
 
 
 --
--- Name: idx_execution_schedule_due; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_execution_schedule_due; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_execution_schedule_due ON execution_schedules USING btree (is_active, next_run_at);
 
 
 --
--- Name: idx_execution_schedule_user_trigger; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_execution_schedule_user_trigger; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_execution_schedule_user_trigger ON execution_schedules USING btree (user_id, trigger_type);
@@ -10394,42 +9801,63 @@ CREATE INDEX idx_friendship_user ON friendships USING btree (user_id);
 
 
 --
--- Name: idx_goal_world_graph_user_goal; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_friendships_friend_status; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_friendships_friend_status ON friendships USING btree (friend_id, status);
+
+
+--
+-- Name: idx_friendships_user_status; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_friendships_user_status ON friendships USING btree (user_id, status);
+
+
+--
+-- Name: idx_goal_world_graph_user_goal; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE UNIQUE INDEX idx_goal_world_graph_user_goal ON goal_world_graph_snapshots USING btree (user_id, goal_id);
 
 
 --
--- Name: idx_goal_world_graph_user_type; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_goal_world_graph_user_type; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_goal_world_graph_user_type ON goal_world_graph_snapshots USING btree (user_id, goal_type, last_saved_at);
 
 
 --
--- Name: idx_goals_target_date; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_goals_plan_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_goals_plan_id ON goals USING btree (plan_id);
+
+
+--
+-- Name: idx_goals_target_date; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_goals_target_date ON goals USING btree (target_date);
 
 
 --
--- Name: idx_goals_user_primary; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_goals_user_primary; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_goals_user_primary ON goals USING btree (user_id, is_primary);
 
 
 --
--- Name: idx_goals_user_status; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_goals_user_status; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_goals_user_status ON goals USING btree (user_id, status);
 
 
 --
--- Name: idx_goals_user_type_status; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_goals_user_type_status; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_goals_user_type_status ON goals USING btree (user_id, goal_type, status);
@@ -10471,6 +9899,13 @@ CREATE INDEX idx_group_files_shared_by ON group_files USING btree (shared_by_id)
 
 
 --
+-- Name: idx_group_members_composite; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_group_members_composite ON group_members USING btree (group_id, user_id);
+
+
+--
 -- Name: idx_group_message_read_message; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -10506,7 +9941,7 @@ CREATE INDEX idx_group_type ON groups USING btree (type);
 
 
 --
--- Name: idx_growth_chronicle_user_saved; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_growth_chronicle_user_saved; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_growth_chronicle_user_saved ON growth_chronicle_snapshots USING btree (user_id, last_saved_at);
@@ -10520,28 +9955,28 @@ CREATE INDEX idx_idempotency_expires ON idempotency_keys USING btree (expires_at
 
 
 --
--- Name: idx_idiographic_associations_user_pair; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_idiographic_associations_user_pair; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE UNIQUE INDEX idx_idiographic_associations_user_pair ON idiographic_associations USING btree (user_id, dim_pair);
 
 
 --
--- Name: idx_idiographic_associations_user_visible; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_idiographic_associations_user_visible; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_idiographic_associations_user_visible ON idiographic_associations USING btree (user_id, visible);
 
 
 --
--- Name: idx_idiographic_changepoints_user_dim_date; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_idiographic_changepoints_user_dim_date; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE UNIQUE INDEX idx_idiographic_changepoints_user_dim_date ON idiographic_changepoints USING btree (user_id, dim, change_date);
 
 
 --
--- Name: idx_insight_claims_user_status; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_insight_claims_user_status; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_insight_claims_user_status ON insight_claims USING btree (user_id, status);
@@ -10590,7 +10025,7 @@ CREATE INDEX idx_jobs_user_id ON jobs USING btree (user_id);
 
 
 --
--- Name: idx_knowledge_node_documents_user_file_primary; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_knowledge_node_documents_user_file_primary; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_knowledge_node_documents_user_file_primary ON knowledge_node_documents USING btree (user_id, file_id, is_primary);
@@ -10604,14 +10039,14 @@ CREATE INDEX idx_knowledge_nodes_embedding_hnsw ON knowledge_nodes USING hnsw (e
 
 
 --
--- Name: idx_leaderboard_snapshot_period; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_leaderboard_snapshot_period; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_leaderboard_snapshot_period ON leaderboard_snapshots USING btree (period);
 
 
 --
--- Name: idx_leaderboard_snapshot_type_date; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_leaderboard_snapshot_type_date; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_leaderboard_snapshot_type_date ON leaderboard_snapshots USING btree (snapshot_type, snapshot_date);
@@ -10821,24 +10256,31 @@ CREATE INDEX idx_message_reports_status ON message_reports USING btree (status);
 
 
 --
--- Name: idx_north_star_metric_events_plan_type; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_north_star_metric_events_plan_type; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_north_star_metric_events_plan_type ON north_star_metric_events USING btree (plan_id, event_type);
 
 
 --
--- Name: idx_north_star_metric_events_type_date; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_north_star_metric_events_type_date; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_north_star_metric_events_type_date ON north_star_metric_events USING btree (event_type, metric_date);
 
 
 --
--- Name: idx_north_star_metric_events_user_date; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_north_star_metric_events_user_date; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_north_star_metric_events_user_date ON north_star_metric_events USING btree (user_id, metric_date);
+
+
+--
+-- Name: idx_notifications_user_read_created; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_notifications_user_read_created ON notifications USING btree (user_id, is_read, created_at DESC) WHERE (deleted_at IS NULL);
 
 
 --
@@ -10863,14 +10305,14 @@ CREATE INDEX idx_outbox_unpublished ON event_outbox USING btree (created_at) WHE
 
 
 --
--- Name: idx_persdyn_attractors_user_confidence; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_persdyn_attractors_user_confidence; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_persdyn_attractors_user_confidence ON persdyn_attractors USING btree (user_id, confidence);
 
 
 --
--- Name: idx_persdyn_attractors_user_dim; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_persdyn_attractors_user_dim; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE UNIQUE INDEX idx_persdyn_attractors_user_dim ON persdyn_attractors USING btree (user_id, dim);
@@ -10954,6 +10396,20 @@ CREATE INDEX idx_plans_user_id ON plans USING btree (user_id);
 
 
 --
+-- Name: idx_post_comment_post; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_post_comment_post ON post_comments USING btree (post_id);
+
+
+--
+-- Name: idx_post_comment_user; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_post_comment_user ON post_comments USING btree (user_id);
+
+
+--
 -- Name: idx_post_like_post; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -10968,14 +10424,21 @@ CREATE INDEX idx_post_like_user ON post_likes USING btree (user_id);
 
 
 --
--- Name: idx_privacy_budget_allowed_spent; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_post_likes_composite; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_post_likes_composite ON post_likes USING btree (user_id, post_id);
+
+
+--
+-- Name: idx_privacy_budget_allowed_spent; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_privacy_budget_allowed_spent ON privacy_budget_ledger USING btree (allowed, spent_at);
 
 
 --
--- Name: idx_privacy_budget_subject_window; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_privacy_budget_subject_window; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_privacy_budget_subject_window ON privacy_budget_ledger USING btree (subject_id, window_key, query_type);
@@ -11010,14 +10473,14 @@ CREATE UNIQUE INDEX idx_projection_snapshots_projection_aggregate ON projection_
 
 
 --
--- Name: idx_push_delivery_user_category; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_push_delivery_user_category; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_push_delivery_user_category ON push_delivery_records USING btree (user_id, category);
 
 
 --
--- Name: idx_push_delivery_user_sent; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_push_delivery_user_sent; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_push_delivery_user_sent ON push_delivery_records USING btree (user_id, sent_at);
@@ -11038,105 +10501,84 @@ CREATE INDEX idx_rec_cache_user_type ON recommendation_cache USING btree (user_i
 
 
 --
--- Name: idx_release_approval_category_status_created; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_release_approval_category_status_created; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_release_approval_category_status_created ON release_approval_requests USING btree (category, status, created_at);
 
 
 --
--- Name: idx_release_approval_object_status; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_release_approval_object_status; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_release_approval_object_status ON release_approval_requests USING btree (object_type, object_id, status);
 
 
 --
--- Name: idx_routing_decision_log_source_state_v2_key; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_routing_decision_log_source_state_v2_key; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_routing_decision_log_source_state_v2_key ON routing_decision_log USING btree (source_state_v2_key);
 
 
 --
--- Name: idx_routing_decision_log_user_decided; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_routing_decision_log_user_decided; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_routing_decision_log_user_decided ON routing_decision_log USING btree (user_id, decided_at);
 
 
 --
--- Name: idx_routing_decision_log_user_outcome; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_routing_decision_log_user_outcome; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_routing_decision_log_user_outcome ON routing_decision_log USING btree (user_id, outcome_collected_at);
 
 
 --
--- Name: idx_routing_decision_log_user_outcome_v2; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_routing_decision_log_user_outcome_v2; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_routing_decision_log_user_outcome_v2 ON routing_decision_log USING btree (user_id, outcome_timestamp);
 
 
 --
--- Name: idx_safe_experiment_episodes_exp_created; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_safe_experiment_episodes_exp_created; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_safe_experiment_episodes_exp_created ON safe_experiment_episodes USING btree (experiment_id, created_at);
 
 
 --
--- Name: idx_safe_experiments_status_domain; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_safe_experiments_status_domain; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_safe_experiments_status_domain ON safe_experiments USING btree (status, domain);
 
 
 --
--- Name: idx_saga_instances_created; Type: INDEX; Schema: public; Owner: brsama
---
-
-CREATE INDEX idx_saga_instances_created ON saga_instances USING btree (created_at DESC);
-
-
---
--- Name: idx_saga_instances_status; Type: INDEX; Schema: public; Owner: brsama
---
-
-CREATE INDEX idx_saga_instances_status ON saga_instances USING btree (status);
-
-
---
--- Name: idx_saga_instances_type; Type: INDEX; Schema: public; Owner: brsama
---
-
-CREATE INDEX idx_saga_instances_type ON saga_instances USING btree (saga_type);
-
-
---
--- Name: idx_scenes_centroid_embedding_hnsw; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_scenes_centroid_embedding_hnsw; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_scenes_centroid_embedding_hnsw ON scenes USING hnsw (centroid_embedding vector_cosine_ops) WHERE (centroid_embedding IS NOT NULL);
 
 
 --
--- Name: idx_scenes_user_quality; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_scenes_user_quality; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_scenes_user_quality ON scenes USING btree (user_id, quality_score);
 
 
 --
--- Name: idx_scenes_user_time_window; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_scenes_user_time_window; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_scenes_user_time_window ON scenes USING btree (user_id, time_start, time_end);
 
 
 --
--- Name: idx_scenes_user_version; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_scenes_user_version; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_scenes_user_version ON scenes USING btree (user_id, version);
@@ -11213,21 +10655,21 @@ CREATE INDEX idx_share_target_user ON shared_resources USING btree (target_user_
 
 
 --
--- Name: idx_shared_skills_published; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_shared_skills_published; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_shared_skills_published ON shared_skills USING btree (published_at);
 
 
 --
--- Name: idx_skill_share_queue_owner_created; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_skill_share_queue_owner_created; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_skill_share_queue_owner_created ON skill_share_moderation_queue USING btree (owner_user_id, created_at);
 
 
 --
--- Name: idx_strategy_belief_user_score_inputs; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_strategy_belief_user_score_inputs; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_strategy_belief_user_score_inputs ON strategy_belief_snapshots USING btree (user_id, strategy_key, evidence_count);
@@ -11269,7 +10711,7 @@ CREATE INDEX idx_suggestion_log_user_created ON asset_suggestion_logs USING btre
 
 
 --
--- Name: idx_task_documents_task_created; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_task_documents_task_created; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_task_documents_task_created ON task_documents USING btree (task_id, created_at);
@@ -11311,6 +10753,13 @@ CREATE INDEX idx_tasks_plan_id ON tasks USING btree (plan_id);
 
 
 --
+-- Name: idx_tasks_plan_user_status; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_tasks_plan_user_status ON tasks USING btree (plan_id, user_id, status);
+
+
+--
 -- Name: idx_tasks_status; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -11346,7 +10795,7 @@ CREATE INDEX idx_tasks_user_status_created_at ON tasks USING btree (user_id, sta
 
 
 --
--- Name: idx_tdr_user_created_snapshot; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_tdr_user_created_snapshot; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_tdr_user_created_snapshot ON transition_decision_records USING btree (user_id, created_at, input_snapshot_ref);
@@ -11374,14 +10823,14 @@ CREATE INDEX idx_token_usage_user_id ON token_usage USING btree (user_id);
 
 
 --
--- Name: idx_unresolved_conflicts_user_conflict_key; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_unresolved_conflicts_user_conflict_key; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_unresolved_conflicts_user_conflict_key ON unresolved_conflicts USING btree (user_id, conflict_key);
 
 
 --
--- Name: idx_unresolved_conflicts_user_status; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_unresolved_conflicts_user_status; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_unresolved_conflicts_user_status ON unresolved_conflicts USING btree (user_id, status);
@@ -11479,14 +10928,14 @@ CREATE UNIQUE INDEX idx_user_memory_settings_user ON user_memory_settings USING 
 
 
 --
--- Name: idx_user_push_opt_in_user; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_user_push_opt_in_user; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE UNIQUE INDEX idx_user_push_opt_in_user ON user_push_opt_in USING btree (user_id);
 
 
 --
--- Name: idx_user_scenario_states_user_focus; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_user_scenario_states_user_focus; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_user_scenario_states_user_focus ON user_scenario_states USING btree (user_id, current_focus_contract_id, current_focus_contract_version);
@@ -11528,17 +10977,24 @@ CREATE INDEX idx_user_sim_user2 ON user_similarities USING btree (user_id_2);
 
 
 --
--- Name: idx_user_skills_user_active; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_user_skills_user_active; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_user_skills_user_active ON user_skills USING btree (user_id, active);
 
 
 --
--- Name: idx_user_skills_user_updated; Type: INDEX; Schema: public; Owner: brsama
+-- Name: idx_user_skills_user_updated; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_user_skills_user_updated ON user_skills USING btree (user_id, updated_at);
+
+
+--
+-- Name: idx_user_state_snapshots_user_snapshot; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_user_state_snapshots_user_snapshot ON user_state_snapshots USING btree (user_id, snapshot_at DESC);
 
 
 --
@@ -11696,21 +11152,21 @@ CREATE INDEX ix_ab_experiments_status ON ab_experiments USING btree (status);
 
 
 --
--- Name: ix_accountability_policies_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_accountability_policies_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_accountability_policies_deleted_at ON accountability_policies USING btree (deleted_at);
 
 
 --
--- Name: ix_accountability_policies_policy_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_accountability_policies_policy_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE UNIQUE INDEX ix_accountability_policies_policy_id ON accountability_policies USING btree (policy_id);
 
 
 --
--- Name: ix_accountability_policies_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_accountability_policies_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_accountability_policies_user_id ON accountability_policies USING btree (user_id);
@@ -11738,98 +11194,98 @@ CREATE INDEX ix_achievements_type ON achievements USING btree (type);
 
 
 --
--- Name: ix_admin_audit_log_action; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_admin_audit_log_action; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_admin_audit_log_action ON admin_audit_log USING btree (action);
 
 
 --
--- Name: ix_admin_audit_log_admin_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_admin_audit_log_admin_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_admin_audit_log_admin_user_id ON admin_audit_log USING btree (admin_user_id);
 
 
 --
--- Name: ix_admin_audit_log_category; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_admin_audit_log_category; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_admin_audit_log_category ON admin_audit_log USING btree (category);
 
 
 --
--- Name: ix_admin_audit_log_created_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_admin_audit_log_created_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_admin_audit_log_created_at ON admin_audit_log USING btree (created_at);
 
 
 --
--- Name: ix_admin_audit_log_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_admin_audit_log_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_admin_audit_log_id ON admin_audit_log USING btree (id);
 
 
 --
--- Name: ix_admin_audit_log_ip_address; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_admin_audit_log_ip_address; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_admin_audit_log_ip_address ON admin_audit_log USING btree (ip_address);
 
 
 --
--- Name: ix_admin_audit_log_occurred_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_admin_audit_log_occurred_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_admin_audit_log_occurred_at ON admin_audit_log USING btree (occurred_at);
 
 
 --
--- Name: ix_admin_audit_log_outcome; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_admin_audit_log_outcome; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_admin_audit_log_outcome ON admin_audit_log USING btree (outcome);
 
 
 --
--- Name: ix_admin_audit_log_path; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_admin_audit_log_path; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_admin_audit_log_path ON admin_audit_log USING btree (path);
 
 
 --
--- Name: ix_admin_audit_log_request_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_admin_audit_log_request_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_admin_audit_log_request_id ON admin_audit_log USING btree (request_id);
 
 
 --
--- Name: ix_admin_audit_log_retention_until; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_admin_audit_log_retention_until; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_admin_audit_log_retention_until ON admin_audit_log USING btree (retention_until);
 
 
 --
--- Name: ix_admin_audit_log_risk; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_admin_audit_log_risk; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_admin_audit_log_risk ON admin_audit_log USING btree (risk);
 
 
 --
--- Name: ix_admin_audit_log_status_code; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_admin_audit_log_status_code; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_admin_audit_log_status_code ON admin_audit_log USING btree (status_code);
 
 
 --
--- Name: ix_admin_audit_log_trace_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_admin_audit_log_trace_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_admin_audit_log_trace_id ON admin_audit_log USING btree (trace_id);
@@ -11976,217 +11432,217 @@ CREATE INDEX ix_arbitration_decisions_deleted_at ON arbitration_decisions USING 
 
 
 --
--- Name: ix_artifacts_artifact_type; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_artifacts_artifact_type; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_artifacts_artifact_type ON planning_artifacts USING btree (artifact_type);
 
 
 --
--- Name: ix_artifacts_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_artifacts_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_artifacts_deleted_at ON planning_artifacts USING btree (deleted_at);
 
 
 --
--- Name: ix_artifacts_plan_card_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_artifacts_plan_card_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_artifacts_plan_card_id ON planning_artifacts USING btree (plan_card_id);
 
 
 --
--- Name: ix_artifacts_plan_type; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_artifacts_plan_type; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_artifacts_plan_type ON planning_artifacts USING btree (plan_card_id, artifact_type);
 
 
 --
--- Name: ix_artifacts_status; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_artifacts_status; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_artifacts_status ON planning_artifacts USING btree (status);
 
 
 --
--- Name: ix_artifacts_type_status; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_artifacts_type_status; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_artifacts_type_status ON planning_artifacts USING btree (artifact_type, status);
 
 
 --
--- Name: ix_aurora_core_session_snapshots_conversation_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_aurora_core_session_snapshots_conversation_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_aurora_core_session_snapshots_conversation_id ON aurora_core_session_snapshots USING btree (conversation_id);
 
 
 --
--- Name: ix_aurora_core_session_snapshots_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_aurora_core_session_snapshots_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_aurora_core_session_snapshots_deleted_at ON aurora_core_session_snapshots USING btree (deleted_at);
 
 
 --
--- Name: ix_aurora_core_session_snapshots_expires_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_aurora_core_session_snapshots_expires_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_aurora_core_session_snapshots_expires_at ON aurora_core_session_snapshots USING btree (expires_at);
 
 
 --
--- Name: ix_aurora_core_session_snapshots_last_activity_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_aurora_core_session_snapshots_last_activity_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_aurora_core_session_snapshots_last_activity_at ON aurora_core_session_snapshots USING btree (last_activity_at);
 
 
 --
--- Name: ix_aurora_core_session_snapshots_resume_token_hash; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_aurora_core_session_snapshots_resume_token_hash; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE UNIQUE INDEX ix_aurora_core_session_snapshots_resume_token_hash ON aurora_core_session_snapshots USING btree (resume_token_hash);
 
 
 --
--- Name: ix_aurora_core_session_snapshots_session_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_aurora_core_session_snapshots_session_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_aurora_core_session_snapshots_session_id ON aurora_core_session_snapshots USING btree (session_id);
 
 
 --
--- Name: ix_aurora_core_session_snapshots_stage; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_aurora_core_session_snapshots_stage; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_aurora_core_session_snapshots_stage ON aurora_core_session_snapshots USING btree (stage);
 
 
 --
--- Name: ix_aurora_core_session_snapshots_status; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_aurora_core_session_snapshots_status; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_aurora_core_session_snapshots_status ON aurora_core_session_snapshots USING btree (status);
 
 
 --
--- Name: ix_aurora_core_session_snapshots_surface; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_aurora_core_session_snapshots_surface; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_aurora_core_session_snapshots_surface ON aurora_core_session_snapshots USING btree (surface);
 
 
 --
--- Name: ix_aurora_core_session_snapshots_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_aurora_core_session_snapshots_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_aurora_core_session_snapshots_user_id ON aurora_core_session_snapshots USING btree (user_id);
 
 
 --
--- Name: ix_aurora_decision_telemetry_action; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_aurora_decision_telemetry_action; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_aurora_decision_telemetry_action ON aurora_decision_telemetry USING btree (action);
 
 
 --
--- Name: ix_aurora_decision_telemetry_conversation_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_aurora_decision_telemetry_conversation_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_aurora_decision_telemetry_conversation_id ON aurora_decision_telemetry USING btree (conversation_id);
 
 
 --
--- Name: ix_aurora_decision_telemetry_decided_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_aurora_decision_telemetry_decided_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_aurora_decision_telemetry_decided_at ON aurora_decision_telemetry USING btree (decided_at);
 
 
 --
--- Name: ix_aurora_decision_telemetry_decision_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_aurora_decision_telemetry_decision_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE UNIQUE INDEX ix_aurora_decision_telemetry_decision_id ON aurora_decision_telemetry USING btree (decision_id);
 
 
 --
--- Name: ix_aurora_decision_telemetry_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_aurora_decision_telemetry_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_aurora_decision_telemetry_deleted_at ON aurora_decision_telemetry USING btree (deleted_at);
 
 
 --
--- Name: ix_aurora_decision_telemetry_energy_level; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_aurora_decision_telemetry_energy_level; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_aurora_decision_telemetry_energy_level ON aurora_decision_telemetry USING btree (energy_level);
 
 
 --
--- Name: ix_aurora_decision_telemetry_outcome; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_aurora_decision_telemetry_outcome; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_aurora_decision_telemetry_outcome ON aurora_decision_telemetry USING btree (outcome);
 
 
 --
--- Name: ix_aurora_decision_telemetry_outcome_filled_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_aurora_decision_telemetry_outcome_filled_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_aurora_decision_telemetry_outcome_filled_at ON aurora_decision_telemetry USING btree (outcome_filled_at);
 
 
 --
--- Name: ix_aurora_decision_telemetry_request_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_aurora_decision_telemetry_request_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_aurora_decision_telemetry_request_id ON aurora_decision_telemetry USING btree (request_id);
 
 
 --
--- Name: ix_aurora_decision_telemetry_surface; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_aurora_decision_telemetry_surface; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_aurora_decision_telemetry_surface ON aurora_decision_telemetry USING btree (surface);
 
 
 --
--- Name: ix_aurora_decision_telemetry_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_aurora_decision_telemetry_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_aurora_decision_telemetry_user_id ON aurora_decision_telemetry USING btree (user_id);
 
 
 --
--- Name: ix_aurora_policy_versions_created_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_aurora_policy_versions_created_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_aurora_policy_versions_created_at ON aurora_policy_versions USING btree (created_at);
 
 
 --
--- Name: ix_aurora_scheduled_wakes_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_aurora_scheduled_wakes_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_aurora_scheduled_wakes_user_id ON aurora_scheduled_wakes USING btree (user_id);
 
 
 --
--- Name: ix_aurora_scheduled_wakes_wake_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_aurora_scheduled_wakes_wake_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_aurora_scheduled_wakes_wake_id ON aurora_scheduled_wakes USING btree (wake_id);
 
 
 --
--- Name: ix_aurora_state_snapshots_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_aurora_state_snapshots_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_aurora_state_snapshots_user_id ON aurora_state_snapshots USING btree (user_id);
@@ -12305,7 +11761,7 @@ CREATE INDEX ix_calendar_events_user_time ON calendar_events USING btree (user_i
 
 
 --
--- Name: ix_candidate_action_feedback_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_candidate_action_feedback_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_candidate_action_feedback_deleted_at ON candidate_action_feedback USING btree (deleted_at);
@@ -12396,266 +11852,266 @@ CREATE INDEX ix_capsule_generation_jobs_user_id ON capsule_generation_jobs USING
 
 
 --
--- Name: ix_card_adoption_records_adopted_root_card_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_card_adoption_records_adopted_root_card_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_card_adoption_records_adopted_root_card_id ON card_adoption_records USING btree (adopted_root_card_id);
 
 
 --
--- Name: ix_card_adoption_records_adopter_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_card_adoption_records_adopter_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_card_adoption_records_adopter_user_id ON card_adoption_records USING btree (adopter_user_id);
 
 
 --
--- Name: ix_card_adoption_records_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_card_adoption_records_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_card_adoption_records_deleted_at ON card_adoption_records USING btree (deleted_at);
 
 
 --
--- Name: ix_card_adoption_records_import_mode; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_card_adoption_records_import_mode; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_card_adoption_records_import_mode ON card_adoption_records USING btree (import_mode);
 
 
 --
--- Name: ix_card_adoption_records_share_record_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_card_adoption_records_share_record_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_card_adoption_records_share_record_id ON card_adoption_records USING btree (share_record_id);
 
 
 --
--- Name: ix_card_adoption_user_mode; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_card_adoption_user_mode; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_card_adoption_user_mode ON card_adoption_records USING btree (adopter_user_id, import_mode);
 
 
 --
--- Name: ix_card_edges_active; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_card_edges_active; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_card_edges_active ON card_edges USING btree (active);
 
 
 --
--- Name: ix_card_edges_active_type; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_card_edges_active_type; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_card_edges_active_type ON card_edges USING btree (active, edge_type);
 
 
 --
--- Name: ix_card_edges_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_card_edges_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_card_edges_deleted_at ON card_edges USING btree (deleted_at);
 
 
 --
--- Name: ix_card_edges_edge_type; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_card_edges_edge_type; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_card_edges_edge_type ON card_edges USING btree (edge_type);
 
 
 --
--- Name: ix_card_edges_from_card_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_card_edges_from_card_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_card_edges_from_card_id ON card_edges USING btree (from_card_id);
 
 
 --
--- Name: ix_card_edges_from_type; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_card_edges_from_type; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_card_edges_from_type ON card_edges USING btree (from_card_id, edge_type);
 
 
 --
--- Name: ix_card_edges_to_card_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_card_edges_to_card_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_card_edges_to_card_id ON card_edges USING btree (to_card_id);
 
 
 --
--- Name: ix_card_edges_to_type; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_card_edges_to_type; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_card_edges_to_type ON card_edges USING btree (to_card_id, edge_type);
 
 
 --
--- Name: ix_card_share_owner_scope; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_card_share_owner_scope; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_card_share_owner_scope ON card_share_records USING btree (shared_by_user_id, scope);
 
 
 --
--- Name: ix_card_share_records_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_card_share_records_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_card_share_records_deleted_at ON card_share_records USING btree (deleted_at);
 
 
 --
--- Name: ix_card_share_records_group_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_card_share_records_group_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_card_share_records_group_id ON card_share_records USING btree (group_id);
 
 
 --
--- Name: ix_card_share_records_root_card_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_card_share_records_root_card_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_card_share_records_root_card_id ON card_share_records USING btree (root_card_id);
 
 
 --
--- Name: ix_card_share_records_scope; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_card_share_records_scope; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_card_share_records_scope ON card_share_records USING btree (scope);
 
 
 --
--- Name: ix_card_share_records_shared_by_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_card_share_records_shared_by_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_card_share_records_shared_by_user_id ON card_share_records USING btree (shared_by_user_id);
 
 
 --
--- Name: ix_card_share_records_snapshot_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_card_share_records_snapshot_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_card_share_records_snapshot_id ON card_share_records USING btree (snapshot_id);
 
 
 --
--- Name: ix_card_share_records_target_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_card_share_records_target_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_card_share_records_target_user_id ON card_share_records USING btree (target_user_id);
 
 
 --
--- Name: ix_card_share_scope_group; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_card_share_scope_group; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_card_share_scope_group ON card_share_records USING btree (scope, group_id);
 
 
 --
--- Name: ix_card_share_scope_target; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_card_share_scope_target; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_card_share_scope_target ON card_share_records USING btree (scope, target_user_id);
 
 
 --
--- Name: ix_card_snapshots_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_card_snapshots_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_card_snapshots_deleted_at ON card_snapshots USING btree (deleted_at);
 
 
 --
--- Name: ix_card_snapshots_owner_type; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_card_snapshots_owner_type; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_card_snapshots_owner_type ON card_snapshots USING btree (source_owner_id, source_card_type);
 
 
 --
--- Name: ix_card_snapshots_root_card_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_card_snapshots_root_card_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_card_snapshots_root_card_id ON card_snapshots USING btree (root_card_id);
 
 
 --
--- Name: ix_card_snapshots_root_type; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_card_snapshots_root_type; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_card_snapshots_root_type ON card_snapshots USING btree (root_card_id, source_card_type);
 
 
 --
--- Name: ix_card_snapshots_source_card_type; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_card_snapshots_source_card_type; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_card_snapshots_source_card_type ON card_snapshots USING btree (source_card_type);
 
 
 --
--- Name: ix_card_snapshots_source_owner_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_card_snapshots_source_owner_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_card_snapshots_source_owner_id ON card_snapshots USING btree (source_owner_id);
 
 
 --
--- Name: ix_cards_card_type; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_cards_card_type; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_cards_card_type ON cards USING btree (card_type);
 
 
 --
--- Name: ix_cards_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_cards_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_cards_deleted_at ON cards USING btree (deleted_at);
 
 
 --
--- Name: ix_cards_holder_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_cards_holder_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_cards_holder_id ON cards USING btree (holder_id);
 
 
 --
--- Name: ix_cards_holder_status; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_cards_holder_status; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_cards_holder_status ON cards USING btree (holder_id, lifecycle_status);
 
 
 --
--- Name: ix_cards_lifecycle_status; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_cards_lifecycle_status; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_cards_lifecycle_status ON cards USING btree (lifecycle_status);
 
 
 --
--- Name: ix_cards_owner_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_cards_owner_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_cards_owner_id ON cards USING btree (owner_id);
 
 
 --
--- Name: ix_cards_owner_type; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_cards_owner_type; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_cards_owner_type ON cards USING btree (owner_id, card_type);
 
 
 --
--- Name: ix_cards_type_status; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_cards_type_status; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_cards_type_status ON cards USING btree (card_type, lifecycle_status);
@@ -12732,98 +12188,98 @@ CREATE INDEX ix_collaborative_galaxies_group_id ON collaborative_galaxies USING 
 
 
 --
--- Name: ix_commitments_deadline; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_commitments_deadline; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_commitments_deadline ON commitments USING btree (deadline);
 
 
 --
--- Name: ix_commitments_node_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_commitments_node_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_commitments_node_id ON commitments USING btree (node_id);
 
 
 --
--- Name: ix_commitments_status; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_commitments_status; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_commitments_status ON commitments USING btree (status);
 
 
 --
--- Name: ix_commitments_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_commitments_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_commitments_user_id ON commitments USING btree (user_id);
 
 
 --
--- Name: ix_community_aggregate_signals_cohort_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_community_aggregate_signals_cohort_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_community_aggregate_signals_cohort_id ON community_aggregate_signals USING btree (cohort_id);
 
 
 --
--- Name: ix_community_aggregate_signals_cohort_key; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_community_aggregate_signals_cohort_key; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_community_aggregate_signals_cohort_key ON community_aggregate_signals USING btree (cohort_key);
 
 
 --
--- Name: ix_community_aggregate_signals_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_community_aggregate_signals_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_community_aggregate_signals_deleted_at ON community_aggregate_signals USING btree (deleted_at);
 
 
 --
--- Name: ix_community_aggregate_signals_expires_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_community_aggregate_signals_expires_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_community_aggregate_signals_expires_at ON community_aggregate_signals USING btree (expires_at);
 
 
 --
--- Name: ix_community_aggregate_signals_generated_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_community_aggregate_signals_generated_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_community_aggregate_signals_generated_at ON community_aggregate_signals USING btree (generated_at);
 
 
 --
--- Name: ix_community_aggregate_signals_privacy_tier; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_community_aggregate_signals_privacy_tier; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_community_aggregate_signals_privacy_tier ON community_aggregate_signals USING btree (privacy_tier);
 
 
 --
--- Name: ix_community_aggregate_signals_signal_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_community_aggregate_signals_signal_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_community_aggregate_signals_signal_id ON community_aggregate_signals USING btree (signal_id);
 
 
 --
--- Name: ix_community_aggregate_signals_signal_type; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_community_aggregate_signals_signal_type; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_community_aggregate_signals_signal_type ON community_aggregate_signals USING btree (signal_type);
 
 
 --
--- Name: ix_community_aggregate_signals_stat_name; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_community_aggregate_signals_stat_name; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_community_aggregate_signals_stat_name ON community_aggregate_signals USING btree (stat_name);
 
 
 --
--- Name: ix_community_aggregate_signals_status; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_community_aggregate_signals_status; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_community_aggregate_signals_status ON community_aggregate_signals USING btree (status);
@@ -12893,63 +12349,63 @@ CREATE INDEX ix_context_pack_runs_user_id ON context_pack_runs USING btree (user
 
 
 --
--- Name: ix_counterfactual_evaluation_reports_context_hash; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_counterfactual_evaluation_reports_context_hash; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_counterfactual_evaluation_reports_context_hash ON counterfactual_evaluation_reports USING btree (context_hash);
 
 
 --
--- Name: ix_counterfactual_evaluation_reports_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_counterfactual_evaluation_reports_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_counterfactual_evaluation_reports_deleted_at ON counterfactual_evaluation_reports USING btree (deleted_at);
 
 
 --
--- Name: ix_counterfactual_evaluation_reports_evidence_grade; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_counterfactual_evaluation_reports_evidence_grade; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_counterfactual_evaluation_reports_evidence_grade ON counterfactual_evaluation_reports USING btree (evidence_grade);
 
 
 --
--- Name: ix_counterfactual_evaluation_reports_generated_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_counterfactual_evaluation_reports_generated_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_counterfactual_evaluation_reports_generated_at ON counterfactual_evaluation_reports USING btree (generated_at);
 
 
 --
--- Name: ix_counterfactual_evaluation_reports_policy_a; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_counterfactual_evaluation_reports_policy_a; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_counterfactual_evaluation_reports_policy_a ON counterfactual_evaluation_reports USING btree (policy_a);
 
 
 --
--- Name: ix_counterfactual_evaluation_reports_policy_b; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_counterfactual_evaluation_reports_policy_b; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_counterfactual_evaluation_reports_policy_b ON counterfactual_evaluation_reports USING btree (policy_b);
 
 
 --
--- Name: ix_counterfactual_evaluation_reports_promotion_status; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_counterfactual_evaluation_reports_promotion_status; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_counterfactual_evaluation_reports_promotion_status ON counterfactual_evaluation_reports USING btree (promotion_status);
 
 
 --
--- Name: ix_counterfactual_evaluation_reports_replaced_by_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_counterfactual_evaluation_reports_replaced_by_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_counterfactual_evaluation_reports_replaced_by_id ON counterfactual_evaluation_reports USING btree (replaced_by_id);
 
 
 --
--- Name: ix_counterfactual_evaluation_reports_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_counterfactual_evaluation_reports_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_counterfactual_evaluation_reports_user_id ON counterfactual_evaluation_reports USING btree (user_id);
@@ -12981,6 +12437,27 @@ CREATE INDEX ix_crypto_shredding_certificates_deleted_at ON crypto_shredding_cer
 --
 
 CREATE INDEX ix_crypto_shredding_certificates_user_id ON crypto_shredding_certificates USING btree (user_id);
+
+
+--
+-- Name: ix_cso_directive; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_cso_directive ON community_strategy_outcomes USING btree (directive_id);
+
+
+--
+-- Name: ix_cso_user_decision; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_cso_user_decision ON community_strategy_outcomes USING btree (user_id, decision);
+
+
+--
+-- Name: ix_cso_user_trigger; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_cso_user_trigger ON community_strategy_outcomes USING btree (user_id, trigger_type);
 
 
 --
@@ -13152,35 +12629,35 @@ CREATE UNIQUE INDEX ix_dictionary_entries_word ON dictionary_entries USING btree
 
 
 --
--- Name: ix_distilled_strategy_cache_shareability; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_distilled_strategy_cache_shareability; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_distilled_strategy_cache_shareability ON distilled_strategy_cache USING btree (shareability);
 
 
 --
--- Name: ix_distilled_strategy_cache_source_trajectory_type; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_distilled_strategy_cache_source_trajectory_type; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_distilled_strategy_cache_source_trajectory_type ON distilled_strategy_cache USING btree (source_trajectory_type);
 
 
 --
--- Name: ix_distilled_strategy_cache_status; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_distilled_strategy_cache_status; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_distilled_strategy_cache_status ON distilled_strategy_cache USING btree (status);
 
 
 --
--- Name: ix_distilled_strategy_cache_status_source; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_distilled_strategy_cache_status_source; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_distilled_strategy_cache_status_source ON distilled_strategy_cache USING btree (status, source_trajectory_type);
 
 
 --
--- Name: ix_distilled_strategy_cache_updated_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_distilled_strategy_cache_updated_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_distilled_strategy_cache_updated_at ON distilled_strategy_cache USING btree (updated_at);
@@ -13222,84 +12699,84 @@ CREATE INDEX ix_document_chunks_user_id ON document_chunks USING btree (user_id)
 
 
 --
--- Name: ix_document_retrieval_feedback_created_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_document_retrieval_feedback_created_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_document_retrieval_feedback_created_at ON document_retrieval_feedback USING btree (created_at);
 
 
 --
--- Name: ix_document_retrieval_feedback_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_document_retrieval_feedback_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_document_retrieval_feedback_deleted_at ON document_retrieval_feedback USING btree (deleted_at);
 
 
 --
--- Name: ix_document_retrieval_feedback_file_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_document_retrieval_feedback_file_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_document_retrieval_feedback_file_id ON document_retrieval_feedback USING btree (file_id);
 
 
 --
--- Name: ix_document_retrieval_feedback_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_document_retrieval_feedback_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_document_retrieval_feedback_user_id ON document_retrieval_feedback USING btree (user_id);
 
 
 --
--- Name: ix_durable_session_state_snapshots_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_durable_session_state_snapshots_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_durable_session_state_snapshots_deleted_at ON durable_session_state_snapshots USING btree (deleted_at);
 
 
 --
--- Name: ix_durable_session_state_snapshots_expires_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_durable_session_state_snapshots_expires_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_durable_session_state_snapshots_expires_at ON durable_session_state_snapshots USING btree (expires_at);
 
 
 --
--- Name: ix_durable_session_state_snapshots_fsm_state; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_durable_session_state_snapshots_fsm_state; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_durable_session_state_snapshots_fsm_state ON durable_session_state_snapshots USING btree (fsm_state);
 
 
 --
--- Name: ix_durable_session_state_snapshots_last_seen_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_durable_session_state_snapshots_last_seen_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_durable_session_state_snapshots_last_seen_at ON durable_session_state_snapshots USING btree (last_seen_at);
 
 
 --
--- Name: ix_durable_session_state_snapshots_recoverable; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_durable_session_state_snapshots_recoverable; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_durable_session_state_snapshots_recoverable ON durable_session_state_snapshots USING btree (recoverable);
 
 
 --
--- Name: ix_durable_session_state_snapshots_request_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_durable_session_state_snapshots_request_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_durable_session_state_snapshots_request_id ON durable_session_state_snapshots USING btree (request_id);
 
 
 --
--- Name: ix_durable_session_state_snapshots_session_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_durable_session_state_snapshots_session_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_durable_session_state_snapshots_session_id ON durable_session_state_snapshots USING btree (session_id);
 
 
 --
--- Name: ix_durable_session_state_snapshots_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_durable_session_state_snapshots_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_durable_session_state_snapshots_user_id ON durable_session_state_snapshots USING btree (user_id);
@@ -13320,56 +12797,56 @@ CREATE INDEX ix_episodic_memories_user_id ON episodic_memories USING btree (user
 
 
 --
--- Name: ix_event_bus_dlq_created_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_event_bus_dlq_created_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_event_bus_dlq_created_at ON event_bus_dlq USING btree (created_at);
 
 
 --
--- Name: ix_event_bus_dlq_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_event_bus_dlq_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_event_bus_dlq_deleted_at ON event_bus_dlq USING btree (deleted_at);
 
 
 --
--- Name: ix_event_bus_dlq_event_type; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_event_bus_dlq_event_type; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_event_bus_dlq_event_type ON event_bus_dlq USING btree (event_type);
 
 
 --
--- Name: ix_event_bus_dlq_failure_stage; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_event_bus_dlq_failure_stage; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_event_bus_dlq_failure_stage ON event_bus_dlq USING btree (failure_stage);
 
 
 --
--- Name: ix_event_bus_dlq_group_name; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_event_bus_dlq_group_name; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_event_bus_dlq_group_name ON event_bus_dlq USING btree (group_name);
 
 
 --
--- Name: ix_event_bus_dlq_message_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_event_bus_dlq_message_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_event_bus_dlq_message_id ON event_bus_dlq USING btree (message_id);
 
 
 --
--- Name: ix_event_bus_dlq_stream; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_event_bus_dlq_stream; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_event_bus_dlq_stream ON event_bus_dlq USING btree (stream);
 
 
 --
--- Name: ix_event_bus_dlq_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_event_bus_dlq_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_event_bus_dlq_user_id ON event_bus_dlq USING btree (user_id);
@@ -13411,70 +12888,70 @@ CREATE INDEX ix_evolution_predictions_prediction_type ON evolution_predictions U
 
 
 --
--- Name: ix_execution_audit_log_action; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_execution_audit_log_action; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_execution_audit_log_action ON execution_audit_log USING btree (action);
 
 
 --
--- Name: ix_execution_audit_log_actor; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_execution_audit_log_actor; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_execution_audit_log_actor ON execution_audit_log USING btree (actor);
 
 
 --
--- Name: ix_execution_audit_log_intent_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_execution_audit_log_intent_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_execution_audit_log_intent_id ON execution_audit_log USING btree (intent_id);
 
 
 --
--- Name: ix_execution_audit_log_occurred_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_execution_audit_log_occurred_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_execution_audit_log_occurred_at ON execution_audit_log USING btree (occurred_at);
 
 
 --
--- Name: ix_execution_audit_log_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_execution_audit_log_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_execution_audit_log_user_id ON execution_audit_log USING btree (user_id);
 
 
 --
--- Name: ix_execution_schedules_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_execution_schedules_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_execution_schedules_deleted_at ON execution_schedules USING btree (deleted_at);
 
 
 --
--- Name: ix_execution_schedules_is_active; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_execution_schedules_is_active; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_execution_schedules_is_active ON execution_schedules USING btree (is_active);
 
 
 --
--- Name: ix_execution_schedules_next_run_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_execution_schedules_next_run_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_execution_schedules_next_run_at ON execution_schedules USING btree (next_run_at);
 
 
 --
--- Name: ix_execution_schedules_task_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_execution_schedules_task_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_execution_schedules_task_id ON execution_schedules USING btree (task_id);
 
 
 --
--- Name: ix_execution_schedules_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_execution_schedules_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_execution_schedules_user_id ON execution_schedules USING btree (user_id);
@@ -13509,28 +12986,28 @@ CREATE INDEX ix_expansion_feedback_user_id ON expansion_feedback USING btree (us
 
 
 --
--- Name: ix_focus_contracts_active_node; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_focus_contracts_active_node; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_focus_contracts_active_node ON focus_contracts USING btree (active_node);
 
 
 --
--- Name: ix_focus_contracts_scenario_pack_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_focus_contracts_scenario_pack_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_focus_contracts_scenario_pack_id ON focus_contracts USING btree (scenario_pack_id);
 
 
 --
--- Name: ix_focus_contracts_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_focus_contracts_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_focus_contracts_user_id ON focus_contracts USING btree (user_id);
 
 
 --
--- Name: ix_focus_contracts_user_version; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_focus_contracts_user_version; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_focus_contracts_user_version ON focus_contracts USING btree (user_id, version);
@@ -13586,49 +13063,49 @@ CREATE INDEX ix_galaxy_skins_deleted_at ON galaxy_skins USING btree (deleted_at)
 
 
 --
--- Name: ix_goal_world_graph_snapshots_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_goal_world_graph_snapshots_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_goal_world_graph_snapshots_deleted_at ON goal_world_graph_snapshots USING btree (deleted_at);
 
 
 --
--- Name: ix_goal_world_graph_snapshots_goal_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_goal_world_graph_snapshots_goal_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_goal_world_graph_snapshots_goal_id ON goal_world_graph_snapshots USING btree (goal_id);
 
 
 --
--- Name: ix_goal_world_graph_snapshots_goal_type; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_goal_world_graph_snapshots_goal_type; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_goal_world_graph_snapshots_goal_type ON goal_world_graph_snapshots USING btree (goal_type);
 
 
 --
--- Name: ix_goal_world_graph_snapshots_graph_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_goal_world_graph_snapshots_graph_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_goal_world_graph_snapshots_graph_id ON goal_world_graph_snapshots USING btree (graph_id);
 
 
 --
--- Name: ix_goal_world_graph_snapshots_last_saved_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_goal_world_graph_snapshots_last_saved_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_goal_world_graph_snapshots_last_saved_at ON goal_world_graph_snapshots USING btree (last_saved_at);
 
 
 --
--- Name: ix_goal_world_graph_snapshots_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_goal_world_graph_snapshots_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_goal_world_graph_snapshots_user_id ON goal_world_graph_snapshots USING btree (user_id);
 
 
 --
--- Name: ix_goals_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_goals_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_goals_user_id ON goals USING btree (user_id);
@@ -13782,21 +13259,21 @@ CREATE INDEX ix_groups_deleted_at ON groups USING btree (deleted_at);
 
 
 --
--- Name: ix_growth_chronicle_snapshots_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_growth_chronicle_snapshots_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_growth_chronicle_snapshots_deleted_at ON growth_chronicle_snapshots USING btree (deleted_at);
 
 
 --
--- Name: ix_growth_chronicle_snapshots_last_saved_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_growth_chronicle_snapshots_last_saved_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_growth_chronicle_snapshots_last_saved_at ON growth_chronicle_snapshots USING btree (last_saved_at);
 
 
 --
--- Name: ix_growth_chronicle_snapshots_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_growth_chronicle_snapshots_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_growth_chronicle_snapshots_user_id ON growth_chronicle_snapshots USING btree (user_id);
@@ -13817,56 +13294,56 @@ CREATE INDEX ix_idempotency_keys_user_id ON idempotency_keys USING btree (user_i
 
 
 --
--- Name: ix_identity_evidence_created_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_identity_evidence_created_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_identity_evidence_created_at ON identity_evidence USING btree (created_at);
 
 
 --
--- Name: ix_identity_evidence_dimension; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_identity_evidence_dimension; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_identity_evidence_dimension ON identity_evidence USING btree (dimension);
 
 
 --
--- Name: ix_identity_evidence_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_identity_evidence_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_identity_evidence_user_id ON identity_evidence USING btree (user_id);
 
 
 --
--- Name: ix_insight_claims_created_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_insight_claims_created_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_insight_claims_created_at ON insight_claims USING btree (created_at);
 
 
 --
--- Name: ix_insight_claims_source; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_insight_claims_source; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_insight_claims_source ON insight_claims USING btree (source);
 
 
 --
--- Name: ix_insight_claims_status; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_insight_claims_status; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_insight_claims_status ON insight_claims USING btree (status);
 
 
 --
--- Name: ix_insight_claims_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_insight_claims_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_insight_claims_user_id ON insight_claims USING btree (user_id);
 
 
 --
--- Name: ix_intervention_acceptance_status; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_intervention_acceptance_status; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_intervention_acceptance_status ON intervention_records USING btree (acceptance_status);
@@ -13901,7 +13378,7 @@ CREATE INDEX ix_intervention_audit_logs_user_id ON intervention_audit_logs USING
 
 
 --
--- Name: ix_intervention_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_intervention_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_intervention_deleted_at ON intervention_records USING btree (deleted_at);
@@ -13943,28 +13420,28 @@ CREATE INDEX ix_intervention_feedback_user_id ON intervention_feedback USING btr
 
 
 --
--- Name: ix_intervention_outcome; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_intervention_outcome; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_intervention_outcome ON intervention_records USING btree (outcome_status, outcome_window_days);
 
 
 --
--- Name: ix_intervention_outcomes_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_intervention_outcomes_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_intervention_outcomes_deleted_at ON intervention_outcomes USING btree (deleted_at);
 
 
 --
--- Name: ix_intervention_outcomes_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_intervention_outcomes_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_intervention_outcomes_user_id ON intervention_outcomes USING btree (user_id);
 
 
 --
--- Name: ix_intervention_plan_card_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_intervention_plan_card_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_intervention_plan_card_id ON intervention_records USING btree (plan_card_id);
@@ -14006,28 +13483,28 @@ CREATE INDEX ix_intervention_requests_user_id ON intervention_requests USING btr
 
 
 --
--- Name: ix_intervention_strategy_outcomes_intervention_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_intervention_strategy_outcomes_intervention_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_intervention_strategy_outcomes_intervention_id ON intervention_strategy_outcomes USING btree (intervention_id);
 
 
 --
--- Name: ix_intervention_strategy_outcomes_outcome; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_intervention_strategy_outcomes_outcome; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_intervention_strategy_outcomes_outcome ON intervention_strategy_outcomes USING btree (outcome);
 
 
 --
--- Name: ix_intervention_strategy_outcomes_trigger_type; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_intervention_strategy_outcomes_trigger_type; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_intervention_strategy_outcomes_trigger_type ON intervention_strategy_outcomes USING btree (trigger_type);
 
 
 --
--- Name: ix_intervention_strategy_outcomes_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_intervention_strategy_outcomes_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_intervention_strategy_outcomes_user_id ON intervention_strategy_outcomes USING btree (user_id);
@@ -14055,28 +13532,28 @@ CREATE UNIQUE INDEX ix_intervention_templates_template_id ON intervention_templa
 
 
 --
--- Name: ix_intervention_trigger_channel; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_intervention_trigger_channel; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_intervention_trigger_channel ON intervention_records USING btree (trigger_type, delivery_channel);
 
 
 --
--- Name: ix_intervention_trigger_type; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_intervention_trigger_type; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_intervention_trigger_type ON intervention_records USING btree (trigger_type);
 
 
 --
--- Name: ix_intervention_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_intervention_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_intervention_user_id ON intervention_records USING btree (user_id);
 
 
 --
--- Name: ix_intervention_user_status; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_intervention_user_status; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_intervention_user_status ON intervention_records USING btree (user_id, acceptance_status);
@@ -14125,35 +13602,35 @@ CREATE INDEX ix_jobs_user_id ON jobs USING btree (user_id);
 
 
 --
--- Name: ix_knowledge_node_documents_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_knowledge_node_documents_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_knowledge_node_documents_deleted_at ON knowledge_node_documents USING btree (deleted_at);
 
 
 --
--- Name: ix_knowledge_node_documents_file_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_knowledge_node_documents_file_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_knowledge_node_documents_file_id ON knowledge_node_documents USING btree (file_id);
 
 
 --
--- Name: ix_knowledge_node_documents_is_primary; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_knowledge_node_documents_is_primary; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_knowledge_node_documents_is_primary ON knowledge_node_documents USING btree (is_primary);
 
 
 --
--- Name: ix_knowledge_node_documents_node_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_knowledge_node_documents_node_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_knowledge_node_documents_node_id ON knowledge_node_documents USING btree (node_id);
 
 
 --
--- Name: ix_knowledge_node_documents_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_knowledge_node_documents_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_knowledge_node_documents_user_id ON knowledge_node_documents USING btree (user_id);
@@ -14216,21 +13693,21 @@ CREATE INDEX ix_knowledge_nodes_subject_id ON knowledge_nodes USING btree (subje
 
 
 --
--- Name: ix_leaderboard_snapshots_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_leaderboard_snapshots_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_leaderboard_snapshots_deleted_at ON leaderboard_snapshots USING btree (deleted_at);
 
 
 --
--- Name: ix_leaderboard_snapshots_snapshot_date; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_leaderboard_snapshots_snapshot_date; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_leaderboard_snapshots_snapshot_date ON leaderboard_snapshots USING btree (snapshot_date);
 
 
 --
--- Name: ix_leaderboard_snapshots_snapshot_type; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_leaderboard_snapshots_snapshot_type; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_leaderboard_snapshots_snapshot_type ON leaderboard_snapshots USING btree (snapshot_type);
@@ -14321,105 +13798,105 @@ CREATE UNIQUE INDEX ix_ltm_daily_snapshots_snapshot_date ON ltm_daily_snapshots 
 
 
 --
--- Name: ix_marketplace_packs_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_marketplace_packs_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_marketplace_packs_deleted_at ON marketplace_packs USING btree (deleted_at);
 
 
 --
--- Name: ix_marketplace_packs_domain; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_marketplace_packs_domain; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_marketplace_packs_domain ON marketplace_packs USING btree (domain);
 
 
 --
--- Name: ix_marketplace_packs_pack_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_marketplace_packs_pack_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE UNIQUE INDEX ix_marketplace_packs_pack_id ON marketplace_packs USING btree (pack_id);
 
 
 --
--- Name: ix_marketplace_packs_quality; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_marketplace_packs_quality; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_marketplace_packs_quality ON marketplace_packs USING btree (status, quality_score);
 
 
 --
--- Name: ix_marketplace_packs_status; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_marketplace_packs_status; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_marketplace_packs_status ON marketplace_packs USING btree (status);
 
 
 --
--- Name: ix_marketplace_packs_status_domain; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_marketplace_packs_status_domain; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_marketplace_packs_status_domain ON marketplace_packs USING btree (status, domain);
 
 
 --
--- Name: ix_marketplace_skills_author_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_marketplace_skills_author_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_marketplace_skills_author_id ON marketplace_skills USING btree (author_id);
 
 
 --
--- Name: ix_marketplace_skills_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_marketplace_skills_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_marketplace_skills_deleted_at ON marketplace_skills USING btree (deleted_at);
 
 
 --
--- Name: ix_marketplace_skills_domain; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_marketplace_skills_domain; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_marketplace_skills_domain ON marketplace_skills USING btree (domain);
 
 
 --
--- Name: ix_marketplace_skills_evidence_grade; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_marketplace_skills_evidence_grade; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_marketplace_skills_evidence_grade ON marketplace_skills USING btree (evidence_grade);
 
 
 --
--- Name: ix_marketplace_skills_quality; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_marketplace_skills_quality; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_marketplace_skills_quality ON marketplace_skills USING btree (status, quality_score);
 
 
 --
--- Name: ix_marketplace_skills_skill_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_marketplace_skills_skill_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE UNIQUE INDEX ix_marketplace_skills_skill_id ON marketplace_skills USING btree (skill_id);
 
 
 --
--- Name: ix_marketplace_skills_source_skill_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_marketplace_skills_source_skill_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_marketplace_skills_source_skill_id ON marketplace_skills USING btree (source_skill_id);
 
 
 --
--- Name: ix_marketplace_skills_status; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_marketplace_skills_status; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_marketplace_skills_status ON marketplace_skills USING btree (status);
 
 
 --
--- Name: ix_marketplace_skills_status_domain; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_marketplace_skills_status_domain; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_marketplace_skills_status_domain ON marketplace_skills USING btree (status, domain);
@@ -14629,63 +14106,63 @@ CREATE INDEX ix_node_relations_target_node_id ON node_relations USING btree (tar
 
 
 --
--- Name: ix_north_star_metric_events_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_north_star_metric_events_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_north_star_metric_events_deleted_at ON north_star_metric_events USING btree (deleted_at);
 
 
 --
--- Name: ix_north_star_metric_events_event_key; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_north_star_metric_events_event_key; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE UNIQUE INDEX ix_north_star_metric_events_event_key ON north_star_metric_events USING btree (event_key);
 
 
 --
--- Name: ix_north_star_metric_events_event_type; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_north_star_metric_events_event_type; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_north_star_metric_events_event_type ON north_star_metric_events USING btree (event_type);
 
 
 --
--- Name: ix_north_star_metric_events_metric_date; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_north_star_metric_events_metric_date; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_north_star_metric_events_metric_date ON north_star_metric_events USING btree (metric_date);
 
 
 --
--- Name: ix_north_star_metric_events_occurred_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_north_star_metric_events_occurred_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_north_star_metric_events_occurred_at ON north_star_metric_events USING btree (occurred_at);
 
 
 --
--- Name: ix_north_star_metric_events_plan_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_north_star_metric_events_plan_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_north_star_metric_events_plan_id ON north_star_metric_events USING btree (plan_id);
 
 
 --
--- Name: ix_north_star_metric_events_source; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_north_star_metric_events_source; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_north_star_metric_events_source ON north_star_metric_events USING btree (source);
 
 
 --
--- Name: ix_north_star_metric_events_task_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_north_star_metric_events_task_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_north_star_metric_events_task_id ON north_star_metric_events USING btree (task_id);
 
 
 --
--- Name: ix_north_star_metric_events_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_north_star_metric_events_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_north_star_metric_events_user_id ON north_star_metric_events USING btree (user_id);
@@ -14727,56 +14204,56 @@ CREATE INDEX ix_notifications_user_id ON notifications USING btree (user_id);
 
 
 --
--- Name: ix_occurrences_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_occurrences_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_occurrences_deleted_at ON task_occurrences USING btree (deleted_at);
 
 
 --
--- Name: ix_occurrences_plan_card_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_occurrences_plan_card_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_occurrences_plan_card_id ON task_occurrences USING btree (plan_card_id);
 
 
 --
--- Name: ix_occurrences_plan_date; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_occurrences_plan_date; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_occurrences_plan_date ON task_occurrences USING btree (plan_card_id, scheduled_for);
 
 
 --
--- Name: ix_occurrences_scheduled_date; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_occurrences_scheduled_date; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_occurrences_scheduled_date ON task_occurrences USING btree (scheduled_for, occurrence_status);
 
 
 --
--- Name: ix_occurrences_scheduled_for; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_occurrences_scheduled_for; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_occurrences_scheduled_for ON task_occurrences USING btree (scheduled_for);
 
 
 --
--- Name: ix_occurrences_series_card_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_occurrences_series_card_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_occurrences_series_card_id ON task_occurrences USING btree (series_card_id);
 
 
 --
--- Name: ix_occurrences_series_status; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_occurrences_series_status; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_occurrences_series_status ON task_occurrences USING btree (series_card_id, occurrence_status);
 
 
 --
--- Name: ix_occurrences_status; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_occurrences_status; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_occurrences_status ON task_occurrences USING btree (occurrence_status);
@@ -14797,70 +14274,70 @@ CREATE INDEX ix_offline_message_queue_user_id ON offline_message_queue USING btr
 
 
 --
--- Name: ix_pack_adoption_history_adoption_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_pack_adoption_history_adoption_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_pack_adoption_history_adoption_id ON pack_adoption_history USING btree (adoption_id);
 
 
 --
--- Name: ix_pack_adoption_history_asset_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_pack_adoption_history_asset_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_pack_adoption_history_asset_id ON pack_adoption_history USING btree (asset_id);
 
 
 --
--- Name: ix_pack_adoption_history_asset_trace; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_pack_adoption_history_asset_trace; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_pack_adoption_history_asset_trace ON pack_adoption_history USING btree (asset_type, asset_id, trace_id);
 
 
 --
--- Name: ix_pack_adoption_history_asset_type; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_pack_adoption_history_asset_type; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_pack_adoption_history_asset_type ON pack_adoption_history USING btree (asset_type);
 
 
 --
--- Name: ix_pack_adoption_history_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_pack_adoption_history_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_pack_adoption_history_deleted_at ON pack_adoption_history USING btree (deleted_at);
 
 
 --
--- Name: ix_pack_adoption_history_impact_type; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_pack_adoption_history_impact_type; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_pack_adoption_history_impact_type ON pack_adoption_history USING btree (impact_type);
 
 
 --
--- Name: ix_pack_adoption_history_outcome; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_pack_adoption_history_outcome; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_pack_adoption_history_outcome ON pack_adoption_history USING btree (outcome);
 
 
 --
--- Name: ix_pack_adoption_history_trace_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_pack_adoption_history_trace_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_pack_adoption_history_trace_id ON pack_adoption_history USING btree (trace_id);
 
 
 --
--- Name: ix_pack_adoption_history_user_created; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_pack_adoption_history_user_created; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_pack_adoption_history_user_created ON pack_adoption_history USING btree (user_id, created_at);
 
 
 --
--- Name: ix_pack_adoption_history_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_pack_adoption_history_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_pack_adoption_history_user_id ON pack_adoption_history USING btree (user_id);
@@ -15084,49 +14561,49 @@ CREATE INDEX ix_posts_user_id ON posts USING btree (user_id);
 
 
 --
--- Name: ix_privacy_budget_ledger_allowed; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_privacy_budget_ledger_allowed; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_privacy_budget_ledger_allowed ON privacy_budget_ledger USING btree (allowed);
 
 
 --
--- Name: ix_privacy_budget_ledger_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_privacy_budget_ledger_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_privacy_budget_ledger_deleted_at ON privacy_budget_ledger USING btree (deleted_at);
 
 
 --
--- Name: ix_privacy_budget_ledger_query_type; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_privacy_budget_ledger_query_type; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_privacy_budget_ledger_query_type ON privacy_budget_ledger USING btree (query_type);
 
 
 --
--- Name: ix_privacy_budget_ledger_spent_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_privacy_budget_ledger_spent_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_privacy_budget_ledger_spent_at ON privacy_budget_ledger USING btree (spent_at);
 
 
 --
--- Name: ix_privacy_budget_ledger_subject_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_privacy_budget_ledger_subject_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_privacy_budget_ledger_subject_id ON privacy_budget_ledger USING btree (subject_id);
 
 
 --
--- Name: ix_privacy_budget_ledger_subject_type; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_privacy_budget_ledger_subject_type; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_privacy_budget_ledger_subject_type ON privacy_budget_ledger USING btree (subject_type);
 
 
 --
--- Name: ix_privacy_budget_ledger_window_key; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_privacy_budget_ledger_window_key; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_privacy_budget_ledger_window_key ON privacy_budget_ledger USING btree (window_key);
@@ -15161,14 +14638,14 @@ CREATE INDEX ix_private_messages_thread_root_id ON private_messages USING btree 
 
 
 --
--- Name: ix_probe_outcomes_claim_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_probe_outcomes_claim_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_probe_outcomes_claim_id ON probe_outcomes USING btree (claim_id);
 
 
 --
--- Name: ix_probe_outcomes_created_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_probe_outcomes_created_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_probe_outcomes_created_at ON probe_outcomes USING btree (created_at);
@@ -15217,168 +14694,168 @@ CREATE INDEX ix_recommendation_cache_deleted_at ON recommendation_cache USING bt
 
 
 --
--- Name: ix_release_approval_requests_applied_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_release_approval_requests_applied_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_release_approval_requests_applied_at ON release_approval_requests USING btree (applied_at);
 
 
 --
--- Name: ix_release_approval_requests_applied_by_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_release_approval_requests_applied_by_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_release_approval_requests_applied_by_id ON release_approval_requests USING btree (applied_by_id);
 
 
 --
--- Name: ix_release_approval_requests_category; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_release_approval_requests_category; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_release_approval_requests_category ON release_approval_requests USING btree (category);
 
 
 --
--- Name: ix_release_approval_requests_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_release_approval_requests_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_release_approval_requests_deleted_at ON release_approval_requests USING btree (deleted_at);
 
 
 --
--- Name: ix_release_approval_requests_needs_admin_attention; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_release_approval_requests_needs_admin_attention; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_release_approval_requests_needs_admin_attention ON release_approval_requests USING btree (needs_admin_attention);
 
 
 --
--- Name: ix_release_approval_requests_object_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_release_approval_requests_object_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_release_approval_requests_object_id ON release_approval_requests USING btree (object_id);
 
 
 --
--- Name: ix_release_approval_requests_object_type; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_release_approval_requests_object_type; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_release_approval_requests_object_type ON release_approval_requests USING btree (object_type);
 
 
 --
--- Name: ix_release_approval_requests_requested_by_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_release_approval_requests_requested_by_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_release_approval_requests_requested_by_id ON release_approval_requests USING btree (requested_by_id);
 
 
 --
--- Name: ix_release_approval_requests_status; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_release_approval_requests_status; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_release_approval_requests_status ON release_approval_requests USING btree (status);
 
 
 --
--- Name: ix_release_approval_requests_submitted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_release_approval_requests_submitted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_release_approval_requests_submitted_at ON release_approval_requests USING btree (submitted_at);
 
 
 --
--- Name: ix_report_snapshots_cache_version; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_report_snapshots_cache_version; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_report_snapshots_cache_version ON report_snapshots USING btree (cache_version);
 
 
 --
--- Name: ix_report_snapshots_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_report_snapshots_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_report_snapshots_deleted_at ON report_snapshots USING btree (deleted_at);
 
 
 --
--- Name: ix_report_snapshots_delivery_mode; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_report_snapshots_delivery_mode; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_report_snapshots_delivery_mode ON report_snapshots USING btree (delivery_mode);
 
 
 --
--- Name: ix_report_snapshots_report_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_report_snapshots_report_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE UNIQUE INDEX ix_report_snapshots_report_id ON report_snapshots USING btree (report_id);
 
 
 --
--- Name: ix_report_snapshots_snapshot_type; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_report_snapshots_snapshot_type; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_report_snapshots_snapshot_type ON report_snapshots USING btree (snapshot_type);
 
 
 --
--- Name: ix_report_snapshots_user_cache; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_report_snapshots_user_cache; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_report_snapshots_user_cache ON report_snapshots USING btree (user_id, cache_version);
 
 
 --
--- Name: ix_report_snapshots_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_report_snapshots_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_report_snapshots_user_id ON report_snapshots USING btree (user_id);
 
 
 --
--- Name: ix_research_consent_records_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_research_consent_records_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_research_consent_records_deleted_at ON research_consent_records USING btree (deleted_at);
 
 
 --
--- Name: ix_research_consent_records_granted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_research_consent_records_granted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_research_consent_records_granted_at ON research_consent_records USING btree (granted_at);
 
 
 --
--- Name: ix_research_consent_records_protocol_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_research_consent_records_protocol_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_research_consent_records_protocol_id ON research_consent_records USING btree (protocol_id);
 
 
 --
--- Name: ix_research_consent_records_revoked_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_research_consent_records_revoked_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_research_consent_records_revoked_at ON research_consent_records USING btree (revoked_at);
 
 
 --
--- Name: ix_research_consent_records_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_research_consent_records_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_research_consent_records_user_id ON research_consent_records USING btree (user_id);
 
 
 --
--- Name: ix_research_consent_user_active; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_research_consent_user_active; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_research_consent_user_active ON research_consent_records USING btree (user_id, protocol_id, revoked_at);
 
 
 --
--- Name: ix_research_consent_user_protocol; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_research_consent_user_protocol; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_research_consent_user_protocol ON research_consent_records USING btree (user_id, protocol_id);
@@ -15532,56 +15009,56 @@ CREATE INDEX ix_review_overrides_user_id ON review_overrides USING btree (user_i
 
 
 --
--- Name: ix_safe_experiment_episodes_experiment_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_safe_experiment_episodes_experiment_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_safe_experiment_episodes_experiment_id ON safe_experiment_episodes USING btree (experiment_id);
 
 
 --
--- Name: ix_safe_experiment_episodes_experiment_key; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_safe_experiment_episodes_experiment_key; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_safe_experiment_episodes_experiment_key ON safe_experiment_episodes USING btree (experiment_key);
 
 
 --
--- Name: ix_safe_experiment_episodes_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_safe_experiment_episodes_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_safe_experiment_episodes_user_id ON safe_experiment_episodes USING btree (user_id);
 
 
 --
--- Name: ix_safe_experiments_created_by; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_safe_experiments_created_by; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_safe_experiments_created_by ON safe_experiments USING btree (created_by);
 
 
 --
--- Name: ix_safe_experiments_domain; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_safe_experiments_domain; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_safe_experiments_domain ON safe_experiments USING btree (domain);
 
 
 --
--- Name: ix_safe_experiments_experiment_key; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_safe_experiments_experiment_key; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE UNIQUE INDEX ix_safe_experiments_experiment_key ON safe_experiments USING btree (experiment_key);
 
 
 --
--- Name: ix_safe_experiments_kill_switch_key; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_safe_experiments_kill_switch_key; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_safe_experiments_kill_switch_key ON safe_experiments USING btree (kill_switch_key);
 
 
 --
--- Name: ix_safe_experiments_status; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_safe_experiments_status; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_safe_experiments_status ON safe_experiments USING btree (status);
@@ -15602,7 +15079,7 @@ CREATE UNIQUE INDEX ix_scaffolding_states_user_id ON scaffolding_states USING bt
 
 
 --
--- Name: ix_scenes_scene_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_scenes_scene_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE UNIQUE INDEX ix_scenes_scene_id ON scenes USING btree (scene_id);
@@ -15805,14 +15282,14 @@ CREATE INDEX ix_semantic_links_target_type ON semantic_links USING btree (target
 
 
 --
--- Name: ix_session_completions_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_session_completions_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_session_completions_user_id ON session_completions USING btree (user_id);
 
 
 --
--- Name: ix_session_completions_user_id_created_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_session_completions_user_id_created_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_session_completions_user_id_created_at ON session_completions USING btree (user_id, created_at);
@@ -15847,7 +15324,7 @@ CREATE INDEX ix_shared_resources_target_user_id ON shared_resources USING btree 
 
 
 --
--- Name: ix_shared_skills_share_slug; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_shared_skills_share_slug; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE UNIQUE INDEX ix_shared_skills_share_slug ON shared_skills USING btree (share_slug);
@@ -15917,56 +15394,56 @@ CREATE INDEX ix_shop_purchases_user_id_created_at ON shop_purchases USING btree 
 
 
 --
--- Name: ix_simulation_runs_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_simulation_runs_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_simulation_runs_deleted_at ON simulation_runs USING btree (deleted_at);
 
 
 --
--- Name: ix_simulation_runs_last_active_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_simulation_runs_last_active_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_simulation_runs_last_active_at ON simulation_runs USING btree (last_active_at);
 
 
 --
--- Name: ix_simulation_runs_scenario_key; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_simulation_runs_scenario_key; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_simulation_runs_scenario_key ON simulation_runs USING btree (scenario_key);
 
 
 --
--- Name: ix_simulation_runs_session_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_simulation_runs_session_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE UNIQUE INDEX ix_simulation_runs_session_id ON simulation_runs USING btree (session_id);
 
 
 --
--- Name: ix_simulation_runs_state; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_simulation_runs_state; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_simulation_runs_state ON simulation_runs USING btree (state);
 
 
 --
--- Name: ix_simulation_runs_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_simulation_runs_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_simulation_runs_user_id ON simulation_runs USING btree (user_id);
 
 
 --
--- Name: ix_simulation_runs_user_last_active; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_simulation_runs_user_last_active; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_simulation_runs_user_last_active ON simulation_runs USING btree (user_id, last_active_at);
 
 
 --
--- Name: ix_skill_share_moderation_queue_user_skill_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_skill_share_moderation_queue_user_skill_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_skill_share_moderation_queue_user_skill_id ON skill_share_moderation_queue USING btree (user_skill_id);
@@ -15980,14 +15457,14 @@ CREATE INDEX ix_spark_contracts_deleted_at ON spark_contracts USING btree (delet
 
 
 --
--- Name: ix_srl_phase_states_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_srl_phase_states_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_srl_phase_states_deleted_at ON srl_phase_states USING btree (deleted_at);
 
 
 --
--- Name: ix_srl_phase_states_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_srl_phase_states_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE UNIQUE INDEX ix_srl_phase_states_user_id ON srl_phase_states USING btree (user_id);
@@ -16050,21 +15527,21 @@ CREATE INDEX ix_stored_files_user_id ON stored_files USING btree (user_id);
 
 
 --
--- Name: ix_strategy_belief_snapshots_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_strategy_belief_snapshots_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_strategy_belief_snapshots_deleted_at ON strategy_belief_snapshots USING btree (deleted_at);
 
 
 --
--- Name: ix_strategy_belief_snapshots_strategy_key; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_strategy_belief_snapshots_strategy_key; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_strategy_belief_snapshots_strategy_key ON strategy_belief_snapshots USING btree (strategy_key);
 
 
 --
--- Name: ix_strategy_belief_snapshots_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_strategy_belief_snapshots_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_strategy_belief_snapshots_user_id ON strategy_belief_snapshots USING btree (user_id);
@@ -16092,14 +15569,14 @@ CREATE INDEX ix_strategy_nodes_user_id ON strategy_nodes USING btree (user_id);
 
 
 --
--- Name: ix_strategy_outcomes_user_trigger; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_strategy_outcomes_user_trigger; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_strategy_outcomes_user_trigger ON intervention_strategy_outcomes USING btree (user_id, trigger_type);
 
 
 --
--- Name: ix_strategy_outcomes_user_trigger_tone; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_strategy_outcomes_user_trigger_tone; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_strategy_outcomes_user_trigger_tone ON intervention_strategy_outcomes USING btree (user_id, trigger_type, delivery_tone);
@@ -16131,18 +15608,6 @@ CREATE INDEX ix_study_records_node_id ON study_records USING btree (node_id);
 --
 
 CREATE INDEX ix_study_records_user_id ON study_records USING btree (user_id);
-
---
--- Name: ix_study_records_user_id_node_id; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX ix_study_records_user_id_node_id ON study_records USING btree (user_id, node_id);
-
---
--- Name: ix_study_records_user_id_created_at; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX ix_study_records_user_id_created_at ON study_records USING btree (user_id, created_at);
 
 
 --
@@ -16223,21 +15688,21 @@ CREATE INDEX ix_system_config_change_logs_id ON system_config_change_logs USING 
 
 
 --
--- Name: ix_task_documents_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_task_documents_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_task_documents_deleted_at ON task_documents USING btree (deleted_at);
 
 
 --
--- Name: ix_task_documents_file_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_task_documents_file_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_task_documents_file_id ON task_documents USING btree (file_id);
 
 
 --
--- Name: ix_task_documents_task_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_task_documents_task_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_task_documents_task_id ON task_documents USING btree (task_id);
@@ -16363,126 +15828,126 @@ CREATE INDEX ix_tasks_user_id ON tasks USING btree (user_id);
 
 
 --
--- Name: ix_tdr_created_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_tdr_created_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_tdr_created_at ON transition_decision_records USING btree (created_at);
 
 
 --
--- Name: ix_tdr_input_snapshot_ref; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_tdr_input_snapshot_ref; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_tdr_input_snapshot_ref ON transition_decision_records USING btree (input_snapshot_ref);
 
 
 --
--- Name: ix_tdr_policy_version; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_tdr_policy_version; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_tdr_policy_version ON transition_decision_records USING btree (policy_version);
 
 
 --
--- Name: ix_tdr_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_tdr_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_tdr_user_id ON transition_decision_records USING btree (user_id);
 
 
 --
--- Name: ix_theater_candidate_bundles_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_theater_candidate_bundles_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_theater_candidate_bundles_deleted_at ON theater_candidate_bundles USING btree (deleted_at);
 
 
 --
--- Name: ix_theater_candidate_bundles_prediction_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_theater_candidate_bundles_prediction_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_theater_candidate_bundles_prediction_id ON theater_candidate_bundles USING btree (prediction_id);
 
 
 --
--- Name: ix_theater_candidate_bundles_status; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_theater_candidate_bundles_status; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_theater_candidate_bundles_status ON theater_candidate_bundles USING btree (status);
 
 
 --
--- Name: ix_theater_candidate_bundles_target_resolution_mode; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_theater_candidate_bundles_target_resolution_mode; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_theater_candidate_bundles_target_resolution_mode ON theater_candidate_bundles USING btree (target_resolution_mode);
 
 
 --
--- Name: ix_theater_candidate_bundles_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_theater_candidate_bundles_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_theater_candidate_bundles_user_id ON theater_candidate_bundles USING btree (user_id);
 
 
 --
--- Name: ix_theater_predictions_accuracy_due_on; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_theater_predictions_accuracy_due_on; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_theater_predictions_accuracy_due_on ON theater_predictions USING btree (accuracy_due_on);
 
 
 --
--- Name: ix_theater_predictions_accuracy_pending; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_theater_predictions_accuracy_pending; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_theater_predictions_accuracy_pending ON theater_predictions USING btree (accuracy_status, accuracy_due_on);
 
 
 --
--- Name: ix_theater_predictions_accuracy_status; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_theater_predictions_accuracy_status; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_theater_predictions_accuracy_status ON theater_predictions USING btree (accuracy_status);
 
 
 --
--- Name: ix_theater_predictions_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_theater_predictions_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_theater_predictions_deleted_at ON theater_predictions USING btree (deleted_at);
 
 
 --
--- Name: ix_theater_predictions_generated_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_theater_predictions_generated_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_theater_predictions_generated_at ON theater_predictions USING btree (generated_at);
 
 
 --
--- Name: ix_theater_predictions_prediction_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_theater_predictions_prediction_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_theater_predictions_prediction_id ON theater_predictions USING btree (prediction_id);
 
 
 --
--- Name: ix_theater_predictions_target_resolution_mode; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_theater_predictions_target_resolution_mode; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_theater_predictions_target_resolution_mode ON theater_predictions USING btree (target_resolution_mode);
 
 
 --
--- Name: ix_theater_predictions_user_generated; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_theater_predictions_user_generated; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_theater_predictions_user_generated ON theater_predictions USING btree (user_id, generated_at DESC);
 
 
 --
--- Name: ix_theater_predictions_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_theater_predictions_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_theater_predictions_user_id ON theater_predictions USING btree (user_id);
@@ -16650,6 +16115,13 @@ CREATE INDEX ix_user_devices_push_token ON user_devices USING btree (push_token)
 
 
 --
+-- Name: ix_user_devices_push_token_hash; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_user_devices_push_token_hash ON user_devices USING btree (push_token_hash);
+
+
+--
 -- Name: ix_user_devices_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -16811,21 +16283,21 @@ CREATE UNIQUE INDEX ix_user_preferences_center_user_id ON user_preferences_cente
 
 
 --
--- Name: ix_user_scenario_states_current_node; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_user_scenario_states_current_node; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_user_scenario_states_current_node ON user_scenario_states USING btree (current_node);
 
 
 --
--- Name: ix_user_scenario_states_pack_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_user_scenario_states_pack_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_user_scenario_states_pack_id ON user_scenario_states USING btree (pack_id);
 
 
 --
--- Name: ix_user_scenario_states_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_user_scenario_states_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE UNIQUE INDEX ix_user_scenario_states_user_id ON user_scenario_states USING btree (user_id);
@@ -16909,63 +16381,63 @@ CREATE INDEX ix_user_similarities_deleted_at ON user_similarities USING btree (d
 
 
 --
--- Name: ix_user_skill_adoptions_asset_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_user_skill_adoptions_asset_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_user_skill_adoptions_asset_id ON user_skill_adoptions USING btree (asset_id);
 
 
 --
--- Name: ix_user_skill_adoptions_asset_type; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_user_skill_adoptions_asset_type; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_user_skill_adoptions_asset_type ON user_skill_adoptions USING btree (asset_type);
 
 
 --
--- Name: ix_user_skill_adoptions_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_user_skill_adoptions_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_user_skill_adoptions_deleted_at ON user_skill_adoptions USING btree (deleted_at);
 
 
 --
--- Name: ix_user_skill_adoptions_status; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_user_skill_adoptions_status; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_user_skill_adoptions_status ON user_skill_adoptions USING btree (status);
 
 
 --
--- Name: ix_user_skill_adoptions_trace_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_user_skill_adoptions_trace_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_user_skill_adoptions_trace_id ON user_skill_adoptions USING btree (trace_id);
 
 
 --
--- Name: ix_user_skill_adoptions_user_asset; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_user_skill_adoptions_user_asset; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_user_skill_adoptions_user_asset ON user_skill_adoptions USING btree (user_id, asset_type, asset_id);
 
 
 --
--- Name: ix_user_skill_adoptions_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_user_skill_adoptions_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_user_skill_adoptions_user_id ON user_skill_adoptions USING btree (user_id);
 
 
 --
--- Name: ix_user_skills_forked_from_share_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_user_skills_forked_from_share_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_user_skills_forked_from_share_id ON user_skills USING btree (forked_from_share_id);
 
 
 --
--- Name: ix_user_skills_shared_catalog_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_user_skills_shared_catalog_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_user_skills_shared_catalog_id ON user_skills USING btree (shared_catalog_id);
@@ -17182,21 +16654,21 @@ CREATE INDEX ix_visual_elements_type_rarity ON visual_elements USING btree (elem
 
 
 --
--- Name: ix_window_states_created_at; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_window_states_created_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_window_states_created_at ON window_states USING btree (created_at);
 
 
 --
--- Name: ix_window_states_trigger_decision_ref; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_window_states_trigger_decision_ref; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_window_states_trigger_decision_ref ON window_states USING btree (trigger_decision_ref);
 
 
 --
--- Name: ix_window_states_user_id; Type: INDEX; Schema: public; Owner: brsama
+-- Name: ix_window_states_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_window_states_user_id ON window_states USING btree (user_id);
@@ -17224,7 +16696,7 @@ CREATE INDEX ix_word_books_word ON word_books USING btree (word);
 
 
 --
--- Name: uq_aurora_policy_versions_version; Type: INDEX; Schema: public; Owner: brsama
+-- Name: uq_aurora_policy_versions_version; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE UNIQUE INDEX uq_aurora_policy_versions_version ON aurora_policy_versions USING btree (version);
@@ -17252,14 +16724,14 @@ CREATE UNIQUE INDEX uq_memory_rank_policies_scope ON memory_rank_policies USING 
 
 
 --
--- Name: uq_research_consent_active_protocol; Type: INDEX; Schema: public; Owner: brsama
+-- Name: uq_research_consent_active_protocol; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE UNIQUE INDEX uq_research_consent_active_protocol ON research_consent_records USING btree (user_id, protocol_id) WHERE (revoked_at IS NULL);
 
 
 --
--- Name: admin_audit_log trg_admin_audit_log_prevent_mutation; Type: TRIGGER; Schema: public; Owner: brsama
+-- Name: admin_audit_log trg_admin_audit_log_prevent_mutation; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
 CREATE TRIGGER trg_admin_audit_log_prevent_mutation BEFORE DELETE OR UPDATE ON admin_audit_log FOR EACH ROW EXECUTE FUNCTION admin_audit_log_prevent_mutation();
@@ -17370,7 +16842,7 @@ ALTER TABLE ONLY accountability_partnership
 
 
 --
--- Name: accountability_policies accountability_policies_commitment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: accountability_policies accountability_policies_commitment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY accountability_policies
@@ -17378,7 +16850,7 @@ ALTER TABLE ONLY accountability_policies
 
 
 --
--- Name: accountability_policies accountability_policies_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: accountability_policies accountability_policies_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY accountability_policies
@@ -17402,7 +16874,7 @@ ALTER TABLE ONLY achievements
 
 
 --
--- Name: admin_audit_log admin_audit_log_admin_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: admin_audit_log admin_audit_log_admin_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY admin_audit_log
@@ -17426,7 +16898,7 @@ ALTER TABLE ONLY asset_suggestion_logs
 
 
 --
--- Name: aurora_decision_telemetry aurora_decision_telemetry_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: aurora_decision_telemetry aurora_decision_telemetry_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY aurora_decision_telemetry
@@ -17434,7 +16906,7 @@ ALTER TABLE ONLY aurora_decision_telemetry
 
 
 --
--- Name: aurora_judgment_records aurora_judgment_records_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: aurora_judgment_records aurora_judgment_records_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY aurora_judgment_records
@@ -17442,7 +16914,7 @@ ALTER TABLE ONLY aurora_judgment_records
 
 
 --
--- Name: aurora_scheduled_wakes aurora_scheduled_wakes_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: aurora_scheduled_wakes aurora_scheduled_wakes_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY aurora_scheduled_wakes
@@ -17450,7 +16922,7 @@ ALTER TABLE ONLY aurora_scheduled_wakes
 
 
 --
--- Name: aurora_state_snapshots aurora_state_snapshots_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: aurora_state_snapshots aurora_state_snapshots_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY aurora_state_snapshots
@@ -17522,7 +16994,7 @@ ALTER TABLE ONLY calendar_events
 
 
 --
--- Name: candidate_action_feedback candidate_action_feedback_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: candidate_action_feedback candidate_action_feedback_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY candidate_action_feedback
@@ -17570,7 +17042,7 @@ ALTER TABLE ONLY capsule_generation_jobs
 
 
 --
--- Name: card_adoption_records card_adoption_records_adopted_root_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: card_adoption_records card_adoption_records_adopted_root_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY card_adoption_records
@@ -17578,7 +17050,7 @@ ALTER TABLE ONLY card_adoption_records
 
 
 --
--- Name: card_adoption_records card_adoption_records_adopter_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: card_adoption_records card_adoption_records_adopter_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY card_adoption_records
@@ -17586,7 +17058,7 @@ ALTER TABLE ONLY card_adoption_records
 
 
 --
--- Name: card_adoption_records card_adoption_records_share_record_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: card_adoption_records card_adoption_records_share_record_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY card_adoption_records
@@ -17594,7 +17066,7 @@ ALTER TABLE ONLY card_adoption_records
 
 
 --
--- Name: card_edges card_edges_from_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: card_edges card_edges_from_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY card_edges
@@ -17602,7 +17074,7 @@ ALTER TABLE ONLY card_edges
 
 
 --
--- Name: card_edges card_edges_to_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: card_edges card_edges_to_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY card_edges
@@ -17610,7 +17082,7 @@ ALTER TABLE ONLY card_edges
 
 
 --
--- Name: card_share_records card_share_records_group_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: card_share_records card_share_records_group_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY card_share_records
@@ -17618,7 +17090,7 @@ ALTER TABLE ONLY card_share_records
 
 
 --
--- Name: card_share_records card_share_records_root_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: card_share_records card_share_records_root_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY card_share_records
@@ -17626,7 +17098,7 @@ ALTER TABLE ONLY card_share_records
 
 
 --
--- Name: card_share_records card_share_records_shared_by_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: card_share_records card_share_records_shared_by_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY card_share_records
@@ -17634,7 +17106,7 @@ ALTER TABLE ONLY card_share_records
 
 
 --
--- Name: card_share_records card_share_records_snapshot_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: card_share_records card_share_records_snapshot_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY card_share_records
@@ -17642,7 +17114,7 @@ ALTER TABLE ONLY card_share_records
 
 
 --
--- Name: card_share_records card_share_records_target_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: card_share_records card_share_records_target_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY card_share_records
@@ -17650,7 +17122,7 @@ ALTER TABLE ONLY card_share_records
 
 
 --
--- Name: card_snapshots card_snapshots_root_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: card_snapshots card_snapshots_root_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY card_snapshots
@@ -17658,7 +17130,7 @@ ALTER TABLE ONLY card_snapshots
 
 
 --
--- Name: card_snapshots card_snapshots_source_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: card_snapshots card_snapshots_source_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY card_snapshots
@@ -17666,7 +17138,7 @@ ALTER TABLE ONLY card_snapshots
 
 
 --
--- Name: cards cards_holder_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: cards cards_holder_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY cards
@@ -17674,7 +17146,7 @@ ALTER TABLE ONLY cards
 
 
 --
--- Name: cards cards_origin_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: cards cards_origin_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY cards
@@ -17682,7 +17154,7 @@ ALTER TABLE ONLY cards
 
 
 --
--- Name: cards cards_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: cards cards_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY cards
@@ -17746,11 +17218,19 @@ ALTER TABLE ONLY collaborative_galaxies
 
 
 --
--- Name: commitments commitments_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: commitments commitments_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY commitments
     ADD CONSTRAINT commitments_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: community_strategy_outcomes community_strategy_outcomes_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY community_strategy_outcomes
+    ADD CONSTRAINT community_strategy_outcomes_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -17762,7 +17242,7 @@ ALTER TABLE ONLY compliance_check_logs
 
 
 --
--- Name: conflict_resolution_records conflict_resolution_records_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: conflict_resolution_records conflict_resolution_records_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY conflict_resolution_records
@@ -17770,7 +17250,7 @@ ALTER TABLE ONLY conflict_resolution_records
 
 
 --
--- Name: counterfactual_evaluation_reports counterfactual_evaluation_reports_replaced_by_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: counterfactual_evaluation_reports counterfactual_evaluation_reports_replaced_by_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY counterfactual_evaluation_reports
@@ -17842,7 +17322,7 @@ ALTER TABLE ONLY custom_expert_teams
 
 
 --
--- Name: daily_behavior_vector daily_behavior_vector_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: daily_behavior_vector daily_behavior_vector_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY daily_behavior_vector
@@ -17898,7 +17378,7 @@ ALTER TABLE ONLY document_chunks
 
 
 --
--- Name: document_retrieval_feedback document_retrieval_feedback_chunk_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: document_retrieval_feedback document_retrieval_feedback_chunk_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY document_retrieval_feedback
@@ -17906,7 +17386,7 @@ ALTER TABLE ONLY document_retrieval_feedback
 
 
 --
--- Name: document_retrieval_feedback document_retrieval_feedback_file_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: document_retrieval_feedback document_retrieval_feedback_file_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY document_retrieval_feedback
@@ -17914,7 +17394,7 @@ ALTER TABLE ONLY document_retrieval_feedback
 
 
 --
--- Name: document_retrieval_feedback document_retrieval_feedback_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: document_retrieval_feedback document_retrieval_feedback_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY document_retrieval_feedback
@@ -17938,7 +17418,7 @@ ALTER TABLE ONLY error_records
 
 
 --
--- Name: execution_audit_log execution_audit_log_intent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: execution_audit_log execution_audit_log_intent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY execution_audit_log
@@ -17946,7 +17426,7 @@ ALTER TABLE ONLY execution_audit_log
 
 
 --
--- Name: execution_audit_log execution_audit_log_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: execution_audit_log execution_audit_log_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY execution_audit_log
@@ -18002,7 +17482,7 @@ ALTER TABLE ONLY execution_records
 
 
 --
--- Name: execution_schedules execution_schedules_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: execution_schedules execution_schedules_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY execution_schedules
@@ -18010,7 +17490,7 @@ ALTER TABLE ONLY execution_schedules
 
 
 --
--- Name: execution_schedules execution_schedules_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: execution_schedules execution_schedules_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY execution_schedules
@@ -18106,7 +17586,7 @@ ALTER TABLE ONLY subtasks
 
 
 --
--- Name: focus_contracts focus_contracts_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: focus_contracts focus_contracts_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY focus_contracts
@@ -18170,15 +17650,15 @@ ALTER TABLE ONLY galaxy_user_permissions
 
 
 --
--- Name: goals goals_plan_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: goals goals_plan_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY goals
-    ADD CONSTRAINT goals_plan_id_fkey FOREIGN KEY (plan_id) REFERENCES plans(id);
+    ADD CONSTRAINT goals_plan_id_fkey FOREIGN KEY (plan_id) REFERENCES plans(id) ON DELETE SET NULL;
 
 
 --
--- Name: goals goals_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: goals goals_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY goals
@@ -18330,7 +17810,7 @@ ALTER TABLE ONLY idempotency_keys
 
 
 --
--- Name: identity_evidence identity_evidence_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: identity_evidence identity_evidence_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY identity_evidence
@@ -18338,7 +17818,7 @@ ALTER TABLE ONLY identity_evidence
 
 
 --
--- Name: idiographic_associations idiographic_associations_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: idiographic_associations idiographic_associations_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY idiographic_associations
@@ -18346,7 +17826,7 @@ ALTER TABLE ONLY idiographic_associations
 
 
 --
--- Name: idiographic_changepoints idiographic_changepoints_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: idiographic_changepoints idiographic_changepoints_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY idiographic_changepoints
@@ -18354,7 +17834,7 @@ ALTER TABLE ONLY idiographic_changepoints
 
 
 --
--- Name: insight_claims insight_claims_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: insight_claims insight_claims_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY insight_claims
@@ -18394,7 +17874,7 @@ ALTER TABLE ONLY intervention_feedback
 
 
 --
--- Name: intervention_records intervention_records_knowledge_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: intervention_records intervention_records_knowledge_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY intervention_records
@@ -18402,7 +17882,7 @@ ALTER TABLE ONLY intervention_records
 
 
 --
--- Name: intervention_records intervention_records_phase_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: intervention_records intervention_records_phase_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY intervention_records
@@ -18410,7 +17890,7 @@ ALTER TABLE ONLY intervention_records
 
 
 --
--- Name: intervention_records intervention_records_plan_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: intervention_records intervention_records_plan_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY intervention_records
@@ -18418,7 +17898,7 @@ ALTER TABLE ONLY intervention_records
 
 
 --
--- Name: intervention_records intervention_records_task_occurrence_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: intervention_records intervention_records_task_occurrence_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY intervention_records
@@ -18426,7 +17906,7 @@ ALTER TABLE ONLY intervention_records
 
 
 --
--- Name: intervention_records intervention_records_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: intervention_records intervention_records_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY intervention_records
@@ -18442,7 +17922,7 @@ ALTER TABLE ONLY intervention_requests
 
 
 --
--- Name: intervention_strategy_outcomes intervention_strategy_outcomes_intervention_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: intervention_strategy_outcomes intervention_strategy_outcomes_intervention_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY intervention_strategy_outcomes
@@ -18450,7 +17930,7 @@ ALTER TABLE ONLY intervention_strategy_outcomes
 
 
 --
--- Name: intervention_strategy_outcomes intervention_strategy_outcomes_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: intervention_strategy_outcomes intervention_strategy_outcomes_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY intervention_strategy_outcomes
@@ -18466,7 +17946,7 @@ ALTER TABLE ONLY jobs
 
 
 --
--- Name: knowledge_node_documents knowledge_node_documents_file_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: knowledge_node_documents knowledge_node_documents_file_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY knowledge_node_documents
@@ -18474,7 +17954,7 @@ ALTER TABLE ONLY knowledge_node_documents
 
 
 --
--- Name: knowledge_node_documents knowledge_node_documents_node_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: knowledge_node_documents knowledge_node_documents_node_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY knowledge_node_documents
@@ -18482,7 +17962,7 @@ ALTER TABLE ONLY knowledge_node_documents
 
 
 --
--- Name: knowledge_node_documents knowledge_node_documents_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: knowledge_node_documents knowledge_node_documents_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY knowledge_node_documents
@@ -18562,7 +18042,7 @@ ALTER TABLE ONLY login_attempts
 
 
 --
--- Name: marketplace_packs marketplace_packs_rollback_of_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: marketplace_packs marketplace_packs_rollback_of_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY marketplace_packs
@@ -18570,7 +18050,7 @@ ALTER TABLE ONLY marketplace_packs
 
 
 --
--- Name: marketplace_skills marketplace_skills_author_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: marketplace_skills marketplace_skills_author_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY marketplace_skills
@@ -18578,7 +18058,7 @@ ALTER TABLE ONLY marketplace_skills
 
 
 --
--- Name: marketplace_skills marketplace_skills_rollback_of_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: marketplace_skills marketplace_skills_rollback_of_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY marketplace_skills
@@ -18746,7 +18226,7 @@ ALTER TABLE ONLY node_relations
 
 
 --
--- Name: north_star_metric_events north_star_metric_events_plan_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: north_star_metric_events north_star_metric_events_plan_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY north_star_metric_events
@@ -18754,7 +18234,7 @@ ALTER TABLE ONLY north_star_metric_events
 
 
 --
--- Name: north_star_metric_events north_star_metric_events_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: north_star_metric_events north_star_metric_events_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY north_star_metric_events
@@ -18762,7 +18242,7 @@ ALTER TABLE ONLY north_star_metric_events
 
 
 --
--- Name: north_star_metric_events north_star_metric_events_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: north_star_metric_events north_star_metric_events_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY north_star_metric_events
@@ -18802,7 +18282,7 @@ ALTER TABLE ONLY offline_message_queue
 
 
 --
--- Name: pack_adoption_history pack_adoption_history_adoption_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: pack_adoption_history pack_adoption_history_adoption_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY pack_adoption_history
@@ -18810,7 +18290,7 @@ ALTER TABLE ONLY pack_adoption_history
 
 
 --
--- Name: pack_adoption_history pack_adoption_history_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: pack_adoption_history pack_adoption_history_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY pack_adoption_history
@@ -18834,7 +18314,7 @@ ALTER TABLE ONLY passive_signals
 
 
 --
--- Name: persdyn_attractors persdyn_attractors_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: persdyn_attractors persdyn_attractors_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY persdyn_attractors
@@ -18890,7 +18370,7 @@ ALTER TABLE ONLY plan_states
 
 
 --
--- Name: planning_artifacts planning_artifacts_approved_by_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: planning_artifacts planning_artifacts_approved_by_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY planning_artifacts
@@ -18898,7 +18378,7 @@ ALTER TABLE ONLY planning_artifacts
 
 
 --
--- Name: planning_artifacts planning_artifacts_plan_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: planning_artifacts planning_artifacts_plan_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY planning_artifacts
@@ -18914,11 +18394,27 @@ ALTER TABLE ONLY plans
 
 
 --
+-- Name: post_comments post_comments_post_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY post_comments
+    ADD CONSTRAINT post_comments_post_id_fkey FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE;
+
+
+--
+-- Name: post_comments post_comments_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY post_comments
+    ADD CONSTRAINT post_comments_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: post_likes post_likes_post_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY post_likes
-    ADD CONSTRAINT post_likes_post_id_fkey FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE;
+    ADD CONSTRAINT post_likes_post_id_fkey FOREIGN KEY (post_id) REFERENCES posts(id);
 
 
 --
@@ -18926,7 +18422,7 @@ ALTER TABLE ONLY post_likes
 --
 
 ALTER TABLE ONLY post_likes
-    ADD CONSTRAINT post_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+    ADD CONSTRAINT post_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
 
 
 --
@@ -18978,7 +18474,7 @@ ALTER TABLE ONLY private_messages
 
 
 --
--- Name: probe_outcomes probe_outcomes_claim_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: probe_outcomes probe_outcomes_claim_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY probe_outcomes
@@ -18986,7 +18482,7 @@ ALTER TABLE ONLY probe_outcomes
 
 
 --
--- Name: push_delivery_records push_delivery_records_notification_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: push_delivery_records push_delivery_records_notification_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY push_delivery_records
@@ -18994,7 +18490,7 @@ ALTER TABLE ONLY push_delivery_records
 
 
 --
--- Name: push_delivery_records push_delivery_records_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: push_delivery_records push_delivery_records_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY push_delivery_records
@@ -19026,7 +18522,7 @@ ALTER TABLE ONLY recommendation_cache
 
 
 --
--- Name: release_approval_requests release_approval_requests_applied_by_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: release_approval_requests release_approval_requests_applied_by_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY release_approval_requests
@@ -19034,7 +18530,7 @@ ALTER TABLE ONLY release_approval_requests
 
 
 --
--- Name: release_approval_requests release_approval_requests_requested_by_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: release_approval_requests release_approval_requests_requested_by_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY release_approval_requests
@@ -19042,7 +18538,7 @@ ALTER TABLE ONLY release_approval_requests
 
 
 --
--- Name: report_snapshots report_snapshots_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: report_snapshots report_snapshots_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY report_snapshots
@@ -19050,7 +18546,7 @@ ALTER TABLE ONLY report_snapshots
 
 
 --
--- Name: routing_decision_log routing_decision_log_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: routing_decision_log routing_decision_log_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY routing_decision_log
@@ -19058,7 +18554,7 @@ ALTER TABLE ONLY routing_decision_log
 
 
 --
--- Name: safe_experiment_episodes safe_experiment_episodes_experiment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: safe_experiment_episodes safe_experiment_episodes_experiment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY safe_experiment_episodes
@@ -19066,7 +18562,7 @@ ALTER TABLE ONLY safe_experiment_episodes
 
 
 --
--- Name: safe_experiment_episodes safe_experiment_episodes_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: safe_experiment_episodes safe_experiment_episodes_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY safe_experiment_episodes
@@ -19074,7 +18570,7 @@ ALTER TABLE ONLY safe_experiment_episodes
 
 
 --
--- Name: safe_experiments safe_experiments_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: safe_experiments safe_experiments_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY safe_experiments
@@ -19090,7 +18586,7 @@ ALTER TABLE ONLY scaffolding_states
 
 
 --
--- Name: scenes scenes_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: scenes scenes_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY scenes
@@ -19138,7 +18634,7 @@ ALTER TABLE ONLY seed_library_ratings
 
 
 --
--- Name: session_completions session_completions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: session_completions session_completions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY session_completions
@@ -19234,7 +18730,7 @@ ALTER TABLE ONLY shop_purchases
 
 
 --
--- Name: simulation_runs simulation_runs_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: simulation_runs simulation_runs_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY simulation_runs
@@ -19242,7 +18738,7 @@ ALTER TABLE ONLY simulation_runs
 
 
 --
--- Name: skill_share_moderation_queue skill_share_moderation_queue_owner_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: skill_share_moderation_queue skill_share_moderation_queue_owner_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY skill_share_moderation_queue
@@ -19258,7 +18754,7 @@ ALTER TABLE ONLY spark_contracts
 
 
 --
--- Name: srl_phase_states srl_phase_states_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: srl_phase_states srl_phase_states_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY srl_phase_states
@@ -19338,7 +18834,7 @@ ALTER TABLE ONLY system_config_change_logs
 
 
 --
--- Name: task_documents task_documents_file_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: task_documents task_documents_file_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY task_documents
@@ -19346,7 +18842,7 @@ ALTER TABLE ONLY task_documents
 
 
 --
--- Name: task_documents task_documents_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: task_documents task_documents_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY task_documents
@@ -19386,7 +18882,7 @@ ALTER TABLE ONLY task_knowledge_links
 
 
 --
--- Name: task_occurrences task_occurrences_phase_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: task_occurrences task_occurrences_phase_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY task_occurrences
@@ -19394,7 +18890,7 @@ ALTER TABLE ONLY task_occurrences
 
 
 --
--- Name: task_occurrences task_occurrences_plan_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: task_occurrences task_occurrences_plan_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY task_occurrences
@@ -19402,7 +18898,7 @@ ALTER TABLE ONLY task_occurrences
 
 
 --
--- Name: task_occurrences task_occurrences_series_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: task_occurrences task_occurrences_series_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY task_occurrences
@@ -19442,7 +18938,7 @@ ALTER TABLE ONLY tasks
 
 
 --
--- Name: theater_candidate_bundles theater_candidate_bundles_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: theater_candidate_bundles theater_candidate_bundles_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY theater_candidate_bundles
@@ -19450,7 +18946,7 @@ ALTER TABLE ONLY theater_candidate_bundles
 
 
 --
--- Name: theater_predictions theater_predictions_candidate_bundle_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: theater_predictions theater_predictions_candidate_bundle_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY theater_predictions
@@ -19458,7 +18954,7 @@ ALTER TABLE ONLY theater_predictions
 
 
 --
--- Name: theater_predictions theater_predictions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: theater_predictions theater_predictions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY theater_predictions
@@ -19482,7 +18978,7 @@ ALTER TABLE ONLY tracking_events
 
 
 --
--- Name: transition_decision_records transition_decision_records_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: transition_decision_records transition_decision_records_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY transition_decision_records
@@ -19490,7 +18986,7 @@ ALTER TABLE ONLY transition_decision_records
 
 
 --
--- Name: unresolved_conflicts unresolved_conflicts_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: unresolved_conflicts unresolved_conflicts_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY unresolved_conflicts
@@ -19674,7 +19170,7 @@ ALTER TABLE ONLY user_preferences_center
 
 
 --
--- Name: user_push_opt_in user_push_opt_in_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: user_push_opt_in user_push_opt_in_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY user_push_opt_in
@@ -19682,7 +19178,7 @@ ALTER TABLE ONLY user_push_opt_in
 
 
 --
--- Name: user_scenario_states user_scenario_states_current_focus_contract_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: user_scenario_states user_scenario_states_current_focus_contract_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY user_scenario_states
@@ -19690,7 +19186,7 @@ ALTER TABLE ONLY user_scenario_states
 
 
 --
--- Name: user_scenario_states user_scenario_states_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: user_scenario_states user_scenario_states_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY user_scenario_states
@@ -19730,7 +19226,7 @@ ALTER TABLE ONLY user_similarities
 
 
 --
--- Name: user_skill_adoptions user_skill_adoptions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: user_skill_adoptions user_skill_adoptions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY user_skill_adoptions
@@ -19738,7 +19234,7 @@ ALTER TABLE ONLY user_skill_adoptions
 
 
 --
--- Name: user_skills user_skills_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: user_skills user_skills_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY user_skills
@@ -19842,7 +19338,7 @@ ALTER TABLE ONLY user_visual_elements
 
 
 --
--- Name: window_states window_states_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+-- Name: window_states window_states_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY window_states
@@ -19866,20 +19362,20 @@ ALTER TABLE ONLY word_books
 
 
 --
--- Name: admin_audit_log; Type: ROW SECURITY; Schema: public; Owner: brsama
+-- Name: admin_audit_log; Type: ROW SECURITY; Schema: public; Owner: postgres
 --
 
 ALTER TABLE admin_audit_log ENABLE ROW LEVEL SECURITY;
 
 --
--- Name: admin_audit_log admin_audit_log_insert_only; Type: POLICY; Schema: public; Owner: brsama
+-- Name: admin_audit_log admin_audit_log_insert_only; Type: POLICY; Schema: public; Owner: postgres
 --
 
 CREATE POLICY admin_audit_log_insert_only ON admin_audit_log FOR INSERT WITH CHECK (true);
 
 
 --
--- Name: admin_audit_log admin_audit_log_select_only; Type: POLICY; Schema: public; Owner: brsama
+-- Name: admin_audit_log admin_audit_log_select_only; Type: POLICY; Schema: public; Owner: postgres
 --
 
 CREATE POLICY admin_audit_log_select_only ON admin_audit_log FOR SELECT USING (true);
@@ -19959,7 +19455,7 @@ GRANT SELECT ON TABLE accountability_partnership TO sparkle_readonly;
 
 
 --
--- Name: TABLE accountability_policies; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE accountability_policies; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE accountability_policies TO sparkle_engine;
@@ -19975,7 +19471,7 @@ GRANT SELECT ON TABLE achievements TO sparkle_readonly;
 
 
 --
--- Name: TABLE admin_audit_log; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE admin_audit_log; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE admin_audit_log TO sparkle_readonly;
@@ -20036,7 +19532,7 @@ GRANT SELECT ON TABLE asset_suggestion_logs TO sparkle_readonly;
 
 
 --
--- Name: TABLE aurora_core_session_snapshots; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE aurora_core_session_snapshots; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE aurora_core_session_snapshots TO sparkle_engine;
@@ -20045,7 +19541,7 @@ GRANT SELECT ON TABLE aurora_core_session_snapshots TO sparkle_readonly;
 
 
 --
--- Name: TABLE aurora_decision_telemetry; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE aurora_decision_telemetry; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE aurora_decision_telemetry TO sparkle_engine;
@@ -20054,7 +19550,7 @@ GRANT SELECT ON TABLE aurora_decision_telemetry TO sparkle_readonly;
 
 
 --
--- Name: TABLE aurora_judgment_records; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE aurora_judgment_records; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE aurora_judgment_records TO sparkle_engine;
@@ -20063,7 +19559,7 @@ GRANT SELECT ON TABLE aurora_judgment_records TO sparkle_readonly;
 
 
 --
--- Name: TABLE aurora_policy_versions; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE aurora_policy_versions; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE aurora_policy_versions TO sparkle_engine;
@@ -20072,7 +19568,7 @@ GRANT SELECT ON TABLE aurora_policy_versions TO sparkle_readonly;
 
 
 --
--- Name: TABLE aurora_scheduled_wakes; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE aurora_scheduled_wakes; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE aurora_scheduled_wakes TO sparkle_engine;
@@ -20081,7 +19577,7 @@ GRANT SELECT ON TABLE aurora_scheduled_wakes TO sparkle_readonly;
 
 
 --
--- Name: TABLE aurora_state_snapshots; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE aurora_state_snapshots; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE aurora_state_snapshots TO sparkle_engine;
@@ -20141,7 +19637,7 @@ GRANT SELECT ON TABLE calendar_events TO sparkle_readonly;
 
 
 --
--- Name: TABLE candidate_action_feedback; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE candidate_action_feedback; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE candidate_action_feedback TO sparkle_readonly;
@@ -20175,35 +19671,35 @@ GRANT SELECT ON TABLE capsule_generation_jobs TO sparkle_readonly;
 
 
 --
--- Name: TABLE card_adoption_records; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE card_adoption_records; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE card_adoption_records TO sparkle_readonly;
 
 
 --
--- Name: TABLE card_edges; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE card_edges; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE card_edges TO sparkle_readonly;
 
 
 --
--- Name: TABLE card_share_records; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE card_share_records; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE card_share_records TO sparkle_readonly;
 
 
 --
--- Name: TABLE card_snapshots; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE card_snapshots; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE card_snapshots TO sparkle_readonly;
 
 
 --
--- Name: TABLE cards; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE cards; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE cards TO sparkle_readonly;
@@ -20246,17 +19742,24 @@ GRANT SELECT ON TABLE collaborative_galaxies TO sparkle_readonly;
 
 
 --
--- Name: TABLE commitments; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE commitments; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE commitments TO sparkle_readonly;
 
 
 --
--- Name: TABLE community_aggregate_signals; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE community_aggregate_signals; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE community_aggregate_signals TO sparkle_readonly;
+
+
+--
+-- Name: TABLE community_strategy_outcomes; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE community_strategy_outcomes TO sparkle_readonly;
 
 
 --
@@ -20267,7 +19770,7 @@ GRANT SELECT ON TABLE compliance_check_logs TO sparkle_readonly;
 
 
 --
--- Name: TABLE conflict_resolution_records; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE conflict_resolution_records; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE conflict_resolution_records TO sparkle_readonly;
@@ -20301,7 +19804,7 @@ GRANT SELECT ON TABLE context_pack_runs TO sparkle_readonly;
 
 
 --
--- Name: TABLE counterfactual_evaluation_reports; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE counterfactual_evaluation_reports; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE counterfactual_evaluation_reports TO sparkle_readonly;
@@ -20364,7 +19867,7 @@ GRANT SELECT ON TABLE custom_expert_teams TO sparkle_readonly;
 
 
 --
--- Name: TABLE daily_behavior_vector; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE daily_behavior_vector; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE daily_behavior_vector TO sparkle_readonly;
@@ -20397,7 +19900,7 @@ GRANT SELECT ON TABLE dictionary_entries TO sparkle_readonly;
 
 
 --
--- Name: TABLE distilled_strategy_cache; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE distilled_strategy_cache; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE distilled_strategy_cache TO sparkle_readonly;
@@ -20421,7 +19924,7 @@ GRANT SELECT ON TABLE document_chunks TO sparkle_readonly;
 
 
 --
--- Name: TABLE document_retrieval_feedback; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE document_retrieval_feedback; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE document_retrieval_feedback TO sparkle_engine;
@@ -20430,7 +19933,7 @@ GRANT SELECT ON TABLE document_retrieval_feedback TO sparkle_readonly;
 
 
 --
--- Name: TABLE durable_session_state_snapshots; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE durable_session_state_snapshots; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE durable_session_state_snapshots TO sparkle_readonly;
@@ -20455,7 +19958,7 @@ GRANT SELECT ON TABLE error_records TO sparkle_readonly;
 
 
 --
--- Name: TABLE event_bus_dlq; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE event_bus_dlq; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE event_bus_dlq TO sparkle_readonly;
@@ -20498,7 +20001,7 @@ GRANT SELECT ON TABLE evolution_predictions TO sparkle_readonly;
 
 
 --
--- Name: TABLE execution_audit_log; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE execution_audit_log; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE execution_audit_log TO sparkle_engine;
@@ -20525,7 +20028,7 @@ GRANT SELECT ON TABLE execution_records TO sparkle_readonly;
 
 
 --
--- Name: TABLE execution_schedules; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE execution_schedules; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE execution_schedules TO sparkle_engine;
@@ -20543,7 +20046,7 @@ GRANT SELECT ON TABLE expansion_feedback TO sparkle_readonly;
 
 
 --
--- Name: TABLE focus_contracts; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE focus_contracts; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE focus_contracts TO sparkle_engine;
@@ -20586,14 +20089,14 @@ GRANT SELECT ON TABLE galaxy_user_permissions TO sparkle_readonly;
 
 
 --
--- Name: TABLE goal_world_graph_snapshots; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE goal_world_graph_snapshots; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE goal_world_graph_snapshots TO sparkle_readonly;
 
 
 --
--- Name: TABLE goals; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE goals; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE goals TO sparkle_readonly;
@@ -20663,7 +20166,7 @@ GRANT SELECT ON TABLE groups TO sparkle_readonly;
 
 
 --
--- Name: TABLE growth_chronicle_snapshots; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE growth_chronicle_snapshots; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE growth_chronicle_snapshots TO sparkle_readonly;
@@ -20678,28 +20181,28 @@ GRANT SELECT ON TABLE idempotency_keys TO sparkle_readonly;
 
 
 --
--- Name: TABLE identity_evidence; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE identity_evidence; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE identity_evidence TO sparkle_readonly;
 
 
 --
--- Name: TABLE idiographic_associations; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE idiographic_associations; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE idiographic_associations TO sparkle_readonly;
 
 
 --
--- Name: TABLE idiographic_changepoints; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE idiographic_changepoints; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE idiographic_changepoints TO sparkle_readonly;
 
 
 --
--- Name: TABLE insight_claims; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE insight_claims; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE insight_claims TO sparkle_readonly;
@@ -20724,7 +20227,7 @@ GRANT SELECT ON TABLE intervention_feedback TO sparkle_readonly;
 
 
 --
--- Name: TABLE intervention_outcomes; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE intervention_outcomes; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE intervention_outcomes TO sparkle_engine;
@@ -20733,7 +20236,7 @@ GRANT SELECT ON TABLE intervention_outcomes TO sparkle_readonly;
 
 
 --
--- Name: TABLE intervention_records; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE intervention_records; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE intervention_records TO sparkle_engine;
@@ -20751,7 +20254,7 @@ GRANT SELECT ON TABLE intervention_requests TO sparkle_readonly;
 
 
 --
--- Name: TABLE intervention_strategy_outcomes; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE intervention_strategy_outcomes; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE intervention_strategy_outcomes TO sparkle_engine;
@@ -20796,7 +20299,7 @@ GRANT SELECT ON TABLE jobs TO sparkle_readonly;
 
 
 --
--- Name: TABLE knowledge_node_documents; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE knowledge_node_documents; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE knowledge_node_documents TO sparkle_engine;
@@ -20815,7 +20318,7 @@ GRANT SELECT ON TABLE knowledge_nodes TO sparkle_readonly;
 
 
 --
--- Name: TABLE leaderboard_snapshots; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE leaderboard_snapshots; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE leaderboard_snapshots TO sparkle_readonly;
@@ -20855,14 +20358,14 @@ GRANT SELECT ON TABLE ltm_daily_snapshots TO sparkle_readonly;
 
 
 --
--- Name: TABLE marketplace_packs; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE marketplace_packs; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE marketplace_packs TO sparkle_readonly;
 
 
 --
--- Name: TABLE marketplace_skills; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE marketplace_skills; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE marketplace_skills TO sparkle_readonly;
@@ -20986,7 +20489,7 @@ GRANT SELECT ON TABLE node_relations TO sparkle_readonly;
 
 
 --
--- Name: TABLE north_star_metric_events; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE north_star_metric_events; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE north_star_metric_events TO sparkle_readonly;
@@ -21028,7 +20531,7 @@ GRANT SELECT ON TABLE offline_message_queue TO sparkle_readonly;
 
 
 --
--- Name: TABLE pack_adoption_history; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE pack_adoption_history; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE pack_adoption_history TO sparkle_readonly;
@@ -21044,7 +20547,7 @@ GRANT SELECT ON TABLE passive_signals TO sparkle_readonly;
 
 
 --
--- Name: TABLE persdyn_attractors; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE persdyn_attractors; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE persdyn_attractors TO sparkle_readonly;
@@ -21085,7 +20588,7 @@ GRANT SELECT ON TABLE plan_states TO sparkle_readonly;
 
 
 --
--- Name: TABLE planning_artifacts; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE planning_artifacts; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE planning_artifacts TO sparkle_engine;
@@ -21101,6 +20604,13 @@ GRANT SELECT ON TABLE plans TO sparkle_gateway;
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE plans TO sparkle_engine;
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE plans TO sparkle_celery;
 GRANT SELECT ON TABLE plans TO sparkle_readonly;
+
+
+--
+-- Name: TABLE post_comments; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE post_comments TO sparkle_readonly;
 
 
 --
@@ -21120,7 +20630,7 @@ GRANT SELECT ON TABLE posts TO sparkle_readonly;
 
 
 --
--- Name: TABLE privacy_budget_ledger; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE privacy_budget_ledger; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE privacy_budget_ledger TO sparkle_readonly;
@@ -21134,7 +20644,7 @@ GRANT SELECT ON TABLE private_messages TO sparkle_readonly;
 
 
 --
--- Name: TABLE probe_outcomes; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE probe_outcomes; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE probe_outcomes TO sparkle_readonly;
@@ -21168,7 +20678,7 @@ GRANT SELECT ON TABLE projection_snapshots TO sparkle_readonly;
 
 
 --
--- Name: TABLE push_delivery_records; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE push_delivery_records; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE push_delivery_records TO sparkle_engine;
@@ -21204,21 +20714,21 @@ GRANT SELECT ON TABLE recommendation_cache TO sparkle_readonly;
 
 
 --
--- Name: TABLE release_approval_requests; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE release_approval_requests; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE release_approval_requests TO sparkle_readonly;
 
 
 --
--- Name: TABLE report_snapshots; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE report_snapshots; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE report_snapshots TO sparkle_readonly;
 
 
 --
--- Name: TABLE research_consent_records; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE research_consent_records; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE research_consent_records TO sparkle_readonly;
@@ -21261,31 +20771,24 @@ GRANT SELECT ON TABLE review_overrides TO sparkle_readonly;
 
 
 --
--- Name: TABLE routing_decision_log; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE routing_decision_log; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE routing_decision_log TO sparkle_readonly;
 
 
 --
--- Name: TABLE safe_experiment_episodes; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE safe_experiment_episodes; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE safe_experiment_episodes TO sparkle_readonly;
 
 
 --
--- Name: TABLE safe_experiments; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE safe_experiments; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE safe_experiments TO sparkle_readonly;
-
-
---
--- Name: TABLE saga_instances; Type: ACL; Schema: public; Owner: brsama
---
-
-GRANT SELECT ON TABLE saga_instances TO sparkle_readonly;
 
 
 --
@@ -21298,7 +20801,7 @@ GRANT SELECT ON TABLE scaffolding_states TO sparkle_readonly;
 
 
 --
--- Name: TABLE scenes; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE scenes; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE scenes TO sparkle_readonly;
@@ -21349,7 +20852,7 @@ GRANT SELECT ON TABLE semantic_links TO sparkle_readonly;
 
 
 --
--- Name: TABLE session_completions; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE session_completions; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE session_completions TO sparkle_readonly;
@@ -21366,7 +20869,7 @@ GRANT SELECT ON TABLE shared_resources TO sparkle_readonly;
 
 
 --
--- Name: TABLE shared_skills; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE shared_skills; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE shared_skills TO sparkle_engine;
@@ -21389,14 +20892,14 @@ GRANT SELECT ON TABLE shop_purchases TO sparkle_readonly;
 
 
 --
--- Name: TABLE simulation_runs; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE simulation_runs; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE simulation_runs TO sparkle_readonly;
 
 
 --
--- Name: TABLE skill_share_moderation_queue; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE skill_share_moderation_queue; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE skill_share_moderation_queue TO sparkle_readonly;
@@ -21412,7 +20915,7 @@ GRANT SELECT ON TABLE spark_contracts TO sparkle_readonly;
 
 
 --
--- Name: TABLE srl_phase_states; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE srl_phase_states; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE srl_phase_states TO sparkle_readonly;
@@ -21429,7 +20932,7 @@ GRANT SELECT ON TABLE stored_files TO sparkle_readonly;
 
 
 --
--- Name: TABLE strategy_belief_snapshots; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE strategy_belief_snapshots; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE strategy_belief_snapshots TO sparkle_engine;
@@ -21500,7 +21003,7 @@ GRANT SELECT ON TABLE system_config_change_logs TO sparkle_readonly;
 
 
 --
--- Name: TABLE task_documents; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE task_documents; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE task_documents TO sparkle_engine;
@@ -21527,7 +21030,7 @@ GRANT SELECT ON TABLE task_knowledge_links TO sparkle_readonly;
 
 
 --
--- Name: TABLE task_occurrences; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE task_occurrences; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE task_occurrences TO sparkle_engine;
@@ -21555,14 +21058,14 @@ GRANT SELECT ON TABLE tasks TO sparkle_readonly;
 
 
 --
--- Name: TABLE theater_candidate_bundles; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE theater_candidate_bundles; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE theater_candidate_bundles TO sparkle_readonly;
 
 
 --
--- Name: TABLE theater_predictions; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE theater_predictions; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE theater_predictions TO sparkle_readonly;
@@ -21587,14 +21090,14 @@ GRANT SELECT ON TABLE tracking_events TO sparkle_readonly;
 
 
 --
--- Name: TABLE transition_decision_records; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE transition_decision_records; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE transition_decision_records TO sparkle_readonly;
 
 
 --
--- Name: TABLE unresolved_conflicts; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE unresolved_conflicts; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE unresolved_conflicts TO sparkle_readonly;
@@ -21748,7 +21251,7 @@ GRANT SELECT ON TABLE user_preferences_center TO sparkle_readonly;
 
 
 --
--- Name: TABLE user_push_opt_in; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE user_push_opt_in; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_push_opt_in TO sparkle_engine;
@@ -21757,7 +21260,7 @@ GRANT SELECT ON TABLE user_push_opt_in TO sparkle_readonly;
 
 
 --
--- Name: TABLE user_scenario_states; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE user_scenario_states; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_scenario_states TO sparkle_engine;
@@ -21794,14 +21297,14 @@ GRANT SELECT ON TABLE user_similarities TO sparkle_readonly;
 
 
 --
--- Name: TABLE user_skill_adoptions; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE user_skill_adoptions; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE user_skill_adoptions TO sparkle_readonly;
 
 
 --
--- Name: TABLE user_skills; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE user_skills; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_skills TO sparkle_engine;
@@ -21902,7 +21405,7 @@ GRANT SELECT ON TABLE visual_elements TO sparkle_readonly;
 
 
 --
--- Name: TABLE window_states; Type: ACL; Schema: public; Owner: brsama
+-- Name: TABLE window_states; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE window_states TO sparkle_readonly;
@@ -21918,399 +21421,42 @@ GRANT SELECT ON TABLE word_books TO sparkle_readonly;
 
 
 --
--- Name: TABLE _ag_label_edge; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
+-- Name: DEFAULT PRIVILEGES FOR SEQUENCES; Type: DEFAULT ACL; Schema: public; Owner: postgres
 --
 
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy._ag_label_edge TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy._ag_label_edge TO sparkle_celery;
-GRANT SELECT ON TABLE sparkle_galaxy._ag_label_edge TO sparkle_readonly;
-
-
---
--- Name: TABLE "APPLICATION"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
---
-
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."APPLICATION" TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."APPLICATION" TO sparkle_celery;
-GRANT SELECT ON TABLE sparkle_galaxy."APPLICATION" TO sparkle_readonly;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT,USAGE ON SEQUENCES TO sparkle_gateway;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT,USAGE ON SEQUENCES TO sparkle_engine;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT,USAGE ON SEQUENCES TO sparkle_celery;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT,USAGE ON SEQUENCES TO sparkle_readonly;
 
 
 --
--- Name: SEQUENCE "APPLICATION_id_seq"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
+-- Name: DEFAULT PRIVILEGES FOR TABLES; Type: DEFAULT ACL; Schema: public; Owner: postgres
 --
 
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."APPLICATION_id_seq" TO sparkle_engine;
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."APPLICATION_id_seq" TO sparkle_celery;
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."APPLICATION_id_seq" TO sparkle_readonly;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT ON TABLES TO sparkle_readonly;
 
 
 --
--- Name: TABLE "APPLIES_TO"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
+-- Name: DEFAULT PRIVILEGES FOR SEQUENCES; Type: DEFAULT ACL; Schema: sparkle_galaxy; Owner: postgres
 --
 
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."APPLIES_TO" TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."APPLIES_TO" TO sparkle_celery;
-GRANT SELECT ON TABLE sparkle_galaxy."APPLIES_TO" TO sparkle_readonly;
-
-
---
--- Name: SEQUENCE "APPLIES_TO_id_seq"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
---
-
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."APPLIES_TO_id_seq" TO sparkle_engine;
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."APPLIES_TO_id_seq" TO sparkle_celery;
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."APPLIES_TO_id_seq" TO sparkle_readonly;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA sparkle_galaxy GRANT SELECT,USAGE ON SEQUENCES TO sparkle_engine;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA sparkle_galaxy GRANT SELECT,USAGE ON SEQUENCES TO sparkle_celery;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA sparkle_galaxy GRANT SELECT,USAGE ON SEQUENCES TO sparkle_readonly;
 
 
 --
--- Name: TABLE "INTERESTED_IN"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
+-- Name: DEFAULT PRIVILEGES FOR TABLES; Type: DEFAULT ACL; Schema: sparkle_galaxy; Owner: postgres
 --
 
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."INTERESTED_IN" TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."INTERESTED_IN" TO sparkle_celery;
-GRANT SELECT ON TABLE sparkle_galaxy."INTERESTED_IN" TO sparkle_readonly;
-
-
---
--- Name: SEQUENCE "INTERESTED_IN_id_seq"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
---
-
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."INTERESTED_IN_id_seq" TO sparkle_engine;
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."INTERESTED_IN_id_seq" TO sparkle_celery;
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."INTERESTED_IN_id_seq" TO sparkle_readonly;
-
-
---
--- Name: TABLE _ag_label_vertex; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
---
-
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy._ag_label_vertex TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy._ag_label_vertex TO sparkle_celery;
-GRANT SELECT ON TABLE sparkle_galaxy._ag_label_vertex TO sparkle_readonly;
-
-
---
--- Name: TABLE "KnowledgeNode"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
---
-
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."KnowledgeNode" TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."KnowledgeNode" TO sparkle_celery;
-GRANT SELECT ON TABLE sparkle_galaxy."KnowledgeNode" TO sparkle_readonly;
-
-
---
--- Name: SEQUENCE "KnowledgeNode_id_seq"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
---
-
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."KnowledgeNode_id_seq" TO sparkle_engine;
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."KnowledgeNode_id_seq" TO sparkle_celery;
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."KnowledgeNode_id_seq" TO sparkle_readonly;
-
-
---
--- Name: TABLE "MASTERED"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
---
-
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."MASTERED" TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."MASTERED" TO sparkle_celery;
-GRANT SELECT ON TABLE sparkle_galaxy."MASTERED" TO sparkle_readonly;
-
-
---
--- Name: SEQUENCE "MASTERED_id_seq"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
---
-
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."MASTERED_id_seq" TO sparkle_engine;
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."MASTERED_id_seq" TO sparkle_celery;
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."MASTERED_id_seq" TO sparkle_readonly;
-
-
---
--- Name: TABLE "PREREQUISITE"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
---
-
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."PREREQUISITE" TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."PREREQUISITE" TO sparkle_celery;
-GRANT SELECT ON TABLE sparkle_galaxy."PREREQUISITE" TO sparkle_readonly;
-
-
---
--- Name: SEQUENCE "PREREQUISITE_id_seq"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
---
-
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."PREREQUISITE_id_seq" TO sparkle_engine;
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."PREREQUISITE_id_seq" TO sparkle_celery;
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."PREREQUISITE_id_seq" TO sparkle_readonly;
-
-
---
--- Name: TABLE "RELATED"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
---
-
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."RELATED" TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."RELATED" TO sparkle_celery;
-GRANT SELECT ON TABLE sparkle_galaxy."RELATED" TO sparkle_readonly;
-
-
---
--- Name: SEQUENCE "RELATED_id_seq"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
---
-
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."RELATED_id_seq" TO sparkle_engine;
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."RELATED_id_seq" TO sparkle_celery;
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."RELATED_id_seq" TO sparkle_readonly;
-
-
---
--- Name: TABLE "STUDIED"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
---
-
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."STUDIED" TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."STUDIED" TO sparkle_celery;
-GRANT SELECT ON TABLE sparkle_galaxy."STUDIED" TO sparkle_readonly;
-
-
---
--- Name: SEQUENCE "STUDIED_id_seq"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
---
-
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."STUDIED_id_seq" TO sparkle_engine;
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."STUDIED_id_seq" TO sparkle_celery;
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."STUDIED_id_seq" TO sparkle_readonly;
-
-
---
--- Name: TABLE "STUDIES"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
---
-
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."STUDIES" TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."STUDIES" TO sparkle_celery;
-GRANT SELECT ON TABLE sparkle_galaxy."STUDIES" TO sparkle_readonly;
-
-
---
--- Name: SEQUENCE "STUDIES_id_seq"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
---
-
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."STUDIES_id_seq" TO sparkle_engine;
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."STUDIES_id_seq" TO sparkle_celery;
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."STUDIES_id_seq" TO sparkle_readonly;
-
-
---
--- Name: TABLE "User"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
---
-
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."User" TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."User" TO sparkle_celery;
-GRANT SELECT ON TABLE sparkle_galaxy."User" TO sparkle_readonly;
-
-
---
--- Name: SEQUENCE "User_id_seq"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
---
-
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."User_id_seq" TO sparkle_engine;
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."User_id_seq" TO sparkle_celery;
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."User_id_seq" TO sparkle_readonly;
-
-
---
--- Name: TABLE "__SchemaSeed"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
---
-
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."__SchemaSeed" TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."__SchemaSeed" TO sparkle_celery;
-GRANT SELECT ON TABLE sparkle_galaxy."__SchemaSeed" TO sparkle_readonly;
-
-
---
--- Name: SEQUENCE "__SchemaSeed_id_seq"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
---
-
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."__SchemaSeed_id_seq" TO sparkle_engine;
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."__SchemaSeed_id_seq" TO sparkle_celery;
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."__SchemaSeed_id_seq" TO sparkle_readonly;
-
-
---
--- Name: SEQUENCE _ag_label_edge_id_seq; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
---
-
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy._ag_label_edge_id_seq TO sparkle_engine;
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy._ag_label_edge_id_seq TO sparkle_celery;
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy._ag_label_edge_id_seq TO sparkle_readonly;
-
-
---
--- Name: SEQUENCE _ag_label_vertex_id_seq; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
---
-
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy._ag_label_vertex_id_seq TO sparkle_engine;
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy._ag_label_vertex_id_seq TO sparkle_celery;
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy._ag_label_vertex_id_seq TO sparkle_readonly;
-
-
---
--- Name: SEQUENCE _label_id_seq; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
---
-
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy._label_id_seq TO sparkle_engine;
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy._label_id_seq TO sparkle_celery;
-GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy._label_id_seq TO sparkle_readonly;
-
-
---
--- Name: DEFAULT PRIVILEGES FOR SEQUENCES; Type: DEFAULT ACL; Schema: public; Owner: brsama
---
-
-ALTER DEFAULT PRIVILEGES FOR ROLE brsama IN SCHEMA public GRANT SELECT,USAGE ON SEQUENCES TO sparkle_gateway;
-ALTER DEFAULT PRIVILEGES FOR ROLE brsama IN SCHEMA public GRANT SELECT,USAGE ON SEQUENCES TO sparkle_engine;
-ALTER DEFAULT PRIVILEGES FOR ROLE brsama IN SCHEMA public GRANT SELECT,USAGE ON SEQUENCES TO sparkle_celery;
-ALTER DEFAULT PRIVILEGES FOR ROLE brsama IN SCHEMA public GRANT SELECT,USAGE ON SEQUENCES TO sparkle_readonly;
-
-
---
--- Name: DEFAULT PRIVILEGES FOR TABLES; Type: DEFAULT ACL; Schema: public; Owner: brsama
---
-
-ALTER DEFAULT PRIVILEGES FOR ROLE brsama IN SCHEMA public GRANT SELECT ON TABLES TO sparkle_readonly;
-
-
---
--- Name: DEFAULT PRIVILEGES FOR SEQUENCES; Type: DEFAULT ACL; Schema: sparkle_galaxy; Owner: brsama
---
-
-ALTER DEFAULT PRIVILEGES FOR ROLE brsama IN SCHEMA sparkle_galaxy GRANT SELECT,USAGE ON SEQUENCES TO sparkle_engine;
-ALTER DEFAULT PRIVILEGES FOR ROLE brsama IN SCHEMA sparkle_galaxy GRANT SELECT,USAGE ON SEQUENCES TO sparkle_celery;
-ALTER DEFAULT PRIVILEGES FOR ROLE brsama IN SCHEMA sparkle_galaxy GRANT SELECT,USAGE ON SEQUENCES TO sparkle_readonly;
-
-
---
--- Name: DEFAULT PRIVILEGES FOR TABLES; Type: DEFAULT ACL; Schema: sparkle_galaxy; Owner: brsama
---
-
-ALTER DEFAULT PRIVILEGES FOR ROLE brsama IN SCHEMA sparkle_galaxy GRANT SELECT,INSERT,DELETE,UPDATE ON TABLES TO sparkle_engine;
-ALTER DEFAULT PRIVILEGES FOR ROLE brsama IN SCHEMA sparkle_galaxy GRANT SELECT,INSERT,DELETE,UPDATE ON TABLES TO sparkle_celery;
-ALTER DEFAULT PRIVILEGES FOR ROLE brsama IN SCHEMA sparkle_galaxy GRANT SELECT ON TABLES TO sparkle_readonly;
-
-
---
--- Missing GRANT statements for sparkle_engine (R4 P0-02 fix)
---
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE achievements TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE admin_audit_log TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE alembic_version TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE appeals TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE arbitration_cases TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE arbitration_decisions TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE asset_suggestion_logs TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE auth_audit_log TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE broadcast_messages TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE candidate_action_feedback TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE card_adoption_records TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE card_edges TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE card_share_records TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE card_snapshots TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE cards TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE collaborative_galaxies TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE commitments TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE community_aggregate_signals TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE compliance_check_logs TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE conflict_resolution_records TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE counterfactual_evaluation_reports TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE crdt_operation_log TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE crdt_snapshots TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE crypto_shredding_certificates TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE custom_expert_profiles TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE custom_expert_teams TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE daily_behavior_vector TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE data_access_logs TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE distilled_strategy_cache TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE dlq_replay_audit_logs TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE durable_session_state_snapshots TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE event_bus_dlq TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE event_outbox TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE event_sequence_counters TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE event_store TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE friendships TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE goal_world_graph_snapshots TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE goals TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE growth_chronicle_snapshots TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE idempotency_keys TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE identity_evidence TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE idiographic_associations TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE idiographic_changepoints TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE insight_claims TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE leaderboard_snapshots TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE legal_holds TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE login_attempts TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE marketplace_packs TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE marketplace_skills TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE message_favorites TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE message_reports TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE north_star_metric_events TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE offline_message_queue TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE pack_adoption_history TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE persdyn_attractors TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE photon_transaction_history TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE post_likes TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE privacy_budget_ledger TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE private_messages TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE probe_outcomes TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE processed_events TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE projection_metadata TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE projection_snapshots TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE release_approval_requests TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE report_snapshots TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE research_consent_records TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE routing_decision_log TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE safe_experiment_episodes TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE safe_experiments TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE saga_instances TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE scenes TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE security_audit_logs TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE session_completions TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE shop_items TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE shop_purchases TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE simulation_runs TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE skill_share_moderation_queue TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE srl_phase_states TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE system_config_change_logs TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE theater_candidate_bundles TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE theater_predictions TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE transition_decision_records TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE unresolved_conflicts TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_skill_adoptions TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE window_states TO sparkle_engine;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA sparkle_galaxy GRANT SELECT,INSERT,DELETE,UPDATE ON TABLES TO sparkle_engine;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA sparkle_galaxy GRANT SELECT,INSERT,DELETE,UPDATE ON TABLES TO sparkle_celery;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA sparkle_galaxy GRANT SELECT ON TABLES TO sparkle_readonly;
 
 
 --
 -- PostgreSQL database dump complete
 --
-
--- ── R4 P1 DB Schema Fixes ──────────────────────────────────────────
-
--- DB-P1-04: Prevent bidirectional duplicates in accountability_partnership
-CREATE UNIQUE INDEX IF NOT EXISTS uq_accountability_partnership_pair_reverse
-    ON accountability_partnership (LEAST(initiator_id, partner_id), GREATEST(initiator_id, partner_id));
-DROP INDEX IF EXISTS uq_accountability_partnership_pair_reverse;
-
--- Replace with exclusion constraint approach
-ALTER TABLE accountability_partnership
-    ADD CONSTRAINT chk_accountability_partnership_no_self
-    CHECK (initiator_id != partner_id);
-
--- DB-P1-05: study_buddies missing constraints
-ALTER TABLE study_buddies
-    ADD CONSTRAINT chk_study_buddies_no_self CHECK (user1_id != user2_id);
-ALTER TABLE study_buddies
-    ADD CONSTRAINT chk_study_buddies_status CHECK (status IN ('active', 'inactive', 'pending'));
-CREATE UNIQUE INDEX IF NOT EXISTS uq_study_buddies_pair
-    ON study_buddies (LEAST(user1_id, user2_id), GREATEST(user1_id, user2_id));
-
--- DB-P1-07: group_messages.sender_id missing index
-CREATE INDEX IF NOT EXISTS ix_group_messages_sender_id ON group_messages (sender_id);
 
 

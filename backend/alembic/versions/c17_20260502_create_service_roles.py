@@ -1,7 +1,7 @@
 """create service roles for production RBAC
 
 Revision ID: c17_20260502
-Revises: c12_20260502
+Revises: boot_20260502_sparkle_galaxy
 Create Date: 2026-05-02 14:20:00
 """
 
@@ -15,7 +15,7 @@ import sqlalchemy as sa
 
 
 revision: str = "c17_20260502"
-down_revision: str | None = "c12_20260502"
+down_revision: str | None = "boot_20260502_sparkle_galaxy"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

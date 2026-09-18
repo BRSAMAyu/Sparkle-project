@@ -984,7 +984,8 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		{"/counterfactual", "counterfactual"},
 		{"/error-book", "error-book"},
 		{"/event-bus", "event-bus"},
-		{"/release-approvals", "release-approvals"},
+		// Engine mounts /api/v1/release_approvals (underscore); the path must match or every proxied request 404s.
+		{"/release_approvals", "release_approvals"},
 		{"/research", "research"},
 		{"/safe-experiments", "safe-experiments"},
 		{"/scenario-packs", "scenario-packs"},
