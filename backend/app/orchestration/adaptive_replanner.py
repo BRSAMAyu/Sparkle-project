@@ -1832,7 +1832,9 @@ class AdaptiveReplanner:
         now = _utcnow().isoformat()
         existing_meta = (state.facts or {}).get("adaptive_meta", {})
         adaptive_meta = dict(existing_meta)
-        adaptive_meta["last_adjustment_at"] = now
+        # P2-2 (sysrev round1): last_adjustment_at 不再在此预写——冷却必须在
+        # 任务级调整真正落地后才武装，否则 applier 失败/零变更时冷却被白白
+        # 消耗，失败调整在 AUTO_ADJUSTMENT_COOLDOWN 内无法重试
         adaptive_meta["last_trigger"] = trigger
         record = self._build_adjustment_record(report, adjustments, feedback_category)
         recent = list(adaptive_meta.get("recent_adaptations", []) or [])
@@ -1918,6 +1920,24 @@ class AdaptiveReplanner:
                     len(patch_result.hidden_task_ids),
                     report.plan_id,
                 )
+                # P2-2 (sysrev round1): 任务级调整已落地，现在才武装调整冷却；
+                # 深合并读取最新 adaptive_meta，避免覆盖 applier 刚写入的快照
+                try:
+                    fresh_state = await self.plan_state_service.get_plan_state(
+                        report.user_id, report.plan_id, refresh=True
+                    )
+                    if fresh_state:
+                        armed_meta = dict((fresh_state.facts or {}).get("adaptive_meta") or {})
+                        armed_meta["last_adjustment_at"] = now
+                        armed_meta["last_trigger"] = trigger
+                        await self.plan_state_service.upsert_plan_state(
+                            user_id=report.user_id,
+                            plan_id=report.plan_id,
+                            patch={"facts": {"adaptive_meta": armed_meta}},
+                            bump_version=False,
+                        )
+                except Exception as exc:
+                    logger.warning("Failed to arm adjustment cooldown for plan {}: {}", report.plan_id, exc)
                 # Enhance the adaptation record with task-level outcome
                 record = AdaptationRecord(
                     what_changed=f"{record.what_changed}; tasks patched: {len(patch_result.affected_task_ids)}",

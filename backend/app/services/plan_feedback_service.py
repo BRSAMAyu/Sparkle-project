@@ -12,6 +12,7 @@ Responsibilities:
 This service provides the feedback loop for the plan review system.
 """
 
+import copy
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -331,8 +332,12 @@ class PlanFeedbackService:
             return None
 
         # 找到对应的 review 反馈并更新
+        # P2-1b (sysrev round1): 读-拷贝-改-写。不能原地修改 ORM 加载的
+        # feedback_log 条目——SQLAlchemy 检测不到 JSONB 内容变化，在无 Redis
+        # （state 直接来自 DB 实例）的部署下决策更新会静默丢失
+        feedback_log = copy.deepcopy(list(state.feedback_log or []))
         updated = False
-        for entry in reversed(state.feedback_log):
+        for entry in reversed(feedback_log):
             if entry.get("applied_adjustment", {}).get("review_id") == review_id:
                 entry["applied_adjustment"]["decision"] = user_decision
                 if user_decision == "reject":
@@ -351,7 +356,7 @@ class PlanFeedbackService:
             state = await self._plan_state_service.replace_feedback_log(
                 user_id=user_id,
                 plan_id=plan_id,
-                feedback_log=state.feedback_log,
+                feedback_log=feedback_log,
                 bump_version=False,  # User decision doesn't change plan content
             )
 

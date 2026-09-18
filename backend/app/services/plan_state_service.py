@@ -347,7 +347,9 @@ class PlanStateService:
         Keeps the newest summaries first and trims to a fixed size.
         """
         state = await self.get_or_create_plan_state(user_id, plan_id)
-        summaries = state.task_summaries or []
+        # P2-1a (sysrev round1): 先拷贝再改——直接在 ORM 加载的 list 上原地 insert
+        # 并回赋同一对象，SQLAlchemy 视为未变更，新 summary 会静默丢失
+        summaries = list(state.task_summaries or [])
         summaries.insert(0, summary)
         if len(summaries) > limit:
             summaries = summaries[:limit]
@@ -556,7 +558,10 @@ class PlanStateService:
             Updated PlanState or None
         """
         state = await self.get_or_create_plan_state(user_id, plan_id)
-        state.feedback_log = feedback_log
+        # P2-1b (sysrev round1): deepcopy 保证赋值的是新对象——调用方常在原地
+        # 修改条目后把同一 list 传回来（如 update_feedback_decision），直接回赋
+        # 同一对象会让 SQLAlchemy 判定无变化，决策更新在无 Redis 部署下静默丢失
+        state.feedback_log = copy.deepcopy(feedback_log)
         if bump_version:
             state.version = (state.version or 0) + 1
         state.updated_at = _utcnow()

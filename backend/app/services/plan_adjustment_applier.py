@@ -12,6 +12,7 @@ Four patch types supported (Phase 1):
 3. Prerequisite review insertion — insert a short review task before tasks linked to weak nodes
 4. Concurrency reduction — mark low-priority future tasks as hidden via plan state metadata
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -30,6 +31,7 @@ from app.services.system_update_service import SystemUpdateService, build_system
 # Data structures
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class PlanAdjustmentResult:
     """Outcome of applying incremental adjustments to a plan's tasks."""
@@ -44,6 +46,10 @@ class PlanAdjustmentResult:
     user_facing_summary: str = ""
     rollback_snapshot_id: str | None = None
     task_state_snapshots: dict[str, dict[str, Any]] = field(default_factory=dict)
+    # P1-2 (sysrev round1): 参数实际落地时记录本次应用的完整值，持久化到
+    # adaptive_meta.last_applied_* 供下一轮计算幂等增量
+    applied_time_multiplier: float | None = None
+    applied_difficulty_shift: float | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -94,6 +100,10 @@ class PlanAdjustmentApplier:
         if not adjustments and not self._has_constraint_patches(constraints):
             return PlanAdjustmentResult(applied=False, plan_id=plan_id, user_id=user_id)
 
+        # P1-2 (sysrev round1): 幂等基线 —— adaptive_meta 记录上次已落地的参数，
+        # 已打过 adaptive_adjusted 标记的任务本轮只应用相对增量
+        adaptive_meta = dict(facts.get("adaptive_meta") or {})
+
         # Fetch upcoming pending tasks
         upcoming = await self._fetch_upcoming_tasks(user_id, plan_id)
         if not upcoming:
@@ -108,24 +118,14 @@ class PlanAdjustmentApplier:
         )
 
         # Apply patches in order (as per implementation doc §7.2)
-        await self._patch_prerequisite_reviews(
-            upcoming, constraints, adjustments, result
-        )
-        await self._patch_difficulty(
-            upcoming, adjustments, result
-        )
-        await self._patch_time_multiplier(
-            upcoming, adjustments, result
-        )
-        await self._patch_concurrency(
-            upcoming, constraints, result
-        )
+        await self._patch_prerequisite_reviews(upcoming, constraints, adjustments, result)
+        await self._patch_difficulty(upcoming, adjustments, result, adaptive_meta)
+        await self._patch_time_multiplier(upcoming, adjustments, result, adaptive_meta)
+        await self._patch_concurrency(upcoming, constraints, result)
 
         # Record snapshot for rollback (断点1 Fix #3: include hidden_task_ids)
         if result.affected_task_ids or result.inserted_task_ids or result.hidden_task_ids:
-            await self._record_snapshot(
-                user_id, plan_id, snapshot_id, trigger, result
-            )
+            await self._record_snapshot(user_id, plan_id, snapshot_id, trigger, result)
             result.user_facing_summary = self._build_user_facing_summary(result)
 
             # Notify user via system update (low-defense language)
@@ -143,10 +143,17 @@ class PlanAdjustmentApplier:
         tasks: list[Task],
         adjustments: dict[str, Any],
         result: PlanAdjustmentResult,
+        adaptive_meta: dict[str, Any] | None = None,
     ) -> None:
         multiplier = adjustments.get("time_multiplier", 1.0)
         if multiplier == 1.0:
             return
+
+        # P1-2 (sysrev round1): 幂等 —— 已 adaptive_adjusted 的任务只应用
+        # 相对上次落地乘数的增量，避免冷却周期反复对同一批任务复利相乘
+        meta = adaptive_meta or {}
+        last_applied = self._as_float(meta.get("last_applied_time_multiplier"), 1.0)
+        adjusted_ratio = (multiplier / last_applied) if last_applied > 0 else multiplier
 
         count = 0
         for task in tasks:
@@ -155,9 +162,10 @@ class PlanAdjustmentApplier:
             if task.id in result.inserted_task_ids:
                 continue  # Don't scale tasks we just inserted
 
+            effective = adjusted_ratio if "adaptive_adjusted" in (task.tags or []) else multiplier
             old_minutes = task.estimated_minutes
             new_minutes = self._clamp(
-                round(old_minutes * multiplier),
+                round(old_minutes * effective),
                 MIN_ESTIMATED_MINUTES,
                 MAX_ESTIMATED_MINUTES,
             )
@@ -173,6 +181,7 @@ class PlanAdjustmentApplier:
                 count += 1
 
         if count:
+            result.applied_time_multiplier = multiplier
             result.patch_summary["time_scaled"] = {
                 "multiplier": multiplier,
                 "tasks_affected": count,
@@ -187,10 +196,16 @@ class PlanAdjustmentApplier:
         tasks: list[Task],
         adjustments: dict[str, Any],
         result: PlanAdjustmentResult,
+        adaptive_meta: dict[str, Any] | None = None,
     ) -> None:
         shift = adjustments.get("difficulty_shift", 0.0)
         if shift == 0.0:
             return
+
+        # P1-2 (sysrev round1): 幂等 —— 已 adaptive_adjusted 的任务只应用
+        # 相对上次落地 shift 的增量，避免同一批任务每轮多步进一档
+        meta = adaptive_meta or {}
+        last_applied_shift = self._as_float(meta.get("last_applied_difficulty_shift"), 0.0)
 
         count = 0
         for task in tasks:
@@ -199,15 +214,16 @@ class PlanAdjustmentApplier:
             if task.id in result.inserted_task_ids:
                 continue
 
+            effective_shift = shift - last_applied_shift if "adaptive_adjusted" in (task.tags or []) else shift
             old_diff = task.difficulty
             # difficulty_shift is continuous (-0.5 to 0.5), map to integer step
             # Negative shift = easier, positive = harder
-            step = round(shift)
+            step = round(effective_shift)
             if step == 0:
                 # For fractional shifts, apply probabilistic nudge on harder tasks
-                if old_diff >= 3 and shift < 0:
+                if old_diff >= 3 and effective_shift < 0:
                     step = -1
-                elif old_diff <= 2 and shift > 0:
+                elif old_diff <= 2 and effective_shift > 0:
                     step = 1
                 else:
                     continue
@@ -224,6 +240,7 @@ class PlanAdjustmentApplier:
                 count += 1
 
         if count:
+            result.applied_difficulty_shift = shift
             result.patch_summary["difficulty_adjusted"] = {
                 "shift": shift,
                 "tasks_affected": count,
@@ -245,6 +262,17 @@ class PlanAdjustmentApplier:
         if not should_insert or not weak_node_ids:
             return
 
+        # P1-2 (sysrev round1): 幂等 —— 已存在同名的 PENDING 前置复习任务时不再重复插入，
+        # 否则每个冷却周期都会对同一批弱节点任务再插一遍复习卡
+        seeded_titles = (
+            await self._pending_review_titles(
+                user_id=tasks[0].user_id,
+                plan_id=tasks[0].plan_id,
+            )
+            if tasks
+            else set()
+        )
+
         inserted_count = 0
         for task in tasks:
             if inserted_count >= 3:  # Max 3 review insertions per run
@@ -252,6 +280,8 @@ class PlanAdjustmentApplier:
             if task.knowledge_node_id is None:
                 continue
             if str(task.knowledge_node_id) not in [str(nid) for nid in weak_node_ids]:
+                continue
+            if f"前置复习: {task.title}" in seeded_titles:
                 continue
             # This task targets a weak node — insert a review task before it
             review_task = Task(
@@ -341,7 +371,7 @@ class PlanAdjustmentApplier:
             "task_state_snapshots": dict(result.task_state_snapshots),
         }
 
-        #断点1 Fix #2: Deep-merge — read existing adaptive_meta first to avoid
+        # 断点1 Fix #2: Deep-merge — read existing adaptive_meta first to avoid
         # destroying replanner's cooldown/evolution/rollback metadata.
         state = await self.plan_state_service.get_plan_state(user_id, plan_id)
         existing_meta = dict((state.facts or {}).get("adaptive_meta") or {}) if state else {}
@@ -350,6 +380,11 @@ class PlanAdjustmentApplier:
 
         merged_meta = dict(existing_meta)
         merged_meta["task_patch_snapshots"] = existing_snapshots
+        # P1-2 (sysrev round1): 记录本轮实际落地的完整参数，作为下一轮幂等增量基线
+        if result.applied_time_multiplier is not None:
+            merged_meta["last_applied_time_multiplier"] = result.applied_time_multiplier
+        if result.applied_difficulty_shift is not None:
+            merged_meta["last_applied_difficulty_shift"] = result.applied_difficulty_shift
 
         await self.plan_state_service.upsert_plan_state(
             user_id=user_id,
@@ -387,6 +422,7 @@ class PlanAdjustmentApplier:
         inserted_ids = last.get("inserted_task_ids", [])
         if inserted_ids:
             from sqlalchemy import delete
+
             stmt = delete(Task).where(
                 Task.id.in_([UUID(tid) for tid in inserted_ids]),
                 Task.tags.contains(["adaptive_prerequisite_review"]),
@@ -396,11 +432,7 @@ class PlanAdjustmentApplier:
         # Restore original task state (minutes / difficulty / order / tags)
         task_state_snapshots = dict(last.get("task_state_snapshots") or {})
         if task_state_snapshots:
-            tasks = await self.db.execute(
-                select(Task).where(
-                    Task.id.in_([UUID(tid) for tid in task_state_snapshots])
-                )
-            )
+            tasks = await self.db.execute(select(Task).where(Task.id.in_([UUID(tid) for tid in task_state_snapshots])))
             for task in tasks.scalars():
                 original = task_state_snapshots.get(str(task.id)) or {}
                 if "estimated_minutes" in original:
@@ -415,11 +447,7 @@ class PlanAdjustmentApplier:
             # Backward-compatible fallback for older snapshots that only track hidden ids.
             hidden_ids = last.get("hidden_task_ids", [])
             if hidden_ids:
-                tasks = await self.db.execute(
-                    select(Task).where(
-                        Task.id.in_([UUID(tid) for tid in hidden_ids])
-                    )
-                )
+                tasks = await self.db.execute(select(Task).where(Task.id.in_([UUID(tid) for tid in hidden_ids])))
                 for task in tasks.scalars():
                     tags = list(task.tags) if task.tags else []
                     if "adaptive_hidden" in tags:
@@ -516,6 +544,17 @@ class PlanAdjustmentApplier:
             "tags": list(task.tags) if task.tags else [],
         }
 
+    async def _pending_review_titles(self, *, user_id: UUID, plan_id: UUID) -> set[str]:
+        """Titles of still-pending prerequisite review tasks seeded for this plan."""
+        stmt = select(Task).where(
+            Task.user_id == user_id,
+            Task.plan_id == plan_id,
+            Task.status == TaskStatus.PENDING,
+            Task.tags.contains(["adaptive_prerequisite_review"]),
+        )
+        result = await self.db.execute(stmt)
+        return {task.title for task in result.scalars().all()}
+
     async def _fetch_upcoming_tasks(
         self,
         user_id: UUID,
@@ -549,3 +588,12 @@ class PlanAdjustmentApplier:
     @staticmethod
     def _clamp(value: int, low: int, high: int) -> int:
         return max(low, min(high, value))
+
+    @staticmethod
+    def _as_float(value: Any, default: float) -> float:
+        """Coerce a possibly-missing/None adaptive_meta value to float."""
+        try:
+            parsed = float(value)
+        except (TypeError, ValueError):
+            return default
+        return parsed

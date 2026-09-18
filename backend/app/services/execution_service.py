@@ -16,7 +16,7 @@ from uuid import UUID
 
 import httpx
 from loguru import logger
-from sqlalchemy import String, cast, desc, func, select
+from sqlalchemy import String, cast, desc, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -1012,6 +1012,34 @@ class ExecutionService:
         )
         return intent
 
+    async def _claim_intent_for_dispatch(self, intent: ExecutionIntent) -> bool:
+        """Atomically claim the dispatch slot for this intent.
+
+        P2-8 (sysrev round1): a conditional UPDATE (WHERE status IN
+        {draft, ready, queued}) guarantees only one concurrent dispatch flips
+        the row; the loser sees rowcount == 0 and must not create a second
+        external run.
+        """
+        stmt = (
+            update(ExecutionIntent)
+            .where(
+                ExecutionIntent.id == intent.id,
+                ExecutionIntent.status.in_([
+                    ExecutionIntentStatus.DRAFT,
+                    ExecutionIntentStatus.READY,
+                    ExecutionIntentStatus.QUEUED,
+                ]),
+            )
+            .values(status=ExecutionIntentStatus.DISPATCHED)
+            .execution_options(synchronize_session=False)
+        )
+        result = await self._db.execute(stmt)
+        await self._db.commit()
+        if result.rowcount != 1:
+            return False
+        await self._db.refresh(intent)
+        return True
+
     async def dispatch(
         self,
         *,
@@ -1043,7 +1071,12 @@ class ExecutionService:
             )
 
         old_status = intent.status
-        intent.status = ExecutionIntentStatus.DISPATCHED
+        # P2-8 (sysrev round1): 条件更新认领 dispatch 名额——DB 中状态仍属于
+        # 可派发集合时才翻转为 dispatched；并发双派发只有一个能认领成功，
+        # 避免对同一 intent 重复创建 OpenClaw 外部 run
+        claimed = await self._claim_intent_for_dispatch(intent)
+        if not claimed:
+            raise ValueError(f"Intent {intent_id} was concurrently dispatched by another request")
         intent.dispatched_at = _utcnow()
         intent.error_category = None
         intent.error_message = None

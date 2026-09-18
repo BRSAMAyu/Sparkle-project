@@ -7,7 +7,8 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import desc, select
+from loguru import logger
+from sqlalchemy import desc, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.adapters.openclaw.result_parser import ResultParser
@@ -132,7 +133,14 @@ class ExecutionIngestor:
             existing_record=record,
         )
 
+        claimed = False
         if intent.status == ExecutionIntentStatus.WAITING_APPROVAL:
+            # P2-3 (sysrev round1): 条件更新占位——并发双击"确认"时只有一个请求
+            # 能把 waiting_approval 翻转为 succeeded；输掉的请求不再重复执行
+            # _apply_execution_result（否则 task 计数双加、PlanExecutionRecord 双写）
+            claimed = await self._claim_waiting_approval(intent)
+
+        if claimed:
             await self._apply_execution_result(
                 intent=intent,
                 parsed=parsed,
@@ -141,6 +149,9 @@ class ExecutionIngestor:
                 user_confirmed=True,
             )
         else:
+            if intent.status == ExecutionIntentStatus.WAITING_APPROVAL:
+                # 输掉了并发占位：以获胜请求已提交的 DB 状态为准
+                await self._db.refresh(intent)
             old_status = intent.status
             intent.trust_level = TrustLevel.TRUSTED
             self._db.add(intent)
@@ -201,7 +212,12 @@ class ExecutionIngestor:
         task = None
         if not self._should_skip_task_sync(intent):
             task = await self._get_user_task(task_id=intent.task_id, user_id=user_id)
-            await self._rollback_task_if_needed(task)
+            rolled_back = await self._rollback_task_if_needed(task)
+            if rolled_back and task.plan_id:
+                # P2-4 (sysrev round1): reject 回滚不只是把任务翻回 IN_PROGRESS，
+                # 还要修正 plan_state.task_index 与 plan.progress，否则计数永久
+                # 发散、avg_completion_rate 可 >1 并误导健康评估
+                await self._resync_plan_after_rollback(task)
 
         old_status = intent.status
         intent.status = ExecutionIntentStatus.HANDED_BACK
@@ -437,6 +453,30 @@ class ExecutionIngestor:
             error_message=intent.error_message,
         )
 
+    async def _claim_waiting_approval(self, intent: ExecutionIntent) -> bool:
+        """Atomically consume the waiting_approval placeholder.
+
+        P2-3 (sysrev round1): a conditional UPDATE (WHERE status='waiting_approval')
+        guarantees only one concurrent confirm flips the row; the loser sees
+        rowcount == 0 and must not re-apply the execution result. The final
+        status is refined by _apply_execution_result afterwards.
+        """
+        stmt = (
+            update(ExecutionIntent)
+            .where(
+                ExecutionIntent.id == intent.id,
+                ExecutionIntent.status == ExecutionIntentStatus.WAITING_APPROVAL,
+            )
+            .values(status=ExecutionIntentStatus.SUCCEEDED)
+            .execution_options(synchronize_session=False)
+        )
+        result = await self._db.execute(stmt)
+        await self._db.commit()
+        if result.rowcount != 1:
+            return False
+        await self._db.refresh(intent)
+        return True
+
     async def _apply_execution_result(
         self,
         *,
@@ -582,10 +622,12 @@ class ExecutionIngestor:
             issues=issues,
         )
 
-    async def _rollback_task_if_needed(self, task: Task) -> None:
+    async def _rollback_task_if_needed(self, task: Task) -> bool:
+        """Roll a completed delegated task back to IN_PROGRESS. Returns True if
+        the task was actually rolled back (it had been completed)."""
         if task.status != TaskStatus.COMPLETED:
             self._db.add(task)
-            return
+            return False
 
         task.status = TaskStatus.IN_PROGRESS
         task.completed_at = None
@@ -593,6 +635,26 @@ class ExecutionIngestor:
         if task.user_note == DELEGATED_COMPLETION_NOTE:
             task.user_note = None
         self._db.add(task)
+        return True
+
+    async def _resync_plan_after_rollback(self, task: Task) -> None:
+        """P2-4 (sysrev round1): rebuild plan_state.task_index and recompute
+        plan.progress after a rejected execution rolled the task back."""
+        try:
+            from app.services.plan_service import PlanService
+            from app.services.task_state_sync import TaskStateSyncService
+
+            await TaskStateSyncService(self._db, self._redis).rebuild_task_index(
+                user_id=task.user_id,
+                plan_id=task.plan_id,
+            )
+            await PlanService.update_progress(self._db, task.plan_id, task.user_id)
+        except Exception as exc:
+            logger.warning(
+                "Failed to resync plan progress after reject rollback for task {}: {}",
+                task.id,
+                exc,
+            )
 
     async def _get_user_intent(self, *, intent_id: UUID, user_id: UUID) -> ExecutionIntent:
         intent = await self._db.get(ExecutionIntent, intent_id)

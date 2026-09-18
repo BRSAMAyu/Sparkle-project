@@ -81,10 +81,15 @@ class PlanOutcomeEvaluator:
             improvement_score = max(0.0, later_quality - max(first_quality - 0.05, 0.0))
         stability_score = later_quality if first_quality >= 0.75 else max(0.0, 1.0 - abs(later_quality - first_quality))
         trust_preservation_score = max(0.0, 1.0 - max(first_trust - later_trust, 0.0))
-        repeated_mistake_reduction = 1.0 if first_mistakes == 0 else max(
-            0.0,
-            min(1.0, (first_mistakes - later_mistakes) / max(first_mistakes, 1)),
-        )
+        if first_mistakes == 0:
+            # P2-7 (sysrev round1): 首轮 0 错不再无条件给满分——次轮出现重复
+            # 错误属于回归，必须记 0 分，否则整体分被抬高、回归被掩盖
+            repeated_mistake_reduction = 1.0 if later_mistakes == 0 else 0.0
+        else:
+            repeated_mistake_reduction = max(
+                0.0,
+                min(1.0, (first_mistakes - later_mistakes) / max(first_mistakes, 1)),
+            )
         drift_safety_score = 0.2 if later_overfit else 0.95
         if later_trust < 0.45:
             drift_safety_score = min(drift_safety_score, 0.4)
@@ -105,6 +110,8 @@ class PlanOutcomeEvaluator:
             notes.append(f"Validated learning applied: {', '.join(learned[:3])}")
         if later_mistakes < first_mistakes:
             notes.append("Later cycle reduced repeated mistakes.")
+        if first_mistakes == 0 and later_mistakes > 0:
+            notes.append("Later cycle regressed: repeated mistakes appeared after a clean first cycle.")
         if later_overfit:
             notes.append("Later cycle shows potential overfit risk.")
         if later_trust < first_trust:

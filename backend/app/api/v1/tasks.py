@@ -834,12 +834,9 @@ async def update_task(
     if not task or task.user_id != current_user.id:
         raise NotFoundError(message="Task not found")
 
-    update_data = task_in.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(task, field, value)
-
-    await db.commit()
-    await db.refresh(task)
+    # P2-5 (sysrev round1): 委托 TaskService.update，确保卡协议影子投影、
+    # 资源自动链接与 focus-context 失效等服务侧副作用不被跳过
+    task = await TaskService.update(db, task, task_in)
 
     return {"data": TaskDetail.model_validate(task)}
 
@@ -1258,16 +1255,22 @@ async def complete_task(
     # 🔥 关键修复: 调用 TaskService.complete_task() 而非直接操作数据库
     # 这确保了 task.completed 事件被发布，从而触发 AdaptiveReplanner
     actual_minutes = request.actual_minutes or task.estimated_minutes or 15
-    task = await TaskService.complete_task(
-        db=db,
-        task_id=task_id,
-        user_id=current_user.id,
-        actual_minutes=actual_minutes,
-        note=request.note,
-        route_history_decision_id=request.route_history_decision_id,
-        routing_outcome_signal_id=request.routing_outcome_signal_id,
-        routing_trace_id=request.routing_trace_id,
-    )
+    try:
+        task = await TaskService.complete_task(
+            db=db,
+            task_id=task_id,
+            user_id=current_user.id,
+            actual_minutes=actual_minutes,
+            note=request.note,
+            route_history_decision_id=request.route_history_decision_id,
+            routing_outcome_signal_id=request.routing_outcome_signal_id,
+            routing_trace_id=request.routing_trace_id,
+        )
+    except ValueError as exc:
+        # P1-1 (sysrev round1): FSM 拒绝的流转（如 PENDING -> COMPLETED）
+        # 必须映射为 400，与 /pause、/resume 端点的既有模式保持一致
+        record_product_loop_event("task_execution", "task_complete", "invalid_transition", "bad_request")
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     # 以下逻辑由 TaskService.complete() 已处理，无需重复:
     # - plan_update (已包含在 TaskService.complete 中)

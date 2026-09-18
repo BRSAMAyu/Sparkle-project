@@ -1,4 +1,5 @@
 """Tests for PlanAdjustmentApplier — bridges adaptive adjustments to task entities."""
+
 from datetime import date, timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -14,10 +15,10 @@ from app.services.plan_adjustment_applier import (
     PlanAdjustmentResult,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_task(
     *,
@@ -89,6 +90,7 @@ def _make_applier(
 # No-op cases
 # ===========================================================================
 
+
 @pytest.mark.asyncio
 async def test_no_plan_state_returns_not_applied():
     applier, _ = _make_applier()
@@ -120,6 +122,7 @@ async def test_empty_task_list_returns_not_applied():
 # ===========================================================================
 # Patch 1: Time multiplier
 # ===========================================================================
+
 
 @pytest.mark.asyncio
 async def test_time_multiplier_scales_estimated_minutes():
@@ -172,6 +175,7 @@ async def test_time_multiplier_1_is_identity():
 # ===========================================================================
 # Patch 2: Difficulty shift
 # ===========================================================================
+
 
 @pytest.mark.asyncio
 async def test_negative_difficulty_shift_lowers_hard_tasks():
@@ -234,6 +238,7 @@ async def test_difficulty_zero_shift_is_identity():
 # Patch 3: Prerequisite review insertion
 # ===========================================================================
 
+
 @pytest.mark.asyncio
 async def test_prerequisite_review_inserted_for_weak_nodes():
     weak_node = uuid4()
@@ -294,6 +299,7 @@ async def test_no_review_without_constraint_flag():
 # Patch 4: Concurrency / hide distant
 # ===========================================================================
 
+
 @pytest.mark.asyncio
 async def test_concurrency_hides_distant_tasks():
     tasks = [_make_task(order_index=i) for i in range(5)]
@@ -330,6 +336,7 @@ async def test_no_hiding_without_flag():
 # ===========================================================================
 # Snapshot & rollback
 # ===========================================================================
+
 
 @pytest.mark.asyncio
 async def test_snapshot_recorded_on_patch():
@@ -467,6 +474,7 @@ async def test_rollback_restores_task_fields_and_tags():
 # User-facing language
 # ===========================================================================
 
+
 @pytest.mark.asyncio
 async def test_user_facing_summary_no_forbidden_words():
     t = _make_task()
@@ -486,6 +494,7 @@ async def test_user_facing_summary_no_forbidden_words():
 # ===========================================================================
 # Safety limits
 # ===========================================================================
+
 
 @pytest.mark.asyncio
 async def test_max_tasks_to_patch_limit():
@@ -525,3 +534,143 @@ async def test_combined_patches_all_apply():
     assert len(res.inserted_task_ids) >= 1
     assert "time_scaled" in res.patch_summary
     assert "difficulty_adjusted" in res.patch_summary
+
+
+# ===========================================================================
+# P1-2 (sysrev round1): idempotency across repeated adjustment cycles.
+# Each `_run_cycle` mimics one health-evaluation cooldown expiry: adjustments
+# and adaptive_meta are persisted to facts between cycles.
+# ===========================================================================
+
+
+async def _run_cycle(tasks: list, facts: dict, constraints: dict | None = None):
+    """Run apply_incremental_changes once and return (result, persisted_meta)."""
+    applier, _ = _make_applier(tasks=tasks, facts=facts, constraints=constraints or {})
+    res = await applier.apply_incremental_changes(uuid4(), uuid4())
+    persisted_meta = dict(facts.get("adaptive_meta") or {})
+    if applier.plan_state_service.upsert_plan_state.await_count:
+        kwargs = applier.plan_state_service.upsert_plan_state.await_args.kwargs
+        persisted_meta = dict(kwargs["patch"]["facts"]["adaptive_meta"])
+    return res, persisted_meta
+
+
+@pytest.mark.asyncio
+async def test_repeated_same_multiplier_does_not_compound():
+    """Regression for the 30→69min bug: identical adjustments on every cooldown
+    cycle must not re-multiply already-adjusted tasks."""
+    t = _make_task(estimated_minutes=30)
+    facts = {"adaptive_adjustments": {"time_multiplier": 1.3}, "adaptive_meta": {}}
+
+    res1, meta1 = await _run_cycle([t], facts)
+    assert t.estimated_minutes == 39
+    assert meta1["last_applied_time_multiplier"] == 1.3
+    assert "adaptive_adjusted" in t.tags
+
+    facts2 = {"adaptive_adjustments": {"time_multiplier": 1.3}, "adaptive_meta": meta1}
+    res2, meta2 = await _run_cycle([t], facts2)
+    assert t.estimated_minutes == 39  # unchanged — no compounding
+    assert len(res2.affected_task_ids) == 0
+    assert meta2.get("last_applied_time_multiplier") == 1.3
+
+
+@pytest.mark.asyncio
+async def test_multiplier_evolution_applies_increment_to_adjusted_tasks():
+    """When the parameter legitimately evolves, adjusted tasks get the delta
+    (ratio new/last_applied), landing exactly on the new cumulative value."""
+    t = _make_task(estimated_minutes=30)
+    facts = {"adaptive_adjustments": {"time_multiplier": 1.2}, "adaptive_meta": {}}
+
+    _, meta1 = await _run_cycle([t], facts)
+    assert t.estimated_minutes == 36
+
+    facts2 = {"adaptive_adjustments": {"time_multiplier": 1.5}, "adaptive_meta": meta1}
+    _, meta2 = await _run_cycle([t], facts2)
+    # 36 * (1.5 / 1.2) = 45 == 30 * 1.5 — cumulative value, not compounding
+    assert t.estimated_minutes == 45
+    assert meta2["last_applied_time_multiplier"] == 1.5
+
+
+@pytest.mark.asyncio
+async def test_new_untagged_task_gets_full_multiplier():
+    """Tasks that were never adjusted receive the full multiplier even when
+    already-applied tasks in the same batch are skipped."""
+    already_adjusted = _make_task(estimated_minutes=36)
+    already_adjusted.tags = ["adaptive_adjusted"]
+    fresh = _make_task(estimated_minutes=50)
+    facts = {
+        "adaptive_adjustments": {"time_multiplier": 1.5},
+        "adaptive_meta": {"last_applied_time_multiplier": 1.5},
+    }
+
+    _, meta = await _run_cycle([already_adjusted, fresh], facts)
+
+    assert already_adjusted.estimated_minutes == 36  # skipped
+    assert fresh.estimated_minutes == 75  # full 1.5 applied once
+    assert meta["last_applied_time_multiplier"] == 1.5
+
+
+@pytest.mark.asyncio
+async def test_repeated_same_difficulty_shift_does_not_step_twice():
+    """difficulty_shift=-0.2 must not keep stepping -1 every cycle."""
+    t = _make_task(difficulty=4)
+    facts = {"adaptive_adjustments": {"difficulty_shift": -0.2}, "adaptive_meta": {}}
+
+    res1, meta1 = await _run_cycle([t], facts)
+    assert t.difficulty == 3
+    assert meta1["last_applied_difficulty_shift"] == -0.2
+
+    facts2 = {"adaptive_adjustments": {"difficulty_shift": -0.2}, "adaptive_meta": meta1}
+    res2, _ = await _run_cycle([t], facts2)
+    assert t.difficulty == 3  # unchanged — no extra step
+    assert len(res2.affected_task_ids) == 0
+
+
+@pytest.mark.asyncio
+async def test_difficulty_shift_evolution_applies_delta():
+    """An evolved shift applies only the delta to already-adjusted tasks."""
+    t = _make_task(difficulty=4)
+    facts = {"adaptive_adjustments": {"difficulty_shift": -0.2}, "adaptive_meta": {}}
+
+    _, meta1 = await _run_cycle([t], facts)
+    assert t.difficulty == 3
+
+    facts2 = {"adaptive_adjustments": {"difficulty_shift": -0.4}, "adaptive_meta": meta1}
+    _, meta2 = await _run_cycle([t], facts2)
+    # delta -0.2 → one more step: 4 → 3 → 2 (cumulative two steps, not four)
+    assert t.difficulty == 2
+    assert meta2["last_applied_difficulty_shift"] == -0.4
+
+
+@pytest.mark.asyncio
+async def test_prerequisite_review_not_duplicated_across_cycles():
+    """A weak-node task with an already-seeded PENDING review task must not get
+    a second identical review inserted on the next adjustment cycle."""
+    from app.models.task import Task, TaskStatus, TaskType
+
+    weak_node = uuid4()
+    original = _make_task(knowledge_node_id=weak_node)
+    original.title = "弱节点任务"
+    constraints = {
+        "insert_prerequisite_review": True,
+        "weak_knowledge_node_ids": [str(weak_node)],
+    }
+    facts = {"adaptive_adjustments": {}, "adaptive_meta": {}}
+
+    res1, _ = await _run_cycle([original], facts, constraints)
+    assert len(res1.inserted_task_ids) == 1
+
+    # Next cycle: the previously inserted review task is now inside the
+    # look-ahead window (PENDING, same due date).
+    review_task = Task(
+        user_id=original.user_id,
+        plan_id=original.plan_id,
+        title="前置复习: 弱节点任务",
+        type=TaskType.LEARNING,
+        estimated_minutes=10,
+        difficulty=1,
+        energy_cost=1,
+        status=TaskStatus.PENDING,
+        tags=["adaptive_prerequisite_review", "adaptive_adjusted"],
+    )
+    res2, _ = await _run_cycle([original, review_task], facts, constraints)
+    assert len(res2.inserted_task_ids) == 0  # deduped
