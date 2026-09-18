@@ -482,7 +482,7 @@ class ToolExecutor:
             except Exception as e:
                 execution_time_ms = int((time.time() - start_time) * 1000)
                 safe_error = sanitize_exception_message(str(e))
-                logger.error(f"Tool execution error: {tool_name} - {str(e)}", exc_info=True)
+                logger.opt(exception=e).error(f"Tool execution error: {tool_name} - {str(e)}")
                 TOOL_EXECUTION_COUNT.labels(tool_name=tool_name, status="error").inc()
                 await self._safe_rollback(db_session)
                 await self._record_tool_execution(

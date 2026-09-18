@@ -118,13 +118,28 @@ async def test_fsm_legal_transitions():
         assert current.state == next_state
         assert current.details == f"to {next_state}"
 
-    for origin_state in [STATE_INIT, STATE_THINKING, STATE_GENERATING, STATE_TOOL_CALLING, STATE_DONE]:
+    # R2-03: FAILED 可重试回任意活跃态，但不允许 FAILED→DONE 直接洗白失败
+    for origin_state in [STATE_INIT, STATE_THINKING, STATE_GENERATING, STATE_TOOL_CALLING]:
         assert await manager.update_state(session_id, origin_state, details=f"origin {origin_state}") is True
         assert await manager.update_state(session_id, STATE_FAILED, details="boom") is True
         failed = await manager.load_state(session_id)
         assert failed is not None
         assert failed.state == STATE_FAILED
         assert failed.details == "boom"
+
+    # FAILED → DONE 必须被拒绝，状态保持 FAILED；新回合须经 INIT
+    assert await manager.update_state(session_id, STATE_DONE, details="failed to done") is False
+    failed = await manager.load_state(session_id)
+    assert failed is not None
+    assert failed.state == STATE_FAILED
+
+    # DONE → FAILED 放行（回合完成后收尾异常）；新回合经 INIT 重新进入
+    assert await manager.update_state(session_id, STATE_INIT, details="new turn") is True
+    assert await manager.update_state(session_id, STATE_DONE, details="done again") is True
+    assert await manager.update_state(session_id, STATE_FAILED, details="post-done failure") is True
+    failed = await manager.load_state(session_id)
+    assert failed is not None
+    assert failed.state == STATE_FAILED
 
 
 @pytest.mark.asyncio

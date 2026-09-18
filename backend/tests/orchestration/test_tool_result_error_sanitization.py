@@ -93,8 +93,10 @@ async def test_tool_result_continuation_still_logs_raw_error():
         ):
             pass
 
-        mock_logger.error.assert_called_once()
-        logged_msg = mock_logger.error.call_args[0][0]
+        # R2-04: loguru 的 exc_info= 不生效（堆栈静默丢失），修正后统一走
+        # logger.opt(exception=...).error(...)，原始文本与堆栈都保留
+        mock_logger.opt.assert_called_once()
+        logged_msg = mock_logger.opt.return_value.error.call_args[0][0]
         assert "postgres://internal-host" in logged_msg, (
             f"Raw exception should be logged, got: {logged_msg}"
         )

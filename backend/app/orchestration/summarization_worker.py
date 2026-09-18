@@ -73,7 +73,7 @@ class SummarizationWorker:
         except asyncio.CancelledError:
             logger.info(f"Worker {self.worker_id} cancelled")
         except Exception as e:
-            logger.error(f"Worker {self.worker_id} crashed: {e}", exc_info=True)
+            logger.opt(exception=e).error(f"Worker {self.worker_id} crashed: {e}")
         finally:
             self.running = False
             logger.info(f"SummarizationWorker {self.worker_id} stopped")

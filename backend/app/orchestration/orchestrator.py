@@ -946,7 +946,7 @@ class ChatOrchestrator(
                 await self.redis.set(effect_key, json.dumps(result.user_visible_effect, ensure_ascii=False))
                 await self.redis.expire(effect_key, 24 * 3600)
         except Exception:
-            logger.warning("Failed to process Aurora correction payload from chat context", exc_info=True)
+            logger.opt(exception=True).warning("Failed to process Aurora correction payload from chat context")
 
     @staticmethod
     def _build_aurora_runtime_metadata(
@@ -1336,9 +1336,10 @@ class ChatOrchestrator(
                 chat_directive=plan.chat_directive if hasattr(plan, "chat_directive") else None,
             )
         except Exception:
-            logger.warning(
+            logger.opt(exception=True).warning(
                 "feed_aurora_decision failed for user=%s action=%s",
-                user_id, plan.action or "emit_message", exc_info=True,
+                user_id,
+                plan.action or "emit_message",
             )
 
     async def _emit_early_ack_progress(
@@ -1540,7 +1541,7 @@ class ChatOrchestrator(
             if t.cancelled():
                 return
             if exc := t.exception():
-                logger.error(f"Background task {t.get_coro().__name__ if t.get_coro() else t} failed: {exc}", exc_info=exc)
+                logger.opt(exception=exc).error(f"Background task {t.get_coro().__name__ if t.get_coro() else t} failed: {exc}")
 
         self._bg_tasks.add(task)
         task.add_done_callback(_on_task_done)
@@ -1864,7 +1865,7 @@ class ChatOrchestrator(
         try:
             injection_mode = (await AuroraDocContextKillSwitchService().get_mode()).strip().lower()
         except Exception:
-            logger.warning("AuroraDocContextKillSwitchService.get_mode failed, falling back to settings", exc_info=True)
+            logger.opt(exception=True).warning("AuroraDocContextKillSwitchService.get_mode failed, falling back to settings")
             injection_mode = (
                 str(getattr(settings, "AURORA_DOC_CONTEXT_DOCUMENT_CONTEXT_INJECTION_MODE", "live") or "live")
                 .strip()
@@ -2370,13 +2371,13 @@ class ChatOrchestrator(
                             if _spine_resp_dir:
                                 request_extra_context["spine_response_directive"] = _spine_resp_dir.to_dict()
                         except Exception:
-                            logger.warning("Redis/spine get_response_directive failed for user=%s", user_id, exc_info=True)
+                            logger.opt(exception=True).warning("Redis/spine get_response_directive failed for user=%s", user_id)
                         try:
                             _spine_ret_dir = await _spine.get_retrieval_directive(user_id)
                             if _spine_ret_dir:
                                 request_extra_context["spine_retrieval_directive"] = _spine_ret_dir.to_dict()
                         except Exception:
-                            logger.warning("Redis/spine get_retrieval_directive failed for user=%s", user_id, exc_info=True)
+                            logger.opt(exception=True).warning("Redis/spine get_retrieval_directive failed for user=%s", user_id)
                         try:
                             from app.signals.growth_chronicle import GrowthChronicleService
                             _chronicle_svc = GrowthChronicleService(self.redis)
@@ -2386,8 +2387,9 @@ class ChatOrchestrator(
                                     f"- {e.title}: {e.narrative}" for e in _chronicle_entries if e.narrative
                                 )
                         except Exception:
-                            logger.warning(
-                                "GrowthChronicleService.get_chronicle failed for user=%s", user_id, exc_info=True,
+                            logger.opt(exception=True).warning(
+                                "GrowthChronicleService.get_chronicle failed for user=%s",
+                                user_id,
                             )
                         try:
                             # Track interaction count for fatigue detection
@@ -2403,27 +2405,28 @@ class ChatOrchestrator(
                             if _fatigue and _fatigue.get("fatigue_level") not in ("low", "normal"):
                                 request_extra_context["spine_fatigue_context"] = _fatigue
                         except Exception:
-                            logger.warning(
-                                "Spine fatigue check failed for user=%s", user_id, exc_info=True,
+                            logger.opt(exception=True).warning(
+                                "Spine fatigue check failed for user=%s",
+                                user_id,
                             )
                         try:
                             _spine_ux = await _spine.get_ux_directive(user_id)
                             if _spine_ux:
                                 request_extra_context["spine_ux_directive"] = _spine_ux.to_dict()
                         except Exception:
-                            logger.warning("Redis/spine get_ux_directive failed for user=%s", user_id, exc_info=True)
+                            logger.opt(exception=True).warning("Redis/spine get_ux_directive failed for user=%s", user_id)
                         try:
                             _spine_comm = await _spine.get_community_directive(user_id)
                             if _spine_comm:
                                 request_extra_context["spine_community_directive"] = _spine_comm.to_dict()
                         except Exception:
-                            logger.warning("Redis/spine get_community_directive failed for user=%s", user_id, exc_info=True)
+                            logger.opt(exception=True).warning("Redis/spine get_community_directive failed for user=%s", user_id)
                         try:
                             _spine_skill = await _spine.get_skill_directive(user_id)
                             if _spine_skill:
                                 request_extra_context["spine_skill_directive"] = _spine_skill.to_dict()
                         except Exception:
-                            logger.warning("Redis/spine get_skill_directive failed for user=%s", user_id, exc_info=True)
+                            logger.opt(exception=True).warning("Redis/spine get_skill_directive failed for user=%s", user_id)
                     except Exception as _spine_err:
                         from app.core.business_metrics import record_spine_degradation
 

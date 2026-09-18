@@ -385,10 +385,11 @@ class TestTaskManagerIntegration:
         assert "Critical error" in details["error_message"]
 
     @pytest.mark.asyncio
-    async def test_semaphore_exhaustion(self, task_manager):
+    async def test_semaphore_exhaustion(self):
         """测试信号量耗尽"""
-        # 设置极低的并发限制
-        task_manager._semaphore = asyncio.Semaphore(2)
+        # R2-05 重构后信号量按事件循环持有，并发限制在构造时固定，
+        # 不再暴露可替换的 _semaphore 属性
+        task_manager = BackgroundTaskManager(max_concurrent_tasks=2)
 
         async def blocking_task():
             await asyncio.sleep(0.5)

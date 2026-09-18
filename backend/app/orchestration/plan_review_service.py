@@ -1976,7 +1976,7 @@ Please review this plan and provide your assessment."""
         # Trigger asynchronous task generation
         def _log_task_exception(task: asyncio.Task) -> None:
             if not task.cancelled() and task.exception():
-                logger.error(f"Background task failed: {task.exception()}", exc_info=task.exception())
+                logger.opt(exception=task.exception()).error(f"Background task failed: {task.exception()}")
 
         task_gen = asyncio.create_task(
             self._generate_tasks_after_approval(
@@ -2153,7 +2153,7 @@ Please review this plan and provide your assessment."""
                     logger.error(f"Task generation failed for plan {plan_id}: " f"{result.error_message}")
 
         except Exception as e:
-            logger.error(f"Error in _generate_tasks_after_approval: {e}", exc_info=True)
+            logger.opt(exception=e).error(f"Error in _generate_tasks_after_approval: {e}")
 
     async def notify_plan_rejected(self, plan_id: str, user_id: str, feedback: str) -> dict[str, Any]:
         """
@@ -2275,10 +2275,9 @@ Please review this plan and provide your assessment."""
 
         def _log_replan_exception(task: asyncio.Task) -> None:
             if not task.cancelled() and task.exception():
-                logger.error(
+                logger.opt(exception=task.exception()).error(
                     "Replan background task failed: %s",
                     task.exception(),
-                    exc_info=task.exception(),
                 )
 
         replan_task.add_done_callback(_log_replan_exception)
@@ -2455,7 +2454,7 @@ Please review this plan and provide your assessment."""
                 await pending_actions_store.delete(action_id, user_id)
 
         except Exception as e:
-            logger.error(f"Failed to auto execute replan action {action_id}: {e}", exc_info=True)
+            logger.opt(exception=e).error(f"Failed to auto execute replan action {action_id}: {e}")
             try:
                 await sse_manager.send_to_user(
                     user_id,

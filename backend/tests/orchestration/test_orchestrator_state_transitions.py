@@ -896,13 +896,21 @@ class TestEdgeCasesAndErrorHandling:
             details="Request completed",
         )
 
-        # 尝试从 DONE 转换到其他状态（根据业务逻辑，这可能不允许）
-        # 这里我们只测试系统允许这个转换
-        await state_manager.update_state(
+        # R2-03: 终态非法出边必须被拒绝。DONE 是回合终态，
+        # 直接跳回活跃态会掩盖真实生命周期；新回合必须先写 INIT。
+        rejected = await state_manager.update_state(
             sample_session_id,
             STATE_THINKING,
             details="New request in same session",
         )
+        assert rejected is False, "DONE → THINKING 必须被转移校验拒绝"
+        saved_state = await state_manager.load_state(sample_session_id)
+        assert saved_state is not None
+        assert saved_state.state == STATE_DONE
+
+        # 新回合：DONE → INIT（放行）→ THINKING（放行）
+        assert await state_manager.update_state(sample_session_id, STATE_INIT, details="New turn") is True
+        assert await state_manager.update_state(sample_session_id, STATE_THINKING, details="Processing") is True
 
         # 验证新状态
         saved_state = await state_manager.load_state(sample_session_id)

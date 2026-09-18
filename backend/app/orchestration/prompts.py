@@ -1306,7 +1306,7 @@ def build_system_prompt(
             if _mc and hasattr(_mc, "tier"):
                 _model_tier_str = _mc.tier.value
         except Exception:
-            logger.debug("Failed to resolve model tier for key=%s", model_key, exc_info=True)
+            logger.opt(exception=True).debug("Failed to resolve model tier for key=%s", model_key)
     _prompt_budget = _TIER_PROMPT_BUDGET.get(_model_tier_str or "", PROMPT_SECTION_SOFT_LIMIT_TOKENS)
 
     pre_budget_section_map = dict(section_map)
@@ -2733,7 +2733,7 @@ def _extract_canonical_insight_state(context: dict[str, Any] | None) -> UserInsi
         try:
             return UserInsightState(**candidate)
         except Exception:
-            logger.debug("Failed to construct UserInsightState from candidate dict", exc_info=True)
+            logger.opt(exception=True).debug("Failed to construct UserInsightState from candidate dict")
 
     # 2. Attribute on profile_context object
     profile_ctx = context.get("profile_context")
@@ -2745,7 +2745,7 @@ def _extract_canonical_insight_state(context: dict[str, Any] | None) -> UserInsi
             try:
                 return UserInsightState(**attr)
             except Exception:
-                logger.debug("Failed to construct UserInsightState from profile_ctx attr", exc_info=True)
+                logger.opt(exception=True).debug("Failed to construct UserInsightState from profile_ctx attr")
 
     # 3. Dict form inside profile_context
     if isinstance(profile_ctx, dict):
@@ -2756,7 +2756,7 @@ def _extract_canonical_insight_state(context: dict[str, Any] | None) -> UserInsi
             try:
                 return UserInsightState(**inner)
             except Exception:
-                logger.debug("Failed to construct UserInsightState from profile_ctx dict inner", exc_info=True)
+                logger.opt(exception=True).debug("Failed to construct UserInsightState from profile_ctx dict inner")
 
     return None
 

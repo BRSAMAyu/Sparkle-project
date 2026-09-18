@@ -130,6 +130,9 @@ _OPENCLAW_CHAT_CONTROL_EXPLANATION_HINTS = (
 # RB-02: module-level so the graph timeout budget is observable and testable.
 GRAPH_TIMEOUT_SECONDS = 300
 
+# R2-01: 超时/断连取消包装任务后，等待内层 graph 协程退出的有界时长
+_GRAPH_CANCEL_JOIN_TIMEOUT = 5.0
+
 
 class ExecutionEngineMixin:
     """Mixin providing execution, planning, and tool-handling methods for ChatOrchestrator."""
@@ -1398,7 +1401,7 @@ class ExecutionEngineMixin:
             )
             return
         except Exception as exc:
-            logger.error(f"Tool result continuation failed: {exc}", exc_info=True)
+            logger.opt(exception=exc).error(f"Tool result continuation failed: {exc}")
             safe_message, error_code, retryable = build_safe_chat_error(exc)
             yield agent_service_pb2.ChatResponse(
                 response_id=response_id,
@@ -1856,6 +1859,13 @@ class ExecutionEngineMixin:
                     logger.error(f"Graph execution exceeded timeout of {GRAPH_TIMEOUT_SECONDS}s; cancelling")
                     graph_task.cancel()
                     result_holder["timed_out"] = True
+                    # R2-01: 等待内层 graph 协程真正退出（有界），确保取消确实生效；
+                    # 传播与等待的兜底在 task_manager 包装任务内完成
+                    with contextlib.suppress(Exception):
+                        await asyncio.wait({graph_task}, timeout=_GRAPH_CANCEL_JOIN_TIMEOUT)
+                    if graph_task.done():
+                        with contextlib.suppress(asyncio.CancelledError):
+                            graph_task.exception()
                     break
                 try:
                     item = await asyncio.wait_for(queue.get(), timeout=0.1)
@@ -2112,6 +2122,12 @@ class ExecutionEngineMixin:
                         "LangGraph planner timed out after {}s for session {}; using synthesized fallback",
                         _LANGGRAPH_PLANNER_TIMEOUT_SECONDS,
                         session_id,
+                    )
+                    # R2-02: planner 纯超时也必须计入熔断失败。
+                    # 持续超时的 planner 若不计数，熔断器永不打开，每轮固定损失
+                    # _LANGGRAPH_PLANNER_TIMEOUT_SECONDS 延迟。
+                    await self.langgraph_breaker.on_failure(
+                        f"timeout_after_{_LANGGRAPH_PLANNER_TIMEOUT_SECONDS:.0f}s"
                     )
                     executable_plan = self.lang_graph_planner.build_fallback_plan(
                         message=user_message,
@@ -2568,7 +2584,10 @@ class ExecutionEngineMixin:
 
             state.context_data["executable_plan"] = executable_plan
             state.context_data["snapshot"] = snapshot
-            await self.langgraph_breaker.on_success()
+            # R2-02: fallback 计划（熔断已开或 planner 超时）的成功不代表 planner 成功，
+            # 不得调用 on_success 抵消失败计数（否则 6 连超时 failure_count=0）
+            if not use_synthesized_fallback:
+                await self.langgraph_breaker.on_success()
 
             plan_summary = self.lang_graph_planner.get_plan_summary(executable_plan)
             logger.info(f"Plan ready for execution: {plan_summary}")
@@ -2603,7 +2622,7 @@ class ExecutionEngineMixin:
                 track_task(shadow_task)
             return route_decision, executable_plan, snapshot, False
         except Exception as e:
-            logger.error(f"LangGraph planning error: {e}", exc_info=True)
+            logger.opt(exception=e).error(f"LangGraph planning error: {e}")
             await self.langgraph_breaker.on_failure(str(e))
             # RB-08: 错误文案必须走脱敏通道，禁止把原始异常文本直接流给客户端
             safe_message, _, _ = build_safe_chat_error(e)

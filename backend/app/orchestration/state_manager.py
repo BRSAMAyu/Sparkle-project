@@ -33,6 +33,29 @@ STATE_TOOL_CALLING = "TOOL_CALLING"
 STATE_DONE = "DONE"
 STATE_FAILED = "FAILED"
 
+# R2-03: 会话 FSM 转移白名单。
+#
+# 定位取舍（详见 round2/01-r2-engine-orchestration.md R2-03）：
+# 该 FSM 在生产中主要作为"回合生命周期标记"使用——每回合开始时先写 INIT，
+# 结束时写 DONE/FAILED（或经 aurora 路径写 GENERATING→DONE）。
+# 白名单据此做保守校验：
+# - 活跃态（INIT/THINKING/GENERATING/TOOL_CALLING）之间互转、以及向 DONE/FAILED 推进均放行；
+# - DONE 只能停留在 DONE、转 FAILED（收尾后异常），或经 INIT 开启新回合；
+# - FAILED 只能停留在 FAILED、转活跃态（重试），或经 INIT 开启新回合；
+#   不允许 FAILED→DONE 直接"洗白"失败；
+# - 新会话首写（无既有状态）不校验；未知状态值不校验（前向兼容）。
+_FSM_ALL_STATES = {STATE_INIT, STATE_THINKING, STATE_GENERATING, STATE_TOOL_CALLING, STATE_DONE, STATE_FAILED}
+_FSM_ACTIVE_STATES = _FSM_ALL_STATES - {STATE_DONE, STATE_FAILED}
+
+_VALID_TRANSITIONS: dict[str, set[str]] = {
+    STATE_INIT: set(_FSM_ALL_STATES),
+    STATE_THINKING: _FSM_ACTIVE_STATES | {STATE_DONE, STATE_FAILED},
+    STATE_GENERATING: _FSM_ACTIVE_STATES | {STATE_DONE, STATE_FAILED},
+    STATE_TOOL_CALLING: _FSM_ACTIVE_STATES | {STATE_DONE, STATE_FAILED},
+    STATE_DONE: {STATE_DONE, STATE_FAILED, STATE_INIT},
+    STATE_FAILED: _FSM_ACTIVE_STATES | {STATE_FAILED, STATE_INIT},
+}
+
 
 SESSION_LOCK_ACQUIRE_FAILURES_TOTAL = get_or_create_metric(
     Counter,
@@ -180,6 +203,14 @@ class SessionStateManager:
             # 先加载现有状态
             existing = await self.load_state(session_id)
 
+            # R2-03: 转移校验 —— 拒绝非法出边时保持原状态不变
+            if existing and not self._is_transition_allowed(existing.state, state):
+                logger.warning(
+                    f"Rejected invalid FSM transition for session {session_id}: "
+                    f"{existing.state} -> {state}"
+                )
+                return False
+
             if existing:
                 # 更新现有状态
                 existing.state = state
@@ -219,6 +250,20 @@ class SessionStateManager:
         except Exception as e:
             logger.error(f"Failed to update state for session {session_id}: {e}")
             return False
+
+    @staticmethod
+    def _is_transition_allowed(current_state: str, next_state: str) -> bool:
+        """R2-03: 判断 FSM 转移是否在白名单内。
+
+        未知状态值（当前态或目标态）不校验，保持前向兼容；
+        白名单外的转移一律拒绝，由调用方保持原状态。
+        """
+        allowed = _VALID_TRANSITIONS.get(current_state)
+        if allowed is None:
+            return True
+        if next_state not in _FSM_ALL_STATES:
+            return True
+        return next_state in allowed
 
     async def _persist_durable_state(self, state: FSMState) -> None:
         if self.db_session is None:

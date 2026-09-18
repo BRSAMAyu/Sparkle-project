@@ -164,7 +164,7 @@ class PersistenceLayerMixin:
             )
             return [record.to_dict() if hasattr(record, "to_dict") else record for record in (records or [])]
         except Exception as e:
-            logger.warning(f"Failed to publish execution feedback: {e}", exc_info=True)
+            logger.opt(exception=e).warning(f"Failed to publish execution feedback: {e}")
             return []
 
     # ------------------------------------------------------------------

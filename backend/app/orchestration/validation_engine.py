@@ -827,5 +827,5 @@ class ValidationEngineMixin:
                 "tools_successful": validation_result.tool_summary.get("successful", 0),
             }
         except Exception as e:
-            logger.warning(f"Plan execution validation failed: {e}", exc_info=True)
+            logger.opt(exception=e).warning(f"Plan execution validation failed: {e}")
             return None
