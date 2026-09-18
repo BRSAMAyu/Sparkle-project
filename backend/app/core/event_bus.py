@@ -688,6 +688,9 @@ class EventBus:
         self.max_retries = getattr(settings, "EVENT_BUS_MAX_RETRIES", 3)
         self.publish_base_delay_ms = getattr(settings, "EVENT_BUS_PUBLISH_BASE_DELAY_MS", 200)
         self.publish_max_delay_ms = getattr(settings, "EVENT_BUS_PUBLISH_MAX_DELAY_MS", 2000)
+        # R2-EI-15: consumer retry is an immediate hot requeue bounded by
+        # max_retries; these backoff knobs are currently NOT applied anywhere.
+        # Implement delayed delivery before wiring them back into the retry path.
         self.consumer_retry_base_delay_ms = getattr(
             settings,
             "EVENT_BUS_CONSUMER_RETRY_BASE_DELAY_MS",
@@ -894,16 +897,17 @@ class EventBus:
             maxlen=self.retry_stream_maxlen,
         )
         await self.redis.xack(stream, group_name, message_id)
-        delay_ms = min(self.consumer_retry_base_delay_ms * (2**retry_count), self.consumer_retry_max_delay_ms)
+        # R2-EI-15: requeue is immediate (hot retry) — no delayed delivery is
+        # implemented, attempts are bounded by self.max_retries instead. Do not
+        # compute/log a backoff delay value that is never actually applied.
         logger.warning(
-            "Requeued failed event: stream={} group={} consumer={} message_id={} retry={}/{} delay_ms={} error={}",
+            "Requeued failed event: stream={} group={} consumer={} message_id={} retry={}/{} error={}",
             stream,
             group_name,
             consumer_name,
             message_id,
             next_retry,
             self.max_retries,
-            delay_ms,
             error,
         )
 

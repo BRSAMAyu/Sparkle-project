@@ -128,6 +128,30 @@ async def mark_all_notifications_read(
 
 
 # route-tier: authed
+# NOTE(R2-EI-13): literal routes MUST be declared before same-shape parameterized
+# routes; otherwise "/notifications/clear-read" is captured by
+# "/notifications/{notification_id}" below and always fails UUID validation (422).
+@router.delete("/notifications/clear-read")
+async def clear_read_notifications(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Clear all read notifications for the current user.
+
+    Returns the number of notifications deleted.
+    """
+    service = NotificationCenterService(db)
+
+    count = await service.clear_read_notifications(current_user.id)
+
+    return {
+        "message": f"Cleared {count} read notifications",
+        "count": count
+    }
+
+
+# route-tier: authed
 @router.delete("/notifications/{notification_id}")
 async def delete_notification(
     notification_id: UUID,
@@ -275,27 +299,6 @@ async def transition_intervention_record(
         )
 
     return {"message": f"Intervention record action applied: {request.action}"}
-
-
-# route-tier: authed
-@router.delete("/notifications/clear-read")
-async def clear_read_notifications(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Clear all read notifications for the current user.
-
-    Returns the number of notifications deleted.
-    """
-    service = NotificationCenterService(db)
-
-    count = await service.clear_read_notifications(current_user.id)
-
-    return {
-        "message": f"Cleared {count} read notifications",
-        "count": count
-    }
 
 
 # route-tier: authed

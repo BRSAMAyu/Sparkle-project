@@ -498,6 +498,10 @@ async def lifespan(fastapp: FastAPI):
     # 停止知识拓展后台任务
     await stop_expansion_worker()
 
+    # R2-EI-16: 先停进程内 APScheduler，防止关停窗口内 1 分钟 tick 等 job
+    # 在已取消消费者的 loop 上打正在关闭的 DB 池。
+    scheduler_service.stop()
+
     # EI-04: 进入事件总线关停流程 —— 阻止关机窗口内死亡的消费循环被 _restart_consume_loop 复活。
     from app.core.event_bus import event_bus
 
@@ -573,6 +577,14 @@ async def lifespan(fastapp: FastAPI):
         cognitive_consumer_task.cancel()
         with suppress(asyncio.CancelledError):
             await cognitive_consumer_task
+
+    # R2-EI-17: capsule consumer was missing from the shutdown cancel list
+    # (list-consistency fix; event_bus.close() already drains it since EI-04)
+    capsule_consumer_task = getattr(app.state, "capsule_consumer_task", None)
+    if capsule_consumer_task:
+        capsule_consumer_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await capsule_consumer_task
 
     document_feedback_consumer_task = getattr(app.state, "document_feedback_consumer_task", None)
     if document_feedback_consumer_task:
@@ -701,9 +713,21 @@ async def lifespan(fastapp: FastAPI):
         logger.warning(f"Event bus shutdown failed: {e}")
 
     # Close Cache
+    # R2-EI-18: graceful shutdown hygiene — detach the EpisodeLogger Redis sink
+    # (holds cache_service.redis) and close redis_search_client's own client
+    # before/alongside the shared Redis release.
+    from app.causal.episode_logger import episode_logger
+
+    episode_logger.detach_sink()
+    await redis_search_client.close()
     await cache_service.close()
     # Close WebSocket Redis
     await manager.close_redis()
+
+    # R2-EI-18: dispose the SQLAlchemy engine/connection pool as the last step.
+    from app.db.session import engine
+
+    await engine.dispose()
 
     logger.info("Sparkle API Server stopped")
 

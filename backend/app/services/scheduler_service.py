@@ -81,6 +81,17 @@ class SchedulerService:
         self.scheduler.start()
         logger.info("Scheduler started with smart push cycle, daily decay, capsule generation, and weekly preference inference decay jobs")
 
+    def stop(self):
+        """R2-EI-16: graceful shutdown must drain the in-process APScheduler.
+
+        Without this, a job firing inside the shutdown window (e.g. the 1-minute
+        execution schedule tick) would hit a DB pool that is already being torn
+        down. Safe to call even if the scheduler never started.
+        """
+        if self.scheduler.running:
+            self.scheduler.shutdown(wait=False)
+            logger.info("Scheduler stopped")
+
     async def run_smart_push_cycle(self):
         """
         执行智能推送周期

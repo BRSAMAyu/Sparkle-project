@@ -211,6 +211,22 @@ async def list_libraries(
     return LibraryListResponse(data=data, meta=meta)
 
 
+# NOTE(R2-EI-14): literal routes MUST be declared before same-shape parameterized
+# routes; otherwise "/seed-libraries/my-subscriptions" is captured by
+# "/seed-libraries/{library_id}" below and always fails UUID validation (422).
+@router.get(
+    "/seed-libraries/my-subscriptions",
+    response_model=SubscriptionListResponse,
+    summary="我的订阅（兼容路径）",
+)
+async def get_my_subscriptions_alias(
+    is_enabled: bool | None = Query(None, description="仅返回启用的订阅"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await get_my_subscriptions(is_enabled, current_user, db)
+
+
 @router.get(
     "/seed-libraries/{library_id}",
     response_model=LibraryResponse,
@@ -636,19 +652,6 @@ async def unsubscribe_library_alias(
     db: AsyncSession = Depends(get_db),
 ):
     return await unsubscribe_library(library_id, current_user, db)
-
-
-@router.get(
-    "/seed-libraries/my-subscriptions",
-    response_model=SubscriptionListResponse,
-    summary="我的订阅（兼容路径）",
-)
-async def get_my_subscriptions_alias(
-    is_enabled: bool | None = Query(None, description="仅返回启用的订阅"),
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    return await get_my_subscriptions(is_enabled, current_user, db)
 
 
 @router.get(

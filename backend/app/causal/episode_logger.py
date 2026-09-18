@@ -174,6 +174,13 @@ class EpisodeLogger:
     def attach_sink(self, sink: EpisodeSink) -> None:
         self._sink = sink
 
+    def detach_sink(self) -> EpisodeSink | None:
+        """R2-EI-18: remove the current sink so graceful shutdown can release
+        the Redis client it may hold before cache_service.close() runs."""
+        detached = self._sink
+        self._sink = None
+        return detached
+
     async def log_decision(
         self,
         *,
