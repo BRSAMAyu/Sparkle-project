@@ -1097,3 +1097,82 @@ class TestD2EdgeTargetValidation:
         assert any("Max steps" in e and "truncated" in e for e in result.errors), (
             f"Expected truncation error message in errors, got: {result.errors}"
         )
+
+
+# =============================================================================
+# Alias-merge safety (F-1 deep_analysis 附带发现)
+# =============================================================================
+
+
+class TestAliasMergeSafety:
+    """
+    节点把 state.context_data 原样返回时，_merge_context_data 会收到
+    target is new_data 的别名 dict——迭代中 del 同一 dict 在 CPython 3.11
+    抛 "dictionary keys changed during iteration"。
+
+    触发路径：plan-intent deep_analysis → tool_execution → execution_review
+    （execution_review_node 返回 {"context_data": <state 内同一引用>}）。
+    """
+
+    @staticmethod
+    def _populate_realistic_context(context: dict) -> None:
+        """填充接近生产形态的 context_data（键数要足以踩中 CPython 迭代器检查）。"""
+        context.update(
+            {
+                "session_id": "sess-123",
+                "user_id": "user-456",
+                "request_id": "req-789",
+                "workflow_id": "wf-000",
+                "intent": "plan",
+                "analysis_depth": "deep_analysis",
+                "model_used": "glm-4.6",
+                "generation_provider": "zhipu",
+                "tool_calls": [{"name": "search_notes"}],
+                "tool_results": [{"name": "search_notes", "result": {"items": []}}],
+                "run_ledger": None,
+                "review_context": {"reflection_round": 0},
+                "messages_meta": {"count": 3},
+                "context_pack_tokens": 2048,
+                "document_chunks": [],
+            }
+        )
+
+    def test_merge_context_data_with_self_alias(self):
+        """直接单元层：target 与 new_data 为同一 dict 时合并不得抛 RuntimeError。"""
+        from app.orchestration.statechart_engine import _merge_context_data
+
+        aliased = {f"key_{i}": {"payload": i} for i in range(16)}
+        _merge_context_data(aliased, aliased)
+        assert len(aliased) == 16
+        assert aliased["key_0"] == {"payload": 0}
+
+    def test_workflow_state_update_with_own_context(self):
+        """WorkflowState.update 传入自身 context_data 不得抛 RuntimeError。"""
+        state = WorkflowState()
+        self._populate_realistic_context(state.context_data)
+        state.update(state.context_data)
+        assert len(state.context_data) == 15
+        assert state.context_data["intent"] == "plan"
+
+    async def test_execution_review_style_node_returning_state_context(self, sample_state):
+        """图执行层：节点返回 state 自身 context_data 引用（execution_review 模式）不崩。"""
+        self._populate_realistic_context(sample_state.context_data)
+
+        async def execution_review_like_node(state: WorkflowState) -> dict:
+            # _state_get(state, "context_data", {}) 取到的是同一对象引用
+            context_data = state.context_data
+            context_data["tool_review_issues"] = []
+            return {"next_step": "generation", "context_data": context_data}
+
+        graph = StateGraph("AliasMergeGraph")
+        graph.add_node("execution_review", execution_review_like_node)
+        graph.set_entry_point("execution_review")
+        graph.add_edge("execution_review", "__end__")
+        graph.compile()
+
+        result = await graph.invoke(sample_state)
+
+        assert result.next_step == "generation"
+        assert result.errors == []
+        assert result.context_data["tool_review_issues"] == []
+        assert result.context_data["intent"] == "plan"

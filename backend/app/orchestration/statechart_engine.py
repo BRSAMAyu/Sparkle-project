@@ -113,7 +113,10 @@ def _evict_overflow_context_keys(target: dict[str, Any]) -> None:
 def _merge_context_data(target: dict[str, Any], new_data: dict[str, Any]) -> None:
     if not isinstance(new_data, dict):
         return
-    for key, value in new_data.items():
+    # 迭代快照：节点常把 state.context_data 原样返回（如 execution_review_node），
+    # 此时 new_data is target，迭代中 del 同一 dict 会抛
+    # "dictionary keys changed during iteration"（CPython 3.11）。
+    for key, value in list(new_data.items()):
         if key in target:
             del target[key]
         target[key] = _summarize_context_value(value)
