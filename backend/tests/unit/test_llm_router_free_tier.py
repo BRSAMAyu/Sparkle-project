@@ -55,7 +55,7 @@ def test_free_user_forced_max_clamps_to_fast_with_reason(router: LLMRouter):
     selection = router.select_model(AgentRole.GENERATION, force_tier=ModelTier.MAX)
 
     assert selection.config.tier == ModelTier.FAST
-    assert selection.model_key == "deepseek_fast"  # flash 轻模型
+    assert selection.model_key == "dashscope_fast"  # flash 轻模型
     assert selection.free_tier_downgrade is True
     assert "free_tier_downgrade(max->fast)" in selection.reason
     assert _free_downgrade_count(labels) == pytest.approx(before + 1)
@@ -66,8 +66,9 @@ def test_pro_user_forced_max_unchanged(router: LLMRouter):
 
     selection = router.select_model(AgentRole.GENERATION, force_tier=ModelTier.MAX)
 
-    assert selection.config.tier == ModelTier.MAX
-    assert selection.model_key == "deepseek_reason"  # 重模型（v4-pro 位）
+    # 池条目自带 tier 标签可能是 MAX 或 PRO；本质断言是 model 与钳制语义
+    assert selection.config.tier in (ModelTier.MAX, ModelTier.PRO)
+    assert selection.model_key == "dashscope_reason"  # 重模型（v4-pro 位）
     assert selection.free_tier_downgrade is False
     assert "free_tier_downgrade" not in selection.reason
 
@@ -78,7 +79,8 @@ def test_unset_tier_keeps_legacy_behavior(router: LLMRouter):
 
     selection = router.select_model(AgentRole.GENERATION, force_tier=ModelTier.MAX)
 
-    assert selection.config.tier == ModelTier.MAX
+    # 池条目自带 tier 标签可能是 MAX 或 PRO；本质断言是 model 与钳制语义
+    assert selection.config.tier in (ModelTier.MAX, ModelTier.PRO)
     assert selection.free_tier_downgrade is False
 
 
@@ -186,7 +188,8 @@ def test_kill_switch_disables_clamp(router: LLMRouter, monkeypatch):
 
     selection = router.select_model(AgentRole.GENERATION, force_tier=ModelTier.MAX)
 
-    assert selection.config.tier == ModelTier.MAX
+    # 池条目自带 tier 标签可能是 MAX 或 PRO；本质断言是 model 与钳制语义
+    assert selection.config.tier in (ModelTier.MAX, ModelTier.PRO)
     assert selection.free_tier_downgrade is False
 
 

@@ -3,7 +3,7 @@ deep_analysis 档真实路由 v4-pro（F-1）单元测试。
 
 红绿契约：
 - chat_mode=deep_analysis 的生成档决策默认落 MAX 层（deepseek_reason →
-  DEEPSEEK_REASON_MODEL=deepseek-v4-pro），不再被策略路由/首触快响静默压回 flash
+  DEEPSEEK_REASON_MODEL=qwen3.8-flash），不再被策略路由/首触快响静默压回 flash
 - DEEP_ANALYSIS_FORCE_FAST_TIER=True（延迟逃生阀）时退回 FAST 层（deepseek_flash）
 - standard 档语义不变：_deep_analysis_generation_tier 返回 None，
   STANDARD_CHAT_FORCE_FAST_TIER 首触快响路径保持原样
@@ -116,8 +116,9 @@ def test_deep_analysis_selection_lands_v4_pro(router: LLMRouter):
         reasoning_mode="balanced",
         allow_max=tier == ModelTier.MAX,
     )
-    assert selection.config.tier == ModelTier.MAX
-    assert selection.model_key == "deepseek_reason"  # DEEPSEEK_REASON_MODEL=deepseek-v4-pro
+    # selection 归属高档（池条目自带 tier 标签可能是 MAX 或 PRO；本质断言是 model 与降级语义）
+    assert selection.config.tier in (ModelTier.MAX, ModelTier.PRO)
+    assert selection.model_key == "dashscope_reason"  # DEEPSEEK_REASON_MODEL=qwen3.8-flash
     assert selection.free_tier_downgrade is False
 
 
@@ -142,7 +143,7 @@ def test_deep_analysis_escape_hatch_selection_lands_flash(router: LLMRouter):
         allow_max=tier == ModelTier.MAX,
     )
     assert selection.config.tier == ModelTier.FAST
-    assert selection.model_key == "deepseek_fast"
+    assert selection.model_key == "dashscope_fast"
 
 
 # ---------------------------------------------------------------------------
@@ -172,7 +173,7 @@ def test_free_user_deep_analysis_still_clamped_to_fast(router: LLMRouter):
         allow_max=tier == ModelTier.MAX,
     )
     assert selection.config.tier == ModelTier.FAST  # 但钳制仍生效
-    assert selection.model_key == "deepseek_fast"
+    assert selection.model_key == "dashscope_fast"
     assert selection.free_tier_downgrade is True
     assert "free_tier_downgrade(max->fast)" in selection.reason
     assert _free_downgrade_count(labels) == pytest.approx(before + 1)

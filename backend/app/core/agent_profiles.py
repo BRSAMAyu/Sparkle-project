@@ -219,7 +219,7 @@ DEFAULT_AGENT_PROFILES: dict[AgentRole, AgentProfile] = {
         expertise_domains=["concept explanation", "learning companionship"],
         model_tier=ModelTier.STANDARD,
         model_policy=AgentModelPolicy(
-            preferred_models=["dashscope_chat", "deepseek_chat"],
+            preferred_models=["dashscope_chat"],
             preferred_tier=ModelTier.STANDARD,
             fallback_tiers=[ModelTier.REASONING, ModelTier.FAST],
         ),
@@ -316,7 +316,7 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         entry_tags=["exam", "strategy", "mock"],
         model_tier=ModelTier.PRO,
         model_policy=AgentModelPolicy(
-            preferred_models=["dashscope_reason", "deepseek_reason", "dashscope_chat"],
+            preferred_models=["dashscope_reason", "dashscope_chat"],
             preferred_tier=ModelTier.PRO,
             fallback_tiers=[ModelTier.PLUS, ModelTier.STANDARD],
         ),
@@ -376,7 +376,7 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         entry_tags=["analysis", "reasoning", "evidence"],
         model_tier=ModelTier.PRO,
         model_policy=AgentModelPolicy(
-            preferred_models=["dashscope_reason", "deepseek_reason", "dashscope_chat"],
+            preferred_models=["dashscope_reason", "dashscope_chat"],
             preferred_tier=ModelTier.PRO,
             fallback_tiers=[ModelTier.PLUS, ModelTier.STANDARD],
         ),
@@ -402,7 +402,7 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         entry_tags=["error-diagnosis", "remediation", "root-cause"],
         model_tier=ModelTier.PRO,
         model_policy=AgentModelPolicy(
-            preferred_models=["deepseek_reason", "dashscope_reason", "dashscope_chat"],
+            preferred_models=["dashscope_reason", "dashscope_chat"],
             preferred_tier=ModelTier.PRO,
             fallback_tiers=[ModelTier.PLUS, ModelTier.STANDARD],
         ),
@@ -429,7 +429,7 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         expertise_domains=["roadmap design", "milestone planning"],
         model_tier=ModelTier.PLUS,
         model_policy=AgentModelPolicy(
-            preferred_models=["dashscope_chat", "deepseek_chat", "dashscope_reason"],
+            preferred_models=["dashscope_chat", "dashscope_reason"],
             preferred_tier=ModelTier.PLUS,
             fallback_tiers=[ModelTier.PRO, ModelTier.STANDARD],
         ),
@@ -445,7 +445,7 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         expertise_domains=["problem solving", "diagnosis"],
         model_tier=ModelTier.PRO,
         model_policy=AgentModelPolicy(
-            preferred_models=["deepseek_reason", "dashscope_reason", "deepseek_chat"],
+            preferred_models=["dashscope_reason"],
             preferred_tier=ModelTier.PRO,
             fallback_tiers=[ModelTier.PLUS, ModelTier.STANDARD],
         ),
@@ -465,7 +465,7 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         entry_tags=["math", "practice", "derivation"],
         model_tier=ModelTier.STANDARD,
         model_policy=AgentModelPolicy(
-            preferred_models=["deepseek_chat", "dashscope_reason", "dashscope_chat"],
+            preferred_models=["dashscope_reason", "dashscope_chat"],
             preferred_tier=ModelTier.STANDARD,
             fallback_tiers=[ModelTier.REASONING],
         ),
@@ -491,7 +491,7 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         entry_tags=["code", "debugging", "projects"],
         model_tier=ModelTier.STANDARD,
         model_policy=AgentModelPolicy(
-            preferred_models=["deepseek_chat", "dashscope_chat"],
+            preferred_models=["dashscope_chat"],
             preferred_tier=ModelTier.STANDARD,
             fallback_tiers=[ModelTier.REASONING, ModelTier.GLM_BATCH],
         ),
@@ -526,7 +526,7 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         expertise_domains=["task_delegation", "execution_monitoring", "result_verification"],
         model_tier=ModelTier.STANDARD,
         model_policy=AgentModelPolicy(
-            preferred_models=["dashscope_chat", "deepseek_chat"],
+            preferred_models=["dashscope_chat"],
             preferred_tier=ModelTier.STANDARD,
             fallback_tiers=[ModelTier.PLUS, ModelTier.FAST],
         ),
@@ -556,7 +556,7 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         expertise_domains=["quality review", "risk identification"],
         model_tier=ModelTier.PRO,  # 使用深推理层
         model_policy=AgentModelPolicy(
-            preferred_models=["deepseek_reason", "dashscope_reason", "deepseek_chat"],
+            preferred_models=["dashscope_reason"],
             preferred_tier=ModelTier.PRO,
             fallback_tiers=[ModelTier.PLUS, ModelTier.STANDARD],
         ),
@@ -581,7 +581,7 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         expertise_domains=["tool execution", "workflow support"],
         model_tier=ModelTier.STANDARD,
         model_policy=AgentModelPolicy(
-            preferred_models=["dashscope_chat", "deepseek_chat"],
+            preferred_models=["dashscope_chat"],
             preferred_tier=ModelTier.STANDARD,
             fallback_tiers=[ModelTier.REASONING, ModelTier.FAST],
         ),
@@ -629,7 +629,7 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         entry_tags=["writing", "editing", "expression"],
         model_tier=ModelTier.STANDARD,
         model_policy=AgentModelPolicy(
-            preferred_models=["deepseek_chat", "dashscope_chat"],
+            preferred_models=["dashscope_chat"],
             preferred_tier=ModelTier.STANDARD,
             fallback_tiers=[ModelTier.REASONING, ModelTier.FAST],
         ),
@@ -655,7 +655,7 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         entry_tags=["science", "concepts", "experiments"],
         model_tier=ModelTier.PRO,
         model_policy=AgentModelPolicy(
-            preferred_models=["dashscope_reason", "deepseek_reason", "dashscope_chat"],
+            preferred_models=["dashscope_reason", "dashscope_chat"],
             preferred_tier=ModelTier.PRO,
             fallback_tiers=[ModelTier.PLUS, ModelTier.STANDARD],
         ),
