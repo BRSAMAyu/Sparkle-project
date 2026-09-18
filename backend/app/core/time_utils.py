@@ -25,6 +25,19 @@ def utcnow_aware() -> datetime:
     return datetime.now(UTC)
 
 
+def ensure_naive_utc(value: datetime | None) -> datetime | None:
+    """Coerce a possibly tz-aware datetime to the canonical tz-naive UTC form.
+
+    LLM-generated timestamps (ISO strings with 'Z'/'+00:00') parse as tz-aware;
+    PostgreSQL columns are TIMESTAMP WITHOUT TIME ZONE and asyncpg raises
+    DataError ("can't subtract offset-naive and offset-aware datetimes") when
+    handed an aware value against them.
+    """
+    if value is None or value.tzinfo is None:
+        return value
+    return value.astimezone(UTC).replace(tzinfo=None)
+
+
 def utcnow_iso() -> str:
     """Return the current UTC time as an ISO 8601 string."""
     return datetime.now(UTC).isoformat()

@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from collections.abc import Iterable
 from datetime import UTC, date, datetime
-from app.core.time_utils import utcnow
+from app.core.time_utils import ensure_naive_utc, utcnow
 from typing import Any
 from uuid import UUID
 
@@ -885,6 +885,11 @@ class MemoryService:
         mentioned_entity_hash: str | None,
         mentioned_entity_owner_user_id: UUID | None,
     ) -> EpisodicMemory:
+        # naive-UTC is the DB canonical form; aware inputs (e.g. LLM-extracted
+        # ISO timestamps) make asyncpg raise DataError against TIMESTAMP columns
+        occurred_at = ensure_naive_utc(occurred_at)
+        due_at = ensure_naive_utc(due_at)
+        resolved_at = ensure_naive_utc(resolved_at)
         return EpisodicMemory(
             user_id=user_id,
             summary=summary,

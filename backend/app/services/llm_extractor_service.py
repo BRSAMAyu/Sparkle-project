@@ -8,6 +8,7 @@ from typing import Any
 from uuid import UUID
 
 from app.config import settings
+from app.core.time_utils import ensure_naive_utc
 from app.core.cache import cache_service
 from app.services.aurora_stage19_kill_switch_service import AuroraStage19KillSwitchService
 from app.services.llm_service import llm_service
@@ -138,10 +139,11 @@ class LlmExtractorService:
             occurred = datetime.fromisoformat(str(occurred_at_raw)) if occurred_at_raw else occurred_at
         except ValueError:
             occurred = occurred_at
+        occurred = ensure_naive_utc(occurred) or occurred_at
         due_at = None
         if due_at_raw:
             try:
-                due_at = datetime.fromisoformat(str(due_at_raw))
+                due_at = ensure_naive_utc(datetime.fromisoformat(str(due_at_raw)))
             except ValueError:
                 due_at = None
 
