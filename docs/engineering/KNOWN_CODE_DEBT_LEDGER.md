@@ -58,3 +58,11 @@
 ---
 
 **审计方法**：三路并行只读探索（网关导入图验证、移动端路由/引用 grep、Python 标记密度扫描）+ 全量引用交叉核对；2026-09-08 执行。
+
+---
+
+## 2026-09-18 守卫体系自足性（登记于全量首绿之后）
+
+- **BD 规则停用**：`stage40_sgw_dogfood_report.md` 为 v1 未跟踪产物已丢失；规则要求 `PHASE_I_EXIT_READY: YES` 的实测证据，不可凭空重建。恢复条件：真实重跑 Stage40 SGW dogfood（Phase A/B/C，/tmp/stage40_{off,shadow,rl}.db 三库）。
+- **CARD-DUAL-WRITE 规则停用**：守卫 import 的 `app.services.card_protocol.consistency_validator` 自初始提交即不存在于仓库；card_protocol 接线时须一并补齐该模块并恢复规则。
+- **守卫产物再生脚本**：`scripts/stage27/render_jitai_templates.py`、`scripts/stage30/render_stage30_templates.py`；其余 stage22/23/24 产物用各自 --write/bootstrap 脚本再生。产物均已入库，勿再依赖未跟踪状态。
