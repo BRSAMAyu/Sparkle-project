@@ -141,7 +141,7 @@ class _FakeAccountabilityRepository extends AccountabilityRepository {
       ),
       pendingPolicies: PendingPoliciesSummaryInfo(count: 1),
       recentReflections: recentReflections,
-      achievements: const {'achievements': []},
+      achievements: const {'achievements': <dynamic>[]},
       leaderboardSummary: const {},
       relationshipSummary: const {},
       recentShares: const [],

@@ -266,7 +266,7 @@ void main() {
           'review_data': {
             'plan_id': 'plan-123',
             'score': 85,
-            'issues': [],
+            'issues': <dynamic>[],
           },
           'request_id': 'req-1',
         };

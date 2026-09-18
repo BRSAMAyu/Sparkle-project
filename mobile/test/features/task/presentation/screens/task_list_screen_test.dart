@@ -10,7 +10,6 @@ import 'package:sparkle/core/services/task_notification_scheduler.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/features/task/presentation/screens/task_list_screen.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 import 'package:sparkle/shared/models/api_response_model.dart';
 import '../../../../shared/i18n_test_helper.dart';

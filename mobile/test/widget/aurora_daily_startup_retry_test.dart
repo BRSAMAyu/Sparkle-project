@@ -20,7 +20,6 @@ import 'package:sparkle/features/home/data/repositories/dashboard_repository.dar
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboard_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 import '../shared/i18n_test_helper.dart';
 
 class _NoopApiClient implements ApiClient {

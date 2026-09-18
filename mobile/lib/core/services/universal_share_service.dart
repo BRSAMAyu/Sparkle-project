@@ -11,7 +11,6 @@ import 'package:share_plus/share_plus.dart' as share_plus;
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/share_service.dart';
 import 'package:sparkle/core/services/wechat_share_service.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 
 
 /// Shareable content types for the universal share system

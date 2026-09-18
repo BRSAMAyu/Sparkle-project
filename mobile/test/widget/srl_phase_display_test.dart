@@ -90,7 +90,7 @@ class _SrlParseTestHelper extends StatelessWidget {
 }
 
 class _SrlParseResult extends StatelessWidget {
-  const _SrlParseResult({super.key, required this.result});
+  const _SrlParseResult({required this.result});
   final Map<String, String>? result;
 
   @override

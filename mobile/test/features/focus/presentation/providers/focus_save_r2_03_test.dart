@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
-import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/features/focus/data/repositories/focus_repository.dart';
 import 'package:sparkle/features/focus/data/services/prediction_service.dart';
@@ -17,7 +16,6 @@ import 'package:sparkle/features/visual_elements/data/repositories/visual_elemen
 import 'package:sparkle/core/services/app_event_stream_service.dart';
 import 'package:sparkle/core/services/prediction_attribution_service.dart';
 import 'package:sparkle/l10n/app_localizations_zh.dart';
-import 'package:sparkle/shared/entities/task_model.dart';
 
 // R2-03 regression tests: a focus session must never be reported as saved
 // (offline or otherwise) when nothing was persisted, and a failed save must

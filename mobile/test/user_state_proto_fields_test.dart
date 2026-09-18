@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:protobuf/protobuf.dart';
 import 'package:protobuf/well_known_types/google/protobuf/struct.pb.dart';
 import 'package:sparkle/gen/user_state.pb.dart';
 

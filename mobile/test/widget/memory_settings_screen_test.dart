@@ -6,7 +6,6 @@ import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_settings_screen.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 import '../shared/i18n_test_helper.dart';
 
 DioException _dioError(int statusCode) {

@@ -8,7 +8,6 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/session_refresh_service.dart';
 import 'package:sparkle/core/storage/token_storage.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
-import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/auth/presentation/screens/login_screen.dart';
 import 'package:sparkle/shared/entities/user_model.dart';

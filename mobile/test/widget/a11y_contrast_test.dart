@@ -6,14 +6,14 @@ import 'package:sparkle/core/design/design_system.dart';
 
 /// Calculates relative luminance per WCAG 2.1 definition.
 double _relativeLuminance(Color color) {
-  double channel(int c) {
+  double channel(double c) {
     final sRGB = c / 255.0;
     return sRGB <= 0.03928 ? sRGB / 12.92 : math.pow((sRGB + 0.055) / 1.055, 2.4).toDouble();
   }
 
-  return 0.2126 * channel(color.red) +
-      0.7152 * channel(color.green) +
-      0.0722 * channel(color.blue);
+  return 0.2126 * channel(color.r * 255.0) +
+      0.7152 * channel(color.g * 255.0) +
+      0.0722 * channel(color.b * 255.0);
 }
 
 /// Calculates WCAG contrast ratio between two colors.

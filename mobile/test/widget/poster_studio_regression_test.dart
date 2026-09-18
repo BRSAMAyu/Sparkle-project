@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/network/api_client.dart';
@@ -15,7 +14,6 @@ import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/data/repositories/plan_repository.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/user/presentation/screens/poster_studio_screen.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 import '../shared/i18n_test_helper.dart';

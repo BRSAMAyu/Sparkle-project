@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/features/home/presentation/widgets/learning_heatmap_widget.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 import '../shared/i18n_test_helper.dart';
 
 void main() {
@@ -53,7 +52,7 @@ void main() {
       final lightColor = _cellColorForDate(tester, olderDay.date);
       final mediumColor = _cellColorForDate(tester, latestDay.date);
 
-      expect(mediumColor.alpha, greaterThan(lightColor.alpha));
+      expect(mediumColor.a, greaterThan(lightColor.a));
     });
 
     testWidgets('renders zero-minute day as gray', (tester) async {

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/design/widgets/app_permission_dialog.dart';
@@ -16,7 +15,6 @@ import 'package:sparkle/features/home/presentation/widgets/thought_capsule_dialo
 import 'package:sparkle/features/notification_center/data/models/unified_notification_model.dart';
 import 'package:sparkle/features/notification_center/presentation/widgets/notification_filter_chip.dart';
 import 'package:sparkle/features/notification_center/presentation/widgets/unified_notification_card.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 import '../shared/i18n_test_helper.dart';
 
 void main() {

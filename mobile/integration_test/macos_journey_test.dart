@@ -46,7 +46,7 @@ void main() {
         try {
           root = WidgetsBinding.instance.renderViews.first;
         } catch (_) {
-          root = RendererBinding.instance.renderView;
+          root = RendererBinding.instance.renderViews.first;
         }
         RenderRepaintBoundary? boundary;
         void walk(RenderObject ro) {

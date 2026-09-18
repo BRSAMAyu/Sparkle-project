@@ -4,24 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_bubble.dart';
-import 'package:sparkle/features/home/presentation/widgets/recent_insights_card.dart';
-import 'package:sparkle/features/notification_center/presentation/providers/notification_center_provider.dart';
-import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import '../shared/i18n_test_helper.dart';
-
-class _StaticNotificationCenter extends NotificationCenter {
-  _StaticNotificationCenter(this._initialState);
-
-  final NotificationCenterState _initialState;
-
-  @override
-  NotificationCenterState build() => _initialState;
-
-  @override
-  Future<void> loadNotifications(
-      {bool unreadOnly = false, String? sourceType}) async {}
-}
 
 void main() {
 

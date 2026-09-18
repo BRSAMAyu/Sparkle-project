@@ -69,12 +69,6 @@ void main() {
           reason: 'No ErrorWidget for network issues');
 
       // Check for retry buttons or error messages if error occurred
-      final retryButton = find.byWidgetPredicate(
-        (widget) =>
-            widget is Text &&
-            (widget.data?.contains('重试') == true ||
-                widget.data?.contains('Retry') == true),
-      );
       // Retry button existence is informational, not required
       // But if there's an error, retry should exist
     } finally {

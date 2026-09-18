@@ -142,7 +142,7 @@ class _FakeAccountabilityRepository extends AccountabilityRepository {
         totalCheckins: 9,
       ),
       pendingPolicies: pendingPolicies,
-      achievements: const {'achievements': []},
+      achievements: const {'achievements': <dynamic>[]},
       leaderboardSummary: const {},
       relationshipSummary: const {},
       recentShares: const [],

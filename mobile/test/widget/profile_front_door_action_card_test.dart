@@ -5,7 +5,6 @@ import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/evidence_resolve_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/action_card.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 import '../shared/i18n_test_helper.dart';
 
 class _FakeEvidenceResolveService implements EvidenceResolveService {

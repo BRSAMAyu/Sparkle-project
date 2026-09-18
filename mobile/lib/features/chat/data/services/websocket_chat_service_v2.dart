@@ -1311,9 +1311,6 @@ typedef WebSocketChannelFactory = WebSocketChannel Function(
 /// Safe int coercion: JSON numbers may arrive as double (e.g. 150.0).
 int? _safeInt(dynamic v) => v == null ? null : (v is int ? v : (v is num ? v.toInt() : null));
 
-/// Safe double coercion: JSON numbers may arrive as int (e.g. 1 instead of 1.0).
-double? _safeDouble(dynamic v) => v == null ? null : (v is double ? v : (v is num ? v.toDouble() : null));
-
 /// WebSocket 聊天服务 V2（完整的连接复用和状态管理）
 class WebSocketChatServiceV2 with WidgetsBindingObserver {
   WebSocketChatServiceV2({

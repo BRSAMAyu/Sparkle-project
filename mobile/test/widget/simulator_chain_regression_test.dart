@@ -6,11 +6,9 @@ import 'package:sparkle/core/services/app_event_stream_service.dart';
 import 'package:sparkle/features/insights/data/models/learning_path_node.dart';
 import 'package:sparkle/features/insights/data/models/learning_path_plan_response.dart';
 import 'package:sparkle/features/insights/data/repositories/learning_path_repository.dart';
-import 'package:sparkle/features/insights/presentation/providers/learning_path_provider.dart';
 import 'package:sparkle/features/insights/presentation/widgets/learning_path_dialog.dart';
 import 'package:sparkle/features/visual_elements/data/repositories/visual_element_repository.dart';
 import 'package:sparkle/features/visual_elements/presentation/providers/visual_elements_provider.dart';
-import 'package:sparkle/shared/entities/galaxy_model.dart';
 import 'package:sparkle/shared/entities/visual_element_model.dart';
 import '../shared/i18n_test_helper.dart';
 

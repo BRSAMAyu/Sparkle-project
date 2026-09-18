@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:isar/isar.dart';
@@ -16,7 +15,6 @@ import 'package:sparkle/core/offline/sync_center_provider.dart';
 import 'package:sparkle/core/offline/sync_engine.dart';
 import 'package:sparkle/core/services/websocket_service.dart';
 import 'package:sparkle/features/user/presentation/screens/sync_center_screen.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 import '../shared/i18n_test_helper.dart';
 
 const _runSyncCenterWidget = bool.fromEnvironment('RUN_SYNC_CENTER_WIDGET');

@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -23,7 +22,6 @@ import 'package:sparkle/features/home/presentation/screens/dashboard_screen.dart
 import 'package:sparkle/features/home/presentation/widgets/unified_omni_bar.dart';
 import 'package:sparkle/features/user/presentation/screens/profile_screen.dart';
 import 'package:sparkle/features/user/presentation/widgets/statistics_card.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/user_brief.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 import '../shared/i18n_test_helper.dart';

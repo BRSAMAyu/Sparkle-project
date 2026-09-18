@@ -12,7 +12,6 @@ library;
 
 import 'dart:async';
 import 'dart:developer' as developer;
-import 'dart:isolate';
 import 'dart:ui' show FrameTiming;
 
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -436,14 +435,9 @@ class PerformanceMonitor {
 
   /// 估算内存使用 (通过dart:developer API)
   int _estimateMemoryUsage() {
-    try {
-      developer.Service.getIsolateId(Isolate.current);
-      // dart:developer 不直接暴露 heap size, 返回 -1 表示不可用
-      // 真实内存需通过 platform channel 获取
-      return -1;
-    } catch (_) {
-      return -1;
-    }
+    // dart:developer 不直接暴露 heap size, 返回 -1 表示不可用
+    // 真实内存需通过 platform channel 获取
+    return -1;
   }
 
   /// 获取网络连接状态

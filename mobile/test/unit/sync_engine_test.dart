@@ -232,9 +232,9 @@ void main() {
 }
 
 class _FakeConnectivity implements Connectivity {
-  _FakeConnectivity([this.result = const [ConnectivityResult.wifi]]);
+  _FakeConnectivity();
 
-  final List<ConnectivityResult> result;
+  final List<ConnectivityResult> result = const [ConnectivityResult.wifi];
 
   @override
   Future<List<ConnectivityResult>> checkConnectivity() async => result;
@@ -245,8 +245,7 @@ class _FakeConnectivity implements Connectivity {
 }
 
 class _TestSyncEngine extends SyncEngine {
-  _TestSyncEngine(super.localDb, super.wsService, super.apiClient,
-      {super.connectivity});
+  _TestSyncEngine(super.localDb, super.wsService, super.apiClient);
 
   @override
   Future<void> processNow({bool force = false, bool skipConnectivity = false}) =>

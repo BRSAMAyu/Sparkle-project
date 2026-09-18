@@ -14,7 +14,6 @@ import 'package:sparkle/core/services/evidence_resolve_service.dart';
 import 'package:sparkle/features/memory/presentation/widgets/evidence_cards.dart';
 import 'package:sparkle/features/memory/presentation/widgets/evidence_drawer.dart';
 import 'package:sparkle/features/memory/presentation/widgets/memory_evidence_badge.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 
 import 'evidence_cards_test.mocks.dart';
 import '../../../../shared/i18n_test_helper.dart';
@@ -672,7 +671,8 @@ void main() {
       final result = await service.resolveEvidence([]);
 
       expect(result, isEmpty);
-      verifyNever(mockApiClient.post(any, data: anyNamed('data')));
+      verifyNever(
+          mockApiClient.post<Map<String, dynamic>>(any, data: anyNamed('data')));
     });
 
     test('should resolve evidence via API', () async {
@@ -705,9 +705,12 @@ void main() {
       expect(result.first.id, equals('evt-1'));
       expect(result.first.status, equals('ok'));
 
-      verify(mockApiClient.post('/api/v1/events/evidence/resolve', data: {
-        'items': [refs.first.toJson()],
-      })).called(1);
+      verify(mockApiClient.post<Map<String, dynamic>>(
+        '/api/v1/events/evidence/resolve',
+        data: {
+          'items': [refs.first.toJson()],
+        },
+      )).called(1);
     });
 
     test('should handle multiple refs', () async {
@@ -781,14 +784,14 @@ void main() {
           .thenAnswer(
         (_) async => Response<Map<String, dynamic>>(
           requestOptions: RequestOptions(path: ''),
-          data: {'resolved': []},
+          data: {'resolved': <dynamic>[]},
           statusCode: 200,
         ),
       );
 
       await service.resolveEvidence(refs);
 
-      final captured = verify(mockApiClient.post(
+      final captured = verify(mockApiClient.post<Map<String, dynamic>>(
         '/api/v1/events/evidence/resolve',
         data: captureAnyNamed('data'),
       )).captured.single as Map<String, dynamic>;

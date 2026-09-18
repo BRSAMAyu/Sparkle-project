@@ -118,18 +118,15 @@ class _FakeRef implements Ref {
     required this.authState,
     required this.guestService,
     required this.authRepository,
-    this.activePlanId = 'plan-1',
-    this.reasoningMode = 'balanced',
-    this.seedLibraryEnabled = false,
     ChatMode? chatMode,
   }) : chatMode = chatMode ?? standard;
 
   final AuthState authState;
   final GuestService guestService;
   final AuthRepository authRepository;
-  final String activePlanId;
-  final String reasoningMode;
-  final bool seedLibraryEnabled;
+  final String activePlanId = 'plan-1';
+  final String reasoningMode = 'balanced';
+  final bool seedLibraryEnabled = false;
   final ChatMode chatMode;
 
   @override

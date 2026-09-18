@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/features/user/presentation/screens/user_persona_screen.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 import '../shared/i18n_test_helper.dart';
 

@@ -117,13 +117,6 @@ void main() {
   // -------------------------------------------------------------------
 
   group('parseDormantMeta — end-to-end metadata parsing', () {
-    late TaskChatNotifier notifier;
-
-    setUp(() {
-      // Create a notifier with a no-op repository (not used in parse tests)
-      // We only test the public parseDormantMeta method directly.
-    });
-
     test('returns null when metadata is null', () {
       final notifier = _FakeTaskChatNotifier();
       final result = notifier.parseDormantMeta(null);

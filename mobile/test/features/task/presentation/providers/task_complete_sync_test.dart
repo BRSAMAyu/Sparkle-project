@@ -19,7 +19,6 @@ import 'package:sparkle/core/services/prediction_attribution_service.dart';
 import 'package:sparkle/core/services/task_notification_id_mapper.dart';
 import 'package:sparkle/core/services/task_notification_scheduler.dart';
 import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
-import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/task/data/models/task_completion_result.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';

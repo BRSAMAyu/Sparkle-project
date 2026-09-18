@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -15,7 +14,6 @@ import 'package:sparkle/features/chat/presentation/providers/aurora_status_provi
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
 import 'package:sparkle/features/home/data/repositories/dashboard_repository.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import '../shared/i18n_test_helper.dart';
@@ -79,7 +77,9 @@ class _FakeAuroraNotifier extends AuroraStatusNotifier {
   void stopPeriodicRefresh() {}
 
   @override
-  void dispose() {}
+  void dispose() {
+    super.dispose();
+  }
 }
 
 /// Quiet DashboardNotifier that does not trigger network requests.
@@ -140,13 +140,12 @@ class _HistoryChatRepository extends Fake implements ChatRepository {
     this.recentConversations = const <Map<String, dynamic>>[],
     this.historyBySession = const <String, List<ChatMessageModel>>{},
     this.recentError,
-    this.historyErrorBySession = const <String, Object>{},
   });
 
   final List<Map<String, dynamic>> recentConversations;
   final Map<String, List<ChatMessageModel>> historyBySession;
   final Object? recentError;
-  final Map<String, Object> historyErrorBySession;
+  final Map<String, Object> historyErrorBySession = const <String, Object>{};
   final List<String> requestedSessions = <String>[];
 
   @override
@@ -187,7 +186,8 @@ class _HistoryChatNotifier extends ChatNotifier {
   @override
   Future<void> warmUpConnection() async {}
 
-  @override
+  // NOTE: switchPlanSession 是 ChatNotifierActions 扩展方法，无法真正 @override；
+  // 此处同名实例方法仅用于拦截直接以 _HistoryChatNotifier 静态类型发起的调用。
   Future<void> switchPlanSession(String? planId,
       {BuildContext? context}) async {}
 }

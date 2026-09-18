@@ -28,7 +28,6 @@ import 'package:sparkle/features/galaxy/data/models/user_galaxy_contribution.dar
 import 'package:sparkle/features/galaxy/data/services/galaxy_performance_monitor.dart';
 import 'package:sparkle/features/insights/data/models/weekly_growth_narrative.dart';
 import 'package:sparkle/features/insights/data/repositories/growth_narrative_repository.dart';
-import 'package:sparkle/features/insights/presentation/providers/weekly_growth_narrative_provider.dart';
 import 'package:sparkle/features/insights/presentation/widgets/weekly_growth_narrative_card.dart';
 import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
 import 'package:sparkle/features/plan/data/models/exam_sprint_models.dart';
@@ -42,7 +41,6 @@ import 'package:sparkle/features/plan/presentation/screens/sprint_completion_scr
 import 'package:sparkle/features/task/data/models/task_completion_result.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 import 'package:sparkle/shared/entities/user_model.dart';

@@ -43,7 +43,7 @@ void main() {
         'metacognition_dashboard': {
           'available': false,
           'hidden': false,
-          'cards': const [],
+          'cards': const <dynamic>[],
         },
       }),
       isNull,

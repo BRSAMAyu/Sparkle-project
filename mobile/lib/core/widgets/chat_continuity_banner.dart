@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 
 enum ChatContinuityKind {
   chat,

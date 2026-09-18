@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/home/data/repositories/dashboard_repository.dart';
@@ -104,7 +103,7 @@ void main() {
               'prediction_source': 'rules',
               'prediction_tier': 'rules',
               'fallback_used': true,
-              'recommended_actions': const [],
+              'recommended_actions': const <dynamic>[],
               'tracking': {
                 'candidate_id': 'prediction-1',
                 'action_type': 'resume_priority_task',

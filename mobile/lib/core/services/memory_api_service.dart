@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/network/api_client.dart';

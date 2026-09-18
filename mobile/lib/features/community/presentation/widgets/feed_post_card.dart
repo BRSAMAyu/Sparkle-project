@@ -262,13 +262,11 @@ class _ActionButton extends StatelessWidget {
   const _ActionButton({
     required this.icon,
     required this.label,
-    this.activeIcon,
     this.color,
     this.semanticLabel,
     this.onTap,
   });
   final IconData icon;
-  final IconData? activeIcon;
   final String label;
   final Color? color;
   final String? semanticLabel;
@@ -286,7 +284,7 @@ class _ActionButton extends StatelessWidget {
             child: Row(
               children: [
                 Icon(
-                  activeIcon ?? icon,
+                  icon,
                   color: color ?? DS.textSecondary,
                   size: 20,
                 ),

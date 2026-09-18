@@ -1,0 +1,1125 @@
+diff --git a/mobile/integration_test/macos_journey_test.dart b/mobile/integration_test/macos_journey_test.dart
+index 89350269..ec51e8b1 100644
+--- a/mobile/integration_test/macos_journey_test.dart
++++ b/mobile/integration_test/macos_journey_test.dart
+@@ -46,7 +46,7 @@ void main() {
+         try {
+           root = WidgetsBinding.instance.renderViews.first;
+         } catch (_) {
+-          root = RendererBinding.instance.renderView;
++          root = RendererBinding.instance.renderViews.first;
+         }
+         RenderRepaintBoundary? boundary;
+         void walk(RenderObject ro) {
+diff --git a/mobile/integration_test/offline_error_test.dart b/mobile/integration_test/offline_error_test.dart
+index c4ab504d..46b72eb5 100644
+--- a/mobile/integration_test/offline_error_test.dart
++++ b/mobile/integration_test/offline_error_test.dart
+@@ -69,12 +69,6 @@ void main() {
+           reason: 'No ErrorWidget for network issues');
+ 
+       // Check for retry buttons or error messages if error occurred
+-      final retryButton = find.byWidgetPredicate(
+-        (widget) =>
+-            widget is Text &&
+-            (widget.data?.contains('重试') == true ||
+-                widget.data?.contains('Retry') == true),
+-      );
+       // Retry button existence is informational, not required
+       // But if there's an error, retry should exist
+     } finally {
+diff --git a/mobile/lib/core/design/widgets/charts/engagement_heatmap.dart b/mobile/lib/core/design/widgets/charts/engagement_heatmap.dart
+index 73eb109f..1e714783 100755
+--- a/mobile/lib/core/design/widgets/charts/engagement_heatmap.dart
++++ b/mobile/lib/core/design/widgets/charts/engagement_heatmap.dart
+@@ -1,7 +1,6 @@
+ import 'package:flutter/material.dart';
+ import 'package:sparkle/core/design/design_system.dart';
+ import 'package:sparkle/core/extensions/context_l10n.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+ 
+ class EngagementHeatmap extends StatelessWidget {
+   const EngagementHeatmap({
+diff --git a/mobile/lib/core/services/memory_api_service.dart b/mobile/lib/core/services/memory_api_service.dart
+index c5ae435a..4e98f3e9 100644
+--- a/mobile/lib/core/services/memory_api_service.dart
++++ b/mobile/lib/core/services/memory_api_service.dart
+@@ -1,4 +1,3 @@
+-import 'package:dio/dio.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:sparkle/core/models/memory_models.dart';
+ import 'package:sparkle/core/network/api_client.dart';
+diff --git a/mobile/lib/core/services/performance_monitor.dart b/mobile/lib/core/services/performance_monitor.dart
+index 503ee7f2..936433bc 100755
+--- a/mobile/lib/core/services/performance_monitor.dart
++++ b/mobile/lib/core/services/performance_monitor.dart
+@@ -12,7 +12,6 @@ library;
+ 
+ import 'dart:async';
+ import 'dart:developer' as developer;
+-import 'dart:isolate';
+ import 'dart:ui' show FrameTiming;
+ 
+ import 'package:connectivity_plus/connectivity_plus.dart';
+@@ -436,14 +435,9 @@ class PerformanceMonitor {
+ 
+   /// 估算内存使用 (通过dart:developer API)
+   int _estimateMemoryUsage() {
+-    try {
+-      developer.Service.getIsolateId(Isolate.current);
+-      // dart:developer 不直接暴露 heap size, 返回 -1 表示不可用
+-      // 真实内存需通过 platform channel 获取
+-      return -1;
+-    } catch (_) {
+-      return -1;
+-    }
++    // dart:developer 不直接暴露 heap size, 返回 -1 表示不可用
++    // 真实内存需通过 platform channel 获取
++    return -1;
+   }
+ 
+   /// 获取网络连接状态
+diff --git a/mobile/lib/core/services/universal_share_service.dart b/mobile/lib/core/services/universal_share_service.dart
+index 69125191..9b0958c4 100644
+--- a/mobile/lib/core/services/universal_share_service.dart
++++ b/mobile/lib/core/services/universal_share_service.dart
+@@ -11,7 +11,6 @@ import 'package:share_plus/share_plus.dart' as share_plus;
+ import 'package:sparkle/core/services/i18n_service.dart';
+ import 'package:sparkle/core/services/share_service.dart';
+ import 'package:sparkle/core/services/wechat_share_service.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+ 
+ 
+ /// Shareable content types for the universal share system
+diff --git a/mobile/lib/core/utils/chaos/chaos_control_dialog.dart b/mobile/lib/core/utils/chaos/chaos_control_dialog.dart
+index ea776573..7d293d03 100755
+--- a/mobile/lib/core/utils/chaos/chaos_control_dialog.dart
++++ b/mobile/lib/core/utils/chaos/chaos_control_dialog.dart
+@@ -6,7 +6,6 @@ import 'package:sparkle/core/constants/api_constants.dart';
+ import 'package:sparkle/core/design/design_system.dart';
+ import 'package:sparkle/core/design/widgets/app_feedback.dart';
+ import 'package:sparkle/core/extensions/context_l10n.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+ 
+ class ChaosControlDialog extends StatefulWidget {
+   const ChaosControlDialog({super.key});
+diff --git a/mobile/lib/core/utils/formatters.dart b/mobile/lib/core/utils/formatters.dart
+index 79ebf974..76f82a7c 100644
+--- a/mobile/lib/core/utils/formatters.dart
++++ b/mobile/lib/core/utils/formatters.dart
+@@ -1,6 +1,5 @@
+ import 'package:intl/intl.dart';
+ import 'package:sparkle/core/services/i18n_service.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+ 
+ 
+ /// Localized formatters for dates, times, durations, and numbers.
+diff --git a/mobile/lib/core/widgets/chat_continuity_banner.dart b/mobile/lib/core/widgets/chat_continuity_banner.dart
+index b7fb0804..f3ff90ae 100644
+--- a/mobile/lib/core/widgets/chat_continuity_banner.dart
++++ b/mobile/lib/core/widgets/chat_continuity_banner.dart
+@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
+ import 'package:go_router/go_router.dart';
+ import 'package:sparkle/core/design/design_system.dart';
+ import 'package:sparkle/core/extensions/context_l10n.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+ 
+ enum ChatContinuityKind {
+   chat,
+diff --git a/mobile/lib/features/chat/data/services/websocket_chat_service_v2.dart b/mobile/lib/features/chat/data/services/websocket_chat_service_v2.dart
+index ab163518..eed6e869 100755
+--- a/mobile/lib/features/chat/data/services/websocket_chat_service_v2.dart
++++ b/mobile/lib/features/chat/data/services/websocket_chat_service_v2.dart
+@@ -1311,9 +1311,6 @@ typedef WebSocketChannelFactory = WebSocketChannel Function(
+ /// Safe int coercion: JSON numbers may arrive as double (e.g. 150.0).
+ int? _safeInt(dynamic v) => v == null ? null : (v is int ? v : (v is num ? v.toInt() : null));
+ 
+-/// Safe double coercion: JSON numbers may arrive as int (e.g. 1 instead of 1.0).
+-double? _safeDouble(dynamic v) => v == null ? null : (v is double ? v : (v is num ? v.toDouble() : null));
+-
+ /// WebSocket 聊天服务 V2（完整的连接复用和状态管理）
+ class WebSocketChatServiceV2 with WidgetsBindingObserver {
+   WebSocketChatServiceV2({
+diff --git a/mobile/lib/features/community/presentation/widgets/feed_post_card.dart b/mobile/lib/features/community/presentation/widgets/feed_post_card.dart
+index 8768095d..ad9708bb 100755
+--- a/mobile/lib/features/community/presentation/widgets/feed_post_card.dart
++++ b/mobile/lib/features/community/presentation/widgets/feed_post_card.dart
+@@ -262,13 +262,11 @@ class _ActionButton extends StatelessWidget {
+   const _ActionButton({
+     required this.icon,
+     required this.label,
+-    this.activeIcon,
+     this.color,
+     this.semanticLabel,
+     this.onTap,
+   });
+   final IconData icon;
+-  final IconData? activeIcon;
+   final String label;
+   final Color? color;
+   final String? semanticLabel;
+@@ -286,7 +284,7 @@ class _ActionButton extends StatelessWidget {
+             child: Row(
+               children: [
+                 Icon(
+-                  activeIcon ?? icon,
++                  icon,
+                   color: color ?? DS.textSecondary,
+                   size: 20,
+                 ),
+diff --git a/mobile/test/app/main_pages_load_smoke_test.dart b/mobile/test/app/main_pages_load_smoke_test.dart
+index 10bf947e..467cdec7 100644
+--- a/mobile/test/app/main_pages_load_smoke_test.dart
++++ b/mobile/test/app/main_pages_load_smoke_test.dart
+@@ -1,7 +1,6 @@
+ import 'dart:io';
+ 
+ import 'package:flutter/material.dart';
+-import 'package:flutter_localizations/flutter_localizations.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+ import 'package:flutter_test/flutter_test.dart';
+@@ -23,7 +22,6 @@ import 'package:sparkle/features/home/presentation/screens/dashboard_screen.dart
+ import 'package:sparkle/features/home/presentation/widgets/unified_omni_bar.dart';
+ import 'package:sparkle/features/user/presentation/screens/profile_screen.dart';
+ import 'package:sparkle/features/user/presentation/widgets/statistics_card.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+ import 'package:sparkle/shared/entities/user_brief.dart';
+ import 'package:sparkle/shared/entities/user_model.dart';
+ import '../shared/i18n_test_helper.dart';
+diff --git a/mobile/test/features/achievement/presentation/screens/achievement_list_screen_test.dart b/mobile/test/features/achievement/presentation/screens/achievement_list_screen_test.dart
+index 8fd2a1fc..1f0e227e 100644
+--- a/mobile/test/features/achievement/presentation/screens/achievement_list_screen_test.dart
++++ b/mobile/test/features/achievement/presentation/screens/achievement_list_screen_test.dart
+@@ -1,4 +1,3 @@
+-import 'package:dio/dio.dart';
+ import 'package:flutter/material.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:flutter_test/flutter_test.dart';
+diff --git a/mobile/test/features/auth/presentation/screens/login_screen_submit_test.dart b/mobile/test/features/auth/presentation/screens/login_screen_submit_test.dart
+index 023a5863..058758b3 100644
+--- a/mobile/test/features/auth/presentation/screens/login_screen_submit_test.dart
++++ b/mobile/test/features/auth/presentation/screens/login_screen_submit_test.dart
+@@ -8,7 +8,6 @@ import 'package:sparkle/core/network/api_client.dart';
+ import 'package:sparkle/core/services/session_refresh_service.dart';
+ import 'package:sparkle/core/storage/token_storage.dart';
+ import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
+-import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
+ import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
+ import 'package:sparkle/features/auth/presentation/screens/login_screen.dart';
+ import 'package:sparkle/shared/entities/user_model.dart';
+diff --git a/mobile/test/features/chat/data/services/websocket_chat_service_v2_test.dart b/mobile/test/features/chat/data/services/websocket_chat_service_v2_test.dart
+index ea29c6a9..96d2f63d 100644
+--- a/mobile/test/features/chat/data/services/websocket_chat_service_v2_test.dart
++++ b/mobile/test/features/chat/data/services/websocket_chat_service_v2_test.dart
+@@ -266,7 +266,7 @@ void main() {
+           'review_data': {
+             'plan_id': 'plan-123',
+             'score': 85,
+-            'issues': [],
++            'issues': <dynamic>[],
+           },
+           'request_id': 'req-1',
+         };
+diff --git a/mobile/test/features/community/data/services/community_websocket_service_test.dart b/mobile/test/features/community/data/services/community_websocket_service_test.dart
+index df71d658..b53171ef 100644
+--- a/mobile/test/features/community/data/services/community_websocket_service_test.dart
++++ b/mobile/test/features/community/data/services/community_websocket_service_test.dart
+@@ -1,4 +1,3 @@
+-import 'dart:async';
+ 
+ import 'package:flutter_test/flutter_test.dart';
+ import 'package:sparkle/features/community/data/services/community_websocket_service.dart';
+diff --git a/mobile/test/features/error_book/presentation/screens/error_list_screen_test.dart b/mobile/test/features/error_book/presentation/screens/error_list_screen_test.dart
+index acc76824..26a11c3f 100644
+--- a/mobile/test/features/error_book/presentation/screens/error_list_screen_test.dart
++++ b/mobile/test/features/error_book/presentation/screens/error_list_screen_test.dart
+@@ -7,7 +7,6 @@ import 'package:sparkle/features/error_book/data/models/error_record.dart';
+ import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
+ import 'package:sparkle/features/error_book/data/repositories/error_book_repository.dart';
+ import 'package:sparkle/features/error_book/presentation/screens/error_list_screen.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+ import 'package:sparkle/shared/entities/cognitive_analysis.dart';
+ import '../../../../shared/i18n_test_helper.dart';
+ 
+diff --git a/mobile/test/features/focus/presentation/providers/focus_save_r2_03_test.dart b/mobile/test/features/focus/presentation/providers/focus_save_r2_03_test.dart
+index e3ffb8b7..2b2e5e20 100644
+--- a/mobile/test/features/focus/presentation/providers/focus_save_r2_03_test.dart
++++ b/mobile/test/features/focus/presentation/providers/focus_save_r2_03_test.dart
+@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:flutter_test/flutter_test.dart';
+ import 'package:shared_preferences/shared_preferences.dart';
+ import 'package:sparkle/core/services/i18n_service.dart';
+-import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
+ import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
+ import 'package:sparkle/features/focus/data/repositories/focus_repository.dart';
+ import 'package:sparkle/features/focus/data/services/prediction_service.dart';
+@@ -17,7 +16,6 @@ import 'package:sparkle/features/visual_elements/data/repositories/visual_elemen
+ import 'package:sparkle/core/services/app_event_stream_service.dart';
+ import 'package:sparkle/core/services/prediction_attribution_service.dart';
+ import 'package:sparkle/l10n/app_localizations_zh.dart';
+-import 'package:sparkle/shared/entities/task_model.dart';
+ 
+ // R2-03 regression tests: a focus session must never be reported as saved
+ // (offline or otherwise) when nothing was persisted, and a failed save must
+diff --git a/mobile/test/features/galaxy/widget/galaxy_empty_state_screen_test.dart b/mobile/test/features/galaxy/widget/galaxy_empty_state_screen_test.dart
+index b276f643..b3f5b9ef 100644
+--- a/mobile/test/features/galaxy/widget/galaxy_empty_state_screen_test.dart
++++ b/mobile/test/features/galaxy/widget/galaxy_empty_state_screen_test.dart
+@@ -1,4 +1,3 @@
+-import 'package:flutter/material.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:flutter_test/flutter_test.dart';
+ import 'package:shared_preferences/shared_preferences.dart';
+@@ -9,7 +8,6 @@ import 'package:sparkle/core/services/retry_strategy.dart';
+ import 'package:sparkle/features/galaxy/data/models/user_galaxy_contribution.dart';
+ import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
+ import 'package:sparkle/features/galaxy/presentation/screens/galaxy_screen.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+ import 'package:sparkle/shared/entities/galaxy_model.dart';
+ import '../../../shared/i18n_test_helper.dart';
+ 
+diff --git a/mobile/test/features/home/presentation/providers/dashboard_provider_test.dart b/mobile/test/features/home/presentation/providers/dashboard_provider_test.dart
+index 4daef8db..e8923091 100644
+--- a/mobile/test/features/home/presentation/providers/dashboard_provider_test.dart
++++ b/mobile/test/features/home/presentation/providers/dashboard_provider_test.dart
+@@ -1,5 +1,4 @@
+ import 'package:dio/dio.dart';
+-import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:flutter_test/flutter_test.dart';
+ import 'package:sparkle/core/network/api_client.dart';
+ import 'package:sparkle/features/home/data/repositories/dashboard_repository.dart';
+@@ -104,7 +103,7 @@ void main() {
+               'prediction_source': 'rules',
+               'prediction_tier': 'rules',
+               'fallback_used': true,
+-              'recommended_actions': const [],
++              'recommended_actions': const <dynamic>[],
+               'tracking': {
+                 'candidate_id': 'prediction-1',
+                 'action_type': 'resume_priority_task',
+diff --git a/mobile/test/features/home/presentation/widgets/exam_sprint_dashboard_card_test.dart b/mobile/test/features/home/presentation/widgets/exam_sprint_dashboard_card_test.dart
+index 6aa5fcfc..161a0236 100644
+--- a/mobile/test/features/home/presentation/widgets/exam_sprint_dashboard_card_test.dart
++++ b/mobile/test/features/home/presentation/widgets/exam_sprint_dashboard_card_test.dart
+@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
+ import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
+ import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboard_provider.dart';
+ import 'package:sparkle/features/home/presentation/widgets/exam_sprint_dashboard_card.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+ import '../../../../shared/i18n_test_helper.dart';
+ 
+ void main() {
+diff --git a/mobile/test/features/home/presentation/widgets/predicted_intent_card_test.dart b/mobile/test/features/home/presentation/widgets/predicted_intent_card_test.dart
+index de2cfa19..aad66420 100644
+--- a/mobile/test/features/home/presentation/widgets/predicted_intent_card_test.dart
++++ b/mobile/test/features/home/presentation/widgets/predicted_intent_card_test.dart
+@@ -1,4 +1,3 @@
+-import 'package:flutter/material.dart';
+ import 'package:flutter_test/flutter_test.dart';
+ import 'package:sparkle/features/home/data/models/prediction_insight_data.dart';
+ import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
+diff --git a/mobile/test/features/memory/presentation/widgets/evidence_cards_test.dart b/mobile/test/features/memory/presentation/widgets/evidence_cards_test.dart
+index a55a8713..90c8df46 100644
+--- a/mobile/test/features/memory/presentation/widgets/evidence_cards_test.dart
++++ b/mobile/test/features/memory/presentation/widgets/evidence_cards_test.dart
+@@ -14,7 +14,6 @@ import 'package:sparkle/core/services/evidence_resolve_service.dart';
+ import 'package:sparkle/features/memory/presentation/widgets/evidence_cards.dart';
+ import 'package:sparkle/features/memory/presentation/widgets/evidence_drawer.dart';
+ import 'package:sparkle/features/memory/presentation/widgets/memory_evidence_badge.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+ 
+ import 'evidence_cards_test.mocks.dart';
+ import '../../../../shared/i18n_test_helper.dart';
+@@ -672,7 +671,8 @@ void main() {
+       final result = await service.resolveEvidence([]);
+ 
+       expect(result, isEmpty);
+-      verifyNever(mockApiClient.post(any, data: anyNamed('data')));
++      verifyNever(
++          mockApiClient.post<Map<String, dynamic>>(any, data: anyNamed('data')));
+     });
+ 
+     test('should resolve evidence via API', () async {
+@@ -705,9 +705,12 @@ void main() {
+       expect(result.first.id, equals('evt-1'));
+       expect(result.first.status, equals('ok'));
+ 
+-      verify(mockApiClient.post('/api/v1/events/evidence/resolve', data: {
+-        'items': [refs.first.toJson()],
+-      })).called(1);
++      verify(mockApiClient.post<Map<String, dynamic>>(
++        '/api/v1/events/evidence/resolve',
++        data: {
++          'items': [refs.first.toJson()],
++        },
++      )).called(1);
+     });
+ 
+     test('should handle multiple refs', () async {
+@@ -781,14 +784,14 @@ void main() {
+           .thenAnswer(
+         (_) async => Response<Map<String, dynamic>>(
+           requestOptions: RequestOptions(path: ''),
+-          data: {'resolved': []},
++          data: {'resolved': <dynamic>[]},
+           statusCode: 200,
+         ),
+       );
+ 
+       await service.resolveEvidence(refs);
+ 
+-      final captured = verify(mockApiClient.post(
++      final captured = verify(mockApiClient.post<Map<String, dynamic>>(
+         '/api/v1/events/evidence/resolve',
+         data: captureAnyNamed('data'),
+       )).captured.single as Map<String, dynamic>;
+diff --git a/mobile/test/features/memory/presentation/widgets/subject_type_filter_test.dart b/mobile/test/features/memory/presentation/widgets/subject_type_filter_test.dart
+index 89df6147..65160dbf 100644
+--- a/mobile/test/features/memory/presentation/widgets/subject_type_filter_test.dart
++++ b/mobile/test/features/memory/presentation/widgets/subject_type_filter_test.dart
+@@ -1,4 +1,3 @@
+-import 'package:flutter/material.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:flutter_test/flutter_test.dart';
+ import 'package:sparkle/core/constants/app_constants.dart';
+diff --git a/mobile/test/features/shop/presentation/providers/equipment_display_provider_test.dart b/mobile/test/features/shop/presentation/providers/equipment_display_provider_test.dart
+index 7120f3ce..d1adc435 100644
+--- a/mobile/test/features/shop/presentation/providers/equipment_display_provider_test.dart
++++ b/mobile/test/features/shop/presentation/providers/equipment_display_provider_test.dart
+@@ -1,5 +1,4 @@
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+ import 'package:flutter_test/flutter_test.dart';
+ import 'package:shared_preferences/shared_preferences.dart';
+ import 'package:sparkle/core/design/tokens_v2/theme_manager.dart';
+diff --git a/mobile/test/features/task/presentation/providers/task_chat_dormant_test.dart b/mobile/test/features/task/presentation/providers/task_chat_dormant_test.dart
+index f41b8502..75801a35 100644
+--- a/mobile/test/features/task/presentation/providers/task_chat_dormant_test.dart
++++ b/mobile/test/features/task/presentation/providers/task_chat_dormant_test.dart
+@@ -117,13 +117,6 @@ void main() {
+   // -------------------------------------------------------------------
+ 
+   group('parseDormantMeta — end-to-end metadata parsing', () {
+-    late TaskChatNotifier notifier;
+-
+-    setUp(() {
+-      // Create a notifier with a no-op repository (not used in parse tests)
+-      // We only test the public parseDormantMeta method directly.
+-    });
+-
+     test('returns null when metadata is null', () {
+       final notifier = _FakeTaskChatNotifier();
+       final result = notifier.parseDormantMeta(null);
+diff --git a/mobile/test/features/task/presentation/providers/task_complete_sync_test.dart b/mobile/test/features/task/presentation/providers/task_complete_sync_test.dart
+index ef7b5b9f..fcb048af 100644
+--- a/mobile/test/features/task/presentation/providers/task_complete_sync_test.dart
++++ b/mobile/test/features/task/presentation/providers/task_complete_sync_test.dart
+@@ -19,7 +19,6 @@ import 'package:sparkle/core/services/prediction_attribution_service.dart';
+ import 'package:sparkle/core/services/task_notification_id_mapper.dart';
+ import 'package:sparkle/core/services/task_notification_scheduler.dart';
+ import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
+-import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
+ import 'package:sparkle/features/task/data/models/task_completion_result.dart';
+ import 'package:sparkle/features/task/data/repositories/task_repository.dart';
+ import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
+diff --git a/mobile/test/features/task/presentation/screens/task_list_screen_test.dart b/mobile/test/features/task/presentation/screens/task_list_screen_test.dart
+index f4c3b7a8..a0173997 100644
+--- a/mobile/test/features/task/presentation/screens/task_list_screen_test.dart
++++ b/mobile/test/features/task/presentation/screens/task_list_screen_test.dart
+@@ -10,7 +10,6 @@ import 'package:sparkle/core/services/task_notification_scheduler.dart';
+ import 'package:sparkle/features/task/data/repositories/task_repository.dart';
+ import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
+ import 'package:sparkle/features/task/presentation/screens/task_list_screen.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+ import 'package:sparkle/shared/entities/task_model.dart';
+ import 'package:sparkle/shared/models/api_response_model.dart';
+ import '../../../../shared/i18n_test_helper.dart';
+diff --git a/mobile/test/unit/chat_notifier_stream_test.dart b/mobile/test/unit/chat_notifier_stream_test.dart
+index cd0a8cf0..050f388e 100644
+--- a/mobile/test/unit/chat_notifier_stream_test.dart
++++ b/mobile/test/unit/chat_notifier_stream_test.dart
+@@ -118,18 +118,15 @@ class _FakeRef implements Ref {
+     required this.authState,
+     required this.guestService,
+     required this.authRepository,
+-    this.activePlanId = 'plan-1',
+-    this.reasoningMode = 'balanced',
+-    this.seedLibraryEnabled = false,
+     ChatMode? chatMode,
+   }) : chatMode = chatMode ?? standard;
+ 
+   final AuthState authState;
+   final GuestService guestService;
+   final AuthRepository authRepository;
+-  final String activePlanId;
+-  final String reasoningMode;
+-  final bool seedLibraryEnabled;
++  final String activePlanId = 'plan-1';
++  final String reasoningMode = 'balanced';
++  final bool seedLibraryEnabled = false;
+   final ChatMode chatMode;
+ 
+   @override
+diff --git a/mobile/test/unit/sync_engine_test.dart b/mobile/test/unit/sync_engine_test.dart
+index 9fc87cf5..fb80ea82 100644
+--- a/mobile/test/unit/sync_engine_test.dart
++++ b/mobile/test/unit/sync_engine_test.dart
+@@ -232,9 +232,9 @@ void main() {
+ }
+ 
+ class _FakeConnectivity implements Connectivity {
+-  _FakeConnectivity([this.result = const [ConnectivityResult.wifi]]);
++  _FakeConnectivity();
+ 
+-  final List<ConnectivityResult> result;
++  final List<ConnectivityResult> result = const [ConnectivityResult.wifi];
+ 
+   @override
+   Future<List<ConnectivityResult>> checkConnectivity() async => result;
+@@ -245,8 +245,7 @@ class _FakeConnectivity implements Connectivity {
+ }
+ 
+ class _TestSyncEngine extends SyncEngine {
+-  _TestSyncEngine(super.localDb, super.wsService, super.apiClient,
+-      {super.connectivity});
++  _TestSyncEngine(super.localDb, super.wsService, super.apiClient);
+ 
+   @override
+   Future<void> processNow({bool force = false, bool skipConnectivity = false}) =>
+diff --git a/mobile/test/user_state_proto_fields_test.dart b/mobile/test/user_state_proto_fields_test.dart
+index 87eb797b..58ae04a4 100644
+--- a/mobile/test/user_state_proto_fields_test.dart
++++ b/mobile/test/user_state_proto_fields_test.dart
+@@ -1,5 +1,4 @@
+ import 'package:flutter_test/flutter_test.dart';
+-import 'package:protobuf/protobuf.dart';
+ import 'package:protobuf/well_known_types/google/protobuf/struct.pb.dart';
+ import 'package:sparkle/gen/user_state.pb.dart';
+ 
+diff --git a/mobile/test/widget/a11y_contrast_test.dart b/mobile/test/widget/a11y_contrast_test.dart
+index 5397e259..4f65a478 100644
+--- a/mobile/test/widget/a11y_contrast_test.dart
++++ b/mobile/test/widget/a11y_contrast_test.dart
+@@ -6,14 +6,14 @@ import 'package:sparkle/core/design/design_system.dart';
+ 
+ /// Calculates relative luminance per WCAG 2.1 definition.
+ double _relativeLuminance(Color color) {
+-  double channel(int c) {
++  double channel(double c) {
+     final sRGB = c / 255.0;
+     return sRGB <= 0.03928 ? sRGB / 12.92 : math.pow((sRGB + 0.055) / 1.055, 2.4).toDouble();
+   }
+ 
+-  return 0.2126 * channel(color.red) +
+-      0.7152 * channel(color.green) +
+-      0.0722 * channel(color.blue);
++  return 0.2126 * channel(color.r * 255.0) +
++      0.7152 * channel(color.g * 255.0) +
++      0.0722 * channel(color.b * 255.0);
+ }
+ 
+ /// Calculates WCAG contrast ratio between two colors.
+diff --git a/mobile/test/widget/accountability_invite_closure_test.dart b/mobile/test/widget/accountability_invite_closure_test.dart
+index 97de9580..8e4dd324 100644
+--- a/mobile/test/widget/accountability_invite_closure_test.dart
++++ b/mobile/test/widget/accountability_invite_closure_test.dart
+@@ -15,7 +15,6 @@ import 'package:sparkle/features/community/data/models/accountability_model.dart
+ import 'package:sparkle/features/community/data/models/community_model.dart';
+ import 'package:sparkle/features/community/data/repositories/accountability_repository.dart';
+ import 'package:sparkle/features/community/data/repositories/community_repository.dart';
+-import 'package:sparkle/features/community/presentation/providers/accountability_provider.dart';
+ import 'package:sparkle/features/community/presentation/screens/accountability_screen.dart';
+ import 'package:sparkle/shared/entities/user_brief.dart';
+ import 'package:sparkle/shared/entities/user_model.dart';
+diff --git a/mobile/test/widget/accountability_signal_notification_test.dart b/mobile/test/widget/accountability_signal_notification_test.dart
+index deacbc13..0b268afe 100644
+--- a/mobile/test/widget/accountability_signal_notification_test.dart
++++ b/mobile/test/widget/accountability_signal_notification_test.dart
+@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
+ import 'package:sparkle/features/community/data/models/accountability_model.dart';
+ import 'package:sparkle/features/notification_center/data/models/unified_notification_model.dart';
+ import 'package:sparkle/features/notification_center/presentation/widgets/unified_notification_card.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+ import '../shared/i18n_test_helper.dart';
+ 
+ void main() {
+diff --git a/mobile/test/widget/achievement_unlock_dialog_test.dart b/mobile/test/widget/achievement_unlock_dialog_test.dart
+index 64a01e76..e305d0e2 100644
+--- a/mobile/test/widget/achievement_unlock_dialog_test.dart
++++ b/mobile/test/widget/achievement_unlock_dialog_test.dart
+@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
+ import 'package:flutter_test/flutter_test.dart';
+ import 'package:shared_preferences/shared_preferences.dart';
+ import 'package:sparkle/features/achievement/presentation/widgets/achievement_unlock_dialog.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+ import 'package:sparkle/shared/entities/achievement_model.dart';
+ import '../shared/i18n_test_helper.dart';
+ 
+diff --git a/mobile/test/widget/action_card_task_list_test.dart b/mobile/test/widget/action_card_task_list_test.dart
+index 12ce1113..c143df72 100644
+--- a/mobile/test/widget/action_card_task_list_test.dart
++++ b/mobile/test/widget/action_card_task_list_test.dart
+@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
+ import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
+ import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
+ import 'package:sparkle/features/chat/presentation/widgets/action_card.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+ import '../shared/i18n_test_helper.dart';
+ 
+ void main() {
+diff --git a/mobile/test/widget/action_card_ux_test.dart b/mobile/test/widget/action_card_ux_test.dart
+index 19134f76..f2d1e7b7 100644
+--- a/mobile/test/widget/action_card_ux_test.dart
++++ b/mobile/test/widget/action_card_ux_test.dart
+@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
+ import 'package:flutter_test/flutter_test.dart';
+ import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
+ import 'package:sparkle/features/chat/presentation/widgets/action_card.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+ import '../shared/i18n_test_helper.dart';
+ 
+ void main() {
+diff --git a/mobile/test/widget/ai_ops_analysis_screen_test.dart b/mobile/test/widget/ai_ops_analysis_screen_test.dart
+index 7cb165b8..48172587 100644
+--- a/mobile/test/widget/ai_ops_analysis_screen_test.dart
++++ b/mobile/test/widget/ai_ops_analysis_screen_test.dart
+@@ -1,4 +1,3 @@
+-import 'package:flutter/material.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:flutter_test/flutter_test.dart';
+ import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
+diff --git a/mobile/test/widget/assistant_message_metadata_tray_test.dart b/mobile/test/widget/assistant_message_metadata_tray_test.dart
+index e7e2f5a3..04fe6966 100644
+--- a/mobile/test/widget/assistant_message_metadata_tray_test.dart
++++ b/mobile/test/widget/assistant_message_metadata_tray_test.dart
+@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
+ import 'package:flutter_test/flutter_test.dart';
+ import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
+ import 'package:sparkle/features/chat/presentation/widgets/assistant_message_metadata_tray.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+ import '../shared/i18n_test_helper.dart';
+ 
+ void main() {
+diff --git a/mobile/test/widget/aurora_daily_startup_retry_test.dart b/mobile/test/widget/aurora_daily_startup_retry_test.dart
+index 2eb0d3f3..374b181a 100644
+--- a/mobile/test/widget/aurora_daily_startup_retry_test.dart
++++ b/mobile/test/widget/aurora_daily_startup_retry_test.dart
+@@ -20,7 +20,6 @@ import 'package:sparkle/features/home/data/repositories/dashboard_repository.dar
+ import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
+ import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboard_provider.dart';
+ import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+ import '../shared/i18n_test_helper.dart';
+ 
+ class _NoopApiClient implements ApiClient {
+diff --git a/mobile/test/widget/chat_history_sheet_regression_test.dart b/mobile/test/widget/chat_history_sheet_regression_test.dart
+index 374432d5..c752886b 100644
+--- a/mobile/test/widget/chat_history_sheet_regression_test.dart
++++ b/mobile/test/widget/chat_history_sheet_regression_test.dart
+@@ -1,7 +1,6 @@
+ import 'dart:async';
+ 
+ import 'package:flutter/material.dart';
+-import 'package:flutter_localizations/flutter_localizations.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:flutter_test/flutter_test.dart';
+ import 'package:shared_preferences/shared_preferences.dart';
+@@ -15,7 +14,6 @@ import 'package:sparkle/features/chat/presentation/providers/aurora_status_provi
+ import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
+ import 'package:sparkle/features/home/data/repositories/dashboard_repository.dart';
+ import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+ import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
+ import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
+ import '../shared/i18n_test_helper.dart';
+@@ -79,7 +77,9 @@ class _FakeAuroraNotifier extends AuroraStatusNotifier {
+   void stopPeriodicRefresh() {}
+ 
+   @override
+-  void dispose() {}
++  void dispose() {
++    super.dispose();
++  }
+ }
+ 
+ /// Quiet DashboardNotifier that does not trigger network requests.
+@@ -140,13 +140,12 @@ class _HistoryChatRepository extends Fake implements ChatRepository {
+     this.recentConversations = const <Map<String, dynamic>>[],
+     this.historyBySession = const <String, List<ChatMessageModel>>{},
+     this.recentError,
+-    this.historyErrorBySession = const <String, Object>{},
+   });
+ 
+   final List<Map<String, dynamic>> recentConversations;
+   final Map<String, List<ChatMessageModel>> historyBySession;
+   final Object? recentError;
+-  final Map<String, Object> historyErrorBySession;
++  final Map<String, Object> historyErrorBySession = const <String, Object>{};
+   final List<String> requestedSessions = <String>[];
+ 
+   @override
+@@ -187,7 +186,8 @@ class _HistoryChatNotifier extends ChatNotifier {
+   @override
+   Future<void> warmUpConnection() async {}
+ 
+-  @override
++  // NOTE: switchPlanSession 是 ChatNotifierActions 扩展方法，无法真正 @override；
++  // 此处同名实例方法仅用于拦截直接以 _HistoryChatNotifier 静态类型发起的调用。
+   Future<void> switchPlanSession(String? planId,
+       {BuildContext? context}) async {}
+ }
+diff --git a/mobile/test/widget/chat_review_banner_test.dart b/mobile/test/widget/chat_review_banner_test.dart
+index 3f00306d..31e8bff8 100644
+--- a/mobile/test/widget/chat_review_banner_test.dart
++++ b/mobile/test/widget/chat_review_banner_test.dart
+@@ -21,7 +21,6 @@ import 'package:sparkle/features/home/presentation/providers/dashboard_provider.
+ import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboard_provider.dart';
+ import 'package:sparkle/features/plan/data/models/plan_model.dart';
+ import 'package:sparkle/features/plan/data/repositories/plan_repository.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+ import '../shared/i18n_test_helper.dart';
+ 
+ class _NoopApiClient implements ApiClient {
+diff --git a/mobile/test/widget/chat_scroll_test.dart b/mobile/test/widget/chat_scroll_test.dart
+index 7fdcee57..74789bb1 100755
+--- a/mobile/test/widget/chat_scroll_test.dart
++++ b/mobile/test/widget/chat_scroll_test.dart
+@@ -21,7 +21,6 @@ import 'package:sparkle/features/home/presentation/providers/dashboard_provider.
+ import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboard_provider.dart';
+ import 'package:sparkle/features/plan/data/models/plan_model.dart';
+ import 'package:sparkle/features/plan/data/repositories/plan_repository.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+ import '../shared/i18n_test_helper.dart';
+ 
+ class _NoopApiClient implements ApiClient {
+diff --git a/mobile/test/widget/commitment_detail_screen_policy_test.dart b/mobile/test/widget/commitment_detail_screen_policy_test.dart
+index 9ad0df35..6c723f0a 100644
+--- a/mobile/test/widget/commitment_detail_screen_policy_test.dart
++++ b/mobile/test/widget/commitment_detail_screen_policy_test.dart
+@@ -142,7 +142,7 @@ class _FakeAccountabilityRepository extends AccountabilityRepository {
+         totalCheckins: 9,
+       ),
+       pendingPolicies: pendingPolicies,
+-      achievements: const {'achievements': []},
++      achievements: const {'achievements': <dynamic>[]},
+       leaderboardSummary: const {},
+       relationshipSummary: const {},
+       recentShares: const [],
+diff --git a/mobile/test/widget/community_remaining_closure_test.dart b/mobile/test/widget/community_remaining_closure_test.dart
+index c6e51beb..cd493bdd 100644
+--- a/mobile/test/widget/community_remaining_closure_test.dart
++++ b/mobile/test/widget/community_remaining_closure_test.dart
+@@ -146,16 +146,16 @@ void main() {
+         'delivery_summary': '已通过站内提醒发送，对方在线时会实时看到',
+         'message': '已提醒',
+       };
+-      final displayMessage = (successResult['delivery_summary'] as String?) ??
+-          (successResult['message'] as String?) ??
++      final displayMessage = successResult['delivery_summary'] ??
++          successResult['message'] ??
+           '已通过站内提醒发送，对方在线时会实时看到';
+       expect(displayMessage, '已通过站内提醒发送，对方在线时会实时看到');
+ 
+       // When delivery_summary is absent, falls back to message
+       const fallbackResult = {'message': '已提醒伙伴'};
+       final fallbackMessage =
+-          (fallbackResult['delivery_summary'] as String?) ??
+-              (fallbackResult['message'] as String?) ??
++          fallbackResult['delivery_summary'] ??
++              fallbackResult['message'] ??
+               '已通过站内提醒发送，对方在线时会实时看到';
+       expect(fallbackMessage, '已提醒伙伴');
+ 
+diff --git a/mobile/test/widget/error_card_galaxy_echo_test.dart b/mobile/test/widget/error_card_galaxy_echo_test.dart
+index d92c7304..e2137787 100644
+--- a/mobile/test/widget/error_card_galaxy_echo_test.dart
++++ b/mobile/test/widget/error_card_galaxy_echo_test.dart
+@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
+ import 'package:shared_preferences/shared_preferences.dart';
+ import 'package:sparkle/features/error_book/data/models/error_record.dart';
+ import 'package:sparkle/features/error_book/presentation/widgets/error_card.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+ import '../shared/i18n_test_helper.dart';
+ 
+ void main() {
+diff --git a/mobile/test/widget/evidence_card_navigation_test.dart b/mobile/test/widget/evidence_card_navigation_test.dart
+index 4cce0d0b..9120e58a 100644
+--- a/mobile/test/widget/evidence_card_navigation_test.dart
++++ b/mobile/test/widget/evidence_card_navigation_test.dart
+@@ -1,6 +1,4 @@
+ import 'package:flutter/material.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+-import 'package:flutter_localizations/flutter_localizations.dart';
+ import 'package:flutter_test/flutter_test.dart';
+ import 'package:go_router/go_router.dart';
+ import 'package:sparkle/core/models/memory_models.dart';
+diff --git a/mobile/test/widget/export_data_screen_test.dart b/mobile/test/widget/export_data_screen_test.dart
+index 6c51734a..ef57ab19 100644
+--- a/mobile/test/widget/export_data_screen_test.dart
++++ b/mobile/test/widget/export_data_screen_test.dart
+@@ -1,8 +1,6 @@
+-import 'package:flutter/material.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:flutter_test/flutter_test.dart';
+ import 'package:sparkle/features/user/presentation/screens/export_data_screen.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+ import '../shared/i18n_test_helper.dart';
+ 
+ void main() {
+diff --git a/mobile/test/widget/galaxy_node_preview_card_test.dart b/mobile/test/widget/galaxy_node_preview_card_test.dart
+index b55ae373..f02c41b7 100644
+--- a/mobile/test/widget/galaxy_node_preview_card_test.dart
++++ b/mobile/test/widget/galaxy_node_preview_card_test.dart
+@@ -1,8 +1,6 @@
+ import 'package:flutter/material.dart';
+-import 'package:flutter_localizations/flutter_localizations.dart';
+ import 'package:flutter_test/flutter_test.dart';
+ import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_node_preview_card.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+ import 'package:sparkle/shared/entities/galaxy_model.dart';
+ import '../shared/i18n_test_helper.dart';
+ 
+diff --git a/mobile/test/widget/graph_diagnostic_card_test.dart b/mobile/test/widget/graph_diagnostic_card_test.dart
+index f995f045..9ee7ecb0 100644
+--- a/mobile/test/widget/graph_diagnostic_card_test.dart
++++ b/mobile/test/widget/graph_diagnostic_card_test.dart
+@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
+ import 'package:flutter_test/flutter_test.dart';
+ import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
+ import 'package:sparkle/features/chat/presentation/widgets/action_card.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+ import '../shared/i18n_test_helper.dart';
+ 
+ void main() {
+diff --git a/mobile/test/widget/h9_ui_sync_test.dart b/mobile/test/widget/h9_ui_sync_test.dart
+index 383e45d2..15dd3f1b 100644
+--- a/mobile/test/widget/h9_ui_sync_test.dart
++++ b/mobile/test/widget/h9_ui_sync_test.dart
+@@ -28,7 +28,6 @@ import 'package:sparkle/features/galaxy/data/models/user_galaxy_contribution.dar
+ import 'package:sparkle/features/galaxy/data/services/galaxy_performance_monitor.dart';
+ import 'package:sparkle/features/insights/data/models/weekly_growth_narrative.dart';
+ import 'package:sparkle/features/insights/data/repositories/growth_narrative_repository.dart';
+-import 'package:sparkle/features/insights/presentation/providers/weekly_growth_narrative_provider.dart';
+ import 'package:sparkle/features/insights/presentation/widgets/weekly_growth_narrative_card.dart';
+ import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
+ import 'package:sparkle/features/plan/data/models/exam_sprint_models.dart';
+@@ -42,7 +41,6 @@ import 'package:sparkle/features/plan/presentation/screens/sprint_completion_scr
+ import 'package:sparkle/features/task/data/models/task_completion_result.dart';
+ import 'package:sparkle/features/task/data/repositories/task_repository.dart';
+ import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+ import 'package:sparkle/shared/entities/achievement_model.dart';
+ import 'package:sparkle/shared/entities/task_model.dart';
+ import 'package:sparkle/shared/entities/user_model.dart';
+diff --git a/mobile/test/widget/learning_heatmap_widget_test.dart b/mobile/test/widget/learning_heatmap_widget_test.dart
+index 3851db63..276ad38c 100644
+--- a/mobile/test/widget/learning_heatmap_widget_test.dart
++++ b/mobile/test/widget/learning_heatmap_widget_test.dart
+@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:flutter_test/flutter_test.dart';
+ import 'package:sparkle/features/home/presentation/widgets/learning_heatmap_widget.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+ import '../shared/i18n_test_helper.dart';
+ 
+ void main() {
+@@ -53,7 +52,7 @@ void main() {
+       final lightColor = _cellColorForDate(tester, olderDay.date);
+       final mediumColor = _cellColorForDate(tester, latestDay.date);
+ 
+-      expect(mediumColor.alpha, greaterThan(lightColor.alpha));
++      expect(mediumColor.a, greaterThan(lightColor.a));
+     });
+ 
+     testWidgets('renders zero-minute day as gray', (tester) async {
+diff --git a/mobile/test/widget/learning_path_task_path_navigation_test.dart b/mobile/test/widget/learning_path_task_path_navigation_test.dart
+index aec55f75..4a33723d 100644
+--- a/mobile/test/widget/learning_path_task_path_navigation_test.dart
++++ b/mobile/test/widget/learning_path_task_path_navigation_test.dart
+@@ -10,7 +10,6 @@ import 'package:sparkle/core/services/notification_service.dart';
+ import 'package:sparkle/features/insights/data/models/learning_path_node.dart';
+ import 'package:sparkle/features/insights/data/models/learning_path_plan_response.dart';
+ import 'package:sparkle/features/insights/data/repositories/learning_path_repository.dart';
+-import 'package:sparkle/features/insights/presentation/providers/learning_path_provider.dart';
+ import 'package:sparkle/features/insights/presentation/widgets/learning_path_dialog.dart';
+ import 'package:sparkle/shared/utils/entity_card_payloads.dart';
+ import '../shared/i18n_test_helper.dart';
+diff --git a/mobile/test/widget/memory_correction_test.dart b/mobile/test/widget/memory_correction_test.dart
+index 394510da..69d644e9 100644
+--- a/mobile/test/widget/memory_correction_test.dart
++++ b/mobile/test/widget/memory_correction_test.dart
+@@ -1,11 +1,9 @@
+-import 'package:flutter/material.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:flutter_test/flutter_test.dart';
+ import 'package:sparkle/core/constants/app_constants.dart';
+ import 'package:sparkle/core/models/memory_models.dart';
+ import 'package:sparkle/core/services/memory_api_service.dart';
+ import 'package:sparkle/features/memory/presentation/screens/memory_detail_screen.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+ import '../shared/i18n_test_helper.dart';
+ 
+ class _CorrectionApiService implements MemoryApiService {
+diff --git a/mobile/test/widget/memory_explain_view_test.dart b/mobile/test/widget/memory_explain_view_test.dart
+index aeb06baf..09f52833 100644
+--- a/mobile/test/widget/memory_explain_view_test.dart
++++ b/mobile/test/widget/memory_explain_view_test.dart
+@@ -1,11 +1,9 @@
+-import 'package:flutter/material.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:flutter_test/flutter_test.dart';
+ import 'package:sparkle/core/constants/app_constants.dart';
+ import 'package:sparkle/core/models/memory_models.dart';
+ import 'package:sparkle/core/services/memory_api_service.dart';
+ import 'package:sparkle/features/memory/presentation/screens/memory_detail_screen.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+ import '../shared/i18n_test_helper.dart';
+ 
+ class _HistoryStubService implements MemoryApiService {
+diff --git a/mobile/test/widget/memory_settings_screen_test.dart b/mobile/test/widget/memory_settings_screen_test.dart
+index e1c33c95..36d630d9 100644
+--- a/mobile/test/widget/memory_settings_screen_test.dart
++++ b/mobile/test/widget/memory_settings_screen_test.dart
+@@ -6,7 +6,6 @@ import 'package:sparkle/core/constants/app_constants.dart';
+ import 'package:sparkle/core/models/memory_models.dart';
+ import 'package:sparkle/core/services/memory_api_service.dart';
+ import 'package:sparkle/features/memory/presentation/screens/memory_settings_screen.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+ import '../shared/i18n_test_helper.dart';
+ 
+ DioException _dioError(int statusCode) {
+diff --git a/mobile/test/widget/metacognition_panel_test.dart b/mobile/test/widget/metacognition_panel_test.dart
+index 1d408737..e8898445 100644
+--- a/mobile/test/widget/metacognition_panel_test.dart
++++ b/mobile/test/widget/metacognition_panel_test.dart
+@@ -43,7 +43,7 @@ void main() {
+         'metacognition_dashboard': {
+           'available': false,
+           'hidden': false,
+-          'cards': const [],
++          'cards': const <dynamic>[],
+         },
+       }),
+       isNull,
+diff --git a/mobile/test/widget/mirofish_wiring_finish_test.dart b/mobile/test/widget/mirofish_wiring_finish_test.dart
+index 9efe8e4d..9eadb094 100644
+--- a/mobile/test/widget/mirofish_wiring_finish_test.dart
++++ b/mobile/test/widget/mirofish_wiring_finish_test.dart
+@@ -4,25 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
+ import 'package:go_router/go_router.dart';
+ import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
+ import 'package:sparkle/features/chat/presentation/widgets/chat_bubble.dart';
+-import 'package:sparkle/features/home/presentation/widgets/recent_insights_card.dart';
+-import 'package:sparkle/features/notification_center/presentation/providers/notification_center_provider.dart';
+-import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
+ import 'package:sparkle/l10n/app_localizations.dart';
+ import '../shared/i18n_test_helper.dart';
+ 
+-class _StaticNotificationCenter extends NotificationCenter {
+-  _StaticNotificationCenter(this._initialState);
+-
+-  final NotificationCenterState _initialState;
+-
+-  @override
+-  NotificationCenterState build() => _initialState;
+-
+-  @override
+-  Future<void> loadNotifications(
+-      {bool unreadOnly = false, String? sourceType}) async {}
+-}
+-
+ void main() {
+ 
+   setUp(setUpI18nForTesting);
+diff --git a/mobile/test/widget/openclaw_connection_panel_test.dart b/mobile/test/widget/openclaw_connection_panel_test.dart
+index 32a91e88..3916cbaa 100644
+--- a/mobile/test/widget/openclaw_connection_panel_test.dart
++++ b/mobile/test/widget/openclaw_connection_panel_test.dart
+@@ -1,6 +1,5 @@
+ import 'package:flutter/material.dart';
+ import 'package:flutter/services.dart';
+-import 'package:flutter_localizations/flutter_localizations.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:flutter_test/flutter_test.dart';
+ import 'package:sparkle/core/services/openclaw_connection_service.dart';
+diff --git a/mobile/test/widget/overflow_regression_test.dart b/mobile/test/widget/overflow_regression_test.dart
+index 0c368878..fd5198b2 100644
+--- a/mobile/test/widget/overflow_regression_test.dart
++++ b/mobile/test/widget/overflow_regression_test.dart
+@@ -1,5 +1,4 @@
+ import 'package:flutter/material.dart';
+-import 'package:flutter_localizations/flutter_localizations.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:flutter_test/flutter_test.dart';
+ import 'package:sparkle/core/design/widgets/app_permission_dialog.dart';
+@@ -16,7 +15,6 @@ import 'package:sparkle/features/home/presentation/widgets/thought_capsule_dialo
+ import 'package:sparkle/features/notification_center/data/models/unified_notification_model.dart';
+ import 'package:sparkle/features/notification_center/presentation/widgets/notification_filter_chip.dart';
+ import 'package:sparkle/features/notification_center/presentation/widgets/unified_notification_card.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+ import '../shared/i18n_test_helper.dart';
+ 
+ void main() {
+diff --git a/mobile/test/widget/plan_review_card_test.dart b/mobile/test/widget/plan_review_card_test.dart
+index 66901261..9e97cfa8 100644
+--- a/mobile/test/widget/plan_review_card_test.dart
++++ b/mobile/test/widget/plan_review_card_test.dart
+@@ -1,8 +1,6 @@
+ import 'package:flutter/material.dart';
+-import 'package:flutter_localizations/flutter_localizations.dart';
+ import 'package:flutter_test/flutter_test.dart';
+ import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+ import '../shared/i18n_test_helper.dart';
+ 
+ void main() {
+diff --git a/mobile/test/widget/poster_studio_regression_test.dart b/mobile/test/widget/poster_studio_regression_test.dart
+index 50071a29..0be1b38f 100644
+--- a/mobile/test/widget/poster_studio_regression_test.dart
++++ b/mobile/test/widget/poster_studio_regression_test.dart
+@@ -1,6 +1,5 @@
+ import 'package:flutter/material.dart';
+ import 'package:flutter/rendering.dart';
+-import 'package:flutter_localizations/flutter_localizations.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:flutter_test/flutter_test.dart';
+ import 'package:sparkle/core/network/api_client.dart';
+@@ -15,7 +14,6 @@ import 'package:sparkle/features/plan/data/models/plan_model.dart';
+ import 'package:sparkle/features/plan/data/repositories/plan_repository.dart';
+ import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
+ import 'package:sparkle/features/user/presentation/screens/poster_studio_screen.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+ import 'package:sparkle/shared/entities/achievement_model.dart';
+ import 'package:sparkle/shared/entities/user_model.dart';
+ import '../shared/i18n_test_helper.dart';
+diff --git a/mobile/test/widget/profile_front_door_action_card_test.dart b/mobile/test/widget/profile_front_door_action_card_test.dart
+index d135a2b6..ad42ddcd 100644
+--- a/mobile/test/widget/profile_front_door_action_card_test.dart
++++ b/mobile/test/widget/profile_front_door_action_card_test.dart
+@@ -5,7 +5,6 @@ import 'package:sparkle/core/models/memory_models.dart';
+ import 'package:sparkle/core/services/evidence_resolve_service.dart';
+ import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
+ import 'package:sparkle/features/chat/presentation/widgets/action_card.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+ import '../shared/i18n_test_helper.dart';
+ 
+ class _FakeEvidenceResolveService implements EvidenceResolveService {
+diff --git a/mobile/test/widget/reflection_recent_summary_test.dart b/mobile/test/widget/reflection_recent_summary_test.dart
+index afb75b55..f8eb402f 100644
+--- a/mobile/test/widget/reflection_recent_summary_test.dart
++++ b/mobile/test/widget/reflection_recent_summary_test.dart
+@@ -141,7 +141,7 @@ class _FakeAccountabilityRepository extends AccountabilityRepository {
+       ),
+       pendingPolicies: PendingPoliciesSummaryInfo(count: 1),
+       recentReflections: recentReflections,
+-      achievements: const {'achievements': []},
++      achievements: const {'achievements': <dynamic>[]},
+       leaderboardSummary: const {},
+       relationshipSummary: const {},
+       recentShares: const [],
+diff --git a/mobile/test/widget/scene_recent_summary_test.dart b/mobile/test/widget/scene_recent_summary_test.dart
+index 78de3582..5ebfa8c6 100644
+--- a/mobile/test/widget/scene_recent_summary_test.dart
++++ b/mobile/test/widget/scene_recent_summary_test.dart
+@@ -1,4 +1,3 @@
+-import 'package:flutter/material.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:flutter_test/flutter_test.dart';
+ import 'package:sparkle/core/constants/app_constants.dart';
+diff --git a/mobile/test/widget/simulator_chain_regression_test.dart b/mobile/test/widget/simulator_chain_regression_test.dart
+index 97cb2fd9..4af3d0ff 100644
+--- a/mobile/test/widget/simulator_chain_regression_test.dart
++++ b/mobile/test/widget/simulator_chain_regression_test.dart
+@@ -6,11 +6,9 @@ import 'package:sparkle/core/services/app_event_stream_service.dart';
+ import 'package:sparkle/features/insights/data/models/learning_path_node.dart';
+ import 'package:sparkle/features/insights/data/models/learning_path_plan_response.dart';
+ import 'package:sparkle/features/insights/data/repositories/learning_path_repository.dart';
+-import 'package:sparkle/features/insights/presentation/providers/learning_path_provider.dart';
+ import 'package:sparkle/features/insights/presentation/widgets/learning_path_dialog.dart';
+ import 'package:sparkle/features/visual_elements/data/repositories/visual_element_repository.dart';
+ import 'package:sparkle/features/visual_elements/presentation/providers/visual_elements_provider.dart';
+-import 'package:sparkle/shared/entities/galaxy_model.dart';
+ import 'package:sparkle/shared/entities/visual_element_model.dart';
+ import '../shared/i18n_test_helper.dart';
+ 
+diff --git a/mobile/test/widget/srl_phase_display_test.dart b/mobile/test/widget/srl_phase_display_test.dart
+index eb74433f..cc69f1a6 100644
+--- a/mobile/test/widget/srl_phase_display_test.dart
++++ b/mobile/test/widget/srl_phase_display_test.dart
+@@ -90,7 +90,7 @@ class _SrlParseTestHelper extends StatelessWidget {
+ }
+ 
+ class _SrlParseResult extends StatelessWidget {
+-  const _SrlParseResult({super.key, required this.result});
++  const _SrlParseResult({required this.result});
+   final Map<String, String>? result;
+ 
+   @override
+diff --git a/mobile/test/widget/sync_center_screen_test.dart b/mobile/test/widget/sync_center_screen_test.dart
+index 6e38e66d..52ff7d33 100644
+--- a/mobile/test/widget/sync_center_screen_test.dart
++++ b/mobile/test/widget/sync_center_screen_test.dart
+@@ -2,7 +2,6 @@ import 'dart:async';
+ import 'dart:io';
+ 
+ import 'package:dio/dio.dart';
+-import 'package:flutter/material.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:flutter_test/flutter_test.dart';
+ import 'package:isar/isar.dart';
+@@ -16,7 +15,6 @@ import 'package:sparkle/core/offline/sync_center_provider.dart';
+ import 'package:sparkle/core/offline/sync_engine.dart';
+ import 'package:sparkle/core/services/websocket_service.dart';
+ import 'package:sparkle/features/user/presentation/screens/sync_center_screen.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+ import '../shared/i18n_test_helper.dart';
+ 
+ const _runSyncCenterWidget = bool.fromEnvironment('RUN_SYNC_CENTER_WIDGET');
+diff --git a/mobile/test/widget/unified_settings_bgm_test.dart b/mobile/test/widget/unified_settings_bgm_test.dart
+index c23dfbcc..b1490cc6 100644
+--- a/mobile/test/widget/unified_settings_bgm_test.dart
++++ b/mobile/test/widget/unified_settings_bgm_test.dart
+@@ -1,12 +1,10 @@
+ import 'package:flutter/material.dart';
+-import 'package:flutter_localizations/flutter_localizations.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:flutter_test/flutter_test.dart';
+ import 'package:shared_preferences/shared_preferences.dart';
+ import 'package:sparkle/core/services/bgm_service.dart';
+ import 'package:sparkle/core/services/sensory_feedback_service.dart';
+ import 'package:sparkle/features/user/presentation/screens/unified_settings_screen.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+ import '../shared/i18n_test_helper.dart';
+ 
+ void main() {
+diff --git a/mobile/test/widget/user_persona_screen_test.dart b/mobile/test/widget/user_persona_screen_test.dart
+index 4fcb414c..2b6732c0 100644
+--- a/mobile/test/widget/user_persona_screen_test.dart
++++ b/mobile/test/widget/user_persona_screen_test.dart
+@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
+ import 'package:sparkle/features/user/data/repositories/user_repository.dart';
+ import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
+ import 'package:sparkle/features/user/presentation/screens/user_persona_screen.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+ import 'package:sparkle/shared/entities/user_model.dart';
+ import '../shared/i18n_test_helper.dart';
+ 
+diff --git a/mobile/test/widget/visual_elements_layout_regression_test.dart b/mobile/test/widget/visual_elements_layout_regression_test.dart
+index 9478155c..0b4be7a4 100644
+--- a/mobile/test/widget/visual_elements_layout_regression_test.dart
++++ b/mobile/test/widget/visual_elements_layout_regression_test.dart
+@@ -1,5 +1,4 @@
+ import 'package:flutter/material.dart';
+-import 'package:flutter_localizations/flutter_localizations.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:flutter_test/flutter_test.dart';
+ import 'package:sparkle/core/network/api_client.dart';
+@@ -9,7 +8,6 @@ import 'package:sparkle/features/visual_elements/presentation/providers/visual_r
+ import 'package:sparkle/features/visual_elements/presentation/screens/visual_elements_screen.dart';
+ import 'package:sparkle/features/visual_elements/presentation/widgets/visual_element_preview_dialog.dart';
+ import 'package:sparkle/features/visual_elements/presentation/widgets/visual_element_unlock_dialog.dart';
+-import 'package:sparkle/l10n/app_localizations.dart';
+ import 'package:sparkle/shared/entities/visual_element_model.dart';
+ import '../shared/i18n_test_helper.dart';
+ 

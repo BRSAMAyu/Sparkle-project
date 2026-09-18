@@ -146,16 +146,16 @@ void main() {
         'delivery_summary': '已通过站内提醒发送，对方在线时会实时看到',
         'message': '已提醒',
       };
-      final displayMessage = (successResult['delivery_summary'] as String?) ??
-          (successResult['message'] as String?) ??
+      final displayMessage = successResult['delivery_summary'] ??
+          successResult['message'] ??
           '已通过站内提醒发送，对方在线时会实时看到';
       expect(displayMessage, '已通过站内提醒发送，对方在线时会实时看到');
 
       // When delivery_summary is absent, falls back to message
       const fallbackResult = {'message': '已提醒伙伴'};
       final fallbackMessage =
-          (fallbackResult['delivery_summary'] as String?) ??
-              (fallbackResult['message'] as String?) ??
+          fallbackResult['delivery_summary'] ??
+              fallbackResult['message'] ??
               '已通过站内提醒发送，对方在线时会实时看到';
       expect(fallbackMessage, '已提醒伙伴');
 
