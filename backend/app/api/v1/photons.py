@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,9 +20,6 @@ from app.schemas.photon import (
 from app.services.photon_service import get_photon_service
 
 router = APIRouter()
-
-# 访客用户 ID（与 guest_seed_service.py 和 guest_service.dart 保持一致）
-GUEST_USER_ID = "guest_sparkle_demo_visitor"
 
 
 @router.get("/balance", response_model=dict[str, Any])
@@ -110,6 +107,7 @@ async def get_transaction_summary(
 @router.post("/transfer", response_model=dict[str, Any])
 async def transfer_photons(
     request: PhotonTransferRequest,
+    http_request: Request,
     idempotency_key: str | None = Header(None, alias="Idempotency-Key"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -119,8 +117,12 @@ async def transfer_photons(
 
     Transfers photons from current user to another user.
     """
-    # 访客用户禁止转账
-    if str(current_user.id) == GUEST_USER_ID or current_user.username == GUEST_USER_ID:
+    # 访客禁止转账：以 JWT 的 is_guest 声明为准（网关/引擎签发访客令牌时
+    # 都注入 is_guest=True）。旧实现只比对遗留演示常量
+    # GUEST_USER_ID="guest_sparkle_demo_visitor"，真实游客（UUID 主键 +
+    # guest_* 用户名）可绕过守卫完成越权转账。
+    token_payload = getattr(http_request.state, "token_payload", None) or {}
+    if token_payload.get("is_guest"):
         raise HTTPException(
             status_code=403,
             detail="Guest users cannot transfer photons. Please register for a full account."

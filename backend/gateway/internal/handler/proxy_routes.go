@@ -9,6 +9,7 @@ package handler
 
 import (
 	"net/http/httputil"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -38,13 +39,34 @@ func NewProxyRoutesHandler(
 }
 
 // registerREST registers GET, POST, PUT, PATCH, DELETE for the given relative path.
-// This avoids Any() which would also allow CONNECT, TRACE, HEAD, OPTIONS.
+//
+// For wildcard groups ("/*path") it additionally:
+//  1. registers the bare collection path ("") — gin's httprouter does NOT match
+//     "/group" against "/group/*path", so without this the bare request is met
+//     by gin's RedirectTrailingSlash 301 → "/group/", which the FastAPI engine
+//     (redirect_slashes) bounces back with a 307 whose Location is an absolute
+//     internal URL (http://127.0.0.1:8000/...), producing the 301↔307 redirect
+//     loop + intranet address leak observed on /api/v1/leaderboards and
+//     /api/v1/inventory (gamification-eval P1-2); and
+//  2. trims trailing slashes on wildcard-matched paths before proxying, since
+//     FastAPI canonicalizes to non-slash routes and its 307 Location would leak
+//     the internal topology to clients.
 func (h *ProxyRoutesHandler) registerREST(rg *gin.RouterGroup, relativePath string) {
-	rg.GET(relativePath, h.proxyWithHeaders)
-	rg.POST(relativePath, h.proxyWithHeaders)
-	rg.PUT(relativePath, h.proxyWithHeaders)
-	rg.PATCH(relativePath, h.proxyWithHeaders)
-	rg.DELETE(relativePath, h.proxyWithHeaders)
+	handler := h.proxyWithHeaders
+	if relativePath == "/*path" {
+		// Bare collection path ("/api/v1/<group>") must proxy directly.
+		rg.GET("", handler)
+		rg.POST("", handler)
+		rg.PUT("", handler)
+		rg.PATCH("", handler)
+		rg.DELETE("", handler)
+		handler = h.proxyWithHeadersTrailingSlashTrimmed
+	}
+	rg.GET(relativePath, handler)
+	rg.POST(relativePath, handler)
+	rg.PUT(relativePath, handler)
+	rg.PATCH(relativePath, handler)
+	rg.DELETE(relativePath, handler)
 }
 
 // RegisterProxyRoutes registers all explicit proxy routes to Python Backend
@@ -387,7 +409,6 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	experiments.Use(authMiddleware)
 	{
 		h.registerREST(experiments, "/*path")
-		h.registerREST(experiments, "")
 	}
 	h.logger.Info("Registered experiments proxy routes")
 
@@ -755,7 +776,6 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	notifications := api.Group("/notifications")
 	notifications.Use(authMiddleware)
 	{
-		h.registerREST(notifications, "")
 		h.registerREST(notifications, "/*path")
 	}
 	h.logger.Info("Registered notifications proxy routes")
@@ -764,7 +784,6 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	notificationCenter := api.Group("/notification-center")
 	notificationCenter.Use(authMiddleware)
 	{
-		h.registerREST(notificationCenter, "")
 		h.registerREST(notificationCenter, "/*path")
 	}
 	h.logger.Info("Registered notification-center proxy routes")
@@ -808,7 +827,6 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	subjects := api.Group("/subjects")
 	subjects.Use(authMiddleware)
 	{
-		h.registerREST(subjects, "")
 		h.registerREST(subjects, "/*path")
 	}
 	h.logger.Info("Registered subjects proxy routes")
@@ -943,7 +961,6 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	visualElements := api.Group("/visual-elements")
 	visualElements.Use(authMiddleware)
 	{
-		h.registerREST(visualElements, "")
 		h.registerREST(visualElements, "/*path")
 	}
 	h.logger.Info("Registered visual-elements proxy routes")
@@ -1009,8 +1026,6 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	executions := api.Group("/executions")
 	executions.Use(authMiddleware)
 	{
-		// route-tier: authed
-		h.registerREST(executions, "")
 		// route-tier: authed
 		h.registerREST(executions, "/*path")
 	}
@@ -1111,6 +1126,21 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	h.logger.Info("Registered admin proxy routes (catch-all)")
 
 	// Health routes are handled locally by the gateway (setup.go) — do not proxy
+}
+
+// proxyWithHeadersTrailingSlashTrimmed proxies the request like proxyWithHeaders
+// but trims trailing slashes from the path first. FastAPI (engine) responds to a
+// trailing-slash request with a 307 whose Location is an absolute internal URL
+// (e.g. http://127.0.0.1:8000/api/v1/...), leaking intranet topology to the
+// client and bouncing Dio's redirect limit. The engine's canonical routes never
+// require a trailing slash, so trimming is always safe.
+func (h *ProxyRoutesHandler) proxyWithHeadersTrailingSlashTrimmed(c *gin.Context) {
+	p := c.Request.URL.Path
+	if trimmed := strings.TrimRight(p, "/"); trimmed != p && trimmed != "" {
+		c.Request.URL.Path = trimmed
+		c.Request.URL.RawPath = ""
+	}
+	h.proxyWithHeaders(c)
 }
 
 // proxyWithHeaders proxies request to Python Backend with user context headers

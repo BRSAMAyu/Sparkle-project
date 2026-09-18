@@ -17,7 +17,7 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import and_, case, desc, func, or_, select
+from sqlalchemy import and_, case, desc, distinct, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -211,10 +211,21 @@ class LeaderboardService:
         # 计算综合分数
         # 全局排行 = 知识点数×1.0 + 打卡天数×0.5 + 成就数×2.0 + 最长连胜×1.5
         # Use SQL ORDER BY + LIMIT to avoid loading all users into Python memory
+        #
+        # 修复注记（gamification-eval P1-3）：
+        # 1) user_score_q 的 select 列表只含聚合表达式（无 User 实体列），
+        #    SQLAlchemy 无法推断 outerjoin 的隐式左表，执行期抛
+        #    InvalidRequestError("Don't know how to join to UserNodeStatus")。
+        #    两处查询均显式 select_from(User)。
+        # 2) 旧实现 count(UserNodeStatus.user_id)/count(UserAchievement.id)
+        #    在三表 outerjoin 的笛卡尔积上计数，节点数×成就数互相放大
+        #    （实测人人 276/276）。改为 count(distinct ...) 按实体去重。
+        node_count_expr = func.count(distinct(UserNodeStatus.node_id)).label('node_count')
+        achievement_count_expr = func.count(distinct(UserAchievement.achievement_id)).label('achievement_count')
         score_expr = (
-            func.count(UserNodeStatus.user_id) * self.WEIGHT_KNOWLEDGE_NODES
+            func.count(distinct(UserNodeStatus.node_id)) * self.WEIGHT_KNOWLEDGE_NODES
             + func.coalesce(UserStreakStats.total_checkin_days, 0) * self.WEIGHT_STUDY_DAYS
-            + func.count(UserAchievement.id) * self.WEIGHT_ACHIEVEMENTS
+            + func.count(distinct(UserAchievement.achievement_id)) * self.WEIGHT_ACHIEVEMENTS
             + func.coalesce(UserStreakStats.longest_streak, 0) * self.WEIGHT_STREAK
         ).label("composite_score")
 
@@ -222,12 +233,12 @@ class LeaderboardService:
             User.id,
             User.username,
             User.avatar_url,
-            func.count(UserNodeStatus.user_id).label('node_count'),
-            func.count(UserAchievement.id).label('achievement_count'),
+            node_count_expr,
+            achievement_count_expr,
             func.coalesce(UserStreakStats.longest_streak, 0).label('streak'),
             func.coalesce(UserStreakStats.total_checkin_days, 0).label('study_days'),
             score_expr,
-        ).outerjoin(
+        ).select_from(User).outerjoin(
             UserNodeStatus, and_(
                 UserNodeStatus.user_id == User.id,
                 UserNodeStatus.mastery_score >= 50  # 掌握度>=50%
@@ -256,7 +267,7 @@ class LeaderboardService:
         if user_score is None:
             user_score_q = select(
                 score_expr,
-            ).outerjoin(
+            ).select_from(User).outerjoin(
                 UserNodeStatus, and_(
                     UserNodeStatus.user_id == User.id,
                     UserNodeStatus.mastery_score >= 50

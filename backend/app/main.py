@@ -446,6 +446,7 @@ async def lifespan(fastapp: FastAPI):
             # 0.5 确保全局成就和皮肤定义存在 (所有用户共享)
             try:
                 from app.data.seed_content_initial import initialize_seed_libraries
+                from app.data.shop_seeds import seed_shop_items
                 from app.services.guest_seed_service import (
                     _ensure_achievements,
                     _ensure_galaxy_skins,
@@ -456,8 +457,12 @@ async def lifespan(fastapp: FastAPI):
                 await _ensure_galaxy_skins(db)
                 await ensure_global_galaxy_baseline(db)
                 await initialize_seed_libraries(db)
+                # 商城物品种子：此前仅手动脚本 scripts/init_shop.py 可触发，
+                # 真实环境 shop_items 常年为空（演示阻断）。seed_shop_items
+                # 自带空表检查（幂等），挂在同一启动引用数据链路。
+                await seed_shop_items(db)
                 await db.commit()
-                logger.info("Global achievements, galaxy skins, galaxy baseline, and official seed libraries ensured")
+                logger.info("Global achievements, galaxy skins, galaxy baseline, official seed libraries, and shop items ensured")
             except Exception as e:
                 await db.rollback()
                 logger.warning(f"Failed to ensure startup reference data (non-fatal): {e}")
