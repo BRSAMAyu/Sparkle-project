@@ -38,7 +38,12 @@ from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 from typing import Any
 
-from app.core.llm_monitoring import LLMMonitor
+from app.core.llm_monitoring import (
+    LLM_CALLS_TOTAL,
+    LLM_LATENCY_SECONDS,
+    TASK_FAILURES,
+    LLMMonitor,
+)
 from app.core.llm_output_validator import LLMOutputValidator
 from app.core.llm_quota import LLMCostGuard
 from app.core.llm_safety import LLMSafetyService, SafetyCheckResult
@@ -228,12 +233,15 @@ class LLMSecurityWrapper:
         if not self.monitor:
             return
         try:
-            self.monitor.LLM_CALLS_TOTAL.labels(
+            # F-2 修复：LLM_CALLS_TOTAL/LLM_LATENCY_SECONDS 是 llm_monitoring 的模块级
+            # 指标，并非 LLMMonitor 实例属性——原先经 self.monitor.X 访问触发
+            # AttributeError 且被下方 except 静默吞掉，导致整个监控记账成为 no-op。
+            LLM_CALLS_TOTAL.labels(
                 model=model or "unknown",
                 status=status,
                 endpoint=endpoint,
             ).inc()
-            self.monitor.LLM_LATENCY_SECONDS.labels(
+            LLM_LATENCY_SECONDS.labels(
                 model=model or "unknown",
                 endpoint=endpoint,
             ).observe(latency_seconds)
@@ -251,7 +259,8 @@ class LLMSecurityWrapper:
         if not self.monitor:
             return
         try:
-            self.monitor.TASK_FAILURES.labels(
+            # F-2 修复：TASK_FAILURES 同为模块级指标（属性名漂移曾令本记账静默失效）
+            TASK_FAILURES.labels(
                 task_type=endpoint,
                 error_type=type(exc).__name__,
             ).inc()

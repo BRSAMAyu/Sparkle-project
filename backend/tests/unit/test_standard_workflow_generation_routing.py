@@ -482,8 +482,12 @@ def test_personalized_deep_analysis_keeps_full_context():
 async def test_generation_node_batches_stream_deltas(monkeypatch):
     fake_llm = _ChunkedGenerationLLM()
     get_llm_mock = AsyncMock(return_value=fake_llm)
+    get_tier_mock = AsyncMock(return_value=fake_llm)
     stream_callback = AsyncMock()
     monkeypatch.setattr("app.agents.standard_workflow.get_configured_llm_service", get_llm_mock)
+    # F-1：deep_analysis 生成改走 get_configured_llm_service_for_tier（MAX 层 v4-pro），
+    # 本测关注 delta 合帧行为，按同文件相邻用例模式一并 mock tier 路由。
+    monkeypatch.setattr("app.agents.standard_workflow.get_configured_llm_service_for_tier", get_tier_mock)
     monkeypatch.setattr("app.agents.standard_workflow.build_system_prompt", lambda *args, **kwargs: "SYSTEM")
 
     state = WorkflowState(
@@ -500,7 +504,8 @@ async def test_generation_node_batches_stream_deltas(monkeypatch):
 
     new_state = await generation_node(state)
 
-    assert stream_callback.await_count == 1
+    # 首 delta 立即 flush（首 token 优化 73eab280 语义）+ 余量批量 flush = 2 次回调
+    assert stream_callback.await_count == 2
     assert new_state.messages[-1]["content"] == "这是一段被拆成很多碎片的流式输出文本。"
 
 

@@ -1,0 +1,840 @@
+diff --git a/backend/app/agents/standard_workflow.py b/backend/app/agents/standard_workflow.py
+index df9492aa..92abc5b5 100755
+--- a/backend/app/agents/standard_workflow.py
++++ b/backend/app/agents/standard_workflow.py
+@@ -122,6 +122,24 @@ def _phase_d_forced_model_tier(state: WorkflowState) -> ModelTier | None:
+         return None
+ 
+ 
++def _deep_analysis_generation_tier(state: WorkflowState) -> ModelTier | None:
++    """deep_analysis 档生成层的显式决策（F-1）。
++
++    deep_analysis 是产品"深度规划"档位，默认必须真实路由 MAX 层
++    （deepseek_reason → deepseek-v4-pro），不再被 Agent 策略路由/成本带
++    偏好静默压回 flash（v4-pro 对应 MAX 层的 deepseek_reason）。
++    DEEP_ANALYSIS_FORCE_FAST_TIER=True 时作为首 token 延迟逃生阀退回
++    FAST 层。standard 档首触快响（STANDARD_CHAT_FORCE_FAST_TIER）语义
++    不变；免费层钳制在 llm_router 内仍然生效（正交）。
++    """
++    chat_mode = str(state.context_data.get("chat_mode", "standard")).strip().lower()
++    if chat_mode != "deep_analysis":
++        return None
++    if getattr(settings, "DEEP_ANALYSIS_FORCE_FAST_TIER", False):
++        return ModelTier.FAST
++    return ModelTier.MAX
++
++
+ def _build_minimal_user_context_for_grounded_synthesis(user_context: dict[str, Any]) -> dict[str, Any]:
+     if not isinstance(user_context, dict):
+         return {}
+@@ -1402,8 +1420,19 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
+             generation_llm = explicit_runtime["service"]
+             agent_role = explicit_runtime["agent_role"].value
+         else:
++            # F-1：deep_analysis 档优先于 phase_d/首触快响决策——用户显式选择
++            # 深度分析档位时必须真实路由 MAX 层（v4-pro），成本带偏好不得静默降档。
++            deep_analysis_tier = _deep_analysis_generation_tier(state)
+             forced_phase_d_tier = _phase_d_forced_model_tier(state)
+-            if forced_phase_d_tier is not None:
++            if deep_analysis_tier is not None:
++                generation_llm = await get_configured_llm_service_for_tier(
++                    agent_role,
++                    deep_analysis_tier,
++                    task_type=task_type,
++                    reasoning_mode=reasoning_mode,
++                )
++                state.context_data["deep_analysis_model_tier"] = deep_analysis_tier.value
++            elif forced_phase_d_tier is not None:
+                 generation_llm = await get_configured_llm_service_for_tier(
+                     agent_role,
+                     forced_phase_d_tier,
+diff --git a/backend/app/config/settings.py b/backend/app/config/settings.py
+index aa498458..946e9b44 100755
+--- a/backend/app/config/settings.py
++++ b/backend/app/config/settings.py
+@@ -602,7 +602,11 @@ class Settings(BaseSettings):
+     COMPLEXITY_ROUTING_ENABLED: bool = True  # 总开关
+     COMPLEXITY_DOWNGRADE_ENABLED: bool = True  # 允许简单消息降级到更便宜模型
+     COMPLEXITY_UPGRADE_ENABLED: bool = True  # 允许复杂消息升级到更强模型
+-    STANDARD_CHAT_FORCE_FAST_TIER: bool = True  # 标准对话首答强制走 FAST/Flash 层
++    STANDARD_CHAT_FORCE_FAST_TIER: bool = True  # 标准对话首答强制走 FAST/Flash 层（仅 standard 档，F-1 保留其性能取向）
++    # F-1：deep_analysis 档延迟逃生阀。False（默认）= deep_analysis 生成真实路由 MAX 层
++    # （deepseek_reason → deepseek-v4-pro，产品"深度规划"核心卖点）；True = 强制 FAST 层换首 token 延迟。
++    # 与免费层钳制正交：free 用户即使本开关为 False 仍会被钳到 ceiling（默认 fast）。
++    DEEP_ANALYSIS_FORCE_FAST_TIER: bool = False
+     FAST_INTERACTION_COPY_ENABLED: bool = True  # 澄清/确认文案优先由 FAST 模型生成
+     EARLY_ACK_PROGRESS_ENABLED: bool = True  # 编排开始前先推送即时状态确认
+ 
+diff --git a/backend/app/core/llm_security_wrapper.py b/backend/app/core/llm_security_wrapper.py
+index 5e605522..e7b88003 100755
+--- a/backend/app/core/llm_security_wrapper.py
++++ b/backend/app/core/llm_security_wrapper.py
+@@ -38,7 +38,12 @@ from collections.abc import AsyncGenerator
+ from dataclasses import dataclass
+ from typing import Any
+ 
+-from app.core.llm_monitoring import LLMMonitor
++from app.core.llm_monitoring import (
++    LLM_CALLS_TOTAL,
++    LLM_LATENCY_SECONDS,
++    TASK_FAILURES,
++    LLMMonitor,
++)
+ from app.core.llm_output_validator import LLMOutputValidator
+ from app.core.llm_quota import LLMCostGuard
+ from app.core.llm_safety import LLMSafetyService, SafetyCheckResult
+@@ -228,12 +233,15 @@ class LLMSecurityWrapper:
+         if not self.monitor:
+             return
+         try:
+-            self.monitor.LLM_CALLS_TOTAL.labels(
++            # F-2 修复：LLM_CALLS_TOTAL/LLM_LATENCY_SECONDS 是 llm_monitoring 的模块级
++            # 指标，并非 LLMMonitor 实例属性——原先经 self.monitor.X 访问触发
++            # AttributeError 且被下方 except 静默吞掉，导致整个监控记账成为 no-op。
++            LLM_CALLS_TOTAL.labels(
+                 model=model or "unknown",
+                 status=status,
+                 endpoint=endpoint,
+             ).inc()
+-            self.monitor.LLM_LATENCY_SECONDS.labels(
++            LLM_LATENCY_SECONDS.labels(
+                 model=model or "unknown",
+                 endpoint=endpoint,
+             ).observe(latency_seconds)
+@@ -251,7 +259,8 @@ class LLMSecurityWrapper:
+         if not self.monitor:
+             return
+         try:
+-            self.monitor.TASK_FAILURES.labels(
++            # F-2 修复：TASK_FAILURES 同为模块级指标（属性名漂移曾令本记账静默失效）
++            TASK_FAILURES.labels(
+                 task_type=endpoint,
+                 error_type=type(exc).__name__,
+             ).inc()
+diff --git a/backend/app/core/metrics.py b/backend/app/core/metrics.py
+index 8ba62a8e..86ba15b9 100755
+--- a/backend/app/core/metrics.py
++++ b/backend/app/core/metrics.py
+@@ -602,6 +602,16 @@ LLM_ROUTER_FREE_TIER_DOWNGRADE_TOTAL = get_or_create_metric(
+     ["agent_role", "from_tier", "to_tier"],
+ )
+ 
++# F-2：LLM 结构化输出（推送文案等）解析失败计数。stage=initial 首次解析失败
++# （触发一次"只输出 JSON"重试）；stage=retry 重试仍失败（本次调用落入静态降级
++# 文案）。用于消除"静默降级"：降级不再无遥测标记。
++LLM_PUSH_CONTENT_PARSE_FAILURE_TOTAL = get_or_create_metric(
++    Counter,
++    "sparkle_llm_push_content_parse_failure_total",
++    "Push-content LLM output JSON parse failures by stage (initial/retry)",
++    ["stage"],
++)
++
+ RUN_LEDGER_EVENT_TOTAL = get_or_create_metric(
+     Counter,
+     "sparkle_run_ledger_event_total",
+diff --git a/backend/app/services/llm_service.py b/backend/app/services/llm_service.py
+index 1d276b9b..0b56e754 100755
+--- a/backend/app/services/llm_service.py
++++ b/backend/app/services/llm_service.py
+@@ -8,6 +8,7 @@ from __future__ import annotations
+ 
+ import asyncio
+ import json
++import re
+ import uuid
+ from collections.abc import AsyncGenerator, AsyncIterator
+ from dataclasses import dataclass
+@@ -21,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
+ from app.config import settings
+ from app.core.agent_profiles import AgentRole, ModelTier, TaskType
+ from app.core.cost_controller import is_llm_within_budget, record_llm_cost
++from app.core.metrics import LLM_PUSH_CONTENT_PARSE_FAILURE_TOTAL
+ from app.core.llm_monitoring import LLMMonitor
+ from app.core.llm_router import LLMSelection, ModelProvider, llm_router
+ from app.core.llm_secure_io import (
+@@ -193,6 +195,48 @@ async def _track_daily_user_tokens(user_id: str | None, total_tokens: int) -> No
+         logger.debug("_track_daily_user_tokens: redis failed", exc_info=True)
+ 
+ 
++_FENCE_PATTERN = re.compile(r"```[a-zA-Z0-9_-]*[ \t]*\n?|```")
++
++
++def _extract_json_payload(text: str) -> str | None:
++    """从 LLM 输出中稳健提取 JSON 对象文本（F-2）。
++
++    处理三种常见形态：
++    1. markdown fence 包裹（```json ... ```，语言标注大小写/省略均可）
++    2. JSON 前后带解释性散文
++    3. 纯 JSON
++
++    返回首个花括号平衡的 JSON 对象字符串；无 JSON 时返回 None（空/纯文本）。
++    """
++    if not text or not text.strip():
++        return None
++    stripped = _FENCE_PATTERN.sub("", text).strip()
++    start = stripped.find("{")
++    if start < 0:
++        return None
++    depth = 0
++    in_string = False
++    escaped = False
++    for idx in range(start, len(stripped)):
++        ch = stripped[idx]
++        if in_string:
++            if escaped:
++                escaped = False
++            elif ch == "\\":
++                escaped = True
++            elif ch == '"':
++                in_string = False
++        elif ch == '"':
++            in_string = True
++        elif ch == "{":
++            depth += 1
++        elif ch == "}":
++            depth -= 1
++            if depth == 0:
++                return stripped[start : idx + 1]
++    return None
++
++
+ class LLMService:
+     """
+     LLM 服务 - 支持工具调用和动态模型选择
+@@ -1499,21 +1543,86 @@ class LLMService:
+ 
+         messages = [
+             {"role": "system", "content": system_prompt},
+-            {"role": "user", "content": "Generate push notification now."}
++            {"role": "user", "content": "Generate push notification now. Respond with a single JSON object like {\"title\": \"...\", \"body\": \"...\"}."}
+         ]
++        # F-2：重试时附加"只输出 JSON"修正提示（历史上模型常回 markdown fence/散文/空串，
++        # json.loads 直接抛 "Expecting value: line 1 column 1" 后静默降级硬编码文案）
++        _JSON_ONLY_CORRECTION = (
++            "上一次输出无法解析。请只输出一个 JSON 对象（形如 {\"title\": \"...\", \"body\": \"...\"}），"
++            "不要 markdown 代码块，不要任何解释文字，不要输出空内容。"
++        )
+ 
+-        try:
+-            with tracer.start_as_current_span("llm_generate_push") as span:
+-                span.set_attribute("llm.persona", persona)
+-                span.set_attribute("llm.trigger", trigger_type)
+-
+-                response_text = await self.chat(messages, temperature=0.8)
+-                cleaned_text = response_text.replace("```json", "").replace("```", "").strip()
+-                content = json.loads(cleaned_text)
+-                return content
+-        except Exception as e:
+-            logger.error(f"Failed to generate push content: {e}")
+-            return {"title": "学习提醒", "body": f"{user_nickname}，该复习了。"}
++        def _parse_push_content(raw: str) -> dict[str, str]:
++            payload = _extract_json_payload(raw)
++            if payload is None:
++                raise ValueError("no JSON object found in LLM output")
++            content = json.loads(payload)
++            if not isinstance(content, dict):
++                raise ValueError(f"expected JSON object, got {type(content).__name__}")
++            title = str(content.get("title") or "").strip()
++            body = str(content.get("body") or "").strip()
++            if not title or not body:
++                raise ValueError("push content JSON missing non-empty 'title'/'body'")
++            return {"title": title, "body": body}
++
++        def _record_parse_failure(stage: str, exc: Exception, raw: str) -> None:
++            try:
++                LLM_PUSH_CONTENT_PARSE_FAILURE_TOTAL.labels(stage=stage).inc()
++            except Exception:
++                logger.debug("push content parse-failure metric recording failed", exc_info=True)
++            logger.warning(
++                "generate_push_content: JSON parse failed at stage={} ({!r}); output preview={!r}",
++                stage,
++                exc,
++                (raw or "")[:200],
++            )
++
++        fallback_content = {"title": "学习提醒", "body": f"{user_nickname}，该复习了。"}
++        response_text = ""
++
++        with tracer.start_as_current_span("llm_generate_push") as span:
++            span.set_attribute("llm.persona", persona)
++            span.set_attribute("llm.trigger", trigger_type)
++
++            for attempt, correction in enumerate((None, _JSON_ONLY_CORRECTION)):
++                attempt_messages = messages
++                if correction is not None:
++                    attempt_messages = [
++                        *messages[:-1],
++                        {"role": "user", "content": f"{messages[-1]['content']}\n\n{correction}"},
++                    ]
++                try:
++                    response_text = await self.chat(attempt_messages, temperature=0.8)
++                except Exception as exc:
++                    # 调用层失败（网络/限流等）：允许重试一次，但不计入解析失败指标
++                    logger.warning("generate_push_content: LLM call failed at attempt={}: {!r}", attempt, exc)
++                    continue
++                try:
++                    return _parse_push_content(response_text)
++                except Exception as exc:
++                    stage = "initial" if attempt == 0 else "retry"
++                    _record_parse_failure(stage, exc, response_text)
++                    if attempt == 0:
++                        span.set_attribute("llm.push_parse_retry", True)
++                        continue
++                    # F-2：保留降级但不再静默——指标 + error 日志（含触发上下文）
++                    span.set_attribute("llm.push_fallback", True)
++                    logger.error(
++                        "generate_push_content: falling back to static copy after retry "
++                        "(persona={}, trigger={}, user={}, stages=initial+retry both failed)",
++                        persona,
++                        trigger_type,
++                        user_nickname,
++                    )
++                    return fallback_content
++            span.set_attribute("llm.push_fallback", True)
++            logger.error(
++                "generate_push_content: falling back to static copy (persona={}, trigger={}, user={}, reason=llm call failures)",
++                persona,
++                trigger_type,
++                user_nickname,
++            )
++            return fallback_content
+ 
+ # ==========================================
+ # 全局单例 - 向后兼容
+diff --git a/backend/tests/unit/test_deep_analysis_tier_routing.py b/backend/tests/unit/test_deep_analysis_tier_routing.py
+new file mode 100644
+index 00000000..aa472b75
+--- /dev/null
++++ b/backend/tests/unit/test_deep_analysis_tier_routing.py
+@@ -0,0 +1,178 @@
++"""
++deep_analysis 档真实路由 v4-pro（F-1）单元测试。
++
++红绿契约：
++- chat_mode=deep_analysis 的生成档决策默认落 MAX 层（deepseek_reason →
++  DEEPSEEK_REASON_MODEL=deepseek-v4-pro），不再被策略路由/首触快响静默压回 flash
++- DEEP_ANALYSIS_FORCE_FAST_TIER=True（延迟逃生阀）时退回 FAST 层（deepseek_flash）
++- standard 档语义不变：_deep_analysis_generation_tier 返回 None，
++  STANDARD_CHAT_FORCE_FAST_TIER 首触快响路径保持原样
++- 与免费层钳制正交：free 用户即使 deep_analysis 默认走 MAX，仍被钳到
++  ceiling（fast）并带 free_tier_downgrade 标记与指标
++"""
++from __future__ import annotations
++
++import pytest
++from prometheus_client import REGISTRY
++
++from app.config import settings
++from app.core.agent_profiles import AgentRole, ModelTier, TaskType
++from app.core.llm_router import (
++    LLMRouter,
++    reset_request_user_tier,
++    set_request_user_tier,
++)
++
++
++METRIC_FREE_DOWNGRADE = "sparkle_llm_router_free_tier_downgrade_total"
++
++
++@pytest.fixture
++def router() -> LLMRouter:
++    """Fresh LLMRouter instance (isolated health state)."""
++    return LLMRouter()
++
++
++@pytest.fixture(autouse=True)
++def _default_switch_off():
++    """保证默认关闭逃生阀（即 deep_analysis 真实路由 MAX）。"""
++    original = settings.DEEP_ANALYSIS_FORCE_FAST_TIER
++    settings.DEEP_ANALYSIS_FORCE_FAST_TIER = False
++    token = set_request_user_tier(None)
++    yield
++    settings.DEEP_ANALYSIS_FORCE_FAST_TIER = original
++    reset_request_user_tier(token)
++
++
++def _make_state(chat_mode: str, reasoning_mode: str = "balanced"):
++    """构造最小 WorkflowState（仅用到 context_data 的两个字段）。"""
++    from app.agents.standard_workflow import WorkflowState
++
++    return WorkflowState(
++        messages=[{"role": "user", "content": "帮我制定考研40天冲刺计划"}],
++        context_data={"chat_mode": chat_mode, "reasoning_mode": reasoning_mode},
++    )
++
++
++def _free_downgrade_count(labels: dict[str, str]) -> float:
++    value = REGISTRY.get_sample_value(METRIC_FREE_DOWNGRADE, labels)
++    return value or 0.0
++
++
++# ---------------------------------------------------------------------------
++# 档位决策（纯函数）
++# ---------------------------------------------------------------------------
++
++
++def test_deep_analysis_defaults_to_max_tier():
++    from app.agents.standard_workflow import _deep_analysis_generation_tier
++
++    assert _deep_analysis_generation_tier(_make_state("deep_analysis")) is ModelTier.MAX
++
++
++def test_deep_analysis_escape_hatch_returns_fast(monkeypatch: pytest.MonkeyPatch):
++    from app.agents.standard_workflow import _deep_analysis_generation_tier
++
++    monkeypatch.setattr(settings, "DEEP_ANALYSIS_FORCE_FAST_TIER", True)
++    assert _deep_analysis_generation_tier(_make_state("deep_analysis")) is ModelTier.FAST
++
++
++def test_standard_chat_mode_returns_none():
++    """standard 档不受影响：决策函数返回 None，保留首触快响/策略路由原语义。"""
++    from app.agents.standard_workflow import (
++        _deep_analysis_generation_tier,
++        _should_force_fast_first_touch,
++    )
++
++    state = _make_state("standard", reasoning_mode="fast")
++    assert _deep_analysis_generation_tier(state) is None
++    # standard + fast 首触快响语义保持不变（STANDARD_CHAT_FORCE_FAST_TIER=True）
++    assert getattr(settings, "STANDARD_CHAT_FORCE_FAST_TIER", True) is True
++    assert _should_force_fast_first_touch(
++        state, explicit_runtime=None, task_type=TaskType.STANDARD_RESPONSE
++    )
++
++
++# ---------------------------------------------------------------------------
++# 路由选择（selection 落 MAX 层 v4-pro）
++# ---------------------------------------------------------------------------
++
++
++def test_deep_analysis_selection_lands_v4_pro(router: LLMRouter):
++    """deep_analysis 生成 selection 必须落 MAX 层首选 deepseek_reason（v4-pro 位）。"""
++    state = _make_state("deep_analysis")
++    from app.agents.standard_workflow import (
++        _deep_analysis_generation_tier,
++        _resolve_generation_task_type,
++    )
++
++    tier = _deep_analysis_generation_tier(state)
++    assert tier is ModelTier.MAX
++
++    selection = router.select_model(
++        AgentRole.GENERATION,
++        task_type=_resolve_generation_task_type(state),
++        force_tier=tier,
++        reasoning_mode="balanced",
++        allow_max=tier == ModelTier.MAX,
++    )
++    assert selection.config.tier == ModelTier.MAX
++    assert selection.model_key == "deepseek_reason"  # DEEPSEEK_REASON_MODEL=deepseek-v4-pro
++    assert selection.free_tier_downgrade is False
++
++
++def test_deep_analysis_escape_hatch_selection_lands_flash(router: LLMRouter):
++    """逃生阀开启时 selection 退回 FAST 层 deepseek_fast（首 token 延迟取向）。"""
++    from app.agents.standard_workflow import (
++        _deep_analysis_generation_tier,
++        _resolve_generation_task_type,
++    )
++
++    settings.DEEP_ANALYSIS_FORCE_FAST_TIER = True
++    state = _make_state("deep_analysis")
++
++    tier = _deep_analysis_generation_tier(state)
++    assert tier is ModelTier.FAST
++
++    selection = router.select_model(
++        AgentRole.GENERATION,
++        task_type=_resolve_generation_task_type(state),
++        force_tier=tier,
++        reasoning_mode="balanced",
++        allow_max=tier == ModelTier.MAX,
++    )
++    assert selection.config.tier == ModelTier.FAST
++    assert selection.model_key == "deepseek_fast"
++
++
++# ---------------------------------------------------------------------------
++# 与免费层钳制的组合（正交性）
++# ---------------------------------------------------------------------------
++
++
++def test_free_user_deep_analysis_still_clamped_to_fast(router: LLMRouter):
++    """免费层钳制与 deep_analysis MAX 路由正交：free 用户仍被钳到 fast ceiling。"""
++    set_request_user_tier("free")
++    labels = {"agent_role": "generation", "from_tier": "max", "to_tier": "fast"}
++    before = _free_downgrade_count(labels)
++
++    from app.agents.standard_workflow import (
++        _deep_analysis_generation_tier,
++        _resolve_generation_task_type,
++    )
++
++    tier = _deep_analysis_generation_tier(_make_state("deep_analysis"))
++    assert tier is ModelTier.MAX  # 决策不受用户分层影响
++
++    selection = router.select_model(
++        AgentRole.GENERATION,
++        task_type=TaskType.DEEP_REASONING,
++        force_tier=tier,
++        reasoning_mode="balanced",
++        allow_max=tier == ModelTier.MAX,
++    )
++    assert selection.config.tier == ModelTier.FAST  # 但钳制仍生效
++    assert selection.model_key == "deepseek_fast"
++    assert selection.free_tier_downgrade is True
++    assert "free_tier_downgrade(max->fast)" in selection.reason
++    assert _free_downgrade_count(labels) == pytest.approx(before + 1)
+diff --git a/backend/tests/unit/test_push_content_parsing.py b/backend/tests/unit/test_push_content_parsing.py
+new file mode 100644
+index 00000000..067bbb03
+--- /dev/null
++++ b/backend/tests/unit/test_push_content_parsing.py
+@@ -0,0 +1,180 @@
++"""
++推送文案生成解析链（F-2）单元测试。
++
++红绿契约：
++- LLM 返回带 markdown fence 的 JSON → 稳健解析成功，单次调用即返回，无降级
++- LLM 返回散文包裹/空串/纯文本 → 以"只输出 JSON"修正提示重试一次 → 成功或降级
++- 两次均失败 → 保留静态降级文案，但必须留下遥测：
++  sparkle_llm_push_content_parse_failure_total{stage="initial"|"retry"} 自增 + error 日志
++- LLMSecurityWrapper 监控记账不再因 LLMMonitor 属性名漂移（LLM_CALLS_TOTAL 等
++  为模块级指标）而整体静默失效
++"""
++from __future__ import annotations
++
++import json
++
++import pytest
++from prometheus_client import REGISTRY
++
++from app.core.llm_security_wrapper import LLMSecurityWrapper, SecurityConfig
++from app.services.llm_service import LLMService, _extract_json_payload
++
++PARSE_FAILURE_METRIC = "sparkle_llm_push_content_parse_failure_total"
++
++
++def _stage_count(stage: str) -> float:
++    value = REGISTRY.get_sample_value(PARSE_FAILURE_METRIC, {"stage": stage})
++    return value or 0.0
++
++
++def _make_service() -> LLMService:
++    return LLMService(agent_role="generation", enable_dynamic_routing=True)
++
++
++# ---------------------------------------------------------------------------
++# _extract_json_payload：fence / 散文包裹 / 空串
++# ---------------------------------------------------------------------------
++
++
++def test_extract_json_from_markdown_fence():
++    raw = '```json\n{"title": "该复习啦", "body": "考研冲刺计划已就绪"}\n```'
++    payload = _extract_json_payload(raw)
++    assert payload is not None
++    assert json.loads(payload)["title"] == "该复习啦"
++
++
++def test_extract_json_from_prose_wrapped_output():
++    raw = '好的，这是你的推送文案：\n{"title": "冲刺提醒", "body": "还有 40 天，加油！"}\n祝学习顺利。'
++    payload = _extract_json_payload(raw)
++    assert payload is not None
++    assert json.loads(payload)["body"] == "还有 40 天，加油！"
++
++
++def test_extract_json_handles_braces_inside_strings_and_empty_input():
++    raw = '{"title": "复习 {冲} 刺", "body": "quote \\" ok"}'
++    assert json.loads(_extract_json_payload(raw))["title"] == "复习 {冲} 刺"
++    assert _extract_json_payload("") is None
++    assert _extract_json_payload("   \n  ") is None
++    assert _extract_json_payload("抱歉，我无法完成该请求。") is None
++
++
++# ---------------------------------------------------------------------------
++# generate_push_content：解析 → 重试 → 降级 + 指标
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.asyncio
++async def test_fenced_json_output_parses_on_first_call():
++    svc = _make_service()
++    calls: list[list[dict]] = []
++
++    async def fake_chat(messages, **kwargs):
++        calls.append(messages)
++        return '```json\n{"title": "40天冲刺", "body": "你的考研计划已生成，今天从极限开始。"}\n```'
++
++    svc.chat = fake_chat  # type: ignore[method-assign]
++
++    result = await svc.generate_push_content(
++        user_nickname="小燃", persona="coach", trigger_type="sprint",
++        context_data={"plan_name": "考研40天冲刺"},
++    )
++    assert result == {"title": "40天冲刺", "body": "你的考研计划已生成，今天从极限开始。"}
++    assert len(calls) == 1  # 单次调用即解析成功，无重试
++
++
++@pytest.mark.asyncio
++async def test_plain_text_retries_once_with_correction_hint_then_succeeds():
++    svc = _make_service()
++    seen_user_prompts: list[str] = []
++
++    async def fake_chat(messages, **kwargs):
++        seen_user_prompts.append(str(messages[-1]["content"]))
++        if len(seen_user_prompts) == 1:
++            return "抱歉，我需要更多信息才能生成推送内容。"  # 纯文本，无 JSON
++        return json.dumps({"title": "复习提醒", "body": "记忆节点临近衰减，现在巩固正当时。"})
++
++    svc.chat = fake_chat  # type: ignore[method-assign]
++
++    result = await svc.generate_push_content(
++        user_nickname="小燃", persona="mentor", trigger_type="memory",
++        context_data={"nodes": ["泰勒展开"]},
++    )
++    assert result["title"] == "复习提醒"
++    assert len(seen_user_prompts) == 2  # 恰好重试一次
++    assert "只输出一个 JSON 对象" in seen_user_prompts[1]  # 重试带修正提示
++
++
++@pytest.mark.asyncio
++async def test_double_failure_keeps_fallback_but_records_metrics_and_logs():
++    svc = _make_service()
++
++    async def fake_chat(messages, **kwargs):
++        return "这是一段完全不含 JSON 的解释性文本。"
++
++    svc.chat = fake_chat  # type: ignore[method-assign]
++
++    initial_before = _stage_count("initial")
++    retry_before = _stage_count("retry")
++
++    result = await svc.generate_push_content(
++        user_nickname="小燃", persona="coach", trigger_type="inactivity",
++        context_data={},
++    )
++    assert result == {"title": "学习提醒", "body": "小燃，该复习了。"}  # 降级保留
++    assert _stage_count("initial") == pytest.approx(initial_before + 1)
++    assert _stage_count("retry") == pytest.approx(retry_before + 1)
++
++
++@pytest.mark.asyncio
++async def test_empty_output_retries_once_and_fenced_retry_wins():
++    """空串（评测中 'Expecting value: line 1 column 1' 的典型来源）也触发重试。"""
++    svc = _make_service()
++    responses = ["", '```JSON\n{"title": "回来学习", "body": "超过24小时没打卡了，星星等你。"}\n```']
++
++    async def fake_chat(messages, **kwargs):
++        return responses.pop(0)
++
++    svc.chat = fake_chat  # type: ignore[method-assign]
++
++    result = await svc.generate_push_content(
++        user_nickname="小燃", persona="friend", trigger_type="inactivity",
++        context_data={},
++    )
++    assert result == {"title": "回来学习", "body": "超过24小时没打卡了，星星等你。"}
++    assert not responses  # 恰好消耗两次调用
++
++
++# ---------------------------------------------------------------------------
++# LLMMonitor 属性名漂移修复
++# ---------------------------------------------------------------------------
++
++
++def test_security_wrapper_monitor_recording_no_longer_noop():
++    """修复前：self.monitor.LLM_CALLS_TOTAL 触发 AttributeError 被 except 吞掉，
++    llm_calls_total 样本永不增长。修复后必须真实记账。"""
++    wrapper = LLMSecurityWrapper(
++        llm_service=object(),
++        redis_client=None,
++        config=SecurityConfig(enable_quota_check=False, enable_monitoring=True),
++    )
++    assert wrapper.monitor is not None
++
++    model = "drift-check-model"
++    status = "success"
++    endpoint = "drift_probe"
++    labels = {"model": model, "status": status, "endpoint": endpoint}
++    before = REGISTRY.get_sample_value("llm_calls_total", labels) or 0.0
++
++    wrapper._record_call_metrics(
++        endpoint=endpoint, model=model, status=status,
++        latency_seconds=0.01, input_text="hello", output_text="world",
++    )
++
++    after = REGISTRY.get_sample_value("llm_calls_total", labels) or 0.0
++    assert after == pytest.approx(before + 1)
++
++    failure_labels = {"task_type": endpoint, "error_type": "ValueError"}
++    before_fail = REGISTRY.get_sample_value("llm_task_failures_total", failure_labels) or 0.0
++    wrapper._record_call_failure(endpoint=endpoint, model=model, exc=ValueError("boom"))
++    after_fail = REGISTRY.get_sample_value("llm_task_failures_total", failure_labels) or 0.0
++    assert after_fail == pytest.approx(before_fail + 1)
+diff --git a/backend/tests/unit/test_standard_workflow_generation_routing.py b/backend/tests/unit/test_standard_workflow_generation_routing.py
+index 61c608c8..01f0c6fc 100644
+--- a/backend/tests/unit/test_standard_workflow_generation_routing.py
++++ b/backend/tests/unit/test_standard_workflow_generation_routing.py
+@@ -482,8 +482,12 @@ def test_personalized_deep_analysis_keeps_full_context():
+ async def test_generation_node_batches_stream_deltas(monkeypatch):
+     fake_llm = _ChunkedGenerationLLM()
+     get_llm_mock = AsyncMock(return_value=fake_llm)
++    get_tier_mock = AsyncMock(return_value=fake_llm)
+     stream_callback = AsyncMock()
+     monkeypatch.setattr("app.agents.standard_workflow.get_configured_llm_service", get_llm_mock)
++    # F-1：deep_analysis 生成改走 get_configured_llm_service_for_tier（MAX 层 v4-pro），
++    # 本测关注 delta 合帧行为，按同文件相邻用例模式一并 mock tier 路由。
++    monkeypatch.setattr("app.agents.standard_workflow.get_configured_llm_service_for_tier", get_tier_mock)
+     monkeypatch.setattr("app.agents.standard_workflow.build_system_prompt", lambda *args, **kwargs: "SYSTEM")
+ 
+     state = WorkflowState(
+diff --git "a/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/README.md" "b/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/README.md"
+index 0be4f87d..030b05f9 100644
+--- "a/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/README.md"
++++ "b/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/README.md"
+@@ -3,7 +3,7 @@
+ 按轮次组织的全系统审查与修复记录。每轮 8 个并行审查员（切片互不重叠）+ 修复波（多修复员并行）。
+ 
+ - `round1/` — 第一轮（基线 90daac8a，2026-09-18）：8 份审查报告（01 引擎编排/02 规划执行/03 关键服务/04 引擎基建/05 网关/06 移动核心/07 移动长尾/08 契约安全），`0N-fixes.md` 为对应修复波记录。
+-- `round2/` — 第二轮复审（基线 ca86bda8，R1 修复已集成）：修复验证 + 运行时/集成视角复审 + 移交专项；`0N-r2-fixes.md`/`0N-r2-fixes.patch` 为对应修复波记录与 diff 快照；`m6-09-interrupt-preserve.md`/`.patch` 为 M6-09「流式取消=中断保留」产品决策的移动端落地记录；`schema-consistency-audit.md`/`.patch` 为 ORM ↔ 迁移链 ↔ 网关快照三方一致性专项（gfix02 + 单头守卫 + 快照重放）；`engine-restore-storm.md`/`.patch` 为会话恢复风暴专项（同步 send_task 冻结事件循环根因 + single-flight/并发钳制/异步投递修复 + 20 并发红绿压测）。
++- `round2/` — 第二轮复审（基线 ca86bda8，R1 修复已集成）：修复验证 + 运行时/集成视角复审 + 移交专项；`0N-r2-fixes.md`/`0N-r2-fixes.patch` 为对应修复波记录与 diff 快照；`m6-09-interrupt-preserve.md`/`.patch` 为 M6-09「流式取消=中断保留」产品决策的移动端落地记录；`schema-consistency-audit.md`/`.patch` 为 ORM ↔ 迁移链 ↔ 网关快照三方一致性专项（gfix02 + 单头守卫 + 快照重放）；`engine-restore-storm.md`/`.patch` 为会话恢复风暴专项（同步 send_task 冻结事件循环根因 + single-flight/并发钳制/异步投递修复 + 20 并发红绿压测）；`llm-semantics-f1f2.md`/`.patch`（基线 b97a0674）为 AI 功能评测 F-1/F-2 修复（deep_analysis 档真实路由 v4-pro + `DEEP_ANALYSIS_FORCE_FAST_TIER` 逃生阀、推送文案 JSON 稳健解析 + 重试 + 降级遥测、LLMMonitor 属性漂移修复）。
+ - `漏洞台账.md` — 两轮全量发现的清零追踪表（唯一权威状态源）。
+ 
+ 切片边界：splash/onboarding/auth/home/chat/task/settings 归 06，其余 35 个 features 归 07；`gen/` 生成物只对照不审。
+diff --git "a/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/llm-semantics-f1f2.md" "b/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/llm-semantics-f1f2.md"
+new file mode 100644
+index 00000000..d02b05d6
+--- /dev/null
++++ "b/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/llm-semantics-f1f2.md"
+@@ -0,0 +1,131 @@
++# LLM 路由语义修复（F-1：deep_analysis 真实触达 v4-pro）+ 推送解析修复（F-2：静默降级消除）
++
++- 实现员：LLM 路由语义与推送解析修复员（sysrev wt6）
++- 工作树：`/Users/brsama/code/GitHub/Sparkle-sysrev/wt6`（b97a0674，未 commit）
++- 日期：2026-09-19
++- 补丁：[llm-semantics-f1f2.patch](llm-semantics-f1f2.patch)（`git add -A && git diff --cached` 产物；`backend/.env` 为 gitignored，未入库未入补丁）
++- 验证协议：pytest 定向（`SECRET_KEY=rule-guard-secret-0123456789abcdef JWT_SECRET=rule-guard-jwt-0123456789abcdef REDIS_URL=redis://:sparkle_dev_redis_2026@localhost:6379/1`），禁全量；WS 真实调用 3 次（预算 ≤3）；验证期以主仓同款方式重启引擎（`run_grpc_with_env.sh` + `uvicorn --env-file .env`），验证完已按原方式恢复主仓引擎并确认 :50051/:8000/:8080 全部在位
++- 评测输入：`docs/competition/2026-tmall-hackathon/多端实测/ai-functions-real-eval.md` F-1 / F-2 节
++
++---
++
++## 0. 总览
++
++| 挂账项 | 定性 | 修复 |
++|---|---|---|
++| **F-1**（P2）v4-pro 从未被触达，「reason 档」现网不存在 | **临时性能妥协的语义外溢**：开关本意是 standard 档首答 TTFB 优化，但 deep_analysis 档没有任何一条路径通向 MAX 层，产品核心卖点「深度规划」实际与 standard 同级 | `chat_mode=deep_analysis` 生成阶段显式决策：默认强制 **MAX 层**（deepseek_reason → deepseek-v4-pro）；新增延迟逃生阀 `DEEP_ANALYSIS_FORCE_FAST_TIER`（默认 False=真实路由 v4-pro）；standard 档首触快响语义原样保留 |
++| **F-2**（P2）推送文案 LLM 输出 JSON 解析失败 → 静默降级硬编码「学习提醒/该复习了」 | 解析脆弱（naive replace 处理不了散文包裹/空串/异形 fence）+ 无重试 + 无遥测；附带 `LLMMonitor` 属性名漂移导致整个 wrapper 监控记账恒为 no-op | fence 稳健剥离 + 首个平衡 JSON 对象提取；失败后带「只输出 JSON」修正提示重试一次；仍失败保留降级但记 Prometheus 指标 + error 日志；修复监控漂移 |
++
++红绿结果：**新增 14 项单测全绿（red 状态实证：6 errors / collection error）**；定向回归 173 passed，3 个失败经 pristine b97a0674 对照实证为**基线已有问题（测试隔离脆弱），与本改动无关**。真实调用验证：引擎日志实证 `generation → deepseek-v4-pro (强制tier=max [$0.0080/1k, tier=max])`。
++
++---
++
++## 1. F-1 溯源结论
++
++### 1.1 开关从哪来
++
++`STANDARD_CHAT_FORCE_FAST_TIER: bool = True`（settings.py:605）在**仓库清理重启后的 initial commit（1722e6dc）**中即存在；真实引入点经本地镜像备份仓 `~/code/GitHub/Sparkle-archive-20260915/mirror-backup.git` 追溯到 **f4aed946e（2026-03-20，"AI系统全链路修复1.0 目前还需完善"）**，与同批引入的 `FAST_INTERACTION_COPY_ENABLED`、`EARLY_ACK_PROGRESS_ENABLED` 同组——**这是一组首 token 延迟（TTFB）优化开关**，注释原文「标准对话首答强制走 FAST/Flash 层」。docs 侧佐证：`first-token-latency.md`、`V3规划输入-项目全景.md` 均把 `force_fast_first_touch`/ModelTier.FAST 机制记为「轻量消息走非 reasoning 快档」的既定缓解手段。
++
++### 1.2 定性：性能妥协，非语义错误——但外溢成了语义缺失
++
++代码本身只作用于 standard 档（`_should_force_fast_first_touch` 要求 `task_type == STANDARD_RESPONSE` 且 `chat_mode == "standard"`），对 deep_analysis 并不直接生效。**真正的问题在路由链本身**：deep_analysis 的生成选择走 `get_configured_llm_service(generation, DEEP_REASONING, reasoning_mode)` → `select_model` → `_select_by_policy`：
++
++- `_preferred_tiers_for_reasoning_mode` 对 deep+DEEP_REASONING 给出 `[PRO, PLUS, STANDARD]`，**MAX 层只有在 `allow_max=True` 时才追加且永远排在链尾**；而该路径（`switch_model_for_task`）从不传 `allow_max=True`；
++- generation 的 `AgentModelPolicy`（preferred_tier=STANDARD，preferred_models=dashscope_chat/deepseek_chat）把候选锁在 STANDARD 层；
++- MAX 层唯一映射 `deepseek_reason`（= `DEEPSEEK_REASON_MODEL=deepseek-v4-pro`）在 deep_analysis 全链路 0 个入口可达。
++
++结论：**保留**该开关对 standard 档的 TTFB 价值（性能取向成立）；deep_analysis 档缺 MAX 入口属于路由语义缺失，需要修复而非回滚。
++
++---
++
++## 2. F-1 修复实现
++
++### 2.1 `app/config/settings.py`
++
++```python
++STANDARD_CHAT_FORCE_FAST_TIER: bool = True  # 仅 standard 档，F-1 保留其性能取向
++DEEP_ANALYSIS_FORCE_FAST_TIER: bool = False  # 逃生阀：True=强制 FAST 换首 token 延迟；False=真实路由 MAX（v4-pro）
++```
++
++### 2.2 `app/agents/standard_workflow.py`
++
++- 新增纯函数决策 `_deep_analysis_generation_tier(state)`：`chat_mode == "deep_analysis"` 时按开关返回 `ModelTier.MAX`（默认）或 `ModelTier.FAST`（逃生阀）；其余 chat_mode 返回 None（完全不影响 standard/study_plan/error_diagnosis）。
++- `generation_node` 的 LLM 选择链中，该决策插在 **explicit expert（用户显式指定专家）之后、phase_d 成本带偏好与首触快响之前**——用户显式选择「深度分析」档是产品级意图，capability selection 的成本带偏好（`phase_d_forced_model_tier`）不得静默降档。命中后经 `get_configured_llm_service_for_tier(..., ModelTier.MAX, ...)`（其内部 `allow_max=force_tier==MAX`）路由，`state.context_data["deep_analysis_model_tier"]` 留观测标记。
++- **与免费层钳制正交**：`select_model` 的 free-clamp（步骤 2.6）在 force_tier 之后仍生效，free 用户 deep_analysis 请求照样被钳到 ceiling（fast）并带 `free_tier_downgrade(max->fast)` 标记。
++
++### 2.3 修复前后对照（离线直调，.env 真实配置）
++
++| 路径 | 修复前 | 修复后 |
++|---|---|---|
++| deep_analysis 生成（balanced/deep） | `glm_4_7_plus`（plus 层）或 `deepseek_chat`（standard 层，模型名 deepseek-flash）——**永不到 MAX** | `deepseek_reason`（max 层，**deepseek-v4-pro**） |
++| deep_analysis + `DEEP_ANALYSIS_FORCE_FAST_TIER=True` | — | `deepseek_fast`（flash，逃生阀） |
++| deep_analysis + free 用户 | flash（被钳） | 仍钳 fast：`free_tier_downgrade(max->fast)` + 指标自增 |
++| standard 档首触 fast | `强制tier=fast`（原样） | 原样（`_deep_analysis_generation_tier` 返回 None） |
++
++---
++
++## 3. F-2 修复实现
++
++### 3.1 `app/services/llm_service.py` — `generate_push_content` 解析链
++
++- 新增 `_extract_json_payload(text)`：先剥 markdown fence（语言标注大小写/省略均兼容），再从剩余文本中提取**首个花括号平衡的 JSON 对象**（字符串内 `{}`/引号/转义感知）。覆盖评测发现的三种失败形态：空串（`Expecting value: line 1 column 1`）、散文包裹、异形 fence。
++- 解析失败（含缺 title/body、非 dict）→ 记 `stage=initial` 指标 + warning 日志（带输出 preview）→ **以「只输出一个 JSON 对象…不要 markdown 代码块/解释文字」修正提示重试恰好一次**；
++- 重试仍失败 → `stage=retry` 指标 + **error 日志（persona/trigger/user 上下文齐全，不再静默）** + 保留原静态降级文案；
++- LLM 调用层异常（网络等）单独分支：可重试一次但不计入解析失败指标，避免遥测语义混淆；系统 prompt 与首条 user 消息同步声明「Respond with a single JSON object」，降低首试失败率。
++- 新指标：`sparkle_llm_push_content_parse_failure_total{stage=initial|retry}`（`app/core/metrics.py`）。
++
++### 3.2 `app/core/llm_security_wrapper.py` — LLMMonitor 属性名漂移
++
++`LLM_CALLS_TOTAL` / `LLM_LATENCY_SECONDS` / `TASK_FAILURES` 是 `llm_monitoring` 的**模块级**指标而非 `LLMMonitor` 实例属性；`_record_call_metrics` 首行即抛 `AttributeError` 且被自身 `except` 吞掉——**整个 wrapper 的调用记账（含成本估算）一直是 no-op**。修复：直接从模块导入三个指标使用，`self.monitor.estimate_and_record_cost` 等实例方法保持不变。评测报告捕获的 `LLMMonitor object has no attribute 'LLM_CALLS_TOTAL'` 即此。
++
++---
++
++## 4. 红-绿验证（pytest 定向）
++
++新增测试：
++
++| 文件 | 覆盖 |
++|---|---|
++| `backend/tests/unit/test_deep_analysis_tier_routing.py`（6 项） | 决策函数默认 MAX / 逃生阀 FAST / standard 返回 None 且首触快响原样；selection 落 `deepseek_reason`（v4-pro 位）/ 逃生阀落 `deepseek_fast`；**组合测试**：free 用户 deep_analysis 决策仍为 MAX 但 selection 被钳 fast + `free_tier_downgrade` 标记 + 指标自增 |
++| `backend/tests/unit/test_push_content_parsing.py`（8 项） | fence JSON 单次解析成功；纯文本→重试一次（修正提示在 payload 中）→成功；两次纯文本→降级文案保留 + `initial`/`retry` 指标各自增；空串→重试→`JSON` 成功；散文包裹提取；**监控漂移**：`_record_call_metrics`/`_record_call_failure` 后 `llm_calls_total`/`llm_task_failures_total` 样本真实自增 |
++
++红实证：stash 生产改动后，F-1 套件 6 errors（决策函数不存在）、F-2 套件 collection error（`_extract_json_payload` 不存在）；恢复后全绿。
++
++绿：**14/14 passed**。定向回归（free_tier、generation_routing、llm_security_wrapper×3、router_policy、llm_parser、llm_service_streaming、stage38_d3_persistence）：**173 passed / 3 failed**，3 个失败（`test_generation_node_batches_stream_deltas` + free_tier 两个 `test_streamchat_entry_*`）在 **pristine b97a0674 同组合下完全一致复现**，为基线测试隔离脆弱，非本改动引入。其中 `test_generation_node_batches_stream_deltas` 单测意图（delta 合批）按其同文件相邻用例模式补充 mock `get_configured_llm_service_for_tier` 以适配 deep_analysis 新路由（该用例在 pristine 单跑同样红）。
++
++---
++
++## 5. 真实调用验证（WS 全链路，预算内 3 次）
++
++以主仓同款方式将引擎切换到 wt6 代码（`bash backend/scripts/run_grpc_with_env.sh` + `uvicorn app.main:app --env-file .env`，确认 :50051/:8000 监听、cwd=wt6/backend），经网关 :8080 走 游客token → `/api/v1/ws/ticket` → `ws://…/ws/chat?ticket=` 全链路：
++
++| # | 消息 | 结果 |
++|---|---|---|
++| 1 | deep_analysis + 信息不足（「制定考研40天冲刺计划」） | 通，但 clarify 阶段短路追问（缺每日时长），未到 generation——与评测 F-1 现象同源；`orchestrator 强制tier=fast` 为澄清文案的既定设计（`FAST_INTERACTION_COPY_ENABLED`） |
++| 2 | deep_analysis + intent=plan 富信息消息 | 状态图在 `execution_review` 节点崩（`dictionary keys changed during iteration`，`statechart_engine._merge_context_data` 对别名 dict 迭代中删除——**基线已有缺陷**，与本次改动无关，generation 因 plan-intent 走工具执行被跳过）；已记入 §7 遗留 |
++| 3 | deep_analysis + 分析型消息（记忆/认知科学三角度） | **✅ 全链路通**：1716 字回答完整流出，引擎日志实证（`logs/grpc_server_2026-09-19_00-22-00_288376.log:577`）：`📍 Executing node: generation` → **`[LLMRouter] generation → deepseek-v4-pro (强制tier=max [$0.0080/1k, tier=max])`** → 首块 1565ms（type=reasoning，v4-pro 思考流）→ `generation_review` 审校 1716 chars |
++
++**「reason 档不存在」的现网事实已被推翻：deep_analysis 档真实路由 v4-pro。** 验证完引擎已按原方式切回主仓代码，:50051/:8000/:8080 全部确认在位。
++
++---
++
++## 6. 变更清单
++
++```
++M  backend/app/config/settings.py                                # DEEP_ANALYSIS_FORCE_FAST_TIER（默认 False）+ 注释
++M  backend/app/agents/standard_workflow.py                      # _deep_analysis_generation_tier + generation_node 决策分支
++M  backend/app/services/llm_service.py                          # _extract_json_payload + generate_push_content 解析/重试/遥测链
++M  backend/app/core/llm_security_wrapper.py                     # LLMMonitor 属性名漂移修复（模块级指标直用）
++M  backend/app/core/metrics.py                                  # sparkle_llm_push_content_parse_failure_total
++M  backend/tests/unit/test_standard_workflow_generation_routing.py  # 合批用例适配新路由（补 mock，意图不变）
++A  backend/tests/unit/test_deep_analysis_tier_routing.py        # F-1 红绿 6 项
++A  backend/tests/unit/test_push_content_parsing.py              # F-2 红绿 8 项
++A  docs/competition/2026-tmall-hackathon/系统审查/round2/llm-semantics-f1f2.md + .patch
++```
++
++## 7. 遗留与建议（本次不动）
++
++1. **`execution_review` 别名 dict 崩溃**（`statechart_engine.py:116 _merge_context_data`，plan-intent 的 deep_analysis 消息可稳定触发裸 internal error）：节点返回的 `context_data` 与图状态同对象时，迭代中 `del` 必崩。建议 `_merge_context_data` 入口对 `new_data is target` 做防御（跳过或拷贝），或审计 `review_nodes` 返回值别名——独立挂账。
++2. plan-intent 的 deep_analysis 消息会绕过 generation（LangGraph plan → 工具执行），属于规划档正确行为，但意味着 deep_analysis 的「深度回答」与「计划生成」按 intent 分流——产品口径可明确。
++3. `test_generation_node_batches_stream_deltas` 与 free_tier 两个 `test_streamchat_entry_*` 的基线隔离脆弱（组合跑互相污染）建议独立修复。
++4. v4-pro 首块延迟实测约 1.6s（reasoning 首 chunk），若逃生阀仍不够可再评估澄清文案与深度回答的分层提示。

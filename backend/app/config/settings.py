@@ -602,7 +602,11 @@ class Settings(BaseSettings):
     COMPLEXITY_ROUTING_ENABLED: bool = True  # 总开关
     COMPLEXITY_DOWNGRADE_ENABLED: bool = True  # 允许简单消息降级到更便宜模型
     COMPLEXITY_UPGRADE_ENABLED: bool = True  # 允许复杂消息升级到更强模型
-    STANDARD_CHAT_FORCE_FAST_TIER: bool = True  # 标准对话首答强制走 FAST/Flash 层
+    STANDARD_CHAT_FORCE_FAST_TIER: bool = True  # 标准对话首答强制走 FAST/Flash 层（仅 standard 档，F-1 保留其性能取向）
+    # F-1：deep_analysis 档延迟逃生阀。False（默认）= deep_analysis 生成真实路由 MAX 层
+    # （deepseek_reason → deepseek-v4-pro，产品"深度规划"核心卖点）；True = 强制 FAST 层换首 token 延迟。
+    # 与免费层钳制正交：free 用户即使本开关为 False 仍会被钳到 ceiling（默认 fast）。
+    DEEP_ANALYSIS_FORCE_FAST_TIER: bool = False
     FAST_INTERACTION_COPY_ENABLED: bool = True  # 澄清/确认文案优先由 FAST 模型生成
     EARLY_ACK_PROGRESS_ENABLED: bool = True  # 编排开始前先推送即时状态确认
 

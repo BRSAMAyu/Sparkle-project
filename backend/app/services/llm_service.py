@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import uuid
 from collections.abc import AsyncGenerator, AsyncIterator
 from dataclasses import dataclass
@@ -21,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.core.agent_profiles import AgentRole, ModelTier, TaskType
 from app.core.cost_controller import is_llm_within_budget, record_llm_cost
+from app.core.metrics import LLM_PUSH_CONTENT_PARSE_FAILURE_TOTAL
 from app.core.llm_monitoring import LLMMonitor
 from app.core.llm_router import LLMSelection, ModelProvider, llm_router
 from app.core.llm_secure_io import (
@@ -191,6 +193,48 @@ async def _track_daily_user_tokens(user_id: str | None, total_tokens: int) -> No
             await r.expire(redis_key, 48 * 3600)
     except Exception:
         logger.debug("_track_daily_user_tokens: redis failed", exc_info=True)
+
+
+_FENCE_PATTERN = re.compile(r"```[a-zA-Z0-9_-]*[ \t]*\n?|```")
+
+
+def _extract_json_payload(text: str) -> str | None:
+    """从 LLM 输出中稳健提取 JSON 对象文本（F-2）。
+
+    处理三种常见形态：
+    1. markdown fence 包裹（```json ... ```，语言标注大小写/省略均可）
+    2. JSON 前后带解释性散文
+    3. 纯 JSON
+
+    返回首个花括号平衡的 JSON 对象字符串；无 JSON 时返回 None（空/纯文本）。
+    """
+    if not text or not text.strip():
+        return None
+    stripped = _FENCE_PATTERN.sub("", text).strip()
+    start = stripped.find("{")
+    if start < 0:
+        return None
+    depth = 0
+    in_string = False
+    escaped = False
+    for idx in range(start, len(stripped)):
+        ch = stripped[idx]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == '"':
+                in_string = False
+        elif ch == '"':
+            in_string = True
+        elif ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return stripped[start : idx + 1]
+    return None
 
 
 class LLMService:
@@ -1499,21 +1543,86 @@ class LLMService:
 
         messages = [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": "Generate push notification now."}
+            {"role": "user", "content": "Generate push notification now. Respond with a single JSON object like {\"title\": \"...\", \"body\": \"...\"}."}
         ]
+        # F-2：重试时附加"只输出 JSON"修正提示（历史上模型常回 markdown fence/散文/空串，
+        # json.loads 直接抛 "Expecting value: line 1 column 1" 后静默降级硬编码文案）
+        _JSON_ONLY_CORRECTION = (
+            "上一次输出无法解析。请只输出一个 JSON 对象（形如 {\"title\": \"...\", \"body\": \"...\"}），"
+            "不要 markdown 代码块，不要任何解释文字，不要输出空内容。"
+        )
 
-        try:
-            with tracer.start_as_current_span("llm_generate_push") as span:
-                span.set_attribute("llm.persona", persona)
-                span.set_attribute("llm.trigger", trigger_type)
+        def _parse_push_content(raw: str) -> dict[str, str]:
+            payload = _extract_json_payload(raw)
+            if payload is None:
+                raise ValueError("no JSON object found in LLM output")
+            content = json.loads(payload)
+            if not isinstance(content, dict):
+                raise ValueError(f"expected JSON object, got {type(content).__name__}")
+            title = str(content.get("title") or "").strip()
+            body = str(content.get("body") or "").strip()
+            if not title or not body:
+                raise ValueError("push content JSON missing non-empty 'title'/'body'")
+            return {"title": title, "body": body}
 
-                response_text = await self.chat(messages, temperature=0.8)
-                cleaned_text = response_text.replace("```json", "").replace("```", "").strip()
-                content = json.loads(cleaned_text)
-                return content
-        except Exception as e:
-            logger.error(f"Failed to generate push content: {e}")
-            return {"title": "学习提醒", "body": f"{user_nickname}，该复习了。"}
+        def _record_parse_failure(stage: str, exc: Exception, raw: str) -> None:
+            try:
+                LLM_PUSH_CONTENT_PARSE_FAILURE_TOTAL.labels(stage=stage).inc()
+            except Exception:
+                logger.debug("push content parse-failure metric recording failed", exc_info=True)
+            logger.warning(
+                "generate_push_content: JSON parse failed at stage={} ({!r}); output preview={!r}",
+                stage,
+                exc,
+                (raw or "")[:200],
+            )
+
+        fallback_content = {"title": "学习提醒", "body": f"{user_nickname}，该复习了。"}
+        response_text = ""
+
+        with tracer.start_as_current_span("llm_generate_push") as span:
+            span.set_attribute("llm.persona", persona)
+            span.set_attribute("llm.trigger", trigger_type)
+
+            for attempt, correction in enumerate((None, _JSON_ONLY_CORRECTION)):
+                attempt_messages = messages
+                if correction is not None:
+                    attempt_messages = [
+                        *messages[:-1],
+                        {"role": "user", "content": f"{messages[-1]['content']}\n\n{correction}"},
+                    ]
+                try:
+                    response_text = await self.chat(attempt_messages, temperature=0.8)
+                except Exception as exc:
+                    # 调用层失败（网络/限流等）：允许重试一次，但不计入解析失败指标
+                    logger.warning("generate_push_content: LLM call failed at attempt={}: {!r}", attempt, exc)
+                    continue
+                try:
+                    return _parse_push_content(response_text)
+                except Exception as exc:
+                    stage = "initial" if attempt == 0 else "retry"
+                    _record_parse_failure(stage, exc, response_text)
+                    if attempt == 0:
+                        span.set_attribute("llm.push_parse_retry", True)
+                        continue
+                    # F-2：保留降级但不再静默——指标 + error 日志（含触发上下文）
+                    span.set_attribute("llm.push_fallback", True)
+                    logger.error(
+                        "generate_push_content: falling back to static copy after retry "
+                        "(persona={}, trigger={}, user={}, stages=initial+retry both failed)",
+                        persona,
+                        trigger_type,
+                        user_nickname,
+                    )
+                    return fallback_content
+            span.set_attribute("llm.push_fallback", True)
+            logger.error(
+                "generate_push_content: falling back to static copy (persona={}, trigger={}, user={}, reason=llm call failures)",
+                persona,
+                trigger_type,
+                user_nickname,
+            )
+            return fallback_content
 
 # ==========================================
 # 全局单例 - 向后兼容

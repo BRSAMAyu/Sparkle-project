@@ -122,6 +122,24 @@ def _phase_d_forced_model_tier(state: WorkflowState) -> ModelTier | None:
         return None
 
 
+def _deep_analysis_generation_tier(state: WorkflowState) -> ModelTier | None:
+    """deep_analysis 档生成层的显式决策（F-1）。
+
+    deep_analysis 是产品"深度规划"档位，默认必须真实路由 MAX 层
+    （deepseek_reason → deepseek-v4-pro），不再被 Agent 策略路由/成本带
+    偏好静默压回 flash（v4-pro 对应 MAX 层的 deepseek_reason）。
+    DEEP_ANALYSIS_FORCE_FAST_TIER=True 时作为首 token 延迟逃生阀退回
+    FAST 层。standard 档首触快响（STANDARD_CHAT_FORCE_FAST_TIER）语义
+    不变；免费层钳制在 llm_router 内仍然生效（正交）。
+    """
+    chat_mode = str(state.context_data.get("chat_mode", "standard")).strip().lower()
+    if chat_mode != "deep_analysis":
+        return None
+    if getattr(settings, "DEEP_ANALYSIS_FORCE_FAST_TIER", False):
+        return ModelTier.FAST
+    return ModelTier.MAX
+
+
 def _build_minimal_user_context_for_grounded_synthesis(user_context: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(user_context, dict):
         return {}
@@ -1402,8 +1420,19 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
             generation_llm = explicit_runtime["service"]
             agent_role = explicit_runtime["agent_role"].value
         else:
+            # F-1：deep_analysis 档优先于 phase_d/首触快响决策——用户显式选择
+            # 深度分析档位时必须真实路由 MAX 层（v4-pro），成本带偏好不得静默降档。
+            deep_analysis_tier = _deep_analysis_generation_tier(state)
             forced_phase_d_tier = _phase_d_forced_model_tier(state)
-            if forced_phase_d_tier is not None:
+            if deep_analysis_tier is not None:
+                generation_llm = await get_configured_llm_service_for_tier(
+                    agent_role,
+                    deep_analysis_tier,
+                    task_type=task_type,
+                    reasoning_mode=reasoning_mode,
+                )
+                state.context_data["deep_analysis_model_tier"] = deep_analysis_tier.value
+            elif forced_phase_d_tier is not None:
                 generation_llm = await get_configured_llm_service_for_tier(
                     agent_role,
                     forced_phase_d_tier,

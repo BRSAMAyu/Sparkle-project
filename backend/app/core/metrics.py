@@ -602,6 +602,16 @@ LLM_ROUTER_FREE_TIER_DOWNGRADE_TOTAL = get_or_create_metric(
     ["agent_role", "from_tier", "to_tier"],
 )
 
+# F-2：LLM 结构化输出（推送文案等）解析失败计数。stage=initial 首次解析失败
+# （触发一次"只输出 JSON"重试）；stage=retry 重试仍失败（本次调用落入静态降级
+# 文案）。用于消除"静默降级"：降级不再无遥测标记。
+LLM_PUSH_CONTENT_PARSE_FAILURE_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_llm_push_content_parse_failure_total",
+    "Push-content LLM output JSON parse failures by stage (initial/retry)",
+    ["stage"],
+)
+
 RUN_LEDGER_EVENT_TOTAL = get_or_create_metric(
     Counter,
     "sparkle_run_ledger_event_total",
