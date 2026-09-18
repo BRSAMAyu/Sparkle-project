@@ -37,10 +37,16 @@ func (f *WebSocketFactory) CreateUpgrader() websocket.Upgrader {
 func (f *WebSocketFactory) checkOrigin(r *http.Request) bool {
 	origin := r.Header.Get("Origin")
 
-	// In production, reject connections without Origin header.
-	// In development, allow empty Origin (same-origin / direct connections).
+	// R2-GW-8: native mobile clients (dart:io WebSocket) never send an Origin
+	// header, and every request reaching this check has already passed the
+	// WsAuth middleware (JWT/ticket), so the browser-CSRF rationale for Origin
+	// enforcement does not apply. Rejecting the empty Origin here rejected ALL
+	// four production native WS routes (/ws/chat, /ws/files, /ws/stt, and the
+	// community proxy). Allow the empty Origin; non-empty origins still go
+	// through the whitelist below to protect browser clients from cross-site
+	// WebSocket hijacking.
 	if origin == "" {
-		return !f.config.IsProduction()
+		return true
 	}
 
 	allowed := f.config.IsOriginAllowed(origin)

@@ -3,7 +3,6 @@ package handler
 import (
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 	"time"
 
@@ -127,8 +126,12 @@ func TestWebSocketProxyHTTPGuards(t *testing.T) {
 		lastAttempt:  time.Now(),
 		blockedUntil: time.Now().Add(time.Minute),
 	}
+	// session_id must be a well-formed UUID, or HandlePersonalWS rejects the
+	// request with 400 (invalid session_id format) before the reconnect
+	// limiter is ever consulted — the original `strings.Repeat("a", 4)`
+	// short-circuited and this assertion could never exercise the 429 path.
 	w := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/personal?user="+userID+"&token=token&session_id="+strings.Repeat("a", 4), nil)
+	req := httptest.NewRequest(http.MethodGet, "/personal?user="+userID+"&token=token&session_id=11111111-2222-3333-4444-555555555555", nil)
 	router.ServeHTTP(w, req)
 	require.Equal(t, http.StatusTooManyRequests, w.Code)
 

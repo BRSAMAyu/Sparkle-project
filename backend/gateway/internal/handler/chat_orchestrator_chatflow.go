@@ -113,6 +113,16 @@ func normalizeChatMode(mode string) string {
 	}
 }
 
+// detachedPersistCtx returns a context decoupled from the stream lifecycle
+// with a short deadline. R2-GW-1: the read pump cancels streamCtx the moment
+// the client disconnects, and a mobile client legitimately disappears right
+// after receiving the terminal meta frame. Terminal persistence and billing
+// must survive that cancellation — they run on a detached ctx instead. Only
+// mid-stream usage segments stay stream-bound (live quota enforcement).
+func detachedPersistCtx(parent context.Context) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.WithoutCancel(parent), 5*time.Second)
+}
+
 func writeLegacyJSON(writer *wsSafeWriter, payload interface{}) error {
 	return writer.WriteJSON(payload)
 }
@@ -709,7 +719,12 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 			respondStreamRecvError(responder, err, reqID)
 			if textBuilder.Len() > 0 && input.SessionID != "" {
 				partialText := textBuilder.String()
-				h.saveMessage(ctx, userID, input.SessionID, "assistant", partialText, map[string]interface{}{
+				// R2-GW-1: the recv error may be the client disconnect that
+				// just cancelled streamCtx — the partial answer was streamed
+				// and must still reach the history store.
+				saveCtx, cancelSave := detachedPersistCtx(ctx)
+				defer cancelSave()
+				h.saveMessage(saveCtx, userID, input.SessionID, "assistant", partialText, map[string]interface{}{
 					"trace_id":  traceID,
 					"truncated": true,
 				})
@@ -801,12 +816,18 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	}
 	fullText = textBuilder.String()
 
+	// R2-GW-1: final usage reconciliation is terminal billing for a turn that
+	// already streamed to completion — it must survive the client disconnect
+	// that cancels streamCtx (segment recording above stays stream-bound).
+	usageCtx, cancelUsage := detachedPersistCtx(ctx)
+	defer cancelUsage()
+
 	if h.quota != nil && usageTotalTokens > 0 {
 		delta := usageTotalTokens - segmentRecorded
 		if delta < 0 {
 			delta = 0
 		}
-		if _, err := h.quota.RecordUsage(ctx, userID, reqID, delta, 24*time.Hour); err != nil {
+		if _, err := h.quota.RecordUsage(usageCtx, userID, reqID, delta, 24*time.Hour); err != nil {
 			log.Printf("Failed to record usage: %v", err)
 		}
 	} else if h.quota != nil && usageTotalTokens == 0 {
@@ -815,7 +836,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		if delta < 0 {
 			delta = 0
 		}
-		if _, err := h.quota.RecordUsage(ctx, userID, reqID, delta, 24*time.Hour); err != nil {
+		if _, err := h.quota.RecordUsage(usageCtx, userID, reqID, delta, 24*time.Hour); err != nil {
 			log.Printf("Failed to record usage: %v", err)
 		}
 		if delta == 0 {
@@ -866,16 +887,21 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		meta["breaker_status"] = "open"
 	}
 
+	// R2-GW-1: a failed terminal frame write means the client is already
+	// gone — that must not skip persistence of the completed turn below.
+	// The stream finished successfully server-side, so the answer is real;
+	// returning clientGone still closes the connection as before.
+	clientGone := false
 	switch r := responder.(type) {
 	case *envelopeResponder:
 		if err := r.SendMeta(meta); err != nil {
 			logWebSocketWriteError("envelope metadata", err)
-			return true
+			clientGone = true
 		}
 	case *protobufResponder:
 		if err := r.SendMeta(meta); err != nil {
 			logWebSocketWriteError("protobuf metadata", err)
-			return true
+			clientGone = true
 		}
 	case *wsSafeWriter:
 		// Send final metadata
@@ -883,7 +909,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 			"type": "meta",
 			"meta": meta,
 		}) {
-			return true
+			clientGone = true
 		}
 	}
 
@@ -904,16 +930,16 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		case *envelopeResponder:
 			if err := r.SendChatResponse(doneResp); err != nil {
 				logWebSocketWriteError("envelope synthetic done", err)
-				return true
+				clientGone = true
 			}
 		case *protobufResponder:
 			if err := r.SendChatResponse(doneResp); err != nil {
 				logWebSocketWriteError("protobuf synthetic done", err)
-				return true
+				clientGone = true
 			}
 		case *wsSafeWriter:
 			if !writeLegacyJSONLogged(r, "legacy synthetic done", convertResponseToJSON(ctx, doneResp)) {
-				return true
+				clientGone = true
 			}
 		}
 	}
@@ -923,11 +949,17 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		// Multi-turn chat depends on the assistant turn being visible in Redis
 		// before the client sends the next user message, so persist history
 		// synchronously and keep only semantic-cache updates async.
+		// R2-GW-1: the client typically disconnects right after the terminal
+		// meta frame (answer received, app backgrounded) and the read pump
+		// then cancels streamCtx — the save must ride a detached ctx instead,
+		// or the completed assistant turn is lost forever.
 		sessionID := input.SessionID
 		queryText := input.Message
 		result := fullText
 
-		h.saveMessage(ctx, userID, sessionID, "assistant", result, map[string]interface{}{
+		saveCtx, cancelSave := detachedPersistCtx(ctx)
+		defer cancelSave()
+		h.saveMessage(saveCtx, userID, sessionID, "assistant", result, map[string]interface{}{
 			"meta":           meta,
 			"workflow_id":    doneResp.WorkflowId,
 			"prompt_version": doneResp.PromptVersion,
@@ -947,7 +979,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		}()
 	}
 
-	return false
+	return clientGone
 }
 
 func respondStreamRecvError(responder interface{}, err error, requestID string) {

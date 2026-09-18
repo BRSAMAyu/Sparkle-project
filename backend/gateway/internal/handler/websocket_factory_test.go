@@ -50,6 +50,25 @@ func TestCheckOrigin_NoOriginHeader(t *testing.T) {
 	assert.True(t, result, "should allow request with no origin header (same-origin)")
 }
 
+// TestCheckOrigin_EmptyOriginAllowedInProduction is the R2-GW-8 regression:
+// native mobile clients never send an Origin header and the request has
+// already passed WsAuth, so the empty Origin must be accepted in production
+// too (it used to 403 all four native WS routes). Non-empty origins remain
+// whitelist-gated.
+func TestCheckOrigin_EmptyOriginAllowedInProduction(t *testing.T) {
+	cfg := &config.Config{
+		Environment:    "production",
+		AllowedOrigins: []string{"https://example.com"},
+	}
+
+	factory := NewWebSocketFactory(cfg)
+	req := httptest.NewRequest("GET", "http://api.example.com/ws/chat", nil)
+	// No Origin header — dart:io WebSocket dial
+
+	assert.True(t, factory.checkOrigin(req),
+		"empty Origin must be allowed in production for authenticated native clients")
+}
+
 // TestCheckOrigin_AllowedOrigin tests allowing whitelisted origin
 func TestCheckOrigin_AllowedOrigin(t *testing.T) {
 	cfg := &config.Config{

@@ -56,6 +56,12 @@ func (h *ChatOrchestrator) saveMessage(
 	content string,
 	extra map[string]interface{},
 ) {
+	if h.chatHistory == nil {
+		// F5: nil-dependent test wiring; production always provides the
+		// service (setup.go wiring), so a nil here must not panic the
+		// handler — skip persistence instead.
+		return
+	}
 	tracer := otel.Tracer("chat-orchestrator")
 	ctx, span := tracer.Start(parentCtx, "redis.save_message")
 	defer span.End()

@@ -12,7 +12,6 @@ type JSONWriteCloser interface {
 type SignalHub struct {
 	mu          sync.RWMutex
 	connections map[string]map[JSONWriteCloser]struct{}
-	sendMu      sync.Mutex
 }
 
 func NewSignalHub() *SignalHub {
@@ -54,6 +53,13 @@ func (h *SignalHub) RemoveAll() {
 }
 
 func (h *SignalHub) Send(userID string, payload interface{}) {
+	// R2-GW-5: snapshot the connection set under RLock and write outside any
+	// hub-level lock — the previous hub-wide sendMu made one slow connection
+	// (chat writeWait floors at 60s) stall widget pushes for EVERY user
+	// (head-of-line blocking) and pile up /internal/signals/push handlers.
+	// This matches the FileEventHub snapshot pattern; per-connection write
+	// serialization is the connection's own contract (production registers
+	// wsSafeWriter, which locks internally).
 	h.mu.RLock()
 	userConns := h.connections[userID]
 	conns := make([]JSONWriteCloser, 0, len(userConns))
@@ -62,8 +68,6 @@ func (h *SignalHub) Send(userID string, payload interface{}) {
 	}
 	h.mu.RUnlock()
 
-	h.sendMu.Lock()
-	defer h.sendMu.Unlock()
 	for _, conn := range conns {
 		if err := conn.WriteJSON(payload); err != nil {
 			h.Unregister(userID, conn)

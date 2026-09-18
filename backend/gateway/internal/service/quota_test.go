@@ -136,6 +136,33 @@ func TestQuotaService_DcrQuota(t *testing.T) {
 		assert.ErrorIs(t, err, ErrQuotaInsufficient)
 		assert.Equal(t, int64(0), remaining)
 	})
+
+	// R2-GW-2 regression: the old Lua guard (`result == current - 1`) was a
+	// tautology, so EVERY decrement re-ran EXPIRE and slid the TTL forward —
+	// an active user's daily quota key would never expire and the daily
+	// quota would never reset. The TTL must be stamped once, on a key with
+	// no TTL, and left alone afterwards.
+	t.Run("TTL stamped once, never slid forward by later decrements", func(t *testing.T) {
+		key := fmt.Sprintf("user:quota:%s", uid)
+		s.Set(key, "5")
+
+		_, err := svc.DecrQuota(ctx, uid)
+		assert.NoError(t, err)
+		assert.Greater(t, s.TTL(key), time.Duration(0), "first decrement must stamp a TTL")
+
+		// Pin a known 1h TTL, then decrement again: the TTL must stay on its
+		// 1h trajectory instead of being reset to the script default (24h).
+		s.SetTTL(key, time.Hour)
+		remaining, err := svc.DecrQuota(ctx, uid)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(3), remaining)
+
+		ttlAfter := s.TTL(key)
+		assert.Less(t, ttlAfter, 2*time.Hour,
+			"later decrements must not slide the TTL forward (R2-GW-2)")
+		assert.Greater(t, ttlAfter, 59*time.Minute,
+			"the pre-existing TTL must be preserved")
+	})
 }
 
 func TestQuotaService_RecordUsage(t *testing.T) {

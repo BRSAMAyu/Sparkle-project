@@ -112,6 +112,28 @@ func (h *STTHandler) HandleWebSocket(c *gin.Context) {
 		zap.String("user_id_hash", hashUserIDForLog(userID)),
 		zap.String("python_url", h.pythonSTTUrl))
 
+	// R2-GW-4: both read pumps need read deadlines refreshed by pong traffic
+	// plus periodic pings, or a half-open connection (mobile NAT drop with no
+	// FIN) while Python STT is silent leaks two pump goroutines, two sockets
+	// and this handler forever — chat (pongWait) and the community proxy
+	// (dual deadlines) already have keepalives, STT was the only one missing.
+	pongWait := 90 * time.Second
+	if h.config != nil && h.config.WSPongWaitSeconds > 0 {
+		pongWait = time.Duration(h.config.WSPongWaitSeconds) * time.Second
+	}
+	pingInterval := pongWait / 2
+	if pingInterval <= 0 {
+		pingInterval = 30 * time.Second
+	}
+	setSTTReadKeepalive := func(conn *websocket.Conn) {
+		_ = conn.SetReadDeadline(time.Now().Add(pongWait))
+		conn.SetPongHandler(func(string) error {
+			return conn.SetReadDeadline(time.Now().Add(pongWait))
+		})
+	}
+	setSTTReadKeepalive(clientConn)
+	setSTTReadKeepalive(pythonConn)
+
 	// 3. Bidirectional forwarding using channels
 	errChan := make(chan error, 2)
 	done := make(chan struct{})
@@ -191,8 +213,42 @@ func (h *STTHandler) HandleWebSocket(c *gin.Context) {
 		}
 	}()
 
+	// Ping ticker: keeps both halves alive and turns a dead peer into a read
+	// deadline failure (surfacing through the pumps into errChan) instead of
+	// an indefinite half-open hang (R2-GW-4).
+	go func() {
+		ticker := time.NewTicker(pingInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-done:
+				return
+			case <-ticker.C:
+				// Ping the Python upstream through the serialized writer.
+				if err := writePython(websocket.PingMessage, nil); err != nil {
+					select {
+					case errChan <- err:
+					default:
+					}
+					closeDone()
+					return
+				}
+				// Ping the client through the safe writer (internally locked).
+				if err := clientWriter.WriteControl(websocket.PingMessage, nil); err != nil {
+					select {
+					case errChan <- err:
+					default:
+					}
+					closeDone()
+					return
+				}
+			}
+		}
+	}()
+
 	// Wait for error or completion
 	err = <-errChan
+	closeDone()
 	if err != nil {
 		h.logger.Error("STT WebSocket proxy error",
 			zap.String("user_id_hash", hashUserIDForLog(userID)),

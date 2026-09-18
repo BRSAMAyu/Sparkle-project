@@ -83,16 +83,14 @@ func NewWebSocketProxy(backendURL string, logger *zap.Logger, cfg *config.Config
 			// Use secure origin checking based on config
 			CheckOrigin: func(r *http.Request) bool {
 				origin := r.Header.Get("Origin")
+				// R2-GW-8: same policy as WebSocketFactory — this proxy sits
+				// behind the auth middleware and native mobile clients never
+				// send an Origin, so the empty Origin must not be rejected.
+				// The previous localhost-Host special case was dead code
+				// anyway: Go does not expose Host via r.Header.Get, so it
+				// always returned "" and every empty-Origin request was 403'd.
 				if origin == "" {
-					// Allow missing Origin only for same-host requests (no reverse proxy)
-					host := r.Header.Get("Host")
-					if host != "" && (host == "localhost:8080" || host == "127.0.0.1:8080") {
-						return true
-					}
-					logger.Warn("WebSocket proxy rejected connection with empty Origin",
-						zap.String("host", host),
-						zap.String("remote_addr", r.RemoteAddr))
-					return false
+					return true
 				}
 				allowed := cfg.IsOriginAllowed(origin)
 				if !allowed {

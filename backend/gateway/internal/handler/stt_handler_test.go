@@ -116,6 +116,47 @@ func TestSTTHandlerRejectsPerConnectionRateLimit(t *testing.T) {
 	require.True(t, websocket.IsCloseError(err, websocket.ClosePolicyViolation), "expected close policy violation, got %v", err)
 }
 
+// R2-GW-4 regression: a client that goes silent (half-open mobile connection
+// dropped by NAT without FIN) must be reaped by the server read deadline
+// instead of leaking both relay pumps, two sockets and the handler forever.
+func TestSTTHandlerReapsSilentClientViaReadDeadline(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	backendDone := make(chan struct{})
+	defer close(backendDone)
+	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		upgrader := websocket.Upgrader{CheckOrigin: func(*http.Request) bool { return true }}
+		conn, err := upgrader.Upgrade(w, r, nil)
+		require.NoError(t, err)
+		defer conn.Close()
+		// STT upstream stays silent forever.
+		<-backendDone
+	}))
+	defer backend.Close()
+
+	handler := NewSTTHandler(
+		toWebSocketTestURL(backend.URL),
+		zap.NewNop(),
+		&config.Config{WSPongWaitSeconds: 1, WSWriteWaitSeconds: 1},
+	)
+	router := gin.New()
+	router.GET("/ws/stt", func(c *gin.Context) {
+		c.Set("user_id", "user-1")
+		handler.HandleWebSocket(c)
+	})
+	server := httptest.NewServer(router)
+	defer server.Close()
+
+	conn, _, err := websocket.DefaultDialer.Dial(toWebSocketTestURL(server.URL)+"/ws/stt", nil)
+	require.NoError(t, err)
+	defer conn.Close()
+
+	// The client never reads (so it never answers pings); the server-side
+	// read deadline must close the session well within the 5s test budget.
+	_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	_, _, err = conn.ReadMessage()
+	require.Error(t, err, "silent client must be closed by the server read deadline")
+}
+
 func toWebSocketTestURL(httpURL string) string {
 	return "ws" + strings.TrimPrefix(httpURL, "http")
 }

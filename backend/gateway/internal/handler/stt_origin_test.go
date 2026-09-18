@@ -12,11 +12,13 @@ import (
 	"github.com/sparkle/gateway/internal/config"
 )
 
-// GW-P2-2 regression: /ws/stt used to carry a local checkOrigin that allowed
-// empty Origin headers unconditionally — the only WS entry accepting them in
-// production. It must follow the WebSocketFactory policy: empty Origin
-// rejected in production, allowed in development; listed origins allowed;
-// unlisted origins rejected.
+// GW-P2-2 regression (updated by R2-GW-8): /ws/stt must follow the
+// WebSocketFactory origin policy. That policy changed with R2-GW-8 — empty
+// Origin is now allowed in every environment because the request has already
+// passed WsAuth (JWT/ticket) and native mobile clients never send an Origin;
+// the previous empty-Origin rejection made production mobile STT unusable.
+// Non-empty origins still go through the configured whitelist in production,
+// and development keeps its local-host allowances.
 func TestSTTUpgrader_OriginPolicyMatchesFactory(t *testing.T) {
 	prodCfg := &config.Config{Environment: "prod", AllowedOrigins: []string{"https://app.example.com"}}
 	devCfg := &config.Config{Environment: "development", AllowedOrigins: []string{"https://app.example.com"}}
@@ -29,10 +31,10 @@ func TestSTTUpgrader_OriginPolicyMatchesFactory(t *testing.T) {
 		return r
 	}
 
-	t.Run("production_rejects_empty_origin", func(t *testing.T) {
+	t.Run("production_allows_empty_origin_after_wsauth", func(t *testing.T) {
 		h := NewSTTHandler("ws://stt:50052", zap.NewNop(), prodCfg)
-		assert.False(t, h.upgrader.CheckOrigin(req("")),
-			"empty Origin must be rejected in production")
+		assert.True(t, h.upgrader.CheckOrigin(req("")),
+			"empty Origin must be allowed in production: native clients never send one and auth already happened")
 	})
 
 	t.Run("development_allows_empty_origin", func(t *testing.T) {
@@ -48,6 +50,7 @@ func TestSTTUpgrader_OriginPolicyMatchesFactory(t *testing.T) {
 
 	t.Run("unlisted_origin_rejected", func(t *testing.T) {
 		h := NewSTTHandler("ws://stt:50052", zap.NewNop(), prodCfg)
-		assert.False(t, h.upgrader.CheckOrigin(req("https://evil.example.com")))
+		assert.False(t, h.upgrader.CheckOrigin(req("https://evil.example.com")),
+			"non-empty unlisted origins must still be rejected in production")
 	})
 }
