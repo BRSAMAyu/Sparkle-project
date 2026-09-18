@@ -31,7 +31,7 @@ safe_clean() {
   find "$WT_ROOT" "$MAIN_REPO" -name "__pycache__" -type d -prune -exec rm -rf {} + 2>/dev/null
   find "$MAIN_REPO/backend" -name ".pytest_cache" -type d -prune -exec rm -rf {} + 2>/dev/null
   find /tmp -maxdepth 1 -name "*.log.*" -mtime +1 -delete 2>/dev/null
-  docker builder prune -f >/dev/null 2>&1
+  # 注意：docker prune 不入自动路径——守护进程脆弱时 prune 会挂死守卫循环，仅手动执行
 }
 
 aggressive_clean() {
