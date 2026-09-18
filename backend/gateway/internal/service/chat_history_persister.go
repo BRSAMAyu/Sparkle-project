@@ -273,6 +273,9 @@ func buildMessageMetadata(msg ChatHistoryMessage) []byte {
 	if msg.IsReasoningComplete {
 		meta["is_reasoning_complete"] = true
 	}
+	if msg.IsInterrupted {
+		meta["is_interrupted"] = true
+	}
 	if msg.HasErrors {
 		meta["has_errors"] = true
 	}

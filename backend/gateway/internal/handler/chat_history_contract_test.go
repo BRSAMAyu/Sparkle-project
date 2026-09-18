@@ -59,6 +59,7 @@ func TestGetConversationHistoryIncludesMobileContractFields(t *testing.T) {
 		"reasoning_steps":[{"title":"step-1"}],
 		"reasoning_summary":"done",
 		"is_reasoning_complete":true,
+		"is_interrupted":true,
 		"meta":{"latency_ms":12},
 		"agentCollaboration":{"workflow":"team"}
 	}`
@@ -85,7 +86,7 @@ func TestGetConversationHistoryIncludesMobileContractFields(t *testing.T) {
 	for _, key := range []string{
 		"id", "user_id", "conversation_id", "session_id", "task_id", "role", "content", "created_at",
 		"widgets", "tool_results", "has_errors", "errors", "requires_confirmation", "confirmation_data",
-		"reasoning_steps", "reasoning_summary", "is_reasoning_complete", "meta", "agentCollaboration",
+		"reasoning_steps", "reasoning_summary", "is_reasoning_complete", "is_interrupted", "meta", "agentCollaboration",
 	} {
 		_, ok := msg[key]
 		require.Truef(t, ok, "expected key %s in response", key)

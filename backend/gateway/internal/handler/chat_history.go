@@ -35,6 +35,7 @@ type ChatHistoryMessageDTO struct {
 	ReasoningSteps       []map[string]interface{} `json:"reasoning_steps"`
 	ReasoningSummary     string                   `json:"reasoning_summary"`
 	IsReasoningComplete  bool                     `json:"is_reasoning_complete"`
+	IsInterrupted        bool                     `json:"is_interrupted"`
 	Meta                 map[string]interface{}   `json:"meta"`
 	AgentCollaboration   map[string]interface{}   `json:"agentCollaboration"`
 }
@@ -134,6 +135,7 @@ func (h *ChatHistoryHandler) GetConversationHistory(c *gin.Context) {
 			ReasoningSteps:       msg.ReasoningSteps,
 			ReasoningSummary:     msg.ReasoningSummary,
 			IsReasoningComplete:  msg.IsReasoningComplete,
+			IsInterrupted:        msg.IsInterrupted,
 			Meta:                 msg.Meta,
 			AgentCollaboration:   msg.AgentCollaboration,
 		})

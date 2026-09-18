@@ -1,0 +1,238 @@
+diff --git a/backend/gateway/internal/handler/chat_history.go b/backend/gateway/internal/handler/chat_history.go
+index f5844a5d..ba98927d 100644
+--- a/backend/gateway/internal/handler/chat_history.go
++++ b/backend/gateway/internal/handler/chat_history.go
+@@ -35,6 +35,7 @@ type ChatHistoryMessageDTO struct {
+ 	ReasoningSteps       []map[string]interface{} `json:"reasoning_steps"`
+ 	ReasoningSummary     string                   `json:"reasoning_summary"`
+ 	IsReasoningComplete  bool                     `json:"is_reasoning_complete"`
++	IsInterrupted        bool                     `json:"is_interrupted"`
+ 	Meta                 map[string]interface{}   `json:"meta"`
+ 	AgentCollaboration   map[string]interface{}   `json:"agentCollaboration"`
+ }
+@@ -134,6 +135,7 @@ func (h *ChatHistoryHandler) GetConversationHistory(c *gin.Context) {
+ 			ReasoningSteps:       msg.ReasoningSteps,
+ 			ReasoningSummary:     msg.ReasoningSummary,
+ 			IsReasoningComplete:  msg.IsReasoningComplete,
++			IsInterrupted:        msg.IsInterrupted,
+ 			Meta:                 msg.Meta,
+ 			AgentCollaboration:   msg.AgentCollaboration,
+ 		})
+diff --git a/backend/gateway/internal/handler/chat_history_contract_test.go b/backend/gateway/internal/handler/chat_history_contract_test.go
+index eaec8ccd..1a2a148d 100644
+--- a/backend/gateway/internal/handler/chat_history_contract_test.go
++++ b/backend/gateway/internal/handler/chat_history_contract_test.go
+@@ -59,6 +59,7 @@ func TestGetConversationHistoryIncludesMobileContractFields(t *testing.T) {
+ 		"reasoning_steps":[{"title":"step-1"}],
+ 		"reasoning_summary":"done",
+ 		"is_reasoning_complete":true,
++		"is_interrupted":true,
+ 		"meta":{"latency_ms":12},
+ 		"agentCollaboration":{"workflow":"team"}
+ 	}`
+@@ -85,7 +86,7 @@ func TestGetConversationHistoryIncludesMobileContractFields(t *testing.T) {
+ 	for _, key := range []string{
+ 		"id", "user_id", "conversation_id", "session_id", "task_id", "role", "content", "created_at",
+ 		"widgets", "tool_results", "has_errors", "errors", "requires_confirmation", "confirmation_data",
+-		"reasoning_steps", "reasoning_summary", "is_reasoning_complete", "meta", "agentCollaboration",
++		"reasoning_steps", "reasoning_summary", "is_reasoning_complete", "is_interrupted", "meta", "agentCollaboration",
+ 	} {
+ 		_, ok := msg[key]
+ 		require.Truef(t, ok, "expected key %s in response", key)
+diff --git a/backend/gateway/internal/service/chat_history.go b/backend/gateway/internal/service/chat_history.go
+index 68c6a04c..18d7d373 100755
+--- a/backend/gateway/internal/service/chat_history.go
++++ b/backend/gateway/internal/service/chat_history.go
+@@ -92,6 +92,7 @@ type ChatHistoryMessage struct {
+ 	ReasoningSteps       []map[string]interface{} `json:"reasoning_steps,omitempty"`
+ 	ReasoningSummary     string                   `json:"reasoning_summary,omitempty"`
+ 	IsReasoningComplete  bool                     `json:"is_reasoning_complete,omitempty"`
++	IsInterrupted        bool                     `json:"is_interrupted,omitempty"`
+ 	Meta                 map[string]interface{}   `json:"meta,omitempty"`
+ 	AgentCollaboration   map[string]interface{}   `json:"agentCollaboration,omitempty"`
+ }
+@@ -989,6 +990,9 @@ func populateMessageMetadata(msg *ChatHistoryMessage, raw []byte) {
+ 	if v, ok := meta["is_reasoning_complete"].(bool); ok {
+ 		msg.IsReasoningComplete = v
+ 	}
++	if v, ok := meta["is_interrupted"].(bool); ok {
++		msg.IsInterrupted = v
++	}
+ 	if v, ok := meta["has_errors"].(bool); ok {
+ 		msg.HasErrors = v
+ 	}
+diff --git a/backend/gateway/internal/service/chat_history_persister.go b/backend/gateway/internal/service/chat_history_persister.go
+index 813d5676..a2c05779 100644
+--- a/backend/gateway/internal/service/chat_history_persister.go
++++ b/backend/gateway/internal/service/chat_history_persister.go
+@@ -273,6 +273,9 @@ func buildMessageMetadata(msg ChatHistoryMessage) []byte {
+ 	if msg.IsReasoningComplete {
+ 		meta["is_reasoning_complete"] = true
+ 	}
++	if msg.IsInterrupted {
++		meta["is_interrupted"] = true
++	}
+ 	if msg.HasErrors {
+ 		meta["has_errors"] = true
+ 	}
+diff --git "a/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/guard-baseline-red-fix.md" "b/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/guard-baseline-red-fix.md"
+new file mode 100644
+index 00000000..6ca7fa9b
+--- /dev/null
++++ "b/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/guard-baseline-red-fix.md"
+@@ -0,0 +1,155 @@
++# 守卫基线红线修复报告（BA / AQ / BG）
++
++- 日期：2026-09-18 深夜
++- 基线：main HEAD `9a625906`（feat(guards)+chore(gateway): BA-ROUTES parity guard, CI race timeout, quota Lua dead-code removal）
++- 结论：**BA 为真实代码违规（已修代码）**；**AQ / BG 为环境性红（gitignored 生成产物缺失类），HEAD 规范环境下本就绿，不改守卫逻辑**。全量守卫最终 **71/71 全绿（exit=0）**。
++
++---
++
++## 一、BA —— 真实代码违规（DTO 字段 parity 缺口）
++
++### 红证据（修复前）
++
++```
++$ bash scripts/run_all_rule_guards.sh --rule BA
++go_fields=[... 无 is_interrupted ...]
++dart_fields=[... 'is_interrupted' ...]
++BA001 missing Go chat history field `is_interrupted` in backend/gateway/internal/handler/chat_history.go
++[Rule BA] FAIL
++```
++
++### 追责（引入提交）
++
++```
++a49fcf12 feat(chat): M6-09 interrupt-preserve — keep partial reply on cancel with 已中断 marker
++（2026-09-18 19:39 +0800）
++```
++
++该提交给移动端 `mobile/lib/features/chat/data/models/chat_message_model.dart` 增加了
++`@JsonKey(name: 'is_interrupted', includeIfNull: false) final bool isInterrupted`（M6-09「流式取消=中断保留」，
++序列化保留使历史往返标记不丢），但**没有同步网关侧 `ChatHistoryMessageDTO`**。BA 守卫
++（`scripts/guards/check_rule_ba_gateway_contract_parity.py`）比对 Dart `ChatMessageModel` 与 Go
++`ChatHistoryMessageDTO` 的 json 字段集，dart−go 差集非空即红。守卫逻辑自初始提交以来未变，判定为**代码违规**，修代码。
++
++### 修复方式（补 Go 侧全链路，比照既有 `is_reasoning_complete` 字段的四点同构）
++
++1. `backend/gateway/internal/service/chat_history.go`
++   - `ChatHistoryMessage` 结构体新增 `IsInterrupted bool \`json:"is_interrupted,omitempty"\``
++     （Redis 原始 JSON 存取路径自动透传：`SaveMessage` 存原始字节，`getMessagesFromRedis` 反序列化即还原）；
++   - `populateMessageMetadata` 新增 `meta["is_interrupted"]` bool 还原（PostgreSQL JSONB 回读路径）。
++2. `backend/gateway/internal/service/chat_history_persister.go`
++   - `buildMessageMetadata` 新增 `msg.IsInterrupted → meta["is_interrupted"]=true`（DB 落库路径）。
++3. `backend/gateway/internal/handler/chat_history.go`
++   - `ChatHistoryMessageDTO` 新增 `IsInterrupted bool \`json:"is_interrupted"\``（与 `is_reasoning_complete`
++     同风格：DTO 层不带 omitempty，保持空值响应形状稳定）；映射处补充 `IsInterrupted: msg.IsInterrupted`。
++4. `backend/gateway/internal/handler/chat_history_contract_test.go`
++   - 移动端契约字段测试 payload 增加 `"is_interrupted":true`，断言键列表增加 `"is_interrupted"`。
++
++未改任何守卫脚本；未动 proto（该字段是 REST 历史接口 DTO 层字段，不在 gRPC 契约面）。
++
++### 绿证据（修复后）
++
++```
++$ PYTHON_BIN=/opt/homebrew/bin/python3.11 bash scripts/run_all_rule_guards.sh --rule BA
++[Rule BA] PASS - go_fields=20 dart_fields=19 missing=0
++all rule guards passed (1 rules)
++
++$ CGO_ENABLED=0 go build ./...          # BUILD-OK
++$ CGO_ENABLED=0 go test ./internal/handler/... ./internal/service/...
++ok  github.com/sparkle/gateway/internal/handler   27.867s
++ok  github.com/sparkle/gateway/internal/service    9.712s
++```
++
++gofmt 零差异；golangci-lint 对四处改动文件零告警（本包其余告警为 `file_event_hub_test.go` 等存量问题，与本次无关）。
++
++---
++
++## 二、AQ —— 环境性红（gitignored 生成产物缺失 → 守卫崩溃）
++
++### 现状：HEAD 规范环境下直接绿
++
++```
++$ PYTHON_BIN=/opt/homebrew/bin/python3.11 bash scripts/run_all_rule_guards.sh --rule AQ
++[Rule AQ] PASS - Python hand-written UserStateV1 matches proto-generated user_state_pb2
++          (exceptions: ['emotion_hint', 'emotion_hint_reserved'])
++```
++
++用默认 `backend/.venv/bin/python` 复跑同样 PASS。
++
++### 红因定性 + 复现证据
++
++守卫第一行 `from app.gen import user_state_pb2`，而 `backend/app/gen/` 在 `.gitignore:242` 中被忽略（生成产物不入库）。
++一旦工作副本缺失该目录（fresh clone 未跑 `make proto-gen`、`git stash -u`、`git clean -fdx` 等），守卫即崩：
++
++```
++ModuleNotFoundError: No module named 'app.gen'
++AQ exit=1        # 实测复现：临时移走 backend/app/gen（备份后恢复，byte-identical）
++```
++
++守卫脚本与被比对的 `schema.py` / proto 自初始提交 `1722e6dc` 起零改动——不是规则漂移、不是白名单缺项，
++是**守卫对本地生成产物的环境依赖**。AGENTS.md 已把 `make proto-gen` 列为标准引导步骤，守卫行为符合设计，
++**不改守卫逻辑**（改为自动生成会让守卫依赖 buf/protoc 工具链且掩盖真 staleness；改为跳过则弱化提交门）。
++处置：定性 + 报告备案，规范环境下全量绿即为基线。
++
++---
++
++## 三、BG —— 环境性红（同类：生成产物缺失 → BG001）
++
++### 现状：HEAD 规范环境下直接绿
++
++```
++$ PYTHON_BIN=/opt/homebrew/bin/python3.11 bash scripts/run_all_rule_guards.sh --rule BG
++[Rule BG] PASS - checked 7 proto files across Go/Python/Dart (0 staleness warnings)
++```
++
++（默认 venv python 复跑同绿。staleness 检查为 WARN 级不致红，BG 的红只可能来自 BG001 缺文件 / BG002 空文件 / BG004 未映射。）
++
++### 红因定性 + 复现证据
++
++`check_generated_files` 要求 `backend/gateway/gen/`、`backend/app/gen/`、`mobile/lib/gen/` 下 24 个生成文件存在，
++而三个 gen 目录整体被 `.gitignore:240-242` 忽略。移走三个 gen 目录实测复现：
++
++```
++BG001 Go generated file missing: proto/error_book/error_book_grpc.pb.go (from error_book.proto)
++BG001 Python generated file missing: error_book_pb2.py (from error_book.proto)
++...（共 24 条）
++BG exit=1        # 备份后移走 → 复现 → 恢复，diff -rq byte-identical
++```
++
++处置与 AQ 同理：**守卫逻辑未改**。`976061ab`（fix(guards): make guard suite self-sufficient, 09-18 08:23）已按
++"守卫套件自足" 原则再生过一轮丢失产物并配套再生成脚本；gen 目录属同一自足范畴，规范环境执行 `make proto-gen`
++即永久消除该红类。
++
++---
++
++## 四、三条红的时序还原
++
++- 任务侧观察到的"三红并存"最自洽的解释：观察环境当时缺失 gitignored gen 产物（stash -u / clean -x / 未跑 proto-gen 的副本），
++  此时 BA（代码违规，恒红）+ AQ（ModuleNotFoundError）+ BG（BG001）同时红；且 BA 是唯一与提交内容绑定的存量红。
++- 本次在 HEAD `9a625906` 规范环境（gen 产物齐全，mtimes 09-18 07:39，晚于全部 proto）下的全量首跑：**仅 BA 红**，
++  AQ/BG 绿——与环境性红定性一致。
++- 网关三件套 patch（`gateway-handoff-trio.patch`，已落地为 HEAD `9a625906`）内容为 BA-ROUTES 守卫 / CI timeout /
++  quota 清理，不触及 BA/AQ/BG 判定面，排除"三件套引入"假设。
++
++## 五、全量守卫最终数字
++
++```
++$ PYTHON_BIN=/opt/homebrew/bin/python3.11 bash scripts/run_all_rule_guards.sh --jobs 4
++exit=0
++all rule guards passed (71 rules)
++```
++
++含今晚新增 **DB-HEAD**（alembic 单头 gfix02_20260918）与 **BA-ROUTES**（374 网关代理路由 ↔ 923 引擎路由，
++54 catch-all 组，115 ledgered diffs）均 PASS；修复前同环境全量为 70/71（仅 BA 红）。
++
++## 六、改动清单（本 patch）
++
++| 文件 | 改动 |
++| --- | --- |
++| `backend/gateway/internal/service/chat_history.go` | 结构体 +`IsInterrupted`；`populateMessageMetadata` +还原 |
++| `backend/gateway/internal/service/chat_history_persister.go` | `buildMessageMetadata` +落库 |
++| `backend/gateway/internal/handler/chat_history.go` | DTO +字段 +映射 |
++| `backend/gateway/internal/handler/chat_history_contract_test.go` | 契约测试覆盖新字段 |
++
++未 commit / 未 push；工作区仅含上述 4 文件修改（守卫运行对 `stage22_prompt_coverage_baseline.md` 的 audited_at
++时间戳副作用已 checkout 还原）。

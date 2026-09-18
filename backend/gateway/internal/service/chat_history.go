@@ -92,6 +92,7 @@ type ChatHistoryMessage struct {
 	ReasoningSteps       []map[string]interface{} `json:"reasoning_steps,omitempty"`
 	ReasoningSummary     string                   `json:"reasoning_summary,omitempty"`
 	IsReasoningComplete  bool                     `json:"is_reasoning_complete,omitempty"`
+	IsInterrupted        bool                     `json:"is_interrupted,omitempty"`
 	Meta                 map[string]interface{}   `json:"meta,omitempty"`
 	AgentCollaboration   map[string]interface{}   `json:"agentCollaboration,omitempty"`
 }
@@ -988,6 +989,9 @@ func populateMessageMetadata(msg *ChatHistoryMessage, raw []byte) {
 	}
 	if v, ok := meta["is_reasoning_complete"].(bool); ok {
 		msg.IsReasoningComplete = v
+	}
+	if v, ok := meta["is_interrupted"].(bool); ok {
+		msg.IsInterrupted = v
 	}
 	if v, ok := meta["has_errors"].(bool); ok {
 		msg.HasErrors = v
