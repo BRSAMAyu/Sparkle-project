@@ -32,6 +32,7 @@ from app.models.achievement import UserStreakStats
 from app.models.error_book import ErrorRecord
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.schemas.error_book import (
+    ErrorAnalysisResult,
     ErrorQueryParams,
     ErrorClusterReviewCard,
     ErrorReviewCardAction,
@@ -319,7 +320,7 @@ class ErrorBookService:
             # but we can add it to the DB column.
 
             # --- Step 4: Update DB ---
-            error.latest_analysis = analysis_result
+            error.latest_analysis = self._normalize_analysis_result(analysis_result)
             error.linked_knowledge_node_ids = linked_ids
             error.affected_node_id = linked_ids[0] if linked_ids else None
             # error.suggested_concepts = ... (if LLM returns them)
@@ -578,6 +579,26 @@ class ErrorBookService:
 
         result = await self.db.execute(stmt)
         return result.scalars().all()
+
+    @staticmethod
+    def _normalize_analysis_result(analysis_result: object) -> dict:
+        """把 LLM/兜底产出的分析 dict 规范成 schema-complete 结构再落库。
+
+        latest_analysis 是 ErrorRecordResponse/ErrorAnalysisResult 的数据源：
+        缺必填字段（如 error_type）的局部 JSONB 会让该错题所有后续读取 500
+        （round2 基线双 500 之一）。LLM 的 json_object 输出此前未经校验直接
+        落库，这里统一走 ErrorAnalysisResult 容错校验（缺失字段补默认值）。
+        """
+        if not isinstance(analysis_result, dict):
+            logger.warning(
+                f"Ignoring non-dict analysis result ({type(analysis_result).__name__}); writing schema-complete empty analysis"
+            )
+            analysis_result = {}
+        try:
+            return ErrorAnalysisResult.model_validate(analysis_result).model_dump(mode="json")
+        except Exception as e:  # pragma: no cover - 容错校验理论上不会失败
+            logger.warning(f"Analysis result normalization failed, persisting raw: {e}")
+            return analysis_result
 
     async def _run_llm_analysis(self, subject, question, user_ans, correct_ans, linked_nodes) -> dict:
         node_context = ", ".join([n.name for n in linked_nodes])
@@ -1226,6 +1247,16 @@ class ErrorBookService:
             await self._flush_pending_mastery_events(mastery_results)
         except Exception as e:
             logger.warning(f"Error book mastery sync (review) failed: {e}")
+
+        # 这段 commit 之后若 error 有脏属性（如无关联节点时 _attach_no_linked_node_hint
+        # 改写 latest_analysis），flush 会带服务端生成的 updated_at=now()，flush 后该
+        # 属性即被 SQLAlchemy 过期；调用方（gRPC _map_to_proto / FastAPI 响应序列化）
+        # 在无 greenlet 的同步上下文里读取就会 MissingGreenlet（网关错题复习桥 500）。
+        # 这里刷新一次，保证返回的 ORM 实例属性全部已加载。
+        try:
+            await self.db.refresh(error)
+        except Exception as e:
+            logger.warning(f"Post-review refresh failed: {e}")
 
         return error
 

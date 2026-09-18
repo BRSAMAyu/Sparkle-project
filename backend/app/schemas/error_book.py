@@ -138,6 +138,26 @@ class ErrorLinkingHint(BaseModel):
     action: str | None = None
 
 
+# 局部/历史脏数据的兜底标签（latest_analysis JSONB 曾被写入只有 linking_hint
+# 或缺必填字段的行，见 round2/errorbook-review-500-fix.md）。
+_ERROR_TYPE_LABEL_FALLBACKS: dict[str, str] = {
+    ErrorTypeEnum.CONCEPT_CONFUSION.value: "概念混淆",
+    ErrorTypeEnum.CALCULATION_ERROR.value: "计算错误",
+    ErrorTypeEnum.READING_CARELESS.value: "粗心大意",
+    ErrorTypeEnum.KNOWLEDGE_GAP.value: "知识缺口",
+    ErrorTypeEnum.METHOD_WRONG.value: "方法错误",
+    ErrorTypeEnum.LOGIC_ERROR.value: "逻辑错误",
+    ErrorTypeEnum.MEMORY_LAPSE.value: "记忆偏差",
+    ErrorTypeEnum.TIME_PRESSURE.value: "时间压力",
+    ErrorTypeEnum.OTHER.value: "其他",
+}
+_ANALYSIS_TEXT_DEFAULTS: dict[str, str] = {
+    "root_cause": "暂无错因分析",
+    "correct_approach": "暂无解题思路",
+    "study_suggestion": "暂无学习建议",
+}
+
+
 class ErrorAnalysisResult(BaseModel):
     """AI 分析结果"""
 
@@ -150,6 +170,35 @@ class ErrorAnalysisResult(BaseModel):
     study_suggestion: str = Field(..., description="学习建议")
     ocr_text: str | None = Field(None, description="OCR识别的文本（如果是图片题）")
     linking_hint: ErrorLinkingHint | None = Field(None, description="无法关联知识节点时给前端的引导")
+
+    @model_validator(mode="before")
+    @classmethod
+    def tolerate_partial_legacy_analysis(cls, data: Any) -> Any:
+        """容错存量局部 latest_analysis：补齐必填字段而非让响应 500。
+
+        写入侧已修复为落库前补齐（ErrorBookMasterySyncService）并校验 LLM JSON
+        （ErrorBookService），这里兜住修复前已经写进 DB 的毒化行以及任何漏网
+        的局部 dict。
+        """
+        if not isinstance(data, dict):
+            return data
+        normalized = dict(data)
+
+        raw_error_type = normalized.get("error_type")
+        try:
+            error_type = ErrorTypeEnum(str(raw_error_type))
+        except (TypeError, ValueError):
+            error_type = ErrorTypeEnum.OTHER
+        normalized["error_type"] = error_type.value
+
+        if not str(normalized.get("error_type_label") or "").strip():
+            normalized["error_type_label"] = _ERROR_TYPE_LABEL_FALLBACKS[error_type.value]
+
+        for key, default in _ANALYSIS_TEXT_DEFAULTS.items():
+            if normalized.get(key) is None or str(normalized.get(key)).strip() == "":
+                normalized[key] = default
+
+        return normalized
 
     @field_validator(
         "error_type_label", "root_cause", "correct_approach", "study_suggestion", "ocr_text", mode="before"

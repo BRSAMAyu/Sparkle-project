@@ -231,11 +231,23 @@ class ErrorBookMasterySyncService:
 
     @staticmethod
     def _attach_no_linked_node_hint(error_record: Any) -> None:
-        """Attach a response-visible hint when an error cannot affect Galaxy yet."""
+        """Attach a response-visible hint when an error cannot affect Galaxy yet.
+
+        latest_analysis 是 ErrorRecordResponse.latest_analysis (ErrorAnalysisResult)
+        的数据源，必填字段缺失会让该错题的所有响应 500（round2 基线双 500 之一）。
+        因此这里在注入 linking_hint 的同时补齐 schema 必填字段，保证落库的
+        JSONB 永远是 schema-complete 的。
+        """
         latest_analysis = getattr(error_record, "latest_analysis", None)
         if not isinstance(latest_analysis, dict):
             latest_analysis = {}
         updated_analysis = dict(latest_analysis)
+        # Schema-complete defaults (matches ErrorAnalysisResult required fields).
+        updated_analysis.setdefault("error_type", "other")
+        updated_analysis.setdefault("error_type_label", "其他")
+        updated_analysis.setdefault("root_cause", "暂无错因分析")
+        updated_analysis.setdefault("correct_approach", "暂无解题思路")
+        updated_analysis.setdefault("study_suggestion", "暂无学习建议")
         updated_analysis["linking_hint"] = dict(NO_LINKED_NODE_HINT)
         error_record.latest_analysis = updated_analysis
 
