@@ -10,6 +10,7 @@
 | `check_settings.py` | 检查 backend 配置项完整性 |
 | `force_sync_db.py` | 强制全量同步数据库（导入所有模型后重建 schema，谨慎使用） |
 | `orm_migration_audit.py` | ORM ↔ Alembic 迁移链 ↔ 实库 三方列集审计（scratch 库真重放迁移链；exit 非零=白名单外漂移；见 round2 schema-consistency-audit 报告） |
+| `db_debris_cleanup.py` | dev 库 schema 碎片清理（29 张会话遗留表 + tasks 三列 db-only 残留；默认 dry-run，`--apply` 实删；演练验证与 runbook 见 `docs/engineering/DB_DEBRIS_CLEANUP.md`） |
 | `test_job_service.py` | 手动验证任务服务 |
 | `test_llm_parser.py` | 手动验证 LLM 解析器 |
 | `build_demo.sh` | Demo 版本自动打包（历史演示用途） |

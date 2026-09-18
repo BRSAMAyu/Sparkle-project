@@ -16,6 +16,7 @@
 | [REPOSITORY_STANDARDS](./REPOSITORY_STANDARDS.md) | **仓库设计规范与整洁标准**（根目录白名单、产物归位、归档规范、提交检查单） |
 | [CI](./CI.md) | **CI 工作流说明**（保留集、设计规则、已删除项、恢复方法） |
 | [KNOWN_CODE_DEBT_LEDGER](./KNOWN_CODE_DEBT_LEDGER.md) | **已知代码债务台账**（当前有效，处置一项划掉一项） |
+| [DB_DEBRIS_CLEANUP](./DB_DEBRIS_CLEANUP.md) | **dev 库 schema 碎片清理 runbook**（29 张会话遗留表 + tasks 三列；何时跑、如何核对、回滚=重建 dev 库） |
 | [quality_guardrails](./quality_guardrails.md) | CI 覆盖率与风险阈值 |
 | [contract_guardrails](./contract_guardrails.md) | OpenAPI/Proto 契约校验规则 |
 | [flutter_quality_gate](./flutter_quality_gate.md) | Flutter 分析预算 |
