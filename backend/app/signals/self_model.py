@@ -196,17 +196,33 @@ class SparkleSelfModelService:
             return []
 
         claims: list[SelfModelClaim] = []
-        assumptions = readout.get("known_assumptions", {})
-        for i, (assumption_id, assumption_data) in enumerate(assumptions.items()):
+        assumptions = readout.get("known_assumptions", [])
+        # Aurora readout (_to_readout_summary) returns known_assumptions as a
+        # list of assumption dicts; accept the legacy dict shape defensively.
+        if isinstance(assumptions, dict):
+            assumption_items: list[tuple[Any, Any]] = list(assumptions.items())
+        else:
+            assumption_items = [
+                (item.get("assumption_id", f"assumption_{i}"), item)
+                for i, item in enumerate(assumptions)
+                if isinstance(item, dict)
+            ]
+        for i, (assumption_id, assumption_data) in enumerate(assumption_items):
             if i >= limit:
                 break
             if isinstance(assumption_data, dict):
+                evidence_raw = assumption_data.get("evidence", []) or []
+                evidence = [
+                    item if isinstance(item, str) else str(item.get("detail", ""))
+                    for item in evidence_raw
+                    if isinstance(item, (str, dict))
+                ]
                 claims.append(SelfModelClaim(
                     claim_id=f"aurora:{assumption_id}",
                     claim=str(assumption_data.get("statement", assumption_id)),
                     confidence=float(assumption_data.get("confidence", 0.5)),
                     scope="user_pair",
-                    evidence=assumption_data.get("evidence", []),
+                    evidence=[item for item in evidence if item],
                     counter_evidence=[],
                     policy_effects=[],
                     outcome=None,

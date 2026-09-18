@@ -247,7 +247,7 @@ class TestGenerateTasksForPlanTool:
                 difficulty="medium",
                 task_count=3,
             )
-            result = await tool.execute(params, user_id, db_session)
+            result = await tool.execute(params, user_id, db_session, locale="zh")
             assert result.success is False
             assert "不存在" in result.error_message
 
@@ -262,7 +262,7 @@ class TestGenerateTasksForPlanTool:
                 topic="math",
                 difficulty="medium",
             )
-            result = await tool.execute(params, user_id, db_session)
+            result = await tool.execute(params, user_id, db_session, locale="zh")
             assert result.success is False
             assert "不存在" in result.error_message
 
@@ -274,7 +274,7 @@ class TestGenerateTasksForPlanTool:
             topic="math",
             difficulty="medium",
         )
-        result = await tool.execute(params, user_id, db_session)
+        result = await tool.execute(params, user_id, db_session, locale="zh")
         assert result.success is False
         assert "格式错误" in result.error_message
 
@@ -385,7 +385,7 @@ class TestFallbackTasks:
         mock_constraints = SimpleNamespace(max_session_minutes=45)
         tool = GenerateTasksForPlanTool()
         with patch.object(tool, "_get_learning_path_node_names", new_callable=AsyncMock, return_value=[]):
-            tasks = await tool._build_fallback_tasks(plan, "微积分", 4, mock_constraints, db_session)
+            tasks = await tool._build_fallback_tasks(plan, "微积分", 4, mock_constraints, db_session, locale="zh")
         assert len(tasks) == 4
         assert tasks[0]["title"].startswith("梳理")
         assert tasks[0]["type"] == "learning"
@@ -399,7 +399,7 @@ class TestFallbackTasks:
         mock_constraints = SimpleNamespace(max_session_minutes=45)
         tool = GenerateTasksForPlanTool()
         with patch.object(tool, "_get_learning_path_node_names", new_callable=AsyncMock, return_value=["力学", "运动学", "牛顿定律"]):
-            tasks = await tool._build_fallback_tasks(plan, "牛顿定律", 5, mock_constraints, db_session)
+            tasks = await tool._build_fallback_tasks(plan, "牛顿定律", 5, mock_constraints, db_session, locale="zh")
         assert len(tasks) == 5
         assert tasks[0]["title"].startswith("补齐前置知识")
         assert tasks[-1]["type"] == "reflection"
@@ -410,7 +410,7 @@ class TestFallbackTasks:
         mock_constraints = SimpleNamespace(max_session_minutes=45)
         tool = GenerateTasksForPlanTool()
         with patch.object(tool, "_get_learning_path_node_names", new_callable=AsyncMock, return_value=[]):
-            tasks = await tool._build_fallback_tasks(plan, "math", 8, mock_constraints, db_session)
+            tasks = await tool._build_fallback_tasks(plan, "math", 8, mock_constraints, db_session, locale="zh")
         assert len(tasks) == 8
         assert "巩固任务" in tasks[-1]["title"]
 

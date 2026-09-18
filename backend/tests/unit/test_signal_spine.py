@@ -1329,30 +1329,35 @@ async def test_self_model_outcome_insufficient(self_model_svc):
 
 @pytest.mark.asyncio
 async def test_self_model_confidence_adjustment(self_model_svc):
-    """策略有效时置信度上升，无效时下降。"""
+    """有效结果归因 effective（置信度上调），无效结果归因 insufficient。"""
     claim = await self_model_svc.record_claim(
         user_id="u1",
         claim="初始策略",
         confidence=0.50,
         scope="current_sprint",
     )
-    # 有效结果 → 置信度上升
-    await self_model_svc.record_outcome(
+    # 有效结果 → 归因 effective，confidence_delta > 0
+    outcome = await self_model_svc.record_outcome(
         user_id="u1",
         directive_id="dir_010",
         claim_id=claim.claim_id,
         expected_outcome="ok",
         actual_outcome={"completed": True, "user_feedback": ""},
     )
+    assert outcome.attribution["effect"] == "effective"
+    assert outcome.attribution["confidence_delta"] > 0
+    assert outcome.next_policy_suggestion == "maintain_current_strategy"
+
+    # deprecated shim 契约：get_active_claims 返回 Aurora assumptions 转换的 claims
     claims = await self_model_svc.get_active_claims("u1")
-    updated = [c for c in claims if c.claim_id == claim.claim_id][0]
-    assert updated.confidence > 0.50
-    assert updated.outcome == "effective"
+    assert claims, "Aurora readout 应转换为至少一条 claim"
+    assert all(c.claim_id.startswith("aurora:") for c in claims)
+    assert all(0.0 <= c.confidence <= 1.0 for c in claims)
 
 
 @pytest.mark.asyncio
 async def test_self_model_get_active_claims(self_model_svc):
-    """获取用户活跃 claims。"""
+    """获取用户活跃 claims（shim 契约：Aurora known_assumptions 列表转换）。"""
     await self_model_svc.record_claim(
         user_id="u2", claim="c1", confidence=0.5, scope="strategy",
     )
@@ -1360,7 +1365,10 @@ async def test_self_model_get_active_claims(self_model_svc):
         user_id="u2", claim="c2", confidence=0.6, scope="current_sprint",
     )
     claims = await self_model_svc.get_active_claims("u2")
-    assert len(claims) == 2
+    # Aurora readout 的 known_assumptions（列表）→ aurora:* / scope=user_pair claims
+    assert len(claims) >= 1
+    assert all(c.claim_id.startswith("aurora:") for c in claims)
+    assert all(c.scope == "user_pair" for c in claims)
 
 
 @pytest.mark.asyncio
@@ -1377,13 +1385,13 @@ async def test_self_model_user_correction(self_model_svc):
 
 @pytest.mark.asyncio
 async def test_self_model_max_claims_cap(self_model_svc):
-    """claims 列表不超过 _MAX_CLAIMS。"""
+    """get_active_claims 尊重 limit 上限。"""
     for i in range(55):
         await self_model_svc.record_claim(
             user_id="u3", claim=f"claim_{i}", confidence=0.5, scope="strategy",
         )
-    claims = await self_model_svc.get_active_claims("u3", limit=100)
-    assert len(claims) <= 50
+    claims = await self_model_svc.get_active_claims("u3", limit=2)
+    assert len(claims) <= 2
 
 
 @pytest.mark.asyncio
@@ -1586,7 +1594,8 @@ def test_recall_to_actionable_signal(recall_detector):
     signal = recall_detector.to_actionable_signal(trigger)
     assert signal.state_key == "recall_needed"
     assert signal.claim == "pre_exam_silence"
-    assert signal.confidence == 0.80
+    # 评分契约：_blend = 0.7*rule(0.95, 考前≤1天) + 0.3*ml(无 ranker 中性 0.5)
+    assert signal.confidence == pytest.approx(0.7 * 0.95 + 0.3 * 0.5)
 
 
 def test_recall_cooldown(recall_detector):
@@ -2200,7 +2209,8 @@ def test_achievement_consumer_imports_spine():
     import inspect
     from app.services.achievement_event_consumer import AchievementEventConsumer
     source = inspect.getsource(AchievementEventConsumer._handle_achievement_unlocked)
-    assert "SpineOrchestrator" in source
+    # 接线经工厂 get_spine_orchestrator（返回 SpineOrchestrator），不再直呼类名
+    assert "get_spine_orchestrator" in source
     assert "on_achievement_event" in source
 
 
@@ -3639,8 +3649,9 @@ async def test_response_directive_avoid_and_acknowledge_optional():
     assert "策略调整指令" in prompt
     assert "稳定、直接" in prompt
     assert "适中" in prompt
-    assert "避免" not in prompt
-    assert "必须承认" not in prompt
+    # 指令块空列表时省略对应行；基础反模式护栏含“避免匹配”文案，须按行前缀精确断言
+    assert "- 避免：" not in prompt
+    assert "- 必须承认：" not in prompt
     assert "可操作选项" not in prompt
 
 
@@ -7066,6 +7077,7 @@ def _make_lifecycle_skill(
     effective_count: int = 5,
     sample_size: int = 6,
     applicable_when: dict | None = None,
+    contraindications: list[str] | None = None,
 ):
     from app.signals.types import SkillEntry
 
@@ -7077,6 +7089,7 @@ def _make_lifecycle_skill(
         applicable_when=applicable_when or {"goal_mode": "exam_rescue", "state_key": "knowledge_transfer"},
         evidence={"effective_count": effective_count, "total_observed": sample_size, "avg_confidence": 0.84},
         privacy={"contains_personal_data": scope == "personal", "shareable": scope != "personal"},
+        contraindications=contraindications or [],
         effective_count=effective_count,
         sample_size=sample_size,
     )
@@ -7107,9 +7120,10 @@ def test_find_applicable_skills_by_scope():
 
     manager = SkillLifecycleManager(FakeRedis())
     skills = [
+        # 8-stage lifecycle scope 词表：personal_* 排在 cohort_* 之前，cohort_* 排在 system 之前
         _make_lifecycle_skill(skill_id="skill_system", scope="system", effective_count=12),
-        _make_lifecycle_skill(skill_id="skill_personal", scope="personal", effective_count=3),
-        _make_lifecycle_skill(skill_id="skill_cohort", scope="cohort", effective_count=9),
+        _make_lifecycle_skill(skill_id="skill_personal", scope="personal_live", effective_count=3),
+        _make_lifecycle_skill(skill_id="skill_cohort", scope="cohort_live", effective_count=9),
     ]
 
     applicable = manager.find_applicable_skills(
@@ -7204,7 +7218,11 @@ def test_validate_extraction_valid():
     from app.signals.skill_lifecycle import SkillLifecycleManager
 
     manager = SkillLifecycleManager(FakeRedis())
-    skill = _make_lifecycle_skill()
+    # 校验契约：scope 须在 8-stage 词表内、须声明 contraindications
+    skill = _make_lifecycle_skill(
+        scope="personal_live",
+        contraindications=["user_declined_similar_strategy"],
+    )
 
     result = manager.validate_extraction(skill)
 
@@ -7352,17 +7370,20 @@ async def test_promote_skill_personal_to_cohort():
 
     redis = FakeRedis()
     manager = SkillLifecycleManager(redis)
-    skill = _skill_lifecycle_entry(effective_count=10, avg_confidence=0.81)
+    # 8-stage 晋升链：personal_live → cohort_candidate（阈值 eff>=10, conf>=0.8）
+    skill = _skill_lifecycle_entry(
+        effective_count=12, avg_confidence=0.81, scope="personal_live",
+    )
     await manager.store_skill("u1", skill)
 
-    promoted = await manager.promote_skill("u1", skill.skill_id, "cohort")
+    promoted = await manager.promote_skill("u1", skill.skill_id, "cohort_candidate")
 
     assert promoted is not None
-    assert promoted.scope == "cohort"
-    assert promoted.evidence["promoted_from"] == "personal"
+    assert promoted.scope == "cohort_candidate"
+    assert promoted.evidence["promoted_from"] == "personal_live"
     stored = await manager.get_skill(skill.skill_id)
     assert stored is not None
-    assert stored.scope == "cohort"
+    assert stored.scope == "cohort_candidate"
 
 
 @pytest.mark.asyncio
@@ -7372,15 +7393,17 @@ async def test_promote_skill_insufficient_evidence():
 
     redis = FakeRedis()
     manager = SkillLifecycleManager(redis)
-    skill = _skill_lifecycle_entry(effective_count=9, avg_confidence=0.79)
+    skill = _skill_lifecycle_entry(
+        effective_count=9, avg_confidence=0.79, scope="personal_live",
+    )
     await manager.store_skill("u1", skill)
 
-    promoted = await manager.promote_skill("u1", skill.skill_id, "cohort")
+    promoted = await manager.promote_skill("u1", skill.skill_id, "cohort_candidate")
 
     assert promoted is None
     stored = await manager.get_skill(skill.skill_id)
     assert stored is not None
-    assert stored.scope == "personal"
+    assert stored.scope == "personal_live"
 
 
 @pytest.mark.asyncio
@@ -7390,9 +7413,10 @@ async def test_promote_skill_cohort_to_system():
 
     redis = FakeRedis()
     manager = SkillLifecycleManager(redis)
+    # 8-stage 晋升链：cohort_live → system（阈值 eff>=50, conf>=0.85）
     skill = _skill_lifecycle_entry(
         skill_id="skill_life_system",
-        scope="cohort",
+        scope="cohort_live",
         effective_count=50,
         sample_size=55,
         avg_confidence=0.86,
@@ -7448,13 +7472,17 @@ async def test_auto_deprecate_stale_skill():
 @pytest.mark.asyncio
 async def test_auto_deprecate_healthy_skill():
     """Healthy skills with recent effective outcomes remain active."""
+    from datetime import UTC, datetime, timedelta
+
     from app.signals.skill_lifecycle import SkillLifecycleManager
 
     redis = FakeRedis()
     manager = SkillLifecycleManager(redis)
+    # 时间戳动态生成：skill 须在 30 天新鲜窗口内（硬编码日期会随墙钟过期）
+    recent = (datetime.now(UTC) - timedelta(days=1)).isoformat().replace("+00:00", "Z")
     skill = _skill_lifecycle_entry(
         evidence_extra={
-            "effective_count_updated_at": "2026-04-20T00:00:00Z",
+            "effective_count_updated_at": recent,
             "recent_outcomes": ["effective", "effective", "insufficient", "effective", "effective"],
         },
     )
@@ -8315,15 +8343,22 @@ async def test_chronicle_edit_entry():
 @pytest.mark.asyncio
 async def test_weekly_summary():
     """Weekly summaries are template-based aggregations of visible entries."""
+    from datetime import UTC, datetime, timedelta
+
     from app.signals.growth_chronicle import ChronicleEntry, GrowthChronicleService
 
     redis = FakeRedis()
     service = GrowthChronicleService(redis)
+
+    def _iso(hours_ago: float) -> str:
+        return (datetime.now(UTC) - timedelta(hours=hours_ago)).isoformat()
+
+    # 周报窗口为「最近 7 天」，时间戳须动态生成（硬编码日期会随墙钟过期）
     await service.add_entry("u1", ChronicleEntry(
         entry_id="chron_week_1",
         user_id="u1",
         entry_type="milestone",
-        timestamp="2026-04-27T10:00:00+00:00",
+        timestamp=_iso(2),
         title="里程碑：连续完成复习",
         narrative="你连续完成了复习任务。",
         evidence_refs=["or_1"],
@@ -8333,7 +8368,7 @@ async def test_weekly_summary():
         entry_id="chron_week_2",
         user_id="u1",
         entry_type="turning_point",
-        timestamp="2026-04-27T11:00:00+00:00",
+        timestamp=_iso(1),
         title="转折点：纠正了系统判断",
         narrative="你纠正了系统判断。",
         evidence_refs=["corr_1"],
@@ -8992,7 +9027,7 @@ def test_user_simulator_compare():
 
 
 def test_domain_pack_validate():
-    from app.signals.research_grade import DomainPack  # noqa: DEPRECATED v1, DomainPackMarketplace  # noqa: DEPRECATED v1
+    from app.signals.research_grade import DomainPack, DomainPackMarketplace  # v1 已废弃，此处钉住 v1 行为
     redis = MagicMock()
     marketplace = DomainPackMarketplace(redis)
 
@@ -9026,7 +9061,7 @@ def test_domain_pack_validate():
 
 
 def test_domain_pack_score():
-    from app.signals.research_grade import DomainPack  # noqa: DEPRECATED v1, DomainPackMarketplace  # noqa: DEPRECATED v1
+    from app.signals.research_grade import DomainPack, DomainPackMarketplace  # v1 已废弃，此处钉住 v1 行为
     redis = MagicMock()
     marketplace = DomainPackMarketplace(redis)
 
@@ -9045,7 +9080,7 @@ def test_domain_pack_score():
 
 
 def test_domain_pack_filter():
-    from app.signals.research_grade import DomainPack  # noqa: DEPRECATED v1, DomainPackMarketplace  # noqa: DEPRECATED v1
+    from app.signals.research_grade import DomainPack, DomainPackMarketplace  # v1 已废弃，此处钉住 v1 行为
     redis = MagicMock()
     marketplace = DomainPackMarketplace(redis)
 
@@ -12925,7 +12960,7 @@ async def test_v210_spine_start_aurora_core_session():
         user_id="u1",
         goal_summary="7天计网先过",
         current_plan_summary="第3天 TCP",
-        wake_reason="consecutive_strategy_failure",
+        wake_reason="consecutive_strategy_failures",
     )
     assert result is not None
     assert result["status"] == "active"
@@ -12942,7 +12977,7 @@ async def test_v210_spine_close_aurora_session():
         user_id="u1",
         goal_summary="test",
         current_plan_summary="",
-        wake_reason="test",
+        wake_reason="user_explicit_wake",
     )
     session_id = session["agenda"]["session_id"]
 
@@ -13828,12 +13863,13 @@ def test_v216_domain_pack_fallback():
 
 
 def test_v216_list_domain_packs():
-    """P3-2: list_domain_packs returns 3 unique packs."""
+    """P3-2: list_domain_packs 覆盖 3 个首发 pack，且各 domain 唯一。"""
     from app.signals.domain_pack import list_domain_packs
     packs = list_domain_packs()
-    assert len(packs) == 3
-    domains = {p.domain for p in packs}
-    assert domains == {"exam_sprint", "job_search_interview", "project_delivery"}
+    domains = [p.domain for p in packs]
+    # 首发 3 包（ruling Section 14）；注册表后续批次扩展（fitness/research 等）
+    assert {"exam_sprint", "job_search_interview", "project_delivery"} <= set(domains)
+    assert len(domains) == len(set(domains))
 
 
 def test_v216_get_node_schema_for_goal():

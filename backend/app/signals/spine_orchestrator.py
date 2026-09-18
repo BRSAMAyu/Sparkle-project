@@ -3163,7 +3163,11 @@ class SpineOrchestrator:
 
         # v2.5: Counterfactual shadow evaluation (research-grade)
         if user_id and record.attribution in ("effective", "insufficient"):
-            await self._run_counterfactual_shadow(user_id, record, actual_outcome)
+            try:
+                await self._run_counterfactual_shadow(user_id, record, actual_outcome)
+            except Exception:
+                # 影子评估为研究性增强，不得中断 outcome 主流程（与相邻 enricher 一致）
+                logger.warning("record_outcome: _run_counterfactual_shadow failed", exc_info=True)
 
         # P1: Close the episode outcome loop for counterfactual analysis
         try:

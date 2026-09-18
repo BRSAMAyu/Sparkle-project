@@ -49,6 +49,7 @@ async def test_plan_progress_updates_on_task_completion(db_session: AsyncSession
     await db_session.refresh(plan)
 
     # Create 4 tasks for the plan
+    # 完成前置为 IN_PROGRESS（R1A4-P2-2 FSM：PENDING -> COMPLETED 非法）
     tasks = []
     for i in range(4):
         task = Task(
@@ -57,7 +58,7 @@ async def test_plan_progress_updates_on_task_completion(db_session: AsyncSession
             plan_id=plan.id,
             title=f"复习任务 {i+1}",
             type=TaskType.LEARNING,
-            status=TaskStatus.PENDING,
+            status=TaskStatus.IN_PROGRESS,
             estimated_minutes=30,
         )
         tasks.append(task)

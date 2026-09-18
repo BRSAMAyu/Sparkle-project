@@ -369,7 +369,8 @@ def test_achievement_consumer_imports_spine():
     import inspect
     from app.services.achievement_event_consumer import AchievementEventConsumer
     source = inspect.getsource(AchievementEventConsumer._handle_achievement_unlocked)
-    assert "SpineOrchestrator" in source
+    # 接线经工厂 get_spine_orchestrator（返回 SpineOrchestrator），不再直呼类名
+    assert "get_spine_orchestrator" in source
     assert "on_achievement_event" in source
 
 
