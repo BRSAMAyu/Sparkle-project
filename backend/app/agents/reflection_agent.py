@@ -708,18 +708,32 @@ class ReflectionAgent:
 
         try:
             # N2 修复：构造 messages 列表按裸服务真实签名调用（原 system_prompt=/user_message= 必 TypeError）
+            system_content = build_reflection_system_prompt(
+                get_review_profile(
+                    review_profile_id=review_profile_id,
+                    workflow_context=workflow_context,
+                    target_type=review_result.target_type,
+                )
+            )
+            # R2-fix: 继承主生成的 system_prompt（含检索材料、跨会话记忆、用户画像）。
+            # 缺失时重写调用"失明"，会产出"没有看到资料正文/没有记忆记录"类回复并
+            # 替换主回复交付用户（round2 验收 mr4/a2-slim 间歇失败的根因之一）。
+            generation_system_prompt = str((context or {}).get("generation_system_prompt") or "").strip()
+            if generation_system_prompt:
+                system_content = "\n\n".join(
+                    [
+                        system_content,
+                        "## 原始生成上下文（修正时必须继承，禁止丢弃）\n\n"
+                        "以下是生成原始回复时所用的完整系统提示，包含检索到的用户资料原文、"
+                        "跨会话记忆与用户画像。修正或重写内容时必须继续依据这些材料与记忆作答，"
+                        "禁止声称「没有看到资料正文」「没有相关记忆记录」。\n\n"
+                        f"{generation_system_prompt}",
+                    ]
+                )
+
             fixed_content = await self.generator.chat(
                 [
-                    {
-                        "role": "system",
-                        "content": build_reflection_system_prompt(
-                            get_review_profile(
-                                review_profile_id=review_profile_id,
-                                workflow_context=workflow_context,
-                                target_type=review_result.target_type,
-                            )
-                        ),
-                    },
+                    {"role": "system", "content": system_content},
                     {"role": "user", "content": prompt},
                 ],
                 temperature=0.3

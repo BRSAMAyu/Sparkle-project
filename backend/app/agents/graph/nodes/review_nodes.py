@@ -604,6 +604,8 @@ async def generation_review_node(state: SparkleState) -> dict[str, Any]:
         "reviewed_content": None,
         "review_profile_id": review_result.review_profile_id,
         "workflow_context": workflow_context,
+        # R2-fix: 随审查上下文携带主生成 system_prompt，供 reflection 重写继承
+        "generation_system_prompt": str(context_data.get("generation_system_prompt") or ""),
     }
 
     # 6. 记录审查历史
@@ -768,7 +770,13 @@ async def reflection_node(state: SparkleState) -> dict[str, Any]:
     logger.info("[ReviewNode] reflection_node invoked (Phase 2a: full ReflectionAgent)")
 
     # 获取当前审查上下文
-    review_context: ReviewContext | None = _state_get(state, "review_context")
+    # R2-fix: 真实图（standard_workflow）用的是自研 WorkflowState dataclass，
+    # 节点返回值会被引擎合并进 context_data（见 reflection_condition 的同类
+    # 回退）。此前这里只读 state 属性，永远拿不到 review_context，
+    # reflection 实际从未执行过（引擎日志恒现 "No review context, ending
+    # reflection"）。
+    context_data = _state_get(state, "context_data", {}) or {}
+    review_context: ReviewContext | None = _state_get(state, "review_context") or context_data.get("review_context")
     if not review_context:
         logger.warning("[ReviewNode] No review context, ending reflection")
         return {"next_step": "__end__"}
@@ -854,13 +862,18 @@ async def reflection_node(state: SparkleState) -> dict[str, Any]:
 
         # 执行反思修正
         reflection_result = await reflector.reflect(
-            user_id=str(_state_get(state, "user_id") or ""),
+            # R2-fix: WorkflowState 上没有 user_id/session_id 字段，真实图中
+            # 它们在 context_data 里（见 collaboration_node 等节点的读法）
+            user_id=str(_state_get(state, "user_id") or context_data.get("user_id") or ""),
             user_query=user_query,
             original_content=original_content,
             review_result=review_result,
             context={
-                "session_id": _state_get(state, "session_id"),
+                "session_id": str(_state_get(state, "session_id") or context_data.get("session_id") or ""),
                 "messages": messages,
+                # R2-fix: 继承主生成的 system_prompt（检索材料/跨会话记忆/画像），
+                # 否则重写调用对材料与记忆"失明"，会产出"没有看到资料"类回复
+                "generation_system_prompt": str(review_context.get("generation_system_prompt") or ""),
             },
             review_profile_id=review_profile_id,
             workflow_context=workflow_context,

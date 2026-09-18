@@ -497,7 +497,11 @@ class Settings(BaseSettings):
     TRANSLATION_PRIMARY_PROVIDER: str = "hunyuan"  # hunyuan | siliconflow
     TRANSLATION_BACKUP_PROVIDER: str = "siliconflow"  # hunyuan | siliconflow
     TRANSLATION_PROVIDER_TIMEOUT_SECONDS: int = 30
-    REVIEWER_LLM_TIMEOUT_SECONDS: int = 12
+    # R2-fix: 12s 低于审查模型实测延迟（qwen3.8-flash 常态 12-14s、P95 超
+    # 30s，见 round2 验收与 wt6 实测引擎日志），几乎每轮触发 TimeoutError →
+    # fail-closed（score=0.00 + 1 个 critical"审查过程出错"）→ 无效重写。
+    # 45s 与 ReviewerAgent.DEFAULT_LLM_TIMEOUT_SECONDS 对齐，覆盖 P95+。
+    REVIEWER_LLM_TIMEOUT_SECONDS: int = 45
 
     # OCR / Document Cleaning
     OCR_PROVIDER: str = "zhipu"  # zhipu | siliconflow

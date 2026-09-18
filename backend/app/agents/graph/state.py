@@ -84,6 +84,9 @@ class ReviewContext(TypedDict, total=False):
     reviewer_model: str                     # 审查使用的模型
     original_content: str | None         # 原始内容（用于反思修正）
     reviewed_content: str | None         # 审查后的内容
+    # R2-fix: 主生成最终组装的 system_prompt（含检索材料/跨会话记忆/画像），
+    # reflection_node 重写时必须继承，否则重写回复会丢失材料与记忆
+    generation_system_prompt: str | None
 
 
 class ReviewHistoryEntry(TypedDict, total=False):

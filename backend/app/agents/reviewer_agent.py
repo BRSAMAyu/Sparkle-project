@@ -656,6 +656,11 @@ class ReviewerAgent:
             ReviewResult: 解析后的审查结果
         """
         try:
+            if not isinstance(response, dict):
+                # chat_json 解析失败会返回 None（不抛异常）；显式走 fail-closed，
+                # 避免 AttributeError 掩盖真实原因
+                raise ValueError(f"reviewer payload is not a dict: {type(response).__name__}")
+
             overall_score = float(response.get("overall_score", 0.7))
             decision = response.get("decision", ReviewDecision.NEEDS_REFINEMENT.value)
             requires_reflection = response.get("requires_reflection", False)
@@ -679,9 +684,21 @@ class ReviewerAgent:
             # 解析问题
             issues = []
             for i in response.get("issues", []):
+                severity = str(i.get("severity", "info")).lower()
+                # R2-fix: 严重度通胀校准。审查 LLM 对正常回复也会贴非 safety 类
+                # critical（实测 overall 0.82 的正常回复带 1 个 critical + 2 个
+                # warning），与"总分达到通过线"自相矛盾，导致"未通过+无效重写"
+                # 几乎每轮触发。当总分 >= 通过阈值时，非 safety 的 critical 降级
+                # 为 warning；safety 类 critical 一律保留，绝不因高分放行。
+                if (
+                    overall_score >= self.DEFAULT_OVERALL_THRESHOLD
+                    and severity == ReviewSeverity.CRITICAL.value
+                    and str(i.get("category", "")).strip().lower() != "safety"
+                ):
+                    severity = ReviewSeverity.WARNING.value
                 issues.append(Issue(
                     category=i.get("category", "general"),
-                    severity=i.get("severity", "info"),
+                    severity=severity,
                     location=i.get("location", ""),
                     description=i.get("description", ""),
                     affected_content=i.get("affected_content", ""),
@@ -690,7 +707,8 @@ class ReviewerAgent:
                 ))
 
             # 确保决策与分数一致
-            if overall_score >= 0.7 and not any(i["severity"] == "critical" for i in response.get("issues", [])):
+            has_critical = any(i.severity == ReviewSeverity.CRITICAL.value for i in issues)
+            if overall_score >= self.DEFAULT_OVERALL_THRESHOLD and not has_critical:
                 decision = ReviewDecision.PASSED.value
             elif overall_score < 0.5:
                 decision = ReviewDecision.FAILED.value

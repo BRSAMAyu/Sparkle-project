@@ -1693,6 +1693,10 @@ Ask about their available time and current tasks if needed.
         document_context=document_context,
     )
     system_prompt = context_assembly.system_prompt
+    # R2-fix: 持久化主生成最终组装的 system_prompt（含检索材料 Retrieved
+    # Documents、跨会话记忆、用户画像），随 context_data 传给 review/reflection，
+    # 让 reflection_node 重写时继承同一上下文，避免重写"失明"。
+    state.context_data["generation_system_prompt"] = system_prompt
     prompt_conversation_context = {"messages": context_assembly.conversation_history}
     state.context_data["context_budget"] = {
         "budgets": context_assembly.budgets,
