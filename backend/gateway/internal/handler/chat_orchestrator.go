@@ -7,6 +7,7 @@ Stage: <首次引入 Stage 号>
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -337,7 +338,15 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 	msgLimiter := newWSMessageRateLimiter(h.cfg)
 
 	tracer := otel.Tracer("chat-orchestrator")
-	readResults := readWSMessages(conn, connDone)
+	// GW-P1-2: after the upgrade the connection is hijacked, so net/http no
+	// longer cancels c.Request.Context() when the client goes away. The read
+	// pump is the only reliable disconnect signal — wire its first read error
+	// to cancel streamCtx, which parents every per-message handler ctx below,
+	// so an in-flight upstream gRPC stream (and its streamSem slot) is
+	// released instead of running to completion as an orphan.
+	streamCtx, cancelStreams := context.WithCancel(c.Request.Context())
+	defer cancelStreams()
+	readResults := readWSMessages(conn, connDone, func(error) { cancelStreams() })
 
 	// Message handling loop: each WebSocket message triggers a new StreamChat call
 	for {
@@ -386,7 +395,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 
 		// P2: Support Binary Protobuf Protocol
 		if msgType == websocket.BinaryMessage {
-			h.handleProtobufMessage(writer, msg, userID, tracer, c.Request.Context())
+			h.handleProtobufMessage(writer, msg, userID, tracer, streamCtx)
 			continue
 		}
 
@@ -422,16 +431,16 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					}
 					return false
 				case "action_feedback":
-					h.handleActionFeedback(c.Request.Context(), writer, msgMap, userID, authToken)
+					h.handleActionFeedback(streamCtx, writer, msgMap, userID, authToken)
 					return false
 				case "intervention_feedback":
 					h.handleInterventionFeedback(writer, msgMap, userID, authToken)
 					return false
 				case "response_feedback":
-					h.handleResponseFeedback(writer, msgMap, userID, c.Request.Context())
+					h.handleResponseFeedback(writer, msgMap, userID, streamCtx)
 					return false
 				case "plan_review_feedback":
-					h.handlePlanReviewFeedback(writer, msgMap, userID, c.Request.Context())
+					h.handlePlanReviewFeedback(writer, msgMap, userID, streamCtx)
 					return false
 				case "focus_completed":
 					h.handleFocusCompleted(msgMap, userID, authToken)
@@ -468,7 +477,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 							toolInput.Reset()
 							chatInputPool.Put(toolInput)
 						}()
-						msgCtx := c.Request.Context()
+						msgCtx := streamCtx
 						ctx2, span2 := tracer.Start(msgCtx, "HandleToolResult")
 						span2.SetAttributes(
 							attribute.String("user_id", userID),
@@ -482,7 +491,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 						return h.handleChatMessage(ctx2, writer, userID, toolInput, toolInput.RequestID)
 					}()
 				case "update_node_mastery":
-					h.handleUpdateNodeMastery(writer, msgMap, userID, c.Request.Context())
+					h.handleUpdateNodeMastery(writer, msgMap, userID, streamCtx)
 					return false
 				case "message", "":
 					// Continue with normal chat message handling
@@ -530,7 +539,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				if len(input.Message) > maxMessageLength {
 					if !writeWSJSONLogged(writer, "message length error", gin.H{
 						"type":    "error",
-						"message": i18n.T(c.Request.Context(), "chat.message_length_exceeded", map[string]string{"max_length": fmt.Sprintf("%d", maxMessageLength)}),
+						"message": i18n.T(streamCtx, "chat.message_length_exceeded", map[string]string{"max_length": fmt.Sprintf("%d", maxMessageLength)}),
 					}) {
 						return true
 					}
@@ -540,7 +549,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				// 🔧 P1-2: XSS 过滤
 				input.Message = sanitizer.Sanitize(input.Message)
 
-				msgCtx := c.Request.Context()
+				msgCtx := streamCtx
 				if traceIDFromClient != "" {
 					msgCtx = agent.WithTraceID(msgCtx, traceIDFromClient)
 				}
@@ -567,7 +576,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				envelope.RequestID = generateRequestID()
 			}
 
-			msgCtx := extractTraceContextFromEnvelope(c.Request.Context(), envelope)
+			msgCtx := extractTraceContextFromEnvelope(streamCtx, envelope)
 			msgCtx, span := tracer.Start(msgCtx, "HandleMessage")
 			span.SetAttributes(
 				attribute.String("user_id", userID),

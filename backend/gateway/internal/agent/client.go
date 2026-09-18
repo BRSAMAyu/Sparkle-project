@@ -370,17 +370,51 @@ func (c *Client) StreamChat(ctx context.Context, req *agentv1.ChatRequest) (agen
 		grpcCallDuration.WithLabelValues("StreamChat", statusCodeLabel(err)).Observe(time.Since(start).Seconds())
 		return nil, err
 	}
-	// Use fresh context with fresh timeout after reconnection
+	// Use a fresh timeout for the retried attempt, but keep the caller's ctx
+	// as parent: the returned server-stream outlives this function, so it
+	// must (a) NOT be canceled when StreamChat returns — a deferred cancel
+	// here killed every retried stream before its first Recv (GW-P1-1) — and
+	// (b) stay attached to the caller's cancellation so WS disconnects still
+	// propagate. The retry ctx's cancel is released when the stream
+	// terminates (cancelOnDoneStream), not on return.
 	retryTimeout := 120 * time.Second
 	if c.config.GRPCTimeoutSeconds > 0 {
 		retryTimeout = time.Duration(c.config.GRPCTimeoutSeconds) * time.Second
 	}
-	retryCtx, retryCancel := context.WithTimeout(context.Background(), retryTimeout)
-	defer retryCancel()
+	retryCtx, retryCancel := context.WithTimeout(ctx, retryTimeout)
 	retryCtx = c.injectMetadata(retryCtx, req.UserId)
 	stream, retryErr := c.currentAPI().StreamChat(retryCtx, req)
+	if retryErr != nil {
+		// The attempt failed and no stream escaped to the caller.
+		retryCancel()
+	} else {
+		stream = newCancelOnDoneStream(stream, retryCancel)
+	}
 	grpcCallDuration.WithLabelValues("StreamChat", statusCodeLabel(retryErr)).Observe(time.Since(start).Seconds())
 	return stream, retryErr
+}
+
+// cancelOnDoneStream releases the retry stream's context cancel exactly when
+// the stream terminates, instead of when the factory function returns —
+// canceling on return killed the stream before its first Recv (GW-P1-1).
+type cancelOnDoneStream struct {
+	grpc.ServerStreamingClient[agentv1.ChatResponse]
+	cancel context.CancelFunc
+	once   sync.Once
+}
+
+func newCancelOnDoneStream(stream grpc.ServerStreamingClient[agentv1.ChatResponse], cancel context.CancelFunc) *cancelOnDoneStream {
+	return &cancelOnDoneStream{ServerStreamingClient: stream, cancel: cancel}
+}
+
+func (s *cancelOnDoneStream) Recv() (*agentv1.ChatResponse, error) {
+	resp, err := s.ServerStreamingClient.Recv()
+	if err != nil {
+		// EOF (clean end) or any terminal error: the stream is over, release
+		// the context timer.
+		s.once.Do(s.cancel)
+	}
+	return resp, err
 }
 
 func (c *Client) SubmitResponseFeedback(ctx context.Context, req *agentv1.ResponseFeedbackRequest) (*agentv1.ResponseFeedbackResponse, error) {

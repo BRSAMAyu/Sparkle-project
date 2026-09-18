@@ -10,12 +10,20 @@ type wsReadResult struct {
 	err         error
 }
 
-func readWSMessages(conn *websocket.Conn, connDone <-chan struct{}) <-chan wsReadResult {
+// readWSMessages pumps websocket reads into a channel. onReadError, when
+// non-nil, is invoked from the pump goroutine the moment a read fails —
+// before the error result is handed to the consumer — so callers can cancel
+// any in-flight upstream work even while they are blocked consuming a gRPC
+// stream instead of reading from the channel (GW-P1-2).
+func readWSMessages(conn *websocket.Conn, connDone <-chan struct{}, onReadError func(error)) <-chan wsReadResult {
 	readResults := make(chan wsReadResult)
 	go func() {
 		defer close(readResults)
 		for {
 			messageType, message, err := conn.ReadMessage()
+			if err != nil && onReadError != nil {
+				onReadError(err)
+			}
 			select {
 			case readResults <- wsReadResult{
 				messageType: messageType,

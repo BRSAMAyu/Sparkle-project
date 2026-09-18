@@ -89,6 +89,15 @@ var (
 		Help: "Total duplicate messages detected and dropped",
 	})
 
+	// QuotaDailyUsageLoadErrors tracks failures to load a user's daily token
+	// usage before a chat stream. Quota enforcement degrades to fail-open on
+	// these errors (usage starts from 0), so a rising rate means billing
+	// integrity is degraded and must be alerted on (GW-P2-4).
+	QuotaDailyUsageLoadErrors = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "sparkle_quota_daily_usage_load_errors_total",
+		Help: "Daily usage load failures that degrade mid-stream quota enforcement to fail-open",
+	})
+
 	AIChatTotalDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
 		Name:    "sparkle_ai_chat_total_duration_seconds",
 		Help:    "Total AI chat request duration from gateway receipt to final completion",

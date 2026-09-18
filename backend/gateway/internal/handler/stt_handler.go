@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/json"
 	"io"
-	"net/http"
 	"sync"
 	"time"
 
@@ -24,21 +23,16 @@ type STTHandler struct {
 
 // NewSTTHandler creates a new STT handler
 func NewSTTHandler(pythonSTTUrl string, logger *zap.Logger, cfg *config.Config) *STTHandler {
+	// GW-P2-2: reuse the WebSocketFactory origin policy instead of a local
+	// one — the previous local checkOrigin allowed empty origins
+	// unconditionally, making /ws/stt the only WS entry that accepted them
+	// in production. The factory rejects empty origins in production and
+	// enforces the configured allowed-origin list.
+	factory := &WebSocketFactory{config: cfg}
 	return &STTHandler{
 		pythonSTTUrl: pythonSTTUrl,
 		upgrader: websocket.Upgrader{
-			CheckOrigin: func(r *http.Request) bool {
-				origin := r.Header.Get("Origin")
-				if origin == "" {
-					return true
-				}
-				allowed := cfg.IsOriginAllowed(origin)
-				if !allowed {
-					logger.Warn("STT WebSocket rejected connection from unauthorized origin",
-						zap.String("origin", origin))
-				}
-				return allowed
-			},
+			CheckOrigin:      factory.checkOrigin,
 			HandshakeTimeout: 10 * time.Second,
 			ReadBufferSize:   4096,
 			WriteBufferSize:  4096,

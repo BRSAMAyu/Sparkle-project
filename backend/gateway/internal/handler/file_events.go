@@ -9,6 +9,7 @@ package handler
 import (
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -56,10 +57,20 @@ func (h *FileEventHandler) HandleWebSocket(c *gin.Context) {
 	}
 	defer conn.Close()
 
+	// GW-P0-1: serialize all writes (hub.Send from the Redis subscriber
+	// goroutine + local close frames) through one wsSafeWriter — gorilla
+	// panics on concurrent writers to the same conn, and the subscriber
+	// goroutine has no recover.
+	writeWait := 10 * time.Second
+	if h.cfg != nil && h.cfg.WSWriteWaitSeconds > 0 {
+		writeWait = time.Duration(h.cfg.WSWriteWaitSeconds) * time.Second
+	}
+	writer := newWSSafeWriter(conn, writeWait)
+
 	userID := c.GetString("user_id")
 	if userID == "" {
 		metrics.WSConnectionError.WithLabelValues("/ws/files", "unknown", "missing_user").Inc()
-		_ = conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseUnsupportedData, "Authentication required"))
+		_ = writer.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseUnsupportedData, "Authentication required"))
 		return
 	}
 	authMethod := c.GetString("ws_auth_method")
@@ -74,11 +85,11 @@ func (h *FileEventHandler) HandleWebSocket(c *gin.Context) {
 	}
 	if maxConns > 0 && h.hub.Count(userID) >= maxConns {
 		metrics.WSConnectionError.WithLabelValues("/ws/files", authMethod, "connection_limit").Inc()
-		_ = conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "Too many connections"))
+		_ = writer.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "Too many connections"))
 		return
 	}
-	h.hub.Register(userID, conn)
-	defer h.hub.Unregister(userID, conn)
+	h.hub.Register(userID, writer)
+	defer h.hub.Unregister(userID, writer)
 
 	readLimit := int64(0)
 	msgRate := 0.0
@@ -105,7 +116,7 @@ func (h *FileEventHandler) HandleWebSocket(c *gin.Context) {
 			break
 		}
 		if !msgLimiter.Allow() {
-			_ = conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "Message rate limit exceeded"))
+			_ = writer.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "Message rate limit exceeded"))
 			break
 		}
 	}

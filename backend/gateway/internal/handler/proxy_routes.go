@@ -733,11 +733,17 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 
 	// ==================== Client Telemetry Routes ====================
 	clientTelemetry := api.Group("/client-telemetry")
-	clientTelemetry.Use(authMiddleware)
 	{
+		// Anonymous ingest: pre-login telemetry batches must reach the
+		// backend without auth (contract:
+		// TestProxyRoutesHandler_ClientTelemetryAuthBoundary).
 		clientTelemetry.POST("/events", h.proxyWithHeaders)
 		clientTelemetry.POST("/events/batch", h.proxyWithHeaders)
-		clientTelemetry.GET("/summary", h.proxyWithHeaders)
+
+		// Aggregated summaries stay behind auth.
+		authedTelemetry := clientTelemetry.Group("")
+		authedTelemetry.Use(authMiddleware)
+		authedTelemetry.GET("/summary", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered client-telemetry proxy routes")
 

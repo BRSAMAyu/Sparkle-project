@@ -589,7 +589,12 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 			if usage, err := h.quota.GetDailyUsage(ctx, userID); err == nil {
 				dailyUsageStart = usage
 			} else {
+				// GW-P2-4: enforcement intentionally degrades to fail-open
+				// here (usage starts at 0), so surface the degradation as a
+				// metric instead of only a log line — a rising rate means
+				// billing integrity is impaired during the Redis outage.
 				log.Printf("Failed to load daily usage: %v", err)
+				wsmetrics.QuotaDailyUsageLoadErrors.Inc()
 			}
 		} else if dailyLimit > 0 && isDevelopmentEnv() {
 			log.Printf("WARN: Daily quota check skipped in development mode (limit=%d)", dailyLimit)

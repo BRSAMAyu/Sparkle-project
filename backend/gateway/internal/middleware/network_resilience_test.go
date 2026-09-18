@@ -313,3 +313,27 @@ func TestNetworkResilienceMiddleware_ZeroConfigDefaults(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 }
+
+// TestNetworkResilienceMiddleware_RegistrationOrderMatters documents the gin
+// mechanic behind GW-P2-1: handler chains are snapshotted per route at
+// registration time, so a Use() that runs after routes are registered never
+// applies to them. In production this middleware must be installed on the
+// api group BEFORE RegisterProxyRoutes.
+func TestNetworkResilienceMiddleware_RegistrationOrderMatters(t *testing.T) {
+	cfg := DefaultNetworkResilienceConfig()
+
+	r := gin.New()
+	r.GET("/early", func(c *gin.Context) { c.Status(http.StatusOK) })
+	r.Use(NetworkResilienceMiddleware(cfg))
+	r.GET("/late", func(c *gin.Context) { c.Status(http.StatusOK) })
+
+	early := httptest.NewRecorder()
+	r.ServeHTTP(early, httptest.NewRequest(http.MethodGet, "/early", nil))
+	assert.Empty(t, early.Header().Get("Keep-Alive"),
+		"route registered before Use() must NOT carry the middleware")
+
+	late := httptest.NewRecorder()
+	r.ServeHTTP(late, httptest.NewRequest(http.MethodGet, "/late", nil))
+	assert.NotEmpty(t, late.Header().Get("Keep-Alive"),
+		"route registered after Use() must carry the middleware")
+}

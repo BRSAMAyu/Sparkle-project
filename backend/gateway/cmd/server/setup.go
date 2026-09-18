@@ -126,6 +126,23 @@ const (
 	defaultDBMaxConnLifetime       = 30 * time.Minute
 )
 
+// projectionRebuildTimeout bounds a background projection rebuild.
+const projectionRebuildTimeout = 10 * time.Minute
+
+// startDetachedRebuild runs a projection rebuild in a background goroutine
+// under its own bounded context (GW-P1-4): net/http cancels the request
+// context as soon as the handler returns, so feeding c.Request.Context() to
+// the goroutine aborted every rebuild the moment "rebuild_started" was
+// written. The detached context keeps the rebuild alive and caps runaway
+// work at projectionRebuildTimeout.
+func startDetachedRebuild(work func(ctx context.Context)) {
+	ctx, cancel := context.WithTimeout(context.Background(), projectionRebuildTimeout)
+	go func() {
+		defer cancel()
+		work(ctx)
+	}()
+}
+
 func initTracer() func(context.Context) error {
 	return otelinfra.InitTracer("sparkle-gateway")
 }
@@ -376,6 +393,14 @@ func initCQRS(ctx context.Context, cfg *config.Config, dbh *databaseHandles, rdb
 
 	fileEventSubscriber := service.NewFileEventSubscriber(rdb, services.fileEventHub, logger)
 	go func() {
+		// GW-P0-1: this goroutine has no recover of its own and a panic here
+		// (e.g. a websocket write issue surfacing from hub.Send) would take
+		// down the whole gateway process. Log and contain it.
+		defer func() {
+			if r := recover(); r != nil {
+				logger.Error("File event subscriber panicked", zap.Any("panic", r))
+			}
+		}()
 		if err := fileEventSubscriber.Run(ctx); err != nil {
 			logger.Error("File event subscriber stopped", zap.Error(err))
 		}
@@ -573,6 +598,14 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 		galaxyRateLimit := middleware.HybridRateLimitMiddlewareSimple(rdb, 10, 20)
 		handlers.galaxyHandler.RegisterRoutes(api, authMiddleware, galaxyRateLimit)
 
+		// FV-24 / GW-P2-1: Network resilience must be applied to the api
+		// group BEFORE the proxy routes are registered — gin snapshots the
+		// handler chain per route at registration time, so a later r.Use()
+		// never reaches them and the middleware was effectively dead for all
+		// explicit proxy routes.
+		resilienceCfg := middleware.DefaultNetworkResilienceConfig()
+		api.Use(middleware.NetworkResilienceMiddleware(resilienceCfg))
+
 		// Register explicit proxy routes for critical Python Backend APIs
 		proxyRoutesHandler.RegisterProxyRoutes(api, authMiddleware)
 	}
@@ -590,10 +623,6 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 		// route-tier: internal
 		internal.POST("/signals/push", handlers.signalPushHandler.HandlePush)
 	}
-
-	// FV-24: Network resilience middleware for upstream proxy routes
-	resilienceCfg := middleware.DefaultNetworkResilienceConfig()
-	r.Use(middleware.NetworkResilienceMiddleware(resilienceCfg))
 
 	if cfg.IsDevelopment() {
 		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -681,7 +710,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 				return
 			}
 
-			go func(ctx context.Context) {
+			startDetachedRebuild(func(ctx context.Context) {
 				opts := projection.DefaultRebuildOptions()
 				progress, err := cqrs.projectionBuilder.RebuildFromEventStore(ctx, name, aggregateType, opts)
 				if err != nil {
@@ -694,7 +723,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 						progress.Duration,
 					)
 				}
-			}(c.Request.Context())
+			})
 
 			c.JSON(http.StatusOK, gin.H{
 				"status":  "rebuild_started",
@@ -718,7 +747,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 				return
 			}
 
-			go func(ctx context.Context) {
+			startDetachedRebuild(func(ctx context.Context) {
 				opts := projection.DefaultRebuildOptions()
 				progress, err := cqrs.projectionBuilder.RebuildFromSnapshot(ctx, name, aggregateType, opts)
 				if err != nil {
@@ -731,7 +760,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 						progress.Duration,
 					)
 				}
-			}(c.Request.Context())
+			})
 
 			c.JSON(http.StatusOK, gin.H{
 				"status":  "rebuild_started",
@@ -823,6 +852,10 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 	}
 
 	// route-tier: deprecated
+	// GW-P2-1: engine-level resilience for the NoRoute fallback proxy only —
+	// every explicit route is already registered by now, so this Use() cannot
+	// reach them (gin snapshots handler chains at registration time).
+	r.Use(middleware.NetworkResilienceMiddleware(middleware.DefaultNetworkResilienceConfig()))
 	r.NoRoute(func(c *gin.Context) {
 		path := c.Request.URL.Path
 		method := c.Request.Method

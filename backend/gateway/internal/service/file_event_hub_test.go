@@ -176,3 +176,93 @@ func TestFileEventHub_SendRemovesBadConnections(t *testing.T) {
 
 	assert.Equal(t, 0, hub.Count("user-b"))
 }
+
+// TestFileEventHub_SendWhileRegisterUnregister_ConcurrentStress is the
+// regression test for GW-P0-1: Send used to iterate the shared connections
+// map outside the read lock while Register/Unregister mutated it, which
+// trips the Go runtime's unrecoverable "concurrent map iteration and map
+// write" fatal as soon as a subscriber Send overlaps a client
+// disconnect/reconnect. The test replays exactly that overlap; with the
+// pre-fix code this test process dies with a runtime fatal, with the
+// snapshot fix it completes cleanly.
+func TestFileEventHub_SendWhileRegisterUnregister_ConcurrentStress(t *testing.T) {
+	hub := NewFileEventHub()
+	upgrader := websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}
+
+	const numConns = 64
+	registered := make(chan struct{}, numConns)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+		hub.Register("stress-user", conn)
+		registered <- struct{}{}
+	}))
+	defer server.Close()
+
+	wsURL := "ws" + server.URL[4:] + "/ws"
+	clients := make([]*websocket.Conn, 0, numConns)
+	defer func() {
+		for _, c := range clients {
+			_ = c.Close()
+		}
+	}()
+	for i := 0; i < numConns; i++ {
+		client, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+		require.NoError(t, err)
+		clients = append(clients, client)
+	}
+	for i := 0; i < numConns; i++ {
+		select {
+		case <-registered:
+		case <-time.After(2 * time.Second):
+			t.Fatal("timed out waiting for hub registrations")
+		}
+	}
+	assert.Equal(t, numConns, hub.Count("stress-user"))
+
+	stop := make(chan struct{})
+	var wg sync.WaitGroup
+
+	// Simulates /ws/files handler goroutines: disconnect + reconnect churn
+	// mutating the shared map.
+	for g := 0; g < 4; g++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				select {
+				case <-stop:
+					return
+				default:
+				}
+				for _, c := range clients {
+					hub.Unregister("stress-user", c)
+					hub.Register("stress-user", c)
+				}
+			}
+		}()
+	}
+
+	// Simulates the Redis file_status subscriber goroutine (exactly one in
+	// production): hub.Send per event. Concurrent per-conn write
+	// serialization is covered separately at the handler level, where the
+	// wsSafeWriter is registered.
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			select {
+			case <-stop:
+				return
+			default:
+			}
+			hub.Send("stress-user", map[string]string{"type": "stress"})
+		}
+	}()
+
+	time.Sleep(1500 * time.Millisecond)
+	close(stop)
+	wg.Wait()
+}
