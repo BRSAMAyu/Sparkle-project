@@ -4,6 +4,15 @@
 // Stage: v1 网关基座
 //
 // 读侧投影事件处理.
+//
+// Delivery contract (GW-P3-7): events arrive at-least-once. The outbox
+// publisher (internal/cqrs/outbox) publishes before it marks entries
+// published, so a crash in between replays entries. Handlers here MUST stay
+// idempotent: deduplicate/overwrite based on event ID or entity state rather
+// than assuming single delivery. Position tracking (LastProcessedPosition via
+// Manager.UpdatePosition) bounds replay windows but does not by itself make
+// reprocessing harmless — projecting the same event twice must converge to
+// the same read-model state.
 
 package projection
 

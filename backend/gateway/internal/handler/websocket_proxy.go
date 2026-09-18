@@ -30,6 +30,11 @@ import (
 // default so behaviour is consistent across WebSocket endpoints.
 const wsDefaultMaxMessageBytes int64 = 256 * 1024 // 256 KB
 
+// wsDedupCheckTimeout bounds the per-message Redis dedup round-trip
+// (GW-P3-4): on timeout the message is forwarded without dedup instead of
+// stalling the client→backend pump.
+const wsDedupCheckTimeout = 200 * time.Millisecond
+
 // Reconnect rate-limit constants
 const (
 	reconnectMaxAttemptsDefault = 10  // default max reconnect attempts per window
@@ -183,7 +188,7 @@ func (p *WebSocketProxy) HandlePersonalWS(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid session_id format"})
 			return
 		}
-		if !p.checkReconnectAllowed(userID) {
+		if !p.checkAndRecordReconnect(userID) {
 			p.logger.Warn("WS reconnect rate limit exceeded",
 				zap.String("user_id_hash", hashUserIDForLog(userID)),
 				zap.String("session_id", sessionID))
@@ -193,7 +198,6 @@ func (p *WebSocketProxy) HandlePersonalWS(c *gin.Context) {
 			})
 			return
 		}
-		p.recordReconnectAttempt(userID)
 		backendURL = backendURL + "?session_id=" + url.QueryEscape(sessionID)
 		p.logger.Info("WS reconnect with session_id",
 			zap.String("user_id_hash", hashUserIDForLog(userID)),
@@ -411,7 +415,16 @@ func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, 
 				if p.dedupService != nil && len(data) > 0 {
 					hash := sha256.Sum256(data)
 					dedupKey := hex.EncodeToString(hash[:])
-					isDup, err := p.dedupService.CheckAndMark(context.Background(), userID, dedupKey)
+					// GW-P3-4: bound the dedup round-trip. The old detached
+					// context.Background() let a Redis stall freeze this
+					// user's whole client→backend forwarding loop (each
+					// message blocked indefinitely in CheckAndMark). On
+					// timeout (or any error) the message is forwarded
+					// anyway — dedup is an optimization, not a correctness
+					// gate.
+					dedupCtx, dedupCancel := context.WithTimeout(context.Background(), wsDedupCheckTimeout)
+					isDup, err := p.dedupService.CheckAndMark(dedupCtx, userID, dedupKey)
+					dedupCancel()
 					if err != nil {
 						p.logger.Debug("Dedup check failed, forwarding anyway",
 							zap.String("user_id_hash", hashUserIDForLog(userID)),
@@ -685,57 +698,53 @@ func (p *WebSocketProxy) IsDraining() bool {
 
 // --- Reconnect rate-limit helpers ---
 
-func (p *WebSocketProxy) checkReconnectAllowed(userID string) bool {
+// checkAndRecordReconnect performs the reconnect admission decision and the
+// attempt recording in one atomic step under a single lock acquisition
+// (GW-P3-5). The old split (checkReconnectAllowed + recordReconnectAttempt)
+// let two concurrent reconnects both observe "allowed" before either recorded,
+// overshooting maxAttempts; the merged decision makes that interleaving
+// impossible.
+func (p *WebSocketProxy) checkAndRecordReconnect(userID string) bool {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	tracker := p.reconnectTrackers[userID]
-	if tracker == nil {
-		return true
-	}
-	if time.Now().Before(tracker.blockedUntil) {
-		return false
-	}
-	windowSec := reconnectWindowSecDefault
-	if p.config != nil && p.config.WSReconnectWindowSeconds > 0 {
-		windowSec = p.config.WSReconnectWindowSeconds
-	}
-	window := time.Duration(windowSec) * time.Second
-	if time.Since(tracker.lastAttempt) > window {
-		tracker.attemptCount = 0
-		return true
-	}
-	maxAttempts := reconnectMaxAttemptsDefault
-	if p.config != nil && p.config.WSReconnectMaxAttempts > 0 {
-		maxAttempts = p.config.WSReconnectMaxAttempts
-	}
-	return tracker.attemptCount < maxAttempts
-}
-
-func (p *WebSocketProxy) recordReconnectAttempt(userID string) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
+	now := time.Now()
 	tracker := p.reconnectTrackers[userID]
 	if tracker == nil {
 		tracker = &reconnectTracker{}
 		p.reconnectTrackers[userID] = tracker
 	}
-	tracker.attemptCount++
-	tracker.lastAttempt = time.Now()
+	if now.Before(tracker.blockedUntil) {
+		return false
+	}
+
+	windowSec := reconnectWindowSecDefault
+	if p.config != nil && p.config.WSReconnectWindowSeconds > 0 {
+		windowSec = p.config.WSReconnectWindowSeconds
+	}
+	if now.Sub(tracker.lastAttempt) > time.Duration(windowSec)*time.Second {
+		tracker.attemptCount = 0
+	}
 
 	maxAttempts := reconnectMaxAttemptsDefault
 	if p.config != nil && p.config.WSReconnectMaxAttempts > 0 {
 		maxAttempts = p.config.WSReconnectMaxAttempts
 	}
-	blockSec := reconnectBlockSecDefault
-	if p.config != nil && p.config.WSReconnectBlockSeconds > 0 {
-		blockSec = p.config.WSReconnectBlockSeconds
+	if tracker.attemptCount >= maxAttempts {
+		return false
 	}
 
+	tracker.attemptCount++
+	tracker.lastAttempt = now
+
 	if tracker.attemptCount >= maxAttempts {
-		tracker.blockedUntil = time.Now().Add(time.Duration(blockSec) * time.Second)
+		blockSec := reconnectBlockSecDefault
+		if p.config != nil && p.config.WSReconnectBlockSeconds > 0 {
+			blockSec = p.config.WSReconnectBlockSeconds
+		}
+		tracker.blockedUntil = now.Add(time.Duration(blockSec) * time.Second)
 	}
+	return true
 }
 
 func (p *WebSocketProxy) reconnectBlockRemaining(userID string) int {

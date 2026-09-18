@@ -1,0 +1,2709 @@
+diff --git a/backend/gateway/cmd/server/main.go b/backend/gateway/cmd/server/main.go
+index 1a395ef3..039ebd2f 100755
+--- a/backend/gateway/cmd/server/main.go
++++ b/backend/gateway/cmd/server/main.go
+@@ -143,25 +143,22 @@ func main() {
+ 		shutdownErrCh <- srv.Shutdown(shutdownCtx)
+ 	}()
+ 
+-	// Phase 3: Drain WebSocket connections (1/3 of total timeout)
++	// Phase 3: Drain WebSocket connections (1/3 of total timeout).
++	// R2-GW-6: both drain phases share one absolute deadline, so the
++	// proxy drain cannot consume the full window and leave nothing for the
++	// chat registry drain (the old sequential full-timeout grants allowed a
++	// worst case of 2T/3 against a T/3 budget).
+ 	drainTimeout := time.Duration(shutdownTimeout/3) * time.Second
+ 	if drainTimeout < 2*time.Second {
+ 		drainTimeout = 2 * time.Second
+ 	}
+-	if handlers.wsProxy != nil {
+-		logger.Log.Info("Draining proxied WebSocket connections",
+-			zap.Duration("drain_timeout", drainTimeout))
+-		handlers.wsProxy.ProxyDrainAll(drainTimeout)
+-		logger.Log.Info("Proxied WebSocket connections drained")
+-	}
+-	if registry := handlers.chatOrchestrator.Registry(); registry != nil {
+-		connCount := registry.Count()
+-		logger.Log.Info("Draining WebSocket connections",
+-			zap.Int("count", connCount),
+-			zap.Duration("drain_timeout", drainTimeout))
+-		registry.DrainAll(drainTimeout)
+-		logger.Log.Info("WebSocket connections drained")
++	// Registry() returns a concrete pointer, so guard the typed nil before it
++	// disappears into an interface (typed-nil != nil interface).
++	var registry registryDrainer
++	if reg := handlers.chatOrchestrator.Registry(); reg != nil {
++		registry = reg
+ 	}
++	drainWebSocketPhases(handlers.wsProxy, registry, logger.Log, drainTimeout)
+ 
+ 	// Phase 4: wait for HTTP shutdown to settle now that all upgraded sockets are closed.
+ 	if err := <-shutdownErrCh; err != nil {
+@@ -170,3 +167,40 @@ func main() {
+ 
+ 	logger.Log.Info("Server exited gracefully")
+ }
++
++// Drain phases accept any drainable implementation (fakes in tests).
++type proxyDrainer interface {
++	ProxyDrainAll(timeout time.Duration)
++}
++
++type registryDrainer interface {
++	DrainAll(timeout time.Duration)
++}
++
++// remainingDrainBudget is the time left until an absolute deadline, floored
++// at zero so a drained-out budget shortens rather than extends the wait.
++func remainingDrainBudget(deadline time.Time) time.Duration {
++	d := time.Until(deadline)
++	if d < 0 {
++		return 0
++	}
++	return d
++}
++
++// drainWebSocketPhases runs both WebSocket drain phases against one shared
++// deadline (R2-GW-6): the combined wait never exceeds drainTimeout.
++func drainWebSocketPhases(wsProxy proxyDrainer, registry registryDrainer, log *zap.Logger, drainTimeout time.Duration) {
++	deadline := time.Now().Add(drainTimeout)
++	if wsProxy != nil {
++		log.Info("Draining proxied WebSocket connections",
++			zap.Duration("drain_timeout", drainTimeout))
++		wsProxy.ProxyDrainAll(remainingDrainBudget(deadline))
++		log.Info("Proxied WebSocket connections drained")
++	}
++	if registry != nil {
++		log.Info("Draining WebSocket connections",
++			zap.Duration("drain_timeout", drainTimeout))
++		registry.DrainAll(remainingDrainBudget(deadline))
++		log.Info("WebSocket connections drained")
++	}
++}
+diff --git a/backend/gateway/cmd/server/main_drain_test.go b/backend/gateway/cmd/server/main_drain_test.go
+new file mode 100644
+index 00000000..fd3f06f0
+--- /dev/null
++++ b/backend/gateway/cmd/server/main_drain_test.go
+@@ -0,0 +1,58 @@
++package main
++
++import (
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/require"
++	"go.uber.org/zap"
++)
++
++type fakeProxyDrain struct {
++	grants []time.Duration
++}
++
++func (f *fakeProxyDrain) ProxyDrainAll(timeout time.Duration) {
++	f.grants = append(f.grants, timeout)
++}
++
++type fakeRegistryDrain struct {
++	grants []time.Duration
++}
++
++func (f *fakeRegistryDrain) DrainAll(timeout time.Duration) {
++	f.grants = append(f.grants, timeout)
++}
++
++// TestDrainWebSocketPhasesSharedDeadline pins the R2-GW-6 fix: the two drain
++// phases share one absolute deadline, so the second phase only receives the
++// budget the first phase did not consume. The old wiring granted each phase
++// the full drainTimeout (worst case 2T/3 for a T/3 budget).
++func TestDrainWebSocketPhasesSharedDeadline(t *testing.T) {
++	proxy := &fakeProxyDrain{}
++	registry := &fakeRegistryDrain{}
++
++	start := time.Now()
++	drainWebSocketPhases(proxy, registry, zap.NewNop(), 400*time.Millisecond)
++	elapsed := time.Since(start)
++
++	require.Len(t, proxy.grants, 1)
++	require.Len(t, registry.grants, 1)
++
++	// Neither phase may receive more than the total budget.
++	require.LessOrEqual(t, proxy.grants[0], 400*time.Millisecond)
++	require.LessOrEqual(t, registry.grants[0], 400*time.Millisecond,
++		"registry drain must not receive a fresh full-timeout grant")
++
++	// The second grant reflects only the unconsumed remainder: the first
++	// phase returned immediately (fake), but the deadline still bounds the
++	// total wall time of both phases.
++	require.Less(t, elapsed, 400*time.Millisecond)
++	require.GreaterOrEqual(t, registry.grants[0], time.Duration(0))
++}
++
++// TestRemainingDrainBudgetNeverNegative pins the floor-at-zero semantics.
++func TestRemainingDrainBudgetNeverNegative(t *testing.T) {
++	require.Equal(t, time.Duration(0), remainingDrainBudget(time.Now().Add(-time.Hour)))
++	require.Greater(t, remainingDrainBudget(time.Now().Add(time.Hour)), time.Duration(0))
++}
+diff --git a/backend/gateway/cmd/server/setup.go b/backend/gateway/cmd/server/setup.go
+index 05eaa846..56198e6e 100644
+--- a/backend/gateway/cmd/server/setup.go
++++ b/backend/gateway/cmd/server/setup.go
+@@ -393,17 +393,12 @@ func initCQRS(ctx context.Context, cfg *config.Config, dbh *databaseHandles, rdb
+ 
+ 	fileEventSubscriber := service.NewFileEventSubscriber(rdb, services.fileEventHub, logger)
+ 	go func() {
+-		// GW-P0-1: this goroutine has no recover of its own and a panic here
+-		// (e.g. a websocket write issue surfacing from hub.Send) would take
+-		// down the whole gateway process. Log and contain it.
+-		defer func() {
+-			if r := recover(); r != nil {
+-				logger.Error("File event subscriber panicked", zap.Any("panic", r))
+-			}
+-		}()
+-		if err := fileEventSubscriber.Run(ctx); err != nil {
+-			logger.Error("File event subscriber stopped", zap.Error(err))
+-		}
++		// GW-P0-1 recover + R2-GW-3 liveness: panics are converted to restarts
++		// inside RunWithRestart (backoff + restart counter), so a transient
++		// Redis outage or panic no longer leaves /ws/files pushes silently
++		// dead until process restart.
++		fileEventSubscriber.RunWithRestart(ctx)
++		logger.Info("File event subscriber stopped")
+ 	}()
+ 
+ 	fileGC := service.NewFileGCService(services.fileMetadata, services.fileStorage, cfg, logger)
+diff --git a/backend/gateway/internal/cqrs/outbox/publisher.go b/backend/gateway/internal/cqrs/outbox/publisher.go
+index be862b5e..df3ad5b1 100755
+--- a/backend/gateway/internal/cqrs/outbox/publisher.go
++++ b/backend/gateway/internal/cqrs/outbox/publisher.go
+@@ -104,6 +104,16 @@ func (p *Publisher) Run(ctx context.Context) error {
+ }
+ 
+ // publishBatch fetches and publishes a batch of events.
++//
++// Delivery contract (GW-P3-7, documented by design): publishing and
++// MarkPublished are intentionally NOT one transaction — an at-least-once
++// semantic. A crash between eventBus.Publish and MarkPublished replays the
++// affected entries on the next poll; GetUnpublished uses
++// FOR UPDATE SKIP LOCKED, so concurrent publisher instances stay safe.
++// Consequence: every event-bus consumer MUST tolerate duplicates. The
++// read-side projection consumers (internal/cqrs/projection) satisfy this via
++// position semantics (LastProcessedPosition) — see the package contract note
++// in projection/handlers.go.
+ func (p *Publisher) publishBatch(ctx context.Context) error {
+ 	// Fetch unpublished entries
+ 	entries, err := p.repo.GetUnpublished(ctx, p.batchSize)
+diff --git a/backend/gateway/internal/cqrs/projection/handlers.go b/backend/gateway/internal/cqrs/projection/handlers.go
+index 20e9bf74..31809bae 100755
+--- a/backend/gateway/internal/cqrs/projection/handlers.go
++++ b/backend/gateway/internal/cqrs/projection/handlers.go
+@@ -4,6 +4,15 @@
+ // Stage: v1 网关基座
+ //
+ // 读侧投影事件处理.
++//
++// Delivery contract (GW-P3-7): events arrive at-least-once. The outbox
++// publisher (internal/cqrs/outbox) publishes before it marks entries
++// published, so a crash in between replays entries. Handlers here MUST stay
++// idempotent: deduplicate/overwrite based on event ID or entity state rather
++// than assuming single delivery. Position tracking (LastProcessedPosition via
++// Manager.UpdatePosition) bounds replay windows but does not by itself make
++// reprocessing harmless — projecting the same event twice must converge to
++// the same read-model state.
+ 
+ package projection
+ 
+diff --git a/backend/gateway/internal/handler/chat_orchestrator.go b/backend/gateway/internal/handler/chat_orchestrator.go
+index 129f4c00..521972f2 100755
+--- a/backend/gateway/internal/handler/chat_orchestrator.go
++++ b/backend/gateway/internal/handler/chat_orchestrator.go
+@@ -159,6 +159,9 @@ type ChatOrchestrator struct {
+ 	signalHub    *service.SignalHub
+ 	httpClient   *http.Client
+ 	wsRegistry   *ConnectionRegistry
++	// quotaFallback is the GW-P2-4 bounded-degradation cap used when Redis
++	// daily-usage accounting is unavailable (instance-level, per UTC day).
++	quotaFallback *service.QuotaLocalFallback
+ 	// streamSem limits concurrent gRPC StreamChat calls.
+ 	streamSem chan struct{}
+ 	draining  atomic.Bool
+@@ -195,8 +198,9 @@ func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, ui service.UserIde
+ 		httpClient: &http.Client{
+ 			Timeout: 5 * time.Second,
+ 		},
+-		wsRegistry: NewConnectionRegistry(signalHub, ch, cfg.WSGlobalMaxConnections, cfg.WSMaxConnections),
+-		streamSem:  make(chan struct{}, streamSemaphoreSize(cfg)),
++		wsRegistry:    NewConnectionRegistry(signalHub, ch, cfg.WSGlobalMaxConnections, cfg.WSMaxConnections),
++		quotaFallback: service.NewQuotaLocalFallbackFromEnv(),
++		streamSem:     make(chan struct{}, streamSemaphoreSize(cfg)),
+ 	}
+ 	streamSemaphoreObserved.Store(h)
+ 	return h
+diff --git a/backend/gateway/internal/handler/chat_orchestrator_chatflow.go b/backend/gateway/internal/handler/chat_orchestrator_chatflow.go
+index 87efe977..473b1768 100644
+--- a/backend/gateway/internal/handler/chat_orchestrator_chatflow.go
++++ b/backend/gateway/internal/handler/chat_orchestrator_chatflow.go
+@@ -598,13 +598,36 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
+ 		if dailyLimit > 0 && !isDevelopmentEnv() {
+ 			if usage, err := h.quota.GetDailyUsage(ctx, userID); err == nil {
+ 				dailyUsageStart = usage
++				// Redis-backed accounting is healthy again: disarm the
++				// GW-P2-4 local fallback indicator.
++				wsmetrics.QuotaLocalFallbackActive.Set(0)
+ 			} else {
+-				// GW-P2-4: enforcement intentionally degrades to fail-open
+-				// here (usage starts at 0), so surface the degradation as a
+-				// metric instead of only a log line — a rising rate means
+-				// billing integrity is impaired during the Redis outage.
+ 				log.Printf("Failed to load daily usage: %v", err)
+ 				wsmetrics.QuotaDailyUsageLoadErrors.Inc()
++				// GW-P2-4 (bounded degradation, product decision
++				// 2026-09-18): without the Redis snapshot the old behavior
++				// was unbounded fail-open (usage starts at 0 and segment
++				// recording also fails). Keep serving, but under a local
++				// instance-level approximate daily request cap. The request
++				// that exceeds the cap is rejected here with an explicit
++				// quota error instead of being admitted unbounded.
++				wsmetrics.QuotaLocalFallbackActive.Set(1)
++				if h.quotaFallback != nil {
++					if _, admitted := h.quotaFallback.Allow(time.Now()); !admitted {
++						log.Printf("Local quota fallback cap reached user=%s request=%s limit=%d (Redis daily usage unavailable)",
++							hashUserIDForLog(userID), reqID, h.quotaFallback.Limit())
++						const degradedMsg = "Daily quota exceeded (service degraded: per-instance fallback limit reached)"
++						switch r := responder.(type) {
++						case *envelopeResponder:
++							r.SendError("resource_exhausted", degradedMsg, false)
++						case *protobufResponder:
++							r.SendError("resource_exhausted", degradedMsg, false)
++						case *wsSafeWriter:
++							writeLegacyJSONLogged(r, "quota fallback cap error", gin.H{"type": "message_nack", "message_id": requestID, "error_code": "quota_exceeded", "error_message": degradedMsg, "retry_after_ms": 60000, "permanent": false})
++						}
++						return false
++					}
++				}
+ 			}
+ 		} else if dailyLimit > 0 && isDevelopmentEnv() {
+ 			log.Printf("WARN: Daily quota check skipped in development mode (limit=%d)", dailyLimit)
+@@ -1006,6 +1029,15 @@ func grpcStreamErrorDetails(err error) (string, string, bool) {
+ 		return "unknown", defaultWSInternalMessage, retryable
+ 	}
+ 
++	// GW-P3-3 passthrough contract: for client-error (4xx-class) codes the
++	// engine-side st.Message() is treated as safe-to-expose verbatim (only
++	// length-truncated below). This is an intentional cross-service contract:
++	// the Python engine MUST keep human-facing validation messages free of
++	// internal details (stack traces, hostnames, prompts internals) — those
++	// belong in engine logs. Internal/DataLoss/unknown codes are still masked
++	// via publicStreamErrorMessage below; if the engine ever needs to send
++	// operator-oriented detail to clients, move it into response metadata
++	// instead of abusing these 5xx messages.
+ 	if strings.TrimSpace(st.Message()) != "" {
+ 		msg := st.Message()
+ 		// Defensive: truncate to prevent leaking long internal messages
+diff --git a/backend/gateway/internal/handler/galaxy_handler.go b/backend/gateway/internal/handler/galaxy_handler.go
+index e1c4871e..f95bc7cb 100644
+--- a/backend/gateway/internal/handler/galaxy_handler.go
++++ b/backend/gateway/internal/handler/galaxy_handler.go
+@@ -86,7 +86,8 @@ func (h *GalaxyHandler) RegisterRoutes(r *gin.RouterGroup, authMiddleware gin.Ha
+ 		// sporadically fail with 429 and break the knowledge graph experience.
+ 		galaxy.GET("/graph", h.GetGraph)
+ 		galaxy.GET("/contribution-stats", h.ProxyToBackend)
+-		galaxy.GET("/nodes", h.ProxyToBackend)
++		// R2-08 §2.2 #22: GET /nodes removed — the engine only serves
++		// POST /galaxy/nodes (the surviving sibling below).
+ 		galaxy.POST("/nodes", h.ProxyToBackend)
+ 		galaxy.GET("/node/:id", h.GetNodeDetailGPRC)
+ 		galaxy.GET("/node/:id/history", h.ProxyToBackend)
+diff --git a/backend/gateway/internal/handler/proxy_routes.go b/backend/gateway/internal/handler/proxy_routes.go
+index 02a58648..4e91f3ae 100644
+--- a/backend/gateway/internal/handler/proxy_routes.go
++++ b/backend/gateway/internal/handler/proxy_routes.go
+@@ -92,7 +92,8 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
+ 		tasks.GET("/today", h.proxyWithHeaders)
+ 		// route-tier: authed
+ 		tasks.GET("/recommended", h.proxyWithHeaders)
+-		tasks.GET("/suggestions", h.proxyWithHeaders)
++		// R2-08 §2.2 #12: GET /suggestions removed — the engine only serves
++		// POST /suggestions (the surviving sibling above).
+ 		// route-tier: authed
+ 		tasks.GET("/feedback/stats", h.proxyWithHeaders)
+ 		// route-tier: authed
+@@ -126,7 +127,8 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
+ 		tasks.POST("/:id/abandon", h.proxyWithHeaders)
+ 		tasks.POST("/:id/pause", h.proxyWithHeaders)
+ 		tasks.POST("/:id/resume", h.proxyWithHeaders)
+-		tasks.POST("/:id/reopen", h.proxyWithHeaders)
++		// R2-08 §2.2 #11: POST /:id/reopen removed — the engine has no
++		// reopen transition anywhere.
+ 		tasks.POST("/:id/stuck", h.proxyWithHeaders)
+ 		tasks.GET("/:id/guidance", h.proxyWithHeaders)
+ 		tasks.POST("/:id/guidance", h.proxyWithHeaders)
+@@ -246,19 +248,13 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
+ 	{
+ 		// Explicit methods rather than Any() to respect HTTP semantics and
+ 		// prevent unintended method exposure (HEAD/CONNECT/TRACE).
+-		// route-tier: authed
+-		cards.GET("", h.proxyWithHeaders)
+-		// route-tier: authed
+-		cards.POST("", h.proxyWithHeaders)
++		// R2-08 §2.2 #4-7: bare GET/POST /cards and the PATCH/PUT wildcard
++		// method-faces are dead (the engine has no such surface) — removed.
+ 		// route-tier: authed
+ 		cards.GET("/*path", h.proxyWithHeaders)
+ 		// route-tier: authed
+ 		cards.POST("/*path", h.proxyWithHeaders)
+ 		// route-tier: authed
+-		cards.PUT("/*path", h.proxyWithHeaders)
+-		// route-tier: authed
+-		cards.PATCH("/*path", h.proxyWithHeaders)
+-		// route-tier: authed
+ 		cards.DELETE("/*path", h.proxyWithHeaders)
+ 	}
+ 	h.logger.Info("Registered cards proxy routes")
+@@ -425,7 +421,8 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
+ 		goals.POST("/decompose-preview", h.proxyWithHeaders)
+ 		goals.GET("/:id", h.proxyWithHeaders)
+ 		goals.PUT("/:id", h.proxyWithHeaders)
+-		goals.PATCH("/:id", h.proxyWithHeaders)
++		// R2-08 §2.2 #13: PATCH /:id removed — the engine only serves
++		// PUT /goals/{goal_id}; the PUT sibling above stays.
+ 		goals.DELETE("/:id", h.proxyWithHeaders)
+ 	}
+ 
+@@ -543,7 +540,8 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
+ 		community.DELETE("/groups/:group_id", h.proxyWithHeaders)
+ 		community.POST("/groups/:group_id/join", h.proxyWithHeaders)
+ 		community.POST("/groups/:group_id/leave", h.proxyWithHeaders)
+-		community.DELETE("/groups/:group_id/leave", h.proxyWithHeaders)
++		// R2-08 §2.2 #19: DELETE leave removed — the engine only serves
++		// POST leave.
+ 		community.POST("/groups/:group_id/transfer", h.proxyWithHeaders)
+ 		community.GET("/groups/:group_id/members", h.proxyWithHeaders)
+ 		community.POST("/groups/:group_id/members/:user_id/kick", h.proxyWithHeaders)
+@@ -553,7 +551,8 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
+ 		// Group Messages
+ 		community.GET("/groups/:group_id/messages", h.proxyWithHeaders)
+ 		community.POST("/groups/:group_id/messages", h.proxyWithHeaders)
+-		community.DELETE("/groups/:group_id/messages/:msg_id", h.proxyWithHeaders)
++		// R2-08 §2.2 #20: DELETE group message removed — the engine only
++		// serves PATCH edit + POST revoke (below).
+ 		community.PATCH("/groups/:group_id/messages/:msg_id", h.proxyWithHeaders)
+ 		community.POST("/groups/:group_id/messages/:msg_id/revoke", h.proxyWithHeaders)
+ 		community.POST("/groups/:group_id/messages/:msg_id/reactions", h.proxyWithHeaders)
+@@ -582,10 +581,10 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
+ 		community.GET("/groups/:group_id/reports", h.proxyWithHeaders)
+ 		community.GET("/groups/:group_id/resources", h.proxyWithHeaders)
+ 		// Private Messages
++		// R2-08 §2.2 #15-17: the /messages/private trio is removed — the
++		// engine has no private-message surface; DMs live under
++		// /friends/{id}/messages (below).
+ 		community.POST("/messages", h.proxyWithHeaders)
+-		community.POST("/messages/private", h.proxyWithHeaders)
+-		community.GET("/messages/private/:user_id", h.proxyWithHeaders)
+-		community.DELETE("/messages/private/:msg_id", h.proxyWithHeaders)
+ 		community.PATCH("/messages/:message_id", h.proxyWithHeaders)
+ 		community.POST("/messages/:message_id/revoke", h.proxyWithHeaders)
+ 		community.POST("/messages/:message_id/reactions", h.proxyWithHeaders)
+@@ -596,7 +595,8 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
+ 		community.POST("/posts", h.proxyWithHeaders)
+ 		community.POST("/posts/:post_id/like", h.proxyWithHeaders)
+ 		community.DELETE("/posts/:post_id", h.proxyWithHeaders)
+-		community.PATCH("/posts/:post_id", h.proxyWithHeaders)
++		// R2-08 §2.2 #18: PATCH /posts/{id} removed — the engine has no
++		// post edit surface.
+ 		community.GET("/posts/:post_id/comments", h.proxyWithHeaders)
+ 		community.POST("/posts/:post_id/comments", h.proxyWithHeaders)
+ 		community.DELETE("/posts/:post_id/comments/:comment_id", h.proxyWithHeaders)
+@@ -606,7 +606,8 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
+ 		community.PUT("/status", h.proxyWithHeaders)
+ 		// Share Resources
+ 		community.POST("/share", h.proxyWithHeaders)
+-		community.POST("/share/:share_id/adopt", h.proxyWithHeaders)
++		// R2-08 §2.2 #21: the /share/{id}/adopt old alias is removed —
++		// adoption lives at /shared-resources/{id}/adopt (below).
+ 		community.POST("/shared-resources/:shared_resource_id/adopt", h.proxyWithHeaders)
+ 		// Encryption
+ 		community.POST("/encryption/keys", h.proxyWithHeaders)
+@@ -672,7 +673,9 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
+ 		// route-tier: authed
+ 		examSprint.POST("/intake", h.proxyWithHeaders)
+ 		// route-tier: authed
+-		examSprint.POST("/completion", h.proxyWithHeaders)
++		// R2-08 §2.2 #10: method corrected POST -> GET; the engine only
++		// serves GET /completion (plan_id query param).
++		examSprint.GET("/completion", h.proxyWithHeaders)
+ 		// route-tier: authed
+ 		examSprint.POST("/post-exam-review", h.proxyWithHeaders)
+ 		// route-tier: authed
+@@ -1069,13 +1072,9 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
+ 		h.registerREST(rg, "/*path")
+ 		h.logger.Info("Registered " + r.name + " proxy routes")
+ 	}
+-	// ==================== CQRS / DLQ Health Routes ====================
+-	cqrs := api.Group("/cqrs")
+-	cqrs.Use(authMiddleware)
+-	{
+-		cqrs.GET("/dlq/stats", h.proxyWithHeaders)
+-	}
+-	h.logger.Info("Registered CQRS DLQ proxy routes")
++	// R2-08 §2.2 #14: the GET /cqrs/dlq/stats proxy group is removed — the
++	// engine has no /api/v1/cqrs/* surface (DLQ truth lives under /dlq/* and
++	// the /admin catch-all below).
+ 
+ 	// ==================== DLQ Admin Routes ====================
+ 	dlq := api.Group("/dlq")
+diff --git a/backend/gateway/internal/handler/proxy_routes_r208_test.go b/backend/gateway/internal/handler/proxy_routes_r208_test.go
+new file mode 100644
+index 00000000..3fdea90e
+--- /dev/null
++++ b/backend/gateway/internal/handler/proxy_routes_r208_test.go
+@@ -0,0 +1,139 @@
++package handler
++
++import (
++	"net/http/httputil"
++	"net/url"
++	"testing"
++	"time"
++
++	"github.com/gin-gonic/gin"
++	"github.com/stretchr/testify/require"
++	"go.uber.org/zap"
++
++	"github.com/sparkle/gateway/internal/middleware"
++)
++
++// r208TestRouter builds a router with the real proxy route registrations.
++func r208TestRouter(t *testing.T) *gin.Engine {
++	t.Helper()
++	gin.SetMode(gin.TestMode)
++
++	backendURL, _ := url.Parse("http://backend:8000")
++	proxy := httputil.NewSingleHostReverseProxy(backendURL)
++	abTestMiddleware := middleware.NewABTestMiddleware(&middleware.ABTestConfig{
++		BackendURL: "http://backend:8000",
++		Timeout:    3 * time.Second,
++		Enabled:    false,
++	})
++	h := NewProxyRoutesHandler(proxy, abTestMiddleware, zap.NewNop())
++
++	router := gin.New()
++	api := router.Group("/api/v1")
++	mockAuth := func(c *gin.Context) {
++		c.Set("user_id", "test-user-123")
++		c.Set("auth_token", "test-token-abc")
++		c.Next()
++	}
++	h.RegisterProxyRoutes(api, mockAuth)
++
++	// Galaxy routes are registered on the same api group in production
++	// (setup.go); nils are safe because registration never invokes handlers.
++	galaxyHandler, err := NewGalaxyHandler(nil, nil, nil, "http://backend:8000")
++	require.NoError(t, err)
++	galaxyHandler.RegisterRoutes(api, mockAuth, func(c *gin.Context) { c.Next() })
++	return router
++}
++
++// TestProxyRoutesHandler_DeadRoutesRemoved pins the R2-08 gateway-side P3
++// disposition (round2/08-r2-fixes.md §5, 17 archived dead routes): routes the
++// engine cannot serve (404/405) are no longer registered on the gateway.
++// Methods are part of the key: e.g. POST /tasks/suggestions must exist while
++// GET /tasks/suggestions must not.
++func TestProxyRoutesHandler_DeadRoutesRemoved(t *testing.T) {
++	router := r208TestRouter(t)
++
++	mustNotExist := []string{
++		// cards (#4-7): bare GET/POST + PATCH/PUT wildcard method-faces
++		"GET /api/v1/cards",
++		"POST /api/v1/cards",
++		"PUT /api/v1/cards/*path",
++		"PATCH /api/v1/cards/*path",
++		// tasks (#11, #12)
++		"POST /api/v1/tasks/:id/reopen",
++		"GET /api/v1/tasks/suggestions",
++		// goals (#13): PATCH redundant, PUT sibling stays
++		"PATCH /api/v1/goals/:id",
++		// cqrs (#14)
++		"GET /api/v1/cqrs/dlq/stats",
++		// community private messages (#15-17)
++		"POST /api/v1/community/messages/private",
++		"GET /api/v1/community/messages/private/:user_id",
++		"DELETE /api/v1/community/messages/private/:msg_id",
++		// community posts (#18)
++		"PATCH /api/v1/community/posts/:post_id",
++		// community groups (#19, #20)
++		"DELETE /api/v1/community/groups/:group_id/leave",
++		"DELETE /api/v1/community/groups/:group_id/messages/:msg_id",
++		// community share old alias (#21)
++		"POST /api/v1/community/share/:share_id/adopt",
++		// galaxy (#22): engine only serves POST /galaxy/nodes
++		"GET /api/v1/galaxy/nodes",
++	}
++
++	registered := make(map[string]bool, len(router.Routes()))
++	for _, rt := range router.Routes() {
++		registered[rt.Method+" "+rt.Path] = true
++	}
++
++	for _, key := range mustNotExist {
++		require.False(t, registered[key], "dead route must not be registered: %s", key)
++	}
++}
++
++// TestProxyRoutesHandler_ExamSprintCompletionIsGET pins the R2-08 §2.2 #10
++// method correction: the engine only serves GET /completion, so the gateway
++// must register GET (the old POST was a guaranteed 405).
++func TestProxyRoutesHandler_ExamSprintCompletionIsGET(t *testing.T) {
++	router := r208TestRouter(t)
++
++	var haveGET, havePOST bool
++	for _, rt := range router.Routes() {
++		switch {
++		case rt.Method == "GET" && rt.Path == "/api/v1/exam-sprint/completion":
++			haveGET = true
++		case rt.Method == "POST" && rt.Path == "/api/v1/exam-sprint/completion":
++			havePOST = true
++		}
++	}
++	require.True(t, haveGET, "GET /api/v1/exam-sprint/completion must be registered")
++	require.False(t, havePOST, "POST /api/v1/exam-sprint/completion must stay removed")
++}
++
++// TestProxyRoutesHandler_SurvivingSiblingsIntact guards the deletions against
++// over-pruning: the method/path siblings the engine really serves must remain.
++func TestProxyRoutesHandler_SurvivingSiblingsIntact(t *testing.T) {
++	router := r208TestRouter(t)
++
++	mustExist := []string{
++		"GET /api/v1/cards/*path",
++		"POST /api/v1/cards/*path",
++		"DELETE /api/v1/cards/*path",
++		"POST /api/v1/tasks/suggestions",
++		"PUT /api/v1/goals/:id",
++		"POST /api/v1/community/groups/:group_id/leave",
++		"PATCH /api/v1/community/groups/:group_id/messages/:msg_id",
++		"POST /api/v1/community/groups/:group_id/messages/:msg_id/revoke",
++		"POST /api/v1/community/shared-resources/:shared_resource_id/adopt",
++		"POST /api/v1/galaxy/nodes",
++		"GET /api/v1/community/friends/:friend_id/messages",
++	}
++
++	registered := make(map[string]bool, len(router.Routes()))
++	for _, rt := range router.Routes() {
++		registered[rt.Method+" "+rt.Path] = true
++	}
++
++	for _, key := range mustExist {
++		require.True(t, registered[key], "surviving sibling route missing: %s", key)
++	}
++}
+diff --git a/backend/gateway/internal/handler/quota_fallback_test.go b/backend/gateway/internal/handler/quota_fallback_test.go
+new file mode 100644
+index 00000000..d3ceb72a
+--- /dev/null
++++ b/backend/gateway/internal/handler/quota_fallback_test.go
+@@ -0,0 +1,175 @@
++package handler
++
++import (
++	"net/http"
++	"net/http/httptest"
++	"strings"
++	"testing"
++	"time"
++
++	"github.com/alicebob/miniredis/v2"
++	"github.com/gin-gonic/gin"
++	"github.com/gorilla/websocket"
++	"github.com/redis/go-redis/v9"
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++
++	"github.com/sparkle/gateway/internal/config"
++	"github.com/sparkle/gateway/internal/metrics"
++	"github.com/sparkle/gateway/internal/service"
++)
++
++// newQuotaFallbackTestOrchestrator spins up the minimal production-shaped
++// chat orchestrator used by the GW-P2-4 fallback tests: a prod WebSocket
++// factory pinned to the exact test origin, a real QuotaService on miniredis,
++// and a nil agent client (admitted requests terminate with the
++// service_unavailable message_nack, which is enough to prove admission).
++func newQuotaFallbackTestOrchestrator(t *testing.T) (wsURL, origin string, mr *miniredis.Miniredis) {
++	t.Helper()
++
++	mr = miniredis.RunT(t)
++	// Fail fast against a closed miniredis: the default pool retries would
++	// add ~1s of dial latency to every degraded request in these tests.
++	rdb := redis.NewClient(&redis.Options{
++		Addr:         mr.Addr(),
++		MaxRetries:   -1,
++		DialTimeout:  100 * time.Millisecond,
++		ReadTimeout:  500 * time.Millisecond,
++		MinIdleConns: 0,
++	})
++	t.Cleanup(func() { _ = rdb.Close() })
++
++	quotaSvc := service.NewQuotaService(rdb)
++	historySvc := service.NewChatHistoryService(rdb)
++	t.Cleanup(historySvc.Stop)
++
++	gin.SetMode(gin.TestMode)
++	r := gin.New()
++	ts := httptest.NewServer(r)
++	t.Cleanup(ts.Close)
++	origin = "http://" + ts.Listener.Addr().String()
++
++	wsFactory := NewWebSocketFactory(&config.Config{
++		Environment:    "prod",
++		AllowedOrigins: []string{origin},
++	})
++	cfg := &config.Config{
++		Environment:    "prod",
++		AllowedOrigins: []string{origin},
++	}
++
++	orchestrator := NewChatOrchestrator(
++		nil,        // agentClient: admitted requests fail fast with service_unavailable
++		nil,        // galaxyClient
++		nil,        // userIdentity
++		historySvc, // chatHistory
++		quotaSvc,
++		nil, // semantic cache
++		nil, // cost
++		wsFactory,
++		cfg,
++		nil, // userContext
++		nil, // taskCommand
++		"http://mock-backend",
++		nil, // signalHub
++	)
++	r.GET("/ws/chat", func(c *gin.Context) {
++		c.Set("user_id", "user_quota_fallback")
++		c.Set("auth_token", "mock_token")
++		orchestrator.HandleWebSocket(c)
++	})
++
++	wsURL = "ws" + strings.TrimPrefix(ts.URL, "http") + "/ws/chat"
++	return wsURL, origin, mr
++}
++
++func dialQuotaFallbackWS(t *testing.T, wsURL, origin string) *websocket.Conn {
++	t.Helper()
++	conn, resp, err := websocket.DefaultDialer.Dial(wsURL, http.Header{
++		"Origin": []string{origin},
++	})
++	require.NoError(t, err, "upgrade with the whitelisted origin must succeed")
++	if resp != nil {
++		defer resp.Body.Close()
++	}
++	t.Cleanup(func() { _ = conn.Close() })
++	return conn
++}
++
++// sendChatMessageAndWaitForNack sends one legacy chat message and drains frames
++// until a terminal error frame arrives (bounded so a regression cannot hang
++// the suite). It returns the error_code carried by that frame.
++func sendChatMessageAndWaitForNack(t *testing.T, conn *websocket.Conn) string {
++	t.Helper()
++	require.NoError(t, conn.WriteJSON(map[string]interface{}{
++		"message":    "hello",
++		"session_id": "sess_quota_fallback",
++	}))
++
++	var frame map[string]interface{}
++	var err error
++	for i := 0; i < 6; i++ {
++		if err = conn.ReadJSON(&frame); err != nil {
++			t.Fatalf("read frame %d: %v", i, err)
++		}
++		if frame["type"] == "message_nack" || frame["type"] == "error" {
++			code, _ := frame["error_code"].(string)
++			return code
++		}
++	}
++	t.Fatalf("no terminal error frame within 6 frames; last=%v", frame)
++	return ""
++}
++
++// TestChatOrchestrator_QuotaLocalFallbackRejects51stRequest is the red-green
++// proof of the GW-P2-4 product decision (2026-09-18): when Redis is down and
++// the daily usage snapshot cannot be loaded, the gateway must not silently
++// fail open forever. It degrades to a local instance-level approximate daily
++// hard cap (default 50 per instance per UTC day) and rejects the first request
++// over that cap with an explicit quota error.
++func TestChatOrchestrator_QuotaLocalFallbackRejects51stRequest(t *testing.T) {
++	wsURL, origin, mr := newQuotaFallbackTestOrchestrator(t)
++
++	// Inject the Redis fault before any request: every GetDailyUsage /
++	// RecordUsageSegment call now fails (connection refused), which is the
++	// degraded regime GW-P2-4 covers.
++	mr.Close()
++
++	const fallbackLimit = 50 // DefaultQuotaLocalFallbackDailyLimit
++	for i := 1; i <= fallbackLimit; i++ {
++		conn := dialQuotaFallbackWS(t, wsURL, origin)
++		code := sendChatMessageAndWaitForNack(t, conn)
++		assert.NotEqual(t, "quota_exceeded", code,
++			"request %d must still be admitted while under the fallback cap", i)
++	}
++
++	// The request right after the cap must be rejected with an explicit
++	// quota error instead of being admitted unbounded (old fail-open).
++	conn := dialQuotaFallbackWS(t, wsURL, origin)
++	code := sendChatMessageAndWaitForNack(t, conn)
++	require.Equal(t, "quota_exceeded", code,
++		"the first request over the local fallback cap must be rejected with quota_exceeded")
++}
++
++// TestChatOrchestrator_QuotaLocalFallbackGauge pins the gauge contract of the
++// bounded degradation: active while Redis daily-usage loads fail, disarmed as
++// soon as one load succeeds again (Redis recovered).
++func TestChatOrchestrator_QuotaLocalFallbackGauge(t *testing.T) {
++	wsURL, origin, mr := newQuotaFallbackTestOrchestrator(t)
++
++	mr.Close()
++	conn := dialQuotaFallbackWS(t, wsURL, origin)
++	code := sendChatMessageAndWaitForNack(t, conn)
++	assert.Equal(t, "service_unavailable", code)
++	require.Equal(t, 1.0, metrics.QuotaLocalFallbackActiveGaugeValue(),
++		"fallback gauge must be active while Redis loads fail")
++
++	// Recover Redis: the next request's usage load succeeds, disarming the
++	// fallback gauge.
++	require.NoError(t, mr.Restart())
++	conn2 := dialQuotaFallbackWS(t, wsURL, origin)
++	code = sendChatMessageAndWaitForNack(t, conn2)
++	assert.Equal(t, "service_unavailable", code)
++	require.Equal(t, 0.0, metrics.QuotaLocalFallbackActiveGaugeValue(),
++		"fallback gauge must disarm once a daily usage load succeeds")
++}
+diff --git a/backend/gateway/internal/handler/websocket_proxy.go b/backend/gateway/internal/handler/websocket_proxy.go
+index 6c62bba3..96950662 100644
+--- a/backend/gateway/internal/handler/websocket_proxy.go
++++ b/backend/gateway/internal/handler/websocket_proxy.go
+@@ -30,6 +30,11 @@ import (
+ // default so behaviour is consistent across WebSocket endpoints.
+ const wsDefaultMaxMessageBytes int64 = 256 * 1024 // 256 KB
+ 
++// wsDedupCheckTimeout bounds the per-message Redis dedup round-trip
++// (GW-P3-4): on timeout the message is forwarded without dedup instead of
++// stalling the client→backend pump.
++const wsDedupCheckTimeout = 200 * time.Millisecond
++
+ // Reconnect rate-limit constants
+ const (
+ 	reconnectMaxAttemptsDefault = 10  // default max reconnect attempts per window
+@@ -183,7 +188,7 @@ func (p *WebSocketProxy) HandlePersonalWS(c *gin.Context) {
+ 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid session_id format"})
+ 			return
+ 		}
+-		if !p.checkReconnectAllowed(userID) {
++		if !p.checkAndRecordReconnect(userID) {
+ 			p.logger.Warn("WS reconnect rate limit exceeded",
+ 				zap.String("user_id_hash", hashUserIDForLog(userID)),
+ 				zap.String("session_id", sessionID))
+@@ -193,7 +198,6 @@ func (p *WebSocketProxy) HandlePersonalWS(c *gin.Context) {
+ 			})
+ 			return
+ 		}
+-		p.recordReconnectAttempt(userID)
+ 		backendURL = backendURL + "?session_id=" + url.QueryEscape(sessionID)
+ 		p.logger.Info("WS reconnect with session_id",
+ 			zap.String("user_id_hash", hashUserIDForLog(userID)),
+@@ -411,7 +415,16 @@ func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request,
+ 				if p.dedupService != nil && len(data) > 0 {
+ 					hash := sha256.Sum256(data)
+ 					dedupKey := hex.EncodeToString(hash[:])
+-					isDup, err := p.dedupService.CheckAndMark(context.Background(), userID, dedupKey)
++					// GW-P3-4: bound the dedup round-trip. The old detached
++					// context.Background() let a Redis stall freeze this
++					// user's whole client→backend forwarding loop (each
++					// message blocked indefinitely in CheckAndMark). On
++					// timeout (or any error) the message is forwarded
++					// anyway — dedup is an optimization, not a correctness
++					// gate.
++					dedupCtx, dedupCancel := context.WithTimeout(context.Background(), wsDedupCheckTimeout)
++					isDup, err := p.dedupService.CheckAndMark(dedupCtx, userID, dedupKey)
++					dedupCancel()
+ 					if err != nil {
+ 						p.logger.Debug("Dedup check failed, forwarding anyway",
+ 							zap.String("user_id_hash", hashUserIDForLog(userID)),
+@@ -685,57 +698,53 @@ func (p *WebSocketProxy) IsDraining() bool {
+ 
+ // --- Reconnect rate-limit helpers ---
+ 
+-func (p *WebSocketProxy) checkReconnectAllowed(userID string) bool {
++// checkAndRecordReconnect performs the reconnect admission decision and the
++// attempt recording in one atomic step under a single lock acquisition
++// (GW-P3-5). The old split (checkReconnectAllowed + recordReconnectAttempt)
++// let two concurrent reconnects both observe "allowed" before either recorded,
++// overshooting maxAttempts; the merged decision makes that interleaving
++// impossible.
++func (p *WebSocketProxy) checkAndRecordReconnect(userID string) bool {
+ 	p.mu.Lock()
+ 	defer p.mu.Unlock()
+ 
++	now := time.Now()
+ 	tracker := p.reconnectTrackers[userID]
+ 	if tracker == nil {
+-		return true
++		tracker = &reconnectTracker{}
++		p.reconnectTrackers[userID] = tracker
+ 	}
+-	if time.Now().Before(tracker.blockedUntil) {
++	if now.Before(tracker.blockedUntil) {
+ 		return false
+ 	}
++
+ 	windowSec := reconnectWindowSecDefault
+ 	if p.config != nil && p.config.WSReconnectWindowSeconds > 0 {
+ 		windowSec = p.config.WSReconnectWindowSeconds
+ 	}
+-	window := time.Duration(windowSec) * time.Second
+-	if time.Since(tracker.lastAttempt) > window {
++	if now.Sub(tracker.lastAttempt) > time.Duration(windowSec)*time.Second {
+ 		tracker.attemptCount = 0
+-		return true
+-	}
+-	maxAttempts := reconnectMaxAttemptsDefault
+-	if p.config != nil && p.config.WSReconnectMaxAttempts > 0 {
+-		maxAttempts = p.config.WSReconnectMaxAttempts
+ 	}
+-	return tracker.attemptCount < maxAttempts
+-}
+-
+-func (p *WebSocketProxy) recordReconnectAttempt(userID string) {
+-	p.mu.Lock()
+-	defer p.mu.Unlock()
+-
+-	tracker := p.reconnectTrackers[userID]
+-	if tracker == nil {
+-		tracker = &reconnectTracker{}
+-		p.reconnectTrackers[userID] = tracker
+-	}
+-	tracker.attemptCount++
+-	tracker.lastAttempt = time.Now()
+ 
+ 	maxAttempts := reconnectMaxAttemptsDefault
+ 	if p.config != nil && p.config.WSReconnectMaxAttempts > 0 {
+ 		maxAttempts = p.config.WSReconnectMaxAttempts
+ 	}
+-	blockSec := reconnectBlockSecDefault
+-	if p.config != nil && p.config.WSReconnectBlockSeconds > 0 {
+-		blockSec = p.config.WSReconnectBlockSeconds
++	if tracker.attemptCount >= maxAttempts {
++		return false
+ 	}
+ 
++	tracker.attemptCount++
++	tracker.lastAttempt = now
++
+ 	if tracker.attemptCount >= maxAttempts {
+-		tracker.blockedUntil = time.Now().Add(time.Duration(blockSec) * time.Second)
++		blockSec := reconnectBlockSecDefault
++		if p.config != nil && p.config.WSReconnectBlockSeconds > 0 {
++			blockSec = p.config.WSReconnectBlockSeconds
++		}
++		tracker.blockedUntil = now.Add(time.Duration(blockSec) * time.Second)
+ 	}
++	return true
+ }
+ 
+ func (p *WebSocketProxy) reconnectBlockRemaining(userID string) int {
+diff --git a/backend/gateway/internal/handler/websocket_proxy_dedup_test.go b/backend/gateway/internal/handler/websocket_proxy_dedup_test.go
+new file mode 100644
+index 00000000..ca31ab84
+--- /dev/null
++++ b/backend/gateway/internal/handler/websocket_proxy_dedup_test.go
+@@ -0,0 +1,98 @@
++package handler
++
++import (
++	"context"
++	"net/http"
++	"net/http/httptest"
++	"testing"
++	"time"
++
++	"github.com/alicebob/miniredis/v2"
++	"github.com/gorilla/websocket"
++	"github.com/redis/go-redis/v9"
++	"github.com/stretchr/testify/require"
++	"go.uber.org/zap"
++
++	"github.com/sparkle/gateway/internal/config"
++	"github.com/sparkle/gateway/internal/service"
++)
++
++// TestWebSocketProxyDedupTimeoutForwardsMessage pins GW-P3-4: the per-message
++// dedup Redis round-trip is bounded by wsDedupCheckTimeout. When Redis stalls
++// (slowed miniredis), the message must be forwarded anyway after the deadline
++// instead of freezing the client→backend pump for the whole Redis stall.
++func TestWebSocketProxyDedupTimeoutForwardsMessage(t *testing.T) {
++	mr := miniredis.RunT(t)
++	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
++	// Stall every Redis command for 2s, honoring ctx cancellation: the
++	// bounded dedup ctx aborts at wsDedupCheckTimeout (200ms); the old
++	// detached context.Background() would sit through the full 2s stall.
++	rdb.AddHook(slowRedisHook{delay: 2 * time.Second})
++	t.Cleanup(func() { _ = rdb.Close() })
++	dedup := service.NewMessageDedupService(rdb)
++
++	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		upgrader := websocket.Upgrader{CheckOrigin: func(*http.Request) bool { return true }}
++		conn, err := upgrader.Upgrade(w, r, nil)
++		if err != nil {
++			return
++		}
++		defer conn.Close()
++		for {
++			mt, data, err := conn.ReadMessage()
++			if err != nil {
++				return
++			}
++			if err := conn.WriteMessage(mt, data); err != nil { // echo
++				return
++			}
++		}
++	}))
++	defer backend.Close()
++
++	proxy := NewWebSocketProxy(backend.URL, zap.NewNop(), &config.Config{
++		WSWriteWaitSeconds: 2,
++	}, dedup)
++	gateway := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		proxy.proxyWebSocket(w, r, backend.URL, "token-123", "user-dedup-timeout", "personal", "")
++	}))
++	defer gateway.Close()
++
++	conn, _, err := websocket.DefaultDialer.Dial(toWebSocketTestURL(gateway.URL), nil)
++	require.NoError(t, err)
++	defer conn.Close()
++
++	require.NoError(t, conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"dedup-timeout-probe"}`)))
++
++	// Echo must arrive well below the 2s Redis slowdown: the dedup check
++	// aborts at wsDedupCheckTimeout (200ms) and the message is forwarded.
++	_ = conn.SetReadDeadline(time.Now().Add(1500 * time.Millisecond))
++	start := time.Now()
++	_, data, err := conn.ReadMessage()
++	require.NoError(t, err, "message must be forwarded despite the stalled dedup backend")
++	require.Contains(t, string(data), "dedup-timeout-probe")
++	t.Logf("echo latency with stalled dedup: %v", time.Since(start))
++}
++
++// slowRedisHook delays every Redis command, aborting early when its context
++// is cancelled (ctx-aware stall, replacing miniredis's missing SetSlowdown).
++type slowRedisHook struct {
++	delay time.Duration
++}
++
++func (h slowRedisHook) DialHook(next redis.DialHook) redis.DialHook { return next }
++
++func (h slowRedisHook) ProcessHook(next redis.ProcessHook) redis.ProcessHook {
++	return func(ctx context.Context, cmd redis.Cmder) error {
++		select {
++		case <-time.After(h.delay):
++			return next(ctx, cmd)
++		case <-ctx.Done():
++			return ctx.Err()
++		}
++	}
++}
++
++func (h slowRedisHook) ProcessPipelineHook(next redis.ProcessPipelineHook) redis.ProcessPipelineHook {
++	return next
++}
+diff --git a/backend/gateway/internal/handler/websocket_proxy_paths_test.go b/backend/gateway/internal/handler/websocket_proxy_paths_test.go
+index f1c9fe2a..205d97ea 100644
+--- a/backend/gateway/internal/handler/websocket_proxy_paths_test.go
++++ b/backend/gateway/internal/handler/websocket_proxy_paths_test.go
+@@ -56,12 +56,11 @@ func TestWebSocketProxyReconnectTrackerLifecycle(t *testing.T) {
+ 	proxy := NewWebSocketProxy("http://backend.local", zap.NewNop(), &config.Config{}, nil)
+ 	userID := "user-reconnect"
+ 
+-	require.True(t, proxy.checkReconnectAllowed(userID))
+ 	for i := 0; i < reconnectMaxAttemptsDefault; i++ {
+-		proxy.recordReconnectAttempt(userID)
++		require.True(t, proxy.checkAndRecordReconnect(userID))
+ 	}
+ 
+-	require.False(t, proxy.checkReconnectAllowed(userID))
++	require.False(t, proxy.checkAndRecordReconnect(userID))
+ 	require.Greater(t, proxy.reconnectBlockRemaining(userID), 0)
+ 
+ 	proxy.mu.Lock()
+diff --git a/backend/gateway/internal/handler/websocket_proxy_reconnect_test.go b/backend/gateway/internal/handler/websocket_proxy_reconnect_test.go
+new file mode 100644
+index 00000000..0e9ec93d
+--- /dev/null
++++ b/backend/gateway/internal/handler/websocket_proxy_reconnect_test.go
+@@ -0,0 +1,61 @@
++package handler
++
++import (
++	"sync"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/require"
++	"go.uber.org/zap"
++
++	"github.com/sparkle/gateway/internal/config"
++)
++
++// TestWebSocketProxyReconnectCheckAndRecordAtomic pins GW-P3-5: the reconnect
++// admission decision and the attempt recording must happen in one atomic
++// step. With the old split (check under one lock, record under another), two
++// concurrent reconnects could both observe "allowed" before either recorded —
++// deterministically reproducible at the last budget slot: both checks return
++// true and attemptCount overshoots to max+1. The merged decision removes the
++// interleaving window entirely.
++func TestWebSocketProxyReconnectCheckAndRecordAtomic(t *testing.T) {
++	proxy := NewWebSocketProxy("http://backend.local", zap.NewNop(), &config.Config{}, nil)
++	userID := "user-reconnect-atomic"
++
++	const workers = 32
++	start := make(chan struct{})
++	var wg sync.WaitGroup
++	var mu sync.Mutex
++	admitted := 0
++	for w := 0; w < workers; w++ {
++		wg.Add(1)
++		go func() {
++			defer wg.Done()
++			<-start // release all workers at once to maximize contention
++			for i := 0; i < reconnectMaxAttemptsDefault; i++ {
++				if proxy.checkAndRecordReconnect(userID) {
++					mu.Lock()
++					admitted++
++					mu.Unlock()
++				}
++			}
++		}()
++	}
++	close(start)
++	wg.Wait()
++
++	require.LessOrEqual(t, admitted, reconnectMaxAttemptsDefault,
++		"atomic check-and-record must never admit more than maxAttempts")
++	require.Equal(t, reconnectMaxAttemptsDefault, admitted,
++		"exactly maxAttempts reconnects must be admitted")
++
++	// Window reset semantics survive the merge: after the sliding window
++	// expires (and any block is lifted) admission reopens.
++	proxy.mu.Lock()
++	reopened := time.Now().Add(-2 * time.Duration(reconnectWindowSecDefault+reconnectBlockSecDefault) * time.Second)
++	proxy.reconnectTrackers[userID].lastAttempt = reopened
++	proxy.reconnectTrackers[userID].blockedUntil = reopened
++	proxy.mu.Unlock()
++	require.True(t, proxy.checkAndRecordReconnect(userID),
++		"admission must reopen after the window and block expire")
++}
+diff --git a/backend/gateway/internal/metrics/ws_metrics.go b/backend/gateway/internal/metrics/ws_metrics.go
+index 9e32dbee..75c58896 100644
+--- a/backend/gateway/internal/metrics/ws_metrics.go
++++ b/backend/gateway/internal/metrics/ws_metrics.go
+@@ -3,6 +3,7 @@ package metrics
+ import (
+ 	"github.com/prometheus/client_golang/prometheus"
+ 	"github.com/prometheus/client_golang/prometheus/promauto"
++	dto "github.com/prometheus/client_model/go"
+ )
+ 
+ var (
+@@ -90,12 +91,43 @@ var (
+ 	})
+ 
+ 	// QuotaDailyUsageLoadErrors tracks failures to load a user's daily token
+-	// usage before a chat stream. Quota enforcement degrades to fail-open on
+-	// these errors (usage starts from 0), so a rising rate means billing
+-	// integrity is degraded and must be alerted on (GW-P2-4).
++	// usage before a chat stream. Quota enforcement degrades to the local
++	// instance-level fallback on these errors (GW-P2-4 bounded degradation),
++	// so a rising rate means billing precision is degraded and must be
++	// alerted on.
+ 	QuotaDailyUsageLoadErrors = promauto.NewCounter(prometheus.CounterOpts{
+ 		Name: "sparkle_quota_daily_usage_load_errors_total",
+-		Help: "Daily usage load failures that degrade mid-stream quota enforcement to fail-open",
++		Help: "Daily usage load failures that degrade quota enforcement to the local instance-level fallback",
++	})
++
++	// QuotaLocalFallbackActive reports whether quota enforcement is currently
++	// running on the local instance-level approximate daily cap because Redis
++	// daily-usage loads are failing (GW-P2-4 bounded degradation). 1 = local
++	// fallback engaged, 0 = Redis-backed accounting healthy. Alert on any
++	// sustained 1: the instance is serving on an approximate cap and usage
++	// recorded in Redis is incomplete for the affected turns.
++	QuotaLocalFallbackActive = promauto.NewGauge(prometheus.GaugeOpts{
++		Name: "sparkle_quota_local_fallback_active",
++		Help: "1 when chat quota enforcement is on the local instance-level fallback cap (Redis daily usage unavailable), 0 when Redis-backed",
++	})
++
++	// KeyAuthFailures counts static-key auth rejections on the admin and
++	// internal API surfaces (GW-P3/R2-GW-9). These requests are rejected
++	// before any rate limiting sees them, so without this counter
++	// brute-force probing is only visible in logs.
++	KeyAuthFailures = promauto.NewCounterVec(prometheus.CounterOpts{
++		Name: "sparkle_key_auth_failures_total",
++		Help: "Static key auth rejections before rate limiting (mechanism: admin_secret|internal_api_key; reason: not_configured|missing|invalid)",
++	}, []string{"mechanism", "reason"})
++
++	// FileEventSubscriberRestarts counts restarts of the /ws/files Redis
++	// pubsub subscriber loop (R2-GW-3). Each increment is one more interval
++	// in which file status pushes were dead or degraded; a rising rate means
++	// the subscription is unstable (Redis connectivity or panic) and must be
++	// alerted on.
++	FileEventSubscriberRestarts = promauto.NewCounter(prometheus.CounterOpts{
++		Name: "sparkle_file_event_subscriber_restarts_total",
++		Help: "Restarts of the file status pubsub subscriber loop (panics and terminal errors)",
+ 	})
+ 
+ 	AIChatTotalDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
+@@ -182,3 +214,24 @@ var (
+ 		Help: "Total error-code fallback operations during protocol migration",
+ 	}, []string{"direction"})
+ )
++
++// QuotaLocalFallbackActiveGaugeValue reads the current value of
++// QuotaLocalFallbackActive. It exists so other packages' tests can assert on
++// the gauge without depending on prometheus testutil.
++func QuotaLocalFallbackActiveGaugeValue() float64 {
++	var m dto.Metric
++	if err := QuotaLocalFallbackActive.Write(&m); err != nil {
++		return -1
++	}
++	return m.GetGauge().GetValue()
++}
++
++// FileEventSubscriberRestartsValue reads the current value of
++// FileEventSubscriberRestarts (see QuotaLocalFallbackActiveGaugeValue).
++func FileEventSubscriberRestartsValue() float64 {
++	var m dto.Metric
++	if err := FileEventSubscriberRestarts.Write(&m); err != nil {
++		return -1
++	}
++	return m.GetCounter().GetValue()
++}
+diff --git a/backend/gateway/internal/middleware/ab_test_bounded_test.go b/backend/gateway/internal/middleware/ab_test_bounded_test.go
+new file mode 100644
+index 00000000..39717e0a
+--- /dev/null
++++ b/backend/gateway/internal/middleware/ab_test_bounded_test.go
+@@ -0,0 +1,45 @@
++package middleware
++
++import (
++	"testing"
++	"time"
++)
++
++// TestABTestMetricBoundedDropsAtCapacity pins the R2-GW-7 fix: metric
++// recording goroutines are capped. At capacity, new recordings are dropped
++// (best-effort telemetry) instead of stacking unbounded goroutines; the
++// in-flight ones release their slot when done.
++func TestABTestMetricBoundedDropsAtCapacity(t *testing.T) {
++	m := &ABTestMiddleware{metricSem: make(chan struct{}, 1)}
++
++	ran := make(chan struct{}, 4)
++	started := make(chan struct{})
++	release := make(chan struct{})
++
++	// First recording admits (slot free) and blocks, occupying the slot.
++	m.recordMetricBounded(func() {
++		close(started)
++		<-release
++		ran <- struct{}{}
++	})
++	<-started
++
++	// At capacity: this recording must be dropped, not queued.
++	m.recordMetricBounded(func() { ran <- struct{}{} })
++	select {
++	case <-ran:
++		t.Fatal("recording must be dropped while at capacity")
++	case <-time.After(50 * time.Millisecond):
++	}
++
++	// Release the slot: the in-flight recording completes and further
++	// recordings are admitted again.
++	close(release)
++	<-ran
++	m.recordMetricBounded(func() { ran <- struct{}{} })
++	select {
++	case <-ran:
++	case <-time.After(2 * time.Second):
++		t.Fatal("recording must run once a slot is free")
++	}
++}
+diff --git a/backend/gateway/internal/middleware/ab_test_middleware.go b/backend/gateway/internal/middleware/ab_test_middleware.go
+index 0368f05b..c3e8a28e 100644
+--- a/backend/gateway/internal/middleware/ab_test_middleware.go
++++ b/backend/gateway/internal/middleware/ab_test_middleware.go
+@@ -26,16 +26,42 @@ type ABTestConfig struct {
+ type ABTestMiddleware struct {
+ 	config     *ABTestConfig
+ 	httpClient *http.Client
++
++	// R2-GW-7: metric recording runs fire-and-forget per request (up to two
++	// goroutines each), but bounded — at most abTestMetricMaxConcurrent
++	// recordings run at once and excess recordings are dropped (best-effort
++	// telemetry, never worth unbounded goroutine pile-up when the metrics
++	// endpoint stalls).
++	metricSem chan struct{}
+ }
+ 
++// abTestMetricMaxConcurrent bounds concurrent metric recording goroutines.
++const abTestMetricMaxConcurrent = 8
++
+ // NewABTestMiddleware creates a new A/B test middleware
+ func NewABTestMiddleware(config *ABTestConfig) *ABTestMiddleware {
+ 	return &ABTestMiddleware{
+ 		config:     config,
+ 		httpClient: &http.Client{Timeout: config.Timeout},
++		metricSem:  make(chan struct{}, abTestMetricMaxConcurrent),
+ 	}
+ }
+ 
++// recordMetricBounded runs metric recording in a goroutine whose concurrency
++// is capped at abTestMetricMaxConcurrent; at capacity the recording is
++// dropped instead of stacking goroutines (R2-GW-7).
++func (m *ABTestMiddleware) recordMetricBounded(record func()) {
++	select {
++	case m.metricSem <- struct{}{}:
++	default:
++		return // at capacity: drop best-effort telemetry
++	}
++	go func() {
++		defer func() { <-m.metricSem }()
++		record()
++	}()
++}
++
+ // AssignVariant assigns a user to an experiment variant
+ func (m *ABTestMiddleware) AssignVariant() gin.HandlerFunc {
+ 	return func(c *gin.Context) {
+@@ -211,35 +237,39 @@ func (m *ABTestMiddleware) recordFromContext(c *gin.Context) {
+ 	if latency != "" {
+ 		if latencyMs, err := strconv.ParseFloat(latency, 64); err == nil {
+ 			// Record latency metric
+-			go m.recordMetricAsync(
+-				variantInfo.ExperimentID,
+-				variantInfo.VariantID,
+-				"latency",
+-				latencyMs,
+-				"latency",
+-				map[string]interface{}{
+-					"path":   c.Request.URL.Path,
+-					"method": c.Request.Method,
+-				},
+-				authHeader,
+-			)
++			m.recordMetricBounded(func() {
++				m.recordMetricAsync(
++					variantInfo.ExperimentID,
++					variantInfo.VariantID,
++					"latency",
++					latencyMs,
++					"latency",
++					map[string]interface{}{
++						"path":   c.Request.URL.Path,
++						"method": c.Request.Method,
++					},
++					authHeader,
++				)
++			})
+ 		}
+ 	}
+ 
+ 	// Record success/error metric asynchronously
+-	go m.recordMetricAsync(
+-		variantInfo.ExperimentID,
+-		variantInfo.VariantID,
+-		metricName,
+-		metricValue,
+-		"success",
+-		map[string]interface{}{
+-			"path":        c.Request.URL.Path,
+-			"method":      c.Request.Method,
+-			"status_code": statusCode,
+-		},
+-		authHeader,
+-	)
++	m.recordMetricBounded(func() {
++		m.recordMetricAsync(
++			variantInfo.ExperimentID,
++			variantInfo.VariantID,
++			metricName,
++			metricValue,
++			"success",
++			map[string]interface{}{
++				"path":        c.Request.URL.Path,
++				"method":      c.Request.Method,
++				"status_code": statusCode,
++			},
++			authHeader,
++		)
++	})
+ }
+ 
+ // recordMetricAsync records a metric asynchronously
+diff --git a/backend/gateway/internal/middleware/auth.go b/backend/gateway/internal/middleware/auth.go
+index c48f1d1e..d06c8541 100755
+--- a/backend/gateway/internal/middleware/auth.go
++++ b/backend/gateway/internal/middleware/auth.go
+@@ -22,6 +22,7 @@ import (
+ 	"github.com/sparkle/gateway/internal/config"
+ 	"github.com/sparkle/gateway/internal/i18n"
+ 	"github.com/sparkle/gateway/internal/logsafe"
++	"github.com/sparkle/gateway/internal/metrics"
+ )
+ 
+ // middlewareConfig holds the application config for config-based environment
+@@ -447,12 +448,21 @@ func AdminAuthMiddleware(cfg *config.Config) gin.HandlerFunc {
+ 	return func(c *gin.Context) {
+ 		// Always require X-Admin-Secret header (including development).
+ 		if cfg.AdminSecret == "" {
++			metrics.KeyAuthFailures.WithLabelValues("admin_secret", "not_configured").Inc()
+ 			abortWithAPIError(c, http.StatusUnauthorized, "admin_secret_not_configured", "Admin secret not configured")
+ 			return
+ 		}
+ 
+ 		secretFromHeader := c.GetHeader("X-Admin-Secret")
+ 		if secretFromHeader == "" || subtle.ConstantTimeCompare([]byte(secretFromHeader), []byte(cfg.AdminSecret)) != 1 {
++			// GW-P3/R2-GW-9: these rejections happen before rate limiting,
++			// so count them explicitly to make brute-force probing
++			// observable beyond log lines.
++			reason := "invalid"
++			if secretFromHeader == "" {
++				reason = "missing"
++			}
++			metrics.KeyAuthFailures.WithLabelValues("admin_secret", reason).Inc()
+ 			abortWithAPIError(c, http.StatusUnauthorized, "invalid_or_missing_admin_secret", "Invalid or missing admin secret")
+ 			return
+ 		}
+diff --git a/backend/gateway/internal/middleware/distributed_rate_limiter.go b/backend/gateway/internal/middleware/distributed_rate_limiter.go
+index 253b7a0e..a4136496 100644
+--- a/backend/gateway/internal/middleware/distributed_rate_limiter.go
++++ b/backend/gateway/internal/middleware/distributed_rate_limiter.go
+@@ -27,9 +27,15 @@ var (
+ 		Help: "Total Redis errors in rate limiter by error type",
+ 	}, []string{"error_type"})
+ 
+-	rateLimiterTokensCurrent = promauto.NewGauge(prometheus.GaugeOpts{
+-		Name: "rate_limiter_tokens_current",
+-		Help: "Current token count left in the distributed token bucket (sampled)",
++	// GW-P3-6: the previous rate_limiter_tokens_current gauge was overwritten
++	// by an arbitrary key's remaining tokens on every request, so the value
++	// carried no meaning. A histogram of per-request remaining tokens (all
++	// keys mixed) preserves the capacity-pressure signal without pretending
++	// to be per-key state.
++	rateLimiterTokensRemaining = promauto.NewHistogram(prometheus.HistogramOpts{
++		Name:    "rate_limiter_tokens_remaining",
++		Help:    "Remaining tokens observed per distributed token bucket request (all keys mixed; capacity-pressure signal, not per-key state)",
++		Buckets: []float64{0, 1, 5, 10, 25, 50, 100, 250, 500, 1000},
+ 	})
+ 
+ 	rateLimiterRejectionsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+@@ -223,7 +229,7 @@ func (d *DistributedRateLimiter) allowAtMillis(ctx context.Context, key string,
+ 		return false, 0, fmt.Errorf("parse remaining tokens: %w", err)
+ 	}
+ 
+-	rateLimiterTokensCurrent.Set(remaining)
++	rateLimiterTokensRemaining.Observe(remaining)
+ 	allowed := allowedValue == 1
+ 	if !allowed {
+ 		rateLimiterRejectionsTotal.WithLabelValues("insufficient_tokens").Inc()
+diff --git a/backend/gateway/internal/middleware/distributed_rate_limiter_tokens_test.go b/backend/gateway/internal/middleware/distributed_rate_limiter_tokens_test.go
+new file mode 100644
+index 00000000..d2bc8f9b
+--- /dev/null
++++ b/backend/gateway/internal/middleware/distributed_rate_limiter_tokens_test.go
+@@ -0,0 +1,44 @@
++package middleware
++
++import (
++	"context"
++	"testing"
++
++	"github.com/prometheus/client_golang/prometheus"
++	dto "github.com/prometheus/client_model/go"
++	"github.com/stretchr/testify/require"
++)
++
++// TestRateLimiter_TokensRemainingHistogram pins the GW-P3-6 fix: per-request
++// remaining tokens are recorded into a histogram (rate_limiter_tokens_remaining)
++// instead of a single gauge whose value was whichever key requested last.
++func TestRateLimiter_TokensRemainingHistogram(t *testing.T) {
++	d, _ := newDistributedRateLimiterForTest(t, 1.0, 5, 5)
++
++	// Observe the histogram count before and after real limiter traffic.
++	countBefore := rateLimiterTokensRemainingObservations(t)
++
++	for i := 0; i < 3; i++ {
++		allowed, remaining, err := d.Allow(context.Background(), "histogram-probe")
++		require.NoError(t, err)
++		require.True(t, allowed)
++		require.GreaterOrEqual(t, remaining, int64(0))
++	}
++
++	countAfter := rateLimiterTokensRemainingObservations(t)
++	require.Greater(t, countAfter, countBefore,
++		"limiter requests must observe into the remaining-tokens histogram")
++}
++
++func rateLimiterTokensRemainingObservations(t *testing.T) uint64 {
++	t.Helper()
++	mch := make(chan prometheus.Metric, 16)
++	rateLimiterTokensRemaining.Collect(mch)
++	close(mch)
++	for m := range mch {
++		var dtoM dto.Metric
++		require.NoError(t, m.Write(&dtoM))
++		return dtoM.GetHistogram().GetSampleCount()
++	}
++	return 0
++}
+diff --git a/backend/gateway/internal/middleware/internal_api.go b/backend/gateway/internal/middleware/internal_api.go
+index b57a4a27..a475a788 100644
+--- a/backend/gateway/internal/middleware/internal_api.go
++++ b/backend/gateway/internal/middleware/internal_api.go
+@@ -7,18 +7,26 @@ import (
+ 	"github.com/gin-gonic/gin"
+ 
+ 	"github.com/sparkle/gateway/internal/config"
++	"github.com/sparkle/gateway/internal/metrics"
+ )
+ 
+ // InternalAPIKeyMiddleware validates internal service calls using X-Internal-API-Key header.
+ func InternalAPIKeyMiddleware(cfg *config.Config) gin.HandlerFunc {
+ 	return func(c *gin.Context) {
+ 		if cfg.InternalAPIKey == "" {
++			metrics.KeyAuthFailures.WithLabelValues("internal_api_key", "not_configured").Inc()
+ 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "internal api key not configured"})
+ 			return
+ 		}
+ 
+ 		provided := c.GetHeader("X-Internal-API-Key")
+ 		if provided == "" || subtle.ConstantTimeCompare([]byte(provided), []byte(cfg.InternalAPIKey)) != 1 {
++			// GW-P3/R2-GW-9: rejected before rate limiting — count explicitly.
++			reason := "invalid"
++			if provided == "" {
++				reason = "missing"
++			}
++			metrics.KeyAuthFailures.WithLabelValues("internal_api_key", reason).Inc()
+ 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid internal api key"})
+ 			return
+ 		}
+diff --git a/backend/gateway/internal/middleware/internal_ip_whitelist.go b/backend/gateway/internal/middleware/internal_ip_whitelist.go
+index d7b3c2f6..1324f0e9 100644
+--- a/backend/gateway/internal/middleware/internal_ip_whitelist.go
++++ b/backend/gateway/internal/middleware/internal_ip_whitelist.go
+@@ -14,6 +14,15 @@ import (
+ // InternalIPWhitelistMiddleware restricts /internal endpoints to trusted IPs/CIDRs.
+ func InternalIPWhitelistMiddleware(cfg *config.Config) gin.HandlerFunc {
+ 	allowedNets := parseInternalWhitelist(cfg.InternalIPWhitelist)
++	// GW-P3-2: an empty whitelist in production silently degrades the
++	// internal API defense to the static key alone (the per-request skip
++	// below stays intentional for bootstrap/deployability). Make the gap
++	// visible once at startup so operators can close it.
++	if !cfg.IsDevelopment() && len(allowedNets) == 0 {
++		log.Printf("[SECURITY][WARN] INTERNAL_IP_WHITELIST is not configured in %s environment: "+
++			"internal endpoints are protected by the static key only; configure the whitelist to restore defense in depth",
++			cfg.Environment)
++	}
+ 	return func(c *gin.Context) {
+ 		if cfg.IsDevelopment() || len(allowedNets) == 0 {
+ 			c.Next()
+diff --git a/backend/gateway/internal/middleware/internal_ip_whitelist_gap_test.go b/backend/gateway/internal/middleware/internal_ip_whitelist_gap_test.go
+new file mode 100644
+index 00000000..96e0a8c3
+--- /dev/null
++++ b/backend/gateway/internal/middleware/internal_ip_whitelist_gap_test.go
+@@ -0,0 +1,90 @@
++package middleware
++
++import (
++	"bytes"
++	"log"
++	"net/http"
++	"net/http/httptest"
++	"strings"
++	"testing"
++
++	"github.com/gin-gonic/gin"
++	"github.com/stretchr/testify/require"
++
++	"github.com/sparkle/gateway/internal/config"
++)
++
++// captureStdLog runs fn while capturing the standard library log output.
++func captureStdLog(t *testing.T, fn func()) string {
++	t.Helper()
++	var buf bytes.Buffer
++	flags := log.Flags()
++	out := log.Writer()
++	log.SetOutput(&buf)
++	log.SetFlags(0)
++	defer func() {
++		log.SetOutput(out)
++		log.SetFlags(flags)
++	}()
++	fn()
++	return buf.String()
++}
++
++// TestInternalIPWhitelist_WarnsWhenProductionWhitelistMissing pins GW-P3-2:
++// in production an unset/empty INTERNAL_IP_WHITELIST silently reduces the
++// internal API defense to the static key alone; construction of the
++// middleware must emit a loud startup warning so operators notice.
++func TestInternalIPWhitelist_WarnsWhenProductionWhitelistMissing(t *testing.T) {
++	cfg := &config.Config{
++		Environment:         "production",
++		InternalIPWhitelist: []string{},
++	}
++
++	var logs string
++	logs = captureStdLog(t, func() {
++		_ = InternalIPWhitelistMiddleware(cfg)
++	})
++	require.Contains(t, logs, "INTERNAL_IP_WHITELIST",
++		"production construction with an empty whitelist must log a startup warning")
++
++	// Development stays quiet.
++	devCfg := &config.Config{
++		Environment:         "development",
++		InternalIPWhitelist: []string{},
++	}
++	logs = captureStdLog(t, func() {
++		_ = InternalIPWhitelistMiddleware(devCfg)
++	})
++	require.False(t, strings.Contains(logs, "INTERNAL_IP_WHITELIST"),
++		"development construction must not warn")
++
++	// A configured production whitelist also stays quiet.
++	prodCfg := &config.Config{
++		Environment:         "production",
++		InternalIPWhitelist: []string{"10.0.0.0/8"},
++	}
++	logs = captureStdLog(t, func() {
++		_ = InternalIPWhitelistMiddleware(prodCfg)
++	})
++	require.False(t, strings.Contains(logs, "INTERNAL_IP_WHITELIST"),
++		"configured production whitelist must not warn")
++}
++
++// TestInternalIPWhitelist_EmptyWhitelistStillServes pins the intentional
++// runtime behavior that accompanies the warning: with no whitelist the layer
++// still passes through (static key remains the gate), so the warning must not
++// be confused with a behavior change.
++func TestInternalIPWhitelist_EmptyWhitelistStillServes(t *testing.T) {
++	cfg := &config.Config{
++		Environment:         "production",
++		InternalIPWhitelist: []string{},
++	}
++	r := gin.New()
++	r.Use(InternalIPWhitelistMiddleware(cfg))
++	// route-tier: internal
++	r.GET("/internal/test", func(c *gin.Context) { c.Status(http.StatusOK) })
++
++	w := httptest.NewRecorder()
++	r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/internal/test", nil))
++	require.Equal(t, http.StatusOK, w.Code)
++}
+diff --git a/backend/gateway/internal/middleware/key_auth_failures_test.go b/backend/gateway/internal/middleware/key_auth_failures_test.go
+new file mode 100644
+index 00000000..718e4fde
+--- /dev/null
++++ b/backend/gateway/internal/middleware/key_auth_failures_test.go
+@@ -0,0 +1,71 @@
++package middleware
++
++import (
++	"net/http"
++	"net/http/httptest"
++	"testing"
++
++	"github.com/gin-gonic/gin"
++	dto "github.com/prometheus/client_model/go"
++	"github.com/stretchr/testify/require"
++
++	"github.com/sparkle/gateway/internal/config"
++	"github.com/sparkle/gateway/internal/metrics"
++)
++
++func keyAuthFailureCount(mechanism, reason string) float64 {
++	var m dto.Metric
++	if err := metrics.KeyAuthFailures.WithLabelValues(mechanism, reason).Write(&m); err != nil {
++		return 0
++	}
++	return m.GetCounter().GetValue()
++}
++
++// serveKeyAuth runs a request through a middleware constructor func and
++// returns the response recorder.
++func serveKeyAuth(mw gin.HandlerFunc, headers map[string]string) *httptest.ResponseRecorder {
++	r := gin.New()
++	r.Use(mw)
++	r.GET("/probe", func(c *gin.Context) { c.Status(http.StatusOK) })
++	req := httptest.NewRequest(http.MethodGet, "/probe", nil)
++	for k, v := range headers {
++		req.Header.Set(k, v)
++	}
++	w := httptest.NewRecorder()
++	r.ServeHTTP(w, req)
++	return w
++}
++
++// TestKeyAuthFailuresCounted pins the GW-9 fix: static-key rejections on the
++// admin and internal API surfaces increment sparkle_key_auth_failures_total.
++// These requests are aborted before rate limiting sees them, so the counter
++// is the only non-log signal of brute-force probing.
++func TestKeyAuthFailuresCounted(t *testing.T) {
++	// Admin secret: missing and invalid are counted separately.
++	beforeMissing := keyAuthFailureCount("admin_secret", "missing")
++	w := serveKeyAuth(AdminAuthMiddleware(&config.Config{AdminSecret: "real-secret"}), nil)
++	require.Equal(t, http.StatusUnauthorized, w.Code)
++	require.Greater(t, keyAuthFailureCount("admin_secret", "missing"), beforeMissing)
++
++	beforeInvalid := keyAuthFailureCount("admin_secret", "invalid")
++	w = serveKeyAuth(AdminAuthMiddleware(&config.Config{AdminSecret: "real-secret"}), map[string]string{"X-Admin-Secret": "wrong"})
++	require.Equal(t, http.StatusUnauthorized, w.Code)
++	require.Greater(t, keyAuthFailureCount("admin_secret", "invalid"), beforeInvalid)
++
++	// Valid secret is NOT counted as a failure.
++	beforeValid := keyAuthFailureCount("admin_secret", "invalid")
++	w = serveKeyAuth(AdminAuthMiddleware(&config.Config{AdminSecret: "real-secret"}), map[string]string{"X-Admin-Secret": "real-secret"})
++	require.Equal(t, http.StatusOK, w.Code)
++	require.Equal(t, beforeValid, keyAuthFailureCount("admin_secret", "invalid"))
++
++	// Internal API key: missing and invalid.
++	beforeMissingKey := keyAuthFailureCount("internal_api_key", "missing")
++	w = serveKeyAuth(InternalAPIKeyMiddleware(&config.Config{InternalAPIKey: "internal-key"}), nil)
++	require.Equal(t, http.StatusUnauthorized, w.Code)
++	require.Greater(t, keyAuthFailureCount("internal_api_key", "missing"), beforeMissingKey)
++
++	beforeInvalidKey := keyAuthFailureCount("internal_api_key", "invalid")
++	w = serveKeyAuth(InternalAPIKeyMiddleware(&config.Config{InternalAPIKey: "internal-key"}), map[string]string{"X-Internal-API-Key": "wrong"})
++	require.Equal(t, http.StatusUnauthorized, w.Code)
++	require.Greater(t, keyAuthFailureCount("internal_api_key", "invalid"), beforeInvalidKey)
++}
+diff --git a/backend/gateway/internal/middleware/rate_limit.go b/backend/gateway/internal/middleware/rate_limit.go
+index bca9e427..d4a10a9f 100755
+--- a/backend/gateway/internal/middleware/rate_limit.go
++++ b/backend/gateway/internal/middleware/rate_limit.go
+@@ -506,18 +506,50 @@ func HybridRateLimitMiddleware(rdb *redis.Client, localRL *RateLimiter, config H
+ 	}
+ }
+ 
++// rateLimitMaxKeySegments caps how deep a concrete path may shape a rate
++// limit bucket (GW-P3-1): it bounds the bucket namespace a client can create.
++const rateLimitMaxKeySegments = 8
++
++func rateLimitPathSegments(path string) []string {
++	return strings.FieldsFunc(path, func(r rune) bool { return r == '/' })
++}
++
++// rateLimitDepthSuffix returns "#N" with N = min(segment count, cap).
++func rateLimitDepthSuffix(path string) string {
++	n := len(rateLimitPathSegments(path))
++	if n > rateLimitMaxKeySegments {
++		n = rateLimitMaxKeySegments
++	}
++	return "#" + strconv.Itoa(n)
++}
++
++// rateLimitFixedPrefix returns the first n path segments as "/a/b/c".
++func rateLimitFixedPrefix(path string, n int) string {
++	segs := rateLimitPathSegments(path)
++	if len(segs) > n {
++		segs = segs[:n]
++	}
++	return "/" + strings.Join(segs, "/")
++}
++
++// normalizeRateLimitRoutePath derives the rate limit bucket path.
++//
++// Explicit routes bucket by their route template. Catch-all (wildcard)
++// templates and unmatched NoRoute paths must NOT bucket by the concrete
++// request path: anonymous clients could otherwise mint unlimited buckets by
++// appending suffix junk to proxyable prefixes (GW-P3-1). Instead the bucket
++// is bounded to trusted structure — the template (or a short fixed prefix of
++// the path for NoRoute, which has no template) plus a capped segment count,
++// so same-depth suffixes share a bucket while /settings and
++// /settings/ai-usage still do not throttle each other.
+ func normalizeRateLimitRoutePath(c *gin.Context) string {
+ 	routePath := c.FullPath()
+ 	if routePath == "" {
+-		return c.Request.URL.Path
++		return "noroute:" + rateLimitFixedPrefix(c.Request.URL.Path, 3) + rateLimitDepthSuffix(c.Request.URL.Path)
+ 	}
+ 
+-	// Catch-all proxy routes like /api/v1/user/*path collapse unrelated
+-	// interactive requests into the same rate-limit bucket. Use the concrete
+-	// request path for wildcard templates so /settings and /settings/ai-usage
+-	// do not throttle each other.
+ 	if strings.Contains(routePath, "*") {
+-		return c.Request.URL.Path
++		return routePath + rateLimitDepthSuffix(c.Request.URL.Path)
+ 	}
+ 
+ 	return routePath
+diff --git a/backend/gateway/internal/middleware/rate_limit_bucket_test.go b/backend/gateway/internal/middleware/rate_limit_bucket_test.go
+new file mode 100644
+index 00000000..6df76027
+--- /dev/null
++++ b/backend/gateway/internal/middleware/rate_limit_bucket_test.go
+@@ -0,0 +1,66 @@
++package middleware
++
++import (
++	"net/http"
++	"net/http/httptest"
++	"testing"
++
++	"github.com/gin-gonic/gin"
++	"github.com/stretchr/testify/require"
++)
++
++// rateLimitRoutePathViaRouter runs a request through a real gin router so
++// normalizeRateLimitRoutePath sees the same FullPath()/NoRoute conditions as
++// production. An empty registerPath exercises the NoRoute branch.
++func rateLimitRoutePathViaRouter(t *testing.T, registerPath, requestPath string) string {
++	t.Helper()
++	var captured string
++	router := gin.New()
++	if registerPath != "" {
++		router.Any(registerPath, func(c *gin.Context) {
++			captured = normalizeRateLimitRoutePath(c)
++		})
++	} else {
++		router.NoRoute(func(c *gin.Context) {
++			captured = normalizeRateLimitRoutePath(c)
++		})
++	}
++	req := httptest.NewRequest(http.MethodGet, requestPath, nil)
++	req.RemoteAddr = "127.0.0.1:12345"
++	router.ServeHTTP(httptest.NewRecorder(), req)
++	require.NotEmpty(t, captured, "middleware must have captured a bucket path")
++	return captured
++}
++
++// TestNormalizeRateLimitRoutePath_BoundedBuckets pins the GW-P3-1 fix: the
++// rate-limit bucket namespace must stay bounded for wildcard templates and
++// unmatched (NoRoute) paths, so anonymous clients cannot mint arbitrary
++// buckets by appending suffix junk to proxy prefixes.
++func TestNormalizeRateLimitRoutePath_BoundedBuckets(t *testing.T) {
++	// Wildcard template: same-depth concrete suffixes share one bucket even
++	// when their content differs (arbitrary suffixes must not multiply
++	// buckets)...
++	suffixA := rateLimitRoutePathViaRouter(t, "/api/v1/user/*path", "/api/v1/user/settings/AAAAAAAAAA")
++	suffixB := rateLimitRoutePathViaRouter(t, "/api/v1/user/*path", "/api/v1/user/settings/BBBBBBBBBB")
++	require.Equal(t, suffixA, suffixB,
++		"wildcard routes must bucket by template + depth, not by concrete path content")
++
++	// ...while different depths remain distinct so /settings and
++	// /settings/ai-usage do not throttle each other (original intent).
++	deeper := rateLimitRoutePathViaRouter(t, "/api/v1/user/*path", "/api/v1/user/settings/AAAAAAAAAA/deeper")
++	require.NotEqual(t, suffixA, deeper)
++
++	// Extremely deep paths must not extend the namespace either.
++	floor := rateLimitRoutePathViaRouter(t, "/api/v1/user/*path", "/api/v1/user/a/b/c/d/e/f/g/h/i/j/k/l")
++	capped := rateLimitRoutePathViaRouter(t, "/api/v1/user/*path", "/api/v1/user/a/b/c/d/e/f/x/y/z")
++	require.Equal(t, floor, capped, "segment count must be capped")
++
++	// NoRoute: suffix junk on a proxied auth prefix must not mint buckets.
++	nrA := rateLimitRoutePathViaRouter(t, "", "/api/v1/auth/login/AAAAAAAAAA")
++	nrB := rateLimitRoutePathViaRouter(t, "", "/api/v1/auth/login/BBBBBBBBBB")
++	require.Equal(t, nrA, nrB, "NoRoute buckets must ignore untrusted path content")
++
++	// Explicit (non-wildcard) routes keep the plain template as bucket.
++	exact := rateLimitRoutePathViaRouter(t, "/api/v1/tasks", "/api/v1/tasks")
++	require.Equal(t, "/api/v1/tasks", exact)
++}
+diff --git a/backend/gateway/internal/middleware/rate_limit_test.go b/backend/gateway/internal/middleware/rate_limit_test.go
+index b7489f85..66d4cebf 100644
+--- a/backend/gateway/internal/middleware/rate_limit_test.go
++++ b/backend/gateway/internal/middleware/rate_limit_test.go
+@@ -95,7 +95,7 @@ func TestInternalRateLimitMiddleware(t *testing.T) {
+ func TestNormalizeRateLimitRoutePath(t *testing.T) {
+ 	t.Parallel()
+ 
+-	t.Run("uses concrete request path for wildcard routes", func(t *testing.T) {
++	t.Run("buckets wildcard routes by template plus depth (GW-P3-1)", func(t *testing.T) {
+ 		t.Parallel()
+ 
+ 		recorder := httptest.NewRecorder()
+@@ -107,7 +107,10 @@ func TestNormalizeRateLimitRoutePath(t *testing.T) {
+ 
+ 		req := httptest.NewRequest(http.MethodGet, "/api/v1/user/settings/ai-usage", nil)
+ 		router.ServeHTTP(recorder, req)
+-		if gotPath != "/api/v1/user/settings/ai-usage" {
++		// GW-P3-1: the bucket is the route template plus a capped segment
++		// count — NOT the concrete path, whose untrusted suffixes previously
++		// minted unlimited buckets.
++		if gotPath != "/api/v1/user/*path#5" {
+ 			t.Fatalf("normalizeRateLimitRoutePath() = %q", gotPath)
+ 		}
+ 	})
+diff --git a/backend/gateway/internal/service/chat_history.go b/backend/gateway/internal/service/chat_history.go
+index 00a30a20..68c6a04c 100755
+--- a/backend/gateway/internal/service/chat_history.go
++++ b/backend/gateway/internal/service/chat_history.go
+@@ -54,6 +54,12 @@ type ChatHistoryService struct {
+ 	retryBuf    []retryEntry
+ 	retryMu     sync.Mutex
+ 	retryStopCh chan struct{}
++
++	// R2-GW-7: cache backfills run fire-and-forget, but bounded — at most
++	// chatHistoryBackfillMaxConcurrent run at once and excess backfills are
++	// dropped (the cache is self-healing on the next read).
++	backfillSem chan struct{}
++	backfillWg  sync.WaitGroup
+ }
+ 
+ func NewChatHistoryServiceWithPool(rdb *redis.Client, pool *pgxpool.Pool, ttl time.Duration) *ChatHistoryService {
+@@ -62,6 +68,7 @@ func NewChatHistoryServiceWithPool(rdb *redis.Client, pool *pgxpool.Pool, ttl ti
+ 		pool:           pool,
+ 		chatHistoryTTL: ttl,
+ 		retryStopCh:    make(chan struct{}),
++		backfillSem:    make(chan struct{}, chatHistoryBackfillMaxConcurrent),
+ 	}
+ 	s.breakerThreshold.Store(DefaultMaxQueueSize)
+ 	go s.retryWorker()
+@@ -110,6 +117,7 @@ func NewChatHistoryServiceWithTTL(rdb *redis.Client, ttl time.Duration) *ChatHis
+ 		rdb:            rdb,
+ 		chatHistoryTTL: ttl,
+ 		retryStopCh:    make(chan struct{}),
++		backfillSem:    make(chan struct{}, chatHistoryBackfillMaxConcurrent),
+ 	}
+ 	s.breakerThreshold.Store(DefaultMaxQueueSize)
+ 	go s.retryWorker()
+@@ -124,6 +132,29 @@ func (s *ChatHistoryService) Stop() {
+ 	default:
+ 		close(s.retryStopCh)
+ 	}
++	s.backfillWg.Wait()
++}
++
++// chatHistoryBackfillMaxConcurrent bounds concurrent cache backfill
++// goroutines (R2-GW-7).
++const chatHistoryBackfillMaxConcurrent = 4
++
++// startBackfill runs cache-backfill work without blocking the request path
++// but with bounded concurrency: once chatHistoryBackfillMaxConcurrent
++// backfills are in flight, additional ones are dropped. Backfills are pure
++// cache warm-up — dropping is safe and the next read repopulates.
++func (s *ChatHistoryService) startBackfill(work func()) {
++	select {
++	case s.backfillSem <- struct{}{}:
++	default:
++		return // at capacity: drop instead of stacking goroutines
++	}
++	s.backfillWg.Add(1)
++	go func() {
++		defer s.backfillWg.Done()
++		defer func() { <-s.backfillSem }()
++		work()
++	}()
+ }
+ 
+ // retryWorker periodically flushes the local retry buffer back into the persist queue.
+@@ -472,7 +503,7 @@ func (s *ChatHistoryService) GetMessages(ctx context.Context, userID, sessionID
+ 
+ 		// 3. Backfill Redis cache (async) - only if we got data from DB
+ 		if len(messages) > 0 {
+-			go s.backfillRedisMessages(sessionID, messages)
++			s.startBackfill(func() { s.backfillRedisMessages(sessionID, messages) })
+ 		}
+ 
+ 		return messages, nil
+@@ -724,7 +755,7 @@ func (s *ChatHistoryService) GetRecentSessions(ctx context.Context, userID strin
+ 
+ 		// 3. Backfill Redis cache (async) - only if we got data from DB
+ 		if len(sessions) > 0 {
+-			go s.backfillRedisCache(userID, sessions)
++			s.startBackfill(func() { s.backfillRedisCache(userID, sessions) })
+ 		}
+ 
+ 		return sessions, nil
+diff --git a/backend/gateway/internal/service/chat_history_backfill_test.go b/backend/gateway/internal/service/chat_history_backfill_test.go
+new file mode 100644
+index 00000000..a792d110
+--- /dev/null
++++ b/backend/gateway/internal/service/chat_history_backfill_test.go
+@@ -0,0 +1,72 @@
++package service
++
++import (
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/require"
++)
++
++// TestStartBackfillBoundedAndTracked pins the R2-GW-7 fix on the chat
++// history cache backfill: work runs off the request path, concurrency is
++// capped (excess backfills are dropped — the cache self-heals on the next
++// read), and Stop() waits for in-flight backfills instead of abandoning them.
++func TestStartBackfillBoundedAndTracked(t *testing.T) {
++	s := &ChatHistoryService{backfillSem: make(chan struct{}, 1)}
++
++	// With a free slot the work runs and Stop() (backfillWg.Wait) waits for it.
++	ran := make(chan struct{})
++	s.startBackfill(func() { close(ran) })
++	select {
++	case <-ran:
++	case <-time.After(2 * time.Second):
++		t.Fatal("backfill work must run when a slot is available")
++	}
++
++	// At capacity the work is dropped, never queued or blocked.
++	s.backfillSem <- struct{}{} // occupy the only slot
++	dropped := false
++	s.startBackfill(func() { dropped = true })
++	require.False(t, dropped, "backfill must be dropped while at capacity")
++	released := false
++	s.startBackfill(func() { released = true }) // also dropped (slot busy)
++	require.False(t, released)
++
++	// Release and confirm capacity is restored.
++	<-s.backfillSem
++	s.startBackfill(func() {})
++	s.backfillWg.Wait() // must not hang: goroutines release their slots
++}
++
++// TestChatHistoryStopWaitsForBackfill pins the Stop() contract addition.
++func TestChatHistoryStopWaitsForBackfill(t *testing.T) {
++	s := &ChatHistoryService{
++		retryStopCh: make(chan struct{}),
++		backfillSem: make(chan struct{}, chatHistoryBackfillMaxConcurrent),
++	}
++	started := make(chan struct{})
++	release := make(chan struct{})
++	s.startBackfill(func() {
++		close(started)
++		<-release
++	})
++	<-started
++
++	stopped := make(chan struct{})
++	go func() {
++		s.Stop()
++		close(stopped)
++	}()
++
++	select {
++	case <-stopped:
++		t.Fatal("Stop must wait for in-flight backfills")
++	case <-time.After(50 * time.Millisecond):
++	}
++	close(release)
++	select {
++	case <-stopped:
++	case <-time.After(2 * time.Second):
++		t.Fatal("Stop must return once in-flight backfills finish")
++	}
++}
+diff --git a/backend/gateway/internal/service/file_event_subscriber.go b/backend/gateway/internal/service/file_event_subscriber.go
+index 104e3717..5277a7fc 100755
+--- a/backend/gateway/internal/service/file_event_subscriber.go
++++ b/backend/gateway/internal/service/file_event_subscriber.go
+@@ -3,9 +3,13 @@ package service
+ import (
+ 	"context"
+ 	"encoding/json"
++	"fmt"
++	"time"
+ 
+ 	"github.com/redis/go-redis/v9"
+ 	"go.uber.org/zap"
++
++	"github.com/sparkle/gateway/internal/metrics"
+ )
+ 
+ type FileStatusEvent struct {
+@@ -35,20 +39,97 @@ func NewFileEventSubscriber(redis *redis.Client, hub *FileEventHub, logger *zap.
+ 	}
+ }
+ 
++// Restart backoff bounds for RunWithRestart.
++const (
++	fileEventRestartBackoffBase = 250 * time.Millisecond
++	fileEventRestartBackoffMax  = 5 * time.Second
++	fileEventHealthyRunReset    = time.Minute
++)
++
++// RunWithRestart runs the subscriber for the lifetime of ctx, restarting the
++// pubsub loop after terminal errors AND panics with a capped exponential
++// backoff (R2-GW-3: the pre-fix goroutine recovered the panic and then died,
++// leaving /ws/files pushes silently dead until process restart). Every
++// restart increments sparkle_file_event_subscriber_restarts_total so the
++// degraded window is observable and alertable. A run that stayed healthy for
++// fileEventHealthyRunReset resets the backoff schedule.
++func (s *FileEventSubscriber) RunWithRestart(ctx context.Context) {
++	backoff := fileEventRestartBackoffBase
++	for {
++		start := time.Now()
++		runErr := s.runOnce(ctx)
++		if ctx.Err() != nil {
++			// Deliberate shutdown, not a fault.
++			return
++		}
++		if time.Since(start) >= fileEventHealthyRunReset {
++			backoff = fileEventRestartBackoffBase
++		}
++		metrics.FileEventSubscriberRestarts.Inc()
++		if s.logger != nil {
++			s.logger.Error("File event subscriber exited; restarting",
++				zap.Error(runErr),
++				zap.Duration("backoff", backoff),
++			)
++		}
++		select {
++		case <-ctx.Done():
++			return
++		case <-time.After(backoff):
++		}
++		if backoff < fileEventRestartBackoffMax {
++			backoff *= 2
++			if backoff > fileEventRestartBackoffMax {
++				backoff = fileEventRestartBackoffMax
++			}
++		}
++	}
++}
++
++// runOnce guards a single Run lifecycle against panics (R2-GW-3), converting
++// them into ordinary errors so the restart loop can continue.
++func (s *FileEventSubscriber) runOnce(ctx context.Context) (err error) {
++	defer func() {
++		if r := recover(); r != nil {
++			if s.logger != nil {
++				s.logger.Error("File event subscriber panicked", zap.Any("panic", r))
++			}
++			err = fmt.Errorf("file event subscriber panic: %v", r)
++		}
++	}()
++	return s.Run(ctx)
++}
++
+ func (s *FileEventSubscriber) Run(ctx context.Context) error {
+ 	pubsub := s.redis.Subscribe(ctx, "file_status")
+ 	defer pubsub.Close()
+ 
++	// go-redis's ReceiveMessage blocks on the socket and does not honor ctx
++	// cancellation once the connection is established, so ctx shutdown is
++	// implemented by closing the pubsub (which unblocks the receive with a
++	// pool-closed error). watchDone prevents the watcher from leaking when
++	// Run returns on its own (terminal error → RunWithRestart loop).
++	watchDone := make(chan struct{})
++	defer func() { close(watchDone) }()
++	go func() {
++		select {
++		case <-ctx.Done():
++			_ = pubsub.Close()
++		case <-watchDone:
++		}
++	}()
++
+ 	for {
+ 		msg, err := pubsub.ReceiveMessage(ctx)
+ 		if err != nil {
+ 			if ctx.Err() != nil {
+ 				return ctx.Err()
+ 			}
+-			if s.logger != nil {
+-				s.logger.Warn("File status subscriber error", zap.Error(err))
+-			}
+-			continue
++			// R2-GW-3: propagate the failure to RunWithRestart instead of
++			// busy-looping here (a closed Redis fails dial immediately, so
++			// the old warn+continue spun hot) — the restart loop owns retry
++			// policy: backoff, restart counter, and recovery.
++			return err
+ 		}
+ 
+ 		var event FileStatusEvent
+diff --git a/backend/gateway/internal/service/file_event_subscriber_restart_test.go b/backend/gateway/internal/service/file_event_subscriber_restart_test.go
+new file mode 100644
+index 00000000..50f6e292
+--- /dev/null
++++ b/backend/gateway/internal/service/file_event_subscriber_restart_test.go
+@@ -0,0 +1,116 @@
++package service
++
++import (
++	"context"
++	"encoding/json"
++	"sync"
++	"testing"
++	"time"
++
++	"github.com/alicebob/miniredis/v2"
++	"github.com/redis/go-redis/v9"
++	"github.com/stretchr/testify/require"
++	"go.uber.org/zap"
++
++	"github.com/sparkle/gateway/internal/metrics"
++)
++
++// captureHubWriter records hub deliveries for assertions.
++type captureHubWriter struct {
++	mu     sync.Mutex
++	writes []map[string]interface{}
++	closed bool
++}
++
++func (w *captureHubWriter) WriteJSON(payload interface{}) error {
++	w.mu.Lock()
++	defer w.mu.Unlock()
++	if raw, err := json.Marshal(payload); err == nil {
++		var m map[string]interface{}
++		if json.Unmarshal(raw, &m) == nil {
++			w.writes = append(w.writes, m)
++		}
++	}
++	return nil
++}
++
++func (w *captureHubWriter) Close() error {
++	w.mu.Lock()
++	defer w.mu.Unlock()
++	w.closed = true
++	return nil
++}
++
++func (w *captureHubWriter) count() int {
++	w.mu.Lock()
++	defer w.mu.Unlock()
++	return len(w.writes)
++}
++
++// TestFileEventSubscriberRunWithRestartRecovers pins the R2-GW-3 fix: a
++// terminal subscriber failure (Redis down at subscribe time) must not end the
++// subscriber's life. RunWithRestart backs off, restarts, increments
++// sparkle_file_event_subscriber_restarts_total, and resumes delivering
++// file_status events to the hub once Redis is reachable again.
++func TestFileEventSubscriberRunWithRestartRecovers(t *testing.T) {
++	mr := miniredis.RunT(t)
++	rdb := redis.NewClient(&redis.Options{
++		Addr:        mr.Addr(),
++		MaxRetries:  -1,
++		DialTimeout: 100 * time.Millisecond,
++		ReadTimeout: 500 * time.Millisecond,
++	})
++	t.Cleanup(func() { _ = rdb.Close() })
++
++	hub := NewFileEventHub()
++	writer := &captureHubWriter{}
++	hub.Register("user-restart", writer)
++	t.Cleanup(func() { hub.Unregister("user-restart", writer) })
++
++	sub := NewFileEventSubscriber(rdb, hub, zap.NewNop())
++
++	restartsBefore := metrics.FileEventSubscriberRestartsValue()
++
++	// Phase 1: Redis fault — every subscribe attempt fails fast.
++	mr.Close()
++
++	ctx, cancel := context.WithCancel(context.Background())
++	done := make(chan struct{})
++	go func() {
++		defer close(done)
++		sub.RunWithRestart(ctx)
++	}()
++
++	// The restart loop must have counted at least one restart while Redis
++	// stayed down.
++	require.Eventually(t, func() bool {
++		return metrics.FileEventSubscriberRestartsValue() > restartsBefore
++	}, 5*time.Second, 50*time.Millisecond,
++		"terminal subscriber failures must increment the restart counter")
++
++	// Phase 2: Redis restored — the loop must recover and resume delivery.
++	// Keep publishing: messages sent before the restart loop resubscribes are
++	// legitimately lost (pubsub is live-only), so at least one publish must
++	// land after resubscription.
++	require.NoError(t, mr.Restart())
++	payload, err := json.Marshal(map[string]interface{}{
++		"type":     "file_status",
++		"file_id":  "file-1",
++		"user_id":  "user-restart",
++		"status":   "processed",
++		"progress": 100,
++	})
++	require.NoError(t, err)
++	require.Eventually(t, func() bool {
++		_ = rdb.Publish(context.Background(), "file_status", payload).Err()
++		return writer.count() > 0
++	}, 10*time.Second, 100*time.Millisecond,
++		"subscriber must resume delivering file_status events after restart")
++
++	cancel()
++	select {
++	case <-done:
++	case <-time.After(5 * time.Second):
++		t.Fatal("RunWithRestart must return after context cancellation")
++	}
++}
+diff --git a/backend/gateway/internal/service/quota_fallback.go b/backend/gateway/internal/service/quota_fallback.go
+new file mode 100644
+index 00000000..5117a9cf
+--- /dev/null
++++ b/backend/gateway/internal/service/quota_fallback.go
+@@ -0,0 +1,93 @@
++package service
++
++import (
++	"os"
++	"strconv"
++	"sync/atomic"
++	"time"
++)
++
++// QuotaLocalFallbackDailyLimitEnv overrides the per-instance daily hard cap
++// used when Redis-backed daily usage accounting is unavailable.
++const QuotaLocalFallbackDailyLimitEnv = "QUOTA_LOCAL_FALLBACK_DAILY_LIMIT"
++
++// DefaultQuotaLocalFallbackDailyLimit is the per-instance approximate daily
++// request cap while quota enforcement runs in local fallback mode. The value
++// is deliberately much lower than the normal DAILY_QUOTA token budget: it is
++// an emergency bounded-degradation ceiling (GW-P2-4 product decision,
++// 2026-09-18), not a feature.
++const DefaultQuotaLocalFallbackDailyLimit = int64(50)
++
++const quotaFallbackDayShift = 32
++
++// QuotaLocalFallback is an instance-level approximate daily request counter
++// used as a bounded fallback when the Redis-backed daily usage snapshot cannot
++// be loaded. It keeps the gateway available during a Redis outage while
++// guaranteeing a hard per-instance ceiling instead of unbounded fail-open.
++//
++// Semantics:
++//   - instance-local: across N gateway replicas the effective ceiling is
++//     N * limit (documented approximation, mitigated by alerting on
++//     sparkle_quota_local_fallback_active);
++//   - counts admitted requests, not tokens (Redis is down, so token metering
++//     is unavailable by definition);
++//   - resets on UTC day rollover (approximate "daily"), implemented as one
++//     atomic CAS word: high 32 bits = UTC day, low 32 bits = today's count.
++type QuotaLocalFallback struct {
++	limit int64
++	state atomic.Int64
++}
++
++// NewQuotaLocalFallbackFromEnv builds the fallback with the limit from
++// QUOTA_LOCAL_FALLBACK_DAILY_LIMIT, or DefaultQuotaLocalFallbackDailyLimit
++// when unset or invalid.
++func NewQuotaLocalFallbackFromEnv() *QuotaLocalFallback {
++	limit := DefaultQuotaLocalFallbackDailyLimit
++	if raw := os.Getenv(QuotaLocalFallbackDailyLimitEnv); raw != "" {
++		if parsed, err := strconv.ParseInt(raw, 10, 64); err == nil && parsed > 0 {
++			limit = parsed
++		}
++	}
++	return &QuotaLocalFallback{limit: limit}
++}
++
++// NewQuotaLocalFallback builds the fallback with an explicit limit (tests).
++func NewQuotaLocalFallback(limit int64) *QuotaLocalFallback {
++	if limit <= 0 {
++		limit = DefaultQuotaLocalFallbackDailyLimit
++	}
++	return &QuotaLocalFallback{limit: limit}
++}
++
++// Limit returns the configured per-instance daily cap.
++func (f *QuotaLocalFallback) Limit() int64 { return f.limit }
++
++func packQuotaFallbackState(day, count int64) int64 {
++	return day<<quotaFallbackDayShift | count
++}
++
++// Allow atomically admits one request against the per-instance daily cap,
++// resetting the counter when the UTC day rolls over. It returns the number of
++// requests admitted today (including this one) and whether the request is
++// admitted. Once the cap is reached the counter saturates: further attempts
++// are rejected without mutating state.
++func (f *QuotaLocalFallback) Allow(now time.Time) (count int64, admitted bool) {
++	day := now.UTC().Unix() / 86400
++	for {
++		cur := f.state.Load()
++		if cur>>quotaFallbackDayShift != day {
++			// Day rolled over (or first use): try to start today's window.
++			if f.state.CompareAndSwap(cur, packQuotaFallbackState(day, 1)) {
++				return 1, 1 <= f.limit
++			}
++			continue
++		}
++		count = cur & ((1 << quotaFallbackDayShift) - 1)
++		if count >= f.limit {
++			return count, false
++		}
++		if f.state.CompareAndSwap(cur, cur+1) {
++			return count + 1, true
++		}
++	}
++}
+diff --git a/backend/gateway/internal/service/quota_fallback_test.go b/backend/gateway/internal/service/quota_fallback_test.go
+new file mode 100644
+index 00000000..4dfc3740
+--- /dev/null
++++ b/backend/gateway/internal/service/quota_fallback_test.go
+@@ -0,0 +1,92 @@
++package service
++
++import (
++	"sync"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/require"
++)
++
++func TestQuotaLocalFallback_AllowUpToLimitThenReject(t *testing.T) {
++	f := NewQuotaLocalFallback(2)
++	now := time.Date(2026, 9, 18, 10, 0, 0, 0, time.UTC)
++
++	count, admitted := f.Allow(now)
++	require.True(t, admitted)
++	require.Equal(t, int64(1), count)
++
++	count, admitted = f.Allow(now)
++	require.True(t, admitted)
++	require.Equal(t, int64(2), count)
++
++	count, admitted = f.Allow(now)
++	require.False(t, admitted, "request over the cap must be rejected")
++	require.Equal(t, int64(2), count, "rejected attempts must not consume budget")
++
++	// The counter saturates: many rejected attempts never wrap or re-admit.
++	for i := 0; i < 1000; i++ {
++		if _, admitted = f.Allow(now); admitted {
++			t.Fatal("rejected attempts must stay rejected within the same day")
++		}
++	}
++}
++
++func TestQuotaLocalFallback_ResetsOnUTCDayRollover(t *testing.T) {
++	f := NewQuotaLocalFallback(1)
++	day1 := time.Date(2026, 9, 18, 23, 59, 0, 0, time.UTC)
++	day2 := day1.Add(2 * time.Hour) // next UTC day
++
++	_, admitted := f.Allow(day1)
++	require.True(t, admitted)
++	_, admitted = f.Allow(day1)
++	require.False(t, admitted)
++
++	count, admitted := f.Allow(day2)
++	require.True(t, admitted, "counter must reset on UTC day rollover")
++	require.Equal(t, int64(1), count)
++}
++
++func TestQuotaLocalFallback_ConcurrentAllowNeverExceedsLimit(t *testing.T) {
++	f := NewQuotaLocalFallback(50)
++	now := time.Now()
++	const workers, perWorker = 8, 100
++
++	var mu sync.Mutex
++	total := 0
++	var wg sync.WaitGroup
++	for w := 0; w < workers; w++ {
++		wg.Add(1)
++		go func() {
++			defer wg.Done()
++			for i := 0; i < perWorker; i++ {
++				if _, ok := f.Allow(now); ok {
++					mu.Lock()
++					total++
++					mu.Unlock()
++				}
++			}
++		}()
++	}
++	wg.Wait()
++	require.Equal(t, 50, total, "exactly limit admissions must succeed under concurrency")
++}
++
++func TestQuotaLocalFallback_EnvOverride(t *testing.T) {
++	t.Setenv(QuotaLocalFallbackDailyLimitEnv, "7")
++	f := NewQuotaLocalFallbackFromEnv()
++	require.Equal(t, int64(7), f.Limit())
++
++	t.Setenv(QuotaLocalFallbackDailyLimitEnv, "")
++	f = NewQuotaLocalFallbackFromEnv()
++	require.Equal(t, DefaultQuotaLocalFallbackDailyLimit, f.Limit(),
++		"empty env must fall back to the documented default 50")
++
++	t.Setenv(QuotaLocalFallbackDailyLimitEnv, "not-a-number")
++	f = NewQuotaLocalFallbackFromEnv()
++	require.Equal(t, DefaultQuotaLocalFallbackDailyLimit, f.Limit())
++
++	t.Setenv(QuotaLocalFallbackDailyLimitEnv, "-3")
++	f = NewQuotaLocalFallbackFromEnv()
++	require.Equal(t, DefaultQuotaLocalFallbackDailyLimit, f.Limit())
++}
+diff --git "a/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/p3-sweep-gateway.md" "b/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/p3-sweep-gateway.md"
+new file mode 100644
+index 00000000..d1ee5a4e
+--- /dev/null
++++ "b/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/p3-sweep-gateway.md"
+@@ -0,0 +1,140 @@
++# P3 清扫报告 · 网关批（GW-P2-4 落地 + GW-P3 族 + GW 移交 + R2-08 网关侧）
++
++- 清扫员：P3 清扫员·网关批（恢复重派）
++- 工作树：`/Users/brsama/code/GitHub/Sparkle-sysrev/wt2`（main@47db4816，未 commit）
++- 日期：2026-09-18
++- 补丁：[p3-sweep-gateway.patch](p3-sweep-gateway.patch)（`git add -A && git diff --cached` 产物，gen/ 无改动）
++- 验证协议：`CGO_ENABLED=0 go vet ./...` 零输出；`SECRET_KEY=x JWT_SECRET=test-secret-0123456789abcdef CGO_ENABLED=0 go test <pkg> -count=1` 逐包（一次一个进程）；-race 仍因 CGO_ENABLED=0 铁律不可用
++
++---
++
++## 0. 总览
++
++| 批次 | 项数 | 结果 |
++|---|---|---|
++| ★GW-P2-4 产品决策落地 | 1 | ✅ 有界降级全量落地（红-绿双证） |
++| GW-P3-1..7（round1/05-fixes.md 剩余） | 7 | ✅ 5 代码修复 + 2 注释契约（按报告判词） |
++| GW-3/6/7/9（round2/05-r2-fixes.md 移交） | 4 | ✅ 全部修复（GW-3 含同型 Run 热旋修复） |
++| R2-08 网关侧 P3（08-r2-fixes.md §5） | 17 条死路由 + 守卫 | ✅ 16 删 + 1 改方法 + BM 守卫红-绿 |
++| **合计** | **29 项处置** | 全部闭环，守卫套件全绿（含新 BM） |
++
++未做（超出授权/跨仓，移交清单见 §6）。
++
++---
++
++## 1. ★GW-P2-4 配额 Redis 故障「有界降级」（最高优先，产品决策 2026-09-18）
++
++决策依据：`系统审查/漏洞台账.md` 末节 + 漏洞台账「2026-09-18 产品决策落定」。旧形态：Redis 加载日用量失败 → `dailyUsageStart=0` 且 `RecordUsageSegment` 同样失败 → 中流配额闸口恒不触发 = 无界 fail-open。
++
++**实现**（三件套）：
++1. `internal/service/quota_fallback.go`（新增）：`QuotaLocalFallback`——**实例级**近似日计数硬上限，默认 **50/实例/日**；单字 `atomic.Int64` CAS（高 32 位=UTC 日、低 32 位=当日计数）实现「atomic + 当日重置」；达限后计数器饱和（拒绝不再自增，杜绝 32 位回绕）；env `QUOTA_LOCAL_FALLBACK_DAILY_LIMIT` 可覆盖（构造时读取，非法值回退默认）。
++2. `internal/metrics/ws_metrics.go`：新增 `sparkle_quota_local_fallback_active` gauge（1=降级中/0=Redis 健康）；保留 `sparkle_quota_daily_usage_load_errors_total`（帮助文案同步改为降级语义）。
++3. `internal/handler/chat_orchestrator_chatflow.go`（配额加载分支）：加载失败 → 打点 + gauge=1 + `quotaFallback.Allow()`；**未获准（第 51 次）在流开始前拒绝**，envelope/protobuf 走 `resource_exhausted`，legacy 走 `message_nack`，`error_code=quota_exceeded`（客户端既有配额 UX 复用），message 明示 `service degraded: per-instance fallback limit reached`；Redis 恢复后任一成功加载把 gauge 归零（自愈 disarm）。
++
++**红-绿**（`quota_fallback_test.go`，51 次真实 WS 连接）：
++- RED（接线前）：Redis 故障注入（关停 miniredis）下第 51 次仍被放行（`service_unavailable` 而非 `quota_exceeded`），gauge 恒 0 —— FAIL（73s 旧形态跑证）。
++- GREEN：第 1..50 次放行、第 51 次 `error_code=quota_exceeded` —— PASS（8.4s）；gauge 1→0 转换测试 PASS（0.5s）。
++- 服务单测 4 项（限额/当日重置/并发恰 50 次准入/env 覆盖）全绿。
++
++**语义边界（记录在案）**：N 实例部署时有效上限为 N×50（实例级近似的固有属性，靠 `sparkle_quota_local_fallback_active` 告警缓解）；降级期按「次」计而非 token（Redis 不可用时 token 计量本身不可用）；免费模型跨层降级为协调者 follow-up（决策原文）。
++
++---
++
++## 2. GW-P3-1..7（round1/05-fixes.md §3 剩余清单）
++
++| ID | 处置 | 证据 |
++|---|---|---|
++| GW-P3-1 限流键可污染 | `rate_limit.go` `normalizeRateLimitRoutePath` 重写：wildcard=模板+截断段数（cap 8）；NoRoute=固定前 3 段+段数——不可信后缀不再造桶，同深度后缀同桶，`/settings` 与 `/settings/ai-usage` 段数不同仍分桶 | RED：新测 suffix A/B 同桶断言在旧实现 FAIL；GREEN：`rate_limit_bucket_test.go` 5 断言全绿；旧用例 `uses_concrete_request_path...` 按新契约改写 |
++| GW-P3-2 内网白名单缺省静默跳过 | `internal_ip_whitelist.go`：构造时（生产且空表）`[SECURITY][WARN]` 启动告警一次；运行时放行语义不变（静态 key 仍是闸门） | RED：日志捕获测试旧实现 FAIL（无告警）；GREEN：`internal_ip_whitelist_gap_test.go` 3 断言（prod 告警/dev 静默/配置后静默）+ 放行行为钉死 |
++| GW-P3-3 gRPC 4xx 透传契约 | `grpcStreamErrorDetails` 加契约注释：4xx 类引擎 message 视为可对外（仅截断），引擎侧必须保持人读校验消息无内部细节；5xx/unknown 仍掩蔽 | 注释即修复（报告判词「维持，加注释」） |
++| GW-P3-4 dedup 无超时 | `websocket_proxy.go`：`context.WithTimeout(200ms)`（`wsDedupCheckTimeout`）；超时/出错照常转发（dedup 是优化不是正确性闸门） | 行为红-绿：`websocket_proxy_dedup_test.go` 用 ctx-aware redis hook 制造 2s 停顿——旧实现（Background ctx）回声 1.5s 内不到 FAIL；新实现 203ms 转发 PASS |
++| GW-P3-5 重连限流非原子 | `checkReconnectAllowed`+`recordReconnectAttempt` 合并为单锁 `checkAndRecordReconnect`（检查+记账+封禁一步），调用点/旧测试同步迁移 | 确定性 RED：旧对在最后一个配额槽位上双观察者互锁复现（双 true + 计数溢出 11>10，`zz_red` 临时测试证红后删除）；GREEN：32 并发恰 10 次准入 + 窗口重开语义 PASS |
++| GW-P3-6 tokens gauge 无语义 | `distributed_rate_limiter.go`：`rate_limiter_tokens_current` gauge → `rate_limiter_tokens_remaining` histogram（0..1000 桶），per-request remaining 全键混采=容量压力信号，不再伪称 per-key 状态 | `distributed_rate_limiter_tokens_test.go`：限流器 3 次请求后直方图样本数增长 PASS（旧 gauge 形态无此观测面，编译级红） |
++| GW-P3-7 outbox 非事务 | 按报告判词「无需改动」：`outbox/publisher.go` 加 at-least-once 交付契约注释（publish→mark 崩溃窗口重放；SKIP LOCKED 多实例安全）；消费端 `projection/handlers.go` 包注释加幂等要求（LastProcessedPosition 限制重放窗但不豁免幂等） | 注释即修复 |
++
++## 3. GW-3/6/7/9（round2/05-r2-fixes.md §3 移交清单）
++
++### GW-3（R2-GW-3，P2）file 订阅者 recover 后活性丢失 — ✅
++- `file_event_subscriber.go`：新增 `RunWithRestart(ctx)`——panic（`runOnce` recover 转普通错误）与终态错误统一走「计数 → 指数退避 250ms→5s 封顶 → 重启」；健康运行 >1min 重置退避；ctx 取消即退出（非故障）。
++- 指标：`sparkle_file_event_subscriber_restarts_total`（每次重启 +1，降级窗口可观测可告警）。
++- `setup.go` goroutine 改走 `RunWithRestart`（GW-P0-1 recover 语义升级为「recover 即重启」）。
++- **同型缺陷一并修**：旧 `Run` 对 `ReceiveMessage` 错误是 warn+continue——Redis 关停时拨号立即失败 = 热旋刷日志；现改为把终态错误交还重启循环（重试策略单点化）。
++- **shutdown 缺陷一并修（新发现 #2）**：go-redis `ReceiveMessage` 建连后不响应 ctx 取消——`Run` 内 watcher 监听 ctx → `pubsub.Close()` 解堵（watchDone 防泄漏）；修复前 `cancel()` 后 goroutine 永不退出（调试测试实证 >3s），修复后 58µs 退出。
++- 红绿：`file_event_subscriber_restart_test.go`——Redis 关停期重启计数增长（旧实现计数恒 0，红态在第一轮真实跑出）→ `mr.Restart()` 后自动恢复投递、`cancel` 干净退出，全绿。
++
++### GW-6 双 drain 各拿满额 deadline — ✅
++- `cmd/server/main.go`：提取 `drainWebSocketPhases`——两 drain 共享一个绝对 deadline，第二阶段只拿剩余预算（`remainingDrainBudget` 负值归零）；合计等待 ≤ T/3（旧最坏 2T/3）。
++- 注意点：`Registry()` 返回具体指针，先判 typed-nil 再入接口（interface 装箱后 nil 检查失效）。
++- `main_drain_test.go`：两阶段授予单调不增、总量受 400ms 预算约束、负预算归零，PASS。
++
++### GW-7 fire-and-forget 扇出无上限 — ✅（两处族全修）
++- `chat_history.go`：backfill 走 `startBackfill`——信号量 cap 4 + `backfillWg`；满载丢弃（纯缓存预热，下次读自愈）；`Stop()` 现在 `backfillWg.Wait()`（不再遗弃在飞 backfill）。覆盖 :475 消息回填与 :727 会话回填两个点。
++- `ab_test_middleware.go`：`recordMetricBounded`——cap 8 信号量，满载丢弃（best-effort 遥测）；覆盖 latency 与 success 两个打点（原每请求 2 goroutine）。
++- 测试：`chat_history_backfill_test.go`（有槽即跑/满载丢弃/Stop 等待）+ `ab_test_bounded_test.go`（占槽阻塞/满载丢弃/释放后再准入），全绿。红态为静态结论（报告 §4 无背压判定），新测试钉死有界契约。
++
++### GW-9 密钥失败不进限流计数 — ✅
++- 指标：`sparkle_key_auth_failures_total{mechanism=admin_secret|internal_api_key, reason=not_configured|missing|invalid}`；接线 `AdminAuthMiddleware`（auth.go）与 `InternalAPIKeyMiddleware`（internal_api.go）的全部 401 分支。
++- 有效密钥不计数（测试钉死）；这些请求先于限流器被拒，计数器即爆破探测的唯一非日志信号。
++- `key_auth_failures_test.go`：missing/invalid 分别计数、有效密钥零计数，PASS。
++
++## 4. R2-08 网关侧 P3 处置（08-r2-fixes.md §5 分类清单）
++
++§5 各行的归属甄别：/health、/ws、achievements 副本、exam-sprint 功能面、marketplace/seed-libraries admin、galaxy/community 长尾、单条散布——均为**引擎侧**去重/产品确认项，非网关代码；R2-08-12 迁移守卫为 scripts 侧。网关侧可执行项 = 「死网关路由 17 条」行，本批全量处置：
++
++| # | 路由 | 处置 | 依据 |
++|---|---|---|---|
++| 4,5 | GET/POST `/cards`（bare） | 删 | 引擎无 bare 面 |
++| 6,7 | PATCH/PUT `/cards/*` | 删 | 引擎 /cards 无 PATCH/PUT |
++| 10 | POST `/exam-sprint/completion` | **改方法 → GET** | 引擎仅 GET /completion（plan_id query）；mobile `examSprintCompletion` 常量经查是 go_router 应用内导航 URI 而非 HTTP 调用，无双注册风险 |
++| 11 | POST `/tasks/:id/reopen` | 删 | 引擎全仓无 reopen |
++| 12 | GET `/tasks/suggestions` | 删（POST 兄弟存活） | 引擎仅 POST |
++| 13 | PATCH `/goals/:id` | 删（PUT 兄弟存活） | 引擎仅 PUT {goal_id} |
++| 14 | GET `/cqrs/dlq/stats` | 删（整组） | 引擎无 /api/v1/cqrs/*；真身在 /dlq/* 与 /admin |
++| 15-17 | POST/GET/DELETE `/community/messages/private*` | 删 ×3 | 引擎无私信面（DM=/friends/{id}/messages） |
++| 18 | PATCH `/community/posts/:post_id` | 删 | 引擎无 post 编辑 |
++| 19 | DELETE `/community/groups/:id/leave` | 删（POST 兄弟存活） | 引擎仅 POST leave |
++| 20 | DELETE `/community/groups/:id/messages/:msg_id` | 删（PATCH+revoke 存活） | 引擎无 DELETE |
++| 21 | POST `/community/share/:share_id/adopt` | 删（新别名存活） | 引擎用 /shared-resources/{id}/adopt |
++| 22 | GET `/galaxy/nodes` | 删（POST 兄弟存活） | 引擎仅 POST /galaxy/nodes |
++
++- 删除前逐条核过 mobile `api_endpoints.dart`/feature 消费者（cards 常量无 HTTP 消费者；taskSuggestions 走 POST；其余报告已实证 404/405 无成功消费者）——客户端结果不变（引擎 404/405 → 网关路由 404），面收敛。
++- 回归钉死：`proxy_routes_r208_test.go` 三测——17 键逐一断言未注册（方法为键）、GET completion 在/POST completion 不在、11 条存活兄弟路由防过剪。全绿。
++- **守卫化（BM 守卫）**：`scripts/guards/check_rule_bm_r208_dead_routes.py`——16 片段 + exam-sprint 方法面双向断言，`rule-bm: ignore <reason>` 豁免注记；已登记 `rule_guard_manifest.tsv`（68→69 守卫）。红-绿：临时回插 `cards.PUT` → FAIL（exit 1，指向精确行）→ 还原 → OK。
++- 报告 §5 建议「网关↔引擎前缀自动比对扩进 BA guard」：**移交**（跨语言全量 parity 守卫是独立工程，现状 92 条不可达引擎路由需产品/引擎侧先清；BM 守卫是本批处置面的防回归钉子）。
++
++## 5. 测试记录
++
++```
++$ CGO_ENABLED=0 go vet ./...                                   → 零输出
++$ export SECRET_KEY=x JWT_SECRET=test-secret-0123456789abcdef CGO_ENABLED=0
++逐包 -count=1（一次一个 go test 进程）：
++  ok  cmd/server           0.8s    ok  internal/agent     0.9s
++  ok  internal/config      0.5s    ok  internal/logsafe   0.5s
++  ok  internal/middleware  5.7s    ok  internal/service   9.4s
++  ok  internal/cqrs        2.7s    ok  internal/cqrs/event 0.5s
++  ok  internal/db          0.6s    ok  internal/handler  27.2s
++  internal/metrics — 无测试文件（新增 gauge/counter 值读取 helper 供跨包测试）
++  gen/* 为生成代码；outbox/projection/worker/galaxy/logger/i18n 无测试文件
++守卫：bash scripts/run_all_rule_guards.sh 全绿（含新 [Rule BM]）；BM 守卫独立红验 exit 1 → 还原 → exit 0
++```
++
++过程产物（patch 外）：无遗留临时文件（zz_red/debug 测试均已删除）；`docs/product/stage22_prompt_coverage_baseline.md` 的 audited_at 时间戳为守卫套件运行副作用，已 `git checkout` 还原。
++
++## 6. 新发现记档与移交清单
++
++**新发现（本批已顺手修或已防护）**：
++1. `ChatHistoryService.Run` 热旋：pubsub 接收错误 warn+continue，Redis 关停时拨号即败 = 无间隔重试刷屏（GW-3 修复中一并改为错误上交重启循环）。
++2. go-redis pubsub 取消盲区：`ReceiveMessage` 建连后 ctx 取消不解除阻塞，进程无法干净停机（GW-3 修复中加 pubsub.Close watcher）。
++3. typed-nil 接口装箱陷阱：`Registry()` 具体指针入接口后 nil 检查失效（GW-6 调用点已显式防护，此处记档防扩散）。
++4. miniredis v2.35 无 `SetSlowdown`：GW-P3-4 测试用 ctx-aware redis `AddHook` 模式替代（模式可复用，见 `websocket_proxy_dedup_test.go`）。
++
++**移交（未做，超出本批授权）**：
++1. 「网关↔引擎前缀自动比对」全量 parity 守卫（BA guard 扩展）——需引擎侧先清 §5 长尾，BM 守卫为过渡钉子。
++2. §5 引擎侧行（health/achievements 双前缀去重、exam-sprint dashboard/sprint-summary/diagnose 补注册、marketplace/seed-libraries admin 面、galaxy/community 长尾、单条散布 9 条）——引擎代码 + 产品确认，非网关。
++3. 免费模型配额跨层降级（GW-P2-4 决策原文中的 follow-up）。
++4. 配额 Lua reserve/refund/decr 死代码族删除（R2-05 报告选项 1，需另行决策）。
++5. CI 补跑 `-race`（本机 CGO_ENABLED=0 铁律不可用；并发正确性以行为性并发测试+静态论证覆盖：fallback CAS、reconnect 单锁、backfill/metric 信号量、subscriber watcher）。
++
++---
++
++*处置方法：可行为红的项全部红-绿（GW-P2-4/P3-1/P3-2/P3-4/P3-5/GW-3/BM 守卫）；纯观测/契约项（P3-3/P3-6/P3-7/GW-7/GW-9）以「报告判词 + 新观测面钉死」处置。git 操作仅 add/diff/reset，未 commit。*
+diff --git a/scripts/guards/check_rule_bm_r208_dead_routes.py b/scripts/guards/check_rule_bm_r208_dead_routes.py
+new file mode 100644
+index 00000000..36ae008a
+--- /dev/null
++++ b/scripts/guards/check_rule_bm_r208_dead_routes.py
+@@ -0,0 +1,101 @@
++#!/usr/bin/env python3
++"""Rule BM: R2-08 dead gateway routes stay removed.
++
++The P3 gateway sweep (2026-09-18) deleted 16 dead proxy registrations and
++corrected POST /exam-sprint/completion to GET per the R2-08 §2.2 route audit
++(see docs/competition/2026-tmall-hackathon/系统审查/round2/08-r2-fixes.md §5).
++This guard fails if any of those dead surfaces reappear in the gateway, or if
++the corrected method regresses.
++
++Evasion hatch: annotate the offending line with `rule-bm: ignore <reason>`.
++"""
++from __future__ import annotations
++
++import re
++import sys
++from pathlib import Path
++
++REPO_ROOT = Path(__file__).resolve().parents[2]
++PROXY_ROUTES_PATH = REPO_ROOT / "backend/gateway/internal/handler/proxy_routes.go"
++GALAXY_HANDLER_PATH = REPO_ROOT / "backend/gateway/internal/handler/galaxy_handler.go"
++
++# Go registration fragments that must never reappear (whitespace-normalized
++# substrings of `x.<METHOD>("path", ...)` registrations).
++FORBIDDEN_REGISTRATIONS = [
++    'cards.GET("",',
++    'cards.POST("",',
++    'cards.PUT("/*path",',
++    'cards.PATCH("/*path",',
++    'tasks.GET("/suggestions",',
++    'tasks.POST("/:id/reopen",',
++    'goals.PATCH("/:id",',
++    'cqrs.GET("/dlq/stats",',
++    'community.POST("/messages/private",',
++    'community.GET("/messages/private/:user_id",',
++    'community.DELETE("/messages/private/:msg_id",',
++    'community.PATCH("/posts/:post_id",',
++    'community.DELETE("/groups/:group_id/leave",',
++    'community.DELETE("/groups/:group_id/messages/:msg_id",',
++    'community.POST("/share/:share_id/adopt",',
++    'galaxy.GET("/nodes",',
++]
++
++# The one method correction from the sweep: GET must stay, POST must not.
++EXAM_COMPLETION_GET = 'examSprint.GET("/completion",'
++EXAM_COMPLETION_POST = 'examSprint.POST("/completion",'
++
++IGNORE_RE = re.compile(r"rule-bm:\s*ignore\s+.+", re.IGNORECASE)
++
++
++def _scan(path: Path) -> list[str]:
++    failures: list[str] = []
++    if not path.exists():
++        failures.append(f"required file missing: {path.relative_to(REPO_ROOT)}")
++        return failures
++
++    for lineno, raw in enumerate(
++        path.read_text(encoding="utf-8").splitlines(), start=1
++    ):
++        line = raw.strip()
++        if IGNORE_RE.search(line):
++            continue
++        for fragment in FORBIDDEN_REGISTRATIONS:
++            if fragment in line:
++                failures.append(
++                    f"{path.relative_to(REPO_ROOT)}:{lineno}: dead route "
++                    f"re-registered: {fragment}... (R2-08 §2.2; annotate with "
++                    f"`rule-bm: ignore <reason>` if the engine gained this surface)"
++                )
++        if path == PROXY_ROUTES_PATH:
++            if EXAM_COMPLETION_POST in line:
++                failures.append(
++                    f"{path.relative_to(REPO_ROOT)}:{lineno}: POST "
++                    f"/exam-sprint/completion re-registered — the engine only "
++                    f"serves GET (R2-08 §2.2 #10)"
++                )
++            if EXAM_COMPLETION_GET in line:
++                continue  # required; checked below
++
++    if path == PROXY_ROUTES_PATH:
++        text = path.read_text(encoding="utf-8")
++        if EXAM_COMPLETION_GET not in text and not IGNORE_RE.search(text):
++            failures.append(
++                f"{path.relative_to(REPO_ROOT)}: GET /exam-sprint/completion "
++                f"registration missing (R2-08 §2.2 #10 correction removed?)"
++            )
++    return failures
++
++
++def main() -> int:
++    failures = _scan(PROXY_ROUTES_PATH) + _scan(GALAXY_HANDLER_PATH)
++    if failures:
++        print("RULE BM FAILED: R2-08 dead gateway routes must stay removed")
++        for failure in failures:
++            print(f"  - {failure}")
++        return 1
++    print("RULE BM OK: R2-08 dead gateway routes remain removed")
++    return 0
++
++
++if __name__ == "__main__":
++    sys.exit(main())
+diff --git a/scripts/rule_guard_manifest.tsv b/scripts/rule_guard_manifest.tsv
+index e7203e36..d552078e 100644
+--- a/scripts/rule_guard_manifest.tsv
++++ b/scripts/rule_guard_manifest.tsv
+@@ -71,3 +71,4 @@ AURORA-CONFIG	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_aurora_config_consiste
+ # CARD-DUAL-WRITE	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_card_protocol_dual_write_consistency.py"
+ BJ	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_bj_dead_imports.py"
+ UI-TOKENS	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_ui_design_tokens_ratchet.py"
++BM	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_bm_r208_dead_routes.py"

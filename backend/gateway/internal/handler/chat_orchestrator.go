@@ -159,6 +159,9 @@ type ChatOrchestrator struct {
 	signalHub    *service.SignalHub
 	httpClient   *http.Client
 	wsRegistry   *ConnectionRegistry
+	// quotaFallback is the GW-P2-4 bounded-degradation cap used when Redis
+	// daily-usage accounting is unavailable (instance-level, per UTC day).
+	quotaFallback *service.QuotaLocalFallback
 	// streamSem limits concurrent gRPC StreamChat calls.
 	streamSem chan struct{}
 	draining  atomic.Bool
@@ -195,8 +198,9 @@ func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, ui service.UserIde
 		httpClient: &http.Client{
 			Timeout: 5 * time.Second,
 		},
-		wsRegistry: NewConnectionRegistry(signalHub, ch, cfg.WSGlobalMaxConnections, cfg.WSMaxConnections),
-		streamSem:  make(chan struct{}, streamSemaphoreSize(cfg)),
+		wsRegistry:    NewConnectionRegistry(signalHub, ch, cfg.WSGlobalMaxConnections, cfg.WSMaxConnections),
+		quotaFallback: service.NewQuotaLocalFallbackFromEnv(),
+		streamSem:     make(chan struct{}, streamSemaphoreSize(cfg)),
 	}
 	streamSemaphoreObserved.Store(h)
 	return h

@@ -598,13 +598,36 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		if dailyLimit > 0 && !isDevelopmentEnv() {
 			if usage, err := h.quota.GetDailyUsage(ctx, userID); err == nil {
 				dailyUsageStart = usage
+				// Redis-backed accounting is healthy again: disarm the
+				// GW-P2-4 local fallback indicator.
+				wsmetrics.QuotaLocalFallbackActive.Set(0)
 			} else {
-				// GW-P2-4: enforcement intentionally degrades to fail-open
-				// here (usage starts at 0), so surface the degradation as a
-				// metric instead of only a log line — a rising rate means
-				// billing integrity is impaired during the Redis outage.
 				log.Printf("Failed to load daily usage: %v", err)
 				wsmetrics.QuotaDailyUsageLoadErrors.Inc()
+				// GW-P2-4 (bounded degradation, product decision
+				// 2026-09-18): without the Redis snapshot the old behavior
+				// was unbounded fail-open (usage starts at 0 and segment
+				// recording also fails). Keep serving, but under a local
+				// instance-level approximate daily request cap. The request
+				// that exceeds the cap is rejected here with an explicit
+				// quota error instead of being admitted unbounded.
+				wsmetrics.QuotaLocalFallbackActive.Set(1)
+				if h.quotaFallback != nil {
+					if _, admitted := h.quotaFallback.Allow(time.Now()); !admitted {
+						log.Printf("Local quota fallback cap reached user=%s request=%s limit=%d (Redis daily usage unavailable)",
+							hashUserIDForLog(userID), reqID, h.quotaFallback.Limit())
+						const degradedMsg = "Daily quota exceeded (service degraded: per-instance fallback limit reached)"
+						switch r := responder.(type) {
+						case *envelopeResponder:
+							r.SendError("resource_exhausted", degradedMsg, false)
+						case *protobufResponder:
+							r.SendError("resource_exhausted", degradedMsg, false)
+						case *wsSafeWriter:
+							writeLegacyJSONLogged(r, "quota fallback cap error", gin.H{"type": "message_nack", "message_id": requestID, "error_code": "quota_exceeded", "error_message": degradedMsg, "retry_after_ms": 60000, "permanent": false})
+						}
+						return false
+					}
+				}
 			}
 		} else if dailyLimit > 0 && isDevelopmentEnv() {
 			log.Printf("WARN: Daily quota check skipped in development mode (limit=%d)", dailyLimit)
@@ -1006,6 +1029,15 @@ func grpcStreamErrorDetails(err error) (string, string, bool) {
 		return "unknown", defaultWSInternalMessage, retryable
 	}
 
+	// GW-P3-3 passthrough contract: for client-error (4xx-class) codes the
+	// engine-side st.Message() is treated as safe-to-expose verbatim (only
+	// length-truncated below). This is an intentional cross-service contract:
+	// the Python engine MUST keep human-facing validation messages free of
+	// internal details (stack traces, hostnames, prompts internals) — those
+	// belong in engine logs. Internal/DataLoss/unknown codes are still masked
+	// via publicStreamErrorMessage below; if the engine ever needs to send
+	// operator-oriented detail to clients, move it into response metadata
+	// instead of abusing these 5xx messages.
 	if strings.TrimSpace(st.Message()) != "" {
 		msg := st.Message()
 		// Defensive: truncate to prevent leaking long internal messages

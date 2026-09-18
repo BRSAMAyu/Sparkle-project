@@ -3,6 +3,7 @@ package metrics
 import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	dto "github.com/prometheus/client_model/go"
 )
 
 var (
@@ -90,12 +91,43 @@ var (
 	})
 
 	// QuotaDailyUsageLoadErrors tracks failures to load a user's daily token
-	// usage before a chat stream. Quota enforcement degrades to fail-open on
-	// these errors (usage starts from 0), so a rising rate means billing
-	// integrity is degraded and must be alerted on (GW-P2-4).
+	// usage before a chat stream. Quota enforcement degrades to the local
+	// instance-level fallback on these errors (GW-P2-4 bounded degradation),
+	// so a rising rate means billing precision is degraded and must be
+	// alerted on.
 	QuotaDailyUsageLoadErrors = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "sparkle_quota_daily_usage_load_errors_total",
-		Help: "Daily usage load failures that degrade mid-stream quota enforcement to fail-open",
+		Help: "Daily usage load failures that degrade quota enforcement to the local instance-level fallback",
+	})
+
+	// QuotaLocalFallbackActive reports whether quota enforcement is currently
+	// running on the local instance-level approximate daily cap because Redis
+	// daily-usage loads are failing (GW-P2-4 bounded degradation). 1 = local
+	// fallback engaged, 0 = Redis-backed accounting healthy. Alert on any
+	// sustained 1: the instance is serving on an approximate cap and usage
+	// recorded in Redis is incomplete for the affected turns.
+	QuotaLocalFallbackActive = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "sparkle_quota_local_fallback_active",
+		Help: "1 when chat quota enforcement is on the local instance-level fallback cap (Redis daily usage unavailable), 0 when Redis-backed",
+	})
+
+	// KeyAuthFailures counts static-key auth rejections on the admin and
+	// internal API surfaces (GW-P3/R2-GW-9). These requests are rejected
+	// before any rate limiting sees them, so without this counter
+	// brute-force probing is only visible in logs.
+	KeyAuthFailures = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "sparkle_key_auth_failures_total",
+		Help: "Static key auth rejections before rate limiting (mechanism: admin_secret|internal_api_key; reason: not_configured|missing|invalid)",
+	}, []string{"mechanism", "reason"})
+
+	// FileEventSubscriberRestarts counts restarts of the /ws/files Redis
+	// pubsub subscriber loop (R2-GW-3). Each increment is one more interval
+	// in which file status pushes were dead or degraded; a rising rate means
+	// the subscription is unstable (Redis connectivity or panic) and must be
+	// alerted on.
+	FileEventSubscriberRestarts = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "sparkle_file_event_subscriber_restarts_total",
+		Help: "Restarts of the file status pubsub subscriber loop (panics and terminal errors)",
 	})
 
 	AIChatTotalDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
@@ -182,3 +214,24 @@ var (
 		Help: "Total error-code fallback operations during protocol migration",
 	}, []string{"direction"})
 )
+
+// QuotaLocalFallbackActiveGaugeValue reads the current value of
+// QuotaLocalFallbackActive. It exists so other packages' tests can assert on
+// the gauge without depending on prometheus testutil.
+func QuotaLocalFallbackActiveGaugeValue() float64 {
+	var m dto.Metric
+	if err := QuotaLocalFallbackActive.Write(&m); err != nil {
+		return -1
+	}
+	return m.GetGauge().GetValue()
+}
+
+// FileEventSubscriberRestartsValue reads the current value of
+// FileEventSubscriberRestarts (see QuotaLocalFallbackActiveGaugeValue).
+func FileEventSubscriberRestartsValue() float64 {
+	var m dto.Metric
+	if err := FileEventSubscriberRestarts.Write(&m); err != nil {
+		return -1
+	}
+	return m.GetCounter().GetValue()
+}

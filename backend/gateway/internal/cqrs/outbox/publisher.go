@@ -104,6 +104,16 @@ func (p *Publisher) Run(ctx context.Context) error {
 }
 
 // publishBatch fetches and publishes a batch of events.
+//
+// Delivery contract (GW-P3-7, documented by design): publishing and
+// MarkPublished are intentionally NOT one transaction — an at-least-once
+// semantic. A crash between eventBus.Publish and MarkPublished replays the
+// affected entries on the next poll; GetUnpublished uses
+// FOR UPDATE SKIP LOCKED, so concurrent publisher instances stay safe.
+// Consequence: every event-bus consumer MUST tolerate duplicates. The
+// read-side projection consumers (internal/cqrs/projection) satisfy this via
+// position semantics (LastProcessedPosition) — see the package contract note
+// in projection/handlers.go.
 func (p *Publisher) publishBatch(ctx context.Context) error {
 	// Fetch unpublished entries
 	entries, err := p.repo.GetUnpublished(ctx, p.batchSize)

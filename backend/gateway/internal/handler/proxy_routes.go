@@ -92,7 +92,8 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		tasks.GET("/today", h.proxyWithHeaders)
 		// route-tier: authed
 		tasks.GET("/recommended", h.proxyWithHeaders)
-		tasks.GET("/suggestions", h.proxyWithHeaders)
+		// R2-08 §2.2 #12: GET /suggestions removed — the engine only serves
+		// POST /suggestions (the surviving sibling above).
 		// route-tier: authed
 		tasks.GET("/feedback/stats", h.proxyWithHeaders)
 		// route-tier: authed
@@ -126,7 +127,8 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		tasks.POST("/:id/abandon", h.proxyWithHeaders)
 		tasks.POST("/:id/pause", h.proxyWithHeaders)
 		tasks.POST("/:id/resume", h.proxyWithHeaders)
-		tasks.POST("/:id/reopen", h.proxyWithHeaders)
+		// R2-08 §2.2 #11: POST /:id/reopen removed — the engine has no
+		// reopen transition anywhere.
 		tasks.POST("/:id/stuck", h.proxyWithHeaders)
 		tasks.GET("/:id/guidance", h.proxyWithHeaders)
 		tasks.POST("/:id/guidance", h.proxyWithHeaders)
@@ -246,18 +248,12 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	{
 		// Explicit methods rather than Any() to respect HTTP semantics and
 		// prevent unintended method exposure (HEAD/CONNECT/TRACE).
-		// route-tier: authed
-		cards.GET("", h.proxyWithHeaders)
-		// route-tier: authed
-		cards.POST("", h.proxyWithHeaders)
+		// R2-08 §2.2 #4-7: bare GET/POST /cards and the PATCH/PUT wildcard
+		// method-faces are dead (the engine has no such surface) — removed.
 		// route-tier: authed
 		cards.GET("/*path", h.proxyWithHeaders)
 		// route-tier: authed
 		cards.POST("/*path", h.proxyWithHeaders)
-		// route-tier: authed
-		cards.PUT("/*path", h.proxyWithHeaders)
-		// route-tier: authed
-		cards.PATCH("/*path", h.proxyWithHeaders)
 		// route-tier: authed
 		cards.DELETE("/*path", h.proxyWithHeaders)
 	}
@@ -425,7 +421,8 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		goals.POST("/decompose-preview", h.proxyWithHeaders)
 		goals.GET("/:id", h.proxyWithHeaders)
 		goals.PUT("/:id", h.proxyWithHeaders)
-		goals.PATCH("/:id", h.proxyWithHeaders)
+		// R2-08 §2.2 #13: PATCH /:id removed — the engine only serves
+		// PUT /goals/{goal_id}; the PUT sibling above stays.
 		goals.DELETE("/:id", h.proxyWithHeaders)
 	}
 
@@ -543,7 +540,8 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		community.DELETE("/groups/:group_id", h.proxyWithHeaders)
 		community.POST("/groups/:group_id/join", h.proxyWithHeaders)
 		community.POST("/groups/:group_id/leave", h.proxyWithHeaders)
-		community.DELETE("/groups/:group_id/leave", h.proxyWithHeaders)
+		// R2-08 §2.2 #19: DELETE leave removed — the engine only serves
+		// POST leave.
 		community.POST("/groups/:group_id/transfer", h.proxyWithHeaders)
 		community.GET("/groups/:group_id/members", h.proxyWithHeaders)
 		community.POST("/groups/:group_id/members/:user_id/kick", h.proxyWithHeaders)
@@ -553,7 +551,8 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		// Group Messages
 		community.GET("/groups/:group_id/messages", h.proxyWithHeaders)
 		community.POST("/groups/:group_id/messages", h.proxyWithHeaders)
-		community.DELETE("/groups/:group_id/messages/:msg_id", h.proxyWithHeaders)
+		// R2-08 §2.2 #20: DELETE group message removed — the engine only
+		// serves PATCH edit + POST revoke (below).
 		community.PATCH("/groups/:group_id/messages/:msg_id", h.proxyWithHeaders)
 		community.POST("/groups/:group_id/messages/:msg_id/revoke", h.proxyWithHeaders)
 		community.POST("/groups/:group_id/messages/:msg_id/reactions", h.proxyWithHeaders)
@@ -582,10 +581,10 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		community.GET("/groups/:group_id/reports", h.proxyWithHeaders)
 		community.GET("/groups/:group_id/resources", h.proxyWithHeaders)
 		// Private Messages
+		// R2-08 §2.2 #15-17: the /messages/private trio is removed — the
+		// engine has no private-message surface; DMs live under
+		// /friends/{id}/messages (below).
 		community.POST("/messages", h.proxyWithHeaders)
-		community.POST("/messages/private", h.proxyWithHeaders)
-		community.GET("/messages/private/:user_id", h.proxyWithHeaders)
-		community.DELETE("/messages/private/:msg_id", h.proxyWithHeaders)
 		community.PATCH("/messages/:message_id", h.proxyWithHeaders)
 		community.POST("/messages/:message_id/revoke", h.proxyWithHeaders)
 		community.POST("/messages/:message_id/reactions", h.proxyWithHeaders)
@@ -596,7 +595,8 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		community.POST("/posts", h.proxyWithHeaders)
 		community.POST("/posts/:post_id/like", h.proxyWithHeaders)
 		community.DELETE("/posts/:post_id", h.proxyWithHeaders)
-		community.PATCH("/posts/:post_id", h.proxyWithHeaders)
+		// R2-08 §2.2 #18: PATCH /posts/{id} removed — the engine has no
+		// post edit surface.
 		community.GET("/posts/:post_id/comments", h.proxyWithHeaders)
 		community.POST("/posts/:post_id/comments", h.proxyWithHeaders)
 		community.DELETE("/posts/:post_id/comments/:comment_id", h.proxyWithHeaders)
@@ -606,7 +606,8 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		community.PUT("/status", h.proxyWithHeaders)
 		// Share Resources
 		community.POST("/share", h.proxyWithHeaders)
-		community.POST("/share/:share_id/adopt", h.proxyWithHeaders)
+		// R2-08 §2.2 #21: the /share/{id}/adopt old alias is removed —
+		// adoption lives at /shared-resources/{id}/adopt (below).
 		community.POST("/shared-resources/:shared_resource_id/adopt", h.proxyWithHeaders)
 		// Encryption
 		community.POST("/encryption/keys", h.proxyWithHeaders)
@@ -672,7 +673,9 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		// route-tier: authed
 		examSprint.POST("/intake", h.proxyWithHeaders)
 		// route-tier: authed
-		examSprint.POST("/completion", h.proxyWithHeaders)
+		// R2-08 §2.2 #10: method corrected POST -> GET; the engine only
+		// serves GET /completion (plan_id query param).
+		examSprint.GET("/completion", h.proxyWithHeaders)
 		// route-tier: authed
 		examSprint.POST("/post-exam-review", h.proxyWithHeaders)
 		// route-tier: authed
@@ -1069,13 +1072,9 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		h.registerREST(rg, "/*path")
 		h.logger.Info("Registered " + r.name + " proxy routes")
 	}
-	// ==================== CQRS / DLQ Health Routes ====================
-	cqrs := api.Group("/cqrs")
-	cqrs.Use(authMiddleware)
-	{
-		cqrs.GET("/dlq/stats", h.proxyWithHeaders)
-	}
-	h.logger.Info("Registered CQRS DLQ proxy routes")
+	// R2-08 §2.2 #14: the GET /cqrs/dlq/stats proxy group is removed — the
+	// engine has no /api/v1/cqrs/* surface (DLQ truth lives under /dlq/* and
+	// the /admin catch-all below).
 
 	// ==================== DLQ Admin Routes ====================
 	dlq := api.Group("/dlq")

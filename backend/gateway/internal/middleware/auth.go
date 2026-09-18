@@ -22,6 +22,7 @@ import (
 	"github.com/sparkle/gateway/internal/config"
 	"github.com/sparkle/gateway/internal/i18n"
 	"github.com/sparkle/gateway/internal/logsafe"
+	"github.com/sparkle/gateway/internal/metrics"
 )
 
 // middlewareConfig holds the application config for config-based environment
@@ -447,12 +448,21 @@ func AdminAuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Always require X-Admin-Secret header (including development).
 		if cfg.AdminSecret == "" {
+			metrics.KeyAuthFailures.WithLabelValues("admin_secret", "not_configured").Inc()
 			abortWithAPIError(c, http.StatusUnauthorized, "admin_secret_not_configured", "Admin secret not configured")
 			return
 		}
 
 		secretFromHeader := c.GetHeader("X-Admin-Secret")
 		if secretFromHeader == "" || subtle.ConstantTimeCompare([]byte(secretFromHeader), []byte(cfg.AdminSecret)) != 1 {
+			// GW-P3/R2-GW-9: these rejections happen before rate limiting,
+			// so count them explicitly to make brute-force probing
+			// observable beyond log lines.
+			reason := "invalid"
+			if secretFromHeader == "" {
+				reason = "missing"
+			}
+			metrics.KeyAuthFailures.WithLabelValues("admin_secret", reason).Inc()
 			abortWithAPIError(c, http.StatusUnauthorized, "invalid_or_missing_admin_secret", "Invalid or missing admin secret")
 			return
 		}

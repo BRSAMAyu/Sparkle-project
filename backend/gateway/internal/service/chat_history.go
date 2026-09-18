@@ -54,6 +54,12 @@ type ChatHistoryService struct {
 	retryBuf    []retryEntry
 	retryMu     sync.Mutex
 	retryStopCh chan struct{}
+
+	// R2-GW-7: cache backfills run fire-and-forget, but bounded — at most
+	// chatHistoryBackfillMaxConcurrent run at once and excess backfills are
+	// dropped (the cache is self-healing on the next read).
+	backfillSem chan struct{}
+	backfillWg  sync.WaitGroup
 }
 
 func NewChatHistoryServiceWithPool(rdb *redis.Client, pool *pgxpool.Pool, ttl time.Duration) *ChatHistoryService {
@@ -62,6 +68,7 @@ func NewChatHistoryServiceWithPool(rdb *redis.Client, pool *pgxpool.Pool, ttl ti
 		pool:           pool,
 		chatHistoryTTL: ttl,
 		retryStopCh:    make(chan struct{}),
+		backfillSem:    make(chan struct{}, chatHistoryBackfillMaxConcurrent),
 	}
 	s.breakerThreshold.Store(DefaultMaxQueueSize)
 	go s.retryWorker()
@@ -110,6 +117,7 @@ func NewChatHistoryServiceWithTTL(rdb *redis.Client, ttl time.Duration) *ChatHis
 		rdb:            rdb,
 		chatHistoryTTL: ttl,
 		retryStopCh:    make(chan struct{}),
+		backfillSem:    make(chan struct{}, chatHistoryBackfillMaxConcurrent),
 	}
 	s.breakerThreshold.Store(DefaultMaxQueueSize)
 	go s.retryWorker()
@@ -124,6 +132,29 @@ func (s *ChatHistoryService) Stop() {
 	default:
 		close(s.retryStopCh)
 	}
+	s.backfillWg.Wait()
+}
+
+// chatHistoryBackfillMaxConcurrent bounds concurrent cache backfill
+// goroutines (R2-GW-7).
+const chatHistoryBackfillMaxConcurrent = 4
+
+// startBackfill runs cache-backfill work without blocking the request path
+// but with bounded concurrency: once chatHistoryBackfillMaxConcurrent
+// backfills are in flight, additional ones are dropped. Backfills are pure
+// cache warm-up — dropping is safe and the next read repopulates.
+func (s *ChatHistoryService) startBackfill(work func()) {
+	select {
+	case s.backfillSem <- struct{}{}:
+	default:
+		return // at capacity: drop instead of stacking goroutines
+	}
+	s.backfillWg.Add(1)
+	go func() {
+		defer s.backfillWg.Done()
+		defer func() { <-s.backfillSem }()
+		work()
+	}()
 }
 
 // retryWorker periodically flushes the local retry buffer back into the persist queue.
@@ -472,7 +503,7 @@ func (s *ChatHistoryService) GetMessages(ctx context.Context, userID, sessionID 
 
 		// 3. Backfill Redis cache (async) - only if we got data from DB
 		if len(messages) > 0 {
-			go s.backfillRedisMessages(sessionID, messages)
+			s.startBackfill(func() { s.backfillRedisMessages(sessionID, messages) })
 		}
 
 		return messages, nil
@@ -724,7 +755,7 @@ func (s *ChatHistoryService) GetRecentSessions(ctx context.Context, userID strin
 
 		// 3. Backfill Redis cache (async) - only if we got data from DB
 		if len(sessions) > 0 {
-			go s.backfillRedisCache(userID, sessions)
+			s.startBackfill(func() { s.backfillRedisCache(userID, sessions) })
 		}
 
 		return sessions, nil

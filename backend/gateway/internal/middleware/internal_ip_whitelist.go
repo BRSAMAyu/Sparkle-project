@@ -14,6 +14,15 @@ import (
 // InternalIPWhitelistMiddleware restricts /internal endpoints to trusted IPs/CIDRs.
 func InternalIPWhitelistMiddleware(cfg *config.Config) gin.HandlerFunc {
 	allowedNets := parseInternalWhitelist(cfg.InternalIPWhitelist)
+	// GW-P3-2: an empty whitelist in production silently degrades the
+	// internal API defense to the static key alone (the per-request skip
+	// below stays intentional for bootstrap/deployability). Make the gap
+	// visible once at startup so operators can close it.
+	if !cfg.IsDevelopment() && len(allowedNets) == 0 {
+		log.Printf("[SECURITY][WARN] INTERNAL_IP_WHITELIST is not configured in %s environment: "+
+			"internal endpoints are protected by the static key only; configure the whitelist to restore defense in depth",
+			cfg.Environment)
+	}
 	return func(c *gin.Context) {
 		if cfg.IsDevelopment() || len(allowedNets) == 0 {
 			c.Next()

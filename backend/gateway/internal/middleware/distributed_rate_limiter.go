@@ -27,9 +27,15 @@ var (
 		Help: "Total Redis errors in rate limiter by error type",
 	}, []string{"error_type"})
 
-	rateLimiterTokensCurrent = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "rate_limiter_tokens_current",
-		Help: "Current token count left in the distributed token bucket (sampled)",
+	// GW-P3-6: the previous rate_limiter_tokens_current gauge was overwritten
+	// by an arbitrary key's remaining tokens on every request, so the value
+	// carried no meaning. A histogram of per-request remaining tokens (all
+	// keys mixed) preserves the capacity-pressure signal without pretending
+	// to be per-key state.
+	rateLimiterTokensRemaining = promauto.NewHistogram(prometheus.HistogramOpts{
+		Name:    "rate_limiter_tokens_remaining",
+		Help:    "Remaining tokens observed per distributed token bucket request (all keys mixed; capacity-pressure signal, not per-key state)",
+		Buckets: []float64{0, 1, 5, 10, 25, 50, 100, 250, 500, 1000},
 	})
 
 	rateLimiterRejectionsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
@@ -223,7 +229,7 @@ func (d *DistributedRateLimiter) allowAtMillis(ctx context.Context, key string, 
 		return false, 0, fmt.Errorf("parse remaining tokens: %w", err)
 	}
 
-	rateLimiterTokensCurrent.Set(remaining)
+	rateLimiterTokensRemaining.Observe(remaining)
 	allowed := allowedValue == 1
 	if !allowed {
 		rateLimiterRejectionsTotal.WithLabelValues("insufficient_tokens").Inc()

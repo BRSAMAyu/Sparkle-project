@@ -86,7 +86,8 @@ func (h *GalaxyHandler) RegisterRoutes(r *gin.RouterGroup, authMiddleware gin.Ha
 		// sporadically fail with 429 and break the knowledge graph experience.
 		galaxy.GET("/graph", h.GetGraph)
 		galaxy.GET("/contribution-stats", h.ProxyToBackend)
-		galaxy.GET("/nodes", h.ProxyToBackend)
+		// R2-08 §2.2 #22: GET /nodes removed — the engine only serves
+		// POST /galaxy/nodes (the surviving sibling below).
 		galaxy.POST("/nodes", h.ProxyToBackend)
 		galaxy.GET("/node/:id", h.GetNodeDetailGPRC)
 		galaxy.GET("/node/:id/history", h.ProxyToBackend)

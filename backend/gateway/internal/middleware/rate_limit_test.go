@@ -95,7 +95,7 @@ func TestInternalRateLimitMiddleware(t *testing.T) {
 func TestNormalizeRateLimitRoutePath(t *testing.T) {
 	t.Parallel()
 
-	t.Run("uses concrete request path for wildcard routes", func(t *testing.T) {
+	t.Run("buckets wildcard routes by template plus depth (GW-P3-1)", func(t *testing.T) {
 		t.Parallel()
 
 		recorder := httptest.NewRecorder()
@@ -107,7 +107,10 @@ func TestNormalizeRateLimitRoutePath(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodGet, "/api/v1/user/settings/ai-usage", nil)
 		router.ServeHTTP(recorder, req)
-		if gotPath != "/api/v1/user/settings/ai-usage" {
+		// GW-P3-1: the bucket is the route template plus a capped segment
+		// count — NOT the concrete path, whose untrusted suffixes previously
+		// minted unlimited buckets.
+		if gotPath != "/api/v1/user/*path#5" {
 			t.Fatalf("normalizeRateLimitRoutePath() = %q", gotPath)
 		}
 	})

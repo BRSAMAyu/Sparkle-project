@@ -506,18 +506,50 @@ func HybridRateLimitMiddleware(rdb *redis.Client, localRL *RateLimiter, config H
 	}
 }
 
+// rateLimitMaxKeySegments caps how deep a concrete path may shape a rate
+// limit bucket (GW-P3-1): it bounds the bucket namespace a client can create.
+const rateLimitMaxKeySegments = 8
+
+func rateLimitPathSegments(path string) []string {
+	return strings.FieldsFunc(path, func(r rune) bool { return r == '/' })
+}
+
+// rateLimitDepthSuffix returns "#N" with N = min(segment count, cap).
+func rateLimitDepthSuffix(path string) string {
+	n := len(rateLimitPathSegments(path))
+	if n > rateLimitMaxKeySegments {
+		n = rateLimitMaxKeySegments
+	}
+	return "#" + strconv.Itoa(n)
+}
+
+// rateLimitFixedPrefix returns the first n path segments as "/a/b/c".
+func rateLimitFixedPrefix(path string, n int) string {
+	segs := rateLimitPathSegments(path)
+	if len(segs) > n {
+		segs = segs[:n]
+	}
+	return "/" + strings.Join(segs, "/")
+}
+
+// normalizeRateLimitRoutePath derives the rate limit bucket path.
+//
+// Explicit routes bucket by their route template. Catch-all (wildcard)
+// templates and unmatched NoRoute paths must NOT bucket by the concrete
+// request path: anonymous clients could otherwise mint unlimited buckets by
+// appending suffix junk to proxyable prefixes (GW-P3-1). Instead the bucket
+// is bounded to trusted structure — the template (or a short fixed prefix of
+// the path for NoRoute, which has no template) plus a capped segment count,
+// so same-depth suffixes share a bucket while /settings and
+// /settings/ai-usage still do not throttle each other.
 func normalizeRateLimitRoutePath(c *gin.Context) string {
 	routePath := c.FullPath()
 	if routePath == "" {
-		return c.Request.URL.Path
+		return "noroute:" + rateLimitFixedPrefix(c.Request.URL.Path, 3) + rateLimitDepthSuffix(c.Request.URL.Path)
 	}
 
-	// Catch-all proxy routes like /api/v1/user/*path collapse unrelated
-	// interactive requests into the same rate-limit bucket. Use the concrete
-	// request path for wildcard templates so /settings and /settings/ai-usage
-	// do not throttle each other.
 	if strings.Contains(routePath, "*") {
-		return c.Request.URL.Path
+		return routePath + rateLimitDepthSuffix(c.Request.URL.Path)
 	}
 
 	return routePath

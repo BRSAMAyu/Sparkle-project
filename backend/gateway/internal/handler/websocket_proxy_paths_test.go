@@ -56,12 +56,11 @@ func TestWebSocketProxyReconnectTrackerLifecycle(t *testing.T) {
 	proxy := NewWebSocketProxy("http://backend.local", zap.NewNop(), &config.Config{}, nil)
 	userID := "user-reconnect"
 
-	require.True(t, proxy.checkReconnectAllowed(userID))
 	for i := 0; i < reconnectMaxAttemptsDefault; i++ {
-		proxy.recordReconnectAttempt(userID)
+		require.True(t, proxy.checkAndRecordReconnect(userID))
 	}
 
-	require.False(t, proxy.checkReconnectAllowed(userID))
+	require.False(t, proxy.checkAndRecordReconnect(userID))
 	require.Greater(t, proxy.reconnectBlockRemaining(userID), 0)
 
 	proxy.mu.Lock()

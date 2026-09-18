@@ -393,17 +393,12 @@ func initCQRS(ctx context.Context, cfg *config.Config, dbh *databaseHandles, rdb
 
 	fileEventSubscriber := service.NewFileEventSubscriber(rdb, services.fileEventHub, logger)
 	go func() {
-		// GW-P0-1: this goroutine has no recover of its own and a panic here
-		// (e.g. a websocket write issue surfacing from hub.Send) would take
-		// down the whole gateway process. Log and contain it.
-		defer func() {
-			if r := recover(); r != nil {
-				logger.Error("File event subscriber panicked", zap.Any("panic", r))
-			}
-		}()
-		if err := fileEventSubscriber.Run(ctx); err != nil {
-			logger.Error("File event subscriber stopped", zap.Error(err))
-		}
+		// GW-P0-1 recover + R2-GW-3 liveness: panics are converted to restarts
+		// inside RunWithRestart (backoff + restart counter), so a transient
+		// Redis outage or panic no longer leaves /ws/files pushes silently
+		// dead until process restart.
+		fileEventSubscriber.RunWithRestart(ctx)
+		logger.Info("File event subscriber stopped")
 	}()
 
 	fileGC := service.NewFileGCService(services.fileMetadata, services.fileStorage, cfg, logger)

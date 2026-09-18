@@ -26,14 +26,40 @@ type ABTestConfig struct {
 type ABTestMiddleware struct {
 	config     *ABTestConfig
 	httpClient *http.Client
+
+	// R2-GW-7: metric recording runs fire-and-forget per request (up to two
+	// goroutines each), but bounded — at most abTestMetricMaxConcurrent
+	// recordings run at once and excess recordings are dropped (best-effort
+	// telemetry, never worth unbounded goroutine pile-up when the metrics
+	// endpoint stalls).
+	metricSem chan struct{}
 }
+
+// abTestMetricMaxConcurrent bounds concurrent metric recording goroutines.
+const abTestMetricMaxConcurrent = 8
 
 // NewABTestMiddleware creates a new A/B test middleware
 func NewABTestMiddleware(config *ABTestConfig) *ABTestMiddleware {
 	return &ABTestMiddleware{
 		config:     config,
 		httpClient: &http.Client{Timeout: config.Timeout},
+		metricSem:  make(chan struct{}, abTestMetricMaxConcurrent),
 	}
+}
+
+// recordMetricBounded runs metric recording in a goroutine whose concurrency
+// is capped at abTestMetricMaxConcurrent; at capacity the recording is
+// dropped instead of stacking goroutines (R2-GW-7).
+func (m *ABTestMiddleware) recordMetricBounded(record func()) {
+	select {
+	case m.metricSem <- struct{}{}:
+	default:
+		return // at capacity: drop best-effort telemetry
+	}
+	go func() {
+		defer func() { <-m.metricSem }()
+		record()
+	}()
 }
 
 // AssignVariant assigns a user to an experiment variant
@@ -211,35 +237,39 @@ func (m *ABTestMiddleware) recordFromContext(c *gin.Context) {
 	if latency != "" {
 		if latencyMs, err := strconv.ParseFloat(latency, 64); err == nil {
 			// Record latency metric
-			go m.recordMetricAsync(
-				variantInfo.ExperimentID,
-				variantInfo.VariantID,
-				"latency",
-				latencyMs,
-				"latency",
-				map[string]interface{}{
-					"path":   c.Request.URL.Path,
-					"method": c.Request.Method,
-				},
-				authHeader,
-			)
+			m.recordMetricBounded(func() {
+				m.recordMetricAsync(
+					variantInfo.ExperimentID,
+					variantInfo.VariantID,
+					"latency",
+					latencyMs,
+					"latency",
+					map[string]interface{}{
+						"path":   c.Request.URL.Path,
+						"method": c.Request.Method,
+					},
+					authHeader,
+				)
+			})
 		}
 	}
 
 	// Record success/error metric asynchronously
-	go m.recordMetricAsync(
-		variantInfo.ExperimentID,
-		variantInfo.VariantID,
-		metricName,
-		metricValue,
-		"success",
-		map[string]interface{}{
-			"path":        c.Request.URL.Path,
-			"method":      c.Request.Method,
-			"status_code": statusCode,
-		},
-		authHeader,
-	)
+	m.recordMetricBounded(func() {
+		m.recordMetricAsync(
+			variantInfo.ExperimentID,
+			variantInfo.VariantID,
+			metricName,
+			metricValue,
+			"success",
+			map[string]interface{}{
+				"path":        c.Request.URL.Path,
+				"method":      c.Request.Method,
+				"status_code": statusCode,
+			},
+			authHeader,
+		)
+	})
 }
 
 // recordMetricAsync records a metric asynchronously
