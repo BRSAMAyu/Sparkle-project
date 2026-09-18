@@ -74,6 +74,9 @@ class LlmExtractorService:
                     {
                         "user_message": user_message,
                         "assistant_message": assistant_message,
+                        # R28 修复：中文相对时间（下周三/这周五）必须有时钟参照才能
+                        # 解析成 due_at；此前 payload 无当前时间，LLM 只能瞎猜或留空。
+                        "now_utc": f"{self._now_fn().isoformat()}Z",
                     },
                     ensure_ascii=False,
                 ),
@@ -146,6 +149,14 @@ class LlmExtractorService:
                 due_at = ensure_naive_utc(datetime.fromisoformat(str(due_at_raw)))
             except ValueError:
                 due_at = None
+
+        # R28 校验加固：commitment 候选缺 due_at 时固化链的自动固化通道
+        # （subject_type=="commitment" and due_at is not None）永远不会命中，
+        # 条目只会滞留工作记忆。降级为 self 保住事实本身，decay 同步回退。
+        if subject_type == "commitment" and due_at is None:
+            subject_type = "self"
+            if decay_policy == "due_at+7d":
+                decay_policy = "30d"
 
         return InferredEpisodicCandidate(
             candidate_text=candidate_text,

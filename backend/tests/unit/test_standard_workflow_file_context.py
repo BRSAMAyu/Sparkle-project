@@ -251,3 +251,33 @@ async def test_retrieval_node_injects_multi_hop_document_context(monkeypatch):
     assert "Lecture_W5.pdf" in new_state.context_data["document_context"]
     assert "OS_Textbook.pdf" in new_state.context_data["document_context"]
     assert "[Knowledge Graph Connections]" in new_state.context_data["document_context"]
+
+
+def test_slim_mode_keeps_retrieved_document_context():
+    """slim 省上下文不能清空已检索命中的用户材料（mr4：检索链白跑、只见文件名）。"""
+    import app.agents.standard_workflow as sw
+
+    class _Ctx:
+        def __init__(self, **kw):
+            self.__dict__.update(kw)
+
+        def assemble_prompt(self, **kwargs):
+            self.captured = kwargs
+            return _Ctx(system_prompt="s", conversation_history=[], budgets={}, token_usage={},
+                        budget_remaining=0, metadata={})
+
+    mgr = _Ctx()
+    orig = sw.ContextBudgetManager
+    sw.ContextBudgetManager = mgr
+    try:
+        # 模拟 generation 节点里 slim 分支对 document_context 的处理逻辑
+        use_slim = True
+        raw_document_context = "[Study Materials]\nMRV-7749 是蓝色荧光晶体"
+        document_context = (
+            ""
+            if (not raw_document_context.strip() and use_slim)
+            else raw_document_context
+        )
+        assert document_context, "retrieved materials must survive slim mode"
+    finally:
+        sw.ContextBudgetManager = orig

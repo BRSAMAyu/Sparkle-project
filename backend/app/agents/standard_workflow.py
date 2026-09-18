@@ -1673,9 +1673,15 @@ Ask about their available time and current tasks if needed.
     )
 
     raw_document_context = state.context_data.get("document_context") or ""
+    # slim 省上下文时知识库可裁，但已检索命中的用户材料不能丢：检索决策
+    # （targeted_source_rag 等）刚花了预算把正文捞回来，这里清空等于整条
+    # RAG 链白跑、模型只能看到文件名（mr4 断点）。预算由 ContextBudgetManager 兜底。
     document_context = (
         ""
-        if (use_slim_deep_context or use_fast_grounded_synthesis or use_slim_standard_context)
+        if (
+            not raw_document_context.strip()
+            and (use_slim_deep_context or use_fast_grounded_synthesis or use_slim_standard_context)
+        )
         else raw_document_context
     )
     context_budget_manager = ContextBudgetManager()

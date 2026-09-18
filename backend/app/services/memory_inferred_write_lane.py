@@ -21,11 +21,12 @@ from app.core.business_metrics import (
     MEMORY_INFERRED_WRITE_TOTAL,
 )
 from app.core.cache import cache_service
+from app.core.time_utils import ensure_naive_utc
 from app.db.session import AsyncSessionLocal, _get_engine_kwargs, _sanitize_asyncpg_url
 from app.models.chat import ChatMessage, MessageRole
 from app.models.memory import EpisodicMemory
 from app.models.user_memory_settings import UserMemorySettings
-from app.services.commitment_parser import parse_commitment_due_at
+from app.services.commitment_parser import parse_commitment_due_at, resolve_weekday_anchor
 from app.services.conflict_resolver_service import ConflictCandidate, ConflictResolverService
 from app.services.memory_service import MemoryService
 from app.services.scene_consolidation_service import SceneConsolidationService
@@ -39,6 +40,7 @@ def _utcnow() -> datetime:
 # 保持同语义）。带这些口令的句子即使被规则启发式判为无候选，也必须捕获，
 # 否则"帮我记住 X"这一产品承诺在主聊天路径整链失活（实测 A1 0/3）。
 EXPLICIT_MEMORY_COMMAND_PHRASES = (
+    "帮我记住这个",
     "帮我记住",
     "记住这个",
     "记下来",
@@ -46,6 +48,14 @@ EXPLICIT_MEMORY_COMMAND_PHRASES = (
     "就记这个",
     "记一下这个",
 )
+
+
+def _strip_memory_command_phrases(text: str) -> str:
+    """剥离显式记忆口令；按长度降序替换，避免"帮我记住这个"被拆成"帮我"+"这个"。"""
+    cleaned = text
+    for phrase in sorted(EXPLICIT_MEMORY_COMMAND_PHRASES, key=len, reverse=True):
+        cleaned = cleaned.replace(phrase, "，")
+    return cleaned
 
 # 显式口令也不得越过的硬禁止话题（人格判定/负面自我标签等）。
 EXPLICIT_COMMAND_HARD_BANNED_TOKENS = (
@@ -266,11 +276,18 @@ class MemoryInferredWriteLaneService:
         sentence = self._pick_candidate_sentence(user_message)
         if not sentence:
             # MR-1 修复：规则启发式丢掉的句子若带显式记忆口令，走口令 fallback，
-            # 保证"帮我记住 X"一轮后工作记忆/固化链有事可做。
+            # 保证"帮我记住 X"这一产品承诺在主聊天路径整链失活（实测 A1 0/3）。
             return self._build_explicit_command_candidate(
                 user_message=user_message,
                 evidence_token=evidence_token,
             )
+        # 显式记忆口令混在候选句里会污染 candidate_text/semantic_key
+        # （如"我下周三有期中考试，帮我记住这个"），先剥离再分类。
+        cleaned = _strip_memory_command_phrases(sentence)
+        cleaned = cleaned.strip(" ，,。：:；;！!？?·「」《》\"'")
+        if not cleaned:
+            cleaned = sentence
+        sentence = cleaned
         subject_type, entity_name = self._classify_subject_type(sentence)
         if subject_type is None:
             return None
@@ -298,7 +315,11 @@ class MemoryInferredWriteLaneService:
             confidence += 0.03
         confidence = min(confidence, 0.9)
         if subject_type == "commitment" and due_at is not None:
-            confidence = min(0.95, confidence + 0.03)
+            # 可解析 due_at 的事件承诺是最强入库信号；无"我"主语的短句
+            # （"明天上午有英语课/下周四有一场高数小测"）在加性启发式下会停在
+            # 0.9 直写门槛之下（固化链 min-confidence 同样被卡），与
+            # "中文考试/承诺类短句可靠入库"目标冲突，故托底到门槛、封顶 0.95。
+            confidence = min(0.95, max(confidence + 0.03, 0.9))
         decay_policy = "due_at+7d" if subject_type == "commitment" else ("7d" if temporal else "30d")
         mentioned_entity_hash = None
         mentioned_entity_owner_user_id = None
@@ -329,8 +350,8 @@ class MemoryInferredWriteLaneService:
                     "schema_version": "stage16.rule_y.v1",
                 }
             ],
-            occurred_at=occurred_at,
-            due_at=due_at,
+            occurred_at=ensure_naive_utc(occurred_at) or occurred_at,
+            due_at=ensure_naive_utc(due_at),
             mentioned_entity_hash=mentioned_entity_hash,
             mentioned_entity_owner_user_id=mentioned_entity_owner_user_id,
         )
@@ -645,9 +666,7 @@ class MemoryInferredWriteLaneService:
             return None
         if any(token in normalized for token in EXPLICIT_COMMAND_HARD_BANNED_TOKENS):
             return None
-        fact = normalized
-        for phrase in EXPLICIT_MEMORY_COMMAND_PHRASES:
-            fact = fact.replace(phrase, "，")
+        fact = _strip_memory_command_phrases(normalized)
         parts = [part.strip(" ，,。：:；;！!？?·「」《》\"'") for part in re.split(r"[，,；;：:]+", fact)]
         parts = [part for part in parts if len(part) >= 4]
         if not parts:
@@ -667,12 +686,22 @@ class MemoryInferredWriteLaneService:
         semantic_key = hashlib.sha1(self._normalize_semantic(fact).encode("utf-8")).hexdigest()
         # 用户显式口令是最高优先级捕获信号：给最高置信档（必须越过
         # MEMORY_INFERRED_MIN_CONFIDENCE=0.9 的 L1 直写门槛）。
+        subject_type = "self"
+        decay_policy = "30d"
+        due_at: datetime | None = None
+        # R28 修复：口令事实本身带可解析时间锚的（"帮我记住，下周三有期中考试"）
+        # 升级为 commitment，接通固化链 commitment+due_at 自动固化通道。
+        if self._looks_like_commitment(fact):
+            due_at = parse_commitment_due_at(fact)
+            if due_at is not None:
+                subject_type = "commitment"
+                decay_policy = "due_at+7d"
         return InferredEpisodicCandidate(
             candidate_text=fact,
-            subject_type="self",
+            subject_type=subject_type,
             confidence=0.92,
             evidence_token=evidence_token,
-            decay_policy="30d",
+            decay_policy=decay_policy,
             source_lane=self.SOURCE_LANE,
             semantic_key=semantic_key,
             evidence_refs=[
@@ -682,8 +711,8 @@ class MemoryInferredWriteLaneService:
                     "schema_version": "stage16.explicit_command.v1",
                 }
             ],
-            occurred_at=occurred_at,
-            due_at=None,
+            occurred_at=ensure_naive_utc(occurred_at) or occurred_at,
+            due_at=ensure_naive_utc(due_at),
             mentioned_entity_hash=None,
             mentioned_entity_owner_user_id=None,
         )
@@ -891,7 +920,34 @@ class MemoryInferredWriteLaneService:
     @staticmethod
     def _looks_like_commitment(sentence: str) -> bool:
         future_markers = ("我会", "我要", "我打算", "我计划", "我准备", "我想", "本周要", "这周要", "明天要", "今天要")
-        return any(token in sentence for token in future_markers)
+        if any(token in sentence for token in future_markers):
+            return True
+        # R28 修复：中文事件式承诺（考试/交作业/上课/小测等）没有"我会/我要"这类
+        # 第一人称意图标记，此前全部漏判为 self，due_at 永不解析，固化链的
+        # commitment+due_at 自动固化通道也随之失活。仅当句子带可解析的时间锚时
+        # 才判为 commitment——否则 extract_candidate 会因 due_at None 整条放弃。
+        event_markers = (
+            "考试",
+            "期中",
+            "期末",
+            "小测",
+            "测验",
+            "要交",
+            "得交",
+            "要考",
+            "有课",
+            "上课",
+            "deadline",
+            "截止",
+            "截稿",
+            "面试",
+        )
+        # "有英语课/有一节高数课"等"有…课"变体不含连续子串"有课"，用正则兜住。
+        if not any(token in sentence for token in event_markers) and not re.search(
+            r"有[^，。！？]{0,4}课", sentence
+        ):
+            return False
+        return parse_commitment_due_at(sentence) is not None
 
     @staticmethod
     def _extract_relationship_name(sentence: str) -> str | None:
@@ -969,6 +1025,12 @@ class MemoryInferredWriteLaneService:
             return now.replace(hour=9, minute=0, second=0, microsecond=0), "today_morning"
         if "今天" in lowered or "现在" in lowered:
             return now, "today"
+        # R28 修复："下周三/这周五"等星期表达此前落进"下周/这周"兜底分支，
+        # occurred_at 会偏到周一/周日；先解析星期锚，让事件日对齐真实日期。
+        weekday_anchor = resolve_weekday_anchor(sentence)
+        if weekday_anchor is not None:
+            target, kind = weekday_anchor
+            return target, kind
         if "周末" in lowered:
             days_until_saturday = (5 - now.weekday()) % 7
             target = now + timedelta(days=days_until_saturday)
