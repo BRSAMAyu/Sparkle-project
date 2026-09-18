@@ -40,6 +40,16 @@ router = APIRouter(prefix="/health", tags=["Health"])
 START_TIME = time.time()
 
 
+def set_start_time() -> None:
+    """记录应用启动时间（main.py lifespan 调用，刷新 /health 的 uptime 基线）。
+
+    EI-10：自 app/api/v1/health.py（从未注册的死 router，已删除）迁入，
+    复用本模块的 START_TIME，使启动时间戳与真实健康端点共用同一来源。
+    """
+    global START_TIME
+    START_TIME = time.time()
+
+
 def _utcnow() -> datetime:
     return datetime.now(UTC)
 

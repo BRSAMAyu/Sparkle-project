@@ -7,7 +7,6 @@ from datetime import timedelta
 
 from app.core.time_utils import utcnow as _utcnow
 from celery import shared_task
-from celery.schedules import crontab
 from loguru import logger
 from sqlalchemy import delete, select
 
@@ -78,12 +77,3 @@ async def _cleanup_old_login_attempts(db) -> int:
 
     logger.info("Deleted {} expired login attempts", total_deleted)
     return total_deleted
-
-
-# Celery Beat schedule
-CELERYBEAT_SCHEDULE = {
-    "cleanup-old-login-attempts": {
-        "task": "tasks.login_attempt_cleanup.cleanup_old_login_attempts",
-        "schedule": crontab(hour=4, minute=0),  # Daily at 04:00 UTC
-    },
-}

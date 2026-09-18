@@ -26,7 +26,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.api.middleware import IdempotencyMiddleware, RequestContextMiddleware
-from app.api.v1.health import set_start_time
+from app.api.v1.health_production import set_start_time
 from app.api.v1.router import api_router
 from app.config import settings
 from app.consumers.achievement_plan_consumer import AchievementPlanConsumer

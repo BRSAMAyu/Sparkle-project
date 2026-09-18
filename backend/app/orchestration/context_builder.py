@@ -1494,22 +1494,47 @@ class ContextBuilderMixin:
                 conversation_context = await self._build_conversation_context(session_id, user_id)
 
         if active_db and user_message:
-            try:
-                user_msg = ChatMessage(
-                    user_id=uuid.UUID(str(user_id)),
-                    session_id=self._coerce_session_uuid(session_id),
-                    role=MessageRole.USER,
-                    content=user_message,
-                    message_id=request_id,
-                )
-                active_db.add(user_msg)
-                await active_db.commit()
-            except Exception as e:
-                logger.warning(f"Failed to persist user chat message: {e}")
-                with contextlib.suppress(Exception):
-                    await active_db.rollback()
+            await self._persist_user_message(
+                active_db=active_db,
+                user_id=user_id,
+                session_id=session_id,
+                user_message=user_message,
+                request_id=request_id,
+            )
 
         return grpc_context, plan_id, plan_switched, user_context_payload, conversation_context, plan_context
+
+    async def _persist_user_message(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+        session_id: str,
+        user_message: str,
+        request_id: str | None,
+    ) -> None:
+        """持久化本轮用户消息（R2-09 / RB-06 follow-up）。
+
+        使用 ``flush`` 而非 ``commit``：``active_db`` 是 gRPC 流的共享会话，
+        提交所有权在 ``app/services/agent_grpc_service.py``（stream 结束统一
+        commit、异常 rollback，:354-399）。中途 commit 会破坏"一轮一事务"
+        原子性——用户消息已提交而后续任何环节失败时，外层 rollback 无法回滚它。
+        flush 已分配 PK，同会话内后续读取同样可见。
+        """
+        try:
+            user_msg = ChatMessage(
+                user_id=uuid.UUID(str(user_id)),
+                session_id=self._coerce_session_uuid(session_id),
+                role=MessageRole.USER,
+                content=user_message,
+                message_id=request_id,
+            )
+            active_db.add(user_msg)
+            await active_db.flush()
+        except Exception as e:
+            logger.warning(f"Failed to persist user chat message: {e}")
+            with contextlib.suppress(Exception):
+                await active_db.rollback()
 
     @staticmethod
     def _coerce_session_uuid(session_id: str) -> uuid.UUID:

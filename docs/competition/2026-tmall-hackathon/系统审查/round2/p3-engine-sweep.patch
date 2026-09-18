@@ -1,0 +1,1597 @@
+diff --git a/backend/app/api/v1/errors.py b/backend/app/api/v1/errors.py
+deleted file mode 100755
+index 7818ef0c..00000000
+--- a/backend/app/api/v1/errors.py
++++ /dev/null
+@@ -1,54 +0,0 @@
+-"""
+-Error Records API Endpoints
+-"""
+-from typing import Any  # Moved to top
+-
+-from fastapi import APIRouter, Depends, HTTPException, status
+-from sqlalchemy.ext.asyncio import AsyncSession
+-
+-from app.api.deps import get_current_user
+-from app.db.session import get_db
+-from app.models.error_book import ErrorRecord
+-from app.models.subject import Subject
+-from app.models.user import User
+-from app.schemas.error import ErrorRecordCreate, ErrorRecordResponse
+-
+-router = APIRouter()
+-
+-@router.post("", response_model=dict[str, Any], status_code=status.HTTP_201_CREATED)
+-async def create_error_record(
+-    record_in: ErrorRecordCreate,
+-    current_user: User = Depends(get_current_user),
+-    db: AsyncSession = Depends(get_db)
+-):
+-    """
+-    保存错题记录 (v2.1)
+-    """
+-    # 验证 subject_id
+-    subject = await db.get(Subject, record_in.subject_id)
+-    if not subject:
+-        raise HTTPException(
+-            status_code=400,
+-            detail=f"未找到ID为 {record_in.subject_id} 的学科"
+-        )
+-
+-    # 创建记录
+-    db_record = ErrorRecord(
+-        user_id=current_user.id,
+-        subject_id=subject.id,
+-        subject=subject.name, # 保留冗余字段用于快速显示或历史兼容
+-        topic=record_in.topic,
+-        error_type=record_in.error_type,
+-        description=record_in.description,
+-        ai_analysis=record_in.ai_analysis,
+-        image_urls=record_in.image_urls
+-    )
+-
+-    db.add(db_record)
+-    await db.commit()
+-    await db.refresh(db_record)
+-
+-    return {
+-        "success": True,
+-        "data": ErrorRecordResponse.model_validate(db_record)
+-    }
+diff --git a/backend/app/api/v1/health.py b/backend/app/api/v1/health.py
+deleted file mode 100755
+index 53394a69..00000000
+--- a/backend/app/api/v1/health.py
++++ /dev/null
+@@ -1,181 +0,0 @@
+-"""
+-Health Check API
+-健康检查端点 - 包含数据库连接状态检查
+-"""
+-from __future__ import annotations
+-
+-from datetime import UTC, datetime
+-
+-from fastapi import APIRouter, Depends
+-from pydantic import BaseModel
+-from sqlalchemy import text
+-from sqlalchemy.ext.asyncio import AsyncSession
+-
+-from app.config import settings
+-from app.db.session import engine, get_db
+-
+-router = APIRouter()
+-
+-
+-def _utcnow() -> datetime:
+-    """Return naive UTC datetime for compatibility with existing DB columns."""
+-    return datetime.now(UTC).replace(tzinfo=None)
+-
+-
+-class DatabaseHealth(BaseModel):
+-    """数据库健康状态"""
+-    connected: bool
+-    latency_ms: float | None = None
+-    pool_size: int | None = None
+-    pool_checked_out: int | None = None
+-    error: str | None = None
+-
+-
+-class HealthResponse(BaseModel):
+-    """健康检查响应"""
+-    status: str  # healthy, degraded, unhealthy
+-    timestamp: datetime
+-    version: str
+-    database: DatabaseHealth
+-    uptime_seconds: float | None = None
+-
+-
+-# 记录启动时间
+-_start_time: datetime | None = None
+-
+-
+-def set_start_time():
+-    """设置启动时间（在应用启动时调用）"""
+-    global _start_time
+-    _start_time = _utcnow()
+-
+-
+-def get_uptime_seconds() -> float | None:
+-    """获取运行时间（秒）"""
+-    if _start_time is None:
+-        return None
+-    return (_utcnow() - _start_time).total_seconds()
+-
+-
+-async def check_database_health(db: AsyncSession) -> DatabaseHealth:
+-    """
+-    检查数据库连接健康状态
+-
+-    执行简单的 SELECT 1 查询来验证连接
+-    """
+-    try:
+-        start = _utcnow()
+-
+-        # 执行简单查询验证连接
+-        await db.execute(text("SELECT 1"))
+-
+-        end = _utcnow()
+-        latency_ms = (end - start).total_seconds() * 1000
+-
+-        # 获取连接池信息（仅 PostgreSQL）
+-        pool_size = None
+-        pool_checked_out = None
+-
+-        if not settings.DATABASE_URL.startswith("sqlite"):
+-            try:
+-                pool = engine.pool
+-                pool_size = pool.size()
+-                pool_checked_out = pool.checkedout()
+-            except Exception:
+-                pass
+-
+-        return DatabaseHealth(
+-            connected=True,
+-            latency_ms=round(latency_ms, 2),
+-            pool_size=pool_size,
+-            pool_checked_out=pool_checked_out,
+-        )
+-
+-    except Exception as e:
+-        return DatabaseHealth(
+-            connected=False,
+-            error=str(e),
+-        )
+-
+-
+-@router.get("", response_model=HealthResponse)
+-@router.get("/", response_model=HealthResponse)
+-async def health_check(db: AsyncSession = Depends(get_db)):
+-    """
+-    完整健康检查
+-
+-    返回应用和数据库的健康状态
+-    """
+-    db_health = await check_database_health(db)
+-
+-    # 根据数据库状态确定整体健康状态
+-    if db_health.connected:
+-        if db_health.latency_ms and db_health.latency_ms > 1000:
+-            status = "degraded"  # 数据库响应慢
+-        else:
+-            status = "healthy"
+-    else:
+-        status = "unhealthy"
+-
+-    return HealthResponse(
+-        status=status,
+-        timestamp=_utcnow(),
+-        version=settings.APP_VERSION,
+-        database=db_health,
+-        uptime_seconds=get_uptime_seconds(),
+-    )
+-
+-
+-@router.get("/liveness")
+-@router.get("/live")
+-async def liveness_check():
+-    """
+-    存活检查（Kubernetes liveness probe）
+-
+-    仅检查应用是否运行，不检查依赖服务
+-    """
+-    return {"status": "alive"}
+-
+-
+-@router.get("/readiness")
+-@router.get("/ready")
+-async def readiness_check(db: AsyncSession = Depends(get_db)):
+-    """
+-    就绪检查（Kubernetes readiness probe）
+-
+-    检查应用是否准备好接收流量
+-    """
+-    db_health = await check_database_health(db)
+-
+-    if db_health.connected:
+-        return {"status": "ready"}
+-    else:
+-        return {"status": "not_ready", "reason": "database_unavailable"}
+-
+-
+-@router.get("/database")
+-async def database_health(db: AsyncSession = Depends(get_db)):
+-    """
+-    数据库详细健康信息
+-
+-    返回数据库连接池和性能信息
+-    """
+-    health = await check_database_health(db)
+-
+-    return {
+-        "database": {
+-            "type": "postgresql" if not settings.DATABASE_URL.startswith("sqlite") else "sqlite",
+-            "connected": health.connected,
+-            "latency_ms": health.latency_ms,
+-            "pool": {
+-                "size": health.pool_size,
+-                "checked_out": health.pool_checked_out,
+-                "config": {
+-                    "pool_size": settings.DB_POOL_SIZE if not settings.DATABASE_URL.startswith("sqlite") else None,
+-                    "max_overflow": settings.DB_MAX_OVERFLOW if not settings.DATABASE_URL.startswith("sqlite") else None,
+-                    "pool_recycle": settings.DB_POOL_RECYCLE if not settings.DATABASE_URL.startswith("sqlite") else None,
+-                }
+-            } if not settings.DATABASE_URL.startswith("sqlite") else None,
+-            "error": health.error,
+-        }
+-    }
+diff --git a/backend/app/api/v1/health_production.py b/backend/app/api/v1/health_production.py
+index a622aa05..3dec9061 100755
+--- a/backend/app/api/v1/health_production.py
++++ b/backend/app/api/v1/health_production.py
+@@ -40,6 +40,16 @@ router = APIRouter(prefix="/health", tags=["Health"])
+ START_TIME = time.time()
+ 
+ 
++def set_start_time() -> None:
++    """记录应用启动时间（main.py lifespan 调用，刷新 /health 的 uptime 基线）。
++
++    EI-10：自 app/api/v1/health.py（从未注册的死 router，已删除）迁入，
++    复用本模块的 START_TIME，使启动时间戳与真实健康端点共用同一来源。
++    """
++    global START_TIME
++    START_TIME = time.time()
++
++
+ def _utcnow() -> datetime:
+     return datetime.now(UTC)
+ 
+diff --git a/backend/app/celery_schedule.py b/backend/app/celery_schedule.py
+index d9525f90..746c4958 100755
+--- a/backend/app/celery_schedule.py
++++ b/backend/app/celery_schedule.py
+@@ -49,13 +49,9 @@ def setup_periodic_tasks(sender, **kwargs):
+         name='scan-trace-compaction-every-day'
+     )
+ 
+-    # Aurora DualCore → SGW outcome evaluator — every hour
+-    from app.core.celery_tasks import evaluate_routing_outcomes
+-    sender.add_periodic_task(
+-        3600.0,
+-        evaluate_routing_outcomes.s(),
+-        name='evaluate-routing-outcomes-every-hour'
+-    )
++    # Aurora DualCore → SGW outcome evaluator — every 30 minutes
++    # EI-08：仅保留 celery_app.conf.beat_schedule 里的 "routing-outcome-evaluation"
++    # （1800s + args=(200,)）。此处原 3600s 条目与它构成双频执行，已删除。
+ 
+     # L4 daily learning loop — yesterday's bottleneck → today's focus
+     from app.core.celery_tasks import run_daily_goal_reflections
+@@ -137,23 +133,10 @@ def setup_periodic_tasks(sender, **kwargs):
+         name='run-counterfactual-evaluations-every-day'
+     )
+ 
+-    # State decay/retraction maintenance — prevents stale short-term state from becoming identity
+-    from app.core.celery_tasks import apply_memory_decay, spine_auto_deprecate_skills, spine_expire_stale_states
+-    sender.add_periodic_task(
+-        21600.0,
+-        spine_expire_stale_states.s(),
+-        name='spine-expire-stale-states-every-6h'
+-    )
+-    sender.add_periodic_task(
+-        86400.0,
+-        spine_auto_deprecate_skills.s(),
+-        name='spine-auto-deprecate-skills-every-day'
+-    )
+-    sender.add_periodic_task(
+-        86400.0,
+-        apply_memory_decay.s(),
+-        name='apply-memory-decay-every-day'
+-    )
++    # EI-08：spine_expire_stale_states / spine_auto_deprecate_skills / apply_memory_decay
++    # 只在 celery_app.conf.beat_schedule 注册（带 crontab 与 args 的确定性条目：
++    # spine-expire-stale-states */6h@:30 args=500、spine-auto-deprecate-skills 04:00 args=500、
++    # memory-decay 03:30 args=200）。此处原先的 interval 版条目与它们构成双频执行，已删除。
+ 
+     # SafeExperiment guardrail monitor — pause unsafe canaries/live experiments within 30 minutes
+     from app.core.celery_tasks import monitor_safe_experiment_guardrails
+diff --git a/backend/app/core/celery_app.py b/backend/app/core/celery_app.py
+index 94c09322..a06facab 100755
+--- a/backend/app/core/celery_app.py
++++ b/backend/app/core/celery_app.py
+@@ -69,7 +69,10 @@ celery_app = Celery(
+         # 该模块必须随 worker 加载，否则消息按 unregistered task 被静默丢弃。
+         "app.tasks.community_checkin_reminder",
+         "app.tasks.policy_tasks",
+-        "workers.signals_learning_worker",
++        # EI-11: signals_learning_worker 已从 backend/workers/ 顶层包并入 app/workers/，
++        # include 用 app.* 全路径，消除双根歧义（pytest 进程内顶层 `workers` 名
++        # 会被 conftest 的 sys.path 前排抢占为 app.workers）。
++        "app.workers.signals_learning_worker",
+         "app.aurora.tasks",
+     ],
+ )
+@@ -119,9 +122,11 @@ celery_app.conf.update(
+     },
+     # 默认路由
+     task_routes={
+-        "app.core.celery_tasks.generate_embedding": {"queue": "high_priority"},
+-        "app.core.celery_tasks.batch_error_analysis": {"queue": "default"},
+-        "app.core.celery_tasks.cleanup_old_data": {"queue": "low_priority"},
++        # EI-07：键必须是任务注册表中的真实 name=（短名，见下方任务定义），
++        # 带模块前缀的旧键永不匹配 → 路由静默失效落 default 队列
++        "generate_embedding": {"queue": "high_priority"},
++        "batch_error_analysis": {"queue": "default"},
++        "cleanup_old_data": {"queue": "low_priority"},
+         "app.core.celery_tasks.health_check_task": {"queue": "high_priority"},
+         "generate_capsules_batch": {"queue": "glm_batch"},
+         "analyze_cognitive_fragment_batch": {"queue": "glm_batch"},
+diff --git a/backend/app/core/rate_limiting.py b/backend/app/core/rate_limiting.py
+index 3f267047..6eb85717 100755
+--- a/backend/app/core/rate_limiting.py
++++ b/backend/app/core/rate_limiting.py
+@@ -2,32 +2,67 @@
+ Rate Limiting Middleware
+ Using slowapi to manage rate limits for API endpoints
+ """
++import os
++
+ from fastapi import FastAPI, Request
+ from slowapi import Limiter, _rate_limit_exceeded_handler
+ from slowapi.errors import RateLimitExceeded
+ from slowapi.util import get_remote_address
+ 
+ 
++def _trusted_proxy_count() -> int:
++    """
++    可信代理层数（环境变量 ``TRUSTED_PROXY_COUNT``，默认 1）。
++
++    - **1（默认）**：匹配本仓部署拓扑——Go 网关（httputil.ReverseProxy /
++      websocket_proxy）在 X-Forwarded-For 尾部追加真实 client IP，取最右 1 段。
++    - **0**：完全不信任 XFF / X-Real-IP（引擎直连暴露、前面没有可信代理时使用）。
++    - **N**：链路上有 N 层会追加 XFF 的可信代理，取右起第 N 段。
++    """
++    raw = os.getenv("TRUSTED_PROXY_COUNT", "1")
++    try:
++        return max(0, int(raw.strip()))
++    except (ValueError, AttributeError):
++        return 0
++
++
+ def get_real_ip(request: Request) -> str:
+     """
+-    获取真实 IP，支持代理透传 (X-Forwarded-For / X-Real-IP)。
++    获取真实客户端 IP（按可信代理数从 X-Forwarded-For 右起解析，EI-09）。
++
++    历史实现无条件信任 XFF 首段——客户端可伪造该头绕过按 IP 限流（auth 登录
++    端点的爆破防护）。现按 ``TRUSTED_PROXY_COUNT`` 取 XFF **右起**第 N 段：
++    可信代理追加的段在右侧，客户端注入的伪造段在左侧天然被弃用。链条短于 N
++    （说明有代理未追加，右段可能是客户端注入）或 N=0 时，退回 TCP 对端地址——
++    宁可退化为共享桶也不可被伪造。
++
+     同时追加请求路径，确保不同端点的限流配额互相隔离——
+     当所有流量经过同一个内网网关时（如 Docker 环境），
+     若只用 IP 作为 key，所有端点会共享同一配额，极易误触发 429。
++
++    NOTE（R2 复核加注，EI-09 遗留边界）：
++    - ``default_limits=["600 per minute"]`` 未挂 SlowAPIMiddleware，**并不生效**，
++      仅 ``@limiter.limit`` 装饰的端点（auth/community/suggestions）有限流；
++    - 按 IP 限流只是纵深防御的一层，登录爆破防护以 DB 侧账号级锁
++      （login_attempt 机制）为准，不依赖本限流。
+     """
+-    # SECURITY NOTE: X-Forwarded-For is trusted from all proxies. In production,
+-    # configure trusted proxy count via TRUSTED_PROXY_COUNT env var.
++    peer = get_remote_address(request)
+     forwarded = request.headers.get("X-Forwarded-For")
+     real_ip = request.headers.get("X-Real-IP")
+-    if forwarded:
+-        ip = forwarded.split(",")[0].strip()
+-    elif real_ip:
+-        ip = real_ip.strip()
+-    else:
+-        ip = get_remote_address(request)
++    n = _trusted_proxy_count()
++
++    ip = peer
++    if n > 0:
++        if forwarded:
++            parts = [p.strip() for p in forwarded.split(",") if p.strip()]
++            if len(parts) >= n:
++                ip = parts[-n]
++        elif real_ip:
++            ip = real_ip
+     # Include path so per-endpoint limits don't share quota
+     return f"{ip}:{request.url.path}"
+ 
++
+ limiter = Limiter(
+     key_func=get_real_ip,
+     default_limits=["600 per minute"]
+diff --git a/backend/app/main.py b/backend/app/main.py
+index 63a8cfa4..0453513c 100755
+--- a/backend/app/main.py
++++ b/backend/app/main.py
+@@ -26,7 +26,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
+ from starlette.middleware.base import BaseHTTPMiddleware
+ 
+ from app.api.middleware import IdempotencyMiddleware, RequestContextMiddleware
+-from app.api.v1.health import set_start_time
++from app.api.v1.health_production import set_start_time
+ from app.api.v1.router import api_router
+ from app.config import settings
+ from app.consumers.achievement_plan_consumer import AchievementPlanConsumer
+diff --git a/backend/app/orchestration/adaptive_replanner.py b/backend/app/orchestration/adaptive_replanner.py
+index 85240d4a..99fa2c8a 100644
+--- a/backend/app/orchestration/adaptive_replanner.py
++++ b/backend/app/orchestration/adaptive_replanner.py
+@@ -315,6 +315,11 @@ class AdaptiveReplanner:
+ 
+     AUTO_ADJUSTMENT_COOLDOWN = timedelta(hours=2)
+     AUTO_REPLAN_COOLDOWN = timedelta(hours=12)
++    # R2-P3-06（sysrev round2）：零任务级变更轮不武装 last_adjustment_at（P2-2
++    # 语义），改写独立的轻量 last_noop_adjustment_at 并在本窗口内跳过重评估，
++    # 否则每个健康信号都会重写 plan_state 并向用户 enqueue 一条"本轮没有
++    # 任务级调整"。struggle 触发器豁免（用户正在挣扎，必须被响应）。
++    AUTO_NOOP_ADJUSTMENT_THROTTLE = timedelta(minutes=30)
+     STRUGGLE_COOLDOWN_BYPASS_THRESHOLD = 2
+     SNAPSHOT_HISTORY_LIMIT = 3
+     NEGATIVE_FEEDBACK_CATEGORIES = {"too_difficult", "too_long", "unclear", "irrelevant"}
+@@ -1728,6 +1733,13 @@ class AdaptiveReplanner:
+         else:
+             if self._recently_triggered(state.facts, "last_adjustment_at", self.AUTO_ADJUSTMENT_COOLDOWN):
+                 action_taken = "adjustment_cooldown_active"
++            elif (
++                trigger != "task_feedback_struggle"
++                and self._recently_triggered(state.facts, "last_noop_adjustment_at", self.AUTO_NOOP_ADJUSTMENT_THROTTLE)
++            ):
++                # R2-P3-06：上一轮零任务级变更的评估刚发生过（窗口内），跳过
++                # 整轮重评估——不写参数、不追加 feedback_log、不打扰用户。
++                action_taken = "noop_adjustment_throttled"
+             else:
+                 action_records = await self._apply_incremental_adjustment(
+                     report,
+@@ -1976,6 +1988,25 @@ class AdaptiveReplanner:
+         if not patch_result or not (
+             patch_result.affected_task_ids or patch_result.inserted_task_ids or patch_result.hidden_task_ids
+         ):
++            # R2-P3-06：零任务级变更轮写轻量节流戳（不动 last_adjustment_at，
++            # 保持 P2-2"落地才武装冷却"语义）。深合并读取最新 adaptive_meta，
++            # 防止覆盖 applier 刚写入的快照；bump_version=False 避免每信号刷版本。
++            try:
++                fresh_state = await self.plan_state_service.get_plan_state(
++                    report.user_id, report.plan_id, refresh=True
++                )
++                if fresh_state:
++                    noop_meta = dict((fresh_state.facts or {}).get("adaptive_meta") or {})
++                    noop_meta["last_noop_adjustment_at"] = now
++                    noop_meta["last_trigger"] = trigger
++                    await self.plan_state_service.upsert_plan_state(
++                        user_id=report.user_id,
++                        plan_id=report.plan_id,
++                        patch={"facts": {"adaptive_meta": noop_meta}},
++                        bump_version=False,
++                    )
++            except Exception as exc:
++                logger.warning("Failed to record noop-adjustment throttle for plan {}: {}", report.plan_id, exc)
+             await self._enqueue_adaptation_update(
+                 report.user_id,
+                 AdaptationRecord(
+diff --git a/backend/app/orchestration/context_builder.py b/backend/app/orchestration/context_builder.py
+index cbd0bc82..4942001b 100644
+--- a/backend/app/orchestration/context_builder.py
++++ b/backend/app/orchestration/context_builder.py
+@@ -1494,23 +1494,48 @@ class ContextBuilderMixin:
+                 conversation_context = await self._build_conversation_context(session_id, user_id)
+ 
+         if active_db and user_message:
+-            try:
+-                user_msg = ChatMessage(
+-                    user_id=uuid.UUID(str(user_id)),
+-                    session_id=self._coerce_session_uuid(session_id),
+-                    role=MessageRole.USER,
+-                    content=user_message,
+-                    message_id=request_id,
+-                )
+-                active_db.add(user_msg)
+-                await active_db.commit()
+-            except Exception as e:
+-                logger.warning(f"Failed to persist user chat message: {e}")
+-                with contextlib.suppress(Exception):
+-                    await active_db.rollback()
++            await self._persist_user_message(
++                active_db=active_db,
++                user_id=user_id,
++                session_id=session_id,
++                user_message=user_message,
++                request_id=request_id,
++            )
+ 
+         return grpc_context, plan_id, plan_switched, user_context_payload, conversation_context, plan_context
+ 
++    async def _persist_user_message(
++        self,
++        *,
++        active_db: AsyncSession | None,
++        user_id: str,
++        session_id: str,
++        user_message: str,
++        request_id: str | None,
++    ) -> None:
++        """持久化本轮用户消息（R2-09 / RB-06 follow-up）。
++
++        使用 ``flush`` 而非 ``commit``：``active_db`` 是 gRPC 流的共享会话，
++        提交所有权在 ``app/services/agent_grpc_service.py``（stream 结束统一
++        commit、异常 rollback，:354-399）。中途 commit 会破坏"一轮一事务"
++        原子性——用户消息已提交而后续任何环节失败时，外层 rollback 无法回滚它。
++        flush 已分配 PK，同会话内后续读取同样可见。
++        """
++        try:
++            user_msg = ChatMessage(
++                user_id=uuid.UUID(str(user_id)),
++                session_id=self._coerce_session_uuid(session_id),
++                role=MessageRole.USER,
++                content=user_message,
++                message_id=request_id,
++            )
++            active_db.add(user_msg)
++            await active_db.flush()
++        except Exception as e:
++            logger.warning(f"Failed to persist user chat message: {e}")
++            with contextlib.suppress(Exception):
++                await active_db.rollback()
++
+     @staticmethod
+     def _coerce_session_uuid(session_id: str) -> uuid.UUID:
+         try:
+diff --git a/backend/app/orchestration/persistence_layer.py b/backend/app/orchestration/persistence_layer.py
+index c3614f5a..c542c03b 100644
+--- a/backend/app/orchestration/persistence_layer.py
++++ b/backend/app/orchestration/persistence_layer.py
+@@ -40,7 +40,11 @@ class PersistenceLayerMixin:
+                 model_name=getattr(llm_service, "default_model", None),
+             )
+             active_db.add(assistant_msg)
+-            await active_db.commit()
++            # RB-06 follow-up（R2 全仓中途 commit 审计）：flush 而非 commit——
++            # active_db 是 gRPC 流的共享会话，提交所有权在 agent_grpc_service
++            # （stream 结束统一 commit）。flush 已分配 PK，写 lane 的
++            # assistant_message_id 语义不变。
++            await active_db.flush()
+             MemoryInferredWriteLaneService.enqueue_from_session(
+                 user_id=uuid.UUID(str(user_id)),
+                 session_id=self._coerce_session_uuid(session_id),
+diff --git a/backend/app/schemas/error.py b/backend/app/schemas/error.py
+deleted file mode 100755
+index 9b5730c5..00000000
+--- a/backend/app/schemas/error.py
++++ /dev/null
+@@ -1,39 +0,0 @@
+-"""
+-Error Record Schemas
+-"""
+-from __future__ import annotations
+-
+-from datetime import datetime
+-from uuid import UUID
+-
+-from pydantic import BaseModel, ConfigDict, Field
+-
+-
+-class ErrorRecordCreate(BaseModel):
+-    """创建错题记录"""
+-    # 🆕 v2.1: 改为标准学科 ID
+-    subject_id: int = Field(description="Standard Subject ID")
+-    topic: str = Field(min_length=1, description="Topic/Knowledge point")
+-    error_type: str = Field(description="Type of error")
+-    description: str = Field(description="Description of the error")
+-    ai_analysis: str | None = Field(None, description="AI Analysis")
+-    image_urls: list[str] | None = Field(default=[], description="Image URLs")
+-
+-    # 兼容字段 (可选)
+-    # subject_name: Optional[str] = None
+-
+-class ErrorRecordResponse(BaseModel):
+-    id: UUID
+-    user_id: UUID
+-    subject_id: int | None
+-    subject: str
+-    topic: str
+-    error_type: str
+-    description: str
+-    ai_analysis: str | None
+-    image_urls: list[str] | None
+-    frequency: int
+-    is_resolved: bool
+-    created_at: datetime
+-
+-    model_config = ConfigDict(from_attributes=True)
+diff --git a/backend/app/services/plan_state_service.py b/backend/app/services/plan_state_service.py
+index 2913fb36..54efd0c8 100644
+--- a/backend/app/services/plan_state_service.py
++++ b/backend/app/services/plan_state_service.py
+@@ -33,6 +33,11 @@ from sqlalchemy.orm.attributes import flag_modified
+ 
+ from app.models.plan_state import PlanState, PlanStateStatus
+ 
++# R2-P3-06（sysrev round2）：feedback_log 追加窗口上限。零任务级变更的健康
++# 信号轮也会追加条目（曾无节流），无界增长会拖垮 plan_state 行与深合并开销；
++# 保留最近 N 条即可满足回看需求（recent_adaptations 上限 10、snapshots 上限 3）。
++FEEDBACK_LOG_WINDOW_LIMIT = 200
++
+ # Cache configuration
+ PLAN_STATE_CACHE_TTL = 3600  # 1 hour
+ PLAN_STATE_CACHE_PREFIX = "state:plan:"
+@@ -263,6 +268,9 @@ class PlanStateService:
+                 current_log.extend(patch["feedback_log"])
+             else:
+                 current_log.append(patch["feedback_log"])
++            # R2-P3-06：追加后钳制到最近 FEEDBACK_LOG_WINDOW_LIMIT 条
++            if len(current_log) > FEEDBACK_LOG_WINDOW_LIMIT:
++                current_log = current_log[-FEEDBACK_LOG_WINDOW_LIMIT:]
+             state.feedback_log = current_log
+ 
+         if "constraints" in patch:
+diff --git a/backend/app/tasks/accountability_tasks.py b/backend/app/tasks/accountability_tasks.py
+index 90e1533f..32761457 100644
+--- a/backend/app/tasks/accountability_tasks.py
++++ b/backend/app/tasks/accountability_tasks.py
+@@ -13,7 +13,6 @@ from uuid import UUID
+ from zoneinfo import ZoneInfo
+ 
+ from celery import shared_task
+-from celery.schedules import crontab
+ from loguru import logger
+ from sqlalchemy import and_, select
+ from sqlalchemy.ext.asyncio import AsyncSession
+@@ -807,26 +806,8 @@ async def _calculate_streak(
+ # ============================================================================
+ # Celery Beat 配置
+ # ============================================================================
++# EI-08：本模块任务由 app/core/celery_app.conf.beat_schedule 统一接线
++# （accountability-daily-reminders-morning/evening、partner-progress-check、
++# achievement-evaluation）。原模块级 CELERYBEAT_SCHEDULE 是从未被生产 beat
++# 读取的死配置，已删除（守卫 tests/core/test_celery_route_beat_hygiene.py）。
+ 
+-CELERYBEAT_SCHEDULE = {
+-    # 每天早上9点发送打卡提醒
+-    "accountability-daily-reminders-morning": {
+-        "task": "tasks.accountability.send_daily_reminders",
+-        "schedule": crontab(hour=9, minute=0),
+-    },
+-    # 每天晚上9点再次发送提醒
+-    "accountability-daily-reminders-evening": {
+-        "task": "tasks.accountability.send_daily_reminders",
+-        "schedule": crontab(hour=21, minute=0),
+-    },
+-    # 每天晚上11:59检查进度
+-    "accountability-progress-check": {
+-        "task": "tasks.accountability.check_partner_progress",
+-        "schedule": crontab(hour=23, minute=59),
+-    },
+-    # 每天晚上11:59评估成就
+-    "accountability-achievement-evaluation": {
+-        "task": "tasks.accountability.evaluate_achievements",
+-        "schedule": crontab(hour=23, minute=59),
+-    },
+-}
+diff --git a/backend/app/tasks/guest_cleanup.py b/backend/app/tasks/guest_cleanup.py
+index f3b1b17c..d0989a58 100644
+--- a/backend/app/tasks/guest_cleanup.py
++++ b/backend/app/tasks/guest_cleanup.py
+@@ -8,7 +8,6 @@ from datetime import timedelta
+ 
+ from app.core.time_utils import utcnow as _utcnow
+ from celery import shared_task
+-from celery.schedules import crontab
+ from loguru import logger
+ from sqlalchemy import delete, select
+ 
+@@ -156,14 +155,6 @@ async def _cleanup_guest_sessions(db) -> int:
+     return len(inactive_guests)
+ 
+ 
+-# Celery Beat 配置
+-CELERYBEAT_SCHEDULE = {
+-    "cleanup-expired-guests": {
+-        "task": "tasks.guest_cleanup.cleanup_expired_guests",
+-        "schedule": crontab(hour=5, minute=0, day_of_week=0),  # 每周日凌晨5点
+-    },
+-    "cleanup-guest-sessions": {
+-        "task": "tasks.guest_cleanup.cleanup_guest_sessions",
+-        "schedule": crontab(hour=6, minute=0),  # 每天凌晨6点
+-    },
+-}
++# EI-08：原模块级 CELERYBEAT_SCHEDULE 是从未被生产 beat 读取的死配置，已删除
++# （守卫 tests/core/test_celery_route_beat_hygiene.py）。
++
+diff --git a/backend/app/tasks/login_attempt_cleanup.py b/backend/app/tasks/login_attempt_cleanup.py
+index 8fa6c8de..8f484f9b 100644
+--- a/backend/app/tasks/login_attempt_cleanup.py
++++ b/backend/app/tasks/login_attempt_cleanup.py
+@@ -7,7 +7,6 @@ from datetime import timedelta
+ 
+ from app.core.time_utils import utcnow as _utcnow
+ from celery import shared_task
+-from celery.schedules import crontab
+ from loguru import logger
+ from sqlalchemy import delete, select
+ 
+@@ -78,12 +77,3 @@ async def _cleanup_old_login_attempts(db) -> int:
+ 
+     logger.info("Deleted {} expired login attempts", total_deleted)
+     return total_deleted
+-
+-
+-# Celery Beat schedule
+-CELERYBEAT_SCHEDULE = {
+-    "cleanup-old-login-attempts": {
+-        "task": "tasks.login_attempt_cleanup.cleanup_old_login_attempts",
+-        "schedule": crontab(hour=4, minute=0),  # Daily at 04:00 UTC
+-    },
+-}
+diff --git a/backend/app/tasks/update_similarities.py b/backend/app/tasks/update_similarities.py
+index 0922b060..8dc9d80f 100644
+--- a/backend/app/tasks/update_similarities.py
++++ b/backend/app/tasks/update_similarities.py
+@@ -10,7 +10,6 @@ from typing import Any
+ from uuid import UUID
+ 
+ from celery import shared_task
+-from celery.schedules import crontab
+ from loguru import logger
+ from sqlalchemy import delete, func, select
+ from sqlalchemy.ext.asyncio import AsyncSession
+@@ -546,22 +545,6 @@ async def _get_user_learning_stats(
+     }
+ 
+ 
+-# Celery Beat 配置示例
+-CELERYBEAT_SCHEDULE = {
+-    "update-user-similarities": {
+-        "task": "tasks.update_similarities.update_all_user_similarities",
+-        "schedule": crontab(hour=2, minute=0),  # 每天凌晨2点
+-    },
+-    "update-learning-profiles": {
+-        "task": "tasks.update_similarities.update_user_learning_profiles",
+-        "schedule": crontab(hour=3, minute=0),  # 每天凌晨3点
+-    },
+-    "update-item-similarities": {
+-        "task": "tasks.update_similarities.update_item_similarities",
+-        "schedule": crontab(hour=4, minute=0),  # 每天凌晨4点
+-    },
+-    "cleanup-cache": {
+-        "task": "tasks.update_similarities.expire_old_recommendation_cache",
+-        "schedule": crontab(minute=0),  # 每小时
+-    },
+-}
++# EI-08：原模块级 CELERYBEAT_SCHEDULE 是从未被生产 beat 读取的死配置，已删除
++# （守卫 tests/core/test_celery_route_beat_hygiene.py）。
++
+diff --git a/backend/workers/signals_learning_worker.py b/backend/app/workers/signals_learning_worker.py
+similarity index 99%
+rename from backend/workers/signals_learning_worker.py
+rename to backend/app/workers/signals_learning_worker.py
+index a15346ef..ead4507a 100644
+--- a/backend/workers/signals_learning_worker.py
++++ b/backend/app/workers/signals_learning_worker.py
+@@ -381,7 +381,7 @@ async def run_analysis_once():
+     Run analysis once (for testing or manual execution).
+ 
+     Usage:
+-        python -c "import asyncio; from workers.signals_learning_worker import run_analysis_once; asyncio.run(run_analysis_once())"
++        python -c "import asyncio; from app.workers.signals_learning_worker import run_analysis_once; asyncio.run(run_analysis_once())"
+     """
+     worker = get_signals_learning_worker()
+     return await worker.run_daily_analysis()
+diff --git a/backend/tests/api/test_no_unregistered_routers.py b/backend/tests/api/test_no_unregistered_routers.py
+new file mode 100644
+index 00000000..2e2875dc
+--- /dev/null
++++ b/backend/tests/api/test_no_unregistered_routers.py
+@@ -0,0 +1,71 @@
++"""EI-10 守卫（P3 清扫）：app/api/v1 下定义模块级 router 的文件必须被 router.py 注册。
++
++历史问题：``health.py`` 与 ``errors.py`` 是完整但从未 include 的死 router——
++health.py 的 DB 健康检查实现被 health_production.py 顶替（main.py 只借用
++``set_start_time``），errors.py 的错题端点与 error_book.py（真正挂在 ``/errors``
++前缀的实现）重叠。死 router 误导维护者，其端点列表还会向客户端宣传不存在的契约。
++"""
++
++from __future__ import annotations
++
++import ast
++import re
++from pathlib import Path
++
++BACKEND_ROOT = Path(__file__).resolve().parents[2]
++V1_DIR = BACKEND_ROOT / "app" / "api" / "v1"
++
++# 未注册但有意保留的模块（须注明理由）
++# - router: 聚合器自身（定义 api_router）
++# - _experience: 经 app/api/v1/experience/__init__.py 间接注册
++#   （`from app.api.v1._experience import router` → router.py:200 include experience.router）
++ALLOWLIST: set[str] = {"router", "_experience"}
++
++_ROUTER_DEF_RE = re.compile(r"^\w*router\w*\s*=\s*APIRouter\(", re.M)
++
++
++def _modules_defining_router() -> set[str]:
++    mods: set[str] = set()
++    for f in V1_DIR.glob("*.py"):
++        if f.name == "__init__.py":
++            continue
++        if _ROUTER_DEF_RE.search(f.read_text(encoding="utf-8", errors="ignore")):
++            mods.add(f.stem)
++    return mods
++
++
++def _router_py_imported_modules() -> set[str]:
++    tree = ast.parse((V1_DIR / "router.py").read_text(encoding="utf-8"))
++    imported: set[str] = set()
++    for node in ast.walk(tree):
++        if isinstance(node, ast.ImportFrom) and node.module:
++            if node.module == "app.api.v1":
++                imported.update(a.name for a in node.names)
++            elif node.module.startswith("app.api.v1."):
++                imported.add(node.module.rsplit(".", 1)[-1])
++    return imported
++
++
++def test_dead_router_files_removed() -> None:
++    assert not (V1_DIR / "health.py").exists(), (
++        "health.py 死 router 应删除：实现被 health_production.py 顶替；"
++        "set_start_time 已迁至 health_production.py"
++    )
++    assert not (V1_DIR / "errors.py").exists(), (
++        "errors.py 死 router 应删除：/errors 的真实实现是 error_book.py"
++    )
++
++
++def test_set_start_time_lives_in_health_production_and_main_imports_it() -> None:
++    hp_src = (V1_DIR / "health_production.py").read_text(encoding="utf-8")
++    assert "def set_start_time" in hp_src
++    main_src = (BACKEND_ROOT / "app" / "main.py").read_text(encoding="utf-8")
++    assert "from app.api.v1.health_production import set_start_time" in main_src
++
++
++def test_every_router_module_is_registered_or_allowlisted() -> None:
++    unregistered = _modules_defining_router() - _router_py_imported_modules() - ALLOWLIST
++    assert not unregistered, (
++        f"app/api/v1 下存在未被 router.py 注册的死 router 模块: {sorted(unregistered)}；"
++        "请删除或在 ALLOWLIST 登记（注明理由）"
++    )
+diff --git a/backend/tests/core/test_celery_beat_registration_guard.py b/backend/tests/core/test_celery_beat_registration_guard.py
+index 69ac36e6..91e5f302 100644
+--- a/backend/tests/core/test_celery_beat_registration_guard.py
++++ b/backend/tests/core/test_celery_beat_registration_guard.py
+@@ -17,8 +17,9 @@ import sys
+ from pathlib import Path
+ from types import ModuleType
+ 
+-# 模拟 worker 的导入环境：生产镜像 WORKDIR=/app（backend 根），
+-# 因此 include 里的顶层包 `workers.signals_learning_worker` 可直接导入（EI-11 已知债务）。
++# 模拟 worker 的导入环境：生产镜像 WORKDIR=/app（backend 根）。
++# EI-11 已修：include 统一为 `app.workers.signals_learning_worker` 全路径，
++# 不再依赖顶层 `workers` 包（backend/workers/ 已删除）。
+ BACKEND_ROOT = Path(__file__).resolve().parents[2]
+ if str(BACKEND_ROOT) not in sys.path:
+     sys.path.insert(0, str(BACKEND_ROOT))
+@@ -30,10 +31,10 @@ from app.core.celery_app import celery_app  # noqa: E402
+ def _import_include_module(module_path: str) -> ModuleType:
+     """导入一个 include 模块。
+ 
+-    已知债务（EI-11）：pytest 进程里 conftest 把 `backend/app` 插入 sys.path 前排，
+-    顶层名 `workers` 会被提前解析为 `app.workers`，导致 `importlib` 无法再导入真正的
+-    顶层包 `backend/workers`。生产 worker（WORKDIR=/app）解析到的才是 `backend/workers`。
+-    此时回退为按 backend 根的文件路径显式加载，把其中的 celery 任务注册进同一 app。
++    EI-11 修复后 include 全部为 app.* 全路径；文件路径回退保留作安全网
++    （历史：pytest 进程里 conftest 把 `backend/app` 插入 sys.path 前排时，
++    顶层名 `workers` 会被 `app.workers` 抢占，双根歧义下 importlib 无法
++    导入真正的顶层包，需按 backend 根的文件路径显式加载）。
+     """
+     try:
+         return importlib.import_module(module_path)
+diff --git a/backend/tests/core/test_celery_route_beat_hygiene.py b/backend/tests/core/test_celery_route_beat_hygiene.py
+new file mode 100644
+index 00000000..ab1bc99d
+--- /dev/null
++++ b/backend/tests/core/test_celery_route_beat_hygiene.py
+@@ -0,0 +1,112 @@
++"""EI-07 / EI-08 守卫（P3 清扫）：celery 路由与 beat 计划卫生。
++
++EI-07：task_routes 的每个键必须是任务注册表中的真实任务名——键名与任务
++``name=`` 不一致时该条路由永不生效，任务静默落到 default 队列。R2 复核
++（04-r2-engine-infra.md §3/§5）确认仍余 3 条 ``app.core.celery_tasks.*``
++前缀键指向短名任务（generate_embedding / batch_error_analysis /
++cleanup_old_data）。
++
++EI-08：同一任务的多条 beat 条目只允许出现在"有意多频"白名单内
++（早/晚成对、4 门课错峰、日/周胶囊，见 R2 §3）。参数演化期遗留的双源
++重复条目（static conf.beat_schedule × celery_schedule.add_periodic_task）
++必须清理。另含仓库扫描守卫：模块级 ``CELERYBEAT_SCHEDULE`` /
++``beat_schedule =`` 死配置只允许出现在两个权威接线位置（R2 §3 建议，
++封死死配置返潮口子）。
++"""
++
++from __future__ import annotations
++
++import importlib
++import importlib.util
++import re
++import sys
++from pathlib import Path
++
++BACKEND_ROOT = Path(__file__).resolve().parents[2]
++if str(BACKEND_ROOT) not in sys.path:
++    sys.path.insert(0, str(BACKEND_ROOT))
++
++from app.celery_schedule import setup_periodic_tasks  # noqa: E402
++from app.core.celery_app import celery_app  # noqa: E402
++
++
++def _cold_start_registry() -> set[str]:
++    """模拟 worker 冷启动：导入 include 全部模块 + 显式触发周期任务注册。"""
++    for module_path in celery_app.conf.include:
++        try:
++            importlib.import_module(module_path)
++        except ModuleNotFoundError:
++            # EI-11 历史债务：pytest 进程里顶层 `workers` 名被 conftest 的
++            # sys.path 前排抢占，回退为按 backend 根的文件路径显式加载。
++            file_path = BACKEND_ROOT.joinpath(*module_path.split(".")).with_suffix(".py")
++            if not file_path.exists():
++                raise
++            spec = importlib.util.spec_from_file_location(
++                module_path.replace(".", "_") + "_hygiene_load", file_path
++            )
++            assert spec is not None and spec.loader is not None
++            module = importlib.util.module_from_spec(spec)
++            spec.loader.exec_module(module)
++    setup_periodic_tasks(celery_app)
++    return set(celery_app.tasks)
++
++
++def test_every_task_route_key_is_a_registered_task_name() -> None:
++    """EI-07：task_routes 键与注册表全匹配。"""
++    registered = _cold_start_registry()
++    invalid = {k: v for k, v in celery_app.conf.task_routes.items() if k not in registered}
++    assert not invalid, (
++        "task_routes 存在指向不存在任务名的无效条目（路由永不生效，任务静默落 "
++        f"default 队列）：{invalid}；请把键改为任务的真实 name= 或删除该条"
++    )
++
++
++# 有意多频白名单（R2-04 §3：早/晚成对、4 门课错峰、日/周胶囊）。
++INTENTIONAL_MULTI_BEAT_TASKS = {
++    "generate_daily_capsules_for_all",  # 日胶囊 + 周日深度胶囊
++    "app.core.celery_tasks.pack_quality_analysis_task",  # 4 门课月度错峰
++    "tasks.accountability.send_daily_reminders",  # 早 9:00 / 晚 21:00
++    "tasks.community.send_checkin_reminders",  # 早 10:00 / 晚 20:00
++}
++
++
++def test_beat_entries_have_no_accidental_duplicate_frequency() -> None:
++    """EI-08：同一任务的多条 beat 条目必须在有意多频白名单内。"""
++    setup_periodic_tasks(celery_app)
++    counts: dict[str, list[str]] = {}
++    for entry_name, entry in celery_app.conf.beat_schedule.items():
++        counts.setdefault(str(entry["task"]), []).append(entry_name)
++    accidental = {
++        task: entries
++        for task, entries in counts.items()
++        if len(entries) > 1 and task not in INTENTIONAL_MULTI_BEAT_TASKS
++    }
++    assert not accidental, (
++        "以下任务被注册了多条 beat 条目（双频执行：浪费配额且 side-effect 型任务"
++        f"双跑）：{accidental}；二选一保留（保留带 crontab/args 的确定性条目）"
++    )
++
++
++_AUTHORITATIVE_BEAT_MODULES = {
++    BACKEND_ROOT / "app" / "core" / "celery_app.py",
++    BACKEND_ROOT / "app" / "celery_schedule.py",
++}
++_BEAT_ASSIGN_RE = re.compile(r"^\s*(CELERYBEAT_SCHEDULE|beat_schedule)\s*=", re.M)
++
++
++def test_no_module_level_beat_config_outside_authoritative_sources() -> None:
++    """EI-08 附带守卫：模块级 beat 死配置一律禁止（生产 beat 从不读它）。"""
++    offenders: list[str] = []
++    for py in sorted((BACKEND_ROOT / "app").rglob("*.py")):
++        if py in _AUTHORITATIVE_BEAT_MODULES:
++            continue
++        src = py.read_text(encoding="utf-8", errors="ignore")
++        # 去注释行，避免命中文档性内容
++        stripped = "\n".join(line.split("#", 1)[0] for line in src.splitlines())
++        if _BEAT_ASSIGN_RE.search(stripped):
++            offenders.append(str(py.relative_to(BACKEND_ROOT)))
++    assert not offenders, (
++        "模块级 CELERYBEAT_SCHEDULE / beat_schedule = 是从未接线的死配置（生产 "
++        f"beat 只读 app/core/celery_app.py 与 app/celery_schedule.py）：{offenders}；"
++        "请删除，或改为 celery_schedule.setup_periodic_tasks 里的 add_periodic_task"
++    )
+diff --git a/backend/tests/core/test_rate_limit_real_ip.py b/backend/tests/core/test_rate_limit_real_ip.py
+new file mode 100644
+index 00000000..e0d54e10
+--- /dev/null
++++ b/backend/tests/core/test_rate_limit_real_ip.py
+@@ -0,0 +1,72 @@
++"""EI-09 守卫（P3 清扫）：get_real_ip 按可信代理数解析真实客户端 IP。
++
++历史行为：无条件信任 ``X-Forwarded-For`` 首段——客户端可伪造该头绕过按 IP
++限流（auth 登录端点的爆破防护，R2 §5 EI-09 复核加注项）。
++
++本仓部署拓扑：Go 网关（httputil.ReverseProxy）在 XFF 尾部追加真实 client IP，
++因此正确做法是取 XFF 右起第 N 位（N = ``TRUSTED_PROXY_COUNT``）；N=0 时
++完全不信任该头，退回 TCP 对端地址。链条短于 N（说明有代理未追加，最右段
++可能是客户端注入的）时同样退回对端地址，宁可退化为共享桶也不可被伪造。
++"""
++
++from __future__ import annotations
++
++import pytest
++from starlette.requests import Request
++
++from app.core.rate_limiting import _trusted_proxy_count, get_real_ip
++
++_PEER = "203.0.113.9"
++
++
++def _request(headers: dict[str, str], client_host: str = _PEER, path: str = "/api/v1/auth/login") -> Request:
++    scope = {
++        "type": "http",
++        "method": "POST",
++        "path": path,
++        "headers": [(k.lower().encode(), v.encode()) for k, v in headers.items()],
++        "query_string": b"",
++        "client": (client_host, 12345),
++        "server": ("server", 80),
++        "scheme": "http",
++    }
++    return Request(scope)
++
++
++def test_spoofed_xff_ignored_when_no_trusted_proxy(monkeypatch: pytest.MonkeyPatch) -> None:
++    monkeypatch.setenv("TRUSTED_PROXY_COUNT", "0")
++    req = _request({"X-Forwarded-For": "1.2.3.4"})
++    assert get_real_ip(req) == f"{_PEER}:/api/v1/auth/login"
++
++
++def test_rightmost_entry_trusted_with_single_proxy(monkeypatch: pytest.MonkeyPatch) -> None:
++    monkeypatch.setenv("TRUSTED_PROXY_COUNT", "1")
++    req = _request({"X-Forwarded-For": "1.2.3.4, 198.51.100.7"})
++    # 最右段由可信网关追加；客户端伪造的首段无效
++    assert get_real_ip(req).startswith("198.51.100.7:")
++
++
++def test_shorter_chain_than_trusted_count_falls_back_to_peer(monkeypatch: pytest.MonkeyPatch) -> None:
++    monkeypatch.setenv("TRUSTED_PROXY_COUNT", "3")
++    req = _request({"X-Forwarded-For": "1.2.3.4, 198.51.100.7"})
++    assert get_real_ip(req).startswith(f"{_PEER}:")
++
++
++def test_x_real_ip_trusted_only_behind_proxy(monkeypatch: pytest.MonkeyPatch) -> None:
++    monkeypatch.setenv("TRUSTED_PROXY_COUNT", "0")
++    req = _request({"X-Real-IP": "5.6.7.8"})
++    assert get_real_ip(req).startswith(f"{_PEER}:")
++    monkeypatch.setenv("TRUSTED_PROXY_COUNT", "1")
++    req2 = _request({"X-Real-IP": "5.6.7.8"})
++    assert get_real_ip(req2).startswith("5.6.7.8:")
++
++
++def test_direct_peer_used_without_proxy_headers(monkeypatch: pytest.MonkeyPatch) -> None:
++    monkeypatch.setenv("TRUSTED_PROXY_COUNT", "1")
++    req = _request({})
++    assert get_real_ip(req).startswith(f"{_PEER}:")
++
++
++def test_invalid_env_value_falls_back_to_zero(monkeypatch: pytest.MonkeyPatch) -> None:
++    monkeypatch.setenv("TRUSTED_PROXY_COUNT", "bogus")
++    assert _trusted_proxy_count() == 0
+diff --git a/backend/tests/core/test_rb06_followup_no_midstream_commit.py b/backend/tests/core/test_rb06_followup_no_midstream_commit.py
+new file mode 100644
+index 00000000..aef65b57
+--- /dev/null
++++ b/backend/tests/core/test_rb06_followup_no_midstream_commit.py
+@@ -0,0 +1,117 @@
++"""RB-06 follow-up（P3 清扫）：流路径共享会话上的中途 commit 审计处置。
++
++R1 RB-06 已修 session_state_mixin；R2-09 移交了同族坐标
++``context_builder.py``（_build_full_context 内持久化用户消息时中途 commit）。
++本波全仓审计又确认 ``persistence_layer._persist_assistant_message``（助手消息
++落盘）同样在 gRPC 流的共享 ``active_db`` 上中途 commit——破坏"一轮一事务"
++原子性（用户消息已提交而后续任何环节失败时，外层 agent_grpc_service 的
++rollback 无法回滚它）。
++
++处置与 RB-06 同法：``commit()`` → ``flush()``。提交所有权在
++``app/services/agent_grpc_service.py``（stream 结束统一 commit、异常 rollback，
++见 :354-399）；flush 后由调用方统一提交，PK 由 flush 分配，写 lane 语义不变。
++"""
++
++from __future__ import annotations
++
++from types import SimpleNamespace
++from uuid import uuid4
++
++import pytest
++
++from app.orchestration.context_builder import ContextBuilderMixin
++from app.orchestration.persistence_layer import PersistenceLayerMixin
++
++
++class _RecordingSession:
++    """假 session：记录 add/flush/commit/rollback 调用序列。"""
++
++    def __init__(self) -> None:
++        self.calls: list[tuple] = []
++
++    def add(self, obj) -> None:
++        self.calls.append(("add", obj))
++
++    async def flush(self) -> None:
++        self.calls.append(("flush",))
++
++    async def commit(self) -> None:
++        self.calls.append(("commit",))
++
++    async def rollback(self) -> None:
++        self.calls.append(("rollback",))
++
++
++def _assert_flush_not_commit(session: _RecordingSession) -> None:
++    ops = [c[0] for c in session.calls]
++    assert "flush" in ops, "必须 flush 使调用方（agent_grpc_service）统一提交"
++    assert "commit" not in ops, "共享会话上禁止中途 commit（RB-06/R2-09 同族）"
++
++
++@pytest.mark.asyncio
++async def test_persist_user_message_uses_flush_not_commit() -> None:
++    """R2-09：_build_full_context 用户消息落盘走 flush。"""
++    mixin = object.__new__(ContextBuilderMixin)
++    session = _RecordingSession()
++    await mixin._persist_user_message(
++        active_db=session,
++        user_id=str(uuid4()),
++        session_id=str(uuid4()),
++        user_message="你好",
++        request_id="req-1",
++    )
++    _assert_flush_not_commit(session)
++
++
++@pytest.mark.asyncio
++async def test_persist_user_message_rolls_back_on_failure() -> None:
++    mixin = object.__new__(ContextBuilderMixin)
++
++    class _BoomSession(_RecordingSession):
++        async def flush(self) -> None:
++            self.calls.append(("flush",))
++            raise RuntimeError("boom")
++
++    session = _BoomSession()
++    # 异常必须被吞掉（非致命路径），且触发 rollback 清理
++    await mixin._persist_user_message(
++        active_db=session,
++        user_id=str(uuid4()),
++        session_id=str(uuid4()),
++        user_message="你好",
++        request_id="req-1",
++    )
++    ops = [c[0] for c in session.calls]
++    assert "rollback" in ops
++    assert "commit" not in ops
++
++
++@pytest.mark.asyncio
++async def test_persist_assistant_message_uses_flush_not_commit(monkeypatch: pytest.MonkeyPatch) -> None:
++    """审计新增点：persistence_layer 助手消息落盘走 flush（PK 由 flush 分配）。"""
++    import app.orchestration.persistence_layer as pl
++
++    lane_calls: list[dict] = []
++
++    class _FakeLane:
++        @staticmethod
++        def enqueue_from_session(**kwargs) -> None:
++            lane_calls.append(kwargs)
++
++    monkeypatch.setattr(pl, "MemoryInferredWriteLaneService", _FakeLane)
++    mixin = object.__new__(PersistenceLayerMixin)
++    mixin._coerce_session_uuid = staticmethod(lambda sid: uuid4())  # type: ignore[attr-defined]
++    mixin.llm_service = SimpleNamespace(default_model="unit-model")  # type: ignore[attr-defined]
++    # _persist_assistant_message 通过模块级 llm_service 取默认模型，改打桩
++    monkeypatch.setattr(pl, "llm_service", SimpleNamespace(default_model="unit-model"))
++
++    session = _RecordingSession()
++    await PersistenceLayerMixin._persist_assistant_message(
++        mixin,
++        active_db=session,  # type: ignore[arg-type]
++        user_id=str(uuid4()),
++        session_id=str(uuid4()),
++        full_response="回复内容",
++    )
++    _assert_flush_not_commit(session)
++    assert lane_calls, "flush 后写 lane 仍必须被触发（assistant_message_id 可用）"
+diff --git a/backend/tests/core/test_workers_package_location.py b/backend/tests/core/test_workers_package_location.py
+new file mode 100644
+index 00000000..36bda75f
+--- /dev/null
++++ b/backend/tests/core/test_workers_package_location.py
+@@ -0,0 +1,32 @@
++"""EI-11 守卫（P3 清扫）：celery include 不得引用 backend 根下的顶层 workers 包。
++
++历史问题：``backend/workers/`` 与 ``app/workers/`` 双根并存，靠 Docker
++WORKDIR=/app 同时可导入两个根。能跑，但违反仓库分层直觉，pytest 进程内
++还会发生 ``workers`` 名字歧义（conftest 把 backend/app 插入 sys.path 前排，
++顶层 ``import workers`` 解析到 app.workers——EI-02 守卫测试的 file-path
++回退正是其现实代偿）。统一并入 ``app/workers/``。
++"""
++
++from __future__ import annotations
++
++from pathlib import Path
++
++BACKEND_ROOT = Path(__file__).resolve().parents[2]
++
++
++def test_toplevel_workers_package_removed() -> None:
++    assert not (BACKEND_ROOT / "workers").exists(), (
++        "backend/workers/ 顶层包应删除：signals_learning_worker 已并入 app/workers/"
++    )
++
++
++def test_signals_learning_worker_lives_in_app_workers() -> None:
++    assert (BACKEND_ROOT / "app" / "workers" / "signals_learning_worker.py").exists()
++
++
++def test_celery_include_uses_app_qualified_workers_path() -> None:
++    src = (BACKEND_ROOT / "app" / "core" / "celery_app.py").read_text(encoding="utf-8")
++    assert '"workers.signals_learning_worker"' not in src, (
++        "celery include 仍引用顶层 workers 包（EI-11 双根）"
++    )
++    assert '"app.workers.signals_learning_worker"' in src
+diff --git a/backend/tests/unit/test_r2p306_noop_throttle.py b/backend/tests/unit/test_r2p306_noop_throttle.py
+new file mode 100644
+index 00000000..1207ba7a
+--- /dev/null
++++ b/backend/tests/unit/test_r2p306_noop_throttle.py
+@@ -0,0 +1,175 @@
++"""R2-P3-06（P3 清扫）：零任务级变更轮的节流 + feedback_log 追加窗口上限。
++
++P2-2 修复的副作用（02-r2-engine-planning.md §2 R2-P3-06）：零任务级变更轮
++不再武装 ``last_adjustment_at`` → 2h 调整冷却对"参数写了但没落地"的轮次永久
++失效；每个新健康信号都会重写 plan_state（bump_version + feedback_log 追加 +
++snapshots 追加）并向用户 enqueue 一条"本轮没有任务级调整"的 adaptation
++update，无节流。
++
++修复口径（报告建议第一选项）：
++1. 零变更轮写独立的轻量 ``adaptive_meta.last_noop_adjustment_at``；
++2. ``_handle_report`` 在 noop 节流窗口内直接跳过重评估（不写参数、不追加
++   feedback_log、不给用户发消息）；``task_feedback_struggle`` 触发器豁免
++   （用户正在挣扎，与 replan 冷却旁路同一哲学）；
++3. ``upsert_plan_state`` 的 feedback_log 追加加窗口上限（保留最近 N 条）。
++"""
++
++from __future__ import annotations
++
++from datetime import UTC, datetime, timedelta
++from types import SimpleNamespace
++from uuid import uuid4
++
++import pytest
++from sqlalchemy import select
++from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
++from unittest.mock import AsyncMock
++
++from app.models.base import Base
++from app.models.plan_state import PlanState
++from app.orchestration.adaptive_replanner import AdaptiveReplanner
++from app.services.plan_progress_service import PlanHealthReport
++from app.services.plan_state_service import FEEDBACK_LOG_WINDOW_LIMIT, PlanStateService
++
++
++def _make_report() -> PlanHealthReport:
++    return PlanHealthReport(
++        plan_id=uuid4(),
++        user_id=uuid4(),
++        status="active",
++        severity="warning",
++        reasons=["progress_lag"],
++        metrics={"progress_rate": 0.2},
++        requires_adjustment=True,
++        recommended_action="adjust",
++    )
++
++
++def _make_replanner(state_facts: dict | None) -> AdaptiveReplanner:
++    replanner = object.__new__(AdaptiveReplanner)
++    report_facts = state_facts if state_facts is not None else {"adaptive_meta": {}}
++    replanner.db = None
++    replanner._card_bridge = None
++    replanner.plan_state_service = SimpleNamespace(
++        get_plan_state=AsyncMock(return_value=SimpleNamespace(facts=report_facts, constraints={})),
++        upsert_plan_state=AsyncMock(),
++    )
++    replanner.plan_health_signal_service = SimpleNamespace(maybe_publish=AsyncMock())
++    replanner._calculate_adjustments = lambda *args, **kwargs: {"adaptive_adjustments": {"time_multiplier": 1.1}}
++    replanner.plan_adjustment_applier = SimpleNamespace(
++        apply_incremental_changes=AsyncMock(
++            return_value=SimpleNamespace(
++                applied=True,
++                affected_task_ids=[],
++                inserted_task_ids=[],
++                hidden_task_ids=[],
++                user_facing_summary=None,
++            )
++        )
++    )
++    replanner._enqueue_adaptation_update = AsyncMock()
++    replanner._apply_cognitive_pattern_adjustments = AsyncMock(return_value=[])
++    return replanner
++
++
++@pytest.mark.asyncio
++async def test_zero_change_round_records_noop_throttle_timestamp() -> None:
++    """红：零变更轮必须写 last_noop_adjustment_at（冻结基线不写，冷却闸门永失效）。"""
++    replanner = _make_replanner(None)
++    report = _make_report()
++
++    await replanner._apply_incremental_adjustment(report, trigger="task_feedback")
++
++    upsert = replanner.plan_state_service.upsert_plan_state
++    # 两次 upsert：参数写入 + fresh-read 后武装 noop 节流
++    armed = [
++        c.kwargs.get("patch", {}).get("facts", {}).get("adaptive_meta", {})
++        for c in upsert.await_args_list
++    ]
++    assert any("last_noop_adjustment_at" in meta for meta in armed), (
++        f"零变更轮未写 last_noop_adjustment_at，upsert 序列：{armed}"
++    )
++    # 决不写 last_adjustment_at（P2-2 语义保持：冷却只在任务级落地后武装）
++    assert not any("last_adjustment_at" in meta for meta in armed)
++
++
++@pytest.mark.asyncio
++async def test_noop_throttle_suppresses_re_evaluation_within_window() -> None:
++    """红：节流窗口内的重复健康信号跳过整轮重评估（不写参数/不发消息）。"""
++    recent = datetime.now(UTC).isoformat()
++    replanner = _make_replanner({"adaptive_meta": {"last_noop_adjustment_at": recent}})
++    report = _make_report()
++
++    await replanner._handle_report(report, trigger="task_feedback")
++
++    replanner.plan_adjustment_applier.apply_incremental_changes.assert_not_awaited()
++    replanner.plan_state_service.upsert_plan_state.assert_not_called()
++    replanner._enqueue_adaptation_update.assert_not_called()
++
++
++@pytest.mark.asyncio
++async def test_struggle_trigger_bypasses_noop_throttle() -> None:
++    """struggle 触发器豁免节流（用户挣扎必须被响应）。"""
++    recent = datetime.now(UTC).isoformat()
++    replanner = _make_replanner({"adaptive_meta": {"last_noop_adjustment_at": recent}})
++    report = _make_report()
++
++    await replanner._handle_report(report, trigger="task_feedback_struggle")
++
++    replanner.plan_adjustment_applier.apply_incremental_changes.assert_awaited_once()
++
++
++@pytest.mark.asyncio
++async def test_expired_noop_throttle_allows_new_evaluation() -> None:
++    """窗口过期后恢复正常评估。"""
++    stale = (datetime.now(UTC) - timedelta(hours=1)).isoformat()
++    replanner = _make_replanner({"adaptive_meta": {"last_noop_adjustment_at": stale}})
++    report = _make_report()
++
++    await replanner._handle_report(report, trigger="task_feedback")
++
++    replanner.plan_adjustment_applier.apply_incremental_changes.assert_awaited_once()
++
++
++# ===========================================================================
++# feedback_log 追加窗口上限
++# ===========================================================================
++
++
++@pytest.fixture
++async def sqlite_session():
++    engine = create_async_engine(
++        "sqlite+aiosqlite:///:memory:",
++        connect_args={"check_same_thread": False},
++    )
++    tables = [Base.metadata.tables["plan_states"]]
++    async with engine.begin() as conn:
++        await conn.run_sync(lambda sync_conn: Base.metadata.create_all(sync_conn, tables=tables))
++
++    session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
++    async with session_factory() as session:
++        yield session
++
++    await engine.dispose()
++
++
++@pytest.mark.asyncio
++async def test_feedback_log_append_is_window_capped(sqlite_session) -> None:
++    """红：feedback_log 追加必须保留最近 N 条，无界增长将被钳制。"""
++    service = PlanStateService(sqlite_session, redis=None)
++    user_id = uuid4()
++    plan_id = uuid4()
++
++    for i in range(FEEDBACK_LOG_WINDOW_LIMIT + 25):
++        await service.upsert_plan_state(
++            user_id=user_id,
++            plan_id=plan_id,
++            patch={"feedback_log": {"entry": i}},
++        )
++
++    result = await sqlite_session.execute(select(PlanState).where(PlanState.plan_id == plan_id))
++    state = result.scalar_one()
++    assert len(state.feedback_log) == FEEDBACK_LOG_WINDOW_LIMIT
++    # 保留的是最近的条目
++    assert state.feedback_log[-1]["entry"] == FEEDBACK_LOG_WINDOW_LIMIT + 24
++    assert state.feedback_log[0]["entry"] == 25
+diff --git "a/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/p3-engine-sweep.md" "b/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/p3-engine-sweep.md"
+new file mode 100644
+index 00000000..2f56c9b9
+--- /dev/null
++++ "b/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/p3-engine-sweep.md"
+@@ -0,0 +1,140 @@
++# P3 引擎清扫批 — 修复记录（p3-engine-sweep）
++
++- 修复员：P3 引擎清扫批（wt6，main detached @ `47db4816`，未 commit）
++- 任务书：EI-07..EI-11（04-r2-engine-infra.md §5 移交专项② + round1/04-engine-infra.md §剩余清单）、RB-06 follow-up（round1/01-fixes.md + 01-r2-engine-orchestration.md R2-09）、R2-P3-06（02-r2-engine-planning.md §2）
++- 方法：红-绿证明（新守卫/行为测试先在冻结代码跑红，修复后跑绿）；pytest 只跑目标文件，单进程
++- 环境：`SECRET_KEY/JWT_SECRET/REDIS_URL` 按规注入，`/opt/homebrew/bin/python3.11 -m pytest`；PG/Redis 栈健康未重启
++
++## 条目对应关系（任务书编号 → 报告实际位置）
++
++| 任务书编号 | 报告实际条目 | 处置 |
++|---|---|---|
++| EI-07 | round1/04-engine-infra.md 剩余清单 + 04-r2 §3/§5（task_routes 无效条目 6→3） | ✅ 本波修复 |
++| EI-08 | round1/04 同上 + 04-r2 §3（真实双频 3~4 个 + 死配置 + 扫描守卫建议） | ✅ 本波修复 |
++| EI-09 | round1/04 + 04-r2 §5"维持 P3 但加注"（XFF 伪造绕过） | ✅ 本波修复（可信代理解析 + 加注） |
++| EI-10 | round1/04 + 04-r2 §5（health.py/errors.py 死 router） | ✅ 本波修复 |
++| EI-11 | round1/04 + 04-r2 §5（backend/workers 与 app/workers 双根） | ✅ 本波修复 |
++| EI-12 | 04-r2 §5"已修复，建议关闭" | 按报告结论关闭，不动 |
++| RB-06 | round1/01-fixes.md RB-06(follow-up)："全仓审计其余中途 commit() 共享 session 的点"；R2-09 给出 context_builder 坐标 | ✅ 审计 + 修 2 点 |
++| R2-P3-06 | 02-r2-engine-planning.md §2（P2-2 副作用：零变更轮无节流） | ✅ 本波修复 |
++
++---
++
++## EI-07：task_routes 无效条目（3 条）
++
++**问题**：`celery_app.conf.task_routes` 中 3 条键带 `app.core.celery_tasks.` 模块前缀，但任务实际注册名是短名（`@celery_app.task(name="generate_embedding")` 等）。Celery 路由按任务名精确匹配（无通配符），键永不命中 → 路由静默失效，任务落 default 队列：`generate_embedding`（应 high_priority）、`batch_error_analysis`、`cleanup_old_data`（应 low_priority）。运行时冷启动探针实证：include 全量导入后注册表 120 任务，36 条路由键中 3 条无效（与 R2 报告一致）。
++
++**修复**：`backend/app/core/celery_app.py` — 3 条键改为真实短名，路由意图（high_priority/default/low_priority）保持不变。
++
++**红绿**：新守卫 `tests/core/test_celery_route_beat_hygiene.py::test_every_task_route_key_is_a_registered_task_name`（模拟 worker 冷启动导入 include 全部模块后断言路由键 ⊆ 注册表）。
++红（冻结代码）：**FAILED**，报出 3 条无效键；绿（修复后）：**passed**。
++
++## EI-08：beat 双频条目 + 模块级死配置 + 仓库扫描守卫
++
++**问题**：
++1. **双源双频**：`app/celery_schedule.py::setup_periodic_tasks`（add_periodic_task）与 `app/core/celery_app.conf.beat_schedule`（static dict）对同一任务注册两份计划，side-effect 型任务双跑、浪费配额。运行时实证 4 组（比 R2 报告多 1 组）：`evaluate_routing_outcomes`（1800s+args × 3600s）、`spine_expire_stale_states`（*/6h@:30+args=500 × 21600s）、`spine_auto_deprecate_skills`（04:00+args=500 × 86400s，R1 曾点名、R2 计数遗漏）、`apply_memory_decay`（03:30+args=200 × 86400s）。
++2. **模块级死配置**：模块级 `CELERYBEAT_SCHEDULE` 从未被生产 beat 读取（生产只读 celery_app.py 的 static dict + celery_schedule.py 的 add_periodic_task）。实证 4 个文件：`tasks/login_attempt_cleanup.py`（任务名还写错为 `tasks.login_attempt_cleanup.*`，真实名 `tasks.cleanup_old_login_attempts`）、`tasks/accountability_tasks.py`（与活计划完全重复）、`tasks/guest_cleanup.py`、`tasks/update_similarities.py`——后两者任务甚至未在 include 列表。守卫红跑时全部抓出（R2 §3 建议的"仓库扫描守卫"落地）。
++
++**修复**：
++- `app/celery_schedule.py`：删除 4 条与 static 计划重复的 interval 条目（保留带 crontab + args 的确定性条目），留注释指明权威接线位置；
++- `app/tasks/{login_attempt_cleanup,accountability_tasks,guest_cleanup,update_similarities}.py`：删除模块级 `CELERYBEAT_SCHEDULE` 死配置及残余 `crontab` 导入；
++- 守卫新增 2 条：`test_beat_entries_have_no_accidental_duplicate_frequency`（多 beat 条目仅允许"有意多频"白名单：日/周胶囊、4 门课错峰、早/晚成对×2，即 R2 §3 判定的 5 组有意设计）、`test_no_module_level_beat_config_outside_authoritative_sources`（全仓扫描，死配置只允许出现在两个权威位置）。
++
++**红绿**：红（冻结代码）：双频断言 **FAILED**（报出 4 组）、死配置扫描 **FAILED**（报出 4 文件）；绿（修复后）：`test_celery_route_beat_hygiene.py` **3 passed**。既有 F4 守卫 `test_celery_beat_registration_guard.py` 回归 **2 passed**（beat→注册表匹配不回退）。
++
++## EI-09：get_real_ip 按可信代理数解析（XFF 伪造绕过）
++
++**问题**：`app/core/rate_limiting.py::get_real_ip` 无条件信任 `X-Forwarded-For` 首段，客户端可伪造该头绕过按 IP 限流（auth 登录端点爆破防护；代码有 SECURITY NOTE 但无实现）。R2 复核加注：若依赖它防爆破需叠加 DB 侧账号级锁（login_attempt 机制已在）。
++
++**修复**（R1 建议的"从可信代理数推算真实 client IP"）：
++- 新增 `_trusted_proxy_count()`：读 `TRUSTED_PROXY_COUNT` 环境变量（默认 **1**，匹配本仓部署拓扑——Go 网关 `httputil.ReverseProxy` 会把真实 client IP 追加到 XFF 尾部，故取**右起第 N 段**；N=0 完全不信任该头；链条短于 N 说明有代理未追加、右段可能是客户端注入，退回 TCP 对端地址——宁退化为共享桶不可被伪造）；
++- `get_real_ip` 重写为右起 N 位解析；路径隔离 key 语义不变；
++- docstring 落 R2 要求的两条加注：`default_limits` 未挂 SlowAPIMiddleware 不生效（仅 `@limiter.limit` 的 23 处生效）；登录爆破防护以 DB 侧 login_attempt 账号级锁为准。
++
++**红绿**：新守卫 `tests/core/test_rate_limit_real_ip.py`（6 用例：伪造首段被弃、右起 1 段可信、链短于 N 回退对端、X-Real-IP 仅代理后可信、无头用对端、非法 env 回退 0）。
++红：**ImportError**（`_trusted_proxy_count` 不存在，收集期失败）；绿：**6 passed**。`tests/security/test_security.py` 回归 35 passed。
++
++## EI-10：health.py / errors.py 死 router
++
++**问题**：`app/api/v1/health.py` 的 router 从未被 include（DB 健康实现被 health_production.py 顶替，main.py 只借用 `set_start_time`）；`app/api/v1/errors.py` 同样从未 include（`/errors` 的真实实现是 error_book.py，prefix="/errors"）。死 router 的端点列表误导维护者并向客户端宣传不存在的契约。AST 全量扫描（101 个定义模块级 router 的文件 − router.py 导入）确认仅 `health`/`errors` 真死（`_experience` 经 experience 包 `__init__` 间接注册、`router` 为聚合器自身，均活）。
++
++**修复**：
++- `set_start_time` 迁入 `app/api/v1/health_production.py`（复用其 `START_TIME` 全局，启动时间戳与真实健康端点共用同一来源）；`app/main.py:29` 改从 `health_production` 导入；
++- 删除 `app/api/v1/health.py`、`app/api/v1/errors.py`，连带删除仅被 errors.py 引用的死 schema `app/schemas/error.py`（全仓零引用实证）；
++- 守卫 `tests/api/test_no_unregistered_routers.py`：①死文件已删断言；②set_start_time 归属与 main 导入断言；③**全仓扫描守卫**——v1 包内定义模块级 router 的文件必须被 router.py 导入或进白名单（白名单仅 `router`/`_experience`，均注明理由），防死 router 返潮。
++
++**红绿**：红（冻结代码）：**3 FAILED**（死文件存在、set_start_time 在 health.py、未注册扫描报 health/errors）；绿：**3 passed**。`tests/contract/test_api_health_contract.py` + `test_api_router_openapi_contract.py` + kill-switch readiness 4 文件回归 **14 passed**（`/health/*`、`/errors` 契约不回退）。
++
++## EI-11：backend/workers 顶层包并入 app/workers/
++
++**问题**：`backend/workers/signals_learning_worker.py`（436 行，无 `__init__.py` 的命名空间包）与 `app/workers/` 平行，靠 Docker WORKDIR=/app 同时可导入两根；pytest 进程内 conftest 把 `backend/app` 插入 sys.path 前排，顶层 `import workers` 解析到 `app.workers`——守卫测试的 file-path 回退即其现实代偿。
++
++**修复**：`git mv backend/workers/signals_learning_worker.py backend/app/workers/`，删除顶层 `workers/` 目录；`celery_app.conf.include` 改 `"app.workers.signals_learning_worker"` 全路径（附 EI-11 注释）；文件内 docstring 的示例命令同步改；`tests/core/test_celery_beat_registration_guard.py` 的过时"已知债务"注释更新（file-path 回退保留作安全网）。
++
++**红绿**：新守卫 `tests/core/test_workers_package_location.py`（3 用例：顶层包已删、文件在 app/workers、include 用全路径）。
++红：**3 FAILED**；绿：**3 passed**。EI-02 守卫回归通过（include 模块全量导入 + beat 零缺失语义不变）。
++
++## RB-06 follow-up：中途 commit 共享会话 — 全仓审计 + 修 2 点
++
++**审计范围与结论**（orchestration/ 全量 `.commit()` 逐点核对会话所有权；流路径 = `agent_grpc_service.StreamChat` 的 `db_session`，提交所有权在 :354-399——stream 结束统一 commit、异常 rollback）：
++
++| # | 位置 | 会话 | 判定 | 处置 |
++|---|---|---|---|---|
++| 1 | `context_builder.py:1506`（`_build_full_context` 持久化用户消息） | **gRPC 流共享 `active_db`** | 同族损坏：中途 commit 破坏"一轮一事务"原子性，用户消息已提交而后续失败时外层 rollback 无法回滚（R2-09 坐标） | ✅ 抽取为 `_persist_user_message` 并改 `flush` |
++| 2 | `persistence_layer.py:43`（`_persist_assistant_message` 持久化助手消息） | **gRPC 流共享 `active_db`**（orchestrator/execution_engine 5 处调用） | 同族损坏（审计新增，报告外） | ✅ 改 `flush`（PK 由 flush 分配，写 lane 的 `assistant_message_id` 语义不变） |
++| 3 | `session_state_mixin.py`（R1 RB-06 原修点） | 流共享 | R1 已修（flush），本轮复核维持 | 无需动 |
++| 4 | `adaptive_replanner.py:873`（`_write_compressed_sprint_day`，`self.db`） | 调用方为 task_event_consumer（每事件独立会话）/ api 请求级会话 | 非 gRPC 流共享会话；消费者/端点各自拥有事务边界 | 不动（审计留档） |
++| 5 | `planning_workflow.py:1244/1380/1412`（db 为参数传入） | 规划/修复链调用方自有会话 | 非 gRPC 流共享会话 | 不动（审计留档） |
++| 6 | `executor.py:587/615` | 587 独立 `history_session`；615 已是 flush + `_commit_if_owned` | 正确 | 无需动 |
++
++**红绿**：新测试 `tests/core/test_rb06_followup_no_midstream_commit.py`（3 用例，假 session 记录调用序列）：用户消息 flush 不 commit、flush 失败回滚、助手消息 flush 后写 lane 仍触发。
++红（冻结代码）：**3 FAILED**（`'commit' in ['add','commit']`，`_persist_user_message` 尚不存在）；绿：**3 passed**。
++
++## R2-P3-06：零变更轮节流 + feedback_log 窗口上限
++
++**问题**：P2-2 修复副作用——零任务级变更轮不武装 `last_adjustment_at` → 2h 调整冷却对"参数写了但没落地"的轮次永久失效（唯一闸门 `adaptive_replanner.py:1729`）；每个新健康信号都重写 plan_state（bump_version + feedback_log 追加 + snapshots 追加）并向用户 enqueue 一条"本轮没有任务级调整"，无节流。
++
++**修复**（报告建议第一选项）：
++1. `adaptive_replanner.py`：新增 `AUTO_NOOP_ADJUSTMENT_THROTTLE = timedelta(minutes=30)`；零变更分支（applier 无 affected/inserted/hidden ids）fresh-read 深合并写轻量 `adaptive_meta.last_noop_adjustment_at`（`bump_version=False`，不动 `last_adjustment_at`——P2-2"落地才武装冷却"语义保持，既有测试 `test_noop_patch_does_not_arm_adjustment_cooldown` 继续绿）；
++2. `_handle_report` adjust 分支新增闸门：noop 窗口内跳过整轮重评估（不写参数、不追加 feedback_log、不打扰用户），`action_taken="noop_adjustment_throttled"`；**`task_feedback_struggle` 豁免**（用户挣扎必须被响应，与 replan 冷却旁路同一哲学）；
++3. `plan_state_service.py`：新增 `FEEDBACK_LOG_WINDOW_LIMIT = 200`，`upsert_plan_state` 追加 feedback_log 后钳制保留最近 200 条（对齐 recent_adaptations ≤10 / snapshots ≤3 的既有窗口惯例）。
++
++**红绿**：新测试 `tests/unit/test_r2p306_noop_throttle.py`（5 用例：零变更轮写节流戳且不写 last_adjustment_at、窗口内重复信号整轮跳过、struggle 豁免、窗口过期恢复、feedback_log 钳制到 200 且保最新）。
++红（冻结代码）：**ImportError**（`FEEDBACK_LOG_WINDOW_LIMIT` 不存在）+ 行为红（冻结 `_handle_report` 对窗口内重复信号照常进 applier）；绿：**5 passed**。
++
++---
++
++## 测试执行记录（单进程，逐批单命令）
++
++| # | 批次 | 结果 |
++|---|---|---|
++| 1 | `tests/core/test_celery_route_beat_hygiene.py`（冻结基线） | **3 failed**（红） |
++| 2 | 同上（修复后） | **3 passed** |
++| 3 | `tests/core/test_rate_limit_real_ip.py` | 红=ImportError → **6 passed** |
++| 4 | `tests/api/test_no_unregistered_routers.py`（冻结基线） | **3 failed**（红）→ 修复后 **3 passed** |
++| 5 | `tests/core/test_workers_package_location.py` + 旧守卫 `test_celery_beat_registration_guard.py` | 红=3 failed → **5 passed** |
++| 6 | `tests/core/test_rb06_followup_no_midstream_commit.py` | **3 failed**（红）→ **3 passed** |
++| 7 | `tests/unit/test_r2p306_noop_throttle.py` | 红=ImportError+行为红 → **5 passed** |
++| 8 | 回归：`test_context_builder_mixin.py` + `test_adaptive_replanner_stage34.py` + `test_plan_state_service_jsonb.py` | 16 passed / 2 failed——**2 failed 经 git stash 实证为冻结基线固有**（memory mock 缺 awaitable，与本波无关） |
++| 9 | 回归：health/openapi 契约 + kill-switch readiness 4 文件 | **14 passed** |
++| 10 | 回归：`test_feedback_adjustment_delete_task.py` + `test_plan_adjustment_applier.py` | **37 passed** |
++| 11 | 回归：`test_plan_state_jsonb_pg.py` + `test_policy_task_event_loop.py` + `test_event_bus_lifespan_shutdown.py` | **5 passed, 3 skipped**（skip 为真 PG 腿环境开关未开，属 G2 用例非本波范围） |
++| 12 | 回归：orchestrator wiring 3 文件 | 37 passed / 1 failed——**经 stash 实证为冻结基线固有**（behavior_signal_collector 的 mock 缺 `scalars`） |
++| 13 | 回归：`tests/security/test_security.py` | **35 passed** |
++
++**新增测试 25 个用例（6 文件）全绿；红绿证明齐备；无新增基线失败。**
++
++## 改动文件清单（24 文件，+751/−399）
++
++**代码（14）**：`backend/app/core/celery_app.py`、`backend/app/celery_schedule.py`、`backend/app/tasks/{login_attempt_cleanup,accountability_tasks,guest_cleanup,update_similarities}.py`、`backend/app/core/rate_limiting.py`、`backend/app/main.py`、`backend/app/api/v1/health_production.py`、`backend/app/orchestration/{context_builder,persistence_layer,adaptive_replanner}.py`、`backend/app/services/plan_state_service.py`、`backend/app/workers/signals_learning_worker.py`（自 `backend/workers/` 移入）＋删除 `backend/app/api/v1/health.py`、`backend/app/api/v1/errors.py`、`backend/app/schemas/error.py`、`backend/workers/`（空目录移除）
++
++**测试（6 新 + 1 改）**：`backend/tests/core/{test_celery_route_beat_hygiene,test_rate_limit_real_ip,test_rb06_followup_no_midstream_commit,test_workers_package_location}.py`、`backend/tests/api/test_no_unregistered_routers.py`、`backend/tests/unit/test_r2p306_noop_throttle.py`、`backend/tests/core/test_celery_beat_registration_guard.py`（注释更新）
++
++## 遗留风险与移交
++
++1. **TRUSTED_PROXY_COUNT 默认 1 的前提**：引擎必须部署在会追加 XFF 的可信代理之后（本仓 Go 网关满足；websocket_proxy 仅透传不追加，但 WS 不经 FastAPI limiter）。若拓扑变更（多级 CDN 等）需同步 env；直连暴露时置 0。
++2. **限流覆盖面本身未扩大**：`default_limits` 仍未挂 SlowAPIMiddleware（按 R2 结论"维持 P3 + 加注"处理，未引入全局限流的行为变更）；按 IP 限流只是纵深一层，爆破防护以 login_attempt 账号级锁为准。
++3. **`_experience.py` / experience 包并存**：活代码（经包 `__init__` 间接注册），非本波处置对象；命名易误导，建议后续波正名。
++4. **RB-06 审计第 4/5 类**（consumer/request 级会话的服务内 commit）是本仓请求路径的主导约定，未改；若未来统一"服务层只 flush"，再立项。
++5. **noop 节流 30min 的取舍**：零变更后的真实参数调整最多延迟 30min（struggle 旁路不受限）；如产品侧需要更快响应，可调常量或改信号服务层按 signature 聚合。
++6. **基线固有失败 3 个**（context_builder mixin 2 + c03 wiring 1）经 stash 实证与本波无关，建议单独立项（mock 缺 awaitable/scalars）。

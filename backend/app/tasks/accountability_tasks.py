@@ -13,7 +13,6 @@ from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from celery import shared_task
-from celery.schedules import crontab
 from loguru import logger
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -807,26 +806,8 @@ async def _calculate_streak(
 # ============================================================================
 # Celery Beat 配置
 # ============================================================================
+# EI-08：本模块任务由 app/core/celery_app.conf.beat_schedule 统一接线
+# （accountability-daily-reminders-morning/evening、partner-progress-check、
+# achievement-evaluation）。原模块级 CELERYBEAT_SCHEDULE 是从未被生产 beat
+# 读取的死配置，已删除（守卫 tests/core/test_celery_route_beat_hygiene.py）。
 
-CELERYBEAT_SCHEDULE = {
-    # 每天早上9点发送打卡提醒
-    "accountability-daily-reminders-morning": {
-        "task": "tasks.accountability.send_daily_reminders",
-        "schedule": crontab(hour=9, minute=0),
-    },
-    # 每天晚上9点再次发送提醒
-    "accountability-daily-reminders-evening": {
-        "task": "tasks.accountability.send_daily_reminders",
-        "schedule": crontab(hour=21, minute=0),
-    },
-    # 每天晚上11:59检查进度
-    "accountability-progress-check": {
-        "task": "tasks.accountability.check_partner_progress",
-        "schedule": crontab(hour=23, minute=59),
-    },
-    # 每天晚上11:59评估成就
-    "accountability-achievement-evaluation": {
-        "task": "tasks.accountability.evaluate_achievements",
-        "schedule": crontab(hour=23, minute=59),
-    },
-}

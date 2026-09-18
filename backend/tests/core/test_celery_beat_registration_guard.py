@@ -17,8 +17,9 @@ import sys
 from pathlib import Path
 from types import ModuleType
 
-# 模拟 worker 的导入环境：生产镜像 WORKDIR=/app（backend 根），
-# 因此 include 里的顶层包 `workers.signals_learning_worker` 可直接导入（EI-11 已知债务）。
+# 模拟 worker 的导入环境：生产镜像 WORKDIR=/app（backend 根）。
+# EI-11 已修：include 统一为 `app.workers.signals_learning_worker` 全路径，
+# 不再依赖顶层 `workers` 包（backend/workers/ 已删除）。
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
@@ -30,10 +31,10 @@ from app.core.celery_app import celery_app  # noqa: E402
 def _import_include_module(module_path: str) -> ModuleType:
     """导入一个 include 模块。
 
-    已知债务（EI-11）：pytest 进程里 conftest 把 `backend/app` 插入 sys.path 前排，
-    顶层名 `workers` 会被提前解析为 `app.workers`，导致 `importlib` 无法再导入真正的
-    顶层包 `backend/workers`。生产 worker（WORKDIR=/app）解析到的才是 `backend/workers`。
-    此时回退为按 backend 根的文件路径显式加载，把其中的 celery 任务注册进同一 app。
+    EI-11 修复后 include 全部为 app.* 全路径；文件路径回退保留作安全网
+    （历史：pytest 进程里 conftest 把 `backend/app` 插入 sys.path 前排时，
+    顶层名 `workers` 会被 `app.workers` 抢占，双根歧义下 importlib 无法
+    导入真正的顶层包，需按 backend 根的文件路径显式加载）。
     """
     try:
         return importlib.import_module(module_path)

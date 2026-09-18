@@ -8,7 +8,6 @@ from datetime import timedelta
 
 from app.core.time_utils import utcnow as _utcnow
 from celery import shared_task
-from celery.schedules import crontab
 from loguru import logger
 from sqlalchemy import delete, select
 
@@ -156,14 +155,6 @@ async def _cleanup_guest_sessions(db) -> int:
     return len(inactive_guests)
 
 
-# Celery Beat 配置
-CELERYBEAT_SCHEDULE = {
-    "cleanup-expired-guests": {
-        "task": "tasks.guest_cleanup.cleanup_expired_guests",
-        "schedule": crontab(hour=5, minute=0, day_of_week=0),  # 每周日凌晨5点
-    },
-    "cleanup-guest-sessions": {
-        "task": "tasks.guest_cleanup.cleanup_guest_sessions",
-        "schedule": crontab(hour=6, minute=0),  # 每天凌晨6点
-    },
-}
+# EI-08：原模块级 CELERYBEAT_SCHEDULE 是从未被生产 beat 读取的死配置，已删除
+# （守卫 tests/core/test_celery_route_beat_hygiene.py）。
+

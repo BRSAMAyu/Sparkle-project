@@ -381,7 +381,7 @@ async def run_analysis_once():
     Run analysis once (for testing or manual execution).
 
     Usage:
-        python -c "import asyncio; from workers.signals_learning_worker import run_analysis_once; asyncio.run(run_analysis_once())"
+        python -c "import asyncio; from app.workers.signals_learning_worker import run_analysis_once; asyncio.run(run_analysis_once())"
     """
     worker = get_signals_learning_worker()
     return await worker.run_daily_analysis()

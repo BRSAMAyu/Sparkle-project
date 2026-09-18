@@ -49,13 +49,9 @@ def setup_periodic_tasks(sender, **kwargs):
         name='scan-trace-compaction-every-day'
     )
 
-    # Aurora DualCore → SGW outcome evaluator — every hour
-    from app.core.celery_tasks import evaluate_routing_outcomes
-    sender.add_periodic_task(
-        3600.0,
-        evaluate_routing_outcomes.s(),
-        name='evaluate-routing-outcomes-every-hour'
-    )
+    # Aurora DualCore → SGW outcome evaluator — every 30 minutes
+    # EI-08：仅保留 celery_app.conf.beat_schedule 里的 "routing-outcome-evaluation"
+    # （1800s + args=(200,)）。此处原 3600s 条目与它构成双频执行，已删除。
 
     # L4 daily learning loop — yesterday's bottleneck → today's focus
     from app.core.celery_tasks import run_daily_goal_reflections
@@ -137,23 +133,10 @@ def setup_periodic_tasks(sender, **kwargs):
         name='run-counterfactual-evaluations-every-day'
     )
 
-    # State decay/retraction maintenance — prevents stale short-term state from becoming identity
-    from app.core.celery_tasks import apply_memory_decay, spine_auto_deprecate_skills, spine_expire_stale_states
-    sender.add_periodic_task(
-        21600.0,
-        spine_expire_stale_states.s(),
-        name='spine-expire-stale-states-every-6h'
-    )
-    sender.add_periodic_task(
-        86400.0,
-        spine_auto_deprecate_skills.s(),
-        name='spine-auto-deprecate-skills-every-day'
-    )
-    sender.add_periodic_task(
-        86400.0,
-        apply_memory_decay.s(),
-        name='apply-memory-decay-every-day'
-    )
+    # EI-08：spine_expire_stale_states / spine_auto_deprecate_skills / apply_memory_decay
+    # 只在 celery_app.conf.beat_schedule 注册（带 crontab 与 args 的确定性条目：
+    # spine-expire-stale-states */6h@:30 args=500、spine-auto-deprecate-skills 04:00 args=500、
+    # memory-decay 03:30 args=200）。此处原先的 interval 版条目与它们构成双频执行，已删除。
 
     # SafeExperiment guardrail monitor — pause unsafe canaries/live experiments within 30 minutes
     from app.core.celery_tasks import monitor_safe_experiment_guardrails

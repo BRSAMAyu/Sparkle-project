@@ -40,7 +40,11 @@ class PersistenceLayerMixin:
                 model_name=getattr(llm_service, "default_model", None),
             )
             active_db.add(assistant_msg)
-            await active_db.commit()
+            # RB-06 follow-up（R2 全仓中途 commit 审计）：flush 而非 commit——
+            # active_db 是 gRPC 流的共享会话，提交所有权在 agent_grpc_service
+            # （stream 结束统一 commit）。flush 已分配 PK，写 lane 的
+            # assistant_message_id 语义不变。
+            await active_db.flush()
             MemoryInferredWriteLaneService.enqueue_from_session(
                 user_id=uuid.UUID(str(user_id)),
                 session_id=self._coerce_session_uuid(session_id),

@@ -69,7 +69,10 @@ celery_app = Celery(
         # 该模块必须随 worker 加载，否则消息按 unregistered task 被静默丢弃。
         "app.tasks.community_checkin_reminder",
         "app.tasks.policy_tasks",
-        "workers.signals_learning_worker",
+        # EI-11: signals_learning_worker 已从 backend/workers/ 顶层包并入 app/workers/，
+        # include 用 app.* 全路径，消除双根歧义（pytest 进程内顶层 `workers` 名
+        # 会被 conftest 的 sys.path 前排抢占为 app.workers）。
+        "app.workers.signals_learning_worker",
         "app.aurora.tasks",
     ],
 )
@@ -119,9 +122,11 @@ celery_app.conf.update(
     },
     # 默认路由
     task_routes={
-        "app.core.celery_tasks.generate_embedding": {"queue": "high_priority"},
-        "app.core.celery_tasks.batch_error_analysis": {"queue": "default"},
-        "app.core.celery_tasks.cleanup_old_data": {"queue": "low_priority"},
+        # EI-07：键必须是任务注册表中的真实 name=（短名，见下方任务定义），
+        # 带模块前缀的旧键永不匹配 → 路由静默失效落 default 队列
+        "generate_embedding": {"queue": "high_priority"},
+        "batch_error_analysis": {"queue": "default"},
+        "cleanup_old_data": {"queue": "low_priority"},
         "app.core.celery_tasks.health_check_task": {"queue": "high_priority"},
         "generate_capsules_batch": {"queue": "glm_batch"},
         "analyze_cognitive_fragment_batch": {"queue": "glm_batch"},

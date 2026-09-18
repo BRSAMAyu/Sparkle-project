@@ -10,7 +10,6 @@ from typing import Any
 from uuid import UUID
 
 from celery import shared_task
-from celery.schedules import crontab
 from loguru import logger
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -546,22 +545,6 @@ async def _get_user_learning_stats(
     }
 
 
-# Celery Beat 配置示例
-CELERYBEAT_SCHEDULE = {
-    "update-user-similarities": {
-        "task": "tasks.update_similarities.update_all_user_similarities",
-        "schedule": crontab(hour=2, minute=0),  # 每天凌晨2点
-    },
-    "update-learning-profiles": {
-        "task": "tasks.update_similarities.update_user_learning_profiles",
-        "schedule": crontab(hour=3, minute=0),  # 每天凌晨3点
-    },
-    "update-item-similarities": {
-        "task": "tasks.update_similarities.update_item_similarities",
-        "schedule": crontab(hour=4, minute=0),  # 每天凌晨4点
-    },
-    "cleanup-cache": {
-        "task": "tasks.update_similarities.expire_old_recommendation_cache",
-        "schedule": crontab(minute=0),  # 每小时
-    },
-}
+# EI-08：原模块级 CELERYBEAT_SCHEDULE 是从未被生产 beat 读取的死配置，已删除
+# （守卫 tests/core/test_celery_route_beat_hygiene.py）。
+

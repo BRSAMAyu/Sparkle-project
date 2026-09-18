@@ -33,6 +33,11 @@ from sqlalchemy.orm.attributes import flag_modified
 
 from app.models.plan_state import PlanState, PlanStateStatus
 
+# R2-P3-06（sysrev round2）：feedback_log 追加窗口上限。零任务级变更的健康
+# 信号轮也会追加条目（曾无节流），无界增长会拖垮 plan_state 行与深合并开销；
+# 保留最近 N 条即可满足回看需求（recent_adaptations 上限 10、snapshots 上限 3）。
+FEEDBACK_LOG_WINDOW_LIMIT = 200
+
 # Cache configuration
 PLAN_STATE_CACHE_TTL = 3600  # 1 hour
 PLAN_STATE_CACHE_PREFIX = "state:plan:"
@@ -263,6 +268,9 @@ class PlanStateService:
                 current_log.extend(patch["feedback_log"])
             else:
                 current_log.append(patch["feedback_log"])
+            # R2-P3-06：追加后钳制到最近 FEEDBACK_LOG_WINDOW_LIMIT 条
+            if len(current_log) > FEEDBACK_LOG_WINDOW_LIMIT:
+                current_log = current_log[-FEEDBACK_LOG_WINDOW_LIMIT:]
             state.feedback_log = current_log
 
         if "constraints" in patch:

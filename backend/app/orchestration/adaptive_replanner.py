@@ -315,6 +315,11 @@ class AdaptiveReplanner:
 
     AUTO_ADJUSTMENT_COOLDOWN = timedelta(hours=2)
     AUTO_REPLAN_COOLDOWN = timedelta(hours=12)
+    # R2-P3-06（sysrev round2）：零任务级变更轮不武装 last_adjustment_at（P2-2
+    # 语义），改写独立的轻量 last_noop_adjustment_at 并在本窗口内跳过重评估，
+    # 否则每个健康信号都会重写 plan_state 并向用户 enqueue 一条"本轮没有
+    # 任务级调整"。struggle 触发器豁免（用户正在挣扎，必须被响应）。
+    AUTO_NOOP_ADJUSTMENT_THROTTLE = timedelta(minutes=30)
     STRUGGLE_COOLDOWN_BYPASS_THRESHOLD = 2
     SNAPSHOT_HISTORY_LIMIT = 3
     NEGATIVE_FEEDBACK_CATEGORIES = {"too_difficult", "too_long", "unclear", "irrelevant"}
@@ -1728,6 +1733,13 @@ class AdaptiveReplanner:
         else:
             if self._recently_triggered(state.facts, "last_adjustment_at", self.AUTO_ADJUSTMENT_COOLDOWN):
                 action_taken = "adjustment_cooldown_active"
+            elif (
+                trigger != "task_feedback_struggle"
+                and self._recently_triggered(state.facts, "last_noop_adjustment_at", self.AUTO_NOOP_ADJUSTMENT_THROTTLE)
+            ):
+                # R2-P3-06：上一轮零任务级变更的评估刚发生过（窗口内），跳过
+                # 整轮重评估——不写参数、不追加 feedback_log、不打扰用户。
+                action_taken = "noop_adjustment_throttled"
             else:
                 action_records = await self._apply_incremental_adjustment(
                     report,
@@ -1976,6 +1988,25 @@ class AdaptiveReplanner:
         if not patch_result or not (
             patch_result.affected_task_ids or patch_result.inserted_task_ids or patch_result.hidden_task_ids
         ):
+            # R2-P3-06：零任务级变更轮写轻量节流戳（不动 last_adjustment_at，
+            # 保持 P2-2"落地才武装冷却"语义）。深合并读取最新 adaptive_meta，
+            # 防止覆盖 applier 刚写入的快照；bump_version=False 避免每信号刷版本。
+            try:
+                fresh_state = await self.plan_state_service.get_plan_state(
+                    report.user_id, report.plan_id, refresh=True
+                )
+                if fresh_state:
+                    noop_meta = dict((fresh_state.facts or {}).get("adaptive_meta") or {})
+                    noop_meta["last_noop_adjustment_at"] = now
+                    noop_meta["last_trigger"] = trigger
+                    await self.plan_state_service.upsert_plan_state(
+                        user_id=report.user_id,
+                        plan_id=report.plan_id,
+                        patch={"facts": {"adaptive_meta": noop_meta}},
+                        bump_version=False,
+                    )
+            except Exception as exc:
+                logger.warning("Failed to record noop-adjustment throttle for plan {}: {}", report.plan_id, exc)
             await self._enqueue_adaptation_update(
                 report.user_id,
                 AdaptationRecord(
