@@ -22,6 +22,7 @@ import 'package:sparkle/features/chat/presentation/providers/guidance_mode_provi
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/seed_library/presentation/providers/seed_library_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
+import 'package:sparkle/core/storage/token_storage_io.dart';
 
 class _NoopApiClient extends ApiClient {
   _NoopApiClient() : super(_UnusedRef());
@@ -45,7 +46,7 @@ class _UnusedRef implements Ref {
 
 class _FakeAuthRepository extends AuthRepository {
   _FakeAuthRepository({this.token})
-      : super(_NoopApiClient(), const FlutterSecureStorage());
+      : super(_NoopApiClient(), SecureTokenStorage(storage: const FlutterSecureStorage()));
 
   final String? token;
 

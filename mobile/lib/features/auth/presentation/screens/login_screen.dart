@@ -34,6 +34,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
 
+  /// W-4 防重入窗口：同帧/短连击内的重复提交只放行第一次。
+  ///
+  /// Web 上 flt-text-editing-host 内含真实 <form>+隐藏 submit input，
+  /// 原生 form submit 与 Flutter 侧提交构成双通道，一次 Enter 可同时
+  /// 触发 login 与 guest 两个 POST（web-round1 W-4 实测 19:44:10/11）。
+  static const _submitDedupWindow = Duration(milliseconds: 800);
+  DateTime? _lastSubmitAt;
+
+  bool _consumeSubmitTicket() {
+    final now = DateTime.now();
+    final last = _lastSubmitAt;
+    if (last != null && now.difference(last) < _submitDedupWindow) {
+      return false;
+    }
+    _lastSubmitAt = now;
+    return true;
+  }
+
   @override
   void dispose() {
     _usernameController.dispose();
@@ -42,6 +60,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   void _submit() {
+    if (!_consumeSubmitTicket()) return;
     if (_formKey.currentState!.validate()) {
       unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
       unawaited(
@@ -51,6 +70,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
       );
     }
+  }
+
+  void _submitAsGuest() {
+    if (!_consumeSubmitTicket()) return;
+    unawaited(ref.read(authProvider.notifier).loginAsGuest());
   }
 
   Future<void> _handleSocialLogin(
@@ -146,6 +170,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   TextFormField(
                     controller: _usernameController,
                     autofillHints: const [AutofillHints.username],
+                    // W-4：显式声明 IME 语义，避免 web 端原生 form submit
+                    // 以默认「done」通道触发隐式提交。
+                    textInputAction: TextInputAction.next,
+                    onFieldSubmitted: (_) =>
+                        FocusScope.of(context).nextFocus(),
                     decoration: InputDecoration(
                       labelText: l10n.username,
                       border: const OutlineInputBorder(),
@@ -161,6 +190,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     obscureText: !_isPasswordVisible,
                     obscuringCharacter: '●',
                     style: const TextStyle(letterSpacing: 0),
+                    // W-4：done + 显式 onFieldSubmitted，Enter 只走这一条
+                    // Flutter 通道（再由防重入窗口吸收同帧重复触发）。
+                    textInputAction: TextInputAction.done,
+                    onFieldSubmitted: (_) => _submit(),
                     decoration: InputDecoration(
                       labelText: l10n.password,
                       border: const OutlineInputBorder(),
@@ -209,11 +242,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     label: l10n.continueAsGuest,
                     onPressed: authState.isLoading
                         ? null
-                        : () async {
-                            await ref
-                                .read(authProvider.notifier)
-                                .loginAsGuest();
-                          },
+                        : _submitAsGuest,
                     loading: authState.isLoading,
                     disabled: authState.isLoading,
                     variant: ButtonVariant.ghost,

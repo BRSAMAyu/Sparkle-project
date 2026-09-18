@@ -24,6 +24,7 @@ import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/shared/entities/user_brief.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
+import 'package:sparkle/core/storage/token_storage_io.dart';
 
 class _StaticAuthNotifier extends AuthNotifier {
   _StaticAuthNotifier(AuthState authState)
@@ -45,7 +46,7 @@ class _DelayedProfileUserRepository extends UserRepository {
 }
 
 class _UnusedAuthRepository extends AuthRepository {
-  _UnusedAuthRepository() : super(_UnusedApiClient(), _MemorySecureStorage());
+  _UnusedAuthRepository() : super(_UnusedApiClient(), SecureTokenStorage(storage: _MemorySecureStorage()));
 
   @override
   Future<bool> isLoggedIn() async => false;

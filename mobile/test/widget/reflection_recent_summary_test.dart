@@ -17,6 +17,7 @@ import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/user_brief.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 import '../shared/i18n_test_helper.dart';
+import 'package:sparkle/core/storage/token_storage_io.dart';
 
 void main() {
 
@@ -178,7 +179,7 @@ class _FakeAuthNotifier extends AuthNotifier {
 
 class _UnusedAuthRepository extends AuthRepository {
   _UnusedAuthRepository()
-      : super(_UnusedApiClient(), const FlutterSecureStorage());
+      : super(_UnusedApiClient(), SecureTokenStorage(storage: const FlutterSecureStorage()));
 }
 
 class _UnusedRef implements Ref<Object?> {

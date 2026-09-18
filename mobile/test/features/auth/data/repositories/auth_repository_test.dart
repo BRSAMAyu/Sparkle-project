@@ -1,9 +1,12 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/core/storage/token_storage.dart';
+import 'package:sparkle/core/storage/token_storage_web.dart';
+import 'package:sparkle/features/auth/data/models/token_model.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 
 class TestApiClient implements ApiClient {
@@ -88,68 +91,32 @@ class TestApiClient implements ApiClient {
   }
 }
 
-class InMemorySecureStorage implements FlutterSecureStorage {
+class InMemoryTokenStorage implements TokenStorage {
   final Map<String, String> _values = <String, String>{};
 
   @override
-  Future<void> write({
-    required String key,
-    required String? value,
-    IOSOptions? iOptions,
-    AndroidOptions? aOptions,
-    LinuxOptions? lOptions,
-    WebOptions? webOptions,
-    AppleOptions? mOptions,
-    WindowsOptions? wOptions,
-    MacOsOptions? macOsOptions,
-  }) async {
-    if (value == null) {
-      _values.remove(key);
-    } else {
-      _values[key] = value;
-    }
+  Future<String?> read(String key) async => _values[key];
+
+  @override
+  Future<void> write(String key, String value) async {
+    _values[key] = value;
   }
 
   @override
-  Future<String?> read({
-    required String key,
-    IOSOptions? iOptions,
-    AndroidOptions? aOptions,
-    LinuxOptions? lOptions,
-    WebOptions? webOptions,
-    AppleOptions? mOptions,
-    WindowsOptions? wOptions,
-    MacOsOptions? macOsOptions,
-  }) async =>
-      _values[key];
-
-  @override
-  Future<void> delete({
-    required String key,
-    IOSOptions? iOptions,
-    AndroidOptions? aOptions,
-    LinuxOptions? lOptions,
-    WebOptions? webOptions,
-    AppleOptions? mOptions,
-    WindowsOptions? wOptions,
-    MacOsOptions? macOsOptions,
-  }) async {
+  Future<void> delete(String key) async {
     _values.remove(key);
   }
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 void main() {
   late TestApiClient apiClient;
-  late InMemorySecureStorage storage;
+  late InMemoryTokenStorage storage;
   late AuthRepository repository;
 
   setUp(() {
     DemoDataService.isDemoMode = false;
     apiClient = TestApiClient();
-    storage = InMemorySecureStorage();
+    storage = InMemoryTokenStorage();
     repository = AuthRepository(apiClient, storage);
   });
 
@@ -191,8 +158,8 @@ void main() {
     final response = await repository.login('user@example.com', 'password');
 
     expect(response.username, 'tester');
-    expect(await storage.read(key: 'accessToken'), 'access-token');
-    expect(await storage.read(key: 'refreshToken'), 'refresh-token');
+    expect(await storage.read('accessToken'), 'access-token');
+    expect(await storage.read('refreshToken'), 'refresh-token');
   });
 
   test('refreshToken throws when no refresh token is stored', () async {
@@ -203,12 +170,36 @@ void main() {
   });
 
   test('getAccessToken reuses in-memory cache after first read', () async {
-    await storage.write(key: 'accessToken', value: 'cached-token');
+    await storage.write('accessToken', 'cached-token');
 
     expect(await repository.getAccessToken(), 'cached-token');
 
-    await storage.delete(key: 'accessToken');
+    await storage.delete('accessToken');
 
     expect(await repository.getAccessToken(), 'cached-token');
+  });
+
+  /// W-1/W-2 验收测试：web 平台（注入 TokenStorageWeb，落 localStorage）
+  /// 下 saveTokens 后 read 能取回 —— 修复前 secure storage web 并发写全丢，
+  /// getAccessToken 恒为空（web-round1：UI 不跳转、刷新丢会话的根因）。
+  test('W-1/W-2: web storage keeps tokens across saveTokens → read', () async {
+    SharedPreferences.setMockInitialValues({});
+    final webRepository = AuthRepository(apiClient, TokenStorageWeb());
+
+    await webRepository.saveTokens(
+      TokenResponse(
+        accessToken: 'web-access-token',
+        refreshToken: 'web-refresh-token',
+        expiresIn: 3600,
+      ),
+    );
+
+    expect(await webRepository.getAccessToken(), 'web-access-token');
+    expect(await webRepository.getRefreshToken(), 'web-refresh-token');
+    expect(await webRepository.isLoggedIn(), isTrue);
+
+    await webRepository.clearTokens();
+    expect(await webRepository.getAccessToken(), isNull);
+    expect(await webRepository.isLoggedIn(), isFalse);
   });
 }

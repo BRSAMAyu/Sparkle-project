@@ -58,6 +58,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final Ref _ref;
   final AuthRepository _authRepository;
 
+  /// 会话世代（W-1 竞态收口）。
+  ///
+  /// 每个认证流程入口（checkAuthStatus/login/register/socialLogin/loginAsGuest/
+  /// logout）开启新世代；流程内所有 await 之后的 state 写入前先校验世代，
+  /// 过世代（已有更新流程开启）的写入一律丢弃。否则并发时旧流程的
+  /// finally/catch/_failedAuthState 会把新流程的成功态覆盖回未认证
+  /// （web-round1 实测：登录 200 后 UI 不跳转的疑因 2）。
+  int _sessionGeneration = 0;
+  int _beginSessionOp() => ++_sessionGeneration;
+  bool _isStaleSessionOp(int generation) => generation != _sessionGeneration;
+
   AuthState _failedAuthState(
     Object error, {
     required bool isAuthenticated,
@@ -87,7 +98,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  Future<void> _resetInvalidStoredSession(Object error) async {
+  Future<void> _resetInvalidStoredSession(
+    Object error, {
+    required int generation,
+  }) async {
+    if (_isStaleSessionOp(generation)) {
+      debugPrint(
+          'ℹ️ Skipping stale session reset (generation $generation superseded)');
+      return;
+    }
     debugPrint(
         'ℹ️ Stored auth session expired, clearing local auth state: $error');
     await _authRepository.clearTokens();
@@ -103,6 +122,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> checkAuthStatus() async {
+    final generation = _beginSessionOp();
     state = state.copyWith(isLoading: true);
     try {
       final prefs = _ref.read(sharedPreferencesProvider);
@@ -111,11 +131,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
       DemoDataService.isDemoMode = savedDemoMode;
 
       final isLoggedIn = await _authRepository.isLoggedIn();
+      if (_isStaleSessionOp(generation)) return;
       if (isLoggedIn) {
         try {
           // 有真实 token 时，强制关闭 isDemoMode，确保从后端读取真实数据
           DemoDataService.isDemoMode = false;
           var user = await _authRepository.getCurrentUser();
+          if (_isStaleSessionOp(generation)) return;
           if (user.registrationSource == 'guest') {
             try {
               final guestId =
@@ -129,6 +151,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           } else {
             await _ref.read(guestServiceProvider).clearGuestData();
           }
+          if (_isStaleSessionOp(generation)) return;
           state = state.copyWith(
             isLoading: false,
             isAuthenticated: true,
@@ -136,17 +159,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
           );
           SessionRefreshService.refreshSessionBoundProviders(_ref);
         } catch (e) {
-          await _resetInvalidStoredSession(e);
+          await _resetInvalidStoredSession(e, generation: generation);
         }
       } else {
         state = state.copyWith(isLoading: false, isAuthenticated: false);
       }
     } catch (e) {
-      await _resetInvalidStoredSession(e);
+      await _resetInvalidStoredSession(e, generation: generation);
     }
   }
 
   Future<void> login(String usernameOrEmail, String password) async {
+    final generation = _beginSessionOp();
     state = state.copyWith(isLoading: true);
     try {
       DemoDataService.isDemoMode = false;
@@ -155,16 +179,20 @@ class AuthNotifier extends StateNotifier<AuthState> {
           .setBool(_demoGuestModePreferenceKey, false);
       await _ref.read(guestServiceProvider).clearGuestData();
       final user = await _authRepository.login(usernameOrEmail, password);
+      if (_isStaleSessionOp(generation)) return;
       state = state.copyWith(isAuthenticated: true, user: user);
       SessionRefreshService.refreshSessionBoundProviders(_ref);
     } catch (e) {
+      if (_isStaleSessionOp(generation)) return;
       state = _failedAuthState(e, isAuthenticated: false);
     } finally {
-      state = state.copyWith(
-        isLoading: false,
-        error: state.error,
-        failure: state.failure,
-      );
+      if (!_isStaleSessionOp(generation)) {
+        state = state.copyWith(
+          isLoading: false,
+          error: state.error,
+          failure: state.failure,
+        );
+      }
     }
   }
 
@@ -176,6 +204,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     String? nickname,
     String? avatarUrl,
   }) async {
+    final generation = _beginSessionOp();
     state = state.copyWith(isLoading: true);
     try {
       DemoDataService.isDemoMode = false;
@@ -191,16 +220,20 @@ class AuthNotifier extends StateNotifier<AuthState> {
         nickname: nickname,
         avatarUrl: avatarUrl,
       );
+      if (_isStaleSessionOp(generation)) return;
       state = state.copyWith(isAuthenticated: true, user: user);
       SessionRefreshService.refreshSessionBoundProviders(_ref);
     } catch (e) {
+      if (_isStaleSessionOp(generation)) return;
       state = _failedAuthState(e, isAuthenticated: false);
     } finally {
-      state = state.copyWith(
-        isLoading: false,
-        error: state.error,
-        failure: state.failure,
-      );
+      if (!_isStaleSessionOp(generation)) {
+        state = state.copyWith(
+          isLoading: false,
+          error: state.error,
+          failure: state.failure,
+        );
+      }
     }
   }
 
@@ -214,6 +247,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     String privacyVersion = 'v1',
     String? agreedLocale,
   }) async {
+    final generation = _beginSessionOp();
     state = state.copyWith(isLoading: true);
     try {
       DemoDataService.isDemoMode = false;
@@ -231,20 +265,25 @@ class AuthNotifier extends StateNotifier<AuthState> {
         privacyVersion: privacyVersion,
         agreedLocale: agreedLocale,
       );
+      if (_isStaleSessionOp(generation)) return;
       state = state.copyWith(isAuthenticated: true, user: user);
       SessionRefreshService.refreshSessionBoundProviders(_ref);
     } catch (e) {
+      if (_isStaleSessionOp(generation)) return;
       state = _failedAuthState(e, isAuthenticated: false);
     } finally {
-      state = state.copyWith(
-        isLoading: false,
-        error: state.error,
-        failure: state.failure,
-      );
+      if (!_isStaleSessionOp(generation)) {
+        state = state.copyWith(
+          isLoading: false,
+          error: state.error,
+          failure: state.failure,
+        );
+      }
     }
   }
 
   Future<void> loginAsGuest() async {
+    final generation = _beginSessionOp();
     state = state.copyWith(isLoading: true);
     try {
       // 访客模式：使用真实后端 token + 后端预置演示数据，不走本地假数据
@@ -258,6 +297,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final guestId = await guestService.getGuestId();
       final user = await _authRepository.guestLogin(guestId);
       final accessToken = await _authRepository.getAccessToken();
+      if (_isStaleSessionOp(generation)) return;
       if (accessToken == null || accessToken.isEmpty) {
         throw Exception(I18nService.instance.l10n.authGuestTokenFailed);
       }
@@ -268,6 +308,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
       SessionRefreshService.refreshSessionBoundProviders(_ref);
     } catch (e) {
+      if (_isStaleSessionOp(generation)) return;
       debugPrint('⚠️ Guest login failed: $e');
       state = _failedAuthState(e, isAuthenticated: false);
     }
@@ -570,6 +611,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> logout() async {
+    // 注销开启新世代：作废所有在途登录/会话检查的 state 写入。
+    _beginSessionOp();
     await _authRepository.logout();
     await _clearUserScopedLocalData();
     await _ref

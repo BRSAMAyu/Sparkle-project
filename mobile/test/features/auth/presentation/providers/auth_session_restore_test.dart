@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/session_refresh_service.dart';
+import 'package:sparkle/core/storage/token_storage_io.dart';
 import 'package:sparkle/features/auth/data/models/token_model.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
@@ -181,7 +182,7 @@ Future<void> _waitFor(bool Function() predicate) async {
 
 class _FakeAuthRepository extends AuthRepository {
   _FakeAuthRepository(FlutterSecureStorage storage, this._user)
-      : super(_UnusedApiClient(), storage);
+      : super(_UnusedApiClient(), SecureTokenStorage(storage: storage));
 
   final UserModel _user;
 

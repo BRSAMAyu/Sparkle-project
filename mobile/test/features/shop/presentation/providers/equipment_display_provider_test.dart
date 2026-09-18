@@ -15,6 +15,7 @@ import 'package:sparkle/shared/entities/achievement_model.dart';
 import 'package:sparkle/shared/entities/shop_model.dart';
 import 'package:sparkle/shared/entities/user_brief.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
+import 'package:sparkle/core/storage/token_storage_io.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -143,7 +144,7 @@ UserModel _achievementTitleUser() => UserModel(
 
 class _UnusedAuthRepository extends AuthRepository {
   _UnusedAuthRepository()
-      : super(_UnusedApiClient(), const FlutterSecureStorage());
+      : super(_UnusedApiClient(), SecureTokenStorage());
 
   @override
   Future<bool> isLoggedIn() async => true;

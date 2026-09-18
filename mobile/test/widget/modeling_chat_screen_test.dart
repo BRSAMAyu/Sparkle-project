@@ -19,6 +19,7 @@ import 'package:sparkle/features/user/presentation/providers/settings_provider.d
 import 'package:sparkle/features/user/presentation/screens/modeling_chat_screen.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 import '../shared/i18n_test_helper.dart';
+import 'package:sparkle/core/storage/token_storage_io.dart';
 
 class _QueuedChatRepository extends ChatRepository {
   _QueuedChatRepository() : super(Dio(), container: ProviderContainer());
@@ -90,7 +91,7 @@ class _SentChatRequest {
 
 class _FakeAuthRepository extends AuthRepository {
   _FakeAuthRepository({this.token})
-      : super(_NoopApiClient(), const FlutterSecureStorage());
+      : super(_NoopApiClient(), SecureTokenStorage(storage: const FlutterSecureStorage()));
 
   final String? token;
 

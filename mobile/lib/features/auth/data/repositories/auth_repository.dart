@@ -8,6 +8,7 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/storage/token_storage.dart';
 import 'package:sparkle/features/auth/data/models/token_model.dart';
 import 'package:sparkle/features/user/data/models/account_security_model.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
@@ -18,7 +19,14 @@ const String _legacyRefreshTokenKey = 'refreshToken';
 class AuthRepository {
   AuthRepository(this._apiClient, this._storage);
   final ApiClient _apiClient;
-  final FlutterSecureStorage _storage;
+
+  /// Token 持久化后端（W-1/W-2 修复）。
+  ///
+  /// 旧实现直连 FlutterSecureStorage，其 web 实现并发写静默全丢
+  /// （IndexedDB `user.box` 空盒实证），token 从未持久化。现改走
+  /// [TokenStorage] 门面：io 平台仍转发 secure storage（行为不变），
+  /// web 平台落 localStorage（生产升级路径见 facade 注释）。
+  final TokenStorage _storage;
   String? _cachedAccessToken;
   String? _cachedRefreshToken;
 
@@ -629,42 +637,30 @@ class AuthRepository {
   Future<void> saveTokens(TokenResponse tokenResponse) async {
     _cachedAccessToken = tokenResponse.accessToken;
     _cachedRefreshToken = tokenResponse.refreshToken;
-    await _storage.write(
-      key: AppConstants.keyAccessToken,
-      value: tokenResponse.accessToken,
-    );
+    await _storage.write(AppConstants.keyAccessToken, tokenResponse.accessToken);
     if (tokenResponse.refreshToken != null &&
         tokenResponse.refreshToken!.isNotEmpty) {
-      await _storage.write(
-        key: AppConstants.keyRefreshToken,
-        value: tokenResponse.refreshToken,
-      );
+      await _storage.write(AppConstants.keyRefreshToken, tokenResponse.refreshToken!);
     } else {
-      await _storage.delete(key: AppConstants.keyRefreshToken);
-      await _storage.delete(key: _legacyRefreshTokenKey);
+      await _storage.delete(AppConstants.keyRefreshToken);
+      await _storage.delete(_legacyRefreshTokenKey);
     }
 
     // Keep legacy keys during migration so older code paths do not lose session.
-    await _storage.write(
-      key: _legacyAccessTokenKey,
-      value: tokenResponse.accessToken,
-    );
+    await _storage.write(_legacyAccessTokenKey, tokenResponse.accessToken);
     if (tokenResponse.refreshToken != null &&
         tokenResponse.refreshToken!.isNotEmpty) {
-      await _storage.write(
-        key: _legacyRefreshTokenKey,
-        value: tokenResponse.refreshToken,
-      );
+      await _storage.write(_legacyRefreshTokenKey, tokenResponse.refreshToken!);
     }
   }
 
   Future<void> clearTokens() async {
     _cachedAccessToken = null;
     _cachedRefreshToken = null;
-    await _storage.delete(key: AppConstants.keyAccessToken);
-    await _storage.delete(key: AppConstants.keyRefreshToken);
-    await _storage.delete(key: _legacyAccessTokenKey);
-    await _storage.delete(key: _legacyRefreshTokenKey);
+    await _storage.delete(AppConstants.keyAccessToken);
+    await _storage.delete(AppConstants.keyRefreshToken);
+    await _storage.delete(_legacyAccessTokenKey);
+    await _storage.delete(_legacyRefreshTokenKey);
   }
 
   Future<String?> getAccessToken() async {
@@ -738,14 +734,14 @@ class AuthRepository {
     required String primaryKey,
     required String legacyKey,
   }) async {
-    final primaryValue = await _storage.read(key: primaryKey);
+    final primaryValue = await _storage.read(primaryKey);
     if (primaryValue != null && primaryValue.isNotEmpty) {
       return primaryValue;
     }
 
-    final legacyValue = await _storage.read(key: legacyKey);
+    final legacyValue = await _storage.read(legacyKey);
     if (legacyValue != null && legacyValue.isNotEmpty) {
-      await _storage.write(key: primaryKey, value: legacyValue);
+      await _storage.write(primaryKey, legacyValue);
       return legacyValue;
     }
 
@@ -766,7 +762,7 @@ final flutterSecureStorageProvider = Provider<FlutterSecureStorage>(
 // Provider for AuthRepository
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   final apiClient = ref.watch(apiClientProvider);
-  final storage = ref.watch(flutterSecureStorageProvider);
+  final storage = ref.watch(tokenStorageProvider);
 
   return AuthRepository(apiClient, storage);
 });

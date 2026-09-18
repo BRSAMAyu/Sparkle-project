@@ -76,6 +76,7 @@ import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/user_brief.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 import '../shared/i18n_test_helper.dart';
+import 'package:sparkle/core/storage/token_storage_io.dart';
 
 void main() {
   setUp(setUpI18nForTesting);
@@ -556,7 +557,7 @@ class _FakeOnboardingCompletedNotifier extends OnboardingCompletedNotifier {
 }
 
 class _UnusedAuthRepository extends AuthRepository {
-  _UnusedAuthRepository() : super(_UnusedApiClient(), _MemorySecureStorage());
+  _UnusedAuthRepository() : super(_UnusedApiClient(), SecureTokenStorage(storage: _MemorySecureStorage()));
 
   @override
   Future<bool> isLoggedIn() async => false;

@@ -1,0 +1,1787 @@
+diff --git a/backend/tests/api/test_auth_login_empty_credentials.py b/backend/tests/api/test_auth_login_empty_credentials.py
+new file mode 100644
+index 00000000..9b40e120
+--- /dev/null
++++ b/backend/tests/api/test_auth_login_empty_credentials.py
+@@ -0,0 +1,196 @@
++"""W-3 回归锁：空凭据登录禁止 200（engine 侧契约，不经网关）。
++
++round-1 Web 走查（docs/competition/2026-tmall-hackathon/多端实测/web-round1.md W-3）
++曾在引擎双进程旧态下观察到 ``POST /auth/login`` 空 username+空 password 返回 200。
++本文件把「凭据校验缺口」钉死为可执行契约（TestClient 直连路由，不依赖网关/DB/Redis）：
++
++- 空 username + 空 password / username+email 均空 → 400（UserLogin 模型校验拒绝，
++  生产由 main.py 的 RequestValidationError handler 映射为 400 信封）
++- 缺 password 字段 → 400
++- 已存在用户 + 空 password → 401（verify_password 对空串恒 False，永不放行）
++- 未知用户（含纯空白用户名）→ 401
++- 正确凭据对照组 → 200（防修复过度把正常登录也拦掉）
++
++红绿证据（2026-09-18）：临时注释 schemas/user.py 的 ``_validate_identifier`` 后，
++test_empty_username_and_password_returns_400 转 422（红）；恢复后全绿——证明当前
++栈的 400 语义确实由该校验器 + login 端点空值兜底共同保证，round-1 的 200 系
++W-8 双进程旧进程假象而非现存代码缺陷。
++"""
++
++from __future__ import annotations
++
++import uuid
++from datetime import datetime
++from types import SimpleNamespace
++from typing import Any
++
++import pytest
++from fastapi import FastAPI
++from fastapi.exceptions import RequestValidationError
++from fastapi.responses import JSONResponse
++from fastapi.testclient import TestClient
++from sqlalchemy.ext.asyncio import AsyncSession
++
++from app.api.v1.auth import router as auth_router
++from app.core.account_lockout import account_lockout_service
++from app.core.auth_audit_service import auth_audit_service
++from app.core.rate_limiting import limiter
++from app.core.security import get_password_hash
++from app.db.session import get_db
++from app.models.user import User
++
++EXISTING_PASSWORD = "w3_right_password_123"
++
++
++class _FakeResult:
++    """模拟 execute(...).scalars().first() 链。"""
++
++    def __init__(self, value: Any) -> None:
++        self._value = value
++
++    def scalars(self) -> "_FakeResult":
++        return self
++
++    def first(self) -> Any:
++        return self._value
++
++
++class _FakeDb:
++    """login 端点只读用户 + refresh，不需要真实会话。"""
++
++    def __init__(self, user: User | None) -> None:
++        self.user = user
++
++    async def execute(self, *_args: Any, **_kwargs: Any) -> _FakeResult:
++        return _FakeResult(self.user)
++
++    async def refresh(self, _obj: Any) -> None:
++        return None
++
++
++def _build_user() -> User:
++    return User(
++        id=uuid.uuid4(),
++        username="w3_existing_user",
++        email="w3_existing@example.com",
++        nickname="W3 Existing",
++        hashed_password=get_password_hash(EXISTING_PASSWORD),
++        is_active=True,
++        created_at=datetime(2026, 1, 1),
++        updated_at=datetime(2026, 1, 1),
++        photon_balance=0,
++        status="offline",
++        email_verified=False,
++        password_login_enabled=True,
++        avatar_status="approved",
++        flame_level=1,
++        flame_brightness=0.5,
++        depth_preference=0.5,
++        curiosity_preference=0.5,
++    )
++
++
++@pytest.fixture
++def api(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
++    """隔离的 auth 路由 app：关限流、mock 外围副作用、复现 400 校验映射。"""
++    from fastapi.testclient import TestClient as _TC  # local import keeps fixture lazy
++
++    user = _build_user()
++    db = _FakeDb(user)
++
++    async def _override_get_db():
++        yield db
++
++    async def _no_lockout(_user_id: str, _db: AsyncSession) -> bool:
++        return False
++
++    async def _noop_async(*_args: Any, **_kwargs: Any) -> None:
++        return None
++
++    def _noop_sync(*_args: Any, **_kwargs: Any) -> None:
++        return None
++
++    monkeypatch.setattr(limiter, "enabled", False)
++    monkeypatch.setattr(
++        account_lockout_service, "check_and_handle_lockout", _no_lockout
++    )
++    monkeypatch.setattr(account_lockout_service, "record_failed_login", _noop_async)
++    monkeypatch.setattr(
++        account_lockout_service, "handle_successful_login", _noop_async
++    )
++    monkeypatch.setattr(auth_audit_service, "schedule_log", _noop_sync)
++
++    from app.core import security_monitor
++
++    monkeypatch.setattr(
++        security_monitor.security_monitor, "record_login_attempt", _noop_async
++    )
++
++    # 成功路径的 token 签发依赖 DB/Redis 写入；对照测试只关心 200 语义，直接桩掉。
++    async def _fake_issue_tokens(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
++        return {"access_token": "w3-stub-access", "refresh_token": "w3-stub-refresh"}
++
++    from app.api.v1 import auth as auth_module
++
++    monkeypatch.setattr(auth_module, "_issue_auth_tokens", _fake_issue_tokens)
++
++    async def _validation_to_400(_request: Any, _exc: RequestValidationError) -> JSONResponse:
++        # 与 main.py 的 validation_exception_handler 同语义（422 → 400）。
++        return JSONResponse(status_code=400, content={"success": False})
++
++    app = FastAPI()
++    app.include_router(auth_router, prefix="/auth")
++    app.state.limiter = limiter
++    app.add_exception_handler(RequestValidationError, _validation_to_400)
++    app.dependency_overrides[get_db] = _override_get_db
++
++    client = _TC(app)
++    return SimpleNamespace(client=client, db=db, user=user)
++
++
++def test_empty_username_and_password_returns_400(api: SimpleNamespace) -> None:
++    resp = api.client.post("/auth/login", json={"username": "", "password": ""})
++    assert resp.status_code == 400, resp.text
++
++
++def test_all_identifiers_null_returns_400(api: SimpleNamespace) -> None:
++    resp = api.client.post(
++        "/auth/login", json={"username": None, "email": None, "password": "whatever"}
++    )
++    assert resp.status_code == 400, resp.text
++
++
++def test_missing_password_returns_400(api: SimpleNamespace) -> None:
++    resp = api.client.post("/auth/login", json={"username": "some_user"})
++    assert resp.status_code == 400, resp.text
++
++
++def test_whitespace_username_returns_401(api: SimpleNamespace) -> None:
++    api.db.user = None  # 纯空白 identifier 不会命中任何用户
++    resp = api.client.post("/auth/login", json={"username": "   ", "password": "   "})
++    assert resp.status_code == 401, resp.text
++
++
++def test_existing_user_with_empty_password_returns_401(api: SimpleNamespace) -> None:
++    resp = api.client.post(
++        "/auth/login", json={"username": "w3_existing_user", "password": ""}
++    )
++    assert resp.status_code == 401, resp.text
++
++
++def test_existing_user_with_wrong_password_returns_401(api: SimpleNamespace) -> None:
++    resp = api.client.post(
++        "/auth/login", json={"username": "w3_existing_user", "password": "nope-nope"}
++    )
++    assert resp.status_code == 401, resp.text
++
++
++def test_valid_credentials_still_return_200(api: SimpleNamespace) -> None:
++    resp = api.client.post(
++        "/auth/login",
++        json={"username": "w3_existing_user", "password": EXISTING_PASSWORD},
++    )
++    assert resp.status_code == 200, resp.text
++    body = resp.json()
++    assert body["access_token"] == "w3-stub-access"
++    assert body["user"]["username"] == "w3_existing_user"
+diff --git "a/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/web-session-fix.md" "b/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/web-session-fix.md"
+new file mode 100644
+index 00000000..3a6a2b61
+--- /dev/null
++++ "b/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/web-session-fix.md"
+@@ -0,0 +1,117 @@
++# Web 会话断链修复（Round 2）· W-1/W-2/W-3/W-4
++
++- 日期：2026-09-18
++- 执行：Web 会话断链修复专员（worktree `wt7`，基线 `dd9d62d3` = main HEAD）
++- 上游依据：[多端实测/web-round1.md](../../多端实测/web-round1.md)（根因实锤：flutter_secure_storage web 并发写静默全丢，IndexedDB `user.box` 空盒实证）
++- 红绿纪律：每项先红后绿；红证据均为可复现操作（临时摘除修复/删除新文件后跑定向测试）
++
++## 修复项总览
++
++| 项 | 结论 | 生产代码变更 | 测试 |
++|---|---|---|---|
++| W-1/W-2 token 持久化（web） | **已修复** | 新增 TokenStorage 门面（conditional import）+ AuthRepository 切换 | 4+4 绿（红=编译失败实证） |
++| W-1 竞态（login vs checkAuthStatus 覆盖） | **已修复** | AuthNotifier 会话世代守卫 | 3 绿（摘守卫 3 红） |
++| W-4 Enter 双触发 | **已修复** | 登录页 800ms 防重入 + 显式 textInputAction | 2 绿（摘修复 2 红） |
++| W-3 后端空凭据 200 | **无需修码，回归锁钉死** | 无（校验器自 initial commit 即存在） | 7 绿（摘校验器 2 红） |
++
++验证命令与结果见文末「验证汇总」。
++
++---
++
++## 1. W-1/W-2 · Token 存储门面（核心）
++
++### 变更
++
++新增 `mobile/lib/core/storage/`（conditional import 先例：`core/offline/local_database_store*.dart`）：
++
++- **`token_storage.dart`** — `TokenStorage` 抽象（`read/write/delete`，key-value 全异步）+ `createTokenStorage()` 工厂 + `tokenStorageProvider`。
++- **`token_storage_io.dart`** — `SecureTokenStorage`：转发 FlutterSecureStorage，默认选项与原 `flutterSecureStorageProvider` 完全一致（Android EncryptedSharedPreferences + iOS first_unlock），**原生行为不变**；可注入 storage 供测试。
++- **`token_storage_web.dart`** — `TokenStorageWeb`：SharedPreferences（localStorage）。头注释明确「**竞赛/dev 可接受；生产 web 应升级为加密方案（WebCrypto 派生密钥 + IndexedDB 或服务端 HttpOnly Cookie），并迁移既有 key**」。
++
++`auth_repository.dart`：`_storage` 类型 FlutterSecureStorage → `TokenStorage`；`authRepositoryProvider` 改 watch `tokenStorageProvider`。`flutterSecureStorageProvider` **保留**（当前无其他消费方，供未来非 token 敏感小数据使用）。
++
++**全仓 grep 遗漏排查**（结论：无其他 token 持久化点）：
++- `FlutterSecureStorage` 在 lib/ 仅存于门面 io 实现、auth_repository 注释/保留 Provider、local_database_store_io 注释；
++- `keyAccessToken/keyRefreshToken` 仅 `app_constants.dart`（定义）与 `auth_repository.dart`（唯一读写点）；
++- `setString.*token` 类写入仅 push_token_manager（推送 token，非认证会话）。
++
++### 波及修复（15 个既有测试文件的编译适配）
++
++AuthRepository 构造签名变化波及既有测试 fake（`_MemorySecureStorage`/`const FlutterSecureStorage` 直传 super），逐一以 `SecureTokenStorage(storage: …)` 包裹（行为等价），或如 `auth_repository_test.dart` 直接改用 `InMemoryTokenStorage`。其中 `auth_repository_test.dart` 在基线即**无法编译**（其 `TestApiClient.post/put/patch` 覆写缺 `Object? data` 具名参数，与 ApiClient 现签名不符），本次随改随修。
++
++**关键波及**：`dashboard_test_harness.dart` 除包裹外还需**新增 `tokenStorageProvider` override** —— 仪表盘链路（`intent_prediction_provider.dart:85` 等 5 处）会真实调用 `authRepositoryProvider.getAccessToken()`；切门面后该读路径走 `tokenStorageProvider`，harness 若只 override 旧的 `flutterSecureStorageProvider` 会命中真实 secure storage 平台通道（MissingPluginException），导致 briefing 区块缺失。该回归在红绿对照中被捕获并修复（见下）。
++
++### 红绿证据
++
++- **红**（摘除 3 个门面 lib 文件后跑 `token_storage_test.dart`）：
++  `Error: 'TokenStorageWeb' isn't a type` / `Method not found: 'setUpI18nForTesting'`… → 编译失败（0 过）。
++- **绿**（恢复后）：
++  - `token_storage_test.dart` **4/4**：web 后端 write→read 往返、**saveTokens 的 4 连写并发模式不再丢数据**（复刻 round-1 实证丢失形态）、未命中返回 null、VM 下工厂解析到 io 后端。
++  - `auth_repository_test.dart` **4/4**：含验收用例 `W-1/W-2: web storage keeps tokens across saveTokens → read`（注入 `TokenStorageWeb`，saveTokens 后 `getAccessToken/getRefreshToken/isLoggedIn` 全部取回，clearTokens 后归零）。
++
++## 2. 竞态收口 · AuthNotifier 会话世代守卫
++
++### 变更（`auth_provider.dart`）
++
++- `_sessionGeneration` 自增令牌：`_beginSessionOp()` / `_isStaleSessionOp(gen)`。
++- 覆盖点：`checkAuthStatus` / `login` / `register` / `socialLogin` / `loginAsGuest` 每个 await 之后的**终态写入前**校验世代，过世代写入直接丢弃；`login` 等的 **finally** 同样受守卫；`_resetInvalidStoredSession` 携带世代参数（过世代**不再清 token**，防误杀新会话）；`logout` 开新世代作废在途登录写入。
++
++### 红绿证据（`auth_session_generation_test.dart`）
++
++- **红**（`git checkout -- auth_provider.dart` 摘除守卫后）：**3/3 红** ——
++  1) 过世代 `checkAuthStatus` 的未认证写入覆盖 login 成功态（isAuthenticated→false）；
++  2) 过世代 login 的 catch/finally 覆盖新 `checkAuthStatus` 成功态；
++  3) logout 后在途 login 仍写入已认证态。
++- **绿**（守卫在场）：**3/3 绿**。
++
++## 3. W-4 · Enter 双触发（登录页）
++
++### 变更（`login_screen.dart`）
++
++- `_consumeSubmitTicket()`：**同一提交 800ms 去重窗口**（`_submitDedupWindow`），`_submit` 与 `_submitAsGuest` 共用——直接封杀 round-1 实测的「一次手势序列 login+guest 双 POST」。
++- TextField 显式 IME 语义：username `textInputAction: TextInputAction.next` + `onFieldSubmitted → nextFocus`；password `TextInputAction.done` + `onFieldSubmitted → _submit`。明确唯一 Flutter 侧提交通道，web 原生 form submit 通道即使并发触发也被防重入窗口吸收。
++
++### 红绿证据（`login_screen_submit_test.dart`，视口 800×2200 保证按钮同屏可达）
++
++- **红**（`git checkout -- login_screen.dart` 摘除修复后）：**2/2 红** ——
++  1) 同帧双击登录按钮 → `loginCalls == 2`（期望 1）；
++  2) 点登录后同帧点访客 → `guestCalls == 1`（期望 0）。
++- **绿**（修复在场）：**2/2 绿**。
++- 注：计数桩在 repository 入口计数后走失败路径，避免 fake-async 下 SessionRefresh→WebSocket warmUp 挂起 timer 干扰断言。
++
++## 4. W-3 · 后端空凭据 login（复现 → 结论修正 → 回归锁）
++
++### 现场复现矩阵（走查同栈：网关 :8080 / 引擎 :8000，引擎 cwd=主仓 backend@dd9d62d3）
++
++| 请求体 | 网关 | 引擎直连 |
++|---|---|---|
++| `{"username":"","password":""}` | **400** | **400**（`username or email is required`） |
++| `{"username":null,"email":null,"password":""}` | 400 | — |
++| `{}`（缺 password） | 400 | — |
++| `{"username":" ","password":" "}` | 401 | — |
++| `{"username":"x","password":""}` | 401 | — |
++
++**结论修正**：W-3 的「200」为 **W-8 双进程事故的旧进程假象**（round-1 报告已记录引擎双进程）；现行代码自 initial commit（1722e6dc）即含 `UserLogin._validate_identifier` 模型校验器（`schemas/user.py:65`，空 username+email 抛 ValueError → RequestValidationError → main.py 映射 **400**）+ login 端点 `if not login_id` 兜底 + `verify_password` 对空口令恒 False → **401**。当前单进程引擎（PID 2918）现场实证 400/401，无生产码缺口，**网关与引擎均未改动**。
++
++### 红绿证据（新增 `backend/tests/api/test_auth_login_empty_credentials.py`，TestClient 直连路由、无网关/DB/Redis 依赖）
++
++- **绿**：**7/7** —— 空 username+password 400、双标识符 null 400、缺 password 400、空白用户名 401、存在用户空口令 401、错误口令 401、**正确凭据对照 200**（防过度拦截；`_issue_auth_tokens` 桩掉，锁 200 语义）。
++- **红**（临时摘除 `_validate_identifier` 校验器）：空凭据两用例回落 **422（≠400 契约）** → `test_empty_username_and_password_returns_400`、`test_all_identifiers_null_returns_400` 红；恢复后全绿。证明 400 语义确由该校验器保证。
++
++---
++
++## 验证汇总
++
++- **backend pytest**（SECRET_KEY/JWT_SECRET/REDIS_URL 按规程注入）：
++  `tests/api/test_auth_login_empty_credentials.py` → **7 passed**。
++- **flutter test**（定向文件，`--concurrency=4`）：
++  - 本轮新增/重写：`auth_repository_test`(4) + `token_storage_test`(4) + `auth_session_generation_test`(3) + `login_screen_submit_test`(2) + `auth_session_restore_test`(3) → **16/16 绿**；
++  - 波及适配套件：app 四件（router_smoke 7+1-、router_deep_link 4 绿、main_pages_load 5+1-、main_actions 7+2-）**与基线逐项一致**（基线亦为 -1/-0/-1/-2，均为先在失败：主题扩展未注册等，非本轮引入）；widget/user/achievement/shop/unit 批 **48 绿 + 3 失败**（3 失败与基线逐项一致）；dashboard 批在 harness 补 `tokenStorageProvider` override 后恢复基线（3 失败=基线先在项）。
++- **flutter analyze**：非 third_party_plugins 错误 **0**（vendored fork 先在错误不计）。
++- **不重启任何服务**：全程未动 :8000/:8080/:50051 进程；`lib/gen`、`backend/gateway/gen` 未手改（worktree 缺失部分自主仓 cp，内容与提交版本一致，git 状态干净）。
++
++## 遗留与建议
++
++1. web token 明文落 localStorage 为竞赛期临时方案，生产前按 `token_storage_web.dart` 头注释升级加密方案（建议独立工单）。
++2. round-1 W-5（语义树残缺）/W-6（glass-pane 0×0）/W-7（i18n+品牌）未在本轮范围，按原批次计划移交。
++3. 仪表盘链路 5 处 `authRepositoryProvider.getAccessToken` 消费点在单测中需 override `tokenStorageProvider`（dashboard_test_harness 已示范），后续新测试注意。
+diff --git a/mobile/lib/core/storage/token_storage.dart b/mobile/lib/core/storage/token_storage.dart
+new file mode 100644
+index 00000000..967f9f21
+--- /dev/null
++++ b/mobile/lib/core/storage/token_storage.dart
+@@ -0,0 +1,38 @@
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++
++import 'token_storage_io.dart' if (dart.library.html) 'token_storage_web.dart';
++
++/// Token 持久化门面（key-value，全异步）。
++///
++/// 背景（web-round1 W-1/W-2 根因，见 docs/competition/2026-tmall-hackathon/
++/// 多端实测/web-round1.md）：`flutter_secure_storage` 的 web 实现存在并发写
++/// 静默丢失缺陷——IndexedDB `user.box` 实证为空，`saveTokens` 的 4+ 个
++/// write 全部丢失，token 从未持久化，导致 web 端登录 200 后会话断裂。
++///
++/// 平台后端（conditional import，先例：core/offline/local_database_store.dart）：
++/// - `io`（Android / iOS / 桌面）：[SecureTokenStorage] 转发
++///   FlutterSecureStorage（Keystore / Keychain），行为与旧实现一致；
++/// - `web`：SharedPreferences（localStorage）。竞赛 / dev 场景可接受，
++///   生产 web 应升级为加密方案（如 WebCrypto 派生密钥 + IndexedDB），
++///   详见 token_storage_web.dart 头注释。
++abstract class TokenStorage {
++  /// 读取 [key] 对应的值；不存在时返回 null。
++  Future<String?> read(String key);
++
++  /// 写入 [key] = [value]（覆盖语义）。
++  Future<void> write(String key, String value);
++
++  /// 删除 [key]（不存在时为 no-op）。
++  Future<void> delete(String key);
++}
++
++/// 平台后端工厂（由 io/web 变体提供 createTokenStorageImpl）。
++TokenStorage createTokenStorage() => createTokenStorageImpl();
++
++/// 全局 TokenStorage Provider。
++///
++/// 认证 token 的唯一持久化入口。`flutterSecureStorageProvider` 保留供
++/// 未来非 token 的敏感小数据使用（当前无其他消费方）。
++final tokenStorageProvider = Provider<TokenStorage>((ref) {
++  return createTokenStorage();
++});
+diff --git a/mobile/lib/core/storage/token_storage_io.dart b/mobile/lib/core/storage/token_storage_io.dart
+new file mode 100644
+index 00000000..8b95df80
+--- /dev/null
++++ b/mobile/lib/core/storage/token_storage_io.dart
+@@ -0,0 +1,36 @@
++import 'package:flutter_secure_storage/flutter_secure_storage.dart';
++
++import 'token_storage.dart';
++
++/// 原生平台（Android / iOS / Linux / macOS / Windows）后端：
++/// 直接转发 FlutterSecureStorage（Keystore / Keychain）。
++///
++/// 行为与修复前的 auth_repository 直连版本完全一致——默认选项沿用
++/// 原 flutterSecureStorageProvider 的配置
++/// （Android EncryptedSharedPreferences + iOS first_unlock）。
++/// 可注入 [storage] 便于测试替换内存实现。
++class SecureTokenStorage implements TokenStorage {
++  SecureTokenStorage({
++    FlutterSecureStorage? storage,
++  }) : _storage = storage ??
++            const FlutterSecureStorage(
++              aOptions: AndroidOptions(encryptedSharedPreferences: true),
++              iOptions: IOSOptions(
++                accessibility: KeychainAccessibility.first_unlock,
++              ),
++            );
++
++  final FlutterSecureStorage _storage;
++
++  @override
++  Future<String?> read(String key) => _storage.read(key: key);
++
++  @override
++  Future<void> write(String key, String value) =>
++      _storage.write(key: key, value: value);
++
++  @override
++  Future<void> delete(String key) => _storage.delete(key: key);
++}
++
++TokenStorage createTokenStorageImpl() => SecureTokenStorage();
+diff --git a/mobile/lib/core/storage/token_storage_web.dart b/mobile/lib/core/storage/token_storage_web.dart
+new file mode 100644
+index 00000000..9b682287
+--- /dev/null
++++ b/mobile/lib/core/storage/token_storage_web.dart
+@@ -0,0 +1,37 @@
++import 'package:shared_preferences/shared_preferences.dart';
++
++import 'token_storage.dart';
++
++/// Web 平台后端：SharedPreferences（落 localStorage）。
++///
++/// ⚠️ 安全边界：localStorage 无加密、可被同源脚本与用户工具直接读取。
++/// 此实现用于修复 flutter_secure_storage web 并发写静默丢失导致的会话
++/// 断链（web-round1 W-1/W-2，IndexedDB `user.box` 空盒实证），**竞赛 /
++/// dev 场景可接受**；生产 web 应升级为加密方案（如 WebCrypto 派生密钥
++/// + IndexedDB，或服务端 HttpOnly Cookie 会话），并迁移既有 key。
++///
++/// 语义与 TokenStorage 契约一致：read 未命中返回 null；write 覆盖；
++/// delete 不存在时 no-op。
++class TokenStorageWeb implements TokenStorage {
++  Future<SharedPreferences> get _prefs => SharedPreferences.getInstance();
++
++  @override
++  Future<String?> read(String key) async {
++    final prefs = await _prefs;
++    return prefs.getString(key);
++  }
++
++  @override
++  Future<void> write(String key, String value) async {
++    final prefs = await _prefs;
++    await prefs.setString(key, value);
++  }
++
++  @override
++  Future<void> delete(String key) async {
++    final prefs = await _prefs;
++    await prefs.remove(key);
++  }
++}
++
++TokenStorage createTokenStorageImpl() => TokenStorageWeb();
+diff --git a/mobile/lib/features/auth/data/repositories/auth_repository.dart b/mobile/lib/features/auth/data/repositories/auth_repository.dart
+index d27bed54..dad9cb47 100755
+--- a/mobile/lib/features/auth/data/repositories/auth_repository.dart
++++ b/mobile/lib/features/auth/data/repositories/auth_repository.dart
+@@ -8,6 +8,7 @@ import 'package:sparkle/core/network/api_client.dart';
+ import 'package:sparkle/core/network/api_endpoints.dart';
+ import 'package:sparkle/core/services/demo_data_service.dart';
+ import 'package:sparkle/core/services/i18n_service.dart';
++import 'package:sparkle/core/storage/token_storage.dart';
+ import 'package:sparkle/features/auth/data/models/token_model.dart';
+ import 'package:sparkle/features/user/data/models/account_security_model.dart';
+ import 'package:sparkle/shared/entities/user_model.dart';
+@@ -18,7 +19,14 @@ const String _legacyRefreshTokenKey = 'refreshToken';
+ class AuthRepository {
+   AuthRepository(this._apiClient, this._storage);
+   final ApiClient _apiClient;
+-  final FlutterSecureStorage _storage;
++
++  /// Token 持久化后端（W-1/W-2 修复）。
++  ///
++  /// 旧实现直连 FlutterSecureStorage，其 web 实现并发写静默全丢
++  /// （IndexedDB `user.box` 空盒实证），token 从未持久化。现改走
++  /// [TokenStorage] 门面：io 平台仍转发 secure storage（行为不变），
++  /// web 平台落 localStorage（生产升级路径见 facade 注释）。
++  final TokenStorage _storage;
+   String? _cachedAccessToken;
+   String? _cachedRefreshToken;
+ 
+@@ -629,42 +637,30 @@ class AuthRepository {
+   Future<void> saveTokens(TokenResponse tokenResponse) async {
+     _cachedAccessToken = tokenResponse.accessToken;
+     _cachedRefreshToken = tokenResponse.refreshToken;
+-    await _storage.write(
+-      key: AppConstants.keyAccessToken,
+-      value: tokenResponse.accessToken,
+-    );
++    await _storage.write(AppConstants.keyAccessToken, tokenResponse.accessToken);
+     if (tokenResponse.refreshToken != null &&
+         tokenResponse.refreshToken!.isNotEmpty) {
+-      await _storage.write(
+-        key: AppConstants.keyRefreshToken,
+-        value: tokenResponse.refreshToken,
+-      );
++      await _storage.write(AppConstants.keyRefreshToken, tokenResponse.refreshToken!);
+     } else {
+-      await _storage.delete(key: AppConstants.keyRefreshToken);
+-      await _storage.delete(key: _legacyRefreshTokenKey);
++      await _storage.delete(AppConstants.keyRefreshToken);
++      await _storage.delete(_legacyRefreshTokenKey);
+     }
+ 
+     // Keep legacy keys during migration so older code paths do not lose session.
+-    await _storage.write(
+-      key: _legacyAccessTokenKey,
+-      value: tokenResponse.accessToken,
+-    );
++    await _storage.write(_legacyAccessTokenKey, tokenResponse.accessToken);
+     if (tokenResponse.refreshToken != null &&
+         tokenResponse.refreshToken!.isNotEmpty) {
+-      await _storage.write(
+-        key: _legacyRefreshTokenKey,
+-        value: tokenResponse.refreshToken,
+-      );
++      await _storage.write(_legacyRefreshTokenKey, tokenResponse.refreshToken!);
+     }
+   }
+ 
+   Future<void> clearTokens() async {
+     _cachedAccessToken = null;
+     _cachedRefreshToken = null;
+-    await _storage.delete(key: AppConstants.keyAccessToken);
+-    await _storage.delete(key: AppConstants.keyRefreshToken);
+-    await _storage.delete(key: _legacyAccessTokenKey);
+-    await _storage.delete(key: _legacyRefreshTokenKey);
++    await _storage.delete(AppConstants.keyAccessToken);
++    await _storage.delete(AppConstants.keyRefreshToken);
++    await _storage.delete(_legacyAccessTokenKey);
++    await _storage.delete(_legacyRefreshTokenKey);
+   }
+ 
+   Future<String?> getAccessToken() async {
+@@ -738,14 +734,14 @@ class AuthRepository {
+     required String primaryKey,
+     required String legacyKey,
+   }) async {
+-    final primaryValue = await _storage.read(key: primaryKey);
++    final primaryValue = await _storage.read(primaryKey);
+     if (primaryValue != null && primaryValue.isNotEmpty) {
+       return primaryValue;
+     }
+ 
+-    final legacyValue = await _storage.read(key: legacyKey);
++    final legacyValue = await _storage.read(legacyKey);
+     if (legacyValue != null && legacyValue.isNotEmpty) {
+-      await _storage.write(key: primaryKey, value: legacyValue);
++      await _storage.write(primaryKey, legacyValue);
+       return legacyValue;
+     }
+ 
+@@ -766,7 +762,7 @@ final flutterSecureStorageProvider = Provider<FlutterSecureStorage>(
+ // Provider for AuthRepository
+ final authRepositoryProvider = Provider<AuthRepository>((ref) {
+   final apiClient = ref.watch(apiClientProvider);
+-  final storage = ref.watch(flutterSecureStorageProvider);
++  final storage = ref.watch(tokenStorageProvider);
+ 
+   return AuthRepository(apiClient, storage);
+ });
+diff --git a/mobile/lib/features/auth/presentation/providers/auth_provider.dart b/mobile/lib/features/auth/presentation/providers/auth_provider.dart
+index b58509b3..60ce0869 100755
+--- a/mobile/lib/features/auth/presentation/providers/auth_provider.dart
++++ b/mobile/lib/features/auth/presentation/providers/auth_provider.dart
+@@ -58,6 +58,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
+   final Ref _ref;
+   final AuthRepository _authRepository;
+ 
++  /// 会话世代（W-1 竞态收口）。
++  ///
++  /// 每个认证流程入口（checkAuthStatus/login/register/socialLogin/loginAsGuest/
++  /// logout）开启新世代；流程内所有 await 之后的 state 写入前先校验世代，
++  /// 过世代（已有更新流程开启）的写入一律丢弃。否则并发时旧流程的
++  /// finally/catch/_failedAuthState 会把新流程的成功态覆盖回未认证
++  /// （web-round1 实测：登录 200 后 UI 不跳转的疑因 2）。
++  int _sessionGeneration = 0;
++  int _beginSessionOp() => ++_sessionGeneration;
++  bool _isStaleSessionOp(int generation) => generation != _sessionGeneration;
++
+   AuthState _failedAuthState(
+     Object error, {
+     required bool isAuthenticated,
+@@ -87,7 +98,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
+     }
+   }
+ 
+-  Future<void> _resetInvalidStoredSession(Object error) async {
++  Future<void> _resetInvalidStoredSession(
++    Object error, {
++    required int generation,
++  }) async {
++    if (_isStaleSessionOp(generation)) {
++      debugPrint(
++          'ℹ️ Skipping stale session reset (generation $generation superseded)');
++      return;
++    }
+     debugPrint(
+         'ℹ️ Stored auth session expired, clearing local auth state: $error');
+     await _authRepository.clearTokens();
+@@ -103,6 +122,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
+   }
+ 
+   Future<void> checkAuthStatus() async {
++    final generation = _beginSessionOp();
+     state = state.copyWith(isLoading: true);
+     try {
+       final prefs = _ref.read(sharedPreferencesProvider);
+@@ -111,11 +131,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
+       DemoDataService.isDemoMode = savedDemoMode;
+ 
+       final isLoggedIn = await _authRepository.isLoggedIn();
++      if (_isStaleSessionOp(generation)) return;
+       if (isLoggedIn) {
+         try {
+           // 有真实 token 时，强制关闭 isDemoMode，确保从后端读取真实数据
+           DemoDataService.isDemoMode = false;
+           var user = await _authRepository.getCurrentUser();
++          if (_isStaleSessionOp(generation)) return;
+           if (user.registrationSource == 'guest') {
+             try {
+               final guestId =
+@@ -129,6 +151,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
+           } else {
+             await _ref.read(guestServiceProvider).clearGuestData();
+           }
++          if (_isStaleSessionOp(generation)) return;
+           state = state.copyWith(
+             isLoading: false,
+             isAuthenticated: true,
+@@ -136,17 +159,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
+           );
+           SessionRefreshService.refreshSessionBoundProviders(_ref);
+         } catch (e) {
+-          await _resetInvalidStoredSession(e);
++          await _resetInvalidStoredSession(e, generation: generation);
+         }
+       } else {
+         state = state.copyWith(isLoading: false, isAuthenticated: false);
+       }
+     } catch (e) {
+-      await _resetInvalidStoredSession(e);
++      await _resetInvalidStoredSession(e, generation: generation);
+     }
+   }
+ 
+   Future<void> login(String usernameOrEmail, String password) async {
++    final generation = _beginSessionOp();
+     state = state.copyWith(isLoading: true);
+     try {
+       DemoDataService.isDemoMode = false;
+@@ -155,16 +179,20 @@ class AuthNotifier extends StateNotifier<AuthState> {
+           .setBool(_demoGuestModePreferenceKey, false);
+       await _ref.read(guestServiceProvider).clearGuestData();
+       final user = await _authRepository.login(usernameOrEmail, password);
++      if (_isStaleSessionOp(generation)) return;
+       state = state.copyWith(isAuthenticated: true, user: user);
+       SessionRefreshService.refreshSessionBoundProviders(_ref);
+     } catch (e) {
++      if (_isStaleSessionOp(generation)) return;
+       state = _failedAuthState(e, isAuthenticated: false);
+     } finally {
+-      state = state.copyWith(
+-        isLoading: false,
+-        error: state.error,
+-        failure: state.failure,
+-      );
++      if (!_isStaleSessionOp(generation)) {
++        state = state.copyWith(
++          isLoading: false,
++          error: state.error,
++          failure: state.failure,
++        );
++      }
+     }
+   }
+ 
+@@ -176,6 +204,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
+     String? nickname,
+     String? avatarUrl,
+   }) async {
++    final generation = _beginSessionOp();
+     state = state.copyWith(isLoading: true);
+     try {
+       DemoDataService.isDemoMode = false;
+@@ -191,16 +220,20 @@ class AuthNotifier extends StateNotifier<AuthState> {
+         nickname: nickname,
+         avatarUrl: avatarUrl,
+       );
++      if (_isStaleSessionOp(generation)) return;
+       state = state.copyWith(isAuthenticated: true, user: user);
+       SessionRefreshService.refreshSessionBoundProviders(_ref);
+     } catch (e) {
++      if (_isStaleSessionOp(generation)) return;
+       state = _failedAuthState(e, isAuthenticated: false);
+     } finally {
+-      state = state.copyWith(
+-        isLoading: false,
+-        error: state.error,
+-        failure: state.failure,
+-      );
++      if (!_isStaleSessionOp(generation)) {
++        state = state.copyWith(
++          isLoading: false,
++          error: state.error,
++          failure: state.failure,
++        );
++      }
+     }
+   }
+ 
+@@ -214,6 +247,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
+     String privacyVersion = 'v1',
+     String? agreedLocale,
+   }) async {
++    final generation = _beginSessionOp();
+     state = state.copyWith(isLoading: true);
+     try {
+       DemoDataService.isDemoMode = false;
+@@ -231,20 +265,25 @@ class AuthNotifier extends StateNotifier<AuthState> {
+         privacyVersion: privacyVersion,
+         agreedLocale: agreedLocale,
+       );
++      if (_isStaleSessionOp(generation)) return;
+       state = state.copyWith(isAuthenticated: true, user: user);
+       SessionRefreshService.refreshSessionBoundProviders(_ref);
+     } catch (e) {
++      if (_isStaleSessionOp(generation)) return;
+       state = _failedAuthState(e, isAuthenticated: false);
+     } finally {
+-      state = state.copyWith(
+-        isLoading: false,
+-        error: state.error,
+-        failure: state.failure,
+-      );
++      if (!_isStaleSessionOp(generation)) {
++        state = state.copyWith(
++          isLoading: false,
++          error: state.error,
++          failure: state.failure,
++        );
++      }
+     }
+   }
+ 
+   Future<void> loginAsGuest() async {
++    final generation = _beginSessionOp();
+     state = state.copyWith(isLoading: true);
+     try {
+       // 访客模式：使用真实后端 token + 后端预置演示数据，不走本地假数据
+@@ -258,6 +297,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
+       final guestId = await guestService.getGuestId();
+       final user = await _authRepository.guestLogin(guestId);
+       final accessToken = await _authRepository.getAccessToken();
++      if (_isStaleSessionOp(generation)) return;
+       if (accessToken == null || accessToken.isEmpty) {
+         throw Exception(I18nService.instance.l10n.authGuestTokenFailed);
+       }
+@@ -268,6 +308,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
+       );
+       SessionRefreshService.refreshSessionBoundProviders(_ref);
+     } catch (e) {
++      if (_isStaleSessionOp(generation)) return;
+       debugPrint('⚠️ Guest login failed: $e');
+       state = _failedAuthState(e, isAuthenticated: false);
+     }
+@@ -570,6 +611,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
+   }
+ 
+   Future<void> logout() async {
++    // 注销开启新世代：作废所有在途登录/会话检查的 state 写入。
++    _beginSessionOp();
+     await _authRepository.logout();
+     await _clearUserScopedLocalData();
+     await _ref
+diff --git a/mobile/lib/features/auth/presentation/screens/login_screen.dart b/mobile/lib/features/auth/presentation/screens/login_screen.dart
+index 1d8423f7..2acc2752 100755
+--- a/mobile/lib/features/auth/presentation/screens/login_screen.dart
++++ b/mobile/lib/features/auth/presentation/screens/login_screen.dart
+@@ -38,6 +38,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
+   final _passwordController = TextEditingController();
+   bool _isPasswordVisible = false;
+ 
++  /// W-4 防重入窗口：同帧/短连击内的重复提交只放行第一次。
++  ///
++  /// Web 上 flt-text-editing-host 内含真实 <form>+隐藏 submit input，
++  /// 原生 form submit 与 Flutter 侧提交构成双通道，一次 Enter 可同时
++  /// 触发 login 与 guest 两个 POST（web-round1 W-4 实测 19:44:10/11）。
++  static const _submitDedupWindow = Duration(milliseconds: 800);
++  DateTime? _lastSubmitAt;
++
++  bool _consumeSubmitTicket() {
++    final now = DateTime.now();
++    final last = _lastSubmitAt;
++    if (last != null && now.difference(last) < _submitDedupWindow) {
++      return false;
++    }
++    _lastSubmitAt = now;
++    return true;
++  }
++
+   @override
+   void dispose() {
+     _usernameController.dispose();
+@@ -46,6 +64,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
+   }
+ 
+   void _submit() {
++    if (!_consumeSubmitTicket()) return;
+     if (_formKey.currentState!.validate()) {
+       unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
+       unawaited(
+@@ -57,6 +76,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
+     }
+   }
+ 
++  void _submitAsGuest() {
++    if (!_consumeSubmitTicket()) return;
++    unawaited(ref.read(authProvider.notifier).loginAsGuest());
++  }
++
+   Future<void> _handleSocialLogin(
+     Future<SocialAuthResult?> Function() loginMethod,
+   ) async {
+@@ -143,6 +167,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
+                   TextFormField(
+                     controller: _usernameController,
+                     autofillHints: const [AutofillHints.username],
++                    // W-4：显式声明 IME 语义，避免 web 端原生 form submit
++                    // 以默认「done」通道触发隐式提交。
++                    textInputAction: TextInputAction.next,
++                    onFieldSubmitted: (_) =>
++                        FocusScope.of(context).nextFocus(),
+                     decoration: InputDecoration(
+                       labelText: l10n.username,
+                       border: const OutlineInputBorder(),
+@@ -158,6 +187,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
+                     obscureText: !_isPasswordVisible,
+                     obscuringCharacter: '●',
+                     style: const TextStyle(letterSpacing: 0),
++                    // W-4：done + 显式 onFieldSubmitted，Enter 只走这一条
++                    // Flutter 通道（再由防重入窗口吸收同帧重复触发）。
++                    textInputAction: TextInputAction.done,
++                    onFieldSubmitted: (_) => _submit(),
+                     decoration: InputDecoration(
+                       labelText: l10n.password,
+                       border: const OutlineInputBorder(),
+@@ -206,11 +239,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
+                     label: l10n.continueAsGuest,
+                     onPressed: authState.isLoading
+                         ? null
+-                        : () async {
+-                            await ref
+-                                .read(authProvider.notifier)
+-                                .loginAsGuest();
+-                          },
++                        : _submitAsGuest,
+                     loading: authState.isLoading,
+                     disabled: authState.isLoading,
+                     variant: ButtonVariant.ghost,
+diff --git a/mobile/test/app/main_actions_smoke_test.dart b/mobile/test/app/main_actions_smoke_test.dart
+index 5787b0d1..a8ae11d0 100644
+--- a/mobile/test/app/main_actions_smoke_test.dart
++++ b/mobile/test/app/main_actions_smoke_test.dart
+@@ -36,6 +36,7 @@ import 'package:sparkle/features/user/presentation/screens/profile_screen.dart';
+ import 'package:sparkle/l10n/app_localizations.dart';
+ import 'package:sparkle/shared/entities/user_model.dart';
+ import '../shared/i18n_test_helper.dart';
++import 'package:sparkle/core/storage/token_storage_io.dart';
+ 
+ void main() {
+ 
+@@ -495,7 +496,7 @@ UserModel _buildUser() => UserModel(
+     );
+ 
+ class _UnusedAuthRepository extends AuthRepository {
+-  _UnusedAuthRepository() : super(_UnusedApiClient(), _MemorySecureStorage());
++  _UnusedAuthRepository() : super(_UnusedApiClient(), SecureTokenStorage(storage: _MemorySecureStorage()));
+ 
+   @override
+   Future<bool> isLoggedIn() async => true;
+diff --git a/mobile/test/app/main_pages_load_smoke_test.dart b/mobile/test/app/main_pages_load_smoke_test.dart
+index 6bddf2c1..27577abb 100644
+--- a/mobile/test/app/main_pages_load_smoke_test.dart
++++ b/mobile/test/app/main_pages_load_smoke_test.dart
+@@ -26,6 +26,7 @@ import 'package:sparkle/l10n/app_localizations.dart';
+ import 'package:sparkle/shared/entities/user_brief.dart';
+ import 'package:sparkle/shared/entities/user_model.dart';
+ import '../shared/i18n_test_helper.dart';
++import 'package:sparkle/core/storage/token_storage_io.dart';
+ 
+ void main() {
+ 
+@@ -249,7 +250,7 @@ UserModel _buildUser() => UserModel(
+     );
+ 
+ class _UnusedAuthRepository extends AuthRepository {
+-  _UnusedAuthRepository() : super(_UnusedApiClient(), _MemorySecureStorage());
++  _UnusedAuthRepository() : super(_UnusedApiClient(), SecureTokenStorage(storage: _MemorySecureStorage()));
+ 
+   @override
+   Future<bool> isLoggedIn() async => true;
+diff --git a/mobile/test/app/router_deep_link_test.dart b/mobile/test/app/router_deep_link_test.dart
+index 4ab4f6a7..0e883b3e 100644
+--- a/mobile/test/app/router_deep_link_test.dart
++++ b/mobile/test/app/router_deep_link_test.dart
+@@ -40,6 +40,7 @@ import 'package:sparkle/l10n/app_localizations.dart';
+ import 'package:sparkle/shared/entities/user_brief.dart';
+ import 'package:sparkle/shared/entities/user_model.dart';
+ import '../shared/i18n_test_helper.dart';
++import 'package:sparkle/core/storage/token_storage_io.dart';
+ 
+ void main() {
+   setUp(setUpI18nForTesting);
+@@ -385,7 +386,7 @@ class _PendingOnboardingCompletedNotifier extends OnboardingCompletedNotifier {
+ }
+ 
+ class _UnusedAuthRepository extends AuthRepository {
+-  _UnusedAuthRepository() : super(_UnusedApiClient(), _MemorySecureStorage());
++  _UnusedAuthRepository() : super(_UnusedApiClient(), SecureTokenStorage(storage: _MemorySecureStorage()));
+ 
+   @override
+   Future<bool> isLoggedIn() async => false;
+diff --git a/mobile/test/app/router_smoke_test.dart b/mobile/test/app/router_smoke_test.dart
+index 51f45cc9..88a8a498 100644
+--- a/mobile/test/app/router_smoke_test.dart
++++ b/mobile/test/app/router_smoke_test.dart
+@@ -76,6 +76,7 @@ import 'package:sparkle/l10n/app_localizations.dart';
+ import 'package:sparkle/shared/entities/user_brief.dart';
+ import 'package:sparkle/shared/entities/user_model.dart';
+ import '../shared/i18n_test_helper.dart';
++import 'package:sparkle/core/storage/token_storage_io.dart';
+ 
+ void main() {
+   setUp(setUpI18nForTesting);
+@@ -556,7 +557,7 @@ class _FakeOnboardingCompletedNotifier extends OnboardingCompletedNotifier {
+ }
+ 
+ class _UnusedAuthRepository extends AuthRepository {
+-  _UnusedAuthRepository() : super(_UnusedApiClient(), _MemorySecureStorage());
++  _UnusedAuthRepository() : super(_UnusedApiClient(), SecureTokenStorage(storage: _MemorySecureStorage()));
+ 
+   @override
+   Future<bool> isLoggedIn() async => false;
+diff --git a/mobile/test/core/storage/token_storage_test.dart b/mobile/test/core/storage/token_storage_test.dart
+new file mode 100644
+index 00000000..deb1cff9
+--- /dev/null
++++ b/mobile/test/core/storage/token_storage_test.dart
+@@ -0,0 +1,60 @@
++import 'package:flutter_test/flutter_test.dart';
++import 'package:shared_preferences/shared_preferences.dart';
++import 'package:sparkle/core/storage/token_storage.dart';
++import 'package:sparkle/core/storage/token_storage_web.dart';
++
++/// W-1/W-2 红绿测试：token 存储门面。
++///
++/// 红（修复前）：TokenStorage/TokenStorageWeb 不存在、AuthRepository 仅接受
++/// FlutterSecureStorage —— 本文件无法编译通过；且浏览器实测（web-round1，
++/// IndexedDB `user.box` 空盒）证明 secure storage web 并发写全丢。
++/// 绿（修复后）：web 后端经 SharedPreferences(localSorage) 落盘，以下全部通过。
++void main() {
++  TestWidgetsFlutterBinding.ensureInitialized();
++
++  group('TokenStorageWeb（web 后端：SharedPreferences/localStorage）', () {
++    test('write 后 read 取回；delete 后为 null', () async {
++      SharedPreferences.setMockInitialValues({});
++      final storage = TokenStorageWeb();
++
++      await storage.write('accessToken', 'token-abc');
++      expect(await storage.read('accessToken'), 'token-abc');
++
++      await storage.delete('accessToken');
++      expect(await storage.read('accessToken'), isNull);
++    });
++
++    test('saveTokens 的并发写模式（曾致 secure storage web 全丢）不再丢数据',
++        () async {
++      SharedPreferences.setMockInitialValues({});
++      final storage = TokenStorageWeb();
++
++      // 复刻 saveTokens 的 4 连写形态（access/refresh/legacy-access/legacy-refresh）。
++      // round-1 走查实证 flutter_secure_storage web 在此模式下静默全丢。
++      await Future.wait<void>([
++        storage.write('accessToken', 'access-1'),
++        storage.write('refreshToken', 'refresh-1'),
++        storage.write('accessTokenLegacy', 'access-1'),
++        storage.write('refreshTokenLegacy', 'refresh-1'),
++      ]);
++
++      expect(await storage.read('accessToken'), 'access-1');
++      expect(await storage.read('refreshToken'), 'refresh-1');
++      expect(await storage.read('accessTokenLegacy'), 'access-1');
++      expect(await storage.read('refreshTokenLegacy'), 'refresh-1');
++    });
++
++    test('read 未命中返回 null（契约语义）', () async {
++      SharedPreferences.setMockInitialValues({});
++      final storage = TokenStorageWeb();
++
++      expect(await storage.read('never-written'), isNull);
++    });
++  });
++
++  test('VM（flutter test）下工厂解析到 io/secure 后端而非 web 后端', () {
++    final storage = createTokenStorage();
++    expect(storage, isA<TokenStorage>());
++    expect(storage, isNot(isA<TokenStorageWeb>()));
++  });
++}
+diff --git a/mobile/test/features/achievement/presentation/providers/achievement_provider_test.dart b/mobile/test/features/achievement/presentation/providers/achievement_provider_test.dart
+index 50271542..1420e287 100644
+--- a/mobile/test/features/achievement/presentation/providers/achievement_provider_test.dart
++++ b/mobile/test/features/achievement/presentation/providers/achievement_provider_test.dart
+@@ -9,6 +9,7 @@ import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart'
+ import 'package:sparkle/shared/entities/achievement_model.dart';
+ import 'package:sparkle/shared/entities/user_brief.dart';
+ import 'package:sparkle/shared/entities/user_model.dart';
++import 'package:sparkle/core/storage/token_storage_io.dart';
+ 
+ void main() {
+   late _FakeAchievementRepository achievementRepository;
+@@ -247,7 +248,7 @@ UserModel _buildUser() => UserModel(
+ 
+ class _UnusedAuthRepository extends AuthRepository {
+   _UnusedAuthRepository()
+-      : super(_UnusedApiClient(), const FlutterSecureStorage());
++      : super(_UnusedApiClient(), SecureTokenStorage(storage: const FlutterSecureStorage()));
+ 
+   @override
+   Future<bool> isLoggedIn() async => true;
+diff --git a/mobile/test/features/auth/data/repositories/auth_repository_test.dart b/mobile/test/features/auth/data/repositories/auth_repository_test.dart
+index 75b221bf..e0ca0d96 100644
+--- a/mobile/test/features/auth/data/repositories/auth_repository_test.dart
++++ b/mobile/test/features/auth/data/repositories/auth_repository_test.dart
+@@ -1,9 +1,12 @@
+ import 'package:dio/dio.dart';
+-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+ import 'package:flutter_test/flutter_test.dart';
++import 'package:shared_preferences/shared_preferences.dart';
+ import 'package:sparkle/core/network/api_client.dart';
+ import 'package:sparkle/core/network/api_endpoints.dart';
+ import 'package:sparkle/core/services/demo_data_service.dart';
++import 'package:sparkle/core/storage/token_storage.dart';
++import 'package:sparkle/core/storage/token_storage_web.dart';
++import 'package:sparkle/features/auth/data/models/token_model.dart';
+ import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
+ 
+ class TestApiClient implements ApiClient {
+@@ -88,68 +91,32 @@ class TestApiClient implements ApiClient {
+   }
+ }
+ 
+-class InMemorySecureStorage implements FlutterSecureStorage {
++class InMemoryTokenStorage implements TokenStorage {
+   final Map<String, String> _values = <String, String>{};
+ 
+   @override
+-  Future<void> write({
+-    required String key,
+-    required String? value,
+-    IOSOptions? iOptions,
+-    AndroidOptions? aOptions,
+-    LinuxOptions? lOptions,
+-    WebOptions? webOptions,
+-    AppleOptions? mOptions,
+-    WindowsOptions? wOptions,
+-    MacOsOptions? macOsOptions,
+-  }) async {
+-    if (value == null) {
+-      _values.remove(key);
+-    } else {
+-      _values[key] = value;
+-    }
+-  }
++  Future<String?> read(String key) async => _values[key];
+ 
+   @override
+-  Future<String?> read({
+-    required String key,
+-    IOSOptions? iOptions,
+-    AndroidOptions? aOptions,
+-    LinuxOptions? lOptions,
+-    WebOptions? webOptions,
+-    AppleOptions? mOptions,
+-    WindowsOptions? wOptions,
+-    MacOsOptions? macOsOptions,
+-  }) async =>
+-      _values[key];
++  Future<void> write(String key, String value) async {
++    _values[key] = value;
++  }
+ 
+   @override
+-  Future<void> delete({
+-    required String key,
+-    IOSOptions? iOptions,
+-    AndroidOptions? aOptions,
+-    LinuxOptions? lOptions,
+-    WebOptions? webOptions,
+-    AppleOptions? mOptions,
+-    WindowsOptions? wOptions,
+-    MacOsOptions? macOsOptions,
+-  }) async {
++  Future<void> delete(String key) async {
+     _values.remove(key);
+   }
+-
+-  @override
+-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+ }
+ 
+ void main() {
+   late TestApiClient apiClient;
+-  late InMemorySecureStorage storage;
++  late InMemoryTokenStorage storage;
+   late AuthRepository repository;
+ 
+   setUp(() {
+     DemoDataService.isDemoMode = false;
+     apiClient = TestApiClient();
+-    storage = InMemorySecureStorage();
++    storage = InMemoryTokenStorage();
+     repository = AuthRepository(apiClient, storage);
+   });
+ 
+@@ -191,8 +158,8 @@ void main() {
+     final response = await repository.login('user@example.com', 'password');
+ 
+     expect(response.username, 'tester');
+-    expect(await storage.read(key: 'accessToken'), 'access-token');
+-    expect(await storage.read(key: 'refreshToken'), 'refresh-token');
++    expect(await storage.read('accessToken'), 'access-token');
++    expect(await storage.read('refreshToken'), 'refresh-token');
+   });
+ 
+   test('refreshToken throws when no refresh token is stored', () async {
+@@ -203,12 +170,36 @@ void main() {
+   });
+ 
+   test('getAccessToken reuses in-memory cache after first read', () async {
+-    await storage.write(key: 'accessToken', value: 'cached-token');
++    await storage.write('accessToken', 'cached-token');
+ 
+     expect(await repository.getAccessToken(), 'cached-token');
+ 
+-    await storage.delete(key: 'accessToken');
++    await storage.delete('accessToken');
+ 
+     expect(await repository.getAccessToken(), 'cached-token');
+   });
++
++  /// W-1/W-2 验收测试：web 平台（注入 TokenStorageWeb，落 localStorage）
++  /// 下 saveTokens 后 read 能取回 —— 修复前 secure storage web 并发写全丢，
++  /// getAccessToken 恒为空（web-round1：UI 不跳转、刷新丢会话的根因）。
++  test('W-1/W-2: web storage keeps tokens across saveTokens → read', () async {
++    SharedPreferences.setMockInitialValues({});
++    final webRepository = AuthRepository(apiClient, TokenStorageWeb());
++
++    await webRepository.saveTokens(
++      TokenResponse(
++        accessToken: 'web-access-token',
++        refreshToken: 'web-refresh-token',
++        expiresIn: 3600,
++      ),
++    );
++
++    expect(await webRepository.getAccessToken(), 'web-access-token');
++    expect(await webRepository.getRefreshToken(), 'web-refresh-token');
++    expect(await webRepository.isLoggedIn(), isTrue);
++
++    await webRepository.clearTokens();
++    expect(await webRepository.getAccessToken(), isNull);
++    expect(await webRepository.isLoggedIn(), isFalse);
++  });
+ }
+diff --git a/mobile/test/features/auth/presentation/providers/auth_session_generation_test.dart b/mobile/test/features/auth/presentation/providers/auth_session_generation_test.dart
+new file mode 100644
+index 00000000..d7e4e063
+--- /dev/null
++++ b/mobile/test/features/auth/presentation/providers/auth_session_generation_test.dart
+@@ -0,0 +1,208 @@
++import 'dart:async';
++
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import 'package:flutter_test/flutter_test.dart';
++import 'package:shared_preferences/shared_preferences.dart';
++import 'package:sparkle/core/network/api_client.dart';
++import 'package:sparkle/core/services/session_refresh_service.dart';
++import 'package:sparkle/core/storage/token_storage.dart';
++import 'package:sparkle/features/auth/data/models/token_model.dart';
++import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
++import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
++import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
++import 'package:sparkle/shared/entities/user_model.dart';
++
++/// W-1 竞态收口红绿测试：AuthNotifier 会话世代守卫。
++///
++/// round-1 web 走查实测：登录 200 后 UI 不跳转的疑因 2 —— 并发
++/// `checkAuthStatus()` 的终态写入（未认证）落在 `login()` 成功写入之后，
++/// 把会话状态打回未认证。
++///
++/// 红（修复前）：过世代流程的 catch/finally/终态写入直接覆盖新流程状态，
++/// 两个测试均失败（isAuthenticated 被打回 false）。
++/// 绿（修复后）：过世代写入被丢弃。
++void main() {
++  TestWidgetsFlutterBinding.ensureInitialized();
++
++  Future<void> settle() async {
++    for (var i = 0; i < 5; i++) {
++      await Future<void>.delayed(Duration.zero);
++    }
++    await Future<void>.delayed(const Duration(milliseconds: 10));
++  }
++
++  final user = UserModel(
++    id: 'gen-user-1',
++    username: 'gen_user',
++    email: 'gen@example.com',
++    nickname: 'Gen User',
++    flameLevel: 1,
++    flameBrightness: 0.5,
++    depthPreference: 0.5,
++    curiosityPreference: 0.5,
++    isActive: true,
++    createdAt: DateTime(2026),
++    updatedAt: DateTime(2026),
++  );
++
++  Future<ProviderContainer> buildContainer(_GatedAuthRepository repo) async {
++    SharedPreferences.setMockInitialValues({});
++    final prefs = await SharedPreferences.getInstance();
++    return ProviderContainer(
++      overrides: [
++        authRepositoryProvider.overrideWithValue(repo),
++        sharedPreferencesProvider.overrideWithValue(prefs),
++        sessionBoundProvidersProvider.overrideWithValue(const []),
++      ],
++    );
++  }
++
++  test('过世代 checkAuthStatus 的未认证写入不得覆盖 login 成功态', () async {
++    final repo = _GatedAuthRepository(user);
++    // 构造器触发的 checkAuthStatus（gen1）挂起在 isLoggedIn，稍后以
++    // 「未登录」放行——模拟引导期检查晚于登录完成的竞态。
++    final staleGate = Completer<bool>();
++    repo.queueIsLoggedInGate(staleGate);
++
++    final container = await buildContainer(repo);
++    addTearDown(container.dispose);
++
++    container.read(authProvider.notifier); // gen1 starts, parks at gate
++    await settle();
++
++    await container.read(authProvider.notifier).login('u', 'p'); // gen2 wins
++    expect(container.read(authProvider).isAuthenticated, isTrue);
++
++    staleGate.complete(false); // 过世代 gen1 恢复：isLoggedIn == false
++    await settle();
++
++    // 红：false（被过世代写入覆盖）；绿：true（过世代写入被丢弃）。
++    expect(container.read(authProvider).isAuthenticated, isTrue);
++  });
++
++  test('过世代 login 的失败态不得覆盖新 checkAuthStatus 的成功态', () async {
++    final repo = _GatedAuthRepository(user);
++    final staleGate = Completer<bool>()..complete(false);
++    final freshGate = Completer<bool>()..complete(true);
++    repo
++      ..queueIsLoggedInGate(staleGate) // gen1（构造器）：未登录
++      ..queueIsLoggedInGate(freshGate) // gen3（显式检查）：已登录
++      ..loginGate = Completer<void>() // gen2 的 login 挂起
++      ..loginShouldFail = true;
++
++    final container = await buildContainer(repo);
++    addTearDown(container.dispose);
++
++    final notifier = container.read(authProvider.notifier); // gen1 done
++    await settle();
++
++    final loginFuture = notifier.login('u', 'p'); // gen2 parks in loginGate
++    await settle();
++    expect(container.read(authProvider).isLoading, isTrue);
++
++    // 新的会话检查（gen3）在 login 在途时完成，给出成功态。
++    await notifier.checkAuthStatus();
++    expect(container.read(authProvider).isAuthenticated, isTrue);
++
++    repo.loginGate!.complete(); // 放行过世代 login → 失败
++    await loginFuture;
++    await settle();
++
++    // 红：false（过世代 catch/finally 覆盖）；绿：true（丢弃）。
++    expect(container.read(authProvider).isAuthenticated, isTrue);
++    expect(container.read(authProvider).error, isNull);
++  });
++
++  test('logout 作废在途 login 的写入', () async {
++    final repo = _GatedAuthRepository(user);
++    final staleGate = Completer<bool>()..complete(false);
++    repo.queueIsLoggedInGate(staleGate);
++    repo.loginGate = Completer<void>();
++
++    final container = await buildContainer(repo);
++    addTearDown(container.dispose);
++
++    final notifier = container.read(authProvider.notifier);
++    await settle();
++
++    final loginFuture = notifier.login('u', 'p'); // gen2 parks
++    await settle();
++
++    await notifier.logout(); // gen3：logout 开新世代并重置状态
++    repo.loginGate!.complete();
++    await loginFuture;
++    await settle();
++
++    expect(container.read(authProvider).isAuthenticated, isFalse);
++  });
++}
++
++class _GatedAuthRepository extends AuthRepository {
++  _GatedAuthRepository(this._user)
++      : super(_UnusedApiClient(), _MemoryTokenStorage());
++
++  final UserModel _user;
++  final List<Completer<bool>> _isLoggedInGates = <Completer<bool>>[];
++  Completer<void>? loginGate;
++  bool loginShouldFail = false;
++
++  void queueIsLoggedInGate(Completer<bool> gate) =>
++      _isLoggedInGates.add(gate);
++
++  @override
++  Future<bool> isLoggedIn() async {
++    if (_isLoggedInGates.isNotEmpty) {
++      return _isLoggedInGates.removeAt(0).future;
++    }
++    return await getAccessToken() != null;
++  }
++
++  @override
++  Future<UserModel> getCurrentUser() async => _user;
++
++  @override
++  Future<UserModel> login(String usernameOrEmail, String password) async {
++    final gate = loginGate;
++    if (gate != null) {
++      await gate.future;
++    }
++    if (loginShouldFail) {
++      throw Exception('login failed (test)');
++    }
++    await saveTokens(
++      TokenResponse(
++        accessToken: 'gen-access-token',
++        refreshToken: 'gen-refresh-token',
++        expiresIn: 3600,
++      ),
++    );
++    return _user;
++  }
++
++  @override
++  Future<void> logout({bool keepDemoMode = false}) async {
++    await clearTokens();
++  }
++}
++
++class _MemoryTokenStorage implements TokenStorage {
++  final Map<String, String> _values = <String, String>{};
++
++  @override
++  Future<String?> read(String key) async => _values[key];
++
++  @override
++  Future<void> write(String key, String value) async {
++    _values[key] = value;
++  }
++
++  @override
++  Future<void> delete(String key) async {
++    _values.remove(key);
++  }
++}
++
++class _UnusedApiClient implements ApiClient {
++  @override
++  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
++}
+diff --git a/mobile/test/features/auth/presentation/providers/auth_session_restore_test.dart b/mobile/test/features/auth/presentation/providers/auth_session_restore_test.dart
+index 64320cbd..e112fb76 100644
+--- a/mobile/test/features/auth/presentation/providers/auth_session_restore_test.dart
++++ b/mobile/test/features/auth/presentation/providers/auth_session_restore_test.dart
+@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
+ import 'package:shared_preferences/shared_preferences.dart';
+ import 'package:sparkle/core/network/api_client.dart';
+ import 'package:sparkle/core/services/session_refresh_service.dart';
++import 'package:sparkle/core/storage/token_storage_io.dart';
+ import 'package:sparkle/features/auth/data/models/token_model.dart';
+ import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
+ import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
+@@ -181,7 +182,7 @@ Future<void> _waitFor(bool Function() predicate) async {
+ 
+ class _FakeAuthRepository extends AuthRepository {
+   _FakeAuthRepository(FlutterSecureStorage storage, this._user)
+-      : super(_UnusedApiClient(), storage);
++      : super(_UnusedApiClient(), SecureTokenStorage(storage: storage));
+ 
+   final UserModel _user;
+ 
+diff --git a/mobile/test/features/auth/presentation/screens/login_screen_submit_test.dart b/mobile/test/features/auth/presentation/screens/login_screen_submit_test.dart
+new file mode 100644
+index 00000000..023a5863
+--- /dev/null
++++ b/mobile/test/features/auth/presentation/screens/login_screen_submit_test.dart
+@@ -0,0 +1,167 @@
++import 'package:flutter/material.dart';
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import 'package:flutter_test/flutter_test.dart';
++import 'package:shared_preferences/shared_preferences.dart';
++import 'package:sparkle/core/design/components/atoms/sparkle_button_v2.dart';
++import 'package:sparkle/core/design/design_system.dart';
++import 'package:sparkle/core/network/api_client.dart';
++import 'package:sparkle/core/services/session_refresh_service.dart';
++import 'package:sparkle/core/storage/token_storage.dart';
++import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
++import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
++import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
++import 'package:sparkle/features/auth/presentation/screens/login_screen.dart';
++import 'package:sparkle/shared/entities/user_model.dart';
++import '../../../../shared/i18n_test_helper.dart';
++
++/// W-4 红绿测试：登录页提交防重入。
++///
++/// round-1 web 走查：一次 Enter 同时产生 login 与 guest 两个 POST
++/// （flt-text-editing-host 内原生 form submit 与 Flutter 提交双通道，
++/// 间隔远小于一帧）。本测试以「同帧内两次触发」模拟该双通道竞态：
++///
++/// 红（修复前）：登录按钮同帧双击 → login 被调用两次；login+guest 连击
++/// → 两个认证 POST 都发出。
++/// 绿（修复后）：800ms 防重入窗口内只放行第一次提交。
++void main() {
++  TestWidgetsFlutterBinding.ensureInitialized();
++
++  /// 拉高测试视口，登录/访客按钮同屏可见——保证同帧双通道连击都能真实命中。
++  void _enlargeViewport(WidgetTester tester) {
++    tester.view
++      ..physicalSize = const Size(800, 2200)
++      ..devicePixelRatio = 1.0;
++    addTearDown(tester.view.resetPhysicalSize);
++    addTearDown(tester.view.resetDevicePixelRatio);
++  }
++
++  setUp(() {
++    setUpI18nForTesting();
++  });
++
++  tearDown(() {
++    tearDownI18n();
++  });
++
++  Future<ProviderContainer> pumpLoginScreen(WidgetTester tester,
++      _CountingAuthRepository repo) async {
++    SharedPreferences.setMockInitialValues({});
++    final prefs = await SharedPreferences.getInstance();
++    final container = ProviderContainer(
++      overrides: [
++        authRepositoryProvider.overrideWithValue(repo),
++        sharedPreferencesProvider.overrideWithValue(prefs),
++        sessionBoundProvidersProvider.overrideWithValue(const []),
++      ],
++    );
++    addTearDown(container.dispose);
++    await tester.pumpWidget(
++      UncontrolledProviderScope(
++        container: container,
++        child: testMaterialApp(
++          theme: AppThemes.lightTheme,
++          home: const LoginScreen(),
++        ),
++      ),
++    );
++    await tester.pumpAndSettle();
++    // 预填合法凭据，保证表单校验放行、提交真正打到 repository。
++    await tester.enterText(find.byType(TextFormField).at(0), 'login_user');
++    await tester.enterText(find.byType(TextFormField).at(1), 'password123');
++    await tester.pump();
++    return container;
++  }
++
++  testWidgets('同一帧内双击登录按钮只提交一次（双通道防重入）', (tester) async {
++    _enlargeViewport(tester);
++    final repo = _CountingAuthRepository();
++    await pumpLoginScreen(tester, repo);
++
++    final loginButton = find.widgetWithText(SparkleButton, '登录');
++    expect(loginButton, findsOneWidget);
++
++    // 模拟双通道触发：原生 form submit + Flutter 侧提交落在同一帧内。
++    await tester.tap(loginButton, warnIfMissed: false);
++    await tester.tap(loginButton, warnIfMissed: false);
++    await tester.pump();
++
++    await tester.pumpAndSettle();
++
++    // 红：2（双 POST）；绿：1。
++    expect(repo.loginCalls, 1);
++  });
++
++  testWidgets('提交后 800ms 内的访客连击被吸收（login+guest 双 POST 复现）',
++      (tester) async {
++    _enlargeViewport(tester);
++    final repo = _CountingAuthRepository();
++    await pumpLoginScreen(tester, repo);
++
++    final loginButton = find.widgetWithText(SparkleButton, '登录');
++    final guestButton = find.widgetWithText(SparkleButton, '以访客身份继续');
++    expect(guestButton, findsOneWidget);
++
++    // round-1 实测形态：一次手势序列同时触发 login 与 guest。
++    await tester.tap(loginButton, warnIfMissed: false);
++    await tester.tap(guestButton, warnIfMissed: false);
++    await tester.pump();
++
++    await tester.pumpAndSettle();
++
++    expect(repo.loginCalls, 1);
++    // 红：1（guest POST 也发出）；绿：0（防重入窗口内被吸收）。
++    expect(repo.guestCalls, 0);
++  });
++}
++
++class _CountingAuthRepository extends AuthRepository {
++  _CountingAuthRepository() : super(_UnusedApiClient(), _MemoryTokenStorage());
++
++  int loginCalls = 0;
++  int guestCalls = 0;
++
++  @override
++  Future<bool> isLoggedIn() async => false;
++
++  /// 计数后即抛错：走 notifier 的失败路径（不触发 SessionRefreshService →
++  /// WebSocket warmUp 连锁，避免 fake-async 挂起 timer），而提交计数发生在
++  /// repository 入口，防重入语义不受影响。
++  @override
++  Future<UserModel> login(String usernameOrEmail, String password) async {
++    loginCalls += 1;
++    await Future<void>.delayed(const Duration(milliseconds: 5));
++    throw Exception('login counted (test stub)');
++  }
++
++  @override
++  Future<UserModel> guestLogin(String guestId) async {
++    guestCalls += 1;
++    await Future<void>.delayed(const Duration(milliseconds: 5));
++    throw Exception('guest counted (test stub)');
++  }
++
++  @override
++  Future<void> logout({bool keepDemoMode = false}) async {}
++}
++
++class _MemoryTokenStorage implements TokenStorage {
++  final Map<String, String> _values = <String, String>{};
++
++  @override
++  Future<String?> read(String key) async => _values[key];
++
++  @override
++  Future<void> write(String key, String value) async {
++    _values[key] = value;
++  }
++
++  @override
++  Future<void> delete(String key) async {
++    _values.remove(key);
++  }
++}
++
++class _UnusedApiClient implements ApiClient {
++  @override
++  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
++}
+diff --git a/mobile/test/features/home/dashboard_test_harness.dart b/mobile/test/features/home/dashboard_test_harness.dart
+index 5c0b6b7f..d2f3d2a3 100644
+--- a/mobile/test/features/home/dashboard_test_harness.dart
++++ b/mobile/test/features/home/dashboard_test_harness.dart
+@@ -40,6 +40,8 @@ import 'package:sparkle/shared/entities/achievement_model.dart';
+ import 'package:sparkle/shared/entities/task_model.dart';
+ import 'package:sparkle/shared/entities/user_brief.dart';
+ import 'package:sparkle/shared/entities/user_model.dart';
++import 'package:sparkle/core/storage/token_storage_io.dart';
++import 'package:sparkle/core/storage/token_storage.dart';
+ 
+ Directory? _dashboardHiveDir;
+ late SharedPreferences _dashboardPrefs;
+@@ -130,6 +132,11 @@ Widget _buildDashboardProviderHarness({
+ 
+   return ProviderScope(
+     overrides: [
++      // W-1/W-2：AuthRepository 的 token 存储已切到 tokenStorageProvider，
++      // 测试内所有经 authRepositoryProvider 的读路径都落在这里。
++      tokenStorageProvider.overrideWithValue(
++        SecureTokenStorage(storage: _MemorySecureStorage()),
++      ),
+       flutterSecureStorageProvider.overrideWithValue(_MemorySecureStorage()),
+       sharedPreferencesProvider.overrideWithValue(_dashboardPrefs),
+       authProvider.overrideWith((ref) => _StaticAuthNotifier()),
+@@ -357,7 +364,7 @@ class _UnusedPlanRepository extends PlanRepository {
+ }
+ 
+ class _UnusedAuthRepository extends AuthRepository {
+-  _UnusedAuthRepository() : super(_NoopApiClient(), _MemorySecureStorage());
++  _UnusedAuthRepository() : super(_NoopApiClient(), SecureTokenStorage(storage: _MemorySecureStorage()));
+ 
+   @override
+   Future<bool> isLoggedIn() async => true;
+diff --git a/mobile/test/features/shop/presentation/providers/equipment_display_provider_test.dart b/mobile/test/features/shop/presentation/providers/equipment_display_provider_test.dart
+index 8353a3a9..7120f3ce 100644
+--- a/mobile/test/features/shop/presentation/providers/equipment_display_provider_test.dart
++++ b/mobile/test/features/shop/presentation/providers/equipment_display_provider_test.dart
+@@ -15,6 +15,7 @@ import 'package:sparkle/shared/entities/achievement_model.dart';
+ import 'package:sparkle/shared/entities/shop_model.dart';
+ import 'package:sparkle/shared/entities/user_brief.dart';
+ import 'package:sparkle/shared/entities/user_model.dart';
++import 'package:sparkle/core/storage/token_storage_io.dart';
+ 
+ void main() {
+   TestWidgetsFlutterBinding.ensureInitialized();
+@@ -143,7 +144,7 @@ UserModel _achievementTitleUser() => UserModel(
+ 
+ class _UnusedAuthRepository extends AuthRepository {
+   _UnusedAuthRepository()
+-      : super(_UnusedApiClient(), const FlutterSecureStorage());
++      : super(_UnusedApiClient(), SecureTokenStorage());
+ 
+   @override
+   Future<bool> isLoggedIn() async => true;
+diff --git a/mobile/test/features/shop/presentation/providers/shop_provider_test.dart b/mobile/test/features/shop/presentation/providers/shop_provider_test.dart
+index d6be7d62..ec114321 100644
+--- a/mobile/test/features/shop/presentation/providers/shop_provider_test.dart
++++ b/mobile/test/features/shop/presentation/providers/shop_provider_test.dart
+@@ -10,6 +10,7 @@ import 'package:sparkle/features/shop/presentation/providers/shop_provider.dart'
+ import 'package:sparkle/shared/entities/shop_model.dart';
+ import 'package:sparkle/shared/entities/user_brief.dart';
+ import 'package:sparkle/shared/entities/user_model.dart';
++import 'package:sparkle/core/storage/token_storage_io.dart';
+ 
+ class TestShopRepository implements ShopRepository {
+   int getShopItemsCalls = 0;
+@@ -966,7 +967,7 @@ class _UnusedRef implements Ref<Object?> {
+ 
+ class _UnusedAuthRepository extends AuthRepository {
+   _UnusedAuthRepository()
+-      : super(_UnusedApiClient(), const FlutterSecureStorage());
++      : super(_UnusedApiClient(), SecureTokenStorage(storage: const FlutterSecureStorage()));
+ 
+   @override
+   Future<bool> isLoggedIn() async => true;
+diff --git a/mobile/test/features/user/presentation/providers/onboarding_pending_state_test.dart b/mobile/test/features/user/presentation/providers/onboarding_pending_state_test.dart
+index fdafaa01..5735f3b2 100644
+--- a/mobile/test/features/user/presentation/providers/onboarding_pending_state_test.dart
++++ b/mobile/test/features/user/presentation/providers/onboarding_pending_state_test.dart
+@@ -24,6 +24,7 @@ import 'package:sparkle/features/user/data/repositories/user_repository.dart';
+ import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
+ import 'package:sparkle/shared/entities/user_brief.dart';
+ import 'package:sparkle/shared/entities/user_model.dart';
++import 'package:sparkle/core/storage/token_storage_io.dart';
+ 
+ class _StaticAuthNotifier extends AuthNotifier {
+   _StaticAuthNotifier(AuthState authState)
+@@ -45,7 +46,7 @@ class _DelayedProfileUserRepository extends UserRepository {
+ }
+ 
+ class _UnusedAuthRepository extends AuthRepository {
+-  _UnusedAuthRepository() : super(_UnusedApiClient(), _MemorySecureStorage());
++  _UnusedAuthRepository() : super(_UnusedApiClient(), SecureTokenStorage(storage: _MemorySecureStorage()));
+ 
+   @override
+   Future<bool> isLoggedIn() async => false;
+diff --git a/mobile/test/unit/chat_notifier_stream_test.dart b/mobile/test/unit/chat_notifier_stream_test.dart
+index 3b4cf1bd..cd0a8cf0 100644
+--- a/mobile/test/unit/chat_notifier_stream_test.dart
++++ b/mobile/test/unit/chat_notifier_stream_test.dart
+@@ -22,6 +22,7 @@ import 'package:sparkle/features/chat/presentation/providers/guidance_mode_provi
+ import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
+ import 'package:sparkle/features/seed_library/presentation/providers/seed_library_provider.dart';
+ import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
++import 'package:sparkle/core/storage/token_storage_io.dart';
+ 
+ class _NoopApiClient extends ApiClient {
+   _NoopApiClient() : super(_UnusedRef());
+@@ -45,7 +46,7 @@ class _UnusedRef implements Ref {
+ 
+ class _FakeAuthRepository extends AuthRepository {
+   _FakeAuthRepository({this.token})
+-      : super(_NoopApiClient(), const FlutterSecureStorage());
++      : super(_NoopApiClient(), SecureTokenStorage(storage: const FlutterSecureStorage()));
+ 
+   final String? token;
+ 
+diff --git a/mobile/test/widget/accountability_invite_closure_test.dart b/mobile/test/widget/accountability_invite_closure_test.dart
+index 4403a848..97de9580 100644
+--- a/mobile/test/widget/accountability_invite_closure_test.dart
++++ b/mobile/test/widget/accountability_invite_closure_test.dart
+@@ -21,6 +21,7 @@ import 'package:sparkle/shared/entities/user_brief.dart';
+ import 'package:sparkle/shared/entities/user_model.dart';
+ import 'package:sparkle/l10n/app_localizations.dart';
+ import '../shared/i18n_test_helper.dart';
++import 'package:sparkle/core/storage/token_storage_io.dart';
+ 
+ void main() {
+ 
+@@ -278,7 +279,7 @@ class _FakeAuthNotifier extends AuthNotifier {
+ 
+ class _UnusedAuthRepository extends AuthRepository {
+   _UnusedAuthRepository()
+-      : super(_UnusedApiClient(), const FlutterSecureStorage());
++      : super(_UnusedApiClient(), SecureTokenStorage(storage: const FlutterSecureStorage()));
+ }
+ 
+ class _UnusedRef implements Ref<Object?> {
+diff --git a/mobile/test/widget/commitment_detail_screen_policy_test.dart b/mobile/test/widget/commitment_detail_screen_policy_test.dart
+index 6e6b9093..9ad0df35 100644
+--- a/mobile/test/widget/commitment_detail_screen_policy_test.dart
++++ b/mobile/test/widget/commitment_detail_screen_policy_test.dart
+@@ -17,6 +17,7 @@ import 'package:sparkle/l10n/app_localizations.dart';
+ import 'package:sparkle/shared/entities/user_brief.dart';
+ import 'package:sparkle/shared/entities/user_model.dart';
+ import '../shared/i18n_test_helper.dart';
++import 'package:sparkle/core/storage/token_storage_io.dart';
+ 
+ void main() {
+ 
+@@ -179,7 +180,7 @@ class _FakeAuthNotifier extends AuthNotifier {
+ 
+ class _UnusedAuthRepository extends AuthRepository {
+   _UnusedAuthRepository()
+-      : super(_UnusedApiClient(), const FlutterSecureStorage());
++      : super(_UnusedApiClient(), SecureTokenStorage(storage: const FlutterSecureStorage()));
+ }
+ 
+ class _UnusedRef implements Ref<Object?> {
+diff --git a/mobile/test/widget/modeling_chat_screen_test.dart b/mobile/test/widget/modeling_chat_screen_test.dart
+index 63b05cde..2c134b1b 100644
+--- a/mobile/test/widget/modeling_chat_screen_test.dart
++++ b/mobile/test/widget/modeling_chat_screen_test.dart
+@@ -19,6 +19,7 @@ import 'package:sparkle/features/user/presentation/providers/settings_provider.d
+ import 'package:sparkle/features/user/presentation/screens/modeling_chat_screen.dart';
+ import 'package:sparkle/shared/entities/user_model.dart';
+ import '../shared/i18n_test_helper.dart';
++import 'package:sparkle/core/storage/token_storage_io.dart';
+ 
+ class _QueuedChatRepository extends ChatRepository {
+   _QueuedChatRepository() : super(Dio(), container: ProviderContainer());
+@@ -90,7 +91,7 @@ class _SentChatRequest {
+ 
+ class _FakeAuthRepository extends AuthRepository {
+   _FakeAuthRepository({this.token})
+-      : super(_NoopApiClient(), const FlutterSecureStorage());
++      : super(_NoopApiClient(), SecureTokenStorage(storage: const FlutterSecureStorage()));
+ 
+   final String? token;
+ 
+diff --git a/mobile/test/widget/reflection_recent_summary_test.dart b/mobile/test/widget/reflection_recent_summary_test.dart
+index 3ee21c49..afb75b55 100644
+--- a/mobile/test/widget/reflection_recent_summary_test.dart
++++ b/mobile/test/widget/reflection_recent_summary_test.dart
+@@ -17,6 +17,7 @@ import 'package:sparkle/l10n/app_localizations.dart';
+ import 'package:sparkle/shared/entities/user_brief.dart';
+ import 'package:sparkle/shared/entities/user_model.dart';
+ import '../shared/i18n_test_helper.dart';
++import 'package:sparkle/core/storage/token_storage_io.dart';
+ 
+ void main() {
+ 
+@@ -178,7 +179,7 @@ class _FakeAuthNotifier extends AuthNotifier {
+ 
+ class _UnusedAuthRepository extends AuthRepository {
+   _UnusedAuthRepository()
+-      : super(_UnusedApiClient(), const FlutterSecureStorage());
++      : super(_UnusedApiClient(), SecureTokenStorage(storage: const FlutterSecureStorage()));
+ }
+ 
+ class _UnusedRef implements Ref<Object?> {

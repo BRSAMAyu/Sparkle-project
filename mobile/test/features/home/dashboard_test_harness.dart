@@ -40,6 +40,8 @@ import 'package:sparkle/shared/entities/achievement_model.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 import 'package:sparkle/shared/entities/user_brief.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
+import 'package:sparkle/core/storage/token_storage_io.dart';
+import 'package:sparkle/core/storage/token_storage.dart';
 
 Directory? _dashboardHiveDir;
 late SharedPreferences _dashboardPrefs;
@@ -130,6 +132,11 @@ Widget _buildDashboardProviderHarness({
 
   return ProviderScope(
     overrides: [
+      // W-1/W-2：AuthRepository 的 token 存储已切到 tokenStorageProvider，
+      // 测试内所有经 authRepositoryProvider 的读路径都落在这里。
+      tokenStorageProvider.overrideWithValue(
+        SecureTokenStorage(storage: _MemorySecureStorage()),
+      ),
       flutterSecureStorageProvider.overrideWithValue(_MemorySecureStorage()),
       sharedPreferencesProvider.overrideWithValue(_dashboardPrefs),
       authProvider.overrideWith((ref) => _StaticAuthNotifier()),
@@ -357,7 +364,7 @@ class _UnusedPlanRepository extends PlanRepository {
 }
 
 class _UnusedAuthRepository extends AuthRepository {
-  _UnusedAuthRepository() : super(_NoopApiClient(), _MemorySecureStorage());
+  _UnusedAuthRepository() : super(_NoopApiClient(), SecureTokenStorage(storage: _MemorySecureStorage()));
 
   @override
   Future<bool> isLoggedIn() async => true;
