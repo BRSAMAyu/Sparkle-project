@@ -548,6 +548,8 @@ class ExperienceActuator:
                 self.db,
                 user_id=UUID(str(user_id)),
                 requested_file_ids=file_ids,
+                include_group_documents=False,
+                group_ids=None,
             )
         except Exception as exc:
             logger.warning(f"Phase 4 user-material file resolution failed: {exc}")

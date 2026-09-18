@@ -748,7 +748,13 @@ Return: ["OS scheduler", "process states"]"""
 Return ONLY a JSON array of concept strings."""
         try:
             messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}]
-            response = await llm_service.chat(messages, temperature=0.0)
+            # 抽取类小任务必须走 fast 档并限时：thinking 档单调用 5-10s 会吃爆
+            # retrieve 总预算（GRAPHRAG_FASTPATH_TIMEOUT*3），导致整条 hydration 超时
+            extraction_llm = await get_configured_llm_service(AgentRole.RETRIEVAL, TaskType.QUICK_QUERY)
+            response = await asyncio.wait_for(
+                extraction_llm.chat(messages, temperature=0.0),
+                timeout=2.5,
+            )
             cleaned_response = str(response or "").strip()
             if cleaned_response.startswith("```"):
                 cleaned_response = cleaned_response.split("```")[1].strip()
@@ -1668,7 +1674,11 @@ Return ONLY a JSON array of entity names."""
         try:
             # llm_service.chat() expects messages parameter
             messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}]
-            response = await llm_service.chat(messages)
+            extraction_llm = await get_configured_llm_service(AgentRole.RETRIEVAL, TaskType.QUICK_QUERY)
+            response = await asyncio.wait_for(
+                extraction_llm.chat(messages),
+                timeout=2.5,
+            )
 
             # 清理响应
             response = response.strip()
