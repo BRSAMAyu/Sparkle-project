@@ -85,6 +85,10 @@ _STREAM_DELTA_FLUSH_CHARS = 96
 _STREAM_DELTA_FLUSH_SECONDS = 0.12
 _MAX_TOOL_LOOPS_PER_TURN = 2
 
+# MR-2：slim 标准问答的记忆窗口参数（top-3 episodic，~500 token 预算）。
+_SLIM_STANDARD_EPISODIC_TOP_K = 3
+_SLIM_STANDARD_TOKEN_BUDGET = 500
+
 
 def _max_tool_loops_for_state(state: WorkflowState) -> int:
     chat_mode = str(state.context_data.get("chat_mode", "standard")).strip().lower()
@@ -1632,6 +1636,8 @@ Ask about their available time and current tasks if needed.
             "\n\n## 通用知识问答约束\n"
             "这是一个通用概念解释或轻量建议问题。\n"
             "除非用户明确询问，否则不要引入当前计划、任务、专注统计、画像或系统状态。\n"
+            "但当提示词带有【近期相关记忆】且用户问及自己之前说过的事（考试、偏好、约定等），"
+            "必须优先依据这些记忆片段回答；记忆未覆盖时才如实说明没有相关记录。\n"
             "先直接回答问题本身，再决定是否补一个很轻的下一步建议。\n"
             "如果要给开始动作，也只能给通用、与任何当前待办或计划无关的最小动作，不要点名具体任务。"
         )
@@ -2688,7 +2694,87 @@ def _build_slim_user_context_for_deep_analysis(user_context: dict[str, Any]) -> 
 
 
 def _build_slim_user_context_for_standard_reply(user_context: dict[str, Any]) -> dict[str, Any]:
-    return {}
+    """MR-2 修复：轻量标准问答不再把用户上下文整体清空。
+
+    多端实测（memory-rag-seedlib-eval MR-2）：短问句默认命中 slim 路径，
+    旧实现直接返回 {}——episodic 记忆/画像/目标全不进提示词，跨会话
+    记忆召回被机制性清零。现保留"记忆最小说集"：top-3 episodic 记忆 +
+    核心画像字段，整体按 ~500 token 预算硬裁剪；计划/任务/统计类噪音
+    仍不进入（保持 slim 原有的防泄漏目标）。
+    """
+    if not isinstance(user_context, dict):
+        return {}
+
+    slim: dict[str, Any] = {}
+
+    episodic = [
+        item
+        for item in (user_context.get("episodic_memories") or [])
+        if isinstance(item, dict) and str(item.get("summary") or "").strip()
+    ]
+    if episodic:
+        slim["episodic_memories"] = episodic[:_SLIM_STANDARD_EPISODIC_TOP_K]
+
+    active_goals = [
+        item
+        for item in (user_context.get("active_goals") or [])
+        if isinstance(item, dict) and str(item.get("title") or "").strip()
+    ]
+    if active_goals:
+        slim["active_goals"] = active_goals[:1]
+
+    preferences = user_context.get("preferences")
+    if isinstance(preferences, dict) and preferences:
+        slim["preferences"] = {key: value for key, value in list(preferences.items())[:8] if value is not None}
+
+    llm_profile = user_context.get("llm_profile")
+    if isinstance(llm_profile, dict) and llm_profile:
+        slim["llm_profile"] = llm_profile
+
+    preference_version = user_context.get("preference_version")
+    if preference_version is not None:
+        slim["preference_version"] = preference_version
+
+    current_query = user_context.get("current_query")
+    if current_query:
+        slim["current_query"] = current_query
+
+    # slim 载荷自带最小 focus：默认 light 档 episodic 只渲染 1 条，
+    # 这里把 cap 提到窗口条数，保证记忆窗口真的可被模型看到。
+    if slim.get("episodic_memories"):
+        slim["context_focus"] = {
+            "focus_mode": "general_focus",
+            "focus_reason": "slim_standard_memory_window",
+            "section_weights": {},
+            "section_caps": {"episodic": _SLIM_STANDARD_EPISODIC_TOP_K, "goals": 1},
+        }
+
+    return _truncate_slim_user_context_to_budget(slim, budget=_SLIM_STANDARD_TOKEN_BUDGET)
+
+
+def _truncate_slim_user_context_to_budget(payload: dict[str, Any], *, budget: int) -> dict[str, Any]:
+    """超预算时逐级收缩 slim 载荷：先丢 preferences，再把记忆窗口收到 1 条。"""
+    try:
+        if estimate_tokens(json.dumps(payload, ensure_ascii=False, default=str)) <= budget:
+            return payload
+    except (TypeError, ValueError):
+        return payload
+
+    trimmed = dict(payload)
+    trimmed.pop("preferences", None)
+    try:
+        if estimate_tokens(json.dumps(trimmed, ensure_ascii=False, default=str)) <= budget:
+            return trimmed
+    except (TypeError, ValueError):
+        return trimmed
+
+    episodic = trimmed.get("episodic_memories")
+    if isinstance(episodic, list) and len(episodic) > 1:
+        trimmed["episodic_memories"] = episodic[:1]
+        focus = trimmed.get("context_focus")
+        if isinstance(focus, dict):
+            focus["section_caps"] = {"episodic": 1, "goals": 1}
+    return trimmed
 
 
 async def _flush_stream_text_buffer(

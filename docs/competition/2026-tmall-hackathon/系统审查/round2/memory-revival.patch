@@ -1,0 +1,1253 @@
+diff --git a/backend/.env.local.example b/backend/.env.local.example
+index 3d261095..bfa95339 100644
+--- a/backend/.env.local.example
++++ b/backend/.env.local.example
+@@ -56,6 +56,11 @@ OPENCLAW_WS_URL=ws://127.0.0.1:18789
+ OPENCLAW_WS_DEVICE_IDENTITY_PATH=/absolute/path/to/.openclaw/device.json
+ OPENCLAW_DEFAULT_WORKDIR=/absolute/path/to/Sparkle-project
+ 
++# MinIO：MINIO_ROOT_* 供 docker-compose 创建容器用；
++# MINIO_ACCESS_KEY / MINIO_SECRET_KEY 是引擎 presign 实际读取的凭证，
++# 两者必须与运行中的 sparkle_minio 容器 root 凭证一致（MR-3）。
+ MINIO_ROOT_USER=minioadmin
+ MINIO_ROOT_PASSWORD=minioadmin
++MINIO_ACCESS_KEY=minioadmin
++MINIO_SECRET_KEY=minioadmin
+ JWT_SECRET=dev_jwt_secret_change_me
+diff --git a/backend/app/agents/standard_workflow.py b/backend/app/agents/standard_workflow.py
+index 92abc5b5..0ca40f6e 100755
+--- a/backend/app/agents/standard_workflow.py
++++ b/backend/app/agents/standard_workflow.py
+@@ -85,6 +85,10 @@ _STREAM_DELTA_FLUSH_CHARS = 96
+ _STREAM_DELTA_FLUSH_SECONDS = 0.12
+ _MAX_TOOL_LOOPS_PER_TURN = 2
+ 
++# MR-2：slim 标准问答的记忆窗口参数（top-3 episodic，~500 token 预算）。
++_SLIM_STANDARD_EPISODIC_TOP_K = 3
++_SLIM_STANDARD_TOKEN_BUDGET = 500
++
+ 
+ def _max_tool_loops_for_state(state: WorkflowState) -> int:
+     chat_mode = str(state.context_data.get("chat_mode", "standard")).strip().lower()
+@@ -1632,6 +1636,8 @@ Ask about their available time and current tasks if needed.
+             "\n\n## 通用知识问答约束\n"
+             "这是一个通用概念解释或轻量建议问题。\n"
+             "除非用户明确询问，否则不要引入当前计划、任务、专注统计、画像或系统状态。\n"
++            "但当提示词带有【近期相关记忆】且用户问及自己之前说过的事（考试、偏好、约定等），"
++            "必须优先依据这些记忆片段回答；记忆未覆盖时才如实说明没有相关记录。\n"
+             "先直接回答问题本身，再决定是否补一个很轻的下一步建议。\n"
+             "如果要给开始动作，也只能给通用、与任何当前待办或计划无关的最小动作，不要点名具体任务。"
+         )
+@@ -2688,7 +2694,87 @@ def _build_slim_user_context_for_deep_analysis(user_context: dict[str, Any]) ->
+ 
+ 
+ def _build_slim_user_context_for_standard_reply(user_context: dict[str, Any]) -> dict[str, Any]:
+-    return {}
++    """MR-2 修复：轻量标准问答不再把用户上下文整体清空。
++
++    多端实测（memory-rag-seedlib-eval MR-2）：短问句默认命中 slim 路径，
++    旧实现直接返回 {}——episodic 记忆/画像/目标全不进提示词，跨会话
++    记忆召回被机制性清零。现保留"记忆最小说集"：top-3 episodic 记忆 +
++    核心画像字段，整体按 ~500 token 预算硬裁剪；计划/任务/统计类噪音
++    仍不进入（保持 slim 原有的防泄漏目标）。
++    """
++    if not isinstance(user_context, dict):
++        return {}
++
++    slim: dict[str, Any] = {}
++
++    episodic = [
++        item
++        for item in (user_context.get("episodic_memories") or [])
++        if isinstance(item, dict) and str(item.get("summary") or "").strip()
++    ]
++    if episodic:
++        slim["episodic_memories"] = episodic[:_SLIM_STANDARD_EPISODIC_TOP_K]
++
++    active_goals = [
++        item
++        for item in (user_context.get("active_goals") or [])
++        if isinstance(item, dict) and str(item.get("title") or "").strip()
++    ]
++    if active_goals:
++        slim["active_goals"] = active_goals[:1]
++
++    preferences = user_context.get("preferences")
++    if isinstance(preferences, dict) and preferences:
++        slim["preferences"] = {key: value for key, value in list(preferences.items())[:8] if value is not None}
++
++    llm_profile = user_context.get("llm_profile")
++    if isinstance(llm_profile, dict) and llm_profile:
++        slim["llm_profile"] = llm_profile
++
++    preference_version = user_context.get("preference_version")
++    if preference_version is not None:
++        slim["preference_version"] = preference_version
++
++    current_query = user_context.get("current_query")
++    if current_query:
++        slim["current_query"] = current_query
++
++    # slim 载荷自带最小 focus：默认 light 档 episodic 只渲染 1 条，
++    # 这里把 cap 提到窗口条数，保证记忆窗口真的可被模型看到。
++    if slim.get("episodic_memories"):
++        slim["context_focus"] = {
++            "focus_mode": "general_focus",
++            "focus_reason": "slim_standard_memory_window",
++            "section_weights": {},
++            "section_caps": {"episodic": _SLIM_STANDARD_EPISODIC_TOP_K, "goals": 1},
++        }
++
++    return _truncate_slim_user_context_to_budget(slim, budget=_SLIM_STANDARD_TOKEN_BUDGET)
++
++
++def _truncate_slim_user_context_to_budget(payload: dict[str, Any], *, budget: int) -> dict[str, Any]:
++    """超预算时逐级收缩 slim 载荷：先丢 preferences，再把记忆窗口收到 1 条。"""
++    try:
++        if estimate_tokens(json.dumps(payload, ensure_ascii=False, default=str)) <= budget:
++            return payload
++    except (TypeError, ValueError):
++        return payload
++
++    trimmed = dict(payload)
++    trimmed.pop("preferences", None)
++    try:
++        if estimate_tokens(json.dumps(trimmed, ensure_ascii=False, default=str)) <= budget:
++            return trimmed
++    except (TypeError, ValueError):
++        return trimmed
++
++    episodic = trimmed.get("episodic_memories")
++    if isinstance(episodic, list) and len(episodic) > 1:
++        trimmed["episodic_memories"] = episodic[:1]
++        focus = trimmed.get("context_focus")
++        if isinstance(focus, dict):
++            focus["section_caps"] = {"episodic": 1, "goals": 1}
++    return trimmed
+ 
+ 
+ async def _flush_stream_text_buffer(
+diff --git a/backend/app/orchestration/prompts.py b/backend/app/orchestration/prompts.py
+index 1327f7ae..cf85a06f 100755
+--- a/backend/app/orchestration/prompts.py
++++ b/backend/app/orchestration/prompts.py
+@@ -2378,6 +2378,31 @@ def _format_user_material_grounding_section(*, user_context: dict) -> str:
+     if not status and not results:
+         return ""
+ 
++    # MR-4 修复：grounding 段必须与本轮实际进入提示词的检索产物一致。
++    # GraphRAG / document_vector_search 已水合出 document_context 时，即使
++    # 预取段自身报 no_hits/no_scoped_files，也不得宣称"没拿到材料"——否则
++    # 模型会拒用 document_chunks 里真实存在的证据（实测连续 4 轮拒答）。
++    document_context = str(user_context.get("document_context") or "").strip()
++    retrieval_meta = user_context.get("document_context_retrieval")
++    hydrated_names: list[str] = []
++    hydrated_count = 0
++    if isinstance(retrieval_meta, dict):
++        receipt = retrieval_meta.get("context_receipt")
++        if isinstance(receipt, dict):
++            hydrated_names = [str(name).strip() for name in (receipt.get("used_names") or []) if str(name).strip()]
++            try:
++                hydrated_count = int(receipt.get("used_count") or 0)
++            except (TypeError, ValueError):
++                hydrated_count = 0
++        if not hydrated_names:
++            try:
++                hydrated_count = int(retrieval_meta.get("total_passed") or 0)
++            except (TypeError, ValueError):
++                hydrated_count = 0
++    documents_in_prompt = bool(document_context) and (
++        hydrated_count > 0 or not isinstance(retrieval_meta, dict) or "total_passed" not in retrieval_meta
++    )
++
+     lines = ["## 用户材料依据 [L1 证据]"]
+     if query:
+         lines.append(f"- 本轮已按该查询预取用户材料: {query}")
+@@ -2399,8 +2424,22 @@ def _format_user_material_grounding_section(*, user_context: dict) -> str:
+             elif snippet:
+                 lines.append(f"- {snippet}")
+     elif status in {"no_hits", "no_scoped_files", "retrieval_failed", "file_resolution_failed"}:
+-        lines.append("- 当前策略要求先看用户材料，但这轮没有拿到足够可用的材料证据。")
+-        lines.append("- 若继续回答，请明确缩小结论范围，并把通用知识当作补充而不是替代。")
++        if documents_in_prompt:
++            # 实际已有水合证据：口径翻转为"使用证据"，并列出命中材料名。
++            if hydrated_names:
++                lines.append(
++                    "- 本轮检索已命中用户材料（见下方文档片段）："
++                    + "、".join(hydrated_names[:3])
++                    + "。回答时优先引用这些材料片段校准概念与事实，材料未覆盖的部分再补通用知识。"
++                )
++            else:
++                lines.append(
++                    "- 本轮检索已命中用户材料（见下方文档片段）。"
++                    "回答时优先引用这些材料片段校准概念与事实，材料未覆盖的部分再补通用知识。"
++                )
++        else:
++            lines.append("- 当前策略要求先看用户材料，但这轮没有拿到足够可用的材料证据。")
++            lines.append("- 若继续回答，请明确缩小结论范围，并把通用知识当作补充而不是替代。")
+     else:
+         return ""
+ 
+diff --git a/backend/app/services/memory_inferred_write_lane.py b/backend/app/services/memory_inferred_write_lane.py
+index b854772d..c548b8d5 100644
+--- a/backend/app/services/memory_inferred_write_lane.py
++++ b/backend/app/services/memory_inferred_write_lane.py
+@@ -35,6 +35,32 @@ def _utcnow() -> datetime:
+     return datetime.now(UTC).replace(tzinfo=None)
+ 
+ 
++# MR-1 修复：显式记忆口令集合（与 WorkingMemoryConsolidationService 的确认短语
++# 保持同语义）。带这些口令的句子即使被规则启发式判为无候选，也必须捕获，
++# 否则"帮我记住 X"这一产品承诺在主聊天路径整链失活（实测 A1 0/3）。
++EXPLICIT_MEMORY_COMMAND_PHRASES = (
++    "帮我记住",
++    "记住这个",
++    "记下来",
++    "把这个记住",
++    "就记这个",
++    "记一下这个",
++)
++
++# 显式口令也不得越过的硬禁止话题（人格判定/负面自我标签等）。
++EXPLICIT_COMMAND_HARD_BANNED_TOKENS = (
++    "性格",
++    "人格",
++    "天生",
++    "永远",
++    "一辈子",
++    "很笨",
++    "很懒",
++    "我就是",
++    "是不是有病",
++)
++
++
+ @dataclass(frozen=True)
+ class InferredEpisodicCandidate:
+     candidate_text: str
+@@ -239,7 +265,12 @@ class MemoryInferredWriteLaneService:
+     ) -> InferredEpisodicCandidate | None:
+         sentence = self._pick_candidate_sentence(user_message)
+         if not sentence:
+-            return None
++            # MR-1 修复：规则启发式丢掉的句子若带显式记忆口令，走口令 fallback，
++            # 保证"帮我记住 X"一轮后工作记忆/固化链有事可做。
++            return self._build_explicit_command_candidate(
++                user_message=user_message,
++                evidence_token=evidence_token,
++            )
+         subject_type, entity_name = self._classify_subject_type(sentence)
+         if subject_type is None:
+             return None
+@@ -601,6 +632,62 @@ class MemoryInferredWriteLaneService:
+             source_id=str(session_id) if session_id is not None else None,
+         )
+ 
++    @classmethod
++    def _has_explicit_memory_command(cls, text: str) -> bool:
++        normalized = str(text or "").strip()
++        return any(phrase in normalized for phrase in EXPLICIT_MEMORY_COMMAND_PHRASES)
++
++    @classmethod
++    def _extract_explicit_command_fact(cls, text: str) -> str | None:
++        """从带显式记忆口令的句子里剥离口令，返回要记住的事实文本。"""
++        normalized = str(text or "").strip()
++        if not normalized or not cls._has_explicit_memory_command(normalized):
++            return None
++        if any(token in normalized for token in EXPLICIT_COMMAND_HARD_BANNED_TOKENS):
++            return None
++        fact = normalized
++        for phrase in EXPLICIT_MEMORY_COMMAND_PHRASES:
++            fact = fact.replace(phrase, "，")
++        parts = [part.strip(" ，,。：:；;！!？?·「」《》\"'") for part in re.split(r"[，,；;：:]+", fact)]
++        parts = [part for part in parts if len(part) >= 4]
++        if not parts:
++            return None
++        return max(parts, key=len)
++
++    def _build_explicit_command_candidate(
++        self,
++        *,
++        user_message: str,
++        evidence_token: str,
++    ) -> InferredEpisodicCandidate | None:
++        fact = self._extract_explicit_command_fact(user_message)
++        if not fact or len(fact) < 6 or len(fact) > 180:
++            return None
++        occurred_at, _temporal_kind = self._resolve_occurred_at(fact)
++        semantic_key = hashlib.sha1(self._normalize_semantic(fact).encode("utf-8")).hexdigest()
++        # 用户显式口令是最高优先级捕获信号：给最高置信档（必须越过
++        # MEMORY_INFERRED_MIN_CONFIDENCE=0.9 的 L1 直写门槛）。
++        return InferredEpisodicCandidate(
++            candidate_text=fact,
++            subject_type="self",
++            confidence=0.92,
++            evidence_token=evidence_token,
++            decay_policy="30d",
++            source_lane=self.SOURCE_LANE,
++            semantic_key=semantic_key,
++            evidence_refs=[
++                {
++                    "type": "chat_turn",
++                    "id": evidence_token,
++                    "schema_version": "stage16.explicit_command.v1",
++                }
++            ],
++            occurred_at=occurred_at,
++            due_at=None,
++            mentioned_entity_hash=None,
++            mentioned_entity_owner_user_id=None,
++        )
++
+     @staticmethod
+     def _pick_candidate_sentence(user_message: str) -> str | None:
+         sentences = re.split(r"[。！？!?\n]+", user_message)
+diff --git a/backend/tests/unit/test_memory_revival_capture.py b/backend/tests/unit/test_memory_revival_capture.py
+new file mode 100644
+index 00000000..da83f098
+--- /dev/null
++++ b/backend/tests/unit/test_memory_revival_capture.py
+@@ -0,0 +1,192 @@
++"""MR-1 记忆捕获主路径复活（memory-revival round2）。
++
++多端实测（memory-rag-seedlib-eval MR-1）："WS 纯聊天轮 0 记忆落库"。
++代码梳理确认 assistant 消息持久化 → ``enqueue_from_session`` → 推断 lane
++的接线在标准轮 happy path 上是通的（RB-06 测试覆盖 persist→enqueue wiring），
++真正的机制性死点是：规则候选器对"显式记忆口令 + 陈述事实"类句子
++（如"我最喜欢的电影是《星际穿越》，帮我记住这个。"）返回 None——
++既无工作记忆条目、也无固化对象，"帮我记住"产品承诺整链失活。
++
++本文件红绿锁定：显式记忆口令必须产生候选并写入 episodic LTM。
++"""
++
++from __future__ import annotations
++
++from unittest.mock import AsyncMock
++from uuid import uuid4
++
++import pytest
++from sqlalchemy import select
++
++from app.config import settings
++from app.models.chat import ChatMessage, MessageRole
++from app.models.memory import EpisodicMemory
++from app.models.user import User
++from app.services.aurora_stage19_kill_switch_service import AuroraStage19KillSwitchService
++from app.services.memory_inferred_write_lane import MemoryInferredWriteLaneService
++
++EVAL_MOVIE_MESSAGE = "我最喜欢的电影是《星际穿越》，帮我记住这个。"
++
++
++async def _create_user(db_session) -> User:
++    user_id = uuid4()
++    user = User(
++        id=user_id,
++        username=f"user_{user_id.hex[:8]}",
++        email=f"{user_id.hex[:8]}@example.com",
++        hashed_password="test",
++    )
++    db_session.add(user)
++    await db_session.commit()
++    return user
++
++
++async def _create_user_turn(db_session, user_id, session_id, content: str) -> ChatMessage:
++    message = ChatMessage(
++        user_id=user_id,
++        session_id=session_id,
++        role=MessageRole.USER,
++        content=content,
++    )
++    db_session.add(message)
++    await db_session.commit()
++    await db_session.refresh(message)
++    return message
++
++
++@pytest.mark.asyncio
++async def test_explicit_memory_command_yields_candidate(db_session):
++    """红：显式记忆口令句此前被规则候选器完全丢弃（extract_candidate → None）。"""
++    service = MemoryInferredWriteLaneService(db_session)
++    candidate = service.extract_candidate(
++        user_id=uuid4(),
++        user_message=EVAL_MOVIE_MESSAGE,
++        assistant_message="好的，我记住了。",
++        evidence_token="turn_movie_red",
++    )
++    assert candidate is not None, (
++        "显式记忆口令（帮我记住/记下来）必须产生推断候选，" "否则工作记忆与固化链无事可做（MR-1 死点）"
++    )
++    assert candidate.subject_type in {"self", "commitment", "person_mention", "relationship"}
++
++
++@pytest.mark.asyncio
++async def test_explicit_memory_command_writes_episodic_ltm_row(db_session, monkeypatch):
++    """红：标准聊天轮（enqueue_from_session 路径，user_message=None 从库补读）
++    一轮后 episodic_memories 必须有 inferred_extraction 写入。"""
++    monkeypatch.setattr(settings, "SPARKLE_MEMORY_INFERRED_WRITE_ENABLED", True, raising=False)
++    monkeypatch.setattr(settings, "SPARKLE_MEMORY_INFERRED_DRY_RUN_ENABLED", False, raising=False)
++    monkeypatch.setattr(AuroraStage19KillSwitchService, "is_enabled", AsyncMock(return_value=False))
++
++    user = await _create_user(db_session)
++    session_id = uuid4()
++    user_turn = await _create_user_turn(db_session, user.id, session_id, EVAL_MOVIE_MESSAGE)
++
++    service = MemoryInferredWriteLaneService(db_session)
++    # enqueue_from_session 语义：user_message=None → 从 chat_messages 回读最新用户轮
++    candidate = await service.process_chat_turn(
++        user_id=user.id,
++        session_id=session_id,
++        user_message=None,
++        assistant_message="好的，我记住了。",
++        user_message_id=None,
++        assistant_message_id=None,
++    )
++
++    assert candidate is not None, "显式记忆口令一轮后必须产出候选"
++    rows = (
++        (
++            await db_session.execute(
++                select(EpisodicMemory).where(
++                    EpisodicMemory.user_id == user.id,
++                    EpisodicMemory.source_lane == "inferred_extraction",
++                    EpisodicMemory.deleted_at.is_(None),
++                )
++            )
++        )
++        .scalars()
++        .all()
++    )
++    assert len(rows) == 1, f"显式记忆口令一轮后 episodic_memories 应有 1 行写入，实际 {len(rows)}"
++    assert "星际穿越" in rows[0].summary
++    assert rows[0].evidence_token == str(user_turn.id)
++
++
++@pytest.mark.asyncio
++async def test_explicit_memory_command_still_respects_user_disabled(db_session, monkeypatch):
++    """护栏：显式口令 fallback 不得绕过用户记忆关闭开关。"""
++    monkeypatch.setattr(settings, "SPARKLE_MEMORY_INFERRED_WRITE_ENABLED", True, raising=False)
++    monkeypatch.setattr(settings, "SPARKLE_MEMORY_INFERRED_DRY_RUN_ENABLED", False, raising=False)
++    monkeypatch.setattr(AuroraStage19KillSwitchService, "is_enabled", AsyncMock(return_value=False))
++
++    from app.models.user_memory_settings import UserMemorySettings
++
++    user = await _create_user(db_session)
++    db_session.add(
++        UserMemorySettings(
++            user_id=user.id,
++            enabled=False,
++            allow_episodic=False,
++        )
++    )
++    await db_session.commit()
++
++    session_id = uuid4()
++    await _create_user_turn(db_session, user.id, session_id, EVAL_MOVIE_MESSAGE)
++
++    service = MemoryInferredWriteLaneService(db_session)
++    await service.process_chat_turn(
++        user_id=user.id,
++        session_id=session_id,
++        user_message=EVAL_MOVIE_MESSAGE,
++        assistant_message="好的，我记住了。",
++        user_message_id=str(uuid4()),
++        assistant_message_id=None,
++    )
++    rows = (await db_session.execute(select(EpisodicMemory).where(EpisodicMemory.user_id == user.id))).scalars().all()
++    assert len(rows) == 0, "用户关闭记忆时显式口令也不得落库"
++
++
++@pytest.mark.asyncio
++async def test_explicit_memory_command_not_duplicated(db_session, monkeypatch):
++    """护栏：同一 evidence_token 重复触发不得写两行（semantic/evidence 去重仍生效）。"""
++    monkeypatch.setattr(settings, "SPARKLE_MEMORY_INFERRED_WRITE_ENABLED", True, raising=False)
++    monkeypatch.setattr(settings, "SPARKLE_MEMORY_INFERRED_DRY_RUN_ENABLED", False, raising=False)
++    monkeypatch.setattr(AuroraStage19KillSwitchService, "is_enabled", AsyncMock(return_value=False))
++
++    user = await _create_user(db_session)
++    session_id = uuid4()
++    user_turn = await _create_user_turn(db_session, user.id, session_id, EVAL_MOVIE_MESSAGE)
++
++    service = MemoryInferredWriteLaneService(db_session)
++    for _ in range(2):
++        await service.process_chat_turn(
++            user_id=user.id,
++            session_id=session_id,
++            user_message=EVAL_MOVIE_MESSAGE,
++            assistant_message="好的，我记住了。",
++            user_message_id=str(user_turn.id),
++            assistant_message_id=None,
++        )
++
++    rows = (
++        (
++            await db_session.execute(
++                select(EpisodicMemory).where(
++                    EpisodicMemory.user_id == user.id,
++                    EpisodicMemory.source_lane == "inferred_extraction",
++                )
++            )
++        )
++        .scalars()
++        .all()
++    )
++    assert len(rows) == 1, f"重复口令必须去重，实际 {len(rows)} 行"
++
++
++def test_explicit_command_fallback_respects_hard_banned_topics():
++    """护栏：硬禁止话题（人格判定/负面标签）即使用户口令要求记住也不得捕获。"""
++    banned_message = "帮我记住：我就是个很笨的人，我永远学不会。"
++    assert MemoryInferredWriteLaneService._has_explicit_memory_command(banned_message)
++    fact = MemoryInferredWriteLaneService._extract_explicit_command_fact(banned_message)
++    assert fact is None, "硬禁止话题不得通过显式口令 fallback 捕获"
+diff --git a/backend/tests/unit/test_memory_revival_slim_and_grounding.py b/backend/tests/unit/test_memory_revival_slim_and_grounding.py
+new file mode 100644
+index 00000000..53a3d8e7
+--- /dev/null
++++ b/backend/tests/unit/test_memory_revival_slim_and_grounding.py
+@@ -0,0 +1,197 @@
++"""MR-2 slim 上下文清空 + MR-4 grounding 自相矛盾 红绿测试。
++
++多端实测（memory-rag-seedlib-eval）：
++- MR-2：``_build_slim_user_context_for_standard_reply`` 返回空 dict——短问句
++  （"根据你的记忆，我之前提到过什么考试？"）默认走 slim，记忆/画像全不进提示词。
++- MR-4：``use_document_context:true`` 下 GraphRAG 块已水合进提示词
++  （document_chunks usage=354），但 ``user_material_grounding`` 段仍宣称
++  "这轮没有拿到足够可用的材料证据"，模型听从后者连续拒用已检索资料。
++"""
++
++from __future__ import annotations
++
++import json
++
++from app.agents.standard_workflow import _build_slim_user_context_for_standard_reply
++from app.core.context_pack import estimate_tokens
++from app.orchestration.prompts import (
++    _format_user_material_grounding_section,
++    build_system_prompt,
++)
++
++
++def _memory_window() -> list[dict]:
++    return [
++        {
++            "id": "m1",
++            "summary": "用户下周三有数据结构期中考试",
++            "subject_type": "self",
++            "source_type": "chat",
++            "occurred_at": "2026-09-17T09:00:00",
++            "confidence": 0.9,
++        },
++        {
++            "id": "m2",
++            "summary": "用户最喜欢的电影是《星际穿越》",
++            "subject_type": "self",
++            "source_type": "chat",
++            "occurred_at": "2026-09-17T09:05:00",
++            "confidence": 0.9,
++        },
++        {
++            "id": "m3",
++            "summary": "用户正在复习操作系统死锁处理机制",
++            "subject_type": "self",
++            "source_type": "chat",
++            "occurred_at": "2026-09-16T21:00:00",
++            "confidence": 0.85,
++        },
++        {
++            "id": "m4",
++            "summary": "用户提到和同学约好周末一起刷题",
++            "subject_type": "person_mention",
++            "source_type": "chat",
++            "occurred_at": "2026-09-15T18:00:00",
++            "confidence": 0.8,
++        },
++    ]
++
++
++def _full_user_context() -> dict:
++    return {
++        "episodic_memories": _memory_window(),
++        "preferences": {"tone": "encouraging", "depth_preference": 0.7, "verbosity": "balanced"},
++        "active_goals": [{"title": "数据结构期中备考", "status": "active"}],
++        "llm_profile": {"verbosity_target": "balanced"},
++        "preference_version": 3,
++        "current_query": "根据你的记忆，我之前提到过什么考试？",
++        # 以下为 slim 必须裁剪的噪音
++        "next_actions": [{"title": "完成线代作业第三章", "estimated_minutes": 30, "type": "task"}],
++        "focus_stats": {"total_minutes": 45, "pomodoro_count": 2},
++        "active_plans": [{"title": "期末复习计划", "type": "study", "progress": 0.4}],
++        "recent_tool_usage": [{"tool_name": "get_plan_state", "summary": "查询了计划状态"}],
++    }
++
++
++# ---------------------------------------------------------------------------
++# MR-2 slim 记忆窗口
++# ---------------------------------------------------------------------------
++
++
++def test_slim_standard_context_is_not_empty():
++    slim = _build_slim_user_context_for_standard_reply(_full_user_context())
++    assert slim, "MR-2: slim 路径不得返回空 dict（记忆/画像被整体清空）"
++
++
++def test_slim_standard_context_keeps_top3_episodic():
++    slim = _build_slim_user_context_for_standard_reply(_full_user_context())
++    episodic = slim.get("episodic_memories") or []
++    assert 1 <= len(episodic) <= 3, f"slim 记忆窗口应为 top-1..3 条 episodic，实际 {len(episodic)}"
++    summaries = json.dumps(episodic, ensure_ascii=False)
++    assert "数据结构期中" in summaries
++
++
++def test_slim_standard_context_drops_task_noise():
++    slim = _build_slim_user_context_for_standard_reply(_full_user_context())
++    for noise_key in ("next_actions", "focus_stats", "active_plans", "recent_tool_usage"):
++        assert noise_key not in slim, f"slim 必须继续裁剪任务/统计噪音: {noise_key}"
++
++
++def test_slim_standard_context_token_budget():
++    slim = _build_slim_user_context_for_standard_reply(_full_user_context())
++    tokens = estimate_tokens(json.dumps(slim, ensure_ascii=False, default=str))
++    assert tokens <= 600, f"slim 记忆窗口应控制在 ~500 token 预算内（实测 {tokens}）"
++
++
++def test_slim_prompt_renders_memory_for_short_memory_question():
++    slim = _build_slim_user_context_for_standard_reply(_full_user_context())
++    prompt = build_system_prompt(
++        slim,
++        conversation_history={"messages": []},
++        prompt_version="v1",
++        context_level="light",
++    )
++    assert "数据结构期中" in prompt, "slim 路径提示词必须包含既有记忆内容"
++
++
++# ---------------------------------------------------------------------------
++# MR-4 grounding 段与实际检索结果一致
++# ---------------------------------------------------------------------------
++
++
++def _hydrated_document_context() -> dict:
++    return {
++        "document_context": (
++            "Relevant Documents (showing top 2 of 3 results):\n"
++            "- [ZB-2049协议白皮书.pdf | 总则 | p1] ZB-2049 是一种实验室物料编码规范，"
++            "其中 ZB 前缀代表中试批次。\n"
++            "- [ZB-2049协议白皮书.pdf | 附录 | p4] ZB-2049 条目需包含批次号与责任人。"
++        ),
++        "document_context_retrieval": {
++            "source": "graphrag",
++            "mode": "selective",
++            "total_retrieved": 3,
++            "total_passed": 3,
++            "context_receipt": {
++                "used": [],
++                "used_names": ["ZB-2049协议白皮书.pdf"],
++                "used_count": 2,
++                "total_retrieved": 3,
++            },
++        },
++        "user_material_grounding": {
++            "status": "no_scoped_files",
++            "query": "ZB-2049 是什么",
++            "results": [],
++        },
++    }
++
++
++def test_grounding_no_longer_contradicts_hydrated_documents():
++    section = _format_user_material_grounding_section(user_context=_hydrated_document_context())
++    assert section, "已有水合文档证据时 grounding 段应生成材料指引"
++    assert "没有拿到" not in section, "MR-4: 已有检索证据时不得宣称'没拿到材料'"
++    assert "没有足够可用" not in section
++    assert "ZB-2049" in section, "grounding 段应引用实际命中的材料名"
++
++
++def test_grounding_keeps_honest_no_material_when_nothing_hydrated():
++    ctx = {
++        "user_material_grounding": {"status": "no_hits", "query": "量子纠错表面码", "results": []},
++    }
++    section = _format_user_material_grounding_section(user_context=ctx)
++    assert section
++    assert "没有拿到" in section or "没有足够" in section, "真无材料时保留诚实的'没有材料'口径"
++
++
++def test_grounding_grounded_status_still_lists_snippets():
++    ctx = {
++        "user_material_grounding": {
++            "status": "grounded",
++            "query": "ZB-2049",
++            "results": [
++                {
++                    "file_name": "ZB-2049协议白皮书.pdf",
++                    "section_title": "总则",
++                    "page_numbers": [1],
++                    "snippet": "ZB-2049 是一种实验室物料编码规范。",
++                }
++            ],
++        },
++    }
++    section = _format_user_material_grounding_section(user_context=ctx)
++    assert "ZB-2049" in section
++    assert "没有拿到" not in section
++
++
++def test_build_system_prompt_has_no_grounding_contradiction():
++    """端到端：build_system_prompt 产物中 grounding 段与 document 块不得互相矛盾。"""
++    ctx = _hydrated_document_context()
++    prompt = build_system_prompt(
++        ctx,
++        conversation_history={"messages": []},
++        prompt_version="v1",
++        context_level="full",
++    )
++    assert "这轮没有拿到足够可用的材料证据" not in prompt, "MR-4: 提示词仍在否定已检索到的材料"
++    assert "ZB-2049" in prompt
+diff --git "a/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/README.md" "b/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/README.md"
+index edd1d36e..f448f7e0 100644
+--- "a/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/README.md"
++++ "b/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/README.md"
+@@ -3,7 +3,7 @@
+ 按轮次组织的全系统审查与修复记录。每轮 8 个并行审查员（切片互不重叠）+ 修复波（多修复员并行）。
+ 
+ - `round1/` — 第一轮（基线 90daac8a，2026-09-18）：8 份审查报告（01 引擎编排/02 规划执行/03 关键服务/04 引擎基建/05 网关/06 移动核心/07 移动长尾/08 契约安全），`0N-fixes.md` 为对应修复波记录。
+-- `round2/` — 第二轮复审（基线 ca86bda8，R1 修复已集成）：修复验证 + 运行时/集成视角复审 + 移交专项；`0N-r2-fixes.md`/`0N-r2-fixes.patch` 为对应修复波记录与 diff 快照；`m6-09-interrupt-preserve.md`/`.patch` 为 M6-09「流式取消=中断保留」产品决策的移动端落地记录；`schema-consistency-audit.md`/`.patch` 为 ORM ↔ 迁移链 ↔ 网关快照三方一致性专项（gfix02 + 单头守卫 + 快照重放）；`engine-restore-storm.md`/`.patch` 为会话恢复风暴专项（同步 send_task 冻结事件循环根因 + single-flight/并发钳制/异步投递修复 + 20 并发红绿压测）；`llm-semantics-f1f2.md`/`.patch`（基线 b97a0674）为 AI 功能评测 F-1/F-2 修复（deep_analysis 档真实路由 v4-pro + `DEEP_ANALYSIS_FORCE_FAST_TIER` 逃生阀、推送文案 JSON 稳健解析 + 重试 + 降级遥测、LLMMonitor 属性漂移修复）；`statechart-iterfix.md`/`.patch`（基线 6e9abd97）为 F-1 附带的 execution_review 别名 dict 迭删崩溃修复（`_merge_context_data` 迭代快照 + TestAliasMergeSafety 回归）。
++- `round2/` — 第二轮复审（基线 ca86bda8，R1 修复已集成）：修复验证 + 运行时/集成视角复审 + 移交专项；`0N-r2-fixes.md`/`0N-r2-fixes.patch` 为对应修复波记录与 diff 快照；`m6-09-interrupt-preserve.md`/`.patch` 为 M6-09「流式取消=中断保留」产品决策的移动端落地记录；`schema-consistency-audit.md`/`.patch` 为 ORM ↔ 迁移链 ↔ 网关快照三方一致性专项（gfix02 + 单头守卫 + 快照重放）；`engine-restore-storm.md`/`.patch` 为会话恢复风暴专项（同步 send_task 冻结事件循环根因 + single-flight/并发钳制/异步投递修复 + 20 并发红绿压测）；`llm-semantics-f1f2.md`/`.patch`（基线 b97a0674）为 AI 功能评测 F-1/F-2 修复（deep_analysis 档真实路由 v4-pro + `DEEP_ANALYSIS_FORCE_FAST_TIER` 逃生阀、推送文案 JSON 稳健解析 + 重试 + 降级遥测、LLMMonitor 属性漂移修复）；`statechart-iterfix.md`/`.patch`（基线 6e9abd97）为 F-1 附带的 execution_review 别名 dict 迭删崩溃修复（`_merge_context_data` 迭代快照 + TestAliasMergeSafety 回归）；`memory-revival.md`/`.patch`（基线 32d2ebe3）为多端实测 MR-1..MR-4 记忆链复活专项（显式记忆口令 fallback 候选、slim 路径记忆窗口 top-3/500 token、grounding 段与实际检索对账、MinIO 凭证对齐 + Celery worker runbook，附 5 次聊天 LLM 预算的端到端验收脚本 `scripts/devtools/acceptance_memory_revival.py`）。
+ - `漏洞台账.md` — 两轮全量发现的清零追踪表（唯一权威状态源）。
+ 
+ 切片边界：splash/onboarding/auth/home/chat/task/settings 归 06，其余 35 个 features 归 07；`gen/` 生成物只对照不审。
+diff --git "a/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/memory-revival.md" "b/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/memory-revival.md"
+new file mode 100644
+index 00000000..bbb3c1d3
+--- /dev/null
++++ "b/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/memory-revival.md"
+@@ -0,0 +1,196 @@
++# AI 记忆链复活（MR-1/2/3/4：跨会话记忆 + slim 记忆窗口 + MinIO 凭证 + grounding 自洽）
++
++- 实现员：AI 记忆链复活专员（sysrev wt5）
++- 工作树：`/Users/brsama/code/GitHub/Sparkle-sysrev/wt5`（基线 32d2ebe3，未 commit）
++- 日期：2026-09-19
++- 补丁：[memory-revival.patch](memory-revival.patch)（`git diff --cached` 产物；`backend/.env` 为 gitignored，只改运行时未入补丁）
++- 评测输入：`docs/competition/2026-tmall-hackathon/多端实测/memory-rag-seedlib-eval.md` MR-1..MR-4 节
++- 红绿协议：pytest 定向（基线红 9 failed → 修复后 14/14 green）；黑名单/护栏测试同批落地；3 个定向回归失败经 pristine 32d2ebe3 stash 对照实证为**基线已有问题**，与本改动无关（见 §6）
++- 分域说明：只动 memory write lane / standard_workflow slim 上下文 / prompts grounding 段 / MinIO 配置与 Celery runbook；MR-5（card_lifecycle_enum 迁移漂移）、MR-6（PII 脱敏）不在本波
++
++---
++
++## 0. 总览
++
++| 挂账项 | 实测定性 | 本波修复 |
++|---|---|---|
++| **MR-1** 记忆捕获主路径死路 | **部分修正 eval 归因**（§1.1）：persist→enqueue 接线在 happy path 是通的（RB-06 测试钉死、DB 有 148 条 assistant 行）；真正的机制性死点是**规则候选器把"显式记忆口令"句整句丢弃**——lane 空转，工作记忆/固化链无事可做；叠加 MR-5 计划链崩轮时整轮零捕获 | write lane 新增**显式口令 fallback 候选**（"帮我记住/记下来…"剥离口令取事实，confidence 0.92 越过 L1 直写门槛，硬禁止话题护栏）；live 配置下同轮即走 WM→固化→episodic LTM |
++| **MR-2** slim 路径清空用户上下文 | 属实：`_build_slim_user_context_for_standard_reply` 返回 `{}`，短问句记忆/画像全不进提示词 | slim 保留**记忆最小说集**：top-3 episodic + 核心画像（preferences 截 8 键 / goals top-1 / llm_profile），`~500 token` 硬预算逐级收缩；slim 自带 `context_focus`（episodic cap=3，破默认 light 只渲染 1 条）；slim 提示词后缀显式允许"用户问记忆时依据【近期相关记忆】回答" |
++| **MR-4** grounding 自相矛盾 | 属实：GraphRAG 水合（`document_context`/document_chunks 进提示词）与 `user_material_grounding` 预取是**两条独立通道**，后者 no_hits/no_scoped_files 时提示词宣称"没拿到材料"，模型听从前者拒用真实证据 | `_format_user_material_grounding_section` 与本轮实际检索产物对账：`document_context` 非空（且 total_passed>0 或无该字段）时，no_* 口径翻转为"已命中材料 + 列出 used_names + 优先引用"；真无材料时保留诚实口径 |
++| **MR-3** MinIO 凭证漂移 + 无 Celery worker | 属实且比 eval 更深一层（§4）：引擎读 `MINIO_ACCESS_KEY/SECRET_KEY`（.env **两行都缺**→空凭证）；`.env` 只有 compose 层 `MINIO_ROOT_USER/PASSWORD=minioadmin`；而运行容器实际 root=`sparkle_minio`。minioadmin 403 与对齐后 200 均已实测复现/修复 | `.env` 对齐运行容器 + 补 `MINIO_ACCESS_KEY/SECRET_KEY` 两行（运行时改动，未入补丁）；`.env.local.example` 登记四行防再漂移；Celery worker 新增 `scripts/devtools/start_celery_worker_dev.sh`（nohup 方式，已启动 pid 见 §4.3），runbook 见 §5 |
++
++红绿结果：**新增 14 项单测（capture 5 + slim/grounding 9），red 实证 9 failed → green 14/14**。定向回归 `test_two_consecutive_sessions_prompt_includes_inferred_memory` 在基线上是红的、本改动后转绿（其夹具句子正含"帮我记住"）。端到端验收（≤5 次聊天 LLM）脚本已备好：[scripts/devtools/acceptance_memory_revival.py](../../../scripts/devtools/acceptance_memory_revival.py)，**待协调者 apply patch + 重启引擎后执行**（§7）。
++
++---
++
++## 1. MR-1 记忆捕获主路径
++
++### 1.1 溯源：比 eval 报告多走了一层
++
++eval 的归因是"标准流式路径不调用 `_persist_assistant_message`"。在基线 32d2ebe3 上逐点核实：
++
++- `orchestrator.process_stream` Step 14（`orchestrator.py:3532`）对**每个成功完成的图轮**调用 `_build_final_response`，其中 `response_builder.py:1291` 无条件调用 `_persist_assistant_message`；
++- `persistence_layer.py:48` flush 后 `MemoryInferredWriteLaneService.enqueue_from_session`（后台 task，不阻塞流式）；
++- wiring 已有 RB-06 测试钉死（`tests/core/test_rb06_followup_no_midstream_commit.py:90`）；
++- 实证：`chat_messages` 中 148 条 assistant 行带 `model_name=qwen3.8-flash`（引擎写），eval 窗口的 working_memory Redis 键也存在（B1' 探针轮的候选写入成功）。
++
++**真正的死点在 lane 的候选提取**（`memory_inferred_write_lane.py::extract_candidate`）：
++
++- A1 电影探针句「我最喜欢的电影是《星际穿越》，帮我记住这个。」——`_pick_candidate_sentence` 产句后 `_classify_subject_type` 全链不命中（无时间锚/动作词"记住"不在动作 token 表/无社交词），`_looks_like_safe_context=False` → 返回 None → lane 空转：工作记忆 0 条、固化 0 对象、episodic 0 行。**"帮我记住 X"这一产品主承诺在主聊天路径整链失活**；
++- A1 考试探针句「我下周三有数据结构期中考试，帮我记住」本可产候选（self+temporal），但该句同时高优触发 create_plan 工具链 → MR-5 卡片双写崩轮，`_execute_graph` 抛异常直接跳过 Step 14 → 0 捕获（该轮修复依赖 MR-5 域 + d859c194 已修 execution_review 崩溃，本波不改）。
++
++### 1.2 修复：显式口令 fallback 候选（`memory_inferred_write_lane.py`）
++
++- `EXPLICIT_MEMORY_COMMAND_PHRASES`（帮我记住/记住这个/记下来/把这个记住/就记这个/记一下这个）与 `EXPLICIT_COMMAND_HARD_BANNED_TOKENS`（人格判定/负面自我标签——口令也不得越过的硬护栏）；
++- `_extract_explicit_command_fact`：剥离口令短语 → 按分隔符切分取最长事实段（≥6 字符）；
++- `_build_explicit_command_candidate`：subject=self、confidence=0.92（> `MEMORY_INFERRED_MIN_CONFIDENCE=0.9`，保证 legacy 直写路径与 WM 固化路径都放行）、decay=30d、`schema_version=stage16.explicit_command.v1`；
++- 挂点在 `extract_candidate` 的 `_pick_candidate_sentence` 为 None 分支——正常规则候选优先，口令 fallback 只兜底，精度夹具（`memory_inferred_cold_dataset.json`，negative 样本零口令词）不受影响。
++
++live 配置（stage19 working_memory=live）下的同轮闭环：候选 → WM `upsert_entry` → 同句命中 `is_explicit_confirmation` → `maybe_consolidate_recent_entries`（10 分钟窗）→ `write_candidate_to_l1(force_write=True)` → **episodic LTM 当轮落行**。kill-switch off 时走 legacy 直写路径，同样落行（单测覆盖）。
++
++### 1.3 红绿
++
++| 测试（tests/unit/test_memory_revival_capture.py） | red | green |
++|---|---|---|
++| `test_explicit_memory_command_yields_candidate` | extract_candidate → None（MR-1 死点实证） | ✅ |
++| `test_explicit_memory_command_writes_episodic_ltm_row`（enqueue_from_session 语义：user_message=None 回读库） | 0 行 | ✅ 1 行，summary 含"星际穿越" |
++| `test_explicit_memory_command_not_duplicated` | —（依赖 fallback） | ✅ 重复口令去重 |
++| `test_explicit_memory_command_still_respects_user_disabled` | —（护栏） | ✅ 用户关闭记忆不落库 |
++| `test_explicit_command_fallback_respects_hard_banned_topics` | 方法不存在 | ✅ "我就是很笨"类口令句拒绝捕获 |
++
++---
++
++## 2. MR-2 slim 路径记忆窗口
++
++### 2.1 溯源
++
++`standard_workflow.py` 原实现一行 `return {}`。短问句（"根据你的记忆，我之前提到过什么考试？"）默认命中 `_should_use_slim_standard_context`（无工具意图、无文档检索、无专家）→ `prompt_user_context={}` → episodic/preferences/goals 全部不进 `build_system_prompt`。同时 `knowledge_context`/`document_context` 在 slim 分支也被清空（这两处是防泄漏的合理设计，保留）。
++
++### 2.2 修复（`standard_workflow.py`）
++
++- `_build_slim_user_context_for_standard_reply` 重写：episodic **top-3**（保留上游已排序的 `_attach_stage34_memory_context` 产物）+ goals top-1 + preferences 截 8 键 + llm_profile + preference_version + current_query；任务/统计/计划噪音（next_actions/focus_stats/active_plans/recent_tool_usage）照旧不进；
++- `_truncate_slim_user_context_to_budget`：`estimate_tokens` 超 500 逐级收缩（丢 preferences → 记忆窗口收到 1 条）；
++- **渲染对齐**：默认 light 档 episodic 只渲染 1 条（`section_caps.get("episodic") or (1 if light else 5)`）——slim 载荷自带最小 `context_focus{focus_mode:general_focus, section_caps:{episodic:3, goals:1}}`（`build_system_prompt` 会从 user_context 回读 focus），保证 top-3 真的可见；
++- slim 提示词后缀新增一句：记忆问句（考试/偏好/约定等）必须优先依据【近期相关记忆】回答，记忆未覆盖才如实说没有——防止"别引入画像"的通用约束压制记忆召回。
++
++### 2.3 红绿（tests/unit/test_memory_revival_slim_and_grounding.py）
++
++red 3 failed（is_not_empty / keeps_top3 / prompt_renders_memory）→ green 6/6：非空、top-3 且含"数据结构期中"、噪音仍被裁剪、token 预算（实测 <600）、`build_system_prompt` light 档渲染出记忆内容、honest 分支不受影响。
++
++---
++
++## 3. MR-4 grounding 段与实际检索对账
++
++### 3.1 溯源
++
++两条独立通道：① `experience_actuator._ground_with_user_materials`（需 grounding_priority==user_materials，产出 `user_material_grounding{status,results}`）；② orchestrator `_hydrate_document_context` GraphRAG（`document_context` + `document_context_retrieval{total_passed, context_receipt.used_names}`）。eval 的 B1' 场景里 ②水合了 3 块（document_chunks usage=354）而 ①报 no_scoped_files/no_hits → `_format_user_material_grounding_section` 渲染"这轮没有拿到足够可用的材料证据"，模型服从后者连续 4 轮拒答。
++
++### 3.2 修复（`prompts.py::_format_user_material_grounding_section`）
++
++对账规则：`document_context` 非空 且（total_passed>0 或检索元数据缺失）→ no_hits/no_scoped_files/retrieval_failed/file_resolution_failed 的口径翻转为"本轮检索已命中用户材料（见下方文档片段）：{used_names top3}。回答时优先引用这些材料片段校准概念与事实，材料未覆盖的部分再补通用知识"；无水合产物时保留原"没拿到材料"诚实口径；grounded 分支原样不动。
++
++### 3.3 红绿
++
++red 2 failed（contradiction/build_system_prompt 端到端）→ green 3/3：有水合证据时段落引用 ZB-2049 且不再出现"没有拿到"；真无材料时保留诚实口径；grounded 分支快照回归。
++
++---
++
++## 4. MR-3 MinIO 凭证与 Celery worker
++
++### 4.1 凭证漂移的完整链条（比 eval 多一层）
++
++| 层 | 键 | 实际值 | 用途 |
++|---|---|---|---|
++| 运行容器 `sparkle_minio` | MINIO_ROOT_USER/PASSWORD | `sparkle_minio` / `sparkle_dev_minio_2026` | 容器创建时固化 |
++| `backend/.env`（修复前） | MINIO_ROOT_USER/PASSWORD | `minioadmin/minioadmin` | docker-compose 建容器变量（引擎**不读**） |
++| `backend/.env`（修复前） | MINIO_ACCESS_KEY/SECRET_KEY | **两行缺失** → settings 默认 `""` | **引擎 presign 实际读取**（`document_upload_storage.py:41`） |
++
++即：不只是 minioadmin vs sparkle_minio 漂移，引擎侧根本拿不到任何键——presign 出的 URL 带空凭证/陈旧凭证，PUT 必 403（`InvalidAccessKeyId`），confirm 409。本机复现/修复双向验证：
++
++```
++minioadmin/minioadmin  → presigned PUT → 403（预期漂移失败）
++sparkle_minio/sparkle_dev_minio_2026 → presigned PUT → 200，head_object 18 bytes ✅
++```
++
++### 4.2 配置处置
++
++- 主仓 `backend/.env`（运行时文件，gitignored，不入补丁）：`MINIO_ROOT_USER/PASSWORD` 对齐运行容器，**新增** `MINIO_ACCESS_KEY/MINIO_SECRET_KEY=sparkle_minio/sparkle_dev_minio_2026`；附带效果：`production_readiness_check.sh` 的"minioadmin 默认凭证"检查由 fail 转 pass；
++- 补丁内：`backend/.env.local.example` 登记四行并注明"ROOT_* 供 compose 建容器、ACCESS_*/SECRET_* 供引擎 presign，两者必须与运行容器一致"；
++- 代码默认值检查：`settings.MINIO_ACCESS_KEY: str = ""` 无 minioadmin 硬编码（干净）；风险在静默空串——由 runbook 验证步骤兜底；
++- 注意：在跑引擎（重启前）仍持旧环境，**重启后才吃到新 .env**（§7 交接）。
++
++### 4.3 Celery worker
++
++- `make celery-up` 已存在（docker 方式，依赖 sparkle_backend 镜像，容器网络 sparkle-project_default）；
++- 新增 nohup 方式 `scripts/devtools/start_celery_worker_dev.sh`（start/stop/status，读 backend/.env，队列 high_priority,default,low_priority，PID/日志落 /tmp）——**已启动**：pid 34450，`celery@Mac-mini-2.local ready`，`process_stored_file` 已注册；
++- 验证：上传链第 2 步不再 409-无消费者（验收脚本 mr3.confirm-queued / mr3.processed 步骤把关）。
++
++---
++
++## 5. Runbook（dev 环境上传链/记忆链每日自检）
++
++```bash
++# 1) 基础设施（PostgreSQL16/Redis/MinIO）
++make dev-up
++# 2) Celery worker（二选一）
++bash scripts/devtools/start_celery_worker_dev.sh     # 本机 nohup；status/stop 同脚本
++make celery-up                                       # docker 方式（需 sparkle_backend 镜像）
++# 3) MinIO 凭证对齐自检（凭证来自 backend/.env，须与容器 root 一致）
++docker exec sparkle_minio env | grep MINIO_ROOT_USER   # 应输出 backend/.env 里 MINIO_ACCESS_KEY 同值
++# 4) 引擎（改代码/.env 后重启才生效）
++pkill -f grpc_server.py && make grpc-server          # :50051
++# 5) 记忆链/上传链端到端验收
++/opt/homebrew/bin/python3.11 scripts/devtools/acceptance_memory_revival.py
++```
++
++---
++
++## 6. 定向回归与基线对照
++
++- 定向绿：`test_memory_revival_*`（14）+ `test_memory_inferred_write_lane.py`（除下述 1 条基线红）+ `test_rb06_followup_no_midstream_commit.py` + `test_standard_workflow_generation_routing.py` + `test_orchestrator_real_engine.py`（42）+ stage5/stage39/signal/session 套件（983 passed）；
++- **pristine 32d2ebe3 stash 对照**证明以下失败为基线已有、与本改动无关：
++  - `test_memory_inferred_write_lane.py::test_memory_inferred_revoke_hides_from_prompt_read_path`（非口令句候选未进提示词——正是本波能力缺口的一部分，但该测试句不含显式口令，属规则候选器召回面问题，留台账）
++  - `test_context_focusing.py::test_context_pack_semantic_gating_filters_irrelevant_memory`
++  - `test_stage5_intervention_language_contract.py` 2 条
++- **基线红转绿**：`test_two_consecutive_sessions_prompt_includes_inferred_memory`（夹具句含"帮我记住"，被本波 fallback 捕获）。
++
++---
++
++## 7. 交接：端到端验收执行步骤（协调者）
++
++1. 主仓 apply 补丁：`git apply docs/competition/2026-tmall-hackathon/系统审查/round2/memory-revival.patch`（主仓 backend/.env 已由本员对齐 MinIO，无需再动）；
++2. 重启引擎（吃 .env 新 MinIO 键 + 补丁代码）：`pkill -f grpc_server.py` 后按主仓方式重启 ：50051（:8080 网关不动）；
++3. 确认 Celery worker 存活：`bash scripts/devtools/start_celery_worker_dev.sh status`（已启动 pid 34450；不在则 start）；
++4. 跑验收（预算：**5 次聊天 LLM** + 1 次 embedding）：`/opt/homebrew/bin/python3.11 scripts/devtools/acceptance_memory_revival.py`；
++5. 通过标准：脚本退出码 0，8 步全 PASS——
++   - a1.seeded-exam / a1.seeded-movie（会话1埋点）
++   - **mr1.episodic-written（聊天一轮后记忆表有写入，DB 断言零 LLM）**
++   - **a2.cross-session-recall（新会话2问考试 → 含"数据结构"）**
++   - **a2.slim-short-recall（新会话3短问句"我最喜欢的电影" → 含"星际穿越"，slim 路径）**
++   - mr3.presigned-put / mr3.confirm-queued / mr3.processed（上传链，MR-3）
++   - **mr4.rag-cited（use_document_context:true 问 MRV-7749 → 引用性状/保存要求，无拒认话术，MR-4）**
++
++已知残留风险（如实记录）：① 考试埋点句高优触发 create_plan（MR-5 域），若计划链仍中断该轮则 a1.seeded-exam 失败——但电影埋点（纯显式口令）不受影响，mr1/a2 断言仍应通过；② 若网关 CQRS 用户消息落库晚于 lane 后台读取，`_load_latest_user_turn` 会拿不到当前轮（实测 eval 窗口未见此竞态输过，B1' 轮候选均成功写入 WM）。
++
++---
++
++## 附：验收脚本
++
++全量脚本见补丁内 `scripts/devtools/acceptance_memory_revival.py`（含逐步 PASS/FAIL、JSON 摘要、DB 断言），核心断言逻辑：
++
++```python
++# MR-1：聊天一轮后记忆表有写入（DB 断言，不耗 LLM）
++lanes = db_scalar(f"SELECT count(*) FROM episodic_memories WHERE user_id='{user_id}' "
++                  "AND source_lane='inferred_extraction' AND deleted_at IS NULL")
++assert lanes >= 1  # 会话1 两条"帮我记住"埋点后，异步 lane 最长等 30s
++
++# MR-2/跨会话：新会话问考试
++q1 = ws_chat(token, str(uuid4()), "根据你的记忆，我之前提到过什么考试？")
++assert "数据结构" in q1["text"]
++# MR-2/slim：新会话超短问句
++q2 = ws_chat(token, str(uuid4()), "我最喜欢的电影是什么？")
++assert "星际穿越" in q2["text"]
++
++# MR-3：presigned PUT 直传（凭证对齐后 200）→ confirm → 轮询 processed
++# MR-4：use_document_context:true 问 RAG_KEYWORD → 回答含性状/保存要求且无"没有拿到/不能复述"
++```
+diff --git a/scripts/devtools/acceptance_memory_revival.py b/scripts/devtools/acceptance_memory_revival.py
+new file mode 100644
+index 00000000..7ae33462
+--- /dev/null
++++ b/scripts/devtools/acceptance_memory_revival.py
+@@ -0,0 +1,242 @@
++#!/usr/bin/env python3
++"""记忆链复活端到端验收（memory-revival round2，MR-1/2/3/4 修复后全链真跑）。
++
++对应多端实测 docs/competition/2026-tmall-hackathon/多端实测/memory-rag-seedlib-eval.md
++的 A1/A2(短问句)/B1+B1' 场景。前置条件：
++  1. 主栈在跑：gateway :8080（新版引擎已 apply memory-revival patch 并重启）
++  2. PostgreSQL/Redis/MinIO 容器在跑（sparkle_db / sparkle_redis / sparkle_minio）
++  3. Celery worker 已启动（bash scripts/devtools/start_celery_worker_dev.sh）
++  4. 本机可 docker exec（DB 断言用，不消耗 LLM）
++
++LLM 预算：5 次聊天调用（埋点×2 + 跨会话提问×2 + RAG 问答×1），
++另有 1 次 embedding 调用（上传切片向量化，非聊天 LLM）。
++
++用法：
++  /opt/homebrew/bin/python3.11 scripts/devtools/acceptance_memory_revival.py
++
++产出：逐项 PASS/FAIL 与最终摘要（0 退出码 = 全过）。
++"""
++
++from __future__ import annotations
++
++import json
++import subprocess
++import sys
++import time
++import urllib.request
++from pathlib import Path
++from uuid import uuid4
++
++import websocket
++
++GATEWAY = "http://localhost:8080"
++DB_CONTAINER = "sparkle_db"
++DB_NAME = "sparkle"
++RAG_KEYWORD = "MRV-7749"  # 本轮验收专用唯一关键词，避免历史数据干扰
++RESULTS: list[dict] = []
++
++
++def http(method: str, path: str, token: str | None = None, body: dict | None = None, timeout: float = 30.0):
++    headers = {"Content-Type": "application/json"}
++    if token:
++        headers["Authorization"] = f"Bearer {token}"
++    req = urllib.request.Request(
++        f"{GATEWAY}{path}",
++        method=method,
++        headers=headers,
++        data=json.dumps(body, ensure_ascii=False).encode() if body is not None else None,
++    )
++    with urllib.request.urlopen(req, timeout=timeout) as resp:
++        return json.loads(resp.read())
++
++
++def ws_ticket(token: str) -> str:
++    data = http("POST", "/api/v1/ws/ticket", token=token, body={})
++    return data.get("ticket") or (data.get("data") or {}).get("ticket") or ""
++
++
++def ws_chat(token: str, session_id: str, message: str, timeout_s: float = 90.0, extra: dict | None = None) -> dict:
++    ticket = ws_ticket(token)
++    ws = websocket.create_connection(f"ws://localhost:8080/ws/chat?ticket={ticket}", timeout=timeout_s)
++    payload = {"type": "message", "message": message, "session_id": session_id}
++    if extra:
++        payload.update(extra)
++    ws.send(json.dumps(payload, ensure_ascii=False))
++    parts: list[str] = []
++    meta: dict = {}
++    t0 = time.time()
++    while time.time() - t0 < timeout_s:
++        try:
++            raw = ws.recv()
++        except websocket.WebSocketTimeoutException:
++            break
++        if not raw:
++            continue
++        try:
++            frame = json.loads(raw)
++        except (TypeError, ValueError):
++            continue
++        ftype = str(frame.get("type") or frame.get("event") or "")
++        if ftype in ("delta", "content_delta", "text_delta", "stream"):
++            delta = frame.get("delta") or frame.get("content") or frame.get("text") or ""
++            if delta:
++                parts.append(delta)
++        elif ftype in ("full_text", "message", "response", "chat_response", "final"):
++            txt = (
++                frame.get("full_text")
++                or frame.get("content")
++                or frame.get("text")
++                or (frame.get("data") or {}).get("content", "")
++            )
++            if txt and txt not in "".join(parts):
++                parts.append(txt)
++        if isinstance(frame.get("metadata"), dict):
++            meta.update(frame["metadata"])
++        if ftype in ("done", "end", "complete", "stream_end", "response_end"):
++            break
++    ws.close()
++    return {"text": "".join(parts).strip(), "metadata": meta, "elapsed": round(time.time() - t0, 1)}
++
++
++def db_scalar(sql: str) -> str:
++    out = subprocess.run(
++        ["docker", "exec", DB_CONTAINER, "psql", "-U", "postgres", "-d", DB_NAME, "-tAc", sql],
++        capture_output=True,
++        text=True,
++    )
++    return (out.stdout or "").strip()
++
++
++def record(step: str, ok: bool, detail: str) -> None:
++    RESULTS.append({"step": step, "ok": ok, "detail": detail})
++    print(f"{'✅ PASS' if ok else '⛔ FAIL'} | {step} | {detail}")
++
++
++def main() -> int:
++    # ---- 0. 游客身份 ----
++    guest = http("POST", "/api/v1/auth/guest", body={"guest_id": f"memrev_{uuid4().hex[:8]}"})
++    token = guest["access_token"]
++    user_id = guest["user"]["id"]
++    print(f"guest user_id={user_id}")
++
++    # ---- MR-1/2 验收 a：跨会话记忆 ----
++    s1 = str(uuid4())
++    seed_exam = ws_chat(token, s1, "我下周三有数据结构期中考试，帮我记住这个。")
++    record(
++        "a1.seeded-exam(会话1)",
++        "数据结构" in seed_exam["text"] or "记" in seed_exam["text"],
++        f"reply[:80]={seed_exam['text'][:80]!r}",
++    )
++    seed_movie = ws_chat(token, s1, "我最喜欢的电影是《星际穿越》，帮我记住这个。")
++    record(
++        "a1.seeded-movie(会话1)",
++        "星际穿越" in seed_movie["text"] or "记" in seed_movie["text"],
++        f"reply[:80]={seed_movie['text'][:80]!r}",
++    )
++
++    # 等待异步记忆 lane（enqueue_from_session 为后台任务）
++    deadline = time.time() + 30
++    lanes = "0"
++    while time.time() < deadline:
++        lanes = db_scalar(
++            f"SELECT count(*) FROM episodic_memories WHERE user_id='{user_id}' "
++            f"AND source_lane='inferred_extraction' AND deleted_at IS NULL"
++        )
++        if lanes not in ("", "0"):
++            break
++        time.sleep(3)
++    record(
++        "mr1.episodic-written(聊天一轮后记忆表有写入)",
++        lanes not in ("", "0"),
++        f"inferred_extraction rows={lanes} (期望>=1，跨轮异步最多等30s)",
++    )
++
++    s2 = str(uuid4())
++    q1 = ws_chat(token, s2, "根据你的记忆，我之前提到过什么考试？")
++    record(
++        "a2.cross-session-recall(新会话2含答案)",
++        "数据结构" in q1["text"],
++        f"reply[:120]={q1['text'][:120]!r}",
++    )
++
++    s3 = str(uuid4())
++    q2 = ws_chat(token, s3, "我最喜欢的电影是什么？")
++    record(
++        "a2.slim-short-recall(新会话3短问句召回)",
++        "星际穿越" in q2["text"],
++        f"reply[:120]={q2['text'][:120]!r}",
++    )
++
++    # ---- MR-3/4 验收 c：文档上传 → RAG 问答引用 ----
++    doc_text = (
++        f"{RAG_KEYWORD} 材料验收说明。\n"
++        f"{RAG_KEYWORD} 是 Sparkle 验收测试专用的星火物质编号：由实验室在第 2049 次实验中合成的"
++        f"蓝色荧光晶体，遇紫外线会发出星轨状磷光，保存温度要求零下 20 摄氏度。"
++    ).encode()
++    upload = http(
++        "POST",
++        "/api/v1/documents/upload",
++        token=token,
++        body={
++            "filename": f"{RAG_KEYWORD.lower()}_note.txt",
++            "mime_type": "text/plain",
++            "file_size": len(doc_text),
++            "visibility": "private",
++        },
++    )
++    file_id, presigned = upload.get("file_id"), upload.get("presigned_url")
++    put_req = urllib.request.Request(presigned, data=doc_text, method="PUT", headers={"Content-Type": "text/plain"})
++    with urllib.request.urlopen(put_req, timeout=30) as resp:
++        put_ok = resp.status == 200
++    record("mr3.presigned-put(凭证对齐后上传)", put_ok, f"file_id={file_id}")
++
++    confirm = http("POST", f"/api/v1/documents/{file_id}/confirm-upload", token=token, body={})
++    job_ok = bool(confirm.get("job_id"))
++    record("mr3.confirm-queued(celery 消费)", job_ok, f"confirm={ {k: confirm.get(k) for k in ('job_id', 'estimated_seconds')} }")
++
++    status = ""
++    deadline = time.time() + 120
++    while time.time() < deadline:
++        st = http("GET", f"/api/v1/documents/{file_id}/status", token=token)
++        status = str(st.get("status") or st.get("stage") or "")
++        if status in {"processed", "completed", "ready"}:
++            break
++        if status in {"failed", "error"}:
++            break
++        time.sleep(4)
++    record("mr3.processed(切片+embedding 入库)", status in {"processed", "completed", "ready"}, f"final status={status}")
++
++    s4 = str(uuid4())
++    q3 = ws_chat(
++        token,
++        s4,
++        f"{RAG_KEYWORD} 是什么？请根据我上传的资料回答它的性状与保存要求。",
++        extra={"use_document_context": True},
++    )
++    grounding_ok = RAG_KEYWORD in q3["text"] and ("磷光" in q3["text"] or "荧光" in q3["text"] or "零下" in q3["text"])
++    refused = ("没有拿到" in q3["text"]) or ("不能复述" in q3["text"]) or ("没有找到相关" in q3["text"])
++    record(
++        "mr4.rag-cited(RAG 问答引用材料)",
++        grounding_ok and not refused,
++        f"reply[:160]={q3['text'][:160]!r}",
++    )
++
++    # ---- 摘要 ----
++    passed = sum(1 for r in RESULTS if r["ok"])
++    total = len(RESULTS)
++    summary = {
++        "passed": passed,
++        "total": total,
++        "chat_llm_calls": 5,
++        "results": RESULTS,
++    }
++    print("\n== SUMMARY ==")
++    print(json.dumps({k: v for k, v in summary.items() if k != "results"}, ensure_ascii=False))
++    return 0 if passed == total else 1
++
++
++if __name__ == "__main__":
++    if Path(__file__).stem and sys.version_info < (3, 11):
++        print("need python3.11+")
++        sys.exit(2)
++    sys.exit(main())
+diff --git a/scripts/devtools/start_celery_worker_dev.sh b/scripts/devtools/start_celery_worker_dev.sh
+new file mode 100755
+index 00000000..227b167c
+--- /dev/null
++++ b/scripts/devtools/start_celery_worker_dev.sh
+@@ -0,0 +1,79 @@
++#!/usr/bin/env bash
++# Dev 环境本机 Celery worker 启动脚本（MR-3 配套 runbook）。
++#
++# 背景：文档上传链 confirm-upload 后 `process_stored_file.delay` 需要 worker
++# 消费；本机 dev 栈此前从未运行 worker，上传链在第 2 步即无人消费（409）。
++#
++# 用法：
++#   bash scripts/devtools/start_celery_worker_dev.sh          # nohup 后台启动
++#   bash scripts/devtools/start_celery_worker_dev.sh stop     # 停止
++#   bash scripts/devtools/start_celery_worker_dev.sh status   # 查看存活
++#
++# 备选（docker 方式）：make celery-up（需要 sparkle_backend 镜像）。
++set -euo pipefail
++
++ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
++BACKEND_DIR="${ROOT_DIR}/backend"
++LOG_FILE="${SPARKLE_CELERY_LOG:-/tmp/sparkle_celery_worker.log}"
++PID_FILE="${SPARKLE_CELERY_PID:-/tmp/sparkle_celery_worker.pid}"
++QUEUES="${SPARKLE_CELERY_QUEUES:-high_priority,default,low_priority}"
++CONCURRENCY="${SPARKLE_CELERY_CONCURRENCY:-2}"
++PYTHON_BIN="${SPARKLE_PYTHON:-}"
++
++if [[ -z "${PYTHON_BIN}" ]]; then
++  for candidate in backend/.venv/bin/python /opt/homebrew/bin/python3.11 python3.11 python3; do
++    if [[ -x "${ROOT_DIR}/${candidate}" || "${candidate}" == python3* ]] && command -v "${candidate}" >/dev/null 2>&1; then
++      PYTHON_BIN="${candidate}"
++      break
++    fi
++  done
++fi
++
++worker_pid() {
++  [[ -f "${PID_FILE}" ]] && kill -0 "$(cat "${PID_FILE}")" 2>/dev/null && cat "${PID_FILE}" || true
++}
++
++case "${1:-start}" in
++  start)
++    if [[ -n "$(worker_pid)" ]]; then
++      echo "✅ Celery worker already running (pid $(cat "${PID_FILE}"))"
++      exit 0
++    fi
++    cd "${BACKEND_DIR}"
++    echo "🚀 Starting Celery worker (queues=${QUEUES}, concurrency=${CONCURRENCY})..."
++    nohup "${PYTHON_BIN}" -m celery -A app.core.celery_app worker \
++      -l info -Q "${QUEUES}" --concurrency="${CONCURRENCY}" \
++      >> "${LOG_FILE}" 2>&1 &
++    echo $! > "${PID_FILE}"
++    sleep 3
++    if kill -0 "$(cat "${PID_FILE}")" 2>/dev/null; then
++      echo "✅ Worker started (pid $(cat "${PID_FILE}"), log ${LOG_FILE})"
++      echo "   Verify: grep -m1 'ready' ${LOG_FILE}"
++    else
++      echo "❌ Worker failed to start; last log lines:"
++      tail -20 "${LOG_FILE}" || true
++      exit 1
++    fi
++    ;;
++  stop)
++    pid="$(worker_pid)"
++    if [[ -n "${pid}" ]]; then
++      kill "${pid}" && echo "🛑 Stopped worker (pid ${pid})"
++    else
++      echo "No running worker found"
++    fi
++    ;;
++  status)
++    pid="$(worker_pid)"
++    if [[ -n "${pid}" ]]; then
++      echo "✅ Worker alive (pid ${pid})"
++    else
++      echo "⛔ Worker not running; start with: $0"
++      exit 1
++    fi
++    ;;
++  *)
++    echo "Usage: $0 [start|stop|status]"
++    exit 2
++    ;;
++esac

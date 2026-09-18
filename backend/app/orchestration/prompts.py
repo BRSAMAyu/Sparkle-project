@@ -2378,6 +2378,31 @@ def _format_user_material_grounding_section(*, user_context: dict) -> str:
     if not status and not results:
         return ""
 
+    # MR-4 修复：grounding 段必须与本轮实际进入提示词的检索产物一致。
+    # GraphRAG / document_vector_search 已水合出 document_context 时，即使
+    # 预取段自身报 no_hits/no_scoped_files，也不得宣称"没拿到材料"——否则
+    # 模型会拒用 document_chunks 里真实存在的证据（实测连续 4 轮拒答）。
+    document_context = str(user_context.get("document_context") or "").strip()
+    retrieval_meta = user_context.get("document_context_retrieval")
+    hydrated_names: list[str] = []
+    hydrated_count = 0
+    if isinstance(retrieval_meta, dict):
+        receipt = retrieval_meta.get("context_receipt")
+        if isinstance(receipt, dict):
+            hydrated_names = [str(name).strip() for name in (receipt.get("used_names") or []) if str(name).strip()]
+            try:
+                hydrated_count = int(receipt.get("used_count") or 0)
+            except (TypeError, ValueError):
+                hydrated_count = 0
+        if not hydrated_names:
+            try:
+                hydrated_count = int(retrieval_meta.get("total_passed") or 0)
+            except (TypeError, ValueError):
+                hydrated_count = 0
+    documents_in_prompt = bool(document_context) and (
+        hydrated_count > 0 or not isinstance(retrieval_meta, dict) or "total_passed" not in retrieval_meta
+    )
+
     lines = ["## 用户材料依据 [L1 证据]"]
     if query:
         lines.append(f"- 本轮已按该查询预取用户材料: {query}")
@@ -2399,8 +2424,22 @@ def _format_user_material_grounding_section(*, user_context: dict) -> str:
             elif snippet:
                 lines.append(f"- {snippet}")
     elif status in {"no_hits", "no_scoped_files", "retrieval_failed", "file_resolution_failed"}:
-        lines.append("- 当前策略要求先看用户材料，但这轮没有拿到足够可用的材料证据。")
-        lines.append("- 若继续回答，请明确缩小结论范围，并把通用知识当作补充而不是替代。")
+        if documents_in_prompt:
+            # 实际已有水合证据：口径翻转为"使用证据"，并列出命中材料名。
+            if hydrated_names:
+                lines.append(
+                    "- 本轮检索已命中用户材料（见下方文档片段）："
+                    + "、".join(hydrated_names[:3])
+                    + "。回答时优先引用这些材料片段校准概念与事实，材料未覆盖的部分再补通用知识。"
+                )
+            else:
+                lines.append(
+                    "- 本轮检索已命中用户材料（见下方文档片段）。"
+                    "回答时优先引用这些材料片段校准概念与事实，材料未覆盖的部分再补通用知识。"
+                )
+        else:
+            lines.append("- 当前策略要求先看用户材料，但这轮没有拿到足够可用的材料证据。")
+            lines.append("- 若继续回答，请明确缩小结论范围，并把通用知识当作补充而不是替代。")
     else:
         return ""
 

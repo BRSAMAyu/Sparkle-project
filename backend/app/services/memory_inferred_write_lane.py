@@ -35,6 +35,32 @@ def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
+# MR-1 修复：显式记忆口令集合（与 WorkingMemoryConsolidationService 的确认短语
+# 保持同语义）。带这些口令的句子即使被规则启发式判为无候选，也必须捕获，
+# 否则"帮我记住 X"这一产品承诺在主聊天路径整链失活（实测 A1 0/3）。
+EXPLICIT_MEMORY_COMMAND_PHRASES = (
+    "帮我记住",
+    "记住这个",
+    "记下来",
+    "把这个记住",
+    "就记这个",
+    "记一下这个",
+)
+
+# 显式口令也不得越过的硬禁止话题（人格判定/负面自我标签等）。
+EXPLICIT_COMMAND_HARD_BANNED_TOKENS = (
+    "性格",
+    "人格",
+    "天生",
+    "永远",
+    "一辈子",
+    "很笨",
+    "很懒",
+    "我就是",
+    "是不是有病",
+)
+
+
 @dataclass(frozen=True)
 class InferredEpisodicCandidate:
     candidate_text: str
@@ -239,7 +265,12 @@ class MemoryInferredWriteLaneService:
     ) -> InferredEpisodicCandidate | None:
         sentence = self._pick_candidate_sentence(user_message)
         if not sentence:
-            return None
+            # MR-1 修复：规则启发式丢掉的句子若带显式记忆口令，走口令 fallback，
+            # 保证"帮我记住 X"一轮后工作记忆/固化链有事可做。
+            return self._build_explicit_command_candidate(
+                user_message=user_message,
+                evidence_token=evidence_token,
+            )
         subject_type, entity_name = self._classify_subject_type(sentence)
         if subject_type is None:
             return None
@@ -599,6 +630,62 @@ class MemoryInferredWriteLaneService:
             mentioned_entity_hash=candidate.mentioned_entity_hash,
             mentioned_entity_owner_user_id=candidate.mentioned_entity_owner_user_id,
             source_id=str(session_id) if session_id is not None else None,
+        )
+
+    @classmethod
+    def _has_explicit_memory_command(cls, text: str) -> bool:
+        normalized = str(text or "").strip()
+        return any(phrase in normalized for phrase in EXPLICIT_MEMORY_COMMAND_PHRASES)
+
+    @classmethod
+    def _extract_explicit_command_fact(cls, text: str) -> str | None:
+        """从带显式记忆口令的句子里剥离口令，返回要记住的事实文本。"""
+        normalized = str(text or "").strip()
+        if not normalized or not cls._has_explicit_memory_command(normalized):
+            return None
+        if any(token in normalized for token in EXPLICIT_COMMAND_HARD_BANNED_TOKENS):
+            return None
+        fact = normalized
+        for phrase in EXPLICIT_MEMORY_COMMAND_PHRASES:
+            fact = fact.replace(phrase, "，")
+        parts = [part.strip(" ，,。：:；;！!？?·「」《》\"'") for part in re.split(r"[，,；;：:]+", fact)]
+        parts = [part for part in parts if len(part) >= 4]
+        if not parts:
+            return None
+        return max(parts, key=len)
+
+    def _build_explicit_command_candidate(
+        self,
+        *,
+        user_message: str,
+        evidence_token: str,
+    ) -> InferredEpisodicCandidate | None:
+        fact = self._extract_explicit_command_fact(user_message)
+        if not fact or len(fact) < 6 or len(fact) > 180:
+            return None
+        occurred_at, _temporal_kind = self._resolve_occurred_at(fact)
+        semantic_key = hashlib.sha1(self._normalize_semantic(fact).encode("utf-8")).hexdigest()
+        # 用户显式口令是最高优先级捕获信号：给最高置信档（必须越过
+        # MEMORY_INFERRED_MIN_CONFIDENCE=0.9 的 L1 直写门槛）。
+        return InferredEpisodicCandidate(
+            candidate_text=fact,
+            subject_type="self",
+            confidence=0.92,
+            evidence_token=evidence_token,
+            decay_policy="30d",
+            source_lane=self.SOURCE_LANE,
+            semantic_key=semantic_key,
+            evidence_refs=[
+                {
+                    "type": "chat_turn",
+                    "id": evidence_token,
+                    "schema_version": "stage16.explicit_command.v1",
+                }
+            ],
+            occurred_at=occurred_at,
+            due_at=None,
+            mentioned_entity_hash=None,
+            mentioned_entity_owner_user_id=None,
         )
 
     @staticmethod
