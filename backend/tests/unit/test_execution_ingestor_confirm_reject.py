@@ -150,15 +150,16 @@ async def _create_waiting_intent_and_record(
 
 @pytest.mark.asyncio
 async def test_confirm_lost_race_does_not_reapply_result(sqlite_session, monkeypatch):
-    """When a concurrent request already consumed the waiting_approval claim,
-    the loser must not run _apply_execution_result again (no double completion)."""
+    """When a concurrent request already consumed the waiting_approval claim AND
+    applied the result (the real double-click race: task already completed), the
+    loser must not run _apply_execution_result again (no double completion)."""
     _mute_ingestor_events(monkeypatch)
     user = await _create_user(sqlite_session)
     task = await _create_task(sqlite_session, user_id=user.id, status=TaskStatus.IN_PROGRESS)
     _, record = await _create_waiting_intent_and_record(sqlite_session, user=user, task=task)
 
-    # Simulate the concurrent winner committing its claim behind our back:
-    # conditional UPDATE + no session sync keeps the identity-map object stale.
+    # Simulate the concurrent winner committing claim + apply behind our back:
+    # conditional UPDATEs + no session sync keep the identity-map objects stale.
     await sqlite_session.execute(
         update(ExecutionIntent)
         .where(
@@ -166,6 +167,16 @@ async def test_confirm_lost_race_does_not_reapply_result(sqlite_session, monkeyp
             ExecutionIntent.status == ExecutionIntentStatus.WAITING_APPROVAL,
         )
         .values(status=ExecutionIntentStatus.SUCCEEDED)
+        .execution_options(synchronize_session=False)
+    )
+    await sqlite_session.execute(
+        update(Task)
+        .where(Task.id == task.id)
+        .values(
+            status=TaskStatus.COMPLETED,
+            completed_at=datetime.now(UTC).replace(tzinfo=None),
+            actual_minutes=0,
+        )
         .execution_options(synchronize_session=False)
     )
     await sqlite_session.commit()
@@ -178,7 +189,41 @@ async def test_confirm_lost_race_does_not_reapply_result(sqlite_session, monkeyp
 
     apply_result_spy.assert_not_awaited()
     await sqlite_session.refresh(task)
-    assert task.status != TaskStatus.COMPLETED, "loser of the confirm race re-applied the result"
+    assert task.status == TaskStatus.COMPLETED, "loser of the confirm race re-applied the result"
+
+
+@pytest.mark.asyncio
+async def test_confirm_retries_apply_after_crash_between_claim_and_apply(sqlite_session, monkeypatch):
+    """R2-P3-04 (sysrev round2): the claim (waiting_approval → succeeded) was
+    committed but the process crashed before _apply_execution_result ran — the
+    retry confirm must complete the task instead of stranding it in
+    IN_PROGRESS forever."""
+    _mute_ingestor_events(monkeypatch)
+    user = await _create_user(sqlite_session)
+    task = await _create_task(sqlite_session, user_id=user.id, status=TaskStatus.IN_PROGRESS)
+    _, record = await _create_waiting_intent_and_record(sqlite_session, user=user, task=task)
+
+    # Simulate the crash: claim committed, apply never ran (task untouched).
+    await sqlite_session.execute(
+        update(ExecutionIntent)
+        .where(
+            ExecutionIntent.id == record.execution_intent_id,
+            ExecutionIntent.status == ExecutionIntentStatus.WAITING_APPROVAL,
+        )
+        .values(status=ExecutionIntentStatus.SUCCEEDED)
+        .execution_options(synchronize_session=False)
+    )
+    await sqlite_session.commit()
+
+    ingestor = _make_ingestor(sqlite_session)
+    await ingestor.confirm_result(record_id=record.id, user_id=user.id)
+
+    await sqlite_session.refresh(task)
+    await sqlite_session.refresh(record)
+    assert task.status == TaskStatus.COMPLETED, (
+        "retry after claim/apply crash never completed the task"
+    )
+    assert task.completed_at is not None
 
 
 @pytest.mark.asyncio

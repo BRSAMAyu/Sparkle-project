@@ -661,6 +661,7 @@ async def test_prerequisite_review_not_duplicated_across_cycles():
 
     # Next cycle: the previously inserted review task is now inside the
     # look-ahead window (PENDING, same due date).
+    # R2-P2-02: 复习卡创建时不再携带 adaptive_adjusted，只保留专属标
     review_task = Task(
         user_id=original.user_id,
         plan_id=original.plan_id,
@@ -670,7 +671,159 @@ async def test_prerequisite_review_not_duplicated_across_cycles():
         difficulty=1,
         energy_cost=1,
         status=TaskStatus.PENDING,
-        tags=["adaptive_prerequisite_review", "adaptive_adjusted"],
+        tags=["adaptive_prerequisite_review"],
     )
     res2, _ = await _run_cycle([original, review_task], facts, constraints)
     assert len(res2.inserted_task_ids) == 0  # deduped
+
+
+# ===========================================================================
+# R2-P2-02 (sysrev round2): P1-2 idempotency gaps on the "parameter evolved"
+# branch — same-cycle tag cross-talk, clamp-boundary baseline corruption,
+# rollback not restoring last_applied_*, and per-round rounding drift.
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+async def test_same_round_new_task_gets_full_time_and_difficulty():
+    """A brand-new task touched by both patches in one cycle must receive the
+    FULL multiplier and the FULL shift — the sibling patch's fresh tag must not
+    make it look already-scaled (50min was silently left at 50 with a stable
+    multiplier of 1.3)."""
+    fresh = _make_task(estimated_minutes=50, difficulty=3)
+    facts = {
+        "adaptive_adjustments": {"time_multiplier": 1.3, "difficulty_shift": -0.3},
+        "adaptive_meta": {
+            "last_applied_time_multiplier": 1.3,
+            "last_applied_difficulty_shift": -0.3,
+        },
+    }
+
+    _, meta = await _run_cycle([fresh], facts)
+
+    assert fresh.estimated_minutes == 65, "new task missed the time scaling in its first cycle"
+    assert fresh.difficulty == 2, "new task missed the full difficulty shift in its first cycle"
+    assert "adaptive_time_scaled" in fresh.tags
+    assert "adaptive_difficulty_scaled" in fresh.tags
+    assert meta["time_baselines"][str(fresh.id)] == 50
+
+
+@pytest.mark.asyncio
+async def test_clamped_high_task_rescales_from_baseline_not_clamped_value():
+    """A task clamped at 480 (orig 400 @1.5) must fall back along the true
+    baseline (400×1.2=480, 400×1.1=440), not keep shrinking from the clamp
+    (480×0.8=384 — permanently corrupted under the ratio scheme)."""
+    t = _make_task(estimated_minutes=400)
+    facts1 = {"adaptive_adjustments": {"time_multiplier": 1.5}, "adaptive_meta": {}}
+
+    _, meta1 = await _run_cycle([t], facts1)
+    assert t.estimated_minutes == 480  # 600 → clamp
+    assert meta1["time_baselines"][str(t.id)] == 400
+
+    facts2 = {"adaptive_adjustments": {"time_multiplier": 1.2}, "adaptive_meta": meta1}
+    _, meta2 = await _run_cycle([t], facts2)
+    assert t.estimated_minutes == 480  # 400×1.2=480 (ratio scheme gave 384)
+
+    facts3 = {"adaptive_adjustments": {"time_multiplier": 1.1}, "adaptive_meta": meta2}
+    await _run_cycle([t], facts3)
+    assert t.estimated_minutes == 440  # 400×1.1=440 (ratio scheme gave 352)
+
+
+@pytest.mark.asyncio
+async def test_clamped_low_task_rescales_from_baseline_not_clamped_value():
+    """Mirror case at MIN: 6min @0.5 clamps to 5; @0.8 the ideal is 5 (6×0.8),
+    the ratio scheme produced 8 (overshooting past the clamp)."""
+    t = _make_task(estimated_minutes=6)
+    _, meta1 = await _run_cycle(
+        [t], {"adaptive_adjustments": {"time_multiplier": 0.5}, "adaptive_meta": {}}
+    )
+    assert t.estimated_minutes == 5  # clamped
+
+    _, meta2 = await _run_cycle(
+        [t], {"adaptive_adjustments": {"time_multiplier": 0.8}, "adaptive_meta": meta1}
+    )
+    assert t.estimated_minutes == 5  # round(6×0.8)=5 (ratio gave 8)
+
+
+@pytest.mark.asyncio
+async def test_scaling_from_baseline_has_no_rounding_drift():
+    """Target values must come from the integer baseline each round, so no
+    ±1min drift accumulates across parameter evolution (17min @1.2→@1.4)."""
+    t = _make_task(estimated_minutes=17)
+    _, meta1 = await _run_cycle(
+        [t], {"adaptive_adjustments": {"time_multiplier": 1.2}, "adaptive_meta": {}}
+    )
+    assert t.estimated_minutes == 20  # round(20.4)
+
+    _, meta2 = await _run_cycle(
+        [t], {"adaptive_adjustments": {"time_multiplier": 1.4}, "adaptive_meta": meta1}
+    )
+    # exact cumulative target round(17×1.4)=24; ratio-of-rounded gave 23
+    assert t.estimated_minutes == 24
+
+
+@pytest.mark.asyncio
+async def test_rollback_restores_last_applied_and_baselines():
+    """After a rollback, re-applying the SAME parameters must scale again
+    (previously ratio new/last = 1.0 turned it into a permanent no-op) and the
+    baseline table must not keep pre-rollback entries."""
+    t = _make_task(estimated_minutes=30)
+    facts = {"adaptive_adjustments": {"time_multiplier": 1.5}, "adaptive_meta": {}}
+
+    _, meta1 = await _run_cycle([t], facts)
+    assert t.estimated_minutes == 45
+
+    # Rollback the snapshot recorded in cycle 1.
+    applier2, db = _make_applier(facts={"adaptive_meta": meta1})
+    db.execute = AsyncMock(return_value=_db_result_for_tasks([t]))
+
+    ok = await applier2.rollback_last_patch(uuid4(), uuid4())
+    assert ok is True
+    patch = applier2.plan_state_service.upsert_plan_state.await_args.kwargs["patch"]
+    restored_meta = patch["facts"]["adaptive_meta"]
+    assert "last_applied_time_multiplier" not in restored_meta
+    assert restored_meta["time_baselines"] == {}
+    assert t.estimated_minutes == 30  # task fields restored from snapshot
+
+    # Re-apply identical parameters: must scale 30 → 45 again.
+    facts_retry = {
+        "adaptive_adjustments": {"time_multiplier": 1.5},
+        "adaptive_meta": restored_meta,
+    }
+    _, meta_retry = await _run_cycle([t], facts_retry)
+    assert t.estimated_minutes == 45, "re-apply after rollback became a no-op"
+    assert meta_retry["last_applied_time_multiplier"] == 1.5
+
+
+@pytest.mark.asyncio
+async def test_review_card_receives_time_scaling_next_round():
+    """Prerequisite review cards are created without adaptive_adjusted, so the
+    next cycle with a stable multiplier gives them the full scaling."""
+    weak_node = uuid4()
+    original = _make_task(knowledge_node_id=weak_node)
+    constraints = {
+        "insert_prerequisite_review": True,
+        "weak_knowledge_node_ids": [str(weak_node)],
+    }
+    facts1 = {
+        "adaptive_adjustments": {"time_multiplier": 1.3},
+        "adaptive_meta": {"last_applied_time_multiplier": 1.3},
+    }
+    res1, meta1 = await _run_cycle([original], facts1, constraints)
+    assert len(res1.inserted_task_ids) == 1
+
+    # Next cycle: the inserted review card (10min, own tag only) is in-window.
+    # 与真实创建一致：不带 knowledge_node_id、不带 adaptive_adjusted
+    review_card = _make_task(estimated_minutes=10)
+    review_card.id = res1.inserted_task_ids[0]
+    review_card.title = "前置复习: Test task"
+    review_card.knowledge_node_id = None
+    review_card.tags = ["adaptive_prerequisite_review"]
+
+    facts2 = {
+        "adaptive_adjustments": {"time_multiplier": 1.3},
+        "adaptive_meta": meta1,
+    }
+    res2, _ = await _run_cycle([review_card], facts2, constraints)
+    assert review_card.estimated_minutes == 13, "review card never received time scaling"
+    assert len(res2.inserted_task_ids) == 0  # still deduped by title

@@ -11,6 +11,7 @@ from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import and_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.plan_execution_record import PlanExecutionRecord
@@ -35,6 +36,7 @@ class PlanExecutionRecordService:
         criteria_results: dict[str, Any],
         tool_summary: dict[str, int],
         issues: list[str],
+        execution_intent_id: UUID | None = None,
     ) -> PlanExecutionRecord:
         """
         创建执行记录
@@ -47,9 +49,11 @@ class PlanExecutionRecordService:
             criteria_results: 标准检查结果
             tool_summary: 工具执行统计
             issues: 问题列表
+            execution_intent_id: 关联的执行意图（C2, sysrev round2）
 
         Returns:
-            PlanExecutionRecord: 创建的记录
+            PlanExecutionRecord: 创建的记录；当同一 intent 已有记录时返回
+            已存在的记录（幂等，P2-3 条件占位之上的 DB 级第二层防线）
         """
         record = PlanExecutionRecord(
             plan_id=plan_id,
@@ -61,10 +65,32 @@ class PlanExecutionRecordService:
             successful_tools=tool_summary.get("successful", 0),
             failed_tools=tool_summary.get("failed", 0),
             issues=issues,
+            execution_intent_id=execution_intent_id,
         )
 
         self.db.add(record)
-        await self.db.commit()
+        try:
+            await self.db.commit()
+        except IntegrityError:
+            # C2 (sysrev round2): uq_plan_execution_records_intent 冲突——
+            # 并发/崩溃重放对同一 intent 的第二次写入，回查现有记录直接返回
+            await self.db.rollback()
+            if execution_intent_id is not None:
+                existing = (
+                    await self.db.execute(
+                        select(PlanExecutionRecord).where(
+                            PlanExecutionRecord.execution_intent_id
+                            == execution_intent_id
+                        )
+                    )
+                ).scalar_one_or_none()
+                if existing is not None:
+                    logger.info(
+                        "Execution record already exists for intent "
+                        f"{execution_intent_id}, returning it idempotently"
+                    )
+                    return existing
+            raise
         await self.db.refresh(record)
 
         logger.info(

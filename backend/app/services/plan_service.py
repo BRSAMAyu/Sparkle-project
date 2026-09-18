@@ -9,7 +9,7 @@ from typing import Any
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import and_, desc, func, select
+from sqlalchemy import and_, desc, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.event_bus import PlanCreatedEvent, event_bus
@@ -81,6 +81,16 @@ class PlanService:
             QuotaExceededError: 配额超限
         """
         from app.services.plan_quota_service import PlanQuotaService
+
+        # C2 (sysrev round2 方案 B): 计划配额 TOCTOU——check_quota 与 insert 之间
+        # 的并发创建窗口可超配额。在同一事务内先取用户级 advisory 事务锁，
+        # 把同用户的"检查+插入"串行化（会话结束自动释放、跨用户零影响、单锁
+        # 事务无死锁风险）。仅 PG 支持，SQLite 测试基座直接跳过。
+        if db.get_bind().dialect.name == "postgresql":
+            await db.execute(
+                text("SELECT pg_advisory_xact_lock(hashtextextended(:user_id::text, 0))"),
+                {"user_id": str(user_id)},
+            )
 
         # 1. 配额检查
         if not skip_quota_check:

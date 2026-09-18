@@ -4,13 +4,13 @@ PlanExecutionRecord - 方案执行记录模型
 记录方案执行后的验证结果，用于反馈学习和分析
 """
 from sqlalchemy import JSON, Boolean, Column, Float, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import text as sa_text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
 from app.models.base import GUID, BaseModel
 
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
-
 
 class PlanExecutionRecord(BaseModel):
     """
@@ -79,6 +79,14 @@ class PlanExecutionRecord(BaseModel):
     # 学习标记
     applied_to_learning = Column(Boolean, default=False)
 
+    # C2 (sysrev round2): 关联的执行意图——P2-3 条件占位之上的第二层防线，
+    # 配合部分唯一索引在 DB 级保证一个 intent 至多一条执行记录
+    execution_intent_id = Column(
+        GUID(),
+        ForeignKey("execution_intents.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
     # 关系
     plan = relationship("Plan", backref="execution_records")
     user = relationship("User", backref="plan_execution_records")
@@ -88,6 +96,15 @@ class PlanExecutionRecord(BaseModel):
         Index("idx_execution_records_plan_user", "plan_id", "user_id"),
         Index("idx_execution_records_status", "validation_status"),
         Index("idx_execution_records_created", "created_at"),
+        # C2 (sysrev round2): PG 部分唯一索引（NULL 不参与）；SQLite 上
+        # postgresql_where 被忽略、退化为全列唯一索引，而 SQLite 唯一索引把
+        # NULL 视为互异，语义等价
+        Index(
+            "uq_plan_execution_records_intent",
+            "execution_intent_id",
+            unique=True,
+            postgresql_where=sa_text("execution_intent_id IS NOT NULL"),
+        ),
     )
 
     def to_dict(self):
@@ -96,6 +113,9 @@ class PlanExecutionRecord(BaseModel):
             "id": str(self.id),
             "plan_id": str(self.plan_id),
             "user_id": str(self.user_id),
+            "execution_intent_id": (
+                str(self.execution_intent_id) if self.execution_intent_id else None
+            ),
             "validation_status": self.validation_status,
             "quality_score": self.quality_score,
             "criteria_results": self.criteria_results or {},

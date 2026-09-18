@@ -50,6 +50,13 @@ class PlanAdjustmentResult:
     # adaptive_meta.last_applied_* 供下一轮计算幂等增量
     applied_time_multiplier: float | None = None
     applied_difficulty_shift: float | None = None
+    # R2-P2-02 (sysrev round2): applier 自有的 adaptive_meta 字段在本轮开始前
+    # 的值，随快照持久化、rollback 时还原——否则回滚后 last_applied_* 停留在
+    # 已回滚参数上，重应用同参数比值=1.0 变成永久 no-op
+    adaptive_meta_before: dict[str, Any] = field(default_factory=dict)
+    # R2-P2-02 (sysrev round2): 时间基线表（task_id → 首次缩放前的
+    # estimated_minutes），随 adaptive_meta 持久化
+    time_baselines: dict[str, int] = field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
@@ -117,10 +124,36 @@ class PlanAdjustmentApplier:
             rollback_snapshot_id=snapshot_id,
         )
 
-        # Apply patches in order (as per implementation doc §7.2)
+        # R2-P2-02 (sysrev round2): 记录本轮开始前 applier 自有 meta 字段，
+        # 快照携带、rollback 还原（回滚不同步 last_applied 的修复）
+        result.adaptive_meta_before = {
+            key: adaptive_meta.get(key)
+            for key in (
+                "last_applied_time_multiplier",
+                "last_applied_difficulty_shift",
+                "time_baselines",
+            )
+        }
+        # R2-P2-02 (sysrev round2): 时间基线表——目标值 = clamp(round(基线 ×
+        # 当前乘数))，天然幂等，并根治 clamp 边界从钳制值继续按比值缩放造成的
+        # 永久基线损坏（480×0.8=384）与逐轮 round() 的 ±1min 漂移
+        time_baselines = dict(adaptive_meta.get("time_baselines") or {})
+        result.time_baselines = time_baselines
+        # R2-P2-02 (sysrev round2): 每个任务在本轮开始前的标签快照。时间/难度
+        # 两个补丁各自只依据"轮前标签"判幂等——共用 adaptive_adjusted 标且
+        # 先执行的补丁会给新任务打标，后执行的补丁会把同周期新任务误判为
+        # "已缩放"只乘比值，乘数稳定时比值=1.0，新任务完全错过时间放大
+        preexisting_tags = {task.id: frozenset(task.tags or []) for task in upcoming}
+
+        # Apply patches in order (as per implementation doc §7.2).
+        # R2-P2-02: 时间补丁先于难度补丁——难度补丁完成打标后，时间补丁仍以
+        # 轮前标签判定，同周期串扰由 preexisting_tags 根治，此处换序是让最常见
+        # 的"只调时间"轮次完全不接触难度标记语义
         await self._patch_prerequisite_reviews(upcoming, constraints, adjustments, result)
-        await self._patch_difficulty(upcoming, adjustments, result, adaptive_meta)
-        await self._patch_time_multiplier(upcoming, adjustments, result, adaptive_meta)
+        await self._patch_time_multiplier(
+            upcoming, adjustments, result, adaptive_meta, time_baselines, preexisting_tags
+        )
+        await self._patch_difficulty(upcoming, adjustments, result, adaptive_meta, preexisting_tags)
         await self._patch_concurrency(upcoming, constraints, result)
 
         # Record snapshot for rollback (断点1 Fix #3: include hidden_task_ids)
@@ -144,16 +177,24 @@ class PlanAdjustmentApplier:
         adjustments: dict[str, Any],
         result: PlanAdjustmentResult,
         adaptive_meta: dict[str, Any] | None = None,
+        time_baselines: dict[str, int] | None = None,
+        preexisting_tags: dict[Any, frozenset[str]] | None = None,
     ) -> None:
         multiplier = adjustments.get("time_multiplier", 1.0)
         if multiplier == 1.0:
             return
 
-        # P1-2 (sysrev round1): 幂等 —— 已 adaptive_adjusted 的任务只应用
-        # 相对上次落地乘数的增量，避免冷却周期反复对同一批任务复利相乘
+        # P1-2 (sysrev round1): 幂等 —— 已缩放过的任务不再复利相乘。
+        # R2-P2-02 (sysrev round2): 判定只依据"本轮开始前"的标签；时间维度使用
+        # 专属 adaptive_time_scaled 标（存量行的 adaptive_adjusted 继续按已缩放
+        # 对待，避免老数据二次复利）。有基线的任务直接按 round(基线 × 当前乘数)
+        # 重算目标值——免疫 clamp 边界损坏与逐轮舍入漂移；无基线的存量行退回
+        # 相对比值路径（与 P1-2 行为一致）。
         meta = adaptive_meta or {}
         last_applied = self._as_float(meta.get("last_applied_time_multiplier"), 1.0)
         adjusted_ratio = (multiplier / last_applied) if last_applied > 0 else multiplier
+        baselines = time_baselines if time_baselines is not None else {}
+        pre_tags = preexisting_tags or {}
 
         count = 0
         for task in tasks:
@@ -162,20 +203,42 @@ class PlanAdjustmentApplier:
             if task.id in result.inserted_task_ids:
                 continue  # Don't scale tasks we just inserted
 
-            effective = adjusted_ratio if "adaptive_adjusted" in (task.tags or []) else multiplier
-            old_minutes = task.estimated_minutes
-            new_minutes = self._clamp(
-                round(old_minutes * effective),
-                MIN_ESTIMATED_MINUTES,
-                MAX_ESTIMATED_MINUTES,
+            tags_before = pre_tags.get(task.id, frozenset())
+            already_scaled = (
+                "adaptive_time_scaled" in tags_before or "adaptive_adjusted" in tags_before
             )
+            baseline = baselines.get(str(task.id))
+            if baseline is not None:
+                new_minutes = self._clamp(
+                    round(int(baseline) * multiplier),
+                    MIN_ESTIMATED_MINUTES,
+                    MAX_ESTIMATED_MINUTES,
+                )
+            elif already_scaled:
+                new_minutes = self._clamp(
+                    round(task.estimated_minutes * adjusted_ratio),
+                    MIN_ESTIMATED_MINUTES,
+                    MAX_ESTIMATED_MINUTES,
+                )
+            else:
+                new_minutes = self._clamp(
+                    round(task.estimated_minutes * multiplier),
+                    MIN_ESTIMATED_MINUTES,
+                    MAX_ESTIMATED_MINUTES,
+                )
+                # 首次缩放：记录真实原始分钟数作为基线（已在缩放中的存量行
+                # 不记录——其当前值并非真实原始值，记入会让后续目标值虚高）
+                baselines.setdefault(str(task.id), task.estimated_minutes)
+
+            old_minutes = task.estimated_minutes
             if new_minutes != old_minutes:
                 self._capture_task_state(result, task)
                 task.estimated_minutes = new_minutes
                 # Mark as adaptively adjusted
                 tags = list(task.tags) if task.tags else []
-                if "adaptive_adjusted" not in tags:
-                    tags.append("adaptive_adjusted")
+                for tag in ("adaptive_time_scaled", "adaptive_adjusted"):
+                    if tag not in tags:
+                        tags.append(tag)
                 task.tags = tags
                 result.affected_task_ids.append(task.id)
                 count += 1
@@ -197,15 +260,20 @@ class PlanAdjustmentApplier:
         adjustments: dict[str, Any],
         result: PlanAdjustmentResult,
         adaptive_meta: dict[str, Any] | None = None,
+        preexisting_tags: dict[Any, frozenset[str]] | None = None,
     ) -> None:
         shift = adjustments.get("difficulty_shift", 0.0)
         if shift == 0.0:
             return
 
         # P1-2 (sysrev round1): 幂等 —— 已 adaptive_adjusted 的任务只应用
-        # 相对上次落地 shift 的增量，避免同一批任务每轮多步进一档
+        # 相对上次落地 shift 的增量，避免同一批任务每轮多步进一档。
+        # R2-P2-02 (sysrev round2): 判定只依据"本轮开始前"的标签（专属
+        # adaptive_difficulty_scaled 标 + 存量 adaptive_adjusted 兼容），
+        # 消除同周期被时间补丁先打标导致的新任务误判。
         meta = adaptive_meta or {}
         last_applied_shift = self._as_float(meta.get("last_applied_difficulty_shift"), 0.0)
+        pre_tags = preexisting_tags or {}
 
         count = 0
         for task in tasks:
@@ -214,7 +282,11 @@ class PlanAdjustmentApplier:
             if task.id in result.inserted_task_ids:
                 continue
 
-            effective_shift = shift - last_applied_shift if "adaptive_adjusted" in (task.tags or []) else shift
+            tags_before = pre_tags.get(task.id, frozenset())
+            already_shifted = (
+                "adaptive_difficulty_scaled" in tags_before or "adaptive_adjusted" in tags_before
+            )
+            effective_shift = shift - last_applied_shift if already_shifted else shift
             old_diff = task.difficulty
             # difficulty_shift is continuous (-0.5 to 0.5), map to integer step
             # Negative shift = easier, positive = harder
@@ -233,8 +305,9 @@ class PlanAdjustmentApplier:
                 self._capture_task_state(result, task)
                 task.difficulty = new_diff
                 tags = list(task.tags) if task.tags else []
-                if "adaptive_adjusted" not in tags:
-                    tags.append("adaptive_adjusted")
+                for tag in ("adaptive_difficulty_scaled", "adaptive_adjusted"):
+                    if tag not in tags:
+                        tags.append(tag)
                 task.tags = tags
                 result.affected_task_ids.append(task.id)
                 count += 1
@@ -296,7 +369,9 @@ class PlanAdjustmentApplier:
                 priority=task.priority + 1,  # Slightly higher priority
                 order_index=task.order_index,  # Same order = before via sorting
                 due_date=task.due_date,
-                tags=["adaptive_prerequisite_review", "adaptive_adjusted"],
+                # R2-P2-02 (sysrev round2): 不打 adaptive_adjusted——该标会让
+                # 下一轮把这张新卡误判为"已缩放"，乘数稳定期永远拿不到时间缩放
+                tags=["adaptive_prerequisite_review"],
                 guide_content="快速复习这个知识点，确保基础扎实后再进入下一个任务。",
             )
             self.db.add(review_task)
@@ -369,6 +444,8 @@ class PlanAdjustmentApplier:
             "inserted_task_ids": [str(tid) for tid in result.inserted_task_ids],
             "hidden_task_ids": [str(tid) for tid in result.hidden_task_ids],
             "task_state_snapshots": dict(result.task_state_snapshots),
+            # R2-P2-02 (sysrev round2): applier 自有 meta 的轮前值，rollback 时还原
+            "adaptive_meta_before": dict(result.adaptive_meta_before),
         }
 
         # 断点1 Fix #2: Deep-merge — read existing adaptive_meta first to avoid
@@ -385,6 +462,9 @@ class PlanAdjustmentApplier:
             merged_meta["last_applied_time_multiplier"] = result.applied_time_multiplier
         if result.applied_difficulty_shift is not None:
             merged_meta["last_applied_difficulty_shift"] = result.applied_difficulty_shift
+        # R2-P2-02 (sysrev round2): 时间基线表随 meta 持久化，供下一轮按
+        # 基线 × 乘数 重算目标值（而非从上一轮结果继续比值缩放）
+        merged_meta["time_baselines"] = dict(result.time_baselines)
 
         await self.plan_state_service.upsert_plan_state(
             user_id=user_id,
@@ -458,6 +538,18 @@ class PlanAdjustmentApplier:
         snapshots.pop()
         current_meta = dict(meta)
         current_meta["task_patch_snapshots"] = snapshots
+        # R2-P2-02 (sysrev round2): 还原快照记录前的 applier 自有 meta——否则
+        # last_applied_* 停留在已回滚的参数上，重应用同参数比值=1.0 变 no-op；
+        # time_baselines 不还原会让基线指向已还原任务的"已缩放值"，后续缩放失真。
+        # 旧快照无 adaptive_meta_before 字段，保持原行为（无法还原就不猜）。
+        meta_before = dict(last.get("adaptive_meta_before") or {})
+        if meta_before:
+            for key in ("last_applied_time_multiplier", "last_applied_difficulty_shift"):
+                if meta_before.get(key) is not None:
+                    current_meta[key] = meta_before[key]
+                else:
+                    current_meta.pop(key, None)
+            current_meta["time_baselines"] = dict(meta_before.get("time_baselines") or {})
         await self.plan_state_service.upsert_plan_state(
             user_id=user_id,
             plan_id=plan_id,

@@ -22,6 +22,7 @@ FeedbackDrivenAdjustmentService
 AdjustmentAction[] (实际执行)
 """
 
+import copy
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -546,13 +547,34 @@ class FeedbackDrivenAdjustmentService:
                 await self.db.commit()
 
                 # 更新 PlanState task_index
+                # R2-P2-03 (sysrev round2): 原实现写 MongoDB 风格伪操作符
+                # {"total": {"$dec": N}}，upsert_plan_state._deep_merge 不支持
+                # 任何操作符 → task_index["total"] 被写成字面 dict，下游
+                # plan_progress_service 读到后 completed/total 抛 TypeError。
+                # 改为读-改-写：deepcopy 后做真实减法（下限 0，deleted 不可能
+                # 超过现存 total），并按 on_task_completed 的同一约定刷新完成率。
+                plan_state = await self.plan_state_service.get_or_create_plan_state(
+                    user_id, plan_id
+                )
+                task_index = copy.deepcopy(
+                    plan_state.task_index
+                    or {"total": 0, "completed": 0, "by_type": {}}
+                )
+                current_total = int(task_index.get("total", 0) or 0)
+                task_index["total"] = max(
+                    0, current_total - len(action.target_task_ids)
+                )
+                new_total = task_index["total"]
+                if new_total > 0:
+                    completed = int(task_index.get("completed", 0) or 0)
+                    task_index["avg_completion_rate"] = round(completed / new_total, 3)
+                else:
+                    # upsert 是 deep-merge：patch 里缺键删不掉列中旧值，必须
+                    # 显式写 0 覆盖，否则残留旧完成率误导健康评估
+                    task_index["avg_completion_rate"] = 0
                 await self.plan_state_service.upsert_plan_state(
                     user_id, plan_id,
-                    patch={
-                        "task_index": {
-                            "total": {"$dec": len(action.target_task_ids)}
-                        }
-                    }
+                    patch={"task_index": task_index},
                 )
 
             elif action.action_type == "adjust_estimate":

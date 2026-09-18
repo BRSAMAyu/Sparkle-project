@@ -29,6 +29,7 @@ from uuid import UUID
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import flag_modified
 
 from app.models.plan_state import PlanState, PlanStateStatus
 
@@ -279,6 +280,24 @@ class PlanStateService:
         if "consecutive_rejection_count" in patch:
             state.consecutive_rejection_count = patch["consecutive_rejection_count"]
 
+        # R2-P1-01 (sysrev round2): JSONB 列统一 flag_modified。调用方常在原地
+        # 修改 ORM 加载的 dict/list 后把同一值作为 patch 传回，上面 deepcopy +
+        # deep-merge 的结果与"已被原地改过的基线"值相等，flush 的等值判定
+        # （persistence._collect_update_commands 的 impl.is_equal）会把该列
+        # 排除出 UPDATE——写入静默丢失，version 照常 bump 掩盖失败。显式
+        # 标记强制列进入 UPDATE，根治整类"回调式 JSONB 更新"丢失问题
+        # （含未知存量调用点与未来新增调用点）。
+        for jsonb_field in (
+            "facts",
+            "milestones",
+            "task_index",
+            "task_summaries",
+            "feedback_log",
+            "constraints",
+        ):
+            if jsonb_field in patch:
+                flag_modified(state, jsonb_field)
+
         # Bump version if requested
         if bump_version:
             state.version = (state.version or 0) + 1
@@ -392,8 +411,13 @@ class PlanStateService:
         """
         state = await self.get_or_create_plan_state(user_id, plan_id)
 
-        # Update task_index
-        task_index = state.task_index or {"total": 0, "completed": 0, "by_type": {}}
+        # R2-P1-01 (sysrev round2): deepcopy 后再改——直接在 ORM 加载的 dict 上
+        # 原地修改会连同已提交基线一起改掉，再把这个 dict 传给 upsert 时，合并
+        # 结果与基线值相等 → flush 判定未变更 → task_index/facts 不落库
+        # （完成计数永久冻结）。
+        task_index = copy.deepcopy(
+            state.task_index or {"total": 0, "completed": 0, "by_type": {}}
+        )
         task_index["completed"] = task_index.get("completed", 0) + 1
         task_index["last_completed_task_id"] = str(task_id)
 
@@ -411,7 +435,7 @@ class PlanStateService:
             task_index["avg_completion_rate"] = round(completed / total, 3)
 
         # Update avg_task_duration if actual_minutes provided
-        facts = state.facts or {}
+        facts = copy.deepcopy(state.facts or {})
         if actual_minutes:
             current_avg = facts.get("avg_task_duration_minutes", 0)
             if current_avg > 0 and completed > 1:
@@ -479,7 +503,11 @@ class PlanStateService:
         """
         state = await self.get_or_create_plan_state(user_id, plan_id)
 
-        task_index = state.task_index or {"total": 0, "completed": 0, "by_type": {}}
+        # R2-P1-01 (sysrev round2): 同 on_task_completed——deepcopy 后再改，
+        # 防止原地修改污染已提交基线导致 total 增量不落库
+        task_index = copy.deepcopy(
+            state.task_index or {"total": 0, "completed": 0, "by_type": {}}
+        )
         task_index["total"] = task_index.get("total", 0) + 1
 
         by_type = task_index.get("by_type", {})

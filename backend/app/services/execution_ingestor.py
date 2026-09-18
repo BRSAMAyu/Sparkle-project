@@ -151,26 +151,48 @@ class ExecutionIngestor:
         else:
             if intent.status == ExecutionIntentStatus.WAITING_APPROVAL:
                 # 输掉了并发占位：以获胜请求已提交的 DB 状态为准
+                # （claim 是条件 UPDATE 且 synchronize_session=False，
+                # 会话内对象仍是陈旧的 waiting_approval，必须先刷新）
                 await self._db.refresh(intent)
-            old_status = intent.status
-            intent.trust_level = TrustLevel.TRUSTED
-            self._db.add(intent)
-            await self._db.commit()
-            await self._db.refresh(intent)
-            await self._publish_status_event(intent, old_status=old_status)
-            await self._publish_result_ingested_event(
-                intent=intent,
-                record=record,
-                trust_level=TrustLevel.TRUSTED,
-                success=bool(parsed.get("success")),
-                error_category=intent.error_category,
-            )
-            if parsed.get("success"):
-                await self._learning_service.handle_trusted_execution(
+            if (
+                intent.status == ExecutionIntentStatus.SUCCEEDED
+                and parsed.get("success")
+                and await self._needs_result_application(intent)
+            ):
+                # R2-P3-04 (sysrev round2): 崩溃窗口补偿——claim（waiting_approval
+                # → succeeded）提交后、_apply_execution_result 执行前进程崩溃时，
+                # intent 恒为 SUCCEEDED 而任务未完成；重试 confirm 的 claim 条件
+                # 已不满足，若直接走让位分支任务将永不完成。此处幂等补做 apply：
+                # 任务已完成时不会进入该分支（无双完成/双写 PlanExecutionRecord，
+                # 后者在任务完成提交之后才创建）；状态/结果/learning 事件由
+                # _apply_execution_result 内部统一发布，与 winner 路径对称。
+                await self._apply_execution_result(
+                    intent=intent,
+                    parsed=parsed,
+                    evaluation=evaluation,
+                    record=record,
+                    user_confirmed=True,
+                )
+            else:
+                old_status = intent.status
+                intent.trust_level = TrustLevel.TRUSTED
+                self._db.add(intent)
+                await self._db.commit()
+                await self._db.refresh(intent)
+                await self._publish_status_event(intent, old_status=old_status)
+                await self._publish_result_ingested_event(
                     intent=intent,
                     record=record,
-                    parsed=parsed,
+                    trust_level=TrustLevel.TRUSTED,
+                    success=bool(parsed.get("success")),
+                    error_category=intent.error_category,
                 )
+                if parsed.get("success"):
+                    await self._learning_service.handle_trusted_execution(
+                        intent=intent,
+                        record=record,
+                        parsed=parsed,
+                    )
 
         await event_bus.publish(
             EXECUTION_APPROVAL_DECISION,
@@ -477,6 +499,29 @@ class ExecutionIngestor:
         await self._db.refresh(intent)
         return True
 
+    async def _needs_result_application(self, intent: ExecutionIntent) -> bool:
+        """R2-P3-04 (sysrev round2): detect the crash window where the claim was
+        committed but ``_apply_execution_result`` never ran — the intent is
+        SUCCEEDED while its task was never completed.
+
+        Reads the raw status column (bypassing the identity map) so a stale
+        session view of the task cannot mask what a concurrent request already
+        committed.
+        """
+        if self._should_skip_task_sync(intent):
+            return False
+        result = await self._db.execute(
+            select(Task.status).where(
+                Task.id == intent.task_id,
+                Task.user_id == intent.user_id,
+                Task.deleted_at.is_(None),
+            )
+        )
+        status = result.scalar_one_or_none()
+        if status is None:
+            return False
+        return status != TaskStatus.COMPLETED
+
     async def _apply_execution_result(
         self,
         *,
@@ -620,6 +665,8 @@ class ExecutionIngestor:
                 "failed": 0 if parsed.get("success") else parsed.get("tool_calls_count", 0),
             },
             issues=issues,
+            # C2 (sysrev round2): 记录意图归属，配合部分唯一索引形成 DB 级幂等防线
+            execution_intent_id=intent.id,
         )
 
     async def _rollback_task_if_needed(self, task: Task) -> bool:

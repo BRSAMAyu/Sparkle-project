@@ -229,18 +229,9 @@ class PlanQuotaService:
 
         TRACKED(TD-007): 未来可以从用户订阅信息中获取
         """
-        # 先检查缓存
-        if self.redis:
-            cache_key = f"plan_quota:{user_id}"
-            try:
-                cached = await self.redis.get(cache_key)
-                if cached:
-                    return int(cached)
-            except Exception as e:
-                logger.warning(f"Redis get quota failed: {e}")
-
-        # 默认返回免费用户配额
-        # TRACKED(TD-007): 查询用户订阅状态，返回对应配额
+        # C2 (sysrev round2) 附带清理：删除 plan_quota:{user_id} 死缓存读——
+        # 仓内从未有写入方，一旦未来有人写入手改配额将无声生效，不如直读配置
+        # 默认值（TRACKED(TD-007) 接订阅状态后再引入带写入方的缓存）
         return settings.PLAN_QUOTA_DEFAULT
 
     async def _count_active_plans(self, user_id: UUID) -> int:
