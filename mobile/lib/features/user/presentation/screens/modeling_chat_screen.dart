@@ -36,12 +36,19 @@ class ModelingChatScreen extends ConsumerStatefulWidget {
 class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
   static const String _auroraModelingSurface = 'aurora_modeling';
 
+  /// A-3: bail out when the stream never produces a first event (the field
+  /// test observed a silent hang: healthy heartbeat, typing a message
+  /// produced no reply, no error and no timeout). 45s covers slow LLM
+  /// starts; anything longer is indistinguishable from a dead run.
+  static const Duration _firstEventTimeout = Duration(seconds: 45);
+
   final TextEditingController _inputController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final List<_ModelingMessage> _messages = <_ModelingMessage>[];
   final Map<String, StreamSubscription<ChatStreamEvent>> _runSubscriptions =
       <String, StreamSubscription<ChatStreamEvent>>{};
   final Map<String, String> _draftMessageIdsByRequest = <String, String>{};
+  final Map<String, Timer> _firstEventTimers = <String, Timer>{};
 
   String? _conversationId;
   bool _completed = false;
@@ -74,6 +81,10 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
       unawaited(subscription.cancel());
     }
     _runSubscriptions.clear();
+    for (final timer in _firstEventTimers.values) {
+      timer.cancel();
+    }
+    _firstEventTimers.clear();
     _draftMessageIdsByRequest.clear();
     _inputController.dispose();
     _scrollController.dispose();
@@ -154,8 +165,13 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
                                         .textTheme
                                         .bodyMedium
                                         ?.copyWith(
+                                          // A-3: brand-on-brand was unreadable
+                                          // (brown text on the brown primary
+                                          // bubble). Use the contrast-safe
+                                          // on-primary token like the main
+                                          // chat bubbles do.
                                           color: isUser
-                                              ? DS.brandPrimaryConst
+                                              ? DS.textOnPrimary
                                               : DS.textPrimary,
                                           height: 1.45,
                                         ),
@@ -338,6 +354,25 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
       setState(() {
         _runSubscriptions[requestId] = subscription;
       });
+      // A-3: convert a silently-dead stream into a visible, retryable error.
+      _firstEventTimers[requestId] = Timer(_firstEventTimeout, () {
+        if (!mounted) {
+          return;
+        }
+        if (!_runSubscriptions.containsKey(requestId)) {
+          return; // Run already finished normally.
+        }
+        final draftId = _draftMessageIdsByRequest[requestId];
+        final receivedContent = draftId != null &&
+            _messages.any((m) => m.id == draftId && m.text.isNotEmpty);
+        if (receivedContent) {
+          return; // Streaming started; not a hang.
+        }
+        _handleStreamError(
+          requestId,
+          'no stream events within ${_firstEventTimeout.inSeconds}s',
+        );
+      });
     } catch (error) {
       if (!mounted) {
         return;
@@ -350,6 +385,9 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
     if (!mounted) {
       return;
     }
+
+    // A-3: any event (even metadata-only) proves the stream is alive.
+    _firstEventTimers.remove(requestId)?.cancel();
 
     final sessionId = event.sessionId?.trim();
     if (sessionId != null && sessionId.isNotEmpty) {
@@ -519,6 +557,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
     bool cancelSubscription = false,
   }) {
     final subscription = _runSubscriptions.remove(requestId);
+    _firstEventTimers.remove(requestId)?.cancel();
     _draftMessageIdsByRequest.remove(requestId);
     if (cancelSubscription && subscription != null) {
       unawaited(subscription.cancel());

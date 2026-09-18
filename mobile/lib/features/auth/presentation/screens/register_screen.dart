@@ -114,18 +114,23 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       ),
       child: SafeArea(
         child: ContentConstraint(
-          child: LayoutBuilder(
-            builder: (context, constraints) => SingleChildScrollView(
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: const EdgeInsets.all(DS.xl),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: IntrinsicHeight(
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
+          // A-5: the previous ConstrainedBox+IntrinsicHeight+Spacer structure
+          // overflowed by 14px on 420dpi phones (the stripes covered the
+          // Register button and the "already have an account" link) because
+          // InputDecorator's intrinsic height under-reports the real layout
+          // height, and IntrinsicHeight pinned the Column to that
+          // under-reported size so the scroll view never scrolled. A plain
+          // scrollable Column (no intrinsic pass, no flex children) always
+          // scrolls and can never overflow; the footer link simply follows
+          // the form instead of being pinned to the viewport bottom.
+          child: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: const EdgeInsets.all(DS.xl),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
                         const SizedBox(height: DS.spacing20),
                         SparkleStaggerItem(
                           index: 0,
@@ -350,17 +355,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             disabled: authState.isLoading,
                           ),
                         ),
-                        const Spacer(),
+                        // A-5: fixed gap replaces the Spacer() — a flex
+                        // child requires a bounded box (the removed
+                        // IntrinsicHeight) and reintroduces the overflow.
+                        const SizedBox(height: DS.xxl),
                         SparkleButton.ghost(
                           label: l10n.hasAccount,
                           onPressed: () => context.go('/login'),
                         ),
                         const SizedBox(height: DS.spacing12),
                       ],
-                    ),
-                  ),
                 ),
-              ),
             ),
           ),
         ),

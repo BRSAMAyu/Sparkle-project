@@ -1,0 +1,1378 @@
+diff --git a/mobile/lib/core/design/widgets/compact_error_card.dart b/mobile/lib/core/design/widgets/compact_error_card.dart
+index 8d2f3bad..70627d0e 100644
+--- a/mobile/lib/core/design/widgets/compact_error_card.dart
++++ b/mobile/lib/core/design/widgets/compact_error_card.dart
+@@ -12,6 +12,11 @@ class CompactErrorCard extends StatelessWidget {
+   @override
+   Widget build(BuildContext context) {
+     return GestureDetector(
++      // A-7: without `opaque` the hit test defers to the (min-size) Row, so
++      // taps landing on the card's padding around the short "Tap to retry"
++      // label fell through and the retry felt like a dead button — the exact
++      // field observation in android-round1.md A-7.
++      behavior: HitTestBehavior.opaque,
+       onTap: onRetry,
+       child: Padding(
+         padding: const EdgeInsets.symmetric(
+diff --git a/mobile/lib/features/auth/presentation/screens/register_screen.dart b/mobile/lib/features/auth/presentation/screens/register_screen.dart
+index 44ea762d..2f95a9e5 100755
+--- a/mobile/lib/features/auth/presentation/screens/register_screen.dart
++++ b/mobile/lib/features/auth/presentation/screens/register_screen.dart
+@@ -114,18 +114,23 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
+       ),
+       child: SafeArea(
+         child: ContentConstraint(
+-          child: LayoutBuilder(
+-            builder: (context, constraints) => SingleChildScrollView(
+-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+-              padding: const EdgeInsets.all(DS.xl),
+-              child: ConstrainedBox(
+-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+-                child: IntrinsicHeight(
+-                  child: Form(
+-                    key: _formKey,
+-                    child: Column(
+-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+-                      children: [
++          // A-5: the previous ConstrainedBox+IntrinsicHeight+Spacer structure
++          // overflowed by 14px on 420dpi phones (the stripes covered the
++          // Register button and the "already have an account" link) because
++          // InputDecorator's intrinsic height under-reports the real layout
++          // height, and IntrinsicHeight pinned the Column to that
++          // under-reported size so the scroll view never scrolled. A plain
++          // scrollable Column (no intrinsic pass, no flex children) always
++          // scrolls and can never overflow; the footer link simply follows
++          // the form instead of being pinned to the viewport bottom.
++          child: SingleChildScrollView(
++            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
++            padding: const EdgeInsets.all(DS.xl),
++            child: Form(
++              key: _formKey,
++              child: Column(
++                crossAxisAlignment: CrossAxisAlignment.stretch,
++                children: [
+                         const SizedBox(height: DS.spacing20),
+                         SparkleStaggerItem(
+                           index: 0,
+@@ -350,17 +355,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
+                             disabled: authState.isLoading,
+                           ),
+                         ),
+-                        const Spacer(),
++                        // A-5: fixed gap replaces the Spacer() — a flex
++                        // child requires a bounded box (the removed
++                        // IntrinsicHeight) and reintroduces the overflow.
++                        const SizedBox(height: DS.xxl),
+                         SparkleButton.ghost(
+                           label: l10n.hasAccount,
+                           onPressed: () => context.go('/login'),
+                         ),
+                         const SizedBox(height: DS.spacing12),
+                       ],
+-                    ),
+-                  ),
+                 ),
+-              ),
+             ),
+           ),
+         ),
+diff --git a/mobile/lib/features/chat/data/services/websocket_chat_service_v2.dart b/mobile/lib/features/chat/data/services/websocket_chat_service_v2.dart
+index c0d19f5a..38d9ecab 100755
+--- a/mobile/lib/features/chat/data/services/websocket_chat_service_v2.dart
++++ b/mobile/lib/features/chat/data/services/websocket_chat_service_v2.dart
+@@ -1984,7 +1984,11 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
+         sessionId: (payload['session_id'] ?? '').toString(),
+         message: (payload['message'] ?? '').toString(),
+         userId: _currentUserId ?? '',
+-        extraContext: payload['extra_context']?.toString(),
++        // A-2: extra_context must be persisted as real JSON. The previous
++        // `Map.toString()` produced a Dart map literal which the gateway
++        // cannot unmarshal into map[string]interface{}, so every replayed
++        // frame was permanently NACKed and the bubble stayed "Sending".
++        extraContext: encodeExtraContextForQueue(payload['extra_context']),
+         fileIds: payload['file_ids'] is List
+             ? (payload['file_ids'] as List).map((e) => e.toString()).toList()
+             : null,
+@@ -1994,6 +1998,50 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
+     }
+   }
+ 
++  /// Encode [extraContext] for the offline queue (A-2).
++  ///
++  /// The queue column is a JSON string. Non-string payloads (Map/List) are
++  /// JSON-encoded so the value can be restored losslessly on replay.
++  @visibleForTesting
++  static String? encodeExtraContextForQueue(dynamic extraContext) {
++    if (extraContext == null) {
++      return null;
++    }
++    if (extraContext is String) {
++      return extraContext;
++    }
++    try {
++      return json.encode(extraContext);
++    } catch (_) {
++      return null;
++    }
++  }
++
++  /// Restore [raw] extra_context persisted by [encodeExtraContextForQueue]
++  /// back to the Map shape the gateway requires (A-2).
++  ///
++  /// Returns null when the payload is not valid JSON (e.g. legacy rows written
++  /// by the old `Map.toString()` path) so the frame is sent without
++  /// extra_context instead of being permanently NACKed.
++  @visibleForTesting
++  static Map<String, dynamic>? decodeExtraContextFromQueue(String? raw) {
++    if (raw == null || raw.trim().isEmpty) {
++      return null;
++    }
++    try {
++      final decoded = json.decode(raw);
++      if (decoded is Map<String, dynamic>) {
++        return decoded;
++      }
++      if (decoded is Map) {
++        return decoded.map((k, v) => MapEntry(k.toString(), v));
++      }
++    } catch (_) {
++      // Legacy Dart-map-literal payload — drop instead of poisoning the frame.
++    }
++    return null;
++  }
++
+   void _notifyPendingPayloadFailure(
+     Map<String, dynamic> payload,
+     ErrorEvent event,
+@@ -2066,6 +2114,16 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
+       if (event is! DoneEvent) {
+         _isStreamActive = true;
+       }
++      // A-2: a server NACK is terminal for the message. Mark the offline row
++      // failed even when no live request controller exists (e.g. the message
++      // is being replayed after a process restart) so the bubble leaves the
++      // permanent Queued/Sending state and the user gets a retry affordance.
++      if (event is NackEvent && requestId != null && requestId.isNotEmpty) {
++        unawaited(_offlineQueue.markFailed(requestId, event.errorMessage));
++        _pendingMessages.removeWhere(
++          (payload) => payload['request_id']?.toString() == requestId,
++        );
++      }
+       _routeEventToRequest(requestId, event);
+       if (event is AuroraStateBandEvent) {
+         _container
+@@ -2553,12 +2611,20 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
+         continue;
+       }
+       unawaited(_offlineQueue.prepareForRetry(msg.requestId));
++      // A-2: restore extra_context to its Map shape (the gateway contract is
++      // map[string]interface{}). Legacy rows persisted as Dart map literals
++      // fail to decode and the field is dropped instead of poisoning the
++      // frame again.
++      final restoredExtraContext = decodeExtraContextFromQueue(
++        msg.extraContext,
++      );
+       final payload = <String, dynamic>{
+         'message': msg.message,
+         'session_id': msg.sessionId,
+         'request_id': msg.requestId,
+         if (msg.nickname != null) 'nickname': msg.nickname,
+-        if (msg.extraContext != null) 'extra_context': msg.extraContext,
++        if (restoredExtraContext != null)
++          'extra_context': restoredExtraContext,
+         if (msg.fileIds != null && msg.fileIds!.isNotEmpty)
+           'file_ids': msg.parsedFileIds,
+         if (msg.chatMode != null) 'chat_mode': msg.chatMode,
+diff --git a/mobile/lib/features/chat/presentation/screens/chat_screen.dart b/mobile/lib/features/chat/presentation/screens/chat_screen.dart
+index e3b339a9..4d12db65 100755
+--- a/mobile/lib/features/chat/presentation/screens/chat_screen.dart
++++ b/mobile/lib/features/chat/presentation/screens/chat_screen.dart
+@@ -1356,12 +1356,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
+               bottom:
+                   false, // Handle bottom padding manually to avoid double padding with ChatInput
+               child: ContentConstraint(
+-                child: Column(
++                // A-5: cap fractions must derive from the CURRENT body
++                // constraints, not MediaQuery.size.height (full screen). With
++                // the keyboard open the Scaffold body shrinks, and the old
++                // full-screen fractions (0.25 + 0.4) no longer fit the
++                // shrunken body — the Column overflowed and the stripes
++                // covered the input bar (bottom 81px / right 53px).
++                child: LayoutBuilder(builder: (context, bodyConstraints) {
++                  return Column(
+                   children: [
+-                    // Header panels — scrollable, capped at 25% height
++                    // Header panels — scrollable, capped at 20% of the body
+                     ConstrainedBox(
+                       constraints: BoxConstraints(
+-                        maxHeight: MediaQuery.of(context).size.height * 0.25,
++                        maxHeight: bodyConstraints.maxHeight * 0.20,
+                       ),
+                       child: SingleChildScrollView(
+                         physics: const ClampingScrollPhysics(),
+@@ -2330,7 +2337,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
+                       ),
+                     ),
+                   ],
+-                ),
++                  );
++                }),
+               ),
+             ),
+           ],
+@@ -2731,9 +2739,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
+         : ref.watch(offlineQueueSnapshotProvider(offlineUserId)).valueOrNull ??
+             OfflineQueueSnapshot.empty;
+ 
++    // A-5: the cap must be a fraction of the CURRENT body height (the
++    // LayoutBuilder above receives the Scaffold body constraints, which the
++    // keyboard already shrank), not of the full screen. 0.20 (header cap)
++    // + 0.60 (this cap) <= 1 keeps the Expanded message list non-negative,
++    // so the input bar can never be pushed off-screen by the IME again.
+     return ConstrainedBox(
+       constraints: BoxConstraints(
+-        maxHeight: MediaQuery.of(context).size.height * 0.4,
++        maxHeight: constraints.maxHeight.isFinite
++            ? constraints.maxHeight * 0.60
++            : MediaQuery.of(context).size.height * 0.4,
+       ),
+       child: SingleChildScrollView(
+         physics: const ClampingScrollPhysics(),
+@@ -4022,12 +4037,20 @@ class _AuroraQuickTrigger extends StatelessWidget {
+                 children: [
+                   Icon(Icons.auto_awesome_rounded, size: 14, color: color),
+                   const SizedBox(width: DS.spacing6),
+-                  Text(
+-                    statusText,
+-                    style: TextStyle(
+-                      color: color,
+-                      fontSize: 11,
+-                      fontWeight: DS.fontWeightMedium,
++                  // A-5: the status label (e.g. the long duplicated
++                  // "Deep calibration available · …" composition) can exceed
++                  // the pill's width — it must ellipsize instead of
++                  // overflowing the screen by 53px.
++                  Flexible(
++                    child: Text(
++                      statusText,
++                      maxLines: 1,
++                      overflow: TextOverflow.ellipsis,
++                      style: TextStyle(
++                        color: color,
++                        fontSize: 11,
++                        fontWeight: DS.fontWeightMedium,
++                      ),
+                     ),
+                   ),
+                 ],
+diff --git a/mobile/lib/features/community/presentation/widgets/partners_tab.dart b/mobile/lib/features/community/presentation/widgets/partners_tab.dart
+index e3dbd15e..83475b31 100644
+--- a/mobile/lib/features/community/presentation/widgets/partners_tab.dart
++++ b/mobile/lib/features/community/presentation/widgets/partners_tab.dart
+@@ -9,6 +9,7 @@ import 'package:sparkle/core/design/widgets/compact_error_card.dart';
+ import 'package:sparkle/core/design/widgets/empty_state.dart';
+ import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
+ import 'package:sparkle/core/extensions/context_l10n.dart';
++import 'package:sparkle/core/offline/connectivity_provider.dart';
+ import 'package:sparkle/core/services/sensory_feedback_service.dart';
+ import 'package:sparkle/features/community/community_routes.dart';
+ import 'package:sparkle/features/community/data/models/accountability_model.dart';
+@@ -29,6 +30,17 @@ class PartnersTab extends ConsumerWidget {
+ 
+   @override
+   Widget build(BuildContext context, WidgetRef ref) {
++    // A-7: when connectivity comes back, the error cards must recover on
++    // their own — previously they kept showing stale failures ("switch away
++    // and back does not revalidate") and the retry tap produced no request.
++    ref.listen<bool>(isOnlineProvider, (previous, next) {
++      if (previous == false && next) {
++        ref.invalidate(myPartnershipsProvider);
++        ref.invalidate(accountabilityHubProvider);
++        ref.invalidate(accountabilityOverviewProvider);
++        ref.invalidate(friendsProvider);
++      }
++    });
+     final partnershipsAsync = ref.watch(myPartnershipsProvider);
+     final hubAsync = ref.watch(accountabilityHubProvider);
+     final friendsAsync = ref.watch(friendsProvider);
+diff --git a/mobile/lib/features/goal/presentation/pages/goal_detail_page.dart b/mobile/lib/features/goal/presentation/pages/goal_detail_page.dart
+index a5fd1127..a2e64996 100644
+--- a/mobile/lib/features/goal/presentation/pages/goal_detail_page.dart
++++ b/mobile/lib/features/goal/presentation/pages/goal_detail_page.dart
+@@ -18,6 +18,7 @@ import 'package:sparkle/features/goal/presentation/widgets/goal_detail_l10n.dart
+ import 'package:sparkle/features/goal/presentation/widgets/journey_progress_card.dart';
+ import 'package:sparkle/features/goal/presentation/widgets/minimum_criteria_card.dart';
+ import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
++import 'package:sparkle/l10n/app_localizations.dart';
+ 
+ class GoalDetailPage extends ConsumerWidget {
+   const GoalDetailPage({
+@@ -261,13 +262,17 @@ class _GoalHeader extends StatelessWidget {
+   static Widget _buildTargetDateChip(
+     BuildContext context,
+     String? targetDate,
+-    dynamic l10n,
++    // A-6: must be statically typed as AppLocalizations. The goalDetail*
++    // getters live in the GoalDetailLocalizations extension; a `dynamic`
++    // receiver bypasses extension resolution and crashed the page with
++    // NoSuchMethodError (android-round1.md A-6).
++    AppLocalizations l10n,
+   ) {
+     if (targetDate == null) {
+       return _InfoChip(
+         icon: Icons.event_outlined,
+-        label: l10n.goalDetailNoTargetDate as String,
+-        semanticsLabel: l10n.goalDetailTargetDate as String,
++        label: l10n.goalDetailNoTargetDate,
++        semanticsLabel: l10n.goalDetailTargetDate,
+       );
+     }
+ 
+@@ -279,7 +284,7 @@ class _GoalHeader extends StatelessWidget {
+       return _InfoChip(
+         icon: Icons.event_outlined,
+         label: targetDate,
+-        semanticsLabel: l10n.goalDetailTargetDate as String,
++        semanticsLabel: l10n.goalDetailTargetDate,
+       );
+     }
+ 
+diff --git a/mobile/lib/features/user/presentation/screens/modeling_chat_screen.dart b/mobile/lib/features/user/presentation/screens/modeling_chat_screen.dart
+index 476b8548..274afa71 100644
+--- a/mobile/lib/features/user/presentation/screens/modeling_chat_screen.dart
++++ b/mobile/lib/features/user/presentation/screens/modeling_chat_screen.dart
+@@ -36,12 +36,19 @@ class ModelingChatScreen extends ConsumerStatefulWidget {
+ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
+   static const String _auroraModelingSurface = 'aurora_modeling';
+ 
++  /// A-3: bail out when the stream never produces a first event (the field
++  /// test observed a silent hang: healthy heartbeat, typing a message
++  /// produced no reply, no error and no timeout). 45s covers slow LLM
++  /// starts; anything longer is indistinguishable from a dead run.
++  static const Duration _firstEventTimeout = Duration(seconds: 45);
++
+   final TextEditingController _inputController = TextEditingController();
+   final ScrollController _scrollController = ScrollController();
+   final List<_ModelingMessage> _messages = <_ModelingMessage>[];
+   final Map<String, StreamSubscription<ChatStreamEvent>> _runSubscriptions =
+       <String, StreamSubscription<ChatStreamEvent>>{};
+   final Map<String, String> _draftMessageIdsByRequest = <String, String>{};
++  final Map<String, Timer> _firstEventTimers = <String, Timer>{};
+ 
+   String? _conversationId;
+   bool _completed = false;
+@@ -74,6 +81,10 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
+       unawaited(subscription.cancel());
+     }
+     _runSubscriptions.clear();
++    for (final timer in _firstEventTimers.values) {
++      timer.cancel();
++    }
++    _firstEventTimers.clear();
+     _draftMessageIdsByRequest.clear();
+     _inputController.dispose();
+     _scrollController.dispose();
+@@ -154,8 +165,13 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
+                                         .textTheme
+                                         .bodyMedium
+                                         ?.copyWith(
++                                          // A-3: brand-on-brand was unreadable
++                                          // (brown text on the brown primary
++                                          // bubble). Use the contrast-safe
++                                          // on-primary token like the main
++                                          // chat bubbles do.
+                                           color: isUser
+-                                              ? DS.brandPrimaryConst
++                                              ? DS.textOnPrimary
+                                               : DS.textPrimary,
+                                           height: 1.45,
+                                         ),
+@@ -338,6 +354,25 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
+       setState(() {
+         _runSubscriptions[requestId] = subscription;
+       });
++      // A-3: convert a silently-dead stream into a visible, retryable error.
++      _firstEventTimers[requestId] = Timer(_firstEventTimeout, () {
++        if (!mounted) {
++          return;
++        }
++        if (!_runSubscriptions.containsKey(requestId)) {
++          return; // Run already finished normally.
++        }
++        final draftId = _draftMessageIdsByRequest[requestId];
++        final receivedContent = draftId != null &&
++            _messages.any((m) => m.id == draftId && m.text.isNotEmpty);
++        if (receivedContent) {
++          return; // Streaming started; not a hang.
++        }
++        _handleStreamError(
++          requestId,
++          'no stream events within ${_firstEventTimeout.inSeconds}s',
++        );
++      });
+     } catch (error) {
+       if (!mounted) {
+         return;
+@@ -351,6 +386,9 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
+       return;
+     }
+ 
++    // A-3: any event (even metadata-only) proves the stream is alive.
++    _firstEventTimers.remove(requestId)?.cancel();
++
+     final sessionId = event.sessionId?.trim();
+     if (sessionId != null && sessionId.isNotEmpty) {
+       _conversationId = sessionId;
+@@ -519,6 +557,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
+     bool cancelSubscription = false,
+   }) {
+     final subscription = _runSubscriptions.remove(requestId);
++    _firstEventTimers.remove(requestId)?.cancel();
+     _draftMessageIdsByRequest.remove(requestId);
+     if (cancelSubscription && subscription != null) {
+       unawaited(subscription.cancel());
+diff --git a/mobile/lib/features/user/presentation/screens/profile_screen.dart b/mobile/lib/features/user/presentation/screens/profile_screen.dart
+index 0b28d808..fef3dab6 100755
+--- a/mobile/lib/features/user/presentation/screens/profile_screen.dart
++++ b/mobile/lib/features/user/presentation/screens/profile_screen.dart
+@@ -30,6 +30,7 @@ import 'package:sparkle/features/user/user_routes.dart';
+ import 'package:sparkle/features/visual_elements/visual_elements_routes.dart';
+ import 'package:sparkle/l10n/app_localizations.dart';
+ import 'package:sparkle/shared/entities/user_model.dart';
++import 'package:sparkle/shared/entities/visual_element_model.dart';
+ import 'package:sparkle/shared/providers/visual_element_provider.dart';
+ 
+ class ProfileScreen extends ConsumerWidget {
+@@ -70,7 +71,12 @@ class ProfileScreen extends ConsumerWidget {
+                     data: (profileContext) =>
+                         _buildTraitsSection(context, ref, profileContext),
+                     loading: () => const SizedBox.shrink(),
+-                    error: (_, __) => const CompactErrorCard(),
++                    // A-4: the profile data error card must offer an exit
++                    // (tap-to-retry) — the logout entry lives on this tab, a
++                    // dead-end error state locks the user out of it.
++                    error: (_, __) => CompactErrorCard(
++                      onRetry: () => ref.invalidate(profileContextProvider),
++                    ),
+                   ),
+                   const SizedBox(height: DS.spacing12),
+                   if (profileContext != null)
+@@ -432,13 +438,15 @@ class ProfileScreen extends ConsumerWidget {
+         ],
+       );
+ 
+-  Color _colorFromElement(dynamic element) {
+-    final colors = (element.config['colors'] as List<dynamic>?) ??
+-        (element.config['gradient'] as List<dynamic>?);
+-    if (colors != null && colors.isNotEmpty) {
+-      final value = colors.first.toString().replaceFirst('#', '');
+-      final hex = value.length == 6 ? 'FF$value' : value;
+-      final parsed = int.tryParse(hex, radix: 16);
++  /// A-4: color extraction is delegated to the model-level
++  /// [VisualElementModel.prestigeAccentHex], which tolerates the polymorphic
++  /// config shapes (hex List or `{'colors': [...]}` Map envelope) that
++  /// previously hard-cast to `List<dynamic>?` and crashed the whole tab.
++  Color _colorFromElement(VisualElementModel? element) {
++    final hex = element?.prestigeAccentHex?.replaceFirst('#', '');
++    if (hex != null && hex.isNotEmpty) {
++      final padded = hex.length == 6 ? 'FF$hex' : hex;
++      final parsed = int.tryParse(padded, radix: 16);
+       if (parsed != null) {
+         return Color(parsed);
+       }
+diff --git a/mobile/lib/shared/entities/visual_element_model.dart b/mobile/lib/shared/entities/visual_element_model.dart
+index 1e08b5eb..20681e56 100644
+--- a/mobile/lib/shared/entities/visual_element_model.dart
++++ b/mobile/lib/shared/entities/visual_element_model.dart
+@@ -191,6 +191,45 @@ class VisualElementModel {
+ 
+   String? get prestigeLabel => config['prestige_label']?.toString();
+ 
++  /// A-4: first parsable accent color from the polymorphic `config` map.
++  ///
++  /// `config['colors']` is usually a hex-string List, while
++  /// `config['gradient']` may be either a hex-string List or a Map envelope
++  /// (`{'colors': [...]}` — the canonical catalogue shape parsed by
++  /// visual_element_card.dart). Registered users equipped with Map-envelope
++  /// elements crashed the whole Profile tab when UI code hard-cast these
++  /// fields to `List<dynamic>?` (android-round1.md A-4). This getter never
++  /// throws and returns null when nothing parsable exists.
++  String? get prestigeAccentHex {
++    for (final entry in <dynamic>[config['colors'], config['gradient']]) {
++      final hex = _firstHexIn(entry);
++      if (hex != null) {
++        return hex;
++      }
++    }
++    return null;
++  }
++
++  static String? _firstHexIn(dynamic value) {
++    List<dynamic>? colors;
++    if (value is List) {
++      colors = value;
++    } else if (value is Map) {
++      final nested = value['colors'];
++      if (nested is List) {
++        colors = nested;
++      }
++    }
++    for (final item in colors ?? const <dynamic>[]) {
++      final text = item.toString().replaceFirst('#', '').trim();
++      if ((text.length == 6 || text.length == 8) &&
++          int.tryParse(text, radix: 16) != null) {
++        return text;
++      }
++    }
++    return null;
++  }
++
+   String? get sourceAchievementId =>
+       unlockRequirement?['achievement_id']?.toString() ??
+       config['source_achievement_id']?.toString();
+diff --git a/mobile/test/core/design/compact_error_card_a7_tap_test.dart b/mobile/test/core/design/compact_error_card_a7_tap_test.dart
+new file mode 100644
+index 00000000..2ffd7cfa
+--- /dev/null
++++ b/mobile/test/core/design/compact_error_card_a7_tap_test.dart
+@@ -0,0 +1,84 @@
++// A-7 regression test: the whole CompactErrorCard surface must be tappable.
++//
++// Field evidence (android-round1.md A-7, screenshots 45-48): after airplane
++// mode recovery, tapping "Failed to load · Tap to retry" produced zero
++// network requests. The GestureDetector used the default deferToChild hit
++// behavior, so taps that did not land exactly on the tiny label glyphs fell
++// through — the retry felt like a dead button.
++import 'package:flutter/material.dart';
++import 'package:flutter_test/flutter_test.dart';
++import 'package:sparkle/core/design/widgets/compact_error_card.dart';
++import 'package:sparkle/l10n/app_localizations.dart';
++
++Future<void> _pumpCard(WidgetTester tester, VoidCallback? onRetry) async {
++  await tester.pumpWidget(
++    MaterialApp(
++      locale: const Locale('en'),
++      supportedLocales: const [Locale('en'), Locale('zh')],
++      localizationsDelegates: const [AppLocalizations.delegate],
++      home: Scaffold(
++        body: Align(
++          alignment: Alignment.topLeft,
++          child: CompactErrorCard(onRetry: onRetry),
++        ),
++      ),
++    ),
++  );
++  await tester.pump();
++}
++
++void main() {
++  testWidgets(
++      'tapping the card padding (away from the label glyphs) fires onRetry',
++      (tester) async {
++    var retryCount = 0;
++    await _pumpCard(tester, () => retryCount++);
++
++    // The card content Row is min-size; its padded area is much wider than
++    // the glyphs. Tap near the right edge of the card — the spot a user
++    // naturally aims for on a full-width error card.
++    final cardRect = tester.getRect(find.byType(CompactErrorCard));
++    expect(
++      cardRect.width,
++      greaterThan(0),
++      reason: 'the card must be laid out before hit-testing',
++    );
++    await tester.tapAt(
++      Offset(cardRect.right - 2, cardRect.center.dy),
++
++    );
++    await tester.pump();
++
++    expect(
++      retryCount,
++      1,
++      reason:
++          'A tap on the card surface must trigger the retry callback; '
++          'retryCount stayed 0, meaning taps on the padding fall through '
++          'again (A-7 dead-button regression)',
++    );
++  });
++
++  testWidgets('tapping the label itself fires onRetry', (tester) async {
++    var retryCount = 0;
++    await _pumpCard(tester, () => retryCount++);
++
++    await tester.tap(find.text('Tap to retry'), warnIfMissed: false);
++    await tester.pump();
++
++    expect(retryCount, 1);
++  });
++
++  testWidgets('card without onRetry is inert (no crash on tap)', (tester) async {
++    await _pumpCard(tester, null);
++
++    final cardRect = tester.getRect(find.byType(CompactErrorCard));
++    await tester.tapAt(
++      Offset(cardRect.right - 2, cardRect.center.dy),
++
++    );
++    await tester.pump();
++
++    expect(find.byType(CompactErrorCard), findsOneWidget);
++  });
++}
+diff --git a/mobile/test/features/auth/register_screen_a5_overflow_test.dart b/mobile/test/features/auth/register_screen_a5_overflow_test.dart
+new file mode 100644
+index 00000000..8362f178
+--- /dev/null
++++ b/mobile/test/features/auth/register_screen_a5_overflow_test.dart
+@@ -0,0 +1,117 @@
++// A-5 regression test: the register form must not overflow on the field-test
++// device geometry (1080x2400 @ 2.625dpr — the Medium Phone AVD), and the
++// Register button plus the "Already have an account?" link must stay
++// reachable while the whole form (incl. the password strength row) is filled.
++//
++// Field evidence (android-round1.md A-5, screenshot 08):
++//   BOTTOM OVERFLOWED BY 14 PIXELS — the yellow/black stripes covered the
++//   Register button and the "Already have an account?" link. Root cause:
++//   ConstrainedBox+IntrinsicHeight+Spacer pinned the Column to an
++//   under-reported intrinsic height (InputDecorator intrinsic heights), so
++//   the SingleChildScrollView believed nothing needed scrolling.
++import 'package:flutter/material.dart';
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import 'package:flutter_test/flutter_test.dart';
++import 'package:shared_preferences/shared_preferences.dart';
++import 'package:sparkle/core/services/view_storage_service.dart';
++import 'package:sparkle/features/auth/presentation/screens/register_screen.dart';
++import 'package:sparkle/l10n/app_localizations.dart';
++
++Future<void> _pumpRegister(WidgetTester tester) async {
++  await tester.binding.setSurfaceSize(const Size(411.43, 914.29));
++  addTearDown(() => tester.binding.setSurfaceSize(null));
++  tester.view.devicePixelRatio = 2.625;
++  addTearDown(tester.view.reset);
++
++  await tester.pumpWidget(
++    ProviderScope(
++      child: MaterialApp(
++        locale: const Locale('en'),
++        supportedLocales: const [Locale('en'), Locale('zh')],
++        localizationsDelegates: const [AppLocalizations.delegate],
++        home: const RegisterScreen(),
++      ),
++    ),
++  );
++  // Let the staggered entrance animations settle.
++  await tester.pump(const Duration(milliseconds: 800));
++  await tester.pump(const Duration(milliseconds: 800));
++}
++
++void main() {
++  setUpAll(() async {
++    SharedPreferences.setMockInitialValues(<String, Object>{});
++    await ViewStorageService.ensureInitialized();
++  });
++
++  testWidgets(
++      'filled register form shows no RenderFlex overflow and keeps the '
++      'Register / has-account actions reachable on the AVD geometry',
++      (tester) async {
++    await _pumpRegister(tester);
++
++    // Fill every field; the password strength row appearing on input is the
++    // exact trigger of the field-test 14px overflow.
++    await tester.enterText(
++      find.widgetWithText(TextFormField, 'Username').first,
++      'fieldtester3',
++    );
++    await tester.pump();
++    await tester.enterText(
++      find.widgetWithText(TextFormField, 'Email').first,
++      'fieldtester3@gmail.com',
++    );
++    await tester.enterText(
++      find.widgetWithText(TextFormField, 'Password').first,
++      'Sup3rSecret!42',
++    );
++    await tester.pump();
++    await tester.enterText(
++      find.widgetWithText(TextFormField, 'Confirm Password').first,
++      'Sup3rSecret!42',
++    );
++    await tester.pump(const Duration(milliseconds: 300));
++
++    // Any RenderFlex overflow above this point fails the test via the
++    // framework exception handler — the assertions below pin the recovery
++    // path as well.
++
++    // The two consent checkboxes must be reachable by scrolling.
++    final tosCheckbox = find.byType(CheckboxListTile).first;
++    await tester.scrollUntilVisible(
++      tosCheckbox,
++      160,
++      scrollable: find.byType(Scrollable).first,
++    );
++    await tester.pump(const Duration(milliseconds: 300));
++    await tester.tap(tosCheckbox, warnIfMissed: false);
++    await tester.pump(const Duration(milliseconds: 300));
++
++    // The Register button must exist and be hittable after scrolling to it.
++    final registerButton = find.text('Register').last;
++    await tester.scrollUntilVisible(
++      registerButton,
++      160,
++      scrollable: find.byType(Scrollable).first,
++    );
++    await tester.pump(const Duration(milliseconds: 300));
++    expect(
++      registerButton,
++      findsOneWidget,
++      reason: 'The primary Register button must remain in the tree and be '
++          'scrollable into view (A-5: it was covered by overflow stripes)',
++    );
++    await tester.ensureVisible(registerButton);
++    await tester.pump(const Duration(milliseconds: 300));
++
++    // The "Already have an account?" link must also remain reachable — in the
++    // field test it was the bottom-most casualty of the 14px overflow.
++    await tester.scrollUntilVisible(
++      find.text('Already have an account?'),
++      200,
++      scrollable: find.byType(Scrollable).first,
++    );
++    await tester.pump(const Duration(milliseconds: 300));
++    expect(find.text('Already have an account?'), findsOneWidget);
++  });
++}
+diff --git a/mobile/test/features/chat/data/services/websocket_chat_service_v2_a2_offline_queue_test.dart b/mobile/test/features/chat/data/services/websocket_chat_service_v2_a2_offline_queue_test.dart
+new file mode 100644
+index 00000000..f727ad3c
+--- /dev/null
++++ b/mobile/test/features/chat/data/services/websocket_chat_service_v2_a2_offline_queue_test.dart
+@@ -0,0 +1,315 @@
++// A-2 regression tests: the guest offline chat queue must replay frames the
++// gateway can parse, and a server `message_nack` must move a queued/sending
++// message to the failed state (with retry) instead of leaving it stuck.
++//
++// Field evidence (android-round1.md A-2, gateway.log 19:53:57):
++//   chat_orchestrator.go:521 Failed to parse chat message: json: cannot
++//   unmarshal string into Go struct field chatInput.extra_context of type
++//   map[string]interface {}
++// The client used `Map.toString()` when persisting extra_context, so every
++// replayed frame was invalid and was permanently NACKed while the UI stayed
++// on "Sending" forever.
++import 'dart:async';
++import 'dart:convert';
++import 'dart:io';
++
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import 'package:flutter_test/flutter_test.dart';
++import 'package:isar/isar.dart';
++import 'package:sparkle/core/offline/local_database.dart';
++import 'package:sparkle/core/offline/models/offline_chat_message.dart';
++import 'package:sparkle/core/offline/offline_message_queue_service.dart';
++import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
++import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
++import 'package:stream_channel/stream_channel.dart';
++import 'package:web_socket_channel/web_socket_channel.dart';
++
++import '../../../../shared/isar_test_helper.dart';
++
++class _MockWebSocketSink implements WebSocketSink {
++  final List<dynamic> sentData = <dynamic>[];
++
++  @override
++  void add(dynamic data) {
++    sentData.add(data);
++  }
++
++  @override
++  void addError(Object error, [StackTrace? stackTrace]) {}
++
++  @override
++  Future<void> addStream(Stream<dynamic> stream) async {
++    await stream.forEach(add);
++  }
++
++  @override
++  Future<void> close([int? closeCode, String? closeReason]) async {}
++
++  @override
++  Future<void> get done => Future<void>.value();
++}
++
++class _ReplayChannel
++    with StreamChannelMixin<dynamic>
++    implements WebSocketChannel {
++  final Completer<void> readyCompleter = Completer<void>();
++  final StreamController<dynamic> incoming = StreamController<dynamic>();
++  final _MockWebSocketSink _sink = _MockWebSocketSink();
++
++  @override
++  WebSocketSink get sink => _sink;
++
++  @override
++  Stream<dynamic> get stream => incoming.stream;
++
++  @override
++  String? get protocol => null;
++
++  @override
++  int? get closeCode => null;
++
++  @override
++  String? get closeReason => null;
++
++  @override
++  Future<void> get ready => readyCompleter.future;
++
++  void completeHandshake() {
++    if (!readyCompleter.isCompleted) {
++      readyCompleter.complete();
++    }
++  }
++}
++
++void main() {
++  TestWidgetsFlutterBinding.ensureInitialized();
++
++  late Isar isar;
++  late LocalDatabase localDb;
++  late Directory tempDir;
++  late OfflineMessageQueueService queue;
++  late ProviderContainer container;
++  late List<_ReplayChannel> channels;
++
++  setUpAll(() async {
++    await initializeIsarCoreForTesting();
++  });
++
++  setUp(() async {
++    tempDir = await Directory.systemTemp.createTemp('a2_offline_queue_test');
++    isar = await Isar.open(
++      [OfflineChatMessageSchema],
++      directory: tempDir.path,
++      name: 'a2_${DateTime.now().microsecondsSinceEpoch}',
++    );
++    localDb = LocalDatabase()..isar = isar;
++    queue = OfflineMessageQueueService(localDb);
++    channels = <_ReplayChannel>[];
++    container = ProviderContainer(
++      overrides: [localDatabaseProvider.overrideWithValue(localDb)],
++    );
++  });
++
++  tearDown(() async {
++    container.dispose();
++    try {
++      await isar.close(deleteFromDisk: true);
++    } catch (_) {}
++    try {
++      await tempDir.delete(recursive: true);
++    } catch (_) {}
++  });
++
++  WebSocketChatServiceV2 buildService() => WebSocketChatServiceV2(
++        container: container,
++        channelFactory: (uri, {headers}) {
++          final channel = _ReplayChannel();
++          channels.add(channel);
++          return channel;
++        },
++        enableReconnect: false,
++        autoConnect: false,
++      );
++
++  Future<void> waitFor(Duration max, FutureOr<bool> Function() condition) async {
++    final deadline = DateTime.now().add(max);
++    while (!await condition()) {
++      if (DateTime.now().isAfter(deadline)) {
++        fail('Condition not met within ${max.inMilliseconds}ms');
++      }
++      await Future<void>.delayed(const Duration(milliseconds: 20));
++    }
++  }
++
++  Map<String, dynamic>? lastChatFrame(_ReplayChannel channel) {
++    final sink = channel.sink as _MockWebSocketSink;
++    for (final raw in sink.sentData.reversed) {
++      if (raw is String && raw.contains('"request_id"')) {
++        return json.decode(raw) as Map<String, dynamic>;
++      }
++    }
++    return null;
++  }
++
++  Future<OfflineChatMessage?> findRow(String message) =>
++      isar.offlineChatMessages.filter().messageEqualTo(message).findFirst();
++
++  test(
++      'replayed queued message carries extra_context as a Map, not a '
++      'stringified Dart literal (gateway unmarshal contract)', () async {
++    final sender = buildService();
++    // Establish identity first (as the app does), but leave the handshake
++    // pending so sendMessage takes the offline-queue path.
++    await sender.ensureConnected(userId: 'u1');
++    sender.sendMessage(
++      message: 'hello from guest',
++      userId: 'u1',
++      extraContext: const {'source': 'galaxy', 'node_id': 'n1'},
++    );
++    sender.dispose();
++
++    OfflineChatMessage? row;
++    await waitFor(const Duration(seconds: 2), () async {
++      row = await findRow('hello from guest');
++      return row != null;
++    });
++    // The persisted extra_context must be valid JSON — exactly what the
++    // gateway unmarshals back into map[string]interface{}.
++    expect(
++      () => json.decode(row!.extraContext!),
++      returnsNormally,
++      reason:
++          'offline row extra_context must be real JSON; got: '
++          '${row!.extraContext}',
++    );
++
++    // Simulate the process-restart replay path: a brand-new service instance
++    // restores the row from Isar and flushes it once the socket is ready.
++    final replayer = buildService();
++    await replayer.ensureConnected(userId: 'u1');
++    channels.last.completeHandshake();
++
++    await waitFor(
++      const Duration(seconds: 3),
++      () async => lastChatFrame(channels.last) != null,
++    );
++    final frame = lastChatFrame(channels.last)!;
++    expect(frame['message'], 'hello from guest');
++    expect(
++      frame['extra_context'],
++      const {'source': 'galaxy', 'node_id': 'n1'},
++      reason:
++          'Replayed extra_context must be a Map (gateway contract is '
++          'map[string]interface{}); a string here is permanently NACKed. '
++          'Got: ${frame['extra_context']} '
++          '(${frame['extra_context'].runtimeType})',
++    );
++    replayer.dispose();
++  });
++
++  test(
++      'legacy Dart-literal extra_context rows are healed on replay: the '
++      'frame goes out without extra_context instead of being NACKed',
++      () async {
++    // Seed a row exactly the way the pre-fix client did (Map.toString()).
++    await queue.enqueue(
++      requestId: 'req_legacy_poison',
++      sessionId: 'session_legacy',
++      message: 'legacy poisoned message',
++      userId: 'u1',
++      extraContext: '{source: legacy, depth: 2}', // Not valid JSON.
++    );
++
++    final replayer = buildService();
++    await replayer.ensureConnected(userId: 'u1');
++    channels.last.completeHandshake();
++
++    await waitFor(
++      const Duration(seconds: 3),
++      () async => lastChatFrame(channels.last) != null,
++    );
++    final frame = lastChatFrame(channels.last)!;
++    expect(frame['message'], 'legacy poisoned message');
++    expect(
++      frame.containsKey('extra_context'),
++      isFalse,
++      reason:
++          'An undecodable legacy extra_context must be dropped rather than '
++          're-sent as a string (the gateway NACKs such frames permanently '
++          '— android-round1.md A-2). Frame: $frame',
++    );
++    replayer.dispose();
++  });
++
++  test('message_nack marks the offline row failed so the bubble can retry',
++      () async {
++    final service = buildService();
++    await service.ensureConnected(userId: 'u1');
++    channels.last.completeHandshake();
++    await waitFor(
++      const Duration(seconds: 2),
++      () async => service.connectionState == WsConnectionState.connected,
++    );
++
++    final events = <ChatStreamEvent>[];
++    final requestStream = service.sendMessage(
++      message: 'doomed message',
++      userId: 'u1',
++      extraContext: const {'k': 'v'},
++    );
++    final subscription = requestStream.listen(events.add);
++
++    Map<String, dynamic>? sentFrame;
++    await waitFor(const Duration(seconds: 3), () async {
++      sentFrame = lastChatFrame(channels.last);
++      return sentFrame != null;
++    });
++    final requestId = sentFrame!['request_id'] as String;
++    await waitFor(const Duration(seconds: 2), () async {
++      final row = await findRow('doomed message');
++      return row != null && row.requestId == requestId;
++    });
++
++    // Gateway rejects the frame permanently.
++    channels.last.incoming.add(json.encode(<String, dynamic>{
++      'type': 'message_nack',
++      'message_id': requestId,
++      'error_code': 'permanent_failure',
++      'error_message': 'bad frame',
++      'permanent': true,
++    }));
++
++    await waitFor(
++      const Duration(seconds: 3),
++      () async => events.any((e) => e is NackEvent),
++    );
++    expect(
++      events.whereType<NackEvent>().first.errorCode,
++      'permanent_failure',
++      reason: 'The request stream must observe the NACK (live-stream path)',
++    );
++
++    // The offline row must leave the sent/queued state (new behavior).
++    OfflineChatMessage? failedRow;
++    await waitFor(const Duration(seconds: 3), () async {
++      final row = await findRow('doomed message');
++      if (row == null || row.requestId != requestId) {
++        return false;
++      }
++      failedRow = row;
++      return row.status == OfflineMessageStatus.failed;
++    });
++    expect(
++      failedRow!.status,
++      OfflineMessageStatus.failed,
++      reason:
++          'message_nack must markFailed the offline row; status stayed '
++          '${failedRow!.status} so the bubble would stay Sending forever',
++    );
++    expect(failedRow!.lastError, 'bad frame');
++    expect(failedRow!.canRetry, isTrue);
++
++    await subscription.cancel();
++    service.dispose();
++  });
++}
+diff --git a/mobile/test/features/goal/goal_detail_page_a6_l10n_test.dart b/mobile/test/features/goal/goal_detail_page_a6_l10n_test.dart
+new file mode 100644
+index 00000000..51f503a2
+--- /dev/null
++++ b/mobile/test/features/goal/goal_detail_page_a6_l10n_test.dart
+@@ -0,0 +1,195 @@
++// A-6 regression test: the goal detail page must render the target-date chip
++// without crashing when `target_date` is null.
++//
++// Field evidence (android-round1.md A-6, screenshot 39): the page rendered
++//   NoSuchMethodError: Class 'AppLocalizationsEn' has no instance getter
++//   'goalDetailNoTargetDate'
++// because `_buildTargetDateChip` typed its `l10n` parameter `dynamic`, which
++// bypasses extension resolution for the goalDetail* getters defined in
++// goal_detail_l10n.dart. The fix types the parameter as AppLocalizations so
++// the GoalDetailLocalizations extension applies statically.
++import 'package:dio/dio.dart';
++import 'package:flutter/material.dart';
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import 'package:flutter_test/flutter_test.dart';
++import 'package:shared_preferences/shared_preferences.dart';
++import 'package:sparkle/core/network/api_client.dart';
++import 'package:sparkle/core/services/view_storage_service.dart';
++import 'package:sparkle/features/goal/presentation/pages/goal_detail_page.dart';
++import 'package:sparkle/l10n/app_localizations.dart';
++
++class _StubApiClient implements ApiClient {
++  final Map<String, dynamic> goalDetailPayload;
++
++  _StubApiClient(this.goalDetailPayload);
++
++  @override
++  Dio get dio => Dio();
++
++  @override
++  Future<Response<T>> get<T>(
++    String path, {
++    Map<String, dynamic>? queryParameters,
++  }) async {
++    if (path.contains('/experience/goal-detail/')) {
++      return Response<T>(
++        data: goalDetailPayload as T?,
++        requestOptions: RequestOptions(path: path),
++      );
++    }
++    // Every other endpoint surfaces as a provider error, which the goal
++    // detail page renders as an empty slot (by design).
++    throw UnimplementedError('Not stubbed: $path');
++  }
++
++  @override
++  Stream<SSEEvent> getStream(
++    String path, {
++    Map<String, dynamic>? headers,
++    Map<String, dynamic>? queryParameters,
++  }) =>
++      const Stream<SSEEvent>.empty();
++
++  @override
++  Stream<SSEEvent> postStream(String path, {Object? data}) =>
++      const Stream<SSEEvent>.empty();
++
++  @override
++  Future<Response<T>> post<T>(
++    String path, {
++    Object? data,
++    Map<String, dynamic>? queryParameters,
++  }) async {
++    throw UnimplementedError('Not stubbed: $path');
++  }
++
++  @override
++  Future<Response<T>> put<T>(
++    String path, {
++    Object? data,
++    Map<String, dynamic>? queryParameters,
++  }) async {
++    throw UnimplementedError('Not stubbed: $path');
++  }
++
++  @override
++  Future<Response<T>> patch<T>(
++    String path, {
++    Object? data,
++    Map<String, dynamic>? queryParameters,
++  }) async {
++    throw UnimplementedError('Not stubbed: $path');
++  }
++
++  @override
++  Future<Response<T>> delete<T>(
++    String path, {
++    Map<String, dynamic>? queryParameters,
++  }) async {
++    throw UnimplementedError('Not stubbed: $path');
++  }
++}
++
++void main() {
++  setUpAll(() async {
++    // The goal detail header renders the plan-health band whose provider
++    // reads ViewStorageService; tests must initialize it like app startup.
++    SharedPreferences.setMockInitialValues({});
++    await ViewStorageService.ensureInitialized();
++  });
++
++  testWidgets(
++      'goal with null target_date renders the "No date set" chip instead of '
++      'NoSuchMethodError', (tester) async {
++    final stub = _StubApiClient(<String, dynamic>{
++      'goal': <String, dynamic>{
++        'id': 'g1',
++        'title': 'Data structures midterm sprint',
++        'goal_type': 'exam',
++        'status': 'active',
++        // A-6 crash path: no target date.
++        'target_date': null,
++        'mastery': 0.42,
++        'progress': 0.6,
++        'priority': 'high',
++      },
++      'minimum_acceptance_criteria': <String, dynamic>{},
++      'plan_health': <String, dynamic>{},
++      'current_phase': <String, dynamic>{},
++      'todays_minimal_next_step': <String, dynamic>{},
++      'knowledge_bottlenecks': <dynamic>[],
++      'accountability_status': <String, dynamic>{},
++      'related_sources': <dynamic>[],
++    });
++
++    await tester.pumpWidget(
++      ProviderScope(
++        overrides: [
++          apiClientProvider.overrideWithValue(stub),
++        ],
++        child: MaterialApp(
++          locale: const Locale('en'),
++          supportedLocales: const [Locale('en'), Locale('zh')],
++          localizationsDelegates: const [AppLocalizations.delegate],
++          home: const GoalDetailPage(goalId: 'g1'),
++        ),
++      ),
++    );
++    await tester.pumpAndSettle();
++
++    expect(
++      find.text('No date set'),
++      findsOneWidget,
++      reason:
++          'The null target-date chip must render its localized label; a '
++          'NoSuchMethodError here means the goalDetail* extension getters '
++          'are being resolved dynamically again (A-6 regression)',
++    );
++    expect(
++      find.text('Data structures midterm sprint'),
++      findsOneWidget,
++      reason: 'The page must render the actual goal header',
++    );
++  });
++
++  testWidgets(
++      'goal with an upcoming target_date renders the raw date without '
++      'crashing', (tester) async {
++    final stub = _StubApiClient(<String, dynamic>{
++      'goal': <String, dynamic>{
++        'id': 'g2',
++        'title': 'Linear algebra problem set',
++        'goal_type': 'exam',
++        'status': 'active',
++        'target_date': '2099-12-31',
++        'mastery': 0.3,
++        'progress': 0.2,
++        'priority': 'normal',
++      },
++      'minimum_acceptance_criteria': <String, dynamic>{},
++      'plan_health': <String, dynamic>{},
++      'current_phase': <String, dynamic>{},
++      'todays_minimal_next_step': <String, dynamic>{},
++      'knowledge_bottlenecks': <dynamic>[],
++      'accountability_status': <String, dynamic>{},
++      'related_sources': <dynamic>[],
++    });
++
++    await tester.pumpWidget(
++      ProviderScope(
++        overrides: [
++          apiClientProvider.overrideWithValue(stub),
++        ],
++        child: MaterialApp(
++          locale: const Locale('en'),
++          supportedLocales: const [Locale('en'), Locale('zh')],
++          localizationsDelegates: const [AppLocalizations.delegate],
++          home: const GoalDetailPage(goalId: 'g2'),
++        ),
++      ),
++    );
++    await tester.pumpAndSettle();
++
++    expect(find.text('2099-12-31'), findsOneWidget);
++  });
++}
+diff --git a/mobile/test/features/user/visual_element_model_a4_prestige_color_test.dart b/mobile/test/features/user/visual_element_model_a4_prestige_color_test.dart
+new file mode 100644
+index 00000000..947e5090
+--- /dev/null
++++ b/mobile/test/features/user/visual_element_model_a4_prestige_color_test.dart
+@@ -0,0 +1,105 @@
++// A-4 regression tests: visual element config color extraction must tolerate
++// the polymorphic shapes shipped by the catalogue.
++//
++// Field evidence (android-round1.md A-4, field-test logcat 19:24:48):
++//   ProfileScreen._colorFromElement (profile_screen.dart:437) crashed the
++//   whole Profile tab with:
++//   type '_Map<String, dynamic>' is not a subtype of type 'List<dynamic>?'
++//   Registered users equip elements whose `config['gradient']` is a Map
++//   envelope ({'colors': [...]}) — the canonical shape parsed by
++//   visual_element_card.dart — while the screen hard-cast it to List.
++//
++// The tolerant parse now lives in the model (VisualElementModel
++// .prestigeAccentHex); these tests lock the shape matrix.
++import 'package:flutter_test/flutter_test.dart';
++import 'package:sparkle/shared/entities/visual_element_model.dart';
++
++VisualElementModel elementWithConfig(Map<String, dynamic> config) {
++  return VisualElementModel.fromJson(<String, dynamic>{
++    'id': 've_test',
++    'name': 'Test Element',
++    'element_type': 'background',
++    'rarity': 'rare',
++    'unlock_source': 'system',
++    'is_default': false,
++    'sort_order': 1,
++    'config': config,
++  });
++}
++
++void main() {
++  test('hex-string List for colors yields the first parsable hex', () {
++    final element = elementWithConfig(<String, dynamic>{
++      'colors': ['#7A93B4', '#94AFD2'],
++    });
++    expect(element.prestigeAccentHex, '7A93B4');
++  });
++
++  test(
++      'Map-envelope gradient (canonical catalogue shape) does not throw and '
++      'yields the first nested hex — the exact shape that crashed the tab',
++      () {
++    final element = elementWithConfig(<String, dynamic>{
++      'gradient': <String, dynamic>{
++        'colors': ['#AB47BC', '#FFA726'],
++        'begin': 'top',
++        'end': 'bottom',
++      },
++    });
++    expect(element.prestigeAccentHex, 'AB47BC');
++  });
++
++  test('gradient as hex-string List still works (legacy shape)', () {
++    final element = elementWithConfig(<String, dynamic>{
++      'gradient': ['#42A5F5'],
++    });
++    expect(element.prestigeAccentHex, '42A5F5');
++  });
++
++  test('colors taking precedence over gradient is preserved', () {
++    final element = elementWithConfig(<String, dynamic>{
++      'colors': ['#111111'],
++      'gradient': <String, dynamic>{
++        'colors': ['#222222'],
++      },
++    });
++    expect(element.prestigeAccentHex, '111111');
++  });
++
++  test('8-digit ARGB hex is accepted', () {
++    final element = elementWithConfig(<String, dynamic>{
++      'colors': ['FF335577'],
++    });
++    expect(element.prestigeAccentHex, 'FF335577');
++  });
++
++  test('malformed / empty / non-color payloads return null instead of throwing',
++      () {
++    expect(
++      elementWithConfig(const <String, dynamic>{}).prestigeAccentHex,
++      isNull,
++    );
++    expect(
++      elementWithConfig(<String, dynamic>{
++        'colors': <String>['nothex', '12345'],
++      }).prestigeAccentHex,
++      isNull,
++    );
++    expect(
++      elementWithConfig(<String, dynamic>{
++        'gradient': <String, dynamic>{'stops': [0.0, 1.0]},
++      }).prestigeAccentHex,
++      isNull,
++    );
++    // The exact pre-fix crash payload: a Map where a List was hard-cast.
++    expect(
++      elementWithConfig(<String, dynamic>{
++        'colors': <String, dynamic>{'primary': '#7A93B4'},
++      }).prestigeAccentHex,
++      isNull,
++      reason:
++          'A Map colors envelope without a nested colors list must degrade to '
++          'null (fallback color) rather than crash',
++    );
++  });
++}

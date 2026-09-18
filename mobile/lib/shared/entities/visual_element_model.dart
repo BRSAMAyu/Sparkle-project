@@ -191,6 +191,45 @@ class VisualElementModel {
 
   String? get prestigeLabel => config['prestige_label']?.toString();
 
+  /// A-4: first parsable accent color from the polymorphic `config` map.
+  ///
+  /// `config['colors']` is usually a hex-string List, while
+  /// `config['gradient']` may be either a hex-string List or a Map envelope
+  /// (`{'colors': [...]}` — the canonical catalogue shape parsed by
+  /// visual_element_card.dart). Registered users equipped with Map-envelope
+  /// elements crashed the whole Profile tab when UI code hard-cast these
+  /// fields to `List<dynamic>?` (android-round1.md A-4). This getter never
+  /// throws and returns null when nothing parsable exists.
+  String? get prestigeAccentHex {
+    for (final entry in <dynamic>[config['colors'], config['gradient']]) {
+      final hex = _firstHexIn(entry);
+      if (hex != null) {
+        return hex;
+      }
+    }
+    return null;
+  }
+
+  static String? _firstHexIn(dynamic value) {
+    List<dynamic>? colors;
+    if (value is List) {
+      colors = value;
+    } else if (value is Map) {
+      final nested = value['colors'];
+      if (nested is List) {
+        colors = nested;
+      }
+    }
+    for (final item in colors ?? const <dynamic>[]) {
+      final text = item.toString().replaceFirst('#', '').trim();
+      if ((text.length == 6 || text.length == 8) &&
+          int.tryParse(text, radix: 16) != null) {
+        return text;
+      }
+    }
+    return null;
+  }
+
   String? get sourceAchievementId =>
       unlockRequirement?['achievement_id']?.toString() ??
       config['source_achievement_id']?.toString();

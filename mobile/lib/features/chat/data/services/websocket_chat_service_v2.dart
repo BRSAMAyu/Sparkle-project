@@ -1984,7 +1984,11 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
         sessionId: (payload['session_id'] ?? '').toString(),
         message: (payload['message'] ?? '').toString(),
         userId: _currentUserId ?? '',
-        extraContext: payload['extra_context']?.toString(),
+        // A-2: extra_context must be persisted as real JSON. The previous
+        // `Map.toString()` produced a Dart map literal which the gateway
+        // cannot unmarshal into map[string]interface{}, so every replayed
+        // frame was permanently NACKed and the bubble stayed "Sending".
+        extraContext: encodeExtraContextForQueue(payload['extra_context']),
         fileIds: payload['file_ids'] is List
             ? (payload['file_ids'] as List).map((e) => e.toString()).toList()
             : null,
@@ -1992,6 +1996,50 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
         nickname: payload['nickname']?.toString(),
       ));
     }
+  }
+
+  /// Encode [extraContext] for the offline queue (A-2).
+  ///
+  /// The queue column is a JSON string. Non-string payloads (Map/List) are
+  /// JSON-encoded so the value can be restored losslessly on replay.
+  @visibleForTesting
+  static String? encodeExtraContextForQueue(dynamic extraContext) {
+    if (extraContext == null) {
+      return null;
+    }
+    if (extraContext is String) {
+      return extraContext;
+    }
+    try {
+      return json.encode(extraContext);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Restore [raw] extra_context persisted by [encodeExtraContextForQueue]
+  /// back to the Map shape the gateway requires (A-2).
+  ///
+  /// Returns null when the payload is not valid JSON (e.g. legacy rows written
+  /// by the old `Map.toString()` path) so the frame is sent without
+  /// extra_context instead of being permanently NACKed.
+  @visibleForTesting
+  static Map<String, dynamic>? decodeExtraContextFromQueue(String? raw) {
+    if (raw == null || raw.trim().isEmpty) {
+      return null;
+    }
+    try {
+      final decoded = json.decode(raw);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+      if (decoded is Map) {
+        return decoded.map((k, v) => MapEntry(k.toString(), v));
+      }
+    } catch (_) {
+      // Legacy Dart-map-literal payload — drop instead of poisoning the frame.
+    }
+    return null;
   }
 
   void _notifyPendingPayloadFailure(
@@ -2065,6 +2113,16 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       _lastStreamDataTime = DateTime.now();
       if (event is! DoneEvent) {
         _isStreamActive = true;
+      }
+      // A-2: a server NACK is terminal for the message. Mark the offline row
+      // failed even when no live request controller exists (e.g. the message
+      // is being replayed after a process restart) so the bubble leaves the
+      // permanent Queued/Sending state and the user gets a retry affordance.
+      if (event is NackEvent && requestId != null && requestId.isNotEmpty) {
+        unawaited(_offlineQueue.markFailed(requestId, event.errorMessage));
+        _pendingMessages.removeWhere(
+          (payload) => payload['request_id']?.toString() == requestId,
+        );
       }
       _routeEventToRequest(requestId, event);
       if (event is AuroraStateBandEvent) {
@@ -2553,12 +2611,20 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
         continue;
       }
       unawaited(_offlineQueue.prepareForRetry(msg.requestId));
+      // A-2: restore extra_context to its Map shape (the gateway contract is
+      // map[string]interface{}). Legacy rows persisted as Dart map literals
+      // fail to decode and the field is dropped instead of poisoning the
+      // frame again.
+      final restoredExtraContext = decodeExtraContextFromQueue(
+        msg.extraContext,
+      );
       final payload = <String, dynamic>{
         'message': msg.message,
         'session_id': msg.sessionId,
         'request_id': msg.requestId,
         if (msg.nickname != null) 'nickname': msg.nickname,
-        if (msg.extraContext != null) 'extra_context': msg.extraContext,
+        if (restoredExtraContext != null)
+          'extra_context': restoredExtraContext,
         if (msg.fileIds != null && msg.fileIds!.isNotEmpty)
           'file_ids': msg.parsedFileIds,
         if (msg.chatMode != null) 'chat_mode': msg.chatMode,

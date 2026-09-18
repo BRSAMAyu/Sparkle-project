@@ -18,6 +18,7 @@ import 'package:sparkle/features/goal/presentation/widgets/goal_detail_l10n.dart
 import 'package:sparkle/features/goal/presentation/widgets/journey_progress_card.dart';
 import 'package:sparkle/features/goal/presentation/widgets/minimum_criteria_card.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 class GoalDetailPage extends ConsumerWidget {
   const GoalDetailPage({
@@ -261,13 +262,17 @@ class _GoalHeader extends StatelessWidget {
   static Widget _buildTargetDateChip(
     BuildContext context,
     String? targetDate,
-    dynamic l10n,
+    // A-6: must be statically typed as AppLocalizations. The goalDetail*
+    // getters live in the GoalDetailLocalizations extension; a `dynamic`
+    // receiver bypasses extension resolution and crashed the page with
+    // NoSuchMethodError (android-round1.md A-6).
+    AppLocalizations l10n,
   ) {
     if (targetDate == null) {
       return _InfoChip(
         icon: Icons.event_outlined,
-        label: l10n.goalDetailNoTargetDate as String,
-        semanticsLabel: l10n.goalDetailTargetDate as String,
+        label: l10n.goalDetailNoTargetDate,
+        semanticsLabel: l10n.goalDetailTargetDate,
       );
     }
 
@@ -279,7 +284,7 @@ class _GoalHeader extends StatelessWidget {
       return _InfoChip(
         icon: Icons.event_outlined,
         label: targetDate,
-        semanticsLabel: l10n.goalDetailTargetDate as String,
+        semanticsLabel: l10n.goalDetailTargetDate,
       );
     }
 

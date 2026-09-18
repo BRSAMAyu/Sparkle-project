@@ -9,6 +9,7 @@ import 'package:sparkle/core/design/widgets/compact_error_card.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/offline/connectivity_provider.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/data/models/accountability_model.dart';
@@ -29,6 +30,17 @@ class PartnersTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // A-7: when connectivity comes back, the error cards must recover on
+    // their own — previously they kept showing stale failures ("switch away
+    // and back does not revalidate") and the retry tap produced no request.
+    ref.listen<bool>(isOnlineProvider, (previous, next) {
+      if (previous == false && next) {
+        ref.invalidate(myPartnershipsProvider);
+        ref.invalidate(accountabilityHubProvider);
+        ref.invalidate(accountabilityOverviewProvider);
+        ref.invalidate(friendsProvider);
+      }
+    });
     final partnershipsAsync = ref.watch(myPartnershipsProvider);
     final hubAsync = ref.watch(accountabilityHubProvider);
     final friendsAsync = ref.watch(friendsProvider);

@@ -30,6 +30,7 @@ import 'package:sparkle/features/user/user_routes.dart';
 import 'package:sparkle/features/visual_elements/visual_elements_routes.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
+import 'package:sparkle/shared/entities/visual_element_model.dart';
 import 'package:sparkle/shared/providers/visual_element_provider.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -70,7 +71,12 @@ class ProfileScreen extends ConsumerWidget {
                     data: (profileContext) =>
                         _buildTraitsSection(context, ref, profileContext),
                     loading: () => const SizedBox.shrink(),
-                    error: (_, __) => const CompactErrorCard(),
+                    // A-4: the profile data error card must offer an exit
+                    // (tap-to-retry) — the logout entry lives on this tab, a
+                    // dead-end error state locks the user out of it.
+                    error: (_, __) => CompactErrorCard(
+                      onRetry: () => ref.invalidate(profileContextProvider),
+                    ),
                   ),
                   const SizedBox(height: DS.spacing12),
                   if (profileContext != null)
@@ -432,13 +438,15 @@ class ProfileScreen extends ConsumerWidget {
         ],
       );
 
-  Color _colorFromElement(dynamic element) {
-    final colors = (element.config['colors'] as List<dynamic>?) ??
-        (element.config['gradient'] as List<dynamic>?);
-    if (colors != null && colors.isNotEmpty) {
-      final value = colors.first.toString().replaceFirst('#', '');
-      final hex = value.length == 6 ? 'FF$value' : value;
-      final parsed = int.tryParse(hex, radix: 16);
+  /// A-4: color extraction is delegated to the model-level
+  /// [VisualElementModel.prestigeAccentHex], which tolerates the polymorphic
+  /// config shapes (hex List or `{'colors': [...]}` Map envelope) that
+  /// previously hard-cast to `List<dynamic>?` and crashed the whole tab.
+  Color _colorFromElement(VisualElementModel? element) {
+    final hex = element?.prestigeAccentHex?.replaceFirst('#', '');
+    if (hex != null && hex.isNotEmpty) {
+      final padded = hex.length == 6 ? 'FF$hex' : hex;
+      final parsed = int.tryParse(padded, radix: 16);
       if (parsed != null) {
         return Color(parsed);
       }

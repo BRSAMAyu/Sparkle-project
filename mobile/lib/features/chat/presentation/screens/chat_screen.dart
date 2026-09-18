@@ -1357,12 +1357,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               bottom:
                   false, // Handle bottom padding manually to avoid double padding with ChatInput
               child: ContentConstraint(
-                child: Column(
+                // A-5: cap fractions must derive from the CURRENT body
+                // constraints, not MediaQuery.size.height (full screen). With
+                // the keyboard open the Scaffold body shrinks, and the old
+                // full-screen fractions (0.25 + 0.4) no longer fit the
+                // shrunken body — the Column overflowed and the stripes
+                // covered the input bar (bottom 81px / right 53px).
+                child: LayoutBuilder(builder: (context, bodyConstraints) {
+                  return Column(
                   children: [
-                    // Header panels — scrollable, capped at 25% height
+                    // Header panels — scrollable, capped at 20% of the body
                     ConstrainedBox(
                       constraints: BoxConstraints(
-                        maxHeight: MediaQuery.of(context).size.height * 0.25,
+                        maxHeight: bodyConstraints.maxHeight * 0.20,
                       ),
                       child: SingleChildScrollView(
                         physics: const ClampingScrollPhysics(),
@@ -2331,7 +2338,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       ),
                     ),
                   ],
-                ),
+                  );
+                }),
               ),
             ),
           ],
@@ -2732,9 +2740,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         : ref.watch(offlineQueueSnapshotProvider(offlineUserId)).valueOrNull ??
             OfflineQueueSnapshot.empty;
 
+    // A-5: the cap must be a fraction of the CURRENT body height (the
+    // LayoutBuilder above receives the Scaffold body constraints, which the
+    // keyboard already shrank), not of the full screen. 0.20 (header cap)
+    // + 0.60 (this cap) <= 1 keeps the Expanded message list non-negative,
+    // so the input bar can never be pushed off-screen by the IME again.
     return ConstrainedBox(
       constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.4,
+        maxHeight: constraints.maxHeight.isFinite
+            ? constraints.maxHeight * 0.60
+            : MediaQuery.of(context).size.height * 0.4,
       ),
       child: SingleChildScrollView(
         physics: const ClampingScrollPhysics(),
@@ -4023,12 +4038,20 @@ class _AuroraQuickTrigger extends StatelessWidget {
                 children: [
                   Icon(Icons.auto_awesome_rounded, size: 14, color: color),
                   const SizedBox(width: DS.spacing6),
-                  Text(
-                    statusText,
-                    style: TextStyle(
-                      color: color,
-                      fontSize: 11,
-                      fontWeight: DS.fontWeightMedium,
+                  // A-5: the status label (e.g. the long duplicated
+                  // "Deep calibration available · …" composition) can exceed
+                  // the pill's width — it must ellipsize instead of
+                  // overflowing the screen by 53px.
+                  Flexible(
+                    child: Text(
+                      statusText,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: color,
+                        fontSize: 11,
+                        fontWeight: DS.fontWeightMedium,
+                      ),
                     ),
                   ),
                 ],

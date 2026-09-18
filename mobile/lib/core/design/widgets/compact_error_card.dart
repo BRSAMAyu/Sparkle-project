@@ -12,6 +12,11 @@ class CompactErrorCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      // A-7: without `opaque` the hit test defers to the (min-size) Row, so
+      // taps landing on the card's padding around the short "Tap to retry"
+      // label fell through and the retry felt like a dead button — the exact
+      // field observation in android-round1.md A-7.
+      behavior: HitTestBehavior.opaque,
       onTap: onRetry,
       child: Padding(
         padding: const EdgeInsets.symmetric(
