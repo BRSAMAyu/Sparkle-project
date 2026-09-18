@@ -224,8 +224,33 @@ class ChatNotifier extends StateNotifier<ChatState> {
       return;
     }
     debugPrint('[Chat] cancelActiveRun: $reason');
-    _streamDebouncer.cancel();
-    _invalidateActiveStreamState();
+    // M6-09「流式取消=中断保留」：先冲刷防抖中的流式增量，确保已生成内容
+    // 完整落地 state，再把非空部分保留为带 isInterrupted 标记的助手消息。
+    // 服务端截断保存（G5）负责持久化，此处保证 UI 与本地会话不丢内容。
+    _streamDebouncer.flushPending();
+    _preservePartialReplyAsInterrupted();
+    _invalidateActiveStreamState(phase: ChatRunPhase.interrupted);
+  }
+
+  /// M6-09：把当前流式已生成但未定稿的部分保留为「已中断」助手消息。
+  /// 无内容时不产生空气泡。
+  void _preservePartialReplyAsInterrupted() {
+    final partialContent = state.streamingContent;
+    if (partialContent.trim().isEmpty) {
+      return;
+    }
+    final interruptedMessage = ChatMessageModel(
+      id: 'ai_interrupted_${DateTime.now().millisecondsSinceEpoch}',
+      userId: 'ai_assistant',
+      conversationId: state.conversationId ?? 'temp_conversation',
+      role: MessageRole.assistant,
+      content: partialContent,
+      createdAt: DateTime.now(),
+      isInterrupted: true,
+    );
+    state = state.copyWith(
+      messages: [...state.messages, interruptedMessage],
+    );
   }
 
   @override

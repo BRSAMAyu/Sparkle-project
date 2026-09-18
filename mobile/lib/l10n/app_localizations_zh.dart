@@ -21336,6 +21336,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatCompleted => '已完成';
 
   @override
+  String get chatInterrupted => '已中断';
+
+  @override
   String get chatContextDetail => '上下文资料详情';
 
   @override

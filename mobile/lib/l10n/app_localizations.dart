@@ -38917,6 +38917,12 @@ abstract class AppLocalizations {
   /// **'已完成'**
   String get chatCompleted;
 
+  /// No description provided for @chatInterrupted.
+  ///
+  /// In zh, this message translates to:
+  /// **'已中断'**
+  String get chatInterrupted;
+
   /// No description provided for @chatContextDetail.
   ///
   /// In zh, this message translates to:

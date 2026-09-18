@@ -22244,6 +22244,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatCompleted => 'Completed';
 
   @override
+  String get chatInterrupted => 'Interrupted';
+
+  @override
   String get chatContextDetail => 'Context detail';
 
   @override

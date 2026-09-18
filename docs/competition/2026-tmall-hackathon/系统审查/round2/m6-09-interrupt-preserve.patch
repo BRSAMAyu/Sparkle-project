@@ -1,0 +1,557 @@
+diff --git "a/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/README.md" "b/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/README.md"
+index 7f3245fb..766071a0 100644
+--- "a/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/README.md"
++++ "b/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/README.md"
+@@ -3,7 +3,7 @@
+ 按轮次组织的全系统审查与修复记录。每轮 8 个并行审查员（切片互不重叠）+ 修复波（多修复员并行）。
+ 
+ - `round1/` — 第一轮（基线 90daac8a，2026-09-18）：8 份审查报告（01 引擎编排/02 规划执行/03 关键服务/04 引擎基建/05 网关/06 移动核心/07 移动长尾/08 契约安全），`0N-fixes.md` 为对应修复波记录。
+-- `round2/` — 第二轮复审（基线 ca86bda8，R1 修复已集成）：修复验证 + 运行时/集成视角复审 + 移交专项；`0N-r2-fixes.md`/`0N-r2-fixes.patch` 为对应修复波记录与 diff 快照。
++- `round2/` — 第二轮复审（基线 ca86bda8，R1 修复已集成）：修复验证 + 运行时/集成视角复审 + 移交专项；`0N-r2-fixes.md`/`0N-r2-fixes.patch` 为对应修复波记录与 diff 快照；`m6-09-interrupt-preserve.md`/`.patch` 为 M6-09「流式取消=中断保留」产品决策的移动端落地记录。
+ - `漏洞台账.md` — 两轮全量发现的清零追踪表（唯一权威状态源）。
+ 
+ 切片边界：splash/onboarding/auth/home/chat/task/settings 归 06，其余 35 个 features 归 07；`gen/` 生成物只对照不审。
+diff --git "a/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/m6-09-interrupt-preserve.md" "b/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/m6-09-interrupt-preserve.md"
+new file mode 100644
+index 00000000..708b15b9
+--- /dev/null
++++ "b/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/m6-09-interrupt-preserve.md"
+@@ -0,0 +1,80 @@
++# M6-09「流式取消=中断保留」实现记录（round2 / 产品决策落地）
++
++> 裁决来源：`../漏洞台账.md` 末节「2026-09-18 产品决策落定」——**打断时已生成内容保留在 UI 与历史（服务端截断保存已有，G5），气泡标「已中断」**。理由：内容消失=信任破坏；对齐主流 AI 伙伴（ChatGPT/Claude）语义。
++> 基线：wt5（最新 main）+ 前任留存的 4 文件半成品（模型层字段/枚举/红测试）。
++
++## 1. 前任进度审查与问题定位
++
++前任留有 4 个已改文件（本轮全部验证后采纳）：
++
++| 文件 | 内容 | 验证结论 |
++|---|---|---|
++| `mobile/lib/features/chat/data/models/chat_message_model.dart` + `.g.dart` | 新增 `isInterrupted` 字段（`is_interrupted`，`includeIfNull: false`）+ copyWith/序列化 | 正确，直接采纳 |
++| `mobile/lib/features/chat/presentation/providers/chat_state.dart` | 新增 `ChatRunPhase.interrupted`（区别于 completed/cancelled/failed）并纳入 `isTerminal` | 正确，直接采纳 |
++| `mobile/test/unit/chat_notifier_stream_test.dart` | 4 条红测试（新消息中断/手动停止/空气泡/JSON 往返） | 跑通确认红（2 失败 2 过） |
++
++**「部分回复被移除」的确切点**（`chat_provider.dart`）：
++
++1. `cancelActiveRun()` → `_invalidateActiveStreamState()` 直接把 `streamingContent` 清空；
++2. 已生成全文 `accumulatedContent` 是 `sendMessage()` 闭包局部变量，取消路径无人读取；
++3. 旧流随后在 `await for` 顶部因 `_streamGeneration` 失效 break，`finalizeRun()` 首行 `!isCurrentRequest()` 早退——**已收 chunk 就此全部丢弃**；
++4. 附带缺陷：流式 UI 走 50ms `_Debouncer`，`cancelActiveRun` 原先直接 `_streamDebouncer.cancel()`，即使要取 state 也只能取到防抖窗口前的旧值。
++
++## 2. 实现要点
++
++### 2.1 取消路径保留（`chat_provider.dart`）
++
++- `cancelActiveRun()` 新顺序：`_streamDebouncer.flushPending()`（先冲刷防抖增量，state 拿到完整已生成内容）→ `_preservePartialReplyAsInterrupted()`（非空则追加 `isInterrupted: true` 的助手消息，id 前缀 `ai_interrupted_`）→ `_invalidateActiveStreamState(phase: ChatRunPhase.interrupted)`。
++- 冲刷安全性：`flushPending` 执行的是旧 run 调度的 `applyPending` 闭包，其内部 `isCurrentRequest()` 守卫在取消时刻仍为真（generation 自增发生在其后），故能同步落地；迟到事件因 generation 失效被拒，不会改写已保留内容、不会产生重复气泡。
++- 空内容（尚无任何 chunk）不产生空气泡。
++- 覆盖两条用户中断路径：`sendMessage` 内 `cancelActiveRun(reason: 'new_message')`（发新消息开新轮）与 ChatInput `onStop` 的 `cancelActiveRun(reason: 'user_stop')`；导航类调用（`new_session`/`switch_plan`/`history_switch`）随後整体替换 messages，保留动作无副作用且瞬间即被服务端历史覆盖。
++
++### 2.2 防抖器（`chat_provider_wiring.dart`）
++
++`_Debouncer` 记录 `_pendingAction` 并新增 `flushPending()`（执行并清空已调度动作）；`run`/`flush`/`cancel` 同步维护该引用。
++
++### 2.3 「已中断」UI 标记（`chat_bubble.dart`）
++
++气泡内 Column 尾部新增轻量标记：`Icons.stop_circle_outlined`（`DS.iconSizeXs`）+ `context.l10n.chatInterrupted`（`DS.captionStyle`/`DS.textTertiary`），仅 `chatMessage?.isInterrupted == true` 时渲染。全部走 design 令牌，不触碰 UI-TOKENS 棘轮基线。
++
++### 2.4 l10n
++
++`chatInterrupted`：zh=「已中断」/ en="Interrupted"。同步登记 `app_zh.arb`、`app_en.arb` 与三份已入库生成文件（`app_localizations*.dart`），与 `chatCompleted` 相邻。
++
++### 2.5 历史持久化语义
++
++- **会话内**：中断消息进入 `state.messages`，新消息开新轮后仍按 [用户旧消息 → 中断的部分回复 → 新用户消息 → 新回复] 顺序保留（红测试断言）。
++- **跨会话持久**：依赖服务端截断保存（G5 已有，网关侧断开时截断入库）。客户端 `is_interrupted` 序列化字段保证本地 JSON 往返不丢标记。
++
++## 3. 测试（红→绿）
++
++`flutter test --concurrency=4 test/unit/chat_notifier_stream_test.dart`：
++
++- 红（实现前）：2 失败——mid-stream 新消息与 user_stop 两条语义测试（内容被丢弃，`hasLength(0)`）；既有 4 条通过。
++- 绿（实现后）：**8/8 通过**（4 既有 + 4 M6-09：内容保留+标记存在+新消息后旧内容仍在+空气泡防护+JSON 往返）。
++
++回归：`chat_notifier_actions_test` / `chat_provider_test` ×2 / `chat_notifier_attachments_test`（65 过）、`chat_scroll_test` / `chat_history_sheet_regression_test` / `reasoning_visualization_test`（5 过）全绿。
++
++静态检查：`dart analyze` 定向（provider/wiring/bubble/state/model/l10n）= 8 条 info，与 HEAD 基线逐条持平（stash 对照验证），**零 error、零 warning、零新增**。
++
++## 4. 与 M6-R2-03（消息补拉）的交互——只记录不扩修
++
++- 服务端重载历史（`loadConversationHistory`/分页补拉）返回的消息**不带** `is_interrupted` 标记（服务端 schema 无此列），中断气泡在重拉后将显示为普通助手消息——内容仍由 G5 截断保存保证，仅客户端标记丢失。
++- 处置建议：M6-R2-03 补拉专项落地时，可由服务端消息表补 `is_interrupted` 列或按 `finish_reason` 推导；本轮不改网关/proto（超出移动端决策范围）。
++- 另一已知边界：导航切换（switch_plan/history_switch）场景下保留的消息会被服务端历史整体替换，属预期（会话切换而非用户中断语义）。
++
++## 5. 恢复说明（接手必读）
++
++1. **本改动未 commit**（任务禁令）。全部改动已快照为 patch：
++   ```bash
++   # 在 wt5 仓库根目录应用（如工作树被还原后需要重放）：
++   git apply docs/competition/2026-tmall-hackathon/系统审查/round2/m6-09-interrupt-preserve.patch
++   ```
++   patch 由 `git add -A && git diff --cached > <patch> && git reset` 生成，含全部 14 项（12 代码/测试文件 + 本文档 + 目录 README 登记）；patch 不含其自身。
++2. **跑测试前需恢复 proto 生成产物**（`mobile/lib/gen/` 被 gitignore，worktree 缺失；本轮验证后已按磁盘纪律清除）：
++   ```bash
++   cp -R <主仓库>/mobile/lib/gen mobile/lib/gen   # 或在仓库根 make proto-gen
++   cd mobile && flutter test --concurrency=4 test/unit/chat_notifier_stream_test.dart
++   ```
++3. 验证静态检查基线：`dart analyze` 定向 8 条 info 为存量（HEAD 同数），不应出现 error。
++4. 后续接续点见 §4：M6-R2-03 补拉时补服务端标记链路。
+diff --git a/mobile/lib/features/chat/data/models/chat_message_model.dart b/mobile/lib/features/chat/data/models/chat_message_model.dart
+index 023e9428..150b4687 100755
+--- a/mobile/lib/features/chat/data/models/chat_message_model.dart
++++ b/mobile/lib/features/chat/data/models/chat_message_model.dart
+@@ -49,6 +49,7 @@ class ChatMessageModel {
+     this.collaborationMode,
+     this.agentsInvolved = const [],
+     this.agentActivities = const [],
++    this.isInterrupted = false,
+   })  : id = id ?? const Uuid().v4(),
+         createdAt = createdAt ?? DateTime.now();
+ 
+@@ -151,6 +152,11 @@ class ChatMessageModel {
+   @JsonKey(includeFromJson: false, includeToJson: false)
+   final List<Map<String, dynamic>> agentActivities;
+ 
++  /// M6-09「流式取消=中断保留」：该助手消息由用户中断（发新消息/点停止）
++  /// 时从已流式部分保存而来。序列化保留，使本地历史往返后标记不丢。
++  @JsonKey(name: 'is_interrupted', includeIfNull: false)
++  final bool isInterrupted;
++
+   Map<String, dynamic> toJson() => _$ChatMessageModelToJson(this);
+ 
+   ChatMessageModel copyWith({
+@@ -186,6 +192,7 @@ class ChatMessageModel {
+     String? collaborationMode,
+     List<String>? agentsInvolved,
+     List<Map<String, dynamic>>? agentActivities,
++    bool? isInterrupted,
+   }) =>
+       ChatMessageModel(
+         id: id ?? this.id,
+@@ -222,6 +229,7 @@ class ChatMessageModel {
+         collaborationMode: collaborationMode ?? this.collaborationMode,
+         agentsInvolved: agentsInvolved ?? this.agentsInvolved,
+         agentActivities: agentActivities ?? this.agentActivities,
++        isInterrupted: isInterrupted ?? this.isInterrupted,
+       );
+ 
+   List<ChatCitation> get citations => ChatCitation.listFromMessage(this);
+diff --git a/mobile/lib/features/chat/data/models/chat_message_model.g.dart b/mobile/lib/features/chat/data/models/chat_message_model.g.dart
+index 924fc58e..20649d53 100644
+--- a/mobile/lib/features/chat/data/models/chat_message_model.g.dart
++++ b/mobile/lib/features/chat/data/models/chat_message_model.g.dart
+@@ -39,6 +39,7 @@ ChatMessageModel _$ChatMessageModelFromJson(Map<String, dynamic> json) =>
+           ? null
+           : MessageMeta.fromJson(json['meta'] as Map<String, dynamic>),
+       agentCollaboration: json['agentCollaboration'] as Map<String, dynamic>?,
++      isInterrupted: json['is_interrupted'] as bool? ?? false,
+     );
+ 
+ Map<String, dynamic> _$ChatMessageModelToJson(ChatMessageModel instance) =>
+@@ -60,6 +61,7 @@ Map<String, dynamic> _$ChatMessageModelToJson(ChatMessageModel instance) =>
+       'reasoning_summary': instance.reasoningSummary,
+       'is_reasoning_complete': instance.isReasoningComplete,
+       'meta': instance.meta,
++      'is_interrupted': instance.isInterrupted,
+     };
+ 
+ const _$MessageRoleEnumMap = {
+diff --git a/mobile/lib/features/chat/presentation/providers/chat_provider.dart b/mobile/lib/features/chat/presentation/providers/chat_provider.dart
+index 34920b01..d90c7ad4 100755
+--- a/mobile/lib/features/chat/presentation/providers/chat_provider.dart
++++ b/mobile/lib/features/chat/presentation/providers/chat_provider.dart
+@@ -224,8 +224,33 @@ class ChatNotifier extends StateNotifier<ChatState> {
+       return;
+     }
+     debugPrint('[Chat] cancelActiveRun: $reason');
+-    _streamDebouncer.cancel();
+-    _invalidateActiveStreamState();
++    // M6-09「流式取消=中断保留」：先冲刷防抖中的流式增量，确保已生成内容
++    // 完整落地 state，再把非空部分保留为带 isInterrupted 标记的助手消息。
++    // 服务端截断保存（G5）负责持久化，此处保证 UI 与本地会话不丢内容。
++    _streamDebouncer.flushPending();
++    _preservePartialReplyAsInterrupted();
++    _invalidateActiveStreamState(phase: ChatRunPhase.interrupted);
++  }
++
++  /// M6-09：把当前流式已生成但未定稿的部分保留为「已中断」助手消息。
++  /// 无内容时不产生空气泡。
++  void _preservePartialReplyAsInterrupted() {
++    final partialContent = state.streamingContent;
++    if (partialContent.trim().isEmpty) {
++      return;
++    }
++    final interruptedMessage = ChatMessageModel(
++      id: 'ai_interrupted_${DateTime.now().millisecondsSinceEpoch}',
++      userId: 'ai_assistant',
++      conversationId: state.conversationId ?? 'temp_conversation',
++      role: MessageRole.assistant,
++      content: partialContent,
++      createdAt: DateTime.now(),
++      isInterrupted: true,
++    );
++    state = state.copyWith(
++      messages: [...state.messages, interruptedMessage],
++    );
+   }
+ 
+   @override
+diff --git a/mobile/lib/features/chat/presentation/providers/chat_provider_wiring.dart b/mobile/lib/features/chat/presentation/providers/chat_provider_wiring.dart
+index a16512e2..ba4aabfc 100644
+--- a/mobile/lib/features/chat/presentation/providers/chat_provider_wiring.dart
++++ b/mobile/lib/features/chat/presentation/providers/chat_provider_wiring.dart
+@@ -21,19 +21,35 @@ class _Debouncer {
+   _Debouncer(this.delay);
+   final Duration delay;
+   Timer? _timer;
++  void Function()? _pendingAction;
+ 
+   void run(void Function() action) {
+     _timer?.cancel();
+-    _timer = Timer(delay, action);
++    _pendingAction = action;
++    _timer = Timer(delay, () {
++      _pendingAction = null;
++      action();
++    });
+   }
+ 
+   void flush(void Function() action) {
+     _timer?.cancel();
++    _pendingAction = null;
+     action();
+   }
+ 
++  /// M6-09「流式取消=中断保留」：立即执行已调度但未触发的防抖动作，
++  /// 使取消路径能拿到完整的已生成内容（而非 50ms 防抖窗口前的旧值）。
++  void flushPending() {
++    final action = _pendingAction;
++    _pendingAction = null;
++    _timer?.cancel();
++    action?.call();
++  }
++
+   void cancel() {
+     _timer?.cancel();
+     _timer = null;
++    _pendingAction = null;
+   }
+ }
+diff --git a/mobile/lib/features/chat/presentation/providers/chat_state.dart b/mobile/lib/features/chat/presentation/providers/chat_state.dart
+index d0b64fda..999d01de 100644
+--- a/mobile/lib/features/chat/presentation/providers/chat_state.dart
++++ b/mobile/lib/features/chat/presentation/providers/chat_state.dart
+@@ -15,6 +15,10 @@ enum ChatRunPhase {
+   finalizing,
+   completed,
+   cancelled,
++
++  /// M6-09「流式取消=中断保留」：用户在流式中发新消息/点停止后，旧流终止，
++  /// 已生成部分保留为带 isInterrupted 标记的助手消息。区别于 completed/failed。
++  interrupted,
+   failed,
+ }
+ 
+@@ -35,6 +39,7 @@ extension ChatRunPhaseX on ChatRunPhase {
+   bool get isTerminal =>
+       this == ChatRunPhase.completed ||
+       this == ChatRunPhase.cancelled ||
++      this == ChatRunPhase.interrupted ||
+       this == ChatRunPhase.failed;
+ }
+ 
+diff --git a/mobile/lib/features/chat/presentation/widgets/chat_bubble.dart b/mobile/lib/features/chat/presentation/widgets/chat_bubble.dart
+index e5bd265d..5de0afd0 100755
+--- a/mobile/lib/features/chat/presentation/widgets/chat_bubble.dart
++++ b/mobile/lib/features/chat/presentation/widgets/chat_bubble.dart
+@@ -1242,6 +1242,31 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
+                                             return animatedContent;
+                                           },
+                                         ),
++                                      // M6-09「流式取消=中断保留」：被中断的
++                                      // 部分回复在气泡尾部保留轻量标记。
++                                      if (chatMessage?.isInterrupted ?? false)
++                                        Padding(
++                                          padding: const EdgeInsets.only(
++                                            top: DS.spacing4,
++                                          ),
++                                          child: Row(
++                                            mainAxisSize: MainAxisSize.min,
++                                            children: [
++                                              Icon(
++                                                Icons.stop_circle_outlined,
++                                                size: DS.iconSizeXs,
++                                                color: DS.textTertiary,
++                                              ),
++                                              const SizedBox(
++                                                width: DS.spacing4,
++                                              ),
++                                              Text(
++                                                context.l10n.chatInterrupted,
++                                                style: DS.captionStyle,
++                                              ),
++                                            ],
++                                          ),
++                                        ),
+                                     ],
+                                   ),
+                                 ),
+diff --git a/mobile/lib/l10n/app_en.arb b/mobile/lib/l10n/app_en.arb
+index 5d56898c..2e732aed 100755
+--- a/mobile/lib/l10n/app_en.arb
++++ b/mobile/lib/l10n/app_en.arb
+@@ -12350,6 +12350,7 @@
+     "chatCommunityShareUploadHint": "After upload, it syncs to group chat and enters group knowledge base",
+     "chatCommunitySuggestion": "Community suggestion: {summary}. {tip}",
+     "chatCompleted": "Completed",
++    "chatInterrupted": "Interrupted",
+     "chatContextDetail": "Context detail",
+     "chatSocialContextDetail": "Social context detail",
+     "chatSocialContextUsed": "Used study partner activity",
+diff --git a/mobile/lib/l10n/app_localizations.dart b/mobile/lib/l10n/app_localizations.dart
+index bff7add0..b8f4a8b5 100644
+--- a/mobile/lib/l10n/app_localizations.dart
++++ b/mobile/lib/l10n/app_localizations.dart
+@@ -38917,6 +38917,12 @@ abstract class AppLocalizations {
+   /// **'已完成'**
+   String get chatCompleted;
+ 
++  /// No description provided for @chatInterrupted.
++  ///
++  /// In zh, this message translates to:
++  /// **'已中断'**
++  String get chatInterrupted;
++
+   /// No description provided for @chatContextDetail.
+   ///
+   /// In zh, this message translates to:
+diff --git a/mobile/lib/l10n/app_localizations_en.dart b/mobile/lib/l10n/app_localizations_en.dart
+index cb6483cc..ab29c58a 100644
+--- a/mobile/lib/l10n/app_localizations_en.dart
++++ b/mobile/lib/l10n/app_localizations_en.dart
+@@ -22243,6 +22243,9 @@ class AppLocalizationsEn extends AppLocalizations {
+   @override
+   String get chatCompleted => 'Completed';
+ 
++  @override
++  String get chatInterrupted => 'Interrupted';
++
+   @override
+   String get chatContextDetail => 'Context detail';
+ 
+diff --git a/mobile/lib/l10n/app_localizations_zh.dart b/mobile/lib/l10n/app_localizations_zh.dart
+index c64515ca..809e9876 100644
+--- a/mobile/lib/l10n/app_localizations_zh.dart
++++ b/mobile/lib/l10n/app_localizations_zh.dart
+@@ -21335,6 +21335,9 @@ class AppLocalizationsZh extends AppLocalizations {
+   @override
+   String get chatCompleted => '已完成';
+ 
++  @override
++  String get chatInterrupted => '已中断';
++
+   @override
+   String get chatContextDetail => '上下文资料详情';
+ 
+diff --git a/mobile/lib/l10n/app_zh.arb b/mobile/lib/l10n/app_zh.arb
+index 122b43a6..1669bf5f 100755
+--- a/mobile/lib/l10n/app_zh.arb
++++ b/mobile/lib/l10n/app_zh.arb
+@@ -9483,6 +9483,7 @@
+     "chatCommunityShareUploadHint": "上传后会同步发到群聊，并进入群知识库",
+     "chatCommunitySuggestion": "参考社群建议：{summary}。{tip}",
+     "chatCompleted": "已完成",
++    "chatInterrupted": "已中断",
+     "chatContextDetail": "上下文资料详情",
+     "chatSocialContextDetail": "社群参考详情",
+     "chatSocialContextUsed": "参考了学习伙伴的动态",
+diff --git a/mobile/test/unit/chat_notifier_stream_test.dart b/mobile/test/unit/chat_notifier_stream_test.dart
+index 669a61b0..3b4cf1bd 100644
+--- a/mobile/test/unit/chat_notifier_stream_test.dart
++++ b/mobile/test/unit/chat_notifier_stream_test.dart
+@@ -324,4 +324,184 @@ void main() {
+       expect(assistantMessages.single.content, isNot(contains('stale')));
+     });
+   });
++
++  group('M6-09 interrupt-preserve semantics', () {
++    test(
++        'sending a new message mid-stream preserves the partial reply as an interrupted assistant message',
++        () async {
++      final firstController = StreamController<ChatStreamEvent>();
++      final secondController = StreamController<ChatStreamEvent>();
++      final controllers = <StreamController<ChatStreamEvent>>[
++        firstController,
++        secondController,
++      ];
++      var index = 0;
++      final repository = _FakeChatRepository(
++        (message, conversationId, {userId, requestId, nickname, extraContext, token, fileIds, includeReferences = false, chatMode}) =>
++            controllers[index++].stream,
++      );
++      final notifier = await _createNotifier(repository);
++      addTearDown(() {
++        notifier.dispose();
++        unawaited(firstController.close());
++        unawaited(secondController.close());
++      });
++
++      final firstFuture = notifier.sendMessage('first');
++      await _settleChat();
++      firstController.add(TextEvent(content: 'partial answer'));
++      await _settleChat();
++      expect(notifier.state.streamingContent, 'partial answer');
++
++      // 用户在流式中发送新消息 → 旧流取消，但已生成部分必须保留。
++      final secondFuture = notifier.sendMessage('second');
++
++      final interruptedMessages = notifier.state.messages
++          .where(
++            (message) =>
++                message.role == MessageRole.assistant && message.isInterrupted,
++          )
++          .toList();
++      expect(interruptedMessages, hasLength(1));
++      expect(interruptedMessages.single.content, 'partial answer');
++      expect(notifier.state.isSending, isFalse);
++      expect(notifier.state.runPhase, ChatRunPhase.interrupted);
++
++      // 旧流迟到的事件不得改写已保留内容，也不得生成重复消息。
++      firstController.add(TextEvent(content: ' MORE'));
++      await firstController.close();
++      await firstFuture;
++      expect(
++        notifier.state.messages
++            .where((message) => message.isInterrupted)
++            .map((message) => message.content),
++        ['partial answer'],
++      );
++
++      // 新一轮正常完成后，被中断的部分回复仍在对话历史中。
++      secondController
++        ..add(TextEvent(content: 'fresh'))
++        ..add(DoneEvent(finishReason: 'STOP'));
++      await secondFuture;
++      await _settleChat();
++
++      final assistantMessages = notifier.state.messages
++          .where((message) => message.role == MessageRole.assistant)
++          .toList();
++      expect(assistantMessages.map((message) => message.content),
++          ['partial answer', 'fresh']);
++      expect(assistantMessages.first.isInterrupted, isTrue);
++      expect(assistantMessages.last.isInterrupted, isFalse);
++      // 对话顺序：旧用户消息 → 中断的部分回复 → 新用户消息 → 新回复
++      expect(
++        notifier.state.messages.map((message) => message.role),
++        [
++          MessageRole.user,
++          MessageRole.assistant,
++          MessageRole.user,
++          MessageRole.assistant,
++        ],
++      );
++    });
++
++    test('user stop keeps the partial reply and marks it interrupted',
++        () async {
++      final controller = StreamController<ChatStreamEvent>();
++      final repository = _FakeChatRepository(
++        (message, conversationId, {userId, requestId, nickname, extraContext, token, fileIds, includeReferences = false, chatMode}) =>
++            controller.stream,
++      );
++      final notifier = await _createNotifier(repository);
++      addTearDown(() {
++        notifier.dispose();
++        unawaited(controller.close());
++      });
++
++      final sendFuture = notifier.sendMessage('long question');
++      await _settleChat();
++      controller.add(TextEvent(content: 'visible partial'));
++      await _settleChat();
++
++      notifier.cancelActiveRun(reason: 'user_stop');
++
++      final interrupted = notifier.state.messages
++          .where((message) => message.isInterrupted)
++          .toList();
++      expect(interrupted, hasLength(1));
++      expect(interrupted.single.role, MessageRole.assistant);
++      expect(interrupted.single.content, 'visible partial');
++      expect(notifier.state.isSending, isFalse);
++      expect(notifier.state.streamingContent, isEmpty);
++      expect(notifier.state.runPhase, ChatRunPhase.interrupted);
++
++      await controller.close();
++      await sendFuture;
++      expect(
++        notifier.state.messages.where((message) => message.isInterrupted),
++        hasLength(1),
++      );
++    });
++
++    test('cancel with no streamed content does not emit an empty bubble',
++        () async {
++      final firstController = StreamController<ChatStreamEvent>();
++      final secondController = StreamController<ChatStreamEvent>();
++      final controllers = <StreamController<ChatStreamEvent>>[
++        firstController,
++        secondController,
++      ];
++      var index = 0;
++      final repository = _FakeChatRepository(
++        (message, conversationId, {userId, requestId, nickname, extraContext, token, fileIds, includeReferences = false, chatMode}) =>
++            controllers[index++].stream,
++      );
++      final notifier = await _createNotifier(repository);
++      addTearDown(() {
++        notifier.dispose();
++        unawaited(firstController.close());
++        unawaited(secondController.close());
++      });
++
++      final firstFuture = notifier.sendMessage('first');
++      await _settleChat();
++      final secondFuture = notifier.sendMessage('second');
++      expect(
++        notifier.state.messages.where((message) => message.isInterrupted),
++        isEmpty,
++      );
++      secondController
++        ..add(TextEvent(content: 'fresh'))
++        ..add(DoneEvent(finishReason: 'STOP'));
++      await secondFuture;
++      await firstController.close();
++      await firstFuture;
++      expect(
++        notifier.state.messages
++            .where((message) => message.role == MessageRole.assistant)
++            .map((message) => message.content),
++        ['fresh'],
++      );
++    });
++
++    test('isInterrupted flag survives JSON roundtrip for local history', () {
++      final interrupted = ChatMessageModel(
++        conversationId: 'conv-1',
++        role: MessageRole.assistant,
++        content: 'partial',
++        isInterrupted: true,
++      );
++      final restored = ChatMessageModel.fromJson(interrupted.toJson());
++      expect(restored.isInterrupted, isTrue);
++
++      final normal = ChatMessageModel(
++        conversationId: 'conv-1',
++        role: MessageRole.assistant,
++        content: 'done',
++      );
++      expect(
++        ChatMessageModel.fromJson(normal.toJson()).isInterrupted,
++        isFalse,
++      );
++    });
++  });
+ }

@@ -15,6 +15,10 @@ enum ChatRunPhase {
   finalizing,
   completed,
   cancelled,
+
+  /// M6-09「流式取消=中断保留」：用户在流式中发新消息/点停止后，旧流终止，
+  /// 已生成部分保留为带 isInterrupted 标记的助手消息。区别于 completed/failed。
+  interrupted,
   failed,
 }
 
@@ -35,6 +39,7 @@ extension ChatRunPhaseX on ChatRunPhase {
   bool get isTerminal =>
       this == ChatRunPhase.completed ||
       this == ChatRunPhase.cancelled ||
+      this == ChatRunPhase.interrupted ||
       this == ChatRunPhase.failed;
 }
 

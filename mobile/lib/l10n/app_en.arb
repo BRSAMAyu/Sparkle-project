@@ -12350,6 +12350,7 @@
     "chatCommunityShareUploadHint": "After upload, it syncs to group chat and enters group knowledge base",
     "chatCommunitySuggestion": "Community suggestion: {summary}. {tip}",
     "chatCompleted": "Completed",
+    "chatInterrupted": "Interrupted",
     "chatContextDetail": "Context detail",
     "chatSocialContextDetail": "Social context detail",
     "chatSocialContextUsed": "Used study partner activity",

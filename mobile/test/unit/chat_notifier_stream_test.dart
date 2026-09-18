@@ -324,4 +324,184 @@ void main() {
       expect(assistantMessages.single.content, isNot(contains('stale')));
     });
   });
+
+  group('M6-09 interrupt-preserve semantics', () {
+    test(
+        'sending a new message mid-stream preserves the partial reply as an interrupted assistant message',
+        () async {
+      final firstController = StreamController<ChatStreamEvent>();
+      final secondController = StreamController<ChatStreamEvent>();
+      final controllers = <StreamController<ChatStreamEvent>>[
+        firstController,
+        secondController,
+      ];
+      var index = 0;
+      final repository = _FakeChatRepository(
+        (message, conversationId, {userId, requestId, nickname, extraContext, token, fileIds, includeReferences = false, chatMode}) =>
+            controllers[index++].stream,
+      );
+      final notifier = await _createNotifier(repository);
+      addTearDown(() {
+        notifier.dispose();
+        unawaited(firstController.close());
+        unawaited(secondController.close());
+      });
+
+      final firstFuture = notifier.sendMessage('first');
+      await _settleChat();
+      firstController.add(TextEvent(content: 'partial answer'));
+      await _settleChat();
+      expect(notifier.state.streamingContent, 'partial answer');
+
+      // 用户在流式中发送新消息 → 旧流取消，但已生成部分必须保留。
+      final secondFuture = notifier.sendMessage('second');
+
+      final interruptedMessages = notifier.state.messages
+          .where(
+            (message) =>
+                message.role == MessageRole.assistant && message.isInterrupted,
+          )
+          .toList();
+      expect(interruptedMessages, hasLength(1));
+      expect(interruptedMessages.single.content, 'partial answer');
+      expect(notifier.state.isSending, isFalse);
+      expect(notifier.state.runPhase, ChatRunPhase.interrupted);
+
+      // 旧流迟到的事件不得改写已保留内容，也不得生成重复消息。
+      firstController.add(TextEvent(content: ' MORE'));
+      await firstController.close();
+      await firstFuture;
+      expect(
+        notifier.state.messages
+            .where((message) => message.isInterrupted)
+            .map((message) => message.content),
+        ['partial answer'],
+      );
+
+      // 新一轮正常完成后，被中断的部分回复仍在对话历史中。
+      secondController
+        ..add(TextEvent(content: 'fresh'))
+        ..add(DoneEvent(finishReason: 'STOP'));
+      await secondFuture;
+      await _settleChat();
+
+      final assistantMessages = notifier.state.messages
+          .where((message) => message.role == MessageRole.assistant)
+          .toList();
+      expect(assistantMessages.map((message) => message.content),
+          ['partial answer', 'fresh']);
+      expect(assistantMessages.first.isInterrupted, isTrue);
+      expect(assistantMessages.last.isInterrupted, isFalse);
+      // 对话顺序：旧用户消息 → 中断的部分回复 → 新用户消息 → 新回复
+      expect(
+        notifier.state.messages.map((message) => message.role),
+        [
+          MessageRole.user,
+          MessageRole.assistant,
+          MessageRole.user,
+          MessageRole.assistant,
+        ],
+      );
+    });
+
+    test('user stop keeps the partial reply and marks it interrupted',
+        () async {
+      final controller = StreamController<ChatStreamEvent>();
+      final repository = _FakeChatRepository(
+        (message, conversationId, {userId, requestId, nickname, extraContext, token, fileIds, includeReferences = false, chatMode}) =>
+            controller.stream,
+      );
+      final notifier = await _createNotifier(repository);
+      addTearDown(() {
+        notifier.dispose();
+        unawaited(controller.close());
+      });
+
+      final sendFuture = notifier.sendMessage('long question');
+      await _settleChat();
+      controller.add(TextEvent(content: 'visible partial'));
+      await _settleChat();
+
+      notifier.cancelActiveRun(reason: 'user_stop');
+
+      final interrupted = notifier.state.messages
+          .where((message) => message.isInterrupted)
+          .toList();
+      expect(interrupted, hasLength(1));
+      expect(interrupted.single.role, MessageRole.assistant);
+      expect(interrupted.single.content, 'visible partial');
+      expect(notifier.state.isSending, isFalse);
+      expect(notifier.state.streamingContent, isEmpty);
+      expect(notifier.state.runPhase, ChatRunPhase.interrupted);
+
+      await controller.close();
+      await sendFuture;
+      expect(
+        notifier.state.messages.where((message) => message.isInterrupted),
+        hasLength(1),
+      );
+    });
+
+    test('cancel with no streamed content does not emit an empty bubble',
+        () async {
+      final firstController = StreamController<ChatStreamEvent>();
+      final secondController = StreamController<ChatStreamEvent>();
+      final controllers = <StreamController<ChatStreamEvent>>[
+        firstController,
+        secondController,
+      ];
+      var index = 0;
+      final repository = _FakeChatRepository(
+        (message, conversationId, {userId, requestId, nickname, extraContext, token, fileIds, includeReferences = false, chatMode}) =>
+            controllers[index++].stream,
+      );
+      final notifier = await _createNotifier(repository);
+      addTearDown(() {
+        notifier.dispose();
+        unawaited(firstController.close());
+        unawaited(secondController.close());
+      });
+
+      final firstFuture = notifier.sendMessage('first');
+      await _settleChat();
+      final secondFuture = notifier.sendMessage('second');
+      expect(
+        notifier.state.messages.where((message) => message.isInterrupted),
+        isEmpty,
+      );
+      secondController
+        ..add(TextEvent(content: 'fresh'))
+        ..add(DoneEvent(finishReason: 'STOP'));
+      await secondFuture;
+      await firstController.close();
+      await firstFuture;
+      expect(
+        notifier.state.messages
+            .where((message) => message.role == MessageRole.assistant)
+            .map((message) => message.content),
+        ['fresh'],
+      );
+    });
+
+    test('isInterrupted flag survives JSON roundtrip for local history', () {
+      final interrupted = ChatMessageModel(
+        conversationId: 'conv-1',
+        role: MessageRole.assistant,
+        content: 'partial',
+        isInterrupted: true,
+      );
+      final restored = ChatMessageModel.fromJson(interrupted.toJson());
+      expect(restored.isInterrupted, isTrue);
+
+      final normal = ChatMessageModel(
+        conversationId: 'conv-1',
+        role: MessageRole.assistant,
+        content: 'done',
+      );
+      expect(
+        ChatMessageModel.fromJson(normal.toJson()).isInterrupted,
+        isFalse,
+      );
+    });
+  });
 }

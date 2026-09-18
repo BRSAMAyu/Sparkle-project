@@ -49,6 +49,7 @@ class ChatMessageModel {
     this.collaborationMode,
     this.agentsInvolved = const [],
     this.agentActivities = const [],
+    this.isInterrupted = false,
   })  : id = id ?? const Uuid().v4(),
         createdAt = createdAt ?? DateTime.now();
 
@@ -151,6 +152,11 @@ class ChatMessageModel {
   @JsonKey(includeFromJson: false, includeToJson: false)
   final List<Map<String, dynamic>> agentActivities;
 
+  /// M6-09「流式取消=中断保留」：该助手消息由用户中断（发新消息/点停止）
+  /// 时从已流式部分保存而来。序列化保留，使本地历史往返后标记不丢。
+  @JsonKey(name: 'is_interrupted', includeIfNull: false)
+  final bool isInterrupted;
+
   Map<String, dynamic> toJson() => _$ChatMessageModelToJson(this);
 
   ChatMessageModel copyWith({
@@ -186,6 +192,7 @@ class ChatMessageModel {
     String? collaborationMode,
     List<String>? agentsInvolved,
     List<Map<String, dynamic>>? agentActivities,
+    bool? isInterrupted,
   }) =>
       ChatMessageModel(
         id: id ?? this.id,
@@ -222,6 +229,7 @@ class ChatMessageModel {
         collaborationMode: collaborationMode ?? this.collaborationMode,
         agentsInvolved: agentsInvolved ?? this.agentsInvolved,
         agentActivities: agentActivities ?? this.agentActivities,
+        isInterrupted: isInterrupted ?? this.isInterrupted,
       );
 
   List<ChatCitation> get citations => ChatCitation.listFromMessage(this);

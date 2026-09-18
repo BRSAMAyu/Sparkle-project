@@ -9483,6 +9483,7 @@
     "chatCommunityShareUploadHint": "上传后会同步发到群聊，并进入群知识库",
     "chatCommunitySuggestion": "参考社群建议：{summary}。{tip}",
     "chatCompleted": "已完成",
+    "chatInterrupted": "已中断",
     "chatContextDetail": "上下文资料详情",
     "chatSocialContextDetail": "社群参考详情",
     "chatSocialContextUsed": "参考了学习伙伴的动态",

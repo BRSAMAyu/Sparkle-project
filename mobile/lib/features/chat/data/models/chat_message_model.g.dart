@@ -39,6 +39,7 @@ ChatMessageModel _$ChatMessageModelFromJson(Map<String, dynamic> json) =>
           ? null
           : MessageMeta.fromJson(json['meta'] as Map<String, dynamic>),
       agentCollaboration: json['agentCollaboration'] as Map<String, dynamic>?,
+      isInterrupted: json['is_interrupted'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$ChatMessageModelToJson(ChatMessageModel instance) =>
@@ -60,6 +61,7 @@ Map<String, dynamic> _$ChatMessageModelToJson(ChatMessageModel instance) =>
       'reasoning_summary': instance.reasoningSummary,
       'is_reasoning_complete': instance.isReasoningComplete,
       'meta': instance.meta,
+      'is_interrupted': instance.isInterrupted,
     };
 
 const _$MessageRoleEnumMap = {

@@ -1242,6 +1242,31 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                             return animatedContent;
                                           },
                                         ),
+                                      // M6-09「流式取消=中断保留」：被中断的
+                                      // 部分回复在气泡尾部保留轻量标记。
+                                      if (chatMessage?.isInterrupted ?? false)
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                            top: DS.spacing4,
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                Icons.stop_circle_outlined,
+                                                size: DS.iconSizeXs,
+                                                color: DS.textTertiary,
+                                              ),
+                                              const SizedBox(
+                                                width: DS.spacing4,
+                                              ),
+                                              Text(
+                                                context.l10n.chatInterrupted,
+                                                style: DS.captionStyle,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
                                     ],
                                   ),
                                 ),
