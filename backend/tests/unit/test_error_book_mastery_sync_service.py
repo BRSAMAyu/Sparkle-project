@@ -673,10 +673,16 @@ def test_error_type_impact_matches_spec():
 
 
 def test_review_performance_impact_matches_spec():
-    """Verify review constants match the implementation doc §5.4."""
+    """Verify review constants match the implementation doc §5.4.
+
+    API canonical value is ReviewPerformanceEnum.FORGOTTEN ("forgotten",
+    app/schemas/error_book.py) — the doc-era spelling "forgot" is kept as an
+    alias for legacy stored analysis payloads. Both must map to -2.
+    """
     assert REVIEW_PERFORMANCE_IMPACT == {
         "remembered": 4,
         "fuzzy": 1,
+        "forgotten": -2,
         "forgot": -2,
     }
 

@@ -95,8 +95,9 @@ async def clean_document(
         task_id = str(uuid.uuid4())
 
         # 2. 检查磁盘空间（假设需要文件大小的3倍空间用于处理）
-        await file.seek(0, 2)
-        file_size = await file.tell()
+        # Starlette UploadFile.seek(offset) 不支持 whence，需通过底层文件对象定位到文件尾
+        file.file.seek(0, os.SEEK_END)
+        file_size = file.file.tell()
         await file.seek(0)
         if file_size > settings.MAX_UPLOAD_SIZE:
             raise HTTPException(

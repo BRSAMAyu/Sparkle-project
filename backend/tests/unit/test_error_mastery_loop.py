@@ -11,7 +11,6 @@ from app.models.task import Task, TaskStatus, TaskType
 from app.models.task_resources import TaskKnowledgeLink
 from app.models.user import User
 from app.services.error_replan_bridge import ErrorReplanBridge
-from app.services.galaxy_service import GalaxyService
 
 
 @pytest.mark.parametrize(
@@ -35,7 +34,16 @@ def test_expanded_error_types_are_recognized(raw_error_type, classified):
 
 
 @pytest.mark.asyncio
-async def test_update_mastery_from_error_clamps_at_ten_and_publishes_event(db_session):
+async def test_error_diagnosis_clamps_at_floor_and_defers_mastery_event(db_session):
+    """错误→掌握度链路（迁移自已删除的 GalaxyService.update_mastery_from_error）。
+
+    clean-slate 后掌握度写入统一由 ErrorBookMasterySyncService 负责：
+    - 单次错题扣分受 [0, 100] 钳制（旧 API 的地板是 10，新契约地板是 0）；
+    - 不再直接 publish "mastery_updated_from_error"，而是把 node_mastery_updated
+      事件随结果返回（_pending_event），由调用方在 commit 后投递。
+    """
+    from app.services.error_book_mastery_sync_service import ErrorBookMasterySyncService
+
     user = User(username="mastery_floor_user", email="mastery-floor@example.com", hashed_password="hashed")
     db_session.add(user)
     await db_session.flush()
@@ -48,59 +56,84 @@ async def test_update_mastery_from_error_clamps_at_ten_and_publishes_event(db_se
         UserNodeStatus(
             user_id=user.id,
             node_id=node.id,
-            mastery_score=12,
-            bkt_mastery_prob=0.12,
+            mastery_score=5,
+            bkt_mastery_prob=0.05,
             total_minutes=0,
             total_study_minutes=0,
             study_count=0,
             is_unlocked=True,
         )
     )
+    error = ErrorRecord(
+        user_id=user.id,
+        subject_code="physics",
+        chapter="thermodynamics",
+        question_text="mastery-floor-error-1",
+        mastery_level=0.2,
+        latest_analysis={"error_type": "knowledge_gap"},
+        linked_knowledge_node_ids=[str(node.id)],
+    )
+    db_session.add_all([error])
     await db_session.flush()
 
-    with patch("app.services.galaxy_service.event_bus.publish", new=AsyncMock()) as mock_publish:
-        result = await GalaxyService(db_session).update_mastery_from_error(
-            db_session,
-            user_id=str(user.id),
-            knowledge_node_id=str(node.id),
-            knowledge_node_name=None,
-            error_type="repeated_mistake",
-            error_count=3,
-        )
+    results = await ErrorBookMasterySyncService(db_session).apply_error_diagnosis(user.id, error)
 
-    assert result == {
-        "node_id": str(node.id),
-        "node_name": node.name,
-        "old_mastery": 12.0,
-        "new_mastery": 10.0,
-        "delta": -2.0,
-    }
-    mock_publish.assert_awaited_once()
-    event_type, payload = mock_publish.await_args.args
-    assert event_type == "mastery_updated_from_error"
-    assert payload["event_type"] == "mastery_updated_from_error"
+    assert len(results) == 1
+    assert results[0]["node_id"] == str(node.id)
+    assert results[0]["old_mastery"] == 5
+    assert results[0]["new_mastery"] == 0  # 5 + knowledge_gap(-10) → 钳制在地板 0
+    assert results[0]["delta"] == -5
+    assert results[0]["record_type"] == "error_diagnosis"
+
+    # 掌握度事件随结果延迟投递（旧 API 在这里直接 event_bus.publish）
+    pending = results[0]["_pending_event"]
+    assert pending["topic"] == "node_mastery_updated"
+    payload = pending["payload"]
+    assert payload["event_type"] == "node_mastery_updated"
     assert payload["node_id"] == str(node.id)
-    assert payload["new_mastery"] == 10.0
+    assert payload["old_mastery"] == 5
+    assert payload["new_mastery"] == 0
+    assert payload["reason"] == "error_diagnosis:knowledge_gap"
+
+    status = (
+        await db_session.execute(
+            select(UserNodeStatus).where(UserNodeStatus.user_id == user.id, UserNodeStatus.node_id == node.id)
+        )
+    ).scalar_one()
+    assert status.mastery_score == 0
+    assert status.revision == 1
 
 
 @pytest.mark.asyncio
-async def test_update_mastery_from_error_returns_none_for_missing_node(db_session):
+async def test_error_diagnosis_without_linked_node_returns_empty_and_hint(db_session):
+    """无法关联知识节点的错题不得写入任何掌握度（迁移自 update_mastery_from_error 返回 None 分支）。"""
+    from app.services.error_book_mastery_sync_service import ErrorBookMasterySyncService
+
     user = User(username="missing_node_user", email="missing-node@example.com", hashed_password="hashed")
     db_session.add(user)
     await db_session.flush()
 
-    with patch("app.services.galaxy_service.event_bus.publish", new=AsyncMock()) as mock_publish:
-        result = await GalaxyService(db_session).update_mastery_from_error(
-            db_session,
-            user_id=str(user.id),
-            knowledge_node_id=None,
-            knowledge_node_name="不存在的知识点",
-            error_type="comprehension_failure",
-            error_count=1,
-        )
+    error = ErrorRecord(
+        user_id=user.id,
+        subject_code="physics",
+        chapter="thermodynamics",
+        question_text="missing-node-error-1",
+        mastery_level=0.2,
+        latest_analysis=None,
+        linked_knowledge_node_ids=None,
+    )
+    db_session.add(error)
+    await db_session.flush()
 
-    assert result is None
-    mock_publish.assert_not_awaited()
+    results = await ErrorBookMasterySyncService(db_session).apply_error_diagnosis(user.id, error)
+
+    assert results == []
+    assert error.latest_analysis["linking_hint"]["code"] == "missing_knowledge_links"
+
+    statuses = (
+        await db_session.execute(select(UserNodeStatus).where(UserNodeStatus.user_id == user.id))
+    ).scalars().all()
+    assert statuses == []
 
 
 async def _seed_replan_context(

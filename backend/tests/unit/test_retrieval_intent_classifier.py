@@ -25,7 +25,9 @@ from app.orchestration.statechart_engine import WorkflowState
         ("how does TCP congestion control work?", "targeted_source_rag"),
         ("help me understand dynamic programming", "targeted_source_rag"),
         ("what is a page table?", "targeted_source_rag"),
-        ("compare paging and segmentation", "targeted_source_rag"),
+        # "compare" 命中 P1-9 _DEEP_RESEARCH_PATTERNS（优先于 knowledge 模式），
+        # 路由到多源深读模式；裸 compare 动词是否应收紧为 multi-source 短语属产品语义调优项。
+        ("compare paging and segmentation", "deep_source_synthesis"),
         ("derive the Bayes theorem formula", "targeted_source_rag"),
         ("解释一下虚拟内存的原理", "targeted_source_rag"),
         ("make me a study plan for OS finals", "graph_only"),
