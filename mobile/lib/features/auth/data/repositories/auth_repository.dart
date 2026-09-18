@@ -756,6 +756,9 @@ final flutterSecureStorageProvider = Provider<FlutterSecureStorage>(
     iOptions: IOSOptions(
       accessibility: KeychainAccessibility.first_unlock,
     ),
+    // macOS: unsigned local builds lack keychain-access-groups (SecItem
+    // -34018); legacy file-based keychain (see token_storage_io.dart).
+    mOptions: MacOsOptions(useDataProtectionKeyChain: false),
   ),
 );
 

@@ -1,2 +1,5 @@
 #include "../../Flutter/Flutter-Release.xcconfig"
 #include "Warnings.xcconfig"
+// Xcode 26: disable explicit modules to avoid ModuleCache races (see Podfile post_install)
+SWIFT_ENABLE_EXPLICIT_MODULES=NO
+CLANG_ENABLE_EXPLICIT_MODULES=NO

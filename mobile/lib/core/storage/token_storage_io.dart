@@ -18,6 +18,11 @@ class SecureTokenStorage implements TokenStorage {
               iOptions: IOSOptions(
                 accessibility: KeychainAccessibility.first_unlock,
               ),
+              // macOS fix: the Data Protection keychain requires
+              // keychain-access-groups entitlements which unsigned local
+              // builds lack (SecItem -> -34018 errSecMissingEntitlement).
+              // Use the legacy file-based keychain instead.
+              mOptions: MacOsOptions(useDataProtectionKeyChain: false),
             );
 
   final FlutterSecureStorage _storage;
