@@ -595,6 +595,13 @@ LLM_ROUTER_ESTIMATED_COST_PER_1K = get_or_create_metric(
     buckets=[0.0, 0.0001, 0.0005, 0.001, 0.002, 0.005, 0.01],
 )
 
+LLM_ROUTER_FREE_TIER_DOWNGRADE_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_llm_router_free_tier_downgrade_total",
+    "Free-tier model downgrades applied by the unified LLM router",
+    ["agent_role", "from_tier", "to_tier"],
+)
+
 RUN_LEDGER_EVENT_TOTAL = get_or_create_metric(
     Counter,
     "sparkle_run_ledger_event_total",

@@ -606,6 +606,10 @@ class Settings(BaseSettings):
     FAST_INTERACTION_COPY_ENABLED: bool = True  # 澄清/确认文案优先由 FAST 模型生成
     EARLY_ACK_PROGRESS_ENABLED: bool = True  # 编排开始前先推送即时状态确认
 
+    # Free Tier Model Downgrade (免费层跨层模型降级)
+    FREE_TIER_DOWNGRADE_ENABLED: bool = True  # 免费用户能力层请求钳制总开关
+    FREE_TIER_MODEL_CEILING: str = "fast"  # 免费层允许的最高能力 tier（fast|standard）
+
     # Feature Flags
     USE_CONTEXT_PACK: bool = True
     ANALYSIS_SYNC_ON_EVENT: bool = True

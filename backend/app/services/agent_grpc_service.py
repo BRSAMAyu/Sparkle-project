@@ -24,6 +24,7 @@ from redis.exceptions import RedisError
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.llm_router import reset_request_user_tier, set_request_user_tier
 from app.core.metrics import (
     FEEDBACK_TO_EFFECT_SECONDS,
     PROTO_ERROR_CODE_FALLBACK_TOTAL,
@@ -263,6 +264,29 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
 
         return user_id
 
+    @staticmethod
+    def _resolve_request_user_tier(request: agent_service_pb2.ChatRequest) -> str:
+        """免费层模型降级信号（free_tier_downgrade）。
+
+        网关 ws chatflow 已在 ChatRequest.user_profile 填充 is_pro
+        （buildAgentUserProfile <- ChatUserProfileSnapshot.IsPro <- flame_level>=3），
+        此处只消费、不改网关；extra_context.user_tier（free/pro）可显式覆盖，
+        供网关未来透传更细分层而无需改 proto。
+        """
+        try:
+            tier = "free"
+            if request.HasField("user_profile") and request.user_profile.is_pro:
+                tier = "pro"
+            if request.HasField("extra_context"):
+                extra = MessageToDict(request.extra_context)
+                raw = str(extra.get("user_tier") or "").strip().lower()
+                if raw in {"free", "pro", "premium", "paid"}:
+                    tier = "free" if raw == "free" else "pro"
+            return tier
+        except (TypeError, ValueError, AttributeError) as exc:
+            logger.debug(f"Failed to resolve request user tier, defaulting to free: {exc}")
+            return "free"
+
     async def StreamChat(
         self,
         request: agent_service_pb2.ChatRequest,
@@ -275,6 +299,8 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         trace_id = request.request_id or str(uuid.uuid4())
         workflow_id = "standard_chat"
         prompt_version = "v1"
+        # 免费层钳制信号：设置于最外层 try 之前，保证 early-return 路径也能复位
+        _request_tier_token = set_request_user_tier(self._resolve_request_user_tier(request))
         try:
             # 从 metadata 获取追踪信息
             raw_metadata = context.invocation_metadata()
@@ -464,6 +490,8 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                 yield response
             except (StopAsyncIteration, grpc.aio.AioRpcError):
                 logger.debug("StreamChat: could not send error response, context already cancelled")
+        finally:
+            reset_request_user_tier(_request_tier_token)
 
     async def SubmitResponseFeedback(
         self,

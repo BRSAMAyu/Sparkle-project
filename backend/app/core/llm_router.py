@@ -23,6 +23,7 @@ LLM Router - 统一的LLM客户端获取入口
 
 import threading
 import time
+from contextvars import ContextVar, Token
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
@@ -32,7 +33,7 @@ from loguru import logger
 from app.config import settings
 from app.core import complexity_analyzer as _cx
 from app.core.agent_profiles import TASK_TO_AGENT_PROFILE, AgentRole, ModelTier, TaskType, agent_profile_registry
-from app.core.metrics import LLM_ROUTER_ESTIMATED_COST_PER_1K, LLM_ROUTER_SELECTION_TOTAL
+from app.core.metrics import LLM_ROUTER_ESTIMATED_COST_PER_1K, LLM_ROUTER_FREE_TIER_DOWNGRADE_TOTAL, LLM_ROUTER_SELECTION_TOTAL
 
 
 class ModelProvider(StrEnum):
@@ -43,6 +44,44 @@ class ModelProvider(StrEnum):
     HUNYUAN = "hunyuan"    # Hunyuan Translation
     DASHSCOPE = "dashscope"  # Aliyun DashScope (通义千问)
     SILICONFLOW = "siliconflow"  # SiliconFlow (专家模型：OCR、翻译等)
+
+
+# ============================================
+# 请求级用户分层信号（免费层模型降级）
+# ============================================
+# 由引擎 gRPC 入口（agent_grpc_service.StreamChat）按 ChatRequest.user_profile.is_pro
+# 设置（网关已在 chatflow 中填充），进程内透传给 LLM 路由做 tier 钳制；
+# 未设置的调用面（内部批量/定时任务/测试）保持现状不钳制。
+
+_REQUEST_USER_TIER: ContextVar[str | None] = ContextVar("sparkle_request_user_tier", default=None)
+
+
+def set_request_user_tier(tier: str | None) -> Token:
+    """标记当前请求的用户分层（"free" / "pro"），供 llm_router 钳制读取。"""
+    normalized = str(tier).strip().lower() if tier else None
+    return _REQUEST_USER_TIER.set(normalized or None)
+
+
+def get_request_user_tier() -> str | None:
+    """读取当前请求用户分层；未标记时返回 None（不钳制）。"""
+    return _REQUEST_USER_TIER.get()
+
+
+def reset_request_user_tier(token: Token) -> None:
+    """按 set 返回的 token 复位分层标记（请求结束 hygiene）。"""
+    _REQUEST_USER_TIER.reset(token)
+
+
+# 能力层排序（高→低，数值越小越重）。免费层钳制只作用于这些 tier；
+# FREE*/GLM_BATCH/SPECIALIST 等非直出能力层保持原路由。
+_CAPABILITY_TIER_RANK: dict[ModelTier, int] = {
+    ModelTier.TOP: 0,
+    ModelTier.MAX: 1,
+    ModelTier.PRO: 2,
+    ModelTier.PLUS: 3,
+    ModelTier.STANDARD: 4,
+    ModelTier.FAST: 5,
+}
 
 
 @dataclass
@@ -107,6 +146,7 @@ class LLMSelection:
     is_fallback: bool = False
     estimated_cost_per_1k: float = 0.0
     tier_used: str = ""
+    free_tier_downgrade: bool = False  # 免费层钳制触发标记（reason 含 free_tier_downgrade）
 
 
 class LLMRouter:
@@ -168,6 +208,101 @@ class LLMRouter:
         if tier == ModelTier.FREE_REASONING:
             return ModelTier.FREE_FAST
         return tier
+
+    # ============================================
+    # 免费层模型降级（free_tier_downgrade）
+    # ============================================
+
+    def _free_tier_ceiling(self) -> tuple[ModelTier, int] | None:
+        """返回免费层允许的最高能力 tier 及其 rank；开关关闭时返回 None。"""
+        if not getattr(settings, "FREE_TIER_DOWNGRADE_ENABLED", True):
+            return None
+        raw = str(getattr(settings, "FREE_TIER_MODEL_CEILING", "fast") or "fast").strip().lower()
+        try:
+            ceiling = ModelTier(raw)
+        except ValueError:
+            logger.warning(f"Invalid FREE_TIER_MODEL_CEILING={raw!r}, falling back to 'fast'")
+            ceiling = ModelTier.FAST
+        ceiling = self._normalize_tier_value(ceiling)
+        rank = _CAPABILITY_TIER_RANK.get(ceiling)
+        if rank is None:
+            # ceiling 配置成非能力层（如 free/glm_batch）时按 fast 兜底，避免免费层失控
+            ceiling = ModelTier.FAST
+            rank = _CAPABILITY_TIER_RANK[ModelTier.FAST]
+        return ceiling, rank
+
+    def _clamp_tier_for_free_tier(self, target_tier: ModelTier) -> tuple[ModelTier, bool]:
+        """免费用户请求高于 ceiling 的能力层时压到 ceiling。返回 (tier, 是否降级)。"""
+        if get_request_user_tier() != "free":
+            return target_tier, False
+        ceiling = self._free_tier_ceiling()
+        if ceiling is None:
+            return target_tier, False
+        ceiling_tier, ceiling_rank = ceiling
+        normalized = self._normalize_tier_value(target_tier)
+        rank = _CAPABILITY_TIER_RANK.get(normalized)
+        if rank is None or rank >= ceiling_rank:
+            return target_tier, False
+        return ceiling_tier, True
+
+    def _filter_tiers_for_free_tier(self, tiers: list[ModelTier]) -> tuple[list[ModelTier], ModelTier | None]:
+        """策略候选层列表的免费层钳制：剔除高于 ceiling 的能力层，全被剔除时落到 ceiling。
+
+        返回 (过滤后的 tiers, 被钳制的最高能力层；未钳制时为 None)。
+        非能力层（GLM_BATCH/SPECIALIST/FREE*）保留。
+        """
+        if get_request_user_tier() != "free":
+            return tiers, None
+        ceiling = self._free_tier_ceiling()
+        if ceiling is None:
+            return tiers, None
+        ceiling_tier, ceiling_rank = ceiling
+
+        def _rank(tier: ModelTier) -> int | None:
+            return _CAPABILITY_TIER_RANK.get(self._normalize_tier_value(tier))
+
+        above = [t for t in tiers if (r := _rank(t)) is not None and r < ceiling_rank]
+        if not above:
+            return tiers, None
+        clamped_from = min(above, key=lambda t: _CAPABILITY_TIER_RANK[self._normalize_tier_value(t)])
+        kept = [t for t in tiers if t not in above]
+        if not kept:
+            kept = [ceiling_tier]
+        return kept, clamped_from
+
+    def _adjust_policy_for_free_tier(
+        self,
+        tiers: list[ModelTier],
+        allowed_tiers: set[ModelTier] | None,
+        preferred_models: list[str],
+    ) -> tuple[list[ModelTier], set[ModelTier] | None, list[str], ModelTier | None]:
+        """免费层钳制下同步收敛策略三元组（候选层 / 模式允许层 / 偏好模型）。
+
+        reasoning_mode 的 allowed_tiers 与 policy.preferred_models 都可能把重模型
+        带回候选链，钳制时必须一并收敛，否则 clamp 会被旁路。仅 free 用户且触发
+        钳制时改动；返回 (tiers, allowed_tiers, preferred_models, clamped_from)。
+        """
+        tiers, clamped_from = self._filter_tiers_for_free_tier(tiers)
+        if clamped_from is None:
+            return tiers, allowed_tiers, preferred_models, None
+        ceiling_tier, ceiling_rank = self._free_tier_ceiling()  # type: ignore[misc]
+
+        def _keep_tier(tier: ModelTier) -> bool:
+            rank = _CAPABILITY_TIER_RANK.get(self._normalize_tier_value(tier))
+            return rank is None or rank >= ceiling_rank
+
+        if allowed_tiers is not None:
+            kept_allowed = {t for t in allowed_tiers if _keep_tier(t)}
+            kept_allowed.add(ceiling_tier)
+            allowed_tiers = kept_allowed
+
+        filtered_preferred: list[str] = []
+        for model_key in preferred_models:
+            cfg = self._available_models.get(model_key)
+            if cfg is not None and not _keep_tier(cfg.tier):
+                continue
+            filtered_preferred.append(model_key)
+        return tiers, allowed_tiers, filtered_preferred, clamped_from
 
     def _preferred_tiers_for_reasoning_mode(
         self,
@@ -708,6 +843,21 @@ class LLMRouter:
                     except ValueError:
                         pass  # target_tier 不在标准链中，跳过复杂度调整
 
+        # 2.6 免费层钳制（free_tier_downgrade）：免费用户请求高于 ceiling 的能力层时压到 ceiling
+        clamped_tier, free_downgraded = self._clamp_tier_for_free_tier(target_tier)
+        if free_downgraded:
+            reason += f" | free_tier_downgrade({target_tier.value}->{clamped_tier.value})"
+            LLM_ROUTER_FREE_TIER_DOWNGRADE_TOTAL.labels(
+                agent_role=agent_role.value,
+                from_tier=target_tier.value,
+                to_tier=clamped_tier.value,
+            ).inc()
+            logger.info(
+                f"[LLMRouter] free_tier_downgrade: {target_tier.value} -> {clamped_tier.value} "
+                f"(agent={agent_role.value}, task={task_type.value if task_type else None})"
+            )
+            target_tier = clamped_tier
+
         # 3. 从tier中选择具体模型（跳过不健康模型）
         candidates = [
             k for k in self._tier_mapping.get(target_tier, [])
@@ -735,6 +885,7 @@ class LLMRouter:
             reason,
             is_fallback="降级" in reason,
             complexity_level=complexity_level,
+            free_tier_downgrade=free_downgraded,
         )
 
     def resolve_candidate_models(
@@ -751,7 +902,8 @@ class LLMRouter:
         profile = agent_profile_registry.get_profile(agent_role)
 
         if force_tier:
-            return list(self._tier_mapping.get(self._normalize_tier_value(force_tier), []))
+            target_tier, _ = self._clamp_tier_for_free_tier(self._normalize_tier_value(force_tier))
+            return list(self._tier_mapping.get(target_tier, []))
         if profile.specific_model:
             return [profile.specific_model]
 
@@ -800,10 +952,14 @@ class LLMRouter:
                 ):
                     if tier not in tiers:
                         tiers.insert(0, tier)
+            # 免费层钳制：候选链/模式允许层/偏好模型一并收敛
+            tiers, allowed_tiers, policy_preferred, _ = self._adjust_policy_for_free_tier(
+                tiers, allowed_tiers, list(profile.model_policy.preferred_models or [])
+            )
             for tier in tiers:
                 for model_key in self._tier_mapping.get(tier, []):
                     _append(model_key)
-            for model_key in profile.model_policy.preferred_models or []:
+            for model_key in policy_preferred:
                 _append(model_key)
         else:
             target_tier = self._normalize_tier_value(profile.model_tier)
@@ -817,6 +973,7 @@ class LLMRouter:
                     allow_max=allow_max,
                 )
                 target_tier = preferred[0]
+            target_tier, _ = self._clamp_tier_for_free_tier(target_tier)
             for model_key in self._tier_mapping.get(target_tier, []):
                 _append(model_key)
 
@@ -919,10 +1076,15 @@ class LLMRouter:
                     tiers.remove(tier)
                 tiers.insert(0, tier)
 
+        # 免费层钳制：候选层/模式允许层/偏好模型一并收敛，防止重模型经旁路回流
+        tiers, allowed_tiers, policy_preferred, clamped_from = self._adjust_policy_for_free_tier(
+            tiers, allowed_tiers, list(policy.preferred_models or [])
+        )
+
         for tier in tiers:
             for model_key in self._tier_mapping.get(tier, []):
                 _append(model_key)
-        for model_key in policy.preferred_models or []:
+        for model_key in policy_preferred:
             _append(model_key)
 
         candidates = self._apply_provider_avoidance(candidates, avoid_providers)
@@ -933,6 +1095,17 @@ class LLMRouter:
         model_key = candidates[0]
         model_config = self._available_models.get(model_key, self._available_models["default"])
         reason = f"Agent策略路由: {agent_role.value} -> {model_key}"
+        if clamped_from is not None:
+            reason += f" | free_tier_downgrade({clamped_from.value}->{model_config.tier.value})"
+            LLM_ROUTER_FREE_TIER_DOWNGRADE_TOTAL.labels(
+                agent_role=agent_role.value,
+                from_tier=clamped_from.value,
+                to_tier=model_config.tier.value,
+            ).inc()
+            logger.info(
+                f"[LLMRouter] free_tier_downgrade: {clamped_from.value} -> {model_config.tier.value} "
+                f"(agent={agent_role.value}, task={task_type.value if task_type else None})"
+            )
         return self._create_selection(
             model_key,
             model_config,
@@ -940,6 +1113,7 @@ class LLMRouter:
             task_type,
             reason,
             complexity_level=complexity_level,
+            free_tier_downgrade=clamped_from is not None,
         )
 
     def get_model_provider(self, model_key: str) -> ModelProvider | None:
@@ -995,6 +1169,7 @@ class LLMRouter:
         *,
         is_fallback: bool = False,
         complexity_level: str = "unknown",
+        free_tier_downgrade: bool = False,
     ) -> LLMSelection:
         """创建LLMSelection对象，含成本可观测字段"""
         cost = config.cost_per_1k_tokens if hasattr(config, "cost_per_1k_tokens") else 0.0
@@ -1009,6 +1184,7 @@ class LLMRouter:
             is_fallback=is_fallback,
             estimated_cost_per_1k=cost,
             tier_used=tier_str,
+            free_tier_downgrade=free_tier_downgrade,
         )
         task_label = task_type.value if task_type is not None else "none"
         LLM_ROUTER_SELECTION_TOTAL.labels(

@@ -1,0 +1,803 @@
+diff --git a/backend/app/config/settings.py b/backend/app/config/settings.py
+index 93c20e99..aa498458 100755
+--- a/backend/app/config/settings.py
++++ b/backend/app/config/settings.py
+@@ -606,6 +606,10 @@ class Settings(BaseSettings):
+     FAST_INTERACTION_COPY_ENABLED: bool = True  # 澄清/确认文案优先由 FAST 模型生成
+     EARLY_ACK_PROGRESS_ENABLED: bool = True  # 编排开始前先推送即时状态确认
+ 
++    # Free Tier Model Downgrade (免费层跨层模型降级)
++    FREE_TIER_DOWNGRADE_ENABLED: bool = True  # 免费用户能力层请求钳制总开关
++    FREE_TIER_MODEL_CEILING: str = "fast"  # 免费层允许的最高能力 tier（fast|standard）
++
+     # Feature Flags
+     USE_CONTEXT_PACK: bool = True
+     ANALYSIS_SYNC_ON_EVENT: bool = True
+diff --git a/backend/app/core/llm_router.py b/backend/app/core/llm_router.py
+index 63b5d6ca..31d5b141 100644
+--- a/backend/app/core/llm_router.py
++++ b/backend/app/core/llm_router.py
+@@ -23,6 +23,7 @@ LLM Router - 统一的LLM客户端获取入口
+ 
+ import threading
+ import time
++from contextvars import ContextVar, Token
+ from dataclasses import dataclass, field
+ from enum import StrEnum
+ from typing import Any
+@@ -32,7 +33,7 @@ from loguru import logger
+ from app.config import settings
+ from app.core import complexity_analyzer as _cx
+ from app.core.agent_profiles import TASK_TO_AGENT_PROFILE, AgentRole, ModelTier, TaskType, agent_profile_registry
+-from app.core.metrics import LLM_ROUTER_ESTIMATED_COST_PER_1K, LLM_ROUTER_SELECTION_TOTAL
++from app.core.metrics import LLM_ROUTER_ESTIMATED_COST_PER_1K, LLM_ROUTER_FREE_TIER_DOWNGRADE_TOTAL, LLM_ROUTER_SELECTION_TOTAL
+ 
+ 
+ class ModelProvider(StrEnum):
+@@ -45,6 +46,44 @@ class ModelProvider(StrEnum):
+     SILICONFLOW = "siliconflow"  # SiliconFlow (专家模型：OCR、翻译等)
+ 
+ 
++# ============================================
++# 请求级用户分层信号（免费层模型降级）
++# ============================================
++# 由引擎 gRPC 入口（agent_grpc_service.StreamChat）按 ChatRequest.user_profile.is_pro
++# 设置（网关已在 chatflow 中填充），进程内透传给 LLM 路由做 tier 钳制；
++# 未设置的调用面（内部批量/定时任务/测试）保持现状不钳制。
++
++_REQUEST_USER_TIER: ContextVar[str | None] = ContextVar("sparkle_request_user_tier", default=None)
++
++
++def set_request_user_tier(tier: str | None) -> Token:
++    """标记当前请求的用户分层（"free" / "pro"），供 llm_router 钳制读取。"""
++    normalized = str(tier).strip().lower() if tier else None
++    return _REQUEST_USER_TIER.set(normalized or None)
++
++
++def get_request_user_tier() -> str | None:
++    """读取当前请求用户分层；未标记时返回 None（不钳制）。"""
++    return _REQUEST_USER_TIER.get()
++
++
++def reset_request_user_tier(token: Token) -> None:
++    """按 set 返回的 token 复位分层标记（请求结束 hygiene）。"""
++    _REQUEST_USER_TIER.reset(token)
++
++
++# 能力层排序（高→低，数值越小越重）。免费层钳制只作用于这些 tier；
++# FREE*/GLM_BATCH/SPECIALIST 等非直出能力层保持原路由。
++_CAPABILITY_TIER_RANK: dict[ModelTier, int] = {
++    ModelTier.TOP: 0,
++    ModelTier.MAX: 1,
++    ModelTier.PRO: 2,
++    ModelTier.PLUS: 3,
++    ModelTier.STANDARD: 4,
++    ModelTier.FAST: 5,
++}
++
++
+ @dataclass
+ class ModelConfig:
+     """模型配置"""
+@@ -107,6 +146,7 @@ class LLMSelection:
+     is_fallback: bool = False
+     estimated_cost_per_1k: float = 0.0
+     tier_used: str = ""
++    free_tier_downgrade: bool = False  # 免费层钳制触发标记（reason 含 free_tier_downgrade）
+ 
+ 
+ class LLMRouter:
+@@ -169,6 +209,101 @@ class LLMRouter:
+             return ModelTier.FREE_FAST
+         return tier
+ 
++    # ============================================
++    # 免费层模型降级（free_tier_downgrade）
++    # ============================================
++
++    def _free_tier_ceiling(self) -> tuple[ModelTier, int] | None:
++        """返回免费层允许的最高能力 tier 及其 rank；开关关闭时返回 None。"""
++        if not getattr(settings, "FREE_TIER_DOWNGRADE_ENABLED", True):
++            return None
++        raw = str(getattr(settings, "FREE_TIER_MODEL_CEILING", "fast") or "fast").strip().lower()
++        try:
++            ceiling = ModelTier(raw)
++        except ValueError:
++            logger.warning(f"Invalid FREE_TIER_MODEL_CEILING={raw!r}, falling back to 'fast'")
++            ceiling = ModelTier.FAST
++        ceiling = self._normalize_tier_value(ceiling)
++        rank = _CAPABILITY_TIER_RANK.get(ceiling)
++        if rank is None:
++            # ceiling 配置成非能力层（如 free/glm_batch）时按 fast 兜底，避免免费层失控
++            ceiling = ModelTier.FAST
++            rank = _CAPABILITY_TIER_RANK[ModelTier.FAST]
++        return ceiling, rank
++
++    def _clamp_tier_for_free_tier(self, target_tier: ModelTier) -> tuple[ModelTier, bool]:
++        """免费用户请求高于 ceiling 的能力层时压到 ceiling。返回 (tier, 是否降级)。"""
++        if get_request_user_tier() != "free":
++            return target_tier, False
++        ceiling = self._free_tier_ceiling()
++        if ceiling is None:
++            return target_tier, False
++        ceiling_tier, ceiling_rank = ceiling
++        normalized = self._normalize_tier_value(target_tier)
++        rank = _CAPABILITY_TIER_RANK.get(normalized)
++        if rank is None or rank >= ceiling_rank:
++            return target_tier, False
++        return ceiling_tier, True
++
++    def _filter_tiers_for_free_tier(self, tiers: list[ModelTier]) -> tuple[list[ModelTier], ModelTier | None]:
++        """策略候选层列表的免费层钳制：剔除高于 ceiling 的能力层，全被剔除时落到 ceiling。
++
++        返回 (过滤后的 tiers, 被钳制的最高能力层；未钳制时为 None)。
++        非能力层（GLM_BATCH/SPECIALIST/FREE*）保留。
++        """
++        if get_request_user_tier() != "free":
++            return tiers, None
++        ceiling = self._free_tier_ceiling()
++        if ceiling is None:
++            return tiers, None
++        ceiling_tier, ceiling_rank = ceiling
++
++        def _rank(tier: ModelTier) -> int | None:
++            return _CAPABILITY_TIER_RANK.get(self._normalize_tier_value(tier))
++
++        above = [t for t in tiers if (r := _rank(t)) is not None and r < ceiling_rank]
++        if not above:
++            return tiers, None
++        clamped_from = min(above, key=lambda t: _CAPABILITY_TIER_RANK[self._normalize_tier_value(t)])
++        kept = [t for t in tiers if t not in above]
++        if not kept:
++            kept = [ceiling_tier]
++        return kept, clamped_from
++
++    def _adjust_policy_for_free_tier(
++        self,
++        tiers: list[ModelTier],
++        allowed_tiers: set[ModelTier] | None,
++        preferred_models: list[str],
++    ) -> tuple[list[ModelTier], set[ModelTier] | None, list[str], ModelTier | None]:
++        """免费层钳制下同步收敛策略三元组（候选层 / 模式允许层 / 偏好模型）。
++
++        reasoning_mode 的 allowed_tiers 与 policy.preferred_models 都可能把重模型
++        带回候选链，钳制时必须一并收敛，否则 clamp 会被旁路。仅 free 用户且触发
++        钳制时改动；返回 (tiers, allowed_tiers, preferred_models, clamped_from)。
++        """
++        tiers, clamped_from = self._filter_tiers_for_free_tier(tiers)
++        if clamped_from is None:
++            return tiers, allowed_tiers, preferred_models, None
++        ceiling_tier, ceiling_rank = self._free_tier_ceiling()  # type: ignore[misc]
++
++        def _keep_tier(tier: ModelTier) -> bool:
++            rank = _CAPABILITY_TIER_RANK.get(self._normalize_tier_value(tier))
++            return rank is None or rank >= ceiling_rank
++
++        if allowed_tiers is not None:
++            kept_allowed = {t for t in allowed_tiers if _keep_tier(t)}
++            kept_allowed.add(ceiling_tier)
++            allowed_tiers = kept_allowed
++
++        filtered_preferred: list[str] = []
++        for model_key in preferred_models:
++            cfg = self._available_models.get(model_key)
++            if cfg is not None and not _keep_tier(cfg.tier):
++                continue
++            filtered_preferred.append(model_key)
++        return tiers, allowed_tiers, filtered_preferred, clamped_from
++
+     def _preferred_tiers_for_reasoning_mode(
+         self,
+         *,
+@@ -708,6 +843,21 @@ class LLMRouter:
+                     except ValueError:
+                         pass  # target_tier 不在标准链中，跳过复杂度调整
+ 
++        # 2.6 免费层钳制（free_tier_downgrade）：免费用户请求高于 ceiling 的能力层时压到 ceiling
++        clamped_tier, free_downgraded = self._clamp_tier_for_free_tier(target_tier)
++        if free_downgraded:
++            reason += f" | free_tier_downgrade({target_tier.value}->{clamped_tier.value})"
++            LLM_ROUTER_FREE_TIER_DOWNGRADE_TOTAL.labels(
++                agent_role=agent_role.value,
++                from_tier=target_tier.value,
++                to_tier=clamped_tier.value,
++            ).inc()
++            logger.info(
++                f"[LLMRouter] free_tier_downgrade: {target_tier.value} -> {clamped_tier.value} "
++                f"(agent={agent_role.value}, task={task_type.value if task_type else None})"
++            )
++            target_tier = clamped_tier
++
+         # 3. 从tier中选择具体模型（跳过不健康模型）
+         candidates = [
+             k for k in self._tier_mapping.get(target_tier, [])
+@@ -735,6 +885,7 @@ class LLMRouter:
+             reason,
+             is_fallback="降级" in reason,
+             complexity_level=complexity_level,
++            free_tier_downgrade=free_downgraded,
+         )
+ 
+     def resolve_candidate_models(
+@@ -751,7 +902,8 @@ class LLMRouter:
+         profile = agent_profile_registry.get_profile(agent_role)
+ 
+         if force_tier:
+-            return list(self._tier_mapping.get(self._normalize_tier_value(force_tier), []))
++            target_tier, _ = self._clamp_tier_for_free_tier(self._normalize_tier_value(force_tier))
++            return list(self._tier_mapping.get(target_tier, []))
+         if profile.specific_model:
+             return [profile.specific_model]
+ 
+@@ -800,10 +952,14 @@ class LLMRouter:
+                 ):
+                     if tier not in tiers:
+                         tiers.insert(0, tier)
++            # 免费层钳制：候选链/模式允许层/偏好模型一并收敛
++            tiers, allowed_tiers, policy_preferred, _ = self._adjust_policy_for_free_tier(
++                tiers, allowed_tiers, list(profile.model_policy.preferred_models or [])
++            )
+             for tier in tiers:
+                 for model_key in self._tier_mapping.get(tier, []):
+                     _append(model_key)
+-            for model_key in profile.model_policy.preferred_models or []:
++            for model_key in policy_preferred:
+                 _append(model_key)
+         else:
+             target_tier = self._normalize_tier_value(profile.model_tier)
+@@ -817,6 +973,7 @@ class LLMRouter:
+                     allow_max=allow_max,
+                 )
+                 target_tier = preferred[0]
++            target_tier, _ = self._clamp_tier_for_free_tier(target_tier)
+             for model_key in self._tier_mapping.get(target_tier, []):
+                 _append(model_key)
+ 
+@@ -919,10 +1076,15 @@ class LLMRouter:
+                     tiers.remove(tier)
+                 tiers.insert(0, tier)
+ 
++        # 免费层钳制：候选层/模式允许层/偏好模型一并收敛，防止重模型经旁路回流
++        tiers, allowed_tiers, policy_preferred, clamped_from = self._adjust_policy_for_free_tier(
++            tiers, allowed_tiers, list(policy.preferred_models or [])
++        )
++
+         for tier in tiers:
+             for model_key in self._tier_mapping.get(tier, []):
+                 _append(model_key)
+-        for model_key in policy.preferred_models or []:
++        for model_key in policy_preferred:
+             _append(model_key)
+ 
+         candidates = self._apply_provider_avoidance(candidates, avoid_providers)
+@@ -933,6 +1095,17 @@ class LLMRouter:
+         model_key = candidates[0]
+         model_config = self._available_models.get(model_key, self._available_models["default"])
+         reason = f"Agent策略路由: {agent_role.value} -> {model_key}"
++        if clamped_from is not None:
++            reason += f" | free_tier_downgrade({clamped_from.value}->{model_config.tier.value})"
++            LLM_ROUTER_FREE_TIER_DOWNGRADE_TOTAL.labels(
++                agent_role=agent_role.value,
++                from_tier=clamped_from.value,
++                to_tier=model_config.tier.value,
++            ).inc()
++            logger.info(
++                f"[LLMRouter] free_tier_downgrade: {clamped_from.value} -> {model_config.tier.value} "
++                f"(agent={agent_role.value}, task={task_type.value if task_type else None})"
++            )
+         return self._create_selection(
+             model_key,
+             model_config,
+@@ -940,6 +1113,7 @@ class LLMRouter:
+             task_type,
+             reason,
+             complexity_level=complexity_level,
++            free_tier_downgrade=clamped_from is not None,
+         )
+ 
+     def get_model_provider(self, model_key: str) -> ModelProvider | None:
+@@ -995,6 +1169,7 @@ class LLMRouter:
+         *,
+         is_fallback: bool = False,
+         complexity_level: str = "unknown",
++        free_tier_downgrade: bool = False,
+     ) -> LLMSelection:
+         """创建LLMSelection对象，含成本可观测字段"""
+         cost = config.cost_per_1k_tokens if hasattr(config, "cost_per_1k_tokens") else 0.0
+@@ -1009,6 +1184,7 @@ class LLMRouter:
+             is_fallback=is_fallback,
+             estimated_cost_per_1k=cost,
+             tier_used=tier_str,
++            free_tier_downgrade=free_tier_downgrade,
+         )
+         task_label = task_type.value if task_type is not None else "none"
+         LLM_ROUTER_SELECTION_TOTAL.labels(
+diff --git a/backend/app/core/metrics.py b/backend/app/core/metrics.py
+index 944d9e47..8ba62a8e 100755
+--- a/backend/app/core/metrics.py
++++ b/backend/app/core/metrics.py
+@@ -595,6 +595,13 @@ LLM_ROUTER_ESTIMATED_COST_PER_1K = get_or_create_metric(
+     buckets=[0.0, 0.0001, 0.0005, 0.001, 0.002, 0.005, 0.01],
+ )
+ 
++LLM_ROUTER_FREE_TIER_DOWNGRADE_TOTAL = get_or_create_metric(
++    Counter,
++    "sparkle_llm_router_free_tier_downgrade_total",
++    "Free-tier model downgrades applied by the unified LLM router",
++    ["agent_role", "from_tier", "to_tier"],
++)
++
+ RUN_LEDGER_EVENT_TOTAL = get_or_create_metric(
+     Counter,
+     "sparkle_run_ledger_event_total",
+diff --git a/backend/app/services/agent_grpc_service.py b/backend/app/services/agent_grpc_service.py
+index 100bb062..ddc3c52d 100755
+--- a/backend/app/services/agent_grpc_service.py
++++ b/backend/app/services/agent_grpc_service.py
+@@ -24,6 +24,7 @@ from redis.exceptions import RedisError
+ from sqlalchemy.exc import SQLAlchemyError
+ from sqlalchemy.ext.asyncio import AsyncSession
+ 
++from app.core.llm_router import reset_request_user_tier, set_request_user_tier
+ from app.core.metrics import (
+     FEEDBACK_TO_EFFECT_SECONDS,
+     PROTO_ERROR_CODE_FALLBACK_TOTAL,
+@@ -263,6 +264,29 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
+ 
+         return user_id
+ 
++    @staticmethod
++    def _resolve_request_user_tier(request: agent_service_pb2.ChatRequest) -> str:
++        """免费层模型降级信号（free_tier_downgrade）。
++
++        网关 ws chatflow 已在 ChatRequest.user_profile 填充 is_pro
++        （buildAgentUserProfile <- ChatUserProfileSnapshot.IsPro <- flame_level>=3），
++        此处只消费、不改网关；extra_context.user_tier（free/pro）可显式覆盖，
++        供网关未来透传更细分层而无需改 proto。
++        """
++        try:
++            tier = "free"
++            if request.HasField("user_profile") and request.user_profile.is_pro:
++                tier = "pro"
++            if request.HasField("extra_context"):
++                extra = MessageToDict(request.extra_context)
++                raw = str(extra.get("user_tier") or "").strip().lower()
++                if raw in {"free", "pro", "premium", "paid"}:
++                    tier = "free" if raw == "free" else "pro"
++            return tier
++        except (TypeError, ValueError, AttributeError) as exc:
++            logger.debug(f"Failed to resolve request user tier, defaulting to free: {exc}")
++            return "free"
++
+     async def StreamChat(
+         self,
+         request: agent_service_pb2.ChatRequest,
+@@ -275,6 +299,8 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
+         trace_id = request.request_id or str(uuid.uuid4())
+         workflow_id = "standard_chat"
+         prompt_version = "v1"
++        # 免费层钳制信号：设置于最外层 try 之前，保证 early-return 路径也能复位
++        _request_tier_token = set_request_user_tier(self._resolve_request_user_tier(request))
+         try:
+             # 从 metadata 获取追踪信息
+             raw_metadata = context.invocation_metadata()
+@@ -464,6 +490,8 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
+                 yield response
+             except (StopAsyncIteration, grpc.aio.AioRpcError):
+                 logger.debug("StreamChat: could not send error response, context already cancelled")
++        finally:
++            reset_request_user_tier(_request_tier_token)
+ 
+     async def SubmitResponseFeedback(
+         self,
+diff --git a/backend/tests/unit/test_llm_router_free_tier.py b/backend/tests/unit/test_llm_router_free_tier.py
+new file mode 100644
+index 00000000..04eebfc1
+--- /dev/null
++++ b/backend/tests/unit/test_llm_router_free_tier.py
+@@ -0,0 +1,233 @@
++"""
++Free-tier model downgrade (free_tier_downgrade) unit tests.
++
++红绿契约：
++- free 用户请求高于 ceiling（默认 fast）的能力层时，selection 落到 ceiling 层
++  （deepseek_fast/flash），reason 含 free_tier_downgrade 标记，Prometheus 计数器自增
++- pro / 未标记用户不受影响（付费全能力，premium → 重模型不变）
++- 网关信号：ChatRequest.user_profile.is_pro（已在链路），extra_context.user_tier 可显式覆盖
++"""
++from __future__ import annotations
++
++import pytest
++from prometheus_client import REGISTRY
++
++from app.config import settings
++from app.core.agent_profiles import AgentRole, ModelTier, TaskType
++from app.core.llm_router import (
++    LLMRouter,
++    get_request_user_tier,
++    reset_request_user_tier,
++    set_request_user_tier,
++)
++
++METRIC_FREE_DOWNGRADE = "sparkle_llm_router_free_tier_downgrade_total"
++
++
++@pytest.fixture
++def router() -> LLMRouter:
++    """Create a fresh LLMRouter instance (isolated health state)."""
++    return LLMRouter()
++
++
++@pytest.fixture(autouse=True)
++def _clean_user_tier():
++    token = set_request_user_tier(None)
++    yield
++    reset_request_user_tier(token)
++
++
++def _free_downgrade_count(labels: dict[str, str]) -> float:
++    value = REGISTRY.get_sample_value(METRIC_FREE_DOWNGRADE, labels)
++    return value or 0.0
++
++
++# ---------------------------------------------------------------------------
++# 核心红绿：free 用户 max 请求 → flash + reason 标记；premium → 重模型不变
++# ---------------------------------------------------------------------------
++
++
++def test_free_user_forced_max_clamps_to_fast_with_reason(router: LLMRouter):
++    set_request_user_tier("free")
++    labels = {"agent_role": "generation", "from_tier": "max", "to_tier": "fast"}
++    before = _free_downgrade_count(labels)
++
++    selection = router.select_model(AgentRole.GENERATION, force_tier=ModelTier.MAX)
++
++    assert selection.config.tier == ModelTier.FAST
++    assert selection.model_key == "deepseek_fast"  # flash 轻模型
++    assert selection.free_tier_downgrade is True
++    assert "free_tier_downgrade(max->fast)" in selection.reason
++    assert _free_downgrade_count(labels) == pytest.approx(before + 1)
++
++
++def test_pro_user_forced_max_unchanged(router: LLMRouter):
++    set_request_user_tier("pro")
++
++    selection = router.select_model(AgentRole.GENERATION, force_tier=ModelTier.MAX)
++
++    assert selection.config.tier == ModelTier.MAX
++    assert selection.model_key == "deepseek_reason"  # 重模型（v4-pro 位）
++    assert selection.free_tier_downgrade is False
++    assert "free_tier_downgrade" not in selection.reason
++
++
++def test_unset_tier_keeps_legacy_behavior(router: LLMRouter):
++    """未标记分层的调用面（内部批量/定时任务）保持现状不钳制。"""
++    assert get_request_user_tier() is None
++
++    selection = router.select_model(AgentRole.GENERATION, force_tier=ModelTier.MAX)
++
++    assert selection.config.tier == ModelTier.MAX
++    assert selection.free_tier_downgrade is False
++
++
++# ---------------------------------------------------------------------------
++# 策略路径（AgentModelPolicy）与普通任务路径
++# ---------------------------------------------------------------------------
++
++
++def test_free_user_deep_reasoning_task_lands_fast_via_policy(router: LLMRouter):
++    set_request_user_tier("free")
++
++    selection = router.select_model(
++        AgentRole.DEEP_ANALYST, TaskType.DEEP_REASONING, reasoning_mode="deep"
++    )
++
++    assert selection.config.tier == ModelTier.FAST
++    assert selection.free_tier_downgrade is True
++    assert "free_tier_downgrade(pro->fast)" in selection.reason
++
++
++def test_pro_user_deep_reasoning_task_keeps_heavy_tier(router: LLMRouter):
++    set_request_user_tier("pro")
++
++    selection = router.select_model(
++        AgentRole.DEEP_ANALYST, TaskType.DEEP_REASONING, reasoning_mode="deep"
++    )
++
++    assert selection.config.tier in {ModelTier.PRO, ModelTier.PLUS, ModelTier.MAX}
++    assert selection.free_tier_downgrade is False
++
++
++def test_free_user_standard_task_clamps_to_fast(router: LLMRouter):
++    set_request_user_tier("free")
++
++    selection = router.select_model(AgentRole.GENERATION, TaskType.STANDARD_RESPONSE)
++
++    assert selection.config.tier == ModelTier.FAST
++    assert selection.free_tier_downgrade is True
++
++
++def test_pro_user_standard_task_keeps_standard(router: LLMRouter):
++    set_request_user_tier("pro")
++
++    selection = router.select_model(AgentRole.GENERATION, TaskType.STANDARD_RESPONSE)
++
++    assert selection.config.tier == ModelTier.STANDARD
++    assert selection.free_tier_downgrade is False
++
++
++# ---------------------------------------------------------------------------
++# 候选链一致性（fallback 链不再回到重模型）
++# ---------------------------------------------------------------------------
++
++
++def test_free_user_candidate_chain_has_no_heavy_tiers(router: LLMRouter):
++    set_request_user_tier("free")
++
++    candidates = router.resolve_candidate_models(
++        AgentRole.DEEP_ANALYST, TaskType.DEEP_REASONING
++    )
++
++    assert candidates
++    for model_key in candidates:
++        assert router._available_models[model_key].tier == ModelTier.FAST
++
++
++def test_free_user_forced_max_candidate_chain_clamped(router: LLMRouter):
++    set_request_user_tier("free")
++
++    candidates = router.resolve_candidate_models(
++        AgentRole.GENERATION, force_tier=ModelTier.MAX
++    )
++
++    assert candidates == list(router._tier_mapping[ModelTier.FAST])
++
++
++# ---------------------------------------------------------------------------
++# 配置面：ceiling 可调 + 总开关
++# ---------------------------------------------------------------------------
++
++
++def test_ceiling_standard_allows_standard_for_free(router: LLMRouter, monkeypatch):
++    monkeypatch.setattr(settings, "FREE_TIER_MODEL_CEILING", "standard", raising=False)
++    set_request_user_tier("free")
++
++    selection = router.select_model(AgentRole.GENERATION, force_tier=ModelTier.MAX)
++
++    assert selection.config.tier == ModelTier.STANDARD
++    assert "free_tier_downgrade(max->standard)" in selection.reason
++
++
++def test_invalid_ceiling_falls_back_to_fast(router: LLMRouter, monkeypatch):
++    monkeypatch.setattr(settings, "FREE_TIER_MODEL_CEILING", "nonsense", raising=False)
++    set_request_user_tier("free")
++
++    selection = router.select_model(AgentRole.GENERATION, force_tier=ModelTier.MAX)
++
++    assert selection.config.tier == ModelTier.FAST
++    assert selection.free_tier_downgrade is True
++
++
++def test_kill_switch_disables_clamp(router: LLMRouter, monkeypatch):
++    monkeypatch.setattr(settings, "FREE_TIER_DOWNGRADE_ENABLED", False, raising=False)
++    set_request_user_tier("free")
++
++    selection = router.select_model(AgentRole.GENERATION, force_tier=ModelTier.MAX)
++
++    assert selection.config.tier == ModelTier.MAX
++    assert selection.free_tier_downgrade is False
++
++
++# ---------------------------------------------------------------------------
++# 网关信号消费（StreamChat 入口，ChatRequest.user_profile.is_pro）
++# ---------------------------------------------------------------------------
++
++
++def test_streamchat_entry_resolves_tier_from_user_profile():
++    from app.gen.agent.v1 import agent_service_pb2
++    from app.services.agent_grpc_service import AgentServiceImpl
++
++    req_free = agent_service_pb2.ChatRequest(user_id="u")
++    assert AgentServiceImpl._resolve_request_user_tier(req_free) == "free"
++
++    req_pro = agent_service_pb2.ChatRequest(
++        user_id="u",
++        user_profile=agent_service_pb2.UserProfile(is_pro=True),
++    )
++    assert AgentServiceImpl._resolve_request_user_tier(req_pro) == "pro"
++
++
++def test_streamchat_entry_extra_context_tier_override():
++    from google.protobuf.struct_pb2 import Struct
++
++    from app.gen.agent.v1 import agent_service_pb2
++    from app.services.agent_grpc_service import AgentServiceImpl
++
++    extra = Struct()
++    extra.update({"user_tier": "free"})
++    req_override_free = agent_service_pb2.ChatRequest(
++        user_id="u",
++        user_profile=agent_service_pb2.UserProfile(is_pro=True),
++        extra_context=extra,
++    )
++    assert AgentServiceImpl._resolve_request_user_tier(req_override_free) == "free"
++
++    extra_pro = Struct()
++    extra_pro.update({"user_tier": "premium"})
++    req_override_pro = agent_service_pb2.ChatRequest(
++        user_id="u",
++        extra_context=extra_pro,
++    )
++    assert AgentServiceImpl._resolve_request_user_tier(req_override_pro) == "pro"
+diff --git "a/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/free-tier-model-downgrade.md" "b/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/free-tier-model-downgrade.md"
+new file mode 100644
+index 00000000..6ed233c3
+--- /dev/null
++++ "b/docs/competition/2026-tmall-hackathon/\347\263\273\347\273\237\345\256\241\346\237\245/round2/free-tier-model-downgrade.md"
+@@ -0,0 +1,166 @@
++# 免费层模型降级落地报告（free_tier_downgrade：免费用户钳制到轻模型）
++
++- 实现员：免费层模型降级实现员（sysrev wt6）
++- 工作树：`/Users/brsama/code/GitHub/Sparkle-sysrev/wt6`（b8f4e7d8，未 commit）
++- 日期：2026-09-18
++- 补丁：[free-tier-model-downgrade.patch](free-tier-model-downgrade.patch)（`git add -A && git diff --cached` 产物，排除自身；`backend/.env` 为 gitignored 未入库未入补丁）
++- 验证协议：pytest 定向（`SECRET_KEY=rule-guard-secret-0123456789abcdef JWT_SECRET=rule-guard-jwt-0123456789abcdef REDIS_URL=redis://:sparkle_dev_redis_2026@localhost:6379/1`），禁全量；真实 LLM 验证 1 次（预算 ≤8）；未触碰在跑主仓引擎（:50051）
++
++---
++
++## 0. 总览
++
++挂账项「免费模型跨层降级」（`p3-sweep-gateway.md` §1 语义边界 + 漏洞台账 2026-09-18 产品决策 follow-up）：**免费/低配额用户的 LLM 请求钳制到轻模型（deepseek-flash），付费/高配额（pro）走全能力（deepseek-v4-pro），降级留痕可观测。**
++
++| 交付 | 状态 |
++|---|---|
++| 分层信号选型：消费既有 `UserProfile.is_pro`（网关已在链路填充，零网关改动） | ✅ |
++| 引擎侧钳制：`llm_router.select_model`（force/task/profile/complexity 路径）+ `_select_by_policy`（候选层/允许层/偏好模型三路收敛）+ `resolve_candidate_models`（fallback 链一致性） | ✅ |
++| 留痕：`reason` 内嵌 `free_tier_downgrade(max->fast)`、`LLMSelection.free_tier_downgrade` 字段、Prometheus `sparkle_llm_router_free_tier_downgrade_total`、loguru 路由日志 | ✅ |
++| 红-绿单测：14 项新增全绿；定向回归 93 passed（3 个基线已有失败，与本改动无关） | ✅ |
++| 真实调用验证：free 上下文强制 MAX → 路由 `deepseek-flash`（tier=fast），真实回复成功 | ✅ |
++| 治理守卫：`run_all_rule_guards.sh` 结果与基线完全一致（K/Z/BA/BG 四项基线即红，非本改动引入） | ✅ |
++
++---
++
++## 1. 分层信号选型（最小侵入）
++
++调研结论（选型依据）：
++
++| 候选信号 | 现状 | 结论 |
++|---|---|---|
++| `users` 表 DB 字段 | 无 plan/tier/subscription 列（只有 `flame_level` 游戏化等级、`photon_balance` 虚拟货币、`is_superuser`） | 需 Alembic 迁移，侵入大，弃 |
++| 网关 JWT claims | 仅 userID + isAdmin（`middleware/auth.go`） | 需改 token 签发链，弃 |
++| 配额服务 | 网关 quota 不分 plan（dd9d62d3 只做有界降级）；引擎 `LLMCostGuard` 全局日限额 | 无分层语义，弃 |
++| **proto `UserProfile.is_pro`** | **字段已存在**（`agent_service.proto` 注释原文 "Pro status might determine access to advanced models or tools"）；网关 ws chatflow **已在填充** | ✅ 选定：只消费，零网关改动 |
++
++选定的既有链路（无需任何网关/proto 改动）：
++
++```
++Go 网关 chatflow（chat_orchestrator_chatflow.go:653）
++  └─ buildAgentUserProfile() ← ChatUserProfileSnapshot.IsPro ← user_context.go:129（user.FlameLevel >= 3）
++       └─ ChatRequest.user_profile.is_pro ──gRPC──▶ 引擎 AgentServiceImpl.StreamChat（本次新增消费点）
++```
++
++引擎 `GetUserProfile` 的 `is_pro` 同源（`user_service.py:208` `is_pro=user.flame_level >= 3`），两仓语义一致。另支持 `extra_context.user_tier`（free/pro/premium/paid）显式覆盖，供网关未来透传更细分层而**无需改 proto**。
++
++---
++
++## 2. 引擎侧实现
++
++### 2.1 `app/core/llm_router.py`（核心钳制）
++
++- **请求级分层信号**：模块级 `ContextVar`（`_REQUEST_USER_TIER`）+ `set_request_user_tier()/get_request_user_tier()/reset_request_user_tier()`。选 contextvar 而非函数参数的原因：`select_model` 调用点遍布 llm_service/factory/workflow/graph nodes，逐点穿参侵入过大；且 `llm_service_impl` 为模块级单例、`get_llm_service` 按角色缓存实例，构造期读参无法覆盖每请求语义。asyncio task 上下文随 StreamChat 协程传播，LangGraph 节点/`get_configured_llm_service*` 的每请求 `select_model` 调用全部可见；未标记的调用面（Celery 批量、定时任务、测试）保持现状不钳制。
++- **能力层秩表**：`_CAPABILITY_TIER_RANK = {top:0, max:1, pro:2, plus:3, standard:4, fast:5}`。钳制只作用于能力层；`free*/glm_batch/specialist` 非直出层保持原路由。
++- **钳制规则**：free 用户且目标 tier 秩 < ceiling 秩 → 压到 ceiling。ceiling 由 `FREE_TIER_MODEL_CEILING` 配置（默认 `fast`，可配 `standard`；非法值回退 fast 并告警）；总开关 `FREE_TIER_DOWNGRADE_ENABLED`（默认 true）。
++- **四条路径全覆盖**：
++  1. `select_model` 主路径（force_tier / task_type / profile tier / reasoning_mode / complexity 调整之后、候选挑选之前，步骤 2.6）——钳 target_tier + reason 标记 + 计数器 + 日志；
++  2. `_select_by_policy` 策略路径——`_adjust_policy_for_free_tier` 三路收敛：候选 `tiers` 剔重、reasoning_mode 的 `allowed_tiers` 重写为 ceiling（否则 deep 模式允许层 {pro,plus,standard} 会把 FAST 候选全滤掉）、`policy.preferred_models` 剔除高于 ceiling 的模型（否则 dashscope_reason 等偏好模型旁路回流）；
++  3. `resolve_candidate_models`（policy 与非 policy 两分支）——fallback 候选链不含高于 ceiling 的层，防止主选择被钳后经 fallback 回到重模型；
++  4. force_tier 的早退分支同样钳制。
++- **留痕**：`LLMSelection` 新增 `free_tier_downgrade: bool`；`reason` 追加 `free_tier_downgrade(<from>-><to>)`（经 `_create_selection` 的 rich reason 进入既有 `[LLMRouter] ... → <model> (...)` 日志行）；新增 `sparkle_llm_router_free_tier_downgrade_total{agent_role,from_tier,to_tier}`（`app/core/metrics.py`）；钳制触发时 loguru INFO 一条 `[LLMRouter] free_tier_downgrade: ...`。
++
++### 2.2 `app/services/agent_grpc_service.py`（入口消费）
++
++- `AgentServiceImpl._resolve_request_user_tier(request)`：`user_profile.is_pro` → free/pro；`extra_context.user_tier` 显式覆盖优先；异常保守回退 free。
++- `StreamChat` 入口（最外层 try 之前）`set_request_user_tier(...)`，方法级 `finally` `reset_request_user_tier(token)`（early-return UNAUTHENTICATED 路径亦复位）。
++- 与 wt5（首 token 优化）分域核对：wt5 改动 `orchestration/context_builder.py`、`orchestration/orchestrator.py`、`agents/standard_workflow.py`、`orchestration/execution_engine.py`、`orchestration/routing_engine.py`、`agents/standard_workflow.py`；本改动只触碰 `core/llm_router.py`、`core/metrics.py`、`config/settings.py`、`services/agent_grpc_service.py`，无同文件冲突。
++
++### 2.3 `app/config/settings.py`
++
++```python
++FREE_TIER_DOWNGRADE_ENABLED: bool = True   # 免费用户能力层请求钳制总开关
++FREE_TIER_MODEL_CEILING: str = "fast"      # 免费层允许的最高能力 tier（fast|standard）
++```
++
++### 2.4 `llm_security_wrapper` 未改动说明
++
++wrapper 的配额/计量钩子（`_enforce_quota`/`_record_usage`/monitor）按 user_id 计量，与模型层无关；降级留痕在 router 层（reason/counter/日志）+ 既有 `sparkle_llm_router_selection_total{tier=...}` 已可让计费/统计看到「free 用户落在 fast 层」。改动面最小化，wrapper 保持 R2-08-02 收敛契约原样。
++
++---
++
++## 3. 网关侧
++
++**零改动**（任务允许：信号已在链路则只消费）。依据见 §1 链路图；`go vet`/Go 测试均无需执行（无 Go 文件改动）。
++
++---
++
++## 4. 红-绿（单测）
++
++新增 `backend/tests/unit/test_llm_router_free_tier.py`（14 项全绿）：
++
++| 组 | 用例 | 断言要点 |
++|---|---|---|
++| 核心红绿 | `test_free_user_forced_max_clamps_to_fast_with_reason` | free + 强制 MAX → `model_key=deepseek_fast`（flash）、`tier=fast`、reason 含 `free_tier_downgrade(max->fast)`、`free_tier_downgrade=True`、Prometheus 计数器 +1 |
++| 核心红绿 | `test_pro_user_forced_max_unchanged` | pro + 强制 MAX → `deepseek_reason`（v4-pro 位）、tier=max、无标记 |
++| 兼容 | `test_unset_tier_keeps_legacy_behavior` | 未标记分层 → MAX 不钳（内部批量/定时任务不受影响） |
++| 策略路径 | free/pro × DEEP_ANALYST deep 推理 | free → fast + `free_tier_downgrade(pro->fast)`；pro → pro/plus/max 不变 |
++| 普通任务 | free/pro × GENERATION standard | free → fast；pro → standard 不变 |
++| 候选链 | free 候选链两项 | fallback 链无重模型；force MAX 链 == FAST 层映射 |
++| 配置面 | ceiling=standard / 非法 ceiling / kill-switch | max→standard；非法回退 fast；开关关闭不钳 |
++| 入口信号 | `_resolve_request_user_tier` | is_pro→pro；extra_context `user_tier` 覆盖（free 压过 is_pro、premium 提权） |
++
++定向回归（同进程约束下逐文件）：
++
++```
++tests/core/test_llm_router_policy.py           7 passed
++tests/unit/test_llm_router_health_tracking.py  7 passed
++tests/unit/test_llm_same_tier_fallback.py      passed
++tests/unit/test_llm_tier_fallback_order.py     passed
++tests/unit/test_llm_explicit_temperature.py    passed
++tests/unit/test_credential_routing.py          passed
++tests/unit/test_glm_batch_adaptive.py          passed
++tests/core/test_agent_profiles_catalog.py      passed
++tests/unit/test_llm_security_wrapper.py        passed
++tests/unit/test_llm_security_wrapper_forwarding.py  passed
++tests/unit/services/test_agent_grpc_service.py 5 passed / 3 FAILED（基线即红）
++tests/unit/test_calibration_receipt.py、test_proto_dual_stack_service.py  passed
++合计：93 passed, 3 failed
++```
++
++3 个失败（`test_stream_chat_errors_set_grpc_internal_and_error_finish_reason` / `test_stream_chat_timeout_sets_deadline_exceeded` / `test_stream_chat_empty_request_session_generates_single_fallback_and_metric`）经 `git stash` 基线复跑确认为 **b8f4e7d8 既有失败**，与本改动无关。
++
++治理守卫：`run_all_rule_guards.sh` 结果 K/Z/BA/BG 四红，基线复跑逐一确认为既有红（另：守卫运行会改写 `docs/product/stage22_prompt_coverage_baseline.md`，已 `git checkout` 复原，不含入补丁）。
++
++---
++
++## 5. 真实调用行为验证（1 次真实请求）
++
++free 上下文 + 强制 MAX + deep 模式（`.env` 真实 DeepSeek key，`DEEPSEEK_CHAT_MODEL=deepseek-flash`、`DEEPSEEK_REASON_MODEL=deepseek-v4-pro`）：
++
++```text
++[LLMRouter] free_tier_downgrade: max -> fast (agent=generation, task=None)
++[LLMRouter] generation → deepseek-flash (强制tier=max | free_tier_downgrade(max->fast) [$0.0002/1k, tier=fast])
++[LLMFallback] Attempt 1/3: model=deepseek-flash, reason=强制tier=max | free_tier_downgrade(max->fast) [..., tier=fast]
++SEL_MODEL_KEY: deepseek_fast
++SEL_TIER: fast
++SEL_MODEL_NAME: deepseek-flash
++SEL_REASON: 强制tier=max | free_tier_downgrade(max->fast) [$0.0002/1k, tier=fast]
++SEL_FLAG: True
++REPLY: 1+1等于2。
++```
++
++确认：路由日志 tier=fast、模型落 deepseek-flash（轻模型）、reason 留痕、真实调用成功。premium 路径（v4-pro 不变）由单测 `test_pro_user_forced_max_unchanged` 钉死，不再消耗真实请求预算。
++
++---
++
++## 6. 边界、配置与移交
++
++**已知边界（记录在案，不阻塞）**：
++1. `select_specific_model`（显式 model_key，如自定义专家 `get_llm_service_for_specific_model`）不钳——显式 key 是明确的人工选择，保留其语义；如需覆盖可后续在 workflow 侧按 is_pro 收敛自定义专家可选层。
++2. REST SSE 路径（`chat.py` → wrapper `chat_stream_with_tools`）不经 gRPC StreamChat 入口，本设计只覆盖核心链路（Flutter → /ws/chat → 网关 → StreamChat）；REST 路径如需钳制，可由网关在 REST 透传 `user_tier` 后在 wrapper 层消费 `user_context`（已在 extra_context 覆盖通道上预留）。
++3. proto3 未设 `user_profile` 的 StreamChat 调用方按 free 处理（默认分层=free 的产品语义）；网关 ws chatflow 恒填 profile，行为符合预期；如需对内网调用豁免，用 `FREE_TIER_DOWNGRADE_ENABLED=false` 熔断。
++4. ceiling=fast 意味着免费用户全部能力层请求（含深度推理）落 flash；产品如需给免费用户保留甜点层，置 `FREE_TIER_MODEL_CEILING=standard` 即可，无需改码。
++
++**文档更新建议（对应任务 5，未直接改动以防跨 worktree 冲突，请主控采纳后落笔）**：
++- `docs/engineering/KNOWN_CODE_DEBT_LEDGER.md`：新增条目「免费层降级只覆盖 gRPC StreamChat 链路；REST SSE 与显式 model_key 路径未钳制（§6.1/6.2）」。
++- `backend/README.md`（或 env 配置清单）：登记 `FREE_TIER_DOWNGRADE_ENABLED`、`FREE_TIER_MODEL_CEILING` 两个新配置及默认值。
++- 监控面板建议：`sparkle_llm_router_free_tier_downgrade_total` 按 `from_tier` 聚合，可回答「免费用户被降级掉的推理量」——商业上可直接用作 Pro 卖点转化漏斗。
++
++**文件清单**：
++- `backend/app/core/llm_router.py`（钳制核心 + contextvar + 留痕）
++- `backend/app/core/metrics.py`（新计数器）
++- `backend/app/config/settings.py`（2 个新配置）
++- `backend/app/services/agent_grpc_service.py`（入口信号消费 + finally 复位）
++- `backend/tests/unit/test_llm_router_free_tier.py`（新增 14 测）
++- 本报告 + 补丁
