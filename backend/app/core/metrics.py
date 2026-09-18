@@ -45,6 +45,19 @@ LLM_CALL_DURATION = get_or_create_metric(
     Histogram, "sparkle_llm_call_duration_seconds", "LLM call duration in seconds", ["model", "provider"]
 )
 
+# M-2 stream variance: provider-level time-to-first-chunk. Observed in
+# OpenAICompatibleProvider.stream_chat from call start to the first content
+# chunk, isolating provider TTFT (connect + model latency) from engine
+# orchestration overhead. Tail values (58s observed at night) are the root
+# cause of "90s silent stream" incidents.
+LLM_PROVIDER_TTFT = get_or_create_metric(
+    Histogram,
+    "sparkle_llm_provider_ttft_seconds",
+    "Provider-level time to first stream content chunk in seconds",
+    ["provider", "model"],
+    buckets=[0.5, 1.0, 2.0, 3.0, 5.0, 8.0, 13.0, 21.0, 34.0, 55.0, 89.0],
+)
+
 AI_RESPONSE_TOTAL_DURATION = get_or_create_metric(
     Histogram,
     "sparkle_ai_response_total_duration_seconds",

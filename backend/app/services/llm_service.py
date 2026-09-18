@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import json
 import re
+import time
 import uuid
 from collections.abc import AsyncGenerator, AsyncIterator
 from dataclasses import dataclass
@@ -22,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.core.agent_profiles import AgentRole, ModelTier, TaskType
 from app.core.cost_controller import is_llm_within_budget, record_llm_cost
-from app.core.metrics import LLM_PUSH_CONTENT_PARSE_FAILURE_TOTAL
+from app.core.metrics import LLM_PROVIDER_TTFT, LLM_PUSH_CONTENT_PARSE_FAILURE_TOTAL
 from app.core.llm_monitoring import LLMMonitor
 from app.core.llm_router import LLMSelection, ModelProvider, llm_router
 from app.core.llm_secure_io import (
@@ -34,11 +35,32 @@ from app.core.llm_secure_io import (
     wrap_tool_result,
     wrap_user_message,
 )
+from app.core.exceptions import LLMServiceError
 from app.services.circuit_breaker import CircuitBreakerOpenException, circuit_breaker_service
 from app.services.llm.base import LLMProvider
 from app.services.llm.concurrency import llm_concurrency
 from app.services.llm.fallback import llm_fallback_manager
 from app.services.llm.providers import OpenAICompatibleProvider
+
+# ---------------------------------------------------------------------------
+# M-2 stream variance guards (see round2/m2-stream-variance.md):
+# The old code applied a single 120s/300s `stream_timeout` to the whole
+# provider stream, so a provider TTFT tail (58s observed) plus SDK retries
+# could hold a chat silently for 2 minutes before the fallback manager ever
+# switched models. We now split the budget:
+#   - FIRST_CHUNK_*: deadline for the *first* content chunk; expiry raises an
+#     LLMServiceError whose message contains "timeout" so the existing
+#     fallback manager classifies it as FallbackReason.TIMEOUT and switches
+#     models instead of hanging.
+#   - OVERALL_*: after the first chunk arrives the deadline is rescheduled to
+#     now + OVERALL, keeping the original generous budget for chunk gaps /
+#     long generations (reasoning models keep their larger budgets).
+# Module-level so tests can shrink the windows.
+# ---------------------------------------------------------------------------
+LLM_STREAM_FIRST_CHUNK_TIMEOUT_SECONDS = 45
+LLM_STREAM_FIRST_CHUNK_TIMEOUT_REASONING_SECONDS = 90
+LLM_STREAM_OVERALL_TIMEOUT_SECONDS = 120
+LLM_STREAM_OVERALL_TIMEOUT_REASONING_SECONDS = 300
 
 # ==========================================
 # 🎭 演示模式预设响应 (Demo Mock Responses)
@@ -815,10 +837,52 @@ class LLMService:
         if not hasattr(current_provider, "client"):
             raise NotImplementedError("Current LLM provider does not expose raw chat completions.")
 
-        async with llm_concurrency.acquire(provider_name):
-            stream = await current_provider.client.chat.completions.create(**params)
-            async for chunk in stream:
-                yield chunk
+        # M-2 stream variance: this is the raw stream behind
+        # chat_stream_with_tools (main chat generation). Same two-stage
+        # deadline as stream_chat._stream_with_selection — a bounded window
+        # for the first chunk (raising a fallback-eligible "timeout" error
+        # instead of hanging), then the generous overall budget.
+        model_name = str(params["model"])
+        is_deep_reasoning = "reason" in model_name.lower() or "thinking" in model_name.lower()
+        overall_timeout = (
+            LLM_STREAM_OVERALL_TIMEOUT_REASONING_SECONDS
+            if is_deep_reasoning
+            else LLM_STREAM_OVERALL_TIMEOUT_SECONDS
+        )
+        first_chunk_timeout = (
+            LLM_STREAM_FIRST_CHUNK_TIMEOUT_REASONING_SECONDS
+            if is_deep_reasoning
+            else LLM_STREAM_FIRST_CHUNK_TIMEOUT_SECONDS
+        )
+
+        try:
+            async with llm_concurrency.acquire(provider_name):
+                loop = asyncio.get_running_loop()
+                ttft_started = time.perf_counter()
+                async with asyncio.timeout(first_chunk_timeout) as stream_deadline:
+                    got_first_chunk = False
+                    stream = await current_provider.client.chat.completions.create(**params)
+                    async for chunk in stream:
+                        if not got_first_chunk:
+                            got_first_chunk = True
+                            stream_deadline.reschedule(loop.time() + overall_timeout)
+                            # M-2: provider-level TTFT probe for the raw path.
+                            LLM_PROVIDER_TTFT.labels(provider=provider_name, model=model_name).observe(
+                                time.perf_counter() - ttft_started
+                            )
+                        yield chunk
+        except TimeoutError:
+            # asyncio.timeout expiry. The message MUST contain "timeout" so
+            # llm_fallback_manager._detect_fallback_reason maps it to
+            # FallbackReason.TIMEOUT and switches models.
+            logger.warning(
+                f"[LLM] Raw stream timeout for model {model_name} "
+                f"(first_chunk_timeout={first_chunk_timeout}s, overall={overall_timeout}s), triggering fallback"
+            )
+            raise LLMServiceError(
+                f"LLM stream timeout: model {model_name} exceeded "
+                f"first-chunk window ({first_chunk_timeout}s)"
+            ) from None
 
     async def _create_raw_stream_with_fallback(
         self,
@@ -1066,18 +1130,49 @@ class LLMService:
                 provider_name, current_provider, request_kwargs = self._build_provider_for_selection(selection)
 
                 is_deep_reasoning = "reason" in selection.config.model_name.lower() or "thinking" in selection.config.model_name.lower()
-                stream_timeout = 300 if is_deep_reasoning else 120
+                overall_timeout = (
+                    LLM_STREAM_OVERALL_TIMEOUT_REASONING_SECONDS
+                    if is_deep_reasoning
+                    else LLM_STREAM_OVERALL_TIMEOUT_SECONDS
+                )
+                first_chunk_timeout = (
+                    LLM_STREAM_FIRST_CHUNK_TIMEOUT_REASONING_SECONDS
+                    if is_deep_reasoning
+                    else LLM_STREAM_FIRST_CHUNK_TIMEOUT_SECONDS
+                )
 
                 try:
                     async with llm_concurrency.acquire(provider_name):
-                        async with asyncio.timeout(stream_timeout):
+                        loop = asyncio.get_running_loop()
+                        # M-2: two-stage deadline — strict window for the first
+                        # content chunk (falls back to another model instead of
+                        # hanging), then the generous overall budget for the
+                        # remainder of the stream.
+                        async with asyncio.timeout(first_chunk_timeout) as stream_deadline:
+                            got_first_chunk = False
                             async for chunk in current_provider.stream_chat(
                                 safe_messages,
                                 model=selection.config.model_name,
                                 temperature=selection.config.temperature,
                                 **request_kwargs
                             ):
+                                if not got_first_chunk:
+                                    got_first_chunk = True
+                                    stream_deadline.reschedule(loop.time() + overall_timeout)
                                 yield chunk
+                except TimeoutError:
+                    # asyncio.timeout expiry. The message MUST contain "timeout"
+                    # so llm_fallback_manager._detect_fallback_reason maps it to
+                    # FallbackReason.TIMEOUT and switches models.
+                    stage = "first-chunk" if not got_first_chunk else "mid-stream"
+                    logger.warning(
+                        f"[LLM] Stream timeout ({stage}) for model {selection.config.model_name} "
+                        f"(first_chunk_timeout={first_chunk_timeout}s, overall={overall_timeout}s), triggering fallback"
+                    )
+                    raise LLMServiceError(
+                        f"LLM stream timeout: model {selection.config.model_name} exceeded "
+                        f"{stage} window (first_chunk={first_chunk_timeout}s, overall={overall_timeout}s)"
+                    ) from None
                 except Exception as e:
                     logger.error(f"[LLM] Stream processing failed for model {selection.config.model_name}: {e}")
                     raise e

@@ -56,6 +56,94 @@ part 'chat_notifier_history.dart';
 part 'chat_notifier_actions.dart';
 part 'chat_provider_wiring.dart';
 
+/// M-2 stream variance: error code injected by [chatStreamWithFirstEventGuard]
+/// when no stream event arrives within the guard window.
+const String kChatFirstEventTimeoutCode = 'FIRST_EVENT_TIMEOUT';
+
+/// M-2 stream variance: wrap a chat event stream with a first-event guard.
+///
+/// Diagnosis (round2/m2-stream-variance.md): provider TTFT tails (58s
+/// observed) used to pass straight through to the main chat UI as a silent
+/// hang because nothing timed out before the engine's 120s stream budget.
+///
+/// Semantics:
+/// - Any event (status/metadata/text/widgets/...) disarms the guard — frames
+///   other than final text already prove the run is alive (same liveness rule
+///   as the modeling screen's A-3 guard).
+/// - If [timeout] elapses with zero events, the source subscription is
+///   cancelled and a single [ErrorEvent] with code
+///   [kChatFirstEventTimeoutCode] is emitted, then the stream closes.
+Stream<ChatStreamEvent> chatStreamWithFirstEventGuard(
+  Stream<ChatStreamEvent> source,
+  Duration timeout, {
+  void Function()? onGuardFired,
+}) {
+  late final StreamController<ChatStreamEvent> controller;
+  StreamSubscription<ChatStreamEvent>? subscription;
+  Timer? guardTimer;
+  var sawFirstEvent = false;
+
+  void disarm() {
+    guardTimer?.cancel();
+    guardTimer = null;
+  }
+
+  controller = StreamController<ChatStreamEvent>(
+    onListen: () {
+      guardTimer = Timer(timeout, () {
+        if (controller.isClosed || sawFirstEvent) {
+          return;
+        }
+        debugPrint(
+          '[ChatProvider] First-event guard fired: no event within '
+          '${timeout.inSeconds}s',
+        );
+        onGuardFired?.call();
+        disarm();
+        unawaited(subscription?.cancel());
+        subscription = null;
+        controller.add(
+          ErrorEvent(
+            code: kChatFirstEventTimeoutCode,
+            message: 'No first stream event within ${timeout.inSeconds}s',
+            retryable: true,
+          ),
+        );
+        unawaited(controller.close());
+      });
+      subscription = source.listen(
+        (event) {
+          sawFirstEvent = true;
+          disarm();
+          if (!controller.isClosed) {
+            controller.add(event);
+          }
+        },
+        onError: (Object error, StackTrace stackTrace) {
+          disarm();
+          if (!controller.isClosed) {
+            controller.addError(error, stackTrace);
+          }
+        },
+        onDone: () {
+          disarm();
+          if (!controller.isClosed) {
+            unawaited(controller.close());
+          }
+        },
+      );
+    },
+    onPause: () => subscription?.pause(),
+    onResume: () => subscription?.resume(),
+    onCancel: () async {
+      disarm();
+      await subscription?.cancel();
+      subscription = null;
+    },
+  );
+  return controller.stream;
+}
+
 // 2. ChatNotifier Class
 class ChatNotifier extends StateNotifier<ChatState> {
   ChatNotifier(this._chatRepository, this._ref) : super(ChatState()) {
@@ -68,20 +156,33 @@ class ChatNotifier extends StateNotifier<ChatState> {
     }
 
     // 监听 WebSocket 连接状态
-    _connectionStateSubscription =
-        _chatRepository.connectionStateStream.listen((connectionState) {
-      if (_isDisposed) return;
-      state = state.copyWith(wsConnectionState: connectionState);
-    });
+    _connectionStateSubscription = _chatRepository.connectionStateStream.listen(
+      (connectionState) {
+        if (_isDisposed) return;
+        state = state.copyWith(wsConnectionState: connectionState);
+      },
+    );
   }
 
   static const int historyPageSize = 20;
 
+  /// M-2 stream variance: window for the first stream event on the main chat
+  /// chain. If zero events arrive in time, the run is cancelled and resent
+  /// once (see sendMessage). Mutable + visible for tests so the guard path can
+  /// be exercised quickly; 30s covers p90 TTFT (~22s observed) while staying
+  /// well under the engine's 45s first-chunk fallback deadline.
+  @visibleForTesting
+  static Duration firstEventGuardTimeout = const Duration(seconds: 30);
+
+  /// M-2: total send attempts per message = 1 initial + 1 guard resend.
+  static const int maxChatSendAttempts = 2;
+
   final ChatRepository _chatRepository;
   final Ref _ref;
   StreamSubscription<WsConnectionState>? _connectionStateSubscription;
-  final _Debouncer _streamDebouncer =
-      _Debouncer(const Duration(milliseconds: 50));
+  final _Debouncer _streamDebouncer = _Debouncer(
+    const Duration(milliseconds: 50),
+  );
   bool _isDisposed = false;
   static const String _dailyUsageDateKey = 'chat_daily_usage_date';
   static const String _dailyUsageTokensKey = 'chat_daily_usage_tokens';
@@ -189,10 +290,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
     );
   }
 
-  void _beginRun({
-    required String runId,
-    ChatMessageModel? userMessage,
-  }) {
+  void _beginRun({required String runId, ChatMessageModel? userMessage}) {
     final nowMs = DateTime.now().millisecondsSinceEpoch;
     state = state.copyWith(
       messages: userMessage == null
@@ -248,9 +346,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       createdAt: DateTime.now(),
       isInterrupted: true,
     );
-    state = state.copyWith(
-      messages: [...state.messages, interruptedMessage],
-    );
+    state = state.copyWith(messages: [...state.messages, interruptedMessage]);
   }
 
   @override
@@ -473,12 +569,14 @@ class ChatNotifier extends StateNotifier<ChatState> {
         envelope[key] = value;
       }
     }
-    final structuredAdjustments =
-        _parseJsonMapList(metadata['structured_cognitive_adjustments']);
+    final structuredAdjustments = _parseJsonMapList(
+      metadata['structured_cognitive_adjustments'],
+    );
     if (structuredAdjustments.isNotEmpty) {
       envelope['structured_cognitive_adjustments'] = structuredAdjustments;
-      final uxTurn =
-          Map<String, dynamic>.from(envelope['ux_turn'] as Map? ?? const {});
+      final uxTurn = Map<String, dynamic>.from(
+        envelope['ux_turn'] as Map? ?? const {},
+      );
       envelope['ux_turn'] = {
         ...uxTurn,
         'structured_cognitive_adjustments': structuredAdjustments,
@@ -953,8 +1051,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
     var shouldResetSending = true;
 
     void upsertSourceSummaryCitations(List<Map<String, dynamic>> citations) {
-      accumulatedRawMetadata['citations'] =
-          List<Map<String, dynamic>>.from(citations);
+      accumulatedRawMetadata['citations'] = List<Map<String, dynamic>>.from(
+        citations,
+      );
       final data = {
         'citations_available': citations.isNotEmpty,
         'reference_scope': citations.every(
@@ -977,10 +1076,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
         );
       } else {
         accumulatedWidgets.add(
-          WidgetPayload(
-            type: 'source_summary',
-            data: data,
-          ),
+          WidgetPayload(type: 'source_summary', data: data),
         );
       }
     }
@@ -1003,8 +1099,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
       if (metadata == null) {
         return;
       }
-      final adjustments =
-          _parseJsonMapList(metadata['structured_cognitive_adjustments']);
+      final adjustments = _parseJsonMapList(
+        metadata['structured_cognitive_adjustments'],
+      );
       if (adjustments.isEmpty) {
         return;
       }
@@ -1199,9 +1296,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
               accumulatedStructuredAdjustments ?? const [],
         );
 
-        state = state.copyWith(
-          messages: [...state.messages, aiMessage],
-        );
+        state = state.copyWith(messages: [...state.messages, aiMessage]);
       }
 
       state = state.copyWith(
@@ -1284,720 +1379,808 @@ class ChatNotifier extends StateNotifier<ChatState> {
       // not abort healthy generations too early.
       const streamTimeout = Duration(minutes: 8);
 
-      // Create a timeout wrapper for the stream
-      final rawStream = _chatRepository.chatStream(
-        content,
-        state.conversationId,
-        userId: userId,
-        nickname: nickname,
-        token: token,
-        fileIds: fileIds,
-        includeReferences: useDocumentContext || fileIds.isNotEmpty,
-        extraContext: extraContext,
-        chatMode: chatModeValue,
-        requestId: runId,
-        useDocumentContext: useDocumentContext,
-      );
+      // M-2 stream variance: guard the *first* event. If the provider TTFT
+      // tail keeps the stream silent past the guard window, cancel this run
+      // and resend once (same content, derived request id). Two protocol
+      // facts shape the rescue path:
+      // - the gateway dedups exact (user, request_id) pairs for 1h
+      //   (ws:chat:request:*), so a literal same-id resend would bounce with
+      //   a non-retryable duplicate_request;
+      // - the engine session lock is only released when the in-flight
+      //   upstream stream dies, which happens when the socket drop makes the
+      //   gateway cancel its gRPC call — hence the reconnect before resending.
+      // A second guard fire means the rescue failed too: fall through to the
+      // existing failure UI (retryable, manual retry still available).
+      final firstEventTimeout = firstEventGuardTimeout;
 
-      // Wrap with timeout check
-      final timedStream = rawStream.timeout(
-        streamTimeout,
-        onTimeout: (sink) {
-          debugPrint('[ChatProvider] Stream timeout after $streamTimeout');
-          sink
-            ..add(
-              ErrorEvent(
-                code: 'STREAM_TIMEOUT',
-                message:
-                    I18nService.instance.l10n.chatStreamTimeout(streamTimeout.inSeconds),
-                retryable: true,
-              ),
-            )
-            ..close();
-        },
-      );
+      for (var sendAttempt = 1;
+          sendAttempt <= maxChatSendAttempts;
+          sendAttempt++) {
+        final isRetryAttempt = sendAttempt > 1;
+        final attemptRequestId = isRetryAttempt ? '${runId}_r1' : runId;
+        var firstEventGuardFired = false;
 
-      await for (final event in timedStream) {
-        if (!isCurrentRequest()) {
-          break;
-        }
-        if (event.responseId != null && event.responseId!.isNotEmpty) {
-          responseId = event.responseId;
-        }
-        if (event.traceId != null && event.traceId!.isNotEmpty) {
-          traceId = event.traceId;
-        }
-        if (event.workflowId != null && event.workflowId!.isNotEmpty) {
-          workflowId = event.workflowId;
-        }
-        if (event.promptVersion != null && event.promptVersion!.isNotEmpty) {
-          promptVersion = event.promptVersion;
-        }
-        // Capture sessionId from backend response to maintain conversation continuity
-        if (event.sessionId != null && event.sessionId!.isNotEmpty) {
-          state = state.copyWith(conversationId: event.sessionId);
-        }
+        // Create a timeout wrapper for the stream
+        final rawStream = _chatRepository.chatStream(
+          content,
+          state.conversationId,
+          userId: userId,
+          nickname: nickname,
+          token: token,
+          fileIds: fileIds,
+          includeReferences: useDocumentContext || fileIds.isNotEmpty,
+          extraContext: extraContext,
+          chatMode: chatModeValue,
+          requestId: attemptRequestId,
+          useDocumentContext: useDocumentContext,
+        );
 
-        if (event is TextEvent) {
-          unawaited(BgmService.setThinkingActivity(true));
-          final metadata = event.metadata;
-          if (metadata != null) {
-            accumulatedMeta.addAll(metadata);
-            accumulatedRawMetadata.addAll(metadata);
-            _appendExecutionWidgets(accumulatedWidgets, metadata);
-            captureCitationMetadata(metadata['citations']);
-            captureStructuredAdjustments(metadata);
-            captureLowYieldBlock(metadata);
-            _ref.read(experienceEnvelopeProvider.notifier).updateFromMetadata(accumulatedRawMetadata);
+        final eventStream = chatStreamWithFirstEventGuard(
+          rawStream.timeout(
+            streamTimeout,
+            onTimeout: (sink) {
+              debugPrint('[ChatProvider] Stream timeout after $streamTimeout');
+              sink
+                ..add(
+                  ErrorEvent(
+                    code: 'STREAM_TIMEOUT',
+                    message: I18nService.instance.l10n.chatStreamTimeout(
+                      streamTimeout.inSeconds,
+                    ),
+                    retryable: true,
+                  ),
+                )
+                ..close();
+            },
+          ),
+          firstEventTimeout,
+          onGuardFired: () => firstEventGuardFired = true,
+        );
+
+        await for (final event in eventStream) {
+          if (!isCurrentRequest()) {
+            break;
           }
-          final uxEnvelope = _extractUxEnvelope(metadata);
-          if (uxEnvelope.isNotEmpty) {
-            accumulatedUxEnvelope = {
-              ...(accumulatedUxEnvelope ?? const <String, dynamic>{}),
-              ...uxEnvelope,
-            };
+          if (event is ErrorEvent && event.code == kChatFirstEventTimeoutCode) {
+            // Synthetic guard error — handled via firstEventGuardFired below.
+            break;
           }
-          final planContext = metadata?['plan_context'];
-          final showPlanContext = metadata?['show_plan_context'] == true;
-          if (!planContextInjected &&
-              (planContext is Map<String, dynamic> || showPlanContext)) {
-            final data = planContext is Map<String, dynamic>
-                ? planContext
-                : {
-                    if (metadata?['plan_id'] is String)
-                      'plan_id': metadata?['plan_id'],
-                  };
-            if (data.isNotEmpty) {
-              accumulatedWidgets.add(
-                WidgetPayload(
-                  type: 'plan_context_summary',
-                  data: data,
-                ),
-              );
-              planContextInjected = true;
-            }
+          if (event.responseId != null && event.responseId!.isNotEmpty) {
+            responseId = event.responseId;
           }
-          if (metadata != null) {
-            final selectedExpertsRaw = metadata['selected_experts'];
-            final answerExpertsRaw = metadata['answer_experts'];
-            final routingStrategy = metadata['routing_strategy'];
-            final fallbackReason = metadata['fallback_reason'];
-            final routeConfidence = metadata['route_confidence'];
-            final expertEntrySource = metadata['expert_entry_source'];
-            final routingPreview = _parseJsonMap(metadata['routing_preview']);
-            final roundtableTurns =
-                _parseJsonMapList(metadata['roundtable_turns']);
-            final primaryAgent = metadata['primary_agent']?.toString();
-            final collaborationNarrative =
-                metadata['collaboration_narrative']?.toString();
-            final collaborationMode =
-                metadata['collaboration_mode']?.toString();
-            final predictionPreview =
-                _parseJsonMap(metadata['prediction_preview']);
-            final simulationPreview =
-                _parseJsonMap(metadata['simulation_preview']);
-            final reportPreview = _parseJsonMap(metadata['report_preview']);
-            final agentsInvolved = _parseSelectedExperts(
-              metadata['agents_involved'],
-            );
-            if (selectedExpertsRaw != null ||
-                routingStrategy != null ||
-                fallbackReason != null ||
-                routeConfidence != null ||
-                expertEntrySource != null) {
-              final selectedExperts = _parseSelectedExperts(selectedExpertsRaw);
-              accumulatedCollaboration = {
-                ...(accumulatedCollaboration ?? const <String, dynamic>{}),
-                'selected_experts': selectedExperts,
-                'answer_experts': _parseSelectedExperts(answerExpertsRaw),
-                'routing_strategy': routingStrategy,
-                'fallback_reason': fallbackReason,
-                'route_confidence': routeConfidence,
-                'expert_entry_source': expertEntrySource,
-              };
-            }
-            if (routingPreview != null && routingPreview.isNotEmpty) {
-              accumulatedRoutingPreview = routingPreview;
-              accumulatedCollaboration = {
-                ...(accumulatedCollaboration ?? const <String, dynamic>{}),
-                'routing_preview': routingPreview,
-              };
-              state = state.copyWith(routingPreview: routingPreview);
-            }
-            if (roundtableTurns.isNotEmpty) {
-              accumulatedRoundtableTurns
-                ..clear()
-                ..addAll(roundtableTurns);
-              accumulatedCollaboration = {
-                ...(accumulatedCollaboration ?? const <String, dynamic>{}),
-                'roundtable_turns':
-                    List<Map<String, dynamic>>.from(accumulatedRoundtableTurns),
-              };
-              state = state.copyWith(
-                roundtableTurns:
-                    List<Map<String, dynamic>>.from(accumulatedRoundtableTurns),
-              );
-            }
-            if (collaborationNarrative != null &&
-                collaborationNarrative.trim().isNotEmpty) {
-              accumulatedCollaborationNarrative = collaborationNarrative.trim();
-            }
-            if (collaborationMode != null &&
-                collaborationMode.trim().isNotEmpty) {
-              accumulatedCollaborationMode = collaborationMode.trim();
-            }
-            if (agentsInvolved.isNotEmpty) {
-              accumulatedAgentsInvolved = agentsInvolved;
-            } else if (primaryAgent != null && primaryAgent.isNotEmpty) {
-              accumulatedAgentsInvolved = [primaryAgent];
-            }
-            if (_parseMetadataFlag(metadata['open_theater']) &&
-                predictionPreview != null) {
-              accumulatedCollaboration = {
-                ...(accumulatedCollaboration ?? const <String, dynamic>{}),
-                'open_theater': true,
-                'deep_link': metadata['deep_link']?.toString(),
-                'prediction_preview': predictionPreview,
-                'source_chat_session_id':
-                    metadata['source_chat_session_id']?.toString(),
-              };
-            }
-            if (_parseMetadataFlag(metadata['open_simulation']) &&
-                simulationPreview != null) {
-              accumulatedCollaboration = {
-                ...(accumulatedCollaboration ?? const <String, dynamic>{}),
-                'open_simulation': true,
-                'simulation_deep_link':
-                    metadata['simulation_deep_link']?.toString(),
-                'simulation_preview': simulationPreview,
-                'source_chat_session_id':
-                    metadata['source_chat_session_id']?.toString(),
-              };
-            }
-            if (_parseMetadataFlag(metadata['open_report']) &&
-                reportPreview != null) {
-              accumulatedCollaboration = {
-                ...(accumulatedCollaboration ?? const <String, dynamic>{}),
-                'open_report': true,
-                'report_deep_link': metadata['report_deep_link']?.toString(),
-                'report_preview': reportPreview,
-                'source_chat_session_id':
-                    metadata['source_chat_session_id']?.toString(),
-              };
-            }
+          if (event.traceId != null && event.traceId!.isNotEmpty) {
+            traceId = event.traceId;
           }
-          // 流式文本片段（delta）
-          accumulatedContent += event.content;
-          pendingStreamingContent = accumulatedContent;
-          flushPending();
-        } else if (event is StatusUpdateEvent) {
-          // AI 状态更新（THINKING, GENERATING 等）
-          if (event.state == 'THINKING' || event.state == 'GENERATING') {
+          if (event.workflowId != null && event.workflowId!.isNotEmpty) {
+            workflowId = event.workflowId;
+          }
+          if (event.promptVersion != null && event.promptVersion!.isNotEmpty) {
+            promptVersion = event.promptVersion;
+          }
+          // Capture sessionId from backend response to maintain conversation continuity
+          if (event.sessionId != null && event.sessionId!.isNotEmpty) {
+            state = state.copyWith(conversationId: event.sessionId);
+          }
+
+          if (event is TextEvent) {
             unawaited(BgmService.setThinkingActivity(true));
-          } else {
-            unawaited(BgmService.setThinkingActivity(false));
-          }
-          final uxProgress = event.metadata?['ux_progress'];
-          final executionProgress = _buildExecutionProgressDetails(
-            event.metadata?['execution_progress'],
-          );
-          lastAiStatus = event.state;
-          pendingAiStatus = event.state;
-          if (executionProgress != null && executionProgress.isNotEmpty) {
-            pendingAiStatusDetails = executionProgress;
-          } else if (uxProgress is Map<String, dynamic>) {
-            final headline = uxProgress['headline']?.toString();
-            final detail = uxProgress['detail']?.toString();
-            pendingAiStatusDetails = [headline, detail]
-                .whereType<String>()
-                .where((item) => item.trim().isNotEmpty)
-                .join(' · ');
-          } else {
-            pendingAiStatusDetails = event.details;
-          }
-          state = state.copyWith(
-            currentAgentName: event.currentAgentName,
-            activeAgentType: event.activeAgentType,
-            activeRunSummary: _buildRunSummary(
-              status: event.state,
-              details: pendingAiStatusDetails,
-              agentName: event.currentAgentName,
-            ),
-          );
-          flushPending();
-        } else if (event is DagExecutionEvent) {
-          state = state.copyWith(dagExecutionSignal: event.signal);
-          final dagDetails = event.signal.statusDetails;
-          if (dagDetails != null && dagDetails.isNotEmpty) {
-            lastAiStatus = 'EXECUTING_TOOL';
-            pendingAiStatus = 'EXECUTING_TOOL';
-            pendingAiStatusDetails = dagDetails;
-          }
-          flushPending();
-        } else if (event is FullTextEvent) {
-          // 完整文本（通常在流结束时）
-          final metadata = event.metadata;
-          if (metadata != null) {
-            accumulatedMeta.addAll(metadata);
-            accumulatedRawMetadata.addAll(metadata);
-            _appendExecutionWidgets(accumulatedWidgets, metadata);
-            captureCitationMetadata(metadata['citations']);
-            captureStructuredAdjustments(metadata);
-            captureLowYieldBlock(metadata);
-            _ref.read(experienceEnvelopeProvider.notifier).updateFromMetadata(accumulatedRawMetadata);
-          }
-          final uxEnvelope = _extractUxEnvelope(metadata);
-          if (uxEnvelope.isNotEmpty) {
-            accumulatedUxEnvelope = {
-              ...(accumulatedUxEnvelope ?? const <String, dynamic>{}),
-              ...uxEnvelope,
-            };
-          }
-          // Extract dual_core_mode from ux_turn (lives in full_text event metadata)
-          final uxTurnMap =
-              accumulatedUxEnvelope?['ux_turn'] as Map<String, dynamic>?;
-          final newDualCoreMode = uxTurnMap?['dual_core_mode'] as String?;
-          if (newDualCoreMode != null) {
-            state = state.copyWith(dualCoreMode: newDualCoreMode);
-          }
-          if (metadata != null) {
-            final selectedExpertsRaw = metadata['selected_experts'];
-            final answerExpertsRaw = metadata['answer_experts'];
-            final routingStrategy = metadata['routing_strategy'];
-            final fallbackReason = metadata['fallback_reason'];
-            final routeConfidence = metadata['route_confidence'];
-            final expertEntrySource = metadata['expert_entry_source'];
-            final routingPreview = _parseJsonMap(metadata['routing_preview']);
-            final roundtableTurns =
-                _parseJsonMapList(metadata['roundtable_turns']);
-            final primaryAgent = metadata['primary_agent']?.toString();
-            final collaborationNarrative =
-                metadata['collaboration_narrative']?.toString();
-            final collaborationMode =
-                metadata['collaboration_mode']?.toString();
-            final predictionPreview =
-                _parseJsonMap(metadata['prediction_preview']);
-            final simulationPreview =
-                _parseJsonMap(metadata['simulation_preview']);
-            final reportPreview = _parseJsonMap(metadata['report_preview']);
-            final agentsInvolved = _parseSelectedExperts(
-              metadata['agents_involved'],
-            );
-            if (selectedExpertsRaw != null ||
-                routingStrategy != null ||
-                fallbackReason != null ||
-                routeConfidence != null ||
-                expertEntrySource != null) {
-              final selectedExperts = _parseSelectedExperts(selectedExpertsRaw);
-              accumulatedCollaboration = {
-                ...(accumulatedCollaboration ?? const <String, dynamic>{}),
-                'selected_experts': selectedExperts,
-                'answer_experts': _parseSelectedExperts(answerExpertsRaw),
-                'routing_strategy': routingStrategy,
-                'fallback_reason': fallbackReason,
-                'route_confidence': routeConfidence,
-                'expert_entry_source': expertEntrySource,
+            final metadata = event.metadata;
+            if (metadata != null) {
+              accumulatedMeta.addAll(metadata);
+              accumulatedRawMetadata.addAll(metadata);
+              _appendExecutionWidgets(accumulatedWidgets, metadata);
+              captureCitationMetadata(metadata['citations']);
+              captureStructuredAdjustments(metadata);
+              captureLowYieldBlock(metadata);
+              _ref
+                  .read(experienceEnvelopeProvider.notifier)
+                  .updateFromMetadata(accumulatedRawMetadata);
+            }
+            final uxEnvelope = _extractUxEnvelope(metadata);
+            if (uxEnvelope.isNotEmpty) {
+              accumulatedUxEnvelope = {
+                ...(accumulatedUxEnvelope ?? const <String, dynamic>{}),
+                ...uxEnvelope,
               };
             }
-            if (routingPreview != null && routingPreview.isNotEmpty) {
-              accumulatedRoutingPreview = routingPreview;
-              accumulatedCollaboration = {
-                ...(accumulatedCollaboration ?? const <String, dynamic>{}),
-                'routing_preview': routingPreview,
-              };
-              state = state.copyWith(routingPreview: routingPreview);
+            final planContext = metadata?['plan_context'];
+            final showPlanContext = metadata?['show_plan_context'] == true;
+            if (!planContextInjected &&
+                (planContext is Map<String, dynamic> || showPlanContext)) {
+              final data = planContext is Map<String, dynamic>
+                  ? planContext
+                  : {
+                      if (metadata?['plan_id'] is String)
+                        'plan_id': metadata?['plan_id'],
+                    };
+              if (data.isNotEmpty) {
+                accumulatedWidgets.add(
+                  WidgetPayload(type: 'plan_context_summary', data: data),
+                );
+                planContextInjected = true;
+              }
             }
-            if (roundtableTurns.isNotEmpty) {
-              accumulatedRoundtableTurns
-                ..clear()
-                ..addAll(roundtableTurns);
-              accumulatedCollaboration = {
-                ...(accumulatedCollaboration ?? const <String, dynamic>{}),
-                'roundtable_turns':
-                    List<Map<String, dynamic>>.from(accumulatedRoundtableTurns),
-              };
-              state = state.copyWith(
-                roundtableTurns:
-                    List<Map<String, dynamic>>.from(accumulatedRoundtableTurns),
+            if (metadata != null) {
+              final selectedExpertsRaw = metadata['selected_experts'];
+              final answerExpertsRaw = metadata['answer_experts'];
+              final routingStrategy = metadata['routing_strategy'];
+              final fallbackReason = metadata['fallback_reason'];
+              final routeConfidence = metadata['route_confidence'];
+              final expertEntrySource = metadata['expert_entry_source'];
+              final routingPreview = _parseJsonMap(metadata['routing_preview']);
+              final roundtableTurns = _parseJsonMapList(
+                metadata['roundtable_turns'],
               );
-            }
-            if (collaborationNarrative != null &&
-                collaborationNarrative.trim().isNotEmpty) {
-              accumulatedCollaborationNarrative = collaborationNarrative.trim();
-            }
-            if (collaborationMode != null &&
-                collaborationMode.trim().isNotEmpty) {
-              accumulatedCollaborationMode = collaborationMode.trim();
-            }
-            if (agentsInvolved.isNotEmpty) {
-              accumulatedAgentsInvolved = agentsInvolved;
-            } else if (primaryAgent != null && primaryAgent.isNotEmpty) {
-              accumulatedAgentsInvolved = [primaryAgent];
-            }
-            if (_parseMetadataFlag(metadata['open_theater']) &&
-                predictionPreview != null) {
-              accumulatedCollaboration = {
-                ...(accumulatedCollaboration ?? const <String, dynamic>{}),
-                'open_theater': true,
-                'deep_link': metadata['deep_link']?.toString(),
-                'prediction_preview': predictionPreview,
-                'source_chat_session_id':
-                    metadata['source_chat_session_id']?.toString(),
-              };
-            }
-            if (_parseMetadataFlag(metadata['open_simulation']) &&
-                simulationPreview != null) {
-              accumulatedCollaboration = {
-                ...(accumulatedCollaboration ?? const <String, dynamic>{}),
-                'open_simulation': true,
-                'simulation_deep_link':
-                    metadata['simulation_deep_link']?.toString(),
-                'simulation_preview': simulationPreview,
-                'source_chat_session_id':
-                    metadata['source_chat_session_id']?.toString(),
-              };
-            }
-            if (_parseMetadataFlag(metadata['open_report']) &&
-                reportPreview != null) {
-              accumulatedCollaboration = {
-                ...(accumulatedCollaboration ?? const <String, dynamic>{}),
-                'open_report': true,
-                'report_deep_link': metadata['report_deep_link']?.toString(),
-                'report_preview': reportPreview,
-                'source_chat_session_id':
-                    metadata['source_chat_session_id']?.toString(),
-              };
-            }
-          }
-          accumulatedContent = event.content;
-          pendingStreamingContent = accumulatedContent;
-          flushPending(immediate: true);
-        } else if (event is ErrorEvent) {
-          final userFriendlyMessage = ErrorMessages.getUserFriendlyMessage(
-            event.code,
-            event.message,
-          );
-          final actionSuggestion =
-              ErrorMessages.getActionSuggestion(event.code);
-          final isRetryable = ErrorMessages.isRetryable(event.code);
-
-          state = state.copyWith(
-            activeRunSummary: _buildRunSummary(
-              status: lastAiStatus,
-              details: event.message,
-            ),
-          );
-          finalizeRun(
-            phase: ChatRunPhase.failed,
-            errorMessage: actionSuggestion.isEmpty
-                ? userFriendlyMessage
-                : I18nService.instance.l10n.chatErrorWithSuggestion(
-                    userFriendlyMessage,
-                    actionSuggestion,
+              final primaryAgent = metadata['primary_agent']?.toString();
+              final collaborationNarrative =
+                  metadata['collaboration_narrative']?.toString();
+              final collaborationMode =
+                  metadata['collaboration_mode']?.toString();
+              final predictionPreview = _parseJsonMap(
+                metadata['prediction_preview'],
+              );
+              final simulationPreview = _parseJsonMap(
+                metadata['simulation_preview'],
+              );
+              final reportPreview = _parseJsonMap(metadata['report_preview']);
+              final agentsInvolved = _parseSelectedExperts(
+                metadata['agents_involved'],
+              );
+              if (selectedExpertsRaw != null ||
+                  routingStrategy != null ||
+                  fallbackReason != null ||
+                  routeConfidence != null ||
+                  expertEntrySource != null) {
+                final selectedExperts = _parseSelectedExperts(
+                  selectedExpertsRaw,
+                );
+                accumulatedCollaboration = {
+                  ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+                  'selected_experts': selectedExperts,
+                  'answer_experts': _parseSelectedExperts(answerExpertsRaw),
+                  'routing_strategy': routingStrategy,
+                  'fallback_reason': fallbackReason,
+                  'route_confidence': routeConfidence,
+                  'expert_entry_source': expertEntrySource,
+                };
+              }
+              if (routingPreview != null && routingPreview.isNotEmpty) {
+                accumulatedRoutingPreview = routingPreview;
+                accumulatedCollaboration = {
+                  ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+                  'routing_preview': routingPreview,
+                };
+                state = state.copyWith(routingPreview: routingPreview);
+              }
+              if (roundtableTurns.isNotEmpty) {
+                accumulatedRoundtableTurns
+                  ..clear()
+                  ..addAll(roundtableTurns);
+                accumulatedCollaboration = {
+                  ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+                  'roundtable_turns': List<Map<String, dynamic>>.from(
+                    accumulatedRoundtableTurns,
                   ),
-            errorCode: event.code,
-            isRetryable: isRetryable,
-            restoreAttachments: hasQueuedAttachments,
-          );
-          return; // 提前退出
-        } else if (event is NackEvent) {
-          final userFriendlyMessage = ErrorMessages.getUserFriendlyMessage(
-            event.errorCode,
-            event.errorMessage,
-          );
-          final actionSuggestion =
-              ErrorMessages.getActionSuggestion(event.errorCode);
-          final isRetryable = ErrorMessages.isRetryable(event.errorCode);
-
-          state = state.copyWith(
-            activeRunSummary: _buildRunSummary(
-              status: lastAiStatus,
-              details: event.errorMessage,
-            ),
-          );
-          finalizeRun(
-            phase: ChatRunPhase.failed,
-            errorMessage: actionSuggestion.isEmpty
-                ? userFriendlyMessage
-                : I18nService.instance.l10n.chatErrorWithSuggestion(
-                    userFriendlyMessage,
-                    actionSuggestion,
+                };
+                state = state.copyWith(
+                  roundtableTurns: List<Map<String, dynamic>>.from(
+                    accumulatedRoundtableTurns,
                   ),
-            errorCode: event.errorCode,
-            isRetryable: isRetryable,
-            restoreAttachments: hasQueuedAttachments,
-          );
-          return; // 提前退出
-        } else if (event is WidgetEvent) {
-          if (event.widgetType == 'system_update' &&
-              !_shouldIncludeSystemUpdate(event.widgetData)) {
-            continue;
-          }
-          accumulatedWidgets.add(
-            _normalizeWidgetPayload(event.widgetType, event.widgetData),
-          );
-          if (event.widgetType == 'low_yield_gentle_block') {
-            _ref
-                .read(lowYieldBlockProvider.notifier)
-                .ingestPayload(event.widgetData);
-          }
-        } else if (event is ToolStartEvent) {
-          // 显示"正在使用工具: xxx"
-          lastAiStatus = 'EXECUTING_TOOL';
-          pendingAiStatus = 'EXECUTING_TOOL';
-          pendingAiStatusDetails =
-              I18nService.instance.l10n.chatUsingTool(event.toolName);
-          final nextTools = List<String>.from(state.activeTools);
-          if (!nextTools.contains(event.toolName)) {
-            nextTools.add(event.toolName);
-          }
-          state = state.copyWith(activeTools: nextTools);
-          flushPending();
-        } else if (event is ToolResultEvent) {
-          final widgetType = event.result.widgetType;
-          final widgetData = event.result.widgetData;
-          final toolName = event.result.toolName;
-          if (toolName.isNotEmpty) {
-            final nextTools = List<String>.from(state.activeTools)
-              ..removeWhere((tool) => tool == toolName);
-            state = state.copyWith(activeTools: nextTools);
-          }
-          if (widgetType != null && widgetData != null) {
-            if (widgetType == 'system_update' &&
-                !_shouldIncludeSystemUpdate(widgetData)) {
+                );
+              }
+              if (collaborationNarrative != null &&
+                  collaborationNarrative.trim().isNotEmpty) {
+                accumulatedCollaborationNarrative =
+                    collaborationNarrative.trim();
+              }
+              if (collaborationMode != null &&
+                  collaborationMode.trim().isNotEmpty) {
+                accumulatedCollaborationMode = collaborationMode.trim();
+              }
+              if (agentsInvolved.isNotEmpty) {
+                accumulatedAgentsInvolved = agentsInvolved;
+              } else if (primaryAgent != null && primaryAgent.isNotEmpty) {
+                accumulatedAgentsInvolved = [primaryAgent];
+              }
+              if (_parseMetadataFlag(metadata['open_theater']) &&
+                  predictionPreview != null) {
+                accumulatedCollaboration = {
+                  ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+                  'open_theater': true,
+                  'deep_link': metadata['deep_link']?.toString(),
+                  'prediction_preview': predictionPreview,
+                  'source_chat_session_id':
+                      metadata['source_chat_session_id']?.toString(),
+                };
+              }
+              if (_parseMetadataFlag(metadata['open_simulation']) &&
+                  simulationPreview != null) {
+                accumulatedCollaboration = {
+                  ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+                  'open_simulation': true,
+                  'simulation_deep_link':
+                      metadata['simulation_deep_link']?.toString(),
+                  'simulation_preview': simulationPreview,
+                  'source_chat_session_id':
+                      metadata['source_chat_session_id']?.toString(),
+                };
+              }
+              if (_parseMetadataFlag(metadata['open_report']) &&
+                  reportPreview != null) {
+                accumulatedCollaboration = {
+                  ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+                  'open_report': true,
+                  'report_deep_link': metadata['report_deep_link']?.toString(),
+                  'report_preview': reportPreview,
+                  'source_chat_session_id':
+                      metadata['source_chat_session_id']?.toString(),
+                };
+              }
+            }
+            // 流式文本片段（delta）
+            accumulatedContent += event.content;
+            pendingStreamingContent = accumulatedContent;
+            flushPending();
+          } else if (event is StatusUpdateEvent) {
+            // AI 状态更新（THINKING, GENERATING 等）
+            if (event.state == 'THINKING' || event.state == 'GENERATING') {
+              unawaited(BgmService.setThinkingActivity(true));
+            } else {
+              unawaited(BgmService.setThinkingActivity(false));
+            }
+            final uxProgress = event.metadata?['ux_progress'];
+            final executionProgress = _buildExecutionProgressDetails(
+              event.metadata?['execution_progress'],
+            );
+            lastAiStatus = event.state;
+            pendingAiStatus = event.state;
+            if (executionProgress != null && executionProgress.isNotEmpty) {
+              pendingAiStatusDetails = executionProgress;
+            } else if (uxProgress is Map<String, dynamic>) {
+              final headline = uxProgress['headline']?.toString();
+              final detail = uxProgress['detail']?.toString();
+              pendingAiStatusDetails = [headline, detail]
+                  .whereType<String>()
+                  .where((item) => item.trim().isNotEmpty)
+                  .join(' · ');
+            } else {
+              pendingAiStatusDetails = event.details;
+            }
+            state = state.copyWith(
+              currentAgentName: event.currentAgentName,
+              activeAgentType: event.activeAgentType,
+              activeRunSummary: _buildRunSummary(
+                status: event.state,
+                details: pendingAiStatusDetails,
+                agentName: event.currentAgentName,
+              ),
+            );
+            flushPending();
+          } else if (event is DagExecutionEvent) {
+            state = state.copyWith(dagExecutionSignal: event.signal);
+            final dagDetails = event.signal.statusDetails;
+            if (dagDetails != null && dagDetails.isNotEmpty) {
+              lastAiStatus = 'EXECUTING_TOOL';
+              pendingAiStatus = 'EXECUTING_TOOL';
+              pendingAiStatusDetails = dagDetails;
+            }
+            flushPending();
+          } else if (event is FullTextEvent) {
+            // 完整文本（通常在流结束时）
+            final metadata = event.metadata;
+            if (metadata != null) {
+              accumulatedMeta.addAll(metadata);
+              accumulatedRawMetadata.addAll(metadata);
+              _appendExecutionWidgets(accumulatedWidgets, metadata);
+              captureCitationMetadata(metadata['citations']);
+              captureStructuredAdjustments(metadata);
+              captureLowYieldBlock(metadata);
+              _ref
+                  .read(experienceEnvelopeProvider.notifier)
+                  .updateFromMetadata(accumulatedRawMetadata);
+            }
+            final uxEnvelope = _extractUxEnvelope(metadata);
+            if (uxEnvelope.isNotEmpty) {
+              accumulatedUxEnvelope = {
+                ...(accumulatedUxEnvelope ?? const <String, dynamic>{}),
+                ...uxEnvelope,
+              };
+            }
+            // Extract dual_core_mode from ux_turn (lives in full_text event metadata)
+            final uxTurnMap =
+                accumulatedUxEnvelope?['ux_turn'] as Map<String, dynamic>?;
+            final newDualCoreMode = uxTurnMap?['dual_core_mode'] as String?;
+            if (newDualCoreMode != null) {
+              state = state.copyWith(dualCoreMode: newDualCoreMode);
+            }
+            if (metadata != null) {
+              final selectedExpertsRaw = metadata['selected_experts'];
+              final answerExpertsRaw = metadata['answer_experts'];
+              final routingStrategy = metadata['routing_strategy'];
+              final fallbackReason = metadata['fallback_reason'];
+              final routeConfidence = metadata['route_confidence'];
+              final expertEntrySource = metadata['expert_entry_source'];
+              final routingPreview = _parseJsonMap(metadata['routing_preview']);
+              final roundtableTurns = _parseJsonMapList(
+                metadata['roundtable_turns'],
+              );
+              final primaryAgent = metadata['primary_agent']?.toString();
+              final collaborationNarrative =
+                  metadata['collaboration_narrative']?.toString();
+              final collaborationMode =
+                  metadata['collaboration_mode']?.toString();
+              final predictionPreview = _parseJsonMap(
+                metadata['prediction_preview'],
+              );
+              final simulationPreview = _parseJsonMap(
+                metadata['simulation_preview'],
+              );
+              final reportPreview = _parseJsonMap(metadata['report_preview']);
+              final agentsInvolved = _parseSelectedExperts(
+                metadata['agents_involved'],
+              );
+              if (selectedExpertsRaw != null ||
+                  routingStrategy != null ||
+                  fallbackReason != null ||
+                  routeConfidence != null ||
+                  expertEntrySource != null) {
+                final selectedExperts = _parseSelectedExperts(
+                  selectedExpertsRaw,
+                );
+                accumulatedCollaboration = {
+                  ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+                  'selected_experts': selectedExperts,
+                  'answer_experts': _parseSelectedExperts(answerExpertsRaw),
+                  'routing_strategy': routingStrategy,
+                  'fallback_reason': fallbackReason,
+                  'route_confidence': routeConfidence,
+                  'expert_entry_source': expertEntrySource,
+                };
+              }
+              if (routingPreview != null && routingPreview.isNotEmpty) {
+                accumulatedRoutingPreview = routingPreview;
+                accumulatedCollaboration = {
+                  ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+                  'routing_preview': routingPreview,
+                };
+                state = state.copyWith(routingPreview: routingPreview);
+              }
+              if (roundtableTurns.isNotEmpty) {
+                accumulatedRoundtableTurns
+                  ..clear()
+                  ..addAll(roundtableTurns);
+                accumulatedCollaboration = {
+                  ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+                  'roundtable_turns': List<Map<String, dynamic>>.from(
+                    accumulatedRoundtableTurns,
+                  ),
+                };
+                state = state.copyWith(
+                  roundtableTurns: List<Map<String, dynamic>>.from(
+                    accumulatedRoundtableTurns,
+                  ),
+                );
+              }
+              if (collaborationNarrative != null &&
+                  collaborationNarrative.trim().isNotEmpty) {
+                accumulatedCollaborationNarrative =
+                    collaborationNarrative.trim();
+              }
+              if (collaborationMode != null &&
+                  collaborationMode.trim().isNotEmpty) {
+                accumulatedCollaborationMode = collaborationMode.trim();
+              }
+              if (agentsInvolved.isNotEmpty) {
+                accumulatedAgentsInvolved = agentsInvolved;
+              } else if (primaryAgent != null && primaryAgent.isNotEmpty) {
+                accumulatedAgentsInvolved = [primaryAgent];
+              }
+              if (_parseMetadataFlag(metadata['open_theater']) &&
+                  predictionPreview != null) {
+                accumulatedCollaboration = {
+                  ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+                  'open_theater': true,
+                  'deep_link': metadata['deep_link']?.toString(),
+                  'prediction_preview': predictionPreview,
+                  'source_chat_session_id':
+                      metadata['source_chat_session_id']?.toString(),
+                };
+              }
+              if (_parseMetadataFlag(metadata['open_simulation']) &&
+                  simulationPreview != null) {
+                accumulatedCollaboration = {
+                  ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+                  'open_simulation': true,
+                  'simulation_deep_link':
+                      metadata['simulation_deep_link']?.toString(),
+                  'simulation_preview': simulationPreview,
+                  'source_chat_session_id':
+                      metadata['source_chat_session_id']?.toString(),
+                };
+              }
+              if (_parseMetadataFlag(metadata['open_report']) &&
+                  reportPreview != null) {
+                accumulatedCollaboration = {
+                  ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+                  'open_report': true,
+                  'report_deep_link': metadata['report_deep_link']?.toString(),
+                  'report_preview': reportPreview,
+                  'source_chat_session_id':
+                      metadata['source_chat_session_id']?.toString(),
+                };
+              }
+            }
+            accumulatedContent = event.content;
+            pendingStreamingContent = accumulatedContent;
+            flushPending(immediate: true);
+          } else if (event is ErrorEvent) {
+            final userFriendlyMessage = ErrorMessages.getUserFriendlyMessage(
+              event.code,
+              event.message,
+            );
+            final actionSuggestion = ErrorMessages.getActionSuggestion(
+              event.code,
+            );
+            final isRetryable = ErrorMessages.isRetryable(event.code);
+
+            state = state.copyWith(
+              activeRunSummary: _buildRunSummary(
+                status: lastAiStatus,
+                details: event.message,
+              ),
+            );
+            finalizeRun(
+              phase: ChatRunPhase.failed,
+              errorMessage: actionSuggestion.isEmpty
+                  ? userFriendlyMessage
+                  : I18nService.instance.l10n.chatErrorWithSuggestion(
+                      userFriendlyMessage,
+                      actionSuggestion,
+                    ),
+              errorCode: event.code,
+              isRetryable: isRetryable,
+              restoreAttachments: hasQueuedAttachments,
+            );
+            return; // 提前退出
+          } else if (event is NackEvent) {
+            final userFriendlyMessage = ErrorMessages.getUserFriendlyMessage(
+              event.errorCode,
+              event.errorMessage,
+            );
+            final actionSuggestion = ErrorMessages.getActionSuggestion(
+              event.errorCode,
+            );
+            final isRetryable = ErrorMessages.isRetryable(event.errorCode);
+
+            state = state.copyWith(
+              activeRunSummary: _buildRunSummary(
+                status: lastAiStatus,
+                details: event.errorMessage,
+              ),
+            );
+            finalizeRun(
+              phase: ChatRunPhase.failed,
+              errorMessage: actionSuggestion.isEmpty
+                  ? userFriendlyMessage
+                  : I18nService.instance.l10n.chatErrorWithSuggestion(
+                      userFriendlyMessage,
+                      actionSuggestion,
+                    ),
+              errorCode: event.errorCode,
+              isRetryable: isRetryable,
+              restoreAttachments: hasQueuedAttachments,
+            );
+            return; // 提前退出
+          } else if (event is WidgetEvent) {
+            if (event.widgetType == 'system_update' &&
+                !_shouldIncludeSystemUpdate(event.widgetData)) {
               continue;
             }
-            accumulatedWidgets
-                .add(_normalizeWidgetPayload(widgetType, widgetData));
-            if (widgetType == 'low_yield_gentle_block') {
+            accumulatedWidgets.add(
+              _normalizeWidgetPayload(event.widgetType, event.widgetData),
+            );
+            if (event.widgetType == 'low_yield_gentle_block') {
               _ref
                   .read(lowYieldBlockProvider.notifier)
-                  .ingestPayload(widgetData);
+                  .ingestPayload(event.widgetData);
             }
-          }
-        } else if (event is CitationEvent) {
-          upsertSourceSummaryCitations(event.citations);
-        } else if (event is UsageEvent) {
-          state = state.copyWith(
-            lastPromptTokens: event.promptTokens,
-            lastCompletionTokens: event.completionTokens,
-            lastTotalTokens: event.totalTokens,
-          );
-          await _updateDailyUsage(event);
-        } else if (event is MetaEvent) {
-          accumulatedMeta.addAll(event.meta);
-          accumulatedRawMetadata.addAll(event.meta);
-          captureCitationMetadata(event.meta['citations']);
-          captureLowYieldBlock(event.meta);
-          captureStructuredAdjustments(event.meta);
-          flushPending();
-        } else if (event is ReasoningStepEvent) {
-          // 🆕 推理步骤事件 - Chain of Thought Visualization
-          reasoningStartTime ??= DateTime.now().millisecondsSinceEpoch;
+          } else if (event is ToolStartEvent) {
+            // 显示"正在使用工具: xxx"
+            lastAiStatus = 'EXECUTING_TOOL';
+            pendingAiStatus = 'EXECUTING_TOOL';
+            pendingAiStatusDetails = I18nService.instance.l10n.chatUsingTool(
+              event.toolName,
+            );
+            final nextTools = List<String>.from(state.activeTools);
+            if (!nextTools.contains(event.toolName)) {
+              nextTools.add(event.toolName);
+            }
+            state = state.copyWith(activeTools: nextTools);
+            flushPending();
+          } else if (event is ToolResultEvent) {
+            final widgetType = event.result.widgetType;
+            final widgetData = event.result.widgetData;
+            final toolName = event.result.toolName;
+            if (toolName.isNotEmpty) {
+              final nextTools = List<String>.from(state.activeTools)
+                ..removeWhere((tool) => tool == toolName);
+              state = state.copyWith(activeTools: nextTools);
+            }
+            if (widgetType != null && widgetData != null) {
+              if (widgetType == 'system_update' &&
+                  !_shouldIncludeSystemUpdate(widgetData)) {
+                continue;
+              }
+              accumulatedWidgets.add(
+                _normalizeWidgetPayload(widgetType, widgetData),
+              );
+              if (widgetType == 'low_yield_gentle_block') {
+                _ref
+                    .read(lowYieldBlockProvider.notifier)
+                    .ingestPayload(widgetData);
+              }
+            }
+          } else if (event is CitationEvent) {
+            upsertSourceSummaryCitations(event.citations);
+          } else if (event is UsageEvent) {
+            state = state.copyWith(
+              lastPromptTokens: event.promptTokens,
+              lastCompletionTokens: event.completionTokens,
+              lastTotalTokens: event.totalTokens,
+            );
+            await _updateDailyUsage(event);
+          } else if (event is MetaEvent) {
+            accumulatedMeta.addAll(event.meta);
+            accumulatedRawMetadata.addAll(event.meta);
+            captureCitationMetadata(event.meta['citations']);
+            captureLowYieldBlock(event.meta);
+            captureStructuredAdjustments(event.meta);
+            flushPending();
+          } else if (event is ReasoningStepEvent) {
+            // 🆕 推理步骤事件 - Chain of Thought Visualization
+            reasoningStartTime ??= DateTime.now().millisecondsSinceEpoch;
 
-          // Add timestamp to step
-          final stepWithTime = event.step.copyWith(
-            createdAt: event.step.createdAt ?? DateTime.now(),
-          );
+            // Add timestamp to step
+            final stepWithTime = event.step.copyWith(
+              createdAt: event.step.createdAt ?? DateTime.now(),
+            );
 
-          accumulatedReasoningSteps.add(stepWithTime);
+            accumulatedReasoningSteps.add(stepWithTime);
 
-          pendingReasoningSteps = List.from(accumulatedReasoningSteps);
-          pendingReasoningActive = true;
-          pendingReasoningStartTime = reasoningStartTime;
-          flushPending();
-        } else if (event is ActionStatusEvent) {
-          // ActionCard 状态更新事件
-          _handleActionStatus(event);
-          flushPending();
-        } else if (event is PlanReviewWidgetEvent) {
-          // Plan Review Widget Event
-          _handlePlanReviewWidget(event);
-          flushPending();
-        } else if (event is StateChangeEvent) {
-          // State Change Event (plan archived/restored/deleted, settings updated)
-          _handleStateChangeEvent(event);
-          flushPending();
-        } else if (event is PlanReviewStatusEvent) {
-          // Plan Review Status Event
-          _handlePlanReviewStatus(event);
-          flushPending();
-        } else if (event is ContentReviewWidgetEvent) {
-          // Content Review Widget Event (Phase 2b)
-          _handleContentReviewWidget(event);
-          flushPending();
-        } else if (event is ContentReflectionResultEvent) {
-          // Content Reflection Result Event (Phase 2b)
-          _handleContentReflectionResult(event);
-          flushPending();
-        } else if (event is AchievementUnlockEvent) {
-          // Achievement Unlock Event
-          _handleAchievementUnlock(event);
-          unawaited(_ref.read(closeToUnlockProvider.notifier).triggerCheck());
-          flushPending();
-        } else if (event is AchievementMilestoneEvent) {
-          // Achievement Milestone Event
-          _handleAchievementMilestone(event);
-          flushPending();
-        } else if (event is TransparencyStepEvent) {
-          // Transparency Step Event
-          state = state.copyWith(
-            currentStepId: event.currentStep,
-            currentStepIndex: event.stepIndex,
-            activeRunSummary: _buildRunSummary(
+            pendingReasoningSteps = List.from(accumulatedReasoningSteps);
+            pendingReasoningActive = true;
+            pendingReasoningStartTime = reasoningStartTime;
+            flushPending();
+          } else if (event is ActionStatusEvent) {
+            // ActionCard 状态更新事件
+            _handleActionStatus(event);
+            flushPending();
+          } else if (event is PlanReviewWidgetEvent) {
+            // Plan Review Widget Event
+            _handlePlanReviewWidget(event);
+            flushPending();
+          } else if (event is StateChangeEvent) {
+            // State Change Event (plan archived/restored/deleted, settings updated)
+            _handleStateChangeEvent(event);
+            flushPending();
+          } else if (event is PlanReviewStatusEvent) {
+            // Plan Review Status Event
+            _handlePlanReviewStatus(event);
+            flushPending();
+          } else if (event is ContentReviewWidgetEvent) {
+            // Content Review Widget Event (Phase 2b)
+            _handleContentReviewWidget(event);
+            flushPending();
+          } else if (event is ContentReflectionResultEvent) {
+            // Content Reflection Result Event (Phase 2b)
+            _handleContentReflectionResult(event);
+            flushPending();
+          } else if (event is AchievementUnlockEvent) {
+            // Achievement Unlock Event
+            _handleAchievementUnlock(event);
+            unawaited(_ref.read(closeToUnlockProvider.notifier).triggerCheck());
+            flushPending();
+          } else if (event is AchievementMilestoneEvent) {
+            // Achievement Milestone Event
+            _handleAchievementMilestone(event);
+            flushPending();
+          } else if (event is TransparencyStepEvent) {
+            // Transparency Step Event
+            state = state.copyWith(
+              currentStepId: event.currentStep,
               currentStepIndex: event.stepIndex,
-              totalSteps: event.totalSteps > 0 ? event.totalSteps : null,
-            ),
-          );
-          flushPending();
-        } else if (event is TransparencyCompleteEvent) {
-          // Transparency Complete Event
-          state = state.copyWith(
-            transparencyData: event.transparencyData,
-            activeRunSummary: _buildRunSummary(
-              totalSteps: event.transparencyData?.steps.length,
-            ),
-          );
-          flushPending();
-        } else if (event is RunLedgerSnapshotEvent) {
-          state = state.copyWith(
-            runLedgerSummary: event.summary,
-          );
-          flushPending();
-        } else if (event is OrchestrationTraceEvent) {
-          accumulatedOrchestrationTrace = event.traceData;
-          flushPending();
-        } else if (event is ModeSuggestionEvent) {
-          accumulatedModeSuggestion = event.suggestion;
-          flushPending();
-        } else if (event is RoutingPreviewEvent) {
-          accumulatedRoutingPreview = event.preview;
-          accumulatedCollaboration = {
-            ...(accumulatedCollaboration ?? const <String, dynamic>{}),
-            'routing_preview': event.preview,
-          };
-          state = state.copyWith(routingPreview: event.preview);
-          flushPending();
-        } else if (event is AgentTurnEvent) {
-          final turns = [...state.roundtableTurns];
-          final incoming = Map<String, dynamic>.from(event.turn);
-          final incomingAgent = incoming['agent_id']?.toString();
-          final incomingIndex = incoming['turn_index'];
-          final existingIndex = turns.indexWhere(
-            (item) =>
-                item['agent_id']?.toString() == incomingAgent &&
-                item['turn_index'] == incomingIndex,
-          );
-          if (existingIndex >= 0) {
-            turns[existingIndex] = incoming;
-          } else {
-            turns.add(incoming);
+              activeRunSummary: _buildRunSummary(
+                currentStepIndex: event.stepIndex,
+                totalSteps: event.totalSteps > 0 ? event.totalSteps : null,
+              ),
+            );
+            flushPending();
+          } else if (event is TransparencyCompleteEvent) {
+            // Transparency Complete Event
+            state = state.copyWith(
+              transparencyData: event.transparencyData,
+              activeRunSummary: _buildRunSummary(
+                totalSteps: event.transparencyData?.steps.length,
+              ),
+            );
+            flushPending();
+          } else if (event is RunLedgerSnapshotEvent) {
+            state = state.copyWith(runLedgerSummary: event.summary);
+            flushPending();
+          } else if (event is OrchestrationTraceEvent) {
+            accumulatedOrchestrationTrace = event.traceData;
+            flushPending();
+          } else if (event is ModeSuggestionEvent) {
+            accumulatedModeSuggestion = event.suggestion;
+            flushPending();
+          } else if (event is RoutingPreviewEvent) {
+            accumulatedRoutingPreview = event.preview;
+            accumulatedCollaboration = {
+              ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+              'routing_preview': event.preview,
+            };
+            state = state.copyWith(routingPreview: event.preview);
+            flushPending();
+          } else if (event is AgentTurnEvent) {
+            final turns = [...state.roundtableTurns];
+            final incoming = Map<String, dynamic>.from(event.turn);
+            final incomingAgent = incoming['agent_id']?.toString();
+            final incomingIndex = incoming['turn_index'];
+            final existingIndex = turns.indexWhere(
+              (item) =>
+                  item['agent_id']?.toString() == incomingAgent &&
+                  item['turn_index'] == incomingIndex,
+            );
+            if (existingIndex >= 0) {
+              turns[existingIndex] = incoming;
+            } else {
+              turns.add(incoming);
+            }
+            accumulatedRoundtableTurns
+              ..clear()
+              ..addAll(turns);
+            accumulatedCollaboration = {
+              ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+              if (accumulatedRoutingPreview != null)
+                'routing_preview': accumulatedRoutingPreview,
+              'roundtable_turns': List<Map<String, dynamic>>.from(turns),
+            };
+            state = state.copyWith(roundtableTurns: turns);
+            flushPending();
+          } else if (event is AgentActivityEvent) {
+            final activities = [...state.agentActivities];
+            final idx = activities.indexWhere(
+              (item) => item.agentId == event.agentId,
+            );
+            if (idx >= 0) {
+              activities[idx] = event;
+            } else {
+              activities.add(event);
+            }
+            state = state.copyWith(agentActivities: activities);
+            flushPending();
+          } else if (event is SprintModeSwitchEvent) {
+            // Sprint Mode Switch Event
+            _handleSprintModeSwitch(event);
+            flushPending();
+          } else if (event is StaleRecoveryEvent) {
+            // Spine: StaleStateGuard recovery card
+            state = state.copyWith(pendingStaleCard: event);
+            flushPending();
+          } else if (event is SpineReceiptEvent) {
+            // Spine: UserVisibleReceipt card
+            state = state.copyWith(pendingSpineReceipt: event);
+            flushPending();
+          } else if (event is CommunityHintEvent) {
+            // Spine: community insight card (divine moment #6 社群经验转策略)
+            state = state.copyWith(pendingCommunityHint: event);
+            flushPending();
+          } else if (event is UXWarningEvent) {
+            // Spine: proactive risk warning (divine moment #5 阻止低收益)
+            state = state.copyWith(pendingUXWarning: event);
+            flushPending();
+          } else if (event is GrowthCardEvent) {
+            // Spine: growth milestone card (divine moment #1 看见坚持)
+            state = state.copyWith(pendingGrowthCard: event);
+            flushPending();
+          } else if (event is GoalArbitrationEvent) {
+            // Spine: multi-goal conflict surface
+            state = state.copyWith(pendingGoalArbitration: event);
+            flushPending();
+          } else if (event is DivineMomentEvent) {
+            // Spine: divine moment card (MAGIC-002 through MAGIC-006)
+            state = state.copyWith(pendingDivineMoment: event);
+            flushPending();
+          } else if (event is SpineDegradedEvent) {
+            // STAB-012: Spine pipeline degraded — show subtle indicator
+            state = state.copyWith(spineDegraded: true);
+            flushPending();
+          } else if (event is CausalTraceEvent) {
+            // GAP-P2-2: Causal trace created — refresh timeline & show indicator
+            state = state.copyWith(
+              pendingCausalTraceId: event.traceIdValue,
+              causalTraceCount: state.causalTraceCount + 1,
+            );
+            _refreshCausalTimeline();
+            flushPending();
+          } else if (event is NotificationEvent) {
+            // Notification Event - 实时通知推送
+            _handleNotificationEvent(event);
+            flushPending();
+          } else if (event is CollaborationTimelineEvent) {
+            accumulatedCollaboration = event.collaborationData;
+            flushPending();
+          } else if (event is DoneEvent) {
+            // 流结束
+            // finishReason: event.finishReason
+            flushPending(immediate: true);
+            state = state.copyWith(runPhase: ChatRunPhase.finalizing);
+            if (state.activeTools.isNotEmpty) {
+              state = state.copyWith(activeTools: []);
+            }
+            if (state.agentActivities.isNotEmpty) {
+              snapshotAgentActivities = state.agentActivities
+                  .map(
+                    (item) => {
+                      'agent_id': item.agentId,
+                      'status': item.status,
+                      'display_name': item.displayName,
+                      'icon': item.icon,
+                      'color': item.color,
+                      'description': item.description,
+                      if (item.durationMs != null)
+                        'duration_ms': item.durationMs,
+                      if (item.resultSummary != null)
+                        'result_summary': item.resultSummary,
+                      if (item.collaborationMode != null)
+                        'collaboration_mode': item.collaborationMode,
+                      if (item.phase != null) 'phase': item.phase,
+                    },
+                  )
+                  .toList();
+            }
+            // 🔧 修复：清除状态指示器（"思考中"/"生成中"等）
+            finalizeRun(phase: ChatRunPhase.completed);
+            break;
           }
-          accumulatedRoundtableTurns
-            ..clear()
-            ..addAll(turns);
-          accumulatedCollaboration = {
-            ...(accumulatedCollaboration ?? const <String, dynamic>{}),
-            if (accumulatedRoutingPreview != null)
-              'routing_preview': accumulatedRoutingPreview,
-            'roundtable_turns': List<Map<String, dynamic>>.from(turns),
-          };
-          state = state.copyWith(roundtableTurns: turns);
-          flushPending();
-        } else if (event is AgentActivityEvent) {
-          final activities = [...state.agentActivities];
-          final idx =
-              activities.indexWhere((item) => item.agentId == event.agentId);
-          if (idx >= 0) {
-            activities[idx] = event;
-          } else {
-            activities.add(event);
-          }
-          state = state.copyWith(agentActivities: activities);
-          flushPending();
-        } else if (event is SprintModeSwitchEvent) {
-          // Sprint Mode Switch Event
-          _handleSprintModeSwitch(event);
-          flushPending();
-        } else if (event is StaleRecoveryEvent) {
-          // Spine: StaleStateGuard recovery card
-          state = state.copyWith(pendingStaleCard: event);
-          flushPending();
-        } else if (event is SpineReceiptEvent) {
-          // Spine: UserVisibleReceipt card
-          state = state.copyWith(pendingSpineReceipt: event);
-          flushPending();
-        } else if (event is CommunityHintEvent) {
-          // Spine: community insight card (divine moment #6 社群经验转策略)
-          state = state.copyWith(pendingCommunityHint: event);
-          flushPending();
-        } else if (event is UXWarningEvent) {
-          // Spine: proactive risk warning (divine moment #5 阻止低收益)
-          state = state.copyWith(pendingUXWarning: event);
-          flushPending();
-        } else if (event is GrowthCardEvent) {
-          // Spine: growth milestone card (divine moment #1 看见坚持)
-          state = state.copyWith(pendingGrowthCard: event);
-          flushPending();
-        } else if (event is GoalArbitrationEvent) {
-          // Spine: multi-goal conflict surface
-          state = state.copyWith(pendingGoalArbitration: event);
-          flushPending();
-        } else if (event is DivineMomentEvent) {
-          // Spine: divine moment card (MAGIC-002 through MAGIC-006)
-          state = state.copyWith(pendingDivineMoment: event);
-          flushPending();
-        } else if (event is SpineDegradedEvent) {
-          // STAB-012: Spine pipeline degraded — show subtle indicator
-          state = state.copyWith(spineDegraded: true);
-          flushPending();
-        } else if (event is CausalTraceEvent) {
-          // GAP-P2-2: Causal trace created — refresh timeline & show indicator
-          state = state.copyWith(
-            pendingCausalTraceId: event.traceIdValue,
-            causalTraceCount: state.causalTraceCount + 1,
-          );
-          _refreshCausalTimeline();
-          flushPending();
-        } else if (event is NotificationEvent) {
-          // Notification Event - 实时通知推送
-          _handleNotificationEvent(event);
-          flushPending();
-        } else if (event is CollaborationTimelineEvent) {
-          accumulatedCollaboration = event.collaborationData;
-          flushPending();
-        } else if (event is DoneEvent) {
-          // 流结束
-          // finishReason: event.finishReason
-          flushPending(immediate: true);
-          state = state.copyWith(runPhase: ChatRunPhase.finalizing);
-          if (state.activeTools.isNotEmpty) {
-            state = state.copyWith(activeTools: []);
-          }
-          if (state.agentActivities.isNotEmpty) {
-            snapshotAgentActivities = state.agentActivities
-                .map(
-                  (item) => {
-                    'agent_id': item.agentId,
-                    'status': item.status,
-                    'display_name': item.displayName,
-                    'icon': item.icon,
-                    'color': item.color,
-                    'description': item.description,
-                    if (item.durationMs != null) 'duration_ms': item.durationMs,
-                    if (item.resultSummary != null)
-                      'result_summary': item.resultSummary,
-                    if (item.collaborationMode != null)
-                      'collaboration_mode': item.collaborationMode,
-                    if (item.phase != null) 'phase': item.phase,
-                  },
-                )
-                .toList();
-          }
-          // 🔧 修复：清除状态指示器（"思考中"/"生成中"等）
-          finalizeRun(phase: ChatRunPhase.completed);
-          break;
         }
+
+        if (!isCurrentRequest() || sawTerminalEvent) {
+          return;
+        }
+        if (firstEventGuardFired) {
+          if (sendAttempt < maxChatSendAttempts) {
+            debugPrint(
+              '[ChatProvider] First-event guard fired (attempt $sendAttempt); '
+              'reconnecting and resending once as ${runId}_r1',
+            );
+            state = state.copyWith(
+              activeRunSummary: _buildRunSummary(
+                status: 'THINKING',
+                details: I18nService.instance.l10n.chatConnectionLost,
+              ),
+            );
+            // Dropping the socket makes the gateway cancel the in-flight
+            // upstream stream, releasing the engine session lock so the
+            // resend is not rejected as a busy-session conflict.
+            await _chatRepository.reconnect();
+            if (!isCurrentRequest()) {
+              return;
+            }
+            continue;
+          }
+          finalizeRun(
+            phase: ChatRunPhase.failed,
+            errorMessage: I18nService.instance.l10n.chatStreamTimeout(
+              firstEventTimeout.inSeconds,
+            ),
+            errorCode: kChatFirstEventTimeoutCode,
+            isRetryable: true,
+            restoreAttachments: hasQueuedAttachments,
+          );
+          return;
+        }
+        break;
       }
 
       if (!isCurrentRequest() || sawTerminalEvent) {

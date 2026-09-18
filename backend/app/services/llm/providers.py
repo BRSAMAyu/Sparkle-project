@@ -1,3 +1,4 @@
+import time
 from collections.abc import AsyncGenerator
 
 from fastapi import HTTPException
@@ -17,6 +18,7 @@ import httpx
 from app.services.llm.base import LLMProvider
 from app.services.llm.concurrency import llm_concurrency
 from app.core.exceptions import LLMServiceError
+from app.core.metrics import LLM_PROVIDER_TTFT
 
 
 class OpenAICompatibleProvider(LLMProvider):
@@ -62,6 +64,11 @@ class OpenAICompatibleProvider(LLMProvider):
             api_key=api_key,
             base_url=base_url,
             timeout=timeout_config,
+            # M-2 stream variance: disable the SDK's implicit retry loop
+            # (openai DEFAULT_MAX_RETRIES=2 with exponential backoff). It is
+            # invisible in logs/metrics and silently stacks up to ~2x TTFT tail
+            # latency; retry/fallback policy is owned by llm_fallback_manager.
+            max_retries=0,
         )
 
     def _get_provider_name(self) -> str:
@@ -127,6 +134,11 @@ class OpenAICompatibleProvider(LLMProvider):
         **kwargs
     ) -> AsyncGenerator[str, None]:
         provider = self._get_provider_name()
+        # M-2: provider-level TTFT probe (call start -> first content chunk).
+        # Isolates provider tail latency (58s observed at night) from engine
+        # orchestration; see sparkle_llm_provider_ttft_seconds.
+        ttft_started = time.perf_counter()
+        ttft_observed = False
         try:
             async with llm_concurrency.acquire(provider):
                 stream = await self.client.chat.completions.create(
@@ -139,6 +151,11 @@ class OpenAICompatibleProvider(LLMProvider):
                 async for chunk in stream:
                     content = chunk.choices[0].delta.content
                     if content:
+                        if not ttft_observed:
+                            ttft_observed = True
+                            LLM_PROVIDER_TTFT.labels(provider=provider, model=model).observe(
+                                time.perf_counter() - ttft_started
+                            )
                         yield content
                 await llm_concurrency.report_success(provider)
         except TimeoutError:

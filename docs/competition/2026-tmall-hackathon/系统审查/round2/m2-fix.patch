@@ -1,0 +1,2613 @@
+diff --git a/backend/app/core/metrics.py b/backend/app/core/metrics.py
+index 86ba15b9..9755f868 100755
+--- a/backend/app/core/metrics.py
++++ b/backend/app/core/metrics.py
+@@ -45,6 +45,19 @@ LLM_CALL_DURATION = get_or_create_metric(
+     Histogram, "sparkle_llm_call_duration_seconds", "LLM call duration in seconds", ["model", "provider"]
+ )
+ 
++# M-2 stream variance: provider-level time-to-first-chunk. Observed in
++# OpenAICompatibleProvider.stream_chat from call start to the first content
++# chunk, isolating provider TTFT (connect + model latency) from engine
++# orchestration overhead. Tail values (58s observed at night) are the root
++# cause of "90s silent stream" incidents.
++LLM_PROVIDER_TTFT = get_or_create_metric(
++    Histogram,
++    "sparkle_llm_provider_ttft_seconds",
++    "Provider-level time to first stream content chunk in seconds",
++    ["provider", "model"],
++    buckets=[0.5, 1.0, 2.0, 3.0, 5.0, 8.0, 13.0, 21.0, 34.0, 55.0, 89.0],
++)
++
+ AI_RESPONSE_TOTAL_DURATION = get_or_create_metric(
+     Histogram,
+     "sparkle_ai_response_total_duration_seconds",
+diff --git a/backend/app/services/llm/providers.py b/backend/app/services/llm/providers.py
+index fb3408a2..01dcc6cb 100755
+--- a/backend/app/services/llm/providers.py
++++ b/backend/app/services/llm/providers.py
+@@ -1,3 +1,4 @@
++import time
+ from collections.abc import AsyncGenerator
+ 
+ from fastapi import HTTPException
+@@ -17,6 +18,7 @@ import httpx
+ from app.services.llm.base import LLMProvider
+ from app.services.llm.concurrency import llm_concurrency
+ from app.core.exceptions import LLMServiceError
++from app.core.metrics import LLM_PROVIDER_TTFT
+ 
+ 
+ class OpenAICompatibleProvider(LLMProvider):
+@@ -62,6 +64,11 @@ class OpenAICompatibleProvider(LLMProvider):
+             api_key=api_key,
+             base_url=base_url,
+             timeout=timeout_config,
++            # M-2 stream variance: disable the SDK's implicit retry loop
++            # (openai DEFAULT_MAX_RETRIES=2 with exponential backoff). It is
++            # invisible in logs/metrics and silently stacks up to ~2x TTFT tail
++            # latency; retry/fallback policy is owned by llm_fallback_manager.
++            max_retries=0,
+         )
+ 
+     def _get_provider_name(self) -> str:
+@@ -127,6 +134,11 @@ class OpenAICompatibleProvider(LLMProvider):
+         **kwargs
+     ) -> AsyncGenerator[str, None]:
+         provider = self._get_provider_name()
++        # M-2: provider-level TTFT probe (call start -> first content chunk).
++        # Isolates provider tail latency (58s observed at night) from engine
++        # orchestration; see sparkle_llm_provider_ttft_seconds.
++        ttft_started = time.perf_counter()
++        ttft_observed = False
+         try:
+             async with llm_concurrency.acquire(provider):
+                 stream = await self.client.chat.completions.create(
+@@ -139,6 +151,11 @@ class OpenAICompatibleProvider(LLMProvider):
+                 async for chunk in stream:
+                     content = chunk.choices[0].delta.content
+                     if content:
++                        if not ttft_observed:
++                            ttft_observed = True
++                            LLM_PROVIDER_TTFT.labels(provider=provider, model=model).observe(
++                                time.perf_counter() - ttft_started
++                            )
+                         yield content
+                 await llm_concurrency.report_success(provider)
+         except TimeoutError:
+diff --git a/backend/app/services/llm_service.py b/backend/app/services/llm_service.py
+index 0b56e754..c9773090 100755
+--- a/backend/app/services/llm_service.py
++++ b/backend/app/services/llm_service.py
+@@ -9,6 +9,7 @@ from __future__ import annotations
+ import asyncio
+ import json
+ import re
++import time
+ import uuid
+ from collections.abc import AsyncGenerator, AsyncIterator
+ from dataclasses import dataclass
+@@ -22,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
+ from app.config import settings
+ from app.core.agent_profiles import AgentRole, ModelTier, TaskType
+ from app.core.cost_controller import is_llm_within_budget, record_llm_cost
+-from app.core.metrics import LLM_PUSH_CONTENT_PARSE_FAILURE_TOTAL
++from app.core.metrics import LLM_PROVIDER_TTFT, LLM_PUSH_CONTENT_PARSE_FAILURE_TOTAL
+ from app.core.llm_monitoring import LLMMonitor
+ from app.core.llm_router import LLMSelection, ModelProvider, llm_router
+ from app.core.llm_secure_io import (
+@@ -34,12 +35,33 @@ from app.core.llm_secure_io import (
+     wrap_tool_result,
+     wrap_user_message,
+ )
++from app.core.exceptions import LLMServiceError
+ from app.services.circuit_breaker import CircuitBreakerOpenException, circuit_breaker_service
+ from app.services.llm.base import LLMProvider
+ from app.services.llm.concurrency import llm_concurrency
+ from app.services.llm.fallback import llm_fallback_manager
+ from app.services.llm.providers import OpenAICompatibleProvider
+ 
++# ---------------------------------------------------------------------------
++# M-2 stream variance guards (see round2/m2-stream-variance.md):
++# The old code applied a single 120s/300s `stream_timeout` to the whole
++# provider stream, so a provider TTFT tail (58s observed) plus SDK retries
++# could hold a chat silently for 2 minutes before the fallback manager ever
++# switched models. We now split the budget:
++#   - FIRST_CHUNK_*: deadline for the *first* content chunk; expiry raises an
++#     LLMServiceError whose message contains "timeout" so the existing
++#     fallback manager classifies it as FallbackReason.TIMEOUT and switches
++#     models instead of hanging.
++#   - OVERALL_*: after the first chunk arrives the deadline is rescheduled to
++#     now + OVERALL, keeping the original generous budget for chunk gaps /
++#     long generations (reasoning models keep their larger budgets).
++# Module-level so tests can shrink the windows.
++# ---------------------------------------------------------------------------
++LLM_STREAM_FIRST_CHUNK_TIMEOUT_SECONDS = 45
++LLM_STREAM_FIRST_CHUNK_TIMEOUT_REASONING_SECONDS = 90
++LLM_STREAM_OVERALL_TIMEOUT_SECONDS = 120
++LLM_STREAM_OVERALL_TIMEOUT_REASONING_SECONDS = 300
++
+ # ==========================================
+ # 🎭 演示模式预设响应 (Demo Mock Responses)
+ # ==========================================
+@@ -815,10 +837,52 @@ class LLMService:
+         if not hasattr(current_provider, "client"):
+             raise NotImplementedError("Current LLM provider does not expose raw chat completions.")
+ 
+-        async with llm_concurrency.acquire(provider_name):
+-            stream = await current_provider.client.chat.completions.create(**params)
+-            async for chunk in stream:
+-                yield chunk
++        # M-2 stream variance: this is the raw stream behind
++        # chat_stream_with_tools (main chat generation). Same two-stage
++        # deadline as stream_chat._stream_with_selection — a bounded window
++        # for the first chunk (raising a fallback-eligible "timeout" error
++        # instead of hanging), then the generous overall budget.
++        model_name = str(params["model"])
++        is_deep_reasoning = "reason" in model_name.lower() or "thinking" in model_name.lower()
++        overall_timeout = (
++            LLM_STREAM_OVERALL_TIMEOUT_REASONING_SECONDS
++            if is_deep_reasoning
++            else LLM_STREAM_OVERALL_TIMEOUT_SECONDS
++        )
++        first_chunk_timeout = (
++            LLM_STREAM_FIRST_CHUNK_TIMEOUT_REASONING_SECONDS
++            if is_deep_reasoning
++            else LLM_STREAM_FIRST_CHUNK_TIMEOUT_SECONDS
++        )
++
++        try:
++            async with llm_concurrency.acquire(provider_name):
++                loop = asyncio.get_running_loop()
++                ttft_started = time.perf_counter()
++                async with asyncio.timeout(first_chunk_timeout) as stream_deadline:
++                    got_first_chunk = False
++                    stream = await current_provider.client.chat.completions.create(**params)
++                    async for chunk in stream:
++                        if not got_first_chunk:
++                            got_first_chunk = True
++                            stream_deadline.reschedule(loop.time() + overall_timeout)
++                            # M-2: provider-level TTFT probe for the raw path.
++                            LLM_PROVIDER_TTFT.labels(provider=provider_name, model=model_name).observe(
++                                time.perf_counter() - ttft_started
++                            )
++                        yield chunk
++        except TimeoutError:
++            # asyncio.timeout expiry. The message MUST contain "timeout" so
++            # llm_fallback_manager._detect_fallback_reason maps it to
++            # FallbackReason.TIMEOUT and switches models.
++            logger.warning(
++                f"[LLM] Raw stream timeout for model {model_name} "
++                f"(first_chunk_timeout={first_chunk_timeout}s, overall={overall_timeout}s), triggering fallback"
++            )
++            raise LLMServiceError(
++                f"LLM stream timeout: model {model_name} exceeded "
++                f"first-chunk window ({first_chunk_timeout}s)"
++            ) from None
+ 
+     async def _create_raw_stream_with_fallback(
+         self,
+@@ -1066,18 +1130,49 @@ class LLMService:
+                 provider_name, current_provider, request_kwargs = self._build_provider_for_selection(selection)
+ 
+                 is_deep_reasoning = "reason" in selection.config.model_name.lower() or "thinking" in selection.config.model_name.lower()
+-                stream_timeout = 300 if is_deep_reasoning else 120
++                overall_timeout = (
++                    LLM_STREAM_OVERALL_TIMEOUT_REASONING_SECONDS
++                    if is_deep_reasoning
++                    else LLM_STREAM_OVERALL_TIMEOUT_SECONDS
++                )
++                first_chunk_timeout = (
++                    LLM_STREAM_FIRST_CHUNK_TIMEOUT_REASONING_SECONDS
++                    if is_deep_reasoning
++                    else LLM_STREAM_FIRST_CHUNK_TIMEOUT_SECONDS
++                )
+ 
+                 try:
+                     async with llm_concurrency.acquire(provider_name):
+-                        async with asyncio.timeout(stream_timeout):
++                        loop = asyncio.get_running_loop()
++                        # M-2: two-stage deadline — strict window for the first
++                        # content chunk (falls back to another model instead of
++                        # hanging), then the generous overall budget for the
++                        # remainder of the stream.
++                        async with asyncio.timeout(first_chunk_timeout) as stream_deadline:
++                            got_first_chunk = False
+                             async for chunk in current_provider.stream_chat(
+                                 safe_messages,
+                                 model=selection.config.model_name,
+                                 temperature=selection.config.temperature,
+                                 **request_kwargs
+                             ):
++                                if not got_first_chunk:
++                                    got_first_chunk = True
++                                    stream_deadline.reschedule(loop.time() + overall_timeout)
+                                 yield chunk
++                except TimeoutError:
++                    # asyncio.timeout expiry. The message MUST contain "timeout"
++                    # so llm_fallback_manager._detect_fallback_reason maps it to
++                    # FallbackReason.TIMEOUT and switches models.
++                    stage = "first-chunk" if not got_first_chunk else "mid-stream"
++                    logger.warning(
++                        f"[LLM] Stream timeout ({stage}) for model {selection.config.model_name} "
++                        f"(first_chunk_timeout={first_chunk_timeout}s, overall={overall_timeout}s), triggering fallback"
++                    )
++                    raise LLMServiceError(
++                        f"LLM stream timeout: model {selection.config.model_name} exceeded "
++                        f"{stage} window (first_chunk={first_chunk_timeout}s, overall={overall_timeout}s)"
++                    ) from None
+                 except Exception as e:
+                     logger.error(f"[LLM] Stream processing failed for model {selection.config.model_name}: {e}")
+                     raise e
+diff --git a/backend/tests/test_m2_stream_variance_guards.py b/backend/tests/test_m2_stream_variance_guards.py
+new file mode 100644
+index 00000000..890fd4fb
+--- /dev/null
++++ b/backend/tests/test_m2_stream_variance_guards.py
+@@ -0,0 +1,305 @@
++"""M-2 stream variance guards (round2/m2-stream-variance.md).
++
++Red-green coverage for the three provider-side amplifiers:
++1. OpenAI SDK implicit retries disabled (max_retries=0).
++2. First-chunk stream deadline (45s / 90s reasoning) triggers the existing
++   fallback path instead of hanging for the full 120s/300s stream budget,
++   while the overall budget still applies after the first chunk arrives.
++3. Provider-level TTFT histogram (sparkle_llm_provider_ttft_seconds) is
++   registered and observed per provider/model.
++"""
++
++from __future__ import annotations
++
++import asyncio
++from types import SimpleNamespace
++from unittest.mock import AsyncMock
++
++import pytest
++from prometheus_client import REGISTRY
++
++import app.services.llm_service as llm_service_module
++from app.core.agent_profiles import AgentRole
++from app.core.llm_router import LLMSelection, ModelConfig, ModelProvider
++from app.services.llm.base import LLMProvider
++from app.services.llm.fallback import FallbackReason, llm_fallback_manager
++from app.services.llm.providers import OpenAICompatibleProvider
++from app.services.llm_service import LLMService
++
++DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1"
++
++
++def _make_selection(model_key: str = "m2-test-primary", model_name: str = "deepseek-chat") -> LLMSelection:
++    return LLMSelection(
++        model_key=model_key,
++        config=ModelConfig(
++            provider=ModelProvider.DEEPSEEK,
++            model_name=model_name,
++            base_url=DEEPSEEK_BASE_URL,
++            api_key="sk-test",
++        ),
++        agent_role=AgentRole.GENERATION,
++        task_type=None,
++        reason="m2 test selection",
++    )
++
++
++def _make_service(provider: LLMProvider, selection: LLMSelection) -> LLMService:
++    service = LLMService(enable_dynamic_routing=False)
++    service.demo_mode = False
++    service._current_selection = selection
++    service._provider = provider
++    return service
++
++
++class _ScriptedStreamProvider(LLMProvider):
++    """Yields per-call scripted streams; each call pops the next behavior."""
++
++    def __init__(self, behaviors: list[str]):
++        self.behaviors = list(behaviors)
++        self.calls = 0
++
++    async def chat(self, messages, model, temperature: float = 0.7, **kwargs) -> str:
++        return ""
++
++    async def stream_chat(self, messages, model, temperature: float = 0.7, **kwargs):
++        self.calls += 1
++        behavior = self.behaviors.pop(0) if self.behaviors else "hang"
++        if behavior == "hang":
++            # Silent provider: no first chunk within any sane window.
++            await asyncio.sleep(30)
++            yield "never"
++            return
++        # behavior == "ok": healthy stream with a pause AFTER the first chunk.
++        yield "ok-1"
++        await asyncio.sleep(0.15)
++        yield "ok-2"
++
++
++class _RawClientProvider(LLMProvider):
++    """Exposes .client.chat.completions.create like OpenAICompatibleProvider,
++    serving scripted raw streams — the main chat generation path
++    (chat_stream_with_tools -> _create_raw_stream)."""
++
++    def __init__(self, behaviors: list[str]):
++        self.behaviors = list(behaviors)
++        self.calls = 0
++        provider = self
++
++        async def create(**params):
++            provider.calls += 1
++            behavior = provider.behaviors.pop(0) if provider.behaviors else "hang"
++            if behavior == "hang":
++                return _hanging_raw_stream()
++            return _healthy_raw_stream()
++
++        self.client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
++
++    async def chat(self, messages, model, temperature: float = 0.7, **kwargs) -> str:
++        return ""
++
++    async def stream_chat(self, messages, model, temperature: float = 0.7, **kwargs):
++        yield "unused"
++
++
++async def _hanging_raw_stream():
++    # Silent provider: no first chunk within any sane window.
++    await asyncio.sleep(30)
++    yield SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content="never"))])
++
++
++def _raw_chunk(content: str):
++    return SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content=content, tool_calls=None))])
++
++
++async def _healthy_raw_stream():
++    yield _raw_chunk("raw-1")
++    await asyncio.sleep(0.15)
++    yield _raw_chunk("raw-2")
++
++
++class _StubFallbackManager:
++    """Records the first stream attempt; on a fallback-eligible error it
++    re-runs the stream once, mirroring execute_stream_with_fallback."""
++
++    def __init__(self) -> None:
++        self.first_error: Exception | None = None
++        self.attempts = 0
++
++    async def execute_stream_with_fallback(self, selection, stream_fn, operation_type="stream_chat"):
++        self.attempts += 1
++        try:
++            async for chunk in stream_fn(selection):
++                yield chunk
++            return
++        except Exception as exc:  # noqa: BLE001 - test stub mirrors real manager
++            self.first_error = exc
++            if "timeout" not in str(exc).lower():
++                raise
++        # Fallback switch (same stream_fn, second attempt succeeds).
++        async for chunk in stream_fn(selection):
++            yield chunk
++
++
++# ---------------------------------------------------------------------------
++# 1. SDK implicit retries
++# ---------------------------------------------------------------------------
++
++
++def test_openai_provider_disables_sdk_implicit_retries():
++    provider = OpenAICompatibleProvider(api_key="sk-test", base_url=DEEPSEEK_BASE_URL)
++    # openai DEFAULT_MAX_RETRIES=2 stacked invisible exponential backoff on
++    # TTFT tails; the fallback manager owns retry policy now.
++    assert provider.client.max_retries == 0
++
++
++def test_openai_provider_name_resolution_unchanged():
++    provider = OpenAICompatibleProvider(api_key="sk-test", base_url=DEEPSEEK_BASE_URL)
++    assert provider._get_provider_name() == "deepseek"
++
++
++# ---------------------------------------------------------------------------
++# 2. First-chunk deadline -> fallback path
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.asyncio
++async def test_first_chunk_timeout_triggers_fallback(monkeypatch):
++    monkeypatch.setattr(llm_service_module, "LLM_STREAM_FIRST_CHUNK_TIMEOUT_SECONDS", 0.05)
++    monkeypatch.setattr(llm_service_module, "LLM_STREAM_OVERALL_TIMEOUT_SECONDS", 1.0)
++
++    selection = _make_selection()
++    provider = _ScriptedStreamProvider(["hang", "ok"])
++    service = _make_service(provider, selection)
++
++    stub = _StubFallbackManager()
++    monkeypatch.setattr(llm_service_module, "llm_fallback_manager", stub)
++
++    chunks: list[str] = []
++    async for chunk in service.stream_chat([{"role": "user", "content": "hi"}], user_context={"user_id": "u1"}):
++        chunks.append(chunk)
++
++    assert chunks == ["ok-1", "ok-2"]
++    assert provider.calls == 2, "first attempt hangs, fallback re-runs the stream"
++    assert stub.first_error is not None
++    assert "timeout" in str(stub.first_error).lower()
++    # The raised error must be classified as TIMEOUT by the real fallback
++    # manager, otherwise no model switch would happen.
++    assert llm_fallback_manager._detect_fallback_reason(stub.first_error) is FallbackReason.TIMEOUT
++
++
++@pytest.mark.asyncio
++async def test_first_chunk_arrival_relaxes_deadline_for_stream_body(monkeypatch):
++    # A 0.15s gap between chunks exceeds the 0.05s first-chunk window but is
++    # well within the overall budget: the deadline must be rescheduled after
++    # the first chunk, not cut the healthy stream.
++    monkeypatch.setattr(llm_service_module, "LLM_STREAM_FIRST_CHUNK_TIMEOUT_SECONDS", 0.05)
++    monkeypatch.setattr(llm_service_module, "LLM_STREAM_OVERALL_TIMEOUT_SECONDS", 5.0)
++
++    selection = _make_selection()
++    provider = _ScriptedStreamProvider(["ok"])
++    service = _make_service(provider, selection)
++
++    stub = _StubFallbackManager()
++    monkeypatch.setattr(llm_service_module, "llm_fallback_manager", stub)
++
++    chunks: list[str] = []
++    async for chunk in service.stream_chat([{"role": "user", "content": "hi"}], user_context={"user_id": "u1"}):
++        chunks.append(chunk)
++
++    assert chunks == ["ok-1", "ok-2"]
++    assert stub.first_error is None, "healthy stream must not hit the first-chunk deadline"
++    assert provider.calls == 1
++
++
++@pytest.mark.asyncio
++async def test_main_chain_raw_stream_first_chunk_timeout_triggers_fallback(monkeypatch):
++    monkeypatch.setattr(llm_service_module, "LLM_STREAM_FIRST_CHUNK_TIMEOUT_SECONDS", 0.05)
++    monkeypatch.setattr(llm_service_module, "LLM_STREAM_OVERALL_TIMEOUT_SECONDS", 1.0)
++
++    selection = _make_selection()
++    provider = _RawClientProvider(["hang", "ok"])
++    service = _make_service(provider, selection)
++
++    stub = _StubFallbackManager()
++    monkeypatch.setattr(llm_service_module, "llm_fallback_manager", stub)
++
++    chunks = [
++        chunk
++        async for chunk in service.chat_stream_with_tools(
++            system_prompt="sys",
++            user_message="hi",
++            tools=[],
++            user_context={"user_id": "u1"},
++        )
++        if chunk.type == "text"
++    ]
++
++    assert [chunk.content for chunk in chunks] == ["raw-1", "raw-2"]
++    assert provider.calls == 2, "first attempt hangs, fallback re-runs the stream"
++    assert stub.first_error is not None
++    assert "timeout" in str(stub.first_error).lower()
++    assert llm_fallback_manager._detect_fallback_reason(stub.first_error) is FallbackReason.TIMEOUT
++
++
++@pytest.mark.asyncio
++async def test_raw_stream_observes_provider_ttft_histogram():
++    selection = _make_selection()
++    provider = _RawClientProvider(["ok"])
++    service = _make_service(provider, selection)
++
++    before = _ttft_count("deepseek", "deepseek-chat") or 0.0
++
++    _ = [
++        chunk
++        async for chunk in service.chat_stream_with_tools(
++            system_prompt="sys",
++            user_message="hi",
++            tools=[],
++            user_context={"user_id": "u1"},
++        )
++        if chunk.type == "text"
++    ]
++
++    after = _ttft_count("deepseek", "deepseek-chat")
++    assert after == before + 1
++
++
++# ---------------------------------------------------------------------------
++# 3. Provider TTFT probe
++# ---------------------------------------------------------------------------
++
++
++def _ttft_count(provider_label: str, model: str) -> float | None:
++    return REGISTRY.get_sample_value(
++        "sparkle_llm_provider_ttft_seconds_count",
++        {"provider": provider_label, "model": model},
++    )
++
++
++@pytest.mark.asyncio
++async def test_provider_ttft_histogram_registered_and_observed():
++    provider = OpenAICompatibleProvider(api_key="sk-test", base_url=DEEPSEEK_BASE_URL)
++
++    class _Chunk:
++        def __init__(self, content: str):
++            self.choices = [SimpleNamespace(delta=SimpleNamespace(content=content))]
++
++    async def fake_stream():
++        await asyncio.sleep(0.05)  # simulated provider TTFT
++        yield _Chunk("hello")
++        yield _Chunk(" world")
++
++    provider.client = SimpleNamespace(
++        chat=SimpleNamespace(completions=SimpleNamespace(create=AsyncMock(return_value=fake_stream())))
++    )
++
++    model = "deepseek-chat"
++    before = _ttft_count("deepseek", model) or 0.0
++
++    chunks = [chunk async for chunk in provider.stream_chat([{"role": "user", "content": "hi"}], model=model)]
++
++    assert chunks == ["hello", " world"]
++    after = _ttft_count("deepseek", model)
++    assert after is not None, "sparkle_llm_provider_ttft_seconds must be registered"
++    assert after == before + 1
+diff --git a/mobile/lib/features/chat/presentation/providers/chat_provider.dart b/mobile/lib/features/chat/presentation/providers/chat_provider.dart
+index d90c7ad4..620f6e4a 100755
+--- a/mobile/lib/features/chat/presentation/providers/chat_provider.dart
++++ b/mobile/lib/features/chat/presentation/providers/chat_provider.dart
+@@ -56,6 +56,94 @@ part 'chat_notifier_history.dart';
+ part 'chat_notifier_actions.dart';
+ part 'chat_provider_wiring.dart';
+ 
++/// M-2 stream variance: error code injected by [chatStreamWithFirstEventGuard]
++/// when no stream event arrives within the guard window.
++const String kChatFirstEventTimeoutCode = 'FIRST_EVENT_TIMEOUT';
++
++/// M-2 stream variance: wrap a chat event stream with a first-event guard.
++///
++/// Diagnosis (round2/m2-stream-variance.md): provider TTFT tails (58s
++/// observed) used to pass straight through to the main chat UI as a silent
++/// hang because nothing timed out before the engine's 120s stream budget.
++///
++/// Semantics:
++/// - Any event (status/metadata/text/widgets/...) disarms the guard — frames
++///   other than final text already prove the run is alive (same liveness rule
++///   as the modeling screen's A-3 guard).
++/// - If [timeout] elapses with zero events, the source subscription is
++///   cancelled and a single [ErrorEvent] with code
++///   [kChatFirstEventTimeoutCode] is emitted, then the stream closes.
++Stream<ChatStreamEvent> chatStreamWithFirstEventGuard(
++  Stream<ChatStreamEvent> source,
++  Duration timeout, {
++  void Function()? onGuardFired,
++}) {
++  late final StreamController<ChatStreamEvent> controller;
++  StreamSubscription<ChatStreamEvent>? subscription;
++  Timer? guardTimer;
++  var sawFirstEvent = false;
++
++  void disarm() {
++    guardTimer?.cancel();
++    guardTimer = null;
++  }
++
++  controller = StreamController<ChatStreamEvent>(
++    onListen: () {
++      guardTimer = Timer(timeout, () {
++        if (controller.isClosed || sawFirstEvent) {
++          return;
++        }
++        debugPrint(
++          '[ChatProvider] First-event guard fired: no event within '
++          '${timeout.inSeconds}s',
++        );
++        onGuardFired?.call();
++        disarm();
++        unawaited(subscription?.cancel());
++        subscription = null;
++        controller.add(
++          ErrorEvent(
++            code: kChatFirstEventTimeoutCode,
++            message: 'No first stream event within ${timeout.inSeconds}s',
++            retryable: true,
++          ),
++        );
++        unawaited(controller.close());
++      });
++      subscription = source.listen(
++        (event) {
++          sawFirstEvent = true;
++          disarm();
++          if (!controller.isClosed) {
++            controller.add(event);
++          }
++        },
++        onError: (Object error, StackTrace stackTrace) {
++          disarm();
++          if (!controller.isClosed) {
++            controller.addError(error, stackTrace);
++          }
++        },
++        onDone: () {
++          disarm();
++          if (!controller.isClosed) {
++            unawaited(controller.close());
++          }
++        },
++      );
++    },
++    onPause: () => subscription?.pause(),
++    onResume: () => subscription?.resume(),
++    onCancel: () async {
++      disarm();
++      await subscription?.cancel();
++      subscription = null;
++    },
++  );
++  return controller.stream;
++}
++
+ // 2. ChatNotifier Class
+ class ChatNotifier extends StateNotifier<ChatState> {
+   ChatNotifier(this._chatRepository, this._ref) : super(ChatState()) {
+@@ -68,20 +156,33 @@ class ChatNotifier extends StateNotifier<ChatState> {
+     }
+ 
+     // 监听 WebSocket 连接状态
+-    _connectionStateSubscription =
+-        _chatRepository.connectionStateStream.listen((connectionState) {
+-      if (_isDisposed) return;
+-      state = state.copyWith(wsConnectionState: connectionState);
+-    });
++    _connectionStateSubscription = _chatRepository.connectionStateStream.listen(
++      (connectionState) {
++        if (_isDisposed) return;
++        state = state.copyWith(wsConnectionState: connectionState);
++      },
++    );
+   }
+ 
+   static const int historyPageSize = 20;
+ 
++  /// M-2 stream variance: window for the first stream event on the main chat
++  /// chain. If zero events arrive in time, the run is cancelled and resent
++  /// once (see sendMessage). Mutable + visible for tests so the guard path can
++  /// be exercised quickly; 30s covers p90 TTFT (~22s observed) while staying
++  /// well under the engine's 45s first-chunk fallback deadline.
++  @visibleForTesting
++  static Duration firstEventGuardTimeout = const Duration(seconds: 30);
++
++  /// M-2: total send attempts per message = 1 initial + 1 guard resend.
++  static const int maxChatSendAttempts = 2;
++
+   final ChatRepository _chatRepository;
+   final Ref _ref;
+   StreamSubscription<WsConnectionState>? _connectionStateSubscription;
+-  final _Debouncer _streamDebouncer =
+-      _Debouncer(const Duration(milliseconds: 50));
++  final _Debouncer _streamDebouncer = _Debouncer(
++    const Duration(milliseconds: 50),
++  );
+   bool _isDisposed = false;
+   static const String _dailyUsageDateKey = 'chat_daily_usage_date';
+   static const String _dailyUsageTokensKey = 'chat_daily_usage_tokens';
+@@ -189,10 +290,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
+     );
+   }
+ 
+-  void _beginRun({
+-    required String runId,
+-    ChatMessageModel? userMessage,
+-  }) {
++  void _beginRun({required String runId, ChatMessageModel? userMessage}) {
+     final nowMs = DateTime.now().millisecondsSinceEpoch;
+     state = state.copyWith(
+       messages: userMessage == null
+@@ -248,9 +346,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
+       createdAt: DateTime.now(),
+       isInterrupted: true,
+     );
+-    state = state.copyWith(
+-      messages: [...state.messages, interruptedMessage],
+-    );
++    state = state.copyWith(messages: [...state.messages, interruptedMessage]);
+   }
+ 
+   @override
+@@ -473,12 +569,14 @@ class ChatNotifier extends StateNotifier<ChatState> {
+         envelope[key] = value;
+       }
+     }
+-    final structuredAdjustments =
+-        _parseJsonMapList(metadata['structured_cognitive_adjustments']);
++    final structuredAdjustments = _parseJsonMapList(
++      metadata['structured_cognitive_adjustments'],
++    );
+     if (structuredAdjustments.isNotEmpty) {
+       envelope['structured_cognitive_adjustments'] = structuredAdjustments;
+-      final uxTurn =
+-          Map<String, dynamic>.from(envelope['ux_turn'] as Map? ?? const {});
++      final uxTurn = Map<String, dynamic>.from(
++        envelope['ux_turn'] as Map? ?? const {},
++      );
+       envelope['ux_turn'] = {
+         ...uxTurn,
+         'structured_cognitive_adjustments': structuredAdjustments,
+@@ -953,8 +1051,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
+     var shouldResetSending = true;
+ 
+     void upsertSourceSummaryCitations(List<Map<String, dynamic>> citations) {
+-      accumulatedRawMetadata['citations'] =
+-          List<Map<String, dynamic>>.from(citations);
++      accumulatedRawMetadata['citations'] = List<Map<String, dynamic>>.from(
++        citations,
++      );
+       final data = {
+         'citations_available': citations.isNotEmpty,
+         'reference_scope': citations.every(
+@@ -977,10 +1076,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
+         );
+       } else {
+         accumulatedWidgets.add(
+-          WidgetPayload(
+-            type: 'source_summary',
+-            data: data,
+-          ),
++          WidgetPayload(type: 'source_summary', data: data),
+         );
+       }
+     }
+@@ -1003,8 +1099,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
+       if (metadata == null) {
+         return;
+       }
+-      final adjustments =
+-          _parseJsonMapList(metadata['structured_cognitive_adjustments']);
++      final adjustments = _parseJsonMapList(
++        metadata['structured_cognitive_adjustments'],
++      );
+       if (adjustments.isEmpty) {
+         return;
+       }
+@@ -1199,9 +1296,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
+               accumulatedStructuredAdjustments ?? const [],
+         );
+ 
+-        state = state.copyWith(
+-          messages: [...state.messages, aiMessage],
+-        );
++        state = state.copyWith(messages: [...state.messages, aiMessage]);
+       }
+ 
+       state = state.copyWith(
+@@ -1284,720 +1379,808 @@ class ChatNotifier extends StateNotifier<ChatState> {
+       // not abort healthy generations too early.
+       const streamTimeout = Duration(minutes: 8);
+ 
+-      // Create a timeout wrapper for the stream
+-      final rawStream = _chatRepository.chatStream(
+-        content,
+-        state.conversationId,
+-        userId: userId,
+-        nickname: nickname,
+-        token: token,
+-        fileIds: fileIds,
+-        includeReferences: useDocumentContext || fileIds.isNotEmpty,
+-        extraContext: extraContext,
+-        chatMode: chatModeValue,
+-        requestId: runId,
+-        useDocumentContext: useDocumentContext,
+-      );
+-
+-      // Wrap with timeout check
+-      final timedStream = rawStream.timeout(
+-        streamTimeout,
+-        onTimeout: (sink) {
+-          debugPrint('[ChatProvider] Stream timeout after $streamTimeout');
+-          sink
+-            ..add(
+-              ErrorEvent(
+-                code: 'STREAM_TIMEOUT',
+-                message:
+-                    I18nService.instance.l10n.chatStreamTimeout(streamTimeout.inSeconds),
+-                retryable: true,
+-              ),
+-            )
+-            ..close();
+-        },
+-      );
++      // M-2 stream variance: guard the *first* event. If the provider TTFT
++      // tail keeps the stream silent past the guard window, cancel this run
++      // and resend once (same content, derived request id). Two protocol
++      // facts shape the rescue path:
++      // - the gateway dedups exact (user, request_id) pairs for 1h
++      //   (ws:chat:request:*), so a literal same-id resend would bounce with
++      //   a non-retryable duplicate_request;
++      // - the engine session lock is only released when the in-flight
++      //   upstream stream dies, which happens when the socket drop makes the
++      //   gateway cancel its gRPC call — hence the reconnect before resending.
++      // A second guard fire means the rescue failed too: fall through to the
++      // existing failure UI (retryable, manual retry still available).
++      final firstEventTimeout = firstEventGuardTimeout;
++
++      for (var sendAttempt = 1;
++          sendAttempt <= maxChatSendAttempts;
++          sendAttempt++) {
++        final isRetryAttempt = sendAttempt > 1;
++        final attemptRequestId = isRetryAttempt ? '${runId}_r1' : runId;
++        var firstEventGuardFired = false;
++
++        // Create a timeout wrapper for the stream
++        final rawStream = _chatRepository.chatStream(
++          content,
++          state.conversationId,
++          userId: userId,
++          nickname: nickname,
++          token: token,
++          fileIds: fileIds,
++          includeReferences: useDocumentContext || fileIds.isNotEmpty,
++          extraContext: extraContext,
++          chatMode: chatModeValue,
++          requestId: attemptRequestId,
++          useDocumentContext: useDocumentContext,
++        );
+ 
+-      await for (final event in timedStream) {
+-        if (!isCurrentRequest()) {
+-          break;
+-        }
+-        if (event.responseId != null && event.responseId!.isNotEmpty) {
+-          responseId = event.responseId;
+-        }
+-        if (event.traceId != null && event.traceId!.isNotEmpty) {
+-          traceId = event.traceId;
+-        }
+-        if (event.workflowId != null && event.workflowId!.isNotEmpty) {
+-          workflowId = event.workflowId;
+-        }
+-        if (event.promptVersion != null && event.promptVersion!.isNotEmpty) {
+-          promptVersion = event.promptVersion;
+-        }
+-        // Capture sessionId from backend response to maintain conversation continuity
+-        if (event.sessionId != null && event.sessionId!.isNotEmpty) {
+-          state = state.copyWith(conversationId: event.sessionId);
+-        }
++        final eventStream = chatStreamWithFirstEventGuard(
++          rawStream.timeout(
++            streamTimeout,
++            onTimeout: (sink) {
++              debugPrint('[ChatProvider] Stream timeout after $streamTimeout');
++              sink
++                ..add(
++                  ErrorEvent(
++                    code: 'STREAM_TIMEOUT',
++                    message: I18nService.instance.l10n.chatStreamTimeout(
++                      streamTimeout.inSeconds,
++                    ),
++                    retryable: true,
++                  ),
++                )
++                ..close();
++            },
++          ),
++          firstEventTimeout,
++          onGuardFired: () => firstEventGuardFired = true,
++        );
+ 
+-        if (event is TextEvent) {
+-          unawaited(BgmService.setThinkingActivity(true));
+-          final metadata = event.metadata;
+-          if (metadata != null) {
+-            accumulatedMeta.addAll(metadata);
+-            accumulatedRawMetadata.addAll(metadata);
+-            _appendExecutionWidgets(accumulatedWidgets, metadata);
+-            captureCitationMetadata(metadata['citations']);
+-            captureStructuredAdjustments(metadata);
+-            captureLowYieldBlock(metadata);
+-            _ref.read(experienceEnvelopeProvider.notifier).updateFromMetadata(accumulatedRawMetadata);
++        await for (final event in eventStream) {
++          if (!isCurrentRequest()) {
++            break;
+           }
+-          final uxEnvelope = _extractUxEnvelope(metadata);
+-          if (uxEnvelope.isNotEmpty) {
+-            accumulatedUxEnvelope = {
+-              ...(accumulatedUxEnvelope ?? const <String, dynamic>{}),
+-              ...uxEnvelope,
+-            };
++          if (event is ErrorEvent && event.code == kChatFirstEventTimeoutCode) {
++            // Synthetic guard error — handled via firstEventGuardFired below.
++            break;
+           }
+-          final planContext = metadata?['plan_context'];
+-          final showPlanContext = metadata?['show_plan_context'] == true;
+-          if (!planContextInjected &&
+-              (planContext is Map<String, dynamic> || showPlanContext)) {
+-            final data = planContext is Map<String, dynamic>
+-                ? planContext
+-                : {
+-                    if (metadata?['plan_id'] is String)
+-                      'plan_id': metadata?['plan_id'],
+-                  };
+-            if (data.isNotEmpty) {
+-              accumulatedWidgets.add(
+-                WidgetPayload(
+-                  type: 'plan_context_summary',
+-                  data: data,
+-                ),
+-              );
+-              planContextInjected = true;
+-            }
++          if (event.responseId != null && event.responseId!.isNotEmpty) {
++            responseId = event.responseId;
+           }
+-          if (metadata != null) {
+-            final selectedExpertsRaw = metadata['selected_experts'];
+-            final answerExpertsRaw = metadata['answer_experts'];
+-            final routingStrategy = metadata['routing_strategy'];
+-            final fallbackReason = metadata['fallback_reason'];
+-            final routeConfidence = metadata['route_confidence'];
+-            final expertEntrySource = metadata['expert_entry_source'];
+-            final routingPreview = _parseJsonMap(metadata['routing_preview']);
+-            final roundtableTurns =
+-                _parseJsonMapList(metadata['roundtable_turns']);
+-            final primaryAgent = metadata['primary_agent']?.toString();
+-            final collaborationNarrative =
+-                metadata['collaboration_narrative']?.toString();
+-            final collaborationMode =
+-                metadata['collaboration_mode']?.toString();
+-            final predictionPreview =
+-                _parseJsonMap(metadata['prediction_preview']);
+-            final simulationPreview =
+-                _parseJsonMap(metadata['simulation_preview']);
+-            final reportPreview = _parseJsonMap(metadata['report_preview']);
+-            final agentsInvolved = _parseSelectedExperts(
+-              metadata['agents_involved'],
+-            );
+-            if (selectedExpertsRaw != null ||
+-                routingStrategy != null ||
+-                fallbackReason != null ||
+-                routeConfidence != null ||
+-                expertEntrySource != null) {
+-              final selectedExperts = _parseSelectedExperts(selectedExpertsRaw);
+-              accumulatedCollaboration = {
+-                ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+-                'selected_experts': selectedExperts,
+-                'answer_experts': _parseSelectedExperts(answerExpertsRaw),
+-                'routing_strategy': routingStrategy,
+-                'fallback_reason': fallbackReason,
+-                'route_confidence': routeConfidence,
+-                'expert_entry_source': expertEntrySource,
+-              };
++          if (event.traceId != null && event.traceId!.isNotEmpty) {
++            traceId = event.traceId;
++          }
++          if (event.workflowId != null && event.workflowId!.isNotEmpty) {
++            workflowId = event.workflowId;
++          }
++          if (event.promptVersion != null && event.promptVersion!.isNotEmpty) {
++            promptVersion = event.promptVersion;
++          }
++          // Capture sessionId from backend response to maintain conversation continuity
++          if (event.sessionId != null && event.sessionId!.isNotEmpty) {
++            state = state.copyWith(conversationId: event.sessionId);
++          }
++
++          if (event is TextEvent) {
++            unawaited(BgmService.setThinkingActivity(true));
++            final metadata = event.metadata;
++            if (metadata != null) {
++              accumulatedMeta.addAll(metadata);
++              accumulatedRawMetadata.addAll(metadata);
++              _appendExecutionWidgets(accumulatedWidgets, metadata);
++              captureCitationMetadata(metadata['citations']);
++              captureStructuredAdjustments(metadata);
++              captureLowYieldBlock(metadata);
++              _ref
++                  .read(experienceEnvelopeProvider.notifier)
++                  .updateFromMetadata(accumulatedRawMetadata);
+             }
+-            if (routingPreview != null && routingPreview.isNotEmpty) {
+-              accumulatedRoutingPreview = routingPreview;
+-              accumulatedCollaboration = {
+-                ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+-                'routing_preview': routingPreview,
++            final uxEnvelope = _extractUxEnvelope(metadata);
++            if (uxEnvelope.isNotEmpty) {
++              accumulatedUxEnvelope = {
++                ...(accumulatedUxEnvelope ?? const <String, dynamic>{}),
++                ...uxEnvelope,
+               };
+-              state = state.copyWith(routingPreview: routingPreview);
+             }
+-            if (roundtableTurns.isNotEmpty) {
+-              accumulatedRoundtableTurns
+-                ..clear()
+-                ..addAll(roundtableTurns);
+-              accumulatedCollaboration = {
+-                ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+-                'roundtable_turns':
+-                    List<Map<String, dynamic>>.from(accumulatedRoundtableTurns),
+-              };
+-              state = state.copyWith(
+-                roundtableTurns:
+-                    List<Map<String, dynamic>>.from(accumulatedRoundtableTurns),
++            final planContext = metadata?['plan_context'];
++            final showPlanContext = metadata?['show_plan_context'] == true;
++            if (!planContextInjected &&
++                (planContext is Map<String, dynamic> || showPlanContext)) {
++              final data = planContext is Map<String, dynamic>
++                  ? planContext
++                  : {
++                      if (metadata?['plan_id'] is String)
++                        'plan_id': metadata?['plan_id'],
++                    };
++              if (data.isNotEmpty) {
++                accumulatedWidgets.add(
++                  WidgetPayload(type: 'plan_context_summary', data: data),
++                );
++                planContextInjected = true;
++              }
++            }
++            if (metadata != null) {
++              final selectedExpertsRaw = metadata['selected_experts'];
++              final answerExpertsRaw = metadata['answer_experts'];
++              final routingStrategy = metadata['routing_strategy'];
++              final fallbackReason = metadata['fallback_reason'];
++              final routeConfidence = metadata['route_confidence'];
++              final expertEntrySource = metadata['expert_entry_source'];
++              final routingPreview = _parseJsonMap(metadata['routing_preview']);
++              final roundtableTurns = _parseJsonMapList(
++                metadata['roundtable_turns'],
++              );
++              final primaryAgent = metadata['primary_agent']?.toString();
++              final collaborationNarrative =
++                  metadata['collaboration_narrative']?.toString();
++              final collaborationMode =
++                  metadata['collaboration_mode']?.toString();
++              final predictionPreview = _parseJsonMap(
++                metadata['prediction_preview'],
+               );
++              final simulationPreview = _parseJsonMap(
++                metadata['simulation_preview'],
++              );
++              final reportPreview = _parseJsonMap(metadata['report_preview']);
++              final agentsInvolved = _parseSelectedExperts(
++                metadata['agents_involved'],
++              );
++              if (selectedExpertsRaw != null ||
++                  routingStrategy != null ||
++                  fallbackReason != null ||
++                  routeConfidence != null ||
++                  expertEntrySource != null) {
++                final selectedExperts = _parseSelectedExperts(
++                  selectedExpertsRaw,
++                );
++                accumulatedCollaboration = {
++                  ...(accumulatedCollaboration ?? const <String, dynamic>{}),
++                  'selected_experts': selectedExperts,
++                  'answer_experts': _parseSelectedExperts(answerExpertsRaw),
++                  'routing_strategy': routingStrategy,
++                  'fallback_reason': fallbackReason,
++                  'route_confidence': routeConfidence,
++                  'expert_entry_source': expertEntrySource,
++                };
++              }
++              if (routingPreview != null && routingPreview.isNotEmpty) {
++                accumulatedRoutingPreview = routingPreview;
++                accumulatedCollaboration = {
++                  ...(accumulatedCollaboration ?? const <String, dynamic>{}),
++                  'routing_preview': routingPreview,
++                };
++                state = state.copyWith(routingPreview: routingPreview);
++              }
++              if (roundtableTurns.isNotEmpty) {
++                accumulatedRoundtableTurns
++                  ..clear()
++                  ..addAll(roundtableTurns);
++                accumulatedCollaboration = {
++                  ...(accumulatedCollaboration ?? const <String, dynamic>{}),
++                  'roundtable_turns': List<Map<String, dynamic>>.from(
++                    accumulatedRoundtableTurns,
++                  ),
++                };
++                state = state.copyWith(
++                  roundtableTurns: List<Map<String, dynamic>>.from(
++                    accumulatedRoundtableTurns,
++                  ),
++                );
++              }
++              if (collaborationNarrative != null &&
++                  collaborationNarrative.trim().isNotEmpty) {
++                accumulatedCollaborationNarrative =
++                    collaborationNarrative.trim();
++              }
++              if (collaborationMode != null &&
++                  collaborationMode.trim().isNotEmpty) {
++                accumulatedCollaborationMode = collaborationMode.trim();
++              }
++              if (agentsInvolved.isNotEmpty) {
++                accumulatedAgentsInvolved = agentsInvolved;
++              } else if (primaryAgent != null && primaryAgent.isNotEmpty) {
++                accumulatedAgentsInvolved = [primaryAgent];
++              }
++              if (_parseMetadataFlag(metadata['open_theater']) &&
++                  predictionPreview != null) {
++                accumulatedCollaboration = {
++                  ...(accumulatedCollaboration ?? const <String, dynamic>{}),
++                  'open_theater': true,
++                  'deep_link': metadata['deep_link']?.toString(),
++                  'prediction_preview': predictionPreview,
++                  'source_chat_session_id':
++                      metadata['source_chat_session_id']?.toString(),
++                };
++              }
++              if (_parseMetadataFlag(metadata['open_simulation']) &&
++                  simulationPreview != null) {
++                accumulatedCollaboration = {
++                  ...(accumulatedCollaboration ?? const <String, dynamic>{}),
++                  'open_simulation': true,
++                  'simulation_deep_link':
++                      metadata['simulation_deep_link']?.toString(),
++                  'simulation_preview': simulationPreview,
++                  'source_chat_session_id':
++                      metadata['source_chat_session_id']?.toString(),
++                };
++              }
++              if (_parseMetadataFlag(metadata['open_report']) &&
++                  reportPreview != null) {
++                accumulatedCollaboration = {
++                  ...(accumulatedCollaboration ?? const <String, dynamic>{}),
++                  'open_report': true,
++                  'report_deep_link': metadata['report_deep_link']?.toString(),
++                  'report_preview': reportPreview,
++                  'source_chat_session_id':
++                      metadata['source_chat_session_id']?.toString(),
++                };
++              }
++            }
++            // 流式文本片段（delta）
++            accumulatedContent += event.content;
++            pendingStreamingContent = accumulatedContent;
++            flushPending();
++          } else if (event is StatusUpdateEvent) {
++            // AI 状态更新（THINKING, GENERATING 等）
++            if (event.state == 'THINKING' || event.state == 'GENERATING') {
++              unawaited(BgmService.setThinkingActivity(true));
++            } else {
++              unawaited(BgmService.setThinkingActivity(false));
+             }
+-            if (collaborationNarrative != null &&
+-                collaborationNarrative.trim().isNotEmpty) {
+-              accumulatedCollaborationNarrative = collaborationNarrative.trim();
++            final uxProgress = event.metadata?['ux_progress'];
++            final executionProgress = _buildExecutionProgressDetails(
++              event.metadata?['execution_progress'],
++            );
++            lastAiStatus = event.state;
++            pendingAiStatus = event.state;
++            if (executionProgress != null && executionProgress.isNotEmpty) {
++              pendingAiStatusDetails = executionProgress;
++            } else if (uxProgress is Map<String, dynamic>) {
++              final headline = uxProgress['headline']?.toString();
++              final detail = uxProgress['detail']?.toString();
++              pendingAiStatusDetails = [headline, detail]
++                  .whereType<String>()
++                  .where((item) => item.trim().isNotEmpty)
++                  .join(' · ');
++            } else {
++              pendingAiStatusDetails = event.details;
+             }
+-            if (collaborationMode != null &&
+-                collaborationMode.trim().isNotEmpty) {
+-              accumulatedCollaborationMode = collaborationMode.trim();
++            state = state.copyWith(
++              currentAgentName: event.currentAgentName,
++              activeAgentType: event.activeAgentType,
++              activeRunSummary: _buildRunSummary(
++                status: event.state,
++                details: pendingAiStatusDetails,
++                agentName: event.currentAgentName,
++              ),
++            );
++            flushPending();
++          } else if (event is DagExecutionEvent) {
++            state = state.copyWith(dagExecutionSignal: event.signal);
++            final dagDetails = event.signal.statusDetails;
++            if (dagDetails != null && dagDetails.isNotEmpty) {
++              lastAiStatus = 'EXECUTING_TOOL';
++              pendingAiStatus = 'EXECUTING_TOOL';
++              pendingAiStatusDetails = dagDetails;
+             }
+-            if (agentsInvolved.isNotEmpty) {
+-              accumulatedAgentsInvolved = agentsInvolved;
+-            } else if (primaryAgent != null && primaryAgent.isNotEmpty) {
+-              accumulatedAgentsInvolved = [primaryAgent];
++            flushPending();
++          } else if (event is FullTextEvent) {
++            // 完整文本（通常在流结束时）
++            final metadata = event.metadata;
++            if (metadata != null) {
++              accumulatedMeta.addAll(metadata);
++              accumulatedRawMetadata.addAll(metadata);
++              _appendExecutionWidgets(accumulatedWidgets, metadata);
++              captureCitationMetadata(metadata['citations']);
++              captureStructuredAdjustments(metadata);
++              captureLowYieldBlock(metadata);
++              _ref
++                  .read(experienceEnvelopeProvider.notifier)
++                  .updateFromMetadata(accumulatedRawMetadata);
+             }
+-            if (_parseMetadataFlag(metadata['open_theater']) &&
+-                predictionPreview != null) {
+-              accumulatedCollaboration = {
+-                ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+-                'open_theater': true,
+-                'deep_link': metadata['deep_link']?.toString(),
+-                'prediction_preview': predictionPreview,
+-                'source_chat_session_id':
+-                    metadata['source_chat_session_id']?.toString(),
++            final uxEnvelope = _extractUxEnvelope(metadata);
++            if (uxEnvelope.isNotEmpty) {
++              accumulatedUxEnvelope = {
++                ...(accumulatedUxEnvelope ?? const <String, dynamic>{}),
++                ...uxEnvelope,
+               };
+             }
+-            if (_parseMetadataFlag(metadata['open_simulation']) &&
+-                simulationPreview != null) {
+-              accumulatedCollaboration = {
+-                ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+-                'open_simulation': true,
+-                'simulation_deep_link':
+-                    metadata['simulation_deep_link']?.toString(),
+-                'simulation_preview': simulationPreview,
+-                'source_chat_session_id':
+-                    metadata['source_chat_session_id']?.toString(),
+-              };
++            // Extract dual_core_mode from ux_turn (lives in full_text event metadata)
++            final uxTurnMap =
++                accumulatedUxEnvelope?['ux_turn'] as Map<String, dynamic>?;
++            final newDualCoreMode = uxTurnMap?['dual_core_mode'] as String?;
++            if (newDualCoreMode != null) {
++              state = state.copyWith(dualCoreMode: newDualCoreMode);
+             }
+-            if (_parseMetadataFlag(metadata['open_report']) &&
+-                reportPreview != null) {
+-              accumulatedCollaboration = {
+-                ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+-                'open_report': true,
+-                'report_deep_link': metadata['report_deep_link']?.toString(),
+-                'report_preview': reportPreview,
+-                'source_chat_session_id':
+-                    metadata['source_chat_session_id']?.toString(),
+-              };
++            if (metadata != null) {
++              final selectedExpertsRaw = metadata['selected_experts'];
++              final answerExpertsRaw = metadata['answer_experts'];
++              final routingStrategy = metadata['routing_strategy'];
++              final fallbackReason = metadata['fallback_reason'];
++              final routeConfidence = metadata['route_confidence'];
++              final expertEntrySource = metadata['expert_entry_source'];
++              final routingPreview = _parseJsonMap(metadata['routing_preview']);
++              final roundtableTurns = _parseJsonMapList(
++                metadata['roundtable_turns'],
++              );
++              final primaryAgent = metadata['primary_agent']?.toString();
++              final collaborationNarrative =
++                  metadata['collaboration_narrative']?.toString();
++              final collaborationMode =
++                  metadata['collaboration_mode']?.toString();
++              final predictionPreview = _parseJsonMap(
++                metadata['prediction_preview'],
++              );
++              final simulationPreview = _parseJsonMap(
++                metadata['simulation_preview'],
++              );
++              final reportPreview = _parseJsonMap(metadata['report_preview']);
++              final agentsInvolved = _parseSelectedExperts(
++                metadata['agents_involved'],
++              );
++              if (selectedExpertsRaw != null ||
++                  routingStrategy != null ||
++                  fallbackReason != null ||
++                  routeConfidence != null ||
++                  expertEntrySource != null) {
++                final selectedExperts = _parseSelectedExperts(
++                  selectedExpertsRaw,
++                );
++                accumulatedCollaboration = {
++                  ...(accumulatedCollaboration ?? const <String, dynamic>{}),
++                  'selected_experts': selectedExperts,
++                  'answer_experts': _parseSelectedExperts(answerExpertsRaw),
++                  'routing_strategy': routingStrategy,
++                  'fallback_reason': fallbackReason,
++                  'route_confidence': routeConfidence,
++                  'expert_entry_source': expertEntrySource,
++                };
++              }
++              if (routingPreview != null && routingPreview.isNotEmpty) {
++                accumulatedRoutingPreview = routingPreview;
++                accumulatedCollaboration = {
++                  ...(accumulatedCollaboration ?? const <String, dynamic>{}),
++                  'routing_preview': routingPreview,
++                };
++                state = state.copyWith(routingPreview: routingPreview);
++              }
++              if (roundtableTurns.isNotEmpty) {
++                accumulatedRoundtableTurns
++                  ..clear()
++                  ..addAll(roundtableTurns);
++                accumulatedCollaboration = {
++                  ...(accumulatedCollaboration ?? const <String, dynamic>{}),
++                  'roundtable_turns': List<Map<String, dynamic>>.from(
++                    accumulatedRoundtableTurns,
++                  ),
++                };
++                state = state.copyWith(
++                  roundtableTurns: List<Map<String, dynamic>>.from(
++                    accumulatedRoundtableTurns,
++                  ),
++                );
++              }
++              if (collaborationNarrative != null &&
++                  collaborationNarrative.trim().isNotEmpty) {
++                accumulatedCollaborationNarrative =
++                    collaborationNarrative.trim();
++              }
++              if (collaborationMode != null &&
++                  collaborationMode.trim().isNotEmpty) {
++                accumulatedCollaborationMode = collaborationMode.trim();
++              }
++              if (agentsInvolved.isNotEmpty) {
++                accumulatedAgentsInvolved = agentsInvolved;
++              } else if (primaryAgent != null && primaryAgent.isNotEmpty) {
++                accumulatedAgentsInvolved = [primaryAgent];
++              }
++              if (_parseMetadataFlag(metadata['open_theater']) &&
++                  predictionPreview != null) {
++                accumulatedCollaboration = {
++                  ...(accumulatedCollaboration ?? const <String, dynamic>{}),
++                  'open_theater': true,
++                  'deep_link': metadata['deep_link']?.toString(),
++                  'prediction_preview': predictionPreview,
++                  'source_chat_session_id':
++                      metadata['source_chat_session_id']?.toString(),
++                };
++              }
++              if (_parseMetadataFlag(metadata['open_simulation']) &&
++                  simulationPreview != null) {
++                accumulatedCollaboration = {
++                  ...(accumulatedCollaboration ?? const <String, dynamic>{}),
++                  'open_simulation': true,
++                  'simulation_deep_link':
++                      metadata['simulation_deep_link']?.toString(),
++                  'simulation_preview': simulationPreview,
++                  'source_chat_session_id':
++                      metadata['source_chat_session_id']?.toString(),
++                };
++              }
++              if (_parseMetadataFlag(metadata['open_report']) &&
++                  reportPreview != null) {
++                accumulatedCollaboration = {
++                  ...(accumulatedCollaboration ?? const <String, dynamic>{}),
++                  'open_report': true,
++                  'report_deep_link': metadata['report_deep_link']?.toString(),
++                  'report_preview': reportPreview,
++                  'source_chat_session_id':
++                      metadata['source_chat_session_id']?.toString(),
++                };
++              }
+             }
+-          }
+-          // 流式文本片段（delta）
+-          accumulatedContent += event.content;
+-          pendingStreamingContent = accumulatedContent;
+-          flushPending();
+-        } else if (event is StatusUpdateEvent) {
+-          // AI 状态更新（THINKING, GENERATING 等）
+-          if (event.state == 'THINKING' || event.state == 'GENERATING') {
+-            unawaited(BgmService.setThinkingActivity(true));
+-          } else {
+-            unawaited(BgmService.setThinkingActivity(false));
+-          }
+-          final uxProgress = event.metadata?['ux_progress'];
+-          final executionProgress = _buildExecutionProgressDetails(
+-            event.metadata?['execution_progress'],
+-          );
+-          lastAiStatus = event.state;
+-          pendingAiStatus = event.state;
+-          if (executionProgress != null && executionProgress.isNotEmpty) {
+-            pendingAiStatusDetails = executionProgress;
+-          } else if (uxProgress is Map<String, dynamic>) {
+-            final headline = uxProgress['headline']?.toString();
+-            final detail = uxProgress['detail']?.toString();
+-            pendingAiStatusDetails = [headline, detail]
+-                .whereType<String>()
+-                .where((item) => item.trim().isNotEmpty)
+-                .join(' · ');
+-          } else {
+-            pendingAiStatusDetails = event.details;
+-          }
+-          state = state.copyWith(
+-            currentAgentName: event.currentAgentName,
+-            activeAgentType: event.activeAgentType,
+-            activeRunSummary: _buildRunSummary(
+-              status: event.state,
+-              details: pendingAiStatusDetails,
+-              agentName: event.currentAgentName,
+-            ),
+-          );
+-          flushPending();
+-        } else if (event is DagExecutionEvent) {
+-          state = state.copyWith(dagExecutionSignal: event.signal);
+-          final dagDetails = event.signal.statusDetails;
+-          if (dagDetails != null && dagDetails.isNotEmpty) {
++            accumulatedContent = event.content;
++            pendingStreamingContent = accumulatedContent;
++            flushPending(immediate: true);
++          } else if (event is ErrorEvent) {
++            final userFriendlyMessage = ErrorMessages.getUserFriendlyMessage(
++              event.code,
++              event.message,
++            );
++            final actionSuggestion = ErrorMessages.getActionSuggestion(
++              event.code,
++            );
++            final isRetryable = ErrorMessages.isRetryable(event.code);
++
++            state = state.copyWith(
++              activeRunSummary: _buildRunSummary(
++                status: lastAiStatus,
++                details: event.message,
++              ),
++            );
++            finalizeRun(
++              phase: ChatRunPhase.failed,
++              errorMessage: actionSuggestion.isEmpty
++                  ? userFriendlyMessage
++                  : I18nService.instance.l10n.chatErrorWithSuggestion(
++                      userFriendlyMessage,
++                      actionSuggestion,
++                    ),
++              errorCode: event.code,
++              isRetryable: isRetryable,
++              restoreAttachments: hasQueuedAttachments,
++            );
++            return; // 提前退出
++          } else if (event is NackEvent) {
++            final userFriendlyMessage = ErrorMessages.getUserFriendlyMessage(
++              event.errorCode,
++              event.errorMessage,
++            );
++            final actionSuggestion = ErrorMessages.getActionSuggestion(
++              event.errorCode,
++            );
++            final isRetryable = ErrorMessages.isRetryable(event.errorCode);
++
++            state = state.copyWith(
++              activeRunSummary: _buildRunSummary(
++                status: lastAiStatus,
++                details: event.errorMessage,
++              ),
++            );
++            finalizeRun(
++              phase: ChatRunPhase.failed,
++              errorMessage: actionSuggestion.isEmpty
++                  ? userFriendlyMessage
++                  : I18nService.instance.l10n.chatErrorWithSuggestion(
++                      userFriendlyMessage,
++                      actionSuggestion,
++                    ),
++              errorCode: event.errorCode,
++              isRetryable: isRetryable,
++              restoreAttachments: hasQueuedAttachments,
++            );
++            return; // 提前退出
++          } else if (event is WidgetEvent) {
++            if (event.widgetType == 'system_update' &&
++                !_shouldIncludeSystemUpdate(event.widgetData)) {
++              continue;
++            }
++            accumulatedWidgets.add(
++              _normalizeWidgetPayload(event.widgetType, event.widgetData),
++            );
++            if (event.widgetType == 'low_yield_gentle_block') {
++              _ref
++                  .read(lowYieldBlockProvider.notifier)
++                  .ingestPayload(event.widgetData);
++            }
++          } else if (event is ToolStartEvent) {
++            // 显示"正在使用工具: xxx"
+             lastAiStatus = 'EXECUTING_TOOL';
+             pendingAiStatus = 'EXECUTING_TOOL';
+-            pendingAiStatusDetails = dagDetails;
+-          }
+-          flushPending();
+-        } else if (event is FullTextEvent) {
+-          // 完整文本（通常在流结束时）
+-          final metadata = event.metadata;
+-          if (metadata != null) {
+-            accumulatedMeta.addAll(metadata);
+-            accumulatedRawMetadata.addAll(metadata);
+-            _appendExecutionWidgets(accumulatedWidgets, metadata);
+-            captureCitationMetadata(metadata['citations']);
+-            captureStructuredAdjustments(metadata);
+-            captureLowYieldBlock(metadata);
+-            _ref.read(experienceEnvelopeProvider.notifier).updateFromMetadata(accumulatedRawMetadata);
+-          }
+-          final uxEnvelope = _extractUxEnvelope(metadata);
+-          if (uxEnvelope.isNotEmpty) {
+-            accumulatedUxEnvelope = {
+-              ...(accumulatedUxEnvelope ?? const <String, dynamic>{}),
+-              ...uxEnvelope,
+-            };
+-          }
+-          // Extract dual_core_mode from ux_turn (lives in full_text event metadata)
+-          final uxTurnMap =
+-              accumulatedUxEnvelope?['ux_turn'] as Map<String, dynamic>?;
+-          final newDualCoreMode = uxTurnMap?['dual_core_mode'] as String?;
+-          if (newDualCoreMode != null) {
+-            state = state.copyWith(dualCoreMode: newDualCoreMode);
+-          }
+-          if (metadata != null) {
+-            final selectedExpertsRaw = metadata['selected_experts'];
+-            final answerExpertsRaw = metadata['answer_experts'];
+-            final routingStrategy = metadata['routing_strategy'];
+-            final fallbackReason = metadata['fallback_reason'];
+-            final routeConfidence = metadata['route_confidence'];
+-            final expertEntrySource = metadata['expert_entry_source'];
+-            final routingPreview = _parseJsonMap(metadata['routing_preview']);
+-            final roundtableTurns =
+-                _parseJsonMapList(metadata['roundtable_turns']);
+-            final primaryAgent = metadata['primary_agent']?.toString();
+-            final collaborationNarrative =
+-                metadata['collaboration_narrative']?.toString();
+-            final collaborationMode =
+-                metadata['collaboration_mode']?.toString();
+-            final predictionPreview =
+-                _parseJsonMap(metadata['prediction_preview']);
+-            final simulationPreview =
+-                _parseJsonMap(metadata['simulation_preview']);
+-            final reportPreview = _parseJsonMap(metadata['report_preview']);
+-            final agentsInvolved = _parseSelectedExperts(
+-              metadata['agents_involved'],
++            pendingAiStatusDetails = I18nService.instance.l10n.chatUsingTool(
++              event.toolName,
+             );
+-            if (selectedExpertsRaw != null ||
+-                routingStrategy != null ||
+-                fallbackReason != null ||
+-                routeConfidence != null ||
+-                expertEntrySource != null) {
+-              final selectedExperts = _parseSelectedExperts(selectedExpertsRaw);
+-              accumulatedCollaboration = {
+-                ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+-                'selected_experts': selectedExperts,
+-                'answer_experts': _parseSelectedExperts(answerExpertsRaw),
+-                'routing_strategy': routingStrategy,
+-                'fallback_reason': fallbackReason,
+-                'route_confidence': routeConfidence,
+-                'expert_entry_source': expertEntrySource,
+-              };
++            final nextTools = List<String>.from(state.activeTools);
++            if (!nextTools.contains(event.toolName)) {
++              nextTools.add(event.toolName);
+             }
+-            if (routingPreview != null && routingPreview.isNotEmpty) {
+-              accumulatedRoutingPreview = routingPreview;
+-              accumulatedCollaboration = {
+-                ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+-                'routing_preview': routingPreview,
+-              };
+-              state = state.copyWith(routingPreview: routingPreview);
++            state = state.copyWith(activeTools: nextTools);
++            flushPending();
++          } else if (event is ToolResultEvent) {
++            final widgetType = event.result.widgetType;
++            final widgetData = event.result.widgetData;
++            final toolName = event.result.toolName;
++            if (toolName.isNotEmpty) {
++              final nextTools = List<String>.from(state.activeTools)
++                ..removeWhere((tool) => tool == toolName);
++              state = state.copyWith(activeTools: nextTools);
+             }
+-            if (roundtableTurns.isNotEmpty) {
+-              accumulatedRoundtableTurns
+-                ..clear()
+-                ..addAll(roundtableTurns);
+-              accumulatedCollaboration = {
+-                ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+-                'roundtable_turns':
+-                    List<Map<String, dynamic>>.from(accumulatedRoundtableTurns),
+-              };
+-              state = state.copyWith(
+-                roundtableTurns:
+-                    List<Map<String, dynamic>>.from(accumulatedRoundtableTurns),
++            if (widgetType != null && widgetData != null) {
++              if (widgetType == 'system_update' &&
++                  !_shouldIncludeSystemUpdate(widgetData)) {
++                continue;
++              }
++              accumulatedWidgets.add(
++                _normalizeWidgetPayload(widgetType, widgetData),
+               );
++              if (widgetType == 'low_yield_gentle_block') {
++                _ref
++                    .read(lowYieldBlockProvider.notifier)
++                    .ingestPayload(widgetData);
++              }
+             }
+-            if (collaborationNarrative != null &&
+-                collaborationNarrative.trim().isNotEmpty) {
+-              accumulatedCollaborationNarrative = collaborationNarrative.trim();
+-            }
+-            if (collaborationMode != null &&
+-                collaborationMode.trim().isNotEmpty) {
+-              accumulatedCollaborationMode = collaborationMode.trim();
++          } else if (event is CitationEvent) {
++            upsertSourceSummaryCitations(event.citations);
++          } else if (event is UsageEvent) {
++            state = state.copyWith(
++              lastPromptTokens: event.promptTokens,
++              lastCompletionTokens: event.completionTokens,
++              lastTotalTokens: event.totalTokens,
++            );
++            await _updateDailyUsage(event);
++          } else if (event is MetaEvent) {
++            accumulatedMeta.addAll(event.meta);
++            accumulatedRawMetadata.addAll(event.meta);
++            captureCitationMetadata(event.meta['citations']);
++            captureLowYieldBlock(event.meta);
++            captureStructuredAdjustments(event.meta);
++            flushPending();
++          } else if (event is ReasoningStepEvent) {
++            // 🆕 推理步骤事件 - Chain of Thought Visualization
++            reasoningStartTime ??= DateTime.now().millisecondsSinceEpoch;
++
++            // Add timestamp to step
++            final stepWithTime = event.step.copyWith(
++              createdAt: event.step.createdAt ?? DateTime.now(),
++            );
++
++            accumulatedReasoningSteps.add(stepWithTime);
++
++            pendingReasoningSteps = List.from(accumulatedReasoningSteps);
++            pendingReasoningActive = true;
++            pendingReasoningStartTime = reasoningStartTime;
++            flushPending();
++          } else if (event is ActionStatusEvent) {
++            // ActionCard 状态更新事件
++            _handleActionStatus(event);
++            flushPending();
++          } else if (event is PlanReviewWidgetEvent) {
++            // Plan Review Widget Event
++            _handlePlanReviewWidget(event);
++            flushPending();
++          } else if (event is StateChangeEvent) {
++            // State Change Event (plan archived/restored/deleted, settings updated)
++            _handleStateChangeEvent(event);
++            flushPending();
++          } else if (event is PlanReviewStatusEvent) {
++            // Plan Review Status Event
++            _handlePlanReviewStatus(event);
++            flushPending();
++          } else if (event is ContentReviewWidgetEvent) {
++            // Content Review Widget Event (Phase 2b)
++            _handleContentReviewWidget(event);
++            flushPending();
++          } else if (event is ContentReflectionResultEvent) {
++            // Content Reflection Result Event (Phase 2b)
++            _handleContentReflectionResult(event);
++            flushPending();
++          } else if (event is AchievementUnlockEvent) {
++            // Achievement Unlock Event
++            _handleAchievementUnlock(event);
++            unawaited(_ref.read(closeToUnlockProvider.notifier).triggerCheck());
++            flushPending();
++          } else if (event is AchievementMilestoneEvent) {
++            // Achievement Milestone Event
++            _handleAchievementMilestone(event);
++            flushPending();
++          } else if (event is TransparencyStepEvent) {
++            // Transparency Step Event
++            state = state.copyWith(
++              currentStepId: event.currentStep,
++              currentStepIndex: event.stepIndex,
++              activeRunSummary: _buildRunSummary(
++                currentStepIndex: event.stepIndex,
++                totalSteps: event.totalSteps > 0 ? event.totalSteps : null,
++              ),
++            );
++            flushPending();
++          } else if (event is TransparencyCompleteEvent) {
++            // Transparency Complete Event
++            state = state.copyWith(
++              transparencyData: event.transparencyData,
++              activeRunSummary: _buildRunSummary(
++                totalSteps: event.transparencyData?.steps.length,
++              ),
++            );
++            flushPending();
++          } else if (event is RunLedgerSnapshotEvent) {
++            state = state.copyWith(runLedgerSummary: event.summary);
++            flushPending();
++          } else if (event is OrchestrationTraceEvent) {
++            accumulatedOrchestrationTrace = event.traceData;
++            flushPending();
++          } else if (event is ModeSuggestionEvent) {
++            accumulatedModeSuggestion = event.suggestion;
++            flushPending();
++          } else if (event is RoutingPreviewEvent) {
++            accumulatedRoutingPreview = event.preview;
++            accumulatedCollaboration = {
++              ...(accumulatedCollaboration ?? const <String, dynamic>{}),
++              'routing_preview': event.preview,
++            };
++            state = state.copyWith(routingPreview: event.preview);
++            flushPending();
++          } else if (event is AgentTurnEvent) {
++            final turns = [...state.roundtableTurns];
++            final incoming = Map<String, dynamic>.from(event.turn);
++            final incomingAgent = incoming['agent_id']?.toString();
++            final incomingIndex = incoming['turn_index'];
++            final existingIndex = turns.indexWhere(
++              (item) =>
++                  item['agent_id']?.toString() == incomingAgent &&
++                  item['turn_index'] == incomingIndex,
++            );
++            if (existingIndex >= 0) {
++              turns[existingIndex] = incoming;
++            } else {
++              turns.add(incoming);
+             }
+-            if (agentsInvolved.isNotEmpty) {
+-              accumulatedAgentsInvolved = agentsInvolved;
+-            } else if (primaryAgent != null && primaryAgent.isNotEmpty) {
+-              accumulatedAgentsInvolved = [primaryAgent];
++            accumulatedRoundtableTurns
++              ..clear()
++              ..addAll(turns);
++            accumulatedCollaboration = {
++              ...(accumulatedCollaboration ?? const <String, dynamic>{}),
++              if (accumulatedRoutingPreview != null)
++                'routing_preview': accumulatedRoutingPreview,
++              'roundtable_turns': List<Map<String, dynamic>>.from(turns),
++            };
++            state = state.copyWith(roundtableTurns: turns);
++            flushPending();
++          } else if (event is AgentActivityEvent) {
++            final activities = [...state.agentActivities];
++            final idx = activities.indexWhere(
++              (item) => item.agentId == event.agentId,
++            );
++            if (idx >= 0) {
++              activities[idx] = event;
++            } else {
++              activities.add(event);
+             }
+-            if (_parseMetadataFlag(metadata['open_theater']) &&
+-                predictionPreview != null) {
+-              accumulatedCollaboration = {
+-                ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+-                'open_theater': true,
+-                'deep_link': metadata['deep_link']?.toString(),
+-                'prediction_preview': predictionPreview,
+-                'source_chat_session_id':
+-                    metadata['source_chat_session_id']?.toString(),
+-              };
++            state = state.copyWith(agentActivities: activities);
++            flushPending();
++          } else if (event is SprintModeSwitchEvent) {
++            // Sprint Mode Switch Event
++            _handleSprintModeSwitch(event);
++            flushPending();
++          } else if (event is StaleRecoveryEvent) {
++            // Spine: StaleStateGuard recovery card
++            state = state.copyWith(pendingStaleCard: event);
++            flushPending();
++          } else if (event is SpineReceiptEvent) {
++            // Spine: UserVisibleReceipt card
++            state = state.copyWith(pendingSpineReceipt: event);
++            flushPending();
++          } else if (event is CommunityHintEvent) {
++            // Spine: community insight card (divine moment #6 社群经验转策略)
++            state = state.copyWith(pendingCommunityHint: event);
++            flushPending();
++          } else if (event is UXWarningEvent) {
++            // Spine: proactive risk warning (divine moment #5 阻止低收益)
++            state = state.copyWith(pendingUXWarning: event);
++            flushPending();
++          } else if (event is GrowthCardEvent) {
++            // Spine: growth milestone card (divine moment #1 看见坚持)
++            state = state.copyWith(pendingGrowthCard: event);
++            flushPending();
++          } else if (event is GoalArbitrationEvent) {
++            // Spine: multi-goal conflict surface
++            state = state.copyWith(pendingGoalArbitration: event);
++            flushPending();
++          } else if (event is DivineMomentEvent) {
++            // Spine: divine moment card (MAGIC-002 through MAGIC-006)
++            state = state.copyWith(pendingDivineMoment: event);
++            flushPending();
++          } else if (event is SpineDegradedEvent) {
++            // STAB-012: Spine pipeline degraded — show subtle indicator
++            state = state.copyWith(spineDegraded: true);
++            flushPending();
++          } else if (event is CausalTraceEvent) {
++            // GAP-P2-2: Causal trace created — refresh timeline & show indicator
++            state = state.copyWith(
++              pendingCausalTraceId: event.traceIdValue,
++              causalTraceCount: state.causalTraceCount + 1,
++            );
++            _refreshCausalTimeline();
++            flushPending();
++          } else if (event is NotificationEvent) {
++            // Notification Event - 实时通知推送
++            _handleNotificationEvent(event);
++            flushPending();
++          } else if (event is CollaborationTimelineEvent) {
++            accumulatedCollaboration = event.collaborationData;
++            flushPending();
++          } else if (event is DoneEvent) {
++            // 流结束
++            // finishReason: event.finishReason
++            flushPending(immediate: true);
++            state = state.copyWith(runPhase: ChatRunPhase.finalizing);
++            if (state.activeTools.isNotEmpty) {
++              state = state.copyWith(activeTools: []);
+             }
+-            if (_parseMetadataFlag(metadata['open_simulation']) &&
+-                simulationPreview != null) {
+-              accumulatedCollaboration = {
+-                ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+-                'open_simulation': true,
+-                'simulation_deep_link':
+-                    metadata['simulation_deep_link']?.toString(),
+-                'simulation_preview': simulationPreview,
+-                'source_chat_session_id':
+-                    metadata['source_chat_session_id']?.toString(),
+-              };
++            if (state.agentActivities.isNotEmpty) {
++              snapshotAgentActivities = state.agentActivities
++                  .map(
++                    (item) => {
++                      'agent_id': item.agentId,
++                      'status': item.status,
++                      'display_name': item.displayName,
++                      'icon': item.icon,
++                      'color': item.color,
++                      'description': item.description,
++                      if (item.durationMs != null)
++                        'duration_ms': item.durationMs,
++                      if (item.resultSummary != null)
++                        'result_summary': item.resultSummary,
++                      if (item.collaborationMode != null)
++                        'collaboration_mode': item.collaborationMode,
++                      if (item.phase != null) 'phase': item.phase,
++                    },
++                  )
++                  .toList();
+             }
+-            if (_parseMetadataFlag(metadata['open_report']) &&
+-                reportPreview != null) {
+-              accumulatedCollaboration = {
+-                ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+-                'open_report': true,
+-                'report_deep_link': metadata['report_deep_link']?.toString(),
+-                'report_preview': reportPreview,
+-                'source_chat_session_id':
+-                    metadata['source_chat_session_id']?.toString(),
+-              };
++            // 🔧 修复：清除状态指示器（"思考中"/"生成中"等）
++            finalizeRun(phase: ChatRunPhase.completed);
++            break;
++          }
++        }
++
++        if (!isCurrentRequest() || sawTerminalEvent) {
++          return;
++        }
++        if (firstEventGuardFired) {
++          if (sendAttempt < maxChatSendAttempts) {
++            debugPrint(
++              '[ChatProvider] First-event guard fired (attempt $sendAttempt); '
++              'reconnecting and resending once as ${runId}_r1',
++            );
++            state = state.copyWith(
++              activeRunSummary: _buildRunSummary(
++                status: 'THINKING',
++                details: I18nService.instance.l10n.chatConnectionLost,
++              ),
++            );
++            // Dropping the socket makes the gateway cancel the in-flight
++            // upstream stream, releasing the engine session lock so the
++            // resend is not rejected as a busy-session conflict.
++            await _chatRepository.reconnect();
++            if (!isCurrentRequest()) {
++              return;
+             }
++            continue;
+           }
+-          accumulatedContent = event.content;
+-          pendingStreamingContent = accumulatedContent;
+-          flushPending(immediate: true);
+-        } else if (event is ErrorEvent) {
+-          final userFriendlyMessage = ErrorMessages.getUserFriendlyMessage(
+-            event.code,
+-            event.message,
+-          );
+-          final actionSuggestion =
+-              ErrorMessages.getActionSuggestion(event.code);
+-          final isRetryable = ErrorMessages.isRetryable(event.code);
+-
+-          state = state.copyWith(
+-            activeRunSummary: _buildRunSummary(
+-              status: lastAiStatus,
+-              details: event.message,
+-            ),
+-          );
+           finalizeRun(
+             phase: ChatRunPhase.failed,
+-            errorMessage: actionSuggestion.isEmpty
+-                ? userFriendlyMessage
+-                : I18nService.instance.l10n.chatErrorWithSuggestion(
+-                    userFriendlyMessage,
+-                    actionSuggestion,
+-                  ),
+-            errorCode: event.code,
+-            isRetryable: isRetryable,
+-            restoreAttachments: hasQueuedAttachments,
+-          );
+-          return; // 提前退出
+-        } else if (event is NackEvent) {
+-          final userFriendlyMessage = ErrorMessages.getUserFriendlyMessage(
+-            event.errorCode,
+-            event.errorMessage,
+-          );
+-          final actionSuggestion =
+-              ErrorMessages.getActionSuggestion(event.errorCode);
+-          final isRetryable = ErrorMessages.isRetryable(event.errorCode);
+-
+-          state = state.copyWith(
+-            activeRunSummary: _buildRunSummary(
+-              status: lastAiStatus,
+-              details: event.errorMessage,
++            errorMessage: I18nService.instance.l10n.chatStreamTimeout(
++              firstEventTimeout.inSeconds,
+             ),
+-          );
+-          finalizeRun(
+-            phase: ChatRunPhase.failed,
+-            errorMessage: actionSuggestion.isEmpty
+-                ? userFriendlyMessage
+-                : I18nService.instance.l10n.chatErrorWithSuggestion(
+-                    userFriendlyMessage,
+-                    actionSuggestion,
+-                  ),
+-            errorCode: event.errorCode,
+-            isRetryable: isRetryable,
++            errorCode: kChatFirstEventTimeoutCode,
++            isRetryable: true,
+             restoreAttachments: hasQueuedAttachments,
+           );
+-          return; // 提前退出
+-        } else if (event is WidgetEvent) {
+-          if (event.widgetType == 'system_update' &&
+-              !_shouldIncludeSystemUpdate(event.widgetData)) {
+-            continue;
+-          }
+-          accumulatedWidgets.add(
+-            _normalizeWidgetPayload(event.widgetType, event.widgetData),
+-          );
+-          if (event.widgetType == 'low_yield_gentle_block') {
+-            _ref
+-                .read(lowYieldBlockProvider.notifier)
+-                .ingestPayload(event.widgetData);
+-          }
+-        } else if (event is ToolStartEvent) {
+-          // 显示"正在使用工具: xxx"
+-          lastAiStatus = 'EXECUTING_TOOL';
+-          pendingAiStatus = 'EXECUTING_TOOL';
+-          pendingAiStatusDetails =
+-              I18nService.instance.l10n.chatUsingTool(event.toolName);
+-          final nextTools = List<String>.from(state.activeTools);
+-          if (!nextTools.contains(event.toolName)) {
+-            nextTools.add(event.toolName);
+-          }
+-          state = state.copyWith(activeTools: nextTools);
+-          flushPending();
+-        } else if (event is ToolResultEvent) {
+-          final widgetType = event.result.widgetType;
+-          final widgetData = event.result.widgetData;
+-          final toolName = event.result.toolName;
+-          if (toolName.isNotEmpty) {
+-            final nextTools = List<String>.from(state.activeTools)
+-              ..removeWhere((tool) => tool == toolName);
+-            state = state.copyWith(activeTools: nextTools);
+-          }
+-          if (widgetType != null && widgetData != null) {
+-            if (widgetType == 'system_update' &&
+-                !_shouldIncludeSystemUpdate(widgetData)) {
+-              continue;
+-            }
+-            accumulatedWidgets
+-                .add(_normalizeWidgetPayload(widgetType, widgetData));
+-            if (widgetType == 'low_yield_gentle_block') {
+-              _ref
+-                  .read(lowYieldBlockProvider.notifier)
+-                  .ingestPayload(widgetData);
+-            }
+-          }
+-        } else if (event is CitationEvent) {
+-          upsertSourceSummaryCitations(event.citations);
+-        } else if (event is UsageEvent) {
+-          state = state.copyWith(
+-            lastPromptTokens: event.promptTokens,
+-            lastCompletionTokens: event.completionTokens,
+-            lastTotalTokens: event.totalTokens,
+-          );
+-          await _updateDailyUsage(event);
+-        } else if (event is MetaEvent) {
+-          accumulatedMeta.addAll(event.meta);
+-          accumulatedRawMetadata.addAll(event.meta);
+-          captureCitationMetadata(event.meta['citations']);
+-          captureLowYieldBlock(event.meta);
+-          captureStructuredAdjustments(event.meta);
+-          flushPending();
+-        } else if (event is ReasoningStepEvent) {
+-          // 🆕 推理步骤事件 - Chain of Thought Visualization
+-          reasoningStartTime ??= DateTime.now().millisecondsSinceEpoch;
+-
+-          // Add timestamp to step
+-          final stepWithTime = event.step.copyWith(
+-            createdAt: event.step.createdAt ?? DateTime.now(),
+-          );
+-
+-          accumulatedReasoningSteps.add(stepWithTime);
+-
+-          pendingReasoningSteps = List.from(accumulatedReasoningSteps);
+-          pendingReasoningActive = true;
+-          pendingReasoningStartTime = reasoningStartTime;
+-          flushPending();
+-        } else if (event is ActionStatusEvent) {
+-          // ActionCard 状态更新事件
+-          _handleActionStatus(event);
+-          flushPending();
+-        } else if (event is PlanReviewWidgetEvent) {
+-          // Plan Review Widget Event
+-          _handlePlanReviewWidget(event);
+-          flushPending();
+-        } else if (event is StateChangeEvent) {
+-          // State Change Event (plan archived/restored/deleted, settings updated)
+-          _handleStateChangeEvent(event);
+-          flushPending();
+-        } else if (event is PlanReviewStatusEvent) {
+-          // Plan Review Status Event
+-          _handlePlanReviewStatus(event);
+-          flushPending();
+-        } else if (event is ContentReviewWidgetEvent) {
+-          // Content Review Widget Event (Phase 2b)
+-          _handleContentReviewWidget(event);
+-          flushPending();
+-        } else if (event is ContentReflectionResultEvent) {
+-          // Content Reflection Result Event (Phase 2b)
+-          _handleContentReflectionResult(event);
+-          flushPending();
+-        } else if (event is AchievementUnlockEvent) {
+-          // Achievement Unlock Event
+-          _handleAchievementUnlock(event);
+-          unawaited(_ref.read(closeToUnlockProvider.notifier).triggerCheck());
+-          flushPending();
+-        } else if (event is AchievementMilestoneEvent) {
+-          // Achievement Milestone Event
+-          _handleAchievementMilestone(event);
+-          flushPending();
+-        } else if (event is TransparencyStepEvent) {
+-          // Transparency Step Event
+-          state = state.copyWith(
+-            currentStepId: event.currentStep,
+-            currentStepIndex: event.stepIndex,
+-            activeRunSummary: _buildRunSummary(
+-              currentStepIndex: event.stepIndex,
+-              totalSteps: event.totalSteps > 0 ? event.totalSteps : null,
+-            ),
+-          );
+-          flushPending();
+-        } else if (event is TransparencyCompleteEvent) {
+-          // Transparency Complete Event
+-          state = state.copyWith(
+-            transparencyData: event.transparencyData,
+-            activeRunSummary: _buildRunSummary(
+-              totalSteps: event.transparencyData?.steps.length,
+-            ),
+-          );
+-          flushPending();
+-        } else if (event is RunLedgerSnapshotEvent) {
+-          state = state.copyWith(
+-            runLedgerSummary: event.summary,
+-          );
+-          flushPending();
+-        } else if (event is OrchestrationTraceEvent) {
+-          accumulatedOrchestrationTrace = event.traceData;
+-          flushPending();
+-        } else if (event is ModeSuggestionEvent) {
+-          accumulatedModeSuggestion = event.suggestion;
+-          flushPending();
+-        } else if (event is RoutingPreviewEvent) {
+-          accumulatedRoutingPreview = event.preview;
+-          accumulatedCollaboration = {
+-            ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+-            'routing_preview': event.preview,
+-          };
+-          state = state.copyWith(routingPreview: event.preview);
+-          flushPending();
+-        } else if (event is AgentTurnEvent) {
+-          final turns = [...state.roundtableTurns];
+-          final incoming = Map<String, dynamic>.from(event.turn);
+-          final incomingAgent = incoming['agent_id']?.toString();
+-          final incomingIndex = incoming['turn_index'];
+-          final existingIndex = turns.indexWhere(
+-            (item) =>
+-                item['agent_id']?.toString() == incomingAgent &&
+-                item['turn_index'] == incomingIndex,
+-          );
+-          if (existingIndex >= 0) {
+-            turns[existingIndex] = incoming;
+-          } else {
+-            turns.add(incoming);
+-          }
+-          accumulatedRoundtableTurns
+-            ..clear()
+-            ..addAll(turns);
+-          accumulatedCollaboration = {
+-            ...(accumulatedCollaboration ?? const <String, dynamic>{}),
+-            if (accumulatedRoutingPreview != null)
+-              'routing_preview': accumulatedRoutingPreview,
+-            'roundtable_turns': List<Map<String, dynamic>>.from(turns),
+-          };
+-          state = state.copyWith(roundtableTurns: turns);
+-          flushPending();
+-        } else if (event is AgentActivityEvent) {
+-          final activities = [...state.agentActivities];
+-          final idx =
+-              activities.indexWhere((item) => item.agentId == event.agentId);
+-          if (idx >= 0) {
+-            activities[idx] = event;
+-          } else {
+-            activities.add(event);
+-          }
+-          state = state.copyWith(agentActivities: activities);
+-          flushPending();
+-        } else if (event is SprintModeSwitchEvent) {
+-          // Sprint Mode Switch Event
+-          _handleSprintModeSwitch(event);
+-          flushPending();
+-        } else if (event is StaleRecoveryEvent) {
+-          // Spine: StaleStateGuard recovery card
+-          state = state.copyWith(pendingStaleCard: event);
+-          flushPending();
+-        } else if (event is SpineReceiptEvent) {
+-          // Spine: UserVisibleReceipt card
+-          state = state.copyWith(pendingSpineReceipt: event);
+-          flushPending();
+-        } else if (event is CommunityHintEvent) {
+-          // Spine: community insight card (divine moment #6 社群经验转策略)
+-          state = state.copyWith(pendingCommunityHint: event);
+-          flushPending();
+-        } else if (event is UXWarningEvent) {
+-          // Spine: proactive risk warning (divine moment #5 阻止低收益)
+-          state = state.copyWith(pendingUXWarning: event);
+-          flushPending();
+-        } else if (event is GrowthCardEvent) {
+-          // Spine: growth milestone card (divine moment #1 看见坚持)
+-          state = state.copyWith(pendingGrowthCard: event);
+-          flushPending();
+-        } else if (event is GoalArbitrationEvent) {
+-          // Spine: multi-goal conflict surface
+-          state = state.copyWith(pendingGoalArbitration: event);
+-          flushPending();
+-        } else if (event is DivineMomentEvent) {
+-          // Spine: divine moment card (MAGIC-002 through MAGIC-006)
+-          state = state.copyWith(pendingDivineMoment: event);
+-          flushPending();
+-        } else if (event is SpineDegradedEvent) {
+-          // STAB-012: Spine pipeline degraded — show subtle indicator
+-          state = state.copyWith(spineDegraded: true);
+-          flushPending();
+-        } else if (event is CausalTraceEvent) {
+-          // GAP-P2-2: Causal trace created — refresh timeline & show indicator
+-          state = state.copyWith(
+-            pendingCausalTraceId: event.traceIdValue,
+-            causalTraceCount: state.causalTraceCount + 1,
+-          );
+-          _refreshCausalTimeline();
+-          flushPending();
+-        } else if (event is NotificationEvent) {
+-          // Notification Event - 实时通知推送
+-          _handleNotificationEvent(event);
+-          flushPending();
+-        } else if (event is CollaborationTimelineEvent) {
+-          accumulatedCollaboration = event.collaborationData;
+-          flushPending();
+-        } else if (event is DoneEvent) {
+-          // 流结束
+-          // finishReason: event.finishReason
+-          flushPending(immediate: true);
+-          state = state.copyWith(runPhase: ChatRunPhase.finalizing);
+-          if (state.activeTools.isNotEmpty) {
+-            state = state.copyWith(activeTools: []);
+-          }
+-          if (state.agentActivities.isNotEmpty) {
+-            snapshotAgentActivities = state.agentActivities
+-                .map(
+-                  (item) => {
+-                    'agent_id': item.agentId,
+-                    'status': item.status,
+-                    'display_name': item.displayName,
+-                    'icon': item.icon,
+-                    'color': item.color,
+-                    'description': item.description,
+-                    if (item.durationMs != null) 'duration_ms': item.durationMs,
+-                    if (item.resultSummary != null)
+-                      'result_summary': item.resultSummary,
+-                    if (item.collaborationMode != null)
+-                      'collaboration_mode': item.collaborationMode,
+-                    if (item.phase != null) 'phase': item.phase,
+-                  },
+-                )
+-                .toList();
+-          }
+-          // 🔧 修复：清除状态指示器（"思考中"/"生成中"等）
+-          finalizeRun(phase: ChatRunPhase.completed);
+-          break;
++          return;
+         }
++        break;
+       }
+ 
+       if (!isCurrentRequest() || sawTerminalEvent) {
+diff --git a/mobile/test/unit/chat_notifier_first_event_guard_test.dart b/mobile/test/unit/chat_notifier_first_event_guard_test.dart
+new file mode 100644
+index 00000000..84678878
+--- /dev/null
++++ b/mobile/test/unit/chat_notifier_first_event_guard_test.dart
+@@ -0,0 +1,339 @@
++import 'dart:async';
++
++import 'package:dio/dio.dart';
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import 'package:flutter_secure_storage/flutter_secure_storage.dart';
++import 'package:flutter_test/flutter_test.dart';
++import 'package:shared_preferences/shared_preferences.dart';
++import 'package:sparkle/core/network/api_client.dart';
++import 'package:sparkle/core/services/guest_service.dart';
++import 'package:sparkle/features/auth/auth.dart';
++import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
++import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
++import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
++import 'package:sparkle/features/chat/data/models/chat_mode.dart';
++import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
++import 'package:sparkle/features/chat/data/repositories/chat_repository.dart';
++import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
++import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
++import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
++import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
++import 'package:sparkle/features/chat/presentation/providers/guidance_mode_provider.dart';
++import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
++import 'package:sparkle/features/seed_library/presentation/providers/seed_library_provider.dart';
++import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
++import 'package:sparkle/core/storage/token_storage_io.dart';
++
++/// M-2 stream variance red-green: main chat chain first-event guard.
++///
++/// Covers the guard semantics added to ChatNotifier.sendMessage: 30s (shrunk
++/// here) with zero stream events triggers one automatic resend on a derived
++/// request id after a reconnect; a second silent run surfaces the existing
++/// failure state.
++void main() {
++  TestWidgetsFlutterBinding.ensureInitialized();
++
++  Duration originalGuardTimeout = ChatNotifier.firstEventGuardTimeout;
++
++  setUp(() {
++    originalGuardTimeout = ChatNotifier.firstEventGuardTimeout;
++    // Shrink the 30s production window so tests run in real time quickly.
++    ChatNotifier.firstEventGuardTimeout = const Duration(milliseconds: 120);
++  });
++
++  tearDown(() {
++    ChatNotifier.firstEventGuardTimeout = originalGuardTimeout;
++  });
++
++  Future<void> waitFor(
++    bool Function() condition, {
++    Duration timeout = const Duration(seconds: 4),
++    String reason = 'condition not met in time',
++  }) async {
++    final watch = Stopwatch()..start();
++    while (!condition() && watch.elapsed < timeout) {
++      await Future<void>.delayed(const Duration(milliseconds: 20));
++    }
++    expect(condition(), isTrue, reason: reason);
++  }
++
++  test(
++    'guard fires on silent stream, reconnects and resends once with a derived request id',
++    () async {
++      final silentController = StreamController<ChatStreamEvent>();
++      final requestIds = <String>[];
++      var reconnectCalls = 0;
++
++      Stream<ChatStreamEvent> recoveredStream() async* {
++        yield TextEvent(content: 'recovered');
++        yield DoneEvent(finishReason: 'STOP');
++      }
++
++      final repository = _FakeChatRepository(
++        (message, conversationId, {userId, requestId, nickname, extraContext, token, fileIds, includeReferences = false, chatMode}) {
++          requestIds.add(requestId ?? '');
++          if (requestIds.length == 1) {
++            // First attempt: never emits, never closes -> guard must fire.
++            return silentController.stream;
++          }
++          return recoveredStream();
++        },
++      )..onReconnect = () => reconnectCalls++;
++
++      final notifier = await _createNotifier(repository);
++      addTearDown(() {
++        notifier.dispose();
++        unawaited(silentController.close());
++      });
++
++      await notifier.sendMessage('hello');
++
++      expect(reconnectCalls, 1, reason: 'guard must reconnect exactly once');
++      expect(requestIds, hasLength(2));
++      expect(requestIds[1], '${requestIds[0]}_r1');
++      expect(notifier.state.runPhase, ChatRunPhase.completed);
++      expect(notifier.state.error, isNull);
++      expect(
++        notifier.state.messages.where((message) => message.role == MessageRole.assistant).map((message) => message.content),
++        contains('recovered'),
++      );
++    },
++  );
++
++  test('second silent run exhausts the guard and surfaces the failure state', () async {
++    final silentControllers = <StreamController<ChatStreamEvent>>[];
++    final requestIds = <String>[];
++    var reconnectCalls = 0;
++
++    final repository = _FakeChatRepository(
++      (message, conversationId, {userId, requestId, nickname, extraContext, token, fileIds, includeReferences = false, chatMode}) {
++        requestIds.add(requestId ?? '');
++        final controller = StreamController<ChatStreamEvent>();
++        silentControllers.add(controller);
++        return controller.stream;
++      },
++    )..onReconnect = () => reconnectCalls++;
++
++    final notifier = await _createNotifier(repository);
++    addTearDown(() {
++      notifier.dispose();
++      for (final controller in silentControllers) {
++        unawaited(controller.close());
++      }
++    });
++
++    final sendFuture = notifier.sendMessage('still silent');
++    await waitFor(
++      () => notifier.state.runPhase == ChatRunPhase.failed,
++      reason: 'run should fail after two silent attempts',
++    );
++    await sendFuture;
++
++    expect(reconnectCalls, 1);
++    expect(requestIds, hasLength(2));
++    expect(requestIds[1], '${requestIds[0]}_r1');
++    expect(notifier.state.runPhase, ChatRunPhase.failed);
++    expect(notifier.state.errorCode, kChatFirstEventTimeoutCode);
++    expect(notifier.state.isErrorRetryable, isTrue);
++    expect(notifier.state.error, isNotEmpty);
++  });
++
++  test('an early status frame counts as a first event and disarms the guard', () async {
++    final requestIds = <String>[];
++    var reconnectCalls = 0;
++    late final StreamController<ChatStreamEvent> controller;
++
++    final repository = _FakeChatRepository(
++      (message, conversationId, {userId, requestId, nickname, extraContext, token, fileIds, includeReferences = false, chatMode}) {
++        requestIds.add(requestId ?? '');
++        return controller.stream;
++      },
++    )..onReconnect = () => reconnectCalls++;
++
++    controller = StreamController<ChatStreamEvent>();
++    final notifier = await _createNotifier(repository);
++    addTearDown(() {
++      notifier.dispose();
++      unawaited(controller.close());
++    });
++
++    final sendFuture = notifier.sendMessage('alive stream');
++    await Future<void>.delayed(const Duration(milliseconds: 40));
++
++    controller.add(StatusUpdateEvent(state: 'THINKING', details: 'orchestrating'));
++
++    // Stay silent well past the guard window: no reconnect, no resend.
++    await Future<void>.delayed(ChatNotifier.firstEventGuardTimeout * 3);
++    expect(reconnectCalls, 0);
++    expect(requestIds, hasLength(1));
++    expect(notifier.state.runPhase, ChatRunPhase.streaming);
++
++    controller.add(DoneEvent(finishReason: 'STOP'));
++    await sendFuture;
++
++    expect(notifier.state.runPhase, ChatRunPhase.completed);
++    expect(reconnectCalls, 0);
++  });
++}
++
++class _NoopApiClient extends ApiClient {
++  _NoopApiClient() : super(_UnusedRef());
++
++  @override
++  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
++}
++
++class _UnusedRef implements Ref {
++  @override
++  T read<T>(ProviderListenable<T> provider) {
++    if (T == Interceptor) {
++      return InterceptorsWrapper() as T;
++    }
++    throw UnimplementedError('Unsupported read for $provider');
++  }
++
++  @override
++  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
++}
++
++class _FakeAuthRepository extends AuthRepository {
++  _FakeAuthRepository({this.token})
++      : super(_NoopApiClient(), SecureTokenStorage(storage: const FlutterSecureStorage()));
++
++  final String? token;
++
++  @override
++  Future<String?> getAccessToken() async => token;
++}
++
++typedef _ChatStreamFactory = Stream<ChatStreamEvent> Function(
++  String message,
++  String? conversationId, {
++  String? userId,
++  String? requestId,
++  String? nickname,
++  Map<String, dynamic>? extraContext,
++  String? token,
++  List<String>? fileIds,
++  bool includeReferences,
++  String? chatMode,
++});
++
++class _FakeChatRepository extends ChatRepository {
++  _FakeChatRepository(this._streamFactory)
++      : super(Dio(), container: ProviderContainer());
++
++  final _ChatStreamFactory _streamFactory;
++  void Function()? onReconnect;
++  final StreamController<WsConnectionState> _connectionController =
++      StreamController<WsConnectionState>.broadcast();
++
++  @override
++  Stream<WsConnectionState> get connectionStateStream =>
++      _connectionController.stream;
++
++  @override
++  Stream<ChatStreamEvent> chatStream(
++    String message,
++    String? conversationId, {
++    String? userId,
++    String? requestId,
++    String? nickname,
++    Map<String, dynamic>? extraContext,
++    String? token,
++    List<String>? fileIds,
++    bool includeReferences = false,
++    String? chatMode,
++    bool? useDocumentContext,
++  }) {
++    return _streamFactory(
++      message,
++      conversationId,
++      userId: userId,
++      requestId: requestId,
++      nickname: nickname,
++      extraContext: extraContext,
++      token: token,
++      fileIds: fileIds,
++      includeReferences: includeReferences,
++      chatMode: chatMode,
++    );
++  }
++
++  @override
++  Future<void> reconnect() async {
++    onReconnect?.call();
++  }
++
++  @override
++  void dispose() {
++    unawaited(_connectionController.close());
++  }
++}
++
++class _FakeRef implements Ref {
++  _FakeRef({
++    required this.authState,
++    required this.guestService,
++    required this.authRepository,
++    ChatMode? chatMode,
++  }) : chatMode = chatMode ?? standard;
++
++  final AuthState authState;
++  final GuestService guestService;
++  final AuthRepository authRepository;
++  final String activePlanId = 'plan-1';
++  final String reasoningMode = 'balanced';
++  final bool seedLibraryEnabled = false;
++  final ChatMode chatMode;
++
++  @override
++  T read<T>(ProviderListenable<T> provider) {
++    if (provider == authProvider) {
++      return authState as T;
++    }
++    if (provider == guestServiceProvider) {
++      return guestService as T;
++    }
++    if (provider == authRepositoryProvider) {
++      return authRepository as T;
++    }
++    if (provider == activePlanProvider) {
++      return activePlanId as T;
++    }
++    if (provider == aiReasoningModeProvider) {
++      return reasoningMode as T;
++    }
++    if (provider == chatSeedLibraryEnabledProvider) {
++      return seedLibraryEnabled as T;
++    }
++    if (provider == chatModeProvider) {
++      return chatMode as T;
++    }
++    if (provider == systemUpdateLevelProvider) {
++      return 0 as T;
++    }
++    if (provider == guidanceModeProvider) {
++      return GuidanceMode.aiGuide as T;
++    }
++    if (provider == subscriptionsProvider) {
++      return const SubscriptionsState() as T;
++    }
++    throw UnimplementedError('Unsupported provider read: $provider');
++  }
++
++  @override
++  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
++}
++
++Future<ChatNotifier> _createNotifier(_FakeChatRepository repository) async {
++  SharedPreferences.setMockInitialValues(<String, Object>{});
++  final prefs = await SharedPreferences.getInstance();
++  final guestService = GuestService(prefs);
++  final ref = _FakeRef(
++    authState: AuthState(isAuthenticated: false, user: null),
++    guestService: guestService,
++    authRepository: _FakeAuthRepository(token: 'test-token'),
++  );
++  return ChatNotifier(repository, ref);
++}
