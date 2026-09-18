@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -41,7 +40,9 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.text('学习洞察还没有可读数据'), findsOneWidget);
-    expect(find.text('去创建学习任务'), findsOneWidget);
+    // 空态 CTA 渲染的是通用 taskCreateAction（「创建任务」），并非
+    // insCreateTask（「去创建学习任务」——该 key 从未被本屏引用）。
+    expect(find.text('创建任务'), findsOneWidget);
   });
 
   testWidgets('weekly narrative panel opens expanded from deep link',

@@ -1,0 +1,137 @@
+diff --git a/mobile/test/features/goal/presentation/goal_creation_wizard_screen_test.dart b/mobile/test/features/goal/presentation/goal_creation_wizard_screen_test.dart
+index e961508c..f0fcd20b 100644
+--- a/mobile/test/features/goal/presentation/goal_creation_wizard_screen_test.dart
++++ b/mobile/test/features/goal/presentation/goal_creation_wizard_screen_test.dart
+@@ -2,11 +2,21 @@ import 'package:flutter/material.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:flutter_test/flutter_test.dart';
+ import 'package:sparkle/features/goal/data/models/goal_creation_models.dart';
++import 'package:sparkle/features/goal/data/models/goal_intent_models.dart';
+ import 'package:sparkle/features/goal/data/repositories/goal_repository.dart';
++import 'package:sparkle/features/goal/data/services/goal_intent_service.dart';
+ import 'package:sparkle/features/goal/presentation/screens/goal_creation_wizard_screen.dart';
+ 
+ import '../../../shared/i18n_test_helper.dart';
+ 
++/// 意图分析桩：始终返回 kill-switch-off（mode=disabled），模拟 FME 端点
++/// 关闭/不可达时文档化的回退路径——wizard 落回传统 5 步流程。
++class _DisabledGoalIntentService implements GoalIntentService {
++  @override
++  Future<GoalIntentAnalysis> analyze(String text) async =>
++      GoalIntentAnalysis.disabled();
++}
++
+ void main() {
+   setUp(setUpI18nForTesting);
+   tearDown(tearDownI18n);
+@@ -21,12 +31,22 @@ void main() {
+       ProviderScope(
+         overrides: [
+           goalRepositoryProvider.overrideWithValue(repository),
++          goalIntentServiceProvider.overrideWithValue(
++            _DisabledGoalIntentService(),
++          ),
+         ],
+         child: testMaterialApp(
+           home: GoalCreationWizardScreen(onCreated: (goal) => created = goal),
+         ),
+       ),
+     );
++    await tester.pumpAndSettle();
++
++    // Phase-1 Entry Wire：第 0 步是自然语言意图输入。提交意图文本后，
++    // 意图服务返回 disabled，wizard 回退到传统类型选择器（「学术」等）。
++    await tester.enterText(find.byType(TextField), '通过高数考试');
++    await tester.tap(find.widgetWithText(FilledButton, '让我先看看你的情况'));
++    await tester.pumpAndSettle();
+ 
+     expect(find.text('学术'), findsOneWidget);
+ 
+diff --git a/mobile/test/features/insights/presentation/screens/learning_insights_overview_screen_test.dart b/mobile/test/features/insights/presentation/screens/learning_insights_overview_screen_test.dart
+index cc0d22eb..fc2c1e10 100644
+--- a/mobile/test/features/insights/presentation/screens/learning_insights_overview_screen_test.dart
++++ b/mobile/test/features/insights/presentation/screens/learning_insights_overview_screen_test.dart
+@@ -1,4 +1,3 @@
+-import 'package:flutter/material.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:flutter_test/flutter_test.dart';
+ import 'package:sparkle/core/design/design_system.dart';
+@@ -41,7 +40,9 @@ void main() {
+     await tester.pump(const Duration(milliseconds: 300));
+ 
+     expect(find.text('学习洞察还没有可读数据'), findsOneWidget);
+-    expect(find.text('去创建学习任务'), findsOneWidget);
++    // 空态 CTA 渲染的是通用 taskCreateAction（「创建任务」），并非
++    // insCreateTask（「去创建学习任务」——该 key 从未被本屏引用）。
++    expect(find.text('创建任务'), findsOneWidget);
+   });
+ 
+   testWidgets('weekly narrative panel opens expanded from deep link',
+diff --git a/mobile/test/features/plan/presentation/screens/learning_portfolio_screen_test.dart b/mobile/test/features/plan/presentation/screens/learning_portfolio_screen_test.dart
+index f08b75ab..72c3a29f 100644
+--- a/mobile/test/features/plan/presentation/screens/learning_portfolio_screen_test.dart
++++ b/mobile/test/features/plan/presentation/screens/learning_portfolio_screen_test.dart
+@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:flutter_test/flutter_test.dart';
+ import 'package:go_router/go_router.dart';
++import 'package:shared_preferences/shared_preferences.dart';
+ import 'package:sparkle/core/design/design_system.dart';
+ import 'package:sparkle/core/design/components/atoms/sparkle_button_v2.dart';
+ import 'package:sparkle/core/network/api_client.dart';
+@@ -11,12 +12,20 @@ import 'package:sparkle/features/auth/auth.dart';
+ import 'package:sparkle/features/plan/data/models/exam_sprint_models.dart';
+ import 'package:sparkle/features/plan/data/repositories/exam_sprint_repository.dart';
+ import 'package:sparkle/features/plan/presentation/screens/learning_portfolio_screen.dart';
++import 'package:sparkle/features/user/data/repositories/user_repository.dart';
+ import 'package:sparkle/shared/entities/user_model.dart';
+ import '../../../../shared/i18n_test_helper.dart';
+ 
+ void main() {
+ 
+   setUp(setUpI18nForTesting);
++  setUp(() {
++    // SparkleRefreshIndicator 在调用 onRefresh 前会先走感官反馈管道，
++    // 该管道读取 SharedPreferences 偏好（声音/触感开关）。widget 测试里
++    // 若不 mock prefs 平台通道会抛异常，导致下拉刷新永远到不了仓库层。
++    SharedPreferences.setMockInitialValues(const <String, Object>{});
++  });
++
+   testWidgets('learning portfolio renders grouped sprint sections',
+       (WidgetTester tester) async {
+     await _useTallSurface(tester);
+@@ -173,6 +182,7 @@ void main() {
+             _FakeExamSprintRepository(result: _mockPortfolio()),
+           ),
+           currentUserProvider.overrideWithValue(_mockUser()),
++          userRepositoryProvider.overrideWithValue(_NoServerUserRepository()),
+         ],
+         child: MaterialApp.router(
+           theme: AppThemes.lightTheme,
+@@ -220,6 +230,9 @@ Widget _buildApp({
+     overrides: [
+       examSprintRepositoryProvider.overrideWithValue(repository),
+       currentUserProvider.overrideWithValue(_mockUser()),
++      // accessibility provider 构造时会同步服务端设置；不 stub 会在
++      // widget 测试里发起真实 Dio 请求并留下 pending timer。
++      userRepositoryProvider.overrideWithValue(_NoServerUserRepository()),
+     ],
+     child: MaterialApp.router(
+       theme: AppThemes.lightTheme,
+@@ -334,3 +347,16 @@ class _NoopApiClient implements ApiClient {
+   @override
+   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+ }
++
++/// 用户仓库桩：accessibility provider 初始化时会 fetch/update 服务端
++/// 设置，stub 掉以避免测试内出现真实 Dio 请求与 pending timer。
++class _NoServerUserRepository extends UserRepository {
++  _NoServerUserRepository() : super(_NoopApiClient());
++
++  @override
++  Future<Map<String, dynamic>> fetchUserSettings() async =>
++      const <String, dynamic>{};
++
++  @override
++  Future<void> updateUserSettings(Map<String, dynamic> payload) async {}
++}

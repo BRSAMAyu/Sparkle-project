@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_button_v2.dart';
 import 'package:sparkle/core/network/api_client.dart';
@@ -11,12 +12,20 @@ import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/plan/data/models/exam_sprint_models.dart';
 import 'package:sparkle/features/plan/data/repositories/exam_sprint_repository.dart';
 import 'package:sparkle/features/plan/presentation/screens/learning_portfolio_screen.dart';
+import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 import '../../../../shared/i18n_test_helper.dart';
 
 void main() {
 
   setUp(setUpI18nForTesting);
+  setUp(() {
+    // SparkleRefreshIndicator 在调用 onRefresh 前会先走感官反馈管道，
+    // 该管道读取 SharedPreferences 偏好（声音/触感开关）。widget 测试里
+    // 若不 mock prefs 平台通道会抛异常，导致下拉刷新永远到不了仓库层。
+    SharedPreferences.setMockInitialValues(const <String, Object>{});
+  });
+
   testWidgets('learning portfolio renders grouped sprint sections',
       (WidgetTester tester) async {
     await _useTallSurface(tester);
@@ -173,6 +182,7 @@ void main() {
             _FakeExamSprintRepository(result: _mockPortfolio()),
           ),
           currentUserProvider.overrideWithValue(_mockUser()),
+          userRepositoryProvider.overrideWithValue(_NoServerUserRepository()),
         ],
         child: MaterialApp.router(
           theme: AppThemes.lightTheme,
@@ -220,6 +230,9 @@ Widget _buildApp({
     overrides: [
       examSprintRepositoryProvider.overrideWithValue(repository),
       currentUserProvider.overrideWithValue(_mockUser()),
+      // accessibility provider 构造时会同步服务端设置；不 stub 会在
+      // widget 测试里发起真实 Dio 请求并留下 pending timer。
+      userRepositoryProvider.overrideWithValue(_NoServerUserRepository()),
     ],
     child: MaterialApp.router(
       theme: AppThemes.lightTheme,
@@ -333,4 +346,17 @@ class _FakeExamSprintRepository extends ExamSprintRepository {
 class _NoopApiClient implements ApiClient {
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// 用户仓库桩：accessibility provider 初始化时会 fetch/update 服务端
+/// 设置，stub 掉以避免测试内出现真实 Dio 请求与 pending timer。
+class _NoServerUserRepository extends UserRepository {
+  _NoServerUserRepository() : super(_NoopApiClient());
+
+  @override
+  Future<Map<String, dynamic>> fetchUserSettings() async =>
+      const <String, dynamic>{};
+
+  @override
+  Future<void> updateUserSettings(Map<String, dynamic> payload) async {}
 }

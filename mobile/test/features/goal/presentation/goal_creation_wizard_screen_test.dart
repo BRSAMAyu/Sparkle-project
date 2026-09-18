@@ -2,10 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/features/goal/data/models/goal_creation_models.dart';
+import 'package:sparkle/features/goal/data/models/goal_intent_models.dart';
 import 'package:sparkle/features/goal/data/repositories/goal_repository.dart';
+import 'package:sparkle/features/goal/data/services/goal_intent_service.dart';
 import 'package:sparkle/features/goal/presentation/screens/goal_creation_wizard_screen.dart';
 
 import '../../../shared/i18n_test_helper.dart';
+
+/// 意图分析桩：始终返回 kill-switch-off（mode=disabled），模拟 FME 端点
+/// 关闭/不可达时文档化的回退路径——wizard 落回传统 5 步流程。
+class _DisabledGoalIntentService implements GoalIntentService {
+  @override
+  Future<GoalIntentAnalysis> analyze(String text) async =>
+      GoalIntentAnalysis.disabled();
+}
 
 void main() {
   setUp(setUpI18nForTesting);
@@ -21,12 +31,22 @@ void main() {
       ProviderScope(
         overrides: [
           goalRepositoryProvider.overrideWithValue(repository),
+          goalIntentServiceProvider.overrideWithValue(
+            _DisabledGoalIntentService(),
+          ),
         ],
         child: testMaterialApp(
           home: GoalCreationWizardScreen(onCreated: (goal) => created = goal),
         ),
       ),
     );
+    await tester.pumpAndSettle();
+
+    // Phase-1 Entry Wire：第 0 步是自然语言意图输入。提交意图文本后，
+    // 意图服务返回 disabled，wizard 回退到传统类型选择器（「学术」等）。
+    await tester.enterText(find.byType(TextField), '通过高数考试');
+    await tester.tap(find.widgetWithText(FilledButton, '让我先看看你的情况'));
+    await tester.pumpAndSettle();
 
     expect(find.text('学术'), findsOneWidget);
 
