@@ -1,0 +1,988 @@
+diff --git a/backend/gateway/internal/service/chat_history.go b/backend/gateway/internal/service/chat_history.go
+index 18d7d373..db7d495c 100755
+--- a/backend/gateway/internal/service/chat_history.go
++++ b/backend/gateway/internal/service/chat_history.go
+@@ -594,8 +594,12 @@ func (s *ChatHistoryService) getMessagesFromDB(ctx context.Context, userID, sess
+ 		return []ChatHistoryMessage{}, nil
+ 	}
+ 
++	// N-2（web-round2）：chat_messages.metadata 已由 gfix03 迁移删除
++	// （docs/competition/2026-tmall-hackathon/系统审查/round2/schema-route-tail.md；
++	// 全仓审计漏掉了本文件这段手写 SQL，导致 DB fallback 必然 42703 → 500）。
++	// 富元数据由引擎侧持久化管道负责，不再从该列重建。
+ 	rows, err := s.pool.Query(ctx, `
+-		SELECT id, session_id, user_id, role, content, created_at, metadata
++		SELECT id, session_id, user_id, role, content, created_at
+ 		FROM chat_messages
+ 		WHERE session_id = $1 AND user_id = $2
+ 		ORDER BY created_at DESC
+@@ -615,9 +619,8 @@ func (s *ChatHistoryService) getMessagesFromDB(ctx context.Context, userID, sess
+ 			role      string
+ 			content   string
+ 			createdAt pgtype.Timestamptz
+-			metadata  []byte
+ 		)
+-		if err := rows.Scan(&id, &dbSession, &dbUser, &role, &content, &createdAt, &metadata); err != nil {
++		if err := rows.Scan(&id, &dbSession, &dbUser, &role, &content, &createdAt); err != nil {
+ 			return nil, err
+ 		}
+ 		msg := ChatHistoryMessage{
+@@ -628,10 +631,6 @@ func (s *ChatHistoryService) getMessagesFromDB(ctx context.Context, userID, sess
+ 			Content:   content,
+ 			Timestamp: fmt.Sprintf("%d", createdAt.Time.Unix()),
+ 		}
+-		// Reconstruct rich metadata fields from JSONB
+-		if len(metadata) > 0 {
+-			populateMessageMetadata(&msg, metadata)
+-		}
+ 		messages = append(messages, msg)
+ 	}
+ 	if err := rows.Err(); err != nil {
+@@ -942,95 +941,6 @@ func normalizeDocumentFilter(values []string) []string {
+ 	return filter
+ }
+ 
+-// populateMessageMetadata reconstructs rich message fields from a JSONB metadata payload
+-// read from the database. The JSON is expected to follow the same shape produced by
+-// buildMessageMetadata in chat_history_persister.go.
+-func populateMessageMetadata(msg *ChatHistoryMessage, raw []byte) {
+-	if raw == nil || len(raw) == 0 {
+-		return
+-	}
+-	var meta map[string]interface{}
+-	if err := json.Unmarshal(raw, &meta); err != nil {
+-		zap.L().Warn("Failed to unmarshal chat message metadata",
+-			zap.Error(err),
+-		)
+-		return
+-	}
+-
+-	if widgets, ok := meta["widgets"].([]interface{}); ok {
+-		widgetList := make([]map[string]interface{}, 0, len(widgets))
+-		for _, w := range widgets {
+-			if m, ok := w.(map[string]interface{}); ok {
+-				widgetList = append(widgetList, m)
+-			}
+-		}
+-		msg.Widgets = widgetList
+-	}
+-	if toolResults, ok := meta["tool_results"].([]interface{}); ok {
+-		trList := make([]map[string]interface{}, 0, len(toolResults))
+-		for _, tr := range toolResults {
+-			if m, ok := tr.(map[string]interface{}); ok {
+-				trList = append(trList, m)
+-			}
+-		}
+-		msg.ToolResults = trList
+-	}
+-	if reasoningSteps, ok := meta["reasoning_steps"].([]interface{}); ok {
+-		rsList := make([]map[string]interface{}, 0, len(reasoningSteps))
+-		for _, rs := range reasoningSteps {
+-			if m, ok := rs.(map[string]interface{}); ok {
+-				rsList = append(rsList, m)
+-			}
+-		}
+-		msg.ReasoningSteps = rsList
+-	}
+-	if v, ok := meta["reasoning_summary"].(string); ok {
+-		msg.ReasoningSummary = v
+-	}
+-	if v, ok := meta["is_reasoning_complete"].(bool); ok {
+-		msg.IsReasoningComplete = v
+-	}
+-	if v, ok := meta["is_interrupted"].(bool); ok {
+-		msg.IsInterrupted = v
+-	}
+-	if v, ok := meta["has_errors"].(bool); ok {
+-		msg.HasErrors = v
+-	}
+-	if errors, ok := meta["errors"].([]interface{}); ok {
+-		errList := make([]map[string]interface{}, 0, len(errors))
+-		for _, e := range errors {
+-			if m, ok := e.(map[string]interface{}); ok {
+-				errList = append(errList, m)
+-			}
+-		}
+-		msg.Errors = errList
+-	}
+-	if v, ok := meta["requires_confirmation"].(bool); ok {
+-		msg.RequiresConfirmation = v
+-	}
+-	if confirmationData, ok := meta["confirmation_data"].(map[string]interface{}); ok {
+-		msg.ConfirmationData = confirmationData
+-	}
+-	if agentCollab, ok := meta["agent_collaboration"].(map[string]interface{}); ok {
+-		msg.AgentCollaboration = agentCollab
+-	}
+-	if msg.Meta == nil {
+-		msg.Meta = make(map[string]interface{})
+-	}
+-	// Merge any additional keys not handled above (e.g. UX envelope fields)
+-	knownKeys := map[string]bool{
+-		"widgets": true, "tool_results": true, "reasoning_steps": true,
+-		"reasoning_summary": true, "is_reasoning_complete": true,
+-		"has_errors": true, "errors": true, "requires_confirmation": true,
+-		"confirmation_data": true, "agent_collaboration": true,
+-	}
+-	for k, v := range meta {
+-		if !knownKeys[k] {
+-			msg.Meta[k] = v
+-		}
+-	}
+-}
+-
+ func buildSessionTitle(ctx context.Context, role, content string) string {
+ 	if role != "user" {
+ 		return i18n.T(ctx, "chat_history.new_conversation")
+diff --git a/mobile/lib/core/services/social_auth_service.dart b/mobile/lib/core/services/social_auth_service.dart
+index 17dca33a..814756d7 100644
+--- a/mobile/lib/core/services/social_auth_service.dart
++++ b/mobile/lib/core/services/social_auth_service.dart
+@@ -31,7 +31,23 @@ class SocialAuthService {
+   factory SocialAuthService() => _instance;
+   SocialAuthService._internal();
+   static final SocialAuthService _instance = SocialAuthService._internal();
+-  final fluwx.Fluwx _weChat = fluwx.Fluwx();
++
++  /// N-3（web-round2）：`Fluwx()` 构造函数会立刻订阅
++  /// `FluwxPlatform.instance.responseEventHandler`；当平台实现未实现该方法
++  /// （web 端注册残缺的 FluwxWeb 等）时抛 UnimplementedError，把本单例的
++  /// 首次访问（升级账户页 build 里的 `isWeChatAvailable`）炸成红屏。
++  /// 这里降级为 null → 微信能力视为不可用，页面正常渲染，微信路径走
++  /// 下方既有的 UnsupportedError 提示。
++  fluwx.Fluwx? _createWeChat() {
++    try {
++      return fluwx.Fluwx();
++    } on UnimplementedError catch (e) {
++      _logger.w('Fluwx platform implementation unavailable: ${e.message}');
++      return null;
++    }
++  }
++
++  late final fluwx.Fluwx? _weChat = _createWeChat();
+ 
+   final Logger _logger = Logger();
+ 
+@@ -72,10 +88,14 @@ class SocialAuthService {
+         return;
+       }
+ 
+-      final registered = await _weChat.registerApi(
+-        appId: effectiveAppId,
+-        universalLink: Platform.isIOS ? _weChatUniversalLink : null,
+-      );
++      // N-3：平台实现缺失（_weChat == null）时按注册失败降级，
++      // 保持 _weChatInitialized == false → isWeChatAvailable == false。
++      final registered =
++          await _weChat?.registerApi(
++            appId: effectiveAppId,
++            universalLink: Platform.isIOS ? _weChatUniversalLink : null,
++          ) ??
++          false;
+       _weChatInitialized = registered;
+       if (registered) {
+         _logger.i(
+@@ -160,12 +180,15 @@ class SocialAuthService {
+       );
+     }
+ 
+-    final installed = await _weChat.isWeChatInstalled;
+-    if (!installed) {
++    // N-3：平台实现缺失时视为微信不可用，走既有 UnsupportedError 降级路径。
++    final weChat = _weChat;
++    final installed =
++        await (weChat?.isWeChatInstalled ?? Future<bool>.value(false));
++    if (weChat == null || !installed) {
+       throw UnsupportedError('请先安装微信客户端');
+     }
+ 
+-    final sent = await _weChat.authBy(
++    final sent = await weChat.authBy(
+       which: fluwx.NormalAuth(
+         scope: 'snsapi_userinfo',
+         state: 'sparkle_login',
+@@ -179,7 +202,7 @@ class SocialAuthService {
+     final completer = Completer<SocialAuthResult?>();
+     late final fluwx.FluwxCancelable cancelable;
+ 
+-    cancelable = _weChat.addSubscriber((response) {
++    cancelable = weChat.addSubscriber((response) {
+       if (response is fluwx.WeChatAuthResponse) {
+         cancelable.cancel();
+         if (!response.isSuccessful || response.code == null) {
+diff --git a/mobile/lib/features/auth/presentation/screens/login_screen.dart b/mobile/lib/features/auth/presentation/screens/login_screen.dart
+index b0676bbe..cc1a789a 100755
+--- a/mobile/lib/features/auth/presentation/screens/login_screen.dart
++++ b/mobile/lib/features/auth/presentation/screens/login_screen.dart
+@@ -39,16 +39,36 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
+   /// Web 上 flt-text-editing-host 内含真实 <form>+隐藏 submit input，
+   /// 原生 form submit 与 Flutter 侧提交构成双通道，一次 Enter 可同时
+   /// 触发 login 与 guest 两个 POST（web-round1 W-4 实测 19:44:10/11）。
+-  static const _submitDedupWindow = Duration(milliseconds: 800);
+-  DateTime? _lastSubmitAt;
++  ///
++  /// W-4（web-round2 误伤定性）：防重入必须**分域**。旧实现把按钮点击与
++  /// 键盘提交放在同一个 800ms 窗口里，按钮通道消费的票据会把 800ms 内的
++  /// 键盘 Enter 一并吞掉（实测 Enter ×8 零请求）。现拆成两个互不影响的
++  /// 通道窗口：
++  /// - 按钮域 800ms：防双击与 login/guest 双 POST（round-1 语义保持）；
++  /// - 键盘域 100ms：只吸收同帧内的原生 form submit + performAction
++  ///   双触发，保证紧随按钮点击的键盘提交永远能发出请求。
++  static const _buttonSubmitDedupWindow = Duration(milliseconds: 800);
++  static const _keySubmitDedupWindow = Duration(milliseconds: 100);
++  DateTime? _lastButtonSubmitAt;
++  DateTime? _lastKeySubmitAt;
++
++  bool _consumeButtonSubmitTicket() {
++    final now = DateTime.now();
++    final last = _lastButtonSubmitAt;
++    if (last != null && now.difference(last) < _buttonSubmitDedupWindow) {
++      return false;
++    }
++    _lastButtonSubmitAt = now;
++    return true;
++  }
+ 
+-  bool _consumeSubmitTicket() {
++  bool _consumeKeySubmitTicket() {
+     final now = DateTime.now();
+-    final last = _lastSubmitAt;
+-    if (last != null && now.difference(last) < _submitDedupWindow) {
++    final last = _lastKeySubmitAt;
++    if (last != null && now.difference(last) < _keySubmitDedupWindow) {
+       return false;
+     }
+-    _lastSubmitAt = now;
++    _lastKeySubmitAt = now;
+     return true;
+   }
+ 
+@@ -59,8 +79,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
+     super.dispose();
+   }
+ 
+-  void _submit() {
+-    if (!_consumeSubmitTicket()) return;
++  void _submit({bool fromKeyboard = false}) {
++    final allowed =
++        fromKeyboard ? _consumeKeySubmitTicket() : _consumeButtonSubmitTicket();
++    if (!allowed) return;
+     if (_formKey.currentState!.validate()) {
+       unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
+       unawaited(
+@@ -73,7 +95,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
+   }
+ 
+   void _submitAsGuest() {
+-    if (!_consumeSubmitTicket()) return;
++    if (!_consumeButtonSubmitTicket()) return;
+     unawaited(ref.read(authProvider.notifier).loginAsGuest());
+   }
+ 
+@@ -191,9 +213,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
+                     obscuringCharacter: '●',
+                     style: const TextStyle(letterSpacing: 0),
+                     // W-4：done + 显式 onFieldSubmitted，Enter 只走这一条
+-                    // Flutter 通道（再由防重入窗口吸收同帧重复触发）。
++                    // Flutter 通道（再由键盘域防重入窗口吸收同帧重复触发）。
+                     textInputAction: TextInputAction.done,
+-                    onFieldSubmitted: (_) => _submit(),
++                    onFieldSubmitted: (_) =>
++                        _submit(fromKeyboard: true),
+                     decoration: InputDecoration(
+                       labelText: l10n.password,
+                       border: const OutlineInputBorder(),
+diff --git a/mobile/lib/features/chat/presentation/widgets/chat_input.dart b/mobile/lib/features/chat/presentation/widgets/chat_input.dart
+index 53796eee..b2b15da1 100755
+--- a/mobile/lib/features/chat/presentation/widgets/chat_input.dart
++++ b/mobile/lib/features/chat/presentation/widgets/chat_input.dart
+@@ -71,6 +71,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
+   bool _isAttachmentBursting = false;
+   bool _isButtonPressed = false;
+   bool _isFocusChanging = false;
++  Timer? _echoGuardTimer;
+ 
+   void _showAttachmentSheet() {
+     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen));
+@@ -180,6 +181,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
+ 
+   @override
+   void dispose() {
++    _echoGuardTimer?.cancel();
+     _controller
+       ..removeListener(_handleTextChange)
+       ..dispose();
+@@ -188,6 +190,24 @@ class _ChatInputState extends ConsumerState<ChatInput> {
+     super.dispose();
+   }
+ 
++  /// N-6（web-round2）输入框回声防护。
++  ///
++  /// web 端 flt-text-editing-host 对 controller 清空的 DOM 回写是异步的，
++  /// `clear()` 之后旧文本会被回灌（实测：消息发送后输入框仍显示旧文本，
++  /// 下一条输入被拼接成 46/400，既干扰用户也破坏自动化）。
++  /// 发送后短暂校验：若控制器在回声窗口内又变回「刚发送的文本」，则清掉。
++  /// 仅精确匹配刚发送文本才清除；窗口内重新输入任何不同内容都不受影响
++  /// （人手在 200ms 内逐字重打出同一段文本不可行）。
++  void _scheduleEchoGuard(String sentText) {
++    _echoGuardTimer?.cancel();
++    _echoGuardTimer = Timer(const Duration(milliseconds: 200), () {
++      if (!mounted) return;
++      if (_controller.text == sentText) {
++        _controller.clear();
++      }
++    });
++  }
++
+   Future<void> _handleSend() async {
+     final text = _controller.text.trim();
+     if (text.isEmpty || _isSending) return;
+@@ -198,6 +218,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
+       setState(() => _isSending = true);
+       widget.onSend!(text, replyToId: widget.quotedMessage?.id);
+       _controller.clear();
++      _scheduleEchoGuard(text);
+       widget.onCancelQuote?.call();
+ 
+       _restoreFocus();
+@@ -208,6 +229,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
+     setState(() => _isSending = true);
+     try {
+       _controller.clear();
++      _scheduleEchoGuard(text);
+       _restoreFocus();
+     } finally {
+       if (mounted) setState(() => _isSending = false);
+diff --git a/mobile/test/core/services/social_auth_web_fluwx_test.dart b/mobile/test/core/services/social_auth_web_fluwx_test.dart
+new file mode 100644
+index 00000000..aaa90142
+--- /dev/null
++++ b/mobile/test/core/services/social_auth_web_fluwx_test.dart
+@@ -0,0 +1,50 @@
++import 'package:flutter_test/flutter_test.dart';
++// ignore: implementation_imports
++import 'package:fluwx/src/method_channel/fluwx_platform_interface.dart';
++import 'package:sparkle/core/services/social_auth_service.dart';
++
++// N-3（web-round2）红绿测试：升级账户页红屏
++// `UnimplementedError: responseEventHandler has not been implemented.`
++//
++// 根因链：
++// 1. web 构建注册 vendored fluwx 的 `FluwxWeb` 为平台实现，但修复前它
++//    **零重写** —— 与本文件底部的 `_BareFluwxPlatform` 形状完全一致；
++// 2. `Fluwx()` 构造函数第一时间监听
++//    `FluwxPlatform.instance.responseEventHandler` → 命中基类
++//    `throw UnimplementedError('responseEventHandler has not been implemented.')`
++//    （web-round2 事件留档 `UnimplementedError: respon…`）；
++// 3. `SocialAuthService` 是懒初始化单例，web 旅程中首个触碰它的页面是
++//    GuestUpgradeScreen.build() 的 `isWeChatAvailable`（登录页只在社交
++//    按钮 onTap 里才触碰）→ build 期抛异常 → 红屏，2/2 复现。
++//
++// 修复分两层：
++// - vendored fluwx：FluwxWeb 补齐全部平台方法（优雅降级）；
++// - SocialAuthService：Fluwx 构造失败降级为 null，微信能力视为不可用。
++//
++// 红（修复前）：本测试构造 SocialAuthService 直接抛 UnimplementedError。
++// 绿（修复后）：构造安全、能力查询降级、微信路径走 UnsupportedError。
++// （FluwxWeb 本体依赖 flutter_web_plugins，VM 测试无法编译，由
++// `dart analyze`（third_party_plugins/fluwx）与 web 构建覆盖。）
++void main() {
++  test('平台实现残缺（旧 FluwxWeb 形状）时 SocialAuthService 优雅降级，不再红屏', () async {
++    // 模拟 web 构建注册零重写的 FluwxWeb 后的平台实例状态。
++    FluwxPlatform.instance = _BareFluwxPlatform();
++
++    // 升级账户页 build() 中触发的正是这条链：SocialAuthService 懒单例
++    // → 字段初始化 Fluwx() → 订阅 responseEventHandler。
++    // 修复前这里抛 UnimplementedError('responseEventHandler has not been
++    // implemented.')；修复后降级为 null，构造安全。
++    expect(SocialAuthService.new, returnsNormally);
++    expect(SocialAuthService().isWeChatAvailable, isFalse);
++
++    // 微信路径必须降级为既有的 UnsupportedError 提示，而不是平台级
++    // UnimplementedError 红屏。
++    await expectLater(
++      SocialAuthService().signInWithWeChat(),
++      throwsUnsupportedError,
++    );
++  });
++}
++
++/// 与修复前的 FluwxWeb 同形状：零重写的平台实现。
++class _BareFluwxPlatform extends FluwxPlatform {}
+diff --git a/mobile/test/features/auth/presentation/providers/web_session_restore_test.dart b/mobile/test/features/auth/presentation/providers/web_session_restore_test.dart
+new file mode 100644
+index 00000000..0231ac96
+--- /dev/null
++++ b/mobile/test/features/auth/presentation/providers/web_session_restore_test.dart
+@@ -0,0 +1,184 @@
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import 'package:flutter_test/flutter_test.dart';
++import 'package:shared_preferences/shared_preferences.dart';
++import 'package:sparkle/core/constants/app_constants.dart';
++import 'package:sparkle/core/network/api_client.dart';
++import 'package:sparkle/core/services/session_refresh_service.dart';
++import 'package:sparkle/core/storage/token_storage.dart';
++import 'package:sparkle/core/storage/token_storage_web.dart';
++import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
++import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
++import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
++import 'package:sparkle/features/chat/data/repositories/chat_repository.dart';
++import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
++import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
++import 'package:sparkle/shared/entities/user_brief.dart';
++import 'package:sparkle/shared/entities/user_model.dart';
++
++/// N-4（web-round2 / W-2 残留）红绿测试：会话重载恢复链。
++///
++/// round-2 实测：web 登录成功后 localStorage 四键齐全
++/// （flutter.access_token / flutter.refresh_token / accessToken / guest_id），
++/// 但 reload 后仍回 `#/login?return_to=…` —— 写 ✓ 恢复 ✗。
++///
++/// 本测试把「恢复链」从头到尾锁住：token 注入 **真实的 TokenStorageWeb**
++/// （web 后端，SharedPreferences/localStorage）→ 真实 `AuthRepository`
++/// 继承的 `isLoggedIn()/getAccessToken()` 消费它 → 真实
++/// `AuthNotifier.checkAuthStatus()`（含 guest reseed 分支与会话世代收口）
++/// → `isAuthenticated == true`。同时验证失败语义：无 token 时必须回到
++/// 未认证而非挂起。
++///
++/// 红（修复前 / 接线断裂时）：恢复链任何一环断开（如 tokenStorageProvider
++/// 未被 authRepositoryProvider 消费、checkAuthStatus 竞态覆盖），本测试
++/// isAuthenticated 到不了 true。
++/// 绿（HEAD @ 164a1cd6）：接线完整，恢复链全绿 —— round-2 的 as-served
++/// 失败定性为「22:02 陈旧运行实例早于竞态收口修复」（web-round2.md
++/// 关键定性 1），需重启 flutter run 后按本语义线上复验。
++void main() {
++  TestWidgetsFlutterBinding.ensureInitialized();
++
++  const guestId = 'guest_n4restore';
++  final guestUser = UserModel(
++    id: 'n4000000-0000-4000-8000-000000000001',
++    username: guestId,
++    email: '$guestId@sparkle.local',
++    flameLevel: 1,
++    flameBrightness: 0.8,
++    depthPreference: 0.5,
++    curiosityPreference: 0.5,
++    isActive: true,
++    status: UserStatus.online,
++    createdAt: DateTime(2026),
++    updatedAt: DateTime(2026),
++    registrationSource: 'guest',
++  );
++
++  /// 容器装配：必须先由调用方 `SharedPreferences.setMockInitialValues(...)`
++  /// （保证 TokenStorageWeb 的 localStorage 后端可运行）。
++  Future<ProviderContainer> buildRestoreContainer(
++    _RestoreAuthRepository repo,
++  ) async {
++    final prefs = await SharedPreferences.getInstance();
++    final container = ProviderContainer(
++      overrides: [
++        authRepositoryProvider.overrideWithValue(repo),
++        sharedPreferencesProvider.overrideWithValue(prefs),
++        // checkAuthStatus 成功路径会触发 SessionRefreshService：
++        // 会话绑定 provider 集合置空 + chatProvider 换成静默桩，
++        // 保证测试只考察恢复链本身（不拉起 WebSocket/仪表盘）。
++        sessionBoundProvidersProvider.overrideWithValue(const []),
++        chatProvider.overrideWith(
++          (ref) => _QuietChatNotifier(_QuietChatRepository(), ref),
++        ),
++      ],
++    );
++    return container;
++  }
++
++  Future<AuthState> settleAuth(ProviderContainer container) async {
++    // 触发 AuthNotifier 构造（构造内 unawaited(checkAuthStatus())）。
++    container.read(authProvider.notifier);
++    for (var i = 0; i < 200; i++) {
++      final state = container.read(authProvider);
++      if (!state.isLoading) return state;
++      await Future<void>.delayed(const Duration(milliseconds: 5));
++    }
++    return container.read(authProvider);
++  }
++
++  test('token 注入 TokenStorageWeb → checkAuthStatus 恢复 → isAuthenticated=true（含 guest reseed）',
++      () async {
++    // localStorage 初态：访客 id + 非演示模式（模拟 web-round2 v8 重载前）。
++    SharedPreferences.setMockInitialValues(const {
++      'flutter.guest_id': guestId,
++      'flutter.demo_guest_mode_enabled': false,
++    });
++    final storage = TokenStorageWeb();
++    await storage.write(AppConstants.keyAccessToken, 'access-tok-n4');
++    await storage.write('accessToken', 'access-tok-n4'); // legacy 双写与 saveTokens 一致
++    final repo = _RestoreAuthRepository(storage, guestUser);
++
++    final container = await buildRestoreContainer(repo);
++    addTearDown(container.dispose);
++
++    final state = await settleAuth(container);
++
++    // 恢复成功。
++    expect(state.isAuthenticated, isTrue, reason: 'token 在 storage 里，恢复链必须放行');
++    expect(state.user?.username, guestId);
++    // 真实 AuthRepository（未覆写 isLoggedIn/getAccessToken）确实消费了
++    // TokenStorageWeb。
++    expect(await storage.read(AppConstants.keyAccessToken), 'access-tok-n4');
++    // guest reseed 分支按 round-2 旅程真实执行。
++    expect(repo.meCalls, 1);
++    expect(repo.guestLoginCalls, 1);
++  });
++
++  test('无 token（清空 storage）→ 恢复链必须落到未认证而非误判已登录', () async {
++    SharedPreferences.setMockInitialValues(const {
++      'flutter.guest_id': guestId,
++      'flutter.demo_guest_mode_enabled': false,
++    });
++    final storage = TokenStorageWeb();
++    final repo = _RestoreAuthRepository(storage, guestUser);
++
++    final container = await buildRestoreContainer(repo);
++    addTearDown(container.dispose);
++
++    final state = await settleAuth(container);
++
++    expect(state.isAuthenticated, isFalse);
++    expect(repo.meCalls, 0, reason: '无 token 时不得发起 /me 请求');
++  });
++}
++
++/// 恢复链被测主体：isLoggedIn/getAccessToken/getRefreshToken 全部走继承的
++/// 真实实现（消费注入的 TokenStorage）；仅网络出口 getCurrentUser/guestLogin
++/// 打桩，避免 flutter test 触网。
++class _RestoreAuthRepository extends AuthRepository {
++  _RestoreAuthRepository(TokenStorage storage, this._user)
++      : super(_UnusedApiClient(), storage);
++
++  final UserModel _user;
++  int meCalls = 0;
++  int guestLoginCalls = 0;
++
++  @override
++  Future<UserModel> getCurrentUser() async {
++    meCalls += 1;
++    return _user;
++  }
++
++  @override
++  Future<UserModel> guestLogin(String guestId) async {
++    guestLoginCalls += 1;
++    return _user;
++  }
++
++  @override
++  Future<void> logout({bool keepDemoMode = false}) async {}
++}
++
++class _QuietChatNotifier extends ChatNotifier {
++  _QuietChatNotifier(super.chatRepository, super.ref);
++
++  @override
++  Future<void> warmUpConnection() async {}
++}
++
++class _QuietChatRepository extends Fake implements ChatRepository {
++  @override
++  Stream<WsConnectionState> get connectionStateStream =>
++      const Stream<WsConnectionState>.empty();
++
++  @override
++  WsConnectionState get connectionState => WsConnectionState.disconnected;
++
++  @override
++  void dispose() {}
++}
++
++class _UnusedApiClient implements ApiClient {
++  @override
++  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
++}
+diff --git a/mobile/test/features/auth/presentation/screens/login_screen_keyboard_submit_test.dart b/mobile/test/features/auth/presentation/screens/login_screen_keyboard_submit_test.dart
+new file mode 100644
+index 00000000..84487d27
+--- /dev/null
++++ b/mobile/test/features/auth/presentation/screens/login_screen_keyboard_submit_test.dart
+@@ -0,0 +1,147 @@
++import 'package:flutter/material.dart';
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import 'package:flutter_test/flutter_test.dart';
++import 'package:shared_preferences/shared_preferences.dart';
++import 'package:sparkle/core/design/design_system.dart';
++import 'package:sparkle/core/network/api_client.dart';
++import 'package:sparkle/core/services/session_refresh_service.dart';
++import 'package:sparkle/core/storage/token_storage.dart';
++import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
++import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
++import 'package:sparkle/features/auth/presentation/screens/login_screen.dart';
++import 'package:sparkle/shared/entities/user_model.dart';
++import '../../../../shared/i18n_test_helper.dart';
++
++/// W-4（web-round2 误伤）红绿测试：键盘 Enter 提交必须发出请求。
++///
++/// round-2 实测：登录页聚焦输入框后 Enter ×8 零请求。根因是旧的
++/// `_consumeSubmitTicket` 把按钮点击与键盘提交放进同一个 800ms 窗口——
++/// 按钮通道消费的票据会把紧随其后的键盘提交一并吞掉（且 login/guest
++/// 跨动作互吞）。
++///
++/// 修复：防重入分域 —— 按钮域 800ms（防双击/双 POST，round-1 语义保持），
++/// 键盘域 100ms（只吸收 web 原生 form submit + performAction 的同帧双触发）。
++///
++/// 红（修复前）：「点登录按钮 → 800ms 内 Enter」场景 login 只被调用 1 次
++/// （Enter 被按钮票据吞掉）；同帧双 Enter 也会双发。
++/// 绿（修复后）：按钮后的 Enter 独立放行（2 次）；同帧双 Enter 只发 1 次。
++void main() {
++  TestWidgetsFlutterBinding.ensureInitialized();
++
++  setUp(setUpI18nForTesting);
++
++  tearDown(tearDownI18n);
++
++  Future<ProviderContainer> pumpLoginScreen(
++    WidgetTester tester,
++    _CountingAuthRepository repo,
++  ) async {
++    SharedPreferences.setMockInitialValues({});
++    final prefs = await SharedPreferences.getInstance();
++    final container = ProviderContainer(
++      overrides: [
++        authRepositoryProvider.overrideWithValue(repo),
++        sharedPreferencesProvider.overrideWithValue(prefs),
++        sessionBoundProvidersProvider.overrideWithValue(const []),
++      ],
++    );
++    addTearDown(container.dispose);
++    await tester.pumpWidget(
++      UncontrolledProviderScope(
++        container: container,
++        child: testMaterialApp(
++          theme: AppThemes.lightTheme,
++          home: const LoginScreen(),
++        ),
++      ),
++    );
++    await tester.pumpAndSettle();
++    // 预填合法凭据，保证表单校验放行、提交真正打到 repository。
++    await tester.enterText(find.byType(TextFormField).at(0), 'login_user');
++    await tester.enterText(find.byType(TextFormField).at(1), 'password123');
++    await tester.pump();
++    return container;
++  }
++
++  testWidgets('点击登录按钮后紧随的键盘 Enter 提交必须发出请求（分域核心）',
++      (tester) async {
++    final repo = _CountingAuthRepository();
++    await pumpLoginScreen(tester, repo);
++
++    final loginButton = find.widgetWithText(SparkleButton, '登录');
++    expect(loginButton, findsOneWidget);
++
++    // 1) 按钮通道提交（消费按钮域票据）。
++    await tester.tap(loginButton, warnIfMissed: false);
++    await tester.pump();
++
++    // 2) 800ms 内的键盘 Enter（onFieldSubmitted / TextInputAction.done）。
++    //    修复前：被按钮域票据吞掉（loginCalls == 1，红）。
++    //    修复后：键盘域独立放行（loginCalls == 2，绿）。
++    await tester.testTextInput.receiveAction(TextInputAction.done);
++    await tester.pump();
++    await tester.pumpAndSettle();
++
++    expect(repo.loginCalls, 2);
++  });
++
++  testWidgets('键盘通道自身的同帧双触发只提交一次（防原生 form 双通道）',
++      (tester) async {
++    final repo = _CountingAuthRepository();
++    await pumpLoginScreen(tester, repo);
++
++    // 模拟 web 双通道：原生 form submit 与 Flutter performAction 同帧触发。
++    await tester.testTextInput.receiveAction(TextInputAction.done);
++    await tester.testTextInput.receiveAction(TextInputAction.done);
++    await tester.pump();
++    await tester.pumpAndSettle();
++
++    // 红（修复前旧窗口也会吸收，但按钮/键盘混域）：本用例锁定键盘域 100ms
++    // 独立窗口的语义 —— 双触发只发 1 次。
++    expect(repo.loginCalls, 1);
++  });
++}
++
++class _CountingAuthRepository extends AuthRepository {
++  _CountingAuthRepository() : super(_UnusedApiClient(), _MemoryTokenStorage());
++
++  int loginCalls = 0;
++
++  @override
++  Future<bool> isLoggedIn() async => false;
++
++  /// 计数后即抛错：走 notifier 的失败路径（不触发 SessionRefreshService →
++  /// WebSocket warmUp 连锁，避免 fake-async 挂起 timer），而提交计数发生在
++  /// repository 入口，防重入语义不受影响。
++  @override
++  Future<UserModel> login(String usernameOrEmail, String password) async {
++    loginCalls += 1;
++    await Future<void>.delayed(const Duration(milliseconds: 5));
++    throw Exception('login counted (test stub)');
++  }
++
++  @override
++  Future<void> logout({bool keepDemoMode = false}) async {}
++}
++
++class _MemoryTokenStorage implements TokenStorage {
++  final Map<String, String> _values = <String, String>{};
++
++  @override
++  Future<String?> read(String key) async => _values[key];
++
++  @override
++  Future<void> write(String key, String value) async {
++    _values[key] = value;
++  }
++
++  @override
++  Future<void> delete(String key) async {
++    _values.remove(key);
++  }
++}
++
++class _UnusedApiClient implements ApiClient {
++  @override
++  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
++}
+diff --git a/mobile/test/features/chat/presentation/widgets/chat_input_echo_guard_test.dart b/mobile/test/features/chat/presentation/widgets/chat_input_echo_guard_test.dart
+new file mode 100644
+index 00000000..04d18da0
+--- /dev/null
++++ b/mobile/test/features/chat/presentation/widgets/chat_input_echo_guard_test.dart
+@@ -0,0 +1,89 @@
++import 'package:flutter/material.dart';
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import 'package:flutter_test/flutter_test.dart';
++import 'package:sparkle/features/chat/presentation/widgets/chat_input.dart';
++import '../../../../shared/i18n_test_helper.dart';
++
++/// N-6（web-round2）红绿测试：聊天输入框发送后必须清空，且 web 端 DOM
++/// 回灌（旧文本在 clear() 之后被异步写回）不得导致下一条消息拼接
++/// （round-2 实测「…介绍你自己我下周要考…」46/400）。
++///
++/// 修复：_handleSend 清空后启动 200ms 回声防护 —— 若控制器在窗口内又变回
++/// 「刚发送的文本」，再次清空。
++///
++/// 红（修复前）：发送清空后模拟 web 回灌（controller 又变回已发送文本），
++/// 文本滞留 → 第二条输入必然拼接。
++/// 绿（修复后）：回灌文本在防护窗口内被清除。
++void main() {
++  TestWidgetsFlutterBinding.ensureInitialized();
++
++  setUp(setUpI18nForTesting);
++
++  tearDown(tearDownI18n);
++
++  Future<TextEditingController> pumpChatInput(WidgetTester tester) async {
++    await tester.pumpWidget(
++      ProviderScope(
++        child: testMaterialApp(
++          home: Scaffold(
++            body: ChatInput(
++              onSend: (_, {replyToId}) {},
++            ),
++          ),
++        ),
++      ),
++    );
++    await tester.pumpAndSettle();
++    return tester
++        .widget<TextField>(find.byType(TextField).first)
++        .controller!;
++  }
++
++  testWidgets('发送清空后 web 回灌旧文本 → 回声防护窗口内被清除', (tester) async {
++    final controller = await pumpChatInput(tester);
++
++    // 用户输入第一条消息并点发送。
++    await tester.enterText(find.byType(TextField).first, '你好，请用一句话介绍你自己');
++    await tester.pump();
++
++    final sendButton = find.bySemanticsLabel('Send message').first;
++    expect(sendButton, findsOneWidget);
++    // 只推进一帧：回声防护窗口（200ms）必须在注入回灌文本时仍然未到期。
++    await tester.tap(sendButton, warnIfMissed: false);
++    await tester.pump();
++
++    // 发送即清空（widget 原有语义）。
++    expect(controller.text, isEmpty);
++
++    // 模拟 web flt-text-editing-host 异步 DOM 回灌：旧文本被写回控制器
++    // （真实时序：clear() 之后数十毫秒内到达）。
++    controller.text = '你好，请用一句话介绍你自己';
++    await tester.pump();
++
++    // 修复前：回灌文本永久滞留（下一条输入被拼接）。
++    // 修复后：200ms 回声防护窗口内被再次清空。
++    await tester.pump(const Duration(milliseconds: 300));
++
++    expect(
++      controller.text,
++      isEmpty,
++      reason: '回灌的已发送文本必须在防护窗口内被清除，否则下一条消息会被拼接',
++    );
++  });
++
++  testWidgets('回声窗口内用户新输入的不同内容不受防护影响', (tester) async {
++    final controller = await pumpChatInput(tester);
++
++    await tester.enterText(find.byType(TextField).first, '第一条');
++    await tester.pump();
++    await tester.tap(find.bySemanticsLabel('Send message').first, warnIfMissed: false);
++    await tester.pumpAndSettle();
++    expect(controller.text, isEmpty);
++
++    // 用户立即开始输入第二条（与已发送文本不同）。
++    controller.text = '第二条：';
++    await tester.pump(const Duration(milliseconds: 300));
++
++    expect(controller.text, '第二条：');
++  });
++}
+diff --git a/mobile/third_party_plugins/fluwx/lib/src/fluwx_web.dart b/mobile/third_party_plugins/fluwx/lib/src/fluwx_web.dart
+index fabc284f..140eb57a 100644
+--- a/mobile/third_party_plugins/fluwx/lib/src/fluwx_web.dart
++++ b/mobile/third_party_plugins/fluwx/lib/src/fluwx_web.dart
+@@ -3,29 +3,47 @@
+  *
+  *   Licensed to the Apache Software Foundation (ASF) under one or more contributor
+  * license agreements.  See the NOTICE file distributed with this work for
+- * additional information regarding copyright ownership.  The ASF licenses this
+- * file to you under the Apache License, Version 2.0 (the 'License'); you may not
+- * use this file except in compliance with the License.  You may obtain a copy of
+- * the License at
++ * additional information regarding copyright ownership. The ASF licenses this
++ * file to you under the Apache License, Version 2.0 (the "License"); you may
++ * not use this file except in compliance with the License. You may obtain
++ * a copy of the License at
+  *
+  * http://www.apache.org/licenses/LICENSE-2.0
+  *
+  * Unless required by applicable law or agreed to in writing, software
+- * distributed under the License is distributed on an 'AS IS' BASIS, WITHOUT
+- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+- * License for the specific language governing permissions and limitations under
+- * the License.
++ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
++ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
++ * License for the specific language governing permissions and limitations
++ * under the License.
+  */
+ 
+ // In order to *not* need this ignore, consider extracting the "web" version
+ // of your plugin as a separate package, instead of inlining it in the same
+ // package as the core of your plugin.
+ // ignore: avoid_web_libraries_in_flutter
++import 'dart:async';
++
+ import 'package:flutter_web_plugins/flutter_web_plugins.dart';
+ 
++import 'foundation/arguments.dart';
+ import 'method_channel/fluwx_platform_interface.dart';
++import 'response/wechat_response.dart';
+ 
+ /// A web implementation of the FluwxPlatform of the Fluwx plugin.
++///
++/// N-3（web-round2）根因修复：本类此前注册为 web 平台实现却**没有重写任何
++/// 平台方法**，而 `Fluwx()` 构造函数第一时间监听
++/// `FluwxPlatform.instance.responseEventHandler` —— 命中基类
++/// `throw UnimplementedError('responseEventHandler has not been implemented.')`。
++/// 首个访问 `SocialAuthService` 单例的页面（升级账户页 build 中的
++/// `isWeChatAvailable`）在 build 期当场红屏（2/2 复现，事件留档
++/// `UnimplementedError: respon…`）。
++///
++/// Web 端没有微信 SDK 运行时，这里给出**优雅降级**语义：
++/// - `responseEventHandler` 恒定空广播流（订阅安全、永不发射）；
++/// - `registerApi` 返回 false（上层 `initWeChat` 据此保持不可用态）；
++/// - 其余能力（分享/支付/授权/打开）一律返回 false，由上层布尔检查与
++///   既有的 UnsupportedError 提示路径自然降级，不再抛平台级异常。
+ class FluwxWeb extends FluwxPlatform {
+   /// Constructs a FluwxWeb
+   FluwxWeb();
+@@ -33,4 +51,78 @@ class FluwxWeb extends FluwxPlatform {
+   static void registerWith(Registrar registrar) {
+     FluwxPlatform.instance = FluwxWeb();
+   }
++
++  final StreamController<WeChatResponse> _responseController =
++      StreamController<WeChatResponse>.broadcast();
++
++  @override
++  Stream<WeChatResponse> get responseEventHandler => _responseController.stream;
++
++  @override
++  Future<bool> get isWeChatInstalled async => false;
++
++  @override
++  Future<bool> get isSupportOpenBusinessView async => false;
++
++  @override
++  Future<bool> registerApi({
++    required String appId,
++    bool doOnIOS = true,
++    bool doOnAndroid = true,
++    String? universalLink,
++  }) async =>
++      false;
++
++  @override
++  Future<String?> getExtMsg() async => null;
++
++  @override
++  Future<bool> open(OpenType target) async => false;
++
++  @override
++  Future<bool> share(WeChatShareModel what) async => false;
++
++  @override
++  Future<bool> sendAuth({
++    required String scope,
++    String state = 'state',
++    bool nonAutomatic = false,
++  }) async =>
++      false;
++
++  @override
++  Future<bool> authByPhoneLogin({
++    required String scope,
++    String state = 'state',
++  }) async =>
++      false;
++
++  @override
++  Future<bool> authByQRCode({
++    required String appId,
++    required String scope,
++    required String nonceStr,
++    required String timestamp,
++    required String signature,
++    String? schemeData,
++  }) async =>
++      false;
++
++  @override
++  Future<bool> stopAuthByQRCode() async => false;
++
++  @override
++  Future<bool> pay(PayType which) async => false;
++
++  @override
++  Future<bool> autoDeduct(AutoDeduct data) async => false;
++
++  @override
++  Future<bool> authBy(AuthType which) async => false;
++
++  @override
++  Future<void> attemptToResumeMsgFromWx() async {}
++
++  @override
++  Future<void> selfCheck() async {}
+ }

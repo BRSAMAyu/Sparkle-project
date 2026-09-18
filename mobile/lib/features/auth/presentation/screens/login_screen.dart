@@ -39,16 +39,36 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   /// Web 上 flt-text-editing-host 内含真实 <form>+隐藏 submit input，
   /// 原生 form submit 与 Flutter 侧提交构成双通道，一次 Enter 可同时
   /// 触发 login 与 guest 两个 POST（web-round1 W-4 实测 19:44:10/11）。
-  static const _submitDedupWindow = Duration(milliseconds: 800);
-  DateTime? _lastSubmitAt;
+  ///
+  /// W-4（web-round2 误伤定性）：防重入必须**分域**。旧实现把按钮点击与
+  /// 键盘提交放在同一个 800ms 窗口里，按钮通道消费的票据会把 800ms 内的
+  /// 键盘 Enter 一并吞掉（实测 Enter ×8 零请求）。现拆成两个互不影响的
+  /// 通道窗口：
+  /// - 按钮域 800ms：防双击与 login/guest 双 POST（round-1 语义保持）；
+  /// - 键盘域 100ms：只吸收同帧内的原生 form submit + performAction
+  ///   双触发，保证紧随按钮点击的键盘提交永远能发出请求。
+  static const _buttonSubmitDedupWindow = Duration(milliseconds: 800);
+  static const _keySubmitDedupWindow = Duration(milliseconds: 100);
+  DateTime? _lastButtonSubmitAt;
+  DateTime? _lastKeySubmitAt;
 
-  bool _consumeSubmitTicket() {
+  bool _consumeButtonSubmitTicket() {
     final now = DateTime.now();
-    final last = _lastSubmitAt;
-    if (last != null && now.difference(last) < _submitDedupWindow) {
+    final last = _lastButtonSubmitAt;
+    if (last != null && now.difference(last) < _buttonSubmitDedupWindow) {
       return false;
     }
-    _lastSubmitAt = now;
+    _lastButtonSubmitAt = now;
+    return true;
+  }
+
+  bool _consumeKeySubmitTicket() {
+    final now = DateTime.now();
+    final last = _lastKeySubmitAt;
+    if (last != null && now.difference(last) < _keySubmitDedupWindow) {
+      return false;
+    }
+    _lastKeySubmitAt = now;
     return true;
   }
 
@@ -59,8 +79,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
-  void _submit() {
-    if (!_consumeSubmitTicket()) return;
+  void _submit({bool fromKeyboard = false}) {
+    final allowed =
+        fromKeyboard ? _consumeKeySubmitTicket() : _consumeButtonSubmitTicket();
+    if (!allowed) return;
     if (_formKey.currentState!.validate()) {
       unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
       unawaited(
@@ -73,7 +95,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   void _submitAsGuest() {
-    if (!_consumeSubmitTicket()) return;
+    if (!_consumeButtonSubmitTicket()) return;
     unawaited(ref.read(authProvider.notifier).loginAsGuest());
   }
 
@@ -191,9 +213,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     obscuringCharacter: '●',
                     style: const TextStyle(letterSpacing: 0),
                     // W-4：done + 显式 onFieldSubmitted，Enter 只走这一条
-                    // Flutter 通道（再由防重入窗口吸收同帧重复触发）。
+                    // Flutter 通道（再由键盘域防重入窗口吸收同帧重复触发）。
                     textInputAction: TextInputAction.done,
-                    onFieldSubmitted: (_) => _submit(),
+                    onFieldSubmitted: (_) =>
+                        _submit(fromKeyboard: true),
                     decoration: InputDecoration(
                       labelText: l10n.password,
                       border: const OutlineInputBorder(),

@@ -71,6 +71,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   bool _isAttachmentBursting = false;
   bool _isButtonPressed = false;
   bool _isFocusChanging = false;
+  Timer? _echoGuardTimer;
 
   void _showAttachmentSheet() {
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen));
@@ -180,12 +181,31 @@ class _ChatInputState extends ConsumerState<ChatInput> {
 
   @override
   void dispose() {
+    _echoGuardTimer?.cancel();
     _controller
       ..removeListener(_handleTextChange)
       ..dispose();
     _focusNode.dispose();
     _textNotEmpty.dispose();
     super.dispose();
+  }
+
+  /// N-6（web-round2）输入框回声防护。
+  ///
+  /// web 端 flt-text-editing-host 对 controller 清空的 DOM 回写是异步的，
+  /// `clear()` 之后旧文本会被回灌（实测：消息发送后输入框仍显示旧文本，
+  /// 下一条输入被拼接成 46/400，既干扰用户也破坏自动化）。
+  /// 发送后短暂校验：若控制器在回声窗口内又变回「刚发送的文本」，则清掉。
+  /// 仅精确匹配刚发送文本才清除；窗口内重新输入任何不同内容都不受影响
+  /// （人手在 200ms 内逐字重打出同一段文本不可行）。
+  void _scheduleEchoGuard(String sentText) {
+    _echoGuardTimer?.cancel();
+    _echoGuardTimer = Timer(const Duration(milliseconds: 200), () {
+      if (!mounted) return;
+      if (_controller.text == sentText) {
+        _controller.clear();
+      }
+    });
   }
 
   Future<void> _handleSend() async {
@@ -198,6 +218,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
       setState(() => _isSending = true);
       widget.onSend!(text, replyToId: widget.quotedMessage?.id);
       _controller.clear();
+      _scheduleEchoGuard(text);
       widget.onCancelQuote?.call();
 
       _restoreFocus();
@@ -208,6 +229,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     setState(() => _isSending = true);
     try {
       _controller.clear();
+      _scheduleEchoGuard(text);
       _restoreFocus();
     } finally {
       if (mounted) setState(() => _isSending = false);

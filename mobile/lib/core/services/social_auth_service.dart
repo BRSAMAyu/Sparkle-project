@@ -31,7 +31,23 @@ class SocialAuthService {
   factory SocialAuthService() => _instance;
   SocialAuthService._internal();
   static final SocialAuthService _instance = SocialAuthService._internal();
-  final fluwx.Fluwx _weChat = fluwx.Fluwx();
+
+  /// N-3（web-round2）：`Fluwx()` 构造函数会立刻订阅
+  /// `FluwxPlatform.instance.responseEventHandler`；当平台实现未实现该方法
+  /// （web 端注册残缺的 FluwxWeb 等）时抛 UnimplementedError，把本单例的
+  /// 首次访问（升级账户页 build 里的 `isWeChatAvailable`）炸成红屏。
+  /// 这里降级为 null → 微信能力视为不可用，页面正常渲染，微信路径走
+  /// 下方既有的 UnsupportedError 提示。
+  fluwx.Fluwx? _createWeChat() {
+    try {
+      return fluwx.Fluwx();
+    } on UnimplementedError catch (e) {
+      _logger.w('Fluwx platform implementation unavailable: ${e.message}');
+      return null;
+    }
+  }
+
+  late final fluwx.Fluwx? _weChat = _createWeChat();
 
   final Logger _logger = Logger();
 
@@ -72,10 +88,14 @@ class SocialAuthService {
         return;
       }
 
-      final registered = await _weChat.registerApi(
-        appId: effectiveAppId,
-        universalLink: Platform.isIOS ? _weChatUniversalLink : null,
-      );
+      // N-3：平台实现缺失（_weChat == null）时按注册失败降级，
+      // 保持 _weChatInitialized == false → isWeChatAvailable == false。
+      final registered =
+          await _weChat?.registerApi(
+            appId: effectiveAppId,
+            universalLink: Platform.isIOS ? _weChatUniversalLink : null,
+          ) ??
+          false;
       _weChatInitialized = registered;
       if (registered) {
         _logger.i(
@@ -160,12 +180,15 @@ class SocialAuthService {
       );
     }
 
-    final installed = await _weChat.isWeChatInstalled;
-    if (!installed) {
+    // N-3：平台实现缺失时视为微信不可用，走既有 UnsupportedError 降级路径。
+    final weChat = _weChat;
+    final installed =
+        await (weChat?.isWeChatInstalled ?? Future<bool>.value(false));
+    if (weChat == null || !installed) {
       throw UnsupportedError('请先安装微信客户端');
     }
 
-    final sent = await _weChat.authBy(
+    final sent = await weChat.authBy(
       which: fluwx.NormalAuth(
         scope: 'snsapi_userinfo',
         state: 'sparkle_login',
@@ -179,7 +202,7 @@ class SocialAuthService {
     final completer = Completer<SocialAuthResult?>();
     late final fluwx.FluwxCancelable cancelable;
 
-    cancelable = _weChat.addSubscriber((response) {
+    cancelable = weChat.addSubscriber((response) {
       if (response is fluwx.WeChatAuthResponse) {
         cancelable.cancel();
         if (!response.isSuccessful || response.code == null) {
