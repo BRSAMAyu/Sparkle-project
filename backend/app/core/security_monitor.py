@@ -130,7 +130,9 @@ class SecurityMonitor:
                 attempted_at=_utcnow()
             )
             db.add(login_attempt)
-            await db.commit()
+            # flush（非 commit）：请求级事务由 get_db 统一提交；
+            # 中途 commit 会终结外部托管事务，导致 login() 后续 ORM 访问触发 MissingGreenlet 500
+            await db.flush()
 
             # 记录安全事件
             event_type = SecurityEventType.LOGIN_SUCCESS if success else SecurityEventType.LOGIN_FAILED
@@ -417,7 +419,8 @@ class SecurityMonitor:
                 timestamp=event.timestamp
             )
             db.add(audit_log)
-            await db.commit()
+            # 同上：flush 由 get_db 统一提交，避免请求中段终结事务
+            await db.flush()
 
             # 同时记录到Redis用于实时监控
             redis_key = f"security:events:{event.timestamp.timestamp()}"

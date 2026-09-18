@@ -1,0 +1,1345 @@
+diff --git a/docs/competition/2026-tmall-hackathon/UIUX/README.md b/docs/competition/2026-tmall-hackathon/UIUX/README.md
+index 8936968a..185618d3 100644
+--- a/docs/competition/2026-tmall-hackathon/UIUX/README.md
++++ b/docs/competition/2026-tmall-hackathon/UIUX/README.md
+@@ -29,3 +29,4 @@ A/B 级问题清零为收敛条件，C 级按性价比排序消化。
+ - `rounds/` — 各轮审查报告与修复记录（随轮次创建）
+   - `round1-L1-design-system.md` — Round 1 L1 设计系统地基审查（基线 ca86bda8）
+   - `round1-batch1-contrast.md` — Round 1 批次 1 修复：浅色模式对比度达标（P0-1 数值校准 + 速查表）
++  - `round1-batch2-single-source.md` — Round 1 批次 2 修复：双事实源收敛（任务色 3→1 / 品牌色 2→1 / 字阶 3→1，P0-2 + P0-3）
+diff --git a/docs/competition/2026-tmall-hackathon/UIUX/rounds/round1-batch2-single-source.md b/docs/competition/2026-tmall-hackathon/UIUX/rounds/round1-batch2-single-source.md
+new file mode 100644
+index 00000000..0da3d1be
+--- /dev/null
++++ b/docs/competition/2026-tmall-hackathon/UIUX/rounds/round1-batch2-single-source.md
+@@ -0,0 +1,134 @@
++# Round 1 · 批次 2 — 双事实源收敛（Single Source of Truth）
++
++> 上游：`round1-L1-design-system.md`（P0-2 双事实源 / P0-3 字阶三体系）· `round1-batch1-contrast.md`（数值已先校准，本批只删结构不改校准值）
++> 本批边界：**删双源**。container 四件套（xxxContainer/onContainer）与 `context.sparkle` 入口统一留批次 3。
++> 纪律：色值以树上现值为真相源（批次 1 对比度数值已在基线）；零构建、零 flutter test；dart analyze 定向。
++
++---
++
++## 0. 结果速览
++
++| 指标 | 值 |
++| --- | --- |
++| 改动 | 10 文件，+168 / −622（净 −454 行） |
++| 删除文件 | `tokens/task_colors.dart`（81 行）、`tokens_v2/typography_token.dart`（226 行） |
++| 事实源收敛 | 任务色 **3 → 1**（TaskColors、SparkleTaskColors → SparkleColors.task*）；品牌色 **2 → 1**（SemanticColors.brand* → SparkleColors.brand*）；字阶 **3 → 1**（TypographySystem、DS 字阶 → SparkleTypography） |
++| 迁移调用点 | 真实调用点全迁移（task_pill、login_screen、theme extension 接线）；超额面（116 文件字号 + 394 文件字重）按预设分支降级为冻结 deprecated shim |
++| 验证 | 定向 dart analyze 8 文件 **0 error / 0 warning**；旧符号 lib+test 严格 grep **零代码残留** |
++
++---
++
++## 1. 裁决一：TaskColors vs SparkleColors.task*（L1 P0-2）
++
++**裁决：SparkleColors.task*（tokens_v2/theme_manager.dart）为唯一事实源。**
++
++依据：批次 1 已将浅色 task* 收敛到语义色值（`theme_manager.dart` 批次 1 注释原话 "so batch 2 inherits one value per hue"），本树现值即为此裁决准备的收敛目标；L1 §5.1 与 P0-2 修复方向均为"删 TaskColors"。
++
++### 1.1 色值处置（以现值为准）
++
++- 两侧共有槽位：**保留 SparkleColors 现值**，TaskColors 侧值随之消亡（浅色 learning `#175FB0` vs `#48678D` 的分叉终结——同一 hue 从此只有一个值）。
++- TaskColors 独有的 **OCR 槽折入**：`taskOcr` 新增字段接进全部 6 套工厂（light/HC/CB × light/dark），值 = TaskColors 现值（light `#4F6572` / dark `#78909C`）；特殊档沿用同值——灰色天然色盲/高对比中性，零新发明字面量。
++- `getTaskColor(String)` 补 `'ocr'` case；新增强类型 `Color taskColorFor(TaskType)` 作为 TaskType → 调色板的唯一映射。
++
++### 1.2 删除与迁移
++
++| 对象 | 处置 | 规模 |
++| --- | --- | --- |
++| `tokens/task_colors.dart` | 整文件删除（`TaskColors`、`_RawTaskColors` 14 值） | −81 行 |
++| `SparkleTaskColors`（app/theme.dart 第三方源，存疑值 64B5F6/FF9800 系） | 类 + `SparkleTaskColorsExtension` + 2 处 ThemeData 注册全删（lib+test 零消费，本就 @Deprecated） | −223 行 |
++| `task_pill.dart`（唯一真实消费者） | 4 个角色 getter 调用迁移为 `context.colors.taskColorFor(type)` 单点取色；import 改 `task_model.dart show TaskType` | 1 组件 |
++| `SparkleThemeExtension` | 拆线：`taskColors` 字段、2 个 factory 注入、copyWith、lerp 全删（任务色本就随 `colors` 走 lerp） | 8 行 |
++| `SparkleContextExtension` | `taskColors` getter 删除 | 1 getter |
++
++### 1.3 行为变化（即修复本体）
++
++无 tone 的 `TaskPill` 由 TaskColors 饱和 Material 值（浅色 learning `#175FB0` 等，L1 §2.3 点名的"首页一套、pill 另一套"）切换为调色板 task* 值（浅色 learning `#48678D` = semanticInfo），暗色同步走调色板暗档——pill 与全局色彩语言归一口音。
++
++---
++
++## 2. 裁决二：SemanticColors.brandOrange/brandBlue vs SparkleColors.brand*（L1 P0-2）
++
++**裁决：SparkleColors.brand* 为唯一事实源；登录页品牌标改用产品真实品牌对。**
++
++依据：L1 §2.4——用户认识产品的第一个 3 秒看到的不是产品品牌色（纸感书院 #825D49 暖棕 vs 登录页孤立 #D9773A 促销橙）。
++
++### 2.1 色值处置（以现值为准）
++
++- 锚值全保留：`brandPrimary`/`brandSecondary` 六套工厂现值一字不动。
++- Deep 渐变端角色（原孤立值 `#BA5923`/`#2F588E`）改为**派生 getter**：`brandPrimaryDeep` / `brandSecondaryDeep` = `Color.lerp(anchor, black, 0.16)`。单一公式、零新增 hex 字面量、与锚值永不漂移、六套调色板自动成立（CB 档同 hue 变深仍 CB-safe）。
++
++### 2.2 删除与迁移
++
++| 对象 | 处置 |
++| --- | --- |
++| `SemanticColors.brandOrange/brandOrangeDeep/brandBlue/brandBlueDeep` | 4 个 getter（4 个孤立字面量）删除，原址留收敛注释 |
++| `login_screen.dart`（唯一消费者） | 4 个私有 getter 改指 `SparkleColors`；`_BrandMark`/`_BrandWordmark` 参数正名 `orange/orangeDeep/blue/blueDeep` → `primary/primaryDeep/secondary/secondaryDeep`（8 处重命名），消除"登录页是橙色品牌"的命名误导 |
++
++### 2.3 行为变化（即修复本体）
++
++登录页品牌标从促销橙蓝渐变切换为产品品牌对：浅色 `#825D49 → 深化16%` / `#7A8BA6 → 深化16%`，暗色 `#C97A43` / `#7E8FAE`——L1 P0-2"登录页品牌分裂"的修复本体。视觉终验随 L2/L3 截图波。
++
++---
++
++## 3. 裁决三：字阶三体系单一真相源（L1 P0-3）
++
++**裁决：SparkleTypography（theme_manager.dart）为唯一样式真相源。**
++**分支触发：DS 数值面 116 文件（字号 ~633 调用点）+ 394 文件（字重 ~1659 调用点）远超 30 文件阈值 → 按任务预设降级 shim 方案**：样式 shim 转发到唯一源，数值 shim 冻结。
++
++### 3.1 删除
++
++`tokens_v2/typography_token.dart` 整文件（−226 行）：`TypographySystem` 样式工厂 ×9、`TypographyToken`、`TypographyTokenVariant`、`TextKey`、`TypographyThemeExtension`（后四者 lib+test 零消费，其中 ThemeExtension 版 sparkleTypography 映射本身就是第四个微型事实源）；`design_system.dart` 的 import/export 同步摘除。
++
++### 3.2 样式 shim（转发，值收敛）
++
++`DS` 9 个 TextStyle getter 重指向 `SparkleTypography.standard()` 并全部 `@Deprecated('Use context.typo.* instead.')`。存量 ~744 调用点不动，渲染值按 L1 P0-3 指认的冲突归一：
++
++| DS 符号（shim） | 旧值（TypographySystem） | 新值（SparkleTypography） | 调用点 |
++| --- | --- | --- | --- |
++| displayLarge | 48.8 w800 | 46 w700 | 1 |
++| headingLarge | 39 w700 | 30 w700 | 3 |
++| titleLarge | 25 w600 | 19 w500 | 35 |
++| titleMedium | 20 w600 | 19 w500（暂转发 titleLarge，待 15 角色扩展） | 34 |
++| bodyLarge | 20 w400 | 16 w400 | 18 |
++| bodyMedium | 16 w400 | 14 w400 | 125 |
++| bodySmall | 12.8 w500 | 12 w400（bodySmall 别名） | 348 |
++| labelLarge | 16 w500 | 14 w500 | 23 |
++| labelSmall | 12.8 w500 | 12 w500 | 157 |
++
++硬下限核验：正文 ≥14 ✓（14/16），元数据 ≥12 ✓（12）；TypographySystem 的 12.8/48.8 非整倍率值全部消失。
++
++### 3.3 数值 shim（冻结，值恒等）
++
++`DS.fontSize*/fontWeight*/lineHeightNormal/fontSizeSM|MD|LG|XL` 约 20 个符号：**数值原样冻结**（含 fontSizeSm=16、captionStyle=16 等历史怪值，注释明示"冻结待逐屏迁移"），全部 `@Deprecated`；TypographySystem 引用改为恒等字面量。统计模块 4 个兼容样式（textStyle/headlineStyle/bodyStyle/captionStyle）内联冻结值以消除自弃用。**这层是冻结兼容层，不是第三事实源**：不再演化、不再新增，唯一演化方向是逐屏迁往 `context.typo`。
++
++---
++
++## 4. 批次 1 移交项处置
++
++| 移交项（batch1 §6） | 本批处置 |
++| --- | --- |
++| `userChatBubbleGradient` 零消费死令牌（"批次 2 删除或重定义"） | **已删除**（SparkleColors getter，零消费经 lib+test 复核） |
++| features 层旧 TaskColors 值硬编码副本（"批次 3+ 模块横扫"） | 现存 3 处（calendar/avatar/candidate_action）经核对实为**名字键通用调色板**（`'orange'` 等），非 TaskType 语义 → 维持批次 3+ 模块横扫，不属本批对 |
++
++---
++
++## 5. 验证
++
++- **dart analyze 定向**（8 个改动/接线文件）：**0 error / 0 warning**。过程中抓到并当场修复：`ambiguous_extension_member_access` ×5（见 §6）、EOF 换行 ×1。
++- **旧符号 grep**（lib+test，仅豁免整行注释）：`TaskColors` / `SparkleTaskColors` / `TypographySystem` / `TypographyToken` / `TextKey` / `brandOrange` / `brandBlue` / `taskColors` / `task_colors` / `typography_token` → **零代码残留**（仅 2 条出处注释 + 1 条冻结值注释）。
++- **消费面复核**：`SparkleColors(` 外部构造零（新增必填字段无破坏面）；两扩展并存下裸用 `context.colors` 的其他文件扫描零命中。
++- 纪律：零构建、零 flutter test；`pub get` 仅依赖解析（.dart_tool，gitignore 内）。
++- 视觉终验（随 L2/L3 截图波）：登录页品牌标、无 tone 的 TaskPill、DS 字阶 shim 涉及屏（titleMedium/bodySmall 高频屏优先）。
++
++---
++
++## 6. 残留与移交（批次 3 边界）
++
++| 项 | 现状 | 去向 |
++| --- | --- | --- |
++| **双 `colors` 入口碰撞** | `SparkleContext`(design_system).colors（aliases 门面）vs `SparkleContextExtension`.colors（真 palette）——本批在 task_pill/login_screen 实际撞线（ambiguous error），已用显式扩展调用临时消歧（`task_card.dart:775` 既有先例） | **批次 3 入口统一的第一案**：aliases 门面退役或改名 |
++| `context.sparkleTypography` 第二排版入口 | design_system.dart:488，3 个 feature 文件在用 | 批次 3 入口统一 |
++| AppColors(app/theme.dart)、SemanticColors 其余 ~76 色（galaxy/agent/intent/sector/achievement/template） | 域 palette 并入或豁免（L1 P1-9 高对比贯通） | 批次 3+ |
++| container 四件套（xxxContainer/onContainer）、tint 边缘带、textTertiary 静态化、CB 浅色档重校 | batch1 §6 移交表原样 | 批次 3 |
++| features 层名字键调色板字面量（3 处） | 非任务色语义 | 批次 3+ 模块横扫 |
++| SparkleTypography 15 角色扩展 + TextTheme 补齐映射（L1 §4.1） | titleMedium shim 暂转发 titleLarge | 批次 3 |
+diff --git a/mobile/lib/app/theme.dart b/mobile/lib/app/theme.dart
+index abf4d5ae..c06af0b8 100755
+--- a/mobile/lib/app/theme.dart
++++ b/mobile/lib/app/theme.dart
+@@ -132,7 +132,6 @@ class AppThemes {
+             cardShadow: DS.shadowMd,
+             elevatedShadow: DS.shadowLg,
+           ),
+-          SparkleTaskColors.light,
+           SparkleThemeExtension.light(), // 🔧 修复：注册 SparkleThemeExtension
+         ],
+ 
+@@ -360,7 +359,6 @@ class AppThemes {
+             cardShadow: DS.shadowMd,
+             elevatedShadow: DS.shadowLg,
+           ),
+-          SparkleTaskColors.dark,
+           SparkleThemeExtension.dark(), // 🔧 修复：注册 SparkleThemeExtension
+         ],
+ 
+@@ -560,224 +558,3 @@ class AppThemes {
+ extension ThemeExtensionHelper on ThemeData {
+   AppThemeExtension? get appExtension => extension<AppThemeExtension>();
+ }
+-
+-/// Sparkle task/status color extension kept for legacy app theme consumers.
+-///
+-/// Canonical UI color tokens live in tokens_v2/theme_manager.dart as
+-/// SparkleColors and are exposed through `context.colors`.
+-@immutable
+-@Deprecated('Use context.colors from SparkleThemeExtension instead.')
+-class SparkleTaskColors extends ThemeExtension<SparkleTaskColors> {
+-  const SparkleTaskColors({
+-    required this.taskLearning,
+-    required this.taskTraining,
+-    required this.taskErrorFix,
+-    required this.taskReflection,
+-    required this.taskSocial,
+-    required this.taskPlanning,
+-    required this.planSprint,
+-    required this.planGrowth,
+-    required this.surfaceCard,
+-    required this.surfaceElevated,
+-    required this.surfaceGlass,
+-    required this.textPrimary,
+-    required this.textSecondary,
+-    required this.textTertiary,
+-    required this.textOnPrimary,
+-    required this.border,
+-    required this.divider,
+-  });
+-  // 任务类型颜色
+-  final Color taskLearning;
+-  final Color taskTraining;
+-  final Color taskErrorFix;
+-  final Color taskReflection;
+-  final Color taskSocial;
+-  final Color taskPlanning;
+-
+-  // 计划类型颜色
+-  final Color planSprint;
+-  final Color planGrowth;
+-
+-  // 表面颜色
+-  final Color surfaceCard;
+-  final Color surfaceElevated;
+-  final Color surfaceGlass;
+-
+-  // 文本颜色
+-  final Color textPrimary;
+-  final Color textSecondary;
+-  final Color textTertiary;
+-  final Color textOnPrimary;
+-
+-  // 边框和分割线颜色
+-  final Color border;
+-  final Color divider;
+-
+-  /// 浅色主题配色
+-  static SparkleTaskColors get light => SparkleTaskColors(
+-        // 任务类型 - 使用饱和度适中的颜色
+-        taskLearning: const Color(0xFF64B5F6),
+-        taskTraining: const Color(0xFFFF9800),
+-        taskErrorFix: const Color(0xFFEF5350),
+-        taskReflection: const Color(0xFF9C27B0),
+-        taskSocial: const Color(0xFF81C784),
+-        taskPlanning: const Color(0xFF009688),
+-        // 计划类型
+-        planSprint: const Color(0xFFE53935),
+-        planGrowth: const Color(0xFF43A047),
+-        // 表面颜色
+-        surfaceCard: const Color(0xFFFFFFFF),
+-        surfaceElevated: const Color(0xFFFAFAFA),
+-        surfaceGlass: const Color(0xF0FFFFFF),
+-        // 文本颜色
+-        textPrimary: DS.neutral900,
+-        textSecondary: DS.neutral700,
+-        textTertiary: DS.neutral500,
+-        textOnPrimary: const Color(0xFFFFFFFF),
+-        // 边框和分割线
+-        border: DS.neutral300,
+-        divider: DS.neutral200,
+-      );
+-
+-  /// 深色主题配色
+-  static SparkleTaskColors get dark => SparkleTaskColors(
+-        // 任务类型 - 使用更亮的颜色以提高对比度
+-        taskLearning: const Color(0xFF64B5F6),
+-        taskTraining: const Color(0xFFFFB74D),
+-        taskErrorFix: const Color(0xFFEF5350),
+-        taskReflection: const Color(0xFFBA68C8),
+-        taskSocial: const Color(0xFF81C784),
+-        taskPlanning: const Color(0xFF4DB6AC),
+-        // 计划类型
+-        planSprint: const Color(0xFFFF5252),
+-        planGrowth: const Color(0xFF66BB6A),
+-        // 表面颜色
+-        surfaceCard: DS.neutral800,
+-        surfaceElevated: DS.neutral700,
+-        surfaceGlass: const Color(0xF0424242),
+-        // 文本颜色
+-        textPrimary: DS.neutral50,
+-        textSecondary: DS.neutral300,
+-        textTertiary: DS.neutral500,
+-        textOnPrimary: const Color(0xFFFFFFFF),
+-        // 边框和分割线
+-        border: DS.neutral700,
+-        divider: DS.neutral600,
+-      );
+-
+-  @override
+-  SparkleTaskColors copyWith({
+-    Color? taskLearning,
+-    Color? taskTraining,
+-    Color? taskErrorFix,
+-    Color? taskReflection,
+-    Color? taskSocial,
+-    Color? taskPlanning,
+-    Color? planSprint,
+-    Color? planGrowth,
+-    Color? surfaceCard,
+-    Color? surfaceElevated,
+-    Color? surfaceGlass,
+-    Color? textPrimary,
+-    Color? textSecondary,
+-    Color? textTertiary,
+-    Color? textOnPrimary,
+-    Color? border,
+-    Color? divider,
+-  }) =>
+-      SparkleTaskColors(
+-        taskLearning: taskLearning ?? this.taskLearning,
+-        taskTraining: taskTraining ?? this.taskTraining,
+-        taskErrorFix: taskErrorFix ?? this.taskErrorFix,
+-        taskReflection: taskReflection ?? this.taskReflection,
+-        taskSocial: taskSocial ?? this.taskSocial,
+-        taskPlanning: taskPlanning ?? this.taskPlanning,
+-        planSprint: planSprint ?? this.planSprint,
+-        planGrowth: planGrowth ?? this.planGrowth,
+-        surfaceCard: surfaceCard ?? this.surfaceCard,
+-        surfaceElevated: surfaceElevated ?? this.surfaceElevated,
+-        surfaceGlass: surfaceGlass ?? this.surfaceGlass,
+-        textPrimary: textPrimary ?? this.textPrimary,
+-        textSecondary: textSecondary ?? this.textSecondary,
+-        textTertiary: textTertiary ?? this.textTertiary,
+-        textOnPrimary: textOnPrimary ?? this.textOnPrimary,
+-        border: border ?? this.border,
+-        divider: divider ?? this.divider,
+-      );
+-
+-  @override
+-  SparkleTaskColors lerp(ThemeExtension<SparkleTaskColors>? other, double t) {
+-    if (other is! SparkleTaskColors) return this;
+-    return SparkleTaskColors(
+-      taskLearning: Color.lerp(taskLearning, other.taskLearning, t)!,
+-      taskTraining: Color.lerp(taskTraining, other.taskTraining, t)!,
+-      taskErrorFix: Color.lerp(taskErrorFix, other.taskErrorFix, t)!,
+-      taskReflection: Color.lerp(taskReflection, other.taskReflection, t)!,
+-      taskSocial: Color.lerp(taskSocial, other.taskSocial, t)!,
+-      taskPlanning: Color.lerp(taskPlanning, other.taskPlanning, t)!,
+-      planSprint: Color.lerp(planSprint, other.planSprint, t)!,
+-      planGrowth: Color.lerp(planGrowth, other.planGrowth, t)!,
+-      surfaceCard: Color.lerp(surfaceCard, other.surfaceCard, t)!,
+-      surfaceElevated: Color.lerp(surfaceElevated, other.surfaceElevated, t)!,
+-      surfaceGlass: Color.lerp(surfaceGlass, other.surfaceGlass, t)!,
+-      textPrimary: Color.lerp(textPrimary, other.textPrimary, t)!,
+-      textSecondary: Color.lerp(textSecondary, other.textSecondary, t)!,
+-      textTertiary: Color.lerp(textTertiary, other.textTertiary, t)!,
+-      textOnPrimary: Color.lerp(textOnPrimary, other.textOnPrimary, t)!,
+-      border: Color.lerp(border, other.border, t)!,
+-      divider: Color.lerp(divider, other.divider, t)!,
+-    );
+-  }
+-
+-  /// 根据任务类型获取颜色
+-  Color getTaskColor(String taskType) {
+-    switch (taskType.toLowerCase()) {
+-      case 'learning':
+-        return taskLearning;
+-      case 'training':
+-        return taskTraining;
+-      case 'error_fix':
+-        return taskErrorFix;
+-      case 'reflection':
+-        return taskReflection;
+-      case 'social':
+-        return taskSocial;
+-      case 'planning':
+-        return taskPlanning;
+-      default:
+-        return taskLearning;
+-    }
+-  }
+-
+-  /// 根据计划类型获取颜色
+-  Color getPlanColor(String planType) {
+-    switch (planType.toLowerCase()) {
+-      case 'sprint':
+-        return planSprint;
+-      case 'growth':
+-        return planGrowth;
+-      default:
+-        return planSprint;
+-    }
+-  }
+-
+-  /// 创建任务类型渐变
+-  LinearGradient getTaskGradient(String taskType) {
+-    final color = getTaskColor(taskType);
+-    return LinearGradient(
+-      colors: [color, color.withValues(alpha: 0.7)],
+-      begin: Alignment.topLeft,
+-      end: Alignment.bottomRight,
+-    );
+-  }
+-}
+-
+-/// Legacy task color access.
+-@Deprecated(
+-  'Use context.colors from core/design/theme/sparkle_context_extension.dart.',
+-)
+-extension SparkleTaskColorsExtension on BuildContext {
+-  SparkleTaskColors get taskColors =>
+-      Theme.of(this).extension<SparkleTaskColors>() ?? SparkleTaskColors.light;
+-}
+diff --git a/mobile/lib/core/design/color_extensions.dart b/mobile/lib/core/design/color_extensions.dart
+index ec796f8e..dc1dacde 100644
+--- a/mobile/lib/core/design/color_extensions.dart
++++ b/mobile/lib/core/design/color_extensions.dart
+@@ -118,18 +118,11 @@ class SemanticColors {
+   Color get statusInvisibleColor => const Color(0xFF34495E);
+ 
+   // ========== 品牌颜色变体 ==========
+-
+-  /// 品牌橙色（用于登录等强调场景）
+-  Color get brandOrange => const Color(0xFFD9773A);
+-
+-  /// 品牌橙色深色变体
+-  Color get brandOrangeDeep => const Color(0xFFBA5923);
+-
+-  /// 品牌蓝色（用于次要强调）
+-  Color get brandBlue => const Color(0xFF4C78B2);
+-
+-  /// 品牌蓝色深色变体
+-  Color get brandBlueDeep => const Color(0xFF2F588E);
++  //
++  // batch2 收敛：brandOrange/brandOrangeDeep/brandBlue/brandBlueDeep 已删除。
++  // 品牌色的唯一事实源是 tokens_v2/theme_manager.dart 的 SparkleColors
++  // （brandPrimary/brandSecondary 及其 *Deep 派生 getter）。登录页品牌标
++  // 等场景请使用 context.colors.brand*。
+ 
+   // ========== 社交/分享颜色 ==========
+ 
+diff --git a/mobile/lib/core/design/components/atoms/task_pill.dart b/mobile/lib/core/design/components/atoms/task_pill.dart
+index 5be2f830..e1ac7ba3 100755
+--- a/mobile/lib/core/design/components/atoms/task_pill.dart
++++ b/mobile/lib/core/design/components/atoms/task_pill.dart
+@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
+ import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
+ import 'package:sparkle/core/design/design_system.dart';
+ import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
+-import 'package:sparkle/core/design/tokens/task_colors.dart';
++import 'package:sparkle/shared/entities/task_model.dart' show TaskType;
+ 
+ /// Tone mapping for task pills.
+ enum TaskPillTone { info, success, warning, danger, neutral, brand }
+@@ -68,14 +68,16 @@ class TaskPill extends StatelessWidget {
+           iconColor = DS.brandPrimary;
+       }
+     } else {
+-      // Use task type-based colors
+-      final taskColors = TaskColors(
+-        brightness: SparkleContext(context).sparkleColors.brightness,
+-      );
+-      background = taskColors.getTint(type);
+-      border = taskColors.getBorder(type);
+-      textColor = taskColors.getLabel(type);
+-      iconColor = taskColors.getIcon(type);
++      // Task type colors come from the single palette source
++      // (SparkleColors.task* / taskColorFor — batch2 convergence).
++      // Explicit extension application: design_system.dart's SparkleContext
++      // also exposes `colors` (entry unification lands in batch 3).
++      final taskColor =
++          SparkleContextExtension(context).colors.taskColorFor(type);
++      background = taskColor.withValues(alpha: 0.1);
++      border = taskColor.withValues(alpha: 0.3);
++      textColor = taskColor;
++      iconColor = taskColor;
+     }
+ 
+     final horizontal = dense ? context.space.sm : context.space.md;
+diff --git a/mobile/lib/core/design/design_system.dart b/mobile/lib/core/design/design_system.dart
+index fe2a0abc..fc951596 100755
+--- a/mobile/lib/core/design/design_system.dart
++++ b/mobile/lib/core/design/design_system.dart
+@@ -39,7 +39,6 @@ import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
+ import 'package:sparkle/core/design/tokens_v2/animation_token.dart';
+ import 'package:sparkle/core/design/tokens_v2/responsive_system.dart';
+ import 'package:sparkle/core/design/tokens_v2/theme_manager.dart';
+-import 'package:sparkle/core/design/tokens_v2/typography_token.dart';
+ import 'package:sparkle/core/utils/theme_utils.dart';
+ 
+ export '../statistics/statistics.dart';
+@@ -52,7 +51,6 @@ export 'tokens_v2/animation_token.dart';
+ export 'tokens_v2/color_token.dart';
+ export 'tokens_v2/responsive_system.dart';
+ export 'tokens_v2/theme_manager.dart';
+-export 'tokens_v2/typography_token.dart';
+ export 'validation/design_validator.dart';
+ export 'widgets/app_feedback.dart';
+ export 'widgets/graphite_surfaces.dart';
+@@ -1043,28 +1041,44 @@ class DS {
+   static const double iconSizeXl = 40.0;
+   static const double iconSize3xl = 48.0;
+ 
+-  // Typography
++  // Typography — 冻结的数值兼容层（batch2 单一真相源裁决）。
++  // TypographySystem 已删除（L1 P0-3）；以下数值冻结不再演化，
++  // 仅供存量调用点过渡。新代码一律使用 SparkleTypography / context.typo。
+   static const double _fontRatio = 1.25;
++  @Deprecated('Use context.typo.labelSmall (12px) instead. Numeric layer is frozen.')
+   static const double fontSizeXs = 12.0;
+-  @Deprecated(
+-    'Use TypographySystem.bodyMedium() instead. fontSizeSm had a value conflict with TypographySystem.sizeSm.',
+-  )
+-  static const double fontSizeSm = TypographySystem.sizeSm; // 14.0 → 16.0
++  @Deprecated('Use context.typo.labelLarge/bodyMedium (14px) instead. Numeric layer is frozen.')
++  static const double fontSizeSm = 16.0; // frozen legacy value (was TypographySystem.sizeSm)
++  @Deprecated('Use context.typo.bodyLarge (16px) instead. Numeric layer is frozen.')
+   static const double fontSizeBase = 16.0;
++  @Deprecated('Use context.typo.bodyLarge instead. Numeric layer is frozen.')
+   static const double fontSizeMd = fontSizeBase;
++  @Deprecated('Use context.typo.titleLarge instead. Numeric layer is frozen.')
+   static const double fontSizeLg = fontSizeBase * _fontRatio;
++  @Deprecated('Use context.typo.headingMedium instead. Numeric layer is frozen.')
+   static const double fontSizeXl = fontSizeLg * _fontRatio;
++  @Deprecated('Use context.typo.headingLarge instead. Numeric layer is frozen.')
+   static const double fontSize2xl = fontSizeXl * _fontRatio;
++  @Deprecated('Use context.typo.displayLarge instead. Numeric layer is frozen.')
+   static const double fontSize3xl = fontSize2xl * _fontRatio;
++  @Deprecated('Numeric layer is frozen; pick a SparkleTypography role.')
+   static const double fontSize4xl = fontSize3xl * _fontRatio;
++  @Deprecated('Numeric layer is frozen; pick a SparkleTypography role.')
+   static const double fontSize5xl = fontSize4xl * _fontRatio;
++  @Deprecated('Numeric layer is frozen; pick a SparkleTypography role.')
+   static const double fontSize6xl = fontSize5xl * _fontRatio;
+-  static const FontWeight fontWeightRegular = TypographySystem.weightRegular;
+-  static const FontWeight fontWeightMedium = TypographySystem.weightMedium;
+-  static const FontWeight fontWeightSemibold = TypographySystem.weightSemibold;
++  @Deprecated('Use FontWeight.w400 directly or a SparkleTypography role.')
++  static const FontWeight fontWeightRegular = FontWeight.w400;
++  @Deprecated('Use FontWeight.w500 directly or a SparkleTypography role.')
++  static const FontWeight fontWeightMedium = FontWeight.w500;
++  @Deprecated('Use FontWeight.w600 directly or a SparkleTypography role.')
++  static const FontWeight fontWeightSemibold = FontWeight.w600;
++  @Deprecated('Use FontWeight.w600 directly or a SparkleTypography role.')
+   static const FontWeight fontWeightSemiBold = fontWeightSemibold;
+-  static const FontWeight fontWeightBold = TypographySystem.weightBold;
+-  static const double lineHeightNormal = TypographySystem.leadingNormal;
++  @Deprecated('Use FontWeight.w700 directly or a SparkleTypography role.')
++  static const FontWeight fontWeightBold = FontWeight.w700;
++  @Deprecated('Declare line height on the SparkleTypography role you use.')
++  static const double lineHeightNormal = 1.5;
+ 
+   // 动画
+   static Duration get quick => AnimationSystem.quick;
+@@ -1119,16 +1133,33 @@ class DS {
+   static Curve get curveEaseOut => AnimationSystem.easeOut;
+   static Curve get curveEaseInOut => Curves.easeInOut;
+ 
+-  // 排版
+-  static TextStyle get displayLarge => TypographySystem.displayLarge();
+-  static TextStyle get headingLarge => TypographySystem.headingLarge();
+-  static TextStyle get titleLarge => TypographySystem.titleLarge();
+-  static TextStyle get titleMedium => TypographySystem.titleMedium();
+-  static TextStyle get bodyLarge => TypographySystem.bodyLarge();
+-  static TextStyle get bodyMedium => TypographySystem.bodyMedium();
+-  static TextStyle get bodySmall => TypographySystem.labelSmall();
+-  static TextStyle get labelLarge => TypographySystem.labelLarge();
+-  static TextStyle get labelSmall => TypographySystem.labelSmall();
++  // 排版 — 单一真相源裁决（batch2, L1 P0-3）：样式唯一来源是
++  // SparkleTypography（tokens_v2/theme_manager.dart）。以下 DS getter 全部
++  // 降级为 deprecated 兼容 shim，仅做转发（存量约 740 处调用点暂不迁移）。
++  // 新代码使用 context.typo.* 或 Material TextTheme。
++  static SparkleTypography get _typography => SparkleTypography.standard();
++
++  @Deprecated('Use context.typo.displayLarge instead.')
++  static TextStyle get displayLarge => _typography.displayLarge;
++  @Deprecated('Use context.typo.headingLarge instead.')
++  static TextStyle get headingLarge => _typography.headingLarge;
++  @Deprecated('Use context.typo.titleLarge instead.')
++  static TextStyle get titleLarge => _typography.titleLarge;
++
++  /// Shim: SparkleTypography has no separate titleMedium role yet; this
++  /// forwards to [SparkleTypography.titleLarge] until the 15-role expansion.
++  @Deprecated('Use context.typo.titleLarge instead.')
++  static TextStyle get titleMedium => _typography.titleLarge;
++  @Deprecated('Use context.typo.bodyLarge instead.')
++  static TextStyle get bodyLarge => _typography.bodyLarge;
++  @Deprecated('Use context.typo.bodyMedium instead.')
++  static TextStyle get bodyMedium => _typography.bodyMedium;
++  @Deprecated('Use context.typo.bodySmall instead.')
++  static TextStyle get bodySmall => _typography.bodySmall;
++  @Deprecated('Use context.typo.labelLarge instead.')
++  static TextStyle get labelLarge => _typography.labelLarge;
++  @Deprecated('Use context.typo.labelSmall instead.')
++  static TextStyle get labelSmall => _typography.labelSmall;
+ 
+   // Shadows
+   static List<BoxShadow> get shadowSm => _theme.shadows.small;
+@@ -1287,28 +1318,30 @@ class DS {
+   // 向后兼容属性（用于统计模块）
+   // ============================================
+ 
+-  /// 文本样式快捷方式
++  /// 文本样式快捷方式（统计模块兼容层；数值为冻结值，勿新增使用）
+   static TextStyle get textStyle => TextStyle(
+-        fontSize: fontSizeBase,
+-        fontWeight: fontWeightRegular,
++        fontSize: 16.0,
++        fontWeight: FontWeight.w400,
+         color: textPrimary,
+       );
+ 
+   static TextStyle get headlineStyle => TextStyle(
+-        fontSize: fontSizeLg,
+-        fontWeight: fontWeightSemibold,
++        fontSize: 20.0,
++        fontWeight: FontWeight.w600,
+         color: textPrimary,
+       );
+ 
+   static TextStyle get bodyStyle => TextStyle(
+-        fontSize: fontSizeBase,
+-        fontWeight: fontWeightRegular,
++        fontSize: 16.0,
++        fontWeight: FontWeight.w400,
+         color: textSecondary,
+       );
+ 
+   static TextStyle get captionStyle => TextStyle(
+-        fontSize: fontSizeSm,
+-        fontWeight: fontWeightRegular,
++        // frozen legacy value: this stays 16.0 until per-screen migration
++        // re-labels it as a real caption (labelSmall, 12px).
++        fontSize: 16.0,
++        fontWeight: FontWeight.w400,
+         color: textTertiary,
+       );
+ 
+@@ -1322,10 +1355,14 @@ class DS {
+   static const double borderRadiusLG = radius16;
+   static const double borderRadiusXL = radius20;
+ 
+-  /// 字体大小快捷方式（别名）
++  /// 字体大小快捷方式（别名，冻结兼容层）
++  @Deprecated('Numeric layer is frozen; pick a SparkleTypography role.')
+   static const double fontSizeSM = fontSizeSm;
++  @Deprecated('Numeric layer is frozen; pick a SparkleTypography role.')
+   static const double fontSizeMD = fontSizeBase;
++  @Deprecated('Numeric layer is frozen; pick a SparkleTypography role.')
+   static const double fontSizeLG = fontSizeLg;
++  @Deprecated('Numeric layer is frozen; pick a SparkleTypography role.')
+   static const double fontSizeXL = fontSizeXl;
+ }
+ 
+diff --git a/mobile/lib/core/design/theme/sparkle_context_extension.dart b/mobile/lib/core/design/theme/sparkle_context_extension.dart
+index 1ef809f2..2a36a6be 100755
+--- a/mobile/lib/core/design/theme/sparkle_context_extension.dart
++++ b/mobile/lib/core/design/theme/sparkle_context_extension.dart
+@@ -1,6 +1,5 @@
+ import 'package:flutter/material.dart';
+ import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
+-import 'package:sparkle/core/design/tokens/task_colors.dart';
+ import 'package:sparkle/core/design/tokens_v2/theme_manager.dart'
+     show SparkleColors, SparkleSpacing, SparkleTypography;
+ 
+@@ -20,7 +19,6 @@ extension SparkleContextExtension on BuildContext {
+   SparkleSpacing get space => sparkle.spacing;
+   SparkleRadius get radius => sparkle.radius;
+   SparkleMotionTokens get motion => sparkle.motion;
+-  TaskColors get taskColors => sparkle.taskColors;
+ 
+   bool get canBlur => sparkle.enableBlur;
+   bool get canGlow => sparkle.enableGlow;
+diff --git a/mobile/lib/core/design/theme/sparkle_theme_extension.dart b/mobile/lib/core/design/theme/sparkle_theme_extension.dart
+index 1f0af773..c56f1584 100755
+--- a/mobile/lib/core/design/theme/sparkle_theme_extension.dart
++++ b/mobile/lib/core/design/theme/sparkle_theme_extension.dart
+@@ -3,7 +3,6 @@ import 'dart:ui';
+ import 'package:flutter/material.dart';
+ import 'package:sparkle/core/design/motion.dart';
+ import 'package:sparkle/core/design/theme/performance_tier.dart';
+-import 'package:sparkle/core/design/tokens/task_colors.dart';
+ import 'package:sparkle/core/design/tokens_v2/theme_manager.dart'
+     show SparkleColors, SparkleSpacing, SparkleTypography, ThemeManager;
+ 
+@@ -19,7 +18,6 @@ class SparkleThemeExtension extends ThemeExtension<SparkleThemeExtension> {
+     required this.radius,
+     required this.motion,
+     required this.performanceTier,
+-    required this.taskColors,
+   });
+ 
+   factory SparkleThemeExtension.light({
+@@ -36,7 +34,6 @@ class SparkleThemeExtension extends ThemeExtension<SparkleThemeExtension> {
+         radius: const SparkleRadius(),
+         motion: const SparkleMotionTokens(),
+         performanceTier: tier,
+-        taskColors: const TaskColors(brightness: Brightness.light),
+       );
+ 
+   factory SparkleThemeExtension.dark({
+@@ -53,7 +50,6 @@ class SparkleThemeExtension extends ThemeExtension<SparkleThemeExtension> {
+         radius: const SparkleRadius(),
+         motion: const SparkleMotionTokens(),
+         performanceTier: tier,
+-        taskColors: const TaskColors(brightness: Brightness.dark),
+       );
+ 
+   final SparkleColors colors;
+@@ -62,7 +58,6 @@ class SparkleThemeExtension extends ThemeExtension<SparkleThemeExtension> {
+   final SparkleRadius radius;
+   final SparkleMotionTokens motion;
+   final PerformanceTier performanceTier;
+-  final TaskColors taskColors;
+ 
+   bool get enableBlur => performanceTier == PerformanceTier.high;
+   bool get enableGlow => performanceTier == PerformanceTier.high;
+@@ -76,7 +71,6 @@ class SparkleThemeExtension extends ThemeExtension<SparkleThemeExtension> {
+     SparkleRadius? radius,
+     SparkleMotionTokens? motion,
+     PerformanceTier? performanceTier,
+-    TaskColors? taskColors,
+   }) =>
+       SparkleThemeExtension(
+         colors: colors ?? this.colors,
+@@ -85,7 +79,6 @@ class SparkleThemeExtension extends ThemeExtension<SparkleThemeExtension> {
+         radius: radius ?? this.radius,
+         motion: motion ?? this.motion,
+         performanceTier: performanceTier ?? this.performanceTier,
+-        taskColors: taskColors ?? this.taskColors,
+       );
+ 
+   @override
+@@ -101,7 +94,6 @@ class SparkleThemeExtension extends ThemeExtension<SparkleThemeExtension> {
+       radius: radius.lerp(other.radius, t),
+       motion: t < 0.5 ? motion : other.motion,
+       performanceTier: t < 0.5 ? performanceTier : other.performanceTier,
+-      taskColors: t < 0.5 ? taskColors : other.taskColors,
+     );
+   }
+ }
+diff --git a/mobile/lib/core/design/tokens/task_colors.dart b/mobile/lib/core/design/tokens/task_colors.dart
+deleted file mode 100755
+index 8e65bb65..00000000
+--- a/mobile/lib/core/design/tokens/task_colors.dart
++++ /dev/null
+@@ -1,81 +0,0 @@
+-import 'package:flutter/material.dart';
+-import 'package:sparkle/shared/entities/task_model.dart' show TaskType;
+-
+-export 'package:sparkle/shared/entities/task_model.dart' show TaskType;
+-
+-/// Single source of truth for task colors.
+-///
+-/// DO NOT define task colors elsewhere in the UI layer.
+-@immutable
+-class TaskColors {
+-  const TaskColors({required this.brightness});
+-
+-  final Brightness brightness;
+-
+-  bool get _isDark => brightness == Brightness.dark;
+-
+-  Color getColor(TaskType type) {
+-    switch (type) {
+-      case TaskType.learning:
+-        return _isDark
+-            ? _RawTaskColors.learningDark
+-            : _RawTaskColors.learningLight;
+-      case TaskType.training:
+-        return _isDark
+-            ? _RawTaskColors.trainingDark
+-            : _RawTaskColors.trainingLight;
+-      case TaskType.errorFix:
+-        return _isDark
+-            ? _RawTaskColors.errorFixDark
+-            : _RawTaskColors.errorFixLight;
+-      case TaskType.reflection:
+-        return _isDark
+-            ? _RawTaskColors.reflectionDark
+-            : _RawTaskColors.reflectionLight;
+-      case TaskType.social:
+-        return _isDark ? _RawTaskColors.socialDark : _RawTaskColors.socialLight;
+-      case TaskType.planning:
+-        return _isDark
+-            ? _RawTaskColors.planningDark
+-            : _RawTaskColors.planningLight;
+-      case TaskType.ocr:
+-        return _isDark ? _RawTaskColors.ocrDark : _RawTaskColors.ocrLight;
+-    }
+-  }
+-
+-  Color getTint(TaskType type) => getColor(type).withValues(alpha: 0.1);
+-  Color getBorder(TaskType type) => getColor(type).withValues(alpha: 0.3);
+-  Color getIcon(TaskType type) => getColor(type);
+-  Color getLabel(TaskType type) => getColor(type);
+-}
+-
+-class _RawTaskColors {
+-  _RawTaskColors._();
+-
+-  // Light values are WCAG AA calibrated (UIUX round1 batch1): each passes
+-  // >=4.5:1 as pill label text on the 10% tint over white/ambient/primary.
+-  // Dark values are untouched by that calibration.
+-  static const Color learningLight = Color(0xFF175FB0); // was 64B5F6 (2.21:1 on white) -> 6.36:1
+-  static const Color learningDark = Color(0xFF4CC9F0);
+-
+-  static const Color trainingLight = Color(0xFF8E4E00); // was FF9800 (2.16:1) -> 6.48:1
+-  static const Color trainingDark = Color(0xFFFFB74D);
+-
+-  static const Color errorFixLight = Color(0xFFB0312A); // was EF5350 (3.49:1) -> 6.33:1
+-  static const Color errorFixDark = Color(0xFFFF6B6B);
+-
+-  static const Color reflectionLight = Color(0xFF9C27B0); // already 6.30:1, kept
+-
+-  static const Color reflectionDark = Color(0xFFBA68C8);
+-
+-  // Social must always be amber.
+-  static const Color socialLight = Color(0xFF755F00); // was shared FFB703 (1.75:1) -> 6.19:1
+-  static const Color socialDark = Color(0xFFFFB703); // dark keeps the bright amber
+-
+-  static const Color planningLight = Color(0xFF00695C); // was 009688 (3.67:1) -> 6.61:1
+-  static const Color planningDark = Color(0xFF4DB6AC);
+-
+-  // OCR is gray.
+-  static const Color ocrLight = Color(0xFF4F6572); // was shared 78909C (3.35:1) -> 6.11:1
+-  static const Color ocrDark = Color(0xFF78909C); // dark keeps the lighter gray
+-}
+diff --git a/mobile/lib/core/design/tokens_v2/theme_manager.dart b/mobile/lib/core/design/tokens_v2/theme_manager.dart
+index a55b181b..a784f896 100755
+--- a/mobile/lib/core/design/tokens_v2/theme_manager.dart
++++ b/mobile/lib/core/design/tokens_v2/theme_manager.dart
+@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
+ import 'package:shared_preferences/shared_preferences.dart';
+ import 'package:sparkle/core/services/sensory_feedback_service.dart';
+ import 'package:sparkle/core/utils/text_rendering.dart';
++import 'package:sparkle/shared/entities/task_model.dart' show TaskType;
+ 
+ /// 主题管理器 - 支持动态切换和持久化
+ /// 支持商城皮肤系统
+@@ -393,6 +394,7 @@ class SparkleColors {
+     required this.taskReflection,
+     required this.taskSocial,
+     required this.taskPlanning,
++    required this.taskOcr,
+     required this.planSprint,
+     required this.planGrowth,
+     required this.statusOnline,
+@@ -440,6 +442,7 @@ class SparkleColors {
+         taskReflection: Color(0xFFCC79A7),      // Reddish Purple
+         taskSocial: Color(0xFF009E73),          // Bluish Green
+         taskPlanning: Color(0xFF56B4E9),        // Sky Blue
++        taskOcr: Color(0xFF4F6572),             // Gray — CB-neutral by definition
+         planSprint: Color(0xFFD55E00),          // Vermillion
+         planGrowth: Color(0xFF009E73),          // Bluish Green
+         statusOnline: Color(0xFF009E73),
+@@ -483,6 +486,7 @@ class SparkleColors {
+         taskReflection: Color(0xFF7B6E8D),
+         taskSocial: Color(0xFF5F8672),
+         taskPlanning: Color(0xFF50737D),
++        taskOcr: Color(0xFF4F6572),
+         planSprint: Color(0xFF9D5B4F),
+         planGrowth: Color(0xFF5D7B63),
+         statusOnline: Color(0xFF189150), // was 2ECC71 (1.86:1 here) -> 3.58:1 graphic line
+@@ -539,6 +543,9 @@ class SparkleColors {
+       taskReflection: Color(0xFF6C5C92), // was 9A88B7 (2.91:1) -> 5.35:1
+       taskSocial: Color(0xFF456E52), // was 769083 (3.15:1) -> 5.32:1
+       taskPlanning: Color(0xFF426D77), // was 6A8790 (3.50:1) -> 5.20:1
++      // OCR slot folded from tokens/task_colors.dart (batch2 single-source
++      // convergence); gray value is the batch1-calibrated ocrLight.
++      taskOcr: Color(0xFF4F6572),
+       planSprint: Color(0xFFA0483E), // was B3756B (3.38:1) -> 5.49:1
+       planGrowth: Color(0xFF456E52), // was 73907A (3.20:1) -> 5.32:1
+       statusOnline: Color(0xFF189150), // was 2ECC71 (1.92:1) -> 3.68:1 (graphic)
+@@ -588,6 +595,7 @@ class SparkleColors {
+         taskReflection: Color(0xFFCC79A7),      // Reddish Purple
+         taskSocial: Color(0xFF009E73),          // Bluish Green
+         taskPlanning: Color(0xFF0072B2),        // Blue
++        taskOcr: Color(0xFF78909C),             // Gray — CB-neutral by definition
+         planSprint: Color(0xFFD55E00),          // Vermillion
+         planGrowth: Color(0xFF009E73),          // Bluish Green
+         statusOnline: Color(0xFF009E73),
+@@ -632,6 +640,7 @@ class SparkleColors {
+         taskReflection: Color(0xFFA696C0),
+         taskSocial: Color(0xFF83A18C),
+         taskPlanning: Color(0xFF7B9AA3),
++        taskOcr: Color(0xFF78909C),
+         planSprint: Color(0xFFD37B72),
+         planGrowth: Color(0xFF83A18C),
+         statusOnline: Color(0xFF2ECC71),
+@@ -678,6 +687,9 @@ class SparkleColors {
+       taskReflection: Color(0xFFA08AB8),
+       taskSocial: Color(0xFF7A9A83),
+       taskPlanning: Color(0xFF7E9AA1),
++      // OCR slot folded from tokens/task_colors.dart (batch2 single-source
++      // convergence); gray value is the pre-existing ocrDark.
++      taskOcr: Color(0xFF78909C),
+       planSprint: Color(0xFFCE817A),
+       planGrowth: Color(0xFF7A9980),
+       statusOnline: Color(0xFF2ECC71),
+@@ -726,6 +738,7 @@ class SparkleColors {
+   final Color taskReflection;
+   final Color taskSocial;
+   final Color taskPlanning;
++  final Color taskOcr;
+   final Color planSprint;
+   final Color planGrowth;
+ 
+@@ -764,11 +777,18 @@ class SparkleColors {
+         end: Alignment.bottomRight,
+       );
+ 
+-  LinearGradient get userChatBubbleGradient => LinearGradient(
+-        colors: [brandSecondary, chatBubbleUser],
+-        begin: Alignment.topLeft,
+-        end: Alignment.bottomRight,
+-      );
++  /// Gradient-depth variant of [brandPrimary], derived toward black so it
++  /// can never drift from the palette anchor (batch2 brand convergence —
++  /// replaces SemanticColors.brandOrangeDeep/brandBlueDeep literals).
++  Color get brandPrimaryDeep =>
++      Color.lerp(brandPrimary, const Color(0xFF000000), 0.16)!;
++
++  /// Gradient-depth variant of [brandSecondary]. See [brandPrimaryDeep].
++  Color get brandSecondaryDeep =>
++      Color.lerp(brandSecondary, const Color(0xFF000000), 0.16)!;
++
++  // userChatBubbleGradient removed (batch2): zero-consumer dead token,
++  // flagged by round1-batch1-contrast.md §6 hand-off.
+ 
+   SparkleColors copyWith({
+     Color? brandPrimary,
+@@ -793,6 +813,7 @@ class SparkleColors {
+     Color? taskReflection,
+     Color? taskSocial,
+     Color? taskPlanning,
++    Color? taskOcr,
+     Color? planSprint,
+     Color? planGrowth,
+     Color? statusOnline,
+@@ -834,6 +855,7 @@ class SparkleColors {
+         taskReflection: taskReflection ?? this.taskReflection,
+         taskSocial: taskSocial ?? this.taskSocial,
+         taskPlanning: taskPlanning ?? this.taskPlanning,
++        taskOcr: taskOcr ?? this.taskOcr,
+         planSprint: planSprint ?? this.planSprint,
+         planGrowth: planGrowth ?? this.planGrowth,
+         statusOnline: statusOnline ?? this.statusOnline,
+@@ -877,6 +899,7 @@ class SparkleColors {
+         taskReflection: Color.lerp(taskReflection, other.taskReflection, t)!,
+         taskSocial: Color.lerp(taskSocial, other.taskSocial, t)!,
+         taskPlanning: Color.lerp(taskPlanning, other.taskPlanning, t)!,
++        taskOcr: Color.lerp(taskOcr, other.taskOcr, t)!,
+         planSprint: Color.lerp(planSprint, other.planSprint, t)!,
+         planGrowth: Color.lerp(planGrowth, other.planGrowth, t)!,
+         statusOnline: Color.lerp(statusOnline, other.statusOnline, t)!,
+@@ -917,11 +940,35 @@ class SparkleColors {
+         return taskSocial;
+       case 'planning':
+         return taskPlanning;
++      case 'ocr':
++        return taskOcr;
+       default:
+         return taskLearning;
+     }
+   }
+ 
++  /// Strongly-typed task color access. The single mapping from
++  /// [TaskType] to palette values (batch2 convergence: the former
++  /// TaskColors class was deleted; its OCR slot folded in here).
++  Color taskColorFor(TaskType type) {
++    switch (type) {
++      case TaskType.learning:
++        return taskLearning;
++      case TaskType.training:
++        return taskTraining;
++      case TaskType.errorFix:
++        return taskErrorFix;
++      case TaskType.reflection:
++        return taskReflection;
++      case TaskType.social:
++        return taskSocial;
++      case TaskType.planning:
++        return taskPlanning;
++      case TaskType.ocr:
++        return taskOcr;
++    }
++  }
++
+   /// Get plan color by type
+   Color getPlanColor(String planType) {
+     switch (planType.toLowerCase()) {
+diff --git a/mobile/lib/core/design/tokens_v2/typography_token.dart b/mobile/lib/core/design/tokens_v2/typography_token.dart
+deleted file mode 100755
+index b2c4698a..00000000
+--- a/mobile/lib/core/design/tokens_v2/typography_token.dart
++++ /dev/null
+@@ -1,226 +0,0 @@
+-import 'package:flutter/material.dart';
+-
+-/// 排版系统 - 基于模块化比例 (1.25)
+-@immutable
+-class TypographySystem {
+-  const TypographySystem._();
+-
+-  // 模块化比例
+-  static const double ratio = 1.25;
+-  static const double baseSize = 16.0;
+-
+-  // 字体大小比例 (基于16px基础)
+-  static const double sizeXs = baseSize / ratio; // ~12.8px
+-  static const double sizeSm = baseSize; // 16px
+-  static const double sizeMd = baseSize * ratio; // ~20px
+-  static const double sizeLg = baseSize * ratio * ratio; // ~25px
+-  static const double sizeXl = baseSize * ratio * ratio * ratio; // ~31.25px
+-  static const double size2xl =
+-      baseSize * ratio * ratio * ratio * ratio; // ~39px
+-  static const double size3xl =
+-      baseSize * ratio * ratio * ratio * ratio * ratio; // ~48.8px
+-
+-  // 字重
+-  static const FontWeight weightLight = FontWeight.w300;
+-  static const FontWeight weightRegular = FontWeight.w400;
+-  static const FontWeight weightMedium = FontWeight.w500;
+-  static const FontWeight weightSemibold = FontWeight.w600;
+-  static const FontWeight weightBold = FontWeight.w700;
+-  static const FontWeight weightExtrabold = FontWeight.w800;
+-
+-  // 行高
+-  static const double leadingTight = 1.2;
+-  static const double leadingNormal = 1.5;
+-  static const double leadingRelaxed = 1.75;
+-
+-  // 字符间距
+-  static const double trackingTight = -0.02;
+-  static const double trackingNormal = 0.0;
+-  static const double trackingWide = 0.02;
+-
+-  /// 标准文本样式
+-  static TextStyle displayLarge() => const TextStyle(
+-        fontSize: size3xl,
+-        fontWeight: weightExtrabold,
+-        height: leadingTight,
+-        letterSpacing: trackingTight,
+-      );
+-
+-  static TextStyle headingLarge() => const TextStyle(
+-        fontSize: size2xl,
+-        fontWeight: weightBold,
+-        height: leadingTight,
+-        letterSpacing: trackingTight,
+-      );
+-
+-  static TextStyle headingMedium() => const TextStyle(
+-        fontSize: sizeXl,
+-        fontWeight: weightSemibold,
+-        height: leadingTight,
+-        letterSpacing: trackingNormal,
+-      );
+-
+-  static TextStyle titleLarge() => const TextStyle(
+-        fontSize: sizeLg,
+-        fontWeight: weightSemibold,
+-        height: leadingNormal,
+-        letterSpacing: trackingNormal,
+-      );
+-
+-  static TextStyle titleMedium() => const TextStyle(
+-        fontSize: sizeMd,
+-        fontWeight: weightSemibold,
+-        height: leadingNormal,
+-        letterSpacing: trackingNormal,
+-      );
+-
+-  static TextStyle bodyLarge() => const TextStyle(
+-        fontSize: sizeMd,
+-        fontWeight: weightRegular,
+-        height: leadingNormal,
+-        letterSpacing: trackingNormal,
+-      );
+-
+-  static TextStyle bodyMedium() => const TextStyle(
+-        fontSize: sizeSm,
+-        fontWeight: weightRegular,
+-        height: leadingNormal,
+-        letterSpacing: trackingNormal,
+-      );
+-
+-  static TextStyle labelLarge() => const TextStyle(
+-        fontSize: sizeSm,
+-        fontWeight: weightMedium,
+-        height: leadingTight,
+-        letterSpacing: trackingWide,
+-      );
+-
+-  static TextStyle labelSmall() => const TextStyle(
+-        fontSize: sizeXs,
+-        fontWeight: weightMedium,
+-        height: leadingTight,
+-        letterSpacing: trackingWide,
+-      );
+-}
+-
+-/// 排版令牌 - 语义化样式
+-@immutable
+-class TypographyToken {
+-  const TypographyToken(this.name, this.style);
+-  final String name;
+-  final TextStyle style;
+-
+-  /// 应用颜色
+-  TypographyToken withColor(Color color) => TypographyToken(
+-        name,
+-        style.copyWith(color: color),
+-      );
+-
+-  /// 应用字重
+-  TypographyToken withWeight(FontWeight weight) => TypographyToken(
+-        name,
+-        style.copyWith(fontWeight: weight),
+-      );
+-
+-  /// 应用字号
+-  TypographyToken withSize(double size) => TypographyToken(
+-        name,
+-        style.copyWith(fontSize: size),
+-      );
+-
+-  /// 响应式变体
+-  TypographyTokenVariant variant({
+-    required TextStyle tablet,
+-    required TextStyle desktop,
+-  }) =>
+-      TypographyTokenVariant(
+-        mobile: style,
+-        tablet: tablet,
+-        desktop: desktop,
+-      );
+-
+-  @override
+-  bool operator ==(Object other) =>
+-      identical(this, other) ||
+-      other is TypographyToken &&
+-          runtimeType == other.runtimeType &&
+-          style == other.style;
+-
+-  @override
+-  int get hashCode => style.hashCode;
+-}
+-
+-/// 响应式排版变体
+-@immutable
+-class TypographyTokenVariant {
+-  const TypographyTokenVariant({
+-    required this.mobile,
+-    required this.tablet,
+-    required this.desktop,
+-  });
+-  final TextStyle mobile;
+-  final TextStyle tablet;
+-  final TextStyle desktop;
+-
+-  TextStyle resolve(BuildContext context) {
+-    final width = MediaQuery.of(context).size.width;
+-    if (width >= 1024) return desktop;
+-    if (width >= 768) return tablet;
+-    return mobile;
+-  }
+-}
+-
+-/// 文本样式键 - 用于主题系统
+-enum TextKey {
+-  displayLarge,
+-  displayMedium,
+-  displaySmall,
+-  headingLarge,
+-  headingMedium,
+-  headingSmall,
+-  titleLarge,
+-  titleMedium,
+-  titleSmall,
+-  bodyLarge,
+-  bodyMedium,
+-  bodySmall,
+-  labelLarge,
+-  labelMedium,
+-  labelSmall,
+-}
+-
+-/// 排版主题扩展
+-extension TypographyThemeExtension on ThemeData {
+-  Map<TextKey, TextStyle> get sparkleTypography => {
+-        TextKey.displayLarge: TypographySystem.displayLarge().copyWith(
+-          color: colorScheme.onSurface,
+-        ),
+-        TextKey.headingLarge: TypographySystem.headingLarge().copyWith(
+-          color: colorScheme.onSurface,
+-        ),
+-        TextKey.headingMedium: TypographySystem.headingMedium().copyWith(
+-          color: colorScheme.onSurface,
+-        ),
+-        TextKey.titleLarge: TypographySystem.titleLarge().copyWith(
+-          color: colorScheme.onSurface,
+-        ),
+-        TextKey.titleMedium: TypographySystem.titleMedium().copyWith(
+-          color: colorScheme.onSurface,
+-        ),
+-        TextKey.bodyLarge: TypographySystem.bodyLarge().copyWith(
+-          color: colorScheme.onSurface,
+-        ),
+-        TextKey.bodyMedium: TypographySystem.bodyMedium().copyWith(
+-          color: colorScheme.onSurface,
+-        ),
+-        TextKey.labelLarge: TypographySystem.labelLarge().copyWith(
+-          color: colorScheme.primary,
+-        ),
+-        TextKey.labelMedium: TypographySystem.labelLarge().copyWith(
+-          color: colorScheme.onSurface,
+-        ),
+-        TextKey.labelSmall: TypographySystem.labelSmall().copyWith(
+-          color: colorScheme.onSurface.withValues(alpha: 0.7),
+-        ),
+-      };
+-}
+diff --git a/mobile/lib/features/auth/presentation/screens/login_screen.dart b/mobile/lib/features/auth/presentation/screens/login_screen.dart
+index 73c2c3dd..1d8423f7 100755
+--- a/mobile/lib/features/auth/presentation/screens/login_screen.dart
++++ b/mobile/lib/features/auth/presentation/screens/login_screen.dart
+@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:go_router/go_router.dart';
+ import 'package:sparkle/core/design/design_system.dart';
++import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
+ import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+ import 'package:sparkle/core/errors/user_facing_error.dart';
+ import 'package:sparkle/core/services/sensory_feedback_service.dart';
+@@ -20,11 +21,17 @@ class LoginScreen extends ConsumerStatefulWidget {
+ }
+ 
+ class _LoginScreenState extends ConsumerState<LoginScreen> {
+-  // Brand colors - using color_extensions.dart via context.colorExtensions
+-  Color get _brandOrange => context.colorExtensions.brandOrange;
+-  Color get _brandOrangeDeep => context.colorExtensions.brandOrangeDeep;
+-  Color get _brandBlue => context.colorExtensions.brandBlue;
+-  Color get _brandBlueDeep => context.colorExtensions.brandBlueDeep;
++  // Brand colors — single source: the SparkleColors palette (batch2
++  // convergence). The login brand mark now shows the product's actual
++  // brand pair (brandPrimary/brandSecondary) instead of the divergent
++  // SemanticColors promo palette; *Deep roles are palette-derived.
++  // Explicit extension application: design_system.dart's SparkleContext
++  // also exposes `colors` (entry unification lands in batch 3).
++  SparkleColors get _brandColors => SparkleContextExtension(context).colors;
++  Color get _brandPrimary => _brandColors.brandPrimary;
++  Color get _brandPrimaryDeep => _brandColors.brandPrimaryDeep;
++  Color get _brandSecondary => _brandColors.brandSecondary;
++  Color get _brandSecondaryDeep => _brandColors.brandSecondaryDeep;
+ 
+   final _formKey = GlobalKey<FormState>();
+   final _usernameController = TextEditingController();
+@@ -117,14 +124,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
+                 children: [
+                   const SizedBox(height: DS.spacing24),
+                   _BrandMark(
+-                    orange: _brandOrange,
+-                    orangeDeep: _brandOrangeDeep,
++                    primary: _brandPrimary,
++                    primaryDeep: _brandPrimaryDeep,
+                   ),
+                   const SizedBox(height: DS.lg),
+                   _BrandWordmark(
+                     title: l10n.appTitle,
+-                    blue: _brandBlue,
+-                    blueDeep: _brandBlueDeep,
++                    secondary: _brandSecondary,
++                    secondaryDeep: _brandSecondaryDeep,
+                   ),
+                   const SizedBox(height: DS.sm),
+                   Text(
+@@ -296,12 +303,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
+ 
+ class _BrandMark extends StatelessWidget {
+   const _BrandMark({
+-    required this.orange,
+-    required this.orangeDeep,
++    required this.primary,
++    required this.primaryDeep,
+   });
+ 
+-  final Color orange;
+-  final Color orangeDeep;
++  final Color primary;
++  final Color primaryDeep;
+ 
+   @override
+   Widget build(BuildContext context) => SizedBox(
+@@ -316,8 +323,8 @@ class _BrandMark extends StatelessWidget {
+                 shape: BoxShape.circle,
+                 gradient: RadialGradient(
+                   colors: [
+-                    orange.withValues(alpha: 0.22),
+-                    orange.withValues(alpha: 0.08),
++                    primary.withValues(alpha: 0.22),
++                    primary.withValues(alpha: 0.08),
+                     Colors.transparent,
+                   ],
+                   stops: const [0.0, 0.58, 1.0],
+@@ -332,11 +339,11 @@ class _BrandMark extends StatelessWidget {
+                 gradient: LinearGradient(
+                   begin: Alignment.topLeft,
+                   end: Alignment.bottomRight,
+-                  colors: [orange, orangeDeep],
++                  colors: [primary, primaryDeep],
+                 ),
+                 boxShadow: [
+                   BoxShadow(
+-                    color: orange.withValues(alpha: 0.28),
++                    color: primary.withValues(alpha: 0.28),
+                     blurRadius: 20,
+                     offset: const Offset(0, 10),
+                   ),
+@@ -356,13 +363,13 @@ class _BrandMark extends StatelessWidget {
+ class _BrandWordmark extends StatelessWidget {
+   const _BrandWordmark({
+     required this.title,
+-    required this.blue,
+-    required this.blueDeep,
++    required this.secondary,
++    required this.secondaryDeep,
+   });
+ 
+   final String title;
+-  final Color blue;
+-  final Color blueDeep;
++  final Color secondary;
++  final Color secondaryDeep;
+ 
+   @override
+   Widget build(BuildContext context) {
+@@ -370,14 +377,14 @@ class _BrandWordmark extends StatelessWidget {
+           fontWeight: FontWeight.w800,
+           letterSpacing: 0.2,
+           height: 1.05,
+-          color: blueDeep,
++          color: secondaryDeep,
+         );
+ 
+     return ShaderMask(
+       shaderCallback: (bounds) => LinearGradient(
+         begin: Alignment.topLeft,
+         end: Alignment.bottomRight,
+-        colors: [blue, blueDeep],
++        colors: [secondary, secondaryDeep],
+       ).createShader(bounds),
+       blendMode: BlendMode.srcIn,
+       child: Text(
+@@ -386,7 +393,7 @@ class _BrandWordmark extends StatelessWidget {
+         style: baseStyle?.copyWith(
+           shadows: [
+             Shadow(
+-              color: blue.withValues(alpha: 0.16),
++              color: secondary.withValues(alpha: 0.16),
+               blurRadius: 12,
+               offset: const Offset(0, 4),
+             ),
