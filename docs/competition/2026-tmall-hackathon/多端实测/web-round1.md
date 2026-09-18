@@ -84,3 +84,9 @@
 ## 截图存档
 
 `/Users/brsama/code/GitHub/Sparkle-sysrev/screenshots/web/`（本轮关键帧：01-登录页全览、02-按钮区、03-填写态、04-认证后停留态）
+
+## 根因附记（走查后 30 分钟内追加）
+
+- flutter_secure_storage web 落盘实证：IndexedDB 有包自建的 `settings`/`user` 两库（密钥材料在），但 `user.box` store **完全为空** —— `saveTokens` 的 4+ 个并发 `_storage.write()` 全部静默丢失（该包 web 实现已知并发写缺陷）
+- 因此 W-1/W-2 同根：**token 从未持久化** → `getAccessToken()` 空 → `authGuestTokenFailed` → 状态打回未认证（UI 不跳转、刷新即丢会话）
+- 修复方向（任务书已备）：按项目 conditional-import 先例（local_database_store_io.dart）做存储 facade —— IO 平台保留 secure storage，web 平台改用 localStorage（dev/竞赛可接受，注释标注生产升级路径）；同时收口 login()/checkAuthStatus() 竞态与 W-4 双触发
