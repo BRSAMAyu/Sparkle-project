@@ -199,12 +199,12 @@ def main() -> int:
     while time.time() < deadline:
         st = http("GET", f"/api/v1/documents/{file_id}/status", token=token)
         status = str(st.get("status") or st.get("stage") or "")
-        if status in {"processed", "completed", "ready"}:
+        if status in {"processed", "completed", "ready", "done", "succeeded"}:
             break
         if status in {"failed", "error"}:
             break
         time.sleep(4)
-    record("mr3.processed(切片+embedding 入库)", status in {"processed", "completed", "ready"}, f"final status={status}")
+    record("mr3.processed(切片+embedding 入库)", status in {"processed", "completed", "ready", "done", "succeeded"}, f"final status={status}")
 
     s4 = str(uuid4())
     q3 = ws_chat(
