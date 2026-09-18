@@ -92,6 +92,16 @@ def _get_review_label(review_result: ReviewResult) -> str:
     return "需要审查"
 
 
+def _should_emit_review_failure_delta(review_result: ReviewResult) -> bool:
+    """是否向用户追加"内容审查未通过"类 delta 文案。
+
+    review_error=True 表示审查系统自身出错（超时/异常/解析失败），审查从未真实
+    执行——内容并未被判失败。管线内保持 fail-closed（reflection 照常触发），
+    但不向用户输出会误导其为内容质量问题的审查失败文案。
+    """
+    return not review_result.passed and not getattr(review_result, "review_error", False)
+
+
 # ============================================
 # Phase 2c: Review History Integration
 # ============================================
@@ -558,7 +568,7 @@ async def generation_review_node(state: SparkleState) -> dict[str, Any]:
     # 4.5. Phase 2b: Send review result to frontend via stream_callback
     context_data = _state_get(state, "context_data", {})
     stream_callback = context_data.get("stream_callback")
-    if stream_callback and not review_result.passed:
+    if stream_callback and _should_emit_review_failure_delta(review_result):
         # Send review widget event to frontend
         try:
             from app.gen.agent.v1 import agent_service_pb2
@@ -589,6 +599,13 @@ async def generation_review_node(state: SparkleState) -> dict[str, Any]:
             logger.info("[ReviewNode] Review result sent to frontend")
         except Exception as e:
             logger.warning(f"[ReviewNode] Failed to send review to frontend: {e}")
+    elif stream_callback and getattr(review_result, "review_error", False):
+        # 审查系统错误：审查未真实执行，不向用户流追加"内容审查未通过"文案；
+        # 决策仍为 fail-closed，reflection 在节点图中照常触发。
+        logger.warning(
+            "[ReviewNode] Review system error suppressed from user stream: "
+            f"review_id={review_result.review_id}, decision={review_result.decision}"
+        )
 
     # 5. 构建审查上下文
     review_context: ReviewContext = {

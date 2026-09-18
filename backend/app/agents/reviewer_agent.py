@@ -140,6 +140,9 @@ class ReviewResult:
     review_timestamp: str               # 审查时间戳
     review_profile_id: str = "default_response"
     workflow_context: dict[str, Any] | None = None
+    # True = 审查系统本身出错（超时/异常/解析失败），审查从未真实执行。
+    # 决策仍 fail-closed（R6-P0-3），但 UI 不应向用户宣称"内容审查未通过"。
+    review_error: bool = False
 
     @property
     def passed(self) -> bool:
@@ -198,6 +201,7 @@ class ReviewResult:
             "review_timestamp": self.review_timestamp,
             "review_profile_id": self.review_profile_id,
             "workflow_context": self.workflow_context or {},
+            "review_error": self.review_error,
         }
 
     @classmethod
@@ -229,6 +233,7 @@ class ReviewResult:
             review_timestamp=data.get("review_timestamp", ""),
             review_profile_id=data.get("review_profile_id", "default_response"),
             workflow_context=data.get("workflow_context") or {},
+            review_error=bool(data.get("review_error", False)),
         )
 
 
@@ -481,6 +486,7 @@ class ReviewerAgent:
                 review_timestamp=context.get("timestamp", "") if context else "",
                 review_profile_id=profile.id,
                 workflow_context=workflow_context or {},
+                review_error=True,
             )
 
     async def review_plan(
@@ -579,6 +585,7 @@ class ReviewerAgent:
                 review_timestamp="",
                 review_profile_id=profile.id,
                 workflow_context=workflow_context or {},
+                review_error=True,
             )
 
     async def review_tool_result(
@@ -759,6 +766,7 @@ class ReviewerAgent:
                 review_timestamp="",
                 review_profile_id=review_profile_id,
                 workflow_context=workflow_context or {},
+                review_error=True,
             )
 
 

@@ -1955,8 +1955,8 @@ def _format_conversation_history(conversation_history: dict = None) -> str:
 def _get_default_preference_instructions(user_context: dict) -> str:
     """默认的偏好指令（兜底）"""
     prefs = _extract_preferences(user_context)
-    depth = prefs.get("depth_preference", 0.5)
-    curiosity = prefs.get("curiosity_preference", 0.5)
+    depth = _preference_scalar(prefs.get("depth_preference"), 0.5)
+    curiosity = _preference_scalar(prefs.get("curiosity_preference"), 0.5)
 
     depth_text = "深入详尽" if depth >= 0.7 else ("简洁概览" if depth < 0.3 else "适中")
     curiosity_text = "探索扩展" if curiosity >= 0.7 else ("专注聚焦" if curiosity < 0.3 else "适中")
@@ -3308,6 +3308,20 @@ def _format_mastery_change_line(item: dict[str, Any]) -> str:
         return f"{node_name} 掌握度从 {old_mastery} 提升到 {new_mastery}"
 
 
+def _preference_scalar(value: Any, default: float = 0.5) -> float:
+    """偏好值标量化：兼容 {"value": x} 包装与非法类型（dict/str 等），渲染层不因画像脏数据崩溃。
+
+    画像写入方存在多种形态（users.py / profile_transparency.py 会写 {"value": x}；
+    上下文管道中亦出现过 dict 形态），阅读侧统一收敛为 float。
+    """
+    if isinstance(value, dict):
+        value = value.get("value", default)
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return float(default)
+
+
 def _render_user_context_content(
     context: dict,
     *,
@@ -3364,8 +3378,10 @@ def _render_user_context_content(
             if verbosity:
                 lines.append(f"- 长度偏好: {verbosity}")
         else:
-            lines.append(f"- 深度: {prefs.get('depth_preference', 0.5):.1f}")
-            lines.append(f"- 好奇心: {prefs.get('curiosity_preference', 0.5):.1f}")
+            depth_val = _preference_scalar(prefs.get("depth_preference"), 0.5)
+            curiosity_val = _preference_scalar(prefs.get("curiosity_preference"), 0.5)
+            lines.append(f"- 深度: {depth_val:.1f}")
+            lines.append(f"- 好奇心: {curiosity_val:.1f}")
         _mark_rendered("preferences")
 
     knowledge_summary = normalized.get("knowledge_summary")
