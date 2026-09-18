@@ -22,7 +22,7 @@ from typing import Any
 
 from sqlalchemy.exc import OperationalError
 
-from app.services.cognitive_service import CognitiveService, _VECTOR_RUNTIME_ENABLED
+from app.services.cognitive_service import CognitiveService
 from app.models.cognitive import CognitiveFragment, BehaviorPattern, AnalysisStatus
 from app.core.event_bus import event_bus
 from app.services.system_update_service import SystemUpdateService, build_system_update
@@ -165,7 +165,7 @@ class TestCreateFragment:
     ):
         """测试 embedding 生成失败时继续创建碎片（无向量）"""
         # SQLite 不支持 pgvector，禁用向量运行时避免 MissingGreenlet
-        with patch('app.services.cognitive_service._VECTOR_RUNTIME_ENABLED', False):
+        with patch('app.services.cognitive_service.CognitiveService._is_vector_runtime_enabled_for_user', new=AsyncMock(return_value=False)):
             service = CognitiveService(db_session)
 
             fragment = await service.create_fragment(
@@ -307,7 +307,7 @@ class TestAnalyzeBehavior:
         target_fragment = fragments[0]
 
         with patch("app.services.cognitive_service.settings.ANALYSIS_SYNC_ON_EVENT", False), \
-             patch("app.services.cognitive_service._VECTOR_RUNTIME_ENABLED", False), \
+             patch("app.services.cognitive_service.CognitiveService._is_vector_runtime_enabled_for_user", new=AsyncMock(return_value=False)), \
              patch("app.services.cognitive_service.AnalyticsService.get_user_profile_summary", new_callable=AsyncMock, return_value="Test user summary"), \
              patch("app.services.cognitive_service.event_bus.publish", new_callable=AsyncMock), \
              patch("app.services.cognitive_service.SystemUpdateService") as mock_su:
@@ -349,7 +349,7 @@ class TestAnalyzeBehavior:
         target_fragment = fragments[0]
 
         with patch("app.services.cognitive_service.settings.ANALYSIS_SYNC_ON_EVENT", False), \
-             patch("app.services.cognitive_service._VECTOR_RUNTIME_ENABLED", False), \
+             patch("app.services.cognitive_service.CognitiveService._is_vector_runtime_enabled_for_user", new=AsyncMock(return_value=False)), \
              patch("app.services.cognitive_service.AnalyticsService.get_user_profile_summary", new_callable=AsyncMock, return_value="Test user summary"), \
              patch("app.services.cognitive_service.event_bus.publish", new_callable=AsyncMock), \
              patch("app.services.cognitive_service.SystemUpdateService") as mock_su:
@@ -403,7 +403,7 @@ class TestAnalyzeBehavior:
         target_fragment = fragments[0]
 
         with patch("app.services.cognitive_service.settings.ANALYSIS_SYNC_ON_EVENT", False), \
-             patch("app.services.cognitive_service._VECTOR_RUNTIME_ENABLED", False), \
+             patch("app.services.cognitive_service.CognitiveService._is_vector_runtime_enabled_for_user", new=AsyncMock(return_value=False)), \
              patch("app.services.cognitive_service.AnalyticsService.get_user_profile_summary", new_callable=AsyncMock, return_value="Test user summary"), \
              patch("app.services.cognitive_service.event_bus.publish", new_callable=AsyncMock), \
              patch("app.services.cognitive_service.SystemUpdateService") as mock_su:
@@ -465,7 +465,7 @@ class TestAnalyzeBehavior:
         target_fragment = fragments[0]
 
         with patch("app.services.cognitive_service.settings.ANALYSIS_SYNC_ON_EVENT", False), \
-             patch("app.services.cognitive_service._VECTOR_RUNTIME_ENABLED", False), \
+             patch("app.services.cognitive_service.CognitiveService._is_vector_runtime_enabled_for_user", new=AsyncMock(return_value=False)), \
              patch("app.services.cognitive_service.AnalyticsService.get_user_profile_summary", new_callable=AsyncMock, return_value="Test user summary"), \
              patch("app.services.cognitive_service.event_bus.publish", new_callable=AsyncMock), \
              patch("app.services.cognitive_service.SystemUpdateService") as mock_su:
@@ -551,7 +551,7 @@ class TestAnalyzeBehavior:
 
         # 分析应该返回错误而不是抛出异常
         with patch("app.services.cognitive_service.settings.ANALYSIS_SYNC_ON_EVENT", False), \
-             patch("app.services.cognitive_service._VECTOR_RUNTIME_ENABLED", False), \
+             patch("app.services.cognitive_service.CognitiveService._is_vector_runtime_enabled_for_user", new=AsyncMock(return_value=False)), \
              patch("app.services.cognitive_service.AnalyticsService.get_user_profile_summary", new_callable=AsyncMock, return_value="Test user summary"), \
              patch("app.services.cognitive_service.event_bus.publish", new_callable=AsyncMock), \
              patch("app.services.cognitive_service.SystemUpdateService") as mock_su:
@@ -621,7 +621,7 @@ class TestHyDEStrategy:
         mock_embedding_service.get_embedding.return_value = [0.2] * 1536
 
         with patch("app.services.cognitive_service.settings.ANALYSIS_SYNC_ON_EVENT", False), \
-             patch("app.services.cognitive_service._VECTOR_RUNTIME_ENABLED", False), \
+             patch("app.services.cognitive_service.CognitiveService._is_vector_runtime_enabled_for_user", new=AsyncMock(return_value=False)), \
              patch("app.services.cognitive_service.AnalyticsService.get_user_profile_summary", new_callable=AsyncMock, return_value="Test user summary"), \
              patch("app.services.cognitive_service.event_bus.publish", new_callable=AsyncMock), \
              patch("app.services.cognitive_service.SystemUpdateService") as mock_su:
@@ -701,7 +701,7 @@ class TestHyDEStrategy:
 
         # 分析应该继续（HyDE 被跳过，使用超时降级）
         with patch("app.services.cognitive_service.settings.ANALYSIS_SYNC_ON_EVENT", False), \
-             patch("app.services.cognitive_service._VECTOR_RUNTIME_ENABLED", True), \
+             patch("app.services.cognitive_service.CognitiveService._is_vector_runtime_enabled_for_user", new=AsyncMock(return_value=True)), \
              patch("app.services.cognitive_service.AnalyticsService.get_user_profile_summary", new_callable=AsyncMock, return_value="Test user summary"), \
              patch("app.services.cognitive_service.event_bus.publish", new_callable=AsyncMock), \
              patch("app.services.cognitive_service.SystemUpdateService") as mock_su:
@@ -760,17 +760,19 @@ class TestVectorEmbeddingFallback:
             Exception("Some other error")
         )
 
-        # 测试 _disable_vector_runtime 静态方法
-        original = mod._VECTOR_RUNTIME_ENABLED
+        # R4-P0-4：全局开关已改为按用户禁用（_disable_vector_runtime_for_user），验证隔离语义
+        original = dict(mod._VECTOR_RUNTIME_DISABLED_USERS)
         try:
-            mod._VECTOR_RUNTIME_ENABLED = True
-            CognitiveService._disable_vector_runtime("test error")
-            assert mod._VECTOR_RUNTIME_ENABLED is False
-            # 重复调用不应再次 warn
-            CognitiveService._disable_vector_runtime("test error")
-            assert mod._VECTOR_RUNTIME_ENABLED is False
+            await CognitiveService._disable_vector_runtime_for_user("u-disable-test", "test error")
+            assert await CognitiveService._is_vector_runtime_enabled_for_user("u-disable-test") is False
+            # 其他用户不受影响（按用户隔离，替代旧全局开关）
+            assert await CognitiveService._is_vector_runtime_enabled_for_user("u-other") is True
+            # 重复调用幂等
+            await CognitiveService._disable_vector_runtime_for_user("u-disable-test", "test error")
+            assert await CognitiveService._is_vector_runtime_enabled_for_user("u-disable-test") is False
         finally:
-            mod._VECTOR_RUNTIME_ENABLED = original
+            mod._VECTOR_RUNTIME_DISABLED_USERS.clear()
+            mod._VECTOR_RUNTIME_DISABLED_USERS.update(original)
 
     @pytest.mark.asyncio
     async def test_create_fragment_vector_runtime_degradation(
@@ -849,12 +851,11 @@ class TestVectorEmbeddingFallback:
         test_user, fragments = test_user_with_fragments
         service = CognitiveService(db_session)
 
-        # 禁用向量运行时
-        import app.services.cognitive_service as cognitive_module
-        original_enabled = cognitive_module._VECTOR_RUNTIME_ENABLED
-        cognitive_module._VECTOR_RUNTIME_ENABLED = False
-
-        try:
+        # R4-P0-4：按用户禁用后 RAG 降级
+        with patch(
+            "app.services.cognitive_service.CognitiveService._is_vector_runtime_enabled_for_user",
+            new=AsyncMock(return_value=False),
+        ):
             mock_llm_service.chat.return_value = json.dumps({
                 "pattern_name": "Fallback Pattern",
                 "confidence_score": 0.7,
@@ -876,9 +877,6 @@ class TestVectorEmbeddingFallback:
             # 分析应该成功（使用降级策略）
             assert result["pattern_name"] == "Fallback Pattern"
             assert result["_meta"]["strategy_used"] == "raw"  # 没有 HyDE
-
-        finally:
-            cognitive_module._VECTOR_RUNTIME_ENABLED = original_enabled
 
 
 # =============================================================================
@@ -1095,7 +1093,7 @@ class TestEventPublishing:
         target_fragment = fragments[0]
 
         with patch("app.services.cognitive_service.settings.ANALYSIS_SYNC_ON_EVENT", False), \
-             patch("app.services.cognitive_service._VECTOR_RUNTIME_ENABLED", False), \
+             patch("app.services.cognitive_service.CognitiveService._is_vector_runtime_enabled_for_user", new=AsyncMock(return_value=False)), \
              patch("app.services.cognitive_service.AnalyticsService.get_user_profile_summary", new_callable=AsyncMock, return_value="Test user summary"):
             await service.analyze_behavior(
                 user_id=test_user.id,
