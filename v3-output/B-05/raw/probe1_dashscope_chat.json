@@ -1,0 +1,581 @@
+[
+ {
+  "model_request": "qwen3.8-flash",
+  "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  "extra_body": {
+   "enable_thinking": false
+  },
+  "http_status": 200,
+  "ttf_headers_ms": 523.1,
+  "ttft_first_chunk_ms": 523.2,
+  "ttft_first_reasoning_ms": null,
+  "ttft_first_content_ms": 523.2,
+  "total_ms": 1275.7,
+  "finish_reason": "stop",
+  "content_sample": "间隔重复记忆是一种基于遗忘曲线规律，在即将遗忘的关键时间点有计划地复习内容，从而以最少的时间成本实现长期牢固记忆的学习方法。",
+  "content_len_chars": 62,
+  "reasoning_sample": "",
+  "reasoning_len_chars": 0,
+  "has_reasoning_stream": false,
+  "usage": {
+   "completion_tokens": 31,
+   "prompt_tokens": 33,
+   "prompt_tokens_details": {
+    "cached_tokens": 0,
+    "text_tokens": 33
+   },
+   "total_tokens": 64
+  },
+  "probe": "dashscope_chat",
+  "tier": "fast",
+  "run": 1,
+  "model_configured": "qwen3.8-flash"
+ },
+ {
+  "model_request": "qwen3.8-flash",
+  "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  "extra_body": {
+   "enable_thinking": false
+  },
+  "http_status": 200,
+  "ttf_headers_ms": 623.7,
+  "ttft_first_chunk_ms": 623.7,
+  "ttft_first_reasoning_ms": null,
+  "ttft_first_content_ms": 623.7,
+  "total_ms": 1143.1,
+  "finish_reason": "stop",
+  "content_sample": "间隔重复记忆是一种通过在逐渐延长的时间间隔中复习信息，以对抗遗忘曲线并实现长期高效记忆的学习策略。",
+  "content_len_chars": 49,
+  "reasoning_sample": "",
+  "reasoning_len_chars": 0,
+  "has_reasoning_stream": false,
+  "usage": {
+   "completion_tokens": 26,
+   "prompt_tokens": 33,
+   "prompt_tokens_details": {
+    "cached_tokens": 0,
+    "text_tokens": 33
+   },
+   "total_tokens": 59
+  },
+  "probe": "dashscope_chat",
+  "tier": "fast",
+  "run": 2,
+  "model_configured": "qwen3.8-flash"
+ },
+ {
+  "model_request": "qwen3.8-flash",
+  "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  "extra_body": {
+   "enable_thinking": false
+  },
+  "http_status": 200,
+  "ttf_headers_ms": 426.0,
+  "ttft_first_chunk_ms": 426.1,
+  "ttft_first_reasoning_ms": null,
+  "ttft_first_content_ms": 426.1,
+  "total_ms": 983.9,
+  "finish_reason": "stop",
+  "content_sample": "间隔重复记忆是一种基于遗忘曲线规律，通过在逐渐拉长的时间间隔内反复复习知识以强化长期记忆的学习方法。",
+  "content_len_chars": 50,
+  "reasoning_sample": "",
+  "reasoning_len_chars": 0,
+  "has_reasoning_stream": false,
+  "usage": {
+   "completion_tokens": 26,
+   "prompt_tokens": 33,
+   "prompt_tokens_details": {
+    "cached_tokens": 0,
+    "text_tokens": 33
+   },
+   "total_tokens": 59
+  },
+  "probe": "dashscope_chat",
+  "tier": "fast",
+  "run": 3,
+  "model_configured": "qwen3.8-flash"
+ },
+ {
+  "model_request": "qwen3.8-flash",
+  "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  "extra_body": {
+   "enable_thinking": false
+  },
+  "http_status": 200,
+  "ttf_headers_ms": 403.5,
+  "ttft_first_chunk_ms": 404.6,
+  "ttft_first_reasoning_ms": null,
+  "ttft_first_content_ms": 404.6,
+  "total_ms": 949.5,
+  "finish_reason": "stop",
+  "content_sample": "间隔重复记忆是一种基于艾宾浩斯遗忘曲线，通过在即将遗忘的关键时间点进行复习，从而以最少的时间成本实现长期牢固记忆的认知策略。",
+  "content_len_chars": 62,
+  "reasoning_sample": "",
+  "reasoning_len_chars": 0,
+  "has_reasoning_stream": false,
+  "usage": {
+   "completion_tokens": 32,
+   "prompt_tokens": 33,
+   "prompt_tokens_details": {
+    "cached_tokens": 0,
+    "text_tokens": 33
+   },
+   "total_tokens": 65
+  },
+  "probe": "dashscope_chat",
+  "tier": "fast",
+  "run": 4,
+  "model_configured": "qwen3.8-flash"
+ },
+ {
+  "model_request": "qwen3.8-flash",
+  "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  "extra_body": {
+   "enable_thinking": true
+  },
+  "http_status": 200,
+  "ttf_headers_ms": 427.1,
+  "ttft_first_chunk_ms": 428.0,
+  "ttft_first_reasoning_ms": 428.0,
+  "ttft_first_content_ms": 1601.3,
+  "total_ms": 1960.6,
+  "finish_reason": "stop",
+  "content_sample": "间隔重复记忆是一种通过按逐渐拉长的时间间隔复习所学内容，从而有效巩固长期记忆的学习方法。",
+  "content_len_chars": 44,
+  "reasoning_sample": "用户要求用一句话解释“间隔重复记忆”。需要简洁回答，中文。需要定义：间隔重复记忆是一种学习策略，通过按逐渐增加的间隔复习信息来巩固长期记忆。一句话。无需工具调用",
+  "reasoning_len_chars": 96,
+  "has_reasoning_stream": true,
+  "usage": {
+   "completion_tokens": 77,
+   "completion_tokens_details": {
+    "reasoning_tokens": 51,
+    "text_tokens": 77
+   },
+   "prompt_tokens": 69,
+   "prompt_tokens_details": {
+    "cached_tokens": 0,
+    "text_tokens": 69
+   },
+   "total_tokens": 146
+  },
+  "probe": "dashscope_chat",
+  "tier": "standard_thinking",
+  "run": 1,
+  "model_configured": "qwen3.8-flash"
+ },
+ {
+  "model_request": "qwen3.8-flash",
+  "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  "extra_body": {
+   "enable_thinking": true
+  },
+  "http_status": 200,
+  "ttf_headers_ms": 418.7,
+  "ttft_first_chunk_ms": 418.7,
+  "ttft_first_reasoning_ms": 418.7,
+  "ttft_first_content_ms": 965.0,
+  "total_ms": 1441.5,
+  "finish_reason": "stop",
+  "content_sample": "间隔重复记忆是一种通过在学习后逐渐延长复习间隔，来强化长期记忆并减少遗忘的学习方法。",
+  "content_len_chars": 42,
+  "reasoning_sample": "我们需要回答用户：“用一句话解释什么是间隔重复记忆。” 需要工具调用已满足。分析：用户要求一句话解释。中文回答即可。简洁。\n",
+  "reasoning_len_chars": 62,
+  "has_reasoning_stream": true,
+  "usage": {
+   "completion_tokens": 57,
+   "completion_tokens_details": {
+    "reasoning_tokens": 32,
+    "text_tokens": 57
+   },
+   "prompt_tokens": 69,
+   "prompt_tokens_details": {
+    "cached_tokens": 0,
+    "text_tokens": 69
+   },
+   "total_tokens": 126
+  },
+  "probe": "dashscope_chat",
+  "tier": "standard_thinking",
+  "run": 2,
+  "model_configured": "qwen3.8-flash"
+ },
+ {
+  "model_request": "qwen3.8-flash",
+  "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  "extra_body": {
+   "enable_thinking": true
+  },
+  "http_status": 200,
+  "ttf_headers_ms": 400.1,
+  "ttft_first_chunk_ms": 400.1,
+  "ttft_first_reasoning_ms": 400.1,
+  "ttft_first_content_ms": 1194.8,
+  "total_ms": 1586.4,
+  "finish_reason": "stop",
+  "content_sample": "间隔重复记忆是一种通过在逐渐延长的时间间隔中复习信息，从而对抗遗忘、巩固长期记忆的学习方法。",
+  "content_len_chars": 46,
+  "reasoning_sample": "用户要求用一句话解释“间隔重复记忆”。需要简洁中文回答。最终应只给一句话。概念：间隔重复是一种学习方法，通过按逐渐延长的时间间隔复习信息，利用遗忘曲线来巩固长期",
+  "reasoning_len_chars": 84,
+  "has_reasoning_stream": true,
+  "usage": {
+   "completion_tokens": 73,
+   "completion_tokens_details": {
+    "reasoning_tokens": 46,
+    "text_tokens": 73
+   },
+   "prompt_tokens": 69,
+   "prompt_tokens_details": {
+    "cached_tokens": 0,
+    "text_tokens": 69
+   },
+   "total_tokens": 142
+  },
+  "probe": "dashscope_chat",
+  "tier": "standard_thinking",
+  "run": 3,
+  "model_configured": "qwen3.8-flash"
+ },
+ {
+  "model_request": "qwen3.8-flash",
+  "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  "extra_body": {
+   "enable_thinking": true
+  },
+  "http_status": 200,
+  "ttf_headers_ms": 470.0,
+  "ttft_first_chunk_ms": 470.0,
+  "ttft_first_reasoning_ms": 470.0,
+  "ttft_first_content_ms": 858.6,
+  "total_ms": 1505.5,
+  "finish_reason": "stop",
+  "content_sample": "间隔重复记忆是一种根据遗忘规律，在即将忘记时按逐渐拉长的时间间隔复习，从而以较少复习次数实现长期记忆的学习方法。",
+  "content_len_chars": 56,
+  "reasoning_sample": "用户要求用一句话解释“间隔重复记忆”。需要简洁中文回答。必须先调用工具，已调用。最终给出一句话。\n",
+  "reasoning_len_chars": 49,
+  "has_reasoning_stream": true,
+  "usage": {
+   "completion_tokens": 61,
+   "completion_tokens_details": {
+    "reasoning_tokens": 27,
+    "text_tokens": 61
+   },
+   "prompt_tokens": 69,
+   "prompt_tokens_details": {
+    "cached_tokens": 0,
+    "text_tokens": 69
+   },
+   "total_tokens": 130
+  },
+  "probe": "dashscope_chat",
+  "tier": "standard_thinking",
+  "run": 4,
+  "model_configured": "qwen3.8-flash"
+ },
+ {
+  "model_request": "qwen3.8-flash",
+  "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  "extra_body": {
+   "enable_thinking": true
+  },
+  "http_status": 200,
+  "ttf_headers_ms": 448.1,
+  "ttft_first_chunk_ms": 448.2,
+  "ttft_first_reasoning_ms": 448.2,
+  "ttft_first_content_ms": 1486.1,
+  "total_ms": 1976.8,
+  "finish_reason": "stop",
+  "content_sample": "间隔重复记忆是一种通过在逐渐拉长的时间间隔中复习学习内容，从而利用遗忘规律强化长期记忆的方法。",
+  "content_len_chars": 47,
+  "reasoning_sample": "用户要求用一句话解释“间隔重复记忆”。需要简洁、准确，中文回答。核心概念：在学习内容即将遗忘时按逐渐拉长的时间间隔复习，以强化长期记忆。一句话即可。",
+  "reasoning_len_chars": 74,
+  "has_reasoning_stream": true,
+  "usage": {
+   "completion_tokens": 68,
+   "completion_tokens_details": {
+    "reasoning_tokens": 42,
+    "text_tokens": 68
+   },
+   "prompt_tokens": 69,
+   "prompt_tokens_details": {
+    "cached_tokens": 0,
+    "text_tokens": 69
+   },
+   "total_tokens": 137
+  },
+  "probe": "dashscope_chat",
+  "tier": "reason",
+  "run": 1,
+  "model_configured": "qwen3.8-flash"
+ },
+ {
+  "model_request": "qwen3.8-flash",
+  "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  "extra_body": {
+   "enable_thinking": true
+  },
+  "http_status": 200,
+  "ttf_headers_ms": 486.9,
+  "ttft_first_chunk_ms": 486.9,
+  "ttft_first_reasoning_ms": 486.9,
+  "ttft_first_content_ms": 1098.2,
+  "total_ms": 1592.0,
+  "finish_reason": "stop",
+  "content_sample": "间隔重复记忆是一种在遗忘临界点按逐渐拉长的时间间隔复习学习内容，以增强长期记忆的方法。",
+  "content_len_chars": 43,
+  "reasoning_sample": "用户要求用一句话解释“间隔重复记忆”。需要简洁中文回答。概念：基于遗忘曲线，在即将遗忘时按逐渐拉长的时间间隔复习，以增强长期记忆。一句话即可。",
+  "reasoning_len_chars": 71,
+  "has_reasoning_stream": true,
+  "usage": {
+   "completion_tokens": 67,
+   "completion_tokens_details": {
+    "reasoning_tokens": 41,
+    "text_tokens": 67
+   },
+   "prompt_tokens": 69,
+   "prompt_tokens_details": {
+    "cached_tokens": 0,
+    "text_tokens": 69
+   },
+   "total_tokens": 136
+  },
+  "probe": "dashscope_chat",
+  "tier": "reason",
+  "run": 2,
+  "model_configured": "qwen3.8-flash"
+ },
+ {
+  "model_request": "qwen3.8-flash",
+  "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  "extra_body": {
+   "enable_thinking": true
+  },
+  "http_status": 200,
+  "ttf_headers_ms": 472.9,
+  "ttft_first_chunk_ms": 472.9,
+  "ttft_first_reasoning_ms": 472.9,
+  "ttft_first_content_ms": 1326.0,
+  "total_ms": 1845.7,
+  "finish_reason": "stop",
+  "content_sample": "间隔重复记忆是一种根据遗忘规律，在学习内容快要忘记时安排逐渐拉长间隔的复习，从而更高效形成长期记忆的方法。",
+  "content_len_chars": 53,
+  "reasoning_sample": "用户要求用一句话解释“间隔重复记忆”。需要简洁中文回答。概念：根据遗忘曲线，在学习内容即将遗忘时安排逐渐拉长间隔的复习，以巩固长期记忆。最终只需一句话。\n",
+  "reasoning_len_chars": 77,
+  "has_reasoning_stream": true,
+  "usage": {
+   "completion_tokens": 73,
+   "completion_tokens_details": {
+    "reasoning_tokens": 42,
+    "text_tokens": 73
+   },
+   "prompt_tokens": 69,
+   "prompt_tokens_details": {
+    "cached_tokens": 0,
+    "text_tokens": 69
+   },
+   "total_tokens": 142
+  },
+  "probe": "dashscope_chat",
+  "tier": "reason",
+  "run": 3,
+  "model_configured": "qwen3.8-flash"
+ },
+ {
+  "model_request": "qwen3.8-flash",
+  "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  "extra_body": {
+   "enable_thinking": true
+  },
+  "http_status": 200,
+  "ttf_headers_ms": 507.6,
+  "ttft_first_chunk_ms": 508.9,
+  "ttft_first_reasoning_ms": 508.9,
+  "ttft_first_content_ms": 835.0,
+  "total_ms": 1297.9,
+  "finish_reason": "stop",
+  "content_sample": "间隔重复记忆是一种通过在学习内容即将遗忘时按逐渐延长的时间间隔进行复习，从而高效巩固长期记忆的学习方法。",
+  "content_len_chars": 52,
+  "reasoning_sample": "我们需要回答用户：“用一句话解释什么是间隔重复记忆。” 需要一句话。已经调用。最终用中文简洁。\n",
+  "reasoning_len_chars": 48,
+  "has_reasoning_stream": true,
+  "usage": {
+   "completion_tokens": 54,
+   "completion_tokens_details": {
+    "reasoning_tokens": 24,
+    "text_tokens": 54
+   },
+   "prompt_tokens": 69,
+   "prompt_tokens_details": {
+    "cached_tokens": 0,
+    "text_tokens": 69
+   },
+   "total_tokens": 123
+  },
+  "probe": "dashscope_chat",
+  "tier": "reason",
+  "run": 4,
+  "model_configured": "qwen3.8-flash"
+ },
+ {
+  "model_request": "qwen3.8-flash",
+  "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  "extra_body": {
+   "enable_thinking": true
+  },
+  "http_status": 200,
+  "ttf_headers_ms": 512.6,
+  "ttft_first_chunk_ms": 512.6,
+  "ttft_first_reasoning_ms": 512.6,
+  "ttft_first_content_ms": 1311.2,
+  "total_ms": 1691.7,
+  "finish_reason": "stop",
+  "content_sample": "间隔重复记忆是一种根据遗忘规律，在逐渐拉长的时间间隔中反复复习学习内容，以高效巩固长期记忆的方法。",
+  "content_len_chars": 49,
+  "reasoning_sample": "用户要求用一句话解释“间隔重复记忆”。需要简洁中文回答。必须先调用工具，已调用。最终只给一句话，可能定义：间隔重复记忆是一种通过在学习内容即将遗忘时按逐渐延长的",
+  "reasoning_len_chars": 102,
+  "has_reasoning_stream": true,
+  "usage": {
+   "completion_tokens": 84,
+   "completion_tokens_details": {
+    "reasoning_tokens": 55,
+    "text_tokens": 84
+   },
+   "prompt_tokens": 69,
+   "prompt_tokens_details": {
+    "cached_tokens": 0,
+    "text_tokens": 69
+   },
+   "total_tokens": 153
+  },
+  "probe": "dashscope_chat",
+  "tier": "fast_x_thinking_on",
+  "run": 1,
+  "model_configured": "qwen3.8-flash"
+ },
+ {
+  "model_request": "qwen3.8-flash",
+  "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  "extra_body": {
+   "enable_thinking": true
+  },
+  "http_status": 200,
+  "ttf_headers_ms": 461.1,
+  "ttft_first_chunk_ms": 461.1,
+  "ttft_first_reasoning_ms": 461.1,
+  "ttft_first_content_ms": 927.8,
+  "total_ms": 1321.8,
+  "finish_reason": "stop",
+  "content_sample": "间隔重复记忆是一种在快要遗忘时按逐渐拉长的时间间隔复习信息，以增强长期记忆的学习方法。",
+  "content_len_chars": 43,
+  "reasoning_sample": "用户要求用一句话解释“间隔重复记忆”。需要用中文回答，简洁一句话。先调用工具，已满足。直接给出定义即可。",
+  "reasoning_len_chars": 52,
+  "has_reasoning_stream": true,
+  "usage": {
+   "completion_tokens": 56,
+   "completion_tokens_details": {
+    "reasoning_tokens": 29,
+    "text_tokens": 56
+   },
+   "prompt_tokens": 69,
+   "prompt_tokens_details": {
+    "cached_tokens": 0,
+    "text_tokens": 69
+   },
+   "total_tokens": 125
+  },
+  "probe": "dashscope_chat",
+  "tier": "fast_x_thinking_on",
+  "run": 2,
+  "model_configured": "qwen3.8-flash"
+ },
+ {
+  "model_request": "qwen3.8-flash",
+  "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  "extra_body": {
+   "enable_thinking": false
+  },
+  "http_status": 200,
+  "total_ms": 585.8,
+  "finish_reason": "stop",
+  "content_sample": "{\"text\": \"我爱在清晨跑步。\", \"lang\": \"zh\"}",
+  "content_len_chars": 34,
+  "reasoning_sample": "",
+  "reasoning_len_chars": 0,
+  "has_reasoning_stream": false,
+  "usage": {
+   "completion_tokens": 16,
+   "prompt_tokens": 64,
+   "prompt_tokens_details": {
+    "cached_tokens": 0,
+    "text_tokens": 64
+   },
+   "total_tokens": 80
+  },
+  "probe": "dashscope_json_mode",
+  "tier": "fast",
+  "run": 1,
+  "stream": false,
+  "json_valid": true
+ },
+ {
+  "model_request": "qwen3.8-flash",
+  "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  "extra_body": {
+   "enable_thinking": false
+  },
+  "http_status": 200,
+  "total_ms": 534.8,
+  "finish_reason": "stop",
+  "content_sample": "{\"text\": \"我爱在清晨跑步。\", \"lang\": \"zh\"}",
+  "content_len_chars": 34,
+  "reasoning_sample": "",
+  "reasoning_len_chars": 0,
+  "has_reasoning_stream": false,
+  "usage": {
+   "completion_tokens": 16,
+   "prompt_tokens": 64,
+   "prompt_tokens_details": {
+    "cached_tokens": 0,
+    "text_tokens": 64
+   },
+   "total_tokens": 80
+  },
+  "probe": "dashscope_json_mode",
+  "tier": "fast",
+  "run": 2,
+  "stream": false,
+  "json_valid": true
+ },
+ {
+  "model_request": "qwen3.8-flash",
+  "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  "extra_body": {
+   "enable_thinking": false
+  },
+  "http_status": 200,
+  "ttf_headers_ms": 533.8,
+  "ttft_first_chunk_ms": 533.9,
+  "ttft_first_reasoning_ms": null,
+  "ttft_first_content_ms": 533.9,
+  "total_ms": 708.7,
+  "finish_reason": "stop",
+  "content_sample": "{\"text\": \"我爱在清晨跑步。\", \"lang\": \"zh\"}",
+  "content_len_chars": 34,
+  "reasoning_sample": "",
+  "reasoning_len_chars": 0,
+  "has_reasoning_stream": false,
+  "usage": {
+   "completion_tokens": 16,
+   "prompt_tokens": 64,
+   "prompt_tokens_details": {
+    "cached_tokens": 0,
+    "text_tokens": 64
+   },
+   "total_tokens": 80
+  },
+  "probe": "dashscope_json_mode",
+  "tier": "fast",
+  "run": 3,
+  "stream": true,
+  "json_valid": true
+ }
+]

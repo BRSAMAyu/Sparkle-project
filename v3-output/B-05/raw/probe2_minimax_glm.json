@@ -1,0 +1,497 @@
+[
+ {
+  "model_request": "MiniMax-M3",
+  "base_url": "https://api.minimaxi.com/v1",
+  "extra_body": {},
+  "http_status": 200,
+  "ttf_headers_ms": 873.7,
+  "ttft_first_chunk_ms": 873.7,
+  "ttft_first_reasoning_ms": null,
+  "ttft_first_content_ms": 1250.2,
+  "total_ms": 2197.4,
+  "finish_reason": "stop",
+  "content_sample": "<think>The user is asking me to explain \"spaced repetition\" (间隔重复记忆) in one sentence in Chinese.</think>\n\n间隔重复记忆是一种按照逐渐拉",
+  "content_len_chars": 161,
+  "reasoning_sample": "",
+  "reasoning_len_chars": 0,
+  "has_reasoning_stream": false,
+  "usage": {
+   "total_tokens": 239,
+   "total_characters": 0,
+   "prompt_tokens": 184,
+   "completion_tokens": 55,
+   "completion_tokens_details": {
+    "reasoning_tokens": 0
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 128
+   }
+  },
+  "probe": "minimax_m3",
+  "mode": "sequential_stream",
+  "run": 1
+ },
+ {
+  "model_request": "MiniMax-M3",
+  "base_url": "https://api.minimaxi.com/v1",
+  "extra_body": {},
+  "http_status": 200,
+  "ttf_headers_ms": 849.3,
+  "ttft_first_chunk_ms": 849.4,
+  "ttft_first_reasoning_ms": null,
+  "ttft_first_content_ms": 1230.0,
+  "total_ms": 2171.5,
+  "finish_reason": "stop",
+  "content_sample": "<think>The user asks in Chinese: \"用一句话解释什么是间隔重复记忆。\" — \"Explain spaced repetition memory in one sentence.\"\n\nI'll provide ",
+  "content_len_chars": 239,
+  "reasoning_sample": "",
+  "reasoning_len_chars": 0,
+  "has_reasoning_stream": false,
+  "usage": {
+   "total_tokens": 255,
+   "total_characters": 0,
+   "prompt_tokens": 184,
+   "completion_tokens": 71,
+   "completion_tokens_details": {
+    "reasoning_tokens": 0
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 128
+   }
+  },
+  "probe": "minimax_m3",
+  "mode": "sequential_stream",
+  "run": 2
+ },
+ {
+  "model_request": "MiniMax-M3",
+  "base_url": "https://api.minimaxi.com/v1",
+  "extra_body": {},
+  "http_status": 200,
+  "ttf_headers_ms": 573.2,
+  "ttft_first_chunk_ms": 573.3,
+  "ttft_first_reasoning_ms": null,
+  "ttft_first_content_ms": 1112.7,
+  "total_ms": 1719.1,
+  "finish_reason": "stop",
+  "content_sample": "<think>用户要求用一句话解释什么是间隔重复记忆。这是一种学习技巧，基于艾宾浩斯遗忘曲线原理。</think>\n\n间隔重复记忆是一种通过在逐渐拉长的时间间隔上反复复习同一信息，从而对抗遗忘曲线、加深长期记忆的学习方法。",
+  "content_len_chars": 111,
+  "reasoning_sample": "",
+  "reasoning_len_chars": 0,
+  "has_reasoning_stream": false,
+  "usage": {
+   "total_tokens": 236,
+   "total_characters": 0,
+   "prompt_tokens": 184,
+   "completion_tokens": 52,
+   "completion_tokens_details": {
+    "reasoning_tokens": 0
+   },
+   "prompt_tokens_details": {
+    "cached_tokens": 128
+   }
+  },
+  "probe": "minimax_m3",
+  "mode": "sequential_stream",
+  "run": 3
+ },
+ {
+  "probe": "minimax_m3",
+  "mode": "concurrent_12_wave",
+  "statuses": [
+   200,
+   200,
+   200,
+   200,
+   200,
+   200,
+   200,
+   200,
+   200,
+   200,
+   200,
+   200
+  ],
+  "n_429": 0,
+  "n_ok": 12,
+  "wave_total_ms": 2505.5,
+  "per_call": [
+   {
+    "run": 1,
+    "http_status": 200,
+    "total_ms": 1144.9,
+    "content_len": 78,
+    "usage": {
+     "total_tokens": 193,
+     "total_characters": 0,
+     "prompt_tokens": 177,
+     "completion_tokens": 16,
+     "completion_tokens_details": {
+      "reasoning_tokens": 0
+     },
+     "prompt_tokens_details": {
+      "cached_tokens": 128
+     }
+    },
+    "base_resp": {
+     "status_code": 0,
+     "status_msg": ""
+    }
+   },
+   {
+    "run": 2,
+    "http_status": 200,
+    "total_ms": 1087.5,
+    "content_len": 78,
+    "usage": {
+     "total_tokens": 193,
+     "total_characters": 0,
+     "prompt_tokens": 177,
+     "completion_tokens": 16,
+     "completion_tokens_details": {
+      "reasoning_tokens": 0
+     },
+     "prompt_tokens_details": {
+      "cached_tokens": 128
+     }
+    },
+    "base_resp": {
+     "status_code": 0,
+     "status_msg": ""
+    }
+   },
+   {
+    "run": 3,
+    "http_status": 200,
+    "total_ms": 1675.6,
+    "content_len": 77,
+    "usage": {
+     "total_tokens": 193,
+     "total_characters": 0,
+     "prompt_tokens": 177,
+     "completion_tokens": 16,
+     "completion_tokens_details": {
+      "reasoning_tokens": 0
+     },
+     "prompt_tokens_details": {
+      "cached_tokens": 128
+     }
+    },
+    "base_resp": {
+     "status_code": 0,
+     "status_msg": ""
+    }
+   },
+   {
+    "run": 4,
+    "http_status": 200,
+    "total_ms": 1046.2,
+    "content_len": 78,
+    "usage": {
+     "total_tokens": 193,
+     "total_characters": 0,
+     "prompt_tokens": 177,
+     "completion_tokens": 16,
+     "completion_tokens_details": {
+      "reasoning_tokens": 0
+     },
+     "prompt_tokens_details": {
+      "cached_tokens": 128
+     }
+    },
+    "base_resp": {
+     "status_code": 0,
+     "status_msg": ""
+    }
+   },
+   {
+    "run": 5,
+    "http_status": 200,
+    "total_ms": 1059.4,
+    "content_len": 78,
+    "usage": {
+     "total_tokens": 193,
+     "total_characters": 0,
+     "prompt_tokens": 177,
+     "completion_tokens": 16,
+     "completion_tokens_details": {
+      "reasoning_tokens": 0
+     },
+     "prompt_tokens_details": {
+      "cached_tokens": 128
+     }
+    },
+    "base_resp": {
+     "status_code": 0,
+     "status_msg": ""
+    }
+   },
+   {
+    "run": 6,
+    "http_status": 200,
+    "total_ms": 1939.2,
+    "content_len": 76,
+    "usage": {
+     "total_tokens": 193,
+     "total_characters": 0,
+     "prompt_tokens": 177,
+     "completion_tokens": 16,
+     "completion_tokens_details": {
+      "reasoning_tokens": 0
+     },
+     "prompt_tokens_details": {
+      "cached_tokens": 128
+     }
+    },
+    "base_resp": {
+     "status_code": 0,
+     "status_msg": ""
+    }
+   },
+   {
+    "run": 7,
+    "http_status": 200,
+    "total_ms": 1362.7,
+    "content_len": 77,
+    "usage": {
+     "total_tokens": 193,
+     "total_characters": 0,
+     "prompt_tokens": 177,
+     "completion_tokens": 16,
+     "completion_tokens_details": {
+      "reasoning_tokens": 0
+     },
+     "prompt_tokens_details": {
+      "cached_tokens": 128
+     }
+    },
+    "base_resp": {
+     "status_code": 0,
+     "status_msg": ""
+    }
+   },
+   {
+    "run": 8,
+    "http_status": 200,
+    "total_ms": 2501.1,
+    "content_len": 78,
+    "usage": {
+     "total_tokens": 193,
+     "total_characters": 0,
+     "prompt_tokens": 177,
+     "completion_tokens": 16,
+     "completion_tokens_details": {
+      "reasoning_tokens": 0
+     },
+     "prompt_tokens_details": {
+      "cached_tokens": 128
+     }
+    },
+    "base_resp": {
+     "status_code": 0,
+     "status_msg": ""
+    }
+   },
+   {
+    "run": 9,
+    "http_status": 200,
+    "total_ms": 1164.5,
+    "content_len": 81,
+    "usage": {
+     "total_tokens": 193,
+     "total_characters": 0,
+     "prompt_tokens": 177,
+     "completion_tokens": 16,
+     "completion_tokens_details": {
+      "reasoning_tokens": 0
+     },
+     "prompt_tokens_details": {
+      "cached_tokens": 128
+     }
+    },
+    "base_resp": {
+     "status_code": 0,
+     "status_msg": ""
+    }
+   },
+   {
+    "run": 10,
+    "http_status": 200,
+    "total_ms": 1545.3,
+    "content_len": 77,
+    "usage": {
+     "total_tokens": 193,
+     "total_characters": 0,
+     "prompt_tokens": 177,
+     "completion_tokens": 16,
+     "completion_tokens_details": {
+      "reasoning_tokens": 0
+     },
+     "prompt_tokens_details": {
+      "cached_tokens": 128
+     }
+    },
+    "base_resp": {
+     "status_code": 0,
+     "status_msg": ""
+    }
+   },
+   {
+    "run": 11,
+    "http_status": 200,
+    "total_ms": 1312.5,
+    "content_len": 78,
+    "usage": {
+     "total_tokens": 193,
+     "total_characters": 0,
+     "prompt_tokens": 177,
+     "completion_tokens": 16,
+     "completion_tokens_details": {
+      "reasoning_tokens": 0
+     },
+     "prompt_tokens_details": {
+      "cached_tokens": 128
+     }
+    },
+    "base_resp": {
+     "status_code": 0,
+     "status_msg": ""
+    }
+   },
+   {
+    "run": 12,
+    "http_status": 200,
+    "total_ms": 995.0,
+    "content_len": 78,
+    "usage": {
+     "total_tokens": 193,
+     "total_characters": 0,
+     "prompt_tokens": 177,
+     "completion_tokens": 16,
+     "completion_tokens_details": {
+      "reasoning_tokens": 0
+     },
+     "prompt_tokens_details": {
+      "cached_tokens": 128
+     }
+    },
+    "base_resp": {
+     "status_code": 0,
+     "status_msg": ""
+    }
+   }
+  ]
+ },
+ {
+  "model_request": "glm-4.7",
+  "base_url": "https://open.bigmodel.cn/api/coding/paas/v4",
+  "extra_body": {
+   "clear_thinking": true
+  },
+  "http_status": 401,
+  "error": "{\"error\":{\"code\":\"1000\",\"message\":\"身份验证失败。\"}}",
+  "total_ms": 51.0,
+  "probe": "zhipu_glm_pool",
+  "mode": "no_thinking",
+  "run": 1,
+  "tier_role": "glm_batch"
+ },
+ {
+  "model_request": "glm-4.7",
+  "base_url": "https://open.bigmodel.cn/api/coding/paas/v4",
+  "extra_body": {
+   "clear_thinking": true
+  },
+  "http_status": 401,
+  "error": "{\"error\":{\"code\":\"1000\",\"message\":\"身份验证失败。\"}}",
+  "total_ms": 53.1,
+  "probe": "zhipu_glm_pool",
+  "mode": "no_thinking",
+  "run": 2,
+  "tier_role": "glm_batch"
+ },
+ {
+  "model_request": "glm-4.7",
+  "base_url": "https://open.bigmodel.cn/api/coding/paas/v4",
+  "extra_body": {
+   "clear_thinking": false
+  },
+  "http_status": 401,
+  "error": "{\"error\":{\"code\":\"1000\",\"message\":\"身份验证失败。\"}}",
+  "total_ms": 53.0,
+  "probe": "zhipu_glm_pool",
+  "mode": "thinking",
+  "run": 1,
+  "tier_role": "glm_batch"
+ },
+ {
+  "model_request": "glm-4.7",
+  "base_url": "https://open.bigmodel.cn/api/coding/paas/v4",
+  "extra_body": {
+   "clear_thinking": false
+  },
+  "http_status": 401,
+  "error": "{\"error\":{\"code\":\"1000\",\"message\":\"身份验证失败。\"}}",
+  "total_ms": 50.7,
+  "probe": "zhipu_glm_pool",
+  "mode": "thinking",
+  "run": 2,
+  "tier_role": "glm_batch"
+ },
+ {
+  "model_request": "glm-4.5-air",
+  "base_url": "https://open.bigmodel.cn/api/coding/paas/v4",
+  "extra_body": {
+   "clear_thinking": true
+  },
+  "http_status": 401,
+  "error": "{\"error\":{\"code\":\"1000\",\"message\":\"身份验证失败。\"}}",
+  "total_ms": 50.3,
+  "probe": "zhipu_glm_pool",
+  "mode": "no_thinking",
+  "run": 1,
+  "tier_role": "glm_batch"
+ },
+ {
+  "model_request": "glm-4.6",
+  "base_url": "https://open.bigmodel.cn/api/coding/paas/v4",
+  "extra_body": {
+   "clear_thinking": true
+  },
+  "http_status": 401,
+  "error": "{\"error\":{\"code\":\"1000\",\"message\":\"身份验证失败。\"}}",
+  "total_ms": 46.4,
+  "probe": "zhipu_glm_pool",
+  "mode": "no_thinking",
+  "run": 1,
+  "tier_role": "glm_batch"
+ },
+ {
+  "model_request": "glm-5.1",
+  "base_url": "https://open.bigmodel.cn/api/coding/paas/v4",
+  "extra_body": {
+   "clear_thinking": false
+  },
+  "http_status": 401,
+  "error": "{\"error\":{\"code\":\"1000\",\"message\":\"身份验证失败。\"}}",
+  "total_ms": 46.4,
+  "probe": "zhipu_glm_pool",
+  "mode": "thinking",
+  "run": 1,
+  "tier_role": "top"
+ },
+ {
+  "model_request": "glm-5.1",
+  "base_url": "https://open.bigmodel.cn/api/coding/paas/v4",
+  "extra_body": {
+   "clear_thinking": false
+  },
+  "http_status": 401,
+  "error": "{\"error\":{\"code\":\"1000\",\"message\":\"身份验证失败。\"}}",
+  "total_ms": 45.5,
+  "probe": "zhipu_glm_pool",
+  "mode": "thinking",
+  "run": 2,
+  "tier_role": "top"
+ }
+]

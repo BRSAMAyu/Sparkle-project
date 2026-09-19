@@ -1,0 +1,203 @@
+[
+ {
+  "model": "qwen3.7-text-embedding-flash",
+  "n_inputs": 1,
+  "dimensions_param": null,
+  "http_status": 200,
+  "total_ms": 122.0,
+  "n_vectors": 1,
+  "vector_dims": [
+   1024
+  ],
+  "usage": {
+   "prompt_tokens": 23,
+   "total_tokens": 23
+  },
+  "all_norm_sample": 1.0004,
+  "probe": "embedding",
+  "mode": "single",
+  "run": 1
+ },
+ {
+  "model": "qwen3.7-text-embedding-flash",
+  "n_inputs": 1,
+  "dimensions_param": null,
+  "http_status": 200,
+  "total_ms": 136.4,
+  "n_vectors": 1,
+  "vector_dims": [
+   1024
+  ],
+  "usage": {
+   "prompt_tokens": 20,
+   "total_tokens": 20
+  },
+  "all_norm_sample": 1.0004,
+  "probe": "embedding",
+  "mode": "single",
+  "run": 2
+ },
+ {
+  "model": "qwen3.7-text-embedding-flash",
+  "n_inputs": 1,
+  "dimensions_param": null,
+  "http_status": 200,
+  "total_ms": 134.0,
+  "n_vectors": 1,
+  "vector_dims": [
+   1024
+  ],
+  "usage": {
+   "prompt_tokens": 23,
+   "total_tokens": 23
+  },
+  "all_norm_sample": 0.9998,
+  "probe": "embedding",
+  "mode": "single",
+  "run": 3
+ },
+ {
+  "model": "qwen3.7-text-embedding-flash",
+  "n_inputs": 1,
+  "dimensions_param": null,
+  "http_status": 200,
+  "total_ms": 121.5,
+  "n_vectors": 1,
+  "vector_dims": [
+   1024
+  ],
+  "usage": {
+   "prompt_tokens": 23,
+   "total_tokens": 23
+  },
+  "all_norm_sample": 1.0004,
+  "probe": "embedding",
+  "mode": "single",
+  "run": 4
+ },
+ {
+  "model": "qwen3.7-text-embedding-flash",
+  "n_inputs": 8,
+  "dimensions_param": null,
+  "http_status": 200,
+  "total_ms": 227.0,
+  "n_vectors": 8,
+  "vector_dims": [
+   1024
+  ],
+  "usage": {
+   "prompt_tokens": 175,
+   "total_tokens": 175
+  },
+  "all_norm_sample": 0.9998,
+  "probe": "embedding",
+  "mode": "batch8",
+  "run": 1
+ },
+ {
+  "model": "qwen3.7-text-embedding-flash",
+  "n_inputs": 8,
+  "dimensions_param": null,
+  "http_status": 200,
+  "total_ms": 179.0,
+  "n_vectors": 8,
+  "vector_dims": [
+   1024
+  ],
+  "usage": {
+   "prompt_tokens": 175,
+   "total_tokens": 175
+  },
+  "all_norm_sample": 0.9998,
+  "probe": "embedding",
+  "mode": "batch8",
+  "run": 2
+ },
+ {
+  "model": "qwen3.7-text-embedding-flash",
+  "n_inputs": 1,
+  "dimensions_param": 1024,
+  "http_status": 200,
+  "total_ms": 127.2,
+  "n_vectors": 1,
+  "vector_dims": [
+   1024
+  ],
+  "usage": {
+   "prompt_tokens": 23,
+   "total_tokens": 23
+  },
+  "all_norm_sample": 1.0004,
+  "probe": "embedding",
+  "mode": "single_dim1024",
+  "run": 1
+ },
+ {
+  "model": "text-embedding-v4",
+  "n_inputs": 1,
+  "dimensions_param": null,
+  "http_status": 200,
+  "total_ms": 132.9,
+  "n_vectors": 1,
+  "vector_dims": [
+   1024
+  ],
+  "usage": {
+   "prompt_tokens": 8,
+   "total_tokens": 8
+  },
+  "all_norm_sample": 1.0,
+  "probe": "embedding",
+  "mode": "single",
+  "run": 1
+ },
+ {
+  "model": "text-embedding-v4",
+  "n_inputs": 1,
+  "dimensions_param": null,
+  "http_status": 200,
+  "total_ms": 123.2,
+  "n_vectors": 1,
+  "vector_dims": [
+   1024
+  ],
+  "usage": {
+   "prompt_tokens": 6,
+   "total_tokens": 6
+  },
+  "all_norm_sample": 1.0,
+  "probe": "embedding",
+  "mode": "single",
+  "run": 2
+ },
+ {
+  "model": "text-embedding-v4",
+  "n_inputs": 8,
+  "dimensions_param": null,
+  "http_status": 200,
+  "total_ms": 224.8,
+  "n_vectors": 8,
+  "vector_dims": [
+   1024
+  ],
+  "usage": {
+   "prompt_tokens": 61,
+   "total_tokens": 61
+  },
+  "all_norm_sample": 1.0,
+  "probe": "embedding",
+  "mode": "batch8",
+  "run": 3
+ },
+ {
+  "probe": "embedding",
+  "provider": "siliconflow",
+  "model": "Qwen/Qwen3-Embedding-4B",
+  "http_status": 200,
+  "total_ms": 316.9,
+  "n_vectors": 2,
+  "vector_dims": [
+   2560
+  ]
+ }
+]

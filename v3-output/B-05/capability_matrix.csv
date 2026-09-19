@@ -1,0 +1,34 @@
+capability,provider,model_configured,model_actual,status_2026_09_19,evidence,notes
+chat_tier_fast,dashscope,qwen3.8-flash (DASHSCOPE_FAST_MODEL),qwen3.8-flash,available,4 runs streaming 200 OK; TTFT p50 440ms / total p50 1001ms; usage ok; thinking off confirmed (no reasoning_content),TTFT即首可见反馈; enable_thinking=false 生效
+chat_tier_standard_thinking,dashscope,qwen3.8-flash (DASHSCOPE_STANDARD_MODEL),qwen3.8-flash,available,4 runs 200 OK; first reasoning stream confirmed; content after reasoning (p50 912ms); reasoning_tokens in usage,prompt_tokens 33->69 (thinking 模式服务端附加提示)
+chat_tier_reason,dashscope,qwen3.8-flash (DASHSCOPE_REASON_MODEL),qwen3.8-flash,available,4 runs 200 OK; identical model as standard (thinking on); p95 total 1871ms,"fast/standard/reason 实际同为 qwen3.8-flash, 仅 thinking 开关差异"
+chat_thinking_toggle,dashscope,qwen3.8-flash,qwen3.8-flash,available,enable_thinking true/false 双向生效; fast+thinking on 出现 reasoning stream (51-52 chars),开关由请求级 extra_body 控制
+chat_json_mode,dashscope,qwen3.8-flash,qwen3.8-flash,available,response_format=json_object 3/3 valid JSON (含 stream 模式); enable_thinking=false 兼容,stream+json_object 同时可用
+chat_json_schema_strict,dashscope,qwen3.8-flash,unknown,unknown,未探测 json_schema; json_object 已验证,保持 unknown
+chat_batch_lane_minimax_m3,minimax,MiniMax-M3 (MINIMAX_CHAT_MODEL),MiniMax-M3,available,3 sequential runs 200 OK; TTFT p50 1281ms / total p50 2462ms; <think> 内联前缀确认; usage 含 cached_tokens,配置为 token plan 免费档; 仅 glm_batch 池
+minimax_concurrency_clamp,minimax,MiniMax-M3,MiniMax-M3,available_with_note,"12 并发一波全 200, 无 429; 单请求 p50 656ms / max 2130ms 波内; 服务端未见 8 并发硬限","客户端 llm_concurrency minimax lane=8 仍需遵守(代码钳制), 服务端余量未知"
+glm_batch_pool_zhipu_candidates,zhipu,glm-4.7 / glm-4.5-air / glm-4.6 (coding paas v4),unreachable,unavailable,7/7 attempts HTTP 401 code 1000 身份验证失败; coding 与标准 paas v4 双端点均 401,ZHIPU_API_KEY 失效; 需轮换凭据后重测
+chat_tier_top,zhipu,glm-5.1 (ZHIPU_TOP_MODEL),unreachable,unavailable,"2/2 attempts HTTP 401; TOP 层实际不可用, 路由会沿 fallback 链降级",LLM_TIER_TOP=glm_5_1_top 当前为死配置
+embedding_primary,dashscope,qwen3.7-text-embedding-flash (DASHSCOPE_EMBEDDING_MODEL),qwen3.7-text-embedding-flash,available,single p50 117ms; batch8 p50 293ms (8 vectors); dim=1024 与 EMBEDDING_DIM 一致; dimensions=1024 参数可用,usage 按 prompt_tokens 计
+embedding_secondary,dashscope,text-embedding-v4 (EMBEDDING_MODEL),text-embedding-v4,available,single p50 124ms; batch8 195ms; dim=1024,
+embedding_backup,siliconflow,Qwen/Qwen3-Embedding-4B (SILICONFLOW_EMBEDDING_MODEL),Qwen/Qwen3-Embedding-4B,available,"200 OK; dim=2560 (与 dashscope 1024 不同维, 混用需重嵌入)",注意维度不一致风险
+stt_realtime,dashscope,qwen3-asr-flash-realtime (QWEN_ASR_MODEL),qwen3-asr-flash-realtime,available,"WS realtime manual-commit 协议 2/2 成功; TTS round-trip 转写逐字正确; open 45-53ms, transcript completed 376-662ms",24kHz PCM 会话直接可用(会话级 sample_rate)
+tts,dashscope,qwen3-tts-instruct-flash (QWEN_TTS_MODEL),qwen3-tts-instruct-flash,available,2/2 runs 200 OK; RIFF wav 24kHz (241-269KB); p50 1613ms; instructions 参数生效; usage 按 characters 计,"音频 URL 下发(签名 URL, 未入库)"
+stt_backup_zhipu,zhipu,glm asr via ZHIPU key,unreachable,unavailable,ZHIPU_API_KEY 401 (同一 key 失效影响),STT_BACKUP_PROVIDER=zhipu 当前不可用
+ocr_primary,zhipu,glm-ocr (ZHIPU_OCR_MODEL) via /layout_parsing,unreachable,unavailable,HTTP 401 code 1000; 主 OCR 路不可用,OCR_PROVIDER=zhipu 需轮换 key 或切主路
+ocr_backup,siliconflow,deepseek-ai/DeepSeek-OCR (SILICONFLOW_OCR_MODEL),deepseek-ai/DeepSeek-OCR,available_low_quality,"200 OK; 两次合成位图探针均未能精确提取(近形误读 123.99/128.99), usage 正常",端点可用但本探针图像质量下识别不精确; 真实文档待补测
+multimodal_primary_chat,dashscope,qwen3.8-flash,qwen3.8-flash,available,image_url 输入 200 OK 且 100% 正确提取合成位图文本 'SAMPLE 128.99 CNY',主聊天模型原生视觉可用 — OCR 可路由到主模型
+rerank,dashscope,qwen3-rerank,not_probed,unknown,未在本卡范围探测,保持 unknown
+hunyuan_translate,siliconflow(fallback),tencent/Hunyuan-MT-7B,not_probed,unknown,翻译不在本卡范围,保持 unknown
+
+cost_lane,config_cost_per_1k(llm_router),config_currency,list_price_ref_CNY_per_1M,measured_usage_typical_call,cost_per_typical_call_CNY_at_list,delta_note
+dashscope_fast,0.0001,usd(ambiguous),0.8 in / 2.7 out (2026-08-27 调价后),prompt 33 / completion 26-33 tok,0.000107,config 0.0001 若为 USD≈0.00072 CNY 且不分输入输出 — 输出侧低估约 3-4x
+dashscope_standard_thinking,0.0002,usd(ambiguous),同 qwen3.8-flash 单价,prompt 69 / completion 52-81 tok (含 reasoning 22-46),0.000231,thinking 增加 output tokens; config 低估
+dashscope_reason,0.001,usd(ambiguous),同 qwen3.8-flash 单价(实测同模型),prompt 69 / completion 47-63 tok (含 reasoning 23-35),0.000204,与 standard 实为同一模型同一单价 — config 将 reason 定为 5x standard 不符合实际
+minimax_m3_batch,0.0,cny(token plan),"list ¥4.2 in / ¥16.8 out per 1M (512K 档, 折扣中)",prompt 184(cached 128) / completion 45-104 tok,0.001949,token plan 套餐内实际边际成本≈0; list 价仅作 fallback 计费参考
+glm_5_1_top (zhipu),0.008,usd(ambiguous),unverified (key 失效无法实测),n/a,,当前不可用; cost 配置无从校准
+embedding_primary,,n/a,unknown (未查到公开价),23 tok/call,,llm_router 无 embedding cost 配置项
+tts,,n/a,unknown,42 chars/call,,usage 按 characters 计
+stt_realtime,,n/a,unknown,n/a (按音频时长),,
+ocr_backup (siliconflow),0.001,usd(ambiguous),unknown,prompt 283 / completion 23 tok,,
+multimodal via qwen3.8-flash,0.0001,usd(ambiguous),0.8/2.7 (图像按 token 折算),prompt 283+ / completion ~20,0.00028,图像输入折算 token 后单价同文本

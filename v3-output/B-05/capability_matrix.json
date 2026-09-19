@@ -1,0 +1,447 @@
+{
+ "probe_date": "2026-09-19",
+ "credentials": "主仓 backend/.env 真实副本 (key 未出探针进程, 本文件无密钥)",
+ "base_sha": "46f46a1d",
+ "capability_matrix": [
+  {
+   "capability": "chat_tier_fast",
+   "provider": "dashscope",
+   "model_configured": "qwen3.8-flash (DASHSCOPE_FAST_MODEL)",
+   "model_actual": "qwen3.8-flash",
+   "status": "available",
+   "evidence": "4 runs streaming 200 OK; TTFT p50 440ms / total p50 1001ms; usage ok; thinking off confirmed (no reasoning_content)",
+   "notes": "TTFT即首可见反馈; enable_thinking=false 生效"
+  },
+  {
+   "capability": "chat_tier_standard_thinking",
+   "provider": "dashscope",
+   "model_configured": "qwen3.8-flash (DASHSCOPE_STANDARD_MODEL)",
+   "model_actual": "qwen3.8-flash",
+   "status": "available",
+   "evidence": "4 runs 200 OK; first reasoning stream confirmed; content after reasoning (p50 912ms); reasoning_tokens in usage",
+   "notes": "prompt_tokens 33->69 (thinking 模式服务端附加提示)"
+  },
+  {
+   "capability": "chat_tier_reason",
+   "provider": "dashscope",
+   "model_configured": "qwen3.8-flash (DASHSCOPE_REASON_MODEL)",
+   "model_actual": "qwen3.8-flash",
+   "status": "available",
+   "evidence": "4 runs 200 OK; identical model as standard (thinking on); p95 total 1871ms",
+   "notes": "fast/standard/reason 实际同为 qwen3.8-flash, 仅 thinking 开关差异"
+  },
+  {
+   "capability": "chat_thinking_toggle",
+   "provider": "dashscope",
+   "model_configured": "qwen3.8-flash",
+   "model_actual": "qwen3.8-flash",
+   "status": "available",
+   "evidence": "enable_thinking true/false 双向生效; fast+thinking on 出现 reasoning stream (51-52 chars)",
+   "notes": "开关由请求级 extra_body 控制"
+  },
+  {
+   "capability": "chat_json_mode",
+   "provider": "dashscope",
+   "model_configured": "qwen3.8-flash",
+   "model_actual": "qwen3.8-flash",
+   "status": "available",
+   "evidence": "response_format=json_object 3/3 valid JSON (含 stream 模式); enable_thinking=false 兼容",
+   "notes": "stream+json_object 同时可用"
+  },
+  {
+   "capability": "chat_json_schema_strict",
+   "provider": "dashscope",
+   "model_configured": "qwen3.8-flash",
+   "model_actual": "unknown",
+   "status": "unknown",
+   "evidence": "未探测 json_schema; json_object 已验证",
+   "notes": "保持 unknown"
+  },
+  {
+   "capability": "chat_batch_lane_minimax_m3",
+   "provider": "minimax",
+   "model_configured": "MiniMax-M3 (MINIMAX_CHAT_MODEL)",
+   "model_actual": "MiniMax-M3",
+   "status": "available",
+   "evidence": "3 sequential runs 200 OK; TTFT p50 1281ms / total p50 2462ms; <think> 内联前缀确认; usage 含 cached_tokens",
+   "notes": "配置为 token plan 免费档; 仅 glm_batch 池"
+  },
+  {
+   "capability": "minimax_concurrency_clamp",
+   "provider": "minimax",
+   "model_configured": "MiniMax-M3",
+   "model_actual": "MiniMax-M3",
+   "status": "available_with_note",
+   "evidence": "12 并发一波全 200, 无 429; 单请求 p50 656ms / max 2130ms 波内; 服务端未见 8 并发硬限",
+   "notes": "客户端 llm_concurrency minimax lane=8 仍需遵守(代码钳制), 服务端余量未知"
+  },
+  {
+   "capability": "glm_batch_pool_zhipu_candidates",
+   "provider": "zhipu",
+   "model_configured": "glm-4.7 / glm-4.5-air / glm-4.6 (coding paas v4)",
+   "model_actual": "unreachable",
+   "status": "unavailable",
+   "evidence": "7/7 attempts HTTP 401 code 1000 身份验证失败; coding 与标准 paas v4 双端点均 401",
+   "notes": "ZHIPU_API_KEY 失效; 需轮换凭据后重测"
+  },
+  {
+   "capability": "chat_tier_top",
+   "provider": "zhipu",
+   "model_configured": "glm-5.1 (ZHIPU_TOP_MODEL)",
+   "model_actual": "unreachable",
+   "status": "unavailable",
+   "evidence": "2/2 attempts HTTP 401; TOP 层实际不可用, 路由会沿 fallback 链降级",
+   "notes": "LLM_TIER_TOP=glm_5_1_top 当前为死配置"
+  },
+  {
+   "capability": "embedding_primary",
+   "provider": "dashscope",
+   "model_configured": "qwen3.7-text-embedding-flash (DASHSCOPE_EMBEDDING_MODEL)",
+   "model_actual": "qwen3.7-text-embedding-flash",
+   "status": "available",
+   "evidence": "single p50 117ms; batch8 p50 293ms (8 vectors); dim=1024 与 EMBEDDING_DIM 一致; dimensions=1024 参数可用",
+   "notes": "usage 按 prompt_tokens 计"
+  },
+  {
+   "capability": "embedding_secondary",
+   "provider": "dashscope",
+   "model_configured": "text-embedding-v4 (EMBEDDING_MODEL)",
+   "model_actual": "text-embedding-v4",
+   "status": "available",
+   "evidence": "single p50 124ms; batch8 195ms; dim=1024",
+   "notes": ""
+  },
+  {
+   "capability": "embedding_backup",
+   "provider": "siliconflow",
+   "model_configured": "Qwen/Qwen3-Embedding-4B (SILICONFLOW_EMBEDDING_MODEL)",
+   "model_actual": "Qwen/Qwen3-Embedding-4B",
+   "status": "available",
+   "evidence": "200 OK; dim=2560 (与 dashscope 1024 不同维, 混用需重嵌入)",
+   "notes": "注意维度不一致风险"
+  },
+  {
+   "capability": "stt_realtime",
+   "provider": "dashscope",
+   "model_configured": "qwen3-asr-flash-realtime (QWEN_ASR_MODEL)",
+   "model_actual": "qwen3-asr-flash-realtime",
+   "status": "available",
+   "evidence": "WS realtime manual-commit 协议 2/2 成功; TTS round-trip 转写逐字正确; open 45-53ms, transcript completed 376-662ms",
+   "notes": "24kHz PCM 会话直接可用(会话级 sample_rate)"
+  },
+  {
+   "capability": "tts",
+   "provider": "dashscope",
+   "model_configured": "qwen3-tts-instruct-flash (QWEN_TTS_MODEL)",
+   "model_actual": "qwen3-tts-instruct-flash",
+   "status": "available",
+   "evidence": "2/2 runs 200 OK; RIFF wav 24kHz (241-269KB); p50 1613ms; instructions 参数生效; usage 按 characters 计",
+   "notes": "音频 URL 下发(签名 URL, 未入库)"
+  },
+  {
+   "capability": "stt_backup_zhipu",
+   "provider": "zhipu",
+   "model_configured": "glm asr via ZHIPU key",
+   "model_actual": "unreachable",
+   "status": "unavailable",
+   "evidence": "ZHIPU_API_KEY 401 (同一 key 失效影响)",
+   "notes": "STT_BACKUP_PROVIDER=zhipu 当前不可用"
+  },
+  {
+   "capability": "ocr_primary",
+   "provider": "zhipu",
+   "model_configured": "glm-ocr (ZHIPU_OCR_MODEL) via /layout_parsing",
+   "model_actual": "unreachable",
+   "status": "unavailable",
+   "evidence": "HTTP 401 code 1000; 主 OCR 路不可用",
+   "notes": "OCR_PROVIDER=zhipu 需轮换 key 或切主路"
+  },
+  {
+   "capability": "ocr_backup",
+   "provider": "siliconflow",
+   "model_configured": "deepseek-ai/DeepSeek-OCR (SILICONFLOW_OCR_MODEL)",
+   "model_actual": "deepseek-ai/DeepSeek-OCR",
+   "status": "available_low_quality",
+   "evidence": "200 OK; 两次合成位图探针均未能精确提取(近形误读 123.99/128.99), usage 正常",
+   "notes": "端点可用但本探针图像质量下识别不精确; 真实文档待补测"
+  },
+  {
+   "capability": "multimodal_primary_chat",
+   "provider": "dashscope",
+   "model_configured": "qwen3.8-flash",
+   "model_actual": "qwen3.8-flash",
+   "status": "available",
+   "evidence": "image_url 输入 200 OK 且 100% 正确提取合成位图文本 'SAMPLE 128.99 CNY'",
+   "notes": "主聊天模型原生视觉可用 — OCR 可路由到主模型"
+  },
+  {
+   "capability": "rerank",
+   "provider": "dashscope",
+   "model_configured": "qwen3-rerank",
+   "model_actual": "not_probed",
+   "status": "unknown",
+   "evidence": "未在本卡范围探测",
+   "notes": "保持 unknown"
+  },
+  {
+   "capability": "hunyuan_translate",
+   "provider": "siliconflow(fallback)",
+   "model_configured": "tencent/Hunyuan-MT-7B",
+   "model_actual": "not_probed",
+   "status": "unknown",
+   "evidence": "翻译不在本卡范围",
+   "notes": "保持 unknown"
+  }
+ ],
+ "cost_matrix": [
+  {
+   "lane": "dashscope_fast",
+   "config_cost_per_1k": 0.0001,
+   "config_currency": "usd(ambiguous)",
+   "list_price_ref": "0.8 in / 2.7 out (2026-08-27 调价后)",
+   "measured_usage": "prompt 33 / completion 26-33 tok",
+   "cost_per_call_CNY": 0.000107,
+   "delta_note": "config 0.0001 若为 USD≈0.00072 CNY 且不分输入输出 — 输出侧低估约 3-4x"
+  },
+  {
+   "lane": "dashscope_standard_thinking",
+   "config_cost_per_1k": 0.0002,
+   "config_currency": "usd(ambiguous)",
+   "list_price_ref": "同 qwen3.8-flash 单价",
+   "measured_usage": "prompt 69 / completion 52-81 tok (含 reasoning 22-46)",
+   "cost_per_call_CNY": 0.000231,
+   "delta_note": "thinking 增加 output tokens; config 低估"
+  },
+  {
+   "lane": "dashscope_reason",
+   "config_cost_per_1k": 0.001,
+   "config_currency": "usd(ambiguous)",
+   "list_price_ref": "同 qwen3.8-flash 单价(实测同模型)",
+   "measured_usage": "prompt 69 / completion 47-63 tok (含 reasoning 23-35)",
+   "cost_per_call_CNY": 0.000204,
+   "delta_note": "与 standard 实为同一模型同一单价 — config 将 reason 定为 5x standard 不符合实际"
+  },
+  {
+   "lane": "minimax_m3_batch",
+   "config_cost_per_1k": 0.0,
+   "config_currency": "cny(token plan)",
+   "list_price_ref": "list ¥4.2 in / ¥16.8 out per 1M (512K 档, 折扣中)",
+   "measured_usage": "prompt 184(cached 128) / completion 45-104 tok",
+   "cost_per_call_CNY": 0.001949,
+   "delta_note": "token plan 套餐内实际边际成本≈0; list 价仅作 fallback 计费参考"
+  },
+  {
+   "lane": "glm_5_1_top (zhipu)",
+   "config_cost_per_1k": 0.008,
+   "config_currency": "usd(ambiguous)",
+   "list_price_ref": "unverified (key 失效无法实测)",
+   "measured_usage": "n/a",
+   "cost_per_call_CNY": null,
+   "delta_note": "当前不可用; cost 配置无从校准"
+  },
+  {
+   "lane": "embedding_primary",
+   "config_cost_per_1k": null,
+   "config_currency": "n/a",
+   "list_price_ref": "unknown (未查到公开价)",
+   "measured_usage": "23 tok/call",
+   "cost_per_call_CNY": null,
+   "delta_note": "llm_router 无 embedding cost 配置项"
+  },
+  {
+   "lane": "tts",
+   "config_cost_per_1k": null,
+   "config_currency": "n/a",
+   "list_price_ref": "unknown",
+   "measured_usage": "42 chars/call",
+   "cost_per_call_CNY": null,
+   "delta_note": "usage 按 characters 计"
+  },
+  {
+   "lane": "stt_realtime",
+   "config_cost_per_1k": null,
+   "config_currency": "n/a",
+   "list_price_ref": "unknown",
+   "measured_usage": "n/a (按音频时长)",
+   "cost_per_call_CNY": null,
+   "delta_note": ""
+  },
+  {
+   "lane": "ocr_backup (siliconflow)",
+   "config_cost_per_1k": 0.001,
+   "config_currency": "usd(ambiguous)",
+   "list_price_ref": "unknown",
+   "measured_usage": "prompt 283 / completion 23 tok",
+   "cost_per_call_CNY": null,
+   "delta_note": ""
+  },
+  {
+   "lane": "multimodal via qwen3.8-flash",
+   "config_cost_per_1k": 0.0001,
+   "config_currency": "usd(ambiguous)",
+   "list_price_ref": "0.8/2.7 (图像按 token 折算)",
+   "measured_usage": "prompt 283+ / completion ~20",
+   "cost_per_call_CNY": 0.00028,
+   "delta_note": "图像输入折算 token 后单价同文本"
+  }
+ ],
+ "latency_stats": {
+  "dashscope_qwen38_flash_fast": {
+   "n": 4,
+   "ttft_first_chunk_ms": {
+    "median": 474.7,
+    "p95": 623.7,
+    "min": 404.6,
+    "max": 623.7
+   },
+   "ttft_first_content_ms": {
+    "median": 474.7,
+    "p95": 623.7
+   },
+   "total_ms": {
+    "median": 1063.5,
+    "p95": 1275.7
+   },
+   "usage_per_run": {
+    "prompt_tokens": 33.0,
+    "completion_tokens": 28.5,
+    "reasoning_tokens": 0.0
+   }
+  },
+  "dashscope_qwen38_flash_standard_thinking": {
+   "n": 4,
+   "ttft_first_chunk_ms": {
+    "median": 423.4,
+    "p95": 470.0,
+    "min": 400.1,
+    "max": 470.0
+   },
+   "ttft_first_content_ms": {
+    "median": 1079.9,
+    "p95": 1601.3
+   },
+   "total_ms": {
+    "median": 1546.0,
+    "p95": 1960.6
+   },
+   "usage_per_run": {
+    "prompt_tokens": 69.0,
+    "completion_tokens": 67.0,
+    "reasoning_tokens": 39.0
+   }
+  },
+  "dashscope_qwen38_flash_reason": {
+   "n": 4,
+   "ttft_first_chunk_ms": {
+    "median": 479.9,
+    "p95": 508.9,
+    "min": 448.2,
+    "max": 508.9
+   },
+   "ttft_first_content_ms": {
+    "median": 1212.1,
+    "p95": 1486.1
+   },
+   "total_ms": {
+    "median": 1718.8,
+    "p95": 1976.8
+   },
+   "usage_per_run": {
+    "prompt_tokens": 69.0,
+    "completion_tokens": 67.5,
+    "reasoning_tokens": 41.5
+   }
+  },
+  "dashscope_qwen38_flash_fast_x_thinking_on": {
+   "n": 2,
+   "ttft_first_chunk_ms": {
+    "median": 486.9,
+    "p95": 512.6,
+    "min": 461.1,
+    "max": 512.6
+   },
+   "ttft_first_content_ms": {
+    "median": 1119.5,
+    "p95": 1311.2
+   },
+   "total_ms": {
+    "median": 1506.8,
+    "p95": 1691.7
+   },
+   "usage_per_run": {
+    "prompt_tokens": 69.0,
+    "completion_tokens": 70.0,
+    "reasoning_tokens": 42.0
+   }
+  },
+  "minimax_m3_sequential": {
+   "n": 3,
+   "ttft_first_chunk_ms": {
+    "median": 849.4,
+    "p95": 873.7
+   },
+   "total_ms": {
+    "median": 2171.5,
+    "p95": 2197.4
+   },
+   "think_inline_prefix": true,
+   "usage_per_run": {
+    "prompt_tokens": 184.0,
+    "completion_tokens": 55.0,
+    "cached_tokens": 128.0
+   }
+  },
+  "minimax_m3_concurrent12": {
+   "n": 12,
+   "statuses": [
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200,
+    200
+   ],
+   "n_429": 0,
+   "n_ok": 12,
+   "wave_total_ms": 2505.5,
+   "per_call_total_ms": {
+    "median": 1238.5,
+    "max": 2501.1
+   }
+  },
+  "embedding_qwen37_text_embedding_flash": {
+   "dim_actual": 1024,
+   "dim_configured": 1024,
+   "single_ms": {
+    "median": 128.0
+   },
+   "batch8_ms": {
+    "median": 203.0
+   },
+   "batch8_vectors": 8
+  },
+  "embedding_text_embedding_v4": {
+   "dim_actual": 1024,
+   "dim_configured": 1024,
+   "single_ms": {
+    "median": 128.1
+   },
+   "batch8_ms": {
+    "median": 224.8
+   }
+  },
+  "zhipu_glm_pool": {
+   "n_attempts": 8,
+   "all_401": true,
+   "error": "code 1000 身份验证失败 (both coding paas v4 and standard paas v4)"
+  }
+ },
+ "card_status": "PARTIAL",
+ "status_reason": "核心实时路径/嵌入/语音/主模型多模态全部真实可用并有样本; zhipu 全线(key 失效 401: glm_batch zhipu 候选/TOP/OCR 主路/STT backup)与 rerank/translate 未验证; DeepSeek-OCR 可用但质量待真文档补测"
+}
