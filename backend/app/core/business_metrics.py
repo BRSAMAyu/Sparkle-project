@@ -288,6 +288,16 @@ MEMORY_INFERRED_REVOKE_TOTAL = get_or_create_metric(
     ['scope']
 )
 
+# Memory V3 (M-02): storage gate 五分类决策计数（verdict ∈
+# store/current_state/event/ignore/confirm；layer ∈ bypass/rule/shadow/
+# semantic/semantic_fallback/error_degraded）。
+MEMORY_STORAGE_GATE_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_memory_storage_gate_total',
+    'Memory storage gate five-way classification decisions',
+    ['verdict', 'layer']
+)
+
 # ========== Phase C Outcome Metrics ==========
 OUTCOME_RECORDS_TOTAL = get_or_create_metric(
     Counter,

@@ -19,7 +19,12 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.core.business_metrics import MEMORY_CORRECTION_TOTAL, MEMORY_RETRACTION_TOTAL, MEMORY_WRITE_TOTAL
+from app.core.business_metrics import (
+    MEMORY_CORRECTION_TOTAL,
+    MEMORY_RETRACTION_TOTAL,
+    MEMORY_STORAGE_GATE_TOTAL,
+    MEMORY_WRITE_TOTAL,
+)
 from app.core.memory_constants import PREFERENCE_KEYS
 from app.models.memory import EpisodicMemory, MemoryCorrection, MemoryGoal, MemoryPreference
 from app.models.user_memory_settings import UserMemorySettings
@@ -846,6 +851,44 @@ class MemoryService:
             mentioned_entity_owner_user_id=mentioned_entity_owner_user_id,
             epistemic_class=epistemic_class,
         )
+        # Memory V3 (M-02): Personalized Storage Gate —— 五分类
+        # （store/current_state/event/ignore/confirm）。评估入口自身永不抛
+        # 异常（内部全量兜底，异常降级 ignore+log），veto 时跳过落库直接
+        # 返回 None，聊天主链零感知。
+        try:
+            from app.services.memory_storage_gate import (
+                MemoryStorageGate,
+                apply_decision_to_record,
+                candidate_from_record,
+            )
+
+            gate_decision = await MemoryStorageGate().evaluate(candidate_from_record(record))
+        except Exception as exc:  # noqa: BLE001 —— 韧性红线：gate 永不阻断写路径调用方
+            logger.warning("Storage gate raised unexpectedly, degrading to ignore: {}", exc)
+            from app.services.memory_storage_gate import StorageGateDecision, StorageGateVerdict
+
+            gate_decision = StorageGateDecision(
+                verdict=StorageGateVerdict.IGNORE.value,
+                layer="error_degraded",
+                reason="ERR.entrypoint",
+            )
+            apply_decision_to_record = None
+        MEMORY_STORAGE_GATE_TOTAL.labels(verdict=gate_decision.verdict, layer=gate_decision.layer).inc()
+        if gate_decision.verdict in {"ignore", "current_state"}:
+            logger.info(
+                "Storage gate vetoed episodic write user_id={} verdict={} reason={} detail={}",
+                user_id,
+                gate_decision.verdict,
+                gate_decision.reason,
+                gate_decision.detail,
+            )
+            MEMORY_WRITE_TOTAL.labels(type="episodic", status="gate_filtered").inc()
+            return None
+        apply_decision_to_record(record, gate_decision)
+        # confirm 档：挂起等用户确认（既有四动作治理 API 出口），不推送
+        # "记住了"系统通知。
+        if gate_decision.verdict == "confirm":
+            emit_system_update = False
         self.db.add(record)
         try:
             await self.db.commit()
@@ -885,6 +928,9 @@ class MemoryService:
                     mentioned_entity_owner_user_id=mentioned_entity_owner_user_id,
                     epistemic_class=epistemic_class,
                 )
+                # 重建记录会丢失 gate 注解（tags/decay/confidence），重放一次
+                # 决策应用（apply 幂等：min() 封顶 + tag 去重 + 空值守卫）。
+                apply_decision_to_record(record, gate_decision)
                 self.db.add(record)
                 try:
                     await self.db.commit()

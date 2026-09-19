@@ -24,7 +24,8 @@
   "D-01",
   "E-01",
   "X-01",
-  "V3-FIX-11"
+  "V3-FIX-11",
+  "M-02"
  ],
  "blocked": [],
  "notes": "2026-09-19 15:0x: 3 aggregator/kill-switch test failures confirmed PRE-EXISTING (fail identically at pre-C-01 baseline wt4; state_aggregator untouched since initial commit) — not a C-01 regression; park for test-system batch. C-01 DONE@57c87a8e (dual-ACCEPT, F2 applied at merge)."

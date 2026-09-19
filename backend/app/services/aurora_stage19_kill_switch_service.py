@@ -36,6 +36,15 @@ class AuroraStage19KillSwitchService:
             settings_attr="AURORA_STAGE19_CONSOLIDATION_MODE",
             legacy_bool_attr="SPARKLE_CONSOLIDATION_ENABLED",
         ),
+        # Memory V3 (M-02): episodic 写路径 storage gate（off=bypass 全写、
+        # shadow=只观测不拦截、live=执行五分类）。语义层另有独立 settings 开关。
+        "storage_gate_enabled": KillSwitchBinding(
+            stage="19",
+            feature="storage_gate",
+            redis_key="storage_gate_mode",
+            settings_attr="AURORA_STAGE19_STORAGE_GATE_MODE",
+            legacy_bool_attr=None,
+        ),
     }
 
     async def get_feature_mode(self, key: str) -> str:

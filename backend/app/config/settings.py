@@ -252,6 +252,8 @@ class Settings(BaseSettings):
     AURORA_STAGE19_WORKING_MEMORY_MODE: str = "live"  # off | shadow | live
     AURORA_STAGE19_LLM_EXTRACTOR_MODE: str = "live"  # off | shadow | live
     AURORA_STAGE19_CONSOLIDATION_MODE: str = "live"  # off | shadow | live
+    # Memory V3 (M-02): episodic 写路径 storage gate（off | shadow | live）
+    AURORA_STAGE19_STORAGE_GATE_MODE: str = "live"
 
     # Aurora Stage 21
     AURORA_STAGE21_SKILL_STORE_MODE: str = "live"  # off | shadow | live
@@ -737,6 +739,17 @@ class Settings(BaseSettings):
     # Legacy alias kept for Stage 17 compatibility with the prompt renderer.
     SPARKLE_PROMPT_SOCIAL_CONTEXT_RENDER_ENABLED: bool = True
     MEMORY_INFERRED_MIN_CONFIDENCE: float = 0.9
+    # Memory V3 (M-02) Personalized Storage Gate —— episodic 写路径五分类
+    # （store/current_state/event/ignore/confirm）。语义判定层可独立关闭
+    # （纯规则仍完整工作）；熔断/超时/失败一律降级为规则默认，不炸主链。
+    # 默认模型取 flash 档（与 DASHSCOPE_FAST_MODEL 同款、router 已注册）；
+    # 未注册名会 router 失败 → 语义层自动降级（不致命，但等于白开）。
+    SPARKLE_STORAGE_GATE_SEMANTIC_ENABLED: bool = False
+    SPARKLE_STORAGE_GATE_SEMANTIC_MODEL: str = "qwen3.8-flash"
+    # 3.0s 会截断 flash 档 thinking 模型（实测 qwen3.8-flash JSON 分类 ~2-3.4s），
+    # 5.0s 为实测可用下限；写路径仍由外层韧性兜底（超时→规则默认）。
+    SPARKLE_STORAGE_GATE_SEMANTIC_TIMEOUT_SECONDS: float = 5.0
+    SPARKLE_STORAGE_GATE_SEMANTIC_MAX_PER_MINUTE: int = 30
     ENABLE_MEMORY_JOBS: bool = True
     ENABLE_EVIDENCE_SNAPSHOT_ON_WRITE: bool = True
     ENABLE_MEMORY_DECAY: bool = True

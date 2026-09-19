@@ -1,0 +1,1978 @@
+diff --git a/backend/app/config/settings.py b/backend/app/config/settings.py
+index 95dd246c..fde69f16 100755
+--- a/backend/app/config/settings.py
++++ b/backend/app/config/settings.py
+@@ -252,6 +252,8 @@ class Settings(BaseSettings):
+     AURORA_STAGE19_WORKING_MEMORY_MODE: str = "live"  # off | shadow | live
+     AURORA_STAGE19_LLM_EXTRACTOR_MODE: str = "live"  # off | shadow | live
+     AURORA_STAGE19_CONSOLIDATION_MODE: str = "live"  # off | shadow | live
++    # Memory V3 (M-02): episodic 写路径 storage gate（off | shadow | live）
++    AURORA_STAGE19_STORAGE_GATE_MODE: str = "live"
+ 
+     # Aurora Stage 21
+     AURORA_STAGE21_SKILL_STORE_MODE: str = "live"  # off | shadow | live
+@@ -737,6 +739,17 @@ class Settings(BaseSettings):
+     # Legacy alias kept for Stage 17 compatibility with the prompt renderer.
+     SPARKLE_PROMPT_SOCIAL_CONTEXT_RENDER_ENABLED: bool = True
+     MEMORY_INFERRED_MIN_CONFIDENCE: float = 0.9
++    # Memory V3 (M-02) Personalized Storage Gate —— episodic 写路径五分类
++    # （store/current_state/event/ignore/confirm）。语义判定层可独立关闭
++    # （纯规则仍完整工作）；熔断/超时/失败一律降级为规则默认，不炸主链。
++    # 默认模型取 flash 档（与 DASHSCOPE_FAST_MODEL 同款、router 已注册）；
++    # 未注册名会 router 失败 → 语义层自动降级（不致命，但等于白开）。
++    SPARKLE_STORAGE_GATE_SEMANTIC_ENABLED: bool = False
++    SPARKLE_STORAGE_GATE_SEMANTIC_MODEL: str = "qwen3.8-flash"
++    # 3.0s 会截断 flash 档 thinking 模型（实测 qwen3.8-flash JSON 分类 ~2-3.4s），
++    # 5.0s 为实测可用下限；写路径仍由外层韧性兜底（超时→规则默认）。
++    SPARKLE_STORAGE_GATE_SEMANTIC_TIMEOUT_SECONDS: float = 5.0
++    SPARKLE_STORAGE_GATE_SEMANTIC_MAX_PER_MINUTE: int = 30
+     ENABLE_MEMORY_JOBS: bool = True
+     ENABLE_EVIDENCE_SNAPSHOT_ON_WRITE: bool = True
+     ENABLE_MEMORY_DECAY: bool = True
+diff --git a/backend/app/core/business_metrics.py b/backend/app/core/business_metrics.py
+index 489d8e4e..e33baa71 100755
+--- a/backend/app/core/business_metrics.py
++++ b/backend/app/core/business_metrics.py
+@@ -288,6 +288,16 @@ MEMORY_INFERRED_REVOKE_TOTAL = get_or_create_metric(
+     ['scope']
+ )
+ 
++# Memory V3 (M-02): storage gate 五分类决策计数（verdict ∈
++# store/current_state/event/ignore/confirm；layer ∈ bypass/rule/shadow/
++# semantic/semantic_fallback/error_degraded）。
++MEMORY_STORAGE_GATE_TOTAL = get_or_create_metric(
++    Counter,
++    'sparkle_memory_storage_gate_total',
++    'Memory storage gate five-way classification decisions',
++    ['verdict', 'layer']
++)
++
+ # ========== Phase C Outcome Metrics ==========
+ OUTCOME_RECORDS_TOTAL = get_or_create_metric(
+     Counter,
+diff --git a/backend/app/services/aurora_stage19_kill_switch_service.py b/backend/app/services/aurora_stage19_kill_switch_service.py
+index d15a05bd..134f49e9 100644
+--- a/backend/app/services/aurora_stage19_kill_switch_service.py
++++ b/backend/app/services/aurora_stage19_kill_switch_service.py
+@@ -36,6 +36,15 @@ class AuroraStage19KillSwitchService:
+             settings_attr="AURORA_STAGE19_CONSOLIDATION_MODE",
+             legacy_bool_attr="SPARKLE_CONSOLIDATION_ENABLED",
+         ),
++        # Memory V3 (M-02): episodic 写路径 storage gate（off=bypass 全写、
++        # shadow=只观测不拦截、live=执行五分类）。语义层另有独立 settings 开关。
++        "storage_gate_enabled": KillSwitchBinding(
++            stage="19",
++            feature="storage_gate",
++            redis_key="storage_gate_mode",
++            settings_attr="AURORA_STAGE19_STORAGE_GATE_MODE",
++            legacy_bool_attr=None,
++        ),
+     }
+ 
+     async def get_feature_mode(self, key: str) -> str:
+diff --git a/backend/app/services/memory_service.py b/backend/app/services/memory_service.py
+index ca13ec6a..b78a357c 100644
+--- a/backend/app/services/memory_service.py
++++ b/backend/app/services/memory_service.py
+@@ -19,7 +19,12 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+ from sqlalchemy.ext.asyncio import AsyncSession
+ 
+ from app.config import settings
+-from app.core.business_metrics import MEMORY_CORRECTION_TOTAL, MEMORY_RETRACTION_TOTAL, MEMORY_WRITE_TOTAL
++from app.core.business_metrics import (
++    MEMORY_CORRECTION_TOTAL,
++    MEMORY_RETRACTION_TOTAL,
++    MEMORY_STORAGE_GATE_TOTAL,
++    MEMORY_WRITE_TOTAL,
++)
+ from app.core.memory_constants import PREFERENCE_KEYS
+ from app.models.memory import EpisodicMemory, MemoryCorrection, MemoryGoal, MemoryPreference
+ from app.models.user_memory_settings import UserMemorySettings
+@@ -846,6 +851,44 @@ class MemoryService:
+             mentioned_entity_owner_user_id=mentioned_entity_owner_user_id,
+             epistemic_class=epistemic_class,
+         )
++        # Memory V3 (M-02): Personalized Storage Gate —— 五分类
++        # （store/current_state/event/ignore/confirm）。评估入口自身永不抛
++        # 异常（内部全量兜底，异常降级 ignore+log），veto 时跳过落库直接
++        # 返回 None，聊天主链零感知。
++        try:
++            from app.services.memory_storage_gate import (
++                MemoryStorageGate,
++                apply_decision_to_record,
++                candidate_from_record,
++            )
++
++            gate_decision = await MemoryStorageGate().evaluate(candidate_from_record(record))
++        except Exception as exc:  # noqa: BLE001 —— 韧性红线：gate 永不阻断写路径调用方
++            logger.warning("Storage gate raised unexpectedly, degrading to ignore: {}", exc)
++            from app.services.memory_storage_gate import StorageGateDecision, StorageGateVerdict
++
++            gate_decision = StorageGateDecision(
++                verdict=StorageGateVerdict.IGNORE.value,
++                layer="error_degraded",
++                reason="ERR.entrypoint",
++            )
++            apply_decision_to_record = None
++        MEMORY_STORAGE_GATE_TOTAL.labels(verdict=gate_decision.verdict, layer=gate_decision.layer).inc()
++        if gate_decision.verdict in {"ignore", "current_state"}:
++            logger.info(
++                "Storage gate vetoed episodic write user_id={} verdict={} reason={} detail={}",
++                user_id,
++                gate_decision.verdict,
++                gate_decision.reason,
++                gate_decision.detail,
++            )
++            MEMORY_WRITE_TOTAL.labels(type="episodic", status="gate_filtered").inc()
++            return None
++        apply_decision_to_record(record, gate_decision)
++        # confirm 档：挂起等用户确认（既有四动作治理 API 出口），不推送
++        # "记住了"系统通知。
++        if gate_decision.verdict == "confirm":
++            emit_system_update = False
+         self.db.add(record)
+         try:
+             await self.db.commit()
+@@ -885,6 +928,9 @@ class MemoryService:
+                     mentioned_entity_owner_user_id=mentioned_entity_owner_user_id,
+                     epistemic_class=epistemic_class,
+                 )
++                # 重建记录会丢失 gate 注解（tags/decay/confidence），重放一次
++                # 决策应用（apply 幂等：min() 封顶 + tag 去重 + 空值守卫）。
++                apply_decision_to_record(record, gate_decision)
+                 self.db.add(record)
+                 try:
+                     await self.db.commit()
+diff --git a/backend/app/services/memory_storage_gate.py b/backend/app/services/memory_storage_gate.py
+new file mode 100644
+index 00000000..7425a1ac
+--- /dev/null
++++ b/backend/app/services/memory_storage_gate.py
+@@ -0,0 +1,1038 @@
++"""Memory V3 Personalized Storage Gate (task M-02) —— 该不该记.
++
++Single authority for the episodic write-path decision "should this candidate
++become long-term memory, and if so in what shape". Sits in
++``MemoryService.create_episodic_memory`` AFTER ``_build_episodic_memory_record``
++and BEFORE ``db.add`` —— it mutates/annotates the in-memory record or vetoes
++the write. It never touches the LLM main chain and never performs DB IO of its
++own.
++
++Five-way verdict (MEMORY_V3.md §2 write policy):
++
++- ``store``          stable, decision-relevant information → write as-is;
++- ``event``          one-time happening / time-boxed constraint → write, but
++                     scope is bounded to the event horizon (short decay /
++                     due_at-anchored), never global (“明早8点有考试” ≠ global);
++- ``current_state``  transient session state (mood / location / energy) →
++                     stays in the Redis working-memory layer, L1 write skipped;
++- ``ignore``         noise (chitchat / greetings / banned self-labels / rapid
++                     duplicates) → no write;
++- ``confirm``        sensitive or high-impact hypothesis from a machine-inferred
++                     lane → written as pending-confirmation HYPOTHESIS (docked
++                     confidence + tag), resolved ONLY through the existing
++                     memory-governance four actions (wrong/outdated/delete/
++                     confirm). No new confirmation mechanism is introduced.
++
++Architecture (rule layer first, semantic layer optional):
++
++1. **Bypass tier** — explicit human actions and structured system writers are
++   not noise candidates: ``user_confirmed`` lane, user-stated seed rows
++   (``user_registered``), structured machine subject types (task_outcome /
++   struggle / reflection …). Kill-switch ``off`` bypasses everything.
++2. **Rule tier** — deterministic, ordered, pure-stdlib first-match-wins rules
++   (R1..R10). This tier alone must be able to classify every scenario
++   (eval benchmark runs with the semantic layer disabled).
++3. **Semantic tier** — only for rule-ambiguous inferred candidates; a light
++   ``chat_json`` call with hard timeout + process-local circuit breaker +
++   rate cap. Any failure degrades to the rule default (fail-open for content:
++   the lane's own confidence machinery remains the noise guard of record).
++   The semantic tier never *upgrades* to confirm: confirm requires a
++   deterministic rule hit (sensitive vocabulary must be auditable).
++
++Resilience contract (acceptance #2 of the card): the public entrypoints
++``evaluate_storage_gate`` / ``evaluate_storage_gate_for_record`` NEVER raise.
++Any internal exception degrades to ``ignore`` with layer ``error_degraded``
++(+ log + metric): the memory write is skipped, the chat main chain is unaware.
++That fail-closed-on-write choice is deliberate (card spec): a broken gate must
++not flood unvetted content into long-term memory, and transient content
++remains available through the upstream working-memory capture, so nothing is
++irrecoverably lost while the gate is faulting.
++
++Dedup: a bounded process-local TTL-LRU catches *rapid* re-statements (same
++normalized content within ``DEDUP_TTL_SECONDS``). Long-term / cross-lane
++duplicate arbitration stays owned by ``ConflictResolverService`` (semantic_key
++chains) — this gate does not duplicate that authority.
++"""
++
++from __future__ import annotations
++
++import asyncio
++import hashlib
++import json
++import re
++import time
++from collections import OrderedDict
++from dataclasses import dataclass, field
++from datetime import datetime
++from enum import StrEnum
++from typing import Any
++
++from loguru import logger
++
++from app.config import settings
++from app.services.memory_epistemic_contract import EpistemicClass
++
++MEMORY_STORAGE_GATE_VERSION = "memory-v3.m02.v1"
++
++# ---------------------------------------------------------------------------
++# Verdicts
++# ---------------------------------------------------------------------------
++
++
++class StorageGateVerdict(StrEnum):
++    STORE = "store"
++    CURRENT_STATE = "current_state"
++    EVENT = "event"
++    IGNORE = "ignore"
++    CONFIRM = "confirm"
++
++
++VERDICTS: frozenset[str] = frozenset(v.value for v in StorageGateVerdict)
++
++# Verdicts that veto the L1 write entirely (transient content stays in the
++# Redis working-memory layer via the upstream pipeline capture).
++VETO_VERDICTS: frozenset[str] = frozenset(
++    {StorageGateVerdict.IGNORE.value, StorageGateVerdict.CURRENT_STATE.value}
++)
++
++
++@dataclass(frozen=True)
++class StorageGateDecision:
++    verdict: str
++    layer: str  # bypass | rule | semantic | semantic_fallback | error_degraded
++    reason: str  # machine-readable rule id (e.g. "R5.one_time_constraint")
++    detail: str = ""
++    # Write-path annotations consumed by MemoryService:
++    annotations: dict[str, Any] = field(default_factory=dict)
++
++    @property
++    def vetoes_write(self) -> bool:
++        return self.verdict in VETO_VERDICTS
++
++
++@dataclass(frozen=True)
++class StorageGateCandidate:
++    """Flat, IO-free projection of an episodic candidate (record or args)."""
++
++    user_id: str
++    summary: str
++    subject_type: str
++    source_type: str
++    source_lane: str
++    semantic_key: str | None = None
++    evidence_token: str | None = None
++    confidence: float | None = None
++    due_at: datetime | None = None
++    tags: tuple[str, ...] = ()
++    evidence_schema_versions: tuple[str, ...] = ()
++
++
++# ---------------------------------------------------------------------------
++# Vocabulary (rule tier) —— all deterministic, auditable, zh-first
++# ---------------------------------------------------------------------------
++
++# Lanes whose writes are machine inference (vs user-stated explicit lanes).
++INFERRED_LANES: frozenset[str] = frozenset(
++    {"inferred_extraction", "llm_extraction", "llm_extractor", "working_memory"}
++)
++EXPLICIT_LANES: frozenset[str] = frozenset({"direct_capture", "user_confirmed"})
++
++# Structured machine subject types: written by governed system writers with
++# decision utility by construction (evidence fusion / accountability). Not
++# free-text noise candidates.
++STRUCTURED_SYSTEM_SUBJECT_TYPES: frozenset[str] = frozenset(
++    {
++        "task_outcome",
++        "struggle",
++        "reflection",
++        "error_analysis",
++        "practice_outcome",
++        "focus_session",
++        "learning_profile",
++        "scene",
++        "daily_summary",
++    }
++)
++
++# Explicit user memory commands (mirrors MemoryInferredWriteLaneService
++# EXPLICIT_MEMORY_COMMAND_PHRASES — kept literal to stay IO-free at the gate).
++EXPLICIT_COMMAND_PHRASES: tuple[str, ...] = (
++    "帮我记住这个",
++    "帮我记住",
++    "记住这个",
++    "记下来",
++    "把这个记住",
++    "就记这个",
++    "记一下这个",
++)
++EXPLICIT_COMMAND_SCHEMA_MARKERS: tuple[str, ...] = (
++    "stage16.explicit_command",
++    "stage19.explicit_command",
++)
++
++# Banned identity/self-label topics (错误长期化 guard; mirrors the extraction
++# lane's hard-ban list — the gate re-checks because consolidation
++# ``force_write`` bypasses extraction-time checks).
++BANNED_IDENTITY_TOKENS: tuple[str, ...] = (
++    "性格",
++    "人格",
++    "天生",
++    "永远",
++    "一辈子",
++    "很笨",
++    "很懒",
++    "我就是",
++    "是不是有病",
++    "学渣",
++    "废物",
++    "没用的人",
++)
++
++# Sensitive topics (confirm tier for inferred provenance). Categories map to
++# the annotation the pending record carries.
++SENSITIVE_TOPICS: dict[str, tuple[str, ...]] = {
++    "health": (
++        "失眠",
++        "抑郁",
++        "焦虑症",
++        "恐惧症",
++        "抗焦虑",
++        "抗抑郁",
++        "吃药",
++        "服药",
++        "住院",
++        "医院",
++        "复诊",
++        "诊断",
++        "生病",
++        "看病",
++        "体检",
++        "心理医生",
++        "心理咨询",
++        "治疗",
++        "月经",
++        "怀孕",
++    ),
++    "mental_state": (
++        "崩溃",
++        "想哭",
++        "不想活",
++        "自残",
++        "自杀",
++        "轻生",
++        "绝望",
++        "惊恐",
++        "恐慌发作",
++    ),
++    "financial": (
++        "经济困难",
++        "生活费不够",
++        "欠钱",
++        "欠债",
++        "花呗",
++        "网贷",
++        "借呗",
++        "还不起",
++        "穷得",
++        "助学金",
++        "助学贷款",
++        "挂科退学",
++        "被退学",
++        "挂了三门",
++    ),
++    "identity": (
++        "性取向",
++        "同性恋",
++        "双性恋",
++        "宗教",
++        "信仰",
++        "政治",
++        "入党",
++        "出柜",
++    ),
++    "family_privacy": (
++        "父母离婚",
++        "家里离婚",
++        "离婚",
++        "离异",
++        "家暴",
++        "闹翻",
++    ),
++}
++
++# One-shot temporal anchors: a point in time, not a recurring pattern.
++ONESHOT_TIME_ANCHORS: tuple[str, ...] = (
++    "明早",
++    "明晚",
++    "明天早上",
++    "明天晚上",
++    "明天下午",
++    "明天上午",
++    "明天",
++    "今晚",
++    "今天晚上",
++    "今天下午",
++    "今天上午",
++    "今天早上",
++    "今早",
++    "这周五",
++    "这周六",
++    "这周日",
++    "这周一",
++    "这周二",
++    "这周三",
++    "这周四",
++    "下周一",
++    "下周二",
++    "下周三",
++    "下周四",
++        "下周五",
++    "下周六",
++    "周日",
++    "周六",
++    "周五",
++    "deadline",
++    "DDL",
++    "ddl",
++    "截止",
++    "截稿",
++)
++_ONESHOT_CLOCK_RE = re.compile(r"(?:明天|今天|今晚|明晚|这周|下周|周[一二三四五六日])[^，。！？]{0,6}\d{1,2}[点:：]")
++_ONESHOT_DATE_RE = re.compile(r"\d{1,2}月\d{1,2}[日号]")
++
++
++def _has_explicit_datetime(summary: str) -> bool:
++    """Numeric date / clock time ("6月15日", "明天8点") — the strongest
++    one-shot anchor class; casual chatter almost never carries one."""
++    return bool(_ONESHOT_CLOCK_RE.search(summary) or _ONESHOT_DATE_RE.search(summary))
++
++
++# Event verbs, weaker than EVENT_NOUNS: only consulted when a one-shot time
++# anchor is present ("6月15日要考四级" / "明天要考英语"). Optional modal prefix
++# (要/得/去…); (?<!不) excludes negated/deliberative forms ("要不要报名"),
++# lookbehind/lookahead exclude 思考/考虑/考察 so bare "考" is safe.
++_ONESHOT_EVENT_VERB_RE = re.compile(
++    r"(?<!不)(?<!不要)(?:要|得|去|需|该|准备|打算)?(?<!思)(?:考|交|提交|面试|答辩|汇报|开会|报名|复诊|体检|截止|截稿|比赛|竞赛)(?!虑|察)"
++)
++
++# Event nouns: happening/commitment semantics (one-time constraints).
++EVENT_NOUNS: tuple[str, ...] = (
++    "考试",
++    "期中",
++    "期末",
++    "小测",
++    "测验",
++    "面试",
++    "答辩",
++    "开会",
++    "会议",
++    "汇报",
++    "交作业",
++    "要交",
++    "得交",
++    "提交",
++    "实验课",
++    "有课",
++    "上课",
++    "截止",
++    "截稿",
++    "比赛",
++    "竞赛",
++    "约了",
++    "赶车",
++    "高铁",
++    "火车票",
++    "机票",
++)
++
++# Present-tense transient state markers.
++TRANSIENT_STATE_MARKERS: tuple[str, ...] = (
++    "现在",
++    "此刻",
++    "眼下",
++    "刚",
++    "正在",
++    "这会儿",
++    "今天",
++    "最近",
++)
++# Mood / energy / location / context vocabulary (state, not preference).
++# 注意子串过匹配：单字"困/渴"会误伤"困难/渴望"，"emo"会误伤英文
++# "memory"——三者改由 _TRANSIENT_TOKEN_RE 边界匹配，词表只放安全词形。
++TRANSIENT_STATE_VOCAB: tuple[str, ...] = (
++    "好累",
++    "很累",
++    "有点累",
++    "好困",
++    "有点困",
++    "发困",
++    "想睡",
++    "没精神",
++    "没状态",
++    "状态不好",
++    "状态差",
++    "好烦",
++    "有点烦",
++    "烦躁",
++    "心情不好",
++    "心情差",
++    "无聊",
++    "饿了",
++    "吃饱",
++    "口渴",
++    "好渴",
++    "在图书馆",
++    "在教室",
++    "在宿舍",
++    "在家",
++    "在实验室",
++    "在自习室",
++    "在食堂",
++    "在路上",
++    "等车",
++    "等公交",
++    "等人",
++    "在上课",
++    "在考试",
++)
++# Standalone-token transient markers: "emo" must not match inside English
++# words ("memory"), 困/渴 must not match 困难/渴望.
++_TRANSIENT_TOKEN_RE = re.compile(r"(?<![a-zA-Z])emo(?![a-zA-Z])|困(?!难)|渴(?!望)")
++# Feeling tokens that mark transience only when co-occurring with a
++# present-tense marker (e.g. "我现在很焦虑"). 单字"困"已移除（改词表
++# 好困/有点困/发困），避免"刚开始很困难"误判。
++TRANSIENT_FEELING_TOKENS: tuple[str, ...] = (
++    "累",
++    "烦",
++    "焦虑",
++    "紧张",
++    "难过",
++    "开心",
++    "兴奋",
++    "没劲",
++    "慌",
++    "头大",
++    "心态",
++    "低落",
++    "状态",
++)
++# Stability markers: pattern-level claims (preferences / habits).
++STABILITY_MARKERS: tuple[str, ...] = (
++    "总是",
++    "一般",
++    "通常",
++    "每次",
++    "一直",
++    "习惯",
++    "我喜欢",
++    "我讨厌",
++    "我偏好",
++    "更喜欢",
++    "比较喜欢",
++    "不喜欢",
++    "我经常",
++    "往往",
++)
++
++# Pure conversational noise (greetings / acks / backchannel).
++NOISE_EXACT: frozenset[str] = frozenset(
++    {
++        "好的",
++        "好吧",
++        "好呀",
++        "嗯",
++        "嗯嗯",
++        "哦",
++        "哦哦",
++        "哈哈",
++        "哈哈哈",
++        "哈哈哈哈",
++        "呵呵",
++        "谢谢",
++        "多谢",
++        " thanks",
++        "ok",
++        "OK",
++        "okay",
++        "yes",
++        "no",
++        "对",
++        "是",
++        "是的",
++        "对的",
++        "明白",
++        "知道了",
++        "收到",
++        "可以",
++        "行",
++        "嗯呐",
++        "没问题",
++        "你说得对",
++        "确实",
++        "是的呢",
++        "继续",
++        "接着说",
++        "再讲讲",
++        "然后呢",
++        "在吗",
++        "在不在",
++        "你好",
++        "hello",
++        "hi",
++        "hey",
++        "嗨",
++        "再见",
++        "拜拜",
++        "晚安",
++        "早安",
++    }
++)
++NOISE_CONTAIN_TOKENS: tuple[str, ...] = (
++    "哈哈哈哈哈",
++    "你是谁",
++    "你叫什么",
++    "你会什么",
++    "你真棒",
++    "你真聪明",
++)
++
++
++def _normalize_text(value: str) -> str:
++    """Lowercase, strip whitespace/punctuation — for noise + dedup matching."""
++    normalized = re.sub(r"\s+", "", str(value or "").strip().lower())
++    normalized = re.sub(r"[，,。！？!?；;:：~～…·「」『』《》\"'`.、]", "", normalized)
++    return normalized
++
++
++# ---------------------------------------------------------------------------
++# Rapid-duplicate TTL-LRU (process-local, bounded)
++# ---------------------------------------------------------------------------
++
++DEDUP_TTL_SECONDS = 30 * 60
++_DEDUP_MAXLEN = 4096
++_dedup_cache: "OrderedDict[tuple[str, str], float]" = OrderedDict()
++
++
++def _dedup_key(candidate: StorageGateCandidate) -> tuple[str, str]:
++    content = candidate.semantic_key or hashlib.sha1(
++        _normalize_text(candidate.summary).encode("utf-8")
++    ).hexdigest()
++    return (str(candidate.user_id), content)
++
++
++def _seen_recently(key: tuple[str, str], now: float) -> bool:
++    seen_at = _dedup_cache.get(key)
++    if seen_at is not None and now - seen_at <= DEDUP_TTL_SECONDS:
++        return True
++    return False
++
++
++def _record_seen(key: tuple[str, str], now: float) -> None:
++    _dedup_cache[key] = now
++    _dedup_cache.move_to_end(key)
++    while len(_dedup_cache) > _DEDUP_MAXLEN:
++        _dedup_cache.popitem(last=False)
++
++
++def reset_gate_state() -> None:
++    """Test hook: clear the dedup LRU and semantic breaker state."""
++    _dedup_cache.clear()
++    MemoryStorageGate._semantic_failures = 0
++    MemoryStorageGate._semantic_open_until = 0.0
++
++
++# ---------------------------------------------------------------------------
++# Rule tier
++# ---------------------------------------------------------------------------
++
++
++def _match_sensitive(summary: str) -> str | None:
++    for category, tokens in SENSITIVE_TOPICS.items():
++        for token in tokens:
++            if token in summary:
++                return category
++    return None
++
++
++def _has_oneshot_time_anchor(summary: str) -> bool:
++    if any(anchor in summary for anchor in ONESHOT_TIME_ANCHORS):
++        return True
++    return bool(_ONESHOT_CLOCK_RE.search(summary) or _ONESHOT_DATE_RE.search(summary))
++
++
++def _has_event_semantics(summary: str) -> bool:
++    return any(noun in summary for noun in EVENT_NOUNS)
++
++
++def _has_stability_claim(summary: str) -> bool:
++    return any(marker in summary for marker in STABILITY_MARKERS)
++
++
++def _is_transient_state(summary: str) -> bool:
++    if _has_stability_claim(summary):
++        return False
++    # 明天有考试 / 周五截止 等 one-time 事件语义在 R5 已先行分类；这里排除
++    # 是为了避免"我现在好累，明天还要考试"这类混合句被降级成纯情绪状态。
++    if _has_event_semantics(summary):
++        return False
++    if _TRANSIENT_TOKEN_RE.search(summary) or any(token in summary for token in TRANSIENT_STATE_VOCAB):
++        return True
++    if any(marker in summary for marker in TRANSIENT_STATE_MARKERS) and any(
++        token in summary for token in TRANSIENT_FEELING_TOKENS
++    ):
++        return True
++    return False
++
++
++def _is_noise(summary: str) -> bool:
++    normalized = _normalize_text(summary)
++    if not normalized:
++        return True
++    if normalized in NOISE_EXACT:
++        return True
++    if len(normalized) <= 3 and not re.search(r"[a-zA-Z]{3,}", normalized):
++        return True
++    if any(token in summary for token in NOISE_CONTAIN_TOKENS):
++        return True
++    # Concatenated backchannel acks ("嗯嗯知道了" = 嗯嗯 + 知道了, "好的收到"):
++    # noise only if the WHOLE string is consumed by known noise tokens.
++    rest = normalized
++    stripped = True
++    while rest and stripped:
++        stripped = False
++        for token in NOISE_EXACT:
++            if token and rest.startswith(token):
++                rest = rest[len(token) :]
++                stripped = True
++                break
++    return not rest
++
++
++def classify_by_rules(candidate: StorageGateCandidate, *, now_ts: float | None = None) -> StorageGateDecision:
++    """Deterministic first-match-wins rule tier. Pure, no IO, never raises
++    for well-formed input (defensive normalization inside)."""
++    now_ts = time.monotonic() if now_ts is None else now_ts
++    summary = str(candidate.summary or "")
++    lane = str(candidate.source_lane or "").strip().lower()
++    source_type = str(candidate.source_type or "").strip().lower()
++
++    # --- Bypass tier -----------------------------------------------------
++    if lane == "user_confirmed":
++        return StorageGateDecision(
++            verdict=StorageGateVerdict.STORE.value,
++            layer="bypass",
++            reason="B1.user_confirmed_lane",
++            detail="explicit human confirmation action",
++        )
++    if lane == "direct_capture" and source_type in {"user_registered", "user_state"}:
++        return StorageGateDecision(
++            verdict=StorageGateVerdict.STORE.value,
++            layer="bypass",
++            reason="B2.user_stated_seed",
++            detail="user-stated record on an explicit lane",
++        )
++    if str(candidate.subject_type or "") in STRUCTURED_SYSTEM_SUBJECT_TYPES:
++        return StorageGateDecision(
++            verdict=StorageGateVerdict.STORE.value,
++            layer="bypass",
++            reason="B3.structured_system_subject",
++            detail="governed system writer, decision utility by construction",
++        )
++
++    # --- Rule tier -------------------------------------------------------
++    # R1 malformed
++    if not summary.strip():
++        return StorageGateDecision(StorageGateVerdict.IGNORE.value, "rule", "R1.malformed", "empty summary")
++
++    # R2 explicit user memory command (strongest user intent signal)
++    schema_hit = any(
++        any(marker in str(sv) for marker in EXPLICIT_COMMAND_SCHEMA_MARKERS)
++        for sv in candidate.evidence_schema_versions
++    )
++    if schema_hit or any(phrase in summary for phrase in EXPLICIT_COMMAND_PHRASES):
++        return StorageGateDecision(
++            verdict=StorageGateVerdict.STORE.value,
++            layer="rule",
++            reason="R2.explicit_user_command",
++            detail="user explicitly asked to remember",
++        )
++
++    # R3 banned identity/self-label topics —— 错误长期化 guard
++    if any(token in summary for token in BANNED_IDENTITY_TOKENS):
++        return StorageGateDecision(
++            verdict=StorageGateVerdict.IGNORE.value,
++            layer="rule",
++            reason="R3.banned_identity_label",
++            detail="negative identity/self-label must not be long-term-ized",
++        )
++
++    # R4 sensitive topic + machine-inferred provenance → confirm
++    sensitive_category = _match_sensitive(summary)
++    if sensitive_category and lane in INFERRED_LANES:
++        return StorageGateDecision(
++            verdict=StorageGateVerdict.CONFIRM.value,
++            layer="rule",
++            reason="R4.sensitive_hypothesis",
++            detail=f"sensitive category={sensitive_category} from inferred lane; pending user confirmation",
++            annotations={
++                "pending_confirmation": True,
++                "sensitivity": sensitive_category,
++            },
++        )
++
++    # R5 one-time time constraint → event (bounded scope, never global)
++    is_commitment = str(candidate.subject_type or "") == "commitment"
++    has_due = candidate.due_at is not None
++    if is_commitment or has_due or (
++        _has_oneshot_time_anchor(summary)
++        and (
++            _has_event_semantics(summary)
++            # 轻动词路径："6月15日要考四级"（考 不在 EVENT_NOUNS，因
++            # 考虑/思考 同形）；仅在存在一次性时间锚点时才采信。
++            or _ONESHOT_EVENT_VERB_RE.search(summary) is not None
++        )
++    ):
++        return StorageGateDecision(
++            verdict=StorageGateVerdict.EVENT.value,
++            layer="rule",
++            reason="R5.one_time_constraint",
++            detail="one-time/time-boxed constraint; scope bounded to event horizon, not global",
++            annotations={"bounded_scope": True},
++        )
++
++    # R6 transient session state → current_state (working memory only)
++    if _is_transient_state(summary):
++        return StorageGateDecision(
++            verdict=StorageGateVerdict.CURRENT_STATE.value,
++            layer="rule",
++            reason="R6.transient_state",
++            detail="present-tense mood/location/energy; stays in working memory",
++        )
++
++    # R7 conversational noise
++    if _is_noise(summary):
++        return StorageGateDecision(
++            verdict=StorageGateVerdict.IGNORE.value, layer="rule", reason="R7.noise", detail="chitchat/backchannel"
++        )
++
++    # R8 rapid duplicate (same user + same content within TTL)
++    key = _dedup_key(candidate)
++    if _seen_recently(key, now_ts):
++        return StorageGateDecision(
++            verdict=StorageGateVerdict.IGNORE.value,
++            layer="rule",
++            reason="R8.rapid_duplicate",
++            detail=f"identical content re-stated within {DEDUP_TTL_SECONDS}s",
++        )
++
++    # R9 stable preference / pattern claim
++    if _has_stability_claim(summary):
++        return StorageGateDecision(
++            verdict=StorageGateVerdict.STORE.value,
++            layer="rule",
++            reason="R9.stable_pattern",
++            detail="recurring-pattern/preference claim",
++        )
++
++    # R10 default by provenance; inferred lanes hand the residue to the
++    # semantic tier (or fail open to store when semantics are unavailable).
++    if lane in EXPLICIT_LANES:
++        return StorageGateDecision(
++            verdict=StorageGateVerdict.STORE.value,
++            layer="rule",
++            reason="R10.explicit_lane_default",
++            detail="user-stated content on explicit lane",
++        )
++    return StorageGateDecision(
++        verdict=StorageGateVerdict.STORE.value,
++        layer="rule",
++        reason="R10.ambiguous_inferred",
++        detail="rule-ambiguous inferred candidate; semantic tier eligible",
++        annotations={"semantic_eligible": True},
++    )
++
++
++# ---------------------------------------------------------------------------
++# Semantic tier (optional, circuit-broken, degrades to rule default)
++# ---------------------------------------------------------------------------
++
++SEMANTIC_PROMPT = """你是记忆入库守门员。对一条将被写入长期记忆的候选内容做五分类，只输出 JSON。
++
++分类定义：
++- store：稳定、未来可能改变系统决策的信息（长期偏好、能力画像、稳定习惯、重要背景事实）
++- event：一次性/有明确时间窗的安排或事件（考试、截止、会议、约见），值得记但不该当成长期全局事实
++- current_state：仅当前会话有效的瞬时状态（情绪、精力、位置），不值得进长期记忆
++- ignore：闲聊、问候、应答、噪声、无信息量
++- confirm：敏感信息（健康/心理/经济/身份/家庭隐私）或高影响推断，需要用户确认后才可作为确定记忆
++
++候选内容：
++subject_type: {subject_type}
++来源: {source_type} / {source_lane}
++内容: {summary}
++
++只输出 JSON：{{"class": "store|event|current_state|ignore|confirm", "reason": "简短理由"}}"""
++
++
++class MemoryStorageGate:
++    """Stateful wrapper: kill-switch aware evaluation + semantic tier."""
++
++    # process-local circuit breaker state (mirrors the extractor philosophy)
++    _semantic_failures: int = 0
++    _semantic_open_until: float = 0.0
++    _semantic_calls_this_window: int = 0
++    _semantic_window_started_at: float = 0.0
++
++    SEMANTIC_BREAKER_THRESHOLD = 3
++    SEMANTIC_BREAKER_COOLDOWN_SECONDS = 300.0
++
++    def __init__(self, *, semantic_llm=None, now_fn=time.monotonic):
++        # semantic_llm: async callable (prompt:str) -> dict|None (JSON parsed).
++        # Lazily bound to llm_service.chat_json when left None.
++        self._semantic_llm = semantic_llm
++        self._now_fn = now_fn
++        self._kill_switches = None
++
++    async def _gate_mode(self) -> str:
++        try:
++            from app.services.aurora_stage19_kill_switch_service import AuroraStage19KillSwitchService
++
++            if self._kill_switches is None:
++                self._kill_switches = AuroraStage19KillSwitchService()
++            return await self._kill_switches.get_feature_mode("storage_gate_enabled")
++        except Exception as exc:  # kill-switch infra down → gate stays on (settings default)
++            logger.debug("Storage gate kill-switch read failed, using settings default: {}", exc)
++            mode = str(getattr(settings, "AURORA_STAGE19_STORAGE_GATE_MODE", "live") or "live").lower()
++            return mode if mode in {"off", "shadow", "live"} else "live"
++
++    async def _semantic_classify(self, candidate: StorageGateCandidate) -> StorageGateDecision | None:
++        """Light LLM classification for rule-ambiguous inferred candidates.
++
++        Returns None on any failure (disabled / breaker open / timeout / bad
++        payload) —— caller degrades to the rule default. Never raises."""
++        if not settings.SPARKLE_STORAGE_GATE_SEMANTIC_ENABLED:
++            return None
++        now = self._now_fn()
++        if now < MemoryStorageGate._semantic_open_until:
++            return None
++        # process-local rate cap
++        window = 60.0
++        if now - MemoryStorageGate._semantic_window_started_at > window:
++            MemoryStorageGate._semantic_window_started_at = now
++            MemoryStorageGate._semantic_calls_this_window = 0
++        if MemoryStorageGate._semantic_calls_this_window >= settings.SPARKLE_STORAGE_GATE_SEMANTIC_MAX_PER_MINUTE:
++            return None
++
++        llm = self._semantic_llm
++        if llm is None:
++            try:
++                from app.services.llm_service import llm_service
++
++                async def llm(prompt: str):
++                    return await llm_service.chat_json(
++                        [{"role": "system", "content": prompt}],
++                        model=settings.SPARKLE_STORAGE_GATE_SEMANTIC_MODEL,
++                        max_tokens=60,
++                    )
++
++            except Exception as exc:
++                logger.debug("Storage gate semantic LLM unavailable: {}", exc)
++                return None
++
++        MemoryStorageGate._semantic_calls_this_window += 1
++        prompt = SEMANTIC_PROMPT.format(
++            subject_type=candidate.subject_type,
++            source_type=candidate.source_type,
++            source_lane=candidate.source_lane,
++            summary=str(candidate.summary or "")[:400],
++        )
++        try:
++            payload = await asyncio.wait_for(
++                llm(prompt), timeout=settings.SPARKLE_STORAGE_GATE_SEMANTIC_TIMEOUT_SECONDS
++            )
++        except asyncio.TimeoutError:
++            self._breaker_record_failure()
++            logger.info("Storage gate semantic classify timed out; degrading to rule default")
++            return None
++        except Exception as exc:
++            self._breaker_record_failure()
++            logger.info("Storage gate semantic classify failed ({}); degrading to rule default", exc)
++            return None
++
++        verdict = self._parse_verdict(payload)
++        if verdict is None:
++            self._breaker_record_failure()
++            return None
++        MemoryStorageGate._semantic_failures = 0
++        return StorageGateDecision(
++            verdict=verdict,
++            layer="semantic",
++            reason="S1.fast_semantic",
++            detail=f"LLM five-way classification: {self._semantic_reason(payload)}",
++            annotations={"semantic_eligible": True},
++        )
++
++    @staticmethod
++    def _parse_verdict(payload: Any) -> str | None:
++        try:
++            if isinstance(payload, str):
++                payload = json.loads(payload)
++            if isinstance(payload, dict):
++                raw = str(payload.get("class") or "").strip().lower()
++            else:
++                raw = str(payload or "").strip().lower()
++            match = re.search(r"(store|event|current_state|ignore|confirm)", raw)
++            return match.group(1) if match else None
++        except Exception:
++            return None
++
++    @staticmethod
++    def _semantic_reason(payload: Any) -> str:
++        try:
++            if isinstance(payload, str):
++                payload = json.loads(payload)
++            if isinstance(payload, dict):
++                return str(payload.get("reason") or "")[:120]
++        except Exception:
++            pass
++        return ""
++
++    @classmethod
++    def _breaker_record_failure(cls) -> None:
++        cls._semantic_failures += 1
++        if cls._semantic_failures >= cls.SEMANTIC_BREAKER_THRESHOLD:
++            cls._semantic_open_until = time.monotonic() + cls.SEMANTIC_BREAKER_COOLDOWN_SECONDS
++            logger.warning(
++                "Storage gate semantic tier circuit opened for {}s after {} consecutive failures",
++                cls.SEMANTIC_BREAKER_COOLDOWN_SECONDS,
++                cls._semantic_failures,
++            )
++
++    # -- public entry ------------------------------------------------------
++
++    async def evaluate(self, candidate: StorageGateCandidate) -> StorageGateDecision:
++        """Full gate evaluation. NEVER raises (acceptance #2)."""
++        try:
++            mode = await self._gate_mode()
++            if mode == "off":
++                return StorageGateDecision(
++                    verdict=StorageGateVerdict.STORE.value,
++                    layer="bypass",
++                    reason="B0.kill_switch_off",
++                    detail="storage gate disabled by kill switch",
++                )
++            decision = classify_by_rules(candidate)
++            if mode == "shadow":
++                # observability only: never veto/annotate in shadow
++                return StorageGateDecision(
++                    verdict=StorageGateVerdict.STORE.value,
++                    layer="shadow",
++                    reason=f"shadow:{decision.reason}",
++                    detail=decision.detail,
++                    annotations={"shadow_verdict": decision.verdict},
++                )
++            # live: enforce. Semantic refinement only for rule-ambiguous
++            # inferred residue — and never towards confirm (auditable rules only).
++            if decision.annotations.get("semantic_eligible") and settings.SPARKLE_STORAGE_GATE_SEMANTIC_ENABLED:
++                refined = await self._semantic_classify(candidate)
++                if refined is not None:
++                    if refined.verdict == StorageGateVerdict.CONFIRM.value:
++                        # semantic tier may not self-authorize a confirm verdict
++                        refined = StorageGateDecision(
++                            verdict=StorageGateVerdict.STORE.value,
++                            layer="semantic_fallback",
++                            reason="S1.semantic_confirm_demoted",
++                            detail="semantic confirm not allowed without a rule hit; stored",
++                            annotations={"semantic_verdict": "confirm"},
++                        )
++                    decision = refined
++            if decision.verdict not in VETO_VERDICTS:
++                # remember accepted content for the rapid-duplicate rule
++                _record_seen(_dedup_key(candidate), time.monotonic())
++            return decision
++        except Exception as exc:  # noqa: BLE001 — resilience contract
++            logger.warning("Storage gate internal error, degrading to ignore+log: {}", exc)
++            return StorageGateDecision(
++                verdict=StorageGateVerdict.IGNORE.value,
++                layer="error_degraded",
++                reason="ERR.internal",
++                detail=f"gate exception: {type(exc).__name__}",
++            )
++
++
++def candidate_from_record(record: Any) -> StorageGateCandidate:
++    """Project a built (unsaved) EpisodicMemory into a gate candidate."""
++    schema_versions: list[str] = []
++    refs = getattr(record, "evidence_refs", None) or []
++    if isinstance(refs, dict):
++        refs = refs.get("refs") or []
++    for ref in refs:
++        if isinstance(ref, dict):
++            version = ref.get("schema_version")
++            if version:
++                schema_versions.append(str(version))
++    tags = getattr(record, "tags", None) or []
++    if not isinstance(tags, (list, tuple)):
++        tags = []
++    return StorageGateCandidate(
++        user_id=str(getattr(record, "user_id", "")),
++        summary=str(getattr(record, "summary", "") or ""),
++        subject_type=str(getattr(record, "subject_type", "") or ""),
++        source_type=str(getattr(record, "source_type", "") or ""),
++        source_lane=str(getattr(record, "source_lane", "") or "").strip().lower(),
++        semantic_key=getattr(record, "semantic_key", None),
++        evidence_token=getattr(record, "evidence_token", None),
++        confidence=getattr(record, "confidence", None),
++        due_at=getattr(record, "due_at", None),
++        tags=tuple(str(tag) for tag in tags),
++        evidence_schema_versions=tuple(schema_versions),
++    )
++
++
++async def evaluate_storage_gate_for_record(record: Any) -> StorageGateDecision:
++    """Convenience entry used by MemoryService on the built episodic record."""
++    return await MemoryStorageGate().evaluate(candidate_from_record(record))
++
++
++# ---------------------------------------------------------------------------
++# Write-path application (annotations → record mutations)
++# ---------------------------------------------------------------------------
++
++PENDING_CONFIRMATION_TAG = "m02:pending_confirmation"
++EVENT_BOUNDED_TAG = "m02:event_bounded"
++CONFIRM_CONFIDENCE_CAP = 0.55
++
++
++def apply_decision_to_record(record: Any, decision: StorageGateDecision) -> None:
++    """Mutate the unsaved record per the decision's annotations.
++
++    Called only for non-veto verdicts. Never raises for its own logic
++    (wrapped defensively; a failure here degrades to storing as-is)."""
++    try:
++        annotations = decision.annotations or {}
++        tags = list(getattr(record, "tags", None) or [])
++        if annotations.get("pending_confirmation"):
++            # confirm verdict: pending HYPOTHESIS, docked confidence, no
++            # "记住了" announcement; resolved via the existing four-action
++            # governance API (confirm/wrong/outdated/delete).
++            confidence = getattr(record, "confidence", None)
++            record.confidence = min(float(confidence), CONFIRM_CONFIDENCE_CAP) if confidence is not None else CONFIRM_CONFIDENCE_CAP
++            record.epistemic_class = EpistemicClass.HYPOTHESIS.value
++            if PENDING_CONFIRMATION_TAG not in tags:
++                tags.append(PENDING_CONFIRMATION_TAG)
++            sensitivity = annotations.get("sensitivity")
++            if sensitivity and f"m02:sensitive:{sensitivity}" not in tags:
++                tags.append(f"m02:sensitive:{sensitivity}")
++        elif annotations.get("bounded_scope") and decision.verdict == StorageGateVerdict.EVENT.value:
++            # event verdict: scope bounded to the event horizon (short decay),
++            # a today-constraint must not live as a global long-term fact.
++            due_at = getattr(record, "due_at", None)
++            if due_at is not None:
++                if not getattr(record, "decay_policy", None):
++                    record.decay_policy = "due_at+7d"
++            else:
++                record.decay_policy = "7d"
++            if EVENT_BOUNDED_TAG not in tags:
++                tags.append(EVENT_BOUNDED_TAG)
++        record.tags = tags
++    except Exception as exc:
++        logger.warning("Storage gate annotation application failed, storing as-is: {}", exc)
+diff --git a/backend/tests/fixtures/memory_storage_gate_eval_v1.json b/backend/tests/fixtures/memory_storage_gate_eval_v1.json
+new file mode 100644
+index 00000000..7db99a83
+--- /dev/null
++++ b/backend/tests/fixtures/memory_storage_gate_eval_v1.json
+@@ -0,0 +1,70 @@
++{
++  "version": "memory-v3.m02.eval.v1",
++  "description": "M-02 Personalized Storage Gate 写入场景评测集。字段对齐 StorageGateCandidate；expected 为五分类期望（rule 层，semantic 关闭）。场景按 id 顺序执行（R8 重复检测依赖先执行 ig11a）。",
++  "scenarios": [
++    { "id": "m02-st01", "category": "store", "summary": "我习惯每天早上背单词，效率最高", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.86, "expected": "store", "note": "R9 习惯+效率模式" },
++    { "id": "m02-st02", "category": "store", "summary": "我一般喜欢用思维导图整理笔记", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.84, "expected": "store", "note": "R9 一般+喜欢" },
++    { "id": "m02-st03", "category": "store", "summary": "我高数比较薄弱，特别是级数部分", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.88, "expected": "store", "note": "R10 学习画像，规则歧义默认存（置信度机制兜底）" },
++    { "id": "m02-st04", "category": "store", "summary": "帮我记住我的考研目标院校是浙大", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.92, "evidence_schema_versions": ["stage16.explicit_command.v1"], "expected": "store", "note": "R2 显式记忆口令（schema 标记）" },
++    { "id": "m02-st05", "category": "store", "summary": "我是大二学生，专业是计算机科学", "subject_type": "self", "source_type": "user_registered", "source_lane": "direct_capture", "confidence": 0.95, "expected": "store", "note": "B2 用户陈述种子" },
++    { "id": "m02-st06", "category": "store", "summary": "用户完成了高数第三章练习，正确率80%", "subject_type": "task_outcome", "source_type": "chat_turn", "source_lane": "direct_capture", "confidence": 0.78, "expected": "store", "note": "B3 结构化系统写方（证据融合有决策效用）" },
++    { "id": "m02-st07", "category": "store", "summary": "用户在TCP拥塞控制题目上连续出错", "subject_type": "struggle", "source_type": "chat_turn", "source_lane": "direct_capture", "confidence": 0.78, "expected": "store", "note": "B3 struggle 结构化观测" },
++    { "id": "m02-st08", "category": "store", "summary": "你提到过一位学习相关人物", "subject_type": "person_mention", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.85, "expected": "store", "note": "R10 已脱敏人物提及（Stage17 规范文本）" },
++    { "id": "m02-st09", "category": "store", "summary": "用户偏好简洁的讲解风格", "subject_type": "learning_profile", "source_type": "analysis", "source_lane": "direct_capture", "confidence": 0.75, "expected": "store", "note": "B3 学习画像结构化写方" },
++    { "id": "m02-st10", "category": "store", "summary": "我每次复习线性代数都先做题再看课", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.85, "expected": "store", "note": "R9 每次（复习方法模式）" },
++    { "id": "m02-st11", "category": "store", "summary": "我讨厌死记硬背，更喜欢理解式学习", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.86, "expected": "store", "note": "R9 讨厌/更喜欢（稳定偏好）" },
++    { "id": "m02-st12", "category": "store", "summary": "我通常在晚上做编程练习效果更好", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.84, "expected": "store", "note": "R9 通常（时段偏好）" },
++    { "id": "m02-st13", "category": "store", "summary": "帮我记住我有抑郁症需要长期服药", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.92, "evidence_schema_versions": ["stage16.explicit_command.v1"], "expected": "store", "note": "R2 用户显式口令覆盖敏感确认档（用户自己的陈述）" },
++    { "id": "m02-st14", "category": "store", "summary": "我在吃抗焦虑的药", "subject_type": "self", "source_type": "user_state", "source_lane": "direct_capture", "confidence": 0.9, "expected": "store", "note": "B2 用户在显式 lane 主动陈述的敏感信息（治理 UI 可删）" },
++    { "id": "m02-ev01", "category": "event", "summary": "明早8点有英语考试", "subject_type": "commitment", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.95, "due_at": "2026-09-20T08:00:00", "expected": "event", "note": "R5 承诺+due_at：一次性时间约束，scope 限于事件窗口" },
++    { "id": "m02-ev02", "category": "event", "summary": "下周四要交数据结构大作业", "subject_type": "commitment", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.93, "due_at": "2026-09-24T23:59:00", "expected": "event", "note": "R5 作业截止" },
++    { "id": "m02-ev03", "category": "event", "summary": "今晚8点开小组会议", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.86, "expected": "event", "note": "R5 今晚+会议（无 due_at 也判 event，bounded decay）" },
++    { "id": "m02-ev04", "category": "event", "summary": "这周五论文投稿截止", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.87, "expected": "event", "note": "R5 这周五+截止" },
++    { "id": "m02-ev05", "category": "event", "summary": "明天下午2点企业面试", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.88, "expected": "event", "note": "R5 明天下午+面试" },
++    { "id": "m02-ev06", "category": "event", "summary": "6月15日要考大学英语四级", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.87, "expected": "event", "note": "R5 日期正则+考" },
++    { "id": "m02-ev07", "category": "event", "summary": "我明天要参加数学建模比赛", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.86, "expected": "event", "note": "R5 明天+比赛" },
++    { "id": "m02-ev08", "category": "event", "summary": "下周三早上有高数小测", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.9, "expected": "event", "note": "R5 下周三+小测" },
++    { "id": "m02-ev09", "category": "event", "summary": "今天下午3点实验课签到", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.85, "expected": "event", "note": "R5 今天下午3点+课：瞬时 today constraint，不默认 global" },
++    { "id": "m02-ev10", "category": "event", "summary": "我约了导师周二10点讨论开题", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.86, "expected": "event", "note": "R5 周二10点时钟正则+约了" },
++    { "id": "m02-ev11", "category": "event", "summary": "周日下午要赶高铁回学校", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.84, "expected": "event", "note": "R5 周日+高铁" },
++    { "id": "m02-ev12", "category": "event", "summary": "我现在好累，明天还要考试", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.85, "expected": "event", "note": "R5 先于 R6：混合句中一次性时间约束主导（对抗样例）" },
++    { "id": "m02-cs01", "category": "current_state", "summary": "我现在好累，不想学了", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.7, "expected": "current_state", "note": "R6 现在+好累：瞬时精力状态，留工作记忆" },
++    { "id": "m02-cs02", "category": "current_state", "summary": "我今天状态不太好", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.7, "expected": "current_state", "note": "R6 状态不好" },
++    { "id": "m02-cs03", "category": "current_state", "summary": "我在图书馆，等下要去自习", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.68, "expected": "current_state", "note": "R6 位置状态" },
++    { "id": "m02-cs04", "category": "current_state", "summary": "此刻在教室等老师来", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.68, "expected": "current_state", "note": "R6 此刻+在教室" },
++    { "id": "m02-cs05", "category": "current_state", "summary": "刚吃饱，有点困", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.6, "expected": "current_state", "note": "R6 刚+困" },
++    { "id": "m02-cs06", "category": "current_state", "summary": "现在有点烦，学不进去", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.66, "expected": "current_state", "note": "R6 现在+烦（瞬时情绪）" },
++    { "id": "m02-cs07", "category": "current_state", "summary": "这会儿在食堂吃饭", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.6, "expected": "current_state", "note": "R6 这会儿+在食堂" },
++    { "id": "m02-cs08", "category": "current_state", "summary": "我在宿舍，马上要出门", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.62, "expected": "current_state", "note": "R6 在宿舍" },
++    { "id": "m02-cs09", "category": "current_state", "summary": "今天没精神，效率低", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.68, "expected": "current_state", "note": "R6 没精神" },
++    { "id": "m02-cs10", "category": "current_state", "summary": "我今天心情不好", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.66, "expected": "current_state", "note": "R6 心情不好（非敏感词表的日常情绪）" },
++    { "id": "m02-cs11", "category": "current_state", "summary": "我现在很焦虑这道题做不出来", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.7, "expected": "current_state", "note": "R6 现在+焦虑（单次情境焦虑，非焦虑症；敏感词为'焦虑症'）" },
++    { "id": "m02-ig01", "category": "ignore", "summary": "好的", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.5, "expected": "ignore", "note": "R7 应答噪声" },
++    { "id": "m02-ig02", "category": "ignore", "summary": "哈哈哈哈", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.4, "expected": "ignore", "note": "R7 闲聊" },
++    { "id": "m02-ig03", "category": "ignore", "summary": "谢谢！", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.4, "expected": "ignore", "note": "R7 归一化后命中" },
++    { "id": "m02-ig04", "category": "ignore", "summary": "嗯嗯知道了", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.4, "expected": "ignore", "note": "R7 应答" },
++    { "id": "m02-ig05", "category": "ignore", "summary": "", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.1, "expected": "ignore", "note": "R1 空内容" },
++    { "id": "m02-ig06", "category": "ignore", "summary": "   ", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.1, "expected": "ignore", "note": "R1 空白" },
++    { "id": "m02-ig07", "category": "ignore", "summary": "我就是很笨，学不会数学", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.8, "expected": "ignore", "note": "R3 负面自我标签禁写（错误长期化守卫）" },
++    { "id": "m02-ig08", "category": "ignore", "summary": "你说得对", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.4, "expected": "ignore", "note": "R7 附和" },
++    { "id": "m02-ig09", "category": "ignore", "summary": "你是谁呀", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.3, "expected": "ignore", "note": "R7 身份提问噪声" },
++    { "id": "m02-ig10", "category": "ignore", "summary": "再见", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.3, "expected": "ignore", "note": "R7 告别" },
++    { "id": "m02-ig11a", "category": "store", "summary": "我概率论基础还行", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.8, "semantic_key": "dedup-prob-base", "expected": "store", "note": "重复陈述第一次：正常入库（R10）" },
++    { "id": "m02-ig11b", "category": "ignore", "summary": "我概率论基础还行", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.8, "semantic_key": "dedup-prob-base", "expected": "ignore", "note": "R8 30 分钟内重复陈述：去重丢弃" },
++    { "id": "m02-ig12", "category": "ignore", "summary": "哦哦", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.3, "expected": "ignore", "note": "R7 应答" },
++    { "id": "m02-ig13", "category": "ignore", "summary": "在吗", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.3, "expected": "ignore", "note": "R7 召唤语" },
++    { "id": "m02-ig14", "category": "ignore", "summary": "嗯", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.3, "expected": "ignore", "note": "R7 单字应答" },
++    { "id": "m02-cf01", "category": "confirm", "summary": "我最近失眠很严重，每天只睡四小时", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.85, "expected": "confirm", "note": "R4 健康（失眠）+推断 lane：挂起待确认" },
++    { "id": "m02-cf02", "category": "confirm", "summary": "我在吃抗焦虑的药", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.85, "expected": "confirm", "note": "R4 健康（抗焦虑/吃药）" },
++    { "id": "m02-cf03", "category": "confirm", "summary": "我被诊断出轻度抑郁", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.85, "expected": "confirm", "note": "R4 健康（诊断/抑郁）" },
++    { "id": "m02-cf04", "category": "confirm", "summary": "我家里经济困难，生活费不够", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.85, "expected": "confirm", "note": "R4 经济" },
++    { "id": "m02-cf05", "category": "confirm", "summary": "我挂科三门，怕被退学", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.85, "expected": "confirm", "note": "R4 学业风险（被退学）" },
++    { "id": "m02-cf06", "category": "confirm", "summary": "我最近情绪崩溃，经常想哭", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.85, "expected": "confirm", "note": "R4 心理（崩溃/想哭）" },
++    { "id": "m02-cf07", "category": "confirm", "summary": "我妈生病住院了", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.8, "expected": "confirm", "note": "R4 家人健康（生病）" },
++    { "id": "m02-cf08", "category": "confirm", "summary": "我父母最近在闹离婚", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.8, "expected": "confirm", "note": "R4 家庭隐私（离婚）" },
++    { "id": "m02-cf09", "category": "confirm", "summary": "我在申请助学金，家里情况不好", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.8, "expected": "confirm", "note": "R4 经济（助学金）" },
++    { "id": "m02-cf10", "category": "confirm", "summary": "下周要去医院复诊", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.85, "expected": "confirm", "note": "R4 先于 R5：敏感健康（医院/复诊）覆盖事件语义（对抗样例）" },
++    { "id": "m02-cf11", "category": "confirm", "summary": "我最近在约心理医生做咨询", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.8, "expected": "confirm", "note": "R4 心理健康（心理医生）" },
++    { "id": "m02-cf12", "category": "confirm", "summary": "我有社交恐惧症，不敢在课堂上发言", "subject_type": "self", "source_type": "chat", "source_lane": "inferred_extraction", "confidence": 0.85, "expected": "confirm", "note": "R4 心理健康推断（高影响 hypothesis）" }
++  ]
++}
+diff --git a/backend/tests/unit/test_memory_storage_gate.py b/backend/tests/unit/test_memory_storage_gate.py
+new file mode 100644
+index 00000000..32dcb798
+--- /dev/null
++++ b/backend/tests/unit/test_memory_storage_gate.py
+@@ -0,0 +1,575 @@
++"""M-02 Personalized Storage Gate 单元 + 韧性 + 写路径接入测试。
++
++覆盖：
++- 五分类规则层关键判定（含"明早8点"≠global 的一次性时间约束语义）；
++- 红绿韧性：gate 内部抛异常 → 降级 ignore+log，写路径/聊天主链零感知；
++- create_episodic_memory 接入点行为（veto 返回 None；confirm 挂起注解；
++  event 有界 scope 注解；kill-switch off 旁路）；
++- 语义层熔断降级（超时/坏输出/断路器打开 → 规则默认，且不得自授权 confirm）。
++"""
++
++from __future__ import annotations
++
++from datetime import datetime, timedelta
++from uuid import uuid4
++
++import pytest
++
++from app.config import settings
++from app.models.memory import EpisodicMemory
++from app.services.memory_storage_gate import (
++    CONFIRM_CONFIDENCE_CAP,
++    EVENT_BOUNDED_TAG,
++    PENDING_CONFIRMATION_TAG,
++    MemoryStorageGate,
++    StorageGateCandidate,
++    StorageGateVerdict,
++    apply_decision_to_record,
++    candidate_from_record,
++    classify_by_rules,
++    reset_gate_state,
++)
++
++
++def _candidate(**overrides) -> StorageGateCandidate:
++    base = dict(
++        user_id="user-1",
++        summary="我习惯早上背单词",
++        subject_type="self",
++        source_type="chat",
++        source_lane="inferred_extraction",
++        semantic_key=None,
++        evidence_token="turn-1",
++        confidence=0.86,
++    )
++    base.update(overrides)
++    return StorageGateCandidate(**base)
++
++
++@pytest.fixture(autouse=True)
++def _gate_live_mode(monkeypatch):
++    """固定 gate=live、语义层关闭，测试纯规则行为（评测基准同口径）。"""
++    reset_gate_state()
++    monkeypatch.setattr(settings, "SPARKLE_STORAGE_GATE_SEMANTIC_ENABLED", False, raising=False)
++    monkeypatch.setattr("app.services.memory_storage_gate.settings", settings, raising=False)
++    async def _live_mode(self):
++        return "live"
++
++    monkeypatch.setattr(MemoryStorageGate, "_gate_mode", _live_mode)
++    yield
++    reset_gate_state()
++
++
++# ---------------------------------------------------------------------------
++# 规则层：五分类
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.asyncio
++async def test_rule_store_stable_preference():
++    decision = await MemoryStorageGate().evaluate(_candidate(summary="我习惯每天早上背单词"))
++    assert decision.verdict == StorageGateVerdict.STORE.value
++    assert decision.reason == "R9.stable_pattern"
++
++
++@pytest.mark.asyncio
++async def test_rule_event_one_time_constraint_not_global():
++    """验收核心：明早8点的瞬时 today constraint 判 event（有界），非全局长期事实。"""
++    decision = await MemoryStorageGate().evaluate(
++        _candidate(summary="明早8点有英语考试", subject_type="commitment", due_at=datetime(2026, 9, 20, 8, 0))
++    )
++    assert decision.verdict == StorageGateVerdict.EVENT.value
++    assert decision.reason == "R5.one_time_constraint"
++    assert decision.annotations["bounded_scope"] is True
++
++
++@pytest.mark.asyncio
++async def test_rule_event_without_due_at_gets_bounded_decay():
++    decision = await MemoryStorageGate().evaluate(_candidate(summary="这周五论文投稿截止"))
++    assert decision.verdict == StorageGateVerdict.EVENT.value
++
++
++@pytest.mark.asyncio
++async def test_rule_current_state_transient_mood():
++    decision = await MemoryStorageGate().evaluate(_candidate(summary="我现在好累，不想学了"))
++    assert decision.verdict == StorageGateVerdict.CURRENT_STATE.value
++    assert decision.reason == "R6.transient_state"
++
++
++@pytest.mark.asyncio
++async def test_rule_ignore_noise():
++    decision = await MemoryStorageGate().evaluate(_candidate(summary="哈哈哈哈"))
++    assert decision.verdict == StorageGateVerdict.IGNORE.value
++    assert decision.reason == "R7.noise"
++
++
++@pytest.mark.asyncio
++async def test_rule_ignore_banned_identity_label():
++    decision = await MemoryStorageGate().evaluate(_candidate(summary="我就是很笨，学不会数学"))
++    assert decision.verdict == StorageGateVerdict.IGNORE.value
++    assert decision.reason == "R3.banned_identity_label"
++
++
++@pytest.mark.asyncio
++async def test_rule_confirm_sensitive_inferred():
++    decision = await MemoryStorageGate().evaluate(_candidate(summary="我最近失眠很严重"))
++    assert decision.verdict == StorageGateVerdict.CONFIRM.value
++    assert decision.reason == "R4.sensitive_hypothesis"
++    assert decision.annotations["pending_confirmation"] is True
++    assert decision.annotations["sensitivity"] == "health"
++
++
++@pytest.mark.asyncio
++async def test_rule_explicit_command_overrides_sensitivity():
++    """用户显式口令（帮我记住X）不被 confirm 档拦截 —— 用户自己的陈述。"""
++    decision = await MemoryStorageGate().evaluate(
++        _candidate(
++            summary="帮我记住我有抑郁症需要长期服药",
++            evidence_schema_versions=("stage16.explicit_command.v1",),
++        )
++    )
++    assert decision.verdict == StorageGateVerdict.STORE.value
++    assert decision.reason == "R2.explicit_user_command"
++
++
++@pytest.mark.asyncio
++async def test_rule_user_stated_on_explicit_lane_bypass():
++    decision = await MemoryStorageGate().evaluate(
++        _candidate(summary="我在吃抗焦虑的药", source_type="user_state", source_lane="direct_capture")
++    )
++    assert decision.verdict == StorageGateVerdict.STORE.value
++    assert decision.layer == "bypass"
++
++
++@pytest.mark.asyncio
++async def test_rule_duplicate_recent_restatement_ignored():
++    gate = MemoryStorageGate()
++    first = await gate.evaluate(_candidate(summary="我概率论基础还行", semantic_key="k-prob"))
++    assert first.verdict == StorageGateVerdict.STORE.value
++    second = await gate.evaluate(_candidate(summary="我概率论基础还行", semantic_key="k-prob"))
++    assert second.verdict == StorageGateVerdict.IGNORE.value
++    assert second.reason == "R8.rapid_duplicate"
++
++
++@pytest.mark.asyncio
++async def test_rule_structured_system_subject_bypass():
++    decision = await MemoryStorageGate().evaluate(
++        _candidate(
++            summary="用户完成了高数第三章练习，正确率80%",
++            subject_type="task_outcome",
++            source_type="chat_turn",
++            source_lane="direct_capture",
++        )
++    )
++    assert decision.verdict == StorageGateVerdict.STORE.value
++    assert decision.reason == "B3.structured_system_subject"
++
++
++# ---------------------------------------------------------------------------
++# 规则层补强（接续 worker 修复的三处漏判 + 对抗负例）
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.asyncio
++async def test_rule_event_explicit_date_with_light_verb():
++    """"6月15日要考四级"：日期锚点 + 轻动词"考"（考虑/思考经 lookaround 排除）。"""
++    decision = await MemoryStorageGate().evaluate(_candidate(summary="6月15日要考大学英语四级"))
++    assert decision.verdict == StorageGateVerdict.EVENT.value
++    assert decision.reason == "R5.one_time_constraint"
++
++
++@pytest.mark.asyncio
++@pytest.mark.parametrize(
++    "summary",
++    [
++        "明天我要思考一下选课方向",  # 思考（lookbehind 排除）
++        "明天考虑一下要不要报名社团",  # 考虑 + 要不要（否定前视排除）
++        "最近考虑转专业的事",  # 无时间锚点
++        "我打算考研",  # 无时间锚点
++    ],
++)
++async def test_rule_deliberation_not_event(summary):
++    decision = await MemoryStorageGate().evaluate(_candidate(summary=summary))
++    assert decision.verdict == StorageGateVerdict.STORE.value
++
++
++@pytest.mark.asyncio
++async def test_rule_modalized_event_verb_commits():
++    decision = await MemoryStorageGate().evaluate(_candidate(summary="明天我要报名数学竞赛"))
++    assert decision.verdict == StorageGateVerdict.EVENT.value
++
++
++@pytest.mark.asyncio
++async def test_rule_transient_state_with_qualifier():
++    """"我今天状态不太好"："状态不好"词形变体（不太好）经 感受token+时间标记 组合命中。"""
++    decision = await MemoryStorageGate().evaluate(_candidate(summary="我今天状态不太好"))
++    assert decision.verdict == StorageGateVerdict.CURRENT_STATE.value
++    assert decision.reason == "R6.transient_state"
++
++
++@pytest.mark.asyncio
++async def test_rule_stability_claim_overrides_state_token():
++    """"状态"命中瞬时档的前提是无稳定性标记："一直"仍走 store。"""
++    decision = await MemoryStorageGate().evaluate(_candidate(summary="我最近状态一直很差"))
++    assert decision.verdict == StorageGateVerdict.STORE.value
++    assert decision.reason == "R9.stable_pattern"
++
++
++@pytest.mark.asyncio
++@pytest.mark.parametrize("summary", ["嗯嗯知道了", "好的谢谢", "嗯明白", "收到继续"])
++async def test_rule_noise_concatenated_backchannels(summary):
++    """拼接应答（嗯嗯+知道了）整体被噪声词消耗殆尽 → ignore。"""
++    decision = await MemoryStorageGate().evaluate(_candidate(summary=summary))
++    assert decision.verdict == StorageGateVerdict.IGNORE.value
++    assert decision.reason == "R7.noise"
++
++
++@pytest.mark.asyncio
++async def test_rule_noise_prefix_does_not_eat_content():
++    """"对，我每天早上都跑步"仅前缀是应答词：不完全消耗 → 不判噪声。"""
++    decision = await MemoryStorageGate().evaluate(_candidate(summary="对，我每天早上都跑步"))
++    assert decision.verdict == StorageGateVerdict.STORE.value
++
++
++# ---------------------------------------------------------------------------
++# 韧性红绿：gate 异常不炸写路径 / 聊天主链
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.asyncio
++async def test_gate_internal_exception_degrades_to_ignore():
++    """红绿之绿：规则层抛异常 → evaluate 永不 raise，降级 ignore+log。"""
++    gate = MemoryStorageGate()
++
++    async def _boom(self, candidate, **kwargs):
++        raise RuntimeError("rule layer exploded")
++
++    import app.services.memory_storage_gate as gate_module
++
++    original = gate_module.classify_by_rules
++    gate_module.classify_by_rules = _boom
++    try:
++        decision = await gate.evaluate(_candidate(summary="我习惯早上背单词"))
++    finally:
++        gate_module.classify_by_rules = original
++    assert decision.verdict == StorageGateVerdict.IGNORE.value
++    assert decision.layer == "error_degraded"
++    assert decision.reason == "ERR.internal"
++
++
++@pytest.mark.asyncio
++async def test_gate_veto_does_not_break_write_path(db_session, test_user, monkeypatch):
++    """红绿之绿（接入点）：gate veto 时 create_episodic_memory 返回 None 而非抛异常，
++    调用方（聊天主链）零感知。"""
++    from unittest.mock import AsyncMock
++
++    from app.services.memory_service import MemoryService
++
++    user = test_user
++    monkeypatch.setattr(
++        "app.services.memory_storage_gate.MemoryStorageGate.evaluate",
++        AsyncMock(side_effect=RuntimeError("gate exploded mid-flight")),
++    )
++    service = MemoryService(db_session)
++    record = await service.create_episodic_memory(
++        user_id=user.id,
++        summary="我习惯早上背单词",
++        source_type="chat",
++        source_id=None,
++        occurred_at=datetime.utcnow(),
++        importance_score=0.7,
++        confidence=0.8,
++        tags=[],
++        evidence_refs=[{"type": "chat_turn", "id": "evt", "schema_version": "chat_turn.v1"}],
++        emit_system_update=False,
++    )
++    # gate 抛异常 → 降级 ignore → 写被跳过（None），但绝不向上抛
++    assert record is None
++
++
++@pytest.mark.asyncio
++async def test_write_path_lets_store_through(db_session, test_user, monkeypatch):
++    from app.services.memory_service import MemoryService
++
++    user = test_user
++    service = MemoryService(db_session)
++    record = await service.create_episodic_memory(
++        user_id=user.id,
++        summary="我习惯每天早上背单词，效率最高",
++        source_type="chat",
++        source_id=None,
++        occurred_at=datetime.utcnow(),
++        importance_score=0.7,
++        confidence=0.86,
++        tags=[],
++        evidence_refs=[{"type": "chat_turn", "id": "evt-store", "schema_version": "chat_turn.v1"}],
++        emit_system_update=False,
++    )
++    assert record is not None
++    assert record.id is not None
++
++
++@pytest.mark.asyncio
++async def test_write_path_confirm_writes_pending_hypothesis(db_session, test_user):
++    """confirm 档：写入挂起 HYPOTHESIS（docked confidence + pending tag），
++    由既有四动作治理 API 收口（confirm/wrong/outdated/delete），不新造机制。"""
++    from app.services.memory_service import MemoryService
++
++    user = test_user
++    service = MemoryService(db_session)
++    record = await service.create_episodic_memory(
++        user_id=user.id,
++        summary="我最近失眠很严重，每天只睡四小时",
++        source_type="chat",
++        source_id=None,
++        source_lane="inferred_extraction",
++        occurred_at=datetime.utcnow(),
++        importance_score=0.8,
++        confidence=0.85,
++        tags=[],
++        evidence_refs=[{"type": "chat_turn", "id": "evt-confirm", "schema_version": "chat_turn.v1"}],
++        emit_system_update=True,
++    )
++    assert record is not None
++    assert record.epistemic_class == "HYPOTHESIS"
++    assert record.confidence <= CONFIRM_CONFIDENCE_CAP
++    assert PENDING_CONFIRMATION_TAG in (record.tags or [])
++    assert "m02:sensitive:health" in (record.tags or [])
++
++
++@pytest.mark.asyncio
++async def test_write_path_event_bounded_scope(db_session, test_user):
++    from app.services.memory_service import MemoryService
++
++    user = test_user
++    service = MemoryService(db_session)
++    record = await service.create_episodic_memory(
++        user_id=user.id,
++        summary="今天下午3点实验课签到",
++        source_type="chat",
++        source_id=None,
++        occurred_at=datetime.utcnow(),
++        importance_score=0.7,
++        confidence=0.85,
++        tags=[],
++        evidence_refs=[{"type": "chat_turn", "id": "evt-event", "schema_version": "chat_turn.v1"}],
++        decay_policy="30d",
++        emit_system_update=False,
++    )
++    assert record is not None
++    assert EVENT_BOUNDED_TAG in (record.tags or [])
++    # 无 due_at 的瞬时 today constraint：decay 被压到短窗（7d），非全局长存
++    assert record.decay_policy == "7d"
++
++
++@pytest.mark.asyncio
++async def test_write_path_gate_off_bypasses(db_session, test_user, monkeypatch):
++    async def _off(self):
++        return "off"
++
++    monkeypatch.setattr(MemoryStorageGate, "_gate_mode", _off)
++    from app.services.memory_service import MemoryService
++
++    user = test_user
++    service = MemoryService(db_session)
++    record = await service.create_episodic_memory(
++        user_id=user.id,
++        summary="哈哈哈哈",
++        source_type="chat",
++        source_id=None,
++        occurred_at=datetime.utcnow(),
++        importance_score=0.5,
++        confidence=0.6,
++        tags=[],
++        evidence_refs=[{"type": "chat_turn", "id": "evt-off", "schema_version": "chat_turn.v1"}],
++        emit_system_update=False,
++    )
++    assert record is not None  # gate off → 噪声也照旧写入（恢复既有行为）
++
++
++@pytest.mark.asyncio
++async def test_write_path_gate_vetoes_transient(db_session, test_user):
++    from app.services.memory_service import MemoryService
++
++    user = test_user
++    service = MemoryService(db_session)
++    record = await service.create_episodic_memory(
++        user_id=user.id,
++        summary="我现在好累，不想学了",
++        source_type="chat",
++        source_id=None,
++        occurred_at=datetime.utcnow(),
++        importance_score=0.6,
++        confidence=0.7,
++        tags=[],
++        evidence_refs=[{"type": "chat_turn", "id": "evt-cs", "schema_version": "chat_turn.v1"}],
++        emit_system_update=False,
++    )
++    assert record is None  # current_state → 不落 L1（留在 Redis 工作记忆层）
++
++
++# ---------------------------------------------------------------------------
++# 语义层熔断降级
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.asyncio
++async def test_semantic_disabled_uses_rule_layer_only(monkeypatch):
++    """语义层默认关闭：R10 歧义残留直接 fail-open store，不发起 LLM 调用。"""
++    monkeypatch.setattr(settings, "SPARKLE_STORAGE_GATE_SEMANTIC_ENABLED", False, raising=False)
++    calls = []
++
++    async def _llm(prompt):
++        calls.append(prompt)
++        return {"class": "ignore"}
++
++    gate = MemoryStorageGate(semantic_llm=_llm)
++    decision = await gate.evaluate(_candidate(summary="我高数比较薄弱，特别是级数部分"))
++    assert decision.verdict == StorageGateVerdict.STORE.value
++    assert decision.layer == "rule"
++    assert calls == []
++
++
++@pytest.mark.asyncio
++async def test_semantic_refines_ambiguous_candidate(monkeypatch):
++    """语义层开启时对规则歧义残留做五分类精化。"""
++    monkeypatch.setattr(settings, "SPARKLE_STORAGE_GATE_SEMANTIC_ENABLED", True, raising=False)
++
++    async def _llm(prompt):
++        return {"class": "ignore", "reason": "无决策价值的牢骚"}
++
++    gate = MemoryStorageGate(semantic_llm=_llm)
++    decision = await gate.evaluate(_candidate(summary="我高数比较薄弱，特别是级数部分"))
++    assert decision.verdict == StorageGateVerdict.IGNORE.value
++    assert decision.layer == "semantic"
++
++
++@pytest.mark.asyncio
++async def test_semantic_timeout_degrades_to_rule_default(monkeypatch):
++    monkeypatch.setattr(settings, "SPARKLE_STORAGE_GATE_SEMANTIC_ENABLED", True, raising=False)
++    monkeypatch.setattr(settings, "SPARKLE_STORAGE_GATE_SEMANTIC_TIMEOUT_SECONDS", 0.05, raising=False)
++
++    async def _slow_llm(prompt):
++        import asyncio
++
++        await asyncio.sleep(1.0)
++        return {"class": "ignore"}
++
++    gate = MemoryStorageGate(semantic_llm=_slow_llm)
++    decision = await gate.evaluate(_candidate(summary="我高数比较薄弱，特别是级数部分"))
++    assert decision.verdict == StorageGateVerdict.STORE.value
++    assert decision.layer == "rule"
++
++
++@pytest.mark.asyncio
++async def test_semantic_bad_payload_degrades(monkeypatch):
++    monkeypatch.setattr(settings, "SPARKLE_STORAGE_GATE_SEMANTIC_ENABLED", True, raising=False)
++
++    async def _bad_llm(prompt):
++        return "not-json-garbage"
++
++    gate = MemoryStorageGate(semantic_llm=_bad_llm)
++    decision = await gate.evaluate(_candidate(summary="我高数比较薄弱，特别是级数部分"))
++    assert decision.verdict == StorageGateVerdict.STORE.value
++    assert decision.layer == "rule"
++
++
++@pytest.mark.asyncio
++async def test_semantic_cannot_self_authorize_confirm(monkeypatch):
++    """语义层不得自授权 confirm：敏感确认必须来自可审计的规则命中。"""
++    monkeypatch.setattr(settings, "SPARKLE_STORAGE_GATE_SEMANTIC_ENABLED", True, raising=False)
++
++    async def _confirm_llm(prompt):
++        return {"class": "confirm", "reason": "llm thinks so"}
++
++    gate = MemoryStorageGate(semantic_llm=_confirm_llm)
++    decision = await gate.evaluate(_candidate(summary="我高数比较薄弱，特别是级数部分"))
++    assert decision.verdict == StorageGateVerdict.STORE.value
++    assert decision.reason == "S1.semantic_confirm_demoted"
++
++
++@pytest.mark.asyncio
++async def test_semantic_breaker_opens_after_consecutive_failures(monkeypatch):
++    monkeypatch.setattr(settings, "SPARKLE_STORAGE_GATE_SEMANTIC_ENABLED", True, raising=False)
++    calls = []
++
++    async def _flaky(prompt):
++        calls.append(prompt)
++        raise ConnectionError("llm down")
++
++    gate = MemoryStorageGate(semantic_llm=_flaky)
++    texts = ["我高数比较薄弱，特别是级数部分", "我线代基础还可以", "我英语阅读速度偏慢"]
++    for text in texts[: MemoryStorageGate.SEMANTIC_BREAKER_THRESHOLD]:
++        decision = await gate.evaluate(_candidate(summary=text))
++        assert decision.verdict == StorageGateVerdict.STORE.value
++        assert decision.layer == "rule"
++    assert MemoryStorageGate._semantic_open_until > 0
++    calls_before = len(calls)
++    # breaker open：不再发起调用，直接规则默认
++    await gate.evaluate(_candidate(summary=texts[-1]))
++    assert len(calls) == calls_before
++
++
++@pytest.mark.asyncio
++async def test_shadow_mode_never_vetoes(monkeypatch):
++    async def _shadow(self):
++        return "shadow"
++
++    monkeypatch.setattr(MemoryStorageGate, "_gate_mode", _shadow)
++    gate = MemoryStorageGate()
++    decision = await gate.evaluate(_candidate(summary="我现在好累"))
++    assert decision.verdict == StorageGateVerdict.STORE.value
++    assert decision.layer == "shadow"
++    assert decision.annotations["shadow_verdict"] == StorageGateVerdict.CURRENT_STATE.value
++
++
++# ---------------------------------------------------------------------------
++# apply_decision_to_record 幂等性（向量运行时降级重建路径会重放）
++# ---------------------------------------------------------------------------
++
++
++def _fake_record(**overrides) -> EpisodicMemory:
++    base = dict(
++        user_id=uuid4(),
++        summary="明早8点有英语考试",
++        source_type="chat",
++        source_lane="inferred_extraction",
++        subject_type="commitment",
++        occurred_at=datetime.utcnow(),
++        due_at=datetime.utcnow() + timedelta(days=1),
++        confidence=0.9,
++        tags=["stage16:auto_memory"],
++        evidence_refs=[],
++        evidence_score=0.5,
++    )
++    base.update(overrides)
++    return EpisodicMemory(**base)
++
++
++def test_apply_decision_idempotent_for_event():
++    from app.services.memory_storage_gate import StorageGateDecision
++
++    record = _fake_record(decay_policy=None)
++    decision = StorageGateDecision(
++        verdict=StorageGateVerdict.EVENT.value,
++        layer="rule",
++        reason="R5.one_time_constraint",
++        annotations={"bounded_scope": True},
++    )
++    apply_decision_to_record(record, decision)
++    once_tags = list(record.tags)
++    once_decay = record.decay_policy
++    apply_decision_to_record(record, decision)
++    assert record.tags == once_tags
++    assert record.decay_policy == once_decay
++
++
++def test_candidate_from_record_projects_schema_versions():
++    record = _fake_record(
++        evidence_refs=[{"type": "chat_turn", "id": "t1", "schema_version": "stage16.explicit_command.v1"}]
++    )
++    candidate = candidate_from_record(record)
++    assert candidate.evidence_schema_versions == ("stage16.explicit_command.v1",)
++    decision = classify_by_rules(candidate)
++    assert decision.verdict == StorageGateVerdict.STORE.value
++    assert decision.reason == "R2.explicit_user_command"
+diff --git a/backend/tests/unit/test_memory_storage_gate_eval.py b/backend/tests/unit/test_memory_storage_gate_eval.py
+new file mode 100644
+index 00000000..eccd374d
+--- /dev/null
++++ b/backend/tests/unit/test_memory_storage_gate_eval.py
+@@ -0,0 +1,126 @@
++"""M-02 Storage Gate 写入场景评测基准（precision/recall 回归守卫）。
++
++数据驱动：backend/tests/fixtures/memory_storage_gate_eval_v1.json（50+ 场景）。
++口径：规则层（语义层关闭）+ gate live 模式 —— 基准数字可复现、不依赖 LLM。
++任何场景误判都会在此处失败，防止 gate 词表/规则顺序回归。
++"""
++
++from __future__ import annotations
++
++import json
++from datetime import datetime
++from pathlib import Path
++
++import pytest
++
++from app.config import settings
++from app.services.memory_storage_gate import (
++    MemoryStorageGate,
++    StorageGateCandidate,
++    StorageGateVerdict,
++    reset_gate_state,
++)
++
++EVAL_FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "memory_storage_gate_eval_v1.json"
++
++# 回归阈值：每类 precision / recall 下限（当前基准为 1.0，词表演进时允许
++# 审慎下调，但不得低于任务卡验收口径的可用下限）。
++MIN_SCENARIOS = 50
++PER_CLASS_MIN_PRECISION = 1.0
++PER_CLASS_MIN_RECALL = 1.0
++
++
++def load_scenarios() -> list[dict]:
++    payload = json.loads(EVAL_FIXTURE.read_text(encoding="utf-8"))
++    return payload["scenarios"]
++
++
++def _to_candidate(scenario: dict, index: int) -> StorageGateCandidate:
++    due_at_raw = scenario.get("due_at")
++    return StorageGateCandidate(
++        user_id="eval-user",
++        summary=scenario["summary"],
++        subject_type=scenario.get("subject_type", "self"),
++        source_type=scenario.get("source_type", "chat"),
++        source_lane=scenario.get("source_lane", "inferred_extraction"),
++        semantic_key=scenario.get("semantic_key") or f"eval-{scenario['id']}-{index}",
++        evidence_token=f"eval-token-{index}",
++        confidence=float(scenario.get("confidence", 0.8)),
++        due_at=datetime.fromisoformat(due_at_raw) if due_at_raw else None,
++        tags=(),
++        evidence_schema_versions=tuple(scenario.get("evidence_schema_versions", ())),
++    )
++
++
++async def run_eval() -> tuple[list[dict], dict[str, dict[str, float]]]:
++    """Run the fixture through the gate; return per-scenario results + metrics."""
++    reset_gate_state()
++    gate = MemoryStorageGate()
++    results: list[dict] = []
++    for index, scenario in enumerate(load_scenarios()):
++        decision = await gate.evaluate(_to_candidate(scenario, index))
++        results.append(
++            {
++                "id": scenario["id"],
++                "expected": scenario["expected"],
++                "predicted": decision.verdict,
++                "reason": decision.reason,
++                "layer": decision.layer,
++            }
++        )
++    metrics: dict[str, dict[str, float]] = {}
++    for klass in StorageGateVerdict:
++        expected = sum(1 for r in results if r["expected"] == klass.value)
++        predicted = sum(1 for r in results if r["predicted"] == klass.value)
++        tp = sum(1 for r in results if r["expected"] == klass.value and r["predicted"] == klass.value)
++        precision = tp / predicted if predicted else 1.0
++        recall = tp / expected if expected else 1.0
++        metrics[klass.value] = {
++            "expected": expected,
++            "predicted": predicted,
++            "tp": tp,
++            "precision": precision,
++            "recall": recall,
++        }
++    return results, metrics
++
++
++@pytest.fixture(autouse=True)
++def _deterministic_gate(monkeypatch):
++    reset_gate_state()
++    monkeypatch.setattr(settings, "SPARKLE_STORAGE_GATE_SEMANTIC_ENABLED", False, raising=False)
++
++    async def _live_mode(self):
++        return "live"
++
++    monkeypatch.setattr(MemoryStorageGate, "_gate_mode", _live_mode)
++    yield
++    reset_gate_state()
++
++
++@pytest.mark.asyncio
++async def test_eval_set_has_at_least_50_scenarios():
++    scenarios = load_scenarios()
++    assert len(scenarios) >= MIN_SCENARIOS
++    classes = {s["expected"] for s in scenarios}
++    assert classes == {v.value for v in StorageGateVerdict}
++
++
++@pytest.mark.asyncio
++async def test_eval_precision_recall_thresholds():
++    results, metrics = await run_eval()
++    for klass, m in metrics.items():
++        assert m["precision"] >= PER_CLASS_MIN_PRECISION, f"{klass} precision {m}"
++        assert m["recall"] >= PER_CLASS_MIN_RECALL, f"{klass} recall {m}"
++    # 全对：隐含 accuracy == 1.0
++    assert all(r["expected"] == r["predicted"] for r in results)
++
++
++@pytest.mark.asyncio
++async def test_eval_transient_today_constraint_not_global():
++    """验收专项：一次性时间约束（明早8点/今天下午N点）判 event（有界 scope），
++    绝不默认 store/global。"""
++    results, _ = await run_eval()
++    by_id = {r["id"]: r for r in results}
++    for scenario_id in ("m02-ev01", "m02-ev09"):
++        assert by_id[scenario_id]["predicted"] == "event", by_id[scenario_id]
