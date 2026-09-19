@@ -1,0 +1,5073 @@
+{
+  "version": "3.0",
+  "product": "Sparkle",
+  "generated": "2026-09-19",
+  "tasks": [
+    {
+      "id": "B-01",
+      "title": "42 模块产品生死簿与可达性真相",
+      "stream": "BASELINE",
+      "depends_on": [],
+      "required_locks": [
+        "product-portfolio"
+      ],
+      "objective": "建立当前 HEAD 的真实功能 portfolio，决定 CORE/CONTEXTUAL/LABS/HIDDEN/RETIRE，不凭旧文档。",
+      "work": [
+        "枚举 mobile features、Go/Python routes、导航/深链与入口；实际从 UI 探索可达性。",
+        "为 42 feature 建 matrix：JTBD、journey、数据真实性、状态完备性、保留理由、V3 surface。",
+        "将 leaderboard/shop/photon/long-tail 按 V3 决策标记；未知项用 simulator 实测，不猜。"
+      ],
+      "acceptance": [
+        "42 个 feature 100% 有唯一状态与证据；不存在“材料未知但默认上线”。",
+        "CORE/CONTEXTUAL 的每一项可映射到至少一个 Golden Journey；HIDDEN/RETIRE 用户不可达。",
+        "输出 MODULE_MATRIX.csv 与 machine-readable portfolio.json。"
+      ],
+      "path_seeds": [
+        "mobile/lib/features",
+        "mobile/lib/core",
+        "backend/app/api",
+        "backend/gateway"
+      ],
+      "must_read": [
+        "NORTH_STAR.md",
+        "00_context/DECISIONS_V3.md",
+        "03_modules/LONG_TAIL.md"
+      ],
+      "risk": "medium",
+      "resource_class": "LIGHT",
+      "reviewers_required": 1,
+      "gate": "V3-0",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "B-02",
+      "title": "数据真实性、Mock 污染与指标 Lineage 基线",
+      "stream": "BASELINE",
+      "depends_on": [],
+      "required_locks": [
+        "analytics-truth"
+      ],
+      "objective": "盘清用户可见的每一个关键数字来自哪里，阻止假数据进入 V3。",
+      "work": [
+        "扫描统计 provider/repository/cache/seed/fallback，重点 agent/capsule/focus statistics。",
+        "建立字段级 lineage：UI→repo/API→DB/event/formula，并标 actual/self_reported/estimated/demo/unknown。",
+        "识别 mock 写入 Isar 或 production cache 的路径，先写红测，不必本卡全部修。"
+      ],
+      "acceptance": [
+        "核心 Journey 所有数字有 lineage；硬编码统计/mock 污染有可复现证据和后续任务映射。",
+        "seed/demo namespace 与真实 cohort 可被查询区分。",
+        "生成 data_truth_inventory.json/csv。"
+      ],
+      "path_seeds": [
+        "mobile/lib",
+        "backend/app/services/analytics",
+        "backend/app/api",
+        "backend/gateway"
+      ],
+      "must_read": [
+        "02_core_systems/DATA_FLYWHEEL.md",
+        "05_metrics_eval/METRIC_TREE.md"
+      ],
+      "risk": "high",
+      "resource_class": "LIGHT",
+      "reviewers_required": 2,
+      "gate": "V3-0",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "B-03",
+      "title": "跨端 Journey Simulator Harness 基线",
+      "stream": "BASELINE",
+      "depends_on": [],
+      "required_locks": [
+        "simulator-harness"
+      ],
+      "objective": "把“Agent 真正使用 App”固化成可重复测试基建。",
+      "work": [
+        "盘点现有 macos_journey_test、Android instrumentation/integration、Web test harness。",
+        "统一 test persona reset、trace capture、截图路径、网络切换、test clock、build metadata。",
+        "先让 GJ01 的最小壳在 Android/Web/macOS 各可启动并保存 evidence。"
+      ],
+      "acceptance": [
+        "三个平台都有可重复启动脚本或明确 unsupported 原因；run 产出 build SHA/device/time/screenshots/log refs。",
+        "失败返回非零，不允许“没找到模拟器=PASS”。",
+        "文档说明 simulator 不得绕过 UI。"
+      ],
+      "path_seeds": [
+        "mobile/integration_test",
+        "tests_e2e",
+        "scripts/devtools"
+      ],
+      "must_read": [
+        "05_metrics_eval/USER_SIMULATION.md",
+        "05_metrics_eval/GOLDEN_JOURNEYS.md",
+        "04_ux/MULTIPLATFORM.md"
+      ],
+      "risk": "medium",
+      "resource_class": "HEAVY",
+      "reviewers_required": 1,
+      "gate": "V3-0",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "B-04",
+      "title": "V3 视觉基线截图与 L2–L5 Review Harness",
+      "stream": "BASELINE",
+      "depends_on": [],
+      "required_locks": [
+        "visual-baseline"
+      ],
+      "objective": "建立可比较的真实截图基线，后续 UI 卡必须以视觉证据闭环。",
+      "work": [
+        "为 onboarding/home/chat/goal/task/memory/galaxy/profile/settings 生成 canonical states。",
+        "三端采集 baseline screenshots，统一命名与 viewport。",
+        "实现轻量 manifest/diff 辅助，不要求像素完全一致；记录当前 A/B visual issues。"
+      ],
+      "acceptance": [
+        "至少核心 9 surfaces × 主要状态有 baseline；截图来自真实渲染。",
+        "每张图有 build SHA/persona/state。",
+        "输出首轮视觉问题 ledger。"
+      ],
+      "path_seeds": [
+        "mobile/lib",
+        "scripts/devtools"
+      ],
+      "must_read": [
+        "04_ux/DESIGN_DIRECTION.md",
+        "04_ux/VISUAL_REVIEW_RUBRIC.md"
+      ],
+      "risk": "medium",
+      "resource_class": "HEAVY",
+      "reviewers_required": 1,
+      "gate": "V3-0",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "B-05",
+      "title": "当前模型、Embedding、语音/OCR 与成本能力 Probe",
+      "stream": "BASELINE",
+      "depends_on": [],
+      "required_locks": [
+        "ai-provider"
+      ],
+      "objective": "以 2026-09-19 当前真实凭据探测能力，不沿用旧模型清单。",
+      "work": [
+        "探测 qwen3.8-flash fast/standard/max 实际模型、thinking、tool/structured output、TTFT、总延迟、usage。",
+        "探测 MiniMax M3 batch、embedding、ASR/TTS、OCR 等已配置 capability；无 key 明确 unavailable。",
+        "记录 provider/model_request/model_actual/error/fallback/cost；至少每实时路径 10 次样本。"
+      ],
+      "acceptance": [
+        "输出 capability_matrix.json + latency raw samples；未知保持 unknown。",
+        "LIVE 缺 key/模型失败不命中 fixture。",
+        "为 E 系列卡给出真实 SLO 基线。"
+      ],
+      "path_seeds": [
+        "backend/app/core",
+        "backend/app/services/llm",
+        "backend/app/orchestration",
+        ".env.example"
+      ],
+      "must_read": [
+        "02_core_systems/AI_ROUTING_LATENCY.md",
+        "V3_DEFINITION_OF_DONE.md"
+      ],
+      "risk": "high",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 2,
+      "gate": "V3-0",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "B-06",
+      "title": "V3 核心实体映射与重复真源审计",
+      "stream": "BASELINE",
+      "depends_on": [],
+      "required_locks": [
+        "architecture-map"
+      ],
+      "objective": "把 V3 概念映射到现有 authoritative implementation，防止 Agent 造第二套系统。",
+      "work": [
+        "定位 UserState/五层模型/Aurora/Memory/RAG/Task/Plan/Event/Attempt/Run/Permission/Outbox 当前实体与表。",
+        "对 NORTH_STAR 每个概念写 reuse/extend/retire/no-authority 映射。",
+        "扫描重复 profile/memory/run/task truth，标明迁移而非立即重写。"
+      ],
+      "acceptance": [
+        "四分法 State/Memory/Knowledge/Events 可映射到当前实体。",
+        "Aurora/Agent Runtime/Action 不出现两个权威 owner。",
+        "生成 ENTITY_MAP.md/json；后续任务必须引用。"
+      ],
+      "path_seeds": [
+        "backend/app/models",
+        "backend/app/aurora",
+        "backend/app/state_aggregator",
+        "backend/app/working_memory",
+        "backend/app/services/evidence",
+        "backend/app/orchestration",
+        "backend/gateway"
+      ],
+      "must_read": [
+        "02_core_systems/USER_WORLD_MODEL.md",
+        "00_context/BASELINE_V2_V2_5.md"
+      ],
+      "risk": "high",
+      "resource_class": "LIGHT",
+      "reviewers_required": 2,
+      "gate": "V3-0",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "U-01",
+      "title": "核心设计表面 Inventory 与 Component 收敛计划",
+      "stream": "UX",
+      "depends_on": [
+        "B-01",
+        "B-04"
+      ],
+      "required_locks": [
+        "design-system"
+      ],
+      "objective": "用真实 screenshot + widget tree 找出核心旅程中的组件/层级/装饰债。",
+      "work": [
+        "审查 Button/Card/Chip/Pill/Empty/Error/Loading/AI status 的重复实现。",
+        "统计核心屏的 gradient/particle/glow/confetti 与 local typography/color。",
+        "制定迁移顺序，只针对 V3 可达 surface，不做全仓机械重构。"
+      ],
+      "acceptance": [
+        "核心页面组件 owner 唯一；新增 UI 必须用 design system。",
+        "输出 before screenshots 与 component consolidation plan。"
+      ],
+      "path_seeds": [
+        "mobile/lib/core/design",
+        "mobile/lib/features"
+      ],
+      "must_read": [
+        "04_ux/DESIGN_DIRECTION.md",
+        "00_context/DECISIONS_V3.md"
+      ],
+      "risk": "medium",
+      "resource_class": "LIGHT",
+      "reviewers_required": 1,
+      "gate": "V3-4",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "U-02",
+      "title": "Calm/Warm 设计语言与低刺激模式落地",
+      "stream": "UX",
+      "depends_on": [
+        "U-01"
+      ],
+      "required_locks": [
+        "design-system",
+        "mobile-shell"
+      ],
+      "objective": "把“纸感书院+现代AI”从文档变成可运行 token/policy，并接活现有 low-stimulation dead code。",
+      "work": [
+        "定义 calm/celebrate/attention 状态 token；减少核心屏装饰竞争。",
+        "接入 reduced motion/low stimulation 到真实 Theme/Animation/Gamification。",
+        "确保 Galaxy 可保持独立 dark cosmic 但导航转场一致。"
+      ],
+      "acceptance": [
+        "普通/低刺激模式核心截图均通过 contrast/hierarchy rubric。",
+        "低刺激模式实际减少动效/挑战性元素，不只是 setting 值。"
+      ],
+      "path_seeds": [
+        "mobile/lib/core/design",
+        "mobile/lib/features/aurora",
+        "mobile/lib/features/settings"
+      ],
+      "must_read": [
+        "04_ux/DESIGN_DIRECTION.md",
+        "03_modules/GAMEIFICATION.md"
+      ],
+      "risk": "medium",
+      "resource_class": "HEAVY",
+      "reviewers_required": 1,
+      "gate": "V3-4",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "U-03",
+      "title": "Aurora / Memory “Sparkle 对我的理解”核心交互",
+      "stream": "UX",
+      "depends_on": [
+        "U-01",
+        "M-08"
+      ],
+      "required_locks": [
+        "mobile-profile",
+        "memory-ui"
+      ],
+      "objective": "将 provenance/scope/correction 做成普通用户可理解的控制面。",
+      "work": [
+        "实现四组理解视图与 Why-this receipt。",
+        "修改/删除/改scope/暂时不用全部调用真实后端语义。",
+        "移除“0 memories/5 correctable claims/75%”黑话式主呈现。"
+      ],
+      "acceptance": [
+        "用户能在 30 秒解释 Sparkle 知道什么、为什么、怎么改。",
+        "纠正/删除后界面与下一次 decision 同步变化。",
+        "A/B visual issues=0。"
+      ],
+      "path_seeds": [
+        "mobile/lib/features/memory",
+        "mobile/lib/features/aurora",
+        "mobile/lib/features/user"
+      ],
+      "must_read": [
+        "03_modules/MEMORY_AURORA_UI.md",
+        "04_ux/COPY_TONE.md"
+      ],
+      "risk": "high",
+      "resource_class": "HEAVY",
+      "reviewers_required": 2,
+      "gate": "V3-4",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "U-04",
+      "title": "Proposal / Execution / Hybrid Handoff 交互组件",
+      "stream": "UX",
+      "depends_on": [
+        "U-01",
+        "X-03"
+      ],
+      "required_locks": [
+        "mobile-action",
+        "mobile-chat"
+      ],
+      "objective": "建立统一 Action Proposal、diff、approval、turn ownership、run progress UI。",
+      "work": [
+        "聊天/任务页复用同一 proposal card。",
+        "Human/Agent/Hybrid 清楚可见但不技术化；显示“你做/Sparkle做/一起做”。",
+        "覆盖 awaiting user/partial/unknown/cancel/conflict。"
+      ],
+      "acceptance": [
+        "GJ06/GJ07 用户无需读日志知道当前轮到谁。",
+        "重复点击不产生重复 command；未知结果不显示成功。"
+      ],
+      "path_seeds": [
+        "mobile/lib/features/chat",
+        "mobile/lib/features/task",
+        "mobile/lib/features/openclaw"
+      ],
+      "must_read": [
+        "04_ux/CORE_INTERACTION_PATTERNS.md",
+        "02_core_systems/HUMAN_AGENT_HYBRID.md"
+      ],
+      "risk": "high",
+      "resource_class": "HEAVY",
+      "reviewers_required": 2,
+      "gate": "V3-4",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "U-05",
+      "title": "首页/Goal/Chat 三屏 L2 产品化重构",
+      "stream": "UX",
+      "depends_on": [
+        "U-01",
+        "J-03",
+        "J-05"
+      ],
+      "required_locks": [
+        "mobile-home",
+        "mobile-goal",
+        "mobile-chat"
+      ],
+      "objective": "让三张核心屏共享同一个 Goal trajectory 心智模型，解决信息竞争。",
+      "work": [
+        "首页仅突出 Primary Action/Why/Stuck/Run。",
+        "Goal 显示 trajectory/milestone/evidence/blocker/material。",
+        "Chat 将长建议转 proposal/source/receipt 结构。"
+      ],
+      "acceptance": [
+        "5 秒测试可说出每屏主任务；核心 CTA 唯一。",
+        "5 Persona screenshot A/B issue=0。",
+        "功能不因视觉重构退化。"
+      ],
+      "path_seeds": [
+        "mobile/lib/features/home",
+        "mobile/lib/features/goal",
+        "mobile/lib/features/chat"
+      ],
+      "must_read": [
+        "03_modules/HOME.md",
+        "03_modules/CHAT.md",
+        "03_modules/GOAL_TASK_PLAN_CALENDAR_FOCUS.md"
+      ],
+      "risk": "medium",
+      "resource_class": "HEAVY",
+      "reviewers_required": 1,
+      "gate": "V3-4",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "U-06",
+      "title": "L4 状态完备性注入与统一错误/等待语义",
+      "stream": "UX",
+      "depends_on": [
+        "U-04",
+        "U-05"
+      ],
+      "required_locks": [
+        "mobile-state-patterns"
+      ],
+      "objective": "系统化覆盖 State Matrix，不再每个 feature 自造空/错/加载态。",
+      "work": [
+        "建立可注入 network/model/auth/permission/conflict/partial/unknown states。",
+        "统一组件和用户语言。",
+        "核心 Journey 自动注入至少 12 类失败状态。"
+      ],
+      "acceptance": [
+        "核心 surfaces state matrix ≥95% covered；所有错误有下一步。",
+        "长等待 >500ms 有 stage feedback。",
+        "无 terminal spinner。"
+      ],
+      "path_seeds": [
+        "mobile/lib/core",
+        "mobile/lib/features"
+      ],
+      "must_read": [
+        "04_ux/STATE_MATRIX.md",
+        "04_ux/CORE_INTERACTION_PATTERNS.md"
+      ],
+      "risk": "medium",
+      "resource_class": "HEAVY",
+      "reviewers_required": 1,
+      "gate": "V3-4",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "U-07",
+      "title": "长尾 Feature Contextualization 与导航减负",
+      "stream": "UX",
+      "depends_on": [
+        "B-01",
+        "U-05"
+      ],
+      "required_locks": [
+        "navigation",
+        "product-portfolio"
+      ],
+      "objective": "把可保留长尾能力放回 Goal/Action context，清除“超级App功能目录”感。",
+      "work": [
+        "按 portfolio 将 Calendar/Focus/ErrorBook/Knowledge/Vocabulary/Translation 等嵌入相关 Action。",
+        "Labs/HIDDEN 移出主导航/搜索/深链暴露。",
+        "保留功能可通过 context CTA 到达并返回原 Goal。"
+      ],
+      "acceptance": [
+        "五 Tab 不增加；CORE journey 不出现无关 feature入口。",
+        "HIDDEN 用户不可达；CONTEXTUAL 有至少一个自然 journey。"
+      ],
+      "path_seeds": [
+        "mobile/lib/app",
+        "mobile/lib/features"
+      ],
+      "must_read": [
+        "03_modules/LONG_TAIL.md",
+        "00_context/MODULE_PORTFOLIO.md"
+      ],
+      "risk": "medium",
+      "resource_class": "HEAVY",
+      "reviewers_required": 1,
+      "gate": "V3-4",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "U-08",
+      "title": "Accessibility 全链升级",
+      "stream": "UX",
+      "depends_on": [
+        "U-05"
+      ],
+      "required_locks": [
+        "accessibility"
+      ],
+      "objective": "让核心 Journey 对 screen reader/keyboard/large text/reduced motion 可用。",
+      "work": [
+        "跑 Web semantics、Android accessibility、macOS keyboard focus。",
+        "修 semantic labels/touch targets/contrast/dynamic text。",
+        "低刺激/reduced motion 与 Aurora policy 一致。"
+      ],
+      "acceptance": [
+        "GJ01/GJ03/GJ08 核心控件可由辅助技术完成。",
+        "WCAG AA；不依赖颜色传达关键状态。"
+      ],
+      "path_seeds": [
+        "mobile/lib"
+      ],
+      "must_read": [
+        "04_ux/ACCESSIBILITY.md"
+      ],
+      "risk": "medium",
+      "resource_class": "HEAVY",
+      "reviewers_required": 1,
+      "gate": "V3-4",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "U-09",
+      "title": "L5 三端视觉/交互一致性 Diff",
+      "stream": "UX",
+      "depends_on": [
+        "B-03",
+        "B-04",
+        "U-06",
+        "U-08"
+      ],
+      "required_locks": [
+        "visual-baseline",
+        "simulator-harness"
+      ],
+      "objective": "在 Android/Web/macOS 对同一 canonical state 做真实对比并修复平台特有断裂。",
+      "work": [
+        "跑同 persona/goal/state 截图矩阵。",
+        "修 layout overflow、URL/session、keyboard/mouse/touch 差异。",
+        "对允许差异写 reason，而非强行像素一致。"
+      ],
+      "acceptance": [
+        "核心状态三端无 A/B visual issue；交互语义一致。",
+        "生成 final screenshot matrix 与 diff report。"
+      ],
+      "path_seeds": [
+        "mobile/lib",
+        "mobile/integration_test"
+      ],
+      "must_read": [
+        "04_ux/MULTIPLATFORM.md",
+        "04_ux/VISUAL_REVIEW_RUBRIC.md"
+      ],
+      "risk": "medium",
+      "resource_class": "HEAVY",
+      "reviewers_required": 1,
+      "gate": "V3-4",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "U-10",
+      "title": "全产品文案与术语终审",
+      "stream": "UX",
+      "depends_on": [
+        "U-03",
+        "U-05",
+        "U-07"
+      ],
+      "required_locks": [
+        "copy-l10n"
+      ],
+      "objective": "把内部黑话、玄学分数、羞辱/模板化鼓励全部收敛。",
+      "work": [
+        "扫描可达 zh 文案和 screenshot OCR/semantics tree。",
+        "统一 Aurora tone、错误、Memory、Agent run、Insights。",
+        "英文仅在专有名词/必要技术表面，默认中文体验一致。"
+      ],
+      "acceptance": [
+        "核心 journey 无未解释内部术语/placeholder/raw l10n key。",
+        "Why/失败/不确定表达符合 PRODUCT_LANGUAGE。"
+      ],
+      "path_seeds": [
+        "mobile/lib/l10n",
+        "mobile/lib/features"
+      ],
+      "must_read": [
+        "01_product/PRODUCT_LANGUAGE.md",
+        "04_ux/COPY_TONE.md"
+      ],
+      "risk": "medium",
+      "resource_class": "LIGHT",
+      "reviewers_required": 1,
+      "gate": "V3-4",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "D-01",
+      "title": "统一 Event / Evidence Lineage Contract",
+      "stream": "DATA",
+      "depends_on": [
+        "B-02",
+        "B-06"
+      ],
+      "required_locks": [
+        "event-contract"
+      ],
+      "objective": "把交互、决策、执行、outcome 串到可追溯事件图。",
+      "work": [
+        "复用现有 outbox/event store；定义 V3 关键 event names + shared fields。",
+        "确保 client telemetry 不成为业务真值。",
+        "每个 intervention/action/run/outcome 通过 IDs 关联。"
+      ],
+      "acceptance": [
+        "一条 GJ03 trace 可从 UI action 追到 outcome/state update。",
+        "事件幂等且跨用户隔离。"
+      ],
+      "path_seeds": [
+        "backend/app/models",
+        "backend/gateway/internal/cqrs",
+        "backend/app/services/evidence"
+      ],
+      "must_read": [
+        "02_core_systems/DATA_FLYWHEEL.md"
+      ],
+      "risk": "high",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 2,
+      "gate": "V3-3",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "D-02",
+      "title": "Outcome Ledger 与 Evidence Type 正规化",
+      "stream": "DATA",
+      "depends_on": [
+        "D-01"
+      ],
+      "required_locks": [
+        "outcome-ledger"
+      ],
+      "objective": "建立真实成果账本，让“完成”不等于点击。",
+      "work": [
+        "映射现有 task completion/artifact/focus/quiz/goal evidence。",
+        "区分 actual/self-reported/estimated/unknown；保留 source。",
+        "提供 outcome query 给 Aurora/Experience Memory/Galaxy。"
+      ],
+      "acceptance": [
+        "Action complete 可选/必需 completion evidence；无法证明时不伪装 actual。",
+        "Outcome 能跨模块被查询且不重复计数。"
+      ],
+      "path_seeds": [
+        "backend/app/services/evidence",
+        "backend/app/models",
+        "backend/app/learning"
+      ],
+      "must_read": [
+        "02_core_systems/DATA_FLYWHEEL.md",
+        "02_core_systems/ACTION_AND_INTERVENTION_ENGINE.md"
+      ],
+      "risk": "high",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 2,
+      "gate": "V3-3",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "D-03",
+      "title": "Understanding 五维内部度量与校准",
+      "stream": "DATA",
+      "depends_on": [
+        "D-01",
+        "M-01"
+      ],
+      "required_locks": [
+        "analytics-truth",
+        "user-model"
+      ],
+      "objective": "替代神秘 understanding_depth 百分比，形成可诊断的五维内部指标。",
+      "work": [
+        "定义 coverage/correctness/scope_precision/freshness/utility 计算与缺失语义。",
+        "从五层用户模型/纠正/outcome取证，禁止模型自评分当事实。",
+        "UI 只消费可解释 summary，不直接显示未校准百分比。"
+      ],
+      "acceptance": [
+        "每一维有公式/数据源/边界；缺数据=unknown。",
+        "纠正与错误使用会合理降低相关维度。"
+      ],
+      "path_seeds": [
+        "backend/app/state_aggregator",
+        "backend/app/services/evidence",
+        "backend/app/aurora"
+      ],
+      "must_read": [
+        "02_core_systems/DATA_FLYWHEEL.md"
+      ],
+      "risk": "medium",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 1,
+      "gate": "V3-3",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "D-04",
+      "title": "真实 Analytics 接线并清除生产 Mock 缓存污染",
+      "stream": "DATA",
+      "depends_on": [
+        "B-02",
+        "D-01"
+      ],
+      "required_locks": [
+        "analytics-truth",
+        "mobile-analytics"
+      ],
+      "objective": "修复三个统计 provider 与其它 user-visible mock，真实 API 不可用就隐藏。",
+      "work": [
+        "按 B-02 lineage 接真实 route/DB；移除 mock 写 Isar 暖缓存。",
+        "demo/seed 数据用 namespace/flag 严格隔离。",
+        "增加 data provenance UI/diagnostic metadata。"
+      ],
+      "acceptance": [
+        "生产 user 统计无固定 0.95/4.2 等 mock；cache 不保存 demo fallback。",
+        "断网显示 last-known-real 或 unknown，注明时间。"
+      ],
+      "path_seeds": [
+        "mobile/lib/features",
+        "backend/app/services/analytics",
+        "backend/app/api"
+      ],
+      "must_read": [
+        "00_context/DECISIONS_V3.md",
+        "05_metrics_eval/METRIC_TREE.md"
+      ],
+      "risk": "high",
+      "resource_class": "HEAVY",
+      "reviewers_required": 2,
+      "gate": "V3-0",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "D-05",
+      "title": "Intervention → Outcome 分析管线",
+      "stream": "DATA",
+      "depends_on": [
+        "D-02",
+        "A-02"
+      ],
+      "required_locks": [
+        "analytics-intervention"
+      ],
+      "objective": "回答“什么帮助在什么情境有用”，形成 Experience Memory 数据基础。",
+      "work": [
+        "记录 intervention exposure/accept/edit/reject/start/outcome。",
+        "按 goal/friction/execution_mode 切片；禁止用 chat reply 当 outcome。",
+        "提供 conservative association summary 给 Experience projector。"
+      ],
+      "acceptance": [
+        "同一 intervention 不双计；未观察 outcome 标 censored/unknown。",
+        "能够生成 per-user/per-scope 的历史结果摘要。"
+      ],
+      "path_seeds": [
+        "backend/app/services/analytics",
+        "backend/app/learning",
+        "backend/app/aurora"
+      ],
+      "must_read": [
+        "02_core_systems/DATA_FLYWHEEL.md",
+        "02_core_systems/MEMORY_V3.md"
+      ],
+      "risk": "medium",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 1,
+      "gate": "V3-3",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "D-06",
+      "title": "WVPL 北极星查询与事实 JSON",
+      "stream": "DATA",
+      "depends_on": [
+        "D-02",
+        "D-04"
+      ],
+      "required_locks": [
+        "analytics-truth"
+      ],
+      "objective": "实现可审计的 North Star，不让模型计算数字。",
+      "work": [
+        "SQL/服务计算 active denominator、WVPL users、loops/user、outcome types、mode/proactive。",
+        "历史/seed/demo cohort 分离。",
+        "生成事实 JSON 供 Insights/报告，LLM 只解释。"
+      ],
+      "acceptance": [
+        "固定 fixture 得到确定结果；边界（跨周/重复 event/撤销 outcome）测试。",
+        "可在 staging 真实跑并追溯 event IDs。"
+      ],
+      "path_seeds": [
+        "backend/app/services/analytics",
+        "backend/app/api"
+      ],
+      "must_read": [
+        "05_metrics_eval/METRIC_TREE.md"
+      ],
+      "risk": "medium",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 1,
+      "gate": "V3-3",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "D-07",
+      "title": "Evidence-driven Insights 产品重构",
+      "stream": "DATA",
+      "depends_on": [
+        "D-03",
+        "D-04",
+        "D-05",
+        "U-05"
+      ],
+      "required_locks": [
+        "mobile-insights",
+        "analytics-truth"
+      ],
+      "objective": "把 Insights 从预测仪表盘变成有证据、可行动的 reflection。",
+      "work": [
+        "实现 fact→interpretation→uncertainty→evidence→implication 卡片。",
+        "优先 friction pattern/interventions that helped/goal progress。",
+        "删除/隐藏无定义能力分数和假精确预测。"
+      ],
+      "acceptance": [
+        "每条洞察可点来源；纠正错误解释后后续更新。",
+        "无数据时不生成人格结论。",
+        "Simulator 能理解至少 3 条 insight 意义。"
+      ],
+      "path_seeds": [
+        "mobile/lib/features/insights",
+        "mobile/lib/features/cognitive",
+        "backend/app/services/analytics"
+      ],
+      "must_read": [
+        "03_modules/INSIGHTS_COGNITIVE.md"
+      ],
+      "risk": "medium",
+      "resource_class": "HEAVY",
+      "reviewers_required": 1,
+      "gate": "V3-3",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "D-08",
+      "title": "数据飞轮纵向证明与 Regression Dashboard",
+      "stream": "DATA",
+      "depends_on": [
+        "D-06",
+        "D-07",
+        "A-08"
+      ],
+      "required_locks": [
+        "analytics-intervention"
+      ],
+      "objective": "用多 session 证据证明数据→理解→决策→outcome 闭环，而不是模块列表。",
+      "work": [
+        "跑至少 10 Persona 的 Day0/Day3/Day7 模拟。",
+        "输出 understanding dims、memory use、intervention、outcome、personalization paired result。",
+        "生成 regression dashboard/JSON，用于 Q final gate。"
+      ],
+      "acceptance": [
+        "每个 Persona 至少一条 correction 或 plan change 后产生可解释 future adaptation。",
+        "错误/无效个性化保留在结果，不筛掉。"
+      ],
+      "path_seeds": [
+        "scripts/devtools",
+        "backend/app/services/analytics"
+      ],
+      "must_read": [
+        "05_metrics_eval/PERSONALIZATION_EVAL.md",
+        "02_core_systems/DATA_FLYWHEEL.md"
+      ],
+      "risk": "medium",
+      "resource_class": "HEAVY",
+      "reviewers_required": 1,
+      "gate": "V3-3",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "M-01",
+      "title": "Memory V3 实体映射与 Epistemic Types",
+      "stream": "MEMORY",
+      "depends_on": [
+        "B-06"
+      ],
+      "required_locks": [
+        "memory-semantics"
+      ],
+      "objective": "在现有 memory/五层用户模型上落实 FACT/PREFERENCE/OBSERVATION/HYPOTHESIS/EXPERIENCE 与 provenance，不建第二库。",
+      "work": [
+        "将现有字段/表映射 V3 record；缺字段通过最小迁移或派生补齐。",
+        "区分 transient current state，不把每轮 context 写长期 memory。",
+        "建立 status/supersede/revoke/epoch contract。"
+      ],
+      "acceptance": [
+        "现有数据可向后兼容或有迁移；Inference 不覆盖 fact。",
+        "Memory record 均可指出 source/scope/status。"
+      ],
+      "path_seeds": [
+        "backend/app/working_memory",
+        "backend/app/services/evidence",
+        "backend/app/models",
+        "backend/app/learning"
+      ],
+      "must_read": [
+        "02_core_systems/MEMORY_V3.md",
+        "02_core_systems/USER_WORLD_MODEL.md"
+      ],
+      "risk": "high",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 2,
+      "gate": "V3-2",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "M-02",
+      "title": "Personalized Storage Gate — 该不该记",
+      "stream": "MEMORY",
+      "depends_on": [
+        "M-01"
+      ],
+      "required_locks": [
+        "memory-write-policy"
+      ],
+      "objective": "减少瞬时噪声与错误长期化，只把未来可能改变 decision 的内容升级。",
+      "work": [
+        "建立规则+fast semantic gate，输出 store/current_state/event/ignore/confirm。",
+        "敏感/高影响 hypothesis 需要 confirmation。",
+        "为 transient sessions、重复信息、一次性时间约束设计 case。"
+      ],
+      "acceptance": [
+        "50+ 写入场景 precision/recall 评测；瞬时 today constraint 不默认 global。",
+        "gate 失败不会阻断聊天主链。"
+      ],
+      "path_seeds": [
+        "backend/app/working_memory",
+        "backend/app/services/evidence",
+        "backend/app/orchestration"
+      ],
+      "must_read": [
+        "02_core_systems/MEMORY_V3.md",
+        "09_research/FRONTIER_RESEARCH.md"
+      ],
+      "risk": "medium",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 1,
+      "gate": "V3-2",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "M-03",
+      "title": "Scope/TTL/Purpose 确定性预筛",
+      "stream": "MEMORY",
+      "depends_on": [
+        "M-01"
+      ],
+      "required_locks": [
+        "memory-retrieval"
+      ],
+      "objective": "LLM 前先用确定规则砍掉不合法 Memory。",
+      "work": [
+        "实现 user/status/revoked/scope/TTL/purpose/sensitivity filters。",
+        "定义 goal/domain/task_type/global/time-window compatibility。",
+        "输出 filter reason metrics。"
+      ],
+      "acceptance": [
+        "wrong-user/revoked/expired candidate 在 semantic retrieval 前为 0。",
+        "单测覆盖 scope lattice 与 today-only。"
+      ],
+      "path_seeds": [
+        "backend/app/working_memory",
+        "backend/app/services/personalization"
+      ],
+      "must_read": [
+        "02_core_systems/MEMORY_V3.md"
+      ],
+      "risk": "high",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 2,
+      "gate": "V3-2",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "M-04",
+      "title": "Memory Conflict Resolver 接线",
+      "stream": "MEMORY",
+      "depends_on": [
+        "M-03",
+        "D-01"
+      ],
+      "required_locks": [
+        "memory-semantics",
+        "conflict-resolver"
+      ],
+      "objective": "让多模块/多时间证据显式仲裁。",
+      "work": [
+        "实现 priority tuple 与 TEMPORAL/SCOPE/SOURCE/INFERENCE 类别。",
+        "将现有 ConflictResolverService 雏形复用/扩展。",
+        "高信息增益且不确定时输出 clarification，不静默选。"
+      ],
+      "acceptance": [
+        "矛盾测试 ≥30 组；explicit correction 胜过旧 inference；scope difference 可共存。",
+        "生成 resolution record 与 provenance。"
+      ],
+      "path_seeds": [
+        "backend/app/services",
+        "backend/app/aurora"
+      ],
+      "must_read": [
+        "02_core_systems/CONFLICT_RESOLVER.md"
+      ],
+      "risk": "high",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 2,
+      "gate": "V3-2",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "M-05",
+      "title": "Over-personalization Self-ReCheck",
+      "stream": "MEMORY",
+      "depends_on": [
+        "M-03",
+        "C-03"
+      ],
+      "required_locks": [
+        "memory-retrieval",
+        "ai-eval"
+      ],
+      "objective": "在合法召回后判断“该不该用/该不该说出来”。",
+      "work": [
+        "实现 relevance/necessity/repetition/sycophancy 检查，可 rule+fast model。",
+        "区分 use_for_internal_decision 与 surface_to_user。",
+        "构建 OP-Bench 风格内部 cases。"
+      ],
+      "acceptance": [
+        "overpersonalization eval ≤5% 目标；无关 memory 可召回但不进入输出。",
+        "不因过滤导致合法个性化大幅下降，报告 tradeoff。"
+      ],
+      "path_seeds": [
+        "backend/app/working_memory",
+        "backend/app/orchestration"
+      ],
+      "must_read": [
+        "02_core_systems/MEMORY_V3.md",
+        "05_metrics_eval/PERSONALIZATION_EVAL.md"
+      ],
+      "risk": "medium",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 1,
+      "gate": "V3-2",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "M-06",
+      "title": "Experience Memory Projector",
+      "stream": "MEMORY",
+      "depends_on": [
+        "M-02",
+        "D-05"
+      ],
+      "required_locks": [
+        "experience-memory"
+      ],
+      "objective": "从真实 intervention/outcome 投影“何种帮助曾有效”，不直接形成因果宣称。",
+      "work": [
+        "定义 situation signature、intervention、mode、outcome、feedback、evidence count。",
+        "单次结果低权；重复证据提升 strength；失败同样保留。",
+        "提供 Context retrieval 接口。"
+      ],
+      "acceptance": [
+        "同一用户相似 context 能召回历史有效/无效干预。",
+        "没有 outcome 的 intervention 不标 effective。"
+      ],
+      "path_seeds": [
+        "backend/app/learning",
+        "backend/app/services/evidence",
+        "backend/app/aurora"
+      ],
+      "must_read": [
+        "02_core_systems/MEMORY_V3.md",
+        "02_core_systems/DATA_FLYWHEEL.md"
+      ],
+      "risk": "medium",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 1,
+      "gate": "V3-3",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "M-07",
+      "title": "Correction/Delete/Revocation + Memory Epoch 终局",
+      "stream": "MEMORY",
+      "depends_on": [
+        "M-01"
+      ],
+      "required_locks": [
+        "memory-semantics",
+        "privacy-delete"
+      ],
+      "objective": "保证用户纠正/删除贯穿派生状态、缓存和后续检索。",
+      "work": [
+        "统一 correction/revoke/supersede/delete 事件。",
+        "bump memory_epoch 并发布 invalidation；derived profile/summary 重算或标 stale。",
+        "处理 in-flight run 与 cache。"
+      ],
+      "acceptance": [
+        "删除后 retrieval/cache/context 新请求 0 使用；旧 derived summary 不复活。",
+        "双设备/重试/重复删除幂等；审计保留不暴露内容。"
+      ],
+      "path_seeds": [
+        "backend/app/working_memory",
+        "backend/app/services/evidence",
+        "backend/app/aurora",
+        "backend/gateway"
+      ],
+      "must_read": [
+        "02_core_systems/MEMORY_V3.md",
+        "08_operations/SECURITY_PRIVACY.md"
+      ],
+      "risk": "critical",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 2,
+      "gate": "V3-2",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "M-08",
+      "title": "Memory Provenance/Scope 用户 API",
+      "stream": "MEMORY",
+      "depends_on": [
+        "M-04",
+        "M-07"
+      ],
+      "required_locks": [
+        "memory-api"
+      ],
+      "objective": "为 U-03 提供真实可修改来源，不让 UI 读内部 ORM。",
+      "work": [
+        "建立 list/detail/source/scope/update/revoke API；权限严格 user。",
+        "为 inference/observation/experience 返回用户语言所需 metadata。",
+        "提供 Why-this lookup by memory_use_receipt。"
+      ],
+      "acceptance": [
+        "API 不泄露其他用户；source 不存在时诚实 unknown。",
+        "修改/删除触发 epoch/invalidation。"
+      ],
+      "path_seeds": [
+        "backend/app/api",
+        "backend/app/services"
+      ],
+      "must_read": [
+        "03_modules/MEMORY_AURORA_UI.md"
+      ],
+      "risk": "high",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 2,
+      "gate": "V3-2",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "M-09",
+      "title": "Memory Longitudinal / Adversarial 评测套件",
+      "stream": "MEMORY",
+      "depends_on": [
+        "M-05",
+        "M-06",
+        "M-07"
+      ],
+      "required_locks": [
+        "memory-eval"
+      ],
+      "objective": "把正确记忆、正确不用、纠正、删除、偏好变化固化成回归门禁。",
+      "work": [
+        "构建 ≥80 multi-session cases，覆盖 10 Persona。",
+        "paired no-history baseline；记录 invalid use/overpersonalization/uplift。",
+        "至少 5 个关键 case 真模型重复 5 次。"
+      ],
+      "acceptance": [
+        "valid-use precision≥95% 目标；invalid use=0；overpersonalization≤5%。",
+        "结果 machine-readable；失败不会被平均值掩盖。"
+      ],
+      "path_seeds": [
+        "tests",
+        "scripts/devtools"
+      ],
+      "must_read": [
+        "05_metrics_eval/PERSONALIZATION_EVAL.md"
+      ],
+      "risk": "medium",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 1,
+      "gate": "V3-2",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "M-10",
+      "title": "Memory/Aurora UI 全链集成",
+      "stream": "MEMORY",
+      "depends_on": [
+        "M-08",
+        "U-03",
+        "M-09"
+      ],
+      "required_locks": [
+        "memory-ui"
+      ],
+      "objective": "将后台正确语义真正变成用户控制与信任体验。",
+      "work": [
+        "接 U-03 到真实 API；从 chat/home why receipt 深链到对应理解。",
+        "修改/删除后自动重新计算当前 proposal 是否受影响。",
+        "视觉与 copy 终审。"
+      ],
+      "acceptance": [
+        "GJ08/GJ09 三端通过；用户无需知道“Memory”内部结构。",
+        "删除后当前/未来个性化正确变化。"
+      ],
+      "path_seeds": [
+        "mobile/lib/features/memory",
+        "mobile/lib/features/aurora"
+      ],
+      "must_read": [
+        "03_modules/MEMORY_AURORA_UI.md"
+      ],
+      "risk": "high",
+      "resource_class": "HEAVY",
+      "reviewers_required": 2,
+      "gate": "V3-4",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "C-01",
+      "title": "DecisionContext / ContextPack 契约冻结",
+      "stream": "CONTEXT",
+      "depends_on": [
+        "B-06"
+      ],
+      "required_locks": [
+        "context-contract"
+      ],
+      "objective": "定义 Aurora/Router/Planner 共同消费的最小高信号 Context 契约。",
+      "work": [
+        "映射当前 UserStateV1/context_builder；优先 extend 现有 contract。",
+        "字段携带 ref/type/scope/version/why_included。",
+        "proto/DTO 需要变化时遵循单一生成链。"
+      ],
+      "acceptance": [
+        "Python/Go/Dart 如需消费则 parity guard 通过。",
+        "不存在 parallel UserContextV3 真源。"
+      ],
+      "path_seeds": [
+        "backend/app/orchestration",
+        "backend/app/state_aggregator",
+        "proto"
+      ],
+      "must_read": [
+        "02_core_systems/CONTEXT_COMPILER_V3.md",
+        "00_context/ENTITY_MAP.md"
+      ],
+      "risk": "high",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 2,
+      "gate": "V3-2",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "C-02",
+      "title": "State/Memory/Knowledge/Events 四分适配层",
+      "stream": "CONTEXT",
+      "depends_on": [
+        "C-01",
+        "M-01",
+        "D-01"
+      ],
+      "required_locks": [
+        "context-builder"
+      ],
+      "objective": "Context Builder 明确来源类别，阻止 profile/RAG/history 混成一段 prose。",
+      "work": [
+        "实现/重构 source adapters；每类可独立禁用/计量。",
+        "history 仅最近必要消息/compaction，不替代 state。",
+        "seed/demo source 标记。"
+      ],
+      "acceptance": [
+        "ContextPack 每 item source type 正确；同名字段无静默覆盖。",
+        "可在 trace 看四类 token/项数。"
+      ],
+      "path_seeds": [
+        "backend/app/orchestration",
+        "backend/app/state_aggregator"
+      ],
+      "must_read": [
+        "02_core_systems/USER_WORLD_MODEL.md"
+      ],
+      "risk": "medium",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 1,
+      "gate": "V3-2",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "C-03",
+      "title": "Context 硬过滤→语义检索 Pipeline",
+      "stream": "CONTEXT",
+      "depends_on": [
+        "C-02",
+        "M-03"
+      ],
+      "required_locks": [
+        "context-retrieval"
+      ],
+      "objective": "在 embedding/LLM 前应用 identity/scope/TTL/purpose 等 hard filters。",
+      "work": [
+        "将 Memory filter 与 knowledge permission filter 放到 candidate pool 前。",
+        "只对合法候选 rerank；输出 reasons。",
+        "性能测试 candidate 规模。"
+      ],
+      "acceptance": [
+        "invalid candidate 绝不送给 model；过滤后 token/latency 可观测。",
+        "1000+ memory synthetic 下仍稳定。"
+      ],
+      "path_seeds": [
+        "backend/app/orchestration",
+        "backend/app/working_memory",
+        "backend/app/services"
+      ],
+      "must_read": [
+        "02_core_systems/CONTEXT_COMPILER_V3.md"
+      ],
+      "risk": "high",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 2,
+      "gate": "V3-2",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "C-04",
+      "title": "RAG Placement/Citation/Version 正确性",
+      "stream": "CONTEXT",
+      "depends_on": [
+        "C-02",
+        "E-05"
+      ],
+      "required_locks": [
+        "rag-context"
+      ],
+      "objective": "解决 V2.5 “材料已注入但模型间歇不引用”，优化真正使用而非 presence。",
+      "work": [
+        "对 qwen3.8-flash 做位置/格式/引用提示 A/B；紧贴用户问题或工具式 JIT。",
+        "记录 retrieved vs cited vs answer-supported。",
+        "版本/删除/跨用户过滤。"
+      ],
+      "acceptance": [
+        "mr4 类案例稳定达到定义阈值（至少 20 次统计）；citation faithfulness 通过。",
+        "不能通过强迫每个回答引用无关材料提高指标。"
+      ],
+      "path_seeds": [
+        "backend/app/orchestration",
+        "backend/app/services/rag",
+        "backend/app/services"
+      ],
+      "must_read": [
+        "02_core_systems/RAG_KNOWLEDGE.md"
+      ],
+      "risk": "medium",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 1,
+      "gate": "V3-2",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "C-05",
+      "title": "Conflict Resolver 注入 Context 与 Clarification",
+      "stream": "CONTEXT",
+      "depends_on": [
+        "C-02",
+        "M-04"
+      ],
+      "required_locks": [
+        "context-builder",
+        "conflict-resolver"
+      ],
+      "objective": "让模型知道哪些事实已解决、哪些仍不确定，并避免把冲突文本全部塞进去。",
+      "work": [
+        "ContextPack 传 resolved facts + unresolved conflicts + ask-if-material flag。",
+        "SufficiencyChecker 只对会改变 decision 的冲突提问。",
+        "记录 resolution refs。"
+      ],
+      "acceptance": [
+        "30 冲突场景不出现两个相反偏好同时当真。",
+        "不必要 clarification 率在 eval 中下降。"
+      ],
+      "path_seeds": [
+        "backend/app/orchestration",
+        "backend/app/aurora"
+      ],
+      "must_read": [
+        "02_core_systems/CONFLICT_RESOLVER.md"
+      ],
+      "risk": "medium",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 1,
+      "gate": "V3-2",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "C-06",
+      "title": "Context Budget / JIT / Compaction",
+      "stream": "CONTEXT",
+      "depends_on": [
+        "C-03",
+        "C-04"
+      ],
+      "required_locks": [
+        "context-builder"
+      ],
+      "objective": "控制长程污染与成本，按 decision utility 分配 token。",
+      "work": [
+        "建立 tier/decision-type budget，不沿用单一 6000 token 机械上限。",
+        "长聊天 compaction 保留 decisions/corrections/unresolved/action results。",
+        "大型 knowledge 仅 references+top chunks，Agent 可 JIT fetch。"
+      ],
+      "acceptance": [
+        "长会话回归不因 compaction 丢 correction/goal state。",
+        "token 使用与质量/延迟有对比报告。"
+      ],
+      "path_seeds": [
+        "backend/app/orchestration",
+        "backend/app/services"
+      ],
+      "must_read": [
+        "02_core_systems/CONTEXT_COMPILER_V3.md",
+        "09_research/FRONTIER_RESEARCH.md"
+      ],
+      "risk": "medium",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 1,
+      "gate": "V3-2",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "C-07",
+      "title": "Context Cache 版本/Memory Epoch/Policy Version 正确性",
+      "stream": "CONTEXT",
+      "depends_on": [
+        "C-03",
+        "M-07"
+      ],
+      "required_locks": [
+        "context-cache"
+      ],
+      "objective": "缓存不允许继续使用删除/纠正前的信息。",
+      "work": [
+        "cache key 加 object versions/memory_epoch/policy_version/knowledge version。",
+        "update/delete/permission change 失效。",
+        "write/correction intent 禁 stale text cache。"
+      ],
+      "acceptance": [
+        "删除/纠正后 0 stale reuse；跨 user 0 collision。",
+        "cache hit metrics 保留，性能不显著退化。"
+      ],
+      "path_seeds": [
+        "backend/app/orchestration",
+        "backend/app/core",
+        "backend/gateway"
+      ],
+      "must_read": [
+        "02_core_systems/CONTEXT_COMPILER_V3.md"
+      ],
+      "risk": "critical",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 2,
+      "gate": "V3-2",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "C-08",
+      "title": "Context Observability + Decision Utility Eval",
+      "stream": "CONTEXT",
+      "depends_on": [
+        "C-05",
+        "C-06",
+        "C-07"
+      ],
+      "required_locks": [
+        "context-eval"
+      ],
+      "objective": "知道“为什么这次模型看了这些”，并验证少而对。",
+      "work": [
+        "记录候选→filter→rerank→inject 数、tokens、reasons。",
+        "做 ablation：no memory/no RAG/no outcome/full context。",
+        "定位 context bloat 和 harmful context。"
+      ],
+      "acceptance": [
+        "至少 50 场景有 utility/latency/token 结果；错误 Context 可追溯 source_ref。",
+        "不记录敏感正文到日志。"
+      ],
+      "path_seeds": [
+        "backend/app/orchestration",
+        "scripts/devtools"
+      ],
+      "must_read": [
+        "05_metrics_eval/EVAL_PROTOCOL.md"
+      ],
+      "risk": "medium",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 1,
+      "gate": "V3-2",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "X-01",
+      "title": "ActionPlan V3 契约：Outcome/Execution/Cognitive Ownership",
+      "stream": "ACTION",
+      "depends_on": [
+        "B-06"
+      ],
+      "required_locks": [
+        "action-contract"
+      ],
+      "objective": "在现有 Task/Plan/Proposal 上增加 V3 语义，不重建 task system。",
+      "work": [
+        "定义 desired_outcome/smallest_useful_step/completion_evidence/execution_mode/cognitive_ownership/source refs/risk。",
+        "映射到已有 card/task protocol；兼容旧记录。",
+        "契约变更有 schema/proto migration tests。"
+      ],
+      "acceptance": [
+        "Human/Agent/Hybrid 可表达；旧 task 不破。",
+        "不能仅自然语言携带关键字段。"
+      ],
+      "path_seeds": [
+        "backend/app/models",
+        "backend/app/services/card_protocol",
+        "proto",
+        "mobile/lib/features/task"
+      ],
+      "must_read": [
+        "02_core_systems/ACTION_AND_INTERVENTION_ENGINE.md"
+      ],
+      "risk": "high",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 2,
+      "gate": "V3-2",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "X-02",
+      "title": "Human/Agent/Hybrid Allocation Policy",
+      "stream": "ACTION",
+      "depends_on": [
+        "X-01"
+      ],
+      "required_locks": [
+        "action-policy"
+      ],
+      "objective": "实现 delegation rubric，而不是模型随意“我来帮你做”。",
+      "work": [
+        "根据 cognitive ownership/tool advantage/risk/embodiment/privacy/confidence/time/user preference 输出 mode。",
+        "规则处理 high-risk/explicit user intent，LLM 处理语义灰区。",
+        "记录 why 与 confidence。"
+      ],
+      "acceptance": [
+        "≥60 scenario blind rubric ≥90% target；high-risk auto=0。",
+        "学习目标不会默认 Agent 写完整答案。"
+      ],
+      "path_seeds": [
+        "backend/app/aurora",
+        "backend/app/orchestration",
+        "backend/app/services"
+      ],
+      "must_read": [
+        "02_core_systems/HUMAN_AGENT_HYBRID.md"
+      ],
+      "risk": "high",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 2,
+      "gate": "V3-2",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "X-03",
+      "title": "Action Proposal Diff/Authorization 统一适配",
+      "stream": "ACTION",
+      "depends_on": [
+        "X-01"
+      ],
+      "required_locks": [
+        "task-core",
+        "command-protocol"
+      ],
+      "objective": "将 V2 可信写入协议推广到 V3 Action，复用现有 receipt/idempotency。",
+      "work": [
+        "统一 proposal→approve→validate version/permission→commit→receipt。",
+        "支持 proposal diff、expiry、conflict、cancel。",
+        "所有入口（chat/task/Aurora）走同权威 command path。"
+      ],
+      "acceptance": [
+        "重复确认不重复写；版本冲突不覆盖；未授权不执行。",
+        "UI 可得到 authoritative receipt。"
+      ],
+      "path_seeds": [
+        "backend/app/services",
+        "backend/app/api",
+        "backend/gateway"
+      ],
+      "must_read": [
+        "02_core_systems/ACTION_AND_INTERVENTION_ENGINE.md"
+      ],
+      "risk": "critical",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 2,
+      "gate": "V3-2",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "X-04",
+      "title": "Human Action Flow + Completion Evidence",
+      "stream": "ACTION",
+      "depends_on": [
+        "X-03"
+      ],
+      "required_locks": [
+        "task-core"
+      ],
+      "objective": "让用户执行的 action 有清晰开始/完成/evidence，而不是 Agent 对话结束。",
+      "work": [
+        "实现/修复 start/complete/abandon/rescope。",
+        "完成时按 action 类型获取 artifact/self-report/test evidence。",
+        "Focus/Calendar 作为 optional capability。"
+      ],
+      "acceptance": [
+        "GJ05 完整；重开保留状态；completion 无 evidence 时类型正确。",
+        "实际时长不从 estimated 回填。"
+      ],
+      "path_seeds": [
+        "backend/app/services",
+        "mobile/lib/features/task",
+        "mobile/lib/features/focus"
+      ],
+      "must_read": [
+        "03_modules/GOAL_TASK_PLAN_CALENDAR_FOCUS.md"
+      ],
+      "risk": "medium",
+      "resource_class": "HEAVY",
+      "reviewers_required": 1,
+      "gate": "V3-2",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "X-05",
+      "title": "Unified Agent Run 持久化状态机",
+      "stream": "ACTION",
+      "depends_on": [
+        "X-01",
+        "D-01"
+      ],
+      "required_locks": [
+        "agent-runtime"
+      ],
+      "objective": "统一长任务 run_id/state，不让 App 内存或 OpenClaw 成第二真源。",
+      "work": [
+        "映射已有 agent/execution/openclaw runtime；复用可用表/ledger。",
+        "实现 QUEUED/RUNNING/AWAITING_USER/EXECUTING/terminal。",
+        "run state 持久化，WebSocket 仅通知。"
+      ],
+      "acceptance": [
+        "App kill/reopen 可查询 run；worker restart 可恢复/明确 terminal。",
+        "非法状态迁移测试。"
+      ],
+      "path_seeds": [
+        "backend/app/agents",
+        "backend/app/services",
+        "backend/app/models",
+        "mobile/lib/features/openclaw"
+      ],
+      "must_read": [
+        "02_core_systems/AGENT_RUNTIME.md"
+      ],
+      "risk": "critical",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 2,
+      "gate": "V3-2",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "X-06",
+      "title": "Tool Registry Permission/Idempotency/Budget",
+      "stream": "ACTION",
+      "depends_on": [
+        "X-05"
+      ],
+      "required_locks": [
+        "agent-runtime",
+        "permission"
+      ],
+      "objective": "Agent 只能通过有能力边界的工具执行。",
+      "work": [
+        "统一 tool metadata：read/write/risk/reversible/required permission/cost。",
+        "side effect 强制 idempotency key + permission decision。",
+        "run budget token/cost/time/tool calls。"
+      ],
+      "acceptance": [
+        "prompt injection 不能扩大工具权限；duplicate call 不重复 side effect。",
+        "budget 超限进入明确状态而非无限执行。"
+      ],
+      "path_seeds": [
+        "backend/app/tools",
+        "backend/app/agents",
+        "backend/app/core"
+      ],
+      "must_read": [
+        "02_core_systems/AGENT_RUNTIME.md",
+        "08_operations/SECURITY_PRIVACY.md"
+      ],
+      "risk": "critical",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 2,
+      "gate": "V3-2",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "X-07",
+      "title": "Hybrid Handoff / Awaiting User / Resume",
+      "stream": "ACTION",
+      "depends_on": [
+        "X-02",
+        "X-05",
+        "U-04"
+      ],
+      "required_locks": [
+        "agent-runtime",
+        "mobile-action"
+      ],
+      "objective": "实现真正“Agent做一部分→轮到用户→继续”的长程协作。",
+      "work": [
+        "run step 标 owner + completion condition。",
+        "Agent 产物持久化；用户确认/编辑触发 resume。",
+        "通知/重开恢复到 awaiting step。"
+      ],
+      "acceptance": [
+        "GJ07 三端通过；用户操作两次不会 resume 两次。",
+        "取消/过期明确。"
+      ],
+      "path_seeds": [
+        "backend/app/agents",
+        "mobile/lib/features/chat",
+        "mobile/lib/features/task"
+      ],
+      "must_read": [
+        "02_core_systems/HUMAN_AGENT_HYBRID.md"
+      ],
+      "risk": "high",
+      "resource_class": "HEAVY",
+      "reviewers_required": 2,
+      "gate": "V3-2",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "X-08",
+      "title": "Outcome Capture 与 Goal State 回写",
+      "stream": "ACTION",
+      "depends_on": [
+        "X-04",
+        "X-05",
+        "D-02"
+      ],
+      "required_locks": [
+        "outcome-ledger",
+        "task-core"
+      ],
+      "objective": "无论 Human/Agent/Hybrid，完成后统一产生 Outcome。",
+      "work": [
+        "将 artifact/tool receipt/user evidence 映射 Outcome Ledger。",
+        "更新 Goal/Milestone/Experience/Galaxy 通过事件，不双写多个真源。",
+        "partial/failed outcome 保留。"
+      ],
+      "acceptance": [
+        "GJ03/GJ05/GJ06 产生可查询 outcome；WVPL 可计数。",
+        "失败不点亮成果。"
+      ],
+      "path_seeds": [
+        "backend/app/services",
+        "backend/gateway/internal/cqrs"
+      ],
+      "must_read": [
+        "02_core_systems/DATA_FLYWHEEL.md"
+      ],
+      "risk": "high",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 2,
+      "gate": "V3-3",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "X-09",
+      "title": "Agent Failure/Cancel/Unknown Outcome/Recovery",
+      "stream": "ACTION",
+      "depends_on": [
+        "X-05",
+        "X-06"
+      ],
+      "required_locks": [
+        "agent-runtime"
+      ],
+      "objective": "把生产 Agent 最难的失败语义做对。",
+      "work": [
+        "模拟 provider timeout/tool timeout/worker kill/network partition/partial side effect。",
+        "定义 retry vs reconcile vs unknown outcome；支持 compensation hints。",
+        "客户端显示真实状态。"
+      ],
+      "acceptance": [
+        "false success=0；duplicate side effect=0。",
+        "20+ chaos cases terminal/recoverable state 正确。"
+      ],
+      "path_seeds": [
+        "backend/app/agents",
+        "backend/app/workers",
+        "mobile/lib"
+      ],
+      "must_read": [
+        "02_core_systems/AGENT_RUNTIME.md",
+        "04_ux/STATE_MATRIX.md"
+      ],
+      "risk": "critical",
+      "resource_class": "HEAVY",
+      "reviewers_required": 2,
+      "gate": "V3-5",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "X-10",
+      "title": "Action Engine E2E Evaluation",
+      "stream": "ACTION",
+      "depends_on": [
+        "X-07",
+        "X-08",
+        "X-09",
+        "A-04"
+      ],
+      "required_locks": [
+        "action-eval"
+      ],
+      "objective": "证明 Human/Agent/Hybrid、授权、run、outcome 在真实产品闭环工作。",
+      "work": [
+        "跑 ≥60 allocation/action scenarios + GJ04-07。",
+        "记录 decision, execution, result, outcome, latency, cost。",
+        "保留失败/低分 case。"
+      ],
+      "acceptance": [
+        "allocation ≥90% target；high-risk auto=0；false success=0。",
+        "Simulator 无需开发者介入完成核心 case。"
+      ],
+      "path_seeds": [
+        "scripts/devtools",
+        "tests_e2e"
+      ],
+      "must_read": [
+        "05_metrics_eval/EVAL_PROTOCOL.md"
+      ],
+      "risk": "medium",
+      "resource_class": "HEAVY",
+      "reviewers_required": 1,
+      "gate": "V3-5",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "A-01",
+      "title": "AuroraDecision 契约与现有 Runtime 映射",
+      "stream": "AURORA",
+      "depends_on": [
+        "B-06",
+        "C-01",
+        "X-01"
+      ],
+      "required_locks": [
+        "aurora-contract"
+      ],
+      "objective": "将 Aurora 从元数据 sidecar 升级为显式控制决策，但复用现有 20+ 组件。",
+      "work": [
+        "审计 backend/app/aurora decision_loop/policies/core_session 等，映射 DecisionContext→AuroraDecision。",
+        "定义 intervention/mode/rationale refs/uncertainty/tier/no_action。",
+        "新能力三态 kill switch。"
+      ],
+      "acceptance": [
+        "现有聊天不因 shadow Aurora 退化；shadow/live 可对比。",
+        "契约可追踪到 source refs。"
+      ],
+      "path_seeds": [
+        "backend/app/aurora",
+        "backend/app/orchestration"
+      ],
+      "must_read": [
+        "02_core_systems/AURORA_V3.md"
+      ],
+      "risk": "high",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 2,
+      "gate": "V3-2",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "A-02",
+      "title": "Intervention Catalog + Policy Engine V1",
+      "stream": "AURORA",
+      "depends_on": [
+        "A-01"
+      ],
+      "required_locks": [
+        "aurora-policy"
+      ],
+      "objective": "把 clarify/explain/retrieve/rescope/split/schedule/practice/review/delegate/execute/coexecute/reflect/connect/pause/remind/abstain/no_action 做成可评测选择空间。",
+      "work": [
+        "映射现有 adaptive_replanner/predicted_reply/policies。",
+        "规则先过滤非法 intervention；LLM 只在合法集合选/参数化。",
+        "记录 policy version 与选择理由。"
+      ],
+      "acceptance": [
+        "每个 catalog item 有 capability/permission/expected outcome；无“字符串自由动作”。",
+        "至少 30 基础 scenario 可输出合法决策。"
+      ],
+      "path_seeds": [
+        "backend/app/aurora",
+        "backend/app/orchestration"
+      ],
+      "must_read": [
+        "02_core_systems/AURORA_V3.md"
+      ],
+      "risk": "medium",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 1,
+      "gate": "V3-2",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "A-03",
+      "title": "Friction Diagnosis + Sufficiency / One Best Question",
+      "stream": "AURORA",
+      "depends_on": [
+        "A-02",
+        "C-03"
+      ],
+      "required_locks": [
+        "aurora-policy"
+      ],
+      "objective": "准确区分卡点并减少问卷式追问。",
+      "work": [
+        "实现 friction taxonomy schema 与 evidence。",
+        "用信息增益/decision sensitivity 选是否问、问哪一个。",
+        "UNKNOWN 时不假诊断。"
+      ],
+      "acceptance": [
+        "20 canonical stuck scenarios ≥18 intervention/diagnosis 合理；不必要澄清受控。",
+        "同一句“做不下去”在不同 Context 产生不同处理。"
+      ],
+      "path_seeds": [
+        "backend/app/aurora",
+        "backend/app/orchestration"
+      ],
+      "must_read": [
+        "01_product/USER_SEGMENTS_AND_JTBD.md"
+      ],
+      "risk": "medium",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 1,
+      "gate": "V3-2",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "A-04",
+      "title": "Aurora Human/Agent/Hybrid 联合决策",
+      "stream": "AURORA",
+      "depends_on": [
+        "A-02",
+        "X-02"
+      ],
+      "required_locks": [
+        "aurora-policy",
+        "action-policy"
+      ],
+      "objective": "把 intervention 与 execution allocation 联合，而非两个系统各自猜。",
+      "work": [
+        "决策输出 intervention + mode + cognitive ownership。",
+        "对学习/创作/工具任务建立 canonical examples。",
+        "用户 explicit delegation/keep-for-me 优先。"
+      ],
+      "acceptance": [
+        "paired cases 不出现 intervention 合理但执行权错误。",
+        "high-risk auto=0。"
+      ],
+      "path_seeds": [
+        "backend/app/aurora",
+        "backend/app/orchestration"
+      ],
+      "must_read": [
+        "02_core_systems/HUMAN_AGENT_HYBRID.md"
+      ],
+      "risk": "high",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 2,
+      "gate": "V3-2",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "A-05",
+      "title": "Bounded Policy Patches / Adaptive Preferences",
+      "stream": "AURORA",
+      "depends_on": [
+        "A-02",
+        "M-06",
+        "D-05"
+      ],
+      "required_locks": [
+        "aurora-policy",
+        "experience-memory"
+      ],
+      "objective": "让 Aurora 可从 outcome 更新白名单策略，而非改系统 Prompt/代码。",
+      "work": [
+        "定义 patch surfaces：granularity/clarification/explanation/intervention preference/proactive cadence/allocation preference。",
+        "candidate→evidence→confirm(if needed)→active→expire/revoke。",
+        "policy version 进入 Context/cache key。"
+      ],
+      "acceptance": [
+        "非法 patch field 被拒绝；用户纠正可撤销。",
+        "同 scope 历史有效 intervention 可改变 ranking，且有 evidence refs。"
+      ],
+      "path_seeds": [
+        "backend/app/aurora",
+        "backend/app/learning"
+      ],
+      "must_read": [
+        "02_core_systems/AURORA_V3.md"
+      ],
+      "risk": "high",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 2,
+      "gate": "V3-3",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "A-06",
+      "title": "Aurora “Why this?” / Calibration Receipt",
+      "stream": "AURORA",
+      "depends_on": [
+        "A-03",
+        "M-08",
+        "U-03"
+      ],
+      "required_locks": [
+        "aurora-receipt"
+      ],
+      "objective": "让用户感知理解与可纠正性，而不是“AI说自己懂”。",
+      "work": [
+        "生成短 rationale summary + memory/knowledge refs + uncertainties。",
+        "receipt 支持 not relevant/wrong/change scope/delete。",
+        "避免每条回复都强制展示历史。"
+      ],
+      "acceptance": [
+        "GJ08 用户可从建议直接纠偏；receipt 与真实 Context 一致。",
+        "不泄露 hidden chain-of-thought。"
+      ],
+      "path_seeds": [
+        "backend/app/aurora",
+        "mobile/lib/features/aurora",
+        "mobile/lib/features/chat"
+      ],
+      "must_read": [
+        "02_core_systems/AURORA_V3.md",
+        "01_product/PRODUCT_LANGUAGE.md"
+      ],
+      "risk": "high",
+      "resource_class": "HEAVY",
+      "reviewers_required": 2,
+      "gate": "V3-4",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "A-07",
+      "title": "Comeback + Low-stimulation Relationship Policies",
+      "stream": "AURORA",
+      "depends_on": [
+        "A-02",
+        "U-02"
+      ],
+      "required_locks": [
+        "aurora-policy",
+        "mobile-shell"
+      ],
+      "objective": "把已有 comeback/low-stimulation 机制变成真实关系体验。",
+      "work": [
+        "回来时恢复目标状态而非模板问候。",
+        "low-stimulation policy 控制 UI/主动/游戏化，不能心理诊断。",
+        "用户 explicit setting 最高优先。"
+      ],
+      "acceptance": [
+        "3/7/14-day test clock 回归合理；不会显示陈旧任务为当前。",
+        "低刺激截图/interaction 通过。"
+      ],
+      "path_seeds": [
+        "backend/app/aurora",
+        "mobile/lib/features/aurora"
+      ],
+      "must_read": [
+        "02_core_systems/AURORA_V3.md"
+      ],
+      "risk": "medium",
+      "resource_class": "HEAVY",
+      "reviewers_required": 1,
+      "gate": "V3-4",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "A-08",
+      "title": "Aurora Longitudinal / Ablation Evaluation",
+      "stream": "AURORA",
+      "depends_on": [
+        "A-03",
+        "A-04",
+        "A-05",
+        "A-06",
+        "A-07",
+        "M-09",
+        "C-08"
+      ],
+      "required_locks": [
+        "aurora-eval"
+      ],
+      "objective": "证明 Aurora 比固定模板/无历史基线更好，并找到失败边界。",
+      "work": [
+        "10 Persona multi-session；A/B no-memory/no-experience/fixed-policy/full。",
+        "评 stuck accuracy, allocation, utility, overpersonalization, clarification, cost。",
+        "保留反例并回流动态 issue。"
+      ],
+      "acceptance": [
+        "输出 raw+summary；目标指标达到或诚实未达。",
+        "不把模型 judge 单独作为结论。"
+      ],
+      "path_seeds": [
+        "scripts/devtools",
+        "tests_e2e"
+      ],
+      "must_read": [
+        "05_metrics_eval/EVAL_PROTOCOL.md"
+      ],
+      "risk": "medium",
+      "resource_class": "HEAVY",
+      "reviewers_required": 1,
+      "gate": "V3-3",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "J-01",
+      "title": "First 3 Minutes 当前体验实测与机会图",
+      "stream": "JOURNEY",
+      "depends_on": [
+        "B-01",
+        "B-03",
+        "B-04"
+      ],
+      "required_locks": [
+        "journey-first3"
+      ],
+      "objective": "从 clean install 真实体验，不先改代码，建立时间/困惑/视觉基线。",
+      "work": [
+        "10 Persona 中抽 5 个走真实新用户，另走 seed example。",
+        "记录每步时间、点击、等待、开发者知识依赖。",
+        "形成 opportunity map 与必须砍掉的信息。"
+      ],
+      "acceptance": [
+        "有录像/截图/time-to-first-action；第一分钟所有阻碍可复现。",
+        "区分 example vs own-goal。"
+      ],
+      "path_seeds": [
+        "mobile/lib/features/splash",
+        "mobile/lib/features/auth",
+        "mobile/lib/features/onboarding",
+        "mobile/lib/features/home"
+      ],
+      "must_read": [
+        "01_product/FIRST_3_MINUTES.md"
+      ],
+      "risk": "medium",
+      "resource_class": "HEAVY",
+      "reviewers_required": 1,
+      "gate": "V3-1",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "J-02",
+      "title": "Onboarding：Value Before Profile",
+      "stream": "JOURNEY",
+      "depends_on": [
+        "J-01",
+        "U-01"
+      ],
+      "required_locks": [
+        "mobile-onboarding"
+      ],
+      "objective": "重构入口与 progressive profiling，先让用户得到 Action。",
+      "work": [
+        "实现两个入口与最小 goal capture。",
+        "只问改变 first action 的问题；其他信息延后。",
+        "guest example 与 real profile namespace 隔离。"
+      ],
+      "acceptance": [
+        "fresh user ≤3min 到 useful action；seed 不进入真实 Memory。",
+        "注册/游客/升级三端 session 稳定。"
+      ],
+      "path_seeds": [
+        "mobile/lib/features/onboarding",
+        "mobile/lib/features/auth",
+        "backend/app/services/guest_seed_service.py"
+      ],
+      "must_read": [
+        "01_product/FIRST_3_MINUTES.md"
+      ],
+      "risk": "medium",
+      "resource_class": "HEAVY",
+      "reviewers_required": 1,
+      "gate": "V3-1",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "J-03",
+      "title": "Today Cockpit 重新定义主入口",
+      "stream": "JOURNEY",
+      "depends_on": [
+        "J-01",
+        "U-01"
+      ],
+      "required_locks": [
+        "mobile-home"
+      ],
+      "objective": "把首页从聚合仪表盘变成“现在最值得做什么”。",
+      "work": [
+        "识别并移除/折叠 competing cards。",
+        "Primary Action + why + stuck + current run；secondary 信息按 relevance。",
+        "fresh/no-goal/active/stalled 状态。"
+      ],
+      "acceptance": [
+        "5 Persona 第一眼能说出下一步；唯一 primary CTA。",
+        "所有展示数据有 B-02 lineage。"
+      ],
+      "path_seeds": [
+        "mobile/lib/features/home",
+        "backend/app/api"
+      ],
+      "must_read": [
+        "03_modules/HOME.md"
+      ],
+      "risk": "medium",
+      "resource_class": "HEAVY",
+      "reviewers_required": 1,
+      "gate": "V3-1",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "J-04",
+      "title": "First Meaningful Action 端到端",
+      "stream": "JOURNEY",
+      "depends_on": [
+        "J-02",
+        "J-03",
+        "A-03",
+        "X-03"
+      ],
+      "required_locks": [
+        "journey-first3",
+        "action-contract"
+      ],
+      "objective": "让真实目标在 onboarding 后立即落到 Smallest Useful Step。",
+      "work": [
+        "把 Goal capture→Context→Aurora→Proposal→confirm→Task 持久化串通。",
+        "Action 包含 outcome/evidence/mode。",
+        "拒绝/编辑也进入 feedback。"
+      ],
+      "acceptance": [
+        "GJ01 三端；5 Persona action 不模板化；重开存在。",
+        "提案生成失败诚实处理。"
+      ],
+      "path_seeds": [
+        "mobile/lib",
+        "backend/app/aurora",
+        "backend/app/services"
+      ],
+      "must_read": [
+        "02_core_systems/ACTION_AND_INTERVENTION_ENGINE.md"
+      ],
+      "risk": "medium",
+      "resource_class": "HEAVY",
+      "reviewers_required": 1,
+      "gate": "V3-1",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "J-05",
+      "title": "“我卡住了”旗舰恢复旅程",
+      "stream": "JOURNEY",
+      "depends_on": [
+        "J-03",
+        "A-03",
+        "U-01"
+      ],
+      "required_locks": [
+        "journey-stuck"
+      ],
+      "objective": "将 Stuck 做成全产品统一恢复入口。",
+      "work": [
+        "Home/Goal/Action 可触发；传真实 context。",
+        "最多先问一个高价值问题；输出主 intervention。",
+        "用户可“不是这个原因”纠正。"
+      ],
+      "acceptance": [
+        "20 friction scenario ≥18 合理；UI ≤2 轮进入 proposal。",
+        "纠正产生 Memory/evidence candidate。"
+      ],
+      "path_seeds": [
+        "mobile/lib/features/home",
+        "mobile/lib/features/task",
+        "mobile/lib/features/chat",
+        "backend/app/aurora"
+      ],
+      "must_read": [
+        "01_product/USER_JOURNEYS.md"
+      ],
+      "risk": "medium",
+      "resource_class": "HEAVY",
+      "reviewers_required": 1,
+      "gate": "V3-2",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "J-06",
+      "title": "Hybrid Flagship Journey：AI 降摩擦但不偷走目标",
+      "stream": "JOURNEY",
+      "depends_on": [
+        "J-05",
+        "X-07"
+      ],
+      "required_locks": [
+        "journey-hybrid"
+      ],
+      "objective": "做出一个可泛化的 Hybrid 样板（科研/比赛/作品集任选当前数据最强场景）。",
+      "work": [
+        "设计 Agent prep→Human judgment→Agent execute/check→Outcome。",
+        "所有 handoff 使用统一 Runtime/UI。",
+        "保留 source/citations/artifacts。"
+      ],
+      "acceptance": [
+        "端到端真实工具/材料；不是预录。",
+        "用户清楚自己必须做哪一步及为何。"
+      ],
+      "path_seeds": [
+        "mobile/lib",
+        "backend/app/agents",
+        "backend/app/tools"
+      ],
+      "must_read": [
+        "02_core_systems/HUMAN_AGENT_HYBRID.md"
+      ],
+      "risk": "medium",
+      "resource_class": "HEAVY",
+      "reviewers_required": 1,
+      "gate": "V3-2",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "J-07",
+      "title": "Return / Stale Plan / Comeback Recovery",
+      "stream": "JOURNEY",
+      "depends_on": [
+        "J-06",
+        "A-07"
+      ],
+      "required_locks": [
+        "journey-return"
+      ],
+      "objective": "用户离开后回来能恢复，而不是面对过期 backlog。",
+      "work": [
+        "测试 1/3/7/14 day test clock。",
+        "检测 plan drift/deadline changes；Aurora rescope。",
+        "未完成任务不做羞辱式累积。"
+      ],
+      "acceptance": [
+        "回来 ≤2 actions 到 meaningful next step；陈旧建议不复用。",
+        "comeback rationale 有真实变化依据。"
+      ],
+      "path_seeds": [
+        "mobile/lib/features/home",
+        "backend/app/aurora"
+      ],
+      "must_read": [
+        "01_product/DAY0_DAY14.md"
+      ],
+      "risk": "medium",
+      "resource_class": "HEAVY",
+      "reviewers_required": 1,
+      "gate": "V3-3",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "J-08",
+      "title": "Goal Completion → Reflection → Trajectory",
+      "stream": "JOURNEY",
+      "depends_on": [
+        "J-06",
+        "D-02",
+        "G-02"
+      ],
+      "required_locks": [
+        "journey-completion"
+      ],
+      "objective": "把成果完成后的价值累积做出来。",
+      "work": [
+        "完成 action→artifact/outcome→goal milestone→reflection→experience candidate→Galaxy。",
+        "展示从想法到成果的轨迹。",
+        "避免只展示分钟/streak。"
+      ],
+      "acceptance": [
+        "GJ03/GJ05 形成 outcome；Goal 页面/星图一致。",
+        "Reflection 不凭空推断人格。"
+      ],
+      "path_seeds": [
+        "mobile/lib/features/goal",
+        "mobile/lib/features/galaxy",
+        "backend/app/learning"
+      ],
+      "must_read": [
+        "01_product/DAY0_DAY14.md"
+      ],
+      "risk": "medium",
+      "resource_class": "HEAVY",
+      "reviewers_required": 1,
+      "gate": "V3-3",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "E-01",
+      "title": "Cognition Ladder 当前路由映射",
+      "stream": "AI",
+      "depends_on": [
+        "B-05",
+        "B-06"
+      ],
+      "required_locks": [
+        "ai-routing"
+      ],
+      "objective": "将现有 DualCore/UnifiedIntent/tiers 映射 L0-L3，找出无意义 LLM 调用。",
+      "work": [
+        "采样真实 journeys trace，每个模型调用分类必要/可规则/可batch。",
+        "定义 L0/L1/L2/L3 entry criteria。",
+        "不重建 router，收敛 current paths。"
+      ],
+      "acceptance": [
+        "核心 journey 无隐藏无必要深模型；映射文档+metrics。",
+        "existing direct-answer fast path 不退化。"
+      ],
+      "path_seeds": [
+        "backend/app/orchestration",
+        "backend/app/core/llm_router*"
+      ],
+      "must_read": [
+        "02_core_systems/AI_ROUTING_LATENCY.md"
+      ],
+      "risk": "medium",
+      "resource_class": "LIGHT",
+      "reviewers_required": 1,
+      "gate": "V3-1",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "E-02",
+      "title": "Fast Semantic / Deliberate Decision 能力路由",
+      "stream": "AI",
+      "depends_on": [
+        "E-01"
+      ],
+      "required_locks": [
+        "ai-routing"
+      ],
+      "objective": "让简单交互真正快、复杂决策保留能力。",
+      "work": [
+        "基于 B-05 probe 选择 fast/deliberate config；thinking 参数按任务。",
+        "结构化输出/工具能力纳入 capability，不只 model name。",
+        "fallback 能力兼容。"
+      ],
+      "acceptance": [
+        "L1/L2 latency/quality 有真实 A/B；简单 intent 不走 L2。",
+        "fallback 不把需要 tools 的任务降成 text-only 假完成。"
+      ],
+      "path_seeds": [
+        "backend/app/core",
+        "backend/app/orchestration"
+      ],
+      "must_read": [
+        "02_core_systems/AI_ROUTING_LATENCY.md"
+      ],
+      "risk": "high",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 2,
+      "gate": "V3-1",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "E-03",
+      "title": "实时 Stage Events 与首反馈体验",
+      "stream": "AI",
+      "depends_on": [
+        "E-02",
+        "U-04"
+      ],
+      "required_locks": [
+        "ai-streaming",
+        "mobile-chat"
+      ],
+      "objective": "用真实阶段事件替代 20s 无反馈，同时不暴露 chain-of-thought。",
+      "work": [
+        "定义 context/retrieval/decision/tool/waiting 等 stage events。",
+        "第一阶段 feedback 目标 <500ms（服务可知后）。",
+        "UI 去抖避免状态闪烁。"
+      ],
+      "acceptance": [
+        "深路径 500ms 内有真实阶段反馈；stage 与 trace 匹配。",
+        "不显示 reasoning_content 原文。"
+      ],
+      "path_seeds": [
+        "backend/app/orchestration",
+        "backend/gateway",
+        "mobile/lib/features/chat"
+      ],
+      "must_read": [
+        "02_core_systems/AI_ROUTING_LATENCY.md"
+      ],
+      "risk": "medium",
+      "resource_class": "HEAVY",
+      "reviewers_required": 1,
+      "gate": "V3-4",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "E-04",
+      "title": "Aurora/Action/Memory 专项模型 Eval 与 Prompt 收敛",
+      "stream": "AI",
+      "depends_on": [
+        "E-02",
+        "A-02",
+        "M-02"
+      ],
+      "required_locks": [
+        "ai-eval"
+      ],
+      "objective": "用任务级 eval 选择 prompt/examples/tier，不凭主观“更聪明”。",
+      "work": [
+        "为 friction/action/allocation/memory gate 建固定 eval。",
+        "比较 structured prompt + canonical examples；删除重复/相互冲突巨型 prompt。",
+        "防 prompt injection，尤其 idiographic sanitization 旧缺陷。"
+      ],
+      "acceptance": [
+        "每域有 baseline→candidate 分数/latency/cost。",
+        "安全相关 input 不使用未消毒原文。"
+      ],
+      "path_seeds": [
+        "backend/app/orchestration/prompts.py",
+        "backend/app/agents",
+        "backend/app/aurora"
+      ],
+      "must_read": [
+        "09_research/FRONTIER_RESEARCH.md"
+      ],
+      "risk": "high",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 2,
+      "gate": "V3-2",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "E-05",
+      "title": "Embedding / Hybrid Retrieval 生产接入",
+      "stream": "AI",
+      "depends_on": [
+        "B-05"
+      ],
+      "required_locks": [
+        "embedding-provider",
+        "rag-index"
+      ],
+      "objective": "确认并接活真实 embedding，RAG/Galaxy semantic search 不靠旧 key。",
+      "work": [
+        "选择当前可用 provider；记录 model/version/dim。",
+        "迁移/重建 index 有版本与 rollback；hybrid lexical+vector。",
+        "delete/version isolation。"
+      ],
+      "acceptance": [
+        "真实文档 retrieval benchmark；wrong-user=0；无 key 明确关闭功能。",
+        "不静默使用随机/zero embedding。"
+      ],
+      "path_seeds": [
+        "backend/app/services",
+        "backend/app/core",
+        "backend/app/models"
+      ],
+      "must_read": [
+        "02_core_systems/RAG_KNOWLEDGE.md"
+      ],
+      "risk": "high",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 2,
+      "gate": "V3-2",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "E-06",
+      "title": "Async Batch Cognitive Worklane",
+      "stream": "AI",
+      "depends_on": [
+        "E-01",
+        "D-01"
+      ],
+      "required_locks": [
+        "batch-ai",
+        "workers"
+      ],
+      "objective": "把不需实时的 reflection/profile aggregation/analytics 放入 MiniMax/glm_batch，降低前台成本。",
+      "work": [
+        "定义 eligible workloads 与 freshness SLA。",
+        "任务可取消/重试，结果带 model/version/source。",
+        "绝不让 batch 老结果覆盖新 explicit correction。"
+      ],
+      "acceptance": [
+        "前台 journey latency 不依赖 batch；stale result 被拒绝。",
+        "queue/cost metrics。"
+      ],
+      "path_seeds": [
+        "backend/app/workers",
+        "backend/app/core/celery*",
+        "backend/app/services"
+      ],
+      "must_read": [
+        "02_core_systems/AI_ROUTING_LATENCY.md"
+      ],
+      "risk": "medium",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 1,
+      "gate": "V3-3",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "E-07",
+      "title": "Quality/Latency/Cost Adaptive Routing + Health Fallback",
+      "stream": "AI",
+      "depends_on": [
+        "E-02",
+        "E-04",
+        "B-05"
+      ],
+      "required_locks": [
+        "ai-routing"
+      ],
+      "objective": "在真实 provider 波动下选择最便宜满足质量/延迟的能力。",
+      "work": [
+        "加入 health/circuit breaker/429/backoff 与 capability-aware fallback。",
+        "route reason 与 actual model 留痕。",
+        "付费 entitlement 不绑 flame。"
+      ],
+      "acceptance": [
+        "100+ sample 统计；provider down 仍能合法降级/明确 unavailable。",
+        "无无界重试/成本。"
+      ],
+      "path_seeds": [
+        "backend/app/core",
+        "backend/app/orchestration"
+      ],
+      "must_read": [
+        "02_core_systems/AI_ROUTING_LATENCY.md"
+      ],
+      "risk": "high",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 2,
+      "gate": "V3-6",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "E-08",
+      "title": "AI Stack 集成 Bench：Quality × TTFT × Cost × Context",
+      "stream": "AI",
+      "depends_on": [
+        "E-03",
+        "E-04",
+        "E-07",
+        "C-08"
+      ],
+      "required_locks": [
+        "ai-eval"
+      ],
+      "objective": "给最终 V3 决策提供可复跑基准，而不是模型品牌讨论。",
+      "work": [
+        "跑代表性 100+ queries across L0-L3。",
+        "记录 TTFT/total/token/cost/context size/fallback/quality。",
+        "按 intent/persona/route 切片。"
+      ],
+      "acceptance": [
+        "输出 raw CSV/JSON 与 dashboard summary；所有 percentiles 样本量≥100。",
+        "SLO 若未达，真实报告并生成 dynamic issues。"
+      ],
+      "path_seeds": [
+        "scripts/devtools",
+        "backend/app"
+      ],
+      "must_read": [
+        "V3_DEFINITION_OF_DONE.md"
+      ],
+      "risk": "medium",
+      "resource_class": "HEAVY",
+      "reviewers_required": 1,
+      "gate": "V3-7",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "P-01",
+      "title": "Event-trigger + Suppression Pipeline",
+      "stream": "PROACTIVE",
+      "depends_on": [
+        "A-02",
+        "D-01"
+      ],
+      "required_locks": [
+        "proactive-policy"
+      ],
+      "objective": "把主动式做成 event→filter→Aurora，而不是定时问 LLM。",
+      "work": [
+        "接 deadline/overdue/slot missed/user active/upstream complete/goal stalled/run awaiting。",
+        "quiet/mute/cap/cooldown/recent rejection/novelty deterministic filter。",
+        "shadow mode 记录 would-notify。"
+      ],
+      "acceptance": [
+        "被 mute/quiet/cooldown 抑制=100%；无需 LLM 的事件不调用模型。",
+        "shadow metrics 可审。"
+      ],
+      "path_seeds": [
+        "backend/app/aurora",
+        "backend/app/core/celery*",
+        "backend/app/signals"
+      ],
+      "must_read": [
+        "02_core_systems/PROACTIVE_SYSTEM.md"
+      ],
+      "risk": "medium",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 1,
+      "gate": "V3-5",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "P-02",
+      "title": "NO_ACTION / Proactive Relevance Decision",
+      "stream": "PROACTIVE",
+      "depends_on": [
+        "P-01",
+        "A-03"
+      ],
+      "required_locks": [
+        "proactive-policy"
+      ],
+      "objective": "让 Aurora 学会保持安静。",
+      "work": [
+        "构建该提醒/不该提醒成对 scenarios。",
+        "要求 new information + actionable value；仅逾期不够。",
+        "记录 no_action reason。"
+      ],
+      "acceptance": [
+        "20+ suppression/relevance cases 违规=0；false positive 受控。"
+      ],
+      "path_seeds": [
+        "backend/app/aurora"
+      ],
+      "must_read": [
+        "02_core_systems/PROACTIVE_SYSTEM.md"
+      ],
+      "risk": "medium",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 1,
+      "gate": "V3-5",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "P-03",
+      "title": "Proactive Suggestion UX",
+      "stream": "PROACTIVE",
+      "depends_on": [
+        "P-01",
+        "U-05"
+      ],
+      "required_locks": [
+        "mobile-notification"
+      ],
+      "objective": "主动建议在 App/通知中心以可忽略、可解释、可 mute 方式呈现。",
+      "work": [
+        "why now / suggested action / today ignore / mute this type。",
+        "不使用 guilt 文案。",
+        "deep link 到正确 Goal/Proposal。"
+      ],
+      "acceptance": [
+        "重复建议不刷屏；拒绝后 cooldown 生效。",
+        "离线/过期通知点击有合理恢复。"
+      ],
+      "path_seeds": [
+        "mobile/lib/features/notification_center",
+        "mobile/lib/features/home"
+      ],
+      "must_read": [
+        "02_core_systems/PROACTIVE_SYSTEM.md"
+      ],
+      "risk": "medium",
+      "resource_class": "HEAVY",
+      "reviewers_required": 1,
+      "gate": "V3-5",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "P-04",
+      "title": "低风险 Auto-execute 授权模型",
+      "stream": "PROACTIVE",
+      "depends_on": [
+        "P-01",
+        "X-06"
+      ],
+      "required_locks": [
+        "proactive-policy",
+        "permission"
+      ],
+      "objective": "仅对预授权低风险操作允许 proactive auto execution。",
+      "work": [
+        "定义 allowlist + permission grant/revoke。",
+        "高风险/不可逆永远 proposal。",
+        "每次 auto 有 receipt/notification。"
+      ],
+      "acceptance": [
+        "未授权=0 auto；revoke 后立即失效。",
+        "重复 trigger 不重复 side effect。"
+      ],
+      "path_seeds": [
+        "backend/app/aurora",
+        "backend/app/agents"
+      ],
+      "must_read": [
+        "08_operations/SECURITY_PRIVACY.md"
+      ],
+      "risk": "critical",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 2,
+      "gate": "V3-5",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "P-05",
+      "title": "Proactive Longitudinal Evaluation",
+      "stream": "PROACTIVE",
+      "depends_on": [
+        "P-02",
+        "P-03",
+        "P-04",
+        "M-09"
+      ],
+      "required_locks": [
+        "proactive-eval"
+      ],
+      "objective": "验证主动带来目标恢复而非通知负担。",
+      "work": [
+        "多天 Persona 注入 stalled/deadline/completion。",
+        "记录 accept/dismiss/mute/action/outcome。",
+        "比较 no-proactive baseline。"
+      ],
+      "acceptance": [
+        "proactive precision 达到项目设定阈值并报告；quiet violations=0。",
+        "不只报 open rate。"
+      ],
+      "path_seeds": [
+        "scripts/devtools"
+      ],
+      "must_read": [
+        "05_metrics_eval/EVAL_PROTOCOL.md"
+      ],
+      "risk": "medium",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 1,
+      "gate": "V3-5",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "P-06",
+      "title": "Notification Burden / Quiet / Low-stimulation 终局",
+      "stream": "PROACTIVE",
+      "depends_on": [
+        "P-03",
+        "A-07"
+      ],
+      "required_locks": [
+        "mobile-notification",
+        "aurora-policy"
+      ],
+      "objective": "把用户主动控制与关系策略完全接通。",
+      "work": [
+        "统一设置、低刺激、quiet hours、daily caps。",
+        "多设备 state 一致。",
+        "用户关闭后 in-flight scheduled notifications 被取消/抑制。"
+      ],
+      "acceptance": [
+        "24h test-clock 0 超 cap；mute 生效。",
+        "低刺激模式默认更保守。"
+      ],
+      "path_seeds": [
+        "backend/app/aurora",
+        "mobile/lib/features/settings"
+      ],
+      "must_read": [
+        "02_core_systems/PROACTIVE_SYSTEM.md"
+      ],
+      "risk": "medium",
+      "resource_class": "HEAVY",
+      "reviewers_required": 1,
+      "gate": "V3-5",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "G-01",
+      "title": "Galaxy Mastery 从“学习分钟”升级 Evidence-aware",
+      "stream": "GALAXY",
+      "depends_on": [
+        "B-01",
+        "D-02"
+      ],
+      "required_locks": [
+        "galaxy-model"
+      ],
+      "objective": "让节点亮度代表有证据的成长，而非时间即掌握。",
+      "work": [
+        "审计现有 mastery 公式与数据源。",
+        "定义 evidence types 权重/uncertainty/decay；self-report 不等于测试。",
+        "兼容旧数据并标 legacy estimate。"
+      ],
+      "acceptance": [
+        "同样30分钟但不同 outcome 不产生相同 mastery。",
+        "公式透明可测；无 evidence 不凭空精通。"
+      ],
+      "path_seeds": [
+        "backend/app/services/galaxy",
+        "backend/app/models"
+      ],
+      "must_read": [
+        "03_modules/GALAXY.md"
+      ],
+      "risk": "medium",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 1,
+      "gate": "V3-3",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "G-02",
+      "title": "Artifact/Outcome → Galaxy/Trajectory 接线",
+      "stream": "GALAXY",
+      "depends_on": [
+        "G-01",
+        "X-08"
+      ],
+      "required_locks": [
+        "galaxy-model"
+      ],
+      "objective": "真实成果自动成为图谱证据与用户可见成长。",
+      "work": [
+        "消费 outcome events 幂等更新 nodes/edges。",
+        "关联 Goal/Milestone/Artifact。",
+        "失败/撤销 outcome 正确处理。"
+      ],
+      "acceptance": [
+        "GJ05/GJ08 图谱变化可解释且可追 source。",
+        "不重复点亮。"
+      ],
+      "path_seeds": [
+        "backend/app/services/galaxy",
+        "backend/gateway/internal/cqrs"
+      ],
+      "must_read": [
+        "03_modules/GALAXY.md"
+      ],
+      "risk": "medium",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 1,
+      "gate": "V3-3",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "G-03",
+      "title": "Galaxy Goal-focused UX 重设计",
+      "stream": "GALAXY",
+      "depends_on": [
+        "G-01",
+        "U-05"
+      ],
+      "required_locks": [
+        "mobile-galaxy"
+      ],
+      "objective": "保留视觉锤同时让图可读、可行动。",
+      "work": [
+        "默认当前 Goal 子图；节点详情 why/来源/next step。",
+        "修 Review now/controls 重叠，合理空态。",
+        "减少无意义粒子/光效对阅读的干扰。"
+      ],
+      "acceptance": [
+        "新用户能解释星图在表达什么；5 screenshots A/B issue=0。",
+        "缩放/点击跨端稳定。"
+      ],
+      "path_seeds": [
+        "mobile/lib/features/galaxy"
+      ],
+      "must_read": [
+        "03_modules/GALAXY.md"
+      ],
+      "risk": "medium",
+      "resource_class": "HEAVY",
+      "reviewers_required": 1,
+      "gate": "V3-4",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "G-04",
+      "title": "Galaxy 对 Correction/Delete/Version 的一致性",
+      "stream": "GALAXY",
+      "depends_on": [
+        "G-02",
+        "M-07"
+      ],
+      "required_locks": [
+        "galaxy-model",
+        "privacy-delete"
+      ],
+      "objective": "用户删除材料/纠正 evidence 后图谱不能保留错误派生结论。",
+      "work": [
+        "定义 provenance edge invalidation/recompute。",
+        "删除 document/memory/outcome 的影响按类型处理。",
+        "避免全图重建昂贵路径。"
+      ],
+      "acceptance": [
+        "删除后相关 edge/node state 正确；不跨用户泄露。",
+        "有回归测试与事件重放。"
+      ],
+      "path_seeds": [
+        "backend/app/services/galaxy"
+      ],
+      "must_read": [
+        "08_operations/SECURITY_PRIVACY.md"
+      ],
+      "risk": "high",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 2,
+      "gate": "V3-3",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "G-05",
+      "title": "Galaxy 性能/手势/视觉终验",
+      "stream": "GALAXY",
+      "depends_on": [
+        "G-03",
+        "G-04",
+        "U-09"
+      ],
+      "required_locks": [
+        "mobile-galaxy"
+      ],
+      "objective": "在真实数据规模下确保视觉资产不变成卡顿/演示风险。",
+      "work": [
+        "小/中/大图性能；恢复风暴回归；缩放/选择/搜索。",
+        "Android/Web/macOS 截图与 FPS/latency。",
+        "语义搜索走真实 embedding。"
+      ],
+      "acceptance": [
+        "无 A/B 视觉问题；核心操作无 overlap。",
+        "性能达到平台可用基线，异常 graceful。"
+      ],
+      "path_seeds": [
+        "mobile/lib/features/galaxy",
+        "backend/app/services/galaxy"
+      ],
+      "must_read": [
+        "03_modules/GALAXY.md"
+      ],
+      "risk": "medium",
+      "resource_class": "HEAVY",
+      "reviewers_required": 1,
+      "gate": "V3-4",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "S-01",
+      "title": "Community Realtime/Read-model 真相复测",
+      "stream": "COMMUNITY",
+      "depends_on": [
+        "B-01",
+        "B-03"
+      ],
+      "required_locks": [
+        "community-realtime"
+      ],
+      "objective": "先确认 V2.5 当前 M-3/502 等是否仍存在，不直接重写。",
+      "work": [
+        "两真实测试账号 join/chat/checkin/reconnect。",
+        "检查 WS path/gateway/projection/outbox/DLQ。",
+        "标 seed/mock data。"
+      ],
+      "acceptance": [
+        "当前状态有可重复 report；live 失败不 fallback 假 realtime。"
+      ],
+      "path_seeds": [
+        "mobile/lib/features/community",
+        "backend/gateway/internal/cqrs",
+        "backend/app/api/v1/community.py"
+      ],
+      "must_read": [
+        "03_modules/COMMUNITY.md"
+      ],
+      "risk": "medium",
+      "resource_class": "HEAVY",
+      "reviewers_required": 1,
+      "gate": "V3-5",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "S-02",
+      "title": "Community Context Privacy Boundary",
+      "stream": "COMMUNITY",
+      "depends_on": [
+        "S-01",
+        "M-01"
+      ],
+      "required_locks": [
+        "community-permission",
+        "memory-semantics"
+      ],
+      "objective": "群聊/小队绝不能自动访问私人 Memory/Profile。",
+      "work": [
+        "定义 shared context allowlist：用户主动分享 Goal/Action/Artifact。",
+        "Aurora group prompt/tool context 使用 group permission。",
+        "离群/revoke 后失效。"
+      ],
+      "acceptance": [
+        "private memory leakage=0；两账户 adversarial tests。",
+        "群内 AI 说明它看到什么。"
+      ],
+      "path_seeds": [
+        "backend/app/api/v1/community.py",
+        "backend/app/orchestration",
+        "backend/app/aurora"
+      ],
+      "must_read": [
+        "03_modules/COMMUNITY.md"
+      ],
+      "risk": "critical",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 2,
+      "gate": "V3-5",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "S-03",
+      "title": "Squad/Sprint/Check-in 产品表面收敛",
+      "stream": "COMMUNITY",
+      "depends_on": [
+        "S-01",
+        "U-05"
+      ],
+      "required_locks": [
+        "mobile-community"
+      ],
+      "objective": "从公共 feed 转向围绕 Goal outcome 的小组协作。",
+      "work": [
+        "收敛入口：小队/冲刺/今日check-in/artifact feedback。",
+        "公共帖子/feed 降级，不占核心。",
+        "Flame 表达群活跃，不与付费绑定。"
+      ],
+      "acceptance": [
+        "单人核心 journey 不受依赖；小组 journey 自解释。",
+        "seed/demo group 明确标演示。"
+      ],
+      "path_seeds": [
+        "mobile/lib/features/community"
+      ],
+      "must_read": [
+        "03_modules/COMMUNITY.md"
+      ],
+      "risk": "medium",
+      "resource_class": "HEAVY",
+      "reviewers_required": 1,
+      "gate": "V3-5",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "S-04",
+      "title": "Community Artifact Feedback → Outcome/Evidence",
+      "stream": "COMMUNITY",
+      "depends_on": [
+        "S-03",
+        "D-02"
+      ],
+      "required_locks": [
+        "community-realtime",
+        "outcome-ledger"
+      ],
+      "objective": "把同伴反馈变成可选择的 Goal evidence，而不是社交孤岛。",
+      "work": [
+        "分享 artifact/check-in 关联 Goal/Action。",
+        "feedback/ack 不自动成为 mastery；用户可采纳为 outcome evidence。",
+        "事件进入 flywheel。"
+      ],
+      "acceptance": [
+        "GJ16 能从 check-in 回到 Goal trajectory。",
+        "撤回后派生引用更新。"
+      ],
+      "path_seeds": [
+        "backend/app/api/v1/community.py",
+        "backend/app/services/evidence"
+      ],
+      "must_read": [
+        "03_modules/COMMUNITY.md"
+      ],
+      "risk": "medium",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 1,
+      "gate": "V3-5",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "S-05",
+      "title": "Community Reconnect/Retract/Two-account E2E",
+      "stream": "COMMUNITY",
+      "depends_on": [
+        "S-02",
+        "S-03",
+        "S-04"
+      ],
+      "required_locks": [
+        "community-eval"
+      ],
+      "objective": "真实验证实时、权限、撤回、离线和跨用户隔离。",
+      "work": [
+        "20+ cases：reconnect/dup event/out-of-order/leave/revoke/block。",
+        "Android/Web/macOS applicable flows。",
+        "日志/trace 与 UI 结果一致。"
+      ],
+      "acceptance": [
+        "WS 真实通过；cross-user/private memory leak=0；duplicate check-in=0。",
+        "失败态不冒充 live。"
+      ],
+      "path_seeds": [
+        "tests_e2e",
+        "mobile/integration_test"
+      ],
+      "must_read": [
+        "05_metrics_eval/EVAL_PROTOCOL.md"
+      ],
+      "risk": "high",
+      "resource_class": "HEAVY",
+      "reviewers_required": 2,
+      "gate": "V3-5",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "O-01",
+      "title": "公网 Staging HTTPS/WSS 一键部署",
+      "stream": "OPS",
+      "depends_on": [
+        "B-06"
+      ],
+      "required_locks": [
+        "deployment"
+      ],
+      "objective": "让 fresh device 不依赖 localhost，形成真实产品运行环境。",
+      "work": [
+        "基于 docker-compose/现有部署建立 staging；TLS/domain/env secrets。",
+        "FastAPI internal；Gateway public；health/readiness。",
+        "App/Web endpoint config 可切换。"
+      ],
+      "acceptance": [
+        "GJ01 远端设备通过；密钥不在 client bundle。",
+        "部署/rollback 文档和 smoke 脚本。"
+      ],
+      "path_seeds": [
+        "docker-compose*",
+        "backend",
+        "mobile"
+      ],
+      "must_read": [
+        "08_operations/DEPLOYMENT.md"
+      ],
+      "risk": "high",
+      "resource_class": "HEAVY",
+      "reviewers_required": 2,
+      "gate": "V3-6",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "O-02",
+      "title": "End-to-End Trace / Metrics Spine",
+      "stream": "OPS",
+      "depends_on": [
+        "D-01",
+        "B-05"
+      ],
+      "required_locks": [
+        "observability"
+      ],
+      "objective": "贯穿 UI→Gateway→Context→Aurora→LLM→Run→Outcome 的 trace。",
+      "work": [
+        "统一 trace_id/span tags；补关键指标。",
+        "日志不记录 Memory/PII 正文。",
+        "dashboard 或查询脚本。"
+      ],
+      "acceptance": [
+        "任一 GJ 能用 trace_id 还原关键阶段/actual model/receipt。",
+        "latency/cost/context 关联。"
+      ],
+      "path_seeds": [
+        "backend",
+        "mobile/lib"
+      ],
+      "must_read": [
+        "08_operations/OBSERVABILITY.md"
+      ],
+      "risk": "medium",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 1,
+      "gate": "V3-6",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "O-03",
+      "title": "Secrets/Prompt Injection/Tool Permission 安全终审",
+      "stream": "OPS",
+      "depends_on": [
+        "X-06",
+        "C-04"
+      ],
+      "required_locks": [
+        "security"
+      ],
+      "objective": "保护材料 prompt injection、tool escalation、secret leakage。",
+      "work": [
+        "复测 historical idiographic sanitization 缺陷。",
+        "恶意 PDF/Memory/用户消息不能修改 system permission。",
+        "secret scan/log redaction。"
+      ],
+      "acceptance": [
+        "安全 adversarial suite；高危=0。",
+        "tool permission 决定不由 prompt文本覆盖。"
+      ],
+      "path_seeds": [
+        "backend/app/core",
+        "backend/app/orchestration",
+        "backend/app/tools"
+      ],
+      "must_read": [
+        "08_operations/SECURITY_PRIVACY.md"
+      ],
+      "risk": "critical",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 2,
+      "gate": "V3-6",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "O-04",
+      "title": "Paid Entitlement 与 Flame/Gameification 解耦",
+      "stream": "OPS",
+      "depends_on": [
+        "B-01",
+        "E-07"
+      ],
+      "required_locks": [
+        "entitlement"
+      ],
+      "objective": "修正 is_pro=flame_level 历史语义混用。",
+      "work": [
+        "建立/复用独立 entitlement source。",
+        "LLM ceiling/quota 读取 entitlement。",
+        "迁移现有用户有安全默认。"
+      ],
+      "acceptance": [
+        "改变 flame 不改变付费能力；付费状态变化正确生效。",
+        "metrics 能区分 plan。"
+      ],
+      "path_seeds": [
+        "backend/app/models",
+        "backend/app/core",
+        "mobile/lib/features"
+      ],
+      "must_read": [
+        "01_product/COMMERCIAL_MODEL.md"
+      ],
+      "risk": "high",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 2,
+      "gate": "V3-6",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "O-05",
+      "title": "Backup/Restore + Agent Run/Memory Consistency 演练",
+      "stream": "OPS",
+      "depends_on": [
+        "O-01",
+        "X-09",
+        "M-07"
+      ],
+      "required_locks": [
+        "deployment",
+        "agent-runtime"
+      ],
+      "objective": "验证数据飞轮不是只能单机活着。",
+      "work": [
+        "备份 PG/MinIO/必要 Redis durable state；恢复 staging。",
+        "恢复期间/之后 Agent run、Memory epoch、outcome consistency。",
+        "RPO/RTO 实测。"
+      ],
+      "acceptance": [
+        "恢复后 GJ03/GJ08/run query 通过；无已删 memory 复活。"
+      ],
+      "path_seeds": [
+        "scripts",
+        "backend"
+      ],
+      "must_read": [
+        "08_operations/DEPLOYMENT.md"
+      ],
+      "risk": "critical",
+      "resource_class": "HEAVY",
+      "reviewers_required": 2,
+      "gate": "V3-6",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "O-06",
+      "title": "Kill Switch / Release / Rollback 统一操作面",
+      "stream": "OPS",
+      "depends_on": [
+        "O-01",
+        "A-01",
+        "X-05"
+      ],
+      "required_locks": [
+        "release"
+      ],
+      "objective": "让 Aurora/Memory/Agent 新能力可 off/shadow/live 并安全回滚。",
+      "work": [
+        "注册新 flags，清理未受控 live 实验。",
+        "定义 per-capability rollback。",
+        "release manifest 记录 model/config/migration。"
+      ],
+      "acceptance": [
+        "shadow/live 切换不丢用户 state；rollback smoke 通过。",
+        "flag 状态可观测。"
+      ],
+      "path_seeds": [
+        "backend/app/core",
+        "scripts",
+        "docs"
+      ],
+      "must_read": [
+        "08_operations/RELEASE_GATES.md"
+      ],
+      "risk": "high",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 2,
+      "gate": "V3-6",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "O-07",
+      "title": "成本/配额/Queue 生产预算与 Graceful Degradation",
+      "stream": "OPS",
+      "depends_on": [
+        "E-07",
+        "X-06",
+        "O-02"
+      ],
+      "required_locks": [
+        "quota-cost"
+      ],
+      "objective": "将成本控制与用户价值关联，避免 Agent/Batch 失控。",
+      "work": [
+        "budget by user/plan/run/tier；queue backpressure。",
+        "Redis bounded degrade 保持；Agent run 超预算暂停/询问。",
+        "cost/WVPL metrics。"
+      ],
+      "acceptance": [
+        "provider/Redis/queue 故障不会无界成本或全站假成功。",
+        "额度耗尽有可理解 UX。"
+      ],
+      "path_seeds": [
+        "backend/gateway",
+        "backend/app/core",
+        "backend/app/workers"
+      ],
+      "must_read": [
+        "08_operations/OBSERVABILITY.md"
+      ],
+      "risk": "high",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 2,
+      "gate": "V3-6",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "Q-01",
+      "title": "260 场景统一 Runner 与证据格式",
+      "stream": "QUALITY",
+      "depends_on": [
+        "B-03"
+      ],
+      "required_locks": [
+        "eval-harness"
+      ],
+      "objective": "将 V3 scenario library 变成可运行的 deterministic/model/simulator runner。",
+      "work": [
+        "读取 scenarios_v3.jsonl；按 type 调用对应 harness。",
+        "输出 case-level pass/fail/metrics/trace/evidence。",
+        "支持 repeat/seed/provider config。"
+      ],
+      "acceptance": [
+        "260 case 可枚举；unsupported 不算 PASS。",
+        "结果 JSON schema 稳定。"
+      ],
+      "path_seeds": [
+        "scripts/devtools",
+        "tests_e2e"
+      ],
+      "must_read": [
+        "05_metrics_eval/EVAL_PROTOCOL.md"
+      ],
+      "risk": "medium",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 1,
+      "gate": "V3-7",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "Q-02",
+      "title": "20 Golden Journeys 三端终验",
+      "stream": "QUALITY",
+      "depends_on": [
+        "Q-01",
+        "U-09",
+        "J-08",
+        "X-10",
+        "M-10"
+      ],
+      "required_locks": [
+        "simulator-harness"
+      ],
+      "objective": "把核心产品真实跑通，而不是模块测试拼接。",
+      "work": [
+        "按 applicable matrix 执行 GJ01-20。",
+        "fresh state + remote/local 两种关键环境。",
+        "保存视频/截图/trace。"
+      ],
+      "acceptance": [
+        "所有 required journey PASS；失败生成动态卡，不用 waive。",
+        "核心 GJ01/04/06/08/09/14/18/19 三端或明确平台适用。"
+      ],
+      "path_seeds": [
+        "tests_e2e",
+        "mobile/integration_test"
+      ],
+      "must_read": [
+        "05_metrics_eval/GOLDEN_JOURNEYS.md"
+      ],
+      "risk": "medium",
+      "resource_class": "HEAVY",
+      "reviewers_required": 1,
+      "gate": "V3-7",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "Q-03",
+      "title": "Autonomous Visual QA 最终波",
+      "stream": "QUALITY",
+      "depends_on": [
+        "U-09",
+        "U-10",
+        "Q-02"
+      ],
+      "required_locks": [
+        "visual-baseline"
+      ],
+      "objective": "以用户视角对 final RC 做逐屏视觉审查。",
+      "work": [
+        "截图核心/long-tail reachable/所有状态。",
+        "独立 visual Reviewer 按 12维 rubric。",
+        "A/B issue 回动态修复，重截图。"
+      ],
+      "acceptance": [
+        "核心 journey A/B=0；其它 reachable A=0。",
+        "before/after 可对比。"
+      ],
+      "path_seeds": [
+        "mobile/lib",
+        "scripts/devtools"
+      ],
+      "must_read": [
+        "04_ux/VISUAL_REVIEW_RUBRIC.md"
+      ],
+      "risk": "medium",
+      "resource_class": "HEAVY",
+      "reviewers_required": 1,
+      "gate": "V3-7",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "Q-04",
+      "title": "Personalization / Overpersonalization 独立红队",
+      "stream": "QUALITY",
+      "depends_on": [
+        "M-09",
+        "A-08",
+        "D-08"
+      ],
+      "required_locks": [
+        "memory-eval"
+      ],
+      "objective": "独立攻击“越用越懂我”的主张。",
+      "work": [
+        "偏好变化、无关历史、敏感信息、删除、跨用户、sycophancy。",
+        "paired blind review，Reviewer 不看实现。",
+        "统计 precision/invalid/overpersonalization/uplift。"
+      ],
+      "acceptance": [
+        "达到 V3-4 指标或明确 FAIL；invalid=0 是硬门。",
+        "失败案例原样保留。"
+      ],
+      "path_seeds": [
+        "scripts/devtools"
+      ],
+      "must_read": [
+        "05_metrics_eval/PERSONALIZATION_EVAL.md"
+      ],
+      "risk": "high",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 2,
+      "gate": "V3-7",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "Q-05",
+      "title": "Security/Privacy/Permission 最终红队",
+      "stream": "QUALITY",
+      "depends_on": [
+        "O-03",
+        "S-05",
+        "O-04"
+      ],
+      "required_locks": [
+        "security-eval"
+      ],
+      "objective": "从用户隔离、Agent tool、Memory、community、entitlement 攻击系统。",
+      "work": [
+        "跨账号/local cache、prompt injection、tool escalation、revoked memory、seed namespace。",
+        "动态扫描 + 手工 scenario。",
+        "确认 logs/trace 无敏感正文。"
+      ],
+      "acceptance": [
+        "P0/P1=0；cross-user=0；unauthorized side effect=0。"
+      ],
+      "path_seeds": [
+        "tests",
+        "scripts/devtools"
+      ],
+      "must_read": [
+        "08_operations/SECURITY_PRIVACY.md"
+      ],
+      "risk": "critical",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 2,
+      "gate": "V3-7",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "Q-06",
+      "title": "Performance / Cost / Provider 波动终验",
+      "stream": "QUALITY",
+      "depends_on": [
+        "E-08",
+        "O-07",
+        "Q-01"
+      ],
+      "required_locks": [
+        "performance-eval"
+      ],
+      "objective": "验证 V3 不因智能化变慢变贵到不可用。",
+      "work": [
+        "至少 100 样本/指标，L0-L3 分开。",
+        "模拟 429/高 TTFT/queue pressure。",
+        "测 Context token 与 Memory 数量增长。"
+      ],
+      "acceptance": [
+        "报告 p50/p95 only if n≥100；false smooth=0。",
+        "SLO 不达即 FAIL/动态修复，不剪异常。"
+      ],
+      "path_seeds": [
+        "scripts/devtools"
+      ],
+      "must_read": [
+        "V3_DEFINITION_OF_DONE.md"
+      ],
+      "risk": "medium",
+      "resource_class": "HEAVY",
+      "reviewers_required": 1,
+      "gate": "V3-7",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "Q-07",
+      "title": "Chaos / Recovery / Offline / Restore Storm 终验",
+      "stream": "QUALITY",
+      "depends_on": [
+        "X-09",
+        "O-05",
+        "U-06"
+      ],
+      "required_locks": [
+        "chaos-eval"
+      ],
+      "objective": "在 V3 新 Runtime/Context 下重跑故障恢复，防回归历史雪崩。",
+      "work": [
+        "worker kill/Redis issue/Celery issue/network toggle/app restart/20 concurrent restore。",
+        "验证 EndpointShield/dispatch async 仍有效。",
+        "run/outcome/memory consistency。"
+      ],
+      "acceptance": [
+        "false success=0；duplicate=0；历史 restore storm SLO 不大幅退化。"
+      ],
+      "path_seeds": [
+        "backend",
+        "mobile/integration_test",
+        "scripts"
+      ],
+      "must_read": [
+        "08_operations/RELEASE_GATES.md"
+      ],
+      "risk": "critical",
+      "resource_class": "HEAVY",
+      "reviewers_required": 2,
+      "gate": "V3-7",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    },
+    {
+      "id": "Q-08",
+      "title": "V3 Final Gate Audit / Commercial RC",
+      "stream": "QUALITY",
+      "depends_on": [
+        "Q-02",
+        "Q-03",
+        "Q-04",
+        "Q-05",
+        "Q-06",
+        "Q-07",
+        "D-08",
+        "P-05",
+        "G-05"
+      ],
+      "required_locks": [
+        "release"
+      ],
+      "objective": "逐项审 V3 Definition of Done，输出唯一最终状态。",
+      "work": [
+        "读取所有 gate 原始证据，不只任务 status。",
+        "任何未执行标 NOT_RUN；未达标 FAIL；外部依赖 BLOCKED。",
+        "生成 RC manifest/SHA/config/model/flags/deploy/runbook。"
+      ],
+      "acceptance": [
+        "V3_DEFINITION_OF_DONE 每条有 evidence link 和 PASS/FAIL/BLOCKED。",
+        "不能用“107任务完成”替代产品 gate。",
+        "输出 FINAL_V3_GATE_REPORT.md。"
+      ],
+      "path_seeds": [
+        "docs",
+        "scripts"
+      ],
+      "must_read": [
+        "V3_DEFINITION_OF_DONE.md",
+        "08_operations/RELEASE_GATES.md"
+      ],
+      "risk": "critical",
+      "resource_class": "MEDIUM",
+      "reviewers_required": 2,
+      "gate": "V3-7",
+      "status": "TODO",
+      "forbidden_practices": [
+        "不得重建已存在的权威真源",
+        "不得用 mock/seed 冒充真实行为",
+        "不得只通过静态代码阅读宣称用户体验通过",
+        "不得弱化既有安全/幂等/隔离/审计守卫"
+      ],
+      "required_evidence": [
+        "base/final SHA",
+        "targeted tests",
+        "integration/simulator evidence",
+        "review receipt"
+      ]
+    }
+  ]
+}

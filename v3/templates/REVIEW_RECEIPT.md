@@ -1,0 +1,11 @@
+# Review Receipt
+- Task:
+- Reviewer:
+- Reviewed SHA:
+- Verdict: ACCEPT / CHANGES / BLOCKED
+- Acceptance items verified:
+- Commands/tests actually executed:
+- Simulator/screenshots inspected:
+- Security/privacy/truth checks:
+- Regressions/concerns:
+- Required changes:

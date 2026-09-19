@@ -1,0 +1,106 @@
+[
+  {
+    "id": "P01",
+    "name": "比赛开发者",
+    "goal": "两周内完成可演示的 AI 产品",
+    "constraints": [
+      "课业并行",
+      "晚间时间碎片"
+    ],
+    "preference": "先看到可运行版本再读理论",
+    "hidden_friction": "成果标准模糊时会反复重构"
+  },
+  {
+    "id": "P02",
+    "name": "本科科研者",
+    "goal": "推进一篇 continual learning 论文实验",
+    "constraints": [
+      "GPU 共享",
+      "实验耗时长"
+    ],
+    "preference": "需要证据与反例",
+    "hidden_friction": "选项过多"
+  },
+  {
+    "id": "P03",
+    "name": "作品集学习者",
+    "goal": "14天做出数据分析作品",
+    "constraints": [
+      "每天30-60分钟"
+    ],
+    "preference": "示例优先",
+    "hidden_friction": "不知道成品标准"
+  },
+  {
+    "id": "P04",
+    "name": "期中冲刺学生",
+    "goal": "7天准备数据结构期中",
+    "constraints": [
+      "多个科目",
+      "能量波动"
+    ],
+    "preference": "题目反馈优先",
+    "hidden_friction": "把不会和没时间混在一起"
+  },
+  {
+    "id": "P05",
+    "name": "内容创作者",
+    "goal": "完成三期播客",
+    "constraints": [
+      "选题多",
+      "没有固定搭档"
+    ],
+    "preference": "先讲再整理",
+    "hidden_friction": "完美主义"
+  },
+  {
+    "id": "P06",
+    "name": "隐私敏感用户",
+    "goal": "完成求职作品集",
+    "constraints": [
+      "不希望长期保存私人信息"
+    ],
+    "preference": "明确询问后再记忆",
+    "hidden_friction": "信任"
+  },
+  {
+    "id": "P07",
+    "name": "高自主用户",
+    "goal": "学习 Rust 并写 CLI",
+    "constraints": [
+      "技术基础强"
+    ],
+    "preference": "不想被过度解释",
+    "hidden_friction": "AI 替做过多"
+  },
+  {
+    "id": "P08",
+    "name": "易变计划用户",
+    "goal": "课程项目交付",
+    "constraints": [
+      "deadline/组员经常变化"
+    ],
+    "preference": "动态重排",
+    "hidden_friction": "plan drift"
+  },
+  {
+    "id": "P09",
+    "name": "低刺激偏好用户",
+    "goal": "每天推进论文阅读",
+    "constraints": [
+      "不喜欢游戏化/通知"
+    ],
+    "preference": "calm UI",
+    "hidden_friction": "notification fatigue"
+  },
+  {
+    "id": "P10",
+    "name": "多材料用户",
+    "goal": "用五份PDF完成综述",
+    "constraints": [
+      "文献长且版本多"
+    ],
+    "preference": "引用透明",
+    "hidden_friction": "检索和版本混乱"
+  }
+]

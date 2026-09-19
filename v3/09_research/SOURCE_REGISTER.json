@@ -1,0 +1,86 @@
+[
+  {
+    "id": "R01",
+    "title": "Effective context engineering for AI agents",
+    "year": 2025,
+    "url": "https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents",
+    "use": "context budget/JIT/compaction"
+  },
+  {
+    "id": "R02",
+    "title": "Writing effective tools for agents — with agents",
+    "year": 2025,
+    "url": "https://www.anthropic.com/engineering/writing-tools-for-agents",
+    "use": "tool design/eval"
+  },
+  {
+    "id": "R03",
+    "title": "OP-Bench",
+    "year": 2026,
+    "url": "https://arxiv.org/abs/2601.13722",
+    "use": "over-personalization guard"
+  },
+  {
+    "id": "R04",
+    "title": "Personalize-then-Store",
+    "year": 2026,
+    "url": "https://arxiv.org/abs/2605.25535",
+    "use": "memory storage gate"
+  },
+  {
+    "id": "R05",
+    "title": "Implementation Intentions and Goal Achievement",
+    "year": 2006,
+    "url": "https://doi.org/10.1016/S0065-2601(06)38002-1",
+    "use": "intention-action gap"
+  },
+  {
+    "id": "R06",
+    "title": "Notion Custom Agent trigger release",
+    "year": 2026,
+    "url": "https://www.notion.com/releases/2026-07-31",
+    "use": "industry baseline for proactive agents"
+  },
+  {
+    "id": "R07",
+    "title": "Toward Personalized LLM-Powered Agents: Foundations, Evaluation, and Future Directions",
+    "year": 2026,
+    "url": "https://arxiv.org/abs/2602.22680",
+    "use": "profile-memory-planning-action integrated personalization"
+  },
+  {
+    "id": "R08",
+    "title": "Intelligent AI Delegation",
+    "year": 2026,
+    "url": "https://arxiv.org/abs/2602.11865",
+    "use": "authority/responsibility/accountability/boundaries/trust in delegation"
+  },
+  {
+    "id": "R09",
+    "title": "Memory for Autonomous LLM Agents: Mechanisms, Evaluation, and Emerging Frontiers",
+    "year": 2026,
+    "url": "https://arxiv.org/abs/2603.07670",
+    "use": "write-manage-read memory loop, contradiction/latency/privacy"
+  },
+  {
+    "id": "R10",
+    "title": "From Storage to Experience: A Survey on the Evolution of LLM Agent Memory Mechanisms",
+    "year": 2026,
+    "url": "https://arxiv.org/abs/2605.06716",
+    "use": "storage-reflection-experience memory progression"
+  },
+  {
+    "id": "R11",
+    "title": "Motion AI Task Manager",
+    "year": 2026,
+    "url": "https://www.usemotion.com/features/ai-task-manager",
+    "use": "competitive baseline for dynamic task prioritization/scheduling"
+  },
+  {
+    "id": "R12",
+    "title": "Reclaim Up Next for Tasks",
+    "year": 2026,
+    "url": "https://help.reclaim.ai/en/articles/8602291-using-up-next-for-tasks",
+    "use": "competitive baseline for task scheduling and user override"
+  }
+]

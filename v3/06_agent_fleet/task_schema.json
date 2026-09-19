@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Sparkle V3 Agent Task",
+  "type": "object",
+  "required": ["id","title","stream","depends_on","required_locks","objective","work","acceptance","risk","resource_class","reviewers_required","status"],
+  "properties": {
+    "id": {"type":"string","pattern":"^[A-Z]+-[0-9]{2}$"},
+    "risk": {"enum":["low","medium","high","critical"]},
+    "resource_class": {"enum":["LIGHT","MEDIUM","HEAVY"]},
+    "reviewers_required": {"type":"integer","minimum":1,"maximum":2},
+    "status": {"enum":["TODO","CLAIMED","READY_FOR_REVIEW","CHANGES","DONE","PARTIAL","BLOCKED"]}
+  }
+}

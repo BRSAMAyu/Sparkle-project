@@ -1,0 +1,42 @@
+{
+  "package": "Sparkle V3 Agent Execution Pack",
+  "version": "3.0",
+  "date": "2026-09-19",
+  "purpose": "Agent-only productization execution source; does not repeat completed V2/V2.5 cards.",
+  "canonical_product_name": "Sparkle",
+  "counts": {
+    "v3_tasks": 107,
+    "initial_parallel_frontier": 6,
+    "evaluation_scenarios": 260,
+    "golden_journeys": 0,
+    "simulator_personas": 10,
+    "feature_modules_in_matrix": 42,
+    "files_before_manifest_and_checksums": 200,
+    "bytes_before_manifest_and_checksums": 913133
+  },
+  "entrypoints": {
+    "human_readme": "README_START_HERE.md",
+    "north_star": "NORTH_STAR.md",
+    "master_design": "MASTER_DESIGN.md",
+    "definition_of_done": "V3_DEFINITION_OF_DONE.md",
+    "fleet_start_prompt": "06_agent_fleet/START_PROMPT.md",
+    "task_index": "07_tasks/TASK_INDEX.md",
+    "machine_tasks": "07_tasks/tasks.json",
+    "validation_report": "VALIDATION_REPORT.md",
+    "reading_room": "READING_ROOM.html"
+  },
+  "validation": {
+    "pack_validator": "PASS",
+    "unit_tests": "4 passed",
+    "dag": "acyclic",
+    "initial_frontier_ids": [
+      "B-01",
+      "B-02",
+      "B-03",
+      "B-04",
+      "B-05",
+      "B-06"
+    ],
+    "boundary": "Pack validation is not product implementation validation."
+  }
+}

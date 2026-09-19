@@ -1,0 +1,43 @@
+﻿feature,desired_v3_role,user_job,natural_journey,v3_product_rule,B-01_current_state,data_truth,evidence
+achievement,SECONDARY,quietly acknowledge meaningful outcomes,goal completion/reflection,only real outcome events; hidden in low-stimulation,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+aurora,CORE,adaptive decision + relationship layer,all core journeys,Why-this/correction/no-action,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+auth,CORE,secure low-friction account/session,first 3 minutes/account switch,no profile burden,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+calendar,CONTEXTUAL,schedule when time placement matters,schedule intervention,not a main destination,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+chat,CORE,"clarify, collaborate, execute",stuck/hybrid/general help,fast/deep/agent modes,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+cognitive,CORE,evidence-based understanding/reflection,insights/reflection,no pseudo-psych scores,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+community,CORE_OPTIONAL,small-group accountability/artifact feedback,sprint/check-in,solo product remains complete,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+document,CONTEXTUAL,goal material ingestion,add material,"source of knowledge, not user memory",TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+documents,CONTEXTUAL,browse/manage goal materials,goal material,contextual surface,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+error_book,CONTEXTUAL,turn errors into practice/evidence,practice/review,root cause is hypothesis,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+experience,CONTEXTUAL,surface past helpful interventions/outcomes,reflection/why this,not a separate persona system,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+file,CONTEXTUAL,artifact/material file operations,goal/action,permission/version tracked,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+focus,CONTEXTUAL,help execute chosen human action,human action,timer is not outcome,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+galaxy,CORE,visualize knowledge/outcome trajectory,completion/reflection,evidence-aware mastery,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+goal,CORE,persistent context for desired outcome,all long-horizon journeys,primary organizing object,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+home,CORE,answer what matters now,daily return,one primary action,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+insights,CORE,convert evidence into useful reflection,reflection/return,fact→interpretation→uncertainty→action,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+intent,INTERNAL,route/categorize requests,all AI paths,no user-facing destination,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+knowledge,CONTEXTUAL,retrieve and use user/external knowledge,RAG/action,separate from memory,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+leaderboard,HIDDEN,none for V3 core,none,do not launch because code exists,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+memory,CORE,controlled longitudinal personalization,correction/return,source/scope/revoke visible,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+mirofish,LABS,experimental only if proven,labs,hidden by default,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+notification_center,CONTEXTUAL,surface high-value proactive events,proactive/run awaiting,burden caps,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+onboarding,CORE,reach first meaningful value quickly,first 3 minutes,progressive profiling,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+openclaw,INTERNAL_CAPABILITY,reuse execution/tool capabilities,agent run,not a second runtime/user center,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+photon,SECONDARY,optional lightweight reward,achievement,not entitlement,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+plan,CORE,maintain revisable route to goal,goal planning/recovery,"plan is mutable, not backlog burden",TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+reflection,CONTEXTUAL,extract learning after outcome,completion/return,evidence-bound,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+report,CONTEXTUAL,summarize verified progress,weekly reflection,facts computed before LLM prose,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+reviews,CONTEXTUAL,review artifacts/knowledge/errors,practice/reflection,source-linked,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+seed_library,LABS,developer/demo seeds,example mode,strict namespace,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+settings,CORE,privacy/agent/proactive/accessibility control,my/control,settings actually affect runtime,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+shop,SECONDARY,optional cosmetic/reward,secondary,"not core, no fake value",TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+simulation,LABS,experimental learning simulation,labs/contextual if proven,hidden by default,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+splash,CORE,fast trustworthy startup/recovery,first 3 minutes,no decorative delay,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+task,CORE,concrete action lifecycle,today/goal,completion evidence,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+theater,LABS,experimental visualization,labs,hidden by default,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+tools,CONTEXTUAL,capabilities used by Agent/actions,agent/hybrid,permissioned registry,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+translation,CONTEXTUAL,remove language friction for materials,knowledge/action,only when needed,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+user,CORE,account + reflection/control surface,my,not another profile truth,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+visual_elements,LABS,shared visuals only if design-system owned,all UI,experiments hidden,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence
+vocabulary,CONTEXTUAL,practice vocabulary when goal requires,learning action,not separate primary app,TO_VERIFY,TO_VERIFY,B-01 fills current HEAD evidence

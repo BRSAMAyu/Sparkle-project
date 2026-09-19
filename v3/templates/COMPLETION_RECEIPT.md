@@ -1,0 +1,16 @@
+# Completion Receipt
+- Task:
+- Agent:
+- Base SHA:
+- Final SHA:
+- Status: READY_FOR_REVIEW / PARTIAL / BLOCKED
+- User-value change:
+- Files/components:
+- Tests executed + results:
+- Simulator/device journey + results:
+- Screenshots/video:
+- Trace IDs / actual model / latency / usage (if AI):
+- Negative/failure cases:
+- Known limitations:
+- Rollback/kill switch:
+- Suggested reviewer checks:
