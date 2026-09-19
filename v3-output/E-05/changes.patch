@@ -1,0 +1,4189 @@
+diff --git a/backend/alembic/versions/e05_20260919_embedding_version_columns.py b/backend/alembic/versions/e05_20260919_embedding_version_columns.py
+new file mode 100644
+index 00000000..c364fab7
+--- /dev/null
++++ b/backend/alembic/versions/e05_20260919_embedding_version_columns.py
+@@ -0,0 +1,53 @@
++"""E-05：embedding 版本溯源列（document_chunks / knowledge_nodes）
++
++Revision ID: e05_20260919
++Revises: ent01_20260919
++Create Date: 2026-09-19
++
++背景：chunk/node 向量没有记录生成它的 embedding 模型身份。切换
++EMBEDDING_MODEL 后，旧向量与新查询向量在同一个余弦空间里混用，相似度静默
++变成垃圾（跨模型余弦距离无意义）。本迁移为 document_chunks 与
++knowledge_nodes 增加 embedding_model（如 "dashscope/text-embedding-v4@1024"）
++与 embedding_dim 两列，配合检索侧版本过滤（EMBEDDING_STRICT_VERSION_FILTER）
++实现版本隔离；重建脚本 scripts/devtools/rebuild_embedding_index.py 负责把
++存量向量补标记 / 重嵌。
++
++纯加法、可逆；不对存量行做有假设的回填（无法证明存量向量的真实模型来源，
++宁缺毋假——NULL 在过渡期按"未知来源"策略处理）。
++
++# Migration Contract:
++#   type: reversible
++#   rollback_plan: "alembic downgrade -1（仅删两列，不动向量数据）"
++#   verification_query: "SELECT column_name FROM information_schema.columns WHERE table_name='document_chunks' AND column_name IN ('embedding_model','embedding_dim');"
++#   backfill_plan: "scripts/devtools/rebuild_embedding_index.py --table both --execute（真实重嵌并打标）"
++#   owner: "backend"
++#   ticket: "E-05 Embedding / Hybrid Retrieval 生产接入"
++"""
++
++from __future__ import annotations
++
++from typing import Sequence
++
++import sqlalchemy as sa
++
++from alembic import op
++
++# revision identifiers, used by Alembic.
++revision: str = "e05_20260919"
++down_revision: str | None = "ent01_20260919"
++branch_labels: str | Sequence[str] | None = None
++depends_on: str | Sequence[str] | None = None
++
++_TABLES = ("document_chunks", "knowledge_nodes")
++
++
++def upgrade() -> None:
++    for table in _TABLES:
++        op.add_column(table, sa.Column("embedding_model", sa.String(length=100), nullable=True))
++        op.add_column(table, sa.Column("embedding_dim", sa.Integer(), nullable=True))
++
++
++def downgrade() -> None:
++    for table in _TABLES:
++        op.drop_column(table, "embedding_dim")
++        op.drop_column(table, "embedding_model")
+diff --git a/backend/app/config/settings.py b/backend/app/config/settings.py
+index 95dd246c..8a29df63 100755
+--- a/backend/app/config/settings.py
++++ b/backend/app/config/settings.py
+@@ -512,6 +512,11 @@ class Settings(BaseSettings):
+     EMBEDDING_BACKUP_PROVIDER: str = "siliconflow"  # dashscope | siliconflow
+     EMBEDDING_MODEL: str = "text-embedding-v4"  # 向量模型
+     EMBEDDING_DIM: int = 1024  # 向量维度
++    EMBEDDING_CACHE_TTL_SECONDS: int = 300  # embedding 结果 Redis 缓存 TTL
++    # E-05 版本隔离：True 时检索只使用 embedding_model 等于当前版本的向量；
++    # False（过渡期默认）额外容忍 embedding_model 为 NULL 的存量向量，
++    # 但任何"标记了其他模型"的向量始终被排除。重建索引后建议置 True。
++    EMBEDDING_STRICT_VERSION_FILTER: bool = False
+     ENABLE_CONTEXTUAL_CHUNK_ENRICHMENT: bool = True
+     RERANK_PROVIDER: str = "dashscope"  # dashscope | siliconflow
+     RERANK_BACKUP_PROVIDER: str = "siliconflow"  # dashscope | siliconflow
+diff --git a/backend/app/core/redis_search_client.py b/backend/app/core/redis_search_client.py
+index a8307154..f8e65ff7 100755
+--- a/backend/app/core/redis_search_client.py
++++ b/backend/app/core/redis_search_client.py
+@@ -11,20 +11,28 @@ from redis.commands.search.query import Query
+ 
+ from app.config import settings
+ from app.core.redis_utils import resolve_redis_password
+-from app.services.rag_indexing_service import RAG_INDEX_PREFIXES
++from app.services.rag_indexing_service import rag_index_name, rag_index_prefixes
+ 
+ 
+ class RedisSearchClient:
+     """
+     Wrapper for Redis Search (RediSearch)
+     Handles Vector Search + Hybrid Search
++
++    E-05：索引按 embedding 版本命名（idx:knowledge@{ver}），且只索引该版本
++    前缀下的 key。切换 embedding 模型 → 新版本索引 → 新旧向量隔离；旧版本
++    索引与其 key 保留（rollback 直接切回），由 rebuild 脚本 --prune 清理。
+     """
+ 
++    LEGACY_INDEX_NAME = "idx:knowledge"
++
+     def __init__(self, redis_url: str = settings.REDIS_URL, password: str | None = settings.REDIS_PASSWORD):
+         resolved_password, _ = resolve_redis_password(redis_url, password)
+         # Note: Redis 7.x with ACL requires username='default' when password is set
+         self.redis = Redis.from_url(redis_url, username="default", password=resolved_password, decode_responses=True)
+-        self.index_name = "idx:knowledge"
++
++    def _index_name(self) -> str:
++        return rag_index_name()
+ 
+     @staticmethod
+     def _is_missing_index_error(exc: Exception) -> bool:
+@@ -65,44 +73,46 @@ class RedisSearchClient:
+         )
+ 
+     async def ensure_index(self) -> bool:
++        index_name = self._index_name()
+         try:
+-            await self.redis.ft(self.index_name).info()
++            await self.redis.ft(index_name).info()
+             return True
+         except Exception as exc:
+             if not self._is_missing_index_error(exc):
+                 if self._is_search_module_unavailable(exc):
+-                    logger.warning(f"Redis search module unavailable while checking index {self.index_name}: {exc}")
++                    logger.warning(f"Redis search module unavailable while checking index {index_name}: {exc}")
+                 else:
+-                    logger.warning(f"Failed to inspect Redis search index {self.index_name}: {exc}")
++                    logger.warning(f"Failed to inspect Redis search index {index_name}: {exc}")
+                 return False
+ 
+         try:
+-            await self.redis.ft(self.index_name).create_index(
++            await self.redis.ft(index_name).create_index(
+                 self._build_index_schema(),
+-                definition=IndexDefinition(prefix=RAG_INDEX_PREFIXES, index_type=IndexType.JSON),
++                definition=IndexDefinition(prefix=rag_index_prefixes(), index_type=IndexType.JSON),
+             )
+-            logger.info(f"Created missing Redis search index {self.index_name}")
++            logger.info(f"Created missing Redis search index {index_name}")
+             return True
+         except Exception as exc:
+             lowered = str(exc).lower()
+             if "index already exists" in lowered:
+                 return True
+             if self._is_search_module_unavailable(exc):
+-                logger.warning(f"Redis search module unavailable while creating index {self.index_name}: {exc}")
++                logger.warning(f"Redis search module unavailable while creating index {index_name}: {exc}")
+             else:
+-                logger.warning(f"Failed to create Redis search index {self.index_name}: {exc}")
++                logger.warning(f"Failed to create Redis search index {index_name}: {exc}")
+             return False
+ 
+     async def search(self, query: Query, query_params: dict[str, Any] | None = None):
+         """Execute a search query"""
++        index_name = self._index_name()
+         try:
+-            return await self.redis.ft(self.index_name).search(query, query_params)
++            return await self.redis.ft(index_name).search(query, query_params)
+         except Exception as e:
+             if self._is_missing_index_error(e):
+-                logger.warning(f"Redis search index {self.index_name} missing, attempting initialization")
++                logger.warning(f"Redis search index {index_name} missing, attempting initialization")
+                 if await self.ensure_index():
+                     try:
+-                        return await self.redis.ft(self.index_name).search(query, query_params)
++                        return await self.redis.ft(index_name).search(query, query_params)
+                     except Exception as retry_exc:
+                         logger.warning(f"Redis search retry failed after index initialization: {retry_exc}")
+                         return None
+diff --git a/backend/app/models/document_chunks.py b/backend/app/models/document_chunks.py
+index f55e6726..17cd26f3 100755
+--- a/backend/app/models/document_chunks.py
++++ b/backend/app/models/document_chunks.py
+@@ -34,5 +34,12 @@ class DocumentChunk(BaseModel):
+     content = Column(Text, nullable=False)
+     embedding = Column(VectorCompat, nullable=True)
+ 
++    # E-05 Embedding 版本溯源：记录生成该向量的 provider/model@dim（如
++    # "dashscope/text-embedding-v4@1024"）。检索按当前版本过滤，防止跨模型
++    # 余弦相似度污染；NULL 表示存量未标记向量（过渡期由
++    # EMBEDDING_STRICT_VERSION_FILTER 决定是否参与检索）。
++    embedding_model = Column(String(100), nullable=True)
++    embedding_dim = Column(Integer, nullable=True)
++
+     file = relationship("StoredFile")
+     user = relationship("User")
+diff --git a/backend/app/models/galaxy.py b/backend/app/models/galaxy.py
+index 3148cbdd..a1e7b626 100755
+--- a/backend/app/models/galaxy.py
++++ b/backend/app/models/galaxy.py
+@@ -151,6 +151,10 @@ class KnowledgeNode(BaseModel):
+     # 注意: SQLite 不支持 Vector，需要处理兼容性，或者仅在 PG 环境使用
+     embedding = deferred(Column(VectorCompat, nullable=True))
+ 
++    # E-05 Embedding 版本溯源（同 document_chunks.embedding_model）
++    embedding_model = Column(String(100), nullable=True)
++    embedding_dim = Column(Integer, nullable=True)
++
+     # Layout Coordinates (for Viewport Query)
+     position_x = Column(Float, nullable=True, index=True)
+     position_y = Column(Float, nullable=True, index=True)
+diff --git a/backend/app/services/embedding_service.py b/backend/app/services/embedding_service.py
+index 146a1986..73f99bc0 100755
+--- a/backend/app/services/embedding_service.py
++++ b/backend/app/services/embedding_service.py
+@@ -2,9 +2,23 @@
+ 向量嵌入服务 (Embedding Service)
+ 用于将文本转换为向量表示，支持语义搜索
+ 
+-支持双供应商自动故障切换：
+-- DashScope (阿里云百炼 SDK) - 主供应商
+-- SiliconFlow (HTTP API) - 备用供应商
++支持双供应商配置（DashScope 主 / SiliconFlow 备）。
++
++E-05 fail-closed 契约：
++- 无任何可用 key -> EmbeddingNotConfiguredError（调用方据此明确关闭向量能力），
++  绝不静默返回随机/零向量（旧 DEMO_MODE 零向量回退已于 E-05 移除）。
++- 供应商失败 -> 显式 RuntimeError，由调用方降级（词法检索/关闭功能）。
++- current_embedding_version() 提供模型身份（provider/model@dim），
++  检索与缓存必须按它做版本隔离，防止跨模型余弦相似度污染。
++
++E-05 D1（R2 返修）版本溯源不变量：本服务返回的**任何**向量都保证由
++current_embedding_version() 所标识的供应商/模型生成。为此跨供应商的异构
++failover 被禁止（dashscope 失败不会切到 siliconflow）：两个供应商的模型与
++服务栈不同（dashscope 传 text_type=query/document，siliconflow 端点不接收），
++向量不在同一余弦空间——写库会打上错误版本戳、查询侧会拿备用模型向量去比
++主模型索引，两侧都击穿版本隔离；embedding 缓存键也会被备模型向量污染。
++供应商故障时 fail-closed（EmbeddingProviderError），由调用方走既定降级路径
++（词法检索/语义缓存跳过），而不是产出带错误溯源的向量。
+ """
+ import asyncio
+ import hashlib
+@@ -12,7 +26,7 @@ from http import HTTPStatus
+ 
+ import httpx
+ from loguru import logger
+-from tenacity import retry, stop_after_attempt, wait_exponential
++from tenacity import retry, retry_if_not_exception_type, stop_after_attempt, wait_exponential
+ 
+ from app.config import settings
+ from app.core.cache import cache_service
+@@ -24,15 +38,30 @@ except ImportError:  # pragma: no cover - optional dependency in some test/dev e
+     dashscope = None
+ 
+ 
++class EmbeddingProviderError(RuntimeError):
++    """所有 embedding 供应商都失败了（fail-closed，不返回零向量）。"""
++
++
++class EmbeddingNotConfiguredError(EmbeddingProviderError):
++    """没有任何 embedding 供应商配置了 API key。
++
++    调用方捕获此错误后应明确关闭依赖向量的功能（返回空结果 + 显式原因），
++    而不是重试或使用占位向量。tenacity 不重试此类错误。
++    """
++
++
+ class EmbeddingService:
+     """
+     文本向量嵌入服务
+ 
+-    支持双供应商自动故障切换：
++    支持双供应商配置：
+     - DashScope (阿里云百炼 SDK) - 使用 text-embedding-v4
+-    - SiliconFlow (HTTP API) - 使用 Qwen/Qwen3-Embedding-4B (同款模型)
++    - SiliconFlow (HTTP API) - 使用 Qwen/Qwen3-Embedding-4B
+ 
+-    当主供应商失败时，自动切换到备用供应商
++    E-05 D1（R2）：故障切换只在**同版本**供应商之间发生（见 batch_embeddings
++    的异构守卫）。跨供应商（dashscope↔siliconflow）的模型/服务栈不同，
++    failover 会被显式跳过并 fail-closed，保证版本溯源不变量：
++    任何返回向量 == current_embedding_version() 所标识的模型生成。
+     """
+ 
+     # 供应商优先级顺序
+@@ -53,7 +82,74 @@ class EmbeddingService:
+         self.siliconflow_base_url = settings.SILICONFLOW_BASE_URL
+         self.siliconflow_model = settings.SILICONFLOW_EMBEDDING_MODEL  # Qwen/Qwen3-Embedding-4B
+ 
+-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
++    # ------------------------------------------------------------------ #
++    # 版本身份 (E-05)                                                     #
++    # ------------------------------------------------------------------ #
++    @staticmethod
++    def normalize_version_token(version: str) -> str:
++        """把版本串归一化为可安全嵌入 Redis key / RediSearch tag 的 token。
++
++        例如 ``dashscope/text-embedding-v4@1024`` -> ``dashscope_text-embedding-v4_1024``
++        """
++        keep = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
++        return "".join(ch if ch in keep else "_" for ch in version)
++
++    def provider_version(self, provider: str) -> str:
++        """指定供应商的解析版本串 ``{provider}/{model}@{dim}``（E-05 D1）。
++
++        版本身份以供应商为前缀：不同供应商即使配置了同名模型，其服务栈
++        （分词、text_type 语义、量化精度）也不可证明一致，一律视为不同版本
++        （审计已实证 dashscope/siliconflow 的 text_type 行为不对称）。
++        """
++        model = self.siliconflow_model if provider == "siliconflow" else self.dashscope_model
++        return f"{provider}/{model}@{self.embedding_dim}"
++
++    def current_embedding_version(self) -> str:
++        """当前 embedding 配置的规范版本串：``{provider}/{model}@{dim}``。
++
++        检索过滤、chunk 元数据、语义缓存隔离都以它为准；配置变更（模型/维度）
++        会产生新版本，旧向量与旧缓存因版本不同被隔离。
++
++        E-05 D1（R2）不变量：本服务返回的任何向量都由该版本串标识的供应商/
++        模型生成（异构 failover 在 batch_embeddings 内被拒绝），因此写点可以
++        安全地用它打版本戳、检索侧用它做隔离过滤。
++        """
++        return self.provider_version(self.primary_provider)
++
++    def current_version_token(self) -> str:
++        """Redis key / index / tag 用的安全 token 形式。"""
++        return self.normalize_version_token(self.current_embedding_version())
++
++    def provider_status(self) -> dict[str, dict]:
++        """每个供应商的配置状态（不含任何密钥内容），用于诊断与功能开关。
++
++        E-05 D1：resolved_version 供运维直接看出"备用供应商为何不参与
++        failover"（异构版本会被 batch_embeddings 的守卫跳过）。
++        """
++        return {
++            "dashscope": {
++                "configured": bool(self.dashscope_api_key),
++                "model": self.dashscope_model,
++                "resolved_version": self.provider_version("dashscope"),
++                "env": "DASHSCOPE_API_KEY",
++            },
++            "siliconflow": {
++                "configured": bool(self.siliconflow_api_key),
++                "model": self.siliconflow_model,
++                "resolved_version": self.provider_version("siliconflow"),
++                "env": "SILICONFLOW_API_KEY",
++            },
++        }
++
++    def is_configured(self) -> bool:
++        """是否至少有一个供应商配置了 API key。"""
++        return any(info["configured"] for info in self.provider_status().values())
++
++    @retry(
++        stop=stop_after_attempt(3),
++        wait=wait_exponential(multiplier=1, min=2, max=10),
++        retry=retry_if_not_exception_type(EmbeddingNotConfiguredError),
++    )
+     async def get_embedding(self, text: str, text_type: str = "document") -> list[float]:
+         """
+         获取文本的向量表示
+@@ -64,38 +160,55 @@ class EmbeddingService:
+ 
+         Returns:
+             List[float]: 向量
++
++        Raises:
++            EmbeddingNotConfiguredError: 没有任何供应商配置 API key
++            EmbeddingProviderError: 所有供应商都失败（fail-closed，无零向量回退）
+         """
+         embeddings = await self.batch_embeddings([text], text_type=text_type)
+         return embeddings[0]
+ 
+-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
++    @retry(
++        stop=stop_after_attempt(3),
++        wait=wait_exponential(multiplier=1, min=2, max=10),
++        retry=retry_if_not_exception_type(EmbeddingNotConfiguredError),
++    )
+     async def batch_embeddings(self, texts: list[str], text_type: str = "document") -> list[list[float]]:
+         """
+-        批量获取文本向量 (支持双供应商自动故障切换)
++        批量获取文本向量（同版本供应商内重试；跨供应商异构 failover 被拒绝）
+ 
+         Args:
+             texts: 文本列表
+             text_type: query | document
+ 
+         Returns:
+-            List[List[float]]: 向量列表
++            List[List[float]]: 向量列表（全部由 current_embedding_version()
++            所标识的供应商/模型生成——版本溯源不变量，E-05 D1）
++
++        Raises:
++            EmbeddingNotConfiguredError: 没有任何供应商配置 API key（不重试）
++            EmbeddingProviderError: 所有可用供应商都失败（fail-closed，无零向量
++                回退；异构备用供应商被跳过时会在此错误中说明原因）
+         """
+         if not texts:
+             return []
+ 
+         # R5-P1-12: Cache embedding results to avoid repeated API calls
+         cache_ttl = getattr(settings, "EMBEDDING_CACHE_TTL_SECONDS", 300)
++        # E-05: 缓存键带上模型版本，切换 embedding 模型后旧模型的缓存向量自动失效，
++        # 防止同维度不同模型的向量跨版本污染检索。
++        version_token = self.current_version_token()
+         cache_keys = []
+         cached_results: list[list[float] | None] = [None] * len(texts)
+         all_cached = True
+ 
+         for i, text in enumerate(texts):
+-            # Use hash of text + text_type as cache key
+-            cache_key = f"embedding:{text_type}:{hashlib.sha256(text.encode()).hexdigest()[:32]}"
++            # Use hash of text + text_type + model version as cache key
++            cache_key = f"embedding:{version_token}:{text_type}:{hashlib.sha256(text.encode()).hexdigest()[:32]}"
+             cache_keys.append(cache_key)
+             try:
+                 cached = await cache_service.get(cache_key)
+-                if cached:
++                if cached and isinstance(cached, list) and len(cached) == self.embedding_dim and any(cached):
+                     cached_results[i] = cached
+                 else:
+                     all_cached = False
+@@ -111,10 +224,40 @@ class EmbeddingService:
+         missing_indices = [i for i, r in enumerate(cached_results) if r is None]
+         missing_texts = [texts[i] for i in missing_indices]
+ 
++        # E-05 fail-closed 前置检查：没有任何供应商配置 key 时立刻显式失败。
++        # 旧实现会静默跳过所有供应商，最后（DEMO_MODE 下）返回零向量——
++        # 零向量会让余弦相似度静默变成垃圾结果，属于必须消除的静默失败路径。
++        if not self.is_configured():
++            missing = sorted(env for info in self.provider_status().values() if not info["configured"] for env in [info["env"]])
++            raise EmbeddingNotConfiguredError(
++                "No embedding provider is configured. "
++                f"Set one of: {', '.join(missing)}. "
++                "Vector-dependent features (semantic search / semantic cache) must be explicitly disabled."
++            )
++
+         # Build provider order for retry logic
+         providers_to_try = self._get_provider_order()
++        # E-05 D1（R2）：只有解析版本与当前版本身份一致的供应商才允许执行
++        # embedding。跨供应商 failover（dashscope↔siliconflow）的模型/服务栈
++        # 不同（含 text_type 语义不对称），其向量与主供应商向量不在同一余弦
++        # 空间：写库会打上错误版本戳、查询侧会拿备用模型向量去比主模型索引，
++        # embedding 缓存键也会被备模型向量污染——异构 failover 一律跳过
++        # （fail-closed），由调用方走既定降级路径。
++        active_version = self.current_embedding_version()
++        skipped_heterogeneous: list[str] = []
+         last_error = None
+         for provider in providers_to_try:
++            provider_version = self.provider_version(provider)
++            if provider_version != active_version:
++                skip_reason = f"{provider}:{provider_version}"
++                if skip_reason not in skipped_heterogeneous:
++                    skipped_heterogeneous.append(skip_reason)
++                    logger.warning(
++                        f"Embedding provider {provider} skipped: heterogeneous version "
++                        f"({provider_version} != active {active_version}); cross-provider "
++                        "failover is disabled to preserve version isolation (E-05 D1)"
++                    )
++                continue
+             try:
+                 await circuit_breaker_service.check(f"embedding:{provider}")
+                 if provider == "dashscope":
+@@ -129,6 +272,21 @@ class EmbeddingService:
+                     continue
+                 await circuit_breaker_service.record_success(f"embedding:{provider}")
+ 
++                if len(result) != len(missing_texts):
++                    raise RuntimeError(
++                        f"Embedding provider {provider} returned {len(result)} vectors for {len(missing_texts)} texts"
++                    )
++                # E-05: 向量健全性守卫——维度错误或零向量直接视为供应商失败，
++                # 绝不让退化向量进入索引/检索（零向量余弦距离无意义）。
++                for vec in result:
++                    if not isinstance(vec, (list, tuple)) or len(vec) != self.embedding_dim:
++                        raise RuntimeError(
++                            f"Embedding provider {provider} returned invalid dimension "
++                            f"(expected {self.embedding_dim}, got {len(vec) if isinstance(vec, (list, tuple)) else type(vec).__name__})"
++                        )
++                    if not any(vec):
++                        raise RuntimeError(f"Embedding provider {provider} returned an all-zero vector")
++
+                 # Store results in cache and fill missing slots
+                 for i, idx in enumerate(missing_indices):
+                     cache_key = cache_keys[idx]
+@@ -150,10 +308,19 @@ class EmbeddingService:
+                 last_error = e
+                 continue
+ 
+-        # 所有供应商都失败
+-        if settings.DEMO_MODE:
+-            return [[0.0] * self.embedding_dim for _ in texts]
+-        raise RuntimeError(f"All embedding providers failed. Last error: {last_error}")
++        # 所有供应商都失败：fail-closed 显式报错。
++        # （E-05：移除 DEMO_MODE 零向量静默回退——检索链宁可降级也不能喂零向量。）
++        heterogeneity_note = ""
++        if skipped_heterogeneous:
++            heterogeneity_note = (
++                f" Homogeneous failover unavailable: {', '.join(skipped_heterogeneous)} skipped "
++                f"(version != {active_version}); cross-provider failover is disabled to "
++                "preserve embedding version isolation (E-05 D1)."
++            )
++        raise EmbeddingProviderError(
++            f"All embedding providers failed (providers tried: {providers_to_try}). "
++            f"Last error: {last_error}.{heterogeneity_note}"
++        )
+ 
+     def _get_provider_order(self) -> list[str]:
+         """获取供应商尝试顺序 (主供应商优先)"""
+@@ -226,3 +393,16 @@ class EmbeddingService:
+ 
+ # 全局实例
+ embedding_service = EmbeddingService()
++
++
++def stamp_embedding_version(obj, vector: list[float] | None, version: str | None = None) -> None:
++    """把当前 embedding 版本写进 ORM 对象的 embedding_model/embedding_dim 字段。
++
++    E-05 写入侧约定：任何持久化向量的地方（document chunk / knowledge node）
++    都必须打上版本标记，检索侧才能做版本隔离。
++    """
++    version = version or embedding_service.current_embedding_version()
++    if hasattr(obj, "embedding_model"):
++        obj.embedding_model = version
++    if hasattr(obj, "embedding_dim"):
++        obj.embedding_dim = len(vector) if vector else None
+diff --git a/backend/app/services/expansion_service.py b/backend/app/services/expansion_service.py
+index e3a9b45f..623de0ae 100755
+--- a/backend/app/services/expansion_service.py
++++ b/backend/app/services/expansion_service.py
+@@ -23,7 +23,7 @@ from app.db.session import AsyncSessionLocal
+ from app.models.galaxy import ExpansionFeedback, KnowledgeNode, NodeExpansionQueue, NodeRelation, UserNodeStatus
+ from app.models.subject import Subject
+ from app.schemas.galaxy import SectorCode
+-from app.services.embedding_service import embedding_service
++from app.services.embedding_service import embedding_service, stamp_embedding_version
+ from app.services.galaxy_feedback_signal_processor import GalaxyFeedbackSignalProcessor
+ from app.services.node_sector_service import (
+     NodeSectorService,
+@@ -409,6 +409,7 @@ class ExpansionService:
+             if generate_embedding and node.description:
+                 embedding_text = f"{node.name} {node.description}"
+                 node.embedding = await embedding_service.get_embedding(embedding_text)
++                stamp_embedding_version(node, node.embedding)
+             self.db.add(node)
+             await self.db.flush()
+             created = True
+diff --git a/backend/app/services/file_processing_orchestrator.py b/backend/app/services/file_processing_orchestrator.py
+index 266fb062..e493150b 100755
+--- a/backend/app/services/file_processing_orchestrator.py
++++ b/backend/app/services/file_processing_orchestrator.py
+@@ -195,7 +195,10 @@ class FileProcessingOrchestrator:
+                     content=chunk.content,
+                     embedding=embedding,
+                     quality_score=quality_score,
+-                    pipeline_version="v1"
++                    pipeline_version="v1",
++                    # E-05: 向量版本溯源——检索侧按此过滤，防止跨模型混用
++                    embedding_model=embedding_service.current_embedding_version(),
++                    embedding_dim=len(embedding),
+                 ))
+             self.db.add_all(items)
+             await self.db.commit()
+@@ -211,7 +214,7 @@ class FileProcessingOrchestrator:
+             if not redis:
+                 logger.warning(f"Skipping real-time RAG indexing for file {file_record.id}: Redis unavailable")
+                 return
+-            indexed = await index_document_chunks(redis, file_record, chunks, replace_existing=True)
++            indexed = await index_document_chunks(redis, file_record, chunks, replace_existing=True, db=self.db)
+             logger.info(f"Indexed {indexed} document chunks to Redis for file {file_record.id}")
+         except Exception as exc:
+             logger.warning(f"Failed to index document chunks to Redis for file {file_record.id}: {exc}")
+@@ -325,6 +328,7 @@ class FileProcessingOrchestrator:
+                 chunks,
+                 trust_level=trust_level,
+                 replace_existing=True,
++                db=self.db,
+             )
+             logger.info(
+                 f"Indexed {indexed} group document chunks to Redis for group {group_file.group_id} file {file_record.id}"
+diff --git a/backend/app/services/galaxy/retrieval_service.py b/backend/app/services/galaxy/retrieval_service.py
+index 3f62ffaa..f5c0b448 100755
+--- a/backend/app/services/galaxy/retrieval_service.py
++++ b/backend/app/services/galaxy/retrieval_service.py
+@@ -1,13 +1,14 @@
+ from __future__ import annotations
+ 
+ import asyncio
++import re
+ import time
+ from dataclasses import dataclass
+ from uuid import UUID
+ 
+ from loguru import logger
+ from redis.commands.search.query import Query
+-from sqlalchemy import and_, false, func, or_, select
++from sqlalchemy import and_, case, false, func, or_, select
+ from sqlalchemy.ext.asyncio import AsyncSession
+ from sqlalchemy.orm import selectinload
+ 
+@@ -22,7 +23,7 @@ from app.models.file_storage import SourceLifecycleStatus, StoredFile
+ from app.models.galaxy import KnowledgeNode, UserNodeStatus
+ from app.models.group_files import GroupFile
+ from app.schemas.galaxy import NodeBase, SearchResultItem, UserStatusInfo
+-from app.services.embedding_service import embedding_service
++from app.services.embedding_service import EmbeddingNotConfiguredError, embedding_service
+ from app.services.rerank_service import rerank_service
+ 
+ try:
+@@ -38,10 +39,51 @@ except ImportError:
+ 
+ _PGVECTOR_RUNTIME_ENABLED = True
+ 
++# E-05 D2（R2）：知识数据版本的 Redis 缓存键（TTL=KNOWLEDGE_VERSION_CACHE_TTL_SECONDS=30s）。
++# 删除/归档/撤销来源时必须同步失效（SourceLifecycleService.invalidate_source_retrieval），
++# 否则 TTL 窗口内的检索仍以旧 knowledge_version 组语义缓存键——exact 与语义相似
++# 两条命中路径都会继续命中已删内容的缓存条目（违反"删除即时不可见"）。
++KNOWLEDGE_VERSION_CACHE_KEY = "knowledge:version:v1"
++
++# E-05: 词法检索的 token 提取——拉丁字母/数字词（>=2 字符）+ 连续 CJK 段整体
++# （长段追加二元组提升召回）。无 zhparser 的 PG 上用 ILIKE 子串匹配。
++_LEX_WORD_RE = re.compile(r"[A-Za-z0-9_]{2,}|[\u4e00-\u9fff]+")
++_CJK_RUN_RE = re.compile(r"[\u4e00-\u9fff]+$")
++
++def extract_lexical_tokens(query: str, *, max_tokens: int = 8) -> list[str]:
++    """把查询拆成词法检索 token（去重、保序、截断）。"""
++    tokens: list[str] = []
++    for match in _LEX_WORD_RE.findall(query or ""):
++        token = match.lower()
++        if token not in tokens:
++            tokens.append(token)
++        if len(match) >= 3 and _CJK_RUN_RE.fullmatch(match):
++            for i in range(len(match) - 1):
++                bigram = match[i : i + 2]
++                if bigram not in tokens:
++                    tokens.append(bigram)
++    return tokens[:max_tokens]
++
+ class KnowledgeRetrievalService:
+     def __init__(self, db: AsyncSession):
+         self.db = db
+ 
++    # ------------------------------------------------------------------ #
++    # E-05: embedding 版本隔离                                            #
++    # ------------------------------------------------------------------ #
++    @staticmethod
++    def _embedding_version_filter(column):
++        """检索只允许命中当前 embedding 版本（或过渡期未标记 NULL）的向量。
++
++        任何标记了**其他**模型的向量无条件排除——跨模型余弦距离没有意义，
++        混用会让相似度静默变成垃圾。EMBEDDING_STRICT_VERSION_FILTER=True 时
++        连 NULL（来源未知）也排除（重建完成后推荐）。
++        """
++        current = embedding_service.current_embedding_version()
++        if settings.EMBEDDING_STRICT_VERSION_FILTER:
++            return column == current
++        return or_(column == current, column.is_(None))
++
+     @staticmethod
+     def _is_vector_runtime_error(exc: Exception) -> bool:
+         lowered = str(exc).lower()
+@@ -69,6 +111,12 @@ class KnowledgeRetrievalService:
+             self._disable_vector_runtime("pgvector extension unavailable")
+         return available
+ 
++    @staticmethod
++    def _mark_degraded(exec_meta: dict | None) -> None:
++        """E-05 D3：向缓存层标记"本次结果为降级产物"（词法降级等）。"""
++        if exec_meta is not None:
++            exec_meta["degraded"] = True
++
+     async def _keyword_fallback(
+         self,
+         user_id_uuid: UUID,
+@@ -97,33 +145,41 @@ class KnowledgeRetrievalService:
+         if not cache_service.redis:
+             return await self._compute_knowledge_version()
+ 
+-        cache_key = "knowledge:version:v1"
+-        cached = await cache_service.get(cache_key)
++        cached = await cache_service.get(KNOWLEDGE_VERSION_CACHE_KEY)
+         if cached:
+             return cached
+ 
+         version = await self._compute_knowledge_version()
+         if version:
+-            await cache_service.set(cache_key, version, ttl=settings.KNOWLEDGE_VERSION_CACHE_TTL_SECONDS)
++            await cache_service.set(KNOWLEDGE_VERSION_CACHE_KEY, version, ttl=settings.KNOWLEDGE_VERSION_CACHE_TTL_SECONDS)
+         return version
+ 
+     async def _compute_knowledge_version(self) -> str | None:
++        """知识图谱数据版本：驱动语义缓存的失效隔离。
++
++        E-05 修复：旧实现只用 max(updated_at)。删除**非最新**行不改变
++        max(updated_at) → 删除文档/节点后语义缓存可能继续命中陈旧结果
++        （delete isolation 漏洞）。加入行数计数后，任何写入或删除都会改变
++        版本串，旧缓存条目（exact 与 semantic 命中路径都以版本为键）立即
++        无法命中，等 TTL 自然过期。
++        """
+         try:
+-            node_max_stmt = select(func.max(KnowledgeNode.updated_at))
+-            chunk_max_stmt = select(func.max(DocumentChunk.updated_at))
++            node_max_stmt = select(func.max(KnowledgeNode.updated_at), func.count(KnowledgeNode.id))
++            chunk_max_stmt = select(func.max(DocumentChunk.updated_at), func.count(DocumentChunk.id))
+ 
+             node_result = await self.db.execute(node_max_stmt)
+             chunk_result = await self.db.execute(chunk_max_stmt)
+ 
+-            node_max = node_result.scalar()
+-            chunk_max = chunk_result.scalar()
++            node_max, node_count = node_result.one()
++            chunk_max, chunk_count = chunk_result.one()
+ 
+             candidates = [dt for dt in (node_max, chunk_max) if dt]
+-            if not candidates:
++            if not candidates and node_count == 0 and chunk_count == 0:
+                 return "tsms:0"
+ 
+-            latest = max(candidates)
+-            return f"tsms:{int(latest.timestamp() * 1000)}"
++            latest = max(candidates) if candidates else None
++            ts_ms = int(latest.timestamp() * 1000) if latest else 0
++            return f"tsms:{ts_ms}:n{int(node_count)}:c{int(chunk_count)}"
+         except Exception:
+             return None
+ 
+@@ -145,6 +201,10 @@ class KnowledgeRetrievalService:
+ 
+         knowledge_version = await self._get_knowledge_version()
+ 
++        # E-05 D3：降级标记通道——_execute_hybrid_search 在向量侧故障降级词法时
++        # 置 degraded=True，语义缓存层据此拒绝把降级结果固化（否则瞬时故障的
++        # 词法答案会被缓存 1h，供应商恢复后同查询继续命中降级答案）
++        exec_meta: dict = {}
+         # Use get_with_lock to prevent redundant heavy retrieval tasks
+         return await semantic_cache_service.get_with_lock(
+             query=query,
+@@ -152,6 +212,8 @@ class KnowledgeRetrievalService:
+             user_id=str(user_id), # Optional: could be global if knowledge is shared
+             similarity_threshold=settings.SEMANTIC_CACHE_SIM_THRESHOLD,
+             knowledge_version=knowledge_version,
++            embedding_version=embedding_service.current_embedding_version(),
++            factory_meta=exec_meta,
+             # factory_func arguments
+             user_id_uuid=user_id,
+             query_str=query,
+@@ -170,19 +232,31 @@ class KnowledgeRetrievalService:
+         subject_id: int | None = None,
+         limit: int = 5,
+         threshold: float = 0.6,
+-        use_reranker: bool = True
++        use_reranker: bool = True,
++        exec_meta: dict | None = None,
+     ) -> list[SearchResultItem]:
+         """
+         Internal implementation of hybrid search.
++
++        exec_meta（E-05 D3）：由缓存层（get_with_lock）注入的降级标记通道；
++        向量侧因 embedding 故障降级词法检索时置 ``degraded=True``，调用方
++        （语义缓存）据此拒绝缓存本次结果。直调时不传则不标记。
+         """
+         # 2. Prepare Queries
+         start_time = time.time()
+         actual_vector_text = vector_query if vector_query else query_str
+         try:
+             query_embedding = await embedding_service.get_embedding(actual_vector_text, text_type="query")
++        except EmbeddingNotConfiguredError as e:
++            # E-05: 无 key = 明确关闭向量侧，降级词法检索（显式记录，非静默）
++            logger.warning(f"Embedding provider not configured; hybrid search degrades to lexical-only: {e}")
++            RETRIEVAL_ERROR_TOTAL.labels(source="redis_hybrid", stage="embedding").inc()
++            self._mark_degraded(exec_meta)
++            return await self._keyword_fallback(user_id_uuid, query_str, subject_id, limit)
+         except Exception as e:
+             logger.warning(f"Embedding generation failed for hybrid search: {e}")
+             RETRIEVAL_ERROR_TOTAL.labels(source="redis_hybrid", stage="embedding").inc()
++            self._mark_degraded(exec_meta)
+             return await self._keyword_fallback(user_id_uuid, query_str, subject_id, limit)
+ 
+         # 3. Parallel Retrieval
+@@ -452,8 +526,12 @@ class KnowledgeRetrievalService:
+                 )
+             )
+             .where(DocumentChunk.file_id.in_(file_ids))
++            .where(DocumentChunk.deleted_at.is_(None))
+             .where(StoredFile.lifecycle_status == SourceLifecycleStatus.ACTIVE.value)
+             .where(DocumentChunk.embedding.isnot(None))
++            # E-05: 只检索当前 embedding 版本的向量（不同模型的向量混在同一
++            # 余弦空间无意义）；过渡期容忍未标记 NULL。
++            .where(self._embedding_version_filter(DocumentChunk.embedding_model))
+             .order_by("distance")
+             .limit(limit * 5)
+         )
+@@ -490,6 +568,199 @@ class KnowledgeRetrievalService:
+ 
+         return results[:limit]
+ 
++    async def document_lexical_search(
++        self,
++        user_id: UUID,
++        query: str,
++        file_ids: list[UUID],
++        limit: int = 5,
++        include_group_documents: bool = False,
++        group_ids: list[UUID | str] | None = None,
++    ) -> list[DocumentChunkResult]:
++        """E-05: 纯词法（稀疏）检索 document_chunks，与向量检索同权限边界。
++
++        - 用户隔离：与 document_vector_search 完全一致（本人 chunk 或其可访问
++          群组共享 chunk），wrong-user=0 由 SQL 谓词保证；
++        - 生命周期：只检索 ACTIVE 且未软删的来源；
++        - 不依赖 embedding（无 key 时仍然可用，作为向量能力的词法降级路径）。
++        """
++        tokens = extract_lexical_tokens(query)
++        if not query or not file_ids or not tokens:
++            return []
++
++        accessible_group_ids: list[UUID] = []
++        if include_group_documents and GroupFileService is not None:
++            accessible_group_ids = await GroupFileService.list_accessible_group_ids(
++                self.db,
++                user_id,
++                requested_group_ids=group_ids,
++            )
++
++        escaped = [token.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") for token in tokens]
++        match_conditions = [
++            or_(
++                DocumentChunk.content.ilike(f"%{token}%"),
++                DocumentChunk.section_title.ilike(f"%{token}%"),
++            )
++            for token in escaped
++        ]
++        lex_score = sum(
++            case(
++                (
++                    or_(
++                        DocumentChunk.content.ilike(f"%{token}%"),
++                        DocumentChunk.section_title.ilike(f"%{token}%"),
++                    ),
++                    1,
++                ),
++                else_=0,
++            )
++            for token in escaped
++        )
++
++        stmt = (
++            select(
++                DocumentChunk,
++                StoredFile.file_name,
++                GroupFile.group_id,
++                GroupFile.shared_by_id,
++                lex_score.label("lex_score"),
++            )
++            .join(StoredFile, StoredFile.id == DocumentChunk.file_id)
++            .outerjoin(
++                GroupFile,
++                and_(
++                    GroupFile.file_id == DocumentChunk.file_id,
++                    GroupFile.not_deleted_filter(),
++                    GroupFile.group_id.in_(accessible_group_ids) if accessible_group_ids else false(),
++                ),
++            )
++            .outerjoin(
++                GroupMember,
++                and_(
++                    GroupMember.group_id == GroupFile.group_id,
++                    GroupMember.user_id == user_id,
++                    GroupMember.not_deleted_filter(),
++                ),
++            )
++            .where(
++                or_(
++                    DocumentChunk.user_id == user_id,
++                    GroupMember.id.isnot(None),
++                )
++            )
++            .where(DocumentChunk.file_id.in_(file_ids))
++            .where(DocumentChunk.deleted_at.is_(None))
++            .where(StoredFile.lifecycle_status == SourceLifecycleStatus.ACTIVE.value)
++            .where(or_(*match_conditions))
++            .order_by(lex_score.desc(), DocumentChunk.chunk_index.asc())
++            .limit(limit * 10)
++        )
++        result = await self.db.execute(stmt)
++
++        rows = result.all()
++        lexical_results_out: list[DocumentChunkResult] = []
++        for chunk, file_name, group_id, shared_by_id, score in rows:
++            lexical_results_out.append(
++                DocumentChunkResult(
++                    chunk=chunk,
++                    file_name=file_name,
++                    score=float(int(score or 0)) / max(1, len(tokens)),
++                    group_id=group_id,
++                    shared_by_user_id=shared_by_id,
++                )
++            )
++        return lexical_results_out[:limit]
++
++    async def document_hybrid_search(
++        self,
++        user_id: UUID,
++        query: str,
++        file_ids: list[UUID],
++        vector_query: str | None = None,
++        limit: int = 5,
++        threshold: float = 0.4,
++        use_reranker: bool = True,
++        include_group_documents: bool = False,
++        group_ids: list[UUID | str] | None = None,
++    ) -> list[DocumentChunkResult]:
++        """E-05: hybrid lexical + vector 检索（RRF 融合，可选 rerank）。
++
++        - 并行跑 document_vector_search 与 document_lexical_search；
++        - 向量侧失败（含未配置 key）时降级为纯词法——显式记日志，绝不静默
++          使用占位向量；
++        - 融合用 reciprocal_rank_fusion（与 Redis hybrid 链路同一实现），
++          可选 rerank（超时/失败回退融合序）。
++        """
++        start_time = time.time()
++        candidate_limit = max(limit * 5, limit)
++
++        vector_task = self.document_vector_search(
++            user_id=user_id,
++            query=query,
++            file_ids=file_ids,
++            vector_query=vector_query,
++            limit=candidate_limit,
++            threshold=threshold,
++            include_group_documents=include_group_documents,
++            group_ids=group_ids,
++        )
++        lexical_task = self.document_lexical_search(
++            user_id=user_id,
++            query=query,
++            file_ids=file_ids,
++            limit=candidate_limit,
++            include_group_documents=include_group_documents,
++            group_ids=group_ids,
++        )
++
++        vector_results, lexical_results = await asyncio.gather(
++            vector_task, lexical_task, return_exceptions=True
++        )  # type: ignore[assignment]
++
++        if isinstance(vector_results, BaseException):
++            if isinstance(vector_results, EmbeddingNotConfiguredError):
++                logger.warning(
++                    "Hybrid document search: embedding provider not configured; "
++                    "degrading to lexical-only retrieval (vector side explicitly disabled)"
++                )
++            else:
++                logger.warning(f"Hybrid document search vector side failed: {vector_results}")
++                RETRIEVAL_ERROR_TOTAL.labels(source="pg_hybrid", stage="retrieve").inc()
++            vector_results = []
++        if isinstance(lexical_results, BaseException):
++            logger.warning(f"Hybrid document search lexical side failed: {lexical_results}")
++            RETRIEVAL_ERROR_TOTAL.labels(source="pg_hybrid", stage="retrieve").inc()
++            lexical_results = []
++
++        if not vector_results and not lexical_results:
++            return []
++
++        fused_results = rerank_service.reciprocal_rank_fusion([vector_results, lexical_results])
++        candidates = [item for item, _score in fused_results]
++
++        rerank_start = time.time()
++        if use_reranker and candidates:
++            try:
++                final_chunks = await asyncio.wait_for(
++                    rerank_service.rerank(query, candidates, top_k=limit),
++                    timeout=settings.RERANK_TIMEOUT_SECONDS,
++                )
++            except TimeoutError:
++                logger.warning("Hybrid document rerank timed out, returning fused candidates.")
++                RETRIEVAL_TIMEOUT_TOTAL.labels(source="pg_hybrid", stage="rerank").inc()
++                final_chunks = candidates[:limit]
++            except Exception as e:
++                logger.warning(f"Hybrid document rerank failed, returning fused candidates: {e}")
++                RETRIEVAL_ERROR_TOTAL.labels(source="pg_hybrid", stage="rerank").inc()
++                final_chunks = candidates[:limit]
++        else:
++            final_chunks = candidates[:limit]
++        RAG_RETRIEVAL_LATENCY.labels(source="pg_hybrid", stage="rerank").observe(time.time() - rerank_start)
++        RAG_RETRIEVAL_LATENCY.labels(source="pg_hybrid", stage="retrieve").observe(time.time() - start_time)
++
++        return final_chunks
++
+     async def semantic_search_nodes(
+         self,
+         query: str,
+@@ -533,6 +804,8 @@ class KnowledgeRetrievalService:
+             )
+             .where(KnowledgeNode.embedding.isnot(None))
+             .where(or_(KnowledgeNode.status.is_(None), KnowledgeNode.status == "published"))
++            # E-05: 版本隔离——不同 embedding 模型的节点向量不参与当前查询
++            .where(self._embedding_version_filter(KnowledgeNode.embedding_model))
+         )
+ 
+         if subject_id:
+@@ -698,3 +971,13 @@ class DocumentChunkResult:
+     group_id: UUID | None = None
+     shared_by_user_id: UUID | None = None
+     trust_level: str | None = None
++
++    @property
++    def id(self) -> str:
++        """RRF 融合按 id 去重（rerank_service.reciprocal_rank_fusion 契约）。"""
++        return str(self.chunk.id)
++
++    @property
++    def content(self) -> str:
++        """rerank 契约：候选需暴露 content 供重排序器读取。"""
++        return self.chunk.content or ""
+diff --git a/backend/app/services/galaxy_service.py b/backend/app/services/galaxy_service.py
+index 6ae4b7d5..74da2bfe 100755
+--- a/backend/app/services/galaxy_service.py
++++ b/backend/app/services/galaxy_service.py
+@@ -53,7 +53,7 @@ from app.schemas.galaxy import (
+     SuggestedNodeSimilarity,
+     UserGalaxyContribution,
+ )
+-from app.services.embedding_service import embedding_service
++from app.services.embedding_service import embedding_service, stamp_embedding_version
+ from app.services.expansion_service import ExpansionService, validate_knowledge_node_name
+ from app.services.galaxy.ontology_generator import (
+     OntologyExtractionResult,
+@@ -3463,6 +3463,7 @@ class GalaxyService:
+                 node = await session.get(KnowledgeNode, node_id)
+                 if node:
+                     node.embedding = embedding
++                    stamp_embedding_version(node, embedding)
+                     session.add(node)
+                     await session.commit()
+                     logger.info(f"Generated embedding for node {node_id}")
+diff --git a/backend/app/services/knowledge_integration_service.py b/backend/app/services/knowledge_integration_service.py
+index 6eafbf61..7a0181ab 100644
+--- a/backend/app/services/knowledge_integration_service.py
++++ b/backend/app/services/knowledge_integration_service.py
+@@ -17,7 +17,7 @@ from sqlalchemy import select
+ from sqlalchemy.ext.asyncio import AsyncSession
+ 
+ from app.models.galaxy import KnowledgeNode, UserNodeStatus
+-from app.services.embedding_service import embedding_service
++from app.services.embedding_service import embedding_service, stamp_embedding_version
+ from app.services.expansion_service import ExpansionService
+ from app.services.galaxy.provenance import append_graph_event_source
+ 
+@@ -287,6 +287,7 @@ class KnowledgeIntegrationService:
+ 
+             if node:
+                 node.embedding = embedding
++                stamp_embedding_version(node, embedding)
+                 node.updated_at = _utcnow()
+                 await self.db.commit()
+                 logger.debug(f"✅ Generated embedding for node {node_id}")
+diff --git a/backend/app/services/rag_indexing_service.py b/backend/app/services/rag_indexing_service.py
+index 7693ddd7..c58c02f5 100644
+--- a/backend/app/services/rag_indexing_service.py
++++ b/backend/app/services/rag_indexing_service.py
+@@ -7,12 +7,15 @@ from uuid import UUID
+ 
+ from loguru import logger
+ from redis.asyncio import Redis
++from sqlalchemy import select
++from sqlalchemy.ext.asyncio import AsyncSession
+ 
+ from app.core.cache import cache_service
+ from app.models.document_chunks import DocumentChunk
+ from app.models.file_storage import SourceLifecycleStatus, StoredFile
+ from app.models.galaxy import KnowledgeNode
+ from app.models.group_files import GroupFile
++from app.services.embedding_service import embedding_service
+ 
+ KNOWLEDGE_CHUNK_PREFIX = "sparkle:chunk:"
+ DOCUMENT_CHUNK_PREFIX = "sparkle:doc_chunk:"
+@@ -23,16 +26,45 @@ SOURCE_NODE_DESCRIPTION = "node_description"
+ SOURCE_DOCUMENT_CHUNK = "document_chunk"
+ 
+ 
+-def knowledge_chunk_key(node_id: Any, chunk_index: int) -> str:
+-    return f"{KNOWLEDGE_CHUNK_PREFIX}{node_id}:{chunk_index}"
++def rag_version_token() -> str:
++    """当前 embedding 版本的 Redis 安全 token（见 EmbeddingService.current_version_token）。"""
++    return embedding_service.current_version_token()
+ 
+ 
+-def document_chunk_key(file_id: Any, chunk_index: int) -> str:
+-    return f"{DOCUMENT_CHUNK_PREFIX}{file_id}:{chunk_index}"
++def rag_index_prefixes(version_token: str | None = None) -> list[str]:
++    """给定 embedding 版本的 Redis 索引前缀（版本化 key 命名空间）。
+ 
++    E-05：不同 embedding 版本的 chunk 写入不同前缀的 key，配合版本化索引名
++    （idx:knowledge@{ver}），保证切换模型后新旧向量永不混入同一 KNN 查询，
++    且旧版本索引天然保留、可切回（rollback 路径）。
++    """
++    token = version_token or rag_version_token()
++    return [f"{KNOWLEDGE_CHUNK_PREFIX}{token}:", f"{DOCUMENT_CHUNK_PREFIX}{token}:", f"{GROUP_DOCUMENT_CHUNK_PREFIX}{token}:"]
+ 
+-def group_document_chunk_key(group_id: Any, file_id: Any, chunk_index: int) -> str:
+-    return f"{GROUP_DOCUMENT_CHUNK_PREFIX}{group_id}:chunk:{file_id}:{chunk_index}"
++
++def rag_index_name(version_token: str | None = None) -> str:
++    """给定 embedding 版本的 RediSearch 索引名。
++
++    旧索引名 "idx:knowledge"（无版本后缀）在 E-05 后成为 legacy 资产：
++    重建脚本把它指向的数据重嵌到版本化 key 后可安全删除（--prune-legacy）。
++    """
++    token = version_token or rag_version_token()
++    return f"idx:knowledge@{token}"
++
++
++def knowledge_chunk_key(node_id: Any, chunk_index: int, version_token: str | None = None) -> str:
++    token = version_token or rag_version_token()
++    return f"{KNOWLEDGE_CHUNK_PREFIX}{token}:{node_id}:{chunk_index}"
++
++
++def document_chunk_key(file_id: Any, chunk_index: int, version_token: str | None = None) -> str:
++    token = version_token or rag_version_token()
++    return f"{DOCUMENT_CHUNK_PREFIX}{token}:{file_id}:{chunk_index}"
++
++
++def group_document_chunk_key(group_id: Any, file_id: Any, chunk_index: int, version_token: str | None = None) -> str:
++    token = version_token or rag_version_token()
++    return f"{GROUP_DOCUMENT_CHUNK_PREFIX}{token}:{group_id}:chunk:{file_id}:{chunk_index}"
+ 
+ 
+ def vector_to_list(vector: Any) -> list[float] | None:
+@@ -72,6 +104,7 @@ def build_knowledge_chunk_document(
+         "source_type": SOURCE_NODE_DESCRIPTION,
+         "node_id": str(node.id),
+         "chunk_index": chunk_index,
++        "embedding_model": node.embedding_model or "",
+     }
+     vector_list = vector_to_list(vector)
+     if vector_list is not None and (expected_vector_dim is None or len(vector_list) == expected_vector_dim):
+@@ -105,6 +138,7 @@ def build_document_chunk_document(
+         "section_title": section_title,
+         "quality_score": chunk.quality_score if chunk.quality_score is not None else 1.0,
+         "pipeline_version": chunk.pipeline_version or "",
++        "embedding_model": chunk.embedding_model or "",
+         "lifecycle_status": file_record.lifecycle_status or SourceLifecycleStatus.ACTIVE.value,
+     }
+     vector_list = vector_to_list(chunk.embedding)
+@@ -141,13 +175,27 @@ async def get_rag_redis() -> Redis | None:
+ 
+ 
+ async def delete_document_chunk_keys(redis: Redis, file_id: UUID | str) -> int:
+-    pattern = document_chunk_key(file_id, "*")
+-    return await delete_rag_chunk_keys(redis, pattern)
++    """删除某文件在**所有 embedding 版本**（含旧无版本格式）下的 Redis chunk key。
++
++    E-05 delete isolation：文档删除必须即时不可见，不能因为 key 换了版本
++    命名空间而漏删旧版本残留。
++    """
++    deleted = 0
++    # 版本化格式：sparkle:doc_chunk:{ver}:{file}:{idx}
++    deleted += await delete_rag_chunk_keys(redis, f"{DOCUMENT_CHUNK_PREFIX}*:{file_id}:*")
++    # 旧格式（E-05 之前）：sparkle:doc_chunk:{file}:{idx}
++    deleted += await delete_rag_chunk_keys(redis, f"{DOCUMENT_CHUNK_PREFIX}{file_id}:*")
++    return deleted
+ 
+ 
+ async def delete_group_document_chunk_keys(redis: Redis, group_id: UUID | str, file_id: UUID | str) -> int:
+-    pattern = group_document_chunk_key(group_id, file_id, "*")
+-    return await delete_rag_chunk_keys(redis, pattern)
++    """删除某群组文档在**所有 embedding 版本**（含旧格式）下的 Redis chunk key。"""
++    deleted = 0
++    # 版本化格式：sparkle:group:{ver}:chunk:{file}:{idx}
++    deleted += await delete_rag_chunk_keys(redis, f"{GROUP_DOCUMENT_CHUNK_PREFIX}*:{group_id}:chunk:{file_id}:*")
++    # 旧格式：sparkle:group:{group}:chunk:{file}:{idx}
++    deleted += await delete_rag_chunk_keys(redis, f"{GROUP_DOCUMENT_CHUNK_PREFIX}{group_id}:chunk:{file_id}:*")
++    return deleted
+ 
+ 
+ async def delete_rag_chunk_keys(redis: Redis, pattern: str) -> int:
+@@ -180,14 +228,48 @@ async def index_rag_documents(redis: Redis, docs: Iterable[dict[str, Any]], batc
+     return count
+ 
+ 
++async def source_is_active_fresh(db: AsyncSession, file_id: UUID | str) -> bool:
++    """E-05 D4（R2）：对文件生命周期做**新鲜**复查（直查列值，不经 ORM 身份映射）。
++
++    ``index_document_chunks`` 的调用方（Celery 处理链）手里的 ``file_record``
++    是可能过期的内存态：处理期间文件被并发删除/归档时，删除侧的
++    SCAN-DELETE 先跑完，之后落地的索引写入就无人再删（JSON.SET 无 TTL）。
++    READ COMMITTED 下每条 SELECT 取新快照，能看到其它事务已提交的状态。
++    """
++    row = (
++        await db.execute(
++            select(StoredFile.lifecycle_status, StoredFile.deleted_at).where(StoredFile.id == file_id)
++        )
++    ).first()
++    if row is None:
++        return False
++    lifecycle_status, deleted_at = row
++    return deleted_at is None and (lifecycle_status or SourceLifecycleStatus.ACTIVE.value) == SourceLifecycleStatus.ACTIVE.value
++
++
+ async def index_document_chunks(
+     redis: Redis,
+     file_record: StoredFile,
+     chunks: Iterable[DocumentChunk],
+     *,
+     replace_existing: bool = True,
++    db: AsyncSession | None = None,
+ ) -> int:
+-    if (file_record.lifecycle_status or SourceLifecycleStatus.ACTIVE.value) != SourceLifecycleStatus.ACTIVE.value:
++    """把 document chunks 写入版本化 Redis 索引。
++
++    E-05 D4（R2）：``file_record.lifecycle_status`` 是调用方内存态，仅凭它把关
++    会把"处理中被并发删除的文件"的 chunk 永久写进 Redis。传入 db 时：
++    写前新鲜复查行存活（省掉无效写）；写后复核——若删除竞态发生（删除侧
++    SCAN-DELETE 已先跑过、本次写入无人再删），立即补偿清理全部版本 key。
++    剩余窗口仅"删除事务在校验之后才提交"的毫秒级交错，远小于原先整个
++    Celery 处理时长；彻底闭环需要删除侧改为"DB 提交后再失效"（记 follow-up）。
++    """
++    inactive = (file_record.lifecycle_status or SourceLifecycleStatus.ACTIVE.value) != SourceLifecycleStatus.ACTIVE.value
++    if db is not None and not inactive:
++        # 内存态说活着——用 DB 新鲜态复核（内存态说死了则无需复查，下面统一清理）
++        if not await source_is_active_fresh(db, file_record.id):
++            inactive = True
++    if inactive:
+         if replace_existing:
+             deleted = await delete_document_chunk_keys(redis, file_record.id)
+             if deleted:
+@@ -197,10 +279,20 @@ async def index_document_chunks(
+         deleted = await delete_document_chunk_keys(redis, file_record.id)
+         if deleted:
+             logger.info(f"Deleted {deleted} stale Redis document chunks for file {file_record.id}")
+-    return await index_rag_documents(
++    indexed = await index_rag_documents(
+         redis,
+         (build_document_chunk_document(chunk, file_record) for chunk in chunks),
+     )
++    if db is not None and indexed and not await source_is_active_fresh(db, file_record.id):
++        # D4 写后补偿：索引写入与删除竞态（删除的 SCAN-DELETE 已先跑过）→
++        # 本次写入的 key 不会再被任何人删除，立即清理，杜绝永久残留。
++        compensated = await delete_document_chunk_keys(redis, file_record.id)
++        logger.warning(
++            f"E-05 D4 compensation: source {file_record.id} deactivated during indexing; "
++            f"removed {compensated} just-written chunk key(s)"
++        )
++        return 0
++    return indexed
+ 
+ 
+ async def index_group_document_chunks(
+@@ -211,8 +303,14 @@ async def index_group_document_chunks(
+     *,
+     trust_level: str,
+     replace_existing: bool = True,
++    db: AsyncSession | None = None,
+ ) -> int:
+-    if (file_record.lifecycle_status or SourceLifecycleStatus.ACTIVE.value) != SourceLifecycleStatus.ACTIVE.value:
++    """把群组文档 chunks 写入版本化 Redis 索引（D4 语义同 index_document_chunks）。"""
++    inactive = (file_record.lifecycle_status or SourceLifecycleStatus.ACTIVE.value) != SourceLifecycleStatus.ACTIVE.value
++    if db is not None and not inactive:
++        if not await source_is_active_fresh(db, file_record.id):
++            inactive = True
++    if inactive:
+         if replace_existing:
+             deleted = await delete_group_document_chunk_keys(redis, group_file.group_id, file_record.id)
+             if deleted:
+@@ -226,7 +324,7 @@ async def index_group_document_chunks(
+             logger.info(
+                 f"Deleted {deleted} stale Redis group document chunks for group {group_file.group_id} file {file_record.id}"
+             )
+-    return await index_rag_documents(
++    indexed = await index_rag_documents(
+         redis,
+         (
+             build_group_document_chunk_document(
+@@ -238,3 +336,11 @@ async def index_group_document_chunks(
+             for chunk in chunks
+         ),
+     )
++    if db is not None and indexed and not await source_is_active_fresh(db, file_record.id):
++        compensated = await delete_group_document_chunk_keys(redis, group_file.group_id, file_record.id)
++        logger.warning(
++            f"E-05 D4 compensation: source {file_record.id} deactivated during group indexing; "
++            f"removed {compensated} just-written chunk key(s)"
++        )
++        return 0
++    return indexed
+diff --git a/backend/app/services/seed_library_service.py b/backend/app/services/seed_library_service.py
+index 4952182b..75c1918f 100644
+--- a/backend/app/services/seed_library_service.py
++++ b/backend/app/services/seed_library_service.py
+@@ -37,7 +37,7 @@ from app.schemas.seed_content import (
+     SubscriptionCreate,
+     SubscriptionUpdate,
+ )
+-from app.services.embedding_service import embedding_service
++from app.services.embedding_service import embedding_service, stamp_embedding_version
+ 
+ 
+ def _utcnow() -> datetime:
+@@ -994,6 +994,7 @@ class SeedLibraryService:
+             if embedding_text:
+                 try:
+                     item.embedding = await embedding_service.get_embedding(embedding_text, text_type="document")
++                    stamp_embedding_version(item, item.embedding)
+                 except Exception as e:
+                     logger.warning(f"Failed to generate embedding for seed item: {e}")
+ 
+@@ -1208,6 +1209,7 @@ class SeedLibraryService:
+             if embedding_text:
+                 try:
+                     item.embedding = await embedding_service.get_embedding(embedding_text, text_type="document")
++                    stamp_embedding_version(item, item.embedding)
+                 except Exception as e:
+                     logger.warning(f"Failed to update embedding for seed item {item_id}: {e}")
+         try:
+@@ -2064,6 +2066,7 @@ class SeedLibraryService:
+ 
+             try:
+                 item.embedding = await embedding_service.get_embedding(embedding_text, text_type="document")
++                stamp_embedding_version(item, item.embedding)
+                 processed += 1
+             except Exception as e:
+                 logger.warning(f"Failed to generate embedding for item {item.id}: {e}")
+diff --git a/backend/app/services/semantic_cache_service.py b/backend/app/services/semantic_cache_service.py
+index f0884da3..5c3661bc 100755
+--- a/backend/app/services/semantic_cache_service.py
++++ b/backend/app/services/semantic_cache_service.py
+@@ -92,12 +92,13 @@ class SemanticCacheService:
+         self,
+         query: str,
+         user_id: str | None = None,
+-        knowledge_version: str | None = None
++        knowledge_version: str | None = None,
++        embedding_version: str | None = None,
+     ) -> str:
+         """
+         生成缓存键
+ 
+-        使用查询文本的 SHA256 哈希 + 用户ID（可选）
++        使用查询文本的 SHA256 哈希 + 用户ID（可选）+ 知识版本 + embedding 版本
+         """
+         # 标准化查询文本
+         normalized_query = self._normalize_query(query)
+@@ -108,6 +109,10 @@ class SemanticCacheService:
+             parts.append(user_id)
+         if knowledge_version:
+             parts.append(f"kv={knowledge_version}")
++        # E-05: embedding 版本参与缓存键——重嵌/换模型后旧缓存（含旧模型
++        # 查询向量）自动失效，防止跨模型语义命中污染
++        if embedding_version:
++            parts.append(f"ev={embedding_version}")
+ 
+         cache_input = ":".join(parts)
+ 
+@@ -143,7 +148,8 @@ class SemanticCacheService:
+         user_id: str | None,
+         normalized_query: str,
+         knowledge_version: str | None,
+-        ttl: int
++        ttl: int,
++        embedding_version: str | None = None,
+     ) -> None:
+         if not self.redis:
+             return
+@@ -153,6 +159,7 @@ class SemanticCacheService:
+             "user_id": user_id,
+             "normalized_query": normalized_query,
+             "knowledge_version": knowledge_version,
++            "embedding_version": embedding_version,
+             "updated_at": _utcnow().isoformat()
+         }
+         await self.redis.setex(emb_key, ttl, json.dumps(payload))
+@@ -173,7 +180,8 @@ class SemanticCacheService:
+         query_embedding: list[float],
+         user_id: str | None,
+         threshold: float,
+-        knowledge_version: str | None
++        knowledge_version: str | None,
++        embedding_version: str | None = None,
+     ) -> tuple[str, float] | None:
+         if not self.redis:
+             return None
+@@ -203,6 +211,10 @@ class SemanticCacheService:
+                 continue
+             if knowledge_version and payload.get("knowledge_version") != knowledge_version:
+                 continue
++            # E-05: embedding 版本隔离——旧模型查询向量与新模型查询向量的
++            # 余弦相似度无意义，绝不允许跨版本语义命中
++            if embedding_version and payload.get("embedding_version") != embedding_version:
++                continue
+ 
+             embedding = payload.get("embedding")
+             if not embedding:
+@@ -221,7 +233,8 @@ class SemanticCacheService:
+         query: str,
+         user_id: str | None = None,
+         similarity_threshold: float = 0.95,
+-        knowledge_version: str | None = None
++        knowledge_version: str | None = None,
++        embedding_version: str | None = None,
+     ) -> dict[str, Any] | None:
+         """
+         从缓存获取查询结果
+@@ -240,7 +253,7 @@ class SemanticCacheService:
+ 
+         try:
+             await self._init_stats()
+-            cache_key = self._generate_cache_key(query, user_id, knowledge_version)
++            cache_key = self._generate_cache_key(query, user_id, knowledge_version, embedding_version)
+             cached_data = await self.redis.get(cache_key)
+ 
+             if cached_data:
+@@ -256,14 +269,17 @@ class SemanticCacheService:
+ 
+                 return result.get("data")
+             # 语义相似检索
+-            if similarity_threshold < 1.0:
++            # E-05: embedding 供应商未配置时跳过（避免每次未命中都触发
++            # 3 次重试 x 2 供应商的失败风暴）；exact-match 缓存仍可用
++            if similarity_threshold < 1.0 and embedding_service.is_configured():
+                 normalized_query = self._normalize_query(query)
+                 query_embedding = await embedding_service.get_embedding(normalized_query, text_type="query")
+                 similar = await self._find_similar_cache_key(
+                     query_embedding,
+                     user_id,
+                     similarity_threshold,
+-                    knowledge_version
++                    knowledge_version,
++                    embedding_version or embedding_service.current_embedding_version(),
+                 )
+                 if similar:
+                     similar_key, score = similar
+@@ -296,6 +312,8 @@ class SemanticCacheService:
+         ttl: int | None = None,
+         similarity_threshold: float | None = None,
+         knowledge_version: str | None = None,
++        embedding_version: str | None = None,
++        factory_meta: dict[str, Any] | None = None,
+         *args,
+         **kwargs
+     ) -> dict[str, Any] | None:
+@@ -308,6 +326,11 @@ class SemanticCacheService:
+             factory_func: 如果缓存未命中，用于生成数据的异步函数
+             user_id: 用户 ID
+             ttl: 过期时间
++            factory_meta: E-05 D3 降级标记通道。传入的 dict 会以 ``exec_meta``
++                关键字转发给 factory_func；factory 在产出**降级结果**（如
++                embedding 故障后的纯词法检索）时置 ``exec_meta["degraded"]=True``，
++                该结果照常返回但**不写入缓存**——瞬时故障的降级答案不得被固化
++                到缓存（否则供应商恢复后同查询最长继续命中降级答案 1h）。
+             *args, **kwargs: 传递给 factory_func 的参数
+ 
+         Returns:
+@@ -315,18 +338,18 @@ class SemanticCacheService:
+         """
+         if not self.redis:
+             SEMANTIC_CACHE_BYPASS_TOTAL.inc()
+-            return await factory_func(*args, **kwargs)
++            return await self._call_factory(factory_func, factory_meta, *args, **kwargs)
+         if not settings.SEMANTIC_CACHE_ENABLED:
+             SEMANTIC_CACHE_BYPASS_TOTAL.inc()
+-            return await factory_func(*args, **kwargs)
++            return await self._call_factory(factory_func, factory_meta, *args, **kwargs)
+ 
+         # 1. 尝试获取缓存
+         effective_threshold = similarity_threshold if similarity_threshold is not None else 1.0
+-        data = await self.get(query, user_id, effective_threshold, knowledge_version)
++        data = await self.get(query, user_id, effective_threshold, knowledge_version, embedding_version)
+         if data is not None:
+             return data
+ 
+-        cache_key = self._generate_cache_key(query, user_id, knowledge_version)
++        cache_key = self._generate_cache_key(query, user_id, knowledge_version, embedding_version)
+         lock_key = self._generate_lock_key(cache_key)
+ 
+         # 2. 获取分布式锁 (Async)
+@@ -342,17 +365,24 @@ class SemanticCacheService:
+             # 所以会释放 event loop，不会阻塞其他协程。
+             async with lock:
+                 # 双重检查 (Double-Checked Locking)
+-                data = await self.get(query, user_id, effective_threshold, knowledge_version)
++                data = await self.get(query, user_id, effective_threshold, knowledge_version, embedding_version)
+                 if data is not None:
+                     return data
+ 
+                 # 3. 生成数据
+                 logger.info(f"Cache MISS & Lock Acquired. Generating data for query='{query[:30]}...'")
+-                result = await factory_func(*args, **kwargs)
+-
+-                # 4. 写入缓存
+-                if result:
+-                    await self.set(query, result, user_id, ttl, knowledge_version)
++                result = await self._call_factory(factory_func, factory_meta, *args, **kwargs)
++
++                # 4. 写入缓存（E-05 D3：降级结果拒绝固化——瞬时故障的降级答案
++                #    不得进入缓存，供应商恢复后同查询必须重新生成全质量结果）
++                if result and not (factory_meta or {}).get("degraded"):
++                    await self.set(query, result, user_id, ttl, knowledge_version, embedding_version)
++                elif factory_meta and factory_meta.get("degraded"):
++                    SEMANTIC_CACHE_BYPASS_TOTAL.inc()
++                    logger.info(
++                        f"Cache SET skipped for degraded result query='{query[:30]}...' "
++                        "(transient degradation must not be cached; E-05 D3)"
++                    )
+ 
+                 return result
+ 
+@@ -362,11 +392,26 @@ class SemanticCacheService:
+                  logger.warning(f"Failed to acquire lock for {cache_key} (Timeout). Waiting...")
+                  # 稍微等待一下再尝试获取（降级策略）
+                  await asyncio.sleep(0.1)
+-                 return await self.get(query, user_id, knowledge_version=knowledge_version) or await factory_func(*args, **kwargs)
++                 return (
++                     await self.get(
++                         query,
++                         user_id,
++                         knowledge_version=knowledge_version,
++                         embedding_version=embedding_version,
++                     )
++                     or await self._call_factory(factory_func, factory_meta, *args, **kwargs)
++                 )
+ 
+             logger.error(f"Cache Mutex Error: {e}")
+             # 出错时降级为直接调用
++            return await self._call_factory(factory_func, factory_meta, *args, **kwargs)
++
++    @staticmethod
++    async def _call_factory(factory_func, factory_meta: dict[str, Any] | None, *args, **kwargs):
++        """调用 factory；提供 factory_meta 时以 ``exec_meta`` 关键字注入（D3 通道）。"""
++        if factory_meta is None:
+             return await factory_func(*args, **kwargs)
++        return await factory_func(*args, exec_meta=factory_meta, **kwargs)
+ 
+     async def set(
+         self,
+@@ -374,7 +419,8 @@ class SemanticCacheService:
+         data: dict[str, Any],
+         user_id: str | None = None,
+         ttl: int | None = None,
+-        knowledge_version: str | None = None
++        knowledge_version: str | None = None,
++        embedding_version: str | None = None,
+     ) -> bool:
+         """
+         设置缓存
+@@ -394,7 +440,7 @@ class SemanticCacheService:
+         try:
+             await self._init_stats()
+             normalized_query = self._normalize_query(query)
+-            cache_key = self._generate_cache_key(query, user_id, knowledge_version)
++            cache_key = self._generate_cache_key(query, user_id, knowledge_version, embedding_version)
+ 
+             # 包装数据，添加元信息
+             cache_value = {
+@@ -412,14 +458,22 @@ class SemanticCacheService:
+                 ttl_value,
+                 json.dumps(cache_value)
+             )
+-            await self._set_embedding_payload(
+-                cache_key=cache_key,
+-                embedding=await embedding_service.get_embedding(normalized_query, text_type="query"),
+-                user_id=user_id,
+-                normalized_query=normalized_query,
+-                knowledge_version=knowledge_version,
+-                ttl=ttl_value
+-            )
++            # E-05: embedding 未配置或调用失败时跳过语义载荷（exact-match
++            # 缓存仍写入），缓存写路径绝不因 embedding 失败而整体失败
++            if embedding_service.is_configured():
++                try:
++                    embedding_payload = await embedding_service.get_embedding(normalized_query, text_type="query")
++                    await self._set_embedding_payload(
++                        cache_key=cache_key,
++                        embedding=embedding_payload,
++                        user_id=user_id,
++                        normalized_query=normalized_query,
++                        knowledge_version=knowledge_version,
++                        ttl=ttl_value,
++                        embedding_version=embedding_version or embedding_service.current_embedding_version(),
++                    )
++                except Exception as emb_exc:
++                    logger.debug(f"Semantic cache embedding payload skipped: {emb_exc}")
+ 
+             # 更新统计
+             await self.redis.hincrby(self.STATS_KEY, "total_sets", 1)
+diff --git a/backend/app/services/source_lifecycle.py b/backend/app/services/source_lifecycle.py
+index 72990f3e..7bf158dd 100644
+--- a/backend/app/services/source_lifecycle.py
++++ b/backend/app/services/source_lifecycle.py
+@@ -25,6 +25,7 @@ from app.models.group_files import GroupFile
+ from app.models.task import Task
+ from app.models.task_document import TaskDocument
+ from app.services.document_upload_storage import document_upload_storage
++from app.services.galaxy.retrieval_service import KNOWLEDGE_VERSION_CACHE_KEY
+ from app.services.rag_indexing_service import (
+     delete_document_chunk_keys,
+     delete_group_document_chunk_keys,
+@@ -242,6 +243,14 @@ class SourceLifecycleService:
+ 
+         await cache_service.delete_pattern(f"galaxy:node_source_documents:v1:{source.user_id}:*")
+         await cache_service.delete_pattern(f"graphrag:*:{source.user_id}:*")
++        # E-05 D2（R2 返修）：失效全局知识版本缓存（30s TTL）。否则删除/归档后
++        # 的 TTL 窗口内，检索仍以旧 knowledge_version 组语义缓存键 → 已删内容
++        # 继续命中（exact 与语义相似两条路径）。该键是派生缓存，DEL 后下次
++        # 读取自动从 DB 重算，无数据丢失。
++        try:
++            await cache_service.delete(KNOWLEDGE_VERSION_CACHE_KEY)
++        except Exception as exc:
++            logger.warning(f"Failed to invalidate knowledge version cache after source invalidation: {exc}")
+         return deleted
+ 
+     async def reindex_source_retrieval(self, db: AsyncSession, source: StoredFile) -> int:
+@@ -263,7 +272,7 @@ class SourceLifecycleService:
+         ).scalars().all()
+         if not chunks:
+             return 0
+-        indexed = await index_document_chunks(redis, source, chunks)
++        indexed = await index_document_chunks(redis, source, chunks, db=db)
+         await cache_service.delete_pattern(f"galaxy:node_source_documents:v1:{source.user_id}:*")
+         return indexed
+ 
+diff --git a/backend/app/tools/material_retrieval_tools.py b/backend/app/tools/material_retrieval_tools.py
+index f0dfe561..b9dafd8c 100644
+--- a/backend/app/tools/material_retrieval_tools.py
++++ b/backend/app/tools/material_retrieval_tools.py
+@@ -3,9 +3,11 @@ from __future__ import annotations
+ from typing import Any
+ from uuid import UUID
+ 
++from loguru import logger
+ from pydantic import BaseModel, Field
+ 
+ from app.models.file_storage import StoredFile
++from app.services.embedding_service import embedding_service
+ from app.services.galaxy.retrieval_service import KnowledgeRetrievalService
+ from app.services.group_file_service import GroupFileService
+ from app.services.knowledge_service import KnowledgeService
+@@ -20,7 +22,9 @@ class RetrieveUserMaterialParams(BaseModel):
+     )
+     limit: int = Field(default=4, ge=1, le=6)
+     threshold: float = Field(default=0.4, ge=0.0, le=1.0)
+-    use_hypothetical_answer: bool = Field(default=True, description="Whether to reuse HyDE query expansion before retrieval")
++    use_hypothetical_answer: bool = Field(
++        default=True, description="Whether to reuse HyDE query expansion before retrieval"
++    )
+     include_group_documents: bool | None = Field(
+         default=None,
+         description="When true, also search materials shared from groups the user can access.",
+@@ -118,27 +122,49 @@ class RetrieveUserMaterialTool(BaseTool):
+             )
+ 
+         vector_query = params.query
+-        if params.use_hypothetical_answer:
++        embedding_configured = embedding_service.is_configured()
++        if params.use_hypothetical_answer and embedding_configured:
+             try:
+                 vector_query = await KnowledgeService(db_session).generate_hypothetical_answer(params.query)
+             except Exception:
+                 vector_query = params.query
+ 
+         retrieval = KnowledgeRetrievalService(db_session)
+-        results = await retrieval.document_vector_search(
+-            user_id=user_uuid,
+-            query=params.query,
+-            file_ids=[file.id for file in scoped_files],
+-            vector_query=vector_query,
+-            limit=params.limit,
+-            threshold=params.threshold,
+-            include_group_documents=include_group_documents,
+-            group_ids=effective_group_ids,
+-        )
++        if embedding_configured:
++            # E-05: hybrid lexical+vector（RRF 融合 + 可选 rerank）
++            results = await retrieval.document_hybrid_search(
++                user_id=user_uuid,
++                query=params.query,
++                file_ids=[file.id for file in scoped_files],
++                vector_query=vector_query,
++                limit=params.limit,
++                threshold=params.threshold,
++                include_group_documents=include_group_documents,
++                group_ids=effective_group_ids,
++            )
++            retrieval_mode = "hybrid_lexical_vector"
++        else:
++            # E-05 fail-closed：无 embedding key 时向量侧明确关闭，
++            # 降级为纯词法检索并在 payload 中显式标注（不静默、不报错、不用占位向量）
++            logger.warning(
++                "retrieve_user_material: embedding provider not configured "
++                "(DASHSCOPE_API_KEY/SILICONFLOW_API_KEY); lexical-only retrieval"
++            )
++            results = await retrieval.document_lexical_search(
++                user_id=user_uuid,
++                query=params.query,
++                file_ids=[file.id for file in scoped_files],
++                limit=params.limit,
++                include_group_documents=include_group_documents,
++                group_ids=effective_group_ids,
++            )
++            retrieval_mode = "lexical_only_embedding_disabled"
+ 
+         payload = {
+             "query": params.query,
+             "vector_query": vector_query,
++            "retrieval_mode": retrieval_mode,
++            "embedding_configured": embedding_configured,
+             "scoped_file_count": len(scoped_files),
+             "scoped_files": [
+                 {
+diff --git a/backend/tests/services/galaxy/test_retrieval_service.py b/backend/tests/services/galaxy/test_retrieval_service.py
+index 0b9b3676..f701410f 100644
+--- a/backend/tests/services/galaxy/test_retrieval_service.py
++++ b/backend/tests/services/galaxy/test_retrieval_service.py
+@@ -2,15 +2,14 @@
+ Tests for KnowledgeRetrievalService - hybrid_search and related methods
+ Using mock-based approach to avoid SQLite/JSONB compatibility issues
+ """
+-import pytest
+-import pytest_asyncio
++from datetime import UTC, datetime
+ from unittest.mock import AsyncMock, MagicMock, patch
+ from uuid import uuid4
+-from dataclasses import dataclass
+-from datetime import datetime, UTC
+ 
+-from app.services.galaxy.retrieval_service import KnowledgeRetrievalService, DocumentChunkResult
+-from app.schemas.galaxy import NodeWithStatus, SectorCode
++import pytest
++
++from app.schemas.galaxy import NodeWithStatus
++from app.services.galaxy.retrieval_service import DocumentChunkResult, KnowledgeRetrievalService
+ 
+ 
+ class TestHybridSearchLogic:
+@@ -82,6 +81,85 @@ class TestHybridSearchLogic:
+             assert call_kwargs["knowledge_version"] == "tsms:123456"
+             assert "factory_func" in call_kwargs
+ 
++    @pytest.mark.asyncio
++    async def test_forwards_factory_meta_channel_to_cache(self):
++        """E-05 D3：hybrid_search 必须把降级标记通道（factory_meta）传给缓存层，
++        否则 factory 无法告知 get_with_lock"本次是降级结果，不要缓存"。"""
++        mock_db = AsyncMock()
++        service = KnowledgeRetrievalService(mock_db)
++
++        mock_cache_service = MagicMock()
++        mock_cache_service.get_with_lock = AsyncMock(return_value=[])
++
++        with patch('app.services.galaxy.retrieval_service.semantic_cache_service', mock_cache_service), \
++             patch.object(service, '_get_knowledge_version', new_callable=AsyncMock) as mock_version:
++
++            mock_version.return_value = "tsms:123456"
++
++            await service.hybrid_search(user_id=uuid4(), query="test query")
++
++            call_kwargs = mock_cache_service.get_with_lock.call_args.kwargs
++            assert isinstance(call_kwargs.get("factory_meta"), dict)
++
++    @pytest.mark.asyncio
++    async def test_execute_hybrid_search_marks_degraded_on_embedding_failure(self, monkeypatch):
++        """E-05 D3：embedding 故障降级词法检索时必须置 exec_meta["degraded"]=True
++        （缓存层据此拒绝固化降级结果）。"""
++        from app.services.galaxy.retrieval_service import embedding_service as emb
++
++        mock_db = AsyncMock()
++        service = KnowledgeRetrievalService(mock_db)
++
++        async def _embedding_broken(text, text_type="document"):
++            raise RuntimeError("simulated provider outage")
++
++        monkeypatch.setattr(emb, "get_embedding", _embedding_broken)
++        # 词法降级路径的 DB 访问会被 _keyword_fallback 内部捕获，返回空即可
++        monkeypatch.setattr(service, "keyword_search", AsyncMock(return_value=[]))
++
++        exec_meta: dict = {}
++        results = await service._execute_hybrid_search(
++            user_id_uuid=uuid4(),
++            query_str="test query",
++            limit=2,
++            use_reranker=False,
++            exec_meta=exec_meta,
++        )
++
++        assert results == []
++        assert exec_meta.get("degraded") is True, "lexical degradation must mark exec_meta for the cache layer"
++
++    @pytest.mark.asyncio
++    async def test_execute_hybrid_search_no_degraded_mark_on_success_path(self, monkeypatch):
++        """对照：向量侧正常时不标记 degraded（结果可正常缓存）。"""
++        from app.config import settings
++        from app.services.galaxy.retrieval_service import embedding_service as emb
++
++        mock_db = AsyncMock()
++        service = KnowledgeRetrievalService(mock_db)
++        monkeypatch.setattr(settings, "ENABLE_REDIS_HYBRID_FALLBACK", False)
++
++        async def _embedding_ok(text, text_type="document"):
++            return [0.1] * 1024
++
++        monkeypatch.setattr(emb, "get_embedding", _embedding_ok)
++        # 向量与词法两路都空结果 → 直接返回 []，不触发降级标记
++        with patch('app.services.galaxy.retrieval_service.redis_search_client') as mock_redis:
++            mock_redis.hybrid_search = AsyncMock(return_value=MagicMock(docs=[]))
++            mock_redis.search = AsyncMock(return_value=MagicMock(docs=[]))
++
++            exec_meta: dict = {}
++            results = await service._execute_hybrid_search(
++                user_id_uuid=uuid4(),
++                query_str="test query",
++                limit=2,
++                use_reranker=False,
++                exec_meta=exec_meta,
++            )
++
++        assert results == []
++        assert "degraded" not in exec_meta
++
+ 
+ class TestSemanticSearchNodes:
+     """Tests for semantic_search_nodes method."""
+@@ -141,14 +219,14 @@ class TestKnowledgeVersion:
+         mock_db = AsyncMock()
+         service = KnowledgeRetrievalService(mock_db)
+ 
+-        # Mock db.execute to return None for max timestamps
++        # Mock db.execute：max(ts) 为 None、count 为 0（E-05 起版本串含行数）
+         mock_result = MagicMock()
+-        mock_result.scalar.return_value = None
++        mock_result.one.return_value = (None, 0)
+         mock_db.execute = AsyncMock(return_value=mock_result)
+ 
+         result = await service._compute_knowledge_version()
+ 
+-        # Should return either "tsms:0" or a timestamp
++        # Should return "tsms:0"（空库早退）或带行数的完整版本串
+         assert result is not None
+         assert result.startswith("tsms:")
+ 
+diff --git a/backend/tests/services/test_document_retrieval_isolation.py b/backend/tests/services/test_document_retrieval_isolation.py
+new file mode 100644
+index 00000000..12aade21
+--- /dev/null
++++ b/backend/tests/services/test_document_retrieval_isolation.py
+@@ -0,0 +1,325 @@
++"""E-05 集成守卫（真实 PostgreSQL + pgvector + 真实 embedding API）。
++
++运行条件（保护常规 pytest）：
++    E05_LIVE=1 且 backend/.env 有真实 key 且 DATABASE_URL 指向 pgvector 库。
++    pytest -m postgres tests/services/test_document_retrieval_isolation.py
++
++覆盖验收：
++1. wrong-user=0：两用户各建文档，vector/lexical/hybrid 三路检索零串扰；
++2. version isolation：标记为其他 embedding 模型的 chunk 不参与当前检索
++   （strict 与过渡 lenient 模式一致排除"不同版本"）；
++3. delete isolation：删除文档后——
++   a) pgvector 检索立即不可见（lifecycle + 软删谓词）；
++   b) Redis 版本化 RAG key 立即删除（含旧版本残留路径）；
++   c) 语义缓存因 knowledge_version 变化立即不可命中（删的是非最新行也成立；
++      R2 D2 口径：knowledge:version:v1 缓存键本身必须被失效，验证走真实缓存层）。
++"""
++
++from __future__ import annotations
++
++import os
++import uuid
++
++import pytest
++import pytest_asyncio
++from sqlalchemy import delete, select
++from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
++
++from app.config import settings
++from app.models.document_chunks import DocumentChunk
++from app.models.file_storage import StoredFile
++from app.models.user import User
++from app.services.embedding_service import embedding_service
++from app.services.galaxy.retrieval_service import KnowledgeRetrievalService
++from app.services.rag_indexing_service import (
++    document_chunk_key,
++    get_rag_redis,
++    index_document_chunks,
++)
++from app.services.source_lifecycle import source_lifecycle_service
++
++pytestmark = [pytest.mark.asyncio, pytest.mark.postgres]
++
++if os.getenv("E05_LIVE") != "1":
++    pytest.skip("E05 integration guards require E05_LIVE=1 (real PG + real embedding key)", allow_module_level=True)
++
++if not (settings.DATABASE_URL or "").startswith("postgresql"):
++    pytest.skip("E05 integration guards require postgres DATABASE_URL", allow_module_level=True)
++
++USER_A_TEXTS = [
++    "用户A的操作系统笔记：进程间通信 IPC 包括管道、消息队列、共享内存与信号量，共享内存最快但需要同步原语配合。",
++    "用户A的线性代数笔记：矩阵的秩是列空间的维度，初等行变换不改变秩；满秩方阵可逆，行列式非零。",
++]
++USER_B_TEXTS = [
++    # 刻意与 A 同题（进程间通信）：同题不同所有权才是 wrong-user 泄漏的真实攻击面
++    # （例如两个同学各自上传同一门课的笔记）。跨领域内容天然距离远，测不出越权。
++    "用户B的私有复习笔记：消息队列是内核维护的消息链表，按类型收发，进程间通信不需要共享地址空间；信号量用于同步互斥。",
++    "用户B的吉他笔记：C 大调和弦进行 1-5-6-4，横按 F 和弦时食指需要稍微侧压以按紧一二弦。",
++]
++QUERY_A = "进程之间怎么通信，哪种方式最快？"
++QUERY_B = "消息队列是怎么在进程间传数据的？"
++
++
++@pytest_asyncio.fixture(name="live_engine")
++async def live_engine_fixture():
++    engine = create_async_engine(settings.DATABASE_URL)
++    yield engine
++    await engine.dispose()
++
++
++@pytest_asyncio.fixture(name="live_session")
++async def live_session_fixture(live_engine):
++    maker = async_sessionmaker(live_engine, class_=AsyncSession, expire_on_commit=False)
++    async with maker() as session:
++        yield session
++
++
++@pytest_asyncio.fixture(name="two_users_with_docs")
++async def two_users_with_docs_fixture(live_session: AsyncSession):
++    """两用户 + 各 1 文件 + 各 2 chunk（1 次批量真实 embedding，共 4 条）。"""
++    if not embedding_service.is_configured():
++        pytest.skip("no embedding provider key configured")
++    suffix = uuid.uuid4().hex[:8]
++
++    users, files = [], []
++    for label, _texts in (("a", USER_A_TEXTS), ("b", USER_B_TEXTS)):
++        user = User(username=f"e05iso_{label}_{suffix}", email=f"e05iso_{label}_{suffix}@t.local", hashed_password="x")
++        live_session.add(user)
++        await live_session.flush()
++        file_record = StoredFile(
++            user_id=user.id,
++            file_name=f"e05iso_{label}_{suffix}.txt",
++            mime_type="text/plain",
++            status="processed",
++            file_size=0,
++            bucket="e05-iso",
++            object_key=f"e05-iso/{suffix}/{label}.txt",
++        )
++        live_session.add(file_record)
++        await live_session.flush()
++        users.append(user)
++        files.append(file_record)
++
++    vectors = await embedding_service.batch_embeddings(USER_A_TEXTS + USER_B_TEXTS, text_type="document")
++    version = embedding_service.current_embedding_version()
++    vec_iter = iter(vectors)
++    for (user, file_record), texts in zip(zip(users, files, strict=True), (USER_A_TEXTS, USER_B_TEXTS), strict=True):
++        for i, text in enumerate(texts):
++            vector = next(vec_iter)
++            live_session.add(
++                DocumentChunk(
++                    file_id=file_record.id,
++                    user_id=user.id,
++                    chunk_index=i,
++                    section_title=f"{file_record.file_name}#{i}",
++                    content=text,
++                    embedding=vector,
++                    quality_score=1.0,
++                    pipeline_version="e05-iso",
++                    embedding_model=version,
++                    embedding_dim=len(vector),
++                )
++            )
++    await live_session.commit()
++    yield users, files
++    # teardown：测试数据用完清理
++    for file_record in files:
++        await live_session.execute(delete(DocumentChunk).where(DocumentChunk.file_id == file_record.id))
++        await live_session.execute(delete(StoredFile).where(StoredFile.id == file_record.id))
++    for user in users:
++        await live_session.execute(delete(User).where(User.id == user.id))
++    await live_session.commit()
++
++
++async def test_wrong_user_isolation_all_three_strategies(live_session, two_users_with_docs):
++    users, files = two_users_with_docs
++    user_a, user_b = users
++    retrieval = KnowledgeRetrievalService(live_session)
++    file_ids = [f.id for f in files]
++
++    for user, query in ((user_a, QUERY_A), (user_b, QUERY_B)):
++        # 显式绑定循环变量，避免闭包晚绑定（B023）
++        for strategy in (
++            lambda q, _u=user: retrieval.document_vector_search(
++                user_id=_u.id, query=q, file_ids=file_ids, limit=5, threshold=0.6
++            ),
++            lambda q, _u=user: retrieval.document_lexical_search(user_id=_u.id, query=q, file_ids=file_ids, limit=5),
++            lambda q, _u=user: retrieval.document_hybrid_search(
++                user_id=_u.id, query=q, file_ids=file_ids, limit=5, threshold=0.6, use_reranker=False
++            ),
++        ):
++            items = await strategy(query)
++            assert items, f"user {user.username} should retrieve own chunks ({query})"
++            wrong = [item for item in items if item.chunk.user_id != user.id]
++            assert wrong == [], f"cross-user leak in retrieval: {[(w.chunk.id, w.chunk.user_id) for w in wrong]}"
++
++    # 反向验证检索确实有区分度：A 的查询在 A 的结果里排第一且内容相关
++    items_a = await retrieval.document_vector_search(
++        user_id=user_a.id, query=QUERY_A, file_ids=file_ids, limit=5, threshold=0.6
++    )
++    assert "IPC" in items_a[0].chunk.content or "进程" in items_a[0].chunk.content
++
++
++async def test_embedding_version_isolation(live_session, two_users_with_docs):
++    """标记为其他模型的向量不参与检索（跨模型余弦无意义）。"""
++    users, files = two_users_with_docs
++    user_a = users[0]
++    retrieval = KnowledgeRetrievalService(live_session)
++
++    base = await retrieval.document_vector_search(
++        user_id=user_a.id, query=QUERY_A, file_ids=[files[0].id], limit=5, threshold=0.6
++    )
++    assert len(base) >= 1
++
++    # 把 A 的 chunk 0 标记成另一个模型
++    chunk = (
++        await live_session.execute(
++            select(DocumentChunk).where(DocumentChunk.file_id == files[0].id, DocumentChunk.chunk_index == 0)
++        )
++    ).scalar_one()
++    original_model = chunk.embedding_model
++    chunk.embedding_model = "other/model@999"
++    await live_session.commit()
++
++    after = await retrieval.document_vector_search(
++        user_id=user_a.id, query=QUERY_A, file_ids=[files[0].id], limit=5, threshold=0.6
++    )
++    assert chunk.id not in {item.chunk.id for item in after}, "foreign-version vector must be excluded"
++
++    chunk.embedding_model = original_model
++    await live_session.commit()
++
++
++async def test_delete_isolation_pg_redis_semantic_cache(live_session, two_users_with_docs):
++    users, files = two_users_with_docs
++    user_a = users[0]
++    file_a = files[0]
++    retrieval = KnowledgeRetrievalService(live_session)
++
++    # 写入 Redis 版本化索引
++    redis = await get_rag_redis()
++    assert redis is not None, "redis required for delete isolation test"
++    chunks = (
++        (
++            await live_session.execute(
++                select(DocumentChunk)
++                .where(DocumentChunk.file_id == file_a.id, DocumentChunk.deleted_at.is_(None))
++                .order_by(DocumentChunk.chunk_index)
++            )
++        )
++        .scalars()
++        .all()
++    )
++    indexed = await index_document_chunks(redis, file_a, chunks)
++    assert indexed == len(chunks)
++    versioned_keys = [document_chunk_key(file_a.id, c.chunk_index) for c in chunks]
++    existing = await redis.exists(*versioned_keys)
++    assert existing == len(versioned_keys)
++
++    # 预热语义缓存：knowledge_version 走**真实缓存层**（_get_knowledge_version，
++    # R2 D2 口径修正：R1 直调 _compute_knowledge_version() 绕过了 30s Redis
++    # 版本缓存，测不出"删除未失效缓存键 → TTL 窗口内旧版本组键继续命中"）
++    from app.core.cache import cache_service
++    from app.services.galaxy.retrieval_service import KNOWLEDGE_VERSION_CACHE_KEY
++    from app.services.semantic_cache_service import SemanticCacheService
++
++    if not cache_service.redis:
++        await cache_service.init_redis()
++    assert cache_service.redis is not None, "semantic version cache layer required for delete-isolation test"
++
++    cache = SemanticCacheService(redis_client=cache_service.redis, default_ttl=120)
++    kv_before = await retrieval._get_knowledge_version()
++    # 确认版本确实已被缓存层缓存（后续断言才有意义：删除必须把它打掉）
++    assert await cache_service.get(KNOWLEDGE_VERSION_CACHE_KEY) == kv_before
++    await cache.set(
++        QUERY_A,
++        {"nodes": [{"id": "e05-delete-canary"}]},
++        user_id=str(user_a.id),
++        knowledge_version=kv_before,
++        embedding_version=embedding_service.current_embedding_version(),
++    )
++    warm = await cache.get(
++        QUERY_A,
++        user_id=str(user_a.id),
++        knowledge_version=kv_before,
++        embedding_version=embedding_service.current_embedding_version(),
++    )
++    assert warm is not None
++
++    # 另一用户先写一条更新的 chunk，确保被删的 A 文件**不是**最新行
++    # （回归旧行为：旧 knowledge_version = max(updated_at) 时删非最新行不变版本）
++    other_user = User(
++        username=f"e05iso_newer_{uuid.uuid4().hex[:6]}",
++        email=f"e05iso_n_{uuid.uuid4().hex[:6]}@t.local",
++        hashed_password="x",
++    )
++    live_session.add(other_user)
++    await live_session.flush()
++    newer_file = StoredFile(
++        user_id=other_user.id,
++        file_name="e05iso_newer.txt",
++        mime_type="text/plain",
++        status="processed",
++        file_size=0,
++        bucket="e05-iso",
++        object_key=f"e05-iso/{uuid.uuid4().hex}/newer.txt",
++    )
++    live_session.add(newer_file)
++    await live_session.flush()
++    from datetime import UTC, datetime, timedelta
++
++    vec = chunks[0].embedding
++    newer_chunk = DocumentChunk(
++        file_id=newer_file.id,
++        user_id=other_user.id,
++        chunk_index=0,
++        content="占位：让 updated_at 晚于被删文件",
++        embedding=vec,
++        pipeline_version="e05-iso",
++        embedding_model=chunks[0].embedding_model,
++        embedding_dim=chunks[0].embedding_dim,
++        updated_at=datetime.now(UTC).replace(tzinfo=None) + timedelta(minutes=1),
++    )
++    live_session.add(newer_chunk)
++    await live_session.commit()
++
++    # 执行删除（真实生命周期路径：Redis key + chunk 软删 + lifecycle）
++    await source_lifecycle_service.delete(live_session, source=file_a, reason="e05_delete_isolation_test")
++
++    # a) pgvector 立即不可见
++    after_delete = await retrieval.document_vector_search(
++        user_id=user_a.id, query=QUERY_A, file_ids=[files[1].id, file_a.id], limit=5, threshold=0.6
++    )
++    assert file_a.id not in {item.chunk.file_id for item in after_delete}, "deleted file must be invisible immediately"
++
++    # b) Redis 版本化 key（含所有版本）即时清除
++    remaining = await redis.exists(*versioned_keys)
++    assert remaining == 0, "versioned redis keys must be deleted immediately"
++
++    # c) 语义缓存：D2 口径——删除必须**先失效 knowledge:version:v1 缓存键**，
++    #    随后的 _get_knowledge_version() 走缓存层取到新版本（若未失效则会命中
++    #    30s TTL 内的旧值 → 旧语义缓存条目在窗口期内继续可命中）
++    assert await cache_service.get(KNOWLEDGE_VERSION_CACHE_KEY) is None, (
++        "invalidate_source_retrieval must DEL the knowledge version cache key (E-05 D2)"
++    )
++    kv_after = await retrieval._get_knowledge_version()
++    assert kv_after != kv_before, "knowledge_version must change on chunk deletion"
++    stale = await cache.get(
++        QUERY_A,
++        user_id=str(user_a.id),
++        knowledge_version=kv_after,
++        embedding_version=embedding_service.current_embedding_version(),
++    )
++    assert stale is None, "semantic cache entry must not survive its knowledge_version"
++
++    # 清理新增的 newer 行
++    await live_session.execute(delete(DocumentChunk).where(DocumentChunk.id == newer_chunk.id))
++    await live_session.execute(delete(StoredFile).where(StoredFile.id == newer_file.id))
++    await live_session.execute(delete(User).where(User.id == other_user.id))
++    await live_session.commit()
++    keys = [k async for k in redis.scan_iter(match="semantic_cache:*")]
++    if keys:
++        await redis.delete(*keys)
++    members = await redis.smembers(cache.KEY_SET)
++    if members:
++        await redis.srem(cache.KEY_SET, *members)
+diff --git a/backend/tests/services/test_embedding_fail_closed.py b/backend/tests/services/test_embedding_fail_closed.py
+new file mode 100644
+index 00000000..13180a62
+--- /dev/null
++++ b/backend/tests/services/test_embedding_fail_closed.py
+@@ -0,0 +1,319 @@
++"""E-05 fail-closed 单元测试（无网络、无真实 key）。
++
++红→绿对照（见 v3-output/E-05/REPORT.md）：
++- RED（旧代码）：DEMO_MODE=True 且无 key 时 batch_embeddings 静默返回
++  [[0.0]*1024]，零向量进入检索/索引 → 本文件中的
++  test_no_key_demo_mode_never_returns_zero_vectors 在旧代码上失败。
++- GREEN（E-05 后）：无 key → EmbeddingNotConfiguredError；供应商失败 /
++  返回零向量 / 维度不符 → EmbeddingProviderError；绝不返回占位向量。
++"""
++
++from __future__ import annotations
++
++from types import SimpleNamespace
++
++import pytest
++
++import app.services.embedding_service as emb_mod
++from app.services.embedding_service import (
++    EmbeddingNotConfiguredError,
++    EmbeddingProviderError,
++    EmbeddingService,
++    stamp_embedding_version,
++)
++
++
++@pytest.fixture(autouse=True)
++def _reset_circuit_breaker_local_state():
++    from app.services import circuit_breaker as cb_mod
++
++    cb_mod._LOCAL_FAILURES.clear()
++    cb_mod._LOCAL_OPEN.clear()
++    yield
++    cb_mod._LOCAL_FAILURES.clear()
++    cb_mod._LOCAL_OPEN.clear()
++
++
++def _make_service(
++    monkeypatch,
++    *,
++    dashscope_key: str = "",
++    siliconflow_key: str = "",
++    demo_mode: bool = False,
++    backup_provider: str = "siliconflow",
++):
++    # 钉住模型配置，测试不随环境 .env 漂移
++    monkeypatch.setattr(emb_mod.settings, "EMBEDDING_PROVIDER", "dashscope")
++    monkeypatch.setattr(emb_mod.settings, "EMBEDDING_BACKUP_PROVIDER", backup_provider)
++    monkeypatch.setattr(emb_mod.settings, "DASHSCOPE_EMBEDDING_MODEL", "text-embedding-v4")
++    monkeypatch.setattr(emb_mod.settings, "SILICONFLOW_EMBEDDING_MODEL", "Qwen/Qwen3-Embedding-4B")
++    monkeypatch.setattr(emb_mod.settings, "EMBEDDING_DIM", 1024)
++    monkeypatch.setattr(emb_mod.settings, "DASHSCOPE_API_KEY", dashscope_key)
++    monkeypatch.setattr(emb_mod.settings, "SILICONFLOW_API_KEY", siliconflow_key)
++    monkeypatch.setattr(emb_mod.settings, "DEMO_MODE", demo_mode)
++    return EmbeddingService()
++
++
++class TestNotConfiguredFailClosed:
++    async def test_no_key_raises_not_configured(self, monkeypatch):
++        svc = _make_service(monkeypatch)
++        assert not svc.is_configured()
++        with pytest.raises(EmbeddingNotConfiguredError) as exc_info:
++            await svc.get_embedding("期末复习 操作系统")
++        # 错误必须指明缺哪些环境变量（可据此明确关闭功能）
++        assert "DASHSCOPE_API_KEY" in str(exc_info.value)
++        assert "SILICONFLOW_API_KEY" in str(exc_info.value)
++
++    async def test_no_key_demo_mode_never_returns_zero_vectors(self, monkeypatch):
++        """RED（旧代码）/ GREEN（E-05）：DEMO_MODE 不构成零向量回退的理由。"""
++        svc = _make_service(monkeypatch, demo_mode=True)
++        with pytest.raises(EmbeddingNotConfiguredError):
++            await svc.batch_embeddings(["hello", "world"])
++
++    async def test_not_configured_is_not_retried(self, monkeypatch):
++        """EmbeddingNotConfiguredError 必须立即抛出（不消耗 tenacity 重试）。"""
++        svc = _make_service(monkeypatch)
++        calls = []
++
++        async def _spy(*args, **kwargs):
++            calls.append(1)
++
++        monkeypatch.setattr(svc, "_dashscope_embeddings", _spy)
++        with pytest.raises(EmbeddingNotConfiguredError):
++            await svc.batch_embeddings(["hello"])
++        assert calls == []
++
++
++def _core_batch(svc: EmbeddingService, texts: list[str]):
++    """直接调用未装饰的核心函数（跳过 tenacity 等待，测试提速且不影响语义）。"""
++    wrapped = getattr(type(svc).batch_embeddings, "__wrapped__", None)
++    if wrapped is not None:
++        return wrapped(svc, texts)
++    return svc.batch_embeddings(texts)
++
++
++class TestProviderFailureFailClosed:
++    async def test_wrong_key_raises_provider_error(self, monkeypatch):
++        """错误 key（HTTP 非 200）→ 显式失败，绝不静默降级为零向量。"""
++        if emb_mod.dashscope is None:
++            pytest.skip("dashscope package not installed")
++
++        svc = _make_service(monkeypatch, dashscope_key="sk-invalid-key")
++
++        def _fake_call(**payload):
++            return SimpleNamespace(status_code=401, code="InvalidApiKey", message="Invalid API-key")
++
++        monkeypatch.setattr(emb_mod.dashscope.TextEmbedding, "call", _fake_call)
++        with pytest.raises(EmbeddingProviderError):
++            await _core_batch(svc, ["hello"])
++
++    async def test_provider_returning_zero_vector_is_rejected(self, monkeypatch):
++        if emb_mod.dashscope is None:
++            pytest.skip("dashscope package not installed")
++
++        svc = _make_service(monkeypatch, dashscope_key="sk-test")
++
++        def _fake_call(**payload):
++            n = len(payload["input"])
++            return SimpleNamespace(
++                status_code=200,
++                output={"embeddings": [{"embedding": [0.0] * svc.embedding_dim} for _ in range(n)]},
++            )
++
++        monkeypatch.setattr(emb_mod.dashscope.TextEmbedding, "call", _fake_call)
++        with pytest.raises(EmbeddingProviderError):
++            await _core_batch(svc, ["hello"])
++
++    async def test_provider_wrong_dimension_is_rejected(self, monkeypatch):
++        if emb_mod.dashscope is None:
++            pytest.skip("dashscope package not installed")
++
++        svc = _make_service(monkeypatch, dashscope_key="sk-test")
++
++        def _fake_call(**payload):
++            n = len(payload["input"])
++            return SimpleNamespace(
++                status_code=200,
++                output={"embeddings": [{"embedding": [0.1, 0.2, 0.3]} for _ in range(n)]},
++            )
++
++        monkeypatch.setattr(emb_mod.dashscope.TextEmbedding, "call", _fake_call)
++        with pytest.raises(EmbeddingProviderError):
++            await _core_batch(svc, ["hello"])
++
++    async def test_cache_poisoned_zero_entry_treated_as_miss(self, monkeypatch):
++        """Redis 缓存中的零向量（历史脏数据）不得被直接复用。"""
++        if emb_mod.dashscope is None:
++            pytest.skip("dashscope package not installed")
++
++        svc = _make_service(monkeypatch, dashscope_key="sk-test")
++
++        def _fake_call(**payload):
++            n = len(payload["input"])
++            return SimpleNamespace(
++                status_code=200,
++                output={"embeddings": [{"embedding": [0.01] * svc.embedding_dim} for _ in range(n)]},
++            )
++
++        monkeypatch.setattr(emb_mod.dashscope.TextEmbedding, "call", _fake_call)
++
++        cache_store: dict[str, list] = {}
++
++        async def fake_get(key):
++            return cache_store.get(key)
++
++        async def fake_set(key, value, ttl=None):
++            cache_store[key] = value
++
++        monkeypatch.setattr(emb_mod.cache_service, "get", fake_get)
++        monkeypatch.setattr(emb_mod.cache_service, "set", fake_set)
++
++        # 预置被"投毒"的零向量缓存
++        import hashlib
++
++        poisoned_key = (
++            f"embedding:{svc.current_version_token()}:document:" f"{hashlib.sha256(b'hello').hexdigest()[:32]}"
++        )
++        cache_store[poisoned_key] = [0.0] * svc.embedding_dim
++
++        result = await svc.get_embedding("hello")
++        assert len(result) == svc.embedding_dim
++        assert any(result), "must not return the poisoned all-zero cache entry"
++
++
++class TestVersionIdentity:
++    def test_current_embedding_version_format(self, monkeypatch):
++        svc = _make_service(monkeypatch)
++        assert svc.current_embedding_version() == "dashscope/text-embedding-v4@1024"
++
++    def test_provider_version_is_provider_scoped(self, monkeypatch):
++        """D1：版本身份以供应商为前缀——不同供应商即使同名模型也是不同版本，
++        这是异构 failover 必须被拒绝的根因。"""
++        svc = _make_service(monkeypatch, dashscope_key="sk-a", siliconflow_key="sk-b")
++        assert svc.provider_version("dashscope") == "dashscope/text-embedding-v4@1024"
++        assert svc.provider_version("siliconflow") == "siliconflow/Qwen/Qwen3-Embedding-4B@1024"
++        assert svc.provider_version("dashscope") != svc.provider_version("siliconflow")
++        # 当前版本恒等于主供应商的解析版本（版本戳唯一来源）
++        assert svc.current_embedding_version() == svc.provider_version(svc.primary_provider)
++
++    def test_provider_status_exposes_resolved_versions(self, monkeypatch):
++        """D1：诊断面必须能看出备用供应商被跳过的原因（异构版本）。"""
++        svc = _make_service(monkeypatch, dashscope_key="sk-a", siliconflow_key="sk-b")
++        status = svc.provider_status()
++        assert status["dashscope"]["resolved_version"] == "dashscope/text-embedding-v4@1024"
++        assert status["siliconflow"]["resolved_version"] == "siliconflow/Qwen/Qwen3-Embedding-4B@1024"
++        assert "sk-" not in str(status)
++
++    def test_version_token_is_key_safe(self, monkeypatch):
++        svc = _make_service(monkeypatch)
++        token = svc.current_version_token()
++        assert token == "dashscope_text_embedding_v4_1024"
++        assert ":" not in token and "/" not in token and "@" not in token
++
++    def test_provider_status_hides_keys(self, monkeypatch):
++        svc = _make_service(monkeypatch, dashscope_key="sk-secret-value")
++        status = svc.provider_status()
++        assert status["dashscope"]["configured"] is True
++        assert "sk-secret-value" not in str(status)
++
++    def test_stamp_embedding_version(self, monkeypatch):
++        class _Node:
++            embedding_model = None
++            embedding_dim = None
++
++        # stamp 读取模块级全局实例：钉住其配置避免环境漂移
++        monkeypatch.setattr(emb_mod.embedding_service, "primary_provider", "dashscope")
++        monkeypatch.setattr(emb_mod.embedding_service, "dashscope_model", "text-embedding-v4")
++        monkeypatch.setattr(emb_mod.embedding_service, "embedding_dim", 1024)
++
++        node = _Node()
++        stamp_embedding_version(node, [0.1] * 1024)
++        assert node.embedding_model == "dashscope/text-embedding-v4@1024"
++        assert node.embedding_dim == 1024
++
++    def test_cache_key_includes_version(self, monkeypatch):
++        """同文本在不同模型版本下必须产生不同 embedding 缓存键。"""
++        svc = _make_service(monkeypatch)
++        v1 = svc.current_version_token()
++        monkeypatch.setattr(svc, "embedding_dim", 768)
++        v2 = svc.current_version_token()
++        assert v1 != v2
++
++
++class TestHeterogeneousFailoverFailClosed:
++    """E-05 D1（R2 返修）：版本戳必须反映实际执行 embed 的供应商。
++
++    取舍：选择"异构 failover 拒绝"而非"按实际供应商打标"。理由见
++    REVIEW_RECEIPT_2 D1 与 REPORT §R2：查询侧 failover 会拿备用模型向量去比
++    主模型索引（写侧打标救不了查询侧）；缓存命中+备用补嵌的混合批次没有
++    单一真实版本；truthful 打标会把 failover 窗口的写入打进任何查询都看不见
++    的命名空间（静默写不可见）。fail-closed 复用既定降级路径（词法检索），
++    且 rebuild/回滚脚本保持单版本保证。
++    """
++
++    async def test_cross_provider_failover_is_refused(self, monkeypatch):
++        """主供应商失败时不得切到异构备用供应商（防版本戳/缓存键被污染）。"""
++        svc = _make_service(monkeypatch, dashscope_key="sk-a", siliconflow_key="sk-b")
++        calls: list[str] = []
++
++        async def _ds_fail(texts, text_type="document"):
++            calls.append("dashscope")
++            raise RuntimeError("simulated primary outage")
++
++        async def _sf_should_never_run(texts):
++            calls.append("siliconflow")
++            return [[0.01] * svc.embedding_dim for _ in texts]
++
++        monkeypatch.setattr(svc, "_dashscope_embeddings", _ds_fail)
++        monkeypatch.setattr(svc, "_siliconflow_embeddings", _sf_should_never_run)
++
++        with pytest.raises(EmbeddingProviderError) as exc_info:
++            await _core_batch(svc, ["hello"])
++
++        assert calls == ["dashscope"], "heterogeneous backup provider must never be called"
++        # 错误必须显式说明异构跳过原因（可观测，而非静默少了一个供应商）
++        msg = str(exc_info.value)
++        assert "siliconflow" in msg and "version isolation" in msg
++
++    async def test_same_provider_retry_still_works(self, monkeypatch):
++        """同版本（同供应商）的重试/切换保留——守卫只拦异构，不拦重试。"""
++        svc = _make_service(monkeypatch, dashscope_key="sk-a", siliconflow_key="", backup_provider="dashscope")
++        attempts: list[int] = []
++
++        async def _flaky(texts, text_type="document"):
++            attempts.append(1)
++            if len(attempts) == 1:
++                raise RuntimeError("transient failure")
++            return [[0.02] * svc.embedding_dim for _ in texts]
++
++        monkeypatch.setattr(svc, "_dashscope_embeddings", _flaky)
++        result = await _core_batch(svc, ["hello"])
++        assert len(attempts) == 2
++        assert len(result[0]) == svc.embedding_dim and any(result[0])
++
++    async def test_failover_vectors_always_match_stamped_version(self, monkeypatch):
++        """版本溯源不变量（D1 探针口径）：成功路径返回的向量必须来自
++        current_embedding_version() 所标识的供应商——任何调用点拿它打戳都成立。"""
++        svc = _make_service(monkeypatch, dashscope_key="sk-a", siliconflow_key="sk-b")
++        served_by: list[str] = []
++
++        async def _ds_ok(texts, text_type="document"):
++            served_by.append("dashscope")
++            return [[0.03] * svc.embedding_dim for _ in texts]
++
++        # 屏蔽 embedding 结果缓存（防历史缓存命中绕过真实供应商调用）
++        async def _cache_miss(key):
++            return None
++
++        async def _cache_noop_set(key, value, ttl=None):
++            return None
++
++        monkeypatch.setattr(emb_mod.cache_service, "get", _cache_miss)
++        monkeypatch.setattr(emb_mod.cache_service, "set", _cache_noop_set)
++        monkeypatch.setattr(svc, "_dashscope_embeddings", _ds_ok)
++
++        vectors = await _core_batch(svc, ["hello"])
++        assert len(vectors[0]) == svc.embedding_dim
++        # 实际服务供应商 == 版本串里的供应商（PROVENANCE MATCH）
++        assert served_by == ["dashscope"]
++        assert svc.current_embedding_version().startswith(f"{served_by[0]}/")
+diff --git a/backend/tests/services/test_embedding_live_green.py b/backend/tests/services/test_embedding_live_green.py
+new file mode 100644
+index 00000000..de3ece6c
+--- /dev/null
++++ b/backend/tests/services/test_embedding_live_green.py
+@@ -0,0 +1,57 @@
++"""E-05 绿测：真实 key 下 embedding 真实性（1 次 API 批调用）。
++
++断言（acceptance ②）：1024 维、非全零、非恒定（不同文本 → 不同向量，
++且与零向量有实质距离），并验证版本串与配置一致。
++运行：E05_LIVE=1 pytest tests/services/test_embedding_live_green.py
++"""
++
++from __future__ import annotations
++
++import math
++import os
++
++import pytest
++
++from app.services.embedding_service import embedding_service
++
++pytestmark = pytest.mark.asyncio
++
++if os.getenv("E05_LIVE") != "1":
++    pytest.skip("live green test requires E05_LIVE=1 (real provider key)", allow_module_level=True)
++
++
++async def test_real_embedding_1024_nonzero_nonconstant():
++    if not embedding_service.is_configured():
++        pytest.fail("E05_LIVE=1 but no embedding provider key configured — cannot run green test")
++    texts = [
++        "期末复习：操作系统的进程调度与页面置换。",
++        "Machine learning: gradient descent and regularization.",
++    ]
++    vectors = await embedding_service.batch_embeddings(texts, text_type="document")
++
++    assert len(vectors) == 2
++    for vec in vectors:
++        assert len(vec) == embedding_service.embedding_dim == 1024, f"expected 1024 dims, got {len(vec)}"
++        norm = math.sqrt(sum(x * x for x in vec))
++        assert norm > 0.5, f"embedding near-zero (norm={norm}) — provider returned degenerate vector"
++
++    # 非恒定：两向量必须显著不同（同模型同批不同文本余弦应远低于 1）
++    dot = sum(a * b for a, b in zip(vectors[0], vectors[1], strict=True))
++    norm0 = math.sqrt(sum(x * x for x in vectors[0]))
++    norm1 = math.sqrt(sum(x * x for x in vectors[1]))
++    cosine = dot / (norm0 * norm1)
++    assert cosine < 0.98, f"two distinct texts produced near-identical vectors (cos={cosine})"
++
++    # 版本串与配置一致（供索引/缓存隔离使用）。
++    # 注意：真实模型身份来自 provider 专属配置（DASHSCOPE_EMBEDDING_MODEL），
++    # 而非遗留标签 EMBEDDING_MODEL —— E-05 的版本串正是为此从 provider 派生。
++    from app.config import settings as app_settings
++
++    expected_model = (
++        app_settings.SILICONFLOW_EMBEDDING_MODEL
++        if embedding_service.primary_provider == "siliconflow"
++        else app_settings.DASHSCOPE_EMBEDDING_MODEL
++    )
++    assert embedding_service.current_embedding_version() == (
++        f"{embedding_service.primary_provider}/{expected_model}@{embedding_service.embedding_dim}"
++    )
+diff --git a/backend/tests/services/test_rag_indexing_service.py b/backend/tests/services/test_rag_indexing_service.py
+index 77be8462..93693006 100644
+--- a/backend/tests/services/test_rag_indexing_service.py
++++ b/backend/tests/services/test_rag_indexing_service.py
+@@ -1,5 +1,7 @@
+ from uuid import uuid4
+ 
++import pytest
++
+ from app.models.document_chunks import DocumentChunk
+ from app.models.file_storage import StoredFile
+ from app.models.galaxy import KnowledgeNode
+@@ -13,8 +15,13 @@ from app.services.rag_indexing_service import (
+     build_document_chunk_document,
+     build_group_document_chunk_document,
+     build_knowledge_chunk_document,
++    delete_document_chunk_keys,
+     document_chunk_key,
+     group_document_chunk_key,
++    index_document_chunks,
++    knowledge_chunk_key,
++    rag_version_token,
++    source_is_active_fresh,
+ )
+ 
+ 
+@@ -47,7 +54,9 @@ def test_document_chunk_document_uses_requested_key_and_source_type():
+     doc = build_document_chunk_document(chunk, file_record)
+ 
+     assert doc["id"] == document_chunk_key(file_id, 7)
+-    assert doc["id"] == f"sparkle:doc_chunk:{file_id}:7"
++    # E-05: key 携带 embedding 版本 token（版本化命名空间，新旧模型隔离）
++    token = rag_version_token()
++    assert doc["id"] == f"sparkle:doc_chunk:{token}:{file_id}:7"
+     assert doc["source_type"] == SOURCE_DOCUMENT_CHUNK
+     assert doc["parent_id"] == str(file_id)
+     assert doc["parent_name"] == "OS_Textbook.pdf"
+@@ -69,7 +78,8 @@ def test_knowledge_node_document_marks_source_type():
+ 
+     doc = build_knowledge_chunk_document(node, "Round-robin scheduling uses time slices.", [0.4, 0.5], 2)
+ 
+-    assert doc["id"] == f"sparkle:chunk:{node_id}:2"
++    assert doc["id"] == knowledge_chunk_key(node_id, 2)
++    assert doc["id"].startswith(f"sparkle:chunk:{rag_version_token()}:{node_id}:")
+     assert doc["source_type"] == SOURCE_NODE_DESCRIPTION
+     assert doc["parent_id"] == str(node_id)
+     assert doc["keywords"] == "Schedulers os process"
+@@ -127,3 +137,151 @@ def test_group_document_chunk_document_uses_group_namespace_and_metadata():
+     assert doc["shared_by_user_id"] == str(user_id)
+     assert doc["trust_level"] == "verified"
+     assert doc["document_scope"] == "group"
++
++
++# --------------------------------------------------------------------------- #
++# E-05 D4（R2 返修）：删除 × 迟到索引写竞态——写前新鲜复查 + 写后补偿清理。
++# 真实 Redis（键带 uuid 无碰撞，finally 清理）；db 用可控桩模拟行存活状态。
++# --------------------------------------------------------------------------- #
++
++
++class _FakeResult:
++    def __init__(self, row):
++        self._row = row
++
++    def first(self):
++        return self._row
++
++
++class _FakeDB:
++    """按调用次序返回 (lifecycle_status, deleted_at) 列值的假 AsyncSession。"""
++
++    def __init__(self, rows):
++        self._rows = list(rows)
++        self.queries = 0
++
++    async def execute(self, stmt):
++        self.queries += 1
++        row = self._rows.pop(0) if self._rows else ("active", None)
++        return _FakeResult(row)
++
++
++async def _make_index_redis():
++    import os
++
++    import redis.asyncio as redis_asyncio
++
++    from app.config import settings
++    from app.core.redis_utils import resolve_redis_password
++
++    url = settings.REDIS_URL or "redis://localhost:6379/0"
++    password, _ = resolve_redis_password(url, os.getenv("REDIS_PASSWORD", settings.REDIS_PASSWORD))
++    client = redis_asyncio.from_url(url, password=password, decode_responses=True)
++    try:
++        await client.ping()
++    except Exception:
++        await client.aclose()
++        pytest.skip(f"redis not reachable at {url}")
++    return client
++
++
++def _active_file_record(file_id):
++    return StoredFile(
++        id=file_id,
++        user_id=uuid4(),
++        file_name="race.pdf",
++        mime_type="application/pdf",
++        file_size=10,
++        bucket="files",
++        object_key=f"uploads/{file_id}.pdf",
++        lifecycle_status="active",
++    )
++
++
++def _chunks_for(file_id, n=2):
++    return [
++        DocumentChunk(
++            id=uuid4(),
++            file_id=file_id,
++            user_id=uuid4(),
++            chunk_index=i,
++            content=f"chunk content {i}",
++            embedding=[0.1, 0.2, 0.3],
++            quality_score=1.0,
++            pipeline_version="e05-d4",
++        )
++        for i in range(n)
++    ]
++
++
++@pytest.mark.asyncio
++async def test_index_skipped_when_db_says_deleted_despite_stale_memory():
++    """写前校验：内存态 ACTIVE 但 DB 已删 → 不写入且清残留。"""
++    redis = await _make_index_redis()
++    file_id = uuid4()
++    try:
++        db = _FakeDB([("revoked", "2026-09-19 00:00:00")])  # DB 新鲜态：已软删
++        indexed = await index_document_chunks(
++            redis, _active_file_record(file_id), _chunks_for(file_id), db=db
++        )
++        assert indexed == 0
++        assert db.queries == 1  # 写前复查发生了（且只发生一次——直接短路）
++        assert await redis.exists(document_chunk_key(file_id, 0)) == 0
++    finally:
++        await delete_document_chunk_keys(redis, file_id)
++        await redis.aclose()
++
++
++@pytest.mark.asyncio
++async def test_index_compensated_when_deleted_during_write():
++    """写后补偿：写前存活、写入期间被删（复查时已死）→ 已写 key 立即清理，
++    不留永久残留（原实现会永久残留，Redis JSON.SET 无 TTL）。"""
++    redis = await _make_index_redis()
++    file_id = uuid4()
++    try:
++        db = _FakeDB([("active", None), ("revoked", "2026-09-19 00:00:00")])
++        indexed = await index_document_chunks(
++            redis, _active_file_record(file_id), _chunks_for(file_id), db=db
++        )
++        assert indexed == 0  # 补偿路径按"未索引"上报
++        assert db.queries == 2  # 写前 + 写后复核
++        for i in range(2):
++            assert await redis.exists(document_chunk_key(file_id, i)) == 0, (
++                "just-written keys must be compensated (deleted) once the source is found dead"
++            )
++    finally:
++        await delete_document_chunk_keys(redis, file_id)
++        await redis.aclose()
++
++
++@pytest.mark.asyncio
++async def test_index_proceeds_when_source_alive():
++    """对照：行存活时正常索引（写前/写后复查都放行）。"""
++    redis = await _make_index_redis()
++    file_id = uuid4()
++    try:
++        db = _FakeDB([("active", None), ("active", None)])
++        indexed = await index_document_chunks(
++            redis, _active_file_record(file_id), _chunks_for(file_id), db=db
++        )
++        assert indexed == 2
++        assert await redis.exists(document_chunk_key(file_id, 0), document_chunk_key(file_id, 1)) == 2
++    finally:
++        await delete_document_chunk_keys(redis, file_id)
++        await redis.aclose()
++
++
++@pytest.mark.asyncio
++async def test_source_is_active_fresh_interpretation():
++    """新鲜复查的判定口径：行不存在/软删/非 ACTIVE 均为死。"""
++    db = _FakeDB([])
++    assert await source_is_active_fresh(db, uuid4()) is True  # 兜底默认 active（列缺省）
++
++    db = _FakeDB([("archived", None)])
++    assert await source_is_active_fresh(db, uuid4()) is False
++
++    db = _FakeDB([("active", "2026-09-19 00:00:00")])
++    assert await source_is_active_fresh(db, uuid4()) is False
++
++    db = _FakeDB([(None, None)])
++    assert await source_is_active_fresh(db, uuid4()) is True  # NULL 视为默认 ACTIVE
+diff --git a/backend/tests/services/test_semantic_cache_version_isolation.py b/backend/tests/services/test_semantic_cache_version_isolation.py
+new file mode 100644
+index 00000000..3f62cd0b
+--- /dev/null
++++ b/backend/tests/services/test_semantic_cache_version_isolation.py
+@@ -0,0 +1,273 @@
++"""E-05: 语义缓存 delete/version isolation 单元测试（真实 Redis，无 API 调用）。
++
++覆盖：
++1. embedding 版本进入缓存键与相似命中判定——重嵌/换模型后旧缓存自动不可见；
++2. knowledge_version 变化（对应知识数据写入/删除）后旧缓存条目不可命中
++   （delete isolation：删除文档必须让缓存即时失效，即使删的不是最新行）；
++3. D2（R2）：删除路径走**真实缓存层**失效 knowledge:version:v1——
++   该键 30s TTL 期间旧版本组键会让已删内容继续命中，必须被
++   SourceLifecycleService.invalidate_source_retrieval 主动清除；
++4. D3（R2）：降级检索结果（embedding 故障后的词法降级）不得写入语义缓存。
++"""
++
++from __future__ import annotations
++
++import os
++import uuid
++from types import SimpleNamespace
++
++import pytest
++import redis.asyncio as redis_asyncio
++
++from app.config import settings
++from app.core.redis_utils import resolve_redis_password
++from app.services.semantic_cache_service import SemanticCacheService
++
++pytestmark = pytest.mark.asyncio
++
++
++async def _make_cache() -> tuple[SemanticCacheService, redis_asyncio.Redis]:
++    url = settings.REDIS_URL or "redis://localhost:6379/0"
++    password, _ = resolve_redis_password(url, os.getenv("REDIS_PASSWORD", settings.REDIS_PASSWORD))
++    client = redis_asyncio.from_url(url, password=password, decode_responses=True)
++    try:
++        await client.ping()
++    except Exception:
++        await client.aclose()
++        pytest.skip(f"redis not reachable at {url}")
++    return SemanticCacheService(redis_client=client, default_ttl=60), client
++
++
++async def _cleanup(client, keys: list[str]):
++    if keys:
++        await client.delete(*keys)
++
++
++async def test_embedding_version_changes_cache_key_and_hits():
++    cache, client = await _make_cache()
++    tag = uuid.uuid4().hex[:8]
++    try:
++        query = f"e05 测试查询 {tag}"
++        # 用 V1 写入
++        assert await cache.set(
++            query, {"nodes": [{"id": "n1"}]}, user_id="u1", knowledge_version="kv1", embedding_version="V1"
++        )
++        # 同版本 exact 命中
++        hit = await cache.get(query, user_id="u1", knowledge_version="kv1", embedding_version="V1")
++        assert hit is not None and hit["nodes"][0]["id"] == "n1"
++        # 换 embedding 版本 → exact 键不同 → miss（跨模型缓存条目不可见）
++        miss = await cache.get(query, user_id="u1", knowledge_version="kv1", embedding_version="V2")
++        assert miss is None
++        # 未声明版本（调用方未接入）→ 也不命中旧条目，避免跨版本泄漏
++        miss_legacy = await cache.get(query, user_id="u1", knowledge_version="kv1")
++        assert miss_legacy is None
++    finally:
++        keys = [k async for k in client.scan_iter(match=f"{cache.CACHE_PREFIX}*")]
++        await _cleanup(client, keys)
++        await _cleanup(client, [cache.KEY_SET])
++        await client.aclose()
++
++
++async def test_semantic_similar_hit_respects_embedding_version():
++    """相似命中路径：旧模型查询向量 vs 新模型查询向量的余弦相似度无意义，必须隔离。"""
++    cache, client = await _make_cache()
++    tag = uuid.uuid4().hex[:8]
++    try:
++        query_a = f"e05 相似查询甲 {tag}"
++        dim = settings.EMBEDDING_DIM
++        # 构造高相似（同向）的假向量
++        vec_a = [1.0] + [0.0] * (dim - 1)
++        vec_b = [0.999] + [0.001] * (dim - 1)
++
++        # 以 V1 写入 query_a 的缓存与语义载荷
++        key_a = cache._generate_cache_key(query_a, "u1", "kv1", "V1")
++        await cache.set(
++            query_a, {"nodes": [{"id": "shared"}]}, user_id="u1", knowledge_version="kv1", embedding_version="V1"
++        )
++        await cache._set_embedding_payload(
++            cache_key=key_a,
++            embedding=vec_a,
++            user_id="u1",
++            normalized_query=cache._normalize_query(query_a),
++            knowledge_version="kv1",
++            ttl=60,
++            embedding_version="V1",
++        )
++
++        # 同 V1 + 相似向量 → 应能语义命中
++        hit_same = await cache._find_similar_cache_key(vec_b, "u1", 0.9, "kv1", "V1")
++        assert hit_same is not None, "same-version similar lookup should hit"
++
++        # V2 查询 → 版本不匹配 → 即使向量高相似也不可命中
++        hit_cross = await cache._find_similar_cache_key(vec_b, "u1", 0.9, "kv1", "V2")
++        assert hit_cross is None, "cross-embedding-version semantic hit must be blocked"
++
++        # knowledge_version 变化（数据删除/写入）→ 同样不可命中
++        hit_stale = await cache._find_similar_cache_key(vec_b, "u1", 0.9, "kv1-after-delete", "V1")
++        assert hit_stale is None, "stale knowledge_version semantic hit must be blocked"
++    finally:
++        keys = [k async for k in client.scan_iter(match=f"{cache.CACHE_PREFIX}*")]
++        embs = [k async for k in client.scan_iter(match=f"{cache.EMBED_PREFIX}*")]
++        await _cleanup(client, keys + embs)
++        await _cleanup(client, [cache.KEY_SET])
++        await client.aclose()
++
++
++async def test_cross_user_semantic_hit_blocked():
++    """回归守卫：跨用户语义命中必须被拒（wrong-user=0 在缓存层同样成立）。"""
++    cache, client = await _make_cache()
++    tag = uuid.uuid4().hex[:8]
++    try:
++        query = f"e05 隔离查询 {tag}"
++        dim = settings.EMBEDDING_DIM
++        vec = [1.0] + [0.0] * (dim - 1)
++        key = cache._generate_cache_key(query, "userA", "kv1", "V1")
++        await cache.set(
++            query, {"nodes": [{"id": "a-secret"}]}, user_id="userA", knowledge_version="kv1", embedding_version="V1"
++        )
++        await cache._set_embedding_payload(
++            cache_key=key,
++            embedding=vec,
++            user_id="userA",
++            normalized_query=cache._normalize_query(query),
++            knowledge_version="kv1",
++            ttl=60,
++            embedding_version="V1",
++        )
++        # userB 用完全相同的向量查询 → 不得命中 userA 的条目
++        hit = await cache._find_similar_cache_key(vec, "userB", 0.9, "kv1", "V1")
++        assert hit is None
++        exact = await cache.get(query, user_id="userB", knowledge_version="kv1", embedding_version="V1")
++        assert exact is None
++    finally:
++        keys = [k async for k in client.scan_iter(match=f"{cache.CACHE_PREFIX}*")]
++        embs = [k async for k in client.scan_iter(match=f"{cache.EMBED_PREFIX}*")]
++        await _cleanup(client, keys + embs)
++        await _cleanup(client, [cache.KEY_SET])
++        await client.aclose()
++
++
++async def test_source_invalidation_clears_knowledge_version_cache(monkeypatch):
++    """D2（R2）：删除/归档路径必须 DEL knowledge:version:v1（走真实缓存层）。
++
++    R1 的 delete-isolation 测试直调 _compute_knowledge_version() 绕过了这层
++    30s Redis 缓存——生产语义里检索读的是 _get_knowledge_version()，缓存键
++    不失效则已删内容在 TTL 窗口内继续命中语义缓存（REVIEW_RECEIPT_2 D2）。
++    本测试预热真实键 → 执行真实失效函数（外部依赖最小桩化）→ 断言键被清除。
++    """
++    from app.services import source_lifecycle as sl_mod
++    from app.services.galaxy.retrieval_service import KNOWLEDGE_VERSION_CACHE_KEY
++    from app.services.source_lifecycle import source_lifecycle_service
++
++    url = settings.REDIS_URL or "redis://localhost:6379/0"
++    password, _ = resolve_redis_password(url, os.getenv("REDIS_PASSWORD", settings.REDIS_PASSWORD))
++    client = redis_asyncio.from_url(url, password=password, decode_responses=True)
++    try:
++        await client.ping()
++    except Exception:
++        await client.aclose()
++        pytest.skip(f"redis not reachable at {url}")
++
++    # 保存原值，测试后恢复（该键是 dev 共享的派生缓存：DEL 语义安全，但仍礼貌恢复）
++    old_value = await client.get(KNOWLEDGE_VERSION_CACHE_KEY)
++    try:
++        # 预热版本缓存（模拟删除前 30s 内发生过一次检索）
++        assert await client.set(KNOWLEDGE_VERSION_CACHE_KEY, "tsms:1:n1:c1", ex=30)
++
++        # 让失效函数的依赖全部落在同一个真实 Redis 上（cache_service 全局单例
++        # 在测试进程中可能未初始化；生产中它与检索读路径共用同一客户端）
++        monkeypatch.setattr(sl_mod.cache_service, "redis", client)
++
++        async def _fake_get_rag_redis():
++            return client
++
++        monkeypatch.setattr(sl_mod, "get_rag_redis", _fake_get_rag_redis)
++
++        async def _no_group_links(self, db, source_id):
++            return []
++
++        monkeypatch.setattr(sl_mod.SourceLifecycleService, "_active_group_links", _no_group_links)
++
++        source = SimpleNamespace(id=uuid.uuid4(), user_id=uuid.uuid4())
++        await source_lifecycle_service.invalidate_source_retrieval(None, source)
++
++        # 核心断言：版本缓存键必须被真实清除（30s 陈旧窗口归零）
++        assert await client.get(KNOWLEDGE_VERSION_CACHE_KEY) is None, (
++            "invalidate_source_retrieval must DEL the knowledge version cache key; "
++            "otherwise deleted content stays retrievable via stale-versioned semantic cache for up to 30s (E-05 D2)"
++        )
++    finally:
++        if old_value is not None:
++            await client.set(KNOWLEDGE_VERSION_CACHE_KEY, old_value, ex=settings.KNOWLEDGE_VERSION_CACHE_TTL_SECONDS)
++        else:
++            await client.delete(KNOWLEDGE_VERSION_CACHE_KEY)
++        await client.aclose()
++
++
++async def test_degraded_factory_result_is_not_cached(monkeypatch):
++    """D3（R2）：factory 标记 degraded 的结果不得写入语义缓存。
++
++    瞬时 embedding 故障触发词法降级时，降级答案按旧实现会被固化 1h
++    （TTL 3600，无降级标记），供应商恢复后同查询继续命中降级答案。
++    """
++    import app.services.semantic_cache_service as sc_mod
++
++    class _UnconfiguredEmbedding:
++        """打桩 embedding 服务：避免 set() 触发真实 API 调用。"""
++
++        @staticmethod
++        def is_configured():
++            return False
++
++    monkeypatch.setattr(sc_mod, "embedding_service", _UnconfiguredEmbedding)
++
++    cache, client = await _make_cache()
++    tag = uuid.uuid4().hex[:8]
++    try:
++        query = f"e05 降级查询 {tag}"
++        calls = []
++        degraded_meta: dict = {}
++
++        async def degraded_factory(*args, exec_meta=None, **kwargs):
++            calls.append("degraded")
++            if exec_meta is not None:
++                exec_meta["degraded"] = True  # 模拟 _execute_hybrid_search 的降级标记
++            return {"nodes": [{"id": "lexical-only"}]}
++
++        out = await cache.get_with_lock(
++            query=query,
++            factory_func=degraded_factory,
++            user_id="u1",
++            similarity_threshold=1.0,  # 只走 exact 命中路径，不打桩向量比较
++            knowledge_version="kv1",
++            embedding_version="V1",
++            factory_meta=degraded_meta,
++        )
++        assert out == {"nodes": [{"id": "lexical-only"}]}  # 降级结果照常返回（可用性）
++        assert degraded_meta.get("degraded") is True  # 通道确实被注入并被 factory 标记
++        key = cache._generate_cache_key(query, "u1", "kv1", "V1")
++        assert await client.get(key) is None, "degraded result must not be cached (E-05 D3)"
++
++        # 对照：供应商恢复后同一查询重新生成 → 正常结果照常缓存
++        async def healthy_factory(*args, exec_meta=None, **kwargs):
++            calls.append("healthy")
++            return {"nodes": [{"id": "full-quality"}]}
++
++        out2 = await cache.get_with_lock(
++            query=query,
++            factory_func=healthy_factory,
++            user_id="u1",
++            similarity_threshold=1.0,
++            knowledge_version="kv1",
++            embedding_version="V1",
++        )
++        assert out2 == {"nodes": [{"id": "full-quality"}]}
++        assert calls == ["degraded", "healthy"]
++        cached_raw = await client.get(key)
++        assert cached_raw is not None and "full-quality" in cached_raw
++    finally:
++        keys = [k async for k in client.scan_iter(match=f"{cache.CACHE_PREFIX}*")]
++        embs = [k async for k in client.scan_iter(match=f"{cache.EMBED_PREFIX}*")]
++        await _cleanup(client, keys + embs)
++        await _cleanup(client, [cache.KEY_SET])
++        await client.aclose()
+diff --git a/backend/tests/tools/test_growth_tools.py b/backend/tests/tools/test_growth_tools.py
+index 71cd4a89..d90ddc34 100644
+--- a/backend/tests/tools/test_growth_tools.py
++++ b/backend/tests/tools/test_growth_tools.py
+@@ -539,7 +539,12 @@ async def test_retrieve_user_material_tool_formats_scoped_results(monkeypatch):
+         content="Entropy increases in isolated systems until equilibrium is reached.",
+     )
+     fake_result = SimpleNamespace(chunk=fake_chunk, file_name="Thermo Notes.pdf", score=0.92)
+-    fake_retrieval = SimpleNamespace(document_vector_search=AsyncMock(return_value=[fake_result]))
++    fake_retrieval = SimpleNamespace(
++        # E-05: 工具改走 hybrid（向量侧 + 词法侧），mock 同步补齐新接口
++        document_vector_search=AsyncMock(return_value=[fake_result]),
++        document_lexical_search=AsyncMock(return_value=[]),
++        document_hybrid_search=AsyncMock(return_value=[fake_result]),
++    )
+     fake_knowledge = SimpleNamespace(generate_hypothetical_answer=AsyncMock(return_value="expanded thermo query"))
+ 
+     monkeypatch.setattr(
+@@ -555,6 +560,12 @@ async def test_retrieve_user_material_tool_formats_scoped_results(monkeypatch):
+         lambda _db: fake_knowledge,
+     )
+ 
++    # E-05: 工具按 embedding 可用性分流；单测环境无 key，显式注入"已配置"
++    monkeypatch.setattr(
++        "app.tools.material_retrieval_tools.embedding_service.is_configured",
++        lambda: True,
++    )
++
+     tool = RetrieveUserMaterialTool()
+     result = await tool.execute(
+         RetrieveUserMaterialParams(query="Where do my notes explain entropy?", limit=3),
+@@ -564,11 +575,61 @@ async def test_retrieve_user_material_tool_formats_scoped_results(monkeypatch):
+ 
+     assert result.success is True
+     assert result.data["vector_query"] == "expanded thermo query"
++    assert result.data["retrieval_mode"] == "hybrid_lexical_vector"
++    assert result.data["embedding_configured"] is True
+     assert result.data["scoped_file_count"] == 1
+     assert result.data["results"][0]["file_name"] == "Thermo Notes.pdf"
+     assert result.data["results"][0]["section_title"] == "Entropy"
+ 
+ 
++@pytest.mark.asyncio
++async def test_retrieve_user_material_tool_degrades_to_lexical_without_key(monkeypatch):
++    """E-05 fail-closed：无 embedding key 时工具明确降级为词法检索并在 payload 标注。"""
++    scoped_files = [
++        SimpleNamespace(id=uuid4(), file_name="OS.pdf", mime_type="application/pdf", status="ready")
++    ]
++    fake_chunk = SimpleNamespace(
++        id=uuid4(),
++        file_id=scoped_files[0].id,
++        chunk_index=0,
++        section_title="Scheduling",
++        page_numbers=[1],
++        content="Round robin scheduling rotates processes with a fixed time slice.",
++    )
++    fake_result = SimpleNamespace(chunk=fake_chunk, file_name="OS.pdf", score=0.5)
++    fake_retrieval = SimpleNamespace(
++        document_lexical_search=AsyncMock(return_value=[fake_result]),
++        document_vector_search=AsyncMock(return_value=[]),
++        document_hybrid_search=AsyncMock(return_value=[]),
++    )
++    monkeypatch.setattr(
++        "app.tools.material_retrieval_tools._resolve_scoped_files",
++        AsyncMock(return_value=scoped_files),
++    )
++    monkeypatch.setattr(
++        "app.tools.material_retrieval_tools.KnowledgeRetrievalService",
++        lambda _db: fake_retrieval,
++    )
++    monkeypatch.setattr(
++        "app.tools.material_retrieval_tools.embedding_service.is_configured",
++        lambda: False,
++    )
++
++    tool = RetrieveUserMaterialTool()
++    result = await tool.execute(
++        RetrieveUserMaterialParams(query="how does round robin scheduling work?"),
++        user_id=str(uuid4()),
++        db_session=SimpleNamespace(sync_session=SimpleNamespace(info={TOOL_RUNTIME_CONTEXT_KEY: {}})),
++    )
++
++    assert result.success is True
++    assert result.data["embedding_configured"] is False
++    assert result.data["retrieval_mode"] == "lexical_only_embedding_disabled"
++    fake_retrieval.document_lexical_search.assert_awaited_once()
++    fake_retrieval.document_hybrid_search.assert_not_awaited()
++    fake_retrieval.document_vector_search.assert_not_awaited()
++
++
+ @pytest.mark.asyncio
+ async def test_get_intervention_track_record_tool_reads_recent_history(db_session, test_user):
+     record = InterventionRecord(
+diff --git a/backend/tests/unit/test_retrieval_fallback.py b/backend/tests/unit/test_retrieval_fallback.py
+index 6d0fbbfa..c99213aa 100644
+--- a/backend/tests/unit/test_retrieval_fallback.py
++++ b/backend/tests/unit/test_retrieval_fallback.py
+@@ -113,7 +113,8 @@ async def test_redis_search_client_retries_after_missing_index(monkeypatch):
+             self.ft_client = _FakeFT()
+ 
+         def ft(self, index_name):
+-            assert index_name == redis_search_client.index_name
++            # E-05: 索引名按 embedding 版本动态生成（方法而非属性）
++            assert index_name == redis_search_client._index_name()
+             return self.ft_client
+ 
+     monkeypatch.setattr(redis_search_client, "redis", _FakeRedis())
+diff --git a/scripts/devtools/README.md b/scripts/devtools/README.md
+index 8a5e904e..08bff6f6 100644
+--- a/scripts/devtools/README.md
++++ b/scripts/devtools/README.md
+@@ -13,6 +13,8 @@
+ | `db_debris_cleanup.py` | dev 库 schema 碎片清理（29 张会话遗留表 + tasks 三列 db-only 残留；默认 dry-run，`--apply` 实删；演练验证与 runbook 见 `docs/engineering/DB_DEBRIS_CLEANUP.md`） |
+ | `test_job_service.py` | 手动验证任务服务 |
+ | `test_llm_parser.py` | 手动验证 LLM 解析器 |
++| `rebuild_embedding_index.py` | E-05：embedding 索引重建/版本迁移/回滚（默认 dry-run；`--execute` 真实重嵌并打标 `embedding_model/dim`、重建 Redis 版本化 key；回滚=改回旧 EMBEDDING_* 配置后重跑） |
++| `bench_hybrid_retrieval.py` | E-05：hybrid lexical+vector 检索基准（12 chunk 真实语料 × 6 查询，vector/lexical/hybrid 三策略 hit@5/MRR@5/时延；跑完自动清理基准数据） |
+ | `build_demo.sh` | Demo 版本自动打包（历史演示用途） |
+ | `demo_start.sh` | Demo 演示启动脚本（历史演示用途） |
+ | `TEST_INSTRUCTIONS.sh` | 全功能验收测试操作说明（历史） |
+diff --git a/scripts/devtools/bench_hybrid_retrieval.py b/scripts/devtools/bench_hybrid_retrieval.py
+new file mode 100644
+index 00000000..96d755ae
+--- /dev/null
++++ b/scripts/devtools/bench_hybrid_retrieval.py
+@@ -0,0 +1,244 @@
++#!/usr/bin/env python3
++"""E-05: hybrid lexical+vector 检索基准（真实文档、真实 API、hit@5 / 时延）。
++
++流程：
++1. 建立基准语料：专用 bench 用户 + 12 个真实学习材料 chunk（中/英/代码混合），
++   一次批量真实 embedding（版本打标）；
++2. 6 个 paraphrase 查询（非关键词抄写，考察语义检索），预先 warm 查询向量
++   （进入 embedding Redis 缓存，避免策略间时延不公平）；
++3. 三种策略各跑全部查询并计时：
++   - vector-only  : document_vector_search (pgvector cosine)
++   - lexical-only : document_lexical_search (ILIKE token match)
++   - hybrid       : document_hybrid_search (RRF + rerank)
++4. 输出 hit@5 / MRR@5 / p50 / p95 到 stdout 与 --json 指定文件；
++5. --cleanup 清除 bench 数据（默认跑完自动清理）。
++
++用法（backend/ 目录，需真实 key）：
++    python ../scripts/devtools/bench_hybrid_retrieval.py --json ../v3-output/E-05/benchmark.json
++"""
++
++from __future__ import annotations
++
++import argparse
++import asyncio
++import json
++import statistics
++import sys
++import time
++import uuid
++from pathlib import Path
++
++BACKEND_DIR = Path(__file__).resolve().parents[2] / "backend"
++if str(BACKEND_DIR) not in sys.path:
++    sys.path.insert(0, str(BACKEND_DIR))
++
++BENCH_USER_SUFFIX = "e05bench"
++
++CORPUS = [
++    # (section_title, content, gold_query_id)
++    (
++        "进程调度",
++        "时间片轮转调度（Round Robin）中，时间片大小的选择至关重要：时间片过大时，多个进程需要等待整个时间片用完才发生切换，算法退化为先来先服务（FCFS），响应时间变差；时间片过小时，上下文切换开销占比过高，CPU 有效利用率下降。经验法则是一次切换的开销不应超过时间片的百分之十。",
++        "q_rr_timeslice",
++    ),
++    (
++        "页面置换",
++        "请求分页系统中发生缺页中断时，需要在内存中选择一页淘汰。LRU 算法淘汰最长时间未被访问的页，近似算法 Clock（时钟）只使用访问位做环形扫描，开销更低。OPT 是理论最优但无法在线实现，只用于对比评估。抖动（thrashing）发生在进程驻留集过小、缺页率极高的时候。",
++        "q_page_replace",
++    ),
++    (
++        "梯度下降",
++        "批量梯度下降每步使用全部样本计算梯度，收敛稳定但代价高；随机梯度下降每步只用一个样本，噪声大但逃逸鞍点能力强；小批量是折中。学习率过大导致损失震荡甚至发散，过小则收敛缓慢。常用技巧：学习率衰减、动量、Adam 自适应。",
++        "q_gd",
++    ),
++    (
++        "过拟合",
++        "模型在训练集上表现远好于验证集即为过拟合。缓解手段包括：L2 正则化惩罚大权重、Dropout 随机失活神经元、早停（early stopping）、数据增强与降低模型复杂度。偏差-方差权衡指出容量越大方差越大，需要匹配数据规模。",
++        "q_overfit",
++    ),
++    (
++        "红黑树",
++        "红黑树是自平衡二叉搜索树，通过红黑着色约束最长路径不超过最短路径两倍，保证查找、插入、删除均为 O(log n)。与 AVL 相比平衡条件更宽松，插入删除的旋转次数更少，工程上更常用（如 C++ map 的典型实现）。",
++        "q_rbt",
++    ),
++    (
++        "哈希冲突",
++        "哈希表发生冲突的解决方法主要分两类：开放寻址（线性探测、二次探测、双重哈希）与链地址法（拉链）。负载因子超过阈值时需要扩容再散列。一致性哈希通过虚拟节点把键空间映射到环上，是分布式缓存分片与容错的基础。",
++        "q_hash",
++    ),
++    (
++        "TCP 拥塞控制",
++        "TCP 拥塞控制包含慢启动、拥塞避免、快重传与快恢复四个部分。慢启动阶段拥塞窗口（cwnd）每个 RTT 指数增长，到达阈值（ssthresh）后进入线性增长的拥塞避免阶段；发生三次重复 ACK 触发快重传，超时则 cwnd 重置为 1 重新慢启动。",
++        "q_tcp",
++    ),
++    (
++        "HTTP2",
++        "HTTP/2 相比 1.1 的核心改进：二进制分帧、头部压缩（HPACK）、服务器推送，以及最重要的一条 TCP 连接上的多路复用——多个 stream 并行交错传输，消除了 HTTP/1.1 的队头阻塞（应用层），但 TCP 层队头阻塞仍在，HTTP/3 改用 QUIC 解决。",
++        "q_http2",
++    ),
++    (
++        "特征值",
++        "方阵 A 的特征值 λ 满足 det(A - λI) = 0，对应非零解向量称为特征向量。对称矩阵的特征值必为实数且特征向量正交，可正交对角化。谱定理把矩阵分解为 QΛQ^T，是 PCA 降维与谱聚类等算法的数学基础。",
++        "q_eig",
++    ),
++    (
++        "图着色",
++        "图着色问题要求相邻顶点颜色不同，最少颜色数称为色数。四色定理说明任意平面图可用四种颜色着色。判定任意图是否 k-可着色在 k>=3 时是 NP 完全问题，贪心策略按度数排序依次着色是常用近似。",
++        "q_coloring",
++    ),
++    (
++        "CAP Theorem",
++        "The CAP theorem states that a distributed data store can provide at most two of three guarantees: consistency, availability, and partition tolerance. Since network partitions are unavoidable in practice, real systems choose between CP (e.g., ZooKeeper) and AP (e.g., Cassandra) behavior during a partition.",
++        "q_cap",
++    ),
++    (
++        "quickSort",
++        "def quicksort(arr):\n    if len(arr) <= 1:\n        return arr\n    pivot = arr[len(arr) // 2]\n    left = [x for x in arr if x < pivot]\n    mid = [x for x in arr if x == pivot]\n    right = [x for x in arr if x > pivot]\n    return quicksort(left) + mid + quicksort(right)\n# Average time complexity O(n log n); worst case O(n^2) with bad pivots.",
++        "q_sort",
++    ),
++]
++
++QUERIES = [
++    ("q_rr_timeslice", "轮转调度的时间片设得太大会有什么问题？"),
++    ("q_page_replace", "缺页的时候应该按什么策略挑选被换出的页面？"),
++    ("q_gd", "学习率设置不合适对训练有什么影响？"),
++    ("q_overfit", "训练集准确率很高但验证集很差，有哪些缓解办法？"),
++    ("q_tcp", "慢启动阶段拥塞窗口是怎么变化的？"),
++    ("q_cap", "Which guarantee must a distributed store sacrifice during a network partition?"),
++]
++
++
++async def run_bench(json_out: str | None, keep_data: bool) -> int:
++    from sqlalchemy import delete
++
++    from app.db.session import AsyncSessionLocal
++    from app.models.document_chunks import DocumentChunk
++    from app.models.file_storage import StoredFile
++    from app.models.user import User
++    from app.services.embedding_service import embedding_service
++    from app.services.galaxy.retrieval_service import KnowledgeRetrievalService
++    from app.services.rag_indexing_service import delete_document_chunk_keys, get_rag_redis
++
++    if not embedding_service.is_configured():
++        print("FATAL: embedding provider not configured (fail-closed); benchmark requires real key")
++        return 2
++
++    bench_tag = f"e05bench-{uuid.uuid4().hex[:8]}"
++    user_email = f"{bench_tag}@bench.local"
++
++    async with AsyncSessionLocal() as session:
++        user = User(username=bench_tag, email=user_email, hashed_password="bench-no-login")
++        session.add(user)
++        await session.flush()
++
++        file_record = StoredFile(
++            user_id=user.id,
++            file_name=f"{bench_tag}_corpus.txt",
++            mime_type="text/plain",
++            status="processed",
++            file_size=0,
++            bucket="e05-bench",
++            object_key=f"e05-bench/{bench_tag}/corpus.txt",
++        )
++        session.add(file_record)
++        await session.flush()
++
++        # 1) 真实批量 embedding（1 次 API 批调用 <=10/批 → 12 条 = 2 批）
++        texts = [f"{title}。{content}" for title, content, _ in CORPUS]
++        vectors = await embedding_service.batch_embeddings(texts, text_type="document")
++        version = embedding_service.current_embedding_version()
++        gold_by_index = {}
++        for i, ((title, content, gold), vector) in enumerate(zip(CORPUS, vectors)):
++            session.add(
++                DocumentChunk(
++                    file_id=file_record.id,
++                    user_id=user.id,
++                    chunk_index=i,
++                    section_title=title,
++                    content=content,
++                    embedding=vector,
++                    quality_score=1.0,
++                    pipeline_version="e05-bench",
++                    embedding_model=version,
++                    embedding_dim=len(vector),
++                )
++            )
++            gold_by_index[i] = gold
++        await session.commit()
++
++        # 2) warm 查询向量（进入 embedding redis 缓存；6 次 API，之后三策略复用）
++        for _qid, qtext in QUERIES:
++            await embedding_service.get_embedding(qtext, text_type="query")
++
++        file_ids = [file_record.id]
++        retrieval = KnowledgeRetrievalService(session)
++
++        strategies = {
++            "vector_only": lambda q: retrieval.document_vector_search(
++                user_id=user.id, query=q, file_ids=file_ids, limit=5, threshold=0.6
++            ),
++            "lexical_only": lambda q: retrieval.document_lexical_search(
++                user_id=user.id, query=q, file_ids=file_ids, limit=5
++            ),
++            "hybrid": lambda q: retrieval.document_hybrid_search(
++                user_id=user.id, query=q, file_ids=file_ids, limit=5, threshold=0.6
++            ),
++        }
++
++        results: dict[str, dict] = {}
++        for name, runner in strategies.items():
++            hits, mrr_sum, latencies = 0, 0.0, []
++            per_query = []
++            for gold_id, qtext in QUERIES:
++                t0 = time.perf_counter()
++                items = await runner(qtext)
++                latencies.append((time.perf_counter() - t0) * 1000.0)
++                ranks = [gold_by_index.get(item.chunk.chunk_index) for item in items]
++                rank = ranks.index(gold_id) + 1 if gold_id in ranks else 0
++                if 0 < rank <= 5:
++                    hits += 1
++                    mrr_sum += 1.0 / rank
++                per_query.append({"gold": gold_id, "rank": rank, "returned": [r for r in ranks if r]})
++            lat_sorted = sorted(latencies)
++            results[name] = {
++                "hit@5": round(hits / len(QUERIES), 4),
++                "mrr@5": round(mrr_sum / len(QUERIES), 4),
++                "latency_ms_p50": round(statistics.median(latencies), 1),
++                "latency_ms_p95": round(lat_sorted[max(0, int(len(lat_sorted) * 0.95) - 1)], 1),
++                "latency_ms_max": round(max(latencies), 1),
++                "per_query": per_query,
++            }
++
++        meta = {
++            "corpus_chunks": len(CORPUS),
++            "queries": len(QUERIES),
++            "embedding_version": version,
++            "knowledge_language": "zh+en+code",
++        }
++
++        # 清理：bench 数据用完即清（--keep-data 供复用排障）
++        if not keep_data:
++            redis = await get_rag_redis()
++            if redis is not None:
++                await delete_document_chunk_keys(redis, file_record.id)
++            await session.execute(delete(DocumentChunk).where(DocumentChunk.file_id == file_record.id))
++            await session.execute(delete(StoredFile).where(StoredFile.id == file_record.id))
++            await session.execute(delete(User).where(User.id == user.id))
++            await session.commit()
++            meta["cleanup"] = "removed bench user/files/chunks/redis keys"
++
++    print(json.dumps({"meta": meta, "results": results}, ensure_ascii=False, indent=2))
++    if json_out:
++        out = Path(json_out)
++        out.parent.mkdir(parents=True, exist_ok=True)
++        out.write_text(json.dumps({"meta": meta, "results": results}, ensure_ascii=False, indent=2))
++        print(f"\nwritten: {out}")
++    return 0
++
++
++if __name__ == "__main__":
++    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
++    parser.add_argument("--json", default=None, help="结果 JSON 输出路径")
++    parser.add_argument("--keep-data", action="store_true", help="保留 bench 数据（排障用）")
++    args = parser.parse_args()
++    raise SystemExit(asyncio.run(run_bench(args.json, args.keep_data)))
+diff --git a/scripts/devtools/rebuild_embedding_index.py b/scripts/devtools/rebuild_embedding_index.py
+new file mode 100644
+index 00000000..1d7f3438
+--- /dev/null
++++ b/scripts/devtools/rebuild_embedding_index.py
+@@ -0,0 +1,277 @@
++#!/usr/bin/env python3
++"""E-05: embedding 索引重建 / 版本迁移 / 回滚脚本。
++
++职责（配合 Alembic e05_20260919_embedding_version_columns）：
++1. 扫描 document_chunks / knowledge_nodes 中"向量缺失或版本不匹配"的行；
++2. 用指定的 embedding provider 重嵌（批量），并写入
++   embedding_model / embedding_dim 版本标记；
++3. 对 document_chunks 所属文件重建 Redis 版本化 RAG key
++   （sparkle:doc_chunk:{ver}:{file}:{idx}），旧版本 key 全量删除；
++4. 确保 Redis 版本化索引（idx:knowledge@{ver}）存在；
++5. 可选清理非当前版本资产（--prune-legacy）。
++
++用法（backend/ 目录下）：
++    # 干跑（默认）：只报告将重嵌的行数，不调 API 不写库
++    python ../scripts/devtools/rebuild_embedding_index.py --table both
++
++    # 真实执行（调 embedding API，注意配额）
++    python ../scripts/devtools/rebuild_embedding_index.py --table both --execute
++
++    # 只补 NULL/缺失向量的行（存量打标后最小成本迁移）
++    python ../scripts/devtools/rebuild_embedding_index.py --table document_chunks --only-missing --execute
++
++换模型 runbook（E-05 D5，R2 返修补充——必读）：
++    换 embedding 模型**禁止直接改 .env 切流量**。版本隔离是硬过滤：切配置的
++    瞬间，旧版本行被 `_embedding_version_filter` 无条件排除，且新版本的
++    版本化 Redis 索引（KNN+BM25 同一索引）还是空的 → galaxy Redis hybrid
++    双路皆空 → 全量落 pgvector fallback（同样按版本排除旧行）→ 最终词法。
++    症状是**静默召回塌缩**（无任何报错与"因版本排除"信号）。
++
++    正确顺序 = **先 rebuild 后切流量**：
++    1. 线上仍按旧配置服务，先用覆盖参数把存量行重嵌到**新**版本：
++         python ../scripts/devtools/rebuild_embedding_index.py --table both --execute \\
++             --model <新模型名>          # 需要时配合 --provider / --dim
++       （脚本会把行重嵌+打标到新版本、重建新命名空间 Redis key、确保新版本
++       索引 idx:knowledge@{新ver} 存在；全部基于覆盖后的目标版本计算）
++    2. 确认 summary 行数与 FT.INFO num_docs 符合预期；
++    3. 改 .env 切流量 → 新版本命名空间即刻全量可用（切换动作本身零等待）；
++    4. 观察稳定后可考虑 --prune-legacy（注意：它删除**所有**非当前版本 key，
++       包括旧版本回滚资产——执行前确认不再需要回滚到旧模型）。
++
++    诚实的窗口语义：rebuild 期间被重嵌的行会逐步离开旧版本命名空间，
++    旧版本召回随重嵌进度**单调下降**（切换瞬间恢复 100%）；若选"先切流量
++    后 rebuild"则相反——切换瞬间向量召回塌缩到 ~0 再逐步恢复。两者都存在
++    迁移窗口，真正零塌缩需要过渡期双读（新旧命名空间 rank-list RRF 融合，
++    记 follow-up）。中途放弃 rebuild 的恢复方式：重跑脚本（方向参数指回旧
++    版本）即可把行重嵌回去。
++    注意：换**维度**（≠1024）不是 rebuild 能解决的——DB 列是 Vector(1024)，
++    需要列迁移，错维会在写入时响亮报错。
++
++回滚路径（embedding 模型切换后想切回旧模型）：
++    1. 把 .env 的 EMBEDDING_PROVIDER/EMBEDDING_MODEL/EMBEDDING_DIM 改回旧值；
++    2. 重新运行本脚本 --execute（把不匹配行重嵌回旧模型）；
++    3. Redis 旧版本索引与其 key 在切换期间从未删除（版本化命名空间隔离），
++       切回旧配置后立即可用，无需重建；
++    4. 语义缓存按 embedding_version 自动失效，无需手动清理。
++"""
++
++from __future__ import annotations
++
++import argparse
++import asyncio
++import sys
++from pathlib import Path
++
++# 允许从仓库根直接运行：把 backend 加入 sys.path
++BACKEND_DIR = Path(__file__).resolve().parents[2] / "backend"
++if str(BACKEND_DIR) not in sys.path:
++    sys.path.insert(0, str(BACKEND_DIR))
++
++
++async def main() -> int:
++    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
++    parser.add_argument("--table", choices=["document_chunks", "knowledge_nodes", "both"], default="both")
++    parser.add_argument("--batch-size", type=int, default=10, help="embedding 批大小（dashscope <=10）")
++    parser.add_argument("--only-missing", action="store_true", help="只处理 embedding 为 NULL 或未打标的行")
++    parser.add_argument("--execute", action="store_true", help="真实执行（默认 dry-run）")
++    parser.add_argument(
++        "--prune-legacy",
++        action="store_true",
++        help="清理非当前版本资产：所有非当前版本 Redis key 与旧索引 idx:knowledge"
++        "（含旧版本回滚资产，不可逆，需 --execute；执行前确认不再回滚）",
++    )
++    parser.add_argument("--limit", type=int, default=0, help="最多处理多少行（0=不限制；排障用）")
++    parser.add_argument(
++        "--provider",
++        choices=["dashscope", "siliconflow"],
++        default=None,
++        help="目标供应商覆盖（迁移窗口用：先 rebuild 后切流量，见模块 docstring）",
++    )
++    parser.add_argument(
++        "--model",
++        default=None,
++        help="目标 embedding 模型名覆盖（按目标供应商写入其专属模型配置）",
++    )
++    parser.add_argument(
++        "--dim",
++        type=int,
++        default=None,
++        help="目标维度覆盖（警告：DB 列为 Vector(1024)，换维需要列迁移而非 rebuild）",
++    )
++    args = parser.parse_args()
++
++    from sqlalchemy import select
++
++    from app.core.redis_search_client import redis_search_client
++    from app.db.session import AsyncSessionLocal
++    from app.models.document_chunks import DocumentChunk
++    from app.models.file_storage import SourceLifecycleStatus, StoredFile
++    from app.models.galaxy import KnowledgeNode
++    from app.services.embedding_service import embedding_service
++    from app.services.rag_indexing_service import (
++        DOCUMENT_CHUNK_PREFIX,
++        GROUP_DOCUMENT_CHUNK_PREFIX,
++        KNOWLEDGE_CHUNK_PREFIX,
++        delete_document_chunk_keys,
++        get_rag_redis,
++        index_document_chunks,
++        rag_index_name,
++    )
++
++    target_version = embedding_service.current_embedding_version()
++    target_dim = embedding_service.embedding_dim
++
++    # E-05 D5（R2）：迁移窗口覆盖——允许把存量重嵌到"尚未切换流量"的新版本
++    # （先 rebuild 后切流量），线上进程不受影响（它们按自己的配置组命名空间）。
++    if args.provider or args.model or args.dim:
++        if args.provider:
++            embedding_service.primary_provider = args.provider
++        if args.model:
++            if embedding_service.primary_provider == "siliconflow":
++                embedding_service.siliconflow_model = args.model
++            else:
++                embedding_service.dashscope_model = args.model
++        if args.dim:
++            embedding_service.embedding_dim = args.dim
++        target_version = embedding_service.current_embedding_version()
++        target_dim = embedding_service.embedding_dim
++        if target_dim != 1024:
++            print(
++                f"[E-05 rebuild] WARNING: target dim {target_dim} != 1024 (DB column type) — "
++                "dimension change requires a column migration, rebuild alone will fail loudly on write"
++            )
++
++    print(f"[E-05 rebuild] target embedding version = {target_version}")
++    print(f"[E-05 rebuild] redis versioned index     = {rag_index_name()}")
++    if not embedding_service.is_configured():
++        print(
++            "[E-05 rebuild] FATAL: no embedding provider key configured "
++            "(DASHSCOPE_API_KEY / SILICONFLOW_API_KEY). Fail-closed: nothing to do."
++        )
++        return 2
++
++    async with AsyncSessionLocal() as session:
++        tables = []
++        if args.table in ("document_chunks", "both"):
++            tables.append(("document_chunks", DocumentChunk))
++        if args.table in ("knowledge_nodes", "both"):
++            tables.append(("knowledge_nodes", KnowledgeNode))
++
++        total_reembedded = 0
++        files_touched: set[str] = set()
++
++        for table_name, model in tables:
++            if args.only_missing:
++                stale_cond = (model.embedding.is_(None)) | (model.embedding_model.is_(None))
++            else:
++                stale_cond = (
++                    (model.embedding.is_(None))
++                    | (model.embedding_model.is_(None))
++                    | (model.embedding_model != target_version)
++                    | (model.embedding_dim != target_dim)
++                )
++            rows = (await session.execute(select(model).where(stale_cond).order_by(model.created_at))).scalars().all()
++            if args.limit:
++                rows = rows[: args.limit]
++            mode = "dry-run" if not args.execute else "EXECUTE"
++            print(f"[E-05 rebuild] {table_name}: {len(rows)} stale row(s) [{mode}]")
++
++            for start in range(0, len(rows), args.batch_size):
++                batch = rows[start : start + args.batch_size]
++                texts = [
++                    (r.content if table_name == "document_chunks" else f"{r.name} {r.description or ''}") for r in batch
++                ]
++                if not args.execute:
++                    for r, t in zip(batch, texts, strict=True):
++                        print(f"  would re-embed {table_name}#{r.id} ({len(t)} chars)")
++                    continue
++                embeddings = await embedding_service.batch_embeddings(texts, text_type="document")
++                for row, vector in zip(batch, embeddings, strict=True):
++                    row.embedding = vector
++                    row.embedding_model = target_version
++                    row.embedding_dim = len(vector)
++                    if table_name == "document_chunks":
++                        files_touched.add(str(row.file_id))
++                await session.commit()
++                total_reembedded += len(batch)
++                print(f"  re-embedded {start + len(batch)}/{len(rows)}")
++
++        # Redis 重建：只对 document_chunks 触碰过的文件
++        redis = await get_rag_redis()
++        if args.execute and redis is not None and files_touched:
++            for file_id in files_touched:
++                file_record = await session.get(StoredFile, file_id)
++                if file_record is None:
++                    print(f"  skip redis reindex: stored file {file_id} gone")
++                    continue
++                # 删掉该文件所有版本（含 legacy）的旧 key，再按当前版本重建
++                await delete_document_chunk_keys(redis, file_id)
++                if (
++                    file_record.lifecycle_status or SourceLifecycleStatus.ACTIVE.value
++                ) != SourceLifecycleStatus.ACTIVE.value:
++                    print(f"  file {file_id} inactive: redis keys deleted, no reindex")
++                    continue
++                chunks = (
++                    (
++                        await session.execute(
++                            select(DocumentChunk)
++                            .where(
++                                DocumentChunk.file_id == file_id,
++                                DocumentChunk.deleted_at.is_(None),
++                            )
++                            .order_by(DocumentChunk.chunk_index)
++                        )
++                    )
++                    .scalars()
++                    .all()
++                )
++                indexed = await index_document_chunks(redis, file_record, chunks, db=session)
++                print(f"  redis reindexed file {file_id}: {indexed} chunk(s) at version {target_version}")
++
++        # 确保版本化索引存在（R2：只在 --execute 时执行——ensure_index 会真实
++        # 建索引，dry-run 不应有 Redis 副作用）
++        if args.execute and redis is not None:
++            ok = await redis_search_client.ensure_index()
++            print(f"[E-05 rebuild] versioned index ensure: {'ok' if ok else 'FAILED'}")
++
++        # 可选 legacy 清理
++        if args.prune_legacy and args.execute and redis is not None:
++            legacy_prefixes = [KNOWLEDGE_CHUNK_PREFIX, DOCUMENT_CHUNK_PREFIX, GROUP_DOCUMENT_CHUNK_PREFIX]
++            version_token = embedding_service.current_version_token()
++            deleted_keys = 0
++            for prefix in legacy_prefixes:
++                async for key in redis.scan_iter(match=f"{prefix}*"):
++                    # 保留当前版本的 key；无版本后缀的旧格式全删
++                    rest = key[len(prefix) :]
++                    if not rest.startswith(f"{version_token}:"):
++                        deleted_keys += await redis.delete(key)
++            try:
++                await redis.ft(redis_search_client.LEGACY_INDEX_NAME).dropindex(delete_documents=False)
++                print("[E-05 rebuild] dropped legacy index idx:knowledge (documents kept)")
++            except Exception as exc:
++                print(f"[E-05 rebuild] legacy index drop skipped: {exc}")
++            print(f"[E-05 rebuild] pruned {deleted_keys} legacy redis key(s)")
++
++        # 汇总
++        for table_name, model in tables:
++            current = (
++                await session.execute(
++                    select(model.id).where(model.embedding_model == target_version, model.embedding.isnot(None))
++                )
++            ).all()
++            untagged = (await session.execute(select(model.id).where(model.embedding_model.is_(None)))).all()
++            print(
++                f"[E-05 rebuild] summary {table_name}: "
++                f"{len(current)} row(s) at target version, {len(untagged)} untagged row(s) remain"
++            )
++
++    print(
++        "[E-05 rebuild] done. "
++        f"re-embedded={total_reembedded}, "
++        "rollback: revert EMBEDDING_* settings and re-run this script with --execute"
++    )
++    return 0
++
++
++if __name__ == "__main__":
++    raise SystemExit(asyncio.run(main()))
+diff --git a/v3-output/E-05/REPORT.md b/v3-output/E-05/REPORT.md
+new file mode 100644
+index 00000000..02f3f883
+--- /dev/null
++++ b/v3-output/E-05/REPORT.md
+@@ -0,0 +1,326 @@
++# E-05 Embedding / Hybrid Retrieval 生产接入 — 交付报告
++
++worktree: `Sparkle-sysrev/wt5 @ 57c87a8e` ｜ 日期: 2026-09-19 ｜ locks: embedding-provider + rag-index
++
++## 0. 结论摘要
++
++| 验收项 | 结果 | 证据 |
++|---|---|---|
++| ① fail-closed：无/错 key 明确关闭，不静默零向量 | **达成** | RED 复现旧行为 `all_zero=True`；修复后抛 `EmbeddingNotConfiguredError`（§2） |
++| ② 真实 provider 验证（1024 维非零非恒定） | **达成** | 绿测 1 次批调用实测通过（§3） |
++| ③ index 版本标记 + 重建 + rollback | **达成（execute 模式因 API 配额未全量跑，dry-run + 写路径已测）** | 迁移 `e05_20260919`、版本化 Redis key/索引、`rebuild_embedding_index.py`（§4） |
++| ④ hybrid lexical+vector benchmark | **达成** | 真实文档 12 chunk × 6 查询三策略数字（§5） |
++| ⑤ wrong-user=0 | **达成（红→绿）** | 同题跨用户 canary，摘除谓词即红、恢复即绿（§6） |
++| ⑥ delete/version isolation | **达成** | PG/Redis/语义缓存三路同时即时不可见（§7） |
++
++**真实 provider 事实（重要更正）**：主仓现行 `backend/.env` 的实际 embedding 模型是
++`DASHSCOPE_EMBEDDING_MODEL=qwen3.7-text-embedding-flash`（dim 1024），任务卡继承的
++"EMBEDDING_MODEL=text-embedding-v4" 是**未被运行时使用的遗留标签**（DashScope 路径只读
++`DASHSCOPE_EMBEDDING_MODEL`）。E-05 的版本串因此改为**从 provider 实际参数派生**
++（`dashscope/qwen3.7-text-embedding-flash@1024`），而不是信任遗留标签。
++
++## 1. 代码改动总览
++
++核心原则：向量链路的每一个"静默退化"都改成显式状态。
++
++| 文件 | 改动 |
++|---|---|
++| `backend/app/services/embedding_service.py` | **删除 DEMO_MODE 零向量静默回退**（原 L154-156：所有 provider 失败且 DEMO_MODE 时返回 `[0.0]*dim`）；新增 `EmbeddingProviderError` / `EmbeddingNotConfiguredError`（后者 tenacity 不重试）；无 key 前置检查并指明缺失 env 名；供应商返回零向量/错维度视为失败；embedding Redis 缓存键加入模型版本；新增 `current_embedding_version()/current_version_token()/provider_status()/is_configured()` 与 `stamp_embedding_version()` |
++| `backend/alembic/versions/e05_20260919_embedding_version_columns.py` | 加法迁移：`document_chunks`/`knowledge_nodes` 增 `embedding_model`/`embedding_dim`（可逆；不回填——存量向量模型来源不可证明，宁缺毋假） |
++| `backend/app/models/document_chunks.py`、`galaxy.py` | 对应 ORM 列 |
++| `backend/app/services/rag_indexing_service.py` | Redis key 版本化（`sparkle:doc_chunk:{ver}:{file}:{idx}` 等）；删除函数扫**所有版本**（含 legacy 无版本格式，delete isolation 不留残渣）；索引名/前缀按版本生成（`rag_index_name()/rag_index_prefixes()`） |
++| `backend/app/core/redis_search_client.py` | 索引名改为 `idx:knowledge@{ver}` 动态方法；只索引当前版本前缀 key → **新旧模型向量永不混入同一 KNN 查询**，旧版本索引天然保留可切回 |
++| `backend/app/services/galaxy/retrieval_service.py` | ① 向量/节点检索加 embedding 版本过滤（`_embedding_version_filter`：不同模型无条件排除；NULL 过渡期由 `EMBEDDING_STRICT_VERSION_FILTER` 决定）+ `deleted_at` 谓词；② 新增 `document_lexical_search`（CJK bigram + 拉丁词 ILIKE，同权限边界）；③ 新增 `document_hybrid_search`（并行双路 + RRF + 可选 rerank，向量侧失败/未配置显式降级词法）；④ `_compute_knowledge_version` 加入行数计数——修复"删除非最新行不改变版本 → 语义缓存陈旧命中"漏洞；⑤ `DocumentChunkResult` 增 `id`/`content` 属性（RRF 与 rerank 契约） |
++| `backend/app/services/semantic_cache_service.py` | embedding 版本进缓存键与相似命中判定（跨模型语义命中被阻断）；`get/set` 在 provider 未配置时跳过 embedding 调用（消除 3 重试 × 2 供应商的失败风暴）；缓存写不再因 embedding 失败整体失败 |
++| `backend/app/tools/material_retrieval_tools.py` | 工具切到 hybrid；无 key 时**明确降级**为纯词法并在 payload 标注 `retrieval_mode=lexical_only_embedding_disabled`、`embedding_configured=false` |
++| 写入点（`file_processing_orchestrator`、`expansion_service`、`seed_library_service`、`knowledge_integration_service`、`galaxy_service`） | 持久化向量时打 `embedding_model/dim` 标 |
++| `backend/app/config/settings.py` | 新增 `EMBEDDING_STRICT_VERSION_FILTER`（默认 False 过渡）、`EMBEDDING_CACHE_TTL_SECONDS` |
++| `scripts/devtools/rebuild_embedding_index.py`（新） | 重建/迁移/回滚脚本（见 §4） |
++| `scripts/devtools/bench_hybrid_retrieval.py`（新） | 三策略基准（见 §5） |
++| 测试（新 4 文件 + 更新 4 文件） | 见 §6/§7 |
++
++## 2. fail-closed 红绿证据（交付 1）
++
++红（HEAD 旧代码，无 key + DEMO_MODE=true）：
++
++```
++RESULT: returned vector dim=1024 all_zero=True
++VERDICT: FAIL-CLOSED VIOLATION — silent zero embedding
++```
++
++绿（E-05 代码，同条件）：
++
++```
++RESULT: raised EmbeddingNotConfiguredError: No embedding provider is configured.
++        Set one of: DASHSCOPE_API_KEY, SILICONFLOW_API_KEY. ...
++VERDICT: fail-closed (explicit error)
++```
++
++单元测试（无网络）：`tests/services/test_embedding_fail_closed.py` 12 项——
++无 key 立即抛错且不消耗重试、DEMO_MODE 不再构成零向量理由、错 key/零向量/错维度均
++`EmbeddingProviderError`、被投毒的零向量缓存条目按 miss 处理、版本串/token 格式、
++`provider_status` 不泄漏 key 内容。
++
++**行为语义**（"无 key 明确关闭功能"）：
++- 检索工具层：`retrieve_user_material` 返回 `retrieval_mode=lexical_only_embedding_disabled`，词法检索仍可用（success=true，非崩溃非静默）；
++- Galaxy hybrid：日志显式 `degrades to lexical-only`，走 `_keyword_fallback`；
++- 语义缓存：跳过语义相似命中，exact-match 缓存不受影响。
++
++## 3. 真实 provider 绿测（交付 1）
++
++`tests/services/test_embedding_live_green.py`（E05_LIVE=1，真实 key）：
++2 条不同文本 → 各 1024 维、norm>0.5、两向量余弦 <0.98（非恒定）、版本串与
++`DASHSCOPE_EMBEDDING_MODEL` 派生值一致。**通过**（1 次批 API 调用）。
++
++## 4. 版本标记 / 重建 / 回滚（交付 2）
++
++- **版本标识**：`{provider}/{model}@{dim}`（DB 列存原文，Redis key/tag 用 `_` 归一化 token）。写入点全部打标（§1）。
++- **迁移**：`alembic upgrade head` → `e05_20260919` 已在 dev 库应用；`downgrade -1` → 列数 3→1 → `upgrade head` 恢复（**回滚演练通过**，向量数据不动）。
++- **Redis 索引版本化**：`idx:knowledge@dashscope_qwen3_7_text_embedding_flash_1024` 已创建（`FT._LIST` 与 legacy `idx:knowledge` 并存——legacy 是保留的回滚资产）。版本化 key 前缀只被同版本索引收录，杜绝跨模型 KNN 混用。
++- **重建脚本**：dry-run 实测输出 `document_chunks: 25 stale row(s)`、`knowledge_nodes: 157 stale row(s)`（均为 NULL 未打标存量）。`--execute` 的写路径（`batch_embeddings` → 打标 → `index_document_chunks` → 全版本 key 清理）与隔离测试/基准脚本走的是同一批函数，已被真实执行覆盖；全量 execute 需 ~3 批（chunks）+ 16 批（nodes）API 调用，因本卡 ≤20 次真实调用配额未在存量数据上全量跑——**这是唯一未 live 验证的环节**，留待发布窗口执行。
++- **回滚 runbook**（模型切换后切回）：① `.env` 改回旧 `EMBEDDING_*`；② 重跑 `rebuild_embedding_index.py --execute`（旧版本 Redis 索引与 key 一直在，配置切回即用）；③ 语义缓存按 embedding 版本自动失效，无需手动清理；确认稳定后 `--prune-legacy` 清旧资产。
++
++## 5. Hybrid benchmark（交付 3）
++
++`scripts/devtools/bench_hybrid_retrieval.py`：12 个真实学习材料 chunk（中/英/代码混合，真实 API 批量嵌入+打标）× 6 个 paraphrase 查询（查询向量预 warm 入缓存，三策略计时公平）。结果（`v3-output/E-05/benchmark.json`）：
++
++| 策略 | hit@5 | MRR@5 | p50 | p95 | max |
++|---|---|---|---|---|---|
++| vector-only (pgvector) | 1.00 | 1.00 | 4.3ms | 4.6ms | 14.0ms |
++| lexical-only (ILIKE bigram) | 1.00 | 1.00 | 2.4ms | 2.8ms | 6.3ms |
++| **hybrid (RRF + qwen3-rerank)** | 1.00 | 1.00 | **132.0ms** | 176.5ms | 194.5ms |
++
++解读（诚实评估）：
++- 12-chunk 干净语料上三策略质量全部饱和（hit@5=1.0），该基准证明的是**接线正确性与时延画像**，不是策略区分度；中文 bigram 词法在小语料上非常强（"缺页"等查询-内容子串重合）。
++- hybrid 时延主要成本是 rerank API 往返（~130ms），且已有 2.5s 超时护栏与 RRF 兜底；若时延敏感可 `use_reranker=False`（纯 RRF 融合时 hybrid p50 ~6.6ms，见第一轮运行日志）。
++- 修复了一个**真实 bug**：`rerank_service._extract_documents` 只认 `.content/.description/.name`，而 `DocumentChunkResult` 此前没有这些属性 → hybrid 路径 rerank 一直是**静默 no-op**（返回融合序前 top_k，无 API 调用、无报错）。已通过为 `DocumentChunkResult` 增加 `content` 属性修复——这本身就消除了一个"看起来在 rerank 实际没有"的静默失败。
++- 词法路径（新增）与向量路径同权限边界，是"无 key 明确关闭向量功能"后仍可用的降级检索。
++
++## 6. wrong-user=0（交付 4，红→绿）
++
++`tests/services/test_document_retrieval_isolation.py::test_wrong_user_isolation_all_three_strategies`（真实 PG+pgvector+真实 embedding）：
++- canary 刻意构造**同题不同所有权**（两用户各有"进程间通信"笔记）——跨领域语料天然距离远测不出越权，同题才是真实攻击面（两个同学传同一门课的笔记）；
++- GREEN：vector/lexical/hybrid 三路，两用户互查，`wrong == []` 断言零串扰，且各自首条结果内容相关；
++- RED（临时摘除 `user_id` 谓词后重跑）：
++
++```
++E   AssertionError: cross-user leak in retrieval: [(UUID('3d5dc141-...'), UUID('03dbac27-...'))]
++```
++
++恢复后 3 项全绿。另含缓存层守卫：`test_cross_user_semantic_hit_blocked`（userB 用相同向量不可命中 userA 的语义缓存条目）。
++
++## 7. delete / version isolation（交付 5）
++
++`test_delete_isolation_pg_redis_semantic_cache`（真实链路 `SourceLifecycleService.delete`）：
++- 前置：chunk 索引进 Redis 版本化 key + 语义缓存写入带当前 `knowledge_version` 的条目 + **另一用户写入一行 updated_at 更晚的 chunk**（专打旧 `max(updated_at)` 版本算法的盲区：删非最新行版本不变）；
++- 删除后断言三路同时成立：
++  a) pgvector 检索立即不可见（lifecycle REVOKED + `deleted_at` 谓词）；
++  b) Redis 版本化 key 立即清零（含所有版本与 legacy 格式）；
++  c) `knowledge_version` 因行数计数变化而改变 → 旧语义缓存条目（exact 与语义相似路径）均不可命中。
++- version isolation：`test_embedding_version_isolation` 把某 chunk 标成 `other/model@999` 后，该向量从检索中消失（strict 与过渡 lenient 一致排除异版本）。
++- 语义缓存 embedding 版本隔离（单元，真 Redis）：`test_embedding_version_changes_cache_key_and_hits` / `test_semantic_similar_hit_respects_embedding_version`——同向量高相似但跨模型版本/跨 knowledge_version 均被阻断。
++
++## 8. 测试与验证清单
++
++```
++# 单元 + 回归（无 key，dev Redis）
++REDIS_PASSWORD=... pytest tests/services/test_embedding_fail_closed.py \
++  tests/services/test_semantic_cache_version_isolation.py tests/test_rag_retrieval.py \
++  tests/services/test_rag_indexing_service.py tests/services/galaxy/test_retrieval_service.py \
++  tests/services/test_semantic_cache_service.py tests/services/test_retrieval_cache.py \
++  tests/test_vector_search.py tests/unit/test_graphrag_hybrid_retrieval.py \
++  tests/unit/test_retrieval_fallback.py tests/unit/test_retrieval_keyword_search.py \
++  tests/tools/test_growth_tools.py tests/services/test_expansion_service.py \
++  tests/unit/test_seed_library_service.py tests/unit/test_knowledge_service_semantic_search.py \
++  tests/phase5/test_hyde_rag.py tests/unit/test_seed_content_content_backfill.py \
++  tests/unit/test_seed_library_stage22.py
++→ 全绿（更新了 4 个断言旧行为的既有测试：key 格式、knowledge_version 元组 mock、索引名方法化、工具 mock 补新接口）
++
++# 集成（真实 PG + 真实 key；backend/.env 临时副本，已删）
++E05_LIVE=1 pytest tests/services/test_embedding_live_green.py tests/services/test_document_retrieval_isolation.py
++→ 4 passed
++```
++
++真实 API 调用估算：≈19-21 次（含 embedding Redis 缓存命中抵扣；基准语料 2 批 + 查询 warm 6 + rerank 6 + 绿测 1 + 隔离 ~3 + 调试探针 ~2）。贴着 ≤20 红线，rebuild --execute 因此只做了 dry-run（§4）。
++
++## 9. 遗留风险与后续建议
++
++1. **rebuild --execute 未在存量 25 chunk + 157 node 上全量 live 跑**（API 配额）；发布窗口执行后建议把 `EMBEDDING_STRICT_VERSION_FILTER=true` 落进 .env。
++2. Redis galaxy hybrid 的 KNN 是全局 top-k 再在 Python 侧过滤用户/组装（`graph_rag._redis_doc_matches_user` + parent 回表），无泄漏但**召回受全局 top-k 截断**；且 `redis_search_client.hybrid_search` 的 return_fields 不含 `lifecycle_status`，graph_rag 的生命周期过滤实际总走默认值——建议后续把 user/lifecycle 过滤下推进查询。
++3. 存量 dev 数据 25 chunk / 157 node 的向量模型来源不可证明（含 `eval-sim-v1` 疑似模拟数据），未打标前按"未知来源"在过渡期参与检索；全量 rebuild 后自然消除。
++4. dev 库有一个 2026-09-18 的他人遗留空用户 `dbg_ayyahr`（0 chunk/0 file），非本卡产物，未动。
++5. `bench_hybrid_retrieval.py` 语料饱和（hit@5 全 1.0）；后续做策略区分度需要更大噪声语料与更难查询集。
++6. **（R2，REVIEW_RECEIPT_2 D4 残余）**删除事务在索引写后校验之后才提交的毫秒级交错仍可产生残留；彻底闭环需"DB 提交后再失效 Redis"的事务后钩子。
++7. **（R2，D5 follow-up）**换模型零塌缩需过渡期双读（新旧命名空间 rank-list RRF 融合）；并建议暴露 excluded-by-version 行数指标（当前静默召回塌缩无信号）。
++8. **（R2，D7）**`semantic_cache:keys` SET 只增不减（过期/SREM 均不清理成员），超 200 随机采样 → 长期命中率向 0 衰减 + 每次查找最多 200 次串行 GET；建议周期性对账清理。
++9. **（R2，D8）**工具 payload 的 `retrieval_mode=hybrid_lexical_vector` 只反映 key 配置不反映实际执行——供应商故障期 payload 谎报 hybrid（agent 可见结构化信号错）；建议执行路径回填真实 mode。
++10. **（R2，D6）**`--prune-legacy` 会删除所有非当前版本 key（含其它版本化索引之外的一切），且不清理僵尸空索引（如 dev 中配置漂移产生的 `idx:knowledge@dashscope_text_embedding_v4_1024`，num_docs=0）；帮助文本已改如实，行为待产品确认后重构。
++11. **（R2，D1 代价）**跨供应商 failover 已禁用（见 §R2.1）；主供应商故障期间向量能力整体降级为词法。若需跨供应商兜底，正路是双读而非恢复 failover。
++
++## 10. 交付物
++
++- 代码：`changes.patch`（同目录）
++- 基准数据：`v3-output/E-05/benchmark.json`
++- 迁移：`backend/alembic/versions/e05_20260919_embedding_version_columns.py`
++- 脚本：`scripts/devtools/rebuild_embedding_index.py`、`scripts/devtools/bench_hybrid_retrieval.py`（已登记 `scripts/devtools/README.md`）
++- 测试：`backend/tests/services/test_embedding_fail_closed.py`、`test_semantic_cache_version_isolation.py`、`test_document_retrieval_isolation.py`、`test_embedding_live_green.py`
++- 收工清理：worktree `backend/.env` 已删；dev DB 测试数据（e05iso/e05bench/dbg 用户与 chunk）已清；Redis 测试 key/语义缓存已清；`/tmp/e05` 已删；`backend/app/gen` 符号链接（指向主仓生成代码，gitignored）已移除
++
++---
++
++# §R2 返修记录（2026-09-19，DeepAudit 第二路 Reviewer：VERDICT CHANGES）
++
++返修对象：`REVIEW_RECEIPT_2.md` 的 D1-D4 确认缺陷 + D5 运维约束。原则：不动其余设计，
++只修版本化机制自身的旁路与竞态。全部改动在下列文件（其余文件与 R1 交付一致）：
++
++| 文件 | 返修改动 |
++|---|---|
++| `backend/app/services/embedding_service.py` | **D1**：新增 `provider_version(provider)`（版本身份以供应商为前缀）；`batch_embeddings` 供应商循环加**异构守卫**——解析版本 ≠ 当前版本的供应商直接跳过（显式 warning + 错误信息说明原因），跨供应商 failover 一律 fail-closed；`provider_status()` 暴露各供应商 `resolved_version` 供诊断 |
++| `backend/app/services/galaxy/retrieval_service.py` | **D2**：`knowledge:version:v1` 提升为模块常量 `KNOWLEDGE_VERSION_CACHE_KEY`；**D3**：`hybrid_search` 经 `factory_meta` 通道向缓存层传递降级标记，`_execute_hybrid_search` 在 embedding 故障降级词法时置 `degraded=True`（`_mark_degraded`） |
++| `backend/app/services/source_lifecycle.py` | **D2**：`invalidate_source_retrieval` 失效清单补 `DEL knowledge:version:v1`（30s TTL 窗口归零）；import 常量避免双源 |
++| `backend/app/services/semantic_cache_service.py` | **D3**：`get_with_lock` 新增 `factory_meta` 参数（以 `exec_meta` 关键字注入 factory）；**降级结果拒绝写缓存**（照常返回 + 显式日志 + bypass 指标），三个 factory 调用点统一走 `_call_factory` |
++| `backend/app/services/rag_indexing_service.py` | **D4**：新增 `source_is_active_fresh(db, file_id)`（直查列值，绕过 ORM 身份映射的陈旧内存态）；`index_document_chunks` / `index_group_document_chunks` 增 `db` 参数——写前新鲜复查行存活（省无效写）、写后复核（发现删除竞态立即补偿清理全部版本 key） |
++| `backend/app/services/file_processing_orchestrator.py` | **D4**：两个实时索引入口传 `db=self.db` |
++| `scripts/devtools/rebuild_embedding_index.py` | **D5**：新增 `--provider/--model/--dim` 目标覆盖（"先 rebuild 后切流量"的可执行工具）；模块 docstring 补换模型 runbook（见 §R2.5）；`ensure_index` 收敛到 `--execute`（dry-run 不再有建索引副作用）；`--prune-legacy` 帮助文本改为如实描述（删除**所有**非当前版本 key，含回滚资产） |
++| 测试 | 见 §R2.6（4 个新文件全重跑 + 相关回归，全绿） |
++
++## R2.1 D1 版本戳按实际服务供应商——取舍：fail-closed，而非按实际供应商打标
++
++**缺陷回顾**：dashscope 失败 → siliconflow 成功时，向量是 `siliconflow/Qwen3-Embedding-4B`
++的，但所有写点打的是 `current_embedding_version()`（只读 primary 配置）的
++`dashscope/...` 戳——DB 溯源永久错误、跨模型向量混入同一版本 KNN、embedding
++缓存键（按主供应商 token 命名）被污染 300s。审计探针实证 `PROVENANCE MISMATCH: True`。
++
++**两条修法**（任务书允许二选一）：
++
++- A. 版本串由实际执行 embed 的 provider 决定：`batch_embeddings` 返回逐条溯源，写点与缓存键按实际来源打标。
++- **B.（选定）异构 failover 拒绝写入并显式报错**：只有解析版本与当前版本一致的供应商参与，其余跳过（fail-closed），由调用方走既定降级路径。
++
++**选 B 的理由**（写侧打标救不了这条不变量的根本原因）：
++
++1. **查询侧无法修复**：failover 窗口内查询 embedding 也来自备用模型，拿它去比
++   主模型版本的索引语料——跨模型查询×语料余弦正是本卡要消灭的静默垃圾相似度。
++   写侧打标再正确，查询侧照样击穿隔离；要救只能让查询也路由到备用命名空间，
++   而那里只有 failover 窗口写入的少量行 → 召回塌缩，可用性收益趋零。
++2. **混合批次没有单一真实版本**：一次 `batch_embeddings` 可能部分命中缓存
++   （主模型旧向量）+ 部分新嵌（备用模型向量），逐条溯源意味着返回类型、
++   6+ 写点、缓存键全部改面，且批内版本混杂本身就难以正确打戳。
++3. **truthful 打标 = 静默写不可见**：siliconflow 戳的行会被 dashscope 版本的
++   检索硬排除（版本隔离本意），failover 窗口写入的数据对全部查询不可见，
++   直到 rebuild——比显式降级更糟。
++4. **rebuild/回滚兼容**（任务书点名）：B 保证任何持久化向量恒为
++   `current_embedding_version()` 单一版本，rebuild/rollback 脚本的单版本假设
++   原样成立；A 会引入多版本行，`--prune-legacy` 与回滚语义都要重定义。
++5. 行为证据：审计已实证两供应商 text_type 语义不对称（dashscope 传
++   query/document，siliconflow 端点不接收）——即使模型权重相同，向量空间也
++   系统性偏移，"同款模型"假设不成立。
++
++**代价（如实披露）**：主供应商故障期间向量能力整体降级（词法检索 + D3 保证降级
++结果不固化），不再有跨供应商兜底。这是把"相似度静默变垃圾"换成"显式可观测的
++降级"，与本卡 fail-closed 主线一致。若未来确需跨供应商兜底，正路是过渡期双读
++（rank-list 融合，见 R2.5 follow-up），不是写侧打标。
++
++**测试**：`test_cross_provider_failover_is_refused`（备用供应商**零调用** + 错误
++说明原因）、`test_same_provider_retry_still_works`（同版本重试保留）、
++`test_failover_vectors_always_match_stamped_version`（审计探针口径的
++PROVENANCE MATCH 断言）、`test_provider_version_is_provider_scoped`、
++`test_provider_status_exposes_resolved_versions`。
++
++## R2.2 D2 knowledge:version:v1 失效 + 真实缓存层口径
++
++- 修复：`invalidate_source_retrieval`（archive/revoke/orphan/delete 四条路径共用）
++  在清单末尾 `DEL knowledge:version:v1`（经 `cache_service`，与检索读路径同客户端）。
++  写路径**不**失效该键：写入的 staleness（新内容 ≤30s 后才进语义缓存键）是缓存
++  TTL 语义、可接受；而全局键在每次写入时失效会让语义缓存命中率塌缩，且版本算法
++  （行数+max updated_at）在 TTL 过期后自然刷新。
++- 口径修正（审计指出的测试缺陷）：R1 的 delete-isolation 测试直调
++  `_compute_knowledge_version()` 绕过缓存层。现改为：
++  - 常开测试（真 Redis，无 DB/API）`test_source_invalidation_clears_knowledge_version_cache`：
++    预热真实键 → 真实 `invalidate_source_retrieval`（外部依赖最小桩化）→ 断言键被清除；
++  - live 集成测试（`test_document_retrieval_isolation.py`）改为
++    `_get_knowledge_version()`（真实缓存层）+ 预热后断言键确实在缓存中 + 删除后
++    断言键被 DEL、新版本即时可见。**该 live 测试本轮未执行**（返修约束：dev DB
++    只读 + 真实 API 预算 ≤5），口径已按生产语义修正，留待下次 live 窗口跑。
++
++## R2.3 D3 降级结果不长缓存
++
++- 机制：`hybrid_search` 创建 `exec_meta` 字典经 `factory_meta` 传入 `get_with_lock`；
++  factory（`_execute_hybrid_search`）在 embedding 未配置/生成失败两处降级词法前置
++  `degraded=True`；缓存层见标记则**跳过 set**（结果照常返回——降级不等于不可用）。
++- 选择"完全不缓存"而非短 TTL：降级结果连 exact 命中都不该服务（供应商恢复后
++  同查询应立即拿到全质量结果）；击穿保护由锁本身承担。pgvector fallback 不标记
++  （它是全质量向量路径，只是换了后端）。
++- 测试：`test_degraded_factory_result_is_not_cached`（真 Redis：降级不落缓存 +
++  对照组正常落缓存）、`test_execute_hybrid_search_marks_degraded_on_embedding_failure`
++  / `..._no_degraded_mark_on_success_path`、`test_forwards_factory_meta_channel_to_cache`。
++
++## R2.4 D4 删除 × 迟到索引写竞态
++
++- 机制：`index_document_chunks` / `index_group_document_chunks` 传入 db 时——
++  ①写前 `source_is_active_fresh` 新鲜复查（直查列值；READ COMMITTED 每语句新快照，
++  能看到已提交的删除），已死则只清理不写入；②写后复核，若索引写入与删除竞态
++  （删除侧 SCAN-DELETE 已先跑过、本次写入无人再删），立即补偿清理全部版本 key
++  并按 0 上报。三个调用方（orchestrator ×2、source_lifecycle restore、rebuild
++  脚本）全部接 db。
++- **残余窗口（如实披露）**：删除事务在校验**之后**才提交的毫秒级交错仍未闭环
++  （原窗口是整个 Celery 处理时长，分钟级）。彻底闭环需删除侧改为"DB 提交后再
++  失效 Redis"（事务提交后钩子），记 follow-up；现状已把永久残留概率压缩到可忽略。
++- 测试（真 Redis + 可控 db 桩）：`test_index_skipped_when_db_says_deleted_despite_stale_memory`
++  （内存态 ACTIVE + DB 已死 → 零写入）、`test_index_compensated_when_deleted_during_write`
++  （写入期间死亡 → 补偿清理，无残留）、`test_index_proceeds_when_source_alive`（对照）、
++  `test_source_is_active_fresh_interpretation`（判定口径：缺行/软删/非 ACTIVE/NULL）。
++
++## R2.5 D5 换模型 runbook（"先 rebuild 后切流量"）
++
++已写入 `rebuild_embedding_index.py` 模块 docstring（执行者第一眼看到的位置），
++要点：
++
++1. **禁止直接改 .env 切流量**：版本隔离是硬过滤——切换瞬间旧版本行被
++   `_embedding_version_filter` 无条件排除 + 新版本 Redis 索引（KNN+BM25 同索引）
++   全空 → galaxy hybrid 双路皆空 → pgvector fallback 同样排除旧行 → 静默召回
++   塌缩到纯词法，无任何报错信号。
++2. 正确顺序：先用 `--model`（需要时 `--provider/--dim`）覆盖参数在**线上仍按旧
++   配置服务**的状态下 rebuild（行重嵌+打标到新版本、新命名空间 Redis key 重建、
++   新版本索引创建）→ 确认 summary/`FT.INFO num_docs` → 改 .env 切流量（切换
++   即刻全量可用）→ 稳定后可选 `--prune-legacy`（注意它删**所有**非当前版本 key
++   含回滚资产）。
++3. 诚实窗口语义：rebuild 期间旧行逐步离开旧版本命名空间，旧版本召回单调下降
++   （切换瞬间恢复）；"先切流量后 rebuild"则切换瞬间塌缩到 ~0 再恢复。两者都有
++   迁移窗口，**零塌缩需要过渡期双读**（新旧命名空间 rank-list RRF 融合，rank
++   融合天然容忍两个向量空间）——记 follow-up。
++4. 换**维度**（≠1024）需列迁移而非 rebuild（DB 列 `Vector(1024)`，错维写入响亮报错）。
++
++附带修正：脚本 `ensure_index` 收敛到 `--execute`（R2 实测发现 dry-run 会在 Redis
++真实建索引——已修 + 已清理探针误建的 `idx:knowledge@dashscope_new_model_x_1024`）。
++
++## R2.6 返修验证记录
++
++```
++# 4 个新测试文件（全绿；pytest 定向串行）
++tests/services/test_embedding_fail_closed.py            17 passed（R1 12 + D1 新增 5）
++tests/services/test_semantic_cache_version_isolation.py  5 passed（R1 3 + D2/D3 新增 2）
++tests/services/test_rag_indexing_service.py              8 passed（R1 4 + D4 新增 4）
++tests/services/test_embedding_live_green.py（E05_LIVE=1） 1 passed（embedding 缓存命中，
++                                                         0 次新 API 调用）
++
++# 相关回归（真实缓存层口径，全绿）
++galaxy/test_retrieval_service.py（含 D3 新增 3 项）+ test_retrieval_fallback.py
+++ test_retrieval_cache.py + test_semantic_cache_service.py      → 28 passed
++test_rag_retrieval.py + test_vector_search.py + test_retrieval_keyword_search.py
+++ test_expansion_service.py + test_seed_library_service.py
+++ test_knowledge_service_semantic_search.py                      → 39 passed
++test_graphrag_hybrid_retrieval.py + test_growth_tools.py         → 18 passed
++test_hyde_rag.py + test_seed_content_content_backfill.py
+++ test_seed_library_stage22.py                                   → 30 passed
++
++# 脚本
++rebuild_embedding_index.py dry-run（默认 + --model 覆盖）：目标版本/索引名/谓词
++正确联动；dry-run 无 Redis/DB 副作用（实测 FT._LIST 前后一致）
++
++# 真实 API 消耗：0 次新增（live green 命中 R1 预热的 embedding 缓存；
++# 返修测试全部 mock 供应商或直测缓存/索引层）
++```
++
++未验证项（如实）：`test_document_retrieval_isolation.py`（live 集成）口径已修
++（D2 真实缓存层断言），但本轮约束（dev DB 只读、API 预算）下未执行；其 D1/D3
++相关断言与单测口径一致，留待下一次 live 窗口全量跑。
+diff --git a/v3-output/E-05/benchmark.json b/v3-output/E-05/benchmark.json
+new file mode 100644
+index 00000000..5ec6d378
+--- /dev/null
++++ b/v3-output/E-05/benchmark.json
+@@ -0,0 +1,172 @@
++{
++  "meta": {
++    "corpus_chunks": 12,
++    "queries": 6,
++    "embedding_version": "dashscope/qwen3.7-text-embedding-flash@1024",
++    "knowledge_language": "zh+en+code",
++    "cleanup": "removed bench user/files/chunks/redis keys"
++  },
++  "results": {
++    "vector_only": {
++      "hit@5": 1.0,
++      "mrr@5": 1.0,
++      "latency_ms_p50": 4.3,
++      "latency_ms_p95": 4.6,
++      "latency_ms_max": 14.0,
++      "per_query": [
++        {
++          "gold": "q_rr_timeslice",
++          "rank": 1,
++          "returned": [
++            "q_rr_timeslice"
++          ]
++        },
++        {
++          "gold": "q_page_replace",
++          "rank": 1,
++          "returned": [
++            "q_page_replace",
++            "q_rr_timeslice"
++          ]
++        },
++        {
++          "gold": "q_gd",
++          "rank": 1,
++          "returned": [
++            "q_gd",
++            "q_overfit"
++          ]
++        },
++        {
++          "gold": "q_overfit",
++          "rank": 1,
++          "returned": [
++            "q_overfit",
++            "q_gd"
++          ]
++        },
++        {
++          "gold": "q_tcp",
++          "rank": 1,
++          "returned": [
++            "q_tcp"
++          ]
++        },
++        {
++          "gold": "q_cap",
++          "rank": 1,
++          "returned": [
++            "q_cap"
++          ]
++        }
++      ]
++    },
++    "lexical_only": {
++      "hit@5": 1.0,
++      "mrr@5": 1.0,
++      "latency_ms_p50": 2.4,
++      "latency_ms_p95": 2.8,
++      "latency_ms_max": 6.3,
++      "per_query": [
++        {
++          "gold": "q_rr_timeslice",
++          "rank": 1,
++          "returned": [
++            "q_rr_timeslice",
++            "q_page_replace"
++          ]
++        },
++        {
++          "gold": "q_page_replace",
++          "rank": 1,
++          "returned": [
++            "q_page_replace"
++          ]
++        },
++        {
++          "gold": "q_gd",
++          "rank": 1,
++          "returned": [
++            "q_gd"
++          ]
++        },
++        {
++          "gold": "q_overfit",
++          "rank": 1,
++          "returned": [
++            "q_overfit"
++          ]
++        },
++        {
++          "gold": "q_tcp",
++          "rank": 1,
++          "returned": [
++            "q_tcp"
++          ]
++        },
++        {
++          "gold": "q_cap",
++          "rank": 1,
++          "returned": [
++            "q_cap"
++          ]
++        }
++      ]
++    },
++    "hybrid": {
++      "hit@5": 1.0,
++      "mrr@5": 1.0,
++      "latency_ms_p50": 132.0,
++      "latency_ms_p95": 176.5,
++      "latency_ms_max": 194.5,
++      "per_query": [
++        {
++          "gold": "q_rr_timeslice",
++          "rank": 1,
++          "returned": [
++            "q_rr_timeslice",
++            "q_page_replace"
++          ]
++        },
++        {
++          "gold": "q_page_replace",
++          "rank": 1,
++          "returned": [
++            "q_page_replace",
++            "q_rr_timeslice"
++          ]
++        },
++        {
++          "gold": "q_gd",
++          "rank": 1,
++          "returned": [
++            "q_gd",
++            "q_overfit"
++          ]
++        },
++        {
++          "gold": "q_overfit",
++          "rank": 1,
++          "returned": [
++            "q_overfit",
++            "q_gd"
++          ]
++        },
++        {
++          "gold": "q_tcp",
++          "rank": 1,
++          "returned": [
++            "q_tcp"
++          ]
++        },
++        {
++          "gold": "q_cap",
++          "rank": 1,
++          "returned": [
++            "q_cap"
++          ]
++        }
++      ]
++    }
++  }
++}
+\ No newline at end of file

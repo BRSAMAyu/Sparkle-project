@@ -539,7 +539,12 @@ async def test_retrieve_user_material_tool_formats_scoped_results(monkeypatch):
         content="Entropy increases in isolated systems until equilibrium is reached.",
     )
     fake_result = SimpleNamespace(chunk=fake_chunk, file_name="Thermo Notes.pdf", score=0.92)
-    fake_retrieval = SimpleNamespace(document_vector_search=AsyncMock(return_value=[fake_result]))
+    fake_retrieval = SimpleNamespace(
+        # E-05: 工具改走 hybrid（向量侧 + 词法侧），mock 同步补齐新接口
+        document_vector_search=AsyncMock(return_value=[fake_result]),
+        document_lexical_search=AsyncMock(return_value=[]),
+        document_hybrid_search=AsyncMock(return_value=[fake_result]),
+    )
     fake_knowledge = SimpleNamespace(generate_hypothetical_answer=AsyncMock(return_value="expanded thermo query"))
 
     monkeypatch.setattr(
@@ -555,6 +560,12 @@ async def test_retrieve_user_material_tool_formats_scoped_results(monkeypatch):
         lambda _db: fake_knowledge,
     )
 
+    # E-05: 工具按 embedding 可用性分流；单测环境无 key，显式注入"已配置"
+    monkeypatch.setattr(
+        "app.tools.material_retrieval_tools.embedding_service.is_configured",
+        lambda: True,
+    )
+
     tool = RetrieveUserMaterialTool()
     result = await tool.execute(
         RetrieveUserMaterialParams(query="Where do my notes explain entropy?", limit=3),
@@ -564,9 +575,59 @@ async def test_retrieve_user_material_tool_formats_scoped_results(monkeypatch):
 
     assert result.success is True
     assert result.data["vector_query"] == "expanded thermo query"
+    assert result.data["retrieval_mode"] == "hybrid_lexical_vector"
+    assert result.data["embedding_configured"] is True
     assert result.data["scoped_file_count"] == 1
     assert result.data["results"][0]["file_name"] == "Thermo Notes.pdf"
     assert result.data["results"][0]["section_title"] == "Entropy"
+
+
+@pytest.mark.asyncio
+async def test_retrieve_user_material_tool_degrades_to_lexical_without_key(monkeypatch):
+    """E-05 fail-closed：无 embedding key 时工具明确降级为词法检索并在 payload 标注。"""
+    scoped_files = [
+        SimpleNamespace(id=uuid4(), file_name="OS.pdf", mime_type="application/pdf", status="ready")
+    ]
+    fake_chunk = SimpleNamespace(
+        id=uuid4(),
+        file_id=scoped_files[0].id,
+        chunk_index=0,
+        section_title="Scheduling",
+        page_numbers=[1],
+        content="Round robin scheduling rotates processes with a fixed time slice.",
+    )
+    fake_result = SimpleNamespace(chunk=fake_chunk, file_name="OS.pdf", score=0.5)
+    fake_retrieval = SimpleNamespace(
+        document_lexical_search=AsyncMock(return_value=[fake_result]),
+        document_vector_search=AsyncMock(return_value=[]),
+        document_hybrid_search=AsyncMock(return_value=[]),
+    )
+    monkeypatch.setattr(
+        "app.tools.material_retrieval_tools._resolve_scoped_files",
+        AsyncMock(return_value=scoped_files),
+    )
+    monkeypatch.setattr(
+        "app.tools.material_retrieval_tools.KnowledgeRetrievalService",
+        lambda _db: fake_retrieval,
+    )
+    monkeypatch.setattr(
+        "app.tools.material_retrieval_tools.embedding_service.is_configured",
+        lambda: False,
+    )
+
+    tool = RetrieveUserMaterialTool()
+    result = await tool.execute(
+        RetrieveUserMaterialParams(query="how does round robin scheduling work?"),
+        user_id=str(uuid4()),
+        db_session=SimpleNamespace(sync_session=SimpleNamespace(info={TOOL_RUNTIME_CONTEXT_KEY: {}})),
+    )
+
+    assert result.success is True
+    assert result.data["embedding_configured"] is False
+    assert result.data["retrieval_mode"] == "lexical_only_embedding_disabled"
+    fake_retrieval.document_lexical_search.assert_awaited_once()
+    fake_retrieval.document_hybrid_search.assert_not_awaited()
+    fake_retrieval.document_vector_search.assert_not_awaited()
 
 
 @pytest.mark.asyncio

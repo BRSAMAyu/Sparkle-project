@@ -195,7 +195,10 @@ class FileProcessingOrchestrator:
                     content=chunk.content,
                     embedding=embedding,
                     quality_score=quality_score,
-                    pipeline_version="v1"
+                    pipeline_version="v1",
+                    # E-05: 向量版本溯源——检索侧按此过滤，防止跨模型混用
+                    embedding_model=embedding_service.current_embedding_version(),
+                    embedding_dim=len(embedding),
                 ))
             self.db.add_all(items)
             await self.db.commit()
@@ -211,7 +214,7 @@ class FileProcessingOrchestrator:
             if not redis:
                 logger.warning(f"Skipping real-time RAG indexing for file {file_record.id}: Redis unavailable")
                 return
-            indexed = await index_document_chunks(redis, file_record, chunks, replace_existing=True)
+            indexed = await index_document_chunks(redis, file_record, chunks, replace_existing=True, db=self.db)
             logger.info(f"Indexed {indexed} document chunks to Redis for file {file_record.id}")
         except Exception as exc:
             logger.warning(f"Failed to index document chunks to Redis for file {file_record.id}: {exc}")
@@ -325,6 +328,7 @@ class FileProcessingOrchestrator:
                 chunks,
                 trust_level=trust_level,
                 replace_existing=True,
+                db=self.db,
             )
             logger.info(
                 f"Indexed {indexed} group document chunks to Redis for group {group_file.group_id} file {file_record.id}"

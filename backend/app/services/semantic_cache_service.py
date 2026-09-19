@@ -92,12 +92,13 @@ class SemanticCacheService:
         self,
         query: str,
         user_id: str | None = None,
-        knowledge_version: str | None = None
+        knowledge_version: str | None = None,
+        embedding_version: str | None = None,
     ) -> str:
         """
         生成缓存键
 
-        使用查询文本的 SHA256 哈希 + 用户ID（可选）
+        使用查询文本的 SHA256 哈希 + 用户ID（可选）+ 知识版本 + embedding 版本
         """
         # 标准化查询文本
         normalized_query = self._normalize_query(query)
@@ -108,6 +109,10 @@ class SemanticCacheService:
             parts.append(user_id)
         if knowledge_version:
             parts.append(f"kv={knowledge_version}")
+        # E-05: embedding 版本参与缓存键——重嵌/换模型后旧缓存（含旧模型
+        # 查询向量）自动失效，防止跨模型语义命中污染
+        if embedding_version:
+            parts.append(f"ev={embedding_version}")
 
         cache_input = ":".join(parts)
 
@@ -143,7 +148,8 @@ class SemanticCacheService:
         user_id: str | None,
         normalized_query: str,
         knowledge_version: str | None,
-        ttl: int
+        ttl: int,
+        embedding_version: str | None = None,
     ) -> None:
         if not self.redis:
             return
@@ -153,6 +159,7 @@ class SemanticCacheService:
             "user_id": user_id,
             "normalized_query": normalized_query,
             "knowledge_version": knowledge_version,
+            "embedding_version": embedding_version,
             "updated_at": _utcnow().isoformat()
         }
         await self.redis.setex(emb_key, ttl, json.dumps(payload))
@@ -173,7 +180,8 @@ class SemanticCacheService:
         query_embedding: list[float],
         user_id: str | None,
         threshold: float,
-        knowledge_version: str | None
+        knowledge_version: str | None,
+        embedding_version: str | None = None,
     ) -> tuple[str, float] | None:
         if not self.redis:
             return None
@@ -203,6 +211,10 @@ class SemanticCacheService:
                 continue
             if knowledge_version and payload.get("knowledge_version") != knowledge_version:
                 continue
+            # E-05: embedding 版本隔离——旧模型查询向量与新模型查询向量的
+            # 余弦相似度无意义，绝不允许跨版本语义命中
+            if embedding_version and payload.get("embedding_version") != embedding_version:
+                continue
 
             embedding = payload.get("embedding")
             if not embedding:
@@ -221,7 +233,8 @@ class SemanticCacheService:
         query: str,
         user_id: str | None = None,
         similarity_threshold: float = 0.95,
-        knowledge_version: str | None = None
+        knowledge_version: str | None = None,
+        embedding_version: str | None = None,
     ) -> dict[str, Any] | None:
         """
         从缓存获取查询结果
@@ -240,7 +253,7 @@ class SemanticCacheService:
 
         try:
             await self._init_stats()
-            cache_key = self._generate_cache_key(query, user_id, knowledge_version)
+            cache_key = self._generate_cache_key(query, user_id, knowledge_version, embedding_version)
             cached_data = await self.redis.get(cache_key)
 
             if cached_data:
@@ -256,14 +269,17 @@ class SemanticCacheService:
 
                 return result.get("data")
             # 语义相似检索
-            if similarity_threshold < 1.0:
+            # E-05: embedding 供应商未配置时跳过（避免每次未命中都触发
+            # 3 次重试 x 2 供应商的失败风暴）；exact-match 缓存仍可用
+            if similarity_threshold < 1.0 and embedding_service.is_configured():
                 normalized_query = self._normalize_query(query)
                 query_embedding = await embedding_service.get_embedding(normalized_query, text_type="query")
                 similar = await self._find_similar_cache_key(
                     query_embedding,
                     user_id,
                     similarity_threshold,
-                    knowledge_version
+                    knowledge_version,
+                    embedding_version or embedding_service.current_embedding_version(),
                 )
                 if similar:
                     similar_key, score = similar
@@ -296,6 +312,8 @@ class SemanticCacheService:
         ttl: int | None = None,
         similarity_threshold: float | None = None,
         knowledge_version: str | None = None,
+        embedding_version: str | None = None,
+        factory_meta: dict[str, Any] | None = None,
         *args,
         **kwargs
     ) -> dict[str, Any] | None:
@@ -308,6 +326,11 @@ class SemanticCacheService:
             factory_func: 如果缓存未命中，用于生成数据的异步函数
             user_id: 用户 ID
             ttl: 过期时间
+            factory_meta: E-05 D3 降级标记通道。传入的 dict 会以 ``exec_meta``
+                关键字转发给 factory_func；factory 在产出**降级结果**（如
+                embedding 故障后的纯词法检索）时置 ``exec_meta["degraded"]=True``，
+                该结果照常返回但**不写入缓存**——瞬时故障的降级答案不得被固化
+                到缓存（否则供应商恢复后同查询最长继续命中降级答案 1h）。
             *args, **kwargs: 传递给 factory_func 的参数
 
         Returns:
@@ -315,18 +338,18 @@ class SemanticCacheService:
         """
         if not self.redis:
             SEMANTIC_CACHE_BYPASS_TOTAL.inc()
-            return await factory_func(*args, **kwargs)
+            return await self._call_factory(factory_func, factory_meta, *args, **kwargs)
         if not settings.SEMANTIC_CACHE_ENABLED:
             SEMANTIC_CACHE_BYPASS_TOTAL.inc()
-            return await factory_func(*args, **kwargs)
+            return await self._call_factory(factory_func, factory_meta, *args, **kwargs)
 
         # 1. 尝试获取缓存
         effective_threshold = similarity_threshold if similarity_threshold is not None else 1.0
-        data = await self.get(query, user_id, effective_threshold, knowledge_version)
+        data = await self.get(query, user_id, effective_threshold, knowledge_version, embedding_version)
         if data is not None:
             return data
 
-        cache_key = self._generate_cache_key(query, user_id, knowledge_version)
+        cache_key = self._generate_cache_key(query, user_id, knowledge_version, embedding_version)
         lock_key = self._generate_lock_key(cache_key)
 
         # 2. 获取分布式锁 (Async)
@@ -342,17 +365,24 @@ class SemanticCacheService:
             # 所以会释放 event loop，不会阻塞其他协程。
             async with lock:
                 # 双重检查 (Double-Checked Locking)
-                data = await self.get(query, user_id, effective_threshold, knowledge_version)
+                data = await self.get(query, user_id, effective_threshold, knowledge_version, embedding_version)
                 if data is not None:
                     return data
 
                 # 3. 生成数据
                 logger.info(f"Cache MISS & Lock Acquired. Generating data for query='{query[:30]}...'")
-                result = await factory_func(*args, **kwargs)
+                result = await self._call_factory(factory_func, factory_meta, *args, **kwargs)
 
-                # 4. 写入缓存
-                if result:
-                    await self.set(query, result, user_id, ttl, knowledge_version)
+                # 4. 写入缓存（E-05 D3：降级结果拒绝固化——瞬时故障的降级答案
+                #    不得进入缓存，供应商恢复后同查询必须重新生成全质量结果）
+                if result and not (factory_meta or {}).get("degraded"):
+                    await self.set(query, result, user_id, ttl, knowledge_version, embedding_version)
+                elif factory_meta and factory_meta.get("degraded"):
+                    SEMANTIC_CACHE_BYPASS_TOTAL.inc()
+                    logger.info(
+                        f"Cache SET skipped for degraded result query='{query[:30]}...' "
+                        "(transient degradation must not be cached; E-05 D3)"
+                    )
 
                 return result
 
@@ -362,11 +392,26 @@ class SemanticCacheService:
                  logger.warning(f"Failed to acquire lock for {cache_key} (Timeout). Waiting...")
                  # 稍微等待一下再尝试获取（降级策略）
                  await asyncio.sleep(0.1)
-                 return await self.get(query, user_id, knowledge_version=knowledge_version) or await factory_func(*args, **kwargs)
+                 return (
+                     await self.get(
+                         query,
+                         user_id,
+                         knowledge_version=knowledge_version,
+                         embedding_version=embedding_version,
+                     )
+                     or await self._call_factory(factory_func, factory_meta, *args, **kwargs)
+                 )
 
             logger.error(f"Cache Mutex Error: {e}")
             # 出错时降级为直接调用
+            return await self._call_factory(factory_func, factory_meta, *args, **kwargs)
+
+    @staticmethod
+    async def _call_factory(factory_func, factory_meta: dict[str, Any] | None, *args, **kwargs):
+        """调用 factory；提供 factory_meta 时以 ``exec_meta`` 关键字注入（D3 通道）。"""
+        if factory_meta is None:
             return await factory_func(*args, **kwargs)
+        return await factory_func(*args, exec_meta=factory_meta, **kwargs)
 
     async def set(
         self,
@@ -374,7 +419,8 @@ class SemanticCacheService:
         data: dict[str, Any],
         user_id: str | None = None,
         ttl: int | None = None,
-        knowledge_version: str | None = None
+        knowledge_version: str | None = None,
+        embedding_version: str | None = None,
     ) -> bool:
         """
         设置缓存
@@ -394,7 +440,7 @@ class SemanticCacheService:
         try:
             await self._init_stats()
             normalized_query = self._normalize_query(query)
-            cache_key = self._generate_cache_key(query, user_id, knowledge_version)
+            cache_key = self._generate_cache_key(query, user_id, knowledge_version, embedding_version)
 
             # 包装数据，添加元信息
             cache_value = {
@@ -412,14 +458,22 @@ class SemanticCacheService:
                 ttl_value,
                 json.dumps(cache_value)
             )
-            await self._set_embedding_payload(
-                cache_key=cache_key,
-                embedding=await embedding_service.get_embedding(normalized_query, text_type="query"),
-                user_id=user_id,
-                normalized_query=normalized_query,
-                knowledge_version=knowledge_version,
-                ttl=ttl_value
-            )
+            # E-05: embedding 未配置或调用失败时跳过语义载荷（exact-match
+            # 缓存仍写入），缓存写路径绝不因 embedding 失败而整体失败
+            if embedding_service.is_configured():
+                try:
+                    embedding_payload = await embedding_service.get_embedding(normalized_query, text_type="query")
+                    await self._set_embedding_payload(
+                        cache_key=cache_key,
+                        embedding=embedding_payload,
+                        user_id=user_id,
+                        normalized_query=normalized_query,
+                        knowledge_version=knowledge_version,
+                        ttl=ttl_value,
+                        embedding_version=embedding_version or embedding_service.current_embedding_version(),
+                    )
+                except Exception as emb_exc:
+                    logger.debug(f"Semantic cache embedding payload skipped: {emb_exc}")
 
             # 更新统计
             await self.redis.hincrby(self.STATS_KEY, "total_sets", 1)

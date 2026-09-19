@@ -113,7 +113,8 @@ async def test_redis_search_client_retries_after_missing_index(monkeypatch):
             self.ft_client = _FakeFT()
 
         def ft(self, index_name):
-            assert index_name == redis_search_client.index_name
+            # E-05: 索引名按 embedding 版本动态生成（方法而非属性）
+            assert index_name == redis_search_client._index_name()
             return self.ft_client
 
     monkeypatch.setattr(redis_search_client, "redis", _FakeRedis())

@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import re
 import time
 from dataclasses import dataclass
 from uuid import UUID
 
 from loguru import logger
 from redis.commands.search.query import Query
-from sqlalchemy import and_, false, func, or_, select
+from sqlalchemy import and_, case, false, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -22,7 +23,7 @@ from app.models.file_storage import SourceLifecycleStatus, StoredFile
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.group_files import GroupFile
 from app.schemas.galaxy import NodeBase, SearchResultItem, UserStatusInfo
-from app.services.embedding_service import embedding_service
+from app.services.embedding_service import EmbeddingNotConfiguredError, embedding_service
 from app.services.rerank_service import rerank_service
 
 try:
@@ -38,9 +39,50 @@ except ImportError:
 
 _PGVECTOR_RUNTIME_ENABLED = True
 
+# E-05 D2（R2）：知识数据版本的 Redis 缓存键（TTL=KNOWLEDGE_VERSION_CACHE_TTL_SECONDS=30s）。
+# 删除/归档/撤销来源时必须同步失效（SourceLifecycleService.invalidate_source_retrieval），
+# 否则 TTL 窗口内的检索仍以旧 knowledge_version 组语义缓存键——exact 与语义相似
+# 两条命中路径都会继续命中已删内容的缓存条目（违反"删除即时不可见"）。
+KNOWLEDGE_VERSION_CACHE_KEY = "knowledge:version:v1"
+
+# E-05: 词法检索的 token 提取——拉丁字母/数字词（>=2 字符）+ 连续 CJK 段整体
+# （长段追加二元组提升召回）。无 zhparser 的 PG 上用 ILIKE 子串匹配。
+_LEX_WORD_RE = re.compile(r"[A-Za-z0-9_]{2,}|[\u4e00-\u9fff]+")
+_CJK_RUN_RE = re.compile(r"[\u4e00-\u9fff]+$")
+
+def extract_lexical_tokens(query: str, *, max_tokens: int = 8) -> list[str]:
+    """把查询拆成词法检索 token（去重、保序、截断）。"""
+    tokens: list[str] = []
+    for match in _LEX_WORD_RE.findall(query or ""):
+        token = match.lower()
+        if token not in tokens:
+            tokens.append(token)
+        if len(match) >= 3 and _CJK_RUN_RE.fullmatch(match):
+            for i in range(len(match) - 1):
+                bigram = match[i : i + 2]
+                if bigram not in tokens:
+                    tokens.append(bigram)
+    return tokens[:max_tokens]
+
 class KnowledgeRetrievalService:
     def __init__(self, db: AsyncSession):
         self.db = db
+
+    # ------------------------------------------------------------------ #
+    # E-05: embedding 版本隔离                                            #
+    # ------------------------------------------------------------------ #
+    @staticmethod
+    def _embedding_version_filter(column):
+        """检索只允许命中当前 embedding 版本（或过渡期未标记 NULL）的向量。
+
+        任何标记了**其他**模型的向量无条件排除——跨模型余弦距离没有意义，
+        混用会让相似度静默变成垃圾。EMBEDDING_STRICT_VERSION_FILTER=True 时
+        连 NULL（来源未知）也排除（重建完成后推荐）。
+        """
+        current = embedding_service.current_embedding_version()
+        if settings.EMBEDDING_STRICT_VERSION_FILTER:
+            return column == current
+        return or_(column == current, column.is_(None))
 
     @staticmethod
     def _is_vector_runtime_error(exc: Exception) -> bool:
@@ -68,6 +110,12 @@ class KnowledgeRetrievalService:
         if not available:
             self._disable_vector_runtime("pgvector extension unavailable")
         return available
+
+    @staticmethod
+    def _mark_degraded(exec_meta: dict | None) -> None:
+        """E-05 D3：向缓存层标记"本次结果为降级产物"（词法降级等）。"""
+        if exec_meta is not None:
+            exec_meta["degraded"] = True
 
     async def _keyword_fallback(
         self,
@@ -97,33 +145,41 @@ class KnowledgeRetrievalService:
         if not cache_service.redis:
             return await self._compute_knowledge_version()
 
-        cache_key = "knowledge:version:v1"
-        cached = await cache_service.get(cache_key)
+        cached = await cache_service.get(KNOWLEDGE_VERSION_CACHE_KEY)
         if cached:
             return cached
 
         version = await self._compute_knowledge_version()
         if version:
-            await cache_service.set(cache_key, version, ttl=settings.KNOWLEDGE_VERSION_CACHE_TTL_SECONDS)
+            await cache_service.set(KNOWLEDGE_VERSION_CACHE_KEY, version, ttl=settings.KNOWLEDGE_VERSION_CACHE_TTL_SECONDS)
         return version
 
     async def _compute_knowledge_version(self) -> str | None:
+        """知识图谱数据版本：驱动语义缓存的失效隔离。
+
+        E-05 修复：旧实现只用 max(updated_at)。删除**非最新**行不改变
+        max(updated_at) → 删除文档/节点后语义缓存可能继续命中陈旧结果
+        （delete isolation 漏洞）。加入行数计数后，任何写入或删除都会改变
+        版本串，旧缓存条目（exact 与 semantic 命中路径都以版本为键）立即
+        无法命中，等 TTL 自然过期。
+        """
         try:
-            node_max_stmt = select(func.max(KnowledgeNode.updated_at))
-            chunk_max_stmt = select(func.max(DocumentChunk.updated_at))
+            node_max_stmt = select(func.max(KnowledgeNode.updated_at), func.count(KnowledgeNode.id))
+            chunk_max_stmt = select(func.max(DocumentChunk.updated_at), func.count(DocumentChunk.id))
 
             node_result = await self.db.execute(node_max_stmt)
             chunk_result = await self.db.execute(chunk_max_stmt)
 
-            node_max = node_result.scalar()
-            chunk_max = chunk_result.scalar()
+            node_max, node_count = node_result.one()
+            chunk_max, chunk_count = chunk_result.one()
 
             candidates = [dt for dt in (node_max, chunk_max) if dt]
-            if not candidates:
+            if not candidates and node_count == 0 and chunk_count == 0:
                 return "tsms:0"
 
-            latest = max(candidates)
-            return f"tsms:{int(latest.timestamp() * 1000)}"
+            latest = max(candidates) if candidates else None
+            ts_ms = int(latest.timestamp() * 1000) if latest else 0
+            return f"tsms:{ts_ms}:n{int(node_count)}:c{int(chunk_count)}"
         except Exception:
             return None
 
@@ -145,6 +201,10 @@ class KnowledgeRetrievalService:
 
         knowledge_version = await self._get_knowledge_version()
 
+        # E-05 D3：降级标记通道——_execute_hybrid_search 在向量侧故障降级词法时
+        # 置 degraded=True，语义缓存层据此拒绝把降级结果固化（否则瞬时故障的
+        # 词法答案会被缓存 1h，供应商恢复后同查询继续命中降级答案）
+        exec_meta: dict = {}
         # Use get_with_lock to prevent redundant heavy retrieval tasks
         return await semantic_cache_service.get_with_lock(
             query=query,
@@ -152,6 +212,8 @@ class KnowledgeRetrievalService:
             user_id=str(user_id), # Optional: could be global if knowledge is shared
             similarity_threshold=settings.SEMANTIC_CACHE_SIM_THRESHOLD,
             knowledge_version=knowledge_version,
+            embedding_version=embedding_service.current_embedding_version(),
+            factory_meta=exec_meta,
             # factory_func arguments
             user_id_uuid=user_id,
             query_str=query,
@@ -170,19 +232,31 @@ class KnowledgeRetrievalService:
         subject_id: int | None = None,
         limit: int = 5,
         threshold: float = 0.6,
-        use_reranker: bool = True
+        use_reranker: bool = True,
+        exec_meta: dict | None = None,
     ) -> list[SearchResultItem]:
         """
         Internal implementation of hybrid search.
+
+        exec_meta（E-05 D3）：由缓存层（get_with_lock）注入的降级标记通道；
+        向量侧因 embedding 故障降级词法检索时置 ``degraded=True``，调用方
+        （语义缓存）据此拒绝缓存本次结果。直调时不传则不标记。
         """
         # 2. Prepare Queries
         start_time = time.time()
         actual_vector_text = vector_query if vector_query else query_str
         try:
             query_embedding = await embedding_service.get_embedding(actual_vector_text, text_type="query")
+        except EmbeddingNotConfiguredError as e:
+            # E-05: 无 key = 明确关闭向量侧，降级词法检索（显式记录，非静默）
+            logger.warning(f"Embedding provider not configured; hybrid search degrades to lexical-only: {e}")
+            RETRIEVAL_ERROR_TOTAL.labels(source="redis_hybrid", stage="embedding").inc()
+            self._mark_degraded(exec_meta)
+            return await self._keyword_fallback(user_id_uuid, query_str, subject_id, limit)
         except Exception as e:
             logger.warning(f"Embedding generation failed for hybrid search: {e}")
             RETRIEVAL_ERROR_TOTAL.labels(source="redis_hybrid", stage="embedding").inc()
+            self._mark_degraded(exec_meta)
             return await self._keyword_fallback(user_id_uuid, query_str, subject_id, limit)
 
         # 3. Parallel Retrieval
@@ -452,8 +526,12 @@ class KnowledgeRetrievalService:
                 )
             )
             .where(DocumentChunk.file_id.in_(file_ids))
+            .where(DocumentChunk.deleted_at.is_(None))
             .where(StoredFile.lifecycle_status == SourceLifecycleStatus.ACTIVE.value)
             .where(DocumentChunk.embedding.isnot(None))
+            # E-05: 只检索当前 embedding 版本的向量（不同模型的向量混在同一
+            # 余弦空间无意义）；过渡期容忍未标记 NULL。
+            .where(self._embedding_version_filter(DocumentChunk.embedding_model))
             .order_by("distance")
             .limit(limit * 5)
         )
@@ -489,6 +567,199 @@ class KnowledgeRetrievalService:
                 )
 
         return results[:limit]
+
+    async def document_lexical_search(
+        self,
+        user_id: UUID,
+        query: str,
+        file_ids: list[UUID],
+        limit: int = 5,
+        include_group_documents: bool = False,
+        group_ids: list[UUID | str] | None = None,
+    ) -> list[DocumentChunkResult]:
+        """E-05: 纯词法（稀疏）检索 document_chunks，与向量检索同权限边界。
+
+        - 用户隔离：与 document_vector_search 完全一致（本人 chunk 或其可访问
+          群组共享 chunk），wrong-user=0 由 SQL 谓词保证；
+        - 生命周期：只检索 ACTIVE 且未软删的来源；
+        - 不依赖 embedding（无 key 时仍然可用，作为向量能力的词法降级路径）。
+        """
+        tokens = extract_lexical_tokens(query)
+        if not query or not file_ids or not tokens:
+            return []
+
+        accessible_group_ids: list[UUID] = []
+        if include_group_documents and GroupFileService is not None:
+            accessible_group_ids = await GroupFileService.list_accessible_group_ids(
+                self.db,
+                user_id,
+                requested_group_ids=group_ids,
+            )
+
+        escaped = [token.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") for token in tokens]
+        match_conditions = [
+            or_(
+                DocumentChunk.content.ilike(f"%{token}%"),
+                DocumentChunk.section_title.ilike(f"%{token}%"),
+            )
+            for token in escaped
+        ]
+        lex_score = sum(
+            case(
+                (
+                    or_(
+                        DocumentChunk.content.ilike(f"%{token}%"),
+                        DocumentChunk.section_title.ilike(f"%{token}%"),
+                    ),
+                    1,
+                ),
+                else_=0,
+            )
+            for token in escaped
+        )
+
+        stmt = (
+            select(
+                DocumentChunk,
+                StoredFile.file_name,
+                GroupFile.group_id,
+                GroupFile.shared_by_id,
+                lex_score.label("lex_score"),
+            )
+            .join(StoredFile, StoredFile.id == DocumentChunk.file_id)
+            .outerjoin(
+                GroupFile,
+                and_(
+                    GroupFile.file_id == DocumentChunk.file_id,
+                    GroupFile.not_deleted_filter(),
+                    GroupFile.group_id.in_(accessible_group_ids) if accessible_group_ids else false(),
+                ),
+            )
+            .outerjoin(
+                GroupMember,
+                and_(
+                    GroupMember.group_id == GroupFile.group_id,
+                    GroupMember.user_id == user_id,
+                    GroupMember.not_deleted_filter(),
+                ),
+            )
+            .where(
+                or_(
+                    DocumentChunk.user_id == user_id,
+                    GroupMember.id.isnot(None),
+                )
+            )
+            .where(DocumentChunk.file_id.in_(file_ids))
+            .where(DocumentChunk.deleted_at.is_(None))
+            .where(StoredFile.lifecycle_status == SourceLifecycleStatus.ACTIVE.value)
+            .where(or_(*match_conditions))
+            .order_by(lex_score.desc(), DocumentChunk.chunk_index.asc())
+            .limit(limit * 10)
+        )
+        result = await self.db.execute(stmt)
+
+        rows = result.all()
+        lexical_results_out: list[DocumentChunkResult] = []
+        for chunk, file_name, group_id, shared_by_id, score in rows:
+            lexical_results_out.append(
+                DocumentChunkResult(
+                    chunk=chunk,
+                    file_name=file_name,
+                    score=float(int(score or 0)) / max(1, len(tokens)),
+                    group_id=group_id,
+                    shared_by_user_id=shared_by_id,
+                )
+            )
+        return lexical_results_out[:limit]
+
+    async def document_hybrid_search(
+        self,
+        user_id: UUID,
+        query: str,
+        file_ids: list[UUID],
+        vector_query: str | None = None,
+        limit: int = 5,
+        threshold: float = 0.4,
+        use_reranker: bool = True,
+        include_group_documents: bool = False,
+        group_ids: list[UUID | str] | None = None,
+    ) -> list[DocumentChunkResult]:
+        """E-05: hybrid lexical + vector 检索（RRF 融合，可选 rerank）。
+
+        - 并行跑 document_vector_search 与 document_lexical_search；
+        - 向量侧失败（含未配置 key）时降级为纯词法——显式记日志，绝不静默
+          使用占位向量；
+        - 融合用 reciprocal_rank_fusion（与 Redis hybrid 链路同一实现），
+          可选 rerank（超时/失败回退融合序）。
+        """
+        start_time = time.time()
+        candidate_limit = max(limit * 5, limit)
+
+        vector_task = self.document_vector_search(
+            user_id=user_id,
+            query=query,
+            file_ids=file_ids,
+            vector_query=vector_query,
+            limit=candidate_limit,
+            threshold=threshold,
+            include_group_documents=include_group_documents,
+            group_ids=group_ids,
+        )
+        lexical_task = self.document_lexical_search(
+            user_id=user_id,
+            query=query,
+            file_ids=file_ids,
+            limit=candidate_limit,
+            include_group_documents=include_group_documents,
+            group_ids=group_ids,
+        )
+
+        vector_results, lexical_results = await asyncio.gather(
+            vector_task, lexical_task, return_exceptions=True
+        )  # type: ignore[assignment]
+
+        if isinstance(vector_results, BaseException):
+            if isinstance(vector_results, EmbeddingNotConfiguredError):
+                logger.warning(
+                    "Hybrid document search: embedding provider not configured; "
+                    "degrading to lexical-only retrieval (vector side explicitly disabled)"
+                )
+            else:
+                logger.warning(f"Hybrid document search vector side failed: {vector_results}")
+                RETRIEVAL_ERROR_TOTAL.labels(source="pg_hybrid", stage="retrieve").inc()
+            vector_results = []
+        if isinstance(lexical_results, BaseException):
+            logger.warning(f"Hybrid document search lexical side failed: {lexical_results}")
+            RETRIEVAL_ERROR_TOTAL.labels(source="pg_hybrid", stage="retrieve").inc()
+            lexical_results = []
+
+        if not vector_results and not lexical_results:
+            return []
+
+        fused_results = rerank_service.reciprocal_rank_fusion([vector_results, lexical_results])
+        candidates = [item for item, _score in fused_results]
+
+        rerank_start = time.time()
+        if use_reranker and candidates:
+            try:
+                final_chunks = await asyncio.wait_for(
+                    rerank_service.rerank(query, candidates, top_k=limit),
+                    timeout=settings.RERANK_TIMEOUT_SECONDS,
+                )
+            except TimeoutError:
+                logger.warning("Hybrid document rerank timed out, returning fused candidates.")
+                RETRIEVAL_TIMEOUT_TOTAL.labels(source="pg_hybrid", stage="rerank").inc()
+                final_chunks = candidates[:limit]
+            except Exception as e:
+                logger.warning(f"Hybrid document rerank failed, returning fused candidates: {e}")
+                RETRIEVAL_ERROR_TOTAL.labels(source="pg_hybrid", stage="rerank").inc()
+                final_chunks = candidates[:limit]
+        else:
+            final_chunks = candidates[:limit]
+        RAG_RETRIEVAL_LATENCY.labels(source="pg_hybrid", stage="rerank").observe(time.time() - rerank_start)
+        RAG_RETRIEVAL_LATENCY.labels(source="pg_hybrid", stage="retrieve").observe(time.time() - start_time)
+
+        return final_chunks
 
     async def semantic_search_nodes(
         self,
@@ -533,6 +804,8 @@ class KnowledgeRetrievalService:
             )
             .where(KnowledgeNode.embedding.isnot(None))
             .where(or_(KnowledgeNode.status.is_(None), KnowledgeNode.status == "published"))
+            # E-05: 版本隔离——不同 embedding 模型的节点向量不参与当前查询
+            .where(self._embedding_version_filter(KnowledgeNode.embedding_model))
         )
 
         if subject_id:
@@ -698,3 +971,13 @@ class DocumentChunkResult:
     group_id: UUID | None = None
     shared_by_user_id: UUID | None = None
     trust_level: str | None = None
+
+    @property
+    def id(self) -> str:
+        """RRF 融合按 id 去重（rerank_service.reciprocal_rank_fusion 契约）。"""
+        return str(self.chunk.id)
+
+    @property
+    def content(self) -> str:
+        """rerank 契约：候选需暴露 content 供重排序器读取。"""
+        return self.chunk.content or ""

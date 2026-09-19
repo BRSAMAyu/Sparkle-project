@@ -17,7 +17,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
-from app.services.embedding_service import embedding_service
+from app.services.embedding_service import embedding_service, stamp_embedding_version
 from app.services.expansion_service import ExpansionService
 from app.services.galaxy.provenance import append_graph_event_source
 
@@ -287,6 +287,7 @@ class KnowledgeIntegrationService:
 
             if node:
                 node.embedding = embedding
+                stamp_embedding_version(node, embedding)
                 node.updated_at = _utcnow()
                 await self.db.commit()
                 logger.debug(f"✅ Generated embedding for node {node_id}")

@@ -1,0 +1,172 @@
+{
+  "meta": {
+    "corpus_chunks": 12,
+    "queries": 6,
+    "embedding_version": "dashscope/qwen3.7-text-embedding-flash@1024",
+    "knowledge_language": "zh+en+code",
+    "cleanup": "removed bench user/files/chunks/redis keys"
+  },
+  "results": {
+    "vector_only": {
+      "hit@5": 1.0,
+      "mrr@5": 1.0,
+      "latency_ms_p50": 4.3,
+      "latency_ms_p95": 4.6,
+      "latency_ms_max": 14.0,
+      "per_query": [
+        {
+          "gold": "q_rr_timeslice",
+          "rank": 1,
+          "returned": [
+            "q_rr_timeslice"
+          ]
+        },
+        {
+          "gold": "q_page_replace",
+          "rank": 1,
+          "returned": [
+            "q_page_replace",
+            "q_rr_timeslice"
+          ]
+        },
+        {
+          "gold": "q_gd",
+          "rank": 1,
+          "returned": [
+            "q_gd",
+            "q_overfit"
+          ]
+        },
+        {
+          "gold": "q_overfit",
+          "rank": 1,
+          "returned": [
+            "q_overfit",
+            "q_gd"
+          ]
+        },
+        {
+          "gold": "q_tcp",
+          "rank": 1,
+          "returned": [
+            "q_tcp"
+          ]
+        },
+        {
+          "gold": "q_cap",
+          "rank": 1,
+          "returned": [
+            "q_cap"
+          ]
+        }
+      ]
+    },
+    "lexical_only": {
+      "hit@5": 1.0,
+      "mrr@5": 1.0,
+      "latency_ms_p50": 2.4,
+      "latency_ms_p95": 2.8,
+      "latency_ms_max": 6.3,
+      "per_query": [
+        {
+          "gold": "q_rr_timeslice",
+          "rank": 1,
+          "returned": [
+            "q_rr_timeslice",
+            "q_page_replace"
+          ]
+        },
+        {
+          "gold": "q_page_replace",
+          "rank": 1,
+          "returned": [
+            "q_page_replace"
+          ]
+        },
+        {
+          "gold": "q_gd",
+          "rank": 1,
+          "returned": [
+            "q_gd"
+          ]
+        },
+        {
+          "gold": "q_overfit",
+          "rank": 1,
+          "returned": [
+            "q_overfit"
+          ]
+        },
+        {
+          "gold": "q_tcp",
+          "rank": 1,
+          "returned": [
+            "q_tcp"
+          ]
+        },
+        {
+          "gold": "q_cap",
+          "rank": 1,
+          "returned": [
+            "q_cap"
+          ]
+        }
+      ]
+    },
+    "hybrid": {
+      "hit@5": 1.0,
+      "mrr@5": 1.0,
+      "latency_ms_p50": 132.0,
+      "latency_ms_p95": 176.5,
+      "latency_ms_max": 194.5,
+      "per_query": [
+        {
+          "gold": "q_rr_timeslice",
+          "rank": 1,
+          "returned": [
+            "q_rr_timeslice",
+            "q_page_replace"
+          ]
+        },
+        {
+          "gold": "q_page_replace",
+          "rank": 1,
+          "returned": [
+            "q_page_replace",
+            "q_rr_timeslice"
+          ]
+        },
+        {
+          "gold": "q_gd",
+          "rank": 1,
+          "returned": [
+            "q_gd",
+            "q_overfit"
+          ]
+        },
+        {
+          "gold": "q_overfit",
+          "rank": 1,
+          "returned": [
+            "q_overfit",
+            "q_gd"
+          ]
+        },
+        {
+          "gold": "q_tcp",
+          "rank": 1,
+          "returned": [
+            "q_tcp"
+          ]
+        },
+        {
+          "gold": "q_cap",
+          "rank": 1,
+          "returned": [
+            "q_cap"
+          ]
+        }
+      ]
+    }
+  }
+}

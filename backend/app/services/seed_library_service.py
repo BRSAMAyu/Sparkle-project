@@ -37,7 +37,7 @@ from app.schemas.seed_content import (
     SubscriptionCreate,
     SubscriptionUpdate,
 )
-from app.services.embedding_service import embedding_service
+from app.services.embedding_service import embedding_service, stamp_embedding_version
 
 
 def _utcnow() -> datetime:
@@ -994,6 +994,7 @@ class SeedLibraryService:
             if embedding_text:
                 try:
                     item.embedding = await embedding_service.get_embedding(embedding_text, text_type="document")
+                    stamp_embedding_version(item, item.embedding)
                 except Exception as e:
                     logger.warning(f"Failed to generate embedding for seed item: {e}")
 
@@ -1208,6 +1209,7 @@ class SeedLibraryService:
             if embedding_text:
                 try:
                     item.embedding = await embedding_service.get_embedding(embedding_text, text_type="document")
+                    stamp_embedding_version(item, item.embedding)
                 except Exception as e:
                     logger.warning(f"Failed to update embedding for seed item {item_id}: {e}")
         try:
@@ -2064,6 +2066,7 @@ class SeedLibraryService:
 
             try:
                 item.embedding = await embedding_service.get_embedding(embedding_text, text_type="document")
+                stamp_embedding_version(item, item.embedding)
                 processed += 1
             except Exception as e:
                 logger.warning(f"Failed to generate embedding for item {item.id}: {e}")

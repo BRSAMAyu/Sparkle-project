@@ -23,7 +23,7 @@ from app.db.session import AsyncSessionLocal
 from app.models.galaxy import ExpansionFeedback, KnowledgeNode, NodeExpansionQueue, NodeRelation, UserNodeStatus
 from app.models.subject import Subject
 from app.schemas.galaxy import SectorCode
-from app.services.embedding_service import embedding_service
+from app.services.embedding_service import embedding_service, stamp_embedding_version
 from app.services.galaxy_feedback_signal_processor import GalaxyFeedbackSignalProcessor
 from app.services.node_sector_service import (
     NodeSectorService,
@@ -409,6 +409,7 @@ class ExpansionService:
             if generate_embedding and node.description:
                 embedding_text = f"{node.name} {node.description}"
                 node.embedding = await embedding_service.get_embedding(embedding_text)
+                stamp_embedding_version(node, node.embedding)
             self.db.add(node)
             await self.db.flush()
             created = True

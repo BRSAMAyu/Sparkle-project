@@ -34,5 +34,12 @@ class DocumentChunk(BaseModel):
     content = Column(Text, nullable=False)
     embedding = Column(VectorCompat, nullable=True)
 
+    # E-05 Embedding 版本溯源：记录生成该向量的 provider/model@dim（如
+    # "dashscope/text-embedding-v4@1024"）。检索按当前版本过滤，防止跨模型
+    # 余弦相似度污染；NULL 表示存量未标记向量（过渡期由
+    # EMBEDDING_STRICT_VERSION_FILTER 决定是否参与检索）。
+    embedding_model = Column(String(100), nullable=True)
+    embedding_dim = Column(Integer, nullable=True)
+
     file = relationship("StoredFile")
     user = relationship("User")

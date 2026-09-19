@@ -514,6 +514,11 @@ class Settings(BaseSettings):
     EMBEDDING_BACKUP_PROVIDER: str = "siliconflow"  # dashscope | siliconflow
     EMBEDDING_MODEL: str = "text-embedding-v4"  # 向量模型
     EMBEDDING_DIM: int = 1024  # 向量维度
+    EMBEDDING_CACHE_TTL_SECONDS: int = 300  # embedding 结果 Redis 缓存 TTL
+    # E-05 版本隔离：True 时检索只使用 embedding_model 等于当前版本的向量；
+    # False（过渡期默认）额外容忍 embedding_model 为 NULL 的存量向量，
+    # 但任何"标记了其他模型"的向量始终被排除。重建索引后建议置 True。
+    EMBEDDING_STRICT_VERSION_FILTER: bool = False
     ENABLE_CONTEXTUAL_CHUNK_ENRICHMENT: bool = True
     RERANK_PROVIDER: str = "dashscope"  # dashscope | siliconflow
     RERANK_BACKUP_PROVIDER: str = "siliconflow"  # dashscope | siliconflow

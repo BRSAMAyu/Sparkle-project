@@ -151,6 +151,10 @@ class KnowledgeNode(BaseModel):
     # 注意: SQLite 不支持 Vector，需要处理兼容性，或者仅在 PG 环境使用
     embedding = deferred(Column(VectorCompat, nullable=True))
 
+    # E-05 Embedding 版本溯源（同 document_chunks.embedding_model）
+    embedding_model = Column(String(100), nullable=True)
+    embedding_dim = Column(Integer, nullable=True)
+
     # Layout Coordinates (for Viewport Query)
     position_x = Column(Float, nullable=True, index=True)
     position_y = Column(Float, nullable=True, index=True)

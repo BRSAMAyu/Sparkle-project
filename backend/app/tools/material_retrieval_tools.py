@@ -3,9 +3,11 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
+from loguru import logger
 from pydantic import BaseModel, Field
 
 from app.models.file_storage import StoredFile
+from app.services.embedding_service import embedding_service
 from app.services.galaxy.retrieval_service import KnowledgeRetrievalService
 from app.services.group_file_service import GroupFileService
 from app.services.knowledge_service import KnowledgeService
@@ -20,7 +22,9 @@ class RetrieveUserMaterialParams(BaseModel):
     )
     limit: int = Field(default=4, ge=1, le=6)
     threshold: float = Field(default=0.4, ge=0.0, le=1.0)
-    use_hypothetical_answer: bool = Field(default=True, description="Whether to reuse HyDE query expansion before retrieval")
+    use_hypothetical_answer: bool = Field(
+        default=True, description="Whether to reuse HyDE query expansion before retrieval"
+    )
     include_group_documents: bool | None = Field(
         default=None,
         description="When true, also search materials shared from groups the user can access.",
@@ -118,27 +122,49 @@ class RetrieveUserMaterialTool(BaseTool):
             )
 
         vector_query = params.query
-        if params.use_hypothetical_answer:
+        embedding_configured = embedding_service.is_configured()
+        if params.use_hypothetical_answer and embedding_configured:
             try:
                 vector_query = await KnowledgeService(db_session).generate_hypothetical_answer(params.query)
             except Exception:
                 vector_query = params.query
 
         retrieval = KnowledgeRetrievalService(db_session)
-        results = await retrieval.document_vector_search(
-            user_id=user_uuid,
-            query=params.query,
-            file_ids=[file.id for file in scoped_files],
-            vector_query=vector_query,
-            limit=params.limit,
-            threshold=params.threshold,
-            include_group_documents=include_group_documents,
-            group_ids=effective_group_ids,
-        )
+        if embedding_configured:
+            # E-05: hybrid lexical+vector（RRF 融合 + 可选 rerank）
+            results = await retrieval.document_hybrid_search(
+                user_id=user_uuid,
+                query=params.query,
+                file_ids=[file.id for file in scoped_files],
+                vector_query=vector_query,
+                limit=params.limit,
+                threshold=params.threshold,
+                include_group_documents=include_group_documents,
+                group_ids=effective_group_ids,
+            )
+            retrieval_mode = "hybrid_lexical_vector"
+        else:
+            # E-05 fail-closed：无 embedding key 时向量侧明确关闭，
+            # 降级为纯词法检索并在 payload 中显式标注（不静默、不报错、不用占位向量）
+            logger.warning(
+                "retrieve_user_material: embedding provider not configured "
+                "(DASHSCOPE_API_KEY/SILICONFLOW_API_KEY); lexical-only retrieval"
+            )
+            results = await retrieval.document_lexical_search(
+                user_id=user_uuid,
+                query=params.query,
+                file_ids=[file.id for file in scoped_files],
+                limit=params.limit,
+                include_group_documents=include_group_documents,
+                group_ids=effective_group_ids,
+            )
+            retrieval_mode = "lexical_only_embedding_disabled"
 
         payload = {
             "query": params.query,
             "vector_query": vector_query,
+            "retrieval_mode": retrieval_mode,
+            "embedding_configured": embedding_configured,
             "scoped_file_count": len(scoped_files),
             "scoped_files": [
                 {

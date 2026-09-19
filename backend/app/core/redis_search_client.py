@@ -11,20 +11,28 @@ from redis.commands.search.query import Query
 
 from app.config import settings
 from app.core.redis_utils import resolve_redis_password
-from app.services.rag_indexing_service import RAG_INDEX_PREFIXES
+from app.services.rag_indexing_service import rag_index_name, rag_index_prefixes
 
 
 class RedisSearchClient:
     """
     Wrapper for Redis Search (RediSearch)
     Handles Vector Search + Hybrid Search
+
+    E-05：索引按 embedding 版本命名（idx:knowledge@{ver}），且只索引该版本
+    前缀下的 key。切换 embedding 模型 → 新版本索引 → 新旧向量隔离；旧版本
+    索引与其 key 保留（rollback 直接切回），由 rebuild 脚本 --prune 清理。
     """
+
+    LEGACY_INDEX_NAME = "idx:knowledge"
 
     def __init__(self, redis_url: str = settings.REDIS_URL, password: str | None = settings.REDIS_PASSWORD):
         resolved_password, _ = resolve_redis_password(redis_url, password)
         # Note: Redis 7.x with ACL requires username='default' when password is set
         self.redis = Redis.from_url(redis_url, username="default", password=resolved_password, decode_responses=True)
-        self.index_name = "idx:knowledge"
+
+    def _index_name(self) -> str:
+        return rag_index_name()
 
     @staticmethod
     def _is_missing_index_error(exc: Exception) -> bool:
@@ -65,44 +73,46 @@ class RedisSearchClient:
         )
 
     async def ensure_index(self) -> bool:
+        index_name = self._index_name()
         try:
-            await self.redis.ft(self.index_name).info()
+            await self.redis.ft(index_name).info()
             return True
         except Exception as exc:
             if not self._is_missing_index_error(exc):
                 if self._is_search_module_unavailable(exc):
-                    logger.warning(f"Redis search module unavailable while checking index {self.index_name}: {exc}")
+                    logger.warning(f"Redis search module unavailable while checking index {index_name}: {exc}")
                 else:
-                    logger.warning(f"Failed to inspect Redis search index {self.index_name}: {exc}")
+                    logger.warning(f"Failed to inspect Redis search index {index_name}: {exc}")
                 return False
 
         try:
-            await self.redis.ft(self.index_name).create_index(
+            await self.redis.ft(index_name).create_index(
                 self._build_index_schema(),
-                definition=IndexDefinition(prefix=RAG_INDEX_PREFIXES, index_type=IndexType.JSON),
+                definition=IndexDefinition(prefix=rag_index_prefixes(), index_type=IndexType.JSON),
             )
-            logger.info(f"Created missing Redis search index {self.index_name}")
+            logger.info(f"Created missing Redis search index {index_name}")
             return True
         except Exception as exc:
             lowered = str(exc).lower()
             if "index already exists" in lowered:
                 return True
             if self._is_search_module_unavailable(exc):
-                logger.warning(f"Redis search module unavailable while creating index {self.index_name}: {exc}")
+                logger.warning(f"Redis search module unavailable while creating index {index_name}: {exc}")
             else:
-                logger.warning(f"Failed to create Redis search index {self.index_name}: {exc}")
+                logger.warning(f"Failed to create Redis search index {index_name}: {exc}")
             return False
 
     async def search(self, query: Query, query_params: dict[str, Any] | None = None):
         """Execute a search query"""
+        index_name = self._index_name()
         try:
-            return await self.redis.ft(self.index_name).search(query, query_params)
+            return await self.redis.ft(index_name).search(query, query_params)
         except Exception as e:
             if self._is_missing_index_error(e):
-                logger.warning(f"Redis search index {self.index_name} missing, attempting initialization")
+                logger.warning(f"Redis search index {index_name} missing, attempting initialization")
                 if await self.ensure_index():
                     try:
-                        return await self.redis.ft(self.index_name).search(query, query_params)
+                        return await self.redis.ft(index_name).search(query, query_params)
                     except Exception as retry_exc:
                         logger.warning(f"Redis search retry failed after index initialization: {retry_exc}")
                         return None

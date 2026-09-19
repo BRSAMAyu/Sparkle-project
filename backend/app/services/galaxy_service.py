@@ -53,7 +53,7 @@ from app.schemas.galaxy import (
     SuggestedNodeSimilarity,
     UserGalaxyContribution,
 )
-from app.services.embedding_service import embedding_service
+from app.services.embedding_service import embedding_service, stamp_embedding_version
 from app.services.expansion_service import ExpansionService, validate_knowledge_node_name
 from app.services.galaxy.ontology_generator import (
     OntologyExtractionResult,
@@ -3482,6 +3482,7 @@ class GalaxyService:
                 node = await session.get(KnowledgeNode, node_id)
                 if node:
                     node.embedding = embedding
+                    stamp_embedding_version(node, embedding)
                     session.add(node)
                     await session.commit()
                     logger.info(f"Generated embedding for node {node_id}")

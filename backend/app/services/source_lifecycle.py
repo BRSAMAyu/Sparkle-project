@@ -25,6 +25,7 @@ from app.models.group_files import GroupFile
 from app.models.task import Task
 from app.models.task_document import TaskDocument
 from app.services.document_upload_storage import document_upload_storage
+from app.services.galaxy.retrieval_service import KNOWLEDGE_VERSION_CACHE_KEY
 from app.services.rag_indexing_service import (
     delete_document_chunk_keys,
     delete_group_document_chunk_keys,
@@ -242,6 +243,14 @@ class SourceLifecycleService:
 
         await cache_service.delete_pattern(f"galaxy:node_source_documents:v1:{source.user_id}:*")
         await cache_service.delete_pattern(f"graphrag:*:{source.user_id}:*")
+        # E-05 D2（R2 返修）：失效全局知识版本缓存（30s TTL）。否则删除/归档后
+        # 的 TTL 窗口内，检索仍以旧 knowledge_version 组语义缓存键 → 已删内容
+        # 继续命中（exact 与语义相似两条路径）。该键是派生缓存，DEL 后下次
+        # 读取自动从 DB 重算，无数据丢失。
+        try:
+            await cache_service.delete(KNOWLEDGE_VERSION_CACHE_KEY)
+        except Exception as exc:
+            logger.warning(f"Failed to invalidate knowledge version cache after source invalidation: {exc}")
         return deleted
 
     async def reindex_source_retrieval(self, db: AsyncSession, source: StoredFile) -> int:
@@ -263,7 +272,7 @@ class SourceLifecycleService:
         ).scalars().all()
         if not chunks:
             return 0
-        indexed = await index_document_chunks(redis, source, chunks)
+        indexed = await index_document_chunks(redis, source, chunks, db=db)
         await cache_service.delete_pattern(f"galaxy:node_source_documents:v1:{source.user_id}:*")
         return indexed
 
