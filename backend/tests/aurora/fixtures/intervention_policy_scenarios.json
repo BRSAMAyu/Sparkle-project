@@ -1,0 +1,726 @@
+{
+  "_meta": {
+    "card": "A-02 Intervention Catalog + Policy Engine V1",
+    "version": "aurora_intervention_policy.v1",
+    "description": "干预选择 policy engine 的场景仿真集：factors → evaluate_intervention_policy → 期望决策。基线场景（S 系列）覆盖全部结构性守卫与确定性缺省出口；A 系列为对抗场景（目录外提名/脏输入/确定性拒绝）。每条断言：selected（恒为封闭目录成员）、why（封闭 reason 码，有序精确）、exclusion_reasons（子集断言）、no_action_reason（inert 时必须为 AURORA_NO_ACTION_REASONS 成员）。",
+    "guard_legend": {
+      "R0.nominee_out_of_catalog": "目录外提名串（字符串自由动作）确定性拒绝",
+      "R1.capability_missing": "能力需求未满足",
+      "R2.permission_missing": "权限需求未满足",
+      "R3.task_context_missing": "干预需要任务锚点而上下文缺失（卡面点名 practice）",
+      "R4.allocation_mode_missing": "执行面干预缺 X-02 分配事实（P3-8：不静默放行，卡面点名 delegate）",
+      "R5.allocation_mode_conflict": "X-02 分配 mode 与干预族冲突",
+      "R6.quiet_hours_suppression": "静默时段抑制主动触达（显式请求可豁免）",
+      "R7.cooldown_active": "同型干预冷却中（不作用于 inert 出口）",
+      "R8.materiality_below_threshold": "materiality 门未过（显式请求可豁免）",
+      "R9.proactive_budget_exhausted": "proactive 预算耗尽（显式请求可豁免）"
+    }
+  },
+  "scenarios": [
+    {
+      "id": "S01_rescope_full_context",
+      "description": "计划范围调整：全量上下文，提名 rescope → 选中（结构性干预基线）",
+      "factors": {
+        "capabilities": ["task_write"],
+        "permissions": ["plan_adjust"],
+        "nominated": ["rescope"],
+        "has_task_context": true
+      },
+      "expect": {
+        "selected": "rescope",
+        "why": ["D1.first_legal_nominee"],
+        "resolved_execution_mode": "hybrid",
+        "semantic_eligible": false,
+        "feasible_contains": ["rescope"]
+      }
+    },
+    {
+      "id": "S02_clarify_minimal_chat",
+      "description": "澄清提问：仅对话面能力即可成立（对话域无任务锚点要求）",
+      "factors": {
+        "capabilities": ["chat"],
+        "nominated": ["clarify"]
+      },
+      "expect": {
+        "selected": "clarify",
+        "why": ["D1.first_legal_nominee"],
+        "resolved_execution_mode": "hybrid",
+        "feasible_contains": ["clarify"]
+      }
+    },
+    {
+      "id": "S03_explain_generation_surface",
+      "description": "解释概念：对话+生成面，无额外权限",
+      "factors": {
+        "capabilities": ["chat", "llm_generate"],
+        "nominated": ["explain"]
+      },
+      "expect": {
+        "selected": "explain",
+        "why": ["D1.first_legal_nominee"],
+        "resolved_execution_mode": "agent"
+      }
+    },
+    {
+      "id": "S04_retrieve_with_permission",
+      "description": "材料召回：能力与读权限齐备 → retrieve（能做且被准做）",
+      "factors": {
+        "capabilities": ["memory_read"],
+        "permissions": ["memory_read"],
+        "nominated": ["retrieve"]
+      },
+      "expect": {
+        "selected": "retrieve",
+        "why": ["D1.first_legal_nominee"],
+        "resolved_execution_mode": "agent"
+      }
+    },
+    {
+      "id": "S05_retrieve_without_permission",
+      "description": "对抗：有检索能力但无读权限 → R2 确定性拒绝（能做 ≠ 被准做）",
+      "factors": {
+        "capabilities": ["memory_read"],
+        "permissions": [],
+        "nominated": ["retrieve"]
+      },
+      "expect": {
+        "selected": "no_action",
+        "why": ["D2.no_legal_nominee_no_action"],
+        "no_action_reason": "no_matching_pattern",
+        "exclusion_reasons": {"retrieve": "R2.permission_missing"},
+        "feasible_not_contains": ["retrieve"]
+      }
+    },
+    {
+      "id": "S06_split_task_context",
+      "description": "任务分解：任务锚点 + 写面 + 生成面 + 计划权限",
+      "factors": {
+        "capabilities": ["task_write", "llm_generate"],
+        "permissions": ["plan_adjust"],
+        "nominated": ["split"],
+        "has_task_context": true
+      },
+      "expect": {
+        "selected": "split",
+        "why": ["D1.first_legal_nominee"],
+        "resolved_execution_mode": "hybrid"
+      }
+    },
+    {
+      "id": "S07_split_without_task_context",
+      "description": "对抗：split 无任务锚点 → R3（分解无对象）",
+      "factors": {
+        "capabilities": ["task_write", "llm_generate"],
+        "permissions": ["plan_adjust"],
+        "nominated": ["split"],
+        "has_task_context": false
+      },
+      "expect": {
+        "selected": "no_action",
+        "why": ["D2.no_legal_nominee_no_action"],
+        "no_action_reason": "no_matching_pattern",
+        "exclusion_reasons": {"split": "R3.task_context_missing"}
+      }
+    },
+    {
+      "id": "S08_schedule_full",
+      "description": "重排时间：写面+定时面+计划权限+任务锚点",
+      "factors": {
+        "capabilities": ["task_write", "scheduler"],
+        "permissions": ["plan_adjust"],
+        "nominated": ["schedule"],
+        "has_task_context": true
+      },
+      "expect": {
+        "selected": "schedule",
+        "why": ["D1.first_legal_nominee"],
+        "resolved_execution_mode": "hybrid"
+      }
+    },
+    {
+      "id": "S09_practice_with_task_context",
+      "description": "针对性练习：任务锚点在（卡面点名场景的合法侧）",
+      "factors": {
+        "capabilities": ["llm_generate"],
+        "nominated": ["practice"],
+        "has_task_context": true
+      },
+      "expect": {
+        "selected": "practice",
+        "why": ["D1.first_legal_nominee"],
+        "resolved_execution_mode": "hybrid"
+      }
+    },
+    {
+      "id": "S10_practice_without_task_context",
+      "description": "对抗：practice 缺任务锚点 → R3 确定性拒绝（卡面点名：practice 需要 task 上下文）",
+      "factors": {
+        "capabilities": ["llm_generate"],
+        "nominated": ["practice"],
+        "has_task_context": false
+      },
+      "expect": {
+        "selected": "no_action",
+        "why": ["D2.no_legal_nominee_no_action"],
+        "no_action_reason": "no_matching_pattern",
+        "exclusion_reasons": {"practice": "R3.task_context_missing"},
+        "feasible_not_contains": ["practice"]
+      }
+    },
+    {
+      "id": "S11_review_with_task_context",
+      "description": "批改产出：任务锚点 + 生成面",
+      "factors": {
+        "capabilities": ["llm_generate"],
+        "nominated": ["review"],
+        "has_task_context": true
+      },
+      "expect": {
+        "selected": "review",
+        "why": ["D1.first_legal_nominee"],
+        "resolved_execution_mode": "agent"
+      }
+    },
+    {
+      "id": "S12_delegate_with_agent_allocation",
+      "description": "委派执行：X-02 分配 mode=agent 镜像 → delegate 合法（卡面点名场景的合法侧）",
+      "factors": {
+        "capabilities": ["tool_execution"],
+        "permissions": ["task_execute"],
+        "nominated": ["delegate"],
+        "has_task_context": true,
+        "allocation_mode": "agent"
+      },
+      "expect": {
+        "selected": "delegate",
+        "why": ["D1.first_legal_nominee"],
+        "resolved_execution_mode": "agent",
+        "feasible_contains": ["delegate"]
+      }
+    },
+    {
+      "id": "S13_delegate_without_allocation",
+      "description": "对抗：delegate 无 X-02 分配事实 → R4 确定性拒绝（卡面点名：delegate 需要 X-02 分配允许；P3-8 不静默放行）",
+      "factors": {
+        "capabilities": ["tool_execution"],
+        "permissions": ["task_execute"],
+        "nominated": ["delegate"],
+        "has_task_context": true,
+        "allocation_mode": null
+      },
+      "expect": {
+        "selected": "no_action",
+        "why": ["D2.no_legal_nominee_no_action"],
+        "no_action_reason": "no_matching_pattern",
+        "exclusion_reasons": {"delegate": "R4.allocation_mode_missing"},
+        "feasible_not_contains": ["delegate", "execute", "co_execute"]
+      }
+    },
+    {
+      "id": "S14_delegate_allocation_conflict",
+      "description": "对抗：X-02 判定 human 执行（agent 不可行）→ delegate 与分配冲突 → R5",
+      "factors": {
+        "capabilities": ["tool_execution"],
+        "permissions": ["task_execute"],
+        "nominated": ["delegate"],
+        "has_task_context": true,
+        "allocation_mode": "human"
+      },
+      "expect": {
+        "selected": "no_action",
+        "why": ["D2.no_legal_nominee_no_action"],
+        "no_action_reason": "no_matching_pattern",
+        "exclusion_reasons": {"delegate": "R5.allocation_mode_conflict"}
+      }
+    },
+    {
+      "id": "S15_execute_with_agent_allocation",
+      "description": "agent 直接执行：分配 mode=agent → execute 合法（学习守卫在 X-02 侧已管住 user_core）",
+      "factors": {
+        "capabilities": ["tool_execution", "llm_generate"],
+        "permissions": ["task_execute"],
+        "nominated": ["execute"],
+        "has_task_context": true,
+        "allocation_mode": "agent"
+      },
+      "expect": {
+        "selected": "execute",
+        "why": ["D1.first_legal_nominee"],
+        "resolved_execution_mode": "agent"
+      }
+    },
+    {
+      "id": "S16_execute_allocation_conflict",
+      "description": "对抗：execute 在分配 hybrid 下 → R5（execute 要求 agent 分配）",
+      "factors": {
+        "capabilities": ["tool_execution", "llm_generate"],
+        "permissions": ["task_execute"],
+        "nominated": ["execute"],
+        "has_task_context": true,
+        "allocation_mode": "hybrid"
+      },
+      "expect": {
+        "selected": "no_action",
+        "why": ["D2.no_legal_nominee_no_action"],
+        "no_action_reason": "no_matching_pattern",
+        "exclusion_reasons": {"execute": "R5.allocation_mode_conflict"}
+      }
+    },
+    {
+      "id": "S17_co_execute_with_hybrid_allocation",
+      "description": "人机协作：分配 hybrid → co_execute 合法，用户保决策点",
+      "factors": {
+        "capabilities": ["tool_execution", "chat"],
+        "permissions": ["task_execute"],
+        "nominated": ["co_execute"],
+        "has_task_context": true,
+        "allocation_mode": "hybrid"
+      },
+      "expect": {
+        "selected": "co_execute",
+        "why": ["D1.first_legal_nominee"],
+        "resolved_execution_mode": "hybrid",
+        "feasible_contains": ["co_execute"],
+        "feasible_not_contains": ["delegate", "execute"]
+      }
+    },
+    {
+      "id": "S18_co_execute_allocation_conflict",
+      "description": "对抗：co_execute 在分配 agent 下 → R5（协作承诺的人决策点无载体）",
+      "factors": {
+        "capabilities": ["tool_execution", "chat"],
+        "permissions": ["task_execute"],
+        "nominated": ["co_execute"],
+        "has_task_context": true,
+        "allocation_mode": "agent"
+      },
+      "expect": {
+        "selected": "no_action",
+        "why": ["D2.no_legal_nominee_no_action"],
+        "no_action_reason": "no_matching_pattern",
+        "exclusion_reasons": {"co_execute": "R5.allocation_mode_conflict"}
+      }
+    },
+    {
+      "id": "S19_reflect_with_model_write",
+      "description": "建模反思：model_write 权限在（产出经确认的模型更新）",
+      "factors": {
+        "capabilities": ["chat", "llm_generate"],
+        "permissions": ["model_write"],
+        "nominated": ["reflect"]
+      },
+      "expect": {
+        "selected": "reflect",
+        "why": ["D1.first_legal_nominee"],
+        "resolved_execution_mode": "hybrid"
+      }
+    },
+    {
+      "id": "S20_reflect_without_model_write",
+      "description": "对抗：reflect 无模型写权限 → R2（无权限的建模会话只产出空转）",
+      "factors": {
+        "capabilities": ["chat", "llm_generate"],
+        "permissions": [],
+        "nominated": ["reflect"]
+      },
+      "expect": {
+        "selected": "no_action",
+        "why": ["D2.no_legal_nominee_no_action"],
+        "no_action_reason": "no_matching_pattern",
+        "exclusion_reasons": {"reflect": "R2.permission_missing"}
+      }
+    },
+    {
+      "id": "S21_connect_peer_full",
+      "description": "同侪接入：同侪面 + 双权限 + proactive 预算在 → connect_peer",
+      "factors": {
+        "capabilities": ["peer_network"],
+        "permissions": ["peer_contact", "proactive_contact"],
+        "nominated": ["connect_peer"],
+        "proactive_budget_available": true
+      },
+      "expect": {
+        "selected": "connect_peer",
+        "why": ["D1.first_legal_nominee"],
+        "resolved_execution_mode": "hybrid"
+      }
+    },
+    {
+      "id": "S22_connect_peer_quiet_hours",
+      "description": "对抗：静默时段主动触达 → R6，确定性 no_action（原因码 closed vocab）",
+      "factors": {
+        "capabilities": ["peer_network"],
+        "permissions": ["peer_contact", "proactive_contact"],
+        "nominated": ["connect_peer"],
+        "quiet_hours": true
+      },
+      "expect": {
+        "selected": "no_action",
+        "why": ["D2.no_legal_nominee_no_action"],
+        "no_action_reason": "quiet_hours",
+        "exclusion_reasons": {"connect_peer": "R6.quiet_hours_suppression"}
+      }
+    },
+    {
+      "id": "S23_pause_signal_anchored",
+      "description": "负荷下调：信号锚即可（L2 burnout 族路径），不要求任务锚点",
+      "factors": {
+        "capabilities": ["chat", "task_write"],
+        "permissions": ["plan_adjust"],
+        "nominated": ["pause"],
+        "has_task_context": false
+      },
+      "expect": {
+        "selected": "pause",
+        "why": ["D1.first_legal_nominee"],
+        "resolved_execution_mode": "hybrid"
+      }
+    },
+    {
+      "id": "S24_remind_full",
+      "description": "提醒：定时面 + 主动触达权限 + 预算 + 提醒对象（任务锚点）",
+      "factors": {
+        "capabilities": ["scheduler"],
+        "permissions": ["proactive_contact"],
+        "nominated": ["remind"],
+        "has_task_context": true,
+        "proactive_budget_available": true
+      },
+      "expect": {
+        "selected": "remind",
+        "why": ["D1.first_legal_nominee"],
+        "resolved_execution_mode": "agent"
+      }
+    },
+    {
+      "id": "S25_remind_budget_exhausted",
+      "description": "对抗：proactive 预算耗尽 → R9，确定性 no_action + budget_exhausted",
+      "factors": {
+        "capabilities": ["scheduler"],
+        "permissions": ["proactive_contact"],
+        "nominated": ["remind"],
+        "has_task_context": true,
+        "proactive_budget_available": false
+      },
+      "expect": {
+        "selected": "no_action",
+        "why": ["D2.no_legal_nominee_no_action"],
+        "no_action_reason": "budget_exhausted",
+        "exclusion_reasons": {"remind": "R9.proactive_budget_exhausted"}
+      }
+    },
+    {
+      "id": "S26_no_nominee_selection_open",
+      "description": "无提名全量可用 → no_action + 选择开放（语义层唯一进场条件）",
+      "factors": {
+        "capabilities": ["chat", "llm_generate", "memory_read", "task_write", "scheduler", "peer_network", "tool_execution"],
+        "permissions": ["memory_read", "plan_adjust", "task_execute", "model_write", "peer_contact", "proactive_contact"],
+        "nominated": [],
+        "has_task_context": true,
+        "allocation_mode": "hybrid"
+      },
+      "expect": {
+        "selected": "no_action",
+        "why": ["D2.no_legal_nominee_no_action"],
+        "no_action_reason": "no_matching_pattern",
+        "semantic_eligible": true,
+        "feasible_contains": ["rescope", "co_execute", "connect_peer"]
+      }
+    },
+    {
+      "id": "S27_materiality_gate_closed",
+      "description": "materiality 门关闭：非 inert 全剔（R8），仅确定性出口可行（A-01 materiality 语义）",
+      "factors": {
+        "capabilities": ["task_write"],
+        "permissions": ["plan_adjust"],
+        "nominated": ["rescope"],
+        "has_task_context": true,
+        "materiality_sufficient": false
+      },
+      "expect": {
+        "selected": "no_action",
+        "why": ["D2.no_legal_nominee_no_action"],
+        "no_action_reason": "materiality_below_threshold",
+        "exclusion_reasons": {"rescope": "R8.materiality_below_threshold"},
+        "semantic_eligible": false,
+        "feasible_contains": ["no_action", "abstain"],
+        "feasible_not_contains": ["rescope", "explain"]
+      }
+    },
+    {
+      "id": "S28_materiality_closed_explicit_request",
+      "description": "materiality 关闭但用户显式请求 → 抑制门豁免（X1），结构性守卫仍全部生效",
+      "factors": {
+        "capabilities": ["chat", "llm_generate"],
+        "nominated": ["explain"],
+        "materiality_sufficient": false,
+        "explicit_user_request": true
+      },
+      "expect": {
+        "selected": "explain",
+        "why": ["D1.first_legal_nominee", "X1.explicit_request_bypassed_gate"],
+        "resolved_execution_mode": "agent"
+      }
+    },
+    {
+      "id": "S29_first_nominee_illegal_fallback",
+      "description": "有序提名过滤：首提名非法（无锚点）→ 次提名合法 → 选中次提名",
+      "factors": {
+        "capabilities": ["task_write", "llm_generate", "chat"],
+        "permissions": ["plan_adjust"],
+        "nominated": ["practice", "explain"],
+        "has_task_context": false
+      },
+      "expect": {
+        "selected": "explain",
+        "why": ["D1.first_legal_nominee"],
+        "exclusion_reasons": {"practice": "R3.task_context_missing"}
+      }
+    },
+    {
+      "id": "S30_nominee_order_preserved",
+      "description": "提名序即优先级：双合法提名 → 首者胜（不搞静态优先级表）",
+      "factors": {
+        "capabilities": ["task_write", "llm_generate", "chat"],
+        "permissions": ["plan_adjust"],
+        "nominated": ["rescope", "clarify"],
+        "has_task_context": true
+      },
+      "expect": {
+        "selected": "rescope",
+        "why": ["D1.first_legal_nominee"],
+        "feasible_contains": ["clarify"]
+      }
+    },
+    {
+      "id": "S31_abstain_explicit_inert_reason",
+      "description": "显式提名 abstain + 携封闭原因 → abstain（边界尊重是合法决策）",
+      "factors": {
+        "nominated": ["abstain"],
+        "inert_reason": "focus_protected"
+      },
+      "expect": {
+        "selected": "abstain",
+        "why": ["D1.first_legal_nominee"],
+        "no_action_reason": "focus_protected",
+        "resolved_execution_mode": null
+      }
+    },
+    {
+      "id": "S32_quiet_hours_explicit_request_remind",
+      "description": "静默时段用户显式要求提醒 → R6 豁免（X1）——用户主权高于抑制门，守卫不豁免",
+      "factors": {
+        "capabilities": ["scheduler"],
+        "permissions": ["proactive_contact"],
+        "nominated": ["remind"],
+        "has_task_context": true,
+        "quiet_hours": true,
+        "explicit_user_request": true
+      },
+      "expect": {
+        "selected": "remind",
+        "why": ["D1.first_legal_nominee", "X1.explicit_request_bypassed_gate"],
+        "resolved_execution_mode": "agent"
+      }
+    },
+    {
+      "id": "S33_cooldown_suppresses_nominee",
+      "description": "同型冷却：rescope 冷却中且被提名 → R7，no_action + cooldown_active",
+      "factors": {
+        "capabilities": ["task_write"],
+        "permissions": ["plan_adjust"],
+        "nominated": ["rescope"],
+        "has_task_context": true,
+        "cooldown_target": "rescope"
+      },
+      "expect": {
+        "selected": "no_action",
+        "why": ["D2.no_legal_nominee_no_action"],
+        "no_action_reason": "cooldown_active",
+        "exclusion_reasons": {"rescope": "R7.cooldown_active"}
+      }
+    },
+    {
+      "id": "S34_cooldown_scoped_to_target",
+      "description": "冷却只抑制目标成员：rescope 冷却但提名 pause → pause 照常可选",
+      "factors": {
+        "capabilities": ["chat", "task_write"],
+        "permissions": ["plan_adjust"],
+        "nominated": ["pause"],
+        "has_task_context": true,
+        "cooldown_target": "rescope"
+      },
+      "expect": {
+        "selected": "pause",
+        "why": ["D1.first_legal_nominee"],
+        "exclusion_reasons": {"rescope": "R7.cooldown_active"},
+        "feasible_contains": ["pause"]
+      }
+    },
+    {
+      "id": "S35_capability_missing",
+      "description": "对抗：explain 缺生成面 → R1（系统没有该执行面）",
+      "factors": {
+        "capabilities": ["chat"],
+        "nominated": ["explain"]
+      },
+      "expect": {
+        "selected": "no_action",
+        "why": ["D2.no_legal_nominee_no_action"],
+        "no_action_reason": "no_matching_pattern",
+        "exclusion_reasons": {"explain": "R1.capability_missing"},
+        "feasible_not_contains": ["explain"]
+      }
+    },
+    {
+      "id": "S36_dirty_capability_values_ignored",
+      "description": "脏输入：词表外能力串被确定性丢弃 → 等价于能力缺失（R1），不 raise",
+      "factors": {
+        "capabilities": ["llm_generate", "teleport", "quantum_solver"],
+        "nominated": ["explain"]
+      },
+      "expect": {
+        "selected": "no_action",
+        "why": ["D2.no_legal_nominee_no_action"],
+        "no_action_reason": "no_matching_pattern",
+        "exclusion_reasons": {"explain": "R1.capability_missing"}
+      }
+    },
+    {
+      "id": "S37_dirty_allocation_mode_coerced_none",
+      "description": "脏输入：allocation_mode 非法值归 None → 执行面干预 R4（P3-8 对脏输入同样不静默放行）",
+      "factors": {
+        "capabilities": ["tool_execution"],
+        "permissions": ["task_execute"],
+        "nominated": ["delegate"],
+        "has_task_context": true,
+        "allocation_mode": "auto"
+      },
+      "expect": {
+        "selected": "no_action",
+        "why": ["D2.no_legal_nominee_no_action"],
+        "no_action_reason": "no_matching_pattern",
+        "exclusion_reasons": {"delegate": "R4.allocation_mode_missing"}
+      }
+    },
+    {
+      "id": "S38_explicit_no_action_nomination",
+      "description": "显式提名 no_action → 合法选中（D1 而非 D2：出口本身可以是提名）",
+      "factors": {
+        "nominated": ["no_action"]
+      },
+      "expect": {
+        "selected": "no_action",
+        "why": ["D1.first_legal_nominee"],
+        "no_action_reason": "no_matching_pattern"
+      }
+    },
+    {
+      "id": "A1_free_string_nominee_rejected",
+      "description": "对抗：目录外自由串提名（mega_rescope）→ R0 确定性拒绝，绝不入选、绝不 LLM 兜底",
+      "factors": {
+        "capabilities": ["task_write"],
+        "permissions": ["plan_adjust"],
+        "nominated": ["mega_rescope"],
+        "has_task_context": true
+      },
+      "expect": {
+        "selected": "no_action",
+        "why": ["D2.no_legal_nominee_no_action"],
+        "no_action_reason": "no_matching_pattern",
+        "exclusion_reasons": {"mega_rescope": "R0.nominee_out_of_catalog"}
+      }
+    },
+    {
+      "id": "A2_mixed_nominees_free_string_plus_legal",
+      "description": "对抗混合：自由串 + 合法提名 → 自由串记 R0，合法者照常胜出（无字符串自由动作）",
+      "factors": {
+        "capabilities": ["task_write"],
+        "permissions": ["plan_adjust"],
+        "nominated": ["mega_rescope", "rescope"],
+        "has_task_context": true
+      },
+      "expect": {
+        "selected": "rescope",
+        "why": ["D1.first_legal_nominee"],
+        "exclusion_reasons": {"mega_rescope": "R0.nominee_out_of_catalog"}
+      }
+    },
+    {
+      "id": "A3_empty_factors_inert_floor",
+      "description": "对抗：空因子 → 仅 inert 可行（地板性质），no_action 合法输出",
+      "factors": {},
+      "expect": {
+        "selected": "no_action",
+        "why": ["D2.no_legal_nominee_no_action"],
+        "no_action_reason": "no_matching_pattern",
+        "feasible_contains": ["no_action", "abstain"],
+        "feasible_not_contains": ["clarify", "explain"],
+        "semantic_eligible": false
+      }
+    },
+    {
+      "id": "A4_spell_drift_card_typos_rejected",
+      "description": "对抗：卡面拼写漂移串（coexecute/connect——A-01 已冻结 co_execute/connect_peer）→ R0，拼写地雷不可能进入运行时",
+      "factors": {
+        "capabilities": ["tool_execution", "chat", "peer_network"],
+        "permissions": ["task_execute", "peer_contact", "proactive_contact"],
+        "nominated": ["coexecute", "connect"],
+        "has_task_context": true,
+        "allocation_mode": "agent"
+      },
+      "expect": {
+        "selected": "no_action",
+        "why": ["D2.no_legal_nominee_no_action"],
+        "no_action_reason": "no_matching_pattern",
+        "exclusion_reasons": {
+          "coexecute": "R0.nominee_out_of_catalog",
+          "connect": "R0.nominee_out_of_catalog"
+        }
+      }
+    },
+    {
+      "id": "A5_double_nomination_dedup",
+      "description": "重复提名去重：selected 与 why 不受重复影响（确定性）",
+      "factors": {
+        "capabilities": ["chat"],
+        "nominated": ["clarify", "clarify", "clarify"]
+      },
+      "expect": {
+        "selected": "clarify",
+        "why": ["D1.first_legal_nominee"]
+      }
+    },
+    {
+      "id": "A6_case_insensitive_nominee",
+      "description": "提名大小写归一：CLARIFY → clarify（归一化后仍封闭目录成员）",
+      "factors": {
+        "capabilities": ["chat"],
+        "nominated": ["CLARIFY"]
+      },
+      "expect": {
+        "selected": "clarify",
+        "why": ["D1.first_legal_nominee"]
+      }
+    },
+    {
+      "id": "A7_full_grant_nothing_nominated_inert_reason_ladder",
+      "description": "全量授权无提名 → no_action（开放选择标记为真，语义层唯一进场面）",
+      "factors": {
+        "capabilities": ["chat", "llm_generate", "memory_read", "task_write", "scheduler", "peer_network", "tool_execution"],
+        "permissions": ["memory_read", "plan_adjust", "task_execute", "model_write", "peer_contact", "proactive_contact"],
+        "has_task_context": true,
+        "allocation_mode": "agent"
+      },
+      "expect": {
+        "selected": "no_action",
+        "why": ["D2.no_legal_nominee_no_action"],
+        "no_action_reason": "no_matching_pattern",
+        "semantic_eligible": true,
+        "feasible_contains": ["delegate", "execute", "remind"],
+        "feasible_not_contains": ["co_execute"]
+      }
+    }
+    ],
+  "_count": 45
+}
