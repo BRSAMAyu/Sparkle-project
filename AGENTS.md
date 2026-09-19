@@ -55,6 +55,7 @@ bash scripts/run_all_rule_guards.sh      # 治理守卫（提交前）
    - 留：`docs/` 下的报告与 `.patch`（规范目录登记）、正式代码改动
 4. **持久产物只有两类**：进 git 的代码/文档，和归档在 `docs/competition/` 的实测报告。其余皆可删。
 5. **主会话职责**：合入 patch 后立即 `git worktree remove` 已完成的 worktree；每轮唤醒巡检 `df`（<6G 触发清理：go-build 缓存、/tmp 大日志、已完成 worktree 的构建产物）；发现不明大文件立即溯源。
+6. **并发验收工作树安全（强制，2026-09-19 wt8 清空事故后立规）**：两个验收会话不得在同一 worktree 内并发做树变更操作——`git stash`（含 `-u`）、`git reset`、`git clean`、分支切换一律禁止（Worker 未 commit 时交付物多为 untracked，一旦 stash+clean 即永久丢失）；变异实验只允许单文件粒度改动与还原（`git checkout -- <file>`；untracked 文件先 `cp` 到 /tmp 备份再改）；需要干净基线对照时用 `git clone <worktree> /tmp/<名字>-baseline` 在克隆里做（克隆只含 HEAD，天然基线且不碰原树）；每轮树操作前后 `git status --short` 与清单比对；主会话派双验收员到同一卡时必须下发本条指令，且 Leader 在合入窗口前对 untracked 交付物做备份。
 
 **红线**：C 档（聊天记录等应用数据、正在运行的 Docker 卷、在用模拟器镜像）与 D 档（主仓、在用 worktree、SDK 平台工具）永不清理；删除任何 1G 以上内容前必须获项目方明确确认。
 
