@@ -28,6 +28,7 @@ func TestCORS_AllowedOrigin(t *testing.T) {
 	assert.Equal(t, "Origin", w.Header().Get("Vary"))
 	assert.Equal(t, "true", w.Header().Get("Access-Control-Allow-Credentials"))
 	assert.Contains(t, w.Header().Get("Access-Control-Allow-Headers"), "Authorization")
+	assert.Contains(t, w.Header().Get("Access-Control-Allow-Headers"), "X-Idempotency-Key")
 	assert.Contains(t, w.Header().Get("Access-Control-Allow-Methods"), "GET")
 	assert.Contains(t, w.Header().Get("Access-Control-Allow-Methods"), "POST")
 }

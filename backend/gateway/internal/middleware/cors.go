@@ -18,7 +18,10 @@ func CORSMiddleware(cfg *config.Config) gin.HandlerFunc {
 				// X-Device-*：客户端设备标识三头（device_identity_service.buildHeaders，
 				// 缺它们时 auth/settings/telemetry 的预检全被拦，表现为"点击无响应"
 				// 的 CORS 假象 —— web-round2 N-1）
-				c.Header("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Requested-With, X-Request-ID, X-Trace-ID, X-Device-Id, X-Device-Platform, X-Device-Name, Accept, Accept-Language")
+				// X-Idempotency-Key：idempotency_interceptor 给每个 POST 注入；
+				// 缺它时跨源部署下 register/login/purchase 等全部变更类 POST
+				// 死在 OPTIONS 预检 —— V3-FIX-17 诊断发现（V3-FIX-18）
+				c.Header("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Requested-With, X-Request-ID, X-Trace-ID, X-Idempotency-Key, X-Device-Id, X-Device-Platform, X-Device-Name, Accept, Accept-Language")
 				c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 				c.Header("Access-Control-Expose-Headers", "X-Request-ID, X-Trace-ID, X-RateLimit-Limit, X-RateLimit-Remaining")
 				c.Header("Access-Control-Max-Age", "86400")

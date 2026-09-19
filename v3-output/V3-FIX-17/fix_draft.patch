@@ -1,0 +1,114 @@
+V3-FIX-17 修复草案（DRAFT — 未 apply，不改任何生产代码；判读依据见同目录 DIAGNOSIS.md）
+
+内容：
+  [1] mobile/lib/core/errors/failures.dart        — unknown 不再一揽子映射 NetworkFailure
+  [2] mobile/lib/features/auth/data/repositories/auth_repository.dart — 注册成功语义修正 + 临时埋点
+  [3] mobile/lib/core/network/api_interceptor.dart — AuthInterceptor.onRequest 埋点（rethrow，不改行为面）
+  [4] backend/gateway/internal/middleware/cors.go  — allow-list 补 X-Idempotency-Key / X-Current-Goal-ID（网关侧，跨源 P1）
+
+说明：
+  - [2][3] 的 debugPrint 埋点为联调定位用（E1 实验），验证后整段摘除即可。
+  - [4] 属网关侧最小修复：R2-8（8ddfe535）起移动端对所有变更类请求注入
+    X-Idempotency-Key，网关 CORS 白名单未同步；跨源部署下预检被浏览器拒绝，
+    register/login/purchase 等全部 POST 无法发出（OPTIONS 预检已实测复现）。
+  - 基于 wt6 @ 42180162，diff 由真实文件副本生成；应用前建议 git apply --check。
+---
+--- a/mobile/lib/core/errors/failures.dart
++++ b/mobile/lib/core/errors/failures.dart
+@@ -294,6 +294,22 @@
+           return OfflineFailure(
+             message: message,
+             code: 'OFFLINE',
++            statusCode: statusCode,
++            originalError: error,
++          );
++        }
++        // V3-FIX-17: 未知异常不再一揽子伪装成网络错误。web 注册「静默假失败」
++        // 的机制根因：管线内非 Dio 异常被 assureDioException 包装为 unknown →
++        // NetworkFailure → 200 成功却播报「网络连接不稳定」。解码/校验类异常
++        // 与「服务器已有应答」的异常保留原始类别，正确 UX 且可定位。
++        final rawError = error.error;
++        final isClientParseFailure = rawError is TypeError ||
++            rawError is FormatException ||
++            rawError is ArgumentError;
++        if (isClientParseFailure || statusCode != null) {
++          return UnknownFailure(
++            message: message,
++            code: isClientParseFailure ? 'PARSE_ERROR' : 'PIPELINE_ERROR',
+             statusCode: statusCode,
+             originalError: error,
+           );
+--- a/mobile/lib/features/auth/data/repositories/auth_repository.dart
++++ b/mobile/lib/features/auth/data/repositories/auth_repository.dart
+@@ -59,13 +59,38 @@
+       );
+       // Assuming registration returns the user and tokens directly
+       final data = response.data;
+-      final tokenData = data!['token'] as Map<String, dynamic>? ?? data;
+-      final tokenResponse = TokenResponse.fromJson(tokenData);
+-      await saveTokens(tokenResponse);
++      // V3-FIX-17: 注册成功判定 = HTTP 2xx + user 体可解析；2xx 却无 user
++      // 体属于真正的异常（防御分支，理论上不可达）。
++      if (data == null || data['user'] is! Map<String, dynamic>) {
++        throw ServerFailure(
++          message: I18nService.instance.l10n.authErrorRegistrationFailed,
++          code: 'REGISTRATION_EMPTY_RESPONSE',
++          statusCode: response.statusCode,
++        );
++      }
++      // V3-FIX-17 UX 语义修正：token 持久化失败（web localStorage 配额/隐私
++      // 模式等）只降级为「注册成功但本地会话未建立」，绝不把已建号回滚成
++      // 注册失败 —— 否则用户重试必撞「用户名已存在」（B-03 REPORT §4.1）。
++      final tokenData = data['token'] as Map<String, dynamic>? ?? data;
++      try {
++        await saveTokens(TokenResponse.fromJson(tokenData));
++      } catch (e) {
++        debugPrint('[V3-FIX-17] token persistence degraded after successful '
++            'registration: $e');
++      }
+       return UserModel.fromJson(data['user'] as Map<String, dynamic>);
+     } on DioException catch (e) {
++      // V3-FIX-17 临时埋点（E1 实验，联调后移除）：抓 unknown 的原始异常与栈，
++      // 判读表见 v3-output/V3-FIX-17/DIAGNOSIS.md §5-E1。
++      debugPrint('[V3-FIX-17] register DioException type=${e.type} '
++          'status=${e.response?.statusCode} error=${e.error} '
++          'uri=${e.requestOptions.uri}');
+       throw AppFailureMapper.fromDio(e, fallbackMessage: I18nService.instance.l10n.authErrorRegistrationFailed);
+     } catch (e) {
++      // V3-FIX-17 临时埋点（E1 实验，联调后移除）：若此分支被命中即推翻
++      // fromDio 前提，转查模型解析。
++      debugPrint('[V3-FIX-17] register non-Dio exception: '
++          '${e.runtimeType}: $e');
+       throw AppFailureMapper.from(
+         e,
+         fallbackMessage: I18nService.instance.l10n.authErrorRegistrationFailed,
+--- a/mobile/lib/core/network/api_interceptor.dart
++++ b/mobile/lib/core/network/api_interceptor.dart
+@@ -114,6 +114,13 @@
+       }
+     } on StateError {
+       // Allow late teardown-time requests to complete without crashing tests.
++    } catch (e) {
++      // V3-FIX-17 临时埋点（E1 实验，联调后移除）：onRequest 抛出的非
++      // StateError 异常会被 dio 包装为 DioExceptionType.unknown
++      // （dio 5.9.0 dio_mixin.dart:440），是 web 假失败候选抛点之一。
++      // rethrow 保持既有行为面不变，仅补观测。
++      debugPrint('[V3-FIX-17] AuthInterceptor.onRequest unexpected: $e');
++      rethrow;
+     }
+     super.onRequest(options, handler);
+   }
+--- a/backend/gateway/internal/middleware/cors.go
++++ b/backend/gateway/internal/middleware/cors.go
+@@ -18,7 +18,10 @@
+ 				// X-Device-*：客户端设备标识三头（device_identity_service.buildHeaders，
+ 				// 缺它们时 auth/settings/telemetry 的预检全被拦，表现为"点击无响应"
+ 				// 的 CORS 假象 —— web-round2 N-1）
+-				c.Header("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Requested-With, X-Request-ID, X-Trace-ID, X-Device-Id, X-Device-Platform, X-Device-Name, Accept, Accept-Language")
++				// V3-FIX-17: 追加 X-Idempotency-Key（R2-8 起移动端对所有变更类请求
++				// 注入）与 X-Current-Goal-ID，否则跨源部署下预检被浏览器拒绝，
++				// register/login/purchase 等全部 POST 无法发出（2026-09-19 实测复现）。
++				c.Header("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Requested-With, X-Request-ID, X-Trace-ID, X-Device-Id, X-Device-Platform, X-Device-Name, X-Idempotency-Key, X-Current-Goal-ID, Accept, Accept-Language")
+ 				c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+ 				c.Header("Access-Control-Expose-Headers", "X-Request-ID, X-Trace-ID, X-RateLimit-Limit, X-RateLimit-Remaining")
+ 				c.Header("Access-Control-Max-Age", "86400")
