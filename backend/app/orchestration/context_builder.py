@@ -18,7 +18,6 @@ import json
 import time
 import uuid
 from datetime import datetime, timedelta
-from app.core.time_utils import utcnow
 from typing import Any
 
 from google.protobuf.json_format import MessageToDict
@@ -29,6 +28,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.core.i18n import I18n
 from app.core.metrics import AURORA_RETURNING_CONTEXT_TIER_TOTAL
+from app.core.time_utils import utcnow
 from app.gen.agent.v1 import agent_service_pb2
 from app.models.chat import ChatMessage, ChatSession, MessageRole
 from app.models.cognitive import CognitiveFragment
@@ -863,13 +863,15 @@ class ContextBuilderMixin:
                     # --- Aurora Profile Integration ---
                     try:
                         from app.aurora.ledger import AppendOnlyLedgerStore
-                        from app.aurora.relationship_state import SparkleRelationshipStateManager
                         from app.aurora.profile_translator import ProfileTranslator
-                        from app.aurora.schemas.primitives import InsightClaim, IdentityEvidence
+                        from app.aurora.relationship_state import SparkleRelationshipStateManager
+                        from app.aurora.schemas.primitives import IdentityEvidence, InsightClaim
 
                         # Instantiate ledger (defaults to memory-based if no storage path is mapped)
                         ledger = AppendOnlyLedgerStore(storage_path=settings.AURORA_LEDGER_PATH)
-                        raw_records = ledger.list_records(user_id=user_id, record_types={"insight_claim", "identity_evidence"})
+                        raw_records = ledger.list_records(
+                            user_id=user_id, record_types={"insight_claim", "identity_evidence"}
+                        )
 
                         claims = []
                         for r in raw_records:
@@ -894,11 +896,13 @@ class ContextBuilderMixin:
                             user_id=uuid.UUID(user_id),
                             claims=claims,
                             identity_evidence=evidence,
-                            interaction_metadata=interaction_metadata
+                            interaction_metadata=interaction_metadata,
                         )
 
                         translator = ProfileTranslator()
-                        translation = translator.translate(claims=claims, evidence=evidence, relationship_state=rel_state)
+                        translation = translator.translate(
+                            claims=claims, evidence=evidence, relationship_state=rel_state
+                        )
 
                         # Inject into profile context for prompt building
                         bundle_profile_data["aurora_profile_summary"] = translation.summary
@@ -978,7 +982,9 @@ class ContextBuilderMixin:
                     _timed("seed_library_context", self._get_seed_library_context(user_id, db_session)),
                     _timed("learning_gaps_summary", self._build_learning_gaps_summary(user_id, db_session)),
                     _timed("working_memory_snapshot", self._build_stage33_working_memory_snapshot(user_id, db_session)),
-                    _timed("recent_tool_usage", self._get_recent_tool_usage_context(user_id=user_id, db_session=db_session)),
+                    _timed(
+                        "recent_tool_usage", self._get_recent_tool_usage_context(user_id=user_id, db_session=db_session)
+                    ),
                 )
                 _uc_mark("prism_parallel_queries")
 
@@ -1031,6 +1037,7 @@ class ContextBuilderMixin:
                 # Self-model: strategy confidence, failure streak, task completion rate
                 with contextlib.suppress(Exception):
                     from app.aurora.runtime_v1.self_model import SparkleSelfModelService
+
                     self_model_summary = await SparkleSelfModelService.get_readout_summary(
                         user_id=user_id,
                         request_extra_context={},
@@ -1059,6 +1066,13 @@ class ContextBuilderMixin:
                     db_session=db_session,
                 )
                 _uc_mark("stage39_context")
+                # C-02：四类来源标注（不改值，只加 manifest + trace 日志）。
+                _final_payload = await self._attach_source_manifest(
+                    _final_payload,
+                    user_id=user_id,
+                    db_session=db_session,
+                )
+                _uc_mark("source_manifest")
                 if _uc_marks:
                     logger.info(
                         "[LATENCY] build_user_context session={} {}",
@@ -1242,6 +1256,67 @@ class ContextBuilderMixin:
                 user_id=user_id,
                 db_session=db_session,
             )
+
+    # rule-as: ignore metadata-only four-category source manifest (C-02); observability face with no prompt/routing consumer by design
+    async def _attach_source_manifest(
+        self,
+        payload: dict[str, Any],
+        *,
+        user_id: str,
+        db_session: AsyncSession,
+    ) -> dict[str, Any]:
+        """C-02：给装配后的 payload 标注四类 source manifest（provider 读 + 分类）。
+
+        D-CTX 迁移第一步：ContextBuilderMixin 的 stage 适配器由此降级为带来源
+        标签的数据源（本方法不改任何既有值，只加 metadata["context_sources"]）。
+        provider 读：User.registration_source（seed/demo 口径）与 decision_records
+        最近 3 条（Events 通道，走 D-01 词表）；任一失败只降级该输入，不阻断装配。
+        """
+        from app.core.context_pack import estimate_tokens
+        from app.orchestration.context_sources import build_payload_source_manifest
+
+        registration_source: str | None = None
+        decision_records: list[Any] = []
+        try:
+            from app.models.user import User as UserModel
+
+            result = await db_session.execute(
+                select(UserModel.registration_source).where(UserModel.id == uuid.UUID(user_id))
+            )
+            registration_source = result.scalar_one_or_none()
+        except Exception as exc:
+            logger.debug(f"source manifest: registration_source degraded for {user_id}: {exc}")
+        try:
+            from app.services.decision_record_service import DecisionRecordService
+
+            decision_records = list(
+                await DecisionRecordService(db_session).get_recent_records(uuid.UUID(user_id), limit=3)
+            )
+        except Exception as exc:
+            logger.debug(f"source manifest: decision_records degraded for {user_id}: {exc}")
+
+        try:
+            payload["context_sources"] = build_payload_source_manifest(
+                payload,
+                registration_source=registration_source,
+                decision_records=decision_records,
+                estimate_tokens_fn=estimate_tokens,
+            )
+            sections = payload["context_sources"]["sections"]
+            logger.info(
+                "C-02 context sources user={user_id}: state={state} memory={memory} "
+                "knowledge={knowledge} events={events} seed_demo_user={seed_user} overrides={overrides}",
+                user_id=user_id,
+                state=f"{sections['state']['item_count']}i/{sections['state']['token_estimate']}t",
+                memory=f"{sections['memory']['item_count']}i/{sections['memory']['token_estimate']}t",
+                knowledge=f"{sections['knowledge']['item_count']}i/{sections['knowledge']['token_estimate']}t",
+                events=f"{sections['events']['item_count']}i/{sections['events']['token_estimate']}t",
+                seed_user=payload["context_sources"].get("user_is_seed_or_demo", False),
+                overrides=len(payload["context_sources"].get("overrides") or []),
+            )
+        except Exception as exc:
+            logger.warning(f"Failed to attach source manifest for {user_id}: {exc}")
+        return payload
 
     # ------------------------------------------------------------------
     # _build_returning_context
@@ -1533,6 +1608,20 @@ class ContextBuilderMixin:
                 user_context_payload = self._merge_user_contexts(local_context, grpc_context)
                 logger.info(f"Merged user context: {user_context_payload is not None}")
 
+                # C-02：grpc 合并面的覆盖不再静默——显式登记 + 告警（值语义不变）。
+                if isinstance(user_context_payload, dict):
+                    from app.orchestration.context_sources import (
+                        GRPC_MERGE_KEYS,
+                        attach_overrides,
+                        detect_merge_overrides,
+                    )
+
+                    merge_overrides = detect_merge_overrides(local_context, user_context_payload, GRPC_MERGE_KEYS)
+                    if merge_overrides and isinstance(user_context_payload.get("context_sources"), dict):
+                        user_context_payload["context_sources"] = attach_overrides(
+                            user_context_payload["context_sources"], merge_overrides
+                        )
+
                 if plan_id:
                     try:
                         from app.core.plan_context import PlanContextBuilder
@@ -1594,6 +1683,36 @@ class ContextBuilderMixin:
         if self.context_pruner:
             with tracer.start_as_current_span("db.build_conversation_context"):
                 conversation_context = await self._build_conversation_context(session_id, user_id)
+        # C-02 history 语义：会话历史归 events 通道，仅最近必要消息 + compaction
+        # 边界（ContextPruner 的 recent window + summary），不替代 state——
+        # state 通道没有 conversation_history 写入点（context_sources 铁律）。
+        if isinstance(user_context_payload, dict) and isinstance(conversation_context, dict):
+            from app.core.context_pack import estimate_tokens
+            from app.orchestration.context_sources import attach_conversation_history
+
+            messages = conversation_context.get("messages") or []
+            history_stats = {
+                "messages": len(messages),
+                "original_count": int(conversation_context.get("original_count", len(messages)) or 0),
+                "pruned_count": int(conversation_context.get("pruned_count", len(messages)) or 0),
+                "summary_used": bool(conversation_context.get("summary_used", False)),
+                "recent_window": int(getattr(self.context_pruner, "summary_recent_window", 0) or 0),
+            }
+            history_tokens = estimate_tokens(json.dumps(messages, ensure_ascii=False, default=str))
+            if isinstance(user_context_payload.get("context_sources"), dict):
+                user_context_payload["context_sources"] = attach_conversation_history(
+                    user_context_payload["context_sources"], history_stats
+                )
+                events_section = user_context_payload["context_sources"]["sections"]["events"]
+                events_section["token_estimate"] = int(events_section.get("token_estimate", 0) or 0) + history_tokens
+            logger.info(
+                "C-02 conversation history (events channel): messages={messages} original={original} "
+                "summary_used={summary_used} tokens={tokens}",
+                messages=history_stats["messages"],
+                original=history_stats["original_count"],
+                summary_used=history_stats["summary_used"],
+                tokens=history_tokens,
+            )
         _ctx_probe_marks.append(("build_conversation_context", time.perf_counter() - _h1))
         _h2 = time.perf_counter()
         if active_db and user_message:

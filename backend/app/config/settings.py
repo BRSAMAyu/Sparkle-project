@@ -153,8 +153,8 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str = Field("", validation_alias=AliasChoices("POSTGRES_PASSWORD", "DB_PASSWORD"))
     POSTGRES_DB: str = Field("sparkle", validation_alias=AliasChoices("POSTGRES_DB", "DB_NAME"))
     SPARKLE_RBAC_ENABLED: bool = False
-    SPARKLE_JWT_KEY_VERSION: str = "v1"           # P1-8: active JWT key version for rotation
-    SPARKLE_JWT_PREVIOUS_KEY: str = ""            # P1-8: previous key for grace-period validation
+    SPARKLE_JWT_KEY_VERSION: str = "v1"  # P1-8: active JWT key version for rotation
+    SPARKLE_JWT_PREVIOUS_KEY: str = ""  # P1-8: previous key for grace-period validation
     SPARKLE_ENGINE_DATABASE_URL: str = ""
     SPARKLE_CELERY_DATABASE_URL: str = ""
 
@@ -217,7 +217,7 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     ALGORITHM: str = "HS256"  # Set to "RS256" in production for asymmetric signing
     JWT_PRIVATE_KEY: str = ""  # PEM-encoded RSA private key (required for RS256 signing)
-    JWT_PUBLIC_KEY: str = ""   # PEM-encoded RSA public key (required for RS256 verification)
+    JWT_PUBLIC_KEY: str = ""  # PEM-encoded RSA public key (required for RS256 verification)
     APPLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_ID: str = ""
     WS_ALLOW_QUERY_TOKEN: bool | None = None
@@ -261,9 +261,7 @@ class Settings(BaseSettings):
     AURORA_STAGE21_SKILL_SHARE_MODE: str = "live"  # off | shadow | live
 
     # Aurora Stage 23
-    AURORA_BAYESIAN_MODE: str = (
-        "live"  # Promoted to live: shadow soak passed (2026-04-28)
-    )
+    AURORA_BAYESIAN_MODE: str = "live"  # Promoted to live: shadow soak passed (2026-04-28)
     AURORA_BAYESIAN_LIVE_CANARY_PERCENT: int = 5
     AURORA_BAYESIAN_TTL_DAYS: int = 30
 
@@ -666,6 +664,11 @@ class Settings(BaseSettings):
     ENABLE_CONTEXT_PACK_TELEMETRY: bool = True
     # C-01: ContextPack.decision_context 决策面契约（Aurora/Router/Planner 共同消费）
     ENABLE_DECISION_CONTEXT: bool = True
+    # C-02: 四分 source adapter 独立开关（state/memory/knowledge/events）
+    ENABLE_CONTEXT_SOURCE_STATE: bool = True
+    ENABLE_CONTEXT_SOURCE_MEMORY: bool = True
+    ENABLE_CONTEXT_SOURCE_KNOWLEDGE: bool = True
+    ENABLE_CONTEXT_SOURCE_EVENTS: bool = True
     ENABLE_BUDGET_TUNING: bool = True
     CONTEXT_PACK_FEEDBACK_WINDOW_MINUTES: int = 10
     ENABLE_CONTEXT_RANKING: bool = True

@@ -537,6 +537,11 @@ class ChatOrchestrator(
             }
             user_context_payload["aurora_planning_sidecar"] = sidecar_meta
             state.context_data["aurora_planning_sidecar"] = dict(sidecar_meta)
+            # C-02/R2-F5：sidecar 是 manifest 附加后的后写挂载，显式登记进 control_keys。
+            with contextlib.suppress(Exception):
+                from app.orchestration.context_sources import register_post_manifest_writes
+
+                register_post_manifest_writes(user_context_payload, ("aurora_planning_sidecar",))
             return str(decision.action or "")
         except Exception as exc:
             logger.debug("Aurora planning sidecar attach skipped: {}", exc)
@@ -2278,6 +2283,20 @@ class ChatOrchestrator(
                     user_context_payload["document_filter"] = request_document_filter
                     user_context_payload["selected_document_ids"] = request_document_filter
                     user_context_payload["conversation_settings"] = dict(request_extra_context["conversation_settings"])
+                    # C-02/R2-F5：manifest 附加后的后写 key 显式登记（否则生产
+                    # control_keys 恒空、unclassified 告警不可见——写序盲区）。
+                    with contextlib.suppress(Exception):
+                        from app.orchestration.context_sources import register_post_manifest_writes
+
+                        register_post_manifest_writes(
+                            user_context_payload,
+                            (
+                                "use_document_context",
+                                "document_filter",
+                                "selected_document_ids",
+                                "conversation_settings",
+                            ),
+                        )
                 initial_document_context_state = {
                     "use_document_context": request_use_document_context,
                     "document_filter": request_document_filter,

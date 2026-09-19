@@ -5,7 +5,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from functools import lru_cache
-from typing import Any
+from typing import Any, Mapping
 from uuid import UUID
 
 from loguru import logger
@@ -46,6 +46,18 @@ from app.orchestration.context_focus import (
     build_context_briefing_note,
     cosine_similarity,
     get_focus_profile,
+)
+from app.orchestration.context_sources import (
+    SOURCE_CATEGORIES,
+    EventSourceAdapter,
+    KnowledgeSourceAdapter,
+    MemorySourceAdapter,
+    StateSourceAdapter,
+    assemble_manifest,
+    detect_preference_key_overrides,
+    item_source_category,
+    memory_record_is_seed,
+    normalize_section,
 )
 from app.services.aurora_doc_context_kill_switch_service import AuroraDocContextKillSwitchService
 from app.services.context_pack_telemetry_service import ContextPackTelemetryService
@@ -1360,8 +1372,14 @@ class ContextPackBuilder:
             conflicts.extend(goal_conflicts)
             conflicts.extend(episodic_conflicts)
             conflicts.extend(cross_conflicts)
+            # 冲突消解分支的覆盖已由 resolver 显式产出（conflicts 面）。
+            preference_collapse_overrides: list[Any] = []
         else:
             preferences = {item.pref_key: item.pref_value for item in preference_records}
+            # C-02：非 resolver 分支的同 key 折叠不再静默。检测在 manifest 构建
+            # 点统一执行（rank/裁剪后再判）——winner 按最终值回溯，早期调用会
+            # 在 rank 重排下登记错胜者。
+            preference_collapse_overrides = []
 
         ranked_preferences = (
             rank_items(resolved_pref_records, kind="preferences", weights=weights, query_text=query_text)
@@ -1632,41 +1650,8 @@ class ContextPackBuilder:
                     focus_mode=focus_decision.focus_mode,
                 ).inc()
 
-        pack_id = None
-        if settings.ENABLE_CONTEXT_PACK_TELEMETRY:
-            trimmed_goal_ids = {payload.get("id") for payload in trimmed_goals}
-            trimmed_episodic_ids = {payload.get("id") for payload in trimmed_episodic}
-            telemetry_pref_scores = [
-                item.evidence_score for item in preference_source_records if item.pref_key in trimmed_preferences
-            ]
-            telemetry_goal_scores = [
-                item.evidence_score for item in goal_source_records if str(item.id) in trimmed_goal_ids
-            ]
-            telemetry_episodic_scores = [
-                item.evidence_score for item in episodic_source_records if str(item.id) in trimmed_episodic_ids
-            ]
-            scores = [
-                score
-                for score in telemetry_pref_scores + telemetry_goal_scores + telemetry_episodic_scores
-                if score is not None
-            ]
-            evidence_avg = (sum(scores) / len(scores)) if scores else None
-
-            telemetry = ContextPackTelemetryService(self.db)
-            pack_id = await telemetry.record_run(
-                user_id=user_id,
-                intent=intent,
-                budgets=budgets,
-                token_usage=token_usage,
-                memory_counts={
-                    "preferences": len(trimmed_preferences),
-                    "goals": len(trimmed_goals),
-                    "episodic": len(trimmed_episodic),
-                },
-                evidence_score_avg=evidence_avg,
-                request_id=request_id,
-                trace_id=trace_id,
-            )
+        # C-02: telemetry（含四类 sources 计量）移至 decision_context 之后统一落账
+        # （pack_id 供 manifest 日志关联；memory_counts 附加 "sources" 见下方 record_run）。
 
         for section, usage in original_usage.items():
             budget = budgets.get(section, 0)
@@ -1709,6 +1694,82 @@ class ContextPackBuilder:
                 logger.warning(f"Failed to build decision context for {user_id}: {exc}")
                 decision_ctx = None
 
+        # C-02: 四分 source manifest（每 item source type / token / 项数 / seed 标记）。
+        # 折叠检测在此统一执行：final_values 用 rank/语义门控/裁剪后的最终 preferences
+        # （trimmed_preferences 的值域），winner 与实际胜出值一致。
+        if not conflict_enabled:
+            preference_collapse_overrides = detect_preference_key_overrides(
+                preference_records,
+                final_values=preferences,
+            )
+        sources_manifest = self._build_source_manifest(
+            decision_ctx=decision_ctx,
+            trimmed_preferences=trimmed_preferences,
+            trimmed_goals=trimmed_goals,
+            trimmed_episodic=trimmed_episodic,
+            episodic_source_records=episodic_source_records,
+            plan_context=plan_context,
+            token_usage=token_usage,
+            preference_collapse_overrides=preference_collapse_overrides,
+            memory_prefilter_metadata=prefilter_metadata,
+        )
+        metadata["sources"] = sources_manifest
+
+        pack_id = None
+        if settings.ENABLE_CONTEXT_PACK_TELEMETRY:
+            trimmed_goal_ids = {payload.get("id") for payload in trimmed_goals}
+            trimmed_episodic_ids = {payload.get("id") for payload in trimmed_episodic}
+            telemetry_pref_scores = [
+                item.evidence_score for item in preference_source_records if item.pref_key in trimmed_preferences
+            ]
+            telemetry_goal_scores = [
+                item.evidence_score for item in goal_source_records if str(item.id) in trimmed_goal_ids
+            ]
+            telemetry_episodic_scores = [
+                item.evidence_score for item in episodic_source_records if str(item.id) in trimmed_episodic_ids
+            ]
+            scores = [
+                score
+                for score in telemetry_pref_scores + telemetry_goal_scores + telemetry_episodic_scores
+                if score is not None
+            ]
+            evidence_avg = (sum(scores) / len(scores)) if scores else None
+
+            telemetry = ContextPackTelemetryService(self.db)
+            pack_id = await telemetry.record_run(
+                user_id=user_id,
+                intent=intent,
+                budgets=budgets,
+                token_usage=token_usage,
+                memory_counts={
+                    "preferences": len(trimmed_preferences),
+                    "goals": len(trimmed_goals),
+                    "episodic": len(trimmed_episodic),
+                    # C-02：四类 token/项数进既有 telemetry（JSONB 附加键，读者按
+                    # 已知 key 取值不受影响；SQL 查询见 v3-output/C-02/REPORT.md）。
+                    "sources": sources_manifest["sections"],
+                },
+                evidence_score_avg=evidence_avg,
+                request_id=request_id,
+                trace_id=trace_id,
+            )
+
+        _source_line = " ".join(
+            f"{category}={section['item_count']}items/{section['token_estimate']}tok"
+            for category, section in sources_manifest["sections"].items()
+        )
+        logger.info(
+            "C-02 context pack sources pack_id={pack_id} user={user_id} intent={intent}: {line} "
+            "item_categories={item_categories} seed_demo={seed} overrides={overrides}",
+            pack_id=pack_id,
+            user_id=user_id,
+            intent=intent,
+            line=_source_line,
+            item_categories=dict(sources_manifest.get("item_category_counts") or {}),
+            seed=sum(int(section.get("seed_or_demo", 0) or 0) for section in sources_manifest["sections"].values()),
+            overrides=len(sources_manifest.get("overrides") or []),
+        )
+
         return ContextPack(
             user_id=user_id,
             intent=intent,
@@ -1724,6 +1785,132 @@ class ContextPackBuilder:
             context_focus=focus_decision.to_dict() if focus_decision else None,
             context_briefing_note=context_briefing_note or None,
             decision_context=decision_ctx,
+        )
+
+    def _build_source_manifest(
+        self,
+        *,
+        decision_ctx: DecisionContext | None,
+        trimmed_preferences: dict[str, Any],
+        trimmed_goals: list[dict[str, Any]],
+        trimmed_episodic: list[dict[str, Any]],
+        episodic_source_records: list[Any],
+        plan_context: dict[str, Any] | None,
+        token_usage: dict[str, int],
+        preference_collapse_overrides: list[Any],
+        memory_prefilter_metadata: Mapping[str, Any] | None,
+    ) -> dict[str, Any]:
+        """C-02：pack 装配结果的四类 manifest（进 metadata["sources"] + telemetry）。
+
+        R2-F1：与 orchestrator 面**同一 key 集**——序列化唯一权威是
+        context_sources.assemble_manifest / normalize_section（缺/多 key 由
+        test_context_source_contract 契约测试钉死）；pack 面不适用的值为 None/{}。
+
+        - state：decision signals（UserStateV1 投影）+ plan + goals（USER_WORLD_MODEL
+          §1 Goal 属 Current State；存储在 memory 表不改变语义类别）。
+        - memory：preferences + episodic（含 seed/demo 条目计数；M-03 预筛 provenance
+          透传进 note——rejected 计数可在 manifest 直接观测，R2-F4 集成路径）。
+        - knowledge/events：本 pack 不携带（documents/galaxy/decision_records/history
+          走 orchestrator 侧 manifest 与 ContextBudgetManager 预算面）——enabled
+          开关与 0 计量显式可见，不留静默空缺。
+        - 每 item source type 正确性：decision_ctx.items 逐条经封闭投影
+          item_source_category 归类，计数进 item_category_counts。
+        """
+        trimmed_episodic_ids = {str(payload.get("id")) for payload in trimmed_episodic}
+        seed_episodic_keys = sorted(
+            str(record.id)
+            for record in episodic_source_records
+            if str(record.id) in trimmed_episodic_ids and memory_record_is_seed(record)
+        )
+
+        signals = list(decision_ctx.signals) if decision_ctx else []
+        signal_tokens = sum(estimate_tokens(_serialize(signal.to_dict())) for signal in signals)
+        has_plan_item = bool(plan_context and plan_context.get("plan_id"))
+
+        item_category_counts: dict[str, int] = dict.fromkeys(SOURCE_CATEGORIES, 0)
+        if decision_ctx is not None:
+            for item in decision_ctx.items:
+                try:
+                    item_category_counts[item_source_category(item.type)] += 1
+                except KeyError:
+                    logger.warning(f"C-02: unknown decision item type {item.type!r} skipped in source manifest")
+
+        prefilter_note = None
+        if isinstance(memory_prefilter_metadata, Mapping):
+            prefilter_sections = memory_prefilter_metadata.get("sections") or {}
+            rejected = sum(
+                int(section.get("input_count", 0) or 0) - int(section.get("allowed_count", 0) or 0)
+                for section in prefilter_sections.values()
+                if isinstance(section, Mapping)
+            )
+            if rejected:
+                prefilter_note = (
+                    f"M-03 prefilter cut {rejected} candidate(s) before ranking "
+                    f"(see metadata.memory_prefilter for dimensions/reasons)"
+                )
+
+        sections = {
+            "state": normalize_section(
+                category="state",
+                enabled=StateSourceAdapter().enabled,
+                adapter=StateSourceAdapter.adapter_name,
+                keys=["signals", "goals", "plan"] if has_plan_item else ["signals", "goals"],
+                item_count=len(signals) + len(trimmed_goals) + (1 if has_plan_item else 0),
+                token_estimate=int(token_usage.get("goals", 0) or 0) + signal_tokens,
+                seed_or_demo=0,
+                seed_or_demo_items=[],
+                decision_items=item_category_counts.get("state"),
+            ),
+            "memory": normalize_section(
+                category="memory",
+                enabled=MemorySourceAdapter().enabled,
+                adapter=MemorySourceAdapter.adapter_name,
+                keys=["preferences", "episodic"],
+                item_count=len(trimmed_preferences) + len(trimmed_episodic),
+                token_estimate=int(token_usage.get("preferences", 0) or 0) + int(token_usage.get("episodic", 0) or 0),
+                seed_or_demo=len(seed_episodic_keys),
+                seed_or_demo_items=[{"key": f"episodic:{record_id}"} for record_id in seed_episodic_keys],
+                decision_items=item_category_counts.get("memory"),
+                note=prefilter_note,
+            ),
+            "knowledge": normalize_section(
+                category="knowledge",
+                enabled=KnowledgeSourceAdapter().enabled,
+                adapter=KnowledgeSourceAdapter.adapter_name,
+                keys=[],
+                item_count=0,
+                token_estimate=0,
+                seed_or_demo=0,
+                seed_or_demo_items=[],
+                decision_items=item_category_counts.get("knowledge"),
+                note="pack does not carry document chunks; knowledge rides orchestrator-side "
+                "context_sources manifest and ContextBudgetManager budgets",
+            ),
+            "events": normalize_section(
+                category="events",
+                enabled=EventSourceAdapter().enabled,
+                adapter=EventSourceAdapter.adapter_name,
+                keys=[],
+                item_count=0,
+                token_estimate=0,
+                seed_or_demo=0,
+                seed_or_demo_items=[],
+                decision_items=item_category_counts.get("events"),
+                note="decision_records and conversation history ride orchestrator-side "
+                "context_sources manifest (events channel)",
+            ),
+        }
+        for category, section in sections.items():
+            sections[category] = dict(section)
+
+        return assemble_manifest(
+            sections=sections,
+            overrides=preference_collapse_overrides,
+            unclassified=[],
+            user_is_seed_or_demo=None,  # pack 面不 fetch 用户行（R2-F1：key 恒在，值 None）
+            late_stage_writers={},
+            control_keys=[],
+            item_category_counts=item_category_counts,
         )
 
     def _decision_item_reasons(
