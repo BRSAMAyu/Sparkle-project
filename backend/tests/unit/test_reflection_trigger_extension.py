@@ -9,7 +9,9 @@ from app.services.card_protocol.outcome_verifier import InterventionOutcomeVerif
 from app.services.task_reflection_service import TaskReflectionService
 
 
-def test_reflection_service_exposes_all_six_categories() -> None:
+def test_reflection_service_exposes_all_eight_categories() -> None:
+    # 8 类 = 6 负向触发 + plan_completed / milestone_reached 两个正向触发
+    # （对齐 task_reflection_service.ELIGIBLE_CATEGORIES 现行清单）。
     assert TaskReflectionService.ELIGIBLE_CATEGORIES == {
         "too_difficult",
         "unclear",
@@ -17,6 +19,8 @@ def test_reflection_service_exposes_all_six_categories() -> None:
         "intervention_ineffective",
         "plan_stall",
         "overload",
+        "plan_completed",
+        "milestone_reached",
     }
 
 

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest
@@ -53,6 +53,10 @@ async def test_build_reflection_context_respects_token_budget(db_session, monkey
     service = TaskReflectionService(db_session)
     monkeypatch.setattr(settings, "AURORA_REFLECTION_CONTEXT_MAX_TOKENS", 24)
     history = RouteHistoryService(db_session)
+    # 决策时间必须落在默认 14 天窗口内（_build_reflection_context 以
+    # now - window_days 过滤）；此前硬编码 2026-04-21 已老化出窗，
+    # 只会命中 fallback 行而恒为 truncated=False，测试意图失效。
+    base = datetime.now(UTC).replace(tzinfo=None) - timedelta(hours=1)
 
     for index in range(5):
         await history.record_decision(
@@ -60,7 +64,7 @@ async def test_build_reflection_context_respects_token_budget(db_session, monkey
             input_aggregator_snapshot_id=f"agg:{index}",
             decision_type=f"decision_{index}",
             decision_payload={"route_execution_mode": "execution_first", "note": "x" * 60},
-            decided_at=datetime(2026, 4, 21, 12, index, 0),
+            decided_at=base + timedelta(minutes=index),
         )
 
     context = await service._build_reflection_context(
