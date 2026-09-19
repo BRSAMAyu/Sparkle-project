@@ -1,3 +1,4 @@
+import hashlib
 from datetime import datetime
 from uuid import uuid4
 
@@ -281,3 +282,259 @@ async def test_conflict_resolver_load_records_stays_user_scoped(db_session):
     )
 
     assert [record.id for record in records] == [owner_record.id]
+
+
+# ---------------------------------------------------------------------------
+# D1 死门：has_unresolved_conflict 曾用人类可读 topic 双向子串匹配 sha1 十六进制
+# conflict_key（=semantic_key），数学上永不命中。修复后 topic 应对齐可读范围
+# （left/right_summary、payload 里的 semantic_key），semantic key 应精确对齐。
+# ---------------------------------------------------------------------------
+
+
+def _sha1_semantic_key(text: str) -> str:
+    # 复刻 MemoryInferredWriteLaneService 的生产写法：sha1(规范化句子)
+    normalized = "".join(text.split()).lower()
+    return hashlib.sha1(normalized.encode("utf-8")).hexdigest()
+
+
+@pytest.mark.asyncio
+async def test_has_unresolved_conflict_matches_topics_against_readable_scope(db_session):
+    user = await _create_user(db_session)
+    semantic_key = _sha1_semantic_key("我决定今晚早睡")
+    assert semantic_key != "我决定今晚早睡"  # 生产形态：40 位十六进制，非可读文本
+    db_session.add(
+        UnresolvedConflict(
+            user_id=user.id,
+            conflict_key=semantic_key,
+            left_summary="我决定今晚早睡",
+            right_summary="昨晚我又熬夜到三点",
+            left_lane="inferred_extraction",
+            right_lane="inferred_extraction",
+            left_payload={"semantic_key": semantic_key, "summary": "我决定今晚早睡"},
+            right_payload={"semantic_key": semantic_key, "summary": "昨晚我又熬夜到三点"},
+            surfaced_at=datetime(2026, 4, 21, 20, 0, 0),
+        )
+    )
+    await db_session.commit()
+
+    service = ConflictResolverService(db_session)
+    assert await service.has_unresolved_conflict(user_id=user.id, topic_keys=("早睡",)) is True
+    assert await service.has_unresolved_conflict(user_id=user.id, topic_keys=("熬夜",)) is True
+    assert await service.has_unresolved_conflict(user_id=user.id, topic_keys=("早睡", "复习")) is True
+    assert await service.has_unresolved_conflict(user_id=user.id, topic_keys=("健身",)) is False
+    assert await service.has_unresolved_conflict(user_id=user.id, topic_keys=()) is False
+
+
+@pytest.mark.asyncio
+async def test_has_unresolved_conflict_matches_semantic_keys_exactly(db_session):
+    user = await _create_user(db_session)
+    semantic_key = _sha1_semantic_key("我决定今晚早睡")
+    db_session.add(
+        UnresolvedConflict(
+            user_id=user.id,
+            conflict_key=semantic_key,
+            left_summary="我决定今晚早睡",
+            right_summary="昨晚我又熬夜到三点",
+            left_lane="inferred_extraction",
+            right_lane="inferred_extraction",
+            surfaced_at=datetime(2026, 4, 21, 20, 0, 0),
+        )
+    )
+    await db_session.commit()
+
+    service = ConflictResolverService(db_session)
+    assert (
+        await service.has_unresolved_conflict(
+            user_id=user.id,
+            topic_keys=(),
+            semantic_keys=(semantic_key,),
+        )
+        is True
+    )
+    assert (
+        await service.has_unresolved_conflict(
+            user_id=user.id,
+            topic_keys=(),
+            semantic_keys=(_sha1_semantic_key("无关事实"),),
+        )
+        is False
+    )
+
+
+@pytest.mark.asyncio
+async def test_same_key_candidates_with_different_confidence_arbitrate_and_audit(db_session):
+    """两条同 semantic_key、不同置信的候选必须被检出冲突并落仲裁审计。"""
+    user = await _create_user(db_session)
+    semantic_key = _sha1_semantic_key("今晚复习线代")
+    existing = EpisodicMemory(
+        user_id=user.id,
+        summary="今晚复习线代到十点",
+        source_type="chat",
+        source_id="session-d1",
+        source_lane="working_memory",
+        subject_type="commitment",
+        occurred_at=datetime(2026, 4, 21, 18, 0, 0),
+        confidence=0.55,
+        evidence_refs=[{"type": "chat_turn", "id": "wm-d1"}],
+        evidence_token="wm-d1",
+        semantic_key=semantic_key,
+    )
+    db_session.add(existing)
+    await db_session.commit()
+
+    service = ConflictResolverService(db_session)
+    candidate = ConflictCandidate(
+        user_id=user.id,
+        summary="今晚复习线代到十二点",
+        source_lane="inferred_extraction",
+        confidence=0.92,
+        occurred_at=datetime(2026, 4, 21, 19, 0, 0),
+        evidence_token="turn-d1",
+        semantic_key=semantic_key,
+        subject_type="commitment",
+        evidence_refs=({"type": "chat_turn", "id": "turn-d1"},),
+    )
+    decision = service.resolve(candidate=candidate, existing_records=[existing])
+
+    # 不同置信 → 确定性裁决（不需要用户投票），但冲突必须被检出且留下审计
+    assert decision.action == "accept"
+    assert decision.reason != "no_conflict"
+    assert decision.loser_record_ids == (existing.id,)
+
+    new_record = EpisodicMemory(
+        user_id=user.id,
+        summary="今晚复习线代到十二点",
+        source_type="chat",
+        source_id="session-d1",
+        source_lane="inferred_extraction",
+        subject_type="commitment",
+        occurred_at=datetime(2026, 4, 21, 19, 0, 0),
+        confidence=0.92,
+        evidence_refs=[{"type": "chat_turn", "id": "turn-d1"}],
+        evidence_token="turn-d1",
+        semantic_key=semantic_key,
+    )
+    db_session.add(new_record)
+    await db_session.commit()
+    await service.apply_live_decision(candidate=candidate, decision=decision, new_record=new_record)
+
+    await db_session.refresh(existing)
+    assert existing.retracted_at is not None  # 输者被撤回
+    unresolved_rows = (await db_session.execute(select(UnresolvedConflict))).scalars().all()
+    assert unresolved_rows == []  # 确定性裁决不进 pending_user 队列
+    audits = (await db_session.execute(select(ConflictResolutionRecord))).scalars().all()
+    assert any(
+        audit.resolution_action == "accept"
+        and audit.conflict_key == semantic_key
+        and audit.resolution_reason == "candidate_overrides_lower_priority"
+        for audit in audits
+    )
+
+
+@pytest.mark.asyncio
+async def test_same_key_tie_candidates_surface_to_unresolved_conflicts_and_block_topic(db_session):
+    """同 key 平级候选落 unresolved_conflicts 后，topic 门必须能拦住（原死门）。"""
+    user = await _create_user(db_session)
+    semantic_key = _sha1_semantic_key("准备周末和同学讨论复习计划")
+    existing = EpisodicMemory(
+        user_id=user.id,
+        summary="准备周末和同学讨论复习计划",
+        source_type="chat",
+        source_id="session-d1-tie",
+        source_lane="inferred_extraction",
+        subject_type="relationship",
+        occurred_at=datetime(2026, 4, 21, 18, 0, 0),
+        confidence=0.88,
+        evidence_refs=[{"type": "chat_turn", "id": "turn-tie-old"}],
+        evidence_token="turn-tie-old",
+        semantic_key=semantic_key,
+    )
+    db_session.add(existing)
+    await db_session.commit()
+
+    service = ConflictResolverService(db_session)
+    candidate = ConflictCandidate(
+        user_id=user.id,
+        summary="准备周末和同学讨论复习计划",
+        source_lane="inferred_extraction",
+        confidence=0.88,
+        occurred_at=datetime(2026, 4, 21, 18, 0, 0),
+        evidence_token="turn-tie-new",
+        semantic_key=semantic_key,
+        subject_type="relationship",
+        evidence_refs=({"type": "chat_turn", "id": "turn-tie-new"},),
+    )
+    decision = service.resolve(candidate=candidate, existing_records=[existing])
+    assert decision.action == "surface_to_user"
+    await service.apply_live_decision(candidate=candidate, decision=decision)
+
+    unresolved = (await db_session.execute(select(UnresolvedConflict))).scalar_one()
+    assert unresolved.status == "pending_user"
+    assert unresolved.conflict_key == semantic_key
+
+    # 死门修复后：可读 topic（技能激活条件关键词）必须能命中 sha1 形态的 conflict_key
+    assert await service.has_unresolved_conflict(user_id=user.id, topic_keys=("复习计划",)) is True
+    assert await service.has_unresolved_conflict(user_id=user.id, topic_keys=("复习",)) is True
+    assert await service.has_unresolved_conflict(user_id=user.id, topic_keys=("健身",)) is False
+
+
+# ---------------------------------------------------------------------------
+# D2 优先级兜底：未知 source_lane（如 aurora_calibration_receipt）曾被 fallback
+# 判为最高档 explicit(4)，可压过 direct_capture。修复后未知 lane 落最低档。
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_known_lanes_keep_registered_priorities(db_session):
+    service = ConflictResolverService(db_session)
+    assert service._priority("direct_capture") == 4
+    assert service._priority("user_confirmed") == 4
+    assert service._priority("llm_extractor") == 2
+    assert service._priority("llm_extraction") == 2
+    assert service._priority("inferred_extraction") == 3
+    assert service._priority("working_memory") == 1
+
+
+@pytest.mark.asyncio
+async def test_unknown_lane_falls_to_lowest_priority_and_loses_to_direct_capture(db_session):
+    service = ConflictResolverService(db_session)
+    # aurora_calibration_receipt 是代码库中真实存在的未登记 lane（correction_feedback）
+    assert service._priority("aurora_calibration_receipt") == 0
+    assert service._priority("") == 0
+    assert service._priority("some_future_lane") == 0
+
+    user = await _create_user(db_session)
+    existing = EpisodicMemory(
+        user_id=user.id,
+        summary="今晚只做一套真题",
+        source_type="chat",
+        source_id="session-d2",
+        source_lane="direct_capture",
+        subject_type="commitment",
+        occurred_at=datetime(2026, 4, 21, 18, 0, 0),
+        confidence=0.5,
+        evidence_refs=[{"type": "chat_turn", "id": "direct-d2"}],
+        evidence_token="direct-d2",
+        semantic_key="commitment:real-exam-set",
+    )
+    db_session.add(existing)
+    await db_session.commit()
+
+    # 未知 lane 的候选即使更新、同置信，也不得压过已登记的 direct_capture 记录
+    decision = service.resolve(
+        candidate=ConflictCandidate(
+            user_id=user.id,
+            summary="今晚只做一套真题（校准回执）",
+            source_lane="aurora_calibration_receipt",
+            confidence=0.5,
+            occurred_at=datetime(2026, 4, 21, 19, 0, 0),
+            evidence_token="receipt-d2",
+            semantic_key="commitment:real-exam-set",
+            subject_type="commitment",
+            evidence_refs=({"type": "chat_turn", "id": "receipt-d2"},),
+        ),
+        existing_records=[existing],
+    )
+    assert decision.action == "reject"
+    assert decision.reason == "higher_priority_existing"
+    assert decision.winner_lane == "direct_capture"

@@ -1372,10 +1372,16 @@ class ContextPackBuilder:
             default_value = PreferenceService.DEFAULT_EXPLICIT.get(key, object())
             if key not in PreferenceService.DEFAULT_EXPLICIT or value != default_value:
                 profile_keys.add(key)
-        if profile_keys:
-            ranked_preferences = [entry for entry in ranked_preferences if entry.item.pref_key not in profile_keys]
-            preferences = {key: value for key, value in preferences.items() if key not in profile_keys}
-            pref_scores = {key: score for key, score in pref_scores.items() if key not in profile_keys}
+        # D3 止血（审计 round2 案例A）：profile 域与 memory_preferences 同 key 时，
+        # 不再将证据化记忆记录从 pack 中静默剔除——双源并存，交给 rank 加权与
+        # 预算竞争裁决；双源键写入 metadata 供审计（V3 再收敛为显式规则表 + 冲突登记）。
+        dual_source_keys = sorted(
+            key
+            for key in profile_keys
+            if any(entry.item.pref_key == key for entry in ranked_preferences)
+        )
+        if dual_source_keys:
+            metadata["preference_dual_source_keys"] = dual_source_keys
 
         pref_budget = budgets.get("preferences", 0)
         goals_budget = budgets.get("goals", 0)

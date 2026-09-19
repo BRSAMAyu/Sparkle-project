@@ -151,3 +151,96 @@ async def test_context_pack_marks_consumed_memory_records(db_session, monkeypatc
     refreshed = await db_session.get(MemoryPreference, pref.id)
     assert refreshed is not None
     assert refreshed.last_consumed_at is not None
+
+
+@pytest.mark.asyncio
+async def test_context_pack_keeps_memory_preferences_alongside_profile_domain(db_session):
+    """D3 止血回归：profile 域（user_preferences_center）与 memory_preferences
+    同 key 时不再先验遮蔽——双源并存进 pack，由 rank/预算竞争，双源键登记 metadata。"""
+    from app.models.user_preferences import UserPreferencesCenter
+    from app.services.personalization.preference_service import PreferenceService
+
+    user_id = uuid4()
+    user = User(
+        id=user_id,
+        username=f"user_{user_id.hex[:8]}",
+        email=f"{user_id.hex[:8]}@example.com",
+        hashed_password="test",
+    )
+    db_session.add(user)
+    await db_session.flush()
+
+    memory_service = MemoryService(db_session)
+    await memory_service.upsert_preference(
+        user_id=user_id,
+        pref_key="error_correction_rate",
+        pref_value={"rate": 0.42},
+        evidence_refs=[{"type": "event", "id": "evt_d3"}],
+    )
+    # 生产实证形态（审计案例 A）：同名 key 同时存在于 center.inferred（无置信度列）
+    db_session.add(
+        UserPreferencesCenter(
+            user_id=user_id,
+            version=1,
+            explicit=PreferenceService.DEFAULT_EXPLICIT.copy(),
+            inferred={"error_correction_rate": {"value": 0.9}},
+        )
+    )
+    await db_session.commit()
+
+    scheduler = ContextBudgetScheduler(
+        budgets={"chat": {"preferences": 200, "goals": 50, "episodic": 50}}
+    )
+    builder = ContextPackBuilder(db_session, scheduler=scheduler)
+    pack = await builder.build(user_id, intent="chat")
+
+    # memory_preferences 的证据化记录必须保留在 pack 里，不得被 center 静默吃掉
+    assert "error_correction_rate" in pack.preferences
+    assert pack.preferences["error_correction_rate"] == {"rate": 0.42}
+    # 双源并存要显式可审计，而不是无声遮蔽
+    assert pack.metadata.get("preference_dual_source_keys") == ["error_correction_rate"]
+    # 预算行为不被破坏
+    assert pack.token_usage["preferences"] <= pack.budgets["preferences"]
+
+
+@pytest.mark.asyncio
+async def test_context_pack_no_dual_source_note_without_overlap(db_session):
+    """无同 key 冲突时不得产生双源标注（默认 explicit 值也不算 profile 域占有）。"""
+    from app.models.user_preferences import UserPreferencesCenter
+    from app.services.personalization.preference_service import PreferenceService
+
+    user_id = uuid4()
+    user = User(
+        id=user_id,
+        username=f"user_{user_id.hex[:8]}",
+        email=f"{user_id.hex[:8]}@example.com",
+        hashed_password="test",
+    )
+    db_session.add(user)
+    await db_session.flush()
+
+    memory_service = MemoryService(db_session)
+    await memory_service.upsert_preference(
+        user_id=user_id,
+        pref_key="depth_preference",
+        pref_value={"value": 0.7},
+        evidence_refs=[{"type": "event", "id": "evt_d3b"}],
+    )
+    db_session.add(
+        UserPreferencesCenter(
+            user_id=user_id,
+            version=1,
+            explicit=PreferenceService.DEFAULT_EXPLICIT.copy(),  # depth_preference=0.5 默认值
+            inferred={},
+        )
+    )
+    await db_session.commit()
+
+    scheduler = ContextBudgetScheduler(
+        budgets={"chat": {"preferences": 200, "goals": 50, "episodic": 50}}
+    )
+    builder = ContextPackBuilder(db_session, scheduler=scheduler)
+    pack = await builder.build(user_id, intent="chat")
+
+    assert "depth_preference" in pack.preferences
+    assert "preference_dual_source_keys" not in pack.metadata

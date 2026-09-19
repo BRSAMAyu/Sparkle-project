@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any, Literal
@@ -11,6 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.aurora_stage20 import ConflictResolutionRecord, UnresolvedConflict
 from app.models.memory import EpisodicMemory
 from app.services.memory_service import MemoryService
+
+logger = logging.getLogger(__name__)
 
 
 def _utcnow() -> datetime:
@@ -56,11 +59,26 @@ class ConflictResolverService:
     """Deterministic Stage 20 conflict arbitration with explicit audit records."""
 
     PRIORITY_BY_TIER = {
+        # D2（审计 round2）：未登记 lane 的保守兜底档位——低于一切已知 lane，
+        # 防止未来新 lane（如 aurora_calibration_receipt）静默压过 direct_capture。
+        "unknown": 0,
         "working_memory": 1,
         "llm": 2,
         "rule": 3,
         "explicit": 4,
     }
+
+    # 显式登记的已知 source_lane（新增 lane 必须登记，否则按 unknown 最低档裁决）
+    KNOWN_SOURCE_LANES: dict[str, str] = {
+        "direct_capture": "explicit",
+        "user_confirmed": "explicit",
+        "llm_extractor": "llm",
+        "llm_extraction": "llm",
+        "inferred_extraction": "rule",
+        "working_memory": "working_memory",
+    }
+
+    _warned_unknown_lanes: set[str] = set()
 
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
@@ -87,19 +105,51 @@ class ConflictResolverService:
         *,
         user_id: UUID,
         topic_keys: tuple[str, ...],
+        semantic_keys: tuple[str, ...] = (),
     ) -> bool:
-        normalized = tuple(key.strip().lower() for key in topic_keys if key and key.strip())
-        if not normalized:
+        """检测用户是否存在 pending_user 的未决冲突。
+
+        D1（审计 round2）修复：conflict_key 是 semantic_key（sha1 十六进制），
+        原实现拿人类可读 topic 与其做子串匹配，数学上永不命中（死门）。
+        现按两类语义对齐：
+        - ``semantic_keys``：与 conflict_key / payload 内 semantic_key 精确比对；
+        - ``topic_keys``：与行内可读范围（left/right_summary 及 payload semantic_key）
+          做归一化双向包含比对。
+        """
+        normalized_topics = tuple(key.strip().lower() for key in topic_keys if key and key.strip())
+        normalized_semantic = tuple(key.strip().lower() for key in semantic_keys if key and key.strip())
+        if not normalized_topics and not normalized_semantic:
             return False
         result = await self.db.execute(
-            select(UnresolvedConflict.conflict_key).where(
+            select(UnresolvedConflict).where(
                 UnresolvedConflict.user_id == user_id,
                 UnresolvedConflict.deleted_at.is_(None),
                 UnresolvedConflict.status == "pending_user",
             )
         )
-        keys = [str(item or "").strip().lower() for item in result.scalars().all()]
-        return any(topic in conflict_key or conflict_key in topic for conflict_key in keys for topic in normalized)
+        conflicts = result.scalars().all()
+        for conflict in conflicts:
+            left_payload = conflict.left_payload if isinstance(conflict.left_payload, dict) else {}
+            right_payload = conflict.right_payload if isinstance(conflict.right_payload, dict) else {}
+            readable_fields = [
+                str(field or "").strip().lower()
+                for field in (
+                    conflict.conflict_key,
+                    conflict.left_summary,
+                    conflict.right_summary,
+                    left_payload.get("semantic_key"),
+                    right_payload.get("semantic_key"),
+                )
+            ]
+            if any(field and field in normalized_semantic for field in readable_fields):
+                return True
+            if any(
+                topic and field and (topic in field or field in topic)
+                for field in readable_fields
+                for topic in normalized_topics
+            ):
+                return True
+        return False
 
     def resolve(
         self,
@@ -394,13 +444,17 @@ class ConflictResolverService:
 
     def _priority(self, source_lane: str) -> int:
         lane = (source_lane or "").strip().lower()
-        if lane == "working_memory":
-            return self.PRIORITY_BY_TIER["working_memory"]
-        if lane in {"llm_extractor", "llm_extraction"}:
-            return self.PRIORITY_BY_TIER["llm"]
-        if lane == "inferred_extraction":
-            return self.PRIORITY_BY_TIER["rule"]
-        return self.PRIORITY_BY_TIER["explicit"]
+        tier = self.KNOWN_SOURCE_LANES.get(lane)
+        if tier is not None:
+            return self.PRIORITY_BY_TIER[tier]
+        if lane and lane not in self._warned_unknown_lanes:
+            self._warned_unknown_lanes.add(lane)
+            logger.warning(
+                "ConflictResolver: unregistered source_lane '%s' falls to lowest priority tier; "
+                "register it in KNOWN_SOURCE_LANES if it should arbitrate higher",
+                lane,
+            )
+        return self.PRIORITY_BY_TIER["unknown"]
 
     def _pick_stronger_record(
         self,

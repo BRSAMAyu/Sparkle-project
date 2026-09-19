@@ -91,3 +91,50 @@ async def test_skill_selection_blocks_on_unresolved_conflict(db_session):
 
     assert matches == []
     assert skill.name in caveats[0]
+
+
+@pytest.mark.asyncio
+async def test_skill_selection_blocks_on_unresolved_conflict_with_production_hash_key(db_session):
+    """D1 死门回归：生产中 conflict_key=sha1 十六进制（=semantic_key），
+    技能激活条件给的是人类可读 topic——修复前该门永不触发。"""
+    import hashlib
+
+    user = await _create_user(db_session)
+    store = SkillStoreService(db_session)
+    skill = await store.create_skill(
+        user_id=user.id,
+        payload={
+            "name": "Exam Triage",
+            "pattern_template": "Scope first.",
+            "activation_conditions": [{"kind": "intent_keywords", "value": ["复习"]}],
+            "examples": [],
+        },
+    )
+    normalized = "".join("我决定考试周提前一周复习".split()).lower()
+    conflict_key = hashlib.sha1(normalized.encode("utf-8")).hexdigest()
+    db_session.add(
+        UnresolvedConflict(
+            user_id=user.id,
+            conflict_key=conflict_key,
+            left_summary="我决定考试周提前一周复习",
+            right_summary="往年考试周我都是前一晚才抱佛脚",
+            left_lane="inferred_extraction",
+            right_lane="inferred_extraction",
+            left_payload={"semantic_key": conflict_key, "summary": "我决定考试周提前一周复习"},
+            right_payload={"semantic_key": conflict_key, "summary": "往年考试周我都是前一晚才抱佛脚"},
+            surfaced_at=datetime(2026, 4, 21, 8, 0, 0),
+        )
+    )
+    await db_session.commit()
+
+    matches, caveats = await SkillSelectionService(db_session).resolve_prompt_payload(
+        user_id=user.id,
+        selection_context=SkillSelectionContext(
+            intent="复习计划制定",
+            tool_category="direct",
+            current_time=datetime(2026, 4, 21, 9, 0, 0),
+        ),
+    )
+
+    assert matches == []
+    assert skill.name in caveats[0]

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
@@ -25,6 +26,60 @@ from app.services.system_update_service import SystemUpdateService, build_system
 
 _JOB_STATUS: dict[str, dict[str, Any]] = {}
 _JOB_HISTORY: dict[str, list[dict[str, Any]]] = {}
+
+# D4（审计 round2）：episodic decay_policy 的唯一消费者（每日 03:30 beat 任务
+# apply_memory_decay）按半衰期衰减 importance_score，低于阈值归档。
+# 审计修正：该消费者自初始提交即存在且已排程，覆盖 30d/60d/90d；真正的缺口是
+# MemoryInferredWriteLaneService 写入的 "7d"（时敏）此前不在策略表内、以及
+# "due_at+7d"（承诺类，需按 due_at 触发）仍无消费者——后者为 V3 数据飞轮待办。
+EPISODIC_DECAY_POLICIES: dict[str, dict[str, float]] = {
+    "7d": {"half_life_days": 7, "archive_threshold": 0.15},
+    "30d": {"half_life_days": 30, "archive_threshold": 0.15},
+    "60d": {"half_life_days": 60, "archive_threshold": 0.15},
+    "90d": {"half_life_days": 90, "archive_threshold": 0.10},
+}
+
+
+async def apply_episodic_decay_policies(
+    db: AsyncSession,
+    *,
+    now: datetime | None = None,
+    batch_size: int = 200,
+) -> dict[str, int]:
+    """按 decay_policy 半衰期衰减 episodic 记忆的 importance_score。
+
+    每条策略独立取一批未归档记录；score 衰减至归档阈值以下的记录置 archived_at。
+    返回 ``{"decayed": int, "archived": int}``。
+    """
+    now = (now or datetime.now(UTC)).replace(tzinfo=None)
+    total_decayed = 0
+    total_archived = 0
+    for policy_name, config in EPISODIC_DECAY_POLICIES.items():
+        result = await db.execute(
+            select(EpisodicMemory)
+            .where(
+                EpisodicMemory.decay_policy == policy_name,
+                EpisodicMemory.archived_at.is_(None),
+                EpisodicMemory.importance_score.isnot(None),
+            )
+            .limit(batch_size)
+        )
+        rows = result.scalars().all()
+        for row in rows:
+            if not row.occurred_at:
+                continue
+            age_days = max(0.0, (now - row.occurred_at).total_seconds() / 86400)
+            half_life = config["half_life_days"]
+            decay_factor = math.pow(0.5, age_days / half_life)
+            new_score = round(float(row.importance_score or 0.5) * decay_factor, 4)
+            row.importance_score = max(0.0, new_score)
+            total_decayed += 1
+            if new_score < config["archive_threshold"]:
+                row.archived_at = now
+                total_archived += 1
+    if total_decayed > 0:
+        await db.commit()
+    return {"decayed": total_decayed, "archived": total_archived}
 
 
 def _utcnow() -> datetime:
