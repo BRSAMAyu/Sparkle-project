@@ -1,35 +1,39 @@
 {
- "namespace": "v3",
- "created_at": "2026-09-19T01:26:06.217205Z",
- "baseline_head": "fedd27e35e305502ba727ba8c3fb46eae33a1eb9",
- "slots": 6,
- "active": {
-  "B-02": {
-   "stage": "DONE",
-   "note": "R1+R2 双路 CHANGES 全处置(C1-C6+P3), 20行lineage 13列解析验证, 验收SQL双路复算一致",
-   "since": "2026-09-19T13:10"
-  }
- },
- "done": [
-  "B-01",
-  "B-02",
-  "B-05",
-  "B-06",
-  "V3-FIX-01",
-  "V3-FIX-04",
-  "B-02X",
-  "V3-FIX-02",
-  "C-01",
-  "M-01",
-  "D-01",
-  "E-01",
-  "X-01",
-  "V3-FIX-11",
-  "M-02",
-  "E-05",
-  "V3-FIX-13",
-  "M-03"
- ],
- "blocked": [],
- "notes": "2026-09-19 15:0x: 3 aggregator/kill-switch test failures confirmed PRE-EXISTING (fail identically at pre-C-01 baseline wt4; state_aggregator untouched since initial commit) — not a C-01 regression; park for test-system batch. C-01 DONE@57c87a8e (dual-ACCEPT, F2 applied at merge)."
+  "namespace": "v3",
+  "created_at": "2026-09-19T01:26:06.217205Z",
+  "baseline_head": "fedd27e35e305502ba727ba8c3fb46eae33a1eb9",
+  "slots": 6,
+  "active": {
+    "B-02": {
+      "stage": "DONE",
+      "note": "R1+R2 双路 CHANGES 全处置(C1-C6+P3), 20行lineage 13列解析验证, 验收SQL双路复算一致",
+      "since": "2026-09-19T13:10"
+    }
+  },
+  "done": [
+    "B-01",
+    "B-02",
+    "B-02X",
+    "B-03",
+    "B-05",
+    "B-06",
+    "C-01",
+    "C-02",
+    "D-01",
+    "E-01",
+    "E-05",
+    "M-01",
+    "M-02",
+    "M-03",
+    "M-07",
+    "V3-FIX-01",
+    "V3-FIX-02",
+    "V3-FIX-04",
+    "V3-FIX-11",
+    "V3-FIX-13",
+    "X-01",
+    "X-02"
+  ],
+  "blocked": [],
+  "notes": "2026-09-19 15:0x: 3 aggregator/kill-switch test failures confirmed PRE-EXISTING (fail identically at pre-C-01 baseline wt4; state_aggregator untouched since initial commit) — not a C-01 regression; park for test-system batch. C-01 DONE@57c87a8e (dual-ACCEPT, F2 applied at merge). | 2026-09-19 evg: 4 merges (ee885386 B-03 / c0e02bf8 X-02 / 886a7d42 C-02 / 0ea1e198 M-07 incl. registry re-freeze 35 @26cf482d); engine restart deferred until B-04 collection completes; D-02 delta review in flight"
 }
