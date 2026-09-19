@@ -9,11 +9,11 @@
   - 新增 v3-output/B-02/lineage.csv（22 个用户可见数字的 UI→repo/API→service→DB/formula 字段级溯源 + 真实性评级）
   - 新增 v3-output/B-02/data_truth_inventory.csv 与 .json（14 项 mock/seed/污染面清单 + DB cohort 事实）
   - 新增 v3-output/B-02/FINDINGS.md（证据 SQL、复现步骤、后续任务映射建议 T-truth-*）
-  - 新增 mobile/test/core/statistics/mock_statistics_guard_test.dart（红测，当前 RED，预期内）
+  - ~~新增 mobile/test/core/statistics/mock_statistics_guard_test.dart（红测，当前 RED，预期内）~~ **复核修订 C1**：红测文件**未随收编入库**（沙箱 flutter test 基建挂起、CI 已关停，文件仅存工作沙箱已随 worktree 回收）；污染机制以代码链路 + `dart run` 探针实证（见同目录 REVIEW_RECEIPT 断言 3）。
 - Tests executed + results:
   - 主仓 DB 只读查证（docker exec sparkle_db psql，只 SELECT）：users 分布 guest 160/email 52/seed 7；user_node_status 8135 行中 guest 占 8050（98.9%）；user_streak_stats guest 最长 30 天 vs email 最长 1 天；user_achievements guest 944 行 vs email 3 行；understanding_depth_daily 149 行（2026-09-18，score 0.275–0.933，avg 0.384）。
   - 排行榜同权重复算 SQL：top-50 = 100% guest 账号，top_score 132.5（见 FINDINGS.md F1，可直接复现）。
-  - 红测 mock_statistics_guard_test.dart：`flutter test test/core/statistics/mock_statistics_guard_test.dart`（结果见下方"Known limitations"——首跑编译耗时，输出以收工日志为准；测试逻辑为源码契约守卫，对当前 `_generateMock` 实现必然 FAIL，即 RED）。
+  - 红测（复核修订 C1：**文件未入库**）：测试逻辑为源码契约守卫，对当前 `_generateMock` 实现必然 FAIL（RED）；沙箱内 `flutter test` 无法完成 loading（见 Known limitations），RED 判定由下行 `dart run` 探针确定性验证。
   - 红测逻辑独立验证（`dart run` 纯 Dart 探针，等价断言逻辑）：三个 `fetchFromApi` 实现体中共 25 个生成 mock 标记（focus 8 / capsule 10 / agent 7）→ 守卫判定 RED（当前违反 D20，预期内）。
   - `flutter test test/core/statistics/mock_statistics_guard_test.dart`：在沙箱环境 loading 阶段挂起至 12 分钟 invoker 超时（`+0 -1: Some tests failed`，TimeoutException in loading）。对照实验：**既有**小测试 test/unit/hash_utils_test.dart 同样在 loading 挂起超时 —— 证明是本沙箱 `flutter test` 基建问题（测试 isolate 无法完成加载），与红测内容无关。
   - 网关/引擎存活：:8080/healthz 200、:8000/health 200；/api/v1/insights/understanding-depth、/dashboard/status、/leaderboards 未授权均 401（隔离正常）。
@@ -32,6 +32,6 @@
 - Suggested reviewer checks:
   1. 独立执行 F1 排行榜复算 SQL（FINDINGS.md 第二节），确认 top-50 全为 registration_source='guest'。
   2. 打开 backend/app/services/leaderboard_service.py 确认无 registration_source 过滤；gateway internal/service/user_context.go:129 确认 IsPro=FlameLevel>=3。
-  3. 运行 mobile/test/core/statistics/mock_statistics_guard_test.dart 确认 RED；对照 hybrid_statistics_repository.dart:330-354 的 _putInWarmCache/isFullySynced 路径。
+  3. ~~运行 mobile/test/core/statistics/mock_statistics_guard_test.dart 确认 RED~~（复核修订 C1：文件未入库）；改为对照 hybrid_statistics_repository.dart:330-354 的 _putInWarmCache/isFullySynced 路径与三个 provider 的 _generateMock* 实现（Reviewer #1 已代码级实证，见 REVIEW_RECEIPT 断言 3）。
   4. 抽查 lineage.csv 中任意 3 行（建议：streak、understanding-depth、galaxy_mastery）沿 UI→API→service→DB 亲自走一遍。
   5. 核对 data_truth_inventory.json 的 DB 事实数字与本机 sparkle_db 一致。

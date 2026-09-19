@@ -10,7 +10,7 @@
 
 ## 0. 一句话结论
 
-V3 四分法（State / Memory / Knowledge / Events）与 Aurora / Agent Runtime / Action 在当前代码中**全部存在唯一权威 owner，无需新造系统**；真正的缺口只有两个 no-authority 概念（Experience Memory 聚合体、UserWorldSnapshot 快照）和四组重复真源（D-PREF / D-CTX / D-INT / D-STATE），全部应走"迁移/收敛"而非重写。
+V3 四分法（State / Memory / Knowledge / Events）与 Aurora / Agent Runtime / Action 在当前代码中**全部存在唯一权威 owner，无需新造系统**；真正的缺口只有两个 no-authority 概念（Experience Memory 聚合体、UserWorldSnapshot 快照）和八组重复真源（D-PREF / D-CTX / D-INT / D-STATE / D-TASK / D-CONF / D-OUTBOX / D-ENTITLE，与 §2 表一致——B-02 复核修订：原摘要行误写"四组"），全部应走"迁移/收敛"而非重写。
 
 ## 1. 概念 → 权威实现映射（四分法验收）
 

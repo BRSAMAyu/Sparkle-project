@@ -1,10 +1,10 @@
 {
-  "namespace": "v3",
-  "created_at": "2026-09-19T01:26:06.217205Z",
-  "baseline_head": "fedd27e35e305502ba727ba8c3fb46eae33a1eb9",
-  "slots": 6,
-  "active": {},
-  "done": [],
-  "blocked": [],
-  "notes": "V2.5 tail tasks (injection-visibility/P1-B/P1-C/android-r5/dailyflow-p2/web-r3) drain first; freed slots pick up B-01..B-06 then next_tasks.py ordering."
+ "namespace": "v3",
+ "created_at": "2026-09-19T01:26:06.217205Z",
+ "baseline_head": "fedd27e35e305502ba727ba8c3fb46eae33a1eb9",
+ "slots": 6,
+ "active": {},
+ "done": [],
+ "blocked": [],
+ "notes": "V2.5 tail tasks (injection-visibility/P1-B/P1-C/android-r5/dailyflow-p2/web-r3) drain first; freed slots pick up B-01..B-06 then next_tasks.py ordering."
 }

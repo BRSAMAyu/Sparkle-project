@@ -3,6 +3,11 @@
 Base SHA: `f01f4ae81ebd645b8f313afd2e9a243cfe83a3f0`（未 commit，工作树仅新增 `mobile/test/core/statistics/` 与 `v3-output/B-02/`）
 调查日期：2026-09-19 ｜ 方式：静态代码溯源 + 主仓 DB 只读查证（`docker exec sparkle_db psql`）+ 网关 :8080 / 引擎 :8000 存活探测。
 
+> **复核修订（2026-09-19，独立 Reviewer verdict CHANGES 已处置，详见同目录 REVIEW_RECEIPT.md）**：
+> ①（C1）红测文件 `mock_statistics_guard_test.dart` **未随本卡收编入库**（沙箱 flutter test 基建挂起 + CI 关停），污染机制以代码链路与 dart run 探针实证；
+> ②（C4）F1 验收 SQL 已补 `deleted_at IS NULL`，对齐服务实际过滤 `not_deleted_filter()`；
+> ③（C3）文中全部 DB 计数为 2026-09-19 时点快照（复核时 live 已漂移：users 219→248、node_status 8135→8478，结构性结论经复核重跑全部成立），后续复核以重跑 SQL 为准。
+
 ---
 
 ## 一、结论摘要
@@ -37,7 +42,7 @@ WITH leaderboard AS (
   LEFT JOIN user_node_status uns ON uns.user_id=u.id
   LEFT JOIN user_streak_stats s ON s.user_id=u.id
   LEFT JOIN user_achievements ua ON ua.user_id=u.id
-  WHERE u.is_active
+  WHERE u.is_active AND u.deleted_at IS NULL  -- C4 修订: 对齐服务 not_deleted_filter() (models/base.py:79)
   GROUP BY u.id, s.total_checkin_days, s.longest_streak)
 SELECT registration_source, count(*) users_in_top50, round(max(score)::numeric,1) top_score
 FROM (SELECT *, row_number() OVER (ORDER BY score DESC) rn FROM leaderboard) t
@@ -45,7 +50,7 @@ WHERE rn <= 50 GROUP BY registration_source;
 -- => guest | 50 | 132.5   （email 用户 0 人入榜）
 ```
 
-队列事实：`users` 219 = guest 160 / email 52 / seed 7。
+队列事实（时点快照，已漂移见文首修订③）：`users` 219 = guest 160 / email 52 / seed 7。
 **修复映射**：leaderboard 查询加 `registration_source NOT IN ('guest','seed')`（或等效 cohort 标记）；社群/统计聚合同理。
 
 ### F2 · `IsPro = FlameLevel >= 3` × 游客种子 flame=15 ⇒ 所有游客以 is_pro=true 送入 AI 路由（D17 已冻结拆除）
@@ -63,8 +68,8 @@ WHERE rn <= 50 GROUP BY registration_source;
 `getStatistics()` cold 路径把返回值 `_putInWarmCache()` 写入 Isar（TTL 24h），
 且 `isFullySynced = !entity.isFromCache` = **true** —— 假数据被标记为"已与服务器完全同步"。
 当前三个仓库无 UI 消费者（休眠脚手架），但路径是活的，接线即污染。
-红测：`mobile/test/core/statistics/mock_statistics_guard_test.dart`（当前 **RED**，符合"先写红测，暂不修"）。
-RED 判定已用等价逻辑的独立 `dart run` 探针确定性验证：三个 `fetchFromApi` 实现体共 25 个生成 mock 标记（focus 8 / capsule 10 / agent 7）。
+红测：`mobile/test/core/statistics/mock_statistics_guard_test.dart` —— **未随本卡收编入库**（C1 修订：沙箱 flutter test 在 loading 阶段挂起属环境限制、CI 已关停，文件仅存于工作沙箱；机制结论不依赖红测，由下行探针 + Reviewer 代码级复核实证）。
+RED 判定已用等价逻辑的独立 `dart run` 探针确定性验证：三个 `fetchFromApi` 实现体共 25 个生成 mock 标记（focus 8 / capsule 10 / agent 7；复核按 `_generateMock*` token 口径计 19（6/8/5），口径差异不影响 RED 结论）。
 注 1：未采用真实 Isar 集成断言，因仓内 IsarCore 测试环境有预存 segfault（`test/unit/sync_engine_test.dart` @Skip）。
 注 2：本沙箱 `flutter test` 对所有测试（含既有 hash_utils_test.dart）在 loading 阶段挂起 12 分钟超时，属环境限制；红测文件在正常环境应得 1 个 failure（= RED）。
 
