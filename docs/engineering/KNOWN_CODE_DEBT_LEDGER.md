@@ -66,3 +66,8 @@
 - **BD 规则停用**：`stage40_sgw_dogfood_report.md` 为 v1 未跟踪产物已丢失；规则要求 `PHASE_I_EXIT_READY: YES` 的实测证据，不可凭空重建。恢复条件：真实重跑 Stage40 SGW dogfood（Phase A/B/C，/tmp/stage40_{off,shadow,rl}.db 三库）。
 - **CARD-DUAL-WRITE 规则停用**：守卫 import 的 `app.services.card_protocol.consistency_validator` 自初始提交即不存在于仓库；card_protocol 接线时须一并补齐该模块并恢复规则。
 - **守卫产物再生脚本**：`scripts/stage27/render_jitai_templates.py`、`scripts/stage30/render_stage30_templates.py`；其余 stage22/23/24 产物用各自 --write/bootstrap 脚本再生。产物均已入库，勿再依赖未跟踪状态。
+
+
+## 2026-09-19 B-06 复核补充登记（O1）
+
+- **engine 侧 is_pro=flame_level>=3 派生**：`backend/app/services/user_service.py:208` 与网关 `user_context.go:129` 同源同病（D17 拆除对象），游客种子 flame=15 导致 166/166 游客以 pro 进 LLM tier（B-02 双路实锤）。处置随 V3-FIX-02（entitlement 独立字段）一并拆网关+引擎两处。

@@ -8,9 +8,11 @@
 
 ---
 
+> **as_of 标注（R2 复核修订 C4）**：本图全部 db_table_live 为 2026-09-19 上午时点快照，当日复核即见漂移（tasks 1089→1219、decision_records 947→2527、episodic 209→235）；全部决策关键 0 值（cards/task_occurrences/user_state_snapshots/execution_intents）经双路复核重跑为真。引用本图请以重跑 SQL 为准。
+
 ## 0. 一句话结论
 
-V3 四分法（State / Memory / Knowledge / Events）与 Aurora / Agent Runtime / Action 在当前代码中**全部存在唯一权威 owner，无需新造系统**；真正的缺口只有两个 no-authority 概念（Experience Memory 聚合体、UserWorldSnapshot 快照）和八组重复真源（D-PREF / D-CTX / D-INT / D-STATE / D-TASK / D-CONF / D-OUTBOX / D-ENTITLE，与 §2 表一致——B-02 复核修订：原摘要行误写"四组"），全部应走"迁移/收敛"而非重写。
+V3 四分法（State / Memory / Knowledge / Events）与 Aurora / Agent Runtime / Action 在当前代码中**全部存在唯一权威 owner，无需新造系统**；真正的缺口只有两个 no-authority 概念（Experience Memory 聚合体、Trajectory/Golden Journey 读模型）和八组重复真源（UserWorldSnapshot 经 R2 复核重分类：权威契约 UserStateV1 已存在，不再是 no-authority，见 §3）（D-PREF / D-CTX / D-INT / D-STATE / D-TASK / D-CONF / D-OUTBOX / D-ENTITLE，与 §2 表一致——B-02 复核修订：原摘要行误写"四组"），全部应走"迁移/收敛"而非重写。
 
 ## 1. 概念 → 权威实现映射（四分法验收）
 
@@ -28,7 +30,7 @@ V3 四分法（State / Memory / Knowledge / Events）与 Aurora / Agent Runtime 
 | V3 概念 | 权威实现 |
 |---|---|
 | FACT / CONFIRMED_PREFERENCE | `memory_preferences`、`memory_goals`（版本链 version+replaced_by_id+retracted_at） |
-| OBSERVATION | `episodic_memories`，`source_lane` 分 lane（live：`direct_capture`=166、`inferred_extraction`=43；D2 修复后登记表含 llm_extractor/aurora_calibration_receipt 等） |
+| OBSERVATION | `episodic_memories`，`source_lane` 分 lane（live：`direct_capture`=166、`inferred_extraction`=43；D2 修复后登记表（conflict_resolver_service.py:72-79）实含 6 lane，**不含 aurora_calibration_receipt**——d1d4 审计明确该 lane 为红线测试用例、故意未登记落 unknown(0)；但 correction_feedback.py:427 至今仍向该未登记 lane 写入（活契约违反，dev DB 0 行未爆量，已开 V3-FIX-06）【R1-E1 修订】） |
 | HYPOTHESIS | inferred lane 承载，但**未显式标注 epistemic class**——V3 加字段而非新表 |
 | EXPERIENCE | ⚠ 无权威存储（见 §3 缺口） |
 | 瞬态（working memory） | `backend/app/working_memory/`（Redis，`consolidated_to_l1_id` 指向 episodic）——符合"瞬态不污染长期 Memory"铁律 |
@@ -45,6 +47,7 @@ V3 四分法（State / Memory / Knowledge / Events）与 Aurora / Agent Runtime 
 - **Aurora**：唯一 owner = `backend/app/aurora/`（engine.py 路由/降级 + runtime_v1/decision_loop.py + l0~l4 干预分层 + policies/）。决不另造 Controller 服务。决策账本 = `aurora_judgment_records` + `routing_decision_log`。
 - **Agent Runtime**：唯一 run truth = `execution_intents`。OpenClaw 仅是 `ExecutorType.OPENCLAW` 枚举值（有 url_guard 治理），不是第二账本/第二权限系统——保持此格局。
 - **Action**：proposal/execution 分配的唯一协议 = `ExecutionIntent`（`execution_mode` HUMAN/AGENT/HYBRID + `TrustLevel` RAW/VALIDATED/TRUSTED）。V3 Human-Agent Allocation 扩展此字段而非新建分配服务。
+- **复核补充行（R2 盲点）**：Model Router（llm_router tier 体系，AI_ROUTING_LATENCY.md 引用的路由无本图行，见 CSV 补充行）；Tool Registry（`tools/registry.py` 委托 `dynamic_tool_registry`，委托关系已记 CSV）；`cognitive_ownership`（D13 必需字段，全仓 0 命中=待 V3 落地）。
 - **Permission/隔离**：网关鉴权 + `permission_service` + `aurora/privacy.py` + `privacy_budget_ledger`；确定性边界（权限/TTL/幂等/审计）已脱离模型自由裁量，符合 NORTH_STAR §5。
 
 ## 2. 重复真源审计（迁移而非重写）
@@ -54,8 +57,8 @@ V3 四分法（State / Memory / Knowledge / Events）与 Aurora / Agent Runtime 
 | D-PREF | 用户偏好 | `memory_preferences`（证据化、版本链）vs `user_preferences_center`（explicit/inferred/traits JSON，live 216 行 vs 59 行） | **暂双源并存、可审计**——37806718 (D3) 已把 context_pack 的静默遮蔽改为并存+`preference_dual_source_keys` 审计键 | 无立即废弃方；`user_settings`/`push_preferences`/`notification_preferences` 是域内设置非偏好真源，勿混 | 版本链写/读语义统一属 V3（d1d4 审计 §6.2 步骤 4）：以 memory_preferences 版本链为记录层、user_preferences_center 为投影层 |
 | D-CTX | 上下文装配 | `app/core/context_pack.py::ContextPackBuilder`（5 个消费者+落表+预算）vs `orchestration/context_builder.py::ContextBuilderMixin`（orchestrator/plan_review 使用，平行装配） | `ContextPack`（有 `context_pack_runs`/`context_budget_profiles` 表与 telemetry） | ContextBuilderMixin 的平行装配路径 | V3 Context Compiler 以 ContextPack 为唯一契约；orchestrator 改为消费 ContextPack，保留 ContextBuilderMixin 内的 stage 适配器作数据源 |
 | D-INT | 干预记录 | `card_protocol.InterventionRecord`（cards 域，0 行）vs `intervention.py` 的 InterventionRequest/AuditLog/Feedback + `intervention_outcomes` | 待定：card_protocol 是目标形态但 shadow 未完成；intervention.py 是今日 live 路径 | 都不立即废弃 | 跟随 card_protocol legacy 迁移收敛（债账 #4），V3 期间只经 `intervention_service` 写，禁止第三入口 |
-| D-STATE | 用户状态 | `user_state_snapshots`（表 0 行）vs `state_aggregator.StateFieldEnvelope`（20 个类型化字段）vs `ltm_daily_snapshots` vs `daily_behavior_vector` vs working_memory snapshot | `state_aggregator`（schema.py 是唯一类型化契约） | `user_state_snapshots` 表与写入方**脱节**——先查消费者再决定补写或废弃，V3 前禁止双写 | UserWorldSnapshot（V3）以 state_aggregator 字段为骨架合成 |
-| D-TASK | 任务 | `tasks`(1089 行 live) vs `cards`+`task_occurrences`(0 行) vs `group_tasks`(社群域) vs `memory_goals`(7 行记忆域) vs `jobs`(celery) | 今日真值=`tasks`；card_protocol 为目标协议 | 无（两态并存是受治理的迁移，非腐化） | card_protocol shadow 验证通过后切流；V3 Smallest Useful Step 落在 task_occurrences 上 |
+| D-STATE | 用户状态 | `user_state_snapshots`（表 0 行）vs `state_aggregator.StateFieldEnvelope`（20 个类型化字段）vs `ltm_daily_snapshots` vs `daily_behavior_vector` vs working_memory snapshot | `state_aggregator`（schema.py 是唯一类型化契约） | `user_state_snapshots` 写入方**存在**（state_estimator_service.py:30-38 确实持久化）但**无生产调用方**——孤儿路径而非无写入方；先查消费者再决定接线或废弃，V3 前禁止双写【R1-E2 修订】 | UserWorldSnapshot（V3）以 state_aggregator 字段为骨架合成 |
+| D-TASK | 任务 | `tasks`(1089 行 live) vs `cards`+`task_occurrences`(0 行) vs `group_tasks`(社群域) vs `memory_goals`(7 行记忆域) vs `jobs`(celery) | 今日真值=`tasks`；card_protocol 为目标协议 | 无（但「受治理」表述过强【R2-C2 修订】：CARD-DUAL-WRITE 守卫已停用、consistency_validator 自初始提交不存在——切流前提的校验模块从未落地，两态并存目前**无治理**，card_protocol 接线时须先补齐校验并恢复规则，见债账 2026-09-18 节） | card_protocol shadow 验证通过后切流；V3 Smallest Useful Step 落在 task_occurrences 上 |
 | D-CONF | 冲突裁决 | `conflict_resolver_service.py`(Stage20 lane 仲裁) vs `layer_conflict_resolver.py`(五层间) vs `memory_conflict_resolver.py`(语义键) | Stage20 为 memory lane 仲裁权威（D1-D4 已修） | 两个窄域 resolver 非同职责重复，但**命名易诱导 V3 Agent 造第四个**——V3 Conflict Resolver 一律扩展 Stage20 比较键 | 统一入口 facade 属低优选项 |
 | D-OUTBOX | 事件外发 | `event_outbox`（权威）vs `outbox_events`（遗留） | `event_outbox`（live 102 行；遗留表已从 live DB 消失） | `galaxy_service.py:142` 的 `outbox_events` fallback 成死代码 | 删 fallback 分支（随 V3 清理，不阻塞） |
 | D-ENTITLE | 权益 | `users.flame_level`（user.py:73）vs `user_library_subscriptions`/`user_consumables` | subscription/consumable 表 | flame_level 保留为展示层字段，禁作权益判据（V3 规则明文） | 渐进迁移判定点 |
@@ -63,7 +66,7 @@ V3 四分法（State / Memory / Knowledge / Events）与 Aurora / Agent Runtime 
 ## 3. V3 缺口（no-authority，需新建但须先证明现有对象不能扩展）
 
 1. **Experience Memory 聚合体**：`MEMORY_V3.md §5` 的（情境签名→干预→结果→反馈→边界）payload 无单一存储。最接近资产：`learning/distiller.py+strategy_store.py`（`distilled_strategy_cache`，source_trajectory_type="user_success"）、`intervention_strategy_outcomes`、`behavioral_outcomes`、`nightly_reviews`、`orchestration/experience_packets.py`。V3 应在此之上聚合，**不是**新造平行学习系统。
-2. **UserWorldSnapshot**：Context Compiler 的结构化快照输入不存在聚合体；扩展点 = `context_pack.py` 装配 + `state_aggregator` 字段 + `situation_brief.py`。
+2. **UserWorldSnapshot**【R2-C1 重分类：非缺口】：权威契约已存在 = `state_aggregator/schema.py:285` 的 `UserStateV1`（20 字段聚合体，自带 source_snapshot_ids/computed_at/freshness_seconds，即契约要求的 source_ref/observed_at/TTL 机制化实现）；持久化层 `user_state_snapshots` 0 行未放量。V3 以 UserStateV1 为骨架合成持久化，**禁止平行新造快照聚合**（契约版 v3/00_context/ENTITY_MAP.md:12 亦点名 UserStateV1）。
 3. **Trajectory / Golden Journey 读模型**：事件源已在 event_store，轨迹状态已在 plan_states——V3 只需读侧视图。
 
 ## 4. V2.5 已落地数据飞轮资产（V3 直接复用的地基，勿重建）

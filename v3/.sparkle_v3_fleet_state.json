@@ -8,12 +8,21 @@
    "stage": "DONE",
    "note": "R1+R2 双路 CHANGES 全处置(C1-C6+P3), 20行lineage 13列解析验证, 验收SQL双路复算一致",
    "since": "2026-09-19T13:10"
+  },
+  "V3-FIX-01": {
+   "worker": "wt7",
+   "since": "2026-09-19T13:20"
+  },
+  "V3-FIX-04": {
+   "worker": "wt4",
+   "since": "2026-09-19T13:20"
   }
  },
  "done": [
   "B-01",
   "B-02",
-  "B-05"
+  "B-05",
+  "B-06"
  ],
  "blocked": [],
  "notes": "V2.5 tail tasks (injection-visibility/P1-B/P1-C/android-r5/dailyflow-p2/web-r3) drain first; freed slots pick up B-01..B-06 then next_tasks.py ordering."
