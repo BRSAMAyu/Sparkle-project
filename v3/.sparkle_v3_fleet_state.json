@@ -20,6 +20,7 @@
     "C-01",
     "C-02",
     "D-01",
+    "D-02",
     "E-01",
     "E-05",
     "M-01",
@@ -35,5 +36,5 @@
     "X-02"
   ],
   "blocked": [],
-  "notes": "2026-09-19 15:0x: 3 aggregator/kill-switch test failures confirmed PRE-EXISTING (fail identically at pre-C-01 baseline wt4; state_aggregator untouched since initial commit) — not a C-01 regression; park for test-system batch. C-01 DONE@57c87a8e (dual-ACCEPT, F2 applied at merge). | 2026-09-19 evg: 4 merges (ee885386 B-03 / c0e02bf8 X-02 / 886a7d42 C-02 / 0ea1e198 M-07 incl. registry re-freeze 35 @26cf482d); engine restart deferred until B-04 collection completes; D-02 delta review in flight"
+  "notes": "2026-09-19 15:0x: 3 aggregator/kill-switch test failures confirmed PRE-EXISTING (fail identically at pre-C-01 baseline wt4; state_aggregator untouched since initial commit) — not a C-01 regression; park for test-system batch. C-01 DONE@57c87a8e (dual-ACCEPT, F2 applied at merge). | 2026-09-19 evg: 4 merges (ee885386 B-03 / c0e02bf8 X-02 / 886a7d42 C-02 / 0ea1e198 M-07 incl. registry re-freeze 35 @26cf482d); engine restart deferred until B-04 collection completes; D-02 delta review in flight | D-02 merged (read-model outcome ledger, zero write path)"
 }
