@@ -7,6 +7,7 @@ from loguru import logger
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.time_utils import ensure_naive_utc, utcnow
 from app.models.notification import PushHistory
 from app.models.user import PushPreference, User
 from app.schemas.notification import NotificationCreate
@@ -328,9 +329,13 @@ class PushService:
             tz = ZoneInfo("Asia/Shanghai")
             local_now = now.astimezone(tz)
 
-        # Start of local day in UTC
+        # Start of local day in UTC. naive-UTC is the DB canonical form
+        # (app/core/time_utils): PushHistory.created_at is TIMESTAMP WITHOUT
+        # TIME ZONE, and binding a tz-aware value here made asyncpg raise
+        # DataError for every user WITH a PushPreference row (daily-flow R2
+        # P1-B, 14/14 preference-row users skipped per cycle, 0 notifications).
         local_start_of_day = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
-        utc_start_of_day = local_start_of_day.astimezone(UTC)
+        utc_start_of_day = ensure_naive_utc(local_start_of_day.astimezone(UTC))
 
         query = (
             select(func.count())
@@ -428,7 +433,10 @@ class PushService:
         # P2': 用户可能尚无 PushPreference 行（joined 关系下为 None），
         # 直接解引用会让本次推送整体失败且 recall 队列键被误删。
         if user.push_preference is not None:
-            user.push_preference.last_push_time = datetime.now(UTC)
+            # naive-UTC canonical: last_push_time is TIMESTAMP WITHOUT TIME
+            # ZONE; an aware value raises the same asyncpg DataError on flush
+            # (same class as the P1-B daily-cap bug).
+            user.push_preference.last_push_time = utcnow()
 
         await self.db.commit()
         logger.info(f"Push sent to user {user.id} [{trigger_type}]: {title} - {body}")

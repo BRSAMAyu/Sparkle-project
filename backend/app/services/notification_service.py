@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime, time, timedelta
+from datetime import datetime, time, timedelta
 from uuid import UUID, uuid4
 from zoneinfo import ZoneInfo
 
@@ -174,7 +174,10 @@ class NotificationService:
                             NotificationInteraction.user_id == user_id,
                             NotificationInteraction.action_type == "dismissed",
                             NotificationInteraction.action_time
-                            >= datetime.now(UTC) - timedelta(days=7),
+                            # naive-UTC canonical: action_time is TIMESTAMP
+                            # WITHOUT TIME ZONE; aware bind raised DataError,
+                            # silently killing the ignore-backoff check (P1-B sweep).
+                            >= _utcnow() - timedelta(days=7),
                         )
                         .order_by(desc(NotificationInteraction.action_time))
                         .limit(5)

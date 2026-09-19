@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-from datetime import UTC
 from typing import Any
 from uuid import UUID
 
@@ -23,6 +22,7 @@ from app.core.metrics import (
     INTERVENTION_PARAMETER_COMPILATION_TOTAL,
     INTERVENTION_PUSH_HISTORY_TOTAL,
 )
+from app.core.time_utils import utcnow
 from app.db.session import AsyncSessionLocal
 from app.models.card_protocol import (
     Card,
@@ -238,9 +238,10 @@ class InterventionEventConsumer:
         )
         prefs = pref_result.scalar_one_or_none()
         if prefs:
-            from datetime import datetime
-
-            prefs.last_push_time = datetime.now(UTC)
+            # naive-UTC canonical: last_push_time is TIMESTAMP WITHOUT TIME
+            # ZONE; an aware value raises asyncpg DataError on flush (P1-B
+            # same-class tz bug found in the same push-chain sweep).
+            prefs.last_push_time = utcnow()
         result = {
             "delivered": True,
             "notification_id": str(created.id),
