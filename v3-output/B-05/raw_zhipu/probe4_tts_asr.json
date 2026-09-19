@@ -1,0 +1,119 @@
+[
+ {
+  "probe": "tts",
+  "model": "qwen3-tts-instruct-flash",
+  "voice": "Cherry",
+  "run": 1,
+  "http_status": 200,
+  "total_ms": 1494.3,
+  "output_keys": [
+   "audio",
+   "finish_reason"
+  ],
+  "usage": {
+   "characters": 42
+  },
+  "audio_source": "url",
+  "download_ms": 72.1,
+  "audio_bytes": 241964,
+  "audio_magic": "52494646",
+  "audio_is_riff": true,
+  "audio_is_mp3": false,
+  "audio_sha256_12": "35a64d172c3d",
+  "audio_url_expired_sample": ""
+ },
+ {
+  "probe": "tts",
+  "model": "qwen3-tts-instruct-flash",
+  "voice": "Cherry",
+  "run": 2,
+  "http_status": 200,
+  "total_ms": 1382.7,
+  "output_keys": [
+   "audio",
+   "finish_reason"
+  ],
+  "usage": {
+   "characters": 42
+  },
+  "audio_source": "url",
+  "download_ms": 72.7,
+  "audio_bytes": 215084,
+  "audio_magic": "52494646",
+  "audio_is_riff": true,
+  "audio_is_mp3": false,
+  "audio_sha256_12": "081ee35f9dc6",
+  "audio_url_expired_sample": ""
+ },
+ {
+  "probe": "asr",
+  "model": "qwen3-asr-flash-realtime",
+  "run": 1,
+  "pcm_bytes": 241920,
+  "sample_rate": 24000,
+  "ws_open_ms": 64.4,
+  "transcript_completed_ms": 617.3,
+  "transcript": "你好，我是星火，你的学习伙伴，今天也要加油哦。",
+  "events_seen": [
+   "session.created",
+   "session.updated",
+   "conversation.item.created",
+   "conversation.item.input_audio_transcription.text",
+   "conversation.item.input_audio_transcription.text",
+   "input_audio_buffer.committed",
+   "conversation.item.input_audio_transcription.text",
+   "conversation.item.input_audio_transcription.text",
+   "conversation.item.input_audio_transcription.text",
+   "conversation.item.input_audio_transcription.text",
+   "conversation.item.input_audio_transcription.text",
+   "conversation.item.input_audio_transcription.text"
+  ],
+  "total_ms": 617.3
+ },
+ {
+  "probe": "asr",
+  "model": "qwen3-asr-flash-realtime",
+  "run": 2,
+  "pcm_bytes": 241920,
+  "sample_rate": 24000,
+  "ws_open_ms": 56.1,
+  "transcript_completed_ms": 426.1,
+  "transcript": "你好，我是星火，你的学习伙伴，今天也要加油哦。",
+  "events_seen": [
+   "session.created",
+   "session.updated",
+   "input_audio_buffer.committed",
+   "conversation.item.created",
+   "conversation.item.input_audio_transcription.text",
+   "conversation.item.input_audio_transcription.text",
+   "conversation.item.input_audio_transcription.text",
+   "conversation.item.input_audio_transcription.text",
+   "conversation.item.input_audio_transcription.text",
+   "conversation.item.input_audio_transcription.text",
+   "conversation.item.input_audio_transcription.text",
+   "conversation.item.input_audio_transcription.text"
+  ],
+  "total_ms": 426.1
+ },
+ {
+  "probe": "asr",
+  "model": "qwen3-asr-flash-realtime",
+  "run": 99,
+  "pcm_bytes": 32000,
+  "sample_rate": 16000,
+  "ws_open_ms": 46.5,
+  "transcript_completed_ms": 226.4,
+  "transcript": "嗯。",
+  "events_seen": [
+   "session.created",
+   "session.updated",
+   "input_audio_buffer.committed",
+   "conversation.item.created",
+   "conversation.item.input_audio_transcription.text",
+   "conversation.item.input_audio_transcription.text",
+   "conversation.item.input_audio_transcription.completed"
+  ],
+  "total_ms": 226.4,
+  "note": "low-amp 440Hz tone, expect empty/short transcript"
+ }
+]

@@ -4,22 +4,17 @@
  "baseline_head": "fedd27e35e305502ba727ba8c3fb46eae33a1eb9",
  "slots": 6,
  "active": {
-  "B-01": {
-   "worker": "wt6 redispatch (post-freeze)",
-   "since": "2026-09-19T12:00"
-  },
   "B-02": {
-   "stage": "REVIEW_2_PENDING",
-   "note": "R1=CHANGES(C1-C4) Leader 已处置@51f5acd7; R2 已派",
-   "since": "2026-09-19T12:00"
-  },
-  "B-05": {
-   "stage": "REVIEW_PENDING",
-   "note": "B-05b zhipu retest READY_FOR_REVIEW @wt2; reviewer dispatched",
-   "since": "2026-09-19T12:40"
+   "stage": "DONE",
+   "note": "R1+R2 双路 CHANGES 全处置(C1-C6+P3), 20行lineage 13列解析验证, 验收SQL双路复算一致",
+   "since": "2026-09-19T13:10"
   }
  },
- "done": [],
+ "done": [
+  "B-01",
+  "B-02",
+  "B-05"
+ ],
  "blocked": [],
  "notes": "V2.5 tail tasks (injection-visibility/P1-B/P1-C/android-r5/dailyflow-p2/web-r3) drain first; freed slots pick up B-01..B-06 then next_tasks.py ordering."
 }

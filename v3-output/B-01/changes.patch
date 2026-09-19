@@ -1,0 +1,768 @@
+diff --git a/v3-output/B-01/MODULE_MATRIX.csv b/v3-output/B-01/MODULE_MATRIX.csv
+new file mode 100644
+index 00000000..21358345
+--- /dev/null
++++ b/v3-output/B-01/MODULE_MATRIX.csv
+@@ -0,0 +1,43 @@
++feature_id,name,module_path,status,jtbd,journey_map,data_truth,reachability_evidence,v3_surface,source_sha
++F01,achievement,mobile/lib/features/achievement,CONTEXTUAL,"安静确认有意义的成果（quiet feedback, not vanity）",GJ2=today-loop: home→task→focus→complete→achievement,真实: user_achievements 1011 行; achievements 47; 后端 /achievements 探测 401,GoRouter 注册 /achievements 等 6 路径; 字符串导航 5 处; sparkle://achievement 深链; home 进度横幅入口,SECONDARY→CONTEXTUAL: 保留安静反馈（D17 降权游戏化; milestone 庆祝降噪）,a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F02,aurora,mobile/lib/features/aurora,CORE,自适应决策+关系层（为什么建议/纠正/何时沉默）,GJ3=stuck-loop: chat/aurora→friction→hybrid action→outcome (Sparkle Moment); GJ5=understand-reflect: insights→report→memory→cognitive,真实: 后端 /aurora 探测 401 活; aurora_judgment_records 55; mobile 侧为数据层(chat/home 消费 aurora_correction/daily_startup),无独立屏; 以数据层经 /chat extra(aurora_correction) 与 home 启动消息呈现 — 设计如此(D07),"CORE: Adaptive Control Layer; 不新增独立页面, 经 Chat/Home 出现",a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F03,auth,mobile/lib/features/auth,CORE,低摩擦安全登录/会话,GJ1=first-run: splash→auth→onboarding→home,"真实: users 248, user_sessions 242; /api/v1/auth 探测 401",公开路径 /login /register /forgot-password /reset-password /legal/*; routes.dart 强制鉴权重定向,CORE: 保留; 游客+显式体验模式(D05),a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F04,calendar,mobile/lib/features/calendar,CONTEXTUAL,时间放置/日程介入,GJ4=goal-track: goal→plan→calendar/sprint→galaxy,真实: calendar_events 1793; 后端 /calendar/events 探测 401,注册 /calendar /calendar-stats /calendar/day; 字符串导航 3 处; home 日程卡入口,"CONTEXTUAL(D19): Goal/Action Context 内出现, 非一级目的地",a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F05,chat,mobile/lib/features/chat,CORE,澄清/协作/执行（Aurora Conversation）,GJ3=stuck-loop: chat/aurora→friction→hybrid action→outcome (Sparkle Moment); GJ4=goal-track: goal→plan→calendar/sprint→galaxy,"真实: chat_messages 954, chat_sessions 240; 网关 /ws/chat + /chat/sessions 401",Tab-2 /chat 注册于 StatefulShellRoute; chat_settings/group/private 路由; 全应用最大入口密度,CORE: 五 Tab 之一(D04); fast/deep/agent 模式,a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F06,cognitive,mobile/lib/features/cognitive,CORE,证据化理解/反思（区分 friction 类型）,GJ5=understand-reflect: insights→report→memory→cognitive,"真实: behavior_patterns 40, cognitive_fragments 103; 后端 /cognitive 401; mock 仓仅 USE_MOCK 编译期门控, 默认真实 API",注册 /cognitive/patterns(字符串导航 4) /curiosity-capsule(5); sparkle://prism|capsule 深链,CORE: P2 承载; 禁伪心理分数(D06),a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F07,community,mobile/lib/features/community,CONTEXTUAL,小队问责/冲刺/成果 check-in,GJ7=social-sprint: community→squad/accountability→check-in,"真实: group_members 664, private_messages 1304, group_messages 340, accountability_* 372, posts 40; mock 仓仅 DemoMode 门控",Tab-4 /community 注册; 21 条子路由; 13 个外部文件引用路由常量,"CONTEXTUAL(CORE_OPTIONAL): Tab 保留但按 D18 重构为小队/冲刺, 去公共 feed 属性",a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F08,document,mobile/lib/features/document,CONTEXTUAL,材料摄取/清洗处理能力,GJ8=knowledge-material: documents→galaxy node→error book→review,"真实(薄): document_chunks 7, knowledge_node_documents 14; 后端 /ingestion /documents 401",无独立屏; repositories/models 被 documents feature 与上传流消费,"CONTEXTUAL: knowledge 来源层, 非用户 memory(D19)",a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F09,documents,mobile/lib/features/documents,CONTEXTUAL,浏览/管理目标材料库,GJ8=knowledge-material: documents→galaxy node→error book→review,同 F08(薄但真); 网关 /documents 组 401,注册 /library /documents; 入口=profile+unified settings(2 常量引用); galaxy draft review 联动,CONTEXTUAL(D19): Goal Context 按需出现,a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F10,error_book,mobile/lib/features/error_book,CONTEXTUAL,把错误转化为练习/证据,GJ8=knowledge-material: documents→galaxy node→error book→review,薄: error_records 仅 1 行; 后端 /errors 401 活,注册 /errors 等 4 路径; 字符串导航 1; galaxy 节点详情入口,CONTEXTUAL(D19): 练习/复习上下文中出现; root cause 保持假设性,a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F11,experience,mobile/lib/features/experience,CONTEXTUAL,浮现过去有效的干预/成果（why-this 证据）,GJ5=understand-reflect: insights→report→memory→cognitive; GJ3=stuck-loop: chat/aurora→friction→hybrid action→outcome (Sparkle Moment),真实: understanding_depth_daily 149; 后端 /experience/readouts 401,无独立屏; snapshot 卡片(goal_detail/understanding)被 goal/insights 消费,"CONTEXTUAL: Experience Memory 的 UI 面, 不做独立人格系统",a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F12,file,mobile/lib/features/file,CONTEXTUAL,材料/产物文件操作(上传/缓存),GJ8=knowledge-material: documents→galaxy node→error book→review,真实: stored_files 7; 后端 /files 401 + /ws/files,无独立屏; 上传/缓存 service 被 documents/community 消费,CONTEXTUAL: permission/version 跟踪的底层能力,a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F13,focus,mobile/lib/features/focus,CONTEXTUAL,帮助执行已选的人类行动,GJ2=today-loop: home→task→focus→complete→achievement,真实(最强): focus_sessions 2431; 后端 /focus/sessions 401; 本地 Isar 真源(B-02 INV-13),注册 /focus /focus/mindfulness/:id; 字符串导航 6 处; home 工具卡入口,CONTEXTUAL(D19): 计时器不是 outcome; human action 上下文内出现,a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F14,galaxy,mobile/lib/features/galaxy,CORE,知识/成果轨迹可视化,GJ4=goal-track: goal→plan→calendar/sprint→galaxy; GJ8=knowledge-material: documents→galaxy node→error book→review,"真实: user_node_status 8478, knowledge_nodes 157, galaxy_skins 28; 后端 /galaxy/graph 401",Tab-3 /galaxy 注册; node/:id + drafts/review; theater/error_book/documents 回跳入口,CORE: 五 Tab 之一(D04)=Outcome & Knowledge Graph,a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F15,goal,mobile/lib/features/goal,CORE,期望成果的持久上下文（首要组织对象）,GJ4=goal-track: goal→plan→calendar/sprint→galaxy; GJ3=stuck-loop: chat/aurora→friction→hybrid action→outcome (Sparkle Moment),"写入路径真实(Goal ORM db.add, goal_decomposition_service.py:132); 但 DB goals 0 行@探测时, plans 399 为实际主载体 — 落表需复核",注册 /goals/new /goals/:goalId; home dashboard 字符串导航 2 处,CORE: primary organizing object; goals 表空置列入补测,a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F16,home,mobile/lib/features/home,CORE,回答现在最值得做什么,GJ2=today-loop: home→task→focus→complete→achievement; GJ1=first-run: splash→auth→onboarding→home,真实: dashboard/growth/weekly 统计族 actual(B-02 INV-13); tasks/notifications 供数,Tab-1 /home 注册; dashboard 15+ widget 入口(全应用入口枢纽); /notifications /weather 子路由,"CORE: 五 Tab 之一(D04)=Today Cockpit, 一个主行动",a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F17,insights,mobile/lib/features/insights,CORE,证据→有用反思,GJ5=understand-reflect: insights→report→memory→cognitive,真实: understanding_depth_daily 149; 后端 /insights 401; dashboard 子页真实 API,注册 6 路径; insight_hub_card(overviewLocation) + sparkle://insights 深链; home 卡片入口,CORE: fact→interpretation→uncertainty→action(D06 禁神秘百分比),a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F18,intent,mobile/lib/features/intent,CONTEXTUAL,内部: 请求路由/意图分类,GJ3=stuck-loop: chat/aurora→friction→hybrid action→outcome (Sparkle Moment),真实: routing_decision_log 450; 后端 multi-intent/omnibar 401,无 UI; intent_provider 被 omnibar/chat 消费 — 数据层,"INTERNAL 能力, 无用户面; 保留为 chat/omnibar 依赖",a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F19,knowledge,mobile/lib/features/knowledge,CONTEXTUAL,检索使用用户/外部知识(RAG),GJ8=knowledge-material: documents→galaxy node→error book→review; GJ3=stuck-loop: chat/aurora→friction→hybrid action→outcome (Sparkle Moment),"真实: knowledge_nodes 157, node_relations 7; 内含 vocabulary_repository",无独立屏; 被 galaxy/chat/vocabulary 消费 — 数据层,"CONTEXTUAL: 与 memory 分离(D09), 经 galaxy/chat 出现",a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F20,leaderboard,mobile/lib/features/leaderboard,HIDDEN,（无 V3 核心 JTBD）,无(不可达/LABS),空: leaderboard_snapshots 0 行; 后端 /leaderboards 401 但无 cohort 过滤(B-02 INV-09 guest/seed 污染),不可达: GoRouter 未注册; leaderboard_screen.dart 全仓 0 引用(死代码); 仅 api_endpoints/l10n 残留,D17: 默认隐藏; 修 cohort 污染前禁上线; 死屏建议 RETIRE,a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F21,memory,mobile/lib/features/memory,CORE,受控的纵向个性化（来源/scope/可撤销）,GJ5=understand-reflect: insights→report→memory→cognitive; GJ6=trust-control: settings→memory settings→export/privacy,"真实: episodic_memories 235, memory_preferences 89; 后端 /memory 401 + memory_settings",注册 /memory /memory/settings /memory/detail; unified_settings+persona 入口(2 常量引用),CORE: D09/D10/D11 硬过滤+显式纠正最高权重的载体,a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F22,mirofish,mobile/lib/features/mirofish,LABS,"（实验视觉组件, 非独立 feature）",无(不可达/LABS),N/A(纯展示组件),"不可达为页面: 无路由无屏; presentation/support 仅 stage header, 被 simulation/theater/report 引用","D19/LABS: 视觉实验, 随宿主屏(LABS 群)存亡; 不单列产品面",a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F23,notification_center,mobile/lib/features/notification_center,CONTEXTUAL,浮现高价值主动干预,GJ3=stuck-loop: chat/aurora→friction→hybrid action→outcome (Sparkle Moment); GJ6=trust-control: settings→memory settings→export/privacy,"真实: notifications 2968, notification_interactions 978, push_histories 2225; 后端 401",注册 /notification-center /notification-analytics; 字符串导航 2; 推送深链入口,CONTEXTUAL: burden cap(D08 proactive cadence 受控),a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F24,onboarding,mobile/lib/features/onboarding,CORE,3 分钟内到达首个有效价值,GJ1=first-run: splash→auth→onboarding→home,真实: users 248(user_preferences_center 248); modeling-chat 会话写入 chat_sessions,/onboarding/persona /onboarding/modeling-chat 注册于 UserRoutes; routes.dart 强制重定向(非游客未完成必达),CORE: progressive profiling; 不伪造历史(D05),a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F25,openclaw,mobile/lib/features/openclaw,CONTEXTUAL,Agent 执行委托 hub（统一 Runtime 面）,GJ3=stuck-loop: chat/aurora→friction→hybrid action→outcome (Sparkle Moment),真实: 后端 /executions 401 活; executions 经 /tasks/:id/execute(origin=openclaw) 写入,注册 /openclaw(=HomeRoutes.openClawHub); home openclaw_hub_card + chat delegate 入口(3 处) + sparkle://openclaw 深链,CONTEXTUAL: D16 唯一 Runtime 适配层; 不做第二 AI 中心,a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F26,photon,mobile/lib/features/photon,HIDDEN,（可选轻量奖励; V3 无核心 JTBD）,无(不可达/LABS),"半真: photon_transaction_history 25 行(后端活, /photons 401); 但无新增消费入口",不可达: PhotonBalanceCard 0 外部消费者(孤儿组件); /photon/history 仅被该孤儿组件引用; /photon/transfer 0 入口,D17: 从核心旅程降级→HIDDEN; 25 条历史交易数据保留后端,a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F27,plan,mobile/lib/features/plan,CORE,维护可修订的目标路线,GJ4=goal-track: goal→plan→calendar/sprint→galaxy,"真实: plans 399, plan_states 28; 后端 /plans 401 + exam-sprint 组",注册 15 路径(/plans 家族+exam-sprint+growth+sprint); home Branch-0 shellRoutes; push_navigation_service 深链,CORE: plan 可变非积压; exam-sprint 家族并入 Goals & Actions,a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F28,reflection,mobile/lib/features/reflection,HIDDEN,成果后提取学习,GJ5=understand-reflect: insights→report→memory→cognitive,后端 /reflections/summary 401 活,不可达(孤儿): /reflection/summary 已注册但常量 0 外部引用+字符串导航 0 处; 仅 routes.dart 挂载,降级: 成果后学习并入 insights/report(GJ5); 独立屏证明入口价值前 HIDDEN,a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F29,report,mobile/lib/features/report,CONTEXTUAL,汇总已验证进度,GJ5=understand-reflect: insights→report→memory→cognitive,真实: 后端 /learning-reports 401; facts-before-prose 管线(weekly_stats_service actual),注册 /learning-report; insights overview+home insight 卡 10 处常量引用,"CONTEXTUAL: 周期性反思面, LLM 前先算事实",a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F30,reviews,mobile/lib/features/reviews,CONTEXTUAL,复习产物/知识/错误,GJ8=knowledge-material: documents→galaxy node→error book→review,薄: review_history/review_feedback 0 行; 后端 /reviews 401 活,注册 /review /review-plan; error_detail + home 工具卡 5 处引用,CONTEXTUAL(D19): source-linked; 数据薄列入观察,a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F31,seed_library,mobile/lib/features/seed_library,LABS,开发者/演示种子（显式体验模式）,GJ1=first-run: splash→auth→onboarding→home,空: seed_libraries/seed_items 0 行; 后端 /seed-libraries /marketplace 401 活但无内容,注册 4 路径; chat settings + 字符串导航 1 处; marketplace 路由注册,"LABS: D05 严格命名空间; 仅体验示例模式, 不混入真实数据(D20)",a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F32,settings,mobile/lib/features/settings,CORE,隐私/代理/主动/无障碍控制,GJ6=trust-control: settings→memory settings→export/privacy,真实: user_preferences_center 248; /settings/transparency 字符串导航 1,无独立路由组; 4 屏(transparency/openclaw/data-usage/accessibility)经 UserRoutes 与 profile/settings 挂载,CORE: P5 信任层; 设置必须真实影响 runtime,a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F33,shop,mobile/lib/features/shop,HIDDEN,（可选外观奖励; V3 降级）,无(不可达/LABS),"空: shop_items 0, shop_purchases 0(空目录可逛); 后端 /shop /shop/items 401 活",可达但孤立: /shop 已注册 + streak_details_screen 1 处入口; 无商品数据,D17+D20: 从核心旅程降级→HIDDEN(真实目录接入前不上); 现有 1 入口随降权移除,a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F34,simulation,mobile/lib/features/simulation,LABS,实验性学习模拟,无(不可达/LABS),空: simulation_runs 0 行; 后端 /simulation 401 活但零使用,注册 /simulation; insights overview/theater/home hub 5 处引用(可达),"D19: 默认 LABS/HIDDEN, 证明独特价值前不进核心",a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F35,splash,mobile/lib/features/splash,CORE,快速可信启动/恢复,GJ1=first-run: splash→auth→onboarding→home,N/A(启动流程; 无业务表),'/' 初始路由; 深链 redirect 中转(_safePendingRedirect 防开放重定向),CORE: 无装饰延迟; 深链恢复,a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F36,task,mobile/lib/features/task,CORE,具体行动生命周期(完成即证据),GJ2=today-loop: home→task→focus→complete→achievement; GJ3=stuck-loop: chat/aurora→friction→hybrid action→outcome (Sparkle Moment),"真实: tasks 1219, plan_execution_records 0(执行记录链路薄); 后端 /tasks 401 + 40+ 子端点",注册 4 路径; 字符串导航 11 处(最高频); home sprint 卡/日历卡入口; execution 流,CORE: completion evidence; Human/Agent 分工标注(D13),a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F37,theater,mobile/lib/features/theater,LABS,实验性知识可视化,无(不可达/LABS),"空: theater_predictions 0, theater_candidate_bundles 0; 后端 /theater/predictions 401 组活但零写入",注册 /theater; insights/theater 卡+chat bubble 6 处引用(可达),D19: 默认 LABS/HIDDEN,a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F38,tools,mobile/lib/features/tools,CONTEXTUAL,Agent/行动可用的能力注册表,GJ3=stuck-loop: chat/aurora→friction→hybrid action→outcome (Sparkle Moment); GJ8=knowledge-material: documents→galaxy node→error book→review,"真实: user_tool_history 15; 后端 /tool-history 组(根 404 属正常, 子路径注册)",注册 /tools/library /tools/:toolId; cognitive_tool_hub_card 字符串导航; tool_registry 10+ 工具(vocab/translator/...),CONTEXTUAL(D19): permissioned registry; 工具即 Goal Context 能力,a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F39,translation,mobile/lib/features/translation,CONTEXTUAL,消除材料语言摩擦,GJ8=knowledge-material: documents→galaxy node→error book→review,后端 /translation 401 活; 翻译历史路由,注册 /translations/history; translator_tool 内 1 处常量引用,"CONTEXTUAL: 仅按需出现, 非独立一级 app",a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F40,user,mobile/lib/features/user,CORE,账户+反思/控制面（我的）,GJ6=trust-control: settings→memory settings→export/privacy; GJ1=first-run: splash→auth→onboarding→home,真实: users 248; 导出/会话/安全日志后端 401 活,"Tab-5 /profile + 22 子路由(15 外部引用文件, 最高); router redirect 参与引导",CORE: 五 Tab 之一(D04)=Reflection & Control; 非另一画像真值,a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F41,visual_elements,mobile/lib/features/visual_elements,LABS,实验视觉元素集,无(不可达/LABS),"真实但实验性: user_visual_elements 80, visual_elements 50",注册 /visual-elements; profile+unified settings 2 处引用(可达),"D19/D21: LABS; 仅 design-system 拥有时保留, 实验不进核心流程",a2d8a10c192f451a2c11042df8e4f6227cad37f9
++F42,vocabulary,mobile/lib/features/vocabulary,CONTEXTUAL,目标需要时练习词汇,GJ8=knowledge-material: documents→galaxy node→error book→review,后端 /vocabulary/wordbook /lookup 401 活; 词库数据经 knowledge/vocabulary_repository,"无独立屏(不可达为页面); 以 vocabulary_lookup 工具注册于 tool_registry, 经 /tools/:toolId 出现","CONTEXTUAL(D19): 学习行动内的工具能力, 非独立主页面",a2d8a10c192f451a2c11042df8e4f6227cad37f9
+diff --git a/v3-output/B-01/REPORT.md b/v3-output/B-01/REPORT.md
+new file mode 100644
+index 00000000..3dc57774
+--- /dev/null
++++ b/v3-output/B-01/REPORT.md
+@@ -0,0 +1,68 @@
++# B-01 报告：42 模块产品生死簿与可达性真相
++
++- 任务卡：B-01（stream BASELINE，gate V3-0，risk medium）
++- 基线 HEAD：`a2d8a10c192f451a2c11042df8e4f6227cad37f9`（worktree wt6）
++- 方法：LIGHT 静态证据（GoRouter 注册表 + 入口引用分析 + gateway 路由代码 + 未鉴权 curl 探测 + DB 只读 SELECT）
++- 日期：2026-09-19
++- 交付：`MODULE_MATRIX.csv`（42 行）、`portfolio.json`（同口径 machine-readable）、本报告
++
++## 1. 方法
++
++1. **可达性**：以 `mobile/lib/app/routes.dart` 的 GoRouter 注册表为准，逐 feature 提取 `*_routes.dart` 的路径常量与注册状态；再用跨 feature 引用分析（Route 常量外部引用 + `context.go/push('/…')` 字符串导航 + `core/services/deep_link_service.dart` 深链映射）判定「注册 ≠ 可达」。
++2. **后端真相**：枚举 `backend/gateway/internal/handler/proxy_routes.go`（gin，~69 个 `/api/v1` 代理组，273 条 method+path）与 `backend/app/api/v1|v2`（FastAPI，104 个 include_router）；对运行中的网关做未鉴权 curl 探测（401=存在需登录 / 404=路径未注册）。
++3. **数据真实性**：`docker exec sparkle_db psql`（只读）查 248 张表的 `pg_stat_user_tables.n_live_tup`；mobile 侧核对 mock 接线（`USE_MOCK` 编译期门控 / `DemoDataService.isDemoMode` 运行时门控，默认均走真实 API）；交叉引用 `v3-output/B-02/data_truth_inventory.csv`（15 项既有结论，含 INV-09 排行榜 cohort 污染、INV-01 3518 行 DemoDataService）。
++4. **状态判定**：CORE/CONTEXTUAL/LABS/HIDDEN/RETIRE/UNKNOWN，依据 `v3/NORTH_STAR.md` §7、`v3/00_context/DECISIONS_V3.md`（D04/D17/D18/D19/D20）、`v3/03_modules/LONG_TAIL.md`。未知不猜。
++
++**Golden Journeys（判定锚点，源自 NORTH_STAR §3–§4）**：
++GJ1 first-run（splash→auth→onboarding→home）｜GJ2 today-loop（home→task→focus→完成→achievement）｜GJ3 stuck-loop（chat/aurora→friction→hybrid→outcome，即 Sparkle Moment）｜GJ4 goal-track（goal→plan→calendar/sprint→galaxy）｜GJ5 understand-reflect（insights→report→memory→cognitive）｜GJ6 trust-control（settings→memory 设置→导出/隐私）｜GJ7 social-sprint（community→小队问责→check-in）｜GJ8 knowledge-material（documents→galaxy 节点→错题→复习）。
++
++## 2. 统计（42/42 全定级，无 UNKNOWN 残留）
++
++| 状态 | 数量 | 明细 |
++|---|---|---|
++| CORE | 15 | aurora, auth, chat, cognitive, galaxy, goal, home, insights, memory, onboarding, plan, settings, splash, task, user |
++| CONTEXTUAL | 18 | achievement, calendar, community, document, documents, error_book, experience, file, focus, intent, knowledge, notification_center, openclaw, report, reviews, tools, translation, vocabulary |
++| LABS | 5 | mirofish, seed_library, simulation, theater, visual_elements |
++| HIDDEN | 4 | leaderboard, photon, reflection, shop |
++| RETIRE | 0 | （leaderboard 死屏为最接近项，见 §4） |
++| UNKNOWN | 0 | （空表疑点列入 §5 补测，不影响状态判定） |
++
++**CORE/CONTEXTUAL → Golden Journey 映射完整性**：33 项全部映射到至少一条 GJ（见 CSV `journey_map` 列）。唯一无 GJ 的 9 项全部是 LABS/HIDDEN（用户不可达或默认隐藏），符合验收标准。
++
++## 3. 关键发现（可达性真相）
++
++1. **42 个 feature 目录 ≠ 42 个可达页面**。其中 8 个目录无独立屏：aurora/experience/knowledge/intent/file/document 为数据层/组件层（被 chat、galaxy、goal、documents 消费，这是合理架构而非债务）；vocabulary 以 `vocabulary_lookup` 注册进 `tool_registry` 经 `/tools/:toolId` 出现；settings 无独立路由组，4 屏经 UserRoutes/profile 挂载。
++2. **三个从未注册进 GoRouter 的目录**：`leaderboard`（有屏但全仓 0 引用=死代码）、`mirofish`（仅共享视觉组件）、`vocabulary`（仅 providers+工具注册）。
++3. **两个「注册但零入口」的孤儿路由**：`/reflection/summary`（常量 0 外部引用 + 字符串导航 0 处）与 `/photon/transfer`；外加孤儿组件 `PhotonBalanceCard`（0 外部消费者，连带 `/photon/history` 不可达）。
++4. **shop 形式可达但内容空**：`/shop` 注册 + streak_details 1 处入口，但 `shop_items`/`shop_purchases` 均 0 行——用户点进去是空目录（D20 违风险）。
++5. **数据真实性分层清楚**：mock 只出现在两处门控之后（`USE_MOCK` 编译期、`DemoDataService.isDemoMode` 运行时，持真实 token 时被 auth_provider 强制关闭）。真实写入最强的表：user_node_status 8478、notifications 2968、focus_sessions 2431、decision_records 2418、calendar_events 1793、tasks 1219、chat_messages 954。
++6. **六类表完全零写入**：leaderboard_snapshots、shop_items/purchases、theater_predictions、simulation_runs、seed_libraries/items、marketplace_*——对应后端端点活着但从未被真实使用，是「端点丰富、产品为空」的典型长尾。
++7. **goals 表 0 行但写入路径真实**（`goal_decomposition_service.py:132` 用 `db.add(goal)` 落 Goal ORM）：plans 399 行是实际主载体，goal 创建落表需运行时复核（不阻塞其 CORE 判定，JTBD/入口证据独立成立）。
++
++## 4. leaderboard / shop / photon 的 V3 决策标注
++
++| 模块 | 决策 | 静态证据 | 依据 |
++|---|---|---|---|
++| leaderboard | **HIDDEN**（死屏建议随 HIDDEN 一并删除→RETIRE 倾向） | GoRouter 未注册；`leaderboard_screen.dart` 全仓 0 引用；`leaderboard_snapshots` 0 行；后端 `/leaderboards` 活但无 cohort 过滤（B-02 INV-09：guest/seed 100% 占据 top-50） | D17「Leaderboard 默认隐藏」+ D20「不造假数据」；修复 cohort 过滤前禁止任何入口 |
++| shop | **HIDDEN**（真实目录接入前不上） | `/shop` 注册 + streak_details 1 处入口（形式可达）；`shop_items` 0、`shop_purchases` 0 | D17「Shop 从核心旅程降级」+ D20「空表面不上」；建议该 1 处入口随 gamification 降权移除，避免空目录暴露 |
++| photon | **HIDDEN**（已是事实孤儿，确认即可） | `PhotonBalanceCard` 0 外部消费者；`/photon/transfer` 0 入口；`/photon/history` 仅被孤儿卡引用；后端 `/photons` 活且 `photon_transaction_history` 25 行真实交易 | D17「Photon 从核心旅程降级」；25 条历史数据保留在后端，UI 不可达与 V3 目标态一致 |
++
++**长尾判定（D19）**：contextual 能力 = focus / calendar / error_book / documents+document / vocabulary / translation / tools / reviews / report / reflection(并入 insights) ；LABS = simulation / theater / mirofish / visual_elements / seed_library。与 LONG_TAIL.md 的 Portfolio test 逐项对照：LABS 群全部答不出「删除是否损伤 WVPL」（全部 0 写入或纯展示），维持降级。
++
++## 5. 需模拟器补测清单（静态证据不足以定论的运行时项）
++
++> 本卡为 LIGHT 任务，以下项不影响本次状态判定（判定依据为独立的 JTBD/入口证据），但 V3-0 gate 通过前建议由 HEAVY 实测卡补验：
++
++1. **goal 创建落表**：`goals` 表 0 行 vs `plans` 399 行——运行时创建一个 goal 验证落表位置（`mobile/lib/features/goal` + `/api/v1/goals`）。
++2. **plan_execution_records 0 行**：task/agent 执行链（`/tasks/:id/execute`）是否真实落库，还是只写 tasks 表。
++3. **reflection 孤儿确认**：模拟器全路径巡检（含推送/深链旁路）确认 `/reflection/summary` 无可达路径；另确认 insights 内是否已内嵌等价反思面板。
++4. **photon 孤儿确认**：巡检 profile/settings 无 photon 余额入口。
++5. **LABS 群数据隔离**：theater/simulation/seed_library 打开后确认 demo 数据不混入真实缓存（D20；红测 `mock_statistics_guard_test.dart` 当前 RED，B-02 INV-02/03/04）。
++6. **游客/seed 入榜**：leaderboard 若未来复活，先用 DB 复算验证 cohort 过滤（INV-09）。
++
++## 6. 边界与诚实声明
++
++- 服务探测用的是主仓运行中的实例（只读 curl/psql），未启动任何新服务、未动模拟器。
++- 网关探测 404 的语义 = 「该子路径未注册」，已与 proxy_routes.go 源码双重核对（如 `/theater` 组只有 `/predictions/*` 子路径，故 `/theater/sessions` 404 不代表 theater 后端缺失）。
++- `pg_stat_user_tables.n_live_tup` 受 autovacuum 时机影响，空表结论均与「是否找到写入代码路径」交叉核对后才写进 data_truth（如 goals 0 行但写入路径存在→列入补测而非判假）。
++- 本卡零代码改动；worktree 内仅新增 `v3-output/B-01/` 四个交付文件。
+diff --git a/v3-output/B-01/portfolio.json b/v3-output/B-01/portfolio.json
+new file mode 100644
+index 00000000..b3b3d1eb
+--- /dev/null
++++ b/v3-output/B-01/portfolio.json
+@@ -0,0 +1,638 @@
++{
++  "task": "B-01",
++  "baseline_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9",
++  "generated": "2026-09-19",
++  "method": "static: GoRouter registry + entry-reference analysis + gateway route code + unauth curl probes (401/404) + read-only DB row counts; cross-checked with v3-output/B-02 inventory",
++  "golden_journeys": {
++    "GJ1": "first-run: splash→auth→onboarding→home",
++    "GJ2": "today-loop: home→task→focus→complete→achievement",
++    "GJ3": "stuck-loop: chat/aurora→friction→hybrid action→outcome (Sparkle Moment)",
++    "GJ4": "goal-track: goal→plan→calendar/sprint→galaxy",
++    "GJ5": "understand-reflect: insights→report→memory→cognitive",
++    "GJ6": "trust-control: settings→memory settings→export/privacy",
++    "GJ7": "social-sprint: community→squad/accountability→check-in",
++    "GJ8": "knowledge-material: documents→galaxy node→error book→review"
++  },
++  "counts": {
++    "CONTEXTUAL": 18,
++    "CORE": 15,
++    "HIDDEN": 4,
++    "LABS": 5
++  },
++  "total": 42,
++  "modules": [
++    {
++      "feature_id": "F01",
++      "name": "achievement",
++      "module_path": "mobile/lib/features/achievement",
++      "status": "CONTEXTUAL",
++      "jtbd": "安静确认有意义的成果（quiet feedback, not vanity）",
++      "journey_map": [
++        "GJ2"
++      ],
++      "data_truth": "真实: user_achievements 1011 行; achievements 47; 后端 /achievements 探测 401",
++      "reachability_evidence": "GoRouter 注册 /achievements 等 6 路径; 字符串导航 5 处; sparkle://achievement 深链; home 进度横幅入口",
++      "v3_surface": "SECONDARY→CONTEXTUAL: 保留安静反馈（D17 降权游戏化; milestone 庆祝降噪）",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F02",
++      "name": "aurora",
++      "module_path": "mobile/lib/features/aurora",
++      "status": "CORE",
++      "jtbd": "自适应决策+关系层（为什么建议/纠正/何时沉默）",
++      "journey_map": [
++        "GJ3",
++        "GJ5"
++      ],
++      "data_truth": "真实: 后端 /aurora 探测 401 活; aurora_judgment_records 55; mobile 侧为数据层(chat/home 消费 aurora_correction/daily_startup)",
++      "reachability_evidence": "无独立屏; 以数据层经 /chat extra(aurora_correction) 与 home 启动消息呈现 — 设计如此(D07)",
++      "v3_surface": "CORE: Adaptive Control Layer; 不新增独立页面, 经 Chat/Home 出现",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F03",
++      "name": "auth",
++      "module_path": "mobile/lib/features/auth",
++      "status": "CORE",
++      "jtbd": "低摩擦安全登录/会话",
++      "journey_map": [
++        "GJ1"
++      ],
++      "data_truth": "真实: users 248, user_sessions 242; /api/v1/auth 探测 401",
++      "reachability_evidence": "公开路径 /login /register /forgot-password /reset-password /legal/*; routes.dart 强制鉴权重定向",
++      "v3_surface": "CORE: 保留; 游客+显式体验模式(D05)",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F04",
++      "name": "calendar",
++      "module_path": "mobile/lib/features/calendar",
++      "status": "CONTEXTUAL",
++      "jtbd": "时间放置/日程介入",
++      "journey_map": [
++        "GJ4"
++      ],
++      "data_truth": "真实: calendar_events 1793; 后端 /calendar/events 探测 401",
++      "reachability_evidence": "注册 /calendar /calendar-stats /calendar/day; 字符串导航 3 处; home 日程卡入口",
++      "v3_surface": "CONTEXTUAL(D19): Goal/Action Context 内出现, 非一级目的地",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F05",
++      "name": "chat",
++      "module_path": "mobile/lib/features/chat",
++      "status": "CORE",
++      "jtbd": "澄清/协作/执行（Aurora Conversation）",
++      "journey_map": [
++        "GJ3",
++        "GJ4"
++      ],
++      "data_truth": "真实: chat_messages 954, chat_sessions 240; 网关 /ws/chat + /chat/sessions 401",
++      "reachability_evidence": "Tab-2 /chat 注册于 StatefulShellRoute; chat_settings/group/private 路由; 全应用最大入口密度",
++      "v3_surface": "CORE: 五 Tab 之一(D04); fast/deep/agent 模式",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F06",
++      "name": "cognitive",
++      "module_path": "mobile/lib/features/cognitive",
++      "status": "CORE",
++      "jtbd": "证据化理解/反思（区分 friction 类型）",
++      "journey_map": [
++        "GJ5"
++      ],
++      "data_truth": "真实: behavior_patterns 40, cognitive_fragments 103; 后端 /cognitive 401; mock 仓仅 USE_MOCK 编译期门控, 默认真实 API",
++      "reachability_evidence": "注册 /cognitive/patterns(字符串导航 4) /curiosity-capsule(5); sparkle://prism|capsule 深链",
++      "v3_surface": "CORE: P2 承载; 禁伪心理分数(D06)",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F07",
++      "name": "community",
++      "module_path": "mobile/lib/features/community",
++      "status": "CONTEXTUAL",
++      "jtbd": "小队问责/冲刺/成果 check-in",
++      "journey_map": [
++        "GJ7"
++      ],
++      "data_truth": "真实: group_members 664, private_messages 1304, group_messages 340, accountability_* 372, posts 40; mock 仓仅 DemoMode 门控",
++      "reachability_evidence": "Tab-4 /community 注册; 21 条子路由; 13 个外部文件引用路由常量",
++      "v3_surface": "CONTEXTUAL(CORE_OPTIONAL): Tab 保留但按 D18 重构为小队/冲刺, 去公共 feed 属性",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F08",
++      "name": "document",
++      "module_path": "mobile/lib/features/document",
++      "status": "CONTEXTUAL",
++      "jtbd": "材料摄取/清洗处理能力",
++      "journey_map": [
++        "GJ8"
++      ],
++      "data_truth": "真实(薄): document_chunks 7, knowledge_node_documents 14; 后端 /ingestion /documents 401",
++      "reachability_evidence": "无独立屏; repositories/models 被 documents feature 与上传流消费",
++      "v3_surface": "CONTEXTUAL: knowledge 来源层, 非用户 memory(D19)",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F09",
++      "name": "documents",
++      "module_path": "mobile/lib/features/documents",
++      "status": "CONTEXTUAL",
++      "jtbd": "浏览/管理目标材料库",
++      "journey_map": [
++        "GJ8"
++      ],
++      "data_truth": "同 F08(薄但真); 网关 /documents 组 401",
++      "reachability_evidence": "注册 /library /documents; 入口=profile+unified settings(2 常量引用); galaxy draft review 联动",
++      "v3_surface": "CONTEXTUAL(D19): Goal Context 按需出现",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F10",
++      "name": "error_book",
++      "module_path": "mobile/lib/features/error_book",
++      "status": "CONTEXTUAL",
++      "jtbd": "把错误转化为练习/证据",
++      "journey_map": [
++        "GJ8"
++      ],
++      "data_truth": "薄: error_records 仅 1 行; 后端 /errors 401 活",
++      "reachability_evidence": "注册 /errors 等 4 路径; 字符串导航 1; galaxy 节点详情入口",
++      "v3_surface": "CONTEXTUAL(D19): 练习/复习上下文中出现; root cause 保持假设性",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F11",
++      "name": "experience",
++      "module_path": "mobile/lib/features/experience",
++      "status": "CONTEXTUAL",
++      "jtbd": "浮现过去有效的干预/成果（why-this 证据）",
++      "journey_map": [
++        "GJ5",
++        "GJ3"
++      ],
++      "data_truth": "真实: understanding_depth_daily 149; 后端 /experience/readouts 401",
++      "reachability_evidence": "无独立屏; snapshot 卡片(goal_detail/understanding)被 goal/insights 消费",
++      "v3_surface": "CONTEXTUAL: Experience Memory 的 UI 面, 不做独立人格系统",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F12",
++      "name": "file",
++      "module_path": "mobile/lib/features/file",
++      "status": "CONTEXTUAL",
++      "jtbd": "材料/产物文件操作(上传/缓存)",
++      "journey_map": [
++        "GJ8"
++      ],
++      "data_truth": "真实: stored_files 7; 后端 /files 401 + /ws/files",
++      "reachability_evidence": "无独立屏; 上传/缓存 service 被 documents/community 消费",
++      "v3_surface": "CONTEXTUAL: permission/version 跟踪的底层能力",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F13",
++      "name": "focus",
++      "module_path": "mobile/lib/features/focus",
++      "status": "CONTEXTUAL",
++      "jtbd": "帮助执行已选的人类行动",
++      "journey_map": [
++        "GJ2"
++      ],
++      "data_truth": "真实(最强): focus_sessions 2431; 后端 /focus/sessions 401; 本地 Isar 真源(B-02 INV-13)",
++      "reachability_evidence": "注册 /focus /focus/mindfulness/:id; 字符串导航 6 处; home 工具卡入口",
++      "v3_surface": "CONTEXTUAL(D19): 计时器不是 outcome; human action 上下文内出现",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F14",
++      "name": "galaxy",
++      "module_path": "mobile/lib/features/galaxy",
++      "status": "CORE",
++      "jtbd": "知识/成果轨迹可视化",
++      "journey_map": [
++        "GJ4",
++        "GJ8"
++      ],
++      "data_truth": "真实: user_node_status 8478, knowledge_nodes 157, galaxy_skins 28; 后端 /galaxy/graph 401",
++      "reachability_evidence": "Tab-3 /galaxy 注册; node/:id + drafts/review; theater/error_book/documents 回跳入口",
++      "v3_surface": "CORE: 五 Tab 之一(D04)=Outcome & Knowledge Graph",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F15",
++      "name": "goal",
++      "module_path": "mobile/lib/features/goal",
++      "status": "CORE",
++      "jtbd": "期望成果的持久上下文（首要组织对象）",
++      "journey_map": [
++        "GJ4",
++        "GJ3"
++      ],
++      "data_truth": "写入路径真实(Goal ORM db.add, goal_decomposition_service.py:132); 但 DB goals 0 行@探测时, plans 399 为实际主载体 — 落表需复核",
++      "reachability_evidence": "注册 /goals/new /goals/:goalId; home dashboard 字符串导航 2 处",
++      "v3_surface": "CORE: primary organizing object; goals 表空置列入补测",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F16",
++      "name": "home",
++      "module_path": "mobile/lib/features/home",
++      "status": "CORE",
++      "jtbd": "回答现在最值得做什么",
++      "journey_map": [
++        "GJ2",
++        "GJ1"
++      ],
++      "data_truth": "真实: dashboard/growth/weekly 统计族 actual(B-02 INV-13); tasks/notifications 供数",
++      "reachability_evidence": "Tab-1 /home 注册; dashboard 15+ widget 入口(全应用入口枢纽); /notifications /weather 子路由",
++      "v3_surface": "CORE: 五 Tab 之一(D04)=Today Cockpit, 一个主行动",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F17",
++      "name": "insights",
++      "module_path": "mobile/lib/features/insights",
++      "status": "CORE",
++      "jtbd": "证据→有用反思",
++      "journey_map": [
++        "GJ5"
++      ],
++      "data_truth": "真实: understanding_depth_daily 149; 后端 /insights 401; dashboard 子页真实 API",
++      "reachability_evidence": "注册 6 路径; insight_hub_card(overviewLocation) + sparkle://insights 深链; home 卡片入口",
++      "v3_surface": "CORE: fact→interpretation→uncertainty→action(D06 禁神秘百分比)",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F18",
++      "name": "intent",
++      "module_path": "mobile/lib/features/intent",
++      "status": "CONTEXTUAL",
++      "jtbd": "内部: 请求路由/意图分类",
++      "journey_map": [
++        "GJ3"
++      ],
++      "data_truth": "真实: routing_decision_log 450; 后端 multi-intent/omnibar 401",
++      "reachability_evidence": "无 UI; intent_provider 被 omnibar/chat 消费 — 数据层",
++      "v3_surface": "INTERNAL 能力, 无用户面; 保留为 chat/omnibar 依赖",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F19",
++      "name": "knowledge",
++      "module_path": "mobile/lib/features/knowledge",
++      "status": "CONTEXTUAL",
++      "jtbd": "检索使用用户/外部知识(RAG)",
++      "journey_map": [
++        "GJ8",
++        "GJ3"
++      ],
++      "data_truth": "真实: knowledge_nodes 157, node_relations 7; 内含 vocabulary_repository",
++      "reachability_evidence": "无独立屏; 被 galaxy/chat/vocabulary 消费 — 数据层",
++      "v3_surface": "CONTEXTUAL: 与 memory 分离(D09), 经 galaxy/chat 出现",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F20",
++      "name": "leaderboard",
++      "module_path": "mobile/lib/features/leaderboard",
++      "status": "HIDDEN",
++      "jtbd": "（无 V3 核心 JTBD）",
++      "journey_map": [],
++      "data_truth": "空: leaderboard_snapshots 0 行; 后端 /leaderboards 401 但无 cohort 过滤(B-02 INV-09 guest/seed 污染)",
++      "reachability_evidence": "不可达: GoRouter 未注册; leaderboard_screen.dart 全仓 0 引用(死代码); 仅 api_endpoints/l10n 残留",
++      "v3_surface": "D17: 默认隐藏; 修 cohort 污染前禁上线; 死屏建议 RETIRE",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F21",
++      "name": "memory",
++      "module_path": "mobile/lib/features/memory",
++      "status": "CORE",
++      "jtbd": "受控的纵向个性化（来源/scope/可撤销）",
++      "journey_map": [
++        "GJ5",
++        "GJ6"
++      ],
++      "data_truth": "真实: episodic_memories 235, memory_preferences 89; 后端 /memory 401 + memory_settings",
++      "reachability_evidence": "注册 /memory /memory/settings /memory/detail; unified_settings+persona 入口(2 常量引用)",
++      "v3_surface": "CORE: D09/D10/D11 硬过滤+显式纠正最高权重的载体",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F22",
++      "name": "mirofish",
++      "module_path": "mobile/lib/features/mirofish",
++      "status": "LABS",
++      "jtbd": "（实验视觉组件, 非独立 feature）",
++      "journey_map": [],
++      "data_truth": "N/A(纯展示组件)",
++      "reachability_evidence": "不可达为页面: 无路由无屏; presentation/support 仅 stage header, 被 simulation/theater/report 引用",
++      "v3_surface": "D19/LABS: 视觉实验, 随宿主屏(LABS 群)存亡; 不单列产品面",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F23",
++      "name": "notification_center",
++      "module_path": "mobile/lib/features/notification_center",
++      "status": "CONTEXTUAL",
++      "jtbd": "浮现高价值主动干预",
++      "journey_map": [
++        "GJ3",
++        "GJ6"
++      ],
++      "data_truth": "真实: notifications 2968, notification_interactions 978, push_histories 2225; 后端 401",
++      "reachability_evidence": "注册 /notification-center /notification-analytics; 字符串导航 2; 推送深链入口",
++      "v3_surface": "CONTEXTUAL: burden cap(D08 proactive cadence 受控)",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F24",
++      "name": "onboarding",
++      "module_path": "mobile/lib/features/onboarding",
++      "status": "CORE",
++      "jtbd": "3 分钟内到达首个有效价值",
++      "journey_map": [
++        "GJ1"
++      ],
++      "data_truth": "真实: users 248(user_preferences_center 248); modeling-chat 会话写入 chat_sessions",
++      "reachability_evidence": "/onboarding/persona /onboarding/modeling-chat 注册于 UserRoutes; routes.dart 强制重定向(非游客未完成必达)",
++      "v3_surface": "CORE: progressive profiling; 不伪造历史(D05)",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F25",
++      "name": "openclaw",
++      "module_path": "mobile/lib/features/openclaw",
++      "status": "CONTEXTUAL",
++      "jtbd": "Agent 执行委托 hub（统一 Runtime 面）",
++      "journey_map": [
++        "GJ3"
++      ],
++      "data_truth": "真实: 后端 /executions 401 活; executions 经 /tasks/:id/execute(origin=openclaw) 写入",
++      "reachability_evidence": "注册 /openclaw(=HomeRoutes.openClawHub); home openclaw_hub_card + chat delegate 入口(3 处) + sparkle://openclaw 深链",
++      "v3_surface": "CONTEXTUAL: D16 唯一 Runtime 适配层; 不做第二 AI 中心",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F26",
++      "name": "photon",
++      "module_path": "mobile/lib/features/photon",
++      "status": "HIDDEN",
++      "jtbd": "（可选轻量奖励; V3 无核心 JTBD）",
++      "journey_map": [],
++      "data_truth": "半真: photon_transaction_history 25 行(后端活, /photons 401); 但无新增消费入口",
++      "reachability_evidence": "不可达: PhotonBalanceCard 0 外部消费者(孤儿组件); /photon/history 仅被该孤儿组件引用; /photon/transfer 0 入口",
++      "v3_surface": "D17: 从核心旅程降级→HIDDEN; 25 条历史交易数据保留后端",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F27",
++      "name": "plan",
++      "module_path": "mobile/lib/features/plan",
++      "status": "CORE",
++      "jtbd": "维护可修订的目标路线",
++      "journey_map": [
++        "GJ4"
++      ],
++      "data_truth": "真实: plans 399, plan_states 28; 后端 /plans 401 + exam-sprint 组",
++      "reachability_evidence": "注册 15 路径(/plans 家族+exam-sprint+growth+sprint); home Branch-0 shellRoutes; push_navigation_service 深链",
++      "v3_surface": "CORE: plan 可变非积压; exam-sprint 家族并入 Goals & Actions",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F28",
++      "name": "reflection",
++      "module_path": "mobile/lib/features/reflection",
++      "status": "HIDDEN",
++      "jtbd": "成果后提取学习",
++      "journey_map": [
++        "GJ5"
++      ],
++      "data_truth": "后端 /reflections/summary 401 活",
++      "reachability_evidence": "不可达(孤儿): /reflection/summary 已注册但常量 0 外部引用+字符串导航 0 处; 仅 routes.dart 挂载",
++      "v3_surface": "降级: 成果后学习并入 insights/report(GJ5); 独立屏证明入口价值前 HIDDEN",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F29",
++      "name": "report",
++      "module_path": "mobile/lib/features/report",
++      "status": "CONTEXTUAL",
++      "jtbd": "汇总已验证进度",
++      "journey_map": [
++        "GJ5"
++      ],
++      "data_truth": "真实: 后端 /learning-reports 401; facts-before-prose 管线(weekly_stats_service actual)",
++      "reachability_evidence": "注册 /learning-report; insights overview+home insight 卡 10 处常量引用",
++      "v3_surface": "CONTEXTUAL: 周期性反思面, LLM 前先算事实",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F30",
++      "name": "reviews",
++      "module_path": "mobile/lib/features/reviews",
++      "status": "CONTEXTUAL",
++      "jtbd": "复习产物/知识/错误",
++      "journey_map": [
++        "GJ8"
++      ],
++      "data_truth": "薄: review_history/review_feedback 0 行; 后端 /reviews 401 活",
++      "reachability_evidence": "注册 /review /review-plan; error_detail + home 工具卡 5 处引用",
++      "v3_surface": "CONTEXTUAL(D19): source-linked; 数据薄列入观察",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F31",
++      "name": "seed_library",
++      "module_path": "mobile/lib/features/seed_library",
++      "status": "LABS",
++      "jtbd": "开发者/演示种子（显式体验模式）",
++      "journey_map": [
++        "GJ1"
++      ],
++      "data_truth": "空: seed_libraries/seed_items 0 行; 后端 /seed-libraries /marketplace 401 活但无内容",
++      "reachability_evidence": "注册 4 路径; chat settings + 字符串导航 1 处; marketplace 路由注册",
++      "v3_surface": "LABS: D05 严格命名空间; 仅体验示例模式, 不混入真实数据(D20)",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F32",
++      "name": "settings",
++      "module_path": "mobile/lib/features/settings",
++      "status": "CORE",
++      "jtbd": "隐私/代理/主动/无障碍控制",
++      "journey_map": [
++        "GJ6"
++      ],
++      "data_truth": "真实: user_preferences_center 248; /settings/transparency 字符串导航 1",
++      "reachability_evidence": "无独立路由组; 4 屏(transparency/openclaw/data-usage/accessibility)经 UserRoutes 与 profile/settings 挂载",
++      "v3_surface": "CORE: P5 信任层; 设置必须真实影响 runtime",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F33",
++      "name": "shop",
++      "module_path": "mobile/lib/features/shop",
++      "status": "HIDDEN",
++      "jtbd": "（可选外观奖励; V3 降级）",
++      "journey_map": [],
++      "data_truth": "空: shop_items 0, shop_purchases 0(空目录可逛); 后端 /shop /shop/items 401 活",
++      "reachability_evidence": "可达但孤立: /shop 已注册 + streak_details_screen 1 处入口; 无商品数据",
++      "v3_surface": "D17+D20: 从核心旅程降级→HIDDEN(真实目录接入前不上); 现有 1 入口随降权移除",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F34",
++      "name": "simulation",
++      "module_path": "mobile/lib/features/simulation",
++      "status": "LABS",
++      "jtbd": "实验性学习模拟",
++      "journey_map": [],
++      "data_truth": "空: simulation_runs 0 行; 后端 /simulation 401 活但零使用",
++      "reachability_evidence": "注册 /simulation; insights overview/theater/home hub 5 处引用(可达)",
++      "v3_surface": "D19: 默认 LABS/HIDDEN, 证明独特价值前不进核心",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F35",
++      "name": "splash",
++      "module_path": "mobile/lib/features/splash",
++      "status": "CORE",
++      "jtbd": "快速可信启动/恢复",
++      "journey_map": [
++        "GJ1"
++      ],
++      "data_truth": "N/A(启动流程; 无业务表)",
++      "reachability_evidence": "'/' 初始路由; 深链 redirect 中转(_safePendingRedirect 防开放重定向)",
++      "v3_surface": "CORE: 无装饰延迟; 深链恢复",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F36",
++      "name": "task",
++      "module_path": "mobile/lib/features/task",
++      "status": "CORE",
++      "jtbd": "具体行动生命周期(完成即证据)",
++      "journey_map": [
++        "GJ2",
++        "GJ3"
++      ],
++      "data_truth": "真实: tasks 1219, plan_execution_records 0(执行记录链路薄); 后端 /tasks 401 + 40+ 子端点",
++      "reachability_evidence": "注册 4 路径; 字符串导航 11 处(最高频); home sprint 卡/日历卡入口; execution 流",
++      "v3_surface": "CORE: completion evidence; Human/Agent 分工标注(D13)",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F37",
++      "name": "theater",
++      "module_path": "mobile/lib/features/theater",
++      "status": "LABS",
++      "jtbd": "实验性知识可视化",
++      "journey_map": [],
++      "data_truth": "空: theater_predictions 0, theater_candidate_bundles 0; 后端 /theater/predictions 401 组活但零写入",
++      "reachability_evidence": "注册 /theater; insights/theater 卡+chat bubble 6 处引用(可达)",
++      "v3_surface": "D19: 默认 LABS/HIDDEN",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F38",
++      "name": "tools",
++      "module_path": "mobile/lib/features/tools",
++      "status": "CONTEXTUAL",
++      "jtbd": "Agent/行动可用的能力注册表",
++      "journey_map": [
++        "GJ3",
++        "GJ8"
++      ],
++      "data_truth": "真实: user_tool_history 15; 后端 /tool-history 组(根 404 属正常, 子路径注册)",
++      "reachability_evidence": "注册 /tools/library /tools/:toolId; cognitive_tool_hub_card 字符串导航; tool_registry 10+ 工具(vocab/translator/...)",
++      "v3_surface": "CONTEXTUAL(D19): permissioned registry; 工具即 Goal Context 能力",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F39",
++      "name": "translation",
++      "module_path": "mobile/lib/features/translation",
++      "status": "CONTEXTUAL",
++      "jtbd": "消除材料语言摩擦",
++      "journey_map": [
++        "GJ8"
++      ],
++      "data_truth": "后端 /translation 401 活; 翻译历史路由",
++      "reachability_evidence": "注册 /translations/history; translator_tool 内 1 处常量引用",
++      "v3_surface": "CONTEXTUAL: 仅按需出现, 非独立一级 app",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F40",
++      "name": "user",
++      "module_path": "mobile/lib/features/user",
++      "status": "CORE",
++      "jtbd": "账户+反思/控制面（我的）",
++      "journey_map": [
++        "GJ6",
++        "GJ1"
++      ],
++      "data_truth": "真实: users 248; 导出/会话/安全日志后端 401 活",
++      "reachability_evidence": "Tab-5 /profile + 22 子路由(15 外部引用文件, 最高); router redirect 参与引导",
++      "v3_surface": "CORE: 五 Tab 之一(D04)=Reflection & Control; 非另一画像真值",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F41",
++      "name": "visual_elements",
++      "module_path": "mobile/lib/features/visual_elements",
++      "status": "LABS",
++      "jtbd": "实验视觉元素集",
++      "journey_map": [],
++      "data_truth": "真实但实验性: user_visual_elements 80, visual_elements 50",
++      "reachability_evidence": "注册 /visual-elements; profile+unified settings 2 处引用(可达)",
++      "v3_surface": "D19/D21: LABS; 仅 design-system 拥有时保留, 实验不进核心流程",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    },
++    {
++      "feature_id": "F42",
++      "name": "vocabulary",
++      "module_path": "mobile/lib/features/vocabulary",
++      "status": "CONTEXTUAL",
++      "jtbd": "目标需要时练习词汇",
++      "journey_map": [
++        "GJ8"
++      ],
++      "data_truth": "后端 /vocabulary/wordbook /lookup 401 活; 词库数据经 knowledge/vocabulary_repository",
++      "reachability_evidence": "无独立屏(不可达为页面); 以 vocabulary_lookup 工具注册于 tool_registry, 经 /tools/:toolId 出现",
++      "v3_surface": "CONTEXTUAL(D19): 学习行动内的工具能力, 非独立主页面",
++      "source_sha": "a2d8a10c192f451a2c11042df8e4f6227cad37f9"
++    }
++  ],
++  "v3_decisions": {
++    "leaderboard": {
++      "decision": "HIDDEN",
++      "basis": "D17 默认隐藏 + D20(cohort 污染 INV-09); 路由未注册+死屏 0 引用+快照表 0 行"
++    },
++    "shop": {
++      "decision": "HIDDEN",
++      "basis": "D17 降级 + D20(空目录: shop_items/purchases 0); 现存 streak_details 1 入口随降权移除"
++    },
++    "photon": {
++      "decision": "HIDDEN",
++      "basis": "D17 降级; 余额卡 0 外部消费者为孤儿组件, transfer 0 入口; 25 条真实交易数据保留后端"
++    },
++    "long_tail": {
++      "decision": "CONTEXTUAL/LABS per D19",
++      "basis": "focus/calendar/error_book/documents/vocabulary/translation/tools→Goal Context; simulation/theater/mirofish/visual_elements/seed_library→LABS"
++    }
++  },
++  "retest_needed": [
++    "goal: DB goals 表 0 行但写入路径存在 — 需运行时验证 goal 创建落表",
++    "plan_execution_records 0 行: task/agent 执行链是否真实落库",
++    "reflection /reflection/summary 无入口 — 模拟器确认无可达路径(含推送/深链旁路)",
++    "photon 余额卡孤儿: 模拟器确认 profile 无 photon 入口",
++    "theater/simulation/seed_library LABS 群: 运行时确认 demo 数据不混入(D20)"
++  ],
++  "unknown_items": [],
++  "partial_note": "全部 42 项均有静态证据定级, 无 UNKNOWN 残留; goals/plan_execution_records 空表列入 retest_needed, 不影响状态判定(其 JTBD/可达性证据独立成立)"
++}
+\ No newline at end of file

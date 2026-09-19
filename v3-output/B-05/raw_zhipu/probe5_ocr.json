@@ -1,0 +1,49 @@
+[
+ {
+  "test_image": {
+   "png_bytes": 648,
+   "text_expected": "SAMPLE 128.99 CNY"
+  }
+ },
+ {
+  "probe": "ocr_zhipu",
+  "model": "glm-ocr",
+  "http_status": 401,
+  "total_ms": 54.1,
+  "error": "{\"error\":{\"code\":\"1000\",\"message\":\"身份验证失败。\"}}"
+ },
+ {
+  "probe": "ocr_siliconflow",
+  "model": "deepseek-ai/DeepSeek-OCR",
+  "http_status": 200,
+  "total_ms": 13550.2,
+  "ocr_text": "} } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } } ",
+  "ocr_match": false,
+  "usage": {
+   "prompt_tokens": 1218,
+   "completion_tokens": 4096,
+   "total_tokens": 5314
+  }
+ },
+ {
+  "probe": "qwen38_flash_vision",
+  "model": "qwen3.8-flash",
+  "http_status": 200,
+  "total_ms": 1740.7,
+  "vision_text": "SAMPLE 128.99 CNY",
+  "ocr_match": true,
+  "usage": {
+   "completion_tokens": 49,
+   "completion_tokens_details": {
+    "reasoning_tokens": 35
+   },
+   "prompt_tokens": 150,
+   "prompt_tokens_details": {
+    "cached_tokens": 0,
+    "image_tokens": 98,
+    "text_tokens": 52
+   },
+   "total_tokens": 199
+  }
+ }
+]

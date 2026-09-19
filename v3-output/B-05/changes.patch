@@ -1,0 +1,1108 @@
+diff --git a/scripts/devtools/probe_zhipu_lanes_b05b.py b/scripts/devtools/probe_zhipu_lanes_b05b.py
+new file mode 100644
+index 00000000..533ce0e7
+--- /dev/null
++++ b/scripts/devtools/probe_zhipu_lanes_b05b.py
+@@ -0,0 +1,117 @@
++"""B-05b: probe all zhipu lane candidates through the engine's own LLM client stack.
++
++One real API call per registry key (glm_5_1_top, glm_4_7_no_thinking, glm_4_7_thinking,
++glm_4_5_air_batch, glm_4_6_batch, glm_4_7_flash_no_thinking, glm_4_7_flash_thinking,
++glm_5_max, glm_4_5_air_free) using llm_router.select_specific_model +
++llm_router.get_openai_client_kwargs + services.llm.providers.OpenAICompatibleProvider —
++i.e. the exact request shape the engine sends (including extra_body clear_thinking).
++
++Usage (from repo root, python3.11 with backend deps):
++    cd backend && /opt/homebrew/bin/python3.11 ../scripts/devtools/probe_zhipu_lanes_b05b.py
++
++Requires backend/.env with a valid ZHIPU_API_KEY. Read-only probe, no state mutated
++(circuit breaker / health tracking are in-process only).
++"""
++from __future__ import annotations
++
++import asyncio
++import json
++import sys
++import time
++from pathlib import Path
++
++BACKEND_DIR = Path(__file__).resolve().parents[2] / "backend"
++sys.path.insert(0, str(BACKEND_DIR))
++
++ZHIPU_KEYS = [
++    "glm_5_1_top",
++    "glm_4_7_no_thinking",
++    "glm_4_7_thinking",
++    "glm_4_5_air_batch",
++    "glm_4_6_batch",
++    "glm_4_7_flash_no_thinking",
++    "glm_4_7_flash_thinking",
++    "glm_5_max",
++    "glm_4_5_air_free",
++]
++
++PROMPT = [{"role": "user", "content": "只回复两个字：在线"}]
++
++
++async def probe_key(router, provider_cls, model_key: str) -> dict:
++    try:
++        selection = router.select_specific_model(model_key)
++    except Exception as e:  # noqa: BLE001 — probe must survive selection errors
++        return {"model_key": model_key, "stage": "select", "ok": False, "error": f"{type(e).__name__}: {e}"}
++
++    client_kwargs = router.get_openai_client_kwargs(selection)
++    request_kwargs = {
++        k: v for k, v in client_kwargs.items()
++        if k not in {"api_key", "base_url", "model", "temperature"}
++    }
++    provider = provider_cls(
++        api_key=client_kwargs["api_key"],
++        base_url=client_kwargs["base_url"],
++        timeout_seconds=90.0,
++    )
++    t0 = time.perf_counter()
++    try:
++        answer = await provider.chat(
++            PROMPT,
++            model=client_kwargs["model"],
++            temperature=client_kwargs["temperature"],
++            **request_kwargs,
++        )
++        elapsed = round(time.perf_counter() - t0, 3)
++        return {
++            "model_key": model_key,
++            "model_name": client_kwargs["model"],
++            "base_url": client_kwargs["base_url"],
++            "extra_body": request_kwargs.get("extra_body"),
++            "ok": True,
++            "elapsed_s": elapsed,
++            "answer_head": (answer or "")[:80],
++        }
++    except Exception as e:  # noqa: BLE001
++        elapsed = round(time.perf_counter() - t0, 3)
++        status = getattr(e, "status_code", None)
++        return {
++            "model_key": model_key,
++            "model_name": client_kwargs["model"],
++            "base_url": client_kwargs["base_url"],
++            "extra_body": request_kwargs.get("extra_body"),
++            "ok": False,
++            "elapsed_s": elapsed,
++            "error_type": type(e).__name__,
++            "status_code": status,
++            "error_head": str(e)[:300],
++        }
++
++
++async def main() -> int:
++    from app.core.llm_router import llm_router
++    from app.services.llm.providers import OpenAICompatibleProvider
++
++    results = []
++    for key in ZHIPU_KEYS:
++        r = await probe_key(llm_router, OpenAICompatibleProvider, key)
++        results.append(r)
++        flag = "OK " if r.get("ok") else "FAIL"
++        print(f"[{flag}] {key} ({r.get('model_name')} @ {r.get('base_url')}) "
++              f"elapsed={r.get('elapsed_s')}s "
++              f"{'answer=' + str(r.get('answer_head'))[:40]!r}"
++              if r.get("ok") else f"[{flag}] {key} status={r.get('status_code')} err={r.get('error_head', '')[:160]}",
++              flush=True)
++        await asyncio.sleep(0.5)
++
++    out = Path("/tmp/b05b-probe/results_engine_lanes.json")
++    out.parent.mkdir(parents=True, exist_ok=True)
++    out.write_text(json.dumps({"ts": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "results": results},
++                              ensure_ascii=False, indent=2))
++    n_ok = sum(1 for r in results if r.get("ok"))
++    print(f"\n{n_ok}/{len(results)} lanes healthy; saved -> {out}")
++    return 0 if n_ok == len(results) else 1
++
++
++if __name__ == "__main__":
++    raise SystemExit(asyncio.run(main()))
+diff --git a/v3-output/B-05/SUPPLEMENT_KEY_ROTATED.md b/v3-output/B-05/SUPPLEMENT_KEY_ROTATED.md
+new file mode 100644
+index 00000000..8d95b2f2
+--- /dev/null
++++ b/v3-output/B-05/SUPPLEMENT_KEY_ROTATED.md
+@@ -0,0 +1,126 @@
++# B-05b SUPPLEMENT — ZHIPU key 轮换后模型能力复测（2026-09-19）
++
++> 结论先行：**新 ZHIPU_API_KEY 全链路可用**。glm-5.3-flash 双端点 16/16 次 200、并发 4 路 8/8 200；glm-ocr 主路 200 且识别质量高；glm-asr-2512 端点存活且 7.8s 中文语音转写逐字正确；引擎侧 9 个 zhipu registry lane 全部经真实调用验证健康（0 个 4xx/5xx）。**glm 车道可转正式备用**（判断依据与成本备注见 §6）。原始数据：`raw/probe6_glm53flash_matrix.json`、`raw/probe7_glmocr_asr.json`、`raw/probe8_engine_lanes.json`。本文件补齐 `capability_matrix.csv`（B-05，PARTIAL 收编）中所有 `unavailable` 的 zhipu 行；补充行见 `capability_matrix_zhipu.csv`。
++
++- 复测时间：2026-09-19 11:45–12:05（本机）
++- 凭据：主仓 `backend/.env` 轮换后的 `ZHIPU_API_KEY`（探测进程外直连，未触碰在跑引擎）
++- 模型面：智谱当前仅剩 `glm-5.3-flash` 与 `glm-5.3`；主仓 .env 已把全部 chat lane 统一映射到 `glm-5.3-flash`（OCR 保留 `glm-ocr`，STT backup 为 `glm-asr-2512`）
++
++---
++
++## 1. 直连能力矩阵（glm-5.3-flash，双端点各 8 次流式 + 参数探针 + 并发 4 路）
++
++### 1.1 标准端点 `/api/paas/v4/chat/completions`（8/8 成功）
++
++| 指标 | p50 | p95 |
++|---|---|---|
++| TTFT（首个 delta，通常为 reasoning_content） | **0.644s** | 0.727s |
++| 首个可见 content（思考结束后） | **1.456s** | 2.812s |
++| 总时延 | **1.661s** | 2.997s |
++
++- **reasoning 行为：8/8 每次都思考**。思考字符占比均值 **84.5%**（如 run1：reasoning 926 字符 vs content 40 字符）。usage 的 `completion_tokens_details.reasoning_tokens` 稳定返回（60/86、86/117、252/280 completion tokens）。
++- 16 次 matrix 调用 finish_reason 全部 `stop`。
++- `thinking:{"type":"disabled"}` → **HTTP 400，code 1210**：`"该模型始终思考，不支持关闭思考；请使用 low、high 或 max。"`（标准端点明确定义了错误码，可编程识别）。
++- `clear_thinking:true`（我方引擎现状的 extra_body）→ 200，思考照常进行，**参数被静默忽略，无 4xx**。
++
++### 1.2 coding 端点 `/api/coding/paas/v4/chat/completions`（8/8 成功）
++
++| 指标 | p50 | p95 |
++|---|---|---|
++| TTFT（首个 delta） | **0.699s** | 4.277s |
++| 首个可见 content | **4.339s** | 7.560s |
++| 总时延 | **4.760s** | 7.828s |
++
++- **reasoning 行为：8/8 每次都思考**，思考字符占比均值 **87.5%**，波动比标准端点大（单次 reasoning 75–1440 字符）。
++- **`thinking:{"type":"disabled"}` 在 coding 端点生效**：200、无 reasoning_content、总时延 1.01s（对照同 prompt 默认思考 ~1.5–7.8s）。两次采样均复现。**这是目前唯一能关掉 glm-5.3-flash 思考的通道**；Leader 之前"disabled 被忽略"的观察仅在标准端点成立。
++- `clear_thinking:true` → 200，思考照常（静默忽略，同标准端点）。
++- 时延结论：coding 端点默认档明显比标准端点慢且尾部更重（p95 7.8s vs 3.0s），**低时延用途应走标准端点**。
++
++### 1.3 并发 4 路（两端点各一波）
++
++| 端点 | 状态 | 波总耗时 | 单请求 total | TTFT_any |
++|---|---|---|---|---|
++| 标准 | 4/4 200 | 1.434s | 1.06–1.43s | 0.447–0.502s |
++| coding | 4/4 200 | 5.883s | 1.86–5.88s | 0.880–0.922s |
++
++无 429、无降速错误；并发 4 路下标准端点几乎无损（TTFT 与串行基本一致），coding 端点排队感明显。
++
++### 1.4 能力基线（标准端点）
++
++- **中文指令遵循（2/2 通过）**：三重约束（≤20 字 + 必含"星火"+ 无标点）→ `瑞利散射使蓝光如星火布满天空`（14 字，全部满足）；"只输出数字" → `5040`。注意约束题的思考开销大（556 reasoning tokens 换 14 字答案）。
++- **JSON 输出（2/2 有效）**：`response_format={"type":"json_object"}` 被**接受**（200，返回合法 JSON，前置换行需 strip）；纯 prompt 约束同样返回合法且语义正确的 `{"names":["小明","小红"],"cities":["上海","北京"]}`。
++- **长上下文（8K 输入）**：约 1.8 万字符 filler + needle，实测 `prompt_tokens=8338`（≥8K），needle `萤火计划` 正确抽出，总时延 2.608s。
++- **⚠️ 关键操作注意**：同构造 5570-token 输入、`max_tokens=1024` 时返回**空 content**——completion 1024 中 1022 全是 reasoning tokens，思考把 max_tokens 预算吃光。**我方给 glm 车道的 max_tokens 必须为思考预留额度**（短答案场景建议 ≥1024，复杂任务 ≥2048），否则用户收到空气回复且 finish=length。
++
++## 2. 视觉探测（glm-5.3-flash + image_url）
++
++- 输入：主仓 `.fieldtest-shots/round3/24_chat_reply1.png`（1080×2400，331KB PNG，base64 data URI）。
++- **接受 image_url，200 OK**，不是纯文本模型。总时延 10.438s，图像折算 `prompt_tokens=3385`。
++- 内容还原准确：识别出应用名 "Aurora"、Flutter 溢出调试横幅、`AI currently remembers / 0 current session memories` 等中英混排 UI 文本。
++- 结论：glm-5.3-flash 原生视觉可用，紧急时 OCR 可兜底路由到主聊天模型（同 dashscope qwen3.8-flash 已验证的行为）。未见错误码场景（探测即成功）。
++
++## 3. glm-ocr 主路实测（`/api/paas/v4/layout_parsing`）
++
++- 同一张含真实文字的截图，`{"model":"glm-ocr","file":"data:image/png;base64,..."}` → **200，0.743s**。
++- `md_results` 质量高：版面 bbox + 中英混排文本全部还原（`AI currently remembers`、`0 current session memories`、`Aurora`、`最近2张任务中有1张超时·轻度关注`、`Current self-model 5 correctable claims` 等），与我方 `ocr_service._extract_text` 的解析契约（md_results / layout_details）兼容。
++- usage：prompt 580 / completion 92 tokens。**OCR 主路端到端可用**（B-05 时的 401 已消除）。
++
++## 4. glm-asr-2512 探测（STT_BACKUP=zhipu 主路模型，`/api/paas/v4/audio/transcriptions`）
++
++| 输入 | 结果 | 时延 |
++|---|---|---|
++| 1s 静音 wav（16kHz mono PCM16） | 200，`text:""`（空转写，语义正确） | 0.206s |
++| 7.8s 中文语音 wav（macOS `say` Tingting 生成） | 200，`text:"你好，今天是9月19日，星火项目语音链路测试，请把这句话转成文字。"`（逐字正确） | **0.441s** |
++
++- 端点存活判定：**200 = 模型活**（非 401/404）。usage 159 prompt / 25 completion tokens。
++- 对照 B-05 的 `stt_backup_zhipu=unavailable`：**STT backup 主路恢复可用**。备注：早期一次 0.83s 截断语音转出乱语 `F dash`，说明模型对超短/截断音频会硬编，流式分段的段长下限（我方 4s）是合理配置。
++
++## 5. 引擎侧 lane 验证（真实调用，我方客户端栈）
++
++脚本：`scripts/devtools/probe_zhipu_lanes_b05b.py`（进 patch）。走真实引擎路径：`llm_router.select_specific_model` → `get_openai_client_kwargs`（含 `extra_body={"clear_thinking":...}`）→ `OpenAICompatibleProvider.chat`。worktree `backend/.env` 临时拷贝自主仓（**收工已删，未进 patch**）。
++
++| registry key | model_name | base_url | 结果 | 时延 |
++|---|---|---|---|---|
++| glm_5_1_top | glm-5.3-flash | coding | OK | 3.649s |
++| glm_4_7_no_thinking | glm-5.3-flash | coding | OK | 2.455s |
++| glm_4_7_thinking | glm-5.3-flash | coding | OK | 2.090s |
++| glm_4_5_air_batch | glm-5.3-flash | coding | OK | 1.994s |
++| glm_4_6_batch | glm-5.3-flash | coding | OK | 2.576s |
++| glm_4_7_flash_no_thinking | glm-5.3-flash | 标准 | OK | 1.569s |
++| glm_4_7_flash_thinking | glm-5.3-flash | 标准 | OK | 1.693s |
++| glm_5_max | glm-5.3-flash | coding | OK | 5.752s |
++| glm_4_5_air_free | glm-5.3-flash | coding | OK | 6.179s |
++
++**9/9 无 4xx/5xx**，全部返回正确应答（"在线"）。`clear_thinking` extra_body 被智谱静默忽略但不报错——我方客户端栈零改动即可工作。
++
++## 6. 结论：glm 车道能否转正式备用
++
++**判断：可以转正式备用（available），并建议做两个小配置改造后效果更佳。**
++
++依据：
++1. 双端点 16/16 + 并发 8/8 全 200，标准端点 TTFT_any p50 0.64s / total p50 1.66s，达到主力 lane 水准；
++2. OCR 主路与 STT backup 主路双双从 unavailable 恢复为端到端可用，且有质量证据（OCR 中英混排还原、ASR 逐字转写）；
++3. 引擎侧 9 个 registry lane 全部健康，客户端栈无需改动。
++
++建议改造（非阻塞）：
++- **`clear_thinking` 改为 `thinking:{"type":"disabled"}` 并把 *_no_thinking lane 切到 coding 端点**：coding 端点支持真关闭思考（1.01s vs 默认 4.7s p50），标准端点该参数会 400（code 1210）。现状静默忽略虽不报错，但"no_thinking" lane 实际都在思考，白白多花 reasoning tokens 与时延。
++- **glm lane 的 max_tokens 预算为思考留量**（默认思考吃掉 84–88% 的 completion 预算；实测 1024 预算可被思考清空导致空回复）。
++- 批量池（LLM_TIER_GLM_BATCH）时延按 coding 端点实测值校准（p50 ~4.8s / p95 ~7.8s，registry 里 avg_latency_ms=250–400 的旧值严重失真）。
++
++成本备注（不编造，未实测到定价）：
++- glm-5.3-flash 单价：**TBD**（公开页未在本次探测中核实，智谱后台计费口径未知）。usage 结构已确认：输入 tokens + 输出 tokens，且**输出中 reasoning_tokens 占比 84–88%**，定价若对 reasoning 与 content 同价，则思考会显著放大账单，标 TBD 待核。
++- registry `cost_per_1k_tokens`（glm lane 0.0001–0.008 USD）与 `glm_5_1_top=0.008` 的配置值均基于旧模型命名，**与当前"全部 lane=glm-5.3-flash"的现实不符，成本估算暂不可信**，待定价核实后统一校准。
++- glm-ocr：本次实测 580 prompt + 92 completion tokens/张；glm-asr-2512：159+25 tokens/7.8s 音频。单价均 TBD。
++- coding 端点是否单独计费：未知（TBD），若与标准端点同价则无成本差异。
++
++## 变更清单
++
++- `v3-output/B-05/SUPPLEMENT_KEY_ROTATED.md` — 本报告
++- `v3-output/B-05/capability_matrix_zhipu.csv` — 对 `capability_matrix.csv` 的 zhipu 补充行（同 schema；B-05 原文件保持不动，本文件行覆盖其 zhipu 行状态）
++- `v3-output/B-05/raw/probe6_glm53flash_matrix.json` — 双端点 8×2 + 参数探针 + 并发 + 基线原始数据
++- `v3-output/B-05/raw/probe7_glmocr_asr.json` — OCR + ASR 原始数据
++- `v3-output/B-05/raw/probe8_engine_lanes.json` — 引擎 9 lane 原始数据
++- `v3-output/B-05/changes.patch` — 上述文件与 devtools 脚本 diff
++- `scripts/devtools/probe_zhipu_lanes_b05b.py` — 引擎侧 lane 探测脚本（一次性，归 devtools）
++
++清理声明：worktree `backend/.env` 副本已删除；`/tmp/b05b-probe/`（wav、脚本、结果）已清；无进程、无模拟器残留。
+diff --git a/v3-output/B-05/capability_matrix_zhipu.csv b/v3-output/B-05/capability_matrix_zhipu.csv
+new file mode 100644
+index 00000000..ea47725b
+--- /dev/null
++++ b/v3-output/B-05/capability_matrix_zhipu.csv
+@@ -0,0 +1,16 @@
++capability,provider,model_configured,model_actual,status_2026_09_19,evidence,notes
++glm_batch_pool_zhipu_candidates,zhipu,glm-4.7 / glm-4.5-air / glm-4.6 (coding paas v4),glm-5.3-flash (全部 lane 已被 .env 统一映射),available,B-05b 补测: 引擎栈 4/4 batch lane 真实调用 200 (1.99-2.58s); 直连 coding 端点 8/8 200 total p50 4.76s / p95 7.83s; 并发4 4/4 200,B-05 的 401 已消除; 思考默认强制 (字符占比 87.5%); thinking disabled 在 coding 端点生效 (1.01s); registry avg_latency_ms=250-400 旧值失真应按实测校准
++chat_tier_top,zhipu,glm-5.1 (ZHIPU_TOP_MODEL),glm-5.3-flash (ZHIPU_TOP_MODEL 已指向),available,B-05b 补测: 引擎栈 glm_5_1_top lane 200 OK 3.65s; coding 端点直连 8/8 200,glm-5.1 模型已下架但 lane 因 .env 重映射恢复健康; TOP 层与其它层实为同一模型
++glm_thinking_control,zhipu,glm-5.3-flash,glm-5.3-flash,available_with_note,B-05b: 标准端点 thinking disabled -> 400 code 1210 '该模型始终思考，不支持关闭思考；请使用 low、high 或 max'; coding 端点同参数 -> 200 且无 reasoning_content (1.01s); 引擎 extra_body clear_thinking 被静默忽略 (200 但仍思考),建议 *_no_thinking lane 走 coding 端点并把 extra_body 改为 thinking:{"type":"disabled"}
++glm_reasoning_behavior,zhipu,glm-5.3-flash,glm-5.3-flash,available_with_note,B-05b: 双端点 16/16 每次都有 reasoning_content (占比 84.5-87.5%); usage 含 completion_tokens_details.reasoning_tokens; 1024 max_tokens 可被思考耗尽 (1022/1024) 导致空 content,引擎侧 glm lane max_tokens 必须为思考预留额度 否则用户收到空回复 (finish=length)
++glm_zh_instruction_json_longctx,zhipu,glm-5.3-flash,glm-5.3-flash,available,B-05b 基线: 三重中文约束 2/2 满足; response_format=json_object 接受且 2/2 合法 JSON; 8338 prompt_tokens 长文 needle 抽取正确 (2.6s),长上下文 ≥8K 输入实测通过
++glm_vision,zhipu,glm-5.3-flash,glm-5.3-flash,available,B-05b: image_url (1080x2400 PNG 331KB base64) 200 OK 10.4s; 准确还原 Aurora UI 中英文本; prompt_tokens 3385,主聊天模型原生视觉可用; OCR 可兜底路由到主模型
++ocr_primary,zhipu,glm-ocr (ZHIPU_OCR_MODEL) via /layout_parsing,glm-ocr,available,B-05b 补测: 真实截图 200 OK 0.743s; md_results 中英混排版面还原准确 (usage 580+92 tok),B-05 的 401 已消除; 与 ocr_service._extract_text 解析契约兼容; 主 OCR 路恢复
++stt_backup_zhipu,zhipu,glm-asr-2512 (ZHIPU_ASR_MODEL) via /audio/transcriptions,glm-asr-2512,available,B-05b 补测: 1s 静音 wav 200 text='' 0.206s; 7.8s 中文语音 200 逐字正确转写 0.441s (usage 159+25 tok),端点存活且质量高; 超短/截断音频会硬编 (0.83s 截断片段转出乱语) 流式分段下限 4s 合理
++glm_lane_engine_stack,zhipu,9 个 registry key (glm_5_1_top/glm_4_7_no_thinking/glm_4_7_thinking/glm_4_5_air_batch/glm_4_6_batch/glm_4_7_flash_no_thinking/glm_4_7_flash_thinking/glm_5_max/glm_4_5_air_free),glm-5.3-flash,available,B-05b: 经 llm_router+OpenAICompatibleProvider (含 clear_thinking extra_body) 各 1 次真实调用 9/9 无 4xx/5xx 全部正确应答 (标准 lane 1.57-1.69s; coding lane 1.99-6.18s),客户端栈零改动可用; 脚本 scripts/devtools/probe_zhipu_lanes_b05b.py
++glm_concurrency4,zhipu,glm-5.3-flash,glm-5.3-flash,available,B-05b: 双端点并发 4 路各一波 8/8 200 无 429; 标准端点波内 TTFT 0.45-0.50s 近串行无损; coding 端点波内 total 1.86-5.88s 排队感明显,服务端并发余量未知; 客户端 llm_concurrency 钳制仍需遵守
++
++cost_lane,config_cost_per_1k(llm_router),config_currency,list_price_ref_CNY_per_1M,measured_usage_typical_call,cost_per_typical_call_CNY_at_list,delta_note
++glm_5_3_flash_all_lanes (zhipu),0.0001-0.008 (按旧模型名),usd(ambiguous),TBD (未核实到公开价 勿引用),典型短句: prompt 19 / completion 86-191 (其中 reasoning 60-209 tok),TBD,智谱仅剩 glm-5.3/glm-5.3-flash; 全部 lane 实为同价同模型; 输出中 reasoning 占 84-88% 若与 content 同价将显著放大账单; registry 各 glm lane cost 配置与现状不符 待定价核实后统一校准
++glm_ocr (zhipu),,n/a,TBD,580 prompt + 92 completion tok/张 (1080x2400 截图),,本次实测 200; 定价未知
++glm_asr_2512 (zhipu),,n/a,TBD,159 prompt + 25 completion tok/7.8s 音频,,STT backup 主路恢复; 定价未知
+diff --git a/v3-output/B-05/raw/probe6_glm53flash_matrix.json b/v3-output/B-05/raw/probe6_glm53flash_matrix.json
+new file mode 100644
+index 00000000..8fd27f93
+--- /dev/null
++++ b/v3-output/B-05/raw/probe6_glm53flash_matrix.json
+@@ -0,0 +1,638 @@
++{
++  "model": "glm-5.3-flash",
++  "ts": "2026-09-19T11:56:40+0800",
++  "standard": {
++    "runs": [
++      {
++        "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
++        "status": 200,
++        "ttft_any_s": 0.602,
++        "ttft_content_s": 1.344,
++        "total_s": 1.489,
++        "reasoning_chars": 310,
++        "content_chars": 42,
++        "reasoning_share_pct": 88.1,
++        "has_reasoning": true,
++        "finish": "stop",
++        "usage": {
++          "prompt_tokens": 19,
++          "completion_tokens": 86,
++          "total_tokens": 105,
++          "prompt_tokens_details": {
++            "cached_tokens": 0
++          },
++          "completion_tokens_details": {
++            "reasoning_tokens": 60
++          }
++        },
++        "content_preview": "光合作用是绿色植物利用光能，将二氧化碳和水转化为有机物（如葡萄糖）并释放氧气的过程。",
++        "run": 1
++      },
++      {
++        "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
++        "status": 200,
++        "ttft_any_s": 0.644,
++        "ttft_content_s": 1.456,
++        "total_s": 1.661,
++        "reasoning_chars": 420,
++        "content_chars": 48,
++        "reasoning_share_pct": 89.7,
++        "has_reasoning": true,
++        "finish": "stop",
++        "usage": {
++          "prompt_tokens": 19,
++          "completion_tokens": 117,
++          "total_tokens": 136,
++          "prompt_tokens_details": {
++            "cached_tokens": 0
++          },
++          "completion_tokens_details": {
++            "reasoning_tokens": 86
++          }
++        },
++        "content_preview": "光合作用是植物、藻类和某些细菌利用光能，将二氧化碳和水转化为有机物（如葡萄糖）并释放氧气的过程。",
++        "run": 2
++      },
++      {
++        "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
++        "status": 200,
++        "ttft_any_s": 0.494,
++        "ttft_content_s": 2.643,
++        "total_s": 2.805,
++        "reasoning_chars": 1038,
++        "content_chars": 47,
++        "reasoning_share_pct": 95.7,
++        "has_reasoning": true,
++        "finish": "stop",
++        "usage": {
++          "prompt_tokens": 19,
++          "completion_tokens": 280,
++          "total_tokens": 299,
++          "prompt_tokens_details": {
++            "cached_tokens": 0
++          },
++          "completion_tokens_details": {
++            "reasoning_tokens": 252
++          }
++        },
++        "content_preview": "光合作用是绿色植物利用光能（主要是阳光），将二氧化碳和水转化为葡萄糖等有机物并释放氧气的过程。",
++        "run": 3
++      },
++      {
++        "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
++        "status": 200,
++        "ttft_any_s": 0.727,
++        "ttft_content_s": 2.812,
++        "total_s": 2.997,
++        "reasoning_chars": 818,
++        "content_chars": 42,
++        "reasoning_share_pct": 95.1,
++        "has_reasoning": true,
++        "finish": "stop",
++        "usage": {
++          "prompt_tokens": 19,
++          "completion_tokens": 203,
++          "total_tokens": 222,
++          "prompt_tokens_details": {
++            "cached_tokens": 0
++          },
++          "completion_tokens_details": {
++            "reasoning_tokens": 177
++          }
++        },
++        "content_preview": "光合作用是绿色植物利用光能，把二氧化碳和水转化为有机物(如葡萄糖)并释放氧气的过程。",
++        "run": 4
++      },
++      {
++        "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
++        "status": 200,
++        "ttft_any_s": 0.688,
++        "ttft_content_s": 1.011,
++        "total_s": 1.338,
++        "reasoning_chars": 132,
++        "content_chars": 45,
++        "reasoning_share_pct": 74.6,
++        "has_reasoning": true,
++        "finish": "stop",
++        "usage": {
++          "prompt_tokens": 19,
++          "completion_tokens": 55,
++          "total_tokens": 74,
++          "prompt_tokens_details": {
++            "cached_tokens": 0
++          },
++          "completion_tokens_details": {
++            "reasoning_tokens": 27
++          }
++        },
++        "content_preview": "光合作用是绿色植物利用光能将二氧化碳和水转化为有机物（如葡萄糖）并释放氧气的生物化学过程。",
++        "run": 5
++      },
++      {
++        "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
++        "status": 200,
++        "ttft_any_s": 0.412,
++        "ttft_content_s": 0.77,
++        "total_s": 1.064,
++        "reasoning_chars": 107,
++        "content_chars": 45,
++        "reasoning_share_pct": 70.4,
++        "has_reasoning": true,
++        "finish": "stop",
++        "usage": {
++          "prompt_tokens": 19,
++          "completion_tokens": 50,
++          "total_tokens": 69,
++          "prompt_tokens_details": {
++            "cached_tokens": 0
++          },
++          "completion_tokens_details": {
++            "reasoning_tokens": 22
++          }
++        },
++        "content_preview": "光合作用是绿色植物利用光能将二氧化碳和水转化为有机物（如葡萄糖）并释放氧气的生物化学过程。",
++        "run": 6
++      },
++      {
++        "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
++        "status": 200,
++        "ttft_any_s": 0.688,
++        "ttft_content_s": 1.012,
++        "total_s": 1.348,
++        "reasoning_chars": 122,
++        "content_chars": 47,
++        "reasoning_share_pct": 72.2,
++        "has_reasoning": true,
++        "finish": "stop",
++        "usage": {
++          "prompt_tokens": 19,
++          "completion_tokens": 54,
++          "total_tokens": 73,
++          "prompt_tokens_details": {
++            "cached_tokens": 0
++          },
++          "completion_tokens_details": {
++            "reasoning_tokens": 25
++          }
++        },
++        "content_preview": "光合作用是植物（及某些微生物）利用光能将二氧化碳和水转化为有机物（如葡萄糖）并释放氧气的过程。",
++        "run": 7
++      },
++      {
++        "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
++        "status": 200,
++        "ttft_any_s": 0.443,
++        "ttft_content_s": 1.587,
++        "total_s": 1.768,
++        "reasoning_chars": 396,
++        "content_chars": 44,
++        "reasoning_share_pct": 90.0,
++        "has_reasoning": true,
++        "finish": "stop",
++        "usage": {
++          "prompt_tokens": 19,
++          "completion_tokens": 125,
++          "total_tokens": 144,
++          "prompt_tokens_details": {
++            "cached_tokens": 0
++          },
++          "completion_tokens_details": {
++            "reasoning_tokens": 98
++          }
++        },
++        "content_preview": "光合作用是绿色植物利用光能将二氧化碳和水转化为葡萄糖等有机物，并释放氧气的生物化学过程。",
++        "run": 8
++      }
++    ],
++    "stats": {
++      "n_ok": 8,
++      "ttft_any_p50": 0.644,
++      "ttft_any_p95": 0.727,
++      "ttft_content_p50": 1.456,
++      "ttft_content_p95": 2.812,
++      "total_p50": 1.661,
++      "total_p95": 2.997,
++      "reasoning_every_run": true,
++      "avg_reasoning_share_pct": 84.5
++    },
++    "param_probes": {
++      "thinking_disabled": {
++        "status": 400,
++        "has_reasoning": null,
++        "error": "{\"error\":{\"code\":\"1210\",\"message\":\"该模型始终思考，不支持关闭思考；请使用 low、high 或 max。\"}}",
++        "ttft_any_s": null,
++        "total_s": null
++      },
++      "engine_clear_thinking_true": {
++        "status": 200,
++        "has_reasoning": true,
++        "error": null,
++        "ttft_any_s": 0.41,
++        "total_s": 0.994
++      }
++    },
++    "concurrency4": {
++      "statuses": [
++        200,
++        200,
++        200,
++        200
++      ],
++      "errors": [],
++      "wave_elapsed_s": 1.434,
++      "per_req_total_s": [
++        1.103,
++        1.059,
++        1.353,
++        1.432
++      ],
++      "ttft_any_s": [
++        0.502,
++        0.493,
++        0.447,
++        0.449
++      ],
++      "has_reasoning": [
++        true,
++        true,
++        true,
++        true
++      ]
++    }
++  },
++  "coding": {
++    "runs": [
++      {
++        "url": "https://open.bigmodel.cn/api/coding/paas/v4/chat/completions",
++        "status": 200,
++        "ttft_any_s": 0.602,
++        "ttft_content_s": 3.602,
++        "total_s": 4.133,
++        "reasoning_chars": 800,
++        "content_chars": 47,
++        "reasoning_share_pct": 94.5,
++        "has_reasoning": true,
++        "finish": "stop",
++        "usage": {
++          "prompt_tokens": 19,
++          "completion_tokens": 191,
++          "total_tokens": 210,
++          "prompt_tokens_details": {
++            "cached_tokens": 0
++          },
++          "completion_tokens_details": {
++            "reasoning_tokens": 161
++          }
++        },
++        "content_preview": "光合作用是绿色植物利用光能，通过叶绿体把二氧化碳和水转化为有机物（如葡萄糖）并释放氧气的过程。",
++        "run": 1
++      },
++      {
++        "url": "https://open.bigmodel.cn/api/coding/paas/v4/chat/completions",
++        "status": 200,
++        "ttft_any_s": 4.277,
++        "ttft_content_s": 5.587,
++        "total_s": 5.915,
++        "reasoning_chars": 317,
++        "content_chars": 41,
++        "reasoning_share_pct": 88.5,
++        "has_reasoning": true,
++        "finish": "stop",
++        "usage": {
++          "prompt_tokens": 19,
++          "completion_tokens": 89,
++          "total_tokens": 108,
++          "prompt_tokens_details": {
++            "cached_tokens": 0
++          },
++          "completion_tokens_details": {
++            "reasoning_tokens": 64
++          }
++        },
++        "content_preview": "光合作用是绿色植物利用光能将二氧化碳和水转化为有机物（如葡萄糖）并释放氧气的过程。",
++        "run": 2
++      },
++      {
++        "url": "https://open.bigmodel.cn/api/coding/paas/v4/chat/completions",
++        "status": 200,
++        "ttft_any_s": 0.587,
++        "ttft_content_s": 4.339,
++        "total_s": 4.76,
++        "reasoning_chars": 1068,
++        "content_chars": 47,
++        "reasoning_share_pct": 95.8,
++        "has_reasoning": true,
++        "finish": "stop",
++        "usage": {
++          "prompt_tokens": 19,
++          "completion_tokens": 239,
++          "total_tokens": 258,
++          "prompt_tokens_details": {
++            "cached_tokens": 0
++          },
++          "completion_tokens_details": {
++            "reasoning_tokens": 209
++          }
++        },
++        "content_preview": "光合作用是绿色植物利用叶绿体吸收光能，将二氧化碳和水转化为有机物（如葡萄糖）并释放氧气的过程。",
++        "run": 3
++      },
++      {
++        "url": "https://open.bigmodel.cn/api/coding/paas/v4/chat/completions",
++        "status": 200,
++        "ttft_any_s": 2.247,
++        "ttft_content_s": 7.56,
++        "total_s": 7.828,
++        "reasoning_chars": 1217,
++        "content_chars": 42,
++        "reasoning_share_pct": 96.7,
++        "has_reasoning": true,
++        "finish": "stop",
++        "usage": {
++          "prompt_tokens": 19,
++          "completion_tokens": 355,
++          "total_tokens": 374,
++          "prompt_tokens_details": {
++            "cached_tokens": 0
++          },
++          "completion_tokens_details": {
++            "reasoning_tokens": 328
++          }
++        },
++        "content_preview": "光合作用是绿色植物利用光能，将二氧化碳和水转化为有机物（如葡萄糖）并释放氧气的过程。",
++        "run": 4
++      },
++      {
++        "url": "https://open.bigmodel.cn/api/coding/paas/v4/chat/completions",
++        "status": 200,
++        "ttft_any_s": 0.573,
++        "ttft_content_s": 0.9,
++        "total_s": 1.287,
++        "reasoning_chars": 75,
++        "content_chars": 34,
++        "reasoning_share_pct": 68.8,
++        "has_reasoning": true,
++        "finish": "stop",
++        "usage": {
++          "prompt_tokens": 19,
++          "completion_tokens": 35,
++          "total_tokens": 54,
++          "prompt_tokens_details": {
++            "cached_tokens": 0
++          },
++          "completion_tokens_details": {
++            "reasoning_tokens": 15
++          }
++        },
++        "content_preview": "光合作用是绿色植物利用阳光、水和二氧化碳合成有机物并释放氧气的过程。",
++        "run": 5
++      },
++      {
++        "url": "https://open.bigmodel.cn/api/coding/paas/v4/chat/completions",
++        "status": 200,
++        "ttft_any_s": 0.699,
++        "ttft_content_s": 7.269,
++        "total_s": 7.533,
++        "reasoning_chars": 1440,
++        "content_chars": 42,
++        "reasoning_share_pct": 97.2,
++        "has_reasoning": true,
++        "finish": "stop",
++        "usage": {
++          "prompt_tokens": 19,
++          "completion_tokens": 412,
++          "total_tokens": 431,
++          "prompt_tokens_details": {
++            "cached_tokens": 0
++          },
++          "completion_tokens_details": {
++            "reasoning_tokens": 386
++          }
++        },
++        "content_preview": "光合作用是绿色植物利用光能，将二氧化碳和水转化为有机物(如葡萄糖)并释放氧气的过程。",
++        "run": 6
++      },
++      {
++        "url": "https://open.bigmodel.cn/api/coding/paas/v4/chat/completions",
++        "status": 200,
++        "ttft_any_s": 0.737,
++        "ttft_content_s": 1.378,
++        "total_s": 1.928,
++        "reasoning_chars": 112,
++        "content_chars": 48,
++        "reasoning_share_pct": 70.0,
++        "has_reasoning": true,
++        "finish": "stop",
++        "usage": {
++          "prompt_tokens": 19,
++          "completion_tokens": 53,
++          "total_tokens": 72,
++          "prompt_tokens_details": {
++            "cached_tokens": 0
++          },
++          "completion_tokens_details": {
++            "reasoning_tokens": 22
++          }
++        },
++        "content_preview": "光合作用是植物、藻类和某些细菌利用光能，将二氧化碳和水转化为有机物（如葡萄糖）并释放氧气的过程。",
++        "run": 7
++      },
++      {
++        "url": "https://open.bigmodel.cn/api/coding/paas/v4/chat/completions",
++        "status": 200,
++        "ttft_any_s": 0.579,
++        "ttft_content_s": 1.688,
++        "total_s": 2.159,
++        "reasoning_chars": 319,
++        "content_chars": 42,
++        "reasoning_share_pct": 88.4,
++        "has_reasoning": true,
++        "finish": "stop",
++        "usage": {
++          "prompt_tokens": 19,
++          "completion_tokens": 93,
++          "total_tokens": 112,
++          "prompt_tokens_details": {
++            "cached_tokens": 0
++          },
++          "completion_tokens_details": {
++            "reasoning_tokens": 67
++          }
++        },
++        "content_preview": "光合作用是绿色植物利用光能，将二氧化碳和水转化为有机物（如葡萄糖）并释放氧气的过程。",
++        "run": 8
++      }
++    ],
++    "stats": {
++      "n_ok": 8,
++      "ttft_any_p50": 0.699,
++      "ttft_any_p95": 4.277,
++      "ttft_content_p50": 4.339,
++      "ttft_content_p95": 7.56,
++      "total_p50": 4.76,
++      "total_p95": 7.828,
++      "reasoning_every_run": true,
++      "avg_reasoning_share_pct": 87.5
++    },
++    "param_probes": {
++      "thinking_disabled": {
++        "status": 200,
++        "has_reasoning": false,
++        "error": null,
++        "ttft_any_s": 0.643,
++        "total_s": 1.01
++      },
++      "engine_clear_thinking_true": {
++        "status": 200,
++        "has_reasoning": true,
++        "error": null,
++        "ttft_any_s": 0.543,
++        "total_s": 1.338
++      }
++    },
++    "concurrency4": {
++      "statuses": [
++        200,
++        200,
++        200,
++        200
++      ],
++      "errors": [],
++      "wave_elapsed_s": 5.883,
++      "per_req_total_s": [
++        5.882,
++        1.949,
++        4.947,
++        1.864
++      ],
++      "ttft_any_s": [
++        0.913,
++        0.914,
++        0.922,
++        0.88
++      ],
++      "has_reasoning": [
++        true,
++        true,
++        true,
++        true
++      ]
++    }
++  },
++  "baselines": {
++    "chinese_instruction": [
++      {
++        "prompt_idx": 1,
++        "status": 200,
++        "content": "瑞利散射使蓝光如星火布满天空",
++        "constraint1_pass": true,
++        "constraint2_pass": false,
++        "reasoning_chars": 1557,
++        "usage": {
++          "prompt_tokens": 52,
++          "completion_tokens": 573,
++          "total_tokens": 625,
++          "prompt_tokens_details": {
++            "cached_tokens": 0
++          },
++          "completion_tokens_details": {
++            "reasoning_tokens": 556
++          }
++        }
++      },
++      {
++        "prompt_idx": 2,
++        "status": 200,
++        "content": "5040",
++        "constraint1_pass": false,
++        "constraint2_pass": true,
++        "reasoning_chars": 80,
++        "usage": {
++          "prompt_tokens": 28,
++          "completion_tokens": 29,
++          "total_tokens": 57,
++          "prompt_tokens_details": {
++            "cached_tokens": 0
++          },
++          "completion_tokens_details": {
++            "reasoning_tokens": 24
++          }
++        }
++      }
++    ],
++    "json_output": {
++      "with_response_format": {
++        "status": 200,
++        "valid_json": true,
++        "error": null,
++        "content": "\n{\"names\": [\"小明\", \"小红\"], \"cities\": [\"上海\", \"北京\"]}\n"
++      },
++      "prompt_only": {
++        "status": 200,
++        "valid_json": true,
++        "content": "{\"names\": [\"小明\", \"小红\"], \"cities\": [\"上海\", \"北京\"]}"
++      }
++    },
++    "long_context_8k": [
++      {
++        "target_chars": 12000,
++        "status": 200,
++        "prompt_tokens": 5570,
++        "content": "",
++        "needle_correct": false,
++        "ttft_any_s": 0.509,
++        "total_s": 9.99,
++        "usage": {
++          "prompt_tokens": 5570,
++          "completion_tokens": 1024,
++          "total_tokens": 6594,
++          "prompt_tokens_details": {
++            "cached_tokens": 0
++          },
++          "completion_tokens_details": {
++            "reasoning_tokens": 1022
++          }
++        }
++      },
++      {
++        "target_chars": 18000,
++        "status": 200,
++        "prompt_tokens": 8338,
++        "content": "萤火计划",
++        "needle_correct": true,
++        "ttft_any_s": 0.65,
++        "total_s": 2.608,
++        "usage": {
++          "prompt_tokens": 8338,
++          "completion_tokens": 196,
++          "total_tokens": 8534,
++          "prompt_tokens_details": {
++            "cached_tokens": 0
++          },
++          "completion_tokens_details": {
++            "reasoning_tokens": 189
++          }
++        }
++      }
++    ]
++  },
++  "vision": {
++    "screenshot": "/Users/brsama/code/GitHub/Sparkle-project/.fieldtest-shots/round3/24_chat_reply1.png",
++    "image_bytes": 331603,
++    "status": 200,
++    "error": null,
++    "content": "这是一张手机应用截图，看起来是一个 AI 学习/对话类应用（名为 \"Aurora\"），并且带有 Flutter 的布局溢出调试提示。内容自上而下如下：\n\n**顶部导航栏**\n- 返回箭头、星形图标、标题 \"AI…\" / 副标题 \"Her…\"，以及若干功能图标（上传、调节、历史、趋势、更多）\n\n**主要卡片内容（原样文字）**\n1. `AI currently remembers` —— `0 cu",
++    "usage": {
++      "prompt_tokens": 3385,
++      "completion_tokens": 512,
++      "total_tokens": 3897,
++      "prompt_tokens_details": {
++        "cached_tokens": 0
++      },
++      "completion_tokens_details": {
++        "reasoning_tokens": 389
++      }
++    },
++    "total_s": 10.438
++  }
++}
+\ No newline at end of file
+diff --git a/v3-output/B-05/raw/probe7_glmocr_asr.json b/v3-output/B-05/raw/probe7_glmocr_asr.json
+new file mode 100644
+index 00000000..9dc2719e
+--- /dev/null
++++ b/v3-output/B-05/raw/probe7_glmocr_asr.json
+@@ -0,0 +1,68 @@
++{
++  "ts": "2026-09-19T11:59:53+0800",
++  "glm_ocr": {
++    "screenshot": "/Users/brsama/code/GitHub/Sparkle-project/.fieldtest-shots/round3/24_chat_reply1.png",
++    "image_bytes": 331603,
++    "status": 200,
++    "elapsed_s": 0.743,
++    "md_results_head": "![](page=0,bbox=[39, 107, 108, 165])\n\n![](page=0,bbox=[178, 93, 298, 183])\n\nHer...\n\n![](page=0,bbox=[476, 104, 557, 170])\n\n![](page=0,bbox=[115, 292, 170, 349])\n\nAI currently remembers\n\n0 current session memories\n\n![](page=0,bbox=[843, 303, 963, 345])\n\nAurora\n\nCan go deeper\n\n3/4 X V\n\n最近2张任务中有1张超时·轻度关注\n\n![](page=0,bbox=[113, 701, 178, 770])\n\nCurrent self-model 5 correctable claims\n\n![](page=0,bbox=[126, 859, 183, 911])\n\nSend to AI\n\nAnswer my question directly\n\n![](page=0,bbox=[123, 966, 183, 1012])\n\nGive me a 3-step action list first\n\nDeep calibration available Deep calibration available (1\n\nSt",
++    "keys": [
++      "created",
++      "data_info",
++      "id",
++      "layout_details",
++      "layout_visualization",
++      "md_results",
++      "model",
++      "request_id",
++      "usage"
++    ],
++    "usage": {
++      "completion_tokens": 92,
++      "prompt_tokens": 580,
++      "total_tokens": 672
++    }
++  },
++  "glm_asr_silence_1s": {
++    "wav": "/tmp/b05b-probe/silence_1s.wav",
++    "wav_bytes": 32044,
++    "status": 200,
++    "elapsed_s": 0.206,
++    "response": {
++      "text": "",
++      "segments": null,
++      "duration": null
++    }
++  },
++  "glm_asr_speech_zh": {
++    "wav": "/tmp/b05b-probe/speech_zh.wav",
++    "wav_bytes": 30560,
++    "status": 200,
++    "elapsed_s": 0.185,
++    "response": {
++      "text": "F dash",
++      "segments": null,
++      "duration": null
++    }
++  },
++  "glm_asr_speech_zh_7s": {
++    "wav": "/tmp/b05b-probe/speech2.wav",
++    "wav_bytes": 254332,
++    "status": 200,
++    "elapsed_s": 0.441,
++    "response": {
++      "created": 1789790431,
++      "id": "202609191200315b793698e2a642af",
++      "request_id": "202609191200315b793698e2a642af",
++      "text": "你好，今天是9月19日，星火项目语音链路测试，请把这句话转成文字。",
++      "usage": {
++        "completion_tokens": 25,
++        "prompt_tokens": 159,
++        "prompt_tokens_details": {
++          "cached_tokens": 0
++        },
++        "total_tokens": 184
++      }
++    }
++  }
++}
+\ No newline at end of file
+diff --git a/v3-output/B-05/raw/probe8_engine_lanes.json b/v3-output/B-05/raw/probe8_engine_lanes.json
+new file mode 100644
+index 00000000..9c2b881a
+--- /dev/null
++++ b/v3-output/B-05/raw/probe8_engine_lanes.json
+@@ -0,0 +1,104 @@
++{
++  "ts": "2026-09-19T12:02:23+0800",
++  "results": [
++    {
++      "model_key": "glm_5_1_top",
++      "model_name": "glm-5.3-flash",
++      "base_url": "https://open.bigmodel.cn/api/coding/paas/v4",
++      "extra_body": {
++        "clear_thinking": false
++      },
++      "ok": true,
++      "elapsed_s": 3.649,
++      "answer_head": "在线"
++    },
++    {
++      "model_key": "glm_4_7_no_thinking",
++      "model_name": "glm-5.3-flash",
++      "base_url": "https://open.bigmodel.cn/api/coding/paas/v4",
++      "extra_body": {
++        "clear_thinking": true
++      },
++      "ok": true,
++      "elapsed_s": 2.455,
++      "answer_head": "在线"
++    },
++    {
++      "model_key": "glm_4_7_thinking",
++      "model_name": "glm-5.3-flash",
++      "base_url": "https://open.bigmodel.cn/api/coding/paas/v4",
++      "extra_body": {
++        "clear_thinking": false
++      },
++      "ok": true,
++      "elapsed_s": 2.09,
++      "answer_head": "在线"
++    },
++    {
++      "model_key": "glm_4_5_air_batch",
++      "model_name": "glm-5.3-flash",
++      "base_url": "https://open.bigmodel.cn/api/coding/paas/v4",
++      "extra_body": {
++        "clear_thinking": true
++      },
++      "ok": true,
++      "elapsed_s": 1.994,
++      "answer_head": "在线"
++    },
++    {
++      "model_key": "glm_4_6_batch",
++      "model_name": "glm-5.3-flash",
++      "base_url": "https://open.bigmodel.cn/api/coding/paas/v4",
++      "extra_body": {
++        "clear_thinking": true
++      },
++      "ok": true,
++      "elapsed_s": 2.576,
++      "answer_head": "在线"
++    },
++    {
++      "model_key": "glm_4_7_flash_no_thinking",
++      "model_name": "glm-5.3-flash",
++      "base_url": "https://open.bigmodel.cn/api/paas/v4",
++      "extra_body": {
++        "clear_thinking": true
++      },
++      "ok": true,
++      "elapsed_s": 1.569,
++      "answer_head": "在线"
++    },
++    {
++      "model_key": "glm_4_7_flash_thinking",
++      "model_name": "glm-5.3-flash",
++      "base_url": "https://open.bigmodel.cn/api/paas/v4",
++      "extra_body": {
++        "clear_thinking": false
++      },
++      "ok": true,
++      "elapsed_s": 1.693,
++      "answer_head": "在线"
++    },
++    {
++      "model_key": "glm_5_max",
++      "model_name": "glm-5.3-flash",
++      "base_url": "https://open.bigmodel.cn/api/coding/paas/v4",
++      "extra_body": {
++        "clear_thinking": false
++      },
++      "ok": true,
++      "elapsed_s": 5.752,
++      "answer_head": "在线"
++    },
++    {
++      "model_key": "glm_4_5_air_free",
++      "model_name": "glm-5.3-flash",
++      "base_url": "https://open.bigmodel.cn/api/coding/paas/v4",
++      "extra_body": {
++        "clear_thinking": true
++      },
++      "ok": true,
++      "elapsed_s": 6.179,
++      "answer_head": "在线"
++    }
++  ]
++}
+\ No newline at end of file

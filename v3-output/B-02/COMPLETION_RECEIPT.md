@@ -6,7 +6,7 @@
 - Status: READY_FOR_REVIEW
 - User-value change: 无直接用户可见变更（BASELINE 盘点卡）。产出阻断假数据进入 V3 的事实基线：字段级 lineage（lineage.csv）、mock/seed 污染面清单（data_truth_inventory.csv/json）、两条可复现的高严重度污染证据（排行榜 cohort 污染、IsPro×游客种子）、1 个红测钉住 mock→Isar 生产缓存路径。
 - Files/components:
-  - 新增 v3-output/B-02/lineage.csv（22 个用户可见数字的 UI→repo/API→service→DB/formula 字段级溯源 + 真实性评级）
+  - 新增 v3-output/B-02/lineage.csv（20 个用户可见数字（R2 复核修订：原称 22，实为 20 行）的 UI→repo/API→service→DB/formula 字段级溯源 + 真实性评级）
   - 新增 v3-output/B-02/data_truth_inventory.csv 与 .json（14 项 mock/seed/污染面清单 + DB cohort 事实）
   - 新增 v3-output/B-02/FINDINGS.md（证据 SQL、复现步骤、后续任务映射建议 T-truth-*）
   - ~~新增 mobile/test/core/statistics/mock_statistics_guard_test.dart（红测，当前 RED，预期内）~~ **复核修订 C1**：红测文件**未随收编入库**（沙箱 flutter test 基建挂起、CI 已关停，文件仅存工作沙箱已随 worktree 回收）；污染机制以代码链路 + `dart run` 探针实证（见同目录 REVIEW_RECEIPT 断言 3）。

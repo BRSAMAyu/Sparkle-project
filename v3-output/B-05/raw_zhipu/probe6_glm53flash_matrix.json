@@ -1,0 +1,638 @@
+{
+  "model": "glm-5.3-flash",
+  "ts": "2026-09-19T11:56:40+0800",
+  "standard": {
+    "runs": [
+      {
+        "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+        "status": 200,
+        "ttft_any_s": 0.602,
+        "ttft_content_s": 1.344,
+        "total_s": 1.489,
+        "reasoning_chars": 310,
+        "content_chars": 42,
+        "reasoning_share_pct": 88.1,
+        "has_reasoning": true,
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 19,
+          "completion_tokens": 86,
+          "total_tokens": 105,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 60
+          }
+        },
+        "content_preview": "光合作用是绿色植物利用光能，将二氧化碳和水转化为有机物（如葡萄糖）并释放氧气的过程。",
+        "run": 1
+      },
+      {
+        "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+        "status": 200,
+        "ttft_any_s": 0.644,
+        "ttft_content_s": 1.456,
+        "total_s": 1.661,
+        "reasoning_chars": 420,
+        "content_chars": 48,
+        "reasoning_share_pct": 89.7,
+        "has_reasoning": true,
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 19,
+          "completion_tokens": 117,
+          "total_tokens": 136,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 86
+          }
+        },
+        "content_preview": "光合作用是植物、藻类和某些细菌利用光能，将二氧化碳和水转化为有机物（如葡萄糖）并释放氧气的过程。",
+        "run": 2
+      },
+      {
+        "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+        "status": 200,
+        "ttft_any_s": 0.494,
+        "ttft_content_s": 2.643,
+        "total_s": 2.805,
+        "reasoning_chars": 1038,
+        "content_chars": 47,
+        "reasoning_share_pct": 95.7,
+        "has_reasoning": true,
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 19,
+          "completion_tokens": 280,
+          "total_tokens": 299,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 252
+          }
+        },
+        "content_preview": "光合作用是绿色植物利用光能（主要是阳光），将二氧化碳和水转化为葡萄糖等有机物并释放氧气的过程。",
+        "run": 3
+      },
+      {
+        "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+        "status": 200,
+        "ttft_any_s": 0.727,
+        "ttft_content_s": 2.812,
+        "total_s": 2.997,
+        "reasoning_chars": 818,
+        "content_chars": 42,
+        "reasoning_share_pct": 95.1,
+        "has_reasoning": true,
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 19,
+          "completion_tokens": 203,
+          "total_tokens": 222,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 177
+          }
+        },
+        "content_preview": "光合作用是绿色植物利用光能，把二氧化碳和水转化为有机物(如葡萄糖)并释放氧气的过程。",
+        "run": 4
+      },
+      {
+        "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+        "status": 200,
+        "ttft_any_s": 0.688,
+        "ttft_content_s": 1.011,
+        "total_s": 1.338,
+        "reasoning_chars": 132,
+        "content_chars": 45,
+        "reasoning_share_pct": 74.6,
+        "has_reasoning": true,
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 19,
+          "completion_tokens": 55,
+          "total_tokens": 74,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 27
+          }
+        },
+        "content_preview": "光合作用是绿色植物利用光能将二氧化碳和水转化为有机物（如葡萄糖）并释放氧气的生物化学过程。",
+        "run": 5
+      },
+      {
+        "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+        "status": 200,
+        "ttft_any_s": 0.412,
+        "ttft_content_s": 0.77,
+        "total_s": 1.064,
+        "reasoning_chars": 107,
+        "content_chars": 45,
+        "reasoning_share_pct": 70.4,
+        "has_reasoning": true,
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 19,
+          "completion_tokens": 50,
+          "total_tokens": 69,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 22
+          }
+        },
+        "content_preview": "光合作用是绿色植物利用光能将二氧化碳和水转化为有机物（如葡萄糖）并释放氧气的生物化学过程。",
+        "run": 6
+      },
+      {
+        "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+        "status": 200,
+        "ttft_any_s": 0.688,
+        "ttft_content_s": 1.012,
+        "total_s": 1.348,
+        "reasoning_chars": 122,
+        "content_chars": 47,
+        "reasoning_share_pct": 72.2,
+        "has_reasoning": true,
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 19,
+          "completion_tokens": 54,
+          "total_tokens": 73,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 25
+          }
+        },
+        "content_preview": "光合作用是植物（及某些微生物）利用光能将二氧化碳和水转化为有机物（如葡萄糖）并释放氧气的过程。",
+        "run": 7
+      },
+      {
+        "url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+        "status": 200,
+        "ttft_any_s": 0.443,
+        "ttft_content_s": 1.587,
+        "total_s": 1.768,
+        "reasoning_chars": 396,
+        "content_chars": 44,
+        "reasoning_share_pct": 90.0,
+        "has_reasoning": true,
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 19,
+          "completion_tokens": 125,
+          "total_tokens": 144,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 98
+          }
+        },
+        "content_preview": "光合作用是绿色植物利用光能将二氧化碳和水转化为葡萄糖等有机物，并释放氧气的生物化学过程。",
+        "run": 8
+      }
+    ],
+    "stats": {
+      "n_ok": 8,
+      "ttft_any_p50": 0.644,
+      "ttft_any_p95": 0.727,
+      "ttft_content_p50": 1.456,
+      "ttft_content_p95": 2.812,
+      "total_p50": 1.661,
+      "total_p95": 2.997,
+      "reasoning_every_run": true,
+      "avg_reasoning_share_pct": 84.5
+    },
+    "param_probes": {
+      "thinking_disabled": {
+        "status": 400,
+        "has_reasoning": null,
+        "error": "{\"error\":{\"code\":\"1210\",\"message\":\"该模型始终思考，不支持关闭思考；请使用 low、high 或 max。\"}}",
+        "ttft_any_s": null,
+        "total_s": null
+      },
+      "engine_clear_thinking_true": {
+        "status": 200,
+        "has_reasoning": true,
+        "error": null,
+        "ttft_any_s": 0.41,
+        "total_s": 0.994
+      }
+    },
+    "concurrency4": {
+      "statuses": [
+        200,
+        200,
+        200,
+        200
+      ],
+      "errors": [],
+      "wave_elapsed_s": 1.434,
+      "per_req_total_s": [
+        1.103,
+        1.059,
+        1.353,
+        1.432
+      ],
+      "ttft_any_s": [
+        0.502,
+        0.493,
+        0.447,
+        0.449
+      ],
+      "has_reasoning": [
+        true,
+        true,
+        true,
+        true
+      ]
+    }
+  },
+  "coding": {
+    "runs": [
+      {
+        "url": "https://open.bigmodel.cn/api/coding/paas/v4/chat/completions",
+        "status": 200,
+        "ttft_any_s": 0.602,
+        "ttft_content_s": 3.602,
+        "total_s": 4.133,
+        "reasoning_chars": 800,
+        "content_chars": 47,
+        "reasoning_share_pct": 94.5,
+        "has_reasoning": true,
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 19,
+          "completion_tokens": 191,
+          "total_tokens": 210,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 161
+          }
+        },
+        "content_preview": "光合作用是绿色植物利用光能，通过叶绿体把二氧化碳和水转化为有机物（如葡萄糖）并释放氧气的过程。",
+        "run": 1
+      },
+      {
+        "url": "https://open.bigmodel.cn/api/coding/paas/v4/chat/completions",
+        "status": 200,
+        "ttft_any_s": 4.277,
+        "ttft_content_s": 5.587,
+        "total_s": 5.915,
+        "reasoning_chars": 317,
+        "content_chars": 41,
+        "reasoning_share_pct": 88.5,
+        "has_reasoning": true,
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 19,
+          "completion_tokens": 89,
+          "total_tokens": 108,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 64
+          }
+        },
+        "content_preview": "光合作用是绿色植物利用光能将二氧化碳和水转化为有机物（如葡萄糖）并释放氧气的过程。",
+        "run": 2
+      },
+      {
+        "url": "https://open.bigmodel.cn/api/coding/paas/v4/chat/completions",
+        "status": 200,
+        "ttft_any_s": 0.587,
+        "ttft_content_s": 4.339,
+        "total_s": 4.76,
+        "reasoning_chars": 1068,
+        "content_chars": 47,
+        "reasoning_share_pct": 95.8,
+        "has_reasoning": true,
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 19,
+          "completion_tokens": 239,
+          "total_tokens": 258,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 209
+          }
+        },
+        "content_preview": "光合作用是绿色植物利用叶绿体吸收光能，将二氧化碳和水转化为有机物（如葡萄糖）并释放氧气的过程。",
+        "run": 3
+      },
+      {
+        "url": "https://open.bigmodel.cn/api/coding/paas/v4/chat/completions",
+        "status": 200,
+        "ttft_any_s": 2.247,
+        "ttft_content_s": 7.56,
+        "total_s": 7.828,
+        "reasoning_chars": 1217,
+        "content_chars": 42,
+        "reasoning_share_pct": 96.7,
+        "has_reasoning": true,
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 19,
+          "completion_tokens": 355,
+          "total_tokens": 374,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 328
+          }
+        },
+        "content_preview": "光合作用是绿色植物利用光能，将二氧化碳和水转化为有机物（如葡萄糖）并释放氧气的过程。",
+        "run": 4
+      },
+      {
+        "url": "https://open.bigmodel.cn/api/coding/paas/v4/chat/completions",
+        "status": 200,
+        "ttft_any_s": 0.573,
+        "ttft_content_s": 0.9,
+        "total_s": 1.287,
+        "reasoning_chars": 75,
+        "content_chars": 34,
+        "reasoning_share_pct": 68.8,
+        "has_reasoning": true,
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 19,
+          "completion_tokens": 35,
+          "total_tokens": 54,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 15
+          }
+        },
+        "content_preview": "光合作用是绿色植物利用阳光、水和二氧化碳合成有机物并释放氧气的过程。",
+        "run": 5
+      },
+      {
+        "url": "https://open.bigmodel.cn/api/coding/paas/v4/chat/completions",
+        "status": 200,
+        "ttft_any_s": 0.699,
+        "ttft_content_s": 7.269,
+        "total_s": 7.533,
+        "reasoning_chars": 1440,
+        "content_chars": 42,
+        "reasoning_share_pct": 97.2,
+        "has_reasoning": true,
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 19,
+          "completion_tokens": 412,
+          "total_tokens": 431,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 386
+          }
+        },
+        "content_preview": "光合作用是绿色植物利用光能，将二氧化碳和水转化为有机物(如葡萄糖)并释放氧气的过程。",
+        "run": 6
+      },
+      {
+        "url": "https://open.bigmodel.cn/api/coding/paas/v4/chat/completions",
+        "status": 200,
+        "ttft_any_s": 0.737,
+        "ttft_content_s": 1.378,
+        "total_s": 1.928,
+        "reasoning_chars": 112,
+        "content_chars": 48,
+        "reasoning_share_pct": 70.0,
+        "has_reasoning": true,
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 19,
+          "completion_tokens": 53,
+          "total_tokens": 72,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 22
+          }
+        },
+        "content_preview": "光合作用是植物、藻类和某些细菌利用光能，将二氧化碳和水转化为有机物（如葡萄糖）并释放氧气的过程。",
+        "run": 7
+      },
+      {
+        "url": "https://open.bigmodel.cn/api/coding/paas/v4/chat/completions",
+        "status": 200,
+        "ttft_any_s": 0.579,
+        "ttft_content_s": 1.688,
+        "total_s": 2.159,
+        "reasoning_chars": 319,
+        "content_chars": 42,
+        "reasoning_share_pct": 88.4,
+        "has_reasoning": true,
+        "finish": "stop",
+        "usage": {
+          "prompt_tokens": 19,
+          "completion_tokens": 93,
+          "total_tokens": 112,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 67
+          }
+        },
+        "content_preview": "光合作用是绿色植物利用光能，将二氧化碳和水转化为有机物（如葡萄糖）并释放氧气的过程。",
+        "run": 8
+      }
+    ],
+    "stats": {
+      "n_ok": 8,
+      "ttft_any_p50": 0.699,
+      "ttft_any_p95": 4.277,
+      "ttft_content_p50": 4.339,
+      "ttft_content_p95": 7.56,
+      "total_p50": 4.76,
+      "total_p95": 7.828,
+      "reasoning_every_run": true,
+      "avg_reasoning_share_pct": 87.5
+    },
+    "param_probes": {
+      "thinking_disabled": {
+        "status": 200,
+        "has_reasoning": false,
+        "error": null,
+        "ttft_any_s": 0.643,
+        "total_s": 1.01
+      },
+      "engine_clear_thinking_true": {
+        "status": 200,
+        "has_reasoning": true,
+        "error": null,
+        "ttft_any_s": 0.543,
+        "total_s": 1.338
+      }
+    },
+    "concurrency4": {
+      "statuses": [
+        200,
+        200,
+        200,
+        200
+      ],
+      "errors": [],
+      "wave_elapsed_s": 5.883,
+      "per_req_total_s": [
+        5.882,
+        1.949,
+        4.947,
+        1.864
+      ],
+      "ttft_any_s": [
+        0.913,
+        0.914,
+        0.922,
+        0.88
+      ],
+      "has_reasoning": [
+        true,
+        true,
+        true,
+        true
+      ]
+    }
+  },
+  "baselines": {
+    "chinese_instruction": [
+      {
+        "prompt_idx": 1,
+        "status": 200,
+        "content": "瑞利散射使蓝光如星火布满天空",
+        "constraint1_pass": true,
+        "constraint2_pass": false,
+        "reasoning_chars": 1557,
+        "usage": {
+          "prompt_tokens": 52,
+          "completion_tokens": 573,
+          "total_tokens": 625,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 556
+          }
+        }
+      },
+      {
+        "prompt_idx": 2,
+        "status": 200,
+        "content": "5040",
+        "constraint1_pass": false,
+        "constraint2_pass": true,
+        "reasoning_chars": 80,
+        "usage": {
+          "prompt_tokens": 28,
+          "completion_tokens": 29,
+          "total_tokens": 57,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 24
+          }
+        }
+      }
+    ],
+    "json_output": {
+      "with_response_format": {
+        "status": 200,
+        "valid_json": true,
+        "error": null,
+        "content": "\n{\"names\": [\"小明\", \"小红\"], \"cities\": [\"上海\", \"北京\"]}\n"
+      },
+      "prompt_only": {
+        "status": 200,
+        "valid_json": true,
+        "content": "{\"names\": [\"小明\", \"小红\"], \"cities\": [\"上海\", \"北京\"]}"
+      }
+    },
+    "long_context_8k": [
+      {
+        "target_chars": 12000,
+        "status": 200,
+        "prompt_tokens": 5570,
+        "content": "",
+        "needle_correct": false,
+        "ttft_any_s": 0.509,
+        "total_s": 9.99,
+        "usage": {
+          "prompt_tokens": 5570,
+          "completion_tokens": 1024,
+          "total_tokens": 6594,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 1022
+          }
+        }
+      },
+      {
+        "target_chars": 18000,
+        "status": 200,
+        "prompt_tokens": 8338,
+        "content": "萤火计划",
+        "needle_correct": true,
+        "ttft_any_s": 0.65,
+        "total_s": 2.608,
+        "usage": {
+          "prompt_tokens": 8338,
+          "completion_tokens": 196,
+          "total_tokens": 8534,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 189
+          }
+        }
+      }
+    ]
+  },
+  "vision": {
+    "screenshot": "/Users/brsama/code/GitHub/Sparkle-project/.fieldtest-shots/round3/24_chat_reply1.png",
+    "image_bytes": 331603,
+    "status": 200,
+    "error": null,
+    "content": "这是一张手机应用截图，看起来是一个 AI 学习/对话类应用（名为 \"Aurora\"），并且带有 Flutter 的布局溢出调试提示。内容自上而下如下：\n\n**顶部导航栏**\n- 返回箭头、星形图标、标题 \"AI…\" / 副标题 \"Her…\"，以及若干功能图标（上传、调节、历史、趋势、更多）\n\n**主要卡片内容（原样文字）**\n1. `AI currently remembers` —— `0 cu",
+    "usage": {
+      "prompt_tokens": 3385,
+      "completion_tokens": 512,
+      "total_tokens": 3897,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 389
+      }
+    },
+    "total_s": 10.438
+  }
+}

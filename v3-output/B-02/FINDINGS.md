@@ -18,7 +18,7 @@ Base SHA: `f01f4ae81ebd645b8f313afd2e9a243cfe83a3f0`（未 commit，工作树仅
 | **actual 但被 seed 污染（cohort pollution）** | 排行榜（top-50 100% 游客种子号）、flame 等级、星图掌握度库（98.9% 行属 guest）、成就库（guest 944 行 vs 真实用户 3 行）、社群内容 |
 | **estimated（明示的模型估计）** | 考试冲刺 estimated_score_now / pass_probability、predictive dashboard（带 confidence + fallback_used） |
 | **demo（门控内 mock）** | 移动端 DemoDataService 全量假人生（编译期 DEMO_MODE / 游客偏好开关，有 token 即强制关闭）、insights 各 repo 的 demo 分支、Mock 认知/社群仓库（USE_MOCK） |
-| **mock 休眠但污染路径健在** | `core/statistics` focus/capsule/agent 三个仓库 `fetchFromApi` 生成假数据并可写进 Isar 生产缓存（红测已钉） |
+| **mock 休眠但污染路径健在** | `core/statistics` focus/capsule/agent 三个仓库 `fetchFromApi` 生成假数据并可写进 Isar 生产缓存（红测未随卡入库，机制经两路复核代码级实证） |
 | **server mock** | llm_service `demo_mode`：无 API key 即把罐头回复当正常 AI 输出返回 |
 
 ## 二、两条最高严重度发现（可复现）

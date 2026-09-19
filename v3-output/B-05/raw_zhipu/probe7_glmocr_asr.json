@@ -1,0 +1,68 @@
+{
+  "ts": "2026-09-19T11:59:53+0800",
+  "glm_ocr": {
+    "screenshot": "/Users/brsama/code/GitHub/Sparkle-project/.fieldtest-shots/round3/24_chat_reply1.png",
+    "image_bytes": 331603,
+    "status": 200,
+    "elapsed_s": 0.743,
+    "md_results_head": "![](page=0,bbox=[39, 107, 108, 165])\n\n![](page=0,bbox=[178, 93, 298, 183])\n\nHer...\n\n![](page=0,bbox=[476, 104, 557, 170])\n\n![](page=0,bbox=[115, 292, 170, 349])\n\nAI currently remembers\n\n0 current session memories\n\n![](page=0,bbox=[843, 303, 963, 345])\n\nAurora\n\nCan go deeper\n\n3/4 X V\n\n最近2张任务中有1张超时·轻度关注\n\n![](page=0,bbox=[113, 701, 178, 770])\n\nCurrent self-model 5 correctable claims\n\n![](page=0,bbox=[126, 859, 183, 911])\n\nSend to AI\n\nAnswer my question directly\n\n![](page=0,bbox=[123, 966, 183, 1012])\n\nGive me a 3-step action list first\n\nDeep calibration available Deep calibration available (1\n\nSt",
+    "keys": [
+      "created",
+      "data_info",
+      "id",
+      "layout_details",
+      "layout_visualization",
+      "md_results",
+      "model",
+      "request_id",
+      "usage"
+    ],
+    "usage": {
+      "completion_tokens": 92,
+      "prompt_tokens": 580,
+      "total_tokens": 672
+    }
+  },
+  "glm_asr_silence_1s": {
+    "wav": "/tmp/b05b-probe/silence_1s.wav",
+    "wav_bytes": 32044,
+    "status": 200,
+    "elapsed_s": 0.206,
+    "response": {
+      "text": "",
+      "segments": null,
+      "duration": null
+    }
+  },
+  "glm_asr_speech_zh": {
+    "wav": "/tmp/b05b-probe/speech_zh.wav",
+    "wav_bytes": 30560,
+    "status": 200,
+    "elapsed_s": 0.185,
+    "response": {
+      "text": "F dash",
+      "segments": null,
+      "duration": null
+    }
+  },
+  "glm_asr_speech_zh_7s": {
+    "wav": "/tmp/b05b-probe/speech2.wav",
+    "wav_bytes": 254332,
+    "status": 200,
+    "elapsed_s": 0.441,
+    "response": {
+      "created": 1789790431,
+      "id": "202609191200315b793698e2a642af",
+      "request_id": "202609191200315b793698e2a642af",
+      "text": "你好，今天是9月19日，星火项目语音链路测试，请把这句话转成文字。",
+      "usage": {
+        "completion_tokens": 25,
+        "prompt_tokens": 159,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "total_tokens": 184
+      }
+    }
+  }
+}
