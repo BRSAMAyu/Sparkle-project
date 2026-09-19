@@ -7,7 +7,7 @@
   "mock(休眠)": 3,
   "mock": 1,
   "seed_namespace": 2,
-  "pollution": 2,
+  "pollution": 3,
   "actual": 3,
   "actual(本地)": 1
  },
@@ -200,10 +200,27 @@
    "gating_or_namespace": "设备本地; 服务端 focus_sessions 对账合并",
    "evidence": "focus_statistics_repository.dart:345-417 mergeServerSessions",
    "remediation_task_hint": "明确\"本地为准\"的取舍; 卸载/换机数据丢失需用户知情"
+  },
+  {
+   "inventory_id": "INV-15",
+   "artifact": "Community feed 无 cohort 过滤 (公开帖 100% 种子作者)",
+   "kind": "logic_gap",
+   "location": "backend/app/api/v1/community.py:276-408 (全链无 registration_source)",
+   "truth_class": "pollution",
+   "enterprises_production_path": "是 — 真实用户看到的社区内容全为种子帖子",
+   "gating_or_namespace": "无",
+   "evidence": "DB as_of 2026-09-19: 未删公开帖 331 = guest 326 + seed 5, email 作者 0 条 (B-02X 独立复核逐位一致)",
+   "remediation_task_hint": "feed 查询加 cohort 过滤或混排策略 (V3-FIX-08)"
   }
  ],
  "revised": {
   "date": "2026-09-19",
   "reason": "REVIEW_RECEIPT C2 (INV-08/09 字段错位修复+JSON重建) / C1 (红测未入库表述) / C4 (INV-09 SQL 补 deleted_at) / C3 (快照漂移以重跑为准)"
- }
+ },
+ "revisions": [
+  {
+   "date": "2026-09-19",
+   "note": "B-02X ACCEPT 合入: INV-15 新增 + 主卡 4 处修正 (weekly_narrative/focus/predictive/growth_dashboard 入口)"
+  }
+ ]
 }
