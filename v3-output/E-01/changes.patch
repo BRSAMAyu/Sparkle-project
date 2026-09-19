@@ -1,0 +1,152 @@
+# E-01 R2 changes.patch — 响应 REVIEW_RECEIPT CHANGES 的纯文档修订
+# 范围: ROUTING_MAP.md + REPORT.md（trace_classification.csv 未改动，已验收）
+# 生成: wt6 worker, 2026-09-19
+diff --git a/tmp/e01rev/ROUTING_MAP.md b/ROUTING_MAP.md
+index 58f83462..11fbe851 100644
+--- a/tmp/e01rev/ROUTING_MAP.md
++++ b/ROUTING_MAP.md
+@@ -31,27 +31,33 @@ generation_node (agents/standard_workflow.py:1365)
+   └─ 其余 → llm_router.select_model(agent_profile→policy→task_type→reasoning_mode→complexity→free钳制)
+ ```
+ 
+-tier 落点（`core/llm_router.py`）：`_preferred_tiers_for_reasoning_mode` 中 **balanced 模式对 QUICK_QUERY/SIMPLE_CHAT 才把 FAST 排首位，其他任务类型首位是 STANDARD→(policy 首选)→实际落 dashscope_chat=plus**；complexity_analyzer（纯规则 <3ms）只能对 tier 做 ±1/±2 的**档内**移动，**不能跳层也不能跳过生成调用**。这是"简单消息落 plus"的结构性原因。
++tier 落点（`core/llm_router.py`，机制归因按 Review 收据改为两段式）：
++
++**(a) 已证实（读码逐行核对）**：`_preferred_tiers_for_reasoning_mode` 中 balanced 模式仅对 {QUICK_QUERY, SIMPLE_CHAT, ROUTING, RETRIEVAL} 把 FAST 排首位，其余任务类型链为 [STANDARD, FAST, PLUS, PRO]（llm_router.py:387-393）；slim 判据 `_should_use_slim_standard_context` 存在且会被 `planned_tool_sequence` 一票否决（standard_workflow.py:2570），但 `planned_tool_sequence` 全库唯一写入点是 tool_planning_node，**只有 exam_preparation/task_decomposition/skill_building 三种 intent**（standard_workflow.py:3185-3207），不存在记忆类序列——纯记忆指令（≤120字、无深词、无文档）按代码应通过 slim 判据进入 balanced fast path 拿到 FAST 层。
++
++**(b) 未解（观测到的行为与 (a) 推导不符，留探针）**：其一，纯记忆指令实测仍落 plus（01:11:31 req 实测 3144/751），slim 判据链上必有未识别的破点；其二，balanced 链首选应是 STANDARD 档（dashscope_standard_thinking/deepseek_chat）、次选 FAST，**观测到的 dashscope_chat 是链上第 3 位（PLUS 档）**，STANDARD/FAST 候选被整体跳过的原因未解释（候选：模型健康熔断、`LLM_TIER_*` env 覆盖、Agent policy preferred_models 排序、专家角色 profile、reasoning_mode 未按预期传入）。**C1 修复卡必须先跑探针回答 (b) 再定挂钩点**，否则按 (a) 直改（如放开 planned_tool_sequence 排除）对纯记忆消息根本不会命中，还可能破坏考试类消息的真实工具流。
++
++另：complexity_analyzer（纯规则 <3ms）的 delta ±1/±2 是沿 `_FALLBACK_TIER_ORDER` 移动，**可跨档**（TRIVIAL delta=-2 可一次跨两档），但只是改 tier，**不能跳过生成调用本身**。
+ 
+ ## 2. 真实 trace 采样结论（dev DB 只读）
+ 
+-样本：`token_usage` 190 条真实调用（113 个聊天 journey + 评测/探针/离线车道）+ 记忆车道 12 条 + 规划 journey 47 run（链路静态分类）。逐调用分类结果：
++样本口径（按 Review 收据修正）：`token_usage` 全表为全量主干（采样时 225 行、复核时 227 行），CSV 做**代表性收录** 190 条调用——36 条未收录行几乎全是重复的 default 0/0 失败探针（全表 default 0/0 共 20 条，CSV 收 10 条）。逐调用分类结果不变（CSV 已验收）：
+ 
+ | 分类 | 条数 | 占比 | 代表 |
+ |---|---|---|---|
+ | necessary_llm | 17 | 8% | 文档接地问答、deep_analysis(MAX) 显式深度分析 |
+ | rule_eligible | 142 | 69% | 记忆指令确认/记忆检索问答落 plus+balanced（应 L0/L1）|
+ | batch_eligible | 30 | 15% | deepeval/deepqe 离线评测走 pro/max 直出层、离线队列走 plus |
+-| wasteful | 11 | 5% | ①"你好"级问候走 plus 全链(~2.1k prompt tokens) ②default 配置 0/0 token 失败调用×10 |
++| wasteful | 11 | 5% | ①"你好"级问候走 plus 全链(~2.1k prompt tokens) ②default 配置 0/0 token 失败调用 |
+ | insufficient_evidence | 6 | 3% | 非uuid测试车道无消息落库 |
+ 
+ 关键发现（详细论据见 CSV rationale 列）：
+ 
+-- **W-1 plus 层漂移（最大浪费面）**：2026-09-19 全部真实聊天生成（172/225 条）落在 `dashscope_chat`(plus)+balanced，其中约 130 条是"帮我记住X / X是什么"级记忆指令与检索问答。09-18 同类文档问答曾由 fast 层正常承接（`dashscope_fast` 4 条 MRV 记录），说明是**近期行为漂移**而非能力需要。机制：balanced 模式下非 QUICK_QUERY 任务类型首位 tier 非 FAST；记忆指令会触发 planned_tool_sequence 使 `use_slim_standard_context=False`，balanced fast path 判据失效。
+-- **W-2 问候直答缺失**：complexity_analyzer 判 TRIVIAL 后只做档内降级，问候语仍走完整生成链（prompt 固定开销 ~2.1k tokens）。首条消息的 intent fast path（FT-LAT-2）只省了 Layer3 分类调用，没省生成层。
+-- **W-3 失败调用可观测**：10 条 `default` 模型 0/0 token 记录 = LLMService 初始化失败回退链的痕迹，零价值但计入了调用面（含 1 条"计划执行中断"用户可见错误）。
+-- **W-4 评测/离线车道未走 batch**：deepeval/deepqe 离线评测 25 条全走 pro/max 直出层（avg completion 2128 tok）；离线队列补发走 glm_4_7_plus。与"MiniMax M3/glm_batch 只承接异步分析"的车道约束一致化后可全部迁移。
+-- **W-5 记忆车道零 LLM（好消息）**：direct_capture(184) 与 inferred_extraction(52) 两条记忆写入车道**均为纯规则**（memory_inferred_write_lane.py 无任何 LLM 调用），无隐藏深模型。但 semantic_key 碎片化（`favorite_movie`/`favorite_movie:星际穿越`/`favorite_movie_interstellar`…≥4 种 key 同事实；236 条仅 53 个不同摘要）造成重复入库与检索噪声——这是 L0 层的数据质量问题，不是模型问题。
++- **W-1 plus 层对 L0/L1 级流量的持续性覆盖面缺口（主要浪费面，非新近回归）**：09-19 当日真实聊天生成 **54/54 条全部落 dashscope_chat(plus)+balanced**（当日唯一 fast 是 4 条 48-token 探针），其中 41/54 个会话含记忆指令/检索型消息（CSV 中 chat 类 rule_eligible=130 条）。**这不是两日间的行为漂移**：09-18 当天 MRV 文档问答 20 次调用 = 15 plus + 4 fast + 1 default，fast 仅占 1/5；同日记忆指令会话全部落 plus（收据重算 30 session/45 调用；09-19 为 22/33 plus）。即 plus 承接记忆级/检索级流量**自 09-18 起就是主模式**，覆盖面缺口长期存在。09-18 的 4 条 fast MRV 成功记录仅证明 FAST 层有能力承接同类问题，不证明当时常态。
++- **W-2 问候直答缺失**：complexity_analyzer 判 TRIVIAL 后只沿 tier 链做 delta 移动（可跨档但不跳过生成），问候语仍走完整生成链（prompt 固定开销 ~2.1k tokens）。首条消息的 intent fast path（FT-LAT-2）只省了 Layer3 分类调用，没省生成层。
++- **W-3 失败调用可观测**：`default` 模型 0/0 token 记录（全表 20 条，CSV 收 10 条）= LLMService 初始化失败回退链的痕迹，零价值但计入了调用面（含 1 条"计划执行中断"用户可见错误）。
++- **W-4 评测/离线车道未走 batch**：deepeval/deepqe 离线评测 25 条全走 pro/max 直出层（avg completion 2128 tok）；glm_4_7_plus 22 条为离线队列补发（非真实聊天）。与"MiniMax M3/glm_batch 只承接异步分析"的车道约束一致化后可全部迁移。
++- **W-5 记忆车道零 LLM（好消息）**：direct_capture(184) 与 inferred_extraction(52) 两条记忆写入车道**均为纯规则**（memory_inferred_write_lane.py 无任何 LLM 调用），无隐藏深模型。但 semantic_key 碎片化（"最喜欢的电影=星际穿越"同一事实存在 **8 种** key 变体；236 条仅 53 个不同摘要）造成重复入库与检索噪声——这是 L0 层的数据质量问题，不是模型问题。
+ - **W-6 上下文包固定开销**：所有聊天调用 prompt 起步 ~2.1k tokens（"你好"也是 2107）。上下文包对 L0/L1 级 turn 没有瘦身档位与 slim 生成共用判据。
+ - **观测缺口**：Layer3 intent 分类、sufficiency、HyDE、planning 链（47 个 planning context_pack_runs 的 request_id 全部未回填）都不进 token_usage/billing 队列——隐藏调用量目前不可度量。
+ 
+@@ -60,26 +66,27 @@ tier 落点（`core/llm_router.py`）：`_preferred_tiers_for_reasoning_mode` 
+ | 级 | 定义 | Entry 判据（现有机制落点） | 出口/退级 | 现状落点 |
+ |---|---|---|---|---|
+ | **L0 No-Model** | 确定性逻辑直答/写库，零 LLM | ① 空消息/纯问候/纯确认（complexity=TRIVIAL 或 greeting regex）② memory_answer 命中（近轮回放）③ Layer1 explicit intent + 模板动作（翻译/任务 CRUD 回执）④ 记忆 direct_capture/inferred_extraction 写入 ⑤ plan review 的 `_quick_rule_check` 自动批准 ⑥ dual_core 模式决策（本就零 LLM） | 判据不满足→L1 | 已存在但**不全生效**：问候仍走生成链（W-2）；memory_answer 只覆盖"最近轮原样可答"的窄集 |
+-| **L1 Fast Semantic** | fast tier 单次轻调用（thinking off） | ① reasoning_mode=fast 且 chat_mode=standard（fast first touch，已实现）② balanced + slim context + ≤120字 + 无深词（balanced fast path，已实现）③ intent∈{QUICK_QUERY,SIMPLE_CHAT}（balanced 模式 FAST 排首位的现状判据）④ 记忆指令确认/检索问答（**建议新增**，见收敛项 C1/C2） | 检索/工具需要→L2；用户显式 deep→L2 | 判据已存在，但 balanced+工具序列的 turn 被排除（W-1 机制）|
+-| **L2 Deliberate** | standard/plus/pro 层，thinking on，多源上下文 | ① intent∈{PLAN,ERROR_DIAGNOSIS,SPRINT_PLAN} 且 conf≥0.8（execution_mode=langgraph 现判据）② 消息长(>120)/多问句/深度词命中（complexity≥COMPLEX）③ dual_core=cognitive_first 或 very_high_cognitive_load ④ RAG 检索命中/文档接地 ⑤ phase_d 强制 tier | 工具多步编排→L3 | 主力路径；plus 层当前承接了本应 L1 的流量（W-1）|
++| **L1 Fast Semantic** | fast tier 单次轻调用（thinking off） | ① reasoning_mode=fast 且 chat_mode=standard（fast first touch，已实现）② balanced + slim context + ≤120字 + 无深词（balanced fast path，已实现）③ intent∈{QUICK_QUERY, SIMPLE_CHAT, ROUTING, RETRIEVAL}（balanced 模式 FAST 排首位的现状判据，llm_router.py:375-393）④ 记忆指令确认/检索问答（**建议新增**，见收敛项 C1/C2） | 检索/工具需要→L2；用户显式 deep→L2 | 判据已存在，但 balanced 主流量未进入（W-1；破点未定位，见机制段 (b)）|
++| **L2 Deliberate** | standard/plus/pro 层，thinking on，多源上下文 | ① intent∈{PLAN, ERROR_DIAGNOSIS} 且 conf≥0.8（execution_mode=langgraph 现判据，unified_intent_router.py:707）② 消息长(>120)/多问句/深度词命中（complexity≥COMPLEX）③ dual_core=cognitive_first 或 very_high_cognitive_load ④ RAG 检索命中/文档接地 ⑤ phase_d 强制 tier | 工具多步编排→L3 | 主力路径；plus 层当前承接了本应 L1 的流量（W-1）|
+ | **L3 Agent Run** | 多步工具执行/规划编排 | ① planning_workflow（澄清→生成→审查→执行）② execution_engine 工具循环（tool_loop_count 上限已有）③ plan review 触发跨模型复核（conf<0.7 ∨ 高危工具 ∨ >8 tool calls）④ deep_analysis 显式深度档（MAX 层，F-1） | — | 已有；审查前置规则门（quality_gate+feasibility+quick_rule_check）即 L0 gate |
+ 
+-**与 dual_core 的关系**：dual_core_router 的 mode（execution_first/balanced/cognitive_first：DB 实测 155/54/18）是**认知调制**轴，决定 prompt 指令与策略约束，**不直接选 L 级**；L 级由 intent→execution_mode + reasoning_mode→tier 决定。映射为：cognitive_first 倾向 L2（澄清类回复），execution_first 倾向 L0/L1（直推执行），balanced 在 L1/L2。收敛时保持两轴正交，不合并。
++**与 dual_core 的关系**：dual_core_router 的 mode（execution_first/balanced/cognitive_first：`routing_decision_log.decision_type` 实测 155/54/18，含 227 条 context_plan 行不计 mode）是**认知调制**轴，决定 prompt 指令与策略约束，**不直接选 L 级**；L 级由 intent→execution_mode + reasoning_mode→tier 决定。映射为：cognitive_first 倾向 L2（澄清类回复），execution_first 倾向 L0/L1（直推执行），balanced 在 L1/L2。收敛时保持两轴正交，不合并。
+ 
+ **与 tier 的关系**：L0=跳过生成（非 tier）；L1=FAST（dashscope_fast/qwen3.8-flash thinking off）；L2=STANDARD/PLUS/PRO（同模型 thinking on，差异只是 thinking 与计费口径）；L3=编排（内含 L1/L2 调用 + 工具）。由于 qwen3.8-flash 全 tier 同底层模型，**L1→L2 的真实差是 thinking token 与 TTFT，不是模型能力差**——这使"该 L1 的 turn 落 L2"的代价主要是延迟（fast TTFT p50 475ms 基线）而非质量差异，收敛风险低。
+ 
+ ## 4. 收敛建议（current paths 内，不重建）
+ 
+-- **C1（对应 W-1）**：记忆指令/检索问答（意图为 chat+记忆命令词、≤60字、无文档）在 generation_node 判据中显式归 L1（强制 FAST tier），复用 `_should_force_balanced_fast_first_touch` 的挂点，放开其对 planned_tool_sequence(记忆工具) 的排除。预期消除 ~69% 样本中的 plus 漂移。
++- **C1（对应 W-1，前置探针未跑前不得实施）**：目标是把记忆指令/检索问答级 turn 显式归 L1（FAST tier）。**挂钩点待定**：已证伪"记忆工具序列排除"假设（planned_tool_sequence 只有 exam/task/skill 三种 intent，纯记忆消息按码应过 slim 判据），故不得在该处挂钩；必须先完成下方 C1-探针回答机制段 (b) 的两个未解问题，再定判据挂点，且修复需**显式排除 exam_preparation 工具流路径**（含考试词+urgency 的记忆消息依赖 planned_tool_sequence 走真实工具执行，不能被误伤）。
++- **C1-探针（给修复卡的具体方法）**：① 复现跑：向 dev 环境发一条纯记忆指令（如"我最喜欢的电影是《星际穿越》，帮我记住这个"），在 `_should_use_slim_standard_context`、`_should_disable_tools_for_light_standard_reply`、`_resolve_reasoning_mode` 三个判据入口加临时日志，落盘各输入（chat_mode/file_ids/document_context/retrieval_decision/planned_tool_sequence/selected_experts/reasoning_mode 实际值）；② 同一次跑在 `llm_router.select_model` 打印 `LLMSelection.reason` 全文与候选链（`resolve_candidate_models`），确认 target_tier 与最终 model_key 是否一致；③ 静态核查部署 env：`LLM_TIER_STANDARD/LLM_TIER_FAST/LLM_TIER_PLUS` 覆盖与 `LLM_PROVIDER`（llm_router.py:797 `_override_tier_mapping_from_env` 可整体改写候选链）；④ 核查 GENERATION 角色 profile 的 model_policy.preferred_models 是否把 dashscope_chat 排前（agent_profiles.py 注册表）。①②定位 slim 判据破点，③④定位 PLUS 跳档原因。
+ - **C2（对应 W-2）**：TRIVIAL（问候/确认）走 L0 模板直答或至少强制 FAST+零工具+零检索；上下文包对 TRIVIAL turn 降为空档。
+ - **C3（对应 W-3）**：default 回退配置从 billing 记录中隔离为 error 事件，不再产生"成功调用"假象。
+ - **C4（对应 W-4）**：deepeval/deepqe/离线队列全部迁 GLM_BATCH 车道（V3-FIX-04 coding 端点已接线，MiniMax 池并发 8 可用）。
+-- **C5（观测缺口）**：Layer3 分类、sufficiency、HyDE、planning 链调用补 token_tracker 埋点 + context_pack_runs.request_id 回填（为 D-06/O-02 的度量前置）。
++- **C5（观测缺口）**：Layer3 分类、sufficiency、HyDE、planning 链调用补 token_tracker 埋点 + context_pack_runs.request_id 回填（为 D-06/O-02 的度量前置；C1-探针的 ①② 日志可直接升级为 C5 的常驻埋点）。
+ - **C6（数据质量）**：记忆 semantic_key 归一化（同事实合并 key），非本卡范围，登记给记忆线。
+ 
+ ## 5. metrics 口径建议（文档级，D-06/O-02 铺垫）
+ 
+-1. **每级调用占比**：`L0_skipped / L1 / L2 / L3` 四级 counter，落点 `LLM_ROUTER_SELECTION_TOTAL` 增加 `ladder_level` label（由 generation_node 的判定分支写入 context_data 一并透传）。目标形态：L0+L1 ≥ 60%（当前按样本反推 L0≈0、L1≈5%）。
++1. **每级调用占比**：`L0_skipped / L1 / L2 / L3` 四级 counter，落点 `LLM_ROUTER_SELECTION_TOTAL` 增加 `ladder_level` label（由 generation_node 的判定分支写入 context_data 一并透传）。目标形态：L0+L1 ≥ 60%（当前 09-19 真实聊天 54/54 全落 plus+balanced，反推 L0≈0、L1≈0）。
+ 2. **隐藏调用比**：`auxiliary_llm_calls / generation_calls`（Layer3+sufficiency+HyDE+review+planning chain / 主生成），当前无数据（C5 前置）。健康线 <0.5。
+ 3. **wasteful 率**：`(default回退调用 + TRIVIAL全链生成) / 总调用`，当前采样值 5%（W-2+W-3 修后应 ≈0）。
+ 4. **每级时延**：按 ladder_level 分组的 TTFT 与 total latency（fast TTFT p50 475ms 为 L1 基线；L2 记录 thinking 占比）。复用 latency_probe.mark 现有埋点。
+@@ -100,6 +107,8 @@ tier 落点（`core/llm_router.py`）：`_preferred_tiers_for_reasoning_mode` 
+ - `backend/tests/unit/test_unified_intent_router_fast_path_first_message.py`（5 用例：空历史不再强制 LLM、复杂/动作消息仍走 LLM assist）
+ - `backend/tests/unit/test_standard_workflow_generation_routing.py`（27 用例，含 `test_generation_node_forces_fast_tier_for_standard_chat`、`test_generation_node_forces_fast_tier_for_balanced_light_standard_chat`、`test_generation_node_answers_recent_memory_question_without_llm`）
+ - `backend/tests/unit/test_deep_analysis_tier_routing.py`（6 用例，F-1 MAX 强制）
+-- `backend/tests/unit/test_llm_router_free_tier.py`（V3-FIX-02 免费层钳制）
++- `backend/tests/unit/test_llm_router_free_tier.py`（14 用例，V3-FIX-02 免费层钳制）
++
++合计 54 用例守护 fast path 判据。
+ 
+-DB 侧交叉验证：fast 层调用在 09-18 曾正常承接文档问答（MRV 4 条 fast 成功记录），证明 fast path 判据本身可用、未退化——当前问题是 balanced 主流量**没有进入**这些判据（W-1），属覆盖面缺口而非回归。
++DB 侧交叉验证（按收据口径修正）：09-18 MRV 文档问答 20 次调用中 4 条 fast 成功记录，仅证明 **FAST 层有能力承接**该类问题；同日 plus 已占 15/20、记忆指令会话全 plus——即 fast path 判据本身未退化（测试守护完好、能力有实证），但 balanced 主流量**自 09-18 起就未进入**这些判据（W-1 持续性覆盖面缺口），slim 判据链破点与 PLUS 跳档原因待 C1-探针定位。
+diff --git a/tmp/e01rev/REPORT.md b/REPORT.md
+index 11fbbd21..291a332c 100644
+--- a/tmp/e01rev/REPORT.md
++++ b/REPORT.md
+@@ -10,28 +10,37 @@
+ 
+ ## 做了什么
+ 
+-1. **真实 trace 采样（只读 dev DB）**：以 `token_usage`（225 条全量）为主干，join `chat_messages` 还原触发消息，覆盖 113 个真实聊天 journey（190 条调用），外加记忆写入车道（236 条 episodic_memories 抽样 12）、规划 journey（context_pack_runs intent=planning 共 47 run，链路静态分类）、审查链（plan_review_service 读码）、离线/评测/探针车道。逐调用按 必要/可规则/可batch/浪费 四类打标，每行附 rationale。
++1. **真实 trace 采样（只读 dev DB）**：以 `token_usage` 全表为全量主干（采样时 225 行、复核时 227 行；重复的 default 0/0 失败探针未逐行收录——全表 20 条收 10 条，属代表性收录），join `chat_messages` 还原触发消息，覆盖 113 个真实聊天 journey（190 条调用入 CSV），外加记忆写入车道（236 条 episodic_memories 抽样 12）、规划 journey（context_pack_runs intent=planning 共 47 run，链路静态分类）、审查链（plan_review_service 读码）、离线/评测/探针车道。逐调用按 必要/可规则/可batch/浪费 四类打标，每行附 rationale。
+ 2. **逐调用分类结果**：necessary_llm 17 ｜ rule_eligible 142 ｜ batch_eligible 30 ｜ wasteful 11 ｜ insufficient_evidence 6（明细见 CSV）。
+ 3. **L0–L3 判据表**：完全基于现有 UnifiedIntentRouter 三层级联 + dual_core_router 规则打分 + standard_workflow fast path 判据 + llm_router tier 链映射，未新建路由概念；明确 dual_core（认知调制轴）与 ladder（模型深度轴）正交。
+-4. **fast path 不退化**：读码证明三层判据（intent rule_fast_path / fast first touch / balanced fast path / recent_memory 零LLM直答）均现存且默认开启；指出既有测试 5 个文件共 40+ 用例作为守护（worktree 无 venv，按 LIGHT 约束未装依赖跑 pytest，以静态断言清单为证）；DB 侧 09-18 fast 层成功承接文档问答的记录交叉验证判据可用。
++4. **fast path 不退化**：读码证明三层判据（intent rule_fast_path / fast first touch / balanced fast path / recent_memory 零LLM直答）均现存且默认开启；既有测试 5 个文件共 54 用例作为守护（worktree 无 venv，按 LIGHT 约束未装依赖跑 pytest，以静态断言清单为证）；DB 侧 09-18 的 4 条 fast MRV 记录证明 FAST 层有能力承接该类问题（判据未退化），但同日 plus 已是主模式——问题是 balanced 主流量持续未进入判据（W-1 覆盖面缺口），破点待 C1-探针。
+ 
+ ## 关键发现（wasteful 面按影响排序）
+ 
+-1. **W-1 plus 层漂移**：09-19 全部真实聊天生成（172 条）落 plus+balanced，其中 ~130 条为记忆指令/检索问答级（CSV 中 rule_eligible 主体）。09-18 同类问题由 fast 层正常承接，证明是近期漂移而非能力需要。机制：balanced 模式非 QUICK_QUERY 的 tier 首位非 FAST + 记忆工具序列使 slim context 判据失效。
+-2. **W-2 问候直答缺失**：TRIVIAL 消息仍走完整生成链（prompt 固定 ~2.1k tokens 开销），complexity 只降档不跳层。
+-3. **W-3 失败调用计账**：10 条 `default` 配置 0/0 token 调用（LLMService 初始化失败回退）产生零价值调用记录。
+-4. **W-4 评测/离线车道未 batch 化**：deepeval/deepqe 25 条走 pro/max 直出层；离线队列走 plus。可整体迁 GLM_BATCH/MiniMax 车道。
+-5. **好消息**：记忆写入两车道均纯规则零 LLM（无隐藏深模型）；审查/规划链有 L0 规则前置门（quick_rule_check/quality_gate）。
++1. **W-1 plus 层对 L0/L1 级流量的持续性覆盖面缺口（主要浪费面，非新近回归）**：09-19 真实聊天生成 **54/54 条全部落 plus+balanced**（"172"为两日全表 plus+balanced 口径，其中 22 条 glm_4_7_plus 是离线队列、非真实聊天），其中 ~130 条（41/54 会话）为记忆指令/检索问答级。**非两日间行为漂移**：09-18 当天 MRV 文档问答 20 次调用 = 15 plus + 4 fast + 1 default，同日记忆指令会话全部落 plus（30 session/45 调用）——plus 承接记忆级流量自 09-18 起就是主模式。09-18 的 4 条 fast 记录仅证明 FAST 层有能力承接，不证明当时常态。
++2. **W-2 问候直答缺失**：TRIVIAL 消息仍走完整生成链（prompt 固定 ~2.1k tokens 开销），complexity delta 只沿 tier 链移动（可跨档）但不跳过生成调用。
++3. **W-3 失败调用计账**：`default` 配置 0/0 token 调用（全表 20 条，CSV 收 10）产生零价值调用记录（LLMService 初始化失败回退）。
++4. **W-4 评测/离线车道未 batch 化**：deepeval/deepqe 25 条走 pro/max 直出层；glm_4_7_plus 22 条离线队列走 plus。可整体迁 GLM_BATCH/MiniMax 车道。
++5. **好消息**：记忆写入两车道均纯规则零 LLM（无隐藏深模型）；审查/规划链有 L0 规则前置门（quick_rule_check/quality_gate）；semantic_key 碎片化比初报更严重——"最喜欢的电影=星际穿越"同一事实存在 **8 种** key 变体（236 条仅 53 个不同摘要），归 C6/记忆线。
+ 6. **观测缺口**：intent Layer3、sufficiency、HyDE、planning 链调用不进 token_usage；47 个 planning run 的 request_id 未回填——隐藏调用量目前不可度量（C5 建议）。
++7. **机制归因两段式（R2 修订）**：已证实——balanced 模式仅 {QUICK_QUERY,SIMPLE_CHAT,ROUTING,RETRIEVAL} FAST 排首位（llm_router.py:387-393）；planned_tool_sequence 唯一写入点是 exam/task/skill 三种 intent（standard_workflow.py:3185-3207），**无记忆序列**，纯记忆消息按码应过 slim 判据。未解——纯记忆消息实测仍落 plus 的判据破点，以及 balanced 链 [STANDARD,FAST,PLUS,PRO] 中 STANDARD/FAST 被跳过、直接落第 3 位 PLUS 的选型跳档原因；已列为 C1-探针（判据入口临时日志 + select_model reason 全文 + env tier 覆盖核查 + GENERATION profile preferred_models 核查），修复卡必须先探针后定挂钩点，并显式保护 exam_preparation 工具流路径。
+ 
+ ## L0–L3 判据要点
+ 
+ - L0：TRIVIAL 问候/确认、recent_memory 回放、显式 intent 模板动作、记忆规则写入、计划规则审查门——判据已存在但 L0 覆盖不全（问候/记忆确认仍走生成）。
+-- L1：fast first touch + balanced fast path 现有判据 + 建议把记忆指令/检索问答显式归入（C1）。
+-- L2：intent∈{PLAN,ERROR_DIAGNOSIS}∧conf≥0.8、复杂度 COMPLEX+、cognitive_first/高认知负载、RAG 命中。
++- L1：fast first touch + balanced fast path 现有判据；balanced FAST-first 判据集 = {QUICK_QUERY, SIMPLE_CHAT, ROUTING, RETRIEVAL}；建议把记忆指令/检索问答显式归入（C1，挂钩点待 C1-探针）。
++- L2：intent∈{PLAN, ERROR_DIAGNOSIS}∧conf≥0.8（langgraph 触发集，不含 SPRINT_PLAN）、复杂度 COMPLEX+、cognitive_first/高认知负载、RAG 命中。
+ - L3：planning_workflow 编排、工具循环、跨模型复核（conf<0.7/高危工具/>8 calls）、deep_analysis 显式 MAX（F-1）。
+ - 因 qwen3.8-flash 全 tier 同底层模型，L1→L2 真实差 = thinking token + TTFT（fast p50 475ms 基线），收敛风险低。
+ 
++## R2 修订记录（响应 REVIEW_RECEIPT CHANGES）
++
++- 修订 1（口径）：W-1"172/225"改为准确口径——172 为两日全表 plus+balanced（含 22 条 glm 离线队列）；09-19 真实聊天 plus=54（54/54 全 plus+balanced 属实）。REPORT/ROUTING_MAP 同步；采样口径改述为"全量主干+代表性收录"（default 0/0 全表 20 条收 10）。
++- 修订 2（定性）：删除"近期行为漂移/回归"叙事，改为"持续性覆盖面缺口"；如实补入 09-18 MRV 20 调用=15 plus/4 fast/1 default、09-18 记忆指令会话全 plus（30/45）对照（Worker 已独立复核确认）。
++- 修订 3（机制两段式）：已证实（balanced FAST-first 集合 + slim 判据存在 + exam 词消息经 exam_preparation 触发 planned_tool_sequence）与未解（纯记忆消息判据破点、PLUS 跳档原因）分开陈述；新增 C1-探针具体方法（判据入口日志复现跑 + select_model reason/候选链打印 + env tier 覆盖核查 + GENERATION profile 核查）；C1 明确不得按"记忆工具序列排除"挂钩，须显式排除 exam_preparation 工具流路径；complexity 表述改"±1/±2 可跨档"。
++- 修订 4（判据表小修）：L1 补 ROUTING/RETRIEVAL；L2 删 SPRINT_PLAN（langgraph 触发集仅 {PLAN, ERROR_DIAGNOSIS}）；dual_core 计数标注来源表 routing_decision_log.decision_type；测试用例数精确为 54；W-5 semantic_key 变体数修正为 8。
++- CSV 未改动（Reviewer 已验收通过）。
++
+ ## 未做 / 边界
+ 
+ - 未跑 pytest（worktree 无 venv；LIGHT 约束 + 磁盘纪律，选择静态证据路线）。
+@@ -40,4 +49,5 @@
+ 
+ ## 清理确认
+ 
+-- /tmp/e01（SQL dump + 脚本）已删；未创建任何仓库外文件；无进程/模拟器/构建产物遗留；未 commit/push。
++- /tmp 修订工作副本与首轮采样 dump 已删；未创建任何仓库外持久文件；无进程/模拟器/构建产物遗留；未 commit/push。
++- changes.patch（R2 文档修订 diff）归档于本目录 `changes.patch`。
