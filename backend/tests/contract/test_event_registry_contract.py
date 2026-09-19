@@ -46,7 +46,12 @@ BACKEND_DIR = Path(__file__).resolve().parents[2]
 
 # sha256 of "|".join(sorted(EVENT_REGISTRY)) captured at D-01 freeze
 # (33 names). See test_event_name_vocabulary_is_frozen.
-_FROZEN_VOCABULARY_SHA256 = "4e8ccdcd9a024cd1ab82084d7f3447b69fbe4a1c05dfd3b0f3240fd47ad443b9"
+# X-02 deliberate vocabulary extension (2026-09-19): +1 name
+# "allocation.decision_recorded" (stage=DECISION, Human/Agent/Hybrid
+# allocation rubric, producer app/services/action_allocation_policy.py) →
+# 34 names; hash bumped per the documented extension process (D-01
+# EVENT_REGISTRY.md §扩展流程: contract change must be explicit).
+_FROZEN_VOCABULARY_SHA256 = "a9f0186796cf1e2db9298e544b6f8d84fb0c22870e051718b407d98eb000a53c"
 
 # Observed distinct event_type values in the live dev DB event_outbox
 # (sparkle_readonly, 2026-09-19; 106 rows). run.* / task.status_changed are

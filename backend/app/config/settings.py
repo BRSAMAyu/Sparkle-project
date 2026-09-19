@@ -755,6 +755,14 @@ class Settings(BaseSettings):
     # 5.0s 为实测可用下限；写路径仍由外层韧性兜底（超时→规则默认）。
     SPARKLE_STORAGE_GATE_SEMANTIC_TIMEOUT_SECONDS: float = 5.0
     SPARKLE_STORAGE_GATE_SEMANTIC_MAX_PER_MINUTE: int = 30
+    # X-02 · Action Allocation Policy（Human/Agent/Hybrid delegation rubric）——
+    # 语义灰区层（可选）。纯规则层完整可用且可独立评测；语义层仅对 D6 灰区
+    # 残留生效，且只能在规则层算出的 feasible set 内选 mode（代码强制），
+    # 熔断/超时/失败一律降级规则默认。
+    SPARKLE_ALLOCATION_SEMANTIC_ENABLED: bool = False
+    SPARKLE_ALLOCATION_SEMANTIC_MODEL: str = "qwen3.8-flash"
+    SPARKLE_ALLOCATION_SEMANTIC_TIMEOUT_SECONDS: float = 5.0
+    SPARKLE_ALLOCATION_SEMANTIC_MAX_PER_MINUTE: int = 30
     ENABLE_MEMORY_JOBS: bool = True
     ENABLE_EVIDENCE_SNAPSHOT_ON_WRITE: bool = True
     ENABLE_MEMORY_DECAY: bool = True

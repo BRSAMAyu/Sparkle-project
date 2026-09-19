@@ -75,6 +75,23 @@ ROUTING_CONFIDENCE = get_or_create_metric(
     ['method']
 )
 
+# ========== X-02 Action Allocation Metrics ==========
+# Human/Agent/Hybrid delegation rubric（app/services/action_allocation_policy.py）。
+# 只在 stateful 包装层递增；纯函数核心 decide_allocation 保持无 IO（评测可复现）。
+ALLOCATION_DECISIONS = get_or_create_metric(
+    Counter,
+    'sparkle_allocation_decisions_total',
+    'Human/Agent/Hybrid allocation decisions by mode and layer',
+    ['mode', 'layer']
+)
+
+ALLOCATION_GUARD_REJECTIONS = get_or_create_metric(
+    Counter,
+    'sparkle_allocation_guard_rejections_total',
+    'Allocation guard-based offer rejections by reason',
+    ['guard']
+)
+
 # ========== Learning Metrics ==========
 LEARNING_UPDATES = get_or_create_metric(
     Counter,

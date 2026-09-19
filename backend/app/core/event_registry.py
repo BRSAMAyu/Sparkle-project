@@ -192,6 +192,17 @@ EVENT_REGISTRY: dict[str, RegisteredEvent] = {
             producers=("app/services/routing_outcome_service.py (passive_signals, " "schema routing_outcome.v1)",),
             status="reserved",
         ),
+        RegisteredEvent(
+            # X-02 · Human/Agent/Hybrid allocation rubric 决策事件（与
+            # routing.decision_recorded 同族：决策域的细分事件名）。产出方是
+            # app/services/action_allocation_policy.py 的决策记录结构；落
+            # event_outbox 由消费方（A-04 Aurora 联合决策 / X-05 Unified Run）执行。
+            name="allocation.decision_recorded",
+            stage=EventStage.DECISION,
+            aggregate_type="allocation_decision",
+            producers=("app/services/action_allocation_policy.py",),
+            status="reserved",
+        ),
         # --- EXECUTION: interventions / actions / runs ----------------------
         RegisteredEvent(
             name="intervention.requested",
