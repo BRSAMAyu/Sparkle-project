@@ -9,9 +9,10 @@
    "note": "R1+R2 双路 CHANGES 全处置(C1-C6+P3), 20行lineage 13列解析验证, 验收SQL双路复算一致",
    "since": "2026-09-19T13:10"
   },
-  "M-01": {
+  "V3-FIX-11": {
    "worker": "wt2 APEX",
-   "since": "2026-09-19T12:30"
+   "note": "P0 telemetry boundary 3-chain fix",
+   "since": "2026-09-19T16:0x"
   }
  },
  "done": [
@@ -23,7 +24,8 @@
   "V3-FIX-04",
   "B-02X",
   "V3-FIX-02",
-  "C-01"
+  "C-01",
+  "M-01"
  ],
  "blocked": [],
  "notes": "2026-09-19 15:0x: 3 aggregator/kill-switch test failures confirmed PRE-EXISTING (fail identically at pre-C-01 baseline wt4; state_aggregator untouched since initial commit) — not a C-01 regression; park for test-system batch. C-01 DONE@57c87a8e (dual-ACCEPT, F2 applied at merge)."

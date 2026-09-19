@@ -14,18 +14,24 @@ from typing import Any
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import func, select
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import func, select, update
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.core.business_metrics import MEMORY_CORRECTION_TOTAL, MEMORY_RETRACTION_TOTAL, MEMORY_WRITE_TOTAL
 from app.core.memory_constants import PREFERENCE_KEYS
 from app.models.memory import EpisodicMemory, MemoryCorrection, MemoryGoal, MemoryPreference
+from app.models.user_memory_settings import UserMemorySettings
 from app.orchestration.dual_core_router import AdaptationRecord
 from app.services.evidence_health_service import EvidenceHealthService
 from app.services.evidence_scoring import compute_score
 from app.services.ltm_rollout_service import LtmRolloutService
+from app.services.memory_epistemic_contract import (
+    classify_episodic_class,
+    inferred_may_supersede,
+    preference_write_provenance,
+)
 from app.services.memory_evolution_service import MemoryEvolutionService
 from app.services.memory_policy_evaluator import MemoryPolicyEvaluator
 from app.services.policy_compiler_service import PolicyCompilerService
@@ -125,6 +131,30 @@ class MemoryService:
             .with_for_update()  # 🔒 Acquires row-level lock until transaction ends
         )
         latest = result.scalar_one_or_none()
+
+        # Memory V3 (M-01) 写守卫：Inference 不覆盖 fact。
+        # memory_preferences 是 FACT/CONFIRMED_PREFERENCE 域；推断写
+        # （source_type=ai_inferred 或 evidence 含 ai_inferred）不得接管
+        # 显式事实链头（不新增版本、不设 replaced_by_id）。推断值仍写
+        # user_preferences live 表（那边已有 explicit-override 保护）。
+        if latest is not None:
+            head_provenance = preference_write_provenance(
+                source_type=None,
+                evidence_refs=latest.evidence_refs,
+            )
+            incoming_provenance = preference_write_provenance(
+                source_type=source_type,
+                evidence_refs=normalized_refs,
+            )
+            if not inferred_may_supersede(head_provenance, incoming_provenance):
+                MEMORY_WRITE_TOTAL.labels(type="preference", status="blocked_inferred_over_fact").inc()
+                logger.info(
+                    "Blocked inferred preference write over explicit fact user_id={user_id} pref_key={pref_key}",
+                    user_id=user_id,
+                    pref_key=pref_key,
+                )
+                return None
+
         version_result = await self.db.execute(
             select(func.max(MemoryPreference.version)).where(
                 MemoryPreference.user_id == user_id,
@@ -774,6 +804,7 @@ class MemoryService:
         mentioned_entity_hash: str | None = None,
         mentioned_entity_owner_user_id: UUID | None = None,
         emit_system_update: bool = True,
+        epistemic_class: str | None = None,
     ) -> EpisodicMemory | None:
         if not await self._allow_write(
             user_id=user_id,
@@ -813,6 +844,7 @@ class MemoryService:
             resolved_at=resolved_at,
             mentioned_entity_hash=mentioned_entity_hash,
             mentioned_entity_owner_user_id=mentioned_entity_owner_user_id,
+            epistemic_class=epistemic_class,
         )
         self.db.add(record)
         try:
@@ -851,6 +883,7 @@ class MemoryService:
                     resolved_at=resolved_at,
                     mentioned_entity_hash=mentioned_entity_hash,
                     mentioned_entity_owner_user_id=mentioned_entity_owner_user_id,
+                    epistemic_class=epistemic_class,
                 )
                 self.db.add(record)
                 try:
@@ -915,6 +948,7 @@ class MemoryService:
         resolved_at: datetime | None,
         mentioned_entity_hash: str | None,
         mentioned_entity_owner_user_id: UUID | None,
+        epistemic_class: str | None = None,
     ) -> EpisodicMemory:
         # naive-UTC is the DB canonical form; aware inputs (e.g. LLM-extracted
         # ISO timestamps) make asyncpg raise DataError against TIMESTAMP columns
@@ -944,6 +978,13 @@ class MemoryService:
             semantic_key=semantic_key,
             mentioned_entity_hash=mentioned_entity_hash,
             mentioned_entity_owner_user_id=mentioned_entity_owner_user_id,
+            # Memory V3 (M-01)：显式传入优先（OBSERVATION/EXPERIENCE 未来写方），
+            # 否则按 lane+source_type 保守派生（R2-F1：FACT 仅限用户陈述——
+            # user_confirmed lane 或 direct_capture+USER_STATEMENT_SOURCE_TYPES；
+            # direct_capture 机器写行落 OBSERVATION；其余 lane 落 HYPOTHESIS）。
+            epistemic_class=classify_episodic_class(
+                source_lane, explicit_class=epistemic_class, source_type=source_type
+            ),
         )
 
     async def list_pending_commitments(
@@ -1034,6 +1075,9 @@ class MemoryService:
 
         await self.db.commit()
         MEMORY_RETRACTION_TOTAL.labels(type=kind).inc()
+        # Memory V3 (M-01)：删除类变更 bump memory_epoch（MEMORY_V3 §6），
+        # 供 M-07 上下文/语义缓存失效与 C-07 在途运行重授权检测。
+        await self._bump_epoch_best_effort(user_id, reason=f"retract:{kind}")
         await SystemUpdateService().enqueue(
             user_id,
             build_system_update(
@@ -1076,6 +1120,9 @@ class MemoryService:
             self._apply_retraction(record, reason or "admin_kill_switch")
 
         await self.db.commit()
+        # Memory V3 (M-01)：批量撤销同样 bump 受影响用户的 memory_epoch。
+        for affected_user_id in {record.user_id for record in records}:
+            await self._bump_epoch_best_effort(affected_user_id, reason="revoke_inferred_bulk")
         return len(records)
 
     async def apply_correction(
@@ -1138,6 +1185,9 @@ class MemoryService:
         await self.db.commit()
         await self.db.refresh(record)
         MEMORY_CORRECTION_TOTAL.labels(type=kind, action=action).inc()
+        if action in {"reject", "no_longer_applicable"}:
+            # Memory V3 (M-01)：撤回类纠错 → bump memory_epoch。
+            await self._bump_epoch_best_effort(user_id, reason=f"correction:{action}")
         logger.info(
             "Memory correction applied user_id={user_id} memory_id={memory_id} action={action}",
             user_id=user_id,
@@ -1233,6 +1283,8 @@ class MemoryService:
         await self.db.refresh(record)
         MEMORY_RETRACTION_TOTAL.labels(type="episodic").inc()
         MEMORY_CORRECTION_TOTAL.labels(type="episodic", action="delete").inc()
+        # Memory V3 (M-01)：用户删除 → bump memory_epoch（缓存失效契约）。
+        await self._bump_epoch_best_effort(user_id, reason="revoke:episodic")
         logger.info(
             "Episodic memory revoked by user user_id={user_id} memory_id={memory_id}",
             user_id=user_id,
@@ -1435,6 +1487,115 @@ class MemoryService:
             return True
         rollout = LtmRolloutService(self.db)
         return await rollout.is_enabled(user_id)
+
+    # ------------------------------------------------------------------
+    # Memory V3 (M-01): memory_epoch contract
+    # ------------------------------------------------------------------
+
+    async def get_memory_epoch(self, user_id: UUID | str) -> int:
+        """Current memory epoch for the user (1 when never bumped).
+
+        M-07 (context compiler cache) and C-07 (user-facing control) capture
+        this value when compiling memory context and re-check to detect
+        stale caches after destructive memory changes (MEMORY_V3.md §6).
+        """
+        result = await self.db.execute(
+            select(UserMemorySettings).where(
+                UserMemorySettings.user_id == user_id,
+                UserMemorySettings.deleted_at.is_(None),
+            )
+        )
+        settings_row = result.scalar_one_or_none()
+        if settings_row is None:
+            return 1
+        return int(settings_row.memory_epoch or 1)
+
+    async def bump_memory_epoch(self, user_id: UUID | str, reason: str | None = None) -> int:
+        """Bump the per-user memory epoch (monotonic) and audit it.
+
+        R2-F3：并发安全。自增走单条原子 ``UPDATE ... SET memory_epoch =
+        memory_epoch + 1 ... RETURNING``（行级锁 + 数据库端自增，两个并发
+        bump 各得各的返回值，终值必为 +2）；懒建设置行撞 unique(user_id)
+        时先 rollback（清 aborted 事务态，避免同 session 后续 bump 全部
+        PendingRollbackError 被吞）再走原子自增重试。每次成功 bump 写一条
+        MemoryCorrection(action="epoch_bump") 审计（锚定 settings 行 id）。
+        """
+        now = utcnow()
+        trimmed_reason = (reason or "memory_epoch_bump")[:200]
+
+        async def _atomic_increment() -> int | None:
+            result = await self.db.execute(
+                update(UserMemorySettings)
+                .where(
+                    UserMemorySettings.user_id == user_id,
+                    UserMemorySettings.deleted_at.is_(None),
+                )
+                .values(
+                    memory_epoch=UserMemorySettings.memory_epoch + 1,
+                    memory_epoch_bumped_at=now,
+                    memory_epoch_reason=trimmed_reason,
+                    updated_at=now,
+                )
+                .returning(UserMemorySettings.id, UserMemorySettings.memory_epoch)
+            )
+            row = result.one_or_none()
+            if row is None:
+                return None
+            self.db.add(
+                MemoryCorrection(
+                    user_id=user_id,
+                    memory_type="memory_epoch",
+                    memory_id=row.id,
+                    action="epoch_bump",
+                    reason=trimmed_reason,
+                )
+            )
+            return int(row.memory_epoch)
+
+        new_epoch = await _atomic_increment()
+        if new_epoch is not None:
+            await self.db.commit()
+            return new_epoch
+
+        # 懒建首行（首个 bump：1 -> 2）。并发首撞 unique(user_id) 时：
+        # rollback 清 aborted 态 -> 对方已提交的行走原子自增重试。
+        settings_row = UserMemorySettings(
+            user_id=user_id,
+            memory_epoch=2,
+            memory_epoch_bumped_at=now,
+            memory_epoch_reason=trimmed_reason,
+        )
+        self.db.add(settings_row)
+        try:
+            await self.db.flush()
+        except IntegrityError:
+            await self.db.rollback()
+            retried = await _atomic_increment()
+            if retried is None:
+                # 行存在但不可自增（如被软删）——显式失败而非静默丢 bump。
+                raise SQLAlchemyError(
+                    f"memory settings row for user {user_id} exists but is not bumpable"
+                )
+            await self.db.commit()
+            return retried
+        self.db.add(
+            MemoryCorrection(
+                user_id=user_id,
+                memory_type="memory_epoch",
+                memory_id=settings_row.id,
+                action="epoch_bump",
+                reason=trimmed_reason,
+            )
+        )
+        await self.db.commit()
+        return int(settings_row.memory_epoch)
+
+    async def _bump_epoch_best_effort(self, user_id: UUID | str, reason: str | None) -> None:
+        """Epoch bump must never break the delete/correction path it serves."""
+        try:
+            await self.bump_memory_epoch(user_id, reason=reason)
+        except NON_CRITICAL_SERVICE_ERRORS as exc:
+            logger.warning("Failed to bump memory epoch user_id={user_id}: {exc}", user_id=user_id, exc=exc)
 
 def _normalize_evidence_refs(
     evidence_refs: Iterable[Any],

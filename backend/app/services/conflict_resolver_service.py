@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from typing import Any, Literal
 from uuid import UUID, uuid4
@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.aurora_stage20 import ConflictResolutionRecord, UnresolvedConflict
 from app.models.memory import EpisodicMemory
+from app.services.memory_epistemic_contract import lane_priority
 from app.services.memory_service import MemoryService
 
 logger = logging.getLogger(__name__)
@@ -261,9 +262,37 @@ class ConflictResolverService:
                 decision.loser_record_ids,
                 user_id=candidate.user_id,
             )
+            # Memory V3 (M-01) 写守卫（变更点防御）：自动冲突裁决不得让
+            # 推断 lane 的 winner retract/supersede 显式 lane 的记录。
+            # resolve() 的 lane 算术不会产出这种决策；本守卫面向的是
+            # apply_live_decision 的其他调用方（M-04 接线后更多）。
+            # 用户仲裁（arbitrate_unresolved_conflict）是显式人类动作，
+            # 不经过此处，保持最高权限。
+            winner_rank = lane_priority(candidate.source_lane)
+            now = _utcnow()
+            guarded_loser_ids: list[UUID] = []
             for record in records:
-                record.retracted_at = _utcnow()
-                record.updated_at = _utcnow()
+                if winner_rank < lane_priority(record.source_lane):
+                    guarded_loser_ids.append(record.id)
+                    continue
+                record.retracted_at = now
+                # Memory V3 (M-01)：败者指向胜者，构成与
+                # memory_preferences.replaced_by_id 对称的 supersede 链。
+                record.superseded_by_id = new_record.id
+                record.updated_at = now
+            if guarded_loser_ids:
+                logger.warning(
+                    "Epistemic guard: inferred-tier winner %s may not supersede explicit-tier records %s",
+                    candidate.source_lane,
+                    [str(record_id) for record_id in guarded_loser_ids],
+                )
+                decision = replace(
+                    decision,
+                    metadata={
+                        **decision.metadata,
+                        "epistemic_guard_skipped_loser_ids": [str(rid) for rid in guarded_loser_ids],
+                    },
+                )
             await self.record_resolution(
                 user_id=candidate.user_id,
                 decision=decision,

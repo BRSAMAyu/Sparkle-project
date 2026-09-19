@@ -1,0 +1,1890 @@
+diff --git a/backend/alembic/versions/m01a_20260919_memory_v3_epistemic.py b/backend/alembic/versions/m01a_20260919_memory_v3_epistemic.py
+new file mode 100644
+index 00000000..9281c931
+--- /dev/null
++++ b/backend/alembic/versions/m01a_20260919_memory_v3_epistemic.py
+@@ -0,0 +1,123 @@
++"""Memory V3 (M-01)：epistemic class / episodic supersede 链 / memory epoch
++
++Revision ID: m01a_20260919
++Revises: ud01_20260919
++Create Date: 2026-09-19
++
++内容（全部为加法，可逆）：
++1. episodic_memories.epistemic_class  —— V3 五类型的显式标注列
++   （FACT/OBSERVATION/HYPOTHESIS/EXPERIENCE；NULL=按 lane+source_type 派生）。
++   HYPOTHESIS 此前由 inferred lane 隐式承载、无显式字段（B-06 §1.2 缺口）。
++   回填（R2-F1 收紧）：FACT 仅限用户陈述——user_confirmed lane（确认动作
++   即用户陈述）或 direct_capture lane 且 source_type ∈ 用户陈述集
++   （user_registered，见 memory_epistemic_contract.USER_STATEMENT_SOURCE_TYPES，
++   本 SQL 须与其保持同步）；direct_capture 的机器写入行（chat_turn/analysis/
++   reflection/error_analysis/practice_outcome 等，dev 库 184 行中 183 行）
++   落 OBSERVATION——按契约自身定义它们是系统观察事件；其余 lane（含
++   aurora_calibration_receipt 等未登记 lane）→HYPOTHESIS（保守档）。
++   CONFIRMED_PREFERENCE 不入本列：由 memory_preferences/memory_goals 表
++   成员资格承载（不建第二库铁律）。
++2. episodic_memories.superseded_by_id —— 冲突裁决败者指向胜者的 supersede 链，
++   与 memory_preferences.replaced_by_id 对称；配套索引。
++3. user_memory_settings.memory_epoch / memory_epoch_bumped_at /
++   memory_epoch_reason —— 每用户单调递增 epoch（MEMORY_V3 §6 删除→bump，
++   缓存失效契约），M-07/C-07 消费。
++
++验证：单迁移在本地 sqlite 基座隔离重放
++（tests/unit/test_memory_v3_migration_sqlite.py，含 dev 库 source_type
++构成的回填期望矩阵）；
++主库只读纪律 —— 本迁移**不得**对主仓 PostgreSQL 直接 apply，随常规发布走
++make sync-db / alembic upgrade head。加列均 nullable / 带 server_default，
++对在跑旧代码零破坏（旧读写不感知新列）。
++
++# Migration Contract:
++#   type: reversible
++#   rollback_plan: "alembic downgrade -1（drop 三组加法列+索引；回填为幂等 UPDATE，无数据损失）"
++#   verification_query: "SELECT column_name FROM information_schema.columns WHERE table_name='episodic_memories' AND column_name IN ('epistemic_class','superseded_by_id');"
++#   backfill_plan: "epistemic_class 按 lane+source_type CASE 回填（本迁移内联，幂等，仅填 NULL 行）；FACT 用户陈述集与 app/services/memory_epistemic_contract.py:USER_STATEMENT_SOURCE_TYPES 同步"
++#   owner: "backend"
++#   ticket: "V3-2 / M-01 Memory V3 实体映射与 Epistemic Types（R2-F1 返修）"
++"""
++
++from __future__ import annotations
++
++from typing import Sequence
++
++import sqlalchemy as sa
++
++import app.models.base
++from alembic import op
++
++# revision identifiers, used by Alembic.
++revision: str = "m01a_20260919"
++down_revision: str | None = "ud01_20260919"
++branch_labels: str | Sequence[str] | None = None
++depends_on: str | Sequence[str] | None = None
++
++
++def upgrade() -> None:
++    # 1. episodic_memories.epistemic_class（nullable，旧行 NULL=派生）
++    op.add_column(
++        "episodic_memories",
++        sa.Column("epistemic_class", sa.String(length=24), nullable=True),
++    )
++    # 2. episodic_memories.superseded_by_id（supersede 链，nullable）
++    op.add_column(
++        "episodic_memories",
++        sa.Column("superseded_by_id", app.models.base.GUID(), nullable=True),
++    )
++    op.create_index(
++        "idx_episodic_memories_epistemic_class",
++        "episodic_memories",
++        ["user_id", "epistemic_class"],
++        unique=False,
++    )
++    op.create_index(
++        "idx_episodic_memories_superseded_by_id",
++        "episodic_memories",
++        ["superseded_by_id"],
++        unique=False,
++    )
++    # 回填（幂等：只填 NULL 行）。R2-F1 收紧：FACT 仅限用户陈述——
++    # user_confirmed lane，或 direct_capture lane 且 source_type 为用户
++    # 陈述集（dev 库 184 direct_capture 行里仅 user_registered=1 行是
++    # 用户陈述，chat_turn=164/analysis=9/reflection=6/error_analysis=2/
++    # practice_outcome=2 均为机器写入事件记录，按契约定义落 OBSERVATION）。
++    # 用户陈述集须与 memory_epistemic_contract.USER_STATEMENT_SOURCE_TYPES 同步。
++    op.execute(
++        """
++        UPDATE episodic_memories
++        SET epistemic_class = CASE
++            WHEN source_lane = 'user_confirmed' THEN 'FACT'
++            WHEN source_lane = 'direct_capture'
++                 AND source_type IN ('user_registered') THEN 'FACT'
++            WHEN source_lane IN ('direct_capture', 'user_confirmed') THEN 'OBSERVATION'
++            ELSE 'HYPOTHESIS'
++        END
++        WHERE epistemic_class IS NULL
++        """
++    )
++
++    # 3. user_memory_settings.memory_epoch（默认 1 = 从未 bump）
++    op.add_column(
++        "user_memory_settings",
++        sa.Column("memory_epoch", sa.Integer(), nullable=False, server_default="1"),
++    )
++    op.add_column(
++        "user_memory_settings",
++        sa.Column("memory_epoch_bumped_at", sa.DateTime(), nullable=True),
++    )
++    op.add_column(
++        "user_memory_settings",
++        sa.Column("memory_epoch_reason", sa.String(length=200), nullable=True),
++    )
++
++
++def downgrade() -> None:
++    op.drop_column("user_memory_settings", "memory_epoch_reason")
++    op.drop_column("user_memory_settings", "memory_epoch_bumped_at")
++    op.drop_column("user_memory_settings", "memory_epoch")
++    op.drop_index("idx_episodic_memories_superseded_by_id", table_name="episodic_memories")
++    op.drop_index("idx_episodic_memories_epistemic_class", table_name="episodic_memories")
++    op.drop_column("episodic_memories", "superseded_by_id")
++    op.drop_column("episodic_memories", "epistemic_class")
+diff --git a/backend/app/api/v1/memory.py b/backend/app/api/v1/memory.py
+index 48a7cbe1..fb0012be 100644
+--- a/backend/app/api/v1/memory.py
++++ b/backend/app/api/v1/memory.py
+@@ -16,6 +16,12 @@ from app.models.memory import EpisodicMemory, MemoryGoal, MemoryPreference
+ from app.models.user import User
+ from app.services.accountability_mvp_service import AccountabilityMvpService
+ from app.services.conflict_resolver_service import ConflictResolverService
++from app.services.memory_epistemic_contract import (
++    EpistemicClass,
++    classify_episodic_class,
++    derive_scope,
++    derive_status,
++)
+ from app.services.memory_service import MemoryService
+ from app.services.personalization.inferred_meta import INFERRED_META, build_inferred_explanation
+ from app.services.working_memory_consolidation_service import WorkingMemoryConsolidationService
+@@ -83,6 +89,11 @@ def _serialize_preference_record(
+         "source_type": source_type,
+         "explanation": explanation,
+         "adjustable": adjustable,
++        # Memory V3 (M-01)：FACT/CONFIRMED_PREFERENCE 域记录的
++        # epistemic class / status / scope 派生字段。
++        "epistemic_class": EpistemicClass.CONFIRMED_PREFERENCE.value,
++        "status": derive_status(record),
++        "scope": derive_scope(record),
+     }
+ 
+ 
+@@ -309,6 +320,12 @@ async def list_episodic(
+                 "revoked_at": record.revoked_at,
+                 "mentioned_entity_hash": record.mentioned_entity_hash,
+                 "declaration_label": ("AI 推断" if record.source_lane == "inferred_extraction" else None),
++                # Memory V3 (M-01)：epistemic class / status / scope。
++                "epistemic_class": classify_episodic_class(
++                    record.source_lane, explicit_class=record.epistemic_class, source_type=record.source_type
++                ),
++                "status": derive_status(record),
++                "scope": derive_scope(record),
+             }
+         )
+     return {
+@@ -836,6 +853,9 @@ def _serialize_preference(record: MemoryPreference) -> dict:
+         "evidence_missing": record.evidence_missing,
+         "evidence_refs": record.evidence_refs or [],
+         "retracted_at": record.retracted_at,
++        "epistemic_class": EpistemicClass.CONFIRMED_PREFERENCE.value,
++        "memory_status": derive_status(record),
++        "scope": derive_scope(record),
+     }
+ 
+ 
+@@ -851,6 +871,9 @@ def _serialize_goal(record: MemoryGoal) -> dict:
+         "evidence_missing": record.evidence_missing,
+         "evidence_refs": record.evidence_refs or [],
+         "retracted_at": record.retracted_at,
++        "epistemic_class": EpistemicClass.CONFIRMED_PREFERENCE.value,
++        "memory_status": derive_status(record, now=_utcnow()),
++        "scope": derive_scope(record),
+     }
+ 
+ 
+@@ -875,6 +898,11 @@ def _serialize_episodic(record: EpisodicMemory) -> dict:
+         "retracted_at": record.retracted_at,
+         "revoked_at": record.revoked_at,
+         "declaration_label": ("AI 推断" if record.source_lane == "inferred_extraction" else None),
++        "epistemic_class": classify_episodic_class(
++            record.source_lane, explicit_class=record.epistemic_class, source_type=record.source_type
++        ),
++        "memory_status": derive_status(record),
++        "scope": derive_scope(record),
+     }
+     if record.evidence_snapshot:
+         payload["evidence_snapshot"] = record.evidence_snapshot
+diff --git a/backend/app/models/memory.py b/backend/app/models/memory.py
+index 66ca2a34..68b62bd5 100644
+--- a/backend/app/models/memory.py
++++ b/backend/app/models/memory.py
+@@ -104,6 +104,14 @@ class EpisodicMemory(BaseModel):
+     archived_at = Column(DateTime, nullable=True)
+     retracted_at = Column(DateTime, nullable=True)
+     revoked_at = Column(DateTime, nullable=True)
++    # Memory V3 (M-01): epistemic class of the record. NULL = derive from
++    # source_lane (explicit lanes -> FACT, everything else -> HYPOTHESIS);
++    # OBSERVATION / EXPERIENCE are set explicitly by future writers
++    # (outcome adapters / M-06 experience projection).
++    epistemic_class = Column(String(24), nullable=True)
++    # Memory V3 (M-01): winner of a conflict resolution that replaced this
++    # record —— episodic counterpart of memory_preferences.replaced_by_id.
++    superseded_by_id = Column(GUID(), nullable=True)
+     embedding = Column(VectorCompat, nullable=True)
+ 
+     user = relationship("User", backref="episodic_memories")
+@@ -119,6 +127,8 @@ Index("idx_episodic_memories_evidence_missing", EpisodicMemory.evidence_missing)
+ Index("idx_episodic_memories_evidence_score", EpisodicMemory.evidence_score)
+ Index("idx_episodic_memories_last_consumed_at", EpisodicMemory.last_consumed_at)
+ Index("idx_episodic_memories_archived_at", EpisodicMemory.archived_at)
++Index("idx_episodic_memories_epistemic_class", EpisodicMemory.user_id, EpisodicMemory.epistemic_class)
++Index("idx_episodic_memories_superseded_by_id", EpisodicMemory.superseded_by_id)
+ 
+ 
+ class Scene(BaseModel):
+diff --git a/backend/app/models/user_memory_settings.py b/backend/app/models/user_memory_settings.py
+index 7eb32c64..adda6416 100644
+--- a/backend/app/models/user_memory_settings.py
++++ b/backend/app/models/user_memory_settings.py
+@@ -1,4 +1,4 @@
+-from sqlalchemy import JSON, Boolean, Column, ForeignKey, Index, String
++from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, Index, Integer, String
+ from sqlalchemy.dialects.postgresql import JSONB
+ from sqlalchemy.orm import relationship
+ 
+@@ -19,6 +19,13 @@ class UserMemorySettings(BaseModel):
+     capture_level = Column(String(20), nullable=False, default="medium")
+     blocked_pref_keys = Column(JSONBCompat, nullable=False, default=list)
+     blocked_sources = Column(JSONBCompat, nullable=False, default=list)
++    # Memory V3 (M-01): per-user memory epoch. Bumped on destructive memory
++    # changes (delete/revoke of records) so cache holders (M-07 context
++    # compiler, semantic cache) and in-flight runs (C-07) can detect that
++    # previously compiled memory context is stale. Monotonic; 1 = no bump yet.
++    memory_epoch = Column(Integer, nullable=False, default=1, server_default="1")
++    memory_epoch_bumped_at = Column(DateTime, nullable=True)
++    memory_epoch_reason = Column(String(200), nullable=True)
+ 
+     user = relationship("User", backref="memory_settings")
+ 
+diff --git a/backend/app/services/conflict_resolver_service.py b/backend/app/services/conflict_resolver_service.py
+index f28ab01f..d44f88dd 100644
+--- a/backend/app/services/conflict_resolver_service.py
++++ b/backend/app/services/conflict_resolver_service.py
+@@ -1,7 +1,7 @@
+ from __future__ import annotations
+ 
+ import logging
+-from dataclasses import dataclass, field
++from dataclasses import dataclass, field, replace
+ from datetime import UTC, datetime
+ from typing import Any, Literal
+ from uuid import UUID, uuid4
+@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
+ 
+ from app.models.aurora_stage20 import ConflictResolutionRecord, UnresolvedConflict
+ from app.models.memory import EpisodicMemory
++from app.services.memory_epistemic_contract import lane_priority
+ from app.services.memory_service import MemoryService
+ 
+ logger = logging.getLogger(__name__)
+@@ -261,9 +262,37 @@ class ConflictResolverService:
+                 decision.loser_record_ids,
+                 user_id=candidate.user_id,
+             )
++            # Memory V3 (M-01) 写守卫（变更点防御）：自动冲突裁决不得让
++            # 推断 lane 的 winner retract/supersede 显式 lane 的记录。
++            # resolve() 的 lane 算术不会产出这种决策；本守卫面向的是
++            # apply_live_decision 的其他调用方（M-04 接线后更多）。
++            # 用户仲裁（arbitrate_unresolved_conflict）是显式人类动作，
++            # 不经过此处，保持最高权限。
++            winner_rank = lane_priority(candidate.source_lane)
++            now = _utcnow()
++            guarded_loser_ids: list[UUID] = []
+             for record in records:
+-                record.retracted_at = _utcnow()
+-                record.updated_at = _utcnow()
++                if winner_rank < lane_priority(record.source_lane):
++                    guarded_loser_ids.append(record.id)
++                    continue
++                record.retracted_at = now
++                # Memory V3 (M-01)：败者指向胜者，构成与
++                # memory_preferences.replaced_by_id 对称的 supersede 链。
++                record.superseded_by_id = new_record.id
++                record.updated_at = now
++            if guarded_loser_ids:
++                logger.warning(
++                    "Epistemic guard: inferred-tier winner %s may not supersede explicit-tier records %s",
++                    candidate.source_lane,
++                    [str(record_id) for record_id in guarded_loser_ids],
++                )
++                decision = replace(
++                    decision,
++                    metadata={
++                        **decision.metadata,
++                        "epistemic_guard_skipped_loser_ids": [str(rid) for rid in guarded_loser_ids],
++                    },
++                )
+             await self.record_resolution(
+                 user_id=candidate.user_id,
+                 decision=decision,
+diff --git a/backend/app/services/memory_epistemic_contract.py b/backend/app/services/memory_epistemic_contract.py
+new file mode 100644
+index 00000000..692128ba
+--- /dev/null
++++ b/backend/app/services/memory_epistemic_contract.py
+@@ -0,0 +1,362 @@
++"""Memory V3 epistemic contract (task M-01).
++
++Authority for the five V3 memory record types (FACT / CONFIRMED_PREFERENCE /
++OBSERVATION / HYPOTHESIS / EXPERIENCE) over the EXISTING storage —— no second
++store is introduced. This module is the single place that defines:
++
++1. Epistemic class derivation from existing columns (``source_lane`` etc.);
++2. Record status derivation (active / superseded / revoked / retracted /
++   archived / expired / resolved) from the existing lifecycle columns
++   (``revoked_at`` / ``retracted_at`` / ``replaced_by_id`` / ``superseded_by_id``
++   / ``archived_at`` / ``expires_at`` / ``resolved_at``);
++3. Provenance classification for preference writes (explicit vs inferred) and
++   the "inference must not overwrite fact" guard predicate;
++4. Lane registry semantics: which ``source_lane`` maps to which epistemic
++   class, delegating lane *priority* arbitration to
++   ``ConflictResolverService.KNOWN_SOURCE_LANES`` (single source of truth for
++   lane tiers; registering new lanes there is a product decision —— see
++   RESERVED_UNREGISTERED_LANES);
++5. The ``memory_epoch`` contract (bump triggers, audit trail) consumed by
++   M-07 (context compiler cache invalidation) and C-07 (user-facing control).
++
++Design rules inherited from USER_WORLD_MODEL / MEMORY_V3:
++- inference/shadow never writes back over raw fact (enforced by guard
++  predicates here and by write-path checks in ``MemoryService`` /
++  ``ConflictResolverService``);
++- correction produces supersede/revoke, never destructive overwrite;
++- transient state stays in working memory (Redis), never pollutes the
++  long-term tables.
++"""
++
++from __future__ import annotations
++
++from datetime import datetime
++from enum import StrEnum
++from typing import Any
++
++MEMORY_EPISTEMIC_CONTRACT_VERSION = "memory-v3.m01.v1"
++
++# ---------------------------------------------------------------------------
++# 1. Epistemic classes (V3 memory record types)
++# ---------------------------------------------------------------------------
++
++
++class EpistemicClass(StrEnum):
++    """V3 memory record types (MEMORY_V3.md §1 / USER_WORLD_MODEL.md §2)."""
++
++    FACT = "FACT"
++    CONFIRMED_PREFERENCE = "CONFIRMED_PREFERENCE"
++    OBSERVATION = "OBSERVATION"
++    HYPOTHESIS = "HYPOTHESIS"
++    EXPERIENCE = "EXPERIENCE"
++
++
++# Classes that live on ``episodic_memories``. CONFIRMED_PREFERENCE is carried
++# by table membership (``memory_preferences`` / ``memory_goals``) and is not a
++# valid ``episodic_memories.epistemic_class`` value.
++EPISODIC_EPISTEMIC_CLASSES: frozenset[str] = frozenset(
++    {
++        EpistemicClass.FACT.value,
++        EpistemicClass.OBSERVATION.value,
++        EpistemicClass.HYPOTHESIS.value,
++        EpistemicClass.EXPERIENCE.value,
++    }
++)
++
++# ---------------------------------------------------------------------------
++# 2. Record status machine
++# ---------------------------------------------------------------------------
++
++
++class MemoryRecordStatus(StrEnum):
++    """Storage-derived lifecycle status (MEMORY_V3.md §1/§6).
++
++    ``candidate`` / ``confirmed`` are *view-level* epistemic qualifiers for
++    HYPOTHESIS-class records (does the user-facing partition show it under
++    "我还不确定的" or as confirmed) and are derived from
++    ``MemoryCorrection(action="confirm")`` / lane, not stored per row.
++    """
++
++    ACTIVE = "active"
++    SUPERSEDED = "superseded"
++    REVOKED = "revoked"
++    RETRACTED = "retracted"
++    ARCHIVED = "archived"
++    EXPIRED = "expired"
++    RESOLVED = "resolved"  # commitment lifecycle closure (episodic only)
++
++
++# Status precedence: earlier entries win when several lifecycle columns are
++# set. revoked (hard user delete) dominates; supersede dominates retraction
++# because it points at a replacement record (the fact chain continues).
++_STATUS_PRECEDENCE: tuple[str, ...] = (
++    MemoryRecordStatus.REVOKED.value,
++    MemoryRecordStatus.SUPERSEDED.value,
++    MemoryRecordStatus.RETRACTED.value,
++    MemoryRecordStatus.ARCHIVED.value,
++    MemoryRecordStatus.EXPIRED.value,
++    MemoryRecordStatus.RESOLVED.value,
++    MemoryRecordStatus.ACTIVE.value,
++)
++
++
++def _get(record: Any, name: str) -> Any:
++    return getattr(record, name, None)
++
++
++def derive_status(record: Any, *, now: datetime | None = None) -> str:
++    """Derive the V3 status of an existing memory row from its columns.
++
++    Works for MemoryPreference / MemoryGoal / EpisodicMemory alike; absent
++    columns simply do not contribute. ``now`` gates the EXPIRED check
++    (``memory_goals.expires_at``); naive-UTC datetimes expected (DB canonical).
++    """
++    if _get(record, "revoked_at") is not None:
++        return MemoryRecordStatus.REVOKED.value
++    if _get(record, "replaced_by_id") is not None or _get(record, "superseded_by_id") is not None:
++        return MemoryRecordStatus.SUPERSEDED.value
++    if _get(record, "retracted_at") is not None:
++        return MemoryRecordStatus.RETRACTED.value
++    if _get(record, "archived_at") is not None:
++        return MemoryRecordStatus.ARCHIVED.value
++    expires_at = _get(record, "expires_at")
++    if expires_at is not None and now is not None and expires_at <= now:
++        return MemoryRecordStatus.EXPIRED.value
++    if _get(record, "resolved_at") is not None:
++        return MemoryRecordStatus.RESOLVED.value
++    return MemoryRecordStatus.ACTIVE.value
++
++
++STATUS_PRECEDENCE: tuple[str, ...] = _STATUS_PRECEDENCE
++
++# ---------------------------------------------------------------------------
++# 3. Lane registry: source_lane -> epistemic semantics
++# ---------------------------------------------------------------------------
++
++# Lanes whose records are user-stated (explicit tier). Lane *priority*
++# arbitration stays owned by ConflictResolverService.KNOWN_SOURCE_LANES /
++# PRIORITY_BY_TIER; this registry only carries epistemic-class semantics.
++EXPLICIT_SOURCE_LANES: frozenset[str] = frozenset({"direct_capture", "user_confirmed"})
++
++# source_type values that represent a USER-STATED record on an explicit lane
++# (R2-F1). Dev-DB evidence (2026-09-19, read-only): of 184 direct_capture rows
++# only user_registered (1 row, user_memory_seed_consumer.py:25) is genuinely
++# user-stated; chat_turn(164)/analysis(9)/reflection(6)/error_analysis(2)/
++# practice_outcome(2) are machine-written event records —— per this contract
++# they are OBSERVATION, not FACT. Extending this set is a product decision
++# (writer governance lands with M-04); the m01a backfill SQL mirrors it and
++# must be kept in sync.
++USER_STATEMENT_SOURCE_TYPES: frozenset[str] = frozenset({"user_registered"})
++
++# Lanes deliberately NOT registered in ConflictResolverService.KNOWN_SOURCE_LANES.
++# ``aurora_calibration_receipt`` is a live red-line case (see V3-FIX-06):
++# correction_feedback.py writes it to working memory; whether it should
++# arbitrate above direct_capture is a product decision this card must NOT
++# make. It is documented here so the epistemic contract has a reserved slot
++# while conflict arbitration continues to treat it as lowest tier ("unknown").
++RESERVED_UNREGISTERED_LANES: dict[str, str] = {
++    "aurora_calibration_receipt": (
++        "correction receipt lane (working-memory scoped, V3-FIX-06 pending); "
++        "deliberately NOT registered in ConflictResolverService.KNOWN_SOURCE_LANES"
++    ),
++}
++
++
++def classify_episodic_class(
++    source_lane: str | None,
++    *,
++    explicit_class: str | None = None,
++    source_type: str | None = None,
++) -> str:
++    """Epistemic class of an episodic row.
++
++    ``explicit_class`` is the ``epistemic_class`` column value when present
++    (future writers: OBSERVATION for behavioral/system observations,
++    EXPERIENCE for situation->intervention->outcome records, M-06). When the
++    column is NULL the class derives conservatively (R2-F1 tightened):
++
++    - ``user_confirmed`` lane -> FACT（确认动作本身就是用户陈述）;
++    - ``direct_capture`` lane + ``source_type`` in
++      ``USER_STATEMENT_SOURCE_TYPES`` -> FACT;
++    - other ``direct_capture`` rows (machine-written event records:
++      chat_turn / analysis / reflection / ...) -> OBSERVATION;
++    - anything else (rule/llm/unknown lanes) -> HYPOTHESIS.
++    """
++    if explicit_class:
++        normalized = str(explicit_class).strip().upper()
++        if normalized in EPISODIC_EPISTEMIC_CLASSES:
++            return normalized
++    lane = str(source_lane or "").strip().lower()
++    if lane == "user_confirmed":
++        return EpistemicClass.FACT.value
++    if lane == "direct_capture":
++        if source_type and str(source_type).strip().lower() in USER_STATEMENT_SOURCE_TYPES:
++            return EpistemicClass.FACT.value
++        return EpistemicClass.OBSERVATION.value
++    return EpistemicClass.HYPOTHESIS.value
++
++
++def lane_priority(source_lane: str | None) -> int:
++    """Lane priority rank, delegated to the conflict resolver registry.
++
++    The registry constants (``KNOWN_SOURCE_LANES`` / ``PRIORITY_BY_TIER``)
++    stay the single source of truth for lane tiers; unregistered lanes
++    conservatively rank lowest ("unknown"), matching resolver behaviour.
++    Import is deferred to avoid a circular import at module load.
++    """
++    from app.services.conflict_resolver_service import ConflictResolverService
++
++    lane = str(source_lane or "").strip().lower()
++    tier = ConflictResolverService.KNOWN_SOURCE_LANES.get(lane)
++    if tier is not None:
++        return ConflictResolverService.PRIORITY_BY_TIER[tier]
++    return ConflictResolverService.PRIORITY_BY_TIER["unknown"]
++
++
++# ---------------------------------------------------------------------------
++# 4. Preference provenance + "inference never overwrites fact" guard
++# ---------------------------------------------------------------------------
++
++INFERRED_EVIDENCE_TYPES: frozenset[str] = frozenset({"ai_inferred"})
++INFERRED_SOURCE_TYPES: frozenset[str] = frozenset({"ai_inferred"})
++
++
++class Provenance(StrEnum):
++    EXPLICIT = "explicit"
++    INFERRED = "inferred"
++
++
++def _refs_iter(evidence_refs: Any):
++    refs = evidence_refs or []
++    if isinstance(refs, dict):
++        refs = refs.get("refs") or []
++    for ref in refs:
++        if isinstance(ref, dict):
++            yield ref
++
++
++def preference_write_provenance(
++    *,
++    source_type: str | None,
++    evidence_refs: Any,
++) -> str:
++    """Classify a memory_preferences write as explicit or inferred.
++
++    Mirrors ``app.api.v1.memory._resolve_preference_source``: a record whose
++    evidence contains ``ai_inferred`` (or whose source_type says so) is
++    inference-layer; everything else (user_state, batch_edit, ...) is the
++    explicit fact layer.
++    """
++    if source_type and str(source_type).strip().lower() in INFERRED_SOURCE_TYPES:
++        return Provenance.INFERRED.value
++    for ref in _refs_iter(evidence_refs):
++        if str(ref.get("type") or "").strip().lower() in INFERRED_EVIDENCE_TYPES:
++            return Provenance.INFERRED.value
++    return Provenance.EXPLICIT.value
++
++
++def inferred_may_supersede(head_provenance: str, incoming_provenance: str) -> bool:
++    """Guard predicate for the memory_preferences version chain.
++
++    The fact domain must keep user-stated truth as chain head: an inferred
++    write may replace another inferred head, but never an explicit head.
++    Explicit writes (user correction) may supersede anything.
++    """
++    if incoming_provenance == Provenance.INFERRED.value and head_provenance == Provenance.EXPLICIT.value:
++        return False
++    return True
++
++
++def inferred_lane_may_supersede_lane(winner_lane: str | None, loser_lane: str | None) -> bool:
++    """Guard predicate for episodic conflict application.
++
++    An inferred-tier winner may not retract/supersede an explicit-tier loser
++    through the automated conflict path. User arbitration
++    (``arbitrate_unresolved_conflict``) is an explicit human action and does
++    NOT go through this predicate.
++    """
++    winner_rank = lane_priority(winner_lane)
++    loser_rank = lane_priority(loser_lane)
++    if winner_rank < loser_rank:
++        return False
++    if winner_rank == loser_rank:
++        # Same-tier: conflict resolver tie-breaks by confidence/recency; the
++        # automated path may still not silently replace equal-rank records ——
++        # that decision is reserved for the resolver's own arithmetic only
++        # when ranks differ, so equal-rank automated supersede is allowed via
++        # apply_live_decision only when the resolver explicitly emitted
++        # "candidate_overrides_lower_priority" (checked by caller).
++        return True
++    return True
++
++
++# ---------------------------------------------------------------------------
++# 5. Scope derivation (V3 record field "scope" from existing columns)
++# ---------------------------------------------------------------------------
++
++
++def derive_scope(record: Any) -> dict[str, Any]:
++    """Derive the V3 ``scope`` of an existing memory row from its columns.
++
++    No new storage: scope is a projection of columns that already exist
++    (subject_type / semantic_key / decay_policy / due_at / expires_at /
++    linked_task_id / linked_plan_id / mentioned_entity_hash / session_id).
++    """
++    scope: dict[str, Any] = {"level": "global"}
++
++    table = getattr(type(record), "__tablename__", "")
++    if table == "memory_goals":
++        scope["level"] = "goal"
++        if _get(record, "linked_task_id") is not None:
++            scope["task_id"] = str(_get(record, "linked_task_id"))
++        if _get(record, "linked_plan_id") is not None:
++            scope["plan_id"] = str(_get(record, "linked_plan_id"))
++    elif table == "episodic_memories":
++        scope["level"] = "domain"
++        if _get(record, "subject_type"):
++            scope["domain_key"] = str(_get(record, "subject_type"))
++        if _get(record, "mentioned_entity_hash"):
++            scope["entity_hash"] = str(_get(record, "mentioned_entity_hash"))
++    elif table == "working_memory":
++        scope["level"] = "session"
++        if _get(record, "session_id") is not None:
++            scope["session_id"] = str(_get(record, "session_id"))
++
++    time_window: dict[str, str] = {}
++    for key in ("due_at", "expires_at", "occurred_at"):
++        value = _get(record, key)
++        if value is not None:
++            time_window[key] = value.isoformat() if hasattr(value, "isoformat") else str(value)
++    if time_window:
++        scope["time_window"] = time_window
++    if _get(record, "decay_policy"):
++        scope["decay_policy"] = str(_get(record, "decay_policy"))
++    return scope
++
++
++# ---------------------------------------------------------------------------
++# 6. memory_epoch contract
++# ---------------------------------------------------------------------------
++
++# Correction actions that constitute a destructive-enough memory change to
++# require epoch bump (MEMORY_V3.md §6: delete -> bump memory_epoch,
++# invalidate semantic/context caches). M-07/C-07 consume the epoch value.
++EPOCH_BUMP_CORRECTION_ACTIONS: frozenset[str] = frozenset(
++    {
++        "delete",
++        "reject",
++        "no_longer_applicable",
++    }
++)
++
++# Actions that never bump the epoch (confidence nudges, consumption traces).
++NON_EPOCH_CORRECTION_ACTIONS: frozenset[str] = frozenset(
++    {
++        "lower_confidence",
++        "confirm",
++        "memory_reference_accepted",
++        "memory_reference_corrected",
++        "memory_reference_ignored",
++        "memory_reference_denied",
++    }
++)
+diff --git a/backend/app/services/memory_service.py b/backend/app/services/memory_service.py
+index f382bf87..ca13ec6a 100644
+--- a/backend/app/services/memory_service.py
++++ b/backend/app/services/memory_service.py
+@@ -14,18 +14,24 @@ from typing import Any
+ from uuid import UUID
+ 
+ from loguru import logger
+-from sqlalchemy import func, select
+-from sqlalchemy.exc import SQLAlchemyError
++from sqlalchemy import func, select, update
++from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+ from sqlalchemy.ext.asyncio import AsyncSession
+ 
+ from app.config import settings
+ from app.core.business_metrics import MEMORY_CORRECTION_TOTAL, MEMORY_RETRACTION_TOTAL, MEMORY_WRITE_TOTAL
+ from app.core.memory_constants import PREFERENCE_KEYS
+ from app.models.memory import EpisodicMemory, MemoryCorrection, MemoryGoal, MemoryPreference
++from app.models.user_memory_settings import UserMemorySettings
+ from app.orchestration.dual_core_router import AdaptationRecord
+ from app.services.evidence_health_service import EvidenceHealthService
+ from app.services.evidence_scoring import compute_score
+ from app.services.ltm_rollout_service import LtmRolloutService
++from app.services.memory_epistemic_contract import (
++    classify_episodic_class,
++    inferred_may_supersede,
++    preference_write_provenance,
++)
+ from app.services.memory_evolution_service import MemoryEvolutionService
+ from app.services.memory_policy_evaluator import MemoryPolicyEvaluator
+ from app.services.policy_compiler_service import PolicyCompilerService
+@@ -125,6 +131,30 @@ class MemoryService:
+             .with_for_update()  # 🔒 Acquires row-level lock until transaction ends
+         )
+         latest = result.scalar_one_or_none()
++
++        # Memory V3 (M-01) 写守卫：Inference 不覆盖 fact。
++        # memory_preferences 是 FACT/CONFIRMED_PREFERENCE 域；推断写
++        # （source_type=ai_inferred 或 evidence 含 ai_inferred）不得接管
++        # 显式事实链头（不新增版本、不设 replaced_by_id）。推断值仍写
++        # user_preferences live 表（那边已有 explicit-override 保护）。
++        if latest is not None:
++            head_provenance = preference_write_provenance(
++                source_type=None,
++                evidence_refs=latest.evidence_refs,
++            )
++            incoming_provenance = preference_write_provenance(
++                source_type=source_type,
++                evidence_refs=normalized_refs,
++            )
++            if not inferred_may_supersede(head_provenance, incoming_provenance):
++                MEMORY_WRITE_TOTAL.labels(type="preference", status="blocked_inferred_over_fact").inc()
++                logger.info(
++                    "Blocked inferred preference write over explicit fact user_id={user_id} pref_key={pref_key}",
++                    user_id=user_id,
++                    pref_key=pref_key,
++                )
++                return None
++
+         version_result = await self.db.execute(
+             select(func.max(MemoryPreference.version)).where(
+                 MemoryPreference.user_id == user_id,
+@@ -774,6 +804,7 @@ class MemoryService:
+         mentioned_entity_hash: str | None = None,
+         mentioned_entity_owner_user_id: UUID | None = None,
+         emit_system_update: bool = True,
++        epistemic_class: str | None = None,
+     ) -> EpisodicMemory | None:
+         if not await self._allow_write(
+             user_id=user_id,
+@@ -813,6 +844,7 @@ class MemoryService:
+             resolved_at=resolved_at,
+             mentioned_entity_hash=mentioned_entity_hash,
+             mentioned_entity_owner_user_id=mentioned_entity_owner_user_id,
++            epistemic_class=epistemic_class,
+         )
+         self.db.add(record)
+         try:
+@@ -851,6 +883,7 @@ class MemoryService:
+                     resolved_at=resolved_at,
+                     mentioned_entity_hash=mentioned_entity_hash,
+                     mentioned_entity_owner_user_id=mentioned_entity_owner_user_id,
++                    epistemic_class=epistemic_class,
+                 )
+                 self.db.add(record)
+                 try:
+@@ -915,6 +948,7 @@ class MemoryService:
+         resolved_at: datetime | None,
+         mentioned_entity_hash: str | None,
+         mentioned_entity_owner_user_id: UUID | None,
++        epistemic_class: str | None = None,
+     ) -> EpisodicMemory:
+         # naive-UTC is the DB canonical form; aware inputs (e.g. LLM-extracted
+         # ISO timestamps) make asyncpg raise DataError against TIMESTAMP columns
+@@ -944,6 +978,13 @@ class MemoryService:
+             semantic_key=semantic_key,
+             mentioned_entity_hash=mentioned_entity_hash,
+             mentioned_entity_owner_user_id=mentioned_entity_owner_user_id,
++            # Memory V3 (M-01)：显式传入优先（OBSERVATION/EXPERIENCE 未来写方），
++            # 否则按 lane+source_type 保守派生（R2-F1：FACT 仅限用户陈述——
++            # user_confirmed lane 或 direct_capture+USER_STATEMENT_SOURCE_TYPES；
++            # direct_capture 机器写行落 OBSERVATION；其余 lane 落 HYPOTHESIS）。
++            epistemic_class=classify_episodic_class(
++                source_lane, explicit_class=epistemic_class, source_type=source_type
++            ),
+         )
+ 
+     async def list_pending_commitments(
+@@ -1034,6 +1075,9 @@ class MemoryService:
+ 
+         await self.db.commit()
+         MEMORY_RETRACTION_TOTAL.labels(type=kind).inc()
++        # Memory V3 (M-01)：删除类变更 bump memory_epoch（MEMORY_V3 §6），
++        # 供 M-07 上下文/语义缓存失效与 C-07 在途运行重授权检测。
++        await self._bump_epoch_best_effort(user_id, reason=f"retract:{kind}")
+         await SystemUpdateService().enqueue(
+             user_id,
+             build_system_update(
+@@ -1076,6 +1120,9 @@ class MemoryService:
+             self._apply_retraction(record, reason or "admin_kill_switch")
+ 
+         await self.db.commit()
++        # Memory V3 (M-01)：批量撤销同样 bump 受影响用户的 memory_epoch。
++        for affected_user_id in {record.user_id for record in records}:
++            await self._bump_epoch_best_effort(affected_user_id, reason="revoke_inferred_bulk")
+         return len(records)
+ 
+     async def apply_correction(
+@@ -1138,6 +1185,9 @@ class MemoryService:
+         await self.db.commit()
+         await self.db.refresh(record)
+         MEMORY_CORRECTION_TOTAL.labels(type=kind, action=action).inc()
++        if action in {"reject", "no_longer_applicable"}:
++            # Memory V3 (M-01)：撤回类纠错 → bump memory_epoch。
++            await self._bump_epoch_best_effort(user_id, reason=f"correction:{action}")
+         logger.info(
+             "Memory correction applied user_id={user_id} memory_id={memory_id} action={action}",
+             user_id=user_id,
+@@ -1233,6 +1283,8 @@ class MemoryService:
+         await self.db.refresh(record)
+         MEMORY_RETRACTION_TOTAL.labels(type="episodic").inc()
+         MEMORY_CORRECTION_TOTAL.labels(type="episodic", action="delete").inc()
++        # Memory V3 (M-01)：用户删除 → bump memory_epoch（缓存失效契约）。
++        await self._bump_epoch_best_effort(user_id, reason="revoke:episodic")
+         logger.info(
+             "Episodic memory revoked by user user_id={user_id} memory_id={memory_id}",
+             user_id=user_id,
+@@ -1436,6 +1488,115 @@ class MemoryService:
+         rollout = LtmRolloutService(self.db)
+         return await rollout.is_enabled(user_id)
+ 
++    # ------------------------------------------------------------------
++    # Memory V3 (M-01): memory_epoch contract
++    # ------------------------------------------------------------------
++
++    async def get_memory_epoch(self, user_id: UUID | str) -> int:
++        """Current memory epoch for the user (1 when never bumped).
++
++        M-07 (context compiler cache) and C-07 (user-facing control) capture
++        this value when compiling memory context and re-check to detect
++        stale caches after destructive memory changes (MEMORY_V3.md §6).
++        """
++        result = await self.db.execute(
++            select(UserMemorySettings).where(
++                UserMemorySettings.user_id == user_id,
++                UserMemorySettings.deleted_at.is_(None),
++            )
++        )
++        settings_row = result.scalar_one_or_none()
++        if settings_row is None:
++            return 1
++        return int(settings_row.memory_epoch or 1)
++
++    async def bump_memory_epoch(self, user_id: UUID | str, reason: str | None = None) -> int:
++        """Bump the per-user memory epoch (monotonic) and audit it.
++
++        R2-F3：并发安全。自增走单条原子 ``UPDATE ... SET memory_epoch =
++        memory_epoch + 1 ... RETURNING``（行级锁 + 数据库端自增，两个并发
++        bump 各得各的返回值，终值必为 +2）；懒建设置行撞 unique(user_id)
++        时先 rollback（清 aborted 事务态，避免同 session 后续 bump 全部
++        PendingRollbackError 被吞）再走原子自增重试。每次成功 bump 写一条
++        MemoryCorrection(action="epoch_bump") 审计（锚定 settings 行 id）。
++        """
++        now = utcnow()
++        trimmed_reason = (reason or "memory_epoch_bump")[:200]
++
++        async def _atomic_increment() -> int | None:
++            result = await self.db.execute(
++                update(UserMemorySettings)
++                .where(
++                    UserMemorySettings.user_id == user_id,
++                    UserMemorySettings.deleted_at.is_(None),
++                )
++                .values(
++                    memory_epoch=UserMemorySettings.memory_epoch + 1,
++                    memory_epoch_bumped_at=now,
++                    memory_epoch_reason=trimmed_reason,
++                    updated_at=now,
++                )
++                .returning(UserMemorySettings.id, UserMemorySettings.memory_epoch)
++            )
++            row = result.one_or_none()
++            if row is None:
++                return None
++            self.db.add(
++                MemoryCorrection(
++                    user_id=user_id,
++                    memory_type="memory_epoch",
++                    memory_id=row.id,
++                    action="epoch_bump",
++                    reason=trimmed_reason,
++                )
++            )
++            return int(row.memory_epoch)
++
++        new_epoch = await _atomic_increment()
++        if new_epoch is not None:
++            await self.db.commit()
++            return new_epoch
++
++        # 懒建首行（首个 bump：1 -> 2）。并发首撞 unique(user_id) 时：
++        # rollback 清 aborted 态 -> 对方已提交的行走原子自增重试。
++        settings_row = UserMemorySettings(
++            user_id=user_id,
++            memory_epoch=2,
++            memory_epoch_bumped_at=now,
++            memory_epoch_reason=trimmed_reason,
++        )
++        self.db.add(settings_row)
++        try:
++            await self.db.flush()
++        except IntegrityError:
++            await self.db.rollback()
++            retried = await _atomic_increment()
++            if retried is None:
++                # 行存在但不可自增（如被软删）——显式失败而非静默丢 bump。
++                raise SQLAlchemyError(
++                    f"memory settings row for user {user_id} exists but is not bumpable"
++                )
++            await self.db.commit()
++            return retried
++        self.db.add(
++            MemoryCorrection(
++                user_id=user_id,
++                memory_type="memory_epoch",
++                memory_id=settings_row.id,
++                action="epoch_bump",
++                reason=trimmed_reason,
++            )
++        )
++        await self.db.commit()
++        return int(settings_row.memory_epoch)
++
++    async def _bump_epoch_best_effort(self, user_id: UUID | str, reason: str | None) -> None:
++        """Epoch bump must never break the delete/correction path it serves."""
++        try:
++            await self.bump_memory_epoch(user_id, reason=reason)
++        except NON_CRITICAL_SERVICE_ERRORS as exc:
++            logger.warning("Failed to bump memory epoch user_id={user_id}: {exc}", user_id=user_id, exc=exc)
++
+ def _normalize_evidence_refs(
+     evidence_refs: Iterable[Any],
+     require_non_empty: bool,
+diff --git a/backend/tests/unit/test_conflict_resolver_epistemic_guard.py b/backend/tests/unit/test_conflict_resolver_epistemic_guard.py
+new file mode 100644
+index 00000000..39d13f04
+--- /dev/null
++++ b/backend/tests/unit/test_conflict_resolver_epistemic_guard.py
+@@ -0,0 +1,205 @@
++"""M-01 写守卫（conflict 域）：自动冲突裁决不得让推断记录压掉显式记录。
++
++apply_live_decision 是对既有行做 retraction 的变更点；守卫必须落在变更点
++（defense in depth），而不仅依赖 resolve() 的 lane 算术 —— 该方法是公开 API，
++M-04 接线 Context 后将有更多调用方。用户仲裁（arbitrate_unresolved_conflict）
++是显式人类动作，不经过本守卫，保持最高权限。
++"""
++
++from datetime import datetime
++from uuid import uuid4
++
++import pytest
++from sqlalchemy import select
++
++from app.models.memory import EpisodicMemory
++from app.models.user import User
++from app.services.conflict_resolver_service import ConflictCandidate, ConflictResolverService, ResolutionDecision
++
++
++async def _create_user(db_session):
++    user_id = uuid4()
++    user = User(
++        id=user_id,
++        username=f"user_{user_id.hex[:8]}",
++        email=f"{user_id.hex[:8]}@example.com",
++        hashed_password="test",
++    )
++    db_session.add(user)
++    await db_session.commit()
++    return user
++
++
++async def _add_episodic(db_session, *, user_id, lane, confidence, semantic_key, summary):
++    record = EpisodicMemory(
++        user_id=user_id,
++        summary=summary,
++        source_type="chat",
++        source_id="session-1",
++        source_lane=lane,
++        subject_type="self",
++        occurred_at=datetime(2026, 9, 19, 10, 0, 0),
++        confidence=confidence,
++        evidence_refs=[{"type": "chat_turn", "id": f"turn-{lane}"}],
++        evidence_token=f"turn-{lane}",
++        semantic_key=semantic_key,
++    )
++    db_session.add(record)
++    await db_session.commit()
++    await db_session.refresh(record)
++    return record
++
++
++@pytest.mark.asyncio
++async def test_apply_live_decision_refuses_inferred_winner_over_explicit_loser(db_session):
++    """推断 winner 的 accept 决策不得 retract/supersede 显式 lane 的 loser。"""
++    user = await _create_user(db_session)
++    explicit_record = await _add_episodic(
++        db_session,
++        user_id=user.id,
++        lane="direct_capture",
++        confidence=0.7,
++        semantic_key="guard-key-1",
++        summary="用户明确说的事实",
++    )
++    new_record = await _add_episodic(
++        db_session,
++        user_id=user.id,
++        lane="inferred_extraction",
++        confidence=0.95,
++        semantic_key="guard-key-1",
++        summary="系统推断的矛盾候选",
++    )
++
++    service = ConflictResolverService(db_session)
++    # 构造一个"越权"决策：winner 是推断 lane，loser 是显式记录。
++    # 正常 resolve() 算术不会产出这种决策（这正是守卫存在的意义：
++    # apply_live_decision 是公开变更点，不能信任所有调用方）。
++    decision = ResolutionDecision(
++        action="accept",
++        reason="candidate_overrides_lower_priority",
++        winner_lane="inferred_extraction",
++        loser_record_ids=(explicit_record.id,),
++        loser_lanes=("direct_capture",),
++        evidence_tokens=("turn-x",),
++        conflict_key="guard-key-1",
++    )
++    await service.apply_live_decision(
++        candidate=ConflictCandidate(
++            user_id=user.id,
++            summary="系统推断的矛盾候选",
++            source_lane="inferred_extraction",
++            confidence=0.95,
++            occurred_at=datetime(2026, 9, 19, 11, 0, 0),
++            evidence_token="turn-x",
++            semantic_key="guard-key-1",
++        ),
++        decision=decision,
++        new_record=new_record,
++    )
++
++    await db_session.refresh(explicit_record)
++    # 守卫生效：显式事实未被撤回、未被 supersede。
++    assert explicit_record.retracted_at is None
++    assert explicit_record.superseded_by_id is None
++
++
++@pytest.mark.asyncio
++async def test_apply_live_decision_allows_higher_lane_winner_to_supersede_lower(db_session):
++    """合法路径不回归：显式 winner 正常 supersede 推断 loser，并落 supersede 链。"""
++    user = await _create_user(db_session)
++    inferred_record = await _add_episodic(
++        db_session,
++        user_id=user.id,
++        lane="inferred_extraction",
++        confidence=0.9,
++        semantic_key="guard-key-2",
++        summary="旧的推断",
++    )
++    new_record = await _add_episodic(
++        db_session,
++        user_id=user.id,
++        lane="direct_capture",
++        confidence=0.9,
++        semantic_key="guard-key-2",
++        summary="用户更正后的事实",
++    )
++
++    service = ConflictResolverService(db_session)
++    decision = ResolutionDecision(
++        action="accept",
++        reason="candidate_overrides_lower_priority",
++        winner_lane="direct_capture",
++        loser_record_ids=(inferred_record.id,),
++        loser_lanes=("inferred_extraction",),
++        evidence_tokens=("turn-y",),
++        conflict_key="guard-key-2",
++    )
++    await service.apply_live_decision(
++        candidate=ConflictCandidate(
++            user_id=user.id,
++            summary="用户更正后的事实",
++            source_lane="direct_capture",
++            confidence=0.9,
++            occurred_at=datetime(2026, 9, 19, 11, 0, 0),
++            evidence_token="turn-y",
++            semantic_key="guard-key-2",
++        ),
++        decision=decision,
++        new_record=new_record,
++    )
++
++    await db_session.refresh(inferred_record)
++    assert inferred_record.retracted_at is not None
++    # supersede 链：败者指向胜者（与 memory_preferences.replaced_by_id 对称）。
++    assert inferred_record.superseded_by_id == new_record.id
++
++
++@pytest.mark.asyncio
++async def test_apply_live_decision_same_lane_supersede_allowed(db_session):
++    """同 lane（推断 vs 推断）的裁决不受守卫影响。"""
++    user = await _create_user(db_session)
++    older = await _add_episodic(
++        db_session,
++        user_id=user.id,
++        lane="inferred_extraction",
++        confidence=0.7,
++        semantic_key="guard-key-3",
++        summary="旧推断",
++    )
++    newer = await _add_episodic(
++        db_session,
++        user_id=user.id,
++        lane="inferred_extraction",
++        confidence=0.9,
++        semantic_key="guard-key-3",
++        summary="新推断",
++    )
++
++    service = ConflictResolverService(db_session)
++    decision = ResolutionDecision(
++        action="accept",
++        reason="candidate_overrides_lower_priority",
++        winner_lane="inferred_extraction",
++        loser_record_ids=(older.id,),
++        loser_lanes=("inferred_extraction",),
++        evidence_tokens=("turn-z",),
++        conflict_key="guard-key-3",
++    )
++    await service.apply_live_decision(
++        candidate=ConflictCandidate(
++            user_id=user.id,
++            summary="新推断",
++            source_lane="inferred_extraction",
++            confidence=0.9,
++            occurred_at=datetime(2026, 9, 19, 11, 0, 0),
++            evidence_token="turn-z",
++            semantic_key="guard-key-3",
++        ),
++        decision=decision,
++        new_record=newer,
++    )
++
++    await db_session.refresh(older)
++    assert older.retracted_at is not None
++    assert older.superseded_by_id == newer.id
+diff --git a/backend/tests/unit/test_memory_epistemic_contract.py b/backend/tests/unit/test_memory_epistemic_contract.py
+new file mode 100644
+index 00000000..8b520264
+--- /dev/null
++++ b/backend/tests/unit/test_memory_epistemic_contract.py
+@@ -0,0 +1,180 @@
++"""M-01 Epistemic 契约不变量（纯契约层，无 DB）。
++
++验证契约与既有资产的一致性：
++- lane 注册表与 ConflictResolverService.KNOWN_SOURCE_LANES 同源；
++- aurora_calibration_receipt 保留位存在但未被登记（不替产品裁决，V3-FIX-06）；
++- 状态机优先级、类型派生、provenance 分类、守卫谓词真值表。
++"""
++
++from datetime import datetime
++from types import SimpleNamespace
++
++from app.services.conflict_resolver_service import ConflictResolverService
++from app.services.memory_epistemic_contract import (
++    EPOCH_BUMP_CORRECTION_ACTIONS,
++    EPISODIC_EPISTEMIC_CLASSES,
++    EXPLICIT_SOURCE_LANES,
++    MEMORY_EPISTEMIC_CONTRACT_VERSION,
++    RESERVED_UNREGISTERED_LANES,
++    USER_STATEMENT_SOURCE_TYPES,
++    EpistemicClass,
++    MemoryRecordStatus,
++    classify_episodic_class,
++    derive_status,
++    inferred_lane_may_supersede_lane,
++    inferred_may_supersede,
++    lane_priority,
++    preference_write_provenance,
++)
++
++
++def test_contract_version_pinned():
++    assert MEMORY_EPISTEMIC_CONTRACT_VERSION == "memory-v3.m01.v1"
++
++
++def test_explicit_lanes_registered_as_explicit_tier_in_resolver():
++    for lane in EXPLICIT_SOURCE_LANES:
++        assert lane in ConflictResolverService.KNOWN_SOURCE_LANES
++        assert ConflictResolverService.KNOWN_SOURCE_LANES[lane] == "explicit"
++
++
++def test_lane_priority_ordering_matches_resolver_tiers():
++    # explicit > rule(inferred_extraction) > llm > working_memory > unknown
++    assert lane_priority("direct_capture") > lane_priority("inferred_extraction")
++    assert lane_priority("inferred_extraction") > lane_priority("llm_extraction")
++    assert lane_priority("llm_extraction") > lane_priority("working_memory")
++    assert lane_priority("working_memory") > lane_priority("some_unregistered_lane")
++    assert lane_priority(None) == lane_priority("some_unregistered_lane")
++
++
++def test_aurora_calibration_receipt_reserved_but_not_registered():
++    """红线用例：给位置、不裁决 —— 登记权在 V3-FIX-06。"""
++    assert "aurora_calibration_receipt" in RESERVED_UNREGISTERED_LANES
++    assert "aurora_calibration_receipt" not in ConflictResolverService.KNOWN_SOURCE_LANES
++    # 未登记 lane 在 epistemic 分类上保守落 HYPOTHESIS
++    assert classify_episodic_class("aurora_calibration_receipt") == EpistemicClass.HYPOTHESIS.value
++
++
++def test_classify_episodic_class_rules():
++    # R2-F1 收紧：FACT 仅限用户陈述。
++    # user_confirmed lane：确认动作本身就是用户陈述 -> FACT。
++    assert classify_episodic_class("user_confirmed") == EpistemicClass.FACT.value
++    # direct_capture + 用户陈述 source_type -> FACT（大小写不敏感）。
++    assert (
++        classify_episodic_class("direct_capture", source_type="user_registered") == EpistemicClass.FACT.value
++    )
++    assert (
++        classify_episodic_class("direct_capture", source_type="USER_REGISTERED") == EpistemicClass.FACT.value
++    )
++    # direct_capture + 机器写（chat_turn/analysis/reflection/...）-> OBSERVATION。
++    assert classify_episodic_class("direct_capture", source_type="chat_turn") == (
++        EpistemicClass.OBSERVATION.value
++    )
++    assert classify_episodic_class("direct_capture", source_type="analysis") == (
++        EpistemicClass.OBSERVATION.value
++    )
++    # source_type 未知/缺失时保守落 OBSERVATION（不冒领事实档）。
++    assert classify_episodic_class("direct_capture") == EpistemicClass.OBSERVATION.value
++    assert classify_episodic_class("direct_capture", source_type=None) == EpistemicClass.OBSERVATION.value
++    assert classify_episodic_class("direct_capture", source_type="") == EpistemicClass.OBSERVATION.value
++    # 推断/未知 lane -> HYPOTHESIS。
++    assert classify_episodic_class("inferred_extraction") == EpistemicClass.HYPOTHESIS.value
++    assert classify_episodic_class("llm_extractor") == EpistemicClass.HYPOTHESIS.value
++    assert classify_episodic_class(None) == EpistemicClass.HYPOTHESIS.value
++    # 显式列优先（未来写方：OBSERVATION / EXPERIENCE）
++    assert (
++        classify_episodic_class("direct_capture", explicit_class="OBSERVATION")
++        == EpistemicClass.OBSERVATION.value
++    )
++    assert (
++        classify_episodic_class("inferred_extraction", explicit_class="EXPERIENCE")
++        == EpistemicClass.EXPERIENCE.value
++    )
++    # 非法值回退 lane+source_type 派生；CONFIRMED_PREFERENCE 不是 episodic 合法类
++    assert classify_episodic_class("direct_capture", explicit_class="bogus", source_type="user_registered") == (
++        EpistemicClass.FACT.value
++    )
++    assert classify_episodic_class("direct_capture", explicit_class="bogus") == (
++        EpistemicClass.OBSERVATION.value
++    )
++    assert classify_episodic_class("direct_capture", explicit_class="CONFIRMED_PREFERENCE") == (
++        EpistemicClass.OBSERVATION.value
++    )
++    assert "CONFIRMED_PREFERENCE" not in EPISODIC_EPISTEMIC_CLASSES
++
++
++def test_user_statement_source_types_evidence_based():
++    """用户陈述集与 dev 库实证一致：仅 user_registered（机器写型不进集合）。"""
++    assert USER_STATEMENT_SOURCE_TYPES == {"user_registered"}
++    for machine_type in ("chat_turn", "analysis", "reflection", "error_analysis", "practice_outcome"):
++        assert machine_type not in USER_STATEMENT_SOURCE_TYPES
++
++
++def test_derive_status_precedence():
++    now = datetime(2026, 9, 19, 12, 0, 0)
++
++    def record(**kwargs):
++        base = {
++            "revoked_at": None,
++            "retracted_at": None,
++            "archived_at": None,
++            "replaced_by_id": None,
++            "superseded_by_id": None,
++            "expires_at": None,
++            "resolved_at": None,
++        }
++        base.update(kwargs)
++        return SimpleNamespace(**base)
++
++    assert derive_status(record()) == MemoryRecordStatus.ACTIVE.value
++    # revoked 最高优先
++    assert derive_status(record(revoked_at=now, retracted_at=now, replaced_by_id="x")) == (
++        MemoryRecordStatus.REVOKED.value
++    )
++    # supersede 高于 retraction（链有后继记录）
++    assert derive_status(record(retracted_at=now, replaced_by_id="x")) == (
++        MemoryRecordStatus.SUPERSEDED.value
++    )
++    assert derive_status(record(retracted_at=now)) == MemoryRecordStatus.RETRACTED.value
++    assert derive_status(record(archived_at=now)) == MemoryRecordStatus.ARCHIVED.value
++    assert derive_status(record(expires_at=datetime(2026, 9, 1)), now=now) == MemoryRecordStatus.EXPIRED.value
++    assert derive_status(record(expires_at=datetime(2026, 9, 30)), now=now) == MemoryRecordStatus.ACTIVE.value
++    assert derive_status(record(resolved_at=now)) == MemoryRecordStatus.RESOLVED.value
++    # episodic supersede 链
++    assert derive_status(record(superseded_by_id="winner")) == MemoryRecordStatus.SUPERSEDED.value
++
++
++def test_preference_write_provenance_classification():
++    assert (
++        preference_write_provenance(source_type="user_state", evidence_refs=[{"type": "user_state", "id": "ui"}])
++        == "explicit"
++    )
++    assert preference_write_provenance(source_type="ai_inferred", evidence_refs=[]) == "inferred"
++    assert (
++        preference_write_provenance(
++            source_type=None, evidence_refs=[{"type": "user_state", "id": "a"}, {"type": "ai_inferred", "id": "b"}]
++        )
++        == "inferred"
++    )
++    assert preference_write_provenance(source_type=None, evidence_refs=[]) == "explicit"
++    assert preference_write_provenance(source_type=None, evidence_refs=None) == "explicit"
++
++
++def test_inferred_may_supersede_truth_table():
++    assert inferred_may_supersede("explicit", "inferred") is False  # 守卫核心
++    assert inferred_may_supersede("explicit", "explicit") is True  # 用户纠错
++    assert inferred_may_supersede("inferred", "inferred") is True  # 推断演化
++    assert inferred_may_supersede("inferred", "explicit") is True  # 空链首写无 head 判定前
++
++
++def test_inferred_lane_supersede_guard_truth_table():
++    assert inferred_lane_may_supersede_lane("inferred_extraction", "direct_capture") is False
++    assert inferred_lane_may_supersede_lane("direct_capture", "inferred_extraction") is True
++    assert inferred_lane_may_supersede_lane("inferred_extraction", "inferred_extraction") is True
++    assert inferred_lane_may_supersede_lane("llm_extraction", "working_memory") is True
++
++
++def test_epoch_bump_action_set_covers_destructive_actions_only():
++    assert EPOCH_BUMP_CORRECTION_ACTIONS == {"delete", "reject", "no_longer_applicable"}
++    assert "confirm" not in EPOCH_BUMP_CORRECTION_ACTIONS
++    assert "lower_confidence" not in EPOCH_BUMP_CORRECTION_ACTIONS
+diff --git a/backend/tests/unit/test_memory_inference_write_guard.py b/backend/tests/unit/test_memory_inference_write_guard.py
+new file mode 100644
+index 00000000..99de237b
+--- /dev/null
++++ b/backend/tests/unit/test_memory_inference_write_guard.py
+@@ -0,0 +1,363 @@
++"""M-01 写守卫：Inference 不覆盖 fact（红→绿基线测试）。
++
++覆盖三条铁律的存储级保障：
++1. memory_preferences 版本链上，推断写（ai_inferred）不得接管显式事实头
++   （不新增版本、不设 replaced_by_id、find_preference 仍返回显式值）；
++2. 显式用户写可正常取代推断头（用户纠错优先，不回归）；
++3. 推断写可正常演替推断头（合法的推断演化不回归）。
++
++另覆盖：episodic 写路径的 epistemic_class 派生、epoch bump 数据结构。
++"""
++
++from datetime import datetime
++from unittest.mock import AsyncMock
++from uuid import uuid4
++
++import pytest
++from sqlalchemy import select
++
++from app.models.memory import EpisodicMemory, MemoryPreference
++from app.models.user import User
++from app.models.user_memory_settings import UserMemorySettings
++from app.services.memory_epistemic_contract import (
++    EpistemicClass,
++    MemoryRecordStatus,
++    classify_episodic_class,
++    derive_status,
++)
++from app.services.memory_service import MemoryService
++
++
++async def _create_user(db_session):
++    user_id = uuid4()
++    user = User(
++        id=user_id,
++        username=f"user_{user_id.hex[:8]}",
++        email=f"{user_id.hex[:8]}@example.com",
++        hashed_password="test",
++    )
++    db_session.add(user)
++    await db_session.commit()
++    return user
++
++
++@pytest.mark.asyncio
++async def test_inferred_preference_write_cannot_supersede_explicit_fact(db_session, monkeypatch):
++    """推断写不覆盖 fact：显式头必须保持版本链头地位。"""
++    user = await _create_user(db_session)
++    monkeypatch.setattr("app.services.memory_service.SystemUpdateService.enqueue", AsyncMock())
++
++    service = MemoryService(db_session)
++    explicit = await service.upsert_preference(
++        user_id=user.id,
++        pref_key="depth_preference",
++        pref_value={"value": 0.8},
++        evidence_refs=[{"type": "user_state", "id": "settings_ui", "schema_version": "ui.v1"}],
++        confidence=0.9,
++        source_type="user_state",
++    )
++    assert explicit is not None
++
++    blocked = await service.upsert_preference(
++        user_id=user.id,
++        pref_key="depth_preference",
++        pref_value={"value": 0.3},
++        evidence_refs=[{"type": "ai_inferred", "id": "seed-1"}],
++        confidence=0.6,
++        source_type="ai_inferred",
++    )
++
++    # 守卫：推断写被拒绝（None），版本链头仍是显式事实。
++    assert blocked is None
++
++    head = await service.find_preference(user.id, "depth_preference")
++    assert head is not None
++    assert head.id == explicit.id
++    assert head.version == 1
++    assert head.replaced_by_id is None
++    assert head.pref_value == {"value": 0.8}
++
++    # 整链上不存在任何推断版本（fact 域未被污染）。
++    result = await db_session.execute(
++        select(MemoryPreference).where(MemoryPreference.user_id == user.id)
++    )
++    all_records = list(result.scalars().all())
++    assert len(all_records) == 1
++    assert all(
++        ref.get("type") != "ai_inferred" for ref in all_records[0].evidence_refs
++    )
++
++
++@pytest.mark.asyncio
++async def test_inferred_preference_write_blocked_via_evidence_refs_only(db_session, monkeypatch):
++    """source_type 未标注但 evidence_refs 含 ai_inferred —— 同样按推断写拦截。"""
++    user = await _create_user(db_session)
++    monkeypatch.setattr("app.services.memory_service.SystemUpdateService.enqueue", AsyncMock())
++
++    service = MemoryService(db_session)
++    await service.upsert_preference(
++        user_id=user.id,
++        pref_key="depth_preference",
++        pref_value={"value": 0.8},
++        evidence_refs=[{"type": "user_state", "id": "ui", "schema_version": "ui.v1"}],
++        confidence=0.9,
++        source_type="user_state",
++    )
++
++    blocked = await service.upsert_preference(
++        user_id=user.id,
++        pref_key="depth_preference",
++        pref_value={"value": 0.3},
++        evidence_refs=[{"type": "user_state", "id": "ui"}, {"type": "ai_inferred", "id": "seed-9"}],
++        confidence=0.6,
++        source_type=None,
++    )
++    assert blocked is None
++
++    head = await service.find_preference(user.id, "depth_preference")
++    assert head.version == 1
++    assert head.pref_value == {"value": 0.8}
++
++
++@pytest.mark.asyncio
++async def test_explicit_write_still_supersedes_inferred_head(db_session, monkeypatch):
++    """用户纠错优先：显式写可正常接管推断头（不回归）。"""
++    user = await _create_user(db_session)
++    monkeypatch.setattr("app.services.memory_service.SystemUpdateService.enqueue", AsyncMock())
++
++    service = MemoryService(db_session)
++    inferred = await service.upsert_preference(
++        user_id=user.id,
++        pref_key="depth_preference",
++        pref_value={"value": 0.3},
++        evidence_refs=[{"type": "ai_inferred", "id": "seed-1"}],
++        confidence=0.6,
++        source_type="ai_inferred",
++    )
++    assert inferred is not None
++
++    explicit = await service.upsert_preference(
++        user_id=user.id,
++        pref_key="depth_preference",
++        pref_value={"value": 0.9},
++        evidence_refs=[{"type": "user_state", "id": "ui", "schema_version": "ui.v1"}],
++        confidence=0.95,
++        source_type="user_state",
++    )
++    assert explicit is not None
++    assert explicit.version == 2
++
++    refreshed = await db_session.execute(
++        select(MemoryPreference).where(MemoryPreference.id == inferred.id)
++    )
++    inferred_row = refreshed.scalar_one()
++    assert inferred_row.replaced_by_id == explicit.id
++    assert derive_status(inferred_row) == MemoryRecordStatus.SUPERSEDED.value
++
++
++@pytest.mark.asyncio
++async def test_inferred_write_still_evolves_inferred_head(db_session, monkeypatch):
++    """推断演化不回归：推断头可被新的推断写演替。"""
++    user = await _create_user(db_session)
++    monkeypatch.setattr("app.services.memory_service.SystemUpdateService.enqueue", AsyncMock())
++
++    service = MemoryService(db_session)
++    first = await service.upsert_preference(
++        user_id=user.id,
++        pref_key="depth_preference",
++        pref_value={"value": 0.3},
++        evidence_refs=[{"type": "ai_inferred", "id": "seed-1"}],
++        confidence=0.6,
++        source_type="ai_inferred",
++    )
++    second = await service.upsert_preference(
++        user_id=user.id,
++        pref_key="depth_preference",
++        pref_value={"value": 0.4},
++        evidence_refs=[{"type": "ai_inferred", "id": "seed-2"}],
++        confidence=0.7,
++        source_type="ai_inferred",
++    )
++    assert second is not None
++    assert second.version == 2
++
++    refreshed = await db_session.execute(
++        select(MemoryPreference).where(MemoryPreference.id == first.id)
++    )
++    assert refreshed.scalar_one().replaced_by_id == second.id
++
++
++@pytest.mark.asyncio
++async def test_first_write_inferred_allowed_on_empty_chain(db_session, monkeypatch):
++    """空链首写不受守卫影响（无 fact 可覆盖）。"""
++    user = await _create_user(db_session)
++    monkeypatch.setattr("app.services.memory_service.SystemUpdateService.enqueue", AsyncMock())
++
++    service = MemoryService(db_session)
++    record = await service.upsert_preference(
++        user_id=user.id,
++        pref_key="depth_preference",
++        pref_value={"value": 0.5},
++        evidence_refs=[{"type": "ai_inferred", "id": "seed-1"}],
++        confidence=0.6,
++        source_type="ai_inferred",
++    )
++    assert record is not None
++    assert record.version == 1
++
++
++@pytest.mark.asyncio
++async def test_episodic_write_derives_epistemic_class_from_lane(db_session, monkeypatch):
++    """episodic 写路径落 epistemic_class（R2-F1 收紧后语义）：
++    - direct_capture + user_registered（用户陈述）→ FACT
++    - direct_capture + chat_turn（机器写事件）→ OBSERVATION
++    - inferred lane → HYPOTHESIS
++    """
++    user = await _create_user(db_session)
++    monkeypatch.setattr("app.services.memory_service.SystemUpdateService.enqueue", AsyncMock())
++
++    service = MemoryService(db_session)
++    fact_record = await service.create_episodic_memory(
++        user_id=user.id,
++        summary="用户注册时陈述：我每周三下午有空",
++        source_type="user_registered",
++        source_id="seed-1",
++        occurred_at=datetime(2026, 9, 19, 10, 0, 0),
++        importance_score=0.8,
++        tags=["seed"],
++        evidence_refs=[{"type": "user_state", "id": "seed-1"}],
++        source_lane="direct_capture",
++        semantic_key="seed-availability",
++    )
++    assert fact_record is not None
++    assert fact_record.epistemic_class == EpistemicClass.FACT.value
++
++    observation_record = await service.create_episodic_memory(
++        user_id=user.id,
++        summary="completed 操作系统 - 死锁处理机制",
++        source_type="chat_turn",
++        source_id="session-1",
++        occurred_at=datetime(2026, 9, 19, 10, 5, 0),
++        importance_score=0.5,
++        tags=["completion"],
++        evidence_refs=[{"type": "chat_turn", "id": "turn-1"}],
++        source_lane="direct_capture",
++        semantic_key="completion-os-deadlock",
++    )
++    assert observation_record is not None
++    assert observation_record.epistemic_class == EpistemicClass.OBSERVATION.value
++
++    hypothesis_record = await service.create_episodic_memory(
++        user_id=user.id,
++        summary="用户偏好晚间复习",
++        source_type="chat",
++        source_id="session-1",
++        occurred_at=datetime(2026, 9, 19, 10, 10, 0),
++        importance_score=0.5,
++        tags=["inferred"],
++        evidence_refs=[{"type": "chat_turn", "id": "turn-2"}],
++        source_lane="inferred_extraction",
++        semantic_key="pref-evening",
++    )
++    assert hypothesis_record is not None
++    assert hypothesis_record.epistemic_class == EpistemicClass.HYPOTHESIS.value
++
++    assert derive_status(fact_record) == MemoryRecordStatus.ACTIVE.value
++    assert classify_episodic_class("direct_capture", source_type="user_registered") == EpistemicClass.FACT.value
++    assert classify_episodic_class("direct_capture", source_type="chat_turn") == (
++        EpistemicClass.OBSERVATION.value
++    )
++    assert classify_episodic_class("inferred_extraction") == EpistemicClass.HYPOTHESIS.value
++    assert classify_episodic_class(None) == EpistemicClass.HYPOTHESIS.value
++
++
++@pytest.mark.asyncio
++async def test_memory_epoch_bump_creates_settings_and_audits(db_session):
++    """epoch 数据结构：懒建设置行、单调递增、MemoryCorrection 留痕。"""
++    from app.models.memory import MemoryCorrection
++
++    user = await _create_user(db_session)
++    service = MemoryService(db_session)
++
++    epoch_before = await service.get_memory_epoch(user.id)
++    assert epoch_before == 1  # 无设置行时默认 epoch=1
++
++    new_epoch = await service.bump_memory_epoch(user.id, reason="user_bulk_delete")
++    assert new_epoch == 2
++
++    settings_row = (
++        await db_session.execute(select(UserMemorySettings).where(UserMemorySettings.user_id == user.id))
++    ).scalar_one()
++    assert settings_row.memory_epoch == 2
++    assert settings_row.memory_epoch_reason == "user_bulk_delete"
++    assert settings_row.memory_epoch_bumped_at is not None
++
++    again = await service.bump_memory_epoch(user.id, reason="sensitive_delete")
++    assert again == 3
++
++    corrections = (
++        await db_session.execute(
++            select(MemoryCorrection).where(
++                MemoryCorrection.user_id == user.id,
++                MemoryCorrection.action == "epoch_bump",
++            )
++        )
++    ).scalars().all()
++    assert len(corrections) == 2
++
++    assert await service.get_memory_epoch(user.id) == 3
++
++
++@pytest.mark.asyncio
++async def test_memory_epoch_concurrent_bumps_no_lost_increment(tmp_path):
++    """R2-F3：并发 bump 不丢增量。
++
++    三个独立连接（真实文件 sqlite，非共享内存库）同时对同一用户首 bump：
++    - 懒建并发撞 unique(user_id) 的 IntegrityError 必须先 rollback 再原子
++      自增重试（不得把 session 留在 aborted 态）；
++    - 每次成功 bump 各得一个不同的返回值（2/3/4 之一），终值必为 4，
++      审计行数必为 3 —— 无论语句如何交错。
++    旧实现（SELECT→python+1→commit）在交错下会返回两个 2、终值 2。
++    """
++    import asyncio
++
++    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
++
++    from app.models.base import Base
++    from app.models.memory import MemoryCorrection
++
++    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'epoch_concurrency.db'}")
++    try:
++        async with engine.begin() as conn:
++            await conn.run_sync(
++                Base.metadata.create_all,
++                tables=[
++                    Base.metadata.tables["users"],
++                    Base.metadata.tables["user_memory_settings"],
++                    Base.metadata.tables["memory_corrections"],
++                ],
++            )
++        session_factory = async_sessionmaker(engine, expire_on_commit=False)
++        user_id = uuid4()
++
++        async def bump_once() -> int:
++            async with session_factory() as session:
++                return await MemoryService(session).bump_memory_epoch(user_id, reason="concurrent_delete")
++
++        results = await asyncio.gather(bump_once(), bump_once(), bump_once())
++        assert sorted(results) == [2, 3, 4]
++
++        async with session_factory() as session:
++            final_epoch = await MemoryService(session).get_memory_epoch(user_id)
++            audit_rows = (
++                await session.execute(
++                    select(MemoryCorrection).where(
++                        MemoryCorrection.user_id == user_id,
++                        MemoryCorrection.action == "epoch_bump",
++                    )
++                )
++            ).scalars().all()
++        assert final_epoch == 4
++        assert len(audit_rows) == 3
++    finally:
++        await engine.dispose()
+diff --git a/backend/tests/unit/test_memory_v3_migration_sqlite.py b/backend/tests/unit/test_memory_v3_migration_sqlite.py
+new file mode 100644
+index 00000000..485238d5
+--- /dev/null
++++ b/backend/tests/unit/test_memory_v3_migration_sqlite.py
+@@ -0,0 +1,171 @@
++"""m01a_20260919 迁移在本地 sqlite 基座上的隔离重放（主库只读纪律）。
++
++不连主仓 PostgreSQL：用 alembic Operations/MigrationContext 把
++m01a_20260919_memory_v3_epistemic.upgrade/downgrade 单独跑在临时
++sqlite 文件库上，验证：
++1. 三组加法列（epistemic_class / superseded_by_id / memory_epoch 三件套）；
++2. R2-F1 收紧后的回填矩阵：FACT 仅限用户陈述（user_confirmed 确认动作 /
++   direct_capture+user_registered），direct_capture 机器写行
++   （chat_turn/analysis 等，dev 库 183/184 主体）→ OBSERVATION，
++   推断与未登记 lane → HYPOTHESIS（保守档）；
++3. 可回滚性（downgrade 后列消失）。
++"""
++
++from __future__ import annotations
++
++import importlib.util
++from pathlib import Path
++from typing import Callable
++from uuid import uuid4
++
++import pytest
++from alembic.migration import MigrationContext
++from alembic.operations import Operations
++from sqlalchemy import create_engine, inspect, text
++
++from app.models.base import Base
++import app.models.memory  # noqa: F401 - register metadata
++import app.models.user_memory_settings  # noqa: F401 - register metadata
++import app.models.user  # noqa: F401 - register metadata (FK target)
++
++BACKEND_ROOT = Path(__file__).resolve().parents[2]
++MIGRATION_PATH = BACKEND_ROOT / "alembic" / "versions" / "m01a_20260919_memory_v3_epistemic.py"
++
++
++@pytest.fixture(name="migration_env")
++def _migration_env(tmp_path):
++    engine = create_engine(f"sqlite:///{tmp_path / 'm01_test.db'}")
++    # 先按 ORM 建表，再摘掉 M-01 新列，还原"迁移前基线"：
++    # ORM 已领先包含 epistemic_class/superseded_by_id/epoch 三件套，
++    # 基线必须与迁移前实库一致（旧 schema 无这些列）。
++    Base.metadata.create_all(
++        engine,
++        tables=[
++            Base.metadata.tables["users"],
++            Base.metadata.tables["episodic_memories"],
++            Base.metadata.tables["user_memory_settings"],
++        ],
++    )
++    with engine.begin() as conn:
++        conn.execute(text("DROP INDEX IF EXISTS idx_episodic_memories_epistemic_class"))
++        conn.execute(text("DROP INDEX IF EXISTS idx_episodic_memories_superseded_by_id"))
++        conn.execute(text("ALTER TABLE episodic_memories DROP COLUMN epistemic_class"))
++        conn.execute(text("ALTER TABLE episodic_memories DROP COLUMN superseded_by_id"))
++        conn.execute(text("ALTER TABLE user_memory_settings DROP COLUMN memory_epoch"))
++        conn.execute(text("ALTER TABLE user_memory_settings DROP COLUMN memory_epoch_bumped_at"))
++        conn.execute(text("ALTER TABLE user_memory_settings DROP COLUMN memory_epoch_reason"))
++
++    def run_migration(op_fn: Callable[[], None]) -> None:
++        with engine.connect() as conn:
++            ctx = MigrationContext.configure(conn)
++            with Operations.context(ctx):
++                op_fn()
++            conn.commit()
++
++    yield run_migration, engine
++    engine.dispose()
++
++
++def _load_migration_module():
++    spec = importlib.util.spec_from_file_location("m01a_20260919", MIGRATION_PATH)
++    module = importlib.util.module_from_spec(spec)
++    spec.loader.exec_module(module)
++    return module
++
++
++def _seed_episodic(engine, lane: str, source_type: str = "chat") -> str:
++    memory_id = str(uuid4())
++    with engine.begin() as conn:
++        conn.execute(
++            text(
++                "INSERT INTO episodic_memories (id, created_at, updated_at, user_id, summary, "
++                "source_type, source_lane, subject_type, occurred_at, evidence_refs, evidence_score, "
++                "correction_count, evidence_missing) "
++                "VALUES (:id, :now, :now, :uid, :summary, :stype, :lane, 'self', :now, '[]', 0.0, 0, 0)"
++            ),
++            {
++                "id": memory_id,
++                "now": "2026-09-19 10:00:00",
++                "uid": str(uuid4()),
++                "summary": f"lane={lane} stype={source_type}",
++                "lane": lane,
++                "stype": source_type,
++            },
++        )
++    return memory_id
++
++
++def test_m01a_upgrade_adds_columns_backfills_and_downgrade_reverses(migration_env):
++    run_migration, engine = migration_env
++    module = _load_migration_module()
++
++    # 迁移头契约：单父挂当前唯一 head（防止并行挂链复活双头）
++    assert module.down_revision == "ud01_20260919"
++
++    # R2-F1 期望矩阵：按 dev 库 live source_type 构成播种。
++    user_statement_id = _seed_episodic(engine, "direct_capture", "user_registered")  # 唯一用户陈述
++    machine_chat_id = _seed_episodic(engine, "direct_capture", "chat_turn")  # 机器写主体
++    machine_analysis_id = _seed_episodic(engine, "direct_capture", "analysis")
++    confirmed_id = _seed_episodic(engine, "user_confirmed", "chat_turn")  # 确认动作即用户陈述
++    inferred_id = _seed_episodic(engine, "inferred_extraction", "chat")
++    unknown_id = _seed_episodic(engine, "aurora_calibration_receipt", "chat")
++
++    run_migration(module.upgrade)
++
++    inspector = inspect(engine)
++    episodic_cols = {col["name"] for col in inspector.get_columns("episodic_memories")}
++    settings_cols = {col["name"] for col in inspector.get_columns("user_memory_settings")}
++    assert "epistemic_class" in episodic_cols
++    assert "superseded_by_id" in episodic_cols
++    assert {"memory_epoch", "memory_epoch_bumped_at", "memory_epoch_reason"} <= settings_cols
++
++    episodic_indexes = {idx["name"] for idx in inspector.get_indexes("episodic_memories")}
++    assert "idx_episodic_memories_epistemic_class" in episodic_indexes
++    assert "idx_episodic_memories_superseded_by_id" in episodic_indexes
++
++    def _class_of(memory_id: str) -> str:
++        with engine.connect() as conn:
++            return conn.execute(
++                text("SELECT epistemic_class FROM episodic_memories WHERE id = :id"), {"id": memory_id}
++            ).scalar_one()
++
++    # FACT 仅限用户陈述（user_confirmed 确认动作 / direct_capture+user_registered）
++    assert _class_of(user_statement_id) == "FACT"
++    assert _class_of(confirmed_id) == "FACT"
++    # direct_capture 机器写行（dev 库 183/184 主体）→ OBSERVATION
++    assert _class_of(machine_chat_id) == "OBSERVATION"
++    assert _class_of(machine_analysis_id) == "OBSERVATION"
++    # 推断 lane → HYPOTHESIS
++    assert _class_of(inferred_id) == "HYPOTHESIS"
++    # 未登记 lane 保守落 HYPOTHESIS（不替产品做登记裁决）
++    assert _class_of(unknown_id) == "HYPOTHESIS"
++
++    with engine.connect() as conn:
++        epoch_default = conn.execute(
++            text("SELECT memory_epoch FROM user_memory_settings LIMIT 1")
++        ).scalar()
++    # 无设置行时不返回记录；有行时 server_default=1
++    assert epoch_default is None or epoch_default == 1
++
++    # 回填语句幂等（alembic 本身保证 upgrade 只跑一次；此处验证的是
++    # 手工重放回填 UPDATE 不会改写已填行）。
++    backfill_sql = (
++        "UPDATE episodic_memories SET epistemic_class = CASE "
++        "WHEN source_lane = 'user_confirmed' THEN 'FACT' "
++        "WHEN source_lane = 'direct_capture' AND source_type IN ('user_registered') THEN 'FACT' "
++        "WHEN source_lane IN ('direct_capture', 'user_confirmed') THEN 'OBSERVATION' "
++        "ELSE 'HYPOTHESIS' END WHERE epistemic_class IS NULL"
++    )
++    with engine.begin() as conn:
++        conn.execute(text(backfill_sql))
++        conn.execute(text(backfill_sql))
++    assert _class_of(user_statement_id) == "FACT"
++    assert _class_of(machine_chat_id) == "OBSERVATION"
++
++    run_migration(module.downgrade)
++    inspector = inspect(engine)
++    episodic_cols = {col["name"] for col in inspector.get_columns("episodic_memories")}
++    settings_cols = {col["name"] for col in inspector.get_columns("user_memory_settings")}
++    assert "epistemic_class" not in episodic_cols
++    assert "superseded_by_id" not in episodic_cols
++    assert "memory_epoch" not in settings_cols

@@ -104,6 +104,14 @@ class EpisodicMemory(BaseModel):
     archived_at = Column(DateTime, nullable=True)
     retracted_at = Column(DateTime, nullable=True)
     revoked_at = Column(DateTime, nullable=True)
+    # Memory V3 (M-01): epistemic class of the record. NULL = derive from
+    # source_lane (explicit lanes -> FACT, everything else -> HYPOTHESIS);
+    # OBSERVATION / EXPERIENCE are set explicitly by future writers
+    # (outcome adapters / M-06 experience projection).
+    epistemic_class = Column(String(24), nullable=True)
+    # Memory V3 (M-01): winner of a conflict resolution that replaced this
+    # record —— episodic counterpart of memory_preferences.replaced_by_id.
+    superseded_by_id = Column(GUID(), nullable=True)
     embedding = Column(VectorCompat, nullable=True)
 
     user = relationship("User", backref="episodic_memories")
@@ -119,6 +127,8 @@ Index("idx_episodic_memories_evidence_missing", EpisodicMemory.evidence_missing)
 Index("idx_episodic_memories_evidence_score", EpisodicMemory.evidence_score)
 Index("idx_episodic_memories_last_consumed_at", EpisodicMemory.last_consumed_at)
 Index("idx_episodic_memories_archived_at", EpisodicMemory.archived_at)
+Index("idx_episodic_memories_epistemic_class", EpisodicMemory.user_id, EpisodicMemory.epistemic_class)
+Index("idx_episodic_memories_superseded_by_id", EpisodicMemory.superseded_by_id)
 
 
 class Scene(BaseModel):

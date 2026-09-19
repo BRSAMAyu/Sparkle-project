@@ -16,6 +16,12 @@ from app.models.memory import EpisodicMemory, MemoryGoal, MemoryPreference
 from app.models.user import User
 from app.services.accountability_mvp_service import AccountabilityMvpService
 from app.services.conflict_resolver_service import ConflictResolverService
+from app.services.memory_epistemic_contract import (
+    EpistemicClass,
+    classify_episodic_class,
+    derive_scope,
+    derive_status,
+)
 from app.services.memory_service import MemoryService
 from app.services.personalization.inferred_meta import INFERRED_META, build_inferred_explanation
 from app.services.working_memory_consolidation_service import WorkingMemoryConsolidationService
@@ -83,6 +89,11 @@ def _serialize_preference_record(
         "source_type": source_type,
         "explanation": explanation,
         "adjustable": adjustable,
+        # Memory V3 (M-01)：FACT/CONFIRMED_PREFERENCE 域记录的
+        # epistemic class / status / scope 派生字段。
+        "epistemic_class": EpistemicClass.CONFIRMED_PREFERENCE.value,
+        "status": derive_status(record),
+        "scope": derive_scope(record),
     }
 
 
@@ -309,6 +320,12 @@ async def list_episodic(
                 "revoked_at": record.revoked_at,
                 "mentioned_entity_hash": record.mentioned_entity_hash,
                 "declaration_label": ("AI 推断" if record.source_lane == "inferred_extraction" else None),
+                # Memory V3 (M-01)：epistemic class / status / scope。
+                "epistemic_class": classify_episodic_class(
+                    record.source_lane, explicit_class=record.epistemic_class, source_type=record.source_type
+                ),
+                "status": derive_status(record),
+                "scope": derive_scope(record),
             }
         )
     return {
@@ -836,6 +853,9 @@ def _serialize_preference(record: MemoryPreference) -> dict:
         "evidence_missing": record.evidence_missing,
         "evidence_refs": record.evidence_refs or [],
         "retracted_at": record.retracted_at,
+        "epistemic_class": EpistemicClass.CONFIRMED_PREFERENCE.value,
+        "memory_status": derive_status(record),
+        "scope": derive_scope(record),
     }
 
 
@@ -851,6 +871,9 @@ def _serialize_goal(record: MemoryGoal) -> dict:
         "evidence_missing": record.evidence_missing,
         "evidence_refs": record.evidence_refs or [],
         "retracted_at": record.retracted_at,
+        "epistemic_class": EpistemicClass.CONFIRMED_PREFERENCE.value,
+        "memory_status": derive_status(record, now=_utcnow()),
+        "scope": derive_scope(record),
     }
 
 
@@ -875,6 +898,11 @@ def _serialize_episodic(record: EpisodicMemory) -> dict:
         "retracted_at": record.retracted_at,
         "revoked_at": record.revoked_at,
         "declaration_label": ("AI 推断" if record.source_lane == "inferred_extraction" else None),
+        "epistemic_class": classify_episodic_class(
+            record.source_lane, explicit_class=record.epistemic_class, source_type=record.source_type
+        ),
+        "memory_status": derive_status(record),
+        "scope": derive_scope(record),
     }
     if record.evidence_snapshot:
         payload["evidence_snapshot"] = record.evidence_snapshot

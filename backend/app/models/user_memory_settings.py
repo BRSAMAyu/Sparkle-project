@@ -1,4 +1,4 @@
-from sqlalchemy import JSON, Boolean, Column, ForeignKey, Index, String
+from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, Index, Integer, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
@@ -19,6 +19,13 @@ class UserMemorySettings(BaseModel):
     capture_level = Column(String(20), nullable=False, default="medium")
     blocked_pref_keys = Column(JSONBCompat, nullable=False, default=list)
     blocked_sources = Column(JSONBCompat, nullable=False, default=list)
+    # Memory V3 (M-01): per-user memory epoch. Bumped on destructive memory
+    # changes (delete/revoke of records) so cache holders (M-07 context
+    # compiler, semantic cache) and in-flight runs (C-07) can detect that
+    # previously compiled memory context is stale. Monotonic; 1 = no bump yet.
+    memory_epoch = Column(Integer, nullable=False, default=1, server_default="1")
+    memory_epoch_bumped_at = Column(DateTime, nullable=True)
+    memory_epoch_reason = Column(String(200), nullable=True)
 
     user = relationship("User", backref="memory_settings")
 
