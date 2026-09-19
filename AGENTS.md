@@ -62,8 +62,8 @@ bash scripts/run_all_rule_guards.sh      # 治理守卫（提交前）
 
 > 背景：6 个 agent 同时跑 Android 模拟器 + iOS 模拟器 + Gradle + 浏览器实例，内存压缩器堆到 27GB 逻辑页（本机物理内存仅 **16GB**），swap 撑满 8GB，整机卡死。本规则优先级高于 6 并发总数。
 
-1. **HEAVY≤1**：同一时刻全舰队最多 1 个 HEAVY 任务。HEAVY = 模拟器（Android/iOS）、Gradle/Android 构建、`flutter build/test`、浏览器自动化实例、批量截图、全库测试、大规模迁移。LIGHT/REVIEW（DB 查询、代码审查、报告写作、API 级 E2E）不受此限。
-2. **主会话每轮唤醒必查内存**：`sysctl vm.swapusage` + `vm_stat`。触发线：swap used >4GB、压缩器逻辑内存 >12GB、或空闲页 <50K（≈0.8GB）→ 暂停派发 HEAVY、要求在跑 HEAVY 让位收尾。
+1. **HEAVY≤1**：同一时刻全舰队最多 1 个 HEAVY 任务。HEAVY = 模拟器（Android/iOS）、Gradle/Android 构建、`flutter build/test`、浏览器自动化实例、批量截图、全库测试、大规模迁移。LIGHT/REVIEW（DB 查询、代码审查、报告写作、API 级 E2E）不受此限；6 槽位始终保持满编。
+2. **主会话每轮唤醒必查内存**：`sysctl vm.swapusage` + `uptime`（2026-09-19 二次修订，放宽）。HEAVY **启动门**：swap 空闲 ≥1.2G 且 load <8 即可放行 1 个（压缩器逻辑页属常驻基线、不会自行回落，不再作门禁）；HEAVY **运行熔断**：swap 空闲 <500M 或 load 持续 >12 → 立即杀该 HEAVY 的平台进程（emulator/gradle/浏览器），保留其 worktree 产物。
 3. **Worker 自律**：Gradle 加 `-Xmx2g`（org.gradle.jvmargs）；`flutter test` 串行并发 1；浏览器单实例用完即关；模拟器用完即关；任务有内存尖峰就分批执行。
 4. **禁止叠加**：模拟器与 Gradle 构建不同时；浏览器自动化与模拟器不同时；一次只验收一个平台。
 
