@@ -16,6 +16,22 @@
   "V3-FIX-04": {
    "worker": "wt4",
    "since": "2026-09-19T13:20"
+  },
+  "V3-FIX-02": {
+   "worker": "wt8 general",
+   "since": "2026-09-19T12:22"
+  },
+  "B-02X": {
+   "worker": "wt6 lineage-extension",
+   "since": "2026-09-19T12:22"
+  },
+  "C-01": {
+   "worker": "wt5 APEX",
+   "since": "2026-09-19T12:30"
+  },
+  "M-01": {
+   "worker": "wt2 APEX",
+   "since": "2026-09-19T12:30"
   }
  },
  "done": [
@@ -25,5 +41,5 @@
   "B-06"
  ],
  "blocked": [],
- "notes": "V2.5 tail tasks (injection-visibility/P1-B/P1-C/android-r5/dailyflow-p2/web-r3) drain first; freed slots pick up B-01..B-06 then next_tasks.py ordering."
+ "notes": "2026-09-19 12:30: 6/6 full (2 Apex root cards + 2 V3-FIX + 1 lineage ext + 1 entitlement). HEAVY gate loosened: swap-free>=1.2G & load<8. Next queue: V3-FIX-01/04 return -> B-03 FieldTest (single HEAVY) + D-01/X-01/E-01/E-05 Apex/general."
 }
