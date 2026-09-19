@@ -9,6 +9,10 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.business_metrics import STATE_ESTIMATOR_LATENCY, STATE_ESTIMATOR_RUNS
+from app.core.telemetry_boundary import (
+    STATE_ESTIMATOR_MIN_INTERVAL_SECONDS,
+    TELEMETRY_DERIVED_LOAD_CAP,
+)
 from app.models.event import TrackingEvent
 from app.models.user_state import UserStateSnapshot
 
@@ -27,7 +31,39 @@ class StateEstimatorService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def update_state(self, user_id: UUID, timezone_name: str | None) -> UserStateSnapshot:
+    async def update_state(
+        self,
+        user_id: UUID,
+        timezone_name: str | None,
+        *,
+        force: bool = False,
+    ) -> UserStateSnapshot:
+        """Recompute the user's state snapshot from recent telemetry.
+
+        V3-FIX-11 T1 (D-01 R2 F4 "request-arms-the-estimator"): every
+        telemetry ingest endpoint call and every cognitive stream worker event
+        used to synchronously mint a fresh snapshot here, and the raw
+        event-volume term saturated cognitive_load at ~50 events/24h. Two
+        bounds now apply:
+
+        - debounce: telemetry-triggered recomputes for the same user are
+          rate-limited to one per STATE_ESTIMATOR_MIN_INTERVAL_SECONDS; inside
+          the window the latest existing snapshot is returned unchanged, so no
+          single telemetry request can synchronously move user state.
+        - cap: the telemetry-derived portion of cognitive_load is capped by
+          TELEMETRY_DERIVED_LOAD_CAP (see _compute_state).
+
+        ``force=True`` bypasses the debounce for server-side schedulers
+        (nightly review etc.) that own their cadence.
+        """
+        if not force:
+            latest = await self.get_latest_snapshot(user_id)
+            if latest is not None and (
+                _utcnow() - latest.snapshot_at
+            ) < timedelta(seconds=STATE_ESTIMATOR_MIN_INTERVAL_SECONDS):
+                STATE_ESTIMATOR_RUNS.labels(result="debounced").inc()
+                return latest
+
         start_time = _utcnow()
         window = self._default_window()
         events = await self._fetch_recent_events(user_id, window)
@@ -105,7 +141,17 @@ class StateEstimatorService:
                 focus_mode = True
 
         wrong_ratio = wrong_events / max(1, total_events)
-        cognitive_load = min(1.0, (wrong_events * 0.15) + (total_events * 0.02))
+        # V3-FIX-11 T1: BOTH terms below are computed from client telemetry
+        # (wrong-event counts and raw volume are client-asserted rows in
+        # tracking_events), so the combined telemetry-derived load is capped
+        # by TELEMETRY_DERIVED_LOAD_CAP: semantically empty noise (heartbeat /
+        # screen_view floods, ~50 events/24h) can no longer saturate
+        # cognitive_load to 1.0 and drive interruptibility to 0. Direction is
+        # preserved (more struggle -> higher load), only the ceiling is
+        # bounded. Server-authoritative signals (event_registry domain, D-01)
+        # may later add on top of this cap.
+        telemetry_load = (wrong_events * 0.15) + (total_events * 0.02)
+        cognitive_load = min(min(1.0, telemetry_load), TELEMETRY_DERIVED_LOAD_CAP)
         strain_index = min(1.0, wrong_ratio + (0.2 if wrong_events >= 3 else 0.0))
         interruptibility = max(0.0, 1.0 - cognitive_load - (0.2 if focus_mode else 0.0))
 

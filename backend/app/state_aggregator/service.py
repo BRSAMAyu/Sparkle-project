@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from dataclasses import replace
 from datetime import date, datetime, timedelta
-from app.core.time_utils import utcnow
 from typing import Any
 from uuid import UUID
 
@@ -11,6 +10,11 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.core.telemetry_boundary import (
+    EMOTIONAL_BLOCK_SENTIMENTS,
+    TELEMETRY_DERIVED_FRAGMENT_SOURCE_TYPES,
+)
+from app.core.time_utils import utcnow
 from app.core.user_insight_state import BigFiveTraits
 from app.models.achievement import (
     Achievement,
@@ -73,6 +77,7 @@ from app.state_aggregator.schema import (
     WorkingMemorySnapshotValueItem,
 )
 from app.working_memory.service import WorkingMemoryService
+
 
 class StateAggregatorService:
     """Read-only Stage 18 user-state aggregator."""
@@ -520,6 +525,16 @@ class StateAggregatorService:
         current_turn_parse: CurrentTurnParseResult | None = None,
     ) -> StateFieldEnvelope[EmotionHintValue]:
         last_24h = now - timedelta(days=1)
+        # TELEMETRY_DERIVED_READ_WAIVER(V3-FIX-11 T3): this is a second-hop
+        # read of a telemetry-derived table (cognitive_fragments is filled by
+        # the cognitive stream worker from stream:tracking_events and by the
+        # seed service). Bound: behavior-source fragments (implicit behavior
+        # capture, client-asserted sentiment) are filtered out here; only
+        # user-authored capsule / server interceptor fragments contribute.
+        # The producer-side intercept set (telemetry_boundary) additionally
+        # keeps every EMOTIONAL_BLOCK_SENTIMENTS value out of the plaintext
+        # column for telemetry writes. Guarded by
+        # tests/contract/test_telemetry_boundary_contract.py + per-chain tests.
         stmt = (
             select(CognitiveFragment.sentiment)
             .where(
@@ -527,6 +542,7 @@ class StateAggregatorService:
                 CognitiveFragment.sentiment.isnot(None),
                 CognitiveFragment.sentiment != "",
                 CognitiveFragment.created_at >= last_24h,
+                CognitiveFragment.source_type.not_in(TELEMETRY_DERIVED_FRAGMENT_SOURCE_TYPES),
             )
             .order_by(CognitiveFragment.created_at.desc())
             .limit(20)
@@ -542,7 +558,9 @@ class StateAggregatorService:
             distribution[s] = distribution.get(s, 0) + count
 
         dominant = max(distribution, key=distribution.get) if distribution else None
-        emotional_block = dominant in {"anxious", "frustrated", "overwhelmed"} if dominant else False
+        # V3-FIX-11 T3: trigger set comes from the shared boundary module so
+        # the worker's intercept set can never drift below it.
+        emotional_block = dominant in EMOTIONAL_BLOCK_SENTIMENTS if dominant else False
         return StateFieldEnvelope(
             value=EmotionHintValue(
                 dominant_sentiment=dominant,

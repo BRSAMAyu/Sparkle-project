@@ -1,0 +1,1097 @@
+diff --git a/backend/app/orchestration/adaptive_replanner.py b/backend/app/orchestration/adaptive_replanner.py
+index 99fa2c8a..d5a8198d 100644
+--- a/backend/app/orchestration/adaptive_replanner.py
++++ b/backend/app/orchestration/adaptive_replanner.py
+@@ -20,11 +20,13 @@ from sqlalchemy import desc, select, update
+ 
+ from app.core.business_metrics import ADAPTIVE_ADJUSTMENT_SKIPPED_TOTAL, ADAPTIVE_ROLLBACK_TOTAL
+ from app.core.event_bus import event_bus
++from app.core.telemetry_boundary import EXCLUDED_COHORT_REGISTRATION_SOURCES
+ from app.models.card_protocol import Card, CardType
+ from app.models.cognitive import BehaviorPattern
+ from app.models.plan import Plan
+ from app.models.task import SubTask, SubTaskStatus, Task, TaskStatus, TaskType
+ from app.models.task_feedback import TaskFeedback
++from app.models.user import User
+ from app.orchestration.dual_core_router import AdaptationRecord
+ from app.orchestration.plan_review_service import plan_review_service
+ from app.orchestration.plan_revision_summary import PlanRevisionSummary
+@@ -128,11 +130,21 @@ class CognitivePatternTrigger:
+         limit: int | None = None,
+         pattern_name: str | None = None,
+     ) -> list[PlanParameterAdjustment]:
++        # TELEMETRY_DERIVED_READ_WAIVER(V3-FIX-11 T2): behavior_patterns is a
++        # telemetry-derived table (cognitive stream fragments / seed writes
++        # feed it). Bound: patterns owned by guest/seed cohort accounts are
++        # excluded at the 0.7 confidence gate — dev DB held 166 seed-injected
++        # 计划谬误 patterns at 0.84 inside this gate (D-01 R2 F5). Guarded by
++        # tests/services/test_adaptive_replanner_seed_cohort_filter.py.
+         result = await self.db.execute(
+             select(BehaviorPattern)
++            .join(User, User.id == BehaviorPattern.user_id)
+             .where(BehaviorPattern.user_id == user_id)
+             .where(BehaviorPattern.is_archived.is_(False))
+             .where(BehaviorPattern.confidence_score >= self.MIN_CONFIDENCE)
++            .where(
++                User.registration_source.not_in(EXCLUDED_COHORT_REGISTRATION_SOURCES)
++            )
+             .order_by(desc(BehaviorPattern.confidence_score), desc(BehaviorPattern.frequency))
+             .limit(12)
+         )
+diff --git a/backend/app/services/analytics/cognitive_stream_worker.py b/backend/app/services/analytics/cognitive_stream_worker.py
+index 906e3dc5..4310bd7b 100755
+--- a/backend/app/services/analytics/cognitive_stream_worker.py
++++ b/backend/app/services/analytics/cognitive_stream_worker.py
+@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
+ 
+ from app.core.business_metrics import EVENT_STREAM_LAG
+ from app.core.event_bus import EventBus
++from app.core.telemetry_boundary import TELEMETRY_SENSITIVE_SENTIMENTS
+ from app.models.cognitive import AnalysisStatus, CognitiveFragment
+ from app.models.compliance import DlqReplayAuditLog
+ from app.models.user import User
+@@ -83,7 +84,14 @@ class CognitiveStreamWorker:
+     GROUP_NAME = "cognitive_stream_worker"
+ 
+     SENSITIVE_TAGS = {"anxiety_high", "distraction_high", "depression_risk"}
+-    SENSITIVE_SENTIMENTS = {"anxious", "depressed", "burnout"}
++    # V3-FIX-11 T3 (D-01 R2 F3): single source of truth in
++    # app/core/telemetry_boundary.py — the intercept set must cover every
++    # sentiment the state aggregator treats as an emotional_block trigger
++    # ({anxious, frustrated, overwhelmed} plus the historical
++    # anxious/depressed/burnout trio), otherwise client telemetry reaches
++    # UserStateV1's emotion_hint through plaintext
++    # cognitive_fragments.sentiment.
++    SENSITIVE_SENTIMENTS = TELEMETRY_SENSITIVE_SENTIMENTS
+ 
+     def __init__(self, db: AsyncSession, redis_client, event_bus: EventBus | None = None):
+         self.db = db
+diff --git a/backend/app/services/nightly_review_service.py b/backend/app/services/nightly_review_service.py
+index c237d5fa..910f78bf 100755
+--- a/backend/app/services/nightly_review_service.py
++++ b/backend/app/services/nightly_review_service.py
+@@ -171,6 +171,14 @@ class NightlyReviewService:
+         return refs
+ 
+     async def _latest_state(self, user_id: UUID) -> UserStateSnapshot | None:
++        # TELEMETRY_DERIVED_READ_WAIVER(V3-FIX-11 T1): user_state_snapshots is
++        # telemetry-derived (state_estimator computes it from tracking_events).
++        # Bound: snapshot writes are debounce-gated
++        # (STATE_ESTIMATOR_MIN_INTERVAL_SECONDS) and the telemetry-derived
++        # cognitive_load is capped (TELEMETRY_DERIVED_LOAD_CAP) in
++        # state_estimator_service, so no single telemetry request can move the
++        # state consumed here. Guarded by
++        # tests/contract/test_telemetry_boundary_contract.py.
+         result = await self.db.execute(
+             select(UserStateSnapshot)
+             .where(UserStateSnapshot.user_id == user_id)
+diff --git a/backend/app/services/personalization/runtime_context_service.py b/backend/app/services/personalization/runtime_context_service.py
+index 5fd01262..4c54bb74 100644
+--- a/backend/app/services/personalization/runtime_context_service.py
++++ b/backend/app/services/personalization/runtime_context_service.py
+@@ -41,6 +41,11 @@ class RuntimeContextService:
+ 
+     async def _is_focus_active(self, user_id: UUID) -> bool:
+         """检查是否处于专注模式"""
++        # TELEMETRY_DERIVED_READ_WAIVER(V3-FIX-11 T1): user_state_snapshots is
++        # telemetry-derived. Bound: only focus_mode/snapshot_at are read, and
++        # snapshot writes are debounce-gated with the telemetry-derived
++        # cognitive_load capped in state_estimator_service. Guarded by
++        # tests/contract/test_telemetry_boundary_contract.py.
+         result = await self.db.execute(
+             select(UserStateSnapshot.focus_mode, UserStateSnapshot.snapshot_at)
+             .where(UserStateSnapshot.user_id == user_id)
+diff --git a/backend/app/services/state_estimator_service.py b/backend/app/services/state_estimator_service.py
+index 83a4676e..5d168083 100755
+--- a/backend/app/services/state_estimator_service.py
++++ b/backend/app/services/state_estimator_service.py
+@@ -9,6 +9,10 @@ from sqlalchemy import desc, select
+ from sqlalchemy.ext.asyncio import AsyncSession
+ 
+ from app.core.business_metrics import STATE_ESTIMATOR_LATENCY, STATE_ESTIMATOR_RUNS
++from app.core.telemetry_boundary import (
++    STATE_ESTIMATOR_MIN_INTERVAL_SECONDS,
++    TELEMETRY_DERIVED_LOAD_CAP,
++)
+ from app.models.event import TrackingEvent
+ from app.models.user_state import UserStateSnapshot
+ 
+@@ -27,7 +31,39 @@ class StateEstimatorService:
+     def __init__(self, db: AsyncSession):
+         self.db = db
+ 
+-    async def update_state(self, user_id: UUID, timezone_name: str | None) -> UserStateSnapshot:
++    async def update_state(
++        self,
++        user_id: UUID,
++        timezone_name: str | None,
++        *,
++        force: bool = False,
++    ) -> UserStateSnapshot:
++        """Recompute the user's state snapshot from recent telemetry.
++
++        V3-FIX-11 T1 (D-01 R2 F4 "request-arms-the-estimator"): every
++        telemetry ingest endpoint call and every cognitive stream worker event
++        used to synchronously mint a fresh snapshot here, and the raw
++        event-volume term saturated cognitive_load at ~50 events/24h. Two
++        bounds now apply:
++
++        - debounce: telemetry-triggered recomputes for the same user are
++          rate-limited to one per STATE_ESTIMATOR_MIN_INTERVAL_SECONDS; inside
++          the window the latest existing snapshot is returned unchanged, so no
++          single telemetry request can synchronously move user state.
++        - cap: the telemetry-derived portion of cognitive_load is capped by
++          TELEMETRY_DERIVED_LOAD_CAP (see _compute_state).
++
++        ``force=True`` bypasses the debounce for server-side schedulers
++        (nightly review etc.) that own their cadence.
++        """
++        if not force:
++            latest = await self.get_latest_snapshot(user_id)
++            if latest is not None and (
++                _utcnow() - latest.snapshot_at
++            ) < timedelta(seconds=STATE_ESTIMATOR_MIN_INTERVAL_SECONDS):
++                STATE_ESTIMATOR_RUNS.labels(result="debounced").inc()
++                return latest
++
+         start_time = _utcnow()
+         window = self._default_window()
+         events = await self._fetch_recent_events(user_id, window)
+@@ -105,7 +141,17 @@ class StateEstimatorService:
+                 focus_mode = True
+ 
+         wrong_ratio = wrong_events / max(1, total_events)
+-        cognitive_load = min(1.0, (wrong_events * 0.15) + (total_events * 0.02))
++        # V3-FIX-11 T1: BOTH terms below are computed from client telemetry
++        # (wrong-event counts and raw volume are client-asserted rows in
++        # tracking_events), so the combined telemetry-derived load is capped
++        # by TELEMETRY_DERIVED_LOAD_CAP: semantically empty noise (heartbeat /
++        # screen_view floods, ~50 events/24h) can no longer saturate
++        # cognitive_load to 1.0 and drive interruptibility to 0. Direction is
++        # preserved (more struggle -> higher load), only the ceiling is
++        # bounded. Server-authoritative signals (event_registry domain, D-01)
++        # may later add on top of this cap.
++        telemetry_load = (wrong_events * 0.15) + (total_events * 0.02)
++        cognitive_load = min(min(1.0, telemetry_load), TELEMETRY_DERIVED_LOAD_CAP)
+         strain_index = min(1.0, wrong_ratio + (0.2 if wrong_events >= 3 else 0.0))
+         interruptibility = max(0.0, 1.0 - cognitive_load - (0.2 if focus_mode else 0.0))
+ 
+diff --git a/backend/app/state_aggregator/service.py b/backend/app/state_aggregator/service.py
+index dd3052e4..aa285399 100644
+--- a/backend/app/state_aggregator/service.py
++++ b/backend/app/state_aggregator/service.py
+@@ -3,7 +3,6 @@ from __future__ import annotations
+ from collections.abc import Awaitable, Callable
+ from dataclasses import replace
+ from datetime import date, datetime, timedelta
+-from app.core.time_utils import utcnow
+ from typing import Any
+ from uuid import UUID
+ 
+@@ -11,6 +10,11 @@ from sqlalchemy import func, select
+ from sqlalchemy.ext.asyncio import AsyncSession
+ 
+ from app.config import settings
++from app.core.telemetry_boundary import (
++    EMOTIONAL_BLOCK_SENTIMENTS,
++    TELEMETRY_DERIVED_FRAGMENT_SOURCE_TYPES,
++)
++from app.core.time_utils import utcnow
+ from app.core.user_insight_state import BigFiveTraits
+ from app.models.achievement import (
+     Achievement,
+@@ -74,6 +78,7 @@ from app.state_aggregator.schema import (
+ )
+ from app.working_memory.service import WorkingMemoryService
+ 
++
+ class StateAggregatorService:
+     """Read-only Stage 18 user-state aggregator."""
+ 
+@@ -520,6 +525,16 @@ class StateAggregatorService:
+         current_turn_parse: CurrentTurnParseResult | None = None,
+     ) -> StateFieldEnvelope[EmotionHintValue]:
+         last_24h = now - timedelta(days=1)
++        # TELEMETRY_DERIVED_READ_WAIVER(V3-FIX-11 T3): this is a second-hop
++        # read of a telemetry-derived table (cognitive_fragments is filled by
++        # the cognitive stream worker from stream:tracking_events and by the
++        # seed service). Bound: behavior-source fragments (implicit behavior
++        # capture, client-asserted sentiment) are filtered out here; only
++        # user-authored capsule / server interceptor fragments contribute.
++        # The producer-side intercept set (telemetry_boundary) additionally
++        # keeps every EMOTIONAL_BLOCK_SENTIMENTS value out of the plaintext
++        # column for telemetry writes. Guarded by
++        # tests/contract/test_telemetry_boundary_contract.py + per-chain tests.
+         stmt = (
+             select(CognitiveFragment.sentiment)
+             .where(
+@@ -527,6 +542,7 @@ class StateAggregatorService:
+                 CognitiveFragment.sentiment.isnot(None),
+                 CognitiveFragment.sentiment != "",
+                 CognitiveFragment.created_at >= last_24h,
++                CognitiveFragment.source_type.not_in(TELEMETRY_DERIVED_FRAGMENT_SOURCE_TYPES),
+             )
+             .order_by(CognitiveFragment.created_at.desc())
+             .limit(20)
+@@ -542,7 +558,9 @@ class StateAggregatorService:
+             distribution[s] = distribution.get(s, 0) + count
+ 
+         dominant = max(distribution, key=distribution.get) if distribution else None
+-        emotional_block = dominant in {"anxious", "frustrated", "overwhelmed"} if dominant else False
++        # V3-FIX-11 T3: trigger set comes from the shared boundary module so
++        # the worker's intercept set can never drift below it.
++        emotional_block = dominant in EMOTIONAL_BLOCK_SENTIMENTS if dominant else False
+         return StateFieldEnvelope(
+             value=EmotionHintValue(
+                 dominant_sentiment=dominant,
+diff --git a/backend/app/core/telemetry_boundary.py b/backend/app/core/telemetry_boundary.py
+new file mode 100644
+index 00000000..89a7736a
+--- /dev/null
++++ b/backend/app/core/telemetry_boundary.py
+@@ -0,0 +1,96 @@
++"""Telemetry / business-truth boundary policy (V3-FIX-11).
++
++Single source of truth for the rules that keep client telemetry out of
++business-truth surfaces. Three infiltration chains were code-confirmed by the
++D-01 dual review (receipts in ``v3-output/D-01/``):
++
++- T1: telemetry POST -> state_estimator -> user_state_snapshots -> nightly
++  review / personalization. The estimator's event-volume term saturated
++  cognitive_load at ~50 events/24h, so a misbehaving client could inflate a
++  user's cognitive-load estimate with semantically empty noise.
++- T2: cognitive_stream_worker -> CognitiveFragment/BehaviorPattern ->
++  adaptive_replanner. Seeded guest-cohort patterns sit inside the replanner's
++  0.7 confidence gate.
++- T3: telemetry/seed sentiment -> cognitive_fragments.sentiment ->
++  state_aggregator emotion_hint. The worker's sensitive-sentiment intercept
++  set did not cover the aggregator's emotional-block trigger set, so
++  ``frustrated``/``overwhelmed`` passed through as plaintext sentiment.
++
++Everything in this module is policy, not mechanism: consumers import the
++constants so the sets can never drift apart again. The contract guard
++``backend/tests/contract/test_telemetry_boundary_contract.py`` enforces that
++truth-path modules referencing telemetry-derived tables carry an explicit
++waiver marker (``TELEMETRY_DERIVED_READ_WAIVER``).
++"""
++
++from __future__ import annotations
++
++# ---------------------------------------------------------------------------
++# T3: sentiment interception vs emotional-block triggers
++# ---------------------------------------------------------------------------
++
++#: Sentiments that, when dominant, trip ``emotional_block_detected`` in the
++#: state aggregator's emotion_hint (UserStateV1). Owned HERE so the producer
++#: side (cognitive_stream_worker intercept set) and the consumer side
++#: (state_aggregator) cannot drift apart.
++EMOTIONAL_BLOCK_SENTIMENTS: frozenset[str] = frozenset(
++    {
++        "anxious",
++        "frustrated",
++        "overwhelmed",
++    }
++)
++
++#: Sentiments the telemetry pipeline must never persist in the plaintext
++#: ``cognitive_fragments.sentiment`` column. Anything a dominant-detection
++#: consumer could turn into a decision trigger (see EMOTIONAL_BLOCK_SENTIMENTS)
++#: is intercepted into the encrypted sensitive-tags channel instead; the
++#: historical anxious/depressed/burnout trio stays intercepted as well.
++#: Invariant (guard-tested): EMOTIONAL_BLOCK_SENTIMENTS is a subset of this.
++TELEMETRY_SENSITIVE_SENTIMENTS: frozenset[str] = (
++    frozenset({"anxious", "depressed", "burnout"}) | EMOTIONAL_BLOCK_SENTIMENTS
++)
++
++#: Fragment source types whose ``sentiment`` column is client-influenced
++#: (implicit behavior capture: telemetry stream worker or seed writes).
++#: ``capsule`` (user-authored flash notes) and ``interceptor`` are not
++#: telemetry-derived and may still contribute sentiment.
++TELEMETRY_DERIVED_FRAGMENT_SOURCE_TYPES: frozenset[str] = frozenset({"behavior"})
++
++# ---------------------------------------------------------------------------
++# T1: state estimator bounds
++# ---------------------------------------------------------------------------
++
++#: Hard ceiling on the telemetry-derived portion of ``cognitive_load``.
++#: Both terms of the estimator's load formula (wrong-event count and raw
++#: event volume) are computed from client telemetry, so the combined
++#: contribution is capped: semantically empty noise (heartbeat / screen_view
++#: floods, ~50 events/24h used to saturate the load to 1.0) can no longer
++#: push interruptibility toward 0 on its own.
++TELEMETRY_DERIVED_LOAD_CAP: float = 0.3
++
++#: Minimum wall-clock interval between telemetry-triggered estimator
++#: recomputes for the same user. Telemetry paths (events ingest endpoint,
++#: cognitive stream worker) call ``update_state`` on every request/event;
++#: within this window the estimator returns the latest existing snapshot
++#: instead of re-arming from the request payload (V3-FIX-11 T1: a single
++#: telemetry request must not synchronously refresh user state).
++STATE_ESTIMATOR_MIN_INTERVAL_SECONDS: int = 300
++
++# ---------------------------------------------------------------------------
++# T2: seed cohort exclusion (registration_source, per V3-FIX-01 precedent)
++# ---------------------------------------------------------------------------
++
++#: Accounts whose data is demo/seed material and must never feed
++#: decision surfaces. Same registration_source口径 as the global leaderboard
++#: fix (V3-FIX-01).
++EXCLUDED_COHORT_REGISTRATION_SOURCES: tuple[str, ...] = ("guest", "seed")
++
++# ---------------------------------------------------------------------------
++# Contract-guard support (see tests/contract/test_telemetry_boundary_contract.py)
++# ---------------------------------------------------------------------------
++
++#: Marker a business-truth module must carry next to (and in the header of)
++#: any reference to a telemetry-derived table. The guard scans truth-path
++#: modules for telemetry-derived identifiers; unmarked references fail.
++TELEMETRY_DERIVED_READ_WAIVER = "TELEMETRY_DERIVED_READ_WAIVER"
+diff --git a/backend/tests/contract/test_telemetry_boundary_contract.py b/backend/tests/contract/test_telemetry_boundary_contract.py
+new file mode 100644
+index 00000000..567549f6
+--- /dev/null
++++ b/backend/tests/contract/test_telemetry_boundary_contract.py
+@@ -0,0 +1,216 @@
++"""Telemetry / business-truth boundary contract guard (V3-FIX-11).
++
++Upgrades the D-01 seven-module direct-reference scan to cover SECOND HOPS
++(D-01 R2 finding F12: "the scan only looks at tracking_events/TrackingEvent
++direct references; derived-table second hops are all invisible — T1
++(user_state_snapshots) and T2/T3 (cognitive_fragments/behavior_patterns) all
++walk second hops and the guard stays green for them").
++
++Two tiers:
++
++- Tier 1 (direct, zero tolerance): business-truth modules must never
++  reference TrackingEvent / tracking_events. Same rule as the D-01 guard,
++  but directory-level for state_aggregator/ and services/evidence/ so new
++  files in those packages are covered automatically (F12 recommendation).
++- Tier 2 (second hop, waiver-gated): truth modules and decision-surface
++  consumers referencing telemetry-derived tables (cognitive_fragments,
++  user_state_snapshots, behavior_patterns) must carry an explicit
++  TELEMETRY_DERIVED_READ_WAIVER marker in the file, and must be listed in
++  WAIVED_MODULES below. A new unwaivered reference fails with an actionable
++  message; a waiver without a live reference fails too (dead waivers drop).
++
++This is deliberately a source scan (static, cheap, CI-able): dynamic/runtime
++assertions can prove one bounded read is bounded, but cannot see the next
++infiltration someone adds. The behavioral bounds themselves are pinned by the
++per-chain tests in tests/unit/ and tests/services/ (see test files referencing
++V3-FIX-11).
++"""
++
++from __future__ import annotations
++
++import io
++import re
++import tokenize
++from pathlib import Path
++
++BACKEND_DIR = Path(__file__).resolve().parents[2]
++
++from app.core.telemetry_boundary import (  # noqa: E402
++    TELEMETRY_DERIVED_READ_WAIVER as WAIVER_MARKER,
++)
++
++# ---------------------------------------------------------------------------
++# Scan targets
++# ---------------------------------------------------------------------------
++
++# Business-truth modules (D-01 seven, upgraded to directory level per F12) —
++# authors of authoritative user state / evidence / decision context.
++TRUTH_PATH_DIRS = (
++    "app/state_aggregator",
++    "app/services/evidence",
++)
++TRUTH_PATH_FILES = (
++    "app/core/context_pack.py",
++    "app/services/galaxy/stats_service.py",
++    # Decision-surface consumers of telemetry-derived tables (V3-FIX-11
++    # chains): nightly review reads user_state_snapshots (T1), the adaptive
++    # replanner reads behavior_patterns (T2), runtime context reads
++    # user_state_snapshots (T1).
++    "app/services/nightly_review_service.py",
++    "app/orchestration/adaptive_replanner.py",
++    "app/services/personalization/runtime_context_service.py",
++)
++
++DIRECT_TELEMETRY_IDENTIFIERS = ("TrackingEvent", "tracking_events")
++
++TELEMETRY_DERIVED_IDENTIFIERS = (
++    "CognitiveFragment",
++    "cognitive_fragments",
++    "UserStateSnapshot",
++    "user_state_snapshots",
++    "BehaviorPattern",
++    "behavior_patterns",
++)
++
++# Files allowed to reference telemetry-derived tables, with the bounded-read
++# reason. Every entry must also carry the WAIVER_MARKER comment in its
++# source. Anything not listed here fails tier 2.
++WAIVED_MODULES: dict[str, str] = {
++    "app/state_aggregator/service.py": (
++        "V3-FIX-11 T3: emotion_hint reads cognitive_fragments.sentiment with "
++        "source_type NOT IN telemetry-derived fragment sources; producer-side "
++        "intercept set covers the emotional_block trigger set"
++    ),
++    "app/services/nightly_review_service.py": (
++        "V3-FIX-11 T1: reads latest user_state_snapshots; snapshots are "
++        "debounce-rate-limited and their telemetry-derived cognitive_load is "
++        "capped by TELEMETRY_DERIVED_LOAD_CAP"
++    ),
++    "app/services/personalization/runtime_context_service.py": (
++        "V3-FIX-11 T1: reads focus_mode/snapshot_at only from "
++        "user_state_snapshots, whose writes are debounce-gated and whose "
++        "telemetry-derived cognitive_load is capped (same bound as nightly review)"
++    ),
++    "app/orchestration/adaptive_replanner.py": (
++        "V3-FIX-11 T2: reads behavior_patterns with registration_source NOT "
++        "IN guest/seed cohort filter at the 0.7 confidence gate"
++    ),
++}
++
++
++def _iter_py_files() -> list[Path]:
++    files: list[Path] = []
++    for rel_dir in TRUTH_PATH_DIRS:
++        directory = BACKEND_DIR / rel_dir
++        assert directory.is_dir(), f"truth-path directory moved: {rel_dir}"
++        files.extend(sorted(directory.glob("*.py")))
++    for rel_file in TRUTH_PATH_FILES:
++        path = BACKEND_DIR / rel_file
++        assert path.exists(), f"truth-path module moved: {rel_file}"
++        files.append(path)
++    return files
++
++
++def _rel(path: Path) -> str:
++    return str(path.relative_to(BACKEND_DIR))
++
++
++def _strip_comments(source: str) -> str:
++    """Drop COMMENT tokens but keep STRING literals.
++
++    Comments are documentation — boundary waivers must be allowed to *name*
++    the tables they bound. String literals stay in scope because they can
++    carry dynamic SQL (D-01 R2 F12 bypass class), so ``text("select ... from
++    tracking_events")`` must remain detectable.
++    """
++    kept: list[str] = []
++    for token in tokenize.generate_tokens(io.StringIO(source).readline):
++        if token.type == tokenize.COMMENT:
++            continue
++        kept.append(token.string if token.type != tokenize.NEWLINE else "\n")
++    return " ".join(kept)
++
++
++def _matching_identifiers(source: str, identifiers: tuple[str, ...]) -> set[str]:
++    found: set[str] = set()
++    for identifier in identifiers:
++        # Word-boundary match: '_cognitive_fragments' or
++        # 'include_behavior_patterns' must NOT count as a reference.
++        if re.search(rf"\b{re.escape(identifier)}\b", source):
++            found.add(identifier)
++    return found
++
++
++def test_truth_path_modules_never_read_client_telemetry_directly():
++    """Tier 1: zero tolerance for direct tracking_events references
++    (code and string literals; comments are exempt as documentation)."""
++    offenders: list[str] = []
++    for path in _iter_py_files():
++        source = path.read_text(encoding="utf-8")
++        found = _matching_identifiers(_strip_comments(source), DIRECT_TELEMETRY_IDENTIFIERS)
++        if found:
++            offenders.append(f"{_rel(path)}: {sorted(found)}")
++    assert not offenders, (
++        "business-truth modules must not read client telemetry directly " f"(D-01 boundary): {offenders}"
++    )
++
++
++def test_truth_path_modules_reference_telemetry_derived_tables_only_with_waiver():
++    """Tier 2: second-hop references need an explicit, listed waiver."""
++    unwaived: list[str] = []
++    for path in _iter_py_files():
++        source = path.read_text(encoding="utf-8")
++        found = _matching_identifiers(_strip_comments(source), TELEMETRY_DERIVED_IDENTIFIERS)
++        if not found:
++            continue
++        rel = _rel(path)
++        if rel not in WAIVED_MODULES:
++            unwaived.append(
++                f"{rel}: references {sorted(found)} without a waiver — add the "
++                f"read bound + '{WAIVER_MARKER}' marker and register it in "
++                "WAIVED_MODULES with review"
++            )
++            continue
++        if WAIVER_MARKER not in source:
++            unwaived.append(
++                f"{rel}: listed in WAIVED_MODULES but the source no longer "
++                f"carries the '{WAIVER_MARKER}' marker (waiver drifted)"
++            )
++    assert not unwaived, (
++        "telemetry-derived tables (second hop) leaked into truth-path "
++        f"modules without a bounded-read waiver: {unwaived}"
++    )
++
++
++def test_waived_modules_all_exist_and_still_reference_their_tables():
++    """Dead waivers fail: a waived module that no longer references any
++    telemetry-derived table must be removed from WAIVED_MODULES."""
++    stale: list[str] = []
++    for rel, reason in WAIVED_MODULES.items():
++        path = BACKEND_DIR / rel
++        if not path.exists():
++            stale.append(f"{rel}: file gone (waiver: {reason})")
++            continue
++        source = path.read_text(encoding="utf-8")
++        if not _matching_identifiers(_strip_comments(source), TELEMETRY_DERIVED_IDENTIFIERS):
++            stale.append(
++                f"{rel}: waiver present but no telemetry-derived reference " "remains — remove the waiver entry"
++            )
++    assert not stale, f"stale waivers: {stale}"
++
++
++def test_waiver_reasons_document_a_bound():
++    """Every waiver must name a concrete bound (filter/cap/debounce/gate),
++    not a bare justification. Keeps waivers honest as they evolve."""
++    bound_keywords = (
++        "filter",
++        "cap",
++        "debounce",
++        "gate",
++        "NOT IN",
++    )
++    weak: list[str] = []
++    for rel, reason in WAIVED_MODULES.items():
++        if not any(keyword in reason for keyword in bound_keywords):
++            weak.append(f"{rel}: waiver reason lacks a named bound — {reason}")
++    assert not weak, weak
+diff --git a/backend/tests/services/test_adaptive_replanner_seed_cohort_filter.py b/backend/tests/services/test_adaptive_replanner_seed_cohort_filter.py
+new file mode 100644
+index 00000000..1c99c3dd
+--- /dev/null
++++ b/backend/tests/services/test_adaptive_replanner_seed_cohort_filter.py
+@@ -0,0 +1,91 @@
++"""V3-FIX-11 T2 red/green: the adaptive replanner's high-confidence
++BehaviorPattern pool must exclude guest/seed cohort accounts.
++
++D-01 R2 evidence (F5): ``adaptive_replanner.CognitivePatternTrigger`` reads
++BehaviorPattern with confidence >= 0.7 into plan adjustments; the dev DB holds
++166 seed-injected "计划谬误" patterns at 0.84 (all owned by
++registration_source='guest' users, guest_seed_service.py:2215) sitting inside
++that gate. Same registration_source口径 as the V3-FIX-01 leaderboard fix.
++
++Statement-capture pattern (no DB needed): the pattern query is compiled and
++inspected, because cohort exclusion is a SQL predicate.
++"""
++
++from __future__ import annotations
++
++from types import SimpleNamespace
++from unittest.mock import AsyncMock
++from uuid import uuid4
++
++from app.orchestration.adaptive_replanner import CognitivePatternTrigger
++
++EXCLUDED_SOURCES = {"guest", "seed"}
++
++
++class _ScalarResult:
++    def __init__(self, rows):
++        self._rows = rows
++
++    def scalars(self):
++        return self
++
++    def all(self):
++        return self._rows
++
++
++class _StatementCaptureDB:
++    def __init__(self):
++        self.statements = []
++
++    async def execute(self, stmt):
++        self.statements.append(stmt)
++        return _ScalarResult([])
++
++
++def _make_trigger(db) -> CognitivePatternTrigger:
++    trigger = CognitivePatternTrigger(db, redis=None)
++    trigger.preference_service.get_preferences = AsyncMock(return_value=SimpleNamespace(explicit={}))
++    return trigger
++
++
++def _bound_scalars(compiled) -> set:
++    values: set = set()
++    for value in (compiled.params or {}).values():
++        if isinstance(value, (list, tuple, set)):
++            values.update(value)
++        else:
++            values.add(value)
++    return values
++
++
++async def test_pattern_pool_query_excludes_guest_and_seed_cohorts():
++    """The replanner's pattern query must filter registration_source."""
++    db = _StatementCaptureDB()
++    trigger = _make_trigger(db)
++
++    await trigger.build_adjustments(user_id=uuid4(), existing_constraints={})
++
++    assert len(db.statements) >= 1
++    pattern_sql = str(db.statements[0].compile()).upper()
++
++    assert "REGISTRATION_SOURCE" in pattern_sql, (
++        "adaptive replanner pattern pool has no registration_source predicate — "
++        "166 seed-injected 计划谬误 patterns at confidence 0.84 sit inside the "
++        "0.7 decision gate (D-01 R2 F5 / V3-FIX-11 T2)"
++    )
++    compiled = db.statements[0].compile()
++    assert (
++        _bound_scalars(compiled) >= EXCLUDED_SOURCES
++    ), f"cohort exclusion bind params missing guest/seed: {_bound_scalars(compiled)}"
++
++
++async def test_existing_pattern_filters_are_preserved():
++    """Cohort filter is additive: confidence gate + archived filter stay."""
++    db = _StatementCaptureDB()
++    trigger = _make_trigger(db)
++
++    await trigger.build_adjustments(user_id=uuid4(), existing_constraints={})
++
++    pattern_sql = str(db.statements[0].compile()).upper()
++    assert "CONFIDENCE_SCORE" in pattern_sql
++    assert "IS_ARCHIVED" in pattern_sql
+diff --git a/backend/tests/unit/test_cognitive_stream_sentiment_intercept.py b/backend/tests/unit/test_cognitive_stream_sentiment_intercept.py
+new file mode 100644
+index 00000000..3372d032
+--- /dev/null
++++ b/backend/tests/unit/test_cognitive_stream_sentiment_intercept.py
+@@ -0,0 +1,94 @@
++"""V3-FIX-11 T3 red/green: telemetry sentiment must not reach the aggregator's
++emotional_block trigger set through plaintext cognitive_fragments.sentiment.
++
++D-01 R2 evidence (F3): ``cognitive_stream_worker`` intercepts only
++{anxious, depressed, burnout} into the encrypted sensitive channel, while the
++state aggregator's ``emotional_block`` trigger set is {anxious, frustrated,
++overwhelmed} — ``frustrated``/``overwhelmed`` from a telemetry payload passed
++through as plaintext sentiment and dominated the aggregator's emotion_hint
++(second-hop telemetry -> business truth).
++"""
++
++from __future__ import annotations
++
++from unittest.mock import AsyncMock
++from uuid import uuid4
++
++from app.core.telemetry_boundary import (
++    EMOTIONAL_BLOCK_SENTIMENTS,
++    TELEMETRY_SENSITIVE_SENTIMENTS,
++)
++from app.services.analytics.cognitive_stream_worker import CognitiveStreamWorker
++
++_UUID = uuid4()
++
++
++class _FragmentCollector:
++    """Stand-in session that records db.add() calls."""
++
++    def __init__(self, worker):
++        self.worker = worker
++
++    def add(self, fragment):
++        self.worker.db_fragments.append(fragment)
++
++
++def _worker_with_collector() -> tuple[CognitiveStreamWorker, list]:
++    worker = CognitiveStreamWorker.__new__(CognitiveStreamWorker)
++    worker.db_fragments = []
++    worker.db = _FragmentCollector(worker)
++    worker.redis = None
++    worker.crypto_erase = AsyncMock()
++    worker.crypto_erase.encrypt_payload = AsyncMock(return_value=("enc-payload", "key-1"))
++    return worker, worker.db_fragments
++
++
++async def _create(worker: CognitiveStreamWorker, sentiment: str | None):
++    await worker._create_fragment(
++        user_id=_UUID,
++        event={"event_id": f"evt-{sentiment}", "event_name": "note", "task_id": None},
++        payload={"sentiment": sentiment, "tags": [], "severity": 1},
++        allow_sensitive=True,
++    )
++
++
++async def test_frustrated_sentiment_is_intercepted():
++    """telemetry payload sentiment=frustrated must NOT land in plaintext
++    sentiment (it is an emotional_block trigger in the aggregator)."""
++    worker, fragments = _worker_with_collector()
++    await _create(worker, "frustrated")
++
++    fragment = fragments[0]
++    assert fragment.sentiment is None, (
++        "frustrated passed through as plaintext sentiment — the aggregator's "
++        "emotional_block trigger set is reachable from client telemetry (T3)"
++    )
++    # intercepted into the encrypted sensitive channel instead
++    assert fragment.sensitive_tags_encrypted == "enc-payload"
++
++
++async def test_overwhelmed_sentiment_is_intercepted():
++    worker, fragments = _worker_with_collector()
++    await _create(worker, "overwhelmed")
++    assert fragments[0].sentiment is None
++
++
++async def test_anxious_sentiment_stays_intercepted():
++    """Regression: the historical trio must remain intercepted."""
++    worker, fragments = _worker_with_collector()
++    await _create(worker, "anxious")
++    assert fragments[0].sentiment is None
++
++
++async def test_neutral_sentiment_flows_through():
++    worker, fragments = _worker_with_collector()
++    await _create(worker, "neutral")
++    assert fragments[0].sentiment == "neutral"
++
++
++def test_emotional_block_triggers_are_all_intercepted():
++    """Single-source-of-truth invariant: every sentiment that can trip
++    emotional_block in the aggregator must be in the telemetry intercept set
++    (prevents the two sets from drifting apart again)."""
++    assert EMOTIONAL_BLOCK_SENTIMENTS <= TELEMETRY_SENSITIVE_SENTIMENTS
++    assert CognitiveStreamWorker.SENSITIVE_SENTIMENTS == TELEMETRY_SENSITIVE_SENTIMENTS
+diff --git a/backend/tests/unit/test_state_aggregator_emotion_telemetry_filter.py b/backend/tests/unit/test_state_aggregator_emotion_telemetry_filter.py
+new file mode 100644
+index 00000000..927805c5
+--- /dev/null
++++ b/backend/tests/unit/test_state_aggregator_emotion_telemetry_filter.py
+@@ -0,0 +1,119 @@
++"""V3-FIX-11 T3 red/green: the state aggregator's emotion_hint must not count
++telemetry-derived fragment sentiment.
++
++D-01 R2 evidence (F3): ``state_aggregator/service.py`` reads
++``cognitive_fragments.sentiment`` (24h window) into UserStateV1's emotion_hint;
++``cognitive_stream_worker`` writes telemetry payloads into that column with
++``source_type='behavior'``, and the seed service fills the same channel.
++Behavior-source sentiment is client-asserted, so the aggregator must filter it
++(user-authored capsule / interceptor fragments and the server-side chat
++classifier remain legitimate channels).
++"""
++
++from __future__ import annotations
++
++from datetime import datetime, timedelta
++from uuid import uuid4
++
++import pytest
++
++from app.models.chat import ChatMessage
++from app.models.cognitive import CognitiveFragment
++from app.state_aggregator.service import StateAggregatorService
++
++
++def _fragment(
++    user_id,
++    sentiment: str,
++    source_type: str = "behavior",
++    created_at: datetime | None = None,
++) -> CognitiveFragment:
++    return CognitiveFragment(
++        user_id=user_id,
++        source_type=source_type,
++        resource_type="event" if source_type == "behavior" else "text",
++        content="fragment",
++        sentiment=sentiment,
++        tags=[],
++        severity=1,
++        created_at=created_at or datetime.utcnow(),
++    )
++
++
++@pytest.mark.asyncio
++async def test_behavior_fragment_sentiment_cannot_trip_emotional_block(db_session):
++    """frustrated telemetry fragments alone must NOT trigger emotional_block.
++
++    RED pre-fix: dominant='frustrated' -> emotional_block_detected=True.
++    """
++    user_id = uuid4()
++    now = datetime.utcnow()
++    for i in range(5):
++        db_session.add(_fragment(user_id, "frustrated", source_type="behavior", created_at=now - timedelta(minutes=i)))
++    await db_session.commit()
++
++    service = StateAggregatorService(db_session)
++    envelope = await service._build_emotion_hint_summary(user_id, now)
++
++    assert envelope.value.emotional_block_detected is False, (
++        "telemetry-derived (behavior-source) sentiment reached the aggregator's "
++        "emotional_block trigger (T3 second hop)"
++    )
++    assert "frustrated" not in (envelope.value.sentiment_distribution or {})
++
++
++@pytest.mark.asyncio
++async def test_overwhelmed_behavior_fragment_sentiment_ignored(db_session):
++    user_id = uuid4()
++    now = datetime.utcnow()
++    db_session.add(_fragment(user_id, "overwhelmed", created_at=now))
++    await db_session.commit()
++
++    service = StateAggregatorService(db_session)
++    envelope = await service._build_emotion_hint_summary(user_id, now)
++
++    assert envelope.value.emotional_block_detected is False
++
++
++@pytest.mark.asyncio
++async def test_capsule_fragment_sentiment_still_counts(db_session):
++    """User-authored capsule sentiment (self-report, not telemetry) keeps its
++    voice — including a negative one."""
++    user_id = uuid4()
++    now = datetime.utcnow()
++    for i in range(3):
++        db_session.add(_fragment(user_id, "frustrated", source_type="capsule", created_at=now - timedelta(minutes=i)))
++    await db_session.commit()
++
++    service = StateAggregatorService(db_session)
++    envelope = await service._build_emotion_hint_summary(user_id, now)
++
++    assert envelope.value.dominant_sentiment == "frustrated"
++    assert envelope.value.emotional_block_detected is True
++
++
++@pytest.mark.asyncio
++async def test_chat_derived_frustration_still_trips_block(db_session):
++    """The server-side chat classifier (user's own words) is a legitimate
++    channel and must keep triggering emotional_block."""
++    user_id = uuid4()
++    now = datetime.utcnow()
++    db_session.add(
++        ChatMessage(
++            id=uuid4(),
++            session_id=uuid4(),
++            user_id=user_id,
++            role="user",
++            content="太难了，做不到，烦死了",
++            created_at=now - timedelta(minutes=5),
++        )
++    )
++    # telemetry noise must not be able to bury the real signal either
++    db_session.add(_fragment(user_id, "happy", source_type="behavior", created_at=now))
++    await db_session.commit()
++
++    service = StateAggregatorService(db_session)
++    envelope = await service._build_emotion_hint_summary(user_id, now)
++
++    assert envelope.value.dominant_sentiment == "frustrated"
++    assert envelope.value.emotional_block_detected is True
+diff --git a/backend/tests/unit/test_state_estimator_telemetry_bounds.py b/backend/tests/unit/test_state_estimator_telemetry_bounds.py
+new file mode 100644
+index 00000000..9808a68d
+--- /dev/null
++++ b/backend/tests/unit/test_state_estimator_telemetry_bounds.py
+@@ -0,0 +1,199 @@
++"""V3-FIX-11 T1 red/green: telemetry must not saturate cognitive_load nor
++re-arm the state estimator on every request.
++
++D-01 R2 evidence (F4, "request-arms-the-estimator"): the ingest endpoint and
++the cognitive stream worker both call ``StateEstimatorService.update_state``
++synchronously, and ``cognitive_load = min(1, wrong*0.15 + total*0.02)`` — the
++pure event-volume term saturates at ~50 events/24h, so a misbehaving client
++can push a user's cognitive-load estimate to 1.0 (interruptibility 0) with
++semantically empty noise (heartbeat / screen_view).
++"""
++
++from __future__ import annotations
++
++from datetime import UTC, datetime, timedelta
++from uuid import uuid4
++
++from app.core.telemetry_boundary import (
++    STATE_ESTIMATOR_MIN_INTERVAL_SECONDS,
++    TELEMETRY_DERIVED_LOAD_CAP,
++)
++from app.models.event import TrackingEvent
++from app.models.user_state import UserStateSnapshot
++from app.services.state_estimator_service import StateEstimatorService, StateWindow
++
++
++def _utcnow() -> datetime:
++    return datetime.now(UTC).replace(tzinfo=None)
++
++
++def _event(event_type: str, payload: dict | None = None, received_at: datetime | None = None):
++    return TrackingEvent(
++        event_id=uuid4().hex,
++        user_id=uuid4(),
++        event_type=event_type,
++        schema_version="event.v1",
++        source="client",
++        ts_ms=int(_utcnow().timestamp() * 1000),
++        entities=None,
++        payload=payload or {},
++        received_at=received_at or _utcnow(),
++    )
++
++
++def test_volume_noise_cannot_saturate_cognitive_load():
++    """50 semantically-empty events in 24h must not saturate cognitive_load.
++
++    RED against the pre-fix formula: min(1, 0 + 50*0.02) == 1.0.
++    """
++    now = _utcnow()
++    events = [_event("screen_view") for _ in range(50)]
++    service = StateEstimatorService(db=None)
++    window = StateWindow(start=now - timedelta(hours=24), end=now)
++    snapshot = service._compute_state(uuid4(), events, window, "UTC")
++
++    assert snapshot.cognitive_load <= TELEMETRY_DERIVED_LOAD_CAP, (
++        f"telemetry volume noise pushed cognitive_load to {snapshot.cognitive_load}; "
++        "client telemetry must be capped below decision-saturation "
++        f"(TELEMETRY_DERIVED_LOAD_CAP={TELEMETRY_DERIVED_LOAD_CAP})"
++    )
++
++
++def test_forged_wrong_events_cannot_saturate_cognitive_load():
++    """Forged quiz_wrong events must not saturate cognitive_load either.
++
++    RED against the pre-fix formula: min(1, 7*0.15 + 0) == 1.05 -> 1.0.
++    Both terms of the load are client telemetry, so the combined
++    telemetry-derived contribution is capped.
++    """
++    now = _utcnow()
++    events = [_event("quiz_wrong") for _ in range(7)]
++    service = StateEstimatorService(db=None)
++    window = StateWindow(start=now - timedelta(hours=24), end=now)
++    snapshot = service._compute_state(uuid4(), events, window, "UTC")
++
++    assert snapshot.cognitive_load <= TELEMETRY_DERIVED_LOAD_CAP
++
++
++def test_legitimate_struggle_signal_survives_below_cap():
++    """A genuine wrong-answer cluster still raises load (direction preserved),
++    just bounded: 3 wrongs -> 0.45 uncapped -> 0.3 capped, still > idle 0.02."""
++    now = _utcnow()
++    events = [_event("quiz_wrong") for _ in range(3)] + [_event("screen_view")]
++    service = StateEstimatorService(db=None)
++    window = StateWindow(start=now - timedelta(hours=24), end=now)
++    snapshot = service._compute_state(uuid4(), events, window, "UTC")
++
++    assert 0 < snapshot.cognitive_load <= TELEMETRY_DERIVED_LOAD_CAP
++
++
++class _ScalarOneOrNone:
++    def __init__(self, value):
++        self._value = value
++
++    def scalar_one_or_none(self):
++        return self._value
++
++
++class _ScalarsAll:
++    def __init__(self, rows):
++        self._rows = rows
++
++    def scalars(self):
++        return self
++
++    def all(self):
++        return self._rows
++
++
++class _FakeSession:
++    """Minimal async-session stand-in for update_state's query paths."""
++
++    def __init__(self, existing_snapshots=None, events=None):
++        self.snapshots = list(existing_snapshots or [])
++        self.events = list(events or [])
++        self.added = []
++        self.commits = 0
++
++    async def execute(self, stmt):
++        # Distinguish the two selects by column descriptions.
++        desc = {d["name"] for d in stmt.column_descriptions}
++        if any(name in desc for name in ("UserStateSnapshot", "user_id", "id")) and "TrackingEvent" not in str(stmt):
++            # latest-snapshot lookup: newest first, limit 1
++            ordered = sorted(self.snapshots, key=lambda s: s.snapshot_at, reverse=True)
++            return _ScalarOneOrNone(ordered[0] if ordered else None)
++        return _ScalarsAll(self.events)
++
++    def add(self, obj):
++        self.added.append(obj)
++
++    async def commit(self):
++        self.commits += 1
++
++    async def refresh(self, obj):
++        return None
++
++
++def _snapshot(user_id, snapshot_at):
++    return UserStateSnapshot(
++        user_id=user_id,
++        snapshot_at=snapshot_at,
++        window_start=snapshot_at - timedelta(hours=24),
++        window_end=snapshot_at,
++        cognitive_load=0.1,
++        interruptibility=0.9,
++        strain_index=0.1,
++        focus_mode=False,
++        sprint_mode=False,
++        time_context={"hour": 12, "weekday": 0},
++        derived_event_ids=[],
++    )
++
++
++async def test_update_state_debounces_rapid_telemetry_bursts():
++    """A second telemetry-triggered update_state inside the debounce window
++    must NOT mint a fresh snapshot (RED: pre-fix code recomputes every call).
++
++    This is the "single request cannot synchronously move state" bound: the
++    ingest endpoint / stream worker still call update_state, but the service
++    itself rate-limits recompute frequency per user.
++    """
++    user_id = uuid4()
++    now = _utcnow()
++    fresh = _snapshot(user_id, now - timedelta(seconds=10))
++    db = _FakeSession(existing_snapshots=[fresh])
++    service = StateEstimatorService(db)
++
++    returned = await service.update_state(user_id, timezone_name=None)
++
++    assert returned is fresh, "must return the existing fresh snapshot"
++    assert db.added == [], "no new snapshot may be created inside the debounce window"
++    assert db.commits == 0
++
++
++async def test_update_state_recomputes_when_snapshot_is_stale():
++    """Outside the debounce window the estimator still refreshes (telemetry
++    remains a bounded signal, not a banned one)."""
++    user_id = uuid4()
++    now = _utcnow()
++    stale = _snapshot(user_id, now - timedelta(seconds=STATE_ESTIMATOR_MIN_INTERVAL_SECONDS + 60))
++    db = _FakeSession(existing_snapshots=[stale])
++    service = StateEstimatorService(db)
++
++    returned = await service.update_state(user_id, timezone_name=None)
++
++    assert returned is not stale
++    assert len(db.added) == 1
++    assert db.commits >= 1
++
++
++async def test_update_state_first_ever_call_recomputes():
++    """No prior snapshot -> compute (bootstrap path unaffected)."""
++    user_id = uuid4()
++    db = _FakeSession()
++    service = StateEstimatorService(db)
++
++    returned = await service.update_state(user_id, timezone_name=None)
++
++    assert returned is not None
++    assert len(db.added) == 1

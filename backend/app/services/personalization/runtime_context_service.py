@@ -41,6 +41,11 @@ class RuntimeContextService:
 
     async def _is_focus_active(self, user_id: UUID) -> bool:
         """检查是否处于专注模式"""
+        # TELEMETRY_DERIVED_READ_WAIVER(V3-FIX-11 T1): user_state_snapshots is
+        # telemetry-derived. Bound: only focus_mode/snapshot_at are read, and
+        # snapshot writes are debounce-gated with the telemetry-derived
+        # cognitive_load capped in state_estimator_service. Guarded by
+        # tests/contract/test_telemetry_boundary_contract.py.
         result = await self.db.execute(
             select(UserStateSnapshot.focus_mode, UserStateSnapshot.snapshot_at)
             .where(UserStateSnapshot.user_id == user_id)

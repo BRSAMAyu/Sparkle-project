@@ -171,6 +171,14 @@ class NightlyReviewService:
         return refs
 
     async def _latest_state(self, user_id: UUID) -> UserStateSnapshot | None:
+        # TELEMETRY_DERIVED_READ_WAIVER(V3-FIX-11 T1): user_state_snapshots is
+        # telemetry-derived (state_estimator computes it from tracking_events).
+        # Bound: snapshot writes are debounce-gated
+        # (STATE_ESTIMATOR_MIN_INTERVAL_SECONDS) and the telemetry-derived
+        # cognitive_load is capped (TELEMETRY_DERIVED_LOAD_CAP) in
+        # state_estimator_service, so no single telemetry request can move the
+        # state consumed here. Guarded by
+        # tests/contract/test_telemetry_boundary_contract.py.
         result = await self.db.execute(
             select(UserStateSnapshot)
             .where(UserStateSnapshot.user_id == user_id)

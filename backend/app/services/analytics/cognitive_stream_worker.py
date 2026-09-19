@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.business_metrics import EVENT_STREAM_LAG
 from app.core.event_bus import EventBus
+from app.core.telemetry_boundary import TELEMETRY_SENSITIVE_SENTIMENTS
 from app.models.cognitive import AnalysisStatus, CognitiveFragment
 from app.models.compliance import DlqReplayAuditLog
 from app.models.user import User
@@ -83,7 +84,14 @@ class CognitiveStreamWorker:
     GROUP_NAME = "cognitive_stream_worker"
 
     SENSITIVE_TAGS = {"anxiety_high", "distraction_high", "depression_risk"}
-    SENSITIVE_SENTIMENTS = {"anxious", "depressed", "burnout"}
+    # V3-FIX-11 T3 (D-01 R2 F3): single source of truth in
+    # app/core/telemetry_boundary.py — the intercept set must cover every
+    # sentiment the state aggregator treats as an emotional_block trigger
+    # ({anxious, frustrated, overwhelmed} plus the historical
+    # anxious/depressed/burnout trio), otherwise client telemetry reaches
+    # UserStateV1's emotion_hint through plaintext
+    # cognitive_fragments.sentiment.
+    SENSITIVE_SENTIMENTS = TELEMETRY_SENSITIVE_SENTIMENTS
 
     def __init__(self, db: AsyncSession, redis_client, event_bus: EventBus | None = None):
         self.db = db

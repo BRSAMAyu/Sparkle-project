@@ -20,11 +20,13 @@ from sqlalchemy import desc, select, update
 
 from app.core.business_metrics import ADAPTIVE_ADJUSTMENT_SKIPPED_TOTAL, ADAPTIVE_ROLLBACK_TOTAL
 from app.core.event_bus import event_bus
+from app.core.telemetry_boundary import EXCLUDED_COHORT_REGISTRATION_SOURCES
 from app.models.card_protocol import Card, CardType
 from app.models.cognitive import BehaviorPattern
 from app.models.plan import Plan
 from app.models.task import SubTask, SubTaskStatus, Task, TaskStatus, TaskType
 from app.models.task_feedback import TaskFeedback
+from app.models.user import User
 from app.orchestration.dual_core_router import AdaptationRecord
 from app.orchestration.plan_review_service import plan_review_service
 from app.orchestration.plan_revision_summary import PlanRevisionSummary
@@ -128,11 +130,21 @@ class CognitivePatternTrigger:
         limit: int | None = None,
         pattern_name: str | None = None,
     ) -> list[PlanParameterAdjustment]:
+        # TELEMETRY_DERIVED_READ_WAIVER(V3-FIX-11 T2): behavior_patterns is a
+        # telemetry-derived table (cognitive stream fragments / seed writes
+        # feed it). Bound: patterns owned by guest/seed cohort accounts are
+        # excluded at the 0.7 confidence gate — dev DB held 166 seed-injected
+        # 计划谬误 patterns at 0.84 inside this gate (D-01 R2 F5). Guarded by
+        # tests/services/test_adaptive_replanner_seed_cohort_filter.py.
         result = await self.db.execute(
             select(BehaviorPattern)
+            .join(User, User.id == BehaviorPattern.user_id)
             .where(BehaviorPattern.user_id == user_id)
             .where(BehaviorPattern.is_archived.is_(False))
             .where(BehaviorPattern.confidence_score >= self.MIN_CONFIDENCE)
+            .where(
+                User.registration_source.not_in(EXCLUDED_COHORT_REGISTRATION_SOURCES)
+            )
             .order_by(desc(BehaviorPattern.confidence_score), desc(BehaviorPattern.frequency))
             .limit(12)
         )
