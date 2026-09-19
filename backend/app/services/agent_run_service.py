@@ -54,6 +54,7 @@ from app.core.run_state_machine import (
     RESUMABLE_RUN_STATUSES,
     RUN_STATE_MACHINE_VERSION,
     InvalidResumeTargetError,
+    RunStateError,
     RunStatus,
     RunWaitKind,
     event_name_for_transition,
@@ -95,6 +96,23 @@ _INTENT_TERMINAL_STATUSES: frozenset[ExecutionIntentStatus] = frozenset(
     }
 )
 
+#: 客户端 cancel 允许的终态归因子集（FIX-29 N3）。取消是**用户语义**操作，
+#: 合法归因只有 ``user_cancelled``；terminal_reason_vocabulary 内其余词
+#: （timeout/queue_stale/worker_restart_orphan/...）是系统侧判定词，客户端
+#: 不得借 cancel 代系统归因（词表内子集白名单，拒绝任意串）。
+CLIENT_CANCEL_REASON_WHITELIST: frozenset[str] = frozenset({"user_cancelled"})
+
+#: 步进里程碑驱动的 EXECUTING 投影允许的源状态（X-05B）。里程碑事件是执行
+#: 进度的**增强可见性**，不是状态真源——只允许从"未在等待"的活跃态落
+#: EXECUTING；AWAITING_* 等待态不因（重投/乱序的）迟到步进被覆盖（等待的
+#: 解除属于 intent 状态漏斗或用户 resume/cancel，单一真源）。
+_MILESTONE_LANDING_SOURCES: frozenset[RunStatus] = frozenset(
+    {
+        RunStatus.QUEUED,
+        RunStatus.RUNNING,
+    }
+)
+
 
 #: intent 投影创建 run 的确定性幂等键（同 intent 同 attempt 恰一次 run.created）。
 def intent_attempt_key(intent_id: UUID | str, attempt: int) -> str:
@@ -107,6 +125,14 @@ def _utcnow() -> datetime:
 
 class RunNotFoundError(ValueError):
     """run 不存在或不属于该用户（API 层 404；与 _get_user_intent 同形）。"""
+
+
+class InvalidCancelReasonError(RunStateError):
+    """cancel reason 不在客户端白名单内（FIX-29 N3；API 层 422）。
+
+    与 :class:`InvalidResumeTargetError` 同族：服务端封闭白名单拒绝客户端
+    自选任意串。注意先于 ``RunStateError`` 捕获（子类）。
+    """
 
 
 class TransitionActor(StrEnum):
@@ -507,7 +533,19 @@ class AgentRunService:
         reason: str = "user_cancelled",
         idempotency_key: str | None = None,
     ) -> RunMutationResult:
-        """用户取消（AGENT_RUNTIME.md §6：状态变更 + 下游协作取消）。"""
+        """用户取消（AGENT_RUNTIME.md §6：状态变更 + 下游协作取消）。
+
+        ``reason`` 服务端白名单（FIX-29 N3）：客户端只能归因
+        ``user_cancelled``（:data:`CLIENT_CANCEL_REASON_WHITELIST`，
+        terminal_reason_vocabulary 的用户语义子集）——词表内其余终态归因是
+        系统侧判定词，任意串一律 ``InvalidCancelReasonError``（API 层 422）。
+        """
+        reason = str(reason)
+        if reason not in CLIENT_CANCEL_REASON_WHITELIST:
+            raise InvalidCancelReasonError(
+                f"cancel reason {reason!r} is not a client-selectable reason "
+                f"(allowed: {sorted(CLIENT_CANCEL_REASON_WHITELIST)})"
+            )
         run = await self.get_run(run_id, user_id=user_id)
         if RunStatus(run.status) is RunStatus.CANCELLED:
             return RunMutationResult(run=run, applied=False, created=False, event_name=None, event_written=False)
@@ -706,6 +744,98 @@ class AgentRunService:
             actor=TransitionActor.PROJECTION,
             source=EventSource.WORKER,
         )
+
+    # ------------------------------------------------------------------
+    # execution 步进 → run 投影（消费 event_bus run.status_changed 里程碑）
+    # ------------------------------------------------------------------
+
+    async def project_execution_step(
+        self,
+        *,
+        intent_id: UUID | str,
+        user_id: UUID | str,
+        task_id: UUID | str | None = None,
+        milestone: str | None = None,
+        to_status: str | None = None,
+        ordinal: int | None = None,
+        stage: str | None = None,
+        steps_total: int | None = None,
+    ) -> RunMutationResult | None:
+        """把 execution 轨道步进里程碑（``run.status_changed`` 漏斗事件）投影到 run。
+
+        X-05B · EXECUTING 执行面接线。步进事件是**增强可见性**，不是 run 生命
+        周期真源（真源是 intent 状态漏斗 ``execution.status_changed``），因此：
+
+        - **无活跃 run → no-op 不铸造**：run 创建只属于状态漏斗（catch-up/
+          attempt 语义在那里）；步进事件先到/状态事件丢失时静默跳过，恢复
+          sweep + 漂移修复兜底（与 X-05 F1 幻影守卫同哲学）；
+        - **run 已终态 → no-op**：迟到步进（终态事件先行）不上 DLQ——终态
+          即结论，进度回放无意义；
+        - **to_status 只从 QUEUED/RUNNING 落 EXECUTING**（:data:`_MILESTONE_
+          LANDING_SOURCES`）：AWAITING_* 等待态不因迟到/乱序步进被覆盖——
+          等待解除属于 intent 漏斗或用户 resume/cancel，单一真源；
+        - **幂等（同 intent+attempt+step 重投恰一次）**：transition 的
+          FOR UPDATE+复查吸收重复 to_status；record_step 的绝对序号单调吸收
+          重复 step（ordinal ≤ steps_done → no-op）。审计同构：迁移走
+          agent_run_transitions+outbox（run.status_changed），步进走
+          outbox（run.step_completed）+ steps_done/current_stage/heartbeat。
+        """
+        intent_uuid = UUID(str(intent_id))
+        target: RunStatus | None = None
+        if to_status is not None and str(to_status).strip():
+            try:
+                target = RunStatus(str(to_status).strip())
+            except ValueError:
+                raise RunStateError(f"unmapped run status in step event {to_status!r}") from None
+
+        run = await self._find_active_run_for_intent(intent_uuid)
+        if run is None:
+            logger.debug("run step projection skipped: no active run for intent {}", intent_uuid)
+            return None
+        if is_terminal_run_status(run.status):
+            logger.debug(
+                "run step projection skipped: run {} already terminal ({})", run.id, run.status.value
+            )
+            return None
+
+        results: list[RunMutationResult] = []
+        if target is not None:
+            current = RunStatus(run.status)
+            if current is target:
+                pass  # 重复投递 no-op（FOR UPDATE+复查语义在此前置吸收）
+            elif current in _MILESTONE_LANDING_SOURCES:
+                results.append(
+                    await self.transition(
+                        run.id,
+                        target,
+                        actor=TransitionActor.PROJECTION,
+                        current_stage=stage,
+                        steps_total=steps_total,
+                        source=EventSource.WORKER,
+                        details={"milestone": milestone, "execution_step": True},
+                    )
+                )
+            else:
+                # AWAITING_*：迟到/乱序步进不覆盖等待态（见 docstring）。
+                logger.info(
+                    "run step projection held status: run {} in {} keeps waiting (late milestone {})",
+                    run.id,
+                    current.value,
+                    milestone,
+                )
+        if ordinal is not None:
+            results.append(
+                await self.record_step(
+                    run.id,
+                    user_id=user_id,
+                    step_id=str(milestone or f"step-{ordinal}"),
+                    ordinal=int(ordinal),
+                    label=stage,
+                    steps_total=steps_total,
+                    source=EventSource.WORKER,
+                )
+            )
+        return results[-1] if results else None
 
     @staticmethod
     def _projection_reason(*, intent_status: str, target: RunStatus) -> str | None:

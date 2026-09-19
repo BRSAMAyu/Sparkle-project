@@ -293,10 +293,16 @@ EVENT_REGISTRY: dict[str, RegisteredEvent] = {
             # X-05: 其余状态迁移的统一事件（语义时刻用专名 run.awaiting_user /
             # run.user_resumed，进度用 run.step_completed；QUEUED→RUNNING、
             # 各终态等一律 run.status_changed）。与 task.status_changed 同族。
+            # X-05B: execution 轨道步进里程碑复用本名上 EventBus
+            # （execution_run_producer → run 投影消费；零新事件名，schema
+            # 扩展字段 milestone/run 块）。
             name="run.status_changed",
             stage=EventStage.EXECUTION,
             aggregate_type="agent_run",
-            producers=("app/services/agent_run_service.py",),
+            producers=(
+                "app/services/agent_run_service.py",
+                "app/services/execution_run_producer.py",
+            ),
             status="live",
         ),
         RegisteredEvent(

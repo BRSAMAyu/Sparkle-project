@@ -60,6 +60,7 @@ from app.services.execution_preference_service import ExecutionPreferenceService
 from app.services.execution_quality_service import ExecutionQualityService
 from app.services.execution_result_validator import ExecutionResultValidator
 from app.services.execution_risk_assessor import ExecutionRiskAssessor
+from app.services.execution_run_producer import publish_execution_step_event
 from app.services.execution_template_service import ExecutionTemplateService
 from app.services.openclaw_connection_profile_service import OpenClawConnectionProfileService
 from app.services.plan_execution_record_service import PlanExecutionRecordService
@@ -1871,6 +1872,9 @@ class ExecutionService:
                         progress=0.35,
                         progress_message="OpenClaw started execution",
                     )
+                    # X-05B: EXECUTING 执行面接线——步进里程碑进 run 事件轨道
+                    # （run.status_changed 漏斗；钩子永不抛出，守卫零影响）。
+                    await publish_execution_step_event(intent, "execution_started")
                     await self._emit_stream_sink(
                         stream_sink,
                         "execution_lifecycle",
@@ -1888,6 +1892,7 @@ class ExecutionService:
                         progress=0.95,
                         progress_message="OpenClaw finished execution",
                     )
+                    await publish_execution_step_event(intent, "finishing")
                     await self._emit_stream_sink(
                         stream_sink,
                         "execution_lifecycle",
@@ -1923,6 +1928,7 @@ class ExecutionService:
                     progress=0.7,
                     progress_message="OpenClaw is producing output",
                 )
+                await publish_execution_step_event(intent, "producing_output")
                 text_chunk = self._extract_gateway_text(payload)
                 if text_chunk:
                     await self._emit_stream_sink(
@@ -1941,6 +1947,7 @@ class ExecutionService:
                     progress=0.55,
                     progress_message="OpenClaw is using tools",
                 )
+                await publish_execution_step_event(intent, "tool_in_use")
                 tool_name = self._extract_gateway_tool_name(payload)
                 tool_input = (
                     payload.get("input")

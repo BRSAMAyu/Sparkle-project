@@ -12,7 +12,10 @@
 
 错误映射（house 先例）：ValueError → 400/409（IllegalRunTransitionError 属
 ValueError 子类 → 409，tasks.py:999 先例）；RunNotFoundError → 404；跨用户
-读取按 404 处理（与 _get_user_intent 同形，不泄露存在性）。
+读取按 404 处理（与 _get_user_intent 同形，不泄露存在性）。FIX-29 硬化：
+POST /runs 挂 intent 前归属校验（他人/不存在 intent 一律 404，不抢占投影
+不窥时间线，N1）；cancel reason 服务端白名单 ``{user_cancelled}``（词表内
+子集，越界 → 422，N3，resume 白名单同族）。
 
 网关侧由 ``backend/gateway/internal/handler/proxy_routes.go`` 的 /runs 代理组
 转发（Go 无业务逻辑，纯 proxy，分层边界不变）。
@@ -33,8 +36,9 @@ from app.api.deps import get_current_active_superuser, get_current_user
 from app.core.run_state_machine import IllegalRunTransitionError, InvalidResumeTargetError, RunStateError
 from app.db.session import get_db
 from app.models.agent_run import AgentRunKind
+from app.models.execution_intent import ExecutionIntent
 from app.models.user import User
-from app.services.agent_run_service import AgentRunService, RunNotFoundError
+from app.services.agent_run_service import AgentRunService, InvalidCancelReasonError, RunNotFoundError
 from app.services.execution_service import ExecutionService
 
 router = APIRouter(prefix="/runs", tags=["agent-runs"])
@@ -73,6 +77,8 @@ class ResumeRunRequest(BaseModel):
 
 
 class CancelRunRequest(BaseModel):
+    """取消请求。reason 只接受服务端白名单 ``user_cancelled``（FIX-29 N3）。"""
+
     reason: str = Field(default="user_cancelled", max_length=32)
     idempotency_key: str | None = Field(default=None, max_length=255)
 
@@ -166,6 +172,18 @@ async def list_run_transitions(
 # --- 写端点 ------------------------------------------------------------------
 
 
+async def _ensure_intent_owned(db: AsyncSession, *, intent_id: UUID, user_id: UUID) -> None:
+    """FIX-29 N1：POST /runs 挂 intent 前校验归属。
+
+    挂他人 intent 的 run 会抢占该 intent 的投影（活跃 run 按 intent_id 检索、
+    不分 user）并借 transitions 时间线窥见他人执行轨迹。跨用户/不存在一律
+    404（与 _get_user_intent 同形，不泄露存在性）。
+    """
+    intent = await db.get(ExecutionIntent, intent_id)
+    if intent is None or str(intent.user_id) != str(user_id):
+        raise HTTPException(status_code=404, detail=f"execution intent {intent_id} not found")
+
+
 # route-tier: authed
 @router.post("", response_model=RunResponse, status_code=201)
 async def create_run(
@@ -173,6 +191,8 @@ async def create_run(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    if request.intent_id is not None:
+        await _ensure_intent_owned(db, intent_id=request.intent_id, user_id=current_user.id)
     service = AgentRunService(db)
     try:
         result = await service.create_run(
@@ -276,6 +296,10 @@ async def cancel_run(
         )
     except IllegalRunTransitionError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except InvalidCancelReasonError as exc:
+        # 服务端白名单拒绝（FIX-29 N3）：非 user_cancelled 归因 → 422（与
+        # resume 白名单拒绝同族），不落到 400/500。
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except RunNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except RunStateError as exc:

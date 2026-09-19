@@ -5,12 +5,19 @@
 执行器协议状态投影为用户可见 run 状态（映射见
 ``app/core/run_state_machine.INTENT_STATUS_TO_RUN_STATUS``）。
 
+X-05B · EXECUTING 执行面接线：同组加消费 ``run.status_changed``（execution
+轨道步进里程碑，producer = ``execution_run_producer.publish_execution_step_event``，
+零新事件名——D-01 冻结词表既有名），投影 EXECUTING 可见步进（状态落点 +
+steps_done/current_stage 进度）到 run 脊柱（``project_execution_step``）。
+
 架构定位（X-05 RUNTIME_MAP §5）：
-- **零侵入**：execution_service 一行不改；投影经既有 event_bus（Redis Streams
+- **零侵入**：execution_service 状态漏斗一行不改（步进 producer 是独立钩子
+  函数，X-05B 只加调用点）；投影经既有 event_bus（Redis Streams
   consumer group，pending 条目在组存续期间不丢）；
 - **幂等**：project_intent_status 内部 FOR UPDATE+复查（重复投递 no-op），
   run 创建按 ``intent:{id}:attempt:{n}`` 确定性幂等键恰一次；终态事件重投
-  由幻影守卫收敛（R2 F1）；
+  由幻影守卫收敛（R2 F1）；步进事件同 intent+attempt+step 重投恰一次
+  （transition 复查 + record_step 序号单调，X-05B）；
 - **可修复**：投影滞后/丢失由 ``AgentRunService.recover_stale_runs`` 的
   intent 漂移修复兜底（QUEUED 分支同样覆盖，R2 F3）；
 - **失败不丢**：投影异常向上抛给 bus（有界重试 → DLQ + metric + DB 落档），
@@ -30,6 +37,7 @@ from loguru import logger
 
 from app.core.event_bus import EventBus
 from app.core.event_types import EXECUTION_STATUS_CHANGED
+from app.core.run_state_machine import RunEventName
 from app.db.session import AsyncSessionLocal
 from app.services.agent_run_service import AgentRunService
 
@@ -84,9 +92,11 @@ class RunProjectionConsumer:
         （无投影信息，重试无意义）。
         """
         event_type = str(event.get("event_type") or "").strip()
-        if event_type != EXECUTION_STATUS_CHANGED:
-            return
-        await self.project_event(event)
+        if event_type == EXECUTION_STATUS_CHANGED:
+            await self.project_event(event)
+        elif event_type == RunEventName.STATUS_CHANGED.value:
+            await self.project_step_event(event)
+        return
 
     async def project_event(self, event: dict) -> None:
         intent_id = str(event.get("execution_intent_id") or "").strip()
@@ -125,4 +135,69 @@ class RunProjectionConsumer:
                 result.run.id,
                 result.created,
                 result.run.status.value if result.run.status else None,
+            )
+
+    async def project_step_event(self, event: dict) -> None:
+        """X-05B · execution 步进里程碑（``run.status_changed``）→ run 投影。
+
+        payload 扩展字段（producer 见 ``execution_run_producer``）：
+        ``execution_intent_id`` / ``user_id`` / ``task_id`` / ``milestone`` /
+        ``run{to_status, step{ordinal, stage, steps_total}}``。缺关键键静默
+        跳过（与状态漏斗同契约）；有 ``run`` 块但 ``to_status`` 非法 → 抛
+        RunStateError（毒事件走 DLQ，与未映射 intent 状态同待遇）。
+        """
+        intent_id = str(event.get("execution_intent_id") or "").strip()
+        user_id = str(event.get("user_id") or "").strip()
+        if not intent_id or not user_id:
+            logger.debug("run step projection skipped: malformed event keys {}", sorted(event.keys()))
+            return
+
+        run_block = event.get("run")
+        if not isinstance(run_block, dict):
+            run_block = {}
+        step_block = run_block.get("step")
+        if not isinstance(step_block, dict):
+            step_block = {}
+
+        to_status = str(run_block.get("to_status") or "").strip() or None
+        ordinal_raw = step_block.get("ordinal")
+        ordinal = int(ordinal_raw) if ordinal_raw is not None else None
+        stage = str(step_block.get("stage") or "").strip() or None
+        steps_total_raw = step_block.get("steps_total")
+        steps_total = int(steps_total_raw) if steps_total_raw is not None else None
+        milestone = str(event.get("milestone") or "").strip() or None
+
+        if to_status is None and ordinal is None:
+            logger.debug("run step projection skipped: no to_status/step in event keys {}", sorted(event.keys()))
+            return
+
+        task_id_raw = str(event.get("task_id") or "").strip()
+        task_id: UUID | None = None
+        if task_id_raw:
+            try:
+                task_id = UUID(task_id_raw)
+            except ValueError:
+                task_id = None
+
+        async with self._session_factory() as db:
+            service = AgentRunService(db)
+            result = await service.project_execution_step(
+                intent_id=UUID(intent_id),
+                user_id=UUID(user_id),
+                task_id=task_id,
+                milestone=milestone,
+                to_status=to_status,
+                ordinal=ordinal,
+                stage=stage,
+                steps_total=steps_total,
+            )
+        if result is None:
+            logger.debug("run step projection no-op intent_id={} milestone={}", intent_id, milestone)
+        else:
+            logger.info(
+                "run step projection applied intent_id={} run_id={} milestone={} steps_done={}",
+                intent_id,
+                result.run.id,
+                milestone,
+                result.run.steps_done,
             )

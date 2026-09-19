@@ -1108,7 +1108,14 @@ class EventBus:
                 logger.error("Failed to persist publish failure DLQ entry for {}: {}", event_type, dlq_exc)
         return None
 
-    async def subscribe(self, stream: str, group_name: str, consumer_name: str, callback: Callable[[dict], Any]):
+    async def subscribe(
+        self,
+        stream: str,
+        group_name: str,
+        consumer_name: str,
+        callback: Callable[[dict], Any],
+        group_start_id: str = "$",
+    ):
         """
         Start a background consumer for a consumer group.
 
@@ -1117,14 +1124,28 @@ class EventBus:
             group_name: Consumer Group name
             consumer_name: Unique consumer name instance
             callback: Async function to handle message payload (dict)
+            group_start_id: XGROUP CREATE start id for a **newly created**
+                group only (existing groups are unaffected — BUSYGROUP path).
+                Default ``$`` (X-05B F6): a new group starts at the stream
+                tail, so first deployment against a stream with history does
+                not replay it (each historical event used to burst a consumer
+                side-effect, e.g. one run row per historical intent in the
+                run projection). Callers that deliberately want full replay
+                (backfill tooling) pass ``"0"`` explicitly. Delivery semantics
+                for messages XADDed after group creation are unchanged
+                (at-least-once + pending/claim on restart).
+
+        Rollback: single-line revert of the default to ``"0"``; groups already
+        created with ``$`` persist in Redis regardless (BUSYGROUP ignores the
+        start id on subsequent deploys).
         """
         if not self.redis:
             await self.connect()
 
         # 1. Create Consumer Group if not exists
         try:
-            await self.redis.xgroup_create(stream, group_name, id="0", mkstream=True)
-            logger.info(f"Created consumer group {group_name} for stream {stream}")
+            await self.redis.xgroup_create(stream, group_name, id=group_start_id, mkstream=True)
+            logger.info(f"Created consumer group {group_name} for stream {stream} at id={group_start_id}")
         except ResponseError as e:
             if "BUSYGROUP" in str(e):
                 logger.debug(f"Consumer group {group_name} already exists")
