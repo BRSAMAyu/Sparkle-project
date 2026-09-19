@@ -50,6 +50,9 @@ async def test_consolidation_promotes_repeated_entry_to_l1(db_session, monkeypat
         )
 
     service = WorkingMemoryConsolidationService(db_session, now_fn=clock.now)
+    # Working memory storage is per-instance when Redis is absent; inject the
+    # same instance the test seeded so consolidation can see the entries.
+    service.working_memory = wm
     consolidated = await service.maybe_consolidate_recent_entries(user_id=user_id, session_id=session_id)
 
     assert len(consolidated) == 1
@@ -83,6 +86,9 @@ async def test_consolidation_accepts_strong_confirmation_but_not_generic_yes(db_
         due_at=clock.now() + timedelta(days=2),
     )
     service = WorkingMemoryConsolidationService(db_session, now_fn=clock.now)
+    # Working memory storage is per-instance when Redis is absent; inject the
+    # same instance the test seeded so consolidation can see the entries.
+    service.working_memory = wm
 
     assert service.is_explicit_confirmation("对") is False
     assert service.is_explicit_confirmation("帮我记住这个") is True
@@ -121,6 +127,9 @@ async def test_consolidation_rejection_retracts_l1(db_session, monkeypatch) -> N
         due_at=clock.now() + timedelta(days=2),
     )
     service = WorkingMemoryConsolidationService(db_session, now_fn=clock.now)
+    # Working memory storage is per-instance when Redis is absent; inject the
+    # same instance the test seeded so consolidation can see the entries.
+    service.working_memory = wm
     consolidated = await service.maybe_consolidate_recent_entries(
         user_id=user_id,
         session_id=session_id,

@@ -11,7 +11,7 @@ from app.working_memory.service import WorkingMemoryService
 
 
 @pytest.mark.asyncio
-async def test_state_aggregator_returns_working_memory_snapshot(db_session) -> None:
+async def test_state_aggregator_returns_working_memory_snapshot(db_session, monkeypatch) -> None:
     user_id = uuid4()
     session_id = uuid4()
     now = datetime.utcnow()
@@ -26,6 +26,11 @@ async def test_state_aggregator_returns_working_memory_snapshot(db_session) -> N
     await db_session.commit()
 
     wm = WorkingMemoryService()
+    # Storage is per-instance without Redis; point the aggregator at the same
+    # WM instance the test seeds (ctor builds its own otherwise).
+    monkeypatch.setattr(
+        "app.state_aggregator.service.WorkingMemoryService", lambda: wm
+    )
     await wm.upsert_entry(
         user_id=str(user_id),
         session_id=str(session_id),

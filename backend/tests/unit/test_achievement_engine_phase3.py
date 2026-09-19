@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from sqlalchemy import and_, select
@@ -489,7 +489,13 @@ async def test_notify_milestones_sends_websocket_payload(db_session, test_user):
 
 
 @pytest.mark.asyncio
-async def test_process_event_rolls_back_unlock_when_photon_grant_fails(db_session, test_user):
+async def test_process_event_compensates_photon_grant_failure_instead_of_rolling_back(db_session, test_user):
+    """R2-01 contract: photon grant failure must not roll back the unlock.
+
+    _grant_rewards catches the failure and schedules compensation (Celery
+    task, local retry as fallback). The unlock row persists so the
+    achievement is not lost; photons are granted later by the retry path.
+    """
     achievement = _achievement(
         "reward_atomicity",
         reward_config=[{"type": "photon", "quantity": 66}],
@@ -514,14 +520,25 @@ async def test_process_event_rolls_back_unlock_when_photon_grant_fails(db_sessio
     with patch(
         "app.services.photon_service.PhotonService.grant_photons",
         AsyncMock(side_effect=RuntimeError("boom")),
-    ):
-        with pytest.raises(RuntimeError, match="boom"):
-            await engine.process_event(
-                user_id=str(test_user.id),
-                event_type=AchievementEvent.TASK_COMPLETED,
-            )
+    ), patch(
+        # Stub the Celery hop: the unit env has no reachable broker and the
+        # real .delay() would stall ~20s in result-backend retries.
+        "app.core.celery_tasks.retry_achievement_photon_reward.delay",
+        new=MagicMock(),
+    ) as mock_delay:
+        # Compensation contract: no exception escapes process_event.
+        await engine.process_event(
+            user_id=str(test_user.id),
+            event_type=AchievementEvent.TASK_COMPLETED,
+        )
 
-    await db_session.rollback()
+    mock_delay.assert_called_once_with(
+        user_id=str(test_user.id),
+        achievement_id=str(achievement.id),
+        achievement_name=achievement.name,
+        quantity=66,
+    )
+
     await db_session.refresh(test_user)
     await db_session.refresh(achievement)
 
@@ -540,10 +557,10 @@ async def test_process_event_rolls_back_unlock_when_photon_grant_fails(db_sessio
         )
     )
 
-    assert unlocked_result.scalar_one_or_none() is None
+    # Unlock survives; only the photon grant awaits compensation.
+    assert unlocked_result.scalar_one_or_none() is not None
     assert history_result.scalars().all() == []
     assert test_user.photon_balance == 0
-    assert achievement.total_unlocked == 0
 
 
 @pytest.mark.asyncio

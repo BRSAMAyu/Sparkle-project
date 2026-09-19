@@ -211,7 +211,7 @@ class TestUnifiedStatusBand:
             "wake_score": 0.0,
             "last_l3_session_at": (now - timedelta(minutes=5)).isoformat(),
             "cooldown_until": cooldown_until.isoformat(),
-            "l3_session_count_today": 1,
+            "l3_session_count_today": 0,
             "updated_at": now.isoformat(),
         })
         _set_energy_get(redis, energy_json)
@@ -612,7 +612,7 @@ class TestPreferencesConsumption:
         decision = router.route(input_)
         gentle_constraints = [
             c for c in decision.execution_constraints
-            if "温和提醒" in c
+            if "gentle reminders" in c
         ]
         assert len(gentle_constraints) > 0
 
@@ -653,7 +653,7 @@ class TestCooldownCalibration:
             "wake_score": 0.8,
             "last_l3_session_at": (now - timedelta(minutes=5)).isoformat(),
             "cooldown_until": cooldown_until.isoformat(),
-            "l3_session_count_today": 1,
+            "l3_session_count_today": 0,
             "updated_at": now.isoformat(),
         })
         _set_energy_get(redis, energy_json)

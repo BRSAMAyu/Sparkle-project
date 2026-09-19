@@ -30,7 +30,13 @@ class _FakeIdempotencyStore:
 @pytest.mark.asyncio
 async def test_publish_retries_until_success() -> None:
     bus = EventBus()
-    bus.redis = SimpleNamespace(xadd=AsyncMock(side_effect=[RuntimeError("boom-1"), RuntimeError("boom-2"), "123-0"]))
+    bus.redis = SimpleNamespace(
+        xadd=AsyncMock(side_effect=[RuntimeError("boom-1"), RuntimeError("boom-2"), "123-0"]),
+        # G07 observability probes groups after every successful xadd; without
+        # it the (whole-function) retry loop burns its final attempt on the
+        # AttributeError instead of returning the published id.
+        xinfo_groups=AsyncMock(return_value=[{"name": "task_event_consumer"}]),
+    )
 
     message_id = await bus.publish("task.completed", {"user_id": "u-1"})
 

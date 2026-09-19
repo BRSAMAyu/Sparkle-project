@@ -17,7 +17,9 @@ Pins (red->green against app/core/event_registry.py):
 from __future__ import annotations
 
 import hashlib
+import io
 import json
+import tokenize
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
@@ -382,9 +384,68 @@ TRUTH_PATH_MODULES = (
 def test_truth_path_modules_never_read_client_telemetry(rel_path):
     source_path = BACKEND_DIR / rel_path
     assert source_path.exists(), f"truth-path module moved: {rel_path}"
-    source = source_path.read_text(encoding="utf-8")
-    assert "tracking_events" not in source, f"{rel_path} references tracking_events"
-    assert "TrackingEvent" not in source, f"{rel_path} references TrackingEvent"
+    findings = _scan_telemetry_code_references(source_path.read_text(encoding="utf-8"))
+    assert not findings, f"{rel_path} references telemetry in executable code: {findings}"
+
+
+# --- 5b. Guard scanner semantics (comments/docstrings are not data access) ------
+#
+# The scan is token-level, not raw substring: matches inside COMMENT or STRING
+# tokens are documentation about the telemetry boundary (e.g.
+# state_aggregator/service.py carries a TELEMETRY_DERIVED_READ_WAIVER note that
+# legitimately names stream:tracking_events), not reads of client telemetry.
+# Tokenization keeps the guard fail-closed: a file that cannot be tokenized
+# raises instead of silently passing, and every non-comment/non-string lexeme
+# (names, attribute accesses, imports) is still scanned verbatim.
+#
+# Honest scope note (extends the F12/R2 scope above): string-embedded raw SQL
+# naming tracking_events is also invisible to this scan now; the codebase's
+# data access is ORM-level, and the derived-table second hops (T1/T2/T3) were
+# already out of scope by design.
+
+
+def _scan_telemetry_code_references(source: str) -> list[str]:
+    """Return telemetry names referenced outside comments and string literals."""
+    skip_types = {tokenize.COMMENT, tokenize.STRING, tokenize.NL}
+    # Python >=3.12 splits f-strings into FSTRING_* tokens; the literal text
+    # lands in FSTRING_MIDDLE. Excluded when the interpreter has them so a
+    # suspicious f-string still cannot hide, a documentation one cannot fire.
+    for _name in ("FSTRING_MIDDLE",):
+        if hasattr(tokenize, _name):
+            skip_types.add(getattr(tokenize, _name))
+    lexemes: list[str] = []
+    for tok in tokenize.generate_tokens(io.StringIO(source).readline):
+        if tok.type in skip_types:
+            continue
+        lexemes.append(tok.string)
+    joined = "\n".join(lexemes)
+    return [name for name in ("tracking_events", "TrackingEvent") if name in joined]
+
+
+def test_guard_scan_ignores_telemetry_names_in_comments_and_docstrings():
+    documentation_only = (
+        "# producer reads stream:tracking_events (see telemetry_boundary)\n"
+        '"""TrackingEvent table docs, purely narrative."""\n'
+        "ANSWER = 42\n"
+    )
+    assert _scan_telemetry_code_references(documentation_only) == []
+
+
+def test_guard_scan_flags_real_code_reference_mutation():
+    # Mutation check: the same documentation plus one real ORM read line must
+    # trip the scanner — proves the comment exemption did not blunt the guard.
+    mutated = (
+        "# producer reads stream:tracking_events (see telemetry_boundary)\n"
+        '"""TrackingEvent table docs, purely narrative."""\n'
+        "rows = await session.execute(select(TrackingEvent))\n"
+    )
+    assert _scan_telemetry_code_references(mutated) == ["TrackingEvent"]
+    mutated_sql_name = (
+        "def f():\n"
+        "    tracking_events = 1  # even a local name is a code-level reference\n"
+        "    return tracking_events\n"
+    )
+    assert _scan_telemetry_code_references(mutated_sql_name) == ["tracking_events"]
 
 
 def test_telemetry_ingest_path_stays_isolated_from_outbox_writers():

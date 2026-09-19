@@ -58,6 +58,9 @@ def test_chat_payload_preserves_canonical_correlation_fields():
         "group_id": "group-chat",
         "conversation_id": "conversation-chat",
         "message_id": "message-chat",
+        "route_history_decision_id": "",
+        "routing_outcome_signal_id": "",
+        "routing_trace_id": "",
     }
 
 

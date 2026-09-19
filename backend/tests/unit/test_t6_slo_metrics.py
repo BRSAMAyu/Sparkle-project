@@ -117,10 +117,16 @@ class TestSLOAlertRules:
         for alert in alerts:
             assert "slo" in alert.get("labels", {}), f"Alert {alert['alert']} missing slo label"
 
-    def test_all_alerts_are_warning_severity(self, slo_rules):
+    def test_alert_severities_follow_burn_rate_class(self, slo_rules):
+        """Multi-window multi-burn-rate scheme: fast-burn alerts page (critical),
+        everything else warns."""
         alerts = slo_rules["groups"][0]["rules"]
         for alert in alerts:
-            assert alert["labels"]["severity"] == "warning"
+            severity = alert["labels"]["severity"]
+            if "FastBurn" in alert["alert"]:
+                assert severity == "critical", alert["alert"]
+            else:
+                assert severity == "warning", alert["alert"]
 
 
 class TestSLOPrometheusConfig:

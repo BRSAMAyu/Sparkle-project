@@ -250,21 +250,36 @@ class TestFatiguePenaltyIntegration:
     async def test_fatigue_cache_avoids_duplicate_redis_calls(self):
         service = _make_service_with_base_quality()
         fatigue_data = {"fatigue_level": "high", "evidence": []}
-        call_count = 0
+        reads: dict[str, int] = {}
 
         async def _get(key: str):
-            nonlocal call_count
-            call_count += 1
+            reads[key] = reads.get(key, 0) + 1
             if "fatigue" in key:
                 return json.dumps(fatigue_data)
             return None
 
         mock_cache = MagicMock()
         mock_cache.get = AsyncMock(side_effect=_get)
+        mock_cache.set = AsyncMock()  # cache writes are awaited now; a sync
+        # stub would raise inside compute_quality and silently disable caching,
+        # doubling the fatigue reads this test guards against.
         with patch("app.core.cache.cache_service", mock_cache):
             await service.compute_quality("user-1")
             await service.compute_quality("user-1")
-        assert call_count == 2
+        # Each compute reads each dependency key at most once (fatigue, crisis,
+        # …). A cache write that fails to await would not change reads today but
+        # breaks the contract the moment a quality-cache read is added; keep the
+        # per-key dedup guard strict.
+        # Two computes, two quality-cache probes; dependency state (fatigue,
+        # crisis) is memoized after the first read — 1 redis read each total.
+        dependency_reads = sum(
+            v for k, v in reads.items() if "streak_quality" not in k
+        )
+        assert dependency_reads == 2
+        quality_probes = sum(
+            v for k, v in reads.items() if "streak_quality" in k
+        )
+        assert quality_probes == 2
 
     @pytest.mark.asyncio
     async def test_fatigue_drops_below_quality_day_threshold(self):

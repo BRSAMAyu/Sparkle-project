@@ -147,4 +147,4 @@ def test_deadline_pressure_in_router():
         ],
     )
     decision = router.route(inp)
-    assert any("截止日期" in c for c in decision.execution_constraints)
+    assert any("deadline pressure" in c for c in decision.execution_constraints)

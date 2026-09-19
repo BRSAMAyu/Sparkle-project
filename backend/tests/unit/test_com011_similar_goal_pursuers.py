@@ -43,21 +43,18 @@ class _AllResult:
         return self._rows
 
 
-class _ScalarVal:
-    def __init__(self, val):
-        self._val = val
+def _make_db(goals_with_users=None, src_goal=None, friend_rows=None):
+    """Build a fake AsyncSession that returns pre-canned results.
 
-    def scalar(self):
-        return self._val
-
-
-def _make_db(goals_with_users=None, src_goal=None, mutual_count=0):
-    """Build a fake AsyncSession that returns pre-canned results."""
+    Mirrors the current find_users_with_similar_goals execute sequence:
+    1) source goal                     -> scalar_one_or_none()
+    2) candidate goals                 -> all()
+    3) own accepted friendships        -> all()   (via _accepted_friend_ids)
+    4) candidates' friendships batch   -> all()   (N+1 prefetch)
+    Mutual counts are derived in-memory from rows 3+4 (no .scalar() call).
+    """
     db = AsyncMock()
 
-    # First call: fetch source goal
-    # Second call: fetch candidates
-    # Subsequent calls: mutual friend count
     call_count = 0
 
     async def mock_execute(stmt):
@@ -69,7 +66,7 @@ def _make_db(goals_with_users=None, src_goal=None, mutual_count=0):
         elif call_count == 2:
             return _AllResult(goals_with_users or [])
         else:
-            return _ScalarVal(mutual_count)
+            return _AllResult(friend_rows or [])
 
     db.execute = mock_execute
     return db
@@ -156,7 +153,7 @@ async def test_returns_scored_pursuers(mock_emb):
         return_value=[[1.0, 0.0], [0.0, 1.0]]
     )
 
-    db = _make_db(src_goal=src_goal, goals_with_users=candidates, mutual_count=0)
+    db = _make_db(src_goal=src_goal, goals_with_users=candidates)
 
     results = await find_users_with_similar_goals(user_id, goal_id, db, limit=5)
 
@@ -188,7 +185,7 @@ async def test_embedding_failure_graceful_fallback(mock_emb):
     mock_emb.get_embedding = AsyncMock(side_effect=RuntimeError("API down"))
     mock_emb.batch_embeddings = AsyncMock(side_effect=RuntimeError("API down"))
 
-    db = _make_db(src_goal=src_goal, goals_with_users=[(cand_goal, cand_user)], mutual_count=0)
+    db = _make_db(src_goal=src_goal, goals_with_users=[(cand_goal, cand_user)])
     results = await find_users_with_similar_goals(user_id, goal_id, db, limit=5)
 
     assert len(results) == 1
@@ -220,7 +217,7 @@ async def test_respects_limit_parameter():
         mock_emb.batch_embeddings = AsyncMock(
             return_value=[[1.0]] * 5
         )
-        db = _make_db(src_goal=src_goal, goals_with_users=candidates, mutual_count=0)
+        db = _make_db(src_goal=src_goal, goals_with_users=candidates)
         results = await find_users_with_similar_goals(user_id, goal_id, db, limit=2)
         assert len(results) == 2
 

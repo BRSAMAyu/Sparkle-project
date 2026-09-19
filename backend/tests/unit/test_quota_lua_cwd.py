@@ -26,6 +26,14 @@ async def redis_client():
     if not url:
         pytest.skip("REDIS_URL not configured")
     client = redis.from_url(url, decode_responses=True)
+    try:
+        await client.ping()
+    except Exception as exc:
+        # Needs live Redis (dev sparkle_redis requires AUTH); the contract
+        # under test — real quota enforcement across CWD changes — cannot be
+        # observed against an unreachable instance.
+        await client.aclose()
+        pytest.skip(f"live Redis unavailable ({exc.__class__.__name__})")
     yield client
     await client.aclose()
 

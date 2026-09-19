@@ -76,7 +76,8 @@ def test_ux_envelope_builder_returns_core_sections() -> None:
     assert envelope["mode_explanation"]["mode"] == "study_plan"
     assert envelope["collaboration_summary"]["selected_experts"] == ["galaxy_guide", "time_tutor"]
     assert envelope["ux_result"]["first_screen_focus"] == "先给阶段目标，再落到今天和本周的动作。"
-    assert envelope["ux_followthrough"]["next_actions_title"] == "先把计划落地到这几步"
+    # Title copy is stage/style-aware now (reflect stage, balanced variant).
+    assert envelope["ux_followthrough"]["next_actions_title"] == "这时候适合回顾一下过程"
 
 
 def test_ux_envelope_builder_mode_specific_headlines_and_recovery() -> None:
@@ -140,7 +141,11 @@ def test_ux_envelope_builder_marks_tool_failure_and_recovery_copy() -> None:
     assert envelope["ux_result"]["completion_state"] == "partial"
     assert envelope["ux_result"]["failure_kind"] == "partial_tool_failure"
     assert "综合结论已可用" in envelope["ux_followthrough"]["recovery_message"]
-    assert envelope["ux_followthrough"]["retry_options"][0] == "换一种执行方式"
+    # With ENABLE_STRUCTURED_NEXT_ACTIONS options are StructuredAction dicts.
+    retry = envelope["ux_followthrough"]["retry_options"][0]
+    assert retry["label"] == "换一种执行方式"
+    assert retry["payload"]["prompt"] == "换一种执行方式"
+    assert retry["reason_key"] == "retry_option"
 
 
 def test_ux_envelope_prefers_explicit_zero_failed_steps() -> None:

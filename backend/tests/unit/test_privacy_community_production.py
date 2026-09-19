@@ -52,6 +52,10 @@ class _ScalarResult:
     def scalar_one_or_none(self):
         return self._value
 
+    def all(self):
+        # Batch queries consume rows via .all(); buffered results are re-readable.
+        return list(self._value) if isinstance(self._value, list) else []
+
 
 class _FakeSession:
     def __init__(self, rows):
@@ -73,7 +77,8 @@ async def test_opt_out_removes_contributor_from_aggregate_values():
         task_reminders_enabled=True,
         community_intelligence_enabled=False,
     )
-    db = _FakeSession([None, disabled_settings])
+    # The bridge now batch-queries settings as (user_id, enabled) rows.
+    db = _FakeSession([[(str(enabled_user), True), (str(disabled_user), False)]])
     bridge = CommunitySignalBridge(db)
 
     values = await bridge._filter_opted_in_values(

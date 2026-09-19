@@ -110,7 +110,15 @@ def test_selector_falls_back_to_compatible_specialist_when_preferred_agent_is_bl
     assert selection["summary"]["specialist_strategy"] == "fallback_specialist"
     assert selection["specialist_selection"]["selected_experts"]
     assert "math_agent" not in selection["specialist_selection"]["selected_experts"]
-    assert selection["fallback_plan"][0]["decision_class"] == "specialist"
+    # The combined fallback_plan composes retrieval -> specialist -> model, so a
+    # retrieval entry may lead; the contract is that the specialist downgrade is
+    # represented, not that it sorts first.
+    specialist_fallbacks = [
+        item for item in selection["fallback_plan"] if item["decision_class"] == "specialist"
+    ]
+    assert specialist_fallbacks
+    assert specialist_fallbacks[0]["preferred_capability_id"] == "agent:math_agent"
+    assert specialist_fallbacks[0]["fallback_capability_id"] != "agent:math_agent"
 
 
 def test_selector_respects_live_model_availability_and_records_cost_fallback() -> None:

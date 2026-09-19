@@ -70,7 +70,16 @@ async def test_task_stuck_consumer_routes_to_adaptive_replanner_health_eval():
     plan_id = uuid4()
     consumer = TaskEventConsumer(Mock())
     db_session = AsyncMock()
-    db_session.execute = AsyncMock(return_value=SimpleNamespace(scalar_one_or_none=lambda: plan_id))
+    # The live task.stuck pipeline issues two differently-shaped selects on the
+    # same session: load_recent_task_execution_signals consumes
+    # result.scalars().all() (entity rows -> empty here, so no intervention
+    # signal), while the plan lookup consumes result.scalar_one_or_none().
+    db_session.execute = AsyncMock(
+        return_value=SimpleNamespace(
+            scalars=lambda: SimpleNamespace(all=lambda: []),
+            scalar_one_or_none=lambda: plan_id,
+        )
+    )
     replanner_instance = SimpleNamespace(evaluate_plan_health_now=AsyncMock(return_value=[]))
 
     with patch("app.services.task_event_consumer.AsyncSessionLocal", return_value=_FakeSessionCM(db_session)), patch(

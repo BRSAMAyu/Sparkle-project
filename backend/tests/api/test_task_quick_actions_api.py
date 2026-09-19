@@ -268,7 +268,16 @@ async def test_skip_task_marks_task_abandoned(tasks_client, db_session, monkeypa
     )
     state["current_user"] = user
 
-    async def _fake_abandon_task(*, db, task_id, user_id, reason=None):
+    async def _fake_abandon_task(
+        *,
+        db,
+        task_id,
+        user_id,
+        reason=None,
+        route_history_decision_id=None,
+        routing_outcome_signal_id=None,
+        routing_trace_id=None,
+    ):
         db_task = await db.get(Task, task_id)
         assert db_task is not None
         db_task.status = TaskStatus.ABANDONED

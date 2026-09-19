@@ -84,6 +84,9 @@ async def test_milestone_notification_contains_personalized_numbers(db_session, 
             event={
                 "achievement_id": "30_day_learner",
                 "achievement_name": "30 天学习者",
+                # Rich eligibility is rarity-driven (DB is the fallback source
+                # of truth); a 30-day learner unlock ships as at least rare.
+                "rarity": "rare",
             },
         )
 

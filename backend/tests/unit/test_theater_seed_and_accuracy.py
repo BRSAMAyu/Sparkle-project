@@ -1,7 +1,7 @@
 import asyncio
 from types import SimpleNamespace
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
 import pytest
@@ -849,6 +849,7 @@ async def test_freeform_prediction_persists_candidate_bundle(db_session, test_us
 
 
 @pytest.mark.asyncio
+@patch("app.services.embedding_service.embedding_service.get_embedding", new_callable=AsyncMock, return_value=[0.1] * 1024)
 async def test_promote_theater_node_to_galaxy_updates_bundle_and_cache(db_session, test_user):
     parent = KnowledgeNode(
         name="Transformer",
@@ -964,6 +965,7 @@ async def test_promote_theater_node_to_galaxy_updates_bundle_and_cache(db_sessio
 
 
 @pytest.mark.asyncio
+@patch("app.services.embedding_service.embedding_service.get_embedding", new_callable=AsyncMock, return_value=[0.1] * 1024)
 async def test_promote_theater_node_rolls_back_when_bundle_update_fails(db_session, test_user, monkeypatch):
     parent = KnowledgeNode(
         name="Transformer",

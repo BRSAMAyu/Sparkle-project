@@ -1,7 +1,10 @@
 """Regression test for ISSUE-20260504-1700-F5.
 
-Verifies that consumer sub-handlers re-raise exceptions so EventBus
-retry/DLQ infrastructure is not bypassed.
+Two contracts, split as the consumers diverged:
+- TaskEventConsumer sub-handlers are isolated by _safe_run (log + contain);
+  EventBus retry/DLQ deliberately never sees their exceptions.
+- ProfileEventConsumer still re-raises, pinning the original F5 propagation
+  contract for consumers without such isolation.
 """
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -9,7 +12,14 @@ import pytest
 
 
 @pytest.mark.asyncio
-async def test_task_completed_propagates_exceptions():
+async def test_task_completed_contains_sub_handler_failures():
+    """Supersedes the F5 propagation expectation for TaskEventConsumer.
+
+    The fan-out now wraps every sub-handler in _safe_run and keeps the
+    plan_id lookup / adaptive replanner in their own try/except: a DB
+    failure is logged and contained so one broken dependency can neither
+    kill sibling sub-handlers nor the stream loop.
+    """
     from app.services.task_event_consumer import TaskEventConsumer
 
     consumer = TaskEventConsumer.__new__(TaskEventConsumer)
@@ -26,14 +36,20 @@ async def test_task_completed_propagates_exceptions():
         "completion_rate": 0.5,
     }
 
-    with patch("app.services.task_event_consumer.AsyncSessionLocal") as mock_session:
+    # The consumer logs via loguru, so spy on the module logger instead of caplog.
+    with patch("app.services.task_event_consumer.AsyncSessionLocal") as mock_session, patch(
+        "app.services.task_event_consumer.logger"
+    ) as mock_logger:
         mock_session.return_value.__aenter__ = AsyncMock(
             side_effect=Exception("DB connection lost")
         )
         mock_session.return_value.__aexit__ = AsyncMock(return_value=False)
 
-        with pytest.raises(Exception, match="DB connection lost"):
-            await consumer._handle_task_completed(event)
+        # Containment contract: must not raise, and must log the failure.
+        await consumer._handle_task_completed(event)
+
+    logged = [str(call.args) for call in mock_logger.warning.call_args_list]
+    assert any("DB connection lost" in args for args in logged)
 
 
 @pytest.mark.asyncio

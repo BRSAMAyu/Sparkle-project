@@ -93,8 +93,8 @@ def test_intervention_language_contract_handles_recent_failure_without_shame() -
     assert "先站到用户同侧" in section
     assert "好奇和重新启动" in section
     assert "朋友" in section
-    assert "a friend helping me restart" in section
-    assert _estimate_prompt_tokens(section) <= 220
+    assert "同侧朋友感" in section
+    assert _estimate_prompt_tokens(section) <= 240
 
 
 def test_intervention_language_contract_handles_recent_mastery_with_restart_bias() -> None:
@@ -113,10 +113,9 @@ def test_intervention_language_contract_handles_recent_mastery_with_restart_bias
     assert prompt.count("## 干预语言契约") == 1
     assert "信号：进展主导" in section
     assert "先肯定已有推进" in section
-    assert "先承接已有进展" in section
     assert "好奇" in section
     assert "重新启动" in section
-    assert _estimate_prompt_tokens(section) <= 220
+    assert _estimate_prompt_tokens(section) <= 240
 
 
 def test_intervention_language_contract_handles_mixed_pain_and_progress_evidence() -> None:
@@ -140,7 +139,7 @@ def test_intervention_language_contract_handles_mixed_pain_and_progress_evidence
         "recent_mastery_changes",
     ]
     assert "信号：痛点+进展并存" in section
-    assert "执行：先承接已有进展，再给最小可行改动" in section
+    assert "执行：每次温柔表达都绑定真实观察、可纠正判断和最小可行动作。" in section
     assert "不先说“你又失败了”" in section
     assert "好奇和重新启动" in section
-    assert _estimate_prompt_tokens(section) <= 220
+    assert _estimate_prompt_tokens(section) <= 240

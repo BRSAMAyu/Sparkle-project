@@ -7,9 +7,33 @@ from uuid import uuid4
 import pytest
 
 from app.config import settings
+from app.core.cache import cache_service
 from app.models.memory import EpisodicMemory
 from app.services.accountability_notification_service import accountability_notification_service
 from app.services.aurora_stage24_policy_kill_switch_service import AuroraStage24PolicyKillSwitchService
+class _InMemoryKillSwitchRedis:
+    """Hermetic stand-in: kill switches use get/set/delete/incr/expire only."""
+
+    def __init__(self) -> None:
+        self._store: dict[str, str] = {}
+
+    async def get(self, key: str) -> str | None:
+        return self._store.get(key)
+
+    async def set(self, key: str, value: str) -> None:
+        self._store[key] = value
+
+    async def delete(self, key: str) -> None:
+        self._store.pop(key, None)
+
+    async def incr(self, key: str) -> int:
+        self._store[key] = str(int(self._store.get(key, "0")) + 1)
+        return int(self._store[key])
+
+    async def expire(self, key: str, ttl: int) -> None:
+        pass
+
+
 from app.services.policy_scheduler_service import PolicySchedulerService
 
 
@@ -25,6 +49,9 @@ async def test_policy_kill_switch_defaults_to_off(monkeypatch) -> None:
 @pytest.mark.asyncio
 async def test_policy_kill_switch_round_trips_modes(monkeypatch) -> None:
     monkeypatch.setattr(settings, "AURORA_POLICY_COMPILER_MODE", "off")
+    # Without Redis the mode write is dropped and the read falls back to
+    # settings; stub the store so the round trip is actually observable.
+    monkeypatch.setattr(cache_service, "redis", _InMemoryKillSwitchRedis())
     service = AuroraStage24PolicyKillSwitchService()
 
     await service.set_mode("live")

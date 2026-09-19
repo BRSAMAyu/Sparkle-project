@@ -416,14 +416,16 @@ def test_decision_loop_adds_high_streak_challenge_modulation_rule() -> None:
     readout = _readout(
         surface="aurora_planning",
         task_state={"stage": "planning"},
-        achievement_signals={"current_streak_days": 6},
+        # MAGIC-001 milestone tiers are now 7/14/21/30 days; 7 is the entry tier.
+        achievement_signals={"current_streak_days": 7},
     )
 
     messages = loop.build_prompt(readout)
     prompt_payload = json.loads(messages[1]["content"])
     prompt_rules = " ".join(prompt_payload["rules"])
 
-    assert "current_streak_days >= 5" in prompt_rules
+    assert "Achievement streak milestone" in prompt_rules
+    assert "current_streak_days=7" in prompt_rules
     assert "retrieval_practice = true" in prompt_rules
     assert "direct_answer_or_acknowledgment" in prompt_rules
     assert prompt_payload["strategy_defaults"]["retrieval_practice"] is True
@@ -1203,7 +1205,11 @@ async def test_fast_track_planning_session_skips_motivation_after_core_fields(mo
     )
 
     state = await manager.runtime_adapter.load_state(user_id=str(user_id), conversation_id=conversation_id)
-    persisted = await manager.get_active_session(conversation_id)
+    # Pass user_id explicitly: the one-arg form reads key prefix
+    # "planning:session::" which never matches sessions saved under
+    # "planning:session:<user_id>:" (suspected product bug in orchestrator.py
+    # L415/L710 — reported separately, see V3-FIX-19 report).
+    persisted = await manager.get_active_session(conversation_id, user_id)
     assert reply is not None
     assert "这次考试对你来说意味着什么" not in reply["message"]
     assert persisted is not None

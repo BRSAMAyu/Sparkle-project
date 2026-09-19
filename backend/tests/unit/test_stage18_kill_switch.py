@@ -13,6 +13,11 @@ async def test_stage18_kill_switch_defaults_follow_settings(monkeypatch) -> None
     monkeypatch.setattr(settings, "AURORA_STAGE18_AGGREGATOR_MODE", "shadow", raising=False)
     monkeypatch.setattr(settings, "AURORA_STAGE18_PUSH_POLICY_MODE", "live", raising=False)
     monkeypatch.setattr(settings, "AURORA_STAGE18_PUSH_DELIVERY_MODE", "off", raising=False)
+    # Legacy bools override an explicit fallback-mode setting; pin them off so
+    # the mode attrs are authoritative here.
+    monkeypatch.setattr(settings, "SPARKLE_AGGREGATOR_ENABLED", False, raising=False)
+    monkeypatch.setattr(settings, "SPARKLE_PUSH_POLICY_ENABLED", False, raising=False)
+    monkeypatch.setattr(settings, "SPARKLE_PUSH_DELIVERY_ENABLED", False, raising=False)
 
     service = AuroraStage18KillSwitchService()
     flags = await service.get_all()
@@ -29,6 +34,10 @@ async def test_stage18_kill_switch_can_flip_flags_without_cross_pollution(monkey
     monkeypatch.setattr(settings, "AURORA_STAGE18_AGGREGATOR_MODE", "off", raising=False)
     monkeypatch.setattr(settings, "AURORA_STAGE18_PUSH_POLICY_MODE", "off", raising=False)
     monkeypatch.setattr(settings, "AURORA_STAGE18_PUSH_DELIVERY_MODE", "off", raising=False)
+    monkeypatch.setattr(
+        "app.services.aurora_stage18_kill_switch_service.cache_service.redis",
+        _InMemoryKillSwitchRedis(),
+    )
 
     service = AuroraStage18KillSwitchService()
     updated = await service.set_flags(
@@ -59,3 +68,18 @@ async def test_stage18_kill_switch_reads_redis_override(monkeypatch) -> None:
         "push_policy_enabled": "live",
         "push_delivery_enabled": "live",
     }
+
+
+class _InMemoryKillSwitchRedis:
+    """Kill switch round-trips only need get/set; writes to real Redis would be
+    pointless here and None would make flips unobservable."""
+
+    def __init__(self) -> None:
+        self._store: dict[str, str] = {}
+
+    async def get(self, key: str) -> str | None:
+        return self._store.get(key)
+
+    async def set(self, key: str, value: str) -> None:
+        self._store[key] = value
+

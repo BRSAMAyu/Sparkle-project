@@ -26,8 +26,23 @@ async def test_stage39_kill_switch_defaults_to_settings_without_redis(monkeypatc
 
 @pytest.mark.asyncio
 async def test_stage39_child_modes_resolve_to_off_when_master_mode_off(monkeypatch) -> None:
-    monkeypatch.setattr(cache_service, "redis", None)
+    monkeypatch.setattr(cache_service, "redis", _InMemoryKillSwitchRedis())
     service = AuroraStage39KillSwitchService()
     await service.set_mode("off")
     await service.set_feature_mode("scaffolding_prompt", "live")
     assert await service.get_feature_mode("scaffolding_prompt") == "off"
+
+
+class _InMemoryKillSwitchRedis:
+    """Hermetic mode store: get/set is all the kill switches need here."""
+
+    def __init__(self) -> None:
+        self._store: dict[str, str] = {}
+
+    async def get(self, key: str) -> str | None:
+        return self._store.get(key)
+
+    async def set(self, key: str, value: str) -> None:
+        self._store[key] = value
+
+

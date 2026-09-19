@@ -15,6 +15,8 @@ def _production_settings(**overrides):
     values = {
         "ENVIRONMENT": "production",
         "DEBUG": False,
+        # Production invariants added after phase0: RBAC must be explicitly on.
+        "SPARKLE_RBAC_ENABLED": True,
         "JWT_SECRET": "phase0_secret_value_with_more_than_32_chars",
         "DATABASE_URL": "postgresql+asyncpg://postgres:secret@sparkle_db:5432/sparkle",
         "POSTGRES_PASSWORD": "postgres_secret",
