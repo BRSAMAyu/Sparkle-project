@@ -1,0 +1,340 @@
+{
+  "_meta": {
+    "card": "A-04 Aurora Human/Agent/Hybrid Joint Decision",
+    "version": "aurora_joint_decision.v1",
+    "description": "联合决策（intervention × allocation）场景仿真集。CE 系列 = 卡面 Work 2 canonical examples（学习/创作/工具三元组）；P 系列 = paired cases（同上下文不同提名，验证「干预合理但执行权错误」组合确定性排除）；A 系列 = 对抗/验收锚点（high-risk auto=0、荒谬提名、抑制门）。断言面：selected（恒封闭目录成员）、mode（联合镜像）、why（JOINT_REASONS 有序精确）、no_action_reason（AURORA_NO_ACTION_REASONS 成员）、exclusions 子集、allocation 事实（task_allocation 对照/D4 标记）。所有期望值由真实联合核（decide_joint_two_step/decide_joint）实跑冻结，非手工臆测。",
+    "reason_legend": {
+      "J1.delivery_mode_incompatible": "步绑定干预的交付 mode 与分配 mode 冲突（联合结构约束）",
+      "D1.first_legal_joint_nominee": "提名序内第一个联合合法者入选",
+      "D2.no_legal_joint_nominee_no_action": "无联合合法提名 → no_action 确定性出口",
+      "D3.conflict_allocation_precedence": "冲突裁决：分配事实优先，干预让位（归因随 exclusions）",
+      "D4.delivery_reallocation_applied": "交付再分配生效（X-02 以交付锚定因子重判，守卫恒同）",
+      "X1.explicit_user_request_priority": "用户显式意图驱动了分配（联合面随行归因）"
+    }
+  },
+  "scenarios": [
+    {
+      "id": "CE1_learning_practice_delivered_hybrid",
+      "family": "canonical_learning",
+      "description": "学习 canonical：用户卡在微积分瓶颈、任务步是练习（获得能力是干预本体）。X-02 判任务步 human（user_core 学习锚），practice 交付需 hybrid → 冲突（D3）→ 交付再分配救回（D4：agent 备练 + 用户练）。对抗面旗舰：A-02 说 practice、X-02 说 human-only 的确定性落锤。",
+      "intervention_factors": {
+        "nominated": ["practice"],
+        "capabilities": ["chat", "llm_generate"],
+        "permissions": ["plan_adjust"],
+        "has_task_context": true,
+        "materiality_sufficient": true
+      },
+      "task_factors": {
+        "task_ref": "task://learn-001",
+        "learning_goal": true,
+        "cognitive_ownership": "user_core",
+        "tool_advantage": "low",
+        "task_summary": "微积分边界值问题练习"
+      },
+      "entry": "two_step",
+      "expect": {
+        "selected": "practice",
+        "mode": "hybrid",
+        "why": [
+          "D3.conflict_allocation_precedence",
+          "D4.delivery_reallocation_applied",
+          "D1.first_legal_joint_nominee"
+        ],
+        "task_allocation_mode": "human",
+        "allocation_mode": "hybrid",
+        "cognitive_ownership": "user_core",
+        "requires_user_authored_evidence": true
+      }
+    },
+    {
+      "id": "CE1b_learning_practice_one_step_conflict",
+      "family": "canonical_learning",
+      "description": "CE1 的单步对照（paired）：同一学习上下文、不经再分配——practice × human 分配 → J1 排除 → no_action + D3 归因（排除记录携带分配 why）。",
+      "intervention_factors": {
+        "nominated": ["practice"],
+        "capabilities": ["chat", "llm_generate"],
+        "permissions": [],
+        "has_task_context": true,
+        "materiality_sufficient": true
+      },
+      "task_factors": {
+        "task_ref": "task://learn-001",
+        "learning_goal": true,
+        "cognitive_ownership": "user_core",
+        "tool_advantage": "low",
+        "task_summary": "微积分边界值问题练习"
+      },
+      "entry": "one_step",
+      "expect": {
+        "selected": "no_action",
+        "mode": null,
+        "why": [
+          "D2.no_legal_joint_nominee_no_action",
+          "D3.conflict_allocation_precedence"
+        ],
+        "no_action_reason": "no_matching_pattern",
+        "exclusions_subset": [
+          ["practice", "J1.delivery_mode_incompatible"]
+        ]
+      }
+    },
+    {
+      "id": "CE2_creation_co_execute_hybrid",
+      "family": "canonical_creation",
+      "description": "创作 canonical：论文初稿人机共写——co_execute 交付锚定 hybrid（agent 备/用户核心/agent 校），任务步 shared ownership → 分配无冲突 → D1 直选。",
+      "intervention_factors": {
+        "nominated": ["co_execute"],
+        "capabilities": ["chat", "tool_execution"],
+        "permissions": ["task_execute"],
+        "has_task_context": true,
+        "materiality_sufficient": true
+      },
+      "task_factors": {
+        "task_ref": "task://paper-001",
+        "cognitive_ownership": "shared",
+        "tool_advantage": "medium",
+        "task_summary": "论文初稿章节人机共写"
+      },
+      "entry": "two_step",
+      "expect": {
+        "selected": "co_execute",
+        "mode": "hybrid",
+        "why": ["D1.first_legal_joint_nominee"],
+        "reallocated": false,
+        "allocation_mode": "hybrid"
+      }
+    },
+    {
+      "id": "CE3_tooling_delegate_explicit",
+      "family": "canonical_tooling",
+      "description": "工具 canonical：参考文献格式批转换，用户显式委托（keep-for-me）→ X-02 X2 显式委托 → agent；delegate 交付锚定 agent 无冲突 → D1 + X1 随行归因（用户主权最高）。",
+      "intervention_factors": {
+        "nominated": ["delegate"],
+        "capabilities": ["chat", "tool_execution"],
+        "permissions": ["task_execute"],
+        "has_task_context": true,
+        "materiality_sufficient": true
+      },
+      "task_factors": {
+        "task_ref": "task://fmt-001",
+        "explicit_intent": "delegate",
+        "cognitive_ownership": "delegated",
+        "tool_advantage": "high",
+        "risk_class": "low",
+        "task_summary": "参考文献 BibTeX 格式批转换"
+      },
+      "entry": "two_step",
+      "expect": {
+        "selected": "delegate",
+        "mode": "agent",
+        "why": [
+          "D1.first_legal_joint_nominee",
+          "X1.explicit_user_request_priority"
+        ],
+        "reallocated": false,
+        "requires_human_approval": false
+      }
+    },
+    {
+      "id": "P1_review_human_task_conflict",
+      "family": "paired",
+      "description": "paired：学习核心任务（分配 human）× 提名 review——review 交付 {agent, hybrid} 不含 human → J1 → no_action + D3；practice 同因排除（归因完整）。",
+      "intervention_factors": {
+        "nominated": ["review"],
+        "capabilities": ["chat", "llm_generate"],
+        "permissions": [],
+        "has_task_context": true,
+        "materiality_sufficient": true
+      },
+      "task_factors": {
+        "learning_goal": true,
+        "cognitive_ownership": "user_core",
+        "tool_advantage": "low",
+        "task_summary": "学习核心任务"
+      },
+      "entry": "one_step",
+      "expect": {
+        "selected": "no_action",
+        "mode": null,
+        "why": [
+          "D2.no_legal_joint_nominee_no_action",
+          "D3.conflict_allocation_precedence"
+        ],
+        "exclusions_subset": [
+          ["review", "J1.delivery_mode_incompatible"]
+        ]
+      }
+    },
+    {
+      "id": "P2_practice_on_delegated_task_absurd",
+      "family": "paired",
+      "description": "paired（荒谬提名）：纯委派机械任务（分配 agent，学习守卫未触发）× 提名 practice——practice 需 hybrid，交付再分配重判仍 agent（delegated 锚定不动守卫）→ 无可救 → no_action + D3 站住。系统不给委派任务发练习。",
+      "intervention_factors": {
+        "nominated": ["practice"],
+        "capabilities": ["chat", "llm_generate"],
+        "permissions": [],
+        "has_task_context": true,
+        "materiality_sufficient": true
+      },
+      "task_factors": {
+        "task_ref": "task://fmt-002",
+        "cognitive_ownership": "delegated",
+        "tool_advantage": "high",
+        "risk_class": "low",
+        "task_summary": "批量格式转换"
+      },
+      "entry": "two_step",
+      "expect": {
+        "selected": "no_action",
+        "mode": null,
+        "why": [
+          "D2.no_legal_joint_nominee_no_action",
+          "D3.conflict_allocation_precedence"
+        ],
+        "reallocated": false,
+        "exclusions_subset": [
+          ["practice", "J1.delivery_mode_incompatible"]
+        ]
+      }
+    },
+    {
+      "id": "A1_high_risk_execute_never_agent",
+      "family": "adversarial",
+      "description": "卡面 Acceptance 2（high-risk auto=0）：高危不可逆任务（清生产库）× 提名 execute/delegate（agent-only 交付）——X-02 R1 判 hybrid+approval、A-02 R5 剔除两项（agent ∉ {human, hybrid}）→ no_action。联合出口永不给高危任务产 agent 模式。",
+      "intervention_factors": {
+        "nominated": ["execute", "delegate"],
+        "capabilities": ["chat", "tool_execution"],
+        "permissions": ["task_execute"],
+        "has_task_context": true,
+        "materiality_sufficient": true
+      },
+      "task_factors": {
+        "task_ref": "task://hi-001",
+        "risk_class": "high",
+        "reversible": false,
+        "cognitive_ownership": "delegated",
+        "tool_advantage": "high",
+        "task_summary": "清理生产数据库退役数据"
+      },
+      "entry": "two_step",
+      "expect": {
+        "selected": "no_action",
+        "mode": null,
+        "why": ["D2.no_legal_joint_nominee_no_action"],
+        "policy_exclusion_subset": [
+          ["execute", "R5.allocation_mode_conflict"],
+          ["delegate", "R5.allocation_mode_conflict"]
+        ]
+      }
+    },
+    {
+      "id": "A2_delegate_on_learning_task_refused",
+      "family": "adversarial",
+      "description": "对抗：学核任务（学习守卫 G1，feasible {human, hybrid}）× 提名 delegate（需 agent）——A-02 R5 面先行剔除 → no_action，无 J 码（冲突在 policy 面已解，归因不丢：policy_exclusions 随行）。防代写是联合不变式。",
+      "intervention_factors": {
+        "nominated": ["delegate"],
+        "capabilities": ["chat", "tool_execution"],
+        "permissions": ["task_execute"],
+        "has_task_context": true,
+        "materiality_sufficient": true
+      },
+      "task_factors": {
+        "learning_goal": true,
+        "cognitive_ownership": "user_core",
+        "tool_advantage": "low",
+        "task_summary": "学习核心任务"
+      },
+      "entry": "two_step",
+      "expect": {
+        "selected": "no_action",
+        "mode": null,
+        "why": ["D2.no_legal_joint_nominee_no_action"],
+        "exclusions": []
+      }
+    },
+    {
+      "id": "S1_quiet_hours_suppress_proactive_remind",
+      "family": "suppression",
+      "description": "抑制门：静默时段 × 主动提醒 remind（proactive）非显式请求 → A-02 R6 剔除 → no_action + no_action_reason=quiet_hours（提醒不受任务 mode 牵连的前提是它先活着）。",
+      "intervention_factors": {
+        "nominated": ["remind"],
+        "capabilities": ["chat", "scheduler"],
+        "permissions": ["proactive_contact"],
+        "has_task_context": true,
+        "materiality_sufficient": true,
+        "quiet_hours": true
+      },
+      "entry": "one_step",
+      "expect": {
+        "selected": "no_action",
+        "mode": null,
+        "why": ["D2.no_legal_joint_nominee_no_action"],
+        "no_action_reason": "quiet_hours"
+      }
+    },
+    {
+      "id": "S2_explicit_request_bypasses_quiet_hours",
+      "family": "suppression",
+      "description": "用户主权：显式请求豁免抑制门——静默时段用户显式要求提醒 → remind 成立，mode 镜像目录标称 agent（scheduler 域，无 allocation_ref——系统面交付不绑任务步执行权）。",
+      "intervention_factors": {
+        "nominated": ["remind"],
+        "capabilities": ["chat", "scheduler"],
+        "permissions": ["proactive_contact"],
+        "has_task_context": true,
+        "materiality_sufficient": true,
+        "quiet_hours": true,
+        "explicit_user_request": true
+      },
+      "entry": "one_step",
+      "expect": {
+        "selected": "remind",
+        "mode": "agent",
+        "why": ["D1.first_legal_joint_nominee"],
+        "allocation_ref": null
+      }
+    },
+    {
+      "id": "S3_clarify_mirror_without_allocation",
+      "family": "system_surface",
+      "description": "系统面镜像：无分配事实（对话域控制决策）× clarify → X-02 灰区缺省分配（R0 hybrid+insufficient）不携带 ref，clarify mode 镜像目录标称 hybrid（A-01 边界：纯对话域可独占携带 mode）。",
+      "intervention_factors": {
+        "nominated": ["clarify"],
+        "capabilities": ["chat"],
+        "permissions": [],
+        "has_task_context": false,
+        "materiality_sufficient": true
+      },
+      "entry": "one_step",
+      "expect": {
+        "selected": "clarify",
+        "mode": "hybrid",
+        "why": ["D1.first_legal_joint_nominee"],
+        "allocation_ref": null,
+        "allocation_why_subset": ["R0.insufficient_factors"]
+      }
+    },
+    {
+      "id": "D1_dirty_allocation_mode_treated_as_missing",
+      "family": "adversarial",
+      "description": "脏输入：分配 mode='AUTO'（词表外）→ 防御性读取归 None → 等同缺分配（灰区缺省）；执行面 delegate 仍被 A-02 R4 挡住（脏值不拓宽执行面），系统面 clarify 照常成立（mode 镜像标称 hybrid）。联合核对脏分配不 raise、不宽取。",
+      "intervention_factors": {
+        "nominated": ["clarify", "delegate"],
+        "capabilities": ["chat", "tool_execution"],
+        "permissions": ["task_execute"],
+        "has_task_context": true,
+        "materiality_sufficient": true
+      },
+      "allocation_override": {"mode": "AUTO", "feasible_modes": ["human", "agent", "hybrid"]},
+      "entry": "one_step",
+      "expect": {
+        "selected": "clarify",
+        "mode": "hybrid",
+        "why": ["D1.first_legal_joint_nominee"],
+        "allocation_ref": null,
+        "policy_exclusion_subset": [
+          ["delegate", "R4.allocation_mode_missing"]
+        ]
+      }
+    }
+  ]
+}

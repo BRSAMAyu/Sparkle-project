@@ -771,6 +771,15 @@ class Settings(BaseSettings):
     SPARKLE_ALLOCATION_SEMANTIC_MODEL: str = "qwen3.8-flash"
     SPARKLE_ALLOCATION_SEMANTIC_TIMEOUT_SECONDS: float = 5.0
     SPARKLE_ALLOCATION_SEMANTIC_MAX_PER_MINUTE: int = 30
+    # A-04 · Aurora Joint Decision（intervention × allocation 联合决策）——
+    # 语义开放选择层（可选，A-02 receipt §4.6 settings 化）。纯规则联合核
+    # 完整可用；语义层仅对规则层标记 semantic_eligible 的开放选择生效，
+    # 且只能在联合可行 (intervention, mode) 对集内选干预（代码强制，
+    # mode 永不由 LLM 决定）；熔断/超时/失败一律降级规则默认。
+    SPARKLE_JOINT_SEMANTIC_ENABLED: bool = False
+    SPARKLE_JOINT_SEMANTIC_MODEL: str = "qwen3.8-flash"
+    SPARKLE_JOINT_SEMANTIC_TIMEOUT_SECONDS: float = 5.0
+    SPARKLE_JOINT_SEMANTIC_MAX_PER_MINUTE: int = 30
     ENABLE_MEMORY_JOBS: bool = True
     ENABLE_EVIDENCE_SNAPSHOT_ON_WRITE: bool = True
     ENABLE_MEMORY_DECAY: bool = True

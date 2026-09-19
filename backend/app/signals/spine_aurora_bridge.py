@@ -104,8 +104,16 @@ class SpineAuroraBridge:
         action: str,
         surface: str,
         chat_directive: dict[str, Any] | None = None,
+        decision_event: dict[str, Any] | None = None,
     ) -> None:
-        """Feed Aurora's decision back to Spine for attribution tracking."""
+        """Feed Aurora's decision back to Spine for attribution tracking.
+
+        ``decision_event``（A-04 · S-01 喂入面，extend-only）：决策记录本体
+        （aurora_decision.v1 契约 to_dict / 联合决策记录）。消费侧只按
+        ``action``/``surface`` 读（.get），新增键零破坏；policy_engine 的
+        aurora bias 与 outcome attribution 照常工作，decision 载荷供后续
+        归因下钻（occurrence_id/decision_id 可追）。
+        """
         try:
             event = {
                 "source": "aurora_decision",
@@ -119,6 +127,8 @@ class SpineAuroraBridge:
                     "intent": chat_directive.get("intent"),
                     "target_domain": chat_directive.get("target_domain"),
                 }
+            if decision_event is not None:
+                event["decision"] = decision_event
 
             key = f"spine:aurora_decisions:{user_id}"
             try:

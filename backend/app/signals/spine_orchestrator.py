@@ -1469,6 +1469,15 @@ class SpineOrchestrator:
         if l2_escalation:
             pipeline_context["l2_escalation"] = l2_escalation
             trace.raw_event_ids.append(f"l2:{l2_escalation['pattern_name']}")
+            # A-04 · S-01 喂入 + 完整联合链：L2 升格是控制决策点（要不要
+            # rescope/pause），在此跑 A-02 policy × X-02 allocation → A-01 契约
+            # 的联合决策并喂入 spine 真通道（spine:aurora_decisions:*——
+            # policy_engine aurora bias / outcome attribution 的既有消费面；
+            # 本轮 pipeline_context["aurora_decisions"] 已在上方装配，无当轮
+            # 自反馈）。只记录/喂入，不改本轮策略选择；失败降级 None。
+            joint_event = await self._run_l2_joint_decision(user_id, l2_escalation, l0_signals)
+            if joint_event is not None:
+                pipeline_context["l2_joint_decision"] = joint_event
 
         # EA-2: Safety degradation gate — check level before policy evaluation
         safety_level = await resilient_redis_call(
@@ -2551,6 +2560,149 @@ class SpineOrchestrator:
             return await engine.check_escalation(user_id, active_states)
         except Exception as exc:
             logger.warning("L2 escalation check failed for user={}: {}", user_id, exc)
+            return None
+
+    async def _run_l2_joint_decision(
+        self,
+        user_id: str,
+        l2_escalation: dict[str, Any],
+        l0_signals: list,
+    ) -> dict[str, Any] | None:
+        """A-04 · L2 升格点的完整联合链（A-02 policy × X-02 allocation → A-01 契约）。
+
+        链路（卡面「至少一个生产决策点走完整联合链」）：
+        1. 因子装配投影（``joint_factor_projection``）：L2 命中经
+           ``L2_INTERVENTION_TO_CATALOG`` 进提名通道；quiet_hours 从 L0 事实
+           （state_key=quiet_hours_active）；materiality 缺省保守（spine 侧无
+           Aurora snapshot——登记 ``materiality_defaulted``）。
+        2. 任务步因子：``project_task_factors_from_l2``（matched_states →
+           交付步语义：deadline→urgent、bottleneck→user_core 学习锚）。
+        3. ``decide_joint_two_step``：X-02 ``decide_allocation``（首次生产调用）
+           + 冲突可救则 D4 交付再分配。
+        4. ``build_joint_contract``：A-01 契约 + P3-8 allocation_ref 回填
+           （``decision://alloc_<id>``，X-02 内容寻址 id）。
+        5. 喂入 spine 真通道（S-01：``feed_aurora_decision`` 的
+           ``decision_event`` 面）+ 结构化日志（occurrence_id/decision_id——
+           P3-4：occurrence_id 是发生键，decision_id 是内容锚）。
+
+        两个显式授予面的设计依据（reviewer 可挑战点，勿静默改）：
+        - ``interaction_model_variant="task_execution"``：L2 四个 escalation
+          pattern（knowledge_crisis/execution_collapse/exam_underwater/
+          burnout_risk）全部是任务执行域危机 → registry 变体按域取
+          task_execution（能力面 {chat, llm_generate, task_write,
+          tool_execution}）。
+        - ``permissions_granted={"plan_adjust"}``：L2 升格仅在用户有活跃学习
+          状态时触发（check_escalation 前置 active_states 非空）——计划域
+          写路径事实恒真；**确认面在交付层**（rescope 交付 hybrid + 计划
+          结构变更经用户确认，见 JOINT_STEP_BOUND_DELIVERY_MODES 判据），
+          非提名层。
+
+        只读/只记录/只喂入：不改本轮 policy_engine 的策略选择（联合决策经
+        spine:aurora_decisions 影响**下一轮** aurora bias 与归因——S-01 的
+        设计语义）。任何失败降级 None（联合核自身 NEVER raises；此处外层
+        再包一层主管道防御）。
+        """
+        try:
+            from uuid import UUID as _UUID
+
+            from app.aurora.joint_decision import (
+                build_joint_contract,
+                decide_joint_two_step,
+                derive_delivery_factors,
+            )
+            from app.aurora.joint_factor_projection import (
+                JointFactorSources,
+                project_joint_factors,
+                project_task_factors_from_l2,
+            )
+            from app.signals.spine_aurora_bridge import SpineAuroraBridge
+
+            quiet_hours_active = any(
+                getattr(signal, "state_key", None) == "quiet_hours_active"
+                for signal in (l0_signals or [])
+            )
+            matched_states = tuple(
+                str(state) for state in (l2_escalation.get("matched_states") or [])
+            )
+            factors, projection_notes = project_joint_factors(
+                JointFactorSources(
+                    l2_intervention=str(l2_escalation.get("intervention") or "") or None,
+                    spine_strategies=(),  # L2 轮次策略评估在联合决策之后（无结果可提名）
+                    interaction_model_variant="task_execution",
+                    permissions_granted=("plan_adjust",),
+                    quiet_hours_active=quiet_hours_active,
+                    task_context_present=bool(matched_states),
+                )
+            )
+            task_factors = project_task_factors_from_l2(
+                matched_states,
+                task_summary=str(l2_escalation.get("reason") or "")[:300],
+            )
+            joint = decide_joint_two_step(factors, task_factors)
+
+            contract = None
+            parsed_user_id: _UUID | None = None
+            try:
+                parsed_user_id = _UUID(str(user_id))
+            except (ValueError, TypeError, AttributeError):
+                logger.debug(
+                    "L2 joint decision contract skipped for non-UUID user_id: {}", user_id
+                )
+            allocation_decision_id: str | None = None
+            if parsed_user_id is not None and joint.allocation is not None:
+                # P3-8：allocation_ref 支撑 = X-02 内容寻址 id（D4 时须用交付
+                # 锚定因子——decision_id 是 factors+decision 的联合哈希）。
+                factors_used = (
+                    derive_delivery_factors(task_factors, joint.selected)
+                    if "D4.delivery_reallocation_applied" in joint.why
+                    else task_factors
+                )
+                allocation_decision_id = joint.allocation.decision_id(factors_used)
+                contract, violations = build_joint_contract(
+                    joint,
+                    parsed_user_id,
+                    cognition_tier="l2_intervention",
+                    trigger_point="l2_escalation",
+                    allocation_decision_id=allocation_decision_id,
+                    evidence_refs=tuple(f"signal://{key}" for key in matched_states),
+                    rationale_summary=str(l2_escalation.get("reason") or "") or None,
+                )
+                if contract is None:
+                    logger.warning(
+                        "L2 joint contract rejected (violations={}); joint record kept",
+                        violations,
+                    )
+
+            decision_event: dict[str, Any] = {
+                "joint": joint.to_dict(),
+                "projection": projection_notes,
+            }
+            if contract is not None:
+                decision_event["contract"] = contract.to_dict()
+
+            # S-01 喂入：spine:aurora_decisions:*（消费面：policy_engine aurora
+            # bias 软偏置 + outcome attribution；decision 载荷键 extend-only）。
+            bridge = SpineAuroraBridge(self.redis)
+            await bridge.feed_aurora_decision(
+                user_id=user_id,
+                action=joint.selected,
+                surface="l2_escalation",
+                decision_event=decision_event,
+            )
+            logger.info(
+                "L2 joint decision: user={} pattern={} selected={} mode={} occurrence={} "
+                "decision_id={} allocation_ref={}",
+                user_id,
+                l2_escalation.get("pattern_name"),
+                joint.selected,
+                joint.mode,
+                joint.occurrence_id,
+                contract.decision_id_or_compute() if contract is not None else "-",
+                contract.allocation_ref if contract is not None else None,
+            )
+            return decision_event
+        except Exception:
+            logger.warning("L2 joint decision failed for user={}", user_id, exc_info=True)
             return None
 
     # ── Layer 6: Directive persistence (delegated to DirectiveStore) ────
