@@ -165,7 +165,11 @@ def test_build_system_prompt_prefixes_past_session_memory() -> None:
         conversation_history={"messages": []},
     )
 
-    assert prompt.startswith("## 跨会话记忆 [L2 引导]\n")
+    # R2-final(a2)：记忆段从 prompt 最前部挪到最末尾（user 消息紧邻处）。
+    assert prompt.rstrip().endswith("需要轻量确认，不要当成确定事实。")
+    assert "## 跨会话记忆 [L2 引导]" in prompt
+    assert prompt.rindex("## 跨会话记忆 [L2 引导]") >= int(len(prompt) * 0.80)
+    assert not prompt.startswith("## 跨会话记忆")
     assert "当用户问候、含糊开场、请求继续学习" in prompt
     assert "[上周 / computer_networks / chat_turn] 上次你备考计算机网络" in prompt
     assert "tags=TCP" in prompt

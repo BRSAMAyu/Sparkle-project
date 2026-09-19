@@ -1582,9 +1582,6 @@ def build_system_prompt(
         if suffix:
             prompt = f"{prompt}\n\n{suffix}"
 
-    if past_session_memory_section:
-        prompt = f"{past_session_memory_section}\n\n{prompt}"
-
     # 4. 版本特定修饰
 
     if prompt_version == "v2":
@@ -1657,6 +1654,13 @@ def build_system_prompt(
         "- 不要使用特殊符号项目符号（如 `•`、`◦`、`▪`、emoji 充当列表符号）。统一使用普通连字符 `- `。\n"
         "- 如果不确定格式是否稳定，直接输出纯文本短段落，不要勉强使用 Markdown。"
     )
+
+    if past_session_memory_section:
+        # R2-final(a2): 记忆段原先插在 prompt 最前部，距 user 消息隔整段系统指令，
+        # qwen3.8-flash 注意力不足时部分轮次回复"没有记录"（记忆实证在库、pack
+        # 已注入）。挪到 system prompt 最末尾（user 消息紧邻处），与文档材料的
+        # last_before_user_message 近邻注入口径一致。
+        prompt = f"{prompt}\n\n{past_session_memory_section}"
 
     _maybe_log_prompt_snapshot(
         prompt,

@@ -431,6 +431,10 @@ CONTEXT_SOURCE_GALAXY = "galaxy_knowledge"
 CONTEXT_SOURCE_TASK_ERROR = "task_error_context"
 CONTEXT_SOURCE_COGNITIVE = "cognitive_profile"
 
+# R2-final(mr4) 回显保底：材料注入 user 消息时的置顶声明，明确来源与优先级，
+# 压制 qwen3.8-flash 把注入材料当无关系统文本忽略、回复"没看到资料"的失败模式。
+_DOCUMENT_NEAR_USER_NOTE = "（系统注：本轮已注入你上传的资料原文，回答必须优先引用）"
+
 
 @dataclass(frozen=True)
 class ContextAssemblyResult:
@@ -440,6 +444,12 @@ class ContextAssemblyResult:
     token_usage: dict[str, int]
     budget_remaining: dict[str, int]
     metadata: dict[str, Any]
+    # R2-final(mr4/a2): 注入材料不再进 system prompt，改为紧邻最后一条 user
+    # 消息注入。user_message 是给 LLM 的最终消息（含材料前缀，无材料时等于
+    # 原始输入）；document_block 是实际注入的材料块原文（供 review/reflection
+    # 继承上下文时复用）。
+    user_message: str = ""
+    document_block: str = ""
 
 
 def _context_source_ratios() -> dict[str, float]:
@@ -850,10 +860,10 @@ class ContextBudgetManager:
             document_text = _truncate_text_to_token_budget(document_text, doc_budget)
         else:
             raw_document_text = _as_prompt_text(document_context)
-            # 指令强化：qwen3.8-flash 偶发无视中性标题下的注入材料（回复称
-            # "没有看到正文"），显式声明这是用户上传资料原文、回答必须优先依据
+            # R2-final(mr4)：正文改为紧邻 user 消息注入（见下方 document_block），
+            # 标题保留自述口径让模型知道这是用户上传资料原文。
             document_text = self._section(
-                "Retrieved Documents（用户上传资料原文——回答相关问题必须优先引用，禁止声称未看到）",
+                "Retrieved Documents（用户上传资料原文）",
                 raw_document_text,
                 doc_budget,
                 CONTEXT_SOURCE_DOCUMENTS,
@@ -870,9 +880,19 @@ class ContextBudgetManager:
             galaxy_text,
             task_text,
             cognitive_text,
-            document_text if not document_text.startswith("## Retrieved Documents") else document_text,
         ]
         system_prompt = "\n\n".join(section for section in sections if str(section or "").strip())
+
+        # R2-final(mr4/a2): 注入材料（检索切片 / 文档原文）从 system prompt 挪到
+        # 最后一条 user 消息前缀。原 placement 元数据写着 "last_before_user_message"
+        # 但实际在 system prompt 尾部、距 user 消息隔大量指令，qwen3.8-flash 注意力
+        # 不足时偶发"没看到资料/没有记录"（A/B 测试材料紧邻 user 消息则完美引用）。
+        # 兑现 placement：材料块 + 回显保底声明紧贴用户问题，同条消息内保证近邻。
+        document_block = document_text
+        if document_block:
+            llm_user_message = f"{_DOCUMENT_NEAR_USER_NOTE}\n\n{document_block}\n\n---\n\n{user_message}"
+        else:
+            llm_user_message = user_message
 
         token_usage = {
             CONTEXT_SOURCE_CONVERSATION: estimate_tokens(_serialize(selected_history)),
@@ -892,7 +912,7 @@ class ContextBudgetManager:
         total_tokens = (
             estimate_tokens(system_prompt)
             + estimate_tokens(_serialize(selected_history))
-            + estimate_tokens(user_message)
+            + estimate_tokens(llm_user_message)
         )
         if total_tokens > self.total_token_budget:
             CONTEXT_BUDGET_OVER_LIMIT_TOTAL.labels(type="total").inc()
@@ -916,6 +936,8 @@ class ContextBudgetManager:
             budgets=budgets,
             token_usage=token_usage,
             budget_remaining=budget_remaining,
+            user_message=llm_user_message,
+            document_block=document_block,
             metadata={
                 "total_token_budget": self.total_token_budget,
                 "raw_budgets": raw_budgets,
@@ -923,7 +945,11 @@ class ContextBudgetManager:
                 "available_for_sources": available_for_sources,
                 "total_tokens": total_tokens,
                 "document_context": document_metadata,
-                "placement": {"document_chunks": "last_before_user_message"},
+                "placement": {
+                    "document_chunks": "last_before_user_message",
+                    "document_context": "last_before_user_message",
+                    "injection_surface": "user_message_prefix",
+                },
             },
         )
 

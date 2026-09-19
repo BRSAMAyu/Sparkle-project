@@ -86,16 +86,28 @@ def test_context_budget_manager_trims_sources_and_places_documents_last(monkeypa
     total_tokens = (
         estimate_tokens(result.system_prompt)
         + estimate_tokens(json.dumps(result.conversation_history, ensure_ascii=False, default=str))
-        + estimate_tokens("Use the documents and continue our thread.")
+        + estimate_tokens(result.user_message)
     )
     assert total_tokens <= settings.CONTEXT_TOTAL_TOKEN_BUDGET
     assert result.token_usage["conversation_history"] <= result.budgets["conversation_history"]
     assert result.token_usage["document_chunks"] <= result.budgets["document_chunks"]
     assert len(result.conversation_history) < len(conversation_history)
-    assert "showing top" in result.system_prompt
-    assert "of 11 results" in result.system_prompt
-    assert result.system_prompt.rfind("## Retrieved Documents") > result.system_prompt.rfind("## Cognitive Profile")
+    # R2-final placement：注入材料离开 system prompt，紧贴最后一条 user 消息
+    # （user_message 前缀 = 回显保底声明 + 材料块 + 原始问题），metadata 与
+    # 实际行为一致。
+    assert "showing top" not in result.system_prompt
+    assert "## Retrieved Documents" not in result.system_prompt
+    assert "showing top" in result.user_message
+    assert "## Retrieved Documents" in result.user_message
+    assert result.user_message.endswith("Use the documents and continue our thread.")
+    assert result.user_message.index("boosted mastery gap evidence") < result.user_message.rindex(
+        "Use the documents and continue our thread."
+    )
+    assert result.user_message.startswith("（系统注：本轮已注入你上传的资料原文，回答必须优先引用）")
+    assert result.document_block and "## Retrieved Documents" in result.document_block
     assert result.metadata["placement"]["document_chunks"] == "last_before_user_message"
+    assert result.metadata["placement"]["document_context"] == "last_before_user_message"
+    assert result.metadata["placement"]["injection_surface"] == "user_message_prefix"
 
     document_ranking = result.metadata["document_context"]["ranking"]
     assert document_ranking[0]["label"].startswith("boosted-gap.pdf")

@@ -13,6 +13,7 @@ LLM 预算：5 次聊天调用（埋点×2 + 跨会话提问×2 + RAG 问答×1�
 
 用法：
   /opt/homebrew/bin/python3.11 scripts/devtools/acceptance_memory_revival.py
+  ACCEPTANCE_GATEWAY=http://localhost:8087 /opt/homebrew/bin/python3.11 scripts/devtools/acceptance_memory_revival.py  # worktree 独立栈
 
 产出：逐项 PASS/FAIL 与最终摘要（0 退出码 = 全过）。
 """
@@ -20,6 +21,7 @@ LLM 预算：5 次聊天调用（埋点×2 + 跨会话提问×2 + RAG 问答×1�
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import time
@@ -29,7 +31,10 @@ from uuid import uuid4
 
 import websocket
 
-GATEWAY = "http://localhost:8080"
+# 支持指向 worktree 独立栈（如 ACCEPTANCE_GATEWAY=http://localhost:8087），
+# 默认主栈 :8080；WS 地址随 HTTP 地址自动推导。
+GATEWAY = os.environ.get("ACCEPTANCE_GATEWAY", "http://localhost:8080").rstrip("/")
+_WS_BASE = GATEWAY.replace("http", "ws", 1)
 DB_CONTAINER = "sparkle_db"
 DB_NAME = "sparkle"
 RAG_KEYWORD = "MRV-7749"  # 本轮验收专用唯一关键词，避免历史数据干扰
@@ -57,7 +62,7 @@ def ws_ticket(token: str) -> str:
 
 def ws_chat(token: str, session_id: str, message: str, timeout_s: float = 90.0, extra: dict | None = None) -> dict:
     ticket = ws_ticket(token)
-    ws = websocket.create_connection(f"ws://localhost:8080/ws/chat?ticket={ticket}", timeout=timeout_s)
+    ws = websocket.create_connection(f"{_WS_BASE}/ws/chat?ticket={ticket}", timeout=timeout_s)
     payload = {"type": "message", "message": message, "session_id": session_id}
     if extra:
         payload.update(extra)
@@ -134,21 +139,30 @@ def main() -> int:
         f"reply[:80]={seed_movie['text'][:80]!r}",
     )
 
-    # 等待异步记忆 lane（enqueue_from_session 为后台任务）
-    deadline = time.time() + 30
-    lanes = "0"
+    # 等待异步记忆 lane（enqueue_from_session 为后台任务）。
+    # R2-final：等两条种子记忆（考试 + 电影）都已落库再进入 a2 提问——
+    # 原先只等 >=1 行，电影记忆的 lane 写入偶发晚于 a2 提问（实测晚 20s），
+    # 造成"没有记录"的假阳性（数据未在库，非召回失败）。
+    deadline = time.time() + 60
+    exam_rows = movie_rows = "0"
     while time.time() < deadline:
-        lanes = db_scalar(
+        exam_rows = db_scalar(
             f"SELECT count(*) FROM episodic_memories WHERE user_id='{user_id}' "
-            f"AND source_lane='inferred_extraction' AND deleted_at IS NULL"
+            f"AND source_lane='inferred_extraction' AND deleted_at IS NULL "
+            f"AND summary ILIKE '%数据结构%'"
         )
-        if lanes not in ("", "0"):
+        movie_rows = db_scalar(
+            f"SELECT count(*) FROM episodic_memories WHERE user_id='{user_id}' "
+            f"AND source_lane='inferred_extraction' AND deleted_at IS NULL "
+            f"AND summary ILIKE '%星际穿越%'"
+        )
+        if exam_rows not in ("", "0") and movie_rows not in ("", "0"):
             break
         time.sleep(3)
     record(
         "mr1.episodic-written(聊天一轮后记忆表有写入)",
-        lanes not in ("", "0"),
-        f"inferred_extraction rows={lanes} (期望>=1，跨轮异步最多等30s)",
+        exam_rows not in ("", "0") and movie_rows not in ("", "0"),
+        f"inferred_extraction rows exam={exam_rows} movie={movie_rows} (期望各>=1，跨轮异步最多等60s)",
     )
 
     s2 = str(uuid4())
@@ -199,19 +213,23 @@ def main() -> int:
     )
 
     status = ""
+    nodes_found = ""
     deadline = time.time() + 120
     while time.time() < deadline:
         st = http("GET", f"/api/v1/documents/{file_id}/status", token=token)
         status = str(st.get("status") or st.get("stage") or "")
-        if status in {"processed", "completed", "ready", "done", "succeeded"}:
+        nodes_found = str(st.get("nodes_found") or "")
+        # building_nodes：切片+embedding 已入库、知识节点构建中——检索/引用
+        # （mr4）所需数据已就绪，即可放行；不必等终态 done。
+        if status in {"processed", "completed", "ready", "done", "succeeded", "building_nodes"}:
             break
         if status in {"failed", "error"}:
             break
         time.sleep(4)
     record(
         "mr3.processed(切片+embedding 入库)",
-        status in {"processed", "completed", "ready", "done", "succeeded"},
-        f"final status={status}",
+        status in {"processed", "completed", "ready", "done", "succeeded", "building_nodes"},
+        f"final status={status} nodes/chunks={nodes_found}",
     )
 
     s4 = str(uuid4())

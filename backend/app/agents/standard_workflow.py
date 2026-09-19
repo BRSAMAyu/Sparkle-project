@@ -1693,11 +1693,21 @@ Ask about their available time and current tasks if needed.
         document_context=document_context,
     )
     system_prompt = context_assembly.system_prompt
+    # R2-final(mr4): 文档正文已由 ContextBudgetManager 挪至 user 消息近邻注入
+    # （placement 兑现 last_before_user_message）。review/reflection 继承上下文
+    # 用的 generation_system_prompt 仍拼回文档块，避免重写时对材料"失明"。
+    _document_block = str(getattr(context_assembly, "document_block", "") or "")
+    if _document_block:
+        state.context_data["generation_system_prompt"] = f"{system_prompt}\n\n{_document_block}"
+    else:
+        state.context_data["generation_system_prompt"] = system_prompt
     # R2-fix: 持久化主生成最终组装的 system_prompt（含检索材料 Retrieved
     # Documents、跨会话记忆、用户画像），随 context_data 传给 review/reflection，
     # 让 reflection_node 重写时继承同一上下文，避免重写"失明"。
-    state.context_data["generation_system_prompt"] = system_prompt
     prompt_conversation_context = {"messages": context_assembly.conversation_history}
+    # R2-final(mr4/a2): LLM 调用使用近邻注入后的最终 user 消息（材料前缀 +
+    # 回显保底声明）；无材料时与原 user_message 相同。落库/清洗等仍用原消息。
+    llm_user_message = str(getattr(context_assembly, "user_message", "") or "") or user_message
     state.context_data["context_budget"] = {
         "budgets": context_assembly.budgets,
         "token_usage": context_assembly.token_usage,
@@ -1809,7 +1819,7 @@ Ask about their available time and current tasks if needed.
             **_build_generation_stream_kwargs(
                 generation_llm,
                 system_prompt=system_prompt,
-                user_message=user_message,
+                user_message=llm_user_message,
                 tools=effective_tools,
                 conversation_history=prompt_conversation_context.get("messages", []),
                 user_context=user_context,
