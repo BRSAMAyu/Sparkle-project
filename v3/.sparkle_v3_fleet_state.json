@@ -26,5 +26,5 @@
   "C-01"
  ],
  "blocked": [],
- "notes": "2026-09-19 12:30: 6/6 full (2 Apex root cards + 2 V3-FIX + 1 lineage ext + 1 entitlement). HEAVY gate loosened: swap-free>=1.2G & load<8. Next queue: V3-FIX-01/04 return -> B-03 FieldTest (single HEAVY) + D-01/X-01/E-01/E-05 Apex/general."
+ "notes": "2026-09-19 15:0x: 3 aggregator/kill-switch test failures confirmed PRE-EXISTING (fail identically at pre-C-01 baseline wt4; state_aggregator untouched since initial commit) — not a C-01 regression; park for test-system batch. C-01 DONE@57c87a8e (dual-ACCEPT, F2 applied at merge)."
 }
