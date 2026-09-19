@@ -14,8 +14,9 @@
    "since": "2026-09-19T12:00"
   },
   "B-05": {
-   "worker": "B-05b zhipu key-rotation retest wt2",
-   "since": "2026-09-19T12:00"
+   "stage": "REVIEW_PENDING",
+   "note": "B-05b zhipu retest READY_FOR_REVIEW @wt2; reviewer dispatched",
+   "since": "2026-09-19T12:40"
   }
  },
  "done": [],
