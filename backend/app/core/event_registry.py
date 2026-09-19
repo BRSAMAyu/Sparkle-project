@@ -226,6 +226,39 @@ EVENT_REGISTRY: dict[str, RegisteredEvent] = {
             status="reserved",
         ),
         RegisteredEvent(
+            # D-05 (2026-09-19): intervention lifecycle analysis events. The
+            # durable analysis truth is intervention_lifecycle_events (D-02
+            # read-model family); these outbox names carry the integration
+            # notifications only (outbox rows are cleanup-deleted after 7 days
+            # and are NOT the analysis store). decision_id (aurora_<32hex>)
+            # rides payload/metadata extra — CorrelationIds enforces canonical
+            # UUIDs, so it cannot ride correlation.decision_id (D-01/D-02
+            # registered follow-up, same as evt_/outc_ prefixes).
+            name="intervention.exposed",
+            stage=EventStage.EXECUTION,
+            aggregate_type="intervention_lifecycle",
+            producers=("app/services/intervention_lifecycle_service.py",),
+            status="reserved",
+        ),
+        RegisteredEvent(
+            name="intervention.started",
+            stage=EventStage.EXECUTION,
+            aggregate_type="intervention_lifecycle",
+            producers=("app/services/intervention_lifecycle_service.py",),
+            status="reserved",
+        ),
+        RegisteredEvent(
+            # Association fact: one whitelisted D-02 outcome linked to one
+            # intervention decision within its observation window. outcome facts
+            # stay owned by the D-02 five sources; this event records only the
+            # (decision_id, outcome_ref) link.
+            name="intervention.outcome_associated",
+            stage=EventStage.OUTCOME,
+            aggregate_type="intervention_lifecycle",
+            producers=("app/services/intervention_lifecycle_service.py",),
+            status="reserved",
+        ),
+        RegisteredEvent(
             name="action.proposed",
             stage=EventStage.EXECUTION,
             aggregate_type="action",

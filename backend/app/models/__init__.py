@@ -164,6 +164,7 @@ from app.models.intervention_adaptive import (
     PassiveSignal,
     ScaffoldingState,
 )
+from app.models.intervention_lifecycle import InterventionLifecycleEvent
 from app.models.intervention_strategy_outcome import InterventionStrategyOutcome
 from app.models.irt import IRTItemParameter, UserIRTAbility
 from app.models.job import Job, JobStatus, JobType
@@ -457,6 +458,8 @@ __all__ = [
     "InterventionTemplate",
     "PassiveSignal",
     "ScaffoldingState",
+    # Intervention Lifecycle (D-05)
+    "InterventionLifecycleEvent",
     # Intervention Strategy
     "InterventionStrategyOutcome",
     # IRT

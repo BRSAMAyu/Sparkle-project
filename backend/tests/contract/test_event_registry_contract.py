@@ -60,7 +60,7 @@ BACKEND_DIR = Path(__file__).resolve().parents[2]
 #   由 observed_unregistered → live，producer =
 #   app/services/agent_run_service.py)。→ 36 names；hash 显式 re-freeze（X-05
 #   交付，待 Leader 复核后归档）。
-_FROZEN_VOCABULARY_SHA256 = "b4190e621f9b5761480c3cbb964ff053c02da44c404422091570c31e8cedc1e2"
+_FROZEN_VOCABULARY_SHA256 = "ef0db85a247379cf7a4946c69de8acf66348320a71d1e588f5a4e4ad8a2602cb"
 
 # Observed distinct event_type values in the live dev DB event_outbox
 # (sparkle_readonly, 2026-09-19; 106 rows). run.* / task.status_changed are
