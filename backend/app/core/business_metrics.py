@@ -261,6 +261,17 @@ MEMORY_PREFILTER_REJECTIONS_TOTAL = get_or_create_metric(
     ['dimension', 'reason']
 )
 
+# C-03 knowledge permission prefilter (app/services/context_retrieval_pipeline):
+# candidates cut before rerank/embedding, by dimension (identity/lifecycle) and
+# frozen reason (knowledge:wrong_user / group_inaccessible / unattributed /
+# no_user_context / unknown_source_type / lifecycle_inactive).
+KNOWLEDGE_PREFILTER_REJECTIONS_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_knowledge_prefilter_rejections_total',
+    'Knowledge candidates rejected by the C-03 permission prefilter',
+    ['dimension', 'reason']
+)
+
 EVIDENCE_MISSING_CURRENT = get_or_create_metric(
     Gauge,
     'sparkle_evidence_missing_current',

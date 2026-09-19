@@ -48,11 +48,16 @@ async def test_vector_search_returns_bm25_hits_when_embedding_fails(monkeypatch)
     retriever = GraphRAGRetriever(AsyncMock())
     retriever.knowledge_service.semantic_search = AsyncMock(return_value=[])
 
+    # C-03 夹具适配：真实 Redis chunk 恒带 source_type/user_id（rag_indexing
+    # 写方保证），且 graphrag 生产调用方恒传 user_id——身份字段缺失是 C-03
+    # 滤芯的 fail-closed 砍除语义（非本测试的降级行为面）。
     doc = SimpleNamespace(
         id="sparkle:chunk:node-1:0",
         parent_id="node-1",
         parent_name="Shortest Path Algorithms",
         content="The SSSP algorithm by Dijkstra relaxes edges greedily.",
+        source_type="document_chunk",
+        user_id="user-1",
     )
 
     monkeypatch.setattr(
@@ -64,7 +69,7 @@ async def test_vector_search_returns_bm25_hits_when_embedding_fails(monkeypatch)
         AsyncMock(return_value=SimpleNamespace(docs=[doc])),
     )
 
-    results = await retriever.vector_search("Dijkstra shortest path", top_k=1)
+    results = await retriever.vector_search("Dijkstra shortest path", top_k=1, user_id="user-1")
 
     assert len(results) == 1
     assert results[0]["id"] == "sparkle:chunk:node-1:0"

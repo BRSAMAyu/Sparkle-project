@@ -15,6 +15,7 @@
 | `test_llm_parser.py` | 手动验证 LLM 解析器 |
 | `rebuild_embedding_index.py` | E-05：embedding 索引重建/版本迁移/回滚（默认 dry-run；`--execute` 真实重嵌并打标 `embedding_model/dim`、重建 Redis 版本化 key；回滚=改回旧 EMBEDDING_* 配置后重跑） |
 | `bench_hybrid_retrieval.py` | E-05：hybrid lexical+vector 检索基准（12 chunk 真实语料 × 6 查询，vector/lexical/hybrid 三策略 hit@5/MRR@5/时延；跑完自动清理基准数据） |
+| `c03_pipeline_perf_profile.py` | C-03：context 硬过滤→rerank 管道延迟剖面（合成 memory+knowledge 候选 × 规模轴；纯函数滤芯 + 合成向量 rerank，真实 LLM/embedding 0 次；`--scales` 可调） |
 | `build_demo.sh` | Demo 版本自动打包（历史演示用途） |
 | `demo_start.sh` | Demo 演示启动脚本（历史演示用途） |
 | `TEST_INSTRUCTIONS.sh` | 全功能验收测试操作说明（历史） |

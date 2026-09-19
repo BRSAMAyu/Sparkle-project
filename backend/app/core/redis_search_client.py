@@ -55,6 +55,11 @@ class RedisSearchClient:
             TagField("$.shared_by_user_id", as_name="shared_by_user_id"),
             TagField("$.trust_level", as_name="trust_level"),
             TagField("$.document_scope", as_name="document_scope"),
+            # C-03: lifecycle 可判定性——document chunks 携带 lifecycle_status
+            # （rag_indexing 写入）。既有索引缺该字段时 RETURN 返回空 → 权限
+            # 滤芯按「该传输面不可判」放行（身份维度不受影响）；重建索引
+            # （scripts/devtools/rebuild_embedding_index.py）后生效。
+            TagField("$.lifecycle_status", as_name="lifecycle_status"),
             TextField("$.parent_name", as_name="parent_name"),
             NumericField("$.subject_id", as_name="subject_id"),
             NumericField("$.importance", as_name="importance"),
@@ -160,6 +165,7 @@ class RedisSearchClient:
                 "shared_by_user_id",
                 "trust_level",
                 "document_scope",
+                "lifecycle_status",
                 "chunk_index",
                 "page_numbers",
                 "section_title",

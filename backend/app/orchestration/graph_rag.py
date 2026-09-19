@@ -29,6 +29,10 @@ from app.core.cache import cache_service
 from app.core.cost_controller import is_rag_within_budget, record_rag_cost
 from app.core.metrics import CACHE_HIT_COUNT, RAG_RETRIEVAL_LATENCY, RETRIEVAL_TIMEOUT_TOTAL
 from app.core.redis_search_client import redis_search_client
+from app.services.context_retrieval_pipeline import (
+    KnowledgeAccessContext,
+    prefilter_knowledge_candidates,
+)
 from app.services.embedding_service import embedding_service
 from app.services.galaxy.rag_router import RagRouter
 from app.services.graphrag_trace_store import cache_trace
@@ -1707,17 +1711,15 @@ Return ONLY a JSON array of entity names."""
         user_id: str | None,
         allowed_group_ids: set[str] | None = None,
     ) -> bool:
-        source_type = str(GraphRAGRetriever._redis_doc_field(doc, "source_type", "") or "")
-        if source_type != "document_chunk" or not user_id:
-            return True
-        lifecycle_status = str(GraphRAGRetriever._redis_doc_field(doc, "lifecycle_status", "active") or "active")
-        if lifecycle_status != "active":
-            return False
-        doc_group_id = str(GraphRAGRetriever._redis_doc_field(doc, "group_id", "") or "").strip()
-        if doc_group_id:
-            return doc_group_id in (allowed_group_ids or set())
-        doc_user_id = str(GraphRAGRetriever._redis_doc_field(doc, "user_id", "") or "")
-        return not doc_user_id or doc_user_id == str(user_id)
+        """C-03 后为 ``prefilter_knowledge_candidates`` 的布尔兼容面（权限判定
+        单一事实源在 app/services/context_retrieval_pipeline；语义收紧：
+        source_type 词表外 / 无检索用户 / 无归属 document chunk 由原先的
+        fail-open 放行改为 fail-closed 砍除，详见该模块 docstring）。"""
+        ctx = KnowledgeAccessContext(
+            user_id=str(user_id) if user_id else None,
+            allowed_group_ids=frozenset(str(g) for g in (allowed_group_ids or set())),
+        )
+        return bool(prefilter_knowledge_candidates([doc], ctx).allowed)
 
     async def _redis_dense_search(self, query: str, top_k: int, user_id: str | None = None):
         try:
@@ -1787,16 +1789,15 @@ Return ONLY a JSON array of entity names."""
             logger.warning(f"GraphRAG Redis hybrid search failed: {e}")
             return []
 
-        dense_docs = [
-            doc
-            for doc in list(getattr(dense_res, "docs", []) or [])
-            if self._redis_doc_matches_user(doc, user_id, allowed_group_ids)
-        ]
-        bm25_docs = [
-            doc
-            for doc in list(getattr(bm25_res, "docs", []) or [])
-            if self._redis_doc_matches_user(doc, user_id, allowed_group_ids)
-        ]
+        # C-03: 权限硬筛前置（RRF 融合与 rerank 之前，同一候选池层）——共享
+        # Redis 索引命中的他人 personal chunk 在进入任何语义阶段前砍除，
+        # 逐候选拒绝归因/计数由滤芯落 Prometheus 与结构化日志。
+        knowledge_ctx = KnowledgeAccessContext(
+            user_id=str(user_id) if user_id else None,
+            allowed_group_ids=frozenset(str(g) for g in (allowed_group_ids or set())),
+        )
+        dense_docs = prefilter_knowledge_candidates(list(getattr(dense_res, "docs", []) or []), knowledge_ctx).allowed
+        bm25_docs = prefilter_knowledge_candidates(list(getattr(bm25_res, "docs", []) or []), knowledge_ctx).allowed
 
         if not dense_docs and not bm25_docs:
             return []

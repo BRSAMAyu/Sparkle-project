@@ -4,6 +4,7 @@ import asyncio
 import re
 import time
 from dataclasses import dataclass
+from typing import Any
 from uuid import UUID
 
 from loguru import logger
@@ -23,6 +24,10 @@ from app.models.file_storage import SourceLifecycleStatus, StoredFile
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.group_files import GroupFile
 from app.schemas.galaxy import NodeBase, SearchResultItem, UserStatusInfo
+from app.services.context_retrieval_pipeline import (
+    KnowledgeAccessContext,
+    run_hard_filter_pipeline_async,
+)
 from app.services.embedding_service import EmbeddingNotConfiguredError, embedding_service
 from app.services.rerank_service import rerank_service
 
@@ -268,7 +273,20 @@ class KnowledgeRetrievalService:
         bm25_q = (
             Query(cleaned_query)
             .paging(0, keyword_limit)
-            .return_fields("id", "parent_id", "content", "parent_name", "importance")
+            # C-03: 身份字段必须随候选返回——RRF 融合后的权限硬筛（rerank 前）
+            # 依赖 source_type / user_id / group_id / lifecycle_status 判定归属
+            # （缺失即 fail-closed 砍除，见 context_retrieval_pipeline）。
+            .return_fields(
+                "id",
+                "parent_id",
+                "content",
+                "parent_name",
+                "importance",
+                "source_type",
+                "user_id",
+                "group_id",
+                "lifecycle_status",
+            )
             .dialect(2)
         )
 
@@ -308,24 +326,40 @@ class KnowledgeRetrievalService:
         fused_results = rerank_service.reciprocal_rank_fusion([vec_docs, kw_docs])
         candidates = [item for item, score in fused_results]
 
-        # 5. Reranking
+        # 5. C-03 硬过滤 → rerank（顺序铁律：权限滤芯在远程 rerank 模型之前）
+        # Redis RAG 索引是跨用户共享索引（vector="*" 全库 KNN + 无用户谓词的
+        # BM25），融合候选天然含他人 personal chunk——此前直接把全部候选正文送
+        # 远程 rerank 模型（内容外泄 + 预算浪费）。现在合法候选才进 rerank；
+        # 砍除归因/延迟/token 计量随 pipeline 报告结构化落日志（C-03 滤芯）。
+        # 本路径无群组解析上下文（调用方未请求群组 scope）→ group chunk
+        # fail-closed 砍除（knowledge:group_inaccessible），与既有装配面行为
+        # 一致（group chunk 的 parent_id=file_id 本就不在 KnowledgeNode 装配集）。
+        knowledge_ctx = KnowledgeAccessContext(user_id=str(user_id_uuid))
         rerank_start = time.time()
-        if use_reranker and candidates:
+
+        async def _rerank_legal(legal: list[Any]) -> list[Any]:
+            if not (use_reranker and legal):
+                return legal[:limit]
             try:
-                final_chunks = await asyncio.wait_for(
-                    rerank_service.rerank(query_str, candidates, top_k=limit),
+                return await asyncio.wait_for(
+                    rerank_service.rerank(query_str, legal, top_k=limit),
                     timeout=settings.RERANK_TIMEOUT_SECONDS,
                 )
             except TimeoutError:
                 logger.warning("Rerank timed out, returning fused candidates.")
                 RETRIEVAL_TIMEOUT_TOTAL.labels(source="redis_hybrid", stage="rerank").inc()
-                final_chunks = candidates[:limit]
+                return legal[:limit]
             except Exception as e:
                 logger.warning(f"Rerank failed, returning fused candidates: {e}")
                 RETRIEVAL_ERROR_TOTAL.labels(source="redis_hybrid", stage="rerank").inc()
-                final_chunks = candidates[:limit]
-        else:
-            final_chunks = candidates[:limit]
+                return legal[:limit]
+
+        pipeline_result = await run_hard_filter_pipeline_async(
+            knowledge_candidates=candidates,
+            knowledge_ctx=knowledge_ctx,
+            rerank_fn=_rerank_legal,
+        )
+        final_chunks = list(pipeline_result.ranked)
         RAG_RETRIEVAL_LATENCY.labels(source="redis_hybrid", stage="rerank").observe(time.time() - rerank_start)
 
         # 6. Fetch Nodes from DB (Optimized with Status Join to avoid N+1)
