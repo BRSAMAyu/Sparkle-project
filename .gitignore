@@ -300,3 +300,8 @@ artifacts/e2e/
 
 # Keep dictionaries directory (MDX files for vocabulary lookup)
 # data/dictionaries/
+
+# ========================================
+# FieldTest local evidence screenshots (referenced by 多端实测 reports, never committed)
+# ========================================
+.fieldtest-shots/

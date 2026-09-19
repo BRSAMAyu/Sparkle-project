@@ -13,3 +13,5 @@
 | [daily-flow-eval-r2.md](daily-flow-eval-r2.md) | 每日流二轮：9957f42d 修复批复验（同法三日连测对照首轮） | ✅ 已完成（@d4338948）：修复 3 全绿（反思 200 入库/诊断 422 可行动/聊天真流式+落库可查）+1 达标带回归（星图 0→4 星 105min，但 complete 端点 5/5 必 500=P1-A outbox SQL）+1 半通（推送默认开/全量评估生效，偏好行用户 tz 崩溃仍 0 通知=P1-B）；36 格 24→26 通、跨日 5/10→8/10；新 P1×3/P2×7 只记录不修 |
 
 截图存档：`/Users/brsama/code/GitHub/Sparkle-sysrev/screenshots/{web,macos,android}/`（不入库）
+
+另：主仓根 `.fieldtest-shots/`（round1–round4 真机原始截图，约 32M）为 FieldTest 实测本地证据存档，被 android-round1/round2 及 B-05 回执按相对路径引用，已加入 .gitignore 永不入库。
