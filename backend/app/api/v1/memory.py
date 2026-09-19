@@ -466,6 +466,15 @@ async def forget_working_memory_entry(
     )
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Working memory entry not found")
+    # Memory V3 (M-07)：WM 删除走统一失效契约 —— epoch bump + invalidation
+    # 事件 + derived 缓存失效（Redis 态本身即真源，forget 已即时生效）。
+    from app.services.memory_invalidation_pipeline import MemoryInvalidationPipeline
+
+    await MemoryInvalidationPipeline(db, cache_service.redis).apply_working_memory_forget(
+        user_id=current_user.id,
+        session_id=resolved_session_id,
+        entry_id=entry_id,
+    )
     return {"status": "ok"}
 
 

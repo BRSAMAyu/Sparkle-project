@@ -9,7 +9,6 @@ from __future__ import annotations
 import json
 from collections.abc import Iterable
 from datetime import UTC, date, datetime
-from app.core.time_utils import ensure_naive_utc, utcnow
 from typing import Any
 from uuid import UUID
 
@@ -26,6 +25,7 @@ from app.core.business_metrics import (
     MEMORY_WRITE_TOTAL,
 )
 from app.core.memory_constants import PREFERENCE_KEYS
+from app.core.time_utils import ensure_naive_utc, utcnow
 from app.models.memory import EpisodicMemory, MemoryCorrection, MemoryGoal, MemoryPreference
 from app.models.user_memory_settings import UserMemorySettings
 from app.orchestration.dual_core_router import AdaptationRecord
@@ -33,11 +33,15 @@ from app.services.evidence_health_service import EvidenceHealthService
 from app.services.evidence_scoring import compute_score
 from app.services.ltm_rollout_service import LtmRolloutService
 from app.services.memory_epistemic_contract import (
+    MemoryRecordStatus,
+    Provenance,
     classify_episodic_class,
+    derive_status,
     inferred_may_supersede,
     preference_write_provenance,
 )
 from app.services.memory_evolution_service import MemoryEvolutionService
+from app.services.memory_invalidation_pipeline import MemoryInvalidationPipeline, MemoryMutationAction
 from app.services.memory_policy_evaluator import MemoryPolicyEvaluator
 from app.services.policy_compiler_service import PolicyCompilerService
 from app.services.system_update_service import SystemUpdateService, build_system_update
@@ -76,12 +80,14 @@ NON_CRITICAL_SERVICE_ERRORS = (
     SQLAlchemyError,
 )
 
+
 def _truncate_summary(value: str) -> str:
     if not value:
         return ""
     if len(value) <= SUMMARY_MAX_LEN:
         return value
     return f"{value[:SUMMARY_MAX_LEN - 1]}…"
+
 
 class MemoryService:
     def __init__(self, db: AsyncSession | None, redis_client=None):
@@ -187,8 +193,23 @@ class MemoryService:
         if latest is not None:
             latest.replaced_by_id = record.id
             latest.updated_at = utcnow()
+            # Memory V3 (M-07)：supersede（用户纠正产生新链头）→ epoch bump +
+            # invalidation 事件 + derived 缓存失效，与版本推进同事务原子生效。
+            # 行锁持有期间无中间提交，C2 的 FOR UPDATE 保护不被破坏。
+            await MemoryInvalidationPipeline(self.db, self.redis).apply_in_txn(
+                user_id=user_id,
+                action=MemoryMutationAction.SUPERSEDE,
+                kind="preference",
+                memory_ids=[record.id],
+                reason_code="preference_supersede",
+            )
 
         await self.db.commit()
+        # M-07 R1-C2-3：DEL 后置到 commit 之后（apply_in_txn 不再内部 DEL）。
+        if latest is not None:
+            await MemoryInvalidationPipeline(self.db, self.redis).invalidate_derived_caches(
+                user_id=user_id, kinds={"preference"}
+            )
         await self.db.refresh(record)
         MEMORY_WRITE_TOTAL.labels(type="preference", status="ok").inc()
 
@@ -754,12 +775,16 @@ class MemoryService:
         """memory-governance-mvp: total count feeding the episodic list pagination."""
         from sqlalchemy import func
 
-        stmt = select(func.count()).select_from(EpisodicMemory).where(
-            EpisodicMemory.user_id == user_id,
-            EpisodicMemory.deleted_at.is_(None),
-            EpisodicMemory.archived_at.is_(None),
-            EpisodicMemory.retracted_at.is_(None),
-            EpisodicMemory.revoked_at.is_(None),
+        stmt = (
+            select(func.count())
+            .select_from(EpisodicMemory)
+            .where(
+                EpisodicMemory.user_id == user_id,
+                EpisodicMemory.deleted_at.is_(None),
+                EpisodicMemory.archived_at.is_(None),
+                EpisodicMemory.retracted_at.is_(None),
+                EpisodicMemory.revoked_at.is_(None),
+            )
         )
         if start:
             stmt = stmt.where(EpisodicMemory.occurred_at >= start)
@@ -1106,24 +1131,52 @@ class MemoryService:
         if model is None:
             raise ValueError(f"Unsupported memory kind: {kind}")
 
+        # M-07：行锁 + 终态复查 —— 双设备并发/重试/重复删除收敛为单次生效。
         result = await self.db.execute(
-            select(model).where(
+            select(model)
+            .where(
                 model.id == memory_id,
                 model.user_id == user_id,
                 model.deleted_at.is_(None),
             )
+            .with_for_update()
         )
         record = result.scalar_one_or_none()
         if record is None:
             return False
+        if derive_status(record, now=utcnow()) != MemoryRecordStatus.ACTIVE.value:
+            # 已处于终态（撤回/撤销/归档/过期…）：幂等成功，零重复副作用。
+            return True
 
         self._apply_retraction(record, reason)
+        record.correction_count = (record.correction_count or 0) + 1
+        self.db.add(
+            MemoryCorrection(
+                user_id=user_id,
+                memory_type=kind,
+                memory_id=record.id,
+                action="retract",
+                reason=reason,
+            )
+        )
+        if kind == "preference":
+            # 链头删除 → live 视图同事务摘键，否则 ProfileContext 复活已删偏好。
+            await self._remove_live_preference_key_in_txn(user_id=user_id, record=record)
 
+        # Memory V3 (M-01→M-07)：状态变更、审计、epoch bump、invalidation 事件
+        # 同事务原子落地（不再是 best-effort）。
+        pipeline = MemoryInvalidationPipeline(self.db, self.redis)
+        await pipeline.apply_in_txn(
+            user_id=user_id,
+            action=MemoryMutationAction.REVOKE,
+            kind=kind,
+            memory_ids=[record.id],
+        )
         await self.db.commit()
+        # M-07 R1-C2-3：DEL 后置到 commit 之后（apply_in_txn 不再内部 DEL）。
+        await pipeline.invalidate_derived_caches(user_id=user_id, kinds={kind})
+        await self.db.refresh(record)
         MEMORY_RETRACTION_TOTAL.labels(type=kind).inc()
-        # Memory V3 (M-01)：删除类变更 bump memory_epoch（MEMORY_V3 §6），
-        # 供 M-07 上下文/语义缓存失效与 C-07 在途运行重授权检测。
-        await self._bump_epoch_best_effort(user_id, reason=f"retract:{kind}")
         await SystemUpdateService().enqueue(
             user_id,
             build_system_update(
@@ -1147,10 +1200,20 @@ class MemoryService:
         reason: str | None = None,
         subject_types: Iterable[str] | None = None,
     ) -> int:
-        stmt = select(EpisodicMemory).where(
-            EpisodicMemory.deleted_at.is_(None),
-            EpisodicMemory.source_lane == "inferred_extraction",
-            EpisodicMemory.revoked_at.is_(None),
+        # M-07 R1-C2-2：与三个单记录入口同款守卫 —— SELECT ... FOR UPDATE +
+        # 行锁内逐行 derive_status 终态复查。并发语义：PG 上两个重叠的批量
+        # 撤销批次（admin kill-switch 重试/双触发）在本查询的行锁上串行化；
+        # 先提交批次置 revoked_at/superseded_by_id 后，后到批次在 READ
+        # COMMITTED 的锁内重读时被 SQL 预过滤 + 以下复查双重排除 → 每用户
+        # 恰一次 epoch bump / 一条聚合事件（不再有双 bump 双事件路径）。
+        stmt = (
+            select(EpisodicMemory)
+            .where(
+                EpisodicMemory.deleted_at.is_(None),
+                EpisodicMemory.source_lane == "inferred_extraction",
+                EpisodicMemory.revoked_at.is_(None),
+            )
+            .with_for_update()
         )
         if user_id is not None:
             stmt = stmt.where(EpisodicMemory.user_id == user_id)
@@ -1158,17 +1221,36 @@ class MemoryService:
             stmt = stmt.where(EpisodicMemory.subject_type.in_(list(subject_types)))
 
         result = await self.db.execute(stmt)
-        records = list(result.scalars().all())
+        records = [
+            record
+            for record in result.scalars().all()
+            # 行锁内终态复查（对齐 derive_status）：superseded 等终态行不再
+            # 二次触碰；全部行已终态时零副作用返回。
+            if derive_status(record, now=utcnow()) == MemoryRecordStatus.ACTIVE.value
+        ]
         if not records:
             return 0
 
+        pipeline = MemoryInvalidationPipeline(self.db, self.redis)
+        ids_by_user: dict[UUID, list[UUID]] = {}
         for record in records:
             self._apply_retraction(record, reason or "admin_kill_switch")
+            ids_by_user.setdefault(record.user_id, []).append(record.id)
 
+        # Memory V3 (M-01→M-07)：批量撤销与单条同契约 —— 每受影响用户恰一次
+        # epoch bump + 一条聚合 invalidation 事件（memory_ids 全量），同事务。
+        for affected_user_id, memory_ids in ids_by_user.items():
+            await pipeline.apply_in_txn(
+                user_id=affected_user_id,
+                action=MemoryMutationAction.BULK_REVOKE,
+                kind="episodic",
+                memory_ids=memory_ids,
+                reason_code="revoke_inferred_bulk",
+            )
         await self.db.commit()
-        # Memory V3 (M-01)：批量撤销同样 bump 受影响用户的 memory_epoch。
-        for affected_user_id in {record.user_id for record in records}:
-            await self._bump_epoch_best_effort(affected_user_id, reason="revoke_inferred_bulk")
+        # M-07 R1-C2-3：DEL 后置到 commit 之后（apply_in_txn 不再内部 DEL）。
+        for affected_user_id in ids_by_user:
+            await pipeline.invalidate_derived_caches(user_id=affected_user_id, kinds={"episodic"})
         return len(records)
 
     async def apply_correction(
@@ -1191,11 +1273,13 @@ class MemoryService:
             raise ValueError(f"Unsupported memory kind: {kind}")
 
         result = await self.db.execute(
-            select(model).where(
+            select(model)
+            .where(
                 model.id == memory_id,
                 model.user_id == user_id,
                 model.deleted_at.is_(None),
             )
+            .with_for_update()
         )
         record = result.scalar_one_or_none()
         if record is None:
@@ -1204,6 +1288,9 @@ class MemoryService:
         if action in {"reject", "no_longer_applicable"}:
             if not settings.ENABLE_MEMORY_RETRACTION:
                 raise ValueError("Memory retraction is disabled by feature flag")
+            # M-07 幂等守卫：重复纠错（双设备/重试）零重复副作用。
+            if derive_status(record, now=utcnow()) != MemoryRecordStatus.ACTIVE.value:
+                return record
             reason_label = reason or action
             self._apply_retraction(record, reason_label)
             MEMORY_RETRACTION_TOTAL.labels(type=kind).inc()
@@ -1228,12 +1315,27 @@ class MemoryService:
         )
         self.db.add(correction_entry)
 
+        if action in {"reject", "no_longer_applicable"}:
+            if kind == "preference":
+                await self._remove_live_preference_key_in_txn(user_id=user_id, record=record)
+            # Memory V3 (M-01→M-07)：撤回类纠错的 epoch bump + invalidation
+            # 事件 + derived 失效与状态变更、审计同事务原子生效。
+            await MemoryInvalidationPipeline(self.db, self.redis).apply_in_txn(
+                user_id=user_id,
+                action=MemoryMutationAction.CORRECTION,
+                kind=kind,
+                memory_ids=[record.id],
+                reason_code=action,
+            )
+
         await self.db.commit()
+        # M-07 R1-C2-3：DEL 后置到 commit 之后（apply_in_txn 不再内部 DEL）。
+        if action in {"reject", "no_longer_applicable"}:
+            await MemoryInvalidationPipeline(self.db, self.redis).invalidate_derived_caches(
+                user_id=user_id, kinds={kind}
+            )
         await self.db.refresh(record)
         MEMORY_CORRECTION_TOTAL.labels(type=kind, action=action).inc()
-        if action in {"reject", "no_longer_applicable"}:
-            # Memory V3 (M-01)：撤回类纠错 → bump memory_epoch。
-            await self._bump_epoch_best_effort(user_id, reason=f"correction:{action}")
         logger.info(
             "Memory correction applied user_id={user_id} memory_id={memory_id} action={action}",
             user_id=user_id,
@@ -1285,16 +1387,22 @@ class MemoryService:
         if not settings.ENABLE_MEMORY_CORRECTION:
             raise ValueError("Memory correction is disabled by feature flag")
 
+        # M-07：行锁 + 终态复查 —— 用户"删除"的幂等/并发收敛点。
         result = await self.db.execute(
-            select(EpisodicMemory).where(
+            select(EpisodicMemory)
+            .where(
                 EpisodicMemory.id == memory_id,
                 EpisodicMemory.user_id == user_id,
                 EpisodicMemory.deleted_at.is_(None),
             )
+            .with_for_update()
         )
         record = result.scalar_one_or_none()
         if record is None:
             return None
+        if derive_status(record, now=utcnow()) != MemoryRecordStatus.ACTIVE.value:
+            # 重复删除（双设备/重试）：幂等返回当前记录，零重复副作用。
+            return record
 
         now = utcnow()
         updated_refs = []
@@ -1325,12 +1433,23 @@ class MemoryService:
                 reason=reason,
             )
         )
+        # Memory V3 (M-01→M-07)：用户删除 → epoch bump + invalidation 事件 +
+        # derived 缓存失效，与 revoked 状态变更同事务原子生效（硬保证）。
+        await MemoryInvalidationPipeline(self.db, self.redis).apply_in_txn(
+            user_id=user_id,
+            action=MemoryMutationAction.REVOKE,
+            kind="episodic",
+            memory_ids=[record.id],
+            reason_code="user_delete",
+        )
         await self.db.commit()
+        # M-07 R1-C2-3：DEL 后置到 commit 之后（apply_in_txn 不再内部 DEL）。
+        await MemoryInvalidationPipeline(self.db, self.redis).invalidate_derived_caches(
+            user_id=user_id, kinds={"episodic"}
+        )
         await self.db.refresh(record)
         MEMORY_RETRACTION_TOTAL.labels(type="episodic").inc()
         MEMORY_CORRECTION_TOTAL.labels(type="episodic", action="delete").inc()
-        # Memory V3 (M-01)：用户删除 → bump memory_epoch（缓存失效契约）。
-        await self._bump_epoch_best_effort(user_id, reason="revoke:episodic")
         logger.info(
             "Episodic memory revoked by user user_id={user_id} memory_id={memory_id}",
             user_id=user_id,
@@ -1619,9 +1738,7 @@ class MemoryService:
             retried = await _atomic_increment()
             if retried is None:
                 # 行存在但不可自增（如被软删）——显式失败而非静默丢 bump。
-                raise SQLAlchemyError(
-                    f"memory settings row for user {user_id} exists but is not bumpable"
-                )
+                raise SQLAlchemyError(f"memory settings row for user {user_id} exists but is not bumpable")
             await self.db.commit()
             return retried
         self.db.add(
@@ -1636,12 +1753,65 @@ class MemoryService:
         await self.db.commit()
         return int(settings_row.memory_epoch)
 
-    async def _bump_epoch_best_effort(self, user_id: UUID | str, reason: str | None) -> None:
-        """Epoch bump must never break the delete/correction path it serves."""
-        try:
-            await self.bump_memory_epoch(user_id, reason=reason)
-        except NON_CRITICAL_SERVICE_ERRORS as exc:
-            logger.warning("Failed to bump memory epoch user_id={user_id}: {exc}", user_id=user_id, exc=exc)
+    async def _remove_live_preference_key_in_txn(
+        self,
+        *,
+        user_id: UUID,
+        record: MemoryPreference,
+    ) -> bool:
+        """链头删除 → live ``user_preferences`` 视图同事务摘键（M-07）。
+
+        ProfileContext/UserInsightCompiler 的偏好真源是 live 表
+        (``UserPreferencesCenter``)；只撤 memory_preferences 链而不摘 live
+        键会让已删除偏好在每次编译中复活（derived 复活通道）。仅当被撤
+        行仍是该 pref_key 的当前活跃链头时摘键（删除历史版本不误伤新值），
+        摘键递增 preference_version → prefs-center / profile_context 的
+        version 门自动失效。
+
+        M-07 R1-C1：链头判定必须对齐 ``derive_status`` 终态语义 ——
+        ``replaced_by_id`` 置位的行是 SUPERSEDED 终态（版本链的历史环节），
+        不是活跃链头。supersede 链（设值 → 改值 → 删链头）下漏掉该过滤
+        会让 head-check 命中被顶替的旧版本，live 键不摘除、已删值复活。
+        """
+        head_result = await self.db.execute(
+            select(MemoryPreference.id)
+            .where(
+                MemoryPreference.user_id == user_id,
+                MemoryPreference.pref_key == record.pref_key,
+                MemoryPreference.deleted_at.is_(None),
+                MemoryPreference.retracted_at.is_(None),
+                # 契约对齐：replaced_by_id 置位 = SUPERSEDED 终态（等价于
+                # episodic 侧 superseded_by_id 的语义），不作为活跃链头。
+                MemoryPreference.replaced_by_id.is_(None),
+                MemoryPreference.id != record.id,
+            )
+            .order_by(MemoryPreference.version.desc())
+            .limit(1)
+        )
+        newer_head_id = head_result.scalar_one_or_none()
+        if newer_head_id is not None:
+            return False  # 已有更新活跃版本承载 live 值
+
+        from app.models.user_preferences import UserPreferencesCenter
+
+        live_result = await self.db.execute(
+            select(UserPreferencesCenter).where(UserPreferencesCenter.user_id == user_id)
+        )
+        live = live_result.scalar_one_or_none()
+        if live is None:
+            return False
+
+        provenance = preference_write_provenance(source_type=None, evidence_refs=record.evidence_refs)
+        bucket_name = "inferred" if provenance == Provenance.INFERRED.value else "explicit"
+        bucket = dict(getattr(live, bucket_name) or {})
+        if record.pref_key not in bucket:
+            return False
+        bucket.pop(record.pref_key, None)
+        setattr(live, bucket_name, bucket)
+        live.version = (live.version or 0) + 1
+        live.updated_at = utcnow()
+        return True
+
 
 def _normalize_evidence_refs(
     evidence_refs: Iterable[Any],

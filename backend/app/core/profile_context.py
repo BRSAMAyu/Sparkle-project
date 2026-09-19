@@ -64,6 +64,10 @@ class CognitiveSummary(BaseModel):
 class ProfileContext(BaseModel):
     preferences: dict[str, Any] = Field(default_factory=dict)
     preference_version: int = 0
+    # Memory V3 (M-07)：编译时的 memory_epoch。缓存消费方必须比对该值与
+    # 当前 epoch（删除/纠错类变更会 bump）——不一致即拒绝旧 derived 快照，
+    # 即使 Redis DEL 失败/TTL 未到也不得复活已删除内容。
+    memory_epoch: int = 1
     knowledge_summary: KnowledgeSummary = Field(default_factory=KnowledgeSummary)
     cognitive_summary: CognitiveSummary = Field(default_factory=CognitiveSummary)
     error_summary: dict[str, Any] = Field(default_factory=dict)

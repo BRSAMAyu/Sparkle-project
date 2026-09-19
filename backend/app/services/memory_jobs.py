@@ -60,6 +60,11 @@ async def apply_episodic_decay_policies(
             .where(
                 EpisodicMemory.decay_policy == policy_name,
                 EpisodicMemory.archived_at.is_(None),
+                # M-07：终态行（revoked/retracted/superseded）不再参与衰减/归档
+                # ——已删除/被顶替记忆不得被后台任务触碰或经归档路径回流。
+                EpisodicMemory.revoked_at.is_(None),
+                EpisodicMemory.retracted_at.is_(None),
+                EpisodicMemory.superseded_by_id.is_(None),
                 EpisodicMemory.importance_score.isnot(None),
             )
             .limit(batch_size)
@@ -160,7 +165,9 @@ class MemoryJobsService:
             return self._record_status("evidence_health", "error", {"error": str(exc)})
 
     async def run_decay_job(self, user_id: UUID | None = None, window_days: int = 14) -> dict[str, Any]:
-        logger.info("Memory decay job started user_id={user_id} window_days={window}", user_id=user_id, window=window_days)
+        logger.info(
+            "Memory decay job started user_id={user_id} window_days={window}", user_id=user_id, window=window_days
+        )
         try:
             users = await self._get_active_users(user_id)
             behavior_summary: dict[UUID, dict[str, int]] = {}
@@ -354,12 +361,7 @@ class MemoryJobsService:
             conditions.append(model.archived_at.is_(None))
         if hasattr(model, "retracted_at"):
             conditions.append(model.retracted_at.is_(None))
-        result = await self.db.execute(
-            select(model)
-            .where(*conditions)
-            .order_by(model.updated_at.desc())
-            .limit(limit)
-        )
+        result = await self.db.execute(select(model).where(*conditions).order_by(model.updated_at.desc()).limit(limit))
         return list(result.scalars().all())
 
     async def _apply_episodic_decay(self, users: list[User], window_days: int) -> dict[UUID, int]:
@@ -376,6 +378,8 @@ class MemoryJobsService:
                     EpisodicMemory.deleted_at.is_(None),
                     EpisodicMemory.archived_at.is_(None),
                     EpisodicMemory.retracted_at.is_(None),
+                    # M-07：superseded 终态行同样不参与后台衰减（R2 P3-6）。
+                    EpisodicMemory.superseded_by_id.is_(None),
                     EpisodicMemory.occurred_at <= cutoff,
                     EpisodicMemory.updated_at <= recent_guard,
                     EpisodicMemory.importance_score.isnot(None),
@@ -434,10 +438,16 @@ class MemoryJobsService:
                 decayed = 0
                 archived = 0
                 for record in records:
-                    last_consumed_at = getattr(record, "last_consumed_at", None) or record.updated_at or record.created_at
+                    last_consumed_at = (
+                        getattr(record, "last_consumed_at", None) or record.updated_at or record.created_at
+                    )
                     if not last_consumed_at:
                         continue
-                    current_scores = [float(getattr(record, field) or 0.0) for field in score_fields if getattr(record, field, None) is not None]
+                    current_scores = [
+                        float(getattr(record, field) or 0.0)
+                        for field in score_fields
+                        if getattr(record, field, None) is not None
+                    ]
                     current_signal = max(current_scores) if current_scores else 0.0
                     if last_consumed_at <= ninety_days_ago and current_signal < 0.3:
                         record.archived_at = now

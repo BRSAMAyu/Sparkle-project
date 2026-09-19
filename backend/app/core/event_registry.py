@@ -370,6 +370,18 @@ EVENT_REGISTRY: dict[str, RegisteredEvent] = {
             producers=("v3: state_aggregator projection",),
             status="reserved",
         ),
+        # M-07 (2026-09-19): memory invalidation. Emitted exactly once per
+        # effective memory mutation (correction/revoke/supersede/delete) by the
+        # unified pipeline, carrying the post-mutation memory_epoch so cache
+        # holders and in-flight runs can detect staleness (MEMORY_V3.md §6).
+        # Payload is content-free by contract (ids/action/epoch only).
+        RegisteredEvent(
+            name="memory.invalidated",
+            stage=EventStage.STATE_UPDATE,
+            aggregate_type="user_memory",
+            producers=("app/services/memory_invalidation_pipeline.py",),
+            status="live",
+        ),
         RegisteredEvent(
             name="user.created",
             stage=EventStage.STATE_UPDATE,
@@ -437,6 +449,8 @@ CORRELATION_KEYS: tuple[str, ...] = (
     "decision_id",
     "plan_id",
     "node_id",
+    # M-07: memory record id of the mutated memory (memory.invalidated events).
+    "memory_id",
 )
 
 
@@ -459,6 +473,7 @@ class CorrelationIds:
     decision_id: str | None = None
     plan_id: str | None = None
     node_id: str | None = None
+    memory_id: str | None = None
 
     def as_dict(self, drop_nones: bool = True) -> dict[str, str]:
         raw = {
@@ -472,6 +487,7 @@ class CorrelationIds:
             "decision_id": self.decision_id,
             "plan_id": self.plan_id,
             "node_id": self.node_id,
+            "memory_id": self.memory_id,
         }
         if drop_nones:
             return {k: v for k, v in raw.items() if v is not None}

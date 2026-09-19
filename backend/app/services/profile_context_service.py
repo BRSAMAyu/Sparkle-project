@@ -133,11 +133,14 @@ class ProfileContextService:
                 if cached:
                     data = json.loads(cached)
                     context = ProfileContext(**data)
-                    current_version = await self.pref_service.get_preference_version(
-                        user_id
-                    )
+                    current_version = await self.pref_service.get_preference_version(user_id)
+                    # Memory V3 (M-07)：缓存有效性 = preference_version 门 +
+                    # memory_epoch 门（删除/纠错 bump epoch 后旧 derived 快照
+                    # 必须被拒绝——即使失效 DEL 失败也不得复活已删内容）。
+                    current_epoch = await self._get_memory_epoch(user_id)
                     if (
                         context.preference_version == current_version
+                        and context.memory_epoch == current_epoch
                         and context.user_insight_state is not None
                     ):
                         await self._attach_live_extensions(
@@ -147,15 +150,25 @@ class ProfileContextService:
                         )
                         return context
                     logger.info(
-                        "ProfileContext cache stale for %s: cached_version=%s current_version=%s has_insight=%s",
+                        "ProfileContext cache stale for %s: cached_version=%s current_version=%s "
+                        "cached_epoch=%s current_epoch=%s has_insight=%s",
                         user_id,
                         context.preference_version,
                         current_version,
+                        context.memory_epoch,
+                        current_epoch,
                         bool(context.user_insight_state),
                     )
             except Exception as exc:
                 logger.warning(f"ProfileContext cache read failed: {exc}")
 
+        # Memory V3 (M-07 R1-C2-4)：epoch 前置读取——先钉 epoch 再构建内容。
+        # 构建期间（prefs→knowledge→cognitive→error→compile 可达数百 ms）若有
+        # 删除/纠错事务 commit（epoch 已 bump），本快照携带的仍是旧 epoch，
+        # 读侧门必拒绝（fail-closed 方向：多一次重编译，绝无复活）；杜绝
+        # 「旧内容 + 新 epoch 过门」的 TTL 复活窗（ABA）。该值同时嵌入
+        # ProfileContext 与 inline snapshot，写缓存时不再二次读取。
+        memory_epoch = await self._get_memory_epoch(user_id)
         preferences = await self._get_preferences(user_id)
         knowledge_summary = await self._get_knowledge_summary(user_id)
         cognitive_summary = await self._get_cognitive_summary(user_id)
@@ -164,17 +177,14 @@ class ProfileContextService:
         context = ProfileContext(
             preferences=preferences.get("explicit") or {},
             preference_version=preferences.get("version") or 0,
+            memory_epoch=memory_epoch,
             knowledge_summary=knowledge_summary,
             cognitive_summary=cognitive_summary,
             error_summary=error_payload.get("summary") or {},
             recent_errors=error_payload.get("recent") or [],
-            traits_prior=BigFiveTraits.model_validate(
-                preferences.get("traits_prior") or {}
-            ),
+            traits_prior=BigFiveTraits.model_validate(preferences.get("traits_prior") or {}),
             trait_observation_state=preferences.get("trait_observation_state") or {},
-            traits_coldstart_completed_at=preferences.get(
-                "traits_coldstart_completed_at"
-            ),
+            traits_coldstart_completed_at=preferences.get("traits_coldstart_completed_at"),
         )
         contract = await UserInsightCompiler(self.db).compile(
             user_id=user_id,
@@ -185,9 +195,7 @@ class ProfileContextService:
 
         if self.redis:
             try:
-                await self.redis.setex(
-                    cache_key, self.CACHE_TTL_SECONDS, context.model_dump_json()
-                )
+                await self.redis.setex(cache_key, self.CACHE_TTL_SECONDS, context.model_dump_json())
             except Exception as exc:
                 logger.warning(f"ProfileContext cache write failed: {exc}")
 
@@ -196,9 +204,10 @@ class ProfileContextService:
             stage34_modes = await AuroraStage34KillSwitchService().summary()
             await self._write_inline_snapshot_cache(
                 user_id,
-                context.user_insight_state.to_inline_snapshot(
-                    capsule_mode=stage34_modes.get("capsule_mode", "shadow")
-                ),
+                context.user_insight_state.to_inline_snapshot(capsule_mode=stage34_modes.get("capsule_mode", "shadow")),
+                # 复用前置读取的 epoch（C2-4）：不在写时二次读取——写时读到
+                # 刚 bump 的新 epoch 会给旧内容盖上「可通过门」的戳。
+                memory_epoch=memory_epoch,
             )
 
         await self._attach_live_extensions(
@@ -224,9 +233,7 @@ class ProfileContextService:
         )
         await self._attach_idiographic_summary(user_id, context)
 
-    async def _attach_srl_phase_summary(
-        self, user_id: UUID, context: ProfileContext
-    ) -> None:
+    async def _attach_srl_phase_summary(self, user_id: UUID, context: ProfileContext) -> None:
         if context.user_insight_state is None:
             return
         try:
@@ -269,9 +276,7 @@ class ProfileContextService:
     ) -> None:
         try:
             service = MetacognitionService(self.db, redis=self.redis)
-            context.metacognition_dashboard = await service.build_dashboard_payload(
-                user_id
-            )
+            context.metacognition_dashboard = await service.build_dashboard_payload(user_id)
         except Exception as exc:
             logger.warning(f"Failed to attach metacognition dashboard: {exc}")
 
@@ -300,9 +305,7 @@ class ProfileContextService:
         context: ProfileContext,
     ) -> None:
         try:
-            service = IdiographicAssociationService(
-                self.db, redis=self.redis
-            )
+            service = IdiographicAssociationService(self.db, redis=self.redis)
             summary = await service.build_aggregator_summary(user_id)
             context.idiographic_summary = (
                 self._serialize_idiographic_summary(
@@ -341,10 +344,7 @@ class ProfileContextService:
     @classmethod
     def _serialize_user_state_value(cls, value: Any) -> Any:
         if is_dataclass(value):
-            return {
-                field.name: cls._serialize_user_state_value(getattr(value, field.name))
-                for field in fields(value)
-            }
+            return {field.name: cls._serialize_user_state_value(getattr(value, field.name)) for field in fields(value)}
         if isinstance(value, datetime):
             return value.isoformat()
         if hasattr(value, "isoformat") and not isinstance(value, str):
@@ -354,11 +354,7 @@ class ProfileContextService:
         if isinstance(value, UUID):
             return str(value)
         if isinstance(value, dict):
-            return {
-                str(key): cls._serialize_user_state_value(item)
-                for key, item in value.items()
-                if item is not None
-            }
+            return {str(key): cls._serialize_user_state_value(item) for key, item in value.items() if item is not None}
         if isinstance(value, (list, tuple)):
             return [cls._serialize_user_state_value(item) for item in value]
         return value
@@ -404,9 +400,9 @@ class ProfileContextService:
         This is a cache-only read path.  It does NOT trigger recompilation.
         Returns ``None`` on cache miss or parse failure.
 
-        The cache is populated as a side effect of ``get_profile_context()``
-        (via the ``user_insight_state.to_inline_snapshot()`` call) or can be
-        populated by a future nearline hot-reload worker.
+        Memory V3 (M-07)：epoch 门——快照缺失 memory_epoch 或与当前不一致
+        一律视为 stale（fail-closed），调用方走 ``get_profile_context`` 重编
+        译路径。删除/纠错 bump epoch 后旧快照不得复活。
         """
         if not self.redis:
             return None
@@ -416,26 +412,65 @@ class ProfileContextService:
             if cached:
                 import json as _json
 
-                return _json.loads(cached)
+                payload = _json.loads(cached)
+                if not isinstance(payload, dict):
+                    return None
+                current_epoch = await self._get_memory_epoch(user_id)
+                if int(payload.get("memory_epoch") or 0) != current_epoch:
+                    logger.info(
+                        "Inline snapshot stale for %s: cached_epoch=%s current_epoch=%s",
+                        user_id,
+                        payload.get("memory_epoch"),
+                        current_epoch,
+                    )
+                    return None
+                return payload
         except Exception as exc:
             logger.warning(f"Inline snapshot cache read failed: {exc}")
         return None
 
     async def _write_inline_snapshot_cache(
-        self, user_id: UUID, snapshot: dict[str, Any]
+        self,
+        user_id: UUID,
+        snapshot: dict[str, Any],
+        *,
+        memory_epoch: int | None = None,
     ) -> None:
-        """Write the inline snapshot to Redis. Called internally after compilation."""
+        """Write the inline snapshot to Redis. Called internally after compilation.
+
+        ``memory_epoch`` is the epoch pinned BEFORE content assembly (M-07
+        R1-C2-4): ``get_profile_context`` passes the value it read up front, so
+        the snapshot can never carry a post-deletion epoch over pre-deletion
+        content (the 120s-TTL ABA resurrection window). The fresh-read fallback
+        exists only for direct external callers/tests and keeps the old
+        write-time pinning semantics for them.
+        """
         if not self.redis:
             return
         cache_key = f"user:inline_snapshot:{user_id}"
         try:
             import json as _json
 
-            await self.redis.setex(
-                cache_key, self.INLINE_SNAPSHOT_CACHE_TTL_SECONDS, _json.dumps(snapshot)
+            payload = dict(snapshot)
+            # M-07：写入时钉住 epoch，读侧据此拒绝 stale 快照。
+            payload["memory_epoch"] = (
+                memory_epoch if memory_epoch is not None else await self._get_memory_epoch(user_id)
             )
+            await self.redis.setex(cache_key, self.INLINE_SNAPSHOT_CACHE_TTL_SECONDS, _json.dumps(payload))
         except Exception as exc:
             logger.warning(f"Inline snapshot cache write failed: {exc}")
+
+    async def _get_memory_epoch(self, user_id: UUID) -> int:
+        """Current memory epoch (M-01 contract read, M-07 cache gate input)."""
+        try:
+            from app.services.memory_service import MemoryService
+
+            return await MemoryService(self.db).get_memory_epoch(user_id)
+        except Exception as exc:
+            # epoch 读失败 fail-closed 到 0：任何已缓存快照（epoch>=1）都会
+            # 被拒绝并重编译——宁可多编译，不让已删内容经缓存复活。
+            logger.warning(f"memory epoch read failed for {user_id}: {exc}")
+            return 0
 
     async def _get_preferences(self, user_id: UUID) -> dict[str, Any]:
         prefs = await self.pref_service.get_preferences(user_id)
@@ -448,12 +483,8 @@ class ProfileContextService:
             "inferred": inferred,
             "version": prefs.version if prefs else 0,
             "traits_prior": dict(prefs.traits_prior or {}) if prefs else {},
-            "trait_observation_state": (
-                dict(prefs.trait_observation_state or {}) if prefs else {}
-            ),
-            "traits_coldstart_completed_at": (
-                prefs.traits_coldstart_completed_at if prefs else None
-            ),
+            "trait_observation_state": (dict(prefs.trait_observation_state or {}) if prefs else {}),
+            "traits_coldstart_completed_at": (prefs.traits_coldstart_completed_at if prefs else None),
         }
 
     async def _get_error_summary(self, user_id: UUID) -> dict[str, Any]:
@@ -477,24 +508,14 @@ class ProfileContextService:
             recent_errors.append(
                 {
                     "id": str(error.id),
-                    "question_preview": (
-                        error.question_text[:50]
-                        if error.question_text
-                        else "Image Question"
-                    ),
+                    "question_preview": (error.question_text[:50] if error.question_text else "Image Question"),
                     "subject": error.subject_code,
                     "error_type": (
-                        error.latest_analysis.get("error_type_label")
-                        if error.latest_analysis
-                        else "Unknown"
+                        error.latest_analysis.get("error_type_label") if error.latest_analysis else "Unknown"
                     ),
                     "mastery": error.mastery_level,
                     "review_count": error.review_count,
-                    "last_reviewed_at": (
-                        error.last_reviewed_at.isoformat()
-                        if error.last_reviewed_at
-                        else None
-                    ),
+                    "last_reviewed_at": (error.last_reviewed_at.isoformat() if error.last_reviewed_at else None),
                 }
             )
         return {"summary": stats or {}, "recent": recent_errors}
@@ -506,9 +527,7 @@ class ProfileContextService:
         active_subjects: list[str] = []
 
         try:
-            avg_stmt = select(func.avg(UserNodeStatus.mastery_score)).where(
-                UserNodeStatus.user_id == user_id
-            )
+            avg_stmt = select(func.avg(UserNodeStatus.mastery_score)).where(UserNodeStatus.user_id == user_id)
             avg_result = await self.db.execute(avg_stmt)
             overall_mastery = float(avg_result.scalar() or 0.0)
         except Exception as exc:
@@ -589,10 +608,9 @@ class ProfileContextService:
             )
             if fallback_mastery:
                 if overall_mastery <= 0.0:
-                    overall_mastery = sum(
-                        float(item.get("mastery_score") or 0.0)
-                        for item in fallback_mastery
-                    ) / max(len(fallback_mastery), 1)
+                    overall_mastery = sum(float(item.get("mastery_score") or 0.0) for item in fallback_mastery) / max(
+                        len(fallback_mastery), 1
+                    )
                 if not weak_spots:
                     weak_spots = [
                         WeakSpot(
@@ -622,18 +640,12 @@ class ProfileContextService:
                 if not node_name:
                     continue
                 delta_raw = item.get("mastery_delta")
-                delta = (
-                    float(delta_raw)
-                    if isinstance(delta_raw, (int, float))
-                    else None
-                )
+                delta = float(delta_raw) if isinstance(delta_raw, (int, float)) else None
                 created_at_raw = item.get("created_at")
                 changed_at = _utcnow()
                 if isinstance(created_at_raw, str) and created_at_raw.strip():
                     try:
-                        changed_at = datetime.fromisoformat(
-                            created_at_raw.replace("Z", "+00:00")
-                        ).replace(tzinfo=None)
+                        changed_at = datetime.fromisoformat(created_at_raw.replace("Z", "+00:00")).replace(tzinfo=None)
                     except ValueError:
                         changed_at = _utcnow()
                 recent_changes.append(
@@ -693,9 +705,7 @@ class ProfileContextService:
 
             pattern_type = str(pattern.pattern_type or "")
             if pattern_type:
-                type_scores[pattern_type] = (
-                    type_scores.get(pattern_type, 0.0) + confidence_val
-                )
+                type_scores[pattern_type] = type_scores.get(pattern_type, 0.0) + confidence_val
 
         if type_scores:
             dominant_pattern_type = max(type_scores, key=type_scores.get)
