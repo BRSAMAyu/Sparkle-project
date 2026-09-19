@@ -5,6 +5,8 @@ from uuid import UUID
 from app.config import settings
 from app.core.cache import cache_service
 from app.services.aurora_stage19_kill_switch_service import AuroraStage19KillSwitchService
+from loguru import logger
+
 from app.services.llm_extractor_service import LlmExtractorService
 from app.services.memory_inferred_write_lane import InferredEpisodicCandidate
 from app.services.working_memory_consolidation_service import WorkingMemoryConsolidationService
@@ -36,13 +38,19 @@ class WorkingMemoryPipelineService:
         llm_mode = await self.kill_switches.get_feature_mode("llm_extractor_enabled")
 
         if llm_mode in {"shadow", "live"} or settings.SPARKLE_LLM_EXTRACTOR_DRY_RUN_ENABLED:
-            llm_candidates = await self.llm_extractor.dry_run_extract(
-                user_id=user_id,
-                session_id=session_id,
-                user_message=user_message,
-                assistant_message=assistant_message,
-                evidence_token=evidence_token,
-            )
+            # LLM 抽取失败（超时/熔断 503/网络）不得炸整轮 pipeline：规则候选与
+            # 显式口令 fallback 不依赖 LLM，必须照常走完（mr1 零条入库根因）。
+            try:
+                llm_candidates = await self.llm_extractor.dry_run_extract(
+                    user_id=user_id,
+                    session_id=session_id,
+                    user_message=user_message,
+                    assistant_message=assistant_message,
+                    evidence_token=evidence_token,
+                )
+            except Exception as exc:
+                logger.warning("LLM extractor failed, falling back to rule candidates only: {}", exc)
+                llm_candidates = []
 
         if wm_mode == "off":
             return accepted_entries

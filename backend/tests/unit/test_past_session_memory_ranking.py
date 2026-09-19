@@ -143,3 +143,74 @@ class TestAssistantPersistSurvivesPoisonedSharedSession:
         )
         assert created.get("committed") is True, "assistant message must persist via independent session"
         assert captured.get("assistant_message", "").startswith("已记下")
+
+
+from uuid import UUID as _UUID
+
+
+class TestLaneSurvivesExtractorOutage:
+    @pytest.mark.asyncio
+    async def test_rule_candidate_survives_llm_503(self, monkeypatch):
+        """LLM 熔断 503 时规则候选/口令 fallback 必须照常入工作记忆（mr1 零条根因）。"""
+        import app.services.working_memory_pipeline_service as wmp
+
+        class _Boom:
+            async def dry_run_extract(self, **kwargs):
+                raise RuntimeError("503: LLM Service Temporarily Unavailable (Circuit Open)")
+
+        class _KS:
+            async def get_feature_mode(self, name):
+                return "live" if name == "llm_extractor_enabled" else "live"
+
+        class _WM:
+            def __init__(self):
+                self.calls = []
+
+            async def upsert_entry(self, **kwargs):
+                self.calls.append(kwargs)
+                return kwargs
+
+        class _Consol:
+            def is_explicit_rejection(self, text):
+                return False
+
+            def is_explicit_confirmation(self, text):
+                return False
+
+            async def maybe_consolidate_recent_entries(self, **kwargs):
+                return []
+
+        class _Pipe(wmp.WorkingMemoryPipelineService):
+            def __init__(self):
+                self.llm_extractor = _Boom()
+                self.kill_switches = _KS()
+                self.working_memory = _WM()
+                self.consolidation = _Consol()
+
+        pipe = _Pipe()
+        from app.services.memory_inferred_write_lane import InferredEpisodicCandidate
+        from datetime import datetime as _dt
+
+        rule = InferredEpisodicCandidate(
+            candidate_text="用户最喜欢的电影是《星际穿越》。",
+            subject_type="self",
+            confidence=0.92,
+            evidence_token="tok",
+            decay_policy="30d",
+            source_lane="inferred_extraction",
+            semantic_key="k1",
+            evidence_refs=[{"type": "chat_turn", "id": "tok"}],
+            occurred_at=_dt(2026, 9, 19, 12, 0, 0),
+            due_at=None,
+            mentioned_entity_hash=None,
+            mentioned_entity_owner_user_id=None,
+        )
+        entries = await pipe.process_chat_turn(
+            user_id=_UUID("11111111-1111-1111-1111-111111111111"),
+            session_id=_UUID("22222222-2222-2222-2222-222222222222"),
+            user_message="我最喜欢的电影是《星际穿越》，帮我记住这个。",
+            assistant_message="已记住",
+            evidence_token="tok",
+            rule_candidate=rule,
+        )
+        assert entries, "rule candidate must survive LLM circuit-open 503"
