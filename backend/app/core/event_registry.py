@@ -247,32 +247,45 @@ EVENT_REGISTRY: dict[str, RegisteredEvent] = {
             status="reserved",
         ),
         RegisteredEvent(
+            # X-05 (2026-09-19): unified agent run 持久状态机落地，仓内首个
+            # run.* producer（app/services/agent_run_service.py）。原探针行
+            # （2026-09-17，run_worker_service）的 4 个名字转为 live。
             name="run.created",
             stage=EventStage.EXECUTION,
             aggregate_type="agent_run",
-            producers=(),  # live DB carries rows; no producer exists in repo (probe origin)
-            status="observed_unregistered",
+            producers=("app/services/agent_run_service.py",),
+            status="live",
+        ),
+        RegisteredEvent(
+            # X-05: 其余状态迁移的统一事件（语义时刻用专名 run.awaiting_user /
+            # run.user_resumed，进度用 run.step_completed；QUEUED→RUNNING、
+            # 各终态等一律 run.status_changed）。与 task.status_changed 同族。
+            name="run.status_changed",
+            stage=EventStage.EXECUTION,
+            aggregate_type="agent_run",
+            producers=("app/services/agent_run_service.py",),
+            status="live",
         ),
         RegisteredEvent(
             name="run.step_completed",
             stage=EventStage.EXECUTION,
             aggregate_type="agent_run",
-            producers=(),
-            status="observed_unregistered",
+            producers=("app/services/agent_run_service.py",),
+            status="live",
         ),
         RegisteredEvent(
             name="run.awaiting_user",
             stage=EventStage.EXECUTION,
             aggregate_type="agent_run",
-            producers=(),
-            status="observed_unregistered",
+            producers=("app/services/agent_run_service.py",),
+            status="live",
         ),
         RegisteredEvent(
             name="run.user_resumed",
             stage=EventStage.EXECUTION,
             aggregate_type="agent_run",
-            producers=(),
-            status="observed_unregistered",
+            producers=("app/services/agent_run_service.py",),
+            status="live",
         ),
         RegisteredEvent(
             name="task.status_changed",

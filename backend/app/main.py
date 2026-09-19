@@ -66,6 +66,7 @@ from app.services.nudge_event_consumer import NudgeEventConsumer
 from app.services.plan_health_event_consumer import PlanHealthEventConsumer
 from app.services.preference_event_consumer import PreferenceEventConsumer
 from app.services.profile_event_consumer import ProfileEventConsumer
+from app.services.run_projection_consumer import RunProjectionConsumer
 from app.services.scheduler_service import scheduler_service
 from app.services.social_signal_event_consumer import SocialSignalEventConsumer
 from app.services.srl_phase_tracker_service import SRLPhaseTrackerService
@@ -265,6 +266,13 @@ async def lifespan(fastapp: FastAPI):
         execution_consumer = ExecutionEventConsumer(event_bus=event_bus)
         execution_consumer_task = asyncio.create_task(execution_consumer.start())
         fastapp.state.execution_consumer_task = execution_consumer_task
+
+    # X-05: execution 轨道 intent 状态 → agent_runs 持久 run 脊柱投影
+    run_projection_consumer_task = None
+    if cache_service.redis:
+        run_projection_consumer = RunProjectionConsumer(event_bus=event_bus)
+        run_projection_consumer_task = asyncio.create_task(run_projection_consumer.start())
+        fastapp.state.run_projection_consumer_task = run_projection_consumer_task
 
     galaxy_execution_consumer_task = None
     if cache_service.redis:
@@ -564,6 +572,12 @@ async def lifespan(fastapp: FastAPI):
         execution_consumer_task.cancel()
         with suppress(asyncio.CancelledError):
             await execution_consumer_task
+
+    run_projection_consumer_task = getattr(app.state, "run_projection_consumer_task", None)
+    if run_projection_consumer_task:
+        run_projection_consumer_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await run_projection_consumer_task
 
     galaxy_execution_consumer_task = getattr(app.state, "galaxy_execution_consumer_task", None)
     if galaxy_execution_consumer_task:

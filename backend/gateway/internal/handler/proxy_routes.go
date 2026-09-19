@@ -1041,6 +1041,16 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	}
 	h.logger.Info("Registered executions proxy routes")
 
+	// ==================== Agent Runs Routes (X-05 unified run state) ====================
+	// route-tier: authed
+	runs := api.Group("/runs")
+	runs.Use(authMiddleware)
+	{
+		// route-tier: authed
+		h.registerREST(runs, "/*path")
+	}
+	h.logger.Info("Registered agent runs proxy routes")
+
 	// ==================== Learning Reports Routes ====================
 	learningReports := api.Group("/learning-reports")
 	learningReports.Use(authMiddleware)

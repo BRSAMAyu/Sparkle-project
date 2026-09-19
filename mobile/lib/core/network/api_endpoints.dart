@@ -84,6 +84,12 @@ class ApiEndpoints {
 
   // Executions
   static const String executions = '/executions';
+
+  // Agent Runs (X-05 unified run state — read-only consumption)
+  static const String agentRuns = '/runs';
+  static String agentRun(String runId) => '/runs/$runId';
+  static String agentRunTransitions(String runId) => '/runs/$runId/transitions';
+
   static const String executionHealth = '/executions/health';
   static const String executionConnectionStatus =
       '/executions/connection/status';

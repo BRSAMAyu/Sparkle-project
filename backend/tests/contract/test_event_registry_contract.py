@@ -48,14 +48,19 @@ BACKEND_DIR = Path(__file__).resolve().parents[2]
 
 # sha256 of "|".join(sorted(EVENT_REGISTRY)) captured at D-01 freeze
 # (33 names). See test_event_name_vocabulary_is_frozen.
-# Two deliberate vocabulary extensions (both 2026-09-19, D-01
-# EVENT_REGISTRY.md §扩展流程: contract change must be explicit):
+# Deliberate vocabulary extensions (D-01 EVENT_REGISTRY.md §扩展流程:
+# contract change must be explicit):
 # - X-02: + "allocation.decision_recorded" (stage=DECISION, Human/Agent/Hybrid
 #   allocation rubric, producer app/services/action_allocation_policy.py)
 # - M-07: + "memory.invalidated" (unified correction/revoke/supersede/delete
 #   pipeline, MEMORY_V3.md §6; content-free payload, correlation carries memory_id)
 # → 35 names; hash re-frozen at M-07 merge (Leader) after both extensions landed.
-_FROZEN_VOCABULARY_SHA256 = "26cf482de89a844045914af996eae8872080c8d4c69a6b46c3132cb237f66472"
+# - X-05 (2026-09-19): + "run.status_changed" (unified agent run 持久状态机的
+#   通用迁移事件；run.created/step_completed/awaiting_user/user_resumed 4 名
+#   由 observed_unregistered → live，producer =
+#   app/services/agent_run_service.py)。→ 36 names；hash 显式 re-freeze（X-05
+#   交付，待 Leader 复核后归档）。
+_FROZEN_VOCABULARY_SHA256 = "b4190e621f9b5761480c3cbb964ff053c02da44c404422091570c31e8cedc1e2"
 
 # Observed distinct event_type values in the live dev DB event_outbox
 # (sparkle_readonly, 2026-09-19; 106 rows). run.* / task.status_changed are
@@ -121,7 +126,15 @@ def test_unregistered_name_is_rejected_everywhere():
 
 
 def test_probe_origin_names_are_flagged_not_live():
-    assert EVENT_REGISTRY["run.created"].status == "observed_unregistered"
+    # X-05 (2026-09-19): run.* 由 app/services/agent_run_service.py 落地 producer
+    # 后转 live（run.created/step_completed/awaiting_user/user_resumed +
+    # 新名 run.status_changed）；task.status_changed 仍是探针源观察名。
+    assert EVENT_REGISTRY["run.created"].status == "live"
+    assert EVENT_REGISTRY["run.status_changed"].status == "live"
+    assert EVENT_REGISTRY["run.awaiting_user"].status == "live"
+    assert EVENT_REGISTRY["run.user_resumed"].status == "live"
+    assert EVENT_REGISTRY["run.step_completed"].status == "live"
+    assert EVENT_REGISTRY["run.created"].producers == ("app/services/agent_run_service.py",)
     assert EVENT_REGISTRY["task.status_changed"].status == "observed_unregistered"
     assert EVENT_REGISTRY["galaxy.node.mastery_updated"].status == "live"
 

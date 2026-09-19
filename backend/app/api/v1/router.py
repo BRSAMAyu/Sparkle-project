@@ -91,6 +91,7 @@ from app.api.v1 import (
     release_approvals,
     research,
     research_consent,
+    runs,  # X-05 Unified Agent Run（run 状态单一权威端点）
     safe_experiments,
     scenario_packs,
     seed_libraries,
@@ -182,6 +183,7 @@ api_router.include_router(tasks.router, prefix="/tasks", tags=["tasks"])
 api_router.include_router(cards.router, prefix="/cards", tags=["cards"])
 api_router.include_router(executions.router)
 api_router.include_router(executions_admin.router)
+api_router.include_router(runs.router)  # X-05：/runs 前缀（run 状态单一权威端点）
 api_router.include_router(subtasks.router, tags=["subtasks"])
 api_router.include_router(plans.router, prefix="/plans", tags=["plans"])
 api_router.include_router(subjects.router, prefix="/subjects", tags=["subjects"])
