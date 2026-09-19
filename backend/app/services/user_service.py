@@ -205,7 +205,9 @@ class UserService:
                 nickname=user.nickname or user.username,
                 timezone=timezone,
                 language="zh-CN",
-                is_pro=user.flame_level >= 3,
+                # V3-FIX-02 (D17): 权益只读独立 entitlement 字段；flame_level 仅为
+                # 展示层字段，永久禁作权益判据（游客 flame=15 曾被误升 pro 层）。
+                is_pro=(getattr(user, "entitlement", None) or "free").strip().lower() == "pro",
                 preferences={
                     "depth_preference": explicit.get("depth_preference", user.depth_preference),
                     "curiosity_preference": explicit.get("curiosity_preference", user.curiosity_preference),

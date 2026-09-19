@@ -269,7 +269,8 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         """免费层模型降级信号（free_tier_downgrade）。
 
         网关 ws chatflow 已在 ChatRequest.user_profile 填充 is_pro
-        （buildAgentUserProfile <- ChatUserProfileSnapshot.IsPro <- flame_level>=3），
+        （buildAgentUserProfile <- ChatUserProfileSnapshot.IsPro <- users.entitlement，
+        V3-FIX-02 后权益不再由 flame_level 派生），
         此处只消费、不改网关；extra_context.user_tier（free/pro）可显式覆盖，
         供网关未来透传更细分层而无需改 proto。
         """

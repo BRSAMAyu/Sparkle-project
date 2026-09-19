@@ -128,7 +128,7 @@ INSERT INTO users (
     updated_at, created_at
 )
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false, NOW(), NOW())
-RETURNING username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, is_minor, age_verified, age_verification_source, age_verified_at, photon_balance, photon_updated_at, equipped_skin, equipped_title, id, created_at, updated_at, deleted_at, equipped_skin_source, equipped_title_source, searchable_by, email_verified, token_revoked_before, password_login_enabled, agreed_to_tos_at, agreed_to_privacy_at, tos_version, privacy_version, agreed_locale, username_hash, email_hash, google_id_hash, apple_id_hash, wechat_unionid_hash
+RETURNING username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, is_minor, age_verified, age_verification_source, age_verified_at, photon_balance, photon_updated_at, equipped_skin, equipped_title, id, created_at, updated_at, deleted_at, equipped_skin_source, equipped_title_source, searchable_by, email_verified, token_revoked_before, password_login_enabled, agreed_to_tos_at, agreed_to_privacy_at, tos_version, privacy_version, agreed_locale, username_hash, email_hash, google_id_hash, apple_id_hash, wechat_unionid_hash, entitlement
 `
 
 type CreateSocialUserParams struct {
@@ -205,6 +205,7 @@ func (q *Queries) CreateSocialUser(ctx context.Context, arg CreateSocialUserPara
 		&i.GoogleIDHash,
 		&i.AppleIDHash,
 		&i.WechatUnionidHash,
+		&i.Entitlement,
 	)
 	return i, err
 }
@@ -212,7 +213,7 @@ func (q *Queries) CreateSocialUser(ctx context.Context, arg CreateSocialUserPara
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (id, email, hashed_password, full_name, is_active, is_superuser, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-RETURNING username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, is_minor, age_verified, age_verification_source, age_verified_at, photon_balance, photon_updated_at, equipped_skin, equipped_title, id, created_at, updated_at, deleted_at, equipped_skin_source, equipped_title_source, searchable_by, email_verified, token_revoked_before, password_login_enabled, agreed_to_tos_at, agreed_to_privacy_at, tos_version, privacy_version, agreed_locale, username_hash, email_hash, google_id_hash, apple_id_hash, wechat_unionid_hash
+RETURNING username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, is_minor, age_verified, age_verification_source, age_verified_at, photon_balance, photon_updated_at, equipped_skin, equipped_title, id, created_at, updated_at, deleted_at, equipped_skin_source, equipped_title_source, searchable_by, email_verified, token_revoked_before, password_login_enabled, agreed_to_tos_at, agreed_to_privacy_at, tos_version, privacy_version, agreed_locale, username_hash, email_hash, google_id_hash, apple_id_hash, wechat_unionid_hash, entitlement
 `
 
 type CreateUserParams struct {
@@ -285,6 +286,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.GoogleIDHash,
 		&i.AppleIDHash,
 		&i.WechatUnionidHash,
+		&i.Entitlement,
 	)
 	return i, err
 }
@@ -1038,7 +1040,7 @@ func (q *Queries) GetUnpublishedOutboxEntries(ctx context.Context, limit int32) 
 }
 
 const getUser = `-- name: GetUser :one
-SELECT username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, is_minor, age_verified, age_verification_source, age_verified_at, photon_balance, photon_updated_at, equipped_skin, equipped_title, id, created_at, updated_at, deleted_at, equipped_skin_source, equipped_title_source, searchable_by, email_verified, token_revoked_before, password_login_enabled, agreed_to_tos_at, agreed_to_privacy_at, tos_version, privacy_version, agreed_locale, username_hash, email_hash, google_id_hash, apple_id_hash, wechat_unionid_hash FROM users WHERE id = $1
+SELECT username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, is_minor, age_verified, age_verification_source, age_verified_at, photon_balance, photon_updated_at, equipped_skin, equipped_title, id, created_at, updated_at, deleted_at, equipped_skin_source, equipped_title_source, searchable_by, email_verified, token_revoked_before, password_login_enabled, agreed_to_tos_at, agreed_to_privacy_at, tos_version, privacy_version, agreed_locale, username_hash, email_hash, google_id_hash, apple_id_hash, wechat_unionid_hash, entitlement FROM users WHERE id = $1
 `
 
 func (q *Queries) GetUser(ctx context.Context, id pgtype.UUID) (User, error) {
@@ -1095,12 +1097,13 @@ func (q *Queries) GetUser(ctx context.Context, id pgtype.UUID) (User, error) {
 		&i.GoogleIDHash,
 		&i.AppleIDHash,
 		&i.WechatUnionidHash,
+		&i.Entitlement,
 	)
 	return i, err
 }
 
 const getUserByAppleID = `-- name: GetUserByAppleID :one
-SELECT username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, is_minor, age_verified, age_verification_source, age_verified_at, photon_balance, photon_updated_at, equipped_skin, equipped_title, id, created_at, updated_at, deleted_at, equipped_skin_source, equipped_title_source, searchable_by, email_verified, token_revoked_before, password_login_enabled, agreed_to_tos_at, agreed_to_privacy_at, tos_version, privacy_version, agreed_locale, username_hash, email_hash, google_id_hash, apple_id_hash, wechat_unionid_hash FROM users WHERE apple_id = $1 LIMIT 1
+SELECT username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, is_minor, age_verified, age_verification_source, age_verified_at, photon_balance, photon_updated_at, equipped_skin, equipped_title, id, created_at, updated_at, deleted_at, equipped_skin_source, equipped_title_source, searchable_by, email_verified, token_revoked_before, password_login_enabled, agreed_to_tos_at, agreed_to_privacy_at, tos_version, privacy_version, agreed_locale, username_hash, email_hash, google_id_hash, apple_id_hash, wechat_unionid_hash, entitlement FROM users WHERE apple_id = $1 LIMIT 1
 `
 
 func (q *Queries) GetUserByAppleID(ctx context.Context, appleID pgtype.Text) (User, error) {
@@ -1157,12 +1160,13 @@ func (q *Queries) GetUserByAppleID(ctx context.Context, appleID pgtype.Text) (Us
 		&i.GoogleIDHash,
 		&i.AppleIDHash,
 		&i.WechatUnionidHash,
+		&i.Entitlement,
 	)
 	return i, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, is_minor, age_verified, age_verification_source, age_verified_at, photon_balance, photon_updated_at, equipped_skin, equipped_title, id, created_at, updated_at, deleted_at, equipped_skin_source, equipped_title_source, searchable_by, email_verified, token_revoked_before, password_login_enabled, agreed_to_tos_at, agreed_to_privacy_at, tos_version, privacy_version, agreed_locale, username_hash, email_hash, google_id_hash, apple_id_hash, wechat_unionid_hash FROM users WHERE email = $1 LIMIT 1
+SELECT username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, is_minor, age_verified, age_verification_source, age_verified_at, photon_balance, photon_updated_at, equipped_skin, equipped_title, id, created_at, updated_at, deleted_at, equipped_skin_source, equipped_title_source, searchable_by, email_verified, token_revoked_before, password_login_enabled, agreed_to_tos_at, agreed_to_privacy_at, tos_version, privacy_version, agreed_locale, username_hash, email_hash, google_id_hash, apple_id_hash, wechat_unionid_hash, entitlement FROM users WHERE email = $1 LIMIT 1
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
@@ -1219,6 +1223,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.GoogleIDHash,
 		&i.AppleIDHash,
 		&i.WechatUnionidHash,
+		&i.Entitlement,
 	)
 	return i, err
 }
@@ -1378,7 +1383,7 @@ UPDATE users
 SET apple_id = COALESCE(apple_id, $2),
     updated_at = NOW()
 WHERE id = $1
-RETURNING username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, is_minor, age_verified, age_verification_source, age_verified_at, photon_balance, photon_updated_at, equipped_skin, equipped_title, id, created_at, updated_at, deleted_at, equipped_skin_source, equipped_title_source, searchable_by, email_verified, token_revoked_before, password_login_enabled, agreed_to_tos_at, agreed_to_privacy_at, tos_version, privacy_version, agreed_locale, username_hash, email_hash, google_id_hash, apple_id_hash, wechat_unionid_hash
+RETURNING username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, is_minor, age_verified, age_verification_source, age_verified_at, photon_balance, photon_updated_at, equipped_skin, equipped_title, id, created_at, updated_at, deleted_at, equipped_skin_source, equipped_title_source, searchable_by, email_verified, token_revoked_before, password_login_enabled, agreed_to_tos_at, agreed_to_privacy_at, tos_version, privacy_version, agreed_locale, username_hash, email_hash, google_id_hash, apple_id_hash, wechat_unionid_hash, entitlement
 `
 
 type LinkAppleUserParams struct {
@@ -1440,6 +1445,7 @@ func (q *Queries) LinkAppleUser(ctx context.Context, arg LinkAppleUserParams) (U
 		&i.GoogleIDHash,
 		&i.AppleIDHash,
 		&i.WechatUnionidHash,
+		&i.Entitlement,
 	)
 	return i, err
 }

@@ -315,16 +315,37 @@ func TestBuildAgentUserProfileUsesResolvedSnapshot(t *testing.T) {
 	}
 }
 
+// V3-FIX-02 (D17 冻结决策): is_pro 是网关→引擎唯一的过界 entitlement 信号，
+// 不得由 flame_level 派生。guest_seed 会把游客 flame_level 写到 15，旧派生
+// (flame>=3) 让全部游客以 pro 层进入 llm_router 钳制；本测试锁定：flame=15
+// 且无 pro entitlement 的用户必须以 is_pro=false 送引擎。
+func TestBuildAgentUserProfileFlameFifteenGuestIsNotPro(t *testing.T) {
+	profile := buildAgentUserProfile(
+		"",
+		"",
+		nil,
+		&db.User{
+			Username:   "guest-flame-15",
+			FlameLevel: 15,
+		},
+	)
+
+	if profile.IsPro {
+		t.Fatal("expected is_pro to be false for flame_level=15 user without pro entitlement")
+	}
+}
+
 func TestBuildAgentUserProfileFallsBackToResolvedUser(t *testing.T) {
 	profile := buildAgentUserProfile(
 		"",
 		"",
 		nil,
 		&db.User{
-			Username:   "fallback-user",
-			Nickname:   pgtype.Text{String: "fallback-nickname", Valid: true},
-			AvatarUrl:  pgtype.Text{String: "https://example.com/fallback.png", Valid: true},
-			FlameLevel: 4,
+			Username:    "fallback-user",
+			Nickname:    pgtype.Text{String: "fallback-nickname", Valid: true},
+			AvatarUrl:   pgtype.Text{String: "https://example.com/fallback.png", Valid: true},
+			FlameLevel:  4,
+			Entitlement: service.EntitlementPro,
 		},
 	)
 
@@ -338,7 +359,7 @@ func TestBuildAgentUserProfileFallsBackToResolvedUser(t *testing.T) {
 		t.Fatalf("unexpected fallback level: %d", profile.Level)
 	}
 	if !profile.IsPro {
-		t.Fatal("expected fallback is_pro to be true")
+		t.Fatal("expected fallback is_pro to be true via entitlement=pro")
 	}
 	if profile.Timezone != "Asia/Shanghai" {
 		t.Fatalf("unexpected fallback timezone: %q", profile.Timezone)

@@ -103,6 +103,51 @@ async def test_get_context_returns_none_for_missing_user():
     assert context is None
 
 
+@pytest.mark.asyncio
+async def test_get_context_flame_fifteen_guest_is_not_pro(db_session):
+    """V3-FIX-02 (D17): flame_level 不得作权益判据。
+
+    guest_seed 会把游客 flame_level 写到 15；旧派生 flame_level>=3 使全部游客
+    以 is_pro=true 进入 llm_router pro 层钳制。is_pro 只读独立 entitlement 字段。
+    """
+    user = User(
+        username="flame15guest",
+        email="flame15@example.com",
+        hashed_password="hashed",
+        flame_level=15,
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    service = UserService(db_session, _RedisCache())
+    context = await service.get_context(user.id)
+
+    assert context is not None
+    assert context.is_pro is False
+
+
+@pytest.mark.asyncio
+async def test_get_context_entitlement_pro_grants_pro_regardless_of_flame(db_session):
+    """V3-FIX-02 (D17): entitlement='pro' 即 pro，与 flame_level 无关。"""
+    user = User(
+        username="entpro",
+        email="entpro@example.com",
+        hashed_password="hashed",
+        flame_level=1,
+        entitlement="pro",
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    service = UserService(db_session, _RedisCache())
+    context = await service.get_context(user.id)
+
+    assert context is not None
+    assert context.is_pro is True
+
+
 class _RedisCache:
     def __init__(self) -> None:
         self._store: dict[str, str] = {}

@@ -8,6 +8,7 @@ import (
 	"hash/fnv"
 	"log"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -62,6 +63,19 @@ type UserContextData struct {
 	RecentProgress     []ProgressEvent   `json:"recent_progress"`
 	RealtimeVersions   map[string]string `json:"realtime_versions,omitempty"`
 	OverlayGeneratedAt string            `json:"overlay_generated_at,omitempty"`
+}
+
+// Entitlement values persisted in users.entitlement (V3-FIX-02 / D17 冻结决策).
+// entitlement 是唯一的权益判据；flame_level 仅为展示层字段，永久禁作权益派生。
+const (
+	EntitlementFree = "free"
+	EntitlementPro  = "pro"
+)
+
+// IsProEntitlement reports whether a stored entitlement value grants pro-tier
+// model routing. Anything unrecognized degrades to free — safe default.
+func IsProEntitlement(entitlement string) bool {
+	return strings.EqualFold(strings.TrimSpace(entitlement), EntitlementPro)
 }
 
 // ChatUserProfileSnapshot captures the gateway-side user profile fields needed
@@ -126,7 +140,7 @@ func (s *UserContextService) GetChatUserProfileSnapshot(ctx context.Context, use
 		Nickname:    nickname,
 		Timezone:    timezone,
 		Language:    language,
-		IsPro:       user.FlameLevel >= 3,
+		IsPro:       IsProEntitlement(user.Entitlement),
 		Level:       user.FlameLevel,
 		Preferences: buildProfilePreferences(user, explicitPrefs),
 	}

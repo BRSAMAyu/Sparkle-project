@@ -281,7 +281,8 @@ func buildAgentUserProfile(inputNickname, userContextJSON string, snapshot *serv
 			profile.Level = fallbackUser.FlameLevel
 		}
 		if !profile.IsPro {
-			profile.IsPro = fallbackUser.FlameLevel >= 3
+			// V3-FIX-02 (D17): 权益只读独立 entitlement 字段，禁止 flame_level 派生。
+			profile.IsPro = service.IsProEntitlement(fallbackUser.Entitlement)
 		}
 	}
 

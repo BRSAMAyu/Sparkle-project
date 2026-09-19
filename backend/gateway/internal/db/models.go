@@ -5267,6 +5267,19 @@ type TransitionDecisionRecord struct {
 	ProjectionPolicy        string           `json:"projection_policy"`
 }
 
+type UnderstandingDepthDaily struct {
+	ID              pgtype.UUID      `json:"id"`
+	CreatedAt       pgtype.Timestamp `json:"created_at"`
+	UpdatedAt       pgtype.Timestamp `json:"updated_at"`
+	DeletedAt       pgtype.Timestamp `json:"deleted_at"`
+	UserID          pgtype.UUID      `json:"user_id"`
+	MetricDate      pgtype.Date      `json:"metric_date"`
+	Score           float64          `json:"score"`
+	Components      []byte           `json:"components"`
+	ContextPackRuns int32            `json:"context_pack_runs"`
+	ChatTurns       int32            `json:"chat_turns"`
+}
+
 type UnresolvedConflict struct {
 	ID                 pgtype.UUID      `json:"id"`
 	CreatedAt          pgtype.Timestamp `json:"created_at"`
@@ -5343,6 +5356,7 @@ type User struct {
 	GoogleIDHash         pgtype.Text      `json:"google_id_hash"`
 	AppleIDHash          pgtype.Text      `json:"apple_id_hash"`
 	WechatUnionidHash    pgtype.Text      `json:"wechat_unionid_hash"`
+	Entitlement          string           `json:"entitlement"`
 }
 
 type UserAchievement struct {

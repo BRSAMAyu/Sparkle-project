@@ -73,6 +73,10 @@ class User(BaseModel):
     flame_level = Column(Integer, default=1, nullable=False)
     flame_brightness = Column(Float, default=0.5, nullable=False)
 
+    # 🆕 权益分层 (V3-FIX-02 / D17 冻结决策)：独立字段，'free' | 'pro'。
+    # 禁止用 flame_level 派生权益 —— 权益唯一判据是本列。
+    entitlement = Column(String(32), default="free", nullable=False, server_default="free")
+
     # 用户偏好
     depth_preference = Column(Float, default=0.5, nullable=False)
     curiosity_preference = Column(Float, default=0.5, nullable=False)

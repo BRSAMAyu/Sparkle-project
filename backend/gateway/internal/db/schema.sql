@@ -5811,6 +5811,26 @@ CREATE TABLE transition_decision_records (
 ALTER TABLE transition_decision_records OWNER TO postgres;
 
 --
+-- Name: understanding_depth_daily; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE understanding_depth_daily (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    user_id uuid NOT NULL,
+    metric_date date NOT NULL,
+    score double precision NOT NULL,
+    components jsonb NOT NULL,
+    context_pack_runs integer NOT NULL,
+    chat_turns integer NOT NULL
+);
+
+
+ALTER TABLE understanding_depth_daily OWNER TO postgres;
+
+--
 -- Name: unresolved_conflicts; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -6658,7 +6678,8 @@ CREATE TABLE users (
     email_hash character varying(64),
     google_id_hash character varying(64),
     apple_id_hash character varying(64),
-    wechat_unionid_hash character varying(64)
+    wechat_unionid_hash character varying(64),
+    entitlement character varying(32) DEFAULT 'free'::character varying NOT NULL
 );
 
 
@@ -8564,6 +8585,14 @@ ALTER TABLE ONLY transition_decision_records
 
 
 --
+-- Name: understanding_depth_daily understanding_depth_daily_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY understanding_depth_daily
+    ADD CONSTRAINT understanding_depth_daily_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: unresolved_conflicts unresolved_conflicts_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -8801,6 +8830,14 @@ ALTER TABLE ONLY theater_candidate_bundles
 
 ALTER TABLE ONLY theater_predictions
     ADD CONSTRAINT uq_theater_predictions_prediction_id UNIQUE (prediction_id);
+
+
+--
+-- Name: understanding_depth_daily uq_understanding_depth_daily_user_date; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY understanding_depth_daily
+    ADD CONSTRAINT uq_understanding_depth_daily_user_date UNIQUE (user_id, metric_date);
 
 
 --
@@ -10826,6 +10863,20 @@ CREATE INDEX idx_token_usage_session_id ON token_usage USING btree (session_id);
 --
 
 CREATE INDEX idx_token_usage_user_id ON token_usage USING btree (user_id);
+
+
+--
+-- Name: idx_understanding_depth_daily_date; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_understanding_depth_daily_date ON understanding_depth_daily USING btree (metric_date);
+
+
+--
+-- Name: idx_understanding_depth_daily_user_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_understanding_depth_daily_user_id ON understanding_depth_daily USING btree (user_id);
 
 
 --
@@ -16023,6 +16074,13 @@ CREATE INDEX ix_tracking_events_user_id ON tracking_events USING btree (user_id)
 
 
 --
+-- Name: ix_understanding_depth_daily_deleted_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_understanding_depth_daily_deleted_at ON understanding_depth_daily USING btree (deleted_at);
+
+
+--
 -- Name: ix_user_achievements_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -21122,6 +21180,13 @@ GRANT SELECT ON TABLE tracking_events TO sparkle_readonly;
 --
 
 GRANT SELECT ON TABLE transition_decision_records TO sparkle_readonly;
+
+
+--
+-- Name: TABLE understanding_depth_daily; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE understanding_depth_daily TO sparkle_readonly;
 
 
 --
