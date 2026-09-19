@@ -135,6 +135,18 @@ class TaskUpdate(BaseModel):
     phase_index: int | None = Field(default=None, ge=1, description="Phase index inside the planning strategy")
     success_criteria: str | None = Field(default=None, description="Task success criteria")
 
+    @field_validator("type", mode="before")
+    @classmethod
+    def _normalize_task_type(cls, value):
+        # P2-J (daily-flow R2): TaskCreate accepts lowercase aliases
+        # ("learning", "error_fix", "study", ...) via coerce_task_type, but
+        # TaskUpdate did not — the same payload shape on a partial update
+        # 422'd instead of mapping to the canonical enum.
+        if value is None:
+            return None
+        parsed = coerce_task_type(value)
+        return parsed if parsed is not None else value
+
 
 class TaskStart(BaseModel):
     """Start task"""

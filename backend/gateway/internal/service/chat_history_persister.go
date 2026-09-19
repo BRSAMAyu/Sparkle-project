@@ -59,13 +59,24 @@ const chatSessionUpsertSQL = `
 // uuid column, so they hash to a deterministic pseudo-session: content stays
 // durable and retries/requeues stay idempotent, without colliding with
 // server-generated session UUIDs.
+//
+// P2-D (daily-flow R2): the derivation MUST mirror the engine's
+// app/orchestration/orchestrator.py `_coerce_session_uuid` —
+// uuid5(NAMESPACE_URL, "sparkle-session:{raw}") (SHA-1 based). The previous
+// MD5/"sparkle:chat-session:" variant produced a *different* pseudo UUID for
+// the same label, so the NOT EXISTS dedup (keyed on session_id) never matched
+// engine-persisted rows and every streamed turn landed twice (4 rows per
+// turn). The engine is the authoritative chat writer (read paths, memory
+// write lane and engine chat_sessions all key on its derivation); with the
+// derivations aligned, the gateway backstop only fills turns the engine
+// actually missed.
 func resolveSessionUUID(raw string) uuid.UUID {
 	raw = strings.TrimSpace(raw)
 	if raw != "" {
 		if parsed, err := uuid.Parse(raw); err == nil {
 			return parsed
 		}
-		return uuid.NewMD5(uuid.NameSpaceURL, []byte("sparkle:chat-session:"+raw))
+		return uuid.NewSHA1(uuid.NameSpaceURL, []byte("sparkle-session:"+raw))
 	}
 	return uuid.New()
 }

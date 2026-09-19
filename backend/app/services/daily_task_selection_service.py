@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from typing import Any
 from uuid import UUID
 
@@ -33,12 +33,68 @@ class _TaskCandidate:
     plan_state: PlanState | None = None
 
 
-def _is_today_relevant(task: Task, today: date) -> bool:
+def _is_today_relevant(task: Task, today: date, plan: Plan | None = None) -> bool:
     if task.status in {TaskStatus.IN_PROGRESS, TaskStatus.STUCK}:
         return True
     if task.status == TaskStatus.COMPLETED:
         return task.completed_at is not None and task.completed_at.date() == today
-    return task.due_date is None or task.due_date <= today
+    if task.due_date is not None:
+        return task.due_date <= today
+    # P2-G (daily-flow R2): undated open tasks used to be unconditionally
+    # "today relevant", so the intake's whole 32-day template (day-tagged,
+    # order_index = day*1000) flooded the today list — 50 PENDING rows with
+    # no today semantics at all. Now an undated open task needs a today
+    # anchor:
+    #   - sequenced plan tasks (day: N tag / day-encoded order_index) count
+    #     only up to the plan's current day (target_date-elapsed, the same
+    #     convention exam_sprint_dashboard uses);
+    #   - everything else counts only on its creation day — older undated
+    #     tasks stay reachable via GET /tasks and /tasks/recommended.
+    day_index = _task_day_index(task)
+    if day_index is not None and plan is not None:
+        current_day = _plan_current_day(plan, today)
+        if current_day is not None:
+            return day_index <= current_day
+    created = _as_date(task.created_at)
+    return created is not None and created == today
+
+
+def _task_day_index(task: Task) -> int | None:
+    """Mirror exam_sprint_dashboard_service._task_day_index's conventions."""
+    for tag in list(task.tags or []):
+        tag_text = str(tag or "").strip().lower()
+        if tag_text.startswith("day:"):
+            raw_value = tag_text.split(":", maxsplit=1)[1].strip()
+            if raw_value.isdigit() and int(raw_value) > 0:
+                return int(raw_value)
+    order_index = int(task.order_index or 0)
+    if order_index >= 1000:
+        return max(order_index // 1000, 1)
+    return None
+
+
+def _as_date(value: date | datetime | None) -> date | None:
+    """Tolerate both datetime and date (in-memory instances / pipelines)."""
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    return None
+
+
+def _plan_current_day(plan: Plan, today: date) -> int | None:
+    """1-based day a sprint plan has progressed to, or None when unknown."""
+    target_date = getattr(plan, "target_date", None)
+    created = _as_date(getattr(plan, "created_at", None))
+    if target_date is None or created is None:
+        return None
+    total_days = (target_date - created).days
+    if total_days <= 0:
+        return None
+    days_remaining = max((target_date - today).days, 0)
+    return max(total_days - days_remaining + 1, 1)
 
 
 class DailyTaskSelectionService:
@@ -100,7 +156,7 @@ class DailyTaskSelectionService:
             candidates = [
                 candidate
                 for candidate in candidates
-                if _is_today_relevant(candidate.task, today)
+                if _is_today_relevant(candidate.task, today, plan=candidate.plan)
             ]
 
         aurora = await self._load_aurora_energy(user_id)

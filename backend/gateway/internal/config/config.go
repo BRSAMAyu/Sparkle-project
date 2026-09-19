@@ -71,6 +71,12 @@ type Config struct {
 	RedisPassword               string   `mapstructure:"REDIS_PASSWORD"`
 	RedisFailClosed             bool     `mapstructure:"REDIS_FAIL_CLOSED"` // Security: reject tokens on Redis failure
 	// DF-2 (daily-flow): drain queue:persist:history into PostgreSQL.
+	// P2-D (daily-flow R2): default OFF — the engine persists every streamed
+	// chat row itself and is the authoritative writer (its session derivation
+	// owns reads, the memory write lane and chat_sessions). The persister
+	// remains an opt-in durable backstop; enabling it is safe again because
+	// resolveSessionUUID now matches the engine's pseudo-session derivation,
+	// so its NOT EXISTS dedup actually matches engine rows.
 	ChatPersisterEnabled        bool     `mapstructure:"CHAT_PERSISTER_ENABLED"`
 	BackendURL                  string   `mapstructure:"BACKEND_URL"`
 	AppleClientID               string   `mapstructure:"APPLE_CLIENT_ID"`
@@ -551,7 +557,9 @@ func Load() *Config {
 	viper.SetDefault("REDIS_FAIL_CLOSED", true)
 	// DF-2: enabled by default so the durable chat pipeline actually runs;
 	// set CHAT_PERSISTER_ENABLED=false to fall back to engine-only writes.
-	viper.SetDefault("CHAT_PERSISTER_ENABLED", true)
+	// P2-D (daily-flow R2): engine is the single authoritative chat writer;
+	// the gateway persister is now an opt-in backstop (see struct comment).
+	viper.SetDefault("CHAT_PERSISTER_ENABLED", false)
 	viper.SetDefault("BACKEND_URL", "http://localhost:8000")
 	viper.SetDefault("APPLE_CLIENT_ID", "")
 	viper.SetDefault("RABBITMQ_URL", "") // Default to empty (disabled)

@@ -147,11 +147,11 @@ async def get_today_capsules(
 ):
     """
     获取今日未读胶囊
-    如果没有胶囊，自动触发生成
+    如果今日还没有生成过胶囊，自动触发生成（P2-H：每日一次，不因已读而反复触发）
     """
     capsules = await curiosity_capsule_service.get_today_capsules(current_user.id, db)
 
-    if not capsules:
+    if not capsules and not await curiosity_capsule_service.has_generated_today(current_user.id, db):
         # 尝试自动生成
         new_capsule = await curiosity_capsule_service.generate_daily_capsule(current_user.id, db)
         if new_capsule:

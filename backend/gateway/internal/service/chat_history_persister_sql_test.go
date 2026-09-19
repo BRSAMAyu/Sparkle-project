@@ -10,10 +10,13 @@ package service
 // Assistant replies therefore never reached PostgreSQL via the queue path.
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/alicebob/miniredis/v2"
+	"github.com/redis/go-redis/v9"
 	"github.com/google/uuid"
 )
 
@@ -67,6 +70,64 @@ func TestResolveSessionUUIDPassthroughAndDeterministicLabel(t *testing.T) {
 	}
 	if first.String() == label {
 		t.Fatal("derived UUID must differ from the raw label")
+	}
+}
+
+// TestResolveSessionUUIDMatchesEngineDerivation pins P2-D (daily-flow R2):
+// the gateway must derive the SAME pseudo UUID as the engine's
+// `_coerce_session_uuid` (app/orchestration/orchestrator.py), i.e.
+// uuid5(NAMESPACE_URL, "sparkle-session:{label}") — SHA-1 based. The pre-fix
+// MD5/"sparkle:chat-session:" variant hashed the same label to a different
+// UUID, so the NOT EXISTS dedup never matched engine rows and every streamed
+// chat turn landed twice (4 rows per turn, R2 eval). The expected value below
+// was computed independently with Python's uuid.uuid5.
+func TestResolveSessionUUIDMatchesEngineDerivation(t *testing.T) {
+	// python: uuid.uuid5(uuid.NAMESPACE_URL, "sparkle-session:df2-d1-s1")
+	const want = "fefd227a-b4d1-5c8a-8a15-672c5151c647"
+	if got := resolveSessionUUID("df2-d1-s1").String(); got != want {
+		t.Fatalf("label derivation diverges from the engine's uuid5: got %s want %s", got, want)
+	}
+	// Trimming must not change the derivation (engine strips too).
+	if got := resolveSessionUUID("  df2-d1-s1\t").String(); got != want {
+		t.Fatalf("whitespace-padded label must resolve identically, got %s", got)
+	}
+}
+
+// TestPersistQueueProducerDisabledSkipsQueue pins the P2-D producer gate:
+// with the persister disabled (the new default), SaveMessage must keep the
+// Redis read-cache writes but stop enqueueing into queue:persist:history,
+// which otherwise grows unbounded with no consumer draining it.
+func TestPersistQueueProducerDisabledSkipsQueue(t *testing.T) {
+	mr := miniredis.RunT(t)
+	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	svc := NewChatHistoryServiceWithTTL(rdb, time.Minute)
+	svc.SetPersistQueueProducerEnabled(false)
+
+	payload := []byte(`{"id":"m1","user_id":"u1","session_id":"s1","role":"user","content":"hi","timestamp":"1789758149"}`)
+	if err := svc.SaveMessage(context.Background(), "s1", payload); err != nil {
+		t.Fatalf("SaveMessage should succeed with the producer disabled: %v", err)
+	}
+	if got, _ := rdb.LLen(context.Background(), "queue:persist:history").Result(); got != 0 {
+		t.Fatalf("disabled producer must not enqueue, queue length = %d", got)
+	}
+	if got, _ := rdb.LLen(context.Background(), "chat:history:s1").Result(); got != 1 {
+		t.Fatalf("cache writes must be unaffected, cache length = %d", got)
+	}
+
+	// The retry buffer must drain (not replay) once the producer is off —
+	// buffered entries would never be consumed.
+	svc.retryMu.Lock()
+	svc.retryBuf = []retryEntry{{msg: payload, enqueuedAt: time.Now()}}
+	svc.retryMu.Unlock()
+	svc.flushRetryBuf()
+	svc.retryMu.Lock()
+	left := len(svc.retryBuf)
+	svc.retryMu.Unlock()
+	if left != 0 {
+		t.Fatalf("flushRetryBuf must clear the buffer when the producer is disabled, left = %d", left)
+	}
+	if got, _ := rdb.LLen(context.Background(), "queue:persist:history").Result(); got != 0 {
+		t.Fatalf("disabled producer must not requeue buffered entries, queue length = %d", got)
 	}
 }
 

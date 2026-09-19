@@ -6,10 +6,11 @@ Curiosity Capsule Service
 from __future__ import annotations
 
 import random
+from datetime import date, datetime, time
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import desc, select
+from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.curiosity_capsule import CuriosityCapsule
@@ -145,17 +146,40 @@ class CuriosityCapsuleService:
 
     async def get_today_capsules(self, user_id: UUID, db: AsyncSession) -> list[CuriosityCapsule]:
         """
-        Get unread capsules for today/recent.
+        Get unread capsules generated today.
+
+        P2-H (daily-flow R2): this used to return *every* unread capsule with
+        no date filter, so a single never-read D1 capsule kept coming back
+        ("复读") and — because the endpoint only auto-generates when the list
+        is empty — blocked all regeneration on later days.
         """
+        day_start = datetime.combine(date.today(), time.min)
         result = await db.execute(
             select(CuriosityCapsule)
             .where(
                 CuriosityCapsule.user_id == user_id,
                 CuriosityCapsule.is_read.is_(False),
+                CuriosityCapsule.created_at >= day_start,
             )
             .order_by(desc(CuriosityCapsule.created_at))
         )
         return result.scalars().all()
+
+    async def has_generated_today(self, user_id: UUID, db: AsyncSession) -> bool:
+        """Whether any capsule (read or unread) was already created today.
+
+        Guards the /capsules/today auto-generation: once today's capsule
+        exists, further calls must not re-enter the 24s synchronous LLM
+        generation just because the user already read the first one.
+        """
+        day_start = datetime.combine(date.today(), time.min)
+        result = await db.execute(
+            select(func.count(CuriosityCapsule.id)).where(
+                CuriosityCapsule.user_id == user_id,
+                CuriosityCapsule.created_at >= day_start,
+            )
+        )
+        return int(result.scalar_one_or_none() or 0) > 0
 
     async def get_user_capsules(
         self,

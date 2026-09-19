@@ -490,13 +490,14 @@ async def get_micro_task_recommendations(
 # route-tier: authed
 @router.get("/today", response_model=list[TaskDetail])
 async def get_today_tasks(
+    limit: int = Query(50, ge=1, le=200, description="Max tasks returned (pagination)"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Return tasks relevant for today."""
     selections = await DailyTaskSelectionService(db, cache_service.redis).select_tasks(
         user_id=current_user.id,
-        limit=50,
+        limit=limit,
         include_completed_today=True,
         only_today_relevant=True,
     )

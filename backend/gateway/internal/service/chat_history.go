@@ -50,6 +50,14 @@ type ChatHistoryService struct {
 	breakerThreshold atomic.Int64
 	chatHistoryTTL   time.Duration
 
+	// P2-D (daily-flow R2): the Redis persist queue only exists to feed
+	// ChatHistoryPersister. When the persister is disabled (now the default —
+	// the engine is the single authoritative chat writer), the producer must
+	// stop enqueueing too, or queue:persist:history grows unbounded with
+	// nothing draining it. Defaults to true so standalone constructors keep
+	// the historical behaviour; server wiring sets it from config.
+	persistQueueEnabled atomic.Bool
+
 	// P1修复: 断路器本地重试缓冲 + 后台重试 goroutine 控制
 	retryBuf    []retryEntry
 	retryMu     sync.Mutex
@@ -71,8 +79,16 @@ func NewChatHistoryServiceWithPool(rdb *redis.Client, pool *pgxpool.Pool, ttl ti
 		backfillSem:    make(chan struct{}, chatHistoryBackfillMaxConcurrent),
 	}
 	s.breakerThreshold.Store(DefaultMaxQueueSize)
+	s.persistQueueEnabled.Store(true)
 	go s.retryWorker()
 	return s
+}
+
+// SetPersistQueueProducerEnabled toggles enqueueing into
+// queue:persist:history. Server wiring turns it off when the persister
+// consumer is disabled (P2-D): the cache writes in SaveMessage are unaffected.
+func (s *ChatHistoryService) SetPersistQueueProducerEnabled(enabled bool) {
+	s.persistQueueEnabled.Store(enabled)
 }
 
 type ChatHistoryMessage struct {
@@ -121,6 +137,7 @@ func NewChatHistoryServiceWithTTL(rdb *redis.Client, ttl time.Duration) *ChatHis
 		backfillSem:    make(chan struct{}, chatHistoryBackfillMaxConcurrent),
 	}
 	s.breakerThreshold.Store(DefaultMaxQueueSize)
+	s.persistQueueEnabled.Store(true)
 	go s.retryWorker()
 	return s
 }
@@ -175,7 +192,8 @@ func (s *ChatHistoryService) retryWorker() {
 
 func (s *ChatHistoryService) flushRetryBuf() {
 	s.retryMu.Lock()
-	if len(s.retryBuf) == 0 {
+	if len(s.retryBuf) == 0 || !s.persistQueueEnabled.Load() {
+		s.retryBuf = nil
 		s.retryMu.Unlock()
 		return
 	}
@@ -279,8 +297,17 @@ func (s *ChatHistoryService) SaveMessage(ctx context.Context, sid string, msg []
 	pipe.LTrim(ctx, cacheKey, -20, -1) // Keep last 20 messages
 	pipe.Expire(ctx, cacheKey, s.chatHistoryTTL)
 
-	// 2. Write to persistent queue (for DB, with Circuit Breaker)
+	// 2. Write to persistent queue (for DB, with Circuit Breaker).
+	// P2-D: skipped entirely when the persister consumer is disabled —
+	// without a consumer the queue would only grow.
 	queueKey := "queue:persist:history"
+
+	if !s.persistQueueEnabled.Load() {
+		if _, err := pipe.Exec(ctx); err != nil {
+			return err
+		}
+		return nil
+	}
 
 	// Check queue length (Circuit Breaker)
 	// We do this check outside the pipeline for simplicity, acknowledging the small race condition.
@@ -445,7 +472,11 @@ func (s *ChatHistoryService) ensureSessionAccess(ctx context.Context, userID, se
 
 	var sessionUUID, userUUID pgtype.UUID
 	if err := sessionUUID.Scan(sessionID); err != nil {
-		return nil
+		// P2-E: label sessions resolve to the engine's derived pseudo UUID so
+		// the DB ownership check applies to them too (a label owned by
+		// another user must 403, not silently pass the DB check).
+		derived := resolveSessionUUID(sessionID)
+		sessionUUID = pgtype.UUID{Bytes: derived, Valid: true}
 	}
 	if err := userUUID.Scan(userID); err != nil {
 		return nil
@@ -573,7 +604,14 @@ func (s *ChatHistoryService) getMessagesFromDB(ctx context.Context, userID, sess
 	// Parse UUIDs
 	var sessionUUID, userUUID pgtype.UUID
 	if err := sessionUUID.Scan(sessionID); err != nil {
-		return nil, fmt.Errorf("invalid session_id: %w", err)
+		// P2-E (daily-flow R2): session labels like "df2-d1-s1" are legal
+		// client-side ids. The engine persisted those rows under a derived
+		// pseudo UUID (see resolveSessionUUID), so a label must resolve to
+		// the same UUID here instead of failing the whole read with
+		// "invalid session_id" (surfaced as a 500 once the Redis cache
+		// expired).
+		derived := resolveSessionUUID(sessionID)
+		sessionUUID = pgtype.UUID{Bytes: derived, Valid: true}
 	}
 	if err := userUUID.Scan(userID); err != nil {
 		return nil, fmt.Errorf("invalid user_id: %w", err)

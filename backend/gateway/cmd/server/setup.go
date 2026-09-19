@@ -202,6 +202,12 @@ func initServices(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client,
 		chatHistoryTTL = 30 * time.Minute
 	}
 	chatHistoryService := service.NewChatHistoryServiceWithPool(rdb, dbh.pool, chatHistoryTTL)
+	// P2-D (daily-flow R2): without a persister consumer the Redis persist
+	// queue would only grow, so the producer is disabled alongside it. The
+	// engine is the single authoritative chat writer in that mode.
+	if !cfg.ChatPersisterEnabled {
+		chatHistoryService.SetPersistQueueProducerEnabled(false)
+	}
 	semanticCacheService := service.NewSemanticCacheService(rdb)
 	billingService := service.NewCostCalculator()
 	userContextService := service.NewUserContextService(dbh.pool)

@@ -64,6 +64,12 @@ class GrowthDashboardService:
     LOOKBACK_DAYS = 7
     DAILY_CONTEXT_RECENT_TTL_SECONDS = 86400 * 21
     DAILY_CONTEXT_RECENT_LIMIT = 14
+    # P2-F (daily-flow R2): the line used to be cached until midnight, so the
+    # context baked into it (streak, days_to_deadline, ...) froze at the first
+    # generation of the day and contradicted the live dashboard for the rest
+    # of the day. A bounded TTL lets the line catch up with real progress
+    # while still amortizing the AI generation cost.
+    DAILY_CONTEXT_LINE_TTL_SECONDS = 1800
 
     def __init__(self, db: AsyncSession):
         self.db = db
@@ -151,7 +157,7 @@ class GrowthDashboardService:
         await cache_service.set(
             cache_key,
             payload,
-            ttl=self._seconds_until_next_day(day),
+            ttl=min(self._seconds_until_next_day(day), self.DAILY_CONTEXT_LINE_TTL_SECONDS),
         )
         await self._remember_daily_context_line(user_id, text, day)
         return payload
