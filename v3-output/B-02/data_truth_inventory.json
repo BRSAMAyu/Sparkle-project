@@ -1,0 +1,214 @@
+{
+  "task": "B-02",
+  "generated_at": "2026-09-19",
+  "base_sha": "f01f4ae81ebd645b8f313afd2e9a243cfe83a3f0",
+  "truth_class_counts": {
+    "demo": 1,
+    "mock(休眠)": 3,
+    "mock": 1,
+    "seed_namespace": 2,
+    "339-340": 1,
+    "pollution": 2,
+    "actual": 3,
+    "actual(本地)": 1
+  },
+  "db_cohort_facts": {
+    "users_total": 219,
+    "users_by_registration_source": {
+      "guest": 160,
+      "email": 52,
+      "seed": 7
+    },
+    "user_node_status_rows_total": 8135,
+    "user_node_status_guest_rows": 8050,
+    "user_node_status_seed_rows": 18,
+    "user_streak_stats_max_longest_by_source": {
+      "guest": 30,
+      "seed": 25,
+      "email": 1
+    },
+    "user_achievements_rows_by_source": {
+      "guest": 944,
+      "seed": 8,
+      "email": 3
+    },
+    "understanding_depth_daily": {
+      "rows": 149,
+      "distinct_users": 149,
+      "metric_date": "2026-09-18",
+      "score_min": 0.275,
+      "score_max": 0.9333,
+      "score_avg": 0.384
+    },
+    "leaderboard_top50_simulation": {
+      "guest": 50,
+      "email": 0,
+      "seed": 0,
+      "top_score": 132.5
+    }
+  },
+  "items": [
+    {
+      "inventory_id": "INV-01",
+      "artifact": "DemoDataService 全量假人生 (user/tasks/plans/galaxy/chat/achievements/leaderboard/community)",
+      "kind": "client_mock",
+      "location": "mobile/lib/core/services/demo_data_service.dart (3518 行)",
+      "truth_class": "demo",
+      "enterprises_production_path": "仅当 DemoDataService.isDemoMode=true",
+      "gating_or_namespace": "门控=--dart-define DEMO_MODE 或 prefs demo_guest_mode_enabled; 持有真实 token 时 auth_provider 强制 isDemoMode=false",
+      "evidence": "main.dart:128-130; auth_provider.dart:130-135",
+      "remediation_task_hint": "D05: UI 必须明示\"体验示例\" 目前入口无标注 需任务跟进"
+    },
+    {
+      "inventory_id": "INV-02",
+      "artifact": "FocusStatsRepository.fetchFromApi 生成假统计 (total=120/600/2400 streak=5)",
+      "kind": "client_mock",
+      "location": "core/statistics/presentation/providers/focus_statistics_provider.dart:119-229",
+      "truth_class": "mock(休眠)",
+      "enterprises_production_path": "无 UI 消费者; 但 HybridStatisticsRepository._putInWarmCache 会将返回值写入 Isar warm cache(TTL 24h) 并标 isFullySynced=true",
+      "gating_or_namespace": "无门控 (依赖\"无人接线\")",
+      "evidence": "hybrid_statistics_repository.dart:330-354; 红测 mobile/test/core/statistics/mock_statistics_guard_test.dart (当前 RED)",
+      "remediation_task_hint": "接线前必须替换为真实 API 或删除; 红测转绿即修复"
+    },
+    {
+      "inventory_id": "INV-03",
+      "artifact": "CapsuleStatsRepository.fetchFromApi 生成假统计 (opened*1.5/0.3 系数)",
+      "kind": "client_mock",
+      "location": "core/statistics/presentation/providers/capsule_statistics_provider.dart:104-167",
+      "truth_class": "mock(休眠)",
+      "enterprises_production_path": "同 INV-02",
+      "gating_or_namespace": "无门控",
+      "evidence": "同上",
+      "remediation_task_hint": "同上"
+    },
+    {
+      "inventory_id": "INV-04",
+      "artifact": "AgentStatsRepository.fetchFromApi 生成假统计 (calls*500=tokens)",
+      "kind": "client_mock",
+      "location": "core/statistics/presentation/providers/agent_statistics_provider.dart:104-165",
+      "truth_class": "mock(休眠)",
+      "enterprises_production_path": "同 INV-02",
+      "gating_or_namespace": "无门控",
+      "evidence": "同上",
+      "remediation_task_hint": "同上"
+    },
+    {
+      "inventory_id": "INV-05",
+      "artifact": "MockCognitiveRepository / MockCommunityRepository",
+      "kind": "client_mock",
+      "location": "features/cognitive|community/data/repositories/mock_*.dart",
+      "truth_class": "mock",
+      "enterprises_production_path": "社区 mock 由 isDemoMode 分流; cognitive 由 USE_MOCK 编译期开关",
+      "gating_or_namespace": "门控完备",
+      "evidence": "community_repository.dart:11-16; cognitive_repository.dart:86-98",
+      "remediation_task_hint": "维持门控; 建议把 USE_MOCK 也统一到 DemoDataService 入口"
+    },
+    {
+      "inventory_id": "INV-06",
+      "artifact": "游客种子 (guest_seed_service): 21 类演示数据直写生产 DB",
+      "kind": "server_seed",
+      "location": "backend/app/services/guest_seed_service.py (seed_guest_user_data 于 auth.py:896-920 触发)",
+      "truth_class": "seed_namespace",
+      "enterprises_production_path": "是 — 每个 guest 注册即写; 且内容进入共享表面(社区/排行榜好友)",
+      "gating_or_namespace": "命名空间: users.registration_source='guest'/'seed'; knowledge_nodes.is_seed=true; sector_classification_model='guest_seed'",
+      "evidence": "DB 实测: users 219 = guest 160 + email 52 + seed 7; user_node_status 8135 行中 8050 行属 guest",
+      "remediation_task_hint": "排行榜/社群/分析必须按 registration_source 过滤; D05 要求游客体验明示"
+    },
+    {
+      "inventory_id": "INV-07",
+      "artifact": "种子好友账号 (_ensure_demo_user 7 个 registration_source='seed')",
+      "kind": "server_seed",
+      "location": "guest_seed_service.py:208-246",
+      "truth_class": "seed_namespace",
+      "enterprises_production_path": "是 — 可登录(密码 DemoFriend123) 有 flame_level/streak/成就",
+      "gating_or_namespace": "users.registration_source='seed' 可查询区分",
+      "evidence": "DB: 7 行",
+      "remediation_task_hint": "禁用登录或隔离; 从排行榜/社群排除"
+    },
+    {
+      "inventory_id": "INV-08",
+      "artifact": "LLM demo_mode 短路 (无 API key 时返回罐头回复)",
+      "kind": "server_mock",
+      "location": "backend/app/services/llm_service.py:291",
+      "truth_class": "339-340",
+      "enterprises_production_path": "386-387",
+      "gating_or_namespace": "542-549",
+      "evidence": "demo",
+      "remediation_task_hint": "是 — key 缺失即激活; 用户侧无差别呈现为 AI 回复",
+      "null": [
+        "无用户可见命名空间 (仅 OTel span llm.demo_mode=True)",
+        "llm_service.py:340 logger.warning; span 属性可查",
+        "生产部署前强制 key 校验/启动失败; 或回复明示演示"
+      ]
+    },
+    {
+      "inventory_id": "INV-09",
+      "artifact": "排行榜无 cohort 过滤 (guest/seed 入榜)",
+      "kind": "logic_gap",
+      "location": "backend/app/services/leaderboard_service.py (全文件无 registration_source)",
+      "truth_class": "pollution",
+      "enterprises_production_path": "是 — 全局榜实然被种子占据",
+      "gating_or_namespace": "无",
+      "evidence": "DB 复算 top-50: 100% guest top_score=132.5 (权重 1.0/0.5/2.0/1.5)",
+      "remediation_task_hint": "最高优先修复: WHERE registration_source NOT IN ('guest'",
+      "null": [
+        "'seed')"
+      ]
+    },
+    {
+      "inventory_id": "INV-10",
+      "artifact": "IsPro=FlameLevel>=3 (游客 seed flame=15 → 全员 is_pro)",
+      "kind": "logic_gap",
+      "location": "backend/gateway/internal/service/user_context.go:129; chat_orchestrator_chatflow.go:284",
+      "truth_class": "pollution",
+      "enterprises_production_path": "是 — 每次聊天经 gRPC user_profile.is_pro 传给引擎",
+      "gating_or_namespace": "无",
+      "evidence": "gateway 代码; DB flame_level=15 的 160 个 guest",
+      "remediation_task_hint": "D17 已冻结拆除; 商业 entitlement 独立于 gamification"
+    },
+    {
+      "inventory_id": "INV-11",
+      "artifact": "understanding_depth_daily 聚合表",
+      "kind": "server_computed",
+      "location": "backend/app/services/understanding_depth_metric_service.py + celery_tasks.py:3614",
+      "truth_class": "actual",
+      "enterprises_production_path": "是 (新上线)",
+      "gating_or_namespace": "用户维度隔离; 冷启动不落行; definition_version=v0.1",
+      "evidence": "DB: 149 用户 2026-09-18 score 0.275-0.933 avg 0.384",
+      "remediation_task_hint": "保持; 聚合任务需排除 seed cohort 或统计时过滤 (当前 149 用户含 guest?)"
+    },
+    {
+      "inventory_id": "INV-12",
+      "artifact": "DashboardService/GrowthDashboard/WeeklyStats 统计族",
+      "kind": "server_computed",
+      "location": "backend/app/services/dashboard_service.py / growth_dashboard_service.py / analytics/weekly_stats_service.py",
+      "truth_class": "actual",
+      "enterprises_production_path": "是",
+      "gating_or_namespace": "按 user_id 隔离; Redis 缓存 300s/7d",
+      "evidence": "代码审读 + 聚合 SQL 均真实",
+      "remediation_task_hint": "维持; 注意上游 users 表的 seed flame 值会流入 flame 卡"
+    },
+    {
+      "inventory_id": "INV-13",
+      "artifact": "Galaxy mastery 写入族 (sync/mastery 客户端上报端点 + 事件/错题/衰减写入)",
+      "kind": "server_computed+client_reported",
+      "location": "galaxy_service.py:3088 update_node_mastery",
+      "truth_class": "actual",
+      "enterprises_production_path": "是",
+      "gating_or_namespace": "master 表 user_node_status; outbox+revision 乐观锁",
+      "evidence": "galaxy_service.py:3110-3160",
+      "remediation_task_hint": "客户端上报端点应鉴权限幅 (当前 mobile 未调用 但端点开放)"
+    },
+    {
+      "inventory_id": "INV-14",
+      "artifact": "Focus 统计本地真源 (Isar FocusSessionRecord)",
+      "kind": "local_actual",
+      "location": "mobile/lib/features/focus/data/repositories/focus_statistics_repository.dart",
+      "truth_class": "actual(本地)",
+      "enterprises_production_path": "是",
+      "gating_or_namespace": "设备本地; 服务端 focus_sessions 对账合并",
+      "evidence": "focus_statistics_repository.dart:345-417 mergeServerSessions",
+      "remediation_task_hint": "明确\"本地为准\"的取舍; 卸载/换机数据丢失需用户知情"
+    }
+  ]
+}
