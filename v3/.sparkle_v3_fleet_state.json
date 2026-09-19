@@ -3,7 +3,21 @@
  "created_at": "2026-09-19T01:26:06.217205Z",
  "baseline_head": "fedd27e35e305502ba727ba8c3fb46eae33a1eb9",
  "slots": 6,
- "active": {},
+ "active": {
+  "B-01": {
+   "worker": "wt6 redispatch (post-freeze)",
+   "since": "2026-09-19T12:00"
+  },
+  "B-02": {
+   "stage": "REVIEW_2_PENDING",
+   "note": "R1=CHANGES(C1-C4) Leader 已处置@51f5acd7; R2 已派",
+   "since": "2026-09-19T12:00"
+  },
+  "B-05": {
+   "worker": "B-05b zhipu key-rotation retest wt2",
+   "since": "2026-09-19T12:00"
+  }
+ },
  "done": [],
  "blocked": [],
  "notes": "V2.5 tail tasks (injection-visibility/P1-B/P1-C/android-r5/dailyflow-p2/web-r3) drain first; freed slots pick up B-01..B-06 then next_tasks.py ordering."
