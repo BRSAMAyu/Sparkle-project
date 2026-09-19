@@ -59,6 +59,11 @@ class LeaderboardService:
     WEIGHT_ACHIEVEMENTS = 2.0
     WEIGHT_STREAK = 1.5
 
+    # V3-FIX-01（D20 决策）：guest/seed 是体验模式/种子 cohort（B-02 F1 实测
+    # 曾占全局榜 top-100 的 100%，top_score 132.5），不得混入用户可见的全局榜。
+    # 仅约束排名面；游客本人的分数查询不受影响（见 user_score_q）。
+    EXCLUDED_COHORT_REGISTRATION_SOURCES = ("guest", "seed")
+
     def __init__(self, db: AsyncSession):
         self.db = db
 
@@ -249,7 +254,9 @@ class LeaderboardService:
             UserStreakStats, UserStreakStats.user_id == User.id
         ).where(
             User.is_active,
-            User.not_deleted_filter()
+            User.not_deleted_filter(),
+            # V3-FIX-01：全局榜排除 guest/seed cohort（保持 is_active + 未删除语义不变）
+            User.registration_source.not_in(self.EXCLUDED_COHORT_REGISTRATION_SOURCES)
         ).group_by(User.id, UserStreakStats.longest_streak, UserStreakStats.total_checkin_days
         ).order_by(score_expr.desc()
         ).limit(request.limit)
