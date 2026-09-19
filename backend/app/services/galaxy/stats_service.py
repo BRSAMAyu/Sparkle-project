@@ -21,6 +21,31 @@ def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
+# --- Spark outbox SQL (module-level so the exact statements are unit-testable) ---
+# P1-A: never write ":param::type" PG casts inside sa_text() — the TextClause
+# regex backtracks ":payload::jsonb" into a bogus "payloa" bind param and the
+# asyncpg compiler leaves a literal ":payload" in the statement, so Postgres
+# answers "syntax error at or near ':'" and aborts the whole transaction
+# (task complete then 500s on the next SELECT). JSON columns need no cast:
+# asyncpg infers jsonb from the prepared statement. The full-column form with
+# the sequence-counter upsert mirrors GalaxyService._write_mastery_outbox_event;
+# aggregate_type is NOT NULL without a default, and the gateway projector only
+# delivers events with sequence_number > cursor, so both are mandatory.
+SPARK_OUTBOX_SEQUENCE_SQL = """
+    INSERT INTO event_sequence_counters (aggregate_type, aggregate_id, next_sequence)
+    VALUES (:aggregate_type, :aggregate_id, 1)
+    ON CONFLICT (aggregate_type, aggregate_id)
+    DO UPDATE SET next_sequence = event_sequence_counters.next_sequence + 1
+    RETURNING next_sequence
+"""
+
+SPARK_OUTBOX_INSERT_SQL = """
+    INSERT INTO event_outbox
+    (aggregate_type, aggregate_id, event_type, event_version, sequence_number, payload, metadata)
+    VALUES (:aggregate_type, :aggregate_id, :event_type, 1, :sequence_number, :payload, :metadata)
+"""
+
+
 class GalaxyStatsService:
     # 掌握度计算常量
     BASE_MASTERY_POINTS = 5.0
@@ -428,16 +453,20 @@ class GalaxyStatsService:
             "revision": revision,
             "timestamp": _utcnow().isoformat(),
         }
+        seq_result = await self.db.execute(
+            sa_text(SPARK_OUTBOX_SEQUENCE_SQL),
+            {"aggregate_type": "galaxy_node_mastery", "aggregate_id": str(user_id)},
+        )
+        sequence_number = seq_result.scalar_one()
         await self.db.execute(
-            sa_text(
-                "INSERT INTO event_outbox (aggregate_id, event_type, payload, created_at) "
-                "VALUES (:aggregate_id, :event_type, :payload::jsonb, :created_at)"
-            ),
+            sa_text(SPARK_OUTBOX_INSERT_SQL),
             {
+                "aggregate_type": "galaxy_node_mastery",
                 "aggregate_id": str(user_id),
                 "event_type": "galaxy.node.mastery_updated",
+                "sequence_number": sequence_number,
                 "payload": json.dumps(payload),
-                "created_at": _utcnow(),
+                "metadata": json.dumps({"service": "galaxy_stats_service"}),
             },
         )
         await self.db.commit()
