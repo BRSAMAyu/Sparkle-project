@@ -1412,6 +1412,10 @@ async def submit_task_feedback(
     - 支持重复提交（更新现有反馈）
     - 自动推断并更新用户偏好
     - 返回偏好更新详情
+
+    P1-C: 重推断（自适应重规划、结构化反思的 LLM 行为分析、补强任务插入）
+    在后台任务执行；同步路径只做校验 + 落库并 <2s 返回，避免移动端
+    26.7s~30s 超时假失败（服务端已入库但客户端收 503）。
     """
     from app.services.task_feedback_service import TaskFeedbackService
 
@@ -1427,6 +1431,7 @@ async def submit_task_feedback(
             stuck_point=feedback_in.stuck_point,
             effective_method=feedback_in.effective_method,
             adjustment_intention=feedback_in.adjustment_intention,
+            defer_heavy_followups=True,
         )
 
         # 构建偏好更新详情

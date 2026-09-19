@@ -3,10 +3,15 @@ Task Feedback Service
 
 处理任务反馈，更新用户推断偏好
 """
+
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import inspect
 import json
+import time
+from collections.abc import Coroutine
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
@@ -17,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import load_only
 
 from app.core.event_bus import event_bus
+from app.db.session import AsyncSessionLocal
 from app.event_publishers.srl_events import publish_srl_event
 from app.models.task import Task, TaskStatus, TaskType
 from app.models.task_feedback import TaskFeedback
@@ -29,6 +35,45 @@ from app.services.task_reflection_service import TaskReflectionService
 
 def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
+
+
+# P1-C: deferred followups run on their own session so the request session can
+# close as soon as the fast ack returns. Tests patch this to share the test DB.
+FOLLOWUP_SESSION_FACTORY = AsyncSessionLocal
+
+# Attributes reloaded after commit so the caller always gets a usable view of
+# the feedback row even if a followup issued a compensating rollback.
+_FEEDBACK_REFRESH_ATTRS = [
+    "id",
+    "user_id",
+    "task_id",
+    "completion_quality",
+    "feedback_text",
+    "category",
+    "inferred_depth_delta",
+    "inferred_difficulty_delta",
+    "task_difficulty_snapshot",
+    "task_type_snapshot",
+    "actual_minutes_snapshot",
+    "reflection_payload",
+    "created_at",
+    "updated_at",
+]
+
+# Strong references keep pending fire-and-forget tasks alive (asyncio GC quirk).
+_FOLLOWUP_TASKS: set[asyncio.Task] = set()
+
+
+def spawn_followup_task(coro: Coroutine[Any, Any, None]) -> asyncio.Task:
+    """Spawn a fire-and-forget task with a strong reference (P1-C pattern).
+
+    Exceptions are logged inside the coroutine itself; main.py additionally
+    registers a global loop exception handler for unhandled task crashes.
+    """
+    task = asyncio.get_running_loop().create_task(coro)
+    _FOLLOWUP_TASKS.add(task)
+    task.add_done_callback(_FOLLOWUP_TASKS.discard)
+    return task
 
 
 class TaskFeedbackService:
@@ -62,6 +107,9 @@ class TaskFeedbackService:
         self.db = db
         self.redis = redis
         self.preference_service = PreferenceService(db, redis)
+        # P1-C observability/test hooks for the deferred followup
+        self.followup_task: asyncio.Task | None = None
+        self._pending_followup_coro: Coroutine[Any, Any, None] | None = None
 
     async def submit_feedback(
         self,
@@ -73,9 +121,10 @@ class TaskFeedbackService:
         stuck_point: str | None = None,
         effective_method: str | None = None,
         adjustment_intention: str | None = None,
+        defer_heavy_followups: bool = False,
     ) -> tuple[TaskFeedback, dict[str, Any] | None]:
         """
-        提交任务反馈
+        提交任务反馈（v2.1 增强）
 
         Args:
             user_id: 用户ID
@@ -83,10 +132,19 @@ class TaskFeedbackService:
             completion_quality: 完成质量评分 (1-5)
             feedback_text: 用户文字反馈
             category: 反馈分类
+            stuck_point: 结构化反思：卡点
+            effective_method: 结构化反思：有效方法
+            adjustment_intention: 结构化反思：下次调整
+            defer_heavy_followups: P1-C — True 时把重推断（自适应重规划、结构化
+                反思的 LLM 行为分析、补强任务插入）移出请求路径，同步路径只做
+                校验 + 落库 + 偏好更新并快速提交（<2s 返回）。HTTP 端点必须传
+                True；默认 False 保持历史调用方（作业/内联测试）语义不变。
 
         Returns:
             反馈对象
         """
+        started_at = time.perf_counter()
+
         # 验证任务并获取任务状态快照
         task = await self._get_and_validate_task(task_id, user_id)
         task_snapshot = {
@@ -136,6 +194,144 @@ class TaskFeedbackService:
         # 更新用户推断偏好
         await self._update_inferred_preferences(user_id, depth_delta, difficulty_delta)
 
+        has_structured_reflection = any(
+            str(value or "").strip() for value in (stuck_point, effective_method, adjustment_intention)
+        )
+
+        reflection_prompt = None
+        if not has_structured_reflection:
+            # 快速规则分支（无 LLM/无 embedding）：保持同步，让客户端仍能拿到反思引导卡片
+            try:
+                reflection_service = TaskReflectionService(self.db, self.redis)
+                reflection_prompt = await reflection_service.maybe_enqueue_reflection_prompt(
+                    user_id=user_id,
+                    task=task,
+                    feedback=feedback,
+                    category=feedback_snapshot["category"],
+                    time_spent_minutes=task_snapshot["actual_minutes"],
+                )
+            except Exception as e:
+                logger.warning(f"[TaskFeedback] Reflection prompt generation failed: {e}")
+
+        # P1-C: 同步路径到此为止 —— 只剩落库、偏好与快速校验，尽快提交返回
+        await self.db.commit()
+        await self.db.refresh(feedback, attribute_names=_FEEDBACK_REFRESH_ATTRS)
+
+        await event_bus.publish(
+            "task.feedback_submitted",
+            {
+                "event_type": "task.feedback_submitted",
+                "user_id": str(user_id),
+                "feedback_id": str(feedback.id),
+                "task_id": str(task_id),
+                "plan_id": str(task_snapshot["plan_id"]) if task_snapshot["plan_id"] else "",
+                "category": feedback.category or "",
+                "feedback_text": feedback.feedback_text or "",
+            },
+        )
+        await publish_srl_event(
+            user_id=user_id,
+            trigger_event_type="task.feedback_submitted",
+            evidence_id=str(feedback.id),
+            metadata={"plan_id": str(task_snapshot["plan_id"]) if task_snapshot["plan_id"] else None},
+        )
+
+        followup_kwargs: dict[str, Any] = {
+            "user_id": user_id,
+            "task_id": task_id,
+            "feedback_id": feedback.id,
+            "task_snapshot": task_snapshot,
+            "feedback_snapshot": feedback_snapshot,
+            "has_structured_reflection": has_structured_reflection,
+            "selected_option": category,
+            "free_text": feedback_text,
+            "stuck_point": stuck_point,
+            "effective_method": effective_method,
+            "adjustment_intention": adjustment_intention,
+            "difficulty_delta": difficulty_delta,
+        }
+
+        if defer_heavy_followups:
+            self._schedule_heavy_followups(**followup_kwargs)
+            elapsed_ms = int((time.perf_counter() - started_at) * 1000)
+            logger.info(
+                "[TaskFeedback] Fast ack persisted feedback {} for task {} in {}ms; "
+                "heavy inference deferred to background followup",
+                feedback.id,
+                task_id,
+                elapsed_ms,
+            )
+            return feedback, reflection_prompt
+
+        # 内联模式（历史语义）：在当前会话上同步执行重推断
+        inline_prompt = await self._execute_heavy_followups(**followup_kwargs)
+        if reflection_prompt is None and inline_prompt is not None:
+            reflection_prompt = inline_prompt
+        # followup 内部的补偿性 rollback（如偏好历史写失败）会 expire 对象，
+        # 与旧实现一致：末尾刷新一次，保证返回的 feedback 属性可直接访问
+        await self.db.refresh(feedback, attribute_names=_FEEDBACK_REFRESH_ATTRS)
+        return feedback, reflection_prompt
+
+    async def join_followup(self) -> None:
+        """等待延迟 followup 完成（可观测性/测试钩子）。"""
+        if self.followup_task is not None:
+            with contextlib.suppress(asyncio.CancelledError):
+                await self.followup_task
+            return
+        coro = self._pending_followup_coro
+        if coro is not None:
+            self._pending_followup_coro = None
+            await coro
+
+    def _schedule_heavy_followups(self, **followup_kwargs: Any) -> asyncio.Task | None:
+        """把重推断链调度到后台任务（P1-C：loop.create_task 模式）。"""
+        coro = self._run_heavy_followups_in_background(**followup_kwargs)
+        try:
+            followup_task = spawn_followup_task(coro)
+        except RuntimeError:
+            # 无运行中的事件循环（不应发生在请求路径）：保留协程供 join_followup 兜底
+            self._pending_followup_coro = coro
+            return None
+        self.followup_task = followup_task
+        return followup_task
+
+    async def _run_heavy_followups_in_background(self, **followup_kwargs: Any) -> None:
+        """在独立会话上执行重推断链（请求会话已随快速响应关闭）。"""
+        user_id = followup_kwargs["user_id"]
+        task_id = followup_kwargs["task_id"]
+        try:
+            async with FOLLOWUP_SESSION_FACTORY() as session:
+                service = TaskFeedbackService(session, self.redis)
+                await service._execute_heavy_followups(**followup_kwargs)
+        except Exception:
+            logger.exception(
+                "[TaskFeedback] Deferred heavy followups failed for user {} task {}",
+                user_id,
+                task_id,
+            )
+
+    async def _execute_heavy_followups(
+        self,
+        *,
+        user_id: UUID,
+        task_id: UUID,
+        feedback_id: UUID,
+        task_snapshot: dict[str, Any],
+        feedback_snapshot: dict[str, Any],
+        has_structured_reflection: bool,
+        selected_option: str | None,
+        free_text: str | None,
+        stuck_point: str | None,
+        effective_method: str | None,
+        adjustment_intention: str | None,
+        difficulty_delta: float | None,
+    ) -> dict[str, Any] | None:
+        """
+        重推断链：自适应重规划 → 路由画像 → 结构化反思（含 LLM 行为分析）→ 兜底补强。
+
+        Returns:
+            结构化反思路径产出的 reflection_prompt（若有）
+        """
         # Adaptive replanning based on feedback signals
         if task_snapshot["plan_id"]:
             try:
@@ -161,34 +357,22 @@ class TaskFeedbackService:
             logger.warning(f"[TaskFeedback] Routing profile update skipped: {e}")
 
         reflection_prompt = None
-        has_structured_reflection = any(
-            str(value or "").strip()
-            for value in (stuck_point, effective_method, adjustment_intention)
-        )
-        try:
-            reflection_service = TaskReflectionService(self.db, self.redis)
-            if has_structured_reflection:
+        if has_structured_reflection:
+            try:
+                reflection_service = TaskReflectionService(self.db, self.redis)
                 reflection_payload = await reflection_service.submit_reflection_answer(
                     user_id=user_id,
-                    feedback_id=feedback.id,
-                    selected_option=category,
-                    free_text=feedback_text,
+                    feedback_id=feedback_id,
+                    selected_option=selected_option,
+                    free_text=free_text,
                     stuck_point=stuck_point,
                     effective_method=effective_method,
                     adjustment_intention=adjustment_intention,
                 )
                 prompt_value = reflection_payload.get("prompt")
                 reflection_prompt = prompt_value if isinstance(prompt_value, dict) else None
-            else:
-                reflection_prompt = await reflection_service.maybe_enqueue_reflection_prompt(
-                    user_id=user_id,
-                    task=task,
-                    feedback=feedback,
-                    category=feedback_snapshot["category"],
-                    time_spent_minutes=task_snapshot["actual_minutes"],
-                )
-        except Exception as e:
-            logger.warning(f"[TaskFeedback] Reflection prompt generation failed: {e}")
+            except Exception as e:
+                logger.warning(f"[TaskFeedback] Reflection processing failed: {e}")
 
         fail_safe_signal = self._classify_fail_safe_signal(
             feedback_snapshot["category"],
@@ -219,46 +403,7 @@ class TaskFeedbackService:
                 logger.warning(f"[TaskFeedback] Remedial task insertion skipped: {e}")
 
         await self.db.commit()
-        await self.db.refresh(
-            feedback,
-            attribute_names=[
-                "id",
-                "user_id",
-                "task_id",
-                "completion_quality",
-                "feedback_text",
-                "category",
-                "inferred_depth_delta",
-                "inferred_difficulty_delta",
-                "task_difficulty_snapshot",
-                "task_type_snapshot",
-                "actual_minutes_snapshot",
-                "reflection_payload",
-                "created_at",
-                "updated_at",
-            ],
-        )
-
-        await event_bus.publish(
-            "task.feedback_submitted",
-            {
-                "event_type": "task.feedback_submitted",
-                "user_id": str(user_id),
-                "feedback_id": str(feedback.id),
-                "task_id": str(task_id),
-                "plan_id": str(task_snapshot["plan_id"]) if task_snapshot["plan_id"] else "",
-                "category": feedback.category or "",
-                "feedback_text": feedback.feedback_text or "",
-            },
-        )
-        await publish_srl_event(
-            user_id=user_id,
-            trigger_event_type="task.feedback_submitted",
-            evidence_id=str(feedback.id),
-            metadata={"plan_id": str(task_snapshot["plan_id"]) if task_snapshot["plan_id"] else None},
-        )
-
-        return feedback, reflection_prompt
+        return reflection_prompt
 
     def _is_knowledge_gap_signal(self, category: str | None, feedback_text: str | None) -> bool:
         normalized_category = str(category or "").strip().lower()
@@ -338,9 +483,7 @@ class TaskFeedbackService:
             "created_at": _utcnow().isoformat(),
         }
         deduped = [
-            item
-            for item in gaps
-            if not (isinstance(item, dict) and item.get("task_id") == str(task_snapshot["id"]))
+            item for item in gaps if not (isinstance(item, dict) and item.get("task_id") == str(task_snapshot["id"]))
         ]
         deduped.append(gap)
         await ProfileWriteService(self.db, self.redis).set_explicit_preference(
@@ -703,9 +846,7 @@ class TaskFeedbackService:
         task_id: UUID,
     ) -> list[TaskFeedback]:
         """获取任务的所有反馈"""
-        result = await self.db.execute(
-            select(TaskFeedback).where(TaskFeedback.task_id == task_id)
-        )
+        result = await self.db.execute(select(TaskFeedback).where(TaskFeedback.task_id == task_id))
         return list(result.scalars().all())
 
     async def get_user_task_feedback_stats(
@@ -723,9 +864,7 @@ class TaskFeedbackService:
                 "recent_feedbacks": list,
             }
         """
-        result = await self.db.execute(
-            select(TaskFeedback).where(TaskFeedback.user_id == user_id)
-        )
+        result = await self.db.execute(select(TaskFeedback).where(TaskFeedback.user_id == user_id))
         feedbacks = result.scalars().all()
 
         total = len(feedbacks)

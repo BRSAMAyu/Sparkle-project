@@ -51,14 +51,41 @@ async def feedback_client(sqlite_session, monkeypatch):
         return None
 
     monkeypatch.setattr("app.services.task_feedback_service.event_bus.publish", _noop_publish)
+    monkeypatch.setattr("app.services.task_feedback_service.publish_srl_event", _noop_publish)
+
+    # P1-C: the endpoint now defers heavy followups to a background task that
+    # opens its own session. Keep tests hermetic: share the sqlite session and
+    # record (then close) scheduled followup coroutines instead of spawning.
+    class _SharedSessionFactory:
+        def __init__(self, session):
+            self._session = session
+
+        def __call__(self):
+            return self
+
+        async def __aenter__(self):
+            return self._session
+
+        async def __aexit__(self, *exc_info):
+            return False
+
     monkeypatch.setattr(
-        "app.services.task_feedback_service.publish_srl_event", _noop_publish
+        "app.services.task_feedback_service.FOLLOWUP_SESSION_FACTORY",
+        _SharedSessionFactory(sqlite_session),
     )
+    scheduled = []
+
+    def _capture_spawn(coro):
+        scheduled.append(coro)
+        coro.close()  # close without running: keeps the portal loop task-free
+        return None
+
+    monkeypatch.setattr("app.services.task_feedback_service.spawn_followup_task", _capture_spawn)
 
     app = FastAPI()
     app.include_router(tasks_router, prefix="/tasks")
 
-    state = {"current_user": None}
+    state = {"current_user": None, "scheduled_followups": scheduled}
 
     async def _override_get_db():
         yield sqlite_session
