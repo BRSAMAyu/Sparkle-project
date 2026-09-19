@@ -490,6 +490,11 @@ class LLMService:
             self._current_selection = selection
             self._extra_body = kwargs.get("extra_body")
             self._explicit_model_override = True
+            # 显式切换后按新 provider 的 key 状态重估 demo 模式：
+            # 否则初始 selection 无 key 时激活的 demo_mode 会被永久带进后续
+            # 显式模型调用——glm_batch 任务切换到有 key 的模型仍输出演示文案
+            # （wt9 全链实测踩中：minimax_m3_batch 调用被 demo 短路返回通用回复）。
+            self.demo_mode = not getattr(self._provider, "has_api_key", True)
 
             logger.info(f"[LLMRouter] Switched to specific model {model_key} -> {kwargs['model']}")
 
@@ -1025,6 +1030,12 @@ class LLMService:
     @staticmethod
     def _parse_json_payload(raw: str, *, response_kind: str) -> Any | None:
         cleaned = raw.replace("```json", "").replace("```", "").strip()
+        # 思维链剥离：推理模型经 OpenAI 兼容路径（MiniMax-M3 实测）会把 <think>…</think>
+        # 内联在 content 头部；思维链文本若含花括号，下方 _extract_json_block 的首个
+        # '{' 会锚定到思维链内部导致提取失败。剥掉前缀思维链后再走原提取逻辑。
+        if cleaned.startswith("<think>"):
+            end_idx = cleaned.find("</think>")
+            cleaned = cleaned[end_idx + len("</think>"):].strip() if end_idx >= 0 else cleaned[len("<think>"):].strip()
 
         def _extract_json_block(text: str) -> str | None:
             for start_ch, end_ch in (("{", "}"), ("[", "]")):

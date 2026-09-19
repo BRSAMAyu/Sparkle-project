@@ -32,6 +32,7 @@ class ProviderType(StrEnum):
     XIAOMI = "xiaomi"
     DASHSCOPE = "dashscope"
     SILICONFLOW = "siliconflow"
+    MINIMAX = "minimax"
 
 
 @dataclass
@@ -115,6 +116,14 @@ PROVIDER_CONFIGS: dict[ProviderType, ConcurrencyConfig] = {
     ProviderType.SILICONFLOW: ConcurrencyConfig(
         max_concurrent=10,
         queue_timeout=30.0,
+    ),
+    # MiniMax 异步分析车道：token plan 并发硬上限 = MINIMAX_MAX_CONCURRENCY（默认 8）。
+    # 走 OpenAI 兼容路径的 glm_batch 执行面（switch_to_specific_model → provider.chat）
+    # 经此池钳制；直连 lane（minimax_provider.analyze）另有同值 semaphore 双保险。
+    ProviderType.MINIMAX: ConcurrencyConfig(
+        max_concurrent=settings.MINIMAX_MAX_CONCURRENCY,
+        min_concurrent=1,
+        queue_timeout=45.0,
     ),
 }
 

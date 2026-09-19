@@ -154,6 +154,10 @@ class ModelSelectionStrategy:
     def _normalize_explicit_model(model_key: str | None) -> tuple[str, list[str], bool] | None:
         if not model_key:
             return None
+        # MiniMax M3 异步车道（glm_batch 队列）：M3 本身是推理模型（思维链内联），
+        # 消费面统一走 chat_json（宽松解析已剥离 <think> 前缀），故 thinking=False。
+        if model_key == "minimax_m3_batch":
+            return model_key, ["glm_4_5_air_batch", "glm_4_6_batch"], False
         if model_key == "glm_4_5_air_batch":
             return model_key, ["glm_4_6_batch", "glm_4_7_no_thinking"], False
         if model_key == "glm_4_6_batch":

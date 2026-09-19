@@ -49,13 +49,19 @@ class GLMBatchService:
         return llm_concurrency.get_runtime_limit("zhipu_coding")
 
     def _select_batch_model_key(self, *, use_thinking: bool, task_type: str) -> str:
+        # MiniMax M3 异步车道优先（token plan 免费档，用户决策：异步分析/批量任务专用，
+        # 并发硬上限 MINIMAX_MAX_CONCURRENCY=8）；池条目仅在配置 MINIMAX_API_KEY 时
+        # 注册，无 key / 不健康时自然落回 glm_* 原链，行为与改动前一致。
+        minimax_candidates = (
+            ["minimax_m3_batch"] if "minimax_m3_batch" in llm_router._available_models else []
+        )
         preferred_candidates = (
-            ["glm_4_7_thinking", "glm_4_7_no_thinking"]
+            [*minimax_candidates, "glm_4_7_thinking", "glm_4_7_no_thinking"]
             if use_thinking
             else (
-                ["glm_4_5_air_batch", "glm_4_6_batch", "glm_4_7_no_thinking"]
+                [*minimax_candidates, "glm_4_5_air_batch", "glm_4_6_batch", "glm_4_7_no_thinking"]
                 if task_type == "capsule_generation"
-                else ["glm_4_6_batch", "glm_4_5_air_batch", "glm_4_7_no_thinking"]
+                else [*minimax_candidates, "glm_4_6_batch", "glm_4_5_air_batch", "glm_4_7_no_thinking"]
             )
         )
         for model_key in preferred_candidates:
@@ -298,7 +304,7 @@ class GLMBatchService:
         kombu 重连会冻结整个事件循环 ~19s（见 app/core/celery_dispatch.py 模块
         注释的实证）。现改为 off-loop + 3s 超时 + ignore_result，失败仅记日志。
         """
-        model_key = "glm_4_5_air_batch"
+        model_key = self._select_batch_model_key(use_thinking=False, task_type="node_sector_backfill")
         logger.info(
             "[GLMBatch] enqueue node_sector_backfill user={} node_count={} model={}",
             user_id,

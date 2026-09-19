@@ -44,6 +44,7 @@ class ModelProvider(StrEnum):
     HUNYUAN = "hunyuan"    # Hunyuan Translation
     DASHSCOPE = "dashscope"  # Aliyun DashScope (通义千问)
     SILICONFLOW = "siliconflow"  # SiliconFlow (专家模型：OCR、翻译等)
+    MINIMAX = "minimax"    # MiniMax M3 (异步分析车道：仅 GLM_BATCH 池，永不进主聊天能力层)
 
 
 # ============================================
@@ -635,6 +636,25 @@ class LLMRouter:
             ),
         }
 
+        # MiniMax 异步分析池条目：仅在配置了 MINIMAX_API_KEY 的环境注册。
+        # 定位约束（用户决策）：MiniMax M3（token plan 免费档，并发硬上限
+        # MINIMAX_MAX_CONCURRENCY=8）只承接 glm_batch 异步分析任务，**永不**加入
+        # fast/standard/plus/pro/max/top 等主聊天能力层 —— 无 key 环境零行为变化。
+        # 执行面走 OpenAI 兼容 {base}/chat/completions（2026-09 实测 200 OK），
+        # 并发由 llm_concurrency 的 minimax 池按 lane 上限钳制；思考链以 <think>
+        # 前缀内联在 content，由 LLMService._parse_json_payload 的 <think> 剥离兜底。
+        if (settings.MINIMAX_API_KEY or "").strip():
+            configs["minimax_m3_batch"] = ModelConfig(
+                provider=ModelProvider.MINIMAX,
+                model_name=settings.MINIMAX_CHAT_MODEL,
+                base_url=settings.MINIMAX_BASE_URL,
+                api_key=settings.MINIMAX_API_KEY,
+                temperature=0.3,
+                tier=ModelTier.GLM_BATCH,
+                cost_per_1k_tokens=0.0,  # token plan 免费档
+                avg_latency_ms=2500,
+            )
+
         self._available_models = configs
 
         fast_models = ["deepseek_fast", "dashscope_fast", "xiaomi_chat", "glm_4_7_flash_no_thinking"]
@@ -705,6 +725,7 @@ class LLMRouter:
             ModelTier.MAX: max_models,
             ModelTier.TOP: ["glm_5_1_top"],
             ModelTier.GLM_BATCH: [
+                *(["minimax_m3_batch"] if "minimax_m3_batch" in self._available_models else []),
                 "glm_4_7_no_thinking",
                 "glm_4_7_thinking",
                 "glm_4_5_air_batch",

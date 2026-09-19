@@ -86,6 +86,8 @@ class OpenAICompatibleProvider(LLMProvider):
             return "dashscope"
         elif "siliconflow" in url_lower:
             return "siliconflow"
+        elif "minimax" in url_lower:
+            return "minimax"
         return "default"
 
     @staticmethod
