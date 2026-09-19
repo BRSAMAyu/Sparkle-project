@@ -9,10 +9,6 @@
    "note": "R1+R2 双路 CHANGES 全处置(C1-C6+P3), 20行lineage 13列解析验证, 验收SQL双路复算一致",
    "since": "2026-09-19T13:10"
   },
-  "C-01": {
-   "stage": "REVIEW_1_PENDING",
-   "since": "2026-09-19T14:10"
-  },
   "M-01": {
    "worker": "wt2 APEX",
    "since": "2026-09-19T12:30"
@@ -26,7 +22,8 @@
   "V3-FIX-01",
   "V3-FIX-04",
   "B-02X",
-  "V3-FIX-02"
+  "V3-FIX-02",
+  "C-01"
  ],
  "blocked": [],
  "notes": "2026-09-19 12:30: 6/6 full (2 Apex root cards + 2 V3-FIX + 1 lineage ext + 1 entitlement). HEAVY gate loosened: swap-free>=1.2G & load<8. Next queue: V3-FIX-01/04 return -> B-03 FieldTest (single HEAVY) + D-01/X-01/E-01/E-05 Apex/general."

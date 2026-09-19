@@ -657,6 +657,8 @@ class Settings(BaseSettings):
     LTM_EVAL_DATASET_PATH: str = "backend/tests/fixtures/ltm_eval_sample.jsonl"
     LTM_EVAL_FAIL_THRESHOLD: float = 0.6
     ENABLE_CONTEXT_PACK_TELEMETRY: bool = True
+    # C-01: ContextPack.decision_context 决策面契约（Aurora/Router/Planner 共同消费）
+    ENABLE_DECISION_CONTEXT: bool = True
     ENABLE_BUDGET_TUNING: bool = True
     CONTEXT_PACK_FEEDBACK_WINDOW_MINUTES: int = 10
     ENABLE_CONTEXT_RANKING: bool = True

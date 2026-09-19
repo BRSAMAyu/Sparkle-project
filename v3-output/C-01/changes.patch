@@ -1,0 +1,1353 @@
+diff --git a/backend/app/config/settings.py b/backend/app/config/settings.py
+index c2bc5a2e..95dd246c 100755
+--- a/backend/app/config/settings.py
++++ b/backend/app/config/settings.py
+@@ -657,6 +657,8 @@ class Settings(BaseSettings):
+     LTM_EVAL_DATASET_PATH: str = "backend/tests/fixtures/ltm_eval_sample.jsonl"
+     LTM_EVAL_FAIL_THRESHOLD: float = 0.6
+     ENABLE_CONTEXT_PACK_TELEMETRY: bool = True
++    # C-01: ContextPack.decision_context 决策面契约（Aurora/Router/Planner 共同消费）
++    ENABLE_DECISION_CONTEXT: bool = True
+     ENABLE_BUDGET_TUNING: bool = True
+     CONTEXT_PACK_FEEDBACK_WINDOW_MINUTES: int = 10
+     ENABLE_CONTEXT_RANKING: bool = True
+diff --git a/backend/app/core/context_pack.py b/backend/app/core/context_pack.py
+index fb60f488..4a9917fb 100644
+--- a/backend/app/core/context_pack.py
++++ b/backend/app/core/context_pack.py
+@@ -30,6 +30,16 @@ from app.core.business_metrics import (
+ )
+ from app.core.context_budget import ContextBudgetScheduler
+ from app.core.context_ranker import RankedItem, rank_items
++from app.core.decision_context import (
++    DEFAULT_DECISION_SIGNAL_FIELDS,
++    ContextItemDescriptor,
++    DecisionContext,
++    DecisionStateSignal,
++    hash_query_text,
++    memory_ref,
++    plan_ref,
++    state_signal_from_envelope,
++)
+ from app.core.plan_context import PlanContextBuilder
+ from app.orchestration.context_focus import (
+     ContextFocusResolver,
+@@ -1098,6 +1108,10 @@ class ContextPack:
+     plan_context: dict[str, Any] | None = None  # PlanScope context
+     context_focus: dict[str, Any] | None = None
+     context_briefing_note: str | None = None
++    # C-01 决策面契约（可选、默认 None → 现有 5 个消费者零破坏）：
++    # Aurora/Router/Planner 的进程内消费面。刻意不进 to_prompt_context()——
++    # manifest 是观测/决策元数据，不是 prompt 内容，避免 token 膨胀。
++    decision_context: DecisionContext | None = None
+ 
+     def to_prompt_context(self) -> dict[str, Any]:
+         result = {
+@@ -1402,9 +1416,7 @@ class ContextPackBuilder:
+         # 不再将证据化记忆记录从 pack 中静默剔除——双源并存，交给 rank 加权与
+         # 预算竞争裁决；双源键写入 metadata 供审计（V3 再收敛为显式规则表 + 冲突登记）。
+         dual_source_keys = sorted(
+-            key
+-            for key in profile_keys
+-            if any(entry.item.pref_key == key for entry in ranked_preferences)
++            key for key in profile_keys if any(entry.item.pref_key == key for entry in ranked_preferences)
+         )
+         if dual_source_keys:
+             metadata["preference_dual_source_keys"] = dual_source_keys
+@@ -1588,14 +1600,20 @@ class ContextPackBuilder:
+         if settings.ENABLE_CONTEXT_PACK_TELEMETRY:
+             trimmed_goal_ids = {payload.get("id") for payload in trimmed_goals}
+             trimmed_episodic_ids = {payload.get("id") for payload in trimmed_episodic}
+-            pref_scores = [
++            telemetry_pref_scores = [
+                 item.evidence_score for item in preference_source_records if item.pref_key in trimmed_preferences
+             ]
+-            goal_scores = [item.evidence_score for item in goal_source_records if str(item.id) in trimmed_goal_ids]
+-            episodic_scores = [
++            telemetry_goal_scores = [
++                item.evidence_score for item in goal_source_records if str(item.id) in trimmed_goal_ids
++            ]
++            telemetry_episodic_scores = [
+                 item.evidence_score for item in episodic_source_records if str(item.id) in trimmed_episodic_ids
+             ]
+-            scores = [score for score in pref_scores + goal_scores + episodic_scores if score is not None]
++            scores = [
++                score
++                for score in telemetry_pref_scores + telemetry_goal_scores + telemetry_episodic_scores
++                if score is not None
++            ]
+             evidence_avg = (sum(scores) / len(scores)) if scores else None
+ 
+             telemetry = ContextPackTelemetryService(self.db)
+@@ -1625,6 +1643,36 @@ class ContextPackBuilder:
+                     budget=budget,
+                 )
+ 
++        # C-01: 决策面契约填充（Aurora/Router/Planner 消费）。失败绝不阻断 pack 主链路。
++        decision_ctx: DecisionContext | None = None
++        if getattr(settings, "ENABLE_DECISION_CONTEXT", True):
++            try:
++                decision_ctx = await self._build_decision_context(
++                    user_id=user_id,
++                    intent=intent,
++                    route_intent=route_intent,
++                    plan_id=plan_id,
++                    query_text=query_text,
++                    focus_mode=focus_decision.focus_mode if focus_decision else None,
++                    ranked_preferences=ranked_preferences,
++                    trimmed_preferences=trimmed_preferences,
++                    ranked_goals=ranked_goals,
++                    trimmed_goals=trimmed_goals,
++                    goal_scores=goal_scores,
++                    ranked_episodic=ranked_episodic,
++                    trimmed_episodic=trimmed_episodic,
++                    episodic_scores=episodic_scores,
++                    goal_candidate_count=len(goal_payloads),
++                    episodic_candidate_count=len(episodic_payloads),
++                    ranking_enabled=ranking_enabled,
++                    semantic_metadata=semantic_metadata,
++                    focus_active=focus_decision is not None,
++                    plan_context=plan_context,
++                )
++            except Exception as exc:
++                logger.warning(f"Failed to build decision context for {user_id}: {exc}")
++                decision_ctx = None
++
+         return ContextPack(
+             user_id=user_id,
+             intent=intent,
+@@ -1639,6 +1687,189 @@ class ContextPackBuilder:
+             plan_context=plan_context,
+             context_focus=focus_decision.to_dict() if focus_decision else None,
+             context_briefing_note=context_briefing_note or None,
++            decision_context=decision_ctx,
++        )
++
++    def _decision_item_reasons(
++        self,
++        *,
++        ranking_enabled: bool,
++        focus_active: bool,
++        semantic_applied: bool,
++        included: int,
++        candidates: int,
++    ) -> tuple[str, ...]:
++        reasons = ["rank_policy"] if ranking_enabled else ["evidence_order"]
++        if focus_active:
++            reasons.append("focus_mode")
++        if semantic_applied:
++            reasons.append("semantic_gate")
++        if included < candidates:
++            reasons.append("budget_carryover")
++        return tuple(reasons)
++
++    async def _collect_decision_signals(
++        self,
++        user_id: UUID,
++    ) -> tuple[tuple[DecisionStateSignal, ...], tuple[str, ...]]:
++        """逐字段投影 UserStateV1 高信号（单字段故障只降级该字段，不炸 pack）。"""
++        from app.state_aggregator.service import StateAggregatorService
++
++        aggregator = StateAggregatorService(self.db)
++        ttl_map = StateAggregatorService.FIELD_TTLS_SECONDS
++        signals: list[DecisionStateSignal] = []
++        degraded: list[str] = []
++        for field_name in DEFAULT_DECISION_SIGNAL_FIELDS:
++            try:
++                state = await aggregator.get_user_state(user_id, required_fields=(field_name,))
++                envelope = getattr(state, field_name, None)
++                if envelope is None or getattr(envelope, "value", None) is None:
++                    degraded.append(field_name)
++                    continue
++                signals.append(
++                    state_signal_from_envelope(
++                        field_name,
++                        envelope,
++                        ttl_map=ttl_map,
++                        epoch=state.schema_version,
++                    )
++                )
++            except Exception as exc:
++                logger.warning(f"Decision context signal {field_name} degraded for {user_id}: {exc}")
++                degraded.append(field_name)
++        return tuple(signals), tuple(degraded)
++
++    async def _build_decision_context(
++        self,
++        *,
++        user_id: UUID,
++        intent: str,
++        route_intent: str | None,
++        plan_id: UUID | None,
++        query_text: str | None,
++        focus_mode: str | None,
++        ranked_preferences: list[RankedItem[Any]],
++        trimmed_preferences: dict[str, Any],
++        ranked_goals: list[RankedItem[Any]],
++        trimmed_goals: list[dict[str, Any]],
++        goal_scores: dict[str, float],
++        ranked_episodic: list[RankedItem[Any]],
++        trimmed_episodic: list[dict[str, Any]],
++        episodic_scores: dict[str, float],
++        goal_candidate_count: int,
++        episodic_candidate_count: int,
++        ranking_enabled: bool,
++        semantic_metadata: dict[str, Any],
++        focus_active: bool,
++        plan_context: dict[str, Any] | None,
++    ) -> DecisionContext:
++        def _iso_or_none(value: Any) -> str | None:
++            return value.isoformat() if hasattr(value, "isoformat") else (str(value) if value is not None else None)
++
++        items: list[ContextItemDescriptor] = []
++
++        pref_candidates = len(ranked_preferences)
++        pref_semantic = bool(semantic_metadata.get("preferences", {}).get("applied"))
++        pref_reasons = self._decision_item_reasons(
++            ranking_enabled=ranking_enabled,
++            focus_active=focus_active,
++            semantic_applied=pref_semantic,
++            included=len(trimmed_preferences),
++            candidates=pref_candidates,
++        )
++        for entry in ranked_preferences:
++            if entry.item.pref_key not in trimmed_preferences:
++                continue
++            items.append(
++                ContextItemDescriptor(
++                    ref=memory_ref("preference", entry.item.id),
++                    type="preference",
++                    scope="user",
++                    why_included=pref_reasons,
++                    epoch=_iso_or_none(getattr(entry.item, "updated_at", None)),
++                    relevance=entry.score,
++                )
++            )
++
++        goal_semantic = bool(semantic_metadata.get("goals", {}).get("applied"))
++        goal_reasons = self._decision_item_reasons(
++            ranking_enabled=ranking_enabled,
++            focus_active=focus_active,
++            semantic_applied=goal_semantic,
++            included=len(trimmed_goals),
++            candidates=goal_candidate_count,
++        )
++        goal_epochs = {
++            str(entry.item.id): _iso_or_none(getattr(entry.item, "updated_at", None)) for entry in ranked_goals
++        }
++        for payload in trimmed_goals:
++            item_id = str(payload.get("id"))
++            items.append(
++                ContextItemDescriptor(
++                    ref=memory_ref("goal", item_id),
++                    type="goal",
++                    scope="plan" if payload.get("linked_plan_id") else "user",
++                    why_included=goal_reasons,
++                    epoch=goal_epochs.get(item_id),
++                    relevance=goal_scores.get(item_id),
++                )
++            )
++
++        episodic_semantic = bool(semantic_metadata.get("episodic", {}).get("applied"))
++        episodic_reasons = self._decision_item_reasons(
++            ranking_enabled=ranking_enabled,
++            focus_active=focus_active,
++            semantic_applied=episodic_semantic,
++            included=len(trimmed_episodic),
++            candidates=episodic_candidate_count,
++        )
++        episodic_epochs = {
++            str(entry.item.id): _iso_or_none(getattr(entry.item, "occurred_at", None)) for entry in ranked_episodic
++        }
++        for payload in trimmed_episodic:
++            item_id = str(payload.get("id"))
++            items.append(
++                ContextItemDescriptor(
++                    ref=memory_ref("episodic", item_id),
++                    type="episodic_memory",
++                    scope="user",
++                    why_included=episodic_reasons,
++                    epoch=episodic_epochs.get(item_id),
++                    relevance=episodic_scores.get(item_id),
++                )
++            )
++
++        if plan_context and plan_context.get("plan_id"):
++            items.append(
++                ContextItemDescriptor(
++                    ref=plan_ref(plan_context.get("plan_id")),
++                    type="plan",
++                    scope="plan",
++                    why_included=("plan_scope",),
++                    epoch=str(plan_context.get("version") or "unknown"),
++                )
++            )
++
++        signals, degraded = await self._collect_decision_signals(user_id)
++
++        omitted_counts = {
++            "preferences": max(0, len(ranked_preferences) - len(trimmed_preferences)),
++            "goals": max(0, goal_candidate_count - len(trimmed_goals)),
++            "episodic": max(0, episodic_candidate_count - len(trimmed_episodic)),
++        }
++
++        return DecisionContext(
++            user_id=user_id,
++            intent=intent,
++            route_intent=route_intent,
++            focus_mode=focus_mode,
++            plan_id=plan_id,
++            query_text_hash=hash_query_text(query_text),
++            signals=signals,
++            items=tuple(items),
++            omitted_counts=omitted_counts,
++            degraded_fields=degraded,
++            built_at=_utcnow(),
+         )
+ 
+     async def _mark_consumed_memory_records(
+diff --git a/backend/app/core/decision_context.py b/backend/app/core/decision_context.py
+new file mode 100644
+index 00000000..5eb49890
+--- /dev/null
++++ b/backend/app/core/decision_context.py
+@@ -0,0 +1,355 @@
++"""C-01 · DecisionContext —— Aurora / Router / Planner 共同消费的最小高信号决策上下文契约。
++
++冻结声明（v3/07_tasks/cards/C-01.md，gate V3-2，locks context-contract）：
++- ContextPack（app/core/context_pack.py）是唯一上下文契约；DecisionContext 是它在
++  “决策面”上的扩展视图，挂在 ``ContextPack.decision_context``（可选字段，默认 None），
++  **不是**平行的 UserContextV3 真源。
++- 事实语义全部来自既有权威：
++  - UserStateV1（app/state_aggregator/schema.py）仍是 UserWorldSnapshot 唯一权威，
++    signal 只是对其 envelope 的投影 + ref 指针；
++  - memory/preferences/goals/episodic 的真源仍是 memory DB 表；
++  - TTL 唯一真源是 StateAggregatorService.FIELD_TTLS_SECONDS（builder 侧传入）。
++- 每个字段携带 ref / type / scope / ttl_or_epoch / version / why_included。
++- 契约快照 parity guard：backend/tests/contract/test_decision_context_contract.py
++  冻结字段集、封闭词表与序列化面。任何变更都需要 bump DECISION_CONTEXT_SCHEMA_VERSION
++  并过两位 reviewer。
++
++消费方接入点：
++- Router（orchestration/dual_core_router）：读 signals（engagement/emotion/srl）
++  + intent/route_intent/focus_mode，替代从 ContextBuilderMixin 平行 dict 里二次取数；
++- Aurora（app/aurora）：读 items manifest（ref/relevance/why_included 即 provenance，
++  对应 AURORA_V3 的 relevant memories + provenance 与 memory_use_receipts）；
++- Planner（orchestration/plan_review_service 等）：读 items_of_type("goal")/
++  items_in_scope("plan") + plan ref， replan 时从 pack 直接取决策面。
++"""
++
++from __future__ import annotations
++
++import dataclasses
++import hashlib
++from dataclasses import dataclass, field
++from datetime import date, datetime
++from types import MappingProxyType
++from typing import Any, Callable, Mapping
++from uuid import UUID
++
++from app.state_aggregator.schema import StateFieldEnvelope, UserStateFieldName
++
++DECISION_CONTEXT_SCHEMA_VERSION = "decision_context.v1"
++
++# ---------------------------------------------------------------------------
++# 封闭词表（冻结；扩展需 bump 契约版本）
++# ---------------------------------------------------------------------------
++
++DECISION_SCOPES: frozenset[str] = frozenset({"user", "session", "plan", "task", "global"})
++
++DECISION_REF_SCHEMES: frozenset[str] = frozenset({"memory", "user_state", "plan", "document", "profile"})
++
++DECISION_INCLUDE_REASONS: frozenset[str] = frozenset(
++    {
++        "rank_policy",  # memory rank policy 打分选中
++        "evidence_order",  # 未启用 rank policy 时按 evidence_score 排序选中
++        "budget_carryover",  # 在预算裁剪中幸存（候选 > 注入）
++        "semantic_gate",  # 通过语义门控阈值
++        "focus_mode",  # focus mode 权重参与选择
++        "plan_scope",  # plan 关联材料
++        "state_signal",  # 决策关键 UserStateV1 信号
++        "direct_request",  # 用户本轮显式要求（如上传材料）
++        "diversity",  # section 多样性保位
++        "fallback",  # 降级路径保底注入
++    }
++)
++
++DECISION_ITEM_TYPES: frozenset[str] = frozenset(
++    {
++        "preference",
++        "goal",
++        "episodic_memory",
++        "plan",
++        "user_state_signal",
++        "document_chunk",
++    }
++)
++
++# 默认高信号 UserState 字段集（冻结）：Router/Aurora 的最小共同需要。
++# task/context_sufficiency 依赖当轮 parse，待 Planner 链路传入 turn parse 后再加。
++DEFAULT_DECISION_SIGNAL_FIELDS: tuple[UserStateFieldName, ...] = (
++    "engagement_state",
++    "emotion_hint",
++    "srl_phase",
++)
++
++
++def memory_ref(kind: str, item_id: Any) -> str:
++    """memory 真源指针，如 ``memory://episodic/<uuid>``（id 可解析回 DB 记录）。"""
++    return f"memory://{kind}/{item_id}"
++
++
++def user_state_ref(field_name: str) -> str:
++    return f"user_state://{field_name}"
++
++
++def plan_ref(plan_id: Any) -> str:
++    return f"plan://{plan_id}"
++
++
++def hash_query_text(text: str | None) -> str | None:
++    """查询文本的短哈希（cache key 组件 / 观测关联用；不落原文，PII 最小化）。"""
++    normalized = str(text or "").strip()
++    if not normalized:
++        return None
++    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:16]
++
++
++def _iso(value: Any) -> str | None:
++    if value is None:
++        return None
++    if isinstance(value, (datetime, date)):
++        return value.isoformat()
++    return str(value)
++
++
++# ---------------------------------------------------------------------------
++# 契约 dataclass（字段集被 tests/contract/test_decision_context_contract.py 冻结）
++# ---------------------------------------------------------------------------
++
++
++@dataclass(frozen=True)
++class ContextItemDescriptor:
++    """pack 内单个被注入 item 的来源/语义描述（provenance manifest 条目）。"""
++
++    ref: str
++    type: str
++    scope: str
++    why_included: tuple[str, ...]
++    ttl_seconds: int | None = None
++    epoch: str | None = None
++    relevance: float | None = None
++    version: str = DECISION_CONTEXT_SCHEMA_VERSION
++
++    def validate(self) -> tuple[str, ...]:
++        violations: list[str] = []
++        scheme = self.ref.split("://", 1)[0] if "://" in self.ref else ""
++        if scheme not in DECISION_REF_SCHEMES:
++            violations.append(f"item {self.ref}: unknown ref scheme {scheme!r}")
++        if self.type not in DECISION_ITEM_TYPES:
++            violations.append(f"item {self.ref}: unknown type {self.type!r}")
++        if self.scope not in DECISION_SCOPES:
++            violations.append(f"item {self.ref}: unknown scope {self.scope!r}")
++        if not self.why_included or not set(self.why_included) <= DECISION_INCLUDE_REASONS:
++            violations.append(f"item {self.ref}: why_included empty or out of vocabulary")
++        if self.ttl_seconds is None and self.epoch is None:
++            violations.append(f"item {self.ref}: ttl_seconds and epoch both missing (ttl_or_epoch rule)")
++        return tuple(violations)
++
++    def to_dict(self) -> dict[str, Any]:
++        return {
++            "ref": self.ref,
++            "type": self.type,
++            "scope": self.scope,
++            "why_included": list(self.why_included),
++            "ttl_seconds": self.ttl_seconds,
++            "epoch": self.epoch,
++            "relevance": self.relevance,
++            "version": self.version,
++        }
++
++
++@dataclass(frozen=True)
++class DecisionStateSignal:
++    """UserStateV1 单字段的最小高信号投影（真源仍是 state_aggregator）。"""
++
++    name: str
++    ref: str
++    value: dict[str, Any]
++    why_included: tuple[str, ...] = ("state_signal",)
++    ttl_seconds: int | None = None
++    epoch: str | None = None
++    computed_at: datetime | str | None = None
++    freshness_seconds: int | None = None
++    source_snapshot_ids: tuple[str, ...] = ()
++    version: str = DECISION_CONTEXT_SCHEMA_VERSION
++
++    def validate(self) -> tuple[str, ...]:
++        violations: list[str] = []
++        if self.ref != user_state_ref(self.name):
++            violations.append(f"signal {self.name}: ref must be {user_state_ref(self.name)!r}")
++        if self.ttl_seconds is None and self.epoch is None:
++            violations.append(f"signal {self.name}: ttl_seconds and epoch both missing (ttl_or_epoch rule)")
++        if not isinstance(self.value, dict):
++            violations.append(f"signal {self.name}: value must be a dict projection")
++        if not self.why_included or not set(self.why_included) <= DECISION_INCLUDE_REASONS:
++            violations.append(f"signal {self.name}: why_included empty or out of vocabulary")
++        return tuple(violations)
++
++    def to_dict(self) -> dict[str, Any]:
++        return {
++            "name": self.name,
++            "ref": self.ref,
++            "value": self.value,
++            "why_included": list(self.why_included),
++            "ttl_seconds": self.ttl_seconds,
++            "epoch": self.epoch,
++            "computed_at": _iso(self.computed_at),
++            "freshness_seconds": self.freshness_seconds,
++            "source_snapshot_ids": list(self.source_snapshot_ids),
++            "version": self.version,
++        }
++
++
++@dataclass(frozen=True)
++class DecisionContext:
++    """决策面契约：本次 pack 构建服务于哪个决策、装入了什么、为何装入、降级了什么。"""
++
++    user_id: UUID
++    intent: str
++    schema_version: str = DECISION_CONTEXT_SCHEMA_VERSION
++    route_intent: str | None = None
++    focus_mode: str | None = None
++    plan_id: UUID | None = None
++    query_text_hash: str | None = None
++    signals: tuple[DecisionStateSignal, ...] = ()
++    items: tuple[ContextItemDescriptor, ...] = ()
++    omitted_counts: Mapping[str, int] = field(default_factory=dict)
++    degraded_fields: tuple[str, ...] = ()
++    built_at: datetime | None = None
++
++    def __post_init__(self) -> None:
++        # 冻结对象：omitted_counts 固化为只读视图，防下游静默篡改观测面。
++        object.__setattr__(self, "omitted_counts", MappingProxyType(dict(self.omitted_counts)))
++
++    # -- 消费便捷接口 -------------------------------------------------------
++
++    def signal(self, name: str) -> DecisionStateSignal | None:
++        for entry in self.signals:
++            if entry.name == name:
++                return entry
++        return None
++
++    def items_in_scope(self, scope: str) -> tuple[ContextItemDescriptor, ...]:
++        return tuple(item for item in self.items if item.scope == scope)
++
++    def items_of_type(self, item_type: str) -> tuple[ContextItemDescriptor, ...]:
++        return tuple(item for item in self.items if item.type == item_type)
++
++    def refs(self) -> tuple[str, ...]:
++        return tuple(item.ref for item in self.items) + tuple(entry.ref for entry in self.signals)
++
++    def validate(self) -> tuple[str, ...]:
++        violations: list[str] = []
++        if self.schema_version != DECISION_CONTEXT_SCHEMA_VERSION:
++            violations.append(f"schema_version mismatch: {self.schema_version!r}")
++        if not self.intent:
++            violations.append("intent must be non-empty")
++        for item in self.items:
++            violations.extend(item.validate())
++        for entry in self.signals:
++            violations.extend(entry.validate())
++        return tuple(violations)
++
++    def cache_key_components(self) -> dict[str, Any]:
++        """V3 Context Compiler cache key 组件（CONTEXT_COMPILER_V3.md §7）。
++
++        决定性组件：user/decision-type/object refs/source epochs/query hash。
++        写操作与纠偏请求必须携带新的 query_text_hash，不得用旧 cache 冒充新推理。
++        """
++        epochs = {entry.epoch for entry in self.signals if entry.epoch}
++        epochs.update(item.epoch for item in self.items if item.epoch)
++        return {
++            "user_id": str(self.user_id),
++            "intent": self.intent,
++            "route_intent": self.route_intent,
++            "focus_mode": self.focus_mode,
++            "plan_id": str(self.plan_id) if self.plan_id else None,
++            "query_text_hash": self.query_text_hash,
++            "schema_version": self.schema_version,
++            "item_refs": sorted(item.ref for item in self.items),
++            "epochs": sorted(epochs),
++        }
++
++    def to_dict(self) -> dict[str, Any]:
++        return {
++            "schema_version": self.schema_version,
++            "user_id": str(self.user_id),
++            "intent": self.intent,
++            "route_intent": self.route_intent,
++            "focus_mode": self.focus_mode,
++            "plan_id": str(self.plan_id) if self.plan_id else None,
++            "query_text_hash": self.query_text_hash,
++            "signals": [entry.to_dict() for entry in self.signals],
++            "items": [item.to_dict() for item in self.items],
++            "omitted_counts": dict(self.omitted_counts),
++            "degraded_fields": list(self.degraded_fields),
++            "built_at": _iso(self.built_at),
++        }
++
++
++# ---------------------------------------------------------------------------
++# signal 投影（每字段的最小高信号 value 形状，冻结）
++# ---------------------------------------------------------------------------
++
++SIGNAL_VALUE_PROJECTIONS: Mapping[str, Callable[[Any], dict[str, Any]]] = {
++    "engagement_state": lambda v: {
++        "last_active_at": _iso(v.last_active_at),
++        "session_count_7d": int(v.session_count_7d or 0),
++        "streak": int(v.streak or 0),
++    },
++    "emotion_hint": lambda v: {
++        "dominant_sentiment": v.dominant_sentiment,
++        "sentiment_distribution": dict(v.sentiment_distribution or {}),
++        "emotional_block_detected": bool(v.emotional_block_detected),
++    },
++    "srl_phase": lambda v: {
++        "current_phase": v.current_phase,
++        "phase_started_at": _iso(v.phase_started_at),
++        "confidence": v.confidence,
++        "source": v.source,
++    },
++}
++
++
++def _default_signal_projection(value: Any) -> dict[str, Any]:
++    """未显式登记投影的字段：递归投影为 JSON 安全 dict（日期转 ISO）。"""
++
++    def _convert(item: Any) -> Any:
++        if isinstance(item, (datetime, date)):
++            return item.isoformat()
++        if isinstance(item, dict):
++            return {key: _convert(entry) for key, entry in item.items()}
++        if isinstance(item, (list, tuple)):
++            return [_convert(entry) for entry in item]
++        if dataclasses.is_dataclass(item) and not isinstance(item, type):
++            return {f.name: _convert(getattr(item, f.name)) for f in dataclasses.fields(item)}
++        return item
++
++    if dataclasses.is_dataclass(value) and not isinstance(value, type):
++        return _convert(value)
++    return {"value": _convert(value)}
++
++
++def state_signal_from_envelope(
++    field_name: UserStateFieldName,
++    envelope: StateFieldEnvelope[Any],
++    *,
++    ttl_map: Mapping[str, int],
++    epoch: str,
++) -> DecisionStateSignal:
++    """从 UserStateV1 envelope 构造 DecisionStateSignal（投影 + 权威 TTL + ref）。"""
++    projection = SIGNAL_VALUE_PROJECTIONS.get(field_name, _default_signal_projection)
++    return DecisionStateSignal(
++        name=field_name,
++        ref=user_state_ref(field_name),
++        value=projection(envelope.value),
++        why_included=("state_signal",),
++        ttl_seconds=int(ttl_map[field_name]),
++        epoch=epoch,
++        computed_at=envelope.computed_at,
++        freshness_seconds=envelope.freshness_seconds,
++        source_snapshot_ids=tuple(envelope.source_snapshot_ids or ()),
++    )
++
++
++# 供消费方做字段集自检的便捷导出（契约真源是 dataclass 本身）
++CONTEXT_ITEM_DESCRIPTOR_FIELDS: tuple[str, ...] = tuple(f.name for f in dataclasses.fields(ContextItemDescriptor))
++DECISION_STATE_SIGNAL_FIELDS: tuple[str, ...] = tuple(f.name for f in dataclasses.fields(DecisionStateSignal))
++DECISION_CONTEXT_FIELDS: tuple[str, ...] = tuple(f.name for f in dataclasses.fields(DecisionContext))
+diff --git a/backend/tests/contract/test_decision_context_contract.py b/backend/tests/contract/test_decision_context_contract.py
+new file mode 100644
+index 00000000..03c074d7
+--- /dev/null
++++ b/backend/tests/contract/test_decision_context_contract.py
+@@ -0,0 +1,547 @@
++"""C-01 · DecisionContext / ContextPack 契约冻结测试（parity guard）。
++
++冻结内容（任何变更都需要契约版本号 bump + 两位 reviewer）：
++1. 三个契约 dataclass 的字段集（名称 + 顺序）；
++2. ref URI scheme / scope / why_included / item type 封闭词表；
++3. ttl_or_epoch 语义规则（每个 item 至少携带其一）；
++4. ContextPack 向后兼容面（旧签名可构造、to_prompt_context 输出 key 集不变）；
++5. ContextPackBuilder 必须为每次 build 填充 decision_context（含降级路径）。
++
++纯 Python 消费（Aurora/Router/Planner 均在 backend/app 内进程消费），
++故 parity guard 采用契约快照（字段集哈希 + 词表冻结）而非跨语言生成物对比。
++"""
++
++from __future__ import annotations
++
++import dataclasses
++import hashlib
++import json
++from datetime import UTC, datetime, timedelta
++from uuid import uuid4
++
++import pytest
++
++from app.config import settings
++from app.core.cache import cache_service
++from app.core.context_budget import ContextBudgetScheduler
++from app.core.context_pack import ContextPack, ContextPackBuilder
++from app.core.decision_context import (
++    CONTEXT_ITEM_DESCRIPTOR_FIELDS,
++    DECISION_CONTEXT_FIELDS,
++    DECISION_CONTEXT_SCHEMA_VERSION,
++    DECISION_INCLUDE_REASONS,
++    DECISION_ITEM_TYPES,
++    DECISION_REF_SCHEMES,
++    DECISION_SCOPES,
++    DECISION_STATE_SIGNAL_FIELDS,
++    DEFAULT_DECISION_SIGNAL_FIELDS,
++    ContextItemDescriptor,
++    DecisionContext,
++    DecisionStateSignal,
++)
++
++# 模块级导入确保 sqlite 建表覆盖聚合器所需的表（follow test_state_aggregator_service 惯例）
++from app.models.achievement import UserStreakStats  # noqa: F401
++from app.models.cognitive import CognitiveFragment  # noqa: F401
++from app.models.focus import FocusSession  # noqa: F401
++from app.models.memory import MemoryPreference
++from app.models.srl_phase_state import SRLPhaseStateRecord  # noqa: F401
++from app.models.user import User
++from app.services.memory_service import MemoryService
++from app.state_aggregator.service import StateAggregatorService
++
++
++def _utcnow() -> datetime:
++    return datetime.now(UTC).replace(tzinfo=None)
++
++
++def _field_names(cls) -> tuple[str, ...]:
++    return tuple(field.name for field in dataclasses.fields(cls))
++
++
++# ---------------------------------------------------------------------------
++# Part A — 契约冻结（无 DB）
++# ---------------------------------------------------------------------------
++
++
++def test_contract_schema_version_frozen():
++    assert DECISION_CONTEXT_SCHEMA_VERSION == "decision_context.v1"
++
++
++def test_contract_field_sets_frozen():
++    """字段集快照：名称、顺序、冻结哈希三者齐验，防任何静默漂移。"""
++    assert _field_names(ContextItemDescriptor) == CONTEXT_ITEM_DESCRIPTOR_FIELDS
++    assert _field_names(DecisionStateSignal) == DECISION_STATE_SIGNAL_FIELDS
++    assert _field_names(DecisionContext) == DECISION_CONTEXT_FIELDS
++
++    # 冻结哈希：三个 dataclass 的 (name, type) 序列的 sha256 截断
++    fingerprint = hashlib.sha256(
++        json.dumps(
++            [
++                [cls.__name__, [[f.name, str(f.type)] for f in dataclasses.fields(cls)]]
++                for cls in (ContextItemDescriptor, DecisionStateSignal, DecisionContext)
++            ],
++            sort_keys=False,
++        ).encode("utf-8")
++    ).hexdigest()
++
++    assert (
++        fingerprint
++        == hashlib.sha256(
++            json.dumps(
++                [
++                    ["ContextItemDescriptor", [[n, t] for n, t in _DECLARED_ITEM_FIELDS]],
++                    ["DecisionStateSignal", [[n, t] for n, t in _DECLARED_SIGNAL_FIELDS]],
++                    ["DecisionContext", [[n, t] for n, t in _DECLARED_CONTEXT_FIELDS]],
++                ],
++                sort_keys=False,
++            ).encode("utf-8")
++        ).hexdigest()
++    )
++
++
++_DECLARED_ITEM_FIELDS = [
++    ("ref", "str"),
++    ("type", "str"),
++    ("scope", "str"),
++    ("why_included", "tuple[str, ...]"),
++    ("ttl_seconds", "int | None"),
++    ("epoch", "str | None"),
++    ("relevance", "float | None"),
++    ("version", "str"),
++]
++_DECLARED_SIGNAL_FIELDS = [
++    ("name", "str"),
++    ("ref", "str"),
++    ("value", "dict[str, Any]"),
++    ("why_included", "tuple[str, ...]"),
++    ("ttl_seconds", "int | None"),
++    ("epoch", "str | None"),
++    ("computed_at", "datetime | str | None"),
++    ("freshness_seconds", "int | None"),
++    ("source_snapshot_ids", "tuple[str, ...]"),
++    ("version", "str"),
++]
++# 注意：无默认值字段（user_id/intent）必须前置于带默认值字段（dataclass 规则）
++_DECLARED_CONTEXT_FIELDS = [
++    ("user_id", "UUID"),
++    ("intent", "str"),
++    ("schema_version", "str"),
++    ("route_intent", "str | None"),
++    ("focus_mode", "str | None"),
++    ("plan_id", "UUID | None"),
++    ("query_text_hash", "str | None"),
++    ("signals", "tuple[DecisionStateSignal, ...]"),
++    ("items", "tuple[ContextItemDescriptor, ...]"),
++    ("omitted_counts", "Mapping[str, int]"),
++    ("degraded_fields", "tuple[str, ...]"),
++    ("built_at", "datetime | None"),
++]
++
++
++def test_closed_vocabularies_frozen():
++    assert frozenset({"user", "session", "plan", "task", "global"}) == DECISION_SCOPES
++    assert frozenset({"memory", "user_state", "plan", "document", "profile"}) == DECISION_REF_SCHEMES
++    assert (
++        frozenset(
++            {
++                "rank_policy",
++                "evidence_order",
++                "budget_carryover",
++                "semantic_gate",
++                "focus_mode",
++                "plan_scope",
++                "state_signal",
++                "direct_request",
++                "diversity",
++                "fallback",
++            }
++        )
++        == DECISION_INCLUDE_REASONS
++    )
++    assert (
++        frozenset(
++            {
++                "preference",
++                "goal",
++                "episodic_memory",
++                "plan",
++                "user_state_signal",
++                "document_chunk",
++            }
++        )
++        == DECISION_ITEM_TYPES
++    )
++
++
++def test_default_signal_fields_frozen():
++    """默认高信号字段集 = Router/Aurora 最小共同需要，属冻结契约一部分。"""
++    assert DEFAULT_DECISION_SIGNAL_FIELDS == ("engagement_state", "emotion_hint", "srl_phase")
++
++
++def test_item_descriptor_requires_ttl_or_epoch():
++    good = ContextItemDescriptor(
++        ref="memory://episodic/00000000-0000-0000-0000-000000000001",
++        type="episodic_memory",
++        scope="user",
++        why_included=("rank_policy",),
++        epoch="2026-09-19T00:00:00",
++    )
++    assert good.validate() == ()
++
++    missing_both = ContextItemDescriptor(
++        ref="memory://goal/00000000-0000-0000-0000-000000000002",
++        type="goal",
++        scope="user",
++        why_included=("rank_policy",),
++    )
++    violations = missing_both.validate()
++    assert any("ttl" in v and "epoch" in v for v in violations)
++
++    ttl_only = ContextItemDescriptor(
++        ref="user_state://engagement_state",
++        type="user_state_signal",
++        scope="user",
++        why_included=("state_signal",),
++        ttl_seconds=60,
++    )
++    assert ttl_only.validate() == ()
++
++
++def test_item_descriptor_flags_unknown_vocabulary():
++    bad = ContextItemDescriptor(
++        ref="weird://thing/1",
++        type="alien_type",
++        scope="galaxy",
++        why_included=(),
++        ttl_seconds=1,
++    )
++    violations = bad.validate()
++    assert any("ref scheme" in v for v in violations)
++    assert any("type" in v for v in violations)
++    assert any("scope" in v for v in violations)
++    assert any("why_included" in v for v in violations)
++
++
++def test_decision_context_validation_aggregates_and_dedupes():
++    item = ContextItemDescriptor(
++        ref="memory://goal/x",
++        type="goal",
++        scope="user",
++        why_included=("rank_policy",),
++        epoch="e1",
++    )
++    signal = DecisionStateSignal(
++        name="engagement_state",
++        ref="user_state://engagement_state",
++        value={"streak": 3},
++        ttl_seconds=60,
++        epoch="user_state.v1.13",
++    )
++    ctx = DecisionContext(
++        user_id=uuid4(),
++        intent="chat",
++        route_intent=None,
++        focus_mode=None,
++        plan_id=None,
++        query_text_hash=None,
++        signals=(signal,),
++        items=(item,),
++        omitted_counts={"goals": 0},
++        degraded_fields=(),
++        built_at=_utcnow(),
++    )
++    assert ctx.validate() == ()
++    assert ctx.signal("engagement_state") is signal
++    assert ctx.signal("emotion_hint") is None
++    assert ctx.items_in_scope("user") == (item,)
++    assert ctx.items_of_type("goal") == (item,)
++
++
++def test_decision_context_serialization_is_json_safe():
++    signal = DecisionStateSignal(
++        name="srl_phase",
++        ref="user_state://srl_phase",
++        value={"current_phase": "forethought", "confidence": 0.8},
++        ttl_seconds=30,
++        epoch="user_state.v1.13",
++        computed_at=_utcnow(),
++        freshness_seconds=0,
++        source_snapshot_ids=("srl:1",),
++    )
++    ctx = DecisionContext(
++        user_id=uuid4(),
++        intent="chat",
++        route_intent="chat",
++        focus_mode="chat_focus",
++        plan_id=None,
++        query_text_hash="ab12",
++        signals=(signal,),
++        items=(),
++        omitted_counts={"preferences": 2},
++        degraded_fields=("emotion_hint",),
++        built_at=_utcnow(),
++    )
++    payload = ctx.to_dict()
++    serialized = json.dumps(payload)  # 不得抛异常
++    assert "ab12" in serialized
++    # 序列化产物是普通 dict（可 JSON 化）；契约对象上的 omitted_counts 是只读 Mapping
++    assert isinstance(payload["omitted_counts"], dict)
++    with pytest.raises(TypeError):
++        ctx.omitted_counts["goals"] = 99
++
++
++def test_cache_key_components_are_deterministic():
++    user_id = uuid4()
++    signal = DecisionStateSignal(
++        name="srl_phase",
++        ref="user_state://srl_phase",
++        value={},
++        ttl_seconds=30,
++        epoch="user_state.v1.13",
++    )
++    item = ContextItemDescriptor(
++        ref="memory://goal/g1",
++        type="goal",
++        scope="user",
++        why_included=("rank_policy",),
++        epoch="e1",
++    )
++
++    def _build() -> DecisionContext:
++        return DecisionContext(
++            user_id=user_id,
++            intent="chat",
++            route_intent="chat",
++            focus_mode=None,
++            plan_id=None,
++            query_text_hash="q1",
++            signals=(signal,),
++            items=(item,),
++            omitted_counts={},
++            degraded_fields=(),
++            built_at=_utcnow(),
++        )
++
++    left, right = _build().cache_key_components(), _build().cache_key_components()
++    assert left == right
++    assert left["query_text_hash"] == "q1"
++    assert "memory://goal/g1" in left["item_refs"]
++    assert "user_state.v1.13" in left["epochs"]
++
++
++def test_context_pack_backward_compatible_surface():
++    """旧构造签名可用；decision_context 默认 None；prompt 面零变化。"""
++    pack = ContextPack(
++        user_id=uuid4(),
++        intent="chat",
++        preferences={"depth_preference": {"value": 0.5}},
++        goals=[],
++        episodic_memories=[],
++        budgets={"preferences": 10, "goals": 10, "episodic": 10},
++        token_usage={"preferences": 1, "goals": 0, "episodic": 0},
++        budget_remaining={"preferences": 9, "goals": 10, "episodic": 10},
++    )
++    assert pack.decision_context is None
++
++    prompt_context = pack.to_prompt_context()
++    # prompt 面 key 集冻结：decision_context 不得进入 prompt（省 token，观测走对象/telemetry）
++    assert set(prompt_context.keys()) == {
++        "preferences",
++        "active_goals",
++        "episodic_memories",
++        "past_session_memory",
++        "context_pack",
++    }
++    assert set(prompt_context["context_pack"].keys()) == {
++        "intent",
++        "budgets",
++        "token_usage",
++        "budget_remaining",
++        "pack_id",
++        "metadata",
++    }
++
++
++# ---------------------------------------------------------------------------
++# Part B — Builder 填充（sqlite）
++# ---------------------------------------------------------------------------
++
++
++async def _seed_user_with_memories(db_session) -> tuple:
++    user_id = uuid4()
++    db_session.add(
++        User(
++            id=user_id,
++            username=f"user_{user_id.hex[:8]}",
++            email=f"{user_id.hex[:8]}@example.com",
++            hashed_password="test",
++        )
++    )
++    await db_session.commit()
++
++    memory_service = MemoryService(db_session)
++    await memory_service.upsert_preference(
++        user_id=user_id,
++        pref_key="depth_preference",
++        pref_value={"value": 0.7},
++        evidence_refs=[{"type": "event", "id": "evt_dc_1"}],
++    )
++    await memory_service.create_goal(
++        user_id=user_id,
++        title="Goal DC",
++        status="active",
++        evidence_refs=[{"type": "event", "id": "evt_dc_2"}],
++    )
++    await memory_service.create_episodic_memory(
++        user_id=user_id,
++        summary="DC episodic memory",
++        source_type="analysis",
++        source_id="src_dc",
++        occurred_at=_utcnow() - timedelta(hours=1),
++        importance_score=0.6,
++        tags=["execution"],
++        evidence_refs=[{"type": "event", "id": "evt_dc_3"}],
++    )
++    return user_id
++
++
++def _builder(db_session) -> ContextPackBuilder:
++    scheduler = ContextBudgetScheduler(budgets={"chat": {"preferences": 200, "goals": 50, "episodic": 50}})
++    return ContextPackBuilder(db_session, scheduler=scheduler)
++
++
++@pytest.mark.asyncio
++async def test_builder_populates_decision_context(db_session, monkeypatch):
++    monkeypatch.setattr(cache_service, "redis", None, raising=False)
++    user_id = await _seed_user_with_memories(db_session)
++
++    pack = await _builder(db_session).build(user_id, intent="chat", query_text="帮我复习高数", route_intent="chat")
++
++    decision = pack.decision_context
++    assert decision is not None, "build() 必须默认填充 decision_context"
++    assert decision.schema_version == DECISION_CONTEXT_SCHEMA_VERSION
++    assert decision.intent == "chat"
++    assert decision.route_intent == "chat"
++    assert decision.user_id == user_id
++    assert decision.query_text_hash is not None
++    assert len(decision.query_text_hash) == 16
++    assert decision.validate() == (), f"契约违规: {decision.validate()}"
++
++    # items manifest 精确覆盖被注入的 section 内容（不多不少）
++    pref_items = decision.items_of_type("preference")
++    included_goal_ids = {item.ref.split("/")[-1] for item in decision.items_of_type("goal")}
++    included_episodic_ids = {item.ref.split("/")[-1] for item in decision.items_of_type("episodic_memory")}
++    assert len(pref_items) == len(pack.preferences)
++    assert all(item.ref.startswith("memory://preference/") for item in pref_items)
++    assert all(item.epoch is not None for item in pref_items)
++    assert included_goal_ids == {payload["id"] for payload in pack.goals}
++    assert included_episodic_ids == {payload["id"] for payload in pack.episodic_memories}
++
++    for item in decision.items:
++        assert item.ref.startswith("memory://")
++        assert item.why_included, "why_included 不得为空"
++        assert set(item.why_included) <= DECISION_INCLUDE_REASONS
++        assert item.ttl_seconds is not None or item.epoch is not None
++        assert item.version == DECISION_CONTEXT_SCHEMA_VERSION
++
++    # 观测面：omitted_counts 覆盖三个 memory section
++    assert set(decision.omitted_counts.keys()) >= {"preferences", "goals", "episodic"}
++
++    # signals：UserStateV1 高信号投影，TTL 与聚合器权威 TTL 表一致
++    assert {s.name for s in decision.signals} == set(DEFAULT_DECISION_SIGNAL_FIELDS)
++    for signal in decision.signals:
++        assert signal.ttl_seconds == StateAggregatorService.FIELD_TTLS_SECONDS[signal.name]
++        assert signal.epoch == "user_state.v1.13"
++        assert signal.ref == f"user_state://{signal.name}"
++        assert signal.why_included == ("state_signal",)
++
++    engagement = decision.signal("engagement_state")
++    assert engagement is not None
++    assert set(engagement.value.keys()) == {"last_active_at", "session_count_7d", "streak"}
++
++
++@pytest.mark.asyncio
++async def test_builder_signals_degrade_gracefully(db_session, monkeypatch):
++    """聚合器故障时 pack 必须照常构建：信号空 + degraded_fields 登记，不抛异常。"""
++    monkeypatch.setattr(cache_service, "redis", None, raising=False)
++    user_id = await _seed_user_with_memories(db_session)
++
++    async def _explode(*args, **kwargs):
++        raise RuntimeError("aggregator down")
++
++    monkeypatch.setattr(StateAggregatorService, "get_user_state", _explode)
++
++    pack = await _builder(db_session).build(user_id, intent="chat")
++    assert pack.decision_context is not None
++    assert pack.decision_context.signals == ()
++    assert tuple(sorted(pack.decision_context.degraded_fields)) == tuple(sorted(DEFAULT_DECISION_SIGNAL_FIELDS))
++    # items manifest 不受信号降级影响
++    assert any(item.type == "preference" for item in pack.decision_context.items)
++
++
++@pytest.mark.asyncio
++async def test_builder_decision_context_kill_switch(db_session, monkeypatch):
++    monkeypatch.setattr(cache_service, "redis", None, raising=False)
++    monkeypatch.setattr(settings, "ENABLE_DECISION_CONTEXT", False, raising=False)
++    user_id = await _seed_user_with_memories(db_session)
++
++    pack = await _builder(db_session).build(user_id, intent="chat")
++    assert pack.decision_context is None
++    # 其余行为不受影响
++    assert "depth_preference" in pack.preferences
++
++
++@pytest.mark.asyncio
++async def test_goal_item_scope_follows_plan_link(db_session, monkeypatch):
++    """linked_plan_id 的 goal → scope=plan；无链接 → scope=user。"""
++    monkeypatch.setattr(cache_service, "redis", None, raising=False)
++    user_id = await _seed_user_with_memories(db_session)
++
++    memory_service = MemoryService(db_session)
++    plan_goal = await memory_service.create_goal(
++        user_id=user_id,
++        title="Plan linked goal",
++        status="active",
++        evidence_refs=[{"type": "event", "id": "evt_dc_plan"}],
++    )
++    # 直接把已注入 payload 标记为 plan 链接形态（复用 create_goal 后更新 linked_plan_id）
++    from sqlalchemy import update
++
++    from app.models.memory import MemoryGoal
++
++    await db_session.execute(update(MemoryGoal).where(MemoryGoal.id == plan_goal.id).values(linked_plan_id=uuid4()))
++    await db_session.commit()
++
++    pack = await _builder(db_session).build(user_id, intent="chat")
++    decision = pack.decision_context
++    assert decision is not None
++
++    goal_scopes = {item.ref: item.scope for item in decision.items_of_type("goal")}
++    plan_linked_refs = {f"memory://goal/{payload['id']}" for payload in pack.goals if payload.get("linked_plan_id")}
++    for ref, scope in goal_scopes.items():
++        expected = "plan" if ref in plan_linked_refs else "user"
++        assert scope == expected, f"{ref} scope 应为 {expected}"
++
++
++@pytest.mark.asyncio
++async def test_memory_governance_and_decision_context_coexist(db_session, monkeypatch):
++    """decision_context 填充不得破坏既有治理行为（last_consumed_at 标记）。"""
++    monkeypatch.setattr(cache_service, "redis", None, raising=False)
++    monkeypatch.setattr(settings, "ENABLE_MEMORY_GOVERNANCE", True, raising=False)
++    user_id = await _seed_user_with_memories(db_session)
++
++    memory_service = MemoryService(db_session)
++    pref = await memory_service.upsert_preference(
++        user_id=user_id,
++        pref_key="curiosity_preference",
++        pref_value={"value": 0.4},
++        evidence_refs=[{"type": "event", "id": "evt_dc_gov"}],
++    )
++
++    pack = await _builder(db_session).build(user_id, intent="chat")
++    assert pack.decision_context is not None
++
++    refreshed = await db_session.get(MemoryPreference, pref.id)
++    assert refreshed is not None
++    assert refreshed.last_consumed_at is not None
+diff --git a/v3-output/C-01/REPORT.md b/v3-output/C-01/REPORT.md
+new file mode 100644
+index 00000000..68c3a9d6
+--- /dev/null
++++ b/v3-output/C-01/REPORT.md
+@@ -0,0 +1,125 @@
++# C-01 REPORT · DecisionContext / ContextPack 契约冻结
++
++- **Task**: C-01 · DecisionContext / ContextPack 契约冻结（stream CONTEXT, gate V3-2, risk high, reviewers=2, locks context-contract）
++- **Status**: READY_FOR_REVIEW（未 commit；改动以 `changes.patch` 交付）
++- **Base SHA**: `2f52a972`（worktree wt5）
++- **工作树最终态**: 2 个修改文件 + 2 个新增文件，未 commit / 未 push
++
++## 1. 问题定义
++
++Aurora / Router / Planner 需要一个共同消费的"最小高信号决策上下文"。基线勘察结论：
++
++| 现状 | 事实 |
++|---|---|
++| ContextPack（`backend/app/core/context_pack.py:1086`） | 唯一上下文契约，但 item 只有隐式 id，无 ref/scope/version/why_included 语义；`metadata["ranking"]` 只是 ranking 开启时的影子元数据，非冻结契约 |
++| UserStateV1（`state_aggregator/schema.py:285`） | UserWorldSnapshot 权威（20 字段 envelope），但其决策关键信号（engagement/emotion/srl）**不在 ContextPack 里**，只经 ContextBuilderMixin 平行 dict 流动（B-06 D-CTX） |
++| 决策侧真值 | event_store + decision_records（live 947 行）；TTL 唯一真源是 `StateAggregatorService.FIELD_TTLS_SECONDS` |
++
++即：决策面消费方要么各自再查（重复装配），要么吃 prompt 面大 dict（无 provenance）。这正是卡要冻的缝。
++
++## 2. 契约形态与关键设计决策
++
++### 2.1 形态：extend ContextPack，不新建真源
++
++新增模块 `backend/app/core/decision_context.py`（纯契约类型，只依赖 stdlib + `state_aggregator.schema`），`ContextPack` 增加一个可选尾字段：
++
++```python
++decision_context: DecisionContext | None = None
++```
++
++三个冻结 dataclass（schema_version = `decision_context.v1`）：
++
++| dataclass | 字段（顺序冻结） |
++|---|---|
++| `ContextItemDescriptor` | ref / type / scope / why_included / ttl_seconds? / epoch? / relevance? / version |
++| `DecisionStateSignal` | name / ref / value / why_included / ttl_seconds? / epoch? / computed_at? / freshness_seconds? / source_snapshot_ids / version |
++| `DecisionContext` | user_id / intent / schema_version / route_intent / focus_mode / plan_id / query_text_hash / signals / items / omitted_counts(只读 Mapping) / degraded_fields / built_at |
++
++每字段满足卡面要求 **ref/type/scope/ttl_or_epoch/version/why_included**：
++- `ref`：真源 URI，封闭 scheme 集 `{memory, user_state, plan, document, profile}`，如 `memory://episodic/<uuid>`、`user_state://srl_phase`、`plan://<plan_id>`（id 可解析回 DB 记录）；
++- `ttl_or_epoch`：契约规则"至少其一"（`validate()` 强校验）。signal 的 TTL 来自权威表 `FIELD_TTLS_SECONDS`，epoch=UserStateV1.schema_version；memory item 的 epoch=记录 updated_at/occurred_at ISO；
++- `why_included`：封闭词表 10 个 reason code（rank_policy / evidence_order / budget_carryover / semantic_gate / focus_mode / plan_scope / state_signal / direct_request / diversity / fallback），builder 按真实选择链组装（如 `(rank_policy, focus_mode, semantic_gate, budget_carryover)`）；
++- `omitted_counts`：候选→注入差值（CONTEXT_COMPILER_V3 §6 观测面）；`query_text_hash`：sha256[:16]，PII 最小化；
++- `cache_key_components()`：落 CONTEXT_COMPILER_V3 §7 的 cache key 组件（user/decision-type/item_refs/epochs/query_hash），纠偏请求带新 hash 不得复用旧 cache。
++
++### 2.2 备选方案与取舍
++
++| 备选 | 结论 | 理由 |
++|---|---|---|
++| 新建 UserContextV3 aggregate | **否决** | 直接违反卡面 acceptance（不存在 parallel UserContextV3 真源）与 B-06 R2-C1 |
++| signal 全量拷贝 UserStateV1 20 字段 | 否决 | 违反"最小高信号"；20 字段里大量与当轮决策无关；且会制造快照聚合漂移面。默认 3 字段（engagement_state/emotion_hint/srl_phase）= Router/Aurora 最小共同需要，且是确定性 DB 投影（无 LLM、无 sufficiency turn-parse 依赖） |
++| DecisionContext 进 `to_prompt_context()` | 否决（刻意） | manifest 是观测/决策元数据不是 prompt 内容；进 prompt 会 token 膨胀并改变 5 个消费者行为。prompt 面集成留给 Context Compiler V3 实现卡，契约面已冻结 key 集 |
++| proto 化（跨层） | 不需要 | 全仓证据：ContextPack 无 proto message、无 Go/Dart 引用（grep proto/ + gateway + mobile 为空）；Aurora/Router/Planner 全在 backend/app 进程内。按卡面"纯 Python 消费→契约快照测试防漂移"执行，proto 单一生成链零触碰 |
++| item ref 用 pref_key 而非记录 id | 否决 | ref 必须可解析回权威记录（correction_actions/API 都以 memory id 寻址） |
++
++### 2.3 信号投影 = 投影 + 指针，非新真源
++
++`state_signal_from_envelope()` 只做 envelope→最小 value 投影（每字段冻结投影形状，如 engagement→{last_active_at, session_count_7d, streak}），TTL/epoch/`source_snapshot_ids`/`freshness_seconds` 原样携带，ref 指回 `user_state://<field>`。真源仍是 state_aggregator。
++
++## 3. 消费方映射表
++
++### 3.1 三个决策消费方（接入点已就绪，消费迁移属后续卡）
++
++| 消费方 | 接入点 | 读什么 |
++|---|---|---|
++| Router（`orchestration/dual_core_router.py`） | `pack.decision_context.signals` + `intent/route_intent/focus_mode` | engagement（streak/session_count_7d）、emotion（dominant_sentiment/emotional_block_detected）、srl_phase——替代从 ContextBuilderMixin 平行 dict 二次取数 |
++| Aurora（`app/aurora/*`） | `pack.decision_context.items` | ref/relevance/why_included 即 AURORA_V3 要求的 "relevant memories + provenance" 与 memory_use_receipts 的数据面；`refs()`/`items_of_type()` 直接可用 |
++| Planner（`orchestration/plan_review_service.py` 等） | `pack.decision_context.items_in_scope("plan")` + plan ref | plan 链接 goal（scope=plan）+ `plan://<id>` item + omitted_counts（预算裁剪可见） |
++
++### 3.2 现有 5 个 ContextPack 消费者（零破坏验证）
++
++| 消费者 | 用法 | 兼容性 |
++|---|---|---|
++| `orchestration/context_focus.py:385` | builder.build() 后读 preferences/goals/… | 新字段可选默认 None；相关测试 `test_context_focusing.py` 21 项通过 |
++| `orchestration/plan_review_service.py:2379` | `to_prompt_context()` | prompt 面 key 集冻结不变（契约测试断言） |
++| `api/v1/chat.py:863` | `to_prompt_context()` | 同上 |
++| `services/memory_eval_service.py:93` | 读 preferences/goals/episodic | 测试通过 |
++| ContextPackRun 行级消费（budget_optimization / response_feedback / understanding_depth） | DB 表 | 零触碰（本卡不改 DB schema） |
++
++## 4. Parity guard（验收项 1）
++
++- **跨层 parity**：不适用（证据：§2.2 proto 取舍行）。全仓 grep 确认 Go/Dart/proto 无 ContextPack 引用。
++- **纯 Python 契约快照**：`backend/tests/contract/test_decision_context_contract.py`（15 项）——
++  - 三个 dataclass 字段名+顺序 == 契约常量，且 (name,type) 序列 sha256 == 测试内字面量（双重冻结）；
++  - scope/ref-scheme/why/item-type 四个封闭词表精确集冻结；
++  - ttl_or_epoch 规则、词表违规、ref 格式违规的 `validate()` 行为；
++  - **ContextPack 向后兼容面**：旧签名可构造、`decision_context` 默认 None、`to_prompt_context()` 输出 key 集与旧完全一致（prompt 面零变化被测试钉死）；
++  - 序列化 JSON-safe + omitted_counts 只读；
++  - builder 填充：manifest 精确覆盖注入集合、signal TTL==FIELD_TTLS_SECONDS、聚合器故障降级（signals 空 + degraded_fields 登记、pack 不炸）、kill switch、goal→plan scope 规则、与 memory governance 共存。
++
++## 5. 红绿纪律与测试证据
++
++1. **RED**（先写测试）：`ModuleNotFoundError: No module named 'app.core.decision_context'`（2026-09-19 12:35 collection error，实跑记录）。
++2. **GREEN**：实现后 `tests/contract/test_decision_context_contract.py` **15 passed**。
++3. **回归**（定向串行，sqlite 内存库，未触碰 dev DB）：
++   - `test_context_pack*.py` 6 文件 **12 passed**
++   - `test_state_aggregator_service.py + test_aggregator_schema_v1_{5,10,11}.py` **16 passed**
++   - `test_context_focusing.py + test_memory_eval_service.py` **21 passed**
++   - lint：改动文件 ruff + black(120) 全通过（ruff --fix 仅排序/UTC 字面量归一）
++   - 运行环境注记：worktree 无 venv，借用 `sparkle-cosmos/backend/.venv`（Python 3.11，依赖全匹配，`PYTHONDONTWRITEBYTECODE=1` 只读借用）；`backend/app/gen/` 为 gitignore 生成物，从主仓只读拷入 worktree 供测试。
++
++## 6. 顺带修复与发现的既有缺陷（非本卡引入）
++
++1. **修复**：`context_pack.py` telemetry 块把 `goal_scores`/`episodic_scores`（trim 结果 dict）就地遮蔽成 list——潜在变量遮蔽缺陷，本次以 `telemetry_*` 重命名根治（RED 调试时实锤命中）。
++2. **记录不修**：`app.core.plan_context` ↔ `orchestration.prompts` 存在既有循环 import（`import app.core.plan_context` 单独即失败，与本次改动无关，正常入口顺序不受影响）——建议记入 KNOWN_CODE_DEBT_LEDGER 跟进。
++
++## 7. 风险与边界
++
++- **热路径成本**：默认 `ENABLE_DECISION_CONTEXT=True` 每次 build 增加 3 个聚合器字段读取（~6 条小索引查询 + kill-switch 读）。三层防护：总开关 settings、整段 try/except（失败→None 不阻断 pack）、逐字段降级（degraded_fields 登记）。与 `_build_stage33_working_memory_snapshot` 既有每轮 get_user_state 调用同量级，有先例。Reviewer 如有顾虑可改默认 False，契约不受影响。
++- **默认信号集刻意不含 task/context_sufficiency**：二者依赖当轮 turn parse（pack build 无此输入，硬塞只会得到 0 分脏数据）；待 Planner 链路传入 turn parse 后按契约版本 bump 扩展。
++- **document_chunk / event 类型在词表中预留但 builder 暂不产出**：RAG 材料注入位（紧邻 user 消息，f01f4ae8）与 event_store 决策引用属 Context Compiler V3 后续卡，契约不提前造假数据。
++- **未做**：decision_context 落 ContextPackRun telemetry（存储面）、orchestrator 侧 ContextBuilderMixin 消费迁移——均为后续卡范围，本卡只冻契约。
++
++## 8. 改动清单
++
++```
++新增  backend/app/core/decision_context.py          # 契约（3 dataclass + 词表 + 投影 + 校验）
++新增  backend/tests/contract/test_decision_context_contract.py  # parity guard（15 项）
++修改  backend/app/core/context_pack.py              # ContextPack.decision_context 字段 + builder 填充 + telemetry 遮蔽修复
++修改  backend/app/config/settings.py                # ENABLE_DECISION_CONTEXT 开关
++产物  v3-output/C-01/REPORT.md + changes.patch
++```
++
++## 9. 收工清理
++
++- 删除 `backend/app/gen/`（主仓拷贝的生成物）、`__pycache__`、`.pytest_cache`；无进程/模拟器/Gradle/浏览器；无 /tmp 产物；venv 借用未写入（PYTHONDONTWRITEBYTECODE）；未 commit/push。

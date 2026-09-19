@@ -30,6 +30,16 @@ from app.core.business_metrics import (
 )
 from app.core.context_budget import ContextBudgetScheduler
 from app.core.context_ranker import RankedItem, rank_items
+from app.core.decision_context import (
+    DEFAULT_DECISION_SIGNAL_FIELDS,
+    ContextItemDescriptor,
+    DecisionContext,
+    DecisionStateSignal,
+    hash_query_text,
+    memory_ref,
+    plan_ref,
+    state_signal_from_envelope,
+)
 from app.core.plan_context import PlanContextBuilder
 from app.orchestration.context_focus import (
     ContextFocusResolver,
@@ -1098,6 +1108,10 @@ class ContextPack:
     plan_context: dict[str, Any] | None = None  # PlanScope context
     context_focus: dict[str, Any] | None = None
     context_briefing_note: str | None = None
+    # C-01 决策面契约（可选、默认 None → 现有 5 个消费者零破坏）：
+    # Aurora/Router/Planner 的进程内消费面。刻意不进 to_prompt_context()——
+    # manifest 是观测/决策元数据，不是 prompt 内容，避免 token 膨胀。
+    decision_context: DecisionContext | None = None
 
     def to_prompt_context(self) -> dict[str, Any]:
         result = {
@@ -1402,9 +1416,7 @@ class ContextPackBuilder:
         # 不再将证据化记忆记录从 pack 中静默剔除——双源并存，交给 rank 加权与
         # 预算竞争裁决；双源键写入 metadata 供审计（V3 再收敛为显式规则表 + 冲突登记）。
         dual_source_keys = sorted(
-            key
-            for key in profile_keys
-            if any(entry.item.pref_key == key for entry in ranked_preferences)
+            key for key in profile_keys if any(entry.item.pref_key == key for entry in ranked_preferences)
         )
         if dual_source_keys:
             metadata["preference_dual_source_keys"] = dual_source_keys
@@ -1588,14 +1600,20 @@ class ContextPackBuilder:
         if settings.ENABLE_CONTEXT_PACK_TELEMETRY:
             trimmed_goal_ids = {payload.get("id") for payload in trimmed_goals}
             trimmed_episodic_ids = {payload.get("id") for payload in trimmed_episodic}
-            pref_scores = [
+            telemetry_pref_scores = [
                 item.evidence_score for item in preference_source_records if item.pref_key in trimmed_preferences
             ]
-            goal_scores = [item.evidence_score for item in goal_source_records if str(item.id) in trimmed_goal_ids]
-            episodic_scores = [
+            telemetry_goal_scores = [
+                item.evidence_score for item in goal_source_records if str(item.id) in trimmed_goal_ids
+            ]
+            telemetry_episodic_scores = [
                 item.evidence_score for item in episodic_source_records if str(item.id) in trimmed_episodic_ids
             ]
-            scores = [score for score in pref_scores + goal_scores + episodic_scores if score is not None]
+            scores = [
+                score
+                for score in telemetry_pref_scores + telemetry_goal_scores + telemetry_episodic_scores
+                if score is not None
+            ]
             evidence_avg = (sum(scores) / len(scores)) if scores else None
 
             telemetry = ContextPackTelemetryService(self.db)
@@ -1625,6 +1643,36 @@ class ContextPackBuilder:
                     budget=budget,
                 )
 
+        # C-01: 决策面契约填充（Aurora/Router/Planner 消费）。失败绝不阻断 pack 主链路。
+        decision_ctx: DecisionContext | None = None
+        if getattr(settings, "ENABLE_DECISION_CONTEXT", True):
+            try:
+                decision_ctx = await self._build_decision_context(
+                    user_id=user_id,
+                    intent=intent,
+                    route_intent=route_intent,
+                    plan_id=plan_id,
+                    query_text=query_text,
+                    focus_mode=focus_decision.focus_mode if focus_decision else None,
+                    ranked_preferences=ranked_preferences,
+                    trimmed_preferences=trimmed_preferences,
+                    ranked_goals=ranked_goals,
+                    trimmed_goals=trimmed_goals,
+                    goal_scores=goal_scores,
+                    ranked_episodic=ranked_episodic,
+                    trimmed_episodic=trimmed_episodic,
+                    episodic_scores=episodic_scores,
+                    goal_candidate_count=len(goal_payloads),
+                    episodic_candidate_count=len(episodic_payloads),
+                    ranking_enabled=ranking_enabled,
+                    semantic_metadata=semantic_metadata,
+                    focus_active=focus_decision is not None,
+                    plan_context=plan_context,
+                )
+            except Exception as exc:
+                logger.warning(f"Failed to build decision context for {user_id}: {exc}")
+                decision_ctx = None
+
         return ContextPack(
             user_id=user_id,
             intent=intent,
@@ -1639,6 +1687,189 @@ class ContextPackBuilder:
             plan_context=plan_context,
             context_focus=focus_decision.to_dict() if focus_decision else None,
             context_briefing_note=context_briefing_note or None,
+            decision_context=decision_ctx,
+        )
+
+    def _decision_item_reasons(
+        self,
+        *,
+        ranking_enabled: bool,
+        focus_active: bool,
+        semantic_applied: bool,
+        included: int,
+        candidates: int,
+    ) -> tuple[str, ...]:
+        reasons = ["rank_policy"] if ranking_enabled else ["evidence_order"]
+        if focus_active:
+            reasons.append("focus_mode")
+        if semantic_applied:
+            reasons.append("semantic_gate")
+        if included < candidates:
+            reasons.append("budget_carryover")
+        return tuple(reasons)
+
+    async def _collect_decision_signals(
+        self,
+        user_id: UUID,
+    ) -> tuple[tuple[DecisionStateSignal, ...], tuple[str, ...]]:
+        """逐字段投影 UserStateV1 高信号（单字段故障只降级该字段，不炸 pack）。"""
+        from app.state_aggregator.service import StateAggregatorService
+
+        aggregator = StateAggregatorService(self.db)
+        ttl_map = StateAggregatorService.FIELD_TTLS_SECONDS
+        signals: list[DecisionStateSignal] = []
+        degraded: list[str] = []
+        for field_name in DEFAULT_DECISION_SIGNAL_FIELDS:
+            try:
+                state = await aggregator.get_user_state(user_id, required_fields=(field_name,))
+                envelope = getattr(state, field_name, None)
+                if envelope is None or getattr(envelope, "value", None) is None:
+                    degraded.append(field_name)
+                    continue
+                signals.append(
+                    state_signal_from_envelope(
+                        field_name,
+                        envelope,
+                        ttl_map=ttl_map,
+                        epoch=state.schema_version,
+                    )
+                )
+            except Exception as exc:
+                logger.warning(f"Decision context signal {field_name} degraded for {user_id}: {exc}")
+                degraded.append(field_name)
+        return tuple(signals), tuple(degraded)
+
+    async def _build_decision_context(
+        self,
+        *,
+        user_id: UUID,
+        intent: str,
+        route_intent: str | None,
+        plan_id: UUID | None,
+        query_text: str | None,
+        focus_mode: str | None,
+        ranked_preferences: list[RankedItem[Any]],
+        trimmed_preferences: dict[str, Any],
+        ranked_goals: list[RankedItem[Any]],
+        trimmed_goals: list[dict[str, Any]],
+        goal_scores: dict[str, float],
+        ranked_episodic: list[RankedItem[Any]],
+        trimmed_episodic: list[dict[str, Any]],
+        episodic_scores: dict[str, float],
+        goal_candidate_count: int,
+        episodic_candidate_count: int,
+        ranking_enabled: bool,
+        semantic_metadata: dict[str, Any],
+        focus_active: bool,
+        plan_context: dict[str, Any] | None,
+    ) -> DecisionContext:
+        def _iso_or_none(value: Any) -> str | None:
+            return value.isoformat() if hasattr(value, "isoformat") else (str(value) if value is not None else None)
+
+        items: list[ContextItemDescriptor] = []
+
+        pref_candidates = len(ranked_preferences)
+        pref_semantic = bool(semantic_metadata.get("preferences", {}).get("applied"))
+        pref_reasons = self._decision_item_reasons(
+            ranking_enabled=ranking_enabled,
+            focus_active=focus_active,
+            semantic_applied=pref_semantic,
+            included=len(trimmed_preferences),
+            candidates=pref_candidates,
+        )
+        for entry in ranked_preferences:
+            if entry.item.pref_key not in trimmed_preferences:
+                continue
+            items.append(
+                ContextItemDescriptor(
+                    ref=memory_ref("preference", entry.item.id),
+                    type="preference",
+                    scope="user",
+                    why_included=pref_reasons,
+                    epoch=_iso_or_none(getattr(entry.item, "updated_at", None)),
+                    relevance=entry.score,
+                )
+            )
+
+        goal_semantic = bool(semantic_metadata.get("goals", {}).get("applied"))
+        goal_reasons = self._decision_item_reasons(
+            ranking_enabled=ranking_enabled,
+            focus_active=focus_active,
+            semantic_applied=goal_semantic,
+            included=len(trimmed_goals),
+            candidates=goal_candidate_count,
+        )
+        goal_epochs = {
+            str(entry.item.id): _iso_or_none(getattr(entry.item, "updated_at", None)) for entry in ranked_goals
+        }
+        for payload in trimmed_goals:
+            item_id = str(payload.get("id"))
+            items.append(
+                ContextItemDescriptor(
+                    ref=memory_ref("goal", item_id),
+                    type="goal",
+                    scope="plan" if payload.get("linked_plan_id") else "user",
+                    why_included=goal_reasons,
+                    epoch=goal_epochs.get(item_id),
+                    relevance=goal_scores.get(item_id),
+                )
+            )
+
+        episodic_semantic = bool(semantic_metadata.get("episodic", {}).get("applied"))
+        episodic_reasons = self._decision_item_reasons(
+            ranking_enabled=ranking_enabled,
+            focus_active=focus_active,
+            semantic_applied=episodic_semantic,
+            included=len(trimmed_episodic),
+            candidates=episodic_candidate_count,
+        )
+        episodic_epochs = {
+            str(entry.item.id): _iso_or_none(getattr(entry.item, "occurred_at", None)) for entry in ranked_episodic
+        }
+        for payload in trimmed_episodic:
+            item_id = str(payload.get("id"))
+            items.append(
+                ContextItemDescriptor(
+                    ref=memory_ref("episodic", item_id),
+                    type="episodic_memory",
+                    scope="user",
+                    why_included=episodic_reasons,
+                    epoch=episodic_epochs.get(item_id),
+                    relevance=episodic_scores.get(item_id),
+                )
+            )
+
+        if plan_context and plan_context.get("plan_id"):
+            items.append(
+                ContextItemDescriptor(
+                    ref=plan_ref(plan_context.get("plan_id")),
+                    type="plan",
+                    scope="plan",
+                    why_included=("plan_scope",),
+                    epoch=str(plan_context.get("version") or "unknown"),
+                )
+            )
+
+        signals, degraded = await self._collect_decision_signals(user_id)
+
+        omitted_counts = {
+            "preferences": max(0, len(ranked_preferences) - len(trimmed_preferences)),
+            "goals": max(0, goal_candidate_count - len(trimmed_goals)),
+            "episodic": max(0, episodic_candidate_count - len(trimmed_episodic)),
+        }
+
+        return DecisionContext(
+            user_id=user_id,
+            intent=intent,
+            route_intent=route_intent,
+            focus_mode=focus_mode,
+            plan_id=plan_id,
+            query_text_hash=hash_query_text(query_text),
+            signals=signals,
+            items=tuple(items),
+            omitted_counts=omitted_counts,
+            degraded_fields=degraded,
+            built_at=_utcnow(),
         )
 
     async def _mark_consumed_memory_records(
