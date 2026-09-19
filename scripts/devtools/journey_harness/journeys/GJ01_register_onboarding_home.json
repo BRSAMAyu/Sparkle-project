@@ -1,0 +1,285 @@
+{
+  "id": "GJ01",
+  "title": "Fresh user → register → onboarding → first useful action (home)",
+  "golden_ref": "v3/05_metrics_eval/GOLDEN_JOURNEYS.md#GJ01 (Fresh user → goal → first useful action)",
+  "description": "全新邮箱用户：注册 → 进入 Persona Guide onboarding（5 步）→ 完成后落到建模对话 → Skip 进入五 Tab 壳 → 回到 Cockpit 首页。对应协调卡『注册→onboarding→首页』。文本按产品实际渲染（zh-first，见 I18nService.resolveSupportedLocale 默认 zh）。",
+  "platforms": {
+    "web": {
+      "applicable": true,
+      "note": "Chrome + CDP + 语义树定位，真实点击/输入。注意：注册提交步当前被产品缺陷阻塞（Web 端注册服务端 200 但客户端静默失败，见 REPORT §4），run 会在该步诚实 FAIL"
+    },
+    "android": {
+      "applicable": true,
+      "note": "基线仅最小壳：boot+安装+启动+截图；UI 步进待无障碍驱动接入（见 android driver 说明）"
+    },
+    "macos": {
+      "applicable": true,
+      "note": "复用 mobile/integration_test/macos_journey_test.dart（访客 journey，不含邮箱注册步）"
+    }
+  },
+  "backends": {
+    "macos": [
+      {
+        "name": "macos_guest_journey_test",
+        "action": "run_journey_test",
+        "args": {}
+      }
+    ],
+    "android": [
+      {
+        "name": "install_apk",
+        "action": "install_apk",
+        "args": {}
+      },
+      {
+        "name": "launch_app_frontend",
+        "action": "launch_app",
+        "args": {
+          "screenshot": "launch_frontend"
+        }
+      },
+      {
+        "name": "logcat_snapshot",
+        "action": "logcat_snapshot",
+        "args": {
+          "name": "logcat_launch"
+        }
+      },
+      {
+        "name": "no_startup_fatal_errors",
+        "action": "assert_logcat_absent",
+        "args": {
+          "patterns": [
+            "FATAL ERROR DURING STARTUP",
+            "IsarError"
+          ]
+        }
+      }
+    ],
+    "web": [
+      {
+        "name": "open_app_login",
+        "action": "open_app",
+        "args": {
+          "wait_text": "以访客身份继续",
+          "timeout": 120
+        }
+      },
+      {
+        "name": "open_register_via_login_entry",
+        "action": "tap_text",
+        "args": {
+          "text": "还没有账号",
+          "then_wait": "加入 Sparkle",
+          "timeout": 30,
+          "screenshot": "register_screen"
+        }
+      },
+      {
+        "name": "fill_username",
+        "action": "type_into_nth",
+        "args": {
+          "index": 0,
+          "text": "jh_g01_%RUN%"
+        }
+      },
+      {
+        "name": "fill_email",
+        "action": "type_into_nth",
+        "args": {
+          "index": 1,
+          "text": "jh_g01_%RUN%@sparkle-journey.example.com"
+        }
+      },
+      {
+        "name": "note_account",
+        "action": "note_account",
+        "args": {
+          "username": "jh_g01_%RUN%",
+          "email": "jh_g01_%RUN%@sparkle-journey.example.com"
+        }
+      },
+      {
+        "name": "fill_password",
+        "action": "type_into_nth",
+        "args": {
+          "index": 2,
+          "text": "Journey#2026A",
+          "verify_contains": ""
+        }
+      },
+      {
+        "name": "fill_confirm_password",
+        "action": "type_into_nth",
+        "args": {
+          "index": 3,
+          "text": "Journey#2026A",
+          "verify_contains": ""
+        }
+      },
+      {
+        "name": "agree_tos",
+        "action": "tap_text",
+        "args": {
+          "text": "我已阅读并同意《用户协议》",
+          "screenshot": "form_filled"
+        }
+      },
+      {
+        "name": "agree_privacy",
+        "action": "tap_text",
+        "args": {
+          "text": "我已阅读并同意《隐私政策》"
+        }
+      },
+      {
+        "name": "submit_register",
+        "action": "tap_text",
+        "args": {
+          "text": "注册",
+          "roles": [
+            "button"
+          ],
+          "exact": false,
+          "then_wait": "学习目标",
+          "timeout": 60,
+          "screenshot": "onboarding_step0"
+        }
+      },
+      {
+        "name": "onboarding_type_goal",
+        "action": "type_into_nth",
+        "args": {
+          "index": 0,
+          "text": "Prepare for my data structures midterm in two weeks"
+        }
+      },
+      {
+        "name": "onboarding_step1",
+        "action": "tap_text",
+        "args": {
+          "text": "下一步",
+          "roles": [
+            "button"
+          ],
+          "exact": true,
+          "then_wait": "学习风格",
+          "timeout": 40,
+          "screenshot": "onboarding_step1"
+        }
+      },
+      {
+        "name": "onboarding_step2",
+        "action": "tap_text",
+        "args": {
+          "text": "下一步",
+          "roles": [
+            "button"
+          ],
+          "exact": true,
+          "then_wait": "每日学习时间",
+          "timeout": 40,
+          "screenshot": "onboarding_step2"
+        }
+      },
+      {
+        "name": "onboarding_step3",
+        "action": "tap_text",
+        "args": {
+          "text": "下一步",
+          "roles": [
+            "button"
+          ],
+          "exact": true,
+          "then_wait": "知识水平",
+          "timeout": 40,
+          "screenshot": "onboarding_step3"
+        }
+      },
+      {
+        "name": "onboarding_step4",
+        "action": "tap_text",
+        "args": {
+          "text": "下一步",
+          "roles": [
+            "button"
+          ],
+          "exact": true,
+          "then_wait": "回答偏好",
+          "timeout": 40,
+          "screenshot": "onboarding_step4"
+        }
+      },
+      {
+        "name": "onboarding_complete",
+        "action": "tap_text",
+        "args": {
+          "text": "完成",
+          "roles": [
+            "button"
+          ],
+          "exact": true,
+          "then_wait": "了解你",
+          "timeout": 120,
+          "screenshot": "modeling_chat"
+        }
+      },
+      {
+        "name": "modeling_skip_to_shell",
+        "action": "tap_text",
+        "args": {
+          "text": "跳过",
+          "roles": [
+            "button"
+          ],
+          "timeout": 90,
+          "screenshot": "shell_entered"
+        }
+      },
+      {
+        "name": "goto_home_cockpit",
+        "action": "tap_text",
+        "args": {
+          "text": "驾驶舱",
+          "timeout": 40,
+          "screenshot": "home_dashboard"
+        }
+      }
+    ],
+    "api": [
+      {
+        "name": "register",
+        "action": "api_register",
+        "args": {
+          "username_prefix": "jh_g01a",
+          "store_as": "default"
+        }
+      },
+      {
+        "name": "onboarding_submit",
+        "action": "api_onboarding",
+        "args": {
+          "goal": "Prepare for my data structures midterm in two weeks"
+        }
+      },
+      {
+        "name": "home_dashboard_data",
+        "action": "api_get",
+        "args": {
+          "path": "/api/v1/dashboard/status"
+        }
+      }
+    ]
+  },
+  "db_asserts": [
+    {
+      "label": "GJ01.users_row_email_source",
+      "backends": [
+        "web",
+        "api"
+      ],
+      "sql": "SELECT count(*) FROM users WHERE username='{{accounts.default.username}}' AND registration_source='email' AND deleted_at IS NULL",
+      "expect": "nonzero"
+    }
+  ]
+}

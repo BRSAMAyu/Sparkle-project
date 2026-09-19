@@ -36,10 +36,23 @@ void main() {
   /// via the root RepaintBoundary — this works even at a locked console,
   /// where the window server stops compositing (external `screencapture -l`
   /// returns a frozen stale frame).
+  ///
+  /// Destination: JOURNEY_SHOT_DEST (--dart-define, absolute dir, injected by
+  /// the journey harness so evidence lands inside the run's evidence folder).
+  /// Falls back to <repo>/v3-output/B-03/evidence/macos_latest so artifacts
+  /// stay inside the worktree (workspace discipline: never write outside).
   Future<void> shot(String name) async {
+    const shotDestEnv = String.fromEnvironment('JOURNEY_SHOT_DEST');
+    final shotDest = shotDestEnv.isNotEmpty
+        ? shotDestEnv
+        // `flutter test` runs with cwd = mobile/, so repo root is one level up.
+        : (Directory.current.path.endsWith('mobile')
+                ? Directory.current.parent.path
+                : Directory.current.path) +
+            '/v3-output/B-03/evidence/macos_latest';
     final dest = name.startsWith('/')
         ? name
-        : '/Users/brsama/code/GitHub/Sparkle-sysrev/screenshots/macos/$name';
+        : '$shotDest/$name';
     try {
       await testTester.runAsync(() async {
         RenderObject root;
@@ -114,6 +127,12 @@ void main() {
     testTester = tester;
     final originalOnError = FlutterError.onError;
     final originalPlatformOnError = ui.PlatformDispatcher.instance.onError;
+    // app.main() installs a production ErrorWidget.builder (lib/main.dart);
+    // flutter_test's end-of-test hygiene check treats that global change as a
+    // test violation and fails the whole run AFTER all journey steps passed.
+    // Capture it before app start and restore in `finally` — real-app
+    // integration testing must not trip on legitimate product bootstrap.
+    final originalErrorWidgetBuilder = ErrorWidget.builder;
 
     // Fresh auth state so the journey really starts at the login page.
     try {
@@ -145,8 +164,15 @@ void main() {
       if (!loginReady) failures.add('login screen never appeared');
       // ignore: avoid_print
       print('JOURNEY step1 login visible=${find.byType(LoginScreen).evaluate().isNotEmpty}');
+      // This is a FRESH-USER journey: silently skipping the login screen
+      // (e.g. leftover auth state from a crashed previous run) would make the
+      // run a degraded pass. Auto-login must be recorded as a failure.
+      final sawLoginScreen = find.byType(LoginScreen).evaluate().isNotEmpty;
+      if (loginReady && !sawLoginScreen) {
+        failures.add('fresh-user journey started without login screen (leftover auth state / auto-login)');
+      }
 
-      if (find.byType(LoginScreen).evaluate().isNotEmpty) {
+      if (sawLoginScreen) {
         final guestFinder = FinderExtension();
         final guest = guestFinder.byTextAny(const ['Continue as Guest', '以访客身份继续']);
         if (guest != null) {
@@ -452,6 +478,7 @@ void main() {
       } catch (_) {}
       FlutterError.onError = originalOnError;
       ui.PlatformDispatcher.instance.onError = originalPlatformOnError;
+      ErrorWidget.builder = originalErrorWidgetBuilder;
     }
 
     // ignore: avoid_print

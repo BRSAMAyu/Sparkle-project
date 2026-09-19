@@ -1,0 +1,38 @@
+{
+  "id": "GJ08",
+  "title": "Correction → memory scope → next-session adaptation",
+  "golden_ref": "v3/05_metrics_eval/GOLDEN_JOURNEYS.md#GJ08",
+  "description": "跨会话记忆召回：会话1 明确给出可复用事实（纠正/偏好）→ 等待记忆落库（episodic_memories，异步 lane）→ 新会话提问 → 回复必须复用该事实。复用 acceptance_memory_revival.py 的 WS+DB 断言模式（复用优先）。",
+  "platforms": {
+    "web": { "applicable": true, "note": "UI 通道待聊天屏步进接入" },
+    "android": { "applicable": true, "note": "基线仅最小壳" },
+    "macos": { "applicable": true, "note": "可经 macos_journey_test 扩展（未含此场景）" }
+  },
+  "backends": {
+    "api": [
+      { "name": "register", "action": "api_register", "args": { "username_prefix": "jh_g08", "store_as": "default" } },
+      { "name": "onboarding_submit", "action": "api_onboarding", "args": { "goal": "7 天准备数据结构期中" } },
+      { "name": "session1_seed_correction", "action": "ws_chat", "args": {
+          "message": "请记住：我的期中考试范围是第 1 到第 6 章，第 7 章不考。",
+          "store_reply_as": "seed_reply",
+          "save_reply_to": "GJ08_session1_seed.md",
+          "timeout_s": 150
+        } },
+      { "name": "wait_memory_landed", "action": "wait_for", "args": {
+          "kind": "episodic_memories",
+          "label": "第1-6章记忆落库",
+          "sql": "SELECT count(*) FROM episodic_memories WHERE user_id='{{accounts.default.user_id}}' AND deleted_at IS NULL AND summary ILIKE '%第 1 到第 6 章%'",
+          "timeout": 240,
+          "poll_interval": 5
+        } },
+      { "name": "session2_cross_session_recall", "action": "ws_chat", "args": {
+          "message": "根据你的记忆，我的期中考试范围是哪些章节？第 7 章要复习吗？",
+          "store_reply_as": "recall_reply",
+          "save_reply_to": "GJ08_session2_recall.md",
+          "assert_contains_any": ["第 1 到第 6 章", "第1到第6章", "1 到 6", "1-6", "第 7 章", "第7章"],
+          "timeout_s": 150
+        } }
+    ]
+  },
+  "db_asserts": []
+}

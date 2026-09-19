@@ -1,0 +1,24 @@
+{
+  "id": "GJ01S",
+  "title": "GJ01 minimal shell (web): app boots → login semantics reachable → register form usable",
+  "golden_ref": "v3/05_metrics_eval/GOLDEN_JOURNEYS.md#GJ01 (minimal shell slice)",
+  "description": "GJ01 的跨端最小壳切片（任务卡 B-03 work#3）：App 可启动、登录页语义树可达、注册表单可填。不含注册提交（GJ01 全程验证该步；当前被 Web 端注册静默失败缺陷阻塞，见 REPORT §4）。",
+  "platforms": {
+    "web": { "applicable": true, "note": "最小壳基线通道：可重复启动+每步截图+非零退出保证" },
+    "android": { "applicable": true, "note": "同切片：boot+install+launch+前台判定+截图+logcat（无 UI 步进，诚实声明）" },
+    "macos": { "applicable": true, "note": "macOS 用完整访客 journey（macos_journey_test.dart），无需单独最小壳" }
+  },
+  "backends": {
+    "android": [
+      { "name": "install_apk", "action": "install_apk", "args": {} },
+      { "name": "launch_app_frontend", "action": "launch_app", "args": { "screenshot": "launch_frontend" } },
+      { "name": "logcat_snapshot", "action": "logcat_snapshot", "args": { "name": "logcat_launch" } }
+    ],
+    "web": [
+      { "name": "open_app_login", "action": "open_app", "args": { "wait_text": "以访客身份继续", "timeout": 120 } },
+      { "name": "register_entry_reachable", "action": "tap_text", "args": { "text": "还没有账号", "then_wait": "加入 Sparkle", "timeout": 30, "screenshot": "register_screen" } },
+      { "name": "form_fields_accept_input", "action": "type_into_nth", "args": { "index": 0, "text": "shell_%RUN%" } },
+      { "name": "back_to_login", "action": "tap_text", "args": { "text": "已有账号", "timeout": 30, "then_wait": "以访客身份继续", "screenshot": "back_to_login" } }
+    ]
+  }
+}

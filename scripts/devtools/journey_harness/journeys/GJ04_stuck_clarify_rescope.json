@@ -1,0 +1,38 @@
+{
+  "id": "GJ04",
+  "title": "“我卡住了” → one clarification → rescope",
+  "golden_ref": "v3/05_metrics_eval/GOLDEN_JOURNEYS.md#GJ04",
+  "description": "带目标用户卡住求助：Aurora 应先澄清（一次）再给出收窄后的可执行下一步。结构断言：第一轮回复必须含真实问句（？/?，即先澄清），第二轮针对补充信息给出可行动回复；完整回复留存供视觉 Reviewer 独立评分（EVAL_PROTOCOL）。注：本轮基线实测 Aurora 未先澄清直接 rescope，该 journey 对当前产品为 FAIL——这是 harness 的真实测试信号，见 v3-output/B-03/FINDINGS.md。",
+  "platforms": {
+    "web": { "applicable": true, "note": "UI 通道待 web backend 支持聊天屏步进后接入" },
+    "android": { "applicable": true, "note": "基线仅最小壳，UI 步进 unsupported" },
+    "macos": { "applicable": true, "note": "可经 macos_journey_test 扩展（未含此场景）" }
+  },
+  "backends": {
+    "api": [
+      { "name": "register", "action": "api_register", "args": { "username_prefix": "jh_g04", "store_as": "default" } },
+      { "name": "onboarding_submit", "action": "api_onboarding", "args": { "goal": "两周内完成可演示的 AI 比赛项目" } },
+      { "name": "stuck_first_message", "action": "ws_chat", "args": {
+          "message": "我卡住了。我的比赛项目这两周要出可演示版本，但我一直没动手，感觉无从下手。",
+          "session_id": "g04_%RUN%",
+          "store_reply_as": "reply1",
+          "save_reply_to": "GJ04_reply1_clarification.md",
+          "assert_contains_any": ["？", "?"],
+          "timeout_s": 150
+        } },
+      { "name": "clarify_answer", "action": "ws_chat", "args": {
+          "message": "最卡的是：demo 范围一直定不下来，我想把功能做全，结果一个都没跑通。",
+          "session_id": "g04_%RUN%",
+          "store_reply_as": "reply2",
+          "save_reply_to": "GJ04_reply2_rescope.md",
+          "assert_not_contains_any": ["抱歉，出了点问题", "service unavailable"],
+          "timeout_s": 150
+        } },
+      { "name": "rescope_is_concrete", "action": "assert_reply_reuses", "args": {
+          "reply_key": "reply2",
+          "keywords": ["demo", "演示", "砍", "最小", "一步", "第一步", "先", "建议", "今天"]
+        } }
+    ]
+  },
+  "db_asserts": []
+}

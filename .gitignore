@@ -305,3 +305,11 @@ artifacts/e2e/
 # FieldTest local evidence screenshots (referenced by 多端实测 reports, never committed)
 # ========================================
 .fieldtest-shots/
+
+# ========================================
+# Vendored plugin native libs (isar_flutter_libs)
+# 2026-09-19 B-03: global *.so rule silently dropped Android libisar.so at
+# vendoring time, crashing app launch (IsarError). dylib/.a in same dir were
+# always tracked; whitelist restores platform parity. v3-output/B-03/REPORT.md
+# ========================================
+!mobile/third_party_plugins/isar_flutter_libs/android/src/main/jniLibs/**/*.so
