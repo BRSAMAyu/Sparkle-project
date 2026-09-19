@@ -71,3 +71,8 @@
 ## 2026-09-19 B-06 复核补充登记（O1）
 
 - **engine 侧 is_pro=flame_level>=3 派生**：`backend/app/services/user_service.py:208` 与网关 `user_context.go:129` 同源同病（D17 拆除对象），游客种子 flame=15 导致 166/166 游客以 pro 进 LLM tier（B-02 双路实锤）。处置随 V3-FIX-02（entitlement 独立字段）一并拆网关+引擎两处。
+
+
+## 2026-09-19 C-01 复核补充登记（R2-F5）
+
+- **plan_context ↔ prompts 循环 import（含 context_pack 本体）**：环 = plan_context:27 → models.__init__:103 → aurora runtime → chat_adapter:20 → prompts:44 → 回 plan_context；单独 import `app.core.plan_context` / `app.orchestration.prompts` / `app.core.context_pack` 皆炸（双 worktree 复现）。正常入口（conftest/main 先载 app.models）不触发；但 C-01 把 context_pack 变成会被直接 import 的契约模块后，新脚本/Celery 入口/健康检查首 import 即炸的概率上升。处置：接线卡前做一次 import 拓扑整理（把 prompts 对 models 的传递依赖打断或延迟导入）。
