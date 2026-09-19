@@ -143,7 +143,9 @@ def main() -> int:
     # R2-final：等两条种子记忆（考试 + 电影）都已落库再进入 a2 提问——
     # 原先只等 >=1 行，电影记忆的 lane 写入偶发晚于 a2 提问（实测晚 20s），
     # 造成"没有记录"的假阳性（数据未在库，非召回失败）。
-    deadline = time.time() + 60
+    # 迟到非丢失：实测第二条 lane 写入可晚至 90s+（LLM 抽取链串行 + worker 延迟），
+    # 17 轮取证两条最终都在库（间隔 3s），60s 窗口产生假阴性——放宽至 150s。
+    deadline = time.time() + 150
     exam_rows = movie_rows = "0"
     while time.time() < deadline:
         exam_rows = db_scalar(
@@ -162,7 +164,7 @@ def main() -> int:
     record(
         "mr1.episodic-written(聊天一轮后记忆表有写入)",
         exam_rows not in ("", "0") and movie_rows not in ("", "0"),
-        f"inferred_extraction rows exam={exam_rows} movie={movie_rows} (期望各>=1，跨轮异步最多等60s)",
+        f"inferred_extraction rows exam={exam_rows} movie={movie_rows} (期望各>=1，跨轮异步最多等150s)",
     )
 
     s2 = str(uuid4())
