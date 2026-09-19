@@ -92,6 +92,26 @@ class ToolExecutor:
         return timeout_value if timeout_value > 0 else 120.0
 
     @staticmethod
+    def _accepts_kwarg(func: Any, name: str) -> bool:
+        """按签名探测 func 是否接受关键字参数 name（含 **kwargs 通配）。
+
+        背景（V3-FIX-13 / D-15-7）：executor 曾无条件向 tool.execute() 传
+        locale=，签名未声明的工具（现存 25 个注册工具中 23 个）全部
+        TypeError。改为探测后再传，缺省形参的工具不再被打挂。
+        """
+        try:
+            signature = inspect.signature(func)
+        except (TypeError, ValueError):
+            return False
+        param = signature.parameters.get(name)
+        if param is not None:
+            return param.kind in (
+                inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                inspect.Parameter.KEYWORD_ONLY,
+            )
+        return any(p.kind == inspect.Parameter.VAR_KEYWORD for p in signature.parameters.values())
+
+    @staticmethod
     async def _publish_tool_event(event_type: str, payload: dict[str, Any]) -> None:
         try:
             await event_bus.publish(
@@ -349,22 +369,26 @@ class ToolExecutor:
                 if runtime_context and isinstance(runtime_context, dict):
                     locale = runtime_context.get("locale", "en")
 
+                # 按工具 execute() 签名探测后再传扩展 kwargs（V3-FIX-13 / D-15-7）
+                execute_kwargs: dict[str, Any] = {"tool_call_id": tool_call_id}
+                if self._accepts_kwarg(tool.execute, "locale"):
+                    execute_kwargs["locale"] = locale
+
                 if getattr(tool, "is_long_running", False) and progress_callback:
+                    if self._accepts_kwarg(tool.execute, "progress_callback"):
+                        execute_kwargs["progress_callback"] = progress_callback
                     execution_coro = tool.execute(
                         validated_params,
                         user_id,
                         db_session,
-                        tool_call_id=tool_call_id,
-                        progress_callback=progress_callback,
-                        locale=locale,
+                        **execute_kwargs,
                     )
                 else:
                     execution_coro = tool.execute(
                         validated_params,
                         user_id,
                         db_session,
-                        tool_call_id=tool_call_id,
-                        locale=locale,
+                        **execute_kwargs,
                     )
                 result = await asyncio.wait_for(execution_coro, timeout=timeout_seconds)
                 if result.tool_call_id is None:

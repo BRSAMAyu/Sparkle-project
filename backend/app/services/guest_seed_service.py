@@ -82,7 +82,9 @@ from app.services.node_sector_service import build_sector_visuals
 
 
 async def _ensure_achievements(session: AsyncSession):
-    await sync_achievement_definitions(session)
+    # commit=False：保留调用者（登录）事务，成就定义随种子整体提交/回滚，
+    # 不再在登录事务中途擅自 commit（V3-FIX-13 / D-12）
+    await sync_achievement_definitions(session, commit=False)
 
     from app.services.accountability_achievement_service import (
         accountability_achievement_service,
@@ -1478,7 +1480,25 @@ async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
     """
     Seed demo data for a new guest user.
     Idempotent — safe to call multiple times (checks before inserting).
+
+    事务隔离（V3-FIX-13 / D-12）：整段种子包在 begin_nested()（SAVEPOINT）里。
+    任一步失败只回滚到 SAVEPOINT 并降级为告警，不会毒化调用方的登录事务
+    （用户行照常落库、登录照常完成）。种子是 best-effort 演示数据。
     """
+    # SAVEPOINT 回滚会把 user 置为过期；日志所需字段先取纯值，避免回滚后同步上下文懒加载
+    user_id = user.id
+    username = user.username
+    try:
+        async with session.begin_nested():
+            await _seed_guest_user_data(session, user)
+    except Exception as exc:
+        logger.warning(
+            f"Guest seed failed; rolled back to SAVEPOINT (login unaffected) "
+            f"user_id={user_id} username={username}: {exc}"
+        )
+
+
+async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
     now = datetime.utcnow()
 
     # Update guest profile to look like an active learner

@@ -140,7 +140,15 @@ def validate_achievement_seed_data() -> None:
                     )
 
 
-async def sync_achievement_definitions(db: AsyncSession) -> tuple[int, int, int]:
+async def sync_achievement_definitions(db: AsyncSession, *, commit: bool = True) -> tuple[int, int, int]:
+    """同步成就/星系皮肤/装扮定义。
+
+    Args:
+        db: 目标会话。
+        commit: 是否在本函数内提交。默认 True（独立调用方：CLI populate、
+            achievement_engine 自愈路径）。在调用者事务内执行时（如 guest
+            种子流程）必须传 False，避免登录事务被中途提交。
+    """
     synced_achievements = 0
     synced_skins = 0
     synced_visual_elements = 0
@@ -201,7 +209,8 @@ async def sync_achievement_definitions(db: AsyncSession) -> tuple[int, int, int]
         element.updated_at = datetime.now(UTC).replace(tzinfo=None)
         synced_visual_elements += 1
 
-    await db.commit()
+    if commit:
+        await db.commit()
     return synced_achievements, synced_skins, synced_visual_elements
 
 
