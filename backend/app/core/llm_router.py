@@ -21,6 +21,7 @@ LLM Router - 统一的LLM客户端获取入口
 - 可降级：主模型失败时自动降级
 """
 
+import math
 import threading
 import time
 from contextvars import ContextVar, Token
@@ -83,6 +84,62 @@ _CAPABILITY_TIER_RANK: dict[ModelTier, int] = {
     ModelTier.STANDARD: 4,
     ModelTier.FAST: 5,
 }
+
+
+# ============================================
+# GLM 车道 thinking 控制 + max_tokens 留量（V3-FIX-04）
+# 依据 B-05b 直连实测（v3-output/B-05/SUPPLEMENT_KEY_ROTATED.md）：
+# - coding 端点（/api/coding/paas/v4）是唯一支持 `thinking:{"type":"disabled"}`
+#   真关闭思考的通道；标准端点（/api/paas/v4）对该参数返 400 code 1210
+#   （"该模型始终思考"）。
+# - clear_thinking 是客户端侧概念，智谱静默忽略（不报错也不关思考）。
+# - 思考吃掉 completion 预算 84-88%：显式 max_tokens=1024 可被思考清空，
+#   用户收到空回复（finish=length）。
+# ============================================
+
+_ZHIPU_CODING_ENDPOINT_MARK = "/api/coding/"
+# glm-5.3-flash 实测思考占 completion 预算比例的上界（实测 84-88%）
+_GLM_WORST_THINKING_SHARE = 0.88
+# 保护目标：最坏思考占比下，可见输出仍 ≥ 配置值的 15%
+_GLM_MIN_VISIBLE_SHARE = 0.15
+
+
+def is_zhipu_coding_endpoint(base_url: str) -> bool:
+    """判断 base_url 是否为智谱 coding 端点（唯一支持关闭思考的通道）。"""
+    return _ZHIPU_CODING_ENDPOINT_MARK in (base_url or "").lower()
+
+
+def glm_thinking_disabled_on_wire(
+    provider: ModelProvider,
+    base_url: str,
+    clear_thinking: bool | None,
+) -> bool:
+    """该候选在线上请求是否会附带 `thinking:{"type":"disabled"}`。
+
+    仅 coding 端点 + clear_thinking=True 时为 True：标准端点发该参数会 400，
+    clear_thinking=False 的思考车道保持默认思考行为。
+    """
+    return provider == ModelProvider.ZHIPU and bool(clear_thinking) and is_zhipu_coding_endpoint(base_url)
+
+
+def glm_effective_max_tokens(
+    provider: ModelProvider,
+    base_url: str,
+    clear_thinking: bool | None,
+    requested: int | None,
+) -> int | None:
+    """GLM 车道 max_tokens 留量保护。
+
+    思考仍会进行的车道（标准端点，或 clear_thinking=False）按最坏 88% 思考占比
+    上浮请求值：effective = ceil(requested * 15% / (1 - 88%))，保证思考吃掉预算后
+    可见输出仍 ≥ 配置值的 15%（1024 → 1280），避免空回复（finish=length）。
+    思考已关闭（coding 端点 + clear_thinking=True）或非 zhipu → 原样返回。
+    """
+    if provider != ModelProvider.ZHIPU or requested is None or requested <= 0:
+        return requested
+    if glm_thinking_disabled_on_wire(provider, base_url, clear_thinking):
+        return requested
+    return math.ceil(requested * _GLM_MIN_VISIBLE_SHARE / (1 - _GLM_WORST_THINKING_SHARE))
 
 
 @dataclass
@@ -1394,9 +1451,17 @@ class LLMRouter:
 
         # GLM 特有参数：通过 extra_body 传递
         if config.provider == ModelProvider.ZHIPU and config.clear_thinking is not None:
-            kwargs["extra_body"] = {
-                "clear_thinking": config.clear_thinking
-            }
+            extra_body: dict[str, Any] = {"clear_thinking": config.clear_thinking}
+            # V3-FIX-04: 仅 coding 端点附 thinking disabled（唯一真关闭思考的通道）；
+            # 标准端点发该参数会 400 code 1210，clear_thinking 字段本身被智谱静默忽略
+            if glm_thinking_disabled_on_wire(config.provider, config.base_url, config.clear_thinking):
+                extra_body["thinking"] = {"type": "disabled"}
+            kwargs["extra_body"] = extra_body
+
+        # V3-FIX-04: 思考车道 max_tokens 留量（最坏 88% 思考占比下保证可见输出 ≥ 配置值的 15%）
+        kwargs["max_tokens"] = glm_effective_max_tokens(
+            config.provider, config.base_url, config.clear_thinking, config.max_tokens
+        )
 
         return kwargs
 

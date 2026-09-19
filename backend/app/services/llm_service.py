@@ -25,7 +25,7 @@ from app.core.agent_profiles import AgentRole, ModelTier, TaskType
 from app.core.cost_controller import is_llm_within_budget, record_llm_cost
 from app.core.metrics import LLM_PROVIDER_TTFT, LLM_PUSH_CONTENT_PARSE_FAILURE_TOTAL
 from app.core.llm_monitoring import LLMMonitor
-from app.core.llm_router import LLMSelection, ModelProvider, llm_router
+from app.core.llm_router import LLMSelection, ModelProvider, glm_effective_max_tokens, llm_router
 from app.core.llm_secure_io import (
     refresh_llm_safety_mode,
     sanitize_llm_output,
@@ -788,6 +788,14 @@ class LLMService:
         for key, value in request_kwargs.items():
             params.setdefault(key, value)
 
+        # V3-FIX-04: GLM 思考车道 max_tokens 留量（caller 显式小预算可被思考清空 → 空回复）
+        params["max_tokens"] = glm_effective_max_tokens(
+            selection.config.provider,
+            selection.config.base_url,
+            selection.config.clear_thinking,
+            params.get("max_tokens"),
+        )
+
         # 添加 MIMO 特有参数：联网搜索和思考模式
         if selection.config.enable_web_search:
             params.setdefault("tools", [])
@@ -829,6 +837,14 @@ class LLMService:
         params.setdefault("temperature", selection.config.temperature)
         for key, value in request_kwargs.items():
             params.setdefault(key, value)
+
+        # V3-FIX-04: GLM 思考车道 max_tokens 留量（caller 显式小预算可被思考清空 → 空回复）
+        params["max_tokens"] = glm_effective_max_tokens(
+            selection.config.provider,
+            selection.config.base_url,
+            selection.config.clear_thinking,
+            params.get("max_tokens"),
+        )
 
         # 添加 MIMO 特有参数：联网搜索和思考模式
         if selection.config.enable_web_search:
