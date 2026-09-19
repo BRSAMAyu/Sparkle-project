@@ -58,6 +58,15 @@ bash scripts/run_all_rule_guards.sh      # 治理守卫（提交前）
 
 **红线**：C 档（聊天记录等应用数据、正在运行的 Docker 卷、在用模拟器镜像）与 D 档（主仓、在用 worktree、SDK 平台工具）永不清理；删除任何 1G 以上内容前必须获项目方明确确认。
 
+## 内存与高负载协调纪律（强制，2026-09-19 整机卡死事故后立规）
+
+> 背景：6 个 agent 同时跑 Android 模拟器 + iOS 模拟器 + Gradle + 浏览器实例，内存压缩器堆到 27GB 逻辑页（本机物理内存仅 **16GB**），swap 撑满 8GB，整机卡死。本规则优先级高于 6 并发总数。
+
+1. **HEAVY≤1**：同一时刻全舰队最多 1 个 HEAVY 任务。HEAVY = 模拟器（Android/iOS）、Gradle/Android 构建、`flutter build/test`、浏览器自动化实例、批量截图、全库测试、大规模迁移。LIGHT/REVIEW（DB 查询、代码审查、报告写作、API 级 E2E）不受此限。
+2. **主会话每轮唤醒必查内存**：`sysctl vm.swapusage` + `vm_stat`。触发线：swap used >4GB、压缩器逻辑内存 >12GB、或空闲页 <50K（≈0.8GB）→ 暂停派发 HEAVY、要求在跑 HEAVY 让位收尾。
+3. **Worker 自律**：Gradle 加 `-Xmx2g`（org.gradle.jvmargs）；`flutter test` 串行并发 1；浏览器单实例用完即关；模拟器用完即关；任务有内存尖峰就分批执行。
+4. **禁止叠加**：模拟器与 Gradle 构建不同时；浏览器自动化与模拟器不同时；一次只验收一个平台。
+
 ## 代码风格
 
 Python：类型注解 + black(120)/ruff ｜ Go：gofmt + golangci-lint ｜ Dart：Effective Dart + flutter_lints，屏幕 `_screen.dart` 结尾，UI 消费 `mobile/lib/core/design/` 令牌

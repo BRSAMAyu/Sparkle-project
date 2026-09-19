@@ -23,7 +23,7 @@
 3. 初始化 `.sparkle_v3_fleet_state.json`（若团队已有共享状态，接入现有共享状态而非创建分叉）。
 4. 第一轮领取必须从 B-01..B-06 中选择；它们正好 6 张且锁互不冲突。
 5. 为每个 Worker 创建独立 worktree/branch，附对应 card 和 Worker Prompt。
-6. 保持总 slot≤6；同机 HEAVY≤4，优先 3 heavy + 其他 light/review。
+6. 保持总 slot≤6；同机 **HEAVY≤1**（16GB 物理内存硬约束，2026-09-19 整机卡死事故后用户裁决），其余 slot 用 light/review 补齐；每轮唤醒实查 `vm_stat`+`sysctl vm.swapusage`。
 7. Worker 返回 READY_FOR_REVIEW 后立即派独立 Reviewer；高/critical risk 两 Reviewer。
 8. ACCEPT 后小批 merge，在 integration HEAD 重跑验收；成功才由 Leader 标 DONE。
 9. 每次有 slot 空出，运行 `python 10_tools/next_tasks.py --state ... --limit 6`，立即补充下一张无锁冲突任务。

@@ -10,7 +10,7 @@
 - MEDIUM：单服务实现/测试、后端集成；
 - LIGHT：review、docs、静态分析、scenario、截图评审、单元测试。
 
-同一机器默认：HEAVY≤4，建议 3；总活跃 slot≤6。Leader 发现磁盘<8GB、Docker memory pressure、queue storm 时立即减 heavy 并发。
+同一机器默认：**HEAVY≤1**（2026-09-19 用户裁决：本机物理内存仅 16GB，多 HEAVY 叠加曾把压缩器堆到 27GB 逻辑页、swap 撑满，整机卡死两次）；总活跃 slot≤6，其余用 LIGHT/REVIEW 补齐。Leader 每轮唤醒必查内存（`sysctl vm.swapusage` + `vm_stat`；swap used>4GB、压缩器逻辑>12GB 或空闲页<50K 时暂停派 HEAVY、让在跑 HEAVY 收尾让位）与磁盘（<8GB 触发清理）。
 
 ## 3. 领取规则
 任务只有在：
