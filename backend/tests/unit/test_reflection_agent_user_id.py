@@ -14,8 +14,12 @@ class _FakeGenerator:
         self.trigger_response = trigger_response
         self.calls = []
 
-    async def chat(self, system_prompt, user_message, temperature=0.3):
-        self.calls.append((system_prompt, user_message, temperature))
+    async def chat(self, messages, temperature=0.3):
+        # wave5 对齐：5416b1d3 N2 修复后 trigger/rewrite 路径统一为
+        # messages-first 签名（chat([{"role":...},...], temperature=...)），
+        # 与 app/core/llm_client.py 裸服务签名一致；旧
+        # chat(system_prompt=, user_message=) 在任何真实实现上都不存在。
+        self.calls.append((messages, temperature))
         return self.trigger_response
 
     def get_current_selection(self):
@@ -102,7 +106,9 @@ async def test_reflection_agent_trigger_mode_returns_triggered_result() -> None:
     assert result.user_id == "user-1"
     assert result.category == "plan_stall"
     assert result.context_tokens == 24
-    assert generator.calls[0][2] == 0.3
+    # messages-first：calls[0] = (messages, temperature)
+    assert generator.calls[0][0][0]["role"] == "system"
+    assert generator.calls[0][1] == 0.3
 
 
 @pytest.mark.asyncio

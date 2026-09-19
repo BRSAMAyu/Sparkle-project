@@ -15,8 +15,12 @@ class _FakeGenerator:
     def __init__(self):
         self.calls = []
 
-    async def chat(self, system_prompt, user_message, temperature=0.6):
-        self.calls.append((system_prompt, user_message, temperature))
+    async def chat(self, messages, temperature=0.3):
+        # wave5 对齐：5416b1d3 N2 修复后 reflection 的生成器调用改为
+        # messages-first 签名（chat([{"role":...},...], temperature=...)），
+        # 与 app/core/llm_client.py 裸服务签名一致；旧
+        # chat(system_prompt=, user_message=) 在任何真实实现上都不存在。
+        self.calls.append((messages, temperature))
         return f"修正版{len(self.calls)}"
 
 
@@ -89,4 +93,6 @@ async def test_reflection_agent_stops_early_on_low_second_round_gain():
     assert result.best_review_result is not None
     assert result.best_review_result["overall_score"] == pytest.approx(0.68, rel=1e-6)
     assert reviewer.calls[0]["review_profile_id"] == "deep_analysis"
-    assert "讲解/深度分析审查" in generator.calls[0][0]
+    # messages-first：calls[0] = (messages, temperature)，system 在 messages[0]
+    assert generator.calls[0][0][0]["role"] == "system"
+    assert "讲解/深度分析审查" in generator.calls[0][0][0]["content"]
