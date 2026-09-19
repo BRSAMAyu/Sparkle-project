@@ -1,0 +1,1643 @@
+diff --git a/backend/app/services/galaxy/stats_service.py b/backend/app/services/galaxy/stats_service.py
+index 2828f4d9..83c9c2a4 100755
+--- a/backend/app/services/galaxy/stats_service.py
++++ b/backend/app/services/galaxy/stats_service.py
+@@ -132,6 +132,7 @@ class GalaxyStatsService:
+                 node_id=node_id,
+                 new_mastery=int(status.mastery_score),
+                 revision=getattr(status, "revision", 0),
++                task_id=task_id,
+             )
+         except Exception as e:
+             logger.warning(f"Failed to write spark outbox event: {e}")
+@@ -442,13 +443,22 @@ class GalaxyStatsService:
+         node_id: UUID,
+         new_mastery: int,
+         revision: int,
++        task_id: UUID | None = None,
+     ) -> None:
+-        """Write mastery outbox event for spark_node, mirroring update_node_mastery pipeline."""
++        """Write mastery outbox event for spark_node, mirroring update_node_mastery pipeline.
++
++        D-01: metadata is built by the shared-field contract (event_registry) and
++        carries the causal task_id so a GJ trace can walk UI action (task
++        completion) -> outbox event -> user_node_status state update by ids.
++        """
+         from sqlalchemy import text as sa_text
+ 
++        from app.core.event_registry import build_event_metadata
++
+         payload = {
+             "user_id": str(user_id),
+             "node_id": str(node_id),
++            "task_id": str(task_id) if task_id else None,
+             "mastery_score": new_mastery,
+             "revision": revision,
+             "timestamp": _utcnow().isoformat(),
+@@ -458,6 +468,16 @@ class GalaxyStatsService:
+             {"aggregate_type": "galaxy_node_mastery", "aggregate_id": str(user_id)},
+         )
+         sequence_number = seq_result.scalar_one()
++        metadata = build_event_metadata(
++            user_id=user_id,
++            source="server_service",
++            service="galaxy_stats_service",
++            event_name="galaxy.node.mastery_updated",
++            aggregate_type="galaxy_node_mastery",
++            aggregate_id=user_id,
++            sequence_number=sequence_number,
++            correlation={"task_id": task_id, "node_id": node_id},
++        )
+         await self.db.execute(
+             sa_text(SPARK_OUTBOX_INSERT_SQL),
+             {
+@@ -466,7 +486,7 @@ class GalaxyStatsService:
+                 "event_type": "galaxy.node.mastery_updated",
+                 "sequence_number": sequence_number,
+                 "payload": json.dumps(payload),
+-                "metadata": json.dumps({"service": "galaxy_stats_service"}),
++                "metadata": json.dumps(metadata),
+             },
+         )
+         await self.db.commit()
+diff --git a/backend/app/services/galaxy_service.py b/backend/app/services/galaxy_service.py
+index 6ae4b7d5..380d790d 100755
+--- a/backend/app/services/galaxy_service.py
++++ b/backend/app/services/galaxy_service.py
+@@ -122,6 +122,25 @@ class GalaxyService:
+             )
+             sequence_number = seq_result.scalar_one()
+ 
++            # D-01: shared-field metadata contract (event_registry). user_id and
++            # node_id are read from the payload the caller already builds, so
++            # legacy callers keep their exact payload shape.
++            from app.core.event_registry import build_event_metadata
++
++            metadata = build_event_metadata(
++                user_id=payload.get("user_id") or aggregate_id,
++                source="server_service",
++                service="galaxy_service",
++                event_name=event_type,
++                aggregate_type="galaxy_node_mastery",
++                aggregate_id=aggregate_id,
++                sequence_number=sequence_number,
++                correlation={
++                    k: payload[k]
++                    for k in ("node_id", "task_id")
++                    if payload.get(k) is not None
++                },
++            )
+             await self.db.execute(
+                 text("""
+                     INSERT INTO event_outbox
+@@ -134,7 +153,7 @@ class GalaxyService:
+                     "event_type": event_type,
+                     "sequence_number": sequence_number,
+                     "payload": json.dumps(payload),
+-                    "metadata": json.dumps({"service": "galaxy_service"}),
++                    "metadata": json.dumps(metadata),
+                 },
+             )
+             return
+diff --git a/backend/app/services/learning_asset_service.py b/backend/app/services/learning_asset_service.py
+index 948d7067..155cfb99 100644
+--- a/backend/app/services/learning_asset_service.py
++++ b/backend/app/services/learning_asset_service.py
+@@ -255,7 +255,8 @@ class LearningAssetService:
+                 "old_status": old_status,
+                 "new_status": asset.status,
+                 "triggered_by": "user_activate",
+-            }
++            },
++            user_id=asset.user_id,
+         )
+ 
+         await db.flush()
+@@ -290,7 +291,8 @@ class LearningAssetService:
+                 "old_status": old_status,
+                 "new_status": asset.status,
+                 "triggered_by": reason,
+-            }
++            },
++            user_id=asset.user_id,
+         )
+ 
+         await db.flush()
+@@ -590,13 +592,28 @@ class LearningAssetService:
+         aggregate_id: UUID,
+         event_type: str,
+         payload: dict[str, Any],
++        user_id: UUID | None = None,
+     ) -> None:
+         """
+         Write event to outbox for async processing.
+ 
+         Uses the existing event_outbox table from CQRS infrastructure.
+         The sequence_number is computed as the next number for this aggregate.
++
++        D-01: metadata is built by the shared-field contract (event_registry);
++        user_id is the isolation key and is required for the V3 envelope.
+         """
++        from app.core.event_registry import build_event_metadata
++
++        # Contract check first: never burn a sequence number for an event that
++        # cannot carry its isolation key (D-01 shared fields).
++        effective_user_id = user_id or payload.get("user_id")
++        if effective_user_id is None:
++            raise ValueError(
++                "learning_asset outbox events require user_id "
++                "(pass user_id= or include payload['user_id'])"
++            )
++
+         # Get next sequence number for this aggregate
+         # Use a dedicated counter table to avoid races and preserve monotonicity.
+         seq_result = await db.execute(
+@@ -611,6 +628,15 @@ class LearningAssetService:
+         )
+         sequence_number = seq_result.scalar()
+ 
++        metadata = build_event_metadata(
++            user_id=effective_user_id,
++            source="server_service",
++            service="learning_asset_service",
++            event_name=event_type,
++            aggregate_type=aggregate_type,
++            aggregate_id=aggregate_id,
++            sequence_number=sequence_number,
++        )
+         await db.execute(
+             text("""
+                 INSERT INTO event_outbox
+@@ -623,7 +649,7 @@ class LearningAssetService:
+                 "event_type": event_type,
+                 "sequence_number": sequence_number,
+                 "payload": json.dumps(payload),
+-                "metadata": json.dumps({"service": "learning_asset_service"}),
++                "metadata": json.dumps(metadata),
+             }
+         )
+ 
+diff --git a/backend/tests/unit/test_learning_assets.py b/backend/tests/unit/test_learning_assets.py
+index 5fa46494..abdb53a4 100644
+--- a/backend/tests/unit/test_learning_assets.py
++++ b/backend/tests/unit/test_learning_assets.py
+@@ -405,6 +405,7 @@ class TestInboxDecay:
+         # Create mock expired asset
+         mock_asset = MagicMock()
+         mock_asset.id = uuid4()
++        mock_asset.user_id = uuid4()  # NOT NULL FK on LearningAsset (D-01 shared-field contract)
+         mock_asset.status = "INBOX"
+         mock_asset.inbox_expires_at = datetime.now(timezone.utc) - timedelta(days=1)
+         mock_asset.archive = MagicMock(side_effect=lambda: setattr(mock_asset, "status", "ARCHIVED"))
+diff --git a/backend/app/core/event_registry.py b/backend/app/core/event_registry.py
+new file mode 100644
+index 00000000..4cafebc6
+--- /dev/null
++++ b/backend/app/core/event_registry.py
+@@ -0,0 +1,737 @@
++"""V3 Event Name Registry & shared-fields contract (D-01).
++
++Single authority (backend/app side) for:
++
++1. **Closed vocabulary of V3 event names** — every event name that may be
++   written into the shared event domain (``event_outbox`` / ``event_store`` /
++   gateway CQRS bus) is declared here with its flywheel stage, aggregate type,
++   producers and lifecycle status. Free-string event names are contract
++   violations for new writers.
++2. **Shared fields contract** — the envelope every V3 event must carry
++   (idempotency ``event_id``, isolation ``user_id``, correlation ids linking
++   intervention/action/run/outcome, naive-UTC ``occurred_at``,
++   ``schema_version``, closed ``source`` enum). The physical column set of
++   ``event_outbox`` is NOT extended: shared fields ride in the ``metadata``
++   jsonb (and payload), so existing writers/consumers stay wire-compatible.
++   Legacy rows whose metadata is only ``{"service": ...}``` remain readable
++   through :func:`read_event_metadata`.
++3. **Telemetry boundary** — ``tracking_events`` (client telemetry) is declared
++   non-truth: events with source ``client_telemetry`` are ineligible as
++   business truth. The authoritative user world state (state_aggregator /
++   evidence fusion) must consume only server-authoritative sources.
++
++Aligned with C-01 ``decision_context.v1``: correlation ids are the same
++record ids referenced by ``memory://`` / ``plan://`` ref URIs, and
++``schema_version`` follows the same ``<contract>.v<n>`` convention.
++
++This module is stdlib-only and performs no I/O; it is importable from any
++layer of backend/app (services, workers, api) without cycle risk.
++"""
++
++from __future__ import annotations
++
++import hashlib
++import json
++import logging
++from collections.abc import Mapping
++from dataclasses import dataclass, field
++from datetime import UTC, datetime
++from enum import StrEnum
++from typing import Any
++from uuid import UUID
++
++_LOGGER = logging.getLogger("app.core.event_registry")
++
++__all__ = [
++    "EVENT_SCHEMA_VERSION",
++    "EventStage",
++    "EventSource",
++    "RegisteredEvent",
++    "EventNameError",
++    "EventContractError",
++    "CorrelationIds",
++    "EVENT_REGISTRY",
++    "REGISTERED_EVENT_NAMES",
++    "CORRELATION_EXEMPT_EVENT_NAMES",
++    "require_registered_event",
++    "is_registered_event_name",
++    "classify_stage",
++    "derive_event_id",
++    "build_event_metadata",
++    "read_event_metadata",
++    "MAX_METADATA_JSON_BYTES",
++    "MAX_METADATA_MAPPING_CHARS",
++    "normalize_occurred_at",
++    "is_telemetry_source",
++    "is_business_truth_eligible",
++    "TELEMETRY_TABLE",
++    "CORRELATION_KEYS",
++]
++
++# --- Contract identity -------------------------------------------------------
++
++EVENT_SCHEMA_VERSION = "event.v1"
++"""Schema version stamped into every V3 event metadata envelope."""
++
++TELEMETRY_TABLE = "tracking_events"
++"""Physical table holding client telemetry. Declared non-truth for business decisions."""
++
++
++# --- Closed vocabularies -----------------------------------------------------
++
++
++class EventStage(StrEnum):
++    """Flywheel stage (DATA_FLYWHEEL.md §1) an event belongs to."""
++
++    INTERACTION = "interaction"  # user-visible interaction (chat, study, UI action)
++    DECISION = "decision"  # routing / aurora / planner decisions
++    EXECUTION = "execution"  # intervention / action / agent-run execution steps
++    OUTCOME = "outcome"  # outcome observations (feedback, results, effects)
++    STATE_UPDATE = "state_update"  # user world / galaxy / memory state mutations
++
++
++class EventSource(StrEnum):
++    """Closed producer-source enum (shared field ``source``)."""
++
++    SERVER_SERVICE = "server_service"  # python engine service (authoritative writer)
++    GATEWAY = "gateway"  # go gateway CQRS (authoritative writer)
++    WORKER = "worker"  # celery / run worker (authoritative writer)
++    CLIENT_TELEMETRY = "client_telemetry"  # mobile-reported telemetry (NON-TRUTH)
++    PROBE = "probe"  # dev probes / experiments (NON-TRUTH for cohorts)
++
++
++TELEMETRY_SOURCES: frozenset[EventSource] = frozenset({EventSource.CLIENT_TELEMETRY, EventSource.PROBE})
++
++
++class EventNameError(Exception):
++    """Raised when an event name is not in the closed registry."""
++
++
++class EventContractError(Exception):
++    """Raised when a shared-field contract rule is violated."""
++
++
++@dataclass(frozen=True)
++class RegisteredEvent:
++    """One entry of the closed event-name vocabulary."""
++
++    name: str
++    stage: EventStage
++    aggregate_type: str
++    producers: tuple[str, ...]
++    status: str  # "live" (produced in repo) | "observed_unregistered" (in DB, no producer in repo) | "reserved" (V3, not yet produced)
++
++    @property
++    def is_live(self) -> bool:
++        return self.status == "live"
++
++
++def _go(*names: str) -> tuple[str, ...]:
++    return tuple(f"gateway/internal/cqrs/event/types.go ({n})" for n in names)
++
++
++# The registry itself. Ordering follows the flywheel loop.
++EVENT_REGISTRY: dict[str, RegisteredEvent] = {
++    e.name: e
++    for e in (
++        # --- INTERACTION ----------------------------------------------------
++        RegisteredEvent(
++            name="chat.message.sent",
++            stage=EventStage.INTERACTION,
++            aggregate_type="ChatSession",
++            producers=_go("EventMessageSent"),
++            status="live",
++        ),
++        RegisteredEvent(
++            name="chat.message.received",
++            stage=EventStage.INTERACTION,
++            aggregate_type="ChatSession",
++            producers=_go("EventMessageReceived"),
++            status="live",
++        ),
++        RegisteredEvent(
++            name="chat.session.created",
++            stage=EventStage.INTERACTION,
++            aggregate_type="ChatSession",
++            producers=_go("EventSessionCreated"),
++            status="live",
++        ),
++        RegisteredEvent(
++            name="chat.session.ended",
++            stage=EventStage.INTERACTION,
++            aggregate_type="ChatSession",
++            producers=_go("EventSessionEnded"),
++            status="live",
++        ),
++        RegisteredEvent(
++            name="galaxy.study.recorded",
++            stage=EventStage.INTERACTION,
++            aggregate_type="KnowledgeNode",
++            producers=_go("EventStudyRecordAdded"),
++            status="live",
++        ),
++        RegisteredEvent(
++            name="user.preferences.updated",
++            stage=EventStage.INTERACTION,
++            aggregate_type="User",
++            producers=_go("EventPreferencesUpdated"),
++            status="live",
++        ),
++        # --- DECISION -------------------------------------------------------
++        RegisteredEvent(
++            name="decision.recorded",
++            stage=EventStage.DECISION,
++            aggregate_type="decision_record",
++            producers=("v3: decision_records read projection",),
++            status="reserved",
++        ),
++        RegisteredEvent(
++            name="routing.decision_recorded",
++            stage=EventStage.DECISION,
++            aggregate_type="intervention_request",
++            producers=("app/services/routing_outcome_service.py (passive_signals, " "schema routing_outcome.v1)",),
++            status="reserved",
++        ),
++        # --- EXECUTION: interventions / actions / runs ----------------------
++        RegisteredEvent(
++            name="intervention.requested",
++            stage=EventStage.EXECUTION,
++            aggregate_type="intervention_request",
++            producers=("v3: intervention pipeline",),
++            status="reserved",
++        ),
++        RegisteredEvent(
++            name="intervention.delivered",
++            stage=EventStage.EXECUTION,
++            aggregate_type="intervention_request",
++            producers=("v3: intervention pipeline",),
++            status="reserved",
++        ),
++        RegisteredEvent(
++            name="intervention.feedback_recorded",
++            stage=EventStage.OUTCOME,
++            aggregate_type="intervention_request",
++            producers=("v3: intervention feedback",),
++            status="reserved",
++        ),
++        RegisteredEvent(
++            name="action.proposed",
++            stage=EventStage.EXECUTION,
++            aggregate_type="action",
++            producers=("v3: hybrid action engine",),
++            status="reserved",
++        ),
++        RegisteredEvent(
++            name="action.accepted",
++            stage=EventStage.EXECUTION,
++            aggregate_type="action",
++            producers=("v3: hybrid action engine",),
++            status="reserved",
++        ),
++        RegisteredEvent(
++            name="action.rejected",
++            stage=EventStage.OUTCOME,
++            aggregate_type="action",
++            producers=("v3: hybrid action engine",),
++            status="reserved",
++        ),
++        RegisteredEvent(
++            name="run.created",
++            stage=EventStage.EXECUTION,
++            aggregate_type="agent_run",
++            producers=(),  # live DB carries rows; no producer exists in repo (probe origin)
++            status="observed_unregistered",
++        ),
++        RegisteredEvent(
++            name="run.step_completed",
++            stage=EventStage.EXECUTION,
++            aggregate_type="agent_run",
++            producers=(),
++            status="observed_unregistered",
++        ),
++        RegisteredEvent(
++            name="run.awaiting_user",
++            stage=EventStage.EXECUTION,
++            aggregate_type="agent_run",
++            producers=(),
++            status="observed_unregistered",
++        ),
++        RegisteredEvent(
++            name="run.user_resumed",
++            stage=EventStage.EXECUTION,
++            aggregate_type="agent_run",
++            producers=(),
++            status="observed_unregistered",
++        ),
++        RegisteredEvent(
++            name="task.status_changed",
++            stage=EventStage.EXECUTION,
++            aggregate_type="task_command",
++            producers=(),
++            status="observed_unregistered",
++        ),
++        RegisteredEvent(
++            name="task.created",
++            stage=EventStage.INTERACTION,
++            aggregate_type="Task",
++            producers=_go("EventTaskCreated"),
++            status="live",
++        ),
++        RegisteredEvent(
++            name="task.started",
++            stage=EventStage.EXECUTION,
++            aggregate_type="Task",
++            producers=_go("EventTaskStarted"),
++            status="live",
++        ),
++        RegisteredEvent(
++            name="task.completed",
++            stage=EventStage.OUTCOME,
++            aggregate_type="Task",
++            producers=_go("EventTaskCompleted"),
++            status="live",
++        ),
++        RegisteredEvent(
++            name="task.abandoned",
++            stage=EventStage.OUTCOME,
++            aggregate_type="Task",
++            producers=_go("EventTaskAbandoned"),
++            status="live",
++        ),
++        RegisteredEvent(
++            name="asset_created",
++            stage=EventStage.EXECUTION,
++            aggregate_type="learning_asset",
++            producers=("app/services/learning_asset_service.py",),
++            status="live",
++        ),
++        RegisteredEvent(
++            name="asset_status_changed",
++            stage=EventStage.EXECUTION,
++            aggregate_type="learning_asset",
++            producers=("app/services/learning_asset_service.py",),
++            status="live",
++        ),
++        # --- OUTCOME --------------------------------------------------------
++        RegisteredEvent(
++            name="outcome.recorded",
++            stage=EventStage.OUTCOME,
++            aggregate_type="outcome",
++            producers=("v3: outcome evidence adapter",),
++            status="reserved",
++        ),
++        # --- STATE UPDATE ---------------------------------------------------
++        RegisteredEvent(
++            name="galaxy.node.mastery_updated",
++            stage=EventStage.STATE_UPDATE,
++            aggregate_type="galaxy_node_mastery",
++            producers=(
++                "app/services/galaxy_service.py::_write_mastery_outbox_event",
++                "app/services/galaxy/stats_service.py::_write_spark_outbox_event",
++            ),
++            status="live",
++        ),
++        RegisteredEvent(
++            name="galaxy.node.created",
++            stage=EventStage.STATE_UPDATE,
++            aggregate_type="KnowledgeNode",
++            producers=_go("EventNodeCreated"),
++            status="live",
++        ),
++        RegisteredEvent(
++            name="galaxy.node.unlocked",
++            stage=EventStage.STATE_UPDATE,
++            aggregate_type="KnowledgeNode",
++            producers=_go("EventNodeUnlocked"),
++            status="live",
++        ),
++        RegisteredEvent(
++            name="galaxy.mastery.updated",
++            stage=EventStage.STATE_UPDATE,
++            aggregate_type="KnowledgeNode",
++            producers=_go("EventMasteryUpdated"),
++            status="live",
++        ),
++        RegisteredEvent(
++            name="user_state.updated",
++            stage=EventStage.STATE_UPDATE,
++            aggregate_type="user_state",
++            producers=("v3: state_aggregator projection",),
++            status="reserved",
++        ),
++        RegisteredEvent(
++            name="user.created",
++            stage=EventStage.STATE_UPDATE,
++            aggregate_type="User",
++            producers=_go("EventUserCreated"),
++            status="live",
++        ),
++        RegisteredEvent(
++            name="user.updated",
++            stage=EventStage.STATE_UPDATE,
++            aggregate_type="User",
++            producers=_go("EventUserUpdated"),
++            status="live",
++        ),
++    )
++}
++
++REGISTERED_EVENT_NAMES: frozenset[str] = frozenset(EVENT_REGISTRY)
++
++CORRELATION_EXEMPT_EVENT_NAMES: frozenset[str] = frozenset(
++    {
++        # Aggregate-root lifecycle events with no upstream causal object: the
++        # learning-asset flow has no intervention/action/run/outcome/task id to
++        # link — the asset itself (aggregate_id) + user_id IS the full lineage.
++        # Declared exemption, not an oversight (D-01 R2-CHANGES #3); frozen by
++        # test_correlation_exempt_names_are_frozen. Any new exemption must be
++        # added deliberately with the same justification.
++        "asset_created",
++        "asset_status_changed",
++    }
++)
++
++
++def is_registered_event_name(name: str) -> bool:
++    return name in EVENT_REGISTRY
++
++
++def require_registered_event(name: str) -> RegisteredEvent:
++    """Return the registry entry or raise — the gate new writers must pass."""
++    try:
++        return EVENT_REGISTRY[name]
++    except KeyError:
++        raise EventNameError(
++            f"Event name {name!r} is not in the V3 event registry. "
++            "Register it in app/core/event_registry.py before emitting "
++            "(closed vocabulary, D-01 contract)."
++        ) from None
++
++
++def classify_stage(name: str) -> EventStage:
++    return require_registered_event(name).stage
++
++
++# --- Correlation ids ---------------------------------------------------------
++
++CORRELATION_KEYS: tuple[str, ...] = (
++    "intervention_id",
++    "action_id",
++    "run_id",
++    "outcome_id",
++    # auxiliary causal links (same mechanism, wider than the four card names)
++    "task_id",
++    "session_id",
++    "message_id",
++    "decision_id",
++    "plan_id",
++    "node_id",
++)
++
++
++@dataclass(frozen=True)
++class CorrelationIds:
++    """Optional cross-links that stitch one event into the lineage graph.
++
++    All values are canonical UUID strings. At least one correlation id is
++    expected on EXECUTION/OUTCOME/STATE_UPDATE events so a GJ trace can walk
++    interaction → decision → execution → outcome → state update purely by ids.
++    """
++
++    intervention_id: str | None = None
++    action_id: str | None = None
++    run_id: str | None = None
++    outcome_id: str | None = None
++    task_id: str | None = None
++    session_id: str | None = None
++    message_id: str | None = None
++    decision_id: str | None = None
++    plan_id: str | None = None
++    node_id: str | None = None
++
++    def as_dict(self, drop_nones: bool = True) -> dict[str, str]:
++        raw = {
++            "intervention_id": self.intervention_id,
++            "action_id": self.action_id,
++            "run_id": self.run_id,
++            "outcome_id": self.outcome_id,
++            "task_id": self.task_id,
++            "session_id": self.session_id,
++            "message_id": self.message_id,
++            "decision_id": self.decision_id,
++            "plan_id": self.plan_id,
++            "node_id": self.node_id,
++        }
++        if drop_nones:
++            return {k: v for k, v in raw.items() if v is not None}
++        return raw
++
++    @classmethod
++    def coerce(cls, value: CorrelationIds | Mapping[str, Any] | None) -> CorrelationIds:
++        if value is None:
++            return cls()
++        if isinstance(value, CorrelationIds):
++            return value
++        known = {f for f in cls.__dataclass_fields__}  # noqa: C416 — clarity
++        return cls(**{k: _canonical_uuid(v) for k, v in dict(value).items() if k in known and v is not None})
++
++    def __post_init__(self) -> None:
++        for key in CORRELATION_KEYS:
++            raw = getattr(self, key)
++            if raw is not None:
++                object.__setattr__(self, key, _canonical_uuid(raw))
++
++
++def _canonical_uuid(value: UUID | str) -> str:
++    try:
++        return str(UUID(str(value)))
++    except (ValueError, TypeError, AttributeError) as exc:
++        raise EventContractError(f"correlation id {value!r} is not a valid UUID") from exc
++
++
++# --- Shared-field helpers ----------------------------------------------------
++
++
++def normalize_occurred_at(value: datetime | None) -> datetime:
++    """Return a naive-UTC datetime (DB convention across the event domain)."""
++    dt = value or datetime.now(UTC)
++    if dt.tzinfo is not None:
++        dt = dt.astimezone(UTC).replace(tzinfo=None)
++    return dt
++
++
++def derive_event_id(
++    *,
++    event_name: str,
++    aggregate_type: str,
++    aggregate_id: UUID | str,
++    sequence_number: int | str | None = None,
++    correlation: CorrelationIds | Mapping[str, Any] | None = None,
++) -> str:
++    """Deterministic idempotency key for an event.
++
++    Scope of the idempotency semantics (be precise, F1/R2-CHANGES #2):
++
++    - SAME-ROW REDELIVERY: identical inputs (name/aggregate/seq/correlation)
++      derive the identical key, so a consumer can dedupe replays of one
++      outbox/event row delivered at-least-once.
++    - NOT same-cause re-execution: re-running the same causal action burns a
++      NEW sequence number (event_sequence_counters), hence a NEW key — that is
++      duplicate-causes detection, which this key does not provide.
++
++    CURRENT CONSUMER STATUS: zero consumers. The only active event_outbox
++    consumer (gateway ``cqrs/outbox/publisher.go`` → Redis streams) dedupes by
++    Redis ``messageID`` / consumer-group position and DECODES metadata through
++    Go ``EventMetadata{trace_id, span_id, user_id, correlation_id, causation_id,
++    source}`` — ``event_id``/``schema_version``/``occurred_at``/``correlation{}`
++    are dropped at that hop. The gateway ``processed_events`` route is NOT
++    usable as-is: ``outbox/repository.go IsProcessed`` runs ``uuid.Parse`` on
++    the id, which REJECTS the ``evt_`` prefix — wiring a consumer there
++    requires resolving the id format first (follow-up card, see D-01 REPORT).
++    Callers that already own a globally unique id (e.g. outbox row uuid) may
++    pass it as ``event_id`` to :func:`build_event_metadata` instead.
++    """
++    require_registered_event(event_name)
++    corr = CorrelationIds.coerce(correlation).as_dict()
++    seed = json.dumps(
++        {
++            "event_name": event_name,
++            "aggregate_type": aggregate_type,
++            "aggregate_id": str(aggregate_id),
++            "sequence_number": None if sequence_number is None else str(sequence_number),
++            "correlation": corr,
++        },
++        sort_keys=True,
++        separators=(",", ":"),
++    )
++    return "evt_" + hashlib.sha256(seed.encode("utf-8")).hexdigest()[:32]
++
++
++def build_event_metadata(
++    *,
++    user_id: UUID | str,
++    source: EventSource | str,
++    service: str,
++    event_name: str,
++    aggregate_type: str,
++    aggregate_id: UUID | str,
++    sequence_number: int | None = None,
++    occurred_at: datetime | None = None,
++    correlation: CorrelationIds | Mapping[str, Any] | None = None,
++    event_id: str | None = None,
++    extra: Mapping[str, Any] | None = None,
++) -> dict[str, Any]:
++    """Build the canonical ``event_outbox.metadata`` jsonb for a V3 event.
++
++    Shared fields (contract, order frozen):
++      event_id / user_id / schema_version / source / service / occurred_at /
++      correlation{...}
++    plus any ``extra`` keys (namespaced by caller, must not collide).
++    """
++    require_registered_event(event_name)
++    try:
++        source_enum = EventSource(source)
++    except ValueError:
++        raise EventContractError(f"source {source!r} not in closed enum {[s.value for s in EventSource]}") from None
++
++    user_id = _canonical_uuid(user_id)
++    corr = CorrelationIds.coerce(correlation).as_dict()
++    metadata: dict[str, Any] = {
++        "event_id": event_id
++        or derive_event_id(
++            event_name=event_name,
++            aggregate_type=aggregate_type,
++            aggregate_id=aggregate_id,
++            sequence_number=sequence_number,
++            correlation=corr,
++        ),
++        "user_id": user_id,
++        "schema_version": EVENT_SCHEMA_VERSION,
++        "source": source_enum.value,
++        "service": service,
++        "occurred_at": normalize_occurred_at(occurred_at).isoformat(),
++    }
++    if corr:
++        metadata["correlation"] = corr
++    if extra:
++        collision = set(extra) & set(metadata)
++        if collision:
++            raise EventContractError(f"extra keys collide with shared fields: {sorted(collision)}")
++        metadata.update(dict(extra))
++    return metadata
++
++
++@dataclass(frozen=True)
++class EventMetadataView:
++    """Read-side view of one event's shared fields (new or legacy shape)."""
++
++    event_id: str | None
++    user_id: str | None
++    schema_version: str | None
++    source: str | None
++    service: str | None
++    occurred_at: datetime | None
++    correlation: Mapping[str, str] = field(default_factory=dict)
++    raw: Mapping[str, Any] = field(default_factory=dict)
++
++    @property
++    def is_v3_envelope(self) -> bool:
++        return self.schema_version == EVENT_SCHEMA_VERSION
++
++    @property
++    def is_telemetry(self) -> bool:
++        return self.source is not None and self.source in {s.value for s in TELEMETRY_SOURCES}
++
++
++MAX_METADATA_JSON_BYTES = 64 * 1024
++"""Cap for str/bytes metadata input before json parsing (R2-CHANGES #4).
++
++Legitimate envelopes are ~0.5 KiB; anything beyond this is a malformed/hostile
++row and is rejected (empty view) with a warning log instead of parsed."""
++
++MAX_METADATA_MAPPING_CHARS = 1 << 20
++"""Approximate cap for already-decoded Mapping input (len of str() form)."""
++
++
++def read_event_metadata(metadata: Mapping[str, Any] | str | bytes | None) -> EventMetadataView:
++    """Parse an ``event_outbox``/``event_store`` metadata jsonb.
++
++    Backward compatible: legacy rows written as ``{"service": "galaxy_service"}``
++    (all 106 live rows at contract time) parse with ``is_v3_envelope == False``
++    and ``user_id`` falling back to ``payload.user_id`` when the caller merges
++    it via ``payload_hint``-style handling at the query layer.
++
++    Defensive contract (R2-CHANGES #4 / F10): malformed inputs never raise —
++    they degrade to an empty view with a warning log. Rejected shapes:
++    non-Mapping Python objects (lists/scalars — previously a TypeError crash
++    for raw lists), oversized str/bytes input, oversized Mapping input, and
++    deeply-nested JSON (RecursionError during parse). Size/nesting guards are
++    rejection+log, not truncation: a truncated JSON document is unparseable
++    anyway, and logging content would leak row data.
++    """
++    parsed: dict[str, Any]
++    if metadata is None:
++        parsed = {}
++    elif isinstance(metadata, (str, bytes)):
++        raw_len = len(metadata)
++        if raw_len > MAX_METADATA_JSON_BYTES:
++            _LOGGER.warning(
++                "event metadata rejected: oversized input (%d bytes > cap %d)",
++                raw_len,
++                MAX_METADATA_JSON_BYTES,
++            )
++            parsed = {}
++        else:
++            try:
++                decoded = json.loads(metadata)
++            except (ValueError, TypeError, RecursionError):
++                parsed = {}
++            else:
++                # JSON arrays/scalars degrade to empty view (not an error).
++                parsed = decoded if isinstance(decoded, dict) else {}
++    elif isinstance(metadata, Mapping):
++        if len(str(metadata)) > MAX_METADATA_MAPPING_CHARS:
++            _LOGGER.warning(
++                "event metadata rejected: oversized mapping (~%d chars > cap %d)",
++                len(str(metadata)),
++                MAX_METADATA_MAPPING_CHARS,
++            )
++            parsed = {}
++        else:
++            parsed = dict(metadata)
++    else:
++        _LOGGER.warning(
++            "event metadata rejected: unsupported input type %s (expected Mapping/str/bytes/None)",
++            type(metadata).__name__,
++        )
++        parsed = {}
++    if not isinstance(parsed, dict):
++        parsed = {}
++
++    occurred_raw = parsed.get("occurred_at")
++    occurred_at: datetime | None = None
++    if isinstance(occurred_raw, str):
++        try:
++            occurred_at = datetime.fromisoformat(occurred_raw)
++        except ValueError:
++            occurred_at = None
++
++    correlation = parsed.get("correlation")
++    if not isinstance(correlation, dict):
++        correlation = {}
++
++    return EventMetadataView(
++        event_id=parsed.get("event_id"),
++        user_id=parsed.get("user_id"),
++        schema_version=parsed.get("schema_version"),
++        source=parsed.get("source"),
++        service=parsed.get("service"),
++        occurred_at=occurred_at,
++        correlation={k: str(v) for k, v in correlation.items() if v is not None},
++        raw=parsed,
++    )
++
++
++# --- Telemetry boundary ------------------------------------------------------
++
++
++def is_telemetry_source(source: EventSource | str | None) -> bool:
++    """True when the producer is a non-truth source (client telemetry / probe)."""
++    if source is None:
++        return False
++    try:
++        return EventSource(source) in TELEMETRY_SOURCES
++    except ValueError:
++        return False
++
++
++def is_business_truth_eligible(source: EventSource | str | None) -> bool:
++    """Business-truth gate: telemetry and probe events can never be truth.
++
++    ``tracking_events`` (client telemetry) feeds observability and Phase-1
++    estimators only. The authoritative user world state (state_aggregator
++    UserStateV1, evidence fusion) must read server-authoritative tables
++    (chat_messages / tasks / study_records / focus_sessions / …), never
++    ``tracking_events``.
++    """
++    return not is_telemetry_source(source)
+diff --git a/backend/tests/contract/test_event_registry_contract.py b/backend/tests/contract/test_event_registry_contract.py
+new file mode 100644
+index 00000000..41327dde
+--- /dev/null
++++ b/backend/tests/contract/test_event_registry_contract.py
+@@ -0,0 +1,388 @@
++"""D-01 contract guards: V3 Event Name Registry + shared fields + telemetry boundary.
++
++Pins (red->green against app/core/event_registry.py):
++- closed event-name vocabulary (exact frozen set, double-frozen via sha256);
++- shared-field envelope rules (event_id/user_id/schema_version/source/
++  occurred_at naive-UTC/correlation UUID canonicalization);
++- deterministic idempotency key derivation (same-ROW redelivery scope only);
++- backward-compatible metadata parsing (legacy {"service": ...} rows) and
++  defensive rejection of malformed/oversized/deeply-nested rows;
++- telemetry boundary: client telemetry / probe sources can never be business
++  truth, and the authoritative truth modules never read tracking_events
++  DIRECTLY (see TRUTH_PATH_MODULES note: derived-table second hops are out of
++  this guard's sight and are tracked as report findings T1/T2/T3 instead);
++- every event name observed in the live dev DB event_outbox is registered.
++"""
++
++from __future__ import annotations
++
++import hashlib
++import json
++from datetime import UTC, datetime, timedelta
++from pathlib import Path
++from uuid import uuid4
++
++import pytest
++
++from app.core.event_registry import (
++    CORRELATION_KEYS,
++    EVENT_REGISTRY,
++    EVENT_SCHEMA_VERSION,
++    CorrelationIds,
++    EventContractError,
++    EventNameError,
++    EventSource,
++    EventStage,
++    build_event_metadata,
++    classify_stage,
++    derive_event_id,
++    is_business_truth_eligible,
++    is_registered_event_name,
++    is_telemetry_source,
++    read_event_metadata,
++)
++
++BACKEND_DIR = Path(__file__).resolve().parents[2]
++
++# sha256 of "|".join(sorted(EVENT_REGISTRY)) captured at D-01 freeze
++# (33 names). See test_event_name_vocabulary_is_frozen.
++_FROZEN_VOCABULARY_SHA256 = "4e8ccdcd9a024cd1ab82084d7f3447b69fbe4a1c05dfd3b0f3240fd47ad443b9"
++
++# Observed distinct event_type values in the live dev DB event_outbox
++# (sparkle_readonly, 2026-09-19; 106 rows). run.* / task.status_changed are
++# probe-origin rows whose producers do not exist in the repo — they are
++# registered with status="observed_unregistered" so the vocabulary stays
++# closed without pretending those names have a maintainer.
++LIVE_OUTBOX_EVENT_NAMES = (
++    "galaxy.node.mastery_updated",
++    "run.created",
++    "run.step_completed",
++    "run.awaiting_user",
++    "run.user_resumed",
++    "task.status_changed",
++)
++
++
++# --- 1. Closed vocabulary ----------------------------------------------------
++
++
++def test_registry_covers_all_flywheel_stages():
++    stages = {e.stage for e in EVENT_REGISTRY.values()}
++    assert stages == set(EventStage)
++
++
++def test_every_live_outbox_event_name_is_registered():
++    for name in LIVE_OUTBOX_EVENT_NAMES:
++        assert is_registered_event_name(name), name
++
++
++def test_event_name_vocabulary_is_frozen():
++    # Double freeze: exact name set against a literal hash captured at D-01
++    # contract time. Adding/removing/renaming an event name must bump this
++    # literal deliberately (contract change, not an accident).
++    names = sorted(EVENT_REGISTRY)
++    digest = hashlib.sha256("|".join(names).encode()).hexdigest()
++    assert len(names) == len(set(names))
++    assert digest == _FROZEN_VOCABULARY_SHA256, (
++        f"event-name vocabulary changed ({len(names)} names); if intentional, "
++        f"update _FROZEN_VOCABULARY_SHA256 deliberately"
++    )
++
++
++def test_unregistered_name_is_rejected_everywhere():
++    bogus = "galaxy.node.mastery_deleted"
++    assert not is_registered_event_name(bogus)
++    with pytest.raises(EventNameError):
++        classify_stage(bogus)
++    with pytest.raises(EventNameError):
++        derive_event_id(
++            event_name=bogus,
++            aggregate_type="galaxy_node_mastery",
++            aggregate_id=uuid4(),
++        )
++    with pytest.raises(EventNameError):
++        build_event_metadata(
++            user_id=uuid4(),
++            source="server_service",
++            service="test",
++            event_name=bogus,
++            aggregate_type="galaxy_node_mastery",
++            aggregate_id=uuid4(),
++        )
++
++
++def test_probe_origin_names_are_flagged_not_live():
++    assert EVENT_REGISTRY["run.created"].status == "observed_unregistered"
++    assert EVENT_REGISTRY["task.status_changed"].status == "observed_unregistered"
++    assert EVENT_REGISTRY["galaxy.node.mastery_updated"].status == "live"
++
++
++def test_gj03_chain_stages_are_classified():
++    # interaction -> execution -> outcome -> state update (DATA_FLYWHEEL §1)
++    assert classify_stage("chat.message.sent") is EventStage.INTERACTION
++    assert classify_stage("run.created") is EventStage.EXECUTION
++    assert classify_stage("task.completed") is EventStage.OUTCOME
++    assert classify_stage("galaxy.node.mastery_updated") is EventStage.STATE_UPDATE
++    assert classify_stage("intervention.feedback_recorded") is EventStage.OUTCOME
++
++
++# --- 2. Shared-field envelope -------------------------------------------------
++
++
++def _envelope(**overrides):
++    user_id = str(uuid4())
++    kwargs = {
++        "user_id": user_id,
++        "source": "server_service",
++        "service": "test_service",
++        "event_name": "galaxy.node.mastery_updated",
++        "aggregate_type": "galaxy_node_mastery",
++        "aggregate_id": user_id,
++        "sequence_number": 3,
++        "correlation": {"task_id": uuid4(), "node_id": uuid4()},
++    }
++    kwargs.update(overrides)
++    return build_event_metadata(**kwargs)
++
++
++def test_envelope_shared_fields_exact_key_set():
++    envelope = _envelope()
++    assert set(envelope) == {
++        "event_id",
++        "user_id",
++        "schema_version",
++        "source",
++        "service",
++        "occurred_at",
++        "correlation",
++    }
++    assert envelope["schema_version"] == EVENT_SCHEMA_VERSION == "event.v1"
++    assert envelope["source"] == "server_service"
++
++
++def test_envelope_occurred_at_is_naive_utc():
++    aware = datetime.now(UTC) + timedelta(hours=5)
++    envelope = _envelope(occurred_at=aware)
++    parsed = datetime.fromisoformat(envelope["occurred_at"])
++    assert parsed.tzinfo is None
++    # naive value equals the UTC instant of the aware input
++    assert parsed == aware.astimezone(UTC).replace(tzinfo=None)
++
++
++def test_envelope_rejects_unknown_source():
++    with pytest.raises(EventContractError):
++        _envelope(source="mobile_client_trust_me")
++
++
++def test_envelope_canonicalizes_uuid_correlation():
++    raw = uuid4()
++    envelope = _envelope(correlation={"task_id": raw, "node_id": str(raw)})
++    assert envelope["correlation"]["task_id"] == str(raw)
++    assert envelope["correlation"]["node_id"] == str(raw)
++    with pytest.raises(EventContractError):
++        _envelope(correlation={"task_id": "not-a-uuid"})
++
++
++def test_envelope_rejects_extra_key_collision():
++    with pytest.raises(EventContractError):
++        _envelope(extra={"user_id": "evil"})
++
++
++def test_correlation_ids_keys_match_contract():
++    assert set(CorrelationIds.__dataclass_fields__) == set(CORRELATION_KEYS)
++    # the four card-named cross-links are present
++    assert {"intervention_id", "action_id", "run_id", "outcome_id"} <= set(CORRELATION_KEYS)
++
++
++# --- 3. Idempotency key -------------------------------------------------------
++
++
++def test_derive_event_id_is_deterministic_and_sensitive():
++    aggregate_id = uuid4()
++    corr = {"task_id": uuid4()}
++    a = derive_event_id(
++        event_name="galaxy.node.mastery_updated",
++        aggregate_type="galaxy_node_mastery",
++        aggregate_id=aggregate_id,
++        sequence_number=7,
++        correlation=corr,
++    )
++    b = derive_event_id(
++        event_name="galaxy.node.mastery_updated",
++        aggregate_type="galaxy_node_mastery",
++        aggregate_id=aggregate_id,
++        sequence_number=7,
++        correlation=corr,
++    )
++    assert a == b and a.startswith("evt_")
++    # any distinguishing input changes the key
++    assert a != derive_event_id(
++        event_name="galaxy.node.mastery_updated",
++        aggregate_type="galaxy_node_mastery",
++        aggregate_id=aggregate_id,
++        sequence_number=8,
++        correlation=corr,
++    )
++    assert a != derive_event_id(
++        event_name="galaxy.node.mastery_updated",
++        aggregate_type="galaxy_node_mastery",
++        aggregate_id=uuid4(),
++        sequence_number=7,
++        correlation=corr,
++    )
++
++
++# --- 4. Legacy metadata compat -------------------------------------------------
++
++
++def test_read_event_metadata_parses_legacy_rows():
++    view = read_event_metadata({"service": "galaxy_service"})
++    assert view.service == "galaxy_service"
++    assert not view.is_v3_envelope
++    assert view.user_id is None
++    assert view.event_id is None
++
++
++def test_read_event_metadata_parses_v3_envelope_from_mapping_and_json():
++    envelope = _envelope()
++    view = read_event_metadata(envelope)
++    assert view.is_v3_envelope
++    assert view.user_id == envelope["user_id"]
++    assert view.source == "server_service"
++    assert not view.is_telemetry
++
++    view2 = read_event_metadata(json.dumps(envelope))
++    assert view2.event_id == envelope["event_id"]
++    assert dict(view2.correlation) == envelope["correlation"]
++
++
++def test_read_event_metadata_marks_telemetry_source():
++    envelope = _envelope(source="client_telemetry")
++    assert read_event_metadata(envelope).is_telemetry
++
++
++# --- 4b. Defensive parse (R2-CHANGES #4 / F10): malformed rows never raise -------
++
++
++def test_read_event_metadata_degrades_non_mapping_python_objects():
++    # Raw list input used to raise TypeError inside dict(); scalars/tuples too.
++    for malformed in ([1, 2], ["a", {"service": "x"}], 42, 3.14, True, (1, 2), set()):
++        view = read_event_metadata(malformed)  # must not raise
++        assert view.service is None
++        assert not view.is_v3_envelope
++        assert dict(view.raw) == {}
++
++
++def test_read_event_metadata_degrades_json_array_and_scalar_strings():
++    assert read_event_metadata("[1,2]").service is None
++    assert read_event_metadata('"just a string"').service is None
++    assert read_event_metadata("null").service is None
++    assert read_event_metadata("").service is None
++    assert read_event_metadata(b"\xff\xfe not utf8").service is None
++
++
++def test_read_event_metadata_rejects_oversized_json_string_instead_of_parsing():
++    oversized = '{"x":"' + "a" * (70 * 1024) + '"}'
++    assert len(oversized.encode("utf-8")) > 64 * 1024
++    view = read_event_metadata(oversized)  # must not raise / must not parse
++    assert view.service is None
++    assert dict(view.raw) == {}
++
++
++def test_read_event_metadata_rejects_oversized_mapping():
++    huge = {"service": "s", "blob": "x" * (2 << 20)}
++    view = read_event_metadata(huge)  # ~2 MiB str() form > 1 MiB cap
++    assert view.service is None
++    assert dict(view.raw) == {}
++
++
++def test_read_event_metadata_survives_deeply_nested_json():
++    deep = "[" * 100_000 + "]" * 100_000  # RecursionError inside json.loads
++    view = read_event_metadata(deep)  # must degrade, not crash the caller
++    assert view.service is None
++    assert dict(view.raw) == {}
++
++
++def test_read_event_metadata_still_parses_at_just_under_caps():
++    # Guards must not reject legitimate envelopes: a ~1 KiB envelope and a
++    # moderately sized mapping still parse fully.
++    envelope = _envelope()
++    assert read_event_metadata(json.dumps(envelope)).is_v3_envelope
++    view = read_event_metadata({"service": "galaxy_service", "blob": "y" * 2048})
++    assert view.service == "galaxy_service"
++
++
++# --- 4c. Correlation exemption class (R2-CHANGES #3) -----------------------------
++
++
++def test_correlation_exempt_names_are_frozen():
++    # The declared exemption from the "EXECUTION/OUTCOME/STATE_UPDATE events
++    # carry >=1 correlation id" rule. Frozen deliberately; adding an exemption
++    # is a contract change requiring justification in the constant's comment.
++    from app.core.event_registry import CORRELATION_EXEMPT_EVENT_NAMES
++
++    assert set(CORRELATION_EXEMPT_EVENT_NAMES) == {"asset_created", "asset_status_changed"}
++    # every exempt name must itself be a registered, live event
++    for name in CORRELATION_EXEMPT_EVENT_NAMES:
++        entry = EVENT_REGISTRY[name]
++        assert entry.status == "live"
++    # non-exempt live producers of EXECUTION/OUTCOME/STATE_UPDATE events must
++    # be able to correlate: every galaxy/task writer has an upstream causal id.
++    exempt_stages = {EventStage.EXECUTION, EventStage.OUTCOME, EventStage.STATE_UPDATE}
++    non_exempt = [e for e in EVENT_REGISTRY.values() if e.stage in exempt_stages and e.status == "live"]
++    assert non_exempt  # sanity: the rule has someone to bind
++    assert {"galaxy.node.mastery_updated", "task.started", "task.completed"} <= {e.name for e in non_exempt}
++    assert not ({"galaxy.node.mastery_updated", "task.started"} & CORRELATION_EXEMPT_EVENT_NAMES)
++
++
++# --- 5. Telemetry boundary -----------------------------------------------------
++
++
++def test_telemetry_sources_are_never_business_truth():
++    assert not is_business_truth_eligible(EventSource.CLIENT_TELEMETRY)
++    assert not is_business_truth_eligible(EventSource.PROBE)
++    assert not is_business_truth_eligible("client_telemetry")
++    assert is_business_truth_eligible(EventSource.SERVER_SERVICE)
++    assert is_business_truth_eligible(EventSource.GATEWAY)
++    assert is_telemetry_source("probe")
++    assert not is_telemetry_source("server_service")
++    assert not is_telemetry_source(None)
++
++
++# Authoritative truth-path modules. If one of these ever starts importing or
++# querying tracking_events (client telemetry), this guard fails: telemetry must
++# not become business truth (D-01 work item 2).
++#
++# GUARD SCOPE (honest, F12/R2): direct-reference level ONLY — it greps module
++# sources for `tracking_events`/`TrackingEvent`. Derived-table SECOND HOPS
++# (telemetry -> cognitive_fragments/user_state_snapshots -> truth module) are
++# invisible to a source scan; those chains are documented as findings T1/T2/T3
++# in the D-01 report and owned by the remediation card, not by this guard.
++# Static list, not directory-level: new files under state_aggregator/ or
++# services/evidence/ must be added here deliberately.
++TRUTH_PATH_MODULES = (
++    "app/state_aggregator/service.py",  # UserStateV1 world state
++    "app/state_aggregator/schema.py",
++    "app/core/context_pack.py",  # decision context
++    "app/services/evidence/fusion_engine.py",  # bayesian evidence fusion
++    "app/services/evidence/unified_evidence.py",
++    "app/services/evidence/outcome_evidence_adapter.py",
++    "app/services/galaxy/stats_service.py",  # galaxy state writer
++)
++
++
++@pytest.mark.parametrize("rel_path", TRUTH_PATH_MODULES)
++def test_truth_path_modules_never_read_client_telemetry(rel_path):
++    source_path = BACKEND_DIR / rel_path
++    assert source_path.exists(), f"truth-path module moved: {rel_path}"
++    source = source_path.read_text(encoding="utf-8")
++    assert "tracking_events" not in source, f"{rel_path} references tracking_events"
++    assert "TrackingEvent" not in source, f"{rel_path} references TrackingEvent"
++
++
++def test_telemetry_ingest_path_stays_isolated_from_outbox_writers():
++    # The client-telemetry ingest service must not write into event_outbox:
++    # telemetry and authoritative outbox events are different domains.
++    source = (BACKEND_DIR / "app" / "services" / "event_service.py").read_text(encoding="utf-8")
++    assert "event_outbox" not in source
++    assert "EventBus" in source  # telemetry still flows through the ephemeral bus
+diff --git a/backend/tests/services/test_event_idempotency_isolation.py b/backend/tests/services/test_event_idempotency_isolation.py
+new file mode 100644
+index 00000000..f3dd2e2a
+--- /dev/null
++++ b/backend/tests/services/test_event_idempotency_isolation.py
+@@ -0,0 +1,309 @@
++"""D-01 guards: event idempotency + cross-user isolation (acceptance item 2).
++
++Two layers, both on in-memory SQLite (no dev-DB access):
++
++1. Client telemetry (tracking_events): duplicate event_id re-ingest is deduped
++   (no double row, no double downstream publish), and event_ids are globally
++   unique so a replay from ANOTHER user cannot create a second row attributed
++   to that user. Reads are user-scoped: user B cannot fetch user A's event by
++   id.
++2. Authoritative outbox writers (galaxy stats_service / galaxy_service /
++   learning_asset_service): rows carry the event.v1 shared-field envelope
++   (user_id isolation key, deterministic event_id, source, correlation ids),
++   so downstream consumers can dedupe by metadata event_id and filter by user.
++"""
++
++from __future__ import annotations
++
++import json
++from uuid import uuid4
++
++import pytest
++from sqlalchemy import text
++from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
++
++from app.core.event_registry import EVENT_SCHEMA_VERSION, read_event_metadata
++from app.models.base import Base
++from app.models.event import TrackingEvent
++from app.services.event_service import EventService
++
++pytestmark = pytest.mark.asyncio
++
++_EXCLUDED_TABLES = {"accountability_partnership", "accountability_checkin"}
++
++_OUTBOX_DDL = [
++    """
++    CREATE TABLE event_outbox (
++        id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
++        aggregate_type VARCHAR(100) NOT NULL,
++        aggregate_id TEXT NOT NULL,
++        event_type VARCHAR(100) NOT NULL,
++        event_version INTEGER NOT NULL DEFAULT 1,
++        payload TEXT NOT NULL,
++        metadata TEXT,
++        sequence_number INTEGER NOT NULL DEFAULT 1,
++        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
++        published_at TIMESTAMP
++    )
++    """,
++    """
++    CREATE TABLE event_sequence_counters (
++        aggregate_type VARCHAR(100) NOT NULL,
++        aggregate_id TEXT NOT NULL,
++        next_sequence INTEGER NOT NULL DEFAULT 1,
++        PRIMARY KEY (aggregate_type, aggregate_id)
++    )
++    """,
++]
++
++
++@pytest.fixture
++async def sqlite_session():
++    engine = create_async_engine(
++        "sqlite+aiosqlite:///:memory:",
++        connect_args={"check_same_thread": False},
++    )
++    tables = [t for name, t in Base.metadata.tables.items() if name not in _EXCLUDED_TABLES]
++    async with engine.begin() as conn:
++        await conn.run_sync(lambda sync_conn: Base.metadata.create_all(sync_conn, tables=tables))
++        for ddl in _OUTBOX_DDL:
++            await conn.execute(text(ddl))
++
++    session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
++    async with session_factory() as session:
++        yield session
++
++    await engine.dispose()
++
++
++class _RecordingBus:
++    """EventBus stand-in that records publishes (downstream-effect proxy)."""
++
++    def __init__(self):
++        self.published: list[dict] = []
++
++    async def publish(self, *, event_type: str, payload: dict, stream: str) -> None:
++        self.published.append({"event_type": event_type, "payload": payload, "stream": stream})
++
++
++def _telemetry_event(event_id: str | None = None) -> dict:
++    return {
++        "event_id": event_id or uuid4().hex,
++        "event_type": "question_submit",
++        "schema_version": "event.v1",
++        "source": "mobile",
++        "ts_ms": 1_700_000_000_000,
++        "entities": {"question_id": "q1"},
++        "payload": {"correct": False},
++    }
++
++
++# --- Layer 1: tracking_events (client telemetry) ------------------------------
++
++
++async def test_duplicate_event_id_is_deduped_without_double_downstream(sqlite_session):
++    bus = _RecordingBus()
++    service = EventService(sqlite_session, bus)
++    event = _telemetry_event()
++
++    first = await service.ingest_events(uuid4(), [event])
++    second = await service.ingest_events(uuid4(), [event])  # full replay
++
++    assert first["accepted"] == 1
++    assert second["accepted"] == 0
++    assert second["deduped"] == 1
++
++    rows = (await sqlite_session.execute(text("SELECT event_id FROM tracking_events"))).scalars().all()
++    assert rows == [event["event_id"]]  # single physical row
++    assert len(bus.published) == 1  # exactly one downstream publish
++
++
++async def test_same_batch_duplicate_is_deduped_in_memory(sqlite_session):
++    bus = _RecordingBus()
++    service = EventService(sqlite_session, bus)
++    event = _telemetry_event()
++
++    result = await service.ingest_events(uuid4(), [event, dict(event)])
++
++    assert result["accepted"] == 1
++    assert result["deduped"] == 1
++    assert len(bus.published) == 1
++
++
++async def test_cross_user_replay_cannot_create_or_read_foreign_rows(sqlite_session):
++    user_a, user_b = uuid4(), uuid4()
++    shared_event_id = uuid4().hex
++    bus = _RecordingBus()
++    service = EventService(sqlite_session, bus)
++
++    await service.ingest_events(user_a, [_telemetry_event(shared_event_id)])
++    # user B replays the SAME event_id: globally unique constraint + pre-fetch
++    # dedupe means no second row and nothing attributed to user B.
++    replay = await service.ingest_events(user_b, [_telemetry_event(shared_event_id)])
++    assert replay["accepted"] == 0
++    assert replay["deduped"] == 1
++
++    rows = await sqlite_session.execute(text("SELECT user_id, event_id FROM tracking_events"))
++    all_rows = rows.all()
++    assert len(all_rows) == 1
++    assert str(all_rows[0][0]) == str(user_a)
++
++    # user-scoped read: B cannot fetch A's event even knowing its id.
++    assert await service.get_event(user_a, shared_event_id) is not None
++    assert await service.get_event(user_b, shared_event_id) is None
++
++
++async def test_state_estimator_reads_are_user_scoped(sqlite_session):
++    # The telemetry-fed Phase-1 estimator must only ever see the calling
++    # user's events (user_id predicate in _fetch_recent_events).
++    from datetime import datetime
++
++    from app.models.user_state import UserStateSnapshot
++    from app.services.state_estimator_service import StateEstimatorService
++
++    user_a, user_b = uuid4(), uuid4()
++    for uid, count in ((user_a, 3), (user_b, 2)):
++        for i in range(count):
++            sqlite_session.add(
++                TrackingEvent(
++                    event_id=uuid4().hex,
++                    user_id=uid,
++                    event_type="question_submit",
++                    schema_version="event.v1",
++                    source="mobile",
++                    ts_ms=1_700_000_000_000 + i,
++                    entities={},
++                    payload={"correct": False},
++                    received_at=datetime.utcnow(),
++                )
++            )
++    await sqlite_session.commit()
++
++    estimator = StateEstimatorService(sqlite_session)
++    snapshot = await estimator.update_state(user_a, None)
++    assert isinstance(snapshot, UserStateSnapshot)
++    assert snapshot.user_id == user_a
++    # 3 events from user A only — user B's 2 events must not leak in.
++    assert len(snapshot.derived_event_ids or []) == 3
++
++
++# --- Layer 2: outbox writers carry the V3 envelope -----------------------------
++
++
++async def test_stats_service_spark_outbox_row_carries_envelope_and_task_correlation(sqlite_session):
++    from app.services.galaxy.stats_service import GalaxyStatsService
++
++    user_id, node_id, task_id = uuid4(), uuid4(), uuid4()
++    service = GalaxyStatsService(sqlite_session)
++    await service._write_spark_outbox_event(
++        user_id=user_id,
++        node_id=node_id,
++        new_mastery=7,
++        revision=2,
++        task_id=task_id,
++    )
++
++    row = (
++        await sqlite_session.execute(
++            text("SELECT aggregate_type, event_type, sequence_number, payload, metadata " "FROM event_outbox")
++        )
++    ).one()
++    assert row.aggregate_type == "galaxy_node_mastery"
++    assert row.event_type == "galaxy.node.mastery_updated"
++    assert row.sequence_number == 1
++
++    view = read_event_metadata(row.metadata)
++    assert view.is_v3_envelope
++    assert view.schema_version == EVENT_SCHEMA_VERSION
++    assert view.user_id == str(user_id)
++    assert view.source == "server_service"
++    assert view.service == "galaxy_stats_service"
++    assert view.occurred_at is not None and view.occurred_at.tzinfo is None
++    assert view.correlation["task_id"] == str(task_id)
++    assert view.correlation["node_id"] == str(node_id)
++    assert view.event_id and view.event_id.startswith("evt_")
++
++    payload = json.loads(row.payload)
++    assert payload["task_id"] == str(task_id)  # causal link visible in payload too
++
++
++async def test_stats_service_spark_event_id_is_idempotent_per_causal_inputs(sqlite_session):
++    from app.services.galaxy.stats_service import GalaxyStatsService
++
++    service = GalaxyStatsService(sqlite_session)
++    user_id, node_id, task_id = uuid4(), uuid4(), uuid4()
++    await service._write_spark_outbox_event(
++        user_id=user_id, node_id=node_id, new_mastery=5, revision=1, task_id=task_id
++    )
++    await service._write_spark_outbox_event(
++        user_id=user_id, node_id=node_id, new_mastery=9, revision=2, task_id=task_id
++    )
++    metadatas = (
++        (await sqlite_session.execute(text("SELECT metadata FROM event_outbox ORDER BY sequence_number")))
++        .scalars()
++        .all()
++    )
++    ids = [read_event_metadata(m).event_id for m in metadatas]
++    # different sequence numbers -> different deterministic ids; both stable-format
++    assert len(set(ids)) == 2
++    assert all(i and i.startswith("evt_") for i in ids)
++
++
++async def test_galaxy_service_mastery_outbox_row_carries_envelope(sqlite_session):
++    from app.services.galaxy_service import GalaxyService
++
++    user_id, node_id = uuid4(), uuid4()
++    service = GalaxyService(sqlite_session)
++    await service._write_mastery_outbox_event(
++        aggregate_id=str(user_id),  # str for the raw-SQL SQLite harness (asyncpg takes UUID)
++        event_type="galaxy.node.mastery_updated",
++        payload={
++            "user_id": str(user_id),
++            "node_id": str(node_id),
++            "mastery_score": 42,
++            "revision": 3,
++            "timestamp": "2026-09-19T00:00:00",
++        },
++    )
++
++    row = (await sqlite_session.execute(text("SELECT event_type, metadata FROM event_outbox"))).one()
++    assert row[0] == "galaxy.node.mastery_updated"
++    view = read_event_metadata(row[1])
++    assert view.is_v3_envelope
++    assert view.user_id == str(user_id)
++    assert view.correlation["node_id"] == str(node_id)
++    assert view.service == "galaxy_service"
++
++
++async def test_learning_asset_outbox_requires_user_id(sqlite_session):
++    from app.services.learning_asset_service import LearningAssetService
++
++    service = LearningAssetService()
++    with pytest.raises(ValueError, match="user_id"):
++        await service._write_event_outbox(
++            db=sqlite_session,
++            aggregate_type="learning_asset",
++            aggregate_id=str(uuid4()),  # str for the raw-SQL SQLite harness
++            event_type="asset_status_changed",
++            payload={"old_status": "ACTIVE", "new_status": "ARCHIVED"},  # no user_id
++        )
++
++
++async def test_learning_asset_outbox_row_carries_envelope(sqlite_session):
++    from app.services.learning_asset_service import LearningAssetService
++
++    user_id = uuid4()
++    service = LearningAssetService()
++    await service._write_event_outbox(
++        db=sqlite_session,
++        aggregate_type="learning_asset",
++        aggregate_id=str(uuid4()),  # str for the raw-SQL SQLite harness
++        event_type="asset_created",
++        payload={"user_id": str(user_id), "asset_kind": "vocab"},
++        user_id=user_id,
++    )
++    row = (await sqlite_session.execute(text("SELECT metadata FROM event_outbox"))).one()
++    view = read_event_metadata(row[0])
++    assert view.is_v3_envelope
++    assert view.user_id == str(user_id)
++    assert view.service == "learning_asset_service"

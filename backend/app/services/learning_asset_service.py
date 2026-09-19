@@ -255,7 +255,8 @@ class LearningAssetService:
                 "old_status": old_status,
                 "new_status": asset.status,
                 "triggered_by": "user_activate",
-            }
+            },
+            user_id=asset.user_id,
         )
 
         await db.flush()
@@ -290,7 +291,8 @@ class LearningAssetService:
                 "old_status": old_status,
                 "new_status": asset.status,
                 "triggered_by": reason,
-            }
+            },
+            user_id=asset.user_id,
         )
 
         await db.flush()
@@ -590,13 +592,28 @@ class LearningAssetService:
         aggregate_id: UUID,
         event_type: str,
         payload: dict[str, Any],
+        user_id: UUID | None = None,
     ) -> None:
         """
         Write event to outbox for async processing.
 
         Uses the existing event_outbox table from CQRS infrastructure.
         The sequence_number is computed as the next number for this aggregate.
+
+        D-01: metadata is built by the shared-field contract (event_registry);
+        user_id is the isolation key and is required for the V3 envelope.
         """
+        from app.core.event_registry import build_event_metadata
+
+        # Contract check first: never burn a sequence number for an event that
+        # cannot carry its isolation key (D-01 shared fields).
+        effective_user_id = user_id or payload.get("user_id")
+        if effective_user_id is None:
+            raise ValueError(
+                "learning_asset outbox events require user_id "
+                "(pass user_id= or include payload['user_id'])"
+            )
+
         # Get next sequence number for this aggregate
         # Use a dedicated counter table to avoid races and preserve monotonicity.
         seq_result = await db.execute(
@@ -611,6 +628,15 @@ class LearningAssetService:
         )
         sequence_number = seq_result.scalar()
 
+        metadata = build_event_metadata(
+            user_id=effective_user_id,
+            source="server_service",
+            service="learning_asset_service",
+            event_name=event_type,
+            aggregate_type=aggregate_type,
+            aggregate_id=aggregate_id,
+            sequence_number=sequence_number,
+        )
         await db.execute(
             text("""
                 INSERT INTO event_outbox
@@ -623,7 +649,7 @@ class LearningAssetService:
                 "event_type": event_type,
                 "sequence_number": sequence_number,
                 "payload": json.dumps(payload),
-                "metadata": json.dumps({"service": "learning_asset_service"}),
+                "metadata": json.dumps(metadata),
             }
         )
 

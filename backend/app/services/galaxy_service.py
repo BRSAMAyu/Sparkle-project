@@ -122,6 +122,25 @@ class GalaxyService:
             )
             sequence_number = seq_result.scalar_one()
 
+            # D-01: shared-field metadata contract (event_registry). user_id and
+            # node_id are read from the payload the caller already builds, so
+            # legacy callers keep their exact payload shape.
+            from app.core.event_registry import build_event_metadata
+
+            metadata = build_event_metadata(
+                user_id=payload.get("user_id") or aggregate_id,
+                source="server_service",
+                service="galaxy_service",
+                event_name=event_type,
+                aggregate_type="galaxy_node_mastery",
+                aggregate_id=aggregate_id,
+                sequence_number=sequence_number,
+                correlation={
+                    k: payload[k]
+                    for k in ("node_id", "task_id")
+                    if payload.get(k) is not None
+                },
+            )
             await self.db.execute(
                 text("""
                     INSERT INTO event_outbox
@@ -134,7 +153,7 @@ class GalaxyService:
                     "event_type": event_type,
                     "sequence_number": sequence_number,
                     "payload": json.dumps(payload),
-                    "metadata": json.dumps({"service": "galaxy_service"}),
+                    "metadata": json.dumps(metadata),
                 },
             )
             return

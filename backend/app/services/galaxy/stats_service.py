@@ -132,6 +132,7 @@ class GalaxyStatsService:
                 node_id=node_id,
                 new_mastery=int(status.mastery_score),
                 revision=getattr(status, "revision", 0),
+                task_id=task_id,
             )
         except Exception as e:
             logger.warning(f"Failed to write spark outbox event: {e}")
@@ -442,13 +443,22 @@ class GalaxyStatsService:
         node_id: UUID,
         new_mastery: int,
         revision: int,
+        task_id: UUID | None = None,
     ) -> None:
-        """Write mastery outbox event for spark_node, mirroring update_node_mastery pipeline."""
+        """Write mastery outbox event for spark_node, mirroring update_node_mastery pipeline.
+
+        D-01: metadata is built by the shared-field contract (event_registry) and
+        carries the causal task_id so a GJ trace can walk UI action (task
+        completion) -> outbox event -> user_node_status state update by ids.
+        """
         from sqlalchemy import text as sa_text
+
+        from app.core.event_registry import build_event_metadata
 
         payload = {
             "user_id": str(user_id),
             "node_id": str(node_id),
+            "task_id": str(task_id) if task_id else None,
             "mastery_score": new_mastery,
             "revision": revision,
             "timestamp": _utcnow().isoformat(),
@@ -458,6 +468,16 @@ class GalaxyStatsService:
             {"aggregate_type": "galaxy_node_mastery", "aggregate_id": str(user_id)},
         )
         sequence_number = seq_result.scalar_one()
+        metadata = build_event_metadata(
+            user_id=user_id,
+            source="server_service",
+            service="galaxy_stats_service",
+            event_name="galaxy.node.mastery_updated",
+            aggregate_type="galaxy_node_mastery",
+            aggregate_id=user_id,
+            sequence_number=sequence_number,
+            correlation={"task_id": task_id, "node_id": node_id},
+        )
         await self.db.execute(
             sa_text(SPARK_OUTBOX_INSERT_SQL),
             {
@@ -466,7 +486,7 @@ class GalaxyStatsService:
                 "event_type": "galaxy.node.mastery_updated",
                 "sequence_number": sequence_number,
                 "payload": json.dumps(payload),
-                "metadata": json.dumps({"service": "galaxy_stats_service"}),
+                "metadata": json.dumps(metadata),
             },
         )
         await self.db.commit()

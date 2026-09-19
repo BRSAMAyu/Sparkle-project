@@ -405,6 +405,7 @@ class TestInboxDecay:
         # Create mock expired asset
         mock_asset = MagicMock()
         mock_asset.id = uuid4()
+        mock_asset.user_id = uuid4()  # NOT NULL FK on LearningAsset (D-01 shared-field contract)
         mock_asset.status = "INBOX"
         mock_asset.inbox_expires_at = datetime.now(timezone.utc) - timedelta(days=1)
         mock_asset.archive = MagicMock(side_effect=lambda: setattr(mock_asset, "status", "ARCHIVED"))
