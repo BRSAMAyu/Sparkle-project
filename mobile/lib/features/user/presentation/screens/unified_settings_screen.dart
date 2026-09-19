@@ -24,6 +24,8 @@ import 'package:sparkle/features/cognitive/presentation/providers/capsule_provid
 import 'package:sparkle/features/cognitive/presentation/screens/capsule/capsule_detail_screen.dart';
 import 'package:sparkle/features/cognitive/presentation/widgets/capsule/capsule_generation_preview.dart';
 import 'package:sparkle/features/documents/documents_routes.dart';
+// memory-governance-mvp: 设置页"AI 记忆"入口直达记忆面板（列表+纠正/删除）。
+import 'package:sparkle/features/memory/memory_routes.dart';
 import 'package:sparkle/features/settings/presentation/screens/accessibility_settings_screen.dart';
 import 'package:sparkle/features/settings/presentation/providers/accessibility_provider.dart';
 import 'package:sparkle/features/settings/presentation/widgets/settings_behavior_explanation.dart';
@@ -1941,6 +1943,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                     unawaited(_setMemoryHidden(value)),
                 onOpenMemorySettings: () =>
                     context.push(UserRoutes.memorySettings),
+                onOpenMemoryPanel: () => context.push(MemoryRoutes.panel),
               ),
               const SizedBox(height: DS.spacing20),
               _buildSectionHeader(Icons.language_rounded, l10n.language),

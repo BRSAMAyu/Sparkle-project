@@ -6083,6 +6083,67 @@
         }
     },
     "memoryPanelRevokeThis": "Revoke This",
+    "memoryGovSource": "Source: {source}",
+    "@memoryGovSource": {
+        "placeholders": {
+            "source": {
+                "type": "Object"
+            }
+        }
+    },
+    "memoryGovTurn": "chat {turnId}",
+    "@memoryGovTurn": {
+        "placeholders": {
+            "turnId": {
+                "type": "Object"
+            }
+        }
+    },
+    "memoryGovWrittenAt": "saved {date}",
+    "@memoryGovWrittenAt": {
+        "placeholders": {
+            "date": {
+                "type": "Object"
+            }
+        }
+    },
+    "memoryGovConfirm": "That's Right",
+    "memoryGovCorrect": "Fix",
+    "memoryGovDelete": "Delete",
+    "memoryGovWorking": "Working…",
+    "memoryGovSheetTitle": "What's wrong with this memory?",
+    "memoryGovWrong": "It recorded something wrong",
+    "memoryGovOutdated": "No longer true",
+    "memoryGovReasonHint": "Details (optional)",
+    "memoryGovConfirmed": "Confirmed — Sparkle will trust this memory more",
+    "memoryGovCorrected": "Correction submitted — Sparkle will adjust this memory",
+    "memoryGovDeleted": "Memory deleted and will not be recalled",
+    "memoryGovFailed": "Action failed: {error}",
+    "@memoryGovFailed": {
+        "placeholders": {
+            "error": {
+                "type": "Object"
+            }
+        }
+    },
+    "memoryGovLoadMore": "Load more ({total} total)",
+    "@memoryGovLoadMore": {
+        "placeholders": {
+            "total": {
+                "type": "Object"
+            }
+        }
+    },
+    "memSrcChat": "Chat",
+    "memSrcAnalysis": "AI analysis",
+    "memSrcUserState": "User settings",
+    "memSrcUserCreated": "Manually created",
+    "memSrcBehavior": "Behavior",
+    "memSrcDocument": "Document import",
+    "memSrcErrorBook": "Error book",
+    "memSrcPlan": "Study plan",
+    "memSrcSystem": "System",
+    "settDataOpenMemoryPanel": "Review AI Memories",
     "memoryPanelRevokedAutoMemory": "Auto memory revoked",
     "memoryPanelRevoking": "Revoking...",
     "memoryPanelSceneMemories": "{time} · {count} memories",

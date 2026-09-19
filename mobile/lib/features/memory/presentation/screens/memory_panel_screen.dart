@@ -37,8 +37,12 @@ class _MemoryPanelDataState {
     this.pendingCommitments = const [],
     this.unresolvedConflicts = const [],
     this.revokingIds = const {},
+    this.correctingIds = const {},
     this.processingCommitmentIds = const {},
     this.processingConflictIds = const {},
+    this.episodicHasMore = false,
+    this.episodicTotal = 0,
+    this.episodicLoadingMore = false,
   });
 
   final bool isLoading;
@@ -56,8 +60,16 @@ class _MemoryPanelDataState {
   final List<PendingCommitmentItem> pendingCommitments;
   final List<UnresolvedConflictItem> unresolvedConflicts;
   final Set<String> revokingIds;
+
+  /// memory-governance-mvp: 纠正/删除/确认动作进行中的条目。
+  final Set<String> correctingIds;
   final Set<String> processingCommitmentIds;
   final Set<String> processingConflictIds;
+
+  /// memory-governance-mvp: episodic 分页游标状态。
+  final bool episodicHasMore;
+  final int episodicTotal;
+  final bool episodicLoadingMore;
 
   _MemoryPanelDataState copyWith({
     bool? isLoading,
@@ -71,8 +83,12 @@ class _MemoryPanelDataState {
     List<PendingCommitmentItem>? pendingCommitments,
     List<UnresolvedConflictItem>? unresolvedConflicts,
     Set<String>? revokingIds,
+    Set<String>? correctingIds,
     Set<String>? processingCommitmentIds,
     Set<String>? processingConflictIds,
+    bool? episodicHasMore,
+    int? episodicTotal,
+    bool? episodicLoadingMore,
     bool clearError = false,
   }) =>
       _MemoryPanelDataState(
@@ -89,10 +105,13 @@ class _MemoryPanelDataState {
         pendingCommitments: pendingCommitments ?? this.pendingCommitments,
         unresolvedConflicts: unresolvedConflicts ?? this.unresolvedConflicts,
         revokingIds: revokingIds ?? this.revokingIds,
+        correctingIds: correctingIds ?? this.correctingIds,
         processingCommitmentIds:
             processingCommitmentIds ?? this.processingCommitmentIds,
-        processingConflictIds:
-            processingConflictIds ?? this.processingConflictIds,
+        processingConflictIds: processingConflictIds ?? this.processingConflictIds,
+        episodicHasMore: episodicHasMore ?? this.episodicHasMore,
+        episodicTotal: episodicTotal ?? this.episodicTotal,
+        episodicLoadingMore: episodicLoadingMore ?? this.episodicLoadingMore,
       );
 }
 
@@ -103,6 +122,8 @@ class _MemoryPanelDataNotifier extends StateNotifier<_MemoryPanelDataState> {
       : super(const _MemoryPanelDataState());
 
   final MemoryApiService _service;
+
+  static const _episodicPageSize = 20;
 
   Future<void> loadAll() async {
     state = state.copyWith(isLoading: true, clearError: true);
@@ -120,7 +141,7 @@ class _MemoryPanelDataNotifier extends StateNotifier<_MemoryPanelDataState> {
     final results = await Future.wait<(Object?, Object?)>([
       settled(_service.getPreferences()),
       settled(_service.getGoals()),
-      settled(_service.getEpisodic()),
+      settled(_service.getEpisodicPage(limit: _episodicPageSize)),
       settled(_service.getRecentScenes()),
       settled(_service.getForesightHintSummary()),
       settled(_service.getPendingCommitments()),
@@ -140,18 +161,98 @@ class _MemoryPanelDataNotifier extends StateNotifier<_MemoryPanelDataState> {
     final allFailed = failureCount == results.length;
     final failureMessage = firstFailure == null ? null : '$firstFailure';
 
+    final episodicPage = results[2].$1 as EpisodicMemoryPage?;
     state = state.copyWith(
       preferences: results[0].$1 as List<MemoryPreferenceItem>?,
       goals: results[1].$1 as List<MemoryGoalItem>?,
-      episodic: results[2].$1 as List<EpisodicMemoryItem>?,
+      episodic: episodicPage?.items,
       recentScenes: results[3].$1 as List<RecentSceneSummaryItem>?,
       foresightHint: results[4].$1 as ForesightHintSummaryItem?,
       pendingCommitments: results[5].$1 as List<PendingCommitmentItem>?,
       unresolvedConflicts: results[6].$1 as List<UnresolvedConflictItem>?,
+      episodicHasMore: episodicPage?.hasMore,
+      episodicTotal: episodicPage?.total,
       isLoading: false,
       error: allFailed ? failureMessage : null,
       partialError: allFailed ? null : failureMessage,
     );
+  }
+
+  /// memory-governance-mvp: 追加下一页 episodic（offset 分页）。
+  Future<void> loadMoreEpisodic() async {
+    if (state.episodicLoadingMore || !state.episodicHasMore) {
+      return;
+    }
+    state = state.copyWith(episodicLoadingMore: true);
+    try {
+      final page = await _service.getEpisodicPage(
+        limit: _episodicPageSize,
+        offset: state.episodic.length,
+      );
+      if (!mounted) {
+        return;
+      }
+      final known = state.episodic.map((e) => e.id).toSet();
+      final fresh =
+          page.items.where((e) => !known.contains(e.id)).toList();
+      state = state.copyWith(
+        episodic: [...state.episodic, ...fresh],
+        episodicHasMore: page.hasMore,
+        episodicTotal: page.total,
+        episodicLoadingMore: false,
+      );
+    } catch (_) {
+      if (mounted) {
+        state = state.copyWith(episodicLoadingMore: false);
+      }
+      rethrow;
+    }
+  }
+
+  /// memory-governance-mvp: 对单条 episodic 记忆执行用户治理动作。
+  ///
+  /// action ∈ wrong（记错）/ outdated（不再是）/ delete（删除）→ 从列表移除；
+  /// confirm（这就是对的）→ 原位替换为服务端返回的最新条目。
+  Future<void> correctEpisodic(
+    EpisodicMemoryItem item, {
+    required String action,
+    String? reason,
+  }) async {
+    state = state.copyWith(correctingIds: {...state.correctingIds, item.id});
+    try {
+      final updated = await _service.correctEpisodicMemory(
+        item.id,
+        action: action,
+        reason: reason,
+      );
+      if (!mounted) {
+        return;
+      }
+      final List<EpisodicMemoryItem> nextEpisodic;
+      if (action == 'confirm') {
+        nextEpisodic = [
+          for (final entry in state.episodic)
+            if (entry.id == item.id) updated else entry,
+        ];
+      } else {
+        nextEpisodic =
+            state.episodic.where((entry) => entry.id != item.id).toList();
+      }
+      state = state.copyWith(
+        episodic: nextEpisodic,
+        episodicTotal:
+            action == 'confirm' ? state.episodicTotal : state.episodicTotal - 1,
+        correctingIds:
+            state.correctingIds.where((id) => id != item.id).toSet(),
+      );
+    } catch (_) {
+      if (mounted) {
+        state = state.copyWith(
+          correctingIds: state.correctingIds.where((id) => id != item.id).toSet(),
+        );
+      }
+      rethrow;
+    }
   }
 
   Future<void> revokeAutoMemory(EpisodicMemoryItem item) async {
@@ -485,6 +586,10 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
               ..._episodic
                   .where((item) => !_isInferredAutoMemory(item))
                   .map(_buildEpisodicCard),
+              if (_episodicHasMore) ...[
+                const SizedBox(height: DS.sm),
+                _buildLoadMoreButton(context),
+              ],
             ],
           ],
         ),
@@ -533,7 +638,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
             if (_pendingCommitments.isNotEmpty) const SizedBox(height: DS.md),
             if (entries.isEmpty)
               _buildEmptyState(context)
-            else
+            else ...[
               ...entries.indexed.map(
                 (entry) => SparkleStaggerItem(
                   index: entry.$1 +
@@ -542,6 +647,12 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
                   child: _buildEntryCard(entry.$2),
                 ),
               ),
+              if (_episodicHasMore)
+                Padding(
+                  padding: const EdgeInsets.only(top: DS.sm),
+                  child: _buildLoadMoreButton(context),
+                ),
+            ],
           ],
         ],
       ),
@@ -671,6 +782,18 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
       _dateRange = null;
     });
   }
+
+  /// memory-governance-mvp: episodic 分页"加载更多"。
+  Widget _buildLoadMoreButton(BuildContext context) => Center(
+        child: SparkleButton(
+          label: _episodicLoadingMore
+              ? context.l10n.memoryGovWorking
+              : context.l10n.memoryGovLoadMore(_episodicTotal),
+          onPressed: _episodicLoadingMore ? () {} : _loadMoreEpisodic,
+          disabled: _episodicLoadingMore,
+          variant: ButtonVariant.ghost,
+        ),
+      );
 
   Widget _buildEmptyState(BuildContext context) => Padding(
         padding: const EdgeInsets.symmetric(vertical: DS.xl),
@@ -866,12 +989,223 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
           status: _statusFor(item.evidenceMissing, item.evidenceRefs),
         ),
         correctionCount: item.correctionCount,
-        footer: _buildEpisodicFooter(item),
+        footer: _buildEpisodicGovernanceFooter(item),
         onTap: () => _openDetail(
           context,
           MemoryDetailArgs.episodic(item),
         ),
       );
+
+  /// memory-governance-mvp: 每条情景记忆的来源标注 + 标签 + 纠正/删除/确认操作。
+  Widget? _buildEpisodicGovernanceFooter(EpisodicMemoryItem item) {
+    final parts = <Widget>[];
+    final sourceLine = _formatEpisodicSourceLine(item);
+    if (sourceLine.isNotEmpty) {
+      parts.add(
+        Text(
+          sourceLine,
+          style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeSm),
+        ),
+      );
+    }
+    if (item.tags.isNotEmpty) {
+      parts.add(
+        Padding(
+          padding: const EdgeInsets.only(top: DS.xs),
+          child: Wrap(
+            spacing: DS.xs,
+            runSpacing: DS.xs,
+            children: item.tags
+                .take(4)
+                .map(
+                  (tag) => Chip(
+                    label: Text(tag,
+                        style: TextStyle(
+                            fontSize: DS.fontSizeSm,
+                            color: DS.textSecondary)),
+                    backgroundColor: DS.surfaceTertiary,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                )
+                .toList(),
+          ),
+        ),
+      );
+    }
+    if (_isInferredAutoMemory(item)) {
+      parts.add(
+        Padding(
+          padding: const EdgeInsets.only(top: DS.xs),
+          child: Text(
+            context.l10n.memoryPanelAiInferredDescription,
+            style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeSm),
+          ),
+        ),
+      );
+      if ((item.decayPolicy ?? '').isNotEmpty) {
+        parts.add(
+          Padding(
+            padding: const EdgeInsets.only(top: DS.xs),
+            child: Text(
+              context.l10n.memoryPanelValidUntil(item.decayPolicy!),
+              style:
+                  TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeSm),
+            ),
+          ),
+        );
+      }
+    }
+    parts.add(
+      Padding(
+        padding: const EdgeInsets.only(top: DS.sm),
+        child: Wrap(
+          spacing: DS.sm,
+          runSpacing: DS.sm,
+          children: [
+            SparkleButton(
+              label: _correctingIds.contains(item.id)
+                  ? context.l10n.memoryGovWorking
+                  : context.l10n.memoryGovConfirm,
+              onPressed: _correctingIds.contains(item.id)
+                  ? () {}
+                  : () => _correctEpisodic(item, 'confirm'),
+              disabled: _correctingIds.contains(item.id),
+              variant: ButtonVariant.ghost,
+            ),
+            SparkleButton(
+              label: context.l10n.memoryGovCorrect,
+              onPressed: _correctingIds.contains(item.id)
+                  ? () {}
+                  : () => _showCorrectionSheet(item),
+              disabled: _correctingIds.contains(item.id),
+              variant: ButtonVariant.ghost,
+            ),
+            SparkleButton(
+              label: context.l10n.memoryGovDelete,
+              onPressed: _correctingIds.contains(item.id)
+                  ? () {}
+                  : () => _correctEpisodic(item, 'delete'),
+              disabled: _correctingIds.contains(item.id),
+              variant: ButtonVariant.ghost,
+            ),
+            if (_isInferredAutoMemory(item))
+              SparkleButton(
+                label: _revokingIds.contains(item.id)
+                    ? context.l10n.memoryPanelRevoking
+                    : context.l10n.memoryPanelRevokeThis,
+                onPressed: _revokingIds.contains(item.id)
+                    ? () {}
+                    : () => _revokeAutoMemory(item),
+                disabled: _revokingIds.contains(item.id),
+                variant: ButtonVariant.ghost,
+              ),
+            if (AppFeatureFlags.enableEvidenceViewer)
+              SparkleButton.ghost(
+                onPressed: () => EvidenceDrawer.show(
+                  context,
+                  refs: item.evidenceRefs,
+                  evidenceMissing: item.evidenceMissing,
+                ),
+                label: context.l10n.memoryViewEvidence,
+              ),
+          ],
+        ),
+      ),
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: parts,
+    );
+  }
+
+  /// memory-governance-mvp: "这条记忆从哪来"的一行标注（模块 + 对话轮次 + 写入时间）。
+  String _formatEpisodicSourceLine(EpisodicMemoryItem item) {
+    final parts = <String>[
+      context.l10n.memoryGovSource(_episodicSourceLabel(item)),
+      if (item.sourceTurnId != null)
+        context.l10n.memoryGovTurn(
+          item.sourceTurnId!.length > 8
+              ? item.sourceTurnId!.substring(0, 8)
+              : item.sourceTurnId!,
+        ),
+      if (item.writtenAt != null)
+        context.l10n.memoryGovWrittenAt(_formatUpdated(item.writtenAt)),
+    ];
+    return parts.join(' · ');
+  }
+
+  String _episodicSourceLabel(EpisodicMemoryItem item) => switch (item.sourceType) {
+        'chat' || 'text' => context.l10n.memSrcChat,
+        'analysis' => context.l10n.memSrcAnalysis,
+        'user_state' => context.l10n.memSrcUserState,
+        'user_created' => context.l10n.memSrcUserCreated,
+        'behavior' || 'behavior_auto' => context.l10n.memSrcBehavior,
+        'document' || 'document_import' => context.l10n.memSrcDocument,
+        'error_book' => context.l10n.memSrcErrorBook,
+        'plan' => context.l10n.memSrcPlan,
+        'system' => context.l10n.memSrcSystem,
+        _ => item.sourceLabel ?? item.sourceType,
+      };
+
+  Set<String> get _correctingIds => _data.correctingIds;
+
+  bool get _episodicHasMore => _data.episodicHasMore;
+
+  int get _episodicTotal => _data.episodicTotal;
+
+  bool get _episodicLoadingMore => _data.episodicLoadingMore;
+
+  Future<void> _correctEpisodic(
+    EpisodicMemoryItem item,
+    String action, {
+    String? reason,
+  }) async {
+    try {
+      await ref
+          .read(_memoryPanelDataProvider.notifier)
+          .correctEpisodic(item, action: action, reason: reason);
+      if (!mounted) {
+        return;
+      }
+      AppFeedback.success(
+        context,
+        switch (action) {
+          'confirm' => context.l10n.memoryGovConfirmed,
+          'delete' => context.l10n.memoryGovDeleted,
+          _ => context.l10n.memoryGovCorrected,
+        },
+      );
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      AppFeedback.error(context, context.l10n.memoryGovFailed('$e'));
+    }
+  }
+
+  Future<void> _showCorrectionSheet(EpisodicMemoryItem item) async {
+    final result = await showModalBottomSheet<(String, String?)>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheetContext) => _CorrectionActionSheet(item: item),
+    );
+    if (!mounted || result == null) {
+      return;
+    }
+    await _correctEpisodic(item, result.$1, reason: result.$2);
+  }
+
+  Future<void> _loadMoreEpisodic() async {
+    try {
+      await ref.read(_memoryPanelDataProvider.notifier).loadMoreEpisodic();
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      AppFeedback.error(context, context.l10n.memoryGovFailed('$e'));
+    }
+  }
 
   Widget _buildEntryCard(MemoryEntry entry) {
     final isPinned = _pinnedIds.contains(entry.id);
@@ -1218,63 +1552,6 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
     );
   }
 
-  Widget? _buildEpisodicFooter(EpisodicMemoryItem item) {
-    if (!_isInferredAutoMemory(item)) {
-      return null;
-    }
-    final parts = <Widget>[
-      Text(
-        context.l10n.memoryPanelAiInferredDescription,
-        style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeSm),
-      ),
-    ];
-    if ((item.decayPolicy ?? '').isNotEmpty) {
-      parts.add(
-        Padding(
-          padding: const EdgeInsets.only(top: DS.xs),
-          child: Text(
-            context.l10n.memoryPanelValidUntil(item.decayPolicy!),
-            style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeSm),
-          ),
-        ),
-      );
-    }
-    parts.add(
-      Padding(
-        padding: const EdgeInsets.only(top: DS.sm),
-        child: Wrap(
-          spacing: DS.sm,
-          runSpacing: DS.sm,
-          children: [
-            SparkleButton(
-              label: _revokingIds.contains(item.id)
-                  ? context.l10n.memoryPanelRevoking
-                  : context.l10n.memoryPanelRevokeThis,
-              onPressed: _revokingIds.contains(item.id)
-                  ? () {}
-                  : () => _revokeAutoMemory(item),
-              disabled: _revokingIds.contains(item.id),
-              variant: ButtonVariant.ghost,
-            ),
-            if (AppFeatureFlags.enableEvidenceViewer)
-              SparkleButton.ghost(
-                onPressed: () => EvidenceDrawer.show(
-                  context,
-                  refs: item.evidenceRefs,
-                  evidenceMissing: item.evidenceMissing,
-                ),
-                label: context.l10n.memoryViewEvidence,
-              ),
-          ],
-        ),
-      ),
-    );
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: parts,
-    );
-  }
-
   bool _isInferredAutoMemory(EpisodicMemoryItem item) =>
       item.sourceLane == 'inferred_extraction';
 
@@ -1376,8 +1653,81 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
   }
 }
 
+/// memory-governance-mvp: 纠正动作选择面板。
+/// 返回 (action, reason)：wrong=记错 / outdated=不再是；取消返回 null。
+class _CorrectionActionSheet extends StatefulWidget {
+  const _CorrectionActionSheet({required this.item});
+
+  final EpisodicMemoryItem item;
+
+  @override
+  State<_CorrectionActionSheet> createState() => _CorrectionActionSheetState();
+}
+
+class _CorrectionActionSheetState extends State<_CorrectionActionSheet> {
+  final _reasonController = TextEditingController();
+
+  @override
+  void dispose() {
+    _reasonController.dispose();
+    super.dispose();
+  }
+
+  void _submit(String action) {
+    final reason = _reasonController.text.trim();
+    Navigator.of(context).pop((action, reason.isEmpty ? null : reason));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Padding(
+      padding: EdgeInsets.only(
+        left: DS.lg,
+        right: DS.lg,
+        top: DS.sm,
+        bottom: DS.lg + MediaQuery.viewPaddingOf(context).bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            l10n.memoryGovSheetTitle,
+            style: DS.titleMedium.copyWith(fontWeight: DS.fontWeightBold),
+          ),
+          const SizedBox(height: DS.md),
+          SparkleButton(
+            label: l10n.memoryGovWrong,
+            variant: ButtonVariant.secondary,
+            onPressed: () => _submit('wrong'),
+          ),
+          const SizedBox(height: DS.sm),
+          SparkleButton(
+            label: l10n.memoryGovOutdated,
+            variant: ButtonVariant.secondary,
+            onPressed: () => _submit('outdated'),
+          ),
+          const SizedBox(height: DS.md),
+          TextField(
+            controller: _reasonController,
+            maxLines: 2,
+            maxLength: 200,
+            decoration: InputDecoration(
+              hintText: l10n.memoryGovReasonHint,
+              border: const OutlineInputBorder(),
+              isDense: true,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _MemoryPanelLoadingSkeleton extends StatelessWidget {
   const _MemoryPanelLoadingSkeleton();
+
 
   @override
   Widget build(BuildContext context) => ListView.separated(

@@ -6076,6 +6076,67 @@
         }
     },
     "memoryPanelRevokeThis": "撤销此条",
+    "memoryGovSource": "来源：{source}",
+    "@memoryGovSource": {
+        "placeholders": {
+            "source": {
+                "type": "Object"
+            }
+        }
+    },
+    "memoryGovTurn": "对话 {turnId}",
+    "@memoryGovTurn": {
+        "placeholders": {
+            "turnId": {
+                "type": "Object"
+            }
+        }
+    },
+    "memoryGovWrittenAt": "写入于 {date}",
+    "@memoryGovWrittenAt": {
+        "placeholders": {
+            "date": {
+                "type": "Object"
+            }
+        }
+    },
+    "memoryGovConfirm": "确认无误",
+    "memoryGovCorrect": "纠正",
+    "memoryGovDelete": "删除",
+    "memoryGovWorking": "处理中…",
+    "memoryGovSheetTitle": "这条记忆哪里不对？",
+    "memoryGovWrong": "记错了",
+    "memoryGovOutdated": "不再是这样了",
+    "memoryGovReasonHint": "补充说明（可选）",
+    "memoryGovConfirmed": "已确认，AI 会更信任这条记忆",
+    "memoryGovCorrected": "已提交纠正，AI 会调整这条记忆",
+    "memoryGovDeleted": "已删除该记忆，之后不会再被想起",
+    "memoryGovFailed": "操作失败: {error}",
+    "@memoryGovFailed": {
+        "placeholders": {
+            "error": {
+                "type": "Object"
+            }
+        }
+    },
+    "memoryGovLoadMore": "加载更多（共 {total} 条）",
+    "@memoryGovLoadMore": {
+        "placeholders": {
+            "total": {
+                "type": "Object"
+            }
+        }
+    },
+    "memSrcChat": "对话记录",
+    "memSrcAnalysis": "AI 分析",
+    "memSrcUserState": "用户设置",
+    "memSrcUserCreated": "手动创建",
+    "memSrcBehavior": "行为记录",
+    "memSrcDocument": "文档导入",
+    "memSrcErrorBook": "错题本",
+    "memSrcPlan": "学习计划",
+    "memSrcSystem": "系统",
+    "settDataOpenMemoryPanel": "查看 AI 记忆",
     "memoryPanelRevokedAutoMemory": "已撤销 AI 自动记忆",
     "memoryPanelRevoking": "撤销中",
     "memoryPanelSceneMemories": "{time} · {count} 条记忆",

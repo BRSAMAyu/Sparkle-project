@@ -26,6 +26,7 @@ class _MemoryPanelApiService implements MemoryApiService {
     DateTime? start,
     DateTime? end,
     int limit = 20,
+    int offset = 0,
   }) async =>
       [
         EpisodicMemoryItem(
@@ -40,6 +41,30 @@ class _MemoryPanelApiService implements MemoryApiService {
           occurredAt: DateTime(2026, 4, 21),
         ),
       ];
+
+  @override
+  Future<EpisodicMemoryPage> getEpisodicPage({
+    DateTime? start,
+    DateTime? end,
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    final items = await getEpisodic(start: start, end: end, limit: limit);
+    return EpisodicMemoryPage(
+      items: offset == 0 ? items : const [],
+      total: items.length,
+      hasMore: false,
+    );
+  }
+
+  @override
+  Future<EpisodicMemoryItem> correctEpisodicMemory(
+    String id, {
+    required String action,
+    String? reason,
+  }) async =>
+      throw UnimplementedError();
+
 
   @override
   Future<List<PendingCommitmentItem>> getPendingCommitments() async => [];

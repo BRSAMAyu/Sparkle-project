@@ -53,6 +53,7 @@ class MemoryApiService {
     DateTime? start,
     DateTime? end,
     int limit = 20,
+    int offset = 0,
   }) async {
     final response = await _apiClient.get<Map<String, dynamic>>(
       '/memory/episodic',
@@ -60,6 +61,7 @@ class MemoryApiService {
         if (start != null) 'start': start.toIso8601String(),
         if (end != null) 'end': end.toIso8601String(),
         'limit': limit,
+        'offset': offset,
       },
     );
     final items = (response.data?['items'] as List<dynamic>? ?? [])
@@ -67,6 +69,54 @@ class MemoryApiService {
         .map(EpisodicMemoryItem.fromJson)
         .toList();
     return items;
+  }
+
+  /// memory-governance-mvp: episodic 分页游标（total/has_more 透传）。
+  Future<EpisodicMemoryPage> getEpisodicPage({
+    DateTime? start,
+    DateTime? end,
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    final response = await _apiClient.get<Map<String, dynamic>>(
+      '/memory/episodic',
+      queryParameters: {
+        if (start != null) 'start': start.toIso8601String(),
+        if (end != null) 'end': end.toIso8601String(),
+        'limit': limit,
+        'offset': offset,
+      },
+    );
+    final data = response.data ?? <String, dynamic>{};
+    final items = (data['items'] as List<dynamic>? ?? [])
+        .whereType<Map<String, dynamic>>()
+        .map(EpisodicMemoryItem.fromJson)
+        .toList();
+    return EpisodicMemoryPage(
+      items: items,
+      total: (data['total'] as num?)?.toInt() ?? items.length,
+      hasMore: data['has_more'] as bool? ?? false,
+    );
+  }
+
+  /// memory-governance-mvp: 单条情景记忆的用户治理动作。
+  ///
+  /// [action] ∈ wrong（记错）/ outdated（不再是）/ delete（删除，软删）/
+  /// confirm（这就是对的，confidence 提升）。
+  Future<EpisodicMemoryItem> correctEpisodicMemory(
+    String id, {
+    required String action,
+    String? reason,
+  }) async {
+    final response = await _apiClient.post<Map<String, dynamic>>(
+      '/memory/episodic/$id/correction',
+      data: {
+        'action': action,
+        if (reason != null) 'reason': reason,
+      },
+    );
+    final item = response.data?['item'] as Map<String, dynamic>? ?? {};
+    return EpisodicMemoryItem.fromJson(item);
   }
 
   Future<List<PendingCommitmentItem>> getPendingCommitments() async {

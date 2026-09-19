@@ -196,32 +196,46 @@ class EpisodicMemoryItem {
     this.updatedAt,
     this.retractedAt,
     this.revokedAt,
+    this.tags = const [],
+    this.sourceTurnId,
+    this.sourceLabel,
+    this.writtenAt,
   });
 
-  factory EpisodicMemoryItem.fromJson(Map<String, dynamic> json) =>
-      EpisodicMemoryItem(
-        id: json['id'] as String? ?? '',
-        summary: json['summary'] as String? ?? '',
-        sourceType: json['source_type'] as String? ?? '',
-        sourceId: json['source_id'] as String?,
-        sourceLane: json['source_lane'] as String?,
-        subjectType: json['subject_type'] as String?,
-        occurredAt: _parseDate(json['occurred_at']),
-        dueAt: _parseDate(json['due_at']),
-        resolvedAt: _parseDate(json['resolved_at']),
-        importanceScore: (json['importance_score'] as num?)?.toDouble(),
-        confidence: (json['confidence'] as num?)?.toDouble(),
-        evidenceToken: json['evidence_token'] as String?,
-        decayPolicy: json['decay_policy'] as String?,
-        declarationLabel: json['declaration_label'] as String?,
-        updatedAt: _parseDate(json['updated_at']),
-        evidenceMissing: json['evidence_missing'] as bool? ?? false,
-        evidenceRefs: _parseEvidenceRefs(json['evidence_refs']),
-        evidenceScore: (json['evidence_score'] as num?)?.toDouble() ?? 0.0,
-        correctionCount: json['correction_count'] as int? ?? 0,
-        retractedAt: _parseDate(json['retracted_at']),
-        revokedAt: _parseDate(json['revoked_at']),
-      );
+  factory EpisodicMemoryItem.fromJson(Map<String, dynamic> json) {
+    final annotation = json['source_annotation'];
+    final annotationMap =
+        annotation is Map<String, dynamic> ? annotation : null;
+    return EpisodicMemoryItem(
+      id: json['id'] as String? ?? '',
+      summary: json['summary'] as String? ?? '',
+      sourceType: json['source_type'] as String? ?? '',
+      sourceId: json['source_id'] as String?,
+      sourceLane: json['source_lane'] as String?,
+      subjectType: json['subject_type'] as String?,
+      occurredAt: _parseDate(json['occurred_at']),
+      dueAt: _parseDate(json['due_at']),
+      resolvedAt: _parseDate(json['resolved_at']),
+      importanceScore: (json['importance_score'] as num?)?.toDouble(),
+      confidence: (json['confidence'] as num?)?.toDouble(),
+      evidenceToken: json['evidence_token'] as String?,
+      decayPolicy: json['decay_policy'] as String?,
+      declarationLabel: json['declaration_label'] as String?,
+      updatedAt: _parseDate(json['updated_at']),
+      evidenceMissing: json['evidence_missing'] as bool? ?? false,
+      evidenceRefs: _parseEvidenceRefs(json['evidence_refs']),
+      evidenceScore: (json['evidence_score'] as num?)?.toDouble() ?? 0.0,
+      correctionCount: json['correction_count'] as int? ?? 0,
+      retractedAt: _parseDate(json['retracted_at']),
+      revokedAt: _parseDate(json['revoked_at']),
+      tags: (json['tags'] as List<dynamic>? ?? const [])
+          .whereType<String>()
+          .toList(),
+      sourceTurnId: annotationMap?['turn_id'] as String?,
+      sourceLabel: annotationMap?['label'] as String?,
+      writtenAt: _parseDate(annotationMap?['written_at']),
+    );
+  }
 
   final String id;
   final String summary;
@@ -244,6 +258,25 @@ class EpisodicMemoryItem {
   final int correctionCount;
   final DateTime? retractedAt;
   final DateTime? revokedAt;
+
+  /// memory-governance-mvp: 来源标注 —— 哪轮对话/哪个模块写入 + 写入时间。
+  final List<String> tags;
+  final String? sourceTurnId;
+  final String? sourceLabel;
+  final DateTime? writtenAt;
+}
+
+/// memory-governance-mvp: GET /memory/episodic 的分页载荷。
+class EpisodicMemoryPage {
+  const EpisodicMemoryPage({
+    required this.items,
+    required this.total,
+    required this.hasMore,
+  });
+
+  final List<EpisodicMemoryItem> items;
+  final int total;
+  final bool hasMore;
 }
 
 class PendingCommitmentItem {

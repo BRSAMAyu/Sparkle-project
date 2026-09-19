@@ -46,6 +46,8 @@ ALLOWED_EVIDENCE_TYPES = {
 
 INACTIVE_GOAL_STATUSES = {"completed", "archived", "cancelled"}
 CONFIDENCE_DECREMENT = 0.1
+# memory-governance-mvp: 用户"这就是对的"确认路径的置信度增益（与 DECREMENT 对称的小步长）。
+CONFIDENCE_CONFIRM_INCREMENT = 0.05
 MEMORY_REFERENCE_OUTCOMES = {"accepted", "corrected", "ignored", "denied"}
 SUMMARY_MAX_LEN = 48
 SESSION_MOOD_TTL_SECONDS = 7 * 24 * 60 * 60
@@ -686,6 +688,7 @@ class MemoryService:
         start: datetime | None = None,
         end: datetime | None = None,
         subject_types: Iterable[str] | None = None,
+        offset: int = 0,
     ) -> list[EpisodicMemory]:
         stmt = select(EpisodicMemory).where(
             EpisodicMemory.user_id == user_id,
@@ -701,8 +704,36 @@ class MemoryService:
         if subject_types:
             stmt = stmt.where(EpisodicMemory.subject_type.in_(list(subject_types)))
         stmt = stmt.order_by(EpisodicMemory.occurred_at.desc()).limit(limit)
+        if offset:
+            stmt = stmt.offset(offset)
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
+
+    async def count_episodic(
+        self,
+        user_id: UUID,
+        start: datetime | None = None,
+        end: datetime | None = None,
+        subject_types: Iterable[str] | None = None,
+    ) -> int:
+        """memory-governance-mvp: total count feeding the episodic list pagination."""
+        from sqlalchemy import func
+
+        stmt = select(func.count()).select_from(EpisodicMemory).where(
+            EpisodicMemory.user_id == user_id,
+            EpisodicMemory.deleted_at.is_(None),
+            EpisodicMemory.archived_at.is_(None),
+            EpisodicMemory.retracted_at.is_(None),
+            EpisodicMemory.revoked_at.is_(None),
+        )
+        if start:
+            stmt = stmt.where(EpisodicMemory.occurred_at >= start)
+        if end:
+            stmt = stmt.where(EpisodicMemory.occurred_at <= end)
+        if subject_types:
+            stmt = stmt.where(EpisodicMemory.subject_type.in_(list(subject_types)))
+        result = await self.db.execute(stmt)
+        return int(result.scalar_one())
 
     async def get_recent_episodic(
         self,
@@ -1139,6 +1170,122 @@ class MemoryService:
                     "action": action,
                 },
             ),
+        )
+        return record
+
+    async def revoke_episodic_memory(
+        self,
+        *,
+        user_id: UUID,
+        memory_id: UUID,
+        reason: str | None = None,
+    ) -> EpisodicMemory | None:
+        """memory-governance-mvp: 用户"删除"路径 —— 软删（revoked_at）。
+
+        与 apply_correction 的 reject（按 lane 决定 revoked/retracted）不同，
+        显式删除对任意 lane 一律落 revoked_at；召回查询
+        （list_recent_episodic / context_builder 召回）均已排除 revoked 行。
+        """
+        if not settings.ENABLE_MEMORY_CORRECTION:
+            raise ValueError("Memory correction is disabled by feature flag")
+
+        result = await self.db.execute(
+            select(EpisodicMemory).where(
+                EpisodicMemory.id == memory_id,
+                EpisodicMemory.user_id == user_id,
+                EpisodicMemory.deleted_at.is_(None),
+            )
+        )
+        record = result.scalar_one_or_none()
+        if record is None:
+            return None
+
+        now = utcnow()
+        updated_refs = []
+        for ref in record.evidence_refs or []:
+            ref_copy = dict(ref)
+            ref_copy["user_deleted"] = True
+            if reason and "retraction_reason" not in ref_copy:
+                ref_copy["retraction_reason"] = reason
+            updated_refs.append(ref_copy)
+        record.evidence_refs = updated_refs
+        record.revoked_at = now
+        record.updated_at = now
+        record.correction_count = (record.correction_count or 0) + 1
+
+        snapshot = record.evidence_snapshot or {}
+        if not isinstance(snapshot, dict):
+            snapshot = {"history": snapshot}
+        snapshot["revocation_reason"] = reason or "user_deleted"
+        snapshot["evidence_refs"] = updated_refs
+        record.evidence_snapshot = snapshot
+
+        self.db.add(
+            MemoryCorrection(
+                user_id=user_id,
+                memory_type="episodic",
+                memory_id=record.id,
+                action="delete",
+                reason=reason,
+            )
+        )
+        await self.db.commit()
+        await self.db.refresh(record)
+        MEMORY_RETRACTION_TOTAL.labels(type="episodic").inc()
+        MEMORY_CORRECTION_TOTAL.labels(type="episodic", action="delete").inc()
+        logger.info(
+            "Episodic memory revoked by user user_id={user_id} memory_id={memory_id}",
+            user_id=user_id,
+            memory_id=record.id,
+        )
+        return record
+
+    async def confirm_episodic_memory(
+        self,
+        *,
+        user_id: UUID,
+        memory_id: UUID,
+    ) -> EpisodicMemory | None:
+        """memory-governance-mvp: "这就是对的"确认路径 —— confidence 提升。
+
+        确认不是纠错：不增 correction_count，但写 MemoryCorrection(action="confirm")
+        留痕（审计/数据飞轮正样本）。
+        """
+        if not settings.ENABLE_MEMORY_CORRECTION:
+            raise ValueError("Memory correction is disabled by feature flag")
+
+        result = await self.db.execute(
+            select(EpisodicMemory).where(
+                EpisodicMemory.id == memory_id,
+                EpisodicMemory.user_id == user_id,
+                EpisodicMemory.deleted_at.is_(None),
+                EpisodicMemory.revoked_at.is_(None),
+            )
+        )
+        record = result.scalar_one_or_none()
+        if record is None:
+            return None
+
+        record.confidence = min(1.0, float(record.confidence or 0.0) + CONFIDENCE_CONFIRM_INCREMENT)
+        if hasattr(record, "evidence_score"):
+            record.evidence_score = min(1.0, float(record.evidence_score or 0.0) + CONFIDENCE_CONFIRM_INCREMENT)
+        record.updated_at = utcnow()
+        self.db.add(
+            MemoryCorrection(
+                user_id=user_id,
+                memory_type="episodic",
+                memory_id=record.id,
+                action="confirm",
+                reason=None,
+            )
+        )
+        await self.db.commit()
+        await self.db.refresh(record)
+        MEMORY_CORRECTION_TOTAL.labels(type="episodic", action="confirm").inc()
+        logger.info(
+            "Episodic memory confirmed by user user_id={user_id} memory_id={memory_id}",
+            user_id=user_id,
+            memory_id=record.id,
         )
         return record
 

@@ -222,12 +222,52 @@ async def list_goals(
     return {"items": items}
 
 
+EPISODIC_SOURCE_LABELS: dict[str, str] = {
+    "chat": "对话记录",
+    "text": "对话记录",
+    "analysis": "AI 分析",
+    "user_state": "用户设置",
+    "user_created": "手动创建",
+    "behavior_auto": "行为记录",
+    "behavior": "行为记录",
+    "document_import": "文档导入",
+    "document": "文档导入",
+    "error_book": "错题本",
+    "plan": "学习计划",
+    "system": "系统",
+    "tool_history": "工具记录",
+    "seed_library": "种子库",
+    "seed_item": "种子条目",
+    "translation": "翻译",
+}
+
+
+def _episodic_source_annotation(record: EpisodicMemory) -> dict[str, object]:
+    """memory-governance-mvp: 把"这条记忆从哪来"结构化为一等标注。
+
+    - 对话来源：从 evidence_refs 中提取 chat_turn 引用（哪轮对话写入）。
+    - 其余来源：按 source_type 映射模块名（哪个模块写入）。
+    """
+    source_turn_id = None
+    for ref in record.evidence_refs or []:
+        if isinstance(ref, dict) and ref.get("type") == "chat_turn" and ref.get("id"):
+            source_turn_id = str(ref["id"])
+            break
+    label = EPISODIC_SOURCE_LABELS.get(record.source_type, record.source_type)
+    return {
+        "turn_id": source_turn_id,
+        "label": label,
+        "written_at": record.created_at,
+    }
+
+
 # route-tier: authed
 @router.get("/episodic")
 async def list_episodic(
     start: datetime | None = Query(default=None),
     end: datetime | None = Query(default=None),
     limit: int = Query(default=20, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -238,7 +278,9 @@ async def list_episodic(
         limit=limit,
         start=start,
         end=end,
+        offset=offset,
     )
+    total = await service.count_episodic(current_user.id, start=start, end=end)
     items = []
     for record in records:
         items.append(
@@ -260,6 +302,8 @@ async def list_episodic(
                 "correction_count": record.correction_count,
                 "evidence_missing": record.evidence_missing,
                 "evidence_refs": record.evidence_refs or [],
+                "tags": [str(tag) for tag in (record.tags or []) if str(tag)],
+                "source_annotation": _episodic_source_annotation(record),
                 "updated_at": record.updated_at,
                 "retracted_at": record.retracted_at,
                 "revoked_at": record.revoked_at,
@@ -267,7 +311,74 @@ async def list_episodic(
                 "declaration_label": ("AI 推断" if record.source_lane == "inferred_extraction" else None),
             }
         )
-    return {"items": items}
+    return {
+        "items": items,
+        "total": total,
+        "offset": offset,
+        "limit": limit,
+        "has_more": offset + len(items) < total,
+    }
+
+
+# route-tier: authed
+@router.post("/episodic/{memory_id}/correction")
+async def correct_episodic_memory(
+    memory_id: UUID,
+    payload: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """memory-governance-mvp: 单条情景记忆的用户侧治理出口。
+
+    action:
+      - wrong      记错了   → 走 apply_correction(reject)：撤回 + correction_count+1 + MemoryCorrection 留痕
+      - outdated   不再是   → 走 apply_correction(no_longer_applicable)：撤回 + correction_count+1
+      - delete     删除     → revoke_episodic_memory：revoked_at 软删（召回已排除 revoked）
+      - confirm    这就是对的 → confirm_episodic_memory：confidence 小步提升（可选项）
+    """
+    _ensure_memory_panel_enabled()
+    _ensure_memory_correction_enabled()
+
+    action = str(payload.get("action") or "").strip().lower()
+    reason = payload.get("reason")
+    if action not in {"wrong", "outdated", "delete", "confirm"}:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="action must be one of wrong/outdated/delete/confirm",
+        )
+
+    service = MemoryService(db)
+    try:
+        if action == "delete":
+            record = await service.revoke_episodic_memory(
+                user_id=current_user.id,
+                memory_id=memory_id,
+                reason=str(reason) if reason else "user_deleted",
+            )
+        elif action == "confirm":
+            record = await service.confirm_episodic_memory(
+                user_id=current_user.id,
+                memory_id=memory_id,
+            )
+        else:
+            record = await service.apply_correction(
+                kind="episodic",
+                memory_id=memory_id,
+                user_id=current_user.id,
+                action="reject" if action == "wrong" else "no_longer_applicable",
+                reason=str(reason) if reason else action,
+            )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+    if record is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Episodic memory not found")
+
+    return {
+        "status": "corrected" if action != "confirm" else "confirmed",
+        "action": action,
+        "item": _serialize_episodic(record),
+    }
 
 
 # route-tier: authed
@@ -759,6 +870,8 @@ def _serialize_episodic(record: EpisodicMemory) -> dict:
         "correction_count": record.correction_count,
         "evidence_missing": record.evidence_missing,
         "evidence_refs": record.evidence_refs or [],
+        "tags": [str(tag) for tag in (record.tags or []) if str(tag)],
+        "source_annotation": _episodic_source_annotation(record),
         "retracted_at": record.retracted_at,
         "revoked_at": record.revoked_at,
         "declaration_label": ("AI 推断" if record.source_lane == "inferred_extraction" else None),

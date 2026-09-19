@@ -208,6 +208,7 @@ class SettingsDataControlsCard extends StatelessWidget {
     required this.onGrowthChronicleHiddenChanged,
     required this.onMemoryHiddenChanged,
     required this.onOpenMemorySettings,
+    required this.onOpenMemoryPanel,
     super.key,
     this.statusMessage,
   });
@@ -220,6 +221,10 @@ class SettingsDataControlsCard extends StatelessWidget {
   final ValueChanged<bool> onGrowthChronicleHiddenChanged;
   final ValueChanged<bool> onMemoryHiddenChanged;
   final VoidCallback onOpenMemorySettings;
+
+  /// memory-governance-mvp: 设置页直达"AI 记忆"列表（查看来源/纠正/删除）。
+  final VoidCallback onOpenMemoryPanel;
+
   final String? statusMessage;
 
   @override
@@ -296,6 +301,16 @@ class SettingsDataControlsCard extends StatelessWidget {
               onPressed: onOpenMemorySettings,
               icon: const Icon(Icons.psychology_outlined),
               label: Text(l10n.settDataManageMemory),
+            ),
+          ),
+          // memory-governance-mvp: "AI 记忆"管理入口 —— 查看记忆及其来源，
+          // 并对每条记忆执行确认/纠正/删除。
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: onOpenMemoryPanel,
+              icon: const Icon(Icons.history_edu_outlined),
+              label: Text(l10n.settDataOpenMemoryPanel),
             ),
           ),
           if (statusMessage != null && statusMessage!.isNotEmpty) ...[
