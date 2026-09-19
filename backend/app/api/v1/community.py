@@ -41,6 +41,8 @@ from app.core.metrics import (
     record_product_loop_event,
 )
 from app.core.rate_limiting import limiter
+# V3-FIX-08：guest/seed cohort 词表与 leaderboard/friend-match/search（FIX-01/07）共享常量逐字一致。
+from app.core.telemetry_boundary import EXCLUDED_COHORT_REGISTRATION_SOURCES
 from app.core.security import decode_token
 from app.core.websocket import manager
 from app.db.session import AsyncSessionLocal, get_db
@@ -272,6 +274,33 @@ def _shared_resource_avg_rating(resource: SharedResource) -> float | None:
     return round(max(0.0, min(float(resource.quality_score), 1.0)) * 5.0, 1)
 
 
+# ── V3-FIX-08：cohort 过滤（guest/seed 不进用户可见社区聚合面，D20；与 FIX-01/07 同口径）──
+# 产品裁决槽（默认关）：如产品未来裁决保留少量“官方示例帖”（需官方标识且无互动入口，
+# 见 V3-FIX-07 REPORT §6 选项 B/C），把对应 registration_source（如 "seed"）加入本元组；
+# 默认为空元组 = guest/seed 全部排除，谓词与共享词表完全等价。
+FEED_EXAMPLE_CONTENT_SOURCES: tuple[str, ...] = ()
+
+
+def _excluded_feed_cohorts() -> tuple[str, ...]:
+    """Effective cohort blocklist for the public feed (switch-aware)."""
+    return tuple(
+        source
+        for source in EXCLUDED_COHORT_REGISTRATION_SOURCES
+        if source not in FEED_EXAMPLE_CONTENT_SOURCES
+    )
+
+
+def _cohort_visible_post_clause(current_user: User):
+    """作者可见性子句：cohort 帖对真实用户隐藏，本人帖始终可见。"""
+    visible_authors = select(User.id).where(
+        User.registration_source.not_in(_excluded_feed_cohorts())
+    )
+    return or_(
+        Post.user_id == current_user.id,
+        Post.user_id.in_(visible_authors),
+    )
+
+
 # route-tier: authed
 @router.get("/feed", summary="获取社区动态流")
 async def get_feed(
@@ -367,6 +396,9 @@ async def get_feed(
         raise HTTPException(status_code=400, detail=f"Unknown scope: {scope}")
     else:
         stmt = stmt.where(Post.visibility == "public")
+        # V3-FIX-08：公开发现面排除 guest/seed cohort 作者（本人帖除外）；
+        # 关系面 scope（squad/goal_mates/following）保持显式关系语义，不做 cohort 过滤。
+        stmt = stmt.where(_cohort_visible_post_clause(current_user))
 
     # ── block guard: exclude authors with an active block relationship ──
     blocked_uids = (
@@ -441,7 +473,16 @@ async def toggle_like_post(
     db: AsyncSession = Depends(get_db),
 ):
     """Toggle like on a post. Returns updated like_count."""
-    post = (await db.execute(select(Post).where(Post.id == post_id))).scalar_one_or_none()
+    post = (
+        await db.execute(
+            select(Post).where(
+                Post.id == post_id,
+                # V3-FIX-08（防御护栏）：cohort 帖对真实用户按不存在处理（404），
+                # 作者本人不受限；与 feed 读面口径一致。
+                _cohort_visible_post_clause(current_user),
+            )
+        )
+    ).scalar_one_or_none()
     if not post:
         raise HTTPException(status_code=404, detail="动态不存在")
 
@@ -492,10 +533,17 @@ async def list_post_comments(
     db: AsyncSession = Depends(get_db),
 ):
     """Get comments for a post, newest first."""
+    # V3-FIX-08：评论读面排除 guest/seed cohort 评论作者（与 feed 主修同词表）。
+    visible_commenters = select(User.id).where(
+        User.registration_source.not_in(EXCLUDED_COHORT_REGISTRATION_SOURCES)
+    )
     comments = (
         await db.execute(
             select(PostComment)
-            .where(PostComment.post_id == post_id)
+            .where(
+                PostComment.post_id == post_id,
+                PostComment.user_id.in_(visible_commenters),
+            )
             .order_by(desc(PostComment.created_at))
         )
     ).scalars().all()
@@ -520,7 +568,13 @@ async def create_post_comment(
 ):
     """Add a comment to a post."""
     post = (
-        await db.execute(select(Post).where(Post.id == post_id))
+        await db.execute(
+            select(Post).where(
+                Post.id == post_id,
+                # V3-FIX-08（防御护栏）：cohort 帖对真实用户按不存在处理（404）。
+                _cohort_visible_post_clause(current_user),
+            )
+        )
     ).scalar_one_or_none()
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
