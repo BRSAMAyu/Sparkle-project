@@ -154,11 +154,21 @@ class CollaborativeFilteringService:
         str(request.user_id)
 
         # 查询缓存相似度
+        # V3-FIX-07（R7，独立 bug）：join 条件此前只绑 request.user_id，未把
+        # User.id 绑到"另一侧"相似度列，构成 UserSimilarity × User 笛卡尔积
+        # （返回的用户名/头像可与相似度行错配）。改为与内部 _get_similar_users
+        # 完全一致的绑定写法。
         query = select(UserSimilarity, User).join(
             User,
             or_(
-                UserSimilarity.user_id_1 == request.user_id,
-                UserSimilarity.user_id_2 == request.user_id
+                and_(
+                    UserSimilarity.user_id_1 == request.user_id,
+                    User.id == UserSimilarity.user_id_2
+                ),
+                and_(
+                    UserSimilarity.user_id_2 == request.user_id,
+                    User.id == UserSimilarity.user_id_1
+                )
             )
         ).where(
             UserSimilarity.similarity_score >= 0.3,

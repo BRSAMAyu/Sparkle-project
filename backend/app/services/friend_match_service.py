@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_service
 from app.core.profile_context import ProfileContext
+from app.core.telemetry_boundary import EXCLUDED_COHORT_REGISTRATION_SOURCES
 from app.db.session import AsyncSessionLocal
 from app.models.accountability import (
     AccountabilityPartnership,
@@ -744,6 +745,13 @@ class FriendMatchService:
             select(User).where(
                 User.is_active.is_(True),
                 User.searchable_by == SearchVisibility.EVERYONE,
+                # V3-FIX-07（R3）：guest/seed cohort（flame 15/20 压头）不得
+                # 进入好友推荐候选池；词表与 leaderboard_service（V3-FIX-01）
+                # / telemetry_boundary 共享常量逐字一致。实测候选池头部 60 席
+                # = 58 guest + 2 seed、0 email。
+                User.registration_source.not_in(EXCLUDED_COHORT_REGISTRATION_SOURCES),
+                # 同卡补齐软删除过滤（此前缺失，已删除账号可被推荐）。
+                User.not_deleted_filter(),
             ).order_by(
                 User.last_login_at.desc().nullslast(),
                 User.flame_level.desc(),

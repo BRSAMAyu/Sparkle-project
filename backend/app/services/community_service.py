@@ -26,6 +26,7 @@ from sqlalchemy.orm import selectinload
 from app.core.cache import cache_service
 from app.core.datetime_utils import _utcnow
 from app.core.event_bus import GroupFileDeletedEvent, event_bus
+from app.core.telemetry_boundary import EXCLUDED_COHORT_REGISTRATION_SOURCES
 from app.core.websocket import manager
 from app.models.community import (
     Friendship,
@@ -3006,6 +3007,11 @@ class UserSearchService:
         search_query = select(User).where(
             User.is_active,
             User.id != current_user_id,
+            # V3-FIX-07（R4）：guest/seed cohort 账号不得被真实用户搜到；
+            # 词表与 leaderboard_service（V3-FIX-01）共享常量逐字一致。
+            User.registration_source.not_in(EXCLUDED_COHORT_REGISTRATION_SOURCES),
+            # 同卡补齐软删除过滤（此前缺失）。
+            User.not_deleted_filter(),
             or_(
                 User.username.ilike(f"%{_escape_like(query)}%"),
                 User.nickname.ilike(f"%{_escape_like(query)}%"),

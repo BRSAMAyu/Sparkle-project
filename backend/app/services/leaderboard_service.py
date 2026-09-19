@@ -643,7 +643,9 @@ class LeaderboardService:
             User.is_active,
             User.not_deleted_filter(),
             UserNodeStatus.last_study_at >= week_start,
-            UserNodeStatus.last_study_at < week_end
+            UserNodeStatus.last_study_at < week_end,
+            # V3-FIX-07（R5）：本周学习榜同族污染面，口径与 V3-FIX-01 一致
+            User.registration_source.not_in(self.EXCLUDED_COHORT_REGISTRATION_SOURCES)
         ).group_by(User.id)
 
         result = await self.db.execute(query)
@@ -709,7 +711,10 @@ class LeaderboardService:
         ).where(
             User.is_active,
             User.not_deleted_filter(),
-            UserStreakStats.current_streak > 0
+            UserStreakStats.current_streak > 0,
+            # V3-FIX-07（R1）：连胜榜同族污染面，口径与 V3-FIX-01 一致
+            # （实测 top-20 = 16 guest + 3 seed + 1 email）
+            User.registration_source.not_in(self.EXCLUDED_COHORT_REGISTRATION_SOURCES)
         ).order_by(desc(UserStreakStats.current_streak))
 
         result = await self.db.execute(query)
@@ -776,7 +781,10 @@ class LeaderboardService:
             User.is_active,
             User.not_deleted_filter(),
             User.photon_balance.isnot(None),
-            User.photon_balance > 0
+            User.photon_balance > 0,
+            # V3-FIX-07（R2）：光子总榜同族污染面，口径与 V3-FIX-01 一致
+            # （实测 top-20 全席 guest，guest 最高 1020 vs email 最高 50）
+            User.registration_source.not_in(self.EXCLUDED_COHORT_REGISTRATION_SOURCES)
         ).order_by(desc(User.photon_balance))
 
         result = await self.db.execute(query)
@@ -852,7 +860,9 @@ class LeaderboardService:
         ).where(
             User.is_active,
             User.not_deleted_filter(),
-            PhotonTransactionHistory.created_at >= week_start
+            PhotonTransactionHistory.created_at >= week_start,
+            # V3-FIX-07（R2）：本周光子收入榜同族污染面，口径与 V3-FIX-01 一致
+            User.registration_source.not_in(self.EXCLUDED_COHORT_REGISTRATION_SOURCES)
         ).group_by(
             User.id, User.username, User.avatar_url
         ).order_by(desc("total_income"))
