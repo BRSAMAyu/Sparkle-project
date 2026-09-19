@@ -55,7 +55,7 @@ async def _seed_user_with_sources(db_session) -> tuple:
     now = _utcnow()
     await memory_service.create_episodic_memory(
         user_id=user_id,
-        summary="real episodic memory",
+        summary="真实的高数复习记录",
         source_type="analysis",
         source_id="src_c02_a",
         occurred_at=now - timedelta(hours=1),
@@ -65,7 +65,7 @@ async def _seed_user_with_sources(db_session) -> tuple:
     )
     await memory_service.create_episodic_memory(
         user_id=user_id,
-        summary="seeded episodic memory",
+        summary="种子高数复习记忆",
         source_type="startup_seed",
         source_id="src_c02_b",
         occurred_at=now - timedelta(hours=2),

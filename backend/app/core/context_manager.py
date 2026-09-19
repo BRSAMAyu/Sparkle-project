@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import Integer, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.config import settings
 from app.core.metrics import CALENDAR_FALLBACK_TOTAL
 from app.models.achievement import Achievement, AchievementRarity, UserAchievement
 from app.models.calendar_event import CalendarEvent
@@ -28,6 +29,11 @@ from app.services.focus_service import focus_service
 from app.services.galaxy_service import GalaxyService
 from app.services.memory_retrieval_prefilter import PURPOSE_LLM_CONTEXT, apply_memory_prefilter, build_retrieval_context
 from app.services.memory_service import MemoryService
+from app.services.memory_use_selfcheck import (
+    MemoryUseCandidate,
+    SelfCheckContext,
+    evaluate_memory_use_gate,
+)
 from app.services.personalization.preference_service import PreferenceService
 from app.services.profile_context_service import ProfileContextService
 from app.services.social_signal_bridge import SocialSignalBridge
@@ -395,7 +401,34 @@ class ContextOrchestrator:
                     str(getattr(m, "created_at", "") or ""),
                 ),
                 reverse=True,
-            )[:limit]
+            )
+            # M-05 over-personalization Self-ReCheck —— past-session 输出装配面
+            # final-gate（M-03 同位）：包内近重复行降档后再取 limit（近重复不再
+            # 浪费名额）。该面无本轮对话信号 → relevance/跨轮 repetition 休眠，
+            # 仅 dedup 生效（unconstrained 保守放行，M-03 同法）。
+            if settings.ENABLE_MEMORY_USE_SELFCHECK and rows:
+                selfcheck = evaluate_memory_use_gate(
+                    episodic=[
+                        MemoryUseCandidate(
+                            item_id=str(getattr(item, "id", "")),
+                            section="episodic",
+                            content=str(getattr(item, "summary", "") or ""),
+                        )
+                        for item in rows
+                    ],
+                    ctx=SelfCheckContext(),
+                )
+                if selfcheck.internal_only_count:
+                    surfaced_ids = selfcheck.surfaced_ids("episodic")
+                    cut = len(rows) - len(surfaced_ids)
+                    rows = [item for item in rows if str(getattr(item, "id", "")) in surfaced_ids]
+                    logger.info(
+                        "M-05 selfcheck past-session dedup: user={} cut={} reasons={}",
+                        user_id,
+                        cut,
+                        selfcheck.reason_counts,
+                    )
+            rows = rows[:limit]
         except Exception as exc:
             logger.warning("Failed to load past session memory: {}", exc)
             return []

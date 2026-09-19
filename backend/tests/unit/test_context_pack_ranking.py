@@ -148,7 +148,7 @@ async def test_context_pack_marks_inferred_claims_and_correction_actions(db_sess
     )
     inferred = await memory_service.create_episodic_memory(
         user_id=user_id,
-        summary="User probably prefers ambient music while studying",
+        summary="User probably prefers visual notes for networking sprint reviews",
         source_type="ai_inferred",
         source_id="infer_music",
         source_lane="inferred_extraction",

@@ -45,6 +45,11 @@ from app.services.galaxy_service import GalaxyService
 from app.services.insight_copy import canonical_pattern_key, present_pattern_description, present_pattern_name
 from app.services.memory_retrieval_prefilter import PURPOSE_LLM_CONTEXT, apply_memory_prefilter, build_retrieval_context
 from app.services.memory_service import MemoryService
+from app.services.memory_use_selfcheck import (
+    MemoryUseCandidate,
+    SelfCheckContext,
+    evaluate_memory_use_gate,
+)
 from app.services.plan_service import PlanService
 from app.services.self_evolution_service import UnderstandingDepthService
 from app.services.simulation.seed_extractor import SeedExtractor
@@ -615,6 +620,32 @@ class ContextBuilderMixin:
             for memory in ranked_episodic_rows[:5]
             if str(getattr(memory, "summary", "") or "").strip()
         ]
+
+        # M-05 over-personalization Self-ReCheck —— stage34 输出装配面 final-gate
+        # （M-03 R1-F2 同位）：包内近重复 episodic 在 payload["episodic_memories"]
+        # （prompts.format_user_context 渲染进系统 prompt 的 section）降档为
+        # 内部档。该装配点无本轮 user/assistant 信号 → relevance 与跨轮
+        # repetition 休眠（unconstrained 保守放行，M-03 同法），仅 dedup 生效；
+        # 话题面的权威 relevance gate 在 context_pack.build（有 query_text）。
+        if settings.ENABLE_MEMORY_USE_SELFCHECK and episodic_memories:
+            selfcheck = evaluate_memory_use_gate(
+                episodic=[
+                    MemoryUseCandidate(
+                        item_id=str(memory.get("id")),
+                        section="episodic",
+                        content=str(memory.get("summary") or ""),
+                    )
+                    for memory in episodic_memories
+                ],
+                ctx=SelfCheckContext(),
+            )
+            if selfcheck.internal_only_count:
+                surfaced_ids = selfcheck.surfaced_ids("episodic")
+                episodic_memories = [memory for memory in episodic_memories if str(memory.get("id")) in surfaced_ids]
+                payload["memory_selfcheck"] = {
+                    **selfcheck.to_metric_payload(),
+                    "internal_only": selfcheck.internal_only_entries(),
+                }
 
         payload["active_goals"] = active_goals
         payload["episodic_memories"] = episodic_memories

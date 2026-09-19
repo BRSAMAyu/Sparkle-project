@@ -72,6 +72,11 @@ from app.services.memory_retrieval_prefilter import (
     prefilter_candidates,
 )
 from app.services.memory_service import MemoryService
+from app.services.memory_use_selfcheck import (
+    MemoryUseCandidate,
+    SelfCheckContext,
+    evaluate_memory_use_gate,
+)
 from app.services.personalization.preference_service import PreferenceService
 
 
@@ -1511,6 +1516,63 @@ class ContextPackBuilder:
             trimmed_episodic=trimmed_episodic,
         )
 
+        # M-05 over-personalization Self-ReCheck —— 输出装配面 final-gate。
+        # 分工：M-03/C-03 管候选池准入（上面已过），这里管合法召回候选在本轮
+        # 「该不该说出来」。两档用途：降档条目保留在内部决策档
+        # （decision_tier_* 原样传给 _build_decision_context，召回不删），
+        # 只有 ids + 封闭 reason 进 metadata（无正文回灌——metadata 经
+        # to_prompt_context 进入 prompt，故 claims/evidence_summary 同步排除）。
+        decision_tier_preferences = trimmed_preferences
+        decision_tier_goals = list(trimmed_goals)
+        decision_tier_episodic = list(trimmed_episodic)
+        memory_selfcheck_internal_ids: frozenset[str] = frozenset()
+        if settings.ENABLE_MEMORY_USE_SELFCHECK:
+            selfcheck = evaluate_memory_use_gate(
+                preferences=[
+                    MemoryUseCandidate(
+                        item_id=key,
+                        section="preferences",
+                        content=value if isinstance(value, str) else str(value),
+                        pref_key=key,
+                    )
+                    for key, value in trimmed_preferences.items()
+                ],
+                goals=[
+                    MemoryUseCandidate(
+                        item_id=str(payload.get("id")),
+                        section="goals",
+                        content=str(payload.get("title") or ""),
+                    )
+                    for payload in trimmed_goals
+                ],
+                episodic=[
+                    MemoryUseCandidate(
+                        item_id=str(payload.get("id")),
+                        section="episodic",
+                        content=str(payload.get("summary") or ""),
+                    )
+                    for payload in trimmed_episodic
+                ],
+                ctx=SelfCheckContext(user_message=query_text),
+            )
+            if selfcheck.input_count:
+                surfaced_prefs = selfcheck.surfaced_ids("preferences")
+                surfaced_goals = selfcheck.surfaced_ids("goals")
+                surfaced_episodic = selfcheck.surfaced_ids("episodic")
+                trimmed_preferences = {
+                    key: value for key, value in trimmed_preferences.items() if key in surfaced_prefs
+                }
+                trimmed_goals = [payload for payload in trimmed_goals if str(payload.get("id")) in surfaced_goals]
+                trimmed_episodic = [
+                    payload for payload in trimmed_episodic if str(payload.get("id")) in surfaced_episodic
+                ]
+                internal_entries = selfcheck.internal_only_entries()
+                memory_selfcheck_internal_ids = frozenset(entry["id"] for entry in internal_entries)
+                metadata["memory_selfcheck"] = {
+                    **selfcheck.to_metric_payload(),
+                    "internal_only": internal_entries,
+                }
+
         token_usage = {
             "preferences": estimate_tokens(_serialize(trimmed_preferences)),
             "goals": estimate_tokens(_serialize([_budget_view(p, "goals") for p in trimmed_goals])),
@@ -1591,6 +1653,20 @@ class ContextPackBuilder:
         preference_source_records = resolved_pref_records if conflict_enabled else preference_records
         goal_source_records = resolved_goals if conflict_enabled else goals
         episodic_source_records = resolved_episodic if conflict_enabled else episodic
+        # M-05：降档（内部档）条目不得经 evidence_summary 把 title/summary
+        # 带回 prompt 面——top-evidence 观测面只保留 surfaced 条目
+        # （preferences 只暴露 key/score，属 identity 级，不过滤）。
+        if memory_selfcheck_internal_ids:
+            goal_source_records = [
+                record
+                for record in goal_source_records
+                if str(getattr(record, "id", "")) not in memory_selfcheck_internal_ids
+            ]
+            episodic_source_records = [
+                record
+                for record in episodic_source_records
+                if str(getattr(record, "id", "")) not in memory_selfcheck_internal_ids
+            ]
 
         def _iso(dt_value):
             return dt_value.isoformat() if dt_value else None
@@ -1677,12 +1753,12 @@ class ContextPackBuilder:
                     query_text=query_text,
                     focus_mode=focus_decision.focus_mode if focus_decision else None,
                     ranked_preferences=ranked_preferences,
-                    trimmed_preferences=trimmed_preferences,
+                    trimmed_preferences=decision_tier_preferences,
                     ranked_goals=ranked_goals,
-                    trimmed_goals=trimmed_goals,
+                    trimmed_goals=decision_tier_goals,
                     goal_scores=goal_scores,
                     ranked_episodic=ranked_episodic,
-                    trimmed_episodic=trimmed_episodic,
+                    trimmed_episodic=decision_tier_episodic,
                     episodic_scores=episodic_scores,
                     goal_candidate_count=len(goal_payloads),
                     episodic_candidate_count=len(episodic_payloads),

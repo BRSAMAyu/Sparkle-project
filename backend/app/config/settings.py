@@ -674,6 +674,11 @@ class Settings(BaseSettings):
     ENABLE_CONTEXT_RANKING: bool = True
     ENABLE_CONTEXT_FOCUSING: bool = True
     ENABLE_CONTEXT_SEMANTIC_GATING: bool = True
+    # M-05: over-personalization Self-ReCheck at the memory output-assembly
+    # faces (context_pack.build / stage34 / past-session pull). Default on;
+    # off is an explicit ops action (passthrough + no metadata) — wiring
+    # guards turn removal of any final-gate call red.
+    ENABLE_MEMORY_USE_SELFCHECK: bool = True
     ENABLE_CONTEXT_BRIEFING: bool = True
     ENABLE_CONTEXT_FOCUS_METADATA: bool = True
     ENABLE_FOCUS_DOCUMENT_CONTEXT: bool = True
