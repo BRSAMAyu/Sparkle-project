@@ -1114,6 +1114,12 @@ celery_app.conf.beat_schedule = {
         "schedule": crontab(hour=3, minute=15),
         "options": {"queue": "low_priority"},
     },
+    # 数据飞轮：理解深度每日基线（默认队列，幂等 upsert，可带 day 重算）
+    "understanding-depth-daily": {
+        "task": "app.core.celery_tasks.compute_understanding_depth_daily",
+        "schedule": crontab(hour=3, minute=40),
+        "options": {"queue": "default"},
+    },
     "persdyn-attractor-recompute-daily": {
         "task": "app.core.celery_tasks.recompute_persdyn_attractors",
         "schedule": crontab(hour=0, minute=5),

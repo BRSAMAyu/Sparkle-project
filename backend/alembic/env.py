@@ -55,6 +55,8 @@ from app.models import (
     # Seed Content Library
     SeedLibrary, SeedItem, UserLibrarySubscription,
     SessionCompletion,
+    # Understanding depth daily baseline（数据飞轮：理解深度日基线）
+    UnderstandingDepthDaily,
 )  # noqa: F401
 
 # this is the Alembic Config object

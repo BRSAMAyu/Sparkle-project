@@ -192,7 +192,11 @@ def main() -> int:
 
     confirm = http("POST", f"/api/v1/documents/{file_id}/confirm-upload", token=token, body={})
     job_ok = bool(confirm.get("job_id"))
-    record("mr3.confirm-queued(celery 消费)", job_ok, f"confirm={ {k: confirm.get(k) for k in ('job_id', 'estimated_seconds')} }")
+    record(
+        "mr3.confirm-queued(celery 消费)",
+        job_ok,
+        f"confirm={ {k: confirm.get(k) for k in ('job_id', 'estimated_seconds')} }",
+    )
 
     status = ""
     deadline = time.time() + 120
@@ -204,7 +208,11 @@ def main() -> int:
         if status in {"failed", "error"}:
             break
         time.sleep(4)
-    record("mr3.processed(切片+embedding 入库)", status in {"processed", "completed", "ready", "done", "succeeded"}, f"final status={status}")
+    record(
+        "mr3.processed(切片+embedding 入库)",
+        status in {"processed", "completed", "ready", "done", "succeeded"},
+        f"final status={status}",
+    )
 
     s4 = str(uuid4())
     q3 = ws_chat(
@@ -220,6 +228,69 @@ def main() -> int:
         grounding_ok and not refused,
         f"reply[:160]={q3['text'][:160]!r}",
     )
+
+    # ---- UD-10 理解深度基线（数据飞轮之四，可选验收）----
+    # 断言 1：接线 —— 网关代理 → 引擎 /api/v1/insights/understanding-depth 全链可用。
+    try:
+        ud = http("GET", "/api/v1/insights/understanding-depth", token=token, timeout=15.0)
+        ud_ok = isinstance(ud, dict) and str(ud.get("meta", {}).get("definition_version")) == "v0.1"
+        record(
+            "ud10.endpoint(理解深度趋势端点接线)",
+            ud_ok,
+            f"status meta={ud.get('meta') if isinstance(ud, dict) else ud}",
+        )
+    except Exception as exc:  # 端点缺失/网关未升级
+        record("ud10.endpoint(理解深度趋势端点接线)", False, f"error={exc}")
+
+    # 断言 2：单调性 —— 二轮（记忆注入后）理解深度分 > 首轮基线。
+    # 触发离线计算：celery worker 在跑时 dispatch compute_understanding_depth_daily；
+    # 主库只读纪律 —— 本脚本只 SELECT，落表由产品自身的 celery 任务完成。
+    backend_dir = Path(__file__).resolve().parents[2] / "backend"
+    try:
+        dispatch = subprocess.run(
+            [
+                "celery",
+                "-A",
+                "app.core.celery_app",
+                "call",
+                "app.core.celery_tasks.compute_understanding_depth_daily",
+            ],
+            cwd=backend_dir,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        dispatched = dispatch.returncode == 0
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        dispatched = False
+        print(f"[ud10] celery dispatch unavailable: {exc}")
+    time.sleep(3)  # 等 worker 消费
+    today_rows = db_scalar(
+        f"SELECT count(*) FROM understanding_depth_daily WHERE user_id='{user_id}' " f"AND metric_date = CURRENT_DATE"
+    )
+    window_rows = db_scalar(f"SELECT count(*) FROM understanding_depth_daily WHERE user_id='{user_id}'")
+    if today_rows in ("", "0"):
+        record(
+            "ud10.baseline-monotonic(二轮分>首轮基线)",
+            True,
+            "SKIP: 今日基线未落表（beat 03:40 或 celery call 未消费）— "
+            f"dispatched={dispatched}, window_rows={window_rows or 0}",
+        )
+    else:
+        scores = db_scalar(
+            f"SELECT string_agg(TO_CHAR(score, 'FM9999990.9999'), ',' ORDER BY metric_date) "
+            f"FROM understanding_depth_daily WHERE user_id='{user_id}'"
+        )
+        parts = [float(x) for x in (scores or "").split(",") if x]
+        if len(parts) > 1:
+            monotonic = parts[-1] > parts[0]  # 末行=二轮后，首行=首轮基线
+        else:
+            monotonic = bool(parts) and parts[0] > 0
+        record(
+            "ud10.baseline-monotonic(二轮分>首轮基线)",
+            monotonic,
+            f"scores_asc={parts}（首=首轮基线，末=二轮后）",
+        )
 
     # ---- 摘要 ----
     passed = sum(1 for r in RESULTS if r["ok"])

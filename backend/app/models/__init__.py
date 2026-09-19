@@ -231,6 +231,7 @@ except ImportError:
     logging.getLogger(__name__).debug("task_history model not available", exc_info=True)
     TaskHistory = None
 from app.models.theater_prediction import TheaterPrediction
+from app.models.understanding_depth import UnderstandingDepthDaily
 from app.models.tool_history import UserToolHistory
 from app.models.user import PushPreference, User
 from app.models.user_preferences import UserPreferencesCenter
@@ -554,6 +555,8 @@ __all__ = [
     "TaskType",
     # Theater
     "TheaterPrediction",
+    # Understanding depth daily baseline
+    "UnderstandingDepthDaily",
     # Tool History
     "UserToolHistory",
     # User

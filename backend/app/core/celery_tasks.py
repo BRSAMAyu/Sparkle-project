@@ -3651,3 +3651,37 @@ def auto_optimize_routing_parameters(self):
         return _run_async(_run())
     except Exception as exc:
         raise self.retry(exc=exc, countdown=120) from exc
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.compute_understanding_depth_daily")
+def compute_understanding_depth_daily(self, day: str | None = None, limit: int = 2000):
+    """数据飞轮：理解深度每日基线离线计算（默认队列）。
+
+    聚合 context_pack_runs / chat_messages / memory_corrections → 合成 0-1
+    "越用越懂用户"分并落表 understanding_depth_daily（每用户每日一行，幂等
+    upsert，可带 day 参数重算补齐历史）。由 beat 条目 understanding-depth-daily
+    每日 03:40 触发。
+
+    Args:
+        day: ISO 日期（YYYY-MM-DD）；缺省为 UTC 昨天（凌晨跑当日数据未完整）。
+        limit: 单批最大用户数保护。
+    """
+    from datetime import datetime, timedelta
+
+    from app.db.session import AsyncSessionLocal
+
+    async def _run():
+        from app.services.understanding_depth_metric_service import UnderstandingDepthMetricService
+
+        if day:
+            target_day = datetime.strptime(str(day), "%Y-%m-%d").date()
+        else:
+            target_day = (datetime.utcnow() - timedelta(days=1)).date()
+        async with AsyncSessionLocal() as session:
+            service = UnderstandingDepthMetricService(session)
+            return await service.compute_daily_all(day=target_day, limit=limit)
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        raise self.retry(exc=exc, countdown=120) from exc
