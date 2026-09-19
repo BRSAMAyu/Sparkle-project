@@ -551,7 +551,11 @@ class MemoryInferredWriteLaneService:
         if record is None:
             MEMORY_INFERRED_WRITE_TOTAL.labels(status="blocked").inc()
             return None
-        if resolution is not None and resolution.action == "accept" and resolution.loser_record_ids:
+        # M-04: every accept application leaves a resolution record (audit) —
+        # including scope-difference "preserve both" (no losers): CONFLICT_
+        # RESOLVER.md §5 "所有 resolution 产生记录". Destructive side effects
+        # (supersede/epoch/event) remain loser-gated inside apply_live_decision.
+        if resolution is not None and resolution.action == "accept":
             await ConflictResolverService(self.db).apply_live_decision(
                 candidate=self._to_conflict_candidate(user_id=user_id, session_id=session_id, candidate=candidate),
                 decision=resolution,
@@ -651,6 +655,9 @@ class MemoryInferredWriteLaneService:
             mentioned_entity_hash=candidate.mentioned_entity_hash,
             mentioned_entity_owner_user_id=candidate.mentioned_entity_owner_user_id,
             source_id=str(session_id) if session_id is not None else None,
+            # M-04: decay policy rides the candidate so time-scope arbitration
+            # (today-only vs standing) sees the same signals as the record side.
+            decay_policy=candidate.decay_policy,
         )
 
     @classmethod

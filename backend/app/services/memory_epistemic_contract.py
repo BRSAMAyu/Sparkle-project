@@ -220,6 +220,14 @@ def lane_priority(source_lane: str | None) -> int:
 INFERRED_EVIDENCE_TYPES: frozenset[str] = frozenset({"ai_inferred"})
 INFERRED_SOURCE_TYPES: frozenset[str] = frozenset({"ai_inferred"})
 
+# M-04 (V3-FIX-10 F6): source_type values that mark a USER-DRIVEN preference
+# write. A known-explicit source_type is AUTHORITATIVE over evidence refs: an
+# explicit write that cites an ai_inferred evidence item is still an explicit
+# write (the write action, not a cited item, carries provenance). Machine-ish
+# writers ("behavior", "system", …) deliberately stay evidence-decided — they
+# do NOT get automatic explicit authority.
+EXPLICIT_PREFERENCE_SOURCE_TYPES: frozenset[str] = frozenset({"user_state", "chat_preference"})
+
 
 class Provenance(StrEnum):
     EXPLICIT = "explicit"
@@ -242,13 +250,24 @@ def preference_write_provenance(
 ) -> str:
     """Classify a memory_preferences write as explicit or inferred.
 
-    Mirrors ``app.api.v1.memory._resolve_preference_source``: a record whose
-    evidence contains ``ai_inferred`` (or whose source_type says so) is
-    inference-layer; everything else (user_state, batch_edit, ...) is the
+    Mirrors ``app.api.v1.memory._resolve_preference_source`` for the evidence
+    dimension, with one deliberate divergence (F6): a KNOWN-explicit
+    ``source_type`` (``EXPLICIT_PREFERENCE_SOURCE_TYPES``) is authoritative —
+    an explicit write citing an ``ai_inferred`` evidence item classifies
+    EXPLICIT (display-layer inference badges are a presentation concern, not
+    a provenance demotion). Unknown/absent source_type stays evidence-decided.
+
+    Machine vs human boundary (declared, F6): ``inferred`` here means
+    "written by the inference layer" (``ai_inferred`` source_type or
+    evidence), NOT "written by any automated code" — governed rule-layer
+    writers with explicit user intent (user_state / chat_preference) are the
     explicit fact layer.
     """
-    if source_type and str(source_type).strip().lower() in INFERRED_SOURCE_TYPES:
+    normalized_source = str(source_type or "").strip().lower()
+    if normalized_source in INFERRED_SOURCE_TYPES:
         return Provenance.INFERRED.value
+    if normalized_source in EXPLICIT_PREFERENCE_SOURCE_TYPES:
+        return Provenance.EXPLICIT.value
     for ref in _refs_iter(evidence_refs):
         if str(ref.get("type") or "").strip().lower() in INFERRED_EVIDENCE_TYPES:
             return Provenance.INFERRED.value

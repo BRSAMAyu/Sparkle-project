@@ -272,6 +272,28 @@ KNOWLEDGE_PREFILTER_REJECTIONS_TOTAL = get_or_create_metric(
     ['dimension', 'reason']
 )
 
+# M-04 conflict arbitration: live resolution outcomes by action and conflict
+# category (TEMPORAL_CHANGE / SCOPE_DIFFERENCE / SOURCE_DISAGREEMENT /
+# INFERENCE_CONTRADICTION / UNSAFE_AMBIGUITY). Counted at application time
+# (apply_live_decision / user arbitration), not at pure resolve() evaluation
+# (shadow comparisons must not inflate live outcome counts).
+MEMORY_CONFLICT_RESOLUTIONS_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_memory_conflict_resolutions_total',
+    'Memory conflict arbitration outcomes by action and conflict category',
+    ['action', 'category']
+)
+
+# M-04 (V3-FIX-10 F7): epistemic-guard skips in apply_live_decision — an
+# inferred-tier winner attempting to supersede an explicit-tier loser is
+# blocked and must be countable, not just logged.
+MEMORY_EPISTEMIC_GUARD_SKIPS_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_memory_epistemic_guard_skips_total',
+    'Conflict arbitrations where the epistemic guard refused to supersede a higher-tier loser',
+    ['winner_lane', 'loser_lane']
+)
+
 EVIDENCE_MISSING_CURRENT = get_or_create_metric(
     Gauge,
     'sparkle_evidence_missing_current',

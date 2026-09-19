@@ -78,6 +78,10 @@ class MemoryMutationAction(StrEnum):
     SUPERSEDE = "supersede"  # preference version-chain advance
     BULK_REVOKE = "bulk_revoke"  # revoke_inferred_memories (per user)
     WORKING_MEMORY_FORGET = "working_memory_forget"  # session-scoped WM delete
+    # M-04 (V3-FIX-10 F4): user arbitration of an unresolved conflict — the
+    # 5th destructive entry of the epoch contract (sibling entry, same
+    # pipeline; loser retraction/supersede is effective-destructive).
+    USER_ARBITRATION = "user_arbitration"
 
 
 # Derived (compiled) cache keys invalidated on every effective mutation. These
