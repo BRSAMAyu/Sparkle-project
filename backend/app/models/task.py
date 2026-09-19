@@ -59,6 +59,39 @@ class SubTaskStatus(enum.StrEnum):
     COMPLETED = "COMPLETED"
 
 
+class CognitiveOwnership(enum.StrEnum):
+    """X-01 · D13 cognitive_ownership 首版定义（与 execution_mode 正交的认知归属轴）。
+
+    - USER_CORE：该步骤本身即用户想获得的能力/判断/创作（学习、反思、关系沟通）；
+    - SHARED：混合认知（agent 准备/校对，人做核心决定或创作）；
+    - DELEGATED：机械性步骤（检索、整理、格式转换），可整体委托。
+    语义真源：app/core/action_plan.py（契约）与 v3/02_core_systems/HUMAN_AGENT_HYBRID.md §2。
+    """
+
+    USER_CORE = "user_core"
+    SHARED = "shared"
+    DELEGATED = "delegated"
+
+
+class RiskClass(enum.StrEnum):
+    """X-01 · 风险分级（AGENT_RUNTIME §3 run contract 的 risk_class 同名对齐）。"""
+
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+def _string_enum(enum_cls: type[enum.Enum]) -> Enum:
+    """非原生枚举列（VARCHAR 存储，应用层校验）——沿用 execution_intent.py 模式。"""
+    return Enum(
+        enum_cls,
+        values_callable=lambda members: [member.value for member in members],
+        create_constraint=False,
+        native_enum=False,
+    )
+
+
 class Task(BaseModel):
     __tablename__ = "tasks"
 
@@ -110,6 +143,18 @@ class Task(BaseModel):
     knowledge_node_id = Column(GUID(), ForeignKey("knowledge_nodes.id"), nullable=True)
     auto_expand_enabled = Column(Boolean, default=True)
 
+    # ── X-01 · ActionPlan V3 契约列（全部 nullable：NULL = legacy/V2.x 行）─────
+    # 契约真源：app/core/action_plan.py；execution_mode 复用上方既有 String(20)
+    # 镜像列（ExecutionIntent 唯一协议），不新增第二执行模式列。
+    action_schema_version = Column(String(16), nullable=True)  # "action_plan.v1" | NULL=legacy
+    desired_outcome = Column(Text, nullable=True)  # 期望结果陈述（outcome 语义）
+    smallest_useful_step = Column(JSONBCompat, nullable=True)  # {description, useful_because:[封闭枚举]}
+    completion_evidence = Column(JSONBCompat, nullable=True)  # [{evidence_kind, ref?, description?}]
+    cognitive_ownership = Column(_string_enum(CognitiveOwnership), nullable=True)  # D13
+    source_refs = Column(JSONBCompat, nullable=True)  # ["scheme://id", ...] 封闭 scheme（C-01 对齐）
+    risk_class = Column(_string_enum(RiskClass), nullable=True)  # 风险分级
+    reversible = Column(Boolean, nullable=True)  # 可撤销性（risk/reversibility 成对）
+
     # Subtask counters
     subtasks_total = Column(Integer, default=0, nullable=False)
     subtasks_completed = Column(Integer, default=0, nullable=False)
@@ -155,6 +200,19 @@ class Task(BaseModel):
 
     def __repr__(self):
         return f"<Task(title={self.title}, status={self.status})>"
+
+    @property
+    def action_plan(self) -> dict | None:
+        """ActionPlan V3 块的读侧投影（供 TaskDetail from_attributes 消费）。
+
+        X-01 返修 F1/F2：**必须**走 app/core/action_plan.action_plan_projection 统一门
+        （版本 + 全封闭词表 + execution_mode 归一，任一不过 → None + WARN）。禁止在此
+        原样投影列值——曾使单行脏/未来枚举值打挂全部任务读端点。延迟 import 解除
+        models↔core 循环依赖（调用时两模块均已初始化）。
+        """
+        from app.core.action_plan import action_plan_projection
+
+        return action_plan_projection(self)
 
 
 # 创建索引

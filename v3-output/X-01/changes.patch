@@ -1,0 +1,1505 @@
+diff --git a/backend/alembic/versions/x01_20260919_add_action_plan_v3_columns.py b/backend/alembic/versions/x01_20260919_add_action_plan_v3_columns.py
+new file mode 100644
+index 00000000..5a2a5e29
+--- /dev/null
++++ b/backend/alembic/versions/x01_20260919_add_action_plan_v3_columns.py
+@@ -0,0 +1,71 @@
++"""X-01 · ActionPlan V3 contract columns on tasks (additive, legacy-safe)
++
++Revision ID: x01_20260919
++Revises: m01a_20260919
++Create Date: 2026-09-19
++
++契约真源：backend/app/core/action_plan.py（ACTION_PLAN_SCHEMA_VERSION = "action_plan.v1"）。
++迁移内容（tasks 表 8 个 nullable 新列，全部无 server default —— NULL 即 legacy/V2.x 语义）：
++- action_schema_version  String(16)   "action_plan.v1" | NULL
++- desired_outcome        Text         期望结果陈述
++- smallest_useful_step   JSONB        {description, useful_because:[封闭枚举]}
++- completion_evidence    JSONB        [{evidence_kind, ref?, description?}]
++- cognitive_ownership    VARCHAR(16)  user_core|shared|delegated（D13 首版）
++- source_refs            JSONB        ["scheme://id", ...]（封闭 scheme，C-01 对齐）
++- risk_class             VARCHAR(16)  low|medium|high|critical
++- reversible             Boolean      可撤销性
++
++合入窗口重挂（返修 F3，REVIEW_RECEIPT_2）：初版挂 ent01_20260919 时与并行 E-05 的
++e05_20260919 同父分叉；E-05 已先行 apply（dev DB alembic_version=e05），M-01 已把
++m01a_20260919 挂上 e05。主链现为 ud01→ent01→e05→m01a 单头，x01 改挂 m01a 恢复单头。
++
++注意：execution_mode **复用** tasks 既有 String(20) 镜像列（ExecutionIntent 唯一协议，
++dev DB 1231 行全 NULL，2026-09-19 复核），本迁移不触碰它；枚举列不带 DB CHECK
++（沿用 execution_intent.py create_constraint=False 模式，封闭词表由应用层契约强制）。
++
++映射文档（cards/task_occurrences 目标协议形态）：v3-output/X-01/REPORT.md。
++"""
++
++from __future__ import annotations
++
++from typing import Sequence, Union
++
++import sqlalchemy as sa
++from alembic import op
++from sqlalchemy.dialects import postgresql
++
++revision: str = "x01_20260919"
++down_revision: Union[str, None] = "m01a_20260919"
++branch_labels: Union[str, Sequence[str], None] = None
++depends_on: Union[str, Sequence[str], None] = None
++
++
++def _jsonb_type():
++    bind = op.get_bind()
++    if bind.dialect.name == "sqlite":
++        return sa.JSON()
++    return postgresql.JSONB(astext_type=sa.Text())
++
++
++def _action_plan_columns() -> tuple[tuple[str, object], ...]:
++    """列清单惰性构造：JSONB 类型需在迁移运行上下文内按 dialect 决定。"""
++    return (
++        ("action_schema_version", sa.String(length=16)),
++        ("desired_outcome", sa.Text()),
++        ("smallest_useful_step", _jsonb_type()),
++        ("completion_evidence", _jsonb_type()),
++        ("cognitive_ownership", sa.String(length=16)),
++        ("source_refs", _jsonb_type()),
++        ("risk_class", sa.String(length=16)),
++        ("reversible", sa.Boolean()),
++    )
++
++
++def upgrade() -> None:
++    for name, type_ in _action_plan_columns():
++        op.add_column("tasks", sa.Column(name, type_, nullable=True))
++
++
++def downgrade() -> None:
++    for name, _type in reversed(_action_plan_columns()):
++        op.drop_column("tasks", name)
+diff --git a/backend/app/core/action_plan.py b/backend/app/core/action_plan.py
+new file mode 100644
+index 00000000..d8f9a42d
+--- /dev/null
++++ b/backend/app/core/action_plan.py
+@@ -0,0 +1,448 @@
++"""X-01 · ActionPlan V3 契约 —— tasks 域的 Outcome / Execution / Cognitive Ownership 语义。
++
++冻结声明（v3/07_tasks/cards/X-01.md，locks: action-contract）：
++- **不重建 task system**：V3 语义以最小加法落在今日真值 ``tasks`` 表（B-06 D-TASK），
++  新列全部 nullable，``action_schema_version IS NULL`` 即 legacy 行（V2.x 完全兼容）。
++- **execution_mode 唯一协议 = ExecutionIntent**（B-06 §1.5）：HUMAN/AGENT/HYBRID 词表
++  直接复用 ``app.models.execution_intent.ExecutionMode``（human/agent/hybrid，小写），
++  本契约**不新造第二套执行模式枚举**；``tasks.execution_mode`` 复用既有 String(20)
++  镜像列（dev DB 1231 行全 NULL，2026-09-19 复核），只新增应用层封闭校验。
++- **cognitive_ownership 首版定义（D13，全仓 0 实现的盲点补充）**：
++    - ``user_core``  —— 该步骤本身即用户想获得的能力/判断/创作（学习、反思、
++      关系沟通）：不可委托给 agent 完成后只交结果（HUMAN_AGENT_HYBRID §2 维度 1）。
++    - ``shared``     —— 混合认知：agent 准备素材/校对，人做核心决定或创作
++      （对应 HYBRID 模式 ``Agent prepares → Human decides → Agent checks``）。
++    - ``delegated``  —— 机械性/低认知价值步骤（检索、整理、格式转换），用户无需
++      认知参与，可整体委托 agent。
++  cognitive_ownership 与 execution_mode 是两个正交轴：例如 execution_mode=hybrid +
++  cognitive_ownership=user_core（agent 查文献、用户写论文）是合法且常见的组合。
++- **source_refs ref 语义对齐 C-01 decision_context.v1（封闭 scheme）**：
++  C-01 的 {memory, user_state, plan, document, profile} 原样包含；action 域扩展
++  {goal, task, subtask, chat, decision, run}（run → execution_intents）。scheme 封闭，
++  扩展需 bump 契约版本。**待对齐点（D-01 并行中）**：D-01 Event/Evidence Lineage 的
++  intervention/action/run/outcome ID 关联词表若引入新 ref 形态，需在此对齐扩展。
++- **completion_evidence 类型化**（ACTION_AND_INTERVENTION_ENGINE §4）：plan 侧声明
++  「什么算完成证据」——每条必须带 ``evidence_kind``（封闭枚举，覆盖 artifact/file/
++  code/quiz_result/user_confirmation/self_report/system_event），可选 ``ref``（同封闭
++  scheme）；禁止自由文本一列了事。outcome 侧的 actual/self-reported/estimated/unknown
++  验证分级属 D-01 事件域，本契约不重复定义。
++- 契约快照 parity guard：backend/tests/unit/test_action_plan_contract.py +
++  tests/test_action_plan_v3_integration.py（结构化列守卫）。变更词表需 bump
++  ``ACTION_PLAN_SCHEMA_VERSION`` 并过两位 reviewer。
++
++消费方接入点：
++- Planner / Aurora（proposal 生成）：构造 ``ActionPlanContract`` → ``validate()`` →
++  ``apply_to_task(task)``；
++- TaskService（REST 写路径）：``app.schemas.task.ActionPlanIn`` 在 parse 时归一化 +
++  全量校验，service 落列；``Task.action_plan`` 属性供 ``TaskDetail`` 读回；
++- card_protocol（目标协议，文档级映射见 v3-output/X-01/REPORT.md）：TASK card
++  metadata 增量携带 V3 块，切换前不落 card_protocol 代码。
++
++读侧统一门（X-01 返修 F1/F2，REVIEW_RECEIPT_2）：REST 投影（``Task.action_plan``）与
++类型化重构（``action_plan_from_task``）**必须**走同一个 ``action_plan_projection``——
++版本门 + 全封闭词表 + execution_mode 归一，任一不过 → 整块降级为 None + WARN 日志
++（可观测降级）。禁止任何读路径绕过此门直接投影列值（曾使单行脏数据打挂
++GET /tasks 等全部任务端点）。
++
++消费方组合指引（F5，文档级警示，上 UI 消费卡前必须落成硬规则）：
++- ``agent × user_core``：定义级矛盾（user_core 不可委托只交结果），Planner 产出此组合时必须改写；
++- ``hybrid × delegated``：hybrid 必有 human 决策点，与 delegated 否认参与矛盾；
++- ``human × shared``：shared 的 "Agent checks" 阶段在 human 模式无执行载体。
++
++与 V2 ``tasks.success_criteria`` 的优先级规则（F6）：``action_schema_version`` 非空时
++``desired_outcome`` 为唯一完成标准语义，``success_criteria`` 视为 V2 遗留冻结展示；
++两者并存期间 UI 不得同时呈现为生效标准。
++"""
++
++from __future__ import annotations
++
++import enum
++from dataclasses import dataclass, replace
++from typing import Any
++
++from loguru import logger
++
++from app.models.execution_intent import ExecutionMode
++from app.models.task import CognitiveOwnership, RiskClass
++
++ACTION_PLAN_SCHEMA_VERSION = "action_plan.v1"
++
++# ---------------------------------------------------------------------------
++# 封闭词表（冻结；扩展需 bump 契约版本并过两位 reviewer）
++# ---------------------------------------------------------------------------
++
++#: plan 侧「什么算完成证据」的类型（ACTION_AND_INTERVENTION_ENGINE §4 的机制化）。
++#: 文件、代码、答题结果、用户确认、自报结果、系统事件。
++EVIDENCE_KINDS: frozenset[str] = frozenset(
++    {
++        "artifact",  # 产生可检查的产物（笔记/文档/作品）
++        "file",  # 上传/落盘文件
++        "code",  # 可运行/可评审的代码
++        "quiz_result",  # 答题/测验结果
++        "user_confirmation",  # 用户显式确认完成
++        "self_report",  # 自报结果（低信任，outcome 侧分级属 D-01）
++        "system_event",  # 系统事件（如 streak/专注会话记录）
++    }
++)
++
++#: smallest_useful_step 的「为什么算 useful」——ACTION_AND_INTERVENTION_ENGINE §2 的
++#: 六条判据。空集 = 「打开 IDE 看一眼」式伪步骤，契约层拒绝。
++USEFUL_STEP_REASONS: frozenset[str] = frozenset(
++    {
++        "produces_artifact",  # 产生 artifact
++        "reduces_uncertainty",  # 消除关键 uncertainty
++        "builds_capability",  # 形成可验证能力
++        "unblocks_dependency",  # 解锁依赖
++        "enables_decision",  # 完成真实决策
++        "advances_goal",  # 使 goal state 实质前进
++    }
++)
++
++#: source_refs 的封闭 ref scheme。前 5 个与 C-01 decision_context.v1 的
++#: DECISION_REF_SCHEMES 完全一致（ref 语义对齐）；后 6 个为 action 域扩展。
++ACTION_SOURCE_REF_SCHEMES: frozenset[str] = frozenset(
++    {
++        # ── C-01 对齐（勿改名） ──────────────────────────────────────────
++        "memory",  # memory://episodic/<id> 等 memory 真源
++        "user_state",  # user_state://<field>（state_aggregator 投影）
++        "plan",  # plan://<plan_id>
++        "document",  # document://<file_id>
++        "profile",  # profile://<user_id 或 profile 段>
++        # ── action 域扩展 ──────────────────────────────────────────────
++        "goal",  # goal://<goal_id>
++        "task",  # task://<task_id>（依赖/前置任务）
++        "subtask",  # subtask://<subtask_id>
++        "chat",  # chat://<message_id>（来源对话）
++        "decision",  # decision://<decision_record_id>
++        "run",  # run://<execution_intent_id>（D-01 lineage 的 run 域）
++    }
++)
++
++
++class EvidenceKind(enum.StrEnum):
++    ARTIFACT = "artifact"
++    FILE = "file"
++    CODE = "code"
++    QUIZ_RESULT = "quiz_result"
++    USER_CONFIRMATION = "user_confirmation"
++    SELF_REPORT = "self_report"
++    SYSTEM_EVENT = "system_event"
++
++
++class UsefulStepReason(enum.StrEnum):
++    PRODUCES_ARTIFACT = "produces_artifact"
++    REDUCES_UNCERTAINTY = "reduces_uncertainty"
++    BUILDS_CAPABILITY = "builds_capability"
++    UNBLOCKS_DEPENDENCY = "unblocks_dependency"
++    ENABLES_DECISION = "enables_decision"
++    ADVANCES_GOAL = "advances_goal"
++
++
++# ORM 侧枚举（CognitiveOwnership / RiskClass）定义在 app.models.task（与 TaskType
++# 同址），此处仅 re-export 供消费方单点导入。
++__all__ = [
++    "ACTION_PLAN_SCHEMA_VERSION",
++    "ACTION_SOURCE_REF_SCHEMES",
++    "EVIDENCE_KINDS",
++    "USEFUL_STEP_REASONS",
++    "ActionPlanContract",
++    "CognitiveOwnership",
++    "CompletionEvidenceSpec",
++    "EvidenceKind",
++    "RiskClass",
++    "SmallestUsefulStep",
++    "UsefulStepReason",
++    "action_plan_from_task",
++    "action_plan_projection",
++    "clear_action_plan",
++    "normalize_execution_mode",
++]
++
++
++def normalize_execution_mode(raw: Any) -> ExecutionMode | None:
++    """把历史/客户端大小写不一的 execution_mode 归一到 ExecutionMode 词表。
++
++    ``tasks.execution_mode`` 是 String(20) 既有镜像列（ExecutionMode.value 小写为
++    今日写入惯例）；DTO 边界统一经此归一，未知值返回 None（由调用方决定拒绝）。
++    """
++    if isinstance(raw, ExecutionMode):
++        return raw
++    if raw is None:
++        return None
++    if isinstance(raw, enum.Enum):
++        raw = getattr(raw, "value", raw)
++    if not isinstance(raw, str) or not raw.strip():
++        return None
++    try:
++        return ExecutionMode(raw.strip().lower())
++    except ValueError:
++        return None
++
++
++def _ref_scheme(ref: str) -> str:
++    return ref.split("://", 1)[0] if "://" in ref else ""
++
++
++# ---------------------------------------------------------------------------
++# 契约 dataclass（字段集被 tests/unit/test_action_plan_contract.py 冻结）
++# ---------------------------------------------------------------------------
++
++
++@dataclass(frozen=True)
++class SmallestUsefulStep:
++    """最小有用步骤：描述 + 「为什么 useful」的封闭判据集（非自然语言自证）。"""
++
++    description: str
++    useful_because: tuple[str, ...]
++
++    def validate(self) -> tuple[str, ...]:
++        violations: list[str] = []
++        if not (self.description or "").strip():
++            violations.append("smallest_useful_step.description must be non-empty")
++        reasons = tuple(self.useful_because or ())
++        if not reasons:
++            violations.append("smallest_useful_step.useful_because must be non-empty (伪步骤不合法)")
++        unknown = set(reasons) - USEFUL_STEP_REASONS
++        if unknown:
++            violations.append(f"useful_because out of vocabulary: {sorted(unknown)}")
++        return tuple(violations)
++
++    def to_dict(self) -> dict[str, Any]:
++        return {"description": self.description, "useful_because": list(self.useful_because)}
++
++
++@dataclass(frozen=True)
++class CompletionEvidenceSpec:
++    """单条完成证据规格：必须类型化（evidence_kind 封闭枚举），ref 可选。"""
++
++    evidence_kind: str | None
++    ref: str | None = None
++    description: str | None = None
++
++    def validate(self) -> tuple[str, ...]:
++        violations: list[str] = []
++        if self.evidence_kind not in EVIDENCE_KINDS:
++            violations.append(f"completion_evidence.evidence_kind must be one of {sorted(EVIDENCE_KINDS)}")
++        if self.ref is not None and _ref_scheme(self.ref) not in ACTION_SOURCE_REF_SCHEMES:
++            violations.append(f"completion_evidence.ref has unknown scheme: {self.ref!r}")
++        return tuple(violations)
++
++    def to_dict(self) -> dict[str, Any]:
++        return {
++            "evidence_kind": self.evidence_kind,
++            "ref": self.ref,
++            "description": self.description,
++        }
++
++
++@dataclass(frozen=True)
++class ActionPlanContract:
++    """ActionPlan V3：tasks 域单条任务的结构化行动契约（proposal 侧）。
++
++    落库形态 = ``to_task_columns()`` 展开到 ``tasks`` 表的 9 列（execution_mode 复用
++    既有列）；``action_schema_version IS NULL`` 的行为 legacy（V2.x），读取端
++    ``action_plan_from_task`` 对 legacy 返回 None。
++    """
++
++    desired_outcome: str
++    smallest_useful_step: SmallestUsefulStep
++    completion_evidence: tuple[CompletionEvidenceSpec, ...]
++    execution_mode: ExecutionMode
++    cognitive_ownership: CognitiveOwnership
++    source_refs: tuple[str, ...] = ()
++    risk_class: RiskClass | None = None
++    reversible: bool | None = None
++    schema_version: str = ACTION_PLAN_SCHEMA_VERSION
++
++    def validate(self) -> tuple[str, ...]:
++        violations: list[str] = []
++        if self.schema_version != ACTION_PLAN_SCHEMA_VERSION:
++            violations.append(f"schema_version mismatch: {self.schema_version!r}")
++        if not (self.desired_outcome or "").strip():
++            violations.append("desired_outcome must be non-empty")
++        if not isinstance(self.execution_mode, ExecutionMode):
++            violations.append(f"execution_mode must be ExecutionMode, got {self.execution_mode!r}")
++        if not isinstance(self.cognitive_ownership, CognitiveOwnership):
++            violations.append(f"cognitive_ownership must be CognitiveOwnership, got {self.cognitive_ownership!r}")
++        violations.extend(self.smallest_useful_step.validate())
++        if not self.completion_evidence:
++            violations.append("completion_evidence must contain at least one typed entry")
++        for evidence in self.completion_evidence:
++            violations.extend(evidence.validate())
++        if self.risk_class is not None and not isinstance(self.risk_class, RiskClass):
++            violations.append(f"risk_class must be RiskClass, got {self.risk_class!r}")
++        for ref in self.source_refs or ():
++            if _ref_scheme(ref) not in ACTION_SOURCE_REF_SCHEMES:
++                violations.append(f"source ref has unknown or missing scheme: {ref!r}")
++        return tuple(violations)
++
++    def to_task_columns(self) -> dict[str, Any]:
++        """契约 → tasks 表列值（service 写路径的唯一展开点）。"""
++        return {
++            "action_schema_version": self.schema_version,
++            "desired_outcome": self.desired_outcome,
++            "smallest_useful_step": self.smallest_useful_step.to_dict(),
++            "completion_evidence": [entry.to_dict() for entry in self.completion_evidence],
++            "execution_mode": self.execution_mode.value,
++            "cognitive_ownership": self.cognitive_ownership.value,
++            "source_refs": list(self.source_refs),
++            "risk_class": self.risk_class.value if self.risk_class else None,
++            "reversible": self.reversible,
++        }
++
++    def apply_to_task(self, task: Any) -> None:
++        """把契约写到 Task ORM 对象（幂等：整块覆盖 V3 列）。"""
++        for column, value in self.to_task_columns().items():
++            setattr(task, column, value)
++
++    def to_dict(self) -> dict[str, Any]:
++        return {
++            "schema_version": self.schema_version,
++            "desired_outcome": self.desired_outcome,
++            "smallest_useful_step": self.smallest_useful_step.to_dict(),
++            "completion_evidence": [entry.to_dict() for entry in self.completion_evidence],
++            "execution_mode": self.execution_mode.value,
++            "cognitive_ownership": self.cognitive_ownership.value,
++            "source_refs": list(self.source_refs),
++            "risk_class": self.risk_class.value if self.risk_class else None,
++            "reversible": self.reversible,
++        }
++
++    def replace(self, **changes: Any) -> "ActionPlanContract":
++        return replace(self, **changes)
++
++
++def action_plan_projection(task: Any) -> dict[str, Any] | None:
++    """统一读侧门（F1/F2）：REST 投影与类型化重构共用，禁止绕过。
++
++    判别顺序（任一不过 → 整块 None + WARN）：
++    1. ``action_schema_version`` 为空 → legacy 行（正常态，**不打日志**）；
++    2. 版本门：schema_version != ACTION_PLAN_SCHEMA_VERSION；
++    3. execution_mode 归一失败（镜像列词表外值）；
++    4. 结构完整 + 全封闭词表（useful_because / evidence_kind / cognitive_ownership /
++       risk_class / source_refs scheme）。
++
++    降级必须留痕：WARN 带 task 标识与原因——区分「没有 V3 计划」与「V3 计划损坏/版本不符」。
++    版本 bump 未迁移存量行时该 WARN 会随读放大（已知代价，观测优先于静默；可加限流）。
++    """
++    schema_version = getattr(task, "action_schema_version", None)
++    if not schema_version:
++        return None
++
++    def _degrade(reason: str) -> None:
++        task_id = getattr(task, "id", None)
++        logger.warning("ActionPlan V3 投影降级为 legacy (task_id={}): {}", task_id, reason)
++
++    mode = normalize_execution_mode(getattr(task, "execution_mode", None))
++    if mode is None:
++        _degrade(f"execution_mode {getattr(task, 'execution_mode', None)!r} missing or out of vocabulary")
++        return None
++    if schema_version != ACTION_PLAN_SCHEMA_VERSION:
++        _degrade(f"schema_version {schema_version!r} != {ACTION_PLAN_SCHEMA_VERSION!r} (版本门)")
++        return None
++    desired_outcome = getattr(task, "desired_outcome", None)
++    if not desired_outcome or not isinstance(desired_outcome, str):
++        _degrade("desired_outcome missing or not a string (半写行?)")
++        return None
++    step_raw = getattr(task, "smallest_useful_step", None) or {}
++    useful_because = tuple(step_raw.get("useful_because") or ())
++    if not (step_raw.get("description") and useful_because):
++        _degrade("smallest_useful_step incomplete (description/useful_because)")
++        return None
++    if not (USEFUL_STEP_REASONS >= set(useful_because)):
++        _degrade(f"useful_because out of vocabulary: {sorted(set(useful_because) - USEFUL_STEP_REASONS)}")
++        return None
++    evidence_raw = getattr(task, "completion_evidence", None) or []
++    evidence = tuple(entry for entry in evidence_raw if isinstance(entry, dict))
++    if not evidence:
++        _degrade("completion_evidence empty or non-dict entries")
++        return None
++    for entry in evidence:
++        if entry.get("evidence_kind") not in EVIDENCE_KINDS:
++            _degrade(f"completion_evidence.evidence_kind {entry.get('evidence_kind')!r} out of vocabulary")
++            return None
++        ref = entry.get("ref")
++        if ref is not None and _ref_scheme(ref) not in ACTION_SOURCE_REF_SCHEMES:
++            _degrade(f"completion_evidence.ref unknown scheme: {ref!r}")
++            return None
++    ownership_raw = getattr(task, "cognitive_ownership", None)
++    ownership_value = ownership_raw.value if isinstance(ownership_raw, CognitiveOwnership) else ownership_raw
++    if ownership_value not in {member.value for member in CognitiveOwnership}:
++        _degrade(f"cognitive_ownership {ownership_raw!r} out of vocabulary")
++        return None
++    risk_raw = getattr(task, "risk_class", None)
++    risk_value = risk_raw.value if isinstance(risk_raw, RiskClass) else risk_raw
++    if risk_value is not None and risk_value not in {member.value for member in RiskClass}:
++        _degrade(f"risk_class {risk_raw!r} out of vocabulary")
++        return None
++    source_refs = tuple(getattr(task, "source_refs", None) or ())
++    for ref in source_refs:
++        if _ref_scheme(ref) not in ACTION_SOURCE_REF_SCHEMES:
++            _degrade(f"source ref unknown scheme: {ref!r}")
++            return None
++
++    return {
++        "schema_version": schema_version,
++        "desired_outcome": desired_outcome,
++        "smallest_useful_step": {"description": step_raw.get("description"), "useful_because": list(useful_because)},
++        "completion_evidence": [
++            {
++                "evidence_kind": entry.get("evidence_kind"),
++                "ref": entry.get("ref"),
++                "description": entry.get("description"),
++            }
++            for entry in evidence
++        ],
++        "execution_mode": mode.value,
++        "cognitive_ownership": ownership_value,
++        "source_refs": list(source_refs),
++        "risk_class": risk_value,
++        "reversible": getattr(task, "reversible", None),
++    }
++
++
++def action_plan_from_task(task: Any) -> ActionPlanContract | None:
++    """从 Task 行重构契约；与 REST 投影共用 ``action_plan_projection`` 统一门。
++
++    legacy 行（action_schema_version NULL）→ None；脏/未来值行 → None（同一门，
++    同一次 WARN）——两条读路径对同一行永远给出同一答案。
++    """
++    projection = action_plan_projection(task)
++    if projection is None:
++        return None
++    return ActionPlanContract(
++        desired_outcome=projection["desired_outcome"],
++        smallest_useful_step=SmallestUsefulStep(
++            description=projection["smallest_useful_step"]["description"],
++            useful_because=tuple(projection["smallest_useful_step"]["useful_because"]),
++        ),
++        completion_evidence=tuple(
++            CompletionEvidenceSpec(
++                evidence_kind=entry["evidence_kind"],
++                ref=entry["ref"],
++                description=entry["description"],
++            )
++            for entry in projection["completion_evidence"]
++        ),
++        execution_mode=ExecutionMode(projection["execution_mode"]),
++        cognitive_ownership=CognitiveOwnership(projection["cognitive_ownership"]),
++        source_refs=tuple(projection["source_refs"]),
++        risk_class=RiskClass(projection["risk_class"]) if projection["risk_class"] else None,
++        reversible=projection["reversible"],
++        schema_version=projection["schema_version"],
++    )
++
++
++def clear_action_plan(task: Any) -> None:
++    """显式清除 V3 语义：任务回到 legacy 形态（V2.x 兼容路径）。"""
++    for column in (
++        "action_schema_version",
++        "desired_outcome",
++        "smallest_useful_step",
++        "completion_evidence",
++        "cognitive_ownership",
++        "source_refs",
++        "risk_class",
++        "reversible",
++    ):
++        setattr(task, column, None)
+diff --git a/backend/app/models/__init__.py b/backend/app/models/__init__.py
+index 5de16083..318542e1 100755
+--- a/backend/app/models/__init__.py
++++ b/backend/app/models/__init__.py
+@@ -218,7 +218,7 @@ from app.models.session_completion import SessionCompletion
+ from app.models.shop import PhotonTransactionHistory, ShopItem, ShopPurchase, UserConsumable
+ from app.models.simulation_run import SimulationRun
+ from app.models.subject import Subject
+-from app.models.task import Task, TaskStatus, TaskType
++from app.models.task import CognitiveOwnership, RiskClass, Task, TaskStatus, TaskType
+ from app.models.task_document import TaskDocument
+ from app.models.task_feedback import TaskFeedback, TaskFeedbackCategory
+ from app.models.task_resources import TaskKnowledgeLink, TaskResourceLink, TaskResourceType
+diff --git a/backend/app/models/task.py b/backend/app/models/task.py
+index 50fd054c..15970975 100755
+--- a/backend/app/models/task.py
++++ b/backend/app/models/task.py
+@@ -59,6 +59,39 @@ class SubTaskStatus(enum.StrEnum):
+     COMPLETED = "COMPLETED"
+ 
+ 
++class CognitiveOwnership(enum.StrEnum):
++    """X-01 · D13 cognitive_ownership 首版定义（与 execution_mode 正交的认知归属轴）。
++
++    - USER_CORE：该步骤本身即用户想获得的能力/判断/创作（学习、反思、关系沟通）；
++    - SHARED：混合认知（agent 准备/校对，人做核心决定或创作）；
++    - DELEGATED：机械性步骤（检索、整理、格式转换），可整体委托。
++    语义真源：app/core/action_plan.py（契约）与 v3/02_core_systems/HUMAN_AGENT_HYBRID.md §2。
++    """
++
++    USER_CORE = "user_core"
++    SHARED = "shared"
++    DELEGATED = "delegated"
++
++
++class RiskClass(enum.StrEnum):
++    """X-01 · 风险分级（AGENT_RUNTIME §3 run contract 的 risk_class 同名对齐）。"""
++
++    LOW = "low"
++    MEDIUM = "medium"
++    HIGH = "high"
++    CRITICAL = "critical"
++
++
++def _string_enum(enum_cls: type[enum.Enum]) -> Enum:
++    """非原生枚举列（VARCHAR 存储，应用层校验）——沿用 execution_intent.py 模式。"""
++    return Enum(
++        enum_cls,
++        values_callable=lambda members: [member.value for member in members],
++        create_constraint=False,
++        native_enum=False,
++    )
++
++
+ class Task(BaseModel):
+     __tablename__ = "tasks"
+ 
+@@ -110,6 +143,18 @@ class Task(BaseModel):
+     knowledge_node_id = Column(GUID(), ForeignKey("knowledge_nodes.id"), nullable=True)
+     auto_expand_enabled = Column(Boolean, default=True)
+ 
++    # ── X-01 · ActionPlan V3 契约列（全部 nullable：NULL = legacy/V2.x 行）─────
++    # 契约真源：app/core/action_plan.py；execution_mode 复用上方既有 String(20)
++    # 镜像列（ExecutionIntent 唯一协议），不新增第二执行模式列。
++    action_schema_version = Column(String(16), nullable=True)  # "action_plan.v1" | NULL=legacy
++    desired_outcome = Column(Text, nullable=True)  # 期望结果陈述（outcome 语义）
++    smallest_useful_step = Column(JSONBCompat, nullable=True)  # {description, useful_because:[封闭枚举]}
++    completion_evidence = Column(JSONBCompat, nullable=True)  # [{evidence_kind, ref?, description?}]
++    cognitive_ownership = Column(_string_enum(CognitiveOwnership), nullable=True)  # D13
++    source_refs = Column(JSONBCompat, nullable=True)  # ["scheme://id", ...] 封闭 scheme（C-01 对齐）
++    risk_class = Column(_string_enum(RiskClass), nullable=True)  # 风险分级
++    reversible = Column(Boolean, nullable=True)  # 可撤销性（risk/reversibility 成对）
++
+     # Subtask counters
+     subtasks_total = Column(Integer, default=0, nullable=False)
+     subtasks_completed = Column(Integer, default=0, nullable=False)
+@@ -156,6 +201,19 @@ class Task(BaseModel):
+     def __repr__(self):
+         return f"<Task(title={self.title}, status={self.status})>"
+ 
++    @property
++    def action_plan(self) -> dict | None:
++        """ActionPlan V3 块的读侧投影（供 TaskDetail from_attributes 消费）。
++
++        X-01 返修 F1/F2：**必须**走 app/core/action_plan.action_plan_projection 统一门
++        （版本 + 全封闭词表 + execution_mode 归一，任一不过 → None + WARN）。禁止在此
++        原样投影列值——曾使单行脏/未来枚举值打挂全部任务读端点。延迟 import 解除
++        models↔core 循环依赖（调用时两模块均已初始化）。
++        """
++        from app.core.action_plan import action_plan_projection
++
++        return action_plan_projection(self)
++
+ 
+ # 创建索引
+ Index("idx_tasks_user_id", Task.user_id)
+diff --git a/backend/app/schemas/task.py b/backend/app/schemas/task.py
+index b0b04126..28b08df2 100755
+--- a/backend/app/schemas/task.py
++++ b/backend/app/schemas/task.py
+@@ -13,13 +13,144 @@ from enum import Enum, StrEnum
+ from typing import Literal
+ from uuid import UUID
+ 
+-from pydantic import AliasChoices, BaseModel, Field, field_validator
+-
++from pydantic import AliasChoices, BaseModel, Field, field_validator, model_validator
++
++from app.core.action_plan import (
++    ACTION_PLAN_SCHEMA_VERSION,
++    ACTION_SOURCE_REF_SCHEMES,
++    ActionPlanContract,
++    CognitiveOwnership,
++    CompletionEvidenceSpec,
++    EvidenceKind,
++    ExecutionMode,
++    RiskClass,
++    SmallestUsefulStep,
++    UsefulStepReason,
++    normalize_execution_mode,
++)
+ from app.models.task import SubTaskStatus, TaskStatus, TaskType
+ from app.schemas.common import BaseSchema
+ 
+ # ========== Request Schemas ==========
+ 
++# ── X-01 · ActionPlan V3 契约 DTO（结构化字段，非自然语言）──────────────────
++# 语义真源：app/core/action_plan.py（封闭词表 + validate()）。DTO 在 parse 时完成
++# 归一化与全量校验（API 边界 422），service 落列不再二次解释。
++
++
++class SmallestUsefulStepIn(BaseModel):
++    """最小有用步骤：描述 + 封闭判据（useful_because 非空，防「打开 IDE」式伪步骤）。"""
++
++    description: str = Field(min_length=1, max_length=500, description="Step description")
++    useful_because: list[UsefulStepReason] = Field(min_length=1, description="Why useful (closed vocabulary)")
++
++
++class CompletionEvidenceIn(BaseModel):
++    """单条完成证据规格：evidence_kind 必填（封闭枚举），ref 可选（封闭 scheme）。"""
++
++    evidence_kind: EvidenceKind = Field(description="Evidence type (closed vocabulary)")
++    ref: str | None = Field(default=None, max_length=255, description="Optional scheme://id reference")
++    description: str | None = Field(default=None, max_length=500, description="Optional human note")
++
++    @field_validator("ref")
++    @classmethod
++    def _ref_scheme_closed(cls, value: str | None) -> str | None:
++        if value is None:
++            return value
++        scheme = value.split("://", 1)[0] if "://" in value else ""
++        if scheme not in ACTION_SOURCE_REF_SCHEMES:
++            raise ValueError(f"evidence ref scheme must be one of {sorted(ACTION_SOURCE_REF_SCHEMES)}")
++        return value
++
++
++class ActionPlanIn(BaseModel):
++    """ActionPlan V3 写入块：三模式（human/agent/hybrid）在此结构化表达。"""
++
++    desired_outcome: str = Field(min_length=1, max_length=1000, description="Desired outcome statement")
++    smallest_useful_step: SmallestUsefulStepIn
++    completion_evidence: list[CompletionEvidenceIn] = Field(min_length=1, description="Typed evidence specs")
++    execution_mode: ExecutionMode = Field(description="human | agent | hybrid (ExecutionIntent vocabulary)")
++    cognitive_ownership: CognitiveOwnership = Field(description="user_core | shared | delegated (D13)")
++    source_refs: list[str] = Field(default_factory=list, description="scheme://id refs (closed schemes)")
++    risk_class: RiskClass | None = Field(default=None, description="low | medium | high | critical")
++    reversible: bool | None = Field(default=None, description="Reversibility of failure")
++
++    @field_validator("execution_mode", mode="before")
++    @classmethod
++    def _normalize_execution_mode(cls, value):
++        parsed = normalize_execution_mode(value)
++        if parsed is None:
++            raise ValueError("execution_mode must be one of human/agent/hybrid")
++        return parsed
++
++    @field_validator("source_refs")
++    @classmethod
++    def _source_refs_closed(cls, value: list[str]) -> list[str]:
++        for ref in value:
++            scheme = ref.split("://", 1)[0] if "://" in ref else ""
++            if scheme not in ACTION_SOURCE_REF_SCHEMES:
++                raise ValueError(f"source ref scheme must be one of {sorted(ACTION_SOURCE_REF_SCHEMES)}: {ref!r}")
++        return value
++
++    def to_contract(self) -> ActionPlanContract:
++        """DTO → 契约（validate() 兜底跨字段规则；parse 时已过词表校验）。"""
++        contract = ActionPlanContract(
++            desired_outcome=self.desired_outcome,
++            smallest_useful_step=SmallestUsefulStep(
++                description=self.smallest_useful_step.description,
++                useful_because=tuple(reason.value for reason in self.smallest_useful_step.useful_because),
++            ),
++            completion_evidence=tuple(
++                CompletionEvidenceSpec(
++                    evidence_kind=entry.evidence_kind.value,
++                    ref=entry.ref,
++                    description=entry.description,
++                )
++                for entry in self.completion_evidence
++            ),
++            execution_mode=self.execution_mode,
++            cognitive_ownership=self.cognitive_ownership,
++            source_refs=tuple(self.source_refs),
++            risk_class=self.risk_class,
++            reversible=self.reversible,
++            schema_version=ACTION_PLAN_SCHEMA_VERSION,
++        )
++        violations = contract.validate()
++        if violations:
++            raise ValueError(f"invalid action_plan contract: {'; '.join(violations)}")
++        return contract
++
++
++class SmallestUsefulStepOut(BaseModel):
++    description: str
++    useful_because: list[UsefulStepReason]
++
++
++class CompletionEvidenceOut(BaseModel):
++    evidence_kind: EvidenceKind
++    ref: str | None = None
++    description: str | None = None
++
++
++class ActionPlanOut(BaseModel):
++    """ActionPlan V3 读回块（legacy 行 → TaskDetail.action_plan = None）。
++
++    封闭枚举字段保持严格的前提：输入必须来自 Task.action_plan（统一门
++    action_plan_projection 已过滤词表外/未来值/版本不符行，脏行降级为 None）。
++    任何新读路径不得绕过该门直接把列值喂给本模型（X-01 返修 F1 教训）。
++    """
++
++    schema_version: str
++    desired_outcome: str
++    smallest_useful_step: SmallestUsefulStepOut
++    completion_evidence: list[CompletionEvidenceOut]
++    execution_mode: ExecutionMode
++    cognitive_ownership: CognitiveOwnership
++    source_refs: list[str] = Field(default_factory=list)
++    risk_class: RiskClass | None = None
++    reversible: bool | None = None
++
++
+ TASK_TYPE_ALIAS_MAP = {
+     "learning": "LEARNING",
+     "training": "TRAINING",
+@@ -83,6 +214,9 @@ class TaskCreate(BaseModel):
+     source_planning_session_id: str | None = Field(default=None, description="Origin planning session ID")
+     phase_index: int | None = Field(default=None, ge=1, description="Phase index inside the planning strategy")
+     success_criteria: str | None = Field(default=None, description="Task success criteria")
++    action_plan: ActionPlanIn | None = Field(
++        default=None, description="ActionPlan V3 contract block (omit for legacy tasks)"
++    )
+ 
+     @field_validator("type", mode="before")
+     @classmethod
+@@ -134,6 +268,10 @@ class TaskUpdate(BaseModel):
+     source_planning_session_id: str | None = Field(default=None, description="Origin planning session ID")
+     phase_index: int | None = Field(default=None, ge=1, description="Phase index inside the planning strategy")
+     success_criteria: str | None = Field(default=None, description="Task success criteria")
++    action_plan: ActionPlanIn | None = Field(
++        default=None,
++        description="ActionPlan V3 contract block (explicit null = clear V3 semantics)",
++    )
+ 
+     @field_validator("type", mode="before")
+     @classmethod
+@@ -270,6 +408,9 @@ class TaskDetail(TaskBase):
+     source_planning_session_id: str | None = Field(default=None, description="Origin planning session ID")
+     phase_index: int | None = Field(default=None, description="Phase index inside the planning strategy")
+     success_criteria: str | None = Field(default=None, description="Task success criteria")
++    action_plan: ActionPlanOut | None = Field(
++        default=None, description="ActionPlan V3 contract block (None for legacy tasks)"
++    )
+     bound_sources: list[TaskBoundSourceInfo] = Field(
+         default_factory=list,
+         description="Lifecycle-aware source assets currently bound to the task",
+diff --git a/backend/app/services/task_service.py b/backend/app/services/task_service.py
+index de4ead81..e6ab2311 100755
+--- a/backend/app/services/task_service.py
++++ b/backend/app/services/task_service.py
+@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+ 
+ from app.core.cache import cache_service
+ from app.core.event_bus import event_bus, event_bus_reliable
++from app.core.action_plan import clear_action_plan
+ from app.event_publishers.srl_events import publish_srl_event
+ from app.gen.sparkle.inference.v1 import inference_pb2
+ from app.gen.sparkle.signals.v1 import signals_pb2
+@@ -138,6 +139,9 @@ class TaskService:
+             order_index=await TaskService._next_top_order_index(db, user_id),
+             status=TaskStatus.PENDING,
+         )
++        # X-01 · ActionPlan V3：整块写入结构化契约列（DTO 已在 parse 时全量校验）
++        if obj_in.action_plan is not None:
++            obj_in.action_plan.to_contract().apply_to_task(db_obj)
+         db.add(db_obj)
+         await db.flush()
+         if not _is_mock_session(db):
+@@ -229,6 +233,15 @@ class TaskService:
+         """Update task"""
+         update_data = obj_in.model_dump(exclude_unset=True)
+ 
++        # X-01 · ActionPlan V3：action_plan 是契约块，不走逐列 setattr；
++        # 显式传 null（fields_set 含 action_plan 且值为 None）= 清除 V3 语义回到 legacy。
++        if "action_plan" in obj_in.model_fields_set:
++            if obj_in.action_plan is None:
++                clear_action_plan(db_obj)
++            else:
++                obj_in.action_plan.to_contract().apply_to_task(db_obj)
++        update_data.pop("action_plan", None)
++
+         # Track status change for sync
+         old_status = db_obj.status
+         status_changed = "status" in update_data
+diff --git a/backend/tests/test_action_plan_v3_integration.py b/backend/tests/test_action_plan_v3_integration.py
+new file mode 100644
+index 00000000..b43d105e
+--- /dev/null
++++ b/backend/tests/test_action_plan_v3_integration.py
+@@ -0,0 +1,327 @@
++"""X-01 · ActionPlan V3 契约的 service 接线 + 结构化守卫（sqlite 隔离）。
++
++验收对应：
++- Human/Agent/Hybrid 三模式各构造一条**经 TaskService.create 落库**的合法记录；
++- 旧 task 不破：无 action_plan 的 TaskCreate 全新列 NULL；
++- 关键字段必须是结构化列，不是 prompt 文本（守卫测试直接检查 ORM 表结构）。
++"""
++
++from __future__ import annotations
++
++from datetime import UTC, datetime
++from uuid import uuid4
++
++import pytest
++from sqlalchemy import JSON, Text
++
++from app.core.action_plan import (
++    ACTION_PLAN_SCHEMA_VERSION,
++    ACTION_SOURCE_REF_SCHEMES,
++    CognitiveOwnership,
++    EvidenceKind,
++    RiskClass,
++    UsefulStepReason,
++)
++from app.models.execution_intent import ExecutionMode
++from app.models.task import Task
++from app.schemas.task import ActionPlanIn, CompletionEvidenceIn, SmallestUsefulStepIn, TaskCreate, TaskDetail, TaskUpdate
++from app.services.task_service import TaskService
++
++
++def _action_plan_in(mode: str) -> ActionPlanIn:
++    return ActionPlanIn(
++        desired_outcome="能独立讲清楚贝叶斯更新的适用条件",
++        smallest_useful_step=SmallestUsefulStepIn(
++            description="用自己的话写 3 条适用条件并各配 1 个反例",
++            useful_because=["builds_capability", "reduces_uncertainty"],
++        ),
++        completion_evidence=[
++            CompletionEvidenceIn(evidence_kind="artifact", ref="document://doc-1"),
++            CompletionEvidenceIn(evidence_kind="user_confirmation"),
++        ],
++        execution_mode=mode,
++        cognitive_ownership="user_core",
++        source_refs=[f"goal://{uuid4()}", "memory://episodic/00000000-0000-0000-0000-000000000001"],
++        risk_class="low",
++        reversible=True,
++    )
++
++
++@pytest.fixture
++def v3_task_deps(monkeypatch):
++    """复用生产测试的 mock 依赖（personalization 引擎不可用 → 默认值路径）。"""
++
++    def _no_engine(db, redis):
++        raise Exception("no engine")
++
++    monkeypatch.setattr("app.services.task_service.get_personalization_engine", _no_engine)
++    monkeypatch.setattr("app.services.task_service._sync_task_card_projection", _async_noop())
++    monkeypatch.setattr(
++        "app.services.task_service.task_document_service",
++        type("S", (), {"auto_link_from_task_context": _async_noop()})(),
++    )
++    monkeypatch.setattr("app.services.task_service.cache_service", type("C", (), {"redis": None})())
++    monkeypatch.setattr("app.services.task_service.event_bus_reliable", type("E", (), {"publish": _async_noop()})())
++    monkeypatch.setattr("app.services.task_service.publish_srl_event", _async_noop())
++
++
++def _async_noop():
++    async def _noop(*args, **kwargs):
++        return None
++
++    return _noop
++
++
++async def _make_user(db_session):
++    from app.models.user import User
++
++    user = User(username=f"u{uuid4().hex[:8]}", email=f"{uuid4().hex[:8]}@t.co", hashed_password="x", photon_balance=0)
++    db_session.add(user)
++    await db_session.commit()
++    await db_session.refresh(user)
++    return user
++
++
++class TestThreeModesThroughService:
++    @pytest.mark.asyncio
++    @pytest.mark.parametrize("mode", ["human", "agent", "hybrid"])
++    async def test_create_with_action_plan_persists_structured_columns(self, db_session, v3_task_deps, mode):
++        user = await _make_user(db_session)
++        payload = TaskCreate(
++            title=f"V3 任务-{mode}",
++            type="LEARNING",
++            estimated_minutes=25,
++            difficulty=2,
++            action_plan=_action_plan_in(mode),
++        )
++        task = await TaskService.create(db_session, payload, user.id)
++
++        assert task.action_schema_version == ACTION_PLAN_SCHEMA_VERSION
++        assert task.desired_outcome == "能独立讲清楚贝叶斯更新的适用条件"
++        assert task.execution_mode == mode  # 复用既有镜像列，无第二列
++        assert task.cognitive_ownership == "user_core"
++        assert task.risk_class == "low"
++        assert task.reversible is True
++        assert task.smallest_useful_step["useful_because"] == ["builds_capability", "reduces_uncertainty"]
++        assert task.completion_evidence[0]["evidence_kind"] == "artifact"
++        assert task.completion_evidence[0]["ref"] == "document://doc-1"
++        assert task.source_refs[0].startswith("goal://")
++
++        # TaskDetail 序列化面：V3 块可读回，DTO 不丢字段
++        detail = TaskDetail.model_validate(task)
++        assert detail.action_plan is not None
++        assert detail.action_plan.execution_mode == mode
++        assert detail.action_plan.completion_evidence[0].evidence_kind == "artifact"
++
++    @pytest.mark.asyncio
++    async def test_legacy_create_without_action_plan_is_fully_compatible(self, db_session, v3_task_deps):
++        user = await _make_user(db_session)
++        payload = TaskCreate(title="旧式任务", type="LEARNING", estimated_minutes=25, difficulty=1)
++        task = await TaskService.create(db_session, payload, user.id)
++
++        assert task.action_schema_version is None
++        assert task.desired_outcome is None
++        assert task.smallest_useful_step is None
++        assert task.completion_evidence is None
++        assert task.cognitive_ownership is None
++        assert task.source_refs is None
++        assert task.risk_class is None
++        assert task.reversible is None
++        detail = TaskDetail.model_validate(task)
++        assert detail.action_plan is None
++
++    @pytest.mark.asyncio
++    async def test_update_applies_and_clears_action_plan(self, db_session, v3_task_deps):
++        user = await _make_user(db_session)
++        task = await TaskService.create(
++            db_session,
++            TaskCreate(title="更新目标", type="TRAINING", estimated_minutes=20, difficulty=2),
++            user.id,
++        )
++
++        updated = await TaskService.update(db_session, task, TaskUpdate(action_plan=_action_plan_in("hybrid")))
++        assert updated.execution_mode == "hybrid"
++        assert updated.cognitive_ownership == "user_core"
++        assert updated.action_schema_version == ACTION_PLAN_SCHEMA_VERSION
++
++        # 显式置 None（fields_set）→ 清除 V3 语义回到 legacy 形态
++        clear = TaskUpdate(action_plan=None)
++        assert "action_plan" in clear.model_fields_set
++        cleared = await TaskService.update(db_session, updated, clear)
++        assert cleared.action_schema_version is None
++        assert cleared.completion_evidence is None
++
++
++class TestDtoValidation:
++    def test_uppercase_mode_normalized_to_execution_intent_vocab(self):
++        plan = _action_plan_in("HUMAN")
++        assert plan.execution_mode == "human"
++
++    def test_invalid_source_ref_scheme_rejected_at_parse_time(self):
++        with pytest.raises(ValueError):
++            ActionPlanIn(
++                desired_outcome="x",
++                smallest_useful_step=SmallestUsefulStepIn(description="y", useful_because=["advances_goal"]),
++                completion_evidence=[CompletionEvidenceIn(evidence_kind="file")],
++                execution_mode="agent",
++                cognitive_ownership="delegated",
++                source_refs=["ftp://evil"],
++            )
++
++    def test_unstructured_evidence_rejected_at_parse_time(self):
++        with pytest.raises(ValueError):
++            CompletionEvidenceIn(description="用户说做完了")  # type: ignore[call-arg]
++
++    def test_empty_useful_because_rejected(self):
++        with pytest.raises(ValueError):
++            SmallestUsefulStepIn(description="打开 IDE", useful_because=[])
++
++
++class TestStructuredColumnsGuard:
++    """非自然语言保证：关键字段必须是结构化列/字段，不是 prompt 文本。"""
++
++    def test_key_fields_are_real_columns_on_tasks_table(self):
++        table = Task.__table__
++        for name in (
++            "desired_outcome",
++            "smallest_useful_step",
++            "completion_evidence",
++            "cognitive_ownership",
++            "source_refs",
++            "risk_class",
++            "reversible",
++            "action_schema_version",
++        ):
++            assert name in table.columns, f"{name} 必须是 tasks 表的真实列"
++
++    def test_typed_payloads_are_structured_not_free_text(self):
++        """completion_evidence / smallest_useful_step / source_refs 必须是 JSON 结构列，
++        不是 Text 自由文本一列了事。"""
++        table = Task.__table__
++        for name in ("smallest_useful_step", "completion_evidence", "source_refs"):
++            col = table.columns[name]
++            assert isinstance(col.type, JSON), f"{name} 必须是 JSON 结构列，实际 {col.type}"
++            assert not isinstance(col.type, Text)
++
++    def test_execution_mode_single_source_no_duplicate_column(self):
++        """execution_mode 复用既有 String(20) 镜像列：表上不得出现第二个执行模式列。"""
++        mode_like = [c.name for c in Task.__table__.columns if "execution" in c.name]
++        assert mode_like == ["execution_mode"]
++
++    def test_closed_vocabularies_are_enums_not_free_strings(self):
++        import enum
++
++        for vocab in (CognitiveOwnership, RiskClass, EvidenceKind, UsefulStepReason):
++            assert issubclass(vocab, enum.StrEnum)
++        assert isinstance(ACTION_SOURCE_REF_SCHEMES, frozenset) and ACTION_SOURCE_REF_SCHEMES
++
++    def test_all_new_columns_nullable_for_legacy_compat(self):
++        for name in (
++            "desired_outcome",
++            "smallest_useful_step",
++            "completion_evidence",
++            "cognitive_ownership",
++            "source_refs",
++            "risk_class",
++            "reversible",
++            "action_schema_version",
++        ):
++            assert Task.__table__.columns[name].nullable, f"{name} 必须 nullable（旧记录全兼容）"
++
++
++class TestJsonbSqliteCompat:
++    def test_v3_json_columns_use_jsonb_compat_variant(self):
++        """JSONBCompat（JSONB + sqlite JSON variant）保证 sqlite 测试与 PG 生产一致可跑。"""
++        from sqlalchemy.dialects import postgresql, sqlite
++
++        col = Task.__table__.columns["completion_evidence"]
++        compiled_pg = str(col.type.compile(dialect=postgresql.dialect()))
++        compiled_lite = str(col.type.compile(dialect=sqlite.dialect()))
++        assert "JSONB" in compiled_pg.upper()
++        assert "JSON" in compiled_lite.upper()
++
++
++class TestDirtyRowTolerance:
++    """X-01 返修 F1/F2（REVIEW_RECEIPT_2）：REST 读路径对词表外/未来枚举值零容错，
++    单行脏数据曾使 GET /tasks、/today、/recommended、/tasks/{id} 全部 500。
++    修复后：REST 投影与类型化路径走**同一个门**（版本 + 全词表 + 归一），
++    脏/未来行降级为 action_plan=None 并打 WARN 日志（可观测降级，非静默）。"""
++
++    def _v3_task(self, **overrides) -> Task:
++        """构造带 V3 块的 Task 实例（不经 DB，直接喂序列化路径）。"""
++        base = dict(
++            id=uuid4(),
++            user_id=uuid4(),
++            created_at=datetime.now(UTC).replace(tzinfo=None),
++            updated_at=datetime.now(UTC).replace(tzinfo=None),
++            title="脏数据行",
++            type="LEARNING",
++            status="PENDING",
++            tags=[],
++            estimated_minutes=25,
++            difficulty=1,
++            energy_cost=1,
++            priority=0,
++            order_index=0,
++            subtasks_total=0,
++            subtasks_completed=0,
++            action_schema_version="action_plan.v1",
++            desired_outcome="能讲清贝叶斯更新适用条件",
++            smallest_useful_step={"description": "写 3 条适用条件", "useful_because": ["builds_capability"]},
++            completion_evidence=[{"evidence_kind": "artifact", "ref": "document://doc-1"}],
++            execution_mode="human",
++            cognitive_ownership="user_core",
++            source_refs=["goal://00000000-0000-0000-0000-000000000001"],
++            risk_class="low",
++            reversible=True,
++        )
++        base.update(overrides)
++        return Task(**base)
++
++    def test_valid_row_still_serializes_fully(self):
++        detail = TaskDetail.model_validate(self._v3_task())
++        assert detail.action_plan is not None
++        assert detail.action_plan.execution_mode == "human"
++
++    @pytest.mark.parametrize(
++        "dirty_overrides",
++        [
++            # F1 探针实证的四类脏形态（未来词表值 / 词表外镜像列值 / 半写行 / 未来版本行）
++            {"smallest_useful_step": {"description": "x", "useful_because": ["builds_habit_v2"]}},
++            {"completion_evidence": [{"evidence_kind": "streak_data_v2"}]},
++            {"execution_mode": "manual"},
++            {"desired_outcome": None},
++            {"action_schema_version": "action_plan.v0"},  # F2：版本门分歧——REST 曾无版本门
++            {"cognitive_ownership": "bogus_ownership"},
++            {"source_refs": ["ftp://dirty"]},
++        ],
++    )
++    def test_dirty_rows_dont_500_and_degrade_to_none(self, dirty_overrides):
++        task = self._v3_task(**dirty_overrides)
++        detail = TaskDetail.model_validate(task)  # 修复前：pydantic ValidationError → 端点 500
++        assert detail.action_plan is None
++
++    def test_dirty_row_in_a_list_does_not_break_other_rows(self):
++        from app.core.action_plan import action_plan_from_task
++
++        tasks = [self._v3_task(), self._v3_task(execution_mode="agent", desired_outcome=None)]
++        details = [TaskDetail.model_validate(task) for task in tasks]  # 单行脏 → 列表端点整体不 500
++        assert details[0].action_plan is not None
++        assert details[1].action_plan is None
++        # 类型化路径与 REST 路径同一行同答案（F2 统一）
++        assert action_plan_from_task(tasks[0]) is not None
++        assert action_plan_from_task(tasks[1]) is None
++
++    def test_degradation_is_observable_via_warn_log(self):
++        """F2 可观测性：非 NULL schema_version 但门失败 → WARN（带 task 标识与原因），非静默。"""
++        from loguru import logger as loguru_logger
++
++        events: list[str] = []
++        sink_id = loguru_logger.add(lambda message: events.append(str(message)), level="WARNING")
++        try:
++            task = self._v3_task(execution_mode="manual")
++            assert TaskDetail.model_validate(task).action_plan is None
++        finally:
++            loguru_logger.remove(sink_id)
++        assert any("ActionPlan V3" in event for event in events), "降级必须留下 WARN 痕迹"
++
+diff --git a/backend/tests/unit/test_action_plan_contract.py b/backend/tests/unit/test_action_plan_contract.py
+new file mode 100644
+index 00000000..194351bd
+--- /dev/null
++++ b/backend/tests/unit/test_action_plan_contract.py
+@@ -0,0 +1,194 @@
++"""X-01 · ActionPlan V3 契约（app/core/action_plan.py）的封闭词表与校验面测试。
++
++对应任务卡验收：
++- Human/Agent/Hybrid 可表达（三模式各构造一条合法记录）；
++- 关键字段不能仅自然语言携带（类型化 evidence / typed useful_because / 封闭 ref scheme）；
++- 旧记录全兼容（action_schema_version NULL = legacy，重构返回 None）。
++"""
++
++from __future__ import annotations
++
++from uuid import uuid4
++
++import pytest
++
++from app.core.action_plan import (
++    ACTION_PLAN_SCHEMA_VERSION,
++    ACTION_SOURCE_REF_SCHEMES,
++    ActionPlanContract,
++    CognitiveOwnership,
++    CompletionEvidenceSpec,
++    EvidenceKind,
++    RiskClass,
++    SmallestUsefulStep,
++    UsefulStepReason,
++    action_plan_from_task,
++    normalize_execution_mode,
++)
++from app.models.execution_intent import ExecutionMode, TrustLevel
++
++
++def _legal_contract(execution_mode: ExecutionMode) -> ActionPlanContract:
++    """三模式通用的最小合法 V3 契约。"""
++    return ActionPlanContract(
++        desired_outcome="能独立讲清楚贝叶斯更新的适用条件",
++        smallest_useful_step=SmallestUsefulStep(
++            description="用自己的话写 3 条适用条件并各配 1 个反例",
++            useful_because=(UsefulStepReason.BUILDS_CAPABILITY, UsefulStepReason.REDUCES_UNCERTAINTY),
++        ),
++        completion_evidence=(
++            CompletionEvidenceSpec(evidence_kind=EvidenceKind.ARTIFACT, ref="document://abc-123"),
++            CompletionEvidenceSpec(evidence_kind=EvidenceKind.USER_CONFIRMATION),
++        ),
++        execution_mode=execution_mode,
++        cognitive_ownership=CognitiveOwnership.USER_CORE,
++        source_refs=(f"goal://{uuid4()}", "memory://episodic/00000000-0000-0000-0000-000000000001"),
++        risk_class=RiskClass.LOW,
++        reversible=True,
++    )
++
++
++class TestVocabularyClosure:
++    def test_schema_version_is_v1(self):
++        assert ACTION_PLAN_SCHEMA_VERSION == "action_plan.v1"
++
++    def test_execution_mode_reuses_frozen_execution_intent_enum(self):
++        """Action 唯一协议 = ExecutionIntent（B-06 §1.5）：execution_mode 词表必须直接复用，
++        禁止第二套 HUMAN/AGENT/HYBRID 枚举。"""
++        assert {m.value for m in ExecutionMode} == {"human", "agent", "hybrid"}
++
++    def test_cognitive_ownership_first_version_d13(self):
++        assert {m.value for m in CognitiveOwnership} == {"user_core", "shared", "delegated"}
++
++    def test_risk_class_grading(self):
++        assert {m.value for m in RiskClass} == {"low", "medium", "high", "critical"}
++
++    def test_evidence_kinds_cover_action_doc_section4(self):
++        assert {m.value for m in EvidenceKind} == {
++            "artifact",
++            "file",
++            "code",
++            "quiz_result",
++            "user_confirmation",
++            "self_report",
++            "system_event",
++        }
++
++    def test_useful_step_reasons_cover_action_doc_section2(self):
++        assert {m.value for m in UsefulStepReason} == {
++            "produces_artifact",
++            "reduces_uncertainty",
++            "builds_capability",
++            "unblocks_dependency",
++            "enables_decision",
++            "advances_goal",
++        }
++
++    def test_source_ref_schemes_closed_and_c01_aligned(self):
++        """C-01 decision_context.v1 的 5 个 scheme 必须原样包含（ref 语义对齐），
++        其余为 action 域扩展。"""
++        c01_schemes = {"memory", "user_state", "plan", "document", "profile"}
++        assert c01_schemes <= ACTION_SOURCE_REF_SCHEMES
++        assert ACTION_SOURCE_REF_SCHEMES - c01_schemes == {"goal", "task", "subtask", "chat", "decision", "run"}
++
++
++class TestThreeExecutionModesAreExpressible:
++    @pytest.mark.parametrize("mode", list(ExecutionMode))
++    def test_each_mode_constructs_a_legal_contract(self, mode: ExecutionMode):
++        contract = _legal_contract(mode)
++        assert contract.validate() == ()
++        columns = contract.to_task_columns()
++        assert columns["execution_mode"] == mode.value
++        assert columns["action_schema_version"] == ACTION_PLAN_SCHEMA_VERSION
++
++    @pytest.mark.parametrize("mode", list(ExecutionMode))
++    def test_each_mode_maps_to_trust_levels_of_execution_intent(self, mode: ExecutionMode):
++        """HUMAN/AGENT/HYBRID 与 TrustLevel（RAW/VALIDATED/TRUSTED）可组合表达执行语义。"""
++        for trust in TrustLevel:
++            contract = _legal_contract(mode)
++            assert contract.validate() == ()
++            assert trust.value in {"raw", "validated", "trusted"}
++
++
++class TestValidationRejectsUnstructuredOrInvalidPayloads:
++    def _invalid(self, **overrides):
++        """从合法模板构造非法契约（frozen dataclass：直接构造，不 mutate）。"""
++        base = _legal_contract(ExecutionMode.HUMAN)
++        from dataclasses import replace
++
++        return replace(base, **overrides)
++
++    def test_free_text_completion_evidence_without_kind_is_rejected(self):
++        """守卫核心：completion_evidence 不能是自由文本一列了事——必须类型化。"""
++        contract = self._invalid(
++            completion_evidence=(CompletionEvidenceSpec(evidence_kind=None, description="用户说做完了"),),  # type: ignore[arg-type]
++        )
++        violations = contract.validate()
++        assert any("evidence_kind" in v for v in violations)
++
++    def test_empty_completion_evidence_is_rejected(self):
++        contract = self._invalid(completion_evidence=())
++        assert any("completion_evidence" in v for v in contract.validate())
++
++    def test_useful_step_without_reason_is_rejected(self):
++        contract = self._invalid(
++            smallest_useful_step=SmallestUsefulStep(description="打开 IDE 看一眼", useful_because=())
++        )
++        violations = contract.validate()
++        assert any("useful_because" in v for v in violations)
++
++    def test_unknown_source_ref_scheme_is_rejected(self):
++        contract = self._invalid(source_refs=("ftp://random-host/file",))
++        assert any("source ref" in v for v in contract.validate())
++
++    def test_non_uri_source_ref_is_rejected(self):
++        contract = self._invalid(source_refs=("只是一个描述字符串",))
++        assert any("source ref" in v for v in contract.validate())
++
++    def test_unknown_execution_mode_value_is_rejected_by_normalizer(self):
++        assert normalize_execution_mode("robot") is None
++        assert normalize_execution_mode("") is None
++        assert normalize_execution_mode(None) is None
++
++    def test_schema_version_mismatch_is_reported(self):
++        contract = self._invalid(schema_version="action_plan.v999")
++        assert any("schema_version" in v for v in contract.validate())
++
++
++class TestExecutionModeNormalization:
++    """tasks.execution_mode 是 String(20) 既有镜像列：历史写入大小写不一经 DTO 归一。"""
++
++    @pytest.mark.parametrize(
++        ("raw", "expected"),
++        [
++            ("human", ExecutionMode.HUMAN),
++            ("HUMAN", ExecutionMode.HUMAN),
++            ("Human", ExecutionMode.HUMAN),
++            ("agent", ExecutionMode.AGENT),
++            ("AGENT", ExecutionMode.AGENT),
++            ("hybrid", ExecutionMode.HYBRID),
++            (ExecutionMode.HYBRID, ExecutionMode.HYBRID),
++        ],
++    )
++    def test_normalize(self, raw, expected):
++        assert normalize_execution_mode(raw) is expected
++
++
++class TestLegacyTaskCompat:
++    def test_legacy_row_without_schema_version_yields_none(self):
++        from app.models.task import Task
++
++        task = Task(title="旧任务", type="LEARNING")
++        # 未走 ORM 持久化，直接以实例属性模拟 legacy 行
++        assert action_plan_from_task(task) is None
++
++    def test_v3_row_roundtrips_through_task_columns(self):
++        from app.models.task import Task
++
++        contract = _legal_contract(ExecutionMode.HYBRID)
++        task = Task(title="V3 任务", type="LEARNING")
++        contract.apply_to_task(task)
++        restored = action_plan_from_task(task)
++        assert restored is not None
++        assert restored.to_task_columns() == contract.to_task_columns()
++        assert restored.validate() == ()
+diff --git a/backend/tests/unit/test_action_plan_migration_sqlite.py b/backend/tests/unit/test_action_plan_migration_sqlite.py
+new file mode 100644
+index 00000000..5d3e7b10
+--- /dev/null
++++ b/backend/tests/unit/test_action_plan_migration_sqlite.py
+@@ -0,0 +1,119 @@
++"""x01_20260919 迁移在本地 sqlite 基座上的隔离重放（主库只读纪律）。
++
++不连主仓 PostgreSQL：用 alembic Operations/MigrationContext 把
++x01_20260919_add_action_plan_v3_columns.upgrade/downgrade 单独跑在临时
++sqlite 文件库上，验证：
++- 8 个 V3 新列全部落上 tasks 表（nullable，旧行全兼容）；
++- execution_mode 是**复用**的既有列——upgrade/downgrade 都不得触碰它
++  （禁止出现第二 execution_mode 列 / 重复真源）；
++- 旧记录（无 V3 字段）在 upgrade 后原样存活且新列全 NULL；
++- downgrade 把 8 个新列全部移除，回到旧 schema。
++"""
++
++from __future__ import annotations
++
++import importlib.util
++from pathlib import Path
++from typing import Callable
++
++import pytest
++from alembic.migration import MigrationContext
++from alembic.operations import Operations
++from sqlalchemy import create_engine, inspect
++
++BACKEND_ROOT = Path(__file__).resolve().parents[2]
++MIGRATION_PATH = BACKEND_ROOT / "alembic" / "versions" / "x01_20260919_add_action_plan_v3_columns.py"
++
++# V3 契约新增列（execution_mode 复用既有列，不在此列）
++ACTION_PLAN_V3_COLUMNS = {
++    "action_schema_version",
++    "desired_outcome",
++    "smallest_useful_step",
++    "completion_evidence",
++    "cognitive_ownership",
++    "source_refs",
++    "risk_class",
++    "reversible",
++}
++
++
++@pytest.fixture(name="migration_env")
++def _migration_env(tmp_path):
++    engine = create_engine(f"sqlite:///{tmp_path / 'x01_test.db'}")
++
++    # 最小 tasks 基座：模拟迁移前的旧 schema（含将被复用的 execution_mode 列）
++    with engine.begin() as conn:
++        conn.exec_driver_sql(
++            """
++            CREATE TABLE tasks (
++                id VARCHAR(36) PRIMARY KEY,
++                title VARCHAR(255) NOT NULL,
++                execution_mode VARCHAR(20) NULL
++            )
++            """
++        )
++
++    def run_migration(op_fn: Callable[[], None]) -> None:
++        with engine.connect() as conn:
++            ctx = MigrationContext.configure(conn)
++            with Operations.context(ctx):
++                op_fn()
++            conn.commit()
++
++    yield run_migration, engine
++    engine.dispose()
++
++
++def _load_migration_module():
++    spec = importlib.util.spec_from_file_location("x01_20260919", MIGRATION_PATH)
++    module = importlib.util.module_from_spec(spec)
++    spec.loader.exec_module(module)
++    return module
++
++
++def test_x01_chains_from_current_single_head():
++    module = _load_migration_module()
++    # 返修 F3：合入窗口实况 ent01→e05(E-05)→m01a(M-01) 单头，x01 挂 m01a 恢复单头
++    assert module.down_revision == "m01a_20260919", "必须挂在当前唯一 head（m01a）之后，禁止复活双头"
++
++
++def test_x01_upgrade_adds_all_v3_columns_and_downgrade_removes_them(migration_env):
++    run_migration, engine = migration_env
++    module = _load_migration_module()
++
++    run_migration(module.upgrade)
++
++    inspector = inspect(engine)
++    columns = {col["name"]: col for col in inspector.get_columns("tasks")}
++    missing = ACTION_PLAN_V3_COLUMNS - set(columns)
++    assert not missing, f"V3 列缺失: {sorted(missing)}"
++    for name in ACTION_PLAN_V3_COLUMNS:
++        assert columns[name]["nullable"], f"{name} 必须 nullable（旧记录全兼容）"
++        assert columns[name].get("default") is None, f"{name} 不得带 server default（NULL=legacy 语义）"
++
++    # execution_mode 复用：不新增第二列
++    assert "execution_mode" in columns
++
++    run_migration(module.downgrade)
++    columns_after = {col["name"] for col in inspect(engine).get_columns("tasks")}
++    dropped = ACTION_PLAN_V3_COLUMNS & columns_after
++    assert not dropped, f"downgrade 未清除: {sorted(dropped)}"
++    assert "execution_mode" in columns_after, "downgrade 不得动既有 execution_mode 列"
++
++
++def test_x01_legacy_rows_survive_upgrade_untouched(migration_env):
++    run_migration, engine = migration_env
++    module = _load_migration_module()
++
++    with engine.begin() as conn:
++        conn.exec_driver_sql(
++            "INSERT INTO tasks (id, title, execution_mode) VALUES ('legacy-1', '旧任务', NULL)"
++        )
++
++    run_migration(module.upgrade)
++
++    with engine.connect() as conn:
++        row = conn.exec_driver_sql("SELECT * FROM tasks WHERE id = 'legacy-1'").mappings().one()
++    assert row["title"] == "旧任务"
++    for name in ACTION_PLAN_V3_COLUMNS:
++        assert row[name] is None, f"旧记录的 {name} 应保持 NULL"

@@ -218,7 +218,7 @@ from app.models.session_completion import SessionCompletion
 from app.models.shop import PhotonTransactionHistory, ShopItem, ShopPurchase, UserConsumable
 from app.models.simulation_run import SimulationRun
 from app.models.subject import Subject
-from app.models.task import Task, TaskStatus, TaskType
+from app.models.task import CognitiveOwnership, RiskClass, Task, TaskStatus, TaskType
 from app.models.task_document import TaskDocument
 from app.models.task_feedback import TaskFeedback, TaskFeedbackCategory
 from app.models.task_resources import TaskKnowledgeLink, TaskResourceLink, TaskResourceType

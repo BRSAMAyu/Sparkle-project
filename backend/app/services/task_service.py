@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.cache import cache_service
 from app.core.event_bus import event_bus, event_bus_reliable
+from app.core.action_plan import clear_action_plan
 from app.event_publishers.srl_events import publish_srl_event
 from app.gen.sparkle.inference.v1 import inference_pb2
 from app.gen.sparkle.signals.v1 import signals_pb2
@@ -138,6 +139,9 @@ class TaskService:
             order_index=await TaskService._next_top_order_index(db, user_id),
             status=TaskStatus.PENDING,
         )
+        # X-01 · ActionPlan V3：整块写入结构化契约列（DTO 已在 parse 时全量校验）
+        if obj_in.action_plan is not None:
+            obj_in.action_plan.to_contract().apply_to_task(db_obj)
         db.add(db_obj)
         await db.flush()
         if not _is_mock_session(db):
@@ -228,6 +232,15 @@ class TaskService:
     async def update(db: AsyncSession, db_obj: Task, obj_in: TaskUpdate) -> Task:
         """Update task"""
         update_data = obj_in.model_dump(exclude_unset=True)
+
+        # X-01 · ActionPlan V3：action_plan 是契约块，不走逐列 setattr；
+        # 显式传 null（fields_set 含 action_plan 且值为 None）= 清除 V3 语义回到 legacy。
+        if "action_plan" in obj_in.model_fields_set:
+            if obj_in.action_plan is None:
+                clear_action_plan(db_obj)
+            else:
+                obj_in.action_plan.to_contract().apply_to_task(db_obj)
+        update_data.pop("action_plan", None)
 
         # Track status change for sync
         old_status = db_obj.status

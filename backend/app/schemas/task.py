@@ -13,12 +13,143 @@ from enum import Enum, StrEnum
 from typing import Literal
 from uuid import UUID
 
-from pydantic import AliasChoices, BaseModel, Field, field_validator
+from pydantic import AliasChoices, BaseModel, Field, field_validator, model_validator
 
+from app.core.action_plan import (
+    ACTION_PLAN_SCHEMA_VERSION,
+    ACTION_SOURCE_REF_SCHEMES,
+    ActionPlanContract,
+    CognitiveOwnership,
+    CompletionEvidenceSpec,
+    EvidenceKind,
+    ExecutionMode,
+    RiskClass,
+    SmallestUsefulStep,
+    UsefulStepReason,
+    normalize_execution_mode,
+)
 from app.models.task import SubTaskStatus, TaskStatus, TaskType
 from app.schemas.common import BaseSchema
 
 # ========== Request Schemas ==========
+
+# ── X-01 · ActionPlan V3 契约 DTO（结构化字段，非自然语言）──────────────────
+# 语义真源：app/core/action_plan.py（封闭词表 + validate()）。DTO 在 parse 时完成
+# 归一化与全量校验（API 边界 422），service 落列不再二次解释。
+
+
+class SmallestUsefulStepIn(BaseModel):
+    """最小有用步骤：描述 + 封闭判据（useful_because 非空，防「打开 IDE」式伪步骤）。"""
+
+    description: str = Field(min_length=1, max_length=500, description="Step description")
+    useful_because: list[UsefulStepReason] = Field(min_length=1, description="Why useful (closed vocabulary)")
+
+
+class CompletionEvidenceIn(BaseModel):
+    """单条完成证据规格：evidence_kind 必填（封闭枚举），ref 可选（封闭 scheme）。"""
+
+    evidence_kind: EvidenceKind = Field(description="Evidence type (closed vocabulary)")
+    ref: str | None = Field(default=None, max_length=255, description="Optional scheme://id reference")
+    description: str | None = Field(default=None, max_length=500, description="Optional human note")
+
+    @field_validator("ref")
+    @classmethod
+    def _ref_scheme_closed(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        scheme = value.split("://", 1)[0] if "://" in value else ""
+        if scheme not in ACTION_SOURCE_REF_SCHEMES:
+            raise ValueError(f"evidence ref scheme must be one of {sorted(ACTION_SOURCE_REF_SCHEMES)}")
+        return value
+
+
+class ActionPlanIn(BaseModel):
+    """ActionPlan V3 写入块：三模式（human/agent/hybrid）在此结构化表达。"""
+
+    desired_outcome: str = Field(min_length=1, max_length=1000, description="Desired outcome statement")
+    smallest_useful_step: SmallestUsefulStepIn
+    completion_evidence: list[CompletionEvidenceIn] = Field(min_length=1, description="Typed evidence specs")
+    execution_mode: ExecutionMode = Field(description="human | agent | hybrid (ExecutionIntent vocabulary)")
+    cognitive_ownership: CognitiveOwnership = Field(description="user_core | shared | delegated (D13)")
+    source_refs: list[str] = Field(default_factory=list, description="scheme://id refs (closed schemes)")
+    risk_class: RiskClass | None = Field(default=None, description="low | medium | high | critical")
+    reversible: bool | None = Field(default=None, description="Reversibility of failure")
+
+    @field_validator("execution_mode", mode="before")
+    @classmethod
+    def _normalize_execution_mode(cls, value):
+        parsed = normalize_execution_mode(value)
+        if parsed is None:
+            raise ValueError("execution_mode must be one of human/agent/hybrid")
+        return parsed
+
+    @field_validator("source_refs")
+    @classmethod
+    def _source_refs_closed(cls, value: list[str]) -> list[str]:
+        for ref in value:
+            scheme = ref.split("://", 1)[0] if "://" in ref else ""
+            if scheme not in ACTION_SOURCE_REF_SCHEMES:
+                raise ValueError(f"source ref scheme must be one of {sorted(ACTION_SOURCE_REF_SCHEMES)}: {ref!r}")
+        return value
+
+    def to_contract(self) -> ActionPlanContract:
+        """DTO → 契约（validate() 兜底跨字段规则；parse 时已过词表校验）。"""
+        contract = ActionPlanContract(
+            desired_outcome=self.desired_outcome,
+            smallest_useful_step=SmallestUsefulStep(
+                description=self.smallest_useful_step.description,
+                useful_because=tuple(reason.value for reason in self.smallest_useful_step.useful_because),
+            ),
+            completion_evidence=tuple(
+                CompletionEvidenceSpec(
+                    evidence_kind=entry.evidence_kind.value,
+                    ref=entry.ref,
+                    description=entry.description,
+                )
+                for entry in self.completion_evidence
+            ),
+            execution_mode=self.execution_mode,
+            cognitive_ownership=self.cognitive_ownership,
+            source_refs=tuple(self.source_refs),
+            risk_class=self.risk_class,
+            reversible=self.reversible,
+            schema_version=ACTION_PLAN_SCHEMA_VERSION,
+        )
+        violations = contract.validate()
+        if violations:
+            raise ValueError(f"invalid action_plan contract: {'; '.join(violations)}")
+        return contract
+
+
+class SmallestUsefulStepOut(BaseModel):
+    description: str
+    useful_because: list[UsefulStepReason]
+
+
+class CompletionEvidenceOut(BaseModel):
+    evidence_kind: EvidenceKind
+    ref: str | None = None
+    description: str | None = None
+
+
+class ActionPlanOut(BaseModel):
+    """ActionPlan V3 读回块（legacy 行 → TaskDetail.action_plan = None）。
+
+    封闭枚举字段保持严格的前提：输入必须来自 Task.action_plan（统一门
+    action_plan_projection 已过滤词表外/未来值/版本不符行，脏行降级为 None）。
+    任何新读路径不得绕过该门直接把列值喂给本模型（X-01 返修 F1 教训）。
+    """
+
+    schema_version: str
+    desired_outcome: str
+    smallest_useful_step: SmallestUsefulStepOut
+    completion_evidence: list[CompletionEvidenceOut]
+    execution_mode: ExecutionMode
+    cognitive_ownership: CognitiveOwnership
+    source_refs: list[str] = Field(default_factory=list)
+    risk_class: RiskClass | None = None
+    reversible: bool | None = None
+
 
 TASK_TYPE_ALIAS_MAP = {
     "learning": "LEARNING",
@@ -83,6 +214,9 @@ class TaskCreate(BaseModel):
     source_planning_session_id: str | None = Field(default=None, description="Origin planning session ID")
     phase_index: int | None = Field(default=None, ge=1, description="Phase index inside the planning strategy")
     success_criteria: str | None = Field(default=None, description="Task success criteria")
+    action_plan: ActionPlanIn | None = Field(
+        default=None, description="ActionPlan V3 contract block (omit for legacy tasks)"
+    )
 
     @field_validator("type", mode="before")
     @classmethod
@@ -134,6 +268,10 @@ class TaskUpdate(BaseModel):
     source_planning_session_id: str | None = Field(default=None, description="Origin planning session ID")
     phase_index: int | None = Field(default=None, ge=1, description="Phase index inside the planning strategy")
     success_criteria: str | None = Field(default=None, description="Task success criteria")
+    action_plan: ActionPlanIn | None = Field(
+        default=None,
+        description="ActionPlan V3 contract block (explicit null = clear V3 semantics)",
+    )
 
     @field_validator("type", mode="before")
     @classmethod
@@ -270,6 +408,9 @@ class TaskDetail(TaskBase):
     source_planning_session_id: str | None = Field(default=None, description="Origin planning session ID")
     phase_index: int | None = Field(default=None, description="Phase index inside the planning strategy")
     success_criteria: str | None = Field(default=None, description="Task success criteria")
+    action_plan: ActionPlanOut | None = Field(
+        default=None, description="ActionPlan V3 contract block (None for legacy tasks)"
+    )
     bound_sources: list[TaskBoundSourceInfo] = Field(
         default_factory=list,
         description="Lifecycle-aware source assets currently bound to the task",
