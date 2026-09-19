@@ -9,15 +9,19 @@ occurred_at DESC top-3。occurred_at 是"事件发生时间"（LLM 抽取会给�
 from datetime import datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
+from uuid import uuid4
 
 import pytest
 
 from app.core.context_manager import ContextOrchestrator
 
 
-def _row(summary, importance, confidence, created_at, occurred_at):
+def _row(summary, importance, confidence, created_at, occurred_at, user_id):
+    # M-03: real episodic rows always carry user_id; the deterministic
+    # prefilter hard-cuts ownerless/wrong-user rows before ranking.
     return SimpleNamespace(
         id=f"id-{summary}",
+        user_id=user_id,
         summary=summary,
         subject_type="self",
         source_type="chat",
@@ -34,9 +38,22 @@ class TestPastSessionMemoryRanking:
     async def test_high_value_inferred_memory_outranks_fresher_seeds(self):
         manager = ContextOrchestrator.__new__(ContextOrchestrator)
         manager.db = None
-        seed = _row("completed 操作系统-死锁", 0.72, 0.72, datetime(2026, 9, 19, 3, 0, 0), datetime(2026, 9, 19, 3, 0, 0))
+        user_id = uuid4()
+        seed = _row(
+            "completed 操作系统-死锁",
+            0.72,
+            0.72,
+            datetime(2026, 9, 19, 3, 0, 0),
+            datetime(2026, 9, 19, 3, 0, 0),
+            user_id,
+        )
         movie = _row(
-            "用户最喜欢的电影是《星际穿越》", 0.98, 0.98, datetime(2026, 9, 19, 3, 5, 0), datetime(2026, 6, 22, 0, 0, 0)
+            "用户最喜欢的电影是《星际穿越》",
+            0.98,
+            0.98,
+            datetime(2026, 9, 19, 3, 5, 0),
+            datetime(2026, 6, 22, 0, 0, 0),
+            user_id,
         )
 
         async def fake_get_recent(user_id, limit=3, **kwargs):
@@ -49,7 +66,7 @@ class TestPastSessionMemoryRanking:
         original = cm.MemoryService
         cm.MemoryService = lambda *a, **k: service_holder
         try:
-            memories = await manager._get_past_session_memory(user_id=None)  # type: ignore[arg-type]
+            memories = await manager._get_past_session_memory(user_id=user_id)  # type: ignore[arg-type]
         finally:
             cm.MemoryService = original
 

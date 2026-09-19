@@ -53,6 +53,11 @@ from app.services.embedding_service import embedding_service
 from app.services.ltm_rollout_service import LtmRolloutService
 from app.services.memory_conflict_resolver import MemoryConflictResolver
 from app.services.memory_rank_policy_service import MemoryRankPolicyService
+from app.services.memory_retrieval_prefilter import (
+    PURPOSE_LLM_CONTEXT,
+    build_retrieval_context,
+    prefilter_candidates,
+)
 from app.services.memory_service import MemoryService
 from app.services.personalization.preference_service import PreferenceService
 
@@ -1258,8 +1263,39 @@ class ContextPackBuilder:
         if conflict_enabled:
             pref_history = await self.memory_service.list_preference_history(user_id)
 
+        # M-03 deterministic L0 prefilter: illegal candidates (wrong user /
+        # non-active status incl. superseded versions / expired commitments /
+        # out-of-scope goals / user_memory_settings permission blocks) are cut
+        # BEFORE rank / semantic gating / budget see them (MEMORY_V3 §3 1-5).
+        # Conflict-resolution history stays unfiltered —— supersede resolution
+        # legitimately needs the full version chain.
+        retrieval_ctx = await build_retrieval_context(
+            self.db,
+            user_id=user_id,
+            purpose=PURPOSE_LLM_CONTEXT,
+            plan_id=plan_id,
+        )
+        pref_prefilter = prefilter_candidates(preference_records, retrieval_ctx)
+        goal_prefilter = prefilter_candidates(goals, retrieval_ctx)
+        episodic_prefilter = prefilter_candidates(episodic, retrieval_ctx)
+        preference_records = pref_prefilter.allowed
+        goals = goal_prefilter.allowed
+        episodic = episodic_prefilter.allowed
+        prefilter_metadata = {
+            "user_id": str(user_id),
+            "purpose": PURPOSE_LLM_CONTEXT,
+            "plan_id": str(plan_id) if plan_id else None,
+            "sections": {
+                "preferences": pref_prefilter.to_metric_payload(),
+                "goals": goal_prefilter.to_metric_payload(),
+                "episodic": episodic_prefilter.to_metric_payload(),
+            },
+        }
+
         metadata: dict[str, Any] = {
             "document_context_controls": document_context_controls.to_metadata(),
+            # M-03: per-dimension / per-reason cut counts (D-06/O-02 observability).
+            "memory_prefilter": prefilter_metadata,
         }
         ranking_enabled = settings.ENABLE_CONTEXT_RANKING and rollout_enabled
         conflicts: list[dict[str, Any]] = []

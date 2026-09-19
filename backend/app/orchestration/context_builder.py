@@ -43,6 +43,7 @@ from app.services.aurora_stage39_kill_switch_service import AuroraStage39KillSwi
 from app.services.focus_service import focus_service
 from app.services.galaxy_service import GalaxyService
 from app.services.insight_copy import canonical_pattern_key, present_pattern_description, present_pattern_name
+from app.services.memory_retrieval_prefilter import PURPOSE_LLM_CONTEXT, apply_memory_prefilter, build_retrieval_context
 from app.services.memory_service import MemoryService
 from app.services.plan_service import PlanService
 from app.services.self_evolution_service import UnderstandingDepthService
@@ -589,6 +590,17 @@ class ContextBuilderMixin:
         ]
 
         episodic_rows = await memory_service.list_recent_episodic(user_uuid, limit=12)
+        # M-03 deterministic L0 prefilter (R1-F2): stage34 feeds the main chat
+        # payload's episodic_memories, which prompts render into the system
+        # prompt — superseded / expired / permission-blocked rows are cut here,
+        # before the correction/importance ranking (same law as context_manager
+        # and context_pack pull paths; MEMORY_V3 §3 steps 1-5 before semantics).
+        retrieval_ctx = await build_retrieval_context(
+            db_session,
+            user_id=user_uuid,
+            purpose=PURPOSE_LLM_CONTEXT,
+        )
+        episodic_rows = apply_memory_prefilter(episodic_rows, retrieval_ctx)
         ranked_episodic_rows = sorted(
             episodic_rows,
             key=lambda memory: (

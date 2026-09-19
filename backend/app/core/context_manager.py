@@ -26,6 +26,7 @@ from app.services.capsule_favorite_service import CapsuleFavoriteService
 from app.services.error_book_service import ErrorBookService
 from app.services.focus_service import focus_service
 from app.services.galaxy_service import GalaxyService
+from app.services.memory_retrieval_prefilter import PURPOSE_LLM_CONTEXT, apply_memory_prefilter, build_retrieval_context
 from app.services.memory_service import MemoryService
 from app.services.personalization.preference_service import PreferenceService
 from app.services.profile_context_service import ProfileContextService
@@ -377,6 +378,15 @@ class ContextOrchestrator:
             # 不能当"记忆新鲜度"排序：种子记忆（播种时刻）会永远挤掉刚推断出的记忆。
             # 拉宽候选池后按记忆价值（importance/confidence）+ 入库时间重排取 top-N。
             rows = await service.get_recent_episodic(user_id, limit=max(limit * 4, 12))
+            # M-03 确定性 L0 预筛：user/status/TTL/scope/purpose/sensitivity 硬砍
+            # 之后再进入重排/注入（MEMORY_V3 §3 步骤 1-5；含 superseded/expired
+            # 承诺/user_memory_settings 读侧权限——SQL 层均不覆盖）。
+            retrieval_ctx = await build_retrieval_context(
+                db_session or self.db,
+                user_id=user_id,
+                purpose=PURPOSE_LLM_CONTEXT,
+            )
+            rows = apply_memory_prefilter(rows, retrieval_ctx)
             rows = sorted(
                 rows,
                 key=lambda m: (

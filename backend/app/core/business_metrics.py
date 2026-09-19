@@ -234,6 +234,16 @@ MEMORY_JOB_RUNS_TOTAL = get_or_create_metric(
     ['job', 'status']
 )
 
+# M-03 deterministic retrieval prefilter: candidates cut before semantic
+# retrieval, by filter dimension (user/status/ttl/scope/purpose/sensitivity)
+# and fine-grained reason (e.g. user:wrong_user, status:revoked, ttl:today_only_expired).
+MEMORY_PREFILTER_REJECTIONS_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_memory_prefilter_rejections_total',
+    'Memory candidates rejected by the L0 deterministic prefilter',
+    ['dimension', 'reason']
+)
+
 EVIDENCE_MISSING_CURRENT = get_or_create_metric(
     Gauge,
     'sparkle_evidence_missing_current',

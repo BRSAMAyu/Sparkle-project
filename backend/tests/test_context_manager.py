@@ -114,12 +114,16 @@ async def test_context_orchestrator_aggregation(db_session):
                 }
             ),
         )
+        user_id = str(uuid.uuid4())
         m.setattr(
             "app.core.context_manager.MemoryService.get_recent_episodic",
             AsyncMock(
                 return_value=[
                     SimpleNamespace(
                         id=uuid.uuid4(),
+                        # M-03: real episodic rows always carry user_id; the
+                        # deterministic prefilter hard-cuts ownerless rows.
+                        user_id=user_id,
                         summary="上次你备考计算机网络，传输层不错但子网划分薄弱。",
                         subject_type="learning_profile",
                         source_type="chat_turn",
@@ -130,7 +134,6 @@ async def test_context_orchestrator_aggregation(db_session):
             ),
         )
 
-        user_id = str(uuid.uuid4())
         context = await orchestrator.get_user_context(user_id)
 
     assert isinstance(context, CognitiveContext)

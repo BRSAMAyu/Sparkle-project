@@ -1,0 +1,2170 @@
+diff --git a/backend/app/core/business_metrics.py b/backend/app/core/business_metrics.py
+index 489d8e4e..e2d3595b 100755
+--- a/backend/app/core/business_metrics.py
++++ b/backend/app/core/business_metrics.py
+@@ -234,6 +234,16 @@ MEMORY_JOB_RUNS_TOTAL = get_or_create_metric(
+     ['job', 'status']
+ )
+ 
++# M-03 deterministic retrieval prefilter: candidates cut before semantic
++# retrieval, by filter dimension (user/status/ttl/scope/purpose/sensitivity)
++# and fine-grained reason (e.g. user:wrong_user, status:revoked, ttl:today_only_expired).
++MEMORY_PREFILTER_REJECTIONS_TOTAL = get_or_create_metric(
++    Counter,
++    'sparkle_memory_prefilter_rejections_total',
++    'Memory candidates rejected by the L0 deterministic prefilter',
++    ['dimension', 'reason']
++)
++
+ EVIDENCE_MISSING_CURRENT = get_or_create_metric(
+     Gauge,
+     'sparkle_evidence_missing_current',
+diff --git a/backend/app/core/context_manager.py b/backend/app/core/context_manager.py
+index 272f4c01..3de8c4d6 100755
+--- a/backend/app/core/context_manager.py
++++ b/backend/app/core/context_manager.py
+@@ -26,6 +26,7 @@ from app.services.capsule_favorite_service import CapsuleFavoriteService
+ from app.services.error_book_service import ErrorBookService
+ from app.services.focus_service import focus_service
+ from app.services.galaxy_service import GalaxyService
++from app.services.memory_retrieval_prefilter import PURPOSE_LLM_CONTEXT, apply_memory_prefilter, build_retrieval_context
+ from app.services.memory_service import MemoryService
+ from app.services.personalization.preference_service import PreferenceService
+ from app.services.profile_context_service import ProfileContextService
+@@ -377,6 +378,15 @@ class ContextOrchestrator:
+             # 不能当"记忆新鲜度"排序：种子记忆（播种时刻）会永远挤掉刚推断出的记忆。
+             # 拉宽候选池后按记忆价值（importance/confidence）+ 入库时间重排取 top-N。
+             rows = await service.get_recent_episodic(user_id, limit=max(limit * 4, 12))
++            # M-03 确定性 L0 预筛：user/status/TTL/scope/purpose/sensitivity 硬砍
++            # 之后再进入重排/注入（MEMORY_V3 §3 步骤 1-5；含 superseded/expired
++            # 承诺/user_memory_settings 读侧权限——SQL 层均不覆盖）。
++            retrieval_ctx = await build_retrieval_context(
++                db_session or self.db,
++                user_id=user_id,
++                purpose=PURPOSE_LLM_CONTEXT,
++            )
++            rows = apply_memory_prefilter(rows, retrieval_ctx)
+             rows = sorted(
+                 rows,
+                 key=lambda m: (
+diff --git a/backend/app/core/context_pack.py b/backend/app/core/context_pack.py
+index 4a9917fb..2d05f0f8 100644
+--- a/backend/app/core/context_pack.py
++++ b/backend/app/core/context_pack.py
+@@ -53,6 +53,11 @@ from app.services.embedding_service import embedding_service
+ from app.services.ltm_rollout_service import LtmRolloutService
+ from app.services.memory_conflict_resolver import MemoryConflictResolver
+ from app.services.memory_rank_policy_service import MemoryRankPolicyService
++from app.services.memory_retrieval_prefilter import (
++    PURPOSE_LLM_CONTEXT,
++    build_retrieval_context,
++    prefilter_candidates,
++)
+ from app.services.memory_service import MemoryService
+ from app.services.personalization.preference_service import PreferenceService
+ 
+@@ -1258,8 +1263,39 @@ class ContextPackBuilder:
+         if conflict_enabled:
+             pref_history = await self.memory_service.list_preference_history(user_id)
+ 
++        # M-03 deterministic L0 prefilter: illegal candidates (wrong user /
++        # non-active status incl. superseded versions / expired commitments /
++        # out-of-scope goals / user_memory_settings permission blocks) are cut
++        # BEFORE rank / semantic gating / budget see them (MEMORY_V3 §3 1-5).
++        # Conflict-resolution history stays unfiltered —— supersede resolution
++        # legitimately needs the full version chain.
++        retrieval_ctx = await build_retrieval_context(
++            self.db,
++            user_id=user_id,
++            purpose=PURPOSE_LLM_CONTEXT,
++            plan_id=plan_id,
++        )
++        pref_prefilter = prefilter_candidates(preference_records, retrieval_ctx)
++        goal_prefilter = prefilter_candidates(goals, retrieval_ctx)
++        episodic_prefilter = prefilter_candidates(episodic, retrieval_ctx)
++        preference_records = pref_prefilter.allowed
++        goals = goal_prefilter.allowed
++        episodic = episodic_prefilter.allowed
++        prefilter_metadata = {
++            "user_id": str(user_id),
++            "purpose": PURPOSE_LLM_CONTEXT,
++            "plan_id": str(plan_id) if plan_id else None,
++            "sections": {
++                "preferences": pref_prefilter.to_metric_payload(),
++                "goals": goal_prefilter.to_metric_payload(),
++                "episodic": episodic_prefilter.to_metric_payload(),
++            },
++        }
++
+         metadata: dict[str, Any] = {
+             "document_context_controls": document_context_controls.to_metadata(),
++            # M-03: per-dimension / per-reason cut counts (D-06/O-02 observability).
++            "memory_prefilter": prefilter_metadata,
+         }
+         ranking_enabled = settings.ENABLE_CONTEXT_RANKING and rollout_enabled
+         conflicts: list[dict[str, Any]] = []
+diff --git a/backend/app/orchestration/context_builder.py b/backend/app/orchestration/context_builder.py
+index 5e6140f8..3efdad9d 100644
+--- a/backend/app/orchestration/context_builder.py
++++ b/backend/app/orchestration/context_builder.py
+@@ -43,6 +43,7 @@ from app.services.aurora_stage39_kill_switch_service import AuroraStage39KillSwi
+ from app.services.focus_service import focus_service
+ from app.services.galaxy_service import GalaxyService
+ from app.services.insight_copy import canonical_pattern_key, present_pattern_description, present_pattern_name
++from app.services.memory_retrieval_prefilter import PURPOSE_LLM_CONTEXT, apply_memory_prefilter, build_retrieval_context
+ from app.services.memory_service import MemoryService
+ from app.services.plan_service import PlanService
+ from app.services.self_evolution_service import UnderstandingDepthService
+@@ -589,6 +590,17 @@ class ContextBuilderMixin:
+         ]
+ 
+         episodic_rows = await memory_service.list_recent_episodic(user_uuid, limit=12)
++        # M-03 deterministic L0 prefilter (R1-F2): stage34 feeds the main chat
++        # payload's episodic_memories, which prompts render into the system
++        # prompt — superseded / expired / permission-blocked rows are cut here,
++        # before the correction/importance ranking (same law as context_manager
++        # and context_pack pull paths; MEMORY_V3 §3 steps 1-5 before semantics).
++        retrieval_ctx = await build_retrieval_context(
++            db_session,
++            user_id=user_uuid,
++            purpose=PURPOSE_LLM_CONTEXT,
++        )
++        episodic_rows = apply_memory_prefilter(episodic_rows, retrieval_ctx)
+         ranked_episodic_rows = sorted(
+             episodic_rows,
+             key=lambda memory: (
+diff --git a/backend/app/services/memory_retrieval_prefilter.py b/backend/app/services/memory_retrieval_prefilter.py
+new file mode 100644
+index 00000000..ad6fff5a
+--- /dev/null
++++ b/backend/app/services/memory_retrieval_prefilter.py
+@@ -0,0 +1,716 @@
++"""Memory V3 deterministic retrieval prefilter (task M-03).
++
++Single authority for the L0 hard-cut layer that runs BEFORE any semantic /
++ranking stage touches memory candidates. Dimensions and their FIXED evaluation
++order (``FILTER_DIMENSIONS`` — the first failing dimension owns the rejection
++attribution, so metric attribution is deterministic):
++
++    1. identity / tenant filter          -> dimension ``user``
++    2. status filter                     -> dimension ``status`` (M-01 machine)
++    3. TTL / freshness                   -> dimension ``ttl`` (incl. today-only)
++    4. scope compatibility               -> dimension ``scope`` (lattice below)
++    5. purpose & permission              -> dimension ``purpose`` (+ user_memory_settings)
++    6. sensitivity ceiling               -> dimension ``sensitivity``
++
++Order note (R2-F2): MEMORY_V3.md §3 documents the pipeline as
++identity/status/purpose/scope/TTL; the implementation deliberately evaluates
++ttl before scope and purpose after both (cheap column-derived cuts first,
++lattice next, settings-snapshot checks last). This implementation order is
++the single authority — it is pinned by ``test_filter_dimensions_order_is_pinned``
++plus the five adjacent-pair attribution tests; any reorder shifts D-06/O-02
++dimension_counts attribution and MUST bump ``MEMORY_PREFILTER_VERSION``.
++
++Step 6 (conflict/supersede resolution) stays with the existing
++``MemoryConflictResolver`` / M-01 epistemic contract; steps 7-11 (semantic
++retrieval / rerank / Self-ReCheck / budget / receipt) are untouched.
++
++Design rules:
++
++- **Pure core, thin adapter.** ``prefilter_candidates`` performs no I/O so any
++  candidate source (SQL pull, vector search, working-memory consolidation)
++  can be guarded; ``build_retrieval_context`` is the only async I/O helper
++  (loads ``user_memory_settings`` best-effort).
++- **No new storage.** Scope / TTL / purpose / sensitivity are derived from
++  existing columns via the M-01 projection (``derive_scope`` /
++  ``derive_status`` / ``classify_episodic_class``); the typed
++  ``MemoryScopeDescriptor`` exists so future writers (M-04/M-06) can declare
++  explicit scope without migrations.
++- **Conservative-pass on unconstrained dimensions, fail-closed on identity.**
++  When the retrieval context does not constrain goal/domain/task_type, a
++  scoped record passes (relevance is the semantic stage's job). Identity
++  (wrong user), status, TTL and session boundaries are unconditional cuts.
++- **Closed vocabularies as single sources of truth** so the lattice cannot be
++  re-defined in three places: ``SCOPE_LEVELS`` / ``SCOPE_COMPATIBILITY`` /
++  ``LEVEL_ANCHOR_KEYS`` / ``RETRIEVAL_PURPOSES`` / ``SENSITIVITY_RANK`` /
++  ``FILTER_DIMENSIONS``. Guards in ``tests/unit/test_memory_retrieval_prefilter.py``
++  pin the full-matrix parity, the evaluation order AND the derive_scope <->
++  SCOPE_LEVELS vocabulary parity (M-01 adding a scope level turns them red).
++"""
++
++from __future__ import annotations
++
++from dataclasses import dataclass, field
++from datetime import datetime, timedelta
++from enum import StrEnum
++from types import MappingProxyType
++from typing import Any, Iterable, Mapping
++from uuid import UUID
++
++from loguru import logger
++from sqlalchemy import select
++from sqlalchemy.ext.asyncio import AsyncSession
++
++from app.core.business_metrics import MEMORY_PREFILTER_REJECTIONS_TOTAL
++from app.core.time_utils import ensure_naive_utc, utcnow
++from app.services.memory_epistemic_contract import (
++    EpistemicClass,
++    MemoryRecordStatus,
++    classify_episodic_class,
++    derive_scope,
++    derive_status,
++)
++
++MEMORY_PREFILTER_VERSION = "memory-v3.m03.v1"
++
++# ---------------------------------------------------------------------------
++# 1. Closed vocabularies (single source of truth)
++# ---------------------------------------------------------------------------
++
++
++class FilterDimension(StrEnum):
++    """Coarse filter dimensions (metrics labels; card: user/status/revoked/
++    scope/TTL/purpose/sensitivity —— revoked is a status value under M-01's
++    status precedence, so it reports under ``status`` with reason
++    ``status:revoked``)."""
++
++    USER = "user"
++    STATUS = "status"
++    TTL = "ttl"
++    SCOPE = "scope"
++    PURPOSE = "purpose"
++    SENSITIVITY = "sensitivity"
++
++
++# Fixed evaluation order: the first failing dimension owns the rejection
++# reason (deterministic metric attribution).
++FILTER_DIMENSIONS: tuple[FilterDimension, ...] = (
++    FilterDimension.USER,
++    FilterDimension.STATUS,
++    FilterDimension.TTL,
++    FilterDimension.SCOPE,
++    FilterDimension.PURPOSE,
++    FilterDimension.SENSITIVITY,
++)
++
++# Memory scope levels (compatibility lattice). Aligned with C-01
++# ``DECISION_SCOPES``: goal~plan/task anchors, domain~user-subject, global~
++# global, session~session; ``task_type`` is the task-shape axis from
++# MEMORY_V3.md §1 (no stored record derives it today —— explicit descriptors
++# only, future writers).
++SCOPE_LEVELS: tuple[str, ...] = ("global", "goal", "domain", "task_type", "session")
++
++# Retrieval-constraint states for the compatibility matrix.
++_SCOPE_CTX_STATES: tuple[str, ...] = ("unconstrained", "match", "mismatch")
++
++# The compatibility matrix (closed structure). Semantics:
++# - ``unconstrained``: ctx sets no anchor for the record's level, OR the
++#   record itself carries no anchor on any constrained key (an unanchored
++#   scoped record behaves as user-global).
++# - ``match``: at least one record anchor equals a constrained ctx value.
++# - ``mismatch``: ctx constrains the level and no anchor matches.
++# session is fail-closed: transient/working-memory scope never leaks outside
++# its own session (MEMORY_V3 §2 —— transient state must not cross sessions).
++SCOPE_COMPATIBILITY: Mapping[tuple[str, str], bool] = MappingProxyType(
++    {
++        ("global", "unconstrained"): True,
++        ("global", "match"): True,
++        ("global", "mismatch"): True,
++        ("goal", "unconstrained"): True,
++        ("goal", "match"): True,
++        ("goal", "mismatch"): False,
++        ("domain", "unconstrained"): True,
++        ("domain", "match"): True,
++        ("domain", "mismatch"): False,
++        ("task_type", "unconstrained"): True,
++        ("task_type", "match"): True,
++        ("task_type", "mismatch"): False,
++        ("session", "unconstrained"): False,
++        ("session", "match"): True,
++        ("session", "mismatch"): False,
++    }
++)
++
++# Which descriptor keys are the anchors for each level (used both to read the
++# record's anchors and to find the ctx constraints that apply to it).
++LEVEL_ANCHOR_KEYS: Mapping[str, tuple[str, ...]] = MappingProxyType(
++    {
++        "global": (),
++        "goal": ("goal_id", "task_id", "plan_id"),
++        "domain": ("domain_key",),
++        "task_type": ("task_type",),
++        "session": ("session_id",),
++    }
++)
++
++# Closed consumption-purpose vocabulary. ``llm_context`` is the chat/pack
++# injection purpose; jobs that legitimately need every row (decay, repair,
++# conflict resolution) do not go through retrieval prefiltering.
++RETRIEVAL_PURPOSES: frozenset[str] = frozenset({"llm_context", "personalization", "analytics", "export", "governance"})
++PURPOSE_LLM_CONTEXT = "llm_context"
++
++# Ordered sensitivity vocabulary: a record is legal only when its sensitivity
++# rank <= the retrieval context ceiling. No existing column derives
++# ``sensitive`` today (documented limitation —— mechanism is live, policy
++# data lands with future writers; see module docstring and M-03 report).
++SENSITIVITY_RANK: Mapping[str, int] = MappingProxyType({"normal": 0, "sensitive": 1})
++DEFAULT_MAX_SENSITIVITY = "normal"
++
++# TTL rules derived from existing columns (naive-UTC canonical, time_utils):
++# - ``due_at+7d`` commitment records (memory_inferred_write_lane) hard-expire
++#   7 days after their due_at (D4 ledger: previously NO consumer).
++# - ``1d``/``today`` decay policies mark today-only records: valid solely on
++#   their capture date (UTC day of ``created_at``).
++# Half-life policies (7d/30d/60d/90d) are soft decay, owned by the daily
++# decay job (archival -> status dimension); they are NOT hard cuts here.
++EPISODIC_HARD_TTL_BY_DECAY_POLICY: Mapping[str, int] = MappingProxyType({"due_at+7d": 7})
++TODAY_ONLY_DECAY_POLICIES: frozenset[str] = frozenset({"1d", "today"})
++
++# ---------------------------------------------------------------------------
++# 2. Scope descriptor + retrieval context
++# ---------------------------------------------------------------------------
++
++
++@dataclass(frozen=True)
++class MemoryScopeDescriptor:
++    """Typed scope of one memory candidate.
++
++    ``scope_of_record`` derives it from existing storage via the M-01
++    ``derive_scope`` projection; explicit construction is for tests and for
++    future writers that declare scope at write time.
++    """
++
++    level: str = "global"
++    goal_id: str | None = None
++    task_id: str | None = None
++    plan_id: str | None = None
++    domain_key: str | None = None
++    task_type: str | None = None
++    session_id: str | None = None
++    # time window (TTL dimension inputs)
++    today_only: bool = False
++    valid_from: datetime | None = None
++    valid_until: datetime | None = None
++    # purpose / sensitivity restrictions (explicit descriptors only today)
++    allowed_purposes: frozenset[str] | None = None
++    sensitivity: str = "normal"
++
++
++@dataclass(frozen=True)
++class UserMemoryPermissions:
++    """Best-effort snapshot of ``user_memory_settings`` (permission layer of
++    the purpose dimension). Missing settings row -> everything allowed
++    (matches write-side ``_is_user_disabled`` semantics)."""
++
++    enabled: bool = True
++    allow_preferences: bool = True
++    allow_goals: bool = True
++    allow_episodic: bool = True
++    allow_inferred_episodic: bool = True
++    blocked_pref_keys: frozenset[str] = frozenset()
++    blocked_sources: frozenset[str] = frozenset()
++
++    @classmethod
++    def from_settings_row(cls, row: Any) -> UserMemoryPermissions:
++        if row is None:
++            return cls()
++        return cls(
++            enabled=bool(getattr(row, "enabled", True)),
++            allow_preferences=bool(getattr(row, "allow_preferences", True)),
++            allow_goals=bool(getattr(row, "allow_goals", True)),
++            allow_episodic=bool(getattr(row, "allow_episodic", True)),
++            allow_inferred_episodic=bool(getattr(row, "allow_inferred_episodic", True)),
++            blocked_pref_keys=frozenset(str(k) for k in (getattr(row, "blocked_pref_keys", None) or [])),
++            blocked_sources=frozenset(str(s) for s in (getattr(row, "blocked_sources", None) or [])),
++        )
++
++
++@dataclass(frozen=True)
++class RetrievalContext:
++    """Everything the deterministic prefilter is allowed to know about the
++    consumption act. ``now`` is naive UTC (time_utils canonical)."""
++
++    user_id: str
++    purpose: str
++    now: datetime
++    goal_ids: frozenset[str] = frozenset()
++    task_ids: frozenset[str] = frozenset()
++    plan_ids: frozenset[str] = frozenset()
++    domain_keys: frozenset[str] = frozenset()
++    task_type: str | None = None
++    session_id: str | None = None
++    permissions: UserMemoryPermissions = field(default_factory=UserMemoryPermissions)
++    max_sensitivity: str = DEFAULT_MAX_SENSITIVITY
++
++    def __post_init__(self) -> None:
++        if self.purpose not in RETRIEVAL_PURPOSES:
++            raise ValueError(f"unknown retrieval purpose {self.purpose!r}; vocabulary: {sorted(RETRIEVAL_PURPOSES)}")
++        if self.max_sensitivity not in SENSITIVITY_RANK:
++            raise ValueError(
++                f"unknown max_sensitivity {self.max_sensitivity!r}; vocabulary: {sorted(SENSITIVITY_RANK)}"
++            )
++
++
++# ctx anchor values per descriptor key (single mapping used by both the
++# matrix evaluation and the lattice tests —— prevents scattered definitions).
++CTX_ANCHOR_VALUES: Mapping[str, Any] = MappingProxyType(
++    {
++        "goal_id": lambda ctx: ctx.goal_ids,
++        "task_id": lambda ctx: ctx.task_ids,
++        "plan_id": lambda ctx: ctx.plan_ids,
++        "domain_key": lambda ctx: ctx.domain_keys,
++        "task_type": lambda ctx: frozenset({ctx.task_type}) if ctx.task_type else frozenset(),
++        "session_id": lambda ctx: frozenset({ctx.session_id}) if ctx.session_id else frozenset(),
++    }
++)
++
++
++# ---------------------------------------------------------------------------
++# 3. Result types (filter reason metrics)
++# ---------------------------------------------------------------------------
++
++
++@dataclass(frozen=True)
++class Rejection:
++    record_id: str
++    dimension: str
++    reason: str
++    detail: str = ""
++
++
++@dataclass(frozen=True)
++class PrefilterResult:
++    allowed: list[Any]
++    rejections: list[Rejection]
++    input_count: int
++    dimension_counts: dict[str, int]
++    reason_counts: dict[str, int]
++
++    @property
++    def allowed_count(self) -> int:
++        return len(self.allowed)
++
++    def to_metric_payload(self) -> dict[str, Any]:
++        """Structured filter-reason output for pack metadata / telemetry
++        (consumed by D-06/O-02 observability)."""
++        return {
++            "version": MEMORY_PREFILTER_VERSION,
++            "input_count": self.input_count,
++            "allowed_count": self.allowed_count,
++            "dimension_counts": dict(self.dimension_counts),
++            "reason_counts": dict(self.reason_counts),
++        }
++
++
++# ---------------------------------------------------------------------------
++# 4. Derivation helpers (delegate to M-01 authorities)
++# ---------------------------------------------------------------------------
++
++
++def record_kind(record: Any) -> str:
++    """Which memory family a candidate belongs to (for type-level
++    permissions). ORM rows use ``__tablename__``; duck-typed projections fall
++    back to attribute sniffing."""
++    table = str(getattr(type(record), "__tablename__", "") or "")
++    if table == "memory_preferences":
++        return "preference"
++    if table == "memory_goals":
++        return "goal"
++    if table == "episodic_memories":
++        return "episodic"
++    if getattr(record, "pref_key", None) is not None:
++        return "preference"
++    if getattr(record, "summary", None) is not None and getattr(record, "occurred_at", None) is not None:
++        return "episodic"
++    if getattr(record, "expires_at", None) is not None or getattr(record, "target_date", None) is not None:
++        return "goal"
++    return "unknown"
++
++
++def _parse_iso(value: str | None) -> datetime | None:
++    if not value:
++        return None
++    try:
++        return ensure_naive_utc(datetime.fromisoformat(str(value)))
++    except ValueError:
++        return None
++
++
++def scope_of_record(record: Any) -> MemoryScopeDescriptor:
++    """Lift the M-01 ``derive_scope`` projection into the typed descriptor.
++
++    M-01 stays the derivation authority over existing columns; this module
++    only adds TTL/sensitivity/purpose semantics on top.
++    """
++    projection = derive_scope(record)
++    # Unknown levels are PRESERVED, never lifted to "global": scope_compatible
++    # fail-closes them (reason scope:unknown_level, metric-observable). Lifting
++    # an uninterpretable scope to user-global would be fail-open — exactly the
++    # fault class this layer exists to prevent (R2-F1). The derive_scope <->
++    # SCOPE_LEVELS vocabulary parity guard in the unit tests turns red the
++    # moment M-01 emits a level this module cannot interpret.
++    level = str(projection.get("level") or "global")
++    time_window = projection.get("time_window") or {}
++    decay_policy = str(projection.get("decay_policy") or "").strip().lower()
++    today_only = decay_policy in TODAY_ONLY_DECAY_POLICIES
++    valid_until = _parse_iso(time_window.get("expires_at"))
++    if valid_until is None:
++        valid_until = _parse_iso(time_window.get("due_at"))
++    return MemoryScopeDescriptor(
++        level=level,
++        goal_id=str(projection["task_id"]) if level == "goal" and projection.get("task_id") else None,
++        task_id=str(projection.get("task_id")) if projection.get("task_id") else None,
++        plan_id=str(projection.get("plan_id")) if projection.get("plan_id") else None,
++        domain_key=str(projection.get("domain_key")) if projection.get("domain_key") else None,
++        task_type=None,
++        session_id=str(projection.get("session_id")) if projection.get("session_id") else None,
++        today_only=today_only,
++        valid_from=None,
++        valid_until=valid_until,
++    )
++
++
++def sensitivity_of_record(record: Any, descriptor: MemoryScopeDescriptor) -> str:
++    """Record sensitivity. No existing column carries it (default ``normal``);
++    explicit descriptors / future columns plug in here without touching the
++    enforcement point."""
++    value = str(descriptor.sensitivity or DEFAULT_MAX_SENSITIVITY).strip().lower()
++    return value if value in SENSITIVITY_RANK else DEFAULT_MAX_SENSITIVITY
++
++
++def _is_inferred_episodic(record: Any) -> bool:
++    """An episodic record written by the inference layer: M-01 classifies
++    rule/llm/unknown-lane rows as HYPOTHESIS —— single source of truth."""
++    if record_kind(record) != "episodic":
++        return False
++    epistemic = classify_episodic_class(
++        getattr(record, "source_lane", None),
++        explicit_class=getattr(record, "epistemic_class", None),
++        source_type=getattr(record, "source_type", None),
++    )
++    return epistemic == EpistemicClass.HYPOTHESIS.value
++
++
++def _record_id(record: Any) -> str:
++    for attr in ("id", "entry_id", "pref_key"):
++        value = getattr(record, attr, None)
++        if value is not None:
++            return str(value)
++    return "<unknown>"
++
++
++def _record_user_id(record: Any) -> str | None:
++    value = getattr(record, "user_id", None)
++    return None if value is None else str(value)
++
++
++# ---------------------------------------------------------------------------
++# 5. Dimension checks (pure)
++# ---------------------------------------------------------------------------
++
++
++def _reject_user(record: Any, ctx: RetrievalContext) -> Rejection | None:
++    record_user = _record_user_id(record)
++    if record_user is None or record_user != ctx.user_id:
++        return Rejection(
++            record_id=_record_id(record),
++            dimension=FilterDimension.USER.value,
++            reason="user:wrong_user",
++            detail=f"record_user={record_user!r} context_user={ctx.user_id!r}",
++        )
++    return None
++
++
++def _reject_status(record: Any, ctx: RetrievalContext) -> Rejection | None:
++    status = derive_status(record, now=ctx.now)
++    if status != MemoryRecordStatus.ACTIVE.value:
++        return Rejection(
++            record_id=_record_id(record),
++            dimension=FilterDimension.STATUS.value,
++            reason=f"status:{status}",
++            detail="M-01 status machine (revoked>superseded>retracted>archived>expired>resolved)",
++        )
++    return None
++
++
++def _reject_ttl(
++    record: Any,
++    ctx: RetrievalContext,
++    descriptor: MemoryScopeDescriptor,
++) -> Rejection | None:
++    now = ctx.now
++    if descriptor.valid_from is not None and now < descriptor.valid_from:
++        return Rejection(
++            record_id=_record_id(record),
++            dimension=FilterDimension.TTL.value,
++            reason="ttl:not_yet_valid",
++            detail=f"valid_from={descriptor.valid_from.isoformat()}",
++        )
++    # Column-backed expiry (goals.expires_at) already reported by the status
++    # machine as status:expired; here we only add lattice-derived windows.
++    due_at = ensure_naive_utc(getattr(record, "due_at", None))
++    decay_policy = str(getattr(record, "decay_policy", None) or "").strip().lower()
++    hard_days = EPISODIC_HARD_TTL_BY_DECAY_POLICY.get(decay_policy)
++    if hard_days is not None and due_at is not None:
++        horizon = due_at + timedelta(days=hard_days)
++        if now > horizon:
++            return Rejection(
++                record_id=_record_id(record),
++                dimension=FilterDimension.TTL.value,
++                reason="ttl:expired",
++                detail=f"decay_policy={decay_policy} due_at={due_at.isoformat()} horizon={horizon.isoformat()}",
++            )
++    if descriptor.today_only:
++        anchor_date = ensure_naive_utc(getattr(record, "created_at", None)) or ensure_naive_utc(
++            getattr(record, "occurred_at", None)
++        )
++        anchor_day = anchor_date.date() if anchor_date is not None else None
++        if anchor_day is not None and now.date() != anchor_day:
++            return Rejection(
++                record_id=_record_id(record),
++                dimension=FilterDimension.TTL.value,
++                reason="ttl:today_only_expired",
++                detail=f"valid_on={anchor_day.isoformat()} now={now.date().isoformat()} (naive-UTC days)",
++            )
++    return None
++
++
++def _ctx_constraint_state(descriptor: MemoryScopeDescriptor, ctx: RetrievalContext) -> str:
++    """Classify the (record, ctx) pair into a SCOPE_COMPATIBILITY column."""
++    constrained = False
++    matched = False
++    for key in LEVEL_ANCHOR_KEYS.get(descriptor.level, ()):  # () for global
++        ctx_values = CTX_ANCHOR_VALUES[key](ctx)
++        if not ctx_values:
++            continue
++        constrained = True
++        record_anchor = getattr(descriptor, key, None)
++        if record_anchor is not None and str(record_anchor) in {str(v) for v in ctx_values}:
++            matched = True
++    if matched:
++        return "match"
++    if not constrained:
++        return "unconstrained"
++    # ctx constrains this level but no record anchor matched. An unanchored
++    # record (no anchor values at all on this level's keys) does not
++    # restrict itself -> behaves as user-global -> unconstrained column.
++    anchors = [getattr(descriptor, key, None) for key in LEVEL_ANCHOR_KEYS.get(descriptor.level, ())]
++    if all(anchor is None for anchor in anchors):
++        return "unconstrained"
++    return "mismatch"
++
++
++def scope_compatible(descriptor: MemoryScopeDescriptor, ctx: RetrievalContext) -> tuple[bool, str | None]:
++    """Evaluate the compatibility matrix for one descriptor. Unknown levels
++    fail closed (never inject a record whose scope we cannot interpret)."""
++    if descriptor.level not in SCOPE_LEVELS:
++        return False, "scope:unknown_level"
++    state = _ctx_constraint_state(descriptor, ctx)
++    allowed = SCOPE_COMPATIBILITY[(descriptor.level, state)]
++    if allowed:
++        return True, None
++    return False, "scope:mismatch"
++
++
++def _reject_scope(descriptor: MemoryScopeDescriptor, ctx: RetrievalContext) -> Rejection | None:
++    allowed, reason = scope_compatible(descriptor, ctx)
++    if allowed:
++        return None
++    anchors = {
++        key: getattr(descriptor, key, None)
++        for key in LEVEL_ANCHOR_KEYS.get(descriptor.level, ())
++        if getattr(descriptor, key, None) is not None
++    }
++    return Rejection(
++        record_id="",  # filled by caller (needs the record)
++        dimension=FilterDimension.SCOPE.value,
++        reason=reason or "scope:mismatch",
++        detail=f"level={descriptor.level} anchors={anchors}",
++    )
++
++
++def _reject_purpose(
++    record: Any,
++    ctx: RetrievalContext,
++    descriptor: MemoryScopeDescriptor,
++) -> Rejection | None:
++    permissions = ctx.permissions
++    kind = record_kind(record)
++    record_id = _record_id(record)
++
++    def _reject(reason: str, detail: str) -> Rejection:
++        return Rejection(record_id=record_id, dimension=FilterDimension.PURPOSE.value, reason=reason, detail=detail)
++
++    if not permissions.enabled:
++        return _reject("purpose:memory_disabled", "user_memory_settings.enabled=false")
++    if kind == "preference":
++        if not permissions.allow_preferences:
++            return _reject("purpose:type_disabled", "allow_preferences=false")
++        pref_key = str(getattr(record, "pref_key", "") or "")
++        if pref_key and pref_key in permissions.blocked_pref_keys:
++            return _reject("purpose:blocked_pref_key", f"pref_key={pref_key}")
++    elif kind == "goal":
++        if not permissions.allow_goals:
++            return _reject("purpose:type_disabled", "allow_goals=false")
++    elif kind == "episodic":
++        if not permissions.allow_episodic:
++            return _reject("purpose:type_disabled", "allow_episodic=false")
++        if not permissions.allow_inferred_episodic and _is_inferred_episodic(record):
++            return _reject("purpose:inferred_episodic_disabled", "M-01 class=HYPOTHESIS (inference lane)")
++    source_type = str(getattr(record, "source_type", "") or "")
++    if source_type and source_type in permissions.blocked_sources:
++        return _reject("purpose:blocked_source", f"source_type={source_type}")
++    if descriptor.allowed_purposes is not None and ctx.purpose not in descriptor.allowed_purposes:
++        return _reject(
++            "purpose:not_allowed",
++            f"record allows {sorted(descriptor.allowed_purposes)}, consumption purpose={ctx.purpose}",
++        )
++    return None
++
++
++def _reject_sensitivity(
++    record: Any,
++    ctx: RetrievalContext,
++    descriptor: MemoryScopeDescriptor,
++) -> Rejection | None:
++    sensitivity = sensitivity_of_record(record, descriptor)
++    if SENSITIVITY_RANK[sensitivity] > SENSITIVITY_RANK[ctx.max_sensitivity]:
++        return Rejection(
++            record_id=_record_id(record),
++            dimension=FilterDimension.SENSITIVITY.value,
++            reason="sensitivity:exceeded",
++            detail=f"record={sensitivity} ceiling={ctx.max_sensitivity}",
++        )
++    return None
++
++
++# ---------------------------------------------------------------------------
++# 6. The prefilter (pure core)
++# ---------------------------------------------------------------------------
++
++
++def prefilter_candidates(candidates: Iterable[Any], ctx: RetrievalContext) -> PrefilterResult:
++    """Deterministically cut illegal memory candidates before semantic
++    retrieval. Returns the legal subset plus per-record rejection reasons and
++    per-dimension / per-reason counts (also emitted as logs + metrics)."""
++    allowed: list[Any] = []
++    rejections: list[Rejection] = []
++    dimension_counts: dict[str, int] = {dimension.value: 0 for dimension in FILTER_DIMENSIONS}
++    reason_counts: dict[str, int] = {}
++    input_count = 0
++
++    for record in candidates:
++        input_count += 1
++        descriptor = scope_of_record(record)
++        rejection: Rejection | None = (
++            _reject_user(record, ctx)
++            or _reject_status(record, ctx)
++            or _reject_ttl(record, ctx, descriptor)
++            or _reject_scope(descriptor, ctx)
++            or _reject_purpose(record, ctx, descriptor)
++            or _reject_sensitivity(record, ctx, descriptor)
++        )
++        if rejection is None:
++            allowed.append(record)
++            continue
++        if rejection.dimension == FilterDimension.SCOPE.value and not rejection.record_id:
++            rejection = Rejection(
++                record_id=_record_id(record),
++                dimension=rejection.dimension,
++                reason=rejection.reason,
++                detail=rejection.detail,
++            )
++        rejections.append(rejection)
++        dimension_counts[rejection.dimension] = dimension_counts.get(rejection.dimension, 0) + 1
++        reason_counts[rejection.reason] = reason_counts.get(rejection.reason, 0) + 1
++        try:
++            MEMORY_PREFILTER_REJECTIONS_TOTAL.labels(dimension=rejection.dimension, reason=rejection.reason).inc()
++        except Exception:  # pragma: no cover - metrics must never break retrieval
++            pass
++
++    result = PrefilterResult(
++        allowed=allowed,
++        rejections=rejections,
++        input_count=input_count,
++        dimension_counts=dimension_counts,
++        reason_counts=reason_counts,
++    )
++    if rejections:
++        logger.info(
++            "M-03 memory prefilter: input={} allowed={} rejected_dims={} rejected_reasons={}",
++            input_count,
++            result.allowed_count,
++            {k: v for k, v in dimension_counts.items() if v},
++            reason_counts,
++        )
++    return result
++
++
++def apply_memory_prefilter(candidates: Iterable[Any], ctx: RetrievalContext) -> list[Any]:
++    """Convenience wrapper returning only the legal subset."""
++    return prefilter_candidates(candidates, ctx).allowed
++
++
++# ---------------------------------------------------------------------------
++# 7. Async adapter (only I/O boundary of this module)
++# ---------------------------------------------------------------------------
++
++
++async def build_retrieval_context(
++    db: AsyncSession | None,
++    *,
++    user_id: UUID | str,
++    purpose: str,
++    plan_id: UUID | str | None = None,
++    task_ids: Iterable[UUID | str] = (),
++    goal_ids: Iterable[UUID | str] = (),
++    domain_keys: Iterable[str] = (),
++    task_type: str | None = None,
++    session_id: str | None = None,
++    max_sensitivity: str = DEFAULT_MAX_SENSITIVITY,
++    now: datetime | None = None,
++) -> RetrievalContext:
++    """Assemble the RetrievalContext for a consumption act.
++
++    Loads ``user_memory_settings`` best-effort (missing row / DB error ->
++    defaults, matching write-side semantics); a settings read failure must
++    never take down context assembly.
++    """
++    from app.models.user_memory_settings import UserMemorySettings
++
++    permissions = UserMemoryPermissions()
++    if db is not None:
++        try:
++            result = await db.execute(
++                select(UserMemorySettings).where(
++                    UserMemorySettings.user_id == UUID(str(user_id)),
++                    UserMemorySettings.deleted_at.is_(None),
++                )
++            )
++            permissions = UserMemoryPermissions.from_settings_row(result.scalar_one_or_none())
++        except Exception as exc:  # pragma: no cover - defensive
++            logger.warning("M-03 prefilter: user_memory_settings load failed, using defaults: {}", exc)
++
++    plan_ids = frozenset({str(plan_id)}) if plan_id is not None else frozenset()
++    return RetrievalContext(
++        user_id=str(user_id),
++        purpose=purpose,
++        now=ensure_naive_utc(now) or utcnow(),
++        goal_ids=frozenset(str(g) for g in goal_ids),
++        task_ids=frozenset(str(t) for t in task_ids),
++        plan_ids=plan_ids,
++        domain_keys=frozenset(str(d) for d in domain_keys),
++        task_type=task_type,
++        session_id=session_id,
++        permissions=permissions,
++        max_sensitivity=max_sensitivity,
++    )
+diff --git a/backend/tests/aurora/test_h6_dialogue_quality_audit.py b/backend/tests/aurora/test_h6_dialogue_quality_audit.py
+index 80ff2e7b..4fcce8a3 100644
+--- a/backend/tests/aurora/test_h6_dialogue_quality_audit.py
++++ b/backend/tests/aurora/test_h6_dialogue_quality_audit.py
+@@ -207,12 +207,16 @@ async def test_h6_scenario4_cross_session_memory_reaches_prompt_in_practice(db_s
+     monkeypatch.setattr(orchestrator, "_get_social_context_v1", AsyncMock(return_value={}))
+     monkeypatch.setattr(orchestrator, "_get_achievement_context", AsyncMock(return_value={}))
+     monkeypatch.setattr(orchestrator, "_get_calendar_context", AsyncMock(return_value={}))
++    h6_user_id = str(uuid4())
+     monkeypatch.setattr(
+         "app.core.context_manager.MemoryService.get_recent_episodic",
+         AsyncMock(
+             return_value=[
+                 SimpleNamespace(
+                     id=uuid4(),
++                    # M-03: real episodic rows always carry user_id; the
++                    # deterministic prefilter hard-cuts ownerless rows.
++                    user_id=h6_user_id,
+                     summary="你之前提过 TCP 状态转换最容易断链，要先盯触发条件。",
+                     subject_type="learning_profile",
+                     source_type="chat_turn",
+@@ -223,7 +227,7 @@ async def test_h6_scenario4_cross_session_memory_reaches_prompt_in_practice(db_s
+         ),
+     )
+ 
+-    context = await orchestrator.get_context(str(uuid4()))
++    context = await orchestrator.get_context(h6_user_id)
+     prompt = build_system_prompt(
+         user_context=context.model_dump(mode="python"),
+         conversation_history={"messages": []},
+diff --git a/backend/tests/test_context_manager.py b/backend/tests/test_context_manager.py
+index 56c31883..3b8b919c 100644
+--- a/backend/tests/test_context_manager.py
++++ b/backend/tests/test_context_manager.py
+@@ -114,12 +114,16 @@ async def test_context_orchestrator_aggregation(db_session):
+                 }
+             ),
+         )
++        user_id = str(uuid.uuid4())
+         m.setattr(
+             "app.core.context_manager.MemoryService.get_recent_episodic",
+             AsyncMock(
+                 return_value=[
+                     SimpleNamespace(
+                         id=uuid.uuid4(),
++                        # M-03: real episodic rows always carry user_id; the
++                        # deterministic prefilter hard-cuts ownerless rows.
++                        user_id=user_id,
+                         summary="上次你备考计算机网络，传输层不错但子网划分薄弱。",
+                         subject_type="learning_profile",
+                         source_type="chat_turn",
+@@ -130,7 +134,6 @@ async def test_context_orchestrator_aggregation(db_session):
+             ),
+         )
+ 
+-        user_id = str(uuid.uuid4())
+         context = await orchestrator.get_user_context(user_id)
+ 
+     assert isinstance(context, CognitiveContext)
+diff --git a/backend/tests/unit/orchestrator/mixins/test_context_builder_mixin.py b/backend/tests/unit/orchestrator/mixins/test_context_builder_mixin.py
+index c53527da..b641d722 100644
+--- a/backend/tests/unit/orchestrator/mixins/test_context_builder_mixin.py
++++ b/backend/tests/unit/orchestrator/mixins/test_context_builder_mixin.py
+@@ -125,9 +125,13 @@ async def test_attach_stage34_memory_context_injects_goal_and_episodic_top_level
+     )
+     memory = SimpleNamespace(
+         id="memory-1",
++        # M-03: real episodic rows always carry user_id; the deterministic
++        # prefilter hard-cuts ownerless/wrong-user rows before stage34 ranking.
++        user_id="00000000-0000-0000-0000-000000000123",
+         summary="上次复盘时发现自己总把熵增方向和系统边界混在一起。",
+         subject_type="self",
+         source_type="direct_capture",
++        source_lane="direct_capture",
+         occurred_at=None,
+         importance_score=0.8,
+         confidence=0.7,
+diff --git a/backend/tests/unit/test_memory_prefilter_integration.py b/backend/tests/unit/test_memory_prefilter_integration.py
+new file mode 100644
+index 00000000..6dcd2449
+--- /dev/null
++++ b/backend/tests/unit/test_memory_prefilter_integration.py
+@@ -0,0 +1,447 @@
++"""M-03 integration tests —— red→green guard for the retrieval pull paths.
++
++Three attack surfaces, the first two asserted BEFORE any semantic/ranking
++stage and the third (review rework R1-F2) at the rendered prompt:
++
++1. ``ContextOrchestrator._get_past_session_memory`` (context_manager pull
++   path feeding ``past_session_memory`` into the LLM context);
++2. ``ContextPackBuilder.build`` (the semantic retrieval path: candidates ->
++   rank_items -> semantic gating -> budget trim);
++3. ``ContextBuilderMixin._attach_stage34_memory_context`` (main chat payload
++   ``episodic_memories`` -> ``format_user_context`` renders the section into
++   the system prompt).
++
++RED-phase evidence (captured at base 6f488636 before wiring the prefilter,
++see v3-output/M-03/REPORT.md §4; surface 3 red re-captured at 43942d23 in
++the review-rework round):
++- superseded episodic rows (superseded_by_id) pass ``list_recent_episodic``
++  SQL (no such filter) and reach the stage;
++- expired commitments (decay_policy="due_at+7d", past horizon) have NO
++  consumer anywhere (D4 ledger) and reach the stage;
++- superseded preference versions compete with the chain head for injection;
++- goals anchored to another plan reach a plan-scoped pack build;
++- wrong-user / revoked rows injected at the candidate boundary (any
++  non-SQL candidate source) reach the stage unguarded;
++- stage34 rendered the same illegal rows into the system prompt section
++  【近期相关记忆】(prompts.py ``format_user_context``).
++
++GREEN: after the M-03 prefilter is wired, all of the above are 0.
++"""
++
++from datetime import timedelta
++from uuid import uuid4
++
++import pytest
++
++from app.config import settings
++from app.core.context_budget import ContextBudgetScheduler
++from app.core.context_manager import ContextOrchestrator
++from app.core.context_pack import ContextPackBuilder
++from app.models.memory import EpisodicMemory
++from app.models.user import User
++from app.orchestration.context_builder import ContextBuilderMixin
++from app.services.memory_service import MemoryService
++
++NOW_LABEL = "now"
++
++
++def _utcnow():
++    from app.core.time_utils import utcnow
++
++    return utcnow()
++
++
++async def _create_user(db_session):
++    user_id = uuid4()
++    user = User(
++        id=user_id,
++        username=f"user_{user_id.hex[:8]}",
++        email=f"{user_id.hex[:8]}@example.com",
++        hashed_password="test",
++    )
++    db_session.add(user)
++    await db_session.commit()
++    return user_id
++
++
++async def _add_episodic(db_session, user_id, *, summary, importance=0.9, **overrides):
++    record = EpisodicMemory(
++        user_id=user_id,
++        summary=summary,
++        source_type=overrides.pop("source_type", "chat_turn"),
++        source_lane=overrides.pop("source_lane", "direct_capture"),
++        subject_type=overrides.pop("subject_type", "self"),
++        occurred_at=overrides.pop("occurred_at", _utcnow() - timedelta(hours=1)),
++        importance_score=importance,
++        evidence_refs=[{"type": "user_state", "id": "t"}],
++        **overrides,
++    )
++    db_session.add(record)
++    await db_session.commit()
++    return record
++
++
++# ---------------------------------------------------------------------------
++# Surface 1: ContextOrchestrator._get_past_session_memory
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.asyncio
++async def test_db_live_leaks_superseded_and_expired_commitment(db_session):
++    """Rows that TODAY's SQL genuinely returns (real leaks, not mocks):
++    superseded + expired commitment must not reach past_session_memory."""
++    user_id = await _create_user(db_session)
++    now = _utcnow()
++
++    legal = await _add_episodic(db_session, user_id, summary="LEGAL-episodic", importance=0.4)
++    superseded = await _add_episodic(db_session, user_id, summary="SUPERSEDED-episodic", importance=0.95)
++    superseded.superseded_by_id = uuid4()
++    await db_session.commit()
++    await _add_episodic(
++        db_session,
++        user_id,
++        summary="EXPIRED-COMMITMENT",
++        importance=0.95,
++        subject_type="commitment",
++        decay_policy="due_at+7d",
++        due_at=now - timedelta(days=10),
++    )
++    fresh_commitment = await _add_episodic(
++        db_session,
++        user_id,
++        summary="FRESH-COMMITMENT",
++        importance=0.95,
++        subject_type="commitment",
++        decay_policy="due_at+7d",
++        due_at=now - timedelta(days=2),
++    )
++
++    orchestrator = ContextOrchestrator(db_session, None)
++    memories = await orchestrator._get_past_session_memory(user_id, limit=10)
++    summaries = [m["summary"] for m in memories]
++
++    # M-03 acceptance: illegal candidates are 0 at the semantic input.
++    assert "SUPERSEDED-episodic" not in summaries, f"superseded row leaked: {summaries}"
++    assert "EXPIRED-COMMITMENT" not in summaries, f"expired commitment leaked: {summaries}"
++    # legal candidates survive (both fresh rows).
++    assert "LEGAL-episodic" in summaries
++    assert "FRESH-COMMITMENT" in summaries
++    assert legal is not None and fresh_commitment is not None
++
++
++@pytest.mark.asyncio
++async def test_stage_level_no_guard_for_wrong_user_and_revoked(db_session, monkeypatch):
++    """Candidate-source boundary guard: a non-SQL source (or a SQL regression)
++    handing wrong-user/revoked rows to the pull path must get 0 through.
++    At base 6f488636 this leaks (RED evidence in the M-03 report)."""
++    user_id = await _create_user(db_session)
++    now = _utcnow()
++
++    wrong_user = await _add_episodic(db_session, uuid4(), summary="WRONG-USER", importance=0.99)
++    revoked = await _add_episodic(db_session, user_id, summary="REVOKED", importance=0.99)
++    revoked.revoked_at = now
++    await db_session.commit()
++    legal = await _add_episodic(db_session, user_id, summary="STAGE-LEGAL", importance=0.5)
++
++    async def _fake_pull(self, uid, limit=10, **kwargs):
++        return [wrong_user, revoked, legal]
++
++    monkeypatch.setattr(MemoryService, "get_recent_episodic", _fake_pull)
++
++    orchestrator = ContextOrchestrator(db_session, None)
++    memories = await orchestrator._get_past_session_memory(user_id, limit=10)
++    summaries = [m["summary"] for m in memories]
++
++    assert "WRONG-USER" not in summaries, f"wrong-user row leaked: {summaries}"
++    assert "REVOKED" not in summaries, f"revoked row leaked: {summaries}"
++    assert "STAGE-LEGAL" in summaries
++
++
++@pytest.mark.asyncio
++async def test_user_settings_permission_layer_enforced_on_read(db_session):
++    """user_memory_settings is enforced on writes today but never on reads:
++    allow_episodic=False must empty the LLM pull (MEMORY_V3 §3 step 3)."""
++    from app.models.user_memory_settings import UserMemorySettings
++
++    user_id = await _create_user(db_session)
++    await _add_episodic(db_session, user_id, summary="SHOULD-NOT-SURFACE", importance=0.9)
++    db_session.add(
++        UserMemorySettings(
++            user_id=user_id,
++            enabled=True,
++            allow_preferences=True,
++            allow_goals=True,
++            allow_episodic=False,
++        )
++    )
++    await db_session.commit()
++
++    orchestrator = ContextOrchestrator(db_session, None)
++    memories = await orchestrator._get_past_session_memory(user_id, limit=10)
++    assert memories == [], f"episodic memory injected despite allow_episodic=False: {memories}"
++
++
++# ---------------------------------------------------------------------------
++# Surface 2: ContextPackBuilder.build (semantic retrieval path)
++# ---------------------------------------------------------------------------
++
++
++class _RankCapture:
++    """Spy around context_pack.rank_items capturing the candidate lists that
++    reach the ranking (== semantic retrieval input)."""
++
++    def __init__(self, original):
++        self.original = original
++        self.inputs: dict[str, list] = {}
++
++    def __call__(self, items, kind, **kwargs):
++        seen = self.inputs.setdefault(kind, [])
++        seen_ids = {str(getattr(i, "id", id(i))) for i in seen}
++        for item in items:  # rank runs twice (pre/post conflict resolution)
++            key = str(getattr(item, "id", id(item)))
++            if key not in seen_ids:
++                seen.append(item)
++                seen_ids.add(key)
++        return self.original(items, kind, **kwargs)
++
++    def summaries(self, kind):
++        return [str(getattr(i, "summary", "") or "") for i in self.inputs.get(kind, [])]
++
++    def titles(self, kind):
++        return [str(getattr(i, "title", "") or "") for i in self.inputs.get(kind, [])]
++
++    def pref_versions(self, kind, pref_key):
++        return [i for i in self.inputs.get(kind, []) if getattr(i, "pref_key", None) == pref_key]
++
++
++@pytest.mark.asyncio
++async def test_context_pack_semantic_input_is_prefiltered(db_session, monkeypatch):
++    user_id = await _create_user(db_session)
++    now = _utcnow()
++    plan_a, plan_b = uuid4(), uuid4()
++
++    service = MemoryService(db_session)
++    # preference chain: v1 superseded (high evidence) + v2 head
++    v1 = await service.upsert_preference(
++        user_id=user_id,
++        pref_key="depth_preference",
++        pref_value={"value": "superseded-old"},
++        evidence_refs=[{"type": "user_state", "id": "ui", "schema_version": "ui.v1"}],
++        confidence=0.9,
++        source_type="user_state",
++    )
++    v2 = await service.upsert_preference(
++        user_id=user_id,
++        pref_key="depth_preference",
++        pref_value={"value": "head-new"},
++        evidence_refs=[{"type": "user_state", "id": "ui", "schema_version": "ui.v1"}],
++        confidence=0.9,
++        source_type="user_state",
++    )
++    assert v1 is not None and v2 is not None
++
++    other_goal = await service.create_goal(
++        user_id=user_id,
++        title="GOAL-OTHER-PLAN",
++        status="active",
++        linked_plan_id=plan_a,
++        evidence_refs=[{"type": "event", "id": "e1"}],
++    )
++    unlinked_goal = await service.create_goal(
++        user_id=user_id,
++        title="GOAL-UNLINKED",
++        status="active",
++        evidence_refs=[{"type": "event", "id": "e2"}],
++    )
++    this_plan_goal = await service.create_goal(
++        user_id=user_id,
++        title="GOAL-THIS-PLAN",
++        status="active",
++        linked_plan_id=plan_b,
++        evidence_refs=[{"type": "event", "id": "e3"}],
++    )
++    assert other_goal and unlinked_goal and this_plan_goal
++
++    expired_commitment = await _add_episodic(
++        db_session,
++        user_id,
++        summary="PACK-EXPIRED-COMMITMENT",
++        importance=0.95,
++        subject_type="commitment",
++        decay_policy="due_at+7d",
++        due_at=now - timedelta(days=30),
++    )
++    superseded_episodic = await _add_episodic(db_session, user_id, summary="PACK-SUPERSEDED", importance=0.95)
++    superseded_episodic.superseded_by_id = uuid4()
++    await db_session.commit()
++    legal_episodic = await _add_episodic(db_session, user_id, summary="PACK-LEGAL", importance=0.5)
++
++    monkeypatch.setattr(settings, "ENABLE_LTM_ROLLOUT", False, raising=False)
++    monkeypatch.setattr(settings, "ENABLE_CONTEXT_RANKING", True, raising=False)
++    monkeypatch.setattr(settings, "ENABLE_MEMORY_CONFLICT_RESOLUTION", False, raising=False)
++    monkeypatch.setattr(settings, "ENABLE_PERSONALIZED_RANKING", False, raising=False)
++
++    import app.core.context_pack as context_pack_module
++
++    capture = _RankCapture(context_pack_module.rank_items)
++    monkeypatch.setattr(context_pack_module, "rank_items", capture)
++
++    scheduler = ContextBudgetScheduler(budgets={"chat": {"preferences": 200, "goals": 200, "episodic": 200}})
++    builder = ContextPackBuilder(db_session, scheduler=scheduler)
++    pack = await builder.build(user_id, intent="chat", plan_id=plan_b)
++
++    # --- semantic retrieval input assertions (the card's acceptance) ---
++    pref_candidates = capture.pref_versions("preferences", "depth_preference")
++    assert len(pref_candidates) == 1, (
++        "only the chain head may compete for injection; "
++        f"got {[ (p.version, p.pref_value) for p in pref_candidates ]}"
++    )
++    assert pref_candidates[0].version == v2.version
++
++    goal_titles = capture.titles("goals")
++    assert "GOAL-OTHER-PLAN" not in goal_titles, f"cross-plan goal leaked: {goal_titles}"
++    assert "GOAL-THIS-PLAN" in goal_titles
++    assert "GOAL-UNLINKED" in goal_titles  # unanchored goal behaves user-global
++
++    episodic_summaries = capture.summaries("episodic")
++    assert "PACK-EXPIRED-COMMITMENT" not in episodic_summaries
++    assert "PACK-SUPERSEDED" not in episodic_summaries
++    assert "PACK-LEGAL" in episodic_summaries
++    assert legal_episodic is not None and expired_commitment is not None
++
++    # --- end-to-end payload follows the same law ---
++    assert pack.preferences.get("depth_preference") == {"value": "head-new"}
++    pack_goal_titles = [g["title"] for g in pack.goals]
++    assert "GOAL-OTHER-PLAN" not in pack_goal_titles
++    pack_episodic = [m["summary"] for m in pack.episodic_memories]
++    assert "PACK-EXPIRED-COMMITMENT" not in pack_episodic
++    assert "PACK-SUPERSEDED" not in pack_episodic
++
++
++@pytest.mark.asyncio
++async def test_context_pack_user_settings_permissions(db_session, monkeypatch):
++    from app.models.user_memory_settings import UserMemorySettings
++
++    user_id = await _create_user(db_session)
++    service = MemoryService(db_session)
++    await service.upsert_preference(
++        user_id=user_id,
++        pref_key="depth_preference",
++        pref_value={"value": "blocked-key"},
++        evidence_refs=[{"type": "user_state", "id": "ui"}],
++        source_type="user_state",
++    )
++    await service.upsert_preference(
++        user_id=user_id,
++        pref_key="curiosity_preference",
++        pref_value={"value": "allowed-key"},
++        evidence_refs=[{"type": "user_state", "id": "ui"}],
++        source_type="user_state",
++    )
++    db_session.add(
++        UserMemorySettings(
++            user_id=user_id,
++            enabled=True,
++            allow_preferences=True,
++            allow_goals=True,
++            allow_episodic=True,
++            blocked_pref_keys=["depth_preference"],
++        )
++    )
++    await db_session.commit()
++
++    monkeypatch.setattr(settings, "ENABLE_LTM_ROLLOUT", False, raising=False)
++    monkeypatch.setattr(settings, "ENABLE_CONTEXT_RANKING", True, raising=False)
++    monkeypatch.setattr(settings, "ENABLE_MEMORY_CONFLICT_RESOLUTION", False, raising=False)
++
++    scheduler = ContextBudgetScheduler(budgets={"chat": {"preferences": 200, "goals": 200, "episodic": 200}})
++    builder = ContextPackBuilder(db_session, scheduler=scheduler)
++    pack = await builder.build(user_id, intent="chat")
++
++    assert "curiosity_preference" in pack.preferences
++    assert "depth_preference" not in pack.preferences, f"blocked_pref_keys leaked into LLM context: {pack.preferences}"
++
++
++# ---------------------------------------------------------------------------
++# Surface 3 (review rework R1-F2): stage34 context_builder -> system prompt
++# ---------------------------------------------------------------------------
++
++
++class _Stage34Host(ContextBuilderMixin):
++    """Minimal mixin host: _attach_stage34_memory_context only needs .redis
++    (MemoryService(db_session, self.redis)); plan/goal pulls return empty on
++    a clean DB and the kill-switch payload has a settings fallback."""
++
++    def __init__(self):
++        self.redis = None
++
++
++@pytest.mark.asyncio
++async def test_stage34_episodic_prompt_injection_is_prefiltered(db_session):
++    """stage34 writes payload["episodic_memories"], which the main chat prompt
++    renders verbatim into the system prompt section 【近期相关记忆】
++    (prompts.format_user_context). superseded / expired-commitment rows must
++    be 0 at BOTH the payload and the rendered prompt."""
++    user_id = await _create_user(db_session)
++    now = _utcnow()
++
++    superseded = await _add_episodic(db_session, user_id, summary="STAGE34-SUPERSEDED", importance=0.99)
++    superseded.superseded_by_id = uuid4()
++    await db_session.commit()
++    await _add_episodic(
++        db_session,
++        user_id,
++        summary="STAGE34-EXPIRED",
++        importance=0.99,
++        subject_type="commitment",
++        decay_policy="due_at+7d",
++        due_at=now - timedelta(days=30),
++    )
++    legal = await _add_episodic(db_session, user_id, summary="STAGE34-LEGAL", importance=0.5)
++
++    host = _Stage34Host()
++    payload = await host._attach_stage34_memory_context(
++        {"cognitive_context": {}},
++        user_id=str(user_id),
++        db_session=db_session,
++    )
++
++    summaries = [m["summary"] for m in payload["episodic_memories"]]
++    assert "STAGE34-SUPERSEDED" not in summaries, f"superseded row leaked into stage34 prompt payload: {summaries}"
++    assert "STAGE34-EXPIRED" not in summaries, f"expired commitment leaked into stage34 prompt payload: {summaries}"
++    assert "STAGE34-LEGAL" in summaries
++
++    from app.orchestration.prompts import format_user_context
++
++    rendered = format_user_context({"episodic_memories": payload["episodic_memories"]})
++    assert "STAGE34-SUPERSEDED" not in rendered, "superseded row reached the rendered system prompt"
++    assert "STAGE34-EXPIRED" not in rendered, "expired commitment reached the rendered system prompt"
++    assert "STAGE34-LEGAL" in rendered
++    assert legal is not None
++
++
++@pytest.mark.asyncio
++async def test_stage34_user_settings_permissions(db_session):
++    """allow_episodic=False must empty the stage34 episodic prompt section
++    (read-side permission enforcement on the third LLM injection surface)."""
++    from app.models.user_memory_settings import UserMemorySettings
++
++    user_id = await _create_user(db_session)
++    await _add_episodic(db_session, user_id, summary="STAGE34-SHOULD-NOT-SURFACE", importance=0.9)
++    db_session.add(
++        UserMemorySettings(
++            user_id=user_id,
++            enabled=True,
++            allow_preferences=True,
++            allow_goals=True,
++            allow_episodic=False,
++        )
++    )
++    await db_session.commit()
++
++    host = _Stage34Host()
++    payload = await host._attach_stage34_memory_context({}, user_id=str(user_id), db_session=db_session)
++    assert payload["episodic_memories"] == [], (
++        f"episodic memory reached the stage34 prompt payload despite allow_episodic=False: "
++        f"{payload['episodic_memories']}"
++    )
+diff --git a/backend/tests/unit/test_memory_retrieval_prefilter.py b/backend/tests/unit/test_memory_retrieval_prefilter.py
+new file mode 100644
+index 00000000..62a4d0ef
+--- /dev/null
++++ b/backend/tests/unit/test_memory_retrieval_prefilter.py
+@@ -0,0 +1,718 @@
++"""M-03 deterministic retrieval prefilter —— unit tests.
++
++Covers (card acceptance):
++- scope lattice FULL compatibility matrix (closed structure + parity guard:
++  matrix keys == SCOPE_LEVELS x states, and the evaluator agrees with the
++  table on every cell);
++- today-only TTL semantics on naive-UTC day boundaries;
++- every filter dimension: user / status (incl. revoked via M-01 precedence) /
++  TTL / scope / purpose (user_memory_settings permission layer + descriptor
++  purpose restrictions) / sensitivity;
++- filter reason metrics: per-dimension and per-reason counts + payload shape.
++
++Review-rework guards (dual-review CHANGES round):
++- R2-F1: unknown derive_scope levels fail closed on the DERIVED path (never
++  lifted to user-global) + derive_scope <-> SCOPE_LEVELS vocabulary parity;
++- R2-F2: FILTER_DIMENSIONS order pinned + all five adjacent-pair attributions
++  pinned (reorder turns red — D-06 attribution drift guard).
++"""
++
++from datetime import datetime, timedelta
++from types import SimpleNamespace
++from uuid import uuid4
++
++import pytest
++
++from app.models.memory import EpisodicMemory, MemoryGoal, MemoryPreference
++from app.services.memory_retrieval_prefilter import (
++    CTX_ANCHOR_VALUES,
++    FILTER_DIMENSIONS,
++    LEVEL_ANCHOR_KEYS,
++    MEMORY_PREFILTER_VERSION,
++    RETRIEVAL_PURPOSES,
++    SCOPE_COMPATIBILITY,
++    SCOPE_LEVELS,
++    MemoryScopeDescriptor,
++    PrefilterResult,
++    RetrievalContext,
++    UserMemoryPermissions,
++    prefilter_candidates,
++    record_kind,
++    scope_compatible,
++    scope_of_record,
++)
++
++NOW = datetime(2026, 9, 19, 12, 0, 0)
++USER = str(uuid4())
++
++
++def _ctx(**overrides) -> RetrievalContext:
++    defaults = {"user_id": USER, "purpose": "llm_context", "now": NOW}
++    defaults.update(overrides)
++    return RetrievalContext(**defaults)
++
++
++def _episodic(**overrides):
++    """Real ORM shape (no DB) —— derive_scope/derive_status key off
++    ``__tablename__`` and real column attributes."""
++    base = {
++        "id": uuid4(),
++        "user_id": uuid4(),
++        "summary": "s",
++        "source_type": "chat_turn",
++        "source_lane": "direct_capture",
++        "subject_type": "self",
++        "occurred_at": NOW - timedelta(days=1),
++        "created_at": NOW - timedelta(days=1),
++        "importance_score": 0.5,
++        "confidence": 0.5,
++        "evidence_score": 0.5,
++        "correction_count": 0,
++    }
++    base.update(overrides)
++    return EpisodicMemory(**base)
++
++
++def _preference(**overrides):
++    base = {
++        "id": uuid4(),
++        "user_id": uuid4(),
++        "pref_key": "depth_preference",
++        "pref_value": {"value": 1},
++        "version": 1,
++        "evidence_refs": [{"type": "user_state", "id": "t"}],
++    }
++    base.update(overrides)
++    return MemoryPreference(**base)
++
++
++def _goal(**overrides):
++    base = {
++        "id": uuid4(),
++        "user_id": uuid4(),
++        "title": "g",
++        "status": "active",
++        "created_at": NOW - timedelta(days=1),
++        "updated_at": NOW - timedelta(days=1),
++    }
++    base.update(overrides)
++    return MemoryGoal(**base)
++
++
++# ---------------------------------------------------------------------------
++# Closed-vocabulary structure guards
++# ---------------------------------------------------------------------------
++
++
++def test_scope_compatibility_matrix_is_total_and_closed():
++    """The matrix must cover the full cross product (no undefined cell, no
++    stray cell) —— the closed-data-structure acceptance."""
++    expected = {(level, state) for level in SCOPE_LEVELS for state in ("unconstrained", "match", "mismatch")}
++    assert set(SCOPE_COMPATIBILITY.keys()) == expected
++    assert all(isinstance(v, bool) for v in SCOPE_COMPATIBILITY.values())
++
++
++def test_level_anchor_keys_cover_all_scoped_levels():
++    assert set(LEVEL_ANCHOR_KEYS.keys()) == set(SCOPE_LEVELS)
++    assert LEVEL_ANCHOR_KEYS["global"] == ()
++
++
++def test_retrieval_context_rejects_unknown_purpose_and_sensitivity():
++    with pytest.raises(ValueError):
++        _ctx(purpose="not_a_purpose")
++    with pytest.raises(ValueError):
++        _ctx(max_sensitivity="ultra")
++
++
++def test_retrieval_purposes_vocabulary_is_closed():
++    assert frozenset({"llm_context", "personalization", "analytics", "export", "governance"}) == RETRIEVAL_PURPOSES
++
++
++# ---------------------------------------------------------------------------
++# Scope lattice: full matrix parity (evaluator vs table)
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.parametrize("level", SCOPE_LEVELS)
++@pytest.mark.parametrize("state", ["unconstrained", "match", "mismatch"])
++def test_scope_matrix_parity(level, state):
++    """For every (level, state) cell, construct a descriptor + ctx pair that
++    the evaluator maps to exactly that state, and assert the verdict equals
++    the table.
++
++    ``global`` has no anchor keys (LEVEL_ANCHOR_KEYS["global"] == ()), so its
++    match/mismatch columns are structurally unreachable: every global record
++    evaluates to ``unconstrained``. Those two cells still exist in the closed
++    table and must be True (dead-but-safe), which this test asserts.
++    """
++    anchor_key_by_level = {
++        "goal": "goal_id",
++        "domain": "domain_key",
++        "task_type": "task_type",
++        "session": "session_id",
++    }
++    if level == "global":
++        assert SCOPE_COMPATIBILITY[("global", state)] is True
++        if state != "unconstrained":
++            # unreachable by construction; the evaluator can only produce the
++            # unconstrained column for anchor-less levels.
++            assert _classify_state(MemoryScopeDescriptor(level="global"), _ctx()) == "unconstrained"
++            return
++    anchor_value = "anchor-1"
++    other_value = "anchor-other"
++
++    descriptor_kwargs: dict = {"level": level}
++    ctx_kwargs: dict = {}
++    if level in anchor_key_by_level:
++        key = anchor_key_by_level[level]
++        if state == "match":
++            descriptor_kwargs[key] = anchor_value
++            ctx_kwargs = _ctx_anchor(key, anchor_value)
++        elif state == "mismatch":
++            descriptor_kwargs[key] = anchor_value
++            ctx_kwargs = _ctx_anchor(key, other_value)
++        # unconstrained: no ctx anchor, no record anchor
++    descriptor = MemoryScopeDescriptor(**descriptor_kwargs)
++    ctx = _ctx(**ctx_kwargs)
++
++    # sanity: the evaluator really classified the intended state
++    assert _classify_state(descriptor, ctx) == state
++    allowed, reason = scope_compatible(descriptor, ctx)
++    assert allowed is SCOPE_COMPATIBILITY[(level, state)]
++    if SCOPE_COMPATIBILITY[(level, state)]:
++        assert reason is None
++    else:
++        assert reason == "scope:mismatch"
++
++
++def _ctx_anchor(key: str, value: str) -> dict:
++    """Build RetrievalContext kwargs that constrain exactly one anchor key."""
++    if key == "goal_id":
++        return {"goal_ids": frozenset({value})}
++    if key == "task_id":
++        return {"task_ids": frozenset({value})}
++    if key == "plan_id":
++        return {"plan_ids": frozenset({value})}
++    if key == "domain_key":
++        return {"domain_keys": frozenset({value})}
++    if key == "task_type":
++        return {"task_type": value}
++    if key == "session_id":
++        return {"session_id": value}
++    raise AssertionError(key)
++
++
++def _classify_state(descriptor, ctx) -> str:
++    from app.services.memory_retrieval_prefilter import _ctx_constraint_state
++
++    return _ctx_constraint_state(descriptor, ctx)
++
++
++def test_unanchored_scoped_record_behaves_user_global():
++    """A goal/domain record with no anchor never mismatches (its restrictions
++    are undefined -> only the unconstrained column applies)."""
++    descriptor = MemoryScopeDescriptor(level="goal")  # no goal/task/plan anchor
++    ctx = _ctx(plan_ids=frozenset({"some-plan"}), goal_ids=frozenset({"some-goal"}))
++    assert _classify_state(descriptor, ctx) == "unconstrained"
++    assert scope_compatible(descriptor, ctx) == (True, None)
++
++
++def test_goal_anchor_matches_via_task_or_plan():
++    descriptor = MemoryScopeDescriptor(level="goal", plan_id="p1")
++    assert scope_compatible(descriptor, _ctx(plan_ids=frozenset({"p1", "p2"})))[0] is True
++    descriptor_task = MemoryScopeDescriptor(level="goal", task_id="t1")
++    assert scope_compatible(descriptor_task, _ctx(task_ids=frozenset({"t1"})))[0] is True
++    assert scope_compatible(descriptor_task, _ctx(plan_ids=frozenset({"p1"})))[0] is False
++
++
++def test_global_record_passes_even_on_mismatch():
++    descriptor = MemoryScopeDescriptor(level="global")
++    ctx = _ctx(plan_ids=frozenset({"p1"}), domain_keys=frozenset({"math"}), task_type="quiz")
++    assert scope_compatible(descriptor, ctx) == (True, None)
++
++
++def test_session_scope_is_fail_closed():
++    """Session-scoped (transient/working-memory) records never leak outside
++    their own session —— even when ctx carries no session anchor."""
++    descriptor = MemoryScopeDescriptor(level="session", session_id="s1")
++    assert scope_compatible(descriptor, _ctx())[0] is False  # unconstrained -> cut
++    assert scope_compatible(descriptor, _ctx(session_id="s2"))[0] is False
++    assert scope_compatible(descriptor, _ctx(session_id="s1"))[0] is True
++
++
++def test_unknown_level_fails_closed():
++    descriptor = MemoryScopeDescriptor(level="weird")
++    assert scope_compatible(descriptor, _ctx()) == (False, "scope:unknown_level")
++
++
++# ---------------------------------------------------------------------------
++# scope_of_record derivation (M-01 projection -> typed descriptor)
++# ---------------------------------------------------------------------------
++
++
++def test_scope_of_record_episodic_is_domain_with_subject():
++    record = _episodic(subject_type="commitment", decay_policy="due_at+7d", due_at=NOW + timedelta(days=1))
++    descriptor = scope_of_record(record)
++    assert descriptor.level == "domain"
++    assert descriptor.domain_key == "commitment"
++    assert descriptor.today_only is False
++
++
++def test_scope_of_record_preference_is_global():
++    record = _preference()
++    assert record_kind(record) == "preference"
++    assert scope_of_record(record).level == "global"
++
++
++def test_scope_of_record_goal_carries_plan_anchor():
++    record = _goal(linked_plan_id=uuid4())
++    descriptor = scope_of_record(record)
++    assert descriptor.level == "goal"
++    assert descriptor.plan_id is not None
++
++
++def test_scope_of_record_today_only_from_decay_policy():
++    record = _episodic(decay_policy="1d")
++    assert scope_of_record(record).today_only is True
++    record_30d = _episodic(decay_policy="30d")
++    assert scope_of_record(record_30d).today_only is False
++
++
++# ---------------------------------------------------------------------------
++# Dimension: user
++# ---------------------------------------------------------------------------
++
++
++def test_wrong_user_is_cut_and_missing_user_id_fails_closed():
++    legal = _episodic()
++    wrong = _episodic()
++    legal.user_id = USER
++    wrong.user_id = str(uuid4())
++    no_user = SimpleNamespace(summary="x", source_type="chat_turn", occurred_at=NOW)
++
++    result = prefilter_candidates([legal, wrong, no_user], _ctx())
++    assert result.allowed == [legal]
++    assert [r.reason for r in result.rejections] == ["user:wrong_user", "user:wrong_user"]
++    assert result.dimension_counts["user"] == 2
++    assert result.reason_counts["user:wrong_user"] == 2
++
++
++# ---------------------------------------------------------------------------
++# Dimension: status (M-01 precedence machine)
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.parametrize(
++    "attr,value,expected_status",
++    [
++        ("revoked_at", NOW, "revoked"),
++        ("superseded_by_id", uuid4(), "superseded"),
++        ("retracted_at", NOW, "retracted"),
++        ("archived_at", NOW, "archived"),
++    ],
++)
++def test_non_active_status_is_cut(attr, value, expected_status):
++    record = _episodic(**{attr: value})
++    record.user_id = USER
++    result = prefilter_candidates([record], _ctx())
++    assert result.allowed == []
++    assert result.rejections[0].reason == f"status:{expected_status}"
++    assert result.dimension_counts["status"] == 1
++
++
++def test_superseded_preference_version_is_cut():
++    """memory_preferences chain: any non-head version (replaced_by_id set)
++    must not compete for LLM injection."""
++    head = _preference(user_id=USER, version=2)
++    superseded = _preference(user_id=USER, version=1, replaced_by_id=uuid4())
++    result = prefilter_candidates([head, superseded], _ctx())
++    assert result.allowed == [head]
++    assert result.rejections[0].reason == "status:superseded"
++
++
++def test_expired_goal_status_is_cut_via_status_dimension():
++    record = SimpleNamespace(
++        id=uuid4(),
++        user_id=USER,
++        title="g",
++        status="active",
++        expires_at=NOW - timedelta(days=1),
++        created_at=NOW - timedelta(days=10),
++    )
++    result = prefilter_candidates([record], _ctx())
++    assert result.rejections[0].reason == "status:expired"
++
++
++def test_status_precedence_revoked_beats_superseded():
++    record = _episodic(revoked_at=NOW, superseded_by_id=uuid4(), archived_at=NOW)
++    record.user_id = USER
++    result = prefilter_candidates([record], _ctx())
++    assert result.rejections[0].reason == "status:revoked"
++
++
++def test_active_record_passes_all_hard_dimensions():
++    record = _episodic()
++    record.user_id = USER
++    result = prefilter_candidates([record], _ctx())
++    assert result.allowed == [record]
++    assert result.rejections == []
++
++
++# ---------------------------------------------------------------------------
++# Dimension: TTL (today-only + due_at+7d + not_yet_valid)
++# ---------------------------------------------------------------------------
++
++
++def test_today_only_passes_same_utc_day_and_cuts_next_day():
++    same_day = _episodic(decay_policy="1d", created_at=datetime(2026, 9, 19, 0, 30))
++    same_day.user_id = USER
++    next_day = _episodic(decay_policy="today", created_at=datetime(2026, 9, 18, 23, 59))
++    next_day.user_id = USER
++
++    result = prefilter_candidates([same_day, next_day], _ctx(now=datetime(2026, 9, 19, 23, 59)))
++    assert result.allowed == [same_day]
++    assert result.rejections[0].reason == "ttl:today_only_expired"
++    assert result.dimension_counts["ttl"] == 1
++
++
++def test_today_only_midnight_boundary_is_naive_utc():
++    record = _episodic(decay_policy="1d", created_at=datetime(2026, 9, 19, 18, 0))
++    record.user_id = USER
++    just_before = prefilter_candidates([record], _ctx(now=datetime(2026, 9, 19, 23, 59, 59)))
++    at_midnight = prefilter_candidates([record], _ctx(now=datetime(2026, 9, 20, 0, 0, 0)))
++    assert just_before.allowed == [record]
++    assert at_midnight.allowed == []
++    assert at_midnight.rejections[0].reason == "ttl:today_only_expired"
++
++
++def test_commitment_due_at_plus_7d_hard_ttl():
++    fresh = _episodic(decay_policy="due_at+7d", due_at=NOW - timedelta(days=6))
++    fresh.user_id = USER
++    expired = _episodic(decay_policy="due_at+7d", due_at=NOW - timedelta(days=8))
++    expired.user_id = USER
++
++    result = prefilter_candidates([fresh, expired], _ctx())
++    assert result.allowed == [fresh]
++    assert result.rejections[0].reason == "ttl:expired"
++    assert "due_at+7d" in result.rejections[0].detail
++
++
++def test_soft_decay_policies_are_not_hard_ttl():
++    """7d/30d half-life policies belong to the decay job (archival), not the
++    deterministic prefilter."""
++    old_7d = _episodic(decay_policy="7d", occurred_at=NOW - timedelta(days=90))
++    old_7d.user_id = USER
++    assert prefilter_candidates([old_7d], _ctx()).allowed == [old_7d]
++
++
++def test_valid_from_future_is_not_yet_valid():
++    descriptor = MemoryScopeDescriptor(level="global", valid_from=NOW + timedelta(hours=1))
++    record = _episodic()
++    record.user_id = USER
++    from app.services.memory_retrieval_prefilter import _reject_ttl
++
++    rejection = _reject_ttl(record, _ctx(), descriptor)
++    assert rejection is not None and rejection.reason == "ttl:not_yet_valid"
++
++
++# ---------------------------------------------------------------------------
++# Dimension: purpose (permission layer + declared purposes)
++# ---------------------------------------------------------------------------
++
++
++def test_memory_disabled_cuts_everything():
++    record = _episodic()
++    record.user_id = USER
++    ctx = _ctx(permissions=UserMemoryPermissions(enabled=False))
++    result = prefilter_candidates([record], ctx)
++    assert result.rejections[0].reason == "purpose:memory_disabled"
++
++
++def test_type_level_toggles_cut_the_right_family():
++    pref = _preference(user_id=USER)
++    goal = _goal(user_id=USER)
++    epi = _episodic(user_id=USER)
++
++    ctx = _ctx(permissions=UserMemoryPermissions(allow_preferences=False, allow_goals=False, allow_episodic=False))
++    result = prefilter_candidates([pref, goal, epi], ctx)
++    assert result.allowed == []
++    assert [r.reason for r in result.rejections] == ["purpose:type_disabled"] * 3
++
++
++def test_inferred_episodic_toggle_cuts_hypothesis_class_only():
++    inferred = _episodic(user_id=USER, source_lane="llm")  # M-01: unknown lane -> HYPOTHESIS
++    explicit = _episodic(user_id=USER, source_lane="user_confirmed")  # M-01: FACT
++
++    ctx = _ctx(permissions=UserMemoryPermissions(allow_inferred_episodic=False))
++    result = prefilter_candidates([inferred, explicit], ctx)
++    assert result.allowed == [explicit]
++    assert result.rejections[0].reason == "purpose:inferred_episodic_disabled"
++
++
++def test_blocked_pref_keys_and_sources_cut_records():
++    pref = _preference(user_id=USER)
++    epi = _episodic(user_id=USER, source_type="error_analysis")
++
++    ctx = _ctx(
++        permissions=UserMemoryPermissions(
++            blocked_pref_keys=frozenset({"depth_preference"}),
++            blocked_sources=frozenset({"error_analysis"}),
++        )
++    )
++    result = prefilter_candidates([pref, epi], ctx)
++    assert result.allowed == []
++    assert {r.reason for r in result.rejections} == {
++        "purpose:blocked_pref_key",
++        "purpose:blocked_source",
++    }
++
++
++def test_descriptor_declared_purpose_restriction_is_enforced():
++    record = _episodic()
++    record.user_id = USER
++    descriptor_only = MemoryScopeDescriptor(level="global", allowed_purposes=frozenset({"export"}))
++    # wire the descriptor through scope_of_record by monkey-patching per-record
++    original = scope_of_record
++    import app.services.memory_retrieval_prefilter as module
++
++    try:
++        module.scope_of_record = lambda r: descriptor_only
++        result = prefilter_candidates([record], _ctx(purpose="llm_context"))
++        assert result.rejections[0].reason == "purpose:not_allowed"
++        result_export = prefilter_candidates([record], _ctx(purpose="export"))
++        assert result_export.allowed == [record]
++    finally:
++        module.scope_of_record = original
++
++
++# ---------------------------------------------------------------------------
++# Dimension: sensitivity
++# ---------------------------------------------------------------------------
++
++
++def test_sensitivity_ceiling_cut_and_pass():
++    record = _episodic()
++    record.user_id = USER
++    descriptor_only = MemoryScopeDescriptor(level="global", sensitivity="sensitive")
++    import app.services.memory_retrieval_prefilter as module
++
++    original = module.scope_of_record
++    try:
++        module.scope_of_record = lambda r: descriptor_only
++        normal_ctx = _ctx(max_sensitivity="normal")
++        result = prefilter_candidates([record], normal_ctx)
++        assert result.rejections[0].reason == "sensitivity:exceeded"
++        assert result.dimension_counts["sensitivity"] == 1
++
++        elevated_ctx = _ctx(max_sensitivity="sensitive")
++        assert prefilter_candidates([record], elevated_ctx).allowed == [record]
++    finally:
++        module.scope_of_record = original
++
++
++def test_default_sensitivity_is_normal_so_live_records_are_untouched():
++    record = _episodic()
++    record.user_id = USER
++    assert prefilter_candidates([record], _ctx()).allowed == [record]
++
++
++# ---------------------------------------------------------------------------
++# Metrics + result shape
++# ---------------------------------------------------------------------------
++
++
++def test_metric_payload_shape_and_counts():
++    legal = _episodic()
++    legal.user_id = USER
++    revoked = _episodic(revoked_at=NOW)
++    revoked.user_id = USER
++    wrong = _episodic()
++    wrong.user_id = str(uuid4())
++
++    result = prefilter_candidates([legal, revoked, wrong], _ctx())
++    assert isinstance(result, PrefilterResult)
++    assert result.input_count == 3
++    assert result.allowed_count == 1
++    assert result.dimension_counts == {
++        "user": 1,
++        "status": 1,
++        "ttl": 0,
++        "scope": 0,
++        "purpose": 0,
++        "sensitivity": 0,
++    }
++    assert result.reason_counts == {"user:wrong_user": 1, "status:revoked": 1}
++    payload = result.to_metric_payload()
++    assert payload["version"] == MEMORY_PREFILTER_VERSION
++    assert payload["input_count"] == 3
++    assert payload["allowed_count"] == 1
++    assert payload["reason_counts"]["status:revoked"] == 1
++
++
++def test_evaluation_order_user_owns_rejection_before_status():
++    """Deterministic attribution: user check runs before status check."""
++    record = _episodic(revoked_at=NOW)
++    record.user_id = str(uuid4())
++    result = prefilter_candidates([record], _ctx())
++    assert result.rejections[0].dimension == "user"
++
++
++def test_empty_input_returns_empty_result():
++    result = prefilter_candidates([], _ctx())
++    assert result.allowed == []
++    assert result.input_count == 0
++    assert all(v == 0 for v in result.dimension_counts.values())
++
++
++def test_ctx_anchor_values_mapping_matches_level_anchor_keys():
++    """CTX_ANCHOR_VALUES must cover every anchor key used by the lattice."""
++    used_keys = {key for keys in LEVEL_ANCHOR_KEYS.values() for key in keys}
++    assert used_keys <= set(CTX_ANCHOR_VALUES.keys())
++
++
++# ---------------------------------------------------------------------------
++# R2-F1: unknown scope level fails closed on the DERIVED path
++# + derive_scope vocabulary parity guard (M-01 <-> SCOPE_LEVELS)
++# ---------------------------------------------------------------------------
++
++
++def test_unknown_level_from_derive_scope_is_fail_closed(monkeypatch):
++    """A level derive_scope emits that this module cannot interpret must NOT
++    be lifted to user-global (fail-open). It flows into the descriptor and
++    scope_compatible cuts it: scope:unknown_level, metric-observable."""
++    import app.services.memory_retrieval_prefilter as module
++
++    record = _episodic()
++    record.user_id = USER
++    monkeypatch.setattr(module, "derive_scope", lambda r: {"level": "subject"})  # future M-01 vocab
++
++    descriptor = module.scope_of_record(record)
++    assert descriptor.level == "subject"  # preserved, never normalized away
++
++    result = prefilter_candidates([record], _ctx())
++    assert result.allowed == []
++    assert result.rejections[0].dimension == "scope"
++    assert result.rejections[0].reason == "scope:unknown_level"
++    assert result.dimension_counts["scope"] == 1
++
++
++def test_derive_scope_level_vocabulary_parity_with_prefilter():
++    """Vocabulary parity guard: every scope level M-01's derive_scope can emit
++    must be interpretable here. Statically scans the REAL M-01 source (not a
++    duplicate constant), so M-01 adding a new level turns this red before any
++    record can fail open or be silently cut."""
++    import inspect
++    import re
++
++    import app.services.memory_epistemic_contract as contract
++
++    source = inspect.getsource(contract.derive_scope)
++    literals = set(re.findall(r'["\']level["\']\]\s*=\s*"([a-z_]+)"', source))
++    literals |= set(re.findall(r'"level":\s*"([a-z_]+)"', source))
++    assert literals, "source scan found no level literals — derive_scope was refactored, update this guard"
++    unknown = literals - set(SCOPE_LEVELS)
++    assert not unknown, (
++        f"M-01 derive_scope now emits scope level(s) {sorted(unknown)} that the M-03 "
++        "prefilter cannot interpret — extend SCOPE_LEVELS + SCOPE_COMPATIBILITY "
++        "(records with unknown levels fail closed until then)."
++    )
++
++
++# ---------------------------------------------------------------------------
++# R2-F2: evaluation order pinned — implementation order is the single authority
++# ---------------------------------------------------------------------------
++
++
++def test_filter_dimensions_order_is_pinned():
++    """Reordering FILTER_DIMENSIONS shifts D-06/O-02 dimension_counts
++    attribution (same records, different first-failure dimension) and requires
++    bumping MEMORY_PREFILTER_VERSION."""
++    assert [dimension.value for dimension in FILTER_DIMENSIONS] == [
++        "user",
++        "status",
++        "ttl",
++        "scope",
++        "purpose",
++        "sensitivity",
++    ]
++
++
++def _run_user_before_status_case():
++    record = _episodic(revoked_at=NOW)
++    record.user_id = str(uuid4())
++    return prefilter_candidates([record], _ctx())
++
++
++def _run_status_before_ttl_case():
++    record = _episodic(
++        revoked_at=NOW,
++        subject_type="commitment",
++        decay_policy="due_at+7d",
++        due_at=NOW - timedelta(days=30),
++    )
++    record.user_id = USER
++    return prefilter_candidates([record], _ctx())
++
++
++def _run_ttl_before_scope_case():
++    record = _episodic(
++        subject_type="self",
++        decay_policy="1d",
++        created_at=NOW - timedelta(days=1),
++    )
++    record.user_id = USER
++    ctx = _ctx(domain_keys=frozenset({"sports"}))  # self != sports -> scope mismatch too
++    return prefilter_candidates([record], ctx)
++
++
++def _run_scope_before_purpose_case():
++    record = _goal(user_id=USER, linked_plan_id=uuid4())
++    ctx = _ctx(
++        plan_ids=frozenset({str(uuid4())}),  # different plan -> scope mismatch
++        permissions=UserMemoryPermissions(enabled=False),  # purpose violation too
++    )
++    return prefilter_candidates([record], ctx)
++
++
++def _run_purpose_before_sensitivity_case():
++    record = _preference(user_id=USER, pref_key="depth_preference")
++    descriptor = MemoryScopeDescriptor(level="global", sensitivity="sensitive")
++    import app.services.memory_retrieval_prefilter as module
++
++    original = module.scope_of_record
++    try:
++        module.scope_of_record = lambda r: descriptor
++        return prefilter_candidates(
++            [record],
++            _ctx(permissions=UserMemoryPermissions(blocked_pref_keys=frozenset({"depth_preference"}))),
++        )
++    finally:
++        module.scope_of_record = original
++
++
++_ADJACENT_PAIR_RUNNERS = {
++    "user_before_status": _run_user_before_status_case,
++    "status_before_ttl": _run_status_before_ttl_case,
++    "ttl_before_scope": _run_ttl_before_scope_case,
++    "scope_before_purpose": _run_scope_before_purpose_case,
++    "purpose_before_sensitivity": _run_purpose_before_sensitivity_case,
++}
++
++
++@pytest.mark.parametrize(
++    "expected_dimension,case",
++    [
++        ("user", "user_before_status"),
++        ("status", "status_before_ttl"),
++        ("ttl", "ttl_before_scope"),
++        ("scope", "scope_before_purpose"),
++        ("purpose", "purpose_before_sensitivity"),
++    ],
++)
++def test_evaluation_order_adjacent_pairs_are_pinned(expected_dimension, case):
++    """Each record violates EXACTLY two adjacent dimensions; the earlier one
++    must own the rejection. Any reorder of the evaluation chain flips at least
++    one attribution and turns this red (R2-F2: attribution drift guard)."""
++    result = _ADJACENT_PAIR_RUNNERS[case]()
++    assert len(result.rejections) == 1
++    assert result.rejections[0].dimension == expected_dimension
+diff --git a/backend/tests/unit/test_past_session_memory_ranking.py b/backend/tests/unit/test_past_session_memory_ranking.py
+index 132a0b6c..1652b02c 100644
+--- a/backend/tests/unit/test_past_session_memory_ranking.py
++++ b/backend/tests/unit/test_past_session_memory_ranking.py
+@@ -9,15 +9,19 @@ occurred_at DESC top-3。occurred_at 是"事件发生时间"（LLM 抽取会给
+ from datetime import datetime
+ from types import SimpleNamespace
+ from unittest.mock import AsyncMock
++from uuid import uuid4
+ 
+ import pytest
+ 
+ from app.core.context_manager import ContextOrchestrator
+ 
+ 
+-def _row(summary, importance, confidence, created_at, occurred_at):
++def _row(summary, importance, confidence, created_at, occurred_at, user_id):
++    # M-03: real episodic rows always carry user_id; the deterministic
++    # prefilter hard-cuts ownerless/wrong-user rows before ranking.
+     return SimpleNamespace(
+         id=f"id-{summary}",
++        user_id=user_id,
+         summary=summary,
+         subject_type="self",
+         source_type="chat",
+@@ -34,9 +38,22 @@ class TestPastSessionMemoryRanking:
+     async def test_high_value_inferred_memory_outranks_fresher_seeds(self):
+         manager = ContextOrchestrator.__new__(ContextOrchestrator)
+         manager.db = None
+-        seed = _row("completed 操作系统-死锁", 0.72, 0.72, datetime(2026, 9, 19, 3, 0, 0), datetime(2026, 9, 19, 3, 0, 0))
++        user_id = uuid4()
++        seed = _row(
++            "completed 操作系统-死锁",
++            0.72,
++            0.72,
++            datetime(2026, 9, 19, 3, 0, 0),
++            datetime(2026, 9, 19, 3, 0, 0),
++            user_id,
++        )
+         movie = _row(
+-            "用户最喜欢的电影是《星际穿越》", 0.98, 0.98, datetime(2026, 9, 19, 3, 5, 0), datetime(2026, 6, 22, 0, 0, 0)
++            "用户最喜欢的电影是《星际穿越》",
++            0.98,
++            0.98,
++            datetime(2026, 9, 19, 3, 5, 0),
++            datetime(2026, 6, 22, 0, 0, 0),
++            user_id,
+         )
+ 
+         async def fake_get_recent(user_id, limit=3, **kwargs):
+@@ -49,7 +66,7 @@ class TestPastSessionMemoryRanking:
+         original = cm.MemoryService
+         cm.MemoryService = lambda *a, **k: service_holder
+         try:
+-            memories = await manager._get_past_session_memory(user_id=None)  # type: ignore[arg-type]
++            memories = await manager._get_past_session_memory(user_id=user_id)  # type: ignore[arg-type]
+         finally:
+             cm.MemoryService = original
+ 

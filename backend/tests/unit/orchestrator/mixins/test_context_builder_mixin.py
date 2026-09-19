@@ -125,9 +125,13 @@ async def test_attach_stage34_memory_context_injects_goal_and_episodic_top_level
     )
     memory = SimpleNamespace(
         id="memory-1",
+        # M-03: real episodic rows always carry user_id; the deterministic
+        # prefilter hard-cuts ownerless/wrong-user rows before stage34 ranking.
+        user_id="00000000-0000-0000-0000-000000000123",
         summary="上次复盘时发现自己总把熵增方向和系统边界混在一起。",
         subject_type="self",
         source_type="direct_capture",
+        source_lane="direct_capture",
         occurred_at=None,
         importance_score=0.8,
         confidence=0.7,

@@ -207,12 +207,16 @@ async def test_h6_scenario4_cross_session_memory_reaches_prompt_in_practice(db_s
     monkeypatch.setattr(orchestrator, "_get_social_context_v1", AsyncMock(return_value={}))
     monkeypatch.setattr(orchestrator, "_get_achievement_context", AsyncMock(return_value={}))
     monkeypatch.setattr(orchestrator, "_get_calendar_context", AsyncMock(return_value={}))
+    h6_user_id = str(uuid4())
     monkeypatch.setattr(
         "app.core.context_manager.MemoryService.get_recent_episodic",
         AsyncMock(
             return_value=[
                 SimpleNamespace(
                     id=uuid4(),
+                    # M-03: real episodic rows always carry user_id; the
+                    # deterministic prefilter hard-cuts ownerless rows.
+                    user_id=h6_user_id,
                     summary="你之前提过 TCP 状态转换最容易断链，要先盯触发条件。",
                     subject_type="learning_profile",
                     source_type="chat_turn",
@@ -223,7 +227,7 @@ async def test_h6_scenario4_cross_session_memory_reaches_prompt_in_practice(db_s
         ),
     )
 
-    context = await orchestrator.get_context(str(uuid4()))
+    context = await orchestrator.get_context(h6_user_id)
     prompt = build_system_prompt(
         user_context=context.model_dump(mode="python"),
         conversation_history={"messages": []},
