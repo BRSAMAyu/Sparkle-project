@@ -235,6 +235,7 @@ class LLMModelFallbackManager:
         self,
         failed_selection: LLMSelection,
         exclude_models: set[str],
+        require_tools: bool = False,
     ) -> list[LLMSelection]:
         """
         获取可用的回退候选模型
@@ -246,6 +247,10 @@ class LLMModelFallbackManager:
         Args:
             failed_selection: 失败的模型选择
             exclude_models: 要排除的模型 key（已尝试过的）
+            require_tools: 本次调用带工具 schema 时为 True——候选必须保持在
+                主聊天能力层（TOP..FAST），不得降到 FREE*/GLM_BATCH/SPECIALIST
+                等无工具保证的层，避免"会说话但不能执行"的假完成（E-02 卡
+                验收：fallback 不把需要 tools 的任务降成 text-only）。
 
         Returns:
             候选模型列表（按优先级排序）
@@ -258,8 +263,19 @@ class LLMModelFallbackManager:
         # 获取 tier 映射
         tier_mapping = llm_router._tier_mapping
 
-        # 1. 同 tier 的其他模型
-        same_tier_models = tier_mapping.get(current_tier, [])
+        def _tier_allows_tools(tier: ModelTier) -> bool:
+            # 能力层（TOP/MAX/PRO/PLUS/STANDARD/FAST）保留；REASONING 归一化为
+            # PRO。FREE*/GLM_BATCH/SPECIALIST 无工具调用保证，require_tools 时剔除。
+            from app.core.llm_router import _CAPABILITY_TIER_RANK, LLMRouter
+
+            normalized = LLMRouter._normalize_tier_value(tier)
+            return normalized in _CAPABILITY_TIER_RANK
+
+        # 1. 同 tier 的其他模型（require_tools 时该 tier 也须为能力层）
+        if require_tools and not _tier_allows_tools(current_tier):
+            same_tier_models = []
+        else:
+            same_tier_models = tier_mapping.get(current_tier, [])
         for model_key in same_tier_models:
             if model_key not in exclude_models and model_key in llm_router._available_models:
                 config = llm_router._available_models[model_key]
@@ -299,6 +315,8 @@ class LLMModelFallbackManager:
             current_index = tier_order.index(ModelTier.FREE_FAST)
 
         for lower_tier in tier_order[current_index + 1:]:
+            if require_tools and not _tier_allows_tools(lower_tier):
+                continue
             lower_models = tier_mapping.get(lower_tier, [])
             for model_key in lower_models:
                 if model_key not in exclude_models and model_key in llm_router._available_models:
@@ -333,6 +351,7 @@ class LLMModelFallbackManager:
         original_selection: LLMSelection,
         call_fn,  # AsyncCallable[[LLMSelection], Any]
         operation_type: str = "chat",
+        require_tools: bool = False,
     ) -> Any:
         """
         执行 LLM 调用，支持自动回退
@@ -341,6 +360,7 @@ class LLMModelFallbackManager:
             original_selection: 原始模型选择
             call_fn: 异步调用函数，接收 LLMSelection 作为参数
             operation_type: 操作类型（用于日志）
+            require_tools: 调用带工具 schema 时保持候选在主聊天能力层（E-02）
 
         Returns:
             LLM 响应
@@ -379,6 +399,7 @@ class LLMModelFallbackManager:
                 candidates = self._get_fallback_candidates(
                     current_selection or original_selection,
                     exclude_models,
+                    require_tools=require_tools,
                 )
                 if candidates:
                     current_selection = candidates[0]
@@ -445,7 +466,9 @@ class LLMModelFallbackManager:
                 exclude_models.add(model_key)
 
                 # 获取候选模型
-                candidates = self._get_fallback_candidates(current_selection, exclude_models)
+                candidates = self._get_fallback_candidates(
+                    current_selection, exclude_models, require_tools=require_tools
+                )
 
                 if not candidates:
                     logger.error(f"[LLMFallback] No more fallback candidates after {attempt + 1} attempts")
@@ -470,6 +493,7 @@ class LLMModelFallbackManager:
         original_selection: LLMSelection,
         stream_fn,  # AsyncCallable[[LLMSelection], AsyncGenerator[str, None]]
         operation_type: str = "stream_chat",
+        require_tools: bool = False,
     ) -> AsyncGenerator[str, None]:
         """
         执行流式 LLM 调用，支持自动回退
@@ -481,6 +505,7 @@ class LLMModelFallbackManager:
             original_selection: 原始模型选择
             stream_fn: 异步流式调用函数，返回 AsyncGenerator
             operation_type: 操作类型
+            require_tools: 调用带工具 schema 时保持候选在主聊天能力层（E-02）
 
         Yields:
             流式响应内容
@@ -538,7 +563,9 @@ class LLMModelFallbackManager:
             await self.health_tracker.record_failure(original_model_key, fallback_reason)
 
             exclude_models: set[str] = {original_model_key}
-            candidates = self._get_fallback_candidates(original_selection, exclude_models)
+            candidates = self._get_fallback_candidates(
+                original_selection, exclude_models, require_tools=require_tools
+            )
 
             for selection in candidates:
                 model_key = self._get_model_key_from_selection(selection)

@@ -1023,13 +1023,20 @@ class LLMRouter:
                 if normalized_tier not in tiers:
                     tiers.append(normalized_tier)
             if reasoning_mode:
-                for tier in self._preferred_tiers_for_reasoning_mode(
-                    reasoning_mode=reasoning_mode,
-                    task_type=task_type,
-                    allow_max=allow_max,
+                # E-02 可观测一致性：与 _select_by_policy 相同的 reversed-insert，
+                # 使候选层顺序 = 模式优先链顺序。旧实现按正序 insert(0) 会把链
+                # 反转（balanced+STANDARD_RESPONSE 时 PLUS 排到 STANDARD 前），
+                # describe_agent_routing 的候选链首位与实际选择不符。
+                for tier in reversed(
+                    self._preferred_tiers_for_reasoning_mode(
+                        reasoning_mode=reasoning_mode,
+                        task_type=task_type,
+                        allow_max=allow_max,
+                    )
                 ):
-                    if tier not in tiers:
-                        tiers.insert(0, tier)
+                    if tier in tiers:
+                        tiers.remove(tier)
+                    tiers.insert(0, tier)
             # 免费层钳制：候选链/模式允许层/偏好模型一并收敛
             tiers, allowed_tiers, policy_preferred, _ = self._adjust_policy_for_free_tier(
                 tiers, allowed_tiers, list(profile.model_policy.preferred_models or [])

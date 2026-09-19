@@ -615,6 +615,21 @@ LLM_ROUTER_FREE_TIER_DOWNGRADE_TOTAL = get_or_create_metric(
     ["agent_role", "from_tier", "to_tier"],
 )
 
+# E-02 能力路由：每消息 fast/deliberate lane 判定计数。
+# 与 E-01 ROUTING_MAP §5 metrics 口径对齐（lane=fast≈L1 Fast Semantic、
+# lane=deliberate≈L2/L3；L0 走 generation 短路，不经此判定）。
+# trigger = 判定的首要 reasons 标签（封闭枚举，见 capability_lane.resolve_capability_lane）：
+# memory_instruction_fast_lane / memory_query_fast_lane / light_standard_reply（fast）；
+# tool_flow_protected / chat_mode_* / user_mode_deep / document_grounded /
+# explicit_agent_role / experts_selected / document_retrieval / deep_marker_text /
+# personal_data_or_tool_intent / retrieval_required / default_deliberate（deliberate）。
+CHAT_CAPABILITY_LANE_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_chat_capability_lane_total",
+    "Capability-lane (fast/deliberate) decisions per chat turn",
+    ["lane", "memory_class", "retrieval_mode", "trigger"],
+)
+
 # F-2：LLM 结构化输出（推送文案等）解析失败计数。stage=initial 首次解析失败
 # （触发一次"只输出 JSON"重试）；stage=retry 重试仍失败（本次调用落入静态降级
 # 文案）。用于消除"静默降级"：降级不再无遥测标记。

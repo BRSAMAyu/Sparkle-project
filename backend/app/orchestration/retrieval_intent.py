@@ -6,6 +6,8 @@ from collections import Counter
 from dataclasses import dataclass
 from typing import Any, Literal
 
+from app.orchestration.capability_lane import classify_memory_class_message
+
 RetrievalMode = Literal[
     "no_retrieval",
     "graph_only",
@@ -389,6 +391,22 @@ class RetrievalIntentClassifier:
             knowledge_signal = True
         if route in self.PLANNING_ROUTE_HINTS:
             planning_signal = True
+
+        # E-02 能力路由：记忆类轮次（记忆指令确认/记忆检索问答）不做文档/星图检索。
+        # 记忆证据经 user_context 注入（MR-2 slim 记忆最小说集），文档 RAG 对这类
+        # 轮次既无必要也误伤 fast lane（"帮我记住"→ambiguous、"我…是什么"→knowledge
+        # 曾把记忆消息顶进 graph_only/targeted_source_rag，slim 判据被一票否决——
+        # E-01 W-1 破点）。规划类消息（planning_signal）优先级更高，不在此早退。
+        memory_class = classify_memory_class_message(text)
+        if memory_class is not None and not planning_signal:
+            return ContextPlan(
+                retrieval_mode="no_retrieval",
+                should_retrieve=False,
+                budget_tokens=0,
+                reason="memory_class_turn",
+                user_visible_receipt=True,
+                reason_for_user="这是关于你自己的记忆，我直接用已记住的内容回答",
+            )
 
         if planning_signal and not knowledge_signal:
             reason = "planning_query_graph_only"

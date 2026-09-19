@@ -820,10 +820,13 @@ class LLMService:
         async def _call(current_selection: LLMSelection) -> Any:
             return await self._create_raw_completion(current_selection, request_params)
 
+        # E-02 能力兼容：带工具 schema 的调用，fallback 候选保持在主聊天能力层，
+        # 不得降到 FREE*/GLM_BATCH/SPECIALIST 造成"会说话但不能执行"的假完成。
         return await llm_fallback_manager.execute_with_fallback(
             selection,
             _call,
             operation_type=operation_type,
+            require_tools=bool(request_params.get("tools")),
         )
 
     async def _create_raw_stream(
@@ -915,10 +918,12 @@ class LLMService:
             async for chunk in self._create_raw_stream(current_selection, request_params):
                 yield chunk
 
+        # E-02 能力兼容：带工具 schema 的流式调用，fallback 候选保持在主聊天能力层。
         async for chunk in llm_fallback_manager.execute_stream_with_fallback(
             selection,
             _stream,
             operation_type=operation_type,
+            require_tools=bool(request_params.get("tools")),
         ):
             yield chunk
 

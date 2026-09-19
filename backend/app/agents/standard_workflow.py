@@ -52,6 +52,14 @@ from app.core.context_pack import ContextBudgetManager, estimate_tokens, format_
 from app.core.metrics import DOCUMENT_CONTEXT_CHUNKS_INJECTED_TOTAL, DOCUMENT_CONTEXT_TOKENS_USED
 from app.core.pending_actions import pending_actions_store
 from app.gen.agent.v1 import agent_service_pb2
+from app.orchestration.capability_lane import (
+    DEEP_ANALYSIS_TEXT_MARKERS,
+    LIGHT_REPLY_PERSONAL_DATA_MARKERS,
+    LIGHT_REPLY_TOOL_INTENT_MARKERS,
+    classify_memory_class_message,
+    record_capability_lane_decision,
+    resolve_capability_lane,
+)
 from app.orchestration.chat_modes import CHAT_MODE_TEAM_PREFIX, parse_team_spec
 from app.orchestration.context_focus import infer_route_intent_from_chat_mode
 from app.orchestration.executor import ToolExecutor
@@ -276,20 +284,8 @@ def _should_force_balanced_fast_first_touch(
     if not text or len(text) > 120:
         return False
 
-    deep_markers = (
-        "深入",
-        "详细",
-        "原理",
-        "推导",
-        "证明",
-        "严谨",
-        "系统地",
-        "systematically",
-        "in depth",
-        "deep dive",
-        "why exactly",
-    )
-    return not any(marker in text for marker in deep_markers)
+    # E-02：深度词清单与 capability_lane 共享（lane 可观测须与实际 tier 判据同源）。
+    return not any(marker in text for marker in DEEP_ANALYSIS_TEXT_MARKERS)
 
 
 def _coerce_agent_role(role: str | None) -> AgentRole:
@@ -1395,6 +1391,19 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
     memory_answer = _resolve_recent_memory_answer(conversation_context, user_message)
     use_slim_standard_context = _should_use_slim_standard_context(state, user_message)
 
+    # E-02 能力路由：每 turn 落一次 fast/deliberate lane 判定（零 LLM）。
+    # - 遥测：结构化日志 + CHAT_CAPABILITY_LANE_TOTAL（对齐 E-01 ROUTING_MAP §5）。
+    # - context_data["capability_lane"] 供下游（ux_envelope/run_ledger/billing）透传。
+    # - 判定与 tier 强制解耦：tier 落点仍由下方既有分支（fast first touch /
+    #   balanced fast path / deep_analysis / phase_d）执行；lane 反映生效行为
+    #   （含 reasoning_mode=deep → deliberate），故在 reasoning_mode 解析后记录。
+    capability_lane_decision = resolve_capability_lane(
+        user_message=user_message,
+        context_data=state.context_data,
+        reasoning_mode=_resolve_reasoning_mode(state),
+    )
+    record_capability_lane_decision(capability_lane_decision, context_data=state.context_data)
+
     if memory_answer:
         if stream_callback:
             await stream_callback(
@@ -1606,12 +1615,10 @@ Ask about their available time and current tasks if needed.
         chat_mode=str(state.context_data.get("chat_mode", "standard") or "standard"),
         spine_response_directive=state.context_data.get("spine_response_directive"),
         spine_chronicle_summary=(
-            str(state.context_data.get("spine_chronicle_summary") or "")
-            if not use_slim_standard_context else None
+            str(state.context_data.get("spine_chronicle_summary") or "") if not use_slim_standard_context else None
         ),
         spine_fatigue_context=(
-            state.context_data.get("spine_fatigue_context")
-            if not use_slim_standard_context else None
+            state.context_data.get("spine_fatigue_context") if not use_slim_standard_context else None
         ),
     )
     if explicit_runtime and explicit_runtime.get("system_prompt"):
@@ -2497,58 +2504,9 @@ def _should_disable_tools_for_light_standard_reply(state: WorkflowState, user_me
     if not text:
         return False
 
-    explicit_tool_intents = (
-        "创建",
-        "新建",
-        "添加",
-        "保存",
-        "同步",
-        "提醒",
-        "加入日历",
-        "开始专注",
-        "帮我建",
-        "帮我加",
-        "帮我创建",
-        "帮我安排",
-        "设个提醒",
-        "预约",
-        "schedule",
-        "remind",
-        "create",
-        "add",
-        "save",
-        "sync",
-        "start focus",
-    )
-    personal_data_intents = (
-        "我的计划",
-        "我现在的计划",
-        "我的任务",
-        "我当前的任务",
-        "我的日程",
-        "我的日历",
-        "我的知识星图",
-        "我的画像",
-        "我的专注",
-        "我的进度",
-        "我的状态",
-        "结合我现在",
-        "根据我的",
-        "看看我的",
-        "查一下我的",
-        "我今天要做什么",
-        "我今天该做什么",
-        "my plan",
-        "my task",
-        "my tasks",
-        "my schedule",
-        "my calendar",
-        "my progress",
-        "my profile",
-        "based on my",
-        "check my",
-    )
-    if any(keyword in text for keyword in explicit_tool_intents + personal_data_intents):
+    # E-02 R2-F2B：工具动作/个人数据意图词清单与 capability_lane 共享
+    # （lane 可观测须与实际 tier 判据同源，单一事实来源，勿再抄清单）。
+    if any(keyword in text for keyword in LIGHT_REPLY_TOOL_INTENT_MARKERS + LIGHT_REPLY_PERSONAL_DATA_MARKERS):
         return False
 
     # 标准闲聊 / 概念解释默认不暴露工具，避免把用户历史工具偏好误带入无关问题。
@@ -2566,7 +2524,15 @@ def _should_use_slim_standard_context(state: WorkflowState, user_message: str) -
         return False
     decision = context_data.get("document_retrieval_decision") or context_data.get("retrieval_decision") or {}
     if isinstance(decision, dict) and decision.get("should_retrieve"):
-        return False
+        # E-02 能力路由：graph_only（用户知识星图，非文档）不否决记忆类轮次——
+        # 记忆证据走 user_context 注入（MR-2 slim 记忆最小说集）。文档级模式
+        # （targeted_source_rag 等）与规划类 graph_only 仍保持否决（deliberate）。
+        # 这是 retrieval_intent 根修（memory_class_turn）之后的第二道防线，
+        # 覆盖决策由上游旁路写入/旧数据回放的场景。
+        retrieval_mode = str(decision.get("retrieval_mode") or "").strip().lower()
+        is_memory_turn = classify_memory_class_message(user_message) is not None
+        if not (is_memory_turn and retrieval_mode == "graph_only"):
+            return False
     if context_data.get("planned_tool_sequence"):
         return False
     if context_data.get("selected_experts") or context_data.get("answer_experts"):
