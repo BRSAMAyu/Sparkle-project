@@ -21,6 +21,16 @@
   对应 AURORA_V3 的 relevant memories + provenance 与 memory_use_receipts）；
 - Planner（orchestration/plan_review_service 等）：读 items_of_type("goal")/
   items_in_scope("plan") + plan ref， replan 时从 pack 直接取决策面。
+
+命名消歧（V3-FIX-09 / REVIEW_RECEIPT_2 F7 登记，防同名异义误用）：
+- ``ContextPack.decision_context``（本模块 ``DecisionContext``）= 冻结契约对象，
+  带 schema_version/ref/词表校验，可直接 ``validate()``/``to_dict()``；
+- ``SituationBrief.decision_context``（orchestration/situation_brief.py）= prompt 侧
+  普通 dict（residual diagnosis + decision policy + Phase A 守门的合成物），
+  无契约语义，二者同名异义、同链路流动，**禁止互相替换或混用**。
+
+扩展纪律（extend-only）：本契约冻结于 decision_context.v1；新增字段只允许追加
+可选尾字段（不改变既有字段名/顺序/语义与封闭词表），禁止改写或重排。
 """
 
 from __future__ import annotations
@@ -29,6 +39,7 @@ import dataclasses
 import hashlib
 from dataclasses import dataclass, field
 from datetime import date, datetime
+from decimal import Decimal
 from types import MappingProxyType
 from typing import Any, Callable, Mapping
 from uuid import UUID
@@ -68,6 +79,17 @@ DECISION_ITEM_TYPES: frozenset[str] = frozenset(
         "plan",
         "user_state_signal",
         "document_chunk",
+    }
+)
+
+# 降级原因封闭词表（V3-FIX-09 / REVIEW_RECEIPT_2 F1）：degraded_reasons 的合法取值。
+# 治理模式（kill-switch off/shadow）与真降级（数据缺失/取数异常）必须可区分，
+# 不得把治理开关冒充成数据降级。
+DECISION_DEGRADED_REASONS: frozenset[str] = frozenset(
+    {
+        "governance_off",  # aggregator kill-switch=off：治理性关闭，非数据缺失
+        "governance_shadow",  # aggregator kill-switch=shadow：计算不外曝，非数据缺失
+        "unavailable",  # envelope 缺失或取数异常：真降级
     }
 )
 
@@ -157,11 +179,15 @@ class ContextItemDescriptor:
 
 @dataclass(frozen=True)
 class DecisionStateSignal:
-    """UserStateV1 单字段的最小高信号投影（真源仍是 state_aggregator）。"""
+    """UserStateV1 单字段的最小高信号投影（真源仍是 state_aggregator）。
+
+    ``value`` 在构造时固化为只读 Mapping（V3-FIX-09 / REVIEW_RECEIPT_2 F3）：
+    进程内消费者不得突变投影面；序列化经 ``to_dict()`` 还原为普通 dict。
+    """
 
     name: str
     ref: str
-    value: dict[str, Any]
+    value: Mapping[str, Any]
     why_included: tuple[str, ...] = ("state_signal",)
     ttl_seconds: int | None = None
     epoch: str | None = None
@@ -170,14 +196,19 @@ class DecisionStateSignal:
     source_snapshot_ids: tuple[str, ...] = ()
     version: str = DECISION_CONTEXT_SCHEMA_VERSION
 
+    def __post_init__(self) -> None:
+        # F3: 冻结 value 投影为只读视图（与 omitted_counts 同等保护）。
+        if isinstance(self.value, Mapping) and not isinstance(self.value, MappingProxyType):
+            object.__setattr__(self, "value", MappingProxyType(dict(self.value)))
+
     def validate(self) -> tuple[str, ...]:
         violations: list[str] = []
         if self.ref != user_state_ref(self.name):
             violations.append(f"signal {self.name}: ref must be {user_state_ref(self.name)!r}")
         if self.ttl_seconds is None and self.epoch is None:
             violations.append(f"signal {self.name}: ttl_seconds and epoch both missing (ttl_or_epoch rule)")
-        if not isinstance(self.value, dict):
-            violations.append(f"signal {self.name}: value must be a dict projection")
+        if not isinstance(self.value, Mapping):
+            violations.append(f"signal {self.name}: value must be a mapping projection")
         if not self.why_included or not set(self.why_included) <= DECISION_INCLUDE_REASONS:
             violations.append(f"signal {self.name}: why_included empty or out of vocabulary")
         return tuple(violations)
@@ -186,7 +217,7 @@ class DecisionStateSignal:
         return {
             "name": self.name,
             "ref": self.ref,
-            "value": self.value,
+            "value": dict(self.value) if isinstance(self.value, Mapping) else self.value,
             "why_included": list(self.why_included),
             "ttl_seconds": self.ttl_seconds,
             "epoch": self.epoch,
@@ -199,7 +230,21 @@ class DecisionStateSignal:
 
 @dataclass(frozen=True)
 class DecisionContext:
-    """决策面契约：本次 pack 构建服务于哪个决策、装入了什么、为何装入、降级了什么。"""
+    """决策面契约：本次 pack 构建服务于哪个决策、装入了什么、为何装入、降级了什么。
+
+    omitted_counts 候选集边界（V3-FIX-09 / REVIEW_RECEIPT_2 F4 契约文档化）：
+    计数只覆盖「已进入 rank/预算裁剪池的候选 − 实际注入」的差额
+    （preferences/goals/episodic 三个 memory section）。上游门控剔除——M-03 记忆
+    预筛、语义门控淘汰、多样性/冲突剔除——发生在候选池形成之前，**不计入**本计数；
+    该部分在 orchestrator 侧 context_sources manifest（memory_prefilter metadata、
+    section note）观测。消费方不得把 omitted_counts 当作全链路剔除总量。
+
+    degraded_fields / degraded_reasons（V3-FIX-09 / REVIEW_RECEIPT_2 F1）：
+    降级可观测且治理模式与真降级可区分——每个降级字段在 ``degraded_reasons`` 中
+    携带封闭词表 ``DECISION_DEGRADED_REASONS`` 内的原因码
+    （governance_off / governance_shadow / unavailable），
+    聚合器治理开关（kill-switch off/shadow）不得冒充数据缺失。
+    """
 
     user_id: UUID
     intent: str
@@ -213,10 +258,12 @@ class DecisionContext:
     omitted_counts: Mapping[str, int] = field(default_factory=dict)
     degraded_fields: tuple[str, ...] = ()
     built_at: datetime | None = None
+    degraded_reasons: Mapping[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        # 冻结对象：omitted_counts 固化为只读视图，防下游静默篡改观测面。
+        # 冻结对象：omitted_counts / degraded_reasons 固化为只读视图，防下游静默篡改观测面。
         object.__setattr__(self, "omitted_counts", MappingProxyType(dict(self.omitted_counts)))
+        object.__setattr__(self, "degraded_reasons", MappingProxyType(dict(self.degraded_reasons)))
 
     # -- 消费便捷接口 -------------------------------------------------------
 
@@ -241,6 +288,13 @@ class DecisionContext:
             violations.append(f"schema_version mismatch: {self.schema_version!r}")
         if not self.intent:
             violations.append("intent must be non-empty")
+        unknown_reasons = {
+            field_name: reason
+            for field_name, reason in self.degraded_reasons.items()
+            if reason not in DECISION_DEGRADED_REASONS
+        }
+        if unknown_reasons:
+            violations.append(f"degraded_reasons out of vocabulary: {sorted(unknown_reasons.items())}")
         for item in self.items:
             violations.extend(item.validate())
         for entry in self.signals:
@@ -281,6 +335,7 @@ class DecisionContext:
             "omitted_counts": dict(self.omitted_counts),
             "degraded_fields": list(self.degraded_fields),
             "built_at": _iso(self.built_at),
+            "degraded_reasons": dict(self.degraded_reasons),
         }
 
 
@@ -309,11 +364,17 @@ SIGNAL_VALUE_PROJECTIONS: Mapping[str, Callable[[Any], dict[str, Any]]] = {
 
 
 def _default_signal_projection(value: Any) -> dict[str, Any]:
-    """未显式登记投影的字段：递归投影为 JSON 安全 dict（日期转 ISO）。"""
+    """未显式登记投影的字段：递归投影为 JSON 安全 dict（日期/UUID/Decimal 转 str）。
+
+    V3-FIX-09 / REVIEW_RECEIPT_2 F6：UUID 与 Decimal 不得穿透到投影面，
+    否则 v2 扩字段或落库路径上 ``to_dict()`` 结果无法 json.dumps。
+    """
 
     def _convert(item: Any) -> Any:
         if isinstance(item, (datetime, date)):
             return item.isoformat()
+        if isinstance(item, (UUID, Decimal)):
+            return str(item)
         if isinstance(item, dict):
             return {key: _convert(entry) for key, entry in item.items()}
         if isinstance(item, (list, tuple)):

@@ -436,6 +436,14 @@ CONTEXT_PACK_INTENT = get_or_create_metric(
     ['intent']
 )
 
+# V3-FIX-09 / REVIEW_RECEIPT_2 F1: DecisionContext 信号降级可观测（治理模式 vs 真降级）
+DECISION_CONTEXT_SIGNAL_DEGRADED_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_decision_context_signal_degraded_total',
+    'DecisionContext signal degradations by reason (governance_off/governance_shadow/unavailable)',
+    ['reason']
+)
+
 CONTEXT_FOCUS_DECISION_TOTAL = get_or_create_metric(
     Counter,
     'sparkle_context_focus_decision_total',

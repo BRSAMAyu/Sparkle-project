@@ -27,6 +27,7 @@ from app.core.business_metrics import (
     CONTEXT_PACK_OVER_BUDGET,
     CONTEXT_SEMANTIC_GATING_APPLIED_TOTAL,
     CONTEXT_SEMANTIC_GATING_FALLBACK_TOTAL,
+    DECISION_CONTEXT_SIGNAL_DEGRADED_TOTAL,
 )
 from app.core.context_budget import ContextBudgetScheduler
 from app.core.context_ranker import RankedItem, rank_items
@@ -1934,33 +1935,61 @@ class ContextPackBuilder:
     async def _collect_decision_signals(
         self,
         user_id: UUID,
-    ) -> tuple[tuple[DecisionStateSignal, ...], tuple[str, ...]]:
-        """逐字段投影 UserStateV1 高信号（单字段故障只降级该字段，不炸 pack）。"""
+    ) -> tuple[tuple[DecisionStateSignal, ...], tuple[str, ...], dict[str, str]]:
+        """逐字段投影 UserStateV1 高信号（单字段故障只降级该字段，不炸 pack）。
+
+        V3-FIX-09 / REVIEW_RECEIPT_2 F1：治理模式与真降级可区分、可观测。
+        - aggregator kill-switch=off / shadow → 原因码 governance_off / governance_shadow
+          （治理性关闭，跳过取数，不冒充数据缺失）；
+        - live 下 envelope 缺失或取数异常 → 原因码 unavailable（真降级）。
+        观测面：聚合结构化 warning 日志 + DECISION_CONTEXT_SIGNAL_DEGRADED_TOTAL 计数；
+        原因码随 DecisionContext.degraded_reasons 尾字段流出供消费方区分。
+        """
+        from app.services.aurora_stage18_kill_switch_service import AuroraStage18KillSwitchService
         from app.state_aggregator.service import StateAggregatorService
 
+        aggregator_mode = await AuroraStage18KillSwitchService().get_feature_mode("aggregator_enabled")
         aggregator = StateAggregatorService(self.db)
         ttl_map = StateAggregatorService.FIELD_TTLS_SECONDS
         signals: list[DecisionStateSignal] = []
         degraded: list[str] = []
+        degraded_reasons: dict[str, str] = {}
         for field_name in DEFAULT_DECISION_SIGNAL_FIELDS:
-            try:
-                state = await aggregator.get_user_state(user_id, required_fields=(field_name,))
-                envelope = getattr(state, field_name, None)
-                if envelope is None or getattr(envelope, "value", None) is None:
-                    degraded.append(field_name)
-                    continue
-                signals.append(
-                    state_signal_from_envelope(
-                        field_name,
-                        envelope,
-                        ttl_map=ttl_map,
-                        epoch=state.schema_version,
-                    )
-                )
-            except Exception as exc:
-                logger.warning(f"Decision context signal {field_name} degraded for {user_id}: {exc}")
-                degraded.append(field_name)
-        return tuple(signals), tuple(degraded)
+            if aggregator_mode == "off":
+                # 治理性关闭：不取数、不计异常，原因显式编码（F1）
+                degraded_reasons[field_name] = "governance_off"
+            elif aggregator_mode == "shadow":
+                # shadow 模式下 _get_field 恒返回 None（计算不外曝）：跳过无效取数（F1）
+                degraded_reasons[field_name] = "governance_shadow"
+            else:
+                try:
+                    state = await aggregator.get_user_state(user_id, required_fields=(field_name,))
+                    envelope = getattr(state, field_name, None)
+                    if envelope is None or getattr(envelope, "value", None) is None:
+                        degraded_reasons[field_name] = "unavailable"
+                    else:
+                        signals.append(
+                            state_signal_from_envelope(
+                                field_name,
+                                envelope,
+                                ttl_map=ttl_map,
+                                epoch=state.schema_version,
+                            )
+                        )
+                        continue
+                except Exception as exc:
+                    logger.warning(f"Decision context signal {field_name} degraded for {user_id}: {exc}")
+                    degraded_reasons[field_name] = "unavailable"
+            degraded.append(field_name)
+        if degraded:
+            logger.warning(
+                f"Decision context signals degraded for {user_id}: "
+                f"aggregator_mode={aggregator_mode!r} "
+                f"reasons={ {name: degraded_reasons[name] for name in sorted(degraded)} }"
+            )
+            for name in degraded:
+                DECISION_CONTEXT_SIGNAL_DEGRADED_TOTAL.labels(reason=degraded_reasons[name]).inc()
+        return tuple(signals), tuple(degraded), degraded_reasons
 
     async def _build_decision_context(
         self,
@@ -2073,7 +2102,7 @@ class ContextPackBuilder:
                 )
             )
 
-        signals, degraded = await self._collect_decision_signals(user_id)
+        signals, degraded, degraded_reasons = await self._collect_decision_signals(user_id)
 
         omitted_counts = {
             "preferences": max(0, len(ranked_preferences) - len(trimmed_preferences)),
@@ -2093,6 +2122,7 @@ class ContextPackBuilder:
             omitted_counts=omitted_counts,
             degraded_fields=degraded,
             built_at=_utcnow(),
+            degraded_reasons=degraded_reasons,
         )
 
     async def _mark_consumed_memory_records(

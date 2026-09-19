@@ -17,9 +17,11 @@ import dataclasses
 import hashlib
 import json
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from uuid import uuid4
 
 import pytest
+from prometheus_client import REGISTRY
 
 from app.config import settings
 from app.core.cache import cache_service
@@ -29,6 +31,7 @@ from app.core.decision_context import (
     CONTEXT_ITEM_DESCRIPTOR_FIELDS,
     DECISION_CONTEXT_FIELDS,
     DECISION_CONTEXT_SCHEMA_VERSION,
+    DECISION_DEGRADED_REASONS,
     DECISION_INCLUDE_REASONS,
     DECISION_ITEM_TYPES,
     DECISION_REF_SCHEMES,
@@ -38,6 +41,7 @@ from app.core.decision_context import (
     ContextItemDescriptor,
     DecisionContext,
     DecisionStateSignal,
+    _default_signal_projection,
 )
 
 # 模块级导入确保 sqlite 建表覆盖聚合器所需的表（follow test_state_aggregator_service 惯例）
@@ -113,7 +117,8 @@ _DECLARED_ITEM_FIELDS = [
 _DECLARED_SIGNAL_FIELDS = [
     ("name", "str"),
     ("ref", "str"),
-    ("value", "dict[str, Any]"),
+    # V3-FIX-09/F3: value 只读化（构造时固化为 MappingProxyType），注解随之反映只读面
+    ("value", "Mapping[str, Any]"),
     ("why_included", "tuple[str, ...]"),
     ("ttl_seconds", "int | None"),
     ("epoch", "str | None"),
@@ -136,6 +141,8 @@ _DECLARED_CONTEXT_FIELDS = [
     ("omitted_counts", "Mapping[str, int]"),
     ("degraded_fields", "tuple[str, ...]"),
     ("built_at", "datetime | None"),
+    # V3-FIX-09/F1: 可选尾字段——降级原因封闭词表（治理模式与真降级可区分）
+    ("degraded_reasons", "Mapping[str, str]"),
 ]
 
 
@@ -289,6 +296,111 @@ def test_decision_context_serialization_is_json_safe():
     assert isinstance(payload["omitted_counts"], dict)
     with pytest.raises(TypeError):
         ctx.omitted_counts["goals"] = 99
+
+
+def test_signal_value_is_immutable_projection():
+    """V3-FIX-09/F3：signal value 构造后只读——进程内突变必须当场炸（mutation 必红）。"""
+    signal = DecisionStateSignal(
+        name="engagement_state",
+        ref="user_state://engagement_state",
+        value={"streak": 3},
+        ttl_seconds=60,
+        epoch="user_state.v1.13",
+    )
+    assert signal.validate() == ()
+    with pytest.raises(TypeError):
+        signal.value["streak"] = 99  # type: ignore[index]
+    with pytest.raises(TypeError):
+        signal.value["injected"] = True  # type: ignore[index]
+    # 序列化面仍是普通 dict（JSON-safe），不泄漏 MappingProxyType
+    payload = signal.to_dict()
+    assert isinstance(payload["value"], dict)
+    json.dumps(payload)  # 不得抛异常
+    # 快照语义：构造后再改传入的源 dict 不得影响已冻结的投影
+    source = {"streak": 3}
+    snapshot = DecisionStateSignal(
+        name="engagement_state",
+        ref="user_state://engagement_state",
+        value=source,
+        ttl_seconds=60,
+        epoch="user_state.v1.13",
+    )
+    source["streak"] = 777
+    assert snapshot.value["streak"] == 3
+
+
+def test_degraded_reasons_closed_vocabulary_and_readonly():
+    """V3-FIX-09/F1：降级原因封闭词表；degraded_reasons 只读；未知原因码 validate 必报。"""
+    assert frozenset({"governance_off", "governance_shadow", "unavailable"}) == DECISION_DEGRADED_REASONS
+
+    ctx = DecisionContext(
+        user_id=uuid4(),
+        intent="chat",
+        degraded_fields=("emotion_hint",),
+        degraded_reasons={"emotion_hint": "governance_shadow"},
+    )
+    assert ctx.validate() == ()
+    assert ctx.degraded_reasons["emotion_hint"] == "governance_shadow"
+    with pytest.raises(TypeError):
+        ctx.degraded_reasons["emotion_hint"] = "unavailable"  # type: ignore[index]
+    # to_dict 流出普通 dict
+    assert ctx.to_dict()["degraded_reasons"] == {"emotion_hint": "governance_shadow"}
+
+    bad = DecisionContext(
+        user_id=uuid4(),
+        intent="chat",
+        degraded_fields=("emotion_hint",),
+        degraded_reasons={"emotion_hint": "mystery"},
+    )
+    assert any("degraded_reasons" in v for v in bad.validate())
+
+    # 兼容面：不传 degraded_reasons 时默认空且 validate 通过（旧构造签名不变）
+    legacy = DecisionContext(user_id=uuid4(), intent="chat")
+    assert legacy.degraded_reasons == {}
+    assert legacy.validate() == ()
+
+
+def test_default_projection_is_json_safe_for_uuid_decimal():
+    """V3-FIX-09/F6：默认投影把 UUID/Decimal 转 str，递归产物必须可 json.dumps。"""
+
+    @dataclasses.dataclass
+    class _ArbitraryState:
+        raw_uuid: object
+        raw_decimal: object
+        nested: dict
+        items: list
+
+    payload_uuid = uuid4()
+    payload_decimal = Decimal("3.14")
+    state = _ArbitraryState(
+        raw_uuid={"id": payload_uuid, "batch": [payload_uuid, Decimal("9.5")]},
+        raw_decimal=payload_decimal,
+        nested={"when": datetime(2026, 9, 19, 12, 0, 0)},
+        items=(payload_uuid, payload_decimal),
+    )
+
+    projection = _default_signal_projection(state)
+    serialized = json.dumps(projection)  # 不得抛异常（UUID/Decimal 穿透即炸）
+    assert str(payload_uuid) in serialized
+    assert "3.14" in serialized
+    assert "9.5" in serialized
+
+    # 非 dataclass 标量路径：包一层 {"value": ...} 且同样 JSON-safe
+    scalar_projection = _default_signal_projection(Decimal("1.25"))
+    assert scalar_projection == {"value": "1.25"}
+    json.dumps(scalar_projection)
+
+
+def test_omitted_counts_candidate_boundary_documented():
+    """V3-FIX-09/F4：omitted_counts 候选集边界必须写入契约文档并钉住（防文档回退）。"""
+    doc = DecisionContext.__doc__ or ""
+    assert "omitted_counts" in doc
+    assert "候选集" in doc
+    assert "上游门控" in doc  # 明示：M-03 预筛/语义门控/多样性剔除不计入
+    # 只读面保持（与 omitted_counts 契约一致）
+    ctx = DecisionContext(user_id=uuid4(), intent="chat", omitted_counts={"goals": 2})
+    with pytest.raises(TypeError):
+        ctx.omitted_counts["goals"] = 0  # type: ignore[index]
 
 
 def test_cache_key_components_are_deterministic():
@@ -473,6 +585,11 @@ async def test_builder_populates_decision_context(db_session, monkeypatch):
     assert set(srl.value.keys()) == {"current_phase", "phase_started_at", "confidence", "source"}
 
 
+def _degraded_counter_value(reason: str) -> float:
+    sample = REGISTRY.get_sample_value("sparkle_decision_context_signal_degraded_total", {"reason": reason})
+    return float(sample or 0.0)
+
+
 @pytest.mark.asyncio
 async def test_builder_signals_degrade_gracefully(db_session, monkeypatch):
     """聚合器故障时 pack 必须照常构建：信号空 + degraded_fields 登记，不抛异常。"""
@@ -484,12 +601,75 @@ async def test_builder_signals_degrade_gracefully(db_session, monkeypatch):
 
     monkeypatch.setattr(StateAggregatorService, "get_user_state", _explode)
 
+    unavailable_before = _degraded_counter_value("unavailable")
     pack = await _builder(db_session).build(user_id, intent="chat")
     assert pack.decision_context is not None
     assert pack.decision_context.signals == ()
     assert tuple(sorted(pack.decision_context.degraded_fields)) == tuple(sorted(DEFAULT_DECISION_SIGNAL_FIELDS))
+    # V3-FIX-09/F1: 真降级（取数异常）必须编码为 unavailable，而非治理模式
+    assert pack.decision_context.degraded_reasons == dict.fromkeys(DEFAULT_DECISION_SIGNAL_FIELDS, "unavailable")
+    assert pack.decision_context.validate() == ()
+    assert _degraded_counter_value("unavailable") == unavailable_before + len(DEFAULT_DECISION_SIGNAL_FIELDS)
     # items manifest 不受信号降级影响
     assert any(item.type == "preference" for item in pack.decision_context.items)
+
+
+@pytest.mark.asyncio
+async def test_builder_signals_governance_shadow_mode_observable(db_session, monkeypatch):
+    """V3-FIX-09/F1：kill-switch=shadow 时信号缺失必须编码为 governance_shadow（不冒充数据降级），
+    且降级可观测（结构化日志路径 + 降级计数器）。"""
+    monkeypatch.setattr(cache_service, "redis", None, raising=False)
+    monkeypatch.setattr(settings, "AURORA_STAGE18_AGGREGATOR_MODE", "shadow", raising=False)
+    # legacy bool 会把 fallback("off") 劫持回 live；显式关闭保证 shadow 解析的测试封闭性
+    monkeypatch.setattr(settings, "SPARKLE_AGGREGATOR_ENABLED", False, raising=False)
+    user_id = await _seed_user_with_memories(db_session)
+
+    shadow_before = _degraded_counter_value("governance_shadow")
+    pack = await _builder(db_session).build(user_id, intent="chat")
+
+    decision = pack.decision_context
+    assert decision is not None
+    assert decision.signals == ()
+    assert tuple(sorted(decision.degraded_fields)) == tuple(sorted(DEFAULT_DECISION_SIGNAL_FIELDS))
+    assert decision.degraded_reasons == dict.fromkeys(DEFAULT_DECISION_SIGNAL_FIELDS, "governance_shadow")
+    assert decision.validate() == (), f"治理性降级不得产生契约违规: {decision.validate()}"
+    # to_dict 面可观测（v2/落库路径安全）
+    assert decision.to_dict()["degraded_reasons"] == dict.fromkeys(DEFAULT_DECISION_SIGNAL_FIELDS, "governance_shadow")
+    # 降级计数器按原因码递增
+    assert _degraded_counter_value("governance_shadow") == shadow_before + len(DEFAULT_DECISION_SIGNAL_FIELDS)
+    # items manifest 与 pack 其余部分不受治理模式影响
+    assert any(item.type == "preference" for item in decision.items)
+    assert "depth_preference" in pack.preferences
+
+
+@pytest.mark.asyncio
+async def test_builder_signals_governance_off_mode_skips_fetch(db_session, monkeypatch):
+    """V3-FIX-09/F1：kill-switch=off 时跳过取数（不做无效查询），原因编码为 governance_off。"""
+    monkeypatch.setattr(cache_service, "redis", None, raising=False)
+    monkeypatch.setattr(settings, "AURORA_STAGE18_AGGREGATOR_MODE", "off", raising=False)
+    # legacy bool SPARKLE_AGGREGATOR_ENABLED=True 会把 "off" 配置劫持回 "live"
+    # （resolve_settings_mode: configured==fallback 且 legacy 开启 → enabled_mode），必须一并关闭
+    monkeypatch.setattr(settings, "SPARKLE_AGGREGATOR_ENABLED", False, raising=False)
+    user_id = await _seed_user_with_memories(db_session)
+
+    fetch_calls: list[tuple] = []
+
+    async def _must_not_fetch(*args, **kwargs):
+        fetch_calls.append(args)
+        raise AssertionError("aggregator kill-switch=off 时不得发起信号取数")
+
+    monkeypatch.setattr(StateAggregatorService, "get_user_state", _must_not_fetch)
+
+    off_before = _degraded_counter_value("governance_off")
+    pack = await _builder(db_session).build(user_id, intent="chat")
+
+    decision = pack.decision_context
+    assert decision is not None
+    assert decision.signals == ()
+    assert fetch_calls == []
+    assert decision.degraded_reasons == dict.fromkeys(DEFAULT_DECISION_SIGNAL_FIELDS, "governance_off")
+    assert decision.validate() == ()
+    assert _degraded_counter_value("governance_off") == off_before + len(DEFAULT_DECISION_SIGNAL_FIELDS)
 
 
 @pytest.mark.asyncio

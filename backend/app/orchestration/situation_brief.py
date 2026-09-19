@@ -220,6 +220,11 @@ class SituationBrief:
     outcome: dict[str, Any]
     sparkle_self_state: dict[str, Any]
     recommended_stance: dict[str, Any]
+    # 命名消歧（V3-FIX-09 / REVIEW_RECEIPT_2 F7 登记）：本字段是 prompt 侧普通 dict
+    # （residual diagnosis + decision policy + Phase A 守门合成物），与
+    # ContextPack.decision_context（app/core/decision_context.py 冻结契约对象
+    # DecisionContext）同名异义，禁止互相替换或混用；持久化面经 to_dict() 的
+    # "decision_context" key 流转（session_state_mixin 沿用），故字段名不改、语义以此注释为准。
     decision_context: dict[str, Any]
     semantic_control: dict[str, Any]
     semantic_primitives: dict[str, Any]
