@@ -191,8 +191,17 @@ class MemoryService:
         await self.db.flush()
 
         if latest is not None:
+            # V3-FIX-35（精确化 M-07 的 updated_at bump）：
+            # supersede 仍触碰旧行 updated_at（缓存失效/审计语义保留），但链头
+            # 与被取代行共享同一转换时刻——旧行绝不比链头"更新"。修复前旧行
+            # 被 bump 到晚于链头创建时刻的 utcnow()，任何按 updated_at 排序的
+            # 消费面（如 _pick_preference_winner 的旧实现）都会让被取代值反杀
+            # 链头（M-09 评测 20 case 红的根因之一）。
+            supersede_at = utcnow()
             latest.replaced_by_id = record.id
-            latest.updated_at = utcnow()
+            latest.updated_at = supersede_at
+            if (record.updated_at or supersede_at) < supersede_at:
+                record.updated_at = supersede_at
             # Memory V3 (M-07)：supersede（用户纠正产生新链头）→ epoch bump +
             # invalidation 事件 + derived 缓存失效，与版本推进同事务原子生效。
             # 行锁持有期间无中间提交，C2 的 FOR UPDATE 保护不被破坏。

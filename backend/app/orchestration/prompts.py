@@ -3326,6 +3326,104 @@ def _preference_scalar(value: Any, default: float = 0.5) -> float:
         return float(default)
 
 
+# V3-FIX-36：记忆链偏好键的用户可读标签（渲染层显示投影，非真源——偏好值
+# 永远来自记忆链，标签只是显示名；未收录键回退显示原始 key，诚实不猜）。
+_PREFERENCE_LABELS: dict[str, str] = {
+    "ai_verbosity": "回答长度",
+    "response_style": "回答风格",
+    "feedback_style": "反馈风格",
+    "feedback_tone": "反馈语气",
+    "coaching_style": "教练风格",
+    "language": "语言",
+    "learning_style": "学习方式",
+    "timezone": "时区",
+    "focus_duration_preference": "专注时长",
+    "preferred_focus_duration": "专注时长",
+    "focus_mode": "专注模式",
+    "sprint_mode": "冲刺模式",
+    "depth_preference": "内容深度",
+    "curiosity_preference": "好奇心拓展",
+    "study_time_preference": "学习时间",
+    "schedule_preferences": "日程安排",
+    "weather_preferences": "天气偏好",
+    "notification_frequency": "通知频率",
+    "enable_push": "推送开关",
+    "enable_curiosity_push": "拓展推送开关",
+    "push_receptivity": "推送接受度",
+    "curiosity_push_receptivity": "拓展推送接受度",
+    "knowledge_level": "知识水平",
+    "persona_type": "用户身份",
+    "task_priority_bias": "任务优先级",
+    "preferred_expansion_depth": "拓展难度",
+    "vocabulary_retention_style": "记忆方法",
+    "motivation_type": "动力类型",
+    "checkin_regularity": "打卡规律",
+    "daily_cap": "每日任务量",
+    "social_learning_preference": "社群学习",
+}
+
+# 已在上面以标量行渲染（深度/好奇心）的键：值行不重复渲染其数值形态。
+_PREFERENCE_SCALAR_RENDERED_KEYS = {"depth_preference", "curiosity_preference"}
+
+# 单条偏好值行的长度与条数上限：防画像脏数据撑爆 prompt（超出截断、多余丢弃）。
+_PREFERENCE_LINE_MAX_CHARS = 120
+_PREFERENCE_LINE_LIMIT = 8
+
+
+def _preference_value_text(value: Any) -> str:
+    """提取用户可读的偏好值文本（V3-FIX-36 隐私口径）。
+
+    写入方契约（profile_write_service._to_history_payload / 记忆链写入）：
+    {"value": X} 包装、或用户可读字段组成的 dict、或标量。这里只序列化
+    str/int/float/bool 层的用户内容；嵌套结构/空值返回空串（不渲染），
+    内部参数（分数/置信/版本/id）从不出现在本函数的输出里。
+    """
+    if isinstance(value, dict):
+        if "value" in value:
+            return _preference_value_text(value.get("value"))
+        parts: list[str] = []
+        for key, item in value.items():
+            if isinstance(item, (str, int, float, bool)):
+                text = str(item).strip()
+                if text:
+                    parts.append(f"{key}={text}")
+        return "，".join(parts)
+    if isinstance(value, (str, int, float, bool)):
+        return str(value).strip()
+    return ""
+
+
+def _format_memory_preference_lines(prefs: Any) -> list[str]:
+    """记忆链偏好值 → 【学习偏好】值行（V3-FIX-36）。
+
+    输入是 pack.preferences 的只读投影（键=偏好键，值=链头 pref_value）。
+    仅当能提取出非空用户可读文本才生成行；数值型的深度/好奇心标量已有
+    专属行，此处跳过，避免重复。条数与单行长度有上限。
+    """
+    if not isinstance(prefs, dict):
+        return []
+    rendered: list[str] = []
+    for key, value in prefs.items():
+        if not isinstance(key, str) or not key or key == "flame_level":
+            continue
+        text = _preference_value_text(value)
+        if not text:
+            continue
+        if key in _PREFERENCE_SCALAR_RENDERED_KEYS:
+            try:
+                float(text)
+                continue  # 数值形态已由专属标量行渲染
+            except ValueError:
+                pass
+        if len(text) > _PREFERENCE_LINE_MAX_CHARS:
+            text = text[: _PREFERENCE_LINE_MAX_CHARS - 1] + "…"
+        label = _PREFERENCE_LABELS.get(key, key)
+        rendered.append(f"- {label}: {text}")
+        if len(rendered) >= _PREFERENCE_LINE_LIMIT:
+            break
+    return rendered
+
+
 def _render_user_context_content(
     context: dict,
     *,
@@ -3386,6 +3484,13 @@ def _render_user_context_content(
             curiosity_val = _preference_scalar(prefs.get("curiosity_preference"), 0.5)
             lines.append(f"- 深度: {depth_val:.1f}")
             lines.append(f"- 好奇心: {curiosity_val:.1f}")
+        # V3-FIX-36：记忆链偏好值必须进渲染面。M-01..M-07 保证正确的链头值
+        # 在此之前只在 pack.preferences（结构面）可见，最终 prompt 看不到——
+        # 用户纠正生效后答案层无法个性化（M-09 真模型探针 0/5 的根因）。
+        # 隐私口径与 M-08 provenance 对外口径一致：只序列化用户可读的值文本
+        # （{"value": X} 契约或标量/字符串字段），内部参数（分数/置信/版本/
+        # id/epoch）与原始 JSON 结构一律不进渲染。
+        lines.extend(_format_memory_preference_lines(prefs))
         _mark_rendered("preferences")
 
     knowledge_summary = normalized.get("knowledge_summary")

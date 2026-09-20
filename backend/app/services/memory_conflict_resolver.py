@@ -57,8 +57,9 @@ def _goal_overlap(a: date | None, b: date | None) -> bool:
     return a == b
 
 
-def _pick_preference_winner(records: list[MemoryPreference]) -> tuple[MemoryPreference, str]:
-    records_sorted = sorted(
+def _rank_preferences(records: list[MemoryPreference]) -> list[MemoryPreference]:
+    """Legacy ranking axes: (evidence_score, updated_at, confidence)."""
+    return sorted(
         records,
         key=lambda item: (
             item.evidence_score or 0.0,
@@ -67,18 +68,51 @@ def _pick_preference_winner(records: list[MemoryPreference]) -> tuple[MemoryPref
         ),
         reverse=True,
     )
-    if len(records_sorted) == 1:
-        return records_sorted[0], "single"
 
-    top = records_sorted[0]
-    second = records_sorted[1]
-    if (top.evidence_score or 0.0) != (second.evidence_score or 0.0):
-        return top, "evidence_score"
-    if (top.updated_at or datetime.min) != (second.updated_at or datetime.min):
-        return top, "updated_at"
-    if (top.confidence or 0.0) != (second.confidence or 0.0):
-        return top, "confidence"
-    return top, "tie_break_latest"
+
+def _pick_preference_winner(records: list[MemoryPreference]) -> tuple[MemoryPreference, str]:
+    """V3-FIX-35: the M-01/M-07 supersede chain owns winner selection.
+
+    A row with ``replaced_by_id`` set is SUPERSEDED — its value was explicitly
+    replaced by a newer chain head and must never compete for the win, no
+    matter how its (evidence_score, updated_at, confidence) compare. Before
+    this fix the ranking axes ran over the full version history, so
+    (a) M-07's supersede-time ``updated_at`` bump on the OLD row and
+    (b) an old row having accumulated more evidence refs both resurrected
+    superseded values into ``pack.preferences`` (the M-09 "反杀" bug).
+
+    Resolution law:
+    - rows with ``replaced_by_id`` set are excluded from candidacy;
+    - the winner is the best-ranked CHAIN HEAD (``replaced_by_id`` is None);
+    - whenever superseded rows were suppressed, the reason is
+      ``supersede_chain_head`` (the chain structure, not the ranking axes,
+      decided the outcome — honest attribution for the conflicts face);
+    - parallel unchained rows (no supersede ever recorded) keep the legacy
+      ranking semantics unchanged;
+    - a headless group (every row claims a successor — legacy anomaly with a
+      dangling chain) falls back to ranking ALL rows rather than returning
+      nothing: resolution must stay deterministic on damaged data.
+    """
+    superseded = [item for item in records if item.replaced_by_id is not None]
+    heads = [item for item in records if item.replaced_by_id is None]
+    if len(records) == 1:
+        return records[0], "single"
+
+    pool = heads if heads else records
+    ranked = _rank_preferences(pool)
+    winner = ranked[0]
+    if superseded and heads:
+        return winner, "supersede_chain_head"
+    # No chain structure in play — legacy attribution over the ranking axes.
+    # (ranked has >= 2 entries here: pool == records and len(records) >= 2.)
+    second = ranked[1]
+    if (winner.evidence_score or 0.0) != (second.evidence_score or 0.0):
+        return winner, "evidence_score"
+    if (winner.updated_at or datetime.min) != (second.updated_at or datetime.min):
+        return winner, "updated_at"
+    if (winner.confidence or 0.0) != (second.confidence or 0.0):
+        return winner, "confidence"
+    return winner, "tie_break_latest"
 
 
 class MemoryConflictResolver:

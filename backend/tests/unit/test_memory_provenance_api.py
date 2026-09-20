@@ -36,6 +36,7 @@ from app.services.memory_invalidation_pipeline import (
     MemoryInvalidationPipeline,
 )
 from app.services.memory_service import MemoryService
+from app.services.memory_use_selfcheck import SELF_CHECK_VERSION
 
 app = FastAPI()
 app.include_router(router, prefix="/api/v1")
@@ -754,7 +755,7 @@ async def test_why_this_translates_receipt_with_honest_unknown(db_session, prove
             "/api/v1/memory/provenance/why-this",
             json={
                 "memory_ref": f"memory://episodic/{target.id}",
-                "version": "memory_use_selfcheck.v1",
+                "version": SELF_CHECK_VERSION,  # current-version receipt (stale is pinned separately)
                 "pack_id": str(data["a_run"].id),
                 "why_included": ["rank_policy", "semantic_gate"],
                 "internal_only": [

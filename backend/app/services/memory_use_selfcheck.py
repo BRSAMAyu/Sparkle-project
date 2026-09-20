@@ -57,17 +57,23 @@ Design rules (aligned with M-03/C-02/C-03 code style):
   and its reason must come from the frozen ``FAST_MODEL_REASONS`` vocabulary.
 - **Closed vocabularies, frozen.** ``SELF_CHECK_REASONS`` /
   ``FAST_MODEL_REASONS`` / ``USE_CHECK_KINDS`` / ``SELF_CHECK_SECTIONS`` /
-  ``META_PREF_KEYS`` / ``AGREEMENT_BIAS_PREF_KEYS`` / marker sets /
+  ``META_PREF_KEYS`` / ``AGREEMENT_BIAS_PREF_KEYS`` /
+  ``PREFERENCE_KEY_DOMAIN_GLOSSES`` / marker sets /
   thresholds are the single source of truth. Any addition is a deliberate
   vocabulary change: bump ``SELF_CHECK_VERSION`` and re-run the OP-Bench
   (``backend/tests/fixtures/op_bench_memory_use_v1.json``) so both tradeoff
-  metrics move on purpose, not by drift. ``META_PREF_KEYS`` is guarded to stay
-  a subset of the writer vocabulary ``memory_constants.PREFERENCE_KEYS``.
+  metrics move on purpose, not by drift. ``META_PREF_KEYS`` and the domain
+  glosses are guarded to stay a subset of the writer vocabulary
+  ``memory_constants.PREFERENCE_KEYS``.
 - **Token model:** CJK character bigrams + lowercase ASCII alphanumeric
   words. Known lexical limitation (registered in the OP-Bench as
-  ``known_limitation`` polarity, not headline): zero CJK/EN cross-lingual
-  overlap — the fast-model hook is the designed remedy, and stays off until
-  an eval justifies turning it on.
+  ``known_limitation`` polarity, not headline): CJK/EN cross-lingual overlap
+  is zero at the VALUE level — the fast-model hook is the designed remedy
+  for that, and stays off until an eval justifies turning it on. The
+  DOMAIN-level gap (English pref_key vs Chinese query naming the same
+  domain) is closed deterministically by
+  ``PREFERENCE_KEY_DOMAIN_GLOSSES`` (V3-FIX-35): value-free CJK domain
+  expressions unioned into the relevance tokens for preference candidates.
 """
 
 from __future__ import annotations
@@ -79,7 +85,7 @@ from typing import Callable, Iterable, Sequence
 
 from app.core.memory_constants import PREFERENCE_KEYS
 
-SELF_CHECK_VERSION = "memory_use_selfcheck.v1"
+SELF_CHECK_VERSION = "memory_use_selfcheck.v2"
 
 # ---------------------------------------------------------------------------
 # Closed vocabularies (frozen — see module docstring)
@@ -159,6 +165,48 @@ AGREEMENT_BIAS_PREF_KEYS: frozenset[str] = frozenset(
         "coaching_style",
     }
 )
+
+# V3-FIX-35 (second mode) — CJK domain glosses for the preference writer
+# vocabulary. The relevance check already treats the preference DOMAIN as
+# content ("naming the domain in the query earns relevance") by unioning
+# ``lexical_tokens(pref_key)`` — but pref keys are English identifiers, so a
+# Chinese query naming the same domain ("给我出几道练习题" for
+# ``preferred_expansion_depth``) had ZERO token overlap and the chain HEAD was
+# downgraded as topically irrelevant (M-09 P09-D5/P10-D3 residual reds).
+#
+# Each gloss is a faithful, VALUE-FREE expression of the key's SERVICE DOMAIN
+# (the class of requests the preference shapes) — it never encodes a specific
+# user value, so it cannot leak or fabricate personalization; it only lets a
+# CJK query that names the domain earn domain-level relevance, exactly as the
+# English key already does. Keys WITHOUT a gloss (telemetry / system-computed
+# metrics, and META_PREF_KEYS which skip the relevance check entirely) keep
+# their legacy relevance behavior; keys outside the writer vocabulary (open
+# profile-write keys) also get no gloss — honest unknown, never a guess.
+#
+# Frozen vocabulary: guarded (subset of PREFERENCE_KEYS) below; any change is
+# deliberate — bump SELF_CHECK_VERSION and re-run the OP-Bench.
+PREFERENCE_KEY_DOMAIN_GLOSSES: dict[str, str] = {
+    "checkin_regularity": "打卡",
+    "curiosity_preference": "好奇心 知识拓展",
+    "curiosity_push_receptivity": "推送 通知",
+    "daily_cap": "每日任务量",
+    "enable_curiosity_push": "推送 通知",
+    "enable_push": "推送 通知",
+    "focus_mode": "专注",
+    "knowledge_level": "知识水平 讲解 基础",
+    "motivation_type": "动力 激励",
+    "notification_frequency": "提醒 通知 频率",
+    "persona_type": "用户身份 角色",
+    "preferred_expansion_depth": "拓展 练习题 难度",
+    "push_receptivity": "推送 通知",
+    "schedule_preferences": "日程 安排 计划",
+    "social_learning_preference": "社群 学习小组 讨论",
+    "sprint_mode": "冲刺",
+    "study_time_preference": "学习时间 复习时长",
+    "task_priority_bias": "任务优先级 先做哪个",
+    "vocabulary_retention_style": "记忆 背诵 记忆方法",
+    "weather_preferences": "天气",
+}
 
 # Safety-pin content markers (closed set, matched case-insensitively against
 # candidate content): allergy / anaphylaxis / dietary-harm / seizure-class
@@ -518,6 +566,13 @@ def _is_meta_pref(candidate: MemoryUseCandidate) -> bool:
     return candidate.section == "preferences" and candidate.pref_key in META_PREF_KEYS
 
 
+def _pref_domain_tokens(pref_key: str | None) -> frozenset[str]:
+    """CJK domain gloss tokens for a preference key (empty if un glossed —
+    telemetry keys, meta keys, open-vocabulary keys)."""
+    gloss = PREFERENCE_KEY_DOMAIN_GLOSSES.get(pref_key or "")
+    return lexical_tokens(gloss)
+
+
 def _is_safety_pin(candidate: MemoryUseCandidate) -> bool:
     return _has_marker(candidate.content, SAFETY_PIN_CONTENT_MARKERS)
 
@@ -535,6 +590,10 @@ def _relevance_flag(candidate: MemoryUseCandidate, ctx: SelfCheckContext) -> Sel
         # The preference DOMAIN itself is content: naming the domain in the
         # query (e.g. "study_time_preference 是什么意思") earns relevance.
         candidate_tokens = candidate_tokens | lexical_tokens(candidate.pref_key)
+        # V3-FIX-35: …and the same domain expressed in Chinese (the domain
+        # gloss) earns the same domain-level relevance — cross-lingual parity
+        # with the rule above, not value-level relevance.
+        candidate_tokens = candidate_tokens | _pref_domain_tokens(candidate.pref_key)
     if not candidate_tokens:
         return None
     if candidate_tokens & lexical_tokens(message):
@@ -733,3 +792,12 @@ assert (
 ), f"M-05 META_PREF_KEYS drifted outside the writer vocabulary: {META_PREF_KEYS - PREFERENCE_KEYS}"
 assert AGREEMENT_BIAS_PREF_KEYS <= META_PREF_KEYS
 assert not (FAST_MODEL_REASONS & SELF_CHECK_REASONS)
+assert set(PREFERENCE_KEY_DOMAIN_GLOSSES) <= PREFERENCE_KEYS, (
+    "M-05 PREFERENCE_KEY_DOMAIN_GLOSSES drifted outside the writer vocabulary: "
+    f"{set(PREFERENCE_KEY_DOMAIN_GLOSSES) - PREFERENCE_KEYS}"
+)
+assert not (META_PREF_KEYS & set(PREFERENCE_KEY_DOMAIN_GLOSSES)), (
+    "M-05 domain glosses must not cover META_PREF_KEYS (they skip the "
+    f"relevance check — glosses there are dead vocabulary): "
+    f"{META_PREF_KEYS & set(PREFERENCE_KEY_DOMAIN_GLOSSES)}"
+)

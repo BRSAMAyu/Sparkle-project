@@ -90,7 +90,13 @@ async def test_context_pack_conflicts_metadata(db_session, monkeypatch):
 
     assert pack.metadata is not None
     assert pack.metadata.get("conflicts")
-    assert pack.preferences["feedback_tone"]["value"] == "direct"
+    # V3-FIX-35: the second write SUPERSEDES the first (same key, same user)
+    # — the chain head ("soft", the user's latest statement) must win even
+    # though v1 carries more evidence refs (higher evidence_score). The old
+    # assertion pinned the resurrected superseded value ("direct").
+    assert pack.preferences["feedback_tone"]["value"] == "soft"
+    pref_conflicts = [c for c in pack.metadata.get("conflicts", []) if c.get("type") == "preference"]
+    assert pref_conflicts and pref_conflicts[0]["reason"] == "supersede_chain_head"
 
     # Conflict resolution suppresses duplicate/conflicting items.
     # Current behavior keeps at most one canonical item after dedupe.

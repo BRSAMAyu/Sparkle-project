@@ -7,12 +7,13 @@ What these tests enforce (and what they deliberately do NOT):
 2. The full suite runs against the REAL merged memory chain on isolated
    sqlite and produces machine-readable results with the three paired
    metrics correctly computed.
-3. GATE SIGNATURE: the gate is RED today, and the failing set is EXACTLY the
-   registered product bug below (Stage20 resolver resurrecting superseded
-   preference values — see v3-output/M-09/REPORT.md 产品bug登记). Any
-   DIFFERENT failing case makes this test red: new chain regressions and
-   case drift are both caught. When the product bug is fixed, this constant
-   must be emptied by the fixing card, after which the gate enforces green.
+3. GATE SIGNATURE: the gate enforces GREEN since V3-FIX-35/36 (registered
+   bug fixed: the Stage20 resolver used to resurrect superseded preference
+   values — see v3-output/M-09/REPORT.md 产品bug登记 and
+   v3-output/V3-FIX-35-36/REPORT.md). Any failing case makes this test red:
+   new chain regressions and case drift are both caught. Should a product
+   bug need temporary registration again, populate REGISTERED_BUG_CASE_IDS
+   in its fixing card and keep the set EXACTLY equal to the failing set.
 4. Mutation self-tests (non-vacuity): one injected invalid-use marker MUST
    surface as a named failing case — proven both on real run results and on
    an all-green synthetic baseline.
@@ -43,39 +44,19 @@ from tests.memory_eval.memory_eval_schema import (
 HERE = Path(__file__).parent
 REAL_MODEL_ARTIFACT = HERE / "real_model_stability_report.json"
 
-# REGISTERED PRODUCT BUG (do not "fix" here — REPORT.md 产品bug登记):
+# REGISTERED PRODUCT BUG REGISTRY — EMPTY since V3-FIX-35+FIX-36 (2026-09-20).
+# Historical record (do not repopulate without a fixing card): the 20-case
+# signature below was the Stage20 supersede-resurrection bug —
 # ContextPackBuilder.build -> MemoryConflictResolver.resolve_preferences
-# ignores the M-01/M-07 supersede chain and picks winners from the full
-# unfiltered preference history by (evidence_score, updated_at, confidence).
-# M-07's supersede branch bumps the OLD row's updated_at (commit 0ea1e198),
-# so the superseded value outranks the chain head -> pack.preferences returns
-# the OLD value on every same-evidence-channel preference update. These 20
-# preference-supersede / preference-chain cases expose it; every other case
-# is green at HEAD.
-REGISTERED_BUG_CASE_IDS = frozenset(
-    {
-        "P01-D3-response_style_supersede",
-        "P01-D5-depth_pref_chain",
-        "P02-D3-feedback_style_supersede",
-        "P02-D5-verbosity_chain",
-        "P03-D3-medication_reminder_supersede",
-        "P03-D5-reminder_chain",
-        "P04-D3-focus_duration_supersede",
-        "P04-D5-priority_chain",
-        "P05-D3-knowledge_level_supersede",
-        "P05-D5-language_pref_chain",
-        "P06-D3-housing_supersede",
-        "P06-D5-curiosity_chain",
-        "P07-D3-poster_style_supersede",
-        "P07-D5-notify_chain",
-        "P08-D3-feedback_tone_supersede",
-        "P08-D5-coaching_chain",
-        "P09-D3-tooling_supersede",
-        "P09-D5-difficulty_chain",
-        "P10-D3-retention_style_supersede",
-        "P10-D5-review_pref_chain",
-    }
-)
+# picked winners from the full unfiltered preference history by
+# (evidence_score, updated_at, confidence), ignoring replaced_by_id, while
+# M-07's supersede branch bumped the OLD row's updated_at (commit 0ea1e198)
+# so the superseded value outranked the chain head -> pack.preferences
+# returned the OLD value on every same-evidence-channel preference update.
+# Fixed chain-aware in _pick_preference_winner + precise head/old shared
+# supersede instant in upsert_preference + M-05 CJK domain glosses for the
+# two residual relevance-downgrade cases (P09-D5/P10-D3).
+REGISTERED_BUG_CASE_IDS = frozenset()
 
 _OUTCOMES_CACHE: list = []
 _VERDICTS_CACHE: list[CaseVerdict] = []
@@ -151,7 +132,9 @@ async def test_three_metrics_computed_correctly():
 
     invalid_total = sum(len(v.invalid_use_markers) for v in verdicts)
     assert metrics["invalid_use_total"] == invalid_total
-    assert metrics["invalid_use_total"] > 0  # the registered bug is live at HEAD
+    # Gate enforces green since V3-FIX-35/36: zero invalid use suite-wide
+    # (the supersede-resurrection bug that made this > 0 is fixed).
+    assert metrics["invalid_use_total"] == 0
 
     precision = metrics["valid_use_precision"]
     recomputed = precision["valid_items"] / (precision["valid_items"] + precision["invalid_items"])

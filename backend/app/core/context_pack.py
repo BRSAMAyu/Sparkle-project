@@ -1364,6 +1364,12 @@ class ContextPackBuilder:
             resolved_episodic = episodic
 
         if conflict_enabled and resolver is not None:
+            # V3-FIX-35 契约（勿"修复"为上游过滤）：pref_history 刻意保持全量
+            # 版本链（含 replaced_by_id 指向链头的被取代行）——supersede 归因
+            # 与抑制面（conflicts note 的 suppressed ids）是 resolver 的职责，
+            # 它的 winner 选择是链感知的（_pick_preference_winner：被取代行
+            # 不参与竞争，链头胜出）。上游过滤会剥夺链归因，并造成
+            # resolver on/off 两个分支语义分叉。
             preferences, resolved_pref_records, pref_conflicts = resolver.resolve_preferences(
                 {item.pref_key: item.pref_value for item in preference_records},
                 pref_history or resolved_pref_records,
