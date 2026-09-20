@@ -717,6 +717,7 @@ class KnowledgeRetrievalService:
         use_reranker: bool = True,
         include_group_documents: bool = False,
         group_ids: list[UUID | str] | None = None,
+        exec_meta: dict[str, Any] | None = None,
     ) -> list[DocumentChunkResult]:
         """E-05: hybrid lexical + vector 检索（RRF 融合，可选 rerank）。
 
@@ -725,9 +726,21 @@ class KnowledgeRetrievalService:
           使用占位向量；
         - 融合用 reciprocal_rank_fusion（与 Redis hybrid 链路同一实现），
           可选 rerank（超时/失败回退融合序）。
+
+        exec_meta（FIX-16 ④ D8）：实际执行模式回填通道。调用方（工具层）
+        据此报告 ``retrieval_mode``——不再按「key 是否配置」预写 hybrid：
+        供应商故障期（key 在、调用败）或向量运行时熔断期实际执行的是词法，
+        payload 必须如实反映。词表：
+          hybrid_lexical_vector ｜ lexical_only_embedding_disabled ｜
+          lexical_only_vector_degraded ｜ lexical_only_vector_disabled ｜
+          vector_only_lexical_degraded ｜ retrieval_unavailable
         """
         start_time = time.time()
         candidate_limit = max(limit * 5, limit)
+
+        def _report_mode(mode: str) -> None:
+            if exec_meta is not None:
+                exec_meta["retrieval_mode"] = mode
 
         vector_task = self.document_vector_search(
             user_id=user_id,
@@ -752,23 +765,41 @@ class KnowledgeRetrievalService:
             vector_task, lexical_task, return_exceptions=True
         )  # type: ignore[assignment]
 
+        vector_side_failed = False
+        lexical_side_failed = False
         if isinstance(vector_results, BaseException):
             if isinstance(vector_results, EmbeddingNotConfiguredError):
                 logger.warning(
                     "Hybrid document search: embedding provider not configured; "
                     "degrading to lexical-only retrieval (vector side explicitly disabled)"
                 )
+                _report_mode("lexical_only_embedding_disabled")
             else:
                 logger.warning(f"Hybrid document search vector side failed: {vector_results}")
                 RETRIEVAL_ERROR_TOTAL.labels(source="pg_hybrid", stage="retrieve").inc()
+                _report_mode("lexical_only_vector_degraded")
+            vector_side_failed = True
             vector_results = []
         if isinstance(lexical_results, BaseException):
             logger.warning(f"Hybrid document search lexical side failed: {lexical_results}")
             RETRIEVAL_ERROR_TOTAL.labels(source="pg_hybrid", stage="retrieve").inc()
+            lexical_side_failed = True
             lexical_results = []
+
+        if vector_side_failed and lexical_side_failed:
+            _report_mode("retrieval_unavailable")
+        elif lexical_side_failed:
+            _report_mode("vector_only_lexical_degraded")
 
         if not vector_results and not lexical_results:
             return []
+
+        # D8：向量侧「空结果但无异常」需区分「熔断/关闭」与「正常零命中」——
+        # 前者实际执行的是纯词法，模式不得谎报 hybrid。
+        if not vector_side_failed and not vector_results and not await self._vector_runtime_available():
+            _report_mode("lexical_only_vector_disabled")
+        elif not vector_side_failed and not lexical_side_failed:
+            _report_mode("hybrid_lexical_vector")
 
         fused_results = rerank_service.reciprocal_rank_fusion([vector_results, lexical_results])
         candidates = [item for item, _score in fused_results]

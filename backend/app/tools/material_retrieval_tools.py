@@ -137,6 +137,7 @@ class RetrieveUserMaterialTool(BaseTool):
                 vector_query = params.query
 
         retrieval = KnowledgeRetrievalService(db_session)
+        exec_meta: dict = {}
         if embedding_configured:
             # E-05: hybrid lexical+vector（RRF 融合 + 可选 rerank）
             results = await retrieval.document_hybrid_search(
@@ -148,8 +149,14 @@ class RetrieveUserMaterialTool(BaseTool):
                 threshold=params.threshold,
                 include_group_documents=include_group_documents,
                 group_ids=effective_group_ids,
+                # FIX-16 ④（D8）：实际执行模式回填——供应商故障/运行时熔断期
+                # 实际跑的是词法，payload 不得按 key 配置预写 hybrid。
+                exec_meta=exec_meta,
             )
-            retrieval_mode = "hybrid_lexical_vector"
+            retrieval_mode = exec_meta.get(
+                "retrieval_mode",
+                "hybrid_lexical_vector" if embedding_configured else "lexical_only_embedding_disabled",
+            )
         else:
             # E-05 fail-closed：无 embedding key 时向量侧明确关闭，
             # 降级为纯词法检索并在 payload 中显式标注（不静默、不报错、不用占位向量）

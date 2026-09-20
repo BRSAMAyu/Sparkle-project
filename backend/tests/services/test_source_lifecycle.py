@@ -10,8 +10,15 @@ from app.models.file_storage import SourceLifecycleStatus, StoredFile
 from app.models.task import Task, TaskStatus, TaskType
 from app.models.task_document import TaskDocument
 from app.models.user import User
+from app.services import source_lifecycle as sl
 from app.services.source_lifecycle import source_lifecycle_service
 from app.services.task_document_service import TaskDocumentService
+
+
+@pytest.fixture(autouse=True)
+def _no_rag_redis(monkeypatch):
+    """生命周期测试不触真实 Redis（FIX-16 ②：失效已排期 commit 后，调度器会探测 redis）。"""
+    monkeypatch.setattr(sl, "get_rag_redis", AsyncMock(return_value=None))
 
 
 async def _source(db_session, user_id):
@@ -42,7 +49,8 @@ async def _source(db_session, user_id):
 @pytest.mark.asyncio
 async def test_archive_and_restore_toggle_source_retrieval_eligibility(db_session, test_user: User, monkeypatch) -> None:
     stored_file, _chunk = await _source(db_session, test_user.id)
-    monkeypatch.setattr(source_lifecycle_service, "invalidate_source_retrieval", AsyncMock(return_value=2))
+    # FIX-16 ②：失效执行器整体替换（archive 不再直接调 invalidate_source_retrieval）
+    monkeypatch.setattr(source_lifecycle_service, "_execute_retrieval_invalidation", AsyncMock(return_value=2))
     monkeypatch.setattr(source_lifecycle_service, "reindex_source_retrieval", AsyncMock(return_value=1))
 
     archived = await source_lifecycle_service.archive(db_session, source=stored_file, reason="test_archive")
@@ -84,7 +92,7 @@ async def test_archived_sources_are_hidden_from_task_document_context(db_session
     before = await TaskDocumentService.list_task_documents(db_session, task_id=task.id, user_id=test_user.id)
     assert len(before) == 1
 
-    monkeypatch.setattr(source_lifecycle_service, "invalidate_source_retrieval", AsyncMock(return_value=0))
+    monkeypatch.setattr(source_lifecycle_service, "_execute_retrieval_invalidation", AsyncMock(return_value=0))
     await source_lifecycle_service.archive(db_session, source=stored_file)
     await db_session.flush()
 
@@ -95,13 +103,15 @@ async def test_archived_sources_are_hidden_from_task_document_context(db_session
 @pytest.mark.asyncio
 async def test_delete_erases_object_metadata_and_soft_deletes_chunks(db_session, test_user: User, monkeypatch) -> None:
     stored_file, chunk = await _source(db_session, test_user.id)
-    monkeypatch.setattr(source_lifecycle_service, "invalidate_source_retrieval", AsyncMock(return_value=4))
+    monkeypatch.setattr(source_lifecycle_service, "_execute_retrieval_invalidation", AsyncMock(return_value=4))
 
     result = await source_lifecycle_service.delete(db_session, source=stored_file, erase_object=False)
     await db_session.flush()
     await db_session.refresh(chunk)
 
-    assert result.invalidated_keys == 4
+    # FIX-16 ②（N1）：失效已排期到 commit 后异步执行，结果值语义变为
+    # 「排期失效单元数」（1 源 + 0 群组；redis=None 时无群组解析）。
+    assert result.invalidated_keys == 1
     assert stored_file.lifecycle_status == SourceLifecycleStatus.REVOKED.value
     assert stored_file.deleted_at is not None
     assert stored_file.erased_at is not None

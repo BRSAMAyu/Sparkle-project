@@ -144,11 +144,20 @@ async def main() -> int:
     print(f"[E-05 rebuild] target embedding version = {target_version}")
     print(f"[E-05 rebuild] redis versioned index     = {rag_index_name()}")
     if not embedding_service.is_configured():
+        # FIX-16 ③（N3）：dry-run 不调 embedding API，无 key 不应 fail-close——
+        # 否则无 key 环境无法盘点 stale/untagged 行（漂移监控依赖 dry-run）。
+        # --execute 仍 fail-closed：真实重嵌绝不静默进行。
+        if args.execute:
+            print(
+                "[E-05 rebuild] FATAL: no embedding provider key configured "
+                "(DASHSCOPE_API_KEY / SILICONFLOW_API_KEY). Fail-closed: --execute refused."
+            )
+            return 2
         print(
-            "[E-05 rebuild] FATAL: no embedding provider key configured "
-            "(DASHSCOPE_API_KEY / SILICONFLOW_API_KEY). Fail-closed: nothing to do."
+            "[E-05 rebuild] WARNING: no embedding provider key configured "
+            "(DASHSCOPE_API_KEY / SILICONFLOW_API_KEY); dry-run inventory only "
+            "(--execute would be refused)."
         )
-        return 2
 
     async with AsyncSessionLocal() as session:
         tables = []

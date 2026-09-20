@@ -8,13 +8,15 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import time
+import weakref
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import select, update
+from sqlalchemy import event, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_service
@@ -42,9 +44,51 @@ def _utcnow() -> datetime:
 
 
 @dataclass(frozen=True)
+class _RetrievalInvalidationPlan:
+    """一次检索失效的不可变执行计划（FIX-16 ② N1）。
+
+    在事务内捕获（source/group 身份在软删前解析），在事务提交后执行——
+    这样失效的 Redis DEL 严格晚于 commit，消灭「DEL→commit 窗口内并发
+    检索以 READ COMMITTED 旧快照重播删除前 knowledge_version 并再缓存
+    30s」的陈旧窗口。
+    """
+
+    source_id: UUID
+    user_id: UUID
+    group_ids: tuple[UUID, ...] = ()
+
+
+# 已排期、尚在执行的 post-commit 失效任务集合（测试可 drain；优雅关停可 await）。
+_PENDING_INVALIDATION_TASKS: set[asyncio.Task] = set()
+
+# per-session 失效计划登记表（session 请求级生命周期，弱引用不阻止 GC）。
+_POST_COMMIT_INVALIDATION_REGS: weakref.WeakKeyDictionary[Any, dict[str, list[_RetrievalInvalidationPlan]]] = (
+    weakref.WeakKeyDictionary()
+)
+
+
+def _on_invalidation_task_done(task: asyncio.Task) -> None:
+    _PENDING_INVALIDATION_TASKS.discard(task)
+    if task.cancelled():
+        return
+    exc = task.exception()
+    if exc is not None:
+        logger.warning(f"Post-commit retrieval invalidation task failed: {exc}")
+
+
+async def wait_for_pending_post_commit_invalidation() -> None:
+    """等待所有已排期的 post-commit 检索失效完成（测试 drain / 优雅关停用）。"""
+    tasks = [t for t in list(_PENDING_INVALIDATION_TASKS) if not t.done()]
+    if tasks:
+        await asyncio.gather(*tasks)
+
+
+@dataclass(frozen=True)
 class SourceLifecycleResult:
     source: StoredFile
     status: SourceLifecycleStatus
+    # FIX-16 ②（N1）语义变更：失效已排期到事务提交后执行，本值为「排期失效
+    # 单元数」（1 + 关联群组数）；精确删除键数在异步执行完成后落结构化日志。
     invalidated_keys: int
     affected_group_links: int = 0
     affected_chunks: int = 0
@@ -81,7 +125,7 @@ class SourceLifecycleService:
         now = _utcnow()
         source.archived_at = now
         source.archive_review_due_at = now + timedelta(days=ARCHIVE_REVIEW_DAYS)
-        invalidated = await self.invalidate_source_retrieval(db, source)
+        invalidated = await self._schedule_post_commit_retrieval_invalidation(db, source)
         await db.flush()
         return SourceLifecycleResult(source=source, status=SourceLifecycleStatus.ARCHIVED, invalidated_keys=invalidated)
 
@@ -115,7 +159,7 @@ class SourceLifecycleService:
         group_links = await self._active_group_links(db, source.id)
         for group_link in group_links:
             group_link.soft_delete()
-        invalidated = await self.invalidate_source_retrieval(db, source, group_links=group_links)
+        invalidated = await self._schedule_post_commit_retrieval_invalidation(db, source, group_links=group_links)
         await db.flush()
         return SourceLifecycleResult(
             source=source,
@@ -153,7 +197,7 @@ class SourceLifecycleService:
         for source in sources:
             self._set_lifecycle(source, SourceLifecycleStatus.ORPHANED, reason=reason)
             source.orphaned_at = _utcnow()
-            invalidated = await self.invalidate_source_retrieval(db, source)
+            invalidated = await self._schedule_post_commit_retrieval_invalidation(db, source)
             outcomes.append(
                 SourceLifecycleResult(
                     source=source,
@@ -177,8 +221,13 @@ class SourceLifecycleService:
         Object deletion is the cryptographic erasure boundary for encrypted
         object storage: once the encrypted blob is removed, the DB retains only a
         receipt and non-sensitive metadata needed for audit/debugging.
+
+        FIX-16 ②（N1）：检索失效改为「提交后」执行——计划在事务内、群组链接
+        尚未软删时捕获（活跃群组身份必须在删除前解析），Redis DEL 与缓存失效
+        严格晚于 commit。删除对象存储（密码学擦除边界）保持提交前执行：
+        过度擦除安全、擦除不足不安全，方向不可反。
         """
-        invalidated = await self.invalidate_source_retrieval(db, source)
+        invalidated = await self._schedule_post_commit_retrieval_invalidation(db, source)
         await self._soft_delete_source_graph(db, source)
         await self._soft_delete_chunks(db, source)
         group_links = await self._active_group_links(db, source.id)
@@ -233,16 +282,43 @@ class SourceLifecycleService:
         *,
         group_links: list[GroupFile] | None = None,
     ) -> int:
+        """立即失效来源的检索面（公开同步入口：直调方与测试使用）。
+
+        生命周期转换路径（archive/revoke/goal_close_cleanup/delete）**不再**走
+        本方法——它们经 ``_schedule_post_commit_retrieval_invalidation`` 把失效
+        排期到事务提交之后（FIX-16 ② N1：提交前的 DEL 会在「DEL→commit 窗口」
+        内被并发检索以 READ COMMITTED 旧快照重播删除前 knowledge_version 并
+        再缓存 30s，已删内容在删除完成后仍可命中语义缓存）。
+        """
         redis = await get_rag_redis()
+        group_ids: tuple[UUID, ...] = ()
+        if redis is not None:
+            if group_links is not None:
+                group_ids = tuple(link.group_id for link in group_links)
+            elif db is not None:
+                group_ids = tuple(link.group_id for link in await self._active_group_links(db, source.id))
+        return await self._execute_retrieval_invalidation(
+            _RetrievalInvalidationPlan(source_id=source.id, user_id=source.user_id, group_ids=group_ids),
+            redis=redis,
+        )
+
+    async def _execute_retrieval_invalidation(
+        self,
+        plan: _RetrievalInvalidationPlan,
+        *,
+        redis: Any = None,
+    ) -> int:
+        """执行一份失效计划（Redis chunk key + 派生缓存 + 全局知识版本键）。"""
+        if redis is None:
+            redis = await get_rag_redis()
         deleted = 0
         if redis is not None:
-            deleted += await delete_document_chunk_keys(redis, source.id)
-            active_group_links = group_links if group_links is not None else await self._active_group_links(db, source.id)
-            for group_link in active_group_links:
-                deleted += await delete_group_document_chunk_keys(redis, group_link.group_id, source.id)
+            deleted += await delete_document_chunk_keys(redis, plan.source_id)
+            for group_id in plan.group_ids:
+                deleted += await delete_group_document_chunk_keys(redis, group_id, plan.source_id)
 
-        await cache_service.delete_pattern(f"galaxy:node_source_documents:v1:{source.user_id}:*")
-        await cache_service.delete_pattern(f"graphrag:*:{source.user_id}:*")
+        await cache_service.delete_pattern(f"galaxy:node_source_documents:v1:{plan.user_id}:*")
+        await cache_service.delete_pattern(f"graphrag:*:{plan.user_id}:*")
         # E-05 D2（R2 返修）：失效全局知识版本缓存（30s TTL）。否则删除/归档后
         # 的 TTL 窗口内，检索仍以旧 knowledge_version 组语义缓存键 → 已删内容
         # 继续命中（exact 与语义相似两条路径）。该键是派生缓存，DEL 后下次
@@ -252,6 +328,84 @@ class SourceLifecycleService:
         except Exception as exc:
             logger.warning(f"Failed to invalidate knowledge version cache after source invalidation: {exc}")
         return deleted
+
+    async def _schedule_post_commit_retrieval_invalidation(
+        self,
+        db: AsyncSession,
+        source: StoredFile,
+        *,
+        group_links: list[GroupFile] | None = None,
+    ) -> int:
+        """FIX-16 ②（N1/D4 follow-up）：把检索失效排期到事务提交之后执行。
+
+        机制：在事务内捕获失效计划（群组身份必须在软删前解析），经 SQLAlchemy
+        会话级 ``after_commit`` 事件在事件循环内 spawn 失效任务；``after_rollback``
+        时丢弃未执行的计划（回滚的事务无失效需求）。每次 commit 恰好执行一次
+        当时刻的全部累积计划（goal_close_cleanup 多源批删同事务共享一次执行）。
+
+        返回值为「排期失效单元数」（1 + 群组数），用于
+        ``SourceLifecycleResult.invalidated_keys``；精确删除键数在任务完成后
+        落结构化日志（提交前无法预知 SCAN 结果，不再谎报同步计数）。
+        """
+        redis = await get_rag_redis()
+        group_ids: tuple[UUID, ...] = ()
+        if redis is not None:
+            if group_links is not None:
+                group_ids = tuple(link.group_id for link in group_links)
+            else:
+                group_ids = tuple(link.group_id for link in await self._active_group_links(db, source.id))
+        plan = _RetrievalInvalidationPlan(source_id=source.id, user_id=source.user_id, group_ids=group_ids)
+
+        sync_session = db.sync_session
+        reg = _POST_COMMIT_INVALIDATION_REGS.get(sync_session)
+        if reg is None:
+            reg = {"plans": []}
+            _POST_COMMIT_INVALIDATION_REGS[sync_session] = reg
+
+            def _on_commit(session: Any) -> None:
+                plans = reg["plans"][:]
+                reg["plans"].clear()
+                if not plans:
+                    return
+                self._spawn_post_commit_invalidation(plans)
+
+            def _on_rollback(session: Any) -> None:
+                reg["plans"].clear()
+
+            event.listen(sync_session, "after_commit", _on_commit)
+            event.listen(sync_session, "after_rollback", _on_rollback)
+        reg["plans"].append(plan)
+        return 1 + len(group_ids)
+
+    def _spawn_post_commit_invalidation(self, plans: list[_RetrievalInvalidationPlan]) -> None:
+        """在事件循环内 spawn 提交后失效任务（after_commit 处理器运行于循环线程）。"""
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            logger.error(
+                "Post-commit retrieval invalidation dropped (no running loop): "
+                f"sources={[str(p.source_id) for p in plans]}"
+            )
+            return
+        task = loop.create_task(self._run_scheduled_invalidations(plans))
+        _PENDING_INVALIDATION_TASKS.add(task)
+        task.add_done_callback(_on_invalidation_task_done)
+
+    async def _run_scheduled_invalidations(self, plans: list[_RetrievalInvalidationPlan]) -> int:
+        started = time.perf_counter()
+        total = 0
+        for plan in plans:
+            try:
+                total += await self._execute_retrieval_invalidation(plan)
+            except Exception as exc:
+                # 单源失效失败不阻断同批其余源；残留由读侧谓词与版本 TTL 兜底。
+                logger.warning(f"Post-commit retrieval invalidation failed for source {plan.source_id}: {exc}")
+        logger.info(
+            "Post-commit retrieval invalidation complete: "
+            f"sources={[str(p.source_id) for p in plans]} deleted_keys={total} "
+            f"latency_ms={(time.perf_counter() - started) * 1000:.1f}"
+        )
+        return total
 
     async def reindex_source_retrieval(self, db: AsyncSession, source: StoredFile) -> int:
         if source.lifecycle_status not in RETRIEVAL_ENABLED_STATUSES or source.deleted_at is not None:

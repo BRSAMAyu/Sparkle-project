@@ -351,3 +351,180 @@ class TestGalaxySchemaMapping:
 
         assert mapped.user_status is not None
         assert mapped.user_status.first_unlock_at == status.first_unlock_at
+
+
+class TestDocumentHybridSearchExecMeta:
+    """FIX-16 ④（E-05 D8）：document_hybrid_search 实际执行模式回填。
+
+    缺陷：工具 payload 的 retrieval_mode 按「key 是否配置」预写 hybrid——
+    供应商故障期（key 在、调用败）实际执行的是词法，payload 谎报 hybrid。
+    修复：exec_meta 通道回填真实模式，词表封闭。
+    """
+
+    def _make_service(self):
+        return KnowledgeRetrievalService(AsyncMock())
+
+    @staticmethod
+    def _chunk_result():
+        from app.models.document_chunks import DocumentChunk
+
+        return DocumentChunkResult(chunk=MagicMock(spec=DocumentChunk), file_name="f.pdf", score=0.8)
+
+    @pytest.mark.asyncio
+    async def test_both_sides_ok_reports_hybrid(self):
+        service = self._make_service()
+        exec_meta: dict = {}
+        ok = self._chunk_result()
+
+        with patch.object(service, "document_vector_search", new_callable=AsyncMock, return_value=[ok]), \
+             patch.object(service, "document_lexical_search", new_callable=AsyncMock, return_value=[ok]):
+            await service.document_hybrid_search(
+                user_id=uuid4(), query="entropy", file_ids=[uuid4()], use_reranker=False, exec_meta=exec_meta
+            )
+
+        assert exec_meta["retrieval_mode"] == "hybrid_lexical_vector"
+
+    @pytest.mark.asyncio
+    async def test_vector_not_configured_reports_lexical_only_disabled(self):
+        from app.services.embedding_service import EmbeddingNotConfiguredError
+
+        service = self._make_service()
+        exec_meta: dict = {}
+        ok = self._chunk_result()
+
+        with patch.object(
+            service, "document_vector_search",
+            new_callable=AsyncMock, side_effect=EmbeddingNotConfiguredError("no key"),
+        ), patch.object(service, "document_lexical_search", new_callable=AsyncMock, return_value=[ok]):
+            await service.document_hybrid_search(
+                user_id=uuid4(), query="entropy", file_ids=[uuid4()], use_reranker=False, exec_meta=exec_meta
+            )
+
+        assert exec_meta["retrieval_mode"] == "lexical_only_embedding_disabled"
+
+    @pytest.mark.asyncio
+    async def test_vector_runtime_failure_reports_lexical_degraded(self):
+        service = self._make_service()
+        exec_meta: dict = {}
+        ok = self._chunk_result()
+
+        with patch.object(
+            service, "document_vector_search",
+            new_callable=AsyncMock, side_effect=RuntimeError("provider 500"),
+        ), patch.object(service, "document_lexical_search", new_callable=AsyncMock, return_value=[ok]):
+            await service.document_hybrid_search(
+                user_id=uuid4(), query="entropy", file_ids=[uuid4()], use_reranker=False, exec_meta=exec_meta
+            )
+
+        assert exec_meta["retrieval_mode"] == "lexical_only_vector_degraded"
+
+    @pytest.mark.asyncio
+    async def test_lexical_failure_reports_vector_only_degraded(self):
+        service = self._make_service()
+        exec_meta: dict = {}
+        ok = self._chunk_result()
+
+        with patch.object(service, "document_vector_search", new_callable=AsyncMock, return_value=[ok]), \
+             patch.object(
+                 service, "document_lexical_search",
+                 new_callable=AsyncMock, side_effect=RuntimeError("db down"),
+             ):
+            await service.document_hybrid_search(
+                user_id=uuid4(), query="entropy", file_ids=[uuid4()], use_reranker=False, exec_meta=exec_meta
+            )
+
+        assert exec_meta["retrieval_mode"] == "vector_only_lexical_degraded"
+
+    @pytest.mark.asyncio
+    async def test_both_sides_failed_reports_unavailable_and_empty(self):
+        service = self._make_service()
+        exec_meta: dict = {}
+
+        with patch.object(
+            service, "document_vector_search", new_callable=AsyncMock, side_effect=RuntimeError("x")
+        ), patch.object(
+            service, "document_lexical_search", new_callable=AsyncMock, side_effect=RuntimeError("y")
+        ):
+            results = await service.document_hybrid_search(
+                user_id=uuid4(), query="entropy", file_ids=[uuid4()], use_reranker=False, exec_meta=exec_meta
+            )
+
+        assert results == []
+        assert exec_meta["retrieval_mode"] == "retrieval_unavailable"
+
+    @pytest.mark.asyncio
+    async def test_vector_runtime_circuit_open_reports_lexical_disabled(self):
+        """向量侧空结果无异常 + 运行时熔断（pgvector 关）→ 模式如实标注词法。"""
+        service = self._make_service()
+        exec_meta: dict = {}
+        ok = self._chunk_result()
+
+        with patch.object(service, "document_vector_search", new_callable=AsyncMock, return_value=[]), \
+             patch.object(service, "document_lexical_search", new_callable=AsyncMock, return_value=[ok]), \
+             patch.object(service, "_vector_runtime_available", new_callable=AsyncMock, return_value=False):
+            await service.document_hybrid_search(
+                user_id=uuid4(), query="entropy", file_ids=[uuid4()], use_reranker=False, exec_meta=exec_meta
+            )
+
+        assert exec_meta["retrieval_mode"] == "lexical_only_vector_disabled"
+
+    @pytest.mark.asyncio
+    async def test_exec_meta_optional_backward_compat(self):
+        """直调不传 exec_meta（旧调用方）不炸、行为不变。"""
+        service = self._make_service()
+        ok = self._chunk_result()
+
+        with patch.object(service, "document_vector_search", new_callable=AsyncMock, return_value=[ok]), \
+             patch.object(service, "document_lexical_search", new_callable=AsyncMock, return_value=[]):
+            results = await service.document_hybrid_search(
+                user_id=uuid4(), query="entropy", file_ids=[uuid4()], use_reranker=False
+            )
+
+        assert len(results) == 1
+
+
+class TestHybridFusionCorrectness:
+    """验收项：hybrid 两路融合正确性——双路（向量+词法）命中者在 RRF 后居首。"""
+
+    @pytest.mark.asyncio
+    async def test_chunk_hit_by_both_paths_ranks_first(self):
+        service = KnowledgeRetrievalService(AsyncMock())
+        both_hit = self._result("both")
+        vector_only = self._result("vec")
+        lexical_only = self._result("lex")
+
+        with patch.object(service, "document_vector_search", new_callable=AsyncMock,
+                          return_value=[both_hit, vector_only]), \
+             patch.object(service, "document_lexical_search", new_callable=AsyncMock,
+                          return_value=[both_hit, lexical_only]):
+            results = await service.document_hybrid_search(
+                user_id=uuid4(), query="entropy", file_ids=[uuid4()], use_reranker=False
+            )
+
+        ids = [r.chunk.id for r in results]
+        assert ids[0] == "both"
+        assert set(ids[1:]) == {"vec", "lex"}
+
+    @pytest.mark.asyncio
+    async def test_lexical_only_results_still_returned_when_vector_side_empty(self):
+        """向量侧零命中（非故障）时词法独立提供召回——单路不吞另一路结果。"""
+        service = KnowledgeRetrievalService(AsyncMock())
+        lexical_only = self._result("lex")
+
+        with patch.object(service, "document_vector_search", new_callable=AsyncMock, return_value=[]), \
+             patch.object(service, "document_lexical_search", new_callable=AsyncMock,
+                          return_value=[lexical_only]), \
+             patch.object(service, "_vector_runtime_available", new_callable=AsyncMock, return_value=True):
+            results = await service.document_hybrid_search(
+                user_id=uuid4(), query="entropy", file_ids=[uuid4()], use_reranker=False
+            )
+
+        assert [r.chunk.id for r in results] == ["lex"]
+
+    @staticmethod
+    def _result(chunk_id: str):
+        from app.models.document_chunks import DocumentChunk
+
+        chunk = MagicMock(spec=DocumentChunk)
+        chunk.id = chunk_id
+        return DocumentChunkResult(chunk=chunk, file_name="f.pdf", score=0.9)

@@ -631,6 +631,56 @@ async def test_retrieve_user_material_tool_degrades_to_lexical_without_key(monke
 
 
 @pytest.mark.asyncio
+async def test_retrieve_user_material_tool_reports_actual_mode_on_vector_degrade(monkeypatch):
+    """FIX-16 ④（D8）：key 在但供应商故障期实际执行词法——payload 不得谎报 hybrid。"""
+    scoped_files = [
+        SimpleNamespace(id=uuid4(), file_name="OS.pdf", mime_type="application/pdf", status="ready")
+    ]
+    fake_chunk = SimpleNamespace(
+        id=uuid4(),
+        file_id=scoped_files[0].id,
+        chunk_index=0,
+        section_title="Scheduling",
+        page_numbers=[1],
+        content="Round robin scheduling rotates processes with a fixed time slice.",
+    )
+    fake_result = SimpleNamespace(chunk=fake_chunk, file_name="OS.pdf", score=0.5)
+
+    async def hybrid_with_runtime_failure(*args, exec_meta=None, **kwargs):
+        # 模拟真实 document_hybrid_search 的 exec_meta 回填（向量侧运行时故障降级词法）
+        if exec_meta is not None:
+            exec_meta["retrieval_mode"] = "lexical_only_vector_degraded"
+        return [fake_result]
+
+    fake_retrieval = SimpleNamespace(
+        document_hybrid_search=AsyncMock(side_effect=hybrid_with_runtime_failure),
+    )
+    monkeypatch.setattr(
+        "app.tools.material_retrieval_tools._resolve_scoped_files",
+        AsyncMock(return_value=scoped_files),
+    )
+    monkeypatch.setattr(
+        "app.tools.material_retrieval_tools.KnowledgeRetrievalService",
+        lambda _db: fake_retrieval,
+    )
+    monkeypatch.setattr(
+        "app.tools.material_retrieval_tools.embedding_service.is_configured",
+        lambda: True,  # key 在——旧实现此处会预写 hybrid（D8 谎报本体）
+    )
+
+    tool = RetrieveUserMaterialTool()
+    result = await tool.execute(
+        RetrieveUserMaterialParams(query="how does round robin scheduling work?"),
+        user_id=str(uuid4()),
+        db_session=SimpleNamespace(sync_session=SimpleNamespace(info={TOOL_RUNTIME_CONTEXT_KEY: {}})),
+    )
+
+    assert result.success is True
+    assert result.data["embedding_configured"] is True
+    assert result.data["retrieval_mode"] == "lexical_only_vector_degraded"
+
+
+@pytest.mark.asyncio
 async def test_get_intervention_track_record_tool_reads_recent_history(db_session, test_user):
     record = InterventionRecord(
         user_id=test_user.id,
