@@ -141,6 +141,26 @@ LIGHT_REPLY_TOOL_INTENT_MARKERS = (
     "save",
     "sync",
     "start focus",
+    # 材料检索意图（2026-09-20 演示验证实锤：问「上传的小结/材料/出处」
+    # 被判 light_standard_reply → generation 关工具 → 模型拿不到
+    # retrieve_user_material，引用问答全断——检索材料是工具意图，
+    # 命中即走 DELIBERATE 保工具）
+    "材料",
+    "小结",
+    "笔记",
+    "文档",
+    "资料",
+    "出处",
+    "引用",
+    "来源",
+    "上传",
+    "我传的",
+    "附件",
+    "document",
+    "material",
+    "citation",
+    "reference",
+    "source",
 )
 LIGHT_REPLY_PERSONAL_DATA_MARKERS = (
     "我的计划",

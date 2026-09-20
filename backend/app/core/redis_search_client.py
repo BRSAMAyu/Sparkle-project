@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import struct
 from typing import Any
 
@@ -8,6 +9,17 @@ from redis.asyncio import Redis
 from redis.commands.search.field import NumericField, TagField, TextField, VectorField
 from redis.commands.search.index_definition import IndexDefinition, IndexType
 from redis.commands.search.query import Query
+
+# RediSearch 查询语法字符与全角标点不允许裸拼进 FT 查询串
+# （2026-09-20 演示验证实锤：原文含全角括号「（）」「：」时
+# `Syntax error at offset ...` 直接抛错、检索面整轮失败）。
+# 保留 CJK/字母/数字与内联空白，其余一律归空格分词。
+_FT_UNSAFE_CHARS = re.compile(r"[^\w\s\u4e00-\u9fff]+", re.UNICODE)
+
+
+def _ft_sanitize(text: str) -> str:
+    sanitized = _FT_UNSAFE_CHARS.sub(" ", text).strip()
+    return sanitized or "*"
 
 from app.config import settings
 from app.core.redis_utils import resolve_redis_password
@@ -139,7 +151,7 @@ class RedisSearchClient:
 
         # 2. Construct Query
         # If text_query is empty, use wildcard
-        actual_text = text_query if text_query.strip() else "*"
+        actual_text = _ft_sanitize(text_query) if text_query.strip() else "*"
 
         # RediSearch Query Syntax for Hybrid
         # We want to pre-filter by text, then run KNN on the result.
