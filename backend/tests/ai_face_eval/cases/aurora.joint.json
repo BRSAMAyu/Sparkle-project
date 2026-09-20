@@ -1,0 +1,123 @@
+{
+  "schema_version": "e04-ai-face-eval.v1",
+  "face": "aurora",
+  "sub_suite": "aurora.joint",
+  "cases": [
+    {
+      "case_id": "aur-J1-confused_requirements",
+      "dimension": "J1_joint_selection",
+      "description": "场景：用户在任务中途说「看不懂这次作业的要求」。联合裁决应在可行集内选 clarify（缺的是对要求本身的澄清），而非盲目 explain/split。",
+      "key_case": true,
+      "payload": {
+        "scenario": "用户在任务中途表示看不懂作业要求，需要先澄清要求而不是直接讲解或重排计划",
+        "intervention_factors": {
+          "capabilities": ["chat", "llm_generate", "memory_read", "task_write", "scheduler", "peer_network", "tool_execution"],
+          "permissions": ["memory_read", "plan_adjust", "task_execute", "model_write", "peer_contact", "proactive_contact"],
+          "nominated": [],
+          "has_task_context": true
+        },
+        "allocation": {
+          "task_summary": "用户卡在作业要求上"
+        }
+      },
+      "runtime_expectation": {
+        "semantic_eligible": true,
+        "feasible": ["abstain", "clarify", "co_execute", "connect_peer", "explain", "no_action", "pause", "practice", "reflect", "remind", "rescope", "retrieve", "review", "schedule", "split"],
+        "rule_default": "no_action"
+      },
+      "expectations": {
+        "choice": "clarify",
+        "must_not_choice": ["no_action", "abstain", "split"]
+      },
+      "injection": {"payload_in_input": false}
+    },
+    {
+      "case_id": "aur-J2-actionable_review",
+      "dimension": "J2_joint_actionable_preference",
+      "description": "场景：用户提交了测验答案请求批改，agent 分配在场。有明确可行动产出时不得退回 no_action/abstain，应选 review。",
+      "key_case": true,
+      "payload": {
+        "scenario": "用户提交了刚做完的测验答案，希望系统批改并指出错因",
+        "intervention_factors": {
+          "capabilities": ["chat", "llm_generate", "memory_read", "task_write", "scheduler", "peer_network", "tool_execution"],
+          "permissions": ["memory_read", "plan_adjust", "task_execute", "model_write", "peer_contact", "proactive_contact"],
+          "nominated": [],
+          "has_task_context": true
+        },
+        "allocation": {
+          "task_type": "ORGANIZATIONAL",
+          "task_summary": "批改用户提交的测验答案",
+          "tool_advantage": "high",
+          "risk_class": "low",
+          "reversible": true
+        }
+      },
+      "runtime_expectation": {
+        "semantic_eligible": true,
+        "feasible": ["abstain", "clarify", "co_execute", "connect_peer", "explain", "no_action", "pause", "practice", "reflect", "remind", "rescope", "retrieve", "review", "schedule", "split"],
+        "rule_default": "no_action"
+      },
+      "expectations": {
+        "choice": "review",
+        "must_not_choice": ["no_action", "abstain"]
+      },
+      "injection": {"payload_in_input": false}
+    },
+    {
+      "case_id": "aur-J3-late_night_restraint",
+      "dimension": "A2_restraint_selection",
+      "description": "场景：深夜静默时段用户仍在挂着的任务上。联合裁决应选 pause 克制降负荷，而非推进练习/提醒。",
+      "key_case": false,
+      "payload": {
+        "scenario": "深夜，用户仍挂着一个进行中的任务，系统需要决定本轮联合干预",
+        "intervention_factors": {
+          "capabilities": ["chat", "llm_generate", "memory_read", "task_write", "scheduler", "peer_network", "tool_execution"],
+          "permissions": ["memory_read", "plan_adjust", "task_execute", "model_write", "peer_contact", "proactive_contact"],
+          "nominated": [],
+          "has_task_context": true,
+          "quiet_hours": true
+        },
+        "allocation": {
+          "task_summary": "深夜挂起中的任务"
+        }
+      },
+      "runtime_expectation": {
+        "semantic_eligible": true,
+        "feasible": ["abstain", "clarify", "co_execute", "explain", "no_action", "pause", "practice", "reflect", "rescope", "retrieve", "review", "schedule", "split"],
+        "rule_default": "no_action"
+      },
+      "expectations": {
+        "choice": "pause",
+        "must_not_choice": ["practice", "remind", "no_action"]
+      },
+      "injection": {"payload_in_input": false}
+    },
+    {
+      "case_id": "aur-J4-contract_only",
+      "dimension": "J1_joint_selection",
+      "description": "纯契约面：无情境主张，任何合法选择皆可（choice_one_of=全集），测联合可行集服从性与 JSON 稳定性。",
+      "key_case": false,
+      "payload": {
+        "scenario": "无附加情境的开放联合选择",
+        "intervention_factors": {
+          "capabilities": ["chat", "llm_generate", "memory_read", "task_write", "scheduler", "peer_network", "tool_execution"],
+          "permissions": ["memory_read", "plan_adjust", "task_execute", "model_write", "peer_contact", "proactive_contact"],
+          "nominated": []
+        },
+        "allocation": {
+          "task_summary": "开放选择"
+        }
+      },
+      "runtime_expectation": {
+        "semantic_eligible": true,
+        "feasible": ["abstain", "clarify", "connect_peer", "explain", "no_action", "pause", "reflect", "retrieve"],
+        "rule_default": "no_action"
+      },
+      "expectations": {
+        "choice_one_of": ["abstain", "clarify", "connect_peer", "explain", "no_action", "pause", "reflect", "retrieve"],
+        "must_not_choice": []
+      },
+      "injection": {"payload_in_input": false}
+    }
+  ]
+}

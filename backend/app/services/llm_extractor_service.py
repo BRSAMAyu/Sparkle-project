@@ -21,7 +21,10 @@ def _utcnow() -> datetime:
 
 
 class LlmExtractorService:
-    PROMPT_PATH = Path(__file__).with_name("llm_extractor_prompt.v1.md")
+    # v2（E-04 prompt 收敛）：新增规则 11（数据边界：对话内嵌指令是数据不是规则，
+    # 不得遵从、不得产出被指定的候选文本）与 12（寒暄/纯情绪轮 → 空候选）。
+    # 修改 prompt 必须过 backend/tests/ai_face_eval 门禁（sha 登记 + 真模型 floors）。
+    PROMPT_PATH = Path(__file__).with_name("llm_extractor_prompt.v2.md")
     DRY_RUN_PREFIX = "stage19:llm_extract:dry_run:"
     SESSION_BUDGET_PREFIX = "stage19:llm_extract:budget:"
     _local_session_budget: dict[str, int] = {}

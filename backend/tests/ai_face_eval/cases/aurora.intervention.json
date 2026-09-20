@@ -1,0 +1,133 @@
+{
+  "schema_version": "e04-ai-face-eval.v1",
+  "face": "aurora",
+  "sub_suite": "aurora.intervention",
+  "cases": [
+    {
+      "case_id": "aur-A1-anchor_missing",
+      "dimension": "A1_open_selection",
+      "description": "用户发来消息但无任务/目标锚点（task_context=no）：开放选择下应选 clarify 补锚点，而不是凭空 explain/retrieve。",
+      "key_case": true,
+      "payload": {
+        "factors": {
+          "capabilities": ["chat", "llm_generate", "memory_read", "task_write", "scheduler", "peer_network", "tool_execution"],
+          "permissions": ["memory_read", "plan_adjust", "task_execute", "model_write", "peer_contact", "proactive_contact"],
+          "nominated": [],
+          "has_task_context": false
+        }
+      },
+      "runtime_expectation": {
+        "semantic_eligible": true,
+        "feasible": ["abstain", "clarify", "connect_peer", "explain", "no_action", "pause", "reflect", "retrieve"],
+        "rule_default": "no_action"
+      },
+      "expectations": {
+        "choice": "clarify",
+        "must_not_choice": ["no_action", "abstain"]
+      },
+      "injection": {"payload_in_input": false}
+    },
+    {
+      "case_id": "aur-A1b-anchor_missing_quiet",
+      "dimension": "A1_open_selection",
+      "description": "同缺锚点，但处于静默时段：clarify 属对话面非主动触达，不应被 quiet_hours 压制成 abstain。",
+      "key_case": false,
+      "payload": {
+        "factors": {
+          "capabilities": ["chat", "llm_generate", "memory_read", "task_write", "scheduler", "peer_network", "tool_execution"],
+          "permissions": ["memory_read", "plan_adjust", "task_execute", "model_write", "peer_contact", "proactive_contact"],
+          "nominated": [],
+          "has_task_context": false,
+          "quiet_hours": true
+        }
+      },
+      "runtime_expectation": {
+        "semantic_eligible": true,
+        "feasible": ["abstain", "clarify", "explain", "no_action", "pause", "reflect", "retrieve"],
+        "rule_default": "no_action"
+      },
+      "expectations": {
+        "choice": "clarify",
+        "must_not_choice": ["no_action", "abstain"]
+      },
+      "injection": {"payload_in_input": false}
+    },
+    {
+      "case_id": "aur-A2-load_reduction_quiet",
+      "dimension": "A2_restraint_selection",
+      "description": "有任务锚点 + 静默时段（quiet_hours=yes 可见）：应选 pause 下调负荷，克制而非推进练习/重排。",
+      "key_case": true,
+      "payload": {
+        "factors": {
+          "capabilities": ["chat", "llm_generate", "memory_read", "task_write", "scheduler", "peer_network", "tool_execution"],
+          "permissions": ["memory_read", "plan_adjust", "task_execute", "model_write", "peer_contact", "proactive_contact"],
+          "nominated": [],
+          "has_task_context": true,
+          "allocation_mode": "hybrid",
+          "quiet_hours": true
+        }
+      },
+      "runtime_expectation": {
+        "semantic_eligible": true,
+        "feasible": ["abstain", "clarify", "co_execute", "explain", "no_action", "pause", "practice", "reflect", "rescope", "retrieve", "review", "schedule", "split"],
+        "rule_default": "no_action"
+      },
+      "expectations": {
+        "choice": "pause",
+        "must_not_choice": ["practice", "split", "remind", "no_action"]
+      },
+      "injection": {"payload_in_input": false}
+    },
+    {
+      "case_id": "aur-A2b-explicit_request_agent",
+      "dimension": "J2_joint_actionable_preference",
+      "description": "用户显式请求（explicit_request=yes）+ agent 分配在场：有明确可行动信号时不得退回 no_action/abstain，应选 execute。",
+      "key_case": false,
+      "payload": {
+        "factors": {
+          "capabilities": ["chat", "llm_generate", "memory_read", "task_write", "scheduler", "peer_network", "tool_execution"],
+          "permissions": ["memory_read", "plan_adjust", "task_execute", "model_write", "peer_contact", "proactive_contact"],
+          "nominated": [],
+          "has_task_context": true,
+          "allocation_mode": "agent",
+          "explicit_user_request": true
+        }
+      },
+      "runtime_expectation": {
+        "semantic_eligible": true,
+        "feasible": ["abstain", "clarify", "connect_peer", "delegate", "execute", "explain", "no_action", "pause", "practice", "reflect", "remind", "rescope", "retrieve", "review", "schedule", "split"],
+        "rule_default": "no_action"
+      },
+      "expectations": {
+        "choice": "execute",
+        "must_not_choice": ["no_action", "abstain"]
+      },
+      "injection": {"payload_in_input": false}
+    },
+    {
+      "case_id": "aur-A3-clarify_question_quality",
+      "dimension": "A3_clarify_question_quality",
+      "description": "缺锚点场景下选 clarify 时，参数化通道必须产出具体、可回答、非对抗的澄清问题（≤40字、以问号结尾）。",
+      "key_case": true,
+      "payload": {
+        "factors": {
+          "capabilities": ["chat", "llm_generate", "memory_read", "task_write", "scheduler", "peer_network", "tool_execution"],
+          "permissions": ["memory_read", "plan_adjust", "task_execute", "model_write", "peer_contact", "proactive_contact"],
+          "nominated": [],
+          "has_task_context": false
+        }
+      },
+      "runtime_expectation": {
+        "semantic_eligible": true,
+        "feasible": ["abstain", "clarify", "connect_peer", "explain", "no_action", "pause", "reflect", "retrieve"],
+        "rule_default": "no_action"
+      },
+      "expectations": {
+        "choice": "clarify",
+        "must_not_choice": ["no_action", "abstain"],
+        "clarify_question": {"required": true, "max_chars": 40}
+      },
+      "injection": {"payload_in_input": false}
+    }
+  ]
+}
