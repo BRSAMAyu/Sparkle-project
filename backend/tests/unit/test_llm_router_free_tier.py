@@ -24,6 +24,16 @@ from app.core.llm_router import (
 METRIC_FREE_DOWNGRADE = "sparkle_llm_router_free_tier_downgrade_total"
 
 
+@pytest.fixture(autouse=True)
+def _deterministic_env(monkeypatch):
+    """环境无关化（E-06 同款坑）：清空 .env 泄漏的 *_API_KEY/LLM_TIER_*，
+    使 LLMRouter() 构造出确定性默认池（无 key 环境）。"""
+    from app.config import settings as _s
+
+    for k in [k for k in vars(_s) if k.endswith("_API_KEY") or k.startswith("LLM_TIER_")]:
+        monkeypatch.setattr(_s, k, "")
+
+
 @pytest.fixture
 def router() -> LLMRouter:
     """Create a fresh LLMRouter instance (isolated health state)."""
@@ -55,7 +65,7 @@ def test_free_user_forced_max_clamps_to_fast_with_reason(router: LLMRouter):
     selection = router.select_model(AgentRole.GENERATION, force_tier=ModelTier.MAX)
 
     assert selection.config.tier == ModelTier.FAST
-    assert selection.model_key == "dashscope_fast"  # flash 轻模型
+    assert selection.model_key == "deepseek_fast"  # 默认 FAST 层首位（V3-FIX-19 同批对齐：dashscope→deepseek）
     assert selection.free_tier_downgrade is True
     assert "free_tier_downgrade(max->fast)" in selection.reason
     assert _free_downgrade_count(labels) == pytest.approx(before + 1)
@@ -68,7 +78,7 @@ def test_pro_user_forced_max_unchanged(router: LLMRouter):
 
     # 池条目自带 tier 标签可能是 MAX 或 PRO；本质断言是 model 与钳制语义
     assert selection.config.tier in (ModelTier.MAX, ModelTier.PRO)
-    assert selection.model_key == "dashscope_reason"  # 重模型（v4-pro 位）
+    assert selection.model_key == "deepseek_reason"  # 默认 MAX 层首位（V3-FIX-19 同批对齐）
     assert selection.free_tier_downgrade is False
     assert "free_tier_downgrade" not in selection.reason
 

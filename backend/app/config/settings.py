@@ -672,6 +672,30 @@ class Settings(BaseSettings):
     FREE_TIER_DOWNGRADE_ENABLED: bool = True  # 免费用户能力层请求钳制总开关
     FREE_TIER_MODEL_CEILING: str = "fast"  # 免费层允许的最高能力 tier（fast|standard）
 
+    # E-07: Provider 健康滞回（health circuit + hysteresis）。
+    # 语义：连续 FAILURE_THRESHOLD 次失败 → unhealthy（路由跳过）；冷却 RECOVERY_SECONDS
+    # 无新失败 → probation（恢复观察：可选但观察期内 1 次失败立即回 unhealthy 且冷却翻倍，
+    # 防 provider 抖动引发切换风暴）；probation 内连续 PROBE_SUCCESS_THRESHOLD 次成功
+    # → healthy（恢复完整失败容错）。冷却翻倍封顶 COOLDOWN_MAX_SECONDS（有界，不无界退避）。
+    LLM_HEALTH_FAILURE_THRESHOLD: int = 5
+    LLM_HEALTH_RECOVERY_SECONDS: float = 300.0
+    LLM_HEALTH_PROBE_SUCCESS_THRESHOLD: int = 3
+    LLM_HEALTH_COOLDOWN_MAX_SECONDS: float = 1800.0
+
+    # E-07: 三维自适应路由（quality/latency/cost 反馈环）。
+    # 真实调用结果回流打分；候选链内稳定重排，不跨 tier 提升（自适应是 E-02 路由的
+    # 反馈维度扩展，不是新决策真源）。冷启动（样本 < MIN_SAMPLES）不介入 = E-02 既有策略。
+    # 滞回 margin：首位分差低于阈值不交换（防评分抖动引发候选顺序抖动）。
+    ADAPTIVE_ROUTING_ENABLED: bool = True
+    ADAPTIVE_ROUTING_WINDOW: int = 64  # 每模型 outcome 滑窗上限（有界内存）
+    ADAPTIVE_ROUTING_MIN_SAMPLES: int = 8  # 介入所需最少样本（冷启动保护）
+    ADAPTIVE_ROUTING_MARGIN: float = 0.05  # 首位切换最小分差（滞回）
+    ADAPTIVE_ROUTING_WEIGHT_QUALITY: float = 0.5
+    ADAPTIVE_ROUTING_WEIGHT_LATENCY: float = 0.3
+    ADAPTIVE_ROUTING_WEIGHT_COST: float = 0.2
+    ADAPTIVE_ROUTING_LATENCY_REF_MS: float = 5000.0  # 延迟归一参考（≥此值 latency_score=0）
+    ADAPTIVE_ROUTING_COST_REF_PER_1K: float = 0.01  # 成本归一参考（≥此值 cost_score=0）
+
     # Feature Flags
     USE_CONTEXT_PACK: bool = True
     ANALYSIS_SYNC_ON_EVENT: bool = True

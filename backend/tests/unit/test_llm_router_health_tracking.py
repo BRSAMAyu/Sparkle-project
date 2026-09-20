@@ -124,7 +124,13 @@ def test_model_health_state_defaults_to_healthy():
 
 
 def test_model_health_state_recovers_after_success():
-    """Test that a success resets the health state."""
+    """E-07 契约翻转（滞回）：unhealthy 相内的单次成功**不再**立即复活。
+
+    旧契约（record_success 清一切）允许切换前在途的旧成功请求解除熔断——
+    provider 抖动时这正是切换风暴的向量。新契约：必须先过冷却（check_recovery
+    → probation），再由连续探针成功恢复。healthy 相内成功清零失败的语义由
+    test_router_reports_success_clears_previous_failures 覆盖，保持不变。
+    """
     state = ModelHealthState()
 
     # Record failures to trip
@@ -132,12 +138,25 @@ def test_model_health_state_recovers_after_success():
         state.record_failure()
 
     assert state.is_healthy is False
+    assert state.phase == "unhealthy"
 
-    # Single success should recover
+    # 切换前在途的旧成功不能解除熔断（滞回核心）
     state.record_success()
 
+    assert state.is_healthy is False
+    assert state.phase == "unhealthy"
+
+    # 冷却走完 → probation（可被选型=回切探针），仍非完整健康
+    state.last_failure_at = time.monotonic() - state.cooldown_seconds - 1
+    state.check_recovery()
     assert state.is_healthy is True
-    assert state.consecutive_failures == 0
+    assert state.phase == "probation"
+
+    # probation 内连续探针成功 → healthy（恢复完整失败容错）
+    for _ in range(state.PROBE_SUCCESS_THRESHOLD):
+        state.record_success()
+    assert state.phase == "healthy"
+    assert state.is_healthy is True
 
 
 def test_router_reports_success_clears_previous_failures(llm_router):

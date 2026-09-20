@@ -100,16 +100,28 @@ async def test_dynamic_tool_registry_integration(orchestrator):
 
 @pytest.mark.asyncio
 async def test_llm_router_health_tracking(orchestrator):
-    """Test that LLM router health tracking is integrated."""
+    """Test that LLM router health tracking is integrated.
+
+    E-07/FIX-23 契约翻转：健康上报按**注册 model_key** 收键，未注册键拒收
+    （历史死键形态——按 model_name 上报、选型按 model_key 查——已在 E-07 根修）。
+    本测试改用真实注册键验证「失败种子 → 成功清零 → healthy」链路。
+    """
     from app.core.llm_router import llm_router
 
+    model_key = "deepseek_chat"
+    assert model_key in llm_router._available_models  # 前提：注册键
+
     # Success only clears an existing health entry, so seed one first.
-    llm_router.report_model_failure("test_model")
-    llm_router.report_model_success("test_model")
+    llm_router.report_model_failure(model_key)
+    assert model_key in llm_router._model_health
+
+    llm_router.report_model_success(model_key)
 
     # Health state should be tracked
-    assert "test_model" in llm_router._model_health
-    assert llm_router._model_health["test_model"].is_healthy is True
+    assert llm_router._model_health[model_key].is_healthy is True
+    # FIX-23：未注册键不再入册（死键根修）
+    llm_router.report_model_failure("test_model_not_registered")
+    assert "test_model_not_registered" not in llm_router._model_health
 
 
 @pytest.mark.asyncio

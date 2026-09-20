@@ -10,7 +10,7 @@ from functools import wraps
 
 from loguru import logger
 from opentelemetry import trace
-from prometheus_client import REGISTRY, Counter, Gauge, Histogram
+from prometheus_client import REGISTRY, Counter, Gauge, Histogram, Summary
 
 
 def get_or_create_metric(metric_type, name, documentation, labelnames=(), **kwargs):
@@ -613,6 +613,48 @@ LLM_ROUTER_FREE_TIER_DOWNGRADE_TOTAL = get_or_create_metric(
     "sparkle_llm_router_free_tier_downgrade_total",
     "Free-tier model downgrades applied by the unified LLM router",
     ["agent_role", "from_tier", "to_tier"],
+)
+
+# E-07 健康回退：模型健康态迁移计数（healthy/probation/unhealthy 三相滞回）。
+# phase 封闭集：healthy | probation | unhealthy；transition = "from->to"。
+LLM_HEALTH_TRANSITIONS_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_llm_health_transitions_total",
+    "Model health phase transitions under E-07 hysteresis",
+    ["model_key", "transition"],
+)
+
+# E-07 健康回退：fallback manager 实际切换计数（from/to model_key + 触发原因）。
+# reason 封闭集见 FallbackReason（rate_limit_429/timeout/service_unavailable/...）。
+LLM_ROUTER_FALLBACK_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_llm_router_fallback_total",
+    "Actual model fallback switches performed by the fallback manager",
+    ["from_model_key", "to_model_key", "reason"],
+)
+
+# E-07 自适应路由：候选链首位因三维评分被重排的计数。
+LLM_ADAPTIVE_REORDER_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_llm_adaptive_reorder_total",
+    "Adaptive quality/latency/cost candidate reorder events",
+    ["trigger"],
+)
+
+# E-07 时序指标：真实调用延迟（秒）与显式质量信号（0..1）。
+LLM_ROUTER_CALL_LATENCY_SECONDS = get_or_create_metric(
+    Histogram,
+    "sparkle_llm_router_call_latency_seconds",
+    "Real provider call latency observed on the routing outcome path",
+    ["provider", "model_key"],
+    buckets=(0.1, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 60.0, 120.0),
+)
+
+LLM_ROUTER_QUALITY_SIGNAL = get_or_create_metric(
+    Summary,
+    "sparkle_llm_router_quality_signal",
+    "Explicit quality signal (0..1) flowing back into adaptive routing",
+    ["model_key", "provider"],
 )
 
 # E-02 能力路由：每消息 fast/deliberate lane 判定计数。

@@ -23,7 +23,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.core.agent_profiles import AgentRole, ModelTier, TaskType
 from app.core.cost_controller import is_llm_within_budget, record_llm_cost
-from app.core.metrics import LLM_PROVIDER_TTFT, LLM_PUSH_CONTENT_PARSE_FAILURE_TOTAL
+from app.core.metrics import (
+    LLM_PROVIDER_TTFT,
+    LLM_PUSH_CONTENT_PARSE_FAILURE_TOTAL,
+    LLM_ROUTER_CALL_LATENCY_SECONDS,
+)
+from app.core import routing_audit
+from app.core.adaptive_routing import adaptive_routing_engine
 from app.core.llm_monitoring import LLMMonitor
 from app.core.llm_router import LLMSelection, ModelProvider, glm_effective_max_tokens, llm_router
 from app.core.llm_secure_io import (
@@ -61,6 +67,60 @@ LLM_STREAM_FIRST_CHUNK_TIMEOUT_SECONDS = 45
 LLM_STREAM_FIRST_CHUNK_TIMEOUT_REASONING_SECONDS = 90
 LLM_STREAM_OVERALL_TIMEOUT_SECONDS = 120
 LLM_STREAM_OVERALL_TIMEOUT_REASONING_SECONDS = 300
+
+
+def _report_call_outcome(
+    selection: Any,
+    *,
+    success: bool,
+    latency_ms: float | None = None,
+    provider_name: str | None = None,
+) -> None:
+    """E-07/FIX-23：键型对齐的健康上报 + 真实调用结果回流。
+
+    FIX-23（键型死键）：历史调用面按 ``config.model_name`` 上报健康，而选型按
+    ``model_key`` 查 ``_is_model_healthy``——providers 路径的健康态在选型侧永远
+    查不到（死键）。统一改为按注册 model_key 上报；只持有 config 的 legacy 路径
+    经 ``llm_router.resolve_model_key`` 反查，反查不出则放弃（宁缺毋滥，不造死键）。
+
+    同时把每次真实调用的 (latency, success, cost) 回流给三维自适应反馈环
+    （quality/latency/cost），并写入路由审计与 Prometheus 时序指标。
+    """
+    model_key = getattr(selection, "model_key", None)
+    if not model_key:
+        model_key = llm_router.resolve_model_key(getattr(selection, "config", None))
+    if not model_key:
+        return
+    if success:
+        llm_router.report_model_success(model_key)
+    else:
+        llm_router.report_model_failure(model_key)
+
+    config = getattr(selection, "config", None)
+    provider_label = provider_name or (
+        getattr(getattr(config, "provider", None), "value", None) or "unknown"
+    )
+    if latency_ms is not None:
+        latency_ms = max(0.0, float(latency_ms))
+        LLM_ROUTER_CALL_LATENCY_SECONDS.labels(
+            provider=provider_label, model_key=model_key
+        ).observe(latency_ms / 1000.0)
+        cost = getattr(config, "cost_per_1k_tokens", None)
+        adaptive_routing_engine.record_outcome(
+            model_key,
+            latency_ms=latency_ms,
+            success=success,
+            cost_per_1k=float(cost) if cost is not None else None,
+        )
+    routing_audit.record(
+        "outcome",
+        {
+            "model_key": model_key,
+            "provider": provider_label,
+            "success": success,
+            "latency_ms": round(latency_ms, 1) if latency_ms is not None else None,
+        },
+    )
 
 # ==========================================
 # 🎭 演示模式预设响应 (Demo Mock Responses)
@@ -665,6 +725,7 @@ class LLMService:
             async def _call_with_selection(selection: LLMSelection) -> str:
                 provider_name, current_provider, request_kwargs = self._build_provider_for_selection(selection)
 
+                _outcome_t0 = time.perf_counter()
                 try:
                     async with llm_concurrency.acquire(provider_name):
                         async with asyncio.timeout(120):
@@ -676,13 +737,23 @@ class LLMService:
                                 ),
                                 **request_kwargs
                             )
-                        llm_router.report_model_success(selection.config.model_name)
+                        _report_call_outcome(
+                            selection,
+                            success=True,
+                            latency_ms=(time.perf_counter() - _outcome_t0) * 1000.0,
+                            provider_name=provider_name,
+                        )
                         return sanitize_llm_output(
                             response,
                             context={"user_id": user_id, "type": "chat"},
                         )
                 except Exception as e:
-                    llm_router.report_model_failure(selection.config.model_name)
+                    _report_call_outcome(
+                        selection,
+                        success=False,
+                        latency_ms=(time.perf_counter() - _outcome_t0) * 1000.0,
+                        provider_name=provider_name,
+                    )
                     reason = llm_fallback_manager._detect_fallback_reason(e)
                     if reason:
                         logger.warning(
@@ -979,6 +1050,7 @@ class LLMService:
                         merged_kwargs = dict(kwargs)
                         for key, value in request_kwargs.items():
                             merged_kwargs.setdefault(key, value)
+                        _outcome_t0 = time.perf_counter()
                         try:
                             async with llm_concurrency.acquire(provider_name):
                                 async with asyncio.timeout(180):
@@ -990,10 +1062,20 @@ class LLMService:
                                         ),
                                         **merged_kwargs,
                                     )
-                            llm_router.report_model_success(current_selection.config.model_name)
+                            _report_call_outcome(
+                                current_selection,
+                                success=True,
+                                latency_ms=(time.perf_counter() - _outcome_t0) * 1000.0,
+                                provider_name=provider_name,
+                            )
                             return result
                         except Exception:
-                            llm_router.report_model_failure(current_selection.config.model_name)
+                            _report_call_outcome(
+                                current_selection,
+                                success=False,
+                                latency_ms=(time.perf_counter() - _outcome_t0) * 1000.0,
+                                provider_name=provider_name,
+                            )
                             raise
 
                     response = await llm_fallback_manager.execute_with_fallback(

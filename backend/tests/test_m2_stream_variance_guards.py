@@ -126,7 +126,11 @@ class _StubFallbackManager:
         self.first_error: Exception | None = None
         self.attempts = 0
 
-    async def execute_stream_with_fallback(self, selection, stream_fn, operation_type="stream_chat"):
+    async def execute_stream_with_fallback(
+        self, selection, stream_fn, operation_type="stream_chat", require_tools=False
+    ):
+        # require_tools：E-02 生产签名已在调用面传参（capability-aware fallback）；
+        # stub 不消费该参数，仅接受以匹配签名（V3-FIX-19 漏网的既有红）。
         self.attempts += 1
         try:
             async for chunk in stream_fn(selection):

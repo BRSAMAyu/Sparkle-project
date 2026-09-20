@@ -33,6 +33,8 @@ from loguru import logger
 
 from app.config import settings
 from app.core import complexity_analyzer as _cx
+from app.core import routing_audit
+from app.core.adaptive_routing import adaptive_routing_engine
 from app.core.agent_profiles import TASK_TO_AGENT_PROFILE, AgentRole, ModelTier, TaskType, agent_profile_registry
 from app.core.metrics import LLM_ROUTER_ESTIMATED_COST_PER_1K, LLM_ROUTER_FREE_TIER_DOWNGRADE_TOTAL, LLM_ROUTER_SELECTION_TOTAL
 
@@ -164,33 +166,109 @@ class ModelConfig:
 
 @dataclass
 class ModelHealthState:
-    """模型健康状态（内存缓存，无持久化）"""
+    """模型健康状态（内存缓存，无持久化）— E-07 三相滞回状态机。
+
+    phase 封闭集：
+    - healthy:   正常。连续 FAILURE_THRESHOLD 次失败 → unhealthy。
+    - unhealthy: 路由跳过（is_healthy=False）。冷却 cooldown_seconds 无新失败
+                 → probation。**此相内的 record_success 不复活**（在途旧请求的
+                 成功不能解除熔断——滞回核心，防 provider 抖动引发切换风暴）。
+    - probation: 恢复观察（is_healthy=True，可与健康模型同权参与选型=冷却后的
+                 自然回切）。此相内 1 次失败立即回 unhealthy 且冷却翻倍（封顶
+                 COOLDOWN_MAX_SECONDS，有界不无界退避）；连续 PROBE_SUCCESS_THRESHOLD
+                 次成功 → healthy（恢复完整失败容错，冷却复位）。
+
+    兼容性：is_healthy 字段保留原语义（False=路由必跳过；True=可选），现有
+    E-02 消费面零改动；新增 phase 表达三相。
+    """
+
     consecutive_failures: int = 0
+    consecutive_successes: int = 0
     last_failure_at: float | None = None
     is_healthy: bool = True
+    phase: str = "healthy"  # "healthy" | "probation" | "unhealthy"
+    cooldown_seconds: float | None = None  # None = 取 settings 默认
 
-    # 5次连续失败 → 标记不健康；300秒无失败 → 自动恢复
-    FAILURE_THRESHOLD: int = field(default=5, init=False, repr=False)
-    RECOVERY_SECONDS: float = field(default=300.0, init=False, repr=False)
+    FAILURE_THRESHOLD: int = field(default=5)
+    RECOVERY_SECONDS: float = field(default=300.0)
+    PROBE_SUCCESS_THRESHOLD: int = field(default=3)
+    COOLDOWN_MAX_SECONDS: float = field(default=1800.0)
+
+    def __post_init__(self) -> None:
+        # 默认值以 settings 为准（测试/部署可调）；显式传参优先。
+        self.FAILURE_THRESHOLD = int(
+            getattr(settings, "LLM_HEALTH_FAILURE_THRESHOLD", self.FAILURE_THRESHOLD)
+        )
+        self.RECOVERY_SECONDS = float(
+            getattr(settings, "LLM_HEALTH_RECOVERY_SECONDS", self.RECOVERY_SECONDS)
+        )
+        self.PROBE_SUCCESS_THRESHOLD = int(
+            getattr(settings, "LLM_HEALTH_PROBE_SUCCESS_THRESHOLD", self.PROBE_SUCCESS_THRESHOLD)
+        )
+        self.COOLDOWN_MAX_SECONDS = float(
+            getattr(settings, "LLM_HEALTH_COOLDOWN_MAX_SECONDS", self.COOLDOWN_MAX_SECONDS)
+        )
+        if self.cooldown_seconds is None:
+            self.cooldown_seconds = self.RECOVERY_SECONDS
+
+    def _transition(self, new_phase: str) -> None:
+        from app.core.metrics import LLM_HEALTH_TRANSITIONS_TOTAL
+
+        old = self.phase
+        self.phase = new_phase
+        self.is_healthy = new_phase != "unhealthy"
+        if old != new_phase:
+            LLM_HEALTH_TRANSITIONS_TOTAL.labels(
+                model_key=getattr(self, "_model_key", "unknown"),
+                transition=f"{old}->{new_phase}",
+            ).inc()
 
     def record_failure(self) -> None:
         self.consecutive_failures += 1
+        self.consecutive_successes = 0
         self.last_failure_at = time.monotonic()
-        if self.consecutive_failures >= self.FAILURE_THRESHOLD:
-            self.is_healthy = False
-            logger.warning(f"Model marked unhealthy after {self.consecutive_failures} consecutive failures")
+        if self.phase == "probation":
+            # 恢复观察期内失败：立即回 unhealthy，冷却翻倍（防风暴滞回；有界封顶）
+            self.cooldown_seconds = min(
+                self.cooldown_seconds * 2.0, self.COOLDOWN_MAX_SECONDS
+            )
+            self._transition("unhealthy")
+            logger.warning(
+                f"Model failed during probation, back to unhealthy "
+                f"(cooldown escalated to {self.cooldown_seconds:.0f}s)"
+            )
+        elif self.consecutive_failures >= self.FAILURE_THRESHOLD:
+            self._transition("unhealthy")
+            logger.warning(
+                f"Model marked unhealthy after {self.consecutive_failures} consecutive failures"
+            )
 
     def record_success(self) -> None:
+        if self.phase == "unhealthy":
+            # 滞回：unhealthy 期间在途旧请求的成功不解除熔断，等待冷却走完
+            return
+        if self.phase == "probation":
+            self.consecutive_successes += 1
+            if self.consecutive_successes >= self.PROBE_SUCCESS_THRESHOLD:
+                self.consecutive_failures = 0
+                self.cooldown_seconds = self.RECOVERY_SECONDS
+                self._transition("healthy")
+                logger.info("Model recovered to healthy after probation probe successes")
+            return
+        # healthy：单次成功清零失败计数（E-02 既有行为）
         self.consecutive_failures = 0
-        self.is_healthy = True
+        self.consecutive_successes = 0
 
     def check_recovery(self) -> None:
-        """检查是否应该自动恢复（300s 无新失败）"""
-        if not self.is_healthy and self.last_failure_at is not None:
-            if time.monotonic() - self.last_failure_at >= self.RECOVERY_SECONDS:
-                self.is_healthy = True
+        """unhealthy → probation（冷却到期、无新失败）。probation/healthy 不变。"""
+        if self.phase == "unhealthy" and self.last_failure_at is not None:
+            if time.monotonic() - self.last_failure_at >= self.cooldown_seconds:
                 self.consecutive_failures = 0
-                logger.info("Model recovered after cooldown period")
+                self.consecutive_successes = 0
+                self._transition("probation")
+                logger.info(
+                    f"Model entered probation after cooldown ({self.cooldown_seconds:.0f}s)"
+                )
 
 
 @dataclass
@@ -951,6 +1029,11 @@ class LLMRouter:
             candidates = self._apply_provider_avoidance(candidates, avoid_providers)
             reason += " → 降级到standard"
 
+        # E-07 健康秩：probation（恢复观察）降权，健康优先；秩内保持策略原序
+        candidates = self._order_candidates_by_health(candidates)
+        # E-07 三维自适应反馈：候选链内稳定重排（冷启动零介入，不跨 tier）
+        candidates = adaptive_routing_engine.reorder_candidates(candidates)
+
         # 优先使用第一个候选
         model_key = candidates[0]
         model_config = self._available_models.get(model_key, self._available_models["default"])
@@ -1177,6 +1260,10 @@ class LLMRouter:
         if not candidates:
             return None
 
+        # E-07 健康秩 + 三维自适应反馈（与 select_model 同一语义：链内重排，不跨层）
+        candidates = self._order_candidates_by_health(candidates)
+        candidates = adaptive_routing_engine.reorder_candidates(candidates)
+
         model_key = candidates[0]
         model_config = self._available_models.get(model_key, self._available_models["default"])
         reason = f"Agent策略路由: {agent_role.value} -> {model_key}"
@@ -1286,33 +1373,121 @@ class LLMRouter:
             provider=config.provider.value,
             tier=tier_str or "unknown",
         ).observe(cost)
+        # E-07 可观测：路由决策审计（requested→actual + reason，切换可查）
+        routing_audit.record(
+            "selection",
+            {
+                "requested": {
+                    "agent_role": agent_role.value,
+                    "task_type": task_label,
+                    "complexity": complexity_level or "unknown",
+                },
+                "actual": {
+                    "model_key": model_key,
+                    "provider": config.provider.value,
+                    "model_name": config.model_name,
+                    "tier": tier_str or "unknown",
+                },
+                "reason": rich_reason,
+                "is_fallback": is_fallback,
+                "free_tier_downgrade": free_tier_downgrade,
+                "estimated_cost_per_1k": cost,
+            },
+        )
         return selection
 
     # ============================================
-    # 模型健康上报
+    # 模型健康上报（E-07：键型对齐 + 三相滞回）
     # ============================================
 
     def report_model_failure(self, model_key: str) -> None:
-        """上报模型调用失败（由 providers.py 调用）"""
+        """上报模型调用失败（由 providers/llm_service 调用；**按注册 model_key**）
+
+        FIX-23（键型对齐）：历史调用面曾按 config.model_name 上报，而选型按
+        model_key 查询——健康态在选型侧是死键。此处对未注册 key 拒收并告警，
+        不再制造死键。
+        """
         with self._lock:
-            if model_key not in self._model_health:
-                self._model_health[model_key] = ModelHealthState()
-            self._model_health[model_key].record_failure()
+            if model_key not in self._available_models:
+                if model_key:
+                    logger.debug(f"[LLMRouter] health report for unregistered key ignored: {model_key!r}")
+                return
+            state = self._model_health.get(model_key)
+            if state is None:
+                state = ModelHealthState()
+                state._model_key = model_key  # type: ignore[attr-defined]  # 指标标签关联
+                self._model_health[model_key] = state
+            state.record_failure()
 
     def report_model_success(self, model_key: str) -> None:
-        """上报模型调用成功"""
+        """上报模型调用成功（**按注册 model_key**；未注册 key 忽略）"""
         with self._lock:
-            if model_key in self._model_health:
-                self._model_health[model_key].record_success()
+            if model_key not in self._available_models:
+                return
+            state = self._model_health.get(model_key)
+            if state is None:
+                state = ModelHealthState()
+                state._model_key = model_key  # type: ignore[attr-defined]
+                self._model_health[model_key] = state
+            state.record_success()
+
+    def resolve_model_key(self, config: Any) -> str | None:
+        """FIX-23：按模型配置反查注册 model_key（model_name→key 对齐）。
+
+        用于旧调用面只持有 config（如 legacy provider 路径的 duck-typed
+        selection）时的健康上报归一。唯一匹配返回 key；歧义/未注册返回 None
+        （宁缺毋滥，不造死键）。
+        """
+        if config is None:
+            return None
+        model_name = getattr(config, "model_name", None)
+        if not model_name:
+            return None
+        provider = getattr(config, "provider", None)
+        base_url = getattr(config, "base_url", None)
+        matches: list[str] = []
+        with self._lock:
+            for key, cfg in self._available_models.items():
+                if cfg.model_name != model_name:
+                    continue
+                if provider is not None and cfg.provider != provider:
+                    continue
+                if base_url is not None and cfg.base_url != base_url:
+                    continue
+                matches.append(key)
+        return matches[0] if len(matches) == 1 else None
 
     def _is_model_healthy(self, model_key: str) -> bool:
-        """检查模型是否健康（含自动恢复检测）"""
+        """检查模型是否健康（含冷却恢复检测；unknown 默认健康，语义不变）"""
         with self._lock:
             if model_key not in self._model_health:
                 return True
             state = self._model_health[model_key]
             state.check_recovery()
             return state.is_healthy
+
+    def _health_rank(self, model_key: str) -> int:
+        """候选健康秩：healthy=0，probation=1（恢复观察降权），unhealthy=2。"""
+        with self._lock:
+            state = self._model_health.get(model_key)
+            if state is None:
+                return 0
+            state.check_recovery()
+            if state.phase == "probation":
+                return 1
+            if state.phase == "unhealthy":
+                return 2
+            return 0
+
+    def _order_candidates_by_health(self, candidates: list[str]) -> list[str]:
+        """按健康秩稳定排序：健康优先，probation 其次；秩内保持策略原序。
+
+        注意：unhealthy 候选通常已在上方被过滤；此排序兜底保留其相对位置，
+        保证「全不健康时仍可合法降级/明确不可用」而不是崩溃。
+        """
+        if not candidates:
+            return candidates
+        return sorted(candidates, key=self._health_rank)
 
     @staticmethod
     def _normalize_agent_role(agent_role: AgentRole | str | Any) -> AgentRole:
@@ -1417,6 +1592,8 @@ class LLMRouter:
             k for k in self._tier_mapping.get(next_tier, [])
             if self._is_model_healthy(k)
         ]
+        # E-07：probation 恢复观察降权，秩内保持原序
+        candidates = self._order_candidates_by_health(candidates)
         if not candidates:
             return failed_selection
 

@@ -24,6 +24,7 @@ from typing import Any
 
 from loguru import logger
 
+from app.core import routing_audit
 from app.core.agent_profiles import ModelTier
 from app.core.cache import cache_service
 from app.core.llm_router import LLMSelection, llm_router
@@ -331,7 +332,38 @@ class LLMModelFallbackManager:
                     )
                     candidates.append(selection)
 
+        # E-07 健康回退：候选先按 router 健康秩过滤（unhealthy 不再当候选），
+        # 但保留兜底——若过滤后为空（全线故障），保留原候选列表让请求仍能
+        # 「合法降级/明确 unavailable」，而不是直接崩溃（E-07 验收）。
+        # probation（恢复观察）候选保留：这是故障恢复后自然回切的通道。
+        filtered = [c for c in candidates if llm_router._is_model_healthy(c.model_key)]
+        if filtered:
+            # 健康秩稳定排序：healthy 在前，probation 其次
+            filtered = sorted(filtered, key=lambda c: llm_router._health_rank(c.model_key))
+            return filtered
         return candidates
+
+    def _record_switch(self, from_selection: LLMSelection | None, to_selection: LLMSelection, reason: FallbackReason) -> None:
+        """E-07 可观测：实际切换留痕（审计 + Prometheus 计数）。"""
+        from app.core.metrics import LLM_ROUTER_FALLBACK_TOTAL
+
+        from_key = self._get_model_key_from_selection(from_selection) if from_selection else "none"
+        to_key = self._get_model_key_from_selection(to_selection)
+        LLM_ROUTER_FALLBACK_TOTAL.labels(
+            from_model_key=from_key,
+            to_model_key=to_key,
+            reason=reason.value,
+        ).inc()
+        routing_audit.record(
+            "fallback",
+            {
+                "subtype": "model_switch",
+                "from_model_key": from_key,
+                "to_model_key": to_key,
+                "reason": reason.value,
+                "operation": "fallback_switch",
+            },
+        )
 
     def _calculate_backoff_delay(self, attempt: int) -> float:
         """
@@ -402,6 +434,17 @@ class LLMModelFallbackManager:
                     require_tools=require_tools,
                 )
                 if candidates:
+                    self._record_switch(
+                        current_selection, candidates[0], FallbackReason.UNKNOWN_ERROR
+                    )
+                    routing_audit.record(
+                        "outcome",
+                        {
+                            "model_key": model_key,
+                            "success": False,
+                            "note": "skipped_unhealthy_preflight",
+                        },
+                    )
                     current_selection = candidates[0]
                     continue
                 else:
@@ -476,6 +519,9 @@ class LLMModelFallbackManager:
                     session.end_time = time.time()
                     raise e
 
+                # E-07 可观测：实际切换留痕
+                self._record_switch(current_selection, candidates[0], fallback_reason)
+
                 # 切换到候选模型
                 current_selection = candidates[0]
 
@@ -523,12 +569,26 @@ class LLMModelFallbackManager:
                 selection: LLMSelection,
                 fn,
             ) -> AsyncGenerator[str, None]:
+                _t0 = time.perf_counter()
                 try:
                     async for chunk in fn(selection):
                         if not self.first_chunk_received:
                             # 首个 chunk 到达，记录成功
                             model_key = self._get_model_key(selection)
                             await self.manager.health_tracker.record_success(model_key)
+                            # E-07：流式路径此前只报 Redis tracker，从不回流
+                            # router 内存健康与自适应反馈——补齐（FIX-23 同源缺口）
+                            llm_router.report_model_success(model_key)
+                            from app.core.adaptive_routing import adaptive_routing_engine
+
+                            adaptive_routing_engine.record_outcome(
+                                model_key,
+                                latency_ms=(time.perf_counter() - _t0) * 1000.0,
+                                success=True,
+                                cost_per_1k=getattr(
+                                    selection.config, "cost_per_1k_tokens", None
+                                ),
+                            )
                             self.first_chunk_received = True
                         yield chunk
                 except Exception as e:
@@ -539,7 +599,7 @@ class LLMModelFallbackManager:
                         yield "\n\n⚠️ _stream_truncated_"
                         raise e
                     else:
-                        # 首次连接失败，触发回退
+                        # 首次连接失败，触发回退（健康上报由外层统一处理）
                         raise e
 
             def _get_model_key(self, selection: LLMSelection) -> str:
@@ -561,6 +621,8 @@ class LLMModelFallbackManager:
 
             original_model_key = self._get_model_key_from_selection(original_selection)
             await self.health_tracker.record_failure(original_model_key, fallback_reason)
+            # E-07：流式首连失败同样回流 router 内存健康（此前缺口）
+            llm_router.report_model_failure(original_model_key)
 
             exclude_models: set[str] = {original_model_key}
             candidates = self._get_fallback_candidates(
@@ -572,6 +634,7 @@ class LLMModelFallbackManager:
                 if not await self.health_tracker.is_healthy(model_key):
                     logger.warning(f"[LLMFallback] Skipping unhealthy stream fallback model: {selection.config.model_name}")
                     continue
+                self._record_switch(original_selection, selection, fallback_reason)
                 try:
                     logger.info(f"[LLMFallback] Trying fallback model: {selection.config.model_name}")
                     async for chunk in handler.execute(selection, stream_fn):
@@ -581,6 +644,7 @@ class LLMModelFallbackManager:
                     fallback_failure_reason = self._detect_fallback_reason(fallback_error)
                     if fallback_failure_reason is not None:
                         await self.health_tracker.record_failure(model_key, fallback_failure_reason)
+                        llm_router.report_model_failure(model_key)
                     logger.warning(f"[LLMFallback] Fallback to {selection.config.model_name} also failed: {fallback_error}")
                     exclude_models.add(model_key)
 
