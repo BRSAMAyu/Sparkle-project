@@ -514,8 +514,11 @@ class TestFailureSemantics:
     async def test_lane_unavailable_without_provider_credentials(self, monkeypatch):
         """无 key 环境（dev/测试）：GLM_BATCH 链上无凭据 → 车道不可用、调用方
         走前台兜底，与 E-06 之前行为一致（不得对空 key 的 provider 发真实请求）。
-        环境无关化：显式清空 key（主仓 shell 可能带 .env 真实 key）。"""
+        路由器构造时快照 api_key（见 lane_credentials fixture 注释），故清空
+        key 后必须重建路由器——否则主仓 shell 的 .env 真实 key 仍生效。"""
         monkeypatch.setattr(settings, "ZHIPU_API_KEY", "")
+        router = _rebuild_router("")
+        monkeypatch.setattr("app.services.batch_worklane.llm_router", router)
         store = FakeRedis()
         lane = BatchWorklaneService(store=store)
         spy = _ExecutorSpy()
