@@ -169,6 +169,24 @@ def _no_quiet_hours_by_default(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(proactive_config, "PROACTIVE_QUIET_HOURS_ENABLED", False)
 
 
+@pytest.fixture(autouse=True)
+def _frozen_pipeline_clock(monkeypatch: pytest.MonkeyPatch):
+    """P-01 时钟缺陷修复（cooldown 7 红）：管线挂钟注入为固定 ``_now()``。
+
+    ``handle_event`` 内部用真实挂钟（``pipeline._utcnow``）做快照与分类，而
+    本文件的预置状态全部以固定 seed ``2026-09-20 12:00 UTC`` 写入——真实
+    日期一天后漂移，cooldown（seed-10min vs 真实 now）与 daily_cap（seed 日
+    vs 真实今日）窗口必然失配：cooldown×7 全组合只在 seed 当天部分时段通过。
+    修法 = 测试注入时钟（monkeypatch 模块级 ``_utcnow``），零挂钟依赖；
+    store 侧 ``state._utcnow`` 一并钉死，保证写读两侧同一时钟。
+    """
+    from app.aurora.proactive import pipeline as proactive_pipeline
+    from app.aurora.proactive import state as proactive_state
+
+    monkeypatch.setattr(proactive_pipeline, "_utcnow", _now)
+    monkeypatch.setattr(proactive_state, "_utcnow", _now)
+
+
 ALL_TRIGGER_VALUES = [t.value for t in ProactiveTrigger]
 SUPPRESSION_CASES = (
     "quiet_hours",

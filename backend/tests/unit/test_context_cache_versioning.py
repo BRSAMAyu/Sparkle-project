@@ -399,6 +399,55 @@ async def test_face_b_epoch_read_failure_fails_closed(db_session, monkeypatch):
     assert rebuild_entered["v"] is True
 
 
+@pytest.mark.asyncio
+async def test_face_b_old_snapshot_epoch_zero_must_rebuild(db_session, monkeypatch):
+    """FIX-45③ RM-2 钉桩：旧格式快照（无 memory_epoch 字段 → 反序列化 0）遇当前
+    epoch 下限 1 必判 mismatch → 重建（「旧快照 0 必重建」fail-closed 门级直测）。
+
+    RM-2 变异（``int(cached.memory_epoch or 0)`` → ``or 1``）在此必红：
+    0 被吞成 1 == 1 → 命中 → 旧快照 stale 文本存活。偏好版本对齐为一致，
+    保证只有 epoch 门能拦（与 M-2 变异隔离同纪律）。
+    """
+    user = await _create_user(db_session)
+    await _create_settings_row(db_session, user, memory_epoch=1)  # epoch 下限：新建行 = 1
+    orchestrator = ContextOrchestrator(db_session, FakeRedis())
+
+    old_snapshot = CognitiveContext(
+        user_id=str(user.id),
+        timestamp=datetime.now(UTC),
+        # 不写 memory_epoch 字段 = 旧格式 JSON 快照同形（反序列化默认 0）
+        preference_version=3,
+        past_session_memory=[{"summary": "LEGACY_PRE_EPOCH_TEXT"}],
+    )
+    assert old_snapshot.memory_epoch == 0
+    monkeypatch.setattr(orchestrator, "_get_cached_context", AsyncMock(return_value=old_snapshot))
+    # epoch 门走真 DB 读（不 monkeypatch）：新建 settings 行 → 1
+    monkeypatch.setattr(orchestrator, "_get_preference_version", AsyncMock(return_value=3))
+
+    # 重建主干：全部子抓取器替换为空载荷哨兵
+    monkeypatch.setattr(orchestrator, "_get_recent_achievement_progress_events", AsyncMock(return_value=[]))
+    monkeypatch.setattr(orchestrator, "_get_spine_model_claims", AsyncMock(return_value=[]))
+    monkeypatch.setattr(orchestrator, "_get_past_session_memory", AsyncMock(return_value=[]))
+    for name, ret in (
+        ("_get_profile_context", None),
+        ("_get_error_profile", {"summary": {}, "recent": []}),
+        ("_get_task_profile", {"tasks": [], "focus": {}}),
+        ("_get_user_metrics", {}),
+        ("_get_community_profile", {}),
+        ("_get_social_context_v1", {}),
+        ("_get_achievement_context", {}),
+        ("_get_calendar_context", {}),
+        ("_get_capsule_preferences", {}),
+    ):
+        monkeypatch.setattr(orchestrator, name, AsyncMock(return_value=ret))
+
+    result = await orchestrator.get_user_context(str(user.id))
+    # 门判 mismatch → 重建：新快照 epoch 钉为当前值 1，旧文本不存活
+    assert result is not old_snapshot
+    assert result.memory_epoch == 1
+    assert result.past_session_memory == []
+
+
 # ---------------------------------------------------------------------------
 # 4. Face C：读权限门字段变化 → epoch bump + 派生缓存 DEL
 # ---------------------------------------------------------------------------
@@ -463,9 +512,47 @@ def test_face_c_read_gate_fields_cover_policy_evaluator_gates():
     from app.services.memory_policy_evaluator import MemoryPolicyEvaluator
 
     src = inspect.getsource(MemoryPolicyEvaluator)
-    for field in ("enabled", "allow_preferences", "allow_goals", "allow_episodic", "allow_inferred_episodic"):
+    for field in (
+        "enabled",
+        "allow_preferences",
+        "allow_goals",
+        "allow_episodic",
+        "allow_inferred_episodic",
+        "blocked_pref_keys",
+        "blocked_sources",
+    ):
         assert field in READ_GATE_FIELDS
         assert field in src
+
+
+@pytest.mark.asyncio
+async def test_face_c_blocked_pref_keys_flip_bumps_epoch(db_session):
+    """FIX-45② RM-1 钉桩：``blocked_pref_keys`` 收紧必须 bump epoch。
+
+    RM-1 变异（READ_GATE_FIELDS 摘除 blocked_pref_keys）在此必红：
+    收紧零失效 → epoch 停留 1 → 断言 2 失败。
+    """
+    from app.core.memory_constants import PREFERENCE_KEYS
+
+    user = await _create_user(db_session)
+    await _create_settings_row(db_session, user)
+    service = MemorySettingsService(db_session, FakeRedis())
+    pref_key = sorted(PREFERENCE_KEYS)[0]
+    await service.update_settings(user.id, {"blocked_pref_keys": [pref_key]})
+    assert await MemoryService(db_session).get_memory_epoch(user.id) == 2
+
+
+@pytest.mark.asyncio
+async def test_face_c_blocked_sources_flip_bumps_epoch(db_session):
+    """FIX-45② RM-1 钉桩：``blocked_sources`` 收紧必须 bump epoch（探针 C 同款收紧）。
+
+    RM-1 变异（READ_GATE_FIELDS 摘除 blocked_sources）在此必红。
+    """
+    user = await _create_user(db_session)
+    await _create_settings_row(db_session, user)
+    service = MemorySettingsService(db_session, FakeRedis())
+    await service.update_settings(user.id, {"blocked_sources": ["chat"]})
+    assert await MemoryService(db_session).get_memory_epoch(user.id) == 2
 
 
 # ---------------------------------------------------------------------------

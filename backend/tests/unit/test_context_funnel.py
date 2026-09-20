@@ -142,6 +142,28 @@ class TestSourceRefs:
         )
         assert ref["extra"] == {"page_number": 3}
 
+    def test_extra_scalar_string_truncated(self):
+        """C-08 N6 钉桩：标量 extra 的字符串值截断到 64 字符——未来调用方误把
+        长文本（正文/敏感串）放标量 extra 也不至于整段入册。短值不受影响，
+        非字符串标量原样保留。"""
+        from app.orchestration.context_funnel import _MAX_EXTRA_STR_LEN
+
+        long_text = "整段长文本" * 40  # 200 字符 > 上限
+        ref = make_source_ref(
+            kind="document",
+            ref_id=document_ref("f", "c"),
+            extra={
+                "chunk_id": "c-123",  # 常规短值：原样保留
+                "page_number": 7,  # 非 str 标量：不受影响
+                "smuggled": long_text,  # 超长：截断
+            },
+        )
+        assert ref["extra"]["chunk_id"] == "c-123"
+        assert ref["extra"]["page_number"] == 7
+        assert ref["extra"]["smuggled"] == long_text[:_MAX_EXTRA_STR_LEN]
+        assert len(ref["extra"]["smuggled"]) == _MAX_EXTRA_STR_LEN
+        assert long_text not in ref["extra"]["smuggled"]
+
     def test_fingerprint_deterministic(self):
         a = make_source_ref(kind="episodic", ref_id="mem:x", content="同一段内容")
         b = make_source_ref(kind="episodic", ref_id="mem:x", content="同一段内容")

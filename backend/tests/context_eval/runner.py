@@ -19,7 +19,7 @@ from pathlib import Path
 
 from .context_eval_schema import ARMS, MIN_SCENARIOS, check_coverage, validate_scenario
 from .grading import aggregate, grade
-from .mock_model import assemble, mock_answer
+from .mock_model import CITE_THRESHOLD, MAX_SEEN_ITEMS, TOKEN_BUDGET, assemble, mock_answer
 from .scenarios import build_scenarios
 
 RESULTS_VERSION = "c08-ablation.v1"
@@ -68,9 +68,11 @@ def run_ablation() -> dict:
             "scenario_count": len(scenarios),
             "real_llm_calls": 0,
             "mock": {
-                "cite_threshold": 0.15,
-                "max_seen_items": 5,
-                "token_budget": 420,
+                # C-08 N1：meta 从 mock_model 常量取值（此前 max_seen_items 硬编码 5，
+                # 实为 MAX_SEEN_ITEMS = 4，导出的 ablation_results.json 自述失真）。
+                "cite_threshold": CITE_THRESHOLD,
+                "max_seen_items": MAX_SEEN_ITEMS,
+                "token_budget": TOKEN_BUDGET,
                 "latency_model": "40 + 0.12*tokens + 15*surfaces (proxy, not wall-clock)",
             },
             "utility_judge": "C-04 deterministic citation outcome + constructed gold labels",

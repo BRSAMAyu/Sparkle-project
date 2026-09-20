@@ -162,6 +162,34 @@ class TestLegacyFlagLifecycle:
         assert classify_audit_reason("manual_update") is None
         assert classify_audit_reason("task_complete") is None
 
+    def test_sync_mastery_client_reasons_never_clear_legacy_flag(self):
+        """G-01 R-1 收口钉桩：``/sync/mastery`` 客户端绝对值路径的 reason
+        词表（NON_EVIDENCE_REASONS）**永不摘 legacy 旗、永不进证据账本**。
+
+        逐字对齐词表（词表扩缩即红）+ 任意客户端字符串 fail-closed 判 None
+        （/nodes/{id}/mastery 会把 manual_update 替换为任意 request.source
+        透传）+ 行为面：仅含客户端 reason 的账本 = 空证据，旗不摘、计数 0、
+        后验钉在 legacy 先验。
+        """
+        from app.services.galaxy.mastery_evidence import NON_EVIDENCE_REASONS
+
+        # 词表非空且逐字钉住（防静默缩水/扩水）
+        assert frozenset({"offline_sync", "manual_update", "focus_session", "task_complete"}) == NON_EVIDENCE_REASONS
+        for reason in sorted(NON_EVIDENCE_REASONS):
+            assert classify_audit_reason(reason) is None, reason
+        # 客户端可控任意字符串（request.source 透传 / 未来新 reason）一律 None
+        for client_controlled in ("my_device_app", "EVIDENCE:quiz", " ", None, ""):
+            assert classify_audit_reason(client_controlled) is None, repr(client_controlled)
+        # 前缀大小写敏感：伪造成证据 reason 的变体不摘旗
+        assert classify_audit_reason("Evidence:quiz") is None
+
+        # 行为面：客户端 reason 分类为 None → 账本重放视为空证据
+        belief = recompute_evidence_state(88.0, [])
+        assert belief.is_legacy_estimate is True
+        assert belief.evidence_count == 0
+        assert belief.mean == pytest.approx(88.0)
+        assert belief.breakdown == {}
+
     def test_legacy_value_not_deleted_by_fusion(self):
         """Legacy mastery is the prior, not discarded."""
         belief = recompute_evidence_state(50.0, [EvidenceHistoryEntry(MasteryEvidenceType.QUIZ, 50, 0.9, _utcnow_naive())])

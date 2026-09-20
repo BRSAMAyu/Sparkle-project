@@ -113,9 +113,16 @@ def build_scenarios() -> list[Scenario]:
         if family == "crowd_out_rag":
             # 3 条中性干扰记忆先入窗（prompt 前段）——「记忆体量淹没检索材料」
             # 的挤占效应：full 臂金标材料被挤出 4 槽窗，no_memory 臂 rescued。
+            # C-08 N5：TOPICS 是 (title, desc) tuple，format 取 [0]（标题），
+            # 否则合成材料里混入 tuple repr（cosmetic）。
             other2 = TOPICS[(idx + 4) % len(TOPICS)]
             memories = tuple(
-                MemoryItem(ref=f"mem:c{idx}:{k}", content=_MEM_DISTRACTOR.format(other=other if k == 0 else other2), relevant=False, outcome=OUTCOME_NONE)
+                MemoryItem(
+                    ref=f"mem:c{idx}:{k}",
+                    content=_MEM_DISTRACTOR.format(other=other[0] if k == 0 else other2[0]),
+                    relevant=False,
+                    outcome=OUTCOME_NONE,
+                )
                 for k in range(3)
             )
         rng.shuffle(materials)

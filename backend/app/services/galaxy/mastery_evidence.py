@@ -376,6 +376,21 @@ QUIZ_EVIDENCE_REASONS: frozenset[str] = frozenset(
     }
 )
 
+#: G-01 R-1 收口（显式标记）：客户端自报绝对值路径（``/sync/mastery`` 与
+#: manual update REST 入口）写入的 reason 词表。这些 reason **不携带任何
+#: 掌握证据**——客户端塞的绝对值只是「设备端状态上云」，按 R-1 处置契约
+#: 永不摘 legacy 旗、永不进证据账本；首条真实证据（quiz 级）几乎完全覆盖
+#: 被污染先验（quiz K≈0.96）。classify_audit_reason 对它们显式返回 None，
+#: 不依赖 fall-through；未被收编的任意客户端字符串同样 fail-closed 判 None。
+NON_EVIDENCE_REASONS: frozenset[str] = frozenset(
+    {
+        "offline_sync",  # /sync/mastery 移动端离线同步回传
+        "manual_update",  # /nodes/{id}/mastery 手动改分入口
+        "focus_session",  # 专注会话（纯时长，非证据）
+        "task_complete",  # 任务完成（时长型，非掌握证据）
+    }
+)
+
 
 def encode_evidence_reason(evidence_type: MasteryEvidenceType) -> str:
     """reason column value for a new evidence audit row (<=100 chars)."""
@@ -407,9 +422,12 @@ def classify_audit_reason(reason: str | None) -> MasteryEvidenceType | None:
 
     Returns None for reasons that carry no mastery evidence (client
     self-report sync, focus minutes, manual nudges...). Those never clear the
-    legacy flag.
+    legacy flag. ``NON_EVIDENCE_REASONS``（客户端绝对值路径）显式判 None
+    （G-01 R-1 收口），其余未知字符串走同一 fall-through，方向一致。
     """
     reason = (reason or "").strip()
+    if reason in NON_EVIDENCE_REASONS:
+        return None
     if reason.startswith(EVIDENCE_REASON_PREFIX):
         raw = reason[len(EVIDENCE_REASON_PREFIX):]
         try:
@@ -438,6 +456,7 @@ __all__ = [
     "EvidenceHistoryEntry",
     "EvidenceObservation",
     "FusionStep",
+    "NON_EVIDENCE_REASONS",
     "REAL_EVIDENCE_TYPES",
     "apply_evidence_decay",
     "capped_legacy_mastery",

@@ -126,13 +126,17 @@ async def test_push_settings_get_and_update(db_session, enable_memory_controls):
         resp = await ac.get("/api/v1/memory/push-settings")
         assert resp.status_code == 200
         payload = resp.json()
-        assert payload["enabled"] is False
+        # FIX-45①：fresh GET 默认值跟随 settings.PUSH_OPT_IN_DEFAULT_ENABLED
+        # （dailyflow DF-9，9957f42d：默认 True = opt-out 产品语义），而非旧断言的 False。
+        default_enabled = bool(settings.PUSH_OPT_IN_DEFAULT_ENABLED)
+        assert payload["enabled"] is default_enabled
         assert payload["quiet_hours_start"] == "22:00"
 
+        # PUT 显式翻转总开关（相对默认值取反，钉住 update 链真的落库而非回显默认）
         update = await ac.put(
             "/api/v1/memory/push-settings",
             json={
-                "enabled": True,
+                "enabled": not default_enabled,
                 "allow_commitment_follow_up": True,
                 "allow_engagement_recovery": True,
                 "quiet_hours_start": "23:00",
@@ -141,7 +145,7 @@ async def test_push_settings_get_and_update(db_session, enable_memory_controls):
         )
         assert update.status_code == 200
         updated_payload = update.json()
-        assert updated_payload["enabled"] is True
+        assert updated_payload["enabled"] is (not default_enabled)
         assert updated_payload["allow_commitment_follow_up"] is True
         assert updated_payload["allow_engagement_recovery"] is True
         assert updated_payload["quiet_hours_start"] == "23:00"

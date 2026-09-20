@@ -88,6 +88,11 @@ REF_KINDS: tuple[str, ...] = (REF_KIND_DOCUMENT, REF_KIND_EPISODIC, REF_KIND_EXP
 
 _FALLBACK_TOKEN_ESTIMATOR: Callable[[str], int] = lambda text: max(1, len(text) // 4) if text else 0
 
+#: C-08 N6：``make_source_ref`` 标量 extra 的字符串长度上限——extra 是
+#: metadata 通道（page_number / chunk_index / relevance 等短标量），超长
+#: 字符串截断，防止未来调用方把正文/敏感文本借道标量 extra 整段入册。
+_MAX_EXTRA_STR_LEN = 64
+
 
 def clamp_drop_reason(reason: str) -> str:
     """开放 reason 词表 → 有界 label 词表（Prometheus 基数守卫）。
@@ -205,7 +210,9 @@ def make_source_ref(
     """构造一条 source_ref（metadata-only：id/类型/长度/短哈希/token）。
 
     ``extra`` 只接受标量元数据（page_number / chunk_index / relevance 等），
-    值若为非标量会被丢弃——防止正文借道混入。
+    值若为非标量会被丢弃——防止正文借道混入；字符串标量截断到
+    ``_MAX_EXTRA_STR_LEN``（C-08 N6：未来调用方误把长文本放标量 extra 时
+    也不至于整段入册）。
     """
     content_len, content_hash = content_fingerprint(content)
     if tokens is None:
@@ -222,7 +229,7 @@ def make_source_ref(
         entry["marker"] = str(marker)
     if extra:
         scalars = {
-            key: value
+            key: (value[:_MAX_EXTRA_STR_LEN] if isinstance(value, str) else value)
             for key, value in extra.items()
             if isinstance(value, (str, int, float, bool)) or value is None
         }
