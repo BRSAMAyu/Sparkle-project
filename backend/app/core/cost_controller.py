@@ -47,6 +47,10 @@ class CostCategory(StrEnum):
     LLM = "llm"
     RAG = "rag"
     AURORA = "aurora"
+    # E-06：batch 认知车道独立预算桶。batch 工作负载（reflection/profile
+    # aggregation/analytics 的异步 LLM）的支出计入此处，与前台 LLM 桶隔离：
+    # batch 不占前台预算，前台预算熔断也不误杀 batch 车道。
+    GLM_BATCH = "glm_batch"
 
 
 # ── Budget Utilization Gauge ───────────────────────────────────────────
@@ -128,6 +132,7 @@ class BudgetCircuitBreaker:
                 CostCategory.LLM: float(getattr(_settings, "LLM_DAILY_BUDGET_USD", 10.0) or 10.0),
                 CostCategory.RAG: float(getattr(_settings, "RAG_DAILY_BUDGET_USD", 2.0) or 2.0),
                 CostCategory.AURORA: float(getattr(_settings, "AURORA_DAILY_BUDGET_USD", 5.0) or 5.0),
+                CostCategory.GLM_BATCH: float(getattr(_settings, "BATCH_LANE_DAILY_BUDGET_USD", 0.5) or 0.5),
             }
         for cat, amount in self._budgets.items():
             COST_DAILY_BUDGET_USD.labels(category=cat).set(amount)

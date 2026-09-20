@@ -580,6 +580,31 @@ class Settings(BaseSettings):
     GLM_BATCH_THINKING_DEPTH_THRESHOLD: float = 0.72
     GLM_BATCH_THINKING_SEVERITY_THRESHOLD: int = 4
 
+    # E-06 Async Batch Cognitive Worklane（异步批处理认知车道）
+    # 三类不需实时的认知负载（reflection/profile aggregation/analytics）统一
+    # 经 batch_worklane 路由到 GLM_BATCH tier（MiniMax 优先）。并发/预算均与
+    # 前台隔离；模型真源仍是 llm_router（E-02），车道只做 tier 钳制。
+    BATCH_LANE_ENABLED: bool = True
+    BATCH_LANE_ENABLED_REFLECTION: bool = True
+    BATCH_LANE_ENABLED_PROFILE_AGGREGATION: bool = True
+    BATCH_LANE_ENABLED_ANALYTICS: bool = True
+    # 有界重试：耗尽进死信终态（指标+死信登记），绝不无限循环
+    BATCH_LANE_MAX_ATTEMPTS: int = 3
+    BATCH_LANE_RETRY_BACKOFF_SECONDS: float = 2.0
+    # 车道级总并发闸（跨三类 kind；提供商池再由 llm_concurrency 隔离）
+    BATCH_LANE_MAX_CONCURRENCY: int = 4
+    BATCH_LANE_CALL_TIMEOUT_SECONDS: float = 90.0
+    # freshness SLA：超过即视为 stale 结果，消费方必须拒绝
+    BATCH_LANE_FRESHNESS_SLA_REFLECTION_SECONDS: int = 6 * 3600
+    BATCH_LANE_FRESHNESS_SLA_PROFILE_AGGREGATION_SECONDS: int = 24 * 3600
+    BATCH_LANE_FRESHNESS_SLA_ANALYTICS_SECONDS: int = 48 * 3600
+    # batch 独立日预算（USD）：与前台 LLM_DAILY_BUDGET_USD 分桶核算
+    BATCH_LANE_DAILY_BUDGET_USD: float = 0.5
+    # 幂等：结果保留时长需 ≥ 最长 freshness SLA；claim 防同 key 并发双执行
+    BATCH_LANE_RESULT_TTL_SECONDS: int = 48 * 3600
+    BATCH_LANE_CLAIM_TTL_SECONDS: int = 600
+    BATCH_LANE_DEADLETTER_MAX_ENTRIES: int = 200
+
     # Zhipu ASR Configuration
     ZHIPU_ASR_BASE_URL: str = "https://open.bigmodel.cn/api/paas/v4"
     ZHIPU_ASR_MODEL: str = "glm-asr-2512"

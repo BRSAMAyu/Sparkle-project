@@ -129,6 +129,80 @@ COLLABORATION_LATENCY = get_or_create_metric(
     ['workflow_type']
 )
 
+# ========== E-06 Batch Cognitive Worklane Metrics ==========
+# 异步批处理认知车道（reflection/profile aggregation/analytics）的队列、成本、
+# 时延、成功率与死信可观测面。消费方见 app/services/batch_worklane.py。
+BATCH_LANE_DISPATCH_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_batch_lane_dispatch_total',
+    'Batch worklane dispatch outcomes by kind (completed/replayed/disabled/budget_exhausted/dead_letter/duplicate_in_flight)',
+    ['kind', 'outcome']
+)
+
+BATCH_LANE_RETRIES_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_batch_lane_retries_total',
+    'Bounded in-lane retries by kind (before dead-letter terminal state)',
+    ['kind']
+)
+
+BATCH_LANE_DEADLETTER_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_batch_lane_dead_letter_total',
+    'Batch worklane jobs entering dead-letter terminal state by kind',
+    ['kind']
+)
+
+BATCH_LANE_COST_USD_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_batch_lane_cost_usd_total',
+    'Estimated batch worklane LLM cost in USD by kind and model (accounted to glm_batch budget bucket, not foreground)',
+    ['kind', 'model']
+)
+
+BATCH_LANE_LATENCY = get_or_create_metric(
+    Histogram,
+    'sparkle_batch_lane_latency_seconds',
+    'Batch worklane end-to-end execution latency by kind',
+    ['kind'],
+    buckets=[0.5, 1, 2.5, 5, 10, 25, 50, 90, 180]
+)
+
+BATCH_LANE_INFLIGHT = get_or_create_metric(
+    Gauge,
+    'sparkle_batch_lane_inflight',
+    'Currently executing batch worklane jobs by kind',
+    ['kind']
+)
+
+BATCH_LANE_STALE_REJECTED_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_batch_lane_stale_rejected_total',
+    'Batch results rejected on apply because target was explicitly corrected after batch start',
+    ['kind']
+)
+
+BATCH_LANE_BUDGET_REJECTED_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_batch_lane_budget_rejected_total',
+    'Batch jobs rejected by the isolated glm_batch budget circuit breaker',
+    ['kind']
+)
+
+BATCH_LANE_DUPLICATE_SKIPPED_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_batch_lane_duplicate_skipped_total',
+    'Duplicate batch executions skipped by idempotency claim (replay-exactly-once)',
+    ['kind']
+)
+
+BATCH_LANE_DISABLED_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_batch_lane_disabled_total',
+    'Batch dispatch attempts while the lane (global or per-kind) is disabled',
+    ['kind']
+)
+
 # ========== HITL Metrics ==========
 HITL_REQUESTED = get_or_create_metric(
     Counter,

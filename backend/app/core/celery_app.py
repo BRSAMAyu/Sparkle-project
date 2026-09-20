@@ -131,7 +131,10 @@ celery_app.conf.update(
         # EI-07：键必须是任务注册表中的真实 name=（短名，见下方任务定义），
         # 带模块前缀的旧键永不匹配 → 路由静默失效落 default 队列
         "generate_embedding": {"queue": "high_priority"},
-        "batch_error_analysis": {"queue": "default"},
+        # E-06：错题批量分析为不需实时的 analytics 认知负载，归入 glm_batch
+        # 车道（专用 worker -Q glm_batch 消费），不再占用前台 default 队列
+        "batch_error_analysis": {"queue": "glm_batch"},
+        "analyze_error_batch": {"queue": "glm_batch"},
         "cleanup_old_data": {"queue": "low_priority"},
         "app.core.celery_tasks.health_check_task": {"queue": "high_priority"},
         "generate_capsules_batch": {"queue": "glm_batch"},
@@ -495,6 +498,27 @@ def generate_capsules_batch(
         raise self.retry(exc=exc, countdown=countdown) from exc
 
 
+# =============================================================================
+# E-06 batch 车道辅助（profile aggregation 类任务模型解析）
+# =============================================================================
+
+
+def resolve_profile_batch_model_key(model_key: str | None) -> str | None:
+    """profile aggregation 批任务的 batch 车道模型解析。
+
+    调用方显式指定 model_key 时原样保留（显式指定优先）；缺省时经 batch 车道
+    解析（MiniMax 优先，E-02 GLM_BATCH tier 链兜底）。车道关闭时返回 None，
+    行为与 E-06 之前完全一致。
+    """
+    from app.services.batch_worklane import BatchWorkloadKind, batch_worklane
+
+    if model_key:
+        return model_key
+    if batch_worklane.enabled(BatchWorkloadKind.PROFILE_AGGREGATION):
+        return batch_worklane.resolve_batch_model_key(BatchWorkloadKind.PROFILE_AGGREGATION)
+    return model_key
+
+
 @celery_app.task(bind=True, max_retries=3, name="analyze_cognitive_fragment_batch")
 def analyze_cognitive_fragment_batch(
     self,
@@ -502,11 +526,18 @@ def analyze_cognitive_fragment_batch(
     fragment_id: str,
     model_key: str | None = None,
 ):
-    """使用 GLM batch 队列分析认知碎片。"""
+    """使用 GLM batch 队列分析认知碎片（E-06 profile aggregation batch-eligible）。"""
     from uuid import UUID
 
     from app.db.session import AsyncSessionLocal
+    from app.services.batch_worklane import BatchWorkloadKind, batch_worklane
     from app.services.cognitive_service import CognitiveService
+
+    # E-06：未显式指定模型时经 batch 车道解析。此前 None 会落入
+    # CognitiveService 的前台 LLM 兜底链，造成 profile aggregation 静默占用
+    # 前台能力层。
+    model_key = resolve_profile_batch_model_key(model_key)
+    batch_worklane.mark_enqueued(BatchWorkloadKind.PROFILE_AGGREGATION)
 
     async def _analyze():
         async with AsyncSessionLocal() as session:
@@ -532,11 +563,16 @@ def classify_node_sector_batch(
     node_ids: list[str],
     model_key: str | None = None,
 ):
-    """使用 GLM batch 队列为知识节点回填多星域归属。"""
+    """使用 GLM batch 队列为知识节点回填多星域归属（E-06 profile aggregation batch-eligible）。"""
     from uuid import UUID
 
     from app.db.session import AsyncSessionLocal
+    from app.services.batch_worklane import BatchWorkloadKind, batch_worklane
     from app.services.node_sector_service import NodeSectorService
+
+    # E-06：同 analyze_cognitive_fragment_batch——model_key 缺省时锁进 batch 车道。
+    model_key = resolve_profile_batch_model_key(model_key)
+    batch_worklane.mark_enqueued(BatchWorkloadKind.PROFILE_AGGREGATION)
 
     async def _classify():
         async with AsyncSessionLocal() as session:

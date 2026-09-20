@@ -9,11 +9,11 @@ from uuid import UUID
 
 from loguru import logger
 from prometheus_client import Counter, Gauge, Histogram
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
-from app.agents.reflection_agent import TriggeredReflectionResult, get_reflection_agent
+from app.agents.reflection_agent import ReflectionAgent, TriggeredReflectionResult, get_reflection_agent
 from app.config import settings
 from app.core.event_bus import event_bus
 from app.core.metrics import get_or_create_metric
@@ -24,6 +24,11 @@ from app.models.task_feedback import TaskFeedback, TaskFeedbackCategory
 from app.models.task_resources import TaskKnowledgeLink
 from app.models.user_preferences import UserPreferencesCenter
 from app.services.aurora_stage25_reflection_kill_switch_service import AuroraStage25ReflectionKillSwitchService
+from app.services.batch_worklane import (
+    BatchLaneChatClient,
+    BatchWorkloadKind,
+    batch_worklane,
+)
 from app.services.cognitive_service import CognitiveService
 from app.services.memory_inferred_write_lane import InferredEpisodicCandidate, MemoryInferredWriteLaneService
 from app.services.memory_service import MemoryService
@@ -261,7 +266,20 @@ class TaskReflectionService:
             trigger=normalized,
             trigger_payload=trigger_payload,
         )
-        reflector = get_reflection_agent()
+        # E-06：触达式反思是异步认知负载（由 outcome 验证扫触发，非前台会话），
+        # batch 车道启用且可用（链上有凭据）时把生成 LLM 锁进 GLM_BATCH 车道
+        # （MiniMax 优先、隔离并发/预算、幂等、有界重试），不占前台能力层；
+        # 车道关闭或无凭据（本地 dev/测试）时行为与 E-06 之前完全一致。
+        batch_started_at = _utcnow()
+        batch_client: BatchLaneChatClient | None = None
+        if batch_worklane.enabled(BatchWorkloadKind.REFLECTION) and batch_worklane.lane_available(
+            BatchWorkloadKind.REFLECTION
+        )[0]:
+            batch_client = batch_worklane.chat_client(BatchWorkloadKind.REFLECTION)
+        if batch_client is not None:
+            reflector = ReflectionAgent(generator_llm=batch_client)
+        else:
+            reflector = get_reflection_agent()
         reflection = await reflector.reflect(
             user_id=str(user_id),
             trigger_category=normalized,
@@ -316,6 +334,20 @@ class TaskReflectionService:
             if effective_mode != "live":
                 result["status"] = "shadowed"
                 result["reason"] = "auto_degraded"
+            return result
+
+        # E-06 explicit-correction 守卫：batch 开始后若用户提交了新的显式反思
+        # 答案（explicit correction），batch 车道的老结果绝不覆盖新修正。
+        latest_explicit_at = await self._latest_explicit_correction_at(user_id=user_id)
+        can_apply, guard_reason = batch_worklane.should_apply(
+            BatchWorkloadKind.REFLECTION,
+            batch_started_at=batch_started_at,
+            target_updated_at=latest_explicit_at,
+        )
+        if not can_apply:
+            REFLECTION_SKIPPED_TOTAL.labels(category=normalized, reason=guard_reason or "stale_rejected").inc()
+            result["status"] = "skipped"
+            result["reason"] = guard_reason or "stale_rejected"
             return result
 
         lane = MemoryInferredWriteLaneService(self.db)
@@ -1043,6 +1075,25 @@ class TaskReflectionService:
 
     async def _is_trigger_enabled(self, category: str) -> bool:
         return await self.kill_switch.is_trigger_enabled(category)
+
+    async def _latest_explicit_correction_at(self, *, user_id: UUID) -> datetime | None:
+        """用户最近一次显式反思答案提交时间（explicit correction 信号）。
+
+        E-06 batch 守卫数据源：submit_reflection_answer 落库的 feedback 更新
+        时间晚于 batch 开始即视为存在更新的人类修正，batch 老结果不得覆盖。
+        查询失败时返回 None（守卫放行，与改动前行为一致）。
+        """
+        try:
+            result = await self.db.execute(
+                select(func.max(TaskFeedback.updated_at)).where(
+                    TaskFeedback.user_id == user_id,
+                    TaskFeedback.reflection_payload.isnot(None),
+                )
+            )
+            return result.scalar_one_or_none()
+        except Exception as exc:  # noqa: BLE001 — 守卫数据源故障不得阻塞主链
+            logger.warning(f"Failed to load latest explicit correction time: {exc}")
+            return None
 
     async def _trigger_on_cooldown(self, *, user_id: UUID, category: str) -> bool:
         if not self.redis:
