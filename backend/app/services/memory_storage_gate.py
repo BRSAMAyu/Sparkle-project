@@ -565,7 +565,10 @@ SENSITIVE_DOMAIN_NET: tuple[tuple[str, "re.Pattern[str]"], ...] = (
     ),
     (
         "health",
-        re.compile(r"过敏|心律不齐|心悸|胸闷|血压偏[高低]|血糖偏[高低]|指标异常|确诊|查出(?:问题|毛病)"),
+        # O-03：补「头疼」——V3-FIX-41 已将该词划入瞬态档（R6），但稳定性
+        # 标记（「总是头疼」）会使 R6 失配、R9 抢先 store；健康网必须在
+        # R9 前拦住这一形态（R6 先返回，纯瞬态「有点头疼」不受影响）。
+        re.compile(r"头疼|过敏|心律不齐|心悸|胸闷|血压偏[高低]|血糖偏[高低]|指标异常|确诊|查出(?:问题|毛病)"),
     ),
     (
         "mental_state",
@@ -816,8 +819,23 @@ def classify_by_rules(candidate: StorageGateCandidate, *, now_ts: float | None =
             detail=f"identical content re-stated within {DEDUP_TTL_SECONDS}s",
         )
 
-    # R9 stable preference / pattern claim
+    # R9 stable preference / pattern claim —— 敏感域信号不得借稳定句式绕过
+    # fail-closed（O-03：「总是头疼」类健康内容曾借 R9 免确认长期化，重开
+    # V3-FIX-41 关掉的 fail-open 洞）。非显式 lane 命中敏感网 → 与 R10 同款
+    # confirm；显式 lane（用户亲述）维持原行为不变。
     if _has_stability_claim(summary):
+        if lane not in EXPLICIT_LANES:
+            net_category_at_r9 = _match_sensitive_domain_net(summary)
+            if net_category_at_r9:
+                return StorageGateDecision(
+                    verdict=StorageGateVerdict.CONFIRM.value,
+                    layer="rule",
+                    reason="R10.sensitive_domain_fail_closed",
+                    detail=(
+                        f"sensitive domain={net_category_at_r9} inside stable-pattern claim; "
+                        "fail-closed to pending confirmation (no unconfirmed store)"
+                    ),
+                )
         return StorageGateDecision(
             verdict=StorageGateVerdict.STORE.value,
             layer="rule",
