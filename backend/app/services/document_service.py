@@ -988,11 +988,29 @@ class DocumentService:
         # 3. Create Section Nodes (Simple Heuristic)
         # Group chunks by section_title
         sections = {}
+        # 纯标点/空白标题（markdown 的 ===== / ----- 分隔行被 chunker 误当
+        # 标题）不是有效节名——剔除字母/数字/CJK 后为空即纯标点，其 chunk
+        # 并入 General，避免 upsert 对无效候选 raise 导致整个文件 failed
+        # （2026-09-20 演示盘点实测：任何含纯标点分隔行的中文材料必复现）
+        import re as _re
+
+        _PUNCT_ONLY = _re.compile(r"^[\W_]+$", _re.UNICODE)
+
+        def _is_punct_only(t: str) -> bool:
+            # \W 不含 CJK 字符（\w 含），所以含中文即 False；纯 ==== / ---- 为 True
+            return bool(_PUNCT_ONLY.match(t.strip()))
+
+        general_indices: list[int] = []
         for i, chunk in enumerate(chunks):
             title = chunk.section_title or "General"
+            if _is_punct_only(title):
+                general_indices.append(i)
+                continue
             if title not in sections:
                 sections[title] = []
-            sections[title].append(i) # Store chunk index/ref
+            sections[title].append(i)  # Store chunk index/ref
+        if general_indices:
+            sections.setdefault("General", []).extend(general_indices)
 
         for title, chunk_indices in sections.items():
             if title == "General" and len(sections) == 1:
