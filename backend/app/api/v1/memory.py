@@ -695,6 +695,8 @@ async def retract_memory(
             memory_id=memory_uuid,
             user_id=current_user.id,
             reason=reason,
+            # M-08 R2 P3-8：用户主权撤回的事件 actor 归因统一为 user_revoke。
+            reason_code="user_revoke",
         )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc

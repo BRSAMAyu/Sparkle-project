@@ -70,6 +70,7 @@ from app.api.v1 import (
     marketplace,
     memory,
     memory_admin,
+    memory_provenance,
     memory_settings,
     monitoring,
     multi_agent,
@@ -218,6 +219,7 @@ api_router.include_router(vocabulary.router, prefix="/vocabulary", tags=["vocabu
 api_router.include_router(translation.router, prefix="/translation", tags=["translation"])
 api_router.include_router(health_production.router, prefix="/health", tags=["Health"])
 api_router.include_router(memory.router, tags=["memory"])
+api_router.include_router(memory_provenance.router, tags=["memory"])
 api_router.include_router(memory_settings.router, tags=["memory"])
 api_router.include_router(memory_admin.router)
 api_router.include_router(skills.router)

@@ -432,6 +432,9 @@ class MemoryService:
             expires_at=expires_at,
             linked_task_id=linked_task_id,
             linked_plan_id=linked_plan_id,
+            # M-08 R2 P2-2：写入方真实来源落库（此前参数被静默丢弃——计划审批
+            # 自动捕获 goal 被溯源面错标「你告诉我的」）。None = 用户公共创建路径。
+            source_type=source_type,
             evidence_refs=normalized_refs,
             metadata_payload=metadata,
             evidence_score=evidence_score,
@@ -554,7 +557,31 @@ class MemoryService:
             if hasattr(record, key):
                 setattr(record, key, value)
 
+        # Memory V3 (M-08)：goal 字段编辑是 M-07 统一失效契约覆盖的
+        # 「有效内容变更」——标题/状态变化会流入后续 prompt/投影，必须在
+        # 同事务内 bump epoch + 写 memory.invalidated（旧派生缓存不复活）。
+        # 记录保持 active（无版本链、非拒绝族），故 action=USER_UPDATE。
+        record.updated_at = utcnow()
+        record.correction_count = (record.correction_count or 0) + 1
+        self.db.add(
+            MemoryCorrection(
+                user_id=user_id,
+                memory_type="goal",
+                memory_id=record.id,
+                action="user_update",
+                reason=(str(updates.get("title") or "") or "user_update")[:500],
+            )
+        )
+        goal_pipeline = MemoryInvalidationPipeline(self.db, self.redis)
+        await goal_pipeline.apply_in_txn(
+            user_id=user_id,
+            action=MemoryMutationAction.USER_UPDATE,
+            kind="goal",
+            memory_ids=[record.id],
+            reason_code="user_update",
+        )
         await self.db.commit()
+        await goal_pipeline.invalidate_derived_caches(user_id=user_id, kinds={"goal"})
         await self.db.refresh(record)
         MEMORY_WRITE_TOTAL.labels(type="goal", status="ok").inc()
 
@@ -752,6 +779,11 @@ class MemoryService:
             EpisodicMemory.archived_at.is_(None),
             EpisodicMemory.retracted_at.is_(None),
             EpisodicMemory.revoked_at.is_(None),
+            # M-08 R2 P2-5：superseded 行与 revoked/archived 同为召回排除态。
+            # 用户改写「说错的内容」后，旧内容不再喂 state_aggregator /
+            # router_context_reader / aurora signal_aggregator 等非预筛决策面
+            # （主 LLM 面另有 M-03 prefilter 兜底，此处补齐其余读者）。
+            EpisodicMemory.superseded_by_id.is_(None),
         )
         if start:
             stmt = stmt.where(EpisodicMemory.occurred_at >= start)
@@ -784,6 +816,9 @@ class MemoryService:
                 EpisodicMemory.archived_at.is_(None),
                 EpisodicMemory.retracted_at.is_(None),
                 EpisodicMemory.revoked_at.is_(None),
+                # M-08 R2 P2-5：与 list_recent_episodic 同款排除态——列表分页
+                # total 与行集保持一致（superseded 行不再计入）。
+                EpisodicMemory.superseded_by_id.is_(None),
             )
         )
         if start:
@@ -1119,7 +1154,14 @@ class MemoryService:
         memory_id: UUID,
         user_id: UUID,
         reason: str | None = None,
+        reason_code: str | None = None,
     ) -> bool:
+        """用户/系统撤回入口。
+
+        M-08 R2 P3-8：``reason_code``（事件 actor 归因）可选传入——用户主权
+        面传 ``"user_revoke"``，系统侧调用方（working_memory_consolidation 等）
+        保持默认 ``revoke``，两者在 ``memory.invalidated`` 载荷上不再同形。
+        """
         if not settings.ENABLE_MEMORY_RETRACTION:
             raise ValueError("Memory retraction is disabled by feature flag")
 
@@ -1171,6 +1213,7 @@ class MemoryService:
             action=MemoryMutationAction.REVOKE,
             kind=kind,
             memory_ids=[record.id],
+            reason_code=reason_code,
         )
         await self.db.commit()
         # M-07 R1-C2-3：DEL 后置到 commit 之后（apply_in_txn 不再内部 DEL）。
@@ -1377,12 +1420,17 @@ class MemoryService:
         user_id: UUID,
         memory_id: UUID,
         reason: str | None = None,
+        reason_code: str | None = None,
     ) -> EpisodicMemory | None:
         """memory-governance-mvp: 用户"删除"路径 —— 软删（revoked_at）。
 
         与 apply_correction 的 reject（按 lane 决定 revoked/retracted）不同，
         显式删除对任意 lane 一律落 revoked_at；召回查询
         （list_recent_episodic / context_builder 召回）均已排除 revoked 行。
+
+        M-08 R2 P3-8：事件 reason_code 默认 ``user_revoke``（与 pref/goal 用户
+        撤回面对齐——此前此处硬编码 ``user_delete`` 而另两 kind 走裸 ``revoke``，
+        前瞻消费方无法统一判 actor）。
         """
         if not settings.ENABLE_MEMORY_CORRECTION:
             raise ValueError("Memory correction is disabled by feature flag")
@@ -1440,7 +1488,7 @@ class MemoryService:
             action=MemoryMutationAction.REVOKE,
             kind="episodic",
             memory_ids=[record.id],
-            reason_code="user_delete",
+            reason_code=reason_code or "user_revoke",
         )
         await self.db.commit()
         # M-07 R1-C2-3：DEL 后置到 commit 之后（apply_in_txn 不再内部 DEL）。

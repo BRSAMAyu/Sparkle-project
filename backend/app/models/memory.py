@@ -1,6 +1,7 @@
 """
 Memory models for long-term memory storage.
 """
+
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import JSON, Boolean, Column, Date, DateTime, Float, ForeignKey, Index, Integer, String
 from sqlalchemy.dialects.postgresql import JSONB
@@ -34,7 +35,13 @@ class MemoryPreference(BaseModel):
 
 
 Index("idx_memory_preferences_user_pref", MemoryPreference.user_id, MemoryPreference.pref_key)
-Index("uq_memory_preferences_version", MemoryPreference.user_id, MemoryPreference.pref_key, MemoryPreference.version, unique=True)
+Index(
+    "uq_memory_preferences_version",
+    MemoryPreference.user_id,
+    MemoryPreference.pref_key,
+    MemoryPreference.version,
+    unique=True,
+)
 Index("idx_memory_preferences_evidence_missing", MemoryPreference.evidence_missing)
 Index("idx_memory_preferences_evidence_score", MemoryPreference.evidence_score)
 Index("idx_memory_preferences_last_consumed_at", MemoryPreference.last_consumed_at)
@@ -51,6 +58,12 @@ class MemoryGoal(BaseModel):
     expires_at = Column(DateTime, nullable=True)
     linked_task_id = Column(GUID(), ForeignKey("tasks.id"), nullable=True)
     linked_plan_id = Column(GUID(), ForeignKey("plans.id"), nullable=True)
+    # M-08 R2 P2-2：goal 真实写入来源（与 episodic/preferences 域同构的溯源面）。
+    # NULL = 既有行/用户公共创建路径（创建动作本身即用户陈述）；"event" 等系统
+    # 捕获值由写入方（plan_review_service 等）传入，provenance 面据此分流
+    # 「系统写入」桶标签并降置信档——推断/捕获永不报「已确认」（M-01 对外口径）。
+    # 迁移：alembic/versions/m08_20260920_add_memory_goals_source_type.py
+    source_type = Column(String(30), nullable=True)
     evidence_score = Column(Float, nullable=False, default=0.0)
     correction_count = Column(Integer, nullable=False, default=0)
     evidence_refs = Column(JSONBCompat, nullable=False, default=list)

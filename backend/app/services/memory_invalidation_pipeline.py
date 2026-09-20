@@ -82,6 +82,13 @@ class MemoryMutationAction(StrEnum):
     # 5th destructive entry of the epoch contract (sibling entry, same
     # pipeline; loser retraction/supersede is effective-destructive).
     USER_ARBITRATION = "user_arbitration"
+    # M-08 (memory provenance/scope API): user-sovereignty IN-PLACE edit —
+    # goal field updates and scope pause/resume (archived_at toggle). Sibling
+    # entry, same pipeline: the record stays active (no version chain, unlike
+    # SUPERSEDE; no rejection, unlike CORRECTION) but its content/recall
+    # changes, so derived caches must drop. Event NAME stays memory.invalidated
+    # (D-01 vocabulary untouched).
+    USER_UPDATE = "user_update"
 
 
 # Derived (compiled) cache keys invalidated on every effective mutation. These
