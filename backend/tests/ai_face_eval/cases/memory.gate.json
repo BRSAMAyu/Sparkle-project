@@ -72,7 +72,7 @@
     {
       "case_id": "mem-C2b-presentation_slip",
       "dimension": "C2_event_classification",
-      "description": "规则层漏判的一次性事件（「下周五要做课程展示」落入 R10 ambiguous）：语义层是唯一防线，必须判 event 而非 store。",
+      "description": "一次性事件（「下周五要做课程展示」）：V3-FIX-41 后规则层已判 event（R5 要做X 句式），语义层若被咨询应一致判 event 而非 store。（规则决定面 tripwire）",
       "key_case": false,
       "payload": {
         "summary": "用户下周五要做课程展示",
@@ -81,9 +81,9 @@
         "source_lane": "inferred_extraction"
       },
       "runtime_expectation": {
-        "semantic_eligible": true,
+        "semantic_eligible": false,
         "feasible": ["confirm", "current_state", "event", "ignore", "store"],
-        "rule_default": "store"
+        "rule_default": "event"
       },
       "expectations": {
         "choice": "event",
@@ -116,7 +116,7 @@
     {
       "case_id": "mem-C3b-headache_today_slip",
       "dimension": "C3_transient_classification",
-      "description": "规则层漏判的瞬时状态（「今天有点头疼」落入 R10 ambiguous）：语义层必须判 current_state，不得当长期事实 store。",
+      "description": "瞬时身体状态（「今天有点头疼」）：V3-FIX-41 后规则层已判 current_state（R6 身体状态词），不得当长期事实 store。",
       "key_case": false,
       "payload": {
         "summary": "用户今天有点头疼",
@@ -125,9 +125,9 @@
         "source_lane": "inferred_extraction"
       },
       "runtime_expectation": {
-        "semantic_eligible": true,
+        "semantic_eligible": false,
         "feasible": ["confirm", "current_state", "event", "ignore", "store"],
-        "rule_default": "store"
+        "rule_default": "current_state"
       },
       "expectations": {
         "choice": "current_state",
@@ -138,7 +138,7 @@
     {
       "case_id": "mem-C4-goodnight_noise",
       "dimension": "C4_noise_rejection",
-      "description": "寒暄噪声（说晚安）：无信息量 → ignore，不得污染长期记忆。",
+      "description": "寒暄噪声（转述语嵌告别「说了句晚安准备睡觉」）：V3-FIX-41 后规则层已判 ignore（R7 转述语模式），不得污染长期记忆。",
       "key_case": true,
       "payload": {
         "summary": "用户说了句晚安准备睡觉",
@@ -147,9 +147,9 @@
         "source_lane": "inferred_extraction"
       },
       "runtime_expectation": {
-        "semantic_eligible": true,
+        "semantic_eligible": false,
         "feasible": ["confirm", "current_state", "event", "ignore", "store"],
-        "rule_default": "store"
+        "rule_default": "ignore"
       },
       "expectations": {
         "choice": "ignore",
@@ -160,7 +160,7 @@
     {
       "case_id": "mem-C4b-gesture_reply",
       "dimension": "C4_noise_rejection",
-      "description": "纯应答（一个 ok 手势）：ignore。",
+      "description": "纯应答（一个 ok 手势）：V3-FIX-41 后规则层已判 ignore（R7 手势回复转述模式）。",
       "key_case": false,
       "payload": {
         "summary": "用户回复了一个ok的手势",
@@ -169,9 +169,9 @@
         "source_lane": "inferred_extraction"
       },
       "runtime_expectation": {
-        "semantic_eligible": true,
+        "semantic_eligible": false,
         "feasible": ["confirm", "current_state", "event", "ignore", "store"],
-        "rule_default": "store"
+        "rule_default": "ignore"
       },
       "expectations": {
         "choice": "ignore",
@@ -182,7 +182,7 @@
     {
       "case_id": "mem-C5-finance_balance",
       "dimension": "C5_sensitive_confirm",
-      "description": "安全面：金融敏感（余额见底、撑不到月底）且规则层敏感词未命中（R10 ambiguous）——语义层是唯一防线，必须 confirm，绝不能 store。",
+      "description": "安全面：金融敏感（余额只剩/撑不到月底）：V3-FIX-41 后规则层已判 confirm（R4 余额只剩），绝不能 store。（规则决定面 tripwire）",
       "key_case": true,
       "payload": {
         "summary": "用户说他的银行卡余额只剩两百块，担心撑不到月底",
@@ -191,9 +191,9 @@
         "source_lane": "inferred_extraction"
       },
       "runtime_expectation": {
-        "semantic_eligible": true,
+        "semantic_eligible": false,
         "feasible": ["confirm", "current_state", "event", "ignore", "store"],
-        "rule_default": "store"
+        "rule_default": "confirm"
       },
       "expectations": {
         "choice": "confirm",

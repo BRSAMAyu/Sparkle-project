@@ -34,10 +34,19 @@ Architecture (rule layer first, semantic layer optional):
    (eval benchmark runs with the semantic layer disabled).
 3. **Semantic tier** — only for rule-ambiguous inferred candidates; a light
    ``chat_json`` call with hard timeout + process-local circuit breaker +
-   rate cap. Any failure degrades to the rule default (fail-open for content:
-   the lane's own confidence machinery remains the noise guard of record).
-   The semantic tier never *upgrades* to confirm: confirm requires a
-   deterministic rule hit (sensitive vocabulary must be auditable).
+   rate cap. Any failure degrades to the rule default. The semantic tier
+   never *upgrades* to confirm: confirm requires a deterministic rule hit
+   (sensitive vocabulary must be auditable).
+
+R10 residue semantics (V3-FIX-41 decision): the ambiguous-inferred default
+for NON-sensitive content stays ``store`` (+ ``semantic_eligible``) so the
+inference lane keeps its ingestion utility; for content carrying a
+sensitive-DOMAIN signal (financial / health / mental-state families, matched
+by a deliberately wider regex net than the R4 exact table) the residue is
+**fail-closed to ``confirm``** — with the semantic tier off (production
+default) sensitive content must never flow to long-term memory without the
+user's confirmation. Vocab last widened: leak words 「要做X」/「头疼」/
+「余额只剩·拮据」/ reported-greeting patterns (card V3-FIX-41).
 
 Resilience contract (acceptance #2 of the card): the public entrypoints
 ``evaluate_storage_gate`` / ``evaluate_storage_gate_for_record`` NEVER raise.
@@ -72,7 +81,7 @@ from loguru import logger
 from app.config import settings
 from app.services.memory_epistemic_contract import EpistemicClass
 
-MEMORY_STORAGE_GATE_VERSION = "memory-v3.m02.v1"
+MEMORY_STORAGE_GATE_VERSION = "memory-v3.m02.v2"
 
 # ---------------------------------------------------------------------------
 # Verdicts
@@ -239,6 +248,18 @@ SENSITIVE_TOPICS: dict[str, tuple[str, ...]] = {
         "挂科退学",
         "被退学",
         "挂了三门",
+        # V3-FIX-41 漏判③：余额/拮据/钱不够类经济困境表述（E-04 R2 §7 复测
+        # 「银行卡余额只剩两百块」曾漏 → R10 fail-open store）
+        "余额只剩",
+        "余额不足",
+        "余额见底",
+        "拮据",
+        "钱不够",
+        "不够花",
+        "揭不开锅",
+        # P2-1（R2 验收）：裸词「吃土」substring 误命中「吃土豆」——换精确
+        # 短语；独立成句的「吃土」由 R10 网 吃土(?!豆) 兜底。
+        "穷得吃土",
     ),
     "identity": (
         "性取向",
@@ -343,7 +364,15 @@ EVENT_NOUNS: tuple[str, ...] = (
     "高铁",
     "火车票",
     "机票",
+    # V3-FIX-41 漏判①：「下周五要做课程展示」——展示/演讲类一次性承诺
+    "展示",
+    "演讲",
 )
+
+# "要做 X" style commitment (V3-FIX-41 漏判①): consulted ONLY under a one-shot
+# time anchor (R5 precondition), so bare 做/完成 in deliberation stays clear.
+# Negation lookbehinds sit right before the verb: 「不要做/不用做/别做」 excluded.
+_ONESHOT_COMMIT_RE = re.compile(r"(?:要|得|该|准备|打算)(?<!不要)(?<!不用)(?<!别)(?:做|完成|筹备)")
 
 # Present-tense transient state markers.
 TRANSIENT_STATE_MARKERS: tuple[str, ...] = (
@@ -394,6 +423,16 @@ TRANSIENT_STATE_VOCAB: tuple[str, ...] = (
     "等人",
     "在上课",
     "在考试",
+    # V3-FIX-41 漏判②：「有点头疼」类身体状态（健康相邻，留工作记忆层不长期化；
+    # 与 SENSITIVE_TOPICS/敏感域网刻意不相交——过敏/血压等慢化信号走敏感域）
+    "头疼",
+    "头痛",
+    "头晕",
+    "胃疼",
+    "肚子疼",
+    "拉肚子",
+    "恶心",
+    "发烧",
 )
 # Standalone-token transient markers: "emo" must not match inside English
 # words ("memory"), 困/渴 must not match 困难/渴望.
@@ -496,6 +535,44 @@ NOISE_CONTAIN_TOKENS: tuple[str, ...] = (
     "你真聪明",
 )
 
+# Reported (paraphrased) greetings/backchannels (V3-FIX-41 漏判④):
+# NOISE_EXACT only matches whole strings — a REPORTED greeting inside a longer
+# sentence ("说了句晚安准备睡觉") used to slip past R7 into R10 fail-open store.
+# Two families: quoted greeting/backchannel verbs + greeting token, and
+# gesture/sticker replies (mem-C4b golden: ignore).
+_REPORTED_BACKCHANNEL_RE = re.compile(
+    r"(?:说了|道了|回了|发了|喊了)(?:一?[声句条])?(?:晚安|早安|午安|再见|拜拜|你好|您好|哈喽|嗨|谢谢|多谢|辛苦了|收到|好的|嗯)"
+    r"|回复了[^，。！？]{0,6}(?:手势|表情包|表情)"
+)
+
+# R10 residue sensitive-DOMAIN net (V3-FIX-41 core fix). WIDER than the R4
+# exact table: consulted ONLY at the R10.ambiguous_inferred residue (content
+# already missed R4/R5/R6/R7/R9), where the previous default was fail-open
+# STORE — silently writing sensitive-domain content to long-term memory when
+# the semantic tier is off. A hit flips the residue to CONFIRM (fail-closed,
+# pending user confirmation). Categories scoped to financial / health /
+# mental_state (the card's highest-harm families); identity/family privacy
+# stay R4-exact-only to avoid over-rejection. Kept DISJOINT from
+# TRANSIENT_STATE_VOCAB: 头疼-family transient states are classified by R6
+# (working memory), the net only sees non-transient sensitive signals.
+SENSITIVE_DOMAIN_NET: tuple[tuple[str, "re.Pattern[str]"], ...] = (
+    (
+        "financial",
+        re.compile(
+            r"(?:余额|存款|饭卡|卡里|钱包|生活费|现金)[^，。！？]{0,6}(?:只剩|不足|不够|见底|没了|快没|紧张)"
+            r"|见底|拮据|吃土(?!豆)|揭不开锅|缺钱|钱不够用"
+        ),
+    ),
+    (
+        "health",
+        re.compile(r"过敏|心律不齐|心悸|胸闷|血压偏[高低]|血糖偏[高低]|指标异常|确诊|查出(?:问题|毛病)"),
+    ),
+    (
+        "mental_state",
+        re.compile(r"撑不住|撑不下去|喘不过气|情绪低落|濒临崩溃"),
+    ),
+)
+
 
 def _normalize_text(value: str) -> str:
     """Lowercase, strip whitespace/punctuation — for noise + dedup matching."""
@@ -554,6 +631,14 @@ def _match_sensitive(summary: str) -> str | None:
     return None
 
 
+def _match_sensitive_domain_net(summary: str) -> str | None:
+    """Wider sensitive-domain net for the R10 residue (fail-closed guard)."""
+    for category, pattern in SENSITIVE_DOMAIN_NET:
+        if pattern.search(summary):
+            return category
+    return None
+
+
 def _has_oneshot_time_anchor(summary: str) -> bool:
     if any(anchor in summary for anchor in ONESHOT_TIME_ANCHORS):
         return True
@@ -593,6 +678,9 @@ def _is_noise(summary: str) -> bool:
     if len(normalized) <= 3 and not re.search(r"[a-zA-Z]{3,}", normalized):
         return True
     if any(token in summary for token in NOISE_CONTAIN_TOKENS):
+        return True
+    # Reported greetings/backchannels inside a longer sentence (V3-FIX-41).
+    if _REPORTED_BACKCHANNEL_RE.search(summary):
         return True
     # Concatenated backchannel acks ("嗯嗯知道了" = 嗯嗯 + 知道了, "好的收到"):
     # noise only if the WHOLE string is consumed by known noise tokens.
@@ -690,6 +778,9 @@ def classify_by_rules(candidate: StorageGateCandidate, *, now_ts: float | None =
             # 轻动词路径："6月15日要考四级"（考 不在 EVENT_NOUNS，因
             # 考虑/思考 同形）；仅在存在一次性时间锚点时才采信。
             or _ONESHOT_EVENT_VERB_RE.search(summary) is not None
+            # 「要做 X」句式（V3-FIX-41 漏判①："下周五要做课程展示"）；
+            # 否定形（不要做/不用做/别做）经 lookbehind 排除。
+            or _ONESHOT_COMMIT_RE.search(summary) is not None
         )
     ):
         return StorageGateDecision(
@@ -734,14 +825,32 @@ def classify_by_rules(candidate: StorageGateCandidate, *, now_ts: float | None =
             detail="recurring-pattern/preference claim",
         )
 
-    # R10 default by provenance; inferred lanes hand the residue to the
-    # semantic tier (or fail open to store when semantics are unavailable).
+    # R10 default by provenance. Ambiguous inferred residue: sensitive-domain
+    # content is FAIL-CLOSED to confirm (V3-FIX-41) — with the semantic tier
+    # off (production default) a fail-open store here wrote sensitive/health
+    # content into long-term memory without user confirmation. Non-sensitive
+    # residue keeps the store default + semantic eligibility.
     if lane in EXPLICIT_LANES:
         return StorageGateDecision(
             verdict=StorageGateVerdict.STORE.value,
             layer="rule",
             reason="R10.explicit_lane_default",
             detail="user-stated content on explicit lane",
+        )
+    net_category = _match_sensitive_domain_net(summary)
+    if net_category:
+        return StorageGateDecision(
+            verdict=StorageGateVerdict.CONFIRM.value,
+            layer="rule",
+            reason="R10.sensitive_domain_fail_closed",
+            detail=(
+                f"sensitive domain={net_category} at ambiguous residue; "
+                "fail-closed to pending confirmation (no unconfirmed store)"
+            ),
+            annotations={
+                "pending_confirmation": True,
+                "sensitivity": net_category,
+            },
         )
     return StorageGateDecision(
         verdict=StorageGateVerdict.STORE.value,

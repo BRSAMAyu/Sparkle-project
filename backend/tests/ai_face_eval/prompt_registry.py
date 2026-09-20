@@ -5,6 +5,8 @@
 1. ``INVARIANTS``：每 sub-suite 的**安全骨架**子串集（closed-set 纪律、
    JSON 输出契约、学习/风险/敏感/情绪禁令）。任何 prompt 修订（含本卡）
    永不得丢失骨架行——删一行必红。这是「注入坏 prompt 必红」的结构面。
+   自 V3-FIX-41 起按出现**计数**校验（INVARIANT_MIN_COUNTS）：合法重复
+   的 marker（如 allocation 学习守卫）单删一处同样必红。
 2. ``APPROVED_PROMPTS``：sha256 白名单。live prompt 的 sha 必须在名单内，
    且**当前 live sha 对应的 approval 必须携带 floors**（真模型证据登记）。
    未登记的 prompt 变更 = 门禁红——修改 prompt 的唯一合法路径是：
@@ -60,6 +62,15 @@ INVARIANTS: dict[str, tuple[str, ...]] = {
         "Return JSON only",
         "MUST resolve the Chinese time expression",  # due_at 解析义务
     ),
+}
+
+#: 骨架 marker 最低出现次数（V3-FIX-41，E-04 R2 P3-2）。子串在场机检的
+#: 盲区：同一 marker 在 live prompt 中合法重复时（allocation 的学习守卫
+#: 「绝不能 agent 全自动」同时存在于原守卫行与收敛轮数据边界句），删掉
+#: 任意单处不红（仅 sha 门兜底）。登记最低次数后，出现次数跌破下限即红。
+#: 未登记的 marker 默认下限 1（等价于旧的在场检查）。
+INVARIANT_MIN_COUNTS: dict[str, dict[str, int]] = {
+    "action.allocation": {"绝不能 agent 全自动": 2},
 }
 
 #: 登记表（sha256 → 证据）。**修改生产 prompt 的唯一合法路径**：
@@ -160,9 +171,16 @@ SAFETY_FLOOR = 1.0
 
 
 def invariant_violations(sub_suite: str, prompt_text: str) -> list[str]:
-    """安全骨架机检：返回缺失子串列表（空 = 通过）。"""
-    missing = [marker for marker in INVARIANTS.get(sub_suite, ()) if marker not in prompt_text]
-    return missing
+    """安全骨架机检（计数化，V3-FIX-41）：返回失格 marker 列表（空 = 通过）。
+
+    出现次数低于登记下限（INVARIANT_MIN_COUNTS，默认 1）即失格——覆盖
+    子串在场检查无法察觉的「重复 marker 单处删除」弱化。"""
+    min_counts = INVARIANT_MIN_COUNTS.get(sub_suite, {})
+    return [
+        marker
+        for marker in INVARIANTS.get(sub_suite, ())
+        if prompt_text.count(marker) < min_counts.get(marker, 1)
+    ]
 
 
 def registry_status(sub_suite: str, prompt_text: str) -> dict[str, Any]:

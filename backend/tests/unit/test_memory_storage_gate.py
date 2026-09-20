@@ -573,3 +573,110 @@ def test_candidate_from_record_projects_schema_versions():
     decision = classify_by_rules(candidate)
     assert decision.verdict == StorageGateVerdict.STORE.value
     assert decision.reason == "R2.explicit_user_command"
+
+
+# ---------------------------------------------------------------------------
+# V3-FIX-41：规则层四处漏判扩面 + R10 敏感域 fail-closed（红→绿）
+#
+# 证据锚：E-04 R2 回执 §7 复测（backup/2026-09-20/E-04/REVIEW_RECEIPT_2.md）、
+# DYNAMIC_ISSUES V3-FIX-41、ai_face_eval cases memory.gate.json 的
+# mem-C2b/C3b/C4/C4b/C5 golden。语义层默认关的现状下这些内容曾全部
+# R10.ambiguous_inferred → fail-open STORE 无确认入库。
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_fix41_event_yaodo_slot_with_time_anchor():
+    """漏判①（R5）：「下周五要做课程展示」——时间锚点 +「要做 X」句式判 event。"""
+    decision = await MemoryStorageGate().evaluate(_candidate(summary="下周五要做课程展示"))
+    assert decision.verdict == StorageGateVerdict.EVENT.value, decision
+    assert decision.reason == "R5.one_time_constraint"
+    assert decision.annotations["bounded_scope"] is True
+
+
+@pytest.mark.asyncio
+async def test_fix41_transient_headache_body_state():
+    """漏判②（R6）：「今天有点头疼」——身体状态词判 current_state（健康相邻，
+    留工作记忆层，绝不长期化）。"""
+    decision = await MemoryStorageGate().evaluate(_candidate(summary="今天有点头疼"))
+    assert decision.verdict == StorageGateVerdict.CURRENT_STATE.value, decision
+    assert decision.reason == "R6.transient_state"
+
+
+@pytest.mark.asyncio
+async def test_fix41_confirm_financial_balance_distress():
+    """漏判③（R4）：「银行卡余额只剩两百块」——经济困境表述判 confirm。"""
+    decision = await MemoryStorageGate().evaluate(
+        _candidate(summary="用户说他的银行卡余额只剩两百块，担心撑不到月底")
+    )
+    assert decision.verdict == StorageGateVerdict.CONFIRM.value, decision
+    assert decision.reason == "R4.sensitive_hypothesis"
+    assert decision.annotations["pending_confirmation"] is True
+    assert decision.annotations["sensitivity"] == "financial"
+
+
+@pytest.mark.asyncio
+async def test_fix41_ignore_reported_goodnight():
+    """漏判④（R7）：转述语中嵌告别（「说了句晚安准备睡觉」）判 ignore——
+    NOISE_EXACT 仅整句精确匹配，转述语模式此前漏 R7。"""
+    decision = await MemoryStorageGate().evaluate(_candidate(summary="用户说了句晚安准备睡觉"))
+    assert decision.verdict == StorageGateVerdict.IGNORE.value, decision
+    assert decision.reason == "R7.noise"
+
+
+@pytest.mark.asyncio
+async def test_fix41_ignore_reported_gesture_reply():
+    """漏判④同族（R7，ai_face mem-C4b golden=ignore）：「回复了一个ok的手势」。"""
+    decision = await MemoryStorageGate().evaluate(_candidate(summary="用户回复了一个ok的手势"))
+    assert decision.verdict == StorageGateVerdict.IGNORE.value, decision
+    assert decision.reason == "R7.noise"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "summary",
+    [
+        "这个月生活费快见底了",  # 金融域措辞（见底）不在 R4 精确词表 → 曾 fail-open store
+        "我对花生过敏",  # 健康域（过敏）不在 R4 精确词表 → 曾 fail-open store
+    ],
+)
+async def test_fix41_r10_sensitive_domain_residue_fail_closed(summary):
+    """核心缺陷（R10 fail-open → fail-closed）：敏感域措辞漏过 R4 精确词表、
+    又无瞬时/事件/稳定信号的歧义残留，不得在语义层默认关时无确认入库——
+    拒收为挂起待确认（confirm），敏感域 fail-closed。"""
+    decision = await MemoryStorageGate().evaluate(_candidate(summary=summary))
+    assert decision.verdict == StorageGateVerdict.CONFIRM.value, decision
+    assert decision.reason == "R10.sensitive_domain_fail_closed"
+    assert decision.annotations["pending_confirmation"] is True
+    assert decision.annotations["sensitivity"] in {"financial", "health", "mental_state"}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "summary",
+    [
+        "我高数比较薄弱，特别是级数部分",  # m02-st03 学习画像：非敏感域维持现状
+        "我英语阅读速度偏慢",
+        "你提到过一位学习相关人物",  # m02-st08
+    ],
+)
+async def test_fix41_r10_non_sensitive_residue_stays_store(summary):
+    """非敏感域不过度拒收（负例）：R10 歧义残留维持 store + semantic_eligible，
+    避免敏感网过宽破坏推断条目入库体验。"""
+    decision = await MemoryStorageGate().evaluate(_candidate(summary=summary))
+    assert decision.verdict == StorageGateVerdict.STORE.value, decision
+    assert decision.reason == "R10.ambiguous_inferred"
+    assert decision.annotations.get("semantic_eligible") is True
+
+
+class TestP21PotatoNegative:
+    """FIX-41 P2-1 回归钉（Leader 顺修）：裸词「吃土」与食物「吃土豆」的
+    containment 误命中不得复发——食物偏好不得误确认且错标财务。"""
+
+    def test_potato_food_preference_not_financial(self):
+        d = classify_by_rules(_candidate(summary="我喜欢吃土豆"))
+        assert not (d.verdict == "confirm_required" and "financial" in str(d.annotations.get("domain", "")) + d.reason + d.detail)
+
+    def test_bare_chitu_still_caught_by_net(self):
+        d = classify_by_rules(_candidate(summary="这个月生活费花光了要吃土了"))
+        assert d.verdict.startswith("confirm")

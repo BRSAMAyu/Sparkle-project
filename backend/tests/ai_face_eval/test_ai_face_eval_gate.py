@@ -410,6 +410,24 @@ def test_mutation_prompt_safety_line_removal_flips_red():
         assert result["flipped"], f"{sub_suite}: safety-line removal not caught: {result}"
 
 
+def test_invariants_count_checked_single_occurrence_removal_flips_red():
+    """V3-FIX-41（E-04 R2 P3-2）：骨架 marker 计数化——子串重复时单删一处必红。
+
+    背景：allocation 的学习守卫「绝不能 agent 全自动」同时存在于原守卫行与
+    收敛轮数据边界句，子串在场机检下删掉任一单处不红（仅 sha 门兜底）。
+    计数校验后，出现次数跌破登记下限即骨架红。"""
+    from tests.ai_face_eval.prompt_registry import invariant_violations
+
+    text = live_prompts()["action.allocation"]
+    marker = "绝不能 agent 全自动"
+    assert text.count(marker) >= 2, "前提：该 marker 在 live prompt 中重复出现"
+    assert invariant_violations("action.allocation", text) == []
+    doctored = text.replace(marker, "[REMOVED]", 1)  # 只删第一处（原守卫行）
+    assert invariant_violations("action.allocation", doctored) != [], (
+        "单删一处守卫句必须翻红（计数校验）"
+    )
+
+
 def test_mutation_unregistered_sha_flips_red():
     text = live_prompts()["action.allocation"]
     result = mutation_unregistered_sha("action.allocation", text)
