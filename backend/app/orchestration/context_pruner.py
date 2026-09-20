@@ -3,10 +3,13 @@ ContextPruner - 上下文修剪器
 
 负责管理和优化 LLM 上下文窗口，防止 Token 爆炸和上下文溢出。
 
-策略:
+策略 (C-06 起默认路径零 LLM):
 1. Sliding Window: 对短历史保留全部消息
-2. Importance Compression: 中等长度历史使用规则压缩
-3. Sync Summarization: 长历史使用 FAST 模型同步总结
+2. Importance Compression: 中等长度历史使用规则压缩（关键类消息豁免截断）
+3. Deterministic Compaction: 长历史确定性压缩（conversation_compaction.py，
+   保序保留 correction/decision/unresolved/action_result/goal_state）；
+   LLM 同步总结降级为可选档（ENABLE_LLM_SESSION_SUMMARY，默认关），
+   开启后失败仍回落确定性压缩。
 """
 from __future__ import annotations
 
@@ -17,6 +20,13 @@ from typing import Any
 
 import redis.asyncio as redis
 from loguru import logger
+
+from app.config import settings
+from app.orchestration.conversation_compaction import (
+    KEY_SALIENCE,
+    classify_message,
+    compact_history,
+)
 
 
 class ContextPruner:
@@ -92,6 +102,44 @@ class ContextPruner:
                 "summary_used": False,
             }
 
+        # C-06：默认路径 = 确定性 compaction（零 LLM、保序保关键类）。
+        # LLM 同步总结仅在 ENABLE_LLM_SESSION_SUMMARY（或显式 force_summary）
+        # 时作为可选档回归；其失败/空摘要回落不再是二层截断，而是确定性
+        # compaction（RB-07 语义升级：中间消息仍不静默丢）。
+        llm_summary_enabled = bool(
+            getattr(settings, "ENABLE_LLM_SESSION_SUMMARY", False) or force_summary
+        )
+        if not getattr(settings, "ENABLE_DETERMINISTIC_COMPACTION", True) and not llm_summary_enabled:
+            # 确定性压缩被关且 LLM 档未开：维持历史行为（二层压缩）作兜底。
+            messages = self._compress_with_importance(history)
+            logger.debug(
+                f"Session {session_id}: tier2 fallback compression {original_count} -> {len(messages)} "
+                f"(took {time.time() - start_time:.3f}s)"
+            )
+            return {
+                "messages": messages,
+                "summary": None,
+                "original_count": original_count,
+                "pruned_count": len(messages),
+                "summary_used": False,
+            }
+        if not llm_summary_enabled:
+            compaction = compact_history(
+                history,
+                recent_window=int(getattr(settings, "COMPACTION_RECENT_WINDOW", 6) or 6),
+                key_message_cap_tokens=int(
+                    getattr(settings, "COMPACTION_KEY_MESSAGE_CAP_TOKENS", 220) or 220
+                ),
+            )
+            logger.info(
+                f"Session {session_id}: tier3 deterministic compaction {original_count} -> "
+                f"{compaction.pruned_count} (compressed_ordinary={compaction.metadata.get('compressed_ordinary')} "
+                f"key_preserved={len(compaction.metadata.get('key_preserved', []))} "
+                f"dropped_key={len(compaction.metadata.get('dropped_key', []))}, "
+                f"took {time.time() - start_time:.3f}s)"
+            )
+            return compaction.to_pruner_payload()
+
         summary_result = await self._get_summarized_history(session_id, history, user_id)
         logger.info(
             f"Session {session_id}: tier3 compression {original_count} -> "
@@ -138,13 +186,35 @@ class ContextPruner:
                         )
                 except Exception as exc:
                     logger.warning(f"Sync summarization failed for session {session_id}: {exc}")
+                    # C-06：LLM 档失败回落确定性 compaction（关键类不丢），
+                    # 二层截断只是最后兜底。
+                    if getattr(settings, "ENABLE_DETERMINISTIC_COMPACTION", True):
+                        compaction = compact_history(
+                            history,
+                            recent_window=int(getattr(settings, "COMPACTION_RECENT_WINDOW", 6) or 6),
+                            key_message_cap_tokens=int(
+                                getattr(settings, "COMPACTION_KEY_MESSAGE_CAP_TOKENS", 220) or 220
+                            ),
+                        )
+                        return {"messages": compaction.messages, "summary": compaction.summary}
                     fallback_messages = self._compress_with_importance(history)
                     return {"messages": fallback_messages, "summary": None}
 
         if summary_messages and not str(summary or "").strip():
-            # RB-07: 空摘要（FAST 模型空响应/拒答）视为总结失败，退回二层压缩，
-            # 避免 anchor/recent 之外的中间消息被静默丢弃
-            logger.warning(f"Empty sync summary for session {session_id}; falling back to importance compression")
+            # RB-07: 空摘要（FAST 模型空响应/拒答）视为总结失败，退回压缩，
+            # 避免 anchor/recent 之外的中间消息被静默丢弃。C-06：优先确定性
+            # compaction（correction/decision/unresolved/action results 保序
+            # 保留），二层截断仅作开关关闭时的兜底。
+            logger.warning(f"Empty sync summary for session {session_id}; falling back to compression")
+            if getattr(settings, "ENABLE_DETERMINISTIC_COMPACTION", True):
+                compaction = compact_history(
+                    history,
+                    recent_window=int(getattr(settings, "COMPACTION_RECENT_WINDOW", 6) or 6),
+                    key_message_cap_tokens=int(
+                        getattr(settings, "COMPACTION_KEY_MESSAGE_CAP_TOKENS", 220) or 220
+                    ),
+                )
+                return {"messages": compaction.messages, "summary": compaction.summary}
             return {"messages": self._compress_with_importance(history), "summary": None}
 
         messages = self._dedupe_messages(anchor_messages + recent_messages)
@@ -195,6 +265,21 @@ class ContextPruner:
         compressed = dict(message)
         content = str(message.get("content") or "").strip()
         role = str(message.get("role") or "assistant")
+
+        # C-06：关键类（correction/decision/unresolved/action_result/
+        # goal_state）豁免 150 字符硬截断——基线 B1：纠错的操作性尾部
+        # （"请以这次说的为准…"）在关键词未命中时被截掉。长关键消息只做
+        # 头部预算截断（COMPACTION_KEY_MESSAGE_CAP_TOKENS，默认 220 token），
+        # 并保留显式标记；普通消息维持原二层行为。
+        if classify_message(message) in KEY_SALIENCE:
+            cap_tokens = int(getattr(settings, "COMPACTION_KEY_MESSAGE_CAP_TOKENS", 220) or 220)
+            if cap_tokens > 0 and len(content) > 150:
+                from app.orchestration.conversation_compaction import _truncate_content
+
+                compressed["content"] = _truncate_content(content, cap_tokens)
+                compressed["compacted_truncated"] = compressed["content"] != content
+            compressed["salience"] = classify_message(message)
+            return compressed
 
         if self._is_low_signal_message(message):
             compressed["content"] = f"[{role}简述] {self._summarize_low_signal(content)}"

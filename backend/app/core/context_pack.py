@@ -774,6 +774,22 @@ def format_document_chunks_for_prompt(
     prompt_text = ""
     usage = 0
     omitted = total_results - shown
+    # C-06 knowledge JIT：预算内放不下的低排名切片 → references 索引块
+    # （身份行可追溯，行首 "·" 不污染 C-04 [S#] 序号识别面）。计入同一
+    # 预算的适配循环；开关关闭时与旧行为逐字节一致。
+    jit_references_enabled = bool(getattr(settings, "ENABLE_KNOWLEDGE_JIT", False))
+
+    def _references_block(from_index: int) -> str:
+        if not jit_references_enabled:
+            return ""
+        from app.core.knowledge_jit import build_omitted_chunk_references
+
+        labels = [_document_label(entry[0]) for entry in ranked[from_index:]]
+        return build_omitted_chunk_references(
+            labels,
+            max_references=int(getattr(settings, "KNOWLEDGE_JIT_MAX_REFERENCES", 8) or 8),
+        )
+
     while shown > 0:
         header = f"Relevant Documents (showing top {shown} of {total_results} results):"
         omitted = total_results - shown
@@ -781,6 +797,9 @@ def format_document_chunks_for_prompt(
         if omitted > 0:
             lines.append(f"Summary: included the highest-ranked evidence; {omitted} lower-ranked result(s) omitted.")
         lines.extend(selected_lines[:shown])
+        references_block = _references_block(shown) if omitted > 0 else ""
+        if references_block:
+            lines.append(references_block)
         prompt_text = "\n".join(lines)
         usage = estimate_tokens(prompt_text)
         if usage <= effective_budget:
@@ -844,13 +863,36 @@ def format_document_chunks_for_prompt(
 
 
 class ContextBudgetManager:
-    """Budget and place runtime context sources for a single LLM call."""
+    """Budget and place runtime context sources for a single LLM call.
 
-    def __init__(self, total_token_budget: int | None = None) -> None:
-        self.total_token_budget = max(
-            1,
-            int(total_token_budget or getattr(settings, "CONTEXT_TOTAL_TOKEN_BUDGET", 8000) or 8000),
-        )
+    C-06：总预算解析顺序——显式 ``total_token_budget``（向后兼容，既有
+    调用点/测试不变）> tier × decision-type 矩阵
+    （``ENABLE_CONTEXT_BUDGET_MATRIX``，``core/context_budget_matrix.py``，
+    经 ``CONTEXT_TOTAL_TOKEN_BUDGET`` 硬顶钳制）> settings 单值（旧行为）。
+    """
+
+    def __init__(
+        self,
+        total_token_budget: int | None = None,
+        *,
+        tier: str | None = None,
+        decision_type: str | None = None,
+    ) -> None:
+        if total_token_budget:
+            resolved = max(1, int(total_token_budget))
+        elif getattr(settings, "ENABLE_CONTEXT_BUDGET_MATRIX", False):
+            from app.core.context_budget_matrix import resolve_total_budget
+
+            resolved = resolve_total_budget(
+                tier or "free",
+                decision_type or "chat",
+                matrix_overrides=getattr(settings, "CONTEXT_BUDGET_MATRIX_JSON", "") or None,
+            )
+        else:
+            resolved = max(1, int(getattr(settings, "CONTEXT_TOTAL_TOKEN_BUDGET", 8000) or 8000))
+        self.total_token_budget = resolved
+        self.tier = tier or "free"
+        self.decision_type = decision_type or "chat"
 
     def allocate(self) -> dict[str, int]:
         return _allocate_context_source_budgets(self.total_token_budget)
@@ -876,9 +918,39 @@ class ContextBudgetManager:
             conversation_history or [],
             budgets.get(CONTEXT_SOURCE_CONVERSATION, 0),
         )
+        # C-06 knowledge JIT：大型知识源只注入 top chunks + references（可经
+        # retrieve_user_material 按需 fetch）；小知识源原样透传（零回归）。
+        _galaxy_raw = _as_prompt_text(galaxy_knowledge)
+        knowledge_jit_metadata: dict[str, Any] | None = None
+        if getattr(settings, "ENABLE_KNOWLEDGE_JIT", False) and _galaxy_raw:
+            from app.core.knowledge_jit import build_jit_knowledge
+
+            # references 段要与 top chunks 同生共死：给它们预留专项预算，
+            # 否则 _section 的尾部截断会先把 references（可追溯性所在）裁掉。
+            _galaxy_budget = budgets.get(CONTEXT_SOURCE_GALAXY, 0)
+            _reference_reserve = 260 if _galaxy_budget > 400 else max(0, _galaxy_budget // 4)
+            _keep_top = max(
+                64,
+                min(
+                    int(getattr(settings, "KNOWLEDGE_JIT_KEEP_TOP_TOKENS", 600) or 600),
+                    _galaxy_budget - _reference_reserve,
+                ),
+            )
+            _jit = build_jit_knowledge(
+                _galaxy_raw,
+                full_load_max_tokens=min(
+                    int(getattr(settings, "KNOWLEDGE_JIT_FULL_LOAD_MAX_TOKENS", 1200) or 1200),
+                    max(1, _galaxy_budget),
+                ),
+                keep_top_tokens=_keep_top,
+                max_references=int(getattr(settings, "KNOWLEDGE_JIT_MAX_REFERENCES", 8) or 8),
+            )
+            if _jit.applied:
+                _galaxy_raw = _jit.text
+                knowledge_jit_metadata = _jit.to_metadata()
         galaxy_text = self._section(
             "Retrieved Knowledge",
-            _as_prompt_text(galaxy_knowledge),
+            _galaxy_raw,
             budgets.get(CONTEXT_SOURCE_GALAXY, 0),
             CONTEXT_SOURCE_GALAXY,
         )
@@ -1015,6 +1087,13 @@ class ContextBudgetManager:
                 "citation_markers": [entry["marker"] for entry in citation_markers],
                 "citation_guided": bool(citation_markers),
                 "no_material_sentinel": bool(document_text) and is_no_material_sentinel(document_text),
+                # C-06：knowledge JIT 生效记录（None = 未触发/小知识源透传）。
+                "knowledge_jit": knowledge_jit_metadata,
+                "budget_matrix": {
+                    "tier": self.tier,
+                    "decision_type": self.decision_type,
+                    "total_token_budget": self.total_token_budget,
+                },
             },
         )
 

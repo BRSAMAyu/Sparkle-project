@@ -1055,6 +1055,34 @@ def _select_recent_conversation_messages(
     return messages
 
 
+def _resolve_budget_dimensions(context_data: dict[str, Any] | None) -> tuple[str, str]:
+    """C-06：从既有信号解析 (tier, decision_type) 供预算矩阵使用。
+
+    tier 唯一判据是 ``User.entitlement``（'free' | 'pro'，D17 冻结决策）；
+    网关可经 extra_context 透传 ``entitlement``（随 user_context 注入
+    context_data），缺失时回落 settings.DEFAULT_CONTEXT_ENTITLEMENT（成本
+    fail-safe）。decision_type 由 route_intent/intent_type/chat_mode 确定性
+    推导（context_budget_matrix.resolve_decision_type）。
+    """
+    payload = context_data or {}
+    user_context = payload.get("user_context")
+    user_context = user_context if isinstance(user_context, dict) else {}
+    raw_entitlement = str(
+        payload.get("entitlement") or user_context.get("entitlement") or ""
+    ).strip()
+    if not raw_entitlement:
+        raw_entitlement = str(getattr(settings, "DEFAULT_CONTEXT_ENTITLEMENT", "free") or "free")
+    from app.core.context_budget_matrix import resolve_decision_type, resolve_tier
+
+    tier = resolve_tier(raw_entitlement)
+    decision_type = resolve_decision_type(
+        route_intent=payload.get("route_intent"),
+        chat_mode=payload.get("chat_mode"),
+        intent_type=payload.get("intent_type"),
+    )
+    return tier, decision_type
+
+
 def _document_group_scope(context_data: dict[str, Any] | None) -> tuple[bool, list[str]]:
     payload = context_data or {}
     conversation_settings = payload.get("conversation_settings")
@@ -1273,7 +1301,10 @@ async def retrieval_node(state: WorkflowState) -> WorkflowState:
                 }
 
                 if filtered_docs.chunks:
-                    document_budget = ContextBudgetManager().allocate().get("document_chunks", 0)
+                    _budget_tier, _budget_decision = _resolve_budget_dimensions(state.context_data)
+                    document_budget = ContextBudgetManager(
+                        tier=_budget_tier, decision_type=_budget_decision
+                    ).allocate().get("document_chunks", 0)
                     document_context_candidate, document_budget_metadata = format_document_chunks_for_prompt(
                         filtered_docs.chunks,
                         budget=document_budget,
@@ -1692,7 +1723,8 @@ Ask about their available time and current tasks if needed.
         )
         else raw_document_context
     )
-    context_budget_manager = ContextBudgetManager()
+    _budget_tier, _budget_decision = _resolve_budget_dimensions(state.context_data)
+    context_budget_manager = ContextBudgetManager(tier=_budget_tier, decision_type=_budget_decision)
     context_assembly = context_budget_manager.assemble_prompt(
         base_system_prompt=system_prompt,
         user_message=user_message,

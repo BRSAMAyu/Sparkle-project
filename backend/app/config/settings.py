@@ -732,6 +732,26 @@ class Settings(BaseSettings):
     ENABLE_CONTEXT_FOCUS_METADATA: bool = True
     ENABLE_FOCUS_DOCUMENT_CONTEXT: bool = True
     CONTEXT_TOTAL_TOKEN_BUDGET: int = 8000
+    # C-06：tier × decision-type 预算矩阵（core/context_budget_matrix.py）。
+    # CONTEXT_TOTAL_TOKEN_BUDGET 语义降级为「全局硬顶」（运维刹车）；矩阵值
+    # 经它钳制后成为各 tier/决策类型的实际总预算。显式传入
+    # ContextBudgetManager(total_token_budget=...) 时矩阵不介入（向后兼容）。
+    ENABLE_CONTEXT_BUDGET_MATRIX: bool = True
+    CONTEXT_BUDGET_MATRIX_JSON: str = ""  # 可选整体覆盖，见 load_budget_matrix
+    DEFAULT_CONTEXT_ENTITLEMENT: str = "free"  # 上下文面缺失 entitlement 时的预算层
+    # C-06：长会话确定性 compaction（orchestration/conversation_compaction.py）。
+    # 默认路径零 LLM；ENABLE_LLM_SESSION_SUMMARY=True 时 LLM 摘要作为可选档
+    # 回归（tier-3 原路径），LLM 失败仍回落确定性 compaction。
+    ENABLE_DETERMINISTIC_COMPACTION: bool = True
+    ENABLE_LLM_SESSION_SUMMARY: bool = False
+    COMPACTION_RECENT_WINDOW: int = 6
+    COMPACTION_KEY_MESSAGE_CAP_TOKENS: int = 220
+    # C-06：knowledge JIT（core/knowledge_jit.py）——大知识源只注入
+    # references + top chunks，Agent 经 retrieve_user_material 按需 fetch。
+    ENABLE_KNOWLEDGE_JIT: bool = True
+    KNOWLEDGE_JIT_FULL_LOAD_MAX_TOKENS: int = 1200
+    KNOWLEDGE_JIT_KEEP_TOP_TOKENS: int = 600
+    KNOWLEDGE_JIT_MAX_REFERENCES: int = 8
     CONVERSATION_HISTORY_CONTEXT_RATIO: float = 0.40
     ENABLE_DOCUMENT_CONTEXT_INJECTION: bool = True
     DOCUMENT_CONTEXT_RATIO: float = 0.25
