@@ -476,6 +476,7 @@ def build_document_funnel(
 def build_context_funnel_record(
     *,
     request_id: str | None = None,
+    trace_id: str | None = None,
     memory_funnel: dict[str, Any] | None = None,
     experience_meta: dict[str, Any] | None = None,
     retrieval: dict[str, Any] | None = None,
@@ -550,6 +551,8 @@ def build_context_funnel_record(
     return {
         "version": FUNNEL_VERSION,
         "request_id": str(request_id) if request_id else None,
+        # O-02 trace spine：漏斗记录挂到全链 trace_id（context 关联可查）。
+        "trace_id": str(trace_id) if trace_id else None,
         "funnels": {surface: funnel.to_payload() for surface, funnel in sorted(funnels.items())},
         "source_refs": refs,
         "marker_alignment": alignment,
@@ -685,7 +688,8 @@ def funnel_log_line(record: dict[str, Any]) -> str:
     citation = record.get("citation") or {}
     return (
         "C-08 context funnel"
-        + (f" {record.get('request_id')}" if record.get("request_id") else "")
+        + (f" {record.get('request_id')}" if record.get('request_id') else "")
+        + (f" trace={record.get('trace_id')}" if record.get('trace_id') else "")
         + (" " + " ".join(parts) if parts else "")
         + f" refs={len(refs)} alignment={record.get('marker_alignment')}"
         + f" bloat={','.join(bloat) if bloat else '-'} inert={inert}"

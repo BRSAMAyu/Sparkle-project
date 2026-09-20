@@ -400,6 +400,9 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                             "reasoning_mode": reasoning_mode,
                             "workflow_id": workflow_id,
                             "prompt_version": prompt_version,
+                            # O-02 trace spine: 网关 x-trace-id 贯穿引擎侧
+                            # （process_stream 优先用它作为全链 trace_id）。
+                            "trace_id": trace_id,
                         },
                     )
                     async with aclosing(stream_gen):

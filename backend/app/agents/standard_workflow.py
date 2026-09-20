@@ -2187,6 +2187,7 @@ Ask about their available time and current tasks if needed.
             funnel_log_line,
             record_funnel_metrics,
         )
+        from app.core.trace_spine import current_trace_id as current_spine_trace_id
 
         _uc_payload = state.context_data.get("user_context")
         _memory_refs = []
@@ -2203,6 +2204,12 @@ Ask about their available time and current tasks if needed.
                 )
         _funnel_record = build_context_funnel_record(
             request_id=str(state.context_data.get("request_id") or "") or None,
+            # O-02 trace spine：漏斗记录挂全链 trace_id（数据面传播：
+            # process_stream 写入 state.context_data["trace_id"]；contextvar
+            # 为同 task 调用的兜底；缺失诚实降级为 None）。
+            trace_id=str(state.context_data.get("trace_id") or "")
+            or current_spine_trace_id()
+            or None,
             memory_funnel=(
                 _uc_payload.get("context_funnel_memory")
                 if isinstance(_uc_payload, dict)

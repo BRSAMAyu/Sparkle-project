@@ -27,10 +27,19 @@ from loguru import logger
 class LatencyProbe:
     """Accumulates named hop durations and logs a compact summary."""
 
-    def __init__(self, *, session_id: str = "", request_id: str = "", enabled: bool = True) -> None:
+    def __init__(
+        self,
+        *,
+        session_id: str = "",
+        request_id: str = "",
+        trace_id: str = "",
+        enabled: bool = True,
+    ) -> None:
         self.enabled = enabled
         self.session_id = session_id
         self.request_id = request_id
+        # O-02 trace spine：[LATENCY] 行携带全链 trace_id，供按 trace 查询。
+        self.trace_id = trace_id
         self._t0 = time.perf_counter()
         self._last = self._t0
         self._hops: list[tuple[str, float]] = []
@@ -72,10 +81,12 @@ class LatencyProbe:
             if self._first_token_s is not None
             else ""
         )
+        trace_part = f" trace={self.trace_id}" if self.trace_id else ""
         logger.info(
-            "[LATENCY] session={} request={} total={:.0f}ms{} hops: {}",
+            "[LATENCY] session={} request={}{} total={:.0f}ms{} hops: {}",
             self.session_id,
             self.request_id,
+            trace_part,
             total * 1000,
             first_token_part,
             chain,

@@ -253,6 +253,16 @@ def get_agent_type_for_tool(tool_name: str) -> int:
     return agent_service_pb2.ORCHESTRATOR
 
 
+def _round4(value: Any) -> float | None:
+    """confidence 等浮点 tag 的安全收敛（None/非法值 → None）。"""
+    try:
+        if value is None:
+            return None
+        return round(float(value), 4)
+    except (TypeError, ValueError):
+        return None
+
+
 # ---------------------------------------------------------------------------
 # ChatOrchestrator — composed from mixins
 # ---------------------------------------------------------------------------
@@ -2140,7 +2150,13 @@ class ChatOrchestrator(
         span.set_attribute("session_id", request.session_id)
         span.set_attribute("user_id", request.user_id)
         span.set_attribute("request_id", request.request_id)
-        trace_id = format(span.get_span_context().trace_id, "032x")
+        # O-02 trace spine: 网关 x-trace-id（经 gRPC service 传入 context_data）
+        # 优先——保证 UI→Gateway→引擎全链同一 trace_id；缺失时回退本 span id。
+        trace_id = (
+            str((context_data or {}).get("trace_id") or "").strip()
+            or format(span.get_span_context().trace_id, "032x")
+        )
+        span.set_attribute("sparkle.trace_id", trace_id)
 
         try:
             start_time = time.time()
@@ -2148,7 +2164,7 @@ class ChatOrchestrator(
             ACTIVE_SESSIONS.inc()
             request_id = request.request_id
             session_id = str(request.session_id or "").strip()
-            latency_probe = LatencyProbe(session_id=session_id, request_id=request_id)
+            latency_probe = LatencyProbe(session_id=session_id, request_id=request_id, trace_id=trace_id)
             if not session_id:
                 session_id = str(uuid.uuid4())
                 request.session_id = session_id
@@ -2163,6 +2179,24 @@ class ChatOrchestrator(
             workflow_id = (context_data or {}).get("workflow_id", "standard_chat")
             prompt_version = (context_data or {}).get("prompt_version", "v1")
             active_db = db_session or self.db_session
+
+            # O-02 trace spine：关键阶段 span 发射器（失败绝不阻断主链）。
+            # session_id 规整之后创建，保证 span 里是最终 session_id。
+            from app.core.trace_spine import SpineRecorder
+
+            spine = SpineRecorder(
+                trace_id=trace_id,
+                request_id=request_id,
+                session_id=session_id,
+                user_id=str(user_id or ""),
+            )
+            spine.bind()
+            spine.step(
+                "orchestrator_entry",
+                chat_mode=str((context_data or {}).get("chat_mode") or "standard"),
+                workflow_id=str(workflow_id),
+                prompt_version=str(prompt_version),
+            )
 
             # Step 1: Validation & idempotency (early exits)
             if validation_error := await self._validate_request(
@@ -2387,6 +2421,7 @@ class ChatOrchestrator(
                     tracer=tracer,
                 )
                 latency_probe.mark("build_full_context")
+                spine.step("context_build")
                 conversation_context = self._merge_request_history_into_conversation_context(
                     conversation_context,
                     list(request.history),
@@ -2398,6 +2433,9 @@ class ChatOrchestrator(
                     user_context_payload["use_document_context"] = request_use_document_context
                     user_context_payload["document_filter"] = request_document_filter
                     user_context_payload["selected_document_ids"] = request_document_filter
+                    # O-02 trace spine：随 user_context 传入 LLM 层（graph 在
+                    # 独立 task 执行，contextvar 不可达；数据面传播保底）。
+                    user_context_payload["trace_id"] = trace_id
                     user_context_payload["conversation_settings"] = dict(request_extra_context["conversation_settings"])
                     # C-02/R2-F5：manifest 附加后的后写 key 显式登记（否则生产
                     # control_keys 恒空、unclassified 告警不可见——写序盲区）。
@@ -2574,6 +2612,17 @@ class ChatOrchestrator(
                         logger.warning("Spine signal check degraded: {}", _spine_err)
                         request_extra_context["spine_degraded"] = True
                     latency_probe.mark("spine_pipeline")
+                    # O-02：Aurora/spine 阶段 span——causal_trace_id 与聊天
+                    # trace_id 在此建立可查询关联（receipt 经 Redis
+                    # spine:trace:<id> 可达）。
+                    spine.step(
+                        "aurora_turn",
+                        status="degraded" if request_extra_context.get("spine_degraded") else "ok",
+                        causal_trace_id=str(request_extra_context.get("spine_causal_trace_id") or ""),
+                        energy_level=str(
+                            ((request_extra_context.get("aurora_l1") or {}) if isinstance(request_extra_context.get("aurora_l1"), dict) else {}).get("energy_level") or ""
+                        ),
+                    )
 
                 # WIRING-1: A-03 friction diagnosis ask-loop + A-05 patched
                 # decision inputs on the chat decision path (FIX-43/FIX-34).
@@ -2655,6 +2704,10 @@ class ChatOrchestrator(
                 state.context_data["conversation_id"] = session_id
                 state.context_data["request_id"] = request_id
                 state.context_data["user_id"] = user_id
+                # O-02 trace spine：trace_id 显式随 state 传播（graph 经
+                # task_manager 队列在独立 worker task 执行，contextvar 不可
+                # 跨任务到达，故走数据面）。
+                state.context_data["trace_id"] = trace_id
                 # v2.9/v2.10: Inject spine directives into workflow state
                 for _spine_key in ("spine_response_directive", "spine_chronicle_summary",
                                    "spine_fatigue_context", "spine_retrieval_directive",
@@ -3600,6 +3653,12 @@ class ChatOrchestrator(
                     orchestration_trace=orchestration_trace,
                 )
                 latency_probe.mark("plan_and_validate")
+                spine.step(
+                    "plan_validate",
+                    execution_mode=str(getattr(route_decision, "execution_mode", "") or ""),
+                    plan_id=str(plan_id or ""),
+                    plan_switched=bool(plan_switched),
+                )
                 await self._emit_orchestration_trace(
                     state=state,
                     orchestration_trace=orchestration_trace,
@@ -3633,6 +3692,15 @@ class ChatOrchestrator(
                     },
                 )
 
+                # O-02：路由决策 span（intent/mode/layer 有界标签）。
+                spine.step(
+                    "route_decision",
+                    intent=str(route_intent or ""),
+                    execution_mode=str(getattr(route_decision, "execution_mode", "") or ""),
+                    routing_layer=str(plan_meta.get("routing_layer", "unknown") or "unknown"),
+                    confidence=_round4(getattr(route_decision, "confidence", None)),
+                )
+
                 # Step 13: Execute graph
                 result_holder: dict[str, Any] = {}
                 latency_probe.mark("pre_graph_launch")
@@ -3641,6 +3709,7 @@ class ChatOrchestrator(
                 ):
                     yield item
                 latency_probe.mark("execute_graph")
+                spine.step("graph_execute", timed_out=bool(result_holder.get("timed_out")))
 
                 # RB-02: graph timeout path — the graph task was cancelled without a
                 # final_state. Explicitly drain already-generated content, fail the FSM
@@ -3699,6 +3768,12 @@ class ChatOrchestrator(
                         total_completion_tokens=total_completion_tokens,
                     )
                     await self._cache_response(session_id, request_id, final_response_data)
+                    # O-02：终稿 span——token 总量进 trace，供 cost 关联。
+                    spine.step(
+                        "final_compose",
+                        prompt_tokens=int(total_prompt_tokens or 0),
+                        completion_tokens=int(total_completion_tokens or 0),
+                    )
                     # 演示缺陷 ❌#6：done 尾延迟治理。记忆写入/情绪落库不是
                     # 最终帧的构成成分——移入 done 之后的 fire-and-forget 后台
                     # 任务（自带独立 DB 会话，不与流式会话共享生命周期），
@@ -3904,6 +3979,8 @@ class ChatOrchestrator(
                     workflow_type="standard_chat", agents_used="orchestrator", outcome="error"
                 ).inc()
                 logger.opt(exception=e).error("Orchestration Error")
+                # O-02：错误 span（只记异常类型，不记消息正文——可能含用户输入）。
+                spine.step("orchestrator_error", status="error", error_type=type(e).__name__)
                 await self._update_state(
                     session_id,
                     STATE_FAILED,
@@ -3946,6 +4023,17 @@ class ChatOrchestrator(
                 )
 
             finally:
+                # O-02：trace spine 收尾（早退路径——校验失败/幂等命中——可能
+                # 尚未创建 recorder，故判存在；失败绝不阻断清理）。
+                try:
+                    if "spine" in locals():
+                        spine.finish(
+                            status="error" if spine._error else "ok",
+                            prompt_tokens=int(total_prompt_tokens or 0),
+                            completion_tokens=int(total_completion_tokens or 0),
+                        )
+                except Exception:
+                    pass
                 latency_probe.finish()
                 await self._cleanup(
                     lock_acquired=lock_acquired,

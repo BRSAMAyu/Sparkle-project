@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.core.agent_profiles import AgentRole, ModelTier, TaskType
 from app.core.cost_controller import is_llm_within_budget, record_llm_cost
+from app.core.trace_spine import current_recorder, current_trace_id, emit_span
 from app.core.metrics import (
     LLM_PROVIDER_TTFT,
     LLM_PUSH_CONTENT_PARSE_FAILURE_TOTAL,
@@ -1569,9 +1570,16 @@ class LLMService:
             )
 
         if hasattr(self.provider, 'client'):
+            # O-02 trace spine：trace_id 优先取同 task 绑定的 recorder，否则
+            # 回退调用方经 user_context 显式传入（graph worker task 场景）。
+            _uc = user_context if isinstance(user_context, dict) else {}
+            _spine_trace = current_trace_id() or str(_uc.get("trace_id") or "")
             with tracer.start_as_current_span("llm_chat_stream_with_tools") as span:
                 span.set_attribute("llm.model", self.default_model)
                 span.set_attribute("llm.temperature", temperature)
+                # O-02 trace spine：OTel span 与全链 trace_id 关联。
+                if _spine_trace:
+                    span.set_attribute("sparkle.trace_id", _spine_trace)
 
                 # 构建 API 请求参数
                 request_params = {
@@ -1590,6 +1598,8 @@ class LLMService:
 
                 collected_tool_call_chunks = {}
                 usage_data = None
+                _llm_t0 = time.perf_counter()
+                _llm_error: str | None = None
 
                 selection = self._current_selection
                 if selection:
@@ -1605,34 +1615,38 @@ class LLMService:
                             yield item
                     chunk_stream = _direct_stream()
 
-                async for chunk in chunk_stream:
-                    if hasattr(chunk, 'usage') and chunk.usage:
-                        usage_data = chunk.usage
+                try:
+                    async for chunk in chunk_stream:
+                        if hasattr(chunk, 'usage') and chunk.usage:
+                            usage_data = chunk.usage
 
-                    if chunk.choices:
-                        delta = chunk.choices[0].delta
-                        if delta.content:
-                            yield StreamChunk(type="text", content=delta.content)
+                        if chunk.choices:
+                            delta = chunk.choices[0].delta
+                            if delta.content:
+                                yield StreamChunk(type="text", content=delta.content)
 
-                        # MIMO 特有：处理思考链内容 (reasoning_content)
-                        if hasattr(delta, 'reasoning_content') and delta.reasoning_content:
-                            yield StreamChunk(type="reasoning", reasoning_content=delta.reasoning_content)
+                            # MIMO 特有：处理思考链内容 (reasoning_content)
+                            if hasattr(delta, 'reasoning_content') and delta.reasoning_content:
+                                yield StreamChunk(type="reasoning", reasoning_content=delta.reasoning_content)
 
-                        # MIMO 特有：处理联网搜索引用 (annotations)
-                        if hasattr(delta, 'annotations') and delta.annotations:
-                            yield StreamChunk(type="annotation", annotations=list(delta.annotations))
+                            # MIMO 特有：处理联网搜索引用 (annotations)
+                            if hasattr(delta, 'annotations') and delta.annotations:
+                                yield StreamChunk(type="annotation", annotations=list(delta.annotations))
 
-                        if delta.tool_calls:
-                            for tc_chunk in delta.tool_calls:
-                                tool_call_id = tc_chunk.id
-                                if tool_call_id not in collected_tool_call_chunks:
-                                    collected_tool_call_chunks[tool_call_id] = {"name": "", "args_str": ""}
-                                if tc_chunk.function.name:
-                                    collected_tool_call_chunks[tool_call_id]["name"] = tc_chunk.function.name
-                                    yield StreamChunk(type="tool_call_chunk", tool_call_id=tool_call_id, tool_name=tc_chunk.function.name)
-                                if tc_chunk.function.arguments:
-                                    collected_tool_call_chunks[tool_call_id]["args_str"] += tc_chunk.function.arguments
-                                    yield StreamChunk(type="tool_call_chunk", tool_call_id=tool_call_id, arguments=tc_chunk.function.arguments)
+                            if delta.tool_calls:
+                                for tc_chunk in delta.tool_calls:
+                                    tool_call_id = tc_chunk.id
+                                    if tool_call_id not in collected_tool_call_chunks:
+                                        collected_tool_call_chunks[tool_call_id] = {"name": "", "args_str": ""}
+                                    if tc_chunk.function.name:
+                                        collected_tool_call_chunks[tool_call_id]["name"] = tc_chunk.function.name
+                                        yield StreamChunk(type="tool_call_chunk", tool_call_id=tool_call_id, tool_name=tc_chunk.function.name)
+                                    if tc_chunk.function.arguments:
+                                        collected_tool_call_chunks[tool_call_id]["args_str"] += tc_chunk.function.arguments
+                                        yield StreamChunk(type="tool_call_chunk", tool_call_id=tool_call_id, arguments=tc_chunk.function.arguments)
+                except Exception as exc:
+                    _llm_error = type(exc).__name__
+                    raise
 
                 for tool_call_id, data in collected_tool_call_chunks.items():
                     if data["name"] and data["args_str"]:
@@ -1656,16 +1670,54 @@ class LLMService:
                         model_name, usage_data.prompt_tokens or 0,
                         usage_data.completion_tokens or 0, source="stream_chat",
                     )
-                    await record_llm_cost(
+                    _llm_cost_usd = await record_llm_cost(
                         model_name, usage_data.prompt_tokens or 0,
                         usage_data.completion_tokens or 0, source="stream_chat",
                     )
                     await _track_daily_user_tokens(user_id, usage_data.total_tokens or 0)
+                    # O-02 trace spine：llm_call span——actual model/token/cost/
+                    # latency 与全链 trace_id 关联（正文零记录）。
+                    _llm_span_tags = dict(
+                        model=str(model_name),
+                        prompt_tokens=int(usage_data.prompt_tokens or 0),
+                        completion_tokens=int(usage_data.completion_tokens or 0),
+                        total_tokens=int(usage_data.total_tokens or 0),
+                        cost_usd=round(float(_llm_cost_usd or 0.0), 6),
+                    )
+                    _spine = current_recorder()
+                    if _spine is not None:
+                        _spine.span(
+                            "llm_call",
+                            status="error" if _llm_error else "ok",
+                            duration_ms=(time.perf_counter() - _llm_t0) * 1000.0,
+                            **_llm_span_tags,
+                        )
+                    elif _spine_trace:
+                        emit_span(
+                            "llm_call",
+                            trace_id=_spine_trace,
+                            status="error" if _llm_error else "ok",
+                            duration_ms=(time.perf_counter() - _llm_t0) * 1000.0,
+                            tags=_llm_span_tags,
+                        )
                     yield StreamChunk(
                         type="usage",
                         prompt_tokens=usage_data.prompt_tokens,
                         completion_tokens=usage_data.completion_tokens,
                         total_tokens=usage_data.total_tokens
+                    )
+                elif current_trace_id() or _spine_trace:
+                    # 无 usage 帧（部分 provider 不回传）仍发射阶段 span，
+                    # 保证时间线不断链；token/cost 缺省为 0 诚实降级。
+                    emit_span(
+                        "llm_call",
+                        trace_id=current_trace_id() or _spine_trace,
+                        status="error" if _llm_error else "ok",
+                        duration_ms=(time.perf_counter() - _llm_t0) * 1000.0,
+                        tags={
+                            "model": str(selection.model_key if selection else self.default_model),
+                            "cost_usd": 0.0,
+                        },
                     )
         else:
             raise NotImplementedError("Current LLM provider does not support streamed tool calling directly.")
