@@ -140,6 +140,7 @@ KEY_CATEGORY_MAP: Mapping[str, str] = {
     "understanding_depth": "state",  # 系统侧理解度评分（运行时度量）
     # memory
     "episodic_memories": "memory",
+    "experience_memories": "memory",  # WIRING-1（FIX-33）：M-06 经验记忆检索（stage34 写入）
     "past_session_memory": "memory",
     "last_session_mood": "memory",
     "cognitive_insights": "memory",  # 行为模式 = OBSERVATION/HYPOTHESIS（USER_WORLD_MODEL §2）
@@ -163,6 +164,9 @@ KEY_CATEGORY_MAP: Mapping[str, str] = {
     "aurora_stage34_modes": CONTROL_BUCKET,
     "aurora_stage39_modes": CONTROL_BUCKET,
     "aurora_planning_sidecar": CONTROL_BUCKET,  # orchestrator._attach_aurora_planning_sidecar 的后写挂载（R2-F5）
+    # WIRING-1（FIX-33）：经验记忆装配的观测面（M-05 降档率/门禁指标——非世界模型内容）
+    "experience_memory_meta": CONTROL_BUCKET,
+    "experience_memory_selfcheck": CONTROL_BUCKET,
 }
 
 #: 已知会被 stage 适配器在 base 装配之后追加/改写的 payload key（静态事实，来自
@@ -172,6 +176,7 @@ KEY_CATEGORY_MAP: Mapping[str, str] = {
 LATE_STAGE_WRITERS: Mapping[str, tuple[str, ...]] = {
     "active_goals": ("stage34_memory",),
     "episodic_memories": ("stage34_memory",),
+    "experience_memories": ("stage34_memory",),  # WIRING-1（FIX-33）
     "last_session_mood": ("stage34_memory",),
     "recent_corrections": ("stage34_memory",),
     "cognitive_context": ("stage34_memory", "stage39_scaffolding"),

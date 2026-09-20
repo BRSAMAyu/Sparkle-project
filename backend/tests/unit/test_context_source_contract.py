@@ -194,6 +194,7 @@ def test_key_category_map_golden():
         "plan_context": "state",
         "understanding_depth": "state",
         "episodic_memories": "memory",
+        "experience_memories": "memory",  # WIRING-1（FIX-33）
         "past_session_memory": "memory",
         "last_session_mood": "memory",
         "cognitive_insights": "memory",
@@ -214,6 +215,8 @@ def test_key_category_map_golden():
         "aurora_stage34_modes": "control",
         "aurora_stage39_modes": "control",
         "aurora_planning_sidecar": "control",
+        "experience_memory_meta": "control",  # WIRING-1（FIX-33）
+        "experience_memory_selfcheck": "control",  # WIRING-1（FIX-33）
     }
 
 
@@ -222,6 +225,7 @@ def test_late_stage_writers_golden():
     assert dict(LATE_STAGE_WRITERS) == {
         "active_goals": ("stage34_memory",),
         "episodic_memories": ("stage34_memory",),
+        "experience_memories": ("stage34_memory",),  # WIRING-1（FIX-33）
         "last_session_mood": ("stage34_memory",),
         "recent_corrections": ("stage34_memory",),
         "cognitive_context": ("stage34_memory", "stage39_scaffolding"),

@@ -26,6 +26,7 @@ from sqlalchemy import and_, asc, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.core.experience_memory import ExperienceContextQuery
 from app.core.i18n import I18n
 from app.core.metrics import AURORA_RETURNING_CONTEXT_TIER_TOTAL
 from app.core.time_utils import utcnow
@@ -40,6 +41,7 @@ from app.routing.tool_preference_router import ToolPreferenceRouter
 from app.scaffolding.scaffolding_fsm import ScaffoldingFSM
 from app.services.aurora_stage34_kill_switch_service import AuroraStage34KillSwitchService
 from app.services.aurora_stage39_kill_switch_service import AuroraStage39KillSwitchService
+from app.services.experience_memory_projector import ExperienceMemoryProjector
 from app.services.focus_service import focus_service
 from app.services.galaxy_service import GalaxyService
 from app.services.insight_copy import canonical_pattern_key, present_pattern_description, present_pattern_name
@@ -651,6 +653,12 @@ class ContextBuilderMixin:
         payload["episodic_memories"] = episodic_memories
         payload.setdefault("aurora_stage34_modes", await self._stage34_modes_payload())
 
+        # WIRING-1（FIX-33）：M-06 经验记忆检索接入 chat context 装配——
+        # 「该用户相似 situation 下何曾与正/负结果共同出现」经真实 M-03 预筛 +
+        # M-05 selfcheck 后注入 payload["experience_memories"]（降档面见
+        # experience_memory_meta）。失败隔离：检索/门禁异常降级空集，不阻断装配。
+        await self._attach_experience_memory_context(payload, user_id=user_id, db_session=db_session)
+
         last_mood = await memory_service.get_last_session_mood(user_uuid)
         if isinstance(last_mood, dict) and last_mood:
             payload["last_session_mood"] = last_mood
@@ -666,6 +674,94 @@ class ContextBuilderMixin:
             if recent_corrections:
                 cognitive_context["recent_corrections"] = recent_corrections
         return payload
+
+    #: M-05 selfcheck 候选 section 标签（experience claims 与 episodic 分批过门，
+    #: 独立去重域——batch 内 near-duplicate 归因仍成立）。
+    _EXPERIENCE_MEMORY_SECTION = "experience"
+
+    async def _attach_experience_memory_context(
+        self,
+        payload: dict[str, Any],
+        *,
+        user_id: str,
+        db_session: AsyncSession,
+    ) -> None:
+        """WIRING-1（FIX-33）：M-06 ``retrieve_context`` 接入 chat context。
+
+        - 检索：unconstrained 查询（情境轴全部放行——装配点尚无本轮诊断标签；
+          friction 定向检索由 A-05 ``patched_decision_inputs`` 的证据面在决策
+          时执行），双向召回 + 无证据桶，输出已过真实 M-03 预筛（projector
+          出口边界执行）；
+        - M-05 输出门：经验 claims 经真实 ``evaluate_memory_use_gate``
+          （与 episodic_memories 同一 gate 实例语义；``ENABLE_MEMORY_USE_SELFCHECK``
+          关闭时全量放行并在 meta 登记）；internal-only 降档不进 payload——
+          降档率实测面 = ``experience_memory_meta.m05``（FIX-33 原文要求的
+          「词法降档率对经验 claims 的影响」可观测面）；
+        - 因果红线：claims 本身是 D-05 非因果关联文案（M-06 投影边界保证），
+          本层零改写、零补充断言。
+        """
+        payload["experience_memories"] = []
+        meta: dict[str, Any] = {
+            "total_candidates": 0,
+            "surfaced": 0,
+            "internal_only": 0,
+            "truncated_projection": False,
+            "m05_downgrade_rate": 0.0,
+        }
+        payload["experience_memory_meta"] = meta
+        try:
+            result = await ExperienceMemoryProjector(db_session).retrieve_context(
+                ExperienceContextQuery(
+                    user_id=user_id,
+                    purpose=PURPOSE_LLM_CONTEXT,
+                    max_records_per_direction=3,
+                )
+            )
+        except Exception as exc:
+            logger.debug(f"M-06 experience context unavailable for chat assembly: {exc}")
+            meta["unavailable"] = True
+            return
+
+        # 双向桶优先（正向→负向→无证据），同桶内保持 projector 排序（确定性）。
+        records = (
+            list(result.observed_with_positive) + list(result.observed_with_negative) + list(result.no_outcome_evidence)
+        )
+        meta["total_candidates"] = len(records)
+        meta["truncated_projection"] = bool(result.truncated)
+        if not records:
+            return
+
+        candidates = [
+            MemoryUseCandidate(item_id=record.record_id, section=self._EXPERIENCE_MEMORY_SECTION, content=record.claim)
+            for record in records
+            if str(record.claim or "").strip()
+        ]
+        surfaced_ids: set[str] = {candidate.item_id for candidate in candidates}
+        if settings.ENABLE_MEMORY_USE_SELFCHECK and candidates:
+            selfcheck = evaluate_memory_use_gate(episodic=candidates, ctx=SelfCheckContext())
+            surfaced_ids = set(selfcheck.surfaced_ids(self._EXPERIENCE_MEMORY_SECTION))
+            meta["internal_only"] = len(candidates) - len(surfaced_ids)
+            meta["m05_downgrade_rate"] = round(meta["internal_only"] / len(candidates), 6) if candidates else 0.0
+            payload["experience_memory_selfcheck"] = selfcheck.to_metric_payload()
+
+        experience_memories = [
+            {
+                "id": record.record_id,
+                "claim": record.claim,
+                "direction": (
+                    "positive"
+                    if record.has_positive_association_evidence
+                    else ("negative" if record.has_negative_association_evidence else "no_outcome_evidence")
+                ),
+                "evidence_count": record.evidence_count,
+                "evidence_strength": record.completeness_adjusted_strength,
+                "signature": record.signature.as_dict(),
+            }
+            for record in records
+            if record.record_id in surfaced_ids and str(record.claim or "").strip()
+        ]
+        payload["experience_memories"] = experience_memories
+        meta["surfaced"] = len(experience_memories)
 
     async def _build_aurora_everyday_presence_context(
         self,

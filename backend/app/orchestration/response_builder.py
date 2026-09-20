@@ -1130,6 +1130,14 @@ class ResponseBuilderMixin:
                 final_state.context_data["conversation_rhythm"],
                 ensure_ascii=False,
             )
+        # WIRING-1（FIX-43）：A-03 摩擦诊断出口（ask 问句载荷带 branch_key 选项
+        # 供客户端渲染建议选项；act 出口携 A-05 patched 决策输入的干预选择与
+        # 归因）。metadata 出面不改 prompt 本体（E-04 sha 门禁零接触）。
+        if final_state.context_data.get("friction_decision"):
+            response_metadata["friction_decision"] = json.dumps(
+                final_state.context_data["friction_decision"],
+                ensure_ascii=False,
+            )
         response_metadata["session_adaptation_visible"] = "true" if session_adaptation_visible else "false"
         if settings.ENABLE_CONTEXT_FOCUS_METADATA:
             context_focus = final_state.context_data.get("context_focus")

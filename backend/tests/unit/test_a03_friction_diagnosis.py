@@ -70,9 +70,13 @@ FIXTURE_PATH = Path(__file__).resolve().parents[1] / "aurora" / "fixtures" / "fr
 
 #: 四指纹的冻结值（A-02 词表双钉同款纪律；任何词面/阈值变更 → 此处必红，
 #: 提醒提交者 bump FRICTION_DIAGNOSIS_VERSION 并过 reviewer）。
+#: QUESTION_BANK v1_1：WIRING-1/FIX-43 P2 负向反转处置——解析算法改最长词牌
+#: 命中优先（词面零改动），tried_unsure 补「不对」词牌（单字正向词牌「对」
+#: 遮蔽无法由算法消解的唯一词面补充）；bump 依据见 WIRING-1 REPORT 与模块
+#: 顶部修订记录。
 FROZEN_TAXONOMY_FINGERPRINT = "0ce224ab8e12139e2dbdce7092868bad7b7d0efd710de7d9f730ea46a6f6c903"
 FROZEN_EVIDENCE_FINGERPRINT = "2bff307f03cb5176e0c2f885b43ed991f3ddf19631187da94aab5661e33df238"
-FROZEN_QUESTION_BANK_FINGERPRINT = "059458db6e155905d31b12a32e30c1a6e55499f198fc85a92abd805c91ec4538"
+FROZEN_QUESTION_BANK_FINGERPRINT = "e9da836b88f740a7222cd2f3169d58594eefe0915c6865b1004ab0c0319742ae"
 FROZEN_SUFFICIENCY_FINGERPRINT = "a05fdee9fa84160c0fb907782489208e6dd4ed5f6d526d7e05a814119c851a18"
 
 

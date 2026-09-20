@@ -2001,6 +2001,45 @@ class ChatOrchestrator(
         return user_context_payload
 
     # -----------------------------------------------------------------------
+    # WIRING-1（FIX-43/FIX-34）：A-03 摩擦诊断 + A-05 策略补丁的 chat 决策路径
+    # 接线。单点调用 FrictionChatWiringService.process_turn（ask 闭环 + act 出口
+    # 的 patched_decision_inputs 决策输入链）；任何失败由服务层降级，不中断
+    # chat 主链路。产出经 state.context_data["friction_decision"] 进 response
+    # metadata（ResponseBuilderMixin._build_final_response）。
+    # -----------------------------------------------------------------------
+
+    async def _run_friction_decision_wiring(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+        session_id: str,
+        user_message: str,
+        user_context_payload: dict[str, Any] | None,
+        request_extra_context: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        try:
+            from app.services.friction_chat_wiring import FrictionChatWiringService
+
+            service = FrictionChatWiringService(active_db, self.redis)
+            outcome = await service.process_turn(
+                user_id=user_id,
+                session_id=session_id,
+                user_message=user_message or "",
+                user_context_payload=user_context_payload,
+                request_extra_context=request_extra_context,
+            )
+            payload = outcome.to_dict()
+            if payload.get("mode") == "degraded" and not payload.get("question"):
+                return None
+            return payload
+        except Exception:
+            logger.opt(exception=True).warning(
+                "friction decision wiring failed for user=%s session=%s", user_id, session_id
+            )
+            return None
+
+    # -----------------------------------------------------------------------
     # process_stream — main entry point (delegates to mixin methods)
     # -----------------------------------------------------------------------
 
@@ -2459,6 +2498,19 @@ class ChatOrchestrator(
                         request_extra_context["spine_degraded"] = True
                     latency_probe.mark("spine_pipeline")
 
+                # WIRING-1: A-03 friction diagnosis ask-loop + A-05 patched
+                # decision inputs on the chat decision path (FIX-43/FIX-34).
+                _friction_outcome = None
+                if not request.HasField("tool_result") and user_message:
+                    _friction_outcome = await self._run_friction_decision_wiring(
+                        active_db=active_db,
+                        user_id=user_id,
+                        session_id=session_id,
+                        user_message=user_message,
+                        user_context_payload=user_context_payload,
+                        request_extra_context=request_extra_context,
+                    )
+
                 expert_routing_decision = None
                 requested_experts: list[str] = []
                 answer_experts: list[str] = []
@@ -2554,6 +2606,8 @@ class ChatOrchestrator(
                     state.context_data["session_adaptation"] = session_adaptation_context.to_dict()
                 if conversation_rhythm is not None:
                     state.context_data["conversation_rhythm"] = conversation_rhythm
+                if _friction_outcome:
+                    state.context_data["friction_decision"] = _friction_outcome
 
                 await self._attach_aurora_planning_sidecar(
                     active_db=active_db,

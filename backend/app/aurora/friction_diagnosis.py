@@ -1,4 +1,16 @@
-"""A-03 · Friction Diagnosis + Sufficiency / One Best Question（aurora_friction_diagnosis.v1）。
+"""A-03 · Friction Diagnosis + Sufficiency / One Best Question（aurora_friction_diagnosis.v1_1）。
+
+**v1_1（WIRING-1 / FIX-43 P2 处置，2026-09-20）**：`resolve_answer_branch`
+负向词牌被正向词牌子串遮蔽的语义反转修复——
+
+1. 解析算法改为**最长词牌命中优先**（全分支扫描，最长命中词牌所属分支胜出；
+   并列按分支声明序破平）——「不在等/没在等/不等」「不想要了/没那么想要了」
+   类反转由算法消解，词面零改动；
+2. 唯一词面补充：``tried_unsure`` 增加「不对」——「试过但不对」中单字正向
+   词牌「对」的遮蔽无法由最长匹配消解（负向词牌「不对」此前缺席）；
+   问题库指纹随之变化（FROZEN_QUESTION_BANK_FINGERPRINT 已同步 bump），
+   ``FRICTION_DIAGNOSIS_VERSION`` 按「扩任何一面需 bump」纪律升级。
+   生产主路径是 UI branch_key 直传（接线面），自由文本解析是回退层。
 
 产品目标（卡面）：**准确区分卡点并减少问卷式追问**——一次问对，不连环问卷。
 
@@ -82,7 +94,9 @@ from app.core.intervention_lifecycle import INTERVENTION_FRICTION_TAGS
 from app.core.policy_patch import SURFACE_PAYLOAD_SCHEMAS
 from app.signals.policy_engine import _RULE_TABLE
 
-FRICTION_DIAGNOSIS_VERSION = "aurora_friction_diagnosis.v1"
+#: v1_1：FIX-43 P2 负向反转处置（解析算法最长匹配 + tried_unsure 补「不对」词牌）。
+#: 词面/算法变更纪律见模块 docstring 顶部修订记录。
+FRICTION_DIAGNOSIS_VERSION = "aurora_friction_diagnosis.v1_1"
 
 # ---------------------------------------------------------------------------
 # 封闭词表（冻结；扩展需 bump 版本 + reviewer）
@@ -722,7 +736,7 @@ FRICTION_QUESTION_BANK: tuple[QuestionSpec, ...] = (
                 key="tried_unsure",
                 label="试过，没把握",
                 supports=frozenset({"skill", "feedback"}),
-                match_terms=frozenset({"没把握", "不确定", "不知道对不对", "unsure"}),
+                match_terms=frozenset({"没把握", "不确定", "不知道对不对", "不对", "unsure"}),
             ),
             QuestionBranch(
                 key="tried_confident",
@@ -1276,8 +1290,19 @@ def _select_question(
 def resolve_answer_branch(question_id: str, answer_text: str) -> str | None:
     """自由文本答案 → 分支键的规则优先解析（确定性第一层；模型面归 E-04）。
 
-    解析纪律：按分支声明序取**首个**词牌命中；无命中 → None（调用方保持
-    追问预算不变并走 best-guess，绝不猜分支——与「UNKNOWN 不假诊断」同律）。
+    解析纪律（v1_1 / FIX-43 P2 修订）：
+
+    - **最长词牌命中优先**：全分支扫描收集全部 (分支, 命中词牌)，取**最长**
+      命中词牌所属分支——正向词牌是负向词牌真子串时（「在等」⊂「不在等」、
+      「想要」⊂「不想要」），短词牌的先行命中不再遮蔽长词牌（语义反转的
+      算法面修复，词面除「不对」外零改动）；
+    - 并列（跨分支同长）按分支声明序、再按词牌字典序破平——确定性；
+    - 无命中 → None（调用方保持追问预算不变并走 best-guess，绝不猜分支
+      ——与「UNKNOWN 不假诊断」同律）。
+
+    生产主路径是 UI branch_key 直传（接线面 ``FrictionChatWiringService``），
+    自由文本解析只服务无结构回退；两路共用 ``apply_question_answer`` 的
+    (question_id, branch_key) 应用面。
     """
     spec = _QUESTION_BANK_INDEX.get(str(question_id).strip())
     if spec is None:
@@ -1285,11 +1310,14 @@ def resolve_answer_branch(question_id: str, answer_text: str) -> str | None:
     text = _normalize_text(answer_text)
     if not text:
         return None
-    for branch in spec.branches:
+    best: tuple[int, int, str, str] | None = None  # (-词牌长, 分支序, 词牌, 分支键)
+    for branch_index, branch in enumerate(spec.branches):
         for term in sorted(branch.match_terms):
             if term in text:
-                return branch.key
-    return None
+                candidate = (-len(term), branch_index, term, branch.key)
+                if best is None or candidate < best:
+                    best = candidate
+    return best[3] if best is not None else None
 
 
 def apply_question_answer(
