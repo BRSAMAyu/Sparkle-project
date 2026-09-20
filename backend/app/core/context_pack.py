@@ -29,6 +29,11 @@ from app.core.business_metrics import (
     CONTEXT_SEMANTIC_GATING_FALLBACK_TOTAL,
     DECISION_CONTEXT_SIGNAL_DEGRADED_TOTAL,
 )
+from app.core.citation_markers import (
+    CITATION_GUIDE,
+    annotate_citation_markers,
+    is_no_material_sentinel,
+)
 from app.core.context_budget import ContextBudgetScheduler
 from app.core.context_ranker import RankedItem, rank_items
 from app.core.decision_context import (
@@ -928,11 +933,26 @@ class ContextBudgetManager:
         # 但实际在 system prompt 尾部、距 user 消息隔大量指令，qwen3.8-flash 注意力
         # 不足时偶发"没看到资料/没有记录"（A/B 测试材料紧邻 user 消息则完美引用）。
         # 兑现 placement：材料块 + 回显保底声明紧贴用户问题，同条消息内保证近邻。
-        document_block = document_text
-        if document_block:
-            llm_user_message = f"{_DOCUMENT_NEAR_USER_NOTE}\n\n{document_block}\n\n---\n\n{user_message}"
+        #
+        # C-04：在近邻注入之上加确定性引用标记层（[S#]）——
+        # 1. 空检索哨兵块（"无相关材料"）不是材料：不得套"已注入资料必须引用"
+        #    的置顶声明（与哨兵的反幻觉口径互相矛盾、诱导硬引不存在的材料），
+        #    只透传哨兵原文；
+        # 2. 有序号标记的材料块改写为 [S#] 并附「用到才引」引导（引用格式 +
+        #    不硬引约束），给引用率与 faithfulness 一个确定性解析锚点。
+        if document_text and is_no_material_sentinel(document_text):
+            document_block = document_text
+            citation_markers: list[dict[str, Any]] = []
+            llm_user_message = f"{document_block}\n\n---\n\n{user_message}"
         else:
-            llm_user_message = user_message
+            document_block, citation_markers = annotate_citation_markers(document_text)
+            if document_block:
+                near_user_note = _DOCUMENT_NEAR_USER_NOTE
+                if citation_markers:
+                    near_user_note = f"{_DOCUMENT_NEAR_USER_NOTE}\n{CITATION_GUIDE}"
+                llm_user_message = f"{near_user_note}\n\n{document_block}\n\n---\n\n{user_message}"
+            else:
+                llm_user_message = user_message
 
         token_usage = {
             CONTEXT_SOURCE_CONVERSATION: estimate_tokens(_serialize(selected_history)),
@@ -990,6 +1010,11 @@ class ContextBudgetManager:
                     "document_context": "last_before_user_message",
                     "injection_surface": "user_message_prefix",
                 },
+                # C-04：确定性引用标记（过滤后实际注入材料的 [S#] 锚点）与
+                # 引导开关，供 retrieved vs cited vs answer-supported 对照。
+                "citation_markers": [entry["marker"] for entry in citation_markers],
+                "citation_guided": bool(citation_markers),
+                "no_material_sentinel": bool(document_text) and is_no_material_sentinel(document_text),
             },
         )
 

@@ -48,6 +48,7 @@ from app.agents.workflow_experience import (
 from app.config import settings
 from app.core.agent_profiles import AgentRole, ModelTier, TaskType, agent_profile_registry
 from app.core.business_metrics import HITL_REQUESTED, TASK_LOOP_COMPLETED
+from app.core.citation_markers import build_citation_outcome
 from app.core.context_pack import ContextBudgetManager, estimate_tokens, format_document_chunks_for_prompt
 from app.core.metrics import DOCUMENT_CONTEXT_CHUNKS_INJECTED_TOTAL, DOCUMENT_CONTEXT_TOKENS_USED
 from app.core.pending_actions import pending_actions_store
@@ -2070,6 +2071,16 @@ Ask about their available time and current tasks if needed.
         )
 
     state.append_message("assistant", full_response)
+    # C-04：retrieved vs cited vs answer-supported 的确定性记录（零额外模型
+    # 调用）。document_block 是本轮实际注入（过滤后、带 [S#] 标记）的材料块，
+    # full_response 是最终交付答案（含 rescue/fallback 替换后的终稿）。
+    # 幻觉引用（答案引用未注入的 [S#]）与「标了没用」（重叠低于阈值）都会让
+    # faithfulness_ok=False，防止用无关材料硬刷引用指标。
+    _citation_block = str(getattr(context_assembly, "document_block", "") or "")
+    try:
+        state.context_data["citation_outcome"] = build_citation_outcome(full_response, _citation_block)
+    except Exception as exc:
+        logger.warning(f"Citation outcome evaluation failed: {exc}")
     if tool_calls:
         tool_loop_count = int(state.context_data.get("tool_loop_count") or 0)
         max_tool_loops = _max_tool_loops_for_state(state)
