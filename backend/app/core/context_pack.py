@@ -61,6 +61,13 @@ from app.orchestration.context_sources import (
     normalize_section,
 )
 from app.services.aurora_doc_context_kill_switch_service import AuroraDocContextKillSwitchService
+from app.services.conflict_resolution_context import (
+    UNRESOLVED_FETCH_LIMIT,
+    build_conflict_resolution_context,
+    build_record_index,
+    to_prompt_payload,
+)
+from app.services.conflict_resolver_service import ConflictResolverService
 from app.services.context_pack_telemetry_service import ContextPackTelemetryService
 from app.services.embedding_service import embedding_service
 from app.services.ltm_rollout_service import LtmRolloutService
@@ -1135,6 +1142,11 @@ class ContextPack:
     # Aurora/Router/Planner 的进程内消费面。刻意不进 to_prompt_context()——
     # manifest 是观测/决策元数据，不是 prompt 内容，避免 token 膨胀。
     decision_context: DecisionContext | None = None
+    # C-05 冲突裁决注入面（可选、默认 None → 无冲突/未开启时零破坏）：
+    # resolved facts（winner 归因 + 置信）+ unresolved 已知分歧（M-04 ask_once）
+    # + ask-if-material + resolution refs。digest 有界注入（防冲突原文全量进
+    # prompt），经 to_prompt_context 供模型/下游理解「选了哪条、为什么」。
+    conflict_resolution: dict[str, Any] | None = None
 
     def to_prompt_context(self) -> dict[str, Any]:
         result = {
@@ -1155,6 +1167,10 @@ class ContextPack:
             result["context_focus"] = self.context_focus
         if self.context_briefing_note:
             result["context_briefing_note"] = self.context_briefing_note
+        if self.conflict_resolution:
+            # C-05：prompt 面只带有界投影（prompt_note/旗标/ids）——结构化明细
+            # 留在进程内消费面，防止满额冲突整包进 prompt（token 纪律）。
+            result["conflict_resolution"] = to_prompt_payload(self.conflict_resolution)
         # Include plan_context if present (non-empty)
         if self.plan_context:
             result["plan_context"] = self.plan_context
@@ -1317,6 +1333,7 @@ class ContextPackBuilder:
         }
         ranking_enabled = settings.ENABLE_CONTEXT_RANKING and rollout_enabled
         conflicts: list[dict[str, Any]] = []
+        conflict_resolution_payload: dict[str, Any] | None = None
         weights: dict[str, float] | None = None
         if ranking_enabled and settings.ENABLE_PERSONALIZED_RANKING and rollout_enabled:
             policy_service = MemoryRankPolicyService(self.db)
@@ -1384,6 +1401,19 @@ class ContextPackBuilder:
             conflicts.extend(goal_conflicts)
             conflicts.extend(episodic_conflicts)
             conflicts.extend(cross_conflicts)
+            # C-05: 冲突裁决结果注入 Context —— resolved facts（winner 归因 +
+            # 置信）+ unresolved 已知分歧（M-04 ask_once）+ ask-if-material +
+            # resolution refs。record_index 用**预裁决全集**（pref_history 全版
+            # 本链 + goals/episodic 预裁决列表），否则被取代 loser 无 display
+            # 可归因。fail-soft，绝不阻断 pack 主链路。
+            conflict_resolution_payload = await self._build_conflict_resolution_payload(
+                user_id=user_id,
+                conflict_notes=conflicts,
+                preference_records=list(preference_records) + list(pref_history or []),
+                goals=goals,
+                episodes=episodic,
+                query_text=query_text,
+            )
             # 冲突消解分支的覆盖已由 resolver 显式产出（conflicts 面）。
             preference_collapse_overrides: list[Any] = []
         else:
@@ -1653,6 +1683,10 @@ class ContextPackBuilder:
             metadata["semantic_gating"] = semantic_metadata
         if conflicts:
             metadata["conflicts"] = conflicts
+        if conflict_resolution_payload:
+            # C-05：id 级 resolution refs 留 metadata（观测/遥测面）；正文注入面
+            # 走 ContextPack.conflict_resolution（一等字段，digest 有界）。
+            metadata["conflict_resolution_refs"] = conflict_resolution_payload["resolution_refs"]
         if focus_decision:
             metadata["context_focus"] = focus_decision.to_dict()
 
@@ -1868,7 +1902,47 @@ class ContextPackBuilder:
             context_focus=focus_decision.to_dict() if focus_decision else None,
             context_briefing_note=context_briefing_note or None,
             decision_context=decision_ctx,
+            conflict_resolution=conflict_resolution_payload,
         )
+
+    async def _build_conflict_resolution_payload(
+        self,
+        *,
+        user_id: UUID,
+        conflict_notes: list[dict[str, Any]],
+        preference_records: list[Any],
+        goals: list[Any],
+        episodes: list[Any],
+        query_text: str | None,
+    ) -> dict[str, Any] | None:
+        """C-05：组装冲突裁决注入面（resolved + unresolved + refs）。
+
+        消费纪律：resolved 面只读本 build 已裁决的 records/notes（不重建裁决；
+        ``preference_records`` 由调用方传入预裁决全集含 pref_history 全版本链，
+        winner/loser 双侧可归因）；unresolved 面只读 M-04
+        ``ConflictResolverService.list_unresolved_conflicts``（ask_once 权威，
+        pending_user 过滤在真源内）。全部 fail-soft——任何失败降级为无注入，
+        绝不阻断 pack 主链路。
+        """
+        try:
+            unresolved_rows: list[Any] = []
+            try:
+                rows = await ConflictResolverService(self.db).list_unresolved_conflicts(user_id=user_id)
+                unresolved_rows = list(rows)[:UNRESOLVED_FETCH_LIMIT]
+            except Exception as exc:  # noqa: BLE001 - fail-soft per docstring
+                logger.warning(f"C-05 failed to load unresolved conflicts for {user_id}: {exc}")
+            payload = build_conflict_resolution_context(
+                conflict_notes=conflict_notes,
+                record_index=build_record_index(preference_records, goals, episodes),
+                unresolved_rows=unresolved_rows,
+                query_text=query_text,
+            )
+            if payload["resolved_facts"] or payload["unresolved_conflicts"]:
+                return payload
+            return None
+        except Exception as exc:  # noqa: BLE001 - fail-soft per docstring
+            logger.warning(f"C-05 failed to build conflict resolution context for {user_id}: {exc}")
+            return None
 
     def _build_source_manifest(
         self,

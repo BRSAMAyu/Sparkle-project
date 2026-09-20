@@ -14,6 +14,7 @@ from typing import Any, Literal
 
 from loguru import logger
 
+from app.services.conflict_resolution_context import select_material_clarification
 from app.services.llm_fallback_utils import sufficiency_llm
 
 
@@ -33,6 +34,9 @@ class SufficiencyCheckResult:
     clarification_text: str | None = None
     recommended_action: Literal["proceed", "ask", "confirm"] = "proceed"
     missing_fields: list[str] = field(default_factory=list)
+    # C-05：material 记忆冲突的 One Best Question —— 选中的未裁决冲突 id
+    # （unresolved_conflicts 行，可直达仲裁 API）。无冲突提问时恒 None。
+    conflict_clarification_ref: str | None = None
 
 
 class SufficiencyChecker:
@@ -113,6 +117,7 @@ class SufficiencyChecker:
         use_llm_fallback: bool = False,
         tracking_key: str | None = None,
         planning_material_context: dict[str, Any] | None = None,
+        conflict_resolution: dict[str, Any] | None = None,
     ) -> SufficiencyCheckResult:
         """
         检查是否有足够信息执行意图
@@ -121,6 +126,11 @@ class SufficiencyChecker:
             intent: 意图类型 (create_task, create_plan, etc.)
             extracted_entities: 已提取的实体
             conversation_context: 对话历史上下文（用于推断）
+            conflict_resolution: C-05 ContextPack.conflict_resolution 注入面
+                （可选；缺省 None = 行为与旧版完全一致）。内部只消费其中
+                ask_if_material=True 的未裁决冲突——已裁决事实与 scope 不同
+                的 preserve-both 永不提问（materiality 判定在
+                conflict_resolution_context 模块，此处不重复发明）。
 
         Returns:
             SufficiencyCheckResult: 检查结果
@@ -188,6 +198,18 @@ class SufficiencyChecker:
                 intent=intent,
                 planning_material_context=planning_material_context,
             )
+
+        # C-05: 只对会改变 decision 的冲突提问（material 由注入面预判，本处
+        # 经 select_material_clarification 取 One Best Question）。缺省 None
+        # 时零行为变化；NEED_CONFIRMATION（高风险确认流）不被冲突提问改写。
+        if conflict_resolution and result.status != SufficiencyStatus.NEED_CONFIRMATION:
+            question, conflict_ref, _category = select_material_clarification(conflict_resolution)
+            if question:
+                result.status = SufficiencyStatus.NEED_CLARIFICATION
+                result.recommended_action = "ask"
+                result.clarification_questions.insert(0, question)
+                result.missing_fields.append("memory_conflict")
+                result.conflict_clarification_ref = conflict_ref
 
         logger.debug(
             f"Sufficiency check: intent={intent}, status={result.status}, "
