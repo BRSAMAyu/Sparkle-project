@@ -876,12 +876,14 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	}
 	h.logger.Info("Registered documents proxy routes")
 
-	// files: 文件处理触发与状态轮询（Python files.py：POST /files/process、
-	// GET /files/{file_id}/status）——上传链路演示依赖（2026-09-20 盘点补）
+	// files 组已有 Go 本地实现（file_handler.go：upload/:file_id/download/thumbnail），
+	// 这里只补 Python 侧两条：POST /files/process（触发 Celery 处理）与
+	// GET /files/{file_id}/status（处理状态轮询）——上传链路演示依赖（2026-09-20 盘点补）
 	files := api.Group("/files")
 	files.Use(authMiddleware)
 	{
-		h.registerREST(files, "/*path")
+		files.POST("/process", h.proxyWithHeaders)
+		files.GET("/:file_id/status", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered files proxy routes")
 
