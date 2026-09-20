@@ -1,0 +1,327 @@
+{
+  "schema_version": "aurora_friction_diagnosis.v1",
+  "description": "A-03 canonical stuck scenarios（20 例；persona 覆盖 USER_SEGMENTS_AND_JTBD 五类 Builder）。rubric：outcome 必须精确匹配；friction_in 为可接受类型集（act/best-guess 出口必须命中）；act 出口 nomination_first_in 为可接受首要提名集；ask 出口 question_id_in 为可接受问题集。hard_family 内场景全部必过（不计入 18/20 容差）。",
+  "hard_family": [
+    "s02_same_utterance_bare",
+    "s03_same_utterance_failures",
+    "s04_same_utterance_affective",
+    "s17_budget_best_guess",
+    "s18_budget_unknown_no_action",
+    "s20_cold_start_loop"
+  ],
+  "scenarios": [
+    {
+      "scenario_id": "s01_entry_competition_blank",
+      "persona": "competition_builder",
+      "description": "比赛 Builder：拿到题目两天没有任何任务拆解，不知道从哪开始（JTBD 核心摩擦：知道目标但不知道此刻怎么继续）",
+      "input": {
+        "utterance": "这个题目好大，完全不知道从哪开始",
+        "has_active_goal": true,
+        "has_task_context": false,
+        "task_anchor": "参赛作品",
+        "days_since_progress": 6
+      },
+      "expect": {
+        "outcome": "act",
+        "friction_in": ["entry"],
+        "nomination_first_in": ["rescope"]
+      }
+    },
+    {
+      "scenario_id": "s02_same_utterance_bare",
+      "persona": "generic",
+      "description": "同一句「做不下去」· 裸上下文：difficulty/energy 弱词牌平局 → 不足 → 问（根分裂）",
+      "input": {
+        "utterance": "做不下去"
+      },
+      "expect": {
+        "outcome": "ask",
+        "friction_in": ["difficulty", "energy"],
+        "question_id_in": ["q_direction_vs_push", "q_content_vs_state", "q_tried_and_checked", "q_goal_still_wanted"]
+      }
+    },
+    {
+      "scenario_id": "s03_same_utterance_failures",
+      "persona": "course_builder",
+      "description": "同一句「做不下去」· 行为面有连续失败：difficulty/skill 竞争带 → 问试做面；答案 tried_unsure → skill 直出 practice（一次问对）",
+      "input": {
+        "utterance": "做不下去",
+        "recent_failure_count": 5,
+        "has_task_context": true,
+        "task_anchor": "线代作业"
+      },
+      "expect": {
+        "outcome": "ask",
+        "friction_in": ["difficulty", "skill"],
+        "question_id_in": ["q_tried_and_checked", "q_content_vs_state", "q_direction_vs_push"]
+      },
+      "followup": {
+        "answer_text": "做过几题，但不知道对不对",
+        "expect": {
+          "outcome": "act",
+          "friction_in": ["skill"],
+          "nomination_first_in": ["practice"]
+        }
+      }
+    },
+    {
+      "scenario_id": "s04_same_utterance_affective",
+      "persona": "creator",
+      "description": "同一句「做不下去」· spine 情绪压力在案：energy 置信充分 → pause（与 s02/s03 同句不同 Context 不同处理）",
+      "input": {
+        "utterance": "做不下去",
+        "spine_state_keys": ["affective_pressure"]
+      },
+      "expect": {
+        "outcome": "act",
+        "friction_in": ["energy"],
+        "nomination_first_in": ["pause"]
+      }
+    },
+    {
+      "scenario_id": "s05_knowledge_research",
+      "persona": "research_builder",
+      "description": "科研 Builder：论文证明读不懂（缺知识，非缺技能）",
+      "input": {
+        "utterance": "这篇论文的证明完全看不懂，理论不懂",
+        "has_task_context": true,
+        "task_anchor": "文献精读"
+      },
+      "expect": {
+        "outcome": "act",
+        "friction_in": ["knowledge"],
+        "nomination_first_in": ["explain"]
+      }
+    },
+    {
+      "scenario_id": "s06_skill_exam",
+      "persona": "course_builder",
+      "description": "课程 Builder：公式会背不会做（知识迁移断裂）",
+      "input": {
+        "utterance": "公式都会背，一做题就不会",
+        "has_task_context": true,
+        "task_anchor": "期末复习"
+      },
+      "expect": {
+        "outcome": "act",
+        "friction_in": ["skill"],
+        "nomination_first_in": ["practice"]
+      }
+    },
+    {
+      "scenario_id": "s07_time_exam",
+      "persona": "course_builder",
+      "description": "课程 Builder：考试逼近 + spine 时限压力在案 → 重排计划",
+      "input": {
+        "utterance": "还有五天就考试了，完全来不及",
+        "spine_state_keys": ["goal_mode"]
+      },
+      "expect": {
+        "outcome": "act",
+        "friction_in": ["time"],
+        "nomination_first_in": ["schedule"]
+      }
+    },
+    {
+      "scenario_id": "s08_clarity_assignment",
+      "persona": "course_builder",
+      "description": "大作业验收标准模糊 → clarify 直出且必须携带问句载体（A-01 契约对 clarify 的强制参数）",
+      "input": {
+        "utterance": "老师没说要交什么格式，不知道做成什么样",
+        "has_task_context": true,
+        "task_anchor": "课程大作业"
+      },
+      "expect": {
+        "outcome": "act",
+        "friction_in": ["clarity"],
+        "nomination_first_in": ["clarify"],
+        "must_carry_question": true
+      }
+    },
+    {
+      "scenario_id": "s09_dependency_advisor",
+      "persona": "research_builder",
+      "description": "科研 Builder：等导师修改意见三周（外部依赖）",
+      "input": {
+        "utterance": "导师三周没回我修改意见，一直等着他",
+        "blocked_on_external": true,
+        "has_task_context": true
+      },
+      "expect": {
+        "outcome": "act",
+        "friction_in": ["dependency"],
+        "nomination_first_in": ["remind"]
+      }
+    },
+    {
+      "scenario_id": "s10_choice_portfolio",
+      "persona": "portfolio_builder",
+      "description": "作品集 Builder：想做的方向太多不知先做哪个（选项过多）",
+      "input": {
+        "utterance": "想做的东西太多，不知道先做哪个",
+        "has_active_goal": true
+      },
+      "expect": {
+        "outcome": "act",
+        "friction_in": ["choice"],
+        "nomination_first_in": ["reflect"]
+      }
+    },
+    {
+      "scenario_id": "s11_feedback_unseen",
+      "persona": "portfolio_builder",
+      "description": "作品集 Builder：写完没人看过，不知道对不对（缺外部反馈）",
+      "input": {
+        "utterance": "写完了但不知道自己写得对不对，没人给反馈",
+        "has_task_context": true,
+        "task_anchor": "项目文档"
+      },
+      "expect": {
+        "outcome": "act",
+        "friction_in": ["feedback"],
+        "nomination_first_in": ["review"]
+      }
+    },
+    {
+      "scenario_id": "s12_plan_drift_competition",
+      "persona": "competition_builder",
+      "description": "比赛 Builder：规则变更导致原方案失效（计划漂移）",
+      "input": {
+        "utterance": "比赛规则改了，原来的方案做不了了，得重新规划",
+        "has_task_context": true,
+        "task_anchor": "参赛方案"
+      },
+      "expect": {
+        "outcome": "act",
+        "friction_in": ["plan_drift"],
+        "nomination_first_in": ["rescope"]
+      }
+    },
+    {
+      "scenario_id": "s13_goal_drift_creator",
+      "persona": "creator",
+      "description": "Creator：当初想做视频，现在更想写文章（目标本身变化 → 重新对齐而非改计划）",
+      "input": {
+        "utterance": "当初想做视频，现在其实更想写文章",
+        "has_active_goal": true
+      },
+      "expect": {
+        "outcome": "act",
+        "friction_in": ["goal_drift"],
+        "nomination_first_in": ["reflect"]
+      }
+    },
+    {
+      "scenario_id": "s14_social_lonely",
+      "persona": "course_builder",
+      "description": "课程 Builder：一个人学不下去想找搭子（社群缺口）",
+      "input": {
+        "utterance": "一个人学不下去，想找个搭子",
+        "has_task_context": true
+      },
+      "expect": {
+        "outcome": "act",
+        "friction_in": ["social"],
+        "nomination_first_in": ["connect_peer"]
+      }
+    },
+    {
+      "scenario_id": "s15_tooling_env",
+      "persona": "competition_builder",
+      "description": "比赛 Builder：环境装了一晚上还是报错（机械/工具摩擦 → 代办面）",
+      "input": {
+        "utterance": "环境装了一晚上还是报错，配置搞不定",
+        "has_task_context": true
+      },
+      "expect": {
+        "outcome": "act",
+        "friction_in": ["tooling"],
+        "nomination_first_in": ["delegate"]
+      }
+    },
+    {
+      "scenario_id": "s16_unknown_no_signal",
+      "persona": "generic",
+      "description": "无任何证据（无话术/无状态/无事实）→ unknown 不假诊断，预算内问根分裂问",
+      "input": {},
+      "expect": {
+        "outcome": "ask",
+        "friction_in": ["unknown"],
+        "question_id_in": ["q_direction_vs_push"]
+      }
+    },
+    {
+      "scenario_id": "s17_budget_best_guess",
+      "persona": "course_builder",
+      "description": "歧义证据 + session 预算耗尽 → best-guess：act + uncertain=True + B1（不静默也不无限问）",
+      "input": {
+        "utterance": "做不下去",
+        "recent_failure_count": 3,
+        "has_task_context": true,
+        "questions_asked_session": 2
+      },
+      "expect": {
+        "outcome": "act",
+        "friction_in": ["difficulty", "skill"],
+        "nomination_first_in": ["split", "practice"],
+        "uncertain": true,
+        "reason_contains": "B1.budget_exhausted_best_guess"
+      }
+    },
+    {
+      "scenario_id": "s18_budget_unknown_no_action",
+      "persona": "generic",
+      "description": "无证据 + day 预算耗尽 → 不假诊断：no_action + B2 + 空提名（绝不无中生有）",
+      "input": {
+        "questions_asked_day": 5
+      },
+      "expect": {
+        "outcome": "no_action",
+        "friction_in": ["unknown"],
+        "nomination_first_in": [],
+        "reason_contains": "B2.budget_exhausted_unknown_no_action"
+      }
+    },
+    {
+      "scenario_id": "s19_decision_equivalence",
+      "persona": "competition_builder",
+      "description": "entry/plan_drift 竞争带同首要提名 rescope → 决策等价：不问（问不改变行动）直出 + 带内回退提名垫后",
+      "input": {
+        "utterance": "感觉计划全乱了，也不知道怎么开始",
+        "has_active_goal": true,
+        "has_task_context": true
+      },
+      "expect": {
+        "outcome": "act",
+        "friction_in": ["entry", "plan_drift"],
+        "nomination_first_in": ["rescope"],
+        "reason_contains": "S2.sufficient_decision_equivalence",
+        "uncertain": false
+      }
+    },
+    {
+      "scenario_id": "s20_cold_start_loop",
+      "persona": "competition_builder",
+      "description": "冷启动问询闭环：空输入 → 根分裂问 → 答案注入种子+新装配事实 → 一次问后收敛（S3）",
+      "input": {},
+      "expect": {
+        "outcome": "ask",
+        "friction_in": ["unknown"],
+        "question_id_in": ["q_direction_vs_push"]
+      },
+      "followup": {
+        "answer_text": "完全不知道下一步做什么",
+        "extra_input": {
+          "has_active_goal": true,
+          "has_task_context": false,
+          "task_anchor": "参赛作品"
+        },
+        "expect": {
+          "outcome": "act",
+          "friction_in": ["entry"],
+          "nomination_first_in": ["rescope"]
+        }
+      }
+    }
+  ]
+}
