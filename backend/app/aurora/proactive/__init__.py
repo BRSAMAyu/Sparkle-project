@@ -11,8 +11,39 @@ Aurora proactive pipeline (P-01): event → deterministic filter → Aurora.
   scope 隔离）。
 - :class:`ProactiveEventPipeline` — 管线主体 + EventBus 消费者组接入 +
   shadow 审计（metrics / recent_records / sink）。
+
+P-04 低风险 auto-execution 授权门（在 P-01 投递决策之后 / side effect 之前）：
+- :class:`AutoExecOperation` / ``AUTOEXEC_OPERATION_REGISTRY`` — 低风险操作
+  allowlist（封闭词表；高风险/不可逆结构性无表内名字）。
+- :class:`AutoExecGrantStore` — 授权 grant/revoke 存储（版本化 → revoke 即时
+  生效；fail-closed 读）。
+- ``decide_auto_execution`` — auto/proposal 判定纯函数（allowlist 门 → 元数据
+  复核门 → 授权门）。
+- :class:`ProactiveAutoExecGate` — 执行门（幂等键恰一次 + receipt/notification）。
 """
 
+from app.aurora.proactive.autoexec import (
+    AUTOEXEC_EMPTY_VERSION,
+    AUTOEXEC_OPERATION_REGISTRY,
+    AUTOEXEC_OPERATION_VOCABULARY,
+    AUTOEXEC_SCHEMA_VERSION,
+    AutoExecDecision,
+    AutoExecDecisionReason,
+    AutoExecGrantStore,
+    AutoExecOperation,
+    AutoExecOutcome,
+    AutoExecReceipt,
+    AutoExecReceiptStore,
+    AutoExecRequest,
+    AutoExecStateUnavailable,
+    ProactiveAutoExecGate,
+    build_autoexec_receipt_notification,
+    compute_grant_policy_version,
+    decide_auto_execution,
+    derive_autoexec_idempotency_key,
+    grant_cache_key,
+    validate_autoexec_allowlist,
+)
 from app.aurora.proactive.pipeline import (
     DecisionSink,
     ProactiveDecisionRecord,
@@ -53,4 +84,25 @@ __all__ = [
     "ProactiveDecisionRecord",
     "ProactiveEventPipeline",
     "DecisionSink",
+    # P-04 auto-execution authorization gate
+    "AUTOEXEC_SCHEMA_VERSION",
+    "AUTOEXEC_EMPTY_VERSION",
+    "AutoExecOperation",
+    "AUTOEXEC_OPERATION_REGISTRY",
+    "AUTOEXEC_OPERATION_VOCABULARY",
+    "validate_autoexec_allowlist",
+    "AutoExecDecision",
+    "AutoExecDecisionReason",
+    "AutoExecGrantStore",
+    "AutoExecStateUnavailable",
+    "compute_grant_policy_version",
+    "grant_cache_key",
+    "derive_autoexec_idempotency_key",
+    "decide_auto_execution",
+    "AutoExecRequest",
+    "AutoExecReceipt",
+    "AutoExecReceiptStore",
+    "AutoExecOutcome",
+    "ProactiveAutoExecGate",
+    "build_autoexec_receipt_notification",
 ]
