@@ -176,6 +176,7 @@ from app.models.memory_evolution import (
 )
 from app.models.memory_rank_policy import MemoryRankPolicy
 from app.models.marketplace import MarketplacePack, MarketplaceSkill, PackAdoptionHistory, UserSkillAdoption
+from app.models.policy_patch import PolicyPatchRecord
 from app.models.next_action_selection import NextActionSelection
 from app.models.nightly_review import NightlyReview
 from app.models.north_star_metrics import NorthStarMetricEvent
