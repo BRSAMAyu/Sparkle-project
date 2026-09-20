@@ -1120,6 +1120,12 @@ celery_app.conf.beat_schedule = {
         "schedule": crontab(hour=3, minute=40),
         "options": {"queue": "default"},
     },
+    # D-03 数据飞轮：理解五维每日度量 + 校准/漂移检测（默认队列，幂等 upsert）
+    "understanding-dimensions-daily": {
+        "task": "app.core.celery_tasks.compute_understanding_dimensions_daily",
+        "schedule": crontab(hour=3, minute=55),
+        "options": {"queue": "default"},
+    },
     "persdyn-attractor-recompute-daily": {
         "task": "app.core.celery_tasks.recompute_persdyn_attractors",
         "schedule": crontab(hour=0, minute=5),

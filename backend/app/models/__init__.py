@@ -234,6 +234,7 @@ except ImportError:
     TaskHistory = None
 from app.models.theater_prediction import TheaterPrediction
 from app.models.understanding_depth import UnderstandingDepthDaily
+from app.models.understanding_dimensions import UnderstandingCalibrationRun, UnderstandingDimensionDaily
 from app.models.tool_history import UserToolHistory
 from app.models.user import PushPreference, User
 from app.models.user_preferences import UserPreferencesCenter

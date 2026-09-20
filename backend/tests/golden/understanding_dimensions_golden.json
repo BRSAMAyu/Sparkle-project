@@ -1,0 +1,110 @@
+{
+  "schema_version": "understanding.dimensions.v1",
+  "frozen_at": "2026-09-20",
+  "note": "D-03 golden cases. Expected values hand-computed from the frozen formulas in app/core/understanding_dimensions.py; any formula change must re-freeze this file (sha256 pinned by test_understanding_dimensions_contract.py).",
+  "coverage": {
+    "ok": {
+      "context_scores": [1.0, 0.5, 0.5],
+      "task_scores": [1.0, 1.0, 0.0],
+      "missing_dimensions": ["relevant_memory_present", "intent_clarity", "relevant_memory_present"],
+      "expected": {
+        "status": "ok",
+        "value": 0.6667,
+        "samples": 3,
+        "task_score_mean": 0.6667,
+        "top_missing": ["relevant_memory_present", "intent_clarity"]
+      }
+    },
+    "unknown_below_min_sample": {
+      "context_scores": [1.0, 0.8],
+      "task_scores": [1.0, 1.0],
+      "missing_dimensions": [],
+      "expected": {"status": "unknown", "value": null, "samples": 2}
+    }
+  },
+  "correctness": {
+    "ok_moderate": {
+      "usage_opportunities": 20,
+      "negative_corrections": 3,
+      "unresolved_conflicts": 2,
+      "expected": {"status": "ok", "value": 0.5, "samples": 20}
+    },
+    "unknown_no_usage": {
+      "usage_opportunities": 0,
+      "negative_corrections": 5,
+      "unresolved_conflicts": 1,
+      "expected": {"status": "unknown", "value": null, "samples": 0}
+    },
+    "zero_at_saturation": {
+      "usage_opportunities": 2,
+      "negative_corrections": 5,
+      "unresolved_conflicts": 1,
+      "expected": {"status": "ok", "value": 0.0, "samples": 2}
+    }
+  },
+  "scope_precision": {
+    "ok_half": {
+      "scope_feedback_total": 8,
+      "scope_negative": 1,
+      "expected": {"status": "ok", "value": 0.5, "samples": 8}
+    },
+    "unknown_dark_channel": {
+      "scope_feedback_total": 0,
+      "scope_negative": 0,
+      "expected": {"status": "unknown", "value": null, "samples": 0}
+    }
+  },
+  "freshness": {
+    "ok_two_thirds": {
+      "lag_days_samples": [5.0, 10.0, 15.0],
+      "expected": {"status": "ok", "value": 0.6667, "samples": 3}
+    },
+    "unknown_no_samples": {
+      "lag_days_samples": [],
+      "expected": {"status": "unknown", "value": null, "samples": 0}
+    },
+    "zero_on_clamped_stale": {
+      "lag_days_samples": [400.0],
+      "expected": {"status": "ok", "value": 0.0, "samples": 1}
+    }
+  },
+  "utility": {
+    "ok_three_fifths": {
+      "accepted": 6,
+      "corrected": 2,
+      "denied": 2,
+      "expected": {"status": "ok", "value": 0.6, "samples": 10}
+    },
+    "unknown_below_min_decisive": {
+      "accepted": 2,
+      "corrected": 0,
+      "denied": 0,
+      "expected": {"status": "unknown", "value": null, "samples": 2}
+    }
+  },
+  "window_inputs_composite": {
+    "inputs": {
+      "context_scores": [1.0, 0.5, 0.5],
+      "task_scores": [1.0, 1.0, 0.0],
+      "missing_dimensions": ["a", "b", "a"],
+      "usage_opportunities": 10,
+      "correctness_negatives": 2,
+      "unresolved_conflicts": 0,
+      "scope_feedback_total": 4,
+      "scope_negatives": 1,
+      "lag_days": [10.0, 20.0],
+      "utility_accepted": 2,
+      "utility_corrected": 1,
+      "utility_denied": 0,
+      "user_messages": ["帮我制定复习计划", "帮我制定复习计划", "今天好累"]
+    },
+    "expected_dimensions": {
+      "coverage": {"status": "ok", "value": 0.6667},
+      "correctness": {"status": "ok", "value": 0.6},
+      "scope_precision": {"status": "ok", "value": 0.0, "note": "1/4 misuse = exactly SCOPE_TOLERANCE boundary → 0"},
+      "freshness": {"status": "ok", "value": 0.5},
+      "utility": {"status": "ok", "value": 0.6667}
+    },
+    "expected_coverage_anchor": {"anchor_value": 0.5, "anchor_samples": 3}
+  }
+}

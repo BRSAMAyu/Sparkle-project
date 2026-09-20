@@ -3643,3 +3643,67 @@ def compute_understanding_depth_daily(self, day: str | None = None, limit: int =
         return _run_async(_run())
     except Exception as exc:
         raise self.retry(exc=exc, countdown=120) from exc
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.compute_understanding_dimensions_daily")
+def compute_understanding_dimensions_daily(self, day: str | None = None, limit: int = 2000):
+    """D-03 数据飞轮：理解五维每日度量 + 校准/漂移检测（默认队列）。
+
+    五维（coverage/correctness/scope_precision/freshness/utility，公式冻结于
+    app/core/understanding_dimensions.py，缺数据=unknown）从真实表
+    （aurora_judgment_records / context_pack_runs / memory_corrections /
+    unresolved_conflicts / chat_messages）按 7 天滚动窗聚合，落表
+    understanding_dimension_daily（幂等 upsert，可带 day 重算补齐历史）；
+    随后对窗口内有行的用户跑离线校准 + 漂移检测，落
+    understanding_calibration_runs。由 beat 条目 understanding-dimensions-daily
+    每日 03:55 触发（在 understanding-depth-daily 之后错峰）。
+
+    Args:
+        day: ISO 日期（YYYY-MM-DD）；缺省为 UTC 昨天。
+        limit: 单批最大用户数保护。
+    """
+    from datetime import datetime, timedelta
+
+    from app.db.session import AsyncSessionLocal
+
+    async def _run():
+        from sqlalchemy import select
+
+        from app.models.understanding_dimensions import UnderstandingDimensionDaily
+        from app.services.understanding_calibration_service import UnderstandingCalibrationService
+        from app.services.understanding_dimensions_service import UnderstandingDimensionsService
+
+        if day:
+            target_day = datetime.strptime(str(day), "%Y-%m-%d").date()
+        else:
+            target_day = (datetime.utcnow() - timedelta(days=1)).date()
+        async with AsyncSessionLocal() as session:
+            dims_service = UnderstandingDimensionsService(session)
+            summary = await dims_service.compute_daily_all(day=target_day, limit=limit)
+            # 校准/漂移：只对窗口内已有 daily 行的用户跑（有行才有可对齐面）。
+            row_result = await session.execute(
+                select(UnderstandingDimensionDaily.user_id).where(
+                    UnderstandingDimensionDaily.metric_date == target_day
+                )
+            )
+            user_ids = sorted({row for row in row_result.scalars().all() if row})[:limit]
+            calib_service = UnderstandingCalibrationService(session)
+            calibrated = 0
+            red = 0
+            for user_id in user_ids:
+                try:
+                    report = await calib_service.run_for_user(user_id=user_id)
+                    calibrated += 1
+                    if report.get("overall_status") == "red":
+                        red += 1
+                except Exception:
+                    # 校准失败不阻断整批（下一日会重试），行级失败可观测靠 celery 日志。
+                    continue
+            summary["calibrated_users"] = calibrated
+            summary["drift_red_users"] = red
+            return summary
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        raise self.retry(exc=exc, countdown=120) from exc
