@@ -14,6 +14,8 @@ from app.models.accountability import (
     AccountabilityStatus,
 )
 from app.models.accountability_policy import AccountabilityPolicy
+from app.models.agent_run import AgentRun, AgentRunKind, AgentRunTransition
+from app.models.agent_tool_call import AgentToolCall
 from app.models.achievement import (
     Achievement,
     AchievementRarity,
