@@ -24,6 +24,7 @@ from app.models.galaxy import KnowledgeNode, NodeRelation, UserNodeStatus
 from app.models.plan import Plan
 from app.models.task import Task
 from app.models.user import User
+from app.services.galaxy.mastery_evidence import EvidenceObservation, MasteryEvidenceType
 from app.schemas.galaxy import (
     ApplyNodeExpansionRequest,
     ApplyNodeExpansionResponse,
@@ -399,13 +400,22 @@ async def spark_node(
     点亮/增强知识点
 
     当用户完成学习任务时调用，更新掌握度并可能触发 LLM 拓展。
+    G-01: 附带 outcome 证据时走贝叶斯证据融合；缺省走 legacy 时间公式（封顶 40）。
     """
+    outcome_obs = None
+    if request is not None and request.outcome is not None:
+        outcome_obs = EvidenceObservation(
+            evidence_type=MasteryEvidenceType(request.outcome.evidence_type),
+            value=request.outcome.value,
+            confidence=request.outcome.confidence,
+        )
     return await galaxy_service.spark_node(
         user_id=UUID(user_id),
         node_id=node_id,
         study_minutes=request.study_minutes if request else 1,
         task_id=request.task_id if request else None,
         trigger_expansion=request.trigger_expansion if request else True,
+        outcome=outcome_obs,
     )
 
 

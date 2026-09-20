@@ -4,7 +4,7 @@ import math
 import re
 from datetime import datetime
 from enum import StrEnum
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -42,10 +42,26 @@ class LearningGraphState(StrEnum):
 # ==========================================
 # 请求模型
 # ==========================================
+class SparkOutcomeEvidence(BaseModel):
+    """G-01: outcome evidence attached to a spark request.
+
+    evidence_type: quiz = 测验/成绩（高权重）；task_outcome = 任务完成质量；
+    chat_signal = 对话掌握信号；material_ref = 材料引用。
+    self_report 永远不接受为 outcome——自评走独立通道，不与测验混算。
+    """
+
+    evidence_type: Literal["quiz", "task_outcome", "chat_signal", "material_ref"] = "task_outcome"
+    value: float = Field(..., ge=0, le=100, description="mastery 等效观测值 0-100")
+    confidence: float = Field(0.8, ge=0, le=1, description="来源置信度 0-1")
+
+
 class SparkRequest(BaseModel):
     study_minutes: int = Field(..., ge=1, le=480, description="学习时长(分钟)")
     task_id: UUID | None = Field(None, description="关联的任务ID")
     trigger_expansion: bool = Field(True, description="是否触发知识拓展")
+    outcome: SparkOutcomeEvidence | None = Field(
+        None, description="G-01: 学习 outcome 证据（quiz/任务质量）；缺省时走 legacy 时间公式（封顶 40）"
+    )
 
 
 class SearchRequest(BaseModel):
@@ -271,6 +287,21 @@ class NodeBase(BaseModel):
         return blend_sector_colors(sector_weights)
 
 
+class MasteryEvidenceInfo(BaseModel):
+    """G-01: evidence provenance of a mastery value.
+
+    is_legacy_estimate=True 表示该 mastery 来自 legacy 时间公式且没有任何
+    真实证据（quiz/task_outcome/chat_signal/material_ref）支撑——UI 可区分
+    展示；真实证据融合后旗标摘除。
+    """
+
+    is_legacy_estimate: bool = True
+    evidence_count: int = 0
+    self_report_count: int = 0
+    breakdown: dict[str, int] = Field(default_factory=dict)
+    last_evidence_type: str | None = None
+
+
 class UserStatusInfo(BaseModel):
     mastery_score: float
     total_study_minutes: int
@@ -296,6 +327,9 @@ class UserStatusInfo(BaseModel):
     # 计算属性
     status: NodeStatus
     brightness: float  # 0-1，用于前端渲染
+
+    # G-01: mastery 的证据溯源（None = 未评估；is_legacy_estimate=True = legacy 时间估算）
+    mastery_evidence: MasteryEvidenceInfo | None = None
 
 
 class NodeWithStatus(NodeBase):
@@ -325,6 +359,7 @@ class NodeWithStatus(NodeBase):
         *,
         goal_node_ids: set[UUID] | None = None,
         blocked_by_prerequisite_node_ids: list[UUID] | None = None,
+        evidence_count: int | None = None,
     ):
         user_status = None
         blocked_by_prerequisite_node_ids = blocked_by_prerequisite_node_ids or []
@@ -375,6 +410,14 @@ class NodeWithStatus(NodeBase):
                 days_since_mastery_update=float(getattr(review_signal, "days_since_mastery_update", 0.0) or 0.0),
                 status=visual_status,
                 brightness=brightness,
+                mastery_evidence=(
+                    MasteryEvidenceInfo(
+                        is_legacy_estimate=not evidence_count,
+                        evidence_count=evidence_count,
+                    )
+                    if evidence_count is not None
+                    else None
+                ),
             )
 
         sector_weights = resolve_sector_weights(node)

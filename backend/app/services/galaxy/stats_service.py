@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import inspect
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
@@ -14,6 +15,20 @@ from app.core.event_bus import event_bus
 from app.models.galaxy import KnowledgeNode, NodeRelation, StudyRecord, UserNodeStatus
 from app.schemas.galaxy import GalaxyUserStats, NodeWithStatus, SectorCode, SparkEvent, SparkResult, UserStatusInfo
 from app.services.expansion_service import ExpansionService
+from app.services.galaxy.mastery_evidence import (
+    REAL_EVIDENCE_TYPES,
+    EvidenceHistoryEntry,
+    EvidenceObservation,
+    MasteryBelief,
+    MasteryEvidenceType,
+    capped_legacy_mastery,
+    classify_audit_reason,
+    encode_evidence_reason,
+    encode_observation_payload,
+    fuse_mastery,
+    parse_observation_payload,
+    recompute_evidence_state,
+)
 from app.services.node_sector_service import dominant_sector_from_weights, resolve_sector_weights
 
 
@@ -46,6 +61,36 @@ SPARK_OUTBOX_INSERT_SQL = """
 """
 
 
+def _mastery_evidence_info(
+    prior_belief: MasteryBelief,
+    outcome: EvidenceObservation | None = None,
+):
+    """Build the evidence provenance payload for a spark response.
+
+    The prior belief already reflects the persisted ledger; if a fresh outcome
+    was just fused, the flag clears immediately (not only on next read).
+    """
+    from app.schemas.galaxy import MasteryEvidenceInfo as _Info
+
+    breakdown = dict(prior_belief.breakdown)
+    evidence_count = prior_belief.evidence_count
+    if outcome is not None and outcome.evidence_type is not MasteryEvidenceType.SELF_REPORT:
+        breakdown[outcome.evidence_type.value] = breakdown.get(outcome.evidence_type.value, 0) + 1
+        evidence_count += 1
+    real_values = {t.value for t in REAL_EVIDENCE_TYPES}
+    has_real = any(k in real_values for k in breakdown)
+    last_type = outcome.evidence_type.value if outcome is not None else (
+        next((k for k in ("quiz", "task_outcome", "chat_signal", "material_ref") if k in breakdown), None)
+    )
+    return _Info(
+        is_legacy_estimate=not has_real,
+        evidence_count=evidence_count,
+        self_report_count=prior_belief.self_report_count,
+        breakdown=breakdown,
+        last_evidence_type=last_type,
+    )
+
+
 class GalaxyStatsService:
     # 掌握度计算常量
     BASE_MASTERY_POINTS = 5.0
@@ -61,24 +106,40 @@ class GalaxyStatsService:
         node_id: UUID,
         study_minutes: int,
         task_id: UUID | None = None,
-        trigger_expansion: bool = True
+        trigger_expansion: bool = True,
+        outcome: EvidenceObservation | None = None,
     ) -> SparkResult:
         """
         点亮/增强知识点 (任务完成时调用)
+
+        G-01 evidence-aware: 当提供 outcome evidence（测验/任务质量）时，
+        mastery 由贝叶斯证据融合产生；否则走 legacy 时间公式，但被
+        LEGACY_TIME_MASTERY_CAP 封顶——纯时长永远无法凭空推到"已掌握"。
         """
         # 1. 获取或创建用户节点状态
         status = await self._get_or_create_status(user_id, node_id)
 
-        # 2. 计算掌握度增量
+        # 2. 计算掌握度
         node = await self.db.get(KnowledgeNode, node_id)
-        mastery_delta = self._calculate_mastery_delta(study_minutes, node.importance_level)
-
-        # 3. 记录旧状态
         old_mastery = status.mastery_score
         is_first_unlock = not status.is_unlocked
 
+        # 2.1 G-01: 重放该节点的证据账本，得到当前先验信念
+        prior_belief = await self._load_prior_belief(user_id, node_id, old_mastery)
+
+        if outcome is not None:
+            # 证据融合路径：outcome（quiz/task 质量）驱动 mastery
+            fused = fuse_mastery(prior_belief.mean, prior_belief.variance, [outcome])
+            new_mastery = min(max(fused.mean, 0.0), self.MAX_MASTERY)
+            mastery_delta = new_mastery - old_mastery
+        else:
+            # Legacy 时间路径：有界（时间不再点亮高段掌握度）
+            raw_delta = self._calculate_mastery_delta(study_minutes, node.importance_level)
+            new_mastery = capped_legacy_mastery(old_mastery, raw_delta)
+            mastery_delta = new_mastery - old_mastery
+
         # 4. 更新状态
-        status.mastery_score = min(status.mastery_score + mastery_delta, self.MAX_MASTERY)
+        status.mastery_score = new_mastery
         status.total_study_minutes += study_minutes
         status.study_count += 1
         status.last_study_at = _utcnow()
@@ -121,6 +182,24 @@ class GalaxyStatsService:
                     "revision": getattr(status, "revision", 0),
                 },
             )
+            # G-01: outcome evidence gets its own audit row so the evidence
+            # ledger (replayed by _load_prior_belief) stays append-only.
+            if outcome is not None:
+                await self.db.execute(
+                    sa_text(
+                        "INSERT INTO mastery_audit_log (node_id, user_id, old_mastery, new_mastery, reason, request_id, revision) "
+                        "VALUES (:node_id, :user_id, :old_mastery, :new_mastery, :reason, :request_id, :revision)"
+                    ),
+                    {
+                        "node_id": node_id,
+                        "user_id": user_id,
+                        "old_mastery": int(old_mastery),
+                        "new_mastery": int(status.mastery_score),
+                        "reason": encode_evidence_reason(outcome.evidence_type),
+                        "request_id": encode_observation_payload(outcome.value, outcome.confidence),
+                        "revision": getattr(status, "revision", 0),
+                    },
+                )
             await self.db.commit()
         except Exception as e:
             logger.warning(f"Failed to write mastery audit log for spark_node: {e}")
@@ -273,6 +352,7 @@ class GalaxyStatsService:
             decay_paused=status.decay_paused,
             status=NodeWithStatus._calculate_status(status),
             brightness=NodeWithStatus._calculate_brightness(status),
+            mastery_evidence=_mastery_evidence_info(prior_belief, outcome),
         )
 
         return SparkResult(
@@ -436,6 +516,97 @@ class GalaxyStatsService:
         return heatmap
 
     # --- Helpers ---
+
+    async def _load_prior_belief(self, user_id: UUID, node_id: UUID, current_mastery: float) -> MasteryBelief:
+        """G-01: replay the mastery_audit_log evidence ledger for this node.
+
+        Rows written by the spark evidence path carry `evidence:<type>` reasons
+        with an observation payload; quiz-grade rows written by other flows
+        (error book / exam sprint) are recognized via classify_audit_reason.
+        Falls back to the stored mastery as an unvalidated legacy prior when
+        the ledger is unreadable.
+        """
+        from sqlalchemy import text as sa_text
+
+        try:
+            result = await self.db.execute(
+                sa_text(
+                    "SELECT reason, request_id, created_at FROM mastery_audit_log "
+                    "WHERE user_id = :user_id AND node_id = :node_id ORDER BY created_at ASC"
+                ),
+                {"user_id": user_id, "node_id": node_id},
+            )
+            fetched = result.fetchall()
+            if inspect.iscoroutine(fetched):
+                fetched = await fetched
+            try:
+                rows = list(fetched or [])
+            except TypeError:
+                rows = []
+        except Exception as e:
+            logger.warning(f"Failed to load evidence ledger for node {node_id}: {e}")
+            return MasteryBelief(mean=current_mastery)
+
+        history: list[EvidenceHistoryEntry] = []
+        presence_only: list[MasteryEvidenceType] = []
+        for reason, request_id, created_at in rows:
+            evidence_type = classify_audit_reason(reason)
+            if evidence_type is None:
+                continue
+            parsed = parse_observation_payload(request_id)
+            if parsed is None:
+                # Quiz-grade rows from other flows (error book / exam sprint)
+                # carry no observation payload; their effect is already baked
+                # into the stored mastery, so they count as evidence presence
+                # (they clear the legacy flag) but are not re-fused.
+                presence_only.append(evidence_type)
+                continue
+            value, confidence = parsed
+            history.append(
+                EvidenceHistoryEntry(
+                    evidence_type=evidence_type,
+                    value=float(value),
+                    confidence=float(confidence),
+                    observed_at=created_at,
+                )
+            )
+        if not history and not presence_only:
+            return MasteryBelief(mean=current_mastery)
+        belief = recompute_evidence_state(current_mastery, history)
+        for evidence_type in presence_only:
+            belief.breakdown[evidence_type.value] = belief.breakdown.get(evidence_type.value, 0) + 1
+        return belief
+
+    async def get_evidence_counts_by_node(self, user_id: UUID) -> dict[UUID, int]:
+        """G-01: per-node count of real evidence rows (graph read path).
+
+        Powers the `legacy_estimate` flag in Galaxy graph responses: a node
+        with zero real-evidence audit rows is rendering a legacy estimate.
+        """
+        from sqlalchemy import text as sa_text
+
+        from app.services.galaxy.mastery_evidence import QUIZ_EVIDENCE_REASONS
+
+        quiz_reasons = sorted(QUIZ_EVIDENCE_REASONS)
+        placeholders = ", ".join(f":reason_{i}" for i in range(len(quiz_reasons)))
+        params: dict[str, object] = {"user_id": user_id}
+        for i, reason in enumerate(quiz_reasons):
+            params[f"reason_{i}"] = reason
+        try:
+            result = await self.db.execute(
+                sa_text(
+                    f"SELECT node_id, COUNT(*) AS n FROM mastery_audit_log "
+                    f"WHERE user_id = :user_id AND (reason LIKE 'evidence:%' OR reason IN ({placeholders})) "
+                    f"GROUP BY node_id"
+                ),
+                params,
+            )
+            rows = result.fetchall()
+        except Exception as e:
+            logger.warning(f"Failed to load evidence counts for user {user_id}: {e}")
+            return {}
+        return {row[0]: int(row[1]) for row in rows if row[0] is not None}
+
 
     async def _write_spark_outbox_event(
         self,

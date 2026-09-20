@@ -63,6 +63,7 @@ from app.services.galaxy.ontology_generator import (
 from app.services.galaxy.provenance import append_graph_event_source
 from app.services.galaxy.retrieval_service import KnowledgeRetrievalService
 from app.services.galaxy.review_urgency_service import ReviewUrgencyService
+from app.services.galaxy.mastery_evidence import EvidenceObservation
 from app.services.galaxy.stats_service import GalaxyStatsService
 from app.services.galaxy.structure_service import GraphStructureService
 from app.services.node_sector_service import NodeSectorService
@@ -2308,6 +2309,9 @@ class GalaxyService:
         goal_node_ids = await self._get_goal_connected_node_ids(user_id)
         blocked_prerequisites = self._get_blocked_prerequisites_by_node(nodes_with_status, relations)
 
+        # G-01: per-node real-evidence counts power the legacy_estimate flag
+        evidence_counts = await self.stats.get_evidence_counts_by_node(user_id)
+
         # 6. Assemble with Flutter-compatible fields
         return GalaxyGraphResponse(
             nodes=[
@@ -2318,6 +2322,7 @@ class GalaxyService:
                     review_signal=review_signals.get(node.id),
                     goal_node_ids=goal_node_ids,
                     blocked_by_prerequisite_node_ids=blocked_prerequisites.get(node.id, []),
+                    evidence_count=evidence_counts.get(node.id, 0),
                 )
                 for node, status in nodes_with_status
             ],
@@ -2598,8 +2603,9 @@ class GalaxyService:
         study_minutes: int,
         task_id: UUID | None = None,
         trigger_expansion: bool = True,
+        outcome: "EvidenceObservation | None" = None,
     ) -> SparkResult:
-        return await self.stats.spark_node(user_id, node_id, study_minutes, task_id, trigger_expansion)
+        return await self.stats.spark_node(user_id, node_id, study_minutes, task_id, trigger_expansion, outcome)
 
     async def predict_next_node(self, user_id: UUID) -> NodeWithStatus | None:
         return await self.stats.predict_next_node(user_id)
