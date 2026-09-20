@@ -503,6 +503,31 @@ CONTEXT_BUDGET_OVER_LIMIT_TOTAL = get_or_create_metric(
     ['type']
 )
 
+# C-08（context-eval）：context 漏斗观测——stage ∈ {candidates, filtered,
+# ranked, injected}、surface ∈ {memory_episodic, memory_experience, documents,
+# other}、outcome ∈ {kept, dropped}（全有界，24+ 序列封顶）；decision reason
+# 词表经 context_funnel.clamp_drop_reason 收敛后计入 dropped。
+CONTEXT_FUNNEL_STAGE_ITEMS_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_context_funnel_stage_items_total',
+    'Context assembly funnel items per stage/surface/outcome (C-08, bounded labels)',
+    ['stage', 'surface', 'outcome']
+)
+
+CONTEXT_FUNNEL_INERT_REFS_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_context_funnel_inert_refs_total',
+    'Injected-but-never-cited-never-supported refs (C-08 inert/harmful candidates)',
+    ['surface']
+)
+
+CONTEXT_FUNNEL_BLOAT_SECTION_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_context_funnel_bloat_section_total',
+    'Context bloat flags: section token share above threshold (C-08)',
+    ['section']
+)
+
 CONTEXT_PACK_INTENT = get_or_create_metric(
     Counter,
     'sparkle_context_pack_intent_total',

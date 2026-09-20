@@ -47,7 +47,7 @@ from app.services.experience_memory_projector import ExperienceMemoryProjector
 from app.services.focus_service import focus_service
 from app.services.galaxy_service import GalaxyService
 from app.services.insight_copy import canonical_pattern_key, present_pattern_description, present_pattern_name
-from app.services.memory_retrieval_prefilter import PURPOSE_LLM_CONTEXT, apply_memory_prefilter, build_retrieval_context
+from app.services.memory_retrieval_prefilter import PURPOSE_LLM_CONTEXT, build_retrieval_context, prefilter_candidates
 from app.services.memory_service import MemoryService
 from app.services.memory_use_selfcheck import (
     MemoryUseCandidate,
@@ -672,7 +672,12 @@ class ContextBuilderMixin:
             user_id=user_uuid,
             purpose=PURPOSE_LLM_CONTEXT,
         )
-        episodic_rows = apply_memory_prefilter(episodic_rows, retrieval_ctx)
+        # C-08（context-eval）：预筛结果整段捕获（此前 apply_memory_prefilter
+        # 只留 allowed、reasons 丢弃）——漏斗 candidates→filtered 段的决策
+        # reasons 从这里来。metadata-only（id/reason/计数，无正文）。
+        episodic_prefilter = prefilter_candidates(episodic_rows, retrieval_ctx)
+        episodic_prefilter_input = list(episodic_rows)
+        episodic_rows = episodic_prefilter.allowed
         ranked_episodic_rows = sorted(
             episodic_rows,
             key=lambda memory: (
@@ -717,6 +722,56 @@ class ContextBuilderMixin:
         payload["active_goals"] = active_goals
         payload["episodic_memories"] = episodic_memories
         payload.setdefault("aurora_stage34_modes", await self._stage34_modes_payload())
+
+        # C-08（context-eval）：episodic 记忆漏斗——candidates→filtered（M-03
+        # 预筛 reasons）→ranked→injected（rank 截断 + M-05 selfcheck 降档）
+        # 四段计数 + token + 决策 reasons。metadata-only（id/reason/计数/token，
+        # 零正文），供 generation_node 的统一 context funnel 记录消费。
+        try:
+            from app.orchestration.context_funnel import (
+                build_episodic_funnel,
+                episodic_ref,
+                make_source_ref,
+            )
+
+            _selected_ids = {str(memory.get("id")) for memory in episodic_memories}
+            _selfcheck_dropped: list[tuple[str, str]] = []
+            if isinstance(payload.get("memory_selfcheck"), dict):
+                for entry in payload["memory_selfcheck"].get("internal_only") or []:
+                    _entry_id = str(entry.get("item_id") or "") if isinstance(entry, dict) else ""
+                    if _entry_id and _entry_id not in _selected_ids:
+                        _selfcheck_dropped.append((_entry_id, "selfcheck_internal"))
+            _memory_funnel = build_episodic_funnel(
+                candidate_rows=episodic_prefilter_input,
+                prefilter_allowed_count=episodic_prefilter.allowed_count,
+                prefilter_reasons=dict(episodic_prefilter.reason_counts),
+                prefilter_dropped_refs=[
+                    (episodic_ref(rejection.record_id), rejection.reason)
+                    for rejection in episodic_prefilter.rejections
+                ],
+                ranked_rows=ranked_episodic_rows,
+                injected_rows=episodic_memories,
+                selfcheck_dropped_refs=_selfcheck_dropped,
+            )
+            payload["context_funnel_memory"] = {
+                "surface": _memory_funnel.surface,
+                "stages": _memory_funnel.to_payload()["stages"],
+                "consistent": _memory_funnel.validate() == [],
+                "source_refs": [
+                    make_source_ref(
+                        kind="episodic",
+                        ref_id=episodic_ref(memory.get("id")),
+                        content=str(memory.get("summary") or ""),
+                        extra={
+                            "claim_status": memory.get("claim_status"),
+                            "source_lane": memory.get("source_lane"),
+                        },
+                    )
+                    for memory in episodic_memories
+                ],
+            }
+        except Exception as exc:
+            logger.debug(f"C-08 memory funnel capture degraded: {exc}")
 
         # WIRING-1（FIX-33）：M-06 经验记忆检索接入 chat context 装配——
         # 「该用户相似 situation 下何曾与正/负结果共同出现」经真实 M-03 预筛 +
@@ -827,6 +882,9 @@ class ContextBuilderMixin:
         ]
         payload["experience_memories"] = experience_memories
         meta["surfaced"] = len(experience_memories)
+        # C-08（context-eval）：注入 claims 的 token 计量（experience 漏斗
+        # injected 段；metadata-only）。
+        meta["tokens"] = sum(len(str(entry.get("claim") or "")) // 4 for entry in experience_memories)
 
     async def _build_aurora_everyday_presence_context(
         self,

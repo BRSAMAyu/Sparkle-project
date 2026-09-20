@@ -1235,6 +1235,30 @@ async def retrieval_node(state: WorkflowState) -> WorkflowState:
                 "fallback_triggered": filtered_rag.fallback_triggered,
                 "entities": list(rag_result.entities or []),
             }
+            # C-08（context-eval）：注入切片的 source_ref 登记（metadata-only：
+            # doc:file:chunk + 长度/短哈希/token，零正文）——错误 Context 的
+            # 溯源锚点；generation_node 与 [S#] 标记按注入顺序对齐。
+            try:
+                from app.orchestration.context_funnel import document_ref, make_source_ref
+
+                state.context_data["document_source_refs"] = [
+                    make_source_ref(
+                        kind="document",
+                        ref_id=document_ref(item.source_file_id, item.chunk_id),
+                        content=item.content,
+                        extra={
+                            "file_id": str(item.source_file_id) if item.source_file_id else None,
+                            "chunk_id": str(item.chunk_id) if item.chunk_id else None,
+                            "page_number": item.page_number,
+                            "chunk_index": item.chunk_index,
+                            "relevance_score": round(float(item.relevance_score or 0.0), 4),
+                            "evidence_strength": item.evidence_strength,
+                        },
+                    )
+                    for item in filtered_rag.chunks
+                ]
+            except Exception as exc:
+                logger.debug(f"C-08 document source_refs capture degraded: {exc}")
             for item in filtered_rag.chunks:
                 turn_citation_payloads.append(
                     {
@@ -1299,6 +1323,30 @@ async def retrieval_node(state: WorkflowState) -> WorkflowState:
                     "total_passed": filtered_docs.total_passed,
                     "fallback_triggered": filtered_docs.fallback_triggered,
                 }
+                # C-08（context-eval）：同 graphrag 路径的 source_ref 登记
+                # （bullet 格式无 [S#] 标记 → manifest 记 ref、alignment 诚实
+                # 记 no_markers，不误标对齐）。
+                try:
+                    from app.orchestration.context_funnel import document_ref, make_source_ref
+
+                    state.context_data["document_source_refs"] = [
+                        make_source_ref(
+                            kind="document",
+                            ref_id=document_ref(item.source_file_id, item.chunk_id),
+                            content=item.content,
+                            extra={
+                                "file_id": str(item.source_file_id) if item.source_file_id else None,
+                                "chunk_id": str(item.chunk_id) if item.chunk_id else None,
+                                "page_number": item.page_number,
+                                "chunk_index": item.chunk_index,
+                                "relevance_score": round(float(item.relevance_score or 0.0), 4),
+                                "evidence_strength": item.evidence_strength,
+                            },
+                        )
+                        for item in filtered_docs.chunks
+                    ]
+                except Exception as exc:
+                    logger.debug(f"C-08 document source_refs capture degraded: {exc}")
 
                 if filtered_docs.chunks:
                     _budget_tier, _budget_decision = _resolve_budget_dimensions(state.context_data)
@@ -2113,6 +2161,58 @@ Ask about their available time and current tasks if needed.
         state.context_data["citation_outcome"] = build_citation_outcome(full_response, _citation_block)
     except Exception as exc:
         logger.warning(f"Citation outcome evaluation failed: {exc}")
+    # C-08（context-eval）：统一 context funnel 记录——把 stage34 记忆漏斗
+    # （user_context.context_funnel_memory）、RAG 漏斗（document_context_
+    # retrieval/budget）、C-06 预算分区 token 与 C-04 citation outcome 收敛成
+    # 单一 metadata-only 记录 + source_ref manifest + bloat/inert 定位。
+    # 回答「这次模型为什么看了这些、看得对不对」；失败只降级，不阻断主链。
+    try:
+        from app.orchestration.context_funnel import (
+            build_context_funnel_record,
+            funnel_log_line,
+            record_funnel_metrics,
+        )
+
+        _uc_payload = state.context_data.get("user_context")
+        _memory_refs = []
+        if isinstance(_uc_payload, dict):
+            for _mem in _uc_payload.get("episodic_memories") or []:
+                _summary = str(_mem.get("summary") or "")
+                _memory_refs.append(
+                    {
+                        "kind": "episodic",
+                        "ref": f"mem:{_mem.get('id') or '-'}",
+                        "tokens": len(_summary) // 4,
+                        "content_len": len(_summary),
+                    }
+                )
+        _funnel_record = build_context_funnel_record(
+            request_id=str(state.context_data.get("request_id") or "") or None,
+            memory_funnel=(
+                _uc_payload.get("context_funnel_memory")
+                if isinstance(_uc_payload, dict)
+                else None
+            ),
+            experience_meta=(
+                _uc_payload.get("experience_memory_meta")
+                if isinstance(_uc_payload, dict)
+                else None
+            ),
+            retrieval=state.context_data.get("document_context_retrieval") or {},
+            document_budget=state.context_data.get("document_context_budget") or {},
+            context_budget=state.context_data.get("context_budget") or {},
+            citation_outcome=state.context_data.get("citation_outcome") or {},
+            source_refs=state.context_data.get("document_source_refs") or [],
+            citation_markers=list(getattr(context_assembly, "metadata", {}).get("citation_markers") or []),
+            document_injected=bool(_citation_block),
+            document_block_tokens=len(_citation_block) // 4,
+            memory_refs=_memory_refs,
+        )
+        state.context_data["context_funnel"] = _funnel_record
+        record_funnel_metrics(_funnel_record)
+        logger.info("{}", funnel_log_line(_funnel_record))
+    except Exception as exc:
+        logger.warning(f"C-08 context funnel record failed: {exc}")
     if tool_calls:
         tool_loop_count = int(state.context_data.get("tool_loop_count") or 0)
         max_tool_loops = _max_tool_loops_for_state(state)
