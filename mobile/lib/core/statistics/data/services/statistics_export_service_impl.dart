@@ -68,12 +68,17 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
     final type = statistics.type.displayName;
     final period = statistics.period.label;
     final date = DateTime.now();
+    final zh = I18nService.instance.isChinese;
+    // Data provenance (D-04): state where the numbers come from.
+    final source = statistics.isFromCache
+        ? (zh ? '本地缓存（最近同步于 ${_formatDateTime(statistics.lastRefreshedAt)}）' : 'local cache (last synced ${_formatDateTime(statistics.lastRefreshedAt)})')
+        : (zh ? '服务端实时统计' : 'live server statistics');
 
     final buffer = StringBuffer();
-    final zh = I18nService.instance.isChinese;
     buffer.writeln(zh ? '📊 我的$type数据' : '📊 My $type Data');
     buffer.writeln(zh ? '📅 统计周期: $period' : '📅 Period: $period');
     buffer.writeln(zh ? '🕐 导出时间: ${_formatDateTime(date)}' : '🕐 Exported: ${_formatDateTime(date)}');
+    buffer.writeln(zh ? '🧾 数据来源: $source' : '🧾 Data source: $source');
     buffer.writeln();
     buffer.writeln(zh ? '📈 数据来自 星火AI学习助手' : '📈 Data from Sparkle AI');
 
@@ -180,6 +185,9 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
         'appVersion': appVersion,
         'exportedAt': DateTime.now().toIso8601String(),
         'format': 'json',
+        // Data provenance (D-04)
+        'dataSource': statistics.isFromCache ? 'local-cache' : 'server-api',
+        'lastSyncedAt': statistics.lastRefreshedAt.toIso8601String(),
       };
     }
 
@@ -208,6 +216,13 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
       buffer.writeln('# App Version: $appVersion');
       buffer.writeln('# Exported At: ${DateTime.now().toIso8601String()}');
       buffer.writeln('# Format: csv');
+      // Data provenance (D-04)
+      buffer.writeln(
+        '# Data Source: ${statistics.isFromCache ? 'local-cache' : 'server-api'}',
+      );
+      buffer.writeln(
+        '# Last Synced At: ${statistics.lastRefreshedAt.toIso8601String()}',
+      );
     }
 
     final bytes = utf8.encode(buffer.toString());

@@ -507,8 +507,17 @@ class ApiEndpoints {
   // Focus Sessions (P0.3)
   static const String focusSessions = '/focus/sessions';
   static const String focusStats = '/focus/stats';
+  static const String focusStatsWeekly = '/focus/stats/weekly';
+  static const String focusStatsMonthly = '/focus/stats/monthly';
+  static const String focusStatsHeatmap = '/focus/stats/heatmap';
   static const String focusLlmGuide = '/focus/llm/guide';
   static const String focusLlmBreakdown = '/focus/llm/breakdown';
+
+  // Agent Statistics (real DB aggregation via /agent-stats)
+  static const String agentStatsUserOverview = '/agent-stats/user/overview';
+
+  // Capsule Statistics (real DB aggregation)
+  static const String capsuleStats = '/capsules/stats';
 
   // Push Interactions
   static const String pushInteraction = '/push/interaction';

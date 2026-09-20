@@ -1,4 +1,8 @@
+import 'package:dio/dio.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/statistics/data/statistics_data.dart';
 import 'package:sparkle/core/statistics/domain/statistics_domain.dart';
@@ -7,6 +11,11 @@ import 'package:sparkle/core/statistics/presentation/providers/statistics_provid
 part 'capsule_statistics_provider.g.dart';
 
 /// Capsule statistics entity
+///
+/// Field semantics mirror the backend `/capsules/stats` aggregation over
+/// `curiosity_capsules` / `capsule_favorites` / `capsule_feedbacks` for the
+/// requested period window (B-02 lineage INV-03). Fields with no real data
+/// source are absent or `null` — never a fabricated constant.
 class CapsuleStatisticsData extends StatisticsEntity {
 
   CapsuleStatisticsData({
@@ -14,11 +23,11 @@ class CapsuleStatisticsData extends StatisticsEntity {
     required this.period,
     required this.lastRefreshedAt,
     required this.isFromCache,
-    required this.totalOpened,
-    required this.totalCollected,
-    required this.totalShared,
-    required this.averageEngagement,
-    required this.byCategory,
+    required this.totalReceived,
+    required this.totalRead,
+    required this.totalFavorited,
+    required this.totalFeedbackGiven,
+    required this.averageRating,
   });
   @override
   final String id;
@@ -35,33 +44,35 @@ class CapsuleStatisticsData extends StatisticsEntity {
   @override
   final bool isFromCache;
 
-  /// Total capsules opened
-  final int totalOpened;
+  /// Capsules received (created) in the period
+  /// (server: `total_received`)
+  final int totalReceived;
 
-  /// Total capsules collected
-  final int totalCollected;
+  /// Capsules read in the period (server: `total_read`)
+  final int totalRead;
 
-  /// Capsules shared
-  final int totalShared;
+  /// Capsules favorited in the period (server: `total_favorited`)
+  final int totalFavorited;
 
-  /// Average engagement score
-  final double averageEngagement;
+  /// Feedback submissions in the period (server: `total_feedback_given`)
+  final int totalFeedbackGiven;
 
-  /// Breakdown by capsule category
-  final Map<String, int> byCategory;
+  /// Average star rating given in the period.
+  /// Null when no rated feedback exists in the window (unknown).
+  final double? averageRating;
 
   @override
-  double getPrimaryValue() => totalOpened.toDouble();
+  double getPrimaryValue() => totalRead.toDouble();
 
   @override
   double? calculateChange(StatisticsEntity? previous) {
     if (previous == null || previous is! CapsuleStatisticsData) {
       return null;
     }
-    if (previous.totalOpened == 0) {
-      return totalOpened > 0 ? 100.0 : 0.0;
+    if (previous.totalRead == 0) {
+      return totalRead > 0 ? 100.0 : 0.0;
     }
-    return ((totalOpened - previous.totalOpened) / previous.totalOpened) * 100;
+    return ((totalRead - previous.totalRead) / previous.totalRead) * 100;
   }
 
   CapsuleStatisticsData copyWith({
@@ -69,27 +80,43 @@ class CapsuleStatisticsData extends StatisticsEntity {
     StatisticsPeriod? period,
     DateTime? lastRefreshedAt,
     bool? isFromCache,
-    int? totalOpened,
-    int? totalCollected,
-    int? totalShared,
-    double? averageEngagement,
-    Map<String, int>? byCategory,
+    int? totalReceived,
+    int? totalRead,
+    int? totalFavorited,
+    int? totalFeedbackGiven,
+    double? averageRating,
   }) => CapsuleStatisticsData(
-      id: id ?? this.id,
-      period: period ?? this.period,
-      lastRefreshedAt: lastRefreshedAt ?? this.lastRefreshedAt,
-      isFromCache: isFromCache ?? this.isFromCache,
-      totalOpened: totalOpened ?? this.totalOpened,
-      totalCollected: totalCollected ?? this.totalCollected,
-      totalShared: totalShared ?? this.totalShared,
-      averageEngagement: averageEngagement ?? this.averageEngagement,
-      byCategory: byCategory ?? this.byCategory,
-    );
+    id: id ?? this.id,
+    period: period ?? this.period,
+    lastRefreshedAt: lastRefreshedAt ?? this.lastRefreshedAt,
+    isFromCache: isFromCache ?? this.isFromCache,
+    totalReceived: totalReceived ?? this.totalReceived,
+    totalRead: totalRead ?? this.totalRead,
+    totalFavorited: totalFavorited ?? this.totalFavorited,
+    totalFeedbackGiven: totalFeedbackGiven ?? this.totalFeedbackGiven,
+    averageRating: averageRating ?? this.averageRating,
+  );
 }
 
-/// Repository for capsule statistics
+/// Repository for capsule statistics.
+///
+/// Data source: `GET /capsules/stats?start=<utc-iso>&end=<utc-iso>` — a real
+/// per-user DB aggregation scoped to the requested period window. There is
+/// no client-side fallback: transport failures propagate (D-04).
 class CapsuleStatsRepository extends HybridStatisticsRepository<CapsuleStatisticsData> {
-  CapsuleStatsRepository({required super.database, super.cacheConfig});
+  CapsuleStatsRepository({required super.database, super.cacheConfig, Dio? dio})
+      : dio = dio ??
+            Dio(
+              BaseOptions(
+                baseUrl: ApiEndpoints.baseUrl,
+                connectTimeout: const Duration(seconds: 10),
+                receiveTimeout: const Duration(seconds: 30),
+              ),
+            );
+
+  /// HTTP client used for statistics fetches. Production wiring passes the
+  /// shared authenticated client (`ApiClient.dio`); tests inject a stub.
+  final Dio dio;
 
   @override
   StatisticsType get type => StatisticsType.capsule;
@@ -100,38 +127,54 @@ class CapsuleStatsRepository extends HybridStatisticsRepository<CapsuleStatistic
     DateTime? customStart,
     DateTime? customEnd,
   }) async {
+    // The backend aggregates on created_at, stored as naive UTC — send the
+    // period bounds as UTC ISO timestamps so the window matches what the
+    // user sees locally.
+    final response = await dio.get<dynamic>(
+      ApiEndpoints.capsuleStats,
+      queryParameters: <String, dynamic>{
+        'start': period
+            .getStartTime(customStart: customStart)
+            .toUtc()
+            .toIso8601String(),
+        'end': period
+            .getEndTime(customEnd: customEnd)
+            .toUtc()
+            .toIso8601String(),
+      },
+    );
+    final payload = ApiResponseParser.unwrapMap(
+      response.data,
+      action: 'fetchCapsuleStats',
+    );
+
     final now = DateTime.now();
-    final mockData = CapsuleStatisticsData(
+    return CapsuleStatisticsData(
       id: 'capsule_${period.name}_${now.millisecondsSinceEpoch}',
       period: period,
       lastRefreshedAt: now,
       isFromCache: false,
-      totalOpened: _generateMockOpened(period),
-      totalCollected: _generateMockCollected(period),
-      totalShared: _generateMockShared(period),
-      averageEngagement: 4.2,
-      byCategory: const {
-        'science': 8,
-        'history': 5,
-        'art': 6,
-        'technology': 10,
-      },
+      totalReceived: (payload['total_received'] as num?)?.toInt() ?? 0,
+      totalRead: (payload['total_read'] as num?)?.toInt() ?? 0,
+      totalFavorited: (payload['total_favorited'] as num?)?.toInt() ?? 0,
+      totalFeedbackGiven: (payload['total_feedback_given'] as num?)?.toInt() ?? 0,
+      averageRating: (payload['average_rating_given'] as num?)?.toDouble(),
     );
-    return mockData;
   }
 
   @override
-  CapsuleStatisticsData deserializeEntity(Map<String, dynamic> json) => CapsuleStatisticsData(
-      id: json['id'] as String,
-      period: StatisticsPeriodExt.fromCode(json['period'] as String),
-      lastRefreshedAt: DateTime.parse(json['lastRefreshedAt'] as String),
-      isFromCache: json['isFromCache'] as bool,
-      totalOpened: json['totalOpened'] as int,
-      totalCollected: json['totalCollected'] as int,
-      totalShared: json['totalShared'] as int,
-      averageEngagement: (json['averageEngagement'] as num).toDouble(),
-      byCategory: Map<String, int>.from(json['byCategory'] as Map),
-    );
+  CapsuleStatisticsData deserializeEntity(Map<String, dynamic> json) =>
+      CapsuleStatisticsData(
+        id: json['id'] as String,
+        period: StatisticsPeriodExt.fromCode(json['period'] as String),
+        lastRefreshedAt: DateTime.parse(json['lastRefreshedAt'] as String),
+        isFromCache: json['isFromCache'] as bool,
+        totalReceived: json['totalReceived'] as int,
+        totalRead: json['totalRead'] as int,
+        totalFavorited: json['totalFavorited'] as int,
+        totalFeedbackGiven: json['totalFeedbackGiven'] as int,
+        averageRating: (json['averageRating'] as num?)?.toDouble(),
+      );
 
   @override
   Map<String, dynamic> serializeEntity(CapsuleStatisticsData entity) => {
@@ -140,38 +183,27 @@ class CapsuleStatsRepository extends HybridStatisticsRepository<CapsuleStatistic
       'period': entity.period.name,
       'lastRefreshedAt': entity.lastRefreshedAt.toIso8601String(),
       'isFromCache': entity.isFromCache,
-      'totalOpened': entity.totalOpened,
-      'totalCollected': entity.totalCollected,
-      'totalShared': entity.totalShared,
-      'averageEngagement': entity.averageEngagement,
-      'byCategory': entity.byCategory,
+      'totalReceived': entity.totalReceived,
+      'totalRead': entity.totalRead,
+      'totalFavorited': entity.totalFavorited,
+      'totalFeedbackGiven': entity.totalFeedbackGiven,
+      'averageRating': entity.averageRating,
     };
 
-  int _generateMockOpened(StatisticsPeriod period) {
-    switch (period) {
-      case StatisticsPeriod.today:
-        return 12;
-      case StatisticsPeriod.week:
-        return 55;
-      case StatisticsPeriod.month:
-        return 220;
-      case StatisticsPeriod.year:
-        return 2640;
-      case StatisticsPeriod.custom:
-        return 30;
-    }
-  }
-
-  int _generateMockCollected(StatisticsPeriod period) => (_generateMockOpened(period) * 1.5).toInt();
-
-  int _generateMockShared(StatisticsPeriod period) => (_generateMockOpened(period) * 0.3).toInt();
+  @override
+  CapsuleStatisticsData markFromCache(CapsuleStatisticsData entity) =>
+      entity.isFromCache ? entity : entity.copyWith(isFromCache: true);
 }
 
 /// Provider for capsule statistics repository
 @riverpod
 CapsuleStatsRepository capsuleStatsRepository(CapsuleStatsRepositoryRef ref) {
   final database = ref.watch(localDatabaseProvider);
-  return CapsuleStatsRepository(database: database);
+  return CapsuleStatsRepository(
+    database: database,
+    // Shared authenticated transport (auth/retry/logging/pinning stack).
+    dio: ref.watch(apiClientProvider).dio,
+  );
 }
 
 /// Provider for capsule statistics state
@@ -184,6 +216,9 @@ class CapsuleStatistics extends _$CapsuleStatistics {
     StatisticsPeriod period, {
     bool forceRefresh = false,
   }) async {
+    // Keep the last-known-real snapshot across the reload so an offline
+    // reload can display "data as of <lastRefreshedAt>" (D-04).
+    final previous = state;
     state = StatisticsState<CapsuleStatisticsData>.loading(period: period);
 
     final repository = ref.read(capsuleStatsRepositoryProvider);
@@ -194,7 +229,7 @@ class CapsuleStatistics extends _$CapsuleStatistics {
       );
       state = state.withData(data, newPeriod: period);
     } catch (e) {
-      state = state.withError('Failed to load: $e');
+      state = previous.withError('Failed to load: $e');
     }
   }
 

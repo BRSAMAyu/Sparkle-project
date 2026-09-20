@@ -99,6 +99,17 @@ abstract class HybridStatisticsRepository<T extends StatisticsEntity>
   /// Subclasses must implement this for caching.
   Map<String, dynamic> serializeEntity(T entity);
 
+  /// Return a copy of [entity] flagged as served-from-cache.
+  ///
+  /// The hybrid repository calls this whenever an entity is served out of the
+  /// hot/warm/stale cache instead of a fresh API response, so provenance
+  /// stays truthful for UI display ("last known real, as of `timestamp`").
+  T markFromCache(T entity);
+
+  /// Whether the one-time legacy warm-cache purge already ran for this
+  /// repository instance.
+  bool _legacyPurgeDone = false;
+
   // ============================================
   // INTERFACE IMPLEMENTATION
   // ============================================
@@ -121,13 +132,21 @@ abstract class HybridStatisticsRepository<T extends StatisticsEntity>
       customEnd: customEnd,
     );
 
+    // One-time purge of legacy (pre-D-04) mock warm-cache entries. Old
+    // entries were serialized from fabricated data and marked
+    // isFullySynced=true; they must never be served (B-02 INV-02/03/04).
+    if (!_legacyPurgeDone) {
+      await _purgeLegacyWarmCache();
+      _legacyPurgeDone = true;
+    }
+
     // Try hot cache first (if not forcing refresh)
     if (!forceRefresh && cacheConfig.enableHotCache) {
       final hotResult = _getFromHotCache(cacheKey);
       if (hotResult != null && !hotResult.isExpired(cacheConfig.hotTtlSeconds)) {
         // Update last accessed time
         _hotCacheAccess[cacheKey] = DateTime.now();
-        return hotResult.entity;
+        return markFromCache(hotResult.entity);
       }
     }
 
@@ -160,10 +179,17 @@ abstract class HybridStatisticsRepository<T extends StatisticsEntity>
 
       return entity;
     } catch (e) {
-      // If API fails, try to return stale cache as fallback
-      final staleResult = await _getStaleCache(cacheKey);
-      if (staleResult != null) {
-        return staleResult;
+      // If the real API fails, fall back to the last-known-real cached copy
+      // (clearly marked as from-cache, with its original timestamp) so the UI
+      // can display "offline — showing data as of <time>". Fabricated data is
+      // never substituted for a failed fetch (D-04).
+      try {
+        final staleResult = await _getStaleCache(cacheKey);
+        if (staleResult != null) {
+          return staleResult;
+        }
+      } on Exception {
+        // A cache-read failure must not mask the original API error.
       }
       rethrow;
     }
@@ -254,7 +280,7 @@ abstract class HybridStatisticsRepository<T extends StatisticsEntity>
           .filter()
           .cacheKeyEqualTo(cacheKey)
           .findFirst();
-      if (cached != null && !cached.isExpired()) {
+      if (cached != null && !cached.isLegacyEntry && !cached.isExpired()) {
         return true;
       }
     }
@@ -311,22 +337,54 @@ abstract class HybridStatisticsRepository<T extends StatisticsEntity>
     _hotCacheAccess.remove(oldestKey);
   }
 
-  /// Get data from warm cache (Isar)
+  /// Get data from warm cache (Isar).
+  ///
+  /// Legacy (unversioned, pre-D-04 mock) entries are deleted and reported as
+  /// a miss — they can never be served, including via the stale fallback.
   Future<CachedStatisticsModel?> _getFromWarmCache(String key) async {
     final cached = await database.cachedStatistics
         .filter()
         .cacheKeyEqualTo(key)
         .findFirst();
-    if (cached != null) {
-      cached.touch();
-      await database.isar.writeTxn(() async {
-        await database.cachedStatistics.put(cached);
-      });
+    if (cached == null) {
+      return null;
     }
+    if (cached.isLegacyEntry) {
+      await database.isar.writeTxn(() async {
+        await database.cachedStatistics.delete(cached.id);
+      });
+      return null;
+    }
+    cached.touch();
+    await database.isar.writeTxn(() async {
+      await database.cachedStatistics.put(cached);
+    });
     return cached;
   }
 
+  /// Delete every legacy (mock-era) warm-cache entry of this repository's
+  /// statistics type. Runs once per repository instance.
+  Future<void> _purgeLegacyWarmCache() async {
+    final entries = await database.cachedStatistics
+        .filter()
+        .typeEqualTo(type)
+        .findAll();
+    final legacy = entries.where((e) => e.isLegacyEntry).toList();
+    if (legacy.isEmpty) {
+      return;
+    }
+    await database.isar.writeTxn(() async {
+      for (final entry in legacy) {
+        await database.cachedStatistics.delete(entry.id);
+      }
+    });
+  }
+
   /// Put data in warm cache
+  ///
+  /// Only real API responses reach this method (cache hits return early),
+  /// and every entry is stamped with versioned provenance metadata so future
+  /// format changes can invalidate old entries the same way D-04 did.
   Future<void> _putInWarmCache(String key, T entity) async {
     final jsonData = serializeEntity(entity);
     final jsonString = jsonEncode(jsonData);
@@ -343,7 +401,12 @@ abstract class HybridStatisticsRepository<T extends StatisticsEntity>
       ..lastAccessedAt = DateTime.now()
       ..ttlSeconds = cacheConfig.warmTtlSeconds
       ..priority = CachePriority.normal
-      ..isFullySynced = !entity.isFromCache;
+      // True only because a real API round-trip just completed; entities
+      // served out of any cache tier carry isFromCache = true instead.
+      ..isFullySynced = !entity.isFromCache
+      ..metadata = CachedStatisticsModel.buildCacheMetadata(
+        fetchedAt: entity.lastRefreshedAt,
+      );
 
     await database.isar.writeTxn(() async {
       await database.cachedStatistics.put(model);
@@ -383,7 +446,10 @@ abstract class HybridStatisticsRepository<T extends StatisticsEntity>
     }
   }
 
-  /// Get stale cache as fallback when API fails
+  /// Get stale cache as fallback when the real API fails.
+  ///
+  /// Serves the last-known-real copy (warm, then hot) clearly marked as
+  /// from-cache. Legacy mock entries are rejected by [_getFromWarmCache].
   Future<T?> _getStaleCache(String key) async {
     // Try warm cache even if expired
     final warm = await _getFromWarmCache(key);
@@ -394,7 +460,7 @@ abstract class HybridStatisticsRepository<T extends StatisticsEntity>
     // Try hot cache even if expired
     final hot = _hotCache[key];
     if (hot != null) {
-      return hot.entity;
+      return markFromCache(hot.entity);
     }
 
     return null;
@@ -404,7 +470,7 @@ abstract class HybridStatisticsRepository<T extends StatisticsEntity>
   T _deserializeAndTrack(CachedStatisticsModel cached, String key) {
     final jsonString = utf8.decode(cached.jsonData);
     final json = jsonDecode(jsonString) as Map<String, dynamic>;
-    final entity = deserializeEntity(json);
+    final entity = markFromCache(deserializeEntity(json));
 
     // Also store in hot cache for faster next access
     _putInHotCache(key, entity);

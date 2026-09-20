@@ -5,7 +5,7 @@ Curiosity Capsules API
 """
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
@@ -457,45 +457,63 @@ async def request_batch_generation(
 
 @router.get("/stats", response_model=CapsuleStatsSchema)
 async def get_capsule_stats(
+    start: datetime | None = Query(
+        None, description="统计窗口起点（含），缺省为不限"
+    ),
+    end: datetime | None = Query(
+        None, description="统计窗口终点（不含），缺省为不限"
+    ),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    获取胶囊统计信息
+    获取胶囊统计信息（真实 DB 聚合）
+
+    可选 start/end 将统计限定到 created_at 窗口内；两者均缺省时为全部历史。
+    无数据来源的字段返回 0 / None，绝不以假数据填充。
     """
     from sqlalchemy import func, select
 
     from app.models.capsule_favorite import CapsuleFavorite
     from app.models.curiosity_capsule import CuriosityCapsule
 
+    # 与库里 TIMESTAMP WITHOUT TIME ZONE（naive UTC）对齐
+    range_start = start.astimezone(UTC).replace(tzinfo=None) if start and start.tzinfo else start
+    range_end = end.astimezone(UTC).replace(tzinfo=None) if end and end.tzinfo else end
+
+    capsule_filters = [CuriosityCapsule.user_id == current_user.id]
+    favorite_filters = [CapsuleFavorite.user_id == current_user.id]
+    if range_start is not None:
+        capsule_filters.append(CuriosityCapsule.created_at >= range_start)
+        favorite_filters.append(CapsuleFavorite.created_at >= range_start)
+    if range_end is not None:
+        capsule_filters.append(CuriosityCapsule.created_at < range_end)
+        favorite_filters.append(CapsuleFavorite.created_at < range_end)
+
     # 总接收数
     total_result = await db.execute(
-        select(func.count(CuriosityCapsule.id)).where(
-            CuriosityCapsule.user_id == current_user.id
-        )
+        select(func.count(CuriosityCapsule.id)).where(*capsule_filters)
     )
     total_received = total_result.scalar() or 0
 
     # 已读数
     read_result = await db.execute(
         select(func.count(CuriosityCapsule.id)).where(
-            CuriosityCapsule.user_id == current_user.id,
-            CuriosityCapsule.is_read
+            *capsule_filters,
+            CuriosityCapsule.is_read,
         )
     )
     total_read = read_result.scalar() or 0
 
     # 收藏数
     fav_result = await db.execute(
-        select(func.count(CapsuleFavorite.id)).where(
-            CapsuleFavorite.user_id == current_user.id
-        )
+        select(func.count(CapsuleFavorite.id)).where(*favorite_filters)
     )
     total_favorited = fav_result.scalar() or 0
 
     # 反馈统计
     feedback_stats = await capsule_feedback_service.get_user_feedback_stats(
-        current_user.id, db
+        current_user.id, db, start=range_start, end=range_end
     )
 
     return CapsuleStatsSchema(

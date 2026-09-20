@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:isar/isar.dart';
 import 'package:sparkle/core/statistics/domain/statistics_domain.dart';
 
@@ -83,7 +85,52 @@ class CachedStatisticsModel {
   late bool isFullySynced;
 
   /// Metadata (e.g., API version, data hash)
+  ///
+  /// Since D-04 this field carries the warm-cache entry provenance as JSON:
+  /// `{"schemaVersion": <int>, "source": "real-api", "fetchedAt": <iso>}`.
+  /// Entries written before D-04 have `metadata == null` — they were produced
+  /// by client-side mock generators and must never be served again.
   String? metadata;
+
+  /// Current warm-cache entry format version.
+  ///
+  /// v1 (implicit, no [metadata]): entries serialized from fabricated mock
+  /// entities, cached with `isFullySynced = true` — production pollution
+  /// (see B-02 inventory INV-02/03/04, debt FIX-03).
+  /// v2: entries serialized exclusively from real backend API responses and
+  /// stamped via [buildCacheMetadata].
+  static const int currentCacheSchemaVersion = 2;
+
+  /// Provenance marker for entries written by the real-API repositories.
+  static const String cacheSourceRealApi = 'real-api';
+
+  /// Build the versioned provenance metadata for a freshly synced entry.
+  static String buildCacheMetadata({DateTime? fetchedAt}) => jsonEncode({
+        'schemaVersion': currentCacheSchemaVersion,
+        'source': cacheSourceRealApi,
+        'fetchedAt': (fetchedAt ?? DateTime.now()).toIso8601String(),
+      });
+
+  /// Whether [value] is a metadata blob written by the current (real-API)
+  /// cache format.
+  ///
+  /// Legacy entries (null metadata, malformed JSON, or a different schema
+  /// version) are treated as polluted and must be purged, never served.
+  static bool isCurrentCacheMetadata(String? value) {
+    if (value == null) return false;
+    Map<String, dynamic> decoded;
+    try {
+      final parsed = jsonDecode(value);
+      if (parsed is! Map<String, dynamic>) return false;
+      decoded = parsed;
+    } catch (_) {
+      return false;
+    }
+    return decoded['schemaVersion'] == currentCacheSchemaVersion;
+  }
+
+  /// Whether this entry predates the real-API cache format (mock pollution).
+  bool get isLegacyEntry => !isCurrentCacheMetadata(metadata);
 
   /// Check if this cache entry is expired
   bool isExpired() {

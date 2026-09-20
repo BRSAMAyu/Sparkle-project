@@ -3,6 +3,20 @@ import 'package:sparkle/core/statistics/domain/entities/statistics_data_point.da
 import 'package:sparkle/core/statistics/domain/entities/statistics_entity.dart';
 import 'package:sparkle/core/statistics/domain/entities/statistics_period.dart';
 
+/// Thrown when the authoritative server-side statistics source is explicitly
+/// unavailable (e.g. the backend reports a degraded aggregation path).
+///
+/// Callers must surface an honest "unknown / retry" state. Fabricating
+/// replacement data in response to this error is forbidden (D-04).
+class StatisticsSourceUnavailableException implements Exception {
+  const StatisticsSourceUnavailableException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => 'StatisticsSourceUnavailableException: $message';
+}
+
 /// Error types for statistics operations
 enum StatisticsError {
   /// Network request failed

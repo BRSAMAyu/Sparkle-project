@@ -5,6 +5,7 @@ Capsule Feedback Service
 """
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -332,9 +333,18 @@ class CapsuleFeedbackService:
         self,
         user_id: UUID,
         db: AsyncSession,
+        *,
+        start: datetime | None = None,
+        end: datetime | None = None,
     ) -> dict[str, Any]:
         """
         获取用户反馈统计
+
+        Args:
+            user_id: 用户ID
+            db: 数据库会话
+            start: 可选窗口起点（含），按 created_at 过滤
+            end: 可选窗口终点（不含），按 created_at 过滤
 
         Returns:
             {
@@ -344,8 +354,14 @@ class CapsuleFeedbackService:
                 "category_distribution": dict,
             }
         """
+        filters = [CapsuleFeedback.user_id == user_id]
+        if start is not None:
+            filters.append(CapsuleFeedback.created_at >= start)
+        if end is not None:
+            filters.append(CapsuleFeedback.created_at < end)
+
         result = await db.execute(
-            select(CapsuleFeedback).where(CapsuleFeedback.user_id == user_id)
+            select(CapsuleFeedback).where(*filters)
         )
         feedbacks = result.scalars().all()
 

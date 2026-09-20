@@ -114,6 +114,28 @@ extension StatisticsPeriodExt on StatisticsPeriod {
     return end.difference(start);
   }
 
+  /// Day count covered by this period, clamped to 1..365.
+  ///
+  /// Used to translate a UI period into a server-side statistics window
+  /// (e.g. `/agent-stats/user/overview?days=<windowDays>`).
+  int windowDays({DateTime? customStart, DateTime? customEnd}) {
+    switch (this) {
+      case StatisticsPeriod.today:
+        return 1;
+      case StatisticsPeriod.week:
+        return 7;
+      case StatisticsPeriod.month:
+        return 30;
+      case StatisticsPeriod.year:
+        return 365;
+      case StatisticsPeriod.custom:
+        final days = getDuration(customStart: customStart, customEnd: customEnd).inDays + 1;
+        if (days < 1) return 1;
+        if (days > 365) return 365;
+        return days;
+    }
+  }
+
   /// Check if a given date falls within this period
   bool contains(DateTime date, {DateTime? customStart, DateTime? customEnd}) {
     final start = getStartTime(customStart: customStart);
