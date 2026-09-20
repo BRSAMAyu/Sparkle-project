@@ -78,7 +78,9 @@ class EmptyCapsuleStrategy(PushStrategy):
         else:
             requested_count = 3
 
-        # 调度 Celery 任务
+        # 调度 Celery 任务（路由修正：generate_capsules_batch 的注册队列是
+        # glm_batch（celery_app.py 路由表）；此前硬编码 default 导致积压在
+        # default 队列、被通用 worker 消费时逐条烧真模型——2026-09-20 事故）
         celery_app.send_task(
             "generate_capsules_batch",
             args=(
@@ -88,7 +90,7 @@ class EmptyCapsuleStrategy(PushStrategy):
                 "push_triggered",
                 requested_count,
             ),
-            queue="default",
+            queue="glm_batch",
         )
 
         logger.info(

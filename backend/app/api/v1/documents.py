@@ -165,7 +165,10 @@ def _magic_bytes_match(header: bytes, mime_type: str) -> bool:
         if b"\x00" in header:
             return False
         try:
-            header.decode("utf-8")
+            # header 固定 512 字节截取，多字节 UTF-8 字符可能被拦腰截断
+            # （中文文本第 511 字节位于字符中间时 decode 必炸）——被截断的
+            # 尾部字节按 replace 处理，只校验主体可解码即视为文本
+            header.decode("utf-8", errors="replace")
             return True
         except UnicodeDecodeError:
             return False
