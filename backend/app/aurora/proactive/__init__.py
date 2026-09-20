@@ -12,6 +12,14 @@ Aurora proactive pipeline (P-01): event → deterministic filter → Aurora.
 - :class:`ProactiveEventPipeline` — 管线主体 + EventBus 消费者组接入 +
   shadow 审计（metrics / recent_records / sink）。
 
+P-02 相关性决策层（抑制链**之后**、出口与 P-04 授权门**之前**的内容语义面）：
+- ``evaluate_relevance`` / :class:`RelevanceContext` / :class:`RelevanceDecision`
+  — 纯函数「值不值得打扰」裁决（new information + actionable value），
+  no_action 带封闭词表 reason（RELEVANCE_REASONS：duplicate / already_aware /
+  no_new_information / not_actionable / context_unavailable）。
+- :class:`ProactiveRelevanceStore` — 用户近况上下文（已读/交互/提醒摘要）
+  的 Redis JSON 文档存取（fail-closed 读语义与抑制状态存储同源）。
+
 P-04 低风险 auto-execution 授权门（在 P-01 投递决策之后 / side effect 之前）：
 - :class:`AutoExecOperation` / ``AUTOEXEC_OPERATION_REGISTRY`` — 低风险操作
   allowlist（封闭词表；高风险/不可逆结构性无表内名字）。
@@ -49,6 +57,17 @@ from app.aurora.proactive.pipeline import (
     ProactiveDecisionRecord,
     ProactiveEventPipeline,
 )
+from app.aurora.proactive.relevance import (
+    RELEVANCE_REASONS,
+    RELEVANCE_STEP,
+    ProactiveRelevanceContextUnavailable,
+    ProactiveRelevanceStore,
+    RelevanceContext,
+    RelevanceDecision,
+    derive_information_digest,
+    derive_information_onset,
+    evaluate_relevance,
+)
 from app.aurora.proactive.state import (
     LIVE_SCOPE,
     SHADOW_SCOPE,
@@ -84,6 +103,16 @@ __all__ = [
     "ProactiveDecisionRecord",
     "ProactiveEventPipeline",
     "DecisionSink",
+    # P-02 relevance decision layer（抑制链后的内容语义面）
+    "RELEVANCE_STEP",
+    "RELEVANCE_REASONS",
+    "RelevanceContext",
+    "RelevanceDecision",
+    "evaluate_relevance",
+    "derive_information_digest",
+    "derive_information_onset",
+    "ProactiveRelevanceStore",
+    "ProactiveRelevanceContextUnavailable",
     # P-04 auto-execution authorization gate
     "AUTOEXEC_SCHEMA_VERSION",
     "AUTOEXEC_EMPTY_VERSION",

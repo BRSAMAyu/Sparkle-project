@@ -31,9 +31,19 @@ from loguru import logger
 
 from app.aurora.proactive import config as proactive_config
 from app.aurora.proactive.metrics import PROACTIVE_PIPELINE_DECISIONS_TOTAL
-from app.aurora.proactive.state import SHADOW_SCOPE, LIVE_SCOPE, ProactiveSuppressionStore
+from app.aurora.proactive.relevance import (
+    RELEVANCE_STEP,
+    ProactiveRelevanceContextUnavailable,
+    ProactiveRelevanceStore,
+    RelevanceContext,
+    RelevanceDecision,
+    derive_information_digest,
+    derive_information_onset,
+    evaluate_relevance,
+)
+from app.aurora.proactive.state import LIVE_SCOPE, SHADOW_SCOPE, ProactiveSuppressionStore
 from app.aurora.proactive.suppression import SuppressionSnapshot, evaluate_suppression
-from app.aurora.proactive.triggers import TriggerClassification, classify_event
+from app.aurora.proactive.triggers import ProactiveTrigger, TriggerClassification, classify_event
 
 if TYPE_CHECKING:  # 仅类型标注；运行期鸭子类型，保持本模块轻量可导入。
     from app.core.event_bus import EventBus
@@ -59,10 +69,13 @@ class ProactiveDecisionRecord:
     event_name: str
     trigger: str | None  # 白名单外被忽略的事件为 None
     user_id: str
-    #: "notify"（allowed 且已按模式处理）| "suppressed" | "ignored"
+    #: "notify"（allowed 且已按模式处理）| "suppressed" | "no_action"（P-02
+    #: 相关性语义面判定不打扰）| "ignored"
     decision: str
-    #: 抑制原因（suppressed 时与 SUPPRESSION_STEPS 同名）；其余为 None/""。
+    #: 抑制原因（suppressed 时与 SUPPRESSION_STEPS 同名）；no_action 时与
+    #: RELEVANCE_REASONS 同名；其余为 None/""。
     reason: str | None
+    #: 命中的判定步骤名（suppressed=抑制器名；no_action 恒为 "relevance"）。
     step: str | None
     subject_key: str = ""
     shadow: bool = True
@@ -101,12 +114,13 @@ class ProactiveEventPipeline:
         shadow: bool | None = None,
         sink: DecisionSink | None = None,
         deliver: DeliveryFn | None = None,
+        relevance_store: ProactiveRelevanceStore | None = None,
     ) -> None:
         self.store = store or ProactiveSuppressionStore(redis)
+        # P-02 相关性上下文存取：默认与抑制状态共用同一 redis 客户端。
+        self.relevance_store = relevance_store or ProactiveRelevanceStore(redis)
         # shadow 缺省读管线旋钮（env 可覆写），默认开。
-        self.shadow = (
-            bool(proactive_config.PROACTIVE_PIPELINE_SHADOW) if shadow is None else bool(shadow)
-        )
+        self.shadow = bool(proactive_config.PROACTIVE_PIPELINE_SHADOW) if shadow is None else bool(shadow)
         self._sink = sink
         self._deliver = deliver or self._default_deliver
         self.recent_records: deque[ProactiveDecisionRecord] = deque(maxlen=self.MAX_RECENT_RECORDS)
@@ -171,7 +185,35 @@ class ProactiveEventPipeline:
             await self._record(record)
             return record
 
-        # ---- allowed：状态消费与出口处理（被抑制的事件绝不走到这里）----
+        # ---- P-02 相关性决策层（内容语义面：频控面之后、状态消费与出口之前；
+        # no_action 事件不消耗 cap/cooldown/novelty，也永不到达出口与授权门）----
+        try:
+            relevance_context = await self._build_relevance_context(classification, event, scope=scope, now=occurred_at)
+        except ProactiveRelevanceContextUnavailable as exc:
+            # fail-closed（与 state_unavailable 同源哲学）：上下文读不到 →
+            # 宁可漏报不可误报，不打扰。
+            logger.warning("proactive relevance unavailable, fail-closed user={}: {!r}", user_id, exc)
+            relevance = RelevanceDecision(False, "context_unavailable", {"scope": scope})
+        else:
+            relevance = evaluate_relevance(trigger=classification.trigger, context=relevance_context)
+
+        if relevance.suppressed:
+            record = ProactiveDecisionRecord(
+                event_name=event_name,
+                trigger=str(classification.trigger.value),
+                user_id=user_id,
+                decision="no_action",
+                reason=relevance.reason,
+                step=RELEVANCE_STEP,
+                subject_key=classification.subject_key,
+                shadow=self.shadow,
+                occurred_at=occurred_at.isoformat(),
+                details=dict(relevance.details),
+            )
+            await self._record(record)
+            return record
+
+        # ---- allowed：状态消费与出口处理（被抑制/无相关性的事件绝不走到这里）----
         # cap/cooldown/novelty 只被"真发/would-notify"消耗。
         try:
             await self.store.record_notification(
@@ -183,6 +225,20 @@ class ProactiveEventPipeline:
             )
         except Exception as exc:
             logger.warning("proactive state write failed user={}: {!r}", user_id, exc)
+
+        # P-02：提醒摘要落账（duplicate/no_new_information 判定的记忆来源；
+        # best-effort，失败只告警，决定已落不阻断事件流）。
+        if relevance_context.current_digest:
+            try:
+                await self.relevance_store.record_reminder(
+                    user_id,
+                    classification.subject_key,
+                    digest=relevance_context.current_digest,
+                    at=occurred_at,
+                    scope=scope,
+                )
+            except Exception as exc:
+                logger.warning("proactive relevance write failed user={}: {!r}", user_id, exc)
 
         details: dict[str, Any] = {"correlation": dict(classification.correlation)}
         if self.shadow:
@@ -214,6 +270,65 @@ class ProactiveEventPipeline:
         )
         await self._record(record)
         return record
+
+    # -- relevance context（P-02）------------------------------------------
+
+    @staticmethod
+    def _parse_event_time(event: Mapping[str, Any]) -> datetime | None:
+        """解析事件载荷的 ``timestamp``（naive-UTC）；缺失/坏值返回 None。"""
+        raw = event.get("timestamp")
+        if isinstance(raw, datetime):
+            return raw if raw.tzinfo is None else raw.astimezone(UTC).replace(tzinfo=None)
+        text = str(raw).strip() if raw is not None else ""
+        if not text:
+            return None
+        try:
+            parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+        if parsed.tzinfo is not None:
+            parsed = parsed.astimezone(UTC).replace(tzinfo=None)
+        return parsed
+
+    async def _build_relevance_context(
+        self,
+        classification: TriggerClassification,
+        event: Mapping[str, Any],
+        *,
+        scope: str,
+        now: datetime,
+    ) -> RelevanceContext:
+        """组装相关性判定上下文：存储里的用户近况 + 载荷确定性派生。
+
+        - 摘要/起点：:func:`derive_information_digest` /
+          :func:`derive_information_onset`（同一输入永远同一输出）。
+        - USER_ACTIVE：事件本身就是用户对该 subject 的动作 → 交互时刻取
+          max(事件时间戳, 存储记录)（确定性，不依赖外部写入）。
+        - has_actionable_step：默认 True（act 侧默认）；仅当载荷显式声明
+          ``actionable=False`` 才判非行动（正向证据原则）。
+        """
+        trigger = classification.trigger
+        subject_key = classification.subject_key
+        context = await self.relevance_store.build_context(
+            str(event.get("user_id") or ""), subject_key, scope=scope, now=now
+        )
+
+        interaction = context.subject_last_interaction_at
+        if trigger is ProactiveTrigger.USER_ACTIVE:
+            event_at = self._parse_event_time(event) or now
+            if interaction is None or event_at > interaction:
+                interaction = event_at
+
+        actionable = event.get("actionable")
+        return RelevanceContext(
+            subject_last_viewed_at=context.subject_last_viewed_at,
+            subject_last_interaction_at=interaction,
+            last_reminder_at=context.last_reminder_at,
+            last_reminder_digest=context.last_reminder_digest,
+            current_digest=derive_information_digest(trigger, subject_key, event),
+            subject_state_changed_at=derive_information_onset(trigger, event, now=now),
+            has_actionable_step=actionable is not False,
+        )
 
     # -- wiring -----------------------------------------------------------
 
@@ -252,9 +367,8 @@ class ProactiveEventPipeline:
     @staticmethod
     async def _default_deliver(user_id: str, classification: TriggerClassification, event_name: str) -> bool:
         """live 出口：既有 Aurora/system-update 通道（journey consumers 同款）。"""
-        from app.services.system_update_service import build_system_update, SystemUpdateService
-
         from app.core.cache import cache_service
+        from app.services.system_update_service import SystemUpdateService, build_system_update
 
         trigger_name = str(classification.trigger.value)
         title = {
