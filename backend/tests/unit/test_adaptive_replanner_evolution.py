@@ -192,6 +192,7 @@ async def test_on_plan_execution_completed_records_execution_delta_without_repla
     user_id = uuid4()
     plan_id = uuid4()
     replanner = object.__new__(AdaptiveReplanner)
+    replanner.db = SimpleNamespace(scalar=AsyncMock(return_value=plan_id))
     state = SimpleNamespace(facts={"adaptive_meta": {"recent_execution_feedback_deltas": []}})
     replanner.plan_state_service = SimpleNamespace(
         get_plan_state=AsyncMock(return_value=state),
@@ -230,6 +231,47 @@ async def test_on_plan_execution_completed_records_execution_delta_without_repla
     assert adaptive_meta["last_execution_feedback_delta"]["needs_replanning"] is False
     assert adaptive_meta["last_plan_revision_summary"]["new_next_action"].startswith("继续")
     replanner.plan_review_service.trigger_replanning.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_on_plan_execution_completed_skips_ephemeral_plan() -> None:
+    """Ephemeral plans (never inserted into `plans`) must not attempt
+    PlanState persistence — the FK violation poisons the shared chat
+    transaction and fails the whole turn (2026-09-21 ws probe incident)."""
+    user_id = uuid4()
+    plan_id = uuid4()
+    replanner = object.__new__(AdaptiveReplanner)
+    replanner.db = SimpleNamespace(scalar=AsyncMock(return_value=None))
+    replanner.plan_state_service = SimpleNamespace(
+        get_plan_state=AsyncMock(),
+        upsert_plan_state=AsyncMock(),
+    )
+
+    feedback = PlanExecutionFeedback(
+        plan_id=str(plan_id),
+        user_id=str(user_id),
+        session_id="session-1",
+        validation_status="failed",
+        quality_score=0.15,
+        total_steps=2,
+        steps_passed=1,
+        steps_failed=1,
+        aborted=True,
+        step_feedbacks=[],
+        slow_tools=[],
+        failed_tools=["generate_tasks_for_plan"],
+        unreliable_dependencies=[],
+    )
+
+    records = await replanner.on_plan_execution_completed(
+        user_id=user_id,
+        plan_id=plan_id,
+        feedback=feedback,
+    )
+
+    assert records == []
+    replanner.plan_state_service.get_plan_state.assert_not_called()
+    replanner.plan_state_service.upsert_plan_state.assert_not_called()
 
 
 @pytest.mark.asyncio

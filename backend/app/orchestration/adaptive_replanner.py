@@ -1554,6 +1554,15 @@ class AdaptiveReplanner:
         Persists step-level feedback to PlanState and triggers
         replanning if the execution signals warrant it.
         """
+        # Ephemeral plans (e.g. synthesized fallback / langgraph plans) are never
+        # inserted into `plans`; upserting PlanState for them violates
+        # plan_states_plan_id_fkey and poisons the shared chat transaction.
+        plan_row = await self.db.scalar(select(Plan.id).where(Plan.id == plan_id))
+        if plan_row is None:
+            logger.info(
+                f"Skip execution feedback persistence for ephemeral plan: plan_id={plan_id}"
+            )
+            return []
         state = await self.plan_state_service.get_plan_state(user_id, plan_id)
         outcome_learning = self._extract_outcome_learning((state.facts or {}) if state else {})
         execution_summary = self._build_execution_revision_summary(
