@@ -1215,6 +1215,65 @@ class ChatOrchestrator(
         except Exception as exc:
             logger.warning("Failed to write turn-end episodic memory: {}", exc)
 
+    def _create_finalize_db_session(self) -> Any:
+        """后台收尾专用的独立 DB 会话工厂。
+
+        ❌#6：收尾任务在流式生成器结束前后台运行，绝不能与流式
+        ``db_session`` 共享生命周期（StreamChat 会在流结束后 commit+close）。
+        """
+        from app.db.session import AsyncSessionLocal
+
+        return AsyncSessionLocal()
+
+    async def _finalize_turn_after_done(
+        self,
+        *,
+        user_id: str,
+        session_id: str,
+        request_id: str,
+        user_message: str,
+        assistant_message: str,
+        request_extra_context: dict[str, Any] | None,
+        user_context_payload: dict[str, Any] | None,
+        final_state: WorkflowState | None,
+        final_response_data: dict[str, Any] | None,
+        plan_context: dict[str, Any] | None,
+        conversation_context: dict[str, Any] | None,
+        turn_started_at: datetime | None,
+    ) -> None:
+        """done 之后的轮次收尾重活（fire-and-forget，永不抛出）。
+
+        ❌#6：轮末记忆写入与情绪落库不属于最终帧的构成成分——同步执行会把
+        done 事件压在 DB 写之后（演示实测 done 尾延迟 120-145s 的组成部分）。
+        这里用独立会话后台执行；任何失败只记日志，不影响用户已收到的回复。
+        """
+        try:
+            async with self._create_finalize_db_session() as bg_db:
+                await self._write_turn_end_episodic_memory(
+                    active_db=bg_db,
+                    user_id=user_id,
+                    session_id=session_id,
+                    request_id=request_id,
+                    user_message=user_message,
+                    assistant_message=assistant_message,
+                    event_kind="task_completed",
+                    request_extra_context=request_extra_context,
+                    user_context_payload=user_context_payload,
+                    final_state=final_state,
+                    final_response_data=final_response_data,
+                    plan_context=plan_context,
+                    turn_started_at=turn_started_at,
+                )
+                await self._maybe_upsert_session_mood(
+                    active_db=bg_db,
+                    user_id=user_id,
+                    session_id=session_id,
+                    request_extra_context=request_extra_context,
+                    conversation_context=conversation_context,
+                )
+        except Exception as exc:  # noqa: BLE001 — 后台收尾失败不影响已发出的回复
+            logger.warning("Post-done turn finalize failed (non-fatal): {}", exc)
+
     async def _stream_aurora_runtime_v1(
         self,
         *,
@@ -3640,21 +3699,27 @@ class ChatOrchestrator(
                         total_completion_tokens=total_completion_tokens,
                     )
                     await self._cache_response(session_id, request_id, final_response_data)
-                    await self._write_turn_end_episodic_memory(
-                        active_db=active_db,
-                        user_id=user_id,
-                        session_id=session_id,
-                        request_id=request_id,
-                        user_message=user_message,
-                        assistant_message=str(final_response_data.get("message") or ""),
-                        event_kind="task_completed",
-                        request_extra_context=request_extra_context,
-                        user_context_payload=user_context_payload,
-                        final_state=final_state,
-                        final_response_data=final_response_data,
-                        plan_context=plan_context,
-                        turn_started_at=turn_started_at,
+                    # 演示缺陷 ❌#6：done 尾延迟治理。记忆写入/情绪落库不是
+                    # 最终帧的构成成分——移入 done 之后的 fire-and-forget 后台
+                    # 任务（自带独立 DB 会话，不与流式会话共享生命周期），
+                    # 最终 STOP 帧在其之后立即 yield（网关收到 STOP 即发 done）。
+                    finalize_task = asyncio.create_task(
+                        self._finalize_turn_after_done(
+                            user_id=user_id,
+                            session_id=session_id,
+                            request_id=request_id,
+                            user_message=user_message,
+                            assistant_message=str(final_response_data.get("message") or ""),
+                            request_extra_context=request_extra_context,
+                            user_context_payload=user_context_payload,
+                            final_state=final_state,
+                            final_response_data=final_response_data,
+                            plan_context=plan_context,
+                            conversation_context=conversation_context,
+                            turn_started_at=turn_started_at,
+                        )
                     )
+                    self._track_task(finalize_task)
                     try:
                         turn_index = 1
                         if isinstance(conversation_context, dict):
@@ -3820,13 +3885,8 @@ class ChatOrchestrator(
                         request_id=request_id,
                         user_id=user_id,
                     )
-                    await self._maybe_upsert_session_mood(
-                        active_db=active_db,
-                        user_id=user_id,
-                        session_id=session_id,
-                        request_extra_context=request_extra_context,
-                        conversation_context=conversation_context,
-                    )
+                    # （❌#6）_maybe_upsert_session_mood 已并入 _finalize_turn_after_done
+                    # 后台任务；最终帧在收尾轻量步骤后立即发出。
                     yield self._bind_response_session_id(final_response, session_id, request_id=request_id)
 
                 REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="success").inc()

@@ -2130,6 +2130,28 @@ Ask about their available time and current tasks if needed.
     return state
 
 
+# ---------------------------------------------------------------------------
+# 演示缺陷 ❌#4：计划中断的用户可见文案路由
+# ---------------------------------------------------------------------------
+#: 确认门中断（awaiting user confirmation）的面向用户话术——不是失败，
+#: 不出现「中断/失败/layer/step」等开发者词汇。
+_CONFIRMATION_PENDING_NOTICE = (
+    "这一步需要你确认后才能继续。你确认之后，我们可以马上接着往下走。"
+)
+
+
+def render_plan_abort_notice(plan_result: Any) -> str:
+    """计划执行中断 → 用户可见 delta 文案。
+
+    - 确认门中断（``awaiting_user_confirmation``）：转自然话术，开发者诊断
+      （``abort_reason`` 含 layer 细节）只进日志，不进聊天文本；
+    - 其余失败：保持既有「⚠️ 计划执行中断」格式。
+    """
+    if getattr(plan_result, "awaiting_user_confirmation", False):
+        return f"\n\n{_CONFIRMATION_PENDING_NOTICE}"
+    return f"\n\n⚠️ 计划执行中断: {getattr(plan_result, 'abort_reason', None) or 'required step failed'}"
+
+
 async def tool_execution_node(state: WorkflowState) -> WorkflowState:
     """Execute Tools with Grounding Validation (Phase 1 & Phase 2).
 
@@ -2275,7 +2297,11 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
             )
 
             if stream_callback:
-                status_msg = f"{step_result.tool_name}: {'执行成功' if result.success else '执行失败'}"
+                # 演示缺陷 ❌#4：确认门步骤不是「执行失败」——状态条话术区分等待确认。
+                if (not result.success) and (result.error_type or "") == "ConfirmationRequired":
+                    status_msg = f"{step_result.tool_name}: 等待你确认后执行"
+                else:
+                    status_msg = f"{step_result.tool_name}: {'执行成功' if result.success else '执行失败'}"
                 await stream_callback(
                     agent_service_pb2.ChatResponse(
                         status_update=agent_service_pb2.AgentStatus(
@@ -2319,10 +2345,15 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
             state.append_message("tool", result_json, name=step_result.tool_name)
 
         if plan_result.aborted and stream_callback:
-            await stream_callback(
-                agent_service_pb2.ChatResponse(
-                    delta=f"\n\n⚠️ 计划执行中断: {plan_result.abort_reason or 'required step failed'}"
+            # 演示缺陷 ❌#4：确认门中断不是失败——文案路由见 render_plan_abort_notice。
+            if getattr(plan_result, "awaiting_user_confirmation", False):
+                logger.warning(
+                    "Plan {} paused awaiting user confirmation (developer reason: {})",
+                    executable_plan.plan_id,
+                    plan_result.abort_reason,
                 )
+            await stream_callback(
+                agent_service_pb2.ChatResponse(delta=render_plan_abort_notice(plan_result))
             )
 
         # Write feedback for LangGraph plan

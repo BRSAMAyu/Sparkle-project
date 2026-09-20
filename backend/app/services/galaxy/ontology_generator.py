@@ -327,7 +327,16 @@ class OntologyGenerator:
 
     def _fallback_extraction(self, text: str, subject: str | None) -> OntologyExtractionResult:
         lines = [line.strip("# ").strip() for line in text.splitlines() if line.strip()]
-        heading_candidates = [line for line in lines if 4 <= len(line) <= 48][:8]
+        # 附带缺陷（2026-09-20 演示盘点）：markdown 的 ==== / ---- 分隔行、
+        # 表格分隔线（|---|---|）等纯标点行会被当成标题候选 → 下游
+        # upsert_node_from_candidate 的节点名校验 raise ValueError →
+        # create_nodes_from_document 整体失败被 warning 吞掉、静默 fallback。
+        # 此处按与 expansion_service 相同的判据剔除纯标点行。
+        heading_candidates = [
+            line
+            for line in lines
+            if 4 <= len(line) <= 48 and re.search(r"[A-Za-z0-9\u4e00-\u9fff]", line)
+        ][:8]
         if not heading_candidates:
             heading_candidates = self._keyword_candidates(text)
 

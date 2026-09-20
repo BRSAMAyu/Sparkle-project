@@ -340,6 +340,16 @@ def _should_skip_review(state: SparkleState) -> bool:
     Returns:
         bool: True表示跳过审查
     """
+    # 演示缺陷 ❌#6：全局开关（部署/演示环境可整体关闭生成后审查，
+    # 避免审查 LLM 不可用时 done 前烧满多轮超时预算）。
+    try:
+        from app.config import settings
+
+        if not settings.ENABLE_GENERATION_REVIEW:
+            return True
+    except Exception:  # noqa: BLE001 — 配置读取失败不改变审查默认行为
+        pass
+
     # 检查用户配置
     enable_deep_review = _state_get(state, "enable_deep_review", True)
     if not enable_deep_review:
@@ -643,6 +653,16 @@ async def generation_review_node(state: SparkleState) -> dict[str, Any]:
         # 审查通过
         logger.info(f"[ReviewNode] Review PASSED: score={review_result.overall_score:.2f}")
         # 如果有工具调用，去执行；否则结束
+        next_step = "tool_execution" if _state_get(state, "context_data", {}).get("tool_calls") else "__end__"
+    elif getattr(review_result, "review_error", False) and review_result.requires_reflection:
+        # 演示缺陷 ❌#6：reviewer 基础设施故障（审查 LLM 超时/不可用）≠ 内容
+        # 质量问题。正文已流出、无法撤回；此时进入 reflection 只会对同一个
+        # 不可用的 LLM 栈再烧多轮 45s+ 超时（实测 done 尾延迟 120-145s）。
+        # 正确动作：跳过 reflection，直接按有无待执行工具收尾。
+        logger.warning(
+            "[ReviewNode] Review infrastructure error; skipping reflection "
+            f"(review_id={review_result.review_id})"
+        )
         next_step = "tool_execution" if _state_get(state, "context_data", {}).get("tool_calls") else "__end__"
     else:
         # 审查未通过

@@ -502,6 +502,11 @@ class Settings(BaseSettings):
     # fail-closed（score=0.00 + 1 个 critical"审查过程出错"）→ 无效重写。
     # 45s 与 ReviewerAgent.DEFAULT_LLM_TIMEOUT_SECONDS 对齐，覆盖 P95+。
     REVIEWER_LLM_TIMEOUT_SECONDS: int = 45
+    # 演示缺陷 ❌#6：生成后审查链（generation_review→reflection）在末个内容
+    # delta 之后、done 之前同步执行；审查 LLM 不可用时每轮烧满超时预算
+    # （review 45s + reflection 多轮 × 45s+ ≈ 实测 done 尾延迟 120-145s）。
+    # 置 False 可整体跳过生成后审查（内容审查本就无法撤回已流出的正文）。
+    ENABLE_GENERATION_REVIEW: bool = True
 
     # OCR / Document Cleaning
     OCR_PROVIDER: str = "zhipu"  # zhipu | siliconflow

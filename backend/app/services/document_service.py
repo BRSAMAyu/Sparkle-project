@@ -21,6 +21,7 @@ from app.core.cache import cache_service
 from app.core.ingestion.ingestion_service import ingestion_service
 from app.models.document_feedback import DocumentRetrievalFeedback
 from app.models.file_storage import StoredFile
+from app.models.galaxy import KnowledgeNodeDocument
 
 
 @dataclass
@@ -1001,6 +1002,7 @@ class DocumentService:
             return bool(_PUNCT_ONLY.match(t.strip()))
 
         general_indices: list[int] = []
+        section_nodes: list = []
         for i, chunk in enumerate(chunks):
             title = chunk.section_title or "General"
             if _is_punct_only(title):
@@ -1018,7 +1020,7 @@ class DocumentService:
                 root_node.chunk_refs = chunk_indices
                 continue
 
-            await expansion_service.upsert_node_from_candidate(
+            section_node, _created = await expansion_service.upsert_node_from_candidate(
                 user_id=user_id,
                 candidate={
                     "name": title[:50],
@@ -1042,6 +1044,26 @@ class DocumentService:
                     "chunk_refs": chunk_indices,
                 },
             )
+            section_nodes.append(section_node)
+
+        # 演示缺陷 ❌#5：fallback 也必须与 galaxy 主路径同事务补
+        # knowledge_node_documents（user/node/file 三元关联），否则
+        # drafts/summary=0 与 galaxy/drafts=N 自相矛盾、节点拖动归属判非 owned。
+        # 根节点 is_primary=True，分节节点 is_primary=False（与
+        # galaxy_service.create_nodes_from_document 的写法一致）。
+        db_session.add(KnowledgeNodeDocument(
+            user_id=user_id,
+            node_id=root_node.id,
+            file_id=file_id,
+            is_primary=True,
+        ))
+        for section_node in section_nodes:
+            db_session.add(KnowledgeNodeDocument(
+                user_id=user_id,
+                node_id=section_node.id,
+                file_id=file_id,
+                is_primary=False,
+            ))
 
         await db_session.commit()
         await expansion_service._invalidate_after_graph_mutation(user_id)

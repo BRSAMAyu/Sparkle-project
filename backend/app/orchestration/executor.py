@@ -212,10 +212,18 @@ class PlanExecutionResult:
     abort_reason: str | None = None
     # X-09：run 预算已超限（后续层不再发起；FIX-40 P3-6——切断而非硬顶兜底）。
     budget_exceeded: bool = False
+    # 演示缺陷 ❌#4：确认门（requires_confirmation 且用户未批准）中断的是
+    # 「等待确认」而非「执行失败」。置位后聊天层把中断文案路由为面向用户
+    # 的自然话术，开发者诊断（abort_reason）只进日志与内部 metadata。
+    awaiting_user_confirmation: bool = False
 
 
 _MAX_TOOL_CALLS_PER_REQUEST = 20
 _DAG_LAYER_MAX_CONCURRENCY = 10
+
+#: 确认门结构化错误码（演示缺陷 ❌#4）：requires_confirmation 且用户未批准时
+#: 工具不执行。这是「等待确认」语义，不是执行失败——计划层据此路由文案。
+CONFIRMATION_REQUIRED_ERROR_TYPE = "ConfirmationRequired"
 
 # ---------------------------------------------------------------------------
 # X-09 · 失败语义接线（确定性映射 + 重试参数；模块级常量供测试 monkeypatch）
@@ -798,12 +806,15 @@ class ToolExecutor:
             if getattr(tool, "requires_confirmation", False):
                 approved = (runtime_context or {}).get("user_approved", False)
                 if not approved:
+                    # 演示缺陷 ❌#4：error_message/suggestion 会进 tool_result 帧
+                    # 被用户看到——保持面向用户的话术，不用开发者英文术语。
                     return ToolResult(
                         success=False,
                         tool_name=tool_name,
                         tool_call_id=tool_call_id,
-                        error_message=f"Tool '{tool_name}' requires user confirmation before execution",
-                        error_type="ConfirmationRequired",
+                        error_message=f"「{tool_name}」这一步需要你确认后才能执行。",
+                        suggestion="确认这个操作后我们马上继续。",
+                        error_type=CONFIRMATION_REQUIRED_ERROR_TYPE,
                     )
 
             # X-06 · 安全闸门链：权限判定 → side-effect 幂等 → run 预算 → 账本开行
@@ -1430,12 +1441,31 @@ class ToolExecutor:
 
             if layer_aborted:
                 result.aborted = True
-                result.abort_reason = f"Required step failed in layer {layer_idx}"
-                logger.warning(
-                    "Plan {} aborted at layer {}: required step failed",
-                    plan.plan_id,
-                    layer_idx,
+                # 演示缺陷 ❌#4：确认门（ConfirmationRequired）不是执行失败——
+                # 是「等待用户批准」。置 awaiting_user_confirmation 让聊天层把
+                # 用户可见文案路由为自然话术；开发者诊断（含 layer 细节）只进
+                # 日志，不进聊天文本。
+                confirmation_gate_hit = any(
+                    (sr.tool_result.error_type or "") == CONFIRMATION_REQUIRED_ERROR_TYPE
+                    for sr in result.step_results
                 )
+                if confirmation_gate_hit:
+                    result.awaiting_user_confirmation = True
+                    result.abort_reason = (
+                        f"Confirmation-required step paused at layer {layer_idx} (awaiting user approval)"
+                    )
+                    logger.warning(
+                        "Plan {} paused at layer {}: confirmation-required tool awaits user approval",
+                        plan.plan_id,
+                        layer_idx,
+                    )
+                else:
+                    result.abort_reason = f"Required step failed in layer {layer_idx}"
+                    logger.warning(
+                        "Plan {} aborted at layer {}: required step failed",
+                        plan.plan_id,
+                        layer_idx,
+                    )
                 await self._notify_execution_observer(
                     execution_observer,
                     {
@@ -1443,6 +1473,7 @@ class ToolExecutor:
                         "layer_index": layer_idx,
                         "layer_number": layer_number,
                         "reason": result.abort_reason,
+                        "awaiting_user_confirmation": result.awaiting_user_confirmation,
                     },
                 )
                 break
