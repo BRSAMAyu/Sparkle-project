@@ -11,7 +11,11 @@ from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.file_storage import SourceLifecycleStatus
 from app.models.user import User
-from app.services.source_lifecycle import source_lifecycle_payload, source_lifecycle_service
+from app.services.source_lifecycle import (
+    drain_session_retrieval_invalidations,
+    source_lifecycle_payload,
+    source_lifecycle_service,
+)
 
 router = APIRouter(prefix="/sources", tags=["sources"])
 
@@ -49,6 +53,7 @@ async def archive_source(
         reason=(payload.reason if payload else None) or "user_archive",
     )
     await db.commit()
+    await drain_session_retrieval_invalidations(db)
     return source_lifecycle_payload(result.source, invalidated_keys=result.invalidated_keys)
 
 
@@ -70,6 +75,7 @@ async def restore_source(
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     await db.commit()
+    await drain_session_retrieval_invalidations(db)
     return source_lifecycle_payload(result.source, invalidated_keys=result.invalidated_keys)
 
 
@@ -88,6 +94,7 @@ async def revoke_source_permissions(
         reason=(payload.reason if payload else None) or "permission_revoked",
     )
     await db.commit()
+    await drain_session_retrieval_invalidations(db)
     body = source_lifecycle_payload(result.source, invalidated_keys=result.invalidated_keys)
     body["revoked_group_links"] = result.affected_group_links
     return body
@@ -103,6 +110,7 @@ async def delete_source(
     source = await _load_source_or_404(db, source_id, current_user.id)
     result = await source_lifecycle_service.delete(db, source=source)
     await db.commit()
+    await drain_session_retrieval_invalidations(db)
     return source_lifecycle_payload(result.source, invalidated_keys=result.invalidated_keys)
 
 
@@ -120,6 +128,7 @@ async def goal_close_cleanup(
         reason=payload.reason or "goal_closed",
     )
     await db.commit()
+    await drain_session_retrieval_invalidations(db)
     return {
         "updated": len(results),
         "sources": [

@@ -36,7 +36,7 @@ from app.services.rag_indexing_service import (
     get_rag_redis,
     index_document_chunks,
 )
-from app.services.source_lifecycle import source_lifecycle_service
+from app.services.source_lifecycle import drain_session_retrieval_invalidations, source_lifecycle_service
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.postgres]
 
@@ -283,8 +283,13 @@ async def test_delete_isolation_pg_redis_semantic_cache(live_session, two_users_
     live_session.add(newer_chunk)
     await live_session.commit()
 
-    # 执行删除（真实生命周期路径：Redis key + chunk 软删 + lifecycle）
+    # 执行删除（真实生命周期路径：Redis key + chunk 软删 + lifecycle）。
+    # 与生产 handler（api/v1/sources.py）同序列：delete → commit → drain，
+    # 失效在 commit 后于请求路径同步完成（FIX-16 ② N1：pre-commit DEL 缺陷
+    # 已改为 post-commit 执行，删除方负责 drain 保证键清除的即时性）。
     await source_lifecycle_service.delete(live_session, source=file_a, reason="e05_delete_isolation_test")
+    await live_session.commit()
+    await drain_session_retrieval_invalidations(live_session)
 
     # a) pgvector 立即不可见
     after_delete = await retrieval.document_vector_search(

@@ -83,6 +83,23 @@ async def wait_for_pending_post_commit_invalidation() -> None:
         await asyncio.gather(*tasks)
 
 
+async def drain_session_retrieval_invalidations(db: AsyncSession) -> None:
+    """显式 await 本会话已排期的 post-commit 失效任务（请求路径同步性保证）。
+
+    E-05 live 隔离语义要求：删除/归档事务 commit 返回后，versioned redis
+    键必须已经清除——after_commit 钩子 spawn 的任务由 commit 发起方在此
+    await 完成，而非留给事件循环后续 tick（毫秒级异步窗口也不允许）。
+    """
+    sync_session = db.sync_session
+    reg = _POST_COMMIT_INVALIDATION_REGS.get(sync_session)
+    if not reg:
+        return
+    tasks = [t for t in reg["tasks"] if not t.done()]
+    reg["tasks"].clear()
+    if tasks:
+        await asyncio.gather(*tasks)
+
+
 @dataclass(frozen=True)
 class SourceLifecycleResult:
     source: StoredFile
@@ -359,7 +376,7 @@ class SourceLifecycleService:
         sync_session = db.sync_session
         reg = _POST_COMMIT_INVALIDATION_REGS.get(sync_session)
         if reg is None:
-            reg = {"plans": []}
+            reg = {"plans": [], "tasks": []}
             _POST_COMMIT_INVALIDATION_REGS[sync_session] = reg
 
             def _on_commit(session: Any) -> None:
@@ -367,7 +384,7 @@ class SourceLifecycleService:
                 reg["plans"].clear()
                 if not plans:
                     return
-                self._spawn_post_commit_invalidation(plans)
+                self._spawn_post_commit_invalidation(plans, reg)
 
             def _on_rollback(session: Any) -> None:
                 reg["plans"].clear()
@@ -377,8 +394,14 @@ class SourceLifecycleService:
         reg["plans"].append(plan)
         return 1 + len(group_ids)
 
-    def _spawn_post_commit_invalidation(self, plans: list[_RetrievalInvalidationPlan]) -> None:
-        """在事件循环内 spawn 提交后失效任务（after_commit 处理器运行于循环线程）。"""
+    def _spawn_post_commit_invalidation(
+        self, plans: list[_RetrievalInvalidationPlan], reg: dict[str, Any] | None = None
+    ) -> None:
+        """在事件循环内 spawn 提交后失效任务（after_commit 处理器运行于循环线程）。
+
+        任务同时登记进 session 级 reg["tasks"]，供
+        ``drain_session_retrieval_invalidations`` 在请求路径上显式 await。
+        """
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:
@@ -388,6 +411,8 @@ class SourceLifecycleService:
             )
             return
         task = loop.create_task(self._run_scheduled_invalidations(plans))
+        if reg is not None:
+            reg["tasks"].append(task)
         _PENDING_INVALIDATION_TASKS.add(task)
         task.add_done_callback(_on_invalidation_task_done)
 
