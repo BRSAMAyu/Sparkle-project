@@ -143,6 +143,13 @@ class GetSituationBriefTool(BaseTool):
     category = ToolCategory.GROWTH
     parameters_schema = GetSituationBriefParams
 
+    # X-06 capability metadata (fail-closed; vocabulary: app/tools/metadata.py)
+    effect = "read"
+    risk = "low"
+    reversible = True
+    required_permission = "growth.read"
+    cost_usd = 0.0
+
     async def execute(
         self,
         params: GetSituationBriefParams,
@@ -232,6 +239,13 @@ class GetUserStrategyStateTool(BaseTool):
     category = ToolCategory.GROWTH
     parameters_schema = GetUserStrategyStateParams
 
+    # X-06 capability metadata (fail-closed; vocabulary: app/tools/metadata.py)
+    effect = "read"
+    risk = "low"
+    reversible = True
+    required_permission = "growth.read"
+    cost_usd = 0.0
+
     async def execute(
         self,
         params: GetUserStrategyStateParams,
@@ -266,6 +280,13 @@ class AdjustUserStrategyStateTool(BaseTool):
     description = "Write bounded user strategy adjustments to the session, episode, or profile layer."
     category = ToolCategory.GROWTH
     parameters_schema = AdjustUserStrategyStateParams
+
+    # X-06 capability metadata (fail-closed; vocabulary: app/tools/metadata.py)
+    effect = "write"
+    risk = "medium"
+    reversible = True
+    required_permission = "growth.write"
+    cost_usd = 0.0
 
     async def execute(
         self,
@@ -327,6 +348,13 @@ class WriteEpisodeNoteTool(BaseTool):
     category = ToolCategory.GROWTH
     parameters_schema = WriteEpisodeNoteParams
 
+    # X-06 capability metadata (fail-closed; vocabulary: app/tools/metadata.py)
+    effect = "write"
+    risk = "medium"
+    reversible = True
+    required_permission = "memory.write"
+    cost_usd = 0.0
+
     async def execute(
         self,
         params: WriteEpisodeNoteParams,
@@ -382,6 +410,13 @@ class GetProfileFrontDoorTool(BaseTool):
     category = ToolCategory.GROWTH
     parameters_schema = GetProfileFrontDoorParams
 
+    # X-06 capability metadata (fail-closed; vocabulary: app/tools/metadata.py)
+    effect = "read"
+    risk = "low"
+    reversible = True
+    required_permission = "memory.read"
+    cost_usd = 0.0
+
     async def execute(
         self,
         params: GetProfileFrontDoorParams,
@@ -418,6 +453,13 @@ class ApplyProfileCorrectionTool(BaseTool):
     )
     category = ToolCategory.GROWTH
     parameters_schema = ApplyProfileCorrectionParams
+
+    # X-06 capability metadata (fail-closed; vocabulary: app/tools/metadata.py)
+    effect = "write"
+    risk = "medium"
+    reversible = True
+    required_permission = "memory.write"
+    cost_usd = 0.0
 
     async def execute(
         self,
@@ -507,6 +549,13 @@ class GetGraphDiagnosticSurfaceTool(BaseTool):
     )
     category = ToolCategory.GROWTH
     parameters_schema = GetGraphDiagnosticSurfaceParams
+
+    # X-06 capability metadata (fail-closed; vocabulary: app/tools/metadata.py)
+    effect = "read"
+    risk = "low"
+    reversible = True
+    required_permission = "growth.read"
+    cost_usd = 0.0
 
     async def execute(
         self,

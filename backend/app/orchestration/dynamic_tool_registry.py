@@ -13,6 +13,7 @@ from typing import Any
 from loguru import logger
 
 from app.tools.base import BaseTool, ToolCategory
+from app.tools.metadata import ToolMetadata, ToolMetadataError, tool_metadata_from_attributes, validate_tool_metadata
 
 
 @dataclass
@@ -35,6 +36,7 @@ class DynamicToolRegistry:
     _instance = None
     _tools: dict[str, BaseTool] = {}
     _tool_info: dict[str, ToolInfo] = {}
+    _tool_metadata: dict[str, ToolMetadata] = {}
     _registered_packages: set[str] = set()
 
     def __new__(cls):
@@ -42,21 +44,33 @@ class DynamicToolRegistry:
             cls._instance = super().__new__(cls)
             cls._instance._tools = {}
             cls._instance._tool_info = {}
+            cls._instance._tool_metadata = {}
             cls._instance._registered_packages = set()
             cls._instance._registration_lock = threading.RLock()
         return cls._instance
 
     def register_tool(self, tool: BaseTool) -> None:
         """
-        手动注册单个工具
+        手动注册单个工具（X-06 fail-closed：能力元数据缺失/非法即拒绝注册）。
 
         Args:
             tool: 工具实例
+
+        Raises:
+            ToolMetadataError: effect/risk/reversible/required_permission/cost_usd
+                任一缺失或越封闭词表。被拒绝的工具**不进入注册表**——executor
+                侧按未知工具拒绝调用（fail-closed 全链传导）。
         """
         with self._registration_lock:
+            metadata = tool_metadata_from_attributes(tool)  # raises ToolMetadataError
             self._tools[tool.name] = tool
+            self._tool_metadata[tool.name] = metadata
             self._tool_info[tool.name] = self._build_tool_info(tool)
-            logger.info(f"Registered tool: {tool.name} ({tool.category.value})")
+            logger.info(
+                f"Registered tool: {tool.name} ({tool.category.value}, "
+                f"effect={metadata.effect.value}, risk={metadata.risk.value}, "
+                f"permission={metadata.required_permission})"
+            )
 
     def ensure_package_registered(self, package_path: str, recursive: bool = True) -> int:
         """
@@ -168,6 +182,26 @@ class DynamicToolRegistry:
         with self._registration_lock:
             return self._tools.get(name)
 
+    def get_tool_metadata(self, name: str) -> ToolMetadata | None:
+        """获取工具能力元数据（X-06 权限判定的唯一真源读口）。
+
+        未注册/注册被拒的工具返回 None——executor 侧对 None 一律拒绝调用
+        （fail-closed：未知工具与缺失元数据同路拒绝）。
+        """
+        with self._registration_lock:
+            metadata = self._tool_metadata.get(name)
+            if metadata is not None:
+                return metadata
+            if name not in self._tools:
+                return None
+            # 兜底物化（直接写入 _tools 的旁路场景；register_tool 已物化）
+            try:
+                metadata = tool_metadata_from_attributes(self._tools[name])
+            except ToolMetadataError:
+                return None
+            self._tool_metadata[name] = metadata
+            return metadata
+
     def get_all_tools(self) -> list[BaseTool]:
         """获取所有工具实例"""
         with self._registration_lock:
@@ -260,6 +294,11 @@ class DynamicToolRegistry:
                 "description": tool.description,
                 "category": tool.category.value,
             }
+            metadata = self.get_tool_metadata(tool.name)
+            if metadata is not None:
+                info.update(metadata.to_dict())
+            elif verbose:
+                info["metadata_issue"] = "missing or invalid capability metadata"
             if verbose:
                 info["parameters"] = tool.parameters_schema
                 info["module"] = tool.__class__.__module__
@@ -280,8 +319,8 @@ class DynamicToolRegistry:
         with self._registration_lock:
             if name in self._tools:
                 del self._tools[name]
-                if name in self._tool_info:
-                    del self._tool_info[name]
+                self._tool_info.pop(name, None)
+                self._tool_metadata.pop(name, None)
                 logger.info(f"Unregistered tool: {name}")
                 return True
             return False
@@ -302,6 +341,7 @@ class DynamicToolRegistry:
         with self._registration_lock:
             self._tools.clear()
             self._tool_info.clear()
+            self._tool_metadata.clear()
             self._registered_packages.clear()
             logger.info("All tools cleared")
 
@@ -326,7 +366,7 @@ class DynamicToolRegistry:
             return False
 
     def validate_all_tools(self) -> list[dict[str, str]]:
-        """Validate every registered tool has a working execute method and valid schema.
+        """Validate every registered tool: execute/schema/metadata (X-06 fail-closed 五元数据).
 
         Returns a list of issue dicts with ``tool`` and ``issue`` keys.  An empty
         list means all tools passed validation.
@@ -341,6 +381,8 @@ class DynamicToolRegistry:
                 issues.append({"tool": getattr(tool, "__class__", type(None)).__name__, "issue": "missing name attribute"})
             if not getattr(tool, "parameters_schema", None):
                 issues.append({"tool": tool.name, "issue": "missing parameters_schema"})
+            for issue in validate_tool_metadata(tool):
+                issues.append({"tool": tool.name, "issue": f"capability metadata: {issue}"})
             try:
                 tool.to_openai_schema()
             except Exception as exc:

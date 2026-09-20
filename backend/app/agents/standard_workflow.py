@@ -1887,6 +1887,7 @@ Ask about their available time and current tasks if needed.
                 elif chunk.type == "usage":
                     usage_prompt_tokens = chunk.prompt_tokens or 0
                     usage_completion_tokens = chunk.completion_tokens or 0
+                    await _record_run_token_usage(state, usage_prompt_tokens + usage_completion_tokens)
                     if stream_callback:
                         first_chunk_sent = await _flush_stream_text_buffer(
                             stream_callback=stream_callback,
@@ -3363,6 +3364,28 @@ async def router_node(state: WorkflowState) -> WorkflowState:
 # ==========================================
 
 
+async def _record_run_token_usage(state: WorkflowState, total_tokens: int) -> None:
+    """X-06 · LLM token 用量 → run budget 记账（AGENT_RUNTIME.md §3 budget token 维度）。
+
+    仅当本会话挂了 agent run（context_data.run_id，服务端写入）时记账；独立
+    会话、best-effort——记账失败不影响对话流（预算闸门在工具调用侧仍会拦截
+    已超限的 run）。chat 轨道当前不创建 run（X-05 预留），此处零行为。
+    """
+    run_id = state.context_data.get("run_id")
+    if not run_id or total_tokens <= 0:
+        return
+    try:
+        from app.db.session import AsyncSessionLocal
+        from app.services.agent_run_service import AgentRunService
+
+        async with AsyncSessionLocal() as run_session:
+            await AgentRunService(run_session).record_run_usage(
+                run_id, user_id=state.context_data.get("user_id"), tokens=int(total_tokens)
+            )
+    except Exception as exc:  # noqa: BLE001 — 记账失败不阻塞对话流
+        logger.debug("run token usage recording skipped run_id={} error={!r}", run_id, exc)
+
+
 async def _execute_single_tool(
     tool_name: str,
     tool_args: dict,
@@ -3408,6 +3431,11 @@ async def _execute_single_tool(
             runtime_context={
                 "session_id": state.context_data.get("session_id"),
                 "plan_id": state.context_data.get("plan_id"),
+                # X-06 · run 契约透传（服务端结构化授权/预算上下文；chat 轨道
+                # 未挂 run 时缺省不存在——零行为变化，权限回落默认授权集）
+                "run_id": state.context_data.get("run_id"),
+                "allowed_tools": state.context_data.get("run_allowed_tools"),
+                "run_permissions": state.context_data.get("run_permissions"),
                 "redis_client": redis_client,
                 "current_user_message": state.messages[-1]["content"] if state.messages else "",
                 "file_ids": list(state.context_data.get("file_ids") or []),

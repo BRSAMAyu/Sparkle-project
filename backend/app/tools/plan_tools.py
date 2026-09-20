@@ -60,6 +60,13 @@ class CreatePlanTool(BaseTool):
     parameters_schema = CreatePlanParams
     requires_confirmation = False
 
+    # X-06 capability metadata (fail-closed; vocabulary: app/tools/metadata.py)
+    effect = "write"
+    risk = "medium"
+    reversible = True
+    required_permission = "plan.write"
+    cost_usd = 0.0
+
     async def execute(
         self,
         params: CreatePlanParams,
@@ -141,6 +148,13 @@ class GenerateTasksForPlanTool(BaseTool):
     parameters_schema = GenerateTasksForPlanParams
     requires_confirmation = True  # 需要用户确认才能创建
     timeout_seconds = 90.0  # LLM-powered generation, may take longer
+
+    # X-06 capability metadata (fail-closed; vocabulary: app/tools/metadata.py)
+    effect = "write"
+    risk = "high"
+    reversible = True
+    required_permission = "plan.write"
+    cost_usd = 0.0
 
     @staticmethod
     def _resolve_max_session_minutes(persona_constraints: Any | None) -> int:

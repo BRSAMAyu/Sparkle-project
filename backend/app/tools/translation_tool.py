@@ -99,6 +99,13 @@ class TranslateTextTool(BaseTool):
     parameters_schema = TranslateTextParams
     requires_confirmation = False
 
+    # X-06 capability metadata (fail-closed; vocabulary: app/tools/metadata.py)
+    effect = "read"
+    risk = "low"
+    reversible = True
+    required_permission = "llm.use"
+    cost_usd = 0.001
+
     async def execute(
         self,
         params: TranslateTextParams,

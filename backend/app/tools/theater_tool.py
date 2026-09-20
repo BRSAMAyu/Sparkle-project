@@ -25,6 +25,13 @@ class LaunchPredictionTool(BaseTool):
     parameters_schema = LaunchPredictionParams
     requires_confirmation = False
 
+    # X-06 capability metadata (fail-closed; vocabulary: app/tools/metadata.py)
+    effect = "write"
+    risk = "medium"
+    reversible = True
+    required_permission = "llm.use"
+    cost_usd = 0.003
+
     async def execute(
         self,
         params: LaunchPredictionParams,

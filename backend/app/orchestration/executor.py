@@ -25,12 +25,90 @@ from app.core.event_types import (
 from app.core.llm_secure_io import refresh_llm_safety_mode, sanitize_exception_message
 from app.core.metrics import TOOL_EXECUTION_COUNT
 from app.db.session import AsyncSessionLocal
+from app.models.agent_tool_call import AgentToolCall
 from app.services.tool_history_service import ToolHistoryService
 from app.tools.base import TOOL_RUNTIME_CONTEXT_KEY, ToolResult
+from app.tools.metadata import (
+    PermissionDecision,
+    ToolMetadata,
+    canonical_args_hash,
+    decide_tool_permission,
+)
 from app.tools.registry import tool_registry
 
 if TYPE_CHECKING:
     from app.orchestration.schemas import ExecutablePlan, ToolCallSpec
+
+#: X-06 · run 权威会话工厂（权限/预算读取用**独立会话**，避免在调用方事务中途
+#: commit）。测试以 sqlite 测试引擎 monkeypatch 本符号（X-05 service 测试同法）。
+_agent_run_session_factory = AsyncSessionLocal
+
+
+@dataclass
+class _CallGuard:
+    """一次工具调用的安全闸门结果（rejected 非空 = 不执行工具）。"""
+
+    tool_name: str
+    decision: PermissionDecision | None = None
+    metadata: ToolMetadata | None = None
+    idempotency_key: str | None = None
+    args_hash: str = ""
+    run_id: str | None = None
+    ledger: AgentToolCall | None = None
+    replay_result: ToolResult | None = None
+    rejected: ToolResult | None = None
+
+    def reject(self, *, error_type: str, message: str) -> None:
+        self.rejected = ToolResult(
+            success=False,
+            tool_name=self.tool_name,
+            error_type=error_type,
+            error_message=message,
+        )
+
+    def reject_permission(self, tool_name: str, reason: str) -> None:
+        self.reject(
+            error_type="PermissionDenied",
+            message=f"Tool '{tool_name}' denied by permission decision ({reason}); "
+            "grants come from the tool registry and server-declared permissions only",
+        )
+
+    async def finalize(
+        self,
+        db_session: Any,
+        result: ToolResult,
+        execution_time_ms: int | None,
+    ) -> None:
+        """账本收敛（succeeded/failed + 结果 dump；与工具写入同事务提交）。"""
+        if self.ledger is None:
+            return
+        try:
+            self.ledger.status = "succeeded" if result.success else "failed"
+            self.ledger.result = result.model_dump(mode="json")
+            self.ledger.execution_time_ms = execution_time_ms
+            self.ledger.error_type = result.error_type
+            self.ledger.error_message = (result.error_message or None) if not result.success else None
+            self.ledger.finished_at = datetime.now(UTC).replace(tzinfo=None)
+            db_session.add(self.ledger)
+        except Exception as exc:  # noqa: BLE001 — 账本收敛失败不吞工具结果
+            logger.warning("tool call ledger finalize failed tool={} error={!r}", self.tool_name, exc)
+
+    async def record_usage(self, user_id: str) -> None:
+        """run 维度 usage 记账（tool_calls+1、cost+metadata 估计）。"""
+        if self.run_id is None or self.metadata is None:
+            return
+        try:
+            from app.services.agent_run_service import AgentRunService
+
+            async with _agent_run_session_factory() as run_session:
+                await AgentRunService(run_session).record_run_usage(
+                    self.run_id,
+                    user_id=user_id,
+                    tool_calls=1,
+                    cost_usd=self.metadata.cost_usd,
+                )
+        except Exception as exc:  # noqa: BLE001 — 记账失败不吞工具结果（下次闸门仍会拦超限）
+            logger.warning("run usage recording failed run_id={} error={!r}", self.run_id, exc)
 
 
 @dataclass
@@ -193,6 +271,213 @@ class ToolExecutor:
             return info
         return None
 
+    # ------------------------------------------------------------------
+    # X-06 · 工具调用安全闸门（权限/幂等/预算/账本——代码强制，非提示词层）
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _structured_context(runtime_context: dict[str, Any] | None) -> dict[str, Any]:
+        """只取 runtime_context 的**服务端结构化键**（权限判定输入空间）。
+
+        权限判定与预算检查只消费本方法返回的结构化字段；对话内容
+        （``current_user_message`` 等不可信文本）永不进入判定输入——这是
+        prompt injection 无法扩权的构造性保证（SECURITY_PRIVACY.md）。
+        """
+        if not isinstance(runtime_context, dict):
+            return {}
+        keys = ("allowed_tools", "run_permissions", "run_id", "user_approved", "locale")
+        return {k: runtime_context[k] for k in keys if k in runtime_context}
+
+    async def _authorize_and_begin_call(
+        self,
+        *,
+        tool: Any,
+        tool_name: str,
+        arguments: dict[str, Any],
+        user_id: str,
+        db_session: Any,
+        tool_call_id: str | None,
+        idempotency_key: str | None,
+        runtime_context: dict[str, Any] | None,
+    ) -> _CallGuard:
+        """权限判定 + side-effect 幂等 + run 预算闸门 + 账本开行。
+
+        返回 :class:`_CallGuard`——``rejected`` 非空即拒绝/重放（调用方直接
+        返回该 ToolResult，不执行工具）；否则 ``ledger`` 为已开账本行
+        （in_progress，与工具写入同事务），执行完成后调 ``finalize``。
+
+        闸门顺序（fail-closed）：
+        1. 元数据：registry 是唯一真源；缺失（未注册/被拒注册）→ 拒绝；
+        2. 权限：registry 元数据 + run 契约（run_id 存在时以 AgentRun 行为
+           权威，否则取 runtime_context 的服务端结构化授权）；
+        3. 幂等：side-effect（effect=write）必须有 key（显式 idempotency_key
+           或 tool_call_id），缺失即拒绝；同 key 已记录 → 重放（不重复执行）；
+        4. 预算：run_id 存在时 AgentRunService.enforce_budget（超限 → run
+           落 BUDGET_EXCEEDED 明确终态，本次调用拒绝）。
+        """
+        guard = _CallGuard(tool_name=tool_name)
+        ctx = self._structured_context(runtime_context)
+
+        # 1. 元数据（registry fail-closed 的执行侧兜底复查）
+        metadata = tool_registry.get_tool_metadata(tool_name)
+        if metadata is None:
+            guard.reject_permission(tool_name, "metadata_missing")
+            return guard
+
+        # 2. 权限判定（run 行权威 > 服务端结构化授权 > 代码冻结默认授权集）
+        run_row = None
+        run_id = ctx.get("run_id")
+        if run_id:
+            run_row = await self._load_run_row(str(run_id), str(user_id))
+        if run_row is not None:
+            run_permissions = run_row.permissions if isinstance(run_row.permissions, dict) else {}
+            decision = decide_tool_permission(
+                tool_name=tool_name,
+                metadata=metadata,
+                allowed_tools=run_row.allowed_tools or None,
+                granted_permissions=run_permissions.get("granted"),
+                denied_permissions=run_permissions.get("denied"),
+            )
+        else:
+            run_permissions = ctx.get("run_permissions")
+            run_permissions = run_permissions if isinstance(run_permissions, dict) else {}
+            decision = decide_tool_permission(
+                tool_name=tool_name,
+                metadata=metadata,
+                allowed_tools=ctx.get("allowed_tools"),
+                granted_permissions=run_permissions.get("granted"),
+                denied_permissions=run_permissions.get("denied"),
+            )
+        if not decision.allowed:
+            guard.reject_permission(tool_name, decision.reason)
+            return guard
+        guard.decision = decision
+
+        # 3. side-effect 幂等（effect=write 强制 key；同 key 重放恰一次）
+        key = (str(idempotency_key).strip() if idempotency_key else None) or tool_call_id or None
+        guard.idempotency_key = key
+        if metadata.is_side_effect and not key:
+            guard.reject(
+                error_type="IdempotencyKeyRequired",
+                message=f"Tool '{tool_name}' has side effects; an idempotency key (or tool_call_id) is required",
+            )
+            return guard
+
+        args_hash = canonical_args_hash(arguments)
+        guard.args_hash = args_hash
+        guard.metadata = metadata
+
+        if key:
+            existing = await self._find_ledger_row(db_session, user_id, tool_name, key)
+            if existing is not None:
+                if existing.args_hash and existing.args_hash != args_hash:
+                    guard.reject(
+                        error_type="IdempotencyArgsMismatch",
+                        message=(
+                            f"Idempotency key '{key}' was already used with different arguments "
+                            f"for tool '{tool_name}'"
+                        ),
+                    )
+                    return guard
+                if existing.status == "in_progress":
+                    guard.reject(
+                        error_type="IdempotencyConflict",
+                        message=(
+                            f"Previous attempt with idempotency key '{key}' is still in progress "
+                            f"for tool '{tool_name}'; side effect not re-executed"
+                        ),
+                    )
+                    return guard
+                # succeeded/failed：返回已记录结果——同 key 重放恰一次执行
+                guard.replay_result = self._rebuild_result(existing)
+                return guard
+
+        # 4. run 预算闸门（超限 → BUDGET_EXCEEDED 明确终态 + 本次拒绝）
+        if run_row is not None:
+            from app.services.agent_run_service import AgentRunService, BudgetExceededError
+
+            try:
+                async with _agent_run_session_factory() as run_session:
+                    await AgentRunService(run_session).enforce_budget(
+                        run_row.id, user_id=user_id, prospective_tool_calls=1
+                    )
+            except BudgetExceededError as exc:
+                guard.reject(error_type="BudgetExceeded", message=str(exc))
+                return guard
+            except Exception as exc:  # noqa: BLE001 — 预算基础设施故障 → fail-closed
+                logger.error("run budget gate failed (fail-closed) tool={} error={!r}", tool_name, exc)
+                guard.reject(error_type="BudgetGateUnavailable", message="run budget gate unavailable; call rejected")
+                return guard
+            guard.run_id = str(run_row.id)
+
+        # 账本开行（与工具写入同事务：提交即「已发生且已记账」）
+        try:
+            ledger = AgentToolCall(
+                user_id=uuid.UUID(str(user_id)),
+                run_id=uuid.UUID(str(guard.run_id)) if guard.run_id else None,
+                tool_name=tool_name,
+                tool_call_id=tool_call_id,
+                idempotency_key=key,
+                args_hash=args_hash,
+                permission_decision=decision.to_dict(),
+                status="in_progress",
+                started_at=datetime.now(UTC).replace(tzinfo=None),
+            )
+            db_session.add(ledger)
+            await db_session.flush()
+            guard.ledger = ledger
+        except Exception as exc:  # noqa: BLE001 — 并发同 key 撞唯一索引等 → fail-closed
+            logger.warning("tool call ledger begin failed (fail-closed) tool={} error={!r}", tool_name, exc)
+            await self._safe_rollback(db_session)
+            guard.reject(
+                error_type="IdempotencyConflict",
+                message=f"Concurrent duplicate call for tool '{tool_name}' detected; side effect not re-executed",
+            )
+        return guard
+
+    async def _load_run_row(self, run_id: str, user_id: str) -> Any:
+        """加载 AgentRun 权威行（权限/预算的 DB 真源；独立会话避免嵌套事务）。"""
+        try:
+            from app.services.agent_run_service import AgentRunService, RunNotFoundError
+
+            async with _agent_run_session_factory() as run_session:
+                return await AgentRunService(run_session).get_run(run_id, user_id=user_id)
+        except RunNotFoundError:
+            logger.warning("run context references unknown run_id={} (permission falls back to context grants)", run_id)
+            return None
+        except Exception as exc:  # noqa: BLE001 — run 权威不可读 → 视为无 run 上下文（context 授权兜底）
+            logger.error("run authority load failed run_id={} error={!r}", run_id, exc)
+            return None
+
+    @staticmethod
+    async def _find_ledger_row(db_session: Any, user_id: str, tool_name: str, key: str) -> AgentToolCall | None:
+        from sqlalchemy import select
+
+        try:
+            stmt = select(AgentToolCall).where(
+                AgentToolCall.user_id == uuid.UUID(str(user_id)),
+                AgentToolCall.tool_name == tool_name,
+                AgentToolCall.idempotency_key == key,
+            )
+            return (await db_session.execute(stmt)).scalar_one_or_none()
+        except Exception as exc:  # noqa: BLE001 — 账本不可读 → fail-closed（无账本不执行 side effect）
+            logger.error("tool call ledger read failed tool={} key={} error={!r}", tool_name, key, exc)
+            raise
+
+    @staticmethod
+    def _rebuild_result(ledger: AgentToolCall) -> ToolResult:
+        """从账本行重建 ToolResult（重放返回体；损坏行退化为显式冲突拒绝）。"""
+        try:
+            payload = ledger.result or {}
+            return ToolResult.model_validate(payload)
+        except Exception:
+            return ToolResult(
+                success=False,
+                tool_name=ledger.tool_name,
+                error_type="IdempotencyConflict",
+                error_message="Recorded result for this idempotency key is unreadable; side effect not re-executed",
+            )
+
     async def execute_tool_call(
         self,
         tool_name: str,
@@ -203,6 +488,7 @@ class ToolExecutor:
         tool_call_id: str | None = None,
         compensation_call: dict[str, Any] | None = None,
         runtime_context: dict[str, Any] | None = None,
+        idempotency_key: str | None = None,
     ) -> ToolResult:
         """
         执行单个工具调用并记录执行历史
@@ -214,6 +500,8 @@ class ToolExecutor:
             db_session: 数据库会话
             progress_callback: 进度回调
             tool_call_id: 工具调用 ID
+            idempotency_key: X-06 幂等键（side-effect 工具缺省回落 tool_call_id；
+                两者皆缺且 effect=write → IdempotencyKeyRequired 拒绝）
 
         Returns:
             ToolResult: 执行结果
@@ -231,6 +519,7 @@ class ToolExecutor:
                     owns_session=True,
                     compensation_call=compensation_call,
                     runtime_context=runtime_context,
+                    idempotency_key=idempotency_key,
                 )
 
         return await self._execute_tool_call_with_session(
@@ -243,6 +532,7 @@ class ToolExecutor:
             owns_session=False,
             compensation_call=compensation_call,
             runtime_context=runtime_context,
+            idempotency_key=idempotency_key,
         )
 
     async def _execute_tool_call_with_session(
@@ -256,6 +546,7 @@ class ToolExecutor:
         owns_session: bool,
         compensation_call: dict[str, Any] | None,
         runtime_context: dict[str, Any] | None,
+        idempotency_key: str | None = None,
     ) -> ToolResult:
         tool = tool_registry.get_tool(tool_name)
         session_info = self._session_info_mapping(db_session)
@@ -271,6 +562,7 @@ class ToolExecutor:
                     tool_name=tool_name,
                     tool_call_id=tool_call_id,
                     error_message=f"未知工具: {tool_name}",
+                    error_type="ToolNotFound",
                     suggestion="请检查工具名称是否正确",
                 )
                 await self._publish_tool_event(
@@ -351,6 +643,67 @@ class ToolExecutor:
                         error_type="ConfirmationRequired",
                     )
 
+            # X-06 · 安全闸门链：权限判定 → side-effect 幂等 → run 预算 → 账本开行
+            # （代码强制；判定输入只有 registry 元数据与服务端结构化授权，
+            # 与对话内容无关——prompt injection 无法扩权）。
+            guard = await self._authorize_and_begin_call(
+                tool=tool,
+                tool_name=tool_name,
+                arguments=arguments,
+                user_id=user_id,
+                db_session=db_session,
+                tool_call_id=tool_call_id,
+                idempotency_key=idempotency_key,
+                runtime_context=runtime_context,
+            )
+            if guard.rejected is not None:
+                rejected = guard.rejected
+                rejected.tool_call_id = tool_call_id
+                TOOL_EXECUTION_COUNT.labels(tool_name=tool_name, status="denied").inc()
+                await self._publish_tool_event(
+                    TOOL_EXECUTION_FAILED,
+                    {
+                        "user_id": str(user_id),
+                        "tool_name": tool_name,
+                        "tool_call_id": tool_call_id,
+                        "error_message": rejected.error_message,
+                        "error_type": rejected.error_type,
+                        "timestamp": self._utcnow_iso(),
+                    },
+                )
+                await self._record_tool_execution(
+                    db_session,
+                    user_id,
+                    tool_name,
+                    False,
+                    error_message=rejected.error_message,
+                    error_type=rejected.error_type,
+                    use_separate_session=not owns_session,
+                )
+                await self._commit_if_owned(db_session, owns_session)
+                return rejected
+            if guard.replay_result is not None:
+                replay = guard.replay_result
+                replay.tool_call_id = tool_call_id
+                logger.info(
+                    "tool call replay (idempotent, side effect not repeated): tool={} key={}",
+                    tool_name,
+                    guard.idempotency_key,
+                )
+                TOOL_EXECUTION_COUNT.labels(tool_name=tool_name, status="idempotent_replay").inc()
+                await self._publish_tool_event(
+                    TOOL_EXECUTION_COMPLETED if replay.success else TOOL_EXECUTION_FAILED,
+                    {
+                        "user_id": str(user_id),
+                        "tool_name": tool_name,
+                        "tool_call_id": tool_call_id,
+                        "idempotent_replay": True,
+                        "success": replay.success,
+                        "timestamp": self._utcnow_iso(),
+                    },
+                )
+                return replay
+
             await self._publish_tool_event(
                 TOOL_EXECUTION_STARTED,
                 {
@@ -419,7 +772,11 @@ class ToolExecutor:
                     output_summary=result.suggestion or str(result.data)[:200] if result.data else None,
                     use_separate_session=not owns_session,
                 )
+                # X-06 账本收敛（succeeded/failed + 结果 dump；与工具写入同事务）
+                await guard.finalize(db_session, result, execution_time_ms)
                 await self._commit_if_owned(db_session, owns_session)
+                # X-06 run 维度 usage 记账（tool_calls+1 / cost+metadata 估计）
+                await guard.record_usage(user_id)
 
                 if not result.success:
                     await self._publish_tool_event(
@@ -441,6 +798,7 @@ class ToolExecutor:
                         owns_session=owns_session,
                         reason="tool_failed",
                         runtime_context=runtime_context,
+                        tool_call_id=tool_call_id,
                     )
                 else:
                     await self._publish_tool_event(
@@ -494,6 +852,7 @@ class ToolExecutor:
                         owns_session=owns_session,
                         reason="tool_timeout",
                         runtime_context=runtime_context,
+                        tool_call_id=tool_call_id,
                     )
                 return ToolResult(
                     success=False,
@@ -541,6 +900,7 @@ class ToolExecutor:
                         owns_session=owns_session,
                         reason="tool_exception",
                         runtime_context=runtime_context,
+                        tool_call_id=tool_call_id,
                     )
                 return ToolResult(
                     success=False,
@@ -673,11 +1033,19 @@ class ToolExecutor:
         owns_session: bool,
         reason: str,
         runtime_context: dict[str, Any] | None = None,
+        tool_call_id: str | None = None,
     ) -> None:
         if not compensation_spec:
             return
         tool_name, arguments = compensation_spec
         COMPENSATION_TRIGGERED.labels(reason=reason).inc()
+        # X-06：补偿调用本身是 side effect——确定性幂等键（同一失败调用的补偿
+        # 重放恰一次；无原始 call id 时退化为参数哈希）。
+        compensation_key = (
+            f"compensation:{tool_call_id}:{tool_name}"
+            if tool_call_id
+            else f"compensation:{tool_name}:{canonical_args_hash(arguments)}"
+        )
         try:
             await self._execute_tool_call_with_session(
                 tool_name=tool_name,
@@ -689,6 +1057,7 @@ class ToolExecutor:
                 owns_session=owns_session,
                 compensation_call=None,
                 runtime_context=runtime_context,
+                idempotency_key=compensation_key,
             )
         except Exception as e:
             logger.warning(f"Compensation tool failed: {tool_name} - {e}")

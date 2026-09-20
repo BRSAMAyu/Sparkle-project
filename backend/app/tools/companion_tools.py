@@ -111,6 +111,13 @@ class GetCompanionStateTool(BaseTool):
     category = ToolCategory.QUERY
     parameters_schema = GetCompanionStateParams
 
+    # X-06 capability metadata (fail-closed; vocabulary: app/tools/metadata.py)
+    effect = "read"
+    risk = "low"
+    reversible = True
+    required_permission = "memory.read"
+    cost_usd = 0.0
+
     async def execute(
         self,
         params: GetCompanionStateParams,
@@ -145,6 +152,13 @@ class AdjustCompanionStateTool(BaseTool):
     description = "Adjust Sparkle's session-level companion stance with evidence and audit logging."
     category = ToolCategory.QUERY
     parameters_schema = AdjustCompanionStateParams
+
+    # X-06 capability metadata (fail-closed; vocabulary: app/tools/metadata.py)
+    effect = "write"
+    risk = "medium"
+    reversible = True
+    required_permission = "growth.write"
+    cost_usd = 0.0
 
     async def execute(
         self,
@@ -205,6 +219,13 @@ class WriteCompanionGrowthNoteTool(BaseTool):
     category = ToolCategory.QUERY
     parameters_schema = WriteCompanionGrowthNoteParams
 
+    # X-06 capability metadata (fail-closed; vocabulary: app/tools/metadata.py)
+    effect = "write"
+    risk = "medium"
+    reversible = True
+    required_permission = "memory.write"
+    cost_usd = 0.0
+
     async def execute(
         self,
         params: WriteCompanionGrowthNoteParams,
@@ -254,6 +275,13 @@ class WriteRelationshipNoteTool(BaseTool):
     description = "Record an audited relationship note and promote it only when repeated evidence justifies it."
     category = ToolCategory.QUERY
     parameters_schema = WriteRelationshipNoteParams
+
+    # X-06 capability metadata (fail-closed; vocabulary: app/tools/metadata.py)
+    effect = "write"
+    risk = "medium"
+    reversible = True
+    required_permission = "memory.write"
+    cost_usd = 0.0
 
     async def execute(
         self,
@@ -305,6 +333,13 @@ class GetSelfRevisionHistoryTool(BaseTool):
     description = "Read Sparkle's recent self-revision ledger across session, episode, and profile layers."
     category = ToolCategory.QUERY
     parameters_schema = GetSelfRevisionHistoryParams
+
+    # X-06 capability metadata (fail-closed; vocabulary: app/tools/metadata.py)
+    effect = "read"
+    risk = "low"
+    reversible = True
+    required_permission = "memory.read"
+    cost_usd = 0.0
 
     async def execute(
         self,

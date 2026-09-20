@@ -24,9 +24,11 @@ from app.core.run_state_machine import (
     run_status_for_intent_status,
 )
 
-# 迁移图指纹在 X-05 契约冻结时采集（agent_run.v1）。任何变更（加边/删边/改词表）
-# 都会破坏此断言——这是刻意的：改契约必须显式。
-_FROZEN_TRANSITIONS_SHA256 = "3d9815d0f3b89bae"
+# 迁移图指纹：X-05 契约冻结时采集（agent_run.v1 = 3d9815d0f3b89bae）；
+# X-06（agent_run.v2）扩词表 BUDGET_EXCEEDED + 5 条活跃态→BUDGET_EXCEEDED 边
+# + 归因 budget_exceeded——本卡两位 reviewer 的显式契约变更。任何进一步变更
+# （加边/删边/改词表）都会破坏此断言——这是刻意的：改契约必须显式。
+_FROZEN_TRANSITIONS_SHA256 = "87423d3c179aac83"
 
 
 def _transitions_digest() -> str:
@@ -51,6 +53,7 @@ class TestClosedVocabulary:
             "CANCELLED",
             "TIMED_OUT",
             "UNKNOWN_OUTCOME",
+            "BUDGET_EXCEEDED",
         }
 
     def test_terminal_and_active_partition_the_vocabulary(self):
@@ -61,6 +64,7 @@ class TestClosedVocabulary:
         # AGENT_RUNTIME.md §2: 非快乐终态 FAILED/CANCELLED/TIMED_OUT/PARTIAL/
         # UNKNOWN_OUTCOME + 流程终点的 SUCCEEDED（terminal list 行省略了它，
         # 但 QUEUED→RUNNING→…→SUCCEEDED 的终点即无出边终态）。
+        # X-06: BUDGET_EXCEEDED 加入终态（budget 四维超限的明确落点）。
         assert {s.value for s in TERMINAL_RUN_STATUSES} == {
             "SUCCEEDED",
             "FAILED",
@@ -68,6 +72,7 @@ class TestClosedVocabulary:
             "TIMED_OUT",
             "PARTIAL",
             "UNKNOWN_OUTCOME",
+            "BUDGET_EXCEEDED",
         }
 
     def test_transitions_map_is_frozen(self):
@@ -77,6 +82,16 @@ class TestClosedVocabulary:
     def test_no_self_loops(self):
         for src, dsts in ALLOWED_RUN_TRANSITIONS.items():
             assert src not in dsts, f"self-loop {src}"
+
+    def test_all_active_states_reach_budget_exceeded(self):
+        # X-06：预算是外部资源裁决（非执行成败声明），全部活跃态可达。
+        for src in ACTIVE_RUN_STATUSES:
+            assert assert_transition_legal(src, RunStatus.BUDGET_EXCEEDED) is RunStatus.BUDGET_EXCEEDED
+
+    def test_budget_exceeded_is_closed(self):
+        for dst in RunStatus:
+            with pytest.raises(IllegalRunTransitionError):
+                assert_transition_legal(RunStatus.BUDGET_EXCEEDED, dst)
 
 
 class TestLegality:

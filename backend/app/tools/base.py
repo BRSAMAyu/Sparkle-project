@@ -57,6 +57,11 @@ class BaseTool(ABC):
     """
     工具基类
     所有元能力工具必须继承此类
+
+    X-06 · 能力元数据（fail-closed，见 app/tools/metadata.py）：子类**必须**显式
+    声明 ``effect`` / ``risk`` / ``reversible`` / ``required_permission`` /
+    ``cost_usd`` 五个类属性。基类刻意**不给默认值**——缺失即属性不存在，
+    注册表校验（validate_tool_metadata）拒绝注册，executor 侧兜底拒绝调用。
     """
 
     name: str  # 工具名称（唯一标识）
@@ -65,6 +70,13 @@ class BaseTool(ABC):
     parameters_schema: type[BaseModel]  # 参数 Schema（Pydantic Model）
     requires_confirmation: bool = False  # 是否需要用户确认（高风险操作）
     timeout_seconds: float | None = None  # Override per-tool timeout (default 120s)
+
+    # --- X-06 能力元数据（无默认值 = fail-closed；声明规范见 metadata.py） ---
+    effect: str  # "read" | "write"（ToolEffect）
+    risk: str  # "low" | "medium" | "high"（ToolRiskLevel）
+    reversible: bool  # 是否存在补偿路径
+    required_permission: str  # TOOL_PERMISSION_VOCABULARY 内的能力名
+    cost_usd: float  # 单次调用成本估计（USD；纯 DB 工具为 0）
 
     @abstractmethod
     async def execute(

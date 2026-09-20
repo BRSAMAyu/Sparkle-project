@@ -22,6 +22,13 @@ class GenerateLearningReportTool(BaseTool):
     parameters_schema = GenerateLearningReportParams
     requires_confirmation = False
 
+    # X-06 capability metadata (fail-closed; vocabulary: app/tools/metadata.py)
+    effect = "write"
+    risk = "medium"
+    reversible = True
+    required_permission = "llm.use"
+    cost_usd = 0.004
+
     async def execute(
         self,
         params: GenerateLearningReportParams,

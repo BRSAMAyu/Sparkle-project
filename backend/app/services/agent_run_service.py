@@ -65,9 +65,137 @@ from app.core.run_state_machine import (
 from app.models.agent_run import AgentRun, AgentRunKind, AgentRunTransition
 from app.models.execution_intent import ExecutionIntent, ExecutionIntentStatus
 
-AGENT_RUN_PAYLOAD_SCHEMA = RUN_STATE_MACHINE_VERSION  # "agent_run.v1"
+AGENT_RUN_PAYLOAD_SCHEMA = RUN_STATE_MACHINE_VERSION  # "agent_run.v2"
 AGENT_RUN_AGGREGATE_TYPE = "agent_run"
 AGENT_RUN_SERVICE_NAME = "agent_run_service"
+
+# ---------------------------------------------------------------------------
+# X-06 · Run Budget（token/cost/time/tool_calls 四维；fail-closed + 明确终态）
+# ---------------------------------------------------------------------------
+
+#: budget 限额键的封闭词表（四维；AGENT_RUNTIME.md §3 Run contract budget）。
+BUDGET_LIMIT_KEYS: frozenset[str] = frozenset(
+    {
+        "max_total_tokens",  # LLM token 总量
+        "max_cost_usd",  # 成本（USD，工具 cost_usd + LLM 估计）
+        "max_duration_seconds",  # 墙钟时长
+        "max_tool_calls",  # 工具调用次数
+    }
+)
+
+#: usage 计数键（run.budget["usage"]；record_run_usage 维护）。
+BUDGET_USAGE_KEYS: frozenset[str] = frozenset({"tool_calls", "total_tokens", "cost_usd"})
+
+
+class BudgetExceededError(ValueError):
+    """预算超限（评估结果为超时的显式信号；executor 据此拒绝调用）。"""
+
+
+@dataclass(frozen=True)
+class BudgetEvaluation:
+    """一次预算评估的只读快照（纯数据，不落库）。
+
+    ``exceeded`` 为超限维度列表（空 = 未超限）。维度名 ∈
+    {"tool_calls", "total_tokens", "cost_usd", "duration_seconds"}。
+    """
+
+    limits: dict[str, float]
+    usage: dict[str, float]
+    elapsed_seconds: float | None
+    exceeded: list[str]
+
+    @property
+    def is_exceeded(self) -> bool:
+        return bool(self.exceeded)
+
+
+def normalize_budget(budget: dict[str, Any] | None) -> dict[str, Any]:
+    """归一化 + 校验 budget 形状（fail-closed：未知键/非正数/垃圾值一律 ValueError）。
+
+    canonical 形状：``{"limits": {…四维可选…}, "usage": {tool_calls, total_tokens,
+    cost_usd}}``。空/缺失 → 无限额（unlimited）。X-05 之前无任何 budget 生产者，
+    无 legacy 形状兼容负担。
+    """
+    if budget is None:
+        budget = {}
+    if not isinstance(budget, dict):
+        raise ValueError(f"budget must be a dict, got {type(budget).__name__}")
+    unknown = set(budget) - {"limits", "usage"}
+    if unknown:
+        raise ValueError(f"unknown budget keys {sorted(unknown)} (allowed: limits, usage)")
+
+    limits_in = budget.get("limits") or {}
+    usage_in = budget.get("usage") or {}
+    if not isinstance(limits_in, dict) or not isinstance(usage_in, dict):
+        raise ValueError("budget.limits and budget.usage must be dicts")
+
+    limits: dict[str, float] = {}
+    for key, value in limits_in.items():
+        if key not in BUDGET_LIMIT_KEYS:
+            raise ValueError(f"unknown budget limit {key!r} (closed vocabulary: {sorted(BUDGET_LIMIT_KEYS)})")
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or value <= 0:
+            raise ValueError(f"budget limit {key!r} must be a positive number, got {value!r}")
+        limits[key] = float(value)
+
+    usage: dict[str, float] = {"tool_calls": 0.0, "total_tokens": 0.0, "cost_usd": 0.0}
+    for key, value in usage_in.items():
+        if key not in BUDGET_USAGE_KEYS:
+            raise ValueError(f"unknown budget usage key {key!r} (closed vocabulary: {sorted(BUDGET_USAGE_KEYS)})")
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0:
+            raise ValueError(f"budget usage {key!r} must be a non-negative number, got {value!r}")
+        usage[key] = float(value)
+
+    return {"limits": limits, "usage": usage}
+
+
+def evaluate_budget(
+    run: AgentRun,
+    *,
+    now: datetime | None = None,
+    prospective_tool_calls: int = 0,
+) -> BudgetEvaluation:
+    """评估 run 预算（纯读；不迁移状态）。
+
+    - ``max_tool_calls``：已记录 usage.tool_calls + prospective（本次待执行
+      调用数）超过限额即超限——闸门语义（先检后执行）；
+    - ``max_duration_seconds``：elapsed = now − (started_at|created_at)；
+    - token/cost：usage 计数对比限额。
+    """
+    budget = run.budget if isinstance(run.budget, dict) else {}
+    limits = budget.get("limits") or {}
+    usage = budget.get("usage") or {}
+    elapsed_seconds: float | None = None
+    exceeded: list[str] = []
+
+    now = now or _utcnow()
+    usage_tool_calls = float(usage.get("tool_calls") or 0)
+    usage_tokens = float(usage.get("total_tokens") or 0)
+    usage_cost = float(usage.get("cost_usd") or 0)
+
+    max_tool_calls = limits.get("max_tool_calls")
+    if max_tool_calls is not None and usage_tool_calls + max(0, int(prospective_tool_calls)) > float(max_tool_calls):
+        exceeded.append("tool_calls")
+    max_tokens = limits.get("max_total_tokens")
+    if max_tokens is not None and usage_tokens > float(max_tokens):
+        exceeded.append("total_tokens")
+    max_cost = limits.get("max_cost_usd")
+    if max_cost is not None and usage_cost > float(max_cost):
+        exceeded.append("cost_usd")
+    max_duration = limits.get("max_duration_seconds")
+    if max_duration is not None:
+        origin = run.started_at or run.created_at
+        if origin is not None:
+            elapsed_seconds = max(0.0, (now - origin).total_seconds())
+            if elapsed_seconds > float(max_duration):
+                exceeded.append("duration_seconds")
+
+    return BudgetEvaluation(
+        limits={k: float(v) for k, v in limits.items()},
+        usage={"tool_calls": usage_tool_calls, "total_tokens": usage_tokens, "cost_usd": usage_cost},
+        elapsed_seconds=elapsed_seconds,
+        exceeded=exceeded,
+    )
+
 
 #: 恢复 sweep 的默认陈旧阈值（无新心跳多久判孤儿）。execution 轨道的 intent
 #: 默认 timeout 300s、状态漏斗只在变更时触达，取 6h 为保守默认；调用方可显式
@@ -117,6 +245,42 @@ _MILESTONE_LANDING_SOURCES: frozenset[RunStatus] = frozenset(
 #: intent 投影创建 run 的确定性幂等键（同 intent 同 attempt 恰一次 run.created）。
 def intent_attempt_key(intent_id: UUID | str, attempt: int) -> str:
     return f"intent:{str(intent_id)}:attempt:{int(attempt)}"
+
+
+def normalize_run_permissions(permissions: dict[str, Any] | None) -> dict[str, Any]:
+    """校验/归一化 run 权限声明（X-06 fail-closed：能力词越表即 ValueError）。
+
+    canonical 形状：``{"granted": [cap...]|None, "denied": [cap...]}``（均可省）。
+    granted=None 语义 = 用服务端默认授权集（DEFAULT_AGENT_TOOL_GRANTS）。
+    """
+    from app.tools.metadata import TOOL_PERMISSION_VOCABULARY  # 局部导入避免环
+
+    if permissions is None:
+        permissions = {}
+    if not isinstance(permissions, dict):
+        raise ValueError(f"permissions must be a dict, got {type(permissions).__name__}")
+    unknown = set(permissions) - {"granted", "denied"}
+    if unknown:
+        raise ValueError(f"unknown permissions keys {sorted(unknown)} (allowed: granted, denied)")
+    normalized: dict[str, Any] = {}
+    for key in ("granted", "denied"):
+        if key not in permissions or permissions[key] is None:
+            normalized[key] = None if key == "granted" else []
+            continue
+        raw = permissions[key]
+        if not isinstance(raw, (list, tuple, set)):
+            raise ValueError(f"permissions.{key} must be a list of capability names")
+        caps: list[str] = []
+        for item in raw:
+            cap = str(item).strip()
+            if cap not in TOOL_PERMISSION_VOCABULARY:
+                raise ValueError(
+                    f"permissions.{key} contains unknown capability {cap!r} "
+                    f"(closed vocabulary: {sorted(TOOL_PERMISSION_VOCABULARY)})"
+                )
+            caps.append(cap)
+        normalized[key] = sorted(set(caps))
+    return normalized
 
 
 def _utcnow() -> datetime:
@@ -259,6 +423,10 @@ class AgentRunService:
             if terminal_reason not in terminal_reason_vocabulary:
                 raise ValueError(f"unknown terminal reason {terminal_reason!r} (closed vocabulary)")
 
+        # X-06 fail-closed 契约校验：budget 四维/permissions 能力词越表即拒绝创建。
+        budget_canonical = normalize_budget(budget)
+        permissions_canonical = normalize_run_permissions(permissions)
+
         if key is not None:
             existing = await self._find_by_idempotency_key(user_uuid, key)
             if existing is not None:
@@ -274,9 +442,9 @@ class AgentRunService:
             kind=AgentRunKind(kind) if not isinstance(kind, AgentRunKind) else kind,
             objective=str(objective or "").strip() or "(untitled run)",
             context_refs=list(context_refs or []),
-            allowed_tools=list(allowed_tools or []),
-            permissions=dict(permissions or {}),
-            budget=dict(budget or {}),
+            allowed_tools=[str(t) for t in (allowed_tools or [])],
+            permissions=permissions_canonical,
+            budget=budget_canonical,
             completion_condition=dict(completion_condition or {}),
             risk_class=risk_class,
             status=initial,
@@ -483,6 +651,111 @@ class AgentRunService:
         )
 
     # ------------------------------------------------------------------
+    # X-06 · run budget（四维预算：评估/强制/记账；超限 → BUDGET_EXCEEDED）
+    # ------------------------------------------------------------------
+
+    async def evaluate_run_budget(
+        self,
+        run_id: UUID | str,
+        *,
+        user_id: UUID | str | None = None,
+        now: datetime | None = None,
+        prospective_tool_calls: int = 0,
+    ) -> tuple[AgentRun, BudgetEvaluation]:
+        """只读评估（不迁移状态）；返回 (run, evaluation) 供调度层决策。"""
+        run = await self.get_run(run_id, user_id=user_id)
+        evaluation = evaluate_budget(run, now=now, prospective_tool_calls=prospective_tool_calls)
+        return run, evaluation
+
+    async def enforce_budget(
+        self,
+        run_id: UUID | str,
+        *,
+        user_id: UUID | str | None = None,
+        prospective_tool_calls: int = 1,
+        now: datetime | None = None,
+    ) -> BudgetEvaluation:
+        """预算强制闸门（executor 每次工具调用前调用；超限 → 明确终态）。
+
+        - 未超限 → 返回 evaluation（exceeded 空），调用放行；
+        - 超限 → 经封闭迁移图迁移 ``→ BUDGET_EXCEEDED``（reason=
+          ``budget_exceeded``，审计行 + run.status_changed 事件同事务，与
+          其他终态迁移同构——卡面「非无限执行、非静默截断」）；
+        - run 已终态（含已是 BUDGET_EXCEEDED）→ 不迁移（FOR UPDATE+复查/
+          IllegalRunTransitionError 吸收），exceeded 如实返回。
+
+        Raises:
+            BudgetExceededError: 超限（携带 evaluation；executor 据此拒绝调用）。
+        """
+        run = await self.get_run(run_id, user_id=user_id)
+        evaluation = evaluate_budget(run, now=now, prospective_tool_calls=prospective_tool_calls)
+        if not evaluation.is_exceeded:
+            return evaluation
+
+        details = {
+            "budget_exceeded": evaluation.exceeded,
+            "limits": evaluation.limits,
+            "usage": evaluation.usage,
+            "elapsed_seconds": evaluation.elapsed_seconds,
+        }
+        try:
+            await self.transition(
+                run.id,
+                RunStatus.BUDGET_EXCEEDED,
+                user_id=user_id,
+                actor=TransitionActor.WORKER,
+                reason="budget_exceeded",
+                error_category="budget_exceeded",
+                error_message=f"run budget exceeded: {', '.join(evaluation.exceeded)}",
+                details=details,
+                source=EventSource.WORKER,
+            )
+        except (ValueError, RunNotFoundError) as exc:
+            # 已终态（终态封闭）/并发迁移已收敛：终态即结论，不掩盖超限事实。
+            logger.info(
+                "budget terminal transition converged run_id={} status_now={} error={}",
+                run.id,
+                run.status,
+                exc,
+            )
+        raise BudgetExceededError(f"run {run.id} budget exceeded: {', '.join(evaluation.exceeded)}") from None
+
+    async def record_run_usage(
+        self,
+        run_id: UUID | str,
+        *,
+        user_id: UUID | str | None = None,
+        tool_calls: int = 0,
+        tokens: int = 0,
+        cost_usd: float = 0.0,
+    ) -> AgentRun:
+        """记录预算消耗（FOR UPDATE 行锁串行化；终态 run 拒绝记账）。
+
+        usage 计数是 budget 维度的唯一真源（agent_runs.budget.usage）；
+        agent_tool_calls 是审计账本，两者不互为计数器。
+        """
+        stmt = select(AgentRun).where(AgentRun.id == UUID(str(run_id)), AgentRun.deleted_at.is_(None)).with_for_update()
+        if user_id is not None:
+            stmt = stmt.where(AgentRun.user_id == UUID(str(user_id)))
+        run = (await self.db.execute(stmt)).scalar_one_or_none()
+        if run is None:
+            raise RunNotFoundError(f"agent run {run_id} not found")
+        if is_terminal_run_status(run.status):
+            raise ValueError(f"run {run_id} is terminal ({run.status.value}); usage recording rejected")
+
+        budget = dict(run.budget) if isinstance(run.budget, dict) else {}  # 拷贝后再改（JSON 列原地改不触发脏检测）
+        usage = dict(budget.get("usage") or {})
+        usage["tool_calls"] = float(usage.get("tool_calls") or 0) + max(0, int(tool_calls))
+        usage["total_tokens"] = float(usage.get("total_tokens") or 0) + max(0, int(tokens))
+        usage["cost_usd"] = round(float(usage.get("cost_usd") or 0) + max(0.0, float(cost_usd)), 6)
+        budget["usage"] = usage
+        run.budget = budget
+        run.heartbeat_at = _utcnow()
+        await self.db.commit()
+        await self.db.refresh(run)
+        return run
+
+    # ------------------------------------------------------------------
     # 语义操作（API 面）
     # ------------------------------------------------------------------
 
@@ -514,6 +787,15 @@ class AgentRunService:
                 f"(allowed: {sorted(s.value for s in RESUMABLE_RUN_STATUSES)}); "
                 "terminal/waiting statuses cannot be injected via resume"
             )
+        # X-06：resume 前预算闸门——等待中的 run 时间/token 预算已耗尽时，恢复
+        # 执行只会立即越限；直接落 BUDGET_EXCEEDED 明确终态（非无限执行）。
+        evaluation = evaluate_budget(await self.get_run(run_id, user_id=user_id))
+        if evaluation.is_exceeded:
+            return await self._terminalize_budget_exceeded(
+                run_id,
+                user_id=user_id,
+                evaluation=evaluation,
+            )
         return await self.transition(
             run_id,
             target,
@@ -524,6 +806,45 @@ class AgentRunService:
             current_stage=current_stage,
             source=EventSource.SERVER_SERVICE,
         )
+
+    async def _terminalize_budget_exceeded(
+        self,
+        run_id: UUID | str,
+        *,
+        user_id: UUID | str,
+        evaluation: BudgetEvaluation,
+    ) -> RunMutationResult:
+        """resume 闸门的超限落终态（迁移 + 审计 + 事件同构）后抛 BudgetExceededError。"""
+        try:
+            result = await self.transition(
+                run_id,
+                RunStatus.BUDGET_EXCEEDED,
+                user_id=user_id,
+                actor=TransitionActor.USER,
+                reason="budget_exceeded",
+                error_category="budget_exceeded",
+                error_message=f"run budget exceeded: {', '.join(evaluation.exceeded)}",
+                details={
+                    "budget_exceeded": evaluation.exceeded,
+                    "limits": evaluation.limits,
+                    "usage": evaluation.usage,
+                    "elapsed_seconds": evaluation.elapsed_seconds,
+                    "via": "resume_gate",
+                },
+                source=EventSource.SERVER_SERVICE,
+            )
+        except ValueError as exc:
+            # 已终态（终态封闭）：FOR UPDATE+复查/非法迁移吸收——终态即结论。
+            logger.info("resume budget gate converged run_id={} error={}", run_id, exc)
+            result = RunMutationResult(
+                run=await self.get_run(run_id, user_id=user_id),
+                applied=False,
+                created=False,
+                event_name=None,
+                event_written=False,
+            )
+        logger.info("resume budget gate → BUDGET_EXCEEDED run_id={} applied={}", run_id, result.applied)
+        raise BudgetExceededError(f"run {run_id} budget exceeded: {', '.join(evaluation.exceeded)}") from None
 
     async def cancel(
         self,

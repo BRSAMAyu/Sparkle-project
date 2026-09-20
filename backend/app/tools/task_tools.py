@@ -51,6 +51,13 @@ class CreateTaskTool(BaseTool):
     parameters_schema = CreateTaskParams
     requires_confirmation = False
 
+    # X-06 capability metadata (fail-closed; vocabulary: app/tools/metadata.py)
+    effect = "write"
+    risk = "medium"
+    reversible = True
+    required_permission = "task.write"
+    cost_usd = 0.0
+
     async def execute(
         self,
         params: CreateTaskParams,
@@ -131,6 +138,13 @@ class UpdateTaskStatusTool(BaseTool):
     category = ToolCategory.TASK
     parameters_schema = UpdateTaskStatusParams
     requires_confirmation = False
+
+    # X-06 capability metadata (fail-closed; vocabulary: app/tools/metadata.py)
+    effect = "write"
+    risk = "medium"
+    reversible = True
+    required_permission = "task.write"
+    cost_usd = 0.0
 
     async def execute(
         self,
@@ -213,6 +227,13 @@ class BatchCreateTasksTool(BaseTool):
     category = ToolCategory.TASK
     parameters_schema = BatchCreateTasksParams
     requires_confirmation = True  # 批量操作需要确认
+
+    # X-06 capability metadata (fail-closed; vocabulary: app/tools/metadata.py)
+    effect = "write"
+    risk = "high"
+    reversible = True
+    required_permission = "task.write"
+    cost_usd = 0.0
 
     async def execute(
         self,
@@ -316,6 +337,13 @@ class SuggestQuickTaskTool(BaseTool):
     parameters_schema = SuggestQuickTaskParams
     requires_confirmation = False
 
+    # X-06 capability metadata (fail-closed; vocabulary: app/tools/metadata.py)
+    effect = "read"
+    risk = "low"
+    reversible = True
+    required_permission = "task.read"
+    cost_usd = 0.0
+
     async def execute(
         self,
         params: SuggestQuickTaskParams,
@@ -410,6 +438,13 @@ class BreakdownTaskTool(BaseTool):
     category = ToolCategory.TASK
     parameters_schema = BreakdownTaskParams
     requires_confirmation = False
+
+    # X-06 capability metadata (fail-closed; vocabulary: app/tools/metadata.py)
+    effect = "write"
+    risk = "medium"
+    reversible = True
+    required_permission = "task.write"
+    cost_usd = 0.0
 
     async def execute(
         self,

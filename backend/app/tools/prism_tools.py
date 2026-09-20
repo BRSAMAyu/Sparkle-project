@@ -34,6 +34,13 @@ class GetUserBehaviorPatternsTool(BaseTool):
     parameters_schema = GetUserBehaviorPatternsParams
     requires_confirmation = False
 
+    # X-06 capability metadata (fail-closed; vocabulary: app/tools/metadata.py)
+    effect = "read"
+    risk = "low"
+    reversible = True
+    required_permission = "memory.read"
+    cost_usd = 0.0
+
     async def execute(
         self,
         params: Any,

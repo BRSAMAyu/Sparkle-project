@@ -86,12 +86,30 @@ def _install(monkeypatch, tool) -> ToolExecutor:
         return None
 
     monkeypatch.setattr(executor_module, "refresh_llm_safety_mode", _noop_async)
+    from app.tools.metadata import ToolEffect, ToolMetadata, ToolRiskLevel
+
+    _metadata = ToolMetadata(
+        name=tool.name,
+        effect=ToolEffect.READ,
+        risk=ToolRiskLevel.LOW,
+        reversible=True,
+        required_permission="task.read",
+        cost_usd=0.0,
+    )
     monkeypatch.setattr(
         executor_module,
         "tool_registry",
-        SimpleNamespace(get_tool=lambda name: tool),
+        SimpleNamespace(get_tool=lambda name: tool, get_tool_metadata=lambda name: _metadata),
     )
     exec_instance = ToolExecutor()
+
+    # X-06：本测试只钉 locale 签名探测——安全闸门契约由 test_x06_tool_call_safety.py 独立钉死。
+    async def _allow_guard(**kwargs):
+        from app.orchestration.executor import _CallGuard
+
+        return _CallGuard(tool_name=kwargs["tool_name"], metadata=_metadata)
+
+    monkeypatch.setattr(exec_instance, "_authorize_and_begin_call", _allow_guard)
     monkeypatch.setattr(exec_instance, "_record_tool_execution", _noop_async)
     monkeypatch.setattr(exec_instance, "_publish_tool_event", _noop_async)
     monkeypatch.setattr(exec_instance, "_commit_if_owned", _noop_async)

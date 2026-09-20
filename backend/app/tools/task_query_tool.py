@@ -46,6 +46,13 @@ class QueryPlanTasksTool(BaseTool):
     parameters_schema = QueryPlanTasksParams
     requires_confirmation = False
 
+    # X-06 capability metadata (fail-closed; vocabulary: app/tools/metadata.py)
+    effect = "read"
+    risk = "low"
+    reversible = True
+    required_permission = "task.read"
+    cost_usd = 0.0
+
     async def execute(
         self,
         params: QueryPlanTasksParams,
@@ -211,6 +218,13 @@ class ModifyPlanTaskTool(BaseTool):
     parameters_schema = ModifyPlanTaskParams
     requires_confirmation = False
 
+    # X-06 capability metadata (fail-closed; vocabulary: app/tools/metadata.py)
+    effect = "write"
+    risk = "medium"
+    reversible = True
+    required_permission = "task.write"
+    cost_usd = 0.0
+
     async def execute(
         self,
         params: ModifyPlanTaskParams,
@@ -337,6 +351,13 @@ class GetTaskDetailsTool(BaseTool):
     category = ToolCategory.TASK
     parameters_schema = GetTaskDetailsParams
     requires_confirmation = False
+
+    # X-06 capability metadata (fail-closed; vocabulary: app/tools/metadata.py)
+    effect = "read"
+    risk = "low"
+    reversible = True
+    required_permission = "task.read"
+    cost_usd = 0.0
 
     async def execute(
         self,
@@ -625,6 +646,13 @@ class QueryAllTasksTool(BaseTool):
     category = ToolCategory.TASK
     parameters_schema = QueryAllTasksParams
     requires_confirmation = False
+
+    # X-06 capability metadata (fail-closed; vocabulary: app/tools/metadata.py)
+    effect = "read"
+    risk = "low"
+    reversible = True
+    required_permission = "task.read"
+    cost_usd = 0.0
 
     async def execute(
         self,

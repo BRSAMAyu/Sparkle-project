@@ -1,11 +1,13 @@
 import os
 import sys
 from urllib.parse import urlparse, urlunparse
+
 import pytest
 import pytest_asyncio
 import redis.asyncio as redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
+
 from app.config import settings
 from app.core.redis_utils import resolve_redis_password
 
@@ -16,56 +18,10 @@ APP_GEN_DIR = os.path.join(APP_DIR, "gen")
 if APP_GEN_DIR not in sys.path:
     sys.path.insert(0, APP_GEN_DIR)
 
-from tests._credentials import (  # noqa: F401 — re-exported for legacy imports
-    TEST_HASHED_PASSWORD,
-    TEST_HY_API_KEY,
-    TEST_INTERNAL_API_KEY,
-    TEST_SF_API_KEY,
-    TEST_XUNFEI_API_KEY,
-    TEST_XUNFEI_API_SECRET,
-    TEST_ZHIPU_API_KEY,
-)
-
-from app.models.base import Base
-from app.models.plan import Plan  # noqa: F401
-from app.models.task import Task  # noqa: F401
-from app.models.user import User  # noqa: F401
-from app.models.response_feedback import ResponseFeedback  # noqa: F401
-from app.models.research_consent import ResearchConsentRecord  # noqa: F401
-from app.models.report_snapshot import ReportSnapshot  # noqa: F401
-from app.models.intervention import InterventionRequest  # noqa: F401
-from app.models.nightly_review import NightlyReview  # noqa: F401
-from app.models.memory import EpisodicMemory, MemoryGoal, MemoryPreference, Scene  # noqa: F401
-from app.models.context_pack import ContextPackRun, ContextBudgetProfile, ContextPackFeedback  # noqa: F401
-from app.models.memory_rank_policy import MemoryRankPolicy  # noqa: F401
-from app.models.user_memory_settings import UserMemorySettings  # noqa: F401
-from app.models.ltm_daily_snapshot import LtmDailySnapshot  # noqa: F401
-from app.models.event import TrackingEvent  # noqa: F401
+from app.models.accountability import AccountabilityCheckin, AccountabilityPartnership  # noqa: F401
+from app.models.achievement import Achievement, UserAchievement  # noqa: F401
 from app.models.agent_run import AgentRun, AgentRunTransition  # noqa: F401 — X-05 run 脊柱
-from app.models.plan_execution_record import PlanExecutionRecord  # noqa: F401
-from app.models.execution_audit_log import ExecutionAuditLog  # noqa: F401
-from app.models.execution_schedule import ExecutionSchedule  # noqa: F401
-from app.models.card_protocol import Card, CardEdge, TaskOccurrence, PlanningArtifact, InterventionRecord  # noqa: F401
-from app.models.user_preferences import UserPreferencesCenter  # noqa: F401
-from app.models.recommendation import RecommendationCache, UserItemInteraction  # noqa: F401
-from app.models.intervention_adaptive import (  # noqa: F401
-    ScaffoldingState,
-    PassiveSignal,
-    BehavioralOutcome,
-    InterventionTemplate,
-)
-from app.models.intervention_strategy_outcome import InterventionStrategyOutcome  # noqa: F401
-from app.models.distilled_strategy_cache import DistilledStrategyCacheEntry  # noqa: F401
-from app.models.document_chunks import DocumentChunk  # noqa: F401
-from app.models.document_feedback import DocumentRetrievalFeedback  # noqa: F401
-from app.models.file_storage import StoredFile  # noqa: F401
-from app.models.task_feedback import TaskFeedback  # noqa: F401
-from app.models.task_resources import TaskResourceLink  # noqa: F401
-from app.models.session_completion import SessionCompletion  # noqa: F401
-from app.models.srl_phase_state import SRLPhaseStateRecord  # noqa: F401
-from app.models.north_star_metrics import NorthStarMetricEvent  # noqa: F401
-from app.models.notification import Notification, PushHistory  # noqa: F401
-from app.models.push_delivery_record import PushDeliveryRecord  # noqa: F401
+from app.models.agent_tool_call import AgentToolCall  # noqa: F401 — X-06 工具调用账本
 from app.models.aurora_stage20 import (  # noqa: F401
     AuroraJudgmentRecord,
     ConflictResolutionRecord,
@@ -79,34 +35,80 @@ from app.models.aurora_stage31 import (  # noqa: F401
     IdiographicAssociation,
     IdiographicChangepoint,
 )
-from app.models.user_push_opt_in import UserPushOptIn  # noqa: F401
-from app.models.galaxy import KnowledgeNode, UserNodeStatus, StudyRecord  # noqa: F401
+from app.models.base import Base
+from app.models.card_protocol import Card, CardEdge, InterventionRecord, PlanningArtifact, TaskOccurrence  # noqa: F401
+from app.models.cognitive import BehaviorPattern, CognitiveFragment  # noqa: F401
 from app.models.community import (  # noqa: F401
+    Friendship,
     Group,
     GroupMember,
     GroupMessage,
-    PrivateMessage,
-    Friendship,
-    GroupType,
     GroupRole,
+    GroupType,
+    PrivateMessage,
     UserBlock,
 )
-from app.models.accountability import AccountabilityPartnership, AccountabilityCheckin  # noqa: F401
-from app.models.achievement import Achievement, UserAchievement  # noqa: F401
-from app.models.cognitive import BehaviorPattern, CognitiveFragment  # noqa: F401
+from app.models.context_pack import ContextBudgetProfile, ContextPackFeedback, ContextPackRun  # noqa: F401
+from app.models.distilled_strategy_cache import DistilledStrategyCacheEntry  # noqa: F401
+from app.models.document_chunks import DocumentChunk  # noqa: F401
+from app.models.document_feedback import DocumentRetrievalFeedback  # noqa: F401
+from app.models.event import TrackingEvent  # noqa: F401
+from app.models.execution_audit_log import ExecutionAuditLog  # noqa: F401
+from app.models.execution_schedule import ExecutionSchedule  # noqa: F401
+from app.models.file_storage import StoredFile  # noqa: F401
+from app.models.galaxy import KnowledgeNode, StudyRecord, UserNodeStatus  # noqa: F401
+from app.models.intervention import InterventionRequest  # noqa: F401
+from app.models.intervention_adaptive import (  # noqa: F401
+    BehavioralOutcome,
+    InterventionTemplate,
+    PassiveSignal,
+    ScaffoldingState,
+)
+from app.models.intervention_strategy_outcome import InterventionStrategyOutcome  # noqa: F401
+from app.models.ltm_daily_snapshot import LtmDailySnapshot  # noqa: F401
+from app.models.memory import EpisodicMemory, MemoryGoal, MemoryPreference, Scene  # noqa: F401
+from app.models.memory_rank_policy import MemoryRankPolicy  # noqa: F401
+from app.models.nightly_review import NightlyReview  # noqa: F401
+from app.models.north_star_metrics import NorthStarMetricEvent  # noqa: F401
+from app.models.notification import Notification, PushHistory  # noqa: F401
+from app.models.plan import Plan  # noqa: F401
+from app.models.plan_execution_record import PlanExecutionRecord  # noqa: F401
+from app.models.push_delivery_record import PushDeliveryRecord  # noqa: F401
+from app.models.recommendation import RecommendationCache, UserItemInteraction  # noqa: F401
+from app.models.report_snapshot import ReportSnapshot  # noqa: F401
+from app.models.research_consent import ResearchConsentRecord  # noqa: F401
+from app.models.response_feedback import ResponseFeedback  # noqa: F401
+from app.models.session_completion import SessionCompletion  # noqa: F401
 from app.models.shop import (  # noqa: F401
+    ConsumableEffectType,
+    ItemRarity,
+    PhotonTransactionType,
     ShopItem,
+    ShopItemType,
     ShopPurchase,
     UserConsumable,
-    PhotonTransactionType,
-    ShopItemType,
-    ItemRarity,
-    ConsumableEffectType,
 )
 from app.models.simulation_run import SimulationRun  # noqa: F401
+from app.models.srl_phase_state import SRLPhaseStateRecord  # noqa: F401
 from app.models.strategy_belief import StrategyBeliefSnapshot  # noqa: F401
+from app.models.task import Task  # noqa: F401
+from app.models.task_feedback import TaskFeedback  # noqa: F401
+from app.models.task_resources import TaskResourceLink  # noqa: F401
 from app.models.theater_candidate_bundle import TheaterCandidateBundle  # noqa: F401
 from app.models.theater_prediction import TheaterPrediction  # noqa: F401
+from app.models.user import User  # noqa: F401
+from app.models.user_memory_settings import UserMemorySettings  # noqa: F401
+from app.models.user_preferences import UserPreferencesCenter  # noqa: F401
+from app.models.user_push_opt_in import UserPushOptIn  # noqa: F401
+from tests._credentials import (  # noqa: F401 — re-exported for legacy imports
+    TEST_HASHED_PASSWORD,
+    TEST_HY_API_KEY,
+    TEST_INTERNAL_API_KEY,
+    TEST_SF_API_KEY,
+    TEST_XUNFEI_API_KEY,
+    TEST_XUNFEI_API_SECRET,
+    TEST_ZHIPU_API_KEY,
+)
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 

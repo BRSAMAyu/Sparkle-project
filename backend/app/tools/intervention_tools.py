@@ -75,6 +75,13 @@ class GetInterventionTrackRecordTool(BaseTool):
     category = ToolCategory.GROWTH
     parameters_schema = GetInterventionTrackRecordParams
 
+    # X-06 capability metadata (fail-closed; vocabulary: app/tools/metadata.py)
+    effect = "read"
+    risk = "low"
+    reversible = True
+    required_permission = "growth.read"
+    cost_usd = 0.0
+
     async def execute(
         self,
         params: GetInterventionTrackRecordParams,
@@ -133,6 +140,13 @@ class RecordInterventionFeedbackTool(BaseTool):
     description = "Bind free-text conversational feedback onto the active or specified intervention."
     category = ToolCategory.GROWTH
     parameters_schema = RecordInterventionFeedbackParams
+
+    # X-06 capability metadata (fail-closed; vocabulary: app/tools/metadata.py)
+    effect = "write"
+    risk = "medium"
+    reversible = True
+    required_permission = "growth.write"
+    cost_usd = 0.0
 
     async def execute(
         self,

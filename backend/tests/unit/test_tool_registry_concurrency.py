@@ -6,7 +6,6 @@ Tests thread-safety of concurrent tool registration and access.
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -22,6 +21,13 @@ class MockTool(BaseTool):
         self._description = f"Test tool {name}"
         self._category = ToolCategory.TASK
         self._parameters_schema = {}
+
+    # X-06 capability metadata（fail-closed 注册契约：缺任一即拒绝注册）
+    effect = "read"
+    risk = "low"
+    reversible = True
+    required_permission = "task.read"
+    cost_usd = 0.0
 
     @property
     def name(self) -> str:

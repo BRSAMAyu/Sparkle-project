@@ -13,6 +13,15 @@ from app.core.event_types import (
     TOOL_EXECUTION_TIMED_OUT,
 )
 from app.orchestration.executor import ToolExecutor
+
+
+async def _allow_guard(**kwargs):
+    """X-06：旁路安全闸门（这些测试观测 executor 事件流，不测闸门本体——
+    闸门契约由 tests/unit/test_x06_tool_call_safety.py 独立钉死）。"""
+    from app.orchestration.executor import _CallGuard
+
+    return _CallGuard(tool_name=kwargs["tool_name"])
+
 from app.tools.base import ToolResult
 
 
@@ -57,6 +66,7 @@ async def test_execute_tool_call_publishes_started_and_completed(monkeypatch):
     publish = AsyncMock()
 
     monkeypatch.setattr("app.orchestration.executor.tool_registry.get_tool", lambda _: _SuccessfulTool())
+    monkeypatch.setattr(executor, "_authorize_and_begin_call", _allow_guard)
     monkeypatch.setattr("app.orchestration.executor.event_bus.publish", publish)
     monkeypatch.setattr(executor, "_record_tool_execution", AsyncMock())
     monkeypatch.setattr(executor, "_commit_if_owned", AsyncMock())
@@ -82,6 +92,7 @@ async def test_execute_tool_call_timeout_returns_failure_and_event(monkeypatch):
     publish = AsyncMock()
 
     monkeypatch.setattr("app.orchestration.executor.tool_registry.get_tool", lambda _: _SlowTool())
+    monkeypatch.setattr(executor, "_authorize_and_begin_call", _allow_guard)
     monkeypatch.setattr("app.orchestration.executor.event_bus.publish", publish)
     monkeypatch.setattr("app.orchestration.executor.settings", SimpleNamespace(TOOL_EXECUTION_TIMEOUT_SECONDS=0.01))
     monkeypatch.setattr(executor, "_record_tool_execution", AsyncMock())
@@ -111,6 +122,7 @@ async def test_execute_tool_call_sanitizes_exception_message(monkeypatch):
     publish = AsyncMock()
 
     monkeypatch.setattr("app.orchestration.executor.tool_registry.get_tool", lambda _: _ExplodingTool())
+    monkeypatch.setattr(executor, "_authorize_and_begin_call", _allow_guard)
     monkeypatch.setattr("app.orchestration.executor.event_bus.publish", publish)
     monkeypatch.setattr(executor, "_record_tool_execution", AsyncMock())
     monkeypatch.setattr(executor, "_commit_if_owned", AsyncMock())

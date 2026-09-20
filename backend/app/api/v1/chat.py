@@ -654,6 +654,7 @@ async def chat_stream(
                     arguments=chunk.full_arguments,
                     user_id=str(current_user.id),
                     db_session=db,
+                    tool_call_id=chunk.tool_call_id,
                 )
 
                 # 错误处理与自我修正
@@ -770,6 +771,9 @@ async def confirm_action(
                     user_id=str(current_user.id),
                     db_session=db,
                     compensation_call=compensation_call,
+                    # X-06：用户已批准的 side effect——以 action_id 为幂等键，
+                    # 重复提交（双击/重放）恰一次执行
+                    idempotency_key=f"hitl:{action_id}:{tool_name}",
                 )
 
                 # 错误处理与自我修正
@@ -798,6 +802,7 @@ async def confirm_action(
             tool_name=pending_action["tool_name"],
             arguments=pending_action["arguments"],
             user_id=str(current_user.id),
+            idempotency_key=f"hitl:{action_id}:{pending_action['tool_name']}",
             db_session=db,
         )
 

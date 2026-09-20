@@ -56,7 +56,10 @@ __all__ = [
 ]
 
 #: 状态机契约版本。扩词表/扩迁移边必须 bump 并过两位 reviewer（冻结声明）。
-RUN_STATE_MACHINE_VERSION = "agent_run.v1"
+#: ``agent_run.v2``（X-06）：终态词表 + ``budget_exceeded`` 归因 + 5 条活跃态
+#: →BUDGET_EXCEEDED 边（run budget 四维超限的明确终态；事件复用
+#: ``run.status_changed``，D-01 36 词表零改动——X-06 卡面红线）。
+RUN_STATE_MACHINE_VERSION = "agent_run.v2"
 
 
 class RunStatus(StrEnum):
@@ -74,6 +77,7 @@ class RunStatus(StrEnum):
     CANCELLED = "CANCELLED"
     TIMED_OUT = "TIMED_OUT"
     UNKNOWN_OUTCOME = "UNKNOWN_OUTCOME"
+    BUDGET_EXCEEDED = "BUDGET_EXCEEDED"
 
 
 class RunWaitKind(StrEnum):
@@ -109,6 +113,7 @@ TERMINAL_RUN_STATUSES: frozenset[RunStatus] = frozenset(
         RunStatus.CANCELLED,
         RunStatus.TIMED_OUT,
         RunStatus.UNKNOWN_OUTCOME,
+        RunStatus.BUDGET_EXCEEDED,
     }
 )
 
@@ -147,8 +152,10 @@ RESUMABLE_RUN_STATUSES: frozenset[RunStatus] = frozenset(
 #:（M-07 同法），不作为合法迁移边。
 #:
 #: QUEUED 无 →SUCCEEDED/PARTIAL：从未启动的 run 不可能成功/部分完成
-#:（恢复路径给 QUEUED stale 的落点是 CANCELLED）。
+#: （恢复路径给 QUEUED stale 的落点是 CANCELLED）。
 #: AWAITING_* 互通（USER↔APPROVAL）非法：等待类型变更没有业务语义。
+#: X-06：全部活跃态 →BUDGET_EXCEEDED（预算是外部资源裁决，非执行成败声明，
+#: 故 QUEUED 也可达——排队的 run 同样消耗时间预算）。
 ALLOWED_RUN_TRANSITIONS: dict[RunStatus, frozenset[RunStatus]] = {
     RunStatus.QUEUED: frozenset(
         {
@@ -160,6 +167,7 @@ ALLOWED_RUN_TRANSITIONS: dict[RunStatus, frozenset[RunStatus]] = {
             RunStatus.CANCELLED,
             RunStatus.TIMED_OUT,
             RunStatus.UNKNOWN_OUTCOME,
+            RunStatus.BUDGET_EXCEEDED,
         }
     ),
     RunStatus.RUNNING: frozenset(
@@ -173,6 +181,7 @@ ALLOWED_RUN_TRANSITIONS: dict[RunStatus, frozenset[RunStatus]] = {
             RunStatus.CANCELLED,
             RunStatus.TIMED_OUT,
             RunStatus.UNKNOWN_OUTCOME,
+            RunStatus.BUDGET_EXCEEDED,
         }
     ),
     RunStatus.EXECUTING: frozenset(
@@ -186,6 +195,7 @@ ALLOWED_RUN_TRANSITIONS: dict[RunStatus, frozenset[RunStatus]] = {
             RunStatus.CANCELLED,
             RunStatus.TIMED_OUT,
             RunStatus.UNKNOWN_OUTCOME,
+            RunStatus.BUDGET_EXCEEDED,
         }
     ),
     RunStatus.AWAITING_USER: frozenset(
@@ -198,6 +208,7 @@ ALLOWED_RUN_TRANSITIONS: dict[RunStatus, frozenset[RunStatus]] = {
             RunStatus.CANCELLED,
             RunStatus.TIMED_OUT,
             RunStatus.UNKNOWN_OUTCOME,
+            RunStatus.BUDGET_EXCEEDED,
         }
     ),
     RunStatus.AWAITING_APPROVAL: frozenset(
@@ -210,6 +221,7 @@ ALLOWED_RUN_TRANSITIONS: dict[RunStatus, frozenset[RunStatus]] = {
             RunStatus.CANCELLED,
             RunStatus.TIMED_OUT,
             RunStatus.UNKNOWN_OUTCOME,
+            RunStatus.BUDGET_EXCEEDED,
         }
     ),
     # terminal：封闭（无出边）。
@@ -219,6 +231,7 @@ ALLOWED_RUN_TRANSITIONS: dict[RunStatus, frozenset[RunStatus]] = {
     RunStatus.CANCELLED: frozenset(),
     RunStatus.TIMED_OUT: frozenset(),
     RunStatus.UNKNOWN_OUTCOME: frozenset(),
+    RunStatus.BUDGET_EXCEEDED: frozenset(),
 }
 
 
@@ -276,6 +289,7 @@ def event_name_for_transition(source: RunStatus | None, target: RunStatus) -> Ru
 
 
 #: terminal_reason 封闭词表（终态归因，供审计/恢复读取；扩词需 bump 版本）。
+#: X-06 v2 新增 ``budget_exceeded``（BUDGET_EXCEEDED 终态唯一归因）。
 terminal_reason_vocabulary: frozenset[str] = frozenset(
     {
         "completed",
@@ -289,6 +303,7 @@ terminal_reason_vocabulary: frozenset[str] = frozenset(
         "worker_restart_orphan",
         "projection_drift_repair",
         "rejected",
+        "budget_exceeded",
     }
 )
 

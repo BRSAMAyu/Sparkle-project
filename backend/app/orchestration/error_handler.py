@@ -74,7 +74,8 @@ class AgentErrorHandler:
                     tool_name=retry_response.tool_calls[0]["function"]["name"],
                     arguments=json.loads(retry_response.tool_calls[0]["function"]["arguments"]),
                     user_id=user_id,
-                    db_session=db_session
+                    db_session=db_session,
+                    tool_call_id=retry_response.tool_calls[0].get("id"),
                 )
 
                 # 如果修正后仍然失败，递归重试

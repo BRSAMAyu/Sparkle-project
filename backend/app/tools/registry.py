@@ -9,6 +9,7 @@ Tool Registry - 统一工具注册表
 from __future__ import annotations
 
 from .base import BaseTool, ToolCategory
+from .metadata import ToolMetadata
 
 
 class ToolRegistry:
@@ -38,6 +39,10 @@ class ToolRegistry:
     def get_tool(self, name: str) -> BaseTool | None:
         """根据名称获取工具"""
         return self._get_dynamic_registry().get_tool(name)
+
+    def get_tool_metadata(self, name: str) -> ToolMetadata | None:
+        """获取工具能力元数据（X-06 权限判定真源读口；None = 未知/被拒工具）"""
+        return self._get_dynamic_registry().get_tool_metadata(name)
 
     def get_all_tools(self) -> list[BaseTool]:
         """获取所有工具"""

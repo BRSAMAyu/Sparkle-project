@@ -53,6 +53,13 @@ class WebSearchProTool(BaseTool):
 
     API_URL = "https://open.bigmodel.cn/api/paas/v4/web_search"
 
+    # X-06 capability metadata (fail-closed; vocabulary: app/tools/metadata.py)
+    effect = "read"
+    risk = "medium"
+    reversible = True
+    required_permission = "web.search"
+    cost_usd = 0.002
+
     async def execute(
         self,
         params: WebSearchProParams,
