@@ -255,10 +255,18 @@ class GraphStructureService:
             raise PermissionError("user_id is required for position updates")
 
         node_ids = [item["id"] for item in updates]
-        from app.models.galaxy import KnowledgeNode
-        ownership_stmt = select(KnowledgeNode.id).where(
-            KnowledgeNode.id.in_(node_ids),
-            KnowledgeNode.user_id == user_id,
+        from app.models.galaxy import KnowledgeNode, KnowledgeNodeDocument
+        # KnowledgeNode 本身无 user_id：归属经 KnowledgeNodeDocument 判定
+        ownership_stmt = (
+            select(KnowledgeNode.id)
+            .join(
+                KnowledgeNodeDocument,
+                KnowledgeNodeDocument.node_id == KnowledgeNode.id,
+            )
+            .where(
+                KnowledgeNode.id.in_(node_ids),
+                KnowledgeNodeDocument.user_id == user_id,
+            )
         )
         owned = set((await self.db.execute(ownership_stmt)).scalars().all())
         unauthorized = set(node_ids) - owned

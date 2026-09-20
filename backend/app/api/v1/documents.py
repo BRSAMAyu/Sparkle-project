@@ -23,7 +23,7 @@ from app.models.community import GroupMember, GroupRole
 from app.models.document_chunks import DocumentChunk
 from app.models.file_storage import StoredFile
 from app.models.group_files import GroupFile
-from app.models.galaxy import KnowledgeNode
+from app.models.galaxy import KnowledgeNode, KnowledgeNodeDocument
 from app.models.user import User
 from app.services.document_service import document_service
 from app.services.document_upload_storage import document_upload_storage
@@ -449,10 +449,16 @@ async def get_drafts_summary(
     rows = await db.execute(
         select(
             KnowledgeNode.source_file_id,
-            func.count(KnowledgeNode.id).label("draft_count"),
+            func.count(func.distinct(KnowledgeNode.id)).label("draft_count"),
+        )
+        .join(
+            KnowledgeNodeDocument,
+            KnowledgeNodeDocument.node_id == KnowledgeNode.id,
         )
         .where(
-            KnowledgeNode.user_id == current_user.id,
+            # KnowledgeNode 本身无 user_id：用户归属经 KnowledgeNodeDocument
+            # （user/node/file 三元关联表）判定
+            KnowledgeNodeDocument.user_id == current_user.id,
             KnowledgeNode.status == "draft",
             KnowledgeNode.not_deleted_filter(),
         )
