@@ -1164,6 +1164,24 @@ class ChatOrchestrator(
 
         summary = " ".join(str(summary or "").split())
         if not summary:
+            # 普通 chat turn（三类事件之外）没有直接摘要——fallback 到推断
+            # 写道（与 REST api/v1/chat.py 收尾同款），保证 WS 主链路也写
+            # 记忆（2026-09-20 演示验证实锤：WS 4 轮对话 episodic 0 行）
+            try:
+                from app.services.memory_inferred_write_lane import MemoryInferredWriteLaneService
+
+                MemoryInferredWriteLaneService.enqueue_from_chat_turn(
+                    user_id=user_uuid,
+                    session_id=uuid.UUID(str(session_id)),
+                    user_message=user_message or "",
+                    assistant_message=assistant_message or "",
+                    user_message_id=str(request_id) if request_id else None,
+                    assistant_message_id=None,
+                )
+            except (TypeError, ValueError):
+                pass
+            except Exception:
+                logger.debug("inferred write lane fallback enqueue failed", exc_info=True)
             return
         if len(summary) > 1800:
             summary = f"{summary[:1799]}…"

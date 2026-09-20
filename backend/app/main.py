@@ -797,7 +797,8 @@ setup_rate_limiting(app)
 
 # P1: Initialize Prometheus Instrumentator within app creation
 # Moved from deprecated @app.on_event("startup") to ensure proper lifecycle order
-_instrumentator = Instrumentator().instrument(app)
+# expose() 注册 /metrics 端点——缺失时 P-01 等计数器无出镜通道（2026-09-20 验证员实锤 404）
+_instrumentator = Instrumentator().instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):

@@ -1110,7 +1110,7 @@ async def update_node_positions(
     """
     # Convert Pydantic models to dicts
     updates = [{"id": item.id, "x": item.x, "y": item.y} for item in request.updates]
-    count = await galaxy_service.update_node_positions(updates)
+    count = await galaxy_service.update_node_positions(updates, user_id=user_id)
     return {"status": "success", "updated_count": count}
 
 

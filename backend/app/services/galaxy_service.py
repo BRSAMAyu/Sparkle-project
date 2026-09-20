@@ -2256,9 +2256,9 @@ class GalaxyService:
 
         return best_path
 
-    async def update_node_positions(self, updates: list[dict]) -> int:
+    async def update_node_positions(self, updates: list[dict], user_id: str | None = None) -> int:
         """Batch update node positions"""
-        return await self.structure.update_node_positions(updates)
+        return await self.structure.update_node_positions(updates, user_id=user_id)
 
     async def get_nodes_in_bounds(self, min_x: float, max_x: float, min_y: float, max_y: float) -> list[KnowledgeNode]:
         """Get nodes within viewport"""
