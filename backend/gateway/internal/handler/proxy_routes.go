@@ -876,6 +876,15 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	}
 	h.logger.Info("Registered documents proxy routes")
 
+	// files: 文件处理触发与状态轮询（Python files.py：POST /files/process、
+	// GET /files/{file_id}/status）——上传链路演示依赖（2026-09-20 盘点补）
+	files := api.Group("/files")
+	files.Use(authMiddleware)
+	{
+		h.registerREST(files, "/*path")
+	}
+	h.logger.Info("Registered files proxy routes")
+
 	// route-tier: authed
 	sources := api.Group("/sources")
 	sources.Use(authMiddleware)
