@@ -287,14 +287,19 @@ class TaskService:
         db.add(db_obj)
         if not _is_mock_session(db):
             try:
-                from app.services.focus_context_service import focus_context_service
+                # X-04：Focus 是 optional capability——缺席时优雅降级（跳过预载，
+                # action 流照常），不做无差别裸 try/except
+                from app.services.task_optional_capabilities import focus_preload_available
 
-                await focus_context_service.preload_for_task(
-                    db,
-                    user_id=db_obj.user_id,
-                    task=db_obj,
-                    seed_query=db_obj.title,
-                )
+                if await focus_preload_available(db):
+                    from app.services.focus_context_service import focus_context_service
+
+                    await focus_context_service.preload_for_task(
+                        db,
+                        user_id=db_obj.user_id,
+                        task=db_obj,
+                        seed_query=db_obj.title,
+                    )
             except Exception as exc:
                 logger.warning("Focus context preload failed for task {}: {}", db_obj.id, exc)
         await db.commit()
@@ -348,7 +353,6 @@ class TaskService:
             }
         )
         guide_json["pause_state"] = pause_state
-
         db_obj.status = TaskStatus.PAUSED
         db_obj.guide_json = guide_json
         db_obj.paused_at = paused_at
@@ -429,6 +433,20 @@ class TaskService:
         resumed_at = _utcnow()
         guide_json = dict(db_obj.guide_json or {})
         pause_state = dict(guide_json.get("pause_state") or {})
+        # X-04：累计暂停时长（actual = 起止差 − 暂停区间 的真源积累）
+        total_paused = int(pause_state.get("total_paused_seconds") or 0)
+        paused_at_raw = pause_state.get("paused_at")
+        if isinstance(paused_at_raw, str):
+            try:
+                paused_start = datetime.fromisoformat(paused_at_raw)
+                if paused_start.tzinfo is not None:
+                    paused_start = paused_start.replace(tzinfo=None)
+                segment = (resumed_at - paused_start).total_seconds()
+                if segment > 0:
+                    total_paused += int(segment)
+            except ValueError:
+                pass
+        pause_state["total_paused_seconds"] = total_paused
         pause_state["resumed_at"] = resumed_at.isoformat()
         guide_json["pause_state"] = pause_state
 
@@ -516,11 +534,13 @@ class TaskService:
         db: AsyncSession,
         task_id: UUID,
         user_id: UUID,
-        actual_minutes: int,
+        actual_minutes: int | None,
         note: str | None = None,
         route_history_decision_id: str | None = None,
         routing_outcome_signal_id: str | None = None,
         routing_trace_id: str | None = None,
+        evidence: list[dict[str, Any]] | None = None,
+        evidence_source: str = "user",
     ) -> Task:
         """
         Complete task by ID - publishes task.completed event
@@ -535,7 +555,8 @@ class TaskService:
             db: Database session
             task_id: Task ID to complete
             user_id: User ID for ownership verification
-            actual_minutes: Actual time spent on task
+            actual_minutes: **Measured** actual time spent (X-04: None → derived
+                from real start/end timestamps; NEVER backfilled from estimated)
             note: Optional user note
 
         Returns:
@@ -558,6 +579,8 @@ class TaskService:
             route_history_decision_id=route_history_decision_id,
             routing_outcome_signal_id=routing_outcome_signal_id,
             routing_trace_id=routing_trace_id,
+            evidence=evidence,
+            evidence_source=evidence_source,
         )
 
     @staticmethod
@@ -587,11 +610,14 @@ class TaskService:
             task.started_at = task.started_at or started_at
 
         if estimated_minutes > 0 and total_minutes >= estimated_minutes:
+            # X-04：focus 计时器触发的自动完成——证据来源标记 focus_auto，
+            # 无附带证据时回落 system_event（focus timer 不等于学习成果，低信任打型）
             return await TaskService.complete(
                 db,
                 task,
                 total_minutes,
                 note=None,
+                evidence_source="focus_auto",
             )
 
         task.actual_minutes = total_minutes
@@ -604,19 +630,51 @@ class TaskService:
     async def complete(
         db: AsyncSession,
         db_obj: Task,
-        actual_minutes: int,
+        actual_minutes: int | None = None,
         note: str | None = None,
         route_history_decision_id: str | None = None,
         routing_outcome_signal_id: str | None = None,
         routing_trace_id: str | None = None,
+        evidence: list[dict[str, Any]] | None = None,
+        evidence_source: str = "user",
     ) -> Task:
-        """Complete task and update plan progress if task belongs to a plan"""
+        """Complete task and update plan progress if task belongs to a plan
+
+        X-04 红线：``actual_minutes`` 只认**实测**值（客户端计时器）；
+        缺省时由真实起止时间（started_at → completed_at，扣除暂停区间）推算；
+        **永不回填 estimated_minutes**（计划输入不是执行观测）。
+        ``evidence`` 为完成时附带的证据（分型校验），``evidence_source`` 决定
+        无证据时的诚实回落类型（user → user_confirmation；focus_auto/agent →
+        system_event）。
+        """
+        from app.services.task_completion_evidence import (
+            append_completion_evidence_record,
+            build_completion_evidence_record,
+            resolve_actual_minutes,
+        )
+
         _validate_transition(db_obj.status, TaskStatus.COMPLETED)
         db_obj.status = TaskStatus.COMPLETED
-        db_obj.completed_at = _utcnow()
+        completed_at = _utcnow()
+        actual_minutes = resolve_actual_minutes(db_obj, provided=actual_minutes, ended_at=completed_at)
+        db_obj.completed_at = completed_at
         db_obj.actual_minutes = actual_minutes
         if note:
             db_obj.user_note = note
+
+        # X-04：完成证据分型记录（guide_json 增量；X-01 completion_evidence 声明列不动）
+        try:
+            evidence_record = build_completion_evidence_record(
+                db_obj,
+                provided=evidence,
+                source=evidence_source,
+                completed_at=completed_at,
+            )
+            append_completion_evidence_record(db_obj, evidence_record)
+        except ValueError:
+            raise
+        except Exception as exc:  # noqa: BLE001 — 证据记录失败不阻断完成（记录缺省可观测）
+            logger.warning("Failed to build completion evidence record for task {}: {}", db_obj.id, exc)
 
         db.add(db_obj)
         await db.commit()
@@ -654,15 +712,17 @@ class TaskService:
                 logger.warning(f"Failed to append task summary: {e}")
 
         if db_obj.knowledge_node_id:
-            from app.services.galaxy_service import GalaxyService
-
-            study_minutes = actual_minutes or db_obj.estimated_minutes or 15
-            galaxy_service = GalaxyService(db)
             try:
+                # X-04：galaxy 子系统缺席（如 gen 模块未生成）不得阻断完成——
+                # 导入一并纳入 best-effort try（spark 本就允许失败告警）
+                from app.services.galaxy_service import GalaxyService
+                from app.services.task_completion_evidence import resolve_spark_study_minutes
+
+                galaxy_service = GalaxyService(db)
                 await galaxy_service.spark_node(
                     user_id=db_obj.user_id,
                     node_id=db_obj.knowledge_node_id,
-                    study_minutes=study_minutes,
+                    study_minutes=resolve_spark_study_minutes(actual_minutes),
                     task_id=db_obj.id,
                     trigger_expansion=True,
                 )
@@ -674,18 +734,18 @@ class TaskService:
         # match an existing node by title or ignite a stable task-derived star,
         # then spark it so unlocked/mastered/study_minutes react to real study.
         if not db_obj.knowledge_node_id:
-            from app.services.galaxy_service import GalaxyService
-
             try:
+                from app.services.galaxy_service import GalaxyService
+                from app.services.task_completion_evidence import resolve_spark_study_minutes
+
                 galaxy_service = GalaxyService(db)
                 anchor_id = await galaxy_service.ensure_task_node(
                     db_obj.title, task_id=db_obj.id
                 )
-                study_minutes = actual_minutes or db_obj.estimated_minutes or 15
                 await galaxy_service.spark_node(
                     user_id=db_obj.user_id,
                     node_id=anchor_id,
-                    study_minutes=study_minutes,
+                    study_minutes=resolve_spark_study_minutes(actual_minutes),
                     task_id=db_obj.id,
                     trigger_expansion=False,
                 )
@@ -705,7 +765,12 @@ class TaskService:
         from app.models.community import GroupTaskClaim
 
         estimated = db_obj.estimated_minutes or 0
-        completion_rate = actual_minutes / estimated if estimated > 0 else 1.0
+        # X-04：actual 未知（无 started_at 的历史/合成行）时诚实缺省——
+        # completion_rate=None（消费方已知处理 None），绝不为算比率而回填 estimated
+        if estimated > 0:
+            completion_rate = (actual_minutes / estimated) if actual_minutes is not None else None
+        else:
+            completion_rate = 1.0
         claim_result = await db.execute(select(GroupTaskClaim).where(GroupTaskClaim.personal_task_id == db_obj.id))
         linked_claim = claim_result.scalar_one_or_none()
         source = "group" if linked_claim else "personal"
@@ -746,7 +811,7 @@ class TaskService:
                 user_id=str(db_obj.user_id),
                 signal_id=f"task.completed:{db_obj.id}:{db_obj.completed_at.isoformat() if db_obj.completed_at else actual_minutes}",
                 completed=True,
-                timed_out=bool(estimated > 0 and actual_minutes > estimated),
+                timed_out=bool(estimated > 0 and actual_minutes is not None and actual_minutes > estimated),
                 estimated_minutes=estimated,
                 actual_minutes=actual_minutes,
                 difficulty=db_obj.difficulty,
@@ -865,10 +930,14 @@ class TaskService:
         return max(1, min(5, int(mapped)))
 
     @staticmethod
-    def _build_task_summary(task: Task, actual_minutes: int, note: str | None) -> dict:
+    def _build_task_summary(task: Task, actual_minutes: int | None, note: str | None) -> dict:
         estimated = task.estimated_minutes or 0
-        delta = actual_minutes - estimated
-        delta_label = "0min" if delta == 0 else f"{'+' if delta > 0 else ''}{delta}min"
+        # X-04：actual 未知时 delta 诚实标注，不做 estimated 假对比
+        if actual_minutes is None:
+            delta_label = "unknown"
+        else:
+            delta = actual_minutes - estimated
+            delta_label = "0min" if delta == 0 else f"{'+' if delta > 0 else ''}{delta}min"
 
         sentiment = TaskService._infer_sentiment(note)
 
@@ -1085,12 +1154,48 @@ class TaskService:
         routing_outcome_signal_id: str | None = None,
         routing_trace_id: str | None = None,
     ) -> Task:
-        """Abandon task"""
+        """Abandon task
+
+        X-04：放弃也要留痕——持久化真实投入时长（started_at → abandoned_at 扣
+        暂停；**未开始过则保持 None，绝不拿 estimated 顶替**）并在 guide_json
+        追加 abandon_record（原因/时刻/时长/此前状态），重开与复盘可回溯。
+        """
+        from app.services.task_completion_evidence import (
+            ABANDON_RECORD_KEY,
+            compute_actual_minutes_from_timestamps,
+        )
+
         _validate_transition(db_obj.status, TaskStatus.ABANDONED)
+        status_before = db_obj.status
+        abandoned_at = _utcnow()
         db_obj.status = TaskStatus.ABANDONED
-        db_obj.completed_at = _utcnow()  # using completed_at for end time
+        db_obj.completed_at = abandoned_at  # using completed_at for end time
+        # X-04：真实投入时长持久化（未开始 → None；永不从 estimated 回填）
+        db_obj.actual_minutes = compute_actual_minutes_from_timestamps(db_obj, ended_at=abandoned_at)
         if reason:
             db_obj.user_note = f"Abandoned: {reason}"
+
+        # X-04：放弃留痕（append-only，重开不抹）
+        try:
+            guide_json = dict(db_obj.guide_json or {})
+            record = {
+                "reason": reason,
+                "abandoned_at": abandoned_at.isoformat(timespec="seconds"),
+                "actual_minutes": db_obj.actual_minutes,
+                "status_before": status_before.value if isinstance(status_before, TaskStatus) else str(status_before),
+                "user_note": db_obj.user_note,
+            }
+            history = guide_json.get(ABANDON_RECORD_KEY)
+            if isinstance(history, list):
+                history = [*history, record]
+            elif history is None:
+                history = [record]
+            else:
+                history = [history, record]
+            guide_json[ABANDON_RECORD_KEY] = history
+            db_obj.guide_json = guide_json
+        except Exception as exc:  # noqa: BLE001 — 留痕失败不阻断放弃（可观测降级）
+            logger.warning("Failed to record abandon trace for task {}: {}", db_obj.id, exc)
 
         db.add(db_obj)
         await db.commit()
@@ -1103,16 +1208,17 @@ class TaskService:
                 from app.services.task_state_sync import TaskStateSyncService
 
                 sync_service = TaskStateSyncService(db)
-                await sync_service.on_task_updated(db_obj, old_status=TaskStatus(db_obj.status) if reason else None)
+                # X-04 修复：此处必须传**迁移前**状态（曾误传迁移后的 ABANDONED，
+                # 使 plan 侧把放弃误当 continue-from-ABANDONED）
+                await sync_service.on_task_updated(db_obj, old_status=status_before)
             except Exception as e:
                 logger.warning(f"Failed to sync task abandonment with plan state: {e}")
 
         # Publish task abandonment event for cognitive analysis
         from app.core.event_bus import TaskAbandoned
 
-        time_spent = None
-        if db_obj.started_at:
-            time_spent = int((_utcnow() - db_obj.started_at).total_seconds() / 60)
+        # X-04：事件时长与持久化值同源（真实起止推算，未开始为 None）
+        time_spent = db_obj.actual_minutes
 
         event = TaskAbandoned(
             user_id=str(db_obj.user_id),
@@ -1209,6 +1315,219 @@ class TaskService:
             routing_outcome_signal_id=routing_outcome_signal_id,
             routing_trace_id=routing_trace_id,
         )
+
+    # ── X-04 · 重开（reopen）与重定范围（rescope）──────────────────────────
+    # 设计纪律：二者是**独立的显式用户动作**，不并入 _VALID_TRANSITIONS——
+    # X-03 的 status_change_semantics 以「FSM 无出边 = 终态不可逆」推导 complete/
+    # abandon 的 medium/irreversible 授权分级；若给终态加出边，complete 会被
+    # 降级为 low/reversible，削弱既有授权守卫（X-04 Forbidden 条款）。重开走
+    # 本专用路径：终态限定 + 历史保留 + 显式 reason。
+
+    @staticmethod
+    async def reopen(
+        db: AsyncSession,
+        db_obj: Task,
+        reason: str | None = None,
+    ) -> Task:
+        """重开终态任务（COMPLETED/ABANDONED → IN_PROGRESS），**重开保留状态**.
+
+        保留语义：上一次终态尝试的完整快照（状态/完成时刻/真实时长/完成证据
+        记录/备注/原因）append 进 ``guide_json["reopen_history"]`` 后才清理
+        工作列（completed_at/actual_minutes 复位，started_at 刷新为本轮起点）
+        ——历史不丢，actual 永远只反映当前一轮的真实起止。
+        """
+        from app.services.task_completion_evidence import REOPEN_HISTORY_KEY
+
+        if db_obj.status not in (TaskStatus.COMPLETED, TaskStatus.ABANDONED):
+            raise ValueError(
+                f"Only terminal tasks can be reopened (current: {db_obj.status.value})"
+            )
+        status_before = db_obj.status
+        reopened_at = _utcnow()
+
+        guide_json = dict(db_obj.guide_json or {})
+        snapshot = {
+            "reopened_at": reopened_at.isoformat(timespec="seconds"),
+            "reason": reason,
+            "status_before": status_before.value,
+            "completed_at": db_obj.completed_at.isoformat() if db_obj.completed_at else None,
+            "actual_minutes": db_obj.actual_minutes,
+            "user_note": db_obj.user_note,
+            "completion_evidence_record": guide_json.get("completion_evidence_record"),
+        }
+        history = guide_json.get(REOPEN_HISTORY_KEY)
+        history = [*history, snapshot] if isinstance(history, list) else ([history, snapshot] if history else [snapshot])
+        guide_json[REOPEN_HISTORY_KEY] = history
+
+        db_obj.status = TaskStatus.IN_PROGRESS
+        db_obj.started_at = reopened_at  # 本轮真实起点（actual 只计本轮真实起止）
+        db_obj.completed_at = None
+        db_obj.actual_minutes = None
+        db_obj.paused_at = None
+        db_obj.paused_reason = None
+        pause_state = dict(guide_json.get("pause_state") or {})
+        if pause_state:
+            guide_json["pause_state"] = {
+                **pause_state,
+                "paused_at": None,
+                "resumed_at": None,
+                "total_paused_seconds": 0,
+            }
+        if reason:
+            db_obj.user_note = f"Reopened: {reason}"
+        db_obj.guide_json = guide_json
+
+        db.add(db_obj)
+        await db.commit()
+        await db.refresh(db_obj)
+        await _sync_task_card_projection(db, db_obj)
+
+        if db_obj.plan_id:
+            try:
+                from app.services.task_state_sync import TaskStateSyncService
+
+                sync_service = TaskStateSyncService(db)
+                await sync_service.on_task_updated(db_obj, old_status=status_before)
+            except Exception as e:
+                logger.warning(f"Failed to sync task reopen with plan state: {e}")
+
+        # 事件词表 39 冻结：重开是新一轮开始，复用既有 task.started 名
+        await event_bus_reliable.publish(
+            "task.started",
+            {
+                "event_type": "task.started",
+                "user_id": str(db_obj.user_id),
+                "task_id": str(db_obj.id),
+                "plan_id": str(db_obj.plan_id) if db_obj.plan_id else None,
+                "reopened_from": status_before.value,
+                "reason": reason,
+                "due_at": db_obj.due_date.isoformat() if db_obj.due_date else None,
+            },
+        )
+        await publish_srl_event(
+            user_id=db_obj.user_id,
+            trigger_event_type="task.started",
+            evidence_id=str(db_obj.id),
+            metadata={
+                "plan_id": str(db_obj.plan_id) if db_obj.plan_id else None,
+                "reopened_from": status_before.value,
+            },
+        )
+        return db_obj
+
+    @staticmethod
+    async def reopen_task(
+        db: AsyncSession,
+        task_id: UUID,
+        user_id: UUID,
+        reason: str | None = None,
+    ) -> Task:
+        """Reopen a terminal task by ID (ownership verified)."""
+        task = await TaskService.get_by_id(db, task_id, user_id)
+        if not task:
+            from app.core.exceptions import NotFoundError
+
+            raise NotFoundError(message="Task not found")
+        return await TaskService.reopen(db, task, reason)
+
+    @staticmethod
+    async def rescope(
+        db: AsyncSession,
+        db_obj: Task,
+        fields: dict[str, Any],
+        reason: str | None = None,
+    ) -> Task:
+        """重定范围（rescope）：收缩/调整任务口径，**历史保留**.
+
+        - 仅活跃态可 rescope（PENDING/IN_PROGRESS/PAUSED/STUCK）；终态先重开；
+        - 字段白名单（RESCOPE_FIELD_WHITELIST，与 X-03 提案白名单同词表）；
+        - before/after 快照 append 进 ``guide_json["rescope_history"]``；
+        - 零有效变更 → no-op（幂等：不追加历史、不触碰 updated_at 语义）；
+        - started_at / 状态 / 完成证据一律不动——rescope 只改口径，不重置执行。
+        """
+        from app.services.task_completion_evidence import RESCOPE_FIELD_WHITELIST
+
+        if db_obj.status in (TaskStatus.COMPLETED, TaskStatus.ABANDONED):
+            raise ValueError(
+                f"Terminal tasks cannot be rescoped; reopen first (current: {db_obj.status.value})"
+            )
+        if not isinstance(fields, dict) or not fields:
+            raise ValueError("rescope fields must be a non-empty object")
+        illegal = sorted(set(fields) - RESCOPE_FIELD_WHITELIST)
+        if illegal:
+            raise ValueError(f"rescope fields outside whitelist: {illegal}")
+
+        changes: dict[str, dict[str, Any]] = {}
+        for key, value in fields.items():
+            current = getattr(db_obj, key, None)
+            if key == "due_date" and isinstance(value, str) and value:
+                from datetime import date as date_cls
+
+                value = date_cls.fromisoformat(value)
+            if current == value:
+                continue
+            if hasattr(current, "isoformat"):
+                current_out = current.isoformat()
+            elif hasattr(current, "value"):
+                current_out = current.value
+            else:
+                current_out = current
+            if hasattr(value, "isoformat"):
+                value_out = value.isoformat()
+            else:
+                value_out = value
+            changes[key] = {"before": current_out, "after": value_out}
+            setattr(db_obj, key, value)
+
+        if not changes:
+            return db_obj  # 幂等 no-op：零有效变更不留痕
+
+        from app.services.task_completion_evidence import RESCOPE_HISTORY_KEY
+
+        rescoped_at = _utcnow()
+        guide_json = dict(db_obj.guide_json or {})
+        entry = {
+            "rescoped_at": rescoped_at.isoformat(timespec="seconds"),
+            "reason": reason,
+            "changes": changes,
+            "status": db_obj.status.value if isinstance(db_obj.status, TaskStatus) else str(db_obj.status),
+        }
+        history = guide_json.get(RESCOPE_HISTORY_KEY)
+        history = [*history, entry] if isinstance(history, list) else ([history, entry] if history else [entry])
+        guide_json[RESCOPE_HISTORY_KEY] = history
+        db_obj.guide_json = guide_json
+
+        db.add(db_obj)
+        await db.commit()
+        await db.refresh(db_obj)
+        await _sync_task_card_projection(db, db_obj)
+
+        if db_obj.plan_id:
+            try:
+                from app.services.task_state_sync import TaskStateSyncService
+
+                sync_service = TaskStateSyncService(db)
+                await sync_service.on_task_updated(db_obj)
+            except Exception as e:
+                logger.warning(f"Failed to sync task rescope with plan state: {e}")
+        return db_obj
+
+    @staticmethod
+    async def rescope_task(
+        db: AsyncSession,
+        task_id: UUID,
+        user_id: UUID,
+        fields: dict[str, Any],
+        reason: str | None = None,
+    ) -> Task:
+        """Rescope a task by ID (ownership verified)."""
+        task = await TaskService.get_by_id(db, task_id, user_id)
+        if not task:
+            from app.core.exceptions import NotFoundError
+
+            raise NotFoundError(message="Task not found")
+        return await TaskService.rescope(db, task, fields, reason)
+
 
     @staticmethod
     async def delete(db: AsyncSession, db_obj: Task) -> None:

@@ -388,14 +388,18 @@ class TaskUpdate {
 @JsonSerializable()
 class TaskComplete {
   TaskComplete({
-    required this.actualMinutes,
+    this.actualMinutes,
     this.userNote,
   });
 
   factory TaskComplete.fromJson(Map<String, dynamic> json) =>
       _$TaskCompleteFromJson(json);
-  @JsonKey(name: 'actual_minutes')
-  final int actualMinutes;
+
+  /// X-04 红线：只传**实测**分钟（计时器等真实来源）；null = 没有实测值，
+  /// 由服务端按真实起止时间推算——**绝不回填 estimatedMinutes**。
+  @JsonKey(name: 'actual_minutes', includeIfNull: false)
+  final int? actualMinutes;
+
   @JsonKey(name: 'user_note')
   final String? userNote;
 

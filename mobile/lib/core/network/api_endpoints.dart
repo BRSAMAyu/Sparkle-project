@@ -69,6 +69,9 @@ class ApiEndpoints {
   static String taskPriorityReasoning(String id) =>
       '/tasks/$id/priority-reasoning';
   static String abandonTask(String id) => '/tasks/$id/abandon';
+  // X-04: 重开终态任务 / 重定范围
+  static String reopenTask(String id) => '/tasks/$id/reopen';
+  static String rescopeTask(String id) => '/tasks/$id/rescope';
   static String snoozeTask(String id) => '/tasks/$id/snooze';
   static String taskStuck(String id) => '/tasks/$id/stuck';
   static String taskTooHard(String id) => '/tasks/$id/too-hard';

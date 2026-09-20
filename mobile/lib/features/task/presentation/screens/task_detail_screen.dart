@@ -960,10 +960,15 @@ class _BottomActionBar extends ConsumerWidget {
                 Expanded(
                   flex: 2,
                   child: CustomButton.primary(
-                    text: task.status == TaskStatus.paused ||
-                            task.status == TaskStatus.restore
+                    // X-04：终态任务（完成/放弃）→ 重开入口；服务端保留上一轮
+                    // 快照（reopen_history），actual 只反映新一轮真实起止
+                    text: task.status == TaskStatus.completed ||
+                            task.status == TaskStatus.abandoned
                         ? context.l10n.taskActionResume
-                        : context.l10n.taskStart,
+                        : task.status == TaskStatus.paused ||
+                              task.status == TaskStatus.restore
+                            ? context.l10n.taskActionResume
+                            : context.l10n.taskStart,
                     icon: task.status == TaskStatus.paused ||
                             task.status == TaskStatus.restore
                         ? Icons.restart_alt_rounded
@@ -974,6 +979,15 @@ class _BottomActionBar extends ConsumerWidget {
                           SensoryFeedbackEvent.confirm,
                         ),
                       );
+                      if (task.status == TaskStatus.completed ||
+                          task.status == TaskStatus.abandoned) {
+                        unawaited(
+                          ref
+                              .read(taskListProvider.notifier)
+                              .reopenTask(task.id),
+                        );
+                        return;
+                      }
                       if (task.status == TaskStatus.paused ||
                           task.status == TaskStatus.restore) {
                         unawaited(

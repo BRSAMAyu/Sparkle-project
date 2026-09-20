@@ -419,9 +419,10 @@ class _QuickCompleteButton extends ConsumerWidget {
           icon: const Icon(Icons.check_circle_outline_rounded),
           variant: ButtonVariant.ghost,
           onPressed: () async {
+            // X-04：无实测值传 null，不回填 estimated
             await ref
                 .read(taskListProvider.notifier)
-                .completeTask(task.id, task.estimatedMinutes, null);
+                .completeTask(task.id, null, null);
             await ref.read(dashboardProvider.notifier).refresh();
           },
         ),

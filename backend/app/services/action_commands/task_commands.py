@@ -223,8 +223,12 @@ class TaskUpdateStatusCommand:
         # 路由到 TaskService 专用权威方法（状态迁移不走通用 update——TaskUpdate
         # 无 status 字段是房屋刻意设计：complete/pause/abandon 等各自携带全量
         # 副作用：plan 同步、galaxy spark、task.completed 事件等）。
+        #
+        # X-04 红线：actual_minutes 只透传实测值（payload 显式携带）；缺省传
+        # None 由 TaskService.complete 从真实起止推算——**永不从 estimated 回填**。
         if target_status is TaskStatus.COMPLETED:
-            actual_minutes = int(payload.get("actual_minutes") or task.estimated_minutes or 15)
+            raw_actual = payload.get("actual_minutes")
+            actual_minutes = int(raw_actual) if raw_actual is not None else None
             updated = await TaskService.complete(db, task, actual_minutes, note=payload.get("note"))
         elif target_status is TaskStatus.IN_PROGRESS:
             if task.status is TaskStatus.PAUSED or task.status is TaskStatus.STUCK:

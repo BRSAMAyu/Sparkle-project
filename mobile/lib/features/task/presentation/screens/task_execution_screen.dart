@@ -269,7 +269,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
         );
   }
 
-  Future<void> _handleCompletion(int minutes, String? note) async {
+  Future<void> _handleCompletion(int? minutes, String? note) async {
     if (_completionFlowFinished) return;
 
     setState(() {
@@ -1955,11 +1955,14 @@ class _BottomControls extends ConsumerWidget {
 
   final TaskModel task;
   final int elapsedSeconds;
-  final void Function(int minutes, String? note) onComplete;
+  final void Function(int? minutes, String? note) onComplete;
 
   void _showCompleteDialog(BuildContext context) {
     final noteController = TextEditingController();
-    final minutes = Duration(seconds: elapsedSeconds).inMinutes;
+    // X-04：实测分钟来自计时器；不足 1 分钟视为无实测值（0 会被服务端
+    // ge=1 校验拒绝，语义上也确实是「未测到投入」）→ 传 null 由服务端推算
+    final measuredMinutes = Duration(seconds: elapsedSeconds).inMinutes;
+    final minutes = measuredMinutes >= 1 ? measuredMinutes : null;
     final criteria = taskSuccessCriteriaLines(task);
 
     unawaited(
@@ -2013,7 +2016,7 @@ class _BottomControls extends ConsumerWidget {
                       Icon(Icons.timer_outlined, color: DS.primaryBase),
                       const SizedBox(width: DS.spacing8),
                       Text(
-                        context.l10n.taskExecutionElapsedMinutes(minutes),
+                        context.l10n.taskExecutionElapsedMinutes(measuredMinutes),
                         style: DS.bodyMedium.copyWith(
                           fontWeight: DS.fontWeightMedium,
                         ),

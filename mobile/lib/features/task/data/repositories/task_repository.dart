@@ -1374,9 +1374,11 @@ Clarify the core output and completion criteria.
 
   Future<TaskCompletionResult> completeTask(
     String id,
-    int actualMinutes,
+    int? actualMinutes,
     String? note,
   ) async {
+    // X-04：actualMinutes 为 null（无计时器实测值）时服务端按真实起止推算，
+    // 调用方绝不允许以 estimatedMinutes 顶替。
     if (DemoDataService.isDemoMode) {
       final existingIndex =
           DemoDataService().demoTasks.indexWhere((t) => t.id == id);
@@ -1454,6 +1456,60 @@ Clarify the core output and completion criteria.
       return TaskModel.fromJson(payload);
     } on DioException catch (e) {
       return _handleDioError(e, 'abandonTask');
+    }
+  }
+
+  /// X-04 · 重开终态任务（COMPLETED/ABANDONED → IN_PROGRESS）。
+  /// 服务端保留上一轮快照（完成时刻/真实时长/证据）进 reopen_history。
+  Future<TaskModel> reopenTask(String id, {String? reason}) async {
+    if (DemoDataService.isDemoMode) {
+      final existingIndex =
+          DemoDataService().demoTasks.indexWhere((t) => t.id == id);
+      if (existingIndex != -1) {
+        final updated = DemoDataService().demoTasks[existingIndex].copyWith(
+              status: TaskStatus.inProgress,
+              completedAt: null,
+              actualMinutes: null,
+              startedAt: DateTime.now(),
+            );
+        DemoDataService().demoTasks[existingIndex] = updated;
+        return updated;
+      }
+    }
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.reopenTask(id),
+        data: {
+          if (reason != null && reason.isNotEmpty) 'reason': reason,
+        },
+      );
+      final payload =
+          ApiResponseParser.unwrapMap(response.data, action: 'reopenTask');
+      return TaskModel.fromJson(payload);
+    } on DioException catch (e) {
+      return _handleDioError(e, 'reopenTask');
+    }
+  }
+
+  /// X-04 · 重定范围（stale plan 可 rescope；白名单字段；服务端留痕历史）。
+  Future<TaskModel> rescopeTask(
+    String id,
+    Map<String, dynamic> fields, {
+    String? reason,
+  }) async {
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.rescopeTask(id),
+        data: {
+          'fields': fields,
+          if (reason != null && reason.isNotEmpty) 'reason': reason,
+        },
+      );
+      final payload =
+          ApiResponseParser.unwrapMap(response.data, action: 'rescopeTask');
+      return TaskModel.fromJson(payload);
+    } on DioException catch (e) {
+      return _handleDioError(e, 'rescopeTask');
     }
   }
 

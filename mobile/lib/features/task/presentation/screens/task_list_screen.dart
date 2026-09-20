@@ -405,10 +405,12 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                         );
                       },
                       onComplete: () {
+                        // X-04：无计时器实测值 → 传 null（服务端按真实起止算），
+                        // 绝不以 estimatedMinutes 顶替
                         unawaited(
                           ref.read(taskListProvider.notifier).completeTask(
                                 task.id,
-                                task.estimatedMinutes,
+                                task.actualMinutes,
                                 null,
                               ),
                         );
@@ -417,7 +419,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                         unawaited(
                           ref.read(taskListProvider.notifier).retryCompleteTask(
                                 task.id,
-                                task.actualMinutes ?? task.estimatedMinutes,
+                                task.actualMinutes,
                                 task.userNote,
                               ),
                         );
@@ -525,17 +527,18 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                 );
               },
               onComplete: () {
+                // X-04：无实测值传 null，不回填 estimated
                 unawaited(
                   ref
                       .read(taskListProvider.notifier)
-                      .completeTask(task.id, task.estimatedMinutes, null),
+                      .completeTask(task.id, task.actualMinutes, null),
                 );
               },
               onRetrySync: () {
                 unawaited(
                   ref.read(taskListProvider.notifier).retryCompleteTask(
                         task.id,
-                        task.actualMinutes ?? task.estimatedMinutes,
+                        task.actualMinutes,
                         task.userNote,
                       ),
                 );

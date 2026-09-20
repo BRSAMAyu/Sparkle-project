@@ -178,13 +178,14 @@ Map<String, dynamic> _$TaskUpdateToJson(TaskUpdate instance) =>
     };
 
 TaskComplete _$TaskCompleteFromJson(Map<String, dynamic> json) => TaskComplete(
-      actualMinutes: (json['actual_minutes'] as num).toInt(),
+      actualMinutes: (json['actual_minutes'] as num?)?.toInt(),
       userNote: json['user_note'] as String?,
     );
 
 Map<String, dynamic> _$TaskCompleteToJson(TaskComplete instance) =>
     <String, dynamic>{
-      'actual_minutes': instance.actualMinutes,
+      if (instance.actualMinutes != null)
+        'actual_minutes': instance.actualMinutes,
       'user_note': instance.userNote,
     };
 

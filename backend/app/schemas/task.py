@@ -301,11 +301,17 @@ class TaskComplete(BaseModel):
 
 
 class TaskCompleteRequest(BaseModel):
-    """Complete task request body (v2.1)"""
+    """Complete task request body (v2.1 / X-04)
 
-    actual_minutes: int = Field(ge=1, description="Actual minutes")
+    X-04 红线：``actual_minutes`` 是**实测**值（如客户端计时器），可缺省——
+    缺省时服务端从真实起止时间推算，**永不回填 estimated_minutes**。
+    ``evidence`` 复用 X-01 ``CompletionEvidenceIn``（封闭词表 + scheme 校验）。
+    """
+
+    actual_minutes: int | None = Field(default=None, ge=1, description="Measured actual minutes (optional; server derives from real start/end when absent)")
     note: str | None = Field(default=None, validation_alias=AliasChoices("note", "user_note"), description="User note")
     completion_quality: int | None = Field(default=None, ge=1, le=5, description="Self rating 1-5")
+    evidence: list[CompletionEvidenceIn] | None = Field(default=None, description="Typed completion evidence entries (X-01 closed vocabulary)")
     route_history_decision_id: str | None = Field(default=None, description="DualCore route decision id")
     routing_outcome_signal_id: str | None = Field(default=None, description="DualCore routing passive signal id")
     routing_trace_id: str | None = Field(default=None, description="DualCore routing trace id")
@@ -334,6 +340,19 @@ class TaskQuickActionRequest(BaseModel):
     route_history_decision_id: str | None = Field(default=None, description="DualCore route decision id")
     routing_outcome_signal_id: str | None = Field(default=None, description="DualCore routing passive signal id")
     routing_trace_id: str | None = Field(default=None, description="DualCore routing trace id")
+
+
+class TaskReopenRequest(TaskQuickActionRequest):
+    """X-04 · 重开终态任务（COMPLETED/ABANDONED → IN_PROGRESS，历史保留）"""
+
+    pass
+
+
+class TaskRescopeRequest(BaseModel):
+    """X-04 · 重定范围（活跃态任务；白名单字段；历史保留）"""
+
+    fields: dict = Field(description="Fields to adjust (whitelist: title/estimated_minutes/difficulty/energy_cost/priority/due_date/success_criteria)")
+    reason: str | None = Field(default=None, max_length=500, description="Why the scope changed (stale plan, narrowed scope, ...)")
 
 
 class TaskStuckRequest(BaseModel):

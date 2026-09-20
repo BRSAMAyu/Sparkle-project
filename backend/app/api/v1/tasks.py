@@ -43,7 +43,9 @@ from app.schemas.task import (
     TaskPause,
     TaskQuickActionRequest,
     TaskRecommendationResponse,
+    TaskReopenRequest,
     TaskReorderRequest,
+    TaskRescopeRequest,
     TaskResourceLinkCreate,
     TaskResourceLinkInfo,
     TaskSnoozeRequest,
@@ -68,6 +70,7 @@ from app.services.seed_library_service import SeedLibraryService
 from app.services.task_document_service import task_document_service
 from app.services.task_guide_service import task_guide_service
 from app.services.task_priority_service import TaskPriorityService
+from app.services.task_completion_evidence import validate_evidence_entries
 from app.services.task_service import TaskService
 from app.task_guidance import TaskGuidance, TaskGuidanceAudience
 
@@ -1121,6 +1124,14 @@ async def start_task(
 
     调用 TaskService.start_task() 确保状态同步逻辑被执行
     """
+    # X-04 幂等：重复 start（网络重试/双击）恰一次生效——已 IN_PROGRESS 原样返回
+    existing = await db.execute(select(Task).where(Task.id == task_id, Task.user_id == current_user.id))
+    current = existing.scalar_one_or_none()
+    if current is None:
+        raise NotFoundError(message="Task not found")
+    if current.status == TaskStatus.IN_PROGRESS:
+        return {"data": TaskDetail.model_validate(current), "message": "Task already started"}
+
     task = await TaskService.start_task(db=db, task_id=task_id, user_id=current_user.id)
 
     return {"data": TaskDetail.model_validate(task)}
@@ -1174,6 +1185,15 @@ async def abandon_task(
     - 发布 task.abandoned 事件 (用于认知分析)
     """
     reason = request.reason if request else None
+
+    # X-04 幂等：重复 abandon 恰一次生效——已 ABANDONED 原样返回
+    existing = await db.execute(select(Task).where(Task.id == task_id, Task.user_id == current_user.id))
+    current = existing.scalar_one_or_none()
+    if current is None:
+        raise NotFoundError(message="Task not found")
+    if current.status == TaskStatus.ABANDONED:
+        return {"data": TaskDetail.model_validate(current), "message": "Task already abandoned"}
+
     task = await TaskService.abandon_task(
         db=db,
         task_id=task_id,
@@ -1202,6 +1222,56 @@ async def abandon_task(
         logger.warning(f"Failed to enqueue abandon reflection prompt: {e}")
 
     return {"data": TaskDetail.model_validate(task)}
+
+
+# route-tier: authed
+@router.post("/{task_id}/reopen", response_model=dict[str, Any])
+async def reopen_task(
+    task_id: UUID = Path(..., description="Task ID"),
+    request: TaskReopenRequest | None = None,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """X-04 · 重开终态任务（COMPLETED/ABANDONED → IN_PROGRESS）.
+
+    重开保留状态：上一轮终态快照（完成时刻/真实时长/完成证据/备注）归档进
+    guide_json.reopen_history，工作列复位，actual 只反映新一轮真实起止。
+    """
+    reason = request.reason if request else None
+    try:
+        task = await TaskService.reopen_task(db=db, task_id=task_id, user_id=current_user.id, reason=reason)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"data": TaskDetail.model_validate(task), "message": "Task reopened; previous attempt archived"}
+
+
+# route-tier: authed
+@router.post("/{task_id}/rescope", response_model=dict[str, Any])
+async def rescope_task(
+    task_id: UUID = Path(..., description="Task ID"),
+    request: TaskRescopeRequest | None = None,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """X-04 · 重定范围（stale plan 可 rescope）.
+
+    活跃态任务调整白名单口径字段（title/estimated_minutes/difficulty/energy_cost/
+    priority/due_date/success_criteria）；before/after 快照留痕 rescope_history；
+    零有效变更幂等 no-op；终态任务需先 reopen。
+    """
+    if request is None:
+        raise HTTPException(status_code=422, detail="rescope requires a fields object")
+    try:
+        task = await TaskService.rescope_task(
+            db=db,
+            task_id=task_id,
+            user_id=current_user.id,
+            fields=request.fields,
+            reason=request.reason,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"data": TaskDetail.model_validate(task), "message": "Task rescoped"}
 
 
 # route-tier: authed
@@ -1255,7 +1325,18 @@ async def complete_task(
 
     # 🔥 关键修复: 调用 TaskService.complete_task() 而非直接操作数据库
     # 这确保了 task.completed 事件被发布，从而触发 AdaptiveReplanner
-    actual_minutes = request.actual_minutes or task.estimated_minutes or 15
+    #
+    # X-04 红线：actual_minutes 只透传**实测**值；缺省 → None，由服务端从真实
+    # 起止时间推算。绝不回填 estimated_minutes（计划输入不是执行观测）。
+    actual_minutes = request.actual_minutes
+    evidence_payload = None
+    if request.evidence:
+        try:
+            evidence_payload = validate_evidence_entries(
+                [entry.model_dump(mode="json") for entry in request.evidence]
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
     try:
         task = await TaskService.complete_task(
             db=db,
@@ -1263,6 +1344,7 @@ async def complete_task(
             user_id=current_user.id,
             actual_minutes=actual_minutes,
             note=request.note,
+            evidence=evidence_payload,
             route_history_decision_id=request.route_history_decision_id,
             routing_outcome_signal_id=request.routing_outcome_signal_id,
             routing_trace_id=request.routing_trace_id,
@@ -1272,6 +1354,8 @@ async def complete_task(
         # 必须映射为 400，与 /pause、/resume 端点的既有模式保持一致
         record_product_loop_event("task_execution", "task_complete", "invalid_transition", "bad_request")
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    # X-04：后续消费（成就/契约进度）一律用服务端裁决后的真实时长
+    actual_minutes = task.actual_minutes or 0
 
     # 以下逻辑由 TaskService.complete() 已处理，无需重复:
     # - plan_update (已包含在 TaskService.complete 中)

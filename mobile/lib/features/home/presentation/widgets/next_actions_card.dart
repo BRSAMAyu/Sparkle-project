@@ -580,10 +580,11 @@ void _openTaskExecution(
 
 void _completeTask(WidgetRef ref, TaskData task) {
   unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.success));
+  // X-04：无计时器实测值 → null（服务端按真实起止推算），不回填 estimated
   unawaited(
     ref
         .read(taskListProvider.notifier)
-        .completeTask(task.id, task.estimatedMinutes, null)
+        .completeTask(task.id, null, null)
         .then((_) => ref.read(dashboardProvider.notifier).refresh()),
   );
 }

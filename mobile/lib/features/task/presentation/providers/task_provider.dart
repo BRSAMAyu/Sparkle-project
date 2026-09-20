@@ -463,10 +463,12 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     return result;
   }
 
-  /// 完成任务 - 乐观更新（v2.1 增强）
+  /// 完成任务 - 乐观更新（v2.1 增强 / X-04）
+  /// [minutes] 只接受**实测**分钟（计时器）；null = 无实测值，服务端按真实
+  /// 起止推算——调用方不得以 estimatedMinutes 顶替（X-04 红线）。
   Future<TaskCompletionResult?> completeTask(
     String id,
-    int minutes,
+    int? minutes,
     String? note,
   ) async {
     // 1. 乐观更新 UI
@@ -532,7 +534,7 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     required TaskCompletionResult result,
     required TaskModel updatedTask,
     required String taskId,
-    required int minutes,
+    required int? minutes,
     required String? note,
   }) async {
     try {
@@ -614,7 +616,7 @@ class TaskNotifier extends StateNotifier<TaskListState> {
   }
 
   /// 🆕 重试完成任务
-  Future<void> retryCompleteTask(String id, int minutes, String? note) async {
+  Future<void> retryCompleteTask(String id, int? minutes, String? note) async {
     // 幂等跳过：服务端已确认完成（completed + synced）的任务不再重复调用
     // 完成接口，避免把后置步骤误标失败的历史状态当作真实失败而二次完成。
     final existing = _findTaskInState(id);
@@ -661,6 +663,23 @@ class TaskNotifier extends StateNotifier<TaskListState> {
           syncError: errorMsg,
         ),
       );
+    }
+  }
+
+  /// X-04 · 重开终态任务：上一轮快照由服务端归档（reopen_history），
+  /// 本地同步复位工作列。失败仅记日志（服务端状态为准）。
+  Future<TaskModel?> reopenTask(String id, {String? reason}) async {
+    try {
+      final reopened = await _taskRepository.reopenTask(id, reason: reason);
+      _updateTask(id, (_) => reopened);
+      final activeTask = _ref.read(activeTaskProvider);
+      if (activeTask?.id == id) {
+        _ref.read(activeTaskProvider.notifier).state = reopened;
+      }
+      return reopened;
+    } catch (e) {
+      debugPrint('[Task] reopen failed for $id: $e');
+      rethrow;
     }
   }
 

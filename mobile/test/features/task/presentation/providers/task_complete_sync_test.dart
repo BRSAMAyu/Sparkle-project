@@ -44,7 +44,7 @@ class _FakeTaskRepository extends TaskRepository {
   @override
   Future<TaskCompletionResult> completeTask(
     String id,
-    int actualMinutes,
+    int? actualMinutes, // X-04: nullable to match TaskRepository.completeTask
     String? note,
   ) async {
     completeCalls++;
@@ -152,7 +152,7 @@ class _FailingTaskRepository extends _FakeTaskRepository {
   @override
   Future<TaskCompletionResult> completeTask(
     String id,
-    int actualMinutes,
+    int? actualMinutes, // X-04: nullable to match TaskRepository.completeTask
     String? note,
   ) async {
     completeCalls++;
