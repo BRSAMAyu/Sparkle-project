@@ -49,7 +49,6 @@ from app.aurora.proactive.autoexec import (
     compute_grant_policy_version,
     decide_auto_execution,
     derive_autoexec_idempotency_key,
-    grant_cache_key,
     validate_autoexec_allowlist,
 )
 from app.aurora.proactive.pipeline import (
@@ -125,7 +124,6 @@ __all__ = [
     "AutoExecGrantStore",
     "AutoExecStateUnavailable",
     "compute_grant_policy_version",
-    "grant_cache_key",
     "derive_autoexec_idempotency_key",
     "decide_auto_execution",
     "AutoExecRequest",

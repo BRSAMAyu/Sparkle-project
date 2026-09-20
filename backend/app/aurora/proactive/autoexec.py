@@ -26,9 +26,12 @@ effect），凡是「替用户做操作」都经本门。
 3. **revoke 即时生效**：授权文档带内容寻址 ``policy_version``
    （A-05 ``compute_policy_patch_version`` 同款），每次 grant/revoke 重算；
    决策路径**每次 trigger 现读**授权文档（无陈旧缓存），revoke 后下一条
-   trigger 即读不到授权 → 转 proposal。需要缓存的消费方用
-   :func:`grant_cache_key` 把版本并入键（C-07 缓存失效联动：版本 bump →
-   键变 → 缓存不命中）。
+   trigger 即读不到授权 → 转 proposal；执行门在执行前还有**二次版本校验**
+   （比对决策时快照，收窄 TOCTOU 窗口，见
+   :meth:`ProactiveAutoExecGate.handle_operation`）。当前不存在携带授权
+   语义的缓存消费方，授权版本不参与任何缓存键——C-07 联动义务登记：
+   若未来 context 缓存开始消费授权状态，必须把本版本并入
+   ``ContextCacheVersions``，否则构成真实 stale 面。
 4. **重复 trigger 不产生重复 side effect**：幂等键由
    (user, operation, trigger, subject_key) 确定性派生（X-05/X-03 幂等键
    先例）；执行门前查 receipt 索引——同键重放返回既有 receipt，执行器
@@ -53,6 +56,21 @@ effect），凡是「替用户做操作」都经本门。
 - **proposal 兜底**：一切不满足 auto 条件的路径（不在白名单 / 风险非 low /
   不可逆 / 未授权 / 已 revoke / 总闸 / shadow / 状态不可用 / 执行器失败）
   都返回 proposal 模式结果——转 X-03 action proposal 确认卡路径，绝不静默。
+- **in-flight ≠ 真 proposal（UI 消费方必读，P-04 R2 §8-5 语义钉）**：
+  并发同幂等键的第二调用者在首个执行完成前收到
+  ``mode="proposal"`` + ``reason=dedup_replay`` + ``details.inflight=True``
+  ——这是**操作进行中**信号，不是「需要用户确认」的真 proposal（首个完成
+  后同键重投递才走 replay/auto）。UI 必须区分：``details.inflight=True``
+  的 outcome **不得渲染成确认卡**（应忽略或显示「处理中」），否则并发窗口
+  内用户会看到多余的第二张卡。
+- **执行器原子性契约（接线卡义务，P-04 R2 §8-6 契约钉）**：receipt 只在
+  执行器**成功返回后**落账（receipt 后行）；执行器抛错 → 无 receipt →
+  下一条 trigger 允许重试（幂等键不变）。因此执行器实现必须**原子**
+  （要么完整生效、要么零 side effect）或**自身幂等**（同
+  :class:`AutoExecRequest` 重放结果一致）——「部分 side effect 后抛错」
+  属于契约违例，本门不提供补偿，重试会重复其已发生的部分。进程内
+  in-flight 集合只保证单实例恰一次；跨进程原子 claim（多实例部署）为
+  follow-up 登记项。
 
 变更流程：本模块词表/语义改动需 bump ``AUTOEXEC_SCHEMA_VERSION`` 并过两位
 reviewer（A-05/X-06 冻结声明同款纪律）。
@@ -83,7 +101,6 @@ __all__ = [
     "AutoExecStateUnavailable",
     "compute_grant_policy_version",
     "AUTOEXEC_EMPTY_VERSION",
-    "grant_cache_key",
     "derive_autoexec_idempotency_key",
     "decide_auto_execution",
     "AutoExecRequest",
@@ -238,7 +255,8 @@ def compute_grant_policy_version(granted_operations: Mapping[str, Any] | None) -
 
     A-05 ``compute_policy_patch_version`` 同款纪律：授权集任一变化（授予/
     撤销/总闸翻转）→ 版本必然变化——revoke 即时生效的实现基础（决策路径
-    现读文档 + 消费方缓存键并入版本 → bump 即失效）。
+    现读文档 + 执行门二次版本校验比对决策时快照；若未来出现携带授权语义
+    的缓存消费方，其键必须并入本版本，见模块文档 C-07 联动义务）。
     """
     entries = sorted(f"{op}={ts}" for op, ts in (granted_operations or {}).items())
     if not entries:
@@ -249,14 +267,6 @@ def compute_grant_policy_version(granted_operations: Mapping[str, Any] | None) -
 
 #: 空（或全 revoke 后）授权集的稳定版本常量。
 AUTOEXEC_EMPTY_VERSION = _AUTOEXEC_EMPTY_VERSION
-
-
-def grant_cache_key(base_key: str, version: str) -> str:
-    """消费方缓存键并入授权版本（版本 bump → 键变 → 缓存不命中）。
-
-    A-05 ``patch_cache_key`` 同款；C-07 缓存失效联动点。
-    """
-    return f"{base_key}|autoexec={version}"
 
 
 def derive_autoexec_idempotency_key(
@@ -733,7 +743,14 @@ class ProactiveAutoExecGate:
       执行器**零调用**，outcome.mode="proposal"；
     - shadow=True（默认）→ 即便全条件满足，执行器零调用，would_auto=True；
     - 同幂等键重复调用 → 执行器恰一次，第二次返回既有 receipt（replayed）；
-    - 执行器异常 → 不落成功 receipt（无 side effect），转 proposal 兜底。
+    - 执行器异常 → 不落成功 receipt（无 side effect），转 proposal 兜底；
+    - **执行前二次版本校验（FIX-47①，TOCTOU 纵深防御）**：决策通过后、
+      执行器调用前重读授权文档，``policy_version`` 与决策时快照不一致
+      （窗口内任何 grant/revoke/总闸翻转都 bump 版本）→ 转 proposal、
+      执行器零调用（保守方向：授权状态在窗口内发生过变化，宁可多一张
+      确认卡）；二次读故障同样 fail-closed → ``state_unavailable``。
+      残余窗口收窄到「重读之后、执行器调用之前」，彻底消除需跨进程
+      原子 claim（follow-up 登记）。
     """
 
     def __init__(
@@ -831,6 +848,46 @@ class ProactiveAutoExecGate:
             self._inflight.add(decision.idempotency_key)
 
         try:
+            # -- TOCTOU 二次版本校验（FIX-47①；纵深防御，非窗口消除） ------------
+            # 授权读出（决策快照）到执行器调用之间存在毫秒级窗口：并发 revoke/
+            # 总闸翻转可落在窗口内（P-04 R2 探针 2 实证）。执行前重读授权文档，
+            # policy_version 与决策快照不一致 → 授权状态在窗口内发生过变化 →
+            # 转 proposal（保守方向：宁可多一张确认卡）。归因复用
+            # grant_absent（执行时点授权快照已失效；不扩 reason 封闭词表），
+            # 精确版本差异在 details 供审计/UI。残余窗口收窄到「重读之后、
+            # 执行器调用之前」——彻底消除需 Redis 原子 claim（follow-up）。
+            try:
+                fresh_doc = await self.grants.read(str(user_id))
+            except AutoExecStateUnavailable as exc:
+                logger.warning("autoexec gate fail-closed (pre-execute recheck) user={}: {!r}", user_id, exc)
+                return AutoExecOutcome(
+                    mode="proposal",
+                    reason=AutoExecDecisionReason.PROPOSAL_STATE_UNAVAILABLE.value,
+                    decision=decision,
+                    details={"error": str(exc), "phase": "pre_execute_recheck"},
+                )
+            fresh_version = str(
+                fresh_doc.get("policy_version") or compute_grant_policy_version(fresh_doc.get("grants") or {})
+            )
+            if fresh_version != decision.grant_version:  # 任何不一致（含快照缺失）一律不放行
+                logger.info(
+                    "autoexec gate TOCTOU recheck -> proposal user={} op={} decision_version={} fresh_version={}",
+                    user_id,
+                    decision.operation,
+                    decision.grant_version,
+                    fresh_version,
+                )
+                return AutoExecOutcome(
+                    mode="proposal",
+                    reason=AutoExecDecisionReason.PROPOSAL_GRANT_ABSENT.value,
+                    decision=decision,
+                    details={
+                        "grant_version_changed": True,
+                        "decision_grant_version": decision.grant_version,
+                        "fresh_grant_version": fresh_version,
+                    },
+                )
+
             # -- 授权 + 幂等双门全过：唯一执行点 --------------------------------
             request = AutoExecRequest(
                 user_id=str(user_id),

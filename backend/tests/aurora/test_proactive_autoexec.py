@@ -22,6 +22,7 @@ P-04 — 低风险 Auto-execute 授权模型 单测。
 
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime
 from typing import Any
 
@@ -44,7 +45,6 @@ from app.aurora.proactive.autoexec import (
     compute_grant_policy_version,
     decide_auto_execution,
     derive_autoexec_idempotency_key,
-    grant_cache_key,
     validate_autoexec_allowlist,
 )
 
@@ -290,17 +290,28 @@ def test_idempotency_key_is_deterministic_and_discriminating():
         assert derive_autoexec_idempotency_key(**changed) != k1
 
 
-def test_grant_version_content_addressed_and_cache_key_linked():
-    """版本内容寻址（A-05 同款）：授权集变化 → 版本必然变化；缓存键联动。"""
+def test_grant_version_content_addressed():
+    """版本内容寻址（A-05 同款）：授权集变化 → 版本必然变化（revoke 即时生效
+    与执行门二次版本校验的共同依据）。"""
     v_empty = compute_grant_policy_version({})
     assert v_empty == AUTOEXEC_EMPTY_VERSION == "autox_none"
     v1 = compute_grant_policy_version({"notification.mark_read": "t0"})
     v2 = compute_grant_policy_version({"notification.mark_read": "t0", "subject.bookmark": "t1"})
     v1_again = compute_grant_policy_version({"notification.mark_read": "t0"})
     assert v1 != v2 and v1 == v1_again and v1.startswith("autox_")
-    # C-07 联动：版本 bump → 缓存键变 → 缓存不命中。
-    assert grant_cache_key("base", v1) != grant_cache_key("base", v2)
-    assert grant_cache_key("base", v1).endswith(f"|autoexec={v1}")
+
+
+def test_grant_cache_key_removed_not_wired():
+    """FIX-47③：决策路径每次 trigger 现读授权文档、无携带授权语义的缓存
+    消费方——``grant_cache_key`` 原语按论证**删除**而非假接线（假接线 = 给
+    每次 context 构建加一次 Redis 读、零 stale 收益）。复活条件已登记在模块
+    文档：若未来 context 缓存开始消费授权状态，必须把版本并入
+    ``ContextCacheVersions``。本测试钉住删除决定，重加导出 = 有意识的
+    接线决策，必须伴随消费方。"""
+    import app.aurora.proactive.autoexec as mod
+
+    assert not hasattr(mod, "grant_cache_key")
+    assert "grant_cache_key" not in getattr(mod, "__all__", [])
 
 
 # ===========================================================================
@@ -668,3 +679,227 @@ def test_receipt_ttl_covers_novelty_redelivery_window():
     from app.aurora.proactive.suppression import NOVELTY_TTL
 
     assert int(NOVELTY_TTL.total_seconds()) <= AUTOEXEC_RECEIPT_TTL_SECONDS
+
+
+# ===========================================================================
+# 9. FIX-47 加固（P-04 R2 §8 登记项收口；全部确定性、零 LLM）
+# ===========================================================================
+
+
+class _RevokeAfterDecisionReadStore(AutoExecGrantStore):
+    """①竞态注入：armed 状态下，读返回「已授权」快照后立即落一个并发
+    revoke——精确复现 R2 探针 2 的「决策读之后、执行之前」TOCTOU 窗口。"""
+
+    def __init__(self, redis: Any, op_to_revoke: str) -> None:
+        super().__init__(redis)
+        self.op_to_revoke = op_to_revoke
+        self.armed = False
+        self.injected = False
+
+    async def read(self, user_id: str) -> dict[str, Any]:
+        doc = await super().read(user_id)
+        if self.armed:
+            self.armed = False
+            self.injected = True
+            await super().revoke(user_id, self.op_to_revoke)
+        return doc
+
+
+class _FailOnSecondReadStore(AutoExecGrantStore):
+    """①故障注入：第 2 次读（执行前 recheck）读失败 → 必须 fail-closed。"""
+
+    def __init__(self, redis: Any) -> None:
+        super().__init__(redis)
+        self.reads = 0
+
+    async def read(self, user_id: str) -> dict[str, Any]:
+        self.reads += 1
+        if self.reads == 2:
+            raise AutoExecStateUnavailable("recheck read down")
+        return await super().read(user_id)
+
+
+async def test_toctou_midflight_revoke_converts_to_proposal():
+    """①核心竞态（R2 §8-1）：决策读后、执行前发生 revoke → 执行前二次版本
+    校验转 proposal，执行器零调用。变异守卫：去掉 recheck 本测试必红。"""
+    redis = FakeRedis()
+    seed = AutoExecGrantStore(redis)
+    await seed.grant(_USER, "notification.mark_read", now=_now())
+
+    racing = _RevokeAfterDecisionReadStore(redis, "notification.mark_read")
+    racing.armed = True
+    gate, spy, _grants, _receipts = _make_gate(redis, shadow=False)
+    gate.grants = racing
+
+    outcome = await gate.handle_operation(
+        user_id=_USER, operation="notification.mark_read", trigger="deadline", subject_key="t1", now=_now()
+    )
+
+    assert racing.injected is True, "竞态注入必须发生在决策读与执行之间"
+    assert outcome.mode == "proposal", "窗口内 revoke 必须把本次执行拦成 proposal"
+    assert outcome.reason == AutoExecDecisionReason.PROPOSAL_GRANT_ABSENT.value
+    assert outcome.details.get("grant_version_changed") is True
+    assert outcome.details.get("decision_grant_version") != outcome.details.get("fresh_grant_version")
+    assert outcome.receipt is None
+    assert spy.calls == [], "TOCTOU 拦截后执行器必须零调用"
+
+
+async def test_toctou_recheck_read_failure_fails_closed():
+    """①二次读故障 → fail-closed 转 state_unavailable，执行器零调用、零落账
+    （与决策读同款纪律：读不到授权状态就没有资格执行）。"""
+    redis = FakeRedis()
+    seed = AutoExecGrantStore(redis)
+    await seed.grant(_USER, "notification.mark_read", now=_now())
+
+    flaky = _FailOnSecondReadStore(redis)
+    gate, spy, _grants, _receipts = _make_gate(redis, shadow=False)
+    gate.grants = flaky
+
+    outcome = await gate.handle_operation(
+        user_id=_USER, operation="notification.mark_read", trigger="deadline", subject_key="t1", now=_now()
+    )
+
+    assert flaky.reads == 2, "授权文档必须被读两次（决策 + 执行前校验）"
+    assert outcome.mode == "proposal"
+    assert outcome.reason == AutoExecDecisionReason.PROPOSAL_STATE_UNAVAILABLE.value
+    assert outcome.details.get("phase") == "pre_execute_recheck"
+    assert outcome.receipt is None
+    assert spy.calls == []
+
+
+async def test_toctou_unrelated_grant_change_converts_conservatively():
+    """①保守语义钉桩：窗口内变化的是**另一个**操作的授权（本操作 grant 仍在）
+    → 全文档版本比对同样转 proposal。方向性选择：授权状态在窗口内发生过
+    变化即不放行，宁可多一张确认卡（fail-closed 家族语义）。"""
+    redis = FakeRedis()
+    seed = AutoExecGrantStore(redis)
+    await seed.grant(_USER, "notification.mark_read", now=_now())
+    await seed.grant(_USER, "subject.bookmark", now=_now())
+
+    racing = _RevokeAfterDecisionReadStore(redis, "subject.bookmark")  # 撤销的是无关操作
+    racing.armed = True
+    gate, spy, _grants, _receipts = _make_gate(redis, shadow=False)
+    gate.grants = racing
+
+    outcome = await gate.handle_operation(
+        user_id=_USER, operation="notification.mark_read", trigger="deadline", subject_key="t1", now=_now()
+    )
+
+    assert racing.injected is True
+    assert outcome.mode == "proposal"
+    assert outcome.details.get("grant_version_changed") is True
+    assert spy.calls == []
+
+
+def test_import_time_self_check_guard_raises_on_tampered_source_copy(tmp_path):
+    """②自检守护（R2 变异 V3 盲区收口）：篡改注册表的模块源码副本重导入时
+    必须在 import 期 raise（违宪条目使模块不可用）。副本继承**真实源码**的
+    守卫逻辑——若守卫被短路（如 ``if False and _IMPORT_ISSUES``），本测试红。"""
+    import importlib.util
+    import pathlib
+
+    src = pathlib.Path(__file__).resolve().parents[2] / "app" / "aurora" / "proactive" / "autoexec.py"
+    text = src.read_text(encoding="utf-8")
+    tampered = text.replace('risk="low",', 'risk="high",', 1)  # 首个表内条目违宪
+    assert tampered != text, "自检守护测试的源码锚点失效（注册表字面量被重构，需更新锚点）"
+
+    target = tmp_path / "autoexec_tampered_probe.py"
+    target.write_text(tampered, encoding="utf-8")
+    spec = importlib.util.spec_from_file_location("_autoexec_tampered_probe", target)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    import sys
+
+    sys.modules[spec.name] = module  # dataclass 注解解析需要可查 module（标准 spec 加载模式）
+    try:
+        with pytest.raises(ValueError, match="soul invariants"):
+            spec.loader.exec_module(module)
+    finally:
+        sys.modules.pop(spec.name, None)  # 探针模块自清（导入必败，不留进程污染）
+
+
+def test_import_time_self_check_source_pattern_pinned():
+    """②源码钉：自检守卫必须是「计算即校验 + 非空即 raise」形态，
+    防 R2 变异 V3 的 ``if False and`` 短路旁路（守卫分支内紧跟 raise）。"""
+    import pathlib
+
+    text = (pathlib.Path(__file__).resolve().parents[2] / "app" / "aurora" / "proactive" / "autoexec.py").read_text(
+        encoding="utf-8"
+    )
+    assert "_IMPORT_ISSUES = validate_autoexec_allowlist()" in text
+    assert "if _IMPORT_ISSUES:" in text
+    assert "if False and _IMPORT_ISSUES" not in text
+    guard_tail = text[text.index("if _IMPORT_ISSUES:") :]
+    assert "raise ValueError" in guard_tail[:300], "自检守卫分支内必须紧跟 raise"
+
+
+async def test_inflight_concurrent_second_call_is_not_a_real_proposal():
+    """⑤in-flight UI 语义钉桩（R2 §8-5）：并发同键第二调用者 → proposal +
+    ``details.inflight=True``（操作进行中信号，非真 proposal，UI 不得渲染成
+    确认卡）；首个完成后同键重投递 → replay/auto。全程执行器恰一次。"""
+
+    entered = asyncio.Event()
+    release = asyncio.Event()
+
+    class BlockingExecutor:
+        def __init__(self) -> None:
+            self.calls: list[AutoExecRequest] = []
+
+        async def __call__(self, request: AutoExecRequest) -> dict[str, Any]:
+            self.calls.append(request)
+            entered.set()
+            await release.wait()
+            return {"ok": True}
+
+    redis = FakeRedis()
+    blocker = BlockingExecutor()
+    gate, _spy, grants, _receipts = _make_gate(redis, shadow=False, executor=blocker)
+    await _grant(grants, "notification.mark_read")
+
+    kw = {"user_id": _USER, "operation": "notification.mark_read", "trigger": "deadline", "subject_key": "t1"}
+    first_task = asyncio.create_task(gate.handle_operation(now=_now(), **kw))
+    await asyncio.wait_for(entered.wait(), timeout=5)  # 首个已过幂等门、正在执行
+
+    second = await gate.handle_operation(now=_now(), **kw)
+    assert second.mode == "proposal"
+    assert second.reason == AutoExecDecisionReason.DEDUP_REPLAY.value
+    assert second.details.get("inflight") is True, "in-flight 第二调用者必须带 inflight 标记"
+    assert second.receipt is None
+
+    release.set()
+    first = await first_task
+    assert first.mode == "auto" and first.receipt is not None
+
+    third = await gate.handle_operation(now=_now(), **kw)
+    assert third.mode == "auto", "首个完成后同键重投递是 replay，不是确认卡"
+    assert third.reason == AutoExecDecisionReason.DEDUP_REPLAY.value
+    assert third.details.get("replayed") is True
+    assert len(blocker.calls) == 1, "并发窗口 + 重投递合计执行器恰一次"
+
+
+async def test_executor_failure_leaves_no_receipt_retry_path_stays_clean():
+    """⑥原子性契约钉桩（R2 §8-6）：receipt 只在执行器成功返回后落账
+    （receipt 后行）——失败执行零落账，receipt 索引无残留 → 同键重试干净
+    可行。执行器必须原子或自身幂等：部分 side effect 后抛错 = 接线卡契约
+    违例，本门不补偿（模块文档「执行器原子性契约」）。"""
+    redis = FakeRedis()
+    failing = ExecutorSpy(fail=True)
+    gate, _spy, grants, receipts = _make_gate(redis, shadow=False, executor=failing)
+    await _grant(grants, "subject.bookmark")
+
+    kw = {"user_id": _USER, "operation": "subject.bookmark", "trigger": "deadline", "subject_key": "t1"}
+    failed = await gate.handle_operation(now=_now(), **kw)
+    assert failed.mode == "proposal"
+    assert failed.reason == AutoExecDecisionReason.AUTO_EXECUTOR_FAILED.value
+
+    key = derive_autoexec_idempotency_key(
+        user_id=_USER, operation="subject.bookmark", trigger="deadline", subject_key="t1"
+    )
+    assert await receipts.find(_USER, key) is None, "失败执行不得在 receipt 索引留下残留"
+
+    recovered = ExecutorSpy()
+    gate2, _spy2, _grants2, _receipts2 = _make_gate(redis, shadow=False, executor=recovered)
+    gate2.grants = grants
+    retry = await gate2.handle_operation(now=_now(), **kw)
+    assert retry.mode == "auto" and retry.receipt is not None
+    assert len(recovered.calls) == 1, "重试路径不被失败残留污染（恰一次语义保持）"
