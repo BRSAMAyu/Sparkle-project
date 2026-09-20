@@ -514,15 +514,34 @@ async def chat(
             )
 
             # 4.3 错误处理与自我修正
+            # X-09 · budget 终态不进自我修正（FIX-40 P3-6）：BUDGET_EXCEEDED/
+            # 幂等中断是确定结局，LLM 修正轮只会再发起注定被拒的工具调用。
+            terminal_failed = [
+                tr for tr in tool_results if tr.error_type in ("BudgetExceeded", "IdempotencyInterrupted")
+            ]
+            correctable_results = [
+                tr
+                for tr in tool_results
+                if tr.error_type
+                not in (
+                    "BudgetExceeded",
+                    "IdempotencyInterrupted",
+                )
+            ]
+            if terminal_failed:
+                logger.warning(
+                    "batch self-correction skipped for {} terminal-failure tool result(s) (budget/interrupted)",
+                    len(terminal_failed),
+                )
             # 检查是否有失败的工具调用，并尝试自动修正
             corrected_results = await error_handler.handle_batch_errors(
                 llm_service=llm_service,
-                tool_results=tool_results,
+                tool_results=correctable_results,
                 original_requests=llm_response.tool_calls,
                 user_id=str(current_user.id),
                 db_session=db,
             )
-            tool_results = corrected_results
+            tool_results = corrected_results + terminal_failed
 
         # 5. 将工具执行结果反馈给 LLM，获取最终回复
         if requires_confirmation:
@@ -544,7 +563,8 @@ async def chat(
 
             async with asyncio.timeout(30):
                 final_llm_response = await llm_service.continue_with_tool_results(
-                    conversation_history=updated_conversation_history, tool_results=[tr.model_dump() for tr in tool_results]
+                    conversation_history=updated_conversation_history,
+                    tool_results=[tr.model_dump() for tr in tool_results],
                 )
             llm_text = final_llm_response.content
         else:
@@ -658,7 +678,13 @@ async def chat_stream(
                 )
 
                 # 错误处理与自我修正
-                if not result.success and error_handler.should_retry(result):
+                # X-09 · budget/幂等中断终态不进自我修正（FIX-40 P3-6：终态
+                # 失败的重试轮只会再发起注定被拒的工具调用）。
+                if (
+                    not result.success
+                    and result.error_type not in ("BudgetExceeded", "IdempotencyInterrupted")
+                    and error_handler.should_retry(result)
+                ):
                     original_request = {
                         "id": chunk.tool_call_id,
                         "function": {"name": chunk.tool_name, "arguments": json.dumps(chunk.full_arguments)},

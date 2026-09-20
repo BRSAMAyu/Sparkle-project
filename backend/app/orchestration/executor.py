@@ -22,6 +22,16 @@ from app.core.event_types import (
     TOOL_EXECUTION_STARTED,
     TOOL_EXECUTION_TIMED_OUT,
 )
+from app.core.failure_semantics import (
+    DEFAULT_MAX_RETRY_ATTEMPTS,
+    DEFAULT_RETRY_BASE_DELAY_SECONDS,
+    DEFAULT_RETRY_MAX_DELAY_SECONDS,
+    FailureKind,
+    retry_decision,
+)
+
+if TYPE_CHECKING:
+    from app.core.failure_semantics import FailureClassification
 from app.core.llm_secure_io import refresh_llm_safety_mode, sanitize_exception_message
 from app.core.metrics import TOOL_EXECUTION_COUNT
 from app.db.session import AsyncSessionLocal
@@ -42,6 +52,10 @@ if TYPE_CHECKING:
 #: X-06 · run 权威会话工厂（权限/预算读取用**独立会话**，避免在调用方事务中途
 #: commit）。测试以 sqlite 测试引擎 monkeypatch 本符号（X-05 service 测试同法）。
 _agent_run_session_factory = AsyncSessionLocal
+
+#: X-09 · 账本两阶段收敛会话工厂（失败路径 rollback 后复查/收敛账本行，用独立
+#: 会话提交——不制造调用方事务边界；测试 monkeypatch 同上）。
+_ledger_session_factory = AsyncSessionLocal
 
 
 @dataclass
@@ -93,6 +107,68 @@ class _CallGuard:
         except Exception as exc:  # noqa: BLE001 — 账本收敛失败不吞工具结果
             logger.warning("tool call ledger finalize failed tool={} error={!r}", self.tool_name, exc)
 
+    async def resolve_after_failure(
+        self,
+        *,
+        error_type: str,
+        error_message: str | None,
+    ) -> str:
+        """X-09 · 失败路径的账本两阶段收敛（FIX-40 P2-3 收编）.
+
+        背景：内部 commit 工具（persona/plan_state/theater 等）会在执行中途把
+        账本 in_progress 行**提前落库**——executor 失败路径 rollback 对已提交行
+        无效，账本行将永久停在 in_progress（同 key 重放被恒拒 = key 中毒）。
+
+        收敛语义（rollback 之后调用，用独立会话按**账本行 id** 复查）：
+
+        - 行不存在（随事务回滚）→ ``"none"``：无任何持久效果残留，失败调用
+          可安全自动重试；
+        - 行仍为 in_progress（内部 commit 提前落库）→ 置 ``interrupted``
+          （+error/finished_at）并提交 → ``"unknown"``：效果不可核实，重试必须
+          换新幂等键（duplicate side effect=0 的账本根基）；
+        - 行已收敛（succeeded/failed/interrupted）→ ``"unknown"``（保守：该行
+          曾独立提交过，执行中断后其结论不可作为重放依据）。
+        """
+        if self.ledger is None:
+            return "none"
+        ledger_id = getattr(self.ledger, "id", None)
+        if ledger_id is None:
+            return "none"
+        try:
+            async with _ledger_session_factory() as session:
+                from sqlalchemy import select
+
+                row = (
+                    await session.execute(select(AgentToolCall).where(AgentToolCall.id == ledger_id))
+                ).scalar_one_or_none()
+                if row is None:
+                    return "none"
+                if row.status != "in_progress":
+                    return "unknown"
+                row.status = "interrupted"
+                row.error_type = (error_type or "Interrupted")[:100]
+                row.error_message = (error_message or "execution interrupted before outcome was recorded")[:2000]
+                row.finished_at = datetime.now(UTC).replace(tzinfo=None)
+                session.add(row)
+                await session.commit()
+                logger.warning(
+                    "tool call ledger resolved to interrupted (two-phase, FIX-40 P2-3): "
+                    "tool={} key={} ledger_id={} error_type={}",
+                    self.tool_name,
+                    self.idempotency_key,
+                    ledger_id,
+                    error_type,
+                )
+                return "unknown"
+        except Exception as exc:  # noqa: BLE001 — 收敛失败不影响失败结果返回；恢复 sweep 兜底
+            logger.error(
+                "tool call ledger two-phase resolve failed tool={} ledger_id={} error={!r}",
+                self.tool_name,
+                ledger_id,
+                exc,
+            )
+            return "unknown"
+
     async def record_usage(self, user_id: str) -> None:
         """run 维度 usage 记账（tool_calls+1、cost+metadata 估计）。"""
         if self.run_id is None or self.metadata is None:
@@ -134,10 +210,77 @@ class PlanExecutionResult:
     total_layers: int = 0
     aborted: bool = False
     abort_reason: str | None = None
+    # X-09：run 预算已超限（后续层不再发起；FIX-40 P3-6——切断而非硬顶兜底）。
+    budget_exceeded: bool = False
 
 
 _MAX_TOOL_CALLS_PER_REQUEST = 20
 _DAG_LAYER_MAX_CONCURRENCY = 10
+
+# ---------------------------------------------------------------------------
+# X-09 · 失败语义接线（确定性映射 + 重试参数；模块级常量供测试 monkeypatch）
+# ---------------------------------------------------------------------------
+
+#: executor error_type（闸门/超时/异常路径的结构化错误码）→ FailureKind 封闭
+#: 映射。**只看 error_type，不看 message 文案**（文案变化不得改变终态语义）。
+_ERROR_TYPE_TO_FAILURE_KIND: dict[str, FailureKind] = {
+    "TimeoutError": FailureKind.TOOL_TIMEOUT,
+    "BudgetExceeded": FailureKind.BUDGET_EXCEEDED,
+    "BudgetGateUnavailable": FailureKind.TOOL_EXCEPTION,
+    "PermissionDenied": FailureKind.PERMISSION_DENIED,
+    "IdempotencyKeyRequired": FailureKind.IDEMPOTENCY_KEY_REQUIRED,
+    "IdempotencyConflict": FailureKind.IDEMPOTENCY_CONFLICT,
+    "IdempotencyArgsMismatch": FailureKind.IDEMPOTENCY_ARGS_MISMATCH,
+    "IdempotencyInterrupted": FailureKind.IDEMPOTENCY_INTERRUPTED,
+    "ValidationError": FailureKind.VALIDATION_ERROR,
+    "ToolNotFound": FailureKind.UNKNOWN_TOOL,
+    "ConfirmationRequired": FailureKind.CONFIRMATION_REQUIRED,
+}
+
+#: 暂态网络/基础设施异常类型名前缀（generic Exception 路径 error_type=
+#: type(e).__name__ 的确定性归并；网络分区 chaos 场景的可重试判据）。
+_TRANSIENT_EXCEPTION_PREFIXES: tuple[str, ...] = (
+    "Connection",
+    "ConnectTimeout",
+    "ReadTimeout",
+    "WriteTimeout",
+    "ServerDisconnected",
+    "ClientConnector",
+    "TemporaryFailure",
+    "RateLimit",
+)
+
+
+def failure_kind_for_error_type(error_type: str | None) -> FailureKind:
+    """executor 错误码 → FailureKind（确定性；未知码 → TOOL_REPORTED_FAILURE）.
+
+    未知错误码一律 ``TOOL_REPORTED_FAILURE``（暂态族）——最终可重试性仍由
+    side_effect_state 裁决（unknown 则升格 UNKNOWN_OUTCOME），不会误放行。
+    """
+    code = str(error_type or "").strip()
+    if not code:
+        return FailureKind.TOOL_REPORTED_FAILURE
+    if code in _ERROR_TYPE_TO_FAILURE_KIND:
+        return _ERROR_TYPE_TO_FAILURE_KIND[code]
+    if any(code.startswith(prefix) for prefix in _TRANSIENT_EXCEPTION_PREFIXES):
+        return FailureKind.NETWORK_UNREACHABLE
+    return FailureKind.TOOL_REPORTED_FAILURE
+
+
+def classify_tool_result_failure(
+    result: ToolResult,
+    *,
+    tool_effect: str | None,
+) -> FailureClassification:
+    """失败 ToolResult → :class:`FailureClassification`（分类器接线）."""
+    from app.core.failure_semantics import classify_execution_failure
+
+    return classify_execution_failure(
+        failure_kind=failure_kind_for_error_type(result.error_type),
+        error_type=result.error_type,
+        tool_effect=tool_effect,
+        side_effect_state=result.side_effect_state,
+    )
 
 
 class ToolExecutor:
@@ -388,6 +531,19 @@ class ToolExecutor:
                         ),
                     )
                     return guard
+                if existing.status == "interrupted":
+                    # X-09：前次调用中断且效果不可核实（崩溃/超时两阶段收敛后的
+                    # 账本行）。同 key 重放恒拒（duplicate side effect=0）；重试
+                    # 必须换新幂等键——那是显式决策，不是自动行为。
+                    guard.reject(
+                        error_type="IdempotencyInterrupted",
+                        message=(
+                            f"Previous attempt with idempotency key '{key}' for tool '{tool_name}' "
+                            "was interrupted and its side-effect outcome could not be verified; "
+                            "retrying requires a NEW idempotency key (this key will never re-execute)"
+                        ),
+                    )
+                    return guard
                 # succeeded/failed：返回已记录结果——同 key 重放恰一次执行
                 guard.replay_result = self._rebuild_result(existing)
                 return guard
@@ -454,10 +610,17 @@ class ToolExecutor:
         from sqlalchemy import select
 
         try:
-            stmt = select(AgentToolCall).where(
-                AgentToolCall.user_id == uuid.UUID(str(user_id)),
-                AgentToolCall.tool_name == tool_name,
-                AgentToolCall.idempotency_key == key,
+            stmt = (
+                select(AgentToolCall).where(
+                    AgentToolCall.user_id == uuid.UUID(str(user_id)),
+                    AgentToolCall.tool_name == tool_name,
+                    AgentToolCall.idempotency_key == key,
+                )
+                # X-09：populate_existing 绕过 identity map 陈旧视图——同一长会话
+                # （chat 轨道单 db_session 多轮工具调用）内的重放必须看到**已提交**
+                # 的账本真相（另一会话/两阶段收敛写入的 interrupted/succeeded），
+                # 而不是本会话构造时的 in_progress 残影。
+                .execution_options(populate_existing=True)
             )
             return (await db_session.execute(stmt)).scalar_one_or_none()
         except Exception as exc:  # noqa: BLE001 — 账本不可读 → fail-closed（无账本不执行 side effect）
@@ -820,6 +983,11 @@ class ToolExecutor:
                 logger.error(f"Tool execution timeout: {tool_name} after {timeout_seconds}s")
                 TOOL_EXECUTION_COUNT.labels(tool_name=tool_name, status="timeout").inc()
                 await self._safe_rollback(db_session)
+                # X-09 两阶段收敛：rollback 后账本行若仍存在（内部 commit 提前
+                # 落库）→ interrupted；side_effect_state 随结果透传给分类器。
+                side_effect_state = await guard.resolve_after_failure(
+                    error_type="TimeoutError", error_message=timeout_message
+                )
                 await self._record_tool_execution(
                     db_session=db_session,
                     user_id=user_id,
@@ -860,6 +1028,7 @@ class ToolExecutor:
                     tool_call_id=tool_call_id,
                     error_message=timeout_message,
                     error_type="TimeoutError",
+                    side_effect_state=side_effect_state,
                     suggestion="请稍后重试，或缩小本次工具执行范围",
                 )
             except Exception as e:
@@ -868,6 +1037,10 @@ class ToolExecutor:
                 logger.opt(exception=e).error(f"Tool execution error: {tool_name} - {str(e)}")
                 TOOL_EXECUTION_COUNT.labels(tool_name=tool_name, status="error").inc()
                 await self._safe_rollback(db_session)
+                # X-09 两阶段收敛（同 TimeoutError 路径；FIX-40 P2-3）.
+                side_effect_state = await guard.resolve_after_failure(
+                    error_type=type(e).__name__, error_message=safe_error
+                )
                 await self._record_tool_execution(
                     db_session=db_session,
                     user_id=user_id,
@@ -908,6 +1081,7 @@ class ToolExecutor:
                     tool_call_id=tool_call_id,
                     error_message=safe_error,
                     error_type=type(e).__name__,
+                    side_effect_state=side_effect_state,
                     suggestion="请稍后重试或联系支持",
                 )
         finally:
@@ -1081,9 +1255,7 @@ class ToolExecutor:
         results = []
         capped_calls = tool_calls[:_MAX_TOOL_CALLS_PER_REQUEST]
         if len(tool_calls) > _MAX_TOOL_CALLS_PER_REQUEST:
-            logger.warning(
-                f"Tool calls capped from {len(tool_calls)} to {_MAX_TOOL_CALLS_PER_REQUEST}"
-            )
+            logger.warning(f"Tool calls capped from {len(tool_calls)} to {_MAX_TOOL_CALLS_PER_REQUEST}")
         for call in capped_calls:
             arguments = self._coerce_arguments(call["function"].get("arguments"))
             result = await self.execute_tool_call(
@@ -1096,6 +1268,16 @@ class ToolExecutor:
                 runtime_context=runtime_context,
             )
             results.append(result)
+            # X-09 · budget 终态切断批量循环（FIX-40 P3-6）：run 已 BUDGET_EXCEEDED
+            # 时不再发起后续工具调用（此前靠 20 次硬顶兜底）。
+            if result.error_type == "BudgetExceeded":
+                logger.warning(
+                    "tool call batch cut at {}/{} after run budget exceeded (tool={})",
+                    len(results),
+                    len(capped_calls),
+                    call["function"]["name"],
+                )
+                break
         return results
 
     # ------------------------------------------------------------------
@@ -1224,6 +1406,28 @@ class ToolExecutor:
                 },
             )
 
+            # X-09 · budget 终态切断 DAG 循环（FIX-40 P3-6）：任一步因 BUDGET_EXCEEDED
+            # 被拒 → 不再启动后续层（剩余步骤全部跳过，非静默：结果里保留拒绝原因）。
+            if any(sr.tool_result.error_type == "BudgetExceeded" for sr in result.step_results):
+                result.budget_exceeded = True
+                result.aborted = True
+                result.abort_reason = f"Run budget exceeded in layer {layer_idx}"
+                logger.warning(
+                    "Plan {} cut at layer {}: run budget exceeded; remaining layers skipped",
+                    plan.plan_id,
+                    layer_idx,
+                )
+                await self._notify_execution_observer(
+                    execution_observer,
+                    {
+                        "event": "execution_aborted",
+                        "layer_index": layer_idx,
+                        "layer_number": layer_number,
+                        "reason": result.abort_reason,
+                    },
+                )
+                break
+
             if layer_aborted:
                 result.aborted = True
                 result.abort_reason = f"Required step failed in layer {layer_idx}"
@@ -1266,8 +1470,25 @@ class ToolExecutor:
         progress_callback: Any | None,
         runtime_context: dict[str, Any] | None = None,
     ) -> StepResult:
-        """Execute a single ToolCallSpec and return StepResult."""
+        """Execute a single ToolCallSpec and return StepResult.
+
+        X-09 · 有界确定性重试（卡面工作项 5）：失败结果先过三族分类器——
+        RETRYABLE 且 side_effect_state=none（账本随事务回滚，无效果残留）时按
+        指数退避重试，上限 :data:`DEFAULT_MAX_RETRY_ATTEMPTS`；超限即死信
+        （保留最后一次失败结果，由 run 层落明确终态）。UNKNOWN/PERMANENT 族
+        与 BUDGET_EXCEEDED 恒不重试。
+
+        键语义：重试以**派生 tool_call_id**（``{spec.id}:retry:{n}``）开新账本
+        行——原 id 的账本历史不被改写（同 id 重放仍恰一次，X-06 守卫零弱化）；
+        side_effect_state=unknown 的失败根本不进入重试（unknown 族），新键
+        重试只发生在旧账本已回滚（nothing happened）的可证明安全场景。
+        """
         start = time.time()
+        metadata = tool_registry.get_tool_metadata(spec.name)
+        tool_effect = metadata.effect.value if metadata is not None else None
+
+        attempt = 1
+        retries = 0
         tool_result = await self.execute_tool_call(
             tool_name=spec.name,
             arguments=spec.params,
@@ -1278,7 +1499,51 @@ class ToolExecutor:
             compensation_call=spec.compensation_call,
             runtime_context=runtime_context,
         )
+        while not tool_result.success:
+            classification = classify_tool_result_failure(tool_result, tool_effect=tool_effect)
+            should_retry, delay = retry_decision(
+                classification,
+                attempt=attempt,
+                max_attempts=DEFAULT_MAX_RETRY_ATTEMPTS,
+                base_delay_seconds=DEFAULT_RETRY_BASE_DELAY_SECONDS,
+                max_delay_seconds=DEFAULT_RETRY_MAX_DELAY_SECONDS,
+            )
+            if not should_retry:
+                if classification.retryable:
+                    logger.warning(
+                        "step {} (tool {}) dead-lettered after {} attempt(s): {}",
+                        spec.id,
+                        spec.name,
+                        attempt,
+                        tool_result.error_type,
+                    )
+                break
+            logger.info(
+                "retrying step {} (tool {}) attempt {}->{} in {:.3f}s (family={}, side_effect={})",
+                spec.id,
+                spec.name,
+                attempt,
+                attempt + 1,
+                delay,
+                classification.family.value,
+                classification.side_effect_state,
+            )
+            await asyncio.sleep(delay)
+            attempt += 1
+            retries += 1
+            tool_result = await self.execute_tool_call(
+                tool_name=spec.name,
+                arguments=spec.params,
+                user_id=user_id,
+                db_session=db_session,
+                progress_callback=progress_callback,
+                tool_call_id=f"{spec.id}:retry:{attempt}",
+                compensation_call=spec.compensation_call,
+                runtime_context=runtime_context,
+            )
         duration_ms = int((time.time() - start) * 1000)
+        if retries and tool_result.success:
+            tool_result = tool_result.model_copy(update={"data": {**(tool_result.data or {}), "retries": retries}})
 
         # Extract output_data from result for downstream propagation
         output_data: dict[str, Any] = {}

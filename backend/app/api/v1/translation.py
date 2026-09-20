@@ -4,6 +4,7 @@ Translation API - 使用统一翻译工具进行多语言翻译
 
 支持分片翻译、领域术语、缓存和信号评估
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -19,8 +20,10 @@ router = APIRouter()
 
 # ============ Schemas ============
 
+
 class TranslateRequest(BaseModel):
     """翻译请求 - 支持Flutter和通用客户端"""
+
     text: str = Field(..., description="需要翻译的文本", max_length=5000)
     # 支持两种参数命名风格
     source_lang: str | None = Field(default="auto", description="源语言代码 (如: en, zh, auto)")
@@ -60,6 +63,7 @@ class TranslateRequest(BaseModel):
 
 class TranslationSegmentData(BaseModel):
     """翻译片段数据"""
+
     id: str
     translation: str
     notes: list[str] = []
@@ -67,6 +71,7 @@ class TranslationSegmentData(BaseModel):
 
 class TranslationRecommendation(BaseModel):
     """翻译推荐数据"""
+
     should_create_card: bool = False
     reason: str | None = None
     daily_quota_remaining: int = 0
@@ -74,13 +79,16 @@ class TranslationRecommendation(BaseModel):
 
 class TranslateResponse(BaseModel):
     """翻译响应 - 匹配Flutter期望格式"""
+
     success: bool
     translation: str | None = None
     segments: list[TranslationSegmentData] = []
     recommendation: TranslationRecommendation | None = None
     meta: dict[str, Any] = {}
 
+
 # ============ Endpoints ============
+
 
 @router.post("/translate", response_model=TranslateResponse, summary="文本翻译")
 async def translate_text(
@@ -125,10 +133,19 @@ async def translate_text(
         )
 
         # 执行翻译（需要 db 用于信号评估）
-        result = await tool.execute(
-            params=params,
-            user_id=user_id,
+        # X-09 · FIX-40 P3-4 收编：直调 tool.execute() 旁路 X-06 安全闸门
+        # （权限/账本；read 工具无幂等键要求）——改走 ToolExecutor 统一入口。
+        from uuid import uuid4 as _uuid4
+
+        from app.orchestration.executor import ToolExecutor as _X09ToolExecutor
+
+        result = await _X09ToolExecutor().execute_tool_call(
+            tool_name=tool.name,
+            arguments=params.model_dump(),
+            user_id=str(user_id),
             db_session=db,
+            tool_call_id=f"internal:translate:{_uuid4().hex[:16]}",
+            runtime_context={"locale": target_lang},
         )
 
         if result.success:
@@ -218,6 +235,7 @@ async def translate_text(
 
     except Exception as e:
         from loguru import logger as log
+
         log.warning("Translation endpoint error: {} — {}", type(e).__name__, e)
         raise HTTPException(
             status_code=500,

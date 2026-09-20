@@ -32,6 +32,10 @@ class ToolResult(BaseModel):
     widget_type: str | None = None  # 前端渲染组件类型
     widget_data: dict[str, Any] | None = None  # 组件渲染数据
     suggestion: str | None = None  # LLM 可用于自我修正的建议
+    # X-09 · 失败调用的 side effect 账本证据（"none"/"unknown"；成功路径为
+    # None）。分类器（core/failure_semantics）据此裁决 retryable vs unknown：
+    # none=账本随事务回滚（可自动重试）；unknown=账本残留（重试须换新键）。
+    side_effect_state: str | None = None
 
 
 class ToolContext(BaseModel):

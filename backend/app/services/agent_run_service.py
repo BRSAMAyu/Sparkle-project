@@ -1114,9 +1114,7 @@ class AgentRunService:
             logger.debug("run step projection skipped: no active run for intent {}", intent_uuid)
             return None
         if is_terminal_run_status(run.status):
-            logger.debug(
-                "run step projection skipped: run {} already terminal ({})", run.id, run.status.value
-            )
+            logger.debug("run step projection skipped: run {} already terminal ({})", run.id, run.status.value)
             return None
 
         results: list[RunMutationResult] = []
@@ -1342,6 +1340,211 @@ class AgentRunService:
             return None
         reason = self._projection_reason(intent_status=intent.status.value, target=target)
         return target, (reason or "projection_drift_repair")
+
+    # ------------------------------------------------------------------
+    # X-09 · 主动崩溃恢复（in-flight side effect 的证据驱动裁决）
+    # ------------------------------------------------------------------
+
+    async def recover_inflight_runs(
+        self,
+        *,
+        stale_after_seconds: int | None = None,
+        limit: int = 200,
+    ) -> dict[str, Any]:
+        """进程重启后的主动恢复决策（X-05 sweep 是兜底，本路径是主动面）.
+
+        与 :meth:`recover_stale_runs` 的分工（协同不冲突）：
+
+        - sweep 处理**时间陈旧**（QUEUED 陈旧 / wait 过期 / 心跳孤儿）——大窗口
+          兜底（默认 6h），不依赖崩溃证据；
+        - 本 pass 处理**中断证据**（账本 in_progress/interrupted 残留 = side
+          effect 无法核实），窗口只覆盖工具超时长尾（默认 ~5min 起）——杀进程
+          重启后**立即**可执行，不等 sweep。
+
+        决策表（证据驱动，不依赖 worker 所有权/租约——没有租约列时全局决策
+        只对**有中断证据**的 run 做不可逆裁决，其余只输出建议）：
+
+        1. intent 已终态 → 漂移修复（真值优先，与 sweep 同构路径）；
+        2. 有中断账本证据（本轮收敛或此前已 interrupted）→ ``UNKNOWN_OUTCOME``
+           (worker_restart_orphan)：绝不自动重驱动——效果不可核实，重驱动可能
+           造成 duplicate side effect；
+        3. 无中断证据 → ``reattach_candidate``：不迁终态、不刷新心跳（避免
+           掩盖真孤儿被 sweep 误判），由所属轨道（execution/chat 续驱）自行
+           续驱并刷新心跳；终态 run → ``terminal_noop``。
+        """
+        from app.services.tool_call_ledger_service import ToolCallLedgerService
+
+        ledger_result = await ToolCallLedgerService(self.db).reconcile_stale_in_progress(
+            stale_after_seconds=stale_after_seconds,
+        )
+
+        decisions: list[dict[str, Any]] = []
+        seen_runs: set[UUID] = set()
+        for run_id_str in ledger_result.affected_run_ids:
+            run_uuid = UUID(run_id_str)
+            if run_uuid in seen_runs:
+                continue
+            seen_runs.add(run_uuid)
+            run = await self.db.get(AgentRun, run_uuid)
+            if run is None or run.deleted_at is not None:
+                continue
+            if is_terminal_run_status(run.status):
+                decisions.append({"run_id": run_id_str, "decision": "terminal_noop", "status": run.status})
+                continue
+            try:
+                drift = await self._intent_drift_target(run)
+                if drift is not None:
+                    target, reason = drift
+                    result = await self.transition(
+                        run.id,
+                        target,
+                        actor=TransitionActor.RECOVERY,
+                        reason=reason,
+                        source=EventSource.WORKER,
+                        details={"inflight_recovery": True},
+                    )
+                    decisions.append(
+                        {
+                            "run_id": run_id_str,
+                            "decision": "drift_repaired",
+                            "applied": result.applied,
+                            "to": target.value,
+                        }
+                    )
+                    continue
+                result = await self.transition(
+                    run.id,
+                    RunStatus.UNKNOWN_OUTCOME,
+                    actor=TransitionActor.RECOVERY,
+                    reason="worker_restart_orphan",
+                    error_category="unknown_outcome",
+                    error_message="in-flight side-effecting tool call interrupted by process restart; outcome unverifiable",
+                    source=EventSource.WORKER,
+                    details={"inflight_recovery": True, "ledger_reconciled": ledger_result.reconciled},
+                )
+                decisions.append(
+                    {
+                        "run_id": run_id_str,
+                        "decision": "unknown_outcome",
+                        "applied": result.applied,
+                        "to": RunStatus.UNKNOWN_OUTCOME.value,
+                    }
+                )
+            except ValueError as exc:
+                logger.warning("inflight recovery skipped run_id={} error={}", run_id_str, exc)
+                decisions.append({"run_id": run_id_str, "decision": "skipped", "error": str(exc)})
+
+        # 无中断证据的活跃 run：只输出 reattach 建议（不做不可逆动作）。
+        active_stmt = (
+            select(AgentRun.id)
+            .where(
+                AgentRun.deleted_at.is_(None),
+                AgentRun.status.in_([s.value for s in ACTIVE_RUN_STATUSES]),
+            )
+            .limit(max(1, min(int(limit), 1000)))
+        )
+        active_ids = {str(row) for row in (await self.db.execute(active_stmt)).scalars().all()}
+        for run_id_str in sorted(active_ids - {str(r) for r in seen_runs}):
+            decisions.append({"run_id": run_id_str, "decision": "reattach_candidate"})
+
+        return {
+            "mode": "inflight",
+            "ledger_reconciled": ledger_result.reconciled,
+            "ledger_already_resolved": ledger_result.already_resolved,
+            "ledger_stale_after_seconds": ledger_result.stale_after_seconds,
+            "decided": len([d for d in decisions if d.get("decision") not in ("reattach_candidate",)]),
+            "decisions": decisions,
+        }
+
+    # ------------------------------------------------------------------
+    # X-09 · 失败终态化（三族分类 → 合法终态 + 部分完成证据 + 补偿提示）
+    # ------------------------------------------------------------------
+
+    async def terminalize_execution_failure(
+        self,
+        run_id: UUID | str,
+        *,
+        classification: Any,
+        user_id: UUID | str | None = None,
+        error_message: str | None = None,
+        details: dict[str, Any] | None = None,
+        retries_exhausted: bool = False,
+    ) -> RunMutationResult:
+        """把 :class:`app.core.failure_semantics.FailureClassification` 落成 run 终态.
+
+        语义（卡面工作项 1/3）：
+
+        - 分类器映射的终态/归因经封闭迁移图落库（非法/已终态 → ValueError/no-op
+          由 transition 的既有契约吸收——终态即结论）；
+        - **部分完成不静默**：终态化时从账本物化部分完成证据（succeeded/failed/
+          interrupted + 补偿提示），写入 ``run.result_ref``（GET /runs 可见）；
+          有元数据确认的写效果成功步且失败族非 CANCELLED 时，终态升格
+          ``PARTIAL``（completed_partial——部分完成是诚实的结局）；CANCELLED
+          保持 CANCELLED（用户语义归因不被系统覆盖，证据仍随 result_ref 可见）；
+        - 重试耗尽（死信）在审计 details 记 ``retries_exhausted``——非无限执行、
+          非静默截断。
+        """
+        from app.core.failure_semantics import FailureFamily, is_legal_failure_terminal
+        from app.services.tool_call_ledger_service import ToolCallLedgerService
+
+        target = RunStatus(classification.run_terminal_status)
+        if not is_legal_failure_terminal(target):
+            raise RunStateError(f"classification produced non-terminal status {target.value}")
+
+        run = await self.get_run(run_id, user_id=user_id)
+        evidence = await ToolCallLedgerService(self.db).partial_completion_evidence(run.id)
+
+        effective_target = target
+        effective_reason = classification.terminal_reason
+        if (
+            target in (RunStatus.FAILED, RunStatus.UNKNOWN_OUTCOME)
+            and evidence.durable_progress
+            and classification.family is not FailureFamily.USER_CANCELLED
+        ):
+            # 已确认的写效果进度 + 执行失败 → PARTIAL 是诚实终态（AGENT_RUNTIME
+            # §6：不假装回滚，不静默丢弃已完成部分）。
+            effective_target = RunStatus.PARTIAL
+            effective_reason = "completed_partial"
+
+        merged_details: dict[str, Any] = {
+            "failure_kind": classification.failure_kind,
+            "failure_family": classification.family.value,
+            "side_effect_state": classification.side_effect_state,
+            "partial_steps": {
+                "succeeded": len(evidence.succeeded),
+                "failed": len(evidence.failed),
+                "interrupted": len(evidence.interrupted),
+            },
+        }
+        if retries_exhausted:
+            merged_details["retries_exhausted"] = True
+        if details:
+            merged_details.update(details)
+
+        try:
+            result = await self.transition(
+                run.id,
+                effective_target,
+                user_id=user_id,
+                actor=TransitionActor.WORKER,
+                reason=effective_reason,
+                error_category=classification.error_category,
+                error_message=error_message or classification.failure_kind,
+                result_ref=evidence.to_result_ref(),
+                details=merged_details,
+                source=EventSource.WORKER,
+            )
+        except ValueError as exc:
+            # 已终态（终态封闭）/非法边：终态即结论，不覆盖、不双终态。
+            logger.info("failure terminalization converged run_id={} error={}", run_id, exc)
+            result = RunMutationResult(
+                run=await self.get_run(run_id, user_id=user_id),
+                applied=False,
+                created=False,
+                event_name=None,
+                event_written=False,
+            )
+        return result
 
     # ------------------------------------------------------------------
     # 内部

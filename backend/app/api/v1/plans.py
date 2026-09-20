@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, date, datetime
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, Response, status
 from loguru import logger
@@ -58,7 +58,6 @@ from app.services.plan_service import PlanService, _sync_plan_card_projection
 from app.services.plan_state_service import PlanStateService
 from app.services.planning_artifact_service import PlanningArtifactService
 from app.services.state_notification_service import state_notification_service
-from app.tools.plan_tools import GenerateTasksForPlanTool
 from app.tools.schemas import GenerateTasksForPlanParams
 
 router = APIRouter()
@@ -1200,16 +1199,26 @@ async def generate_tasks_for_plan(
     requested_count = request_body.count if request_body and request_body.count is not None else count
 
     topic = plan.subject or plan.name
-    tool = GenerateTasksForPlanTool()
-    result = await tool.execute(
-        GenerateTasksForPlanParams(
+    # X-09 · FIX-40 P3-4 收编：直调 tool.execute() 旁路 X-06 安全闸门（权限/
+    # 幂等/预算/账本）——改走 ToolExecutor 统一入口。端点是用户显式 REST 动作
+    # （点击"为计划生成任务"）= 天然确认语义；幂等键按请求唯一（重复点击是
+    # 新的用户动作，不做跨请求去重）。
+    from app.orchestration.executor import ToolExecutor as _X09ToolExecutor
+
+    _x09_call_key = f"internal:plan_generate_tasks:{uuid4().hex}"
+    result = await _X09ToolExecutor().execute_tool_call(
+        tool_name="generate_tasks_for_plan",
+        arguments=GenerateTasksForPlanParams(
             plan_id=str(plan.id),
             topic=topic,
             difficulty="medium",
             task_count=requested_count,
-        ),
+        ).model_dump(),
         user_id=str(current_user.id),
         db_session=db,
+        tool_call_id=_x09_call_key,
+        runtime_context={"user_approved": True, "plan_id": str(plan.id)},
+        idempotency_key=_x09_call_key,
     )
 
     if not result.success:
@@ -1730,7 +1739,6 @@ async def get_learning_path_progress(
             "nodes": [],
             "overall_progress": 0.0,
         }
-
 
     from app.models.galaxy import KnowledgeNode, UserNodeStatus
 

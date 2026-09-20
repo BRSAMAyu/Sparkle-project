@@ -34,8 +34,12 @@ JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 #: 账本状态封闭词表（应用层契约强制，create_constraint=False 先例）。
 #: - in_progress：闸门已过、已开始执行（提交后的 in_progress = 进程崩溃残留，
 #:   重放该 key 会被拒绝——fail-closed，不盲目重执行 side effect）；
-#: - succeeded / failed：执行已收敛，同 key 重放返回记录结果，不再执行。
-TOOL_CALL_STATUSES = ("in_progress", "succeeded", "failed")
+#: - succeeded / failed：执行已收敛，同 key 重放返回记录结果，不再执行；
+#: - interrupted（X-09 增补）：执行中断且效果不可核实——工具内部 commit 提前
+#:   落库的 in_progress 行在超时/异常/崩溃后经两阶段收敛到此态（executor
+#:   失败路径 resolve / 恢复路径 reconcile）。同 key 重放仍拒绝（duplicate
+#:   side effect=0）；重试必须换新幂等键（显式决策，非自动）。
+TOOL_CALL_STATUSES = ("in_progress", "succeeded", "failed", "interrupted")
 
 _IDEMPOTENT_WHERE = text("idempotency_key IS NOT NULL")
 

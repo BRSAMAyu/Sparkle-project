@@ -2296,6 +2296,13 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
         # Clear executable_plan and loop back
         state.context_data["executable_plan"] = None
         state.context_data["tool_loop_count"] = int(state.context_data.get("tool_loop_count") or 0) + 1
+        if getattr(plan_result, "budget_exceeded", False):
+            # X-09 · budget 终态切断 agent 循环（FIX-40 P3-6，Phase-2 路径）：
+            # 不再回 generation 规划下一轮工具调用；已完成步已通过 tool_result 帧
+            # 流式回传，终态由 run 层（BUDGET_EXCEEDED 迁移）承担。
+            state.context_data["budget_exceeded"] = True
+            state.next_step = "__end__"
+            return state
         state.next_step = "generation"
         return state
 
@@ -2373,6 +2380,7 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
     start_time = time.time()
     total_tools = len(tool_calls)
 
+    budget_exceeded = False
     for idx, tc in enumerate(tool_calls):
         # Parse arguments if needed (ToolExecutor expects dict)
         args = tc.full_arguments
@@ -2382,7 +2390,7 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
             except (json.JSONDecodeError, TypeError):
                 args = {}
 
-        await _execute_single_tool(
+        step_result = await _execute_single_tool(
             tool_name=tc.tool_name,
             tool_args=args,
             tool_call_id=tc.tool_call_id or str(uuid.uuid4()),
@@ -2394,6 +2402,18 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
             tool_index=idx,
             total_tools=total_tools,
         )
+        # X-09 · budget 终态切断 agent 循环（FIX-40 P3-6）：run 已 BUDGET_EXCEEDED
+        # 时不再发起剩余工具调用，也不再回 generation 规划下一轮工具——终态即
+        # 结论（此前仅靠 _MAX_TOOL_LOOPS_PER_TURN 硬顶兜底）。
+        if step_result is not None and getattr(step_result, "error_type", None) == "BudgetExceeded":
+            budget_exceeded = True
+            logger.warning(
+                "tool execution loop cut at {}/{} after run budget exceeded (tool={})",
+                idx + 1,
+                total_tools,
+                tc.tool_name,
+            )
+            break
 
     # Write feedback for Phase 1 LLM tool_calls
     plan_id = state.context_data.get("plan_metadata", {}).get("plan_id", str(uuid.uuid4()))
@@ -2410,6 +2430,13 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
     # Clear tool calls and loop back to generation
     state.context_data["tool_calls"] = []
     state.context_data["tool_loop_count"] = int(state.context_data.get("tool_loop_count") or 0) + 1
+    if budget_exceeded:
+        # 不再回 generation（那会规划下一轮工具调用）；已完成的部分结果已经
+        # 通过 tool_result 帧流式回传——终态化由 run 层（BUDGET_EXCEEDED 迁移）
+        # 承担，executor 闸门已同步落终态。
+        state.context_data["budget_exceeded"] = True
+        state.next_step = "__end__"
+        return state
     state.next_step = "generation"
 
     return state
@@ -3421,6 +3448,7 @@ async def _execute_single_tool(
             )
         )
 
+    result: Any = None
     try:
         result = await executor.execute_tool_call(
             tool_name=tool_name,
@@ -3466,30 +3494,36 @@ async def _execute_single_tool(
         if not result.success:
             logger.warning(f"Tool '{tool_name}' execution failed: {result.error_message}")
 
-            # P1: Attempt fallback handling
-            fallback_message = await ToolExecutionFallback.handle_tool_failure(
-                tool_name=tool_name,
-                error_message=result.error_message or "Unknown error",
-                user_id=user_id,
-                db_session=db_session,
-                redis_client=redis_client,
-                stream_callback=stream_callback,
-            )
+            # X-09 · 终态性失败不进降级包装（false success=0）：BUDGET_EXCEEDED/
+            # 幂等中断是确定结局，不是"工具暂时不可用"——包装成 success=True
+            # 的降级答复会把终态失败伪装成成功（run 层分类/预算切断都会失真）。
+            if result.error_type in ("BudgetExceeded", "IdempotencyInterrupted"):
+                pass  # 保留真实失败结果（下方照常流式回传 error_message）
+            else:
+                # P1: Attempt fallback handling
+                fallback_message = await ToolExecutionFallback.handle_tool_failure(
+                    tool_name=tool_name,
+                    error_message=result.error_message or "Unknown error",
+                    user_id=user_id,
+                    db_session=db_session,
+                    redis_client=redis_client,
+                    stream_callback=stream_callback,
+                )
 
-            # Stream fallback result
-            if stream_callback and fallback_message:
-                await stream_callback(agent_service_pb2.ChatResponse(delta=f"\n\n{fallback_message}"))
+                # Stream fallback result
+                if stream_callback and fallback_message:
+                    await stream_callback(agent_service_pb2.ChatResponse(delta=f"\n\n{fallback_message}"))
 
-            # Create fallback result
-            from app.tools.base import ToolResult
+                # Create fallback result
+                from app.tools.base import ToolResult
 
-            result = ToolResult(
-                success=True,  # Fallback successful
-                tool_name=tool_name,
-                data={"message": fallback_message, "fallback": True},
-                error_message=None,
-                suggestion="如需完整功能，请稍后再试",
-            )
+                result = ToolResult(
+                    success=True,  # Fallback successful
+                    tool_name=tool_name,
+                    data={"message": fallback_message, "fallback": True},
+                    error_message=None,
+                    suggestion="如需完整功能，请稍后再试",
+                )
 
     except Exception as e:
         logger.error(f"Tool '{tool_name}' execution exception: {e}")
@@ -3572,12 +3606,16 @@ async def _execute_single_tool(
             "success": result.success,
             "result": result.data or {},
             "error": result.error_message,
+            "error_type": result.error_type,
             "suggestion": result.suggestion,
             "widget_type": result.widget_type,
             "widget_data": result.widget_data or {},
             "tool_call_id": tool_call_id,
         }
     )
+    # X-09：返回真实结果（BudgetExceeded 等终态信号供 tool_execution_node 切断
+    # agent 循环——FIX-40 P3-6；此前函数返回 None，循环层无法感知预算终态）。
+    return result
 
 
 def _update_feedback_binding_runtime_state(state: WorkflowState, result_data: dict[str, Any]) -> None:

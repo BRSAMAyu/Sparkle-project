@@ -93,7 +93,27 @@ class RunStepRequest(BaseModel):
 
 
 class RecoverRunsRequest(BaseModel):
+    """恢复 sweep 入口（X-05 sweep / X-09 主动 inflight 恢复）.
+
+    ``mode``（X-09 增补，缺省 ``sweep`` 保持既有行为）：
+
+    - ``sweep``：X-05 时间陈旧兜底（QUEUED 陈旧→CANCELLED、wait 过期→
+      TIMED_OUT、心跳孤儿→UNKNOWN_OUTCOME、intent 漂移修复）；
+    - ``inflight``：X-09 主动崩溃恢复——陈旧 in_progress 账本行收敛为
+      interrupted + 受影响活跃 run 的证据驱动裁决（intent 真值优先 /
+      UNKNOWN_OUTCOME / reattach 建议），进程重启后立即可执行。
+    """
+
     stale_after_seconds: int | None = Field(default=None, ge=60, le=30 * 86400)
+    mode: str = Field(default="sweep", pattern="^(sweep|inflight)$")
+
+
+class RunToolCallListResponse(BaseModel):
+    """run 维度账本明细（X-09：部分完成/中断的审计可见面）."""
+
+    items: list[dict[str, Any]]
+    total: int
+    partial_completion: dict[str, Any] | None = None
 
 
 class RunResponse(BaseModel):
@@ -167,6 +187,37 @@ async def list_run_transitions(
     except RunNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return RunTransitionListResponse(items=[t.to_dict() for t in transitions])
+
+
+# route-tier: authed
+@router.get("/{run_id}/tool-calls", response_model=RunToolCallListResponse)
+async def list_run_tool_calls(
+    run_id: UUID,
+    limit: int = 200,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """run 的工具调用账本明细（X-09：部分完成/中断不静默的审计与用户可见面）.
+
+    每步的 succeeded/failed/interrupted 状态、幂等键、错误归因直接可见；
+    ``partial_completion`` 携带部分完成证据与补偿提示（AGENT_RUNTIME §6：
+    显示已完成部分与可补偿动作，不假装回滚）。
+    """
+    from app.services.tool_call_ledger_service import ToolCallLedgerService
+
+    service = AgentRunService(db)
+    try:
+        await service.get_run(run_id, user_id=current_user.id)
+    except RunNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    ledger = ToolCallLedgerService(db)
+    rows = await ledger.list_tool_calls_for_run(run_id, limit=limit)
+    evidence = await ledger.partial_completion_evidence(run_id)
+    return RunToolCallListResponse(
+        items=[row.to_dict() for row in rows],
+        total=len(rows),
+        partial_completion=evidence.to_result_ref(),
+    )
 
 
 # --- 写端点 ------------------------------------------------------------------
@@ -357,6 +408,18 @@ async def recover_runs(
 ):
     del current_user
     service = AgentRunService(db)
+    mode = (request.mode if request else "sweep") or "sweep"
+    if mode == "inflight":
+        # X-09 主动崩溃恢复（进程重启后立即执行；证据驱动裁决）。
+        payload = await service.recover_inflight_runs(
+            stale_after_seconds=request.stale_after_seconds if request else None,
+        )
+        logger.info(
+            "run inflight recovery executed: ledger_reconciled={} decided={}",
+            payload.get("ledger_reconciled"),
+            payload.get("decided"),
+        )
+        return payload
     payload = await service.recover_stale_runs(
         stale_after_seconds=request.stale_after_seconds if request else None,
     )

@@ -2134,7 +2134,22 @@ Please review this plan and provide your assessment."""
                     plan_id=plan_id, topic=topic, difficulty=difficulty, task_count=task_count
                 )
 
-                result = await tool.execute(params=params, user_id=user_id, db_session=db, tool_call_id=action_id)
+                # X-09 · FIX-40 P3-4 收编：服务端直调 tool.execute() 旁路游离于
+                # X-06 安全闸门（权限/幂等/预算/账本）之外——改走 ToolExecutor
+                # 统一入口。本调用是 plan review 审批通过后的服务端代执行（上游
+                # 审批即用户确认语义），runtime_context 显式声明 user_approved；
+                # 幂等键取 action_id（同一 review action 重放恰一次，防重复生成）。
+                from app.orchestration.executor import ToolExecutor as _X09ToolExecutor
+
+                result = await _X09ToolExecutor().execute_tool_call(
+                    tool_name="generate_tasks_for_plan",
+                    arguments=params.model_dump(),
+                    user_id=str(user_id),
+                    db_session=db,
+                    tool_call_id=action_id,
+                    runtime_context={"user_approved": True, "plan_id": plan_id},
+                    idempotency_key=f"plan_review_action:{action_id}",
+                )
 
                 if result.success:
                     task_count_created = result.data.get("task_count", 0)

@@ -2,12 +2,13 @@
 Learning Paths API
 基于拓扑排序的动态学习路径接口
 """
+
 from __future__ import annotations
 
 import asyncio
 from datetime import UTC, datetime
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from loguru import logger
@@ -34,7 +35,6 @@ from app.tools.entity_cards import (
     build_plan_entity_card,
     build_task_list_entity_card,
 )
-from app.tools.plan_tools import GenerateTasksForPlanTool
 from app.tools.schemas import GenerateTasksForPlanParams
 
 router = APIRouter(prefix="/learning-paths", tags=["Learning Paths"])
@@ -42,8 +42,10 @@ router = APIRouter(prefix="/learning-paths", tags=["Learning Paths"])
 
 # ============ Response Models ============
 
+
 class LearningPathErrorResponse(BaseModel):
     """统一的学习路径错误响应"""
+
     error_code: str  # "CYCLIC_DEPENDENCY" | "TARGET_NOT_FOUND" | "NO_PATH" | "GRAPH_ERROR"
     message: str
     details: dict[str, Any] | None = None
@@ -51,6 +53,7 @@ class LearningPathErrorResponse(BaseModel):
 
 class LearningPathNodeResponse(BaseModel):
     """学习路径节点响应"""
+
     id: str
     name: str
     status: str  # mastered, unlocked, locked
@@ -62,6 +65,7 @@ class LearningPathNodeResponse(BaseModel):
 
 class LearningPathTaskResponse(BaseModel):
     """轻量学习路径任务响应"""
+
     id: str
     title: str
     type: str
@@ -73,8 +77,10 @@ class LearningPathTaskResponse(BaseModel):
 
 # ============ Helpers ============
 
+
 def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
+
 
 def _is_error_response(path: list[dict[str, Any]]) -> bool:
     """检查路径响应是否为错误响应"""
@@ -409,16 +415,26 @@ async def generate_learning_path_plan(
     plan_id = str(plan.id)
 
     task_count = min(8, max(5, len(path)))
-    tasks_tool = GenerateTasksForPlanTool()
-    tool_result = await tasks_tool.execute(
-        GenerateTasksForPlanParams(
+    # X-09 · FIX-40 P3-4 收编：直调 tool.execute() 旁路 X-06 安全闸门（权限/
+    # 幂等/预算/账本）——改走 ToolExecutor 统一入口。端点是用户显式 REST 动作
+    # （创建学习路径并生成任务）= 天然确认语义；幂等键按请求唯一（同端点对
+    # 同一 plan 的再次调用是新的用户动作，不做跨请求去重）。
+    from app.orchestration.executor import ToolExecutor as _X09ToolExecutor
+
+    _x09_call_key = f"internal:learning_path_tasks:{uuid4().hex}"
+    tool_result = await _X09ToolExecutor().execute_tool_call(
+        tool_name="generate_tasks_for_plan",
+        arguments=GenerateTasksForPlanParams(
             plan_id=plan_id,
             topic=target_name,
             difficulty="medium",
             task_count=task_count,
-        ),
+        ).model_dump(),
         user_id=str(current_user.id),
         db_session=db,
+        tool_call_id=_x09_call_key,
+        runtime_context={"user_approved": True, "plan_id": plan_id},
+        idempotency_key=_x09_call_key,
     )
 
     if not tool_result.success:
