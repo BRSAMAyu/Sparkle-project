@@ -1,0 +1,412 @@
+{
+  "schema_version": "m09-memory-eval.v1",
+  "persona": {
+    "persona_id": "P09",
+    "name": "数据科学方向",
+    "domain": "统计系数据科学方向：Python工具链、Kaggle、模型评估、SQL项目"
+  },
+  "cases": [
+    {
+      "case_id": "P09-D1-learning_style",
+      "dimension": "D1_valid_use",
+      "description": "学习方式偏好（代码实操）应在学习路线求助中被使用",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -96,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p1",
+              "pref_key": "learning_style",
+              "value": "学新算法要直接上代码实操，边跑边学"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -48,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户这学期在自学机器学习课程，进度到梯度下降",
+              "semantic_key": "m09:p09:ml_course"
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "帮我规划机器学习的学习路线",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "代码实操"
+        ],
+        "must_not_use": [],
+        "may_use": [
+          "梯度下降"
+        ]
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P09-D1-kaggle_project",
+      "dimension": "D1_valid_use",
+      "description": "Kaggle项目记忆应在项目求助中被使用",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -120,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户在打Kaggle房价预测比赛，特征工程卡在缺失值处理",
+              "semantic_key": "m09:p09:kaggle_house"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": []
+        }
+      ],
+      "probe": {
+        "query": "帮我看看房价预测项目的特征工程怎么做",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "房价预测"
+        ],
+        "must_not_use": [],
+        "may_use": [
+          "缺失值"
+        ]
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P09-D2-phatic_ack",
+      "dimension": "D2_correct_non_use",
+      "description": "应答式寒暄（收到）不得触发项目/工具记忆个性化",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -72,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户的数据库课程大作业做的是校园二手交易平台的SQL设计",
+              "semantic_key": "m09:p09:sql_project"
+            },
+            {
+              "type": "write_preference",
+              "alias": "p1",
+              "pref_key": "study_time_preference",
+              "value": "数据集训练任务都放在晚上跑"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": []
+        }
+      ],
+      "probe": {
+        "query": "收到",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [],
+        "must_not_use": [
+          "二手交易平台",
+          "训练任务"
+        ],
+        "may_use": [],
+        "overpersonalization_watch": true,
+        "personal_watch_markers": [
+          "二手交易平台",
+          "训练任务"
+        ]
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P09-D2-repetition_echo",
+      "dimension": "D2_correct_non_use",
+      "description": "提问已点名记忆内容（回声）：系统不得把用户刚说完的事实再复述一遍（M-05 echoed_in_query）",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -72,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户惯用Python的pandas做数据清洗",
+              "semantic_key": "m09:p09:pandas_habit"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": []
+        }
+      ],
+      "probe": {
+        "query": "我惯用Python的pandas做数据清洗，这次想换个思路",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [],
+        "must_not_use": [
+          "pandas做数据清洗"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P09-D3-tooling_supersede",
+      "dimension": "D3_correction_effective",
+      "description": "学习方式偏好被新陈述取代：旧值（视频教程）不得复活（同证据通道 supersede）",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -96,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p1",
+              "pref_key": "learning_style",
+              "value": "学新技术先看视频教程入门"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p2",
+              "pref_key": "learning_style",
+              "value": "现在直接读官方文档上手"
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "我要学PySpark该怎么入门",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "官方文档"
+        ],
+        "must_not_use": [
+          "视频教程"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P09-D3-metric_correction",
+      "dimension": "D3_correction_effective",
+      "description": "记错的评估指标经治理纠错：旧指标（RMSE）不得再出现，新指标（MAE）生效",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -96,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户的比赛项目用RMSE作为线上评估指标",
+              "semantic_key": "m09:p09:metric_v1"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": [
+            {
+              "type": "correct",
+              "target": "m1",
+              "action": "reject",
+              "reason": "指标记错了"
+            },
+            {
+              "type": "write_episodic",
+              "alias": "m2",
+              "via": "explicit",
+              "summary": "用户的比赛项目线上评估指标其实是MAE",
+              "semantic_key": "m09:p09:metric_v2"
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "帮我优化模型在比赛评估指标上的表现",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "MAE"
+        ],
+        "must_not_use": [
+          "RMSE"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P09-D4-delete_token_note",
+      "dimension": "D4_deletion_effective",
+      "description": "删除API密钥备忘记忆后，环境配置求助不得再引用已删内容",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -72,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户把Kaggle的API密钥备份在手机备忘录第一行",
+              "semantic_key": "m09:p09:api_token"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": [
+            {
+              "type": "revoke",
+              "target": "m1",
+              "reason": "密钥换过了，这条删掉"
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "帮我配置Kaggle的本地开发环境",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [],
+        "must_not_use": [
+          "备忘录"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P09-D5-difficulty_chain",
+      "dimension": "D5_preference_change_tracked",
+      "description": "拓展难度偏好两步演进：链头（竞赛难度）胜出，旧值（基础难度）不得竞争（同证据通道 supersede 链）",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -168,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p1",
+              "pref_key": "preferred_expansion_depth",
+              "value": "练习题只要基础难度"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -72,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p2",
+              "pref_key": "preferred_expansion_depth",
+              "value": "现在要竞赛难度的题，基础的没挑战"
+            }
+          ]
+        },
+        {
+          "session_id": "s3",
+          "at_offset_h": -24,
+          "events": []
+        }
+      ],
+      "probe": {
+        "query": "给我出几道统计学习的练习题",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "竞赛难度"
+        ],
+        "must_not_use": [
+          "基础难度"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    }
+  ]
+}

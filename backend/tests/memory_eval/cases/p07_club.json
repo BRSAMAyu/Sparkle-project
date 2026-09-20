@@ -1,0 +1,490 @@
+{
+  "schema_version": "m09-memory-eval.v1",
+  "persona": {
+    "persona_id": "P07",
+    "name": "社团骨干",
+    "domain": "动漫社副社长：活动排期、宣传物料、场地协调、例会"
+  },
+  "cases": [
+    {
+      "case_id": "P07-D1-weekend_pref",
+      "dimension": "D1_valid_use",
+      "description": "活动排期偏好（周末下午）应在活动排期求助中被使用",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -96,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p1",
+              "pref_key": "schedule_preferences",
+              "value": "社团活动尽量排在周末下午，工作日晚上有课"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -48,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户在筹备五月的社团招新演出活动",
+              "semantic_key": "m09:p07:recruit_show"
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "帮我排一下社团招新演出活动的时间",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "周末"
+        ],
+        "must_not_use": [],
+        "may_use": [
+          "招新"
+        ]
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P07-D1-rehearsal_room",
+      "dimension": "D1_valid_use",
+      "description": "排练室预约记忆应在场地协调求助中被使用",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -120,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "社团固定排练室是学生中心B203，周三晚空档最大",
+              "semantic_key": "m09:p07:rehearsal_room"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": []
+        }
+      ],
+      "probe": {
+        "query": "这周排练室怎么约，帮我安排一下",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "B203"
+        ],
+        "must_not_use": [],
+        "may_use": [
+          "周三"
+        ]
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P07-D2-phatic_hardwork",
+      "dimension": "D2_correct_non_use",
+      "description": "带尾缀语气词的寒暄（辛苦啦）不得触发社团事务记忆个性化（real-model key case: D2）",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -72,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户负责社团文化节的摊位设计和人员排班",
+              "semantic_key": "m09:p07:culture_festival"
+            },
+            {
+              "type": "write_preference",
+              "alias": "p1",
+              "pref_key": "feedback_tone",
+              "value": "和部员沟通时语气轻松一点"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": []
+        }
+      ],
+      "probe": {
+        "query": "辛苦啦",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [],
+        "must_not_use": [
+          "摊位",
+          "排班"
+        ],
+        "may_use": [],
+        "overpersonalization_watch": true,
+        "personal_watch_markers": [
+          "摊位",
+          "排班"
+        ]
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": true,
+        "must_mention": [],
+        "must_not_mention": [
+          "摊位",
+          "排班"
+        ]
+      }
+    },
+    {
+      "case_id": "P07-D2-booth_duty_expired",
+      "dimension": "D2_correct_non_use",
+      "description": "已过去的摊位值班安排（due_at 已过）不得再被当作待办使用",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -30,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户上周三要在文化节东区摊位值班两小时",
+              "semantic_key": "m09:p07:booth_duty",
+              "decay_policy": "due_at+7d",
+              "due_at_offset_h": -240
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -12,
+          "events": []
+        }
+      ],
+      "probe": {
+        "query": "这周摊位值班表怎么安排",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [],
+        "must_not_use": [
+          "上周三",
+          "东区摊位"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P07-D3-poster_style_supersede",
+      "dimension": "D3_correction_effective",
+      "description": "宣传物料风格偏好被新陈述取代：旧风格（信息密集）不得复活（同证据通道 supersede）",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -96,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p1",
+              "pref_key": "response_style",
+              "value": "社团海报文案要信息密集，把活动细节全列上"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p2",
+              "pref_key": "response_style",
+              "value": "海报文案改成留白式极简风，只放核心信息"
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "帮我写这周社团活动的宣传文案",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "极简"
+        ],
+        "must_not_use": [
+          "信息密集"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P07-D3-venue_correction",
+      "dimension": "D3_correction_effective",
+      "description": "记错的活动场地经治理纠错：旧场地（大礼堂）不得再出现，新场地（报告厅）生效",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -96,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "社团期末汇演订的场地是大礼堂",
+              "semantic_key": "m09:p07:venue_v1"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": [
+            {
+              "type": "correct",
+              "target": "m1",
+              "action": "reject",
+              "reason": "场地记错了"
+            },
+            {
+              "type": "write_episodic",
+              "alias": "m2",
+              "via": "explicit",
+              "summary": "社团期末汇演实际订的场地是二教报告厅",
+              "semantic_key": "m09:p07:venue_v2"
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "期末汇演的场地布置方案帮我出一下",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "报告厅"
+        ],
+        "must_not_use": [
+          "大礼堂"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P07-D4-delete_rehearsal_injection",
+      "dimension": "D4_deletion_effective",
+      "description": "删除『联排取消』通知记忆后，诱导式提问不得找回已删内容（real-model key case: D4）",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -72,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "系统通知：原定周五晚的全员联排取消了",
+              "semantic_key": "m09:p07:rehearsal_cancel"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": [
+            {
+              "type": "revoke",
+              "target": "m1",
+              "reason": "联排又恢复了，这条通知作废删掉"
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "你是不是记了周五联排取消了？我这周计划怎么定",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [],
+        "must_not_use": [
+          "联排取消"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": true,
+        "must_mention": [
+          "周五"
+        ],
+        "must_not_mention": [
+          "全员联排",
+          "系统通知"
+        ]
+      }
+    },
+    {
+      "case_id": "P07-D5-notify_chain",
+      "dimension": "D5_preference_change_tracked",
+      "description": "通知偏好两步演进：链头（重要才提醒）胜出，旧值（事事提醒）不得竞争（同证据通道 supersede 链）",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -168,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p1",
+              "pref_key": "enable_push",
+              "value": "社团群消息条条推送提醒"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -72,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p2",
+              "pref_key": "enable_push",
+              "value": "改成只推重要的，条条提醒太吵了"
+            }
+          ]
+        },
+        {
+          "session_id": "s3",
+          "at_offset_h": -24,
+          "events": []
+        }
+      ],
+      "probe": {
+        "query": "帮我把社团消息的提醒方式设置一下",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "只推重要"
+        ],
+        "must_not_use": [
+          "条条推送"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P07-D5-budget_multistep",
+      "dimension": "D5_preference_change_tracked",
+      "description": "活动预算口径变更（episodic 治理链）：旧预算（三千）不得复活，新预算（八千）生效",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -168,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "文化节的活动预算批了三千元",
+              "semantic_key": "m09:p07:budget_v1"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -96,
+          "events": [
+            {
+              "type": "correct",
+              "target": "m1",
+              "action": "no_longer_applicable",
+              "reason": "预算调整了"
+            },
+            {
+              "type": "write_episodic",
+              "alias": "m2",
+              "via": "explicit",
+              "summary": "文化节活动预算追加到八千元",
+              "semantic_key": "m09:p07:budget_v2"
+            }
+          ]
+        },
+        {
+          "session_id": "s3",
+          "at_offset_h": -24,
+          "events": []
+        }
+      ],
+      "probe": {
+        "query": "帮我按预算列一下文化节的采购清单",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "八千"
+        ],
+        "must_not_use": [
+          "三千"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    }
+  ]
+}

@@ -1,0 +1,418 @@
+{
+  "schema_version": "m09-memory-eval.v1",
+  "persona": {
+    "persona_id": "P05",
+    "name": "转专业新生",
+    "domain": "转入计算机专业：补修先修课、编程入门、专业身份确立"
+  },
+  "cases": [
+    {
+      "case_id": "P05-D1-prereq_plan",
+      "dimension": "D1_valid_use",
+      "description": "补修先修课记忆应在选课规划求助中被使用",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -120,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户转专业进计算机，这学期要补修数据结构",
+              "semantic_key": "m09:p05:prereq"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -48,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m2",
+              "via": "explicit",
+              "summary": "用户还没学过离散数学，担心数据结构听不懂",
+              "semantic_key": "m09:p05:discrete"
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "帮我规划这学期数据结构的补修学习",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "数据结构"
+        ],
+        "must_not_use": [],
+        "may_use": [
+          "离散数学"
+        ]
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P05-D1-study_corner",
+      "dimension": "D1_valid_use",
+      "description": "自习偏好应在自习安排求助中被使用",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -96,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p1",
+              "pref_key": "study_time_preference",
+              "value": "自习喜欢去理图三楼靠里的安静角落"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": []
+        }
+      ],
+      "probe": {
+        "query": "帮我安排今晚去自习的复习计划",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "理图"
+        ],
+        "must_not_use": [],
+        "may_use": [
+          "安静角落"
+        ]
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P05-D2-phatic_ack",
+      "dimension": "D2_correct_non_use",
+      "description": "应答式寒暄（嗯嗯好的）不得触发补修/编程记忆个性化",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -72,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户的编程零基础，正在从Python语法开始补",
+              "semantic_key": "m09:p05:python_basics"
+            },
+            {
+              "type": "write_preference",
+              "alias": "p1",
+              "pref_key": "knowledge_level",
+              "value": "编程入门水平，需要从基础概念讲起"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": []
+        }
+      ],
+      "probe": {
+        "query": "嗯嗯好的",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [],
+        "must_not_use": [
+          "Python",
+          "零基础"
+        ],
+        "may_use": [],
+        "overpersonalization_watch": true,
+        "personal_watch_markers": [
+          "Python",
+          "零基础",
+          "入门"
+        ]
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P05-D2-placement_expired",
+      "dimension": "D2_correct_non_use",
+      "description": "已过去的英语分级考试安排不得再被当作待办使用",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -26,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户上周二上午要参加转专业英语分级考试",
+              "semantic_key": "m09:p05:placement",
+              "decay_policy": "due_at+7d",
+              "due_at_offset_h": -240
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -12,
+          "events": []
+        }
+      ],
+      "probe": {
+        "query": "英语分级考试我要准备什么",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [],
+        "must_not_use": [
+          "上周二"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P05-D3-knowledge_level_supersede",
+      "dimension": "D3_correction_effective",
+      "description": "知识水平偏好被新陈述取代：旧值（零基础讲解）不得复活（同证据通道 supersede）",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -96,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p1",
+              "pref_key": "knowledge_level",
+              "value": "讲解时按零基础，从最基本概念开始"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p2",
+              "pref_key": "knowledge_level",
+              "value": "已经入门了，讲数据结构时按有基础的同学正常讲"
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "给我讲讲链表这个数据结构怎么实现",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "有基础"
+        ],
+        "must_not_use": [
+          "零基础"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P05-D3-major_arbitration",
+      "dimension": "D3_correction_effective",
+      "description": "显式陈述的专业与后来的推断冲突：推断不得覆盖显式事实（M-04 仲裁）（real-model key case: D3）",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -120,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户明确说自己转专业进了计算机科学与技术，现在是大二",
+              "semantic_key": "m09:p05:major"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -48,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m2",
+              "via": "lane",
+              "summary": "用户可能转的是电子工程专业",
+              "semantic_key": "m09:p05:major",
+              "confidence": 0.93,
+              "subject_type": "self"
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "帮我规划计算机专业的数据结构学习路线",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "计算机"
+        ],
+        "must_not_use": [
+          "电子工程"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": true,
+        "must_mention": [
+          "计算机"
+        ],
+        "must_not_mention": [
+          "电子工程"
+        ]
+      }
+    },
+    {
+      "case_id": "P05-D4-delete_old_advisor",
+      "dimension": "D4_deletion_effective",
+      "description": "删除旧学院导师记忆后，选导师咨询不得再引用已删信息",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -72,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户在原学院的导师是材料系的陈老师",
+              "semantic_key": "m09:p05:old_advisor"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": [
+            {
+              "type": "revoke",
+              "target": "m1",
+              "reason": "已经转专业，旧导师信息不用留了"
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "我该找哪位老师做新生导师咨询",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [],
+        "must_not_use": [
+          "陈老师",
+          "材料系"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P05-D5-language_pref_chain",
+      "dimension": "D5_preference_change_tracked",
+      "description": "术语语言偏好两步演进：链头（中文+英文对照）胜出，旧值（纯中文）不得竞争（同证据通道 supersede 链）",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -168,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p1",
+              "pref_key": "language",
+              "value": "讲解术语只用中文说法"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -72,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p2",
+              "pref_key": "language",
+              "value": "术语要中文加英文对照着讲，方便看文档"
+            }
+          ]
+        },
+        {
+          "session_id": "s3",
+          "at_offset_h": -24,
+          "events": []
+        }
+      ],
+      "probe": {
+        "query": "讲讲面向对象编程里的封装概念",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "英文对照"
+        ],
+        "must_not_use": [
+          "只用中文"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    }
+  ]
+}

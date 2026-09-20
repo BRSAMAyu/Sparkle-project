@@ -1,0 +1,421 @@
+{
+  "schema_version": "m09-memory-eval.v1",
+  "persona": {
+    "persona_id": "P06",
+    "name": "交换生",
+    "domain": "海外交换学期：语言适应、选课注册、语伴、跨文化事务"
+  },
+  "cases": [
+    {
+      "case_id": "P06-D1-language_pref",
+      "dimension": "D1_valid_use",
+      "description": "语言偏好（中文解释）应在概念理解求助中被使用",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -96,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p1",
+              "pref_key": "language",
+              "value": "用中文解释专业概念，专有名词附英文原文"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -48,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户这学期在慕尼黑交换，课程都是德语授课",
+              "semantic_key": "m09:p06:munich"
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "用中文解释一下这门课的学期论文要求",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "专有名词附英文"
+        ],
+        "must_not_use": [],
+        "may_use": [
+          "德语"
+        ]
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P06-D1-buddy_program",
+      "dimension": "D1_valid_use",
+      "description": "语伴记忆应在口语练习求助中被使用",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -120,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户的语伴是德国学生安娜，每周四下午练口语",
+              "semantic_key": "m09:p06:buddy"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": []
+        }
+      ],
+      "probe": {
+        "query": "帮我准备和语伴的口语练习话题",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "语伴"
+        ],
+        "must_not_use": [],
+        "may_use": [
+          "安娜"
+        ]
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P06-D2-phatic_goodnight",
+      "dimension": "D2_correct_non_use",
+      "description": "晚安寒暄不得触发交换事务记忆个性化",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -72,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户下个月要提交交换学分转换申请，需要成绩单公证",
+              "semantic_key": "m09:p06:credit_transfer"
+            },
+            {
+              "type": "write_preference",
+              "alias": "p1",
+              "pref_key": "study_time_preference",
+              "value": "口语练习固定在每周四下午"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": []
+        }
+      ],
+      "probe": {
+        "query": "晚安",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [],
+        "must_not_use": [
+          "学分转换",
+          "成绩单公证",
+          "口语练习"
+        ],
+        "may_use": [],
+        "overpersonalization_watch": true,
+        "personal_watch_markers": [
+          "学分转换",
+          "成绩单公证",
+          "口语练习"
+        ]
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P06-D2-visa_appointment_expired",
+      "dimension": "D2_correct_non_use",
+      "description": "已过去的签证预约（due_at 已过）不得再被当作待办使用",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -30,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户上周五上午要去外管局续签预约",
+              "semantic_key": "m09:p06:visa",
+              "decay_policy": "due_at+7d",
+              "due_at_offset_h": -240
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -12,
+          "events": []
+        }
+      ],
+      "probe": {
+        "query": "我的签证续签预约该准备什么材料",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [],
+        "must_not_use": [
+          "上周五"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P06-D3-housing_supersede",
+      "dimension": "D3_correction_effective",
+      "description": "住宿偏好被新陈述取代：旧值（单人间）不得复活（同证据通道 supersede）",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -96,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p1",
+              "pref_key": "schedule_preferences",
+              "value": "住宿偏好单人间安静环境"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p2",
+              "pref_key": "schedule_preferences",
+              "value": "下学期住宿想换合住公寓"
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "帮我看看下学期住宿怎么选",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "合住"
+        ],
+        "must_not_use": [
+          "单人间"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P06-D3-elective_correction",
+      "dimension": "D3_correction_effective",
+      "description": "记错的二外选课经治理纠错：旧课（日语）不得再出现，新课（韩语）生效",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -96,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户的第二外语选修报的是日语班",
+              "semantic_key": "m09:p06:elective_v1"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": [
+            {
+              "type": "correct",
+              "target": "m1",
+              "action": "no_longer_applicable",
+              "reason": "换课了"
+            },
+            {
+              "type": "write_episodic",
+              "alias": "m2",
+              "via": "explicit",
+              "summary": "用户的第二外语选修换成了韩语班",
+              "semantic_key": "m09:p06:elective_v2"
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "帮我制定二外课程的复习计划",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "韩语"
+        ],
+        "must_not_use": [
+          "日语"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P06-D4-shared_device_isolation",
+      "dimension": "D4_deletion_effective",
+      "description": "共享设备场景：同设备另一用户的记忆（室友的健身安排）绝不可出现在本人的回答里（跨用户隔离）",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -48,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "o1",
+              "via": "explicit",
+              "owner": "other",
+              "summary": "室友办了健身房年卡，每周二五去上动感单车课",
+              "semantic_key": "m09:p06:roommate_gym"
+            },
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户报名了校园晨跑打卡活动",
+              "semantic_key": "m09:p06:morning_run"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": []
+        }
+      ],
+      "probe": {
+        "query": "帮我安排这周的晨跑和运动计划",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "晨跑"
+        ],
+        "must_not_use": [
+          "动感单车",
+          "健身房年卡"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P06-D5-curiosity_chain",
+      "dimension": "D5_preference_change_tracked",
+      "description": "拓展深度偏好两步演进：链头（跨文化专题）胜出，旧值（本地生活专题）不得竞争（同证据通道 supersede 链）",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -168,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p1",
+              "pref_key": "preferred_expansion_depth",
+              "value": "知识拓展偏向本地生活专题"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -72,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p2",
+              "pref_key": "preferred_expansion_depth",
+              "value": "现在想看跨文化对比专题"
+            }
+          ]
+        },
+        {
+          "session_id": "s3",
+          "at_offset_h": -24,
+          "events": []
+        }
+      ],
+      "probe": {
+        "query": "给我推一些课外的知识拓展专题",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "跨文化"
+        ],
+        "must_not_use": [
+          "本地生活"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    }
+  ]
+}

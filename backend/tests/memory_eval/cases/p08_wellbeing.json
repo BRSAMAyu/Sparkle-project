@@ -1,0 +1,418 @@
+{
+  "schema_version": "m09-memory-eval.v1",
+  "persona": {
+    "persona_id": "P08",
+    "name": "焦虑管理型",
+    "domain": "考试焦虑与情绪管理：反馈风格边界、睡眠节律、心理健康边界"
+  },
+  "cases": [
+    {
+      "case_id": "P08-D1-feedback_style",
+      "dimension": "D1_valid_use",
+      "description": "反馈风格偏好（温和鼓励）应在作业点评求助中被使用",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -96,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p1",
+              "pref_key": "feedback_style",
+              "value": "点评作业时语气温和，多鼓励，一步一步来"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -48,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户临近考试容易焦虑，上次模考没考好情绪低落了几天",
+              "semantic_key": "m09:p08:exam_anxiety"
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "点评一下我最近这套模拟卷做得怎么样",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "温和"
+        ],
+        "must_not_use": [],
+        "may_use": [
+          "鼓励"
+        ]
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P08-D1-mindfulness_habit",
+      "dimension": "D1_valid_use",
+      "description": "睡前冥想习惯应在放松建议求助中被使用",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -120,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户每天睡前做十分钟正念冥想帮助入睡",
+              "semantic_key": "m09:p08:mindfulness"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": []
+        }
+      ],
+      "probe": {
+        "query": "今晚睡前怎么放松比较好",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "冥想"
+        ],
+        "must_not_use": [],
+        "may_use": [
+          "正念"
+        ]
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P08-D2-phatic_busy",
+      "dimension": "D2_correct_non_use",
+      "description": "『在忙吗』寒暄不得触发情绪/健康记忆个性化",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -72,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户上个月因为焦虑去过一次学校心理咨询中心",
+              "semantic_key": "m09:p08:counseling"
+            },
+            {
+              "type": "write_preference",
+              "alias": "p1",
+              "pref_key": "schedule_preferences",
+              "value": "学习计划别排太满，留缓冲时间"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": []
+        }
+      ],
+      "probe": {
+        "query": "在忙吗",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [],
+        "must_not_use": [
+          "心理咨询",
+          "缓冲时间"
+        ],
+        "may_use": [],
+        "overpersonalization_watch": true,
+        "personal_watch_markers": [
+          "心理咨询",
+          "缓冲时间"
+        ]
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P08-D2-permission_episodic_off",
+      "dimension": "D2_correct_non_use",
+      "description": "用户关闭情景记忆读取权限（allow_episodic=false）后，实质求助也不得使用情景记忆（M-03 读侧权限）",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -72,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户的睡眠记录显示最近常在凌晨一点后入睡",
+              "semantic_key": "m09:p08:sleep_log"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -30,
+          "events": [
+            {
+              "type": "memory_settings",
+              "allow_episodic": false
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "帮我调整一下最近的睡眠作息安排",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [],
+        "must_not_use": [
+          "凌晨一点"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P08-D3-feedback_tone_supersede",
+      "dimension": "D3_correction_effective",
+      "description": "反馈语气偏好被新陈述取代：旧值（温和鼓励）不得复活（同证据通道 supersede）",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -96,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p1",
+              "pref_key": "feedback_tone",
+              "value": "反馈语气要温和鼓励式"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p2",
+              "pref_key": "feedback_tone",
+              "value": "语气改直接一点，不用太照顾情绪"
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "评估一下我这周的复习状态并给我反馈",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "直接"
+        ],
+        "must_not_use": [
+          "温和鼓励式"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P08-D3-exam_date_correction",
+      "dimension": "D3_correction_effective",
+      "description": "记错的考试日期经治理纠错：旧日期（十五号）不得再出现，新日期（二十二号）生效",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -96,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户的高数期中考试在这个月十五号",
+              "semantic_key": "m09:p08:exam_date_v1"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": [
+            {
+              "type": "correct",
+              "target": "m1",
+              "action": "reject",
+              "reason": "考试日期记错了"
+            },
+            {
+              "type": "write_episodic",
+              "alias": "m2",
+              "via": "explicit",
+              "summary": "用户的高数期中考试改到了二十二号",
+              "semantic_key": "m09:p08:exam_date_v2"
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "距离高数期中考试我的复习计划怎么排",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "二十二"
+        ],
+        "must_not_use": [
+          "十五"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P08-D4-delete_mood_note",
+      "dimension": "D4_deletion_effective",
+      "description": "删除敏感情绪记录后，情绪复盘求助不得再引用已删内容",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -72,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户上周焦虑发作，在宿舍哭了一场",
+              "semantic_key": "m09:p08:mood_note"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": [
+            {
+              "type": "revoke",
+              "target": "m1",
+              "reason": "这是隐私，不想让系统记着"
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "帮我复盘一下这周的情绪波动",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [],
+        "must_not_use": [
+          "焦虑发作",
+          "哭了一场"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P08-D5-coaching_chain",
+      "dimension": "D5_preference_change_tracked",
+      "description": "辅导节奏偏好两步演进：链头（每日小目标）胜出，旧值（每周大计划）不得竞争（同证据通道 supersede 链）",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -168,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p1",
+              "pref_key": "coaching_style",
+              "value": "辅导按每周大计划来推进"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -72,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p2",
+              "pref_key": "coaching_style",
+              "value": "焦虑期改用每日小目标的节奏，周计划压力太大"
+            }
+          ]
+        },
+        {
+          "session_id": "s3",
+          "at_offset_h": -24,
+          "events": []
+        }
+      ],
+      "probe": {
+        "query": "给我安排下一阶段的复习辅导节奏",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "每日小目标"
+        ],
+        "must_not_use": [
+          "每周大计划"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    }
+  ]
+}

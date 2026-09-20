@@ -1,0 +1,415 @@
+{
+  "schema_version": "m09-memory-eval.v1",
+  "persona": {
+    "persona_id": "P02",
+    "name": "夜猫设计师",
+    "domain": "设计系学生：夜间赶图、工具链偏好、客户项目"
+  },
+  "cases": [
+    {
+      "case_id": "P02-D1-tool_pref",
+      "dimension": "D1_valid_use",
+      "description": "工具偏好（Figma）应在做界面时的求助里被使用",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -96,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p1",
+              "pref_key": "learning_style",
+              "value": "学新软件时习惯直接在Figma里照着案例做"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -48,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户在赶交互设计大作业，用Figma画高保真原型",
+              "semantic_key": "m09:p02:prototype"
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "给我的Figma原型提点交互上的改进建议",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "Figma"
+        ],
+        "must_not_use": [],
+        "may_use": [
+          "高保真原型"
+        ]
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P02-D1-night_deadline_habit",
+      "dimension": "D1_valid_use",
+      "description": "深夜赶图习惯应在排期求助里被使用",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -120,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户习惯在深夜赶图，晚上十一点后效率最高",
+              "semantic_key": "m09:p02:night_habit"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": []
+        }
+      ],
+      "probe": {
+        "query": "帮我排一下这次海报作业的赶图时间",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "深夜"
+        ],
+        "must_not_use": [],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P02-D2-phatic_thanks",
+      "dimension": "D2_correct_non_use",
+      "description": "带尾缀语气词的寒暄（谢谢啦）不得触发个性化记忆输出",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -72,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户的插画风格偏扁平风，配色喜欢低饱和",
+              "semantic_key": "m09:p02:illustration_style"
+            },
+            {
+              "type": "write_preference",
+              "alias": "p1",
+              "pref_key": "ai_verbosity",
+              "value": "回复希望短一点直接给方案"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": []
+        }
+      ],
+      "probe": {
+        "query": "谢谢啦",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [],
+        "must_not_use": [
+          "扁平风",
+          "低饱和"
+        ],
+        "may_use": [],
+        "overpersonalization_watch": true,
+        "personal_watch_markers": [
+          "扁平风",
+          "低饱和"
+        ]
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P02-D2-today_only_expired",
+      "dimension": "D2_correct_non_use",
+      "description": "『今天只有二十分钟』的一次性约束在次日不得再被使用（decay 1d + 时间推进）",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -30,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户今天只有二十分钟复习时间，只能做少量练习",
+              "semantic_key": "m09:p02:today_only",
+              "decay_policy": "1d"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -25,
+          "events": [
+            {
+              "type": "time_advance",
+              "days": 2
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "帮我安排今天的复习练习",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [],
+        "must_not_use": [
+          "二十分钟"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P02-D3-feedback_style_supersede",
+      "dimension": "D3_correction_effective",
+      "description": "反馈风格偏好被新陈述取代：旧风格（委婉 sandwich）不得复活（同证据通道 supersede）",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -96,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p1",
+              "pref_key": "feedback_style",
+              "value": "点评作业时先夸优点再委婉指出问题"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p2",
+              "pref_key": "feedback_style",
+              "value": "现在直接列问题就行"
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "点评一下我的版式作业有什么问题",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "直接"
+        ],
+        "must_not_use": [
+          "委婉"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P02-D3-client_name_correction",
+      "dimension": "D3_correction_effective",
+      "description": "记错的客户名经治理纠错后：旧客户名不得再出现，新客户名生效（episodic 治理链）",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -96,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户接的设计外包客户叫蓝鲸科技",
+              "semantic_key": "m09:p02:client_v1"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": [
+            {
+              "type": "correct",
+              "target": "m1",
+              "action": "reject",
+              "reason": "记错客户名了"
+            },
+            {
+              "type": "write_episodic",
+              "alias": "m2",
+              "via": "explicit",
+              "summary": "用户接的设计外包客户是蓝海传媒",
+              "semantic_key": "m09:p02:client_v2"
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "给蓝海传媒的提案ppt我该突出什么",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [],
+        "must_not_use": [
+          "蓝鲸科技"
+        ],
+        "may_use": [
+          "蓝海传媒"
+        ]
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P02-D4-retract_focus_pref",
+      "dimension": "D4_deletion_effective",
+      "description": "面板删除『赶图专注偏好』后，专注设置求助不得再引用已删偏好",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -72,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p1",
+              "pref_key": "focus_mode",
+              "value": "赶图时开勿扰模式，手机放客厅"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": [
+            {
+              "type": "retract",
+              "target": "p1",
+              "reason": "不用这个习惯了，删掉这条偏好"
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "今晚要赶图，帮我安排一个专注环境",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [],
+        "must_not_use": [
+          "勿扰"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P02-D5-verbosity_chain",
+      "dimension": "D5_preference_change_tracked",
+      "description": "回复长度偏好两步演进：链头（要点式）胜出，旧值（段落式）不得竞争（同证据通道 supersede 链）",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -168,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p1",
+              "pref_key": "ai_verbosity",
+              "value": "回复用完整段落详细展开"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -72,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p2",
+              "pref_key": "ai_verbosity",
+              "value": "改成要点式简短回复就好"
+            }
+          ]
+        },
+        {
+          "session_id": "s3",
+          "at_offset_h": -24,
+          "events": []
+        }
+      ],
+      "probe": {
+        "query": "给我讲讲格式塔原则在版式里的用法",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "要点式"
+        ],
+        "must_not_use": [
+          "完整段落"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    }
+  ]
+}

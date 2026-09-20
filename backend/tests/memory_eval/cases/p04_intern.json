@@ -1,0 +1,416 @@
+{
+  "schema_version": "m09-memory-eval.v1",
+  "persona": {
+    "persona_id": "P04",
+    "name": "兼职实习生",
+    "domain": "互联网实习+课业平衡：通勤、站会、公司技术栈、周报"
+  },
+  "cases": [
+    {
+      "case_id": "P04-D1-commute_pref",
+      "dimension": "D1_valid_use",
+      "description": "通勤偏好（地铁直达）应在出行规划求助中被使用",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -96,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户实习通勤只坐地铁二号线直达，不坐公交",
+              "semantic_key": "m09:p04:commute"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -48,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p1",
+              "pref_key": "schedule_preferences",
+              "value": "实习日早上八点半前要到公司"
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "明天去公司实习的通勤和出门时间怎么安排",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "地铁"
+        ],
+        "must_not_use": [],
+        "may_use": [
+          "二号线"
+        ]
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P04-D1-standup_schedule",
+      "dimension": "D1_valid_use",
+      "description": "站会时间记忆应在会议准备求助中被使用",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -120,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户实习组里每日站会是早上十点，要提前准备进度汇报",
+              "semantic_key": "m09:p04:standup"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": []
+        }
+      ],
+      "probe": {
+        "query": "帮我准备今天站会的进度汇报",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "十点"
+        ],
+        "must_not_use": [],
+        "may_use": [
+          "站会"
+        ]
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P04-D2-offtopic_weather",
+      "dimension": "D2_correct_non_use",
+      "description": "天气闲聊不得触发实习/通勤记忆个性化",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -72,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户的实习导师让用户本周内完成用户调研报告",
+              "semantic_key": "m09:p04:research_report"
+            },
+            {
+              "type": "write_preference",
+              "alias": "p1",
+              "pref_key": "task_priority_bias",
+              "value": "实习任务优先于课程作业"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": []
+        }
+      ],
+      "probe": {
+        "query": "今天天气怎么样，适合出门吗",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [],
+        "must_not_use": [
+          "用户调研报告",
+          "实习任务优先"
+        ],
+        "may_use": [],
+        "overpersonalization_watch": true,
+        "personal_watch_markers": [
+          "用户调研报告",
+          "实习任务优先"
+        ]
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P04-D2-sprint_review_expired",
+      "dimension": "D2_correct_non_use",
+      "description": "已结束的迭代评审（due_at 已过）不得再被当作待办使用",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -30,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户要在上周四的迭代评审上做需求文档的讲解",
+              "semantic_key": "m09:p04:sprint_review",
+              "decay_policy": "due_at+7d",
+              "due_at_offset_h": -240
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -12,
+          "events": []
+        }
+      ],
+      "probe": {
+        "query": "这周迭代评审我要准备什么材料",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [],
+        "must_not_use": [
+          "上周四的迭代评审"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P04-D3-focus_duration_supersede",
+      "dimension": "D3_correction_effective",
+      "description": "专注时长偏好被新陈述取代：旧值（45分钟）不得复活（同证据通道 supersede）",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -96,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p1",
+              "pref_key": "focus_duration_preference",
+              "value": "专注学习一段45分钟再休息"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p2",
+              "pref_key": "focus_duration_preference",
+              "value": "现在改成25分钟一段的短专注"
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "晚上下班后学习帮我按专注时长切分一下",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "25分钟"
+        ],
+        "must_not_use": [
+          "45分钟"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P04-D3-stack_correction",
+      "dimension": "D3_correction_effective",
+      "description": "记错的公司技术栈经治理纠错：旧栈（Vue）不得再出现，新栈（React）生效",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -96,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户实习组的前端技术栈是Vue3",
+              "semantic_key": "m09:p04:stack_v1"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": [
+            {
+              "type": "correct",
+              "target": "m1",
+              "action": "reject",
+              "reason": "技术栈记错了"
+            },
+            {
+              "type": "write_episodic",
+              "alias": "m2",
+              "via": "explicit",
+              "summary": "用户实习组的前端技术栈其实是React加TypeScript",
+              "semantic_key": "m09:p04:stack_v2"
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "给我这个迭代的前端任务提点技术实现建议",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "React"
+        ],
+        "must_not_use": [
+          "Vue"
+        ],
+        "may_use": [
+          "TypeScript"
+        ]
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P04-D4-delete_salary_note",
+      "dimension": "D4_deletion_effective",
+      "description": "删除实习薪资备忘后，性价比讨论不得再引用已删数字",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -72,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户的实习薪资是每天两百块",
+              "semantic_key": "m09:p04:salary"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": [
+            {
+              "type": "revoke",
+              "target": "m1",
+              "reason": "薪资是隐私，删掉"
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "帮我算算这周实习收入和上课时间的性价比",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [],
+        "must_not_use": [
+          "两百"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P04-D5-priority_chain",
+      "dimension": "D5_preference_change_tracked",
+      "description": "任务优先级偏好两步演进：链头（课业优先）胜出，旧值（实习优先）不得竞争（同证据通道 supersede 链）",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -168,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p1",
+              "pref_key": "task_priority_bias",
+              "value": "实习任务优先于课程作业"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -72,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p2",
+              "pref_key": "task_priority_bias",
+              "value": "临近期中，课程作业优先于实习任务"
+            }
+          ]
+        },
+        {
+          "session_id": "s3",
+          "at_offset_h": -24,
+          "events": []
+        }
+      ],
+      "probe": {
+        "query": "今晚实习的活和课程作业冲突了，先做哪个",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "课程作业优先"
+        ],
+        "must_not_use": [
+          "实习任务优先"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    }
+  ]
+}

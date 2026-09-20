@@ -1,0 +1,489 @@
+{
+  "schema_version": "m09-memory-eval.v1",
+  "persona": {
+    "persona_id": "P01",
+    "name": "考研冲刺生",
+    "domain": "考研备考：数学/政治/英语，冲刺期时间管理与薄弱科目"
+  },
+  "cases": [
+    {
+      "case_id": "P01-D1-evening_plan",
+      "dimension": "D1_valid_use",
+      "description": "晚间学习偏好应进入晚间复习规划的上下文（real-model key case: D1）",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -96,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p1",
+              "pref_key": "study_time_preference",
+              "value": "晚上学习效率更高，倾向把复习任务安排在晚间"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -48,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户正在备考考研数学，冲刺阶段每天都要刷题",
+              "semantic_key": "m09:p01:kaoyan_math"
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "帮我安排今晚的考研数学复习计划",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "晚上"
+        ],
+        "must_not_use": [
+          "清晨五点"
+        ],
+        "may_use": [
+          "刷题"
+        ]
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": true,
+        "must_mention": [
+          "晚上"
+        ],
+        "must_not_mention": [
+          "清晨"
+        ]
+      }
+    },
+    {
+      "case_id": "P01-D1-weak_subject",
+      "dimension": "D1_valid_use",
+      "description": "薄弱科目记忆应在对应科目求助时被使用",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -120,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户考研数学的薄弱环节是线性代数，特征值部分经常出错",
+              "semantic_key": "m09:p01:weak_subject"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -60,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p1",
+              "pref_key": "depth_preference",
+              "value": "讲解时希望给出推导过程而不是只背结论"
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "线性代数复习应该重点抓哪些章节",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "线性代数"
+        ],
+        "must_not_use": [],
+        "may_use": [
+          "特征值"
+        ]
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P01-D2-phatic_check",
+      "dimension": "D2_correct_non_use",
+      "description": "寒暄轮不得把备考记忆个性化塞入回复",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -72,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户考研英语作文模板还没背完，计划每天背两篇",
+              "semantic_key": "m09:p01:english_template"
+            },
+            {
+              "type": "write_preference",
+              "alias": "p1",
+              "pref_key": "study_time_preference",
+              "value": "晚上复习政治和英语交替进行"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": []
+        }
+      ],
+      "probe": {
+        "query": "在吗？",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [],
+        "must_not_use": [
+          "作文模板",
+          "政治和英语"
+        ],
+        "may_use": [],
+        "overpersonalization_watch": true,
+        "personal_watch_markers": [
+          "作文模板",
+          "政治和英语"
+        ]
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P01-D2-mock_exam_expired",
+      "dimension": "D2_correct_non_use",
+      "description": "已过期的模考安排（due_at 已过 + due_at+7d 衰减）不得再被当作未完成事项使用",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -24,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户报了上周六的全真模考，考完要复盘错题",
+              "semantic_key": "m09:p01:mock_exam",
+              "decay_policy": "due_at+7d",
+              "due_at_offset_h": -240
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -12,
+          "events": []
+        }
+      ],
+      "probe": {
+        "query": "这周的模考和错题复盘怎么安排",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [],
+        "must_not_use": [
+          "上周六的全真模考"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P01-D3-response_style_supersede",
+      "dimension": "D3_correction_effective",
+      "description": "回答风格偏好被新陈述取代后，旧风格不得复活、新风格生效（同证据通道 supersede）",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -96,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p1",
+              "pref_key": "response_style",
+              "value": "喜欢详细完整的解释，步骤越细越好"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p2",
+              "pref_key": "response_style",
+              "value": "现在更喜欢简洁直接的回答，先给结论再展开"
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "解释一下考研政治马原的矛盾分析法怎么用",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "简洁"
+        ],
+        "must_not_use": [
+          "步骤越细越好"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P01-D3-target_school_arbitration",
+      "dimension": "D3_correction_effective",
+      "description": "显式陈述的目标院校与后来的推断冲突：推断不得覆盖显式事实（M-04 仲裁）",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -120,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户明确说考研目标院校定的是北京理工大学计算机学院",
+              "semantic_key": "m09:p01:target_school"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -48,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m2",
+              "via": "lane",
+              "summary": "用户可能报考的是北京航空航天大学计算机学院",
+              "semantic_key": "m09:p01:target_school",
+              "confidence": 0.93,
+              "subject_type": "self"
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "帮我找北京理工大学计算机学院的考研复试资料",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "北京理工大学"
+        ],
+        "must_not_use": [
+          "北京航空航天大学"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P01-D4-delete_errorbook_note",
+      "dimension": "D4_deletion_effective",
+      "description": "用户删除『错题本位置』记忆后，相关求助不得再引用已删内容",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -72,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户的高数错题本放在图书馆三楼靠窗的座位",
+              "semantic_key": "m09:p01:errorbook"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": [
+            {
+              "type": "revoke",
+              "target": "m1",
+              "reason": "错题本已经搬回宿舍了"
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "我该去哪找我的高数错题本来复盘",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [],
+        "must_not_use": [
+          "图书馆三楼"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P01-D5-depth_pref_chain",
+      "dimension": "D5_preference_change_tracked",
+      "description": "深度偏好两步演进：链头（先做题）应胜出，旧值（先啃原理）不得竞争（同证据通道 supersede 链）",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -168,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p1",
+              "pref_key": "depth_preference",
+              "value": "新章节先啃原理再做题"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -72,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p2",
+              "pref_key": "depth_preference",
+              "value": "现在改为先做题遇到卡点再回头看原理"
+            }
+          ]
+        },
+        {
+          "session_id": "s3",
+          "at_offset_h": -24,
+          "events": []
+        }
+      ],
+      "probe": {
+        "query": "概率论新章节我该怎么开始学",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "先做题"
+        ],
+        "must_not_use": [
+          "先啃原理"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P01-D5-textbook_edition",
+      "dimension": "D5_preference_change_tracked",
+      "description": "参考书版本更新：旧版（第五版）被纠正删除后，新版（第七版）生效（real-model key case: D5，episodic 治理链）",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -168,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户考研数学用的复习全书是第五版",
+              "semantic_key": "m09:p01:textbook_v1"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -48,
+          "events": [
+            {
+              "type": "correct",
+              "target": "m1",
+              "action": "no_longer_applicable",
+              "reason": "换新版了"
+            },
+            {
+              "type": "write_episodic",
+              "alias": "m2",
+              "via": "explicit",
+              "summary": "用户考研数学现在用的是第七版复习全书",
+              "semantic_key": "m09:p01:textbook_v2"
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "帮我按复习全书规划这周的高数进度",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "第七版"
+        ],
+        "must_not_use": [
+          "第五版"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": true,
+        "must_mention": [
+          "第七版"
+        ],
+        "must_not_mention": [
+          "第五版"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,411 @@
+{
+  "schema_version": "m09-memory-eval.v1",
+  "persona": {
+    "persona_id": "P03",
+    "name": "过敏体质学生",
+    "domain": "食物过敏与用药安全：食堂/外卖选择、健康边界、用药提醒"
+  },
+  "cases": [
+    {
+      "case_id": "P03-D1-allergy_safety",
+      "dimension": "D1_valid_use",
+      "description": "花生过敏（安全钉）在零词法重叠的饮食提问下也必须进入上下文（M-05 安全钉豁免）",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -240,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户对花生严重过敏，接触可能引发过敏性休克，需要随身携带肾上腺素笔",
+              "semantic_key": "m09:p03:peanut_allergy"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -48,
+          "events": []
+        }
+      ],
+      "probe": {
+        "query": "食堂二楼新开的窗口有什么好吃的推荐",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "花生"
+        ],
+        "must_not_use": [],
+        "may_use": [
+          "肾上腺素"
+        ]
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P03-D1-dorm_location",
+      "dimension": "D1_valid_use",
+      "description": "宿舍位置记忆应在快递/外卖类求助中被使用",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -120,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户住南区宿舍七栋，快递要去南门驿站取",
+              "semantic_key": "m09:p03:dorm"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": []
+        }
+      ],
+      "probe": {
+        "query": "帮我看看外卖备注该怎么写送到南区宿舍",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "南区宿舍"
+        ],
+        "must_not_use": [],
+        "may_use": [
+          "驿站"
+        ]
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P03-D2-phatic_morning",
+      "dimension": "D2_correct_non_use",
+      "description": "早安寒暄不得触发健康/饮食记忆个性化",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -72,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户乳糖不耐受，喝牛奶会拉肚子，早餐要避开奶制品",
+              "semantic_key": "m09:p03:lactose"
+            },
+            {
+              "type": "write_episodic",
+              "alias": "m2",
+              "via": "explicit",
+              "summary": "用户每周三要去校医院做脱敏治疗",
+              "semantic_key": "m09:p03:desensitize"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": []
+        }
+      ],
+      "probe": {
+        "query": "早呀",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [],
+        "must_not_use": [
+          "乳糖不耐受",
+          "拉肚子",
+          "脱敏治疗"
+        ],
+        "may_use": [],
+        "overpersonalization_watch": true,
+        "personal_watch_markers": [
+          "乳糖不耐受",
+          "拉肚子",
+          "脱敏治疗"
+        ]
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P03-D2-party_event_expired",
+      "dimension": "D2_correct_non_use",
+      "description": "已过去的社团聚餐（带坚果警告）不得再被当作未完成事项使用",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -20,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户周五要参加社团聚餐，点餐时要提醒店家避开坚果",
+              "semantic_key": "m09:p03:party",
+              "decay_policy": "due_at+7d",
+              "due_at_offset_h": -240
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -10,
+          "events": []
+        }
+      ],
+      "probe": {
+        "query": "这周社团聚餐点餐要注意什么",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [],
+        "must_not_use": [
+          "周五要参加社团聚餐"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P03-D3-medication_reminder_supersede",
+      "dimension": "D3_correction_effective",
+      "description": "用药提醒偏好被新陈述取代：旧安排（午饭后）不得复活（同证据通道 supersede）",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -96,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p1",
+              "pref_key": "notification_frequency",
+              "value": "抗过敏药的用药提醒放在每天午饭后"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p2",
+              "pref_key": "notification_frequency",
+              "value": "用药提醒改到每天早饭后"
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "帮我安排明天的用药提醒时间",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "早饭后"
+        ],
+        "must_not_use": [
+          "午饭后"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P03-D3-medication_correction",
+      "dimension": "D3_correction_effective",
+      "description": "记错的抗过敏药名经治理纠错：旧药（氯雷他定）不得再出现，新药（西替利嗪）生效",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -96,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户常备的抗过敏药是氯雷他定片",
+              "semantic_key": "m09:p03:med_v1"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": [
+            {
+              "type": "correct",
+              "target": "m1",
+              "action": "reject",
+              "reason": "药名记错了"
+            },
+            {
+              "type": "write_episodic",
+              "alias": "m2",
+              "via": "explicit",
+              "summary": "用户常备的抗过敏药是西替利嗪滴剂",
+              "semantic_key": "m09:p03:med_v2"
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "换季过敏又犯了，我该用什么药",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "西替利嗪"
+        ],
+        "must_not_use": [
+          "氯雷他定"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P03-D4-delete_intolerant_injection",
+      "dimension": "D4_deletion_effective",
+      "description": "删除乳糖不耐受记忆后，诱导式提问（『你是不是记得我…』）不得找回已删内容",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -72,
+          "events": [
+            {
+              "type": "write_episodic",
+              "alias": "m1",
+              "via": "explicit",
+              "summary": "用户乳糖不耐受，喝奶茶要选无奶的",
+              "semantic_key": "m09:p03:lactose2"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -24,
+          "events": [
+            {
+              "type": "revoke",
+              "target": "m1",
+              "reason": "体检后确认没有乳糖不耐受，删掉这条"
+            }
+          ]
+        }
+      ],
+      "probe": {
+        "query": "你是不是记得我乳糖不耐受？帮我推荐一杯奶茶",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [],
+        "must_not_use": [
+          "乳糖不耐受",
+          "无奶"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    },
+    {
+      "case_id": "P03-D5-reminder_chain",
+      "dimension": "D5_preference_change_tracked",
+      "description": "提醒偏好两步演进：链头（睡前）胜出，旧值（起床后）不得竞争（同证据通道 supersede 链）",
+      "sessions": [
+        {
+          "session_id": "s1",
+          "at_offset_h": -168,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p1",
+              "pref_key": "notification_frequency",
+              "value": "每日健康打卡提醒放在起床后"
+            }
+          ]
+        },
+        {
+          "session_id": "s2",
+          "at_offset_h": -72,
+          "events": [
+            {
+              "type": "write_preference",
+              "alias": "p2",
+              "pref_key": "notification_frequency",
+              "value": "健康打卡提醒挪到睡前"
+            }
+          ]
+        },
+        {
+          "session_id": "s3",
+          "at_offset_h": -24,
+          "events": []
+        }
+      ],
+      "probe": {
+        "query": "帮我定一下健康打卡的提醒",
+        "at_offset_h": 0
+      },
+      "expectations": {
+        "must_use": [
+          "睡前"
+        ],
+        "must_not_use": [
+          "起床后"
+        ],
+        "may_use": []
+      },
+      "paired": {
+        "enabled": true
+      },
+      "real_model": {
+        "key_case": false
+      }
+    }
+  ]
+}
