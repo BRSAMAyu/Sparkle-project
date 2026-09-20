@@ -29,6 +29,7 @@ from app.core.cache import cache_service
 from app.core.cost_controller import is_rag_within_budget, record_rag_cost
 from app.core.metrics import CACHE_HIT_COUNT, RAG_RETRIEVAL_LATENCY, RETRIEVAL_TIMEOUT_TOTAL
 from app.core.redis_search_client import redis_search_client
+from app.orchestration.capability_lane import MEMORY_CLASS_INSTRUCTION, classify_memory_class_message
 from app.services.context_retrieval_pipeline import (
     KnowledgeAccessContext,
     prefilter_knowledge_candidates,
@@ -43,6 +44,16 @@ from app.services.rerank_service import rerank_service
 
 _REDISEARCH_SPECIAL_CHARS = re.compile(r'([,\.<>{}\[\]"\'`:;!@#$%^&*()\-+=~|/\\])')
 _QUERY_TOKEN_RE = re.compile(r"[\w\u4e00-\u9fff]+", re.UNICODE)
+
+
+def graphrag_text_cache_bypass(query: str) -> bool:
+    """C-07：该查询是否为写入/纠偏指令轮（旧文本 cache 不可读）。
+
+    CONTEXT_COMPILER_V3 §7「写操作与纠偏请求不得用旧文本 cache 冒充新推
+    理」。判定复用 capability_lane 的零 LLM 记忆指令词表（与 chat 主链同一
+    权威，不造第二套词表）。纯读检索轮不受影响（版本键已保证读新鲜）。
+    """
+    return classify_memory_class_message(query) == MEMORY_CLASS_INSTRUCTION
 
 
 @dataclass
@@ -2252,6 +2263,10 @@ Return ONLY a JSON array of entity names."""
         )
         allowed_group_ids = set(resolved_group_scope)
         cache_key = None
+        # C-07（CONTEXT_COMPILER_V3 §7）：写入/纠偏指令轮禁用旧文本 cache——
+        # 重复发送的同文本纠正消息不得命中纠正前固化的检索文本冒充新推理。
+        # 只跳过读；新鲜结果照常写缓存（后续普通读轮可命中）。
+        _write_intent_turn = graphrag_text_cache_bypass(query)
         if settings.ENABLE_GRAPHRAG_FASTPATH:
             knowledge_version = None
             feedback_version = None
@@ -2273,11 +2288,14 @@ Return ONLY a JSON array of entity names."""
                 feedback_version=feedback_version,
                 group_scope=resolved_group_scope,
             )
-            cached = await self._get_cached_result(cache_key)
-            if cached:
-                CACHE_HIT_COUNT.labels(cache_name="graphrag", result="hit").inc()
-                return cached
-            CACHE_HIT_COUNT.labels(cache_name="graphrag", result="miss").inc()
+            if _write_intent_turn:
+                CACHE_HIT_COUNT.labels(cache_name="graphrag", result="write_intent_bypass").inc()
+            else:
+                cached = await self._get_cached_result(cache_key)
+                if cached:
+                    CACHE_HIT_COUNT.labels(cache_name="graphrag", result="hit").inc()
+                    return cached
+                CACHE_HIT_COUNT.labels(cache_name="graphrag", result="miss").inc()
 
         trace = (
             RetrievalTrace(

@@ -97,6 +97,10 @@ class CognitiveContext(BaseModel):
     # Preference Version (for cache invalidation)
     preference_version: int = Field(default=0, description="Preference version for cache validation")
 
+    # C-07 (M-07 epoch 契约)：快照编译时钉住的 per-user memory epoch。
+    # 0 = 未钉（旧快照/钉读失败）→ 读侧门必判 mismatch → 重建（fail-closed）。
+    memory_epoch: int = Field(default=0, description="Memory epoch pinned at snapshot compile time")
+
     def to_llm_system_prompt_context(self) -> str:
         """Convert to a string representation suitable for System Prompt injection"""
         # Compact representation
@@ -239,19 +243,36 @@ class ContextOrchestrator:
         if not force_refresh:
             cached = await self._get_cached_context(user_id)
             if cached:
-                # 验证偏好版本是否一致
-                current_version = await self._get_preference_version(user_id)
-                if cached.preference_version == current_version:
-                    with contextlib.suppress(Exception):
-                        cached.past_session_memory = await self._get_past_session_memory(UUID(user_id))
-                    return cached
-                # 版本不一致，需要刷新
-                logger.info(
-                    f"Preference version changed for user {user_id}: "
-                    f"cached={cached.preference_version}, current={current_version}, refreshing context"
-                )
+                # C-07：memory_epoch 读侧门（M-07 inline snapshot 同款，保证而非
+                # 加速）——删除/纠正/权限收紧 bump epoch 后，旧快照内嵌的记忆
+                # 文本（profile_context / past_session 之外的 derived 面）不得
+                # 继续被命中。epoch 读失败按 0 处理 → 与快照必不一致 → 重建
+                # （fail-closed，方向永远朝新鲜）。
+                current_epoch = await self._get_memory_epoch(user_id)
+                if int(cached.memory_epoch or 0) != current_epoch:
+                    logger.info(
+                        f"Memory epoch changed for user {user_id}: "
+                        f"cached={cached.memory_epoch}, current={current_epoch}, refreshing context"
+                    )
+                else:
+                    # 验证偏好版本是否一致
+                    current_version = await self._get_preference_version(user_id)
+                    if cached.preference_version == current_version:
+                        with contextlib.suppress(Exception):
+                            cached.past_session_memory = await self._get_past_session_memory(UUID(user_id))
+                        return cached
+                    # 版本不一致，需要刷新
+                    logger.info(
+                        f"Preference version changed for user {user_id}: "
+                        f"cached={cached.preference_version}, current={current_version}, refreshing context"
+                    )
 
         uid = UUID(user_id)
+
+        # C-07：内容装配**前**钉 epoch（M-07 inline snapshot 同纪律）。装配期
+        # 发生删除/纠正 → epoch 已 bump → 下一轮读侧门判 mismatch 重建；
+        # 读失败按 0 钉 → 快照永不命中（fail-closed）。
+        pinned_epoch = await self._get_memory_epoch(user_id)
 
         # ✅ Fix C3: Create independent DB sessions for each parallel task
         # This prevents shared session issues when tasks run concurrently
@@ -333,6 +354,8 @@ class ContextOrchestrator:
             spine_model_claims=spine_model_claims,
             # 记录偏好版本用于缓存验证
             preference_version=preference_version,
+            # C-07：钉住编译时 memory epoch（读侧门比对基准）
+            memory_epoch=pinned_epoch,
         )
 
         context = self._sanitize_context(context)
@@ -809,6 +832,18 @@ class ContextOrchestrator:
             return prefs.version or 0
         except Exception as e:
             logger.warning("Failed to get preference version for {}: {}", user_id, e)
+            return 0
+
+    async def _get_memory_epoch(self, user_id: str) -> int:
+        """C-07：当前 per-user memory epoch（M-01 契约读侧）。
+
+        读失败按 0 返回——0 与任何已钉快照（≥1）必不一致 → 读侧门判
+        mismatch 重建（fail-closed，与 profile_context_service 同语义）。
+        """
+        try:
+            return int(await MemoryService(self.db).get_memory_epoch(UUID(user_id)))
+        except Exception as e:
+            logger.warning("Failed to get memory epoch for {}: {}", user_id, e)
             return 0
 
     async def _get_community_profile(self, user_id: UUID, db_session: AsyncSession | None = None) -> dict[str, Any]:

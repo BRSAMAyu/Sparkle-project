@@ -28,7 +28,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.core.experience_memory import ExperienceContextQuery
 from app.core.i18n import I18n
-from app.core.metrics import AURORA_RETURNING_CONTEXT_TIER_TOTAL
+from app.core.metrics import AURORA_RETURNING_CONTEXT_TIER_TOTAL, CONTEXT_CACHE_VERSION_DECISIONS
 from app.core.time_utils import utcnow
 from app.gen.agent.v1 import agent_service_pb2
 from app.models.chat import ChatMessage, ChatSession, MessageRole
@@ -37,10 +37,12 @@ from app.models.plan import Plan
 from app.models.task import Task
 from app.models.task import TaskStatus as ModelTaskStatus
 from app.models.task_feedback import TaskFeedback
+from app.orchestration.capability_lane import MEMORY_CLASS_INSTRUCTION, classify_memory_class_message
 from app.routing.tool_preference_router import ToolPreferenceRouter
 from app.scaffolding.scaffolding_fsm import ScaffoldingFSM
 from app.services.aurora_stage34_kill_switch_service import AuroraStage34KillSwitchService
 from app.services.aurora_stage39_kill_switch_service import AuroraStage39KillSwitchService
+from app.services.context_cache_key import ContextCacheVersionError, resolve_context_cache_versions
 from app.services.experience_memory_projector import ExperienceMemoryProjector
 from app.services.focus_service import focus_service
 from app.services.galaxy_service import GalaxyService
@@ -75,9 +77,72 @@ class ContextBuilderMixin:
     # The full rebuild costs 1-2s warm (and used to spike 10-30s cold); within a
     # session the payload barely changes between consecutive turns, so later
     # messages reuse it instead of re-paying the whole serial chain.
+    #
+    # C-07（CONTEXT_COMPILER_V3 §7）：键从裸 ``user_id`` 升级为
+    # ``user_id|schema|mepoch|pv|pol|know`` 版本化组合键
+    # （``context_cache_key``，单一权威 ``services/context_cache_key.py``）。
+    # 删除/纠正/权限收紧 → memory_epoch bump（M-07 管线）→ 键变 → 旧条目
+    # 孤儿化，0 stale reuse；跨 user 由键首段 user_id 结构性隔离。
+    # 写入/纠偏指令轮（memory_instruction）整轮绕过缓存——旧文本 cache 不得
+    # 冒充新推理；版本解析失败 fail-closed 重建（M-07 epoch 读侧门同款）。
     _USER_CONTEXT_CACHE_TTL_SECONDS = 120.0
     _USER_CONTEXT_CACHE_MAX_ENTRIES = 128
     _user_context_cache: dict[str, tuple[float, dict[str, Any]]] = {}
+
+    async def _context_cache_resolve_key(
+        self,
+        user_id: str,
+        active_db: AsyncSession | None,
+        user_message: str,
+    ) -> tuple[str | None, str]:
+        """解析本轮 context cache 键；返回 ``(key, outcome)``。
+
+        - ``("…key…", "ok")``：正常版本键；
+        - ``(None, "write_intent_bypass")``：写入/纠偏指令轮，禁用旧文本缓存；
+        - ``(None, "version_error_bypass")``：版本解析失败，fail-closed 重建。
+        """
+        # CONTEXT_COMPILER_V3 §7：写操作与纠偏请求不得用旧文本 cache 冒充新
+        # 推理。记忆指令轮（记住/别忘/记下…，capability_lane 零 LLM 判定）
+        # 重建后照常写缓存——本轮若真落写，M-07 epoch bump 会让该键孤儿化；
+        # 未落写则 TTL 有界。
+        if classify_memory_class_message(user_message) == MEMORY_CLASS_INSTRUCTION:
+            CONTEXT_CACHE_VERSION_DECISIONS.labels(outcome="write_intent_bypass").inc()
+            return None, "write_intent_bypass"
+
+        if active_db is None:
+            return None, "version_error_bypass"
+
+        try:
+            versions = await resolve_context_cache_versions(active_db, user_id, redis_client=self.redis)
+        except ContextCacheVersionError as exc:
+            logger.warning(
+                "context cache version resolve failed, fail-closed rebuild user_id={} error={}",
+                user_id,
+                exc,
+            )
+            CONTEXT_CACHE_VERSION_DECISIONS.labels(outcome="version_error_bypass").inc()
+            return None, "version_error_bypass"
+        return versions.cache_key(), "ok"
+
+    def _context_cache_lookup(self, cache_key: str) -> dict[str, Any] | None:
+        """TTL 内命中返回深拷贝载荷；否则 None（含过期条目惰性清理）。"""
+        entry = self._user_context_cache.get(cache_key)
+        if entry is None:
+            CONTEXT_CACHE_VERSION_DECISIONS.labels(outcome="miss").inc()
+            return None
+        if (time.monotonic() - entry[0]) > self._USER_CONTEXT_CACHE_TTL_SECONDS:
+            self._user_context_cache.pop(cache_key, None)
+            CONTEXT_CACHE_VERSION_DECISIONS.labels(outcome="miss").inc()
+            return None
+        CONTEXT_CACHE_VERSION_DECISIONS.labels(outcome="hit").inc()
+        return copy.deepcopy(entry[1])
+
+    def _context_cache_store(self, cache_key: str, payload: dict[str, Any]) -> None:
+        """写入版本化条目并做 LRU 容量收敛（键含版本，容量按条目数封顶）。"""
+        self._user_context_cache[cache_key] = (time.monotonic(), copy.deepcopy(payload))
+        if len(self._user_context_cache) > self._USER_CONTEXT_CACHE_MAX_ENTRIES:
+            _oldest_key = min(self._user_context_cache, key=lambda k: self._user_context_cache[k][0])
+            self._user_context_cache.pop(_oldest_key, None)
 
     @staticmethod
     def _extract_seed_library_nodes(examples: list[dict[str, Any]]) -> list[str]:
@@ -1717,20 +1782,18 @@ class ContextBuilderMixin:
         with tracer.start_as_current_span("db.build_context"):
             if active_db and user_id:
                 _h0 = time.perf_counter()
-                _cache_entry = self._user_context_cache.get(user_id)
-                if (
-                    _cache_entry is not None
-                    and (time.monotonic() - _cache_entry[0]) <= self._USER_CONTEXT_CACHE_TTL_SECONDS
-                ):
-                    local_context = copy.deepcopy(_cache_entry[1])
+                # C-07：版本化键解析（write/correction 指令轮与版本解析失败
+                # 均得 None → 整轮绕缓存重建，fail-closed）。
+                _cache_key, _cache_outcome = await self._context_cache_resolve_key(user_id, active_db, user_message)
+                local_context = None
+                if _cache_key is not None:
+                    local_context = self._context_cache_lookup(_cache_key)
+                if local_context is not None:
                     _ctx_probe_marks.append(("build_user_context_cached", time.perf_counter() - _h0))
                 else:
                     local_context = await self._build_user_context(user_id, active_db, session_id=session_id)
-                    if isinstance(local_context, dict):
-                        self._user_context_cache[user_id] = (time.monotonic(), copy.deepcopy(local_context))
-                        if len(self._user_context_cache) > self._USER_CONTEXT_CACHE_MAX_ENTRIES:
-                            _oldest_key = min(self._user_context_cache, key=lambda k: self._user_context_cache[k][0])
-                            self._user_context_cache.pop(_oldest_key, None)
+                    if isinstance(local_context, dict) and _cache_key is not None:
+                        self._context_cache_store(_cache_key, local_context)
                     _ctx_probe_marks.append(("build_user_context", time.perf_counter() - _h0))
                 user_context_payload = self._merge_user_contexts(local_context, grpc_context)
                 logger.info(f"Merged user context: {user_context_payload is not None}")

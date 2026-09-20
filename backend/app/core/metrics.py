@@ -144,6 +144,15 @@ SEMANTIC_CACHE_BYPASS_TOTAL = get_or_create_metric(
     Counter, "sparkle_semantic_cache_bypass_total", "Total semantic cache bypasses"
 )
 
+# C-07：context cache 版本键决策面（hit/miss + bypass 归因）。
+# 既有 cache hit 指标全部保留，此处只增不改。
+CONTEXT_CACHE_VERSION_DECISIONS = get_or_create_metric(
+    Counter,
+    "sparkle_context_cache_version_decisions_total",
+    "Context cache version-key decisions (hit/miss/write_intent_bypass/version_error_bypass)",
+    ["outcome"],
+)
+
 # 4. 工具执行指标
 TOOL_EXECUTION_COUNT = get_or_create_metric(
     Counter, "sparkle_tool_executions_total", "Total number of tool executions", ["tool_name", "status"]

@@ -97,6 +97,10 @@ class MemoryMutationAction(StrEnum):
 PROFILE_CONTEXT_KEY_TEMPLATE = "user:profile_context:{user_id}"
 INLINE_SNAPSHOT_KEY_TEMPLATE = "user:inline_snapshot:{user_id}"
 PREFS_CENTER_KEY_TEMPLATE = "user:prefs:center:{user_id}"
+# C-07：ContextOrchestrator 聚合快照（300s TTL，内嵌 profile_context 等
+# 记忆派生文本）。读侧 epoch 门（context_manager 快照比对）是保证，此处
+# DEL 是加速——与下方既有键同一双保险结构。
+CONTEXT_SNAPSHOT_KEY_TEMPLATE = "user:context:snapshot:{user_id}"
 # Aurora self-model: 90-day TTL Redis state hydrated from user context —
 # without explicit DEL a deleted memory's assumptions survive for months.
 AURORA_SELF_MODEL_KEY_TEMPLATE = "aurora:self_model:{user_id}"
@@ -105,6 +109,7 @@ AURORA_SELF_MODEL_KEY_TEMPLATE = "aurora:self_model:{user_id}"
 _ALWAYS_INVALIDATED_TEMPLATES = (
     PROFILE_CONTEXT_KEY_TEMPLATE,
     INLINE_SNAPSHOT_KEY_TEMPLATE,
+    CONTEXT_SNAPSHOT_KEY_TEMPLATE,
     AURORA_SELF_MODEL_KEY_TEMPLATE,
 )
 _PREFERENCE_ONLY_TEMPLATES = (PREFS_CENTER_KEY_TEMPLATE,)
