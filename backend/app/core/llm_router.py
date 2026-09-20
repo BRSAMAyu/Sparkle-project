@@ -36,7 +36,12 @@ from app.core import complexity_analyzer as _cx
 from app.core import routing_audit
 from app.core.adaptive_routing import adaptive_routing_engine
 from app.core.agent_profiles import TASK_TO_AGENT_PROFILE, AgentRole, ModelTier, TaskType, agent_profile_registry
-from app.core.metrics import LLM_ROUTER_ESTIMATED_COST_PER_1K, LLM_ROUTER_FREE_TIER_DOWNGRADE_TOTAL, LLM_ROUTER_SELECTION_TOTAL
+from app.core.entitlement import request_tier_label
+from app.core.metrics import (
+    LLM_ROUTER_ESTIMATED_COST_PER_1K,
+    LLM_ROUTER_FREE_TIER_DOWNGRADE_TOTAL,
+    LLM_ROUTER_SELECTION_TOTAL,
+)
 
 
 class ModelProvider(StrEnum):
@@ -54,7 +59,9 @@ class ModelProvider(StrEnum):
 # 请求级用户分层信号（免费层模型降级）
 # ============================================
 # 由引擎 gRPC 入口（agent_grpc_service.StreamChat）按 ChatRequest.user_profile.is_pro
-# 设置（网关已在 chatflow 中填充），进程内透传给 LLM 路由做 tier 钳制；
+# 设置（网关已在 chatflow 中填充，真源 users.entitlement——O-04：flame_level 永不参与），
+# 进程内透传给 LLM 路由做 tier 钳制，并向 metrics 提供有界 plan 维度
+# （free/pro/unknown，core/entitlement.request_tier_label）；
 # 未设置的调用面（内部批量/定时任务/测试）保持现状不钳制。
 
 _REQUEST_USER_TIER: ContextVar[str | None] = ContextVar("sparkle_request_user_tier", default=None)
@@ -1007,6 +1014,7 @@ class LLMRouter:
                 agent_role=agent_role.value,
                 from_tier=target_tier.value,
                 to_tier=clamped_tier.value,
+                plan=request_tier_label(get_request_user_tier()),
             ).inc()
             logger.info(
                 f"[LLMRouter] free_tier_downgrade: {target_tier.value} -> {clamped_tier.value} "
@@ -1273,6 +1281,7 @@ class LLMRouter:
                 agent_role=agent_role.value,
                 from_tier=clamped_from.value,
                 to_tier=model_config.tier.value,
+                plan=request_tier_label(get_request_user_tier()),
             ).inc()
             logger.info(
                 f"[LLMRouter] free_tier_downgrade: {clamped_from.value} -> {model_config.tier.value} "
@@ -1359,6 +1368,9 @@ class LLMRouter:
             free_tier_downgrade=free_tier_downgrade,
         )
         task_label = task_type.value if task_type is not None else "none"
+        # O-04: plan 有界 label（free/pro/unknown）——metrics 可区分付费层；
+        # 真源是请求级 tier（gRPC 入口按 users.entitlement 派生的 is_pro 设置）。
+        plan_label = request_tier_label(get_request_user_tier())
         LLM_ROUTER_SELECTION_TOTAL.labels(
             agent_role=agent_role.value,
             model_key=model_key,
@@ -1367,11 +1379,13 @@ class LLMRouter:
             task_type=task_label,
             complexity=complexity_level or "unknown",
             fallback="true" if is_fallback else "false",
+            plan=plan_label,
         ).inc()
         LLM_ROUTER_ESTIMATED_COST_PER_1K.labels(
             agent_role=agent_role.value,
             provider=config.provider.value,
             tier=tier_str or "unknown",
+            plan=plan_label,
         ).observe(cost)
         # E-07 可观测：路由决策审计（requested→actual + reason，切换可查）
         routing_audit.record(

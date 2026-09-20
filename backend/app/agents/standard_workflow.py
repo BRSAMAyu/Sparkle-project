@@ -1058,23 +1058,38 @@ def _select_recent_conversation_messages(
 def _resolve_budget_dimensions(context_data: dict[str, Any] | None) -> tuple[str, str]:
     """C-06：从既有信号解析 (tier, decision_type) 供预算矩阵使用。
 
-    tier 唯一判据是 ``User.entitlement``（'free' | 'pro'，D17 冻结决策）；
-    网关可经 extra_context 透传 ``entitlement``（随 user_context 注入
-    context_data），缺失时回落 settings.DEFAULT_CONTEXT_ENTITLEMENT（成本
-    fail-safe）。decision_type 由 route_intent/intent_type/chat_mode 确定性
-    推导（context_budget_matrix.resolve_decision_type）。
+    tier 唯一判据是 ``User.entitlement``（'free' | 'pro'，D17 冻结决策）。
+    信号优先级（O-04 / C-06 R-RISK-1 接线）：
+    1. context_data 显式 ``entitlement``（网关经 extra_context/user_context
+       透传——网关当前四键 context_data 尚未携带，留作未来正向通道）；
+    2. 请求级 tier ContextVar（``llm_router.get_request_user_tier``）——gRPC
+       入口按 ``user_profile.is_pro`` 设置，其真源同样是 ``users.entitlement``
+       （buildAgentUserProfile <- ChatUserProfileSnapshot.IsPro），本进程内
+       零改动即把付费状态接进预算矩阵，pro 用户不再被默认 free 预算钳制；
+    3. settings.DEFAULT_CONTEXT_ENTITLEMENT（'free'，成本 fail-safe）。
+    decision_type 由 route_intent/intent_type/chat_mode 确定性推导
+    （context_budget_matrix.resolve_decision_type）。
     """
+    from app.core.context_budget_matrix import resolve_decision_type, resolve_tier
+    from app.core.entitlement import ENTITLEMENT_FREE, ENTITLEMENT_PRO
+    from app.core.llm_router import get_request_user_tier
+
     payload = context_data or {}
     user_context = payload.get("user_context")
     user_context = user_context if isinstance(user_context, dict) else {}
     raw_entitlement = str(
         payload.get("entitlement") or user_context.get("entitlement") or ""
     ).strip()
-    if not raw_entitlement:
-        raw_entitlement = str(getattr(settings, "DEFAULT_CONTEXT_ENTITLEMENT", "free") or "free")
-    from app.core.context_budget_matrix import resolve_decision_type, resolve_tier
-
-    tier = resolve_tier(raw_entitlement)
+    if raw_entitlement:
+        tier = resolve_tier(raw_entitlement)
+    else:
+        request_tier = get_request_user_tier()
+        if request_tier in (ENTITLEMENT_FREE, ENTITLEMENT_PRO):
+            tier = request_tier
+        else:
+            tier = resolve_tier(
+                str(getattr(settings, "DEFAULT_CONTEXT_ENTITLEMENT", "free") or "free")
+            )
     decision_type = resolve_decision_type(
         route_intent=payload.get("route_intent"),
         chat_mode=payload.get("chat_mode"),

@@ -24,6 +24,7 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.entitlement import entitlement_grants_pro
 from app.core.metrics import CACHE_HIT_COUNT
 from app.core.security import get_password_hash
 from app.models.user import PushPreference, User
@@ -207,7 +208,8 @@ class UserService:
                 language="zh-CN",
                 # V3-FIX-02 (D17): 权益只读独立 entitlement 字段；flame_level 仅为
                 # 展示层字段，永久禁作权益判据（游客 flame=15 曾被误升 pro 层）。
-                is_pro=(getattr(user, "entitlement", None) or "free").strip().lower() == "pro",
+                # O-04: 判级归一到 core/entitlement（宁降不升），与网关 IsProEntitlement 同语义。
+                is_pro=entitlement_grants_pro(getattr(user, "entitlement", None)),
                 preferences={
                     "depth_preference": explicit.get("depth_preference", user.depth_preference),
                     "curiosity_preference": explicit.get("curiosity_preference", user.curiosity_preference),

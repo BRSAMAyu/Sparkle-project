@@ -606,14 +606,17 @@ LLM_ROUTER_SELECTION_TOTAL = get_or_create_metric(
     Counter,
     "sparkle_llm_router_selection_total",
     "Total model-routing selections made by the unified LLM router",
-    ["agent_role", "model_key", "provider", "tier", "task_type", "complexity", "fallback"],
+    # O-04: plan 为有界 label（free/pro/unknown，core/entitlement.request_tier_label），
+    # 路由行为可按付费层切片——flame_level 永不出现在 metrics 维度。
+    ["agent_role", "model_key", "provider", "tier", "task_type", "complexity", "fallback", "plan"],
 )
 
 LLM_ROUTER_ESTIMATED_COST_PER_1K = get_or_create_metric(
     Histogram,
     "sparkle_llm_router_estimated_cost_per_1k",
     "Estimated cost-per-1k tokens for router selections",
-    ["agent_role", "provider", "tier"],
+    # O-04: plan 维度让成本可按付费层归因（OPS 流）。
+    ["agent_role", "provider", "tier", "plan"],
     buckets=[0.0, 0.0001, 0.0005, 0.001, 0.002, 0.005, 0.01],
 )
 
@@ -621,7 +624,9 @@ LLM_ROUTER_FREE_TIER_DOWNGRADE_TOTAL = get_or_create_metric(
     Counter,
     "sparkle_llm_router_free_tier_downgrade_total",
     "Free-tier model downgrades applied by the unified LLM router",
-    ["agent_role", "from_tier", "to_tier"],
+    # O-04: plan 有界 label（free/pro/unknown）；钳制只对 free plan 触发，
+    # 该维度使付费状态变化（entitlement 迁移/升降级）在 metrics 上可验证。
+    ["agent_role", "from_tier", "to_tier", "plan"],
 )
 
 # E-07 健康回退：模型健康态迁移计数（healthy/probation/unhealthy 三相滞回）。

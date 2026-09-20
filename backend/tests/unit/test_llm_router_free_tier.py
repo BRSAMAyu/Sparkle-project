@@ -48,7 +48,8 @@ def _clean_user_tier():
 
 
 def _free_downgrade_count(labels: dict[str, str]) -> float:
-    value = REGISTRY.get_sample_value(METRIC_FREE_DOWNGRADE, labels)
+    # O-04：counter 增加 plan 有界维度；本文件的钳制计数断言均在 free plan 下发生。
+    value = REGISTRY.get_sample_value(METRIC_FREE_DOWNGRADE, {**labels, "plan": "free"})
     return value or 0.0
 
 

@@ -34,6 +34,28 @@ def router() -> LLMRouter:
 
 
 @pytest.fixture(autouse=True)
+def _deterministic_router():
+    """环境无关化：清空 .env 注入的 *_API_KEY 与 LLM_TIER_* override 后
+    对象属性级重建单例路由器（与 test_e07_adaptive_routing 同款——
+    LLMRouter 构造时快照 key/tier，主仓 .env 会让 wt 全绿的测试假红）。"""
+    import app.core.llm_router as llm_router_mod
+
+    saved = {k: v for k, v in vars(settings).items() if k.endswith("_API_KEY") or k.startswith("LLM_TIER_")}
+    saved_module = {k: v for k, v in vars(llm_router_mod).items() if k.startswith("LLM_TIER") or k in ("_TIER_MAP",)}
+    for k in saved:
+        setattr(settings, k, "")
+    fresh = LLMRouter()
+    llm_router_mod.llm_router.__dict__.update(fresh.__dict__)
+    yield
+    for k, v in saved.items():
+        setattr(settings, k, v)
+    for k, v in saved_module.items():
+        setattr(llm_router_mod, k, v)
+    restored = LLMRouter()
+    llm_router_mod.llm_router.__dict__.update(restored.__dict__)
+
+
+@pytest.fixture(autouse=True)
 def _default_switch_off():
     """保证默认关闭逃生阀（即 deep_analysis 真实路由 MAX）。"""
     original = settings.DEEP_ANALYSIS_FORCE_FAST_TIER
@@ -55,7 +77,8 @@ def _make_state(chat_mode: str, reasoning_mode: str = "balanced"):
 
 
 def _free_downgrade_count(labels: dict[str, str]) -> float:
-    value = REGISTRY.get_sample_value(METRIC_FREE_DOWNGRADE, labels)
+    # O-04：counter 增加 plan 有界维度；本文件的钳制计数断言均在 free plan 下发生。
+    value = REGISTRY.get_sample_value(METRIC_FREE_DOWNGRADE, {**labels, "plan": "free"})
     return value or 0.0
 
 
