@@ -21,6 +21,7 @@ if APP_GEN_DIR not in sys.path:
 from app.models.accountability import AccountabilityCheckin, AccountabilityPartnership  # noqa: F401
 from app.models.achievement import Achievement, UserAchievement  # noqa: F401
 from app.models.agent_run import AgentRun, AgentRunTransition  # noqa: F401 — X-05 run 脊柱
+from app.models.action_proposal import ActionProposal, ActionProposalTransition  # noqa: F401 — X-03 command path
 from app.models.agent_tool_call import AgentToolCall  # noqa: F401 — X-06 工具调用账本
 from app.models.aurora_stage20 import (  # noqa: F401
     AuroraJudgmentRecord,

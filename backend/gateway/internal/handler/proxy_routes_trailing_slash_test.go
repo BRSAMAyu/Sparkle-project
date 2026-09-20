@@ -115,6 +115,7 @@ func TestBareCollectionPathProxiesDirectly_NoRedirectLoop(t *testing.T) {
 		"/api/v1/inventory",
 		"/api/v1/photons",
 		"/api/v1/shop",
+		"/api/v1/action-proposals", // X-03：proposal 收件箱裸集合路径直连
 	} {
 		code := doGET(t, router, path)
 		if code != http.StatusOK {
@@ -146,6 +147,7 @@ func TestWildcardSubpathsStillProxyUnchanged(t *testing.T) {
 		"/api/v1/shop/items",
 		"/api/v1/inventory/owned",
 		"/api/v1/photons/balance",
+		"/api/v1/action-proposals/00000000-0000-0000-0000-000000000000/receipt", // X-03：receipt 端点透传
 	} {
 		code := doGET(t, router, path)
 		if code != http.StatusOK {

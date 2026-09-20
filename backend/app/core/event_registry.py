@@ -259,25 +259,28 @@ EVENT_REGISTRY: dict[str, RegisteredEvent] = {
             status="reserved",
         ),
         RegisteredEvent(
+            # X-03 (2026-09-19): Action proposal 统一 command path 落地 producer
+            # （app/services/action_command_service.py，proposal/commit/reject 同事务
+            # 写 outbox）。词表名不变（D-01 冻结 36 名零新增），reserved→live。
             name="action.proposed",
             stage=EventStage.EXECUTION,
             aggregate_type="action",
-            producers=("v3: hybrid action engine",),
-            status="reserved",
+            producers=("app/services/action_command_service.py",),
+            status="live",
         ),
         RegisteredEvent(
             name="action.accepted",
             stage=EventStage.EXECUTION,
             aggregate_type="action",
-            producers=("v3: hybrid action engine",),
-            status="reserved",
+            producers=("app/services/action_command_service.py",),
+            status="live",
         ),
         RegisteredEvent(
             name="action.rejected",
             stage=EventStage.OUTCOME,
             aggregate_type="action",
-            producers=("v3: hybrid action engine",),
-            status="reserved",
+            producers=("app/services/action_command_service.py",),
+            status="live",
         ),
         RegisteredEvent(
             # X-05 (2026-09-19): unified agent run 持久状态机落地，仓内首个

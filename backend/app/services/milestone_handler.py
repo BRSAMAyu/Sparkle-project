@@ -101,7 +101,7 @@ class MilestoneHandler:
             user_id, plan_id, milestone, current_plan_context
         )
 
-        # 3. Store proposal to pending_actions
+        # 3. Store proposal via authoritative command path (action_proposals)
         if proposal:
             action_id = await self._store_proposal(proposal, user_id)
             return action_id
@@ -304,25 +304,69 @@ class MilestoneHandler:
         self,
         proposal: TaskGenerationProposal,
         user_id: UUID,
-    ) -> str:
+    ) -> str | None:
         """
-        Store proposal to pending_actions for later user confirmation.
-        """
-        from app.core.pending_actions import pending_actions_store
+        Store proposal for later user confirmation.
 
-        action_id = await pending_actions_store.save(
-            tool_name="milestone_task_proposal",
-            arguments={
-                "proposal_id": proposal.proposal_id,
-                "plan_id": proposal.plan_id,
-                "milestone_id": proposal.milestone_id,
-            },
-            user_id=str(user_id),
-            description=f"🎉 里程碑达成！为你推荐 {proposal.suggested_count} 个新任务",
-            preview_data=proposal.to_dict(),
-        )
-        logger.info(f"Milestone proposal stored: {action_id}")
-        return action_id
+        X-03 R2 P2-1 返修：走统一权威 command path（``task.create_batch`` proposal
+        落账 action_proposals，source=system），不再写 Redis 侧 pending_actions——
+        里程碑提案获得持久状态/授权门/恰一次/receipt 全套协议语义；幂等键绑定
+        (milestone, plan)，同里程碑重复触发恰一条 proposal。
+        """
+        from app.core.action_command import ActionCommandError
+        from app.services.action_command_service import ActionCommandService
+
+        try:
+            result = await ActionCommandService(self.db).create_proposal(
+                user_id=user_id,
+                command_type="task.create_batch",
+                payload={
+                    "tasks": self._normalize_proposed_tasks(
+                        proposal.proposed_tasks, plan_id=proposal.plan_id
+                    )
+                },
+                source="system",
+                idempotency_key=f"milestone:{proposal.milestone_id}:{proposal.plan_id}",
+                summary=f"里程碑达成！为你推荐 {proposal.suggested_count} 个新任务",
+            )
+        except ActionCommandError as exc:
+            # 预筛拒绝（如 title 校验失败）不阻断里程碑流程——降级为无提案
+            logger.warning(f"Milestone proposal rejected by command path: {exc}")
+            return None
+        logger.info(f"Milestone proposal stored: {result.proposal.id}")
+        return str(result.proposal.id)
+
+    @staticmethod
+    def _normalize_proposed_tasks(
+        proposed_tasks: list[dict[str, Any]],
+        *,
+        plan_id: str,
+    ) -> list[dict[str, Any]]:
+        """LLM/模板产出的任务规格 → TaskCreate 兼容规格（原 confirm 路径的归一逻辑前移）."""
+        from app.schemas.task import coerce_task_type
+
+        normalized: list[dict[str, Any]] = []
+        for task_data in proposed_tasks:
+            task_type = coerce_task_type(
+                task_data.get("type", "learning"), default=ModelTaskType.LEARNING
+            )
+            priority_raw = task_data.get("priority", 2)
+            if isinstance(priority_raw, str):
+                priority_map = {"high": 3, "medium": 2, "low": 1}
+                priority = priority_map.get(priority_raw.lower(), 2)
+            else:
+                priority = int(priority_raw) if priority_raw else 2
+            normalized.append(
+                {
+                    "title": str(task_data.get("title") or "New Task").strip()[:255],
+                    "type": task_type.value if task_type is not None else "learning",
+                    "plan_id": plan_id,
+                    "estimated_minutes": task_data.get("estimated_minutes", 25),
+                    "priority": priority,
+                    "difficulty": task_data.get("difficulty", 2),
+                }
+            )
+        return normalized
 
     async def confirm_proposal(
         self,
@@ -331,67 +375,45 @@ class MilestoneHandler:
     ) -> dict[str, Any]:
         """
         User confirms proposal - create actual tasks.
+
+        X-03 R2 P2-1 返修：确认走统一权威 command path（``ActionCommandService
+        .approve``）。V2 缺陷（get→create×N→delete 非原子，双确认竞窗内重复建
+        任务）由协议恰一次语义幂等根治：重复确认重放 ``already_committed`` 零新
+        写；崩溃后重放亦恰一次（守卫写与领域写同 commit）。返回结构保持旧契约
+        （success/proposal_id/tasks_created/tasks）。
         """
-        from app.core.pending_actions import pending_actions_store
-        from app.schemas.task import TaskCreate, coerce_task_type
-        from app.services.task_service import TaskService
+        from app.core.action_command import ActionCommandError, ProposalNotFoundError
+        from app.services.action_command_service import ActionCommandService
 
-        # Get proposal from pending_actions
-        action = await pending_actions_store.get(proposal_id, user_id)
-        if not action:
-            return {"success": False, "error": "Proposal not found or expired"}
-
-        preview = action.get("preview_data", {})
-        proposed_tasks = preview.get("proposed_tasks", [])
-        plan_id_str = preview.get("plan_id")
-
-        created_tasks = []
+        service = ActionCommandService(self.db)
         try:
-            for task_data in proposed_tasks:
-                # Map task type string to enum
-                task_type_str = task_data.get("type", "learning")
-                task_type = coerce_task_type(task_type_str, default=ModelTaskType.LEARNING)
+            result = await service.approve(proposal_id, user_id=user_id)
+        except ProposalNotFoundError:
+            return {"success": False, "error": "Proposal not found or expired"}
+        except ActionCommandError as exc:
+            # 过期/终态封闭/版本冲突等协议拒绝——结构化错误透传旧契约形态
+            return {"success": False, "error": str(exc), "proposal_id": proposal_id}
 
-                # Map priority string to int
-                priority_str = task_data.get("priority", "medium")
-                if isinstance(priority_str, str):
-                    priority_map = {"high": 3, "medium": 2, "low": 1}
-                    priority = priority_map.get(priority_str.lower(), 2)
-                else:
-                    priority = int(priority_str) if priority_str else 2
+        receipt = result.proposal.receipt or {}
+        created = (receipt.get("subject_after") or {}).get("created") or []
+        tasks = [
+            {"id": str(item.get("ref", "")).removeprefix("task://"), "title": item.get("title")}
+            for item in created
+        ]
+        if not tasks:
+            effects = receipt.get("effects") or []
+            if effects and effects[0].get("kind") == "task.created_batch":
+                tasks = [
+                    {"id": ref.removeprefix("task://"), "title": ""} for ref in effects[0].get("refs", [])
+                ]
 
-                task_create = TaskCreate(
-                    title=task_data.get("title", "New Task"),
-                    type=task_type,
-                    plan_id=UUID(plan_id_str) if plan_id_str else None,
-                    estimated_minutes=task_data.get("estimated_minutes", 25),
-                    priority=priority,
-                    difficulty=task_data.get("difficulty", 2),
-                )
-
-                task = await TaskService.create(
-                    db=self.db,
-                    obj_in=task_create,
-                    user_id=UUID(user_id),
-                )
-                created_tasks.append({"id": str(task.id), "title": task.title})
-
-            # Clean up proposal
-            await pending_actions_store.delete(proposal_id, user_id)
-
-            logger.info(f"Created {len(created_tasks)} tasks from proposal {proposal_id}")
-
-            return {
-                "success": True,
-                "proposal_id": proposal_id,
-                "tasks_created": len(created_tasks),
-                "tasks": created_tasks,
-            }
-
-        except Exception as e:
-            logger.error(f"Failed to create tasks from proposal: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "proposal_id": proposal_id,
-            }
+        logger.info(
+            f"Confirmed milestone proposal {proposal_id}: "
+            f"{'replay' if result.already_committed else 'committed'}, {len(tasks)} tasks"
+        )
+        return {
+            "success": True,
+            "proposal_id": proposal_id,
+            "tasks_created": len(tasks),
+            "tasks": tasks,
+        }
