@@ -369,6 +369,16 @@ async def lifespan(fastapp: FastAPI):
         )
         fastapp.state.plan_task_generation_consumer_task = asyncio.create_task(plan_task_generation_consumer.start())
 
+        # P-01: Aurora proactive pipeline —— event → deterministic filter → Aurora。
+        # shadow 默认开（would-notify 只记录不真发，见 proactive.config），接通即
+        # 安全；真实投递需显式 PROACTIVE_PIPELINE_SHADOW=0。抑制状态 store
+        # fail-closed：Redis 故障时全抑制（宁可少发不可误发）。
+        from app.aurora.proactive import ProactiveEventPipeline
+
+        proactive_pipeline = ProactiveEventPipeline(redis=cache_service.redis)
+        fastapp.state.proactive_pipeline = proactive_pipeline
+        fastapp.state.proactive_pipeline_task = asyncio.create_task(proactive_pipeline.attach(event_bus))
+
         # AUR-005: Wire EpisodeLogger to Redis persistence (production sink)
         try:
             from app.causal.episode_logger import episode_logger
@@ -578,6 +588,13 @@ async def lifespan(fastapp: FastAPI):
         run_projection_consumer_task.cancel()
         with suppress(asyncio.CancelledError):
             await run_projection_consumer_task
+
+    # Stop aurora proactive pipeline consumer (P-01)
+    proactive_pipeline_task = getattr(app.state, "proactive_pipeline_task", None)
+    if proactive_pipeline_task:
+        proactive_pipeline_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await proactive_pipeline_task
 
     galaxy_execution_consumer_task = getattr(app.state, "galaxy_execution_consumer_task", None)
     if galaxy_execution_consumer_task:

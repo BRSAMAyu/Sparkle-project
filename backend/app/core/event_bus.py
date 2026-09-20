@@ -264,6 +264,7 @@ class TaskAbandoned(Event):
         route_history_decision_id: str | None = None,
         routing_outcome_signal_id: str | None = None,
         routing_trace_id: str | None = None,
+        due_at: str | None = None,
     ):
         self.user_id = user_id
         self.task_id = task_id
@@ -275,10 +276,13 @@ class TaskAbandoned(Event):
         self.route_history_decision_id = route_history_decision_id
         self.routing_outcome_signal_id = routing_outcome_signal_id
         self.routing_trace_id = routing_trace_id
+        # P-01 R2: 任务到期日（Task.due_date，Date 粒度，ISO 字符串）。主动式
+        # 管线用它区分 overdue（到期后放弃）与 goal_stalled（无到期信息）。
+        self.due_at = due_at
         self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
-        return {
+        payload = {
             "event_type": "task.abandoned",
             "user_id": self.user_id,
             "task_id": self.task_id,
@@ -292,6 +296,9 @@ class TaskAbandoned(Event):
             "routing_trace_id": self.routing_trace_id,
             "timestamp": self.timestamp.isoformat(),
         }
+        if self.due_at is not None:
+            payload["due_at"] = self.due_at
+        return payload
 
 
 class TaskStartedEvent(Event):
@@ -301,15 +308,20 @@ class TaskStartedEvent(Event):
         task_id: str,
         plan_id: str | None = None,
         source: str = "task_service",
+        due_at: str | None = None,
     ):
         self.user_id = user_id
         self.task_id = task_id
         self.plan_id = plan_id
         self.source = source
+        # P-01 R2: 任务到期日（Task.due_date，Date 粒度，ISO 字符串）。
+        # 主动式管线（aurora/proactive）用它做 deadline approaching 确定性
+        # 分类；None = 任务无到期日（消费方不得假设字段恒在）。
+        self.due_at = due_at
         self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
-        return {
+        payload = {
             "event_type": "task.started",
             "user_id": self.user_id,
             "task_id": self.task_id,
@@ -317,6 +329,9 @@ class TaskStartedEvent(Event):
             "source": self.source,
             "timestamp": self.timestamp.isoformat(),
         }
+        if self.due_at is not None:
+            payload["due_at"] = self.due_at
+        return payload
 
 
 class TaskStuckEvent(Event):

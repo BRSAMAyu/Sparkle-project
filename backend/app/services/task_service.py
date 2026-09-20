@@ -317,6 +317,7 @@ class TaskService:
             user_id=str(db_obj.user_id),
             task_id=str(db_obj.id),
             plan_id=str(db_obj.plan_id) if db_obj.plan_id else None,
+            due_at=db_obj.due_date.isoformat() if db_obj.due_date else None,
         )
         await event_bus_reliable.publish("task.started", event.to_dict())
         await publish_srl_event(
@@ -1132,6 +1133,7 @@ class TaskService:
             route_history_decision_id=route_history_decision_id,
             routing_outcome_signal_id=routing_outcome_signal_id,
             routing_trace_id=routing_trace_id,
+            due_at=db_obj.due_date.isoformat() if db_obj.due_date else None,
         )
         await event_bus_reliable.publish("task.abandoned", event.to_dict())
         try:
@@ -1292,6 +1294,7 @@ class TaskService:
                 user_id=str(task.user_id),
                 task_id=str(task.id),
                 plan_id=str(task.plan_id) if task.plan_id else None,
+                due_at=task.due_date.isoformat() if task.due_date else None,
             )
             await event_bus_reliable.publish("task.started", event.to_dict())
             await publish_srl_event(
