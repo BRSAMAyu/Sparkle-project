@@ -74,11 +74,16 @@ class GalaxyRepository {
 
   Stream<SSEEvent> _connectSSE() async* {
     try {
-      final dio = Dio();
+      // 全仓唯一曾裸建 Dio 的请求点：绕过鉴权拦截器导致 /galaxy/events
+      // 恒 401（V23）。改用 ApiClient 的 dio（带 auth/device 拦截器与刷新链）。
+      final dio = _apiClient.dio;
       final response = await dio.get<ResponseBody>(
         ApiEndpoints.galaxyEvents,
         options: Options(
           responseType: ResponseType.stream,
+          // SSE 事件稀疏，客户端全局 receiveTimeout(30s) 会把静默期误判为
+          // 超时断流；请求级关闭，事件间隔不再受 30s 上限约束。
+          receiveTimeout: null,
           headers: {'Accept': 'text/event-stream'},
         ),
       );
