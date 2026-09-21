@@ -411,18 +411,9 @@ func (h *GalaxyHandler) GetNodeDetailGPRC(c *gin.Context) {
 		defer cancel()
 		resp, err := h.galaxyClient.GetNodeDetail(ctx, userID, nodeID)
 		if err == nil && resp != nil {
-			c.JSON(http.StatusOK, gin.H{
-				"node_id":     resp.NodeId,
-				"label":       resp.Label,
-				"node_type":   resp.NodeType,
-				"mastery":     resp.Mastery,
-				"description": resp.Description,
-				"tags":        resp.Tags,
-				"parent_ids":  resp.ParentIds,
-				"child_ids":   resp.ChildIds,
-				"metadata":    resp.Metadata,
-				"via":         "grpc",
-			})
+			// GW-SHAPE-BATCH2: outbound REST contract shape (KnowledgeDetailResponse),
+			// not the flat proto shape.
+			c.JSON(http.StatusOK, galaxyNodeDetailRESTPayload(resp))
 			return
 		}
 		log.Printf("Galaxy GetNodeDetail gRPC failed, falling back to REST: %v", err)
@@ -472,11 +463,9 @@ func (h *GalaxyHandler) SearchNodesGPRC(c *gin.Context) {
 	defer cancel()
 	resp, err := h.galaxyClient.SearchNodes(ctx, userID, query, 20)
 	if err == nil && resp != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"nodes":       resp.Nodes,
-			"total_found": resp.TotalFound,
-			"via":         "grpc",
-		})
+		// GW-SHAPE-BATCH2: outbound REST contract shape (SearchResponse),
+		// not {nodes, total_found}.
+		c.JSON(http.StatusOK, galaxySearchRESTPayload(query, resp))
 		return
 	}
 	log.Printf("Galaxy SearchNodes gRPC failed, falling back to REST: %v", err)
@@ -501,15 +490,9 @@ func (h *GalaxyHandler) GetGalaxyStatsGPRC(c *gin.Context) {
 		defer cancel()
 		resp, err := h.galaxyClient.GetGalaxyStats(ctx, userID)
 		if err == nil && resp != nil {
-			c.JSON(http.StatusOK, gin.H{
-				"total_nodes":       resp.TotalNodes,
-				"mastered_nodes":    resp.MasteredNodes,
-				"in_progress_nodes": resp.InProgressNodes,
-				"not_started_nodes": resp.NotStartedNodes,
-				"average_mastery":   resp.AverageMastery,
-				"nodes_by_type":     resp.NodesByType,
-				"via":               "grpc",
-			})
+			// GW-SHAPE-BATCH2: outbound REST contract shape
+			// ({"user_stats": ...}), not the flat proto keys.
+			c.JSON(http.StatusOK, galaxyStatsRESTPayload(resp))
 			return
 		}
 		log.Printf("Galaxy GetGalaxyStats gRPC failed, falling back to REST: %v", err)
@@ -534,11 +517,9 @@ func (h *GalaxyHandler) GetRecommendedGPRC(c *gin.Context) {
 		defer cancel()
 		resp, err := h.galaxyClient.GetRecommendedNodes(ctx, userID, 10)
 		if err == nil && resp != nil {
-			c.JSON(http.StatusOK, gin.H{
-				"nodes":   resp.Nodes,
-				"reasons": resp.Reasons,
-				"via":     "grpc",
-			})
+			// GW-SHAPE-BATCH2: node items re-spelled to REST contract keys;
+			// see galaxyRecommendedRESTPayload for the cardinality note.
+			c.JSON(http.StatusOK, galaxyRecommendedRESTPayload(resp))
 			return
 		}
 		log.Printf("Galaxy GetRecommendedNodes gRPC failed, falling back to REST: %v", err)
@@ -594,14 +575,7 @@ func (h *GalaxyHandler) GetGraph(c *gin.Context) {
 func galaxyGraphRESTPayload(resp *galaxyv1.GetUserGalaxyResponse) gin.H {
 	nodes := make([]gin.H, 0, len(resp.GetNodes()))
 	for _, node := range resp.GetNodes() {
-		nodes = append(nodes, gin.H{
-			"id":            node.GetNodeId(),
-			"name":          node.GetLabel(),
-			"mastery_score": node.GetMastery(),
-			// proto-only provenance; no REST counterpart, harmless extra key.
-			"node_type": node.GetNodeType(),
-			"tags":      node.GetTags(),
-		})
+		nodes = append(nodes, galaxyNodeRESTPayload(node))
 	}
 	edges := make([]gin.H, 0, len(resp.GetEdges()))
 	for _, edge := range resp.GetEdges() {
@@ -619,6 +593,179 @@ func galaxyGraphRESTPayload(resp *galaxyv1.GetUserGalaxyResponse) gin.H {
 		"relations":   edges,
 		"total_nodes": resp.GetTotalNodes(),
 		"via":         "grpc",
+	}
+}
+
+// galaxyNodeRESTPayload maps a proto GalaxyNode into the REST node keys the
+// mobile client parses (GalaxyNodeModel reads id/name/mastery_score; the
+// FIX-52/V24-B fallbacks for node_id/label/mastery stay as client-side
+// defense only — the gateway no longer relies on them).
+//
+// GW-GRAPH-SHAPE (FIX-53 follow-up, batch 2): shared by the GetGraph,
+// SearchNodes and GetRecommendedNodes outbound payloads so every galaxy
+// response speaks one node shape.
+//
+// node_type/tags are proto-only provenance keys (no direct REST counterpart
+// in GalaxyGraphResponse/NodeBase context); kept as a harmless superset,
+// same call as FIX-53.
+func galaxyNodeRESTPayload(node *galaxyv1.GalaxyNode) gin.H {
+	return gin.H{
+		"id":            node.GetNodeId(),
+		"name":          node.GetLabel(),
+		"mastery_score": node.GetMastery(),
+		"node_type":     node.GetNodeType(),
+		"tags":          node.GetTags(),
+	}
+}
+
+// galaxyNodeDetailRESTPayload maps the engine's gRPC GetNodeDetailResponse
+// (flat proto shape) into the JSON shape of the engine's REST contract
+// (backend/app/api/v1/galaxy.py get_node_detail → the Flutter
+// KnowledgeDetailResponse shape: {node: {...}, userStats: {...}, relations,
+// ...} — mobile parses KnowledgeDetailResponse.fromJson).
+//
+// GW-SHAPE-BATCH2: the gRPC branch used to pass the flat proto keys through
+// (node_id/label/mastery/...), so mobile json['node'] resolved to null and
+// node detail answered by gRPC failed to parse outright.
+//
+// Value provenance is aligned upstream: the engine's gRPC servicer fills
+// label=node.name, node_type=node.source_type, tags=node.keywords,
+// parent_ids=[node.parent_id], mastery=int(knowledge_stats.mastery_score) —
+// the same DB fields the REST route emits as name/source_type/keywords/
+// parent_id/userStats.mastery_score. Only key names are re-spelled here.
+//
+// Skipped on purpose (proto carries no counterpart; the mobile model defaults
+// them, so emitting nothing is contract-honest):
+//   - relations / source_documents / knowledge_stats / relatedTasks /
+//     relatedPlans / learningPathSnapshot (client defaults to empty)
+//   - userStats.total_study_minutes / study_count / is_unlocked /
+//     is_favorite / last_study_at / next_review_at / decay_paused
+//
+// Note: explicit mapping always emits the REST keys even when the proto value
+// is zero/empty, avoiding the generated `json:"...,omitempty"` trap.
+func galaxyNodeDetailRESTPayload(resp *galaxyv1.GetNodeDetailResponse) gin.H {
+	// REST emits parent_id as null when absent; the servicer stores the single
+	// parent as parent_ids[0] (empty slice otherwise), so this reconstruction
+	// is exact.
+	var parentID any
+	if ids := resp.GetParentIds(); len(ids) > 0 {
+		parentID = ids[0]
+	}
+	return gin.H{
+		"node": gin.H{
+			"id":          resp.GetNodeId(),
+			"name":        resp.GetLabel(),
+			"description": resp.GetDescription(),
+			// engine servicer: tags = node.keywords (same provenance as REST
+			// node_dict["keywords"]).
+			"keywords": resp.GetTags(),
+			// engine servicer: node_type = node.source_type (same provenance
+			// as REST node_dict["source_type"]).
+			"source_type": resp.GetNodeType(),
+			"parent_id":   parentID,
+		},
+		"userStats": gin.H{
+			// int32 truncation of the REST float happens upstream in the
+			// engine servicer; the gateway passes the value through verbatim.
+			"mastery_score": resp.GetMastery(),
+		},
+		"via": "grpc",
+	}
+}
+
+// galaxySearchRESTPayload maps the engine's gRPC SearchNodesResponse into the
+// JSON shape of the engine's REST contract (backend/app/schemas/galaxy.py
+// SearchResponse: {query, results: [{node, similarity, user_status}],
+// total_count} — mobile parses GalaxySearchResponse.fromJson).
+//
+// GW-SHAPE-BATCH2: the gRPC branch used to emit {nodes: [proto GalaxyNode],
+// total_found}; mobile requires json['query'] (String, no default) and
+// results[].node, so search answered by gRPC threw on parse and silently
+// degraded to an empty result list.
+//
+// Deliberate deviation, flagged: proto SearchNodesResponse carries no
+// similarity score and the mobile parser has NO default for it
+// (`(json['similarity'] as num).toDouble()` throws when missing). Skipping
+// the key would keep the endpoint unparseable, so we emit a neutral 0.0
+// placeholder — no ranking signal is invented (result order is exactly the
+// engine's ranking); carrying the real score needs a proto extension
+// (registered as follow-up in v3-output/GW-SHAPE-BATCH2/REPORT.md).
+func galaxySearchRESTPayload(query string, resp *galaxyv1.SearchNodesResponse) gin.H {
+	results := make([]gin.H, 0, len(resp.GetNodes()))
+	for _, node := range resp.GetNodes() {
+		results = append(results, gin.H{
+			"node": galaxyNodeRESTPayload(node),
+			// See doc comment: neutral placeholder, key required by client.
+			"similarity": 0.0,
+		})
+	}
+	return gin.H{
+		// Echo the request's own query back, exactly what the engine's REST
+		// SearchResponse.query carries.
+		"query":       query,
+		"results":     results,
+		"total_count": resp.GetTotalFound(),
+		"via":         "grpc",
+	}
+}
+
+// galaxyStatsRESTPayload maps the engine's gRPC GetGalaxyStatsResponse into
+// the JSON shape of the engine's REST contract (backend/app/api/v1/galaxy.py
+// get_galaxy_stats → {"user_stats": <GalaxyUserStats>, "decay_stats": ...}).
+//
+// GW-SHAPE-BATCH2: the gRPC branch used to emit the flat proto keys
+// (mastered_nodes/in_progress_nodes/nodes_by_type/...) at top level, which
+// matches no REST key.
+//
+// Value provenance: the engine servicer derives its payload from the same
+// GalaxyStatsService.calculate_user_stats the REST route serves, and copies
+// stats.sector_distribution verbatim into nodes_by_type. unlocked_count is
+// not a proto field but is reconstructed exactly: the servicer defines
+// in_progress = max(0, unlocked - mastered), so unlocked = mastered +
+// in_progress holds by construction (modulo the max(0,·) clamp on anomalous
+// data).
+//
+// Skipped on purpose: decay_stats, user_stats.total_study_minutes /
+// streak_days (proto carries no counterpart). average_mastery is a proto-only
+// extra (engine P1-8 computation) kept as a harmless superset. No mobile
+// consumer exists for GET /galaxy/stats (verified by grep); the alignment
+// keeps the gateway honest to the REST contract for any consumer.
+func galaxyStatsRESTPayload(resp *galaxyv1.GetGalaxyStatsResponse) gin.H {
+	return gin.H{
+		"user_stats": gin.H{
+			"total_nodes":    resp.GetTotalNodes(),
+			"mastered_count": resp.GetMasteredNodes(),
+			"unlocked_count": resp.GetMasteredNodes() + resp.GetInProgressNodes(),
+			// provenance-identical: engine servicer copies
+			// calculate_user_stats().sector_distribution into nodes_by_type.
+			"sector_distribution": resp.GetNodesByType(),
+			// proto-only extra (P1-8 real average), harmless superset.
+			"average_mastery": resp.GetAverageMastery(),
+		},
+		"via": "grpc",
+	}
+}
+
+// galaxyRecommendedRESTPayload maps the engine's gRPC GetRecommendedNodesResponse
+// into REST node keys for GET /galaxy/predict.
+//
+// GW-SHAPE-BATCH2: the gRPC branch used to marshal proto GalaxyNode items
+// inline (node_id/label/mastery). There is NO engine REST route for
+// GET /galaxy/predict — the REST fallback 404s, so this gRPC branch is the
+// only live path — and the closest REST sibling (POST /predict-next →
+// NodeDetailResponse) is single-node while the proto payload is a list. The
+// honest alignment is therefore at the node-item level: reuse the shared
+// REST node keys. Top-level `nodes` cardinality and `reasons` (proto-only,
+// no REST counterpart) are kept verbatim and flagged in the batch report.
+func galaxyRecommendedRESTPayload(resp *galaxyv1.GetRecommendedNodesResponse) gin.H {
+	nodes := make([]gin.H, 0, len(resp.GetNodes()))
+	for _, node := range resp.GetNodes() {
+		nodes = append(nodes, galaxyNodeRESTPayload(node))
+	}
+	return gin.H{
+		"nodes":   nodes,
+		"reasons": resp.GetReasons(),
+		"via":     "grpc",
 	}
 }
 
