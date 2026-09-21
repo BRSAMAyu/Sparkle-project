@@ -17,6 +17,8 @@
 | `bench_hybrid_retrieval.py` | E-05：hybrid lexical+vector 检索基准（12 chunk 真实语料 × 6 查询，vector/lexical/hybrid 三策略 hit@5/MRR@5/时延；跑完自动清理基准数据） |
 | `c03_pipeline_perf_profile.py` | C-03：context 硬过滤→rerank 管道延迟剖面（合成 memory+knowledge 候选 × 规模轴；纯函数滤芯 + 合成向量 rerank，真实 LLM/embedding 0 次；`--scales` 可调） |
 | `trace_timeline.py` | O-02：按 trace_id 从引擎日志还原全链时间线（TRACE_SPINE span/latency/context funnel/entry-exit 锚点聚合；actual model/cost/causal receipt 关联；只读、正文零输出） |
+| `x02_run_allocation_eval.py` | X-02：allocation 盲评报告生成器（规则层独跑 60+ 场景 → `v3-output/X-02/EVAL_RESULTS.md`；不触 DB、零 LLM） |
+| `x10_run_action_e2e_eval.py` | X-10：Action Engine E2E 无人值守评测（77 场景真实服务层+真实 DB，六元组+独立判定 → `v3-output/X-10/`；acceptance 不绿 exit≠0；零 LLM/零模拟器/零 gradle） |
 | `build_demo.sh` | Demo 版本自动打包（历史演示用途） |
 | `demo_start.sh` | Demo 演示启动脚本（历史演示用途） |
 | `TEST_INSTRUCTIONS.sh` | 全功能验收测试操作说明（历史） |

@@ -1,0 +1,1497 @@
+{
+  "schema": "sparkle.x10.action-e2e.scenarios.v1",
+  "description": "X-10 Action Engine E2E Evaluation scenario set (>=60). Families: allocation(X-02 rubric + vet), authorization(X-03), proposal lifecycle(X-03/X-09), run steps/resume(X-07), outcome capture(X-08), golden journeys GJ04-07. All scenarios execute against the REAL service layer with a real DB fixture; zero LLM calls. Expected targets are declarative; verdicts are independently recomputed from DB truth + pure functions by the checker.",
+  "scenarios": [
+    {
+      "id": "alloc_a01_learning_user_core_writing",
+      "family": "allocation",
+      "category": "learning_guard",
+      "summary": "论文写作（LEARNING/user_core/工具优势高）→ hybrid：AI 备提纲素材，用户自己创作",
+      "inputs": {
+        "factors": {
+          "task_type": "LEARNING",
+          "cognitive_ownership": "user_core",
+          "tool_advantage": "high",
+          "risk_class": "low",
+          "reversible": true,
+          "confidence": 0.9
+        }
+      },
+      "expected": {
+        "mode": "hybrid",
+        "requires_human_approval": false,
+        "requires_user_authored_evidence": true
+      }
+    },
+    {
+      "id": "alloc_a02_training_practice_user_core",
+      "family": "allocation",
+      "category": "learning_guard",
+      "summary": "刷题练习（TRAINING/learning_goal/user_core）→ hybrid",
+      "inputs": {
+        "factors": {
+          "task_type": "TRAINING",
+          "learning_goal": true,
+          "cognitive_ownership": "user_core",
+          "tool_advantage": "medium",
+          "risk_class": "low",
+          "reversible": true
+        }
+      },
+      "expected": { "mode": "hybrid", "requires_user_authored_evidence": true }
+    },
+    {
+      "id": "alloc_a03_learning_explicit_self",
+      "family": "allocation",
+      "category": "explicit_intent",
+      "summary": "学习任务 + 当轮显式「我自己来」→ human",
+      "inputs": {
+        "factors": {
+          "task_type": "LEARNING",
+          "cognitive_ownership": "user_core",
+          "tool_advantage": "high",
+          "explicit_intent": "self",
+          "risk_class": "low",
+          "reversible": true
+        }
+      },
+      "expected": { "mode": "human" }
+    },
+    {
+      "id": "alloc_a04_learning_adversarial_full_pressure",
+      "family": "allocation",
+      "category": "learning_guard",
+      "summary": "对抗样例：学习任务 + 显式代办 + 偏好 agent + 紧急 → 守卫压过一切，hybrid（不代写）",
+      "inputs": {
+        "factors": {
+          "task_type": "REFLECTION",
+          "learning_goal": true,
+          "cognitive_ownership": "user_core",
+          "tool_advantage": "high",
+          "explicit_intent": "delegate",
+          "user_preference": "prefer_agent",
+          "time_pressure": "urgent",
+          "risk_class": "low",
+          "reversible": true
+        }
+      },
+      "expected": {
+        "mode": "hybrid",
+        "requires_user_authored_evidence": true,
+        "why_contains": ["G1.learning_guard_no_agent", "X2.delegate_downgraded_by_guard"]
+      }
+    },
+    {
+      "id": "alloc_a05_delegated_mechanical_batch",
+      "family": "allocation",
+      "category": "tool_advantage",
+      "summary": "已委托的机械批处理（delegated/工具优势高/低风险可逆）→ agent",
+      "inputs": {
+        "factors": {
+          "task_type": "OCR",
+          "cognitive_ownership": "delegated",
+          "tool_advantage": "high",
+          "risk_class": "low",
+          "reversible": true,
+          "confidence": 0.9
+        }
+      },
+      "expected": { "mode": "agent" }
+    },
+    {
+      "id": "alloc_a06_delegated_retrieval",
+      "family": "allocation",
+      "category": "tool_advantage",
+      "summary": "资料检索整理（delegated/high/低风险）→ agent",
+      "inputs": {
+        "factors": {
+          "task_type": "PLANNING",
+          "cognitive_ownership": "delegated",
+          "tool_advantage": "high",
+          "risk_class": "low",
+          "reversible": true
+        }
+      },
+      "expected": { "mode": "agent" }
+    },
+    {
+      "id": "alloc_a07_delegated_advantage_unverified",
+      "family": "allocation",
+      "category": "gray_zone",
+      "summary": "已委托但工具优势未知 → hybrid（D4 保守）",
+      "inputs": {
+        "factors": {
+          "cognitive_ownership": "delegated",
+          "risk_class": "low",
+          "reversible": true
+        }
+      },
+      "expected": { "mode": "hybrid" }
+    },
+    {
+      "id": "alloc_a08_delegated_urgent_t1_promotion",
+      "family": "allocation",
+      "category": "time_modifier",
+      "summary": "D4 hybrid + 紧急 + 置信足够 → T1 放行 agent 尝试",
+      "inputs": {
+        "factors": {
+          "cognitive_ownership": "delegated",
+          "time_pressure": "urgent",
+          "confidence": 0.7,
+          "risk_class": "low",
+          "reversible": true
+        }
+      },
+      "expected": { "mode": "agent", "why_contains": ["T1.time_pressure_favors_agent"] }
+    },
+    {
+      "id": "alloc_a09_shared_research_hybrid",
+      "family": "allocation",
+      "category": "ownership_default",
+      "summary": "共同 ownership 的调研（shared/medium）→ hybrid（D2）",
+      "inputs": {
+        "factors": {
+          "cognitive_ownership": "shared",
+          "tool_advantage": "medium",
+          "risk_class": "low",
+          "reversible": true
+        }
+      },
+      "expected": { "mode": "hybrid" }
+    },
+    {
+      "id": "alloc_a10_high_risk_low_tool_human",
+      "family": "allocation",
+      "category": "high_risk",
+      "summary": "高风险 + 低工具优势 → human + 必须人工审批（R1）",
+      "inputs": {
+        "factors": {
+          "risk_class": "high",
+          "tool_advantage": "low",
+          "reversible": false
+        }
+      },
+      "expected": { "mode": "human", "requires_human_approval": true }
+    },
+    {
+      "id": "alloc_a11_high_risk_shared_hybrid_approval",
+      "family": "allocation",
+      "category": "high_risk",
+      "summary": "高风险 + shared → hybrid 但必须人工审批",
+      "inputs": {
+        "factors": {
+          "risk_class": "high",
+          "cognitive_ownership": "shared",
+          "tool_advantage": "medium",
+          "reversible": false
+        }
+      },
+      "expected": { "mode": "hybrid", "requires_human_approval": true }
+    },
+    {
+      "id": "alloc_a12_medium_irreversible_r1",
+      "family": "allocation",
+      "category": "high_risk",
+      "summary": "medium+不可逆 = R1 高风险 → 非自动 + 审批",
+      "inputs": {
+        "factors": {
+          "risk_class": "medium",
+          "reversible": false,
+          "cognitive_ownership": "delegated",
+          "tool_advantage": "high"
+        }
+      },
+      "expected": { "mode": "hybrid", "requires_human_approval": true }
+    },
+    {
+      "id": "alloc_a13_critical_restricted_human_only",
+      "family": "allocation",
+      "category": "high_risk",
+      "summary": "critical + restricted → feasible={human}，human + 审批",
+      "inputs": {
+        "factors": {
+          "risk_class": "critical",
+          "privacy": "restricted",
+          "tool_advantage": "high",
+          "reversible": false
+        }
+      },
+      "expected": {
+        "mode": "human",
+        "requires_human_approval": true,
+        "feasible_modes": ["human"]
+      }
+    },
+    {
+      "id": "alloc_a14_embodiment_required_hybrid",
+      "family": "allocation",
+      "category": "embodiment",
+      "summary": "需要现实中的人完成（embodiment）→ agent 不可行 → hybrid",
+      "inputs": {
+        "factors": {
+          "embodiment_required": true,
+          "cognitive_ownership": "delegated",
+          "tool_advantage": "high",
+          "risk_class": "low",
+          "reversible": true
+        }
+      },
+      "expected": { "mode": "hybrid" }
+    },
+    {
+      "id": "alloc_a15_restricted_explicit_delegate_downgraded",
+      "family": "allocation",
+      "category": "privacy",
+      "summary": "restricted + 显式代办 → human（agent 零权限，连准备面都不可）",
+      "inputs": {
+        "factors": {
+          "privacy": "restricted",
+          "explicit_intent": "delegate",
+          "tool_advantage": "high",
+          "risk_class": "low",
+          "reversible": true
+        }
+      },
+      "expected": {
+        "mode": "human",
+        "feasible_modes": ["human"],
+        "why_contains": ["R5.privacy_restricted"]
+      }
+    },
+    {
+      "id": "alloc_a16_sensitive_delegated_hybrid",
+      "family": "allocation",
+      "category": "privacy",
+      "summary": "sensitive 隐私 → 禁全自动 agent → hybrid",
+      "inputs": {
+        "factors": {
+          "privacy": "sensitive",
+          "cognitive_ownership": "delegated",
+          "tool_advantage": "high",
+          "risk_class": "low",
+          "reversible": true
+        }
+      },
+      "expected": { "mode": "hybrid", "why_contains": ["R5.privacy_sensitive_no_auto_agent"] }
+    },
+    {
+      "id": "alloc_a17_low_confidence_r6",
+      "family": "allocation",
+      "category": "confidence",
+      "summary": "系统置信 0.2（R6）→ agent 不可行 → hybrid",
+      "inputs": {
+        "factors": {
+          "confidence": 0.2,
+          "cognitive_ownership": "delegated",
+          "tool_advantage": "high",
+          "risk_class": "low",
+          "reversible": true
+        }
+      },
+      "expected": { "mode": "hybrid", "why_contains": ["R6.low_system_confidence"] }
+    },
+    {
+      "id": "alloc_a18_explicit_self_mechanical",
+      "family": "allocation",
+      "category": "explicit_intent",
+      "summary": "机械任务 + 当轮显式自己做 → human（X1 强于工具优势）",
+      "inputs": {
+        "factors": {
+          "explicit_intent": "self",
+          "cognitive_ownership": "delegated",
+          "tool_advantage": "high",
+          "risk_class": "low",
+          "reversible": true
+        }
+      },
+      "expected": { "mode": "human" }
+    },
+    {
+      "id": "alloc_a19_prefer_agent_low_tool_t2",
+      "family": "allocation",
+      "category": "user_preference",
+      "summary": "持久偏好 agent 但工具优势低 → T2 降 hybrid",
+      "inputs": {
+        "factors": {
+          "user_preference": "prefer_agent",
+          "cognitive_ownership": "delegated",
+          "tool_advantage": "low",
+          "risk_class": "low",
+          "reversible": true
+        }
+      },
+      "expected": { "mode": "hybrid", "why_contains": ["T2.agent_slower_or_costlier"] }
+    },
+    {
+      "id": "alloc_a20_prefer_human",
+      "family": "allocation",
+      "category": "user_preference",
+      "summary": "持久偏好 human → human（U2）",
+      "inputs": {
+        "factors": {
+          "user_preference": "prefer_human",
+          "cognitive_ownership": "delegated",
+          "tool_advantage": "high",
+          "risk_class": "low",
+          "reversible": true
+        }
+      },
+      "expected": { "mode": "human" }
+    },
+    {
+      "id": "alloc_a21_prefer_mixed",
+      "family": "allocation",
+      "category": "user_preference",
+      "summary": "偏好混合 → hybrid（U3）",
+      "inputs": {
+        "factors": {
+          "user_preference": "prefer_mixed",
+          "risk_class": "low",
+          "reversible": true
+        }
+      },
+      "expected": { "mode": "hybrid" }
+    },
+    {
+      "id": "alloc_a22_insufficient_factors_gray",
+      "family": "allocation",
+      "category": "gray_zone",
+      "summary": "全因子缺失 → 保守 hybrid（R0，语义灰区合格）",
+      "inputs": { "factors": {} },
+      "expected": { "mode": "hybrid", "why_contains": ["R0.insufficient_factors"] }
+    },
+    {
+      "id": "alloc_a23_vet_complete_answer_learning_rejected",
+      "family": "allocation",
+      "category": "vet_guard",
+      "summary": "学习任务上 agent 想直接给完整答案 → 拒（G3），建议降级 outline",
+      "inputs": {
+        "factors": {
+          "task_type": "LEARNING",
+          "cognitive_ownership": "user_core",
+          "risk_class": "low",
+          "reversible": true
+        },
+        "offer_kind": "complete_answer"
+      },
+      "expected": {
+        "offer_allowed": false,
+        "offer_reason": "G3.complete_answer_rejected_for_learning",
+        "offer_downgrade": "outline"
+      }
+    },
+    {
+      "id": "alloc_a24_vet_draft_user_core_rejected",
+      "family": "allocation",
+      "category": "vet_guard",
+      "summary": "user_core 学习任务上 agent 想给成品草稿 → 拒（G4），创作主体必须是用户",
+      "inputs": {
+        "factors": {
+          "task_type": "LEARNING",
+          "cognitive_ownership": "user_core",
+          "risk_class": "low",
+          "reversible": true
+        },
+        "offer_kind": "draft"
+      },
+      "expected": {
+        "offer_allowed": false,
+        "offer_reason": "G4.draft_rejected_user_core",
+        "offer_downgrade": "outline"
+      }
+    },
+    {
+      "id": "alloc_a25_vet_mechanical_high_risk_needs_approval",
+      "family": "allocation",
+      "category": "vet_guard",
+      "summary": "高风险域 mechanical 供给 → 放行但强制挂人工审批（R1 按当下因子）",
+      "inputs": {
+        "factors": {
+          "risk_class": "high",
+          "reversible": false,
+          "cognitive_ownership": "delegated",
+          "tool_advantage": "high"
+        },
+        "offer_kind": "mechanical",
+        "stale_decision_requires_approval": false
+      },
+      "expected": {
+        "offer_allowed": true,
+        "offer_reason": "R1.autonomous_execution_needs_approval",
+        "offer_requires_human_approval": true
+      }
+    },
+    {
+      "id": "alloc_a26_vet_restricted_all_supply_forbidden",
+      "family": "allocation",
+      "category": "vet_guard",
+      "summary": "restricted 下连 outline 准备面都拒收（R5）",
+      "inputs": {
+        "factors": { "privacy": "restricted", "risk_class": "low", "reversible": true },
+        "offer_kind": "outline"
+      },
+      "expected": { "offer_allowed": false, "offer_reason": "R5.restricted_agent_supply_forbidden" }
+    },
+    {
+      "id": "alloc_a27_vet_sensitive_complete_answer_downgrade",
+      "family": "allocation",
+      "category": "vet_guard",
+      "summary": "sensitive 下 agent 独立交付拒收，建议降级 draft（保留人在环）",
+      "inputs": {
+        "factors": { "privacy": "sensitive", "risk_class": "low", "reversible": true },
+        "offer_kind": "complete_answer"
+      },
+      "expected": {
+        "offer_allowed": false,
+        "offer_reason": "R5.sensitive_autonomous_supply_forbidden",
+        "offer_downgrade": "draft"
+      }
+    },
+    {
+      "id": "alloc_a28_vet_unknown_kind_rejected",
+      "family": "allocation",
+      "category": "vet_guard",
+      "summary": "词表外供给形态 → fail-closed 拒收（E2）",
+      "inputs": {
+        "factors": { "risk_class": "low", "reversible": true },
+        "offer_kind": "full_solution"
+      },
+      "expected": { "offer_allowed": false, "offer_reason": "E2.unknown_offer_kind" }
+    },
+    {
+      "id": "auth_z01_service_auto_grant_executes",
+      "family": "authorization",
+      "category": "auto_grant",
+      "summary": "用户已授低风险自动权限 + low/可逆命令 → auto 直通执行（proposal COMMITTED，任务真的改了）",
+      "inputs": {
+        "path": "service",
+        "user_auto_grant": true,
+        "execute_if_authorized": true,
+        "seed_task": { "title": "X-10 auto 授权任务", "status": "PENDING", "type": "PLANNING" },
+        "command": {
+          "type": "task.update_fields",
+          "fields": { "title": "X-10 auto 授权任务（已改名）" }
+        }
+      },
+      "expected": {
+        "authorization_mode": "auto",
+        "proposal_status": "COMMITTED",
+        "task_updated": true,
+        "task_status": "PENDING",
+        "receipt_present": true
+      }
+    },
+    {
+      "id": "auth_z02_no_grant_stays_confirmation",
+      "family": "authorization",
+      "category": "auto_grant",
+      "summary": "未授予自动权限 → confirmation；即使携带执行意图也不执行",
+      "inputs": {
+        "path": "service",
+        "user_auto_grant": false,
+        "execute_if_authorized": true,
+        "seed_task": { "title": "X-10 无授权任务", "status": "PENDING", "type": "PLANNING" },
+        "command": {
+          "type": "task.update_fields",
+          "fields": { "title": "X-10 无授权任务（不应生效）" }
+        }
+      },
+      "expected": {
+        "authorization_mode": "confirmation",
+        "proposal_status": "PENDING",
+        "task_updated": false
+      }
+    },
+    {
+      "id": "auth_z03_irreversible_target_never_auto",
+      "family": "authorization",
+      "category": "irreversible",
+      "summary": "终态命令（complete：medium/不可逆）即使有低风险授权也必须确认（high-risk auto=0 的命令面）",
+      "inputs": {
+        "path": "service",
+        "user_auto_grant": true,
+        "execute_if_authorized": true,
+        "seed_task": {
+          "title": "X-10 终态命令任务",
+          "status": "IN_PROGRESS",
+          "type": "PLANNING",
+          "started_at_offset_min": -10
+        },
+        "command": { "type": "task.update_status", "to_status": "COMPLETED" }
+      },
+      "expected": {
+        "authorization_mode": "confirmation",
+        "proposal_status": "PENDING",
+        "task_status": "IN_PROGRESS"
+      }
+    },
+    {
+      "id": "auth_z04_pure_medium_risk_not_low",
+      "family": "authorization",
+      "category": "pure_rule",
+      "summary": "纯函数：risk=medium → 不 auto（auto_forbidden_risk_not_low）",
+      "inputs": {
+        "path": "pure",
+        "pure": { "risk_class": "medium", "reversible": true, "user_auto_grant": true }
+      },
+      "expected": { "authorization_mode": "confirmation", "reason_contains": "auto_forbidden_risk_not_low" }
+    },
+    {
+      "id": "auth_z05_pure_irreversible_low_risk",
+      "family": "authorization",
+      "category": "irreversible",
+      "summary": "纯函数：low 但不可逆 → 不 auto",
+      "inputs": {
+        "path": "pure",
+        "pure": { "risk_class": "low", "reversible": false, "user_auto_grant": true }
+      },
+      "expected": { "authorization_mode": "confirmation", "reason_contains": "auto_forbidden_irreversible" }
+    },
+    {
+      "id": "auth_z06_pure_unclassified_unreversible_declared",
+      "family": "authorization",
+      "category": "pure_rule",
+      "summary": "纯函数：既未分级又未声明可逆 → 不 auto（保守）",
+      "inputs": {
+        "path": "pure",
+        "pure": { "risk_class": null, "reversible": null, "user_auto_grant": true }
+      },
+      "expected": { "authorization_mode": "confirmation" }
+    },
+    {
+      "id": "auth_z07_pure_human_approval_flag",
+      "family": "authorization",
+      "category": "pure_rule",
+      "summary": "纯函数：R1 审批旗标 → 不 auto",
+      "inputs": {
+        "path": "pure",
+        "pure": {
+          "risk_class": "low",
+          "reversible": true,
+          "requires_human_approval": true,
+          "user_auto_grant": true
+        }
+      },
+      "expected": { "authorization_mode": "confirmation", "reason_contains": "auto_forbidden_human_approval_required" }
+    },
+    {
+      "id": "auth_z08_commit_without_confirmation_denied",
+      "family": "authorization",
+      "category": "commit_gate",
+      "summary": "confirmation 模式无用户确认 → commit 拒绝（未授权不执行）",
+      "inputs": {
+        "path": "commit",
+        "authorization": { "mode": "confirmation" },
+        "confirmed": false
+      },
+      "expected": { "commit_allowed": false, "denied": true }
+    },
+    {
+      "id": "auth_z09_commit_with_confirmation_allowed",
+      "family": "authorization",
+      "category": "commit_gate",
+      "summary": "confirmation 模式 + approve 即确认行为 → commit 放行",
+      "inputs": {
+        "path": "commit",
+        "authorization": { "mode": "confirmation" },
+        "confirmed": true
+      },
+      "expected": { "commit_allowed": true }
+    },
+    {
+      "id": "auth_z10_commit_auto_and_missing_record",
+      "family": "authorization",
+      "category": "commit_gate",
+      "summary": "auto 模式放行；授权记录缺失按保守拒绝（绝不放行）",
+      "inputs": {
+        "path": "commit",
+        "authorization": { "mode": "auto" },
+        "also_missing_record": true
+      },
+      "expected": { "commit_allowed": true, "missing_record_denied": true }
+    },
+    {
+      "id": "prop_p01_approve_complete_receipt_and_honest_minutes",
+      "family": "proposal",
+      "category": "commit_receipt",
+      "summary": "提案→确认→commit→receipt；actual_minutes 从真实起止推算（绝不离 estimated）",
+      "inputs": {
+        "op": "approve",
+        "seed_task": {
+          "title": "X-10 完成任务",
+          "status": "IN_PROGRESS",
+          "type": "LEARNING",
+          "estimated_minutes": 60,
+          "started_at_offset_min": -5
+        },
+        "command": { "type": "task.update_status", "to_status": "COMPLETED" }
+      },
+      "expected": {
+        "proposal_status": "COMMITTED",
+        "task_status": "COMPLETED",
+        "receipt_present": true,
+        "actual_minutes_not_estimated": true,
+        "actual_minutes_max": 8
+      }
+    },
+    {
+      "id": "prop_p02_reapprove_idempotent_replay",
+      "family": "proposal",
+      "category": "idempotency",
+      "summary": "重复 approve 幂等：receipt 原样奉还，不重复写审计",
+      "inputs": {
+        "op": "approve_twice",
+        "seed_task": {
+          "title": "X-10 幂等确认任务",
+          "status": "IN_PROGRESS",
+          "type": "LEARNING",
+          "started_at_offset_min": -5
+        },
+        "command": { "type": "task.update_status", "to_status": "COMPLETED" }
+      },
+      "expected": {
+        "proposal_status": "COMMITTED",
+        "second_applied": false,
+        "second_already_committed": true,
+        "transitions_count": 2
+      }
+    },
+    {
+      "id": "prop_p03_recreate_same_key_single_proposal",
+      "family": "proposal",
+      "category": "idempotency",
+      "summary": "同 (user, idempotency_key) 重复创建 → 恰一个 proposal",
+      "inputs": {
+        "op": "create_twice_same_key",
+        "seed_task": { "title": "X-10 同键任务", "status": "PENDING", "type": "PLANNING" },
+        "command": { "type": "task.update_fields", "fields": { "priority": 2 } },
+        "idempotency_key": "x10:prop:same-key"
+      },
+      "expected": { "proposals_count": 1, "second_created": false }
+    },
+    {
+      "id": "prop_p04_same_key_different_payload_replays_existing",
+      "family": "proposal",
+      "category": "idempotency",
+      "summary": "同键不同 payload → 复用既有 proposal（不新建第二行）",
+      "inputs": {
+        "op": "create_conflicting_key",
+        "seed_task": { "title": "X-10 冲突键任务", "status": "PENDING", "type": "PLANNING" },
+        "command": { "type": "task.update_fields", "fields": { "priority": 1 } },
+        "second_command": { "type": "task.update_fields", "fields": { "priority": 3 } },
+        "idempotency_key": "x10:prop:conflict-key"
+      },
+      "expected": { "proposals_count": 1, "second_created": false }
+    },
+    {
+      "id": "prop_p05_reject_terminal_task_unchanged",
+      "family": "proposal",
+      "category": "terminal_closed",
+      "summary": "用户拒绝 → REJECTED 终态；任务保持原状",
+      "inputs": {
+        "op": "reject",
+        "seed_task": { "title": "X-10 拒绝任务", "status": "PENDING", "type": "PLANNING" },
+        "command": { "type": "task.update_status", "to_status": "ABANDONED" }
+      },
+      "expected": { "proposal_status": "REJECTED", "task_status": "PENDING" }
+    },
+    {
+      "id": "prop_p06_cancel_terminal_task_unchanged",
+      "family": "proposal",
+      "category": "terminal_closed",
+      "summary": "用户取消 → CANCELLED 终态；重复取消幂等 no-op",
+      "inputs": {
+        "op": "cancel_twice",
+        "seed_task": { "title": "X-10 取消任务", "status": "PENDING", "type": "PLANNING" },
+        "command": { "type": "task.update_status", "to_status": "ABANDONED" }
+      },
+      "expected": { "proposal_status": "CANCELLED", "second_applied": false, "task_status": "PENDING" }
+    },
+    {
+      "id": "prop_p07_expired_approve_persists_expired",
+      "family": "proposal",
+      "category": "ttl_expiry",
+      "summary": "过期提案 approve → 显式持久化 EXPIRED + 410 语义错误（非读时挥发）",
+      "inputs": {
+        "op": "expire_then_approve",
+        "seed_task": { "title": "X-10 过期任务", "status": "PENDING", "type": "PLANNING" },
+        "command": { "type": "task.update_fields", "fields": { "priority": 2 } }
+      },
+      "expected": {
+        "proposal_status": "EXPIRED",
+        "error": "ProposalExpiredError",
+        "task_updated": false
+      }
+    },
+    {
+      "id": "prop_p08_sweep_expires_stale_batch",
+      "family": "proposal",
+      "category": "ttl_expiry",
+      "summary": "sweep 把过期 PENDING 批量转 EXPIRED（懒转外的兜底）",
+      "inputs": {
+        "op": "sweep",
+        "seed_task": { "title": "X-10 sweep 任务", "status": "PENDING", "type": "PLANNING" },
+        "command": { "type": "task.update_fields", "fields": { "priority": 2 } }
+      },
+      "expected": { "sweep_count": 1, "proposal_status": "EXPIRED" }
+    },
+    {
+      "id": "prop_p09_version_conflict_rolls_back_to_pending",
+      "family": "proposal",
+      "category": "optimistic_concurrency",
+      "summary": "提案后任务被并发修改 → commit 前版本校验拒绝，proposal 复位 PENDING",
+      "inputs": {
+        "op": "version_conflict",
+        "seed_task": {
+          "title": "X-10 版本冲突任务",
+          "status": "IN_PROGRESS",
+          "type": "PLANNING",
+          "started_at_offset_min": -3
+        },
+        "command": { "type": "task.update_status", "to_status": "COMPLETED" },
+        "interfere": { "op": "pause", "reason": "并发改动" }
+      },
+      "expected": { "error": "VersionConflictError", "proposal_status": "PENDING", "task_status": "PAUSED" }
+    },
+    {
+      "id": "prop_p10_terminal_closed_after_reject",
+      "family": "proposal",
+      "category": "terminal_closed",
+      "summary": "终态封闭：拒绝后再 approve → 409 语义错误",
+      "inputs": {
+        "op": "approve_after_reject",
+        "seed_task": { "title": "X-10 终态封闭任务", "status": "PENDING", "type": "PLANNING" },
+        "command": { "type": "task.update_fields", "fields": { "priority": 1 } }
+      },
+      "expected": { "error": "ProposalNotPendingError", "proposal_status": "REJECTED" }
+    },
+    {
+      "id": "prop_p11_create_batch_effects_enriched",
+      "family": "proposal",
+      "category": "commit_receipt",
+      "summary": "task.create_batch 确认后真实建任务，receipt 富化实际 effects",
+      "inputs": {
+        "op": "approve",
+        "seed_task": null,
+        "command": {
+          "type": "task.create_batch",
+          "tasks": [
+            { "title": "X-10 批量任务甲", "type": "LEARNING" },
+            { "title": "X-10 批量任务乙", "type": "PLANNING" }
+          ]
+        }
+      },
+      "expected": {
+        "proposal_status": "COMMITTED",
+        "tasks_created": 2,
+        "receipt_effects_count": 1,
+        "subjectless": true
+      }
+    },
+    {
+      "id": "prop_p12_field_whitelist_violation_no_proposal",
+      "family": "proposal",
+      "category": "input_validation",
+      "summary": "白名单外字段 → prepare 阶段 422，不留任何 proposal 行",
+      "inputs": {
+        "op": "whitelist_violation",
+        "seed_task": { "title": "X-10 白名单任务", "status": "PENDING", "type": "PLANNING" },
+        "command": { "type": "task.update_fields", "fields": { "status": "COMPLETED" } }
+      },
+      "expected": { "error": "CommandValidationError", "proposals_count": 0 }
+    },
+    {
+      "id": "run_r01_define_plan_persisted",
+      "family": "run_steps",
+      "category": "step_plan",
+      "summary": "定义步骤计划 → 持久化 agent_runs.steps + wire 投影（owner/完成条件）",
+      "inputs": {
+        "steps": [
+          {
+            "step_id": "s1-prep",
+            "ordinal": 1,
+            "owner": "agent",
+            "label": "Agent 准备资料",
+            "completion_condition": { "kind": "agent_output" }
+          },
+          {
+            "step_id": "s2-decide",
+            "ordinal": 2,
+            "owner": "human",
+            "label": "用户定稿",
+            "completion_condition": { "kind": "user_confirmation" }
+          }
+        ],
+        "ops": [{ "op": "define" }]
+      },
+      "expected": {
+        "run_status": "QUEUED",
+        "steps_total": 2,
+        "wire_steps_count": 2,
+        "wire_owner_first": "agent",
+        "wire_owner_second": "human"
+      }
+    },
+    {
+      "id": "run_r02_plan_conflict_rejected",
+      "family": "run_steps",
+      "category": "step_plan",
+      "summary": "中途换计划 → RunStepPlanConflictError（409）；同内容重投幂等 no-op",
+      "inputs": {
+        "steps": [
+          {
+            "step_id": "s1",
+            "ordinal": 1,
+            "owner": "agent",
+            "completion_condition": { "kind": "agent_output" }
+          }
+        ],
+        "ops": [
+          { "op": "define" },
+          { "op": "define_same" },
+          {
+            "op": "define_conflict",
+            "steps": [
+              {
+                "step_id": "s1",
+                "ordinal": 1,
+                "owner": "human",
+                "completion_condition": { "kind": "user_confirmation" }
+              }
+            ]
+          }
+        ]
+      },
+      "expected": { "error": "RunStepPlanConflictError", "plan_owner_unchanged": "agent" }
+    },
+    {
+      "id": "run_r03_agent_step_completed_and_stamped",
+      "family": "run_steps",
+      "category": "step_execution",
+      "summary": "Agent 完成自己那步 → 完成戳 + run.step_completed 事件（不 resume：编排层显式交棒）",
+      "inputs": {
+        "steps": [
+          {
+            "step_id": "s1",
+            "ordinal": 1,
+            "owner": "agent",
+            "completion_condition": { "kind": "agent_output" }
+          },
+          {
+            "step_id": "s2",
+            "ordinal": 2,
+            "owner": "human",
+            "completion_condition": { "kind": "user_confirmation" }
+          }
+        ],
+        "ops": [
+          { "op": "define" },
+          { "op": "start" },
+          { "op": "agent_complete", "step_id": "s1", "artifacts": [{ "scheme": "action_proposal", "ref": "prop-x" }] }
+        ]
+      },
+      "expected": {
+        "run_status": "RUNNING",
+        "step_completed_s1": "agent",
+        "resume_count": 0,
+        "event_step_completed": true
+      }
+    },
+    {
+      "id": "run_r04_owner_discipline_agent_cannot_complete_human_step",
+      "family": "run_steps",
+      "category": "owner_discipline",
+      "summary": "Agent 不得替用户完成 human 步骤（认知归属不可越权）",
+      "inputs": {
+        "steps": [
+          {
+            "step_id": "s1",
+            "ordinal": 1,
+            "owner": "human",
+            "completion_condition": { "kind": "user_confirmation" }
+          }
+        ],
+        "ops": [
+          { "op": "define" },
+          { "op": "start" },
+          { "op": "agent_complete", "step_id": "s1", "expect_error": true }
+        ]
+      },
+      "expected": { "error_expected": true, "step_completed": false, "run_status": "RUNNING" }
+    },
+    {
+      "id": "run_r05_owner_discipline_user_cannot_complete_agent_step",
+      "family": "run_steps",
+      "category": "owner_discipline",
+      "summary": "用户确认不能替代 agent 的工作（owner 纪律双向；对抗性编排误用 await 后仍被完成侧守卫拦截）",
+      "inputs": {
+        "steps": [
+          {
+            "step_id": "s1",
+            "ordinal": 1,
+            "owner": "agent",
+            "completion_condition": { "kind": "agent_output" }
+          }
+        ],
+        "ops": [
+          { "op": "define" },
+          { "op": "start" },
+          { "op": "await", "step_id": "s1" },
+          { "op": "user_complete", "step_id": "s1", "idempotency_key": "x10:bad:confirm", "expect_error": true }
+        ]
+      },
+      "expected": { "error_expected": true, "step_completed": false, "run_status": "AWAITING_USER" }
+    },
+    {
+      "id": "run_r06_await_user_step_explicit_handoff",
+      "family": "run_steps",
+      "category": "handoff",
+      "summary": "编排层显式 await 交棒 → AWAITING_USER（wait_kind=user_step）+ awaiting 戳",
+      "inputs": {
+        "steps": [
+          {
+            "step_id": "s1",
+            "ordinal": 1,
+            "owner": "agent",
+            "completion_condition": { "kind": "agent_output" }
+          },
+          {
+            "step_id": "s2",
+            "ordinal": 2,
+            "owner": "human",
+            "label": "用户确认定稿",
+            "completion_condition": { "kind": "user_confirmation" }
+          }
+        ],
+        "ops": [
+          { "op": "define" },
+          { "op": "start" },
+          { "op": "agent_complete", "step_id": "s1" },
+          { "op": "await", "step_id": "s2", "prompt": "请确认 Agent 准备的提纲" }
+        ]
+      },
+      "expected": {
+        "run_status": "AWAITING_USER",
+        "wait_kind": "user_step",
+        "awaiting_step_id": "s2",
+        "awaiting_state": "awaiting",
+        "awaiting_prompt": "请确认 Agent 准备的提纲"
+      }
+    },
+    {
+      "id": "run_r07_user_complete_resumes_exactly_once",
+      "family": "run_steps",
+      "category": "idempotent_resume",
+      "summary": "用户确认 → 完成戳 + resume 原子；恰 1 条 run.user_resumed",
+      "inputs": {
+        "steps": [
+          {
+            "step_id": "s1",
+            "ordinal": 1,
+            "owner": "agent",
+            "completion_condition": { "kind": "agent_output" }
+          },
+          {
+            "step_id": "s2",
+            "ordinal": 2,
+            "owner": "human",
+            "completion_condition": { "kind": "user_confirmation" }
+          }
+        ],
+        "ops": [
+          { "op": "define" },
+          { "op": "start" },
+          { "op": "agent_complete", "step_id": "s1" },
+          { "op": "await", "step_id": "s2" },
+          { "op": "user_complete", "step_id": "s2", "idempotency_key": "x10:confirm:001" }
+        ]
+      },
+      "expected": {
+        "run_status": "RUNNING",
+        "step_completed_s2_by": "user",
+        "resume_count": 1,
+        "user_resumed_events": 1
+      }
+    },
+    {
+      "id": "run_r08_double_confirm_same_key_first_wins",
+      "family": "run_steps",
+      "category": "idempotent_resume",
+      "summary": "同键双击 → replay no-op，仍然恰 1 次 resume（用户操作两次不会 resume 两次）",
+      "inputs": {
+        "steps": [
+          {
+            "step_id": "s1",
+            "ordinal": 1,
+            "owner": "hybrid",
+            "completion_condition": { "kind": "user_confirmation" }
+          }
+        ],
+        "ops": [
+          { "op": "define" },
+          { "op": "start" },
+          { "op": "await", "step_id": "s1" },
+          { "op": "user_complete", "step_id": "s1", "idempotency_key": "x10:confirm:dual" },
+          { "op": "user_complete", "step_id": "s1", "idempotency_key": "x10:confirm:dual" }
+        ]
+      },
+      "expected": {
+        "run_status": "RUNNING",
+        "resume_count": 1,
+        "user_resumed_events": 1,
+        "second_replay": true
+      }
+    },
+    {
+      "id": "run_r09_double_confirm_different_keys_still_once",
+      "family": "run_steps",
+      "category": "idempotent_resume",
+      "summary": "换 key 重发 → first-wins no-op（完成戳存在即收敛）",
+      "inputs": {
+        "steps": [
+          {
+            "step_id": "s1",
+            "ordinal": 1,
+            "owner": "hybrid",
+            "completion_condition": { "kind": "user_edit" }
+          }
+        ],
+        "ops": [
+          { "op": "define" },
+          { "op": "start" },
+          { "op": "await", "step_id": "s1" },
+          { "op": "user_complete", "step_id": "s1", "idempotency_key": "x10:edit:a", "action": "edit" },
+          { "op": "user_complete", "step_id": "s1", "idempotency_key": "x10:edit:b", "action": "edit" }
+        ]
+      },
+      "expected": {
+        "run_status": "RUNNING",
+        "resume_count": 1,
+        "user_resumed_events": 1,
+        "second_replay": true,
+        "first_key_recorded": "x10:edit:a"
+      }
+    },
+    {
+      "id": "run_r10_cold_start_awaiting_recovery",
+      "family": "run_steps",
+      "category": "awaiting_recovery",
+      "summary": "冷启动恢复：awaiting step 从持久化推导（新 service 实例，零内存态）",
+      "inputs": {
+        "steps": [
+          {
+            "step_id": "s1",
+            "ordinal": 1,
+            "owner": "agent",
+            "completion_condition": { "kind": "agent_output" }
+          },
+          {
+            "step_id": "s2",
+            "ordinal": 2,
+            "owner": "human",
+            "completion_condition": { "kind": "user_confirmation" }
+          }
+        ],
+        "ops": [
+          { "op": "define" },
+          { "op": "start" },
+          { "op": "agent_complete", "step_id": "s1" },
+          { "op": "await", "step_id": "s2", "prompt": "恢复点探针" },
+          { "op": "cold_start_read" }
+        ]
+      },
+      "expected": {
+        "awaiting_step_id": "s2",
+        "awaiting_state": "awaiting",
+        "cold_start_ownership": "human",
+        "cold_start_prompt": "恢复点探针"
+      }
+    },
+    {
+      "id": "run_r11_late_confirm_after_cancel_rejected",
+      "family": "run_steps",
+      "category": "cancel_expiry",
+      "summary": "取消后迟到确认 → 明确拒绝（CANCELLED/user_cancelled 投影 cancelled）",
+      "inputs": {
+        "steps": [
+          {
+            "step_id": "s1",
+            "ordinal": 1,
+            "owner": "human",
+            "completion_condition": { "kind": "user_confirmation" }
+          }
+        ],
+        "ops": [
+          { "op": "define" },
+          { "op": "start" },
+          { "op": "await", "step_id": "s1" },
+          { "op": "cancel", "reason": "user_cancelled" },
+          { "op": "user_complete", "step_id": "s1", "idempotency_key": "x10:late:1", "expect_error": true }
+        ]
+      },
+      "expected": {
+        "run_status": "CANCELLED",
+        "terminal_reason": "user_cancelled",
+        "error": "RunNotAwaitingUserStepError",
+        "awaiting_state": "cancelled"
+      }
+    },
+    {
+      "id": "run_r12_late_confirm_after_wait_expiry_rejected",
+      "family": "run_steps",
+      "category": "cancel_expiry",
+      "summary": "等待窗口过期（sweep→TIMED_OUT/wait_expired）后迟到确认明确拒绝",
+      "inputs": {
+        "steps": [
+          {
+            "step_id": "s1",
+            "ordinal": 1,
+            "owner": "human",
+            "completion_condition": { "kind": "user_confirmation" }
+          }
+        ],
+        "ops": [
+          { "op": "define" },
+          { "op": "start" },
+          { "op": "await", "step_id": "s1", "wait_expires_offset_sec": -60 },
+          { "op": "sweep" },
+          { "op": "user_complete", "step_id": "s1", "idempotency_key": "x10:late:2", "expect_error": true }
+        ]
+      },
+      "expected": {
+        "run_status": "TIMED_OUT",
+        "terminal_reason": "wait_expired",
+        "error": "RunNotAwaitingUserStepError",
+        "awaiting_state": "expired"
+      }
+    },
+    {
+      "id": "run_r13_resume_cannot_inject_terminal",
+      "family": "run_steps",
+      "category": "resume_guard",
+      "summary": "resume 目标白名单：客户端不得借 resume 注入 SUCCEEDED 伪造终态",
+      "inputs": {
+        "steps": [
+          {
+            "step_id": "s1",
+            "ordinal": 1,
+            "owner": "human",
+            "completion_condition": { "kind": "user_confirmation" }
+          }
+        ],
+        "ops": [
+          { "op": "define" },
+          { "op": "start" },
+          { "op": "await", "step_id": "s1" },
+          { "op": "resume_bad_target", "to_status": "SUCCEEDED", "expect_error": true }
+        ]
+      },
+      "expected": { "error": "InvalidResumeTargetError", "run_status": "AWAITING_USER" }
+    },
+    {
+      "id": "outc_o01_user_click_completion_self_reported",
+      "family": "outcome",
+      "category": "truth_classification",
+      "summary": "无证据点击完成 → outcome POSITIVE 但真相分级 self_reported（点击 ≠ 证明）",
+      "inputs": {
+        "op": "complete_task",
+        "seed_task": {
+          "title": "X-10 自报完成任务",
+          "status": "IN_PROGRESS",
+          "type": "REFLECTION",
+          "started_at_offset_min": -6
+        },
+        "complete": { "actual_minutes": 5 }
+      },
+      "expected": { "outcome_polarity": "positive", "truth_class": "self_reported", "outcome_captured": true }
+    },
+    {
+      "id": "outc_o02_declared_artifact_unverified_stays_self_reported",
+      "family": "outcome",
+      "category": "truth_classification",
+      "summary": "声明 artifact 但 ref 不可解析 → 不升 actual（声明不构成证明），声明保留",
+      "inputs": {
+        "op": "complete_task",
+        "seed_task": {
+          "title": "X-10 未验证声明任务",
+          "status": "IN_PROGRESS",
+          "type": "LEARNING",
+          "started_at_offset_min": -5,
+          "completion_evidence": [{ "evidence_kind": "artifact", "ref": "document://nonexistent-ref", "description": "笔记" }]
+        },
+        "complete": { "actual_minutes": 5 }
+      },
+      "expected": {
+        "outcome_polarity": "positive",
+        "truth_class": "self_reported",
+        "declared_preserved": true
+      }
+    },
+    {
+      "id": "outc_o03_succeeded_run_receipt_upgrades_actual",
+      "family": "outcome",
+      "category": "truth_classification",
+      "summary": "SUCCEEDED run receipt 物化 → 完成分级升 ACTUAL（服务器记录的独立工作证明）",
+      "inputs": {
+        "op": "complete_with_run",
+        "run_terminal": "SUCCEEDED",
+        "seed_task": {
+          "title": "X-10 run 回执任务",
+          "status": "IN_PROGRESS",
+          "type": "PLANNING",
+          "started_at_offset_min": -5
+        },
+        "complete": { "actual_minutes": 5 }
+      },
+      "expected": { "truth_class": "actual", "run_receipt_materialized": true, "outcome_polarity": "positive" }
+    },
+    {
+      "id": "outc_o04_focus_below_threshold_self_reported",
+      "family": "outcome",
+      "category": "coverage_rule",
+      "summary": "5 分钟 focus 伪装 60 分钟任务 → 覆盖不足，self_reported（1 分钟 focus 不能点亮）",
+      "inputs": {
+        "op": "complete_with_focus",
+        "focus_minutes": 5,
+        "seed_task": {
+          "title": "X-10 覆盖不足任务",
+          "status": "IN_PROGRESS",
+          "type": "LEARNING",
+          "estimated_minutes": 60,
+          "started_at_offset_min": -60
+        },
+        "complete": { "actual_minutes": 60 }
+      },
+      "expected": { "truth_class": "self_reported" }
+    },
+    {
+      "id": "outc_o05_focus_above_threshold_actual",
+      "family": "outcome",
+      "category": "coverage_rule",
+      "summary": "35 分钟 focus ≥ 门槛 max(10, 0.5×60)=30 → ACTUAL",
+      "inputs": {
+        "op": "complete_with_focus",
+        "focus_minutes": 35,
+        "seed_task": {
+          "title": "X-10 覆盖充分任务",
+          "status": "IN_PROGRESS",
+          "type": "LEARNING",
+          "estimated_minutes": 60,
+          "started_at_offset_min": -60
+        },
+        "complete": { "actual_minutes": 60 }
+      },
+      "expected": { "truth_class": "actual" }
+    },
+    {
+      "id": "outc_o06_abandoned_negative_preserved_never_actual",
+      "family": "outcome",
+      "category": "failure_preserved",
+      "summary": "放弃任务 → NEGATIVE outcome 保留（不静默丢弃），永不升 actual、不点亮",
+      "inputs": {
+        "op": "abandon_task",
+        "seed_task": {
+          "title": "X-10 放弃任务",
+          "status": "IN_PROGRESS",
+          "type": "LEARNING",
+          "started_at_offset_min": -10
+        },
+        "abandon": { "reason": "方向不对，放弃" }
+      },
+      "expected": {
+        "outcome_polarity": "negative",
+        "outcome_captured": true,
+        "truth_class": "actual",
+        "ledger_entry_present": true
+      }
+    },
+    {
+      "id": "outc_o07_partial_run_neutral_never_positive",
+      "family": "outcome",
+      "category": "partial_not_promoted",
+      "summary": "run PARTIAL → NEUTRAL：保留可查询，既不点亮也不记负（PARTIAL 不升格）",
+      "inputs": {
+        "op": "terminalize_run",
+        "run_terminal": "PARTIAL",
+        "seed_run": { "objective": "X-10 部分完成 run", "kind": "EXECUTION" }
+      },
+      "expected": { "run_outcome_polarity": "neutral", "never_positive": true }
+    },
+    {
+      "id": "outc_o08_failed_run_negative",
+      "family": "outcome",
+      "category": "run_receipt",
+      "summary": "run FAILED → NEGATIVE outcome（真实但失败的执行事实）",
+      "inputs": {
+        "op": "terminalize_run",
+        "run_terminal": "FAILED",
+        "seed_run": { "objective": "X-10 失败 run", "kind": "EXECUTION" }
+      },
+      "expected": { "run_outcome_polarity": "negative" }
+    },
+    {
+      "id": "outc_o09_derive_outcome_id_idempotent",
+      "family": "outcome",
+      "category": "idempotency",
+      "summary": "derive_outcome_id 幂等：同 (source, source_id) 恒同 id",
+      "inputs": { "op": "derive_id_twice" },
+      "expected": { "ids_equal": true, "id_prefix": "outc_" }
+    },
+    {
+      "id": "outc_o10_recorded_event_content_free",
+      "family": "outcome",
+      "category": "audit_without_exposure",
+      "summary": "outcome.recorded payload 只含 ids/极性/引用，无结果本体与用户内容",
+      "inputs": {
+        "op": "build_event_payload",
+        "seed_task": {
+          "title": "X-10 事件载荷任务",
+          "status": "IN_PROGRESS",
+          "type": "PLANNING",
+          "started_at_offset_min": -5
+        },
+        "complete": { "actual_minutes": 5 }
+      },
+      "expected": { "event_name": "outcome.recorded", "content_free": true, "polarity": "positive" }
+    },
+    {
+      "id": "journey_gj04_stuck_clarification_rescope",
+      "family": "journey",
+      "journey": "GJ04",
+      "category": "golden_journey",
+      "summary": "GJ04 我卡住了 → 一次澄清 → rescope → 恢复完成 → outcome（真实 TaskService 全链）",
+      "inputs": {
+        "journey": "GJ04",
+        "seed_task": {
+          "title": "GJ04 卡住的高数任务",
+          "status": "IN_PROGRESS",
+          "type": "LEARNING",
+          "estimated_minutes": 60,
+          "started_at_offset_min": -8
+        },
+        "stuck_point": "第二问的条件概率方向反了",
+        "rescope": { "estimated_minutes": 15, "success_criteria": "只做第 1 问与第 3 问" },
+        "complete": { "actual_minutes": 12 }
+      },
+      "expected": {
+        "stuck_recorded": true,
+        "rescope_history": 1,
+        "rescope_fields_applied": true,
+        "task_status": "COMPLETED",
+        "outcome_polarity": "positive",
+        "actual_minutes_not_estimated": true,
+        "phases": ["stuck", "rescope", "complete", "outcome"]
+      }
+    },
+    {
+      "id": "journey_gj05_human_evidence_galaxy",
+      "family": "journey",
+      "journey": "GJ05",
+      "category": "golden_journey",
+      "summary": "GJ05 人类行动 → 证据 → Galaxy：完成附 artifact 证据 → study_record 回声 → 账本多源证据",
+      "inputs": {
+        "journey": "GJ05",
+        "seed_task": {
+          "title": "GJ05 人工笔记任务",
+          "status": "IN_PROGRESS",
+          "type": "LEARNING",
+          "started_at_offset_min": -10,
+          "with_knowledge_node": true
+        },
+        "complete": {
+          "actual_minutes": 10,
+          "evidence": [{ "evidence_kind": "artifact", "ref": "document://gj05-note", "description": "我的笔记" }]
+        }
+      },
+      "expected": {
+        "task_status": "COMPLETED",
+        "evidence_fulfilled": true,
+        "study_record_echo": true,
+        "outcome_polarity": "positive",
+        "phases": ["human_action", "evidence", "galaxy"]
+      }
+    },
+    {
+      "id": "journey_gj06_agent_approval_run_receipt",
+      "family": "journey",
+      "journey": "GJ06",
+      "category": "golden_journey",
+      "summary": "GJ06 agent 行动 → 审批 → run → receipt → outcome；高风险 run 必经 AWAITING_APPROVAL",
+      "inputs": {
+        "journey": "GJ06",
+        "seed_task": {
+          "title": "GJ06 agent 执行任务",
+          "status": "PENDING",
+          "type": "PLANNING"
+        },
+        "run": {
+          "objective": "GJ06 整理错题并生成报告",
+          "risk_class": "high",
+          "with_task": true
+        }
+      },
+      "expected": {
+        "run_status": "SUCCEEDED",
+        "approval_gate_visited": true,
+        "receipt_ref_present": true,
+        "task_outcome_actual_via_receipt": true,
+        "outcome_polarity": "positive",
+        "high_risk_auto_zero": true,
+        "phases": ["approval", "run", "receipt", "outcome"]
+      }
+    },
+    {
+      "id": "journey_gj07_hybrid_prep_await_resume",
+      "family": "journey",
+      "journey": "GJ07",
+      "category": "golden_journey",
+      "summary": "GJ07 hybrid：Agent 准备 → 编排层显式 await 交棒 → awaiting user → 幂等 resume → 完成 → outcome（X-07 验收备案 A 语义）",
+      "inputs": {
+        "journey": "GJ07",
+        "seed_task": {
+          "title": "GJ07 hybrid 报告任务",
+          "status": "PENDING",
+          "type": "PLANNING"
+        },
+        "run": {
+          "objective": "GJ07 hybrid 撰写实验报告",
+          "risk_class": "low",
+          "with_task": true,
+          "steps": [
+            {
+              "step_id": "j7-s1-prep",
+              "ordinal": 1,
+              "owner": "agent",
+              "label": "Agent 准备数据提纲",
+              "completion_condition": { "kind": "agent_output" }
+            },
+            {
+              "step_id": "j7-s2-decide",
+              "ordinal": 2,
+              "owner": "human",
+              "label": "用户确认与补写结论",
+              "completion_condition": { "kind": "user_confirmation" }
+            },
+            {
+              "step_id": "j7-s3-check",
+              "ordinal": 3,
+              "owner": "agent",
+              "label": "Agent 校对成稿",
+              "completion_condition": { "kind": "agent_output" }
+            }
+          ]
+        },
+        "double_confirm": true
+      },
+      "expected": {
+        "run_status": "SUCCEEDED",
+        "awaiting_visited": true,
+        "resume_count": 1,
+        "user_resumed_events": 1,
+        "owner_sequence": ["agent", "human", "agent"],
+        "task_outcome_actual_via_receipt": true,
+        "phases": ["agent_prep", "await_user", "resume", "agent_check", "succeed", "outcome"]
+      }
+    }
+  ]
+}
