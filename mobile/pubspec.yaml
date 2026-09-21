@@ -125,7 +125,7 @@ dev_dependencies:
   golden_toolkit: ^0.15.0
 
   # Sentry Plugin for Source Maps
-  sentry_dart_plugin: ^2.0.0
+  sentry_dart_plugin: ^3.4.0
 
 
   stream_channel: ^2.1.0
