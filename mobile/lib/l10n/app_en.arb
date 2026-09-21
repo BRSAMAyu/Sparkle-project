@@ -17204,5 +17204,8 @@
                 "type": "String"
             }
         }
-    }
+    },
+    "runStepContinueCta": "Confirm and continue",
+    "runStepAwaitingHint": "This step is yours; Sparkle continues when you're done",
+    "runStepArtifactsTitle": "Sparkle prepared these"
 }

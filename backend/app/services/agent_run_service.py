@@ -62,6 +62,14 @@ from app.core.run_state_machine import (
     run_status_for_intent_status,
     terminal_reason_vocabulary,
 )
+from app.core.run_steps import (
+    RUN_STEPS_CONTRACT_VERSION,
+    find_step,
+    first_incomplete_step,
+    normalize_artifact_refs,
+    normalize_run_steps,
+    step_completion_stamped,
+)
 from app.models.agent_run import AgentRun, AgentRunKind, AgentRunTransition
 from app.models.execution_intent import ExecutionIntent, ExecutionIntentStatus
 
@@ -287,6 +295,38 @@ def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
+def _stamp_step_awaiting(
+    steps: list[dict[str, Any]],
+    *,
+    step_id: str,
+    prompt: str | None,
+    artifact_refs: list[dict[str, str]] | None,
+) -> list[dict[str, Any]]:
+    """在目标步骤上落 ``awaiting`` 戳（prompt + Agent 准备好的产物引用）。
+
+    X-07 · Agent 产物持久化面：artifacts 以 ``{"scheme","ref"}`` 引用内嵌步骤
+    记录（本体真源留在既有机制——action_proposal receipt / tool_call 账本 /
+    evidence；C-01 scheme 对齐，不复制本体）。重复落戳（重投）以最后一次为
+    准（提示文案可更新；引用同 key 语义收敛）。
+    """
+    stamped = str(step_id).strip()
+    updated: list[dict[str, Any]] = []
+    for step in steps:
+        if step.get("step_id") == stamped:
+            entry = dict(step)
+            awaiting: dict[str, Any] = {"awaited_at": _utcnow().isoformat(timespec="milliseconds")}
+            if prompt:
+                awaiting["prompt"] = str(prompt)[:500]
+            refs = normalize_artifact_refs(artifact_refs)
+            if refs:
+                awaiting["artifacts"] = refs
+            entry["awaiting"] = awaiting
+            updated.append(entry)
+        else:
+            updated.append(step)
+    return updated
+
+
 class RunNotFoundError(ValueError):
     """run 不存在或不属于该用户（API 层 404；与 _get_user_intent 同形）。"""
 
@@ -305,6 +345,45 @@ class TransitionActor(StrEnum):
     SYSTEM = "system"
     RECOVERY = "recovery"
     PROJECTION = "projection"
+
+
+# ---------------------------------------------------------------------------
+# X-07 · Hybrid Handoff（run step owner/完成条件/产物引用 + awaiting/resume）
+# ---------------------------------------------------------------------------
+
+
+class UnknownRunStepError(RunStateError):
+    """step_id 不在该 run 的步骤计划中（API 层 404）。"""
+
+
+class RunStepPlanConflictError(RunStateError):
+    """步骤计划与已持久化计划冲突（plan 只许定义一次；同内容重投幂等 no-op）。"""
+
+
+class RunNotAwaitingUserStepError(RunStateError):
+    """complete_user_step 前置不满足：run 未处于等待用户步骤状态（API 层 409）。"""
+
+
+class MissingIdempotencyKeyError(RunStateError):
+    """complete_user_step 必须携带幂等键（「两次确认只 resume 一次」的服务端
+    依据；API 层 422，resume/cancel 白名单拒绝同族）。"""
+
+
+@dataclass(frozen=True)
+class UserStepResult:
+    """一次用户步骤完成（confirm/edit）的结果.
+
+    ``applied=False`` = 幂等重放（该步骤已有完成戳——双击/重试/换 key 重发
+    一律收敛到第一次，绝不二次 resume）；``resumed`` = 本次调用实际触发了
+    run 恢复迁移（``run.user_resumed``）。
+    """
+
+    run: AgentRun
+    step: dict[str, Any]
+    applied: bool
+    resumed: bool = False
+    event_name: str | None = None
+    replay: bool = False
 
 
 @dataclass(frozen=True)
@@ -401,6 +480,7 @@ class AgentRunService:
         completion_condition: dict[str, Any] | None = None,
         risk_class: str | None = None,
         steps_total: int | None = None,
+        steps: list[dict[str, Any]] | None = None,
         initial_status: RunStatus | str = RunStatus.QUEUED,
         terminal_reason: str | None = None,
         actor: str = TransitionActor.USER,
@@ -432,6 +512,7 @@ class AgentRunService:
             budget = await self._derive_default_budget_for_user(user_uuid)
         budget_canonical = normalize_budget(budget)
         permissions_canonical = normalize_run_permissions(permissions)
+        steps_canonical = normalize_run_steps(steps)  # X-07：计划契约 fail-closed（越表拒绝创建）
 
         if key is not None:
             existing = await self._find_by_idempotency_key(user_uuid, key)
@@ -456,12 +537,13 @@ class AgentRunService:
             status=initial,
             wait_kind=None,
             wait_expires_at=None,
+            steps=steps_canonical,
+            steps_total=int(steps_total) if steps_total else (len(steps_canonical) or None),
             task_id=UUID(str(task_id)) if task_id else None,
             intent_id=UUID(str(intent_id)) if intent_id else None,
             session_id=str(session_id)[:64] if session_id else None,
             trace_id=str(trace_id)[:64] if trace_id else None,
             attempt=int(attempt) or 1,
-            steps_total=int(steps_total) if steps_total else None,
             heartbeat_at=now,
             idempotency_key=key,
             started_at=now if initial is not RunStatus.QUEUED else None,
@@ -971,6 +1053,318 @@ class AgentRunService:
         await self.db.refresh(run)
         return RunMutationResult(
             run=run, applied=True, created=False, event_name="run.step_completed", event_written=event_written
+        )
+
+    # ------------------------------------------------------------------
+    # X-07 · Hybrid Handoff：步骤计划 / 轮到用户 / 用户完成触发 resume
+    # ------------------------------------------------------------------
+
+    async def define_run_steps(
+        self,
+        run_id: UUID | str,
+        *,
+        steps: list[dict[str, Any]],
+        user_id: UUID | str | None = None,
+        actor: str = TransitionActor.WORKER,
+        source: EventSource | str = EventSource.WORKER,
+    ) -> RunMutationResult:
+        """定义/重投 run 步骤计划（``agent_runs.steps``；**计划只定义一次**）.
+
+        - 首次定义：归一化（``normalize_run_steps`` fail-closed，越表 ValueError）
+          后落库 + 刷新心跳 + 同步 ``steps_total``（未显式给过时）；
+        - 同内容重投（at-least-once 生产者）：幂等 no-op（``applied=False``）；
+        - 不同内容：:class:`RunStepPlanConflictError`（409）——计划是 run 契约
+          的一部分，中途换计划会破坏「轮到谁」的可信度，必须显式开新 run；
+        - 终态 run 拒绝（终态封闭）。
+
+        计划定义**不改 run 状态、不发 outbox 事件**（status/事件只属于状态机；
+        计划经 GET /runs 只读可见——与 ``record_step`` 的 outbox 事件面分工）。
+        """
+        normalized = normalize_run_steps(steps)
+        stmt = select(AgentRun).where(AgentRun.id == UUID(str(run_id)), AgentRun.deleted_at.is_(None)).with_for_update()
+        if user_id is not None:
+            stmt = stmt.where(AgentRun.user_id == UUID(str(user_id)))
+        run = (await self.db.execute(stmt)).scalar_one_or_none()
+        if run is None:
+            raise RunNotFoundError(f"agent run {run_id} not found")
+        if is_terminal_run_status(run.status):
+            raise ValueError(f"run {run_id} is terminal ({run.status.value}); step plan rejected")
+
+        existing = list(run.steps or [])
+        if existing:
+            if normalize_run_steps(existing) == normalized:
+                return RunMutationResult(run=run, applied=False, created=False, event_name=None, event_written=False)
+            raise RunStepPlanConflictError(
+                f"run {run_id} already has a different step plan ({len(existing)} steps); "
+                "open a new run to change the plan"
+            )
+
+        run.steps = normalized
+        run.heartbeat_at = _utcnow()
+        if not run.steps_total:
+            run.steps_total = len(normalized) or None
+        await self.db.commit()
+        await self.db.refresh(run)
+        return RunMutationResult(run=run, applied=True, created=False, event_name=None, event_written=False)
+
+    async def await_user_step(
+        self,
+        run_id: UUID | str,
+        *,
+        step_id: str,
+        user_id: UUID | str | None = None,
+        prompt: str | None = None,
+        artifact_refs: list[dict[str, str]] | None = None,
+        wait_expires_at: datetime | None = None,
+        actor: str = TransitionActor.WORKER,
+        source: EventSource | str = EventSource.WORKER,
+    ) -> RunMutationResult:
+        """把 run 交给用户做某一步（「轮到你」；``run.awaiting_user`` 事件）.
+
+        - 步骤必须存在且未完成（``UnknownRunStepError`` / ValueError）；
+        - 同一时刻至多一个 awaiting step（其余步骤尚未轮到——顺序执行语义）；
+        - 步骤上落 ``awaiting`` 戳（prompt + Agent 准备好的 artifacts 引用——
+          **Agent 产物持久化**：引用挂既有机制本体，如 ``action_proposal``/
+          ``tool_call``/``evidence``，不在 run 内复制本体）；
+        - run 经**既有合法边** ``→ AWAITING_USER``（wait_kind=user_step，
+          wait_expires_at 供 sweep 过期 → TIMED_OUT(wait_expired)）——状态机
+          词表/迁移图零改动；已在 AWAITING_USER 时只落戳（事件不重发，幂等），
+          在 AWAITING_APPROVAL 时拒绝（等待类型变更无业务语义，与迁移图
+          USER↔APPROVAL 禁边同哲学）；
+        - 戳 + 状态迁移同事务（transition 的 commit 统一冲刷）。
+        """
+        stmt = select(AgentRun).where(AgentRun.id == UUID(str(run_id)), AgentRun.deleted_at.is_(None)).with_for_update()
+        if user_id is not None:
+            stmt = stmt.where(AgentRun.user_id == UUID(str(user_id)))
+        run = (await self.db.execute(stmt)).scalar_one_or_none()
+        if run is None:
+            raise RunNotFoundError(f"agent run {run_id} not found")
+        if is_terminal_run_status(run.status):
+            raise ValueError(f"run {run_id} is terminal ({run.status.value}); awaiting rejected")
+
+        steps = list(run.steps or [])
+        step = find_step(steps, step_id)
+        if step is None:
+            raise UnknownRunStepError(f"step {step_id!r} is not in run {run_id} step plan")
+        if step.get("completion"):
+            raise ValueError(f"step {step_id!r} already completed; cannot await again")
+        if first_incomplete_step(steps) is not step:
+            raise ValueError(f"step {step_id!r} is not the next pending step; steps run in ordinal order")
+
+        current = RunStatus(run.status)
+        if current in (RunStatus.AWAITING_USER, RunStatus.AWAITING_APPROVAL):
+            if current is RunStatus.AWAITING_APPROVAL or run.wait_kind != RunWaitKind.USER_STEP.value:
+                raise ValueError(
+                    f"run {run_id} is {current.value} (wait_kind={run.wait_kind}); "
+                    "awaiting a user step requires a non-waiting or user_step run"
+                )
+            # 已在等待用户步骤：幂等落戳（同一 step 重投不重发 run.awaiting_user）。
+            run.steps = _stamp_step_awaiting(steps, step_id=step_id, prompt=prompt, artifact_refs=artifact_refs)
+            run.heartbeat_at = _utcnow()
+            await self.db.commit()
+            await self.db.refresh(run)
+            return RunMutationResult(run=run, applied=False, created=False, event_name=None, event_written=False)
+
+        run.steps = _stamp_step_awaiting(steps, step_id=step_id, prompt=prompt, artifact_refs=artifact_refs)
+        return await self.transition(
+            run.id,
+            RunStatus.AWAITING_USER,
+            user_id=user_id,
+            actor=actor,
+            wait_kind=RunWaitKind.USER_STEP,
+            wait_expires_at=wait_expires_at,
+            current_stage=step.get("label"),
+            details={"step_id": step["step_id"], "schema_version": RUN_STEPS_CONTRACT_VERSION},
+            source=source,
+        )
+
+    async def complete_agent_step(
+        self,
+        run_id: UUID | str,
+        *,
+        step_id: str,
+        user_id: UUID | str | None = None,
+        artifact_refs: list[dict[str, str]] | None = None,
+        idempotency_key: str | None = None,
+        actor: str = TransitionActor.WORKER,
+        source: EventSource | str = EventSource.WORKER,
+    ) -> RunMutationResult:
+        """Agent 完成自己那一步（handoff 前半段：``Agent prepares`` → 交棒）.
+
+        - **owner 纪律**：只允许完成 ``owner=agent`` 的步骤——AGENT 不得代替
+          用户完成 HUMAN/HYBRID 步骤（认知归属不可越权，HUMAN_AGENT_HYBRID.md
+          §2/§3；用户的确认/编辑只能走 :meth:`complete_user_step`）；
+        - 必须是下一个未完成步骤（ordinal 顺序执行）；重复完成 → 幂等 no-op；
+        - 产物引用落 ``completion.artifacts``（挂既有机制本体，不复制）；
+        - 发 ``run.step_completed`` 事件（D-01 既有名，进度事件不改状态）——
+          **不 resume**：Agent 完成后是否交棒用户由编排层显式调用
+          :meth:`await_user_step`，两个语义时刻分开（可审计）。
+        """
+        stmt = select(AgentRun).where(AgentRun.id == UUID(str(run_id)), AgentRun.deleted_at.is_(None)).with_for_update()
+        if user_id is not None:
+            stmt = stmt.where(AgentRun.user_id == UUID(str(user_id)))
+        run = (await self.db.execute(stmt)).scalar_one_or_none()
+        if run is None:
+            raise RunNotFoundError(f"agent run {run_id} not found")
+        if is_terminal_run_status(run.status):
+            raise ValueError(f"run {run_id} is terminal ({run.status.value}); step completion rejected")
+
+        steps = list(run.steps or [])
+        step = find_step(steps, step_id)
+        if step is None:
+            raise UnknownRunStepError(f"step {step_id!r} is not in run {run_id} step plan")
+        if step.get("owner") != "agent":
+            raise ValueError(
+                f"step {step_id!r} is owner={step.get('owner')!r}; only agent-owned steps "
+                "can be completed by the agent (human/hybrid steps go through the user path)"
+            )
+        if step.get("completion"):
+            return RunMutationResult(run=run, applied=False, created=False, event_name=None, event_written=False)
+        if first_incomplete_step(steps) is not step:
+            raise ValueError(f"step {step_id!r} is not the next pending step; steps run in ordinal order")
+
+        now = _utcnow()
+        updated, applied = step_completion_stamped(
+            steps,
+            step_id=step["step_id"],
+            completed_by="agent",
+            idempotency_key=str(idempotency_key or f"agent:{step['step_id']}")[:255],
+            action="agent_output",
+            artifact_refs=artifact_refs,
+            completed_at=now.isoformat(timespec="milliseconds"),
+        )
+        if not applied:
+            return RunMutationResult(run=run, applied=False, created=False, event_name=None, event_written=False)
+        run.steps = updated
+        run.heartbeat_at = now
+        event_written = await self._write_run_event_in_txn(
+            run=run,
+            event_name="run.step_completed",
+            source=source,
+            service=AGENT_RUN_SERVICE_NAME,
+            payload={
+                "schema_version": RUN_STEPS_CONTRACT_VERSION,
+                "run_id": str(run.id),
+                "step_id": step["step_id"],
+                "ordinal": step.get("ordinal"),
+                "by": "agent",
+                "effective_change": True,
+            },
+        )
+        await self.db.commit()
+        await self.db.refresh(run)
+        return RunMutationResult(
+            run=run, applied=True, created=False, event_name="run.step_completed", event_written=event_written
+        )
+
+    async def complete_user_step(
+        self,
+        run_id: UUID | str,
+        *,
+        step_id: str,
+        user_id: UUID | str,
+        idempotency_key: str,
+        action: str = "confirm",
+        artifact_refs: list[dict[str, str]] | None = None,
+        note: str | None = None,
+        to_status: RunStatus | str = RunStatus.RUNNING,
+        current_stage: str | None = None,
+    ) -> UserStepResult:
+        """用户完成（确认/编辑）当前 awaiting step —— 完成戳 + resume 原子化.
+
+        **幂等是灵魂**（acceptance：「用户操作两次不会 resume 两次」）：
+
+        1. ``FOR UPDATE`` 锁 run 行后先查步骤完成戳——已带戳（**无论 key 是否
+           相同**，first-wins）直接返回 ``replay`` 结果，不重发事件、不再次
+           resume；并发双击串行化后第二个调用看到已完成步骤同样 no-op；
+        2. 完成戳（含幂等键 + 用户输入/artifact 引用）与 run 恢复迁移在同一
+           事务冲刷（``transition`` 的 commit）——crash 一致性：要么「完成 +
+           恢复」都落库，要么都没有；
+        3. resume 复用 :meth:`resume` 全部契约（目标白名单 R2 F4 / 预算闸门 /
+           ``run.user_resumed`` 事件），X-09 幂等键语义服务端强制。
+
+        前置：run 处于等待用户步骤状态（``RunNotAwaitingUserStepError`` 409）
+        ——过期（wait_expired→TIMED_OUT）/取消（user_cancelled→CANCELLED）后的
+        迟到确认被明确拒绝（acceptance：「取消/过期明确」），错误信息携带当前
+        终态。
+        """
+        key = str(idempotency_key or "").strip()
+        if not key:
+            raise MissingIdempotencyKeyError("complete_user_step requires an idempotency_key")
+
+        stmt = select(AgentRun).where(AgentRun.id == UUID(str(run_id)), AgentRun.deleted_at.is_(None)).with_for_update()
+        if user_id is not None:
+            stmt = stmt.where(AgentRun.user_id == UUID(str(user_id)))
+        run = (await self.db.execute(stmt)).scalar_one_or_none()
+        if run is None:
+            raise RunNotFoundError(f"agent run {run_id} not found")
+
+        steps = list(run.steps or [])
+        step = find_step(steps, step_id)
+        if step is None:
+            raise UnknownRunStepError(f"step {step_id!r} is not in run {run_id} step plan")
+        if step.get("completion"):
+            # 幂等重放：完成戳已存在（双击/重试/换 key 重发一律 first-wins）。
+            # 放在状态检查**之前**——第一次确认已提交、run 已回 RUNNING 后，
+            # 迟到的重试同样收敛为 no-op，而不是 409 假失败。
+            return UserStepResult(run=run, step=step, applied=False, resumed=False, replay=True)
+
+        if step.get("owner") not in ("human", "hybrid"):
+            # owner 纪律先于状态检查：步骤归属是固有属性，状态是瞬态。
+            raise ValueError(
+                f"step {step_id!r} is owner={step.get('owner')!r}; agent-owned steps are completed "
+                "by the agent (user confirmation cannot substitute the agent's work)"
+            )
+
+        status = RunStatus(run.status)
+        if status in (RunStatus.AWAITING_USER, RunStatus.AWAITING_APPROVAL):
+            if run.wait_kind != RunWaitKind.USER_STEP.value:
+                raise RunNotAwaitingUserStepError(
+                    f"run {run_id} is {status.value} waiting for approval, not a user step"
+                )
+        elif is_terminal_run_status(status):
+            reason = f", reason={run.terminal_reason}" if run.terminal_reason else ""
+            raise RunNotAwaitingUserStepError(
+                f"run {run_id} is terminal ({status.value}{reason}); "
+                "late confirm rejected — cancel/expire is explicit"
+            )
+        else:
+            raise RunNotAwaitingUserStepError(f"run {run_id} is {status.value}; no user step is being awaited")
+
+        if first_incomplete_step(steps) is not step:
+            raise ValueError(f"step {step_id!r} is not the next pending step; steps run in ordinal order")
+
+        normalized_refs = normalize_artifact_refs(artifact_refs)
+        now = _utcnow()
+        updated, applied = step_completion_stamped(
+            steps,
+            step_id=step["step_id"],
+            completed_by="user",
+            idempotency_key=key,
+            action=action,
+            artifact_refs=normalized_refs or None,
+            note=note,
+            completed_at=now.isoformat(timespec="milliseconds"),
+        )
+        if not applied:  # 防御：上方显式重放分支已覆盖；此路径理论不可达
+            return UserStepResult(run=run, step=step, applied=False, resumed=False, replay=True)
+        run.steps = updated
+        run.heartbeat_at = now
+        # resume（含预算闸门/目标白名单/事件）与完成戳同事务提交；超限 →
+        # BUDGET_EXCEEDED 明确终态（完成戳随迁移落库——事实不被掩盖）。
+        resume_result = await self.resume(
+            run.id,
+            user_id=user_id,
+            to_status=to_status,
+            idempotency_key=f"{key}:resume",
+            current_stage=current_stage or step.get("label"),
+        )
+        return UserStepResult(
+            run=resume_result.run,
+            step=step,
+            applied=True,
+            resumed=resume_result.applied,
+            event_name=resume_result.event_name,
         )
 
     # ------------------------------------------------------------------

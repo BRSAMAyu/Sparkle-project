@@ -16721,5 +16721,8 @@
                 "type": "String"
             }
         }
-    }
+    },
+    "runStepContinueCta": "确认，继续",
+    "runStepAwaitingHint": "这一步轮到你，完成后 Sparkle 接着做",
+    "runStepArtifactsTitle": "Sparkle 准备好了这些"
 }

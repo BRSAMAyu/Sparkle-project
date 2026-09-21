@@ -19,6 +19,18 @@ POST /runs 挂 intent 前归属校验（他人/不存在 intent 一律 404，不
 
 网关侧由 ``backend/gateway/internal/handler/proxy_routes.go`` 的 /runs 代理组
 转发（Go 无业务逻辑，纯 proxy，分层边界不变）。
+
+X-07 · Hybrid Handoff 增量（全部走既有 run 聚合与状态机，零新真源）：
+- ``PUT /runs/{run_id}/steps``：定义步骤计划（owner/完成条件；只许一次，
+  同内容重投幂等）；
+- ``POST /runs/{run_id}/steps/{step_id}/await``：把 run 交给用户做该步
+  （``run.awaiting_user`` 事件 + wait_expires_at 过期面）；
+- ``POST /runs/{run_id}/steps/{step_id}/complete``：用户确认/编辑该步 →
+  完成戳 + resume 同事务，幂等键必填（「两次确认只 resume 一次」服务端
+  强制：步骤已有完成戳时无论 key 是否相同一律重放 no-op）；
+- run 读取面（GET /runs、GET /runs/{id}）新增 ``steps`` 投影与推导的
+  ``awaiting_step``（含 ownership/prompt/artifacts/expires_at/state）——
+  通知点击/冷启动重开据此恢复到 awaiting step，不靠内存。
 """
 
 from __future__ import annotations
@@ -38,7 +50,16 @@ from app.db.session import get_db
 from app.models.agent_run import AgentRunKind
 from app.models.execution_intent import ExecutionIntent
 from app.models.user import User
-from app.services.agent_run_service import AgentRunService, InvalidCancelReasonError, RunNotFoundError
+from app.services.agent_run_service import (
+    AgentRunService,
+    BudgetExceededError,
+    InvalidCancelReasonError,
+    MissingIdempotencyKeyError,
+    RunNotAwaitingUserStepError,
+    RunNotFoundError,
+    RunStepPlanConflictError,
+    UnknownRunStepError,
+)
 from app.services.execution_service import ExecutionService
 
 router = APIRouter(prefix="/runs", tags=["agent-runs"])
@@ -68,6 +89,7 @@ class CreateRunRequest(BaseModel):
     completion_condition: dict[str, Any] = Field(default_factory=dict)
     risk_class: str | None = Field(default=None, max_length=16)
     steps_total: int | None = Field(default=None, ge=1, le=1000)
+    steps: list[RunStepPlanEntry] = Field(default_factory=list, max_length=64)  # X-07 创建时携带步骤计划
 
 
 class ResumeRunRequest(BaseModel):
@@ -90,6 +112,58 @@ class RunStepRequest(BaseModel):
     effects: list[str] | None = Field(default=None, max_length=16)
     steps_total: int | None = Field(default=None, ge=1, le=1000)
     dedup_key: str | None = Field(default=None, max_length=128)
+
+
+class RunStepPlanEntry(BaseModel):
+    """X-07 · 步骤计划条目（契约：app/core/run_steps.py，服务端 fail-closed）。"""
+
+    step_id: str = Field(min_length=1, max_length=64)
+    ordinal: int = Field(ge=1, le=1000)
+    label: str | None = Field(default=None, max_length=64)
+    owner: str = Field(pattern="^(agent|human|hybrid)$")
+    completion_condition: dict[str, Any] = Field(default_factory=dict)
+    artifacts: list[dict[str, Any]] | None = Field(default=None, max_length=16)
+
+
+class RunStepPlanRequest(BaseModel):
+    """步骤计划定义（PUT /runs/{id}/steps；只许一次，同内容重投幂等）。"""
+
+    steps: list[RunStepPlanEntry] = Field(min_length=0, max_length=64)
+
+
+class RunStepAwaitRequest(BaseModel):
+    """把 run 交给用户做某步（POST /runs/{id}/steps/{step_id}/await）。"""
+
+    prompt: str | None = Field(default=None, max_length=500)
+    artifact_refs: list[dict[str, Any]] | None = Field(default=None, max_length=16)
+    wait_expires_at: datetime | None = None
+
+
+class RunStepCompleteRequest(BaseModel):
+    """用户完成 awaiting step（确认/编辑）→ 完成戳 + resume（幂等键必填）。
+
+    双击/重试/换 key 重发都收敛到第一次（服务端 first-wins）：步骤已有完成
+    戳时返回 ``step_replay=true`` 且不再次 resume——「用户操作两次不会
+    resume 两次」的服务端强制面。
+    """
+
+    idempotency_key: str = Field(min_length=1, max_length=255)
+    action: str = Field(default="confirm", pattern="^(confirm|edit)$", max_length=32)
+    artifact_refs: list[dict[str, Any]] | None = Field(default=None, max_length=16)
+    note: str | None = Field(default=None, max_length=500)
+    to_status: str = Field(default="RUNNING", max_length=24)
+    current_stage: str | None = Field(default=None, max_length=64)
+
+
+class RunAgentStepCompleteRequest(BaseModel):
+    """Agent 完成 agent-owned 步骤（POST /runs/{id}/steps/{step_id}/agent-complete）。
+
+    owner 纪律的服务端面：HUMAN/HYBRID 步骤只能走用户 complete 端点——
+    Agent 不得代替用户完成认知归属属于用户的步骤（HUMAN_AGENT_HYBRID §2/§3）。
+    """
+
+    artifact_refs: list[dict[str, Any]] | None = Field(default=None, max_length=16)
+    idempotency_key: str | None = Field(default=None, max_length=255)
 
 
 class RecoverRunsRequest(BaseModel):
@@ -120,6 +194,7 @@ class RunResponse(BaseModel):
     run: dict[str, Any]
     idempotent_replay: bool = False
     transition_applied: bool = True
+    step_replay: bool = False  # X-07：用户步骤完成重放（步骤已带完成戳，未再次 resume）
 
 
 class RunListResponse(BaseModel):
@@ -262,6 +337,7 @@ async def create_run(
             completion_condition=request.completion_condition,
             risk_class=request.risk_class,
             steps_total=request.steps_total,
+            steps=[entry.model_dump(exclude_none=True) for entry in request.steps] if request.steps else None,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -393,6 +469,156 @@ async def record_run_step(
     except IllegalRunTransitionError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except RunNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return RunResponse(run=result.run.to_dict(), transition_applied=result.applied)
+
+
+# route-tier: authed
+@router.put("/{run_id}/steps", response_model=RunResponse)
+async def define_run_step_plan(
+    run_id: UUID,
+    request: RunStepPlanRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """定义 run 步骤计划（X-07；只许一次，同内容重投幂等 no-op）。"""
+    service = AgentRunService(db)
+    try:
+        result = await service.define_run_steps(
+            run_id,
+            steps=[entry.model_dump(exclude_none=True) for entry in request.steps],
+            user_id=current_user.id,
+        )
+    except RunNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RunStepPlanConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return RunResponse(run=result.run.to_dict(), transition_applied=result.applied)
+
+
+# route-tier: authed
+@router.post("/{run_id}/steps/{step_id}/await", response_model=RunResponse)
+async def await_run_user_step(
+    run_id: UUID,
+    step_id: str,
+    request: RunStepAwaitRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """把 run 交给用户做某步（X-07「轮到你」；run.awaiting_user 事件同事务）。
+
+    通知/重开恢复的数据面：事件带 run_id（aurora RUN_AWAITING 既有消费），
+    App 冷启动经 GET /runs/{id} 的 ``awaiting_step`` 推导恢复到本步。
+    """
+    service = AgentRunService(db)
+    try:
+        result = await service.await_user_step(
+            run_id,
+            step_id=step_id,
+            user_id=current_user.id,
+            prompt=request.prompt,
+            artifact_refs=request.artifact_refs,
+            wait_expires_at=request.wait_expires_at.replace(tzinfo=None) if request.wait_expires_at else None,
+        )
+    except RunNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except UnknownRunStepError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except IllegalRunTransitionError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return RunResponse(run=result.run.to_dict(), transition_applied=result.applied)
+
+
+# route-tier: authed
+@router.post("/{run_id}/steps/{step_id}/complete", response_model=RunResponse)
+async def complete_run_user_step(
+    run_id: UUID,
+    step_id: str,
+    request: RunStepCompleteRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """用户确认/编辑 awaiting step（X-07）→ 完成戳 + resume 同事务、幂等强制.
+
+    - 重放（步骤已有完成戳，无论 key 是否相同）：200 + ``step_replay=true``，
+      **不第二次 resume**；
+    - 过期/取消后的迟到确认：409（终态明确，错误携带终态与归因）；
+    - 缺幂等键：422（幂等是本路径的强制前提，不是可选项）。
+    """
+    service = AgentRunService(db)
+    try:
+        result = await service.complete_user_step(
+            run_id,
+            step_id=step_id,
+            user_id=current_user.id,
+            idempotency_key=request.idempotency_key,
+            action=request.action,
+            artifact_refs=request.artifact_refs,
+            note=request.note,
+            to_status=request.to_status,
+            current_stage=request.current_stage,
+        )
+    except RunNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except UnknownRunStepError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except MissingIdempotencyKeyError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except InvalidResumeTargetError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except (IllegalRunTransitionError, RunNotAwaitingUserStepError, BudgetExceededError) as exc:
+        # 409：并发迁移收敛 / 未在等待 / 预算闸门落 BUDGET_EXCEEDED 终态
+        # （响应 run 字段携带权威终态，客户端刷新即得明确取消/过期/超限面）。
+        run_payload: dict[str, Any] | None = None
+        try:
+            run_payload = (await service.get_run(run_id, user_id=current_user.id)).to_dict()
+        except RunNotFoundError:
+            run_payload = None
+        detail: dict[str, Any] = {"message": str(exc)}
+        if run_payload is not None:
+            detail["run"] = run_payload
+        raise HTTPException(status_code=409, detail=detail) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return RunResponse(
+        run=result.run.to_dict(),
+        transition_applied=result.resumed,
+        step_replay=not result.applied,
+    )
+
+
+# route-tier: authed
+@router.post("/{run_id}/steps/{step_id}/agent-complete", response_model=RunResponse)
+async def complete_run_agent_step(
+    run_id: UUID,
+    step_id: str,
+    request: RunAgentStepCompleteRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Agent 完成 agent-owned 步骤（X-07 handoff 前半段；不发 resume）。
+
+    交棒用户由编排层显式调用 ``POST …/await``——「Agent 完成」与「轮到用户」
+    是两个可审计的语义时刻。
+    """
+    service = AgentRunService(db)
+    try:
+        result = await service.complete_agent_step(
+            run_id,
+            step_id=step_id,
+            user_id=current_user.id,
+            artifact_refs=request.artifact_refs,
+            idempotency_key=request.idempotency_key,
+        )
+    except RunNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except UnknownRunStepError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc

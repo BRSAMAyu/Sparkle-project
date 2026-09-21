@@ -18,6 +18,11 @@
 状态词表与迁移图封闭于 ``app/core/run_state_machine.py``（sha256 双冻结）；
 本模型枚举列沿用 execution_intent 的 ``create_constraint=False +
 native_enum=False`` 模式（封闭词表由应用层契约强制，X-01 同款）。
+
+X-07 · hybrid steps：``agent_runs.steps``（JSONB，Alembic ``x07_20260921``）
+在 run 聚合内持久化步骤计划（owner/完成条件/artifact 引用/完成戳）——步骤
+契约（封闭词表 + 归一化 + awaiting 推导）在 ``app/core/run_steps.py``；
+「轮到谁」与「awaiting step」均从本列推导，不建平行真源。
 """
 
 from __future__ import annotations
@@ -30,6 +35,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
 from app.core.run_state_machine import TERMINAL_RUN_STATUSES, RunStatus
+from app.core.run_steps import run_steps_wire
 from app.models.base import GUID, BaseModel
 
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
@@ -95,6 +101,10 @@ class AgentRun(BaseModel):
     steps_done = Column(Integer, nullable=False, default=0)
     steps_total = Column(Integer, nullable=True)
 
+    # --- X-07 · hybrid 步骤计划（owner/完成条件/产物引用/完成戳；契约见
+    # app/core/run_steps.py；「awaiting step」从本列 + status 推导） ---
+    steps = Column(JSONBCompat, nullable=False, default=list)
+
     # --- 终态归因（封闭词表 terminal_reason_vocabulary） ---
     terminal_reason = Column(String(32), nullable=True)
     error_category = Column(String(100), nullable=True)
@@ -138,6 +148,8 @@ class AgentRun(BaseModel):
         return self.status in TERMINAL_RUN_STATUSES
 
     def to_dict(self) -> dict[str, Any]:
+        from app.core.run_steps import awaiting_step_projection
+
         return {
             "run_id": str(self.id),
             "user_id": str(self.user_id),
@@ -161,6 +173,16 @@ class AgentRun(BaseModel):
             "current_stage": self.current_stage,
             "steps_done": int(self.steps_done or 0),
             "steps_total": self.steps_total,
+            # X-07 · hybrid 步骤面：计划 wire 投影 + 推导的 awaiting step
+            # （「轮到谁」/「恢复点」；冷启动/通知重开从持久化推导，不靠内存）。
+            "steps": run_steps_wire(self.steps),
+            "awaiting_step": awaiting_step_projection(
+                run_status=self.status.value if self.status else None,
+                wait_kind=self.wait_kind,
+                terminal_reason=self.terminal_reason,
+                wait_expires_at=self.wait_expires_at,
+                steps=self.steps,
+            ),
             "terminal_reason": self.terminal_reason,
             "error_category": self.error_category,
             "error_message": self.error_message,

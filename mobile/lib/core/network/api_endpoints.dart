@@ -101,6 +101,10 @@ class ApiEndpoints {
   static const String agentRuns = '/runs';
   static String agentRun(String runId) => '/runs/$runId';
   static String agentRunTransitions(String runId) => '/runs/$runId/transitions';
+  static String agentRunCancel(String runId) => '/runs/$runId/cancel';
+  // X-07 · Hybrid handoff：用户完成 awaiting step（确认/编辑 → 幂等 resume）
+  static String runStepComplete(String runId, String stepId) =>
+      '/runs/$runId/steps/$stepId/complete';
 
   static const String executionHealth = '/executions/health';
   static const String executionConnectionStatus =
