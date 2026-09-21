@@ -53,7 +53,7 @@ def _get_engine_kwargs(db_url: str, sslmode: str | None, sslrootcert: str | None
         # SQLite 不支持连接池，使用 NullPool
         return {
             "poolclass": NullPool,
-            "echo": settings.DEBUG or settings.DB_ECHO,
+            "echo": settings.DB_ECHO,
             "future": True,
         }
     else:
@@ -83,7 +83,7 @@ def _get_engine_kwargs(db_url: str, sslmode: str | None, sslrootcert: str | None
             "pool_recycle": settings.DB_POOL_RECYCLE,
             "pool_timeout": settings.DB_POOL_TIMEOUT,
             "pool_pre_ping": True,  # 连接前健康检查
-            "echo": settings.DEBUG or settings.DB_ECHO,
+            "echo": settings.DB_ECHO,
             "future": True,
             "connect_args": connect_args,
         }
