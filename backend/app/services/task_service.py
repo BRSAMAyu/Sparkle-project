@@ -804,6 +804,14 @@ class TaskService:
             routing_trace_id=routing_trace_id,
         )
         await event_bus_reliable.publish("task.completed", event.to_dict())
+        # X-08：统一 Outcome 捕获（Human/Hybrid 完成面）——映射 outcome 身份 +
+        # 极性并广播 outcome.recorded；真相面仍由 D-02 账本查询时点重算（单一真源）。
+        try:
+            from app.services.outcome_capture_service import capture_task_outcome
+
+            await capture_task_outcome(db_obj)
+        except Exception as exc:  # noqa: BLE001 — 广播失败不阻断完成（账本读模型可重放）
+            logger.warning("Failed to capture outcome for completed task {}: {}", db_obj.id, exc)
         try:
             from app.aurora.runtime_v1.self_model import SparkleSelfModelService
 
@@ -1242,6 +1250,15 @@ class TaskService:
             due_at=db_obj.due_date.isoformat() if db_obj.due_date else None,
         )
         await event_bus_reliable.publish("task.abandoned", event.to_dict())
+        # X-08：失败 outcome 统一捕获（polarity=NEGATIVE）——「partial/failed 保留，
+        # 不得静默丢弃」；负极性 outcome 结构性不可点亮（WVPL loop 谓词要求
+        # status=COMPLETED，Goal.progress 只数 COMPLETED）。
+        try:
+            from app.services.outcome_capture_service import capture_task_outcome
+
+            await capture_task_outcome(db_obj)
+        except Exception as exc:  # noqa: BLE001 — 广播失败不阻断放弃（可观测降级）
+            logger.warning("Failed to capture outcome for abandoned task {}: {}", db_obj.id, exc)
         try:
             from app.aurora.runtime_v1.self_model import SparkleSelfModelService
 

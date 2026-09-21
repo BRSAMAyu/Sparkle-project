@@ -23,6 +23,17 @@
   （B-02 F1 词表 ``("guest","seed")``，fleet 级批扫消费方使用；单用户查询
   默认 False，guest 查自己的账本合法）。
 
+X-08 扩展（locks: outcome-ledger；契约侧说明见 ``app/core/outcome_ledger.py``）：
+- **task 流保留失败**：ABANDONED 行以 ``polarity=NEGATIVE``、
+  ``truth_class=ACTUAL``（服务器记录的放弃事实，quiz_failed「真实但负向」
+  同款先例）进入 task 流——``query(polarity=...)`` 可定向查询；页内条目自带
+  polarity 字段，消费方据此避免把失败当成功点亮。
+- **run receipt 证据**：批次内 ``agent_runs.task_id`` 关联的终态 run 以
+  ``agent_run://<run_id>`` 附着为 INDEPENDENT/verified 证据；SUCCEEDED
+  receipt 使完成分级升 ACTUAL（``classify_task_completion`` 新参）。
+- ``truth_coverage`` 维持「完成 ≠ 点击」语义：只统计 POSITIVE（COMPLETED）
+  条目，失败行不进真相分布分母。
+
 查询接口（服务层函数，不新增 HTTP 端点）：
 - ``query(...)`` → ``OutcomePage``（keyset 分页 + source/truth_class 过滤 + 时间窗）；
 - ``count_by_source(...)`` → 各源 outcome 数（同 standalone 谓词，计数不重复）；
@@ -58,6 +69,8 @@ from app.core.outcome_ledger import (
     EVIDENCE_KIND_REF_SCHEMES,
     EVIDENCE_TRUST_TIERS,
     QUIZ_FEEDBACK_SOURCES,
+    RUN_RECEIPT_OUTCOME_POLARITY,
+    RUN_RECEIPT_WORK_MATERIALIZED_STATUSES,
     EvidenceRole,
     EvidenceTrustTier,
     OutcomeEntry,
@@ -71,6 +84,8 @@ from app.core.outcome_ledger import (
     encode_cursor,
     parse_declared_evidence,
 )
+from app.core.run_state_machine import RunStatus
+from app.models.agent_run import AgentRun
 from app.models.focus import FocusSession, FocusStatus
 from app.models.galaxy import ExpansionFeedback, StudyRecord
 from app.models.intervention_adaptive import BehavioralOutcome
@@ -159,21 +174,29 @@ class OutcomeLedgerService:
         user_id: UUID | str,
         source: OutcomeSource | str | None = None,
         truth_class: TruthClass | str | None = None,
+        polarity: OutcomePolarity | str | None = None,
         since: datetime | None = None,
         until: datetime | None = None,
         limit: int = _DEFAULT_LIMIT,
         cursor: str | None = None,
         exclude_seed_cohort: bool = False,
     ) -> OutcomePage:
-        """按 (occurred_at, key) 倒序翻页；source/truth_class/时间窗过滤。
+        """按 (occurred_at, key) 倒序翻页；source/truth_class/polarity/时间窗过滤。
 
         truth_class 过滤语义：非 task 源真相恒为 actual（服务器记录的行为观察），
         因此 ``truth_class != actual`` 时非 task 源整流排除；``actual`` 时 task 源
         仅保留分级为 actual 的行——消费方拿到的「已证实」面不含自报完成。
+
+        polarity 过滤语义（X-08）：task 流在物化后逐条过滤（与 truth_filter 同
+        机制，批推进 + 续传不变）；非 task 源 polarity 由源数据决定（quiz_failed
+        / behavioral success=False 为 NEGATIVE），条目自带 polarity 字段——v1
+        服务器侧只对 task 流做 polarity 过滤下推，跨源过滤由消费方在页内按
+        polarity 字段自行判断（分页不变量：页面不欠填、游标不跳页不重页）。
         """
         user_id = UUID(str(user_id))
         wanted_source = OutcomeSource(source) if source is not None else None
         wanted_truth = TruthClass(truth_class) if truth_class is not None else None
+        wanted_polarity = OutcomePolarity(polarity) if polarity is not None else None
         limit = max(1, min(_MAX_LIMIT, int(limit)))
         anchor = decode_cursor(cursor)
 
@@ -192,6 +215,7 @@ class OutcomeLedgerService:
                 anchor=anchor,
                 cohort_filter=cohort_filter,
                 truth_filter=wanted_truth,
+                polarity_filter=wanted_polarity,
             )
             streams[OutcomeSource.TASK_COMPLETION] = entries
             if continuation is not None:
@@ -214,6 +238,7 @@ class OutcomeLedgerService:
                         limit=limit,
                         anchor=anchor,
                         cohort_filter=cohort_filter,
+                        polarity_filter=wanted_polarity,
                     )
                     streams[stream_source] = entries
                     if continuation is not None:
@@ -261,7 +286,7 @@ class OutcomeLedgerService:
 
         task_where = _where(
             Task.user_id == user_id,
-            Task.status == TaskStatus.COMPLETED,
+            Task.status.in_((TaskStatus.COMPLETED, TaskStatus.ABANDONED)),  # X-08: 失败保留
             Task.not_deleted_filter(),
             win(Task, Task.completed_at, Task.created_at),
             cohort(Task.user_id),
@@ -347,6 +372,7 @@ class OutcomeLedgerService:
             anchor=None,
             cohort_filter=self._cohort_filter(False),
             truth_filter=None,
+            polarity_filter=OutcomePolarity.POSITIVE,  # X-08: 真相分布只统计完成面（失败行不分母）
         )
         counts = {member.value: 0 for member in TruthClass}
         for entry in entries:
@@ -415,12 +441,15 @@ class OutcomeLedgerService:
         anchor: tuple[datetime, str] | None,
         cohort_filter: Any,
         truth_filter: TruthClass | None,
+        polarity_filter: OutcomePolarity | None = None,
     ) -> tuple[list[OutcomeEntry], tuple[datetime, str] | None]:
-        """task_completion 流（唯一逐条分级的源）。
+        """task_completion 流（唯一逐条分级的源；X-08 起 COMPLETED+ABANDONED）。
 
-        truth_filter 非空时按批推进（每批 limit 行、keyset 续传，上限
-        ``_TASK_FILTER_BATCH_CAP`` 批）直到凑满 limit 条过滤后条目或流尽——
+        truth_filter / polarity_filter 非空时按批推进（每批 limit 行、keyset 续传，
+        上限 ``_TASK_FILTER_BATCH_CAP`` 批）直到凑满 limit 条过滤后条目或流尽——
         分级谓词（focus 覆盖/quiz 物化/ref 解析）不是纯 SQL，过滤在物化后进行。
+        ABANDONED 行（失败保留，X-08）：polarity=NEGATIVE 固定；完成时刻取
+        abandon 落在 completed_at 的终态时刻（X-04 abandon 语义）。
         """
         collected: list[OutcomeEntry] = []
         batches = 0
@@ -431,7 +460,7 @@ class OutcomeLedgerService:
             occurred = _coalesce(Task.completed_at, Task.created_at)
             predicates = [
                 Task.user_id == user_id,
-                Task.status == TaskStatus.COMPLETED,
+                Task.status.in_((TaskStatus.COMPLETED, TaskStatus.ABANDONED)),
                 Task.not_deleted_filter(),
                 self._window(since, until, Task.completed_at, Task.created_at),
                 self._keyset(occurred, _stream_key_expr(OutcomeSource.TASK_COMPLETION, Task.id), anchor),
@@ -451,6 +480,7 @@ class OutcomeLedgerService:
                 user_id=user_id,
                 tasks=tasks,
                 truth_class_filter=truth_filter,
+                polarity_filter=polarity_filter,
             )
             collected.extend(batch)
 
@@ -474,12 +504,14 @@ class OutcomeLedgerService:
         user_id: UUID,
         tasks: list[Any],
         truth_class_filter: TruthClass | None,
+        polarity_filter: OutcomePolarity | None = None,
     ) -> list[OutcomeEntry]:
         task_ids = [task.id for task in tasks]
         echoes = await self._echo_study_records(user_id, task_ids)
         focus_rows = await self._task_focus_sessions(user_id, task_ids)
         quiz_rows = await self._task_quiz_feedbacks(user_id, task_ids)
         verified_refs = await self._resolve_declared_refs(user_id, tasks)
+        run_receipts = await self._task_run_receipts(user_id, task_ids)
 
         entries: list[OutcomeEntry] = []
         for task in tasks:
@@ -487,20 +519,38 @@ class OutcomeLedgerService:
             task_echoes = echoes.get(task.id, [])
             task_focus = focus_rows.get(task.id, [])
             task_quiz = quiz_rows.get(task.id, [])
+            task_receipts = run_receipts.get(task.id, [])
             focus_minutes = sum(float(row.duration_minutes or 0) for row in task_focus)
 
-            projection = action_plan_projection(task)  # X-01 统一门（禁止绕过）
-            declared = parse_declared_evidence(projection["completion_evidence"]) if projection else None
-            verified_kinds = verified_refs.get(task.id, frozenset())
-            truth = classify_task_completion(
-                completed_at=task.completed_at,
-                declared_evidence=declared,
-                focus_minutes_covered=focus_minutes,
-                quiz_materialized=bool(task_quiz),
-                verified_evidence_kinds=verified_kinds,
-                actual_minutes=task.actual_minutes,
-            )
+            # X-08：ABANDONED（失败）行不走完成分级——放弃是服务器记录的负向事实
+            # （quiz_failed「真实但负向的 outcome」同款：ACTUAL + NEGATIVE），永不
+            # 参与完成点亮；receipt 也只对 COMPLETED 行有意义（失败 receipt 不升格）。
+            declared: tuple[dict[str, Any], ...] | None
+            if task.status == TaskStatus.ABANDONED:
+                truth = TruthClass.ACTUAL
+                polarity = OutcomePolarity.NEGATIVE
+                declared = None
+            else:
+                projection = action_plan_projection(task)  # X-01 统一门（禁止绕过）
+                declared = parse_declared_evidence(projection["completion_evidence"]) if projection else None
+                verified_kinds = verified_refs.get(task.id, frozenset())
+                receipt_materialized = any(
+                    str(getattr(row, "status", "")) in RUN_RECEIPT_WORK_MATERIALIZED_STATUSES
+                    for row in task_receipts
+                )
+                truth = classify_task_completion(
+                    completed_at=task.completed_at,
+                    declared_evidence=declared,
+                    focus_minutes_covered=focus_minutes,
+                    quiz_materialized=bool(task_quiz),
+                    verified_evidence_kinds=verified_kinds,
+                    actual_minutes=task.actual_minutes,
+                    run_receipt_materialized=receipt_materialized,
+                )
+                polarity = OutcomePolarity.POSITIVE
             if truth_class_filter is not None and truth is not truth_class_filter:
+                continue
+            if polarity_filter is not None and polarity is not polarity_filter:
                 continue
 
             evidence: list[OutcomeEvidence] = []
@@ -550,6 +600,24 @@ class OutcomeLedgerService:
                         verified=False,
                     )
                 )
+            # X-08：tool receipt 证据（X-05 终态 run，服务器记录的执行明细）。
+            # SUCCEEDED = 独立工作证明；PARTIAL/FAILED receipt 保留为证据（可见、
+            # 可审计）但不参与升格——失败/部分完成不点亮。
+            for row in task_receipts:
+                receipt_status = str(getattr(row, "status", "") or "")
+                evidence.append(
+                    OutcomeEvidence(
+                        source="agent_run_receipt",
+                        ref=f"agent_run://{row.id}",
+                        evidence_kind="system_event",
+                        role=(
+                            EvidenceRole.INDEPENDENT
+                            if receipt_status in RUN_RECEIPT_WORK_MATERIALIZED_STATUSES
+                            else EvidenceRole.PIPELINE_ECHO
+                        ),
+                        verified=True,
+                    )
+                )
 
             correlation: dict[str, str] = {"task_id": task_id_str}
             if task.plan_id:
@@ -565,7 +633,7 @@ class OutcomeLedgerService:
                     user_id=_uuid_str(task.user_id) or "",
                     occurred_at=task.completed_at or task.created_at,
                     truth_class=truth,
-                    polarity=OutcomePolarity.POSITIVE,
+                    polarity=polarity,
                     source_ref=f"task://{task_id_str}",
                     correlation=correlation,
                     minutes=float(task.actual_minutes) if task.actual_minutes is not None else None,
@@ -573,6 +641,29 @@ class OutcomeLedgerService:
                 )
             )
         return entries
+
+    async def _task_run_receipts(self, user_id: UUID, task_ids: list[Any]) -> dict[Any, list[Any]]:
+        """X-08：与批次任务关联的终态 run receipt（X-05 AgentRun 唯一持久真源）。
+
+        只取终态行（is_terminal 语义的 SQL 形态）；partition 键是 run.task_id。
+        receipt 的 result_ref/terminal_reason 留在 run 行（真源），账本只挂
+        ``agent_run://<id>`` 引用——不复制结果本体（单一真源纪律）。
+        """
+        if not task_ids:
+            return {}
+        stmt = select(AgentRun).where(
+            AgentRun.user_id == user_id,
+            AgentRun.task_id.in_(task_ids),
+            # Enum 列绑定用 RunStatus 成员（values_callable 存 value 形态）
+            AgentRun.status.in_([RunStatus(status) for status in RUN_RECEIPT_OUTCOME_POLARITY]),
+        )
+        rows = (await self.db.execute(stmt)).scalars().all()
+        grouped: dict[Any, list[Any]] = {}
+        for row in rows:
+            if row.task_id is None:
+                continue
+            grouped.setdefault(row.task_id, []).append(row)
+        return grouped
 
     async def _echo_study_records(self, user_id: UUID, task_ids: list[Any]) -> dict[Any, list[Any]]:
         if not task_ids:
@@ -732,7 +823,10 @@ class OutcomeLedgerService:
         limit: int,
         anchor: tuple[datetime, str] | None,
         cohort_filter: Any,
+        polarity_filter: OutcomePolarity | None = None,
     ) -> tuple[list[OutcomeEntry], tuple[datetime, str] | None]:
+        if polarity_filter not in (None, OutcomePolarity.POSITIVE):
+            return [], None  # 独立 study 行恒为 POSITIVE；其余极性此流为空（不欠填、不跳页）
         occurred = StudyRecord.created_at
         predicates = [
             StudyRecord.user_id == user_id,
@@ -792,7 +886,10 @@ class OutcomeLedgerService:
         limit: int,
         anchor: tuple[datetime, str] | None,
         cohort_filter: Any,
+        polarity_filter: OutcomePolarity | None = None,
     ) -> tuple[list[OutcomeEntry], tuple[datetime, str] | None]:
+        if polarity_filter not in (None, OutcomePolarity.POSITIVE):
+            return [], None  # focus 行恒为 POSITIVE
         occurred = _coalesce(FocusSession.end_time, FocusSession.created_at)
         predicates = [
             FocusSession.user_id == user_id,
@@ -855,12 +952,21 @@ class OutcomeLedgerService:
         limit: int,
         anchor: tuple[datetime, str] | None,
         cohort_filter: Any,
+        polarity_filter: OutcomePolarity | None = None,
     ) -> tuple[list[OutcomeEntry], tuple[datetime, str] | None]:
+        if polarity_filter is OutcomePolarity.NEUTRAL:
+            return [], None  # quiz 只产 positive/negative
         occurred = ExpansionFeedback.created_at
+        # X-08：polarity 由 meta source 判别，可直接 SQL 下推（quiz_passed=positive）
+        source_values: tuple[str, ...] = tuple(QUIZ_FEEDBACK_SOURCES)
+        if polarity_filter is OutcomePolarity.POSITIVE:
+            source_values = ("quiz_passed",)
+        elif polarity_filter is OutcomePolarity.NEGATIVE:
+            source_values = ("quiz_failed",)
         predicates = [
             ExpansionFeedback.user_id == user_id,
             ExpansionFeedback.not_deleted_filter(),
-            ExpansionFeedback.meta_data["source"].as_string().in_(tuple(QUIZ_FEEDBACK_SOURCES)),
+            ExpansionFeedback.meta_data["source"].as_string().in_(source_values),
             self._window(since, until, occurred),
             self._keyset(
                 occurred,
@@ -921,11 +1027,21 @@ class OutcomeLedgerService:
         limit: int,
         anchor: tuple[datetime, str] | None,
         cohort_filter: Any,
+        polarity_filter: OutcomePolarity | None = None,
     ) -> tuple[list[OutcomeEntry], tuple[datetime, str] | None]:
+        if polarity_filter is OutcomePolarity.NEUTRAL:
+            return [], None  # behavioral 只产 positive/negative
         occurred = _coalesce(BehavioralOutcome.timestamp, BehavioralOutcome.created_at)
+        # X-08：polarity 即 success 布尔，SQL 下推
+        success_predicates: list[Any] = []
+        if polarity_filter is OutcomePolarity.POSITIVE:
+            success_predicates.append(BehavioralOutcome.success.is_(True))
+        elif polarity_filter is OutcomePolarity.NEGATIVE:
+            success_predicates.append(BehavioralOutcome.success.is_(False))
         predicates = [
             BehavioralOutcome.user_id == user_id,
             BehavioralOutcome.not_deleted_filter(),
+            *success_predicates,
             self._window(since, until, BehavioralOutcome.timestamp, BehavioralOutcome.created_at),
             self._keyset(
                 occurred,

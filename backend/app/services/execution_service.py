@@ -3142,6 +3142,15 @@ class ExecutionService:
             await self._db.commit()
             await self._db.refresh(task)
 
+        # X-08：Agent 委托完成面也统一产生 Outcome（Human/Agent/Hybrid 一致）。
+        # 广播 best-effort；真相面由 D-02 账本查询时点重算（不在此处写状态）。
+        try:
+            from app.services.outcome_capture_service import capture_task_outcome
+
+            await capture_task_outcome(task)
+        except Exception as exc:  # noqa: BLE001 — outcome 广播失败不阻断执行结果消费
+            logger.warning("Failed to capture outcome for delegated task {}: {}", task.id, exc)
+
     async def _create_plan_execution_record(
         self,
         *,

@@ -54,6 +54,26 @@
   correlation.node_id 对齐星图掌握度链（GJ03：task→study_record→mastery_audit→outbox）。
 - **North Star WVPL**：goal-linked outcome 判定用本账本的 actual 面，不用完成点击面。
 
+X-08 扩展（2026-09，locks: outcome-ledger + task-core，V3-3）：
+- **partial/failed outcome 保留（卡面 work 3「不得静默丢弃」）**：task 流
+  standalone 谓词从「status=COMPLETED」扩为「status IN (COMPLETED, ABANDONED)」
+  ——ABANDONED 行以 ``polarity=NEGATIVE`` 进入账本（``TruthClass.ACTUAL`` +
+  NEGATIVE，与 quiz_failed「真实但负向的 outcome」同款先例），失败可查询、
+  可审计、但**结构性不可点亮**：WVPL loop 谓词（D-06）独立要求
+  ``status=COMPLETED``，NEGATIVE 条目在任何口径下都不产生 loop。
+- **tool receipt 映射（卡面 work 1）**：X-05 AgentRun 终态 receipt
+  （服务器记录的执行明细，agent_runs.task_id 关联）作为 task_completion
+  outcome 的**独立证据**附着（``EvidenceRole.INDEPENDENT``、verified=True、
+  ``agent_run://<run_id>`` ref）；SUCCEEDED receipt 物化存在 → 完成分级升
+  ACTUAL（``classify_task_completion(run_receipt_materialized=True)``，与
+  quiz 物化面同款先例）；PARTIAL/FAILED receipt **永不**升 actual
+  （失败不点亮），只作证据保留。
+- **为何不 bump ``OUTCOME_LEDGER_SCHEMA_VERSION``**：本次扩展不改 TruthClass
+  词表、信任档位、五源封闭集与幂等键推导——``derive_outcome_id`` 的 seed
+  （含版本串）保持逐字节稳定，D-06 golden fact JSON 钉住的既有 outcome id
+  全部不受影响（读模型旧条目 id 不变的演进是最低侵入路径）。谓词语义扩展
+  由持有 outcome-ledger 锁的本卡（X-08）声明，随两位 reviewer 流程裁决。
+
 变更流程：词表/档位/覆盖率规则属冻结契约，改动需 bump ``OUTCOME_LEDGER_SCHEMA_VERSION``
 并过两位 reviewer（C-01/D-01/X-01 同款纪律）。
 """
@@ -178,6 +198,29 @@ QUIZ_FEEDBACK_SOURCES: frozenset[str] = frozenset({"quiz_passed", "quiz_failed"}
 FOCUS_COVERAGE_MIN_MINUTES = 10
 FOCUS_COVERAGE_RATIO = 0.5
 
+# ---------------------------------------------------------------------------
+# X-08 · run receipt → outcome 映射（工具回执的极性词表；封闭，勿漂移）
+# ---------------------------------------------------------------------------
+
+#: 视为「工作已物化」的 run 终态：SUCCEEDED receipt 存在 → 完成分级可升 ACTUAL。
+#: **仅此一个**——PARTIAL（部分完成）不是成功，FAILED/TIMED_OUT/BUDGET_EXCEEDED/
+#: UNKNOWN_OUTCOME/CANCELLED 都不是：receipt 保留为证据但永不升 actual、
+#: 永不点亮成果（X-08「失败不点亮成果」红线的机制化）。
+RUN_RECEIPT_WORK_MATERIALIZED_STATUSES: frozenset[str] = frozenset({"SUCCEEDED"})
+
+#: run 终态 → outcome 极性（封闭映射；capture 事件与账本共用同一词表）。
+#: PARTIAL → NEUTRAL：部分完成是**真实但未完成**的 outcome——保留、可查询，
+#: 但既非 positive（不点亮）也非 negative（不是失败），卡面「partial 保留」。
+RUN_RECEIPT_OUTCOME_POLARITY: dict[str, OutcomePolarity] = {
+    "SUCCEEDED": OutcomePolarity.POSITIVE,
+    "PARTIAL": OutcomePolarity.NEUTRAL,
+    "CANCELLED": OutcomePolarity.NEUTRAL,
+    "FAILED": OutcomePolarity.NEGATIVE,
+    "TIMED_OUT": OutcomePolarity.NEGATIVE,
+    "BUDGET_EXCEEDED": OutcomePolarity.NEGATIVE,
+    "UNKNOWN_OUTCOME": OutcomePolarity.NEGATIVE,
+}
+
 
 @dataclass(frozen=True)
 class SourceSpec:
@@ -197,7 +240,9 @@ FIVE_SOURCE_MAP: dict[str, SourceSpec] = {
         truth_is_classified=True,
         default_truth_class=TruthClass.SELF_REPORTED,
         occurred_at_field="completed_at",
-        standalone_predicate="status=COMPLETED AND deleted_at IS NULL",
+        standalone_predicate="status IN (COMPLETED, ABANDONED) AND deleted_at IS NULL"
+        " (X-08 扩展：ABANDONED 以 polarity=NEGATIVE 保留——失败 outcome 不静默丢弃，"
+        "亦不可点亮：WVPL loop 谓词独立要求 status=COMPLETED)",
     ),
     "study_record": SourceSpec(
         table="study_records",
@@ -247,6 +292,8 @@ __all__ = [
     "OutcomePolarity",
     "OutcomeSource",
     "QUIZ_FEEDBACK_SOURCES",
+    "RUN_RECEIPT_OUTCOME_POLARITY",
+    "RUN_RECEIPT_WORK_MATERIALIZED_STATUSES",
     "SourceSpec",
     "TruthClass",
     "classify_task_completion",
@@ -353,6 +400,7 @@ def classify_task_completion(
     quiz_materialized: bool,
     verified_evidence_kinds: frozenset[str] | set[str],
     actual_minutes: int | float | None,
+    run_receipt_materialized: bool = False,
 ) -> TruthClass:
     """「无法证明时不伪装 actual」守卫（验收项 ②，红测钉死）。
 
@@ -361,9 +409,12 @@ def classify_task_completion(
     2. 任一 verifiable 档 kind（artifact/file/code/quiz_result）**已验证**
        （ref 解析 / quiz 物化）→ ACTUAL；
     3. quiz 结果物化（独立五源行存在）→ ACTUAL；
-    4. 独立 focus 计时覆盖 ≥ ``required_focus_minutes(actual_minutes)`` → ACTUAL
+    4. SUCCEEDED run receipt 物化（X-05 终态行存在，``agent_runs.task_id``
+       关联；PARTIAL/FAILED receipt 不算）→ ACTUAL——服务器记录的执行明细
+       是与点击无自动因果的独立工作证明（X-08 tool receipt 映射）；
+    5. 独立 focus 计时覆盖 ≥ ``required_focus_minutes(actual_minutes)`` → ACTUAL
        （服务器记录的行为观察，覆盖率门槛防「1 分钟 focus 伪装 60 分钟完成」）；
-    5. 其余一切（无声明 / user 档声明 / 未解析的 verifiable 声明 / 覆盖不足）→
+    6. 其余一切（无声明 / user 档声明 / 未解析的 verifiable 声明 / 覆盖不足）→
        SELF_REPORTED——完成点击及其自动回声只是用户的自报。
 
     注意：本函数永不出 ESTIMATED/DEMO（那是消费方对模型估计与 demo cohort 的
@@ -379,6 +430,8 @@ def classify_task_completion(
     if verified & {k for k, tier in EVIDENCE_TRUST_TIERS.items() if tier is EvidenceTrustTier.VERIFIABLE}:
         return TruthClass.ACTUAL
     if quiz_materialized:
+        return TruthClass.ACTUAL
+    if run_receipt_materialized:
         return TruthClass.ACTUAL
 
     threshold = required_focus_minutes(actual_minutes)

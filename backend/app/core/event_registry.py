@@ -383,8 +383,12 @@ EVENT_REGISTRY: dict[str, RegisteredEvent] = {
             name="outcome.recorded",
             stage=EventStage.OUTCOME,
             aggregate_type="outcome",
-            producers=("v3: outcome evidence adapter",),
-            status="reserved",
+            producers=(
+                "app/services/outcome_capture_service.py (X-08 outcome evidence adapter: "
+                "task terminal states COMPLETED/ABANDONED → unified Outcome capture; "
+                "partial/failed preserved as NEUTRAL/NEGATIVE polarity, never lit)",
+            ),
+            status="live",
         ),
         # --- STATE UPDATE ---------------------------------------------------
         RegisteredEvent(
