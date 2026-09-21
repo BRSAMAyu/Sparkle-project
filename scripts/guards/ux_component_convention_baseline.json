@@ -1,0 +1,1027 @@
+{
+  "comment": "Frozen ratchet baseline for check_ux_component_convention.py (U-01 CONVENTION, mobile/lib/core/design/README.md). Only lower via --update-baseline after a consolidation batch; never raise.",
+  "files": {
+    "mobile/lib/features/chat/presentation/screens/chat_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 2,
+      "rawChip": 2,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/chat/presentation/screens/group_chat_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 1,
+      "rawChip": 2,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/chat/presentation/screens/private_chat_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 1,
+      "rawChip": 2,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/chat/presentation/widgets/action_card.dart": {
+      "colorLiteral": 6,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 1,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/chat/presentation/widgets/agent_avatar_switcher.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/agent_reasoning_bubble.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 2,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 1,
+      "rawSpinner": 2
+    },
+    "mobile/lib/features/chat/presentation/widgets/agent_team_sheet.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 5,
+      "rawChip": 5,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/chat/presentation/widgets/agent_workflow_panel.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 2,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 2
+    },
+    "mobile/lib/features/chat/presentation/widgets/ai_reasoning_mode_pill.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/chat/presentation/widgets/ai_status_indicator.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/chat/presentation/widgets/assistant_message_metadata_tray.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 1,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/chat/presentation/widgets/aurora_calibration_panel.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 1,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/chat/presentation/widgets/aurora_receipt_chip.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 5,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/calibration_receipt_chip.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 2,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/chat/presentation/widgets/capability_ceiling_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 1,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/chat/presentation/widgets/causal_timeline_panel.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 4,
+      "rawButton": 3,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/chat_accessory_pill.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/chat/presentation/widgets/chat_bubble.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 2,
+      "rawChip": 1,
+      "rawSpinner": 2
+    },
+    "mobile/lib/features/chat/presentation/widgets/chat_design_language_widgets.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 3,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/chat_input.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 2,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/chat_mode_selector_pill.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 3,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/chat/presentation/widgets/chat_prediction_dock.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 3,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/chat/presentation/widgets/collaboration_timeline.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 1,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/chat/presentation/widgets/comeback_banner.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/chat/presentation/widgets/community_chat_input.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/content_review_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 2
+    },
+    "mobile/lib/features/chat/presentation/widgets/contextual_correction_bar.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 2,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/chat/presentation/widgets/divine_moment_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 1,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/chat/presentation/widgets/experience_envelope_indicator.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 1,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/chat/presentation/widgets/expert_roundtable_widget.dart": {
+      "colorLiteral": 2,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/chat/presentation/widgets/file_message_bubble.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/chat/presentation/widgets/goal_arbitration_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/graph_diagnostic_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/chat/presentation/widgets/growth_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 1,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/chat/presentation/widgets/intent_analysis_button.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 2,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/intent_preview_dialog.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/low_yield_gentle_block_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 2,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/chat/presentation/widgets/memory_reference_receipt.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/offline_queue_indicator.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/plan_review_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/plan_selector_pill.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 4,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/chat/presentation/widgets/plan_strategy_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 1,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/chat/presentation/widgets/profile_front_door_card.dart": {
+      "colorLiteral": 4,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/chat/presentation/widgets/regeneration_prompt.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 2,
+      "rawSpinner": 2
+    },
+    "mobile/lib/features/chat/presentation/widgets/review_rating_dialog.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 2,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/chat/presentation/widgets/source_explanation_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 2,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/spine_receipt_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/chat/presentation/widgets/stale_recovery_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/chat/presentation/widgets/status_awareness_bar.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 7,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/chat/presentation/widgets/study_materials_sheet.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/task_stuck_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 2,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/chat/presentation/widgets/transparency_floating_capsule.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/chat/presentation/widgets/voice_input_button.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/working_memory_badge.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/chat/presentation/widgets/working_memory_drawer.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 3,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/galaxy/presentation/screens/galaxy_draft_review_screen.dart": {
+      "colorLiteral": 4,
+      "parallelClass": 1,
+      "rawButton": 2,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/galaxy/presentation/screens/galaxy_screen.dart": {
+      "colorLiteral": 14,
+      "parallelClass": 1,
+      "rawButton": 3,
+      "rawChip": 1,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/galaxy/presentation/widgets/galaxy/galaxy_controls.dart": {
+      "colorLiteral": 4,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/galaxy/presentation/widgets/galaxy/galaxy_document_upload_overlay.dart": {
+      "colorLiteral": 9,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/galaxy/presentation/widgets/galaxy/galaxy_error_dialog.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 2,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/galaxy/presentation/widgets/galaxy/galaxy_mini_map.dart": {
+      "colorLiteral": 5,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/galaxy/presentation/widgets/galaxy/galaxy_node_preview_card.dart": {
+      "colorLiteral": 1,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/galaxy/presentation/widgets/galaxy/galaxy_simulation_settings_sheet.dart": {
+      "colorLiteral": 2,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/galaxy/presentation/widgets/galaxy/sector_config.dart": {
+      "colorLiteral": 14,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/galaxy/presentation/widgets/galaxy/star_map_painter.dart": {
+      "colorLiteral": 26,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/galaxy/presentation/widgets/galaxy_contribution_banner.dart": {
+      "colorLiteral": 3,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/galaxy/presentation/widgets/goal_world_graph_mini_panel.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 3,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 2
+    },
+    "mobile/lib/features/galaxy/presentation/widgets/node_detail_sheet.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 10,
+      "rawButton": 2,
+      "rawChip": 0,
+      "rawSpinner": 2
+    },
+    "mobile/lib/features/goal/presentation/screens/goal_creation_wizard_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 3,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/goal/presentation/screens/goal_detail_screen.dart": {
+      "colorLiteral": 1,
+      "parallelClass": 2,
+      "rawButton": 1,
+      "rawChip": 2,
+      "rawSpinner": 2
+    },
+    "mobile/lib/features/goal/presentation/widgets/goal_bottleneck_strip.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/goal/presentation/widgets/goal_created_dialog.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 2,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/goal/presentation/widgets/goal_intent_input.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/goal/presentation/widgets/intent_confirmation_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 1,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/goal/presentation/widgets/journey_progress_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/home/presentation/screens/dashboard_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 5,
+      "rawButton": 4,
+      "rawChip": 1,
+      "rawSpinner": 2
+    },
+    "mobile/lib/features/home/presentation/screens/openclaw_hub_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 2,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/home/presentation/screens/task_monitor_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 1,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/home/presentation/widgets/active_bottleneck_alert.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 1,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/home/presentation/widgets/aurora_status_band.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 1,
+      "rawChip": 1,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/home/presentation/widgets/calendar/task_preview_panel.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/home/presentation/widgets/calendar_heatmap_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/home/presentation/widgets/cognitive_tool_hub_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 1,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/home/presentation/widgets/compact_status_bar.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 2,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/home/presentation/widgets/curiosity_capsule_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 1,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/home/presentation/widgets/dashboard_card_section.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/home/presentation/widgets/dashboard_edit_sheet.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 3,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/home/presentation/widgets/exam_sprint_dashboard_card.dart": {
+      "colorLiteral": 3,
+      "parallelClass": 2,
+      "rawButton": 1,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/home/presentation/widgets/goal_switcher.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/home/presentation/widgets/insight_hub_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 1,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/home/presentation/widgets/intent_prediction_bar.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/home/presentation/widgets/layers/background_layer.dart": {
+      "colorLiteral": 6,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/home/presentation/widgets/layers/effect_layer.dart": {
+      "colorLiteral": 2,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/home/presentation/widgets/learning_heatmap_widget.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/home/presentation/widgets/long_term_plan_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/home/presentation/widgets/multi_agent_bar.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 2,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/home/presentation/widgets/multi_goal_dashboard_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 2,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/home/presentation/widgets/omnibar.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/home/presentation/widgets/openclaw_automation_panel.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 2
+    },
+    "mobile/lib/features/home/presentation/widgets/openclaw_connection_diagnostics_sheet.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 2,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/home/presentation/widgets/openclaw_node_management_panel.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 2
+    },
+    "mobile/lib/features/home/presentation/widgets/predicted_intent_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/home/presentation/widgets/task_board/interactive_task_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 1,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/home/presentation/widgets/task_board/plan_view.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 2,
+      "rawChip": 0,
+      "rawSpinner": 2
+    },
+    "mobile/lib/features/home/presentation/widgets/task_board/sprint_view.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/home/presentation/widgets/thought_capsule_dialog.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 2,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/home/presentation/widgets/today_growth_status_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/home/presentation/widgets/understanding_panel.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 2,
+      "rawButton": 2,
+      "rawChip": 1,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/home/presentation/widgets/unified_omni_bar.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 2,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/home/presentation/widgets/visual_renderer.dart": {
+      "colorLiteral": 1,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/home/presentation/widgets/weather_presentation.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/memory/presentation/screens/memory_panel_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 3,
+      "rawButton": 0,
+      "rawChip": 5,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/memory/presentation/screens/memory_settings_screen.dart": {
+      "colorLiteral": 1,
+      "parallelClass": 3,
+      "rawButton": 0,
+      "rawChip": 2,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/memory/presentation/widgets/evidence_drawer.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/memory/presentation/widgets/memory_evidence_badge.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 1,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/memory/presentation/widgets/pending_commitments_section.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/memory/presentation/widgets/unresolved_conflicts_section.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 3,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/settings/presentation/screens/accessibility_settings_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 1,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/settings/presentation/screens/openclaw_settings_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 2,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/settings/presentation/widgets/openclaw_connection_panel.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 13,
+      "rawChip": 2,
+      "rawSpinner": 3
+    },
+    "mobile/lib/features/settings/presentation/widgets/openclaw_execution_preferences_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 1,
+      "rawChip": 1,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/settings/presentation/widgets/settings_behavior_explanation.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/task/presentation/screens/task_create_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 1,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/task/presentation/screens/task_detail_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 4,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/task/presentation/screens/task_execution_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 1,
+      "rawChip": 1,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/task/presentation/screens/task_list_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 2,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/task/presentation/widgets/execution_approval_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 3,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/task/presentation/widgets/execution_result_renderer.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 1,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/task/presentation/widgets/execution_template_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/task/presentation/widgets/guidance/task_guidance_surface.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 2,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/task/presentation/widgets/paused_task_status_panel.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 1,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/task/presentation/widgets/source_lifecycle_badge.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 3,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/task/presentation/widgets/stuck_help_sheet.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 1,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/task/presentation/widgets/subtask_list_widget.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/task/presentation/widgets/task_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 2,
+      "rawButton": 2,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/task/presentation/widgets/task_chat_panel.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/task/presentation/widgets/task_feedback_dialog.dart": {
+      "colorLiteral": 8,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/task/presentation/widgets/task_guide_panel.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 4,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/task/presentation/widgets/task_offline_indicator.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/task/presentation/widgets/task_protocol_panel.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 2,
+      "rawButton": 0,
+      "rawChip": 2,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/task/presentation/widgets/task_restore_dialog.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 2,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/task/presentation/widgets/why_this_today_panel.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/user/presentation/screens/persona_onboarding_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 3,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/user/presentation/screens/profile_screen.dart": {
+      "colorLiteral": 20,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/user/presentation/screens/unified_settings_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 4,
+      "rawChip": 13,
+      "rawSpinner": 3
+    }
+  }
+}
