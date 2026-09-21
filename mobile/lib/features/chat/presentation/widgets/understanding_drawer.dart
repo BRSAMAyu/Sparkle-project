@@ -14,9 +14,10 @@ class ChatUnderstandingDrawerButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final snapshot = ref.watch(understandingSnapshotProvider).valueOrNull;
     final scheme = Theme.of(context).colorScheme;
+    // U-03 黑话移除：不再用「N 条可纠正判断」计数做主呈现。
     final subtitle = snapshot == null || snapshot.claims.isEmpty
         ? context.l10n.understandingChatDrawerSubtitleEmpty
-        : context.l10n.understandingChatDrawerSubtitle(snapshot.claims.length);
+        : context.l10n.understandingChatDrawerSubtitle;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 6),
       child: Semantics(

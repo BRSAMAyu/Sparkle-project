@@ -13,6 +13,7 @@ class MemoryRoutes {
   static const String panel = '/memory';
   static const String settings = '/memory/settings';
   static const String detail = '/memory/detail';
+  static const String understanding = '/memory/understanding';
 
   static void popOrGoPanel(BuildContext context, {String fallback = panel}) {
     final navigator = Navigator.of(context);
@@ -38,6 +39,21 @@ class MemoryRoutes {
               child: MemoryPanelScreen(),
             ),
             type: SharedAxisTransitionType.scaled,
+          ),
+        ),
+        GoRoute(
+          path: understanding,
+          name: 'memoryUnderstanding',
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
+            state: state,
+            motionToken: SparkleMotionToken.scene,
+            child: const SceneAudioScope(
+              policy: SceneAudioPolicy(
+                track: BgmTrack.insights,
+                atmosphere: ExperienceAtmosphere.insightsMist,
+              ),
+              child: UnderstandingScreen(),
+            ),
           ),
         ),
         GoRoute(

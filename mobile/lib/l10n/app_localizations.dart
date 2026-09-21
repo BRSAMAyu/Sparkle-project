@@ -63,7 +63,7 @@ import 'app_localizations_zh.dart';
 /// property.
 abstract class AppLocalizations {
   AppLocalizations(String locale)
-    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -86,16 +86,16 @@ abstract class AppLocalizations {
   /// of delegates is preferred or required.
   static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
       <LocalizationsDelegate<dynamic>>[
-        delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-      ];
+    delegate,
+    GlobalMaterialLocalizations.delegate,
+    GlobalCupertinoLocalizations.delegate,
+    GlobalWidgetsLocalizations.delegate,
+  ];
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('en'),
-    Locale('zh'),
+    Locale('zh')
   ];
 
   /// No description provided for @appTitle.
@@ -19105,10 +19105,7 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'已处理 {count} 个候选节点，新增 {created} 个，复用 {reused} 个已有节点。'**
   String taskDetailCandidatesApplied(
-    Object count,
-    Object created,
-    Object reused,
-  );
+      Object count, Object created, Object reused);
 
   /// No description provided for @taskDetailCandidatesReused.
   ///
@@ -20477,11 +20474,7 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'近 {days} 天里，当前最值得继续盯的预测动作是「{topAction}」；同时 prompt / inference 命中率分别是 {promptUtil}%/{inferenceUtil}%。'**
   String aiOpsPredictionSummary(
-    Object days,
-    Object topAction,
-    Object promptUtil,
-    Object inferenceUtil,
-  );
+      Object days, Object topAction, Object promptUtil, Object inferenceUtil);
 
   /// No description provided for @aiOpsOpenAnalysis.
   ///
@@ -22768,11 +22761,7 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'{progress}% · {completed}/{occurrences} 次发生 · {tasks} 个任务'**
   String planDetailPhaseStats(
-    Object progress,
-    Object completed,
-    Object occurrences,
-    Object tasks,
-  );
+      Object progress, Object completed, Object occurrences, Object tasks);
 
   /// No description provided for @theaterTitle.
   ///
@@ -23487,10 +23476,7 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'当前阶段：{label} · {step} · {compare}'**
   String theaterTimelinePhaseWithSteps(
-    Object compare,
-    Object label,
-    Object step,
-  );
+      Object compare, Object label, Object step);
 
   /// No description provided for @theaterTimelineWaitingDeduction.
   ///
@@ -23724,12 +23710,8 @@ abstract class AppLocalizations {
   ///
   /// In zh, this message translates to:
   /// **'区间预测：完成率 {completionLow}%-{completionHigh}%， 掌握度 {masteryLow}%-{masteryHigh}%'**
-  String theaterRouteRangePrediction(
-    Object completionHigh,
-    Object completionLow,
-    Object masteryHigh,
-    Object masteryLow,
-  );
+  String theaterRouteRangePrediction(Object completionHigh,
+      Object completionLow, Object masteryHigh, Object masteryLow);
 
   /// No description provided for @theaterRouteRecommendedBaseline.
   ///
@@ -24498,10 +24480,7 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'{type} · {dailyMinutes} 分钟/天 · {hours} 小时'**
   String planCreateReviewSummary(
-    Object dailyMinutes,
-    Object hours,
-    Object type,
-  );
+      Object dailyMinutes, Object hours, Object type);
 
   /// No description provided for @planCreateReviewEditDescription.
   ///
@@ -25636,22 +25615,17 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'原始 {originalMastery}% / {originalCompletion}%  →  调整后 {predictedMastery}% / {predictedCompletion}%'**
   String theaterWhatIfCombinedResult(
-    Object originalMastery,
-    Object originalCompletion,
-    Object predictedMastery,
-    Object predictedCompletion,
-  );
+      Object originalMastery,
+      Object originalCompletion,
+      Object predictedMastery,
+      Object predictedCompletion);
 
   /// No description provided for @theaterAccuracyPredictedActual.
   ///
   /// In zh, this message translates to:
   /// **'预测 {predictedCompletion}% / {predictedMastery}%， 实际 {actualCompletion}% / {actualMastery}%'**
-  String theaterAccuracyPredictedActual(
-    Object predictedCompletion,
-    Object predictedMastery,
-    Object actualCompletion,
-    Object actualMastery,
-  );
+  String theaterAccuracyPredictedActual(Object predictedCompletion,
+      Object predictedMastery, Object actualCompletion, Object actualMastery);
 
   /// No description provided for @theaterPerDayUnit.
   ///
@@ -37586,13 +37560,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'{hashtag} 我在 Sparkle 达成了「{headline}」里程碑。累计学习 {studyDays} 天，掌握 {masteredNodes} 个知识节点，完成 {completedSprints} 次冲刺，记录 {errorCount} 道错题。'**
   String achievementMilestoneShareText(
-    Object completedSprints,
-    Object errorCount,
-    Object hashtag,
-    Object headline,
-    Object masteredNodes,
-    Object studyDays,
-  );
+      Object completedSprints,
+      Object errorCount,
+      Object hashtag,
+      Object headline,
+      Object masteredNodes,
+      Object studyDays);
 
   /// No description provided for @achievementMilestoneShareInProgress.
   ///
@@ -38043,11 +38016,7 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'{month}月{day}日 {hour}:{minute}'**
   String achievementUnlockTimeDate(
-    Object day,
-    Object hour,
-    Object minute,
-    Object month,
-  );
+      Object day, Object hour, Object minute, Object month);
 
   /// No description provided for @achievementUnlockCombo.
   ///
@@ -38240,11 +38209,7 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'结果：{result}，影响任务 {affected} 个，新增 {inserted} 个，收起 {hidden} 个'**
   String notificationCompilationSummary(
-    Object affected,
-    Object hidden,
-    Object inserted,
-    Object result,
-  );
+      Object affected, Object hidden, Object inserted, Object result);
 
   /// No description provided for @notificationEvidencePlanHealthRecovered.
   ///
@@ -38461,9 +38426,7 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'接受率 {acceptanceRate}% · 行动率 {actionRate}%'**
   String notificationAnalyticsAcceptanceActionRate(
-    Object acceptanceRate,
-    Object actionRate,
-  );
+      Object acceptanceRate, Object actionRate);
 
   /// No description provided for @notificationAnalyticsToneEffectivenessTitle.
   ///
@@ -38500,9 +38463,7 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'行动率 {actedRate}% · 有效率 {effectiveRate}%'**
   String notificationAnalyticsActedEffectiveRate(
-    Object actedRate,
-    Object effectiveRate,
-  );
+      Object actedRate, Object effectiveRate);
 
   /// No description provided for @notificationAnalyticsTimeToActionTitle.
   ///
@@ -38569,9 +38530,7 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'接受率: {acceptanceRate}% · 行动率: {actionRate}%'**
   String notificationAnalyticsRateSuffix(
-    Object acceptanceRate,
-    Object actionRate,
-  );
+      Object acceptanceRate, Object actionRate);
 
   /// No description provided for @focusNoTaskHint.
   ///
@@ -38614,10 +38573,7 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'今天的专注让你的 {nodeName} 掌握度从 {oldMastery} 提升到了 {newMastery} 分'**
   String focusSessionMasteryUpdate(
-    String nodeName,
-    int oldMastery,
-    int newMastery,
-  );
+      String nodeName, int oldMastery, int newMastery);
 
   /// No description provided for @focusReflectionTitleLabel.
   ///
@@ -49051,12 +49007,8 @@ abstract class AppLocalizations {
   ///
   /// In zh, this message translates to:
   /// **'我的 7 天备考冲刺完成：掌握 {masteredNodes} 个知识节点，修复 {repairedErrors} 个错误模式，完成 {completedTasks} 个任务。最强项：{strongestArea}。#Sparkle备考'**
-  String planSprintShareText(
-    int masteredNodes,
-    int repairedErrors,
-    int completedTasks,
-    String strongestArea,
-  );
+  String planSprintShareText(int masteredNodes, int repairedErrors,
+      int completedTasks, String strongestArea);
 
   /// No description provided for @planSprintBack.
   ///
@@ -49099,10 +49051,7 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'掌握了 {masteredNodes} 个知识节点，修复了 {repairedErrors} 个错误模式，完成了 {completedTasks} 个任务。'**
   String planSprintResultSummary(
-    Object completedTasks,
-    Object masteredNodes,
-    Object repairedErrors,
-  );
+      Object completedTasks, Object masteredNodes, Object repairedErrors);
 
   /// No description provided for @planSprintStrongest.
   ///
@@ -49343,10 +49292,7 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'{mode} · 进行中（第 {currentDay} 天，还剩 {remainingDays} 天）'**
   String planPortfolioActiveDay(
-    Object currentDay,
-    Object mode,
-    Object remainingDays,
-  );
+      Object currentDay, Object mode, Object remainingDays);
 
   /// No description provided for @planPortfolioActiveShort.
   ///
@@ -54735,11 +54681,7 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'prompt 命中 {prompt}% · 推理命中 {inference}% · known {promptCount}/{inferenceCount}'**
   String aiopsPromptHit(
-    String prompt,
-    String inference,
-    int promptCount,
-    int inferenceCount,
-  );
+      String prompt, String inference, int promptCount, int inferenceCount);
 
   /// No description provided for @calTaskRescheduled.
   ///
@@ -56163,12 +56105,6 @@ abstract class AppLocalizations {
   /// **'Sparkle 对我的理解快照'**
   String get understandingPanelSemanticLabel;
 
-  /// No description provided for @understandingPanelSubtitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'{count} 条判断 · {ratio}% 高置信'**
-  String understandingPanelSubtitle(int count, int ratio);
-
   /// No description provided for @understandingPanelEmptySubtitle.
   ///
   /// In zh, this message translates to:
@@ -56238,18 +56174,15 @@ abstract class AppLocalizations {
   /// No description provided for @understandingClaimSemantic.
   ///
   /// In zh, this message translates to:
-  /// **'{claim}。置信度 {confidence}%。'**
-  String understandingClaimSemantic(String claim, int confidence);
+  /// **'判断：{claim}（把握程度：{confidence}）'**
+  String understandingClaimSemantic(String claim, String confidence);
 
   /// No description provided for @understandingStyleSummary.
   ///
   /// In zh, this message translates to:
   /// **'{tone} · {verbosity}。{reason}'**
   String understandingStyleSummary(
-    String tone,
-    String verbosity,
-    String reason,
-  );
+      String tone, String verbosity, String reason);
 
   /// No description provided for @understandingRecentlyCorrected.
   ///
@@ -56338,8 +56271,8 @@ abstract class AppLocalizations {
   /// No description provided for @understandingChatDrawerSubtitle.
   ///
   /// In zh, this message translates to:
-  /// **'{count} 条可纠正判断'**
-  String understandingChatDrawerSubtitle(int count);
+  /// **'Sparkle 目前的判断，都可以纠正'**
+  String get understandingChatDrawerSubtitle;
 
   /// No description provided for @understandingChatDrawerSubtitleEmpty.
   ///
@@ -57252,10 +57185,7 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'将「{title}」的状态从「{status}」改为「{nextStatus}」。\\n\\n这会影响相关计划、任务和提醒，且不会自动撤销。'**
   String personaGoalStatusChangeContent(
-    Object nextStatus,
-    Object status,
-    Object title,
-  );
+      Object nextStatus, Object status, Object title);
 
   /// No description provided for @personaConfirmChange.
   ///
@@ -63922,20 +63852,14 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'你是Sparkle内置的群聊AI助手，正在协助群聊「{name}」。\n你的任务是产出一条最终可直接发送到群里的中文消息。\n只输出消息正文本身，不要解释，不要加前言，不要写“我来帮你”“你可以这样发”“建议发送”，不要使用项目符号或备注，不要冒充系统说明。\n语气自然、简洁、友好，像群成员会直接发出去的话。\n如果需要列点，只允许使用 `1. ` 或 `- `，不要使用 `•`、`◦`、emoji 项目符号、半残 Markdown。\n\n最近对话:\n{contextLines}\n\n用户问题:\n{input}'**
   String communityAgentGroupPromptZh(
-    Object contextLines,
-    Object input,
-    Object name,
-  );
+      Object contextLines, Object input, Object name);
 
   /// No description provided for @communityAgentGroupPromptEn.
   ///
   /// In zh, this message translates to:
   /// **'You are Sparkle\'s built-in group chat AI assistant, helping in the group \"{name}\".\nYour task is to produce a single message ready to send directly in the group.\nOutput only the message body — no explanations, no preambles, no \"I can help\" or \"You could say\" or \"Suggested reply\", no bullet points or notes, no system impersonation.\nTone: natural, concise, friendly — like something a group member would actually send.\nIf you need to list items, only use `1. ` or `- `. No `•`, `◦`, emoji bullets, or broken Markdown.\n\nRecent conversation:\n{contextLines}\n\nUser question:\n{input}'**
   String communityAgentGroupPromptEn(
-    Object contextLines,
-    Object input,
-    Object name,
-  );
+      Object contextLines, Object input, Object name);
 
   /// No description provided for @communityAgentFriend.
   ///
@@ -63948,20 +63872,14 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'你是Sparkle内置的私聊AI助手，正在协助我与「{name}」的对话。\n你的任务是产出一条最终可直接发送给对方的中文私聊回复。\n只输出回复正文本身，不要解释，不要加前言，不要写“我来帮你”“你可以这样回”“建议回复”，不要附带分析或备注。\n语气自然、礼貌、克制，像我会直接按下发送的内容。\n如果需要列点，只允许使用 `1. ` 或 `- `，不要使用特殊项目符号或半残 Markdown。\n\n最近对话:\n{contextLines}\n\n用户问题:\n{input}'**
   String communityAgentPrivatePromptZh(
-    Object contextLines,
-    Object input,
-    Object name,
-  );
+      Object contextLines, Object input, Object name);
 
   /// No description provided for @communityAgentPrivatePromptEn.
   ///
   /// In zh, this message translates to:
   /// **'You are Sparkle\'s built-in private chat AI assistant, helping with my conversation with \"{name}\".\nYour task is to produce a single private reply ready to send directly.\nOutput only the reply body — no explanations, no preambles, no \"I can help\" or \"You could reply\" or \"Suggested reply\", no analysis or notes.\nTone: natural, polite, restrained — like something I would actually hit send on.\nIf you need to list items, only use `1. ` or `- `. No special bullets or broken Markdown.\n\nRecent conversation:\n{contextLines}\n\nUser question:\n{input}'**
   String communityAgentPrivatePromptEn(
-    Object contextLines,
-    Object input,
-    Object name,
-  );
+      Object contextLines, Object input, Object name);
 
   /// No description provided for @communityAgentPresetSummaryGroupZh.
   ///
@@ -64382,11 +64300,7 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'必读 {mustLoad} · 选读 {optional} · 附件 {attached}{retrievalLabel}'**
   String taskProtocolMaterialsCount(
-    Object attached,
-    Object mustLoad,
-    Object optional,
-    Object retrievalLabel,
-  );
+      Object attached, Object mustLoad, Object optional, Object retrievalLabel);
 
   /// No description provided for @taskProtocolUpdatesOnCompletion.
   ///
@@ -65929,6 +65843,342 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'Sparkle 准备好了这些'**
   String get runStepArtifactsTitle;
+
+  /// No description provided for @understandingViewTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sparkle 对我的理解'**
+  String get understandingViewTitle;
+
+  /// No description provided for @understandingViewIntro.
+  ///
+  /// In zh, this message translates to:
+  /// **'这里是 Sparkle 目前记住的内容和判断。每一项都能查看来源，也可以修改或删除。'**
+  String get understandingViewIntro;
+
+  /// No description provided for @understandingEmptyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sparkle 还不了解你'**
+  String get understandingEmptyTitle;
+
+  /// No description provided for @understandingEmptyBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'聊聊天、制定计划或完成任务之后，Sparkle 会把记住的内容和判断放在这里，你可以随时纠正。'**
+  String get understandingEmptyBody;
+
+  /// No description provided for @understandingBucketEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'这一组暂时没有内容'**
+  String get understandingBucketEmpty;
+
+  /// No description provided for @understandingViewAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看全部'**
+  String get understandingViewAll;
+
+  /// No description provided for @understandingLoadMore.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载更多'**
+  String get understandingLoadMore;
+
+  /// No description provided for @understandingScanCapped.
+  ///
+  /// In zh, this message translates to:
+  /// **'内容较多，这里只显示最近更新的部分。'**
+  String get understandingScanCapped;
+
+  /// No description provided for @understandingPausedBadge.
+  ///
+  /// In zh, this message translates to:
+  /// **'已暂停使用'**
+  String get understandingPausedBadge;
+
+  /// No description provided for @understandingStatusSuperseded.
+  ///
+  /// In zh, this message translates to:
+  /// **'已被新内容替代'**
+  String get understandingStatusSuperseded;
+
+  /// No description provided for @understandingScopeGlobal.
+  ///
+  /// In zh, this message translates to:
+  /// **'所有场景可用'**
+  String get understandingScopeGlobal;
+
+  /// No description provided for @understandingScopeGoal.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅在此目标中'**
+  String get understandingScopeGoal;
+
+  /// No description provided for @understandingScopeDomain.
+  ///
+  /// In zh, this message translates to:
+  /// **'相关话题中'**
+  String get understandingScopeDomain;
+
+  /// No description provided for @understandingScopeSession.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前会话中'**
+  String get understandingScopeSession;
+
+  /// No description provided for @understandingActionEdit.
+  ///
+  /// In zh, this message translates to:
+  /// **'修改'**
+  String get understandingActionEdit;
+
+  /// No description provided for @understandingActionDelete.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除'**
+  String get understandingActionDelete;
+
+  /// No description provided for @understandingActionPause.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂时不用'**
+  String get understandingActionPause;
+
+  /// No description provided for @understandingActionResume.
+  ///
+  /// In zh, this message translates to:
+  /// **'恢复使用'**
+  String get understandingActionResume;
+
+  /// No description provided for @understandingActionScope.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅此 Goal'**
+  String get understandingActionScope;
+
+  /// No description provided for @understandingActionWhy.
+  ///
+  /// In zh, this message translates to:
+  /// **'为什么有这条'**
+  String get understandingActionWhy;
+
+  /// No description provided for @understandingEditTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'修改这条内容'**
+  String get understandingEditTitle;
+
+  /// No description provided for @understandingEditLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'改成'**
+  String get understandingEditLabel;
+
+  /// No description provided for @understandingEditReasonHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'为什么改（可以不填）'**
+  String get understandingEditReasonHint;
+
+  /// No description provided for @understandingDeleteTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除这条内容？'**
+  String get understandingDeleteTitle;
+
+  /// No description provided for @understandingDeleteBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除后 Sparkle 不会再使用它，下一次判断也会随之更新。'**
+  String get understandingDeleteBody;
+
+  /// No description provided for @understandingPauseTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂时不用这条？'**
+  String get understandingPauseTitle;
+
+  /// No description provided for @understandingPauseBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂停期间 Sparkle 不再引用它，你可以随时恢复。'**
+  String get understandingPauseBody;
+
+  /// No description provided for @understandingScopeSheetTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'只在某个目标中使用'**
+  String get understandingScopeSheetTitle;
+
+  /// No description provided for @understandingScopePickPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择学习计划'**
+  String get understandingScopePickPlan;
+
+  /// No description provided for @understandingScopeApply.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅在此计划中使用'**
+  String get understandingScopeApply;
+
+  /// No description provided for @understandingScopeNoPlans.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有可选的学习计划'**
+  String get understandingScopeNoPlans;
+
+  /// No description provided for @understandingToastUpdated.
+  ///
+  /// In zh, this message translates to:
+  /// **'已更新。Sparkle 下一次判断会使用新内容。'**
+  String get understandingToastUpdated;
+
+  /// No description provided for @understandingToastDeleted.
+  ///
+  /// In zh, this message translates to:
+  /// **'已删除。Sparkle 不会再使用这条内容。'**
+  String get understandingToastDeleted;
+
+  /// No description provided for @understandingToastPaused.
+  ///
+  /// In zh, this message translates to:
+  /// **'已暂停。Sparkle 暂时不再引用这条内容。'**
+  String get understandingToastPaused;
+
+  /// No description provided for @understandingToastResumed.
+  ///
+  /// In zh, this message translates to:
+  /// **'已恢复使用。'**
+  String get understandingToastResumed;
+
+  /// No description provided for @understandingToastScoped.
+  ///
+  /// In zh, this message translates to:
+  /// **'已限定使用范围。'**
+  String get understandingToastScoped;
+
+  /// No description provided for @understandingToastFailedDetail.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有成功：{detail}'**
+  String understandingToastFailedDetail(String detail);
+
+  /// No description provided for @whyThisSheetTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'为什么 Sparkle 用了这条'**
+  String get whyThisSheetTitle;
+
+  /// No description provided for @whyThisInUse.
+  ///
+  /// In zh, this message translates to:
+  /// **'这条记忆仍在使用中'**
+  String get whyThisInUse;
+
+  /// No description provided for @whyThisPausedNow.
+  ///
+  /// In zh, this message translates to:
+  /// **'这条记忆已暂停使用'**
+  String get whyThisPausedNow;
+
+  /// No description provided for @whyThisGoneNow.
+  ///
+  /// In zh, this message translates to:
+  /// **'这条记忆已删除，不再使用'**
+  String get whyThisGoneNow;
+
+  /// No description provided for @whyThisReplacedNow.
+  ///
+  /// In zh, this message translates to:
+  /// **'内容已被你修改，这是现行版本'**
+  String get whyThisReplacedNow;
+
+  /// No description provided for @whyThisSourceTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'来源'**
+  String get whyThisSourceTitle;
+
+  /// No description provided for @whyThisSourceUnknown.
+  ///
+  /// In zh, this message translates to:
+  /// **'来源不明'**
+  String get whyThisSourceUnknown;
+
+  /// No description provided for @whyThisWrittenAt.
+  ///
+  /// In zh, this message translates to:
+  /// **'记录于 {time}'**
+  String whyThisWrittenAt(String time);
+
+  /// No description provided for @whyThisLastUsedAt.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近一次使用 {time}'**
+  String whyThisLastUsedAt(String time);
+
+  /// No description provided for @whyThisWhyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'当时被选中的原因'**
+  String get whyThisWhyTitle;
+
+  /// No description provided for @whyThisWhyEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有记录到具体的使用原因'**
+  String get whyThisWhyEmpty;
+
+  /// No description provided for @whyThisInternalTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'有几点原因没有直接说出来'**
+  String get whyThisInternalTitle;
+
+  /// No description provided for @whyThisUnknownReason.
+  ///
+  /// In zh, this message translates to:
+  /// **'原因说明暂缺'**
+  String get whyThisUnknownReason;
+
+  /// No description provided for @whyThisUsageTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近的使用'**
+  String get whyThisUsageTitle;
+
+  /// No description provided for @whyThisUsageEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有使用记录'**
+  String get whyThisUsageEmpty;
+
+  /// No description provided for @whyThisReceiptStale.
+  ///
+  /// In zh, this message translates to:
+  /// **'这份回执来自旧版本格式，仅供参考。'**
+  String get whyThisReceiptStale;
+
+  /// No description provided for @whyThisCorrectAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'这不对'**
+  String get whyThisCorrectAction;
+
+  /// No description provided for @whyThisLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂时打不开这条的来源'**
+  String get whyThisLoadFailed;
+
+  /// No description provided for @understandingPanelPlainSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'这些是 Sparkle 目前的判断，每一项都可以纠正。'**
+  String get understandingPanelPlainSubtitle;
 }
 
 class _AppLocalizationsDelegate
@@ -65958,9 +66208,8 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   }
 
   throw FlutterError(
-    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-    'an issue with the localizations generation tool. Please file an issue '
-    'on GitHub with a reproducible sample app and the gen-l10n configuration '
-    'that was used.',
-  );
+      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+      'an issue with the localizations generation tool. Please file an issue '
+      'on GitHub with a reproducible sample app and the gen-l10n configuration '
+      'that was used.');
 }

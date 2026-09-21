@@ -7,22 +7,19 @@ import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
+import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
 import 'package:sparkle/features/memory/memory_routes.dart';
+import 'package:sparkle/features/memory/presentation/providers/understanding_overview_provider.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_detail_screen.dart';
 import 'package:sparkle/features/memory/presentation/widgets/evidence_drawer.dart';
 import 'package:sparkle/features/memory/presentation/widgets/memory_evidence_badge.dart';
+import 'package:sparkle/features/memory/presentation/widgets/understanding_overview_view.dart';
 import 'package:sparkle/features/memory/presentation/widgets/pending_commitments_section.dart';
 import 'package:sparkle/features/memory/presentation/widgets/unresolved_conflicts_section.dart';
 import 'package:sparkle/features/user/user_routes.dart';
-
-enum MemoryEntryType { preference, goal, episodic }
-
-enum MemorySort { newest, oldest, importance, confidence }
-
-enum MemoryViewMode { compact, expanded }
 
 class _MemoryPanelDataState {
   const _MemoryPanelDataState({
@@ -123,9 +120,10 @@ class _MemoryPanelDataNotifier extends StateNotifier<_MemoryPanelDataState> {
 
   final MemoryApiService _service;
 
-  static const _episodicPageSize = 20;
-
-  Future<void> loadAll() async {
+  /// U-03：V2 主呈现换成四组理解视图，面板自身只加载问责分区
+  /// （场景/前瞻/承诺/冲突）；偏好/目标/经历改由 provenance API 提供，
+  /// 不再重复请求旧列表端点。V1（legacy）仍走全量加载。
+  Future<void> loadAll({bool includeMemories = true}) async {
     state = state.copyWith(isLoading: true, clearError: true);
 
     // F7-05: 逐分区 settle，单个分区失败不再让整个面板进入全量错误态；
@@ -139,9 +137,9 @@ class _MemoryPanelDataNotifier extends StateNotifier<_MemoryPanelDataState> {
     }
 
     final results = await Future.wait<(Object?, Object?)>([
-      settled(_service.getPreferences()),
-      settled(_service.getGoals()),
-      settled(_service.getEpisodicPage(limit: _episodicPageSize)),
+      if (includeMemories) settled(_service.getPreferences()),
+      if (includeMemories) settled(_service.getGoals()),
+      if (includeMemories) settled(_service.getEpisodicPage()),
       settled(_service.getRecentScenes()),
       settled(_service.getForesightHintSummary()),
       settled(_service.getPendingCommitments()),
@@ -150,6 +148,28 @@ class _MemoryPanelDataNotifier extends StateNotifier<_MemoryPanelDataState> {
     if (!mounted) {
       return;
     }
+    var index = 0;
+    final preferences = includeMemories
+        ? results[index++].$1 as List<MemoryPreferenceItem>?
+        : null;
+    final goals =
+        includeMemories ? results[index++].$1 as List<MemoryGoalItem>? : null;
+    final episodicPage = includeMemories
+        ? results[index++] as (EpisodicMemoryPage?, Object?)
+        : null;
+    state = state.copyWith(
+      preferences: preferences,
+      goals: goals,
+      episodic: episodicPage?.$1?.items,
+      recentScenes: results[index++].$1 as List<RecentSceneSummaryItem>?,
+      foresightHint: results[index++].$1 as ForesightHintSummaryItem?,
+      pendingCommitments:
+          results[index++].$1 as List<PendingCommitmentItem>?,
+      unresolvedConflicts: results[index].$1 as List<UnresolvedConflictItem>?,
+      episodicHasMore: episodicPage?.$1?.hasMore,
+      episodicTotal: episodicPage?.$1?.total,
+      isLoading: false,
+    );
     Object? firstFailure;
     var failureCount = 0;
     for (final (_, failure) in results) {
@@ -160,19 +180,7 @@ class _MemoryPanelDataNotifier extends StateNotifier<_MemoryPanelDataState> {
     }
     final allFailed = failureCount == results.length;
     final failureMessage = firstFailure == null ? null : '$firstFailure';
-
-    final episodicPage = results[2].$1 as EpisodicMemoryPage?;
     state = state.copyWith(
-      preferences: results[0].$1 as List<MemoryPreferenceItem>?,
-      goals: results[1].$1 as List<MemoryGoalItem>?,
-      episodic: episodicPage?.items,
-      recentScenes: results[3].$1 as List<RecentSceneSummaryItem>?,
-      foresightHint: results[4].$1 as ForesightHintSummaryItem?,
-      pendingCommitments: results[5].$1 as List<PendingCommitmentItem>?,
-      unresolvedConflicts: results[6].$1 as List<UnresolvedConflictItem>?,
-      episodicHasMore: episodicPage?.hasMore,
-      episodicTotal: episodicPage?.total,
-      isLoading: false,
       error: allFailed ? failureMessage : null,
       partialError: allFailed ? null : failureMessage,
     );
@@ -186,7 +194,6 @@ class _MemoryPanelDataNotifier extends StateNotifier<_MemoryPanelDataState> {
     state = state.copyWith(episodicLoadingMore: true);
     try {
       final page = await _service.getEpisodicPage(
-        limit: _episodicPageSize,
         offset: state.episodic.length,
       );
       if (!mounted) {
@@ -375,33 +382,10 @@ final _memoryPanelDataProvider = StateNotifierProvider.autoDispose<
     _MemoryPanelDataNotifier, _MemoryPanelDataState>((ref) {
   final notifier =
       _MemoryPanelDataNotifier(ref.watch(memoryApiServiceProvider));
-  unawaited(notifier.loadAll());
+  // U-03：V2 呈现四组理解视图（provenance API），面板数据只取问责分区。
+  unawaited(notifier.loadAll(includeMemories: !AppFeatureFlags.enableMemoryPanelV2));
   return notifier;
 });
-
-class MemoryEntry {
-  MemoryEntry({
-    required this.id,
-    required this.type,
-    required this.title,
-    required this.evidenceStatus,
-    required this.detailArgs,
-    required this.updatedAt,
-    required this.correctionCount,
-    this.importance,
-    this.confidence,
-  });
-
-  final String id;
-  final MemoryEntryType type;
-  final String title;
-  final MemoryEvidenceStatus evidenceStatus;
-  final MemoryDetailArgs detailArgs;
-  final DateTime? updatedAt;
-  final int correctionCount;
-  final double? importance;
-  final double? confidence;
-}
 
 class MemoryPanelScreen extends ConsumerStatefulWidget {
   const MemoryPanelScreen({super.key});
@@ -411,13 +395,6 @@ class MemoryPanelScreen extends ConsumerStatefulWidget {
 }
 
 class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
-  MemoryEntryType? _filterType;
-  MemoryEvidenceStatus? _filterEvidence;
-  DateTimeRange? _dateRange;
-  MemorySort _sort = MemorySort.newest;
-  MemoryViewMode _viewMode = MemoryViewMode.compact;
-  final Set<String> _pinnedIds = {};
-
   _MemoryPanelDataState get _data => ref.watch(_memoryPanelDataProvider);
 
   List<MemoryPreferenceItem> get _preferences => _data.preferences;
@@ -595,31 +572,80 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
         ),
       );
 
+  /// U-03 V2 主呈现：四组理解视图（不是数据库管理器）。
+  ///
+  /// 移除了旧 V2 的类型/证据筛选 chips、"N 条"计数与重要性/置信度排序等
+  /// 黑话式主呈现（COPY_TONE：无来源精确数字不上主位）；理解条目的
+  /// 来源/范围/置信层级在每张卡片内以用户语言呈现。
   Widget _buildV2Panel(BuildContext context) {
-    final entries = _applySort(_applyFilters(_buildEntries()));
+    final understanding = ref.watch(understandingOverviewProvider);
+    final hasScenes = _recentScenes.isNotEmpty;
+    final hasHint = _foresightHint?.hintText?.isNotEmpty ?? false;
+    final hasConflicts = _unresolvedConflicts.isNotEmpty;
+    final hasCommitments = _pendingCommitments.isNotEmpty;
+    final hasUnderstanding = !understanding.isEmpty;
     return SparkleRefreshIndicator(
-      onRefresh: _loadAll,
+      onRefresh: () async {
+        await Future.wait([
+          ref.read(understandingOverviewProvider.notifier).refresh(),
+          ref.read(_memoryPanelDataProvider.notifier).loadAll(includeMemories: false),
+        ]);
+        if (!mounted) {
+          return;
+        }
+        final partialError =
+            ref.read(_memoryPanelDataProvider).partialError;
+        if (partialError != null) {
+          AppFeedback.error(
+            context,
+            context.l10n.memoryPanelLoadFailed(partialError),
+          );
+        }
+      },
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(DS.lg),
         children: [
-          SparkleStaggerItem(index: 0, child: _buildFilterBar(context)),
-          const SizedBox(height: DS.md),
-          if (!_hasAnyMemoryContent) ...[
-            _buildGuidedEmptyState(context),
-          ] else ...[
-            if (_foresightHint?.hintText?.isNotEmpty ?? false) ...[
-              SparkleStaggerItem(index: 1, child: _buildForesightHintSection()),
-              const SizedBox(height: DS.md),
-            ],
-            if (_recentScenes.isNotEmpty) ...[
-              SparkleStaggerItem(
-                index: _foresightHint?.hintText?.isNotEmpty ?? false ? 2 : 1,
-                child: _buildRecentScenesSection(),
+          if (!hasUnderstanding &&
+              !hasScenes &&
+              !hasHint &&
+              !hasConflicts &&
+              !hasCommitments &&
+              understanding.error == null)
+            _buildGuidedEmptyState(context)
+          else ...[
+            Text(
+              context.l10n.understandingViewTitle,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: DS.textPrimary,
+                    fontWeight: DS.fontWeightBold,
+                  ),
+            ),
+            const SizedBox(height: DS.sm),
+            if (understanding.error != null && !hasUnderstanding)
+              CustomErrorWidget(
+                message: understanding.error ?? '',
+                onRetry: () => ref
+                    .read(understandingOverviewProvider.notifier)
+                    .refresh(),
+              )
+            else
+              UnderstandingOverviewView(
+                embedded: true,
+                onNeedFullView: () =>
+                    context.push(MemoryRoutes.understanding),
               ),
+            // 场景/前瞻卡片自带标题，不再额外加 _SectionHeader（避免重复）。
+            if (hasHint) ...[
               const SizedBox(height: DS.md),
+              _buildForesightHintSection(),
             ],
-            if (_unresolvedConflicts.isNotEmpty)
+            if (hasScenes) ...[
+              const SizedBox(height: DS.md),
+              _buildRecentScenesSection(),
+            ],
+            if (hasConflicts) ...[
+              const SizedBox(height: DS.xl),
               UnresolvedConflictsSection(
                 items: _unresolvedConflicts,
                 processingIds: _processingConflictIds,
@@ -627,160 +653,20 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
                 onSelectRight: _selectConflictRight,
                 onSelectNone: _selectConflictNone,
               ),
-            if (_unresolvedConflicts.isNotEmpty) const SizedBox(height: DS.md),
-            if (_pendingCommitments.isNotEmpty)
+            ],
+            if (hasCommitments) ...[
+              const SizedBox(height: DS.xl),
               PendingCommitmentsSection(
                 items: _pendingCommitments,
                 processingIds: _processingCommitmentIds,
                 onResolve: _resolvePendingCommitment,
                 onDismiss: _dismissPendingCommitment,
               ),
-            if (_pendingCommitments.isNotEmpty) const SizedBox(height: DS.md),
-            if (entries.isEmpty)
-              _buildEmptyState(context)
-            else ...[
-              ...entries.indexed.map(
-                (entry) => SparkleStaggerItem(
-                  index: entry.$1 +
-                      (_recentScenes.isNotEmpty ? 2 : 1) +
-                      ((_foresightHint?.hintText?.isNotEmpty ?? false) ? 1 : 0),
-                  child: _buildEntryCard(entry.$2),
-                ),
-              ),
-              if (_episodicHasMore)
-                Padding(
-                  padding: const EdgeInsets.only(top: DS.sm),
-                  child: _buildLoadMoreButton(context),
-                ),
             ],
           ],
         ],
       ),
     );
-  }
-
-  Widget _buildFilterBar(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Wrap(
-            spacing: DS.sm,
-            runSpacing: DS.sm,
-            children: [
-              _buildFilterChip(
-                label: context.l10n.taskFilterAll,
-                selected: _filterType == null,
-                onSelected: (_) => _setTypeFilter(null),
-              ),
-              _buildFilterChip(
-                label: context.l10n.memoryTypePreference,
-                selected: _filterType == MemoryEntryType.preference,
-                onSelected: (_) => _setTypeFilter(MemoryEntryType.preference),
-              ),
-              _buildFilterChip(
-                label: context.l10n.memoryTypeGoal,
-                selected: _filterType == MemoryEntryType.goal,
-                onSelected: (_) => _setTypeFilter(MemoryEntryType.goal),
-              ),
-              _buildFilterChip(
-                label: context.l10n.memoryTypeEpisodic,
-                selected: _filterType == MemoryEntryType.episodic,
-                onSelected: (_) => _setTypeFilter(MemoryEntryType.episodic),
-              ),
-            ],
-          ),
-          const SizedBox(height: DS.sm),
-          Wrap(
-            spacing: DS.sm,
-            runSpacing: DS.sm,
-            children: [
-              _buildFilterChip(
-                label: context.l10n.memoryPanelEvidenceAll,
-                selected: _filterEvidence == null,
-                onSelected: (_) => _setEvidenceFilter(null),
-              ),
-              _buildFilterChip(
-                label: context.l10n.memoryPanelEvidenceOk,
-                selected: _filterEvidence == MemoryEvidenceStatus.ok,
-                onSelected: (_) => _setEvidenceFilter(MemoryEvidenceStatus.ok),
-              ),
-              _buildFilterChip(
-                label: context.l10n.memoryPanelEvidenceMissing,
-                selected: _filterEvidence == MemoryEvidenceStatus.missing,
-                onSelected: (_) =>
-                    _setEvidenceFilter(MemoryEvidenceStatus.missing),
-              ),
-              _buildFilterChip(
-                label: context.l10n.memoryPanelEvidenceRedacted,
-                selected: _filterEvidence == MemoryEvidenceStatus.redacted,
-                onSelected: (_) =>
-                    _setEvidenceFilter(MemoryEvidenceStatus.redacted),
-              ),
-            ],
-          ),
-          const SizedBox(height: DS.sm),
-          Row(
-            children: [
-              DropdownButton<MemorySort>(
-                value: _sort,
-                onChanged: (value) {
-                  if (value == null) {
-                    return;
-                  }
-                  setState(() => _sort = value);
-                },
-                items: [
-                  DropdownMenuItem(
-                    value: MemorySort.newest,
-                    child: Text(context.l10n.memorySortNewest),
-                  ),
-                  DropdownMenuItem(
-                    value: MemorySort.oldest,
-                    child: Text(context.l10n.memorySortOldest),
-                  ),
-                  DropdownMenuItem(
-                    value: MemorySort.importance,
-                    child: Text(context.l10n.memorySortImportance),
-                  ),
-                  DropdownMenuItem(
-                    value: MemorySort.confidence,
-                    child: Text(context.l10n.memoryConfidence),
-                  ),
-                ],
-              ),
-              const Spacer(),
-              SparkleButton.ghost(
-                label: _dateRange == null
-                    ? context.l10n.memoryPanelDate
-                    : '${_dateRange!.start.month}/${_dateRange!.start.day}'
-                        ' - ${_dateRange!.end.month}/${_dateRange!.end.day}',
-                onPressed: _pickDateRange,
-                icon: const Icon(Icons.date_range),
-              ),
-              const SizedBox(width: DS.sm),
-              SparkleIconButton(
-                icon: Icon(
-                  _viewMode == MemoryViewMode.compact
-                      ? Icons.view_agenda
-                      : Icons.view_stream,
-                ),
-                onPressed: () => setState(() {
-                  _viewMode = _viewMode == MemoryViewMode.compact
-                      ? MemoryViewMode.expanded
-                      : MemoryViewMode.compact;
-                }),
-                variant: ButtonVariant.ghost,
-              ),
-            ],
-          ),
-        ],
-      );
-
-  void _clearFilters() {
-    setState(() {
-      _filterType = null;
-      _filterEvidence = null;
-      _dateRange = null;
-    });
   }
 
   /// memory-governance-mvp: episodic 分页"加载更多"。
@@ -792,17 +678,6 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
           onPressed: _episodicLoadingMore ? () {} : _loadMoreEpisodic,
           disabled: _episodicLoadingMore,
           variant: ButtonVariant.ghost,
-        ),
-      );
-
-  Widget _buildEmptyState(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: DS.xl),
-        child: EmptyState(
-          type: EmptyStateType.noResults,
-          title: context.l10n.memoryPanelEmptyFilterTitle,
-          description: context.l10n.memoryPanelEmptyFilterDescription,
-          actionText: context.l10n.memoryPanelClearFilter,
-          onAction: _clearFilters,
         ),
       );
 
@@ -1206,88 +1081,6 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
     }
   }
 
-  Widget _buildEntryCard(MemoryEntry entry) {
-    final isPinned = _pinnedIds.contains(entry.id);
-    final preference = entry.detailArgs.preference;
-    final episodic = entry.detailArgs.episodic;
-    final showAdjust = preference?.sourceType == 'ai_inferred' &&
-        (preference?.adjustable ?? false);
-    final showUndo = episodic != null && _isInferredAutoMemory(episodic);
-    final subtitle = [
-      _entryTypeLabel(entry.type),
-      if (episodic != null && _isInferredAutoMemory(episodic))
-        context.l10n.memoryPanelAiAutoMemories,
-      _formatUpdated(entry.updatedAt),
-    ].where((value) => value.isNotEmpty).join(' · ');
-    return Card(
-      margin: const EdgeInsets.only(bottom: DS.md),
-      child: ListTile(
-        title: Text(entry.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-        subtitle: _viewMode == MemoryViewMode.compact
-            ? Text(subtitle)
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(subtitle),
-                  const SizedBox(height: 4),
-                  Text(_formatMetrics(entry)),
-                ],
-              ),
-        trailing: SizedBox(
-          width: showAdjust || showUndo ? 260 : 176,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              MemoryEvidenceBadge(status: entry.evidenceStatus),
-              if (entry.correctionCount > 0) ...[
-                const SizedBox(width: 6),
-                _CorrectionBadge(
-                    label: context.l10n
-                        .memoryPanelCorrectionCount(entry.correctionCount)),
-              ],
-              if (showAdjust) ...[
-                const SizedBox(width: 6),
-                SparkleButton.ghost(
-                  onPressed: () => _openPersonaAdjust(preference!),
-                  label: context.l10n.memoryPanelAdjust,
-                ),
-              ],
-              if (showUndo) ...[
-                const SizedBox(width: 6),
-                SparkleButton(
-                  label: _revokingIds.contains(entry.id)
-                      ? context.l10n.memoryPanelRevoking
-                      : context.l10n.memoryPanelRevoke,
-                  onPressed: _revokingIds.contains(entry.id)
-                      ? () {}
-                      : () => _revokeAutoMemory(episodic),
-                  disabled: _revokingIds.contains(entry.id),
-                  variant: ButtonVariant.ghost,
-                ),
-              ],
-              const SizedBox(width: 4),
-              SparkleIconButton(
-                icon: Icon(
-                  isPinned ? Icons.push_pin : Icons.push_pin_outlined,
-                ),
-                onPressed: () => setState(() {
-                  if (isPinned) {
-                    _pinnedIds.remove(entry.id);
-                  } else {
-                    _pinnedIds.add(entry.id);
-                  }
-                }),
-                variant: ButtonVariant.ghost,
-                size: 32,
-              ),
-            ],
-          ),
-        ),
-        onTap: () => _openDetail(context, entry.detailArgs),
-      ),
-    );
-  }
-
   void _openDetail(BuildContext context, MemoryDetailArgs args) {
     context.push(MemoryRoutes.detail, extra: args);
   }
@@ -1324,168 +1117,9 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
     }
   }
 
-  String _entryTypeLabel(MemoryEntryType type) => switch (type) {
-        MemoryEntryType.preference => context.l10n.memoryTypePreference,
-        MemoryEntryType.goal => context.l10n.memoryTypeGoal,
-        MemoryEntryType.episodic => context.l10n.memoryTypeEpisodic,
-      };
-
   List<EpisodicMemoryItem> get _autoMemoryEntries => _episodic
       .where((item) => _isInferredAutoMemory(item))
       .toList(growable: false);
-
-  String _formatMetrics(MemoryEntry entry) {
-    final importance = entry.importance;
-    final confidence = entry.confidence;
-    final parts = <String>[];
-    if (importance != null) {
-      parts.add(context.l10n
-          .memoryPanelImportanceValue(importance.toStringAsFixed(2)));
-    }
-    if (confidence != null) {
-      parts.add(context.l10n
-          .memoryPanelConfidenceValue(confidence.toStringAsFixed(2)));
-    }
-    return parts.isEmpty
-        ? context.l10n.memoryPanelMetricsNone
-        : parts.join(' · ');
-  }
-
-  void _setTypeFilter(MemoryEntryType? type) {
-    setState(() {
-      _filterType = type;
-    });
-  }
-
-  void _setEvidenceFilter(MemoryEvidenceStatus? status) {
-    setState(() {
-      _filterEvidence = status;
-    });
-  }
-
-  Future<void> _pickDateRange() async {
-    final selected = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-      initialDateRange: _dateRange,
-    );
-    if (selected != null) {
-      setState(() => _dateRange = selected);
-    }
-  }
-
-  List<MemoryEntry> _buildEntries() {
-    final entries = <MemoryEntry>[];
-    for (final item in _preferences) {
-      entries.add(
-        MemoryEntry(
-          id: item.id,
-          type: MemoryEntryType.preference,
-          title: item.prefKey,
-          updatedAt: item.updatedAt,
-          confidence: item.confidence,
-          evidenceStatus: _statusFor(item.evidenceMissing, item.evidenceRefs),
-          correctionCount: item.correctionCount,
-          detailArgs: MemoryDetailArgs.preference(item),
-        ),
-      );
-    }
-    for (final item in _goals) {
-      entries.add(
-        MemoryEntry(
-          id: item.id,
-          type: MemoryEntryType.goal,
-          title: item.title,
-          updatedAt: item.updatedAt,
-          evidenceStatus: _statusFor(item.evidenceMissing, item.evidenceRefs),
-          correctionCount: item.correctionCount,
-          detailArgs: MemoryDetailArgs.goal(item),
-        ),
-      );
-    }
-    for (final item in _episodic) {
-      entries.add(
-        MemoryEntry(
-          id: item.id,
-          type: MemoryEntryType.episodic,
-          title: item.summary,
-          updatedAt: item.occurredAt,
-          importance: item.importanceScore,
-          evidenceStatus: _statusFor(item.evidenceMissing, item.evidenceRefs),
-          correctionCount: item.correctionCount,
-          detailArgs: MemoryDetailArgs.episodic(item),
-        ),
-      );
-    }
-    return entries;
-  }
-
-  List<MemoryEntry> _applyFilters(List<MemoryEntry> entries) =>
-      entries.where((entry) {
-        if (_filterType != null && entry.type != _filterType) {
-          return false;
-        }
-        if (_filterEvidence != null &&
-            entry.evidenceStatus != _filterEvidence) {
-          return false;
-        }
-        if (_dateRange != null && entry.updatedAt != null) {
-          if (entry.updatedAt!.isBefore(_dateRange!.start) ||
-              entry.updatedAt!.isAfter(_dateRange!.end)) {
-            return false;
-          }
-        }
-        return true;
-      }).toList();
-
-  List<MemoryEntry> _applySort(List<MemoryEntry> entries) {
-    entries.sort((a, b) {
-      if (_pinnedIds.contains(a.id) && !_pinnedIds.contains(b.id)) {
-        return -1;
-      }
-      if (_pinnedIds.contains(b.id) && !_pinnedIds.contains(a.id)) {
-        return 1;
-      }
-      switch (_sort) {
-        case MemorySort.oldest:
-          return _compareDates(a.updatedAt, b.updatedAt);
-        case MemorySort.importance:
-          return _compareNumber(b.importance, a.importance);
-        case MemorySort.confidence:
-          return _compareNumber(b.confidence, a.confidence);
-        case MemorySort.newest:
-          return _compareDates(b.updatedAt, a.updatedAt);
-      }
-    });
-    return entries;
-  }
-
-  int _compareDates(DateTime? a, DateTime? b) {
-    if (a == null && b == null) {
-      return 0;
-    }
-    if (a == null) {
-      return 1;
-    }
-    if (b == null) {
-      return -1;
-    }
-    return a.compareTo(b);
-  }
-
-  int _compareNumber(double? a, double? b) {
-    if (a == null && b == null) {
-      return 0;
-    }
-    if (a == null) {
-      return 1;
-    }
-    if (b == null) {
-      return -1;
-    }
-    return a.compareTo(b);
-  }
 
   MemoryEvidenceStatus _statusFor(
     bool evidenceMissing,
@@ -1870,32 +1504,3 @@ class _CorrectionBadge extends StatelessWidget {
       SemanticPill(label: label, tone: PillTone.warning, dense: true);
 }
 
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({
-    required this.label,
-    required this.selected,
-    required this.onSelected,
-  });
-
-  final String label;
-  final bool selected;
-  final ValueChanged<bool> onSelected;
-
-  @override
-  // 触感由 SparklePressable 默认 tap 反馈提供（Step 1 申报：selection→tap）。
-  Widget build(BuildContext context) => SemanticPill(
-        label: label,
-        tone: PillTone.neutral,
-        selected: selected,
-        onTap: () => onSelected(!selected),
-      );
-}
-
-extension on _MemoryPanelScreenState {
-  Widget _buildFilterChip({
-    required String label,
-    required bool selected,
-    required ValueChanged<bool> onSelected,
-  }) =>
-      _FilterChip(label: label, selected: selected, onSelected: onSelected);
-}

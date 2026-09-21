@@ -3314,7 +3314,6 @@
     "communityChatEmpty": "暂无消息",
     "communityChatConnectionLost": "实时连接已被服务器拒绝，自动重连已停止",
     "communityChatReconnect": "重新连接",
-    "communityChatEmpty": "暂无消息",
     "communityChatTitle": "社群聊天",
     "communityCheckInAction": "打卡",
     "communityCheckInDurationLabel": "时长",
@@ -4170,7 +4169,7 @@
     "taskDeadline": "截止时间",
     "taskDeadlineLabel": "截止时间",
     "taskDeleteConfirm": "确定要删除这个任务吗？",
-    "taskPreviewLoadFailed": "加载任务预览失败",
+    "taskPreviewLoadFailed": "任务预览加载失败",
     "taskDeleteTitle": "删除任务",
     "taskDetailLoadFailed": "{arg0}",
     "taskDetailLoading": "加载任务详情...",
@@ -10128,21 +10127,31 @@
     "brtPausedRounds": "已暂停 · {done} / {total} 轮",
     "@brtPausedRounds": {
         "placeholders": {
-            "done": { "type": "int" },
-            "total": { "type": "int" }
+            "done": {
+                "type": "int"
+            },
+            "total": {
+                "type": "int"
+            }
         }
     },
     "brtRounds": "{done} / {total} 轮",
     "@brtRounds": {
         "placeholders": {
-            "done": { "type": "int" },
-            "total": { "type": "int" }
+            "done": {
+                "type": "int"
+            },
+            "total": {
+                "type": "int"
+            }
         }
     },
     "brtDurationMin": "{minutes} 分钟",
     "@brtDurationMin": {
         "placeholders": {
-            "minutes": { "type": "int" }
+            "minutes": {
+                "type": "int"
+            }
         }
     },
     "brtReady": "准备",
@@ -14235,17 +14244,6 @@
     "lowYieldActionCorrect": "不对，纠正",
     "understandingPanelTitle": "Sparkle 懂我",
     "understandingPanelSemanticLabel": "Sparkle 对我的理解快照",
-    "understandingPanelSubtitle": "{count} 条判断 · {ratio}% 高置信",
-    "@understandingPanelSubtitle": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            },
-            "ratio": {
-                "type": "int"
-            }
-        }
-    },
     "understandingPanelEmptySubtitle": "还没有稳定判断",
     "understandingPanelEmptyBody": "当你制定计划、聊天和完成任务后，Sparkle 会把具体假设放在这里，方便你纠正。",
     "understandingPanelLoading": "正在读取当前自我模型",
@@ -14257,14 +14255,14 @@
     "understandingConfidenceHigh": "高置信",
     "understandingConfidenceMedium": "中置信",
     "understandingConfidenceLow": "低置信",
-    "understandingClaimSemantic": "{claim}。置信度 {confidence}%。",
+    "understandingClaimSemantic": "判断：{claim}（把握程度：{confidence}）",
     "@understandingClaimSemantic": {
         "placeholders": {
             "claim": {
                 "type": "String"
             },
             "confidence": {
-                "type": "int"
+                "type": "String"
             }
         }
     },
@@ -14310,14 +14308,8 @@
     "understandingScopeKnowledgeBottleneck": "知识瓶颈",
     "understandingScopeWakePolicy": "唤醒策略",
     "understandingChatDrawerTitle": "当前自我模型",
-    "understandingChatDrawerSubtitle": "{count} 条可纠正判断",
-    "@understandingChatDrawerSubtitle": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
+    "understandingChatDrawerSubtitle": "Sparkle 目前的判断，都可以纠正",
+    "@understandingChatDrawerSubtitle": {},
     "understandingChatDrawerSubtitleEmpty": "查看 Sparkle 当前怎么理解你",
     "understandingChatDrawerOpen": "打开当前自我模型",
     "cahTitle": "责任伙伴空间",
@@ -16679,7 +16671,6 @@
     "auto_photonbalance": "光子积分",
     "auto_loadfailed": "加载失败",
     "auto_transactionhistory": "交易历史",
-    "taskPreviewLoadFailed": "任务预览加载失败",
     "proposalOwnershipHuman": "你做",
     "proposalOwnershipAgent": "Sparkle做",
     "proposalOwnershipHybrid": "一起做",
@@ -16724,5 +16715,135 @@
     },
     "runStepContinueCta": "确认，继续",
     "runStepAwaitingHint": "这一步轮到你，完成后 Sparkle 接着做",
-    "runStepArtifactsTitle": "Sparkle 准备好了这些"
+    "runStepArtifactsTitle": "Sparkle 准备好了这些",
+    "understandingViewTitle": "Sparkle 对我的理解",
+    "@understandingViewTitle": {},
+    "understandingViewIntro": "这里是 Sparkle 目前记住的内容和判断。每一项都能查看来源，也可以修改或删除。",
+    "@understandingViewIntro": {},
+    "understandingEmptyTitle": "Sparkle 还不了解你",
+    "@understandingEmptyTitle": {},
+    "understandingEmptyBody": "聊聊天、制定计划或完成任务之后，Sparkle 会把记住的内容和判断放在这里，你可以随时纠正。",
+    "@understandingEmptyBody": {},
+    "understandingBucketEmpty": "这一组暂时没有内容",
+    "@understandingBucketEmpty": {},
+    "understandingViewAll": "查看全部",
+    "@understandingViewAll": {},
+    "understandingLoadMore": "加载更多",
+    "@understandingLoadMore": {},
+    "understandingScanCapped": "内容较多，这里只显示最近更新的部分。",
+    "@understandingScanCapped": {},
+    "understandingPausedBadge": "已暂停使用",
+    "@understandingPausedBadge": {},
+    "understandingStatusSuperseded": "已被新内容替代",
+    "@understandingStatusSuperseded": {},
+    "understandingScopeGlobal": "所有场景可用",
+    "@understandingScopeGlobal": {},
+    "understandingScopeGoal": "仅在此目标中",
+    "@understandingScopeGoal": {},
+    "understandingScopeDomain": "相关话题中",
+    "@understandingScopeDomain": {},
+    "understandingScopeSession": "当前会话中",
+    "@understandingScopeSession": {},
+    "understandingActionEdit": "修改",
+    "@understandingActionEdit": {},
+    "understandingActionDelete": "删除",
+    "@understandingActionDelete": {},
+    "understandingActionPause": "暂时不用",
+    "@understandingActionPause": {},
+    "understandingActionResume": "恢复使用",
+    "@understandingActionResume": {},
+    "understandingActionScope": "仅此 Goal",
+    "@understandingActionScope": {},
+    "understandingActionWhy": "为什么有这条",
+    "@understandingActionWhy": {},
+    "understandingEditTitle": "修改这条内容",
+    "@understandingEditTitle": {},
+    "understandingEditLabel": "改成",
+    "@understandingEditLabel": {},
+    "understandingEditReasonHint": "为什么改（可以不填）",
+    "@understandingEditReasonHint": {},
+    "understandingDeleteTitle": "删除这条内容？",
+    "@understandingDeleteTitle": {},
+    "understandingDeleteBody": "删除后 Sparkle 不会再使用它，下一次判断也会随之更新。",
+    "@understandingDeleteBody": {},
+    "understandingPauseTitle": "暂时不用这条？",
+    "@understandingPauseTitle": {},
+    "understandingPauseBody": "暂停期间 Sparkle 不再引用它，你可以随时恢复。",
+    "@understandingPauseBody": {},
+    "understandingScopeSheetTitle": "只在某个目标中使用",
+    "@understandingScopeSheetTitle": {},
+    "understandingScopePickPlan": "选择学习计划",
+    "@understandingScopePickPlan": {},
+    "understandingScopeApply": "仅在此计划中使用",
+    "@understandingScopeApply": {},
+    "understandingScopeNoPlans": "还没有可选的学习计划",
+    "@understandingScopeNoPlans": {},
+    "understandingToastUpdated": "已更新。Sparkle 下一次判断会使用新内容。",
+    "@understandingToastUpdated": {},
+    "understandingToastDeleted": "已删除。Sparkle 不会再使用这条内容。",
+    "@understandingToastDeleted": {},
+    "understandingToastPaused": "已暂停。Sparkle 暂时不再引用这条内容。",
+    "@understandingToastPaused": {},
+    "understandingToastResumed": "已恢复使用。",
+    "@understandingToastResumed": {},
+    "understandingToastScoped": "已限定使用范围。",
+    "@understandingToastScoped": {},
+    "understandingToastFailedDetail": "没有成功：{detail}",
+    "@understandingToastFailedDetail": {
+        "placeholders": {
+            "detail": {
+                "type": "String"
+            }
+        }
+    },
+    "whyThisSheetTitle": "为什么 Sparkle 用了这条",
+    "@whyThisSheetTitle": {},
+    "whyThisInUse": "这条记忆仍在使用中",
+    "@whyThisInUse": {},
+    "whyThisPausedNow": "这条记忆已暂停使用",
+    "@whyThisPausedNow": {},
+    "whyThisGoneNow": "这条记忆已删除，不再使用",
+    "@whyThisGoneNow": {},
+    "whyThisReplacedNow": "内容已被你修改，这是现行版本",
+    "@whyThisReplacedNow": {},
+    "whyThisSourceTitle": "来源",
+    "@whyThisSourceTitle": {},
+    "whyThisSourceUnknown": "来源不明",
+    "@whyThisSourceUnknown": {},
+    "whyThisWrittenAt": "记录于 {time}",
+    "@whyThisWrittenAt": {
+        "placeholders": {
+            "time": {
+                "type": "String"
+            }
+        }
+    },
+    "whyThisLastUsedAt": "最近一次使用 {time}",
+    "@whyThisLastUsedAt": {
+        "placeholders": {
+            "time": {
+                "type": "String"
+            }
+        }
+    },
+    "whyThisWhyTitle": "当时被选中的原因",
+    "@whyThisWhyTitle": {},
+    "whyThisWhyEmpty": "没有记录到具体的使用原因",
+    "@whyThisWhyEmpty": {},
+    "whyThisInternalTitle": "有几点原因没有直接说出来",
+    "@whyThisInternalTitle": {},
+    "whyThisUnknownReason": "原因说明暂缺",
+    "@whyThisUnknownReason": {},
+    "whyThisUsageTitle": "最近的使用",
+    "@whyThisUsageTitle": {},
+    "whyThisUsageEmpty": "还没有使用记录",
+    "@whyThisUsageEmpty": {},
+    "whyThisReceiptStale": "这份回执来自旧版本格式，仅供参考。",
+    "@whyThisReceiptStale": {},
+    "whyThisCorrectAction": "这不对",
+    "@whyThisCorrectAction": {},
+    "whyThisLoadFailed": "暂时打不开这条的来源",
+    "@whyThisLoadFailed": {},
+    "understandingPanelPlainSubtitle": "这些是 Sparkle 目前的判断，每一项都可以纠正。",
+    "@understandingPanelPlainSubtitle": {}
 }

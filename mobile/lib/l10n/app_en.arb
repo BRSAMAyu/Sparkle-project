@@ -3321,7 +3321,6 @@
     "communityChatEmpty": "Community Chat Empty",
     "communityChatConnectionLost": "Realtime connection rejected by the server. Auto-retry stopped",
     "communityChatReconnect": "Reconnect",
-    "communityChatEmpty": "Community Chat Empty",
     "communityChatTitle": "Community Chat Title",
     "communityCheckInAction": "Community Check In Action",
     "communityCheckInDurationLabel": "Community Check In Duration Label",
@@ -10949,21 +10948,31 @@
     "brtPausedRounds": "Paused · {done} / {total} rounds",
     "@brtPausedRounds": {
         "placeholders": {
-            "done": { "type": "int" },
-            "total": { "type": "int" }
+            "done": {
+                "type": "int"
+            },
+            "total": {
+                "type": "int"
+            }
         }
     },
     "brtRounds": "{done} / {total} rounds",
     "@brtRounds": {
         "placeholders": {
-            "done": { "type": "int" },
-            "total": { "type": "int" }
+            "done": {
+                "type": "int"
+            },
+            "total": {
+                "type": "int"
+            }
         }
     },
     "brtDurationMin": "{minutes} min",
     "@brtDurationMin": {
         "placeholders": {
-            "minutes": { "type": "int" }
+            "minutes": {
+                "type": "int"
+            }
         }
     },
     "brtReady": "Ready",
@@ -14214,17 +14223,6 @@
     "lowYieldActionCorrect": "Not right",
     "understandingPanelTitle": "Sparkle understands me",
     "understandingPanelSemanticLabel": "Sparkle understanding snapshot",
-    "understandingPanelSubtitle": "{count} claims · {ratio}% high confidence",
-    "@understandingPanelSubtitle": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            },
-            "ratio": {
-                "type": "int"
-            }
-        }
-    },
     "understandingPanelEmptySubtitle": "No stable read yet",
     "understandingPanelEmptyBody": "As you plan, chat, and finish tasks, Sparkle will show specific assumptions here so you can correct them.",
     "understandingPanelLoading": "Reading current self-model",
@@ -14236,14 +14234,14 @@
     "understandingConfidenceHigh": "High confidence",
     "understandingConfidenceMedium": "Medium confidence",
     "understandingConfidenceLow": "Low confidence",
-    "understandingClaimSemantic": "{claim}. Confidence {confidence} percent.",
+    "understandingClaimSemantic": "Assumption: {claim} ({confidence} confidence)",
     "@understandingClaimSemantic": {
         "placeholders": {
             "claim": {
                 "type": "String"
             },
             "confidence": {
-                "type": "int"
+                "type": "String"
             }
         }
     },
@@ -14289,14 +14287,8 @@
     "understandingScopeKnowledgeBottleneck": "Knowledge bottleneck",
     "understandingScopeWakePolicy": "Wake policy",
     "understandingChatDrawerTitle": "Current self-model",
-    "understandingChatDrawerSubtitle": "{count} correctable claims",
-    "@understandingChatDrawerSubtitle": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
+    "understandingChatDrawerSubtitle": "Sparkle's current assumptions — correct any of them",
+    "@understandingChatDrawerSubtitle": {},
     "understandingChatDrawerSubtitleEmpty": "Open what Sparkle currently thinks",
     "understandingChatDrawerOpen": "Open current self-model",
     "cahTitle": "Accountability Hub",
@@ -17207,5 +17199,61 @@
     },
     "runStepContinueCta": "Confirm and continue",
     "runStepAwaitingHint": "This step is yours; Sparkle continues when you're done",
-    "runStepArtifactsTitle": "Sparkle prepared these"
+    "runStepArtifactsTitle": "Sparkle prepared these",
+    "understandingViewTitle": "How Sparkle understands you",
+    "understandingViewIntro": "What Sparkle remembers and assumes right now. Every item shows where it came from, and can be edited or deleted.",
+    "understandingEmptyTitle": "Sparkle doesn't know you yet",
+    "understandingEmptyBody": "After you chat, plan, or finish tasks, Sparkle will put what it remembers here — you can correct anything, anytime.",
+    "understandingBucketEmpty": "Nothing in this group yet",
+    "understandingViewAll": "View all",
+    "understandingLoadMore": "Load more",
+    "understandingScanCapped": "There is a lot here — showing recently updated items first.",
+    "understandingPausedBadge": "Paused",
+    "understandingStatusSuperseded": "Replaced by newer content",
+    "understandingScopeGlobal": "Used everywhere",
+    "understandingScopeGoal": "Only for one goal",
+    "understandingScopeDomain": "For related topics",
+    "understandingScopeSession": "This session only",
+    "understandingActionEdit": "Edit",
+    "understandingActionDelete": "Delete",
+    "understandingActionPause": "Pause",
+    "understandingActionResume": "Resume",
+    "understandingActionScope": "Limit to a goal",
+    "understandingActionWhy": "Why do I have this",
+    "understandingEditTitle": "Edit this item",
+    "understandingEditLabel": "Change to",
+    "understandingEditReasonHint": "Why (optional)",
+    "understandingDeleteTitle": "Delete this item?",
+    "understandingDeleteBody": "Sparkle will stop using it, and its next decisions will reflect the change.",
+    "understandingPauseTitle": "Pause this item?",
+    "understandingPauseBody": "While paused, Sparkle won't use it. You can resume anytime.",
+    "understandingScopeSheetTitle": "Use only for one goal",
+    "understandingScopePickPlan": "Pick a study plan",
+    "understandingScopeApply": "Use only in this plan",
+    "understandingScopeNoPlans": "No study plans to pick from yet",
+    "understandingToastUpdated": "Updated. Sparkle will use the new content next time.",
+    "understandingToastDeleted": "Deleted. Sparkle will no longer use this.",
+    "understandingToastPaused": "Paused. Sparkle won't use this for now.",
+    "understandingToastResumed": "Resumed.",
+    "understandingToastScoped": "Usage scope updated.",
+    "understandingToastFailedDetail": "Didn't go through: {detail}",
+    "whyThisSheetTitle": "Why Sparkle used this",
+    "whyThisInUse": "Still in use",
+    "whyThisPausedNow": "Currently paused",
+    "whyThisGoneNow": "Deleted, no longer in use",
+    "whyThisReplacedNow": "You edited this — this is the current version",
+    "whyThisSourceTitle": "Source",
+    "whyThisSourceUnknown": "Unknown source",
+    "whyThisWrittenAt": "Recorded {time}",
+    "whyThisLastUsedAt": "Last used {time}",
+    "whyThisWhyTitle": "Why it was included",
+    "whyThisWhyEmpty": "No specific inclusion reason recorded",
+    "whyThisInternalTitle": "Reasons it stayed unsaid",
+    "whyThisUnknownReason": "Reason unavailable",
+    "whyThisUsageTitle": "Recent uses",
+    "whyThisUsageEmpty": "No usage records yet",
+    "whyThisReceiptStale": "This receipt uses an older format and is for reference only.",
+    "whyThisCorrectAction": "This isn't right",
+    "whyThisLoadFailed": "Couldn't load the source for this item",
+    "understandingPanelPlainSubtitle": "These are Sparkle's current assumptions. Correct any of them."
 }

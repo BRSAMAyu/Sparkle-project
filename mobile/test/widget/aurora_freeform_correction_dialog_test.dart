@@ -1,8 +1,10 @@
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/home/presentation/screens/dashboard_screen.dart';
 import 'package:sparkle/l10n/app_localizations_en.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 void main() {
   setUp(() {
@@ -51,7 +53,17 @@ class _DialogHarness extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // U-03 harness repair：挂 l10n delegates——对话框源码用
+    // AppLocalizations.of(context)!，无 delegates 时构建即空指针。
     return MaterialApp(
+      locale: const Locale('en'),
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Builder(
         builder: (context) => Scaffold(
           body: Center(

@@ -79,12 +79,11 @@ class _UnderstandingPanelState extends ConsumerState<UnderstandingPanel> {
       children: [
         _PanelHeader(
           title: context.l10n.understandingPanelTitle,
+          // U-03 黑话移除：不再以「N 条判断 · X% 高置信」等无来源精确
+          // 数字做主呈现，改为用户语言的一句说明（COPY_TONE）。
           subtitle: empty
               ? context.l10n.understandingPanelEmptySubtitle
-              : context.l10n.understandingPanelSubtitle(
-                  snapshot.totalClaims,
-                  (snapshot.highConfidenceRatio * 100).round(),
-                ),
+              : context.l10n.understandingPanelPlainSubtitle,
           expanded: _expanded,
           onToggle: widget.compact
               ? null
@@ -292,7 +291,7 @@ class _ClaimTile extends StatelessWidget {
       container: true,
       label: context.l10n.understandingClaimSemantic(
         claim.claim,
-        (claim.confidence * 100).round(),
+        _confidenceText(context, claim.confidenceLabel),
       ),
       child: Container(
         padding: const EdgeInsets.all(12),

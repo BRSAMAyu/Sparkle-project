@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
-import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/evidence_resolve_service.dart';
@@ -460,7 +460,9 @@ void main() {
   });
 
   group('MemoryEvidenceBadge Tests', () {
-    testWidgets('should render OK badge with success color', (tester) async {
+    // U-03：badge 已随 U-01 Step 3 迁到 owner（SemanticPill），以下断言从
+    // 旧 Chip 形状改为 owner 语义（状态→文案/PillTone 映射），断言强度不降。
+    testWidgets('should render OK badge with success tone', (tester) async {
       await tester.pumpWidget(
         testMaterialApp(home: Scaffold(
             body: MemoryEvidenceBadge(status: MemoryEvidenceStatus.ok),
@@ -468,14 +470,11 @@ void main() {
       );
 
       expect(find.text('OK'), findsOneWidget);
-
-      final chip = tester.widget<Chip>(find.byType(Chip));
-      expect(chip.backgroundColor, DS.semanticSuccess.withValues(alpha: 0.12));
-      // Label is now a Row (wrapping count + Text), not a plain Text
-      expect(chip.label, isA<Row>());
+      final pill = tester.widget<SemanticPill>(find.byType(SemanticPill));
+      expect(pill.tone, PillTone.success);
     });
 
-    testWidgets('should render redacted badge with warning color', (tester) async {
+    testWidgets('should render redacted badge with warning tone', (tester) async {
       await tester.pumpWidget(
         testMaterialApp(home: Scaffold(
             body: MemoryEvidenceBadge(status: MemoryEvidenceStatus.redacted),
@@ -483,12 +482,11 @@ void main() {
       );
 
       expect(find.text('已隐藏'), findsOneWidget);
-
-      final chip = tester.widget<Chip>(find.byType(Chip));
-      expect(chip.backgroundColor, DS.semanticWarning.withValues(alpha: 0.12));
+      final pill = tester.widget<SemanticPill>(find.byType(SemanticPill));
+      expect(pill.tone, PillTone.warning);
     });
 
-    testWidgets('should render missing badge with error color', (tester) async {
+    testWidgets('should render missing badge with danger tone', (tester) async {
       await tester.pumpWidget(
         testMaterialApp(home: Scaffold(
             body: MemoryEvidenceBadge(status: MemoryEvidenceStatus.missing),
@@ -496,20 +494,21 @@ void main() {
       );
 
       expect(find.text('缺失'), findsOneWidget);
-
-      final chip = tester.widget<Chip>(find.byType(Chip));
-      expect(chip.backgroundColor, DS.semanticError.withValues(alpha: 0.12));
+      final pill = tester.widget<SemanticPill>(find.byType(SemanticPill));
+      expect(pill.tone, PillTone.danger);
     });
 
-    testWidgets('should have rounded border shape', (tester) async {
+    testWidgets('should prefix evidence count when provided', (tester) async {
       await tester.pumpWidget(
         testMaterialApp(home: Scaffold(
-            body: MemoryEvidenceBadge(status: MemoryEvidenceStatus.ok),
+            body: MemoryEvidenceBadge(
+              status: MemoryEvidenceStatus.ok,
+              evidenceCount: 3,
+            ),
           ),),
       );
 
-      final chip = tester.widget<Chip>(find.byType(Chip));
-      expect(chip.shape, isA<RoundedRectangleBorder>());
+      expect(find.text('3 OK'), findsOneWidget);
     });
 
     testWidgets('should work in different contexts', (tester) async {
@@ -525,7 +524,7 @@ void main() {
           ),),
       );
 
-      expect(find.byType(Chip), findsNWidgets(3));
+      expect(find.byType(SemanticPill), findsNWidgets(3));
     });
   });
 

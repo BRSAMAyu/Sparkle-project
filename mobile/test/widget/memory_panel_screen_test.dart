@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,6 +8,8 @@ import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/evidence_resolve_service.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
+import 'package:sparkle/features/memory/data/memory_provenance_models.dart';
+import 'package:sparkle/features/memory/data/memory_provenance_repository.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_detail_screen.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_panel_screen.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -271,9 +274,14 @@ void main() {
       ProviderScope(
         overrides: [
           memoryApiServiceProvider.overrideWithValue(_EmptyMemoryApiService()),
+          memoryProvenanceRepositoryProvider
+              .overrideWithValue(_EmptyProvenanceRepository()),
         ],
         child: MaterialApp.router(
           routerConfig: router,
+          // U-03 harness repair（与 testMaterialApp 同款）：挂 SparkleThemeExtension，
+          // owner 组件构建即读 context.sparkle。
+          theme: ThemeData(extensions: [SparkleThemeExtension.light()]),
           locale: const Locale('zh'),
           localizationsDelegates: const [
             AppLocalizations.delegate,
@@ -330,6 +338,9 @@ void main() {
         ],
         child: MaterialApp.router(
           routerConfig: router,
+          // U-03 harness repair（与 testMaterialApp 同款）：挂 SparkleThemeExtension，
+          // owner 组件构建即读 context.sparkle。
+          theme: ThemeData(extensions: [SparkleThemeExtension.light()]),
           locale: const Locale('zh'),
           localizationsDelegates: const [
             AppLocalizations.delegate,
@@ -354,6 +365,29 @@ void main() {
     expect(find.text('版本历史'), findsOneWidget);
     expect(find.text('缺失'), findsOneWidget);
   });
+}
+
+/// U-03：V2 面板的四组理解视图来自 provenance API，空态测试注入空仓库。
+class _EmptyProvenanceRepository implements MemoryProvenanceRepository {
+  @override
+  Future<ProvenanceListResult> listItems({
+    UnderstandingBucket? bucket,
+    String? kind,
+    int limit = 200,
+    int offset = 0,
+    bool includeInactive = false,
+  }) async =>
+      const ProvenanceListResult(
+        items: [],
+        total: 0,
+        hasMore: false,
+        scanCapped: false,
+      );
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
+        '${invocation.memberName} not stubbed in _EmptyProvenanceRepository',
+      );
 }
 
 class _EmptyMemoryApiService extends _FakeMemoryApiService {
