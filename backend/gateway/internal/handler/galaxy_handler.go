@@ -16,6 +16,7 @@ import (
 	"github.com/google/uuid"
 	redisv9 "github.com/redis/go-redis/v9"
 
+	galaxyv1 "github.com/sparkle/gateway/gen/galaxy/v1"
 	"github.com/sparkle/gateway/internal/galaxy"
 	"github.com/sparkle/gateway/internal/service"
 )
@@ -563,18 +564,62 @@ func (h *GalaxyHandler) GetGraph(c *gin.Context) {
 
 		resp, err := h.galaxyClient.GetUserGalaxy(ctx, userID)
 		if err == nil && resp != nil {
-			c.JSON(http.StatusOK, gin.H{
-				"nodes":       resp.Nodes,
-				"edges":       resp.Edges,
-				"total_nodes": resp.TotalNodes,
-				"via":         "grpc",
-			})
+			c.JSON(http.StatusOK, galaxyGraphRESTPayload(resp))
 			return
 		}
 		log.Printf("Galaxy GetGraph gRPC failed, falling back to REST: %v", err)
 	}
 
 	h.ProxyToBackend(c)
+}
+
+// galaxyGraphRESTPayload maps the engine's gRPC GetUserGalaxyResponse
+// (proto GalaxyNode/GalaxyEdge shape) into the JSON shape of the engine's
+// REST contract (backend/app/schemas/galaxy.py: GalaxyGraphResponse /
+// NodeWithStatus / NodeRelationInfo) — the shape the mobile client parses.
+//
+// GW-GRAPH-SHAPE: the gRPC branch used to marshal the proto messages
+// directly (node_id/label/mastery + source_id/target_id/relation), which
+// diverged from the REST contract keys (id/name/mastery_score +
+// source_node_id/target_node_id/relation_type). On first load answered by
+// gRPC the client defensively parsed missing id/name into empty strings and
+// rendered an empty universe (V24). Both branches now speak the same
+// outbound contract; value semantics are already aligned upstream because
+// the engine's gRPC servicer derives its payload from the same
+// get_galaxy_graph source as REST (relation values pass through unchanged).
+//
+// Note: explicit mapping always emits the REST keys even when the proto
+// value is zero/empty, avoiding the generated `json:"...,omitempty"` trap
+// where e.g. mastery=0 would silently drop the key.
+func galaxyGraphRESTPayload(resp *galaxyv1.GetUserGalaxyResponse) gin.H {
+	nodes := make([]gin.H, 0, len(resp.GetNodes()))
+	for _, node := range resp.GetNodes() {
+		nodes = append(nodes, gin.H{
+			"id":            node.GetNodeId(),
+			"name":          node.GetLabel(),
+			"mastery_score": node.GetMastery(),
+			// proto-only provenance; no REST counterpart, harmless extra key.
+			"node_type": node.GetNodeType(),
+			"tags":      node.GetTags(),
+		})
+	}
+	edges := make([]gin.H, 0, len(resp.GetEdges()))
+	for _, edge := range resp.GetEdges() {
+		edges = append(edges, gin.H{
+			"source_node_id": edge.GetSourceId(),
+			"target_node_id": edge.GetTargetId(),
+			"relation_type":  edge.GetRelation(),
+		})
+	}
+	return gin.H{
+		"nodes": nodes,
+		// REST GalaxyGraphResponse carries both aliases; the client reads
+		// `edges` first and falls back to `relations`.
+		"edges":       edges,
+		"relations":   edges,
+		"total_nodes": resp.GetTotalNodes(),
+		"via":         "grpc",
+	}
 }
 
 // SyncGalaxy handles POST /galaxy/sync
