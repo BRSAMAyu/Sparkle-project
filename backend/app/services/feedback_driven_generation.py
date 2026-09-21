@@ -591,6 +591,9 @@ class FeedbackDrivenGenerationService:
             统计数据
         """
         cutoff = _utcnow() - timedelta(days=days)
+        # RegenerationRequest.created_at 存 ISO 字符串（见 __post_init__），
+        # 内存侧过滤需用字符串截断值（ISO-8601 同格式下字典序即时间序）。
+        cutoff_str = cutoff.isoformat()
 
         stmt = select(ReviewFeedbackModel).where(ReviewFeedbackModel.created_at >= cutoff)
         if user_id is not None:

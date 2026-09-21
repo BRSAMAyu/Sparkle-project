@@ -5,6 +5,7 @@ Also includes device token management for push notifications.
 """
 from __future__ import annotations
 
+import logging
 from datetime import UTC
 from uuid import UUID
 
@@ -20,6 +21,8 @@ from app.models.community import Friendship, FriendshipStatus, GroupMember
 from app.models.user import User, UserDevice
 
 router = APIRouter()
+
+logger = logging.getLogger(__name__)
 
 
 # ========== Device Token Schemas ==========

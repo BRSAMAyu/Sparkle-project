@@ -473,6 +473,8 @@ class GalaxyGrpcServiceImpl(galaxy_service_pb2_grpc.GalaxyServiceServicer if gal
 
                 # P1-7 fix: look up mastery from UserNodeStatus for each result
                 # P1-5/6 fix: use keywords instead of non-existent tags
+                from sqlalchemy import select
+
                 from app.models.galaxy import UserNodeStatus
 
                 node_ids = [r.node.id for r in results]
@@ -687,6 +689,7 @@ class GalaxyGrpcServiceImpl(galaxy_service_pb2_grpc.GalaxyServiceServicer if gal
                 # P1-8 fix: compute actual average mastery (sum of all mastery_scores / count)
                 # Previously used mastered_count/total_nodes which is % mastered nodes, not avg mastery
                 from sqlalchemy import func as sa_func
+                from sqlalchemy import select as sa_select
 
                 from app.models.galaxy import UserNodeStatus
                 avg_result = await db.execute(

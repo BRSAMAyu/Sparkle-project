@@ -34,7 +34,7 @@ from app.causal.episode_logger import CandidatePolicy, episode_logger
 from app.core.cost_controller import is_aurora_within_budget, record_aurora_cost
 from app.core.error_taxonomy import ErrorCategory, ErrorSeverity, classify_error
 from app.learning.outcome_consumer import OutcomeConsumingService
-from app.signals.absence_detector import AbsenceDetector
+from app.signals.absence_detector import AbsenceDetector, AbsenceSnapshot
 from app.signals.achievement_reinforcement import AchievementReinforcementConsumer
 from app.signals.aurora_core_session import AuroraCoreSessionService, PolicyChange, SessionClosure, StatePatch
 from app.signals.aurora_wake import AuroraWakeJudge

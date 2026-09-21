@@ -3501,6 +3501,8 @@ def scan_behavior_patterns(self, user_id: str):
     from app.db.session import AsyncSessionLocal
 
     async def _run():
+        from uuid import UUID
+
         from sqlalchemy import select
 
         from app.models.task import Task, TaskStatus

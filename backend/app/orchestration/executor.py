@@ -1348,8 +1348,14 @@ class ToolExecutor:
             # Execute steps within this layer concurrently (bounded)
             semaphore = asyncio.Semaphore(_DAG_LAYER_MAX_CONCURRENCY)
 
-            async def _bounded_step(tc_item: Any) -> Any:
-                async with semaphore:
+            # B023: 经默认参绑定本层 semaphore——gather 虽在同层迭代内被 await
+            # （现行行为已正确），显式绑定消除闭包后期绑定隐患，防后续重构
+            # （如把 gather 移出层循环）时静默绑到末轮信号量。
+            async def _bounded_step(
+                tc_item: Any,
+                sem: asyncio.Semaphore = semaphore,
+            ) -> Any:
+                async with sem:
                     return await self._execute_step(
                         tc_item,
                         user_id,

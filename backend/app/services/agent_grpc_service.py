@@ -408,7 +408,10 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     async with aclosing(stream_gen):
                         async for response in stream_gen:
                             if context.cancelled():
-                                logger.info("StreamChat: client disconnected, stopping stream for request=%s", request_id)
+                                logger.info(
+                                    "StreamChat: client disconnected, stopping stream for request=%s",
+                                    request.request_id,
+                                )
                                 break
                             # Track whether we actually streamed any text content
                             if response.WhichOneof("content") in ("delta", "full_text"):
