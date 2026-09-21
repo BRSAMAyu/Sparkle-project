@@ -96,11 +96,22 @@ class SchedulerService:
         """
         执行智能推送周期
         触发 PushService.process_all_users() + PushScheduler 回收队列处理
+
+        Stage38 杀开关与 celery 版 run_push_policy_scheduler 同语义：
+        mode=off 直接跳过（不扫全用户、不做策略评估）；shadow/live 透传。
+        引擎内调度器此前绕过了该开关，导致 demo 环境每 15 分钟全量扫描
+        并触发进程内 LLM 调用（2026-09-21 烧钱事故根修）。
         """
+        from app.services.aurora_stage38_kill_switch_service import AuroraStage38KillSwitchService
+
+        mode = await AuroraStage38KillSwitchService().get_feature_mode("push_scheduler")
+        if mode == "off":
+            logger.info("Smart push cycle skipped: push_scheduler mode=off")
+            return
         logger.info("Starting smart push cycle...")
         async with AsyncSessionLocal() as db:
             push_service = PushService(db)
-            await push_service.process_all_users()
+            await push_service.process_all_users(delivery_mode=mode)
         try:
             async with AsyncSessionLocal() as db:
                 from app.services.push_scheduler import PushScheduler
