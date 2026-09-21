@@ -71,7 +71,14 @@ class EnhancedGalaxyRepository {
             response.data,
             action: 'getGalaxyGraph',
           );
-          return GalaxyGraphResponse.fromJson(payload);
+          final graph = GalaxyGraphResponse.fromJson(payload);
+          // V24-B 契约守卫：载荷声明了节点（nodes 列表非空或 total_nodes>0）
+          // 却解析出 0 个可用节点，属于形状契约破坏（如 gateway gRPC 路径的
+          // proto node_id/label 形状漂移）。必须以 failure 暴露，不得当作
+          // "空星图成功"返回——否则既误导 UI 显示空宇宙，又把坏图写进
+          // _graphCache（10 分钟 TTL），会话内只有 forceRefresh 能恢复。
+          _assertGraphPayloadUsable(graph, payload);
+          return graph;
         },
         onRetry: (attempt, error, delay) {
           debugPrint(
@@ -557,6 +564,45 @@ class EnhancedGalaxyRepository {
         'graph': _graphCache.stats,
         'detail': _detailCache.stats,
       };
+}
+
+/// V24-B 图载荷契约守卫：声明了节点却解析出 0 个可用节点 → 抛契约异常。
+///
+/// 抛出位置在 `_circuitBreaker.execute` 闭包内，因此走通用 catch：
+/// 返回 failure 且【不写缓存】，UI 呈现可重试的错误态而非"空空如也"空态。
+void _assertGraphPayloadUsable(
+  GalaxyGraphResponse graph,
+  Map<String, dynamic> payload,
+) {
+  // "可用" = 具备渲染身份（id+name）。解析出无名壳不算可用——
+  // 它们会被渲染层 sanitize 全数剔除，把星图误判为空宇宙（V24-B）。
+  final hasUsableNode =
+      graph.nodes.any((node) => node.id.isNotEmpty && node.name.isNotEmpty);
+  if (hasUsableNode) {
+    return;
+  }
+  final declaredNodes = payload['nodes'];
+  final declaredTotal = (payload['total_nodes'] as num?)?.toInt() ?? 0;
+  final declaresNodes =
+      (declaredNodes is List && declaredNodes.isNotEmpty) || declaredTotal > 0;
+  if (declaresNodes) {
+    throw GalaxyGraphContractException(
+      'galaxy graph payload declared '
+      '${declaredNodes is List ? declaredNodes.length : declaredTotal} node(s) '
+      'but 0 parsed usable; wire shape drift suspected '
+      '(see V24-B: gateway gRPC path node_id/label vs REST id/name)',
+    );
+  }
+}
+
+/// 星图载荷契约破坏异常（V24-B）
+class GalaxyGraphContractException implements Exception {
+  GalaxyGraphContractException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => 'GalaxyGraphContractException: $message';
 }
 
 /// Galaxy错误类型

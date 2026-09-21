@@ -73,7 +73,10 @@ class GalaxyEdgeModel {
         (json['source_id'] ?? json['source_node_id'] ?? '').toString();
     final targetId =
         (json['target_id'] ?? json['target_node_id'] ?? '').toString();
-    final relationRaw = json['relation_type']?.toString();
+    // V24-B: gateway gRPC 优先路径的 edge 形状是 proto GalaxyEdge
+    // {source_id, target_id, relation}，无 relation_type 字段。
+    final relationRaw =
+        (json['relation_type'] ?? json['relation'])?.toString();
 
     return GalaxyEdgeModel(
       id: (json['id'] ?? '${sourceId}_${targetId}_${relationRaw ?? 'related'}')
@@ -108,6 +111,8 @@ class GalaxyEdgeModel {
         (type) =>
             type.name == raw ||
             _relationWireValue(type) == raw ||
+            // V24-B: proto GalaxyEdge.relation 注释值 "parent" 表示父子关系。
+            (type == EdgeRelationType.parentChild && raw == 'parent') ||
             _relationWireValue(type).toUpperCase() == raw,
         orElse: () => EdgeRelationType.related,
       );
@@ -190,10 +195,13 @@ class GalaxyNodeModel {
     final userStatus = json['user_status'] as Map<String, dynamic>?;
 
     return GalaxyNodeModel(
-      id: json['id']?.toString() ?? '',  // P1-13 fix: null-safety for id field
+      // V24-B: gateway gRPC 优先路径的 node 形状是 proto GalaxyNode
+      // {node_id, label, node_type, mastery}。缺 id/name 时回退到该形状，
+      // 避免解析出"无名节点壳"被渲染层全数剔除、星图误判为空。
+      id: (json['id'] ?? json['node_id'])?.toString() ?? '', // P1-13 fix: null-safety for id field
       parentId: json['parent_id']?.toString(),
       // F7-10: name 与 id 同样防御，避免缓存/旧版本响应缺字段时抛 TypeError
-      name: json['name']?.toString() ?? '',
+      name: (json['name'] ?? json['label'])?.toString() ?? '',
       importance:
           ((json['importance'] ?? json['importance_level']) as num?)?.toInt() ??
               1,
@@ -217,7 +225,7 @@ class GalaxyNodeModel {
           (userStatus?['is_unlocked'] as bool?) ??
           false,
       masteryScore: GalaxyNodeModel._readMasteryScore(
-        json['mastery_score'] ?? userStatus?['mastery_score'],
+        json['mastery_score'] ?? json['mastery'] ?? userStatus?['mastery_score'],
       ),
       studyCount: (GalaxyNodeModel._readStudyCount(json, 'study_count') as num?)
               ?.toInt() ??
