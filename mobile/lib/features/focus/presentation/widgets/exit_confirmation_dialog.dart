@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
-import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
@@ -127,35 +126,47 @@ class _ExitConfirmationDialogState extends State<ExitConfirmationDialog>
                               if (stackActions) ...[
                                 SizedBox(
                                   width: double.infinity,
-                                  child: CustomButton.primary(
-                                    text: _getConfirmText(),
+                                  child: SparkleButton(
+                                    variant: ButtonVariant.destructive,
+                                    label: _getConfirmText(),
+                                    minHeight: 48,
                                     onPressed: _nextStep,
-                                    customGradient: DS.errorGradient,
+                                    expand: true,
                                   ),
                                 ),
                                 const SizedBox(height: DS.md),
                                 SizedBox(
                                   width: double.infinity,
-                                  child: CustomButton.secondary(
-                                    text: _getCancelText(),
+                                  child: SparkleButton(
+                                    variant: ButtonVariant.outline,
+                                    borderSide: BorderSide(color: DS.primaryBase, width: 2),
+                                    label: _getCancelText(),
+                                    minHeight: 48,
                                     onPressed: _cancel,
+                                    expand: true,
                                   ),
                                 ),
                               ] else
                                 Row(
                                   children: [
                                     Expanded(
-                                      child: CustomButton.secondary(
-                                        text: _getCancelText(),
+                                      child: SparkleButton(
+                                        variant: ButtonVariant.outline,
+                                        borderSide: BorderSide(color: DS.primaryBase, width: 2),
+                                        label: _getCancelText(),
+                                        minHeight: 48,
                                         onPressed: _cancel,
+                                        expand: true,
                                       ),
                                     ),
                                     const SizedBox(width: DS.lg),
                                     Expanded(
-                                      child: CustomButton.primary(
-                                        text: _getConfirmText(),
+                                      child: SparkleButton(
+                                        variant: ButtonVariant.destructive,
+                                        label: _getConfirmText(),
+                                        minHeight: 48,
                                         onPressed: _nextStep,
-                                        customGradient: DS.errorGradient,
+                                        expand: true,
                                       ),
                                     ),
                                   ],

@@ -564,13 +564,17 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                         ),
                       ),
                     ),
-                    TextButton(
+                                        SparkleButton(
+                      label: context.l10n.communityChatReconnect,
+                      variant: ButtonVariant.text,
+                      size: ButtonSize.small,
+                      minWidth: 64,
+                      minHeight: 40,
                       onPressed: () => unawaited(
-                        ref
-                            .read(groupChatProvider(widget.groupId).notifier)
-                            .manualReconnect(),
-                      ),
-                      child: Text(context.l10n.communityChatReconnect),
+ ref
+ .read(groupChatProvider(widget.groupId).notifier)
+ .manualReconnect(),
+ ),
                     ),
                   ],
                 ),

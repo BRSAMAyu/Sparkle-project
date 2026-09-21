@@ -92,19 +92,21 @@ class _PlanStrategyCardState extends State<PlanStrategyCard> {
                         ],
                       ),
                     ),
-                    TextButton(
+                                        SparkleButton(
+                      label: isExpanded ? context.l10n.chatStrategyCollapse : context.l10n.chatStrategyExpand,
+                      variant: ButtonVariant.text,
+                      size: ButtonSize.small,
+                      minWidth: 64,
+                      minHeight: 40,
                       onPressed: () {
-                        setState(() {
-                          if (isExpanded) {
-                            _expandedPhases.remove(index);
-                          } else {
-                            _expandedPhases.add(index);
-                          }
-                        });
-                      },
-                      child: Text(isExpanded
-                          ? context.l10n.chatStrategyCollapse
-                          : context.l10n.chatStrategyExpand),
+ setState(() {
+ if (isExpanded) {
+ _expandedPhases.remove(index);
+ } else {
+ _expandedPhases.add(index);
+ }
+ });
+ },
                     ),
                   ],
                 ),

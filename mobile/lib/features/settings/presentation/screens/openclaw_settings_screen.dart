@@ -195,27 +195,32 @@ class _OpenClawSettingsScreenState
                       Row(
                         children: [
                           Expanded(
-                            child: OutlinedButton(
+                            child: SparkleButton(
+                              label: context.l10n.settingsRetryQueue,
+                              variant: ButtonVariant.outline,
+                              borderSide: BorderSide(color: DS.brandPrimary, width: 1.5),
+                              minWidth: 64,
+                              minHeight: 40,
+                              loading: _retryingQueue,
                               onPressed: _retryingQueue
                                   ? null
                                   : () =>
                                       unawaited(_retryQueuedRequests(service)),
-                              child: _retryingQueue
-                                  ? LoadingIndicator.circular(size: 18)
-                                  : Text(context.l10n.settingsRetryQueue),
+                              expand: true,
                             ),
                           ),
                           const SizedBox(width: DS.spacing12),
                           Expanded(
-                            child: TextButton(
+                            child: SparkleButton(
+                              label: l10n.settOpenclawClearQueue,
+                              variant: ButtonVariant.text,
+                              size: ButtonSize.small,
+                              foregroundColor: DS.semanticError,
+                              minWidth: 64,
+                              minHeight: 40,
                               onPressed: () =>
                                   unawaited(_clearQueuedRequests(service)),
-                              child: Text(
-                                l10n.settOpenclawClearQueue,
-                                style: DS.bodyMedium.copyWith(
-                                  color: DS.semanticError,
-                                ),
-                              ),
+                              expand: true,
                             ),
                           ),
                         ],

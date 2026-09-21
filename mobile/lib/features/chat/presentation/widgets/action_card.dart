@@ -7,8 +7,6 @@ import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/motion.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
-import 'package:sparkle/core/design/widgets/custom_button.dart'
-    show CustomButton, CustomButtonSize;
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -541,24 +539,27 @@ class _ActionCardState extends ConsumerState<ActionCard>
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
                               if (widget.onDismiss != null)
-                                CustomButton.text(
-                                  text: dismissLabel,
+                                SparkleButton(
+                                  variant: ButtonVariant.text,
+                                  label: dismissLabel,
+                                  size: ButtonSize.small,
+                                  minHeight: 32,
                                   onPressed: () => unawaited(
                                     _handleGenericDismiss(widget.action),
                                   ),
-                                  size: CustomButtonSize.small,
                                 ),
                               const SizedBox(width: DS.spacing8),
                               if (widget.onConfirm != null)
-                                CustomButton.primary(
-                                  text: confirmLabel,
-                                  icon: Icons.check_rounded,
+                                SparkleButton(
+                                  label: confirmLabel,
+                                  icon: const Icon(Icons.check_rounded),
+                                  size: ButtonSize.small,
+                                  minHeight: 32,
+                                  backgroundGradient: _getActionGradientFor(widget.action),
+                                  foregroundColor: DS.onBrandPrimary,
                                   onPressed: () => unawaited(
                                     _handleGenericConfirm(widget.action),
                                   ),
-                                  size: CustomButtonSize.small,
-                                  customGradient:
-                                      _getActionGradientFor(widget.action),
                                 ),
                             ],
                           ),
@@ -1788,12 +1789,14 @@ class _ActionCardState extends ConsumerState<ActionCard>
             padding: const EdgeInsets.only(top: DS.spacing12),
             child: Align(
               alignment: Alignment.centerRight,
-              child: CustomButton.primary(
-                text: _getConfirmLabel(action.type),
-                icon: Icons.check_rounded,
+              child: SparkleButton(
+                label: _getConfirmLabel(action.type),
+                icon: const Icon(Icons.check_rounded),
+                size: ButtonSize.small,
+                minHeight: 32,
+                backgroundGradient: _getActionGradientFor(action),
+                foregroundColor: DS.onBrandPrimary,
                 onPressed: widget.onConfirm,
-                size: CustomButtonSize.small,
-                customGradient: _getActionGradientFor(action),
               ),
             ),
           ),
@@ -2592,8 +2595,12 @@ class _ActionCardState extends ConsumerState<ActionCard>
         Row(
           children: [
             Expanded(
-              child: CustomButton.primary(
-                text: context.l10n.chatActionDelegateToAi,
+              child: SparkleButton(
+                label: context.l10n.chatActionDelegateToAi,
+                size: ButtonSize.small,
+                minHeight: 32,
+                backgroundGradient: _getActionGradientFor(action),
+                foregroundColor: DS.onBrandPrimary,
                 onPressed: () => unawaited(
                   widget.onWidgetAction?.call(
                     'handoff_task',
@@ -2604,14 +2611,17 @@ class _ActionCardState extends ConsumerState<ActionCard>
                     },
                   ),
                 ),
-                size: CustomButtonSize.small,
-                customGradient: _getActionGradientFor(action),
+                expand: true,
               ),
             ),
             const SizedBox(width: DS.spacing12),
             Expanded(
-              child: CustomButton.secondary(
-                text: context.l10n.chatActionViewExecutionPage,
+              child: SparkleButton(
+                variant: ButtonVariant.outline,
+                borderSide: BorderSide(color: DS.primaryBase, width: 2),
+                label: context.l10n.chatActionViewExecutionPage,
+                size: ButtonSize.small,
+                minHeight: 32,
                 onPressed: () => unawaited(
                   widget.onWidgetAction?.call(
                     'open_task_execution',
@@ -2622,7 +2632,7 @@ class _ActionCardState extends ConsumerState<ActionCard>
                     },
                   ),
                 ),
-                size: CustomButtonSize.small,
+                expand: true,
               ),
             ),
           ],
@@ -3213,16 +3223,16 @@ class _ActionCardState extends ConsumerState<ActionCard>
         ],
         if (recommendedAction != null) ...[
           const SizedBox(height: DS.spacing12),
-          CustomButton.primary(
-            text: recommendedAction['label']?.toString() ?? l10n.commonContinue,
+          SparkleButton(
+            label: recommendedAction['label']?.toString() ?? l10n.commonContinue,
+            size: ButtonSize.small,
+            minHeight: 32,
             onPressed: () => unawaited(
               widget.onWidgetAction?.call(
                 recommendedAction['type']?.toString() ?? 'prompt',
                 recommendedAction,
               ),
             ),
-            size: CustomButtonSize.small,
-            customGradient: DS.infoGradient,
           ),
         ],
         if (adaptationRecords.isNotEmpty || preferenceLearnings.isNotEmpty) ...[
@@ -3476,11 +3486,11 @@ class _ActionCardState extends ConsumerState<ActionCard>
         const SizedBox(height: DS.spacing12),
         Align(
           alignment: Alignment.centerRight,
-          child: CustomButton.primary(
-            text: context.l10n.chatSubmitFeedback,
+          child: SparkleButton(
+            label: context.l10n.chatSubmitFeedback,
+            size: ButtonSize.small,
+            minHeight: 32,
             onPressed: submit,
-            size: CustomButtonSize.small,
-            customGradient: DS.warningGradient,
           ),
         ),
       ],

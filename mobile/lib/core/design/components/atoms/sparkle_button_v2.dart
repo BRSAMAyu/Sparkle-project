@@ -29,6 +29,11 @@ class SparkleButton extends StatelessWidget {
     this.expand = false,
     this.semanticLabel,
     this.focusNode,
+    this.minWidth,
+    this.minHeight,
+    this.borderSide,
+    this.foregroundColor,
+    this.backgroundGradient,
   });
 
   /// 工厂构造函数 - 便捷变体
@@ -123,6 +128,26 @@ class SparkleButton extends StatelessWidget {
   final String? semanticLabel;
   final FocusNode? focusNode;
 
+  /// 最小宽度下限（默认 null = 不约束，保持历史行为）。
+  /// 迁移 M3 按钮（minimumSize 64x40）等场景时用于命中区/布局等价。
+  final double? minWidth;
+
+  /// 最小高度下限（默认 null = 不约束，保持历史行为）。
+  /// 迁移 M3 按钮（视觉高 40）等场景时用于布局高度等价。
+  final double? minHeight;
+
+  /// 描边（默认 null = 无描边，保持历史行为）。
+  /// 迁移 OutlinedButton / CustomButton.secondary（2px 边框）时传入。
+  final BorderSide? borderSide;
+
+  /// 前景（文字/图标）色覆盖（默认 null = 按 variant 取色，保持历史行为）。
+  /// 迁移带语义色文字的按钮（如 destructive 文字动作）时传入；disabled 态仍取 [SparkleColors.textDisabled]。
+  final Color? foregroundColor;
+
+  /// 背景渐变覆盖（默认 null = variant 纯色背景，保持历史行为）。
+  /// 承接历史渐变 CTA（决策确认/行动卡）时传入原渐变对象；disabled 态仍用 surfaceTertiary 纯色。
+  final Gradient? backgroundGradient;
+
   void _handlePressed() {
     if (disabled || loading || onPressed == null) return;
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
@@ -133,6 +158,64 @@ class SparkleButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.sparkleTheme;
     final info = context.breakpointInfo;
+    final hasMinSize = minWidth != null || minHeight != null;
+    final useGradient = backgroundGradient != null && !disabled;
+
+    final Widget ink = InkWell(
+      onTap: disabled || loading ? null : _handlePressed,
+      borderRadius: _getBorderRadius(info),
+      focusNode: focusNode,
+        child: Container(
+          width: expand ? double.infinity : null,
+          padding: _getPadding(info),
+          constraints: hasMinSize
+              ? BoxConstraints(
+                  minWidth: minWidth ?? 0,
+                  minHeight: minHeight ?? 0,
+                )
+              : null,
+          child: Row(
+            mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
+            mainAxisAlignment:
+                expand ? MainAxisAlignment.center : MainAxisAlignment.start,
+            children: _buildChildren(theme, info),
+          ),
+        ),
+    );
+
+    final button = useGradient
+        ? DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: backgroundGradient,
+              borderRadius: _getBorderRadius(info),
+              boxShadow: [
+                BoxShadow(
+                  color: _getShadowColor(theme.colors, info),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Material(
+              color: theme.colors.surfacePrimary.withValues(alpha: 0),
+              child: ink,
+            ),
+          )
+        : Material(
+            color: _getBackgroundColor(theme.colors, info),
+            shape: borderSide == null
+                ? null
+                : RoundedRectangleBorder(
+                    borderRadius: _getBorderRadius(info),
+                    side: borderSide!,
+                  ),
+            borderRadius:
+                borderSide == null ? _getBorderRadius(info) : null,
+            elevation:
+                variant == ButtonVariant.text ? 0 : _getElevation(info),
+            shadowColor: _getShadowColor(theme.colors, info),
+            child: ink,
+          );
 
     return Semantics(
       label: semanticLabel ?? label,
@@ -141,27 +224,7 @@ class SparkleButton extends StatelessWidget {
       child: AnimatedContainer(
         duration: theme.animations.quick,
         curve: Curves.easeOut,
-        child: Material(
-          color: _getBackgroundColor(theme.colors, info),
-          borderRadius: _getBorderRadius(info),
-          elevation: _getElevation(info),
-          shadowColor: _getShadowColor(theme.colors, info),
-          child: InkWell(
-            onTap: disabled || loading ? null : _handlePressed,
-            borderRadius: _getBorderRadius(info),
-            focusNode: focusNode,
-            child: Container(
-              width: expand ? double.infinity : null,
-              padding: _getPadding(info),
-              child: Row(
-                mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
-                mainAxisAlignment:
-                    expand ? MainAxisAlignment.center : MainAxisAlignment.start,
-                children: _buildChildren(theme, info),
-              ),
-            ),
-          ),
-        ),
+        child: button,
       ),
     );
   }
@@ -220,6 +283,7 @@ class SparkleButton extends StatelessWidget {
       case ButtonVariant.secondary:
         return colors.brandSecondary;
       case ButtonVariant.outline:
+      case ButtonVariant.text:
         return colors.surfacePrimary.withValues(alpha: 0);
       case ButtonVariant.ghost:
         return colors.surfacePrimary.withValues(alpha: 0.1);
@@ -230,6 +294,7 @@ class SparkleButton extends StatelessWidget {
 
   Color _getTextColor(SparkleColors colors) {
     if (disabled) return colors.textDisabled;
+    if (foregroundColor != null) return foregroundColor!;
 
     switch (variant) {
       case ButtonVariant.primary:
@@ -249,6 +314,7 @@ class SparkleButton extends StatelessWidget {
         );
       case ButtonVariant.outline:
       case ButtonVariant.ghost:
+      case ButtonVariant.text:
         return colors.brandPrimary;
     }
   }
@@ -326,6 +392,10 @@ enum ButtonVariant {
   outline,
   ghost,
   destructive,
+
+  /// 纯文字按钮（透明底、无阴影、brandPrimary 文字）。
+  /// 等价承接 M3 TextButton / CustomButton.text 的语义。
+  text,
 }
 
 enum ButtonSize {
@@ -448,6 +518,7 @@ class SparkleIconButton extends ConsumerWidget {
       case ButtonVariant.secondary:
         return colors.brandSecondary;
       case ButtonVariant.outline:
+      case ButtonVariant.text:
         return colors.surfacePrimary.withValues(alpha: 0);
       case ButtonVariant.ghost:
         return colors.surfacePrimary.withValues(alpha: 0.1);
@@ -476,6 +547,7 @@ class SparkleIconButton extends ConsumerWidget {
         );
       case ButtonVariant.outline:
       case ButtonVariant.ghost:
+      case ButtonVariant.text:
         return colors.brandPrimary;
     }
   }

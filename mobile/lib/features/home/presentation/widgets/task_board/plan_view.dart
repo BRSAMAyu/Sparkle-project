@@ -364,10 +364,14 @@ class _PlanFilterBanner extends ConsumerWidget {
                 ),
               ),
             ),
-            TextButton(
+                        SparkleButton(
+              label: context.l10n.planViewViewAll,
+              variant: ButtonVariant.text,
+              size: ButtonSize.small,
+              minWidth: 64,
+              minHeight: 40,
               onPressed: () =>
-                  ref.read(taskBoardProvider.notifier).clearPlanSelection(),
-              child: Text(context.l10n.planViewViewAll),
+ ref.read(taskBoardProvider.notifier).clearPlanSelection(),
             ),
           ],
         ),
@@ -715,22 +719,26 @@ class _InactivePlanRow extends ConsumerWidget {
               ),
             ),
             const SizedBox(width: DS.spacing8),
-            TextButton(
+                        SparkleButton(
+              label: context.l10n.planViewRestore,
+              variant: ButtonVariant.text,
+              size: ButtonSize.small,
+              minWidth: 64,
+              minHeight: 40,
               onPressed: canActivate
-                  ? () async {
-                      try {
-                        await ref
-                            .read(planListProvider.notifier)
-                            .activatePlan(plan.id);
-                        if (!context.mounted) return;
-                        AppFeedback.success(context, context.l10n.planViewRestored(plan.name));
-                      } catch (e) {
-                        if (!context.mounted) return;
-                        AppFeedback.error(context, UserFacingError.from(e));
-                      }
-                    }
-                  : null,
-              child: Text(context.l10n.planViewRestore),
+ ? () async {
+ try {
+ await ref
+ .read(planListProvider.notifier)
+ .activatePlan(plan.id);
+ if (!context.mounted) return;
+ AppFeedback.success(context, context.l10n.planViewRestored(plan.name));
+ } catch (e) {
+ if (!context.mounted) return;
+ AppFeedback.error(context, UserFacingError.from(e));
+ }
+ }
+ : null,
             ),
           ],
         ),

@@ -292,7 +292,14 @@ class _ErrorState extends StatelessWidget {
               style: DS.bodySmall.copyWith(color: DS.textSecondary),
             ),
             const SizedBox(height: 12),
-            TextButton(onPressed: onRetry, child: Text(S.chatLabelRetry)),
+                        SparkleButton(
+              label: S.chatLabelRetry,
+              variant: ButtonVariant.text,
+              size: ButtonSize.small,
+              minWidth: 64,
+              minHeight: 40,
+              onPressed: onRetry,
+            ),
           ],
         ),
       );
@@ -496,13 +503,21 @@ class _TimelineEntryCardState extends State<_TimelineEntryCard> {
           autofocus: true,
         ),
         actions: [
-          TextButton(
+                    SparkleButton(
+            label: S.chatLabelCancel,
+            variant: ButtonVariant.text,
+            size: ButtonSize.small,
+            minWidth: 64,
+            minHeight: 40,
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(S.chatLabelCancel),
           ),
-          TextButton(
+                    SparkleButton(
+            label: S.chatLabelSubmit,
+            variant: ButtonVariant.text,
+            size: ButtonSize.small,
+            minWidth: 64,
+            minHeight: 40,
             onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
-            child: Text(S.chatLabelSubmit),
           ),
         ],
       ),

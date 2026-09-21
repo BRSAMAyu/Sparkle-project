@@ -671,9 +671,13 @@ class _InsightHubStatusBanner extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          TextButton(
+                    SparkleButton(
+            label: context.l10n.insightHubRetry,
+            variant: ButtonVariant.text,
+            size: ButtonSize.small,
+            minWidth: 64,
+            minHeight: 40,
             onPressed: onRetry,
-            child: Text(context.l10n.insightHubRetry),
           ),
         ],
       ),

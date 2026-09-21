@@ -3271,16 +3271,22 @@ class _InsightLinkCard extends StatelessWidget {
               ),
         ),
         actions: [
-          TextButton(
+                    SparkleButton(
+            label: context.l10n.chatPromptPreviewCancel,
+            variant: ButtonVariant.text,
+            size: ButtonSize.small,
+            minWidth: 64,
+            minHeight: 40,
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(context.l10n.chatPromptPreviewCancel),
           ),
-          FilledButton(
+                    SparkleButton(
+            label: context.l10n.chatPromptPreviewSend,
+            minWidth: 64,
+            minHeight: 40,
             onPressed: () {
-              Navigator.of(dialogContext).pop();
-              action.onTap?.call();
-            },
-            child: Text(context.l10n.chatPromptPreviewSend),
+ Navigator.of(dialogContext).pop();
+ action.onTap?.call();
+ },
           ),
         ],
       ),

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/chat/presentation/providers/low_yield_block_provider.dart';
 
@@ -114,13 +115,21 @@ class _LowYieldGentleBlockCardState extends State<LowYieldGentleBlockCard> {
               spacing: 8,
               runSpacing: 8,
               children: [
-                OutlinedButton(
+                                SparkleButton(
+                  label: l10n.lowYieldActionCorrect,
+                  variant: ButtonVariant.outline,
+                  borderSide: BorderSide(color: DS.brandPrimary, width: 1.5),
+                  minWidth: 64,
+                  minHeight: 40,
                   onPressed: () => _handle(widget.onCorrect),
-                  child: Text(l10n.lowYieldActionCorrect),
                 ),
-                TextButton(
+                                SparkleButton(
+                  label: l10n.lowYieldActionContinue,
+                  variant: ButtonVariant.text,
+                  size: ButtonSize.small,
+                  minWidth: 64,
+                  minHeight: 40,
                   onPressed: () => _handle(widget.onDismiss),
-                  child: Text(l10n.lowYieldActionContinue),
                 ),
                 FilledButton.icon(
                   onPressed: () => _handle(widget.onAccept),

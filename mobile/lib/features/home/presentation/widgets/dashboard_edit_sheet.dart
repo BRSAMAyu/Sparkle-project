@@ -125,23 +125,31 @@ class _SlotEditor extends ConsumerWidget {
                 ),
               ),
             ),
-            TextButton(
+                        SparkleButton(
+              label: context.l10n.dashboardLeanView,
+              variant: ButtonVariant.text,
+              size: ButtonSize.small,
+              minWidth: 64,
+              minHeight: 40,
               onPressed: () {
-                unawaited(
-                  SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
-                );
-                notifier.resetToLeanView();
-              },
-              child: Text(context.l10n.dashboardLeanView),
+ unawaited(
+ SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
+ );
+ notifier.resetToLeanView();
+ },
             ),
-            TextButton(
+                        SparkleButton(
+              label: context.l10n.dashboardRestoreDefaults,
+              variant: ButtonVariant.text,
+              size: ButtonSize.small,
+              minWidth: 64,
+              minHeight: 40,
               onPressed: () {
-                unawaited(
-                  SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
-                );
-                notifier.restoreDefaults();
-              },
-              child: Text(context.l10n.dashboardRestoreDefaults),
+ unawaited(
+ SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
+ );
+ notifier.restoreDefaults();
+ },
             ),
           ],
         ),
@@ -363,14 +371,18 @@ class _WorkspaceCardEditor extends ConsumerWidget {
               ),
             ),
             const Spacer(),
-            TextButton(
+                        SparkleButton(
+              label: context.l10n.dashboardRestoreDefaults,
+              variant: ButtonVariant.text,
+              size: ButtonSize.small,
+              minWidth: 64,
+              minHeight: 40,
               onPressed: () {
-                unawaited(
-                  SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
-                );
-                notifier.restoreDefaults();
-              },
-              child: Text(context.l10n.dashboardRestoreDefaults),
+ unawaited(
+ SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
+ );
+ notifier.restoreDefaults();
+ },
             ),
           ],
         ),

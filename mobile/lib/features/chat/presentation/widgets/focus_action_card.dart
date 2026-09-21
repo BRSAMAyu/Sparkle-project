@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
@@ -69,10 +68,12 @@ class FocusActionCard extends StatelessWidget {
             ],
             const SizedBox(height: DS.md),
             Consumer(
-              builder: (context, ref, child) => CustomButton.primary(
-                text: l10n.chatFocusStart,
-                icon: Icons.play_arrow_rounded,
-                customGradient: DS.secondaryGradient,
+              builder: (context, ref, child) => SparkleButton(
+                variant: ButtonVariant.secondary,
+                label: l10n.chatFocusStart,
+                icon: const Icon(Icons.play_arrow_rounded),
+                size: ButtonSize.small,
+                minHeight: 32,
                 onPressed: () {
                   unawaited(
                     SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
@@ -81,7 +82,6 @@ class FocusActionCard extends StatelessWidget {
                   ref.read(activeTaskProvider.notifier).state = taskModel;
                   context.push('/tasks/${taskModel.id}/execute');
                 },
-                size: CustomButtonSize.small,
               ),
             ),
           ],

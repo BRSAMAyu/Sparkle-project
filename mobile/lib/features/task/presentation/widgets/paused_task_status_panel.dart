@@ -396,9 +396,13 @@ Future<bool?> showPausedTaskReasonDialog({
         ],
       ),
       actions: [
-        TextButton(
+                SparkleButton(
+          label: l10n.confirm,
+          variant: ButtonVariant.text,
+          size: ButtonSize.small,
+          minWidth: 64,
+          minHeight: 40,
           onPressed: () => Navigator.of(dialogContext).pop(false),
-          child: Text(l10n.confirm),
         ),
       ],
     ),

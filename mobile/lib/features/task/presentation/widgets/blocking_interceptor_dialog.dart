@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
-import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/cognitive_provider.dart';
@@ -192,13 +191,14 @@ class _BlockingInterceptorDialogState
                       },
                     ),
                     const SizedBox(width: DS.spacing12),
-                    CustomButton.primary(
-                      text: l10n.blockingConfirmAbandon,
-                      icon: Icons.check,
+                    SparkleButton(
+                      label: l10n.blockingConfirmAbandon,
+                      icon: const Icon(Icons.check),
+                      size: ButtonSize.small,
+                      minHeight: 32,
                       onPressed: _isSubmitting ? () {} : _submit,
-                      isLoading: _isSubmitting,
-                      size: CustomButtonSize.small,
-                      customGradient: DS.warningGradient, // Orange/Red warning
+                      loading: _isSubmitting,
+                      // Orange/Red warning
                     ),
                   ],
                 ),

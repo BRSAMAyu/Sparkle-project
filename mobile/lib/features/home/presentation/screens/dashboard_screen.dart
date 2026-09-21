@@ -114,13 +114,19 @@ Future<String?> showAuroraFreeformCorrectionInputDialog(BuildContext context) {
           },
         ),
         actions: [
-          TextButton(
+                    SparkleButton(
+            label: l10n.homeAuroraDialogCancel,
+            variant: ButtonVariant.text,
+            size: ButtonSize.small,
+            minWidth: 64,
+            minHeight: 40,
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(l10n.homeAuroraDialogCancel),
           ),
-          FilledButton(
+                    SparkleButton(
+            label: l10n.homeAuroraDialogSend,
+            minWidth: 64,
+            minHeight: 40,
             onPressed: () => Navigator.of(ctx).pop(submittedText()),
-            child: Text(l10n.homeAuroraDialogSend),
           ),
         ],
       );
@@ -1895,9 +1901,13 @@ class _HomeErrorCard extends StatelessWidget {
                   ],
                 ),
               ),
-              TextButton(
+                            SparkleButton(
+                label: context.l10n.dashboardRetry,
+                variant: ButtonVariant.text,
+                size: ButtonSize.small,
+                minWidth: 64,
+                minHeight: 40,
                 onPressed: onRetry,
-                child: Text(context.l10n.dashboardRetry),
               ),
             ],
           ),
@@ -1944,9 +1954,13 @@ class _HomeEmptyInline extends StatelessWidget {
                   ),
             ),
           ),
-          TextButton(
+                    SparkleButton(
+            label: actionLabel,
+            variant: ButtonVariant.text,
+            size: ButtonSize.small,
+            minWidth: 64,
+            minHeight: 40,
             onPressed: onAction,
-            child: Text(actionLabel),
           ),
         ],
       ),

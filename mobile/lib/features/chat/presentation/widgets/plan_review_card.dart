@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/motion.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
-import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -915,13 +914,14 @@ class _PlanReviewCardState extends State<PlanReviewCard>
       return Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          CustomButton.primary(
-            text: _isSubmitting
+          SparkleButton(
+            label: _isSubmitting
                 ? context.l10n.commonSubmitting
                 : context.l10n.planReviewRejectWithFeedback,
-            icon: Icons.refresh_rounded,
+            icon: const Icon(Icons.refresh_rounded),
+            size: ButtonSize.small,
+            minHeight: 32,
             onPressed: _isSubmitting ? null : _handleRejectionFlow,
-            size: CustomButtonSize.small,
           ),
         ],
       );
@@ -933,31 +933,35 @@ class _PlanReviewCardState extends State<PlanReviewCard>
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           if (widget.onReject != null || widget.onDecision != null)
-            CustomButton.text(
-              text: context.l10n.cancel,
+            SparkleButton(
+              variant: ButtonVariant.text,
+              label: context.l10n.cancel,
+              size: ButtonSize.small,
+              minHeight: 32,
               onPressed: _isSubmitting
                   ? null
                   : () => _handleDecision(
                         ReviewDecision.rejected,
                         meta: _buildDecisionMeta(null),
                       ),
-              size: CustomButtonSize.small,
             ),
           const SizedBox(width: DS.spacing8),
           if (widget.onModify != null || widget.onDecision != null)
-            CustomButton.primary(
-              text: _isSubmitting
+            SparkleButton(
+              label: _isSubmitting
                   ? context.l10n.commonSubmitting
                   : context.l10n.planReviewModifyPlan,
-              icon: Icons.edit_rounded,
+              icon: const Icon(Icons.edit_rounded),
+              size: ButtonSize.small,
+              minHeight: 32,
+              backgroundGradient: gradient,
+              foregroundColor: DS.onBrandPrimary,
               onPressed: _isSubmitting
                   ? null
                   : () => _handleDecision(
                         decision,
                         meta: _buildDecisionMeta(null),
                       ),
-              size: CustomButtonSize.small,
-              customGradient: gradient,
             ),
         ],
       );
@@ -968,23 +972,29 @@ class _PlanReviewCardState extends State<PlanReviewCard>
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
         if (widget.onReject != null || widget.onDecision != null)
-          CustomButton.text(
-            text: context.l10n.cancel,
+          SparkleButton(
+            variant: ButtonVariant.text,
+            label: context.l10n.cancel,
+            size: ButtonSize.small,
+            minHeight: 32,
             onPressed: _isSubmitting
                 ? null
                 : () => _handleDecision(
                       ReviewDecision.rejected,
                       meta: _buildDecisionMeta(null),
                     ),
-            size: CustomButtonSize.small,
           ),
         const SizedBox(width: DS.spacing8),
         if (widget.onApprove != null || widget.onDecision != null)
-          CustomButton.primary(
-            text: _isSubmitting
+          SparkleButton(
+            label: _isSubmitting
                 ? context.l10n.commonSubmitting
                 : context.l10n.planReviewApproveExecute,
-            icon: Icons.check_rounded,
+            icon: const Icon(Icons.check_rounded),
+            size: ButtonSize.small,
+            minHeight: 32,
+            backgroundGradient: gradient,
+            foregroundColor: DS.onBrandPrimary,
             onPressed: _isSubmitting
                 ? null
                 : () {
@@ -998,8 +1008,6 @@ class _PlanReviewCardState extends State<PlanReviewCard>
                       ),
                     );
                   },
-            size: CustomButtonSize.small,
-            customGradient: gradient,
           ),
       ],
     );
@@ -1355,18 +1363,23 @@ extension on _PlanReviewCardState {
                         child: Row(
                           children: [
                             Expanded(
-                              child: CustomButton.text(
-                                text: l10n.cancel,
+                              child: SparkleButton(
+                                variant: ButtonVariant.text,
+                                label: l10n.cancel,
+                                size: ButtonSize.small,
+                                minHeight: 32,
                                 onPressed: () => Navigator.of(context).pop(),
-                                size: CustomButtonSize.small,
+                                expand: true,
                               ),
                             ),
                             const SizedBox(width: DS.spacing12),
                             Expanded(
-                              child: CustomButton.primary(
-                                text: l10n.planReviewSubmitFeedback,
+                              child: SparkleButton(
+                                label: l10n.planReviewSubmitFeedback,
+                                size: ButtonSize.small,
+                                minHeight: 32,
                                 onPressed: submit,
-                                size: CustomButtonSize.small,
+                                expand: true,
                               ),
                             ),
                           ],

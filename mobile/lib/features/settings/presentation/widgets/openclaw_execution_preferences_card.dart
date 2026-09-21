@@ -358,26 +358,28 @@ class _OpenClawExecutionPreferencesCardState
           const SizedBox(height: DS.spacing12),
           SizedBox(
             width: double.infinity,
-            child: FilledButton(
+            child:             SparkleButton(
+              label: _dirty ? l.settingsSavePreferences : l.execPrefSynced,
+              minWidth: 64,
+              minHeight: 40,
               onPressed: (!_dirty || service.isSaving)
-                  ? null
-                  : () async {
-                      final ok = await ref
-                          .read(openClawExecutionPreferencesProvider)
-                          .savePreferences(_draft ?? draft);
-                      if (!mounted) {
-                        return;
-                      }
-                      if (ok) {
-                        setState(() {
-                          _dirty = false;
-                        });
-                        AppFeedback.success(
-                            context, l.settingsPreferencesSaved);
-                      }
-                    },
-              child:
-                  Text(_dirty ? l.settingsSavePreferences : l.execPrefSynced),
+ ? null
+ : () async {
+ final ok = await ref
+ .read(openClawExecutionPreferencesProvider)
+ .savePreferences(_draft ?? draft);
+ if (!mounted) {
+ return;
+ }
+ if (ok) {
+ setState(() {
+ _dirty = false;
+ });
+ AppFeedback.success(
+ context, l.settingsPreferencesSaved);
+ }
+ },
+              expand: true,
             ),
           ),
         ],

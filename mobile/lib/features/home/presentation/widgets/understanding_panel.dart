@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
-import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/presentation/providers/understanding_snapshot_provider.dart';
@@ -594,22 +594,28 @@ Future<UnderstandingCorrectionResult?> showUnderstandingCorrectionDialog(
             ),
           ),
           actions: [
-            TextButton(
+                        SparkleButton(
+              label: context.l10n.cancel,
+              variant: ButtonVariant.text,
+              size: ButtonSize.small,
+              minWidth: 64,
+              minHeight: 40,
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(context.l10n.cancel),
             ),
-            FilledButton(
+                        SparkleButton(
+              label: context.l10n.confirm,
+              minWidth: 64,
+              minHeight: 40,
               onPressed: () {
-                final text = controller.text.trim();
-                if (text.isEmpty) return;
-                Navigator.of(dialogContext).pop(
-                  UnderstandingCorrectionResult(
-                    text: text,
-                    scope: selectedScope,
-                  ),
-                );
-              },
-              child: Text(context.l10n.confirm),
+ final text = controller.text.trim();
+ if (text.isEmpty) return;
+ Navigator.of(dialogContext).pop(
+ UnderstandingCorrectionResult(
+ text: text,
+ scope: selectedScope,
+ ),
+ );
+ },
             ),
           ],
         );

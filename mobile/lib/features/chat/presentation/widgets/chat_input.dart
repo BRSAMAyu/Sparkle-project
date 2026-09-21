@@ -299,13 +299,19 @@ class _ChatInputState extends ConsumerState<ChatInput> {
             },
           ),
           actions: [
-            TextButton(
+                        SparkleButton(
+              label: context.l10n.auroraCorrectionInputCancel,
+              variant: ButtonVariant.text,
+              size: ButtonSize.small,
+              minWidth: 64,
+              minHeight: 40,
               onPressed: () => Navigator.of(ctx).pop(null),
-              child: Text(context.l10n.auroraCorrectionInputCancel),
             ),
-            FilledButton(
+                        SparkleButton(
+              label: context.l10n.auroraCorrectionInputSend,
+              minWidth: 64,
+              minHeight: 40,
               onPressed: () => Navigator.of(ctx).pop(submittedText()),
-              child: Text(context.l10n.auroraCorrectionInputSend),
             ),
           ],
         );

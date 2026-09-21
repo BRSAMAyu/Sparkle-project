@@ -890,12 +890,15 @@ Future<void> _showEditDialog(
           const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
-            child: FilledButton(
+            child:             SparkleButton(
+              label: l10n.goalDetailEditSave,
+              minWidth: 64,
+              minHeight: 40,
               onPressed: () => Navigator.of(ctx).pop({
-                'title': titleController.text.trim(),
-                'description': descriptionController.text.trim(),
-              }),
-              child: Text(l10n.goalDetailEditSave),
+ 'title': titleController.text.trim(),
+ 'description': descriptionController.text.trim(),
+ }),
+              expand: true,
             ),
           ),
         ],

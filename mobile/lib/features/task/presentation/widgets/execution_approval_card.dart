@@ -163,9 +163,13 @@ class _ExecutionApprovalCardState extends State<ExecutionApprovalCard> {
                     expanded: _expanded,
                   ),
                   const SizedBox(height: DS.spacing8),
-                  TextButton(
+                                    SparkleButton(
+                    label: _expanded ? copy.collapseDetails : copy.viewDetails,
+                    variant: ButtonVariant.text,
+                    size: ButtonSize.small,
+                    minWidth: 64,
+                    minHeight: 40,
                     onPressed: () => setState(() => _expanded = !_expanded),
-                    child: Text(_expanded ? copy.collapseDetails : copy.viewDetails),
                   ),
                   if (widget.record.comparisonSummary != null) ...[
                     const SizedBox(height: DS.spacing8),
@@ -263,7 +267,13 @@ class _ExecutionApprovalCardState extends State<ExecutionApprovalCard> {
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton(
+                  child: SparkleButton(
+                    label: copy.rejectResult,
+                    variant: ButtonVariant.outline,
+                    borderSide: BorderSide(color: DS.semanticError),
+                    foregroundColor: DS.semanticError,
+                    minWidth: 64,
+                    minHeight: 48,
                     onPressed: widget.isLoading
                         ? null
                         : () {
@@ -274,17 +284,7 @@ class _ExecutionApprovalCardState extends State<ExecutionApprovalCard> {
                             );
                             widget.onReject();
                           },
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(48),
-                      side: BorderSide(color: DS.semanticError),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                    ),
-                    child: Text(
-                      copy.rejectResult,
-                      style: DS.bodyMedium.copyWith(color: DS.semanticError),
-                    ),
+                    expand: true,
                   ),
                 ),
                 const SizedBox(width: DS.spacing12),

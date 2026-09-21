@@ -282,20 +282,31 @@ class _ChatWorkingMemoryPanelState
                     spacing: DS.spacing8,
                     runSpacing: DS.spacing8,
                     children: [
-                      TextButton(
+                                            SparkleButton(
+                        label: context.l10n.chatMemoryOriginalTurn,
+                        variant: ButtonVariant.text,
+                        size: ButtonSize.small,
+                        minWidth: 64,
+                        minHeight: 40,
                         onPressed: item.evidenceToken.isEmpty
-                            ? null
-                            : () => widget.onViewSource(item.evidenceToken),
-                        child: Text(context.l10n.chatMemoryOriginalTurn),
+ ? null
+ : () => widget.onViewSource(item.evidenceToken),
                       ),
-                      TextButton(
+                                            SparkleButton(
+                        label: context.l10n.chatMemoryManualForget,
+                        variant: ButtonVariant.text,
+                        size: ButtonSize.small,
+                        minWidth: 64,
+                        minHeight: 40,
                         onPressed: () => _forget(item.id),
-                        child: Text(context.l10n.chatMemoryManualForget),
                       ),
-                      TextButton(
-                        onPressed:
-                            item.rejected ? null : () => _markCorrect(item.id),
-                        child: Text(context.l10n.chatMemoryMarkCorrect),
+                                            SparkleButton(
+                        label: context.l10n.chatMemoryMarkCorrect,
+                        variant: ButtonVariant.text,
+                        size: ButtonSize.small,
+                        minWidth: 64,
+                        minHeight: 40,
+                        onPressed: item.rejected ? null : () => _markCorrect(item.id),
                       ),
                     ],
                   ),

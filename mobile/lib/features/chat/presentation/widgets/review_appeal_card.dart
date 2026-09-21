@@ -14,7 +14,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
-import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
@@ -681,20 +680,22 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          CustomButton.text(
-                            text: context.l10n.contentReviewCancel,
+                                                    SparkleButton(
+                            label: context.l10n.contentReviewCancel,
+                            size: ButtonSize.small,
+                            variant: ButtonVariant.text,
                             onPressed: widget.onCancelAppeal,
-                            size: CustomButtonSize.small,
+                            minHeight: 32,
                           ),
                           const SizedBox(width: DS.spacing8),
-                          CustomButton.primary(
-                            text: widget.isSubmitting
+                                                    SparkleButton(
+                            label: widget.isSubmitting
                                 ? context.l10n.commonSubmitting
                                 : context.l10n.contentReviewAppealSubmit,
-                            icon: Icons.send_rounded,
-                            onPressed:
-                                widget.isSubmitting ? null : _handleSubmit,
-                            size: CustomButtonSize.small,
+                            size: ButtonSize.small,
+                            icon: const Icon(Icons.send_rounded),
+                            onPressed: widget.isSubmitting ? null : _handleSubmit,
+                            minHeight: 32,
                           ),
                         ],
                       ),

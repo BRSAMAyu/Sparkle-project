@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class GraphDiagnosticCard extends StatelessWidget {
@@ -156,25 +155,31 @@ class _NodeTile extends StatelessWidget {
     final prompt = item['prompt']?.toString() ?? '';
     if (route.isNotEmpty && onAction != null) {
       actions.add(
-        CustomButton.secondary(
-          text: context.l10n.chatGraphGoToGalaxy,
+                SparkleButton(
+          label: context.l10n.chatGraphGoToGalaxy,
+          size: ButtonSize.small,
+          variant: ButtonVariant.outline,
+          borderSide: BorderSide(color: DS.primaryBase, width: 2),
           onPressed: () => unawaited(onAction!(
             'route',
             {'route': route},
           )),
-          size: CustomButtonSize.small,
+          minHeight: 32,
         ),
       );
     }
     if (prompt.isNotEmpty && onAction != null) {
       actions.add(
-        CustomButton.secondary(
-          text: context.l10n.chatGraphContinueExplain,
+                SparkleButton(
+          label: context.l10n.chatGraphContinueExplain,
+          size: ButtonSize.small,
+          variant: ButtonVariant.outline,
+          borderSide: BorderSide(color: DS.primaryBase, width: 2),
           onPressed: () => unawaited(onAction!(
             'prompt',
             {'prompt': prompt},
           )),
-          size: CustomButtonSize.small,
+          minHeight: 32,
         ),
       );
     }

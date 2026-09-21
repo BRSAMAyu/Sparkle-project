@@ -154,13 +154,19 @@ class _TaskCardState extends ConsumerState<TaskCard> {
                 title: Text(l10n.taskConfirmCompleteTitle),
                 content: Text(l10n.taskConfirmCompleteBody(widget.task.title)),
                 actions: [
-                  TextButton(
+                                    SparkleButton(
+                    label: l10n.cancel,
+                    variant: ButtonVariant.text,
+                    size: ButtonSize.small,
+                    minWidth: 64,
+                    minHeight: 40,
                     onPressed: () => Navigator.of(dialogContext).pop(false),
-                    child: Text(l10n.cancel),
                   ),
-                  FilledButton(
+                                    SparkleButton(
+                    label: l10n.confirm,
+                    minWidth: 64,
+                    minHeight: 40,
                     onPressed: () => Navigator.of(dialogContext).pop(true),
-                    child: Text(l10n.confirm),
                   ),
                 ],
               ),

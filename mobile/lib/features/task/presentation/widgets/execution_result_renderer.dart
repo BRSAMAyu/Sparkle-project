@@ -731,9 +731,11 @@ class _ArtifactPreviewSheet extends StatelessWidget {
                     label: Text(context.l10n.executionResultCopyLink),
                   ),
                 const Spacer(),
-                FilledButton(
+                                SparkleButton(
+                  label: context.l10n.commonDone,
+                  minWidth: 64,
+                  minHeight: 40,
                   onPressed: () => Navigator.of(context).pop(),
-                  child: Text(context.l10n.commonDone),
                 ),
               ],
             ),

@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
@@ -375,11 +374,14 @@ class _ClaimTile extends StatelessWidget {
               children: actions.map((action) {
                 final actionType = action['type']?.toString() ?? 'prompt';
                 final payload = Map<String, dynamic>.from(action);
-                return CustomButton.secondary(
-                  text: action['label']?.toString() ??
+                return SparkleButton(
+                  variant: ButtonVariant.outline,
+                  borderSide: BorderSide(color: DS.primaryBase, width: 2),
+                  label: action['label']?.toString() ??
                       (S.chatLabelContinue),
+                  size: ButtonSize.small,
+                  minHeight: 32,
                   onPressed: () => unawaited(onAction!(actionType, payload)),
-                  size: CustomButtonSize.small,
                 );
               }).toList(),
             ),

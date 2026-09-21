@@ -985,13 +985,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             },
           ),
           actions: [
-            TextButton(
+                        SparkleButton(
+              label: context.l10n.auroraCorrectionInputCancel,
+              variant: ButtonVariant.text,
+              size: ButtonSize.small,
+              minWidth: 64,
+              minHeight: 40,
               onPressed: () => Navigator.of(dialogContext).pop(null),
-              child: Text(context.l10n.auroraCorrectionInputCancel),
             ),
-            FilledButton(
+                        SparkleButton(
+              label: context.l10n.auroraCorrectionInputSend,
+              minWidth: 64,
+              minHeight: 40,
               onPressed: () => Navigator.of(dialogContext).pop(submittedText()),
-              child: Text(context.l10n.auroraCorrectionInputSend),
             ),
           ],
         );

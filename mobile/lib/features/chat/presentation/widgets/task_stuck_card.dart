@@ -67,24 +67,32 @@ class TaskStuckCard extends StatelessWidget {
                 icon: const Icon(Icons.auto_fix_high_rounded, size: 16),
                 label: Text(context.l10n.stuckHelpChatWithSparkle),
               ),
-              OutlinedButton(
+                            SparkleButton(
+                label: context.l10n.interventionLater,
+                variant: ButtonVariant.outline,
+                borderSide: BorderSide(color: DS.brandPrimary, width: 1.5),
+                minWidth: 64,
+                minHeight: 40,
                 onPressed: interventionId.isEmpty
-                    ? null
-                    : () => unawaited(_sendFeedback(
-                          action: 'snoozed',
-                          interventionId: interventionId,
-                          extra: const {'snooze_hours': 24},
-                        )),
-                child: Text(context.l10n.interventionLater),
+ ? null
+ : () => unawaited(_sendFeedback(
+ action: 'snoozed',
+ interventionId: interventionId,
+ extra: const {'snooze_hours': 24},
+ )),
               ),
-              TextButton(
+                            SparkleButton(
+                label: context.l10n.chatNotNeeded,
+                variant: ButtonVariant.text,
+                size: ButtonSize.small,
+                minWidth: 64,
+                minHeight: 40,
                 onPressed: interventionId.isEmpty
-                    ? null
-                    : () => unawaited(_sendFeedback(
-                          action: 'dismissed',
-                          interventionId: interventionId,
-                        )),
-                child: Text(context.l10n.chatNotNeeded),
+ ? null
+ : () => unawaited(_sendFeedback(
+ action: 'dismissed',
+ interventionId: interventionId,
+ )),
               ),
             ],
           ),

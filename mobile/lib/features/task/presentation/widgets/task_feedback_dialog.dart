@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
-import 'package:sparkle/core/design/widgets/custom_button.dart' as custom;
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_confetti.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -797,12 +796,14 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                             const SizedBox(width: DS.spacing12),
                             Expanded(
                               flex: 2,
-                              child: custom.CustomButton.primary(
-                                text: _reflectionSaved
+                              child: SparkleButton(
+                                label: _reflectionSaved
                                     ? l10n.commonDone
                                     : l10n.commonSave,
                                 onPressed: _isSubmitting ? null : _handleSubmit,
-                                isLoading: _isSubmitting,
+                                loading: _isSubmitting,
+                                minHeight: 48,
+                                expand: true,
                               ),
                             ),
                           ],

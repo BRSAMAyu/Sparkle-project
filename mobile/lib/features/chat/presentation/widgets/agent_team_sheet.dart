@@ -210,26 +210,25 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
                 // Confirm button
                 SizedBox(
                   width: double.infinity,
-                  child: ElevatedButton(
+                  child:                   SparkleButton(
+                    label: _selectedAgents.length <= 1 ? context.l10n.chatTeamSheetEnterExpert : context.l10n.chatTeamSheetStartCollaboration,
+                    minWidth: 64,
+                    minHeight: 40,
                     onPressed: _selectedAgents.isEmpty
-                        ? null
-                        : () {
-                            final mode = _buildMode();
-                            ref
-                                .read(chatModeNotifierProvider.notifier)
-                                .setMode(mode);
-                            if (mode.apiValue != 'standard') {
-                              ref
-                                  .read(lastMultiAgentModeProvider.notifier)
-                                  .state = mode;
-                            }
-                            Navigator.pop(context);
-                          },
-                    child: Text(
-                      _selectedAgents.length <= 1
-                          ? context.l10n.chatTeamSheetEnterExpert
-                          : context.l10n.chatTeamSheetStartCollaboration,
-                    ),
+ ? null
+ : () {
+ final mode = _buildMode();
+ ref
+ .read(chatModeNotifierProvider.notifier)
+ .setMode(mode);
+ if (mode.apiValue != 'standard') {
+ ref
+ .read(lastMultiAgentModeProvider.notifier)
+ .state = mode;
+ }
+ Navigator.pop(context);
+ },
+                    expand: true,
                   ),
                 ),
                 const SizedBox(height: DS.spacing16),
@@ -604,24 +603,30 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
             ),
           ),
           actions: [
-            TextButton(
+                        SparkleButton(
+              label: S.chatLabelCancel,
+              variant: ButtonVariant.text,
+              size: ButtonSize.small,
+              minWidth: 64,
+              minHeight: 40,
               onPressed: () => Navigator.pop(dialogContext),
-              child: Text(S.chatLabelCancel),
             ),
-            FilledButton(
+                        SparkleButton(
+              label: S.chatLabelCreate,
+              minWidth: 64,
+              minHeight: 40,
               onPressed: () async {
-                final expert = await repository.createCustomExpert(
-                  name: nameController.text.trim(),
-                  description: descriptionController.text.trim(),
-                  systemPrompt: promptController.text.trim(),
-                  baseExpertId: selectedBaseExpert,
-                  preferredModelKey: selectedModelKey,
-                  reasoningMode: selectedReasoningMode,
-                );
-                if (!dialogContext.mounted) return;
-                Navigator.pop(dialogContext, expert);
-              },
-              child: Text(S.chatLabelCreate),
+ final expert = await repository.createCustomExpert(
+ name: nameController.text.trim(),
+ description: descriptionController.text.trim(),
+ systemPrompt: promptController.text.trim(),
+ baseExpertId: selectedBaseExpert,
+ preferredModelKey: selectedModelKey,
+ reasoningMode: selectedReasoningMode,
+ );
+ if (!dialogContext.mounted) return;
+ Navigator.pop(dialogContext, expert);
+ },
             ),
           ],
         ),
@@ -663,23 +668,29 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
           ],
         ),
         actions: [
-          TextButton(
+                    SparkleButton(
+            label: S.chatLabelCancel,
+            variant: ButtonVariant.text,
+            size: ButtonSize.small,
+            minWidth: 64,
+            minHeight: 40,
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text(S.chatLabelCancel),
           ),
-          FilledButton(
+                    SparkleButton(
+            label: S.chatLabelSave,
+            minWidth: 64,
+            minHeight: 40,
             onPressed: () async {
-              await repository.createCustomTeam(
-                name: nameController.text.trim(),
-                description: descriptionController.text.trim(),
-                expertIds: _selectedAgents.toList(),
-                answerExpertIds: _answerAgents.toList(),
-                collaborationMode: _collaborationMode,
-              );
-              if (!dialogContext.mounted) return;
-              Navigator.pop(dialogContext, true);
-            },
-            child: Text(S.chatLabelSave),
+ await repository.createCustomTeam(
+ name: nameController.text.trim(),
+ description: descriptionController.text.trim(),
+ expertIds: _selectedAgents.toList(),
+ answerExpertIds: _answerAgents.toList(),
+ collaborationMode: _collaborationMode,
+ );
+ if (!dialogContext.mounted) return;
+ Navigator.pop(dialogContext, true);
+ },
           ),
         ],
       ),

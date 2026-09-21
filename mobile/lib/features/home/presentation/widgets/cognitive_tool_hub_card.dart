@@ -194,10 +194,14 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
                         ),
                       ),
                       const Spacer(),
-                      TextButton(
+                                            SparkleButton(
+                        label: context.l10n.cognitiveToolHubManageTools,
+                        variant: ButtonVariant.text,
+                        size: ButtonSize.small,
+                        minWidth: 64,
+                        minHeight: 40,
                         onPressed: () =>
-                            context.push('/tools/library?tab=manage'),
-                        child: Text(context.l10n.cognitiveToolHubManageTools),
+ context.push('/tools/library?tab=manage'),
                       ),
                     ],
                   ),

@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/features/community/community_routes.dart';
@@ -204,23 +203,30 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
             child: Row(
               children: [
                 Expanded(
-                  child: CustomButton.primary(
-                    text: context.l10n.fpChat,
-                    icon: Icons.chat_bubble_outline,
+                  child: SparkleButton(
+                    label: context.l10n.fpChat,
+                    icon: const Icon(Icons.chat_bubble_outline),
+                    minHeight: 48,
                     onPressed: () {
                       context.push(
                         '/chat/private/${user.id}?name=${Uri.encodeComponent(user.displayName)}',
                       );
                     },
+                    expand: true,
                   ),
                 ),
                 const SizedBox(width: DS.md),
                 Expanded(
-                  child: CustomButton.secondary(
-                    text: canOpenDashboard ? context.l10n.fpEnterWorkbench : context.l10n.fpViewAchievements,
-                    icon: canOpenDashboard
-                        ? Icons.handshake_outlined
-                        : Icons.emoji_events_outlined,
+                  child: SparkleButton(
+                    variant: ButtonVariant.outline,
+                    borderSide: BorderSide(color: DS.primaryBase, width: 2),
+                    label: canOpenDashboard ? context.l10n.fpEnterWorkbench : context.l10n.fpViewAchievements,
+                    icon: Icon(
+                      canOpenDashboard
+                          ? Icons.handshake_outlined
+                          : Icons.emoji_events_outlined,
+                    ),
+                    minHeight: 48,
                     onPressed: () {
                       if (canOpenDashboard) {
                         context.push(
@@ -231,6 +237,7 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
                         context.push('/achievements');
                       }
                     },
+                    expand: true,
                   ),
                 ),
               ],
@@ -241,9 +248,12 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
             index: 5,
             child: SizedBox(
               width: double.infinity,
-              child: CustomButton.secondary(
-                text: canInviteAccountability ? context.l10n.fpInviteAccountability : context.l10n.fpEnterPartnerWorkbench,
-                icon: Icons.handshake_outlined,
+              child: SparkleButton(
+                variant: ButtonVariant.outline,
+                borderSide: BorderSide(color: DS.primaryBase, width: 2),
+                label: canInviteAccountability ? context.l10n.fpInviteAccountability : context.l10n.fpEnterPartnerWorkbench,
+                icon: const Icon(Icons.handshake_outlined),
+                minHeight: 48,
                 onPressed: () {
                   if (canInviteAccountability) {
                     _showAccountabilityInvite(context, user);
@@ -256,6 +266,7 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
                         .replaceFirst(':id', id),
                   );
                 },
+                expand: true,
               ),
             ),
           ),

@@ -16,7 +16,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/motion.dart';
-import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -1013,10 +1012,12 @@ class _ContentReviewCardState extends State<ContentReviewCard>
     if (widget.review.decision == ContentReviewDecision.passed) {
       return Row(
         children: [
-          CustomButton.text(
-            text: l10n.contentReviewAccept,
+                    SparkleButton(
+            label: l10n.contentReviewAccept,
+            size: ButtonSize.small,
+            variant: ButtonVariant.text,
             onPressed: widget.onAccept,
-            size: CustomButtonSize.small,
+            minHeight: 32,
           ),
           // Phase 2e: 即使通过，用户仍可以反对
           if (widget.onOverride != null) ...[
@@ -1031,31 +1032,37 @@ class _ContentReviewCardState extends State<ContentReviewCard>
       children: [
         // 拒绝/重新生成
         if (widget.onReject != null)
-          CustomButton.text(
-            text: l10n.contentReviewRegenerate,
-            icon: Icons.refresh_rounded,
+                    SparkleButton(
+            label: l10n.contentReviewRegenerate,
+            size: ButtonSize.small,
+            variant: ButtonVariant.text,
+            icon: const Icon(Icons.refresh_rounded),
             onPressed: widget.onReject,
-            size: CustomButtonSize.small,
+            minHeight: 32,
           ),
         // 请求人工审查
         if (widget.onRequestReview != null)
-          CustomButton.text(
-            text: l10n.contentReviewManualReview,
-            icon: Icons.support_agent_rounded,
+                    SparkleButton(
+            label: l10n.contentReviewManualReview,
+            size: ButtonSize.small,
+            variant: ButtonVariant.text,
+            icon: const Icon(Icons.support_agent_rounded),
             onPressed: widget.onRequestReview,
-            size: CustomButtonSize.small,
+            minHeight: 32,
           ),
         // Phase 2e: 更多操作菜单（覆盖/申诉）
         if (widget.onOverride != null || widget.onAppeal != null)
           _buildMoreActionsMenu(context, color, l10n),
         // 接受当前内容
         if (widget.onAccept != null)
-          CustomButton.primary(
-            text: l10n.contentReviewAccept,
-            icon: Icons.check_rounded,
+          SparkleButton(
+            label: l10n.contentReviewAccept,
+            icon: const Icon(Icons.check_rounded),
             onPressed: widget.onAccept,
-            size: CustomButtonSize.small,
-            customGradient: gradient,
+            size: ButtonSize.small,
+            backgroundGradient: gradient,
+            foregroundColor: DS.onBrandPrimary,
+            minHeight: 32,
           ),
       ],
     );

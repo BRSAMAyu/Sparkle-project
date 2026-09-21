@@ -360,10 +360,13 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                                 ),
                               ),
                             ),
-                            TextButton(
+                                                        SparkleButton(
+                              label: context.l10n.chatPrivateRestoreOriginal,
+                              variant: ButtonVariant.text,
+                              size: ButtonSize.small,
+                              minWidth: 64,
+                              minHeight: 40,
                               onPressed: _restoreOriginalDraft,
-                              child:
-                                  Text(context.l10n.chatPrivateRestoreOriginal),
                             ),
                           ],
                         ),

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
-import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/cognitive_provider.dart';
 
@@ -115,12 +114,14 @@ class _ThoughtCapsuleDialogState extends ConsumerState<ThoughtCapsuleDialog> {
                 if (stackActions) ...[
                   SizedBox(
                     width: double.infinity,
-                    child: CustomButton.primary(
-                      text: l10n.send,
-                      icon: Icons.send_rounded,
+                    child: SparkleButton(
+                      label: l10n.send,
+                      icon: const Icon(Icons.send_rounded),
                       onPressed: _isSubmitting ? null : _submit,
-                      isLoading: _isSubmitting,
-                      size: CustomButtonSize.small,
+                      loading: _isSubmitting,
+                      size: ButtonSize.small,
+                      minHeight: 32,
+                      expand: true,
                     ),
                   ),
                   const SizedBox(height: DS.spacing12),
@@ -140,12 +141,13 @@ class _ThoughtCapsuleDialogState extends ConsumerState<ThoughtCapsuleDialog> {
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                       const SizedBox(width: DS.spacing12),
-                      CustomButton.primary(
-                        text: l10n.send,
-                        icon: Icons.send_rounded,
+                      SparkleButton(
+                        label: l10n.send,
+                        size: ButtonSize.small,
+                        icon: const Icon(Icons.send_rounded),
                         onPressed: _isSubmitting ? null : _submit,
-                        isLoading: _isSubmitting,
-                        size: CustomButtonSize.small,
+                        loading: _isSubmitting,
+                        minHeight: 32,
                       ),
                     ],
                   ),

@@ -261,13 +261,19 @@ class _OpenClawConnectionPanelState
           ),
         ),
         actions: [
-          TextButton(
+                    SparkleButton(
+            label: context.l10n.cancel,
+            variant: ButtonVariant.text,
+            size: ButtonSize.small,
+            minWidth: 64,
+            minHeight: 40,
             onPressed: () => Navigator.of(context).pop(),
-            child: Text(context.l10n.cancel),
           ),
-          FilledButton(
+                    SparkleButton(
+            label: context.l10n.openclawImportAndSave,
+            minWidth: 64,
+            minHeight: 40,
             onPressed: () => Navigator.of(context).pop(controller.text),
-            child: Text(context.l10n.openclawImportAndSave),
           ),
         ],
       ),
@@ -369,13 +375,19 @@ class _OpenClawConnectionPanelState
           ),
         ),
         actions: [
-          TextButton(
+                    SparkleButton(
+            label: context.l10n.cancel,
+            variant: ButtonVariant.text,
+            size: ButtonSize.small,
+            minWidth: 64,
+            minHeight: 40,
             onPressed: () => Navigator.of(context).pop(),
-            child: Text(context.l10n.cancel),
           ),
-          FilledButton(
+                    SparkleButton(
+            label: context.l10n.openclawApplyWizard,
+            minWidth: 64,
+            minHeight: 40,
             onPressed: () => Navigator.of(context).pop(controller.text),
-            child: Text(context.l10n.openclawApplyWizard),
           ),
         ],
       ),
@@ -524,13 +536,19 @@ class _OpenClawConnectionPanelState
         title: Text(context.l10n.openclawDisconnect),
         content: Text(context.l10n.openclawDisconnectConfirmBody),
         actions: [
-          TextButton(
+                    SparkleButton(
+            label: context.l10n.cancel,
+            variant: ButtonVariant.text,
+            size: ButtonSize.small,
+            minWidth: 64,
+            minHeight: 40,
             onPressed: () => Navigator.of(context).pop(false),
-            child: Text(context.l10n.cancel),
           ),
-          FilledButton(
+                    SparkleButton(
+            label: context.l10n.openclawDisconnectAction,
+            minWidth: 64,
+            minHeight: 40,
             onPressed: () => Navigator.of(context).pop(true),
-            child: Text(context.l10n.openclawDisconnectAction),
           ),
         ],
       ),
@@ -1044,18 +1062,30 @@ class _OpenClawConnectionPanelState
                 spacing: DS.spacing8,
                 runSpacing: DS.spacing8,
                 children: [
-                  TextButton(
+                                    SparkleButton(
+                    label: context.l10n.openclawGeneratePairingCode,
+                    variant: ButtonVariant.text,
+                    size: ButtonSize.small,
+                    minWidth: 64,
+                    minHeight: 40,
                     onPressed: () => unawaited(_startPairing(service)),
-                    child: Text(context.l10n.openclawGeneratePairingCode),
                   ),
-                  TextButton(
+                                    SparkleButton(
+                    label: context.l10n.openclawCompletePairing,
+                    variant: ButtonVariant.text,
+                    size: ButtonSize.small,
+                    minWidth: 64,
+                    minHeight: 40,
                     onPressed: () => unawaited(_completePairing(service)),
-                    child: Text(context.l10n.openclawCompletePairing),
                   ),
                   if (pairingSession != null)
-                    TextButton(
+                                        SparkleButton(
+                      label: context.l10n.openclawCancelPairing,
+                      variant: ButtonVariant.text,
+                      size: ButtonSize.small,
+                      minWidth: 64,
+                      minHeight: 40,
                       onPressed: () => unawaited(service.cancelPairing()),
-                      child: Text(context.l10n.openclawCancelPairing),
                     ),
                 ],
               ),
@@ -1108,33 +1138,30 @@ class _OpenClawConnectionPanelState
           Row(
             children: [
               Expanded(
-                child: OutlinedButton(
+                child: SparkleButton(
+                  label: context.l10n.openclawTestConnection,
+                  variant: ButtonVariant.outline,
+                  borderSide: BorderSide(color: DS.brandPrimary, width: 1.5),
+                  minWidth: 64,
+                  minHeight: 40,
+                  loading: _testing,
                   onPressed: _testing
                       ? null
                       : () => unawaited(_testConnection(service)),
-                  child: _testing
-                      ? LoadingIndicator.circular(
-                          size: 18,
-                          strokeWidth: 2,
-                          liveRegion: false,
-                      )
-                      : Text(context.l10n.openclawTestConnection),
+                  expand: true,
                 ),
               ),
               const SizedBox(width: DS.spacing12),
               Expanded(
-                child: FilledButton(
+                child: SparkleButton(
+                  label: context.l10n.openclawSaveConfig,
+                  minWidth: 64,
+                  minHeight: 40,
+                  loading: _saving,
                   onPressed: _saving
                       ? null
                       : () => unawaited(_saveConnection(service)),
-                  child: _saving
-                      ? LoadingIndicator.circular(
-                          size: 18,
-                          strokeWidth: 2,
-                          color: DS.neutral0,
-                          liveRegion: false,
-                      )
-                      : Text(context.l10n.openclawSaveConfig),
+                  expand: true,
                 ),
               ),
             ],
@@ -1156,17 +1183,17 @@ class _OpenClawConnectionPanelState
             children: [
               if (service.queuedRequests.isNotEmpty)
                 Expanded(
-                  child: OutlinedButton(
+                  child: SparkleButton(
+                    label: context.l10n.openclawRetryQueue,
+                    variant: ButtonVariant.outline,
+                    borderSide: BorderSide(color: DS.brandPrimary, width: 1.5),
+                    minWidth: 64,
+                    minHeight: 40,
+                    loading: _retryingQueue,
                     onPressed: _retryingQueue
                         ? null
                         : () => unawaited(_retryQueuedRequests(service)),
-                    child: _retryingQueue
-                        ? LoadingIndicator.circular(
-                            size: 18,
-                            strokeWidth: 2,
-                            liveRegion: false,
-                        )
-                        : Text(context.l10n.openclawRetryQueue),
+                    expand: true,
                   ),
                 ),
               if (service.queuedRequests.isNotEmpty &&
@@ -1175,12 +1202,15 @@ class _OpenClawConnectionPanelState
               ],
               if (service.config.isConfigured)
                 Expanded(
-                  child: TextButton(
+                  child: SparkleButton(
+                    label: context.l10n.openclawDisconnect,
+                    variant: ButtonVariant.text,
+                    size: ButtonSize.small,
+                    foregroundColor: DS.semanticError,
+                    minWidth: 64,
+                    minHeight: 40,
                     onPressed: () => unawaited(_disconnect(service)),
-                    child: Text(
-                      context.l10n.openclawDisconnect,
-                      style: DS.bodyMedium.copyWith(color: DS.semanticError),
-                    ),
+                    expand: true,
                   ),
                 ),
             ],

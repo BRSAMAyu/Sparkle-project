@@ -752,25 +752,29 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                       Row(
                         children: [
                           Expanded(
-                            child: OutlinedButton(
+                            child:                             SparkleButton(
+                              label: context.l10n.openclawHubButtonRetryQueue,
+                              variant: ButtonVariant.outline,
+                              borderSide: BorderSide(color: DS.brandPrimary, width: 1.5),
+                              minWidth: 64,
+                              minHeight: 40,
                               onPressed: () =>
-                                  unawaited(_retryQueuedRequests(connection)),
-                              child: Text(
-                                context.l10n.openclawHubButtonRetryQueue,
-                              ),
+ unawaited(_retryQueuedRequests(connection)),
+                              expand: true,
                             ),
                           ),
                           const SizedBox(width: DS.spacing12),
                           Expanded(
-                            child: TextButton(
+                            child: SparkleButton(
+                              label: context.l10n.openclawHubButtonClearQueue,
+                              variant: ButtonVariant.text,
+                              size: ButtonSize.small,
+                              foregroundColor: DS.semanticError,
+                              minWidth: 64,
+                              minHeight: 40,
                               onPressed: () =>
                                   unawaited(_clearQueuedRequests(connection)),
-                              child: Text(
-                                context.l10n.openclawHubButtonClearQueue,
-                                style: DS.bodyMedium.copyWith(
-                                  color: DS.semanticError,
-                                ),
-                              ),
+                              expand: true,
                             ),
                           ),
                         ],

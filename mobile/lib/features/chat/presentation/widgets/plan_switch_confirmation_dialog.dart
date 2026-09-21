@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -149,27 +148,33 @@ class PlanSwitchConfirmationDialog extends StatelessWidget {
                           children: [
                             SizedBox(
                               width: double.infinity,
-                              child: CustomButton.primary(
-                                text: context.l10n.confirm,
+                              child: SparkleButton(
+                                label: context.l10n.confirm,
+                                minHeight: 48,
                                 onPressed: () {
                                   SensoryFeedbackService.emit(
                                     SensoryFeedbackEvent.confirm,
                                   );
                                   onConfirm();
                                 },
+                                expand: true,
                               ),
                             ),
                             const SizedBox(height: DS.spacing12),
                             SizedBox(
                               width: double.infinity,
-                              child: CustomButton.secondary(
-                                text: context.l10n.cancel,
+                              child: SparkleButton(
+                                variant: ButtonVariant.outline,
+                                borderSide: BorderSide(color: DS.primaryBase, width: 2),
+                                label: context.l10n.cancel,
+                                minHeight: 48,
                                 onPressed: () {
                                   SensoryFeedbackService.emit(
                                     SensoryFeedbackEvent.tap,
                                   );
                                   onCancel();
                                 },
+                                expand: true,
                               ),
                             ),
                           ],
@@ -177,26 +182,32 @@ class PlanSwitchConfirmationDialog extends StatelessWidget {
                       : Row(
                           children: [
                             Expanded(
-                              child: CustomButton.secondary(
-                                text: context.l10n.cancel,
+                              child: SparkleButton(
+                                variant: ButtonVariant.outline,
+                                borderSide: BorderSide(color: DS.primaryBase, width: 2),
+                                label: context.l10n.cancel,
+                                minHeight: 48,
                                 onPressed: () {
                                   SensoryFeedbackService.emit(
                                     SensoryFeedbackEvent.tap,
                                   );
                                   onCancel();
                                 },
+                                expand: true,
                               ),
                             ),
                             const SizedBox(width: DS.spacing12),
                             Expanded(
-                              child: CustomButton.primary(
-                                text: context.l10n.confirm,
+                              child: SparkleButton(
+                                label: context.l10n.confirm,
+                                minHeight: 48,
                                 onPressed: () {
                                   SensoryFeedbackService.emit(
                                     SensoryFeedbackEvent.confirm,
                                   );
                                   onConfirm();
                                 },
+                                expand: true,
                               ),
                             ),
                           ],

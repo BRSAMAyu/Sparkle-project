@@ -8,8 +8,6 @@ import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
-import 'package:sparkle/core/design/widgets/custom_button.dart'
-    hide ButtonVariant;
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
@@ -893,9 +891,10 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                     ),
               ),
               const SizedBox(height: DS.spacing24),
-              CustomButton.primary(
-                text: l10n.back,
-                icon: Icons.arrow_back,
+              SparkleButton(
+                label: l10n.back,
+                icon: const Icon(Icons.arrow_back),
+                minHeight: 48,
                 onPressed: () => context.pop(),
               ),
             ],
@@ -1247,10 +1246,12 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
               ],
             ),
             const SizedBox(height: DS.lg),
-            CustomButton.primary(
-              text: context.l10n.taskExecutionStartNow,
-              icon: Icons.arrow_forward_rounded,
-              customGradient: _taskWarmActionGradient(context),
+            SparkleButton(
+              label: context.l10n.taskExecutionStartNow,
+              icon: const Icon(Icons.arrow_forward_rounded),
+              minHeight: 48,
+              backgroundGradient: _taskWarmActionGradient(context),
+              foregroundColor: DS.onBrandPrimary,
               onPressed: () {
                 unawaited(context.push('/focus/mindfulness/${task.id}'));
               },
@@ -1280,24 +1281,33 @@ class _TimerControls extends StatelessWidget {
             spacing: DS.spacing8,
             runSpacing: DS.spacing8,
             children: [
-              CustomButton.secondary(
-                text: context.l10n.taskTimerPomodoro,
-                icon: Icons.timer,
+              SparkleButton(
+                variant: ButtonVariant.outline,
+                borderSide: BorderSide(color: DS.primaryBase, width: 2),
+                label: context.l10n.taskTimerPomodoro,
+                icon: const Icon(Icons.timer),
+                size: ButtonSize.small,
+                minHeight: 32,
                 onPressed: onTogglePomodoro,
-                size: CustomButtonSize.small,
               ),
               ...[15, 25, 45, 60].map(
-                (minutes) => CustomButton.secondary(
-                  text: context.l10n.taskTimerMinutes(minutes),
+                (minutes) => SparkleButton(
+                  variant: ButtonVariant.outline,
+                  borderSide: BorderSide(color: DS.primaryBase, width: 2),
+                  label: context.l10n.taskTimerMinutes(minutes),
+                  size: ButtonSize.small,
+                  minHeight: 32,
                   onPressed: () => onSetPreset(minutes),
-                  size: CustomButtonSize.small,
                 ),
               ),
-              CustomButton.secondary(
-                text: context.l10n.taskExecutionResetTimer,
-                icon: Icons.restart_alt_rounded,
+              SparkleButton(
+                variant: ButtonVariant.outline,
+                borderSide: BorderSide(color: DS.primaryBase, width: 2),
+                label: context.l10n.taskExecutionResetTimer,
+                icon: const Icon(Icons.restart_alt_rounded),
+                size: ButtonSize.small,
+                minHeight: 32,
                 onPressed: onReset,
-                size: CustomButtonSize.small,
               ),
             ],
           ),
@@ -1725,13 +1735,15 @@ class _ExecutionAssistPanel extends ConsumerWidget {
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  TextButton(
+                                    SparkleButton(
+                    label: isClawConfigured ? context.l10n.taskExecutionViewAction : context.l10n.taskExecutionConnectAction,
+                    variant: ButtonVariant.text,
+                    size: ButtonSize.small,
+                    minWidth: 64,
+                    minHeight: 40,
                     onPressed: () => context.push(
-                      '${HomeRoutes.openClawHub}?section=connection',
-                    ),
-                    child: Text(isClawConfigured
-                        ? context.l10n.taskExecutionViewAction
-                        : context.l10n.taskExecutionConnectAction),
+ '${HomeRoutes.openClawHub}?section=connection',
+ ),
                   ),
                   IconButton(
                     onPressed: () {
@@ -1911,16 +1923,19 @@ class _ExecutionAssistPanel extends ConsumerWidget {
           if (supportsAiHandoff) ...[
             SizedBox(
               width: double.infinity,
-              child: CustomButton.secondary(
-                text: canQueueHandoff
+              child: SparkleButton(
+                variant: ButtonVariant.outline,
+                borderSide: BorderSide(color: DS.primaryBase, width: 2),
+                label: canQueueHandoff
                     ? copy.queueAction
                     : isClawConfigured
                         ? _handoffButtonText(
                             context, executionIntent, isHandoffLoading)
                         : copy.connectEngineAction,
-                icon: canQueueHandoff
+                icon: Icon(canQueueHandoff
                     ? Icons.cloud_queue_rounded
-                    : Icons.smart_toy_outlined,
+                    : Icons.smart_toy_outlined),
+                minHeight: 48,
                 onPressed: canHandoff
                     ? () => _handoffTask(context, ref)
                     : canQueueHandoff
@@ -1940,7 +1955,8 @@ class _ExecutionAssistPanel extends ConsumerWidget {
                                 )
                                 .state = true;
                           },
-                isLoading: isHandoffLoading,
+                loading: isHandoffLoading,
+                expand: true,
               ),
             ),
             const SizedBox(height: DS.spacing12),
@@ -2108,8 +2124,12 @@ class _BottomControls extends ConsumerWidget {
                 Row(
                   children: [
                     Expanded(
-                      child: CustomButton.secondary(
-                        text: context.l10n.taskExecutionCriteriaNotMet,
+                      child: SparkleButton(
+                        variant: ButtonVariant.outline,
+                        borderSide: BorderSide(color: DS.primaryBase, width: 2),
+                        label: context.l10n.taskExecutionCriteriaNotMet,
+                        size: ButtonSize.small,
+                        minHeight: 32,
                         onPressed: () {
                           Navigator.of(ctx).pop();
                           AppFeedback.info(
@@ -2117,15 +2137,18 @@ class _BottomControls extends ConsumerWidget {
                             context.l10n.taskExecutionContinueOrRetryTomorrow,
                           );
                         },
-                        size: CustomButtonSize.small,
+                        expand: true,
                       ),
                     ),
                     const SizedBox(width: DS.spacing12),
                     Expanded(
-                      child: CustomButton.primary(
-                        text: context.l10n.taskExecutionCriteriaMetComplete,
-                        icon: Icons.check_rounded,
-                        customGradient: _taskWarmActionGradient(context),
+                      child: SparkleButton(
+                        label: context.l10n.taskExecutionCriteriaMetComplete,
+                        icon: const Icon(Icons.check_rounded),
+                        size: ButtonSize.small,
+                        minHeight: 32,
+                        backgroundGradient: _taskWarmActionGradient(context),
+                        foregroundColor: DS.onBrandPrimary,
                         onPressed: () {
                           Navigator.of(ctx).pop();
                           onComplete(
@@ -2135,7 +2158,7 @@ class _BottomControls extends ConsumerWidget {
                                 : noteController.text.trim(),
                           );
                         },
-                        size: CustomButtonSize.small,
+                        expand: true,
                       ),
                     ),
                   ],
@@ -2174,16 +2197,22 @@ class _BottomControls extends ConsumerWidget {
       child: Row(
         children: [
           Expanded(
-            child: CustomButton.text(
-              text: context.l10n.taskExecutionAbandon,
+            child: SparkleButton(
+              variant: ButtonVariant.text,
+              label: context.l10n.taskExecutionAbandon,
+              minHeight: 48,
               onPressed: () => _abandonTask(context, ref),
+              expand: true,
             ),
           ),
           const SizedBox(width: DS.spacing16),
           if (canPause) ...[
             Expanded(
-              child: CustomButton.secondary(
-                text: context.l10n.taskActionPause,
+              child: SparkleButton(
+                variant: ButtonVariant.outline,
+                borderSide: BorderSide(color: DS.primaryBase, width: 2),
+                label: context.l10n.taskActionPause,
+                minHeight: 48,
                 onPressed: () {
                   unawaited(
                     ref.read(taskListProvider.notifier).pauseTask(
@@ -2192,17 +2221,20 @@ class _BottomControls extends ConsumerWidget {
                         ),
                   );
                 },
+                expand: true,
               ),
             ),
             const SizedBox(width: DS.spacing16),
           ],
           Expanded(
             flex: 2,
-            child: CustomButton.primary(
-              text: isPaused
+            child: SparkleButton(
+              label: isPaused
                   ? context.l10n.taskActionResume
                   : context.l10n.taskExecutionCompleteTitle,
-              customGradient: _taskWarmActionGradient(context),
+              minHeight: 48,
+              backgroundGradient: _taskWarmActionGradient(context),
+              foregroundColor: DS.onBrandPrimary,
               onPressed: isPaused
                   ? () {
                       unawaited(
@@ -2210,6 +2242,7 @@ class _BottomControls extends ConsumerWidget {
                       );
                     }
                   : () => _showCompleteDialog(context),
+              expand: true,
             ),
           ),
         ],
@@ -2282,15 +2315,19 @@ class _RejectReasonSheetState extends State<_RejectReasonSheet> {
           Row(
             children: [
               Expanded(
-                child: CustomButton.text(
-                  text: context.l10n.cancel,
+                child: SparkleButton(
+                  variant: ButtonVariant.text,
+                  label: context.l10n.cancel,
+                  minHeight: 48,
                   onPressed: () => Navigator.of(context).pop(),
+                  expand: true,
                 ),
               ),
               const SizedBox(width: DS.spacing12),
               Expanded(
-                child: CustomButton.primary(
-                  text: context.l10n.taskExecutionRejectConfirm,
+                child: SparkleButton(
+                  label: context.l10n.taskExecutionRejectConfirm,
+                  minHeight: 48,
                   onPressed: () {
                     final extra = _controller.text.trim();
                     final reason = [
@@ -2303,6 +2340,7 @@ class _RejectReasonSheetState extends State<_RejectReasonSheet> {
                           : reason,
                     );
                   },
+                  expand: true,
                 ),
               ),
             ],
@@ -2443,21 +2481,29 @@ class _TaskExitConfirmationDialogState
                       Row(
                         children: [
                           Expanded(
-                            child: CustomButton.secondary(
-                              text: _getCancelText(),
+                            child: SparkleButton(
+                              variant: ButtonVariant.outline,
+                              borderSide: BorderSide(color: DS.primaryBase, width: 2),
+                              label: _getCancelText(),
+                              minHeight: 48,
                               onPressed: _cancel,
+                              expand: true,
                             ),
                           ),
                           const SizedBox(width: DS.lg),
                           Expanded(
                             child: _currentStep == _TaskExitStep.third
-                                ? CustomButton.primary(
-                                    text: _getConfirmText(),
+                                ? SparkleButton(
+                                    label: _getConfirmText(),
+                                    minHeight: 48,
                                     onPressed: _nextStep,
-                                    customGradient: DS.warningGradient,
+                                    expand: true,
                                   )
-                                : CustomButton.secondary(
-                                    text: _getConfirmText(),
+                                : SparkleButton(
+                                    variant: ButtonVariant.outline,
+                                    borderSide: BorderSide(color: DS.primaryBase, width: 2),
+                                    label: _getConfirmText(),
+                                    minHeight: 48,
                                     onPressed: _nextStep,
                                   ),
                           ),

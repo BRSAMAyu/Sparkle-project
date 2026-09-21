@@ -81,18 +81,17 @@ class ActiveBottleneckAlert extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: DS.spacing8),
-                TextButton(
+                SparkleButton(
                   key: const ValueKey('active-bottleneck-open-chat'),
+                  label: context.l10n.bottleneckAlertAction,
+                  variant: ButtonVariant.text,
+                  size: ButtonSize.small,
+                  foregroundColor: DS.warning,
+                  minWidth: 64,
+                  minHeight: 40,
                   onPressed: onOpenChat == null
                       ? null
                       : () => onOpenChat!(activeBottleneck),
-                  child: Text(
-                    context.l10n.bottleneckAlertAction,
-                    style: context.typo.labelLarge.copyWith(
-                      color: DS.warning,
-                      fontWeight: DS.fontWeightBold,
-                    ),
-                  ),
                 ),
               ],
             ),

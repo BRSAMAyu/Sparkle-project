@@ -103,23 +103,19 @@ class SparkleGoalCreatedDialog extends StatelessWidget {
         ),
       ),
       actions: [
-        OutlinedButton(
+        SparkleButton(
+          label: l10n.goalCreatedSeeFullPlan,
+          variant: ButtonVariant.outline,
+          borderSide: BorderSide(color: DS.brandPrimary, width: 1.5),
+          minWidth: 64,
+          minHeight: 40,
           onPressed: onSeePlan,
-          style: OutlinedButton.styleFrom(
-            shape: RoundedRectangleBorder(
-              borderRadius: DS.borderRadius12,
-            ),
-          ),
-          child: Text(l10n.goalCreatedSeeFullPlan),
         ),
-        FilledButton(
+        SparkleButton(
+          label: l10n.goalCreatedStartFirstTask,
+          minWidth: 64,
+          minHeight: 40,
           onPressed: onStartFirstTask,
-          style: FilledButton.styleFrom(
-            shape: RoundedRectangleBorder(
-              borderRadius: DS.borderRadius12,
-            ),
-          ),
-          child: Text(l10n.goalCreatedStartFirstTask),
         ),
       ],
       actionsAlignment: MainAxisAlignment.spaceBetween,

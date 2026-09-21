@@ -50,19 +50,25 @@ class TaskRestoreDialog extends StatelessWidget {
           ],
         ),
         actions: [
-          TextButton(
+                    SparkleButton(
+            label: l10n.cancel,
+            variant: ButtonVariant.text,
+            size: ButtonSize.small,
+            minWidth: 64,
+            minHeight: 40,
             onPressed: () => Navigator.of(context).pop(false),
-            child: Text(l10n.cancel),
           ),
-          FilledButton(
+                    SparkleButton(
+            label: l10n.taskActionResume,
+            minWidth: 64,
+            minHeight: 40,
             onPressed: onConfirm == null
-                ? null
-                : () {
-                    onConfirm!();
-                    Navigator.of(context).pop(true);
-                    AppFeedback.success(context, l10n.taskResumeQueued);
-                  },
-            child: Text(l10n.taskActionResume),
+ ? null
+ : () {
+ onConfirm!();
+ Navigator.of(context).pop(true);
+ AppFeedback.success(context, l10n.taskResumeQueued);
+ },
           ),
         ],
       ),

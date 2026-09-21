@@ -11,8 +11,6 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/compact_error_card.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
-import 'package:sparkle/core/design/widgets/custom_button.dart'
-    hide ButtonVariant;
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
@@ -923,9 +921,12 @@ class _BottomActionBar extends ConsumerWidget {
             child: Row(
               children: [
                 Expanded(
-                  child: CustomButton.secondary(
-                    text: context.l10n.commonEdit,
-                    icon: Icons.edit_outlined,
+                  child: SparkleButton(
+                    variant: ButtonVariant.outline,
+                    borderSide: BorderSide(color: DS.primaryBase, width: 2),
+                    label: context.l10n.commonEdit,
+                    icon: const Icon(Icons.edit_outlined),
+                    minHeight: 48,
                     onPressed: () {
                       unawaited(
                         SensoryFeedbackService.emit(SensoryFeedbackEvent.tap),
@@ -934,15 +935,16 @@ class _BottomActionBar extends ConsumerWidget {
                         context.push('/tasks/new?editFrom=${task.id}'),
                       );
                     },
+                    expand: true,
                   ),
                 ),
                 const SizedBox(width: DS.spacing12),
                 Expanded(
                   flex: 2,
-                  child: CustomButton.primary(
+                  child: SparkleButton(
                     // X-04：终态任务（完成/放弃）→ 重开入口；服务端保留上一轮
                     // 快照（reopen_history），actual 只反映新一轮真实起止
-                    text: task.status == TaskStatus.completed ||
+                    label: task.status == TaskStatus.completed ||
                             task.status == TaskStatus.abandoned
                         ? context.l10n.taskActionResume
                         : task.status == TaskStatus.paused ||
@@ -951,8 +953,8 @@ class _BottomActionBar extends ConsumerWidget {
                             : context.l10n.taskStart,
                     icon: task.status == TaskStatus.paused ||
                             task.status == TaskStatus.restore
-                        ? Icons.restart_alt_rounded
-                        : Icons.play_arrow_rounded,
+                        ? const Icon(Icons.restart_alt_rounded)
+                        : const Icon(Icons.play_arrow_rounded),
                     onPressed: () {
                       unawaited(
                         SensoryFeedbackService.emit(
@@ -987,6 +989,8 @@ class _BottomActionBar extends ConsumerWidget {
                           .selectFromTaskPlanId(task.planId);
                       unawaited(context.push('/tasks/${task.id}/execute'));
                     },
+                    minHeight: 48,
+                    expand: true,
                   ),
                 ),
                 const SizedBox(width: DS.spacing12),
@@ -1023,13 +1027,18 @@ class _BottomActionBar extends ConsumerWidget {
                             ),
                             content: Text(context.l10n.taskDeleteConfirm),
                             actions: [
-                              CustomButton.text(
-                                text: context.l10n.cancel,
+                              SparkleButton(
+                                variant: ButtonVariant.text,
+                                label: context.l10n.cancel,
+                                minHeight: 48,
                                 onPressed: () => Navigator.of(ctx).pop(),
                               ),
-                              CustomButton.primary(
-                                text: context.l10n.commonDelete,
-                                icon: Icons.delete_rounded,
+                              SparkleButton(
+                                variant: ButtonVariant.destructive,
+                                label: context.l10n.commonDelete,
+                                icon: const Icon(Icons.delete_rounded),
+                                size: ButtonSize.small,
+                                minHeight: 32,
                                 onPressed: () {
                                   unawaited(
                                     SensoryFeedbackService.emit(
@@ -1066,8 +1075,6 @@ class _BottomActionBar extends ConsumerWidget {
                                     }
                                   });
                                 },
-                                customGradient: DS.errorGradient,
-                                size: CustomButtonSize.small,
                               ),
                             ],
                           ),
