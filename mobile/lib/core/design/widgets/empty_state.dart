@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
-import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// 空状态场景类型
@@ -230,10 +229,14 @@ class EmptyState extends StatelessWidget {
                           onAction != null)) ...[
                     const SizedBox(height: DS.spacing24),
                     customAction ??
-                        CustomButton.primary(
-                          text: actionText ?? _getDefaultActionText(context)!,
+                        SparkleButton(
+                          // U-01 Step 0：按钮 owner 唯一为 SparkleButton，
+                          // 样式由 token 保证（design README 规约 owner 表）。
+                          label: actionText ?? _getDefaultActionText(context)!,
                           onPressed: onAction,
-                          icon: _getActionIcon(),
+                          icon: _getActionIcon() != null
+                              ? Icon(_getActionIcon())
+                              : null,
                         ),
                   ],
                 ],
@@ -301,10 +304,13 @@ class CompactEmptyState extends StatelessWidget {
               ),
               if (onAction != null && actionText != null) ...[
                 const SizedBox(height: DS.spacing24),
-                CustomButton.text(
-                  text: actionText!,
+                SparkleButton(
+                  // U-01 Step 0：CompactEmptyState 文字动作迁移到按钮 owner
+                  // SparkleButton（ghost≈原 text 变体），样式由 token 保证。
+                  label: actionText!,
                   onPressed: onAction,
-                  size: CustomButtonSize.small,
+                  variant: ButtonVariant.ghost,
+                  size: ButtonSize.small,
                 ),
               ],
             ],

@@ -12,6 +12,12 @@
 - `utils/ai_status_mapper.dart` — AI 状态 → 语义/视觉唯一映射。
 - `validation/` — `DesignSystemLinter`、`DesignValidator`。
 
+## Step 0 收敛状态（U-01，2026-09-21）
+
+- **tone 枚举**：`PillTone`（semantic_pill.dart）是唯一 tone 枚举 owner；原 `TaskPillTone`（值完全相同）已删除，`TaskPill.tone` 直接用 `PillTone`。两组件各自的 tone→色映射保持不变。
+- **骨架屏**：`widgets/sparkle_skeleton.dart` 是骨架渲染唯一 owner（`SparkleSkeleton/SparkleCardSkeleton/SparkleListSkeleton/SparkleChatBubbleSkeleton` + 并入的遗留 shimmer 变体 `TaskCardSkeleton/ChatBubbleSkeleton/ProfileCardSkeleton/ListItemSkeleton`）。`LoadingIndicator` 只保留 circular/linear/fullScreen；重复的 `SkeletonVariant` 枚举与死代码 `async_state_builder.dart`（零引用）已删除。遗留 shimmer 变体待 Step 1-6 按 surface 迁移后删除。
+- **按钮**：design 目录内部对 `custom_button.dart` 的依赖已清零（EmptyState/CompactEmptyState/CustomErrorWidget/NotFoundErrorPage 已直用 `SparkleButton`）。`custom_button.dart` 本体仍被 15 个 feature 文件 59 处调用点使用（视觉与 customGradient 能力差异，须逐 surface 迁移），**已判死、Step 1-6 迁完即删**，禁止新增调用。
+
 ## CONVENTION：新增 UI 必须用 design system（V3 冻结，2026-09-21）
 
 > 依据 `v3/04_ux/DESIGN_DIRECTION.md`（Components 收敛）与 `v3/00_context/DECISIONS_V3.md` D21/D22。

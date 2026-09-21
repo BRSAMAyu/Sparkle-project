@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/shared/entities/task_model.dart' show TaskType;
 
-/// Tone mapping for task pills.
-enum TaskPillTone { info, success, warning, danger, neutral, brand }
+/// U-01 Step 0：tone 语义枚举 owner 唯一为 [PillTone]（semantic_pill.dart）。
+/// 原 `enum TaskPillTone` 与 PillTone 值完全相同，已合并删除；
+/// 本组件保留自己的 tone→token 色映射（neutral 走 surfaceTertiary/border，
+/// 与 SemanticPill 的 neutral 渲染不同），故枚举合并不改变视觉输出。
 
 /// Task pill displaying semantic task colors.
 class TaskPill extends StatelessWidget {
@@ -24,7 +27,7 @@ class TaskPill extends StatelessWidget {
   final IconData? icon;
   final bool dense;
   final VoidCallback? onTap;
-  final TaskPillTone? tone;
+  final PillTone? tone;
 
   @override
   Widget build(BuildContext context) {
@@ -36,32 +39,32 @@ class TaskPill extends StatelessWidget {
     if (tone != null) {
       // Use tone-based colors from design tokens
       switch (tone!) {
-        case TaskPillTone.info:
+        case PillTone.info:
           background = DS.info.withValues(alpha: 0.1);
           border = DS.info.withValues(alpha: 0.3);
           textColor = DS.info;
           iconColor = DS.info;
-        case TaskPillTone.success:
+        case PillTone.success:
           background = DS.success.withValues(alpha: 0.1);
           border = DS.success.withValues(alpha: 0.3);
           textColor = DS.success;
           iconColor = DS.success;
-        case TaskPillTone.warning:
+        case PillTone.warning:
           background = DS.warning.withValues(alpha: 0.1);
           border = DS.warning.withValues(alpha: 0.3);
           textColor = DS.warning;
           iconColor = DS.warning;
-        case TaskPillTone.danger:
+        case PillTone.danger:
           background = DS.error.withValues(alpha: 0.1);
           border = DS.error.withValues(alpha: 0.3);
           textColor = DS.error;
           iconColor = DS.error;
-        case TaskPillTone.neutral:
+        case PillTone.neutral:
           background = DS.surfaceTertiary;
           border = DS.border;
           textColor = DS.textSecondary;
           iconColor = DS.textSecondary;
-        case TaskPillTone.brand:
+        case PillTone.brand:
           background = DS.brandPrimary.withValues(alpha: 0.1);
           border = DS.brandPrimary.withValues(alpha: 0.3);
           textColor = DS.brandPrimary;

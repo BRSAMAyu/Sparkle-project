@@ -8,7 +8,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/materials.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
-import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import '../../shared/i18n_test_helper.dart';
 
@@ -39,15 +39,16 @@ void main() {
     });
 
     testWidgets(
-        'LoadingIndicator skeleton disables shimmer when reduce motion is on', (
-      tester,
-    ) async {
+        'shimmer skeleton (ListItemSkeleton) disables shimmer when reduce motion is on',
+        (tester) async {
+      // U-01 Step 0：骨架家族收敛到 sparkle_skeleton.dart 后，本用例改为直接
+      // 泵入 shimmer 骨架 owner 处的 ListItemSkeleton，reduce-motion 语义不变。
       await tester.pumpWidget(
-        _TestShell(
+        const _TestShell(
           disableAnimations: true,
-          child: LoadingIndicator.skeleton(
-            variant: SkeletonVariant.listItem,
-            count: 2,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [ListItemSkeleton(), ListItemSkeleton()],
           ),
         ),
       );

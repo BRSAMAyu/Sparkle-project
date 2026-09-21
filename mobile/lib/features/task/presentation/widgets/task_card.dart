@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/components/atoms/task_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
@@ -784,40 +785,40 @@ class _DifficultyStars extends StatelessWidget {
       );
 }
 
-TaskPillTone _typeTone(TaskType type) {
+PillTone _typeTone(TaskType type) {
   switch (type) {
     case TaskType.learning:
-      return TaskPillTone.brand;
+      return PillTone.brand;
     case TaskType.training:
-      return TaskPillTone.brand;
+      return PillTone.brand;
     case TaskType.errorFix:
-      return TaskPillTone.danger;
+      return PillTone.danger;
     case TaskType.reflection:
-      return TaskPillTone.info;
+      return PillTone.info;
     case TaskType.social:
-      return TaskPillTone.success;
+      return PillTone.success;
     case TaskType.planning:
-      return TaskPillTone.neutral;
+      return PillTone.neutral;
     case TaskType.ocr:
-      return TaskPillTone.neutral;
+      return PillTone.neutral;
   }
 }
 
-TaskPillTone _statusTone(TaskStatus status) {
+PillTone _statusTone(TaskStatus status) {
   switch (status) {
     case TaskStatus.pending:
-      return TaskPillTone.brand;
+      return PillTone.brand;
     case TaskStatus.inProgress:
     case TaskStatus.stuck:
-      return TaskPillTone.brand;
+      return PillTone.brand;
     case TaskStatus.paused:
-      return TaskPillTone.warning;
+      return PillTone.warning;
     case TaskStatus.restore:
-      return TaskPillTone.neutral;
+      return PillTone.neutral;
     case TaskStatus.completed:
-      return TaskPillTone.success;
+      return PillTone.success;
     case TaskStatus.abandoned:
-      return TaskPillTone.neutral;
+      return PillTone.neutral;
   }
 }
 

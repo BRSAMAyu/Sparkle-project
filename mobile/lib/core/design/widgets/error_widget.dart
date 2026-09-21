@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
-import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
@@ -284,11 +283,16 @@ class CustomErrorWidget extends StatelessWidget {
                   else if (onRetry != null)
                     SparkleStaggerItem(
                       index: 2,
-                      child: CustomButton.primary(
-                        text: _getRetryText(),
+                      child: SparkleButton(
+                        // U-01 Step 0：重试按钮迁移到 owner SparkleButton，
+                        // 样式由 token 保证；severity 语义经 variant 投影
+                        // （error→destructive，warning/info→primary）。
+                        label: _getRetryText(),
                         onPressed: _handleRetry,
-                        icon: Icons.refresh_rounded,
-                        customGradient: _getGradient(),
+                        icon: const Icon(Icons.refresh_rounded),
+                        variant: severity == ErrorSeverity.error
+                            ? ButtonVariant.destructive
+                            : ButtonVariant.primary,
                       ),
                     ),
                 ],
@@ -466,11 +470,11 @@ class NotFoundErrorPage extends StatelessWidget {
       severity: ErrorSeverity.warning,
       actions: [
         if (onGoBack != null)
-          CustomButton.primary(
-            text: l10n.back,
+          SparkleButton(
+            // U-01 Step 0：按钮 owner 唯一为 SparkleButton，样式由 token 保证。
+            label: l10n.back,
             onPressed: onGoBack,
-            icon: Icons.arrow_back_rounded,
-            customGradient: DS.warningGradient,
+            icon: const Icon(Icons.arrow_back_rounded),
           ),
       ],
     );
