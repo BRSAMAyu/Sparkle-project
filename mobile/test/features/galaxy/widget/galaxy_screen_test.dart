@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/retry_strategy.dart';
 import 'package:sparkle/core/services/smart_cache.dart';
@@ -262,7 +263,11 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
+          // 需挂 DS 主题，否则 SparkleThemeExtension 未注册，
+          // SparkleRefreshIndicator 首帧构建即抛断言（错误面板替换内容，
+          // 错误文案与重试按钮均不可见）。
           child: MaterialApp(
+            theme: AppThemes.lightTheme,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: const GalaxyScreen(),
