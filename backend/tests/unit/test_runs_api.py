@@ -140,6 +140,37 @@ async def test_illegal_transition_returns_409_not_500(db_session, outbox_tables,
     assert step.status_code == 200
 
 
+async def test_resume_budget_exceeded_returns_409_not_500(db_session, outbox_tables, client):
+    """X-07 P2-2：旧 resume 端点对 BudgetExceededError 显式映射（对齐 complete_user_step）。
+
+    预算超限时 resume 闸门先落 BUDGET_EXCEEDED 终态再抛 BudgetExceededError；
+    旧端点此前无显式 except（且该异常非 RunStateError 子类）→ 落 500。
+    修复后同新端点语义：409 + 可读错误，且 run 权威状态为 BUDGET_EXCEEDED
+    （客户端刷新即得明确超限面，非静默截断）。
+    """
+    user = await _make_user(db_session)
+    _auth_as(user)
+
+    created = await client.post(
+        "/api/v1/runs",
+        json={
+            "objective": "预算超限的 run",
+            "budget": {"limits": {"max_total_tokens": 100}, "usage": {"total_tokens": 500}},
+        },
+    )
+    assert created.status_code == 201, created.text
+    run_id = created.json()["run"]["run_id"]
+
+    resp = await client.post(f"/api/v1/runs/{run_id}/resume", json={"to_status": "RUNNING"})
+    assert resp.status_code == 409, resp.text  # 修复前：BudgetExceededError 无映射 → 500
+    assert "budget exceeded" in str(resp.json()["detail"])
+
+    # 权威终态可查：resume 闸门已落 BUDGET_EXCEEDED（fail-closed，非 500 掩盖）
+    fresh = await client.get(f"/api/v1/runs/{run_id}")
+    assert fresh.status_code == 200
+    assert fresh.json()["run"]["status"] == "BUDGET_EXCEEDED"
+
+
 async def test_resume_whitelist_allows_only_execution_landings(db_session, outbox_tables, client):
     """resume 落点只允许 RUNNING/EXECUTING（AGENT_RUNTIME §2 两个执行落点）。"""
     user = await _make_user(db_session)

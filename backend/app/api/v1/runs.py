@@ -366,6 +366,10 @@ async def resume_run(
         )
     except IllegalRunTransitionError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except BudgetExceededError as exc:
+        # X-07 P2-2：预算闸门超限（已落 BUDGET_EXCEEDED 终态）→ 409 非 500
+        # （对齐 complete_user_step 同款映射；非 RunStateError 子类，需显式接住）。
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except InvalidResumeTargetError as exc:
         # 服务端白名单拒绝（R2 F4）：注入终态/等待态/未知串 → 422（非 500）。
         raise HTTPException(status_code=422, detail=str(exc)) from exc
