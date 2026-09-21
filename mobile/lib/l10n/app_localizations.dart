@@ -65621,6 +65621,216 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'交易历史'**
   String get auto_transactionhistory;
+
+  /// No description provided for @proposalOwnershipHuman.
+  ///
+  /// In zh, this message translates to:
+  /// **'你做'**
+  String get proposalOwnershipHuman;
+
+  /// No description provided for @proposalOwnershipAgent.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sparkle做'**
+  String get proposalOwnershipAgent;
+
+  /// No description provided for @proposalOwnershipHybrid.
+  ///
+  /// In zh, this message translates to:
+  /// **'一起做'**
+  String get proposalOwnershipHybrid;
+
+  /// No description provided for @proposalTurnYours.
+  ///
+  /// In zh, this message translates to:
+  /// **'轮到你了'**
+  String get proposalTurnYours;
+
+  /// No description provided for @proposalTurnSparkle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sparkle 正在做'**
+  String get proposalTurnSparkle;
+
+  /// No description provided for @proposalTurnTogether.
+  ///
+  /// In zh, this message translates to:
+  /// **'你确认后，Sparkle 来执行'**
+  String get proposalTurnTogether;
+
+  /// No description provided for @proposalStatusAwaitingUser.
+  ///
+  /// In zh, this message translates to:
+  /// **'等你确认'**
+  String get proposalStatusAwaitingUser;
+
+  /// No description provided for @proposalStatusRunning.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在执行'**
+  String get proposalStatusRunning;
+
+  /// No description provided for @proposalStatusPartial.
+  ///
+  /// In zh, this message translates to:
+  /// **'部分完成'**
+  String get proposalStatusPartial;
+
+  /// No description provided for @proposalStatusUnknown.
+  ///
+  /// In zh, this message translates to:
+  /// **'结果待确认'**
+  String get proposalStatusUnknown;
+
+  /// No description provided for @proposalStatusCommitted.
+  ///
+  /// In zh, this message translates to:
+  /// **'已完成'**
+  String get proposalStatusCommitted;
+
+  /// No description provided for @proposalStatusCancelled.
+  ///
+  /// In zh, this message translates to:
+  /// **'已取消'**
+  String get proposalStatusCancelled;
+
+  /// No description provided for @proposalStatusExpired.
+  ///
+  /// In zh, this message translates to:
+  /// **'已过期'**
+  String get proposalStatusExpired;
+
+  /// No description provided for @proposalStatusRejected.
+  ///
+  /// In zh, this message translates to:
+  /// **'已拒绝'**
+  String get proposalStatusRejected;
+
+  /// No description provided for @proposalStatusConflict.
+  ///
+  /// In zh, this message translates to:
+  /// **'内容有更新'**
+  String get proposalStatusConflict;
+
+  /// No description provided for @proposalAwaitingUserHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认后 Sparkle 才会执行这一步'**
+  String get proposalAwaitingUserHint;
+
+  /// No description provided for @proposalRunningHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sparkle 正在处理，你可以先去做别的，回来就能看到结果'**
+  String get proposalRunningHint;
+
+  /// No description provided for @proposalPartialHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'这一步只完成了一部分，剩下的还需要你确认'**
+  String get proposalPartialHint;
+
+  /// No description provided for @proposalUnknownHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'这一步的结果还没确认，先别当成已完成，稍后会更新'**
+  String get proposalUnknownHint;
+
+  /// No description provided for @proposalCommittedHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'已完成并记录'**
+  String get proposalCommittedHint;
+
+  /// No description provided for @proposalCancelledHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'这一步已取消，没有执行'**
+  String get proposalCancelledHint;
+
+  /// No description provided for @proposalExpiredHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'这次确认已经过期，需要的话可以重新发起'**
+  String get proposalExpiredHint;
+
+  /// No description provided for @proposalRejectedHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'你选择了不这样做，没有执行'**
+  String get proposalRejectedHint;
+
+  /// No description provided for @proposalConflictHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'要改的内容在这期间有变化，请重新看一遍再决定'**
+  String get proposalConflictHint;
+
+  /// No description provided for @proposalActionApprove.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认，就这样做'**
+  String get proposalActionApprove;
+
+  /// No description provided for @proposalActionReject.
+  ///
+  /// In zh, this message translates to:
+  /// **'先不用'**
+  String get proposalActionReject;
+
+  /// No description provided for @proposalActionCancel.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消'**
+  String get proposalActionCancel;
+
+  /// No description provided for @proposalActionReview.
+  ///
+  /// In zh, this message translates to:
+  /// **'再看一遍'**
+  String get proposalActionReview;
+
+  /// No description provided for @proposalActionRefresh.
+  ///
+  /// In zh, this message translates to:
+  /// **'刷新结果'**
+  String get proposalActionRefresh;
+
+  /// No description provided for @proposalConfirming.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在处理…'**
+  String get proposalConfirming;
+
+  /// No description provided for @proposalDiffTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'会改动什么'**
+  String get proposalDiffTitle;
+
+  /// No description provided for @proposalDiffBefore.
+  ///
+  /// In zh, this message translates to:
+  /// **'现在'**
+  String get proposalDiffBefore;
+
+  /// No description provided for @proposalDiffAfter.
+  ///
+  /// In zh, this message translates to:
+  /// **'改成'**
+  String get proposalDiffAfter;
+
+  /// No description provided for @proposalUntitled.
+  ///
+  /// In zh, this message translates to:
+  /// **'一个待确认的动作'**
+  String get proposalUntitled;
+
+  /// No description provided for @proposalTurnA11y.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前轮到：{owner}'**
+  String proposalTurnA11y(String owner);
 }
 
 class _AppLocalizationsDelegate

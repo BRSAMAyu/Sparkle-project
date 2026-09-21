@@ -17162,5 +17162,47 @@
     "auto_transactionhistory": "Transaction History",
     "@auto_transactionhistory": {
         "description": "Transaction History"
+    },
+    "proposalOwnershipHuman": "You do it",
+    "proposalOwnershipAgent": "Sparkle does it",
+    "proposalOwnershipHybrid": "Do it together",
+    "proposalTurnYours": "It's your turn",
+    "proposalTurnSparkle": "Sparkle is on it",
+    "proposalTurnTogether": "After you confirm, Sparkle takes over",
+    "proposalStatusAwaitingUser": "Waiting for you",
+    "proposalStatusRunning": "In progress",
+    "proposalStatusPartial": "Partially done",
+    "proposalStatusUnknown": "Outcome pending",
+    "proposalStatusCommitted": "Done",
+    "proposalStatusCancelled": "Cancelled",
+    "proposalStatusExpired": "Expired",
+    "proposalStatusRejected": "Declined",
+    "proposalStatusConflict": "Content changed",
+    "proposalAwaitingUserHint": "Sparkle will only do this after you confirm",
+    "proposalRunningHint": "Sparkle is working on it — step away if you like, the result will be here",
+    "proposalPartialHint": "Only part of this step finished — the rest still needs your confirmation",
+    "proposalUnknownHint": "The outcome isn't confirmed yet — don't treat it as done; we'll update you",
+    "proposalCommittedHint": "Done and recorded",
+    "proposalCancelledHint": "This step was cancelled — nothing was done",
+    "proposalExpiredHint": "This confirmation expired — start again if you still need it",
+    "proposalRejectedHint": "You declined — nothing was done",
+    "proposalConflictHint": "Things changed while you were away — review again before deciding",
+    "proposalActionApprove": "Confirm and do it",
+    "proposalActionReject": "Not now",
+    "proposalActionCancel": "Cancel",
+    "proposalActionReview": "Review again",
+    "proposalActionRefresh": "Refresh outcome",
+    "proposalConfirming": "Working on it…",
+    "proposalDiffTitle": "What will change",
+    "proposalDiffBefore": "Now",
+    "proposalDiffAfter": "Changed to",
+    "proposalUntitled": "An action to confirm",
+    "proposalTurnA11y": "It is now {owner}'s turn",
+    "@proposalTurnA11y": {
+        "placeholders": {
+            "owner": {
+                "type": "String"
+            }
+        }
     }
 }

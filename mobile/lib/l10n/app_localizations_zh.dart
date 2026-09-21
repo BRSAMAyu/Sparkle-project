@@ -36130,4 +36130,111 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get auto_transactionhistory => '交易历史';
+
+  @override
+  String get proposalOwnershipHuman => '你做';
+
+  @override
+  String get proposalOwnershipAgent => 'Sparkle做';
+
+  @override
+  String get proposalOwnershipHybrid => '一起做';
+
+  @override
+  String get proposalTurnYours => '轮到你了';
+
+  @override
+  String get proposalTurnSparkle => 'Sparkle 正在做';
+
+  @override
+  String get proposalTurnTogether => '你确认后，Sparkle 来执行';
+
+  @override
+  String get proposalStatusAwaitingUser => '等你确认';
+
+  @override
+  String get proposalStatusRunning => '正在执行';
+
+  @override
+  String get proposalStatusPartial => '部分完成';
+
+  @override
+  String get proposalStatusUnknown => '结果待确认';
+
+  @override
+  String get proposalStatusCommitted => '已完成';
+
+  @override
+  String get proposalStatusCancelled => '已取消';
+
+  @override
+  String get proposalStatusExpired => '已过期';
+
+  @override
+  String get proposalStatusRejected => '已拒绝';
+
+  @override
+  String get proposalStatusConflict => '内容有更新';
+
+  @override
+  String get proposalAwaitingUserHint => '确认后 Sparkle 才会执行这一步';
+
+  @override
+  String get proposalRunningHint => 'Sparkle 正在处理，你可以先去做别的，回来就能看到结果';
+
+  @override
+  String get proposalPartialHint => '这一步只完成了一部分，剩下的还需要你确认';
+
+  @override
+  String get proposalUnknownHint => '这一步的结果还没确认，先别当成已完成，稍后会更新';
+
+  @override
+  String get proposalCommittedHint => '已完成并记录';
+
+  @override
+  String get proposalCancelledHint => '这一步已取消，没有执行';
+
+  @override
+  String get proposalExpiredHint => '这次确认已经过期，需要的话可以重新发起';
+
+  @override
+  String get proposalRejectedHint => '你选择了不这样做，没有执行';
+
+  @override
+  String get proposalConflictHint => '要改的内容在这期间有变化，请重新看一遍再决定';
+
+  @override
+  String get proposalActionApprove => '确认，就这样做';
+
+  @override
+  String get proposalActionReject => '先不用';
+
+  @override
+  String get proposalActionCancel => '取消';
+
+  @override
+  String get proposalActionReview => '再看一遍';
+
+  @override
+  String get proposalActionRefresh => '刷新结果';
+
+  @override
+  String get proposalConfirming => '正在处理…';
+
+  @override
+  String get proposalDiffTitle => '会改动什么';
+
+  @override
+  String get proposalDiffBefore => '现在';
+
+  @override
+  String get proposalDiffAfter => '改成';
+
+  @override
+  String get proposalUntitled => '一个待确认的动作';
+
+  @override
+  String proposalTurnA11y(String owner) {
+    return '当前轮到：$owner';
+  }
 }

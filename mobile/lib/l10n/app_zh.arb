@@ -16679,5 +16679,47 @@
     "auto_photonbalance": "光子积分",
     "auto_loadfailed": "加载失败",
     "auto_transactionhistory": "交易历史",
-    "taskPreviewLoadFailed": "任务预览加载失败"
+    "taskPreviewLoadFailed": "任务预览加载失败",
+    "proposalOwnershipHuman": "你做",
+    "proposalOwnershipAgent": "Sparkle做",
+    "proposalOwnershipHybrid": "一起做",
+    "proposalTurnYours": "轮到你了",
+    "proposalTurnSparkle": "Sparkle 正在做",
+    "proposalTurnTogether": "你确认后，Sparkle 来执行",
+    "proposalStatusAwaitingUser": "等你确认",
+    "proposalStatusRunning": "正在执行",
+    "proposalStatusPartial": "部分完成",
+    "proposalStatusUnknown": "结果待确认",
+    "proposalStatusCommitted": "已完成",
+    "proposalStatusCancelled": "已取消",
+    "proposalStatusExpired": "已过期",
+    "proposalStatusRejected": "已拒绝",
+    "proposalStatusConflict": "内容有更新",
+    "proposalAwaitingUserHint": "确认后 Sparkle 才会执行这一步",
+    "proposalRunningHint": "Sparkle 正在处理，你可以先去做别的，回来就能看到结果",
+    "proposalPartialHint": "这一步只完成了一部分，剩下的还需要你确认",
+    "proposalUnknownHint": "这一步的结果还没确认，先别当成已完成，稍后会更新",
+    "proposalCommittedHint": "已完成并记录",
+    "proposalCancelledHint": "这一步已取消，没有执行",
+    "proposalExpiredHint": "这次确认已经过期，需要的话可以重新发起",
+    "proposalRejectedHint": "你选择了不这样做，没有执行",
+    "proposalConflictHint": "要改的内容在这期间有变化，请重新看一遍再决定",
+    "proposalActionApprove": "确认，就这样做",
+    "proposalActionReject": "先不用",
+    "proposalActionCancel": "取消",
+    "proposalActionReview": "再看一遍",
+    "proposalActionRefresh": "刷新结果",
+    "proposalConfirming": "正在处理…",
+    "proposalDiffTitle": "会改动什么",
+    "proposalDiffBefore": "现在",
+    "proposalDiffAfter": "改成",
+    "proposalUntitled": "一个待确认的动作",
+    "proposalTurnA11y": "当前轮到：{owner}",
+    "@proposalTurnA11y": {
+        "placeholders": {
+            "owner": {
+                "type": "String"
+            }
+        }
+    }
 }

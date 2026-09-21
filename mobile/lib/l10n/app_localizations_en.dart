@@ -37692,4 +37692,118 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get auto_transactionhistory => 'Transaction History';
+
+  @override
+  String get proposalOwnershipHuman => 'You do it';
+
+  @override
+  String get proposalOwnershipAgent => 'Sparkle does it';
+
+  @override
+  String get proposalOwnershipHybrid => 'Do it together';
+
+  @override
+  String get proposalTurnYours => 'It\'s your turn';
+
+  @override
+  String get proposalTurnSparkle => 'Sparkle is on it';
+
+  @override
+  String get proposalTurnTogether => 'After you confirm, Sparkle takes over';
+
+  @override
+  String get proposalStatusAwaitingUser => 'Waiting for you';
+
+  @override
+  String get proposalStatusRunning => 'In progress';
+
+  @override
+  String get proposalStatusPartial => 'Partially done';
+
+  @override
+  String get proposalStatusUnknown => 'Outcome pending';
+
+  @override
+  String get proposalStatusCommitted => 'Done';
+
+  @override
+  String get proposalStatusCancelled => 'Cancelled';
+
+  @override
+  String get proposalStatusExpired => 'Expired';
+
+  @override
+  String get proposalStatusRejected => 'Declined';
+
+  @override
+  String get proposalStatusConflict => 'Content changed';
+
+  @override
+  String get proposalAwaitingUserHint =>
+      'Sparkle will only do this after you confirm';
+
+  @override
+  String get proposalRunningHint =>
+      'Sparkle is working on it — step away if you like, the result will be here';
+
+  @override
+  String get proposalPartialHint =>
+      'Only part of this step finished — the rest still needs your confirmation';
+
+  @override
+  String get proposalUnknownHint =>
+      'The outcome isn\'t confirmed yet — don\'t treat it as done; we\'ll update you';
+
+  @override
+  String get proposalCommittedHint => 'Done and recorded';
+
+  @override
+  String get proposalCancelledHint =>
+      'This step was cancelled — nothing was done';
+
+  @override
+  String get proposalExpiredHint =>
+      'This confirmation expired — start again if you still need it';
+
+  @override
+  String get proposalRejectedHint => 'You declined — nothing was done';
+
+  @override
+  String get proposalConflictHint =>
+      'Things changed while you were away — review again before deciding';
+
+  @override
+  String get proposalActionApprove => 'Confirm and do it';
+
+  @override
+  String get proposalActionReject => 'Not now';
+
+  @override
+  String get proposalActionCancel => 'Cancel';
+
+  @override
+  String get proposalActionReview => 'Review again';
+
+  @override
+  String get proposalActionRefresh => 'Refresh outcome';
+
+  @override
+  String get proposalConfirming => 'Working on it…';
+
+  @override
+  String get proposalDiffTitle => 'What will change';
+
+  @override
+  String get proposalDiffBefore => 'Now';
+
+  @override
+  String get proposalDiffAfter => 'Changed to';
+
+  @override
+  String get proposalUntitled => 'An action to confirm';
+
+  @override
+  String proposalTurnA11y(String owner) {
+    return 'It is now $owner\'s turn';
+  }
 }

@@ -72,6 +72,15 @@ class ApiEndpoints {
   // X-04: 重开终态任务 / 重定范围
   static String reopenTask(String id) => '/tasks/$id/reopen';
   static String rescopeTask(String id) => '/tasks/$id/rescope';
+  // X-03/U-04: Action Proposal 统一 command path（网关纯代理 → Python 引擎）
+  static const String actionProposals = '/action-proposals';
+  static String actionProposal(String id) => '/action-proposals/$id';
+  static String actionProposalApprove(String id) =>
+      '/action-proposals/$id/approve';
+  static String actionProposalCancel(String id) =>
+      '/action-proposals/$id/cancel';
+  static String actionProposalReject(String id) =>
+      '/action-proposals/$id/reject';
   static String snoozeTask(String id) => '/tasks/$id/snooze';
   static String taskStuck(String id) => '/tasks/$id/stuck';
   static String taskTooHard(String id) => '/tasks/$id/too-hard';

@@ -31,6 +31,8 @@ import 'package:sparkle/features/task/presentation/widgets/execution_result_rend
 import 'package:sparkle/features/task/presentation/widgets/task_card.dart';
 import 'package:sparkle/features/task/utils/task_identity.dart';
 import 'package:sparkle/shared/utils/entity_card_payloads.dart';
+import 'package:sparkle/shared/widgets/action_proposal/action_proposal_card.dart'
+    show ActionProposalCard, ActionProposalCardData;
 
 class ActionCard extends ConsumerStatefulWidget {
   const ActionCard({
@@ -228,6 +230,44 @@ class _ActionCardState extends ConsumerState<ActionCard>
       }
 
       return FocusActionCard(data: widget.action.data);
+    }
+
+    // U-04: 统一 Action Proposal 卡片（chat 挂载点；与 task 页共用同一组件）。
+    if (widget.action.type == 'action_proposal') {
+      final proposal =
+          ActionProposalCardData.fromChatPayload(widget.action.data);
+      return ActionProposalCard(
+        data: proposal,
+        onApprove: (idempotencyKey) async {
+          await widget.onWidgetAction?.call('action_proposal_approve', {
+            ...widget.action.data,
+            'proposal_id': proposal.proposalId,
+            'idempotency_key': idempotencyKey,
+          });
+        },
+        onReject: (idempotencyKey) async {
+          await widget.onWidgetAction?.call('action_proposal_reject', {
+            ...widget.action.data,
+            'proposal_id': proposal.proposalId,
+            'idempotency_key': idempotencyKey,
+          });
+        },
+        onCancel: (idempotencyKey) async {
+          await widget.onWidgetAction?.call('action_proposal_cancel', {
+            ...widget.action.data,
+            'proposal_id': proposal.proposalId,
+            'idempotency_key': idempotencyKey,
+          });
+        },
+        onReview: () =>
+            widget.onWidgetAction?.call('action_proposal_review', {
+          ...widget.action.data,
+        }),
+        onRefresh: () =>
+            widget.onWidgetAction?.call('action_proposal_refresh', {
+          ...widget.action.data,
+        }),
+      );
     }
 
     if (widget.action.type == 'task_card') {

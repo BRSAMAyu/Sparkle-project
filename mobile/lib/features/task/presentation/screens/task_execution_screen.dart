@@ -53,6 +53,7 @@ import 'package:sparkle/features/task/task_routes.dart';
 import 'package:sparkle/features/task/utils/task_identity.dart';
 import 'package:sparkle/features/visual_elements/presentation/providers/visual_elements_provider.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
+import 'package:sparkle/features/task/presentation/widgets/pending_proposal_section.dart';
 
 LinearGradient _taskWarmActionGradient(BuildContext context) {
   final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -1903,6 +1904,9 @@ class _ExecutionAssistPanel extends ConsumerWidget {
             ),
             const SizedBox(height: DS.spacing12),
           ],
+          // U-04: 统一 Action Proposal 卡片（task 挂载点；与 chat 页共用同一
+          // 组件）。数据来自 X-03 proposal 收件箱（subject_id=本任务）。
+          PendingProposalSection(taskId: task.id),
           if (supportsAiHandoff) ...[
             SizedBox(
               width: double.infinity,
