@@ -19,11 +19,11 @@ from typing import Any
 
 from fastapi import APIRouter, Header, HTTPException, Request
 from loguru import logger
+from prometheus_client import Counter, Histogram
 
 from app.config import settings
 from app.core.kill_switch import KillSwitchBinding, write_mode
 from app.core.metrics import get_or_create_metric
-from prometheus_client import Counter, Histogram
 
 router = APIRouter()
 

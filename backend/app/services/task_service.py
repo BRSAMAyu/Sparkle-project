@@ -22,9 +22,9 @@ from loguru import logger
 from sqlalchemy import and_, desc, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.core.action_plan import clear_action_plan
 from app.core.cache import cache_service
 from app.core.event_bus import event_bus, event_bus_reliable
-from app.core.action_plan import clear_action_plan
 from app.event_publishers.srl_events import publish_srl_event
 from app.gen.sparkle.inference.v1 import inference_pb2
 from app.gen.sparkle.signals.v1 import signals_pb2

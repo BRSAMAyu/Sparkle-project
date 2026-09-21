@@ -20,13 +20,13 @@ from app.core.metrics import (
     COMMUNITY_PRIVACY_BUDGET_SPENT,
     COMMUNITY_PRIVACY_COHORT_SIZE,
 )
-from app.services.aurora_stage33_kill_switch_service import AuroraStage33KillSwitchService
 from app.models.community import Group, GroupTask, GroupTaskClaim, GroupType
 from app.models.community_privacy import CommunityAggregateSignal, PrivacyBudgetLedger
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.task import Task
 from app.models.user_settings import UserSettings
 from app.orchestration.dual_core_router import AdaptationRecord
+from app.services.aurora_stage33_kill_switch_service import AuroraStage33KillSwitchService
 from app.services.community_service import GroupTaskService
 from app.services.galaxy_service import GalaxyService
 from app.services.system_update_service import SystemUpdateService, build_system_update

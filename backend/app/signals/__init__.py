@@ -98,8 +98,14 @@ from app.signals.research_experiment_platform import (
 )
 from app.signals.research_grade import (
     DomainPack as DomainPack_v1,  # DEPRECATED: use SkillCard from marketplace
+)
+from app.signals.research_grade import (
     DomainPackMarketplace as DomainPackMarketplace_v1,  # DEPRECATED: use MarketplaceRegistry from marketplace
+)
+from app.signals.research_grade import (
     SimulatedUserProfile as SimulatedUserProfile_v1,  # DEPRECATED: use Persona from simulation_lab
+)
+from app.signals.research_grade import (
     UserSimulator as UserSimulator_v1,  # DEPRECATED: use SyntheticPersonaSimulator from simulation_lab
 )
 from app.signals.research_mode import (

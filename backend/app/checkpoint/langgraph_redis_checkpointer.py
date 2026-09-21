@@ -11,6 +11,7 @@ import base64
 import json
 from typing import Any, AsyncIterator, Sequence
 
+from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.base import (
     BaseCheckpointSaver,
     ChannelVersions,
@@ -22,7 +23,6 @@ from langgraph.checkpoint.base import (
 )
 from langgraph.checkpoint.serde.base import SerializerProtocol
 from loguru import logger
-from langchain_core.runnables import RunnableConfig
 
 
 def _thread_key(thread_id: str, checkpoint_ns: str) -> str:

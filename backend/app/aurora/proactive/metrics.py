@@ -11,8 +11,9 @@ RELEVANCE_REASONS），无用户维度，无基数风险。
 
 from __future__ import annotations
 
-from app.core.metrics import get_or_create_metric
 from prometheus_client import Counter
+
+from app.core.metrics import get_or_create_metric
 
 __all__ = ["PROACTIVE_PIPELINE_DECISIONS_TOTAL"]
 

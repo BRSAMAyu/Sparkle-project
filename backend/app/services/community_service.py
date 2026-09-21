@@ -13,11 +13,10 @@ import asyncio
 import math
 from datetime import UTC, datetime, timedelta
 from difflib import SequenceMatcher
-
-from loguru import logger
 from typing import Any
 from uuid import UUID
 
+from loguru import logger
 from sqlalchemy import and_, case, desc, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession

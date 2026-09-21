@@ -332,7 +332,7 @@ class ProactiveEventPipeline:
 
     # -- wiring -----------------------------------------------------------
 
-    async def attach(self, event_bus: "EventBus") -> None:
+    async def attach(self, event_bus: EventBus) -> None:
         """以既有消费者组机制订阅 sparkle_events（idempotency/DLQ 继承）。"""
         await event_bus.subscribe(
             stream=self.STREAM_NAME,

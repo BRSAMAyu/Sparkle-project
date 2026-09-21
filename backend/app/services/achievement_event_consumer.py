@@ -12,8 +12,8 @@ from loguru import logger
 from sqlalchemy import and_, func, select
 
 from app.core.event_bus import EventBus, reliable_consumer
-from app.core.time_utils import utcnow as _utcnow
 from app.core.event_types import EXECUTION_RESULT_INGESTED
+from app.core.time_utils import utcnow as _utcnow
 from app.db.session import AsyncSessionLocal
 from app.models.achievement import Achievement, AchievementRarity, UserAchievement, UserStreakStats
 from app.models.error_book import ErrorRecord
@@ -396,8 +396,9 @@ class AchievementEventConsumer:
     async def _persist_chronicle_event(self, db, user_id: str, event: dict) -> None:
         """Persist a chronicle event to PostgreSQL growth_chronicle table for durability."""
         try:
-            from app.aurora.runtime_v1.models import GrowthChronicleSnapshot
             from sqlalchemy import select as sa_select
+
+            from app.aurora.runtime_v1.models import GrowthChronicleSnapshot
 
             result = await db.execute(
                 sa_select(GrowthChronicleSnapshot).where(

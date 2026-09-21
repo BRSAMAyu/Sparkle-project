@@ -159,9 +159,6 @@ class GetSituationBriefTool(BaseTool):
     ) -> ToolResult:
         runtime_context = get_tool_runtime_context(db_session)
 
-        # Prefer runtime_context, but fall back to explicit user_id
-        ctx_user_id = runtime_context.get("user_id") or user_id
-
         direct_brief = runtime_context.get("situation_brief")
         if isinstance(direct_brief, dict) and direct_brief:
             return ToolResult(

@@ -14,8 +14,6 @@ from app.models.notification_interaction import NotificationInteraction, Notific
 from app.models.user import PushPreference
 from app.schemas.notification import NotificationCreate
 
-
-
 PER_TYPE_NOTIFICATION_ALIASES: dict[str, set[str]] = {
     "reminder": {
         "reminder",

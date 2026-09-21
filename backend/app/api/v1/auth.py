@@ -21,11 +21,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import _zh, get_current_user
 from app.config import settings
+from app.core import logsafe
 from app.core.account_lockout import account_lockout_service
 from app.core.auth_audit_service import auth_audit_service
 from app.core.cache import cache_service
 from app.core.event_bus import UserRegisteredEvent
-from app.core import logsafe
 from app.core.rate_limiting import limiter
 from app.core.security import (
     blacklist_token,

@@ -47,7 +47,6 @@ __all__ = [
     "TriggerClassification",
     "classify_event",
     "WHITELISTED_EVENT_NAMES",
-    "DEADLINE_SOON_WINDOW",
 ]
 
 

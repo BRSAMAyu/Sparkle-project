@@ -84,7 +84,6 @@ def generate_node_embedding(self, node_id: str, title: str, summary: str, user_i
 
     这是 galaxy_service 中 _process_node_background 的 Celery 版本
     """
-    import asyncio
     from uuid import UUID
 
     from app.db.session import AsyncSessionLocal
@@ -139,7 +138,6 @@ def analyze_error_batch(self, error_ids: list, user_id: str):
 
     这是 error_book_grpc_service 中 _run_analysis_task 的 Celery 版本
     """
-    import asyncio
     from uuid import UUID
 
     from app.db.session import AsyncSessionLocal
@@ -182,7 +180,6 @@ def process_stored_file(
     """
     Process uploaded file: chunking, embeddings, optional thumbnail.
     """
-    import asyncio
     from uuid import UUID
 
     from app.db.session import AsyncSessionLocal
@@ -217,7 +214,6 @@ def process_group_shared_file(
     """
     Index a shared file into the group-scoped RAG namespace.
     """
-    import asyncio
     from uuid import UUID
 
     from app.db.session import AsyncSessionLocal
@@ -251,7 +247,6 @@ def delete_group_file_index(
     """
     Remove group-scoped RAG chunks for a deleted/unshared group file.
     """
-    import asyncio
     from uuid import UUID
 
     from app.db.session import AsyncSessionLocal
@@ -287,7 +282,6 @@ def record_token_usage(
 
     这是 orchestrator 中 token_tracker.record_usage 的 Celery 版本
     """
-    import asyncio
 
     from app.core.cache import cache_service
     from app.orchestration.token_tracker import TokenTracker
@@ -318,7 +312,6 @@ def save_learning_state(self, user_id: str, state_data: dict):
 
     这是 multi_dimensional_learner 中 _save 的 Celery 版本
     """
-    import asyncio
 
     from app.core.cache import cache_service
     from app.learning.multi_dimensional_learner import MultiDimensionalLearner
@@ -344,7 +337,6 @@ def persist_bayesian_data(self, user_id: str, data: dict):
 
     这是 persistent_bayesian_learner 中 _save_to_redis 的 Celery 版本
     """
-    import asyncio
     import json
 
     from loguru import logger
@@ -381,7 +373,6 @@ def persist_bayesian_data(self, user_id: str, data: dict):
 )
 def recompute_idiographic_associations(self, user_id: str | None = None):
     """Recompute Stage 31 idiographic associations for one user or all active users."""
-    import asyncio
     from uuid import UUID
 
     from app.db.session import AsyncSessionLocal
@@ -410,7 +401,6 @@ def invalidate_cache(self, cache_key: str):
 
     这是 route_cache 中 _invalidate_redis 的 Celery 版本
     """
-    import asyncio
 
     from app.core.cache import redis_client
 
@@ -450,7 +440,6 @@ def rerank_documents(self, query: str, doc_ids: list, user_id: str):
 
     这是 rerank_service 中模型加载和推理的 Celery 版本
     """
-    import asyncio
 
     from app.db.session import AsyncSessionLocal
     from app.services.rerank_service import RerankService
@@ -474,7 +463,6 @@ def expansion_worker_task(self, node_id: str, operation: str):
 
     这是 expansion_worker 的 Celery 版本
     """
-    import asyncio
     from uuid import UUID
 
     from loguru import logger
@@ -516,7 +504,6 @@ def generate_weekly_learning_reports(self, limit: int = 200):
     """
     聚合周级学习报告并写入 system updates。
     """
-    import asyncio
 
     from app.core.cache import cache_service
     from app.db.session import AsyncSessionLocal
@@ -958,7 +945,7 @@ def run_l4_async_engine_sweep(self, limit: int = 500):
     async def _run():
         import json
 
-        from app.aurora.runtime_v1.l4_async import L4AsyncEngine, L4_ANALYSIS_TYPES
+        from app.aurora.runtime_v1.l4_async import L4_ANALYSIS_TYPES, L4AsyncEngine
         from app.core.cache import cache_service
         redis = cache_service.redis
         engine = L4AsyncEngine(redis_client=redis)
@@ -1341,7 +1328,6 @@ def persist_report_snapshot(self, user_id: str, cache_version: str, payload: dic
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.capture_ai_metric_baseline")
 def capture_ai_metric_baseline(self):
     """Capture AI metric baseline snapshots into Redis."""
-    import asyncio
 
     from app.core.cache import cache_service
     from app.services.self_evolution_service import MetricBaselineService
@@ -1362,7 +1348,6 @@ def capture_ai_metric_baseline(self):
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.promote_perceptible_cohort")
 def promote_perceptible_cohort(self):
     """Evaluate perceptible cohorts and promote baseline strategy when ready."""
-    import asyncio
 
     from app.core.cache import cache_service
     from app.services.self_evolution_service import CohortPromotionService
@@ -1383,7 +1368,6 @@ def promote_perceptible_cohort(self):
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.refresh_metacognition_snapshots")
 def refresh_metacognition_snapshots(self, limit: int = 500):
     """Refresh Stage 30 metacognition snapshots for recently active users."""
-    import asyncio
 
     from sqlalchemy import select
 
@@ -1422,7 +1406,6 @@ def refresh_metacognition_snapshots(self, limit: int = 500):
 @celery_app.task(bind=True, max_retries=2, name="generate_long_horizon_prediction")
 def generate_long_horizon_prediction(self, user_id: str):
     """使用 GLM batch 生成后台长期行为预测，并写入缓存。"""
-    import asyncio
     from uuid import UUID
 
     from app.db.session import AsyncSessionLocal
@@ -1455,7 +1438,6 @@ def send_verification_email_task(self, to_email: str, verify_token: str, usernam
 
     通过 Celery 队列化邮件发送，添加速率限制防止邮件服务商封禁。
     """
-    import asyncio
 
     from app.core.email_service import email_service
 
@@ -1484,7 +1466,6 @@ def send_verification_email_task(self, to_email: str, verify_token: str, usernam
 )
 def send_password_reset_email_task(self, to_email: str, reset_token: str, username: str):
     """Send password reset email via Celery (replaces fire-and-forget asyncio.create_task)."""
-    import asyncio
 
     from app.core.email_service import email_service
 
@@ -2257,7 +2238,6 @@ def scan_comeback_nudges(self, limit: int = 500):
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.recompute_persdyn_attractors")
 def recompute_persdyn_attractors(self):
     """Recompute Stage 27 PersDyn attractors for all users."""
-    import asyncio
 
     from app.db.session import AsyncSessionLocal
     from app.services.persdyn_attractor_service import PersDynAttractorService
@@ -2508,6 +2488,7 @@ def purge_deleted_account(self, user_id: str) -> dict:
                 AuroraStateSnapshot,
             )
             from app.models.card_protocol import InterventionRecord
+
             # R4-P0-3: Add memory tables for GDPR cascade cleanup
             from app.models.memory import EpisodicMemory, MemoryCorrection, MemoryGoal, MemoryPreference
 
@@ -3377,7 +3358,7 @@ def run_community_privacy_maintenance(self, limit: int = 200):
         redis = cache_service.redis
         results = {"budgets_reset": 0, "cohorts_pruned": 0, "errors": 0}
 
-        async with AsyncSessionLocal() as session:
+        async with AsyncSessionLocal():
             # Reset daily privacy budgets for windows older than 24h
             try:
                 from datetime import UTC, datetime, timedelta
@@ -3495,12 +3476,12 @@ def run_research_improvement_loop(self, limit: int = 500):
 @celery_app.task(bind=True, max_retries=2, name="observe_user_traits")
 def observe_user_traits(self, user_id: str):
     """Observe Big Five traits from recent chat messages via NLP."""
-    import asyncio
 
     from app.db.session import AsyncSessionLocal
 
     async def _run():
         from uuid import UUID as UUIDType
+
         from app.services.traits_nlp_observer_service import TraitsNlpObserverService
         async with AsyncSessionLocal() as session:
             svc = TraitsNlpObserverService(session)
@@ -3516,14 +3497,14 @@ def observe_user_traits(self, user_id: str):
 @celery_app.task(bind=True, max_retries=2, name="scan_behavior_patterns")
 def scan_behavior_patterns(self, user_id: str):
     """Analyze user behavior patterns for planning optimism, focus decay, blindspots."""
-    import asyncio
 
     from app.db.session import AsyncSessionLocal
 
     async def _run():
-        from app.services.analytics.behavior_pattern_service import BehaviorPatternService
-        from app.models.task import Task, TaskStatus
         from sqlalchemy import select
+
+        from app.models.task import Task, TaskStatus
+        from app.services.analytics.behavior_pattern_service import BehaviorPatternService
         async with AsyncSessionLocal() as session:
             svc = BehaviorPatternService(session)
             uid = UUID(user_id)
@@ -3551,7 +3532,6 @@ def scan_behavior_patterns(self, user_id: str):
 @celery_app.task(bind=True, max_retries=2, name="propose_routing_parameters")
 def propose_routing_parameters(self):
     """Propose routing parameter optimizations from accumulated effectiveness data."""
-    import asyncio
 
     from app.db.session import AsyncSessionLocal
 
@@ -3571,7 +3551,6 @@ def propose_routing_parameters(self):
 @celery_app.task(bind=True, max_retries=2, name="optimize_context_pack_budget")
 def optimize_context_pack_budget(self, user_id: str, total_budget: int, context_packs: list[str]):
     """Optimize context pack budget allocation using multi-armed bandit."""
-    import asyncio
 
     from app.db.session import AsyncSessionLocal
 
@@ -3595,7 +3574,6 @@ def optimize_context_pack_budget(self, user_id: str, total_budget: int, context_
 @celery_app.task(bind=True, max_retries=2, name="auto_optimize_routing_parameters")
 def auto_optimize_routing_parameters(self):
     """Run routing parameter auto-optimization cycle."""
-    import asyncio
 
     async def _run():
         from app.core.cache import cache_service

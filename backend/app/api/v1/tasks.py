@@ -67,10 +67,10 @@ from app.services.feedback_service import feedback_service
 from app.services.focus_context_service import focus_context_service
 from app.services.intelligent_task_service import IntelligentTaskService
 from app.services.seed_library_service import SeedLibraryService
+from app.services.task_completion_evidence import validate_evidence_entries
 from app.services.task_document_service import task_document_service
 from app.services.task_guide_service import task_guide_service
 from app.services.task_priority_service import TaskPriorityService
-from app.services.task_completion_evidence import validate_evidence_entries
 from app.services.task_service import TaskService
 from app.task_guidance import TaskGuidance, TaskGuidanceAudience
 

@@ -1,5 +1,5 @@
-from collections import OrderedDict
 import asyncio
+from collections import OrderedDict
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
@@ -159,6 +159,7 @@ class GalaxyGrpcServiceImpl(galaxy_service_pb2_grpc.GalaxyServiceServicer if gal
                     # CRDT merge: resolve offline sync conflicts with max-wins semantics
                     if result.get("reason") == "conflict":
                         from sqlalchemy import select as sa_select
+
                         from app.models.galaxy import UserNodeStatus
                         current_revision = result.get("current_revision", 0)
                         node_id_uuid = UUID(request.node_id) if isinstance(request.node_id, str) else request.node_id
@@ -420,6 +421,7 @@ class GalaxyGrpcServiceImpl(galaxy_service_pb2_grpc.GalaxyServiceServicer if gal
 
                 # Get node from DB for label, description, type, tags
                 from sqlalchemy import select
+
                 from app.models.galaxy import KnowledgeNode
                 stmt = select(KnowledgeNode).where(KnowledgeNode.id == node_id)
                 result = await db.execute(stmt)
@@ -522,7 +524,9 @@ class GalaxyGrpcServiceImpl(galaxy_service_pb2_grpc.GalaxyServiceServicer if gal
         async with self.db_session_factory() as db:
             try:
                 from uuid import UUID as _UUID
+
                 from sqlalchemy import select
+
                 from app.models.galaxy import NodeRelation
 
                 from_id = _UUID(request.from_node_id)
@@ -619,7 +623,9 @@ class GalaxyGrpcServiceImpl(galaxy_service_pb2_grpc.GalaxyServiceServicer if gal
         async with self.db_session_factory() as db:
             try:
                 from uuid import UUID as _UUID
+
                 from sqlalchemy import select
+
                 from app.models.galaxy import NodeRelation
 
                 node_id = _UUID(request.node_id)
@@ -680,8 +686,9 @@ class GalaxyGrpcServiceImpl(galaxy_service_pb2_grpc.GalaxyServiceServicer if gal
 
                 # P1-8 fix: compute actual average mastery (sum of all mastery_scores / count)
                 # Previously used mastered_count/total_nodes which is % mastered nodes, not avg mastery
-                from app.models.galaxy import UserNodeStatus
                 from sqlalchemy import func as sa_func
+
+                from app.models.galaxy import UserNodeStatus
                 avg_result = await db.execute(
                     sa_select(sa_func.coalesce(sa_func.avg(UserNodeStatus.mastery_score), 0.0))
                     .where(UserNodeStatus.user_id == UUID(user_id))
@@ -727,7 +734,6 @@ class GalaxyGrpcServiceImpl(galaxy_service_pb2_grpc.GalaxyServiceServicer if gal
         async with self.db_session_factory() as db:
             galaxy_service = GalaxyService(db)
             try:
-                limit = request.limit if request.limit > 0 else 5
                 result_nodes: list = []
                 reasons_list: list[str] = []
 

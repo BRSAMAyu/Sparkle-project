@@ -203,8 +203,9 @@ async def get_progress(
     registry = _get_registry()
 
     try:
-        from app.core.cache import cache_service
         import json
+
+        from app.core.cache import cache_service
         state_key = f"spine:scenario_journey:{current_user.id}:{goal_id}"
         raw = await cache_service.redis.get(state_key)
         if raw is None:

@@ -25,9 +25,7 @@ Timeline card shape (consumed by causal_timeline_panel.dart):
 
 from __future__ import annotations
 
-
 from loguru import logger
-
 
 
 async def emit_strategy_change_card(

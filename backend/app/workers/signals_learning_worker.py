@@ -19,15 +19,16 @@ Created: 2026-01-15
 """
 
 import asyncio
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple
-from sqlalchemy import select, func, case
-from sqlalchemy.ext.asyncio import AsyncSession
-from loguru import logger
+from datetime import datetime
+from typing import Dict, Optional
 
+from loguru import logger
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.cache import cache_service
 from app.db.session import AsyncSessionLocal
 from app.models.candidate_action_feedback import CandidateActionFeedback
-from app.core.cache import cache_service
 
 
 class SignalsLearningWorker:
@@ -406,17 +407,17 @@ if __name__ == "__main__":
 
         if result["status"] == "success":
             print(f"✅ Status: {result['status']}")
-            print(f"\nOverall Metrics:")
+            print("\nOverall Metrics:")
             for key, value in result["overall_metrics"].items():
                 print(f"  {key}: {value}")
 
-            print(f"\nAction Type Metrics:")
+            print("\nAction Type Metrics:")
             for action_type, metrics in result["action_type_metrics"].items():
                 print(f"  {action_type}:")
                 for key, value in metrics.items():
                     print(f"    {key}: {value}")
 
-            print(f"\nAdjustment Recommendations:")
+            print("\nAdjustment Recommendations:")
             for action_type, adj in result["adjustments"].items():
                 print(f"  {action_type}: {adj['action']} - {adj['reason']}")
         else:

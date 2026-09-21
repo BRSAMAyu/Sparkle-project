@@ -15,7 +15,6 @@ from app.services.curiosity_capsule_service import curiosity_capsule_service
 from app.services.llm_service import llm_service
 from app.services.notification_service import NotificationService
 from app.services.personalization import PushPolicyProfile, get_personalization_engine
-from app.services.user_push_opt_in_service import UserPushOptInService
 from app.services.push_strategies import (
     CuriosityStrategy,
     EmptyCapsuleStrategy,
@@ -23,6 +22,7 @@ from app.services.push_strategies import (
     MemoryStrategy,
     SprintStrategy,
 )
+from app.services.user_push_opt_in_service import UserPushOptInService
 
 PUSH_TRIGGER_TYPES = {
     "MEMORY": "memory",

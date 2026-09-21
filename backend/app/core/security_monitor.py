@@ -516,8 +516,6 @@ class SecurityMonitor:
     async def _check_abnormal_patterns(self):
         """Check for abnormal login patterns and suspicious activity."""
         try:
-            from datetime import timedelta
-            cutoff = datetime.now(UTC) - timedelta(minutes=5)
             # Count recent failed logins from Redis
             try:
                 failed_key = "security:failed_logins_recent"

@@ -22,7 +22,6 @@ from typing import Any
 
 from loguru import logger
 
-from app.core.llm_secure_io import sanitize_tool_payload
 from app.agents.workflow_experience import (
     build_plan_review_prompt,
     build_response_review_prompt,
@@ -32,6 +31,7 @@ from app.agents.workflow_experience import (
 from app.config.settings import settings
 from app.core.agent_profiles import TaskType
 from app.core.llm_router import ModelProvider
+from app.core.llm_secure_io import sanitize_tool_payload
 from app.services.llm_service import get_llm_service_for_task
 
 # ============================================

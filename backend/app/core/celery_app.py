@@ -25,6 +25,7 @@ import os
 
 from celery import Celery
 from celery.schedules import crontab
+
 try:
     from celery.signals import on_after_configure
 except ImportError:

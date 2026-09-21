@@ -21,16 +21,11 @@ from opentelemetry import trace
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.core.agent_profiles import AgentRole, ModelTier, TaskType
-from app.core.cost_controller import is_llm_within_budget, record_llm_cost
-from app.core.trace_spine import current_recorder, current_trace_id, emit_span
-from app.core.metrics import (
-    LLM_PROVIDER_TTFT,
-    LLM_PUSH_CONTENT_PARSE_FAILURE_TOTAL,
-    LLM_ROUTER_CALL_LATENCY_SECONDS,
-)
 from app.core import routing_audit
 from app.core.adaptive_routing import adaptive_routing_engine
+from app.core.agent_profiles import AgentRole, ModelTier, TaskType
+from app.core.cost_controller import is_llm_within_budget, record_llm_cost
+from app.core.exceptions import LLMServiceError
 from app.core.llm_monitoring import LLMMonitor
 from app.core.llm_router import LLMSelection, ModelProvider, glm_effective_max_tokens, llm_router
 from app.core.llm_secure_io import (
@@ -42,7 +37,12 @@ from app.core.llm_secure_io import (
     wrap_tool_result,
     wrap_user_message,
 )
-from app.core.exceptions import LLMServiceError
+from app.core.metrics import (
+    LLM_PROVIDER_TTFT,
+    LLM_PUSH_CONTENT_PARSE_FAILURE_TOTAL,
+    LLM_ROUTER_CALL_LATENCY_SECONDS,
+)
+from app.core.trace_spine import current_recorder, current_trace_id, emit_span
 from app.services.circuit_breaker import CircuitBreakerOpenException, circuit_breaker_service
 from app.services.llm.base import LLMProvider
 from app.services.llm.concurrency import llm_concurrency
@@ -1892,8 +1892,8 @@ class LLMService:
 # 默认单例（使用新的动态路由）
 llm_service_impl = LLMService(agent_role=AgentRole.GENERATION, enable_dynamic_routing=True)
 
-from app.core.llm_security_wrapper import LLMSecurityWrapper, SecurityConfig
 from app.core.cache import cache_service
+from app.core.llm_security_wrapper import LLMSecurityWrapper, SecurityConfig
 
 llm_service = LLMSecurityWrapper(
     llm_service=llm_service_impl,

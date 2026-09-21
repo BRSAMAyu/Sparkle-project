@@ -22,8 +22,8 @@ from app.models.background_task import BackgroundTask, BackgroundTaskStatus, Bac
 from app.models.community import GroupMember, GroupRole
 from app.models.document_chunks import DocumentChunk
 from app.models.file_storage import StoredFile
-from app.models.group_files import GroupFile
 from app.models.galaxy import KnowledgeNode, KnowledgeNodeDocument
+from app.models.group_files import GroupFile
 from app.models.user import User
 from app.services.document_service import document_service
 from app.services.document_upload_storage import document_upload_storage

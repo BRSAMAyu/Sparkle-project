@@ -39,7 +39,6 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any, Awaitable, Callable
-from uuid import uuid4
 
 from loguru import logger
 
@@ -475,7 +474,6 @@ class BatchWorklaneService:
         chat_executor 可注入（测试零真实 LLM）；默认用路由解析的 OpenAI 兼容
         provider 直连（llm_concurrency 按 base_url 映射 minimax/zhipu_coding 池）。
         """
-        started_at = _utcnow()
         start = time.perf_counter()
 
         def _finish(result: BatchLaneResult) -> BatchLaneResult:

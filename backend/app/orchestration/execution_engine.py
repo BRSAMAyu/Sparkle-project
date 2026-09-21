@@ -22,12 +22,12 @@ from app.core.agent_profiles import AgentRole, agent_profile_registry
 from app.core.business_metrics import (
     EVIDENCE_BACKED_VISIBLE_UPDATE_TOTAL,
 )
-from app.core.safe_error_messages import build_safe_chat_error
 from app.core.metrics import (
     RESPONSE_FALLBACK_GENERATED_TOTAL,
     SESSION_FEEDBACK_VISIBLE_HINT_TOTAL,
     TOKEN_USAGE,
 )
+from app.core.safe_error_messages import build_safe_chat_error
 from app.core.task_manager import task_manager
 from app.gen.agent.v1 import agent_service_pb2
 from app.models.execution_intent import ExecutionIntentStatus

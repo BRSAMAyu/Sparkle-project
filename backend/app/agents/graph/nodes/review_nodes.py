@@ -370,10 +370,6 @@ def _should_skip_review(state: SparkleState) -> bool:
     last_message = messages[-1]
     content = _message_attr(last_message, "content", "") or str(last_message)
     content_lower = content.lower()
-    last_user_message = next(
-        (_message_attr(msg, "content", "") for msg in reversed(messages[:-1]) if _message_attr(msg, "role") == "user"),
-        "",
-    )
     chat_mode = str(context_data.get("chat_mode") or "standard").strip().lower()
     has_tool_calls = bool(context_data.get("tool_calls"))
     has_selected_experts = bool(context_data.get("selected_experts") or context_data.get("answer_experts"))

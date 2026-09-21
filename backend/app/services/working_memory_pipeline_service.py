@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from loguru import logger
+
 from app.config import settings
 from app.core.cache import cache_service
 from app.services.aurora_stage19_kill_switch_service import AuroraStage19KillSwitchService
-from loguru import logger
-
 from app.services.llm_extractor_service import LlmExtractorService
 from app.services.memory_inferred_write_lane import InferredEpisodicCandidate
 from app.services.working_memory_consolidation_service import WorkingMemoryConsolidationService

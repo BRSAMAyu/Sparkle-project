@@ -11,10 +11,10 @@ from __future__ import annotations
 
 import asyncio
 import json
-from contextlib import aclosing
 import time
 import uuid
 from collections.abc import AsyncIterator, Callable
+from contextlib import aclosing
 from datetime import UTC, datetime, timedelta
 
 import grpc

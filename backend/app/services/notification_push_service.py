@@ -128,8 +128,8 @@ class NotificationPushService:
         """Push notification via FCM/JPush for offline/bg users. Best-effort."""
         try:
             from app.services.device_service import DeviceService
-            from app.services.push_sender_service import PushSenderService
             from app.services.jpush_sender_service import JPushSenderService
+            from app.services.push_sender_service import PushSenderService
 
             device_svc = DeviceService()
             devices = await device_svc.get_user_devices(

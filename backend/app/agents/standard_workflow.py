@@ -2182,12 +2182,12 @@ Ask about their available time and current tasks if needed.
     # 单一 metadata-only 记录 + source_ref manifest + bloat/inert 定位。
     # 回答「这次模型为什么看了这些、看得对不对」；失败只降级，不阻断主链。
     try:
+        from app.core.trace_spine import current_trace_id as current_spine_trace_id
         from app.orchestration.context_funnel import (
             build_context_funnel_record,
             funnel_log_line,
             record_funnel_metrics,
         )
-        from app.core.trace_spine import current_trace_id as current_spine_trace_id
 
         _uc_payload = state.context_data.get("user_context")
         _memory_refs = []

@@ -16,6 +16,7 @@ from loguru import logger
 from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy import select
 
+from app.core.i18n import I18n
 from app.db.session import AsyncSessionLocal
 from app.models.galaxy import KnowledgeNode
 from app.models.plan import PlanStage as ModelPlanStage
@@ -29,7 +30,6 @@ from app.services.llm_fallback_utils import plan_llm
 from app.services.plan_service import PlanService
 from app.services.task_service import TaskService
 
-from app.core.i18n import I18n
 from .base import BaseTool, ToolCategory, ToolResult
 from .entity_cards import (
     build_plan_entity_card,

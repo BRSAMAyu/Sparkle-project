@@ -13,7 +13,7 @@ from enum import Enum, StrEnum
 from typing import Literal
 from uuid import UUID
 
-from pydantic import AliasChoices, BaseModel, Field, field_validator, model_validator
+from pydantic import AliasChoices, BaseModel, Field, field_validator
 
 from app.core.action_plan import (
     ACTION_PLAN_SCHEMA_VERSION,

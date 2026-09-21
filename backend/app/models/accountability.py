@@ -9,10 +9,10 @@ Models:
 import enum
 
 from sqlalchemy import (
+    DDL,
     JSON,
     Column,
     DateTime,
-    DDL,
     Enum,
     ForeignKey,
     Index,
@@ -20,8 +20,6 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     event,
-    func,
-    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship

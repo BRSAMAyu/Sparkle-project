@@ -195,8 +195,8 @@ class OutcomeConsumingService:
         limit: int = 10,
     ):
         """Get distilled strategies applicable to a user."""
-        from app.learning.strategy_store import StrategyQuery
         from app.aurora.schemas import DistilledStrategyLifecycle
+        from app.learning.strategy_store import StrategyQuery
 
         query = StrategyQuery(
             statuses=(DistilledStrategyLifecycle.USER_REVIEWED,),

@@ -55,6 +55,7 @@ from app.schemas.galaxy import (
 )
 from app.services.embedding_service import embedding_service, stamp_embedding_version
 from app.services.expansion_service import ExpansionService, validate_knowledge_node_name
+from app.services.galaxy.mastery_evidence import EvidenceObservation
 from app.services.galaxy.ontology_generator import (
     OntologyExtractionResult,
     OntologyGenerator,
@@ -63,7 +64,6 @@ from app.services.galaxy.ontology_generator import (
 from app.services.galaxy.provenance import append_graph_event_source
 from app.services.galaxy.retrieval_service import KnowledgeRetrievalService
 from app.services.galaxy.review_urgency_service import ReviewUrgencyService
-from app.services.galaxy.mastery_evidence import EvidenceObservation
 from app.services.galaxy.stats_service import GalaxyStatsService
 from app.services.galaxy.structure_service import GraphStructureService
 from app.services.node_sector_service import NodeSectorService

@@ -49,18 +49,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.aurora_decision import AuroraDecisionContract, aurora_decision_from_dict
 from app.core.event_registry import EventSource, build_event_metadata
 from app.core.intervention_lifecycle import (
-    ACCUMULATED_TIER_MIN_OBSERVATIONS,
     DEFAULT_OBSERVATION_WINDOW_HOURS,
     INTERVENTION_LIFECYCLE_SCHEMA_VERSION,
-    EVIDENCE_TIER_INSUFFICIENT,
-    LifecycleEventType,
     MAX_OBSERVATION_WINDOW_HOURS,
-    ObservationStatus,
     OUTCOME_ASSOCIATION_SOURCES,
+    USER_RESPONSE_EVENT_TYPES,
+    AssociationSummary,
+    LifecycleEventType,
+    ObservationStatus,
     SituationSignature,
     SliceSummary,
-    AssociationSummary,
-    USER_RESPONSE_EVENT_TYPES,
     association_claim,
     association_evidence_tier,
     clamp_observation_window_hours,

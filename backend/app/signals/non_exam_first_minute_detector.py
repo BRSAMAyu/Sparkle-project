@@ -15,7 +15,6 @@ from __future__ import annotations
 import re
 from typing import Any
 
-
 from app.signals.exam_rescue_detector import FirstMinuteSnapshot
 
 # ── Job Search patterns ────────────────────────────────────────────

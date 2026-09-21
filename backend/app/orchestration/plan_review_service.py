@@ -27,13 +27,13 @@ from uuid import UUID
 from loguru import logger
 
 from app.config import settings
-from app.core.llm_secure_io import sanitize_text_for_llm, sanitize_tool_payload
 from app.core.business_metrics import (
     PHASE4_OPERATION_DURATION_SECONDS,
     PLAN_REASONING_GENERATED_TOTAL,
     PLAN_REASONING_SOURCE_TOTAL,
 )
 from app.core.event_bus import event_bus
+from app.core.llm_secure_io import sanitize_text_for_llm, sanitize_tool_payload
 from app.core.pending_actions import pending_actions_store
 from app.event_publishers.srl_events import publish_srl_event
 from app.orchestration.circuit_breaker import CircuitBreaker, CircuitBreakerConfig, circuit_breaker_registry

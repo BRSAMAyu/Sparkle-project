@@ -17,7 +17,7 @@ from loguru import logger
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.datetime_utils import _utcnow, _user_display_name
+from app.core.datetime_utils import _user_display_name, _utcnow
 from app.db.session import get_db_context
 from app.models.accountability import (
     AccountabilityCheckin,

@@ -1,6 +1,6 @@
 from __future__ import annotations
-# rule-bj: exempt v1 未接线组件（评估器/分类器/工具），保留待接线——见 docs/engineering/KNOWN_CODE_DEBT_LEDGER.md
 
+# rule-bj: exempt v1 未接线组件（评估器/分类器/工具），保留待接线——见 docs/engineering/KNOWN_CODE_DEBT_LEDGER.md
 from dataclasses import asdict, dataclass, field
 from enum import StrEnum
 from typing import Any

@@ -20,7 +20,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.core.business_metrics import COLLABORATION_LATENCY
 from app.core.metrics import (
-    ACTIVE_SESSIONS,
     AI_RESPONSE_TOTAL_DURATION,
     REQUEST_LATENCY,
     RESPONSE_FALLBACK_GENERATED_TOTAL,

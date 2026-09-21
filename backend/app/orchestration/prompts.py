@@ -1434,7 +1434,6 @@ def build_system_prompt(
         # interpolated via format_map, which uses {} as placeholders.
         sanitized_user_context = _sanitize_template_value(rendered_user_context)
         sanitized_companion_persona = _sanitize_template_value(companion_persona_section)
-        sanitized_idiographic = _sanitize_template_value(idiographic_section)
 
         prompt = base_prompt.format_map(
             _SafeFormatDict(

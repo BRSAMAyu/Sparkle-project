@@ -1537,7 +1537,6 @@ class AchievementEngine:
             rarity = unlock_payload.get("rarity")
             rarity_value = str(rarity.value if hasattr(rarity, "value") else rarity or "")
             story = str(unlock_payload.get("context_story") or "").strip()
-            is_first = bool(unlock_payload.get("is_first", False))
 
             entry = ChronicleEntry(
                 entry_id=_uid("chron"),

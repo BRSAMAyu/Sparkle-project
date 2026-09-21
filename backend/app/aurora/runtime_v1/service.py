@@ -46,9 +46,9 @@ from app.models.plan import Plan, PlanType
 from app.models.task import Task, TaskStatus
 from app.models.user import User
 from app.models.user_preferences import UserPreferencesCenter
+from app.services.aurora_stage38_kill_switch_service import AuroraStage38KillSwitchService
 from app.services.calendar_service import CalendarService
 from app.services.memory_service import MemoryService
-from app.services.aurora_stage38_kill_switch_service import AuroraStage38KillSwitchService
 from app.sprint_packs.last_24h_mode import (
     apply_last_24h_policy_overrides,
     calculate_days_left,

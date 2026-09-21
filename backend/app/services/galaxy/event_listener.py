@@ -63,7 +63,7 @@ class TaskEventListener:
                 await self.event_bus.subscribe(
                     stream=self.STREAM_NAME,
                     group_name=self.GROUP_NAME,
-                    consumer_name=f"task_event_listener",
+                    consumer_name="task_event_listener",
                     callback=self._on_event,
                 )
                 break

@@ -22,8 +22,8 @@ from app.config import settings
 from app.config.phase5_config import phase5_config
 from app.core.event_bus import event_bus
 from app.core.event_types import PROFILE_COGNITIVE_UPDATED
-from app.models.cognitive import AnalysisStatus, BehaviorPattern, CognitiveFragment, PatternType
 from app.core.llm_secure_io import sanitize_text_for_llm
+from app.models.cognitive import AnalysisStatus, BehaviorPattern, CognitiveFragment, PatternType
 from app.services.analysis.unified_analysis_service import UnifiedAnalysisService
 from app.services.analytics_service import AnalyticsService
 from app.services.embedding_service import embedding_service

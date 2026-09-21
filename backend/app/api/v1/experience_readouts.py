@@ -12,6 +12,7 @@ from sqlalchemy import case, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
+from app.aurora.runtime_v1.self_model import SparkleSelfModelService
 from app.core.cache import cache_service
 from app.models.achievement import UserStreakStats
 from app.models.focus import FocusSession, FocusStatus
@@ -19,7 +20,6 @@ from app.models.goal import Goal
 from app.models.plan import Plan
 from app.models.task import Task, TaskStatus
 from app.models.user import User
-from app.aurora.runtime_v1.self_model import SparkleSelfModelService
 from app.services.aurora_control_surface_service import AuroraControlSurfaceService
 from app.services.growth_dashboard_service import GrowthDashboardService
 from app.services.progress_narrative_service import ProgressNarrativeService

@@ -5,7 +5,8 @@ from fastapi import HTTPException
 from loguru import logger
 
 try:
-    from openai import APIError, AsyncOpenAI, Timeout as OpenAITimeout
+    from openai import APIError, AsyncOpenAI
+    from openai import Timeout as OpenAITimeout
     HAS_OPENAI = True
 except ImportError:
     AsyncOpenAI = None
@@ -15,10 +16,10 @@ except ImportError:
 
 import httpx
 
-from app.services.llm.base import LLMProvider
-from app.services.llm.concurrency import llm_concurrency
 from app.core.exceptions import LLMServiceError
 from app.core.metrics import LLM_PROVIDER_TTFT
+from app.services.llm.base import LLMProvider
+from app.services.llm.concurrency import llm_concurrency
 
 
 class OpenAICompatibleProvider(LLMProvider):

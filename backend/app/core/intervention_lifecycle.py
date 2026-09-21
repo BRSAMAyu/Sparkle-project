@@ -76,7 +76,7 @@ from app.core.aurora_decision import (
     _INERT_INTERVENTIONS,
     AURORA_INTERVENTION_TYPES,
 )
-from app.core.outcome_ledger import OutcomePolarity, OutcomeSource, TruthClass
+from app.core.outcome_ledger import OutcomeSource, TruthClass
 from app.signals.goal_type_adapter import GOAL_TYPE_PROFILES
 from app.signals.policy_engine import _RULE_TABLE
 

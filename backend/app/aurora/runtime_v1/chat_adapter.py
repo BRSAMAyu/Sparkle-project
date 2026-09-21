@@ -18,6 +18,7 @@ from app.aurora.runtime_v1.state import merge_activity_profile_payload, merge_ex
 from app.core.agent_profiles import AgentRole, TaskType
 from app.orchestration.aurora_language_principles import render_aurora_language_contract
 from app.orchestration.prompts import build_conversation_memory_fragment
+
 # get_configured_llm_service imported lazily at call site to avoid circular import
 from app.sprint_packs.sprint_pack_loader import get_mistake_by_nodes, load_pack
 

@@ -8,6 +8,6 @@ No external ML framework dependencies — uses pure Python decision trees
 and logistic regression trained on OutcomeRecorder history.
 """
 
-from app.services.ml.recall_ranker import RecallRanker, RecallFeatures
+from app.services.ml.recall_ranker import RecallFeatures, RecallRanker
 
 __all__ = ["RecallRanker", "RecallFeatures"]

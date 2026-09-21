@@ -4,9 +4,8 @@ Security Audit Log Models
 安全审计日志模型，用于记录所有安全相关事件
 """
 
-from datetime import datetime
-
 import uuid
+from datetime import datetime
 
 from sqlalchemy import JSON, Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID as PGUUID

@@ -37,11 +37,11 @@ from app.consumers.user_profile_bootstrap_consumer import UserProfileBootstrapCo
 from app.consumers.welcome_onboarding_consumer import WelcomeOnboardingConsumer
 from app.core.cache import cache_service
 from app.core.exceptions import SparkleException
-from app.core.request_coalescing import EndpointOverloaded
 from app.core.idempotency import get_idempotency_store
 from app.core.pending_actions import pending_actions_store
 from app.core.rate_limiting import setup_rate_limiting
 from app.core.redis_search_client import redis_search_client
+from app.core.request_coalescing import EndpointOverloaded
 from app.core.websocket import manager
 from app.db.extensions import ensure_database_extensions
 from app.db.init_db import init_db
@@ -890,6 +890,7 @@ app.include_router(api_router, prefix="/api/v1")
 
 # FV-24: Internal API for SLO auto-response
 from app.api.internal.auto_degrade import router as auto_degrade_router
+
 app.include_router(auto_degrade_router, prefix="/api/internal", tags=["Internal SLO"])
 if settings.ENABLE_AGENT_GRAPH_V2:
     try:

@@ -165,8 +165,8 @@ class StudyPlannerAgent(BaseAgent):
         learning_style: str | None = None
 
         try:
-            from app.services.galaxy_knowledge_service import GalaxyKnowledgeService
             from app.core.database import async_session_factory
+            from app.services.galaxy_knowledge_service import GalaxyKnowledgeService
 
             async with async_session_factory() as db:
                 galaxy_svc = GalaxyKnowledgeService(db)
@@ -430,8 +430,8 @@ class ProblemSolverAgent(BaseAgent):
         common_errors: list[str] | None = None
 
         try:
-            from app.services.galaxy_knowledge_service import GalaxyKnowledgeService
             from app.core.database import async_session_factory
+            from app.services.galaxy_knowledge_service import GalaxyKnowledgeService
 
             async with async_session_factory() as db:
                 galaxy_svc = GalaxyKnowledgeService(db)

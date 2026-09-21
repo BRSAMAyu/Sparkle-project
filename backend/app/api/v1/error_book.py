@@ -59,8 +59,8 @@ async def _ocr_and_update_error_task(error_id: UUID, image_url: str) -> None:
     """Fire-and-forget OCR: extract text from image and update the error record."""
     _log = logging.getLogger(__name__)
     try:
-        from app.services.ocr_service import ocr_service
         from app.db.session import AsyncSessionLocal
+        from app.services.ocr_service import ocr_service
 
         ocr_text = await ocr_service.ocr_for_math(image_url)
         if not ocr_text or not ocr_text.strip():
@@ -69,6 +69,7 @@ async def _ocr_and_update_error_task(error_id: UUID, image_url: str) -> None:
 
         async with AsyncSessionLocal() as session:
             from sqlalchemy import update
+
             from app.models.error_book import ErrorRecord
 
             stmt = (

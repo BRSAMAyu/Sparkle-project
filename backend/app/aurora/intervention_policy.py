@@ -45,6 +45,12 @@ from uuid import UUID
 
 from loguru import logger
 
+from app.aurora.intervention_catalog import (
+    INTERVENTION_CAPABILITIES,
+    INTERVENTION_CATALOG,
+    INTERVENTION_PERMISSIONS,
+    catalog_fingerprint,
+)
 from app.core.aurora_decision import (
     AURORA_COGNITION_TIERS,
     AURORA_DECISION_REF_SCHEMES,
@@ -53,12 +59,6 @@ from app.core.aurora_decision import (
     AuroraDecisionContract,
 )
 from app.models.execution_intent import ExecutionMode
-from app.aurora.intervention_catalog import (
-    INTERVENTION_CATALOG,
-    INTERVENTION_CAPABILITIES,
-    INTERVENTION_PERMISSIONS,
-    catalog_fingerprint,
-)
 
 INTERVENTION_POLICY_VERSION = "aurora_intervention_policy.v1"
 

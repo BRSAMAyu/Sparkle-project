@@ -9,12 +9,13 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-from uuid import UUID, NAMESPACE_URL, uuid4, uuid5
+from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.cache import cache_service
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.user_preferences import UserPreferencesCenter
 from app.scenario_packs.exam_prep_14d import EXAM_PREP_14D_MANIFEST_PATH, EXAM_PREP_14D_PACK_ID
@@ -35,7 +36,6 @@ from app.schemas.exam_sprint import (
 from app.services.galaxy_service import GalaxyService
 from app.services.profile_write_service import ProfileWriteService
 from app.sprint_packs.sprint_pack_registry import PACKS_DIR
-from app.core.cache import cache_service
 
 
 def _utcnow() -> datetime:

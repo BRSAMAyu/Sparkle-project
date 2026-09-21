@@ -242,6 +242,7 @@ class GalaxyEventConsumer:
         # Distributed lock to prevent concurrent creation of the same error-gap node
         try:
             import hashlib as _hashlib
+
             from app.core.cache import cache_service
             lock_key = f"galaxy:error_gap:{user_id}:{_hashlib.md5(node_name.encode()).hexdigest()[:12]}"
             lock_acquired = await cache_service.redis.set(lock_key, "1", nx=True, ex=30)

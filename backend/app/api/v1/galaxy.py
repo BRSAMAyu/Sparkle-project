@@ -24,7 +24,6 @@ from app.models.galaxy import KnowledgeNode, NodeRelation, UserNodeStatus
 from app.models.plan import Plan
 from app.models.task import Task
 from app.models.user import User
-from app.services.galaxy.mastery_evidence import EvidenceObservation, MasteryEvidenceType
 from app.schemas.galaxy import (
     ApplyNodeExpansionRequest,
     ApplyNodeExpansionResponse,
@@ -55,6 +54,7 @@ from app.schemas.galaxy import (
 )
 from app.services.decay_service import DecayService
 from app.services.expansion_service import ExpansionService
+from app.services.galaxy.mastery_evidence import EvidenceObservation, MasteryEvidenceType
 from app.services.galaxy_service import GalaxyService
 from app.services.knowledge_integration_service import KnowledgeIntegrationService
 from app.services.node_sector_service import dominant_sector_from_weights, resolve_sector_weights

@@ -60,7 +60,7 @@ class SelfModelBridge:
                 db_session=self.db_session,
             )
             completed = attribution == "effective"
-            state = await aurora.record_task_outcome(
+            await aurora.record_task_outcome(
                 user_id=user_id,
                 completed=completed,
                 reason=intervention,

@@ -24,27 +24,27 @@ from sqlalchemy.orm.attributes import set_committed_value
 
 from app.config import settings
 from app.core.event_bus import ErrorCreated, event_bus
-from app.core.time_utils import utcnow as _utcnow
 from app.core.i18n import I18n
 from app.core.llm_client import llm_client
-from app.services.llm.minimax_provider import minimax_provider
+from app.core.time_utils import utcnow as _utcnow
 from app.models.achievement import UserStreakStats
 from app.models.error_book import ErrorRecord
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.schemas.error_book import (
     ErrorAnalysisResult,
-    ErrorQueryParams,
     ErrorClusterReviewCard,
-    ErrorReviewCardAction,
-    ErrorReviewCardsResponse,
+    ErrorQueryParams,
     ErrorRecordCreate,
     ErrorRecordUpdate,
+    ErrorReviewCardAction,
+    ErrorReviewCardsResponse,
     KnowledgeLinkBrief,
     ReviewAction,
     ReviewPerformanceEnum,
 )
 from app.schemas.semantic_memory import ConceptBrief, ErrorSemanticSummary, SimilarErrorItem, StrategyNodeResponse
 from app.services.embedding_service import embedding_service
+from app.services.llm.minimax_provider import minimax_provider
 from app.services.memory_service import MemoryService
 from app.services.ocr_service import ocr_service
 from app.services.semantic_memory_service import SemanticMemoryService

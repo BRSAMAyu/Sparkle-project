@@ -41,9 +41,10 @@ from app.core.metrics import (
     record_product_loop_event,
 )
 from app.core.rate_limiting import limiter
+from app.core.security import decode_token
+
 # V3-FIX-08：guest/seed cohort 词表与 leaderboard/friend-match/search（FIX-01/07）共享常量逐字一致。
 from app.core.telemetry_boundary import EXCLUDED_COHORT_REGISTRATION_SOURCES
-from app.core.security import decode_token
 from app.core.websocket import manager
 from app.db.session import AsyncSessionLocal, get_db
 from app.models.accountability import (

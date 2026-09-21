@@ -185,7 +185,8 @@ async def create_goal(
 
     # Auto-create a Plan from milestones so the Goal has a real plan
     # entity (not just milestones stored in metadata).
-    from app.models.plan import Plan as PlanModel, PlanType, PlanStage
+    from app.models.plan import Plan as PlanModel
+    from app.models.plan import PlanStage, PlanType
 
     plan_type = PlanType.SPRINT if payload.goal_type in ("exam", "academic") else PlanType.GROWTH
     plan = PlanModel(

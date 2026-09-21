@@ -16,7 +16,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from loguru import logger
-from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 

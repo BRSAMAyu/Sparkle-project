@@ -20,12 +20,11 @@ from app.core.cache import cache_service
 from app.learning.ab_test_framework_enhanced import ABTestFrameworkEnhanced
 from app.orchestration.routing_parameter_registry import (
     ALL_DEFAULT_PARAMETERS,
-    PARAMETER_BOUNDS,
     PARAM_EXPERIMENT_PREFIX,
+    PARAMETER_BOUNDS,
     _clamp,
     _config_hash,
 )
-
 
 REGISTRY_UPDATE_KEY = "aurora:routing_params:current"
 
@@ -141,8 +140,9 @@ class RoutingParameterExperimentService:
             }
 
         # Apply: update the parameter registry in Redis
-        from app.models.experiment import ABExperiment
         import json
+
+        from app.models.experiment import ABExperiment
 
         result = await self.db.execute(
             select(ABExperiment).where(ABExperiment.id == experiment_id)

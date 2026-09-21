@@ -68,8 +68,8 @@ def _decrypt_fields(target, fields_to_decrypt: dict[str, str]) -> None:
 
 def _setup_listeners() -> None:
     """Register SQLAlchemy event listeners for PII encryption."""
-    from app.models.user import User, UserDevice
     from app.core.crypto import get_fernet_key
+    from app.models.user import User, UserDevice
 
     # Only activate if encryption key is available
     try:

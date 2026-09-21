@@ -5,8 +5,6 @@ from langgraph.graph import END, StateGraph
 from langgraph.prebuilt import ToolNode
 from loguru import logger
 
-from app.core.cache import cache_service
-
 from app.agents.graph.expert_registry import (
     get_graph_expert_specs,
     resolve_node_name,
@@ -32,6 +30,7 @@ from app.agents.graph.nodes.registry_tools import (
 )
 from app.agents.graph.nodes.router import router_node
 from app.agents.graph.state import SparkleState
+from app.core.cache import cache_service
 
 EXPERT_SPECS = get_graph_expert_specs()
 EXPERT_NODE_NAMES = [spec.node_name for spec in EXPERT_SPECS]

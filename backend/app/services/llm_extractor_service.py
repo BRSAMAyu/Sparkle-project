@@ -8,8 +8,8 @@ from typing import Any
 from uuid import UUID
 
 from app.config import settings
-from app.core.time_utils import ensure_naive_utc
 from app.core.cache import cache_service
+from app.core.time_utils import ensure_naive_utc
 from app.services.aurora_stage19_kill_switch_service import AuroraStage19KillSwitchService
 from app.services.llm_service import llm_service
 from app.services.memory_inferred_write_lane import InferredEpisodicCandidate

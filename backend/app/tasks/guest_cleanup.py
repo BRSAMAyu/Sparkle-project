@@ -6,11 +6,11 @@ Guest User Cleanup Tasks
 """
 from datetime import timedelta
 
-from app.core.time_utils import utcnow as _utcnow
 from celery import shared_task
 from loguru import logger
 from sqlalchemy import delete, select
 
+from app.core.time_utils import utcnow as _utcnow
 from app.db.session import get_db_context
 from app.models.user import User
 

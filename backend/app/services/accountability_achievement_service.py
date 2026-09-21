@@ -17,11 +17,11 @@ from loguru import logger
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.datetime_utils import _utcnow
 from app.models.accountability import (
     AccountabilityCheckin,
     AccountabilityPartnership,
 )
-from app.core.datetime_utils import _utcnow
 from app.models.achievement import Achievement, AchievementRarity, AchievementType, UserAchievement
 from app.models.user import PushPreference, User
 from app.services.notification_service import notification_service

@@ -10,19 +10,19 @@ Full Vision audit.
 from __future__ import annotations
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     Column,
     Date,
     DateTime,
     Float,
     ForeignKey,
-    JSON,
     String,
     Text,
 )
 from sqlalchemy.orm import relationship
 
-from app.models.base import BaseModel, GUID
+from app.models.base import GUID, BaseModel
 
 
 class Goal(BaseModel):

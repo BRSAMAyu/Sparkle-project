@@ -8,8 +8,8 @@ Spine Orchestrator — 编排完整的 Signal→State→Decision→Directive→A
 
 from __future__ import annotations
 
-import json
 import contextlib
+import json
 from datetime import UTC, datetime
 from typing import Any
 
@@ -23,28 +23,31 @@ from app.aurora.runtime_v1.aurora_spine_confluence import (
 )
 from app.aurora.runtime_v1.correction_feedback import CorrectionFeedbackProcessor
 from app.aurora.runtime_v1.energy_controller import EnergyLevelDecider
+
 try:
     from app.aurora.runtime_v1.l1_light_aurora import L1LightAurora
 except ImportError:
     L1LightAurora = None  # optional until GAP-P1-1 lands
 from app.aurora.runtime_v1.l0_rules import L0RuleEngine
 from app.aurora.runtime_v1.l3_full_core import L3FullCoreEngine
+from app.causal.episode_logger import CandidatePolicy, episode_logger
 from app.core.cost_controller import is_aurora_within_budget, record_aurora_cost
 from app.core.error_taxonomy import ErrorCategory, ErrorSeverity, classify_error
-from app.causal.episode_logger import CandidatePolicy, episode_logger
+from app.learning.outcome_consumer import OutcomeConsumingService
+from app.signals.absence_detector import AbsenceDetector
 from app.signals.achievement_reinforcement import AchievementReinforcementConsumer
 from app.signals.aurora_core_session import AuroraCoreSessionService, PolicyChange, SessionClosure, StatePatch
 from app.signals.aurora_wake import AuroraWakeJudge
-from app.signals.causal_trace_store import CausalTraceStore
 from app.signals.card_store import CardStore
-from app.signals.directive_store import DirectiveStore
+from app.signals.causal_trace_store import CausalTraceStore
+from app.signals.citation_validator import CitationValidator
 from app.signals.community_loops import CommunityLoopManager
 from app.signals.community_signal import CommunitySignalDetector
 from app.signals.core_session import CoreSession, CoreSessionManager
 from app.signals.directive_applier import DirectiveApplier, DirectiveAuditor
 from app.signals.directive_quota import DirectiveQuotaService
+from app.signals.directive_store import DirectiveStore
 from app.signals.exam_rescue_detector import ExamRescueDetector
-from app.signals.non_exam_first_minute_detector import NonExamFirstMinuteDetector
 from app.signals.exam_sprint_policy import ExamSprintPolicyService
 from app.signals.goal_type_adapter import GoalTypeAdapter
 from app.signals.goal_world_graph import GoalWorldGraphService
@@ -56,12 +59,13 @@ from app.signals.intervention_episode import (
 )
 from app.signals.learning_base import LearningBase
 from app.signals.learning_guard import LearningGuard
+from app.signals.low_yield_guard import LowYieldGuard
 from app.signals.material_signal import MaterialSignalDetector
 from app.signals.mistake_signal import MistakeSignalDetector
 from app.signals.multi_goal_arbitration import MultiGoalArbitrator
+from app.signals.non_exam_first_minute_detector import NonExamFirstMinuteDetector
 from app.signals.outcome_recorder import OutcomeRecorder
 from app.signals.outcome_tracker import OutcomeTracker
-from app.learning.outcome_consumer import OutcomeConsumingService
 from app.signals.partner_commitment_loop import PartnerCommitmentLoop
 from app.signals.policy_analytics import PolicyAnalytics
 from app.signals.policy_engine import PolicyEngine
@@ -74,11 +78,8 @@ from app.signals.self_model import SparkleSelfModelService
 from app.signals.signal_ranker import SignalRanker
 from app.signals.skill_extraction import SkillExtractionService
 from app.signals.skill_lifecycle import SkillLifecycleManager
-from app.signals.citation_validator import CitationValidator
-from app.signals.low_yield_guard import LowYieldGuard
 from app.signals.source_tray_integration import SourceEffectivenessTracker
 from app.signals.spine_metrics import SpineMetricsCollector
-from app.signals.absence_detector import AbsenceDetector
 from app.signals.stale_state_guard import StaleStateGuard
 from app.signals.state_packet_builder import ActionableStatePacketBuilder
 from app.signals.state_register import StateRegister
@@ -3621,9 +3622,9 @@ class SpineOrchestrator:
 
         # 11. P4 safe experiment: bandit suggestion for strategy selection
         try:
+            from app.core.metrics import SAFE_EXPERIMENT_BANDIT_BLOCK_TOTAL
             from app.signals.intervention_episode import ContextSignature
             from app.signals.safe_experiment_platform import SafeBanditController
-            from app.core.metrics import SAFE_EXPERIMENT_BANDIT_BLOCK_TOTAL
             ctx_sig = ContextSignature(
                 goal_mode="standard",
                 failure_type=signal.claim,

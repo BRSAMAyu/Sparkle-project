@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import json
 import inspect
+import json
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
@@ -420,7 +420,6 @@ class GalaxyStatsService:
             rel_result = await self.db.execute(relations_query)
             relations = rel_result.scalars().all()
 
-            best_candidate = None
             best_score = -1.0
 
             for rel in relations:

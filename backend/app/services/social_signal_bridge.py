@@ -10,7 +10,7 @@ from sqlalchemy import and_, desc, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.datetime_utils import _utcnow, _user_display_name
+from app.core.datetime_utils import _user_display_name, _utcnow
 from app.core.event_bus import event_bus
 from app.core.event_types import ACCOUNTABILITY_STRUGGLE_DETECTED
 from app.models.accountability import AccountabilityCheckin, AccountabilityPartnership, AccountabilityStatus
@@ -461,8 +461,7 @@ class SocialSignalBridge:
         if not await self._claim_dedupe_key(dedupe_key):
             return {"published": False, "reason": "deduped", "struggle_score": score}
 
-        target = await self.db.get(User, user_uuid)
-        target_name = _user_display_name(target, "你的伙伴")
+        await self.db.get(User, user_uuid)
         partner_payloads = []
         for partnership in partnerships:
             partner_id = (

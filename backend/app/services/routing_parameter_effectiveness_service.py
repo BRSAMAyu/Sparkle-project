@@ -17,7 +17,7 @@ from loguru import logger
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.metrics import get_or_create_metric, Gauge
+from app.core.metrics import Gauge, get_or_create_metric
 
 ROUTING_PARAMETER_EFFECTIVENESS = get_or_create_metric(
     Gauge,
