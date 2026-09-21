@@ -631,7 +631,7 @@ class _ReviewActionBar extends StatelessWidget {
               const SizedBox(width: DS.spacing10),
             ],
           )
-          .toList(growable: false)
+          .toList()
         ..removeLast(),
     );
   }
@@ -699,43 +699,56 @@ class _DraftReviewCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: DS.spacing18),
-                Text(
-                  draft.currentName,
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    color: DS.neutral0,
-                    fontWeight: FontWeight.w800,
-                    height: 1.15,
-                  ),
-                ),
-                const SizedBox(height: DS.spacing10),
-                Text(
-                  draft.currentDescription,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: DS.neutral0.withValues(alpha: 0.72),
-                    height: 1.5,
-                  ),
-                ),
-                if (draft.draft.similarity != null) ...[
-                  const SizedBox(height: DS.spacing18),
-                  _SimilarityBanner(similarity: draft.draft.similarity!),
-                ],
-                const SizedBox(height: DS.spacing20),
-                Text(
-                  context.l10n.galaxyDraftExcerpts,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    color: DS.neutral0,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: DS.spacing12),
+                // V25：卡身中部整体收进 Expanded 滚动区（摘录列表 shrinkWrap 并入），
+                // 小屏大字号时内部滚动而非挤穿牌堆高度（现场双溢出 164/138px）；
+                // 空间充裕时内容仍自顶部铺满，视觉与原布局一致。
                 Expanded(
-                  child: ListView.separated(
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: draft.draft.excerpts.length,
-                    separatorBuilder: (_, __) =>
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          draft.currentName,
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            color: DS.neutral0,
+                            fontWeight: FontWeight.w800,
+                            height: 1.15,
+                          ),
+                        ),
                         const SizedBox(height: DS.spacing10),
-                    itemBuilder: (context, index) => _ExcerptCard(
-                      excerpt: draft.draft.excerpts[index],
+                        Text(
+                          draft.currentDescription,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: DS.neutral0.withValues(alpha: 0.72),
+                            height: 1.5,
+                          ),
+                        ),
+                        if (draft.draft.similarity != null) ...[
+                          const SizedBox(height: DS.spacing18),
+                          _SimilarityBanner(
+                            similarity: draft.draft.similarity!,
+                          ),
+                        ],
+                        const SizedBox(height: DS.spacing20),
+                        Text(
+                          context.l10n.galaxyDraftExcerpts,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            color: DS.neutral0,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: DS.spacing12),
+                        ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: draft.draft.excerpts.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: DS.spacing10),
+                          itemBuilder: (context, index) => _ExcerptCard(
+                            excerpt: draft.draft.excerpts[index],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
