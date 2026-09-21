@@ -2262,15 +2262,21 @@ _CONFIRMATION_PENDING_NOTICE = (
 )
 
 
-def render_plan_abort_notice(plan_result: Any) -> str:
+def render_plan_abort_notice(plan_result: Any, locale: str | None = None) -> str:
     """计划执行中断 → 用户可见 delta 文案。
 
     - 确认门中断（``awaiting_user_confirmation``）：转自然话术，开发者诊断
       （``abort_reason`` 含 layer 细节）只进日志，不进聊天文本；
+    - O-07 · 预算耗尽中断（``budget_exceeded``）：转可理解文案（发生了什么 +
+      能做什么），开发者层号细节不进聊天文本（与确认门同款纪律）；
     - 其余失败：保持既有「⚠️ 计划执行中断」格式。
     """
     if getattr(plan_result, "awaiting_user_confirmation", False):
         return f"\n\n{_CONFIRMATION_PENDING_NOTICE}"
+    if getattr(plan_result, "budget_exceeded", False):
+        from app.core.safe_error_messages import budget_exhausted_turn_note
+
+        return budget_exhausted_turn_note(locale)
     return f"\n\n⚠️ 计划执行中断: {getattr(plan_result, 'abort_reason', None) or 'required step failed'}"
 
 
@@ -2630,6 +2636,19 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
         # 不再回 generation（那会规划下一轮工具调用）；已完成的部分结果已经
         # 通过 tool_result 帧流式回传——终态化由 run 层（BUDGET_EXCEEDED 迁移）
         # 承担，executor 闸门已同步落终态。
+        # O-07 · 超预算「暂停/询问（不是静默失败）」的 chat 面：补一条确定性
+        # 收尾说明（零 LLM 参与），否则用户视角就是「回复突然停了」——静默。
+        from app.core.safe_error_messages import budget_exhausted_turn_note
+
+        if stream_callback:
+            try:
+                await stream_callback(
+                    agent_service_pb2.ChatResponse(
+                        delta=budget_exhausted_turn_note(state.context_data.get("locale"))
+                    )
+                )
+            except Exception:  # noqa: BLE001 — 说明帧是 best-effort，不打断终态收敛
+                logger.warning("budget exhausted turn note streaming failed (non-fatal)")
         state.context_data["budget_exceeded"] = True
         state.next_step = "__end__"
         return state

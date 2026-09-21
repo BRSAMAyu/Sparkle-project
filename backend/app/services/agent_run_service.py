@@ -424,6 +424,12 @@ class AgentRunService:
                 raise ValueError(f"unknown terminal reason {terminal_reason!r} (closed vocabulary)")
 
         # X-06 fail-closed 契约校验：budget 四维/permissions 能力词越表即拒绝创建。
+        # O-07 · budget by user/run/tier：未显式携带 budget 时按 entitlement 派生
+        # 四维默认限额（薄派生层 app/core/budget_matrix.py；词表/校验仍是本模块
+        # normalize_budget 单一真源）。派生读 users.entitlement；读取异常按 free
+        # 收敛（宁降不升，与 entitlement.py fail-safe 同向），run 不再默认无界。
+        if budget is None:
+            budget = await self._derive_default_budget_for_user(user_uuid)
         budget_canonical = normalize_budget(budget)
         permissions_canonical = normalize_run_permissions(permissions)
 
@@ -754,6 +760,27 @@ class AgentRunService:
         await self.db.commit()
         await self.db.refresh(run)
         return run
+
+    async def _derive_default_budget_for_user(self, user_id: UUID) -> dict[str, Any] | None:
+        """O-07 · budget 缺省时的派生入口（entitlement → 四维 run 预算默认值）。
+
+        真源分工：判级只认 ``users.entitlement``（经 ``normalize_entitlement``
+        归一）；派生逻辑在 ``app/core/budget_matrix``（薄层，非第二真源）。
+        任何读取/派生异常一律回落 free 档派生值——预算派生是收紧面，故障方向
+        必须是「更保守」而不是「更无界」。
+        """
+        from app.core.budget_matrix import derive_default_run_budget_if_enabled
+        from app.core.entitlement import ENTITLEMENT_FREE
+        from app.models.user import User
+
+        try:
+            entitlement = (
+                await self.db.execute(select(User.entitlement).where(User.id == user_id))
+            ).scalar_one_or_none()
+        except Exception as exc:  # noqa: BLE001 — 判级读失败 → free（宁降不升）
+            logger.warning("run budget derivation: entitlement read failed user_id={} -> free ({!r})", user_id, exc)
+            entitlement = ENTITLEMENT_FREE
+        return derive_default_run_budget_if_enabled(entitlement)
 
     # ------------------------------------------------------------------
     # 语义操作（API 面）

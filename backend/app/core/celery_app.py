@@ -74,6 +74,8 @@ celery_app = Celery(
         # include 用 app.* 全路径，消除双根歧义（pytest 进程内顶层 `workers` 名
         # 会被 conftest 的 sys.path 前排抢占为 app.workers）。
         "app.workers.signals_learning_worker",
+        # O-07: cost/WVPL 指标日刷新（refresh_cost_wvpl_metrics，low_priority 车道）
+        "app.workers.cost_wvpl_worker",
         "app.aurora.tasks",
     ],
 )
@@ -178,6 +180,8 @@ celery_app.conf.update(
         # 记忆复活验收：文件解析任务此前无路由 → 落原生 celery 队列，
         # worker（-Q high,default,low）不消费 → process_stored_file 永久 queued
         "process_stored_file": {"queue": "default"},
+        # O-07: cost/WVPL 指标刷新归 low_priority 车道（纯聚合，可延迟）
+        "refresh_cost_wvpl_metrics": {"queue": "low_priority"},
     },
     # 监控
     worker_send_task_events=True,
@@ -1004,6 +1008,13 @@ def sweep_profile_outcome_learning(self):
 # =============================================================================
 
 celery_app.conf.beat_schedule = {
+    # O-07 · cost/WVPL 单位价值成本指标日刷新（OBSERVABILITY cost/WVPL 面板）；
+    # 纯聚合零 LLM，走 low_priority 车道；凌晨低峰避开 8 点推送/胶囊高峰。
+    "cost-wvpl-daily-refresh": {
+        "task": "refresh_cost_wvpl_metrics",
+        "schedule": crontab(hour=5, minute=10),
+        "options": {"queue": "low_priority"},
+    },
     # 每天凌晨2点清理旧数据
     "cleanup-every-day": {
         "task": "cleanup_old_data",

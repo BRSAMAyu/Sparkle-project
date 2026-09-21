@@ -410,6 +410,30 @@ class Settings(BaseSettings):
     LLM_DAILY_BUDGET_USD: float = 10.0  # Daily USD budget for LLM calls (cost_controller circuit breaker)
     RAG_DAILY_BUDGET_USD: float = 2.0  # Daily USD budget for RAG operations
     AURORA_DAILY_BUDGET_USD: float = 5.0  # Daily USD budget for Aurora operations
+    # O-07 · Redis 故障时 cost 预算核算的有界降级（与网关 GW-P2-4 QuotaLocalFallback
+    # 同设计语言：实例本地有界兜底，而非无界 fail-open）。开启后 Redis 读/写失败
+    # 期间用进程内保守累计值继续执行预算闸门，防止成本面在 Redis 故障时变成无界。
+    COST_BUDGET_REDIS_FALLBACK_ENABLED: bool = True
+    # O-07 · run 预算派生（budget by user/plan/run/tier 的 run×tier 面）：
+    # create_run 未显式携带 budget 时，按 users.entitlement（真源 app/core/entitlement.py）
+    # 派生四维 run 预算默认值（JSON: max_total_tokens/max_cost_usd/max_tool_calls/
+    # max_duration_seconds 的任意子集）。未知 entitlement 一律按 free（宁降不升）。
+    RUN_BUDGET_DEFAULTS_ENABLED: bool = True
+    RUN_BUDGET_LIMITS_FREE_JSON: str = (
+        '{"max_total_tokens": 150000, "max_cost_usd": 0.5, "max_tool_calls": 50, "max_duration_seconds": 1800}'
+    )
+    RUN_BUDGET_LIMITS_PRO_JSON: str = (
+        '{"max_total_tokens": 600000, "max_cost_usd": 2.0, "max_tool_calls": 200, "max_duration_seconds": 3600}'
+    )
+    # O-07 · 队列背压（FIX-49 glm_batch 无界回积的闸面）：投递前 LLEN 探测队列深度，
+    # 超上限即丢弃（显式 outcome + 指标 + WARNING），不再无界堆积。LIMITS_JSON 为
+    # 按队列覆盖（键=队列名，值=深度上限；0/负数=该队列显式不限），未覆盖队列用
+    # DEFAULT_MAX_DEPTH。探测自身失败不阻断投递（broker 不可达时 send_task 必然
+    # 失败，不存在无界堆积路径——见 app/core/queue_backpressure.py 模块注释）。
+    QUEUE_BACKPRESSURE_ENABLED: bool = True
+    QUEUE_BACKPRESSURE_DEFAULT_MAX_DEPTH: int = 1000
+    QUEUE_BACKPRESSURE_LIMITS_JSON: str = '{"glm_batch": 200}'
+    QUEUE_BACKPRESSURE_PROBE_TIMEOUT_SECONDS: float = 1.5
     AI_MODE_FAST_DAILY_REQUEST_LIMIT: int = 120
     AI_MODE_BALANCED_DAILY_REQUEST_LIMIT: int = 60
     AI_MODE_DEEP_DAILY_REQUEST_LIMIT: int = 24

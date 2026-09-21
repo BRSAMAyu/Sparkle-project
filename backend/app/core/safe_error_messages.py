@@ -13,6 +13,24 @@ _GENERIC_INVALID_ARGUMENT_MESSAGE = "输入内容有误，请检查后重试。"
 _GENERIC_LLM_PROVIDER_ERROR_MESSAGE = "AI 服务暂时不可用，请稍后重试。"
 _ACTIONABLE_LLM_WARMUP_MESSAGE = "AI 服务正在启动中，请等待 30 秒后重试。"
 
+# O-07 · 额度/预算耗尽的可理解 UX（acceptance：用户能看懂发生了什么、怎么办）。
+# 专指**平台侧**额度/预算耗尽（网关日额度、run 预算终态）；措辞必须回答两个
+# 问题：发生了什么 + 用户能做什么。注意这不是供应商侧 insufficient_quota
+# （那类仍走 provider 不可用分支——平台额度与上游配额是两回事，不得混导）。
+_QUOTA_EXHAUSTED_USER_MESSAGE = (
+    "你今天的 AI 学习额度已用完，额度每天自动重置。"
+    "你可以明天再来，或减少长任务的使用；升级 Pro 可获得更高额度。"
+)
+_RUN_BUDGET_EXHAUSTED_USER_MESSAGE = (
+    "本次任务的执行预算已用完，系统已停止后续步骤，已完成的部分都已保留。"
+    "你可以把任务拆小后重试，或联系管理员调整预算。"
+)
+
+# O-07 · 平台侧额度/预算耗尽异常的封闭类名词表（type(exc).__name__ 精确匹配）。
+# 用类名而非 import：本模块被编排/引擎/服务多层引用，import services 层会引入
+# 环；类名词表封闭且由测试钉死（test_o07_budget_matrix_and_ux）。
+_QUOTA_BUDGET_EXHAUSTED_EXC_NAMES = frozenset({"QuotaExceededError", "BudgetExceededError"})
+
 _LLM_PROVIDER_MODULE_MARKERS = (
     "openai",
     "anthropic",
@@ -52,12 +70,44 @@ def _http_status(exc: Exception) -> int | None:
     return None
 
 
+def budget_exhausted_turn_note(locale: str | None = None) -> str:
+    """O-07 · chat 轮因 run 预算耗尽被切断时流式给用户的收尾说明（确定性文案）。
+
+    「暂停/询问（不是静默失败）」的 chat 面：tool 循环被 BUDGET_EXCEEDED 切断
+    后，若不补这条说明，用户视角就是「回复突然停了」——静默。文案回答两件事：
+    发生了什么（预算用完、已完成部分保留）+ 能做什么（拆小重试/明日再试）。
+    """
+    normalized = str(locale or "").strip().lower()
+    if normalized.startswith("en"):
+        return (
+            "\n\nThis task ran out of its execution budget, so remaining steps were stopped. "
+            "Everything completed so far has been saved. Try again with a smaller task scope."
+        )
+    return (
+        f"\n\n{_RUN_BUDGET_EXHAUSTED_USER_MESSAGE}"
+    )
+
+
 def build_safe_chat_error(exc: Exception) -> tuple[str, int, bool]:
     """Map internal exceptions to user-safe chat error payload fields."""
     if isinstance(exc, asyncio.TimeoutError):
         return (
             _GENERIC_TIMEOUT_ERROR_MESSAGE,
             agent_service_pb2.ERROR_CODE_TIMEOUT,
+            True,
+        )
+
+    # O-07 · 平台侧额度/run 预算耗尽：显式、可行动的 UX（先于 provider 分支——
+    # QuotaExceededError 类名含 "quota"，否则会被 _is_llm_provider_exception
+    # 的 "insufficientquotaerror" 标记误吸进「AI 服务不可用」分支，用户看不懂）。
+    if type(exc).__name__ in _QUOTA_BUDGET_EXHAUSTED_EXC_NAMES:
+        if type(exc).__name__ == "BudgetExceededError":
+            message = _RUN_BUDGET_EXHAUSTED_USER_MESSAGE
+        else:
+            message = _QUOTA_EXHAUSTED_USER_MESSAGE
+        return (
+            message,
+            agent_service_pb2.ERROR_CODE_RATE_LIMITED,
             True,
         )
 

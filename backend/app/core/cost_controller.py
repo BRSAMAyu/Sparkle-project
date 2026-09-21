@@ -24,6 +24,14 @@ COST_ESTIMATED_TOTAL = Counter(
     ["category", "operation"],
 )
 
+#: O-07 · Redis 故障期间预算核算进入进程内有界降级的计数（>0 即降级生效中，
+#: 运维应同时关注网关 ``sparkle_quota_local_fallback_active``——同一故障域）。
+COST_BUDGET_REDIS_FALLBACK_TOTAL = Counter(
+    "sparkle_cost_budget_redis_fallback_total",
+    "Budget accounting entered process-local bounded fallback (Redis unavailable) by category",
+    ["category"],
+)
+
 COST_DAILY_BUDGET_USD = Gauge(
     "sparkle_cost_daily_budget_usd",
     "Configured daily budget in USD by category",
@@ -113,6 +121,15 @@ class BudgetCircuitBreaker:
 
     When a category exceeds its daily budget, operations in that category
     are either downgraded (e.g., L3→L1) or blocked entirely.
+
+    O-07 · Redis 有界降级（``COST_BUDGET_REDIS_FALLBACK_ENABLED``，默认开）：
+    Redis 读/写失败或缺失时，预算核算退回**进程内保守累计值**继续闸门——
+    降级期间成本仍有上界（per-process），不再是无界 fail-open；Redis 恢复
+    后自动清零回落到 Redis 真值。与网关 GW-P2-4 ``QuotaLocalFallback`` 同
+    设计语言：实例本地有界兜底 + 降级期显式指标（``COST_BUDGET_REDIS_FALLBACK_TOTAL``）。
+    已知近似（如实声明）：降级期本地累计的支出在 Redis 恢复后不回填
+    （incrbyfloat 当时已失败），恢复后的 Redis 计数只含恢复后支出——低估
+    幅度以降级时长为界，方向保守（闸门宁严不松）。
     """
 
     _BUDGET_KEY = "cost:daily:{category}:{date}"
@@ -136,63 +153,123 @@ class BudgetCircuitBreaker:
             }
         for cat, amount in self._budgets.items():
             COST_DAILY_BUDGET_USD.labels(category=cat).set(amount)
+        # O-07 · 有界降级状态：进程内保守累计（仅降级期累计）+ 降级中类别集合。
+        self._local_spend: dict[CostCategory, float] = {}
+        self._redis_degraded: set[CostCategory] = set()
+
+    # -- O-07 · 有界降级内部状态机 ----------------------------------------
+
+    @staticmethod
+    def _fallback_enabled() -> bool:
+        from app.config import settings as _settings
+
+        return bool(getattr(_settings, "COST_BUDGET_REDIS_FALLBACK_ENABLED", True))
+
+    def _enter_degraded(self, category: CostCategory) -> None:
+        if category not in self._redis_degraded:
+            self._redis_degraded.add(category)
+            COST_BUDGET_REDIS_FALLBACK_TOTAL.labels(category=category).inc()
+            logger.warning(
+                "cost_controller: Redis unavailable for {} budget accounting -> "
+                "process-local bounded fallback (ceiling still enforced)",
+                category,
+            )
+
+    def _exit_degraded(self, category: CostCategory) -> None:
+        if category in self._redis_degraded:
+            self._redis_degraded.discard(category)
+            self._local_spend.pop(category, None)
+            logger.info("cost_controller: Redis recovered for {} budget accounting -> redis truth restored", category)
+
+    def _local_total(self, category: CostCategory) -> float:
+        return float(self._local_spend.get(category, 0.0))
 
     def get_budget(self, category: CostCategory) -> float:
         return self._budgets.get(category, 0.0)
 
     def _get_redis(self):
         from app.core.cache import cache_service
+
         return cache_service.redis
 
     async def _get_daily_spend(self, category: CostCategory) -> float:
         redis = self._get_redis()
         if redis is None:
+            if self._fallback_enabled():
+                self._enter_degraded(category)
+                return self._local_total(category)
             return 0.0
         date_key = datetime.now(UTC).strftime("%Y-%m-%d")
         key = self._BUDGET_KEY.format(category=category, date=date_key)
         try:
             raw = await redis.get(key)
-            return float(raw) if raw else 0.0
         except Exception:
             logger.debug("cost_controller: failed to read daily spend", exc_info=True)
+            if self._fallback_enabled():
+                self._enter_degraded(category)
+                return self._local_total(category)
             return 0.0
+        self._exit_degraded(category)
+        return float(raw) if raw else 0.0
+
+    def daily_spend(self, category: CostCategory) -> float:
+        """进程内同步快照（本地累计面；Redis 真值请用 ``read_daily_spend``）。"""
+        return self._local_total(category)
+
+    async def read_daily_spend(self, category: CostCategory) -> float:
+        """公开只读：当日支出（Redis 真值；故障时为本地保守累计值）。"""
+        return await self._get_daily_spend(category)
 
     async def record_spend(self, category: CostCategory, amount_usd: float, operation: str = "") -> None:
         """Record a cost spend and update daily counter."""
         if amount_usd <= 0:
             return
         COST_ESTIMATED_TOTAL.labels(category=category, operation=operation).inc(amount_usd)
+        redis = self._get_redis()
+        if redis is None:
+            if self._fallback_enabled():
+                # O-07 · 有界降级：无 Redis 时本地保守累计（成本上限仍被执行）。
+                self._enter_degraded(category)
+                self._local_spend[category] = self._local_total(category) + float(amount_usd)
+            return
+        date_key = datetime.now(UTC).strftime("%Y-%m-%d")
+        key = self._BUDGET_KEY.format(category=category, date=date_key)
         try:
-            redis = self._get_redis()
-            if redis is None:
-                return
-            date_key = datetime.now(UTC).strftime("%Y-%m-%d")
-            key = self._BUDGET_KEY.format(category=category, date=date_key)
             await redis.incrbyfloat(key, amount_usd)
             await redis.expire(key, 48 * 3600)
+        except Exception:
+            logger.debug("cost_controller: failed to record spend", exc_info=True)
+            if self._fallback_enabled():
+                self._enter_degraded(category)
+                self._local_spend[category] = self._local_total(category) + float(amount_usd)
+            return
+        self._exit_degraded(category)
 
-            current = await self._get_daily_spend(category)
-            COST_DAILY_SPEND_USD.labels(category=category).set(current)
+        current = await self._get_daily_spend(category)
+        COST_DAILY_SPEND_USD.labels(category=category).set(current)
 
-            budget = self._budgets.get(category, 0.0)
-            if budget > 0:
-                BUDGET_UTILIZATION.labels(category=category).set(current / budget)
+        budget = self._budgets.get(category, 0.0)
+        if budget > 0:
+            BUDGET_UTILIZATION.labels(category=category).set(current / budget)
 
-            # Estimate hourly spend rate via rolling window
-            rate_key = self._SPEND_RATE_KEY.format(category=category)
-            now_ms = int(datetime.now(UTC).timestamp() * 1000)
-            window_start = now_ms - (self._SPEND_WINDOW * 1000)
+        # Estimate hourly spend rate via rolling window
+        rate_key = self._SPEND_RATE_KEY.format(category=category)
+        now_ms = int(datetime.now(UTC).timestamp() * 1000)
+        window_start = now_ms - (self._SPEND_WINDOW * 1000)
+        try:
             pipe = redis.pipeline()
             pipe.zremrangebyscore(rate_key, 0, window_start)
             pipe.zadd(rate_key, {f"{now_ms}:{operation}": amount_usd})
             pipe.zrangebyscore(rate_key, window_start, now_ms, withscores=True)
             results = await pipe.execute()
-            window_total = sum(float(s) for _, s in results[2]) if results[2] else amount_usd
-            hourly_rate = (window_total / self._SPEND_WINDOW) * 3600.0
-            SPEND_RATE_USD_PER_HOUR.labels(category=category).set(hourly_rate)
-            await redis.expire(rate_key, max(self._SPEND_WINDOW * 3, 7200))
         except Exception:
-            logger.debug("cost_controller: failed to record spend", exc_info=True)
+            # 支率窗口失败不影响预算闸门（已记上的支出不受影响）
+            logger.debug("cost_controller: failed to update spend rate window", exc_info=True)
+            return
+        window_total = sum(float(s) for _, s in results[2]) if results[2] else amount_usd
+        hourly_rate = (window_total / self._SPEND_WINDOW) * 3600.0
+        SPEND_RATE_USD_PER_HOUR.labels(category=category).set(hourly_rate)
+        await redis.expire(rate_key, max(self._SPEND_WINDOW * 3, 7200))
 
     async def check_budget(self, category: CostCategory) -> bool:
         """Return True if category is within daily budget."""
