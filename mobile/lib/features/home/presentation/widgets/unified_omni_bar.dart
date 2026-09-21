@@ -9,6 +9,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/app_permission_dialog.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/performance_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/chat/data/models/chat_mode.dart';
@@ -540,8 +541,11 @@ class _UnifiedOmniBarState extends ConsumerState<UnifiedOmniBar>
     setState(() {
       _isListening = true;
     });
-    if (!_shouldReduceMotion) {
+    if (_shouldAnimateGlow) {
       unawaited(_glowController.repeat(reverse: true));
+    } else {
+      // 低档/reduce-motion：辉光静态点亮，不做逐帧呼吸脉冲
+      _glowController.value = 1;
     }
 
     final wsUrl = '${ApiConstants.wsBaseUrl}${ApiConstants.wsStt}';
@@ -682,6 +686,14 @@ class _UnifiedOmniBarState extends ConsumerState<UnifiedOmniBar>
     if (mediaQuery == null) return false;
     return mediaQuery.disableAnimations || mediaQuery.accessibleNavigation;
   }
+
+  /// U-01 Step 2 门控扩面：持续呼吸辉光（语音监听 repeat）是纯装饰动效，
+  /// 中低档位不跑逐帧脉冲，改为静态点亮（glowValue 钉 1）。
+  /// 一次性 intent 反馈 glow（forward/reverse）属交互反馈，仍只受
+  /// reduce-motion 门控。
+  bool get _shouldAnimateGlow =>
+      !_shouldReduceMotion &&
+      PerformanceService.instance.enableParticles;
 
   void _submitIfNotComposing() {
     final composing = _controller.value.composing;

@@ -6,6 +6,7 @@ import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_section.dart';
+import 'package:sparkle/features/home/presentation/widgets/decoration_policy.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
 class ExamSprintDashboardCard extends StatefulWidget {
@@ -239,13 +240,32 @@ class _DayZeroBannerState extends State<_DayZeroBanner>
     with SingleTickerProviderStateMixin {
   late final AnimationController _floatController;
 
+  /// U-01 Step 2 门控扩面：D-0 冲刺横幅的常驻浮动动画此前无条件 repeat；
+  /// 中低档/reduce-motion 钉在静止相位，只保留静态卡面。
+  late DecorationMode _decorationMode = DecorationMode.animated;
+
   @override
   void initState() {
     super.initState();
     _floatController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 3000),
-    )..repeat(reverse: true);
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _decorationMode = resolveDecorationMode(context);
+    if (_decorationMode == DecorationMode.animated) {
+      if (!_floatController.isAnimating) {
+        _floatController.repeat(reverse: true);
+      }
+    } else {
+      _floatController
+        ..stop()
+        ..value = 0.5;
+    }
   }
 
   @override
@@ -275,15 +295,17 @@ class _DayZeroBannerState extends State<_DayZeroBanner>
           vertical: DS.spacing24,
         ),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF1A237E), Color(0xFF283593)],
+          // U-01 Step 2 token 化：本地深靛蓝字面量（0xFF1A237E/0xFF283593）
+          // 换 brandPrimary 派生 token 渐变；textOnPrimary 对比度语义不变。
+          gradient: LinearGradient(
+            colors: [DS.primaryDark, DS.brandPrimary],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: DS.borderRadius20,
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF1A237E).withValues(alpha: 0.2),
+              color: DS.primaryDark.withValues(alpha: 0.2),
               blurRadius: 24,
               offset: const Offset(0, 12),
             ),

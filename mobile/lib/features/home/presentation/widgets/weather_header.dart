@@ -4,8 +4,11 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/performance_tier.dart';
+import 'package:sparkle/core/services/performance_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
+import 'package:sparkle/features/home/presentation/widgets/decoration_policy.dart';
 import 'package:sparkle/features/home/presentation/widgets/weather_presentation.dart';
 
 /// WeatherHeader - Full-screen animated background weather system
@@ -22,6 +25,9 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
   late AnimationController _particleController;
   late Animation<double> _pulseAnimation;
 
+  /// 当前装饰档位（U-01 Step 2 门控扩面）。
+  DecorationMode _mode = DecorationMode.animated;
+
   // Random seed for consistent particle positions
   final Random _random = Random(42);
   late List<_Particle> _particles;
@@ -36,6 +42,20 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
     _initAnimations();
     _initParticles();
     _bindWeatherFeedback();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // U-01 Step 2：装饰档位（tier + reduce-motion）在依赖变化时重解析，
+    // 控制器与粒子规模随之收敛。此前两个控制器无条件 repeat 跑满 60fps。
+    final mode = resolveDecorationMode(context);
+    final modeChanged = mode != _mode;
+    _mode = mode;
+    _applyMotionPolicy();
+    if (modeChanged) {
+      _initParticles();
+    }
   }
 
   void _bindWeatherFeedback() {
@@ -59,13 +79,13 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
     _mainAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2000),
-    )..repeat(reverse: true);
+    );
 
     // Particle drift animation (clouds, rain, meteors)
     _particleController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 3000),
-    )..repeat();
+    );
 
     _pulseAnimation = Tween<double>(begin: 0.8, end: 1.2).animate(
       CurvedAnimation(
@@ -73,10 +93,41 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
     );
   }
 
+  /// U-01 Step 2：按装饰档位启停控制器。
+  ///
+  /// animated 档保持既有 repeat 节奏；staticFrame/off 档停表并钉在
+  /// 中间相位（视觉上取"平均态"单帧，不再每帧全屏重绘）。
+  void _applyMotionPolicy() {
+    if (_mode == DecorationMode.animated) {
+      if (!_mainAnimationController.isAnimating) {
+        _mainAnimationController.repeat(reverse: true);
+      }
+      if (!_particleController.isAnimating) {
+        _particleController.repeat();
+      }
+      return;
+    }
+    _mainAnimationController
+      ..stop()
+      ..value = 0.5;
+    _particleController
+      ..stop()
+      ..value = 0.25;
+  }
+
+  bool get _isUltra =>
+      PerformanceService.instance.currentTier.value == PerformanceTier.ultra;
+
   void _initParticles() {
-    // Initialize stars (shared across weather types)
+    // 星域：animated 全量/收敛，staticFrame 单帧减半，off 不挂载
+    final starCount = scaleDecorationCount(
+      _mode,
+      isUltra: _isUltra,
+      animatedCount: 20,
+      staticCount: 10,
+    );
     _stars = List.generate(
-      20,
+      starCount,
       (i) => _Star(
         x: _random.nextDouble(),
         y: _random.nextDouble() * 0.5,
@@ -87,8 +138,14 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
     );
 
     // Initialize particles for sunny weather (sun rays)
+    final sunRayCount = scaleDecorationCount(
+      _mode,
+      isUltra: _isUltra,
+      animatedCount: 8,
+      staticCount: 8,
+    );
     _particles = List.generate(
-      8,
+      sunRayCount,
       (i) => _Particle(
         angle: (i * pi / 4),
         baseRadius: 30.0 + i * 15.0,
@@ -96,8 +153,14 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
     );
 
     // Initialize clouds for cloudy weather
+    final cloudCount = scaleDecorationCount(
+      _mode,
+      isUltra: _isUltra,
+      animatedCount: 5,
+      staticCount: 3,
+    );
     _clouds = List.generate(
-      5,
+      cloudCount,
       (i) => _Cloud(
         x: _random.nextDouble(),
         y: 0.05 + _random.nextDouble() * 0.25,
@@ -108,8 +171,14 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
     );
 
     // Initialize rain drops for rainy weather
+    final rainCount = scaleDecorationCount(
+      _mode,
+      isUltra: _isUltra,
+      animatedCount: 40,
+      staticCount: 16,
+    );
     _rainDrops = List.generate(
-      40,
+      rainCount,
       (i) => _RainDrop(
         x: _random.nextDouble(),
         startY: -0.1 - _random.nextDouble() * 0.5,
@@ -119,9 +188,17 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
       ),
     );
 
-    // Initialize meteors for meteor weather
+    // Initialize meteors for meteor weather（流星是运动定义的装饰，
+    // 静态帧不成立：staticFrame/off 一律 0，由 build 跳过挂载）
+    final meteorCount = _mode == DecorationMode.animated
+        ? scaleDecorationCount(
+            _mode,
+            isUltra: _isUltra,
+            animatedCount: 6,
+          )
+        : 0;
     _meteors = List.generate(
-      6,
+      meteorCount,
       (i) => _Meteor(
         startX: 0.2 + _random.nextDouble() * 0.6,
         startY: _random.nextDouble() * 0.2,
@@ -174,8 +251,10 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
                 child: _buildAtmosphereVeil(weatherPresentation),
               ),
             ),
-            // Animated star field (always present, intensity varies)
-            _buildAnimatedStarField(weatherPresentation),
+            // Animated star field (always present, intensity varies) —
+            // U-01 Step 2：off 档不挂载星域
+            if (_stars.isNotEmpty)
+              _buildAnimatedStarField(weatherPresentation),
 
             // Weather-specific animated effects
             _buildWeatherEffects(weatherPresentation),
@@ -208,6 +287,10 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
   }
 
   Widget _buildWeatherEffects(WeatherPresentationData presentation) {
+    // U-01 Step 2：off 档不挂载天气粒子特效（色彩氛围由底色渐变+静态幔保留）
+    if (_mode == DecorationMode.off) {
+      return const SizedBox.shrink();
+    }
     switch (presentation.type) {
       case 'sunny':
         return _buildSunnyEffects(presentation.accent);
@@ -216,6 +299,10 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
       case 'rainy':
         return _buildRainyEffects(presentation.accent);
       case 'meteor':
+        // 流星/能量粒子是运动定义的装饰，静态帧不成立：仅 animated 档挂载
+        if (_mode != DecorationMode.animated) {
+          return const SizedBox.shrink();
+        }
         return _buildMeteorEffects(presentation.accent);
       default:
         return _buildSunnyEffects(presentation.accent);
@@ -223,6 +310,10 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
   }
 
   Widget _buildAtmosphereVeil(WeatherPresentationData presentation) {
+    // U-01 Step 2：staticFrame/off 档渲染固定相位单帧，去掉逐帧 AnimatedBuilder。
+    if (_mode != DecorationMode.animated) {
+      return _buildStaticAtmosphereVeil(presentation);
+    }
     return AnimatedBuilder(
       animation: Listenable.merge([
         _mainAnimationController,
@@ -282,6 +373,60 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
           ],
         );
       },
+    );
+  }
+
+  /// 静态氛围幔（staticFrame/off 档）：固定 pulse=1 / drift=0 的单帧版本，
+  /// 无 AnimatedBuilder、无逐帧重建。
+  Widget _buildStaticAtmosphereVeil(WeatherPresentationData presentation) {
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  presentation.accent.withValues(
+                    alpha: 0.05 * presentation.overlayStrength,
+                  ),
+                  presentation.softAccent.withValues(
+                    alpha: 0.04 * presentation.overlayStrength,
+                  ),
+                  Colors.transparent,
+                ],
+                stops: const [0.0, 0.38, 1.0],
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          left: -24,
+          right: -24,
+          bottom: -32,
+          child: IgnorePointer(
+            child: Container(
+              height: 180,
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  center: presentation.glowAlignment,
+                  radius: presentation.glowRadius,
+                  colors: [
+                    presentation.highlight.withValues(
+                      alpha: 0.07 * presentation.overlayStrength,
+                    ),
+                    presentation.softAccent.withValues(
+                      alpha: 0.05 * presentation.overlayStrength,
+                    ),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -390,6 +535,11 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
                 painter: _EnergyParticlePainter(
                   animationValue: _mainAnimationController.value,
                   accentColor: accentColor,
+                  particleCount: scaleDecorationCount(
+                    _mode,
+                    isUltra: _isUltra,
+                    animatedCount: 30,
+                  ),
                 ),
               ),
             ),
@@ -764,10 +914,12 @@ class _MeteorPainter extends CustomPainter {
 class _EnergyParticlePainter extends CustomPainter {
   final double animationValue;
   final Color accentColor;
+  final int particleCount;
 
   _EnergyParticlePainter({
     required this.animationValue,
     required this.accentColor,
+    this.particleCount = 30,
   });
 
   @override
@@ -776,7 +928,7 @@ class _EnergyParticlePainter extends CustomPainter {
     final random = Random(123);
 
     // Floating energy particles
-    for (var i = 0; i < 30; i++) {
+    for (var i = 0; i < particleCount; i++) {
       final baseX = random.nextDouble();
       final baseY = random.nextDouble();
 
@@ -800,5 +952,7 @@ class _EnergyParticlePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _EnergyParticlePainter oldDelegate) =>
-      animationValue != oldDelegate.animationValue;
+      animationValue != oldDelegate.animationValue ||
+      accentColor != oldDelegate.accentColor ||
+      particleCount != oldDelegate.particleCount;
 }

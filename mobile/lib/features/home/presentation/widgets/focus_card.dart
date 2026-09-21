@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
+import 'package:sparkle/features/home/presentation/widgets/decoration_policy.dart';
 
 /// FocusCard - Deep Dive Entry Card for Project Cockpit
 class FocusCard extends ConsumerStatefulWidget {
@@ -29,11 +30,26 @@ class _FocusCardState extends ConsumerState<FocusCard>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     );
-    unawaited(_flameController.repeat(reverse: true));
 
     _flameAnimation = Tween<double>(begin: 0.9, end: 1.1).animate(
       CurvedAnimation(parent: _flameController, curve: Curves.easeInOut),
     );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // U-01 Step 2 门控扩面：火焰呼吸此前无条件 repeat；
+    // 中低档/reduce-motion 钉在 scale=1.0 静态帧（图标+渐变保留）。
+    if (resolveDecorationMode(context) == DecorationMode.animated) {
+      if (!_flameController.isAnimating) {
+        unawaited(_flameController.repeat(reverse: true));
+      }
+    } else {
+      _flameController
+        ..stop()
+        ..value = 0.5;
+    }
   }
 
   @override

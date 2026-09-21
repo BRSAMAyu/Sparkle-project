@@ -1,8 +1,13 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/theme/performance_tier.dart';
+import 'package:sparkle/core/services/performance_service.dart';
 import 'package:sparkle/shared/entities/visual_element_model.dart';
 
 /// 特效层 - 渲染用户选择的特效
+///
+/// U-01 Step 2 门控扩面：low 档不挂载；medium/reduce-motion 单帧静态化；
+/// high/ultra 保持全量脉动动画。
 class EffectLayer extends StatelessWidget {
   const EffectLayer({
     super.key,
@@ -15,13 +20,46 @@ class EffectLayer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tier = PerformanceService.instance.currentTier.value;
+    if (tier == PerformanceTier.low) {
+      return const SizedBox.shrink();
+    }
+    final staticFrame = tier == PerformanceTier.medium ||
+        (MediaQuery.maybeOf(context)?.disableAnimations ?? false);
+
     // 如果没有装备特效，使用默认柔光
     if (element == null) {
-      return _buildDefaultEffect();
+      return _buildDefaultEffect(staticFrame: staticFrame);
     }
 
     final config = element!.config;
     final effectType = config['effect_type'] as String? ?? 'pulse_glow';
+
+    if (staticFrame) {
+      // 静态帧：固定中间相位，单帧绘制，无 AnimatedBuilder 逐帧重建
+      return RepaintBoundary(
+        child: Stack(
+          children: [
+            CustomPaint(
+              size: Size.infinite,
+              painter: _getEffectPainter(
+                effectType,
+                config,
+                staticValue: 0.5,
+              ),
+            ),
+            CustomPaint(
+              size: Size.infinite,
+              painter: _AmbientVignettePainter(
+                animationValue: 0.5,
+                color: _parseColor(config['color'] as String? ?? '#FFFFFF')
+                    .withValues(alpha: 0.16),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     return AnimatedBuilder(
       animation: mainAnimation,
@@ -48,41 +86,51 @@ class EffectLayer extends StatelessWidget {
     );
   }
 
-  Widget _buildDefaultEffect() => RepaintBoundary(
-        child: AnimatedBuilder(
-          animation: mainAnimation,
-          builder: (context, child) => Stack(
-            children: [
-              CustomPaint(
-                size: Size.infinite,
-                painter: _PulseGlowPainter(
-                  intensity: 0.3,
-                  color: const Color(0xFFFFFFFF),
-                  position: 'center',
-                  radius: 200,
-                  animationValue: mainAnimation.value,
-                ),
-              ),
-              CustomPaint(
-                size: Size.infinite,
-                painter: _AmbientVignettePainter(
-                  animationValue: mainAnimation.value,
-                ),
-              ),
-            ],
-          ),
+  Widget _buildDefaultEffect({required bool staticFrame}) {
+    final glow = _PulseGlowPainter(
+      intensity: 0.3,
+      color: Colors.white,
+      position: 'center',
+      radius: 200,
+      animationValue: staticFrame ? 0.5 : mainAnimation.value,
+    );
+    final vignette = _AmbientVignettePainter(
+      animationValue: staticFrame ? 0.5 : mainAnimation.value,
+    );
+    if (staticFrame) {
+      return RepaintBoundary(
+        child: Stack(
+          children: [
+            CustomPaint(size: Size.infinite, painter: glow),
+            CustomPaint(size: Size.infinite, painter: vignette),
+          ],
         ),
       );
+    }
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: mainAnimation,
+        builder: (context, child) => Stack(
+          children: [
+            CustomPaint(size: Size.infinite, painter: glow),
+            CustomPaint(size: Size.infinite, painter: vignette),
+          ],
+        ),
+      ),
+    );
+  }
 
   CustomPainter _getEffectPainter(
-      String effectType, Map<String, dynamic> config) {
+      String effectType, Map<String, dynamic> config,
+      {double? staticValue}) {
     final intensity = (config['intensity'] as num?)?.toDouble() ?? 0.5;
     final speed = (config['speed'] as num?)?.toDouble() ?? 1.0;
     final color = _parseColor(config['color'] as String? ?? '#FFFFFF');
     final position = config['position'] as String? ?? 'center';
     final radius = (config['radius'] as num?)?.toDouble() ?? 150.0;
 
-    final animatedValue = (mainAnimation.value * speed) % 1.0;
+    final animatedValue = staticValue ??
+        (mainAnimation.value * speed) % 1.0;
 
     switch (effectType) {
       case 'dual_ring':
@@ -405,10 +453,12 @@ class _SupernovaPainter extends CustomPainter {
 }
 
 class _AmbientVignettePainter extends CustomPainter {
+  // U-01 Step 2 token 化：原 0x33FFFFFF 字面量（白 20% 暗角）改由
+  // Colors.white 派生，值逐位相等。
   _AmbientVignettePainter({
     required this.animationValue,
-    this.color = const Color(0x33FFFFFF),
-  });
+    Color? color,
+  }) : color = color ?? Colors.white.withValues(alpha: 0.2);
 
   final double animationValue;
   final Color color;

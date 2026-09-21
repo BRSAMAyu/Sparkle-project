@@ -1,6 +1,8 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/theme/performance_tier.dart';
 import 'package:sparkle/core/design/widgets/animation_lifecycle_mixin.dart';
+import 'package:sparkle/core/services/performance_service.dart';
 import 'package:sparkle/shared/entities/visual_element_model.dart';
 
 /// 粒子层 - 渲染用户选择的粒子效果
@@ -53,8 +55,13 @@ class _ParticleLayerState extends State<ParticleLayer>
 
     final config = widget.element!.config;
     final baseCount = config['count'] as int? ?? 50;
-    final count =
-        (baseCount * widget.density).round().clamp(0, baseCount * 2).toInt();
+    // U-01 Step 2 密度降档：中档（单帧静态）粒子数减半；low 档 build 已不挂载
+    final tier = PerformanceService.instance.currentTier.value;
+    final tierScale = tier == PerformanceTier.medium ? 0.5 : 1.0;
+    final count = (baseCount * widget.density * tierScale)
+        .round()
+        .clamp(0, baseCount * 2)
+        .toInt();
     final minSize = (config['min_size'] as num?)?.toDouble() ?? 1.0;
     final maxSize = (config['max_size'] as num?)?.toDouble() ?? 3.0;
     final fallDirection = config['fall_direction'] as String?;
@@ -108,6 +115,25 @@ class _ParticleLayerState extends State<ParticleLayer>
       return const SizedBox.shrink();
     }
 
+    // U-01 Step 2 门控扩面：粒子引擎此前无任何 tier 门控（挂载于
+    // visual_elements 预览等处）。低档/强降动效不挂载；中档单帧静态化；
+    // 高档保持既有 per-particle blur 辉光。口径对齐既有
+    // background_layer 门控（enableParticles = ultra/high 动画）。
+    final tier = PerformanceService.instance.currentTier.value;
+    if (tier == PerformanceTier.low) {
+      return const SizedBox.shrink();
+    }
+    final staticFrame = tier == PerformanceTier.medium ||
+        (MediaQuery.maybeOf(context)?.disableAnimations ?? false);
+    if (staticFrame) {
+      return RepaintBoundary(
+        child: CustomPaint(
+          size: Size.infinite,
+          painter: _buildPainter(particleValue: 0.35, mainValue: 0.5),
+        ),
+      );
+    }
+
     final config = widget.element!.config;
     final shape = config['shape'] as String? ?? 'circle';
     final colors = (config['colors'] as List<dynamic>?)
@@ -126,19 +152,46 @@ class _ParticleLayerState extends State<ParticleLayer>
         ]),
         builder: (context, child) => CustomPaint(
           size: Size.infinite,
-          painter: _ParticlePainter(
-            particles: _particles,
-            colors: colors,
+          painter: _buildPainter(
             shape: shape,
+            colors: colors,
             twinkle: twinkle,
             drift: drift,
             speed: speed,
-            speedMultiplier: widget.speedMultiplier,
             particleValue: widget.particleAnimation.value,
             mainValue: widget.mainAnimation.value,
           ),
         ),
       ),
+    );
+  }
+
+  /// 组装粒子画笔。animated 档从 widget 配置取全量参数；
+  /// 静态帧复用同一画笔（固定相位），保证降档后视觉语言一致。
+  _ParticlePainter _buildPainter({
+    required double particleValue,
+    required double mainValue,
+    String? shape,
+    List<Color>? colors,
+    bool? twinkle,
+    bool? drift,
+    double? speed,
+  }) {
+    final config = widget.element!.config;
+    return _ParticlePainter(
+      particles: _particles,
+      colors: colors ??
+          (config['colors'] as List<dynamic>?)
+                  ?.map((c) => _parseColor(c as String))
+                  .toList() ??
+          [Colors.white],
+      shape: shape ?? config['shape'] as String? ?? 'circle',
+      twinkle: twinkle ?? config['twinkle'] as bool? ?? false,
+      drift: drift ?? config['drift'] as bool? ?? true,
+      speed: speed ?? (config['speed'] as num?)?.toDouble() ?? 1.0,
+      speedMultiplier: widget.speedMultiplier,
+      particleValue: particleValue,
+      mainValue: mainValue,
     );
   }
 

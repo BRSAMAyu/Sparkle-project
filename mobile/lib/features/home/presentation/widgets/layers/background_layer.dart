@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/performance_tier.dart';
 import 'package:sparkle/core/services/performance_service.dart';
 import 'package:sparkle/shared/entities/visual_element_model.dart';
@@ -47,16 +48,10 @@ class BackgroundLayer extends StatelessWidget {
   Widget _buildDefaultBackground() => Stack(
         children: [
           Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFF0A1024),
-                  Color(0xFF171C38),
-                  Color(0xFF1B2546),
-                ],
-              ),
+            // U-01 Step 2 token 化：本地深空色字面量（0xFF0A1024 等）换
+            // design token 派生的 deepSpaceGradient（同"深夜宇宙"语义）。
+            decoration: BoxDecoration(
+              gradient: DS.deepSpaceGradient,
             ),
           ),
           Positioned.fill(
@@ -66,8 +61,8 @@ class BackgroundLayer extends StatelessWidget {
                   center: const Alignment(0.7, -0.4),
                   radius: 1.0,
                   colors: [
-                    const Color(0xFF6B8CFF).withValues(alpha: 0.18),
-                    const Color(0xFF6B8CFF).withValues(alpha: 0.04),
+                    DS.info.withValues(alpha: 0.18),
+                    DS.info.withValues(alpha: 0.04),
                     Colors.transparent,
                   ],
                   stops: const [0.0, 0.45, 1.0],
@@ -222,7 +217,8 @@ class BackgroundLayer extends StatelessWidget {
                         ? gradient.last
                         : null)
         ?.toString();
-    return source == null ? const Color(0xFF8BE9FD) : _parseColor(source);
+    // U-01 Step 2 token 化：兜底强调色从本地青色字面量换 brandSecondary token
+    return source == null ? DS.brandSecondary : _parseColor(source);
   }
 
   Widget _buildAuroraEffect(List<dynamic> colors) => RepaintBoundary(
