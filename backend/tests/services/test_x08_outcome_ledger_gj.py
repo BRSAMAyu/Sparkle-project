@@ -221,8 +221,12 @@ async def test_gj06_succeeded_receipt_materializes_actual_outcome(db_session, re
 
 async def test_gj06_partial_and_failed_receipts_preserved_but_never_light(db_session, recording_bus):
     user = await _make_user(db_session, uid=8104)
-    partial_task = await _new_in_progress_task(db_session, user, title="GJ06 partial 任务")
-    failed_task = await _new_in_progress_task(db_session, user, title="GJ06 failed 任务")
+    # P2 收口（G-02 顺手解）：任务挂 goal-linked plan，使「三腿」中前两条腿
+    # （goal-link + spark state update）成立——此时若 PARTIAL/FAILED receipt 被
+    # 错误升 actual，loops 就会点亮；loops_total == 0 的断言因此非空洞。
+    _goal, plan = await _make_goal_plan(db_session, user, gid=8104, pid=8104)
+    partial_task = await _new_in_progress_task(db_session, user, plan_id=plan.id, title="GJ06 partial 任务")
+    failed_task = await _new_in_progress_task(db_session, user, plan_id=plan.id, title="GJ06 failed 任务")
     await _add_terminal_run(db_session, user, partial_task, RunStatus.PARTIAL)
     await _add_terminal_run(db_session, user, failed_task, RunStatus.FAILED)
 
@@ -240,6 +244,14 @@ async def test_gj06_partial_and_failed_receipts_preserved_but_never_light(db_ses
         receipts = [e for e in entry.evidence if e.source == "agent_run_receipt"]
         assert receipts, "receipt 保留为证据（可见、可审计）"
         assert receipts[0].role.value == "pipeline_echo"  # 不作独立工作证明
+
+    # P2 收口：PARTIAL/FAILED receipt 结构性不进 WVPL loops（goal-linked 且
+    # completed_at 存在的前提下仍恒为 0——点亮只由 actual 面驱动）
+    fact = await NorthStarWvplService(db_session).build_fact(as_of=_naive_now(), generated_at=_naive_now())
+    assert fact["north_star"]["loops_total"] == 0, "partial/failed receipt 不得点亮任何 loop"
+    loop_task_ids = {sample["task_id"] for sample in fact["loops"]["samples"]}
+    assert str(partial_task.id) not in loop_task_ids
+    assert str(failed_task.id) not in loop_task_ids
 
 
 # ---------------------------------------------------------------------------

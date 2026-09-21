@@ -445,6 +445,20 @@ async def lifespan(fastapp: FastAPI):
         fastapp.state.task_event_listener_task = task_event_listener_task
         logger.info("Galaxy TaskEventListener started")
 
+    # Start Galaxy outcome absorption consumer (G-02: outcome.recorded → graph)
+    outcome_absorber_task = None
+    if cache_service.redis and event_bus is not None:
+        from app.services.galaxy.outcome_absorption_service import OutcomeAbsorptionConsumer
+
+        outcome_absorber = OutcomeAbsorptionConsumer(
+            session_factory=AsyncSessionLocal,
+            event_bus=event_bus,
+        )
+        outcome_absorber_task = asyncio.create_task(outcome_absorber.start())
+        fastapp.state.outcome_absorption_consumer = outcome_absorber
+        fastapp.state.outcome_absorption_consumer_task = outcome_absorber_task
+        logger.info("Galaxy outcome absorption consumer started")
+
     async with AsyncSessionLocal() as db:
         try:
             try:
@@ -738,6 +752,17 @@ async def lifespan(fastapp: FastAPI):
         with suppress(asyncio.CancelledError):
             await task_event_listener_task
         logger.info("Galaxy TaskEventListener stopped")
+
+    # Stop Galaxy outcome absorption consumer (G-02)
+    outcome_absorber = getattr(app.state, "outcome_absorption_consumer", None)
+    outcome_absorber_task = getattr(app.state, "outcome_absorption_consumer_task", None)
+    if outcome_absorber:
+        outcome_absorber.stop()
+    if outcome_absorber_task:
+        outcome_absorber_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await outcome_absorber_task
+        logger.info("Galaxy outcome absorption consumer stopped")
 
     # Stop Galaxy Streaming Service
     galaxy_streaming_service = getattr(app.state, "galaxy_streaming_service", None)
