@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
 import 'package:sparkle/features/chat/presentation/widgets/working_memory_badge.dart';
@@ -217,9 +218,10 @@ class _ChatWorkingMemoryPanelState
 
   Widget _buildExpandedBody() {
     if (_loading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: DS.spacing12),
-        child: LinearProgressIndicator(),
+      return Padding(
+        // U-01 Step 3：裸 LinearProgressIndicator 迁 owner（非 const 工厂）。
+        padding: const EdgeInsets.symmetric(vertical: DS.spacing12),
+        child: LoadingIndicator.linear(liveRegion: false),
       );
     }
     if (_error != null) {

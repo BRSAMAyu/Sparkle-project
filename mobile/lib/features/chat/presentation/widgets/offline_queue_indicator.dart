@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 
 enum OfflineQueueIndicatorStatus {
@@ -127,13 +128,11 @@ class _StatusGlyph extends StatelessWidget {
       case OfflineQueueIndicatorStatus.queued:
         return Icon(Icons.wifi_off_rounded, size: 16, color: DS.warning);
       case OfflineQueueIndicatorStatus.sending:
-        return SizedBox(
-          width: 14,
-          height: 14,
-          child: CircularProgressIndicator(
+        return LoadingIndicator.circular(
+            size: 14,
             strokeWidth: 2,
-            valueColor: AlwaysStoppedAnimation<Color>(DS.info),
-          ),
+            color: DS.info,
+            liveRegion: false,
         );
       case OfflineQueueIndicatorStatus.complete:
         return Icon(

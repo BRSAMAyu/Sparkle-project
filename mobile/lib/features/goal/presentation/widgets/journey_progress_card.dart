@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/goal/data/models/scenario_pack_models.dart';
 
@@ -91,11 +92,13 @@ class JourneyProgressCard extends StatelessWidget {
             const SizedBox(height: 10),
             ClipRRect(
               borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
+              // U-01 Step 3：确定性进度条迁 owner。
+              child: LoadingIndicator.linear(
                 value: progress.progress.clamp(0.0, 1.0),
-                minHeight: 6,
+                size: 6,
                 backgroundColor: DS.surfaceTertiary,
-                valueColor: AlwaysStoppedAnimation(DS.brandPrimary),
+                color: DS.brandPrimary,
+                liveRegion: false,
               ),
             ),
             const SizedBox(height: 8),

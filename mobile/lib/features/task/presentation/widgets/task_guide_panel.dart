@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/graphite_surfaces.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sparkle_motion_primitives.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -324,14 +325,16 @@ class _GuideBody extends StatelessWidget {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(999),
-                  child: LinearProgressIndicator(
+                  // U-01 Step 3：确定性进度条迁 owner。
+                  child: LoadingIndicator.linear(
                     key: const Key('done-criteria-progress'),
-                    minHeight: 8,
+                    size: 8,
                     value: doneCriteria.isEmpty
                         ? 0.0
                         : completedCriteriaCount / doneCriteria.length,
                     backgroundColor: DS.surfaceSecondary,
-                    valueColor: AlwaysStoppedAnimation<Color>(DS.success),
+                    color: DS.success,
+                    liveRegion: false,
                   ),
                 ),
                 const SizedBox(height: DS.spacing10),

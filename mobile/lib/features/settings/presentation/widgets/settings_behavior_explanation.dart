@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class SettingsBehaviorExplanation extends StatefulWidget {
@@ -247,10 +248,10 @@ class SettingsDataControlsCard extends StatelessWidget {
                 ),
               ),
               if (saving)
-                const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                LoadingIndicator.circular(
+                    size: 18,
+                    strokeWidth: 2,
+                    liveRegion: false,
                 ),
             ],
           ),

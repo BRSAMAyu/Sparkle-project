@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 
@@ -90,11 +91,14 @@ class LongTermPlanCard extends ConsumerWidget {
                 child: SizedBox(
                   height: 4,
                   width: compact ? 52 : 60,
-                  child: LinearProgressIndicator(
+                  // U-01 Step 3：确定性进度条迁 owner（圆角等价）。
+                  child: LoadingIndicator.linear(
                     value: growth.progress,
+                    size: 4,
                     backgroundColor: isDark ? DS.neutral800 : DS.neutral200,
-                    valueColor: AlwaysStoppedAnimation<Color>(DS.success),
+                    color: DS.success,
                     borderRadius: BorderRadius.circular(2),
+                    liveRegion: false,
                   ),
                 ),
               ),

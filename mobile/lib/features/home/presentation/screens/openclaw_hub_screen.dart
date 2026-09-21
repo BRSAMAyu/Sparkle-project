@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/openclaw_automation_service.dart';
@@ -545,10 +546,12 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                       const SizedBox(height: DS.spacing10),
                       ClipRRect(
                         borderRadius: BorderRadius.circular(999),
-                        child: LinearProgressIndicator(
-                          minHeight: 4,
+                        // U-01 Step 3：裸 LinearProgressIndicator 迁 owner。
+                        child: LoadingIndicator.linear(
+                          size: 4,
                           backgroundColor: DS.surfaceSecondary,
                           color: DS.info,
+                          liveRegion: false,
                         ),
                       ),
                     ],

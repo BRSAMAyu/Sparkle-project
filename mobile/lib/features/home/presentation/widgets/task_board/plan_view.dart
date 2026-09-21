@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/presentation/providers/plan_name_provider.dart';
@@ -160,13 +161,14 @@ class DashboardPlanManager extends ConsumerWidget {
           ),
           const SizedBox(height: DS.spacing12),
           if (planState.isLoading && allPlans.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: DS.spacing12),
+            Padding(
+              // U-01 Step 3：内层为 owner 工厂构造（非 const），去掉外层 const。
+              padding: const EdgeInsets.symmetric(vertical: DS.spacing12),
               child: Center(
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                child: LoadingIndicator.circular(
+                  size: 20,
+                  strokeWidth: 2,
+                  liveRegion: false,
                 ),
               ),
             )
@@ -531,11 +533,12 @@ class _ActivePlanSlot extends ConsumerWidget {
           const SizedBox(height: DS.spacing10),
           ClipRRect(
             borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
+            // U-01 Step 3：确定性进度条迁 owner（背景为 owner 默认轨道色）。
+            child: LoadingIndicator.linear(
               value: plan.progress.clamp(0, 1),
-              minHeight: 6,
-              backgroundColor: DS.neutral200,
-              valueColor: AlwaysStoppedAnimation<Color>(DS.brandPrimary),
+              size: 6,
+              color: DS.brandPrimary,
+              liveRegion: false,
             ),
           ),
           const SizedBox(height: DS.spacing8),

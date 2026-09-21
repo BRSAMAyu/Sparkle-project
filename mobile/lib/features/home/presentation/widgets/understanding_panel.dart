@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/presentation/providers/understanding_snapshot_provider.dart';
 
@@ -146,10 +147,12 @@ class _UnderstandingPanelState extends ConsumerState<UnderstandingPanel> {
             onToggle: null,
           ),
           const SizedBox(height: 12),
-          LinearProgressIndicator(
-            minHeight: 3,
+          // U-01 Step 3：裸 LinearProgressIndicator 迁 owner。
+          LoadingIndicator.linear(
+            size: 3,
             color: scheme.primary,
             backgroundColor: scheme.surfaceContainerHighest,
+            liveRegion: false,
           ),
         ],
       );

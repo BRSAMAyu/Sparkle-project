@@ -1279,7 +1279,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                           aiUsageSummary.when(
                             data: (summary) => _buildAiUsageSummary(summary),
                             loading: () =>
-                                const LinearProgressIndicator(minHeight: 3),
+                                LoadingIndicator.linear(size: 3, liveRegion: false),
                             error: (_, __) => Container(
                               width: double.infinity,
                               padding: const EdgeInsets.all(12),
@@ -1308,7 +1308,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                               ],
                             ),
                             loading: () =>
-                                const LinearProgressIndicator(minHeight: 3),
+                                LoadingIndicator.linear(size: 3, liveRegion: false),
                             error: (_, __) => Container(
                               width: double.infinity,
                               padding: const EdgeInsets.all(12),
@@ -1533,7 +1533,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           if (!notificationPrefs.isLoaded)
-                            const LinearProgressIndicator(minHeight: 3)
+                            LoadingIndicator.linear(size: 3, liveRegion: false)
                           else ...[
                             SwitchListTile(
                               contentPadding: EdgeInsets.zero,

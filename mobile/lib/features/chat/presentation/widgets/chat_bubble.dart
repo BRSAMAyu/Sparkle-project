@@ -10,6 +10,7 @@ import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_network_image.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
@@ -2593,10 +2594,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     final msg = widget.message as PrivateMessageInfo;
 
     if (msg.isSending) {
-      return const SizedBox(
-        width: 12,
-        height: 12,
-        child: CircularProgressIndicator(strokeWidth: 1),
+      return LoadingIndicator.circular(
+          size: 12,
+          strokeWidth: 1,
+          liveRegion: false,
       );
     }
     if (msg.hasError) {
@@ -3176,13 +3177,11 @@ class _DeliveryBadge extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (showSpinner)
-              SizedBox(
-                width: 12,
-                height: 12,
-                child: CircularProgressIndicator(
+              LoadingIndicator.circular(
+                  size: 12,
                   strokeWidth: 1.6,
-                  valueColor: AlwaysStoppedAnimation<Color>(color),
-                ),
+                  color: color,
+                  liveRegion: false,
               )
             else if (icon != null)
               Icon(icon, size: 13, color: color),

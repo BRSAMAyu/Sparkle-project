@@ -270,11 +270,20 @@ class CompactEmptyState extends StatelessWidget {
     this.icon,
     this.onAction,
     this.actionText,
+    this.description,
+    this.iconSize,
   });
   final String message;
   final IconData? icon;
   final VoidCallback? onAction;
   final String? actionText;
+
+  /// 次要提示文案（U-01 Step 3 扩展：两段文案的内联空态迁移所需）
+  final String? description;
+
+  /// 图标尺寸（U-01 Step 3 扩展：紧凑内联空态视觉等价所需，
+  /// null 时保持历史默认 64）
+  final double? iconSize;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -288,7 +297,7 @@ class CompactEmptyState extends StatelessWidget {
               if (icon != null) ...[
                 Icon(
                   icon,
-                  size: 64,
+                  size: iconSize ?? 64,
                   color: context.colors.textSecondary,
                 ),
                 const SizedBox(height: DS.spacing16),
@@ -302,6 +311,16 @@ class CompactEmptyState extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
               ),
+              if (description != null) ...[
+                const SizedBox(height: DS.spacing4),
+                Text(
+                  description!,
+                  style: context.typo.labelSmall.copyWith(
+                    color: context.colors.textMuted,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
               if (onAction != null && actionText != null) ...[
                 const SizedBox(height: DS.spacing24),
                 SparkleButton(

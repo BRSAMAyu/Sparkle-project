@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/features/home/presentation/providers/home_growth_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/active_bottleneck_alert.dart';
 import 'package:sparkle/features/home/presentation/widgets/daily_context_line.dart';
@@ -67,12 +68,21 @@ void main() {
       ),
     );
 
+    // U-01 Step 3：进度环迁 owner LoadingIndicator，key 挂在 owner 上，
+    // 数值/颜色断言下钻到其内部 CircularProgressIndicator。
+    final ownerFinder = find.byKey(const ValueKey('today-growth-progress'));
+    expect(find.byType(LoadingIndicator), findsOneWidget);
     final progress = tester.widget<CircularProgressIndicator>(
-      find.byKey(const ValueKey('today-growth-progress')),
+      find.descendant(
+        of: ownerFinder,
+        matching: find.byType(CircularProgressIndicator),
+      ),
     );
     final valueColor = progress.valueColor as AlwaysStoppedAnimation<Color>;
 
     expect(progress.value, 1);
+    expect(progress.strokeWidth, 7);
+    expect(progress.strokeCap, StrokeCap.round);
     expect(valueColor.value, DS.success);
     expect(find.textContaining('今天收束得很漂亮'), findsOneWidget);
   });

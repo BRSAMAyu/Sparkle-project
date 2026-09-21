@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
@@ -263,16 +264,14 @@ class _SprintHeader extends ConsumerWidget {
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  SizedBox(
-                    width: 36,
-                    height: 36,
-                    child: CircularProgressIndicator(
-                      value: sprint.progress,
-                      strokeWidth: 3,
-                      backgroundColor: DS.surfaceSecondary,
-                      valueColor:
-                          AlwaysStoppedAnimation<Color>(DS.brandPrimary),
-                    ),
+                  // U-01 Step 3：确定性进度环迁 owner。
+                  LoadingIndicator.circular(
+                    value: sprint.progress,
+                    size: 36,
+                    strokeWidth: 3,
+                    backgroundColor: DS.surfaceSecondary,
+                    color: DS.brandPrimary,
+                    liveRegion: false,
                   ),
                   Text(
                     '${(sprint.progress * 100).toInt()}%',

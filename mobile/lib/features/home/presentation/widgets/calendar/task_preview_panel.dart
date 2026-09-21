@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
@@ -203,10 +204,15 @@ class TaskPreviewPanel extends ConsumerWidget {
     );
   }
 
-  Widget _buildLoadingState() => const SizedBox(
+  Widget _buildLoadingState() => SizedBox(
+      // U-01 Step 3：裸 CPI 迁 owner（36px/strokeWidth 4 等价）。
       height: 120,
       child: Center(
-        child: CircularProgressIndicator(),
+        child: LoadingIndicator.circular(
+          size: 36,
+          strokeWidth: 4,
+          liveRegion: false,
+        ),
       ),
     );
 

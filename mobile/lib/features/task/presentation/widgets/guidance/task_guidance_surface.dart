@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/utils/text_rendering.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
@@ -168,10 +169,10 @@ class _TaskGuidanceSurfaceState extends ConsumerState<TaskGuidanceSurface> {
                 ),
               ),
               if (isLoading)
-                const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                LoadingIndicator.circular(
+                    size: 18,
+                    strokeWidth: 2,
+                    liveRegion: false,
                 ),
             ],
           ),

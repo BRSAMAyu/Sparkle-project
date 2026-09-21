@@ -8,6 +8,7 @@ import 'package:sparkle/core/design/components/atoms/task_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sparkle_tappable.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -604,15 +605,11 @@ class _TaskCardState extends ConsumerState<TaskCard> {
                           Positioned(
                             top: 8,
                             right: 8,
-                            child: SizedBox(
-                              width: 14,
-                              height: 14,
-                              child: CircularProgressIndicator(
+                            child: LoadingIndicator.circular(
+                                size: 14,
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  context.colors.brandPrimary,
-                                ),
-                              ),
+                                color: context.colors.brandPrimary,
+                                liveRegion: false,
                             ),
                           ),
                       ],

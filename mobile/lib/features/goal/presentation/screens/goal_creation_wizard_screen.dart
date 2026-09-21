@@ -668,7 +668,10 @@ class _MilestoneEditorStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    if (loading) return const LinearProgressIndicator(minHeight: 4);
+    // U-01 Step 3：裸 LinearProgressIndicator 迁 owner（minHeight 4 等价）。
+    if (loading) {
+      return LoadingIndicator.linear(size: 4, liveRegion: false);
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

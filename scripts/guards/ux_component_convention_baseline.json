@@ -6,7 +6,7 @@
       "parallelClass": 1,
       "rawButton": 2,
       "rawChip": 0,
-      "rawSpinner": 1
+      "rawSpinner": 0
     },
     "mobile/lib/features/chat/presentation/screens/group_chat_screen.dart": {
       "colorLiteral": 0,
@@ -29,13 +29,6 @@
       "rawChip": 0,
       "rawSpinner": 0
     },
-    "mobile/lib/features/chat/presentation/widgets/agent_avatar_switcher.dart": {
-      "colorLiteral": 0,
-      "parallelClass": 0,
-      "rawButton": 0,
-      "rawChip": 0,
-      "rawSpinner": 1
-    },
     "mobile/lib/features/chat/presentation/widgets/agent_reasoning_bubble.dart": {
       "colorLiteral": 0,
       "parallelClass": 0,
@@ -48,7 +41,7 @@
       "parallelClass": 0,
       "rawButton": 0,
       "rawChip": 1,
-      "rawSpinner": 2
+      "rawSpinner": 0
     },
     "mobile/lib/features/chat/presentation/widgets/agent_team_sheet.dart": {
       "colorLiteral": 0,
@@ -62,7 +55,7 @@
       "parallelClass": 2,
       "rawButton": 0,
       "rawChip": 0,
-      "rawSpinner": 2
+      "rawSpinner": 0
     },
     "mobile/lib/features/chat/presentation/widgets/ai_reasoning_mode_pill.dart": {
       "colorLiteral": 0,
@@ -97,7 +90,7 @@
       "parallelClass": 5,
       "rawButton": 0,
       "rawChip": 0,
-      "rawSpinner": 1
+      "rawSpinner": 0
     },
     "mobile/lib/features/chat/presentation/widgets/calibration_receipt_chip.dart": {
       "colorLiteral": 0,
@@ -115,10 +108,10 @@
     },
     "mobile/lib/features/chat/presentation/widgets/causal_timeline_panel.dart": {
       "colorLiteral": 0,
-      "parallelClass": 4,
+      "parallelClass": 2,
       "rawButton": 3,
       "rawChip": 0,
-      "rawSpinner": 1
+      "rawSpinner": 0
     },
     "mobile/lib/features/chat/presentation/widgets/chat_accessory_pill.dart": {
       "colorLiteral": 0,
@@ -132,21 +125,21 @@
       "parallelClass": 1,
       "rawButton": 2,
       "rawChip": 0,
-      "rawSpinner": 2
+      "rawSpinner": 0
     },
     "mobile/lib/features/chat/presentation/widgets/chat_design_language_widgets.dart": {
       "colorLiteral": 0,
       "parallelClass": 3,
       "rawButton": 0,
       "rawChip": 0,
-      "rawSpinner": 1
+      "rawSpinner": 0
     },
     "mobile/lib/features/chat/presentation/widgets/chat_input.dart": {
       "colorLiteral": 0,
       "parallelClass": 1,
       "rawButton": 2,
       "rawChip": 0,
-      "rawSpinner": 1
+      "rawSpinner": 0
     },
     "mobile/lib/features/chat/presentation/widgets/chat_mode_selector_pill.dart": {
       "colorLiteral": 0,
@@ -168,20 +161,6 @@
       "rawButton": 0,
       "rawChip": 0,
       "rawSpinner": 0
-    },
-    "mobile/lib/features/chat/presentation/widgets/community_chat_input.dart": {
-      "colorLiteral": 0,
-      "parallelClass": 0,
-      "rawButton": 0,
-      "rawChip": 0,
-      "rawSpinner": 1
-    },
-    "mobile/lib/features/chat/presentation/widgets/content_review_card.dart": {
-      "colorLiteral": 0,
-      "parallelClass": 0,
-      "rawButton": 0,
-      "rawChip": 0,
-      "rawSpinner": 2
     },
     "mobile/lib/features/chat/presentation/widgets/contextual_correction_bar.dart": {
       "colorLiteral": 0,
@@ -223,7 +202,7 @@
       "parallelClass": 1,
       "rawButton": 0,
       "rawChip": 0,
-      "rawSpinner": 1
+      "rawSpinner": 0
     },
     "mobile/lib/features/chat/presentation/widgets/graph_diagnostic_card.dart": {
       "colorLiteral": 0,
@@ -237,14 +216,7 @@
       "parallelClass": 2,
       "rawButton": 0,
       "rawChip": 0,
-      "rawSpinner": 1
-    },
-    "mobile/lib/features/chat/presentation/widgets/intent_preview_dialog.dart": {
-      "colorLiteral": 0,
-      "parallelClass": 0,
-      "rawButton": 0,
-      "rawChip": 0,
-      "rawSpinner": 1
+      "rawSpinner": 0
     },
     "mobile/lib/features/chat/presentation/widgets/low_yield_gentle_block_card.dart": {
       "colorLiteral": 0,
@@ -258,21 +230,7 @@
       "parallelClass": 1,
       "rawButton": 0,
       "rawChip": 0,
-      "rawSpinner": 1
-    },
-    "mobile/lib/features/chat/presentation/widgets/offline_queue_indicator.dart": {
-      "colorLiteral": 0,
-      "parallelClass": 0,
-      "rawButton": 0,
-      "rawChip": 0,
-      "rawSpinner": 1
-    },
-    "mobile/lib/features/chat/presentation/widgets/plan_review_card.dart": {
-      "colorLiteral": 0,
-      "parallelClass": 0,
-      "rawButton": 0,
-      "rawChip": 0,
-      "rawSpinner": 1
+      "rawSpinner": 0
     },
     "mobile/lib/features/chat/presentation/widgets/plan_selector_pill.dart": {
       "colorLiteral": 0,
@@ -295,19 +253,12 @@
       "rawChip": 0,
       "rawSpinner": 0
     },
-    "mobile/lib/features/chat/presentation/widgets/regeneration_prompt.dart": {
-      "colorLiteral": 0,
-      "parallelClass": 0,
-      "rawButton": 0,
-      "rawChip": 0,
-      "rawSpinner": 2
-    },
     "mobile/lib/features/chat/presentation/widgets/source_explanation_card.dart": {
       "colorLiteral": 0,
       "parallelClass": 2,
       "rawButton": 0,
       "rawChip": 0,
-      "rawSpinner": 1
+      "rawSpinner": 0
     },
     "mobile/lib/features/chat/presentation/widgets/spine_receipt_card.dart": {
       "colorLiteral": 0,
@@ -335,7 +286,7 @@
       "parallelClass": 1,
       "rawButton": 0,
       "rawChip": 0,
-      "rawSpinner": 1
+      "rawSpinner": 0
     },
     "mobile/lib/features/chat/presentation/widgets/task_stuck_card.dart": {
       "colorLiteral": 0,
@@ -351,13 +302,6 @@
       "rawChip": 0,
       "rawSpinner": 0
     },
-    "mobile/lib/features/chat/presentation/widgets/voice_input_button.dart": {
-      "colorLiteral": 0,
-      "parallelClass": 0,
-      "rawButton": 0,
-      "rawChip": 0,
-      "rawSpinner": 1
-    },
     "mobile/lib/features/chat/presentation/widgets/working_memory_badge.dart": {
       "colorLiteral": 0,
       "parallelClass": 1,
@@ -370,7 +314,7 @@
       "parallelClass": 0,
       "rawButton": 3,
       "rawChip": 0,
-      "rawSpinner": 1
+      "rawSpinner": 0
     },
     "mobile/lib/features/galaxy/presentation/screens/galaxy_draft_review_screen.dart": {
       "colorLiteral": 4,
@@ -468,21 +412,21 @@
       "parallelClass": 1,
       "rawButton": 0,
       "rawChip": 0,
-      "rawSpinner": 1
+      "rawSpinner": 0
     },
     "mobile/lib/features/goal/presentation/screens/goal_detail_screen.dart": {
       "colorLiteral": 0,
       "parallelClass": 2,
       "rawButton": 1,
       "rawChip": 0,
-      "rawSpinner": 2
+      "rawSpinner": 0
     },
     "mobile/lib/features/goal/presentation/widgets/goal_bottleneck_strip.dart": {
       "colorLiteral": 0,
       "parallelClass": 1,
       "rawButton": 0,
       "rawChip": 0,
-      "rawSpinner": 1
+      "rawSpinner": 0
     },
     "mobile/lib/features/goal/presentation/widgets/goal_created_dialog.dart": {
       "colorLiteral": 0,
@@ -491,13 +435,6 @@
       "rawChip": 0,
       "rawSpinner": 0
     },
-    "mobile/lib/features/goal/presentation/widgets/goal_intent_input.dart": {
-      "colorLiteral": 0,
-      "parallelClass": 0,
-      "rawButton": 0,
-      "rawChip": 0,
-      "rawSpinner": 1
-    },
     "mobile/lib/features/goal/presentation/widgets/intent_confirmation_card.dart": {
       "colorLiteral": 0,
       "parallelClass": 1,
@@ -505,26 +442,19 @@
       "rawChip": 0,
       "rawSpinner": 0
     },
-    "mobile/lib/features/goal/presentation/widgets/journey_progress_card.dart": {
-      "colorLiteral": 0,
-      "parallelClass": 0,
-      "rawButton": 0,
-      "rawChip": 0,
-      "rawSpinner": 1
-    },
     "mobile/lib/features/home/presentation/screens/dashboard_screen.dart": {
       "colorLiteral": 0,
       "parallelClass": 5,
       "rawButton": 4,
       "rawChip": 0,
-      "rawSpinner": 2
+      "rawSpinner": 0
     },
     "mobile/lib/features/home/presentation/screens/openclaw_hub_screen.dart": {
       "colorLiteral": 0,
       "parallelClass": 0,
       "rawButton": 2,
       "rawChip": 0,
-      "rawSpinner": 1
+      "rawSpinner": 0
     },
     "mobile/lib/features/home/presentation/widgets/active_bottleneck_alert.dart": {
       "colorLiteral": 0,
@@ -539,13 +469,6 @@
       "rawButton": 1,
       "rawChip": 0,
       "rawSpinner": 0
-    },
-    "mobile/lib/features/home/presentation/widgets/calendar/task_preview_panel.dart": {
-      "colorLiteral": 0,
-      "parallelClass": 0,
-      "rawButton": 0,
-      "rawChip": 0,
-      "rawSpinner": 1
     },
     "mobile/lib/features/home/presentation/widgets/calendar_heatmap_card.dart": {
       "colorLiteral": 0,
@@ -596,13 +519,6 @@
       "rawChip": 0,
       "rawSpinner": 0
     },
-    "mobile/lib/features/home/presentation/widgets/goal_switcher.dart": {
-      "colorLiteral": 0,
-      "parallelClass": 0,
-      "rawButton": 0,
-      "rawChip": 0,
-      "rawSpinner": 1
-    },
     "mobile/lib/features/home/presentation/widgets/insight_hub_card.dart": {
       "colorLiteral": 0,
       "parallelClass": 0,
@@ -624,13 +540,6 @@
       "rawChip": 0,
       "rawSpinner": 0
     },
-    "mobile/lib/features/home/presentation/widgets/long_term_plan_card.dart": {
-      "colorLiteral": 0,
-      "parallelClass": 0,
-      "rawButton": 0,
-      "rawChip": 0,
-      "rawSpinner": 1
-    },
     "mobile/lib/features/home/presentation/widgets/multi_agent_bar.dart": {
       "colorLiteral": 0,
       "parallelClass": 2,
@@ -645,13 +554,6 @@
       "rawChip": 0,
       "rawSpinner": 0
     },
-    "mobile/lib/features/home/presentation/widgets/openclaw_automation_panel.dart": {
-      "colorLiteral": 0,
-      "parallelClass": 0,
-      "rawButton": 0,
-      "rawChip": 0,
-      "rawSpinner": 2
-    },
     "mobile/lib/features/home/presentation/widgets/openclaw_connection_diagnostics_sheet.dart": {
       "colorLiteral": 0,
       "parallelClass": 2,
@@ -659,33 +561,26 @@
       "rawChip": 0,
       "rawSpinner": 0
     },
-    "mobile/lib/features/home/presentation/widgets/openclaw_node_management_panel.dart": {
-      "colorLiteral": 0,
-      "parallelClass": 0,
-      "rawButton": 0,
-      "rawChip": 0,
-      "rawSpinner": 2
-    },
     "mobile/lib/features/home/presentation/widgets/predicted_intent_card.dart": {
       "colorLiteral": 0,
       "parallelClass": 1,
       "rawButton": 0,
       "rawChip": 0,
-      "rawSpinner": 1
+      "rawSpinner": 0
     },
     "mobile/lib/features/home/presentation/widgets/task_board/plan_view.dart": {
       "colorLiteral": 0,
       "parallelClass": 1,
       "rawButton": 2,
       "rawChip": 0,
-      "rawSpinner": 2
+      "rawSpinner": 0
     },
     "mobile/lib/features/home/presentation/widgets/task_board/sprint_view.dart": {
       "colorLiteral": 0,
       "parallelClass": 1,
       "rawButton": 0,
       "rawChip": 0,
-      "rawSpinner": 1
+      "rawSpinner": 0
     },
     "mobile/lib/features/home/presentation/widgets/thought_capsule_dialog.dart": {
       "colorLiteral": 0,
@@ -699,21 +594,21 @@
       "parallelClass": 1,
       "rawButton": 0,
       "rawChip": 0,
-      "rawSpinner": 1
+      "rawSpinner": 0
     },
     "mobile/lib/features/home/presentation/widgets/understanding_panel.dart": {
       "colorLiteral": 0,
       "parallelClass": 2,
       "rawButton": 2,
       "rawChip": 0,
-      "rawSpinner": 1
+      "rawSpinner": 0
     },
     "mobile/lib/features/home/presentation/widgets/unified_omni_bar.dart": {
       "colorLiteral": 0,
       "parallelClass": 2,
       "rawButton": 0,
       "rawChip": 0,
-      "rawSpinner": 1
+      "rawSpinner": 0
     },
     "mobile/lib/features/home/presentation/widgets/weather_presentation.dart": {
       "colorLiteral": 0,
@@ -750,26 +645,19 @@
       "rawChip": 0,
       "rawSpinner": 0
     },
-    "mobile/lib/features/memory/presentation/widgets/pending_commitments_section.dart": {
-      "colorLiteral": 0,
-      "parallelClass": 0,
-      "rawButton": 0,
-      "rawChip": 0,
-      "rawSpinner": 1
-    },
     "mobile/lib/features/memory/presentation/widgets/unresolved_conflicts_section.dart": {
       "colorLiteral": 0,
       "parallelClass": 0,
       "rawButton": 3,
       "rawChip": 0,
-      "rawSpinner": 1
+      "rawSpinner": 0
     },
     "mobile/lib/features/settings/presentation/screens/accessibility_settings_screen.dart": {
       "colorLiteral": 0,
       "parallelClass": 0,
       "rawButton": 0,
       "rawChip": 1,
-      "rawSpinner": 1
+      "rawSpinner": 0
     },
     "mobile/lib/features/settings/presentation/screens/openclaw_settings_screen.dart": {
       "colorLiteral": 0,
@@ -783,28 +671,14 @@
       "parallelClass": 0,
       "rawButton": 13,
       "rawChip": 0,
-      "rawSpinner": 3
+      "rawSpinner": 0
     },
     "mobile/lib/features/settings/presentation/widgets/openclaw_execution_preferences_card.dart": {
       "colorLiteral": 0,
       "parallelClass": 0,
       "rawButton": 1,
       "rawChip": 0,
-      "rawSpinner": 1
-    },
-    "mobile/lib/features/settings/presentation/widgets/settings_behavior_explanation.dart": {
-      "colorLiteral": 0,
-      "parallelClass": 0,
-      "rawButton": 0,
-      "rawChip": 0,
-      "rawSpinner": 1
-    },
-    "mobile/lib/features/task/presentation/screens/task_create_screen.dart": {
-      "colorLiteral": 0,
-      "parallelClass": 0,
-      "rawButton": 0,
-      "rawChip": 0,
-      "rawSpinner": 1
+      "rawSpinner": 0
     },
     "mobile/lib/features/task/presentation/screens/task_execution_screen.dart": {
       "colorLiteral": 0,
@@ -825,7 +699,7 @@
       "parallelClass": 1,
       "rawButton": 3,
       "rawChip": 0,
-      "rawSpinner": 1
+      "rawSpinner": 0
     },
     "mobile/lib/features/task/presentation/widgets/execution_result_renderer.dart": {
       "colorLiteral": 0,
@@ -834,19 +708,12 @@
       "rawChip": 0,
       "rawSpinner": 0
     },
-    "mobile/lib/features/task/presentation/widgets/execution_template_card.dart": {
-      "colorLiteral": 0,
-      "parallelClass": 0,
-      "rawButton": 0,
-      "rawChip": 0,
-      "rawSpinner": 1
-    },
     "mobile/lib/features/task/presentation/widgets/guidance/task_guidance_surface.dart": {
       "colorLiteral": 0,
       "parallelClass": 2,
       "rawButton": 0,
       "rawChip": 0,
-      "rawSpinner": 1
+      "rawSpinner": 0
     },
     "mobile/lib/features/task/presentation/widgets/paused_task_status_panel.dart": {
       "colorLiteral": 0,
@@ -862,26 +729,12 @@
       "rawChip": 0,
       "rawSpinner": 0
     },
-    "mobile/lib/features/task/presentation/widgets/subtask_list_widget.dart": {
-      "colorLiteral": 0,
-      "parallelClass": 0,
-      "rawButton": 0,
-      "rawChip": 0,
-      "rawSpinner": 1
-    },
     "mobile/lib/features/task/presentation/widgets/task_card.dart": {
       "colorLiteral": 0,
       "parallelClass": 2,
       "rawButton": 2,
       "rawChip": 0,
-      "rawSpinner": 1
-    },
-    "mobile/lib/features/task/presentation/widgets/task_chat_panel.dart": {
-      "colorLiteral": 0,
-      "parallelClass": 0,
-      "rawButton": 0,
-      "rawChip": 0,
-      "rawSpinner": 1
+      "rawSpinner": 0
     },
     "mobile/lib/features/task/presentation/widgets/task_feedback_dialog.dart": {
       "colorLiteral": 8,
@@ -895,14 +748,7 @@
       "parallelClass": 4,
       "rawButton": 0,
       "rawChip": 0,
-      "rawSpinner": 1
-    },
-    "mobile/lib/features/task/presentation/widgets/task_offline_indicator.dart": {
-      "colorLiteral": 0,
-      "parallelClass": 0,
-      "rawButton": 0,
-      "rawChip": 0,
-      "rawSpinner": 1
+      "rawSpinner": 0
     },
     "mobile/lib/features/task/presentation/widgets/task_protocol_panel.dart": {
       "colorLiteral": 0,
@@ -918,13 +764,6 @@
       "rawChip": 0,
       "rawSpinner": 0
     },
-    "mobile/lib/features/task/presentation/widgets/why_this_today_panel.dart": {
-      "colorLiteral": 0,
-      "parallelClass": 0,
-      "rawButton": 0,
-      "rawChip": 0,
-      "rawSpinner": 1
-    },
     "mobile/lib/features/user/presentation/screens/profile_screen.dart": {
       "colorLiteral": 20,
       "parallelClass": 0,
@@ -937,7 +776,7 @@
       "parallelClass": 1,
       "rawButton": 4,
       "rawChip": 0,
-      "rawSpinner": 3
+      "rawSpinner": 0
     }
   }
 }

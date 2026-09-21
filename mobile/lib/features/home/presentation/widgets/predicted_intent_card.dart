@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/core/network/dio_provider.dart';
@@ -238,11 +239,13 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
                   Expanded(
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(999),
-                      child: LinearProgressIndicator(
-                        minHeight: 6,
+                      // U-01 Step 3：确定性进度条迁 owner。
+                      child: LoadingIndicator.linear(
+                        size: 6,
                         value: forecast.confidence.clamp(0.0, 1.0),
                         backgroundColor: DS.surfaceTertiary,
-                        valueColor: AlwaysStoppedAnimation<Color>(DS.info),
+                        color: DS.info,
+                        liveRegion: false,
                       ),
                     ),
                   ),

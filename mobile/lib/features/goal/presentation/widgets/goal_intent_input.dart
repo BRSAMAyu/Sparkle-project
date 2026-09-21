@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// Phase-1 Entry Wire — single natural-language input that replaces step 0
@@ -54,10 +55,11 @@ class GoalIntentInput extends StatelessWidget {
         FilledButton.icon(
           onPressed: analyzing ? null : onSubmit,
           icon: analyzing
-              ? const SizedBox(
-                  height: 16,
-                  width: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+              ? LoadingIndicator.circular(
+                  // U-01 Step 3：裸 CPI 迁 owner。
+                  size: 16,
+                  strokeWidth: 2,
+                  liveRegion: false,
                 )
               : const Icon(Icons.auto_awesome_rounded),
           label: Text(

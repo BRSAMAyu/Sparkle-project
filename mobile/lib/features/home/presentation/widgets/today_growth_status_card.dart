@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/home/presentation/providers/home_growth_provider.dart';
@@ -278,13 +279,16 @@ class _ProgressRing extends StatelessWidget {
           SizedBox(
             width: 62,
             height: 62,
-            child: CircularProgressIndicator(
+            // U-01 Step 3：确定性进度环迁 owner（strokeCap/底环等价）。
+            child: LoadingIndicator.circular(
               key: const ValueKey('today-growth-progress'),
               value: clampedProgress,
+              size: 62,
               strokeWidth: 7,
               strokeCap: StrokeCap.round,
               backgroundColor: color.withValues(alpha: 0.16),
-              valueColor: AlwaysStoppedAnimation<Color>(color),
+              color: color,
+              liveRegion: false,
             ),
           ),
           Text(

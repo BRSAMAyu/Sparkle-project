@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/task/data/models/execution_template_model.dart';
 
@@ -117,11 +118,14 @@ class ExecutionTemplateCard extends StatelessWidget {
                         child: Stack(
                           alignment: Alignment.center,
                           children: [
-                            CircularProgressIndicator(
+                            // U-01 Step 3：确定性进度环迁 owner。
+                            LoadingIndicator.circular(
                               value: score,
+                              size: 36,
                               strokeWidth: 3,
                               color: accent,
                               backgroundColor: accent.withValues(alpha: 0.14),
+                              liveRegion: false,
                             ),
                             Text(
                               '${(score * 100).round()}%',

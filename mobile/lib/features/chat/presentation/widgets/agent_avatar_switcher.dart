@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 
@@ -332,13 +333,12 @@ class AgentStatusIndicator extends StatelessWidget {
           ),
           if (isThinking) ...[
             const SizedBox(width: DS.sm),
-            SizedBox(
-              width: 12,
-              height: 12,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(config.color),
-              ),
+            // U-01 Step 3：裸 CircularProgressIndicator 迁 owner LoadingIndicator。
+            LoadingIndicator.circular(
+              size: 12,
+              strokeWidth: 2,
+              color: config.color,
+              liveRegion: false,
             ),
           ],
         ],

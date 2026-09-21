@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/services/openclaw_execution_preferences_service.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -82,10 +83,10 @@ class _OpenClawExecutionPreferencesCardState
                 ),
               ),
               if (service.isLoading || service.isSaving)
-                const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                LoadingIndicator.circular(
+                    size: 18,
+                    strokeWidth: 2,
+                    liveRegion: false,
                 ),
             ],
           ),

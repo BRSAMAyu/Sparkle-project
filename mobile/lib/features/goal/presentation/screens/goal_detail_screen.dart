@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -196,10 +197,13 @@ class _GoalHeader extends StatelessWidget {
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      CircularProgressIndicator(
+                      // U-01 Step 3：确定性进度环迁 owner。
+                      LoadingIndicator.circular(
                         value: progress,
+                        size: 76,
                         strokeWidth: 8,
                         backgroundColor: DS.surfaceHigh,
+                        liveRegion: false,
                       ),
                       Text(
                         '${(progress * 100).round()}%',
@@ -673,7 +677,8 @@ class _MetricLine extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 6),
-          LinearProgressIndicator(value: value, minHeight: 6),
+          // U-01 Step 3：确定性进度条迁 owner（背景为 owner 默认轨道色）。
+          LoadingIndicator.linear(value: value, size: 6, liveRegion: false),
         ],
       ),
     );

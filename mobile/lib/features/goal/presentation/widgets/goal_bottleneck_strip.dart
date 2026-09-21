@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/goal/presentation/providers/goal_detail_provider.dart';
 import 'package:sparkle/features/goal/presentation/widgets/goal_detail_l10n.dart';
@@ -114,11 +115,13 @@ class _BottleneckCard extends StatelessWidget {
               const Spacer(),
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: LinearProgressIndicator(
+                // U-01 Step 3：确定性进度条迁 owner。
+                child: LoadingIndicator.linear(
                   value: item.mastery,
-                  minHeight: 8,
+                  size: 8,
                   backgroundColor: colorScheme.surfaceContainerHighest,
                   color: colorScheme.primary,
+                  liveRegion: false,
                 ),
               ),
               const SizedBox(height: 8),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/task/data/models/priority_reasoning.dart';
 import 'package:sparkle/features/task/data/repositories/priority_reasoning_repository.dart';
@@ -103,14 +104,15 @@ class _ExpandedReasoning extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => asyncReasoning.when(
-        loading: () => const Padding(
-          padding: EdgeInsets.fromLTRB(
+        loading: () => Padding(
+          // U-01 Step 3：裸 LinearProgressIndicator 迁 owner。
+          padding: const EdgeInsets.fromLTRB(
             DS.spacing14,
             0,
             DS.spacing14,
             DS.spacing14,
           ),
-          child: LinearProgressIndicator(minHeight: 3),
+          child: LoadingIndicator.linear(size: 3, liveRegion: false),
         ),
         error: (_, __) => Padding(
           padding: const EdgeInsets.fromLTRB(

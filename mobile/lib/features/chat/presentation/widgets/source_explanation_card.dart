@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/chat/presentation/providers/source_explanation_provider.dart';
 
@@ -352,14 +353,12 @@ class _SourceTile extends StatelessWidget {
               tooltip: context.l10n.sourceExplanationCorrectSource,
               onPressed: pending ? null : onCorrect,
               icon: pending
-                  ? SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: scheme.primary,
-                      ),
-                    )
+                  ? LoadingIndicator.circular(
+                      size: 18,
+                      strokeWidth: 2,
+                      color: scheme.primary,
+                      liveRegion: false,
+                  )
                   : const Icon(Icons.edit_note_rounded),
               color: scheme.primary,
             ),

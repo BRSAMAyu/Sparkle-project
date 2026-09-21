@@ -8,6 +8,7 @@ import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/app_permission_dialog.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/performance_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -372,14 +373,15 @@ class _UnifiedOmniBarState extends ConsumerState<UnifiedOmniBar>
             ),
             const SizedBox(width: DS.spacing4),
             if (_isLoading)
-              const SizedBox(
+              SizedBox(
+                // U-01 Step 3：内层为 owner 工厂构造（非 const），去掉外层 const。
                 width: DS.touchTargetMinSize,
                 height: DS.touchTargetMinSize,
                 child: Center(
-                  child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                  child: LoadingIndicator.circular(
+                    size: 20,
+                    strokeWidth: 2,
+                    liveRegion: false,
                   ),
                 ),
               )

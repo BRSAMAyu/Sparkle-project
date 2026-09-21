@@ -1,3 +1,4 @@
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'dart:async';
 
@@ -166,16 +167,12 @@ class _OpenClawAutomationPanelState
                           ? null
                           : () => unawaited(_submitBatch(automation)),
                   icon: automation.isSubmittingBatch
-                      ? SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              DS.textOnPrimary,
-                            ),
-                          ),
-                        )
+                      ? LoadingIndicator.circular(
+                          size: 16,
+                          strokeWidth: 2,
+                          color: DS.textOnPrimary,
+                          liveRegion: false,
+                      )
                       : const Icon(Icons.playlist_add_check_circle_rounded),
                   label: Text(context.l10n.openclawStartBatchDelegation),
                 ),
@@ -337,16 +334,12 @@ class _OpenClawAutomationPanelState
                       ? null
                       : () => unawaited(_createSchedule(automation)),
                   icon: automation.isSavingSchedule
-                      ? SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              DS.textOnPrimary,
-                            ),
-                          ),
-                        )
+                      ? LoadingIndicator.circular(
+                          size: 16,
+                          strokeWidth: 2,
+                          color: DS.textOnPrimary,
+                          liveRegion: false,
+                      )
                       : const Icon(Icons.add_alarm_rounded),
                   label: Text(context.l10n.openclawCreateAutomation),
                 ),

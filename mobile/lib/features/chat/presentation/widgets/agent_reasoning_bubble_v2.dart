@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -256,11 +257,12 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                   width: 20,
                   height: 20,
                   margin: const EdgeInsets.only(right: 8),
-                  child: CircularProgressIndicator(
+                  // U-01 Step 3：裸 CPI 迁 owner。
+                  child: LoadingIndicator.circular(
+                    size: 20,
                     strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation(
-                      _getAgentColor(context, activeStep.agent),
-                    ),
+                    color: _getAgentColor(context, activeStep.agent),
+                    liveRegion: false,
                   ),
                 )
               else if (isCompleted)
@@ -526,12 +528,10 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
           size: 16,
         );
       case StepStatus.inProgress:
-        return const SizedBox(
-          width: 16,
-          height: 16,
-          child: CircularProgressIndicator(
+        return LoadingIndicator.circular(
+            size: 16,
             strokeWidth: 2,
-          ),
+            liveRegion: false,
         );
       case StepStatus.failed:
         return Icon(

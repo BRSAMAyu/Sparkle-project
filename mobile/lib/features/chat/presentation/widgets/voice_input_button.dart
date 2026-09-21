@@ -6,6 +6,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_permission_dialog.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/chat/data/services/audio_recording_service.dart';
@@ -400,13 +401,12 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
     final fontSize = (widget.size * 0.17).clamp(6.0, 10.0);
 
     if (_isProcessing) {
-      return SizedBox(
-        width: progressSize,
-        height: progressSize,
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          color: DS.brandPrimaryConst,
-        ),
+      // U-01 Step 3：裸 CPI 迁 owner。
+      return LoadingIndicator.circular(
+        size: progressSize,
+        strokeWidth: 2,
+        color: DS.brandPrimaryConst,
+        liveRegion: false,
       );
     }
 

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/scroll_edge_haptics.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
@@ -2178,14 +2179,16 @@ class _CommandCenterContent extends StatelessWidget {
             padding: const EdgeInsets.only(top: DS.spacing12),
             child: ClipRRect(
               borderRadius: DS.borderRadiusFull,
-              child: LinearProgressIndicator(
-                minHeight: 8,
+              // U-01 Step 3：确定性进度条迁 owner。
+              child: LoadingIndicator.linear(
+                size: 8,
                 value: progress > 0
                     ? progress.clamp(0, 1)
                     : (dashboardState.activePlanProgress?.progress ?? 0)
                         .clamp(0, 1),
                 backgroundColor: DS.surfaceOverlay,
-                valueColor: AlwaysStoppedAnimation<Color>(accentColor),
+                color: accentColor,
+                liveRegion: false,
               ),
             ),
           ),
@@ -2867,11 +2870,13 @@ class _PlanProgressTile extends StatelessWidget {
             const SizedBox(height: DS.spacing6),
             ClipRRect(
               borderRadius: DS.borderRadiusFull,
-              child: LinearProgressIndicator(
-                minHeight: 8,
+              // U-01 Step 3：确定性进度条迁 owner。
+              child: LoadingIndicator.linear(
+                size: 8,
                 value: plan.progress.clamp(0, 1),
                 backgroundColor: DS.surfaceOverlay,
-                valueColor: AlwaysStoppedAnimation<Color>(DS.brandPrimary),
+                color: DS.brandPrimary,
+                liveRegion: false,
               ),
             ),
             const SizedBox(height: DS.spacing8),

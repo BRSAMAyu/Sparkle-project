@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/task/presentation/providers/subtask_provider.dart';
@@ -156,10 +157,15 @@ class _SubtaskListWidgetState extends ConsumerState<SubtaskListWidget> {
           final state = ref.watch(subtaskNotifierProvider(widget.parentTaskId));
 
           if (state.isLoading) {
-            return const Center(
+            return Center(
+              // U-01 Step 3：裸 CPI 迁 owner（36px/strokeWidth 4 等价）。
               child: Padding(
-                padding: EdgeInsets.all(DS.lg),
-                child: CircularProgressIndicator(),
+                padding: const EdgeInsets.all(DS.lg),
+                child: LoadingIndicator.circular(
+                  size: 36,
+                  strokeWidth: 4,
+                  liveRegion: false,
+                ),
               ),
             );
           }

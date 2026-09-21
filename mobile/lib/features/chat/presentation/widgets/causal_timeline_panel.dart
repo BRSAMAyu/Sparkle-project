@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/empty_state.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
@@ -174,13 +176,31 @@ class CausalTimelinePanel extends ConsumerWidget {
                     ref.read(causalTimelineProvider.notifier).load()),
             Flexible(
               child: timeline.when(
-                loading: () => const _LoadingState(),
+                loading: () => Padding(
+                  // U-01 Step 3：私有 _LoadingState 迁 owner LoadingIndicator
+                  //（裸 CPI 默认 36px/strokeWidth 4，语义不变）。
+                  padding: const EdgeInsets.all(40),
+                  child: Center(
+                    child: LoadingIndicator.circular(
+                      size: 36,
+                      strokeWidth: 4,
+                      liveRegion: false,
+                    ),
+                  ),
+                ),
                 error: (e, _) => _ErrorState(
                   onRetry: () =>
                       ref.read(causalTimelineProvider.notifier).load(),
                 ),
                 data: (entries) => entries.isEmpty
-                    ? const _EmptyState()
+                    ? CompactEmptyState(
+                        // U-01 Step 3：私有 _EmptyState 迁 owner（扩展
+                        // description/iconSize 保两段文案与紧凑图标）。
+                        icon: Icons.history_toggle_off,
+                        iconSize: 36,
+                        message: context.l10n.chatCausalNoRecords,
+                        description: context.l10n.chatCausalNoRecordsHint,
+                      )
                     : _EntryList(
                         entries: entries,
                         onCorrect: (entry, action, explanation) => ref
@@ -254,16 +274,6 @@ class _Header extends StatelessWidget {
       );
 }
 
-class _LoadingState extends StatelessWidget {
-  const _LoadingState();
-
-  @override
-  Widget build(BuildContext context) => const Padding(
-        padding: EdgeInsets.all(40),
-        child: Center(child: CircularProgressIndicator()),
-      );
-}
-
 class _ErrorState extends StatelessWidget {
   const _ErrorState({required this.onRetry});
 
@@ -283,32 +293,6 @@ class _ErrorState extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             TextButton(onPressed: onRetry, child: Text(S.chatLabelRetry)),
-          ],
-        ),
-      );
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.all(40),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.history_toggle_off, color: DS.textTertiary, size: 36),
-            const SizedBox(height: 12),
-            Text(
-              context.l10n.chatCausalNoRecords,
-              style: DS.bodySmall.copyWith(color: DS.textSecondary),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              context.l10n.chatCausalNoRecordsHint,
-              style: DS.labelSmall.copyWith(color: DS.textTertiary),
-              textAlign: TextAlign.center,
-            ),
           ],
         ),
       );

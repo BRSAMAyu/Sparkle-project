@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/offline/connectivity_provider.dart';
 import 'package:sparkle/features/task/data/services/task_offline_queue.dart';
@@ -55,10 +56,11 @@ class TaskOfflineIndicator extends ConsumerWidget {
             ),
           ),
           if (!isOffline && pending > 0)
-            const SizedBox(
-              height: 14,
-              width: 14,
-              child: CircularProgressIndicator(strokeWidth: 2),
+            // U-01 Step 3：裸 CPI 迁 owner。
+            LoadingIndicator.circular(
+              size: 14,
+              strokeWidth: 2,
+              liveRegion: false,
             ),
         ],
       ),

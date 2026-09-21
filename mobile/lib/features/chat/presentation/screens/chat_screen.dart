@@ -1378,11 +1378,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             if (chatState.isLoading)
-                              LinearProgressIndicator(
-                                backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(DS.primaryBase),
-                                minHeight: 2,
+                              LoadingIndicator.linear(
+                                // U-01 Step 3：裸 LinearProgressIndicator 迁
+                                // owner；liveRegion:false 保持既有进度条语义。
+                                color: DS.primaryBase,
+                                backgroundColor:
+                                    DS.surfacePrimary.withValues(alpha: 0),
+                                size: 2,
+                                liveRegion: false,
                               ),
                             ChatWorkingMemoryPanel(
                               sessionId: chatState.conversationId,

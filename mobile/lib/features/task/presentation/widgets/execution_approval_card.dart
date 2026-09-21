@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/task/data/models/execution_intent_model.dart';
@@ -307,16 +308,12 @@ class _ExecutionApprovalCardState extends State<ExecutionApprovalCard> {
                       ),
                     ),
                     child: widget.isLoading
-                        ? SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                DS.surfacePrimary,
-                              ),
-                            ),
-                          )
+                        ? LoadingIndicator.circular(
+                            size: 18,
+                            strokeWidth: 2,
+                            color: DS.surfacePrimary,
+                            liveRegion: false,
+                        )
                         : Text(
                             copy.adoptResult,
                             style: DS.bodyMedium.copyWith(color: DS.white),

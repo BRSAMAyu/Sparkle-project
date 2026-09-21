@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
@@ -201,13 +202,11 @@ class _SingleAgentBadge extends StatelessWidget {
           ),
           if (isActive) ...[
             const SizedBox(width: DS.spacing6),
-            SizedBox(
-              width: 10,
-              height: 10,
-              child: CircularProgressIndicator(
+            LoadingIndicator.circular(
+                size: 10,
                 strokeWidth: 1.5,
                 color: agentColor,
-              ),
+                liveRegion: false,
             ),
           ],
           if (entry.durationMs != null) ...[
@@ -776,13 +775,12 @@ class _StatusDot extends StatelessWidget {
   Widget build(BuildContext context) {
     const size = 18.0;
     if (status == 'active') {
-      return SizedBox(
-        width: size,
-        height: size,
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          color: color,
-        ),
+      // U-01 Step 3：裸 CPI 迁 owner。
+      return LoadingIndicator.circular(
+        size: size,
+        strokeWidth: 2,
+        color: color,
+        liveRegion: false,
       );
     }
     if (status == 'error') {

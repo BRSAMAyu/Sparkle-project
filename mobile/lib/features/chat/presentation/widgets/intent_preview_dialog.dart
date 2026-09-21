@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -121,7 +122,13 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const CircularProgressIndicator(),
+              // U-01 Step 3：裸 CircularProgressIndicator 迁 owner（默认
+              // 36px/strokeWidth 4 等价）。
+              LoadingIndicator.circular(
+                size: 36,
+                strokeWidth: 4,
+                liveRegion: false,
+              ),
               const SizedBox(height: 16),
               Text(context.l10n.intentPreviewAnalyzing),
             ],

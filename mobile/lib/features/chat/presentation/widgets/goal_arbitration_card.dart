@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 
@@ -303,15 +304,15 @@ class _GoalRow extends StatelessWidget {
                 const SizedBox(height: 3),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(3),
-                  child: LinearProgressIndicator(
+                  // U-01 Step 3：确定性进度条迁 owner。
+                  child: LoadingIndicator.linear(
                     value: fraction.clamp(0.0, 1.0),
-                    minHeight: 4,
+                    size: 4,
                     backgroundColor: DS.borderSubtle,
-                    valueColor: AlwaysStoppedAnimation(
-                      isPrimary
-                          ? DS.warning
-                          : DS.warning.withValues(alpha: 0.35),
-                    ),
+                    color: isPrimary
+                        ? DS.warning
+                        : DS.warning.withValues(alpha: 0.35),
+                    liveRegion: false,
                   ),
                 ),
               ],

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 
@@ -299,22 +300,22 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
             // Animated progress indicator
             AnimatedBuilder(
               animation: _progressAnimation,
-              builder: (context, child) => LinearProgressIndicator(
+              // U-01 Step 3：裸 LinearProgressIndicator 迁 owner。
+              builder: (context, child) => LoadingIndicator.linear(
                 backgroundColor:
                     theme.colorScheme.primary.withValues(alpha: 0.2),
+                liveRegion: false,
               ),
             ),
             const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
+                LoadingIndicator.circular(
+                    size: 16,
                     strokeWidth: 2,
                     color: theme.colorScheme.primary,
-                  ),
+                    liveRegion: false,
                 ),
                 const SizedBox(width: 8),
                 Text(

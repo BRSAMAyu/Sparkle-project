@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/chat/presentation/widgets/intent_preview_dialog.dart';
@@ -111,13 +112,11 @@ class _IntentAnalysisChipState extends ConsumerState<IntentAnalysisChip> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(
-              width: 14,
-              height: 14,
-              child: CircularProgressIndicator(
+            LoadingIndicator.circular(
+                size: 14,
                 strokeWidth: 2,
                 color: Theme.of(context).primaryColor,
-              ),
+                liveRegion: false,
             ),
             const SizedBox(width: 8),
             Text(

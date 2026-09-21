@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
@@ -1112,11 +1113,11 @@ class _OpenClawConnectionPanelState
                       ? null
                       : () => unawaited(_testConnection(service)),
                   child: _testing
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
+                      ? LoadingIndicator.circular(
+                          size: 18,
+                          strokeWidth: 2,
+                          liveRegion: false,
+                      )
                       : Text(context.l10n.openclawTestConnection),
                 ),
               ),
@@ -1127,16 +1128,12 @@ class _OpenClawConnectionPanelState
                       ? null
                       : () => unawaited(_saveConnection(service)),
                   child: _saving
-                      ? SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              DS.neutral0,
-                            ),
-                          ),
-                        )
+                      ? LoadingIndicator.circular(
+                          size: 18,
+                          strokeWidth: 2,
+                          color: DS.neutral0,
+                          liveRegion: false,
+                      )
                       : Text(context.l10n.openclawSaveConfig),
                 ),
               ),
@@ -1164,11 +1161,11 @@ class _OpenClawConnectionPanelState
                         ? null
                         : () => unawaited(_retryQueuedRequests(service)),
                     child: _retryingQueue
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
+                        ? LoadingIndicator.circular(
+                            size: 18,
+                            strokeWidth: 2,
+                            liveRegion: false,
+                        )
                         : Text(context.l10n.openclawRetryQueue),
                   ),
                 ),

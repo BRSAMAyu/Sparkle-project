@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_bubble.dart';
@@ -241,12 +242,14 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
                     ),
                   ),
                   if (chatState.isLoading)
-                    const Padding(
-                      padding: EdgeInsets.all(DS.sm),
-                      child: SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                    Padding(
+                      // U-01 Step 3：内层为 owner 工厂构造（非 const），
+                      // 去掉外层 const。
+                      padding: const EdgeInsets.all(DS.sm),
+                      child: LoadingIndicator.circular(
+                        size: 16,
+                        strokeWidth: 2,
+                        liveRegion: false,
                       ),
                     )
                   else

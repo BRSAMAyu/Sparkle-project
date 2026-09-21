@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/features/chat/presentation/widgets/offline_queue_indicator.dart';
 
 import '../../../../shared/i18n_test_helper.dart';
@@ -45,7 +46,16 @@ void main() {
     );
 
     expect(find.text('正在发送 3 条排队消息...'), findsOneWidget);
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    // U-01 Step 3：发送中 spinner 已迁 owner LoadingIndicator，
+    // 其内部仍渲染 CircularProgressIndicator。
+    expect(find.byType(LoadingIndicator), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(LoadingIndicator),
+        matching: find.byType(CircularProgressIndicator),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('shows completion state after all queued messages send',

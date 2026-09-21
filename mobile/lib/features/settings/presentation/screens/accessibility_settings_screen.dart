@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/settings/presentation/providers/accessibility_provider.dart';
 
@@ -43,7 +44,9 @@ class AccessibilitySettingsScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.symmetric(vertical: DS.spacing12),
           children: [
-            if (!settings.isLoaded) const LinearProgressIndicator(minHeight: 3),
+            // U-01 Step 3：裸 LinearProgressIndicator 迁 owner。
+            if (!settings.isLoaded)
+              LoadingIndicator.linear(size: 3, liveRegion: false),
             if (settings.lastError != null) ...[
               _StatusBanner(
                 icon: Icons.sync_problem_rounded,

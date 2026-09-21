@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
@@ -96,10 +97,15 @@ class _StudyMaterialsSheetState extends ConsumerState<StudyMaterialsSheet> {
             ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 320),
               child: state.documents.when(
-                loading: () => const Center(
+                loading: () => Center(
+                  // U-01 Step 3：裸 CircularProgressIndicator 迁 owner。
                   child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: DS.spacing32),
-                    child: CircularProgressIndicator(),
+                    padding: const EdgeInsets.symmetric(vertical: DS.spacing32),
+                    child: LoadingIndicator.circular(
+                      size: 36,
+                      strokeWidth: 4,
+                      liveRegion: false,
+                    ),
                   ),
                 ),
                 error: (error, _) => Padding(

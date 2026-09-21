@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
@@ -593,14 +594,12 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                 size: DS.iconSizeBase,
                               )
                             : _isSending
-                                ? SizedBox(
-                                    width: 22,
-                                    height: 22,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: DS.textOnPrimary,
-                                    ),
-                                  )
+                                ? LoadingIndicator.circular(
+                                    size: 22,
+                                    strokeWidth: 2,
+                                    color: DS.textOnPrimary,
+                                    liveRegion: false,
+                                )
                                 : Icon(
                                     Icons.arrow_upward_rounded,
                                     color: canSend

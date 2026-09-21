@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_goal_provider.dart';
 
@@ -28,10 +29,11 @@ class GoalSwitcher extends ConsumerWidget {
       data: (data) => _GoalSwitcherContent(overview: data, dense: dense),
       orElse: () => _GoalSwitcherFrame(
         dense: dense,
-        child: const SizedBox(
+        // U-01 Step 3：裸 LinearProgressIndicator 迁 owner（140x2 等价）。
+        child: SizedBox(
           height: 20,
           width: 140,
-          child: LinearProgressIndicator(minHeight: 2),
+          child: LoadingIndicator.linear(size: 2, liveRegion: false),
         ),
       ),
     );

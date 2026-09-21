@@ -399,9 +399,13 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                       },
                     ),
                     if (_isLoadingSuggestions)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 8.0),
-                        child: LinearProgressIndicator(minHeight: 2),
+                      Padding(
+                        // U-01 Step 3：裸 LinearProgressIndicator 迁 owner。
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: LoadingIndicator.linear(
+                          size: 2,
+                          liveRegion: false,
+                        ),
                       ),
                     if (_suggestions != null &&
                         _suggestions!.suggestedNodes.isNotEmpty)

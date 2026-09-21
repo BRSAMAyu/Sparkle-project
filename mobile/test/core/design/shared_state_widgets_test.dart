@@ -132,6 +132,60 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   });
+
+  group('CompactEmptyState U-01 Step 3 extensions', () {
+    testWidgets('description renders as tertiary hint under message',
+        (tester) async {
+      await tester.pumpWidget(
+        const _TestShell(
+          disableAnimations: true,
+          child: CompactEmptyState(
+            message: '暂无记录',
+            description: '先去创建第一条吧',
+          ),
+        ),
+      );
+
+      expect(find.text('暂无记录'), findsOneWidget);
+      expect(find.text('先去创建第一条吧'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('iconSize overrides default 64 for compact inline empty states',
+        (tester) async {
+      await tester.pumpWidget(
+        const _TestShell(
+          disableAnimations: true,
+          child: CompactEmptyState(
+            message: '暂无记录',
+            icon: Icons.history_toggle_off,
+            iconSize: 36,
+          ),
+        ),
+      );
+
+      final icon = tester.widget<Icon>(find.byType(Icon));
+      expect(icon.size, 36);
+      expect(icon.icon, Icons.history_toggle_off);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('defaults stay unchanged (64px icon, no description row)',
+        (tester) async {
+      await tester.pumpWidget(
+        const _TestShell(
+          disableAnimations: true,
+          child: CompactEmptyState(message: '暂无记录', icon: Icons.inbox),
+        ),
+      );
+
+      final icon = tester.widget<Icon>(find.byType(Icon));
+      expect(icon.size, 64);
+      expect(find.byType(Icon), findsOneWidget);
+      expect(find.byType(SparkleButton), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  });
 }
 
 Color? _materialColor(WidgetTester tester, {required Key ancestorKey}) => tester

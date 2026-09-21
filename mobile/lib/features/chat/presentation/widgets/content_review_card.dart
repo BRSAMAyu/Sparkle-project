@@ -17,6 +17,7 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/motion.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -614,17 +615,16 @@ class _ContentReviewCardState extends State<ContentReviewCard>
         const SizedBox(height: DS.spacing6),
         ClipRRect(
           borderRadius: DS.borderRadius4,
-          child: LinearProgressIndicator(
+          // U-01 Step 3：确定性进度条迁 owner（背景 DS.neutral200 为默认）。
+          child: LoadingIndicator.linear(
             value: score,
-            backgroundColor: DS.neutral200,
-            valueColor: AlwaysStoppedAnimation<Color>(
-              score >= 0.8
-                  ? DS.success
-                  : score >= 0.5
-                      ? DS.warning
-                      : DS.error,
-            ),
-            minHeight: 6,
+            size: 6,
+            color: score >= 0.8
+                ? DS.success
+                : score >= 0.5
+                    ? DS.warning
+                    : DS.error,
+            liveRegion: false,
           ),
         ),
       ],
@@ -918,13 +918,11 @@ class _ContentReviewCardState extends State<ContentReviewCard>
       child: Row(
         children: [
           if (statusInfo.isInProgress)
-            SizedBox(
-              width: 14,
-              height: 14,
-              child: CircularProgressIndicator(
+            LoadingIndicator.circular(
+                size: 14,
                 strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(statusInfo.color),
-              ),
+                color: statusInfo.color,
+                liveRegion: false,
             )
           else
             Icon(

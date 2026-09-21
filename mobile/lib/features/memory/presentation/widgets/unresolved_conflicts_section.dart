@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 
@@ -51,10 +52,10 @@ class UnresolvedConflictsSection extends StatelessWidget {
                   ),
                   const SizedBox(height: DS.xs),
                   if (processingIds.contains(c.id))
-                    const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                    LoadingIndicator.circular(
+                        size: 16,
+                        strokeWidth: 2,
+                        liveRegion: false,
                     )
                   else
                     Row(

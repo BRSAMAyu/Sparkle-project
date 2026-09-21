@@ -5,6 +5,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/motion.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
@@ -892,17 +893,17 @@ class _PlanReviewCardState extends State<PlanReviewCard>
           const SizedBox(height: DS.spacing6),
           ClipRRect(
             borderRadius: DS.borderRadius4,
-            child: LinearProgressIndicator(
+            // U-01 Step 3：确定性进度条迁 owner（value/size/背景轨道等价，
+            // 背景 DS.neutral200 即 owner 默认）。
+            child: LoadingIndicator.linear(
               value: widget.review.confidence,
-              backgroundColor: DS.neutral200,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                widget.review.confidence >= 0.8
-                    ? DS.success
-                    : widget.review.confidence >= 0.5
-                        ? DS.warning
-                        : DS.error,
-              ),
-              minHeight: 6,
+              size: 6,
+              color: widget.review.confidence >= 0.8
+                  ? DS.success
+                  : widget.review.confidence >= 0.5
+                      ? DS.warning
+                      : DS.error,
+              liveRegion: false,
             ),
           ),
         ],

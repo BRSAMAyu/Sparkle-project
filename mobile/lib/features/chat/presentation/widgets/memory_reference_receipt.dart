@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
@@ -306,14 +307,12 @@ class _MemoryReceiptRowState extends ConsumerState<_MemoryReceiptRow> {
                 ),
                 onPressed: _submitting ? null : _markWrong,
                 icon: _submitting
-                    ? SizedBox(
-                        width: 12,
-                        height: 12,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: DS.warning,
-                        ),
-                      )
+                    ? LoadingIndicator.circular(
+                        size: 12,
+                        strokeWidth: 2,
+                        color: DS.warning,
+                        liveRegion: false,
+                    )
                     : const Icon(Icons.flag_outlined, size: 14),
                 label: Text(S.chatMemoryNotRightShort),
               ),

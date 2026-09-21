@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/openclaw_execution_preferences_service.dart';
 import 'package:sparkle/core/services/openclaw_node_inventory_service.dart';
@@ -136,10 +137,15 @@ class _OpenClawNodeManagementPanelState
         ),
         const SizedBox(height: DS.spacing12),
         if (nodeService.isLoading && nodes.isEmpty)
-          const Center(
+          Center(
+            // U-01 Step 3：裸 CPI 迁 owner（36px/strokeWidth 4 等价）。
             child: Padding(
-              padding: EdgeInsets.all(DS.spacing12),
-              child: CircularProgressIndicator(),
+              padding: const EdgeInsets.all(DS.spacing12),
+              child: LoadingIndicator.circular(
+                size: 36,
+                strokeWidth: 4,
+                liveRegion: false,
+              ),
             ),
           )
         else if (nodes.isEmpty)
@@ -214,16 +220,12 @@ class _OpenClawNodeManagementPanelState
                 child: FilledButton.icon(
                   onPressed: preferenceService.isSaving ? null : _saveAffinity,
                   icon: preferenceService.isSaving
-                      ? SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              DS.textOnPrimary,
-                            ),
-                          ),
-                        )
+                      ? LoadingIndicator.circular(
+                          size: 16,
+                          strokeWidth: 2,
+                          color: DS.textOnPrimary,
+                          liveRegion: false,
+                      )
                       : const Icon(Icons.save_rounded),
                   label: Text(context.l10n.openclawSaveDeviceAffinity),
                 ),

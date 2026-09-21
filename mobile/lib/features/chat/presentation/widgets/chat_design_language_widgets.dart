@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class ChatNewMessagesDivider extends StatelessWidget {
@@ -240,9 +241,12 @@ class DailyStartupRetryBanner extends StatelessWidget {
               SizedBox.square(
                 dimension: DS.iconSizeSm,
                 child: isRetrying
-                    ? CircularProgressIndicator(
+                    ? LoadingIndicator.circular(
+                        // U-01 Step 3：裸 CPI 迁 owner。
+                        size: DS.iconSizeSm,
                         strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(DS.warning),
+                        color: DS.warning,
+                        liveRegion: false,
                       )
                     : Icon(
                         Icons.hourglass_top_rounded,
