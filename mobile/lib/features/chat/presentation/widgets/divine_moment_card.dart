@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -177,20 +178,11 @@ class _DivineMomentCardState extends State<DivineMomentCard>
                   runSpacing: 6,
                   children: actions.map((action) {
                     final isDismiss = action == actions.last && actions.length > 1;
-                    return ActionChip(
-                      label: Text(action),
-                      labelStyle: DS.labelSmall.copyWith(
-                        color: isDismiss ? DS.textSecondary : color,
-                      ),
-                      backgroundColor: isDismiss
-                          ? DS.surfaceSecondary
-                          : color.withValues(alpha: 0.1),
-                      side: BorderSide(
-                        color: isDismiss
-                            ? DS.borderSubtle
-                            : color.withValues(alpha: 0.3),
-                      ),
-                      onPressed: () => widget.onAction(action),
+                    return SemanticPill(
+                      label: action,
+                      tone: isDismiss ? PillTone.neutral : _toneOf(type),
+                      dense: true,
+                      onTap: () => widget.onAction(action),
                     );
                   }).toList(),
                 ),
@@ -201,6 +193,15 @@ class _DivineMomentCardState extends State<DivineMomentCard>
       ),
     );
   }
+
+  /// U-01 Step 1：与 [_visuals] 一一对应的 owner tone 映射。
+  PillTone _toneOf(DivineMomentType type) => switch (type) {
+        DivineMomentType.correctionImpact => PillTone.brand,
+        DivineMomentType.materialNonUse => PillTone.warning,
+        DivineMomentType.absenceNotice => PillTone.info,
+        DivineMomentType.lowYieldBlock => PillTone.danger,
+        DivineMomentType.communityStrategy => PillTone.brand,
+      };
 
   (IconData, Color) _visuals(DivineMomentType type) => switch (type) {
         DivineMomentType.correctionImpact => (Icons.psychology_alt_outlined, DS.brandPrimary),

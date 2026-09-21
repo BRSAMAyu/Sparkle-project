@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
@@ -174,17 +175,10 @@ class InteractiveTaskCard extends ConsumerWidget {
                 runSpacing: DS.spacing6,
                 children: task.tags
                     .map(
-                      (tag) => Chip(
-                        label: Text(
-                          tag,
-                          style: context.typo.labelSmall.copyWith(
-                            fontSize: 10,
-                          ),
-                        ),
-                        visualDensity: VisualDensity.compact,
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        backgroundColor: DS.brandPrimary.withValues(alpha: 0.1),
-                        side: BorderSide.none,
+                      (tag) => SemanticPill(
+                        label: tag,
+                        tone: PillTone.brand,
+                        dense: true,
                       ),
                     )
                     .toList(),

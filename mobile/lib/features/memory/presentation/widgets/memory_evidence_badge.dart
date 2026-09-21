@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
@@ -34,29 +35,17 @@ class MemoryEvidenceBadge extends StatelessWidget {
       MemoryEvidenceStatus.redacted => zh ? '已隐藏' : 'Redacted',
       MemoryEvidenceStatus.missing => zh ? '缺失' : 'Missing',
     };
-    final color = switch (status) {
-      MemoryEvidenceStatus.ok => DS.semanticSuccess,
-      MemoryEvidenceStatus.redacted => DS.semanticWarning,
-      MemoryEvidenceStatus.missing => DS.semanticError,
-    };
     final count = evidenceCount;
 
-    final chip = Chip(
-      label: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (count != null && count > 0) ...[
-            Text('$count ', style: TextStyle(color: color, fontWeight: DS.fontWeightSemibold)),
-          ],
-          Text(label, style: TextStyle(color: color)),
-        ],
-      ),
-      backgroundColor: color.withValues(alpha: 0.12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: BorderSide(color: color.withValues(alpha: 0.4)),
-      ),
-    );
+    final tone = switch (status) {
+      MemoryEvidenceStatus.ok => PillTone.success,
+      MemoryEvidenceStatus.redacted => PillTone.warning,
+      MemoryEvidenceStatus.missing => PillTone.danger,
+    };
+    final pillLabel =
+        (count != null && count > 0) ? '$count $label' : label;
+    // 点击/长按仍由外层 GestureDetector 承担，pill 本体保持非交互（与原等价）。
+    final chip = SemanticPill(label: pillLabel, tone: tone, dense: true);
 
     if (onTap == null && onLongPress == null) return chip;
 

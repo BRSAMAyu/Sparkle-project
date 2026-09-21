@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/compact_error_card.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -120,12 +121,7 @@ class _WhySection extends StatelessWidget {
               runSpacing: 4,
               children: why.evidence
                   .take(3)
-                  .map((e) => Chip(
-                        label: Text(e, style: const TextStyle(fontSize: 10)),
-                        visualDensity: VisualDensity.compact,
-                        backgroundColor:
-                            DS.brandPrimary.withValues(alpha: 0.06),
-                      ))
+                  .map((e) => SemanticPill(label: e, tone: PillTone.brand, dense: true))
                   .toList(),
             ),
           ],
@@ -178,12 +174,7 @@ class _UpdatesSection extends StatelessWidget {
             runSpacing: 4,
             children: updates
                 .take(5)
-                .map((key) => Chip(
-                      label: Text(key, style: const TextStyle(fontSize: 10)),
-                      visualDensity: VisualDensity.compact,
-                      backgroundColor:
-                          DS.semanticSuccess.withValues(alpha: 0.06),
-                    ))
+                .map((key) => SemanticPill(label: key, tone: PillTone.success, dense: true))
                 .toList(),
           ),
         ],

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
@@ -229,18 +230,13 @@ class _AuroraStatusBandState extends State<AuroraStatusBand>
                               label: opt.label,
                               onTap: () => _selectCorrection(opt),
                               child: ExcludeSemantics(
-                                child: ActionChip(
-                                  label: Text(
-                                    opt.label,
-                                    style: DS.labelSmall.copyWith(fontSize: 11),
-                                  ),
-                                  onPressed: () => _selectCorrection(opt),
-                                  backgroundColor: DS.surfaceHigh,
-                                  side: BorderSide(
-                                    color: opt.isDisconfirming
-                                        ? DS.warning.withValues(alpha: 0.3)
-                                        : DS.borderSubtle,
-                                  ),
+                                child: SemanticPill(
+                                  label: opt.label,
+                                  tone: opt.isDisconfirming
+                                      ? PillTone.warning
+                                      : PillTone.neutral,
+                                  dense: true,
+                                  onTap: () => _selectCorrection(opt),
                                 ),
                               ),
                             ),

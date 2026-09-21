@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -176,20 +177,11 @@ class _GrowthCardState extends State<GrowthCard>
                         action.contains(context.l10n.chatNotNeeded);
                     return Padding(
                       padding: const EdgeInsets.only(right: 8),
-                      child: ActionChip(
-                        label: Text(action),
-                        labelStyle: DS.labelSmall.copyWith(
-                          color: isDismiss ? DS.textSecondary : DS.success,
-                        ),
-                        backgroundColor: isDismiss
-                            ? DS.surfaceSecondary
-                            : DS.success.withValues(alpha: 0.1),
-                        side: BorderSide(
-                          color: isDismiss
-                              ? DS.borderSubtle
-                              : DS.success.withValues(alpha: 0.3),
-                        ),
-                        onPressed: () => widget.onAction(action),
+                      child: SemanticPill(
+                        label: action,
+                        tone: isDismiss ? PillTone.neutral : PillTone.success,
+                        dense: true,
+                        onTap: () => widget.onAction(action),
                       ),
                     );
                   }).toList(),

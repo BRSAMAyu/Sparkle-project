@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -420,20 +421,18 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                             SparkleStaggerWrap(
                               children: _suggestions!.suggestedNodes
                                   .map(
-                                    (node) => ActionChip(
-                                      avatar: Icon(
-                                        node.isNew
+                                    (node) => Tooltip(
+                                      message: node.reason,
+                                      child: SemanticPill(
+                                        label: node.name,
+                                        tone: node.isNew
+                                            ? PillTone.success
+                                            : PillTone.brand,
+                                        icon: node.isNew
                                             ? Icons.add_circle_outline
                                             : Icons.link,
-                                        size: 16,
+                                        onTap: () => _applySuggestion(node),
                                       ),
-                                      label: Text(node.name),
-                                      onPressed: () => _applySuggestion(node),
-                                      tooltip: node.reason,
-                                      backgroundColor: node.isNew
-                                          ? DS.success.withValues(alpha: 0.1)
-                                          : DS.brandPrimary
-                                              .withValues(alpha: 0.1),
                                     ),
                                   )
                                   .toList(),

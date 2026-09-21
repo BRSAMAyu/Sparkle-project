@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
@@ -778,20 +779,22 @@ class _OpenClawConnectionPanelState
             spacing: DS.spacing8,
             runSpacing: DS.spacing8,
             children: [
-              ChoiceChip(
-                label: Text(context.l10n.openclawCustomConfig),
+              SemanticPill(
+                label: context.l10n.openclawCustomConfig,
+                tone: PillTone.neutral,
                 selected: _selectedPresetId == 'custom',
-                onSelected: (_) {
+                onTap: () {
                   setState(() {
                     _selectedPresetId = 'custom';
                   });
                 },
               ),
               ..._openClawGuestPresets.map(
-                (preset) => ChoiceChip(
-                  label: Text(_presetLabel(preset.id, context)),
+                (preset) => SemanticPill(
+                  label: _presetLabel(preset.id, context),
+                  tone: PillTone.neutral,
                   selected: _selectedPresetId == preset.id,
-                  onSelected: (_) => _applyPreset(preset),
+                  onTap: () => _applyPreset(preset),
                 ),
               ),
             ],

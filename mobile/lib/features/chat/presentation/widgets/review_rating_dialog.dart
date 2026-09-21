@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -611,17 +612,15 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
               runSpacing: DS.spacing4,
               children: _inaccuratePoints
                   .map(
-                    (point) => Chip(
-                      label: Text(
-                        point,
-                        style: theme.textTheme.bodySmall,
-                      ),
+                    (point) => SemanticPill(
+                      label: point,
+                      tone: PillTone.neutral,
+                      dense: true,
                       onDeleted: () {
                         setState(() {
                           _inaccuratePoints.remove(point);
                         });
                       },
-                      deleteIcon: const Icon(Icons.close, size: DS.iconSizeXs),
                     ),
                   )
                   .toList(),
@@ -654,18 +653,14 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
             runSpacing: DS.spacing8,
             children: _availableTags(context).map((tag) {
               final isSelected = _selectedTags.contains(tag);
-              return FilterChip(
-                label: Text(tag),
+              return SemanticPill(
+                label: tag,
+                tone: PillTone.neutral,
                 selected: isSelected,
-                onSelected: (selected) {
-                  SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
-                  setState(() {
-                    if (selected) {
-                      _selectedTags.add(tag);
-                    } else {
-                      _selectedTags.remove(tag);
-                    }
-                  });
+                onTap: () {
+                  setState(() => isSelected
+                      ? _selectedTags.remove(tag)
+                      : _selectedTags.add(tag));
                 },
               );
             }).toList(),

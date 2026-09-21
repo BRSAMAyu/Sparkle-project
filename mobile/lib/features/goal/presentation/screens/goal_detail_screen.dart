@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
@@ -288,20 +289,15 @@ class _GoalHeader extends StatelessWidget {
       );
     }
 
-    // Overdue: show warning chip
+    // Overdue: show warning chip（U-01 Step 1：amber 字面量 → owner warning tone）
     final overdueLabel = l10n.goalDetailOverdue;
-    final amber = const Color(0xFFE6A817);
     return Semantics(
       label: '${l10n.goalDetailTargetDate}: $targetDate, $overdueLabel',
-      child: Chip(
-        avatar: Icon(Icons.warning_amber_rounded, size: 18, color: amber),
-        label: Text('$targetDate · $overdueLabel'),
-        backgroundColor: amber.withValues(alpha: 0.12),
-        side: BorderSide(color: amber.withValues(alpha: 0.5)),
-        labelStyle: Theme.of(context)
-            .textTheme
-            .labelMedium
-            ?.copyWith(color: amber, fontWeight: FontWeight.w700),
+      child: SemanticPill(
+        label: '$targetDate · $overdueLabel',
+        tone: PillTone.warning,
+        icon: Icons.warning_amber_rounded,
+        dense: true,
       ),
     );
   }
@@ -376,16 +372,16 @@ class _TodayStepCard extends ConsumerWidget {
                     _InfoChip(
                       icon: Icons.category_outlined,
                       label: step.type!,
-                      foreground: DS.textPrimary,
-                      background: DS.brandPrimary.withValues(alpha: 0.18),
+                      tone: PillTone.brand,
+                      emphasized: true,
                     ),
                   if (step.estimatedMinutes != null)
                     _InfoChip(
                       icon: Icons.timer_outlined,
                       label:
                           '${l10n.goalDetailEstimated} ${l10n.goalDetailMinutes(step.estimatedMinutes!)}',
-                      foreground: DS.textPrimary,
-                      background: DS.brandPrimary.withValues(alpha: 0.18),
+                      tone: PillTone.brand,
+                      emphasized: true,
                     ),
                 ],
               ),
@@ -684,33 +680,34 @@ class _MetricLine extends StatelessWidget {
   }
 }
 
+/// U-01 Step 1：裸 Chip → owner [SemanticPill] 薄包装（语义/SEMAPHICS 由
+/// Semantics 保留；色值收敛为 PillTone）。
 class _InfoChip extends StatelessWidget {
   const _InfoChip({
     required this.icon,
     required this.label,
     this.semanticsLabel,
-    this.foreground,
-    this.background,
+    this.tone = PillTone.neutral,
+    this.emphasized = false,
   });
 
   final IconData icon;
   final String label;
   final String? semanticsLabel;
-  final Color? foreground;
-  final Color? background;
+  final PillTone tone;
+
+  /// 原品牌色底（brand α0.18）的强调变体 → selected 态。
+  final bool emphasized;
 
   @override
   Widget build(BuildContext context) {
-    final fg = foreground ?? DS.textSecondary;
     return Semantics(
       label: semanticsLabel == null ? label : '$semanticsLabel: $label',
-      child: Chip(
-        avatar: Icon(icon, size: 18, color: fg),
-        label: Text(label),
-        backgroundColor: background ?? DS.surfaceHigh,
-        side: BorderSide(color: DS.borderSubtle),
-        labelStyle:
-            Theme.of(context).textTheme.labelMedium?.copyWith(color: fg),
+      child: SemanticPill(
+        label: label,
+        tone: tone,
+        icon: icon,
+        selected: emphasized,
       ),
     );
   }

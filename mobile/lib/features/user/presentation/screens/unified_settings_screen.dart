@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/theme/performance_tier.dart';
@@ -630,11 +631,12 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                             runSpacing: DS.spacing8,
                             children: AmbientScene.values
                                 .map(
-                                  (scene) => ChoiceChip(
-                                    label: Text(scene.label),
+                                  (scene) => SemanticPill(
+                                    label: scene.label,
+                                    tone: PillTone.neutral,
                                     selected: _ambientScene == scene,
-                                    onSelected: _sensoryReady
-                                        ? (_) =>
+                                    onTap: _sensoryReady
+                                        ? () =>
                                             unawaited(_setAmbientScene(scene))
                                         : null,
                                   ),
@@ -857,11 +859,12 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                             runSpacing: DS.spacing8,
                             children: BgmMode.values
                                 .map(
-                                  (mode) => ChoiceChip(
-                                    label: Text(_bgmModeLabel(l10n, mode)),
+                                  (mode) => SemanticPill(
+                                    label: _bgmModeLabel(l10n, mode),
+                                    tone: PillTone.neutral,
                                     selected: _bgmMode == mode,
-                                    onSelected: _bgmReady
-                                        ? (_) => unawaited(_setBgmMode(mode))
+                                    onTap: _bgmReady
+                                        ? () => unawaited(_setBgmMode(mode))
                                         : null,
                                   ),
                                 )
@@ -940,12 +943,12 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        ChoiceChip(
-                                          label: Text(
-                                              _bgmPaletteLabel(l10n, palette)),
+                                        SemanticPill(
+                                          label: _bgmPaletteLabel(l10n, palette),
+                                          tone: PillTone.neutral,
                                           selected: _bgmPalette == palette,
-                                          onSelected: _bgmReady
-                                              ? (_) => unawaited(
+                                          onTap: _bgmReady
+                                              ? () => unawaited(
                                                     _setBgmPalette(palette),
                                                   )
                                               : null,
@@ -1129,10 +1132,11 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                               spacing: DS.spacing8,
                               runSpacing: DS.spacing8,
                               children: [
-                                ChoiceChip(
-                                  label: Text(l10n.aiReasoningFastLabel),
+                                SemanticPill(
+                                  label: l10n.aiReasoningFastLabel,
+                                  tone: PillTone.neutral,
                                   selected: aiReasoningMode == 'fast',
-                                  onSelected: (_) => unawaited(
+                                  onTap: () => unawaited(
                                     _applyAiReasoningMode(
                                       context,
                                       l10n,
@@ -1140,10 +1144,11 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                     ),
                                   ),
                                 ),
-                                ChoiceChip(
-                                  label: Text(l10n.aiReasoningBalancedLabel),
+                                SemanticPill(
+                                  label: l10n.aiReasoningBalancedLabel,
+                                  tone: PillTone.neutral,
                                   selected: aiReasoningMode == 'balanced',
-                                  onSelected: (_) => unawaited(
+                                  onTap: () => unawaited(
                                     _applyAiReasoningMode(
                                       context,
                                       l10n,
@@ -1151,10 +1156,11 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                     ),
                                   ),
                                 ),
-                                ChoiceChip(
-                                  label: Text(l10n.aiReasoningDeepLabel),
+                                SemanticPill(
+                                  label: l10n.aiReasoningDeepLabel,
+                                  tone: PillTone.neutral,
                                   selected: aiReasoningMode == 'deep',
-                                  onSelected: (_) => unawaited(
+                                  onTap: () => unawaited(
                                     _applyAiReasoningMode(
                                       context,
                                       l10n,
@@ -1237,11 +1243,11 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                             runSpacing: DS.spacing8,
                             children: MotionIntensityLevel.values
                                 .map(
-                                  (level) => ChoiceChip(
-                                    label: Text(
-                                        _motionIntensityLabel(l10n, level)),
+                                  (level) => SemanticPill(
+                                    label: _motionIntensityLabel(l10n, level),
+                                    tone: PillTone.neutral,
                                     selected: motionIntensityLevel == level,
-                                    onSelected: (_) => ref
+                                    onTap: () => ref
                                         .read(motionIntensityLevelProvider
                                             .notifier)
                                         .setLevel(level),
@@ -2626,28 +2632,31 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
           spacing: DS.spacing8,
           runSpacing: DS.spacing8,
           children: [
-            ChoiceChip(
-              label: Text(context.l10n.settEmotionAdaptiveAuto),
+            SemanticPill(
+              label: context.l10n.settEmotionAdaptiveAuto,
+              tone: PillTone.neutral,
               selected: mode == EmotionAdaptiveMode.auto,
-              onSelected: (_) => unawaited(
+              onTap: () => unawaited(
                 ref
                     .read(emotionStateProvider.notifier)
                     .setMode(EmotionAdaptiveMode.auto),
               ),
             ),
-            ChoiceChip(
-              label: Text(context.l10n.settEmotionAdaptiveLow),
+            SemanticPill(
+              label: context.l10n.settEmotionAdaptiveLow,
+              tone: PillTone.neutral,
               selected: mode == EmotionAdaptiveMode.alwaysLow,
-              onSelected: (_) => unawaited(
+              onTap: () => unawaited(
                 ref
                     .read(emotionStateProvider.notifier)
                     .setMode(EmotionAdaptiveMode.alwaysLow),
               ),
             ),
-            ChoiceChip(
-              label: Text(context.l10n.settEmotionAdaptiveNormal),
+            SemanticPill(
+              label: context.l10n.settEmotionAdaptiveNormal,
+              tone: PillTone.neutral,
               selected: mode == EmotionAdaptiveMode.alwaysNormal,
-              onSelected: (_) => unawaited(
+              onTap: () => unawaited(
                 ref
                     .read(emotionStateProvider.notifier)
                     .setMode(EmotionAdaptiveMode.alwaysNormal),
@@ -2704,11 +2713,12 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             runSpacing: DS.spacing8,
             children: options
                 .map(
-                  (opt) => ChoiceChip(
-                    avatar: Icon(opt.$3, size: 16),
-                    label: Text(opt.$1),
+                  (opt) => SemanticPill(
+                    label: opt.$1,
+                    tone: PillTone.neutral,
+                    icon: opt.$3,
                     selected: selected == opt.$2,
-                    onSelected: (_) => onChanged(opt.$2),
+                    onTap: () => onChanged(opt.$2),
                   ),
                 )
                 .toList(),
@@ -3034,11 +3044,12 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
           runSpacing: DS.spacing8,
           children: BgmIntensity.values
               .map(
-                (intensity) => ChoiceChip(
-                  label: Text(_bgmIntensityLabel(context.l10n, intensity)),
+                (intensity) => SemanticPill(
+                  label: _bgmIntensityLabel(context.l10n, intensity),
+                  tone: PillTone.neutral,
                   selected: _bgmIntensity == intensity,
-                  onSelected: _bgmReady
-                      ? (_) => unawaited(_setBgmIntensity(intensity))
+                  onTap: _bgmReady
+                      ? () => unawaited(_setBgmIntensity(intensity))
                       : null,
                 ),
               )
@@ -3060,11 +3071,12 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
           runSpacing: DS.spacing8,
           children: BgmVariety.values
               .map(
-                (variety) => ChoiceChip(
-                  label: Text(_bgmVarietyLabel(context.l10n, variety)),
+                (variety) => SemanticPill(
+                  label: _bgmVarietyLabel(context.l10n, variety),
+                  tone: PillTone.neutral,
                   selected: _bgmVariety == variety,
-                  onSelected: _bgmReady
-                      ? (_) => unawaited(_setBgmVariety(variety))
+                  onTap: _bgmReady
+                      ? () => unawaited(_setBgmVariety(variety))
                       : null,
                 ),
               )

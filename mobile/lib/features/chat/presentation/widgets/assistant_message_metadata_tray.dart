@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
@@ -548,10 +549,12 @@ class _NextActionsContent extends StatelessWidget {
         if (label.isEmpty) {
           return const SizedBox.shrink();
         }
-        return ActionChip(
-          avatar: const Icon(Icons.arrow_outward_rounded, size: DS.iconSizeXs),
-          label: Text(label),
-          onPressed: onWidgetAction == null
+        return SemanticPill(
+          label: label,
+          tone: PillTone.neutral,
+          dense: true,
+          icon: Icons.arrow_outward_rounded,
+          onTap: onWidgetAction == null
               ? null
               : () => unawaited(onWidgetAction!(actionType, action)),
         );

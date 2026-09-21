@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
@@ -509,19 +510,14 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
               runSpacing: 8,
               children: RegenerationType.values.map((type) {
                 final isSelected = _selectedType == type;
-                return ChoiceChip(
-                  label: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(type.icon, size: 16),
-                      const SizedBox(width: 4),
-                      Text(type.label(context)),
-                    ],
-                  ),
+                return SemanticPill(
+                  label: type.label(context),
+                  tone: PillTone.neutral,
                   selected: isSelected,
-                  onSelected: (selected) {
+                  icon: type.icon,
+                  onTap: () {
                     setState(() {
-                      _selectedType = selected ? type : null;
+                      _selectedType = isSelected ? null : type;
                     });
                   },
                 );
@@ -542,15 +538,16 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
               runSpacing: 8,
               children: _availableHints(context).map((hint) {
                 final isSelected = _selectedHints.contains(hint);
-                return FilterChip(
-                  label: Text(hint),
+                return SemanticPill(
+                  label: hint,
+                  tone: PillTone.neutral,
                   selected: isSelected,
-                  onSelected: (selected) {
+                  onTap: () {
                     setState(() {
-                      if (selected) {
-                        _selectedHints.add(hint);
-                      } else {
+                      if (isSelected) {
                         _selectedHints.remove(hint);
+                      } else {
+                        _selectedHints.add(hint);
                       }
                     });
                   },

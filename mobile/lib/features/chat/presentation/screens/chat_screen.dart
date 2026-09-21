@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
@@ -2180,21 +2181,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           horizontal: 12,
                           vertical: 4,
                         ),
-                        child: Chip(
-                          avatar: Icon(
-                            Icons.info_outline,
-                            size: 14,
-                            color: DS.textTertiary,
-                          ),
-                          label: Text(
-                            context.l10n.chatSmartAdjustUnavailable,
-                            style: DS.labelSmall.copyWith(
-                              color: DS.textTertiary,
-                            ),
-                          ),
-                          backgroundColor: DS.surfacePanel,
-                          side: BorderSide.none,
-                          visualDensity: VisualDensity.compact,
+                        child: SemanticPill(
+                          label: context.l10n.chatSmartAdjustUnavailable,
+                          tone: PillTone.neutral,
+                          dense: true,
+                          icon: Icons.info_outline,
                         ),
                       ),
                     // Spine: Growth Card — divine moment #1 看见坚持
@@ -2296,27 +2287,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                     runSpacing: DS.spacing8,
                                     children: chatState.attachedFiles
                                         .map(
-                                          (file) => InputChip(
-                                            avatar: Icon(
-                                              _attachmentStatusIcon(
-                                                file.status,
-                                              ),
-                                              size: 16,
-                                              color: _attachmentStatusColor(
-                                                file.status,
-                                              ),
+                                          (file) => SemanticPill(
+                                            label: _attachmentChipLabel(file),
+                                            tone: _attachmentStatusTone(
+                                              file.status,
                                             ),
-                                            label: Text(
-                                              _attachmentChipLabel(file),
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                            backgroundColor: Color.alphaBlend(
-                                              DS.info.withValues(alpha: 0.04),
-                                              DS.surfacePrimary,
-                                            ),
-                                            side: BorderSide(
-                                              color: DS.border
-                                                  .withValues(alpha: 0.4),
+                                            dense: true,
+                                            icon: _attachmentStatusIcon(
+                                              file.status,
                                             ),
                                             onDeleted: () => ref
                                                 .read(chatProvider.notifier)
@@ -3072,17 +3050,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
-  Color _attachmentStatusColor(String status) {
+  /// U-01 Step 1：色值映射收敛为 design owner 的 PillTone（值集一一对应）。
+  PillTone _attachmentStatusTone(String status) {
     switch (status.trim().toLowerCase()) {
       case 'processed':
-        return DS.semanticSuccess;
+        return PillTone.success;
       case 'uploaded':
       case 'processing':
-        return DS.warning;
+        return PillTone.warning;
       case 'failed':
-        return DS.semanticError;
+        return PillTone.danger;
       default:
-        return DS.textSecondary;
+        return PillTone.neutral;
     }
   }
 

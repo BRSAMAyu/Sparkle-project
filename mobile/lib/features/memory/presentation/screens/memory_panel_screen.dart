@@ -4,12 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/memory/memory_routes.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_detail_screen.dart';
 import 'package:sparkle/features/memory/presentation/widgets/evidence_drawer.dart';
@@ -867,10 +867,11 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
                 children: item.attractorConfidences
                     .take(3)
                     .map(
-                      (confidence) => Chip(
-                        label: Text(
-                          '${_labelForForesightDim(confidence.dim)} ${confidence.confidence.toStringAsFixed(2)}',
-                        ),
+                      (confidence) => SemanticPill(
+                        label:
+                            '${_labelForForesightDim(confidence.dim)} ${confidence.confidence.toStringAsFixed(2)}',
+                        tone: PillTone.neutral,
+                        dense: true,
                       ),
                     )
                     .toList(),
@@ -945,9 +946,10 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
                   ),
                 ),
                 const SizedBox(width: DS.sm),
-                Chip(
-                  label: Text('Q ${item.qualityScore.toStringAsFixed(2)}'),
-                  backgroundColor: DS.semanticSuccess.withValues(alpha: 0.12),
+                SemanticPill(
+                  label: 'Q ${item.qualityScore.toStringAsFixed(2)}',
+                  tone: PillTone.success,
+                  dense: true,
                 ),
               ],
             ),
@@ -1018,13 +1020,10 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
             children: item.tags
                 .take(4)
                 .map(
-                  (tag) => Chip(
-                    label: Text(tag,
-                        style: TextStyle(
-                            fontSize: DS.fontSizeSm,
-                            color: DS.textSecondary)),
-                    backgroundColor: DS.surfaceTertiary,
-                    visualDensity: VisualDensity.compact,
+                  (tag) => SemanticPill(
+                    label: tag,
+                    tone: PillTone.neutral,
+                    dense: true,
                   ),
                 )
                 .toList(),
@@ -1867,14 +1866,8 @@ class _CorrectionBadge extends StatelessWidget {
   final String label;
 
   @override
-  Widget build(BuildContext context) => Chip(
-        label: Text(label, style: TextStyle(color: DS.textPrimary)),
-        backgroundColor: DS.semanticWarning.withValues(alpha: 0.12),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-          side: BorderSide(color: DS.semanticWarning.withValues(alpha: 0.4)),
-        ),
-      );
+  Widget build(BuildContext context) =>
+      SemanticPill(label: label, tone: PillTone.warning, dense: true);
 }
 
 class _FilterChip extends StatelessWidget {
@@ -1889,15 +1882,12 @@ class _FilterChip extends StatelessWidget {
   final ValueChanged<bool> onSelected;
 
   @override
-  Widget build(BuildContext context) => FilterChip(
-        label: Text(label),
+  // 触感由 SparklePressable 默认 tap 反馈提供（Step 1 申报：selection→tap）。
+  Widget build(BuildContext context) => SemanticPill(
+        label: label,
+        tone: PillTone.neutral,
         selected: selected,
-        onSelected: (value) {
-          unawaited(
-            SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
-          );
-          onSelected(value);
-        },
+        onTap: () => onSelected(!selected),
       );
 }
 

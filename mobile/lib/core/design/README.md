@@ -18,6 +18,12 @@
 - **骨架屏**：`widgets/sparkle_skeleton.dart` 是骨架渲染唯一 owner（`SparkleSkeleton/SparkleCardSkeleton/SparkleListSkeleton/SparkleChatBubbleSkeleton` + 并入的遗留 shimmer 变体 `TaskCardSkeleton/ChatBubbleSkeleton/ProfileCardSkeleton/ListItemSkeleton`）。`LoadingIndicator` 只保留 circular/linear/fullScreen；重复的 `SkeletonVariant` 枚举与死代码 `async_state_builder.dart`（零引用）已删除。遗留 shimmer 变体待 Step 1-6 按 surface 迁移后删除。
 - **按钮**：design 目录内部对 `custom_button.dart` 的依赖已清零（EmptyState/CompactEmptyState/CustomErrorWidget/NotFoundErrorPage 已直用 `SparkleButton`）。`custom_button.dart` 本体仍被 15 个 feature 文件 59 处调用点使用（视觉与 customGradient 能力差异，须逐 surface 迁移），**已判死、Step 1-6 迁完即删**，禁止新增调用。
 
+## Step 1 收敛状态（U-01，2026-09-21）
+
+- **裸 Chip 迁移**：V3 可达 surface 的 raw Chip 家族 75→8（guard ratchet 已刷新）。67 处迁至 `SemanticPill`/TaskPill 体系；保留 8 处（见 `v3-output/U01-STEP1/REPORT.md`）。
+- **owner 扩展（规则 5）**：`SemanticPill` 新增 `selected`（M3 chip 选中态等价：增强 tone + 前置 check 图标）与 `onDeleted`（InputChip 删除区等价：独立可点 + 删除语义）。默认参数不变，既有调用点渲染零影响。
+- **保留项**：agent 动态身份色 chip（agent_team_sheet 3、agent_reasoning_bubble 2、v2 1、capability_ceiling 1）——6-tone 体系无对应色相，强迁即视觉不等价；galaxy 1 处按视觉锤条款豁免。
+
 ## CONVENTION：新增 UI 必须用 design system（V3 冻结，2026-09-21）
 
 > 依据 `v3/04_ux/DESIGN_DIRECTION.md`（Components 收敛）与 `v3/00_context/DECISIONS_V3.md` D21/D22。

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/experience/experience_profile.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
@@ -235,34 +236,34 @@ class _PersonaOnboardingScreenState
         ),
       ];
 
-  ChoiceChip _styleChip(String value, String label) => ChoiceChip(
-        label: Text(label),
+  Widget _styleChip(String value, String label) => SemanticPill(
+        label: label,
+        tone: PillTone.neutral,
         selected: _learningStyle == value,
-        onSelected: (_) {
-          unawaited(
-              SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+        // 触感由 SparklePressable 默认 tap 反馈提供（Step 1 申报：selection→tap）。
+        onTap: () {
           setState(() => _learningStyle = value);
           _schedulePreview();
         },
       );
 
-  ChoiceChip _goalTypeChip(String value, String label) => ChoiceChip(
-        label: Text(label),
+  Widget _goalTypeChip(String value, String label) => SemanticPill(
+        label: label,
+        tone: PillTone.neutral,
         selected: _goalType == value,
-        onSelected: (_) {
-          unawaited(
-              SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+        // 触感由 SparklePressable 默认 tap 反馈提供（Step 1 申报：selection→tap）。
+        onTap: () {
           setState(() => _goalType = value);
           _schedulePreview();
         },
       );
 
-  ChoiceChip _levelChip(String value, String label) => ChoiceChip(
-        label: Text(label),
+  Widget _levelChip(String value, String label) => SemanticPill(
+        label: label,
+        tone: PillTone.neutral,
         selected: _knowledgeLevel == value,
-        onSelected: (_) {
-          unawaited(
-              SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+        // 触感由 SparklePressable 默认 tap 反馈提供（Step 1 申报：selection→tap）。
+        onTap: () {
           setState(() => _knowledgeLevel = value);
           _schedulePreview();
         },

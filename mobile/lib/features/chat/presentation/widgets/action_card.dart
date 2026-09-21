@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/motion.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
@@ -3447,10 +3448,11 @@ class _ActionCardState extends ConsumerState<ActionCard>
             runSpacing: DS.spacing8,
             children: options
                 .map(
-                  (option) => ChoiceChip(
-                    label: Text(option),
+                  (option) => SemanticPill(
+                    label: option,
+                    tone: PillTone.neutral,
                     selected: _selectedReflectionOption == option,
-                    onSelected: (_) {
+                    onTap: () {
                       setState(() {
                         _selectedReflectionOption = option;
                       });

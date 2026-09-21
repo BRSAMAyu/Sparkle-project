@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -147,16 +148,10 @@ class CuriosityCapsuleCard extends ConsumerWidget {
                     const SizedBox(height: DS.md),
 
                     if (capsule.relatedSubject != null)
-                      Chip(
-                        label: Text(
-                          capsule.relatedSubject!,
-                          style: context.typo.labelSmall,
-                        ),
-                        backgroundColor: context.colors.surfaceTertiary
-                            .withValues(alpha: 0.5),
-                        side: BorderSide.none,
-                        padding: EdgeInsets.zero,
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      SemanticPill(
+                        label: capsule.relatedSubject!,
+                        tone: PillTone.neutral,
+                        dense: true,
                       ),
                     const SizedBox(height: DS.spacing12),
                     Align(

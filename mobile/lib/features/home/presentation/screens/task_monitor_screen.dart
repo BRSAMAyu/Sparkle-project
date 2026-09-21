@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -235,20 +236,13 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
             spacing: DS.sm,
             children: BackgroundTaskFilter.values.map((filter) {
               final isSelected = selectedFilter == filter;
-              return FilterChip(
-                label: Text(filter.label(context)),
+              return SemanticPill(
+                label: filter.label(context),
+                tone: PillTone.brand,
                 selected: isSelected,
-                onSelected: (_) {
+                onTap: () {
                   ref.read(backgroundTaskProvider.notifier).setFilter(filter);
                 },
-                backgroundColor: DS.brandPrimary10,
-                selectedColor: DS.primaryBase.withValues(alpha: 0.3),
-                checkmarkColor: DS.primaryBase,
-                labelStyle: TextStyle(
-                  color: isSelected ? DS.primaryBase : DS.brandPrimary70,
-                  fontSize: 13,
-                ),
-                side: BorderSide.none,
               );
             }).toList(),
           ),

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/compact_error_card.dart';
@@ -411,48 +412,25 @@ class _TaskDetailView extends ConsumerWidget {
                           spacing: DS.spacing8,
                           crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
-                            Chip(
-                              label: Text(
-                                _taskTypeLabel(context, task.type),
-                                style: const TextStyle(fontSize: DS.fontSizeSm),
-                              ),
-                              backgroundColor:
-                                  DS.surfaceOverlay.withValues(alpha: 0.92),
-                              avatar: Icon(
-                                Icons.category,
-                                size: DS.iconSizeXs,
-                                color: DS.textSecondary,
-                              ),
-                              labelStyle: TextStyle(color: DS.textPrimary),
+                            SemanticPill(
+                              label: _taskTypeLabel(context, task.type),
+                              tone: PillTone.neutral,
+                              dense: true,
+                              icon: Icons.category,
                             ),
-                            Chip(
-                              label: Text(
-                                _taskStatusLabel(context, task.status),
-                                style: const TextStyle(fontSize: DS.fontSizeSm),
-                              ),
-                              backgroundColor: _getStatusColor(task.status)
-                                  .withValues(alpha: 0.2),
-                              labelStyle: TextStyle(
-                                color: _getStatusColor(task.status),
-                                fontWeight: DS.fontWeightBold,
-                              ),
+                            SemanticPill(
+                              label: _taskStatusLabel(context, task.status),
+                              tone: _getStatusTone(task.status),
+                              dense: true,
+                              selected: true,
                             ),
                             if (_taskProtocolKind(task) != null)
-                              Chip(
+                              SemanticPill(
                                 key: const ValueKey('task-protocol-kind-chip'),
-                                label: Text(
-                                  _taskProtocolKind(task)!,
-                                  style:
-                                      const TextStyle(fontSize: DS.fontSizeSm),
-                                ),
-                                backgroundColor:
-                                    DS.surfaceOverlay.withValues(alpha: 0.92),
-                                avatar: Icon(
-                                  Icons.hub_outlined,
-                                  size: DS.iconSizeXs,
-                                  color: DS.textSecondary,
-                                ),
-                                labelStyle: TextStyle(color: DS.textPrimary),
+                                label: _taskProtocolKind(task)!,
+                                tone: PillTone.neutral,
+                                dense: true,
+                                icon: Icons.hub_outlined,
                               ),
                           ],
                         ),
@@ -779,21 +757,23 @@ class _TaskDetailView extends ConsumerWidget {
     }
   }
 
-  Color _getStatusColor(TaskStatus status) {
+  /// U-01 Step 1：与 [_getStatusColor] 一一对应的 owner tone 映射。
+  PillTone _getStatusTone(TaskStatus status) {
     switch (status) {
       case TaskStatus.pending:
-        return DS.warning;
+        return PillTone.warning;
       case TaskStatus.inProgress:
       case TaskStatus.paused:
       case TaskStatus.restore:
       case TaskStatus.stuck:
-        return DS.info;
+        return PillTone.info;
       case TaskStatus.completed:
-        return DS.success;
+        return PillTone.success;
       case TaskStatus.abandoned:
-        return DS.neutral500;
+        return PillTone.neutral;
     }
   }
+
 }
 
 class _InfoTileCard extends StatefulWidget {
@@ -1212,10 +1192,10 @@ class _StructuredGuideSection extends StatelessWidget {
               runSpacing: DS.spacing8,
               children: keyPoints
                   .map(
-                    (point) => Chip(
-                      label: Text(point),
-                      backgroundColor: DS.surfaceSecondary,
-                      labelStyle: TextStyle(color: DS.textPrimary),
+                    (point) => SemanticPill(
+                      label: point,
+                      tone: PillTone.neutral,
+                      dense: true,
                     ),
                   )
                   .toList(),

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -574,10 +575,11 @@ Future<UnderstandingCorrectionResult?> showUnderstandingCorrectionDialog(
                           button: true,
                           selected: selectedScope == scope,
                           label: _scopeLabel(context, scope),
-                          child: ChoiceChip(
-                            label: Text(_scopeLabel(context, scope)),
+                          child: SemanticPill(
+                            label: _scopeLabel(context, scope),
+                            tone: PillTone.neutral,
                             selected: selectedScope == scope,
-                            onSelected: (_) {
+                            onTap: () {
                               setDialogState(() => selectedScope = scope);
                             },
                           ),

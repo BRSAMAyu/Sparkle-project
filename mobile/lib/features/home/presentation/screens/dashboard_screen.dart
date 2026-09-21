@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/scroll_edge_haptics.dart';
@@ -1649,7 +1650,6 @@ class _CommunityAccountabilitySurface extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
     final active = data.activePartnership;
     final partnerName = active?.partner?.displayName ??
         active?.initiator?.displayName ??
@@ -1713,20 +1713,12 @@ class _CommunityAccountabilitySurface extends StatelessWidget {
                         checkedIn: active.myCheckedInToday,
                       ),
                       const SizedBox(width: DS.spacing10),
-                      ActionChip(
-                        avatar: Icon(
-                          Icons.notifications_active_outlined,
-                          size: 18,
-                          color: scheme.primary,
-                        ),
-                        label: Text(context.l10n.accountabilityNudge),
-                        onPressed: () =>
+                      SemanticPill(
+                        label: context.l10n.accountabilityNudge,
+                        tone: PillTone.brand,
+                        icon: Icons.notifications_active_outlined,
+                        onTap: () =>
                             context.push('/community/accountability'),
-                        backgroundColor: scheme.primaryContainer,
-                        labelStyle: textTheme.labelLarge?.copyWith(
-                          color: scheme.onPrimaryContainer,
-                          fontWeight: FontWeight.w700,
-                        ),
                       ),
                     ],
                   ),

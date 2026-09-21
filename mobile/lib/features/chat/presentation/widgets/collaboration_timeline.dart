@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 
@@ -113,14 +114,10 @@ class _AgentCollaborationTimelineState extends State<AgentCollaborationTimeline>
               ],
             ),
           ),
-          Chip(
-            label: Text('${widget.executionTime.toStringAsFixed(1)}s'),
-            backgroundColor: DS.success.shade100,
-            labelStyle: TextStyle(
-              color: DS.success.shade700,
-              fontSize: 11,
-              fontWeight: DS.fontWeightSemibold,
-            ),
+          SemanticPill(
+            label: '${widget.executionTime.toStringAsFixed(1)}s',
+            tone: PillTone.success,
+            dense: true,
           ),
         ],
       );

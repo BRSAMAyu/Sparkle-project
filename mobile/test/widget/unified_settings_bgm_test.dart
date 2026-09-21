@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/user/presentation/screens/unified_settings_screen.dart';
@@ -57,6 +58,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         child: testMaterialApp(
+          theme: AppThemes.lightTheme,
           home: UnifiedSettingsScreen(),
         ),
       ),
@@ -93,6 +95,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         child: testMaterialApp(
+          theme: AppThemes.lightTheme,
           home: UnifiedSettingsScreen(),
         ),
       ),

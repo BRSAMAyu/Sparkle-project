@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -545,11 +546,12 @@ class _GoalTypeStep extends StatelessWidget {
       runSpacing: 10,
       children: [
         for (final item in items)
-          ChoiceChip(
+          SemanticPill(
+            label: item.$3,
+            tone: PillTone.neutral,
+            icon: item.$2,
             selected: selected == item.$1,
-            avatar: Icon(item.$2, size: 18),
-            label: Text(item.$3),
-            onSelected: (_) => onSelected(item.$1),
+            onTap: () => onSelected(item.$1),
           ),
       ],
     );
@@ -786,8 +788,16 @@ class _GoalConfirmStep extends StatelessWidget {
         Wrap(
           spacing: 8,
           children: [
-            Chip(label: Text(_typeLabels[goalType] ?? goalType)),
-            Chip(label: Text(timeHorizon)),
+            SemanticPill(
+              label: _typeLabels[goalType] ?? goalType,
+              tone: PillTone.neutral,
+              dense: true,
+            ),
+            SemanticPill(
+              label: timeHorizon,
+              tone: PillTone.neutral,
+              dense: true,
+            ),
           ],
         ),
         const SizedBox(height: 12),

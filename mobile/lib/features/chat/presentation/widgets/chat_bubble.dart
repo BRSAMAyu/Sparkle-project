@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
@@ -3428,13 +3429,12 @@ class _InsightLinkCard extends StatelessWidget {
                             child: GestureDetector(
                               onLongPress: () =>
                                   _showPromptPreview(context, item),
-                              child: ActionChip(
-                                avatar: const Icon(
-                                  Icons.chat_bubble_outline_rounded,
-                                  size: 16,
-                                ),
-                                label: Text(item.label),
-                                onPressed: item.onTap ??
+                              child: SemanticPill(
+                                label: item.label,
+                                tone: PillTone.neutral,
+                                dense: true,
+                                icon: Icons.chat_bubble_outline_rounded,
+                                onTap: item.onTap ??
                                     () => _showPromptPreview(context, item),
                               ),
                             ),

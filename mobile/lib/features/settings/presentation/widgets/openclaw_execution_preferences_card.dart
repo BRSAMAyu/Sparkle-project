@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/services/openclaw_execution_preferences_service.dart';
@@ -109,10 +110,11 @@ class _OpenClawExecutionPreferencesCardState
             runSpacing: DS.spacing8,
             children: modeLabels.entries
                 .map(
-                  (entry) => ChoiceChip(
-                    label: Text(entry.value),
+                  (entry) => SemanticPill(
+                    label: entry.value,
+                    tone: PillTone.neutral,
                     selected: draft.mode == entry.key,
-                    onSelected: (_) {
+                    onTap: () {
                       setState(() {
                         _dirty = true;
                         _draft = draft.copyWith(mode: entry.key);

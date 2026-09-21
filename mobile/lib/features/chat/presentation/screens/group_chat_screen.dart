@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
@@ -774,21 +775,17 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
           children: [
             Row(
               children: [
-                FilterChip(
+                // U-01 Step 1：FilterChip → SemanticPill（selected 态经 owner 扩展 API）。
+                SemanticPill(
+                  label: _agentMode
+                      ? context.l10n.communityAgentCollabOn
+                      : context.l10n.communityAgentCollabOff,
+                  tone: PillTone.brand,
                   selected: _agentMode,
-                  label: Text(
-                    _agentMode
-                        ? context.l10n.communityAgentCollabOn
-                        : context.l10n.communityAgentCollabOff,
-                  ),
-                  avatar: Icon(
-                    Icons.auto_awesome,
-                    size: DS.iconSizeXs,
-                    color: _agentMode ? DS.brandPrimary : DS.neutral500,
-                  ),
-                  onSelected: (value) {
+                  icon: Icons.auto_awesome,
+                  onTap: () {
                     setState(() {
-                      _agentMode = value;
+                      _agentMode = !_agentMode;
                       if (_agentMode) {
                         _quotedMessage = null;
                         ref
@@ -984,12 +981,10 @@ class _AgentQuickChip extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => ActionChip(
-        label: Text(
-          label,
-          style: TextStyle(fontSize: DS.fontSizeSm, color: DS.brandPrimary),
-        ),
-        backgroundColor: DS.brandPrimary.withValues(alpha: 0.1),
-        onPressed: onTap,
+  Widget build(BuildContext context) => SemanticPill(
+        label: label,
+        tone: PillTone.brand,
+        dense: true,
+        onTap: onTap,
       );
 }

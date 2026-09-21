@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -292,11 +293,13 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
         runSpacing: DS.spacing8,
         children: teams
             .map(
-              (team) => ActionChip(
-                label: Text(team.name),
-                avatar:
-                    const Icon(Icons.collections_bookmark_outlined, size: 16),
-                onPressed: () {
+              // U-01 Step 1：仅结构收敛（默认 M3 皮 → owner neutral pill）；
+              // 专家多选/已选删除三处含 agent 动态身份色，视觉等价无法达成，保留（见 REPORT）。
+              (team) => SemanticPill(
+                label: team.name,
+                tone: PillTone.neutral,
+                icon: Icons.collections_bookmark_outlined,
+                onTap: () {
                   setState(() {
                     _selectedAgents
                       ..clear()
@@ -323,17 +326,11 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
             spacing: DS.spacing8,
             children: _collaborationModes(context).map((entry) {
               final isSelected = _collaborationMode == entry.value;
-              return ChoiceChip(
-                label: Text(entry.label),
+              return SemanticPill(
+                label: entry.label,
+                tone: PillTone.brand,
                 selected: isSelected,
-                selectedColor: DS.brandPrimary.withValues(alpha: 0.16),
-                labelStyle: TextStyle(
-                  fontWeight:
-                      isSelected ? DS.fontWeightSemibold : DS.fontWeightMedium,
-                  color: isSelected ? DS.brandPrimary : DS.textPrimary,
-                ),
-                onSelected: (_) =>
-                    setState(() => _collaborationMode = entry.value),
+                onTap: () => setState(() => _collaborationMode = entry.value),
               );
             }).toList(),
           ),

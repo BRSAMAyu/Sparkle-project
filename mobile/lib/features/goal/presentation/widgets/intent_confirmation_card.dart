@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/goal/data/models/goal_intent_models.dart';
@@ -81,9 +82,11 @@ class IntentConfirmationCard extends StatelessWidget {
               runSpacing: 8,
               children: [
                 for (final option in analysis.correctionOptions)
-                  ActionChip(
-                    label: Text(option.label),
-                    onPressed: () => onCorrectionSelected(option),
+                  SemanticPill(
+                    label: option.label,
+                    tone: PillTone.neutral,
+                    dense: true,
+                    onTap: () => onCorrectionSelected(option),
                   ),
               ],
             ),

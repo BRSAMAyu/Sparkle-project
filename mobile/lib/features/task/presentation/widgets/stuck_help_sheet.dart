@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
@@ -319,12 +320,10 @@ class _MicroTeachingStepCard extends StatelessWidget {
                 runSpacing: DS.spacing8,
                 children: [
                   for (final chip in chips)
-                    Chip(
-                      label: Text(chip),
-                      visualDensity: VisualDensity.compact,
-                      backgroundColor: DS.primaryBase.withValues(alpha: 0.08),
-                      side: BorderSide(
-                          color: DS.primaryBase.withValues(alpha: 0.18)),
+                    SemanticPill(
+                      label: chip,
+                      tone: PillTone.brand,
+                      dense: true,
                     ),
                 ],
               ),

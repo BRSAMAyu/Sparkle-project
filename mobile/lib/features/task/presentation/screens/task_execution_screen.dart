@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
@@ -2259,10 +2260,11 @@ class _RejectReasonSheetState extends State<_RejectReasonSheet> {
             runSpacing: DS.spacing8,
             children: presetReasons.map((reason) {
               final selected = _selectedReason == reason;
-              return ChoiceChip(
-                label: Text(reason),
+              return SemanticPill(
+                label: reason,
+                tone: PillTone.neutral,
                 selected: selected,
-                onSelected: (_) => setState(() => _selectedReason = reason),
+                onTap: () => setState(() => _selectedReason = reason),
               );
             }).toList(),
           ),
