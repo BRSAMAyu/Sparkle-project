@@ -549,9 +549,26 @@ class GalaxyGrpcServiceImpl(galaxy_service_pb2_grpc.GalaxyServiceServicer if gal
                     galaxy_service_pb2.GalaxyNode(
                         node_id=str(r.node.id),
                         label=r.node.name,
-                        node_type=r.node.source_type or "unknown",
+                        # semantic_search returns SearchResultItem.node as NodeBase
+                        # (no source_type column) — direct access raised
+                        # AttributeError on every non-empty production search,
+                        # collapsing the RPC to INTERNAL before any status fill
+                        # could run. REST face serves the same results without
+                        # that key, so degrade to "unknown" like RecommendedNodes.
+                        node_type=getattr(r.node, "source_type", None) or "unknown",
                         mastery=mastery_map.get(r.node.id, 0),
                         tags=r.node.keywords if hasattr(r.node, 'keywords') and r.node.keywords else [],
+                        # SERVICER-BACKFILL (GRAPH-GRPC-SHAPE follow-up): the
+                        # graph face carries the full per-node user_status block;
+                        # search answered by gRPC served null, and mobile
+                        # (GalaxySearchResult.fromJson) flattens user_status into
+                        # the node model — a null block defaults is_unlocked=false
+                        # + mastery 0 on every search hit. semantic_search already
+                        # rehydrates the full UserStatusInfo per result
+                        # (retrieval.get_user_node_status → SearchResultItem.user_status),
+                        # so this is the same fill GetUserGalaxy does; None maps
+                        # to an unset message (REST user_status=null mirror).
+                        user_status=self._node_user_status_pb(getattr(r, "user_status", None)),
                     )
                     for r in results
                 ]
@@ -811,6 +828,14 @@ class GalaxyGrpcServiceImpl(galaxy_service_pb2_grpc.GalaxyServiceServicer if gal
                             node_type=getattr(predicted, 'source_type', 'unknown') or 'unknown',
                             mastery=mastery,
                             tags=getattr(predicted, 'tags', []) or [],
+                            # SERVICER-BACKFILL (GRAPH-GRPC-SHAPE follow-up):
+                            # predict_next_node returns a NodeWithStatus whose
+                            # user_status is the same UserStatusInfo the REST face
+                            # serves (NodeWithStatus.from_models) — carry it like
+                            # GetUserGalaxy/SearchNodes do, so GET /galaxy/predict
+                            # via gRPC is not semantically poorer than the shared
+                            # node shape. None → unset message (null mirror).
+                            user_status=self._node_user_status_pb(getattr(predicted, "user_status", None)),
                         )
                     )
                     reasons_list.append("Predicted best next step based on your learning pattern")
