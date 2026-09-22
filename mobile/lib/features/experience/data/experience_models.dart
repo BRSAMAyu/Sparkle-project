@@ -175,10 +175,7 @@ class GoalDetailSnapshot {
       ),
       progress:
           _unit(progress?['overall'] ?? goal?['progress'] ?? plan?['progress']),
-      criteria: _list(json['minimum_acceptance_criteria'])
-          .map(_readableLine)
-          .where(_notEmpty)
-          .toList(growable: false),
+      criteria: _criteriaLines(json['minimum_acceptance_criteria']),
       graphNodes: _list(graph?['nodes'])
           .map(_readableLine)
           .where(_notEmpty)
@@ -186,6 +183,41 @@ class GoalDetailSnapshot {
       nextTaskTitle: _nullableString(nextTask?['title']),
       whyThisMatters: _nullableString(json['why_this_matters']),
     );
+  }
+
+  /// goal-detail 的达标线行。
+  ///
+  /// 引擎 GOAL-ROUTER 后 goal-detail 由 experience/goal_router.py 提供，
+  /// `minimum_acceptance_criteria` 是
+  /// `{description, status, thresholds: [{label, threshold, unit, ...}]}`
+  /// （goal 详情屏与 criteria-status PUT 的契约形状）；旧 readouts 快照则是
+  /// `[{label, status, source}]` 列表。两种形状都读，行渲染保持一致
+  /// （threshold 存在时拼 `label >= threshold unit`，与旧引擎 `_criterion_label`
+  /// 输出同形）。
+  static List<String> _criteriaLines(Object? raw) {
+    final map = _map(raw);
+    final items = map != null ? _list(map['thresholds']) : _list(raw);
+    return items
+        .map(_criterionLine)
+        .where(_notEmpty)
+        .toList(growable: false);
+  }
+
+  static String _criterionLine(Object? value) {
+    final map = _map(value);
+    if (map == null) return _string(value);
+    final label = _string(
+      map['label'] ??
+          map['title'] ??
+          map['summary'] ??
+          map['metric'] ??
+          map['node_id'],
+    );
+    if (label.isEmpty) return '';
+    final threshold = map['threshold'];
+    if (threshold == null) return label;
+    final unit = _string(map['unit']);
+    return '$label >= $threshold$unit';
   }
 
   final bool active;

@@ -47,10 +47,6 @@ def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
-def _value(value: Any) -> Any:
-    return getattr(value, "value", value)
-
-
 def _clamp_unit(value: Any) -> float:
     try:
         numeric = float(value or 0)
@@ -468,63 +464,12 @@ async def correct_understanding_snapshot(
     }
 
 
-# route-tier: authed
-@router.get("/goal-detail/{goal_id}")
-async def get_goal_detail(
-    goal_id: str,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-) -> dict[str, Any]:
-    """Goal-centered product snapshot for the dedicated goal detail experience."""
-    goal = await _active_goal(db, current_user.id, goal_id)
-    plan = None
-    if goal and goal.plan_id:
-        result = await db.execute(select(Plan).where(Plan.id == goal.plan_id, Plan.user_id == current_user.id))
-        plan = result.scalar_one_or_none()
-    if plan is None:
-        plan = await _active_plan(db, current_user.id)
-
-    task_counts = await _task_counts(db, current_user.id, plan_id=plan.id if plan else None)
-    next_task = await _next_task(db, current_user.id, plan_id=plan.id if plan else None)
-    progress = _clamp_unit((goal.progress if goal else None) or (plan.progress if plan else None) or 0)
-    criteria = _criteria_payload(goal.minimum_acceptance_criteria if goal else None)
-    if not criteria:
-        criteria = _draft_acceptance_criteria(goal, plan)
-    graph = await _goal_graph_summary(current_user.id, str(goal.id) if goal else (str(plan.id) if plan else goal_id))
-
-    return {
-        "active": bool(goal or plan),
-        "goal": goal.to_dict() if goal else None,
-        "plan": (
-            {
-                "id": str(plan.id),
-                "name": plan.name,
-                "type": _value(plan.type),
-                "subject": plan.subject,
-                "target_date": _iso(plan.target_date),
-                "progress": _clamp_unit(plan.progress),
-                "mastery_level": _clamp_unit(plan.mastery_level),
-                "plan_stage": _value(plan.plan_stage),
-                "priority": _value(plan.priority),
-            }
-            if plan
-            else None
-        ),
-        "minimum_acceptance_criteria": criteria,
-        "progress": {
-            "overall": progress,
-            "tasks_total": task_counts["total"],
-            "tasks_completed": task_counts["completed"],
-            "paused": task_counts["paused"],
-            "stuck": task_counts["stuck"],
-        },
-        "next_task": next_task,
-        "goal_graph": graph,
-        "why_this_matters": graph.get("bottleneck_label") or "这个目标会影响 Sparkle 今天的计划、资料选择和任务排序。",
-        "updated_at": _utcnow().isoformat(),
-    }
-
-
+# GOAL-ROUTER：本模块**不得**再注册 GET /goal-detail/{goal_id}。
+# goal 域端点（GET goal-detail + PUT criteria-status）唯一所有者是
+# experience/goal_router.py——router.py 的 `_include_router_if_new()` 只要发现
+# 任一 (path, methods) 重叠就会把整个 closeout router 拒之门外，历史上本模块
+# 的同路径 GET 曾把 goal_router 整体遮蔽成死代码（mobile criteria-status PUT
+# 因此长期 405）。守卫：tests/unit/test_goal_detail_route_shadowing.py。
 # route-tier: authed
 @router.get("/growth-dashboard")
 async def get_experience_growth_dashboard(

@@ -10,16 +10,30 @@ from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
+from app.api.v1 import experience_readouts as _readouts
 from app.aurora.runtime_v1.models import GoalWorldGraphSnapshot
 from app.models.accountability import AccountabilityCheckin, AccountabilityPartnership, AccountabilityStatus
 from app.models.file_storage import StoredFile
 from app.models.goal import Goal
 from app.models.plan import Plan
 from app.models.strategy_belief import StrategyBeliefSnapshot
-from app.models.task import Task, TaskStatus
+from app.models.task import Task
 from app.models.task_document import TaskDocument
 from app.models.user import User
-from app.services.goal_today_view import fetch_todays_next_task
+from app.services.goal_today_view import fetch_todays_next_task, todays_task_payload
+
+# GOAL-ROUTER（v3-output/GOAL-ROUTER/REPORT.md）：
+# 本 router 是 /experience/goal-detail/{goal_id}（GET+PUT criteria-status）的
+# 唯一所有者。历史上 router.py 的 `_include_router_if_new()` 曾因 readouts
+# 抢注同路径 GET 而把本 router 整体遮蔽成死代码（mobile 的 criteria-status
+# PUT 因此长期 405）——readouts 侧已删除该 GET，本 router 现为生效路径。
+# GET 返回**超集形状**：goal 详情屏契约字段（GoalDetailPayload 原有字段）+
+# home 仪表盘卡兼容字段（active/plan/progress/next_task/goal_graph/
+# why_this_matters/updated_at，即原 readouts 快照面），两个 mobile 解析器
+# （goal_detail_provider.dart / experience_models.dart）都直接可读。
+# `_readouts` 复用说明：home 卡兼容字段的口径（active goal 解析、任务计数、
+# spine 目标图摘要）必须与 readouts 逐字一致，故直接引用其实现而非复制，
+# 防止出现第三套口径漂移。守卫：tests/unit/test_goal_detail_route_shadowing.py。
 
 router = APIRouter(prefix="/experience", tags=["experience"])
 
@@ -101,7 +115,8 @@ class StrategyBeliefPayload(BaseModel):
 
 
 class GoalDetailPayload(BaseModel):
-    goal: GoalSummaryPayload
+    # goal 详情屏契约（goal_detail_provider.dart GoalDetailData.fromJson）。
+    goal: GoalSummaryPayload | None = None
     minimum_acceptance_criteria: MinimumAcceptanceCriteriaPayload
     plan_health: PlanHealthPayload
     current_phase: CurrentPhasePayload
@@ -110,39 +125,52 @@ class GoalDetailPayload(BaseModel):
     accountability_status: AccountabilityStatusPayload
     related_sources: list[RelatedSourcePayload] = Field(default_factory=list)
     strategy_belief: StrategyBeliefPayload | None = None
+    # home 仪表盘卡兼容字段（experience_models.dart GoalDetailSnapshot.fromJson，
+    # 原 readouts 快照形状；goal 可为 None、plan 为计划回退结果）。
+    active: bool = False
+    plan: dict[str, Any] | None = None
+    progress: dict[str, Any] = Field(default_factory=dict)
+    next_task: dict[str, Any] | None = None
+    goal_graph: dict[str, Any] = Field(default_factory=dict)
+    why_this_matters: str | None = None
+    updated_at: str | None = None
 
 
 # route-tier: authed
 @router.get("/goal-detail/{goal_id}", response_model=GoalDetailPayload)
 async def get_goal_detail(
-    goal_id: UUID = Path(...),
+    goal_id: str = Path(...),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> GoalDetailPayload:
-    goal = await _load_goal(db, goal_id=goal_id, user_id=current_user.id)
-    if goal is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Goal not found")
+    """goal 详情（唯一生效路径；超集形状见模块头注释）。
 
-    plan = await _load_plan(db, goal)
-    task_counts = await _task_counts(db, user_id=current_user.id, plan_id=goal.plan_id)
-    next_task = await _todays_next_task(db, user_id=current_user.id, plan_id=goal.plan_id)
-    graph_payload = await _load_graph_payload(db, user_id=current_user.id, goal_id=goal.id)
+    ``goal_id`` 两种用法：
+    - 具体 UUID（goal 详情屏）：精确加载本人目标，查无 → 404；
+    - ``current``/``active`` 别名（home 仪表盘卡）：解析主目标，查无时回退
+      活跃计划并给出 ``active=false`` 的空态快照（保持原 readouts 行为）。
+    """
+    goal = await _resolve_goal(db, goal_id=goal_id, user_id=current_user.id)
+    plan: Plan | None = None
+    if goal is not None and goal.plan_id is not None:
+        plan = await _load_plan(db, goal)
+    if plan is None:
+        plan = await _readouts._active_plan(db, current_user.id)
+
+    task_counts = await _readouts._task_counts(db, current_user.id, plan_id=plan.id if plan else None)
+    next_task = await _todays_next_task(db, user_id=current_user.id, plan_id=plan.id if plan else None)
+    graph_payload = await _load_graph_payload(db, user_id=current_user.id, goal_id=goal.id if goal else None)
+    spine_graph = await _readouts._goal_graph_summary(
+        current_user.id,
+        str(goal.id) if goal else (str(plan.id) if plan else goal_id),
+    )
     accountability = await _accountability_status(db, current_user.id)
-    sources = await _related_sources(db, user_id=current_user.id, plan_id=goal.plan_id)
-    strategy_belief = await _strategy_belief_payload(db, user_id=current_user.id, goal=goal)
+    sources = await _related_sources(db, user_id=current_user.id, plan_id=plan.id if plan else None)
+    strategy_belief = await _strategy_belief_payload(db, user_id=current_user.id, goal=goal) if goal else None
 
     return GoalDetailPayload(
-        goal=GoalSummaryPayload(
-            id=str(goal.id),
-            title=goal.title,
-            goal_type=goal.goal_type,
-            status=goal.status,
-            target_date=goal.target_date.isoformat() if goal.target_date else None,
-            mastery=_safe_ratio(goal.mastery),
-            progress=_safe_ratio(goal.progress),
-            priority=goal.priority or "normal",
-        ),
-        minimum_acceptance_criteria=_criteria_payload(goal.minimum_acceptance_criteria),
+        goal=_goal_summary(goal),
+        minimum_acceptance_criteria=_criteria_or_draft(goal=goal, plan=plan),
         plan_health=_plan_health_payload(goal=goal, plan=plan, task_counts=task_counts),
         current_phase=_current_phase_payload(plan=plan, goal=goal),
         todays_minimal_next_step=_next_step_payload(next_task),
@@ -150,7 +178,27 @@ async def get_goal_detail(
         accountability_status=accountability,
         related_sources=sources,
         strategy_belief=strategy_belief,
+        active=bool(goal or plan),
+        plan=_plan_summary(plan),
+        progress=_progress_payload(goal=goal, plan=plan, task_counts=task_counts),
+        next_task=todays_task_payload(next_task),
+        goal_graph=spine_graph,
+        why_this_matters=spine_graph.get("bottleneck_label")
+        or "这个目标会影响 Sparkle 今天的计划、资料选择和任务排序。",
+        updated_at=_readouts._utcnow().isoformat(),
     )
+
+
+async def _resolve_goal(db: AsyncSession, *, goal_id: str, user_id: UUID) -> Goal | None:
+    """具体 UUID → 精确目标（404 语义）；'current'/'active'/其余 → 主目标别名。"""
+    try:
+        parsed = UUID(goal_id)
+    except ValueError:
+        return await _readouts._active_goal(db, user_id, goal_id)
+    goal = await _load_goal(db, goal_id=parsed, user_id=user_id)
+    if goal is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Goal not found")
+    return goal
 
 
 # route-tier: authed
@@ -210,6 +258,108 @@ async def _load_plan(db: AsyncSession, goal: Goal) -> Plan | None:
     return result.scalar_one_or_none()
 
 
+def _goal_summary(goal: Goal | None) -> GoalSummaryPayload | None:
+    if goal is None:
+        return None
+    return GoalSummaryPayload(
+        id=str(goal.id),
+        title=goal.title,
+        goal_type=goal.goal_type,
+        status=goal.status,
+        target_date=goal.target_date.isoformat() if goal.target_date else None,
+        mastery=_safe_ratio(goal.mastery),
+        progress=_safe_ratio(goal.progress),
+        priority=goal.priority or "normal",
+    )
+
+
+def _enum_value(value: Any) -> Any:
+    return getattr(value, "value", value)
+
+
+def _plan_summary(plan: Plan | None) -> dict[str, Any] | None:
+    """home 卡兼容的计划投影（与原 readouts 快照逐字同形）。"""
+    if plan is None:
+        return None
+    return {
+        "id": str(plan.id),
+        "name": plan.name,
+        "type": _enum_value(plan.type),
+        "subject": plan.subject,
+        "target_date": _iso_date(plan.target_date),
+        "progress": _clamp_unit(plan.progress),
+        "mastery_level": _clamp_unit(plan.mastery_level),
+        "plan_stage": _enum_value(plan.plan_stage),
+        "priority": _enum_value(plan.priority),
+    }
+
+
+def _progress_payload(*, goal: Goal | None, plan: Plan | None, task_counts: dict[str, int]) -> dict[str, Any]:
+    overall = _clamp_unit((goal.progress if goal else None) or (plan.progress if plan else None) or 0)
+    return {
+        "overall": overall,
+        "tasks_total": task_counts["total"],
+        "tasks_completed": task_counts["completed"],
+        "paused": task_counts["paused"],
+        "stuck": task_counts["stuck"],
+    }
+
+
+def _clamp_unit(value: Any) -> float:
+    return _readouts._clamp_unit(value)
+
+
+def _iso_date(value: Any) -> str | None:
+    if value is None:
+        return None
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    return str(value)
+
+
+def _criteria_or_draft(*, goal: Goal | None, plan: Plan | None) -> MinimumAcceptanceCriteriaPayload:
+    """达标线载荷：目标自带优先；无则回退草案（home 卡达标线行不因此退化为空）。"""
+    payload = _criteria_payload(goal.minimum_acceptance_criteria if goal else None)
+    if payload.thresholds:
+        return payload
+    drafts = _draft_acceptance_criteria(goal, plan)
+    return MinimumAcceptanceCriteriaPayload(
+        description="",
+        status="draft",
+        thresholds=[
+            CriteriaThresholdPayload(
+                id=f"draft-{index + 1}",
+                label=str(item.get("label") or ""),
+            )
+            for index, item in enumerate(drafts)
+            if item.get("label")
+        ],
+    )
+
+
+def _draft_acceptance_criteria(goal: Goal | None, plan: Plan | None) -> list[dict[str, Any]]:
+    """无达标线目标时的草案达标线（自原 readouts goal-detail 快照迁移，GOAL-ROUTER）。"""
+    title = str((goal.title if goal else None) or (plan.name if plan else "") or "").strip()
+    goal_type = str((goal.goal_type if goal else None) or (plan.type.value if plan and plan.type else "general"))
+    subject = str((plan.subject if plan else "") or "").strip()
+    if goal_type == "exam" or subject:
+        return [
+            {"label": "核心科目达到目标分数线", "status": "draft", "source": "sparkle_draft"},
+            {"label": "最近一次模拟/真题达到最低通过标准", "status": "draft", "source": "sparkle_draft"},
+            {"label": "高频错题知识点完成复盘", "status": "draft", "source": "sparkle_draft"},
+        ]
+    if title:
+        return [
+            {"label": f"{title} 有可交付成果", "status": "draft", "source": "sparkle_draft"},
+            {"label": "关键风险已被复盘并处理", "status": "draft", "source": "sparkle_draft"},
+            {"label": "下一阶段计划已经确认", "status": "draft", "source": "sparkle_draft"},
+        ]
+    return [
+        {"label": "目标定义清楚", "status": "draft", "source": "sparkle_draft"},
+        {"label": "有可执行的下一步", "status": "draft", "source": "sparkle_draft"},
+    ]
+
+
 async def _strategy_belief_payload(
     db: AsyncSession,
     *,
@@ -263,23 +413,6 @@ def _counter_evidence_payload(raw: Any) -> list[dict[str, Any]]:
     return payload
 
 
-async def _task_counts(db: AsyncSession, *, user_id: UUID, plan_id: UUID | None) -> dict[str, int]:
-    if plan_id is None:
-        return {"total": 0, "completed": 0}
-    result = await db.execute(
-        select(Task.status, func.count(Task.id))
-        .where(
-            Task.user_id == user_id,
-            Task.plan_id == plan_id,
-            Task.deleted_at.is_(None),
-        )
-        .group_by(Task.status)
-    )
-    counts = {str(status.value if hasattr(status, "value") else status): count for status, count in result.all()}
-    total = sum(counts.values())
-    return {"total": total, "completed": counts.get(TaskStatus.COMPLETED.value, 0)}
-
-
 async def _todays_next_task(db: AsyncSession, *, user_id: UUID, plan_id: UUID | None) -> Task | None:
     """goal 详情「今日最小下一步」取数。
 
@@ -301,7 +434,9 @@ def _todays_step_exists(task: Task | None) -> bool:
     return task is not None
 
 
-async def _load_graph_payload(db: AsyncSession, *, user_id: UUID, goal_id: UUID) -> dict[str, Any]:
+async def _load_graph_payload(db: AsyncSession, *, user_id: UUID, goal_id: UUID | None) -> dict[str, Any]:
+    if goal_id is None:
+        return {}
     result = await db.execute(
         select(GoalWorldGraphSnapshot)
         .where(
@@ -420,9 +555,9 @@ def _criteria_payload(raw: Any) -> MinimumAcceptanceCriteriaPayload:
     )
 
 
-def _plan_health_payload(*, goal: Goal, plan: Plan | None, task_counts: dict[str, int]) -> PlanHealthPayload:
-    progress = _safe_ratio(plan.progress if plan else goal.progress)
-    mastery = _safe_ratio(plan.mastery_level if plan else goal.mastery)
+def _plan_health_payload(*, goal: Goal | None, plan: Plan | None, task_counts: dict[str, int]) -> PlanHealthPayload:
+    progress = _safe_ratio((plan.progress if plan else None) or (goal.progress if goal else None))
+    mastery = _safe_ratio((plan.mastery_level if plan else None) or (goal.mastery if goal else None))
     total = task_counts["total"]
     task_completion_rate = task_counts["completed"] / total if total else progress
     overall = (progress * 0.45) + (mastery * 0.35) + (task_completion_rate * 0.2)
@@ -433,9 +568,12 @@ def _plan_health_payload(*, goal: Goal, plan: Plan | None, task_counts: dict[str
     )
 
 
-def _current_phase_payload(*, plan: Plan | None, goal: Goal) -> CurrentPhasePayload:
+def _current_phase_payload(*, plan: Plan | None, goal: Goal | None) -> CurrentPhasePayload:
     if plan is None:
-        return CurrentPhasePayload(name=goal.status or "active", progress=_safe_ratio(goal.progress))
+        return CurrentPhasePayload(
+            name=(goal.status if goal else None) or "active",
+            progress=_safe_ratio(goal.progress if goal else 0),
+        )
     stage = plan.plan_stage.value if hasattr(plan.plan_stage, "value") else str(plan.plan_stage)
     return CurrentPhasePayload(name=stage, progress=_safe_ratio(plan.progress))
 
