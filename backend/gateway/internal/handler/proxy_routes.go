@@ -608,6 +608,15 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		community.POST("/squads/:group_id/leave", h.proxyWithHeaders)
 		community.GET("/squads/:group_id/members", h.proxyWithHeaders)
 		community.GET("/squads/:group_id/sprint-progress", h.proxyWithHeaders)
+		// Squad Study Room + Leaderboard (D-COMM-4: beacon 式在场证明 +
+		// 冲刺完成度口径小队榜) — engine side api/v1/community_study_room.py
+		// and api/v1/community_squad_board.py; presence duration is display-only,
+		// board score stays sprint-completion (XP/photon/time excluded by rule).
+		community.POST("/squads/:group_id/study-room/enter", h.proxyWithHeaders)
+		community.POST("/squads/:group_id/study-room/exit", h.proxyWithHeaders)
+		community.POST("/squads/:group_id/study-room/heartbeat", h.proxyWithHeaders)
+		community.GET("/squads/:group_id/study-room/presence", h.proxyWithHeaders)
+		community.GET("/squads/:group_id/leaderboard", h.proxyWithHeaders)
 		// Group Messages
 		community.GET("/groups/:group_id/messages", h.proxyWithHeaders)
 		community.POST("/groups/:group_id/messages", h.proxyWithHeaders)

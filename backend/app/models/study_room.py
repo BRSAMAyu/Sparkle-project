@@ -1,0 +1,61 @@
+"""共学自习室在场证明模型（D-COMM-4 · beacon 式在场）。
+
+复用裁决（vs 既有表）：社群域无 presence/session 类模型——
+``GroupMember.last_active_at`` 是成员级单时间戳（无会话语义、算不出时长）、
+``models/focus.py::FocusSession`` 是个人番茄钟结算记录（写入即要求
+end_time/duration，无群组归属，撑不起「谁正在自习」的活体在场面）、
+``User.status`` 是全局在线状态（非小队作用域）。故按设计卡 §3.3
+「落库最小记录」立最小新表：一条记录 = 一次进出场（entered_at →
+exited_at），exited_at IS NULL 即在场；心跳只做崩溃恢复（显式进出为主、
+心跳兜底，离开不惩罚——在场时长如实记录，设计裁决）。
+
+「在场时长」只作展示、不进任何榜分（小队榜口径唯一是 sprint 完成度，
+见 services/community_squad_board_service.py；防 Duolingo 式挂机刷时长）。
+"""
+
+from __future__ import annotations
+
+from sqlalchemy import Column, DateTime, ForeignKey, Index, text
+
+from app.models.base import GUID, BaseModel
+
+
+class StudyRoomSession(BaseModel):
+    """一次自习进出场（beacon 式在场证明，最小记录）。
+
+    - ``entered_at``：进入时刻（naive UTC，与社群域既有列约定一致）；
+    - ``exited_at``：离开时刻；NULL = 仍在场；
+    - ``last_heartbeat_at``：最近心跳（显式进出为主，心跳仅兜底崩溃恢复）。
+    """
+
+    __tablename__ = "study_room_sessions"
+
+    group_id = Column(GUID(), ForeignKey("groups.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    entered_at = Column(DateTime, nullable=False)
+    exited_at = Column(DateTime, nullable=True)
+    last_heartbeat_at = Column(DateTime, nullable=False)
+
+    __table_args__ = (
+        # 一人一小队同时至多一个开放会话。部分索引带 exited_at/deleted_at
+        # 谓词，PG 生产由 Alembic 等价迁移创建；sqlite 同样支持部分索引
+        # （sqlite_where 与迁移 dc4room_20260922 双方言等价），测试路径的
+        # 开放会话唯一性由本索引 + 服务层 enter 幂等语义共同保证。
+        Index(
+            "uq_study_room_open_session",
+            "group_id",
+            "user_id",
+            unique=True,
+            sqlite_where=text("exited_at IS NULL AND deleted_at IS NULL"),
+            postgresql_where=text("exited_at IS NULL AND deleted_at IS NULL"),
+        ),
+        Index("idx_study_room_group_entered", "group_id", "entered_at"),
+        Index("idx_study_room_user_entered", "user_id", "entered_at"),
+    )
+
+    def __repr__(self) -> str:  # noqa: D105
+        return (
+            f"<StudyRoomSession(id={self.id}, group_id={self.group_id}, user_id={self.user_id}, "
+            f"entered_at={self.entered_at}, exited_at={self.exited_at})>"
+        )

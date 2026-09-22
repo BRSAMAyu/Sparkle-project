@@ -228,6 +228,7 @@ from app.models.semantic_memory import SemanticLink, StrategyNode
 from app.models.session_completion import SessionCompletion
 from app.models.shop import PhotonTransactionHistory, ShopItem, ShopPurchase, UserConsumable
 from app.models.simulation_run import SimulationRun
+from app.models.study_room import StudyRoomSession
 from app.models.subject import Subject
 from app.models.task import CognitiveOwnership, RiskClass, Task, TaskStatus, TaskType
 from app.models.task_document import TaskDocument
@@ -458,6 +459,8 @@ __all__ = [
     "NodeRelation",
     "StudyRecord",
     "UserNodeStatus",
+    # Study Room (D-COMM-4: 共学自习室在场证明)
+    "StudyRoomSession",
     # Group Files
     "GroupFile",
     "GroupFileTrustLevel",
