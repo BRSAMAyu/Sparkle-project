@@ -49,14 +49,13 @@ class TestRedisClientFixtureIsolation:
     async def test_fixture_writes_visible_and_scoped(self, redis_client):
         await redis_client.set("hygiene2:isolation:probe", "ok", ex=60)
         assert await redis_client.get("hygiene2:isolation:probe") == "ok"
-        # 用独立的裸连接核对数据确实只存在于隔离 DB
-        probe = Redis(
-            host=redis_client.connection_pool.connection_kwargs.get("host", "localhost"),
-            port=redis_client.connection_pool.connection_kwargs.get("port", 6379),
-            db=TEST_REDIS_DB,
-            decode_responses=True,
-            socket_connect_timeout=2,
-        )
+        # 用独立连接核对数据确实只存在于隔离 DB。连接参数必须整体复用
+        # fixture 的 connection_kwargs（含 username/password 等认证信息）——
+        # 若只挑 host/port/db 裸重构，在带密码的 redis（如本地 dev）下会
+        # 以 AuthenticationError 误报（环境条件性假红）。
+        probe_kwargs = dict(redis_client.connection_pool.connection_kwargs)
+        probe_kwargs.setdefault("socket_connect_timeout", 2)
+        probe = Redis(**probe_kwargs)
         try:
             assert probe.get("hygiene2:isolation:probe") == "ok"
         finally:
