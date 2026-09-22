@@ -1,0 +1,341 @@
+diff --git a/backend/app/services/achievement_event_consumer.py b/backend/app/services/achievement_event_consumer.py
+index fc867cac..43a407f2 100644
+--- a/backend/app/services/achievement_event_consumer.py
++++ b/backend/app/services/achievement_event_consumer.py
+@@ -327,12 +327,18 @@ class AchievementEventConsumer:
+                 user_uuid = UUID(str(user_id))
+                 cognitive_service = CognitiveService(db)
+                 achievement_title = event.get("achievement_name") or event.get("title") or str(achievement_id)
++                # IDEM-GAPS：at-least-once 重投递幂等门——引擎侧解锁为每用户每成就至多
++                # 一次（_unlock_achievement 行锁 + unlocked_at 已解锁检查），故
++                # achievement_id 对该用户即「同一次发生」的稳定标识；重试窗口内重复
++                # 消费同一解锁事件时 create_fragment 依 (user_id, source_event_id)
++                # 返回既有碎片，不再重复建 positive_milestone。
+                 await cognitive_service.create_fragment(
+                     user_id=user_uuid,
+                     content=f"用户达成了 {achievement_title} 成就。这是用户持续努力和进步的证明。",
+                     source_type="achievement",
+                     severity=1,
+                     context_tags={"achievement_id": str(achievement_id), "type": "positive_milestone"},
++                    source_event_id=f"achievement_unlock:{achievement_id}",
+                 )
+                 logger.info(f"Recorded cognitive fragment for achievement {achievement_id} unlock by user {user_id}")
+ 
+diff --git a/backend/app/services/plan_health_event_consumer.py b/backend/app/services/plan_health_event_consumer.py
+index 6c4a92a9..aadd5203 100644
+--- a/backend/app/services/plan_health_event_consumer.py
++++ b/backend/app/services/plan_health_event_consumer.py
+@@ -110,9 +110,17 @@ class PlanHealthEventConsumer:
+                             "silent": True,
+                         },
+                     )
++                    # IDEM-GAPS：at-least-once 重投递幂等门——冷却提醒是低优先级
++                    # best-effort 面，签名为发布侧稳定键（severity|action|reasons），
++                    # 同一 plan 同签名重投递 10 分钟窗口内不双发（enqueue 内 SET NX EX）；
++                    # 发布侧同签名冷却 ≥2h，合法重发不会被误吞。
+                     await SystemUpdateService().enqueue(
+                         user_id=UUID(user_id),
+                         payload=update,
++                        dedup_key=(
++                            f"plan_health_cooldown:{plan_id}:"
++                            f"{event.get('signature') or f'{severity}|{action_taken}'}"
++                        ),
+                     )
+ 
+                 # --- Card protocol: create InterventionRecord (breakpoint 3 fix) ---
+diff --git a/backend/app/services/system_update_service.py b/backend/app/services/system_update_service.py
+index 5b569eae..d7ff55b7 100644
+--- a/backend/app/services/system_update_service.py
++++ b/backend/app/services/system_update_service.py
+@@ -14,18 +14,38 @@ def _utcnow() -> datetime:
+ 
+ class SystemUpdateService:
+     KEY_PREFIX = "system_updates:"
++    DEDUP_KEY_PREFIX = "system_updates:dedup:"
+     TTL_SECONDS = 7 * 24 * 60 * 60
+     MAX_ITEMS = 200
++    # IDEM-GAPS：去重标记窗口。总线重试为热重试（requeue 即刻重投，至多 3 次）+
++    # XAUTOCLAIM 空闲阈值默认 5s，重投递窗口为秒~分钟级；600s 足以覆盖，同时远小于
++    # plan_health 同签名 2h 发布侧冷却，不会误吞跨窗口的合法重发。
++    DEFAULT_DEDUP_TTL_SECONDS = 600
+ 
+     def __init__(self, redis_client=None):
+         self.redis = redis_client or cache_service.redis
+ 
+-    async def enqueue(self, user_id: UUID | str, payload: dict[str, Any]) -> bool:
++    async def enqueue(
++        self,
++        user_id: UUID | str,
++        payload: dict[str, Any],
++        dedup_key: str | None = None,
++        dedup_ttl_seconds: int = DEFAULT_DEDUP_TTL_SECONDS,
++    ) -> bool:
+         if not self.redis:
+             return False
+         key = f"{self.KEY_PREFIX}{user_id}"
+         raw = json.dumps(payload, ensure_ascii=True, default=str)
+         try:
++            if dedup_key:
++                # SET NX EX 天然查重：标记已存在 → 同一 dedup_key 的重投递跳过。
++                # 先占标记再入队（非整体原子）：极端窗口下宁可丢一条 best-effort
++                # 提醒，也不产生重复打扰（与既有 enqueue 的低危定位一致）。
++                marker_key = f"{self.DEDUP_KEY_PREFIX}{user_id}:{dedup_key}"
++                acquired = await self.redis.set(marker_key, "1", nx=True, ex=int(dedup_ttl_seconds))
++                if not acquired:
++                    logger.info(f"SystemUpdate enqueue skipped as duplicate: dedup_key={dedup_key}")
++                    return False
+             pipe = self.redis.pipeline()
+             pipe.lpush(key, raw)
+             pipe.ltrim(key, 0, self.MAX_ITEMS - 1)
+diff --git a/backend/tests/unit/test_achievement_event_consumer.py b/backend/tests/unit/test_achievement_event_consumer.py
+index bc4e7d56..d08ba0f9 100644
+--- a/backend/tests/unit/test_achievement_event_consumer.py
++++ b/backend/tests/unit/test_achievement_event_consumer.py
+@@ -1,9 +1,13 @@
+ from datetime import datetime, timedelta
+-from unittest.mock import AsyncMock, patch
++from unittest.mock import AsyncMock, MagicMock, patch
+ 
+ import pytest
+ from sqlalchemy import select
++from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
++from sqlalchemy.pool import StaticPool
+ 
++import app.aurora.runtime_v1.models  # noqa: F401 — 注册 chronicle 表到 metadata
++from app.core.cache import cache_service
+ from app.models.achievement import (
+     Achievement,
+     AchievementRarity,
+@@ -13,6 +17,8 @@ from app.models.achievement import (
+     UserAchievement,
+     UserStreakStats,
+ )
++from app.models.base import Base
++from app.models.cognitive import CognitiveFragment
+ from app.models.error_book import ErrorRecord
+ from app.models.galaxy import KnowledgeNode, UserNodeStatus
+ from app.models.notification import Notification
+@@ -211,3 +217,81 @@ async def test_contract_completion_triggers_achievement_unlock(db_session, test_
+     user_achievement = user_achievement_result.scalar_one_or_none()
+     assert user_achievement is not None
+     assert user_achievement.unlocked_at is not None
++
++
++# ---------------------------------------------------------------------------
++# IDEM-GAPS 缺口A：achievement.unlocked 重投递 → 认知碎片不重复
++# ---------------------------------------------------------------------------
++
++
++def _unlock_event(user_id: str, achievement_id: str, achievement_name: str) -> dict:
++    return {
++        "event_type": "achievement.unlocked",
++        "user_id": user_id,
++        "achievement_id": achievement_id,
++        "achievement_name": achievement_name,
++        "rarity": "common",
++    }
++
++
++@pytest.mark.asyncio
++async def test_unlock_redelivery_creates_single_fragment_per_occurrence(test_user):
++    """同一解锁事件重投两次 → 恰一条碎片；不同成就各一次 → 两条碎片。
++
++    幂等键取 achievement_unlock:{achievement_id}：引擎侧解锁为每用户每成就至多
++    一次（行锁 + unlocked_at 检查），故 achievement_id 对该用户即「同一次发生」。
++    """
++    engine = create_async_engine(
++        "sqlite+aiosqlite:///:memory:",
++        connect_args={"check_same_thread": False},
++        poolclass=StaticPool,
++    )
++    async with engine.begin() as conn:
++        await conn.run_sync(Base.metadata.create_all)
++    session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
++
++    consumer = AchievementEventConsumer(event_bus=AsyncMock())
++    event = _unlock_event(str(test_user.id), "streak_7", "连续学习 7 天")
++
++    spine_mock = MagicMock(on_achievement_event=AsyncMock(), on_achievement_unlocked=AsyncMock())
++    with (
++        patch("app.services.achievement_event_consumer.AsyncSessionLocal", session_factory),
++        patch.object(cache_service, "redis", None),
++        patch(
++            "app.services.cognitive_service.embedding_service.get_embedding",
++            new=AsyncMock(return_value=None),
++        ),
++        patch(
++            "app.services.personalization.preference_service.PreferenceService.get_preferences",
++            new=AsyncMock(return_value=MagicMock(explicit={"share_achievements_to_community": False})),
++        ),
++        patch("app.signals.spine_orchestrator.get_spine_orchestrator", return_value=spine_mock),
++        patch("app.services.cognitive_service.event_bus", new=AsyncMock()),
++    ):
++        await consumer._handle_achievement_unlocked(event)
++        # at-least-once 重投递：同一事件再消费一次
++        await consumer._handle_achievement_unlocked(event)
++        # 不同成就（不同次发生）不被误判成重复
++        await consumer._handle_achievement_unlocked(
++            _unlock_event(str(test_user.id), "tasks_1", "第一个任务")
++        )
++
++    async with session_factory() as session:
++        result = await session.execute(
++            select(CognitiveFragment)
++            .where(CognitiveFragment.user_id == test_user.id)
++            .order_by(CognitiveFragment.source_event_id)
++        )
++        fragments = list(result.scalars().all())
++
++    assert len(fragments) == 2
++    by_key = {f.source_event_id: f for f in fragments}
++    assert set(by_key) == {"achievement_unlock:streak_7", "achievement_unlock:tasks_1"}
++
++    streak_fragment = by_key["achievement_unlock:streak_7"]
++    assert streak_fragment.source_type == "achievement"
++    assert streak_fragment.context_tags["type"] == "positive_milestone"
++    assert streak_fragment.context_tags["achievement_id"] == "streak_7"
++    assert "连续学习 7 天" in streak_fragment.content
++
++    await engine.dispose()
+diff --git a/backend/tests/unit/test_plan_health_cooldown_dedup.py b/backend/tests/unit/test_plan_health_cooldown_dedup.py
+new file mode 100644
+index 00000000..22d70c46
+--- /dev/null
++++ b/backend/tests/unit/test_plan_health_cooldown_dedup.py
+@@ -0,0 +1,136 @@
++"""IDEM-GAPS 缺口B：plan.health.alerted 冷却提醒的重投递幂等门。
++
++- 服务面：SystemUpdateService.enqueue 可选 dedup_key（Redis SET NX EX 天然查重），
++  默认 600s 窗口——覆盖总线热重试+XAUTOCLAIM 秒~分钟级重投递，远小于发布侧
++  同签名 2h 冷却，不误吞合法重发；
++- 消费面：同一事件重投 → 提醒不双发；不同 plan / 标记过期（不同日）→ 正常发。
++"""
++
++from __future__ import annotations
++
++import json
++from unittest.mock import AsyncMock, MagicMock, patch
++from uuid import uuid4
++
++import fakeredis
++import pytest
++
++from app.core.cache import cache_service
++from app.services.plan_health_event_consumer import PlanHealthEventConsumer
++from app.services.system_update_service import SystemUpdateService
++
++
++def _alert_event(user_id: str, plan_id: str, signature: str = "warning|none|pace_drop") -> dict:
++    return {
++        "event_type": "plan.health.alerted",
++        "user_id": user_id,
++        "plan_id": plan_id,
++        "severity": "warning",
++        "recommended_action": "none",
++        "reasons": ["pace_drop"],
++        "action_taken": "none_cooldown_active",
++        "signature": signature,
++        "emitted_at": "2026-09-23T00:00:00+00:00",
++    }
++
++
++@pytest.mark.asyncio
++async def test_enqueue_dedup_key_semantics():
++    """dedup_key 基础语义：同键窗口内不双发；跨用户隔离；过期可再发；缺省行为不变。"""
++    fake = fakeredis.aioredis.FakeRedis(decode_responses=True)
++    svc = SystemUpdateService(redis_client=fake)
++
++    assert await svc.enqueue("u1", {"t": 1}, dedup_key="k") is True
++    # 同键窗口内 → 跳过
++    assert await svc.enqueue("u1", {"t": 1}, dedup_key="k") is False
++    # dedup 键按用户命名空间隔离，互不影响
++    assert await svc.enqueue("u2", {"t": 1}, dedup_key="k") is True
++    # 默认 TTL 600（< 2h 发布侧同签名冷却）
++    ttl = await fake.ttl("system_updates:dedup:u1:k")
++    assert 0 < ttl <= SystemUpdateService.DEFAULT_DEDUP_TTL_SECONDS
++    # 无 dedup_key → 旧行为不变（不去重）
++    assert await svc.enqueue("u1", {"t": 2}) is True
++
++    # 标记过期（不同日机制面）→ 可再次入队
++    await fake.delete("system_updates:dedup:u1:k")
++    assert await svc.enqueue("u1", {"t": 1}, dedup_key="k") is True
++
++    stored = await fake.lrange("system_updates:u1", 0, -1)
++    assert len(stored) == 3  # 首次 k + 无键一次 + 过期后 k；窗口内重复未入队
++
++
++@pytest.mark.asyncio
++async def test_cooldown_reminder_not_duplicated_on_event_redelivery():
++    """同一 plan.health.alerted 事件重投 → 冷却提醒恰一条；不同 plan → 正常发。"""
++    fake = fakeredis.aioredis.FakeRedis(decode_responses=True)
++    consumer = PlanHealthEventConsumer(event_bus=AsyncMock())
++    bridge_stub = MagicMock(on_plan_health_signal=AsyncMock(return_value=None))
++    session_mock = MagicMock()
++
++    plan_id = str(uuid4())
++    user_id = str(uuid4())
++    event = _alert_event(user_id, plan_id)
++    updates_key = f"system_updates:{user_id}"
++
++    def _run(event_body: dict):
++        return consumer._handle_plan_health_alerted(event_body)
++
++    with (
++        patch("app.services.plan_health_event_consumer.AsyncSessionLocal", return_value=session_mock.return_value),
++        patch(
++            "app.services.card_protocol.health_intervention_bridge.PlanHealthInterventionBridge",
++            return_value=bridge_stub,
++        ),
++        patch.object(cache_service, "redis", fake),
++    ):
++        await _run(event)
++        # at-least-once 重投递：同一事件再消费一次
++        await _run(event)
++        items = await fake.lrange(updates_key, 0, -1)
++        assert len(items) == 1
++        stored = json.loads(items[0])
++        assert stored["title"] == "计划状态观察中"
++        assert stored["metadata"]["plan_id"] == plan_id
++
++        # 不同 plan → 不同 dedup 键 → 正常发第二条
++        await _run(_alert_event(user_id, str(uuid4())))
++        items = await fake.lrange(updates_key, 0, -1)
++        assert len(items) == 2
++
++        # 不同日机制面：标记过期后同一 plan 同签名可再次提醒
++        await fake.delete(f"system_updates:dedup:{user_id}:plan_health_cooldown:{plan_id}:warning|none|pace_drop")
++        await _run(event)
++        items = await fake.lrange(updates_key, 0, -1)
++        assert len(items) == 3
++
++
++@pytest.mark.asyncio
++async def test_cooldown_dedup_key_derives_from_event_signature():
++    """消费点按事件 signature 构键；payload 缺 signature 时回退 severity|action。"""
++    fake = fakeredis.aioredis.FakeRedis(decode_responses=True)
++    consumer = PlanHealthEventConsumer(event_bus=AsyncMock())
++    bridge_stub = MagicMock(on_plan_health_signal=AsyncMock(return_value=None))
++    session_mock = MagicMock()
++
++    event = _alert_event(str(uuid4()), str(uuid4()))
++    event_without_signature = {k: v for k, v in event.items() if k != "signature"}
++
++    with (
++        patch("app.services.plan_health_event_consumer.AsyncSessionLocal", return_value=session_mock.return_value),
++        patch(
++            "app.services.card_protocol.health_intervention_bridge.PlanHealthInterventionBridge",
++            return_value=bridge_stub,
++        ),
++        patch.object(cache_service, "redis", fake),
++    ):
++        await consumer._handle_plan_health_alerted(event_without_signature)
++        await consumer._handle_plan_health_alerted(event_without_signature)
++        items = await fake.lrange(f"system_updates:{event['user_id']}", 0, -1)
++        assert len(items) == 1  # 回退键同样幂等
++
++        marker_keys = []
++        async for key in fake.scan_iter(match=f"system_updates:dedup:{event['user_id']}:*"):
++            marker_keys.append(str(key))
++        assert marker_keys == [
++            f"system_updates:dedup:{event['user_id']}:plan_health_cooldown:{event['plan_id']}:warning|none_cooldown_active"
++        ]

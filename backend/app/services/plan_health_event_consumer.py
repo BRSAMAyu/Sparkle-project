@@ -110,9 +110,17 @@ class PlanHealthEventConsumer:
                             "silent": True,
                         },
                     )
+                    # IDEM-GAPS：at-least-once 重投递幂等门——冷却提醒是低优先级
+                    # best-effort 面，签名为发布侧稳定键（severity|action|reasons），
+                    # 同一 plan 同签名重投递 10 分钟窗口内不双发（enqueue 内 SET NX EX）；
+                    # 发布侧同签名冷却 ≥2h，合法重发不会被误吞。
                     await SystemUpdateService().enqueue(
                         user_id=UUID(user_id),
                         payload=update,
+                        dedup_key=(
+                            f"plan_health_cooldown:{plan_id}:"
+                            f"{event.get('signature') or f'{severity}|{action_taken}'}"
+                        ),
                     )
 
                 # --- Card protocol: create InterventionRecord (breakpoint 3 fix) ---

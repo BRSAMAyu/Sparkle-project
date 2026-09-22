@@ -327,12 +327,18 @@ class AchievementEventConsumer:
                 user_uuid = UUID(str(user_id))
                 cognitive_service = CognitiveService(db)
                 achievement_title = event.get("achievement_name") or event.get("title") or str(achievement_id)
+                # IDEM-GAPS：at-least-once 重投递幂等门——引擎侧解锁为每用户每成就至多
+                # 一次（_unlock_achievement 行锁 + unlocked_at 已解锁检查），故
+                # achievement_id 对该用户即「同一次发生」的稳定标识；重试窗口内重复
+                # 消费同一解锁事件时 create_fragment 依 (user_id, source_event_id)
+                # 返回既有碎片，不再重复建 positive_milestone。
                 await cognitive_service.create_fragment(
                     user_id=user_uuid,
                     content=f"用户达成了 {achievement_title} 成就。这是用户持续努力和进步的证明。",
                     source_type="achievement",
                     severity=1,
                     context_tags={"achievement_id": str(achievement_id), "type": "positive_milestone"},
+                    source_event_id=f"achievement_unlock:{achievement_id}",
                 )
                 logger.info(f"Recorded cognitive fragment for achievement {achievement_id} unlock by user {user_id}")
 

@@ -14,18 +14,38 @@ def _utcnow() -> datetime:
 
 class SystemUpdateService:
     KEY_PREFIX = "system_updates:"
+    DEDUP_KEY_PREFIX = "system_updates:dedup:"
     TTL_SECONDS = 7 * 24 * 60 * 60
     MAX_ITEMS = 200
+    # IDEM-GAPS：去重标记窗口。总线重试为热重试（requeue 即刻重投，至多 3 次）+
+    # XAUTOCLAIM 空闲阈值默认 5s，重投递窗口为秒~分钟级；600s 足以覆盖，同时远小于
+    # plan_health 同签名 2h 发布侧冷却，不会误吞跨窗口的合法重发。
+    DEFAULT_DEDUP_TTL_SECONDS = 600
 
     def __init__(self, redis_client=None):
         self.redis = redis_client or cache_service.redis
 
-    async def enqueue(self, user_id: UUID | str, payload: dict[str, Any]) -> bool:
+    async def enqueue(
+        self,
+        user_id: UUID | str,
+        payload: dict[str, Any],
+        dedup_key: str | None = None,
+        dedup_ttl_seconds: int = DEFAULT_DEDUP_TTL_SECONDS,
+    ) -> bool:
         if not self.redis:
             return False
         key = f"{self.KEY_PREFIX}{user_id}"
         raw = json.dumps(payload, ensure_ascii=True, default=str)
         try:
+            if dedup_key:
+                # SET NX EX 天然查重：标记已存在 → 同一 dedup_key 的重投递跳过。
+                # 先占标记再入队（非整体原子）：极端窗口下宁可丢一条 best-effort
+                # 提醒，也不产生重复打扰（与既有 enqueue 的低危定位一致）。
+                marker_key = f"{self.DEDUP_KEY_PREFIX}{user_id}:{dedup_key}"
+                acquired = await self.redis.set(marker_key, "1", nx=True, ex=int(dedup_ttl_seconds))
+                if not acquired:
+                    logger.info(f"SystemUpdate enqueue skipped as duplicate: dedup_key={dedup_key}")
+                    return False
             pipe = self.redis.pipeline()
             pipe.lpush(key, raw)
             pipe.ltrim(key, 0, self.MAX_ITEMS - 1)

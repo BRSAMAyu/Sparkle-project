@@ -1,9 +1,13 @@
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import StaticPool
 
+import app.aurora.runtime_v1.models  # noqa: F401 — 注册 chronicle 表到 metadata
+from app.core.cache import cache_service
 from app.models.achievement import (
     Achievement,
     AchievementRarity,
@@ -13,6 +17,8 @@ from app.models.achievement import (
     UserAchievement,
     UserStreakStats,
 )
+from app.models.base import Base
+from app.models.cognitive import CognitiveFragment
 from app.models.error_book import ErrorRecord
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.notification import Notification
@@ -211,3 +217,81 @@ async def test_contract_completion_triggers_achievement_unlock(db_session, test_
     user_achievement = user_achievement_result.scalar_one_or_none()
     assert user_achievement is not None
     assert user_achievement.unlocked_at is not None
+
+
+# ---------------------------------------------------------------------------
+# IDEM-GAPS 缺口A：achievement.unlocked 重投递 → 认知碎片不重复
+# ---------------------------------------------------------------------------
+
+
+def _unlock_event(user_id: str, achievement_id: str, achievement_name: str) -> dict:
+    return {
+        "event_type": "achievement.unlocked",
+        "user_id": user_id,
+        "achievement_id": achievement_id,
+        "achievement_name": achievement_name,
+        "rarity": "common",
+    }
+
+
+@pytest.mark.asyncio
+async def test_unlock_redelivery_creates_single_fragment_per_occurrence(test_user):
+    """同一解锁事件重投两次 → 恰一条碎片；不同成就各一次 → 两条碎片。
+
+    幂等键取 achievement_unlock:{achievement_id}：引擎侧解锁为每用户每成就至多
+    一次（行锁 + unlocked_at 检查），故 achievement_id 对该用户即「同一次发生」。
+    """
+    engine = create_async_engine(
+        "sqlite+aiosqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+    consumer = AchievementEventConsumer(event_bus=AsyncMock())
+    event = _unlock_event(str(test_user.id), "streak_7", "连续学习 7 天")
+
+    spine_mock = MagicMock(on_achievement_event=AsyncMock(), on_achievement_unlocked=AsyncMock())
+    with (
+        patch("app.services.achievement_event_consumer.AsyncSessionLocal", session_factory),
+        patch.object(cache_service, "redis", None),
+        patch(
+            "app.services.cognitive_service.embedding_service.get_embedding",
+            new=AsyncMock(return_value=None),
+        ),
+        patch(
+            "app.services.personalization.preference_service.PreferenceService.get_preferences",
+            new=AsyncMock(return_value=MagicMock(explicit={"share_achievements_to_community": False})),
+        ),
+        patch("app.signals.spine_orchestrator.get_spine_orchestrator", return_value=spine_mock),
+        patch("app.services.cognitive_service.event_bus", new=AsyncMock()),
+    ):
+        await consumer._handle_achievement_unlocked(event)
+        # at-least-once 重投递：同一事件再消费一次
+        await consumer._handle_achievement_unlocked(event)
+        # 不同成就（不同次发生）不被误判成重复
+        await consumer._handle_achievement_unlocked(
+            _unlock_event(str(test_user.id), "tasks_1", "第一个任务")
+        )
+
+    async with session_factory() as session:
+        result = await session.execute(
+            select(CognitiveFragment)
+            .where(CognitiveFragment.user_id == test_user.id)
+            .order_by(CognitiveFragment.source_event_id)
+        )
+        fragments = list(result.scalars().all())
+
+    assert len(fragments) == 2
+    by_key = {f.source_event_id: f for f in fragments}
+    assert set(by_key) == {"achievement_unlock:streak_7", "achievement_unlock:tasks_1"}
+
+    streak_fragment = by_key["achievement_unlock:streak_7"]
+    assert streak_fragment.source_type == "achievement"
+    assert streak_fragment.context_tags["type"] == "positive_milestone"
+    assert streak_fragment.context_tags["achievement_id"] == "streak_7"
+    assert "连续学习 7 天" in streak_fragment.content
+
+    await engine.dispose()
