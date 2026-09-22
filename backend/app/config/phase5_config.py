@@ -72,6 +72,12 @@ class Phase5Config(BaseSettings):
     # SSE 重放最大事件数（防止过大的重放）
     SSE_REPLAY_MAX_EVENTS: int = 50
 
+    # SSE 空闲心跳间隔（秒）。event_generator 在队列无事件时每隔该时长
+    # 产出一条注释帧（": heartbeat\n\n"）保持链路字节流动，防止 nginx/LB/
+    # 客户端等中间层因读空闲掐断连接。20s < 常见中间层空闲超时（nginx 60s、
+    # 客户端历史 receiveTimeout 30s），且不至于过频。
+    SSE_HEARTBEAT_INTERVAL: float = 20.0
+
     # ==========================================
     # Document Quality Gate Configuration
     # ==========================================

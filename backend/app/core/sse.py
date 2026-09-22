@@ -182,6 +182,11 @@ async def event_generator(queue: asyncio.Queue):
     """
     SSE 事件生成器
 
+    队列空闲期每隔 phase5_config.SSE_HEARTBEAT_INTERVAL 秒产出一条 SSE 注释帧
+    ``: heartbeat\n\n``，保持链路（engine → gateway ReverseProxy → 客户端）字节
+    流动，防止中间层因读空闲掐断连接。注释帧不携带 event:/data: 字段，网关逐字节
+    透传，客户端解析器（如 mobile _parseSSE）会静默忽略，不触发任何事件处理。
+
     Args:
         queue: 事件队列
 
@@ -190,8 +195,15 @@ async def event_generator(queue: asyncio.Queue):
     """
     try:
         while True:
-            # 等待事件
-            event_data = await queue.get()
+            # 等待事件；超时则发心跳注释帧（SSE-HB）
+            try:
+                event_data = await asyncio.wait_for(
+                    queue.get(),
+                    timeout=phase5_config.SSE_HEARTBEAT_INTERVAL,
+                )
+            except asyncio.TimeoutError:
+                yield ": heartbeat\n\n"
+                continue
 
             # 格式化为 SSE 格式
             event_type = event_data.get("type", "message")
