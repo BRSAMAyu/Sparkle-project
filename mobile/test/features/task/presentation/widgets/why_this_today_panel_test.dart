@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/features/task/data/models/priority_reasoning.dart';
 import 'package:sparkle/features/task/presentation/widgets/why_this_today_panel.dart';
+import '../../../../shared/i18n_test_helper.dart';
 
 void main() {
   testWidgets(
@@ -46,8 +47,10 @@ void main() {
     );
 
     await tester.pumpWidget(
+      // U-03 harness repair：面板头与信号标签构建即读 context.l10n，
+      // 裸 MaterialApp 未挂 delegates 空断言炸；换 testMaterialApp。
       ProviderScope(
-        child: MaterialApp(
+        child: testMaterialApp(
           home: Scaffold(
             body: WhyThisTodayPanel(
               taskId: 'task-1',

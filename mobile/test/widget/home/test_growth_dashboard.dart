@@ -11,6 +11,7 @@ import 'package:sparkle/features/home/presentation/widgets/active_bottleneck_ale
 import 'package:sparkle/features/home/presentation/widgets/daily_context_line.dart';
 import 'package:sparkle/features/home/presentation/widgets/next_action_prompt.dart';
 import 'package:sparkle/features/home/presentation/widgets/today_growth_status_card.dart';
+import '../../shared/i18n_test_helper.dart';
 
 void main() {
   setUp(() async {
@@ -182,10 +183,12 @@ Future<void> _pumpWithTheme(
   WidgetTester tester,
   Widget child,
 ) async {
+  // U-03 harness repair：DailyContextLine/ActiveBottleneckAlert 等构建即读
+  // context.l10n，裸 MaterialApp 未挂 delegates 直接空断言炸；改用仓内
+  // testMaterialApp（delegates + zh locale + SparkleThemeExtension）。
   await tester.pumpWidget(
-    MaterialApp(
+    testMaterialApp(
       theme: AppThemes.lightTheme,
-      darkTheme: AppThemes.darkTheme,
       home: Scaffold(body: child),
     ),
   );

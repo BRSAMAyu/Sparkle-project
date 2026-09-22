@@ -171,6 +171,11 @@ void main() {
     await tester.pumpWidget(
       MaterialApp.router(
         routerConfig: router,
+        // U-03 harness repair：ActionCard/PlanCard 构建即读 context.sparkle，
+        // 未注册 SparkleThemeExtension 直接断言失败（与上方 task_list 用例同款）。
+        theme: ThemeData.light().copyWith(
+          extensions: [SparkleThemeExtension.light()],
+        ),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         locale: const Locale('zh'),

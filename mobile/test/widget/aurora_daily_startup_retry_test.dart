@@ -206,6 +206,12 @@ void main() {
     expect(find.byTooltip('重试今日概览'), findsOneWidget);
     expect(startupRepository.calls, 1);
 
+    // A-5（37edc68d）后横幅区被 20% body 高度帽 + SingleChildScrollView 裁剪，
+    // 重试按钮在裁剪区外时 tap 直接落空（命中背后消息列表）；先滚入可视区。
+    // 注意 ChatScreen 有常驻动画，不能 pumpAndSettle，用定长 pump。
+    await tester.ensureVisible(find.byTooltip('重试今日概览'));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 300));
     await tester.tap(find.byTooltip('重试今日概览'));
     await tester.pump();
 

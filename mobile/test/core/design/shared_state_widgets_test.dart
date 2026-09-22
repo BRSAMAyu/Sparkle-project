@@ -67,10 +67,15 @@ void main() {
       await tester.pumpWidget(
         _TestShell(
           disableAnimations: true,
-          child: CustomErrorWidget(
-            type: ErrorType.page,
-            message: '网络连接失败',
-            onRetry: () => retried = true,
+          // 文案演进适配：l10n 由工厂构造注入（.page/.banner/.inline），
+          // 默认构造 l10n=null 会走英文兜底 'Retry'，断言找 '重试' 落空。
+          // 用 Builder 拿 MaterialApp 下的 context，走产品注入正路。
+          child: Builder(
+            builder: (context) => CustomErrorWidget.page(
+              message: '网络连接失败',
+              context: context,
+              onRetry: () => retried = true,
+            ),
           ),
         ),
       );
@@ -245,6 +250,9 @@ class _TestShell extends StatelessWidget {
       darkTheme: AppThemes.darkTheme,
       themeMode:
           brightness == Brightness.dark ? ThemeMode.dark : ThemeMode.light,
+      // U-03 harness repair：不钉 locale 时测试环境默认 en，
+      // CustomErrorWidget 的 l10n 重试按钮渲染 'Retry'，断言找 '重试' 落空。
+      locale: const Locale('zh'),
       localizationsDelegates: const [
         ...AppLocalizations.localizationsDelegates,
         GlobalMaterialLocalizations.delegate,
