@@ -6,7 +6,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from loguru import logger
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_service
@@ -44,6 +44,7 @@ from app.services.notification_service import NotificationService
 from app.services.plan_service import PlanService
 from app.services.plan_state_service import PlanStateService
 from app.services.profile_write_service import ProfileWriteService
+from app.services.sprint_task_ledger import build_ledger_task_stats, fetch_sprint_ledger_tasks
 from app.services.system_update_service import SystemUpdateService, build_system_update
 from app.sprint_packs.sprint_pack_loader import load_pack
 
@@ -564,7 +565,7 @@ class ExamSprintReviewService:
         )
 
         # Trigger achievements based on task completion rate
-        task_stats = self._build_task_stats(tasks)
+        task_stats = self._build_plan_task_stats(tasks)
         completion_rate = task_stats.completion_rate
         await self._trigger_sprint_achievements(
             user_id=user_id,
@@ -937,8 +938,12 @@ class ExamSprintReviewService:
     ) -> SprintSummaryResponse:
         explicit = await self._get_explicit_preferences(user_id)
         cold_start = self._as_dict(explicit.get("cold_start_context"))
-        tasks = await self._load_plan_tasks(plan.id)
-        task_stats = self._build_task_stats(tasks)
+        # BP-4：任务统计取数统一走 sprint 任务账本单一事实源（跨 plan/无 plan 全可见），
+        # 不再按单条 plan 名下收窄——那会让并行计划与手动任务的完成事件不可见。
+        task_stats = build_ledger_task_stats(await fetch_sprint_ledger_tasks(self.db, user_id=user_id))
+        # Sprint 期间锚点：与目标计划时间窗重叠的所有 sprint 计划的最早创建时刻，
+        # 执行事实可能早于目标计划创建（goal 与 intake 并行计划，BP-7）。
+        sprint_started_at = await self._sprint_period_start(plan=plan)
         mastery_changes, score_stats, top_improvement, coverage_stats = await self._build_mastery_summary(
             user_id=user_id,
             cold_start=cold_start,
@@ -946,13 +951,12 @@ class ExamSprintReviewService:
         error_recovery = await self._build_error_recovery(
             user_id=user_id,
             subject=plan.subject,
-            start_at=plan.created_at,
+            start_at=sprint_started_at,
             exam_date=plan.target_date,
         )
         daily_study_trend = await self._build_daily_study_trend(
             user_id=user_id,
-            plan_id=plan.id,
-            start_at=plan.created_at,
+            start_at=sprint_started_at,
             exam_date=plan.target_date,
         )
 
@@ -1041,12 +1045,46 @@ class ExamSprintReviewService:
         return candidates[0]
 
     async def _load_plan_tasks(self, plan_id: UUID) -> list[Task]:
+        """计划域任务（仅用于计划结构性判定：七日完成检测、自动归档等）。
+
+        叙事统计不要从这里取数——那是 sprint 任务账本单一事实源
+        （``app/services/sprint_task_ledger.py``）的职责，见 _build_summary。
+        """
         result = await self.db.execute(
             select(Task).where(Task.plan_id == plan_id, Task.deleted_at.is_(None)).order_by(Task.created_at.asc())
         )
         return result.scalars().all()
 
-    def _build_task_stats(self, tasks: list[Task]) -> SprintTaskStats:
+    async def _sprint_period_start(self, *, plan: Plan) -> datetime:
+        """Sprint 期间起点：与目标计划时间窗重叠的所有 sprint 计划的最早创建时刻。
+
+        BP-4 同族修正：sprint 执行可能跨并行计划（goal 与 intake 各建一条，BP-7），
+        且执行事实可能早于目标计划创建——期间统计锚定单条 plan 会把它们关在窗外。
+        无重叠计划时退回本计划自身创建时刻。
+        """
+        if plan.created_at is None:
+            return _utcnow()
+        plan_end_date = plan.target_date or _utcnow().date()
+        earliest = await self.db.execute(
+            select(func.min(Plan.created_at)).where(
+                Plan.user_id == plan.user_id,
+                Plan.type == PlanType.SPRINT,
+                Plan.deleted_at.is_(None),
+                Plan.created_at.isnot(None),
+                Plan.created_at <= datetime.combine(plan_end_date, time.max),
+                or_(
+                    Plan.target_date.is_(None),
+                    Plan.target_date >= plan.created_at.date(),
+                ),
+            )
+        )
+        started_at = earliest.scalar_one_or_none()
+        if started_at is None or started_at > plan.created_at:
+            return plan.created_at
+        return started_at
+
+    def _build_plan_task_stats(self, tasks: list[Task]) -> SprintTaskStats:
+        """计划域任务统计（仅供自动归档等计划结构性判定使用，非叙事口径）。"""
         total = len(tasks)
         completed = sum(1 for task in tasks if task.status == TaskStatus.COMPLETED)
         completion_rate = (completed / total) if total else 0.0
@@ -1117,7 +1155,7 @@ class ExamSprintReviewService:
                 1,
             )
         else:
-            current_score = await self._current_average_mastery(user_id)
+            current_score = await self._current_measured_score(user_id)
 
         score_delta = None
         if baseline_score is not None and current_score is not None:
@@ -1148,12 +1186,24 @@ class ExamSprintReviewService:
             ),
         )
 
-    async def _current_average_mastery(self, user_id: UUID) -> float | None:
-        result = await self.db.execute(select(UserNodeStatus).where(UserNodeStatus.user_id == user_id))
-        rows = result.scalars().all()
-        if not rows:
+    async def _current_measured_score(self, user_id: UUID) -> float | None:
+        """当前估分取数（「暂无数据」语义，BP-4 / M9 仪表盘诚实性）。
+
+        只有存在 >0 的掌握度测量才构成数据：解锁未学习节点的默认 0 不是测量值，
+        不得以 0 充当真实分数与基线做差（旧实现 0-42=-42 的虚假退步叙事）。
+        无任何测量信号时返回 None，delta 相应为 None（前端呈现「暂无数据」）。
+        """
+        result = await self.db.execute(
+            select(func.avg(UserNodeStatus.mastery_score)).where(
+                UserNodeStatus.user_id == user_id,
+                UserNodeStatus.mastery_score.isnot(None),
+                UserNodeStatus.mastery_score > 0,
+            )
+        )
+        average = result.scalar_one_or_none()
+        if average is None:
             return None
-        return round(sum(float(row.mastery_score or 0.0) for row in rows) / len(rows), 1)
+        return round(float(average), 1)
 
     async def _build_error_recovery(
         self,
@@ -1190,7 +1240,6 @@ class ExamSprintReviewService:
         self,
         *,
         user_id: UUID,
-        plan_id: UUID,
         start_at: datetime,
         exam_date: date | None,
     ) -> list[SprintDailyStudyPoint]:
@@ -1210,9 +1259,12 @@ class ExamSprintReviewService:
             totals[record_date] += max(int(record.study_minutes or 0), 0)
 
         if not totals:
+            # BP-4 同族：完成事件可能挂在并行计划或无 plan 任务上，回退统计按
+            # 用户域取数（窗口过滤不变），不得按单条 plan 收窄漏掉真实完成。
             task_result = await self.db.execute(
                 select(Task).where(
-                    Task.plan_id == plan_id,
+                    Task.user_id == user_id,
+                    Task.deleted_at.is_(None),
                     Task.status == TaskStatus.COMPLETED,
                     Task.completed_at.isnot(None),
                     Task.completed_at >= start_at,

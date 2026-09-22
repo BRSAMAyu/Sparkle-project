@@ -399,9 +399,7 @@ async def test_completed_sprint_auto_archives_without_post_exam_review(db_sessio
 
     await db_session.refresh(plan)
     state = (
-        await db_session.execute(
-            select(PlanState).where(PlanState.user_id == user_id, PlanState.plan_id == plan.id)
-        )
+        await db_session.execute(select(PlanState).where(PlanState.user_id == user_id, PlanState.plan_id == plan.id))
     ).scalar_one()
     portfolio = await ExamSprintReviewService(db_session).get_portfolio(user_id=user_id)
     entry = next(item for item in portfolio.entries if item.plan_id == plan.id)
@@ -832,3 +830,204 @@ def test_days_used_without_target_date_counts_elapsed_days(db_session):
     service = ExamSprintReviewService(db_session)
 
     assert service._compute_days_used(plan=plan, today=date.today()) == 4
+
+
+# ---------------------------------------------------------------------------
+# BP-4 · P1-4：sprint 仪表盘与任务账本对账（NORTHSTAR-LOOP1 NS-001 形态）
+# 现象：账本 completed=2 vs sprint-summary completed=0、total=4（实际更多）、
+# current_score=0.0/delta=-42.0（无测量数据时以 0 充当真实分数）。
+# ---------------------------------------------------------------------------
+
+
+async def _seed_ns001_shape(db_session, *, user_id):
+    """复刻 NS-001 账本形态：goal plan 里程碑卡（最新 plan）+ intake plan day 卡
+    （完成在此）+ 手动无 plan 任务（完成在此）。"""
+    now = _utcnow()
+    goal_plan = Plan(
+        user_id=user_id,
+        name="离散数学期末 7 天冲刺：及格冲 70+",
+        type=PlanType.SPRINT,
+        plan_stage=PlanStage.SPRINT,
+        target_date=date.today() + timedelta(days=7),
+        is_active=True,
+        created_at=now - timedelta(minutes=1),
+        updated_at=now - timedelta(minutes=1),
+    )
+    intake_plan = Plan(
+        user_id=user_id,
+        name="7天离散数学冲刺",
+        type=PlanType.SPRINT,
+        plan_stage=PlanStage.SPRINT,
+        target_date=date.today() + timedelta(days=7),
+        is_active=True,
+        created_at=now - timedelta(minutes=5),
+        updated_at=now - timedelta(minutes=5),
+    )
+    db_session.add_all([goal_plan, intake_plan])
+    await db_session.flush()
+
+    milestones = [
+        Task(
+            user_id=user_id,
+            plan=goal_plan,
+            title=name,
+            type=TaskType.LEARNING,
+            tags=["goal_milestone"],
+            estimated_minutes=25,
+            difficulty=3,
+            energy_cost=2,
+            status=TaskStatus.PENDING,
+        )
+        for name in ("Map the baseline", "Repair the core gaps", "Timed practice loop", "Readiness check")
+    ]
+    intake_day_card = Task(
+        user_id=user_id,
+        plan=intake_plan,
+        title="Day 1 · 诊断分诊 - 诊断分诊",
+        type=TaskType.LEARNING,
+        tags=["规划生成", "离散数学", "phase:1", "day:1"],
+        estimated_minutes=55,
+        difficulty=3,
+        energy_cost=3,
+        status=TaskStatus.COMPLETED,
+        completed_at=now - timedelta(minutes=2),
+    )
+    manual_day_task = Task(
+        user_id=user_id,
+        plan_id=None,
+        title="Day1 数理逻辑 I：命题逻辑复习 + 图论弱点预习",
+        type=TaskType.TRAINING,
+        tags=["NS-001", "day1", "discrete-math"],
+        estimated_minutes=45,
+        difficulty=3,
+        energy_cost=1,
+        status=TaskStatus.COMPLETED,
+        completed_at=now - timedelta(minutes=3),
+    )
+    db_session.add_all([*milestones, intake_day_card, manual_day_task])
+    return goal_plan, intake_plan
+
+
+@pytest.mark.asyncio
+async def test_sprint_summary_task_stats_reconcile_with_task_ledger(db_session, test_user):
+    """账本口径对账：total/completed 必须等于用户任务账本全集统计，
+    跨 plan（intake day 卡）与无 plan（手动任务）的完成事件不得不可见。"""
+    user_id = test_user.id
+    goal_plan, _intake_plan = await _seed_ns001_shape(db_session, user_id=user_id)
+    db_session.add(UserPreferencesCenter(user_id=user_id, explicit={"cold_start_context": {}}))
+    await db_session.commit()
+
+    # 账本权威口径（与 GET /api/v1/tasks 同域：该用户全部未删除任务）
+    ledger = (
+        (await db_session.execute(select(Task).where(Task.user_id == user_id, Task.deleted_at.is_(None))))
+        .scalars()
+        .all()
+    )
+    ledger_total = len(ledger)
+    ledger_completed = sum(1 for task in ledger if task.status == TaskStatus.COMPLETED)
+    assert (ledger_total, ledger_completed) == (6, 2), "前置：账本形态应为 6 任务 2 完成"
+
+    service = ExamSprintReviewService(db_session)
+    response = await service.get_sprint_summary(user_id=user_id, plan_id=goal_plan.id)
+
+    assert response.task_stats.total == ledger_total
+    assert response.task_stats.completed == ledger_completed
+    assert response.task_stats.completion_rate == round(ledger_completed / ledger_total, 4)
+    # AI 叙事必须与账本地基一致（旧实现：「完成了 0 / 4 项任务」）
+    assert f"完成了 {ledger_completed} / {ledger_total} 项任务" in response.narrative_highlights[0]
+    assert f"完成了 {ledger_completed} 项任务" in response.headline
+
+
+@pytest.mark.asyncio
+async def test_sprint_summary_current_score_without_measurements_is_no_data_not_zero(db_session, test_user):
+    """无任何 >0 掌握度测量时，current_score 必须是「暂无数据」（None）而非 0，
+    也不得与基线做差产出虚假退步叙事（旧实现：0 - 42 = -42）。"""
+    user_id = test_user.id
+    goal_plan, _intake_plan = await _seed_ns001_shape(db_session, user_id=user_id)
+    node = KnowledgeNode(
+        id=uuid4(),
+        name="命题逻辑",
+        description="命题逻辑",
+        importance_level=3,
+        source_type="seed",
+        dominant_sector_code="VOID",
+        sector_classification_status="pending",
+    )
+    # 仅「解锁未学习」形态：掌握度全 0（列非空默认），无任何测量信号
+    db_session.add_all(
+        [
+            node,
+            UserPreferencesCenter(
+                user_id=user_id,
+                explicit={"cold_start_context": {"estimated_score_now": 42}},
+            ),
+            UserNodeStatus(user_id=user_id, node_id=node.id, mastery_score=0.0),
+        ]
+    )
+    await db_session.commit()
+
+    service = ExamSprintReviewService(db_session)
+    response = await service.get_sprint_summary(user_id=user_id, plan_id=goal_plan.id)
+
+    assert response.score_stats.baseline_score == 42.0
+    assert response.score_stats.current_score is None
+    assert response.score_stats.delta is None
+
+
+@pytest.mark.asyncio
+async def test_sprint_summary_current_score_uses_measurements_when_present(db_session, test_user):
+    """对照：存在真实测量（>0 掌握度）时，current_score 正常计算差值。"""
+    user_id = test_user.id
+    goal_plan, _intake_plan = await _seed_ns001_shape(db_session, user_id=user_id)
+    node = KnowledgeNode(
+        id=uuid4(),
+        name="图论基础",
+        description="图论基础",
+        importance_level=3,
+        source_type="seed",
+        dominant_sector_code="VOID",
+        sector_classification_status="pending",
+    )
+    node_zero = KnowledgeNode(
+        id=uuid4(),
+        name="数理逻辑",
+        description="数理逻辑",
+        importance_level=3,
+        source_type="seed",
+        dominant_sector_code="VOID",
+        sector_classification_status="pending",
+    )
+    db_session.add_all(
+        [
+            node,
+            node_zero,
+            UserPreferencesCenter(
+                user_id=user_id,
+                explicit={"cold_start_context": {"estimated_score_now": 42}},
+            ),
+            UserNodeStatus(user_id=user_id, node_id=node.id, mastery_score=65.0),
+            UserNodeStatus(user_id=user_id, node_id=node_zero.id, mastery_score=0.0),
+        ]
+    )
+    await db_session.commit()
+
+    service = ExamSprintReviewService(db_session)
+    response = await service.get_sprint_summary(user_id=user_id, plan_id=goal_plan.id)
+
+    assert response.score_stats.current_score == 65.0
+    assert response.score_stats.delta == 23.0
+
+
+@pytest.mark.asyncio
+async def test_sprint_summary_daily_trend_sees_ledger_completions_in_window(db_session, test_user):
+    """同族修：每日学习趋势回退统计不得按 plan 域收窄漏掉账本完成事件。"""
+    user_id = test_user.id
+    goal_plan, _intake_plan = await _seed_ns001_shape(db_session, user_id=user_id)
+    db_session.add(UserPreferencesCenter(user_id=user_id, explicit={"cold_start_context": {}}))
+    await db_session.commit()
+
+    service = ExamSprintReviewService(db_session)
+    response = await service.get_sprint_summary(user_id=user_id, plan_id=goal_plan.id)
+
+    completed_day_minutes = sum(point.minutes for point in response.daily_study_trend)
+    assert completed_day_minutes >= 45 + 55, "完成事件的预估时长应计入趋势（手动 45 + intake 卡 55）"
