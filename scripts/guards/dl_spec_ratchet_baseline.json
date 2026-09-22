@@ -1,0 +1,736 @@
+{
+  "comment": "Frozen ratchet baseline for check_dl_spec_ratchet.py (DL-R3 SPEC v0.9 immediately-effective clauses, generated at main@d87d42ea). Only lower via --update-baseline after a migration batch; never raise.",
+  "files": {
+    "mobile/lib/core/design/motion.dart": {
+      "bannedCurve": 1,
+      "breathingController": 1
+    },
+    "mobile/lib/core/design/tokens_v2/animation_token.dart": {
+      "bannedCurve": 2
+    },
+    "mobile/lib/core/design/widgets/error_widget.dart": {
+      "errorCopyOops": 2
+    },
+    "mobile/lib/core/design/widgets/flame_indicator.dart": {
+      "dsAccentAlias": 2
+    },
+    "mobile/lib/core/design/widgets/sparkle_confetti.dart": {
+      "confettiPerFile": 1,
+      "dsAccentAlias": 1
+    },
+    "mobile/lib/core/design/widgets/success_animation.dart": {
+      "confettiPerFile": 1
+    },
+    "mobile/lib/core/statistics/config/statistics_animation_config.dart": {
+      "bannedCurve": 1
+    },
+    "mobile/lib/core/widgets/scene_atmosphere_layer.dart": {
+      "particleBypass": 4
+    },
+    "mobile/lib/features/achievement/presentation/screens/achievement_contract_screen.dart": {
+      "bannedCurve": 1,
+      "gradientLiteral": 2,
+      "offLadderDuration": 4,
+      "particleBypass": 2
+    },
+    "mobile/lib/features/achievement/presentation/screens/achievement_detail_screen.dart": {
+      "bannedCurve": 1,
+      "gradientLiteral": 10,
+      "offLadderDuration": 4,
+      "particleBypass": 4
+    },
+    "mobile/lib/features/achievement/presentation/screens/achievement_list_screen.dart": {
+      "gradientLiteral": 3,
+      "offLadderDuration": 2
+    },
+    "mobile/lib/features/achievement/presentation/screens/achievement_map_screen.dart": {
+      "bannedCurve": 1,
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/achievement/presentation/screens/milestone_celebration_screen.dart": {
+      "coldColorLiteral": 6,
+      "confettiPerFile": 1,
+      "gradientLiteral": 3,
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/achievement/presentation/screens/streak_details_screen.dart": {
+      "bannedCurve": 1,
+      "gradientLiteral": 1,
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/achievement/presentation/widgets/achievement_card.dart": {
+      "gradientLiteral": 6
+    },
+    "mobile/lib/features/achievement/presentation/widgets/achievement_milestone_badge.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/achievement/presentation/widgets/achievement_progress_card.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/achievement/presentation/widgets/achievement_share_bottom_sheet.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/achievement/presentation/widgets/achievement_unlock_dialog.dart": {
+      "bannedCurve": 7,
+      "confettiPerFile": 1,
+      "gradientLiteral": 3,
+      "offLadderDuration": 4,
+      "particleBypass": 8
+    },
+    "mobile/lib/features/achievement/presentation/widgets/achievement_unlocked_dialog.dart": {
+      "bannedCurve": 1,
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/achievement/presentation/widgets/rarity_badge.dart": {
+      "gradientLiteral": 6
+    },
+    "mobile/lib/features/achievement/presentation/widgets/streak_indicator.dart": {
+      "gradientLiteral": 4,
+      "offLadderDuration": 3
+    },
+    "mobile/lib/features/aurora/presentation/widgets/aurora_core_session_sheet.dart": {
+      "offLadderDuration": 2
+    },
+    "mobile/lib/features/auth/presentation/screens/login_screen.dart": {
+      "gradientLiteral": 3,
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/calendar/data/models/calendar_event_model.dart": {
+      "coldColorLiteral": 7
+    },
+    "mobile/lib/features/calendar/presentation/screens/calendar_stats_screen.dart": {
+      "coldColorLiteral": 5,
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/calendar/presentation/screens/daily_detail_screen.dart": {
+      "coldColorLiteral": 2,
+      "gradientLiteral": 2
+    },
+    "mobile/lib/features/calendar/presentation/widgets/smart_schedule_chip.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/chat/data/models/chat_mode.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/chat/data/services/websocket_chat_service_v2.dart": {
+      "offLadderDuration": 6
+    },
+    "mobile/lib/features/chat/presentation/screens/chat_screen.dart": {
+      "gradientLiteral": 6,
+      "offLadderDuration": 6
+    },
+    "mobile/lib/features/chat/presentation/screens/group_chat_screen.dart": {
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/chat/presentation/screens/private_chat_screen.dart": {
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/action_card.dart": {
+      "coldColorLiteral": 6,
+      "gradientLiteral": 9,
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/agent_avatar_stack.dart": {
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/agent_avatar_switcher.dart": {
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/agent_reasoning_bubble.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart": {
+      "gradientLiteral": 2
+    },
+    "mobile/lib/features/chat/presentation/widgets/ai_reasoning_mode_pill.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/ai_status_indicator.dart": {
+      "gradientLiteral": 1,
+      "offLadderDuration": 2
+    },
+    "mobile/lib/features/chat/presentation/widgets/assistant_message_metadata_tray.dart": {
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/attachment_picker_sheet.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/aurora_indicator.dart": {
+      "gradientLiteral": 1,
+      "offLadderDuration": 3
+    },
+    "mobile/lib/features/chat/presentation/widgets/aurora_status_layer_card.dart": {
+      "offLadderDuration": 2
+    },
+    "mobile/lib/features/chat/presentation/widgets/calibration_receipt_chip.dart": {
+      "offLadderDuration": 2
+    },
+    "mobile/lib/features/chat/presentation/widgets/causal_timeline_panel.dart": {
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/chat_accessory_pill.dart": {
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/chat_bubble.dart": {
+      "bannedCurve": 1,
+      "gradientLiteral": 2,
+      "offLadderDuration": 4
+    },
+    "mobile/lib/features/chat/presentation/widgets/chat_input.dart": {
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/chat_mode_selector_pill.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/chat_mode_selector_sheet.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/collaboration_timeline.dart": {
+      "gradientLiteral": 2
+    },
+    "mobile/lib/features/chat/presentation/widgets/comeback_banner.dart": {
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/community_insight_card.dart": {
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/contextual_correction_bar.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/expert_roundtable_widget.dart": {
+      "coldColorLiteral": 2,
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/goal_arbitration_card.dart": {
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/intent_preview_dialog.dart": {
+      "gradientLiteral": 2
+    },
+    "mobile/lib/features/chat/presentation/widgets/message_detail_view.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/offline_queue_indicator.dart": {
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/plan_progress_strip.dart": {
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/plan_review_card.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/plan_selector_pill.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/plan_switch_confirmation_dialog.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/profile_front_door_card.dart": {
+      "coldColorLiteral": 2
+    },
+    "mobile/lib/features/chat/presentation/widgets/review_appeal_card.dart": {
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/review_rating_dialog.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/source_explanation_card.dart": {
+      "offLadderDuration": 2
+    },
+    "mobile/lib/features/chat/presentation/widgets/spine_receipt_card.dart": {
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/stale_recovery_card.dart": {
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/status_awareness_bar.dart": {
+      "gradientLiteral": 1,
+      "offLadderDuration": 2
+    },
+    "mobile/lib/features/chat/presentation/widgets/strategy_intervention_card.dart": {
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/chat/widgets/agent_status_indicator.dart": {
+      "offLadderDuration": 2
+    },
+    "mobile/lib/features/chat/widgets/quick_reply_chips.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/chat/widgets/typing_text.dart": {
+      "offLadderDuration": 4
+    },
+    "mobile/lib/features/cognitive/data/repositories/mock_cognitive_repository.dart": {
+      "offLadderDuration": 2
+    },
+    "mobile/lib/features/cognitive/presentation/screens/capsule/capsule_detail_screen.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/cognitive/presentation/widgets/capsule/capsule_generation_preview.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/cognitive/presentation/widgets/interactive_decay_timeline.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/cognitive/presentation/widgets/prism_behavior_card.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/cognitive/presentation/widgets/strategy_migration_wizard.dart": {
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/community/presentation/screens/accountability_detail_screen.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/community/presentation/screens/create_post_screen.dart": {
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/community/presentation/screens/friends_screen.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/community/presentation/screens/group_detail_screen.dart": {
+      "gradientLiteral": 4,
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/community/presentation/widgets/accountability/accountability_partner_card.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/community/presentation/widgets/accountability_heatmap.dart": {
+      "offLadderDuration": 3
+    },
+    "mobile/lib/features/community/presentation/widgets/accountability_hub/commitment_card.dart": {
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/community/presentation/widgets/achievement_badge.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/community/presentation/widgets/bonfire_widget.dart": {
+      "gradientLiteral": 2
+    },
+    "mobile/lib/features/community/presentation/widgets/community_widgets.dart": {
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/community/presentation/widgets/feed_post_card.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/community/presentation/widgets/friends_hub_view.dart": {
+      "gradientLiteral": 2
+    },
+    "mobile/lib/features/community/presentation/widgets/group_chat_bubble.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/community/presentation/widgets/group_knowledge_base_view.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/community/presentation/widgets/groups_hub_view.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/community/presentation/widgets/recommendation_feedback_widgets.dart": {
+      "gradientLiteral": 2
+    },
+    "mobile/lib/features/community/presentation/widgets/share_cards/achievement_share_card.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/community/presentation/widgets/share_cards/capsule_share_card.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/community/presentation/widgets/share_cards/learning_report_share_card.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/community/presentation/widgets/share_cards/node_share_card.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/community/presentation/widgets/share_cards/plan_share_card.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/community/presentation/widgets/share_cards/task_share_card.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/documents/presentation/screens/document_library_screen.dart": {
+      "coldColorLiteral": 2,
+      "gradientLiteral": 7,
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/focus/data/models/candidate_action_model.dart": {
+      "coldColorLiteral": 2
+    },
+    "mobile/lib/features/focus/presentation/screens/mindfulness_mode_screen.dart": {
+      "gradientLiteral": 2,
+      "offLadderDuration": 3
+    },
+    "mobile/lib/features/focus/presentation/widgets/flip_clock.dart": {
+      "gradientLiteral": 3
+    },
+    "mobile/lib/features/focus/presentation/widgets/focus_stats_chart.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/focus/presentation/widgets/star_background.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/galaxy/data/services/galaxy_edge_animation.dart": {
+      "offLadderDuration": 1,
+      "particleBypass": 2
+    },
+    "mobile/lib/features/galaxy/data/services/galaxy_gesture_recognizer.dart": {
+      "offLadderDuration": 2
+    },
+    "mobile/lib/features/galaxy/presentation/screens/galaxy_draft_review_screen.dart": {
+      "gradientLiteral": 3,
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/galaxy/presentation/screens/galaxy_screen.dart": {
+      "gradientLiteral": 2,
+      "offLadderDuration": 21,
+      "particleBypass": 2
+    },
+    "mobile/lib/features/galaxy/presentation/widgets/galaxy/energy_particle.dart": {
+      "offLadderDuration": 1,
+      "particleBypass": 6
+    },
+    "mobile/lib/features/galaxy/presentation/widgets/galaxy/galaxy_controls.dart": {
+      "gradientLiteral": 1,
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/galaxy/presentation/widgets/galaxy/galaxy_document_upload_overlay.dart": {
+      "gradientLiteral": 2,
+      "offLadderDuration": 4
+    },
+    "mobile/lib/features/galaxy/presentation/widgets/galaxy/galaxy_error_dialog.dart": {
+      "gradientLiteral": 3
+    },
+    "mobile/lib/features/galaxy/presentation/widgets/galaxy/galaxy_node_preview_card.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/galaxy/presentation/widgets/galaxy/galaxy_search_panel.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/galaxy/presentation/widgets/galaxy/galaxy_simulation_settings_sheet.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/galaxy/presentation/widgets/galaxy/graphrag_visualizer.dart": {
+      "offLadderDuration": 2
+    },
+    "mobile/lib/features/galaxy/presentation/widgets/galaxy/star_map_painter.dart": {
+      "particleBypass": 3
+    },
+    "mobile/lib/features/galaxy/presentation/widgets/galaxy/star_success_animation.dart": {
+      "offLadderDuration": 1,
+      "particleBypass": 8
+    },
+    "mobile/lib/features/galaxy/presentation/widgets/goal_world_graph_mini_panel.dart": {
+      "offLadderDuration": 2
+    },
+    "mobile/lib/features/galaxy/presentation/widgets/node_detail_sheet.dart": {
+      "gradientLiteral": 1,
+      "offLadderDuration": 2
+    },
+    "mobile/lib/features/goal/presentation/screens/goal_creation_wizard_screen.dart": {
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/home/presentation/screens/dashboard_screen.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/home/presentation/screens/openclaw_hub_screen.dart": {
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/home/presentation/screens/weather_guide_screen.dart": {
+      "gradientLiteral": 1,
+      "offLadderDuration": 2
+    },
+    "mobile/lib/features/home/presentation/widgets/active_bottleneck_alert.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/home/presentation/widgets/cognitive_tool_hub_card.dart": {
+      "gradientLiteral": 2
+    },
+    "mobile/lib/features/home/presentation/widgets/dashboard_card_section.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/home/presentation/widgets/dashboard_curiosity_card.dart": {
+      "dsAccentAlias": 1
+    },
+    "mobile/lib/features/home/presentation/widgets/dashboard_motion.dart": {
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/home/presentation/widgets/dashboard_section.dart": {
+      "gradientLiteral": 2
+    },
+    "mobile/lib/features/home/presentation/widgets/exam_sprint_dashboard_card.dart": {
+      "gradientLiteral": 1,
+      "offLadderDuration": 2
+    },
+    "mobile/lib/features/home/presentation/widgets/focus_card.dart": {
+      "gradientLiteral": 2,
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/home/presentation/widgets/insight_hub_card.dart": {
+      "dsAccentAlias": 2,
+      "gradientLiteral": 2
+    },
+    "mobile/lib/features/home/presentation/widgets/layers/background_layer.dart": {
+      "gradientLiteral": 8
+    },
+    "mobile/lib/features/home/presentation/widgets/layers/effect_layer.dart": {
+      "gradientLiteral": 4
+    },
+    "mobile/lib/features/home/presentation/widgets/layers/particle_layer.dart": {
+      "gradientLiteral": 1,
+      "particleBypass": 9
+    },
+    "mobile/lib/features/home/presentation/widgets/layers/weather_layer.dart": {
+      "gradientLiteral": 9,
+      "particleBypass": 17
+    },
+    "mobile/lib/features/home/presentation/widgets/next_action_prompt.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/home/presentation/widgets/next_actions_card.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/home/presentation/widgets/openclaw_hub_card.dart": {
+      "gradientLiteral": 2
+    },
+    "mobile/lib/features/home/presentation/widgets/predicted_intent_card.dart": {
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/home/presentation/widgets/prism_card.dart": {
+      "gradientLiteral": 2,
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/home/presentation/widgets/seed_library_dashboard_card.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/home/presentation/widgets/today_growth_status_card.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/home/presentation/widgets/understanding_panel.dart": {
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/home/presentation/widgets/unified_omni_bar.dart": {
+      "offLadderDuration": 2
+    },
+    "mobile/lib/features/home/presentation/widgets/weather_header.dart": {
+      "gradientLiteral": 7,
+      "offLadderDuration": 2,
+      "particleBypass": 7
+    },
+    "mobile/lib/features/insights/presentation/screens/learning_insights_overview_screen.dart": {
+      "dsAccentAlias": 1
+    },
+    "mobile/lib/features/insights/presentation/widgets/predictive_insights_card.dart": {
+      "dsAccentAlias": 1
+    },
+    "mobile/lib/features/insights/presentation/widgets/weekly_growth_narrative_card.dart": {
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/knowledge/presentation/screens/knowledge_detail_screen.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/onboarding/presentation/screens/interactive_onboarding_screen.dart": {
+      "bannedCurve": 1,
+      "colorsDotNative": 1,
+      "gradientLiteral": 3,
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/onboarding/presentation/widgets/architecture_animation.dart": {
+      "gradientLiteral": 1,
+      "offLadderDuration": 2
+    },
+    "mobile/lib/features/openclaw/presentation/widgets/openclaw_primitives.dart": {
+      "gradientLiteral": 2
+    },
+    "mobile/lib/features/photon/presentation/widgets/photon_balance_card.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/plan/presentation/screens/learning_portfolio_screen.dart": {
+      "coldColorLiteral": 1,
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/plan/presentation/screens/post_exam_review_screen.dart": {
+      "coldColorLiteral": 3,
+      "offLadderDuration": 3
+    },
+    "mobile/lib/features/plan/presentation/screens/sprint_completion_screen.dart": {
+      "confettiPerFile": 1,
+      "gradientLiteral": 1,
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/plan/presentation/screens/sprint_screen.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/plan/presentation/widgets/plan_context_summary.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/report/presentation/screens/learning_report_screen.dart": {
+      "gradientLiteral": 2
+    },
+    "mobile/lib/features/reviews/presentation/screens/review_plan_hub_screen.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/shop/presentation/widgets/user_title_widget.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/simulation/presentation/screens/simulation_screen.dart": {
+      "dsAccentAlias": 3,
+      "gradientLiteral": 3,
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/simulation/presentation/widgets/simulation_chat_bubble.dart": {
+      "dsAccentAlias": 1,
+      "gradientLiteral": 2,
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/splash/presentation/screens/splash_screen.dart": {
+      "gradientLiteral": 2,
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/task/presentation/screens/task_create_screen.dart": {
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/task/presentation/screens/task_detail_screen.dart": {
+      "gradientLiteral": 7
+    },
+    "mobile/lib/features/task/presentation/screens/task_execution_screen.dart": {
+      "gradientLiteral": 4
+    },
+    "mobile/lib/features/task/presentation/widgets/execution_status_indicator.dart": {
+      "bannedCurve": 1,
+      "gradientLiteral": 1,
+      "offLadderDuration": 2
+    },
+    "mobile/lib/features/task/presentation/widgets/task_card.dart": {
+      "gradientLiteral": 3
+    },
+    "mobile/lib/features/task/presentation/widgets/task_completion_celebration.dart": {
+      "confettiPerFile": 1,
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/task/presentation/widgets/task_feedback_dialog.dart": {
+      "bannedCurve": 1,
+      "gradientLiteral": 2,
+      "offLadderDuration": 2
+    },
+    "mobile/lib/features/task/presentation/widgets/task_protocol_panel.dart": {
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/task/presentation/widgets/timer_widget.dart": {
+      "gradientLiteral": 1,
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/task/presentation/widgets/why_this_today_panel.dart": {
+      "offLadderDuration": 2
+    },
+    "mobile/lib/features/theater/presentation/providers/theater_provider.dart": {
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/theater/presentation/screens/knowledge_theater_screen.dart": {
+      "confettiPerFile": 1,
+      "gradientLiteral": 5,
+      "offLadderDuration": 3
+    },
+    "mobile/lib/features/theater/presentation/widgets/knowledge_theater_graph.dart": {
+      "gradientLiteral": 2,
+      "offLadderDuration": 2
+    },
+    "mobile/lib/features/tools/presentation/screens/tool_host_screen.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/tools/presentation/screens/tool_library_screen.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/tools/presentation/widgets/breathing_tool.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/tools/presentation/widgets/tool_shell.dart": {
+      "gradientLiteral": 2
+    },
+    "mobile/lib/features/tools/presentation/widgets/wordbook_tool.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/user/presentation/models/ws6_profile_mirror_models.dart": {
+      "coldColorLiteral": 1
+    },
+    "mobile/lib/features/user/presentation/screens/account_security_screen.dart": {
+      "coldColorLiteral": 2,
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/user/presentation/screens/edit_profile_screen.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/user/presentation/screens/modeling_chat_screen.dart": {
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/user/presentation/screens/persona_onboarding_screen.dart": {
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/user/presentation/screens/poster_studio_screen.dart": {
+      "coldColorLiteral": 3,
+      "gradientLiteral": 2,
+      "offLadderDuration": 1
+    },
+    "mobile/lib/features/user/presentation/screens/profile_screen.dart": {
+      "gradientLiteral": 4
+    },
+    "mobile/lib/features/user/presentation/screens/profile_transparent_screen.dart": {
+      "coldColorLiteral": 1
+    },
+    "mobile/lib/features/user/presentation/screens/schedule_preferences_screen.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/user/presentation/screens/smart_push_settings_screen.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/user/presentation/screens/sync_center_screen.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/user/presentation/screens/unified_settings_screen.dart": {
+      "offLadderDuration": 5
+    },
+    "mobile/lib/features/user/presentation/widgets/achievement_card_generator.dart": {
+      "gradientLiteral": 4
+    },
+    "mobile/lib/features/user/presentation/widgets/avatar_selection_dialog.dart": {
+      "coldColorLiteral": 10,
+      "gradientLiteral": 2
+    },
+    "mobile/lib/features/user/presentation/widgets/learning_mode_control.dart": {
+      "gradientLiteral": 2
+    },
+    "mobile/lib/features/user/presentation/widgets/metacognition_panel_card.dart": {
+      "coldColorLiteral": 1
+    },
+    "mobile/lib/features/user/presentation/widgets/mirror_bar.dart": {
+      "gradientLiteral": 1
+    },
+    "mobile/lib/features/user/presentation/widgets/preference_controller_2d.dart": {
+      "gradientLiteral": 4
+    },
+    "mobile/lib/features/user/presentation/widgets/statistics_card.dart": {
+      "coldColorLiteral": 3,
+      "gradientLiteral": 2
+    },
+    "mobile/lib/features/visual_elements/presentation/screens/visual_elements_screen.dart": {
+      "gradientLiteral": 7
+    },
+    "mobile/lib/features/visual_elements/presentation/shared/visual_element_palette.dart": {
+      "coldColorLiteral": 31,
+      "gradientLiteral": 2
+    },
+    "mobile/lib/features/visual_elements/presentation/widgets/visual_element_card.dart": {
+      "gradientLiteral": 9,
+      "offLadderDuration": 1,
+      "particleBypass": 3
+    },
+    "mobile/lib/features/visual_elements/presentation/widgets/visual_element_preview_dialog.dart": {
+      "gradientLiteral": 3,
+      "offLadderDuration": 4,
+      "particleBypass": 2
+    },
+    "mobile/lib/features/visual_elements/presentation/widgets/visual_element_unlock_dialog.dart": {
+      "bannedCurve": 4,
+      "gradientLiteral": 7,
+      "offLadderDuration": 2
+    },
+    "mobile/lib/l10n/app_localizations_en.dart": {
+      "errorCopyOops": 4
+    }
+  }
+}
