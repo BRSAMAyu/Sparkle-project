@@ -22,12 +22,17 @@ from app.core.llm_router import ModelProvider, llm_router
 
 
 def _rebuild_router(dashscope_key: str = "", minimax_key: str = ""):
-    """以指定 key 重建路由器（模拟引擎进程启动时的 settings 快照）。"""
+    """以指定 key 重建路由器（模拟引擎进程启动时的 settings 快照）。
+
+    B 线 2026-09-22（BATCH_LLM_PROVIDER 开关）：qwen3_7_flash_batch/minimax_m3_batch
+    归开关=minimax 档注册，快照钉 BATCH_LLM_PROVIDER=minimax 保持本文件原断言；
+    开关=glm 回滚位见 test_batch_llm_provider_switch.py。
+    """
     from app.core.llm_router import LLMRouter
 
     with patch.object(settings, "DASHSCOPE_API_KEY", dashscope_key), patch.object(
         settings, "MINIMAX_API_KEY", minimax_key
-    ):
+    ), patch.object(settings, "BATCH_LLM_PROVIDER", "minimax"):
         return LLMRouter()
 
 

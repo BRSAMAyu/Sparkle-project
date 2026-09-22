@@ -56,6 +56,29 @@ class ModelProvider(StrEnum):
 
 
 # ============================================
+# glm_batch 车道执行 provider 开关（B 线模型切换 2026-09-22）
+# ============================================
+# settings.BATCH_LLM_PROVIDER 的合法值与解析语义。开关只作用于 batch 类调用
+# （GLM_BATCH 池条目注册 + glm_batch 执行面选型），主聊天能力层（fast/standard/
+# plus/pro/max/top）与 Qwen 主力配置永不感知此开关。
+
+BATCH_LLM_PROVIDER_VALUES: frozenset[str] = frozenset({"glm", "minimax"})
+
+
+def batch_llm_provider() -> str:
+    """解析 batch 车道执行 provider 开关（唯一读取口，router 与直连车道共用）。
+
+    - "glm"（默认，回滚位）：GLM 原链承接 batch；MiniMax/Qwen batch 条目不注册
+      （key 即便配置也「保留配置不启用」）。
+    - "minimax"：MM-M3+QWEN-PLAN 车道（MiniMax M3 置首、Qwen batch 次位，均
+      key-gated；全无 key 环境 GLM 原链兜底）。
+    非法/空值安全回退 "glm"（与合入前默认一致），绝不抛错。
+    """
+    raw = str(getattr(settings, "BATCH_LLM_PROVIDER", "") or "glm").strip().lower()
+    return raw if raw in BATCH_LLM_PROVIDER_VALUES else "glm"
+
+
+# ============================================
 # 请求级用户分层信号（免费层模型降级）
 # ============================================
 # 由引擎 gRPC 入口（agent_grpc_service.StreamChat）按 ChatRequest.user_profile.is_pro
@@ -589,10 +612,12 @@ class LLMRouter:
                 avg_latency_ms=2500,
             ),
             # ---- GLM 车道（Zhipu）—— 全部「保留待用」----
-            # 用户决策（2026-09 MM-M3 + QWEN-PLAN）：glm_batch 车道默认档 = MiniMax M3
-            # 优先（免费测试用）、Qwen batch 次之；主力聊天层切 Qwen。GLM 条目保留
-            # 注册不删除：作无 MINIMAX/DASHSCOPE key 环境的原链兜底 + 降级链价值；
-            # 回切 = .env 设 LLM_PROVIDER=zhipu / LLM_TIER_* 覆盖，零代码回切
+            # 用户决策（2026-09 MM-M3 + QWEN-PLAN；B 线 2026-09-22 加开关）：
+            # glm_batch 车道 provider 由 BATCH_LLM_PROVIDER 裁决 —— "glm"（默认
+            # 回滚位）= 本 GLM 原链承接 batch；"minimax" = MiniMax M3 优先、
+            # Qwen batch 次之（均 key-gated）。GLM 条目保留注册不删除：既是
+            # 开关=glm 的执行链，也是 minimax 档全无 key 环境的原链兜底；
+            # 主聊天能力层切换走 LLM_PROVIDER，与本开关无关。
             # —— 见下方 _tier_mapping[ModelTier.GLM_BATCH]。
             "glm_4_7_no_thinking": ModelConfig(
                 provider=ModelProvider.ZHIPU,
@@ -846,14 +871,17 @@ class LLMRouter:
             ),
         }
 
-        # MiniMax 异步分析池条目：仅在配置了 MINIMAX_API_KEY 的环境注册。
+        # MiniMax 异步分析池条目：BATCH_LLM_PROVIDER=minimax 且配置了 MINIMAX_API_KEY
+        # 的环境注册（B 线模型切换 2026-09-22：开关为 batch 车道 provider 唯一裁决位）。
         # 定位约束（用户决策）：MiniMax M3（token plan 免费档，并发硬上限
         # MINIMAX_MAX_CONCURRENCY=8）只承接 glm_batch 异步分析任务，**永不**加入
-        # fast/standard/plus/pro/max/top 等主聊天能力层 —— 无 key 环境零行为变化。
+        # fast/standard/plus/pro/max/top 等主聊天能力层。开关=glm（默认回滚位）时
+        # key 即便配置也不注册——「保留配置不启用」；无 key 环境零行为变化。
         # 执行面走 OpenAI 兼容 {base}/chat/completions（2026-09 实测 200 OK），
         # 并发由 llm_concurrency 的 minimax 池按 lane 上限钳制；思考链以 <think>
         # 前缀内联在 content，由 LLMService._parse_json_payload 的 <think> 剥离兜底。
-        if (settings.MINIMAX_API_KEY or "").strip():
+        _minimax_key_present = bool((settings.MINIMAX_API_KEY or "").strip())
+        if _minimax_key_present and batch_llm_provider() == "minimax":
             configs["minimax_m3_batch"] = ModelConfig(
                 provider=ModelProvider.MINIMAX,
                 model_name=settings.MINIMAX_CHAT_MODEL,
@@ -864,13 +892,20 @@ class LLMRouter:
                 cost_per_1k_tokens=0.0,  # token plan 免费档
                 avg_latency_ms=2500,
             )
+        elif _minimax_key_present:
+            logger.info(
+                "BATCH_LLM_PROVIDER=glm: MINIMAX_API_KEY configured but MiniMax batch lane "
+                "kept dormant (保留配置不启用); switch via BATCH_LLM_PROVIDER=minimax"
+            )
 
-        # Qwen 异步分析车道条目：仅在配置了 DASHSCOPE_API_KEY 的环境注册（MiniMax
-        # 同款 key-gate 先例，无 key 环境零行为变化）。定位约束（2026-09 用户决策）：
-        # qwen3.7-flash 承接 glm_batch 异步分析任务（GLM 池条目保留待用，排其后），
-        # **永不**加入 fast/standard/plus/pro/max/top 等主聊天能力层（批处理走
-        # DashScope Batch API 半价为后续优化项，本条目先走 OpenAI 兼容同步路径）。
-        if (settings.DASHSCOPE_API_KEY or "").strip():
+        # Qwen 异步分析车道条目：BATCH_LLM_PROVIDER=minimax 且配置了 DASHSCOPE_API_KEY
+        # 的环境注册（与 MiniMax 同一开关裁决，MiniMax 置首、本条目次位；GLM 车道
+        # （开关=glm）下不注册，主聊天能力层永不感知——无 key 环境零行为变化）。
+        # 定位约束（2026-09 用户决策）：qwen3.7-flash 承接 glm_batch 异步分析任务
+        # （GLM 池条目保留待用，排其后），批处理走 DashScope Batch API 半价为后续
+        # 优化项，本条目先走 OpenAI 兼容同步路径。
+        _dashscope_key_present = bool((settings.DASHSCOPE_API_KEY or "").strip())
+        if _dashscope_key_present and batch_llm_provider() == "minimax":
             configs["qwen3_7_flash_batch"] = ModelConfig(
                 provider=ModelProvider.DASHSCOPE,
                 model_name=settings.DASHSCOPE_BATCH_MODEL,
@@ -960,11 +995,13 @@ class LLMRouter:
             ModelTier.REASONING: list(pro_models) + ["glm_4_7_pro"],
             ModelTier.MAX: max_models,
             ModelTier.TOP: ["qwen3_8_max_top", "glm_5_1_top"],  # 主力 Qwen；glm-5.1 保留待用
-            # 用户决策（2026-09 MM-M3，QWEN-PLAN 合入后维持）：GLM_BATCH 车道 =
-            # MiniMax M3 优先（免费测试用）→ Qwen batch 次位（均 key-gated）；
-            # 任一注册即不启用 GLM（批任务不静默回落付费 GLM，失败走 celery 重试）；
-            # 两者均未注册（零 key 环境）保留 GLM 原链，零行为变化。
-            # 回切方式：LLM_TIER_GLM_BATCH=minimax_m3_batch,qwen3_7_flash_batch,glm_4_7_no_thinking,...
+            # B 线模型切换（2026-09-22）：GLM_BATCH 车道 provider 由
+            # BATCH_LLM_PROVIDER 裁决（唯一注册口见上方 minimax/qwen batch 条目）——
+            # "minimax"：MiniMax M3 优先（免费测试用）→ Qwen batch 次位（均 key-gated）；
+            #   任一注册即不启用 GLM（批任务不静默回落付费 GLM，失败走 celery 重试）。
+            # "glm"（默认回滚位）：两者不注册，本 GLM 原链承接（逐位与 MM-M3 前一致）。
+            # "minimax" 但全无 key：warning 后落本原链兜底，车道保持可用。
+            # 运维细调仍可 LLM_TIER_GLM_BATCH=... 显式覆盖（本映射之后的 env 覆盖）。
             ModelTier.GLM_BATCH: (
                 [
                     key

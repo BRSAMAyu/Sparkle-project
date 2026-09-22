@@ -94,12 +94,16 @@ def _rebuild_router(minimax_key: str):
     DASHSCOPE_API_KEY 一并置空：qwen3_7_flash_batch（QWEN-PLAN）与 minimax 同为
     GLM_BATCH key-gated 条目，真实 .env 的 DASHSCOPE key 会注册 qwen 批次条目，
     使"无 key 落 GLM 原链/车道不可用"断言失效。
+
+    B 线 2026-09-22（BATCH_LLM_PROVIDER 开关）：本文件沿 MM-M3 已验证车道语义，
+    快照钉 BATCH_LLM_PROVIDER=minimax；开关=glm 回滚位见
+    test_batch_llm_provider_switch.py。
     """
     from app.core.llm_router import LLMRouter
 
     with patch.object(settings, "MINIMAX_API_KEY", minimax_key), patch.object(
         settings, "DASHSCOPE_API_KEY", ""
-    ):
+    ), patch.object(settings, "BATCH_LLM_PROVIDER", "minimax"):
         return LLMRouter()
 
 

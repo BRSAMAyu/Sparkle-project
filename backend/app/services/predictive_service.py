@@ -1575,9 +1575,10 @@ class PredictiveService:
             TaskType.STANDARD_RESPONSE,
             force_tier=ModelTier.GLM_BATCH,
         )
-        # 用户决策（2026-09 MM-M3 batch）：GLM_BATCH 默认档 = MiniMax M3 唯一候选，
-        # GLM 链【保留待用】仅在无 MINIMAX_API_KEY 环境（registered 为 glm_* 原链）生效；
-        # 运维经 LLM_TIER_GLM_BATCH 显式加回 glm_* 时尊重该覆盖。
+        # 用户决策（2026-09 MM-M3 batch；B 线 2026-09-22 加 BATCH_LLM_PROVIDER
+        # 开关）：minimax 档 GLM_BATCH 默认档 = MiniMax M3 唯一候选，GLM 链
+        # 【保留待用】仅在 MiniMax 未注册（开关=glm 或无 key）环境（registered
+        # 为 glm_* 原链）生效；运维经 LLM_TIER_GLM_BATCH 显式加回 glm_* 时尊重该覆盖。
         if "minimax_m3_batch" in registered and not any(k.startswith("glm_") for k in registered):
             preferred = ["minimax_m3_batch"]
             reason = f"{reason}；batch 车道默认已切 MiniMax M3（GLM 保留待用）"

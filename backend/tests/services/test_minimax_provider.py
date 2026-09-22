@@ -319,8 +319,12 @@ def test_provider_from_settings_uses_lane_defaults():
 
 @pytest.mark.asyncio
 async def test_error_book_analysis_prefers_minimax_lane():
+    """B 线 2026-09-22（BATCH_LLM_PROVIDER 开关）：本用例验证 minimax 档契约，
+    快照钉 BATCH_LLM_PROVIDER=minimax；glm 回滚位契约见
+    test_batch_llm_provider_switch.py::TestErrorBookDirectLaneGating。"""
     service = _error_book_service()
     with (
+        patch.object(settings, "BATCH_LLM_PROVIDER", "minimax"),
         patch("app.services.error_book_service.minimax_provider") as mock_lane,
         patch("app.services.error_book_service.llm_client") as mock_llm,
     ):
@@ -335,6 +339,7 @@ async def test_error_book_analysis_prefers_minimax_lane():
 async def test_error_book_analysis_falls_back_to_primary_lane_on_busy():
     service = _error_book_service()
     with (
+        patch.object(settings, "BATCH_LLM_PROVIDER", "minimax"),
         patch("app.services.error_book_service.minimax_provider") as mock_lane,
         patch("app.services.error_book_service.llm_client") as mock_llm,
     ):
@@ -349,6 +354,7 @@ async def test_error_book_analysis_falls_back_to_primary_lane_on_busy():
 async def test_error_book_analysis_rule_fallback_when_both_lanes_fail():
     service = _error_book_service()
     with (
+        patch.object(settings, "BATCH_LLM_PROVIDER", "minimax"),
         patch("app.services.error_book_service.minimax_provider") as mock_lane,
         patch("app.services.error_book_service.llm_client") as mock_llm,
     ):

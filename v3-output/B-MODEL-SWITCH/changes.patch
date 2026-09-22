@@ -1,0 +1,781 @@
+diff --git a/backend/app/config/settings.py b/backend/app/config/settings.py
+index 5f18bca4..42a558b2 100755
+--- a/backend/app/config/settings.py
++++ b/backend/app/config/settings.py
+@@ -500,6 +500,15 @@ class Settings(BaseSettings):
+     MINIMAX_BASE_URL: str = "https://api.minimaxi.com/v1"
+     MINIMAX_CHAT_MODEL: str = "MiniMax-M3"
+     MINIMAX_MAX_CONCURRENCY: int = 8
++    # glm_batch 车道执行 provider 开关（B 线模型切换 2026-09-22，测试替换语义）：
++    # - "glm"（默认，回滚位）：batch 类调用走 GLM 原链；MINIMAX/DASHSCOPE key 即便
++    #   已配置，batch 专用条目（minimax_m3_batch/qwen3_7_flash_batch）也不注册
++    #   ——「GLM 保留配置不删、MiniMax 保留配置不启用」。
++    # - "minimax"：MM-M3+QWEN-PLAN 已验证车道（MiniMax M3 置首、Qwen batch 次位，
++    #   均 key-gated；全无 key 落 GLM 原链兜底）。
++    # 合入后由主会话以活栈真 key 冒烟（BATCH_LLM_PROVIDER=minimax → 触发一条
++    # batch 任务 → 验证 MiniMax 侧成功）再切默认；回滚 = 改回 "glm" 重启引擎。
++    BATCH_LLM_PROVIDER: str = "glm"
+ 
+     # Zhipu GLM Configuration (编程/工具调用)
+     ZHIPU_API_KEY: str = ""
+diff --git a/backend/app/core/llm_router.py b/backend/app/core/llm_router.py
+index ee2bb4da..15cbf51e 100644
+--- a/backend/app/core/llm_router.py
++++ b/backend/app/core/llm_router.py
+@@ -55,6 +55,29 @@ class ModelProvider(StrEnum):
+     MINIMAX = "minimax"    # MiniMax M3 (异步分析车道：仅 GLM_BATCH 池，永不进主聊天能力层)
+ 
+ 
++# ============================================
++# glm_batch 车道执行 provider 开关（B 线模型切换 2026-09-22）
++# ============================================
++# settings.BATCH_LLM_PROVIDER 的合法值与解析语义。开关只作用于 batch 类调用
++# （GLM_BATCH 池条目注册 + glm_batch 执行面选型），主聊天能力层（fast/standard/
++# plus/pro/max/top）与 Qwen 主力配置永不感知此开关。
++
++BATCH_LLM_PROVIDER_VALUES: frozenset[str] = frozenset({"glm", "minimax"})
++
++
++def batch_llm_provider() -> str:
++    """解析 batch 车道执行 provider 开关（唯一读取口，router 与直连车道共用）。
++
++    - "glm"（默认，回滚位）：GLM 原链承接 batch；MiniMax/Qwen batch 条目不注册
++      （key 即便配置也「保留配置不启用」）。
++    - "minimax"：MM-M3+QWEN-PLAN 车道（MiniMax M3 置首、Qwen batch 次位，均
++      key-gated；全无 key 环境 GLM 原链兜底）。
++    非法/空值安全回退 "glm"（与合入前默认一致），绝不抛错。
++    """
++    raw = str(getattr(settings, "BATCH_LLM_PROVIDER", "") or "glm").strip().lower()
++    return raw if raw in BATCH_LLM_PROVIDER_VALUES else "glm"
++
++
+ # ============================================
+ # 请求级用户分层信号（免费层模型降级）
+ # ============================================
+@@ -589,10 +612,12 @@ class LLMRouter:
+                 avg_latency_ms=2500,
+             ),
+             # ---- GLM 车道（Zhipu）—— 全部「保留待用」----
+-            # 用户决策（2026-09 MM-M3 + QWEN-PLAN）：glm_batch 车道默认档 = MiniMax M3
+-            # 优先（免费测试用）、Qwen batch 次之；主力聊天层切 Qwen。GLM 条目保留
+-            # 注册不删除：作无 MINIMAX/DASHSCOPE key 环境的原链兜底 + 降级链价值；
+-            # 回切 = .env 设 LLM_PROVIDER=zhipu / LLM_TIER_* 覆盖，零代码回切
++            # 用户决策（2026-09 MM-M3 + QWEN-PLAN；B 线 2026-09-22 加开关）：
++            # glm_batch 车道 provider 由 BATCH_LLM_PROVIDER 裁决 —— "glm"（默认
++            # 回滚位）= 本 GLM 原链承接 batch；"minimax" = MiniMax M3 优先、
++            # Qwen batch 次之（均 key-gated）。GLM 条目保留注册不删除：既是
++            # 开关=glm 的执行链，也是 minimax 档全无 key 环境的原链兜底；
++            # 主聊天能力层切换走 LLM_PROVIDER，与本开关无关。
+             # —— 见下方 _tier_mapping[ModelTier.GLM_BATCH]。
+             "glm_4_7_no_thinking": ModelConfig(
+                 provider=ModelProvider.ZHIPU,
+@@ -846,14 +871,17 @@ class LLMRouter:
+             ),
+         }
+ 
+-        # MiniMax 异步分析池条目：仅在配置了 MINIMAX_API_KEY 的环境注册。
++        # MiniMax 异步分析池条目：BATCH_LLM_PROVIDER=minimax 且配置了 MINIMAX_API_KEY
++        # 的环境注册（B 线模型切换 2026-09-22：开关为 batch 车道 provider 唯一裁决位）。
+         # 定位约束（用户决策）：MiniMax M3（token plan 免费档，并发硬上限
+         # MINIMAX_MAX_CONCURRENCY=8）只承接 glm_batch 异步分析任务，**永不**加入
+-        # fast/standard/plus/pro/max/top 等主聊天能力层 —— 无 key 环境零行为变化。
++        # fast/standard/plus/pro/max/top 等主聊天能力层。开关=glm（默认回滚位）时
++        # key 即便配置也不注册——「保留配置不启用」；无 key 环境零行为变化。
+         # 执行面走 OpenAI 兼容 {base}/chat/completions（2026-09 实测 200 OK），
+         # 并发由 llm_concurrency 的 minimax 池按 lane 上限钳制；思考链以 <think>
+         # 前缀内联在 content，由 LLMService._parse_json_payload 的 <think> 剥离兜底。
+-        if (settings.MINIMAX_API_KEY or "").strip():
++        _minimax_key_present = bool((settings.MINIMAX_API_KEY or "").strip())
++        if _minimax_key_present and batch_llm_provider() == "minimax":
+             configs["minimax_m3_batch"] = ModelConfig(
+                 provider=ModelProvider.MINIMAX,
+                 model_name=settings.MINIMAX_CHAT_MODEL,
+@@ -864,13 +892,20 @@ class LLMRouter:
+                 cost_per_1k_tokens=0.0,  # token plan 免费档
+                 avg_latency_ms=2500,
+             )
++        elif _minimax_key_present:
++            logger.info(
++                "BATCH_LLM_PROVIDER=glm: MINIMAX_API_KEY configured but MiniMax batch lane "
++                "kept dormant (保留配置不启用); switch via BATCH_LLM_PROVIDER=minimax"
++            )
+ 
+-        # Qwen 异步分析车道条目：仅在配置了 DASHSCOPE_API_KEY 的环境注册（MiniMax
+-        # 同款 key-gate 先例，无 key 环境零行为变化）。定位约束（2026-09 用户决策）：
+-        # qwen3.7-flash 承接 glm_batch 异步分析任务（GLM 池条目保留待用，排其后），
+-        # **永不**加入 fast/standard/plus/pro/max/top 等主聊天能力层（批处理走
+-        # DashScope Batch API 半价为后续优化项，本条目先走 OpenAI 兼容同步路径）。
+-        if (settings.DASHSCOPE_API_KEY or "").strip():
++        # Qwen 异步分析车道条目：BATCH_LLM_PROVIDER=minimax 且配置了 DASHSCOPE_API_KEY
++        # 的环境注册（与 MiniMax 同一开关裁决，MiniMax 置首、本条目次位；GLM 车道
++        # （开关=glm）下不注册，主聊天能力层永不感知——无 key 环境零行为变化）。
++        # 定位约束（2026-09 用户决策）：qwen3.7-flash 承接 glm_batch 异步分析任务
++        # （GLM 池条目保留待用，排其后），批处理走 DashScope Batch API 半价为后续
++        # 优化项，本条目先走 OpenAI 兼容同步路径。
++        _dashscope_key_present = bool((settings.DASHSCOPE_API_KEY or "").strip())
++        if _dashscope_key_present and batch_llm_provider() == "minimax":
+             configs["qwen3_7_flash_batch"] = ModelConfig(
+                 provider=ModelProvider.DASHSCOPE,
+                 model_name=settings.DASHSCOPE_BATCH_MODEL,
+@@ -960,11 +995,13 @@ class LLMRouter:
+             ModelTier.REASONING: list(pro_models) + ["glm_4_7_pro"],
+             ModelTier.MAX: max_models,
+             ModelTier.TOP: ["qwen3_8_max_top", "glm_5_1_top"],  # 主力 Qwen；glm-5.1 保留待用
+-            # 用户决策（2026-09 MM-M3，QWEN-PLAN 合入后维持）：GLM_BATCH 车道 =
+-            # MiniMax M3 优先（免费测试用）→ Qwen batch 次位（均 key-gated）；
+-            # 任一注册即不启用 GLM（批任务不静默回落付费 GLM，失败走 celery 重试）；
+-            # 两者均未注册（零 key 环境）保留 GLM 原链，零行为变化。
+-            # 回切方式：LLM_TIER_GLM_BATCH=minimax_m3_batch,qwen3_7_flash_batch,glm_4_7_no_thinking,...
++            # B 线模型切换（2026-09-22）：GLM_BATCH 车道 provider 由
++            # BATCH_LLM_PROVIDER 裁决（唯一注册口见上方 minimax/qwen batch 条目）——
++            # "minimax"：MiniMax M3 优先（免费测试用）→ Qwen batch 次位（均 key-gated）；
++            #   任一注册即不启用 GLM（批任务不静默回落付费 GLM，失败走 celery 重试）。
++            # "glm"（默认回滚位）：两者不注册，本 GLM 原链承接（逐位与 MM-M3 前一致）。
++            # "minimax" 但全无 key：warning 后落本原链兜底，车道保持可用。
++            # 运维细调仍可 LLM_TIER_GLM_BATCH=... 显式覆盖（本映射之后的 env 覆盖）。
+             ModelTier.GLM_BATCH: (
+                 [
+                     key
+diff --git a/backend/app/services/capsule_generation_service.py b/backend/app/services/capsule_generation_service.py
+index ddbf3912..26c747f2 100644
+--- a/backend/app/services/capsule_generation_service.py
++++ b/backend/app/services/capsule_generation_service.py
+@@ -59,7 +59,9 @@ class ModelSelectionStrategy:
+ 
+     @staticmethod
+     def _minimax_lane_registered() -> bool:
+-        """MiniMax 车道条目是否已注册（= 引擎进程启动时配置了 MINIMAX_API_KEY）。"""
++        """MiniMax 车道条目是否已注册（= BATCH_LLM_PROVIDER=minimax 且配置了
++        MINIMAX_API_KEY；B 线 2026-09-22 起开关为唯一裁决位，开关=glm 时保留
++        配置不启用、本判断为 False）。"""
+         from app.core.llm_router import llm_router
+ 
+         return "minimax_m3_batch" in llm_router._available_models
+diff --git a/backend/app/services/error_book_service.py b/backend/app/services/error_book_service.py
+index 16d55c1a..745fa39d 100755
+--- a/backend/app/services/error_book_service.py
++++ b/backend/app/services/error_book_service.py
+@@ -26,6 +26,7 @@ from app.config import settings
+ from app.core.event_bus import ErrorCreated, event_bus
+ from app.core.i18n import I18n
+ from app.core.llm_client import llm_client
++from app.core.llm_router import batch_llm_provider
+ from app.core.time_utils import utcnow as _utcnow
+ from app.models.achievement import UserStreakStats
+ from app.models.error_book import ErrorRecord
+@@ -683,25 +684,32 @@ class ErrorBookService:
+             # 错题分析是后台任务、非用户直面 → 优先走 MiniMax 免费异步车道
+             # （MINIMAX_MAX_CONCURRENCY 钳制，车道满立即快速拒绝不排队）；
+             # 车道 busy/失败时降级回主 LLM 通道，双车道全挂再走规则兜底。
++            # B 线模型切换（2026-09-22）：直连车道与 router 批车道同受
++            # BATCH_LLM_PROVIDER 裁决——开关=glm（回滚位）时不尝试 MiniMax，
++            # 直接走主 LLM 通道（回滚必须全链生效，不留半切换态）。
+             # 注意：M3 是推理模型，思维链计入 max_tokens（实测单题 ~1100+），
+             # 预算给 1500 避免思维链耗尽导致空 content。
+-            try:
+-                response = await asyncio.wait_for(
+-                    minimax_provider.analyze(
+-                        messages=[
+-                            {"role": "system", "content": "You are an expert tutor."},
+-                            {"role": "user", "content": prompt},
+-                        ],
+-                        response_format={"type": "json_object"},
+-                        max_tokens=1500,
+-                    ),
+-                    timeout=25.0,
+-                )
+-            except Exception as lane_error:
+-                logger.warning(
+-                    f"[ErrorBook] MiniMax async lane unavailable "
+-                    f"({type(lane_error).__name__}: {lane_error}); falling back to primary LLM lane"
+-                )
++            response: str | None = None
++            if batch_llm_provider() == "minimax":
++                try:
++                    response = await asyncio.wait_for(
++                        minimax_provider.analyze(
++                            messages=[
++                                {"role": "system", "content": "You are an expert tutor."},
++                                {"role": "user", "content": prompt},
++                            ],
++                            response_format={"type": "json_object"},
++                            max_tokens=1500,
++                        ),
++                        timeout=25.0,
++                    )
++                except Exception as lane_error:
++                    logger.warning(
++                        f"[ErrorBook] MiniMax async lane unavailable "
++                        f"({type(lane_error).__name__}: {lane_error}); falling back to primary LLM lane"
++                    )
++                    response = None
++            if response is None:
+                 response = await asyncio.wait_for(
+                     llm_client.chat_completion(
+                         messages=[
+diff --git a/backend/app/services/glm_batch_service.py b/backend/app/services/glm_batch_service.py
+index 2220df72..7687b9b7 100644
+--- a/backend/app/services/glm_batch_service.py
++++ b/backend/app/services/glm_batch_service.py
+@@ -41,16 +41,22 @@ class GLMBatchService:
+ 
+     @staticmethod
+     def _minimax_lane_registered() -> bool:
+-        """MiniMax 车道条目是否已注册（= 环境配置了 MINIMAX_API_KEY）。"""
++        """MiniMax 车道条目是否已注册。
++
++        注册口在 llm_router._load_model_configs：= BATCH_LLM_PROVIDER=minimax
++        且配置了 MINIMAX_API_KEY（B 线 2026-09-22 起开关为唯一裁决位；开关=glm
++        时 key 即便配置也不注册——保留配置不启用）。
++        """
+         return "minimax_m3_batch" in llm_router._available_models
+ 
+     @classmethod
+     def _active_concurrency_pool(cls) -> str:
+         """batch 车道实际执行 provider 的并发池名。
+ 
+-        MiniMax 注册（有 key）→ 执行面默认落 minimax_m3_batch，拥塞/饱和信号
+-        应读 minimax 池（MINIMAX_MAX_CONCURRENCY 钳制）；无 key 环境 GLM 原链
+-        兜底 → 维持 zhipu_coding 池（行为与切换前一致）。
++        MiniMax 注册（BATCH_LLM_PROVIDER=minimax + 有 key）→ 执行面默认落
++        minimax_m3_batch，拥塞/饱和信号应读 minimax 池（MINIMAX_MAX_CONCURRENCY
++        钳制）；开关=glm 或无 key 环境 GLM 原链兜底 → 维持 zhipu_coding 池
++        （行为与切换前一致）。
+         """
+         return "minimax" if cls._minimax_lane_registered() else "zhipu_coding"
+ 
+@@ -63,9 +69,10 @@ class GLMBatchService:
+         return llm_concurrency.get_runtime_limit(self._active_concurrency_pool())
+ 
+     def _select_batch_model_key(self, *, use_thinking: bool, task_type: str) -> str:
+-        # 用户决策（2026-09 MM-M3 batch）：glm_batch 车道默认唯一 MiniMax M3；
+-        # GLM 条目【保留待用】默认不启用 —— 仅在 MiniMax 未注册（无
+-        # MINIMAX_API_KEY）环境走原链兜底（行为与切换前一致）。
++        # 用户决策（2026-09 MM-M3 batch；B 线 2026-09-22 加 BATCH_LLM_PROVIDER
++        # 开关）：glm_batch 车道在 minimax 档默认唯一 MiniMax M3；GLM 条目
++        # 【保留待用】—— 仅在 MiniMax 未注册（开关=glm 或无 key）环境走原链
++        # 兜底（行为与切换前一致）。
+         # MiniMax 注册后即使不健康也返回 minimax key：执行面失败 → celery
+         # max_retries=3 指数退避重试（不静默偷切 GLM、不静默假成功）。
+         if self._minimax_lane_registered():
+diff --git a/backend/app/services/predictive_service.py b/backend/app/services/predictive_service.py
+index 850a7597..aa6aa606 100755
+--- a/backend/app/services/predictive_service.py
++++ b/backend/app/services/predictive_service.py
+@@ -1575,9 +1575,10 @@ class PredictiveService:
+             TaskType.STANDARD_RESPONSE,
+             force_tier=ModelTier.GLM_BATCH,
+         )
+-        # 用户决策（2026-09 MM-M3 batch）：GLM_BATCH 默认档 = MiniMax M3 唯一候选，
+-        # GLM 链【保留待用】仅在无 MINIMAX_API_KEY 环境（registered 为 glm_* 原链）生效；
+-        # 运维经 LLM_TIER_GLM_BATCH 显式加回 glm_* 时尊重该覆盖。
++        # 用户决策（2026-09 MM-M3 batch；B 线 2026-09-22 加 BATCH_LLM_PROVIDER
++        # 开关）：minimax 档 GLM_BATCH 默认档 = MiniMax M3 唯一候选，GLM 链
++        # 【保留待用】仅在 MiniMax 未注册（开关=glm 或无 key）环境（registered
++        # 为 glm_* 原链）生效；运维经 LLM_TIER_GLM_BATCH 显式加回 glm_* 时尊重该覆盖。
+         if "minimax_m3_batch" in registered and not any(k.startswith("glm_") for k in registered):
+             preferred = ["minimax_m3_batch"]
+             reason = f"{reason}；batch 车道默认已切 MiniMax M3（GLM 保留待用）"
+diff --git a/backend/tests/core/test_llm_router_qwen.py b/backend/tests/core/test_llm_router_qwen.py
+index 7c5458ef..e34bdde4 100644
+--- a/backend/tests/core/test_llm_router_qwen.py
++++ b/backend/tests/core/test_llm_router_qwen.py
+@@ -22,12 +22,17 @@ from app.core.llm_router import ModelProvider, llm_router
+ 
+ 
+ def _rebuild_router(dashscope_key: str = "", minimax_key: str = ""):
+-    """以指定 key 重建路由器（模拟引擎进程启动时的 settings 快照）。"""
++    """以指定 key 重建路由器（模拟引擎进程启动时的 settings 快照）。
++
++    B 线 2026-09-22（BATCH_LLM_PROVIDER 开关）：qwen3_7_flash_batch/minimax_m3_batch
++    归开关=minimax 档注册，快照钉 BATCH_LLM_PROVIDER=minimax 保持本文件原断言；
++    开关=glm 回滚位见 test_batch_llm_provider_switch.py。
++    """
+     from app.core.llm_router import LLMRouter
+ 
+     with patch.object(settings, "DASHSCOPE_API_KEY", dashscope_key), patch.object(
+         settings, "MINIMAX_API_KEY", minimax_key
+-    ):
++    ), patch.object(settings, "BATCH_LLM_PROVIDER", "minimax"):
+         return LLMRouter()
+ 
+ 
+diff --git a/backend/tests/core/test_minimax_batch_routing.py b/backend/tests/core/test_minimax_batch_routing.py
+index fc59fa5f..816fc888 100644
+--- a/backend/tests/core/test_minimax_batch_routing.py
++++ b/backend/tests/core/test_minimax_batch_routing.py
+@@ -2,10 +2,12 @@
+ MiniMax M3 接入 glm_batch 异步分析池的路由单测（全程 mock，零真实请求）。
+ 
+ 背景：MiniMax M3（token plan 免费档，并发硬上限 8）定位为"高性价比异步分析车道"。
+-用户决策（2026-09 MM-M3 batch）：配置 MINIMAX_API_KEY 后 glm_batch 车道默认档 =
+-MiniMax M3 **唯一候选**（GLM batch 条目【保留待用】默认不启用，仅作无 key 环境
+-原链兜底）；MiniMax 不健康时也不静默偷切 GLM —— 批任务失败 → celery 重试接管，
+-不静默假成功。显式回切 GLM 走 LLM_TIER_GLM_BATCH env 覆盖。
++用户决策（2026-09 MM-M3 batch）：BATCH_LLM_PROVIDER=minimax 且配置 MINIMAX_API_KEY
++后 glm_batch 车道默认档 = MiniMax M3 **唯一候选**（GLM batch 条目【保留待用】不启用，
++仅作开关=glm 回滚位与无 key 环境原链兜底）；MiniMax 不健康时也不静默偷切 GLM ——
++批任务失败 → celery 重试接管，不静默假成功。显式回切 GLM 走 BATCH_LLM_PROVIDER=glm
++（B 线 2026-09-22）或 LLM_TIER_GLM_BATCH env 覆盖。本文件 = minimax 档契约；
++glm 档契约见 test_batch_llm_provider_switch.py。
+ """
+ 
+ from unittest.mock import patch
+@@ -22,12 +24,18 @@ def _rebuild_router(minimax_key: str, tier_override: str = ""):
+     DASHSCOPE_API_KEY 一并置空：qwen3_7_flash_batch（QWEN-PLAN 合入）与 minimax
+     同为 GLM_BATCH key-gated 条目，真实 .env 的 DASHSCOPE key 会注册 qwen 批次
+     条目、污染本文件对 minimax 优先档的断言。
++
++    B 线 2026-09-22（BATCH_LLM_PROVIDER 开关）：本文件验证的是开关=minimax 档
++    （MM-M3 已验证车道），快照一并钉 BATCH_LLM_PROVIDER=minimax；开关=glm 回滚位
++    的抑制语义见 test_batch_llm_provider_switch.py。
+     """
+     from app.core.llm_router import LLMRouter
+ 
+     with patch.object(settings, "MINIMAX_API_KEY", minimax_key), patch.object(
+         settings, "DASHSCOPE_API_KEY", ""
+-    ), patch.object(settings, "LLM_TIER_GLM_BATCH", tier_override):
++    ), patch.object(settings, "LLM_TIER_GLM_BATCH", tier_override), patch.object(
++        settings, "BATCH_LLM_PROVIDER", "minimax"
++    ):
+         return LLMRouter()
+ 
+ 
+diff --git a/backend/tests/services/test_minimax_provider.py b/backend/tests/services/test_minimax_provider.py
+index 6e628dc4..0fb97065 100644
+--- a/backend/tests/services/test_minimax_provider.py
++++ b/backend/tests/services/test_minimax_provider.py
+@@ -319,8 +319,12 @@ def test_provider_from_settings_uses_lane_defaults():
+ 
+ @pytest.mark.asyncio
+ async def test_error_book_analysis_prefers_minimax_lane():
++    """B 线 2026-09-22（BATCH_LLM_PROVIDER 开关）：本用例验证 minimax 档契约，
++    快照钉 BATCH_LLM_PROVIDER=minimax；glm 回滚位契约见
++    test_batch_llm_provider_switch.py::TestErrorBookDirectLaneGating。"""
+     service = _error_book_service()
+     with (
++        patch.object(settings, "BATCH_LLM_PROVIDER", "minimax"),
+         patch("app.services.error_book_service.minimax_provider") as mock_lane,
+         patch("app.services.error_book_service.llm_client") as mock_llm,
+     ):
+@@ -335,6 +339,7 @@ async def test_error_book_analysis_prefers_minimax_lane():
+ async def test_error_book_analysis_falls_back_to_primary_lane_on_busy():
+     service = _error_book_service()
+     with (
++        patch.object(settings, "BATCH_LLM_PROVIDER", "minimax"),
+         patch("app.services.error_book_service.minimax_provider") as mock_lane,
+         patch("app.services.error_book_service.llm_client") as mock_llm,
+     ):
+@@ -349,6 +354,7 @@ async def test_error_book_analysis_falls_back_to_primary_lane_on_busy():
+ async def test_error_book_analysis_rule_fallback_when_both_lanes_fail():
+     service = _error_book_service()
+     with (
++        patch.object(settings, "BATCH_LLM_PROVIDER", "minimax"),
+         patch("app.services.error_book_service.minimax_provider") as mock_lane,
+         patch("app.services.error_book_service.llm_client") as mock_llm,
+     ):
+diff --git a/backend/tests/unit/test_batch_worklane.py b/backend/tests/unit/test_batch_worklane.py
+index 4a2e61c2..f07046b0 100644
+--- a/backend/tests/unit/test_batch_worklane.py
++++ b/backend/tests/unit/test_batch_worklane.py
+@@ -94,12 +94,16 @@ def _rebuild_router(minimax_key: str):
+     DASHSCOPE_API_KEY 一并置空：qwen3_7_flash_batch（QWEN-PLAN）与 minimax 同为
+     GLM_BATCH key-gated 条目，真实 .env 的 DASHSCOPE key 会注册 qwen 批次条目，
+     使"无 key 落 GLM 原链/车道不可用"断言失效。
++
++    B 线 2026-09-22（BATCH_LLM_PROVIDER 开关）：本文件沿 MM-M3 已验证车道语义，
++    快照钉 BATCH_LLM_PROVIDER=minimax；开关=glm 回滚位见
++    test_batch_llm_provider_switch.py。
+     """
+     from app.core.llm_router import LLMRouter
+ 
+     with patch.object(settings, "MINIMAX_API_KEY", minimax_key), patch.object(
+         settings, "DASHSCOPE_API_KEY", ""
+-    ):
++    ), patch.object(settings, "BATCH_LLM_PROVIDER", "minimax"):
+         return LLMRouter()
+ 
+ 
+diff --git a/backend/tests/core/test_batch_llm_provider_switch.py b/backend/tests/core/test_batch_llm_provider_switch.py
+new file mode 100644
+index 00000000..2715766a
+--- /dev/null
++++ b/backend/tests/core/test_batch_llm_provider_switch.py
+@@ -0,0 +1,377 @@
++"""
++BATCH_LLM_PROVIDER 开关（B 线模型切换 2026-09-22）路由契约单测（全程 mock，零真实请求、零真实 key）。
++
++语义（测试替换 = 开关可回滚）：
++- "glm"（默认，回滚位）：batch 类调用走 GLM 原链；minimax_m3_batch /
++  qwen3_7_flash_batch 不注册（key 即便配置也「保留配置不启用」）——GLM 路径
++  与 MM-M3 决策合入前逐位一致。
++- "minimax"：MM-M3+QWEN-PLAN 已验证车道（MiniMax M3 置首、Qwen batch 次位，
++  均 key-gated；全无 key 环境 GLM 原链兜底）。
++- 直连车道（error_book → minimax_provider）同受开关裁决，回滚不留半切换态。
++- glm_batch 队列路由（celery task_routes 表 + 显式 queue= 覆盖双处）与本开关
++  正交：本卡两处均不改，测试锁定其一致性。
++"""
++
++import asyncio
++from pathlib import Path
++from unittest.mock import AsyncMock, patch
++
++import pytest
++
++from app.config import settings
++from app.core.agent_profiles import AgentRole, ModelTier
++from app.core.llm_router import ModelProvider, batch_llm_provider, llm_router
++
++_GLM_BATCH_KEYS = ["glm_4_7_no_thinking", "glm_4_7_thinking", "glm_4_5_air_batch", "glm_4_6_batch"]
++_CAPABILITY_TIERS = (
++    ModelTier.FAST,
++    ModelTier.STANDARD,
++    ModelTier.PLUS,
++    ModelTier.PRO,
++    ModelTier.MAX,
++    ModelTier.TOP,
++)
++
++
++def _rebuild_router(
++    *,
++    minimax_key: str = "",
++    dashscope_key: str = "",
++    batch_provider: str = "glm",
++    tier_override: str = "",
++):
++    """以指定 settings 快照重建路由器（模拟引擎进程启动；fleet 惯例）。
++
++    全部 key 为测试假值，任何路径都不发起真实请求。
++    """
++    from app.core.llm_router import LLMRouter
++
++    with (
++        patch.object(settings, "MINIMAX_API_KEY", minimax_key),
++        patch.object(settings, "DASHSCOPE_API_KEY", dashscope_key),
++        patch.object(settings, "BATCH_LLM_PROVIDER", batch_provider),
++        patch.object(settings, "LLM_TIER_GLM_BATCH", tier_override),
++    ):
++        return LLMRouter()
++
++
++@pytest.fixture(autouse=True)
++def _deterministic_env(monkeypatch):
++    """环境无关化：*_API_KEY / LLM_TIER_* 清空，BATCH_LLM_PROVIDER 钉回代码默认。
++
++    vars(settings) 对 pydantic Settings 枚举不到字段（静默无效），故显式走
++    model_fields/__fields__（test_llm_router_qwen.py 同款惯例）。
++    """
++    field_names = set(getattr(settings, "model_fields", None) or getattr(settings, "__fields__", {}))
++    for k in field_names:
++        if k.endswith("_API_KEY") or k.startswith("LLM_TIER_"):
++            monkeypatch.setattr(settings, k, "")
++        elif k == "BATCH_LLM_PROVIDER":
++            monkeypatch.setattr(settings, k, "glm")
++
++
++@pytest.fixture(autouse=True)
++def _restore_global_router():
++    """恢复全局单例快照，防 key-gated 重建污染同进程后续测试。"""
++    saved = dict(llm_router.__dict__)
++    yield
++    llm_router.__dict__.clear()
++    llm_router.__dict__.update(saved)
++
++
++# =============================================================================
++# 1) 开关默认位（glm）：零变化契约
++# =============================================================================
++
++
++class TestSwitchDefaultGlm:
++    def test_default_value_is_glm(self):
++        """settings 默认值必须是 glm（回滚位；切换默认不在本卡内）。"""
++        assert settings.BATCH_LLM_PROVIDER == "glm"
++
++    def test_keys_present_but_switch_glm_entries_not_registered(self):
++        """开关=glm + 双 key 配置：batch 专用条目不注册（保留配置不启用）。"""
++        router = _rebuild_router(minimax_key="test-key", dashscope_key="test-key")
++        assert "minimax_m3_batch" not in router._available_models
++        assert "qwen3_7_flash_batch" not in router._available_models
++
++    def test_switch_glm_batch_tier_is_legacy_glm_chain(self):
++        """开关=glm：GLM_BATCH 链与 MM-M3 决策合入前原链逐位一致（零变化）。"""
++        router = _rebuild_router(minimax_key="test-key", dashscope_key="test-key")
++        assert router._tier_mapping[ModelTier.GLM_BATCH] == _GLM_BATCH_KEYS
++        selection = router.select_model(AgentRole.GENERATION, force_tier=ModelTier.GLM_BATCH)
++        assert selection.model_key == "glm_4_7_no_thinking"
++        assert selection.config.provider == ModelProvider.ZHIPU
++        assert selection.config.tier == ModelTier.GLM_BATCH
++
++    def test_switch_glm_glm_entries_kept_registered(self):
++        """开关=glm：GLM 池条目仍全部注册（保留配置不删，供回滚/env 覆盖）。"""
++        router = _rebuild_router(minimax_key="test-key")
++        for key in _GLM_BATCH_KEYS:
++            assert key in router._available_models, f"{key} 应保留注册（保留待用）"
++            assert router._available_models[key].tier == ModelTier.GLM_BATCH
++
++    def test_switch_glm_batch_entries_never_enter_capability_tiers(self):
++        """主聊天能力层在任何开关位下都不得出现 batch 池条目。"""
++        for provider_value in ("glm", "minimax"):
++            router = _rebuild_router(minimax_key="test-key", dashscope_key="test-key", batch_provider=provider_value)
++            for tier in _CAPABILITY_TIERS:
++                chain = router._tier_mapping[tier]
++                assert "minimax_m3_batch" not in chain
++                assert "qwen3_7_flash_batch" not in chain
++
++    def test_invalid_switch_value_falls_back_to_glm(self):
++        """非法开关值安全回退 glm（与默认位同语义），绝不抛错。"""
++        assert batch_llm_provider() == "glm"  # fixture 钉回默认
++        with patch.object(settings, "BATCH_LLM_PROVIDER", "openai"):
++            assert batch_llm_provider() == "glm"
++        router = _rebuild_router(minimax_key="test-key", batch_provider="openai")
++        assert "minimax_m3_batch" not in router._available_models
++        assert router._tier_mapping[ModelTier.GLM_BATCH] == _GLM_BATCH_KEYS
++
++    def test_switch_reader_tolerates_case_and_whitespace(self):
++        """读取口归一：大小写/首尾空白容忍；空值回退 glm。"""
++        with patch.object(settings, "BATCH_LLM_PROVIDER", " MiniMax "):
++            assert batch_llm_provider() == "minimax"
++        with patch.object(settings, "BATCH_LLM_PROVIDER", "GLM"):
++            assert batch_llm_provider() == "glm"
++        with patch.object(settings, "BATCH_LLM_PROVIDER", ""):
++            assert batch_llm_provider() == "glm"
++
++    def test_no_key_environment_switch_positions_identical(self):
++        """无 key 环境：两个开关位解析结果完全一致（本仓测试环境基线）。"""
++        glm_router = _rebuild_router(batch_provider="glm")
++        minimax_router = _rebuild_router(batch_provider="minimax")
++        assert (
++            glm_router._tier_mapping[ModelTier.GLM_BATCH]
++            == minimax_router._tier_mapping[ModelTier.GLM_BATCH]
++            == _GLM_BATCH_KEYS
++        )
++
++
++# =============================================================================
++# 2) 开关 minimax 位：MM-M3+QWEN-PLAN 已验证语义
++# =============================================================================
++
++
++class TestSwitchMinimax:
++    def test_minimax_position_resolves_minimax_provider_and_model(self):
++        """开关 glm→minimax：batch tier 解析到 MiniMax provider + MiniMax-M3。"""
++        router = _rebuild_router(minimax_key="test-key", batch_provider="minimax")
++        assert router._tier_mapping[ModelTier.GLM_BATCH] == ["minimax_m3_batch"]
++        selection = router.select_model(AgentRole.GENERATION, force_tier=ModelTier.GLM_BATCH)
++        assert selection.model_key == "minimax_m3_batch"
++        assert selection.config.provider == ModelProvider.MINIMAX
++        assert selection.config.model_name == settings.MINIMAX_CHAT_MODEL
++        assert selection.config.base_url == settings.MINIMAX_BASE_URL
++
++    def test_minimax_position_qwen_second_when_minimax_keyless(self):
++        """开关=minimax + 仅 DASHSCOPE key：Qwen batch 承接（MM-M3 前基线行为）。"""
++        router = _rebuild_router(dashscope_key="test-key", batch_provider="minimax")
++        assert router._tier_mapping[ModelTier.GLM_BATCH] == ["qwen3_7_flash_batch"]
++        selection = router.select_model(AgentRole.GENERATION, force_tier=ModelTier.GLM_BATCH)
++        assert selection.config.provider == ModelProvider.DASHSCOPE
++
++    def test_minimax_position_both_keys_ordering(self):
++        """开关=minimax + 双 key：MiniMax 置首、Qwen batch 次位。"""
++        router = _rebuild_router(minimax_key="test-key", dashscope_key="test-key", batch_provider="minimax")
++        assert router._tier_mapping[ModelTier.GLM_BATCH] == [
++            "minimax_m3_batch",
++            "qwen3_7_flash_batch",
++        ]
++
++    def test_minimax_position_without_any_key_falls_back_to_glm_chain(self):
++        """开关=minimax + 全无 key：GLM 原链兜底，车道保持可用（不空转）。"""
++        router = _rebuild_router(batch_provider="minimax")
++        assert router._tier_mapping[ModelTier.GLM_BATCH] == _GLM_BATCH_KEYS
++        selection = router.select_model(AgentRole.GENERATION, force_tier=ModelTier.GLM_BATCH)
++        assert selection.model_key == "glm_4_7_no_thinking"
++
++    def test_minimax_position_glm_entries_still_registered_not_in_tier(self):
++        """开关=minimax：GLM 条目保留注册（保留待用）但不在默认档。"""
++        router = _rebuild_router(minimax_key="test-key", batch_provider="minimax")
++        for key in _GLM_BATCH_KEYS:
++            assert key in router._available_models
++            assert key not in router._tier_mapping[ModelTier.GLM_BATCH]
++
++    def test_tier_override_still_wins_over_switch(self):
++        """LLM_TIER_GLM_BATCH env 覆盖在开关之上仍生效（运维逃生通道不变）。"""
++        router = _rebuild_router(
++            minimax_key="test-key",
++            batch_provider="minimax",
++            tier_override="glm_4_6_batch,minimax_m3_batch",
++        )
++        assert router._tier_mapping[ModelTier.GLM_BATCH] == ["glm_4_6_batch", "minimax_m3_batch"]
++
++
++# =============================================================================
++# 3) 执行面一致性：glm_batch 执行器与直连车道同受开关裁决
++# =============================================================================
++
++
++class TestExecutorCoherence:
++    def test_glm_batch_service_lane_registration_follows_switch(self):
++        """glm_batch_service 的注册判定/并发池随开关切换（router 注册为唯一真源）。"""
++        from app.services import glm_batch_service as mod
++
++        router_glm = _rebuild_router(minimax_key="test-key", batch_provider="glm")
++        with patch.object(mod, "llm_router", router_glm):
++            assert mod.GLMBatchService._minimax_lane_registered() is False
++            assert mod.GLMBatchService._active_concurrency_pool() == "zhipu_coding"
++
++        router_minimax = _rebuild_router(minimax_key="test-key", batch_provider="minimax")
++        with patch.object(mod, "llm_router", router_minimax):
++            assert mod.GLMBatchService._minimax_lane_registered() is True
++            assert mod.GLMBatchService._active_concurrency_pool() == "minimax"
++
++    def test_capsule_strategy_lane_registration_follows_switch(self):
++        """胶囊执行计划侧注册判定随开关切换（读全局 router 注册表）。"""
++        from app.services.capsule_generation_service import ModelSelectionStrategy
++
++        router_glm = _rebuild_router(minimax_key="test-key", batch_provider="glm")
++        with patch.object(llm_router, "_available_models", router_glm._available_models):
++            assert ModelSelectionStrategy._minimax_lane_registered() is False
++
++        router_minimax = _rebuild_router(minimax_key="test-key", batch_provider="minimax")
++        with patch.object(llm_router, "_available_models", router_minimax._available_models):
++            assert ModelSelectionStrategy._minimax_lane_registered() is True
++
++    def test_batch_worklane_resolution_follows_switch(self):
++        """E-06 车道解析（router 真源）：glm 档落 GLM 原链、minimax 档落 M3。"""
++        from app.services.batch_worklane import BatchWorkloadKind, batch_worklane
++
++        kind = next(iter(BatchWorkloadKind))
++        router_glm = _rebuild_router(minimax_key="test-key", batch_provider="glm")
++        with patch("app.services.batch_worklane.llm_router", router_glm):
++            selection = batch_worklane.resolve_selection(kind)
++            assert selection.model_key == "glm_4_7_no_thinking"
++            assert selection.config.provider == ModelProvider.ZHIPU
++
++        router_minimax = _rebuild_router(minimax_key="test-key", batch_provider="minimax")
++        with patch("app.services.batch_worklane.llm_router", router_minimax):
++            selection = batch_worklane.resolve_selection(kind)
++            assert selection.model_key == "minimax_m3_batch"
++            assert selection.config.provider == ModelProvider.MINIMAX
++
++
++class TestErrorBookDirectLaneGating:
++    """error_book 直连 MiniMax 车道与开关联动（回滚必须全链生效）。"""
++
++    @staticmethod
++    def _make_service():
++        from app.services.error_book_service import ErrorBookService
++
++        return object.__new__(ErrorBookService)  # db 未触碰：_run_llm_analysis 不用 self.db
++
++    def test_switch_glm_skips_minimax_lane(self):
++        import app.services.error_book_service as mod
++
++        svc = self._make_service()
++        payload = '{"error_type": "concept_confusion", "error_type_label": "概念混淆"}'
++        with (
++            patch.object(settings, "BATCH_LLM_PROVIDER", "glm"),
++            patch.object(mod, "minimax_provider") as mock_lane,
++            patch.object(
++                mod.llm_client, "chat_completion", new_callable=AsyncMock, return_value=payload
++            ) as mock_primary,
++        ):
++            result = asyncio.run(svc._run_llm_analysis("math", "1+1=?", "3", "2", []))
++        mock_lane.analyze.assert_not_called()
++        mock_primary.assert_awaited_once()
++        assert result["error_type"] == "concept_confusion"
++
++    def test_switch_minimax_uses_minimax_lane(self):
++        import app.services.error_book_service as mod
++
++        svc = self._make_service()
++        payload = '{"error_type": "calculation_error", "error_type_label": "计算错误"}'
++        with (
++            patch.object(settings, "BATCH_LLM_PROVIDER", "minimax"),
++            patch.object(mod.minimax_provider, "analyze", new_callable=AsyncMock, return_value=payload) as mock_lane,
++            patch.object(mod.llm_client, "chat_completion", new_callable=AsyncMock) as mock_primary,
++        ):
++            result = asyncio.run(svc._run_llm_analysis("math", "1+1=?", "3", "2", []))
++        mock_lane.assert_awaited_once()
++        mock_primary.assert_not_awaited()
++        assert result["error_type"] == "calculation_error"
++
++    def test_switch_minimax_lane_failure_still_falls_back_to_primary(self):
++        """minimax 档下车道 busy/失败仍降级主 LLM 通道（既有降级语义保持）。"""
++        import app.services.error_book_service as mod
++
++        svc = self._make_service()
++        payload = '{"error_type": "knowledge_gap", "error_type_label": "知识空缺"}'
++        with (
++            patch.object(settings, "BATCH_LLM_PROVIDER", "minimax"),
++            patch.object(mod.minimax_provider, "analyze", new_callable=AsyncMock, side_effect=RuntimeError("busy")),
++            patch.object(
++                mod.llm_client, "chat_completion", new_callable=AsyncMock, return_value=payload
++            ) as mock_primary,
++        ):
++            result = asyncio.run(svc._run_llm_analysis("math", "1+1=?", "3", "2", []))
++        mock_primary.assert_awaited_once()
++        assert result["error_type"] == "knowledge_gap"
++
++
++# =============================================================================
++# 4) glm_batch 队列路由双处一致性（本卡审计结论：两处均不改，锁定现状）
++# =============================================================================
++
++# 显式 queue= 覆盖位（与 celery task_routes 表并行的第二处路由定义）。
++# 已审计（B-MODEL-SWITCH 2026-09-22）：generate_capsules_batch 三处在表内有同队列
++# 条目（显式覆盖与表一致，属冗余而非分叉）；generate_long_horizon_prediction 不在
++# 表内，显式覆盖是其唯一路由——两处定义互补，均不得漂移。
++_EXPLICIT_QUEUE_SITES = [
++    ("app/core/celery_app.py", "generate_capsules_batch"),
++    ("app/api/v1/capsules.py", "generate_capsules_batch"),
++    ("app/services/predictive_service.py", "generate_long_horizon_prediction"),
++    ("app/services/push_strategies/empty_capsule.py", "generate_capsules_batch"),
++]
++_TASK_ROUTES_GLM_BATCH = {
++    "batch_error_analysis",
++    "analyze_error_batch",
++    "generate_capsules_batch",
++    "analyze_cognitive_fragment_batch",
++    "classify_node_sector_batch",
++}
++_EXPLICIT_ONLY_TASKS = {"generate_long_horizon_prediction"}
++
++
++class TestBatchQueueRoutingConsistency:
++    def test_task_routes_table_routes_batch_tasks_to_glm_batch(self):
++        """路由表处：五个 batch 任务 → glm_batch，且与 settings.GLM_BATCH_QUEUE 同源。"""
++        from app.core.celery_app import celery_app
++
++        routes = celery_app.conf.task_routes or {}
++        for task_name in sorted(_TASK_ROUTES_GLM_BATCH):
++            assert (
++                routes.get(task_name, {}).get("queue") == settings.GLM_BATCH_QUEUE
++            ), f"task_routes[{task_name}] 必须落 {settings.GLM_BATCH_QUEUE}（队列身份不得漂移）"
++        assert settings.GLM_BATCH_QUEUE == "glm_batch"
++
++    def test_explicit_queue_overrides_consistent_with_table(self):
++        """显式覆盖处：已知四个调用位存在且任务名与表一致/在白名单内。"""
++        backend_root = Path(__file__).resolve().parents[2]
++        for rel_path, task_name in _EXPLICIT_QUEUE_SITES:
++            text = (backend_root / rel_path).read_text(encoding="utf-8")
++            assert 'queue="glm_batch"' in text, f"{rel_path} 的显式 queue= 覆盖位丢失"
++            assert f'"{task_name}"' in text, f"{rel_path} 应投递 {task_name}"
++            assert (
++                task_name in _TASK_ROUTES_GLM_BATCH | _EXPLICIT_ONLY_TASKS
++            ), f"{task_name} 未登记：新显式覆盖位必须登记本测试（表内或白名单）"
++
++    def test_no_undocumented_explicit_glm_batch_queue_sites(self):
++        """全仓唯一性：queue="glm_batch" 字面量只出现在已审计的四个文件。"""
++        backend_root = Path(__file__).resolve().parents[2]
++        hit_files = set()
++        for py in sorted((backend_root / "app").rglob("*.py")):
++            if 'queue="glm_batch"' in py.read_text(encoding="utf-8"):
++                hit_files.add(py.relative_to(backend_root).as_posix())
++        expected = {rel for rel, _ in _EXPLICIT_QUEUE_SITES}
++        assert hit_files == expected, f"显式 glm_batch 覆盖位漂移：{sorted(hit_files ^ expected)}"
++
++    def test_variable_queue_site_sources_from_settings(self):
++        """变量覆盖位（glm_batch_service 统一投递面）队列名源自 settings.GLM_BATCH_QUEUE。"""
++        from app.services.glm_batch_service import GLMBatchService
++
++        assert GLMBatchService().queue_name == settings.GLM_BATCH_QUEUE

@@ -41,16 +41,22 @@ class GLMBatchService:
 
     @staticmethod
     def _minimax_lane_registered() -> bool:
-        """MiniMax 车道条目是否已注册（= 环境配置了 MINIMAX_API_KEY）。"""
+        """MiniMax 车道条目是否已注册。
+
+        注册口在 llm_router._load_model_configs：= BATCH_LLM_PROVIDER=minimax
+        且配置了 MINIMAX_API_KEY（B 线 2026-09-22 起开关为唯一裁决位；开关=glm
+        时 key 即便配置也不注册——保留配置不启用）。
+        """
         return "minimax_m3_batch" in llm_router._available_models
 
     @classmethod
     def _active_concurrency_pool(cls) -> str:
         """batch 车道实际执行 provider 的并发池名。
 
-        MiniMax 注册（有 key）→ 执行面默认落 minimax_m3_batch，拥塞/饱和信号
-        应读 minimax 池（MINIMAX_MAX_CONCURRENCY 钳制）；无 key 环境 GLM 原链
-        兜底 → 维持 zhipu_coding 池（行为与切换前一致）。
+        MiniMax 注册（BATCH_LLM_PROVIDER=minimax + 有 key）→ 执行面默认落
+        minimax_m3_batch，拥塞/饱和信号应读 minimax 池（MINIMAX_MAX_CONCURRENCY
+        钳制）；开关=glm 或无 key 环境 GLM 原链兜底 → 维持 zhipu_coding 池
+        （行为与切换前一致）。
         """
         return "minimax" if cls._minimax_lane_registered() else "zhipu_coding"
 
@@ -63,9 +69,10 @@ class GLMBatchService:
         return llm_concurrency.get_runtime_limit(self._active_concurrency_pool())
 
     def _select_batch_model_key(self, *, use_thinking: bool, task_type: str) -> str:
-        # 用户决策（2026-09 MM-M3 batch）：glm_batch 车道默认唯一 MiniMax M3；
-        # GLM 条目【保留待用】默认不启用 —— 仅在 MiniMax 未注册（无
-        # MINIMAX_API_KEY）环境走原链兜底（行为与切换前一致）。
+        # 用户决策（2026-09 MM-M3 batch；B 线 2026-09-22 加 BATCH_LLM_PROVIDER
+        # 开关）：glm_batch 车道在 minimax 档默认唯一 MiniMax M3；GLM 条目
+        # 【保留待用】—— 仅在 MiniMax 未注册（开关=glm 或无 key）环境走原链
+        # 兜底（行为与切换前一致）。
         # MiniMax 注册后即使不健康也返回 minimax key：执行面失败 → celery
         # max_retries=3 指数退避重试（不静默偷切 GLM、不静默假成功）。
         if self._minimax_lane_registered():

@@ -26,6 +26,7 @@ from app.config import settings
 from app.core.event_bus import ErrorCreated, event_bus
 from app.core.i18n import I18n
 from app.core.llm_client import llm_client
+from app.core.llm_router import batch_llm_provider
 from app.core.time_utils import utcnow as _utcnow
 from app.models.achievement import UserStreakStats
 from app.models.error_book import ErrorRecord
@@ -683,25 +684,32 @@ class ErrorBookService:
             # 错题分析是后台任务、非用户直面 → 优先走 MiniMax 免费异步车道
             # （MINIMAX_MAX_CONCURRENCY 钳制，车道满立即快速拒绝不排队）；
             # 车道 busy/失败时降级回主 LLM 通道，双车道全挂再走规则兜底。
+            # B 线模型切换（2026-09-22）：直连车道与 router 批车道同受
+            # BATCH_LLM_PROVIDER 裁决——开关=glm（回滚位）时不尝试 MiniMax，
+            # 直接走主 LLM 通道（回滚必须全链生效，不留半切换态）。
             # 注意：M3 是推理模型，思维链计入 max_tokens（实测单题 ~1100+），
             # 预算给 1500 避免思维链耗尽导致空 content。
-            try:
-                response = await asyncio.wait_for(
-                    minimax_provider.analyze(
-                        messages=[
-                            {"role": "system", "content": "You are an expert tutor."},
-                            {"role": "user", "content": prompt},
-                        ],
-                        response_format={"type": "json_object"},
-                        max_tokens=1500,
-                    ),
-                    timeout=25.0,
-                )
-            except Exception as lane_error:
-                logger.warning(
-                    f"[ErrorBook] MiniMax async lane unavailable "
-                    f"({type(lane_error).__name__}: {lane_error}); falling back to primary LLM lane"
-                )
+            response: str | None = None
+            if batch_llm_provider() == "minimax":
+                try:
+                    response = await asyncio.wait_for(
+                        minimax_provider.analyze(
+                            messages=[
+                                {"role": "system", "content": "You are an expert tutor."},
+                                {"role": "user", "content": prompt},
+                            ],
+                            response_format={"type": "json_object"},
+                            max_tokens=1500,
+                        ),
+                        timeout=25.0,
+                    )
+                except Exception as lane_error:
+                    logger.warning(
+                        f"[ErrorBook] MiniMax async lane unavailable "
+                        f"({type(lane_error).__name__}: {lane_error}); falling back to primary LLM lane"
+                    )
+                    response = None
+            if response is None:
                 response = await asyncio.wait_for(
                     llm_client.chat_completion(
                         messages=[

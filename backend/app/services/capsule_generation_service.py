@@ -59,7 +59,9 @@ class ModelSelectionStrategy:
 
     @staticmethod
     def _minimax_lane_registered() -> bool:
-        """MiniMax 车道条目是否已注册（= 引擎进程启动时配置了 MINIMAX_API_KEY）。"""
+        """MiniMax 车道条目是否已注册（= BATCH_LLM_PROVIDER=minimax 且配置了
+        MINIMAX_API_KEY；B 线 2026-09-22 起开关为唯一裁决位，开关=glm 时保留
+        配置不启用、本判断为 False）。"""
         from app.core.llm_router import llm_router
 
         return "minimax_m3_batch" in llm_router._available_models

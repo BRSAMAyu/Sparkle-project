@@ -2,10 +2,12 @@
 MiniMax M3 接入 glm_batch 异步分析池的路由单测（全程 mock，零真实请求）。
 
 背景：MiniMax M3（token plan 免费档，并发硬上限 8）定位为"高性价比异步分析车道"。
-用户决策（2026-09 MM-M3 batch）：配置 MINIMAX_API_KEY 后 glm_batch 车道默认档 =
-MiniMax M3 **唯一候选**（GLM batch 条目【保留待用】默认不启用，仅作无 key 环境
-原链兜底）；MiniMax 不健康时也不静默偷切 GLM —— 批任务失败 → celery 重试接管，
-不静默假成功。显式回切 GLM 走 LLM_TIER_GLM_BATCH env 覆盖。
+用户决策（2026-09 MM-M3 batch）：BATCH_LLM_PROVIDER=minimax 且配置 MINIMAX_API_KEY
+后 glm_batch 车道默认档 = MiniMax M3 **唯一候选**（GLM batch 条目【保留待用】不启用，
+仅作开关=glm 回滚位与无 key 环境原链兜底）；MiniMax 不健康时也不静默偷切 GLM ——
+批任务失败 → celery 重试接管，不静默假成功。显式回切 GLM 走 BATCH_LLM_PROVIDER=glm
+（B 线 2026-09-22）或 LLM_TIER_GLM_BATCH env 覆盖。本文件 = minimax 档契约；
+glm 档契约见 test_batch_llm_provider_switch.py。
 """
 
 from unittest.mock import patch
@@ -22,12 +24,18 @@ def _rebuild_router(minimax_key: str, tier_override: str = ""):
     DASHSCOPE_API_KEY 一并置空：qwen3_7_flash_batch（QWEN-PLAN 合入）与 minimax
     同为 GLM_BATCH key-gated 条目，真实 .env 的 DASHSCOPE key 会注册 qwen 批次
     条目、污染本文件对 minimax 优先档的断言。
+
+    B 线 2026-09-22（BATCH_LLM_PROVIDER 开关）：本文件验证的是开关=minimax 档
+    （MM-M3 已验证车道），快照一并钉 BATCH_LLM_PROVIDER=minimax；开关=glm 回滚位
+    的抑制语义见 test_batch_llm_provider_switch.py。
     """
     from app.core.llm_router import LLMRouter
 
     with patch.object(settings, "MINIMAX_API_KEY", minimax_key), patch.object(
         settings, "DASHSCOPE_API_KEY", ""
-    ), patch.object(settings, "LLM_TIER_GLM_BATCH", tier_override):
+    ), patch.object(settings, "LLM_TIER_GLM_BATCH", tier_override), patch.object(
+        settings, "BATCH_LLM_PROVIDER", "minimax"
+    ):
         return LLMRouter()
 
 
