@@ -1,0 +1,845 @@
+diff --git a/backend/app/services/galaxy/event_listener.py b/backend/app/services/galaxy/event_listener.py
+index 640ab039..a47a2028 100644
+--- a/backend/app/services/galaxy/event_listener.py
++++ b/backend/app/services/galaxy/event_listener.py
+@@ -74,19 +74,22 @@ class TaskEventListener:
+         logger.info("TaskEventListener subscription established")
+ 
+     async def _on_event(self, event_data: dict):
+-        """处理接收到的事件"""
+-        event_type = event_data.get("event_type")
++        """处理接收到的事件。
+ 
+-        try:
+-            if event_type == "task.completed":
+-                await self.on_task_completed(event_data)
+-            elif event_type == "task.abandoned":
+-                await self.on_task_abandoned(event_data)
+-            elif event_type == "error_created":
+-                await self.on_error_created(event_data)
++        EVENT-ACK：本回调不再吞异常——处理失败必须抛回
++        ``EventBus._process_stream_message``，由总线走「不 ack（留 pending）
++        → 有界重试 → DLQ」管线。此前 blanket-except 让失败事件被恒 ack，
++        事件静默丢失且绕过全部重试/可观测性。非本消费者的事件类型直接
++        返回（良性路由 ack：galaxy_listeners 只关心下面三种类型）。
++        """
++        event_type = event_data.get("event_type")
+ 
+-        except Exception as e:
+-            logger.error(f"Error processing event {event_type}: {e}", exc_info=True)
++        if event_type == "task.completed":
++            await self.on_task_completed(event_data)
++        elif event_type == "task.abandoned":
++            await self.on_task_abandoned(event_data)
++        elif event_type == "error_created":
++            await self.on_error_created(event_data)
+ 
+     async def on_task_completed(self, event: dict):
+         """
+@@ -138,6 +141,9 @@ class TaskEventListener:
+                         )
+ 
+                     except Exception as e:
++                        # best-effort（刻意吞，EVENT-ACK 显式白名单）：单节点
++                        # 掌握度更新失败不否决整事件（重放已成功节点有双计
++                        # 风险），error 级日志可见；整事件级失败由外层上抛兜底。
+                         logger.error(f"Failed to update node {node_id} after task completion: {e}")
+ 
+                 logger.info(
+@@ -146,7 +152,15 @@ class TaskEventListener:
+                 )
+ 
+         except Exception as e:
+-            logger.error(f"Failed to handle task.completed: {e}", exc_info=True)
++            # EVENT-ACK：整事件处理失败 → 上抛触发总线「不 ack + 重试/DLQ」，
++            # 不再吞成恒 ack 静默丢失。
++            logger.warning(
++                "task.completed handling failed (left pending for bus retry/DLQ): "
++                "task_id={} error={}",
++                event.get("task_id"),
++                e,
++            )
++            raise
+ 
+     async def on_task_abandoned(self, event: dict):
+         """
+@@ -189,7 +203,14 @@ class TaskEventListener:
+                 )
+ 
+         except Exception as e:
+-            logger.error(f"Failed to handle task.abandoned: {e}")
++            # EVENT-ACK：同 on_task_completed——失败上抛给总线重试/DLQ。
++            logger.warning(
++                "task.abandoned handling failed (left pending for bus retry/DLQ): "
++                "task_id={} error={}",
++                event.get("task_id"),
++                e,
++            )
++            raise
+ 
+     async def on_error_created(self, event: dict):
+         """
+@@ -233,6 +254,8 @@ class TaskEventListener:
+                         logger.debug(f"Applied negative feedback to node {node_id} due to error {error_id}")
+ 
+                     except Exception as e:
++                        # best-effort（刻意吞，EVENT-ACK 显式白名单）：单节点
++                        # 负反馈失败不否决整事件，error 级日志可见。
+                         logger.error(f"Failed to apply feedback for node {node_id_str}: {e}")
+ 
+                 logger.info(
+@@ -241,7 +264,14 @@ class TaskEventListener:
+                 )
+ 
+         except Exception as e:
+-            logger.error(f"Failed to handle error_created: {e}")
++            # EVENT-ACK：同 on_task_completed——失败上抛给总线重试/DLQ。
++            logger.warning(
++                "error_created handling failed (left pending for bus retry/DLQ): "
++                "error_id={} error={}",
++                event.get("error_id"),
++                e,
++            )
++            raise
+ 
+     async def _get_task_related_nodes(self, db, task_id: UUID) -> list[UUID]:
+         """
+diff --git a/backend/app/services/galaxy/outcome_absorption_service.py b/backend/app/services/galaxy/outcome_absorption_service.py
+index 76901a34..afd4d365 100644
+--- a/backend/app/services/galaxy/outcome_absorption_service.py
++++ b/backend/app/services/galaxy/outcome_absorption_service.py
+@@ -481,21 +481,24 @@ class OutcomeAbsorptionConsumer:
+                 await asyncio.sleep(1)
+ 
+     async def _on_event(self, event_data: dict):
++        """EVENT-ACK：吸收失败必须上抛——``EventBus._process_stream_message``
++        会「不 ack（留 pending）→ 有界重试 → DLQ」。此前 blanket-except 把
++        失败事件恒 ack（静默丢失——幂等门只防重复，救不回从未到达的吸收）；
++        「单事件失败不拖垮消费循环」由总线 per-message 异常隔离保证，不在此
++        处吞。吸收幂等（mastery_audit_log 行 + absorbed_outcomes 标记）保证
++        重投递安全（at-least-once）。"""
+         if event_data.get("event_type") != OUTCOME_RECORDED_EVENT:
+             return
+-        try:
+-            async with self.session_factory() as db:
+-                absorber = GalaxyOutcomeAbsorber(db)
+-                result = await absorber.absorb_outcome(event_data)
+-                if result is not None:
+-                    logger.info(
+-                        "outcome {} absorbed: action={} nodes={}",
+-                        result.outcome_id,
+-                        result.action,
+-                        result.node_ids,
+-                    )
+-        except Exception as exc:  # noqa: BLE001 — 单事件失败不拖垮消费循环
+-            logger.error("Failed to absorb outcome event: {}", exc, exc_info=True)
++        async with self.session_factory() as db:
++            absorber = GalaxyOutcomeAbsorber(db)
++            result = await absorber.absorb_outcome(event_data)
++            if result is not None:
++                logger.info(
++                    "outcome {} absorbed: action={} nodes={}",
++                    result.outcome_id,
++                    result.action,
++                    result.node_ids,
++                )
+ 
+     def stop(self):
+         self._running = False
+diff --git a/backend/app/services/galaxy/streaming_service.py b/backend/app/services/galaxy/streaming_service.py
+index b22bb225..8dca66c4 100644
+--- a/backend/app/services/galaxy/streaming_service.py
++++ b/backend/app/services/galaxy/streaming_service.py
+@@ -73,15 +73,17 @@ class GalaxyStreamingService:
+             self._running = False
+ 
+     async def _on_event(self, event_data: dict):
+-        """处理接收到的事件"""
++        """处理接收到的事件。
++
++        EVENT-ACK：不再吞异常——推送面失败抛回 ``EventBus._process_stream_message``
++        （不 ack 留 pending → 有界重试 → DLQ），此前 blanket-except 把失败
++        事件恒 ack 静默丢失。其它事件类型为良性路由 ack（本组只推
++        node_mastery_updated）。
++        """
+         event_type = event_data.get("event_type")
+ 
+-        try:
+-            if event_type == "node_mastery_updated":
+-                await self._on_mastery_updated(event_data)
+-
+-        except Exception as e:
+-            logger.error(f"Error processing event {event_type}: {e}")
++        if event_type == "node_mastery_updated":
++            await self._on_mastery_updated(event_data)
+ 
+     async def _on_mastery_updated(self, event_data: dict):
+         """处理掌握度更新事件"""
+@@ -125,7 +127,15 @@ class GalaxyStreamingService:
+                     )
+ 
+         except Exception as e:
+-            logger.error(f"Error in _on_mastery_updated: {e}")
++            # EVENT-ACK：整事件推送失败 → 上抛给总线重试/DLQ（不 ack）。
++            logger.warning(
++                "node_mastery_updated broadcast failed (left pending for bus retry/DLQ): "
++                "user_id={} node_id={} error={}",
++                event_data.get("user_id"),
++                event_data.get("node_id"),
++                e,
++            )
++            raise
+ 
+     async def _get_node_name(self, node_id: UUID) -> str | None:
+         """获取节点名称（用于推送通知）"""
+@@ -250,6 +260,8 @@ class GalaxyStreamingService:
+             await self.ws_manager.send_personal_message(message, str(user_id))
+ 
+         except Exception as e:
++            # best-effort（刻意吞，EVENT-ACK 显式白名单）：单连接推送失败
++            # 不否决整事件（事件级失败由 _on_mastery_updated 外层上抛兜底）。
+             logger.error(f"Failed to send galaxy update to user {user_id}: {e}")
+ 
+     def stop(self):
+diff --git a/backend/app/services/galaxy_execution_consumer.py b/backend/app/services/galaxy_execution_consumer.py
+index d512a9a4..80fbc4fc 100644
+--- a/backend/app/services/galaxy_execution_consumer.py
++++ b/backend/app/services/galaxy_execution_consumer.py
+@@ -63,7 +63,15 @@ class GalaxyExecutionConsumer:
+         try:
+             await self._handle_execution_result(event)
+         except Exception as exc:
+-            logger.error("Failed to process execution.result_ingested for galaxy sync: {}", exc)
++            # EVENT-ACK：失败上抛给 ``EventBus._process_stream_message``
++            # （不 ack 留 pending → 有界重试 → DLQ），不再吞成恒 ack 静默丢失。
++            logger.warning(
++                "execution.result_ingested galaxy sync failed (left pending for bus retry/DLQ): "
++                "execution_intent_id={} error={}",
++                event.get("execution_intent_id"),
++                exc,
++            )
++            raise
+ 
+     async def _handle_execution_result(self, event: dict) -> None:
+         intent_id = self._parse_uuid(event.get("execution_intent_id"))
+diff --git a/backend/app/services/preference_event_consumer.py b/backend/app/services/preference_event_consumer.py
+index eda0c6d5..5222cf09 100644
+--- a/backend/app/services/preference_event_consumer.py
++++ b/backend/app/services/preference_event_consumer.py
+@@ -31,6 +31,10 @@ class PreferenceEventConsumer:
+         self.consumer_group = "python_preference_consumer"
+         self.consumer_name = "worker-1"
+         self._running = False
++        # EVENT-ACK：pending 回收空闲阈值——崩溃/失败遗留的未 ack 条目（PEL）
++        # 空闲超过该时长后被 XAUTOCLAIM 认领重处理（at-least-once；缓存失效
++        # 消费天然幂等）。与 EventBus.pending_retry_idle_ms 同量级。
++        self.pending_reclaim_idle_ms = 5000
+ 
+     def stop(self):
+         """Signal the consumer to stop gracefully."""
+@@ -55,6 +59,8 @@ class PreferenceEventConsumer:
+         while self._running:
+             try:
+                 await self._report_stream_length()
++                # EVENT-ACK：先回收 stale pending（崩溃/失败遗留），再读新消息
++                await self._recover_pending()
+ 
+                 messages = await self.redis.xreadgroup(
+                     groupname=self.consumer_group,
+@@ -84,6 +90,49 @@ class PreferenceEventConsumer:
+                 ).inc()
+                 await asyncio.sleep(1)
+ 
++    @staticmethod
++    def _extract_retry_count(data) -> int:
++        """EVENT-ACK：稳健解析重试计数（bytes/非法值一律回 0，与 EventBus 同款）。"""
++        try:
++            return int(data.get("_retry_count", 0)) if isinstance(data, dict) else 0
++        except (TypeError, ValueError):
++            return 0
++
++    async def _recover_pending(self) -> None:
++        """回收 pending：崩溃/失败遗留的未确认条目（EVENT-ACK）。
++
++        消费者崩溃（xreadgroup 与 xack 之间）或失败路由未完成的条目此前
++        滞留 PEL 无人认领（永久卡死）。用 XAUTOCLAIM 认领空闲超过
++        ``pending_reclaim_idle_ms`` 的条目，复用既有「处理→ack /
++        失败→requeue/DLQ」语义（不引入新重试设施，stream pending 即重试面）。
++        """
++        try:
++            # redis-py 7.0+ 返回 (next_id, messages, deleted_ids)
++            result = await self.redis.xautoclaim(
++                self.stream_key,
++                self.consumer_group,
++                self.consumer_name,
++                min_idle_time=self.pending_reclaim_idle_ms,
++                start_id="0-0",
++                count=10,
++            )
++            messages = list(result[1] or [])
++        except Exception as exc:
++            logger.debug("Pending reclaim skipped: {}", exc)
++            return
++        for entry_id, data in messages:
++            retry_count = self._extract_retry_count(data)
++            try:
++                await self._handle_event(entry_id, data)
++                await self.redis.xack(self.stream_key, self.consumer_group, entry_id)
++            except Exception as exc:
++                logger.warning(
++                    "Pending reclaim processing failed (routed to retry/DLQ): entry={} error={}",
++                    entry_id,
++                    exc,
++                )
++                await self._handle_failed_message(entry_id, data, exc, retry_count)
++
+     async def _handle_failed_message(
+         self, entry_id: str, data: dict, error: Exception, retry_count: int,
+     ) -> None:
+@@ -189,6 +238,10 @@ class PreferenceEventConsumer:
+                     consumer_group=self.consumer_group,
+                 ).inc()
+                 raise
++        else:
++            # EVENT-ACK：非偏好事件（同流承载其它 CQRS 事件）为显式良性
++            # 路由 ack——白名单外、重试无意义；debug 留痕不静默。
++            logger.debug("PreferenceEventConsumer skipped non-preference event: type={}", event_type)
+ 
+     @staticmethod
+     def _get_value(data: dict, key: str):
+diff --git a/backend/app/workers/graph_sync_worker.py b/backend/app/workers/graph_sync_worker.py
+index 59c70eaa..c3b9e0bb 100755
+--- a/backend/app/workers/graph_sync_worker.py
++++ b/backend/app/workers/graph_sync_worker.py
+@@ -27,6 +27,9 @@ class GraphSyncWorker:
+         self.stream_key = "stream:graph_sync"
+         self.group_name = "graph_sync_group"
+         self.consumer_name = "worker_1"
++        # EVENT-ACK：pending 回收空闲阈值——失败/崩溃遗留的未 ack 消息（PEL）
++        # 超过该空闲时长后被 XAUTOCLAIM 认领重处理（at-least-once）。
++        self.pending_reclaim_idle_ms = 60_000
+ 
+     async def start(self):
+         """启动 Worker"""
+@@ -62,12 +65,50 @@ class GraphSyncWorker:
+         logger.info("🛑 停止图同步 Worker...")
+         self.running = False
+ 
++    async def _recover_pending(self):
++        """回收 pending：崩溃/处理失败遗留的未确认消息（EVENT-ACK）。
++
++        本 worker 失败时不 ack（消息留在 PEL），但此前没有任何回收面——
++        pending 消息会永久卡死。用 XAUTOCLAIM 认领空闲超过
++        ``pending_reclaim_idle_ms`` 的条目并按正常路径重处理。at-least-once
++        语义：与 EventBus._claim_stale_messages 同款（node 写按 id 幂等，
++        边写依赖下游容忍重放——重放窗口被 min_idle_time 限制在真实故障面）。
++        """
++        if not self.redis:
++            return
++        try:
++            # redis-py 7.0+ 返回 (next_id, messages, deleted_ids)
++            result = await self.redis.xautoclaim(
++                self.stream_key,
++                self.group_name,
++                self.consumer_name,
++                min_idle_time=self.pending_reclaim_idle_ms,
++                start_id="0-0",
++                count=10,
++            )
++            messages = list(result[1] or [])
++        except Exception as e:
++            logger.debug(f"graph sync pending reclaim skipped: {e}")
++            return
++        for msg_id, msg_data in messages:
++            try:
++                await self._process_message(msg_id, msg_data)
++            except Exception as e:
++                logger.warning(
++                    "graph sync pending reclaim failed (message stays pending): id={} error={}",
++                    msg_id,
++                    e,
++                )
++
+     async def _consume(self):
+         """消费消息"""
+         logger.info("开始消费同步消息...")
+ 
+         while self.running:
+             try:
++                # 先回收 stale pending（崩溃/失败遗留），再读新消息（与 EventBus 一致）
++                await self._recover_pending()
++
+                 # 读取消息（阻塞 5 秒）
+                 messages = await self.redis.xreadgroup(
+                     self.group_name,
+@@ -86,8 +127,10 @@ class GraphSyncWorker:
+                             # 处理消息
+                             await self._process_message(msg_id, msg_data)
+                         except Exception as e:
+-                            logger.error(f"处理消息失败 {msg_id}: {e}")
+-                            # 可以选择重试或移到死信队列
++                            # EVENT-ACK：失败不 ack（消息留在 PEL），由
++                            # _recover_pending 的 XAUTOCLAIM 认领重试
++                            # （at-least-once；不引入额外死信设施）。
++                            logger.warning(f"处理消息失败（留 pending 待回收） {msg_id}: {e}")
+ 
+             except asyncio.CancelledError:
+                 logger.info("Worker 被取消")
+@@ -124,6 +167,8 @@ class GraphSyncWorker:
+             elif msg_type == "user_status_updated":
+                 await self._handle_user_status_updated(data)
+             else:
++                # EVENT-ACK：未知类型是显式良性 ack（schema 演进白名单外、
++                # 重试无意义），warning 可见、不静默。
+                 logger.warning(f"未知消息类型: {msg_type}")
+ 
+             # 确认消息已处理
+diff --git a/backend/tests/unit/test_event_ack_reliability.py b/backend/tests/unit/test_event_ack_reliability.py
+new file mode 100644
+index 00000000..84ff51bc
+--- /dev/null
++++ b/backend/tests/unit/test_event_ack_reliability.py
+@@ -0,0 +1,443 @@
++"""EVENT-ACK 回归测试：事件消费 blanket-except 恒 ack 静默丢失修复。
++
++覆盖三层语义：
++1. **失败不 ack**：galaxy 消费域回调（event_listener / outcome_absorption /
++   streaming / galaxy_execution）处理失败必须上抛——``EventBus._process_stream_message``
++   据此走「有界重试 → DLQ」；requeue 自身失败时消息留在 PEL（不 ack）。
++2. **pending 回收**：graph_sync_worker / preference_event_consumer 的
++   XAUTOCLAIM 回收——失败/崩溃遗留的 pending 在恢复后被重处理并 ack。
++3. **良性路径零行为变化**：路由过滤（非本组事件）仍是无异常的良性 ack。
++"""
++
++from __future__ import annotations
++
++import json
++from types import SimpleNamespace
++from unittest.mock import AsyncMock, Mock, patch
++from uuid import UUID, uuid4
++
++import fakeredis.aioredis as fakeredis_aioredis
++import pytest
++
++from app.core.event_bus import EventBus
++from app.services.galaxy.event_listener import TaskEventListener
++from app.services.galaxy.outcome_absorption_service import OutcomeAbsorptionConsumer
++from app.services.galaxy.streaming_service import GalaxyStreamingService
++from app.services.galaxy_execution_consumer import GalaxyExecutionConsumer
++from app.services.preference_event_consumer import PreferenceEventConsumer
++from app.workers.graph_sync_worker import GraphSyncWorker
++
++
++class _FakeIdempotencyStore:
++    async def get(self, key: str):
++        return None
++
++    async def lock(self, key: str) -> bool:
++        return True
++
++    async def set(self, key: str, value, ttl: int) -> None:
++        return None
++
++    async def unlock(self, key: str) -> None:
++        return None
++
++
++# ---------------------------------------------------------------------------
++# 1a. TaskEventListener：失败上抛 + 总线「失败重排队 → 恢复 ack」
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.asyncio
++async def test_event_listener_surfaces_session_failure():
++    """session_factory 直接失败 → on_task_completed 上抛（不再吞成恒 ack）。"""
++
++    def broken_factory():
++        raise RuntimeError("db down")
++
++    listener = TaskEventListener(broken_factory, AsyncMock())
++    event = {"event_type": "task.completed", "task_id": str(uuid4()), "user_id": str(uuid4())}
++
++    with pytest.raises(RuntimeError, match="db down"):
++        await listener._on_event(event)
++
++
++@pytest.mark.asyncio
++async def test_event_listener_unknown_event_type_is_benign_ack():
++    """非本组事件类型：无异常返回（良性路由 ack，行为不变）。"""
++
++    listener = TaskEventListener(Mock(), AsyncMock())
++    await listener._on_event({"event_type": "some.other.event", "data": "x"})
++
++
++@pytest.mark.asyncio
++async def test_event_listener_failure_requeues_then_recovery_acks(monkeypatch: pytest.MonkeyPatch):
++    """总线视角：第一次处理失败 → requeue（事件不丢）；重试成功 → ack。"""
++    bus = EventBus()
++    bus.redis = SimpleNamespace(xack=AsyncMock(), xadd=AsyncMock(return_value="2-0"))
++    move_to_dlq = AsyncMock()
++    monkeypatch.setattr(bus, "_move_to_dlq", move_to_dlq)
++    monkeypatch.setattr(bus, "_get_idempotency_store", AsyncMock(return_value=_FakeIdempotencyStore()))
++
++    listener = TaskEventListener(Mock(), AsyncMock())
++    attempts = 0
++
++    async def flaky_handler(event: dict) -> None:
++        nonlocal attempts
++        attempts += 1
++        if attempts == 1:
++            raise RuntimeError("transient db failure")
++
++    with patch.object(listener, "on_task_completed", flaky_handler):
++        await bus._process_stream_message(
++            stream="sparkle_events",
++            group_name="galaxy_listeners",
++            consumer_name="task_event_listener",
++            callback=listener._on_event,
++            message_id="1-0",
++            data={"event_type": "task.completed", "task_id": str(uuid4()), "user_id": str(uuid4())},
++        )
++
++    # 失败面：requeue 了重试副本（xadd），原始消息被 ack（事件未丢失——
++    # 内容已带 _retry_count 重进 stream；而 requeue 自身失败时不 ack 的
++    # 分支由下一条测试覆盖）
++    bus.redis.xadd.assert_awaited_once()
++    bus.redis.xack.assert_awaited_once_with("sparkle_events", "galaxy_listeners", "1-0")
++    move_to_dlq.assert_not_awaited()
++
++    # 恢复面：重试副本成功 → ack，不进 DLQ
++    with patch.object(listener, "on_task_completed", flaky_handler):
++        await bus._process_stream_message(
++            stream="sparkle_events",
++            group_name="galaxy_listeners",
++            consumer_name="task_event_listener",
++            callback=listener._on_event,
++            message_id="2-0",
++            data={
++                "event_type": "task.completed",
++                "task_id": str(uuid4()),
++                "user_id": str(uuid4()),
++                "_retry_count": "1",
++            },
++        )
++
++    assert attempts == 2
++    assert bus.redis.xack.await_count == 2
++    move_to_dlq.assert_not_awaited()
++
++
++@pytest.mark.asyncio
++async def test_event_bus_requeue_failure_leaves_message_pending(monkeypatch: pytest.MonkeyPatch):
++    """红线：requeue 自身失败 → 消息不 ack（留在 pending，天然重试面）。"""
++    bus = EventBus()
++    bus.redis = SimpleNamespace(
++        xack=AsyncMock(),
++        xadd=AsyncMock(side_effect=RuntimeError("redis requeue down")),
++    )
++    move_to_dlq = AsyncMock()
++    monkeypatch.setattr(bus, "_move_to_dlq", move_to_dlq)
++    monkeypatch.setattr(bus, "_get_idempotency_store", AsyncMock(return_value=_FakeIdempotencyStore()))
++
++    async def failing_callback(event: dict) -> None:
++        raise RuntimeError("consumer failed")
++
++    await bus._process_stream_message(
++        stream="sparkle_events",
++        group_name="g",
++        consumer_name="c",
++        callback=failing_callback,
++        message_id="1-0",
++        data={"event_type": "task.completed", "user_id": "u-1"},
++    )
++
++    bus.redis.xack.assert_not_awaited()  # 未 ack → 留 PEL
++    move_to_dlq.assert_not_awaited()
++
++
++# ---------------------------------------------------------------------------
++# 1b. OutcomeAbsorptionConsumer：吸收失败上抛；非目标事件良性跳过
++# ---------------------------------------------------------------------------
++
++
++def _absorption_session_factory(db: AsyncMock):
++    return Mock(return_value=db)
++
++
++@pytest.mark.asyncio
++async def test_outcome_absorption_consumer_surfaces_failure():
++    """absorb_outcome 失败 → _on_event 上抛（总线据此重试/DLQ，不再恒 ack）。"""
++    db = AsyncMock()
++    db.__aenter__.return_value = db
++    with patch(
++        "app.services.galaxy.outcome_absorption_service.GalaxyOutcomeAbsorber"
++    ) as absorber_cls:
++        absorber_cls.return_value.absorb_outcome = AsyncMock(side_effect=RuntimeError("absorb boom"))
++        consumer = OutcomeAbsorptionConsumer(
++            session_factory=_absorption_session_factory(db), event_bus=None
++        )
++        with pytest.raises(RuntimeError, match="absorb boom"):
++            await consumer._on_event({"event_type": "outcome.recorded", "outcome_id": "outc_x"})
++
++
++@pytest.mark.asyncio
++async def test_outcome_absorption_consumer_ignores_non_outcome_events():
++    """非 outcome.recorded 事件：直接返回（良性路由 ack，不触达 DB）。"""
++    db = AsyncMock()
++    consumer = OutcomeAbsorptionConsumer(session_factory=_absorption_session_factory(db), event_bus=None)
++
++    await consumer._on_event({"event_type": "task.completed", "task_id": "t"})
++
++    db.__aenter__.assert_not_awaited()
++
++
++# ---------------------------------------------------------------------------
++# 1c. GalaxyStreamingService：推送面失败上抛；正常推送零变化
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.asyncio
++async def test_streaming_service_surfaces_malformed_event():
++    """malformed 事件（user_id 缺失）→ 上抛（此前被 blanket-except 吞成恒 ack）。"""
++    service = GalaxyStreamingService(AsyncMock(), AsyncMock())
++
++    with pytest.raises(TypeError):
++        await service._on_event({"event_type": "node_mastery_updated"})
++
++
++@pytest.mark.asyncio
++async def test_streaming_service_happy_path_unchanged():
++    """正常掌握度事件 → 推送成功、无异常（良性路径零行为变化）。"""
++    ws_manager = AsyncMock()
++    service = GalaxyStreamingService(ws_manager, AsyncMock())
++
++    await service._on_event(
++        {
++            "event_type": "node_mastery_updated",
++            "user_id": str(UUID(int=1)),
++            "node_id": str(UUID(int=2)),
++            "old_mastery": 50,
++            "new_mastery": 95,
++            "reason": "quiz",
++        }
++    )
++
++    assert ws_manager.send_personal_message.await_count >= 1  # mastery + level_up
++
++
++# ---------------------------------------------------------------------------
++# 1d. GalaxyExecutionConsumer：同步失败上抛；过滤路径不变
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.asyncio
++async def test_galaxy_execution_consumer_surfaces_failure():
++    consumer = GalaxyExecutionConsumer(AsyncMock())
++
++    async def boom(event: dict) -> None:
++        raise RuntimeError("graph sync boom")
++
++    with patch.object(consumer, "_handle_execution_result", boom):
++        with pytest.raises(RuntimeError, match="graph sync boom"):
++            await consumer.handle_event(
++                {"event_type": "execution.result_ingested", "success": True}
++            )
++
++
++@pytest.mark.asyncio
++async def test_galaxy_execution_consumer_filter_unchanged():
++    """非目标事件 / 失败的执行结果：良性跳过（行为不变）。"""
++    consumer = GalaxyExecutionConsumer(AsyncMock())
++
++    await consumer.handle_event({"event_type": "other.event", "success": True})
++    await consumer.handle_event({"event_type": "execution.result_ingested", "success": False})
++
++
++# ---------------------------------------------------------------------------
++# 2a. GraphSyncWorker：失败留 pending → 回收重试成功
++# ---------------------------------------------------------------------------
++
++
++def _graph_message() -> dict:
++    return {
++        "type": "node_created",
++        "data": json.dumps(
++            {
++                "id": "node-1",
++                "name": "Node",
++                "description": "d",
++                "importance": 5,
++                "sector": "math",
++                "keywords": "a,b",
++                "source_type": "manual",
++            }
++        ),
++    }
++
++
++def _make_worker(redis_client) -> GraphSyncWorker:
++    worker = GraphSyncWorker.__new__(GraphSyncWorker)
++    worker.age_client = AsyncMock()
++    worker.redis = redis_client
++    worker.running = False
++    worker.stream_key = "stream:graph_sync"
++    worker.group_name = "graph_sync_group"
++    worker.consumer_name = "worker_1"
++    worker.pending_reclaim_idle_ms = 0  # 测试立即可认领
++    return worker
++
++
++@pytest.mark.asyncio
++async def test_graph_sync_worker_failure_stays_pending_then_recover_acks():
++    """红线全链路：处理失败 → 未 ack 留 PEL → 回收重试成功 → ack 清空 PEL。"""
++    redis = fakeredis_aioredis.FakeRedis(decode_responses=True)
++    worker = _make_worker(redis)
++    await redis.xgroup_create(worker.stream_key, worker.group_name, id="0", mkstream=True)
++    await redis.xadd(worker.stream_key, _graph_message())
++
++    # 模拟投递后处理失败（或进程崩溃）：xreadgroup 已交付进 PEL、无 ack
++    worker.age_client.add_vertex = AsyncMock(side_effect=RuntimeError("age down"))
++    await redis.xreadgroup(
++        worker.group_name,
++        worker.consumer_name,
++        {worker.stream_key: ">"},
++        count=10,
++    )
++    pending = await redis.xpending(worker.stream_key, worker.group_name)
++    assert pending["pending"] == 1
++
++    await worker._recover_pending()  # 认领重处理，仍失败 → 留 pending
++    pending = await redis.xpending(worker.stream_key, worker.group_name)
++    assert pending["pending"] == 1  # 失败不丢：留在 pending
++
++    # 恢复后再次回收：重试成功 → ack → PEL 清空
++    worker.age_client.add_vertex = AsyncMock(return_value=None)
++    await worker._recover_pending()
++    pending = await redis.xpending(worker.stream_key, worker.group_name)
++    assert pending["pending"] == 0
++    assert worker.age_client.add_vertex.await_count >= 1
++
++
++@pytest.mark.asyncio
++async def test_graph_sync_worker_recover_pending_is_noop_when_no_pending():
++    redis = fakeredis_aioredis.FakeRedis(decode_responses=True)
++    worker = _make_worker(redis)
++    await redis.xgroup_create(worker.stream_key, worker.group_name, id="0", mkstream=True)
++
++    await worker._recover_pending()  # 空 PEL：无异常、无副作用
++
++    pending = await redis.xpending(worker.stream_key, worker.group_name)
++    assert pending["pending"] == 0
++
++
++# ---------------------------------------------------------------------------
++# 2b. PreferenceEventConsumer：崩溃遗留 pending 回收；失败路由 requeue
++# ---------------------------------------------------------------------------
++
++
++def _preference_event() -> dict:
++    inner = json.dumps({"user_id": str(UUID(int=42)), "preference_version": 3, "timestamp": 1.0})
++    return {"type": "user.preferences.updated", "payload": json.dumps({"data": inner})}
++
++
++def _make_preference_consumer(redis_client) -> tuple[PreferenceEventConsumer, AsyncMock]:
++    user_service = AsyncMock()
++    consumer = PreferenceEventConsumer(redis_client, user_service)
++    consumer.pending_reclaim_idle_ms = 0  # 测试立即可认领
++    return consumer, user_service
++
++
++@pytest.mark.asyncio
++async def test_preference_consumer_recovers_crash_left_pending():
++    """崩溃遗留（投递后未 ack）→ _recover_pending 处理并 ack，PEL 清空。"""
++    redis = fakeredis_aioredis.FakeRedis(decode_responses=True)
++    consumer, user_service = _make_preference_consumer(redis)
++    await redis.xgroup_create(consumer.stream_key, consumer.consumer_group, id="0", mkstream=True)
++    await redis.xadd(consumer.stream_key, _preference_event())
++
++    # 模拟崩溃：投递进 PEL 但没来得及 ack
++    await redis.xreadgroup(
++        consumer.consumer_group,
++        consumer.consumer_name,
++        {consumer.stream_key: ">"},
++        count=10,
++    )
++    pending = await redis.xpending(consumer.stream_key, consumer.consumer_group)
++    assert pending["pending"] == 1
++
++    await consumer._recover_pending()
++
++    pending = await redis.xpending(consumer.stream_key, consumer.consumer_group)
++    assert pending["pending"] == 0
++    user_service.invalidate_user_cache.assert_awaited_once()
++
++
++@pytest.mark.asyncio
++async def test_preference_consumer_recover_failure_routes_to_requeue():
++    """回收重处理失败 → 走既有 requeue 语义（_retry_count=1 副本 + 原 ack）。"""
++    redis = fakeredis_aioredis.FakeRedis(decode_responses=True)
++    consumer, user_service = _make_preference_consumer(redis)
++    user_service.invalidate_user_cache = AsyncMock(side_effect=RuntimeError("cache down"))
++    await redis.xgroup_create(consumer.stream_key, consumer.consumer_group, id="0", mkstream=True)
++    await redis.xadd(consumer.stream_key, _preference_event())
++
++    await redis.xreadgroup(
++        consumer.consumer_group,
++        consumer.consumer_name,
++        {consumer.stream_key: ">"},
++        count=10,
++    )
++
++    await consumer._recover_pending()
++
++    # 原始条目已 ack（PEL 空），重试副本带 _retry_count=1 重进 stream
++    pending = await redis.xpending(consumer.stream_key, consumer.consumer_group)
++    assert pending["pending"] == 0
++    assert await redis.xlen(consumer.stream_key) == 2
++    entries = await redis.xrange(consumer.stream_key)
++    retry_payload = entries[-1][1]
++    assert retry_payload.get("_retry_count") == "1"
++
++
++@pytest.mark.asyncio
++async def test_preference_consumer_benign_routing_unchanged():
++    """非偏好事件：无异常直接返回、不触达 user_service（良性 ack 不变）。"""
++    redis = fakeredis_aioredis.FakeRedis(decode_responses=True)
++    consumer, user_service = _make_preference_consumer(redis)
++
++    await consumer._handle_event("0-1", {"type": "user.other.event", "payload": "{}"})
++
++    user_service.invalidate_user_cache.assert_not_awaited()
++
++
++# ---------------------------------------------------------------------------
++# 2c. EventBus 既有 pending 回收面：XAUTOCLAIM 认领 stale 消息（回归护栏）
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.asyncio
++async def test_event_bus_claim_stale_messages_returns_claimed(monkeypatch: pytest.MonkeyPatch):
++    """EventBus 自带 XAUTOCLAIM 回收：认领结果原样进入重处理管线（不回退）。"""
++    bus = EventBus()
++    claimed = [("1-0", {"event_type": "task.completed"})]
++    bus.redis = SimpleNamespace(
++        xautoclaim=AsyncMock(return_value=("0-0", claimed, [])),
++    )
++
++    messages = await bus._claim_stale_messages("sparkle_events", "g", "c")
++
++    assert messages == claimed
++    bus.redis.xautoclaim.assert_awaited_once()
++
++
++@pytest.mark.asyncio
++async def test_event_bus_claim_stale_messages_survives_response_error():
++    """stream/group 尚不存在（ResponseError）→ 返回空、不炸消费循环。"""
++    from redis.exceptions import ResponseError
++
++    bus = EventBus()
++    bus.redis = SimpleNamespace(
++        xautoclaim=AsyncMock(side_effect=ResponseError("NOGROUP")),
++    )
++
++    messages = await bus._claim_stale_messages("sparkle_events", "g", "c")
++
++    assert messages == []

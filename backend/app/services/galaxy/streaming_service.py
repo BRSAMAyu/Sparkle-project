@@ -73,15 +73,17 @@ class GalaxyStreamingService:
             self._running = False
 
     async def _on_event(self, event_data: dict):
-        """处理接收到的事件"""
+        """处理接收到的事件。
+
+        EVENT-ACK：不再吞异常——推送面失败抛回 ``EventBus._process_stream_message``
+        （不 ack 留 pending → 有界重试 → DLQ），此前 blanket-except 把失败
+        事件恒 ack 静默丢失。其它事件类型为良性路由 ack（本组只推
+        node_mastery_updated）。
+        """
         event_type = event_data.get("event_type")
 
-        try:
-            if event_type == "node_mastery_updated":
-                await self._on_mastery_updated(event_data)
-
-        except Exception as e:
-            logger.error(f"Error processing event {event_type}: {e}")
+        if event_type == "node_mastery_updated":
+            await self._on_mastery_updated(event_data)
 
     async def _on_mastery_updated(self, event_data: dict):
         """处理掌握度更新事件"""
@@ -125,7 +127,15 @@ class GalaxyStreamingService:
                     )
 
         except Exception as e:
-            logger.error(f"Error in _on_mastery_updated: {e}")
+            # EVENT-ACK：整事件推送失败 → 上抛给总线重试/DLQ（不 ack）。
+            logger.warning(
+                "node_mastery_updated broadcast failed (left pending for bus retry/DLQ): "
+                "user_id={} node_id={} error={}",
+                event_data.get("user_id"),
+                event_data.get("node_id"),
+                e,
+            )
+            raise
 
     async def _get_node_name(self, node_id: UUID) -> str | None:
         """获取节点名称（用于推送通知）"""
@@ -250,6 +260,8 @@ class GalaxyStreamingService:
             await self.ws_manager.send_personal_message(message, str(user_id))
 
         except Exception as e:
+            # best-effort（刻意吞，EVENT-ACK 显式白名单）：单连接推送失败
+            # 不否决整事件（事件级失败由 _on_mastery_updated 外层上抛兜底）。
             logger.error(f"Failed to send galaxy update to user {user_id}: {e}")
 
     def stop(self):

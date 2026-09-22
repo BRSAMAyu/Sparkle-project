@@ -63,7 +63,15 @@ class GalaxyExecutionConsumer:
         try:
             await self._handle_execution_result(event)
         except Exception as exc:
-            logger.error("Failed to process execution.result_ingested for galaxy sync: {}", exc)
+            # EVENT-ACK：失败上抛给 ``EventBus._process_stream_message``
+            # （不 ack 留 pending → 有界重试 → DLQ），不再吞成恒 ack 静默丢失。
+            logger.warning(
+                "execution.result_ingested galaxy sync failed (left pending for bus retry/DLQ): "
+                "execution_intent_id={} error={}",
+                event.get("execution_intent_id"),
+                exc,
+            )
+            raise
 
     async def _handle_execution_result(self, event: dict) -> None:
         intent_id = self._parse_uuid(event.get("execution_intent_id"))

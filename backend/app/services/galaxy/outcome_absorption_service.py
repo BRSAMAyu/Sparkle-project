@@ -481,21 +481,24 @@ class OutcomeAbsorptionConsumer:
                 await asyncio.sleep(1)
 
     async def _on_event(self, event_data: dict):
+        """EVENT-ACK：吸收失败必须上抛——``EventBus._process_stream_message``
+        会「不 ack（留 pending）→ 有界重试 → DLQ」。此前 blanket-except 把
+        失败事件恒 ack（静默丢失——幂等门只防重复，救不回从未到达的吸收）；
+        「单事件失败不拖垮消费循环」由总线 per-message 异常隔离保证，不在此
+        处吞。吸收幂等（mastery_audit_log 行 + absorbed_outcomes 标记）保证
+        重投递安全（at-least-once）。"""
         if event_data.get("event_type") != OUTCOME_RECORDED_EVENT:
             return
-        try:
-            async with self.session_factory() as db:
-                absorber = GalaxyOutcomeAbsorber(db)
-                result = await absorber.absorb_outcome(event_data)
-                if result is not None:
-                    logger.info(
-                        "outcome {} absorbed: action={} nodes={}",
-                        result.outcome_id,
-                        result.action,
-                        result.node_ids,
-                    )
-        except Exception as exc:  # noqa: BLE001 — 单事件失败不拖垮消费循环
-            logger.error("Failed to absorb outcome event: {}", exc, exc_info=True)
+        async with self.session_factory() as db:
+            absorber = GalaxyOutcomeAbsorber(db)
+            result = await absorber.absorb_outcome(event_data)
+            if result is not None:
+                logger.info(
+                    "outcome {} absorbed: action={} nodes={}",
+                    result.outcome_id,
+                    result.action,
+                    result.node_ids,
+                )
 
     def stop(self):
         self._running = False

@@ -74,19 +74,22 @@ class TaskEventListener:
         logger.info("TaskEventListener subscription established")
 
     async def _on_event(self, event_data: dict):
-        """处理接收到的事件"""
+        """处理接收到的事件。
+
+        EVENT-ACK：本回调不再吞异常——处理失败必须抛回
+        ``EventBus._process_stream_message``，由总线走「不 ack（留 pending）
+        → 有界重试 → DLQ」管线。此前 blanket-except 让失败事件被恒 ack，
+        事件静默丢失且绕过全部重试/可观测性。非本消费者的事件类型直接
+        返回（良性路由 ack：galaxy_listeners 只关心下面三种类型）。
+        """
         event_type = event_data.get("event_type")
 
-        try:
-            if event_type == "task.completed":
-                await self.on_task_completed(event_data)
-            elif event_type == "task.abandoned":
-                await self.on_task_abandoned(event_data)
-            elif event_type == "error_created":
-                await self.on_error_created(event_data)
-
-        except Exception as e:
-            logger.error(f"Error processing event {event_type}: {e}", exc_info=True)
+        if event_type == "task.completed":
+            await self.on_task_completed(event_data)
+        elif event_type == "task.abandoned":
+            await self.on_task_abandoned(event_data)
+        elif event_type == "error_created":
+            await self.on_error_created(event_data)
 
     async def on_task_completed(self, event: dict):
         """
@@ -138,6 +141,9 @@ class TaskEventListener:
                         )
 
                     except Exception as e:
+                        # best-effort（刻意吞，EVENT-ACK 显式白名单）：单节点
+                        # 掌握度更新失败不否决整事件（重放已成功节点有双计
+                        # 风险），error 级日志可见；整事件级失败由外层上抛兜底。
                         logger.error(f"Failed to update node {node_id} after task completion: {e}")
 
                 logger.info(
@@ -146,7 +152,15 @@ class TaskEventListener:
                 )
 
         except Exception as e:
-            logger.error(f"Failed to handle task.completed: {e}", exc_info=True)
+            # EVENT-ACK：整事件处理失败 → 上抛触发总线「不 ack + 重试/DLQ」，
+            # 不再吞成恒 ack 静默丢失。
+            logger.warning(
+                "task.completed handling failed (left pending for bus retry/DLQ): "
+                "task_id={} error={}",
+                event.get("task_id"),
+                e,
+            )
+            raise
 
     async def on_task_abandoned(self, event: dict):
         """
@@ -189,7 +203,14 @@ class TaskEventListener:
                 )
 
         except Exception as e:
-            logger.error(f"Failed to handle task.abandoned: {e}")
+            # EVENT-ACK：同 on_task_completed——失败上抛给总线重试/DLQ。
+            logger.warning(
+                "task.abandoned handling failed (left pending for bus retry/DLQ): "
+                "task_id={} error={}",
+                event.get("task_id"),
+                e,
+            )
+            raise
 
     async def on_error_created(self, event: dict):
         """
@@ -233,6 +254,8 @@ class TaskEventListener:
                         logger.debug(f"Applied negative feedback to node {node_id} due to error {error_id}")
 
                     except Exception as e:
+                        # best-effort（刻意吞，EVENT-ACK 显式白名单）：单节点
+                        # 负反馈失败不否决整事件，error 级日志可见。
                         logger.error(f"Failed to apply feedback for node {node_id_str}: {e}")
 
                 logger.info(
@@ -241,7 +264,14 @@ class TaskEventListener:
                 )
 
         except Exception as e:
-            logger.error(f"Failed to handle error_created: {e}")
+            # EVENT-ACK：同 on_task_completed——失败上抛给总线重试/DLQ。
+            logger.warning(
+                "error_created handling failed (left pending for bus retry/DLQ): "
+                "error_id={} error={}",
+                event.get("error_id"),
+                e,
+            )
+            raise
 
     async def _get_task_related_nodes(self, db, task_id: UUID) -> list[UUID]:
         """

@@ -27,6 +27,9 @@ class GraphSyncWorker:
         self.stream_key = "stream:graph_sync"
         self.group_name = "graph_sync_group"
         self.consumer_name = "worker_1"
+        # EVENT-ACK：pending 回收空闲阈值——失败/崩溃遗留的未 ack 消息（PEL）
+        # 超过该空闲时长后被 XAUTOCLAIM 认领重处理（at-least-once）。
+        self.pending_reclaim_idle_ms = 60_000
 
     async def start(self):
         """启动 Worker"""
@@ -62,12 +65,50 @@ class GraphSyncWorker:
         logger.info("🛑 停止图同步 Worker...")
         self.running = False
 
+    async def _recover_pending(self):
+        """回收 pending：崩溃/处理失败遗留的未确认消息（EVENT-ACK）。
+
+        本 worker 失败时不 ack（消息留在 PEL），但此前没有任何回收面——
+        pending 消息会永久卡死。用 XAUTOCLAIM 认领空闲超过
+        ``pending_reclaim_idle_ms`` 的条目并按正常路径重处理。at-least-once
+        语义：与 EventBus._claim_stale_messages 同款（node 写按 id 幂等，
+        边写依赖下游容忍重放——重放窗口被 min_idle_time 限制在真实故障面）。
+        """
+        if not self.redis:
+            return
+        try:
+            # redis-py 7.0+ 返回 (next_id, messages, deleted_ids)
+            result = await self.redis.xautoclaim(
+                self.stream_key,
+                self.group_name,
+                self.consumer_name,
+                min_idle_time=self.pending_reclaim_idle_ms,
+                start_id="0-0",
+                count=10,
+            )
+            messages = list(result[1] or [])
+        except Exception as e:
+            logger.debug(f"graph sync pending reclaim skipped: {e}")
+            return
+        for msg_id, msg_data in messages:
+            try:
+                await self._process_message(msg_id, msg_data)
+            except Exception as e:
+                logger.warning(
+                    "graph sync pending reclaim failed (message stays pending): id={} error={}",
+                    msg_id,
+                    e,
+                )
+
     async def _consume(self):
         """消费消息"""
         logger.info("开始消费同步消息...")
 
         while self.running:
             try:
+                # 先回收 stale pending（崩溃/失败遗留），再读新消息（与 EventBus 一致）
+                await self._recover_pending()
+
                 # 读取消息（阻塞 5 秒）
                 messages = await self.redis.xreadgroup(
                     self.group_name,
@@ -86,8 +127,10 @@ class GraphSyncWorker:
                             # 处理消息
                             await self._process_message(msg_id, msg_data)
                         except Exception as e:
-                            logger.error(f"处理消息失败 {msg_id}: {e}")
-                            # 可以选择重试或移到死信队列
+                            # EVENT-ACK：失败不 ack（消息留在 PEL），由
+                            # _recover_pending 的 XAUTOCLAIM 认领重试
+                            # （at-least-once；不引入额外死信设施）。
+                            logger.warning(f"处理消息失败（留 pending 待回收） {msg_id}: {e}")
 
             except asyncio.CancelledError:
                 logger.info("Worker 被取消")
@@ -124,6 +167,8 @@ class GraphSyncWorker:
             elif msg_type == "user_status_updated":
                 await self._handle_user_status_updated(data)
             else:
+                # EVENT-ACK：未知类型是显式良性 ack（schema 演进白名单外、
+                # 重试无意义），warning 可见、不静默。
                 logger.warning(f"未知消息类型: {msg_type}")
 
             # 确认消息已处理
