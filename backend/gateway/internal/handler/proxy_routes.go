@@ -598,6 +598,16 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		community.POST("/groups/:group_id/members/:user_id/promote", h.proxyWithHeaders)
 		community.POST("/groups/:group_id/members/:user_id/demote", h.proxyWithHeaders)
 		community.POST("/groups/:group_id/members/:user_id/transfer-ownership", h.proxyWithHeaders)
+		// Sprint Squads (D-COMM-3: 社群×exam_sprint 首联动) — engine side
+		// api/v1/community_squad.py; sprint-completion aggregation source of
+		// truth is engine-side sprint_task_ledger (XP/photon excluded by rule).
+		community.POST("/squads", h.proxyWithHeaders)
+		community.GET("/squads", h.proxyWithHeaders)
+		community.GET("/squads/:group_id", h.proxyWithHeaders)
+		community.POST("/squads/:group_id/join", h.proxyWithHeaders)
+		community.POST("/squads/:group_id/leave", h.proxyWithHeaders)
+		community.GET("/squads/:group_id/members", h.proxyWithHeaders)
+		community.GET("/squads/:group_id/sprint-progress", h.proxyWithHeaders)
 		// Group Messages
 		community.GET("/groups/:group_id/messages", h.proxyWithHeaders)
 		community.POST("/groups/:group_id/messages", h.proxyWithHeaders)

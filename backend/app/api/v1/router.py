@@ -34,6 +34,7 @@ from app.api.v1 import (
     cognitive,
     community,
     community_aggregates,
+    community_squad,
     community_strategy_outcomes,
     counterfactual,
     dashboard,
@@ -209,6 +210,8 @@ api_router.include_router(notifications.router, prefix="/notifications", tags=["
 api_router.include_router(observability.router)
 api_router.include_router(capsules.router, prefix="/capsules", tags=["capsules"])
 api_router.include_router(community.router, prefix="/community", tags=["community"])
+# D-COMM-3: 冲刺小队（社群×exam_sprint 首联动）——独立路由文件（community.py 结构债，新端点不增重存量）
+api_router.include_router(community_squad.router, prefix="/community")
 api_router.include_router(community_aggregates.router)
 api_router.include_router(community_strategy_outcomes.router)
 api_router.include_router(cognitive.router, prefix="/cognitive", tags=["cognitive"])
