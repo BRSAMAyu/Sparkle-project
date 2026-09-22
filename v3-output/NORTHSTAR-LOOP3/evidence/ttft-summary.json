@@ -1,0 +1,44 @@
+{
+  "schema": "sparkle.northstar.real-drive.run.v1",
+  "probe": "ws-ttft-per-message",
+  "messages": [
+    {
+      "label": "V1A-day0-explicit-facts",
+      "ack_s": 0.0,
+      "ttft_first_delta_s": 30.64,
+      "total_s": 86.88,
+      "delta_events": 20
+    },
+    {
+      "label": "V1B-fuzzy-clarification",
+      "ack_s": 0.0,
+      "ttft_first_delta_s": null,
+      "total_s": 19.44,
+      "delta_events": 0
+    },
+    {
+      "label": "V2C-gp04-recall",
+      "ack_s": 0.0,
+      "ttft_first_delta_s": 28.82,
+      "total_s": 66.87,
+      "delta_events": 15
+    },
+    {
+      "label": "V2D-correction",
+      "ack_s": 0.0,
+      "ttft_first_delta_s": 12.2,
+      "total_s": 64.66,
+      "delta_events": 18
+    },
+    {
+      "label": "V2E-pollution-probe",
+      "ack_s": 0.0,
+      "ttft_first_delta_s": 30.12,
+      "total_s": 51.45,
+      "delta_events": 18
+    }
+  ],
+  "count": 5,
+  "note": "ack_s=网关受理；ttft_first_delta_s=用户感知首 token（TTFT）；total_s=回合墙钟",
+  "at": "2026-09-22T15:32:51.402852+00:00"
+}

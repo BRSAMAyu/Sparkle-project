@@ -1,0 +1,18 @@
+{
+  "schema": "sparkle.northstar.real-drive.run.v1",
+  "meta": {
+    "run_id": "NS001-LOOP3-20260922-152610",
+    "gateway_url": "http://localhost:8080",
+    "generated_at": "2026-09-22T15:32:51.403034+00:00",
+    "main_username": "northstar_ns3_2ca4e677",
+    "user_id_prefix": "1093a5df",
+    "llm_messages_sent": 5,
+    "honesty": "定向验证轮：七项判定只针对修复卡验收面，不构成北极星达成宣称"
+  },
+  "gp07_demarcation": "inconclusive: 无明确对/错判定措辞，需人工读全文（可能重新解读命题）",
+  "manual_overrides": {
+    "V2-D": "fail→pass（判卷词表缺口，见 V2-D-rejudged）",
+    "V2-E": "inconclusive→correct-rejection（人工读全文，见 V2-E-rejudged）",
+    "V1-EPISODIC30": "fail 维持（30s 判据口径）但 90s 补读 3 条全对——功能兑现、延迟 30-90s，REPORT.md 定级 pass*"
+  }
+}

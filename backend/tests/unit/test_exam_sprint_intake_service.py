@@ -323,6 +323,36 @@ async def test_intake_reuses_goal_created_plan_when_subject_is_null(db_session) 
 
 
 @pytest.mark.asyncio
+async def test_intake_reuses_goal_created_plan_with_canonical_academic_type(db_session) -> None:
+    """NBP-3b（LOOP3 实测）：真实 goal_decomposition 链把 exam 归一为模板键 academic
+    落库（_CANONICAL_TO_TEMPLATE），夹具若只插 "exam" 会复现「单测绿运行红」——
+    canonical 族键必须同样命中复用，否则用户走真实链路即双计划。"""
+    user_id = uuid4()
+    exam_date = date.today() + timedelta(days=7)
+    goal, plan, day_one = await _seed_goal_linked_sprint_plan(
+        db_session, user_id, exam_date=exam_date, goal_type="academic"
+    )
+
+    service = ExamSprintIntakeService(db=db_session, redis_client=FakeRedis())
+    runtime_state = AuroraRuntimePlanningState(
+        user_id=str(user_id),
+        surface="aurora_planning",
+        conversation_id="exam-sprint-goal-reuse-academic",
+        runtime_session_id="runtime-session-goal-reuse-academic",
+    )
+    service._persist_profile_payloads = AsyncMock()  # type: ignore[method-assign]
+    service.planning_manager.runtime_adapter.get_or_create_state = AsyncMock(return_value=runtime_state)  # type: ignore[method-assign]
+    service.planning_manager.runtime_adapter.save_state = AsyncMock()  # type: ignore[method-assign]
+    service._generate_plan_and_tasks = AsyncMock(side_effect=AssertionError("academic 键必须命中复用，不得生成新计划"))  # type: ignore[method-assign]
+
+    response = await service.intake(user_id=user_id, request=_intake_request_for(exam_date))
+
+    service._generate_plan_and_tasks.assert_not_called()
+    assert UUID(response.launch.plan_id) == plan.id
+    assert response.launch.first_day_task_ids == [str(day_one.id)]
+
+
+@pytest.mark.asyncio
 async def test_intake_does_not_reuse_goal_plan_for_different_exam_date(db_session) -> None:
     """不同 exam_date = 不同目标：goal 关联兜底不得越界复用（保持 BP-7 语义）。"""
     user_id = uuid4()

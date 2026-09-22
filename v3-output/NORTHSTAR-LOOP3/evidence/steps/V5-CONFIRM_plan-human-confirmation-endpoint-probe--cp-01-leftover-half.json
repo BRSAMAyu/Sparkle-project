@@ -1,0 +1,39 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-LOOP3-20260922-152610",
+  "step_id": "V5-CONFIRM",
+  "phase": "loop3",
+  "name": "plan human-confirmation endpoint probe (CP-01 leftover half)",
+  "started_at": "2026-09-22T15:29:28.399063+00:00",
+  "finished_at": "2026-09-22T15:29:28.399069+00:00",
+  "request": {
+    "intake_response_confirm_keys": [],
+    "static_scan": "gateway+engine routes: only POST /api/v1/chat/confirm (action-level) and POST /api/v1/plans/compass/{artifact_id}/approve (compass artifact); no /plans/{id}/confirm|approve route in plans.py or exam_sprint.py"
+  },
+  "response": {
+    "probes": [
+      {
+        "method": "POST",
+        "path": "/api/v1/plans/a6d345a8-55e5-40de-b99b-b8e3de5534e0/confirm",
+        "status": 404
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/plans/a6d345a8-55e5-40de-b99b-b8e3de5534e0/approve",
+        "status": 404
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/plans/a6d345a8-55e5-40de-b99b-b8e3de5534e0",
+        "status": 200
+      }
+    ],
+    "plan_confirm_endpoint_exists": false,
+    "note": "404/405 = 端点不存在；GET /plans/{id} 作对照应 200"
+  },
+  "verdict": "blocked",
+  "checkpoints": [],
+  "notes": [
+    "CP-01 后半项仍缺失：计划草案→人工确认无专用端点（如仍缺，登记维持）"
+  ]
+}

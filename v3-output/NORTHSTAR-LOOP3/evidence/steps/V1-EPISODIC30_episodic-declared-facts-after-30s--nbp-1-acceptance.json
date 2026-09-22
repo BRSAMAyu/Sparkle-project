@@ -1,0 +1,24 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-LOOP3-20260922-152610",
+  "step_id": "V1-EPISODIC30",
+  "phase": "loop3",
+  "name": "episodic declared facts after 30s (NBP-1 acceptance)",
+  "started_at": "2026-09-22T15:28:27.706662+00:00",
+  "finished_at": "2026-09-22T15:28:27.706672+00:00",
+  "request": {
+    "path": "/api/v1/memory/episodic?limit=20",
+    "wait_s": 30
+  },
+  "response": {
+    "status": 200,
+    "entry_count": 0,
+    "entries": [],
+    "due_at_values": []
+  },
+  "verdict": "fail",
+  "checkpoints": [],
+  "notes": [
+    "entry_count=0 < 3 at 30s (LOOP2 WS baseline: 0)"
+  ]
+}

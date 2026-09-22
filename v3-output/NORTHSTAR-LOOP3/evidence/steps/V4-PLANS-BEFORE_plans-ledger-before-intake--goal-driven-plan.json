@@ -1,0 +1,21 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-LOOP3-20260922-152610",
+  "step_id": "V4-PLANS-BEFORE",
+  "phase": "loop3",
+  "name": "plans ledger before intake (goal-driven plan)",
+  "started_at": "2026-09-22T15:29:28.107470+00:00",
+  "finished_at": "2026-09-22T15:29:28.107473+00:00",
+  "request": {
+    "path": "/api/v1/plans?limit=50"
+  },
+  "response": {
+    "status": 200,
+    "sprint_plan_ids": [
+      "9dd4ec15-9539-4e5d-b7cf-d65624419161"
+    ]
+  },
+  "verdict": "pass",
+  "checkpoints": [],
+  "notes": []
+}

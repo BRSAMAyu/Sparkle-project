@@ -1,0 +1,18 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-LOOP3-20260922-152610",
+  "step_id": "S2",
+  "phase": "loop3",
+  "name": "register sse-only account (V6, zero LLM)",
+  "started_at": "2026-09-22T15:26:11.293499+00:00",
+  "finished_at": "2026-09-22T15:26:11.293507+00:00",
+  "request": {
+    "username": "northstar_ns3_sse_55b008a6"
+  },
+  "response": {
+    "status": 200
+  },
+  "verdict": "pass",
+  "checkpoints": [],
+  "notes": []
+}

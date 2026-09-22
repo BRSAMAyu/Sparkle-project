@@ -1,0 +1,65 @@
+{
+  "schema": "sparkle.sse-hb.probe.v1",
+  "subscribe_target": "http://localhost:8080",
+  "endpoint": "/api/v1/galaxy/events (Bearer)",
+  "started_at_utc": "2026-09-22T15:26:39.792946+00:00",
+  "finished_at_utc": "2026-09-22T15:28:39.816027+00:00",
+  "duration_s": 120.02,
+  "connect_count": 1,
+  "disconnect_count": 0,
+  "connection_held_full_duration": true,
+  "heartbeat_count": 6,
+  "heartbeat_intervals_s": [
+    20.0,
+    20.0,
+    20.0,
+    20.0,
+    20.0
+  ],
+  "heartbeat_gap_stats": {
+    "n": 5,
+    "min": 20.0,
+    "max": 20.0,
+    "mean": 20.0,
+    "median": 20.0
+  },
+  "event_field_lines": 0,
+  "other_lines": 0,
+  "total_bytes": 77,
+  "silence_gaps": [],
+  "disconnect_events": [],
+  "connect_events": [
+    {
+      "connection_no": 1,
+      "at_elapsed_s": 0.0
+    }
+  ],
+  "content_types_seen": [
+    "text/event-stream; charset=utf-8"
+  ],
+  "response_headers_first_connections": [
+    {
+      "Cache-Control": "no-cache",
+      "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';",
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cross-Origin-Opener-Policy": "same-origin",
+      "Cross-Origin-Resource-Policy": "same-origin",
+      "Date": "Tue, 22 Sep 2026 15:26:38 GMT",
+      "Permissions-Policy": "geolocation=(), camera=(), microphone=(), payment=()",
+      "Referrer-Policy": "strict-origin-when-cross-origin",
+      "Server": "uvicorn",
+      "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+      "X-Accel-Buffering": "no",
+      "X-Content-Type-Options": "nosniff",
+      "X-Frame-Options": "DENY",
+      "X-Ratelimit-Limit": "20",
+      "X-Ratelimit-Remaining": "19",
+      "X-Request-Id": "e041af79-5e00-474d-bdb9-b3c933ffbb78",
+      "X-Trace-Id": "d2ae6cf1eaaf48d4ac6debc057012a5c",
+      "X-Xss-Protection": "1; mode=block",
+      "Transfer-Encoding": "chunked"
+    }
+  ],
+  "account": "northstar_ns3_sse_55b008a6",
+  "register_gateway": "http://localhost:8080"
+}

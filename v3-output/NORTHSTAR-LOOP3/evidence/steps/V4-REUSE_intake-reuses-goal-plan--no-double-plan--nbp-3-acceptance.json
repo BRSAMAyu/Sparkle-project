@@ -1,0 +1,29 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-LOOP3-20260922-152610",
+  "step_id": "V4-REUSE",
+  "phase": "loop3",
+  "name": "intake reuses goal plan, no double plan (NBP-3 acceptance)",
+  "started_at": "2026-09-22T15:29:28.382305+00:00",
+  "finished_at": "2026-09-22T15:29:28.382310+00:00",
+  "request": {
+    "method": "ledger reconcile GET /api/v1/plans?limit=50"
+  },
+  "response": {
+    "sprint_before": [
+      "9dd4ec15-9539-4e5d-b7cf-d65624419161"
+    ],
+    "sprint_after": [
+      "9dd4ec15-9539-4e5d-b7cf-d65624419161",
+      "a6d345a8-55e5-40de-b99b-b8e3de5534e0"
+    ],
+    "intake_plan_id": "a6d345a8-55e5-40de-b99b-b8e3de5534e0",
+    "reused_same_plan": false,
+    "single_active_sprint": false
+  },
+  "verdict": "fail",
+  "checkpoints": [],
+  "notes": [
+    "LOOP2 baseline: two plans 069bc4f9(goal,subject=null) + ad361a54(intake)"
+  ]
+}

@@ -1,0 +1,91 @@
+{
+  "schema": "sparkle.northstar.real-drive.run.v1",
+  "sprint_plan_ids": [
+    "9dd4ec15-9539-4e5d-b7cf-d65624419161"
+  ],
+  "raw": {
+    "data": [
+      {
+        "id": "9dd4ec15-9539-4e5d-b7cf-d65624419161",
+        "name": "离散数学期末 7 天冲刺：及格冲 70+",
+        "type": "sprint",
+        "description": "NS-001 LOOP3 定向验证；考试日 2026-09-29",
+        "subject": null,
+        "target_date": "2026-09-29",
+        "progress": 0.0,
+        "health_score": 1.0,
+        "health_status": "healthy",
+        "mastery_level": 0.0,
+        "daily_available_minutes": 60,
+        "total_estimated_hours": null,
+        "is_active": true,
+        "priority": "normal",
+        "is_primary": false,
+        "plan_stage": "sprint",
+        "user_id": "1093a5df-33e4-4648-9439-7e07992b38e8",
+        "task_count": 4,
+        "completed_task_count": 0,
+        "created_at": "2026-09-22T15:29:27.814384",
+        "updated_at": "2026-09-22T15:29:27.814388",
+        "source": null,
+        "source_metadata": null,
+        "health_reasons": [],
+        "health_metrics": {
+          "completion_rate": 0.0,
+          "tasks_completed": 0,
+          "tasks_total": 4,
+          "avg_overrun": null,
+          "overrun_count": 0,
+          "severe_overrun_count": 0,
+          "feedback_stats": {
+            "too_difficult": 0,
+            "too_easy": 0,
+            "too_long": 0,
+            "too_short": 0
+          },
+          "time_progress": 0.0,
+          "progress_lag": 0.0,
+          "health_score": 1.0
+        },
+        "requires_adjustment": false,
+        "recommended_action": "none"
+      },
+      {
+        "id": "6e119852-dacb-4e84-9e5b-9adaef7cb8c0",
+        "name": "你好 我要开始备考：离散数学期末考试在 7 天后学习计划",
+        "type": "growth",
+        "description": "围绕“你好 我要开始备考：离散数学期末考试在 7 天后（闭卷 100 分卷） 我的情况：自评当前 度大约 42/100；最薄弱”自动生成的学习计划",
+        "subject": null,
+        "target_date": null,
+        "progress": 0.0,
+        "health_score": null,
+        "health_status": "unknown",
+        "mastery_level": 0.0,
+        "daily_available_minutes": 60,
+        "total_estimated_hours": null,
+        "is_active": true,
+        "priority": "normal",
+        "is_primary": true,
+        "plan_stage": "daily",
+        "user_id": "1093a5df-33e4-4648-9439-7e07992b38e8",
+        "task_count": 0,
+        "completed_task_count": 0,
+        "created_at": "2026-09-22T15:26:41.896197",
+        "updated_at": "2026-09-22T15:26:41.896202",
+        "source": null,
+        "source_metadata": null,
+        "health_reasons": [
+          "missing_plan_state"
+        ],
+        "health_metrics": {},
+        "requires_adjustment": false,
+        "recommended_action": "none"
+      }
+    ],
+    "total": 2,
+    "page": 1,
+    "page_size": 20,
+    "pages": 1
+  },
+  "at": "2026-09-22T15:29:28.107268+00:00"
+}

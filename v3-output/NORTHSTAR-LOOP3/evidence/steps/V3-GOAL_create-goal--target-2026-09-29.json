@@ -1,0 +1,27 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-LOOP3-20260922-152610",
+  "step_id": "V3-GOAL",
+  "phase": "loop3",
+  "name": "create goal (target 2026-09-29)",
+  "started_at": "2026-09-22T15:29:28.083070+00:00",
+  "finished_at": "2026-09-22T15:29:28.083076+00:00",
+  "request": {
+    "path": "/api/v1/goals/",
+    "body": {
+      "goal_type": "exam",
+      "title": "离散数学期末 7 天冲刺：及格冲 70+",
+      "motivation": "一周后期末考，目标及格并冲击 70+",
+      "time_horizon": "short",
+      "description": "NS-001 LOOP3 定向验证；考试日 2026-09-29",
+      "target_date": "2026-09-29"
+    }
+  },
+  "response": {
+    "status": 200,
+    "goal_id": "c51801e7-a76e-47fe-9f2b-4d900efad799"
+  },
+  "verdict": "pass",
+  "checkpoints": [],
+  "notes": []
+}

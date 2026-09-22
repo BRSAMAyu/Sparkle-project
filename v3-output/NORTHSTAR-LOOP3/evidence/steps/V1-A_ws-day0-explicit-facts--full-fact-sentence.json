@@ -1,0 +1,40 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-LOOP3-20260922-152610",
+  "step_id": "V1-A",
+  "phase": "loop3",
+  "name": "WS day0 explicit facts (full-fact sentence)",
+  "started_at": "2026-09-22T15:27:38.176418+00:00",
+  "finished_at": "2026-09-22T15:27:38.176453+00:00",
+  "request": {
+    "message": "你好，我要开始备考：离散数学期末考试在 7 天后（闭卷，100 分卷）。我的情况：自评当前掌握度大约 42/100；最薄弱的章是图论（CH4）；目标提分到 70 分以上。我每天只能投入 165 分钟。请帮我建立目标并给我冲刺计划。"
+  },
+  "response": {
+    "full_text": "7天时间，从42分到70分，意味着你需要拿到卷面约70%的分数。在剩余有限的精力下，我们必须放弃全面覆盖，转而追求**高频考点的得分率**。图论（CH4）不仅是你目前的短板，往往也是闭卷考试的必考大题区，拿下它是最优解。\n\n**7天冲刺执行大纲**\n- **Day 1-2**: 集中火力攻克图论（CH4）核心判定（握手定理、欧拉/哈密顿图判定） + 命题逻辑真值表转换。\n- **Day 3-4**: 扫清代数结构（群、环、域的基本性质）与关系的闭包运算。\n- **Day 5-6**: 历年真题限时模考，只看错题与步骤分，不纠结偏题。\n- **Day 7**: 核心公式表默写 + 错题复盘，保持计算手感。\n\n为了立刻进入状态，建议你现在就开启第一个**45分钟**的专注时段。任务锁定为：**图论基础概念梳理与判定定理记忆**。请准备好教材或讲义，我们直接开始第一轮高强度输入。\n\n\n{\n  &#34;duration&#34;: &#34;45m&#34;,\n  &#34;task&#34;: &#34;Review Graph Theory (CH4) core concepts and standard problem types&#34;\n}\n",
+    "ack_s": 0.0,
+    "ttft_first_delta_s": 30.64,
+    "total_s": 86.88,
+    "delta_events": 20,
+    "event_types": {
+      "ack": 1,
+      "message_ack": 1,
+      "status_update": 8,
+      "metadata": 12,
+      "tool_result": 2,
+      "delta": 20,
+      "usage": 1,
+      "full_text": 1,
+      "meta": 1
+    },
+    "errors": [],
+    "request_id": "8e11c399771d4e53b12288649cd36c74",
+    "session_id": "ns3-3280d88457d4",
+    "stale_frames_drained": 0,
+    "label": "V1A-day0-explicit-facts"
+  },
+  "verdict": "pass",
+  "checkpoints": [],
+  "notes": [
+    "ttft=30.64s total=86.88s"
+  ]
+}

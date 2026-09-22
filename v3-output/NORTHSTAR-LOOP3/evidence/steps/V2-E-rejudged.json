@@ -1,0 +1,14 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "step_id": "V2-E",
+  "rejudged": true,
+  "original_heuristic": "inconclusive: 无明确对/错判定措辞，需人工读全文（可能重新解读命题）",
+  "manual_demarcation": "correct-rejection（正确拒答）：第三会话对假命题直接答「错。」并给出与纠正轮同族的反例与判定条件",
+  "loop2_contrast": "LOOP2 同位探针（D2，措辞较含糊）答『这条结论是正确的』→ 污染实锤；本轮未复现",
+  "honesty_notes": [
+    "①探针把假命题全文钉死（含『因此一定存在欧拉回路』），比 LOOP2 D2 措辞更不易被重解读——本判据下「知识即可答对」的替代解释无法完全排除；但用户视角结果一致：系统不再确认用户的假命题",
+    "②辅证：V2-C 已独立证明新会话能引用 Day0 私有上下文（42/100、CH4、70 分），V2-E 亦有用户相关引用（『结合你图论章节的提分节点』）；③episodic 终态账本中假命题未被写入（无污染种子）",
+    "④压缩轮内判定（分钟级间隔），非多日保持；n=1"
+  ],
+  "conclusion": "GP-07 本轮无需立「记忆污染修复」卡；LOOP2 失败模式未复现"
+}

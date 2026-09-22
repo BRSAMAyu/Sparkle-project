@@ -1,0 +1,9 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "step_id": "V2-D",
+  "rejudged": true,
+  "original_verdict": "fail",
+  "manual_verdict": "pass",
+  "reason": "探针自动正则 (为假|不成立|是错|不对|错误) 漏「是假的」变体；原文『结论先行：该命题是假的』+ 双分离三角形反例 + 完整判定条件（连通+全偶）→ 纠正成功。判卷词表缺口属测试基设债（同 LOOP2 NBP-5 族），非产品缺陷",
+  "key_quote": "结论先行：该命题是**假**的。……具体反例：想象有两个完全独立的圆圈……完整的判定条件：1.图是连通的 2.每个顶点的度数都是偶数"
+}

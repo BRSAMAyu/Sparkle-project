@@ -290,7 +290,11 @@ class ExamSprintIntakeService:
                 Plan.target_date == exam_date,
                 Plan.goal_id.isnot(None),
                 Goal.user_id == user_id,
-                Goal.goal_type == "exam",
+                # canonical exam 族匹配：真实创建链 goal_decomposition_service 的
+                # _CANONICAL_TO_TEMPLATE 会把 exam 归一为模板键 academic 落库
+                # （goal_decomposition_service.py:182-204），只匹配 "exam" 会永不命中
+                # ——LOOP3 NBP-3b 实测双计划根因。
+                Goal.goal_type.in_(("exam", "academic")),
                 Goal.deleted_at.is_(None),
             )
             .order_by(desc(Plan.created_at))

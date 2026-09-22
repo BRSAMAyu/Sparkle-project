@@ -1,0 +1,55 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-LOOP3-20260922-152610",
+  "step_id": "V3-DETAIL",
+  "phase": "loop3",
+  "name": "goal-detail status+shape (NBP-2 acceptance)",
+  "started_at": "2026-09-22T15:29:28.167505+00:00",
+  "finished_at": "2026-09-22T15:29:28.167510+00:00",
+  "request": {
+    "path": "/api/v1/experience/goal-detail/c51801e7-a76e-47fe-9f2b-4d900efad799"
+  },
+  "response": {
+    "status": 200,
+    "body_keys": [
+      "accountability_status",
+      "active",
+      "current_phase",
+      "goal",
+      "goal_graph",
+      "knowledge_bottlenecks",
+      "minimum_acceptance_criteria",
+      "next_task",
+      "plan",
+      "plan_health",
+      "progress",
+      "related_sources",
+      "strategy_belief",
+      "todays_minimal_next_step",
+      "updated_at",
+      "why_this_matters"
+    ],
+    "shape_present": [
+      "goal",
+      "minimum_acceptance_criteria",
+      "plan_health",
+      "todays_minimal_next_step",
+      "knowledge_bottlenecks",
+      "next_task",
+      "progress",
+      "active"
+    ],
+    "nonempty_fields": [
+      "goal",
+      "minimum_acceptance_criteria",
+      "plan_health",
+      "todays_minimal_next_step",
+      "progress",
+      "active"
+    ],
+    "body_preview": "{\"goal\": {\"id\": \"c51801e7-a76e-47fe-9f2b-4d900efad799\", \"title\": \"离散数学期末 7 天冲刺：及格冲 70+\", \"goal_type\": \"academic\", \"status\": \"active\", \"target_date\": \"2026-09-29\", \"mastery\": 0.0, \"progress\": 0.0, \"priority\": \"normal\"}, \"minimum_acceptance_criteria\": {\"description\": \"\", \"status\": \"pending_confirmation\", \"thresholds\": [{\"id\": \"m1\", \"label\": \"Map the baseline\", \"metric\": \"milestone_completed\", \"threshold\": \"1\", \"unit\": \"boolean\", \"current_value\": null, \"met\": false}, {\"id\": \"m2\", \"label\": \"Repair the core gaps\", \"metric\": \"milestone_completed\", \"threshold\": \"1\", \"unit\": \"boolean\", \"current_value\": null, \"met\": false}, {\"id\": \"m3\", \"label\": \"Timed practice loop\", \"metric\": \"milestone_completed\", \"threshold\": \"1\", \"unit\": \"boolean\", \"current_value\": null, \"met\": false}, {\"id\": \"m4\", \"label\": \"Readiness check\", \"metric\": \"milestone_completed\", \"threshold\": \"1\", \"unit\": \"boolean\", \"current_value\": null, \"met\": false}]}, \"plan_health\": {\"overall\": 0.0, \"phase_health\": 0.0, \"task_completion_rate\": 0.0}, \"current_phase\": {\"name\": \"sprint\", \"progress\": 0.0}, \"todays_minimal_next_step\": {\"task_id\": null, \"title\": null, \"type\": null, \"estimated_minutes\": null}, \"knowledge_bottlenecks\": [], \"accountability_status\": {\"partner_count\": 0, \"active_commitments\": 0, \"last_checkin\": null}, \"related_sources\": [], \"strategy_belief\": null, \"active\": true, \"plan\": {\"id\": \"9dd4ec15-9539-4e5d-b7cf-d65624419161\", \"name\": \"离散数学期末 7 天冲刺：及格冲 70+\", \"type\": \"sprint\", \"subject\": null, \"target_date\": \"2026-09-29\", \"progress\": 0.0, \"mastery_level\": 0.0, \"plan_stage\": \"sprint\", \"priority\": \"normal\"}, \"progress\": {\"overall\": 0.0, \"tasks_total\": 4, \"tasks_completed\": 0, \"paused\": 0, \"stuck\": 0}, \"next_task\": null, \"goal_graph\": {\"active\": false, \"nodes\": [], \"edges\": [], \"focus_suggestions\": []}, \"why_this_matters\": \"这个目标会影响 Sparkle 今天的计划、资料选择和任务排序。\", \"updated_at\": \"2026-09-22T15:29:28.166588\"}"
+  },
+  "verdict": "pass",
+  "checkpoints": [],
+  "notes": []
+}

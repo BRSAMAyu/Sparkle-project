@@ -1,0 +1,40 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-LOOP3-20260922-152610",
+  "step_id": "V1-B",
+  "phase": "loop3",
+  "name": "WS fuzzy request (clarification-gate fast-interaction round)",
+  "started_at": "2026-09-22T15:27:57.615683+00:00",
+  "finished_at": "2026-09-22T15:27:57.615691+00:00",
+  "request": {
+    "message": "我想提高成绩，帮我安排一下吧。"
+  },
+  "response": {
+    "full_text": "您的需求已接收，系统正在为您初步规划。为让方案更贴合您的实际目标，需向您确认：这份计划是侧重短期冲刺，还是长期稳步提升？您只需简单回复对应选项，我马上为您生成详细安排。请随时补充，我们会按您的节奏稳步推进，无需着急。",
+    "ack_s": 0.0,
+    "ttft_first_delta_s": null,
+    "total_s": 19.44,
+    "delta_events": 0,
+    "event_types": {
+      "stale_done": 1,
+      "ack": 1,
+      "message_ack": 1,
+      "tool_result": 2,
+      "status_update": 2,
+      "metadata": 3,
+      "full_text": 1,
+      "meta": 1
+    },
+    "errors": [],
+    "request_id": "9eeb4b80eeda4f0db5830fd625c08d89",
+    "session_id": "ns3-3280d88457d4",
+    "stale_frames_drained": 1,
+    "label": "V1B-fuzzy-clarification",
+    "fast_interaction_suspected": true
+  },
+  "verdict": "pass",
+  "checkpoints": [],
+  "notes": [
+    "ttft=Nones total=19.44s"
+  ]
+}

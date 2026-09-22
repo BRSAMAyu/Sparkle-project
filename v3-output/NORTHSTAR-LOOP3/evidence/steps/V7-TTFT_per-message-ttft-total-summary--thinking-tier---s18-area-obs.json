@@ -1,0 +1,47 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-LOOP3-20260922-152610",
+  "step_id": "V7-TTFT",
+  "phase": "loop3",
+  "name": "per-message TTFT/total summary (thinking-tier & S18 area observation)",
+  "started_at": "2026-09-22T15:32:51.402949+00:00",
+  "finished_at": "2026-09-22T15:32:51.402951+00:00",
+  "request": {
+    "method": "instrumented WS client",
+    "budget": "5 LLM messages"
+  },
+  "response": {
+    "rows": [
+      {
+        "msg": "V1A-day0-explicit-facts",
+        "ttft": 30.64,
+        "total": 86.88
+      },
+      {
+        "msg": "V1B-fuzzy-clarification",
+        "ttft": null,
+        "total": 19.44
+      },
+      {
+        "msg": "V2C-gp04-recall",
+        "ttft": 28.82,
+        "total": 66.87
+      },
+      {
+        "msg": "V2D-correction",
+        "ttft": 12.2,
+        "total": 64.66
+      },
+      {
+        "msg": "V2E-pollution-probe",
+        "ttft": 30.12,
+        "total": 51.45
+      }
+    ]
+  },
+  "verdict": "pass",
+  "checkpoints": [],
+  "notes": [
+    "n=5; max_total=86.88s"
+  ]
+}
