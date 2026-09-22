@@ -3,9 +3,19 @@ import unittest
 import uuid
 from datetime import datetime, timedelta
 import pytest
+from app.config import settings
 from app.models.chat import ChatMessage, MessageRole
 from app.db.session import AsyncSessionLocal
 from sqlalchemy import text
+from tests import _dbguard
+
+# TEST-DBGUARD：本模块在 import 期就会拿全局 AsyncSessionLocal 建连、并在用例里
+# INSERT 用户行——指向演示库（库名 == sparkle）时在任何连接发生前整模块跳过。
+if _dbguard.is_demo_db_url(settings.DATABASE_URL or ""):
+    pytest.skip(
+        "TEST-DBGUARD: 演示库隔离 " + _dbguard.demo_guard_message(settings.DATABASE_URL or "", "test_db_partitioning (module)"),
+        allow_module_level=True,
+    )
 
 
 async def _test_session():

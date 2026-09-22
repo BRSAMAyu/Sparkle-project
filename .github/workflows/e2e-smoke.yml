@@ -21,6 +21,9 @@ jobs:
       JWT_SECRET: ci-smoke-jwt-secret-with-32-plus-chars
       ADMIN_SECRET: ci-smoke-admin-secret-with-32-plus-chars
       INTERNAL_API_KEY: ci-smoke-internal-api-key
+      # TEST-DBGUARD：本 workflow 的 compose 栈是一次性 CI 容器（库名沿用 sparkle），
+      # 显式声明白名单让 tests/_dbguard.py 会话门放行；本地开发机禁止设置该变量。
+      SPARKLE_TEST_DB_ALLOW_NAMED_SPARKLE: '1'
       FULL_STACK_TESTS: '1'
       LIVE_API_BASE_URL: http://127.0.0.1:8000/api/v1
       LIVE_GATEWAY_BASE_URL: http://127.0.0.1:8080/api/v1

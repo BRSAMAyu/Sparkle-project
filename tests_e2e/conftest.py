@@ -130,9 +130,35 @@ except ImportError as e:
 
 TEST_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
-    # Use the same database as production
-    "postgresql+asyncpg://postgres:change-me@localhost:5432/sparkle"
+    # TEST-DBGUARD: 默认库从演示库 sparkle 改为专属测试库（与
+    # run_e2e_tests.py 建库脚本一致）。旧默认值曾直指演示库，一旦本机
+    # dev compose 在跑就会把 E2E 数据写进演示库。
+    "postgresql+asyncpg://postgres:change-me@localhost:5432/sparkle_test"
 )
+
+# TEST-DBGUARD 会话门（tests_e2e 是独立 rootdir，不加载 backend/tests/conftest.py，
+# 因此在这里单独接入同一判定器 tests._dbguard——backend 目录已在上方加入 sys.path）。
+from tests import _dbguard  # noqa: E402
+
+if _dbguard.is_demo_db_url(TEST_DATABASE_URL) and not _dbguard.allow_named_sparkle():
+    raise pytest.UsageError(_dbguard.demo_guard_message(TEST_DATABASE_URL, "tests_e2e 会话门"))
+
+# 第二查：部分 E2E 文件（test_integration.py / test_full_e2e.py）直接用
+# settings.DATABASE_URL 建连，须一并拦截。与 backend 会话门同款双条件：
+# 仅当 DB 来自显式配置（env/.env）时才拒跑；裸 worktree 的默认构造串
+# （空密码、无法认证）保持历史行为。
+try:
+    from app.config import settings as _app_settings  # noqa: E402
+
+    _app_db_url = _app_settings.DATABASE_URL or ""
+    if (
+        _dbguard.is_demo_db_url(_app_db_url)
+        and _dbguard.explicit_db_config()
+        and not _dbguard.allow_named_sparkle()
+    ):
+        raise pytest.UsageError(_dbguard.demo_guard_message(_app_db_url, "tests_e2e 会话门 (settings.DATABASE_URL)"))
+except ImportError:
+    pass  # backend app 不可导入时，依赖 app 的用例自会失败，与守卫无关
 
 @pytest.fixture(scope="session")
 def event_loop():

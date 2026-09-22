@@ -17,6 +17,7 @@ from app.models.base import Base
 from app.models.user import User
 from app.models.plan import Plan
 from app.core.security import create_access_token
+from tests import _dbguard
 from typing import AsyncGenerator, Dict
 
 
@@ -27,6 +28,13 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
     This ensures test data is visible to the gRPC server.
     """
     db_url = settings.DATABASE_URL
+
+    # TEST-DBGUARD 域守卫：本 fixture 会真实写入数据（测试用户/节点/通知），
+    # 指向演示库（库名 == sparkle）时无条件拒绝——这是 2026-09 泔染事故的
+    # 直接入口（journey_milestone_* 账号即经此泄漏）。
+    if _dbguard.is_demo_db_url(db_url):
+        pytest.fail(_dbguard.demo_guard_message(db_url, "tests/integration conftest db_session fixture"), pytrace=False)
+
     connect_args = {}
 
     # asyncpg does not accept sslmode in the URL; strip it and map to ssl args.

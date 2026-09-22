@@ -101,6 +101,7 @@ from app.models.user import User  # noqa: F401
 from app.models.user_memory_settings import UserMemorySettings  # noqa: F401
 from app.models.user_preferences import UserPreferencesCenter  # noqa: F401
 from app.models.user_push_opt_in import UserPushOptIn  # noqa: F401
+from tests import _dbguard
 from tests._credentials import (  # noqa: F401 — re-exported for legacy imports
     TEST_HASHED_PASSWORD,
     TEST_HY_API_KEY,
@@ -265,6 +266,26 @@ async def redis_client_fixture():
         await client.aclose()
     else:
         await client.close()
+
+
+def pytest_configure(config):
+    """TEST-DBGUARD 会话门：测试进程永不连接演示库（详见 tests/_dbguard.py）。
+
+    - 显式配置（env / .env）的 DATABASE_URL 指向演示库（库名 == sparkle）→
+      整个进程拒跑（UsageError，退出码 4），这是 2026-09 泔染事故的根因路径；
+    - 裸 worktree（无 .env）由 POSTGRES_* 默认值构造出的同形 URL：密码为空必然
+      认证失败，保持历史行为（仅打印提示），不拒跑、不改任何测试结果。
+    """
+    db_url = settings.DATABASE_URL or ""
+    if not _dbguard.is_demo_db_url(db_url):
+        return
+    if _dbguard.explicit_db_config() and not _dbguard.allow_named_sparkle():
+        raise pytest.UsageError(_dbguard.demo_guard_message(db_url, "backend/tests 会话门 (pytest_configure)"))
+    note = "（CI 临时栈白名单开启，降级为告警）" if _dbguard.allow_named_sparkle() else "（无显式 DB 配置，默认构造串）"
+    print("\n" + "!" * 78)
+    print(f"TEST-DBGUARD 警告: 测试进程的 DATABASE_URL 指向演示库形状的串 {note}")
+    print(_dbguard.demo_guard_message(db_url, "backend/tests 会话门 (pytest_configure)"))
+    print("!" * 78)
 
 
 def pytest_collection_modifyitems(config, items):

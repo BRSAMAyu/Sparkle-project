@@ -23,6 +23,7 @@ from app.models import (
     UserNodeStatus,
 )
 from app.services.graph_reasoning_service import GraphReasoningService
+from tests import _dbguard
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 
@@ -41,6 +42,10 @@ def _sync_database_url() -> str:
     database_url = getattr(settings, "DATABASE_URL", "") or ""
     if not database_url:
         pytest.skip("DATABASE_URL not configured for migration tests")
+    # TEST-DBGUARD：迁移测试会执行 `alembic upgrade head` 真实变更 schema，
+    # 绝不允许落在演示库上——在发起任何连接前直接跳过。
+    if _dbguard.is_demo_db_url(database_url):
+        pytest.skip("TEST-DBGUARD: 拒绝对演示库(sparkle)执行迁移测试 " + _dbguard.demo_guard_message(database_url, "test_migrations._sync_database_url"))
     if not database_url.startswith(("postgresql", "postgres")):
         pytest.skip(f"Migration tests require PostgreSQL, got {database_url!r}")
     return to_sync_database_url(database_url)
