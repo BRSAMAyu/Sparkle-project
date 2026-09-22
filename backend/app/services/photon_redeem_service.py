@@ -7,7 +7,7 @@ Stage: D-COMM-2
 
 口径（设计卡原文裁决）：
 - 可兑换基数 = 审计流水重放：``transaction_type IN (grant_achievement,
-  grant_daily_first, grant_contract, grant_contract_bonus)`` 的累计净收入，
+  grant_daily_first, grant_contract, grant_contract_bonus, grant_bonus)`` 的累计净收入，
   ``deduct_contract_stake / penalty`` 同步扣减基数；**``transfer_in`` 一律
   不计入**（封堵小号互转刷会员；``transfer_out`` 也不返还基数）。
 - 兑换产出：复用 D-REDEEM 核销核 ``redeem_service._grant_pro`` 的叠加语义
@@ -29,12 +29,14 @@ cost WHERE photon_balance >= cost`` 的行内守卫）为**每用户串行化点
 事务语义：与 redeem_service 同款——本模块只 flush 不 commit（get_db 收口）；
 业务拒绝路径内部 rollback 自愈（撤销已 flush 的扣减）后返回结构化终态。
 
-诚实申报（基数口径的既有缝隙，fail-safe 方向=少算不多算）：
-- 每日首胜发放点（achievement_engine）未开 ``record_history``，流水无该收入；
-- combo 加成发放用 ``grant_bonus`` 类型，不在设计卡四类型词表内。
-  两者均为**发放侧既有现状**，本卡不修（给 daily_first 补流水会触发
-  ``_find_existing_transaction`` 去重路径吞掉次日首胜，须独立设计去重键）；
-  后果仅是基数少算、用户可兑上限降低，绝不反向放水。
+诚实申报（基数口径缝隙的收敛状态，PHOTON-STREAM 卡 2026-09-22 补齐）：
+- 每日首胜发放点（achievement_engine.check_daily_first）已开 ``record_history``，
+  并以 ``related_item_id="daily_first:<当日 ISO 日期>"`` 作每日唯一去重键——
+  去重语义=同日幂等（缓存失守时 DB 层兜底），次日键变化绝不被吞；
+- combo 加成发放（achievement_engine._handle_achievement_combo）保留
+  ``grant_bonus`` 类型，已收录进下方收入词表；发放点同样开了流水，键为
+  每事件唯一（uuid4）——combo 在 5 分钟窗口内可合法重复达标，永不互吞。
+发放规则（金额语义）两者均未改动，本通道只收敛「审计即基数」的口径。
 """
 
 from __future__ import annotations
@@ -65,12 +67,14 @@ REDEEM_PRO_ERROR = "error"
 #: 已登记进 models/shop.PhotonTransactionType 枚举，杜绝 admin_adjustment 兜底误标）
 REDEEM_PRO_TX_TYPE = "redeem_pro"
 
-#: 可兑换收入来源（设计卡 §3.1 四类型封闭词表——transfer_in 天然不在表内）
+#: 可兑换收入来源（收入词表 = 设计卡 §3.1 四类型 + PHOTON-STREAM 增补
+#: ``grant_bonus``〔combo 加成〕；``transfer_in`` 天然不在表内）
 REDEEMABLE_INCOME_TYPES: tuple[str, ...] = (
     "grant_achievement",
     "grant_daily_first",
     "grant_contract",
     "grant_contract_bonus",
+    "grant_bonus",
 )
 #: 同步扣减基数的支出类型（契约失败扣 stake / 惩罚）
 REDEEMABLE_DEDUCT_TYPES: tuple[str, ...] = (

@@ -22,6 +22,7 @@ class PhotonTransactionType(enum.StrEnum):
     GRANT_DAILY_FIRST = "grant_daily_first"       # 每日首胜
     GRANT_CONTRACT = "grant_contract"             # 合同完成奖励
     GRANT_CONTRACT_BONUS = "grant_contract_bonus" # 合同完成加成
+    GRANT_BONUS = "grant_bonus"                   # combo 加成（PHOTON-STREAM：补录审计流水，杜绝 admin_adjustment 兜底误标）
     DEDUCT_CONTRACT_STAKE = "deduct_contract_stake" # 合同失败扣除
     PURCHASE = "purchase"                         # 商城购买
     TRANSFER_OUT = "transfer_out"                 # 转账-转出

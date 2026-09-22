@@ -14,6 +14,7 @@ import contextlib
 from collections.abc import Awaitable, Callable
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
+from uuid import uuid4
 
 from loguru import logger
 from sqlalchemy import and_, desc, event, func, select
@@ -2662,6 +2663,11 @@ class AchievementEngine:
                     from app.services.photon_service import PhotonService, PhotonTransactionType
 
                     photon_service = PhotonService(self.db)
+                    # PHOTON-STREAM：补录审计流水（replay 基数口径）。
+                    # related_item_id 每事件唯一（uuid4）：combo 在 5 分钟窗口内
+                    # 可合法重复达标（combo=3 多次触发各发一次），去重键若按日
+                    # 收敛会把同日第二次连击加成误吞——沿用「每次发放即一次
+                    # 独立经济事件」语义，幂等限流仍由上方 Redis combo 计数器承担。
                     await photon_service.grant_photons(
                         user_id=user_id,
                         amount=bonus_photons,
@@ -2672,6 +2678,9 @@ class AchievementEngine:
                             "unlock_count": unlock_count,
                             "type": "achievement_combo",
                         },
+                        related_item_id=f"achievement_combo:{uuid4()}",
+                        record_history=True,
+                        manage_transaction=False,
                     )
                     logger.info(
                         "Granted %d combo bonus photons to user %s (combo=%d)",
@@ -2733,11 +2742,17 @@ class AchievementEngine:
         try:
             from app.services.photon_service import PhotonService, PhotonTransactionType
             photon_service = PhotonService(db)
+            # PHOTON-STREAM：补录审计流水（replay 基数口径）。related_item_id
+            # 以当日 ISO 日期为键——去重语义=同日幂等（Redis 缓存失守时 DB 层
+            # 兜底防重发），次日键自然变化，绝不吞掉次日首胜（D-COMM-2 警告面）。
             await photon_service.grant_photons(
                 user_id=user_id,
                 amount=30,
                 source="daily_first",
                 transaction_type=PhotonTransactionType.GRANT_DAILY_FIRST,
+                related_item_id=f"daily_first:{today.isoformat()}",
+                record_history=True,
+                manage_transaction=False,
             )
             if stats.current_streak >= 3:
                 stats.freeze_charges = (stats.freeze_charges or 0) + 1
