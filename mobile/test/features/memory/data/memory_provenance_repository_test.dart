@@ -199,6 +199,28 @@ void main() {
       expect(linkBody['plan_id'], '22222222-2222-2222-2222-222222222222');
     });
 
+    test('updateScope PUTs link_task with task_id (U-03 contract)', () async {
+      final api = _RecordingApiClient()
+        ..reply({'changed': true, 'memory_epoch': 5});
+      final repo = MemoryProvenanceRepository(api);
+      const id = '11111111-1111-1111-1111-111111111111';
+
+      await repo.updateScope(
+        'goal',
+        id,
+        action: 'link_task',
+        taskId: '33333333-3333-3333-3333-333333333333',
+      );
+
+      expect(api.calls.single.$1, 'PUT');
+      expect(api.calls.single.$2, '/memory/provenance/items/goal/$id/scope');
+      final body = api.calls.single.$3! as Map<String, dynamic>;
+      expect(body['action'], 'link_task');
+      expect(body['task_id'], '33333333-3333-3333-3333-333333333333');
+      // link_task 只带 task_id，不带 plan_id（后端按 action 分支校验）。
+      expect(body.containsKey('plan_id'), isFalse);
+    });
+
     test('revokeItem POSTs to the revoke endpoint with reason', () async {
       final api = _RecordingApiClient()
         ..reply({'status': 'revoked', 'revoked': true});

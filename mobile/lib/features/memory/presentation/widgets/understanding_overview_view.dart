@@ -304,6 +304,14 @@ class UnderstandingItemCard extends ConsumerWidget {
                       disabled: pending,
                       onPressed: pending ? () {} : () => _scope(context, ref),
                     ),
+                  if (item.can('set_scope'))
+                    SparkleButton(
+                      label: l10n.understandingActionLinkTask,
+                      variant: ButtonVariant.ghost,
+                      disabled: pending,
+                      onPressed:
+                          pending ? () {} : () => _linkTask(context, ref),
+                    ),
                   if (item.can('revoke'))
                     SparkleButton(
                       label: l10n.understandingActionDelete,
@@ -417,6 +425,31 @@ class UnderstandingItemCard extends ConsumerWidget {
       await ref
           .read(understandingOverviewProvider.notifier)
           .linkToPlan(item, planId: planId);
+      if (context.mounted) {
+        AppFeedback.success(context, context.l10n.understandingToastScoped);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        AppFeedback.error(
+          context,
+          context.l10n.understandingToastFailedDetail(
+            provenanceErrorDetail(e) ?? '$e',
+          ),
+        );
+      }
+    }
+  }
+
+  /// 仅此 Goal（任务粒度）：task-picker 选真实任务 → link_task（U-03 补齐）。
+  Future<void> _linkTask(BuildContext context, WidgetRef ref) async {
+    final taskId = await showUnderstandingTaskSheet(context);
+    if (taskId == null || !context.mounted) {
+      return;
+    }
+    try {
+      await ref
+          .read(understandingOverviewProvider.notifier)
+          .linkToTask(item, taskId: taskId);
       if (context.mounted) {
         AppFeedback.success(context, context.l10n.understandingToastScoped);
       }

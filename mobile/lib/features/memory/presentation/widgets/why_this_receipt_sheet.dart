@@ -12,7 +12,9 @@ import 'package:sparkle/features/memory/data/memory_provenance_repository.dart';
 import 'package:sparkle/features/memory/presentation/providers/understanding_overview_provider.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/data/repositories/plan_repository.dart';
+import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import 'package:sparkle/shared/entities/task_model.dart';
 
 /// U-03 Why-this receipt：从任何理解项可追问「为什么有这条 / 为什么用它」。
 ///
@@ -569,4 +571,102 @@ Future<String?> showUnderstandingScopeSheet(BuildContext context) =>
 
 final _plansFutureProvider = FutureProvider.autoDispose<List<PlanModel>>(
   (ref) => ref.watch(planRepositoryProvider).getActivePlans(),
+);
+
+/// 仅此 Goal（任务粒度）：选择真实任务（taskRepositoryProvider 走真实后端）。
+/// 返回 task id；取消返回 null。与 plan-picker 同款交互（U-03 link_task）：
+/// 只列未终结任务（completed/abandoned 不再是可归属的进行中目标），
+/// 数据全部来自 GET /tasks，本地不造数据。
+Future<String?> showUnderstandingTaskSheet(BuildContext context) =>
+    showSensoryModalBottomSheet<String?>(
+      context: context,
+      builder: (sheetContext) => Consumer(
+        builder: (context, ref, _) {
+          final l10n = sheetContext.l10n;
+          final tasksAsync = ref.watch(_tasksFutureProvider);
+          return Container(
+            decoration: BoxDecoration(
+              color: DS.surfacePanel,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            padding: const EdgeInsets.fromLTRB(DS.xl, DS.md, DS.xl, DS.xl),
+            child: SafeArea(
+              top: false,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.understandingTaskSheetTitle,
+                    style:
+                        DS.titleMedium.copyWith(fontWeight: DS.fontWeightBold),
+                  ),
+                  const SizedBox(height: DS.md),
+                  Flexible(
+                    child: tasksAsync.when(
+                      loading: () => Padding(
+                        padding: const EdgeInsets.all(DS.lg),
+                        child: Center(
+                          child: LoadingIndicator.circular(size: 20),
+                        ),
+                      ),
+                      error: (_, __) => Text(
+                        l10n.understandingScopeNoTasks,
+                        style: DS.bodySmall.copyWith(color: DS.textSecondary),
+                      ),
+                      data: (tasks) {
+                        if (tasks.isEmpty) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: DS.md),
+                            child: Text(
+                              l10n.understandingScopeNoTasks,
+                              style: DS.bodySmall
+                                  .copyWith(color: DS.textSecondary),
+                            ),
+                          );
+                        }
+                        return ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: tasks.length,
+                          itemBuilder: (context, index) {
+                            final task = tasks[index];
+                            return ListTile(
+                              dense: true,
+                              leading: const Icon(Icons.assignment_outlined),
+                              title: Text(
+                                task.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              onTap: () =>
+                                  Navigator.of(sheetContext).pop(task.id),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+
+final _tasksFutureProvider = FutureProvider.autoDispose<List<TaskModel>>(
+  (ref) async {
+    final response =
+        await ref.watch(taskRepositoryProvider).getTasks(pageSize: 100);
+    // 终态任务（已完成/已放弃）不再是"仅此 Goal"的有效归属对象；
+    // 其余状态（进行中/暂停/卡住等）都还是活任务，照实列出。
+    return response.items
+        .where(
+          (task) =>
+              task.status != TaskStatus.completed &&
+              task.status != TaskStatus.abandoned,
+        )
+        .toList();
+  },
 );

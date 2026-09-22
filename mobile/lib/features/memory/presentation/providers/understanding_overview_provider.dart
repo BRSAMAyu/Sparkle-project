@@ -252,6 +252,27 @@ class UnderstandingOverviewNotifier
     });
   }
 
+  /// 仅此 Goal（任务粒度）：goal 条目绑定到指定任务（真实 task_id，
+  /// 归属校验在后端——跨用户/缺失同报 404，客户端不预判）。
+  Future<void> linkToTask(
+    ProvenanceMemoryItem item, {
+    required String taskId,
+  }) async {
+    await _runAction(item.id, () async {
+      final result = await _repository.updateScope(
+        item.kind,
+        item.id,
+        action: 'link_task',
+        taskId: taskId,
+      );
+      return UnderstandingEffect(
+        type: 'link_task',
+        memoryId: item.id,
+        memoryEpoch: (result['memory_epoch'] as num?)?.toInt(),
+      );
+    });
+  }
+
   /// Why-this receipt（查看来源）。
   Future<WhyThisResult> whyThis(ProvenanceMemoryItem item) =>
       _repository.whyThis(

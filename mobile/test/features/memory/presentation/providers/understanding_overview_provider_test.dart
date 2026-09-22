@@ -14,6 +14,9 @@ class _FakeProvenanceRepository implements MemoryProvenanceRepository {
 
   List<ProvenanceMemoryItem> items = [];
   int listCalls = 0;
+  String? lastScopeAction;
+  String? linkedPlanId;
+  String? linkedTaskId;
 
   @override
   Future<ProvenanceListResult> listItems({
@@ -110,6 +113,9 @@ class _FakeProvenanceRepository implements MemoryProvenanceRepository {
     String? taskId,
     String? reason,
   }) async {
+    lastScopeAction = action;
+    linkedPlanId = planId;
+    linkedTaskId = taskId;
     items = [
       for (final entry in items)
         if (entry.id == id)
@@ -123,7 +129,9 @@ class _FakeProvenanceRepository implements MemoryProvenanceRepository {
             status: action == 'pause' ? 'archived' : 'active',
             scope: action == 'link_plan'
                 ? {'level': 'goal', 'plan_id': planId}
-                : entry.scope,
+                : action == 'link_task'
+                    ? {'level': 'goal', 'task_id': taskId}
+                    : entry.scope,
             correctionCount: entry.correctionCount,
             evidenceMissing: false,
             confidenceTier: entry.confidenceTier,
@@ -370,6 +378,33 @@ void main() {
     expect(state.lastEffect?.type, 'pause');
     expect(state.lastEffect?.memoryEpoch, 11);
     expect(state.items.single.isPaused, isTrue);
+  });
+
+  test('linkToTask sends the link_task scope action with the picked task id',
+      () async {
+    final repo = _FakeProvenanceRepository()
+      ..items = [_entry(id: 'g1', bucket: 'told', kind: 'goal')];
+    final container = ProviderContainer(
+      overrides: [
+        memoryProvenanceRepositoryProvider.overrideWithValue(repo),
+      ],
+    );
+    addTearDown(container.dispose);
+    final notifier = container.read(understandingOverviewProvider.notifier);
+    await notifier.refresh();
+    final listCallsBefore = repo.listCalls;
+
+    await notifier.linkToTask(repo.items.single, taskId: 'task-9');
+
+    // 契约：PUT scope body 的 action=link_task + task_id 原样透传（归属校验
+    // 在后端）。effect 报真实 epoch，且走 _syncAfterMutation 同步链。
+    expect(repo.lastScopeAction, 'link_task');
+    expect(repo.linkedTaskId, 'task-9');
+    final state = container.read(understandingOverviewProvider);
+    expect(state.lastEffect?.type, 'link_task');
+    expect(state.lastEffect?.memoryEpoch, 11);
+    expect(state.items.single.scope, {'level': 'goal', 'task_id': 'task-9'});
+    expect(repo.listCalls, greaterThan(listCallsBefore));
   });
 
   test('correction invalidates understandingSnapshotProvider (acceptance 2)',

@@ -36336,6 +36336,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get understandingScopeNoPlans => '还没有可选的学习计划';
 
   @override
+  String get understandingActionLinkTask => '关联任务';
+
+  @override
+  String get understandingTaskSheetTitle => '只在某个任务中使用';
+
+  @override
+  String get understandingScopeNoTasks => '还没有可选的任务';
+
+  @override
   String get understandingToastUpdated => '已更新。Sparkle 下一次判断会使用新内容。';
 
   @override

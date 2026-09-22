@@ -37910,6 +37910,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get understandingScopeNoPlans => 'No study plans to pick from yet';
 
   @override
+  String get understandingActionLinkTask => 'Link a task';
+
+  @override
+  String get understandingTaskSheetTitle => 'Use only for one task';
+
+  @override
+  String get understandingScopeNoTasks => 'No tasks to pick from yet';
+
+  @override
   String get understandingToastUpdated =>
       'Updated. Sparkle will use the new content next time.';
 

@@ -66030,6 +66030,24 @@ abstract class AppLocalizations {
   /// **'还没有可选的学习计划'**
   String get understandingScopeNoPlans;
 
+  /// No description provided for @understandingActionLinkTask.
+  ///
+  /// In zh, this message translates to:
+  /// **'关联任务'**
+  String get understandingActionLinkTask;
+
+  /// No description provided for @understandingTaskSheetTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'只在某个任务中使用'**
+  String get understandingTaskSheetTitle;
+
+  /// No description provided for @understandingScopeNoTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有可选的任务'**
+  String get understandingScopeNoTasks;
+
   /// No description provided for @understandingToastUpdated.
   ///
   /// In zh, this message translates to:
