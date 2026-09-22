@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 import grpc
+from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from loguru import logger
 
 # Import the service implementation base
@@ -84,6 +85,46 @@ async def _store_active_collaborative_session(galaxy_id: str, service: Collabora
 class GalaxyGrpcServiceImpl(galaxy_service_pb2_grpc.GalaxyServiceServicer if galaxy_service_pb2_grpc else object):
     def __init__(self, db_session_factory):
         self.db_session_factory = db_session_factory
+
+    @staticmethod
+    def _node_user_status_pb(user_status):
+        """GRAPH-GRPC-SHAPE: map a REST UserStatusInfo into the proto
+        GalaxyNodeUserStatus carried by GalaxyNode.user_status.
+
+        Without this block the gateway's gRPC-first /galaxy/graph branch
+        dropped the whole per-node user_status structure the REST face serves,
+        and mobile defaulted is_unlocked=false + zeroed review signals
+        (mobile/lib/shared/entities/galaxy_model.dart reads 10 fields out of
+        user_status). ``None`` maps to an unset message, mirroring the REST
+        contract's user_status=null (not a zeroed block).
+
+        getattr guards: the cache-hit rehydration path guarantees every field
+        (model_validate on UserStatusInfo), but SearchNodes-style row tuples
+        and older cached payloads must degrade to proto zero values, never
+        raise.
+        """
+        if user_status is None:
+            return None
+        fields = {
+            "mastery_score": float(getattr(user_status, "mastery_score", 0.0) or 0.0),
+            "is_unlocked": bool(getattr(user_status, "is_unlocked", False)),
+            "study_count": int(getattr(user_status, "study_count", 0) or 0),
+            "recent_error_count": int(getattr(user_status, "recent_error_count", 0) or 0),
+            "review_urgency_score": float(getattr(user_status, "review_urgency_score", 0.0) or 0.0),
+            "is_review_recommended": bool(getattr(user_status, "is_review_recommended", False)),
+            "review_urgency_reason": getattr(user_status, "review_urgency_reason", None) or "",
+            "days_since_mastery_update": float(getattr(user_status, "days_since_mastery_update", 0.0) or 0.0),
+        }
+        for target, attr in (
+            ("mastery_last_updated_at", "mastery_last_updated_at"),
+            ("first_unlock_at", "first_unlock_at"),
+        ):
+            value = getattr(user_status, attr, None)
+            if isinstance(value, datetime):
+                ts = _timestamp_pb2.Timestamp()
+                ts.FromDatetime(value)
+                fields[target] = ts
+        return galaxy_service_pb2.GalaxyNodeUserStatus(**fields)
 
     @staticmethod
     def _resolve_authenticated_user_id(
@@ -332,6 +373,12 @@ class GalaxyGrpcServiceImpl(galaxy_service_pb2_grpc.GalaxyServiceServicer if gal
                         # P1-5/6 fix: use keywords (node.keywords) instead of non-existent node.tags
                         tags=(node.keywords if hasattr(node, 'keywords') and node.keywords else
                               getattr(node, 'tags', None) or []),
+                        # GRAPH-GRPC-SHAPE fix: carry the full per-node user_status
+                        # block (REST face serves it; mobile parses 10 fields out
+                        # of it — unlocked state, study/review signals). Without
+                        # this the gateway gRPC branch lost the whole structure
+                        # and mobile defaulted is_unlocked=false.
+                        user_status=self._node_user_status_pb(node.user_status),
                     )
                     for node in (graph.nodes or [])
                 ]

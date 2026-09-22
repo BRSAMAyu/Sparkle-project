@@ -1,0 +1,649 @@
+diff --git a/backend/app/services/galaxy_grpc_service.py b/backend/app/services/galaxy_grpc_service.py
+index 25b3ffeb..f855da82 100755
+--- a/backend/app/services/galaxy_grpc_service.py
++++ b/backend/app/services/galaxy_grpc_service.py
+@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
+ from uuid import UUID
+ 
+ import grpc
++from google.protobuf import timestamp_pb2 as _timestamp_pb2
+ from loguru import logger
+ 
+ # Import the service implementation base
+@@ -85,6 +86,46 @@ class GalaxyGrpcServiceImpl(galaxy_service_pb2_grpc.GalaxyServiceServicer if gal
+     def __init__(self, db_session_factory):
+         self.db_session_factory = db_session_factory
+ 
++    @staticmethod
++    def _node_user_status_pb(user_status):
++        """GRAPH-GRPC-SHAPE: map a REST UserStatusInfo into the proto
++        GalaxyNodeUserStatus carried by GalaxyNode.user_status.
++
++        Without this block the gateway's gRPC-first /galaxy/graph branch
++        dropped the whole per-node user_status structure the REST face serves,
++        and mobile defaulted is_unlocked=false + zeroed review signals
++        (mobile/lib/shared/entities/galaxy_model.dart reads 10 fields out of
++        user_status). ``None`` maps to an unset message, mirroring the REST
++        contract's user_status=null (not a zeroed block).
++
++        getattr guards: the cache-hit rehydration path guarantees every field
++        (model_validate on UserStatusInfo), but SearchNodes-style row tuples
++        and older cached payloads must degrade to proto zero values, never
++        raise.
++        """
++        if user_status is None:
++            return None
++        fields = {
++            "mastery_score": float(getattr(user_status, "mastery_score", 0.0) or 0.0),
++            "is_unlocked": bool(getattr(user_status, "is_unlocked", False)),
++            "study_count": int(getattr(user_status, "study_count", 0) or 0),
++            "recent_error_count": int(getattr(user_status, "recent_error_count", 0) or 0),
++            "review_urgency_score": float(getattr(user_status, "review_urgency_score", 0.0) or 0.0),
++            "is_review_recommended": bool(getattr(user_status, "is_review_recommended", False)),
++            "review_urgency_reason": getattr(user_status, "review_urgency_reason", None) or "",
++            "days_since_mastery_update": float(getattr(user_status, "days_since_mastery_update", 0.0) or 0.0),
++        }
++        for target, attr in (
++            ("mastery_last_updated_at", "mastery_last_updated_at"),
++            ("first_unlock_at", "first_unlock_at"),
++        ):
++            value = getattr(user_status, attr, None)
++            if isinstance(value, datetime):
++                ts = _timestamp_pb2.Timestamp()
++                ts.FromDatetime(value)
++                fields[target] = ts
++        return galaxy_service_pb2.GalaxyNodeUserStatus(**fields)
++
+     @staticmethod
+     def _resolve_authenticated_user_id(
+         metadata: dict[str, str],
+@@ -332,6 +373,12 @@ class GalaxyGrpcServiceImpl(galaxy_service_pb2_grpc.GalaxyServiceServicer if gal
+                         # P1-5/6 fix: use keywords (node.keywords) instead of non-existent node.tags
+                         tags=(node.keywords if hasattr(node, 'keywords') and node.keywords else
+                               getattr(node, 'tags', None) or []),
++                        # GRAPH-GRPC-SHAPE fix: carry the full per-node user_status
++                        # block (REST face serves it; mobile parses 10 fields out
++                        # of it — unlocked state, study/review signals). Without
++                        # this the gateway gRPC branch lost the whole structure
++                        # and mobile defaulted is_unlocked=false.
++                        user_status=self._node_user_status_pb(node.user_status),
+                     )
+                     for node in (graph.nodes or [])
+                 ]
+diff --git a/backend/gateway/internal/handler/galaxy_handler.go b/backend/gateway/internal/handler/galaxy_handler.go
+index 74adf244..34aafbbe 100644
+--- a/backend/gateway/internal/handler/galaxy_handler.go
++++ b/backend/gateway/internal/handler/galaxy_handler.go
+@@ -15,6 +15,7 @@ import (
+ 	"github.com/gin-gonic/gin"
+ 	"github.com/google/uuid"
+ 	redisv9 "github.com/redis/go-redis/v9"
++	"google.golang.org/protobuf/types/known/timestamppb"
+ 
+ 	galaxyv1 "github.com/sparkle/gateway/gen/galaxy/v1"
+ 	"github.com/sparkle/gateway/internal/galaxy"
+@@ -605,6 +606,16 @@ func galaxyGraphRESTPayload(resp *galaxyv1.GetUserGalaxyResponse) gin.H {
+ // SearchNodes and GetRecommendedNodes outbound payloads so every galaxy
+ // response speaks one node shape.
+ //
++// GRAPH-GRPC-SHAPE: the per-node user_status block is now carried too —
++// galaxyUserStatusRESTPayload maps the proto GalaxyNodeUserStatus (filled by
++// the engine servicer from the same UserStatusInfo the REST face serves) back
++// into the REST user_status dict mobile parses
++// (mobile/lib/shared/entities/galaxy_model.dart reads is_unlocked/
++// mastery_score/study_count/recent_error_count/review_urgency_score/
++// is_review_recommended/review_urgency_reason/mastery_last_updated_at/
++// days_since_mastery_update/first_unlock_at out of it). Nil proto status
++// maps to a JSON null, exactly the REST contract's user_status=None.
++//
+ // node_type/tags are proto-only provenance keys (no direct REST counterpart
+ // in GalaxyGraphResponse/NodeBase context); kept as a harmless superset,
+ // same call as FIX-53.
+@@ -615,7 +626,55 @@ func galaxyNodeRESTPayload(node *galaxyv1.GalaxyNode) gin.H {
+ 		"mastery_score": node.GetMastery(),
+ 		"node_type":     node.GetNodeType(),
+ 		"tags":          node.GetTags(),
++		"user_status":   galaxyUserStatusRESTPayload(node.GetUserStatus()),
++	}
++}
++
++// galaxyUserStatusRESTPayload maps the proto GalaxyNodeUserStatus into the
++// REST UserStatusInfo key subset mobile consumes. Nil → nil, which gin
++// serializes as null (REST parity for status-less nodes: a missing key would
++// be parse-compatible today, but null keeps the two branches byte-shape
++// honest).
++//
++// Value provenance: the engine servicer copies every field from the same
++// UserStatusInfo model the REST face emits (backend/app/schemas/galaxy.py);
++// the gateway only re-spells keys and reformats timestamps.
++//
++// review_urgency_reason: REST emits null when absent; the proto string zero
++// value "" maps back to null so the shapes stay aligned.
++//
++// Timestamps: proto well-known Timestamp → RFC3339Nano UTC string, the same
++// instant the REST face emits as ISO-8601; Dart's DateTime.tryParse accepts
++// both spellings.
++func galaxyUserStatusRESTPayload(us *galaxyv1.GalaxyNodeUserStatus) gin.H {
++	if us == nil {
++		return nil
++	}
++	var urgencyReason any
++	if us.GetReviewUrgencyReason() != "" {
++		urgencyReason = us.GetReviewUrgencyReason()
++	}
++	return gin.H{
++		"mastery_score":             us.GetMasteryScore(),
++		"is_unlocked":               us.GetIsUnlocked(),
++		"study_count":               us.GetStudyCount(),
++		"recent_error_count":        us.GetRecentErrorCount(),
++		"review_urgency_score":      us.GetReviewUrgencyScore(),
++		"is_review_recommended":     us.GetIsReviewRecommended(),
++		"review_urgency_reason":     urgencyReason,
++		"days_since_mastery_update": us.GetDaysSinceMasteryUpdate(),
++		"mastery_last_updated_at":   restTimeString(us.GetMasteryLastUpdatedAt()),
++		"first_unlock_at":           restTimeString(us.GetFirstUnlockAt()),
++	}
++}
++
++// restTimeString formats a proto Timestamp as the RFC3339 UTC string the REST
++// face's ISO-8601 datetimes normalize to; nil → nil (JSON null).
++func restTimeString(ts *timestamppb.Timestamp) any {
++	if ts == nil {
++		return nil
+ 	}
++	return ts.AsTime().UTC().Format(time.RFC3339Nano)
+ }
+ 
+ // galaxyNodeDetailRESTPayload maps the engine's gRPC GetNodeDetailResponse
+diff --git a/proto/galaxy_service.proto b/proto/galaxy_service.proto
+index f9eb7166..bafee2d6 100755
+--- a/proto/galaxy_service.proto
++++ b/proto/galaxy_service.proto
+@@ -102,6 +102,32 @@ message GalaxyNode {
+   string node_type = 3; // e.g. "concept", "skill", "topic"
+   int32 mastery = 4;
+   repeated string tags = 5;
++  // GRAPH-GRPC-SHAPE: per-user status for this node. The REST face
++  // (GET /galaxy/graph → NodeWithStatus.user_status) always carries this
++  // block; without a proto counterpart the gateway's gRPC-first branch
++  // dropped it and mobile defaulted is_unlocked=false + zeroed review
++  // signals. Field set = exactly what the mobile client consumes
++  // (mobile/lib/shared/entities/galaxy_model.dart GalaxyNodeModel.fromJson);
++  // keep the two in lockstep. Absent (proto3 message presence) mirrors the
++  // REST contract's user_status=null (no personal signal for this node).
++  GalaxyNodeUserStatus user_status = 6;
++}
++
++// Subset of the REST UserStatusInfo (backend/app/schemas/galaxy.py) that
++// crosses the gateway. mastery_score stays double here (the int32 `mastery`
++// above truncates fractional scores); timestamps use proto well-known types
++// and the gateway re-spells them to ISO strings for the REST shape.
++message GalaxyNodeUserStatus {
++  double mastery_score = 1;
++  bool is_unlocked = 2;
++  int32 study_count = 3;
++  int32 recent_error_count = 4;
++  double review_urgency_score = 5;
++  bool is_review_recommended = 6;
++  string review_urgency_reason = 7; // "" when absent (gateway emits null)
++  double days_since_mastery_update = 8;
++  google.protobuf.Timestamp mastery_last_updated_at = 9;
++  google.protobuf.Timestamp first_unlock_at = 10;
+ }
+ 
+ message GalaxyEdge {
+diff --git a/backend/gateway/internal/handler/galaxy_handler_user_status_test.go b/backend/gateway/internal/handler/galaxy_handler_user_status_test.go
+new file mode 100644
+index 00000000..203d8515
+--- /dev/null
++++ b/backend/gateway/internal/handler/galaxy_handler_user_status_test.go
+@@ -0,0 +1,296 @@
++package handler
++
++// GRAPH-GRPC-SHAPE contract tests: the gateway's gRPC-first GetGraph branch
++// must carry the per-node user_status block to the client in the REST shape.
++//
++// Breakage this pins: the proto GalaxyNode (proto/galaxy_service.proto) only
++// carried node_id/label/node_type/mastery(int32)/tags — the whole per-user
++// status structure (UserStatusInfo in backend/app/schemas/galaxy.py) had no
++// proto counterpart, so every /api/v1/galaxy/graph answered through the
++// gateway dropped user_status entirely. Mobile (GalaxyNodeModel.fromJson,
++// mobile/lib/shared/entities/galaxy_model.dart) reads 10 fields out of
++// user_status (is_unlocked/study_count/review signals/...) and silently
++// defaulted them — unlocked nodes rendered locked, review urgency vanished.
++// The REST face (:8000) was unaffected, so the two paths diverged for the
++// same user at the same moment.
++//
++// The 10-key list below is transcribed from GalaxyNodeModel.fromJson
++// (userStatus?['…'] reads) and MUST stay in lockstep with that parser.
++
++import (
++	"context"
++	"encoding/json"
++	"io"
++	"net"
++	"net/http"
++	"net/http/httptest"
++	"strings"
++	"testing"
++	"time"
++
++	"github.com/gin-gonic/gin"
++	"google.golang.org/grpc"
++	"google.golang.org/protobuf/types/known/timestamppb"
++
++	galaxyv1 "github.com/sparkle/gateway/gen/galaxy/v1"
++	"github.com/sparkle/gateway/internal/config"
++	"github.com/sparkle/gateway/internal/galaxy"
++)
++
++// mobileUserStatusKeys — every key mobile reads out of node["user_status"],
++// per mobile/lib/shared/entities/galaxy_model.dart GalaxyNodeModel.fromJson:
++//
++//	is_unlocked, mastery_score, study_count, recent_error_count,
++//	review_urgency_score, is_review_recommended, review_urgency_reason,
++//	mastery_last_updated_at, days_since_mastery_update, first_unlock_at
++var mobileUserStatusKeys = []string{
++	"is_unlocked",
++	"mastery_score",
++	"study_count",
++	"recent_error_count",
++	"review_urgency_score",
++	"is_review_recommended",
++	"review_urgency_reason",
++	"mastery_last_updated_at",
++	"days_since_mastery_update",
++	"first_unlock_at",
++}
++
++// TestGalaxyNodeRESTPayload_EmitsUserStatusContract: when the engine servicer
++// fills a node's user_status, the shared node mapper must surface a
++// user_status block speaking the REST keys mobile parses — all ten of them.
++func TestGalaxyNodeRESTPayload_EmitsUserStatusContract(t *testing.T) {
++	node := &galaxyv1.GalaxyNode{NodeId: "node-1", Label: "命题逻辑", Mastery: 25, UserStatus: userStatusFixture()}
++	raw, err := json.Marshal(galaxyNodeRESTPayload(node))
++	if err != nil {
++		t.Fatalf("marshal node payload: %v", err)
++	}
++	var decoded map[string]any
++	if err := json.Unmarshal(raw, &decoded); err != nil {
++		t.Fatalf("decode node payload: %v (%s)", err, raw)
++	}
++
++	us, ok := decoded["user_status"].(map[string]any)
++	if !ok {
++		t.Fatalf("node payload has no user_status object (keys=%v) — gateway gRPC path drops per-node user_status; mobile defaults is_unlocked=false and loses every review signal", payloadKeys(decoded))
++	}
++	for _, key := range mobileUserStatusKeys {
++		if _, ok := us[key]; !ok {
++			t.Fatalf("user_status missing mobile-consumed key %q (keys=%v)", key, payloadKeys(us))
++		}
++	}
++}
++
++// userStatusFixture mirrors the REST UserStatusInfo the engine serves for an
++// active node; values chosen to catch int truncation (mastery 25.5, urgency
++// 0.75) and timestamp reformatting.
++func userStatusFixture() *galaxyv1.GalaxyNodeUserStatus {
++	return &galaxyv1.GalaxyNodeUserStatus{
++		MasteryScore:           25.5,
++		IsUnlocked:             true,
++		StudyCount:             7,
++		RecentErrorCount:       2,
++		ReviewUrgencyScore:     0.75,
++		IsReviewRecommended:    true,
++		ReviewUrgencyReason:    "3 days since last mastery update",
++		DaysSinceMasteryUpdate: 3.5,
++		MasteryLastUpdatedAt:   timestamppb.New(time.Date(2026, 9, 19, 12, 30, 0, 0, time.UTC)),
++		FirstUnlockAt:          timestamppb.New(time.Date(2026, 9, 10, 8, 0, 0, 0, time.UTC)),
++	}
++}
++
++// TestGalaxyNodeRESTPayload_UserStatusValuesSurvive: mapping is value-faithful
++// (double precision kept, timestamps re-spelled to ISO strings, absent reason
++// → null) — the same user on the REST face and the gateway face must see the
++// same numbers.
++func TestGalaxyNodeRESTPayload_UserStatusValuesSurvive(t *testing.T) {
++	node := &galaxyv1.GalaxyNode{NodeId: "node-1", Label: "命题逻辑", Mastery: 25, UserStatus: userStatusFixture()}
++	raw, err := json.Marshal(galaxyNodeRESTPayload(node))
++	if err != nil {
++		t.Fatalf("marshal: %v", err)
++	}
++	var decoded map[string]any
++	if err := json.Unmarshal(raw, &decoded); err != nil {
++		t.Fatalf("decode: %v (%s)", err, raw)
++	}
++	us, ok := decoded["user_status"].(map[string]any)
++	if !ok {
++		t.Fatalf("user_status missing after mapping (%s)", raw)
++	}
++
++	if got := us["mastery_score"]; got != 25.5 {
++		t.Fatalf("user_status.mastery_score = %v, want 25.5 (int32 truncation must not resurface)", got)
++	}
++	for key, want := range map[string]any{
++		"is_unlocked":               true,
++		"study_count":               float64(7),
++		"recent_error_count":        float64(2),
++		"review_urgency_score":      0.75,
++		"is_review_recommended":     true,
++		"review_urgency_reason":     "3 days since last mastery update",
++		"days_since_mastery_update": 3.5,
++	} {
++		if got := us[key]; got != want {
++			t.Fatalf("user_status.%s = %v, want %v", key, got, want)
++		}
++	}
++	if got := us["mastery_last_updated_at"]; got != "2026-09-19T12:30:00Z" {
++		t.Fatalf("user_status.mastery_last_updated_at = %v, want an ISO instant mobile DateTime.tryParse accepts", got)
++	}
++	if got := us["first_unlock_at"]; got != "2026-09-10T08:00:00Z" {
++		t.Fatalf("user_status.first_unlock_at = %v, want an ISO instant", got)
++	}
++}
++
++// TestGalaxyNodeRESTPayload_NilUserStatusEmitsNull: REST serves
++// user_status=null for nodes without personal signal; the gateway must emit
++// the key with null, not a zeroed block (which would read as "locked" rather
++// than "no signal") and not a missing key (branch-shape divergence).
++func TestGalaxyNodeRESTPayload_NilUserStatusEmitsNull(t *testing.T) {
++	raw, err := json.Marshal(galaxyNodeRESTPayload(&galaxyv1.GalaxyNode{NodeId: "node-9"}))
++	if err != nil {
++		t.Fatalf("marshal: %v", err)
++	}
++	var node map[string]any
++	if err := json.Unmarshal(raw, &node); err != nil {
++		t.Fatalf("decode: %v (%s)", err, raw)
++	}
++	got, ok := node["user_status"]
++	if !ok {
++		t.Fatalf("user_status key missing entirely (keys=%v) — gRPC branch would diverge from REST null", payloadKeys(node))
++	}
++	if got != nil {
++		t.Fatalf("user_status = %v, want null for a status-less node", got)
++	}
++}
++
++// TestGalaxyUserStatusRESTPayload_EmptyReasonEmitsNull pins the ""→null
++// re-spell (proto has no presence for optional strings; REST nulls them).
++func TestGalaxyUserStatusRESTPayload_EmptyReasonEmitsNull(t *testing.T) {
++	raw, err := json.Marshal(galaxyUserStatusRESTPayload(&galaxyv1.GalaxyNodeUserStatus{MasteryScore: 10}))
++	if err != nil {
++		t.Fatalf("marshal: %v", err)
++	}
++	var us map[string]any
++	if err := json.Unmarshal(raw, &us); err != nil {
++		t.Fatalf("decode: %v (%s)", err, raw)
++	}
++	if got := us["review_urgency_reason"]; got != nil {
++		t.Fatalf("review_urgency_reason = %v, want null when the proto string is empty", got)
++	}
++}
++
++// stubUserStatusGraphServer serves a fixture GetUserGalaxyResponse carrying a
++// per-node user_status so the end-to-end test exercises the real handler.
++type stubUserStatusGraphServer struct {
++	galaxyv1.UnimplementedGalaxyServiceServer
++
++	resp *galaxyv1.GetUserGalaxyResponse
++}
++
++func (s *stubUserStatusGraphServer) GetUserGalaxy(ctx context.Context, req *galaxyv1.GetUserGalaxyRequest) (*galaxyv1.GetUserGalaxyResponse, error) {
++	return s.resp, nil
++}
++
++// TestGetGraph_GRPCBranch_EquivalentToRESTUserStatus is the end-to-end red/
++// green regression for the true endpoint break: GET /api/v1/galaxy/graph
++// answered by the gateway's gRPC branch must expose the same per-node
++// user_status the REST direct face serves — every mobile-consumed field
++// present, mastery_score at double precision.
++func TestGetGraph_GRPCBranch_EquivalentToRESTUserStatus(t *testing.T) {
++	gin.SetMode(gin.TestMode)
++
++	resp := &galaxyv1.GetUserGalaxyResponse{
++		UserId: "user-42",
++		Nodes: []*galaxyv1.GalaxyNode{
++			{NodeId: "node-1", Label: "命题逻辑", NodeType: "concept", Mastery: 25, UserStatus: userStatusFixture()},
++			{NodeId: "node-2", Label: "锁住的概念", NodeType: "concept"}, // no status → REST null
++		},
++		TotalNodes: 2,
++	}
++
++	lis, err := net.Listen("tcp", "127.0.0.1:0")
++	if err != nil {
++		t.Fatalf("listen: %v", err)
++	}
++	grpcServer := grpc.NewServer()
++	galaxyv1.RegisterGalaxyServiceServer(grpcServer, &stubUserStatusGraphServer{resp: resp})
++	go func() { _ = grpcServer.Serve(lis) }()
++	defer grpcServer.Stop()
++
++	galaxyClient, err := galaxy.NewClient(&config.Config{AgentAddress: lis.Addr().String()})
++	if err != nil {
++		t.Fatalf("galaxy.NewClient: %v", err)
++	}
++	defer galaxyClient.Close()
++
++	proxyBackend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		t.Errorf("GetGraph unexpectedly fell back to the REST proxy: %s %s", r.Method, r.URL.Path)
++		w.WriteHeader(http.StatusOK)
++		_, _ = w.Write([]byte(`{"nodes":[],"edges":null}`))
++	}))
++	defer proxyBackend.Close()
++
++	ginHandler, err := NewGalaxyHandler(galaxyClient, nil, nil, proxyBackend.URL)
++	if err != nil {
++		t.Fatalf("NewGalaxyHandler: %v", err)
++	}
++
++	auth := func(c *gin.Context) {
++		c.Set("user_id", "user-42")
++		c.Next()
++	}
++	router := gin.New()
++	router.Use(auth)
++	router.GET("/api/v1/galaxy/graph", ginHandler.GetGraph)
++
++	gateway := httptest.NewServer(router)
++	defer gateway.Close()
++
++	httpResp, err := http.Get(gateway.URL + "/api/v1/galaxy/graph")
++	if err != nil {
++		t.Fatalf("GET /graph: %v", err)
++	}
++	defer httpResp.Body.Close()
++	body, err := io.ReadAll(httpResp.Body)
++	if err != nil {
++		t.Fatalf("read body: %v", err)
++	}
++	if httpResp.StatusCode != http.StatusOK {
++		t.Fatalf("GET /graph returned %d, want 200 (body=%s)", httpResp.StatusCode, body)
++	}
++	if !strings.Contains(string(body), `"via":"grpc"`) {
++		t.Fatalf("GET /graph body = %s, want the gRPC branch marker", body)
++	}
++
++	var payload struct {
++		Nodes []struct {
++			ID         string         `json:"id"`
++			UserStatus map[string]any `json:"user_status"`
++		} `json:"nodes"`
++	}
++	if err := json.Unmarshal(body, &payload); err != nil {
++		t.Fatalf("decode body: %v (%s)", err, body)
++	}
++	if len(payload.Nodes) != 2 {
++		t.Fatalf("nodes = %d, want 2 (%s)", len(payload.Nodes), body)
++	}
++
++	unlocked := payload.Nodes[0]
++	if unlocked.UserStatus == nil {
++		t.Fatalf("gateway path still drops user_status for unlocked node (%s)", body)
++	}
++	for _, key := range mobileUserStatusKeys {
++		if _, ok := unlocked.UserStatus[key]; !ok {
++			t.Fatalf("gateway path user_status missing mobile-consumed key %q (keys=%v)", key, payloadKeys(unlocked.UserStatus))
++		}
++	}
++	if unlocked.UserStatus["mastery_score"] != 25.5 {
++		t.Fatalf("gateway mastery_score = %v, want 25.0-scale double equal to the REST face", unlocked.UserStatus["mastery_score"])
++	}
++
++	locked := payload.Nodes[1]
++	if locked.UserStatus != nil {
++		t.Fatalf("status-less node user_status = %v, want null (REST parity)", locked.UserStatus)
++	}
++}
+diff --git a/backend/tests/unit/test_galaxy_grpc_user_status.py b/backend/tests/unit/test_galaxy_grpc_user_status.py
+new file mode 100644
+index 00000000..af6bf85e
+--- /dev/null
++++ b/backend/tests/unit/test_galaxy_grpc_user_status.py
+@@ -0,0 +1,147 @@
++"""GRAPH-GRPC-SHAPE: gRPC GetUserGalaxy must carry per-node user_status.
++
++Breakage this pins (2026-09-23 终审实证，同一账号同一时刻）：
++- GET :8000/api/v1/galaxy/graph（引擎 REST 直连）→ 节点带 user_status
++  （mastery_score=25.0, is_unlocked=True, ...）
++- GET :8080/api/v1/galaxy/graph（经网关，gRPC-first）→ 节点 user_status=null
++
++Root cause: proto ``GalaxyNode``（proto/galaxy_service.proto）只有
++node_id/label/node_type/mastery(int32)/tags —— per-user 状态结构
++（backend/app/schemas/galaxy.py UserStatusInfo）在 proto 上没有承载位，
++servicer 无从填充，网关映射出的响应自然丢掉整个 user_status。移动端
++（mobile/lib/shared/entities/galaxy_model.dart GalaxyNodeModel.fromJson）
++从 user_status 读 10 个字段并静默取默认值——已解锁节点被渲染成锁定、
++复习紧迫度信号全部归零。这是星图 mastery/解锁态对真实用户（全部走网关）
++可见性的终点断点。
++
++本文件固化 servicer 层契约：GetUserGalaxy 的每个节点必须把
++``node.user_status``（缓存命中 rehydrate 出来的 UserStatusInfo）完整映射进
++proto ``GalaxyNode.user_status``（GalaxyNodeUserStatus），移动端消费的
++10 个字段一一对应；mastery_score 走 double（int32 ``mastery`` 会截断小数）。
++"""
++
++from __future__ import annotations
++
++from datetime import datetime
++from types import SimpleNamespace
++from uuid import uuid4
++
++import pytest
++
++from app.schemas.galaxy import (
++    GalaxyGraphResponse,
++    GalaxyUserStats,
++    NodeWithStatus,
++    UserStatusInfo,
++)
++from tests.unit.test_galaxy_grpc_cached_graph import (
++    USER_ID,
++    _cache_roundtrip,
++    _FakeContext,
++    _make_servicer_with,
++)
++
++MASTERY_LAST_UPDATED_AT = datetime(2026, 9, 19, 12, 30)
++FIRST_UNLOCK_AT = datetime(2026, 9, 10, 8, 0)
++
++
++def _build_user_status(**overrides) -> UserStatusInfo:
++    """UserStatusInfo with every mobile-consumed field non-default."""
++    payload: dict = {
++        # 非整数：int32 mastery 截断为 25，double 必须保住 .5
++        "mastery_score": 25.5,
++        "total_study_minutes": 42,
++        "study_count": 7,
++        "is_unlocked": True,
++        "is_collapsed": False,
++        "is_favorite": False,
++        "decay_paused": False,
++        "status": "glimmer",
++        "brightness": 0.25,
++        "recent_error_count": 2,
++        "review_urgency_score": 0.75,
++        "is_review_recommended": True,
++        "review_urgency_reason": "3 days since last mastery update",
++        "days_since_mastery_update": 3.5,
++        "mastery_last_updated_at": MASTERY_LAST_UPDATED_AT,
++        "first_unlock_at": FIRST_UNLOCK_AT,
++    }
++    payload.update(overrides)
++    return UserStatusInfo(**payload)
++
++
++def _build_graph_response(user_status: UserStatusInfo | None) -> GalaxyGraphResponse:
++    node = NodeWithStatus(
++        id=uuid4(),
++        name="命题逻辑",
++        importance_level=3,
++        sector_code="TECH",
++        is_seed=True,
++        keywords=["propositional_logic"],
++        position_angle=0.0,
++        position_radius=0.0,
++        position_x=0.0,
++        position_y=0.0,
++        user_status=user_status,
++    )
++    return GalaxyGraphResponse(
++        nodes=[node],
++        relations=[],
++        edges=[],
++        user_stats=GalaxyUserStats(total_nodes=1, unlocked_count=1),
++        user_flame_intensity=1.0,
++    )
++
++
++async def _get_user_galaxy(monkeypatch: pytest.MonkeyPatch, graph: object):
++    """Run the servicer on a cache-round-tripped payload (the production path)."""
++    cached_payload = _cache_roundtrip(graph)
++    servicer = _make_servicer_with(monkeypatch, cached_payload)
++    context = _FakeContext({"user-id": USER_ID})
++    response = await servicer.GetUserGalaxy(
++        SimpleNamespace(user_id=USER_ID),
++        context,
++    )
++    assert context.code is None, f"GetUserGalaxy failed: code={context.code} details={context.details!r}"
++    return response
++
++
++@pytest.mark.asyncio
++async def test_get_user_galaxy_carries_user_status_on_grpc_nodes(monkeypatch: pytest.MonkeyPatch):
++    """Servicer contract: node.user_status maps field-for-field into proto."""
++    response = await _get_user_galaxy(monkeypatch, _build_graph_response(_build_user_status()))
++
++    assert len(response.nodes) == 1
++    node = response.nodes[0]
++    # proto3 message presence: the status block must actually be set.
++    assert node.HasField("user_status"), (
++        "gRPC GalaxyNode carries no user_status — proto shape loses the "
++        "REST face's per-node user block (mobile then defaults is_unlocked=false)"
++    )
++    us = node.user_status
++    # Mobile consumption set (mobile/lib/shared/entities/galaxy_model.dart),
++    # one assertion per field mobile reads out of user_status.
++    assert us.mastery_score == 25.5, "mastery_score must survive as double (int32 mastery truncates)"
++    assert us.is_unlocked is True
++    assert us.study_count == 7
++    assert us.recent_error_count == 2
++    assert us.review_urgency_score == pytest.approx(0.75)
++    assert us.is_review_recommended is True
++    assert us.review_urgency_reason == "3 days since last mastery update"
++    assert us.days_since_mastery_update == pytest.approx(3.5)
++    assert us.mastery_last_updated_at.ToDatetime() == MASTERY_LAST_UPDATED_AT
++    assert us.first_unlock_at.ToDatetime() == FIRST_UNLOCK_AT
++    # legacy int32 mastery still filled (back-compat for existing consumers)
++    assert node.mastery == 25
++
++
++@pytest.mark.asyncio
++async def test_get_user_galaxy_null_status_stays_absent_not_zero(monkeypatch: pytest.MonkeyPatch):
++    """REST emits user_status=null for status-less nodes; proto must mirror
++    with absence (HasField false), never a zeroed status block (a zeroed
++    block would read as "unlocked=false but exists" instead of "no signal")."""
++    response = await _get_user_galaxy(monkeypatch, _build_graph_response(None))
++
++    node = response.nodes[0]
++    assert not node.HasField("user_status")
++    assert node.mastery == 0

@@ -102,6 +102,32 @@ message GalaxyNode {
   string node_type = 3; // e.g. "concept", "skill", "topic"
   int32 mastery = 4;
   repeated string tags = 5;
+  // GRAPH-GRPC-SHAPE: per-user status for this node. The REST face
+  // (GET /galaxy/graph → NodeWithStatus.user_status) always carries this
+  // block; without a proto counterpart the gateway's gRPC-first branch
+  // dropped it and mobile defaulted is_unlocked=false + zeroed review
+  // signals. Field set = exactly what the mobile client consumes
+  // (mobile/lib/shared/entities/galaxy_model.dart GalaxyNodeModel.fromJson);
+  // keep the two in lockstep. Absent (proto3 message presence) mirrors the
+  // REST contract's user_status=null (no personal signal for this node).
+  GalaxyNodeUserStatus user_status = 6;
+}
+
+// Subset of the REST UserStatusInfo (backend/app/schemas/galaxy.py) that
+// crosses the gateway. mastery_score stays double here (the int32 `mastery`
+// above truncates fractional scores); timestamps use proto well-known types
+// and the gateway re-spells them to ISO strings for the REST shape.
+message GalaxyNodeUserStatus {
+  double mastery_score = 1;
+  bool is_unlocked = 2;
+  int32 study_count = 3;
+  int32 recent_error_count = 4;
+  double review_urgency_score = 5;
+  bool is_review_recommended = 6;
+  string review_urgency_reason = 7; // "" when absent (gateway emits null)
+  double days_since_mastery_update = 8;
+  google.protobuf.Timestamp mastery_last_updated_at = 9;
+  google.protobuf.Timestamp first_unlock_at = 10;
 }
 
 message GalaxyEdge {

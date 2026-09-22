@@ -15,6 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	redisv9 "github.com/redis/go-redis/v9"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	galaxyv1 "github.com/sparkle/gateway/gen/galaxy/v1"
 	"github.com/sparkle/gateway/internal/galaxy"
@@ -605,6 +606,16 @@ func galaxyGraphRESTPayload(resp *galaxyv1.GetUserGalaxyResponse) gin.H {
 // SearchNodes and GetRecommendedNodes outbound payloads so every galaxy
 // response speaks one node shape.
 //
+// GRAPH-GRPC-SHAPE: the per-node user_status block is now carried too —
+// galaxyUserStatusRESTPayload maps the proto GalaxyNodeUserStatus (filled by
+// the engine servicer from the same UserStatusInfo the REST face serves) back
+// into the REST user_status dict mobile parses
+// (mobile/lib/shared/entities/galaxy_model.dart reads is_unlocked/
+// mastery_score/study_count/recent_error_count/review_urgency_score/
+// is_review_recommended/review_urgency_reason/mastery_last_updated_at/
+// days_since_mastery_update/first_unlock_at out of it). Nil proto status
+// maps to a JSON null, exactly the REST contract's user_status=None.
+//
 // node_type/tags are proto-only provenance keys (no direct REST counterpart
 // in GalaxyGraphResponse/NodeBase context); kept as a harmless superset,
 // same call as FIX-53.
@@ -615,7 +626,55 @@ func galaxyNodeRESTPayload(node *galaxyv1.GalaxyNode) gin.H {
 		"mastery_score": node.GetMastery(),
 		"node_type":     node.GetNodeType(),
 		"tags":          node.GetTags(),
+		"user_status":   galaxyUserStatusRESTPayload(node.GetUserStatus()),
 	}
+}
+
+// galaxyUserStatusRESTPayload maps the proto GalaxyNodeUserStatus into the
+// REST UserStatusInfo key subset mobile consumes. Nil → nil, which gin
+// serializes as null (REST parity for status-less nodes: a missing key would
+// be parse-compatible today, but null keeps the two branches byte-shape
+// honest).
+//
+// Value provenance: the engine servicer copies every field from the same
+// UserStatusInfo model the REST face emits (backend/app/schemas/galaxy.py);
+// the gateway only re-spells keys and reformats timestamps.
+//
+// review_urgency_reason: REST emits null when absent; the proto string zero
+// value "" maps back to null so the shapes stay aligned.
+//
+// Timestamps: proto well-known Timestamp → RFC3339Nano UTC string, the same
+// instant the REST face emits as ISO-8601; Dart's DateTime.tryParse accepts
+// both spellings.
+func galaxyUserStatusRESTPayload(us *galaxyv1.GalaxyNodeUserStatus) gin.H {
+	if us == nil {
+		return nil
+	}
+	var urgencyReason any
+	if us.GetReviewUrgencyReason() != "" {
+		urgencyReason = us.GetReviewUrgencyReason()
+	}
+	return gin.H{
+		"mastery_score":             us.GetMasteryScore(),
+		"is_unlocked":               us.GetIsUnlocked(),
+		"study_count":               us.GetStudyCount(),
+		"recent_error_count":        us.GetRecentErrorCount(),
+		"review_urgency_score":      us.GetReviewUrgencyScore(),
+		"is_review_recommended":     us.GetIsReviewRecommended(),
+		"review_urgency_reason":     urgencyReason,
+		"days_since_mastery_update": us.GetDaysSinceMasteryUpdate(),
+		"mastery_last_updated_at":   restTimeString(us.GetMasteryLastUpdatedAt()),
+		"first_unlock_at":           restTimeString(us.GetFirstUnlockAt()),
+	}
+}
+
+// restTimeString formats a proto Timestamp as the RFC3339 UTC string the REST
+// face's ISO-8601 datetimes normalize to; nil → nil (JSON null).
+func restTimeString(ts *timestamppb.Timestamp) any {
+	if ts == nil {
+		return nil
+	}
+	return ts.AsTime().UTC().Format(time.RFC3339Nano)
 }
 
 // galaxyNodeDetailRESTPayload maps the engine's gRPC GetNodeDetailResponse
