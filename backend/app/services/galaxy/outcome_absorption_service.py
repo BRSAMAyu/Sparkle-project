@@ -40,7 +40,10 @@ TaskKnowledgeLink 前置链接 → DF-5 任务标题确定性锚），**不做**
 匹配（完成事件不得凭模糊猜测点亮任意节点）。标题锚与完成管线
 ``GalaxyService.ensure_task_node`` 同源（exact-title 命中优先，否则
 uuid5(title) 确定性任务星），保证吸收与 legacy spark 落在**同一颗星**。
-零 LLM、零 Redis 依赖（传输层由消费者包装持有）。
+零 LLM、零 Redis 依赖（传输层由消费者包装持有）。NBP-4 注记：吸收**真源**
+路径仍零 Redis；唯一例外是事务提交后的读面缓存失效（`invalidate_galaxy_graph_view_cache`，
+best-effort 删除 ``view:get_galaxy_graph`` 视图键，失败只降级不回滚）——
+没有它，「学完 → 星图长大」被读面 ttl=600 吞成分钟级延迟。
 """
 
 from __future__ import annotations
@@ -160,6 +163,15 @@ class GalaxyOutcomeAbsorber:
                 action = await self._absorb_neutral(user_id, node_id, payload)
                 result.action = action if result.action == "no_target" else result.action
         await self.db.commit()
+        # NBP-4 写后即时投影：可见变化（点亮 / 弱点标记）→ 立即失效星图读面
+        # 视图缓存，让「学完 → 看到星图长大」不受读面 ttl=600 分钟级窗口吞掉
+        # 爽点。与 ``GalaxyService.update_mastery`` 提交后失效同款同键。
+        # best-effort：缓存面不可达只降级不回滚——吸收真源恒在 DB（事件纪律）。
+        if result.action in _READ_MODEL_VISIBLE_ACTIONS:
+            try:
+                await invalidate_galaxy_graph_view_cache(user_id)
+            except Exception as exc:  # noqa: BLE001 — 读投影失效失败不阻断吸收
+                logger.warning("galaxy graph view cache invalidation failed for user {}: {}", user_id, exc)
         return result
 
     # -- polarity paths ----------------------------------------------------
@@ -597,6 +609,31 @@ def _parse_occurred_at(raw) -> datetime | None:
         return None
 
 
+# ---------------------------------------------------------------------------
+# NBP-4 · 读模型即时投影（写后失效；与吸收逻辑解耦的纯失效面）
+# ---------------------------------------------------------------------------
+
+#: 触发读面失效的吸收动作：``lit``（mastery/is_unlocked 变化——星图节点长大）
+#: 与 ``flagged``（弱点标记变化——图读 review_signal 可见）。duplicate /
+#: recorded_only / corrected / no_target 读面零变化，不产生失效流量。
+_READ_MODEL_VISIBLE_ACTIONS = frozenset({"lit", "flagged"})
+
+
+async def invalidate_galaxy_graph_view_cache(user_id: UUID) -> int:
+    """失效星图读面视图缓存（NBP-4 写后即时投影的失效面）。
+
+    读面 = ``GalaxyService.get_galaxy_graph`` 的 ``@cached`` 视图（键面前缀
+    ``{APP_NAME}:view:get_galaxy_graph:{user_id}:*``，ttl=600）。吸收真源在
+    DB，本函数只删缓存：失败由调用方降级（最坏退回 TTL 自然过期），不回滚
+    吸收事务。返回删除的键数（观测用；Redis 不可达时为 0）。
+    """
+    from app.core.cache import cache_service
+    from app.config import settings
+
+    pattern = f"{settings.APP_NAME}:view:get_galaxy_graph:{user_id}:*"
+    return await cache_service.delete_pattern(pattern)
+
+
 __all__ = [
     "ABSORBED_OUTCOMES_SNAPSHOT_CAP",
     "ABSORBED_OUTCOMES_SNAPSHOT_KEY",
@@ -607,4 +644,5 @@ __all__ = [
     "OutcomeAbsorptionResult",
     "TASK_OUTCOME_EVIDENCE_CONFIDENCE",
     "TASK_OUTCOME_EVIDENCE_VALUE",
+    "invalidate_galaxy_graph_view_cache",
 ]

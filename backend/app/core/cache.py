@@ -166,13 +166,25 @@ end
             return
         await self.redis.delete(key)
 
-    async def delete_pattern(self, pattern: str):
-        """Delete all keys matching pattern"""
+    async def delete_pattern(self, pattern: str) -> int:
+        """Delete all keys matching pattern; returns the number of deleted keys."""
         if not self.redis:
-            return
+            # NBP-4: 本地缓存兜底模式（Redis 不可达/测试环境）下原为 no-op——
+            # ``cached`` 装饰器把结果写进 ``_local_cache``，删除指令静默失效，
+            # 写后即时投影（如 outcome 吸收后的星图读面失效）形同虚设。
+            # 同步剔除匹配键，保持与 Redis 模式一致的失效语义。
+            import fnmatch
+
+            stale = [k for k in self._local_cache if fnmatch.fnmatchcase(k, pattern)]
+            for key in stale:
+                self._local_cache.pop(key, None)
+            return len(stale)
         # Scan and delete
+        deleted = 0
         async for key in self.redis.scan_iter(pattern):
             await self.redis.delete(key)
+            deleted += 1
+        return deleted
 
     def _maybe_cleanup_local_cache(self):
         self._local_cache_ops += 1
