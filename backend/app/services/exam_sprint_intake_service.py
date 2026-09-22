@@ -154,6 +154,22 @@ class ExamSprintIntakeService:
         # 不再生成第二份（否则先撞计划配额 403，配额未满时则静默双计划）。
         reusable_plan = await self._find_reusable_sprint_plan(user_id=user_id, request=request)
         if reusable_plan is not None:
+            # INTAKE-TEMPLATE：复用 ≠ 完整旅程。goal 驱动创建的计划（NBP-3/3b 兜底
+            # 命中的那一族）只有里程碑梯任务（goal_first_step，无 day:N 标签），
+            # 直接返回会让 7 天冲刺脊柱（daily_task_selection 的 _plan_current_day
+            # 依赖 day:N 标签推进）在最常见路径上缺位。复用后补模板（仅 goal 计划，
+            # 闸在方法内）：幂等——计划已具 day:N 形状则跳过；用户已有任务一概不删。
+            await self._supplement_sprint_template_tasks(
+                plan=reusable_plan,
+                user_id=user_id,
+                request=request,
+                session=session,
+                runtime_state=runtime_state,
+                strategy=strategy,
+                goal_model=goal_model,
+                assessment=assessment,
+                selected_pack=selected_pack,
+            )
             generated = await self._bundle_from_existing_plan(plan=reusable_plan)
         else:
             try:
@@ -421,12 +437,70 @@ class ExamSprintIntakeService:
             redis_client=self.redis,
         )
 
+        created_tasks, first_day_focus, first_day_output = await self._create_sprint_template_tasks(
+            plan=plan,
+            user_id=user_id,
+            session=session,
+            runtime_state=runtime_state,
+            strategy=strategy,
+            subject=subject,
+            daily_hours=daily_hours,
+            last_24h_error_clusters=last_24h_error_clusters,
+        )
+        self._decorate_sprint_plan_metadata(
+            plan=plan,
+            request=request,
+            session=session,
+            strategy=strategy,
+            goal_model=goal_model,
+            assessment=assessment,
+            selected_pack=selected_pack,
+            created_tasks=created_tasks,
+            sprint_policy=sprint_policy,
+            last_24h_mode=last_24h_mode,
+            last_24h_error_clusters=last_24h_error_clusters,
+            subject=subject,
+        )
+        await self.db.commit()
+
+        first_day_tasks = [task for task in created_tasks if int(task.order_index or 0) // 1000 == 1]
+        first_day_task_ids = [str(task.id) for task in first_day_tasks]
+        recommended_task_id = first_day_task_ids[0] if first_day_task_ids else None
+
+        return GeneratedPlanBundle(
+            plan_id=plan.id,
+            plan_name=plan.name,
+            first_day_task_ids=first_day_task_ids,
+            recommended_task_id=recommended_task_id,
+            first_day_focus=first_day_focus or "先把考试范围和高频保底线稳住。",
+            first_day_output=first_day_output or "完成一次闭卷输出和最小检查。",
+        )
+
+    async def _create_sprint_template_tasks(
+        self,
+        *,
+        plan: Plan,
+        user_id: UUID,
+        session: PlanningSession,
+        runtime_state,
+        strategy: dict[str, Any],
+        subject: str,
+        daily_hours: int,
+        last_24h_error_clusters: list[dict[str, Any]],
+    ) -> tuple[list[Task], str, str]:
+        """Create the day-tagged sprint template tasks for ``plan`` (phase loop).
+
+        INTAKE-TEMPLATE：全量生成与复用补模板共用的任务脊柱构造器——
+        day:N 标签 + day*1000 order_index 是 daily_task_selection /
+        exam_sprint_dashboard 推进旅程的唯一形状契约，两条路径必须同构。
+        Returns ``(created_tasks, first_day_focus, first_day_output)``.
+        """
+        sprint_policy = self._as_dict(strategy.get("sprint_policy"))
         created_tasks: list[Task] = []
-        phases = list(strategy.get("phases") or [])
         first_day_focus = ""
         first_day_output = ""
 
-        for index, phase in enumerate(phases, start=1):
+        for index, phase in enumerate(strategy.get("phases") or [], start=1):
             for day_spec in self.planning_manager._daily_task_specs(
                 phase,
                 phase_index=index,
@@ -495,9 +569,31 @@ class ExamSprintIntakeService:
                     first_day_focus = self._strip(day_spec.get("focus") or task.guide_content)
                     first_day_output = self._strip(guide_json.get("output_action"))
 
+        return created_tasks, first_day_focus, first_day_output
+
+    def _decorate_sprint_plan_metadata(
+        self,
+        *,
+        plan: Plan,
+        request: ExamSprintIntakeRequest,
+        session: PlanningSession,
+        strategy: dict[str, Any],
+        goal_model: ExamSprintGoalModel,
+        assessment: ExamSprintAssessment,
+        selected_pack: ExamSprintPackSelection,
+        created_tasks: list[Task],
+        sprint_policy: dict[str, Any],
+        last_24h_mode: bool,
+        last_24h_error_clusters: list[dict[str, Any]],
+        subject: str,
+    ) -> None:
+        """Write the sprint-plan metadata block (shared by both task paths).
+
+        复用补模板同样落此块：exam_sprint_dashboard 读 ``exam_sprint_intake``、
+        aurora/plan 详情读 ``day_highlights``、考后复盘读 ``post_exam_review``——
+        缺了它们，复用计划在这些面上退化为二等计划。
+        """
         first_day_tasks = [task for task in created_tasks if int(task.order_index or 0) // 1000 == 1]
-        first_day_task_ids = [str(task.id) for task in first_day_tasks]
-        recommended_task_id = first_day_task_ids[0] if first_day_task_ids else None
         if last_24h_mode:
             recommendation = "今天不再学新内容：先过高频知识点，再按错因回看错题，最后完成 30 分钟短模拟。"
         else:
@@ -548,15 +644,113 @@ class ExamSprintIntakeService:
                     "last_24h_error_clusters": last_24h_error_clusters,
                 }
             )
-        await self.db.commit()
 
-        return GeneratedPlanBundle(
-            plan_id=plan.id,
-            plan_name=plan.name,
-            first_day_task_ids=first_day_task_ids,
-            recommended_task_id=recommended_task_id,
-            first_day_focus=first_day_focus or "先把考试范围和高频保底线稳住。",
-            first_day_output=first_day_output or "完成一次闭卷输出和最小检查。",
+    async def _plan_has_day_template_tasks(self, *, plan_id: UUID) -> bool:
+        """True when the plan already carries day:N tagged tasks (template shape).
+
+        INTAKE-TEMPLATE 幂等闸：形状判定只认 ``day:`` 标签——goal 里程碑任务
+        （goal_first_step + order_index=1000）会被 daily_task_selection 的
+        order_index 兜底当作 day 1，但没有 day:N 脊柱，不能据此跳过补模板。
+        """
+        result = await self.db.execute(select(Task.tags).where(Task.plan_id == plan_id, Task.deleted_at.is_(None)))
+        for (tags,) in result.all():
+            for tag in list(tags or []):
+                tag_text = str(tag or "").strip().lower()
+                if tag_text.startswith("day:"):
+                    return True
+        return False
+
+    async def _supplement_sprint_template_tasks(
+        self,
+        *,
+        plan: Plan,
+        user_id: UUID,
+        request: ExamSprintIntakeRequest,
+        session: PlanningSession,
+        runtime_state,
+        strategy: dict[str, Any],
+        goal_model: ExamSprintGoalModel,
+        assessment: ExamSprintAssessment,
+        selected_pack: ExamSprintPackSelection,
+    ) -> None:
+        """INTAKE-TEMPLATE：复用路径补 7 天冲刺模板任务（方案 A）。
+
+        NBP-3/3b 复用防双计划，但复用返回的 goal 计划只有里程碑梯
+        （goals.py create_goal 只建 goal_first_step 任务），exam-sprint 的
+        Day1-Day7 脊柱缺位 → daily_task_selection 的 _plan_current_day 无
+        day:N 可推进（JOURNEY-DRIVER 实测 S2 不可观测）。此处把全量生成
+        的模板任务补挂到既有计划上：不新建计划（保 BP-7/INTAKE-IDX 单计划
+        不变量）、不删用户已有任务；计划已具 day:N 形状则幂等跳过。
+
+        goal 闸（plan.goal_id 非空才补）：缺陷本体只存在于 goal 驱动计划。
+        intake 生成路径 PlanService.create 先提交计划、任务随后的窗口里，
+        并发 intake 的复用查询可能命中"已提交但脊柱未落"的半成品计划——
+        那种计划的生成方正在补齐自己的模板，补挂会造成双模板；goal 计划
+        （goal_id 非空）没有生成方，才是本修复的补挂对象。PG 行锁 +
+        锁内复查额外串行化"同 goal 计划被并发补挂"的窗口（首个任务提交
+        即持锁到提交，后到者复查必见 day:N）；SQLite 测试基座无此并发面。
+        """
+        if plan.goal_id is None:
+            return
+        if self.db.get_bind().dialect.name == "postgresql":
+            # 锁计划行：复查 + 首个任务提交在同一持锁窗口内完成（TaskService.create
+            # 逐任务提交，锁随首次提交释放，此后复查者已能看到 day:N 任务）。
+            # 只锁 id 列，避免实体重选把 _find_goal_linked_sprint_plan 的 subject
+            # 回填从身份映射上冲掉。
+            await self.db.execute(select(Plan.id).where(Plan.id == plan.id).with_for_update())
+        if await self._plan_has_day_template_tasks(plan_id=plan.id):
+            return
+
+        daily_hours = self._safe_int(session.collected.get("daily_available_hours")) or 1
+        subject = self._strip(plan.subject) or self._strip(request.subject)
+        sprint_policy = self._as_dict(strategy.get("sprint_policy"))
+        last_24h_mode = bool(sprint_policy.get("last_24h_mode"))
+        await self.planning_manager._refresh_study_material_context(
+            db=self.db,
+            user_id=user_id,
+            session=session,
+            strategy=strategy,
+        )
+        last_24h_error_clusters = (
+            await self.planning_manager._load_last_24h_error_clusters(
+                db=self.db,
+                user_id=user_id,
+                subject=subject,
+            )
+            if last_24h_mode
+            else []
+        )
+        created_tasks, _, _ = await self._create_sprint_template_tasks(
+            plan=plan,
+            user_id=user_id,
+            session=session,
+            runtime_state=runtime_state,
+            strategy=strategy,
+            subject=subject,
+            daily_hours=daily_hours,
+            last_24h_error_clusters=last_24h_error_clusters,
+        )
+        if not created_tasks:
+            return
+        self._decorate_sprint_plan_metadata(
+            plan=plan,
+            request=request,
+            session=session,
+            strategy=strategy,
+            goal_model=goal_model,
+            assessment=assessment,
+            selected_pack=selected_pack,
+            created_tasks=created_tasks,
+            sprint_policy=sprint_policy,
+            last_24h_mode=last_24h_mode,
+            last_24h_error_clusters=last_24h_error_clusters,
+            subject=subject,
+        )
+        await self.db.commit()
+        logger.info(
+            "INTAKE-TEMPLATE supplemented {} sprint template tasks onto reused plan {}",
+            len(created_tasks),
+            plan.id,
         )
 
     async def _record_north_star_intake_metrics(
