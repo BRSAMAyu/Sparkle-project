@@ -1,0 +1,165 @@
+"""COLDSTART: gRPC GetUserGalaxy must survive the @cached Redis round-trip.
+
+生产事故（2026-09-22/23 演示栈，/private/tmp/sparkle_grpc.log 4 次 ERROR）：
+``GalaxyService.get_galaxy_graph`` 挂着 ``@cached(ttl=600)``（Redis JSON 序列化）。
+gRPC servicer ``GalaxyGrpcServiceImpl.GetUserGalaxy`` 直接访问 ``graph.nodes``——
+缓存命中时拿到的是 ``json.loads`` 还原的 plain dict，``'dict' object has no
+attribute 'nodes'`` → except 分支返回空 GetUserGalaxyResponse + INTERNAL，
+网关被迫回落 REST（双跳 + 两分支键形不一致）。
+
+本文件固化两层契约：
+1. seam 层：cache_service 同款序列化往返不得丢失 ``.nodes`` 属性访问；
+2. servicer 层：GetUserGalaxy 在"缓存命中返回 dict"时仍须返回完整图，
+   而不是空响应 + INTERNAL。
+"""
+
+from __future__ import annotations
+
+import json
+from contextlib import asynccontextmanager
+from types import SimpleNamespace
+from uuid import uuid4
+
+import pytest
+
+from app.core.cache import _json_default
+from app.schemas.galaxy import (
+    GalaxyGraphResponse,
+    GalaxyUserStats,
+    NodeWithStatus,
+    UserStatusInfo,
+)
+from app.services import galaxy_grpc_service as grpc_module
+
+
+USER_ID = str(uuid4())
+
+
+def _build_graph_response() -> GalaxyGraphResponse:
+    """Minimal graph shaped exactly like the REST compute path emits."""
+    node = NodeWithStatus(
+        id=uuid4(),
+        name="命题逻辑",
+        importance_level=3,
+        sector_code="TECH",
+        is_seed=True,
+        keywords=["propositional_logic"],
+        position_angle=0.0,
+        position_radius=0.0,
+        position_x=0.0,
+        position_y=0.0,
+        user_status=UserStatusInfo(
+            mastery_score=25.0,
+            total_study_minutes=0,
+            study_count=0,
+            is_unlocked=True,
+            is_collapsed=False,
+            is_favorite=False,
+            decay_paused=False,
+            status="glimmer",
+            brightness=0.25,
+        ),
+    )
+    return GalaxyGraphResponse(
+        nodes=[node],
+        relations=[],
+        edges=[],
+        user_stats=GalaxyUserStats(total_nodes=1, unlocked_count=1),
+        user_flame_intensity=1.0,
+    )
+
+
+def _cache_roundtrip(value: GalaxyGraphResponse) -> object:
+    """Replicate CacheService.set/get verbatim: json.dumps(default=_json_default) → json.loads."""
+    dumped = json.dumps(value, default=_json_default, ensure_ascii=True)
+    return json.loads(dumped)
+
+
+class _FakeGalaxyService:
+    """Stands in for GalaxyService(db) inside the servicer under test."""
+
+    payload: object = None
+
+    def __init__(self, db):
+        self.db = db
+
+    async def get_galaxy_graph(self, user_id, sector_code=None, include_locked=True, zoom_level=1.0):
+        return type(self).payload
+
+
+class _FakeContext:
+    def __init__(self, metadata: dict[str, str]):
+        self._metadata = tuple(metadata.items())
+        self.code = None
+        self.details = None
+
+    def invocation_metadata(self):
+        return self._metadata
+
+    def set_code(self, code):
+        self.code = code
+
+    def set_details(self, details):
+        self.details = details
+
+
+def _make_servicer_with(monkeypatch: pytest.MonkeyPatch, payload: object) -> grpc_module.GalaxyGrpcServiceImpl:
+    @asynccontextmanager
+    async def fake_session_factory():
+        yield object()
+
+    monkeypatch.setattr(grpc_module, "GalaxyService", _FakeGalaxyService)
+    _FakeGalaxyService.payload = payload
+    return grpc_module.GalaxyGrpcServiceImpl(db_session_factory=fake_session_factory)
+
+
+@pytest.mark.asyncio
+async def test_cached_roundtrip_erodes_model_to_dict_documented():
+    """Documents WHY the servicer needs the dict guard.
+
+    The Redis JSON cache (`@cached` → CacheService.set/get) erodes any
+    Pydantic model into a plain dict on a cache hit — by design (REST
+    revalidates via response_model). Every non-REST caller of a @cached
+    service method MUST rehydrate before attribute access. If this test ever
+    fails because the cache started returning models, the servicer guard in
+    GetUserGalaxy is redundant (harmless) and this file can be simplified.
+    """
+    graph = _build_graph_response()
+    cached_payload = _cache_roundtrip(graph)
+    assert isinstance(cached_payload, dict), "cache round-trip stopped eroding models; revisit the servicer guard"
+    assert GalaxyGraphResponse.model_validate(cached_payload).nodes[0].name == "命题逻辑"
+
+
+@pytest.mark.asyncio
+async def test_get_user_galaxy_survives_cache_hit_dict(monkeypatch: pytest.MonkeyPatch):
+    """Servicer contract: a cache-hit dict payload must map to a full proto response."""
+    graph = _build_graph_response()
+    cached_payload = _cache_roundtrip(graph)
+    assert isinstance(cached_payload, dict), "precondition: Redis round-trip yields a dict"
+
+    servicer = _make_servicer_with(monkeypatch, cached_payload)
+    context = _FakeContext({"user-id": USER_ID})
+    response = await servicer.GetUserGalaxy(
+        SimpleNamespace(user_id=USER_ID),
+        context,
+    )
+
+    assert context.code is None, (
+        f"GetUserGalaxy failed on a cache-hit payload: code={context.code} details={context.details!r} "
+        "(production log: gRPC GetUserGalaxy failed: 'dict' object has no attribute 'nodes')"
+    )
+    assert len(response.nodes) == 1
+    assert response.nodes[0].label == "命题逻辑"
+    assert response.nodes[0].mastery == 25
+    assert response.total_nodes == 1
+
+
+@pytest.mark.asyncio
+async def test_model_validate_restores_graph_from_cached_dict():
+    """Fix-path evidence: model_validate maps the cached dict back to the full model."""
+    graph = _build_graph_response()
+    cached_payload = _cache_roundtrip(graph)
+    restored = GalaxyGraphResponse.model_validate(cached_payload)
+    assert restored.nodes[0].name == "命题逻辑"
+    assert restored.nodes[0].user_status.mastery_score == 25.0
+    assert restored.user_stats.total_nodes == 1

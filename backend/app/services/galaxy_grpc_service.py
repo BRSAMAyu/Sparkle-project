@@ -309,6 +309,17 @@ class GalaxyGrpcServiceImpl(galaxy_service_pb2_grpc.GalaxyServiceServicer if gal
                 graph = await galaxy_service.get_galaxy_graph(
                     user_id=UUID(user_id),
                 )
+                # COLDSTART fix: get_galaxy_graph is wrapped in @cached (Redis
+                # JSON round-trip). On a cache hit the decorator hands back a
+                # plain dict and `graph.nodes` below raised "'dict' object has
+                # no attribute 'nodes'" — every cache hit answered INTERNAL +
+                # an empty response, forcing the gateway into the REST
+                # fallback (production: 4x ERROR, 2026-09-23 01:42-01:44).
+                # Rehydrate the model before any attribute access.
+                if isinstance(graph, dict):
+                    from app.schemas.galaxy import GalaxyGraphResponse
+
+                    graph = GalaxyGraphResponse.model_validate(graph)
 
                 nodes = [
                     galaxy_service_pb2.GalaxyNode(
