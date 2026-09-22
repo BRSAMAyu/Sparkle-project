@@ -905,6 +905,20 @@ class NS001Driver:
 
         # exam date: 今天 + 7 天（NS-001 冻结约束「还有 7 天」）
         self.state.exam_date = (datetime.now(UTC).date() + timedelta(days=7)).isoformat()
+        # LOOP4 修复：setup 无条件注册新账号，但旅程旗标是共享 run 状态——
+        # 不重置的话，`--phase all` 复跑会带着旧账号的 diagnostic_attempted=true
+        # 跳过新账号的诊断（实测：重跑注册 aab03da5 却跳过 B4/B5，图面零
+        # mastery、CP-00 假 fail）。新账号=新旅程，全部 per-account 旗标清零。
+        self.state.goal_id = ""
+        self.state.day0_session_id = ""
+        self.state.diagnostic_id = ""
+        self.state.plan_id = ""
+        self.state.recommended_task_id = ""
+        self.state.task_id = ""
+        self.state.goal_created = False
+        self.state.diagnostic_attempted = False
+        self.state.diagnostic_graded = False
+        self.state.day1_chat_redone = False
         self.state.evidence_step_ids.extend(["A1", "A2"])
         self.state.save()
 
