@@ -914,8 +914,9 @@ def generate_daily_capsules_for_all(self):
                             stats["skipped_users"] += 1
                             continue
 
-                        # 调度异步生成任务（P2DISPATCH：改接统一投递面，带背压；
-                        # 注意 queue 仍为显式 default——路由观察项见 REPORT）
+                        # 调度异步生成任务（P2DISPATCH：改接统一投递面，带背压）。
+                        # 队列对齐路由表与 empty_capsule 前例（FIX-49）：default 有
+                        # worker 消费会逐条真调 LLM 烧钱，停车道语义应走 glm_batch。
                         from app.core.celery_dispatch import dispatch_task_async
 
                         dispatched_ok = await dispatch_task_async(
@@ -925,9 +926,9 @@ def generate_daily_capsules_for_all(self):
                                 0.5,  # depth_preference - 默认中等
                                 curiosity_pref,
                                 "daily",
-                                1,  # 每日1个
-                            ),
-                            queue="default",
+                            1,  # 每日1个
+                        ),
+                            queue="glm_batch",
                         )
                         if not dispatched_ok:
                             logger.warning(f"Celery: capsule dispatch dropped by backpressure for user {user.id}")
