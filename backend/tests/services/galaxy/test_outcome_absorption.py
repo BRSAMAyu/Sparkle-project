@@ -340,6 +340,61 @@ async def test_node_resolution_falls_back_to_task_link(absorber_env):
     assert status.mastery_score == pytest.approx(30.0)
 
 
+# ---------------------------------------------------------------------------
+# P1-5：DF-5 标题锚第 4 环——无显式关联的完成任务也必须点亮同一颗星
+# ---------------------------------------------------------------------------
+
+
+async def test_task_without_links_lights_exact_title_matched_star(absorber_env):
+    """无 knowledge_node_id / 无 TaskKnowledgeLink 时，标题精确命中既有节点.
+
+    生产断环复现：northstar 完成任务 outcome.recorded 只有 correlation_task_id，
+    旧解析链拿不到节点 → no_target → mastery 恒 0。第 4 环 = DF-5 同源标题锚：
+    完成管线 spark 与 outcome 吸收必须落在**同一颗星**（exact-title 命中）。
+    """
+    db, user, node = absorber_env
+    task = await _make_task(db, user, node=None, title="贝叶斯定理")  # 与既有节点同名
+
+    result = await GalaxyOutcomeAbsorber(db).absorb_outcome(_task_payload(task))
+
+    assert result.action == "lit", "无显式关联的完成任务必须经标题锚点亮，不得 no_target"
+    assert result.node_ids == [str(node.id)], "必须命中既有同名节点，而非复制新节点"
+    status = await _status(db, user.id, node.id)
+    assert status.mastery_score == pytest.approx(30.0), "证据融合数值（fresh prior + task_outcome）"
+    assert status.is_unlocked is True
+    assert len(await _audit_rows(db, user.id, node.id)) == 1
+
+
+async def test_task_without_links_ignites_deterministic_task_star(absorber_env):
+    """标题无命中时物化 uuid5 确定性任务星并点亮（与 ensure_task_node 同一 id）.
+
+    与完成管线 daily-flow DF-5 同源：GalaxyService.task_node_uuid(normalized
+    title) ——同一任务重放/多事件面（完成 outcome + receipt）锚定同一颗星。
+    """
+    db, user, node = absorber_env
+    title = "离子交换色谱入门 P1-5"
+    task = await _make_task(db, user, node=None, title=title)
+    from app.services.galaxy_service import GalaxyService
+
+    expected_anchor = GalaxyService.task_node_uuid(title)
+
+    result = await GalaxyOutcomeAbsorber(db).absorb_outcome(_task_payload(task))
+
+    assert result.action == "lit"
+    assert result.node_ids == [str(expected_anchor)], "必须落在确定性 uuid5 任务星上"
+    anchor = await db.get(KnowledgeNode, expected_anchor)
+    assert anchor is not None and anchor.source_task_id == task.id
+    status = await _status(db, user.id, expected_anchor)
+    assert status.mastery_score == pytest.approx(30.0)
+    assert status.is_unlocked is True
+
+    # 同任务 receipt 面重放：同因合并，不二次融合（tk= 标记语义跨第 4 环成立）
+    receipt = _receipt_payload("SUCCEEDED", task)
+    second = await GalaxyOutcomeAbsorber(db).absorb_outcome(receipt)
+    assert second.action == "duplicate"
+    assert (await _status(db, user.id, expected_anchor)).mastery_score == pytest.approx(30.0)
+
+
 async def test_no_correlation_means_no_target(absorber_env):
     db, user, node = absorber_env
     task = await _make_task(db, user, node=None)

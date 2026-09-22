@@ -36,8 +36,11 @@ POSITIVE 高掌握度时清除弱点标记（与 handle_mastery_updated 语义�
 
 事件纪律：payload content-free（ids/极性/引用），本模块读到的全部是身份面；
 节点解析只走确定性链（correlation_node_id → task.knowledge_node_id →
-TaskKnowledgeLink 前置链接），**不做**关键词模糊匹配（完成事件不得凭模糊
-猜测点亮任意节点）。零 LLM、零 Redis 依赖（传输层由消费者包装持有）。
+TaskKnowledgeLink 前置链接 → DF-5 任务标题确定性锚），**不做**关键词模糊
+匹配（完成事件不得凭模糊猜测点亮任意节点）。标题锚与完成管线
+``GalaxyService.ensure_task_node`` 同源（exact-title 命中优先，否则
+uuid5(title) 确定性任务星），保证吸收与 legacy spark 落在**同一颗星**。
+零 LLM、零 Redis 依赖（传输层由消费者包装持有）。
 """
 
 from __future__ import annotations
@@ -326,6 +329,27 @@ class GalaxyOutcomeAbsorber:
                         .distinct()
                     )
                     resolved.extend(UUID(str(row[0])) for row in links.all())
+                # DF-5 通用映射锚（第 4 环，P1-5）：任务与星图无显式关联
+                # （无 knowledge_node_id、无 TaskKnowledgeLink）时，复用完成
+                # 管线 ``GalaxyService.ensure_task_node`` 的**同一确定性映射**：
+                # 归一化标题精确命中既有节点，否则物化 uuid5(title) 任务星。
+                # 与完成点击时的 legacy spark 写同一颗星，完成事件才能在
+                # 用户可见面生长。仍无任何关键词模糊匹配（纪律不变）。
+                if task is not None and not resolved:
+                    try:
+                        from app.services.galaxy_service import GalaxyService
+
+                        anchor_id = await GalaxyService(self.db).ensure_task_node(
+                            task.title, task_id=task.id
+                        )
+                        resolved.append(anchor_id)
+                    except Exception as exc:  # noqa: BLE001 — 锚不可得时诚实 no_target
+                        logger.warning(
+                            "outcome {} task-title anchor failed for task {}: {}",
+                            payload.get("outcome_id"),
+                            task_id,
+                            exc,
+                        )
 
         # dedupe, preserve order
         seen: set[UUID] = set()
