@@ -1,0 +1,738 @@
+# Sparkle 设计语言与交互流程规范 v0.9
+
+> 轮次：A 线 R3 · 统一设计语言规范起草 ｜ 2026-09-22 ｜ 零代码改动（纯写作卡，代码现状为只读走查）
+> 依据链：`DL-R2/DECISIONS.md`（D1–D10 主会话裁决，**硬约束**）＋ `DL-R2/CONFLICTS.md`（C-01～C-12、B-01～B-04、H1–H3）＋ `DL-R1-AUDIT/AUDIT.md`（S1–S20）＋ `DL-R1-EDU/RESEARCH.md`（E-P1～E-P15，学习场景原则）＋ `DL-R1-INTL/RESEARCH.md`（I-P1～I-P16，通用工艺原则）
+> 读者：实施工程师（agent 或组员）。每条规范给「依据」标注；数值不给「适当/合理」，拿不准的给区间并标 **【定标待实测】**。
+> 冲突顺序：DECISIONS > 本规范 > CONFLICTS 裁决提案 > R1 报告原文。规范间残留矛盾由起草人裁决并标注（见 §11 起草人勘误）。
+> 配套执行面：`v3-output/DL-R3/ACCEPTANCE.md`（每章验收条款：机检规则描述 + 人审清单）。
+
+---
+
+## §0 使命与气质
+
+### 0.1 方向假设表述（硬条款）
+
+「懂状态 + 会教 + 有温度 + 过程透明」**四合一是方向假设（direction hypothesis），不是品类空位事实（category-gap fact）**。在验证完成前（H3 teardown：豆包爱学 + 有道 AI 老师四维拆解；H2：5–8 人卡片排序访谈 + fake-door），一切对外叙事（含 `docs/competition/` 参赛材料）禁写「品类空位无人占位」类断言。【依据：DECISIONS H3 处置；CONFLICTS §C 空位校验】
+
+H2 验证结果决定批 3/批 4 中温度与仪式层的预算权重：若访谈证明学生只为「答得准+快+考得过」买单，星图仪式视图、回归礼物、人格温度降为薄层。【依据：DECISIONS H2】
+
+### 0.2 第一硬条款：每 surface 必达项 ≤2（H1 消解）
+
+**本规范第一硬条款**：9 个 surface 各自的「必达项」（must-land items，同屏必须完成表达的价值主张）**≤2 个**；四角（懂状态/会教/有温度/过程透明）按屏分配，**不允许同屏全表达**。任何新增功能/面板/卡片进入某屏前，先回答：它服务于该屏哪个必达项？都不服务 → 不进；两个都服务但屏已满 2 → 排队或替换。此条款取代事后矩阵验证，是所有屏级设计评审的第一问。【依据：DECISIONS H1（结构性消解进规范）；CONFLICTS H1「四条宪法在同一块屏幕上打架」】
+
+9 surface 必达项分配矩阵见 §8 开篇。
+
+### 0.3 气质定位
+
+- **底层气质**：暖纸（calm/paper）+ 诚实（honest）。暖纸由色彩系统的 seed 承载（§1），诚实由四态规范（§4.5）与数字准入（§6.3）承载。对照 AUDIT §2 的判决：丑的主因是「系统性失控」而非「审美差」，底子保留、系统立规。
+- **温度三层模型**（D1 的规范化表述）：
+  1. **语言层（主战场，零面积成本）**：AI 人格、人话文案、结论+数字、失败不羞辱——§6；
+  2. **高光时刻（单次、短暂、有容器）**：签名完成动画（§2.4）、成就/回顾仪式视图（§7.2）、连胜安全网触发瞬间的「保住了」反馈（§7.4）——全 app 只有这三类；
+  3. **底座（常驻）零温度装饰**：常驻动画源同屏 ≤1（§2.6）、0.25Hz 呼吸删除（§2.5）、glow 只给唯一焦点（§5.4）。
+  【依据：DECISIONS D1；CONFLICTS C-01 三层落法】
+
+### 0.4 北极星
+
+期末一周效果最好（用户原话裁决）。任何规范条款与「一周备考用户的效率」直接冲突时，效率侧胜出，但必须走 §7.1 的效率档机制表达（提示切换，不静默降级）。【依据：DECISIONS 裁决依据行；DECISIONS D2 增补】
+
+---
+
+## §1 色彩系统
+
+> 架构裁决：D6——暖米棕 seed + tonal palette（色调盘算法）生成 4 级表面阶 + 唯一交互 accent + 语义槽 ≤5（AI 信息=唯一冷色槽）+ 冷色准入规则。【依据：CONFLICTS C-06；AUDIT S1】
+
+### 1.1 五层结构
+
+| 层 | 内容 | 数量 | 生成方式 |
+|---|---|---|---|
+| L-A 中性层（surfaces） | 表面阶 4 级 + 描边 1 组 | 4+3 | 算法生成（tonal palette），禁手挑 |
+| L-B 文字层 | 文字阶 3 级 + disabled | 3+1 | 算法生成，对比度达标 |
+| L-C 交互层 | 唯一 accent（interactive accent） | 1 | 品牌色，只标可交互 |
+| L-D 语义层 | 成功/警告/错误/信息(AI)/焦点 | **5 槽封顶** | 各槽固定色相，全局唯一含义 |
+| L-E 冷色准入 | —— | 规则 | 冷色只能经 L-D 槽出现 |
+
+### 1.2 中性层：4 级表面阶（tonal surface ladder）
+
+| 级 | 语义 | 用途 | 现有落点（`tokens_v2/theme_manager.dart` SparkleColors） |
+|---|---|---|---|
+| S0 canvas（画布） | 最深/最底 | 页面背景 | `surfaceAmbient`（light 0xFFFCF8F3） |
+| S1 base（基础面） | 页内卡片 | 默认卡面 | `surfacePrimary`（light 0xFFF8F4EF） |
+| S2 raised（浮起面） | 悬浮/弹层/选中卡 | sheet、下拉、拖起卡 | `surfaceSecondary`（light 0xFFF1EBE4） |
+| S3 elevated（高亮浮起面） | 最高强调容器 | 选中态容器、焦点卡 | `surfaceTertiary`（light 0xFFE7DED4） |
+
+- **规则 1.2.1**：相邻级差必须可辨——S0/S1 亮度差 ≥3%、S1/S2 ≥3%、S2/S3 ≥4%（当前值已满足，算法生成时作为验收下界）。卡与底的区分靠**色阶**，不靠阴影；阴影只允许浮起件（dialog/sheet/拖拽中的卡）。【依据：AUDIT S1「层次靠猜」；I-P2 M3 tonal surface】
+- **规则 1.2.2**：中性层值由 `material_color_utilities`（官方 Dart 实现，已在 Flutter 生态可用）以暖 seed 生成，seed 取暖棕 hue≈28、chroma≤12（保 calm/paper 不变灰）。批 2 落地时以现 batch-1 校准值（0xFFF8F4EF 族）为 seed 快照回归锚——算法输出与现值偏差 ΔE≤2 视为等价，超限需设计评审。【依据：CONFLICTS C-06 裁决＋steelman 驳回（算法已解决对比度保证）；I-P8】
+- **规则 1.2.3**：卡片不套卡片（nested cards 禁）。分组优先用留白（≥16dp）与对齐，其次用 S0/S1 换色，最后才是描边；描边对比度 ≤S1/S2 级差（结构「在而不吵」）。【依据：CONFLICTS C-01 引 INTL 原则 2；AUDIT S6/S10】
+
+### 1.3 文字层
+
+| 级 | 用途 | light 值（现有） | 对比度要求 |
+|---|---|---|---|
+| textPrimary | 标题/正文主体 | 0xFF171717 | ≥4.5:1 on S0–S2 |
+| textSecondary | 次要说明/元数据 | 0xFF6C655D | ≥4.5:1 on S0–S1 |
+| textTertiary | 辅助（新增槽，现用 textSecondary 兼） | 批 2 定标 【定标待实测】 | ≥4.5:1 on S0 |
+| textDisabled | 禁用态（状态色，非层级） | 0xFFA49B90 | 豁免 |
+
+- **规则 1.3.1**：三级封顶。现网「用透明度压文字」的写法（`Opacity`/`withOpacity` 作用于文本）视为第四级，禁新增；存量迁移。内容永远是最深的颜色（Things 原则）。【依据：INTL §1.1#1】
+
+### 1.4 交互层：唯一 accent
+
+- **规则 1.4.1**：`brandPrimary`（light 0xFF825D49，batch-1 校准 5.31:1）是**唯一交互色**——只允许出现在：可点击控件（按钮/链接/选中态）、品牌时刻（splash 标志、onboarding）。禁兼做：正文强调（用 textPrimary+字重）、图标装饰、非可点标签、进度条装饰。【依据：D6；AUDIT S1（棕色四任，HIG「同色双义」违规，INTL §4#3）；I-P3】
+- **规则 1.4.2**：`brandSecondary` 退役为 AI 语义槽的派生来源（§1.5 info 槽），不再作为第二交互色。DS 里 `DS.accent => brandSecondary` 的别名（design_system.dart:610）标 @Deprecated，新代码禁用。【落点：`core/design/design_system.dart`】
+- **规则 1.4.3**：选中态可见性硬指标——选中与未选中控件在灰度截图下必须可辨（色彩不是选中态的唯一载体）：选中 = accent 容器（accent 14% alpha 底 + accent 1.5dp 描边 + 前置 check 图标，即 `SemanticPill.selected` 现行规格），未选中 = S1 底 + 1dp 描边（neutral300）。【依据：AUDIT S14/V7（onboarding 选中 chip 扫视难辨）；U-01 Step1 已建 selected 态 owner】
+
+### 1.5 语义层：≤5 槽
+
+| 槽 | 色相 | light 值（现有 batch-1 校准） | 准入内容 |
+|---|---|---|---|
+| success | 灰绿 sage | 0xFF456E52 | 完成、达成、在线 |
+| warning | 琥珀 amber | 0xFF7D5C26 | 注意、临近截止、降级提示 |
+| error | 陶土 terracotta | 0xFFA0483E | 失败、错误、逾期 |
+| **info（AI 信息，唯一冷色槽）** | slate 蓝 | 0xFF48678D | AI 状态、AI 建议、确认请求、数据可视化主色 |
+| focus | 现由 accent 兼任 | ——（批 2 评审是否独立） | 键盘/无障碍焦点环 |
+
+- **规则 1.5.1**：槽位封顶 5。`PillTone` 六值映射：`info/success/warning/danger→error/neutral→中性层/brand→accent`，不加第七槽。任务类型色（taskLearning/taskTraining/taskReflection…）在**进度展示位**禁用（进度位只编码掌握度，B-02 裁决），仅允许动机层徽章/日历身份色引用，且须从语义槽派生（`Color.derive` 类）。【依据：CONFLICTS B-02 两层分离；INTL §1.6#2 chips 色语义封顶】
+- **规则 1.5.2 冷色准入**：冷色（蓝/青/紫系）只允许经 info 槽出现，且只用于「系统在说话」的内容（AI 状态、数据可视化、确认动作）。禁装饰。现状越界冷色全部改造：home「50%」蓝 chip→语义重评（是 AI 判断→info 槽；是进度→中性层+字重）；profile「亮度 50%」与折线图→数据可视化走 info；chat 蓝底建议 chip→归 §4.2 chip 语法。**判定口诀：这个蓝色在替系统说话，还是在替设计说话？**【依据：D6；AUDIT S1「像从另一套设计里掉进来」；C-06#5】
+
+### 1.6 对比度验收数字
+
+| 对象 | 要求 | 依据 |
+|---|---|---|
+| 正文文字（<18pt） | ≥4.5:1（WCAG AA） | 批 1 校准已达标（≥5.3:1），保持 |
+| 大字（≥18pt bold 或 ≥24pt） | ≥3:1 | WCAG AA Large |
+| UI 组件边界/图形（图标、描边、图表线） | ≥3:1 | WCAG non-text |
+| 选中态 | 选中容器 vs 背景 ≥3:1，且灰度可辨（§1.4.3） | AUDIT S14 |
+| dark 模式 | 同规则；dark 文字主色 0xFFF4F1EB on 0xFF1A1A1E 已 ≥12:1 | 现值 |
+| highContrast / colorBlindFriendly | 保留现有两套变体（Wong 2011 CB-safe 全保留） | theme_manager.dart:418–475 |
+
+机检：对比度计算脚本纳入批 2 工具链（对 SparkleColors 全量组合跑 WCAG 公式，输出违规对清单）——见 ACCEPTANCE A1.7。
+
+### 1.7 token 命名草案与替换映射策略（渐进迁移）
+
+**原则：不改名、先立规，别名渐进。** 现有 `SparkleColors` 字段名保留为值层 owner；规范命名作为语义层文档先行，代码层新增 `context.colors` 语义别名（落点 `core/design/theme/sparkle_context_extension.dart`）。
+
+| 规范名 | 现有 token（owner） | 迁移动作 |
+|---|---|---|
+| surface.canvas | `surfaceAmbient` | 别名 getter，不迁移字段 |
+| surface.base | `surfacePrimary` | 同上 |
+| surface.raised | `surfaceSecondary` | 同上 |
+| surface.elevated | `surfaceTertiary` | 同上 |
+| text.primary/secondary/tertiary | `textPrimary/textSecondary`（+新增 tertiary） | tertiary 新建 |
+| accent | `brandPrimary` | 不动 |
+| semantic.success/warning/error/info | `semanticSuccess/…/semanticInfo` | 不动（已是规范形） |
+| galaxy.* | `galaxyBackground/galaxyShadow` + sector_config 局部调色 | 按 §7.2 锤内规范收编入口，E1 豁免维持 |
+
+**新代码门禁**（迁移期即生效，不等批 2）：新代码取色只走 `context.colors.*` 语义名；禁新增 `Color(0x…)` 字面量与 `Colors.*`（现有 ratchet 守卫已管：`scripts/guards/check_ui_design_tokens_ratchet.py` colorLiteral 123→103 只降不升）。【依据：README CONVENTION 规则 2；AUDIT §7 交叉根因①】
+
+---
+
+## §2 动效系统
+
+> 架构裁决：D7——单套 5 级阶梯 + elasticOut 全局除名 + 动量才准过冲（tap 100% 阻尼）+ lint 门禁与新旧对比面板同批强制。【依据：CONFLICTS C-08；AUDIT S16/S17/S20；TRIAGE §4 勘误（真冲突=路由转场内联映射 vs DS.motionDuration，motion.dart 本是别名）】
+
+### 2.1 时长阶梯（5 级，唯一事实源）
+
+**Owner：新建 `core/design/tokens_v2/motion_token_v3.dart`**（批 2 落地；落地前由本规范数值表为唯一口径）。现有 7 值 `SparkleMotionToken`（micro/quick/responsive/standard/deliberate/scene/hero）收敛映射如下：
+
+| 级 | 规范名 | 带宽 | 正典值 | 曲线 | 用途 | 替代旧值 |
+|---|---|---|---|---|---|---|
+| M1 | micro | 100–150ms | **120ms** | `Curves.easeOut`（100% 阻尼） | tap 反馈、勾选、chip 选中、开关 | micro 120 / quick 150 / buttonTap 100 |
+| M2 | standard | 200ms | **200ms** | `Cubic(0.2,0,0,1)`（M3 standard） | 页面内过渡、展开收起、列表项增删 | responsive 180 / standard 220 |
+| M3 | emphasized | 300–350ms | **320ms** | 入场 `Cubic(0.05,0.7,0.1,1)`（emphasized-decelerate）；退场 `Cubic(0.3,0,0.8,0.15)`（emphasized-accelerate） | 卡片/面板展开、页面转场 | deliberate 300 / scene 400 |
+| M4 | large | 450–500ms | **480ms** | 标准曲线；**须手势动量驱动**才可用 | 大区域转场、拖拽跟手补完 | pageTransition 350→改 M3 |
+| M5 | narrative | 600–700ms | **650ms** | 非对称减速 | 仅 onboarding 入场、galaxy 仪式模式、成就回顾 | hero 620（非叙事用途删除） |
+
+- **规则 2.1.1**：reverse 时长 ≤ forward（现路由转场表已符合，保留比例约 0.7）。【落点：`core/navigation/sparkle_route_transition.dart:54–77`】
+- **规则 2.1.2**：M4 的「手势动量驱动」判定 = 动画初速度来自手势速度（drag/swipe velocity），tap/按钮触发一律 M1–M3。无动量驱动的 M4/M5 视为违规（对照 620ms hero 现状）。【依据：INTL §1.8「620ms 无手势驱动即超预算」】
+- **规则 2.1.3 数值唯一**：`sparkle_route_transition.dart` 的两份内联 switch（forward/reverse 各一份数值表）删除，改调 motion_token_v3 单一映射（TRIAGE S16 修复落点：触达 ~2 文件，收益覆盖 131 处 SparkleMotionToken 引用）。`motion.dart`（别名类）与 `DS.motionDuration` 全部指向 v3 表。【依据：TRIAGE §4】
+
+### 2.2 曲线与阻尼规则
+
+- **规则 2.2.1（WWDC803 阻尼规则，全 app 唯一过冲条款）**：动量手势（拖拽/轻扫有初速度）→ 允许 easeOutBack 级 80% 阻尼**一次**轻微过冲；一切 tap 驱动 → 100% 阻尼零过冲。弹跳是含义不是口味：过冲只允许出现在「教用户可以再用力」的教学信号位，默认不用。【依据：INTL §1.7 WWDC803 #4/#5；I-P5】
+- **规则 2.2.2（elasticOut 除名）**：`AnimationSystem.spring = Curves.elasticOut` 与 `SparkleMotion.bounce = Curves.elasticOut`（motion.dart:45）全局除名——引用处按 2.2.1 重新归类（tap 驱动改 standard 曲线，动量驱动改 easeOutBack）。`bounceOut` 同除。【依据：D7；AUDIT S16「把弹性动画做成橡皮筋」】
+- **规则 2.2.3（可打断）**：一切动画进行中必须可被新意图打断（AnimationController 重定向/反向，不 ignore 新输入）；任何交互不得「等动画播完才响应」。【依据：HIG Motion「let people cancel motion」；WWDC803 #2】
+
+### 2.3 触觉语义表（全 app 一张表）
+
+| 场景 | 触觉 | 视觉伴随 |
+|---|---|---|
+| 签名完成（§2.4） | `HapticFeedback.mediumImpact`（Success 语义） | 签名动画 |
+| 选择器滑动/chip 选中 | `HapticFeedback.selectionClick` | M1 |
+| 错误/失败 | `HapticFeedback.heavyImpact`（Error 语义） | 错误态（§4.5） |
+| 进入专注/长按开始 | `HapticFeedback.lightImpact` | M2 |
+| 滚动到顶/底 | 现有 scroll_edge_haptics 保留 | —— |
+
+触觉必须可关（settings 无障碍区，§8 settings 蓝图）；默认强度低；禁无因果的彩蛋触觉。【依据：HIG Playing haptics「因果对」；INTL 原则 13】
+
+### 2.4 签名位清单（全 app 唯一完成动画）
+
+**全 app 完成时刻只有一个动效签名**：任务完成勾选动画。
+
+| 参数 | 值 |
+|---|---|
+| 时长 | ≤300ms（正典 240ms：勾笔画绘制 180ms `Cubic(0.2,0,0,1)` + 容器 scale 0.95→1.0 60ms） |
+| 可打断 | 是（完成态立即可见，动画只是确认） |
+| 触觉 | Success（§2.3 表） |
+| 使用范围 | 任务卡完成钮、目标里程碑、复习完成——同构复用，同一规格 |
+| Owner | 新建 `core/design/widgets/signature_check.dart`；现有 `success_animation.dart`/`SparkleConfetti` 降级为 §2.5 庆祝专用 |
+
+**边界条款（B-03 消解）**：HIG「高频交互不加动效」禁的是装饰性/常驻/等待型动效；本签名位属「短而准的确认性反馈」（≤300ms、可打断、不阻塞下一操作、配语义触觉），属于反馈不属于装饰。除此之外的一切高频操作零动效。【依据：CONFLICTS B-03；EDU 对照 Things 勾选（INTL §1.1#3）】
+
+### 2.5 删除清单与降级清单
+
+**删除清单（批 2 执行，机检可拦新增）**：
+
+| # | 对象 | 现状落点 | 处置 |
+|---|---|---|---|
+| D-1 | 0.25Hz 常驻呼吸 | `motion.dart:97–104 createBreathingController`（4s/repeat reverse） | 删除。状态需要「活着」感 → 改为状态变化瞬间的**单次**脉冲（M2，≤1 次/事件） |
+| D-2 | 非叙事 620ms hero | `animation_token.dart:23 hero=620ms` | 归 M5 narrative，仅仪式场景可用（§2.1 表）；页面间 hero 用 M3 |
+| D-3 | 900ms splash 编排 | `features/splash/presentation/screens/splash_screen.dart:28–29` | ≤400ms 一轮最短动画；TRIAGE 已证与 auth 判定并行不阻塞——保留并行，删冗余段（logo scale→title→subtitle→indicator 四段并一段） |
+| D-4 | elasticOut/bounceOut 全局 spring | `animation_token.dart:9–10`、`motion.dart:45` | §2.2.2 |
+
+**降级清单**：
+
+| # | 对象 | 现状 | 降级后 |
+|---|---|---|---|
+| G-1 | confetti | task 完成单 owner 挂载（Step6 已修双份） | 仅**里程碑**（周目标达成/目标完成/连胜安全网触发）单份 ≤600ms；普通任务完成只有签名勾选（§2.4），不放 confetti |
+| G-2 | particle | home 5 层装饰、galaxy 147 粒 | 仅完成时刻/仪式模式单次爆发；受 `GlobalParticleCounter` 上限（默认 80/小屏 64/48/reduce-motion 0，已实现） |
+| G-3 | glow | home 113 处引用 | 只给「当前唯一焦点」（正在进行的任务卡/仪式主节点），每屏 ≤1（galaxy 仪式模式 ≤2：主节点+选中节点） |
+| G-4 | weather 层 | `weather_layer.dart` 零门控直通（TRIAGE S6 剩余半边） | 补 `PerformanceTier` 门控（对齐 background/effect/particle 层同规格） |
+| G-5 | attention pulse | `pulse_scope.dart` maxActiveSlots=**2** | 改为 **1**（同屏持续动画源 ≤1 的机制化落点）；galaxy 仪式模式走独立预算不占此槽 |
+
+【依据：D1/D7；CONFLICTS C-08 降级项；AUDIT S6/S17；INTL 原则 14/15】
+
+### 2.6 同屏持续动画源 ≤1：计数口径
+
+- **持续动画源定义**：任何**循环或无限时长**的动画驱动——repeat/reverse-repeat 的 controller、粒子发射器、shimmer 循环、painter 持续重绘（`repaint` listenable 驱动）、呼吸/脉动。**单次有限时长动画（M1–M5）不计数。**
+- **计数规则**：每屏同时活跃的持续源 ≤1。shimmer 骨架在屏时占用该唯一名额（加载期通常无其他持续源，天然满足）；加载完成骨架消失，名额归还。
+- **galaxy 豁免区合计预算**（锤内规范，仪式模式）：豁免不是免检——仪式模式同屏预算 = 持续源 **1**（星空缓转/闪烁二选一）+ particle ≤80（GlobalParticleCounter 口径）+ glow ≤2 + 节点入场 stagger 一次性（不计）。**工作视图（Tab 默认）持续源 = 0**（纯静态 + 交互瞬间动效）。合计预算超限时优先砍 glow，再砍 particle 密度，最后砍持续源——顺序固定。【依据：D5 增补「豁免区立锤内规范+同屏合计预算」；AUDIT S5/S17（豁免区从未做过同屏合计）】
+
+---
+
+## §3 排版与密度
+
+> 依据：INTL Typography 硬条款（正文 17pt 级、避细字重、最小字号、text styles 即节奏表）本地化；AUDIT S3/S4。
+
+### 3.1 字号/字重/行高层级
+
+Owner：`SparkleTypography`（`tokens_v2/theme_manager.dart:1066`，标准工厂 :1078）。**角色结构保留，数值重定标如下**（批 2 golden 快照后冻结；迁移为长尾批次）：
+
+| 角色 | 字号 | 字重 | 行高 | 用途与约束 |
+|---|---|---|---|---|
+| display | 46 | w700 | 1.2 | **仅** onboarding 开场、成就仪式（§2.1 M5 场景）。禁用于内容屏 |
+| headline | 28 | w700 | 1.3 | 页大标题（每屏 ≤1） |
+| title | 22 | w600 | 1.3 | 卡组标题/区块标题 |
+| subtitle | 19 | w600 | 1.4 | 卡标题 |
+| body | 17 | w400 | **1.6** | **阅读型正文**：chat 消息、AI 解释、文章 |
+| secondary | 15 | w400 | 1.5 | 列表正文/控件文字 |
+| label | 13 | w500 | 1.4 | chip/标签/元数据 |
+| caption | 12 | w400 | 1.4 | 时间戳/脚注。**全 app 最小字号** |
+
+- **规则 3.1.1**：中文正文行高 1.5–1.7（body 1.6 正典）；单行标签 1.2–1.4。西文行高条款（HIG ~1.2）不适用于 CJK 正文。【定标依据：中文可读性共识；I-P9】
+- **规则 3.1.2**：禁用 w300 及以下字重（中文细字重在低端屏发虚）；「强调」优先用 textPrimary+加粗，**禁**「加大加粗连排」——标题级字号连续 ≥3 行视为层级滥用（解 S4 大字喊话）。【依据：HIG Typography；AUDIT S4】
+- **规则 3.1.3**：正文最老 17——chat 消息/长解释必须 body(17)；secondary(15) 只用于控件与列表，禁承载需阅读的 AI 输出。【依据：INTL §1.7 Typography「正文默认 17pt 级」】
+- **规则 3.1.4**：`fontSize:` 字面量禁新增（存量 1293 处，features 全口径——TRIAGE S4；守卫 `check_ui_design_tokens_ratchet.py` 只降不升已覆盖）。
+
+### 3.2 截断与折行策略（解 S3）
+
+**方法论：最小容器宽度 × 最大文案长度配对表**。每个文本角色登记「容器最小宽（dp）/最大字符数（中文口径）/超限策略」三元组；l10n 文案入库时按最长 locale 校核（当前只有 zh/en，en 按字符数 ×1.6 估算）。
+
+| 角色 | 容器最小宽 | 最大长度 | 超限策略 |
+|---|---|---|---|
+| 页大标题（headline/title） | ≥200dp | 16 字 | **禁 ellipsis**——2 行上限（`maxLines:2`）+ 文案入库前按 16 字裁写 |
+| 卡标题（subtitle） | ≥160dp | 20 字 | 2 行上限 + ellipsis 仅第 2 行末 |
+| 顶栏标题 | ≥120dp | 16 字 | 2 行或缩写；**现状反例**：chat 顶栏「AI学习助手」在 Expanded 内 1 行截断成「AI…」（chat_screen.dart:1240–1247），改为标题区占位 ≥120dp 或降级为无标题 |
+| chip/pill | 64dp | **6 字** | 单行 ellipsis 允许（chip 是扫视件）；超 6 字的语义必须改写成 ≤6 字，禁只截不写 |
+| 输入框 placeholder | 与输入框同宽 | **14 字** | placeholder 必须短于可容纳字数（现状反例：onboarding「例如：备考期末 / 学会Flutter」自身截断——arb:1141 缩为「例如：备考期末」） |
+| 按钮文字 | —— | 8 字 | 禁 ellipsis；超限改文案不缩容器 |
+| toast/通知条 | —— | 2 行 | 完整句允许，禁关键信息在第 2 行 |
+
+- **规则 3.2.1**：单行 ellipsis 只允许出现在 label/caption/chip 三类扫视件；body/subtitle 及以上禁单行截断（宁可 2 行，不可「AI…」）。【依据：AUDIT S3「截断是没打磨的最快线索」】
+- **规则 3.2.2**：可横向滚动的 chip 条（快捷条/建议条）末位必须留 ≥24dp 渐隐遮罩或边缘阴影提示「还有更多」；禁无提示硬截（V10「好奇…」反例）。【落点：`intent_prediction_bar.dart` 等】
+- **规则 3.2.3 中文断词**：多行中文用默认 `softWrap`；中英混排处（如「学会Flutter」）禁手动空格断行；CJK 与拉丁混排行首禁出现标点（Flutter 默认避头尾已覆盖，禁用 `overflow: fade` 于多行文本——渐隐只用于 §3.2.2 横滚提示）。
+
+### 3.3 密度
+
+- 列表项最小高度 56dp、卡内边距 16dp、屏边距 16dp（现有 SparkleSpacing 阶梯内取值）；信息密度按「每屏 1 主角 + ≤3 支撑」排布（§0.2 必达项 ≤2 的视觉表达）。【依据：I-P1 内容优先；§8 各屏蓝图】
+
+---
+
+## §4 组件语法
+
+> Owner 延续 U-01 收敛成果不推翻：`SemanticPill`/`TaskPill`/`SparkleButton`/`SparkleCard`/`EmptyState`/`CustomErrorWidget`/`SparkleSkeleton`/`AiStatusCapsule`（`core/design/components/atoms/`、`core/design/widgets/`）。本节为它们补语法规范与门禁扩展。
+
+### 4.1 chip/pill 归一规则（解 S9）
+
+- **规则 4.1.1 唯一 owner**：一切 chip/pill/badge/capsule 类小标签必须用 `SemanticPill`（语义/状态/筛选，含 selected/onDeleted）或 `TaskPill`（任务域）；私有 pill 类禁新增（守卫 parallelClass 已管；存量 178 私有类/119 文件按 §10 批 3 迁移，`status_awareness_bar.dart` 7 个 pill 类先行）。【依据：TRIAGE S9】
+- **规则 4.1.2 选中态**：统一走 `SemanticPill.selected`（accent 容器+check 前置，§1.4.3），禁自造选中样式（现状四种样式混排——描边米色/蓝底浅填充/灰底填充/带图标不带图标——全部归一）。【依据：AUDIT S9】
+- **规则 4.1.3 图标规则**：语义 pill（状态告知）可带 16px 图标；交互 chip（点了有动作）默认**不带图标**，靠文案；图标不是 chip 的装饰位。图标与文字间距 4dp。【依据：AUDIT S9「带图标/不带图标混排」】
+- **规则 4.1.4 数量上限/屏**：同屏可点 chip ≤6；**AI 一条回答之后同屏 chip ≤3**（建议话术类，§7.1）；确认请求类不占 chip 名额（走收件箱/内联确认，§7.3）。【依据：AUDIT S9「一答十 chip」；CONFLICTS C-11（chips ≤3）】
+- **规则 4.1.5 tone 准入**：PillTone 六值按 §1.5 映射；「brand」tone 仅用于 accent 语义（可交互/品牌），禁作状态色。
+
+### 4.2 控件层级语法（解 S14/S15）
+
+三类控件视觉语法必须可区分：
+
+| 类 | 语法 | owner/规格 |
+|---|---|---|
+| 主操作（屏内唯一） | 填充 accent 实底 + textPrimary onAccent | `SparkleButton` variant=primary；**每屏 ≤1** |
+| 次操作/展开 | 描边或浅填充 | variant=secondary/outlined/text |
+| 导航/进入 | 无底色 + trailing chevron「›」 | 自绘规则：chevron 16px、textSecondary、右缘对齐 |
+
+- **规则 4.2.1**：完成类控件（勾/「完成」）与展开类控件（chevron）**不得同视觉权重并排**——任务卡规格：完成钮带文字标签（现 task_card.dart 已改「完成」pill，保持）居右下主位；chevron 缩至 16px、textSecondary、置于卡右上角，热区独立 ≥44×44dp。【依据：AUDIT S14；TRIAGE S14「歧义减半，规范仍缺」】
+- **规则 4.2.2 折叠卡 vs 导航卡**：折叠卡 chevron 竖排且点击时旋转 180°（M1 动画）；导航卡 trailing「›」恒定向右不旋转。两种卡禁止同款式同位（settings「无障碍」双卡反例，§8 settings）。【依据：AUDIT S15】
+- **规则 4.2.3**：affordance 单一——一个控件只表达一种意图；「确认」按钮出现时其确认对象必须在同屏可见（解 S13 悬空确认）。【依据：AUDIT S11/S13】
+
+### 4.3 空态规范（解 S11）
+
+空态组件 owner：`EmptyState`/`CompactEmptyState`。内容三要素：
+
+1. **为何空**（一句话，指向原因：「还没有最低达标线，设置后 Sparkle 才能帮你盯进度」）；
+2. **单一 CTA**（可选，指向**创建该内容**的动作：「去设置达标线」）；
+3. **禁悬空主按钮**——空无一物时禁出现「确认/保存」类确认钮（minimum_criteria_card.dart:76–99 反例：`thresholds.isEmpty` 时隐藏确认块）；禁把操作指令当副标题（「点击展开/收起」反例——chevron 已表达）；
+4. 空态不得与数据同屏混排打架（galaxy「还没有点亮掌握记录」叠在 147 节点上，V24 类）——空态只在**确认无数据**时出现（四态规范 §4.5）。【依据：AUDIT S11；CONFLICTS C-09 空态基线】
+
+### 4.4 加载与骨架
+
+- **规则 4.4.1**：骨架唯一 owner `SparkleSkeleton` 家族；**骨架必须贴最终布局**（块位置=内容位置，屏级骨架用 `SparkleCardSkeleton/SparkleListSkeleton/SparkleChatBubbleSkeleton` 组合出目标布局），禁统一灰块垫场。验收：骨架→内容切换无布局跳变（golden 前后帧对比，ACCEPTANCE A4.6）。【依据：AUDIT S19；CONFLICTS C-09「结构已知数据加载」】
+- **规则 4.4.2**：裸 spinner 禁新增于首屏主路径（守卫已管 rawSpinner）；>2s 的等待必须有阶段感（§4.5 AI 行 / §7.1）。
+- **规则 4.4.3**：骨架 shimmer 是持续动画源，占 §2.6 唯一名额。
+
+### 4.5 四态规范（D9 分工矩阵）
+
+每个异步内容位必须实现四态：**加载（loading）/ 空（empty）/ 错误（error）/ 内容（content）**，外加 **回归（comeback）** 为一等状态。分工矩阵：
+
+| 场景 | 范式 | 硬规格 |
+|---|---|---|
+| **本地可预测操作**（勾任务、开关、保存、拖拽排序） | **乐观 UI** | <100ms 响应底线性；成功**不庆祝**（静默成功，HIG「成功是预期，只需报忧」）；失败回滚 + 人话 toast + 重试按钮 |
+| **AI 推理等待**（chat 首流、星图重算、记忆聚合） | **诚实分阶段** | 分期见 §7.1 流程；**AI 内容禁预填结论**——禁在流式前渲染疑似答案段落/假答案骨架；流式本身允许（token 到达即渲染，每个 token 都是真的） |
+| **结构已知的数据加载** | **骨架贴布局** | §4.4 |
+| **错误态** | **人话 + 重试 + 保留现场** | 模板三句式：「发生了什么（人话）＋影响什么＋怎么办（重试钮）」；禁裸异常文案（V25「Unsupported operation: …」类）；禁「Oops, something went wrong」英文直出；重试必须保留用户已输入内容；owner `CustomErrorWidget`/`CompactErrorCard`（9 surfaces 现仅 9 处采用，私有 error 类遍地——批 1 迁移） |
+| **回归时刻**（距上次打开 ≥72h【定标待实测，区间 48–96h】或连胜中断后回归） | **易赢 + 少东西 + 小礼物** | 首屏 ≤2 卡、首动作是低难度复习（复述昨日 1 个概念级）、问候含进度肯定（「回来啦，你的图论星图已点亮 12 个节点」）；禁堆功能、禁横幅轰炸。现状 ComebackBanner 是 chat 顶部 8 件之一（TRIAGE S8 清单），批 3 迁为独立回归接管屏 |
+
+**错误态是四态规范的倾斜重点**（现状 1.7/5 全 app 最差项）。【依据：DECISIONS D9；CONFLICTS C-09 全条 + steelman 驳回（禁的是预填结论非流式）；EDU 原则 5；AUDIT §5】
+
+---
+
+## §5 空间纪律
+
+### 5.1 面积预算表
+
+| 屏 | 预算条款 | 依据 |
+|---|---|---|
+| chat | **会话本体（气泡流）≥70% 屏高**；系统件（记忆/确认/模式/建议）全部撤出常驻区——改内联微件（消息旁 chip 级）或收件箱（§7.3） | D3；AUDIT S8（现状 25%） |
+| home | 首屏「今天该干什么」入口（指挥台/今日下一步）**必须在折叠线上方**；「Sparkle 对你的理解」卡 ≤35% 首屏且可折叠；底部叠层 ≤2（Tab + 输入条；快捷 chip 并入输入条下游，§7.3） | AUDIT S10/V9；CONFLICTS C-11 |
+| goal/task/memory | 每屏空态区块 ≤1 个常驻（多个空区合并为单一「从哪里开始」入口） | AUDIT S11（goal 3/5 区块是空态） |
+| galaxy | 工作视图/仪式模式分离（§7.2）；控制件与画布同暗（§7.2 锤内规范） | D5 |
+| 全局 | 常驻系统面板（与用户当前任务无关的面板）每屏 ≤1 | D3 撤出常驻区的外推 |
+
+### 5.2 系统件收容规则
+
+系统件（AI 主动性产生的 UI）只有三种合法形态：
+
+1. **内联微件**：长在被描述对象旁边、chip 级高度（≤40dp）——记忆状态=消息旁「已记住 ✓」微型信号，不是顶部面板（INTL 原则 12「inline 是微件不是面板」）；
+2. **收件箱**：`features/notification_center/` 为唯一聚合地——Aurora 确认队列、建议、预警按需取用，**禁注入 chat 常驻区**；
+3. **阶段胶囊**：仅存在于等待期（§7.1），完成即消失。
+
+【依据：D3/D8；CONFLICTS C-03 三级形态、C-10 第 5 条】
+
+### 5.3 装饰预算数字账本
+
+| 项目 | 上限 | 计数口径 | 机制落点 |
+|---|---|---|---|
+| 特效层/屏 | **1**（现 home 5 层：background/weather/particle/effect+renderer） | 挂载层计数 | `visual_renderer` 挂载点裁剪；层门控全覆盖（含 weather，§2.5 G-4） |
+| 粒子/屏 | **80**（小屏 64/48，reduce-motion 0） | GlobalParticleCounter | 已实现，守卫化 |
+| glow 焦点 | 1（galaxy 仪式 ≤2） | §2.5 G-3 | —— |
+| gradient/屏 | ≤2 处且非核心流程 | ratchet 口径新维度 | A5.3 |
+| confetti | 单份 ≤600ms，仅里程碑（§2.5 G-1） | 挂载计数 | SparkleConf_intensity 契约 |
+| 持续动画源 | ≤1（§2.6） | PulseScope/手动 | PulseScope slots 2→1 |
+| 装饰对比度 | 不得高于核心信息 | 人审 | DESIGN_DIRECTION 既有条款，本行使其可验收 |
+
+预算是**硬约束**：新装饰进入某屏前查账，超额必须先减后加（「每轮只加不减」是 AUDIT §7 交叉根因④，此表为其终止机制）。【依据：AUDIT S6/S17；U-01 §4；INTL 原则 15】
+
+---
+
+## §6 文案与数据呈现
+
+### 6.1 语言层温度（D1）
+
+- **AI 人格**：Aurora。语气规格四条：①善意（帮忙不审判）；②简洁（先结论后展开；同一条消息幽默 ≤1 处且不拿学习内容开玩笑）；③不装懂（不确定就说，走 §6.3 三档）；④立场（「on your team」——站在用户一边，推动作不下判断）。【依据：EDU §一.8 Pi 配方＋「情绪陪伴是佐料」（§一.10 豆包）；CONFLICTS C-01 语言层主战场】
+- **Flighty 式结论+数字**：一切状态播报=确定结论+带口径数字+最小动作。「图论梳理完成，计划进度 41%→44%」，禁「任务状态已更新」。【依据：INTL §1.5；EDU 三大面推送】
+- **失败不羞辱红线**：禁「又没坚持」「你怎么才…」「别人都在学」类比较与追责；错误归因于系统/流程（「这个知识点安排得太密了，我调一下」），不归因于人格（「你太懒」）。文案评审一票否决项。【依据：EDU 原则 2（growth.design 把 user shaming 列为反模式）；CONFLICTS C-04 T0】
+- **称呼与语域**：称「你」；禁「亲」「您」；禁感叹号连用（同句 ≤1）。
+- **人格结束权**：AI 对话必须内置「今天到此为止，且你今天赢了」出口（§7.1 效率档与 §7.4），禁无限追问式粘性。【依据：EDU 原则 8；Character.AI 反面教材（EDU §一.9）】
+
+### 6.2 禁直出清单（S2 负面清单，机检靶）
+
+| # | 禁出对象 | 现状实例 |
+|---|---|---|
+| X1 | 英文枚举（status/priority/unit…） | goal「active」「normal」 |
+| X2 | 类型字面量 | 「>= 1boolean」 |
+| X3 | DateTime.toString() 直出 | 「2026-09-20 15:00:00.000」 |
+| X4 | 调试命名与 hash | 「并发测试节点-5c2d9cff」（测试数据污染，TRIAGE §3#5：test_galaxy_concurrency.py 无 teardown） |
+| X5 | 机器自我指标 | 「把握度约 41%」（→§6.3 三档） |
+| X6 | 裸异常/英文错误页 | 「Unsupported operation: …」「Oops, something went wrong」 |
+| X7 | 中英混排半句 | 「0 条当前 session 记忆」 |
+| X8 | 起止相同的时间 Range | 「09/20 13:59 - 09/20 13:59」（折叠为单点时间） |
+
+【依据：AUDIT S2（severity 5）；TRIAGE §3 五例施工图】
+
+### 6.3 C-07 数字准入三则
+
+> 裁决：Flighty 式数字与 S2 禁例的分界线 = 数字的**主体**（你的进步 vs 我的内部慌乱）与**口径稳定性**。【依据：CONFLICTS C-07】
+
+1. **准入**（三条同时满足才准出现数字）：①描述**用户的学习状态**（掌握度、剩余天数、计划健康度变化）；②口径有单一事实源（§10 批 1 S7 修复）、跨屏一致；③语义被 UI 教过（首次出现有一句解释，或口径稳定到形成上下文）。
+2. **禁出**：模型自我置信度、原始 enum/类型/时间戳、调试命名与 hash、无轴无单位的图表数字（AUDIT S4 装饰图表）。
+3. **三档人话翻译表**（AI 内部不确定性必须表达时）：
+
+| 内部置信度 | 展示文案 | 附带动作 |
+|---|---|---|
+| ≥0.75【定标待实测】 | 「我比较有把握」 | 直接给结论 |
+| 0.50–0.75 | 「还在确认，供你参考」 | 结论 + 建议核对来源 |
+| <0.50 | 「这部分我不确定，建议核对教材」 | 弱化结论 + 核对入口 |
+
+不出百分比。完整数据（历史轨迹/口径）走 §7.1 过程折叠出口，不堵死信息。【依据：CONFLICTS C-07 裁决＋steelman 驳回（伪精度非透明）】
+
+### 6.4 数据词典 schema（S2 施工图）
+
+**结构**（每域一文件，共享基础设施一处）：
+
+```
+lib/core/display/lexicon/
+  lexicon.dart              # LexiconEntry 类型 + Lexicon.lookup(domain, raw) 唯一入口
+  goal_status_lexicon.dart  # 域词典：goal/task/plan/memory/commitment…
+  date_formatting.dart      # 时间格式化唯一入口
+```
+
+**LexiconEntry schema**：
+
+| 字段 | 类型 | 说明 | 示例 |
+|---|---|---|---|
+| domain | enum | 数据域 | goal.status |
+| raw | String | 后端原值（enum/事件名） | "active" |
+| labelZh / labelEn | String / String | 人话文案（经 arb key 间接引用，禁散落硬编码） | 「进行中」/「Active」 |
+| tone | PillTone? | 展示槽位（§1.5） | info |
+| icon | IconData? | 语义图标（可选） | —— |
+| verbTemplate | String? | 事件→句模板（{title} 占位） | 「完成「{title}」即达标」 |
+
+**时间格式规范**：相对优先（「今天 15:00」「3 天后」「昨天」），≥7 天落绝对（「9 月 20 日 15:00」）；禁毫秒；同日起止 Range 折叠为单点（X8）；唯一入口 `date_formatting.dart`，`'${c.dueAt}'` 类拼接禁新增（pending_commitments_section.dart:55 为修复靶）。【依据：AUDIT S2/V21；TRIAGE §3#2】
+
+**正例与迁移**：`plan_context_summary.dart:398–423 _statusLabel` 是既有正例（plan 状态已词典化）——批 1 按此模式扩展；`goal_detail_l10n.dart`（约 80 条硬编码三目字符串）与 arb 双重定义并存，迁入 arb+词典统一。引擎侧同步：`backend/app/api/v1/experience_readouts.py:177–187 _criterion_label` 的 `f"{title} >= {threshold}{unit}"` 拼接改为 unit=boolean 时走整句模板（「完成「X」即达标」），引擎与端侧词典 key 对齐（proto/gRPC 字段透传原值，翻译在表现层——分层边界不破坏）。【依据：TRIAGE §3#1、§1.2 附注】
+
+**事件名→人话**：`domain=memory.event` 类，verbTemplate 承载（「completed {title}」→「已完成「{title}」」）；重复事件去重聚合后展示（V20 堆叠反例）。【依据：AUDIT S2；EDU §三 记忆面板「数据库 dump」反例】
+
+---
+
+## §7 交互流程规范
+
+### 7.1 答疑分档流程（D2 + 增补）
+
+```
+用户提问
+   │
+   ▼
+意图判定（ChatOrchestrator 双核路由承接，前端零改动）
+   │
+   ├─ 快问/概念澄清（定义、事实、对比）──────────► 直答（结论先行，≤3 段）
+   │                                                 （快问慢答=惩罚用户）
+   ├─ 显式要答案（「直接给答案」「只要结果」）─────► 直答 + 一行「建议自己走一遍第 2 步」
+   │
+   └─ 应试/作业/刷题（默认语境）──────────────────► 分步引导（默认档）
+                                                      │
+                                        ┌─────────────┤
+                                        │ 分步规格：3–5 步；每步 ≤3 句 + 1 个抓手问题；
+                                        │ 步末「继续」；出口「直接给答案」在第 2 步后出现
+                                        │ （不藏长按——大学生时间宝贵，出口可见但不在首屏抢戏）
+                                        ▼
+                              能力门控：分步置信度 <0.60【定标待实测】
+                              → 降级直答 + 「这部分建议对照教材核对」
+                              （引擎没把握不许装导师——WSJ 实测 Khanmigo 算错比给错答案更糟）
+```
+
+- **全局偏好档**：settings 新增「深学 / 效率」二选一，**默认深学**（深学=上表默认；效率=快问档扩至全部语境、答案直出+要点框）。【落点：`unified_settings_screen.dart` 学习偏好区；后端 `orchestration/` 提示词开关——批 4】
+- **北极星建议**：NS-001 类冲刺计划创建时弹一次性提示「备考周期 ≤7 天，建议切换效率档」——**提示非强制**，不静默改档。【依据：DECISIONS D2 增补】
+- **过程折叠**（与 D3 衔接）：完整思维链=回答消息上的「过程」折叠 chip，默认收起，点开抽屉展示（`reasoning_step_model.dart` 数据链已在）；分步引导天然承载「示范思维」的教学时刻。【依据：CONFLICTS C-02/C-03；EDU 原则 12】
+
+### 7.2 星图双视图（D5）
+
+| | 工作视图（Tab 默认） | 仪式模式（事件触发） |
+|---|---|---|
+| 视角 | 当前学习目标的**局部邻域**（中心节点 + 1 跳，≤20 节点） | 全局宇宙 |
+| 可读性 | 节点=掌握度亮度（Khan 分级语义：未学/学过/掌握）；推荐动作 chip ≤1（「下一个建议碰：X」） | 华美完整（现有粒子/辉光按 §2.6 豁免区预算） |
+| 触发 | galaxy Tab 点入即此 | 成就达成 / 阶段回顾 / **onboarding 首见**（增补：首见全局仪式保留，首见惊艳是品牌资产） |
+| 退出 | —— | 任一点按/滑动回工作视图；「回顾完整星图」入口常驻工作视图角落 |
+
+**锤内规范**（豁免区的第二层规则）：
+1. 标签碰撞消隐 pass——painter 新增标签重叠检测，重叠标签按掌握度+选中态优先级隐藏（2793 行 painter 现无此 pass，AUDIT S5「噪声汤」主因）；
+2. 明暗一体——dark cosmic 画布上的控制件（底部导航/添加按钮）跟随沉浸：galaxy Tab 激活时 shell 底导航切 dark 变体（`shell_navigation.dart:242` 落点），禁浅色件贴暗画布；
+3. 统计泡不遮节点——半透明统计泡移至安全区，禁止叠在密度区节点上；
+4. 「?」图标限未解锁节点（≤5 个/视角），未点亮节点默认弱显示不画问号；
+5. 合计预算按 §2.6 豁免区口径。【依据：D5＋增补；AUDIT S5；EDU §三 知识星图（Obsidian local graph 正面证据）】
+
+### 7.3 推送宪法执行细则（D8 五条落地）
+
+| # | 宪法条款 | 执行规格 |
+|---|---|---|
+| 1 | 三律（类别/降频/一键最小动作） | 只推三类：损失预警、恰当时机、状态相关；每条推送点开直达「完成它」的最小动作（deep link 到具体任务，禁只开首页） |
+| 2 | 频率上限 | 常规类 ≤1 条/日；损失预警类即时但单类 ≤1 条/日；全类周上限 5；静默 23:00–8:00（用户可改）；降频阶梯：同类连续 3 次不响应→2 条/周，连续 7 次→该类静默 |
+| 3 | 文案模板 | `{结论}{口径数字}·{最小动作}`，正文 ≤24 字；例：「图论梳理完成，进度 41%→44%，点此看下一步」。数字受 §6.3 准入约束 |
+| 4 | 目标函数显式化 | bandit 只准优化「单条推送响应率/完成率」；**永不优化 DAU/会话时长/打开总量**（B-01 缝合条款，写入推送服务代码注释与评审清单） |
+| 5 | app 内主动性集中制 | Aurora 确认/建议/预警一律进 `notification_center` 收件箱；收件箱 IA：三分组（需你确认 / 建议 / 预警），需确认项首列；**S7 修复前推送降级仅安全类**（冻结提醒类），禁状态断言类推送 |
+
+【依据：D8；CONFLICTS C-10；EDU §三 推送三律；AUDIT S7 前置】
+
+### 7.4 游戏化三档制清单（D4 + 安全网规格）
+
+**前置硬依赖：S7 单一事实源修复先于任何 T1 上线**（拿「今天有没有任务」都说不准的数据做损失厌恶=拿随机失败做杠杆）。【依据：D4；CONFLICTS C-04】
+
+**T1（首批可做）**：
+
+| 项 | 规格 |
+|---|---|
+| 学习连胜 | 锚定「完成当日**最小**学习目标」（颗粒可自选小：1 个任务/10 分钟），非「打开 app」 |
+| 安全网（无安全网不上线） | 冻结：每月自动 2 张，上限叠存 2 张；补签：断签 24h 内可补 1 次/周；断签瞬间文案不羞辱（「休息了一下，用一张冻结保住了连胜」>「你的连胜断了」） |
+| 签名完成动画 | §2.4 唯一规格 |
+| 诚实进度编码 | 进度展示位只编码掌握度（Khan 分级），禁时长/打卡表演；奖励点数（动机层）永不与进度位混排（B-02 两层分离） |
+| 回归易赢 | §4.5 回归态规格 |
+| 损失厌恶指向 | 只挂学习资产（节点掌握度/连胜/计划健康度）；禁付费品挂钩 |
+
+**T2（缓做，有数据/基建再议）**：bandit 推送时机（需推送样本量）；联赛分组比较（需社交与活跃密度，且必须先分组后比较、可退出）；宝石下注类沉没成本（伦理敏感）。
+
+**T0（禁做）**：双份 confetti 与一切常驻庆祝氛围；为打开/打卡等基础操作发积分；无安全网连胜；羞辱文案；奖励点数出现在进度展示位；无「今天到此为止」出口的玩法。
+
+【依据：D4；CONFLICTS C-04/B-02/B-04；EDU §一.1 证据链＋「机制不可移植，成立条件才可移植」】
+
+---
+
+## §8 屏级蓝图（9 surfaces）
+
+> 每屏：必达项 ≤2（§0.2 矩阵落地）+ 首要改动 Top5（引罪状编号）+ 验收清单（条款号指向 ACCEPTANCE）。现状落点为真实文件路径。
+
+**必达项矩阵总览**：
+
+| surface | 必达项（≤2） | 四角归属 |
+|---|---|---|
+| home | ①今天该干什么（一眼可动） ②一句话入口 | 懂状态 |
+| chat | ①会话本体 ≥70% ②等待分期诚实 | 过程透明+会教 |
+| goal | ①计划健康度一眼可信 ②下一步动作单一 CTA | 懂状态 |
+| task | ①今日任务口径唯一 ②完成路径 ≤2 步 | 懂状态 |
+| memory | ①今日重现入口 ②记忆人话呈现 | 懂状态 |
+| galaxy | ①工作视图回答「下一个该碰什么」 ②加载/空/错误三态可辨 | 懂状态+有温度(仪式) |
+| profile | ①画像与进度诚实 ②图表有轴有单位 | 懂状态 |
+| settings | ①改即生效无需找保存 ②偏好与无障碍集中一处 | ——（系统屏） |
+| onboarding | ①首见星图仪式 ②≤5 步到 home | 有温度 |
+
+### 8.1 home（`features/home/presentation/screens/dashboard_screen.dart`）
+
+- 必达：①今天该干什么 ②一句话入口。
+- Top5 改动：
+  1. 首屏重排：指挥台（今日下一步+完成钮）升为第一卡、折叠线上方；「理解你」卡 ≤35% 首屏且可折叠/可关（V9/S10——understanding_snapshot_card 现无 collapse 逻辑）；
+  2. 底部三叠层→两层：快捷 chip 并入输入条下游（§7.3 建议话术模式：点 chip=填入草稿+高亮发送键），导航直达类 chip 迁指挥台/Tab（C-11 裁决）；
+  3. 装饰减配：特效层 5→1（§5.3 账本），weather 层补门控，首帧减配（装饰延后一帧+首屏卡槽懒加载，S20 剩余半边）；
+  4. 大字简报重写：三行特粗→单行「结论+数字」（S4/S2：硬编码 FlSpot 装饰图表同批处理，statistics_card.dart:91–130）；
+  5. S7 口径接入：今日任务读单一事实源 provider（§10 批 1）。
+- 验收：A8.1。
+
+### 8.2 chat（`features/chat/presentation/screens/chat_screen.dart`）
+
+- 必达：①会话本体 ≥70% ②等待分期诚实。
+- Top5：
+  1. 顶部 8 件系统组件（TRIAGE S8 清单：WorkingMemoryPanel/StatusAwarenessBar/UnderstandingDrawerButton/ResumeBanner/DualCoreModeChip/ReviewNodeBanner/DailyStartupRetryBanner/ComebackBanner）收敛：常驻 0——记忆降内联微件、确认进收件箱、模式条入 dock、横幅类进收件箱或回归屏；
+  2. 等待期：阶段胶囊（ChatRunPhase.sending/streaming/finalizing 已有数据链，chat_state.dart:11–22）默认可见；「检索→思考→生成」三阶段+预期时长（「通常几秒到十几秒」）+可取消；三点 `_TypingIndicator` 在胶囊可见时退役；
+  3. 一答 chip ≤3（建议话术，§4.1.4）；确认请求走内联确认卡（对象可见，§4.2.3）；
+  4. 顶栏标题 2 行策略（S3/V15）；历史回放引用空内容修复（V13）；
+  5. 过程折叠 chip（§7.1）承接思维链展示，DeepSeek 式「过程给人看，结论进历史」。
+- 验收：A8.2。
+
+### 8.3 goal（`features/goal/presentation/screens/goal_detail_screen.dart`）
+
+- 必达：①计划健康度一眼可信 ②下一步动作单一 CTA。
+- Top5：
+  1. S7 跨屏口径对齐（达标线/瓶颈/今日——读单一事实源）；
+  2. 空态悬空「确认」修复（minimum_criteria_card.dart:76–99：空时隐藏确认/改「去设置」）；
+  3. enum 直出清零（:249/:253 status/priority 走词典，§6.4）；
+  4. 百分比收敛：四数打架（0%/0%/0%/7%）→1 个主数字（健康度）+2 个次级，全部走 §6.3 准入；
+  5. 折线图三要素（轴/单位/口径），装饰图删除或补齐。
+- 验收：A8.3。
+
+### 8.4 task（`features/task/presentation/screens/task_list_screen.dart` 等）
+
+- 必达：①今日任务口径唯一 ②完成路径 ≤2 步。
+- Top5：
+  1. 「今日」口径三源归一（§10 批 1 S7：dueDate 口径为事实源）；arb 双 key 去重（:9004/:9212 留一）；
+  2. 头部「今日无任务」与正文「本周 3 个」的调和表达（V12：副标注「本周还有 3 个」）；
+  3. 完成钮/chevron 分级（§4.2.1）；完成路径 ≤2 步（列表勾选即完成，不弹确认）；
+  4. 庆祝降级：完成=签名勾选，confetti 只留里程碑（§2.5 G-1，task_execution_screen 单 owner 保持）；
+  5. 加载统一骨架贴布局（S19）。
+- 验收：A8.4。
+
+### 8.5 memory（`features/memory/presentation/screens/memory_panel_screen.dart`）
+
+- 必达：①今日重现入口 ②记忆人话呈现。
+- Top5：
+  1. 「今日重现」首卡（Readwise 式：每天 3 条最好的，一键升级自测卡）——EDU 三大面裁决的落地；
+  2. 事件名/时间戳直出清零（:850 status 词典、:55 截止时间格式化、:825 Q 值隐藏或释义、tags 词典化）；
+  3. 重复事件聚合（V20）；承诺过期态（pending_commitments_section 无 overdue 分支，S13）；
+  4. 待处理 ✓/✗ 一键裁决补确认对象与撤销（误触回滚）；
+  5. 私有骨架迁移 SparkleSkeleton（:1728）。
+- 验收：A8.5。
+
+### 8.6 galaxy（`features/galaxy/presentation/screens/galaxy_screen.dart`）
+
+- 必达：①工作视图回答「下一个该碰什么」 ②三态可辨。
+- Top5：
+  1. D5 双视图落地（§7.2）：Tab 默认局部工作视图；仪式模式触发器（成就/回顾/onboarding 首见）；
+  2. 标签碰撞消隐 pass（star_map_painter，§7.2 锤内规范 1）；
+  3. shell 沉浸化（shell_navigation.dart:242，dark 变体）；
+  4. 状态机收尾：加载门已有（:415–421），补错误态人话+契约守卫维持（FIX-52/53/54 保留）；引擎 SSE heartbeat（app/core/sse.py:181–211，30s ping）——V26 收尾；
+  5. 豁免区预算账本接入守卫（§2.6）。
+- 验收：A8.6。
+
+### 8.7 profile（`features/user/presentation/screens/profile_screen.dart`）
+
+- 必达：①画像与进度诚实 ②图表有轴有单位。
+- Top5：
+  1. 折线图三要素+真实数据（禁硬编码 FlSpot）；
+  2. 冷色件归槽（亮度 50% chip→语义重评，§1.5.2）；
+  3. 稀有度色与语义色分层维持（DS.profileRarity* 冻结不互替，U-01 Step5 现状保持）；
+  4. 「点击展开/收起」文案替换（chevron 已表达，arb:12517）；
+  5. typography 迁移（Step5 已收编 20 处色字面量，字号字面量长尾）。
+- 验收：A8.7。
+
+### 8.8 settings（`features/user/presentation/screens/unified_settings_screen.dart`）
+
+- 必达：①改即生效无需找保存 ②偏好与无障碍集中一处。
+- Top5：
+  1. 假保存钮治理（:553–560「确定」只做 pop()）：全页改「改即生效+无保存钮」，或脏状态标识+真保存语义（批 1 裁决：前者）；
+  2. 无障碍入口唯一化（双卡合并，§4.2.2 卡语法区分）；
+  3. 新增「深学/效率」偏好档（§7.1）、触觉开关、reduce-motion 尊重确认（§2.3）；
+  4. 卡 affordance 语法统一（chevron=折叠、「›」=跳转）；
+  5. typography/色 token 收尾迁移。
+- 验收：A8.8。
+
+### 8.9 onboarding（`features/onboarding/presentation/screens/interactive_onboarding_screen.dart`）
+
+- 必达：①首见星图仪式 ②≤5 步到 home。
+- Top5：
+  1. placeholder 缩短（arb:1141 →「例如：备考期末」，§3.2 表）；
+  2. 目标创建一句话化（自然语言→结构，Fantastical 式；AI 引擎已有理解能力）；
+  3. narrative 动效预算：入场编排走 M5（650ms 档），总时长 ≤3s 且可跳过；
+  4. 效率档建议提示挂点（D2 增补，检测到 ≤7 天备考时限时）；
+  5. 首见星图仪式（D5 增补）衔接：完成目标创建后一次性展示全局星图，随后落工作视图。
+- 验收：A8.9。
+
+---
+
+## §9 门禁与工具链
+
+### 9.1 lint/guard 规则草案清单（对照现有 ratchet 模式扩展）
+
+现有底座（维持，只降不升）：`check_ux_component_convention.py`（rawButton/rawSpinner/rawChip/parallelClass/colorLiteral，9 surfaces 扫描根）＋ `check_ui_design_tokens_ratchet.py`（colorLiteral/fontSize 全仓）。扩展新维度：
+
+| # | 守卫 | 扫描 pattern（描述） | 基线策略 | 抓的规范 |
+|---|---|---|---|---|
+| G1 | `check_motion_token_convention.py`（新建） | features 内 `Duration(milliseconds: N)` 且 N∉{50,80,100,120,150,200,250,300,320,350,400,450,480,500,600,650,700}（带宽值白名单）；`Curves.elasticOut|bounceOut` 引用；`createBreathingController` 引用 | ratchet 冻结现值（373 处字面量为存量基线），新文件零容忍 | §2.1/§2.2/§2.5 D-1 |
+| G2 | `check_display_lexicon.py`（新建） | `label: \w+\.(status|priority|unit)` 直传模式；`DateTime` 变量经字符串插值进 Text（`'${' + 变量 + '}'` 且变量类型 DateTime）；`toStringAsFixed` 出现在 label 上下文 | 新文件零容忍+存量 ratchet | §6.2 X1/X3/X5 |
+| G3 | chip 数量/屏（静态近似） | 单个 build 方法内可点 chip 构造调用计数 >6 | 阈值型（非 ratchet） | §4.1.4 |
+| G4 | i18n 硬编码中文 | `Text('...中文...')` 字面量（现有 `check_i18n_coverage.py` 扩展扫描 mobile features） | ratchet | §6.2/§6.4 |
+| G5 | ellipsis 滥用 | `maxLines:1` + `TextOverflow.ellipsis` 出现在标题角色（配合命名约定白名单 label/caption） | 人审抽样+新文件告警 | §3.2.1 |
+| G6 | 对比度机检 | 对 SparkleColors 全量前景×背景组合跑 WCAG 公式，输出 <4.5:1（文字）/ <3:1（图形）对清单 | 阈值型，批 2 入 CI | §1.6 |
+| G7 | 面积预算（辅助） | chat_screen 常驻子组件挂载数（AppBar/持久 panel 计数）；每屏 SparkleConfetti 挂载 ≤1 | 阈值型 | §5.1/§2.5 G-1 |
+
+规则：所有新守卫接 `scripts/run_all_rule_guards.sh` 与 `rule_guard_manifest.tsv` 登记；ratchet 基线只降不升，`--update-baseline` 仅净删后刷新（沿用 UX-COMP 既有纪律）。【依据：AUDIT §7 交叉根因①「owner 有、迁移无门禁」；INTL 原则 16】
+
+### 9.2 新旧对比 debug 面板需求（批 2 同批交付）
+
+Linear 式工具链（INTL 原则 16），最低需求集：
+
+1. **token 开关**：debug 抽屉里 MotionTokens v3/v1、色彩 batch-2/batch-1 一键切换（feature flag 并行，真机即时对比）；
+2. **取色器**：运行时改 SparkleColors 值并即时生效（ThemeManager 已有 setColorBlindMode 等动态换色管道可复用，theme_manager.dart:127/202）；
+3. **动效慢放**：全局 0.25×/0.5× 时长缩放开关（评审动效用）；
+4. **预算仪表**：当前屏特效层数/粒子数/持续源数/chip 数实时显示（对接 GlobalParticleCounter/PulseScope）；
+5. **golden 快照**：迁移批前后自动截图对比（flutter golden），差异报告入验收。
+
+### 9.3 迁移门禁
+
+- 新代码禁引旧 token：`AnimationSystem.*` 直接引用冻结（现 42 refs 存量迁移）；`DS.motionDuration`/`motion.dart` 别名指向 v3 后不再接受新调用点（G1 守卫）；
+- 新 UI 必过 README CONVENTION（owner 唯一规则不推翻，本规范 §4 为其语法扩展）；
+- 每批迁移完成后 `--update-baseline` + golden 冻结。【依据：CONFLICTS C-08 顺序裁决（缺一即退回三套并存）】
+
+---
+
+## §10 迁移路线
+
+> 骨架：D10 批次（信任地基先行，工具链并行，落地即开闸）。每批带**验收条款**与**回退策略**。用户红线：**不许改坏可用功能**——每步带回归验证点，功能回归不过不迁移下一批。
+
+### 10.1 批 1 · 信任地基（不动视觉；交付节奏确保两周内组员看到明确变化）
+
+| 工作包 | 内容 | 验收（ACCEPTANCE 条款） |
+|---|---|---|
+| B1-1 S2 文案+数据词典 | TRIAGE §3 五例施工图全清（engine `_criterion_label` 整句模板 + 端侧词典 + arb 双 key 去重 + 测试污染清库）；lexicon 基建落地 | A6.2/A6.4 |
+| B1-2 S7 单一事实源 | 「今日任务」dueDate 口径裁决为事实源；三 provider 对齐（task_board_provider/goal_detail_provider/experience）；跨屏断言测试 | A7.5/A8.3 |
+| B1-3 四态落地 | 空态禁悬空 CTA（minimum_criteria_card）；错误态人话三句式迁移（CustomErrorWidget 存量替换）；骨架贴布局验收；等待胶囊默认可见策略（S18 收尾） | A4.3–A4.6 |
+| B1-4 状态链收尾 | 假保存钮治理（S13）；承诺过期态；V25/V24 实机回归验证；SSE heartbeat（V26 收尾） | A8.8/A8.6 |
+| B1-5 S3 快修 | 配对表落地：placeholder 缩短、chat 顶栏标题、chip ≤6 字改写 | A3.2 |
+
+**肉眼可见证据**：B1-1 文案批本身就是最大观感回收（AUDIT §6 判决「观感收益/成本比全榜第一」），两周内交付。
+**回归验证点**：`cd backend && pytest`；`cd mobile && flutter test`；9 surfaces 手测清单（每屏冒烟：进入/加载/空态/一次主操作）；golden 无差异（视觉零改动承诺）。
+**回退策略**：词典层为纯增量（lookup 失败回落原值），单文件可独立回滚；provider 对齐用 feature flag 包裹（`todaySingleSource` flag），异常即切回旧口径。
+
+### 10.2 批 2 · 工具链与令牌重铸（与批 1 并行建造；批 1 落地即开闸迁移）
+
+| 工作包 | 内容 | 验收 |
+|---|---|---|
+| B2-1 motion v3 | motion_token_v3 新建；route_transition 内联映射收敛（TRIAGE S16：~2 文件，131 refs 收益）；elasticOut 除名；PulseScope 2→1 | A2.1–A2.3 |
+| B2-2 色彩五层 | material_color_utilities 引入（seed 快照回归锚 §1.2.2）；语义别名层；冷色件归槽 | A1.2–A1.7 |
+| B2-3 门禁 | G1–G7 守卫入 manifest；CI 接入 | A9.1 |
+| B2-4 debug 面板 | §9.2 五项最低需求 | A9.2 |
+| B2-5 删除清单 | D-1~D-4（呼吸/620 hero 非Narrative 用途/splash ≤400ms/elastic） | A2.5 |
+
+**回归验证点**：守卫全绿；golden 对比报告逐屏人审（视觉变化必须可解释为规范条款）；`flutter test` 全量。
+**回退策略**：token 切换走 debug 面板 feature flag（§9.2-1），v3/v1 一键回切；单屏迁移单屏验收，禁全量一把梭。
+
+### 10.3 批 3 · 结构重构
+
+home 减法（§8.1）→ chat 面积重划（§8.2，D3 ≥70%）→ galaxy 双视图+消隐+沉浸化（§7.2）→ chip 存量 178 私有类迁移（status_awareness_bar 7 类先行）→ 回归接管屏（§4.5）。
+**回归验证点**：每屏结构改动独立 PR+golden+手测冒烟；面积预算实测（胶囊/面板计数）。**回退**：屏级 feature flag（新旧屏共存一门），结构改动可整屏回退。
+
+### 10.4 批 4 · 行为层
+
+答疑分档（§7.1，orchestration 提示词+双核路由，前后端衔接）→ 游戏化 T1（§7.4，S7 已修为前置）→ 推送宪法（§7.3，gateway/推送服务）→ 回归时刻编排（§4.5 尾项）。
+**回归验证点**：分步正确性抽测（能力门控阈值定标）；推送频率表单测；连胜安全网边界用例（冻结耗尽/补签过期）。**回退**：行为开关全部 settings 可关+服务端 kill switch（对照 `check_rule_fme_kill_switch_registered.py` 既有模式）。
+
+### 10.5 与 TRIAGE 的对接接口（TRIAGE 合入时启用）
+
+本规范起草时 `v3-output/DL-R1-AUDIT/TRIAGE.md` 未在主树落地（wt83 树已产出，起草人已只读参考）。合入后执行三动作：
+1. **施工范围修正**：TRIAGE 判「已修复」项（V25 crash/V24 假空态/双 confetti/骨架双家族）从批 1/批 2 施工范围移除，仅保留实机回归验证条目；「仍存在」11 条（S1/S2/S3/S4/S5/S7/S10/S11/S13/S15/S16）为本规范批 1–3 施工主体；
+2. **勘误吸收**：S16 勘误（motion.dart 是别名非第三套数值；真冲突=路由内联映射）已写入 §2.1.3；S7 勘误（双 key 两消费者同源，真因=三源口径）已写入 §10.1 B1-2；
+3. **批次清单对接**：批 1 直接采用 TRIAGE §5 批次 A/B 清单为施工底稿（本规范 §10.1 工作包与其一一对应）。
+
+### 10.6 H2/H3 验证并行项（上报用户，不阻塞规范）
+
+H3 teardown（豆包爱学+有道 AI 老师，各 1–2h）与 H2 卡片排序访谈（5–8 人×30min）+fake-door 建议与批 1 并行执行；结果决定批 3/4 温度与仪式层预算权重（§0.1）。【依据：DECISIONS H2/H3 处置】
+
+---
+
+## §11 起草人勘误（规范间残留矛盾的自行裁决记录）
+
+| # | 矛盾 | 裁决 |
+|---|---|---|
+| R1 | D7「standard 200ms」 vs 现网 AnimationSystem.standard=220ms（组件侧）与路由侧 200ms 并存 | 正典取 200ms（路由侧现值即 200，迁移量小）；220 作废进存量迁移 |
+| R2 | §2.6 同屏持续源 ≤1 vs 现网 PulseScope maxActiveSlots=2 | 以规范 1 为准，PulseScope 改 1 列入批 2 B2-1（现 2 槽是存量，非裁决冲突） |
+| R3 | C-08 降级清单「confetti 单份 ≤600ms 仅真完成」 vs C-04 T1「签名完成动画 ≤300ms」两者似同位 | 裁决为两级：任务完成=签名勾选 240ms（每次，§2.4）；confetti=里程碑庆祝 ≤600ms（低频，§2.5 G-1）。普通任务完成不再触发 confetti——此为对 U-01 Step6 现状（每完成单份 confetti）的**收紧**，非冲突 |
+| R4 | INTL「正文 17pt」 vs 现网 body 16px | 阅读型正文定 17（chat/长文），控件正文 15——双轨是语义分层不是打架；16 从正典表中移除进迁移 |
+| R5 | D5「onboarding 首见全局」 vs §7.2 工作视图为 Tab 默认 | 不矛盾：默认态=工作视图；onboarding 首见是**一次性仪式触发**，退出后永落工作视图。已在 §7.2 表注明 |
+| R6 | AUDIT S20「900ms 在 auth 判定前开始跑」 vs TRIAGE 勘误「与 auth 并行不阻塞」 | 采 TRIAGE（并行已验证）；本规范 §2.5 D-3 只裁时长上限与冗余段合并，不改并行结构 |
+
+---
+
+## 附录 A · 依据索引（本规范引用的全部编号）
+
+- **DECISIONS**：D1（温度三层）、D2（答疑分档+效率档增补）、D3（三级透明+≥70%）、D4（三档制+S7 前置）、D5（双视图+豁免区预算+首见增补）、D6（色彩五层）、D7（动效阶梯+同批门禁）、D8（推送宪法五条）、D9（四态分工矩阵+回归态）、D10（四批次）；H1（必达项 ≤2 消解）、H2/H3（验证上报）。
+- **CONFLICTS**：C-01～C-12、B-01～B-04、H1–H3（§C）。
+- **AUDIT**：S1–S20、§2 丑的解剖、§3 卡的解剖、§4 效果不好解剖、§5 三件套打分、§6 最重 5 条、§7 交叉根因。
+- **EDU 原则**（引用处简写 E-P#）：1 进步诚实、2 失败不羞辱、3 给台阶不给答案、4 连胜配安全网、5 回归时刻、8 退出完成感、9 可视化回答当下问题、12 过程可见、14 损失厌恶指向学习、15 低摩擦重启。
+- **INTL 原则**（引用处简写 I-P#）：1 内容优先、2 结构被感受、3 颜色单义、4 动效 200–400ms 可打断、5 弹跳是含义、6 高频零动效、8 中性色算法生成、9 排版节奏、10 空态错误态人格、12 状态内联、13 触觉因果对、14 持续振荡禁忌、15 装饰用量纪律、16 工具链先行。
+- **TRIAGE（wt83，合入前为参考口径）**：§1 S7 三源对照、§2 S12 深挖、§3 S2 五例施工图、§4 S16 勘误、§5 批次草案、§6 口径申报。
+
+*规范完。产物：`v3-output/DL-R3/SPEC.md` + `v3-output/DL-R3/ACCEPTANCE.md`。零代码改动、零 /tmp 驻留、未 commit/push。*
