@@ -813,6 +813,16 @@ class ChatOrchestrator(
                     metadata=metadata,
                 )
             )
+            # 终端标记帧（无 content + STOP）：网关把纯 finish 帧映射为 WS `done` 事件，
+            # mobile 客户端只认 done 收尾（FullTextEvent 不终止流）。fast-track 历史上
+            # 是死码（TypeError 即回退通用链），2026-09-23 修复后首次可达，实测缺此帧
+            # 会让客户端挂起至 300s 空闲重置——与通用链的终端契约对齐。
+            await stream_callback(
+                agent_service_pb2.ChatResponse(
+                    finish_reason=agent_service_pb2.STOP,
+                    session_id=session_id,
+                )
+            )
             await self._persist_assistant_message(
                 active_db=active_db,
                 user_id=user_id,
