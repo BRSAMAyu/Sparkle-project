@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from loguru import logger
@@ -433,6 +433,13 @@ class ValidationEngineMixin:
 
         insight_state = situation_brief.get("insight_state") if isinstance(situation_brief, dict) else {}
         contradiction_map = insight_state.get("contradiction_map") if isinstance(insight_state, dict) else []
+        if not isinstance(contradiction_map, list):
+            # ORCH-DEBT P2：insight_state 为 dict 但 contradiction_map 缺省/显式 None
+            # （生产形状：situation_brief 的 profile-missing 回退分支无该键）＝
+            # 无矛盾数据，按空表降级。否则下面的推导抛 TypeError，被
+            # _check_sufficiency 的兜底 except 吞掉后整个 sufficiency 检查
+            # （含澄清与 Phase A 硬停）无声跳过。
+            contradiction_map = []
         contradiction_ids = [
             str(item.get("id") or "").strip()
             for item in contradiction_map
@@ -461,7 +468,44 @@ class ValidationEngineMixin:
         )
         observability = getattr(self, "observability", None)
 
-        if str(decision_context.get("planning_readiness_action") or "").strip() != "ask":
+        pending_ask_action = str(decision_context.get("planning_readiness_action") or "").strip()
+
+        if pending_ask_action == "ask" and str(decision_context.get("phase_a_ask_surfaced") or "").strip() == "true":
+            # ORCH-DEBT P3：残留 pending ask 是上一回合已向用户问出的问题
+            # （Phase A 硬停早退不回写会话态，导致 ask 残留）。本回合消息是
+            # 用户的回答/推进——一次性消费该 ask：清理残留标记并放行，
+            # 不得用同一问题再次硬停（会话死锁，用户回答永远送不到规划链路）。
+            decision_context["planning_readiness_action"] = ""
+            decision_context["phase_a_guardrail"] = ""
+            phase_a_evaluation["ask_residual_consumed"] = "true"
+            self._persist_phase_a_evaluation(
+                state=state,
+                user_context_payload=user_context_payload,
+                evaluation=phase_a_evaluation,
+            )
+            if observability is not None and hasattr(observability, "log_phase_a_decision"):
+                try:
+                    await observability.log_phase_a_decision(
+                        user_id=user_id,
+                        session_id=session_id or "",
+                        decision={
+                            "planning_like": True,
+                            "planning_detection_source": detection_source,
+                            "planning_readiness": phase_a_evaluation["planning_readiness"],
+                            "planning_readiness_action": phase_a_evaluation["planning_readiness_action"],
+                            "phase_a_guardrail": phase_a_guardrail,
+                            "blocking_unknowns": blocking_unknowns[:3],
+                            "contradiction_ids": contradiction_ids[:3],
+                            "contradictions": contradiction_map[:3],
+                            "ask_residual_consumed": True,
+                            "hard_stop": False,
+                        },
+                    )
+                except Exception as exc:
+                    logger.debug(f"Failed to record Phase A residual-ask release observability: {exc}")
+            return False
+
+        if pending_ask_action != "ask":
             if observability is not None and hasattr(observability, "log_phase_a_decision"):
                 try:
                     await observability.log_phase_a_decision(
@@ -489,6 +533,13 @@ class ValidationEngineMixin:
             if str(question).strip()
         ]
         question = clarification_questions[0] if clarification_questions else "你现在最缺的关键信息是什么？"
+        # ORCH-DEBT P3：ask 一次性消费——问出即在会话态落 surfaced 标记并清零
+        # pending ask。硬停早退不会走执行引擎的元数据回写，若不在此处修复会话态，
+        # 残留 ask 会让下一回合（用户的回答）被同一问题再次硬停，会话死锁。
+        decision_context["phase_a_ask_surfaced"] = "true"
+        decision_context["phase_a_ask_surfaced_at"] = datetime.now(UTC).isoformat()
+        decision_context["planning_readiness_action"] = ""
+        decision_context["phase_a_guardrail"] = ""
         fallback_text = (
             "我先不急着给你完整计划，先确认一个最关键的问题：\n\n"
             f"- {question}\n\n"
@@ -500,17 +551,29 @@ class ValidationEngineMixin:
             fallback_text=fallback_text,
             prompts=[question],
         )
+        phase_a_metadata = {
+            "requires_clarification": "true",
+            "clarification_source": "phase_a",
+            "phase_a_guardrail": "ask_before_plan",
+            "planning_readiness": str(decision_context.get("planning_readiness") or ""),
+            "planning_detection_source": detection_source,
+        }
+        if settings.ENABLE_CONTEXT_FOCUS_METADATA:
+            # 残留态修复通道：把消费后的 brief 随快响帧回传（与执行引擎的
+            # response_metadata 持久化约定一致），下一回合不再回放残留 ask。
+            if isinstance(situation_brief, dict):
+                phase_a_metadata["situation_brief"] = json.dumps(situation_brief, ensure_ascii=False)
+            residual_decision = user_context_payload.get("residual_decision_context")
+            if isinstance(residual_decision, dict):
+                phase_a_metadata["residual_decision_context"] = json.dumps(
+                    residual_decision,
+                    ensure_ascii=False,
+                )
         await self._emit_fast_interaction(
             stream_callback=stream_callback,
             text=interaction_text,
             details="我先确认一个关键缺口，再继续为你规划。",
-            metadata={
-                "requires_clarification": "true",
-                "clarification_source": "phase_a",
-                "phase_a_guardrail": "ask_before_plan",
-                "planning_readiness": str(decision_context.get("planning_readiness") or ""),
-                "planning_detection_source": detection_source,
-            },
+            metadata=phase_a_metadata,
         )
         phase_a_evaluation["hard_stop"] = "true"
         phase_a_evaluation["phase_a_guardrail"] = "ask_before_plan"
