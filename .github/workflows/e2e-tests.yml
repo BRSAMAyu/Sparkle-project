@@ -7,9 +7,10 @@ env:
   GO_VERSION: '1.24.0'
   PYTHON_VERSION: '3.11'
   FLUTTER_VERSION: '3.24.0'
+  # CI-AGE: 与 age-postgres action 的 postgres-db 一致（容器首启建的库）
   POSTGRES_USER: sparkle
   POSTGRES_PASSWORD: test
-  POSTGRES_DB: sparkle
+  POSTGRES_DB: sparkle_test
   REDIS_HOST: localhost
 
 jobs:
@@ -21,20 +22,6 @@ jobs:
     runs-on: ubuntu-latest
 
     services:
-      postgres:
-        image: pgvector/pgvector:pg16
-        env:
-          POSTGRES_USER: sparkle
-          POSTGRES_PASSWORD: test
-          POSTGRES_DB: sparkle_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
       redis:
         image: redis:7-alpine
         ports:
@@ -49,6 +36,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # CI-AGE: dev/prod 同源 pgvector+AGE DB（替代裸 pgvector service；
+      # GHA services 先于 step 启动，只能改 step 托管容器）。
+      - name: Start AGE-enabled PostgreSQL (dev-parity image)
+        uses: ./.github/actions/age-postgres
+        with:
+          postgres-user: sparkle
+          postgres-password: test
+          postgres-db: sparkle_test
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -62,10 +58,19 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.lock
 
+      # CI-AGE: dev 侧 sparkle_age_init 同款 one-shot（需在 alembic 前执行，
+      # 与 dev 顺序一致：先图谱后迁移）。
+      - name: Init AGE extension and galaxy graph (dev one-shot parity)
+        env:
+          DATABASE_URL: postgresql+asyncpg://sparkle:test@localhost:5432/sparkle_test
+          REDIS_URL: redis://localhost:6379/0
+          TESTING: 'true'
+        run: python backend/scripts/init_age_extension.py
+
+      # 容器首启已建好 sparkle_test（含扩展与图谱 init），无需 DROP/CREATE 重置；
+      # 旧写法 psql 不带 -d 会连去不存在的 "sparkle" 库，且 DROP 会清掉 AGE init。
       - name: Setup test database
         run: |
-          PGPASSWORD=test psql -h localhost -U sparkle -c "DROP DATABASE IF EXISTS sparkle_test;"
-          PGPASSWORD=test psql -h localhost -U sparkle -c "CREATE DATABASE sparkle_test;"
           cd backend
           DATABASE_URL=postgresql://sparkle:test@localhost:5432/sparkle_test \
           ENVIRONMENT=development \
@@ -108,24 +113,17 @@ jobs:
     name: Go Integration Tests
     runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: pgvector/pgvector:pg16
-        env:
-          POSTGRES_USER: sparkle
-          POSTGRES_PASSWORD: test
-          POSTGRES_DB: sparkle_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      # CI-AGE: dev/prod 同源 pgvector+AGE DB（galaxy_sync worker 消费 AGE）。
+      - name: Start AGE-enabled PostgreSQL (dev-parity image)
+        uses: ./.github/actions/age-postgres
+        with:
+          postgres-user: sparkle
+          postgres-password: test
+          postgres-db: sparkle_test
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -212,20 +210,6 @@ jobs:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
 
     services:
-      postgres:
-        image: pgvector/pgvector:pg16
-        env:
-          POSTGRES_USER: sparkle
-          POSTGRES_PASSWORD: test
-          POSTGRES_DB: sparkle
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
       redis:
         image: redis:7-alpine
         ports:
@@ -239,6 +223,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      # CI-AGE: dev/prod 同源 pgvector+AGE DB（容器首启即建 sparkle_test）。
+      - name: Start AGE-enabled PostgreSQL (dev-parity image)
+        uses: ./.github/actions/age-postgres
+        with:
+          postgres-user: sparkle
+          postgres-password: test
+          postgres-db: sparkle_test
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -264,10 +256,17 @@ jobs:
           cd backend/gateway && go mod download
           cd mobile && flutter pub get
 
+      # CI-AGE: 先图谱 one-shot（dev 顺序），容器首启已建 sparkle_test，
+      # 无需 DROP/CREATE（旧写法会清掉 AGE init，且 psql 不带 -d 连错库）。
+      - name: Init AGE extension and galaxy graph (dev one-shot parity)
+        env:
+          DATABASE_URL: postgresql+asyncpg://sparkle:test@localhost:5432/sparkle_test
+          REDIS_URL: redis://localhost:6379/0
+          TESTING: 'true'
+        run: python backend/scripts/init_age_extension.py
+
       - name: Setup environment
         run: |
-          PGPASSWORD=test psql -h localhost -U sparkle -c "DROP DATABASE IF EXISTS sparkle_test;"
-          PGPASSWORD=test psql -h localhost -U sparkle -c "CREATE DATABASE sparkle_test;"
           cd backend
           DATABASE_URL=postgresql://sparkle:test@localhost:5432/sparkle_test \
           ENVIRONMENT=development \

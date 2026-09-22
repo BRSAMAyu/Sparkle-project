@@ -1,0 +1,106 @@
+name: 'AGE-enabled PostgreSQL (dev-parity)'
+description: >-
+  Build sparkle/pgvector-age:pg16 from docker/pgvector-age.Dockerfile (the same
+  build source as dev docker-compose.yml sparkle_db and prod docker-compose.prod.yml
+  db, guarded by scripts/guards/check_rule_bn_prod_db_age_parity.py), run it as a
+  step-managed container, and optionally create the vector+age extensions.
+  Replaces bare pgvector/pgvector:pg16 job services: GitHub Actions services start
+  before any step, so a locally built image can never back a service container.
+
+inputs:
+  postgres-user:
+    description: 'POSTGRES_USER for the container'
+    required: true
+  postgres-password:
+    description: 'POSTGRES_PASSWORD for the container (CI-local value, not a secret)'
+    required: true
+  postgres-db:
+    description: 'POSTGRES_DB created at first boot'
+    required: true
+  host-port:
+    description: 'Host port mapping for 5432'
+    required: false
+    default: '5432'
+  age-init:
+    description: >-
+      'extensions' (default) runs CREATE EXTENSION IF NOT EXISTS vector/age —
+      the extension-establishment half of dev's one-shot
+      backend/scripts/init_age_extension.py (app/main.py lifespan does the same
+      via ensure_database_extensions). 'none' skips it for jobs that must observe
+      the pure migration-chain state (db-schema-check dump parity).
+    required: false
+    default: 'extensions'
+  container-name:
+    description: 'Name for the docker container'
+    required: false
+    default: 'sparkle-age-pg'
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    # Single source of truth: docker/pgvector-age.Dockerfile (pgvector + Apache AGE).
+    # AGE_REF pinned to the same value used by docker-compose.yml /
+    # docker-compose.prod.yml (Rule BN parity). GHA cache makes warm rebuilds cheap;
+    # cache is shared across jobs in this repo.
+    - name: Build AGE-enabled PostgreSQL image (gha-cached)
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        file: docker/pgvector-age.Dockerfile
+        build-args: AGE_REF=PG16/v1.6.0-rc0
+        tags: sparkle/pgvector-age:pg16
+        load: true
+        push: false
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Start PostgreSQL container
+      env:
+        AGE_PG_USER: ${{ inputs.postgres-user }}
+        AGE_PG_PASSWORD: ${{ inputs.postgres-password }}
+        AGE_PG_DB: ${{ inputs.postgres-db }}
+        AGE_PG_PORT: ${{ inputs.host-port }}
+        AGE_PG_NAME: ${{ inputs.container-name }}
+      run: |
+        docker run -d --name "$AGE_PG_NAME" \
+          -e POSTGRES_USER="$AGE_PG_USER" \
+          -e POSTGRES_PASSWORD="$AGE_PG_PASSWORD" \
+          -e POSTGRES_DB="$AGE_PG_DB" \
+          -p "${AGE_PG_PORT}:5432" \
+          sparkle/pgvector-age:pg16
+      shell: bash
+
+    - name: Wait for PostgreSQL readiness
+      env:
+        AGE_PG_USER: ${{ inputs.postgres-user }}
+        AGE_PG_DB: ${{ inputs.postgres-db }}
+        AGE_PG_NAME: ${{ inputs.container-name }}
+      run: |
+        for i in $(seq 1 40); do
+          if docker exec "$AGE_PG_NAME" pg_isready -U "$AGE_PG_USER" -d "$AGE_PG_DB" >/dev/null 2>&1; then
+            echo "PostgreSQL is ready (attempt $i)"
+            exit 0
+          fi
+          sleep 2
+        done
+        echo "::error::PostgreSQL did not become ready in 80s"
+        docker logs "$AGE_PG_NAME" || true
+        exit 1
+      shell: bash
+
+    - name: Create vector + age extensions
+      if: inputs.age-init == 'extensions'
+      env:
+        AGE_PG_USER: ${{ inputs.postgres-user }}
+        AGE_PG_DB: ${{ inputs.postgres-db }}
+        AGE_PG_NAME: ${{ inputs.container-name }}
+      run: |
+        docker exec "$AGE_PG_NAME" psql -v ON_ERROR_STOP=1 \
+          -U "$AGE_PG_USER" -d "$AGE_PG_DB" \
+          -c "CREATE EXTENSION IF NOT EXISTS vector;" \
+          -c "CREATE EXTENSION IF NOT EXISTS age;" \
+          -c "SELECT extname FROM pg_extension WHERE extname IN ('vector','age') ORDER BY extname;"
+      shell: bash
