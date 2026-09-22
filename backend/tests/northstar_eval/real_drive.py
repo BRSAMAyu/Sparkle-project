@@ -1164,8 +1164,34 @@ class NS001Driver:
         )
         self.store.write_json("snapshot-galaxy-before-day1.json", {"schema": SCHEMA_RUN, "snapshot": graph_before, "at": utcnow_iso()})
 
-        # B5b CP-00 映射核验（P0-1 验收）：诊断判卷后 galaxy 应出现 dm.* 考纲节点
+        # B5b CP-00 映射核验（P0-1 验收）：诊断判卷后 galaxy 应出现 dm 考纲节点
         # 且被诊断触达的节点 mastery 非零（update_galaxy=True 的落图效果）。
+        # LOOP4 修正：galaxy 图面节点主键是 UUID，dm.* 只是题包/linker 域的
+        # canonical 键——按 UUID 前缀 "dm." 匹配结构性永不命中（LOOP4 首跑
+        # CP-00 误判 fail 的根因，活库实证 9 节点已触达/mastery 已写）。
+        # 改从题包 JSON（地面真值）载入 dm 域名集合，按节点名匹配。
+        dm_domain_names: set[str] = set()
+        try:
+            pack_path = Path(__file__).resolve().parents[2] / "app" / "sprint_packs" / "discrete_mathematics_v1.json"
+            pack = json.loads(pack_path.read_text(encoding="utf-8"))
+            for kn in pack.get("knowledge_nodes") or []:
+                label = str(kn.get("label") or "").strip()
+                if label:
+                    dm_domain_names.add(label)
+        except Exception as exc:  # 题包缺失时退化为名称关键词兜底，不让仪器自身炸
+            dm_domain_names = {"命题逻辑", "谓词逻辑", "二元关系", "函数与基数", "欧拉", "哈密顿", "图", "组合计数", "代数系统"}
+
+        def _is_dm_node(node_id: str, node_name: Any) -> bool:
+            name = str(node_name or "").strip()
+            if name and name in dm_domain_names:
+                return True
+            # 名称轻度漂移兜底：任一题包域名被节点名包含（如「欧拉图与哈密顿图」
+            # ⊃「欧拉」「哈密顿」）。单字域名（图）要求精确匹配避免误吞。
+            return any(
+                len(domain) > 1 and domain in name
+                for domain in dm_domain_names
+            )
+
         dm_nodes: list[dict[str, Any]] = []
         if isinstance(graph_before, dict):
             for node in (graph_before.get("nodes") or []):
@@ -1177,7 +1203,7 @@ class NS001Driver:
                     {
                         "id": node_id,
                         "name": node.get("name"),
-                        "is_dm": node_id.startswith("dm."),
+                        "is_dm": _is_dm_node(node_id, node.get("name")),
                         "mastery_score": user_status.get("mastery_score") if isinstance(user_status, dict) else None,
                         "learning_state": node.get("learning_state"),
                         "unlocked": user_status.get("is_unlocked") if isinstance(user_status, dict) else None,
