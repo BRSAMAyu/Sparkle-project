@@ -212,6 +212,7 @@ class ExecutionEngineMixin:
             user_id=user_id,
             session_id=session_id,
             full_response=full_response,
+            user_message=user_message,
         )
         await self._cache_response(
             session_id,
@@ -465,6 +466,7 @@ class ExecutionEngineMixin:
                     user_id=user_id,
                     session_id=session_id,
                     full_response=assistant_text,
+                    user_message=normalized_message,
                 )
                 await self._cache_response(
                     session_id,
@@ -513,6 +515,7 @@ class ExecutionEngineMixin:
                     user_id=user_id,
                     session_id=session_id,
                     full_response=assistant_text,
+                    user_message=normalized_message,
                 )
                 await self._cache_response(
                     session_id,
@@ -1668,6 +1671,7 @@ class ExecutionEngineMixin:
                     user_id=user_id,
                     session_id=session_id,
                     full_response=final_text,
+                    user_message=user_message,
                 )
                 llm_profile_meta = self._extract_llm_profile_meta(user_context_payload)
                 await self._record_decision(

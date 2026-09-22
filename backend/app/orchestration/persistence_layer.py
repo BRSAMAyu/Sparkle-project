@@ -28,6 +28,7 @@ class PersistenceLayerMixin:
         user_id: str,
         session_id: str,
         full_response: str,
+        user_message: str | None = None,
     ) -> None:
         if not active_db or not full_response:
             return
@@ -49,12 +50,31 @@ class PersistenceLayerMixin:
                 )
                 persist_session.add(assistant_msg)
                 await persist_session.flush()
-                MemoryInferredWriteLaneService.enqueue_from_session(
-                    user_id=uuid.UUID(str(user_id)),
-                    session_id=self._coerce_session_uuid(session_id),
-                    assistant_message_id=str(assistant_msg.id),
-                    assistant_message=full_response,
-                )
+                # NBP-1（2026-09-22）：WS/gRPC 轮次收尾的推断写账统一走与
+                # REST api/v1/chat.py save_chat_message 同一个捕获面
+                # enqueue_from_chat_turn（单一事实源）。调用方在手用户原文时
+                # 必须传入 user_message——否则只能靠 enqueue_from_session 的
+                # DB 回捞（_load_latest_user_turn），而 WS 链路的 user 行由
+                # 网关 Redis persister 异步落库，一次性后台任务稳输竞态
+                # （missing_user_turn → 本轮声明事实永久丢失，LOOP2 B1 实锤
+                # 0 条）。无 user_message 的旧调用方保持原行为零变化。
+                resolved_user_message = str(user_message or "").strip()
+                if resolved_user_message:
+                    MemoryInferredWriteLaneService.enqueue_from_chat_turn(
+                        user_id=uuid.UUID(str(user_id)),
+                        session_id=self._coerce_session_uuid(session_id),
+                        user_message=resolved_user_message,
+                        assistant_message=full_response,
+                        user_message_id=str(assistant_msg.id),
+                        assistant_message_id=str(assistant_msg.id),
+                    )
+                else:
+                    MemoryInferredWriteLaneService.enqueue_from_session(
+                        user_id=uuid.UUID(str(user_id)),
+                        session_id=self._coerce_session_uuid(session_id),
+                        assistant_message_id=str(assistant_msg.id),
+                        assistant_message=full_response,
+                    )
                 await persist_session.commit()
         except Exception as e:
             logger.warning(f"Failed to persist assistant chat message: {e}")

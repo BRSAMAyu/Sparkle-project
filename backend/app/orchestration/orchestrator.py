@@ -804,6 +804,7 @@ class ChatOrchestrator(
                 user_id=user_id,
                 session_id=session_id,
                 full_response=text,
+                user_message=user_message,
             )
             return True
         except Exception as exc:
@@ -1174,24 +1175,14 @@ class ChatOrchestrator(
 
         summary = " ".join(str(summary or "").split())
         if not summary:
-            # 普通 chat turn（三类事件之外）没有直接摘要——fallback 到推断
-            # 写道（与 REST api/v1/chat.py 收尾同款），保证 WS 主链路也写
-            # 记忆（2026-09-20 演示验证实锤：WS 4 轮对话 episodic 0 行）
-            try:
-                from app.services.memory_inferred_write_lane import MemoryInferredWriteLaneService
-
-                MemoryInferredWriteLaneService.enqueue_from_chat_turn(
-                    user_id=user_uuid,
-                    session_id=uuid.UUID(str(session_id)),
-                    user_message=user_message or "",
-                    assistant_message=assistant_message or "",
-                    user_message_id=str(request_id) if request_id else None,
-                    assistant_message_id=None,
-                )
-            except (TypeError, ValueError):
-                pass
-            except Exception:
-                logger.debug("inferred write lane fallback enqueue failed", exc_info=True)
+            # 普通 chat turn（三类事件之外）没有直接摘要——无需直写 episodic。
+            # NBP-1（2026-09-22）：WS 主链路的推断写账（明示事实/规则候选）
+            # 已统一上移到 _persist_assistant_message 与快交互出口，直调与
+            # REST api/v1/chat.py 收尾同款 enqueue_from_chat_turn 面（单一
+            # 事实源）。旧 fallback 在此被双重架空：摘要非空即跳过 + 仅主
+            # 路径 Step14 建 finalize 任务可达（澄清短路轮零触发，LOOP2 B1
+            # 0 条实锤）；且与持久化点并发时存在 semantic_key check-then-
+            # insert 双写竞争，故移除而非保留。
             return
         if len(summary) > 1800:
             summary = f"{summary[:1799]}…"
@@ -1382,6 +1373,7 @@ class ChatOrchestrator(
                 user_id=user_id,
                 session_id=session_id,
                 full_response=combined_text,
+                user_message=request.message or "",
             )
         await self._cache_response(
             session_id,
@@ -2337,6 +2329,7 @@ class ChatOrchestrator(
                         user_id=user_id,
                         session_id=session_id,
                         full_response=text,
+                        user_message=user_message,
                     )
                     yield agent_service_pb2.ChatResponse(
                         response_id=response_id,
@@ -3064,6 +3057,8 @@ class ChatOrchestrator(
                     conversation_context=conversation_context,
                     stream_callback=stream_callback,
                     state=state,
+                    session_id=session_id,
+                    request_id=request_id,
                 )
                 latency_probe.mark("check_goal_quality")
                 if _goal_quality_handled:

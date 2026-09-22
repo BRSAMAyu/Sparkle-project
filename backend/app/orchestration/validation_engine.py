@@ -26,6 +26,27 @@ from app.services.plan_execution_validator import PlanExecutionValidator
 from app.services.system_update_service import SystemUpdateService, build_system_update
 
 
+def _ws_turn_capture(
+    *,
+    user_id: str | None,
+    session_id: str | None,
+    user_message: str | None,
+    request_id: str | None,
+) -> dict[str, str] | None:
+    """NBP-1：构造快交互出口的轮次记忆捕获上下文（缺关键字段时返回 None，
+    捕获静默跳过——绝不影响回复主链路）。"""
+    resolved_user_id = str(user_id or "").strip()
+    resolved_session_id = str(session_id or "").strip()
+    if not resolved_user_id or not resolved_session_id:
+        return None
+    return {
+        "user_id": resolved_user_id,
+        "session_id": resolved_session_id,
+        "user_message": str(user_message or ""),
+        "request_id": str(request_id or ""),
+    }
+
+
 class ValidationEngineMixin:
     """Mixin providing request validation, sufficiency checking, goal quality
     evaluation, and plan-execution validation capabilities.
@@ -91,6 +112,7 @@ class ValidationEngineMixin:
         text: str,
         details: str,
         metadata: dict[str, str] | None = None,
+        turn_capture: dict[str, str] | None = None,
     ) -> None:
         payload = metadata or {}
         await stream_callback(
@@ -115,6 +137,26 @@ class ValidationEngineMixin:
                     finish_reason=agent_service_pb2.STOP,
                 )
             )
+            # NBP-1（2026-09-22）：澄清/确认类快交互短路轮此前只发帧——不
+            # 持久化、不建 finalize 任务，整轮零记忆写账触发器（LOOP2 B1
+            # Day0 声明事实 0 入库的直接断点）。此处直调与 REST
+            # api/v1/chat.py 收尾同款 enqueue_from_chat_turn 面（单一事实
+            # 源；零 LLM 正则抽取，不新增预算面）；协议帧形状不变。
+            if turn_capture:
+                try:
+                    from app.services.memory_inferred_write_lane import MemoryInferredWriteLaneService
+
+                    evidence_token = str(turn_capture.get("request_id") or "").strip() or str(uuid.uuid4())
+                    MemoryInferredWriteLaneService.enqueue_from_chat_turn(
+                        user_id=uuid.UUID(str(turn_capture["user_id"])),
+                        session_id=uuid.UUID(str(turn_capture["session_id"])),
+                        user_message=str(turn_capture.get("user_message") or ""),
+                        assistant_message=cleaned,
+                        user_message_id=evidence_token,
+                        assistant_message_id=None,
+                    )
+                except (KeyError, TypeError, ValueError):
+                    logger.debug("fast-interaction turn memory capture skipped: invalid turn context")
         else:
             logger.warning("Fast interaction copy resolved to empty text")
 
@@ -340,6 +382,12 @@ class ValidationEngineMixin:
                         "requires_clarification": "true",
                         "missing_fields": ",".join(check_result.missing_fields),
                     },
+                    turn_capture=_ws_turn_capture(
+                        user_id=user_id,
+                        session_id=session_id,
+                        user_message=user_message,
+                        request_id=request.request_id,
+                    ),
                 )
                 return True, intent_type
 
@@ -355,6 +403,12 @@ class ValidationEngineMixin:
                     text=interaction_text,
                     details="我先和你确认方向，再继续后面的协作。",
                     metadata={"requires_confirmation": "true"},
+                    turn_capture=_ws_turn_capture(
+                        user_id=user_id,
+                        session_id=session_id,
+                        user_message=user_message,
+                        request_id=request.request_id,
+                    ),
                 )
                 return True, intent_type
         except Exception as e:
@@ -574,6 +628,12 @@ class ValidationEngineMixin:
             text=interaction_text,
             details="我先确认一个关键缺口，再继续为你规划。",
             metadata=phase_a_metadata,
+            turn_capture=_ws_turn_capture(
+                user_id=user_id,
+                session_id=session_id,
+                user_message=user_message,
+                request_id=request.request_id,
+            ),
         )
         phase_a_evaluation["hard_stop"] = "true"
         phase_a_evaluation["phase_a_guardrail"] = "ask_before_plan"
@@ -651,6 +711,8 @@ class ValidationEngineMixin:
         conversation_context: dict[str, Any] | None,
         stream_callback,
         state: WorkflowState,
+        session_id: str | None = None,
+        request_id: str | None = None,
     ) -> bool:
         if intent_type not in {"create_plan", "set_goal", "time_planning"}:
             state.context_data["goal_quality"] = {"passed": True, "skipped": True}
@@ -701,6 +763,12 @@ class ValidationEngineMixin:
                     "requires_goal_clarification": "true",
                     "goal_quality_scores": json.dumps(evaluation.scores.to_dict(), ensure_ascii=False),
                 },
+                turn_capture=_ws_turn_capture(
+                    user_id=user_id,
+                    session_id=session_id,
+                    user_message=user_message,
+                    request_id=request_id,
+                ),
             )
             return True
 

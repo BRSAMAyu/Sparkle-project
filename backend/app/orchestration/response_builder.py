@@ -1286,8 +1286,13 @@ class ResponseBuilderMixin:
             response_metadata["execution_suggestion"] = execution_suggestion
 
         await self._hydrate_evolution_context(final_state=final_state, user_id=user_id)
+        # NBP-1（2026-09-22）：主路径轮次收尾持久化时带上用户原文，让
+        # _persist_assistant_message 直调 REST 同款 enqueue_from_chat_turn
+        # 面——不再依赖网关异步落库的 user 行回捞（WS 一次性后台任务稳输
+        # 该竞态）。与既有 ux_envelope 抽取同源，单一事实源。
+        latest_user_message = self._extract_latest_user_message(final_state.messages)
         ux_envelope = await ux_envelope_builder.build(
-            user_message=self._extract_latest_user_message(final_state.messages),
+            user_message=latest_user_message,
             full_response=full_response,
             final_state=final_state,
             executable_plan=executable_plan,
@@ -1314,6 +1319,7 @@ class ResponseBuilderMixin:
             user_id=user_id,
             session_id=session_id,
             full_response=full_response,
+            user_message=latest_user_message,
         )
         await self._record_decision(
             active_db=active_db,
