@@ -74,7 +74,7 @@ from app.services.conflict_resolution_context import (
 )
 from app.services.conflict_resolver_service import ConflictResolverService
 from app.services.context_pack_telemetry_service import ContextPackTelemetryService
-from app.services.embedding_service import embedding_service
+from app.services.embedding_service import EmbeddingNotConfiguredError, embedding_service
 from app.services.ltm_rollout_service import LtmRolloutService
 from app.services.memory_conflict_resolver import MemoryConflictResolver
 from app.services.memory_rank_policy_service import MemoryRankPolicyService
@@ -1194,7 +1194,12 @@ async def _apply_semantic_gating(
         if not query_embedding or not any(query_embedding):
             raise ValueError("query_embedding_empty")
     except Exception as exc:
-        metadata["fallback_reason"] = f"embedding_error:{type(exc).__name__}"
+        # CTX-PACK：配置性降级（无任何供应商 key）与运行时供应商故障必须
+        # 可区分——前者是治理/环境面问题，排障时不能与网络故障混为一谈。
+        if isinstance(exc, EmbeddingNotConfiguredError):
+            metadata["fallback_reason"] = "embedding_not_configured"
+        else:
+            metadata["fallback_reason"] = f"embedding_error:{type(exc).__name__}"
         CONTEXT_SEMANTIC_GATING_FALLBACK_TOTAL.labels(reason=metadata["fallback_reason"]).inc()
         logger.warning(f"Semantic gating failed for {section}: {exc}")
         return ranked_items, metadata
@@ -1712,6 +1717,50 @@ class ContextPackBuilder:
                     **selfcheck.to_metric_payload(),
                     "internal_only": internal_entries,
                 }
+
+        # CTX-PACK（2026-09-22）：召回静默缺失观测面。召回链（L0 SQL 列表 +
+        # M-03 预筛 + 词法 rank + 语义门控 + M-05 selfcheck + 预算裁剪）是
+        # 多级漏斗，任何一级把候选清空都会表现为「prompt 面直接空」且此前
+        # 只有 semantic gating 的 embedding WARNING 可见（M-05 切割零日志，
+        # MEM-AMNESIA 排障时据此误判为 embedding 缺失所致）。凡有合法候选
+        # 进入装配面而三个 section 全空，必须显式申报：metadata 标记 +
+        # WARNING 日志，附可用的逐级归因。只加观测，不改召回语义。
+        surfaced_counts = {
+            "preferences": len(trimmed_preferences),
+            "goals": len(trimmed_goals),
+            "episodic": len(trimmed_episodic),
+        }
+        candidate_counts = {
+            "preferences": len(ranked_preferences),
+            "goals": len(ranked_goals),
+            "episodic": len(ranked_episodic),
+        }
+        if any(candidate_counts.values()) and not any(surfaced_counts.values()):
+            gating_fallbacks = {
+                section: entry.get("fallback_reason")
+                for section, entry in semantic_metadata.items()
+                if isinstance(entry, dict) and entry.get("fallback_reason")
+            }
+            selfcheck_reasons = (metadata.get("memory_selfcheck") or {}).get("reason_counts") or {}
+            metadata["memory_surface_downgrade"] = {
+                "candidate_counts": candidate_counts,
+                "surfaced_counts": surfaced_counts,
+                "selfcheck_reasons": selfcheck_reasons,
+                "semantic_gating_fallbacks": gating_fallbacks,
+                "embedding_unavailable": any(
+                    reason == "embedding_not_configured" for reason in gating_fallbacks.values()
+                ),
+            }
+            logger.warning(
+                "CTX-PACK memory recalled but surface empty: user={user_id} intent={intent} "
+                "candidates={candidate_counts} selfcheck_reasons={selfcheck_reasons} "
+                "semantic_gating_fallbacks={gating_fallbacks}",
+                user_id=user_id,
+                intent=intent,
+                candidate_counts=candidate_counts,
+                selfcheck_reasons=selfcheck_reasons,
+                gating_fallbacks=gating_fallbacks,
+            )
 
         token_usage = {
             "preferences": estimate_tokens(_serialize(trimmed_preferences)),

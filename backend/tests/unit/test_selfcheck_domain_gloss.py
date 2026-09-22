@@ -44,7 +44,7 @@ def _decision_for(candidate: MemoryUseCandidate, message: str) -> MemoryUseDecis
 
 
 def test_version_bumped_for_vocabulary_change():
-    assert SELF_CHECK_VERSION == "memory_use_selfcheck.v2"
+    assert SELF_CHECK_VERSION == "memory_use_selfcheck.v3"
 
 
 def test_gloss_vocabulary_guards():

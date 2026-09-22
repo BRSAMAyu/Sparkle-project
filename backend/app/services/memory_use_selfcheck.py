@@ -23,9 +23,10 @@ downgrade attribution, same law as M-03's ``FILTER_DIMENSIONS``):
     1. relevance    — topically disjoint memory must not be surfaced into an
                       unrelated answer (``selfcheck:irrelevant_to_query``).
                       Conservative-pass when the turn carries no topical
-                      signal (no message / phatic turn) — necessity owns that
-                      case — and meta communication-form preferences are
-                      exempt from topical matching entirely.
+                      signal (no message / phatic turn / session-continuation
+                      opening — v3, see CONTINUATION_CUE_MARKERS) — necessity
+                      owns the phatic case, and meta communication-form
+                      preferences are exempt from topical matching entirely.
     2. necessity    — phatic turns and echo turns do not need any memory
                       surfaced (``selfcheck:phatic_query`` /
                       ``selfcheck:echoed_in_query``). Meta preferences and
@@ -85,7 +86,7 @@ from typing import Callable, Iterable, Sequence
 
 from app.core.memory_constants import PREFERENCE_KEYS
 
-SELF_CHECK_VERSION = "memory_use_selfcheck.v2"
+SELF_CHECK_VERSION = "memory_use_selfcheck.v3"
 
 # ---------------------------------------------------------------------------
 # Closed vocabularies (frozen — see module docstring)
@@ -336,6 +337,121 @@ AFFIRMATIVE_VALUE_MARKERS: frozenset[str] = frozenset(
 # validation cues requesting a substantive answer, never phatic.
 _PHATIC_TAIL_PARTICLES = "啦了呀哦哈呢~！!。，,。"
 
+# ---------------------------------------------------------------------------
+# CTX-PACK (2026-09-22): session-continuation openings.
+#
+# 「早上好，今天从哪里开始？」这类续接开场与跨会话记忆零词法重叠，原
+# relevance 检查按 "topically disjoint" 降档，导致上一会话的记忆永远进不了
+# prompt 面——而渲染层「## 跨会话记忆 [L2 引导]」引导语明确承诺"当用户
+# 问候、含糊开场、请求继续学习……请自然衔接上次内容"。门禁与已上线引导语
+# 自相矛盾（CTX-PACK 红：test_memory_inferred_write_lane 两会话用例）。
+#
+# 修法：relevance 的 conservative-pass（"本轮无话题信号"）扩及**会话续接
+# 开场**——消息含至少一个 CONTINUATION_CUE_MARKERS 暗示词，且每个内容
+# run/word 都被 {暗示词, 问候, 语气词, 裸时间词} 封闭词表消耗完毕（不带
+# 主题词）。带主题词的「继续讲泰勒公式」不保守放行，照走词法重叠路径；
+# 纯语气词轮次照走 phatic 路径 necessity 降档。反过保设计不变：
+# OP-Bench 46 例双指标不受影响（全部用例要么带主题词要么是纯 ack）。
+#
+# 词表纪律：不与 PHATIC_CJK_RUNS 相交（否则 necessity phatic 降档会吞掉
+# 续接开场）；NO_TOPIC 成员必须是裸词（len<=4），防止整句被误吞。
+# SELF_CHECK_VERSION v2 -> v3（deliberate vocabulary change）。
+# ---------------------------------------------------------------------------
+CONTINUATION_CUE_MARKERS: frozenset[str] = frozenset(
+    {
+        "从哪里开始",
+        "从哪开始",
+        "从哪继续",
+        "接着上次",
+        "接着来",
+        "上次说到",
+        "上次的进度",
+        "今天学什么",
+        "今天做什么",
+        "今天干什么",
+        "开始学习吧",
+        "开始吧",
+        "继续吧",
+        "继续学习",
+    }
+)
+NO_TOPIC_CJK_RUNS: frozenset[str] = frozenset(
+    {
+        # 裸问候
+        "早上好",
+        "早安",
+        "上午好",
+        "中午好",
+        "下午好",
+        "晚上好",
+        "午安",
+        "你好",
+        "您好",
+        "哈喽",
+        "嗨",
+        "早",
+        # 裸时间词（无主题内容）
+        "今天",
+        "明天",
+        "今晚",
+        "现在",
+        "上午",
+        "下午",
+        "晚上",
+        "中午",
+    }
+)
+_CONSUMABLE_ASCII_WORDS: frozenset[str] = frozenset(
+    {
+        "hi",
+        "hello",
+        "hey",
+        "morning",
+        "today",
+        "tomorrow",
+        "tonight",
+        "now",
+        "continue",
+        "next",
+        "resume",
+    }
+)
+
+
+def _consumed_cjk_run(run: str) -> bool:
+    """A CJK run whose content is fully accounted for by continuation cues /
+    phatic tokens / bare greetings & time words — no subject matter."""
+    remainder = run
+    for cue in CONTINUATION_CUE_MARKERS:
+        remainder = remainder.replace(cue, "")
+    if not remainder:
+        return True
+    if _phatic_run_core(remainder) in PHATIC_CJK_RUNS:
+        return True
+    return remainder in NO_TOPIC_CJK_RUNS
+
+
+def is_continuation_opening(text: str | None) -> bool:
+    """True iff the message names no subject matter AND carries at least one
+    continuation cue — a session-continuation opening (「早上好，今天从哪里
+    开始？」). None/empty -> False. Cue-less messages (plain acks / bare
+    greetings) are NOT continuation openings: they keep their existing
+    paths (phatic necessity cut / relevance lexical check)."""
+    if not text:
+        return False
+    saw_content = False
+    for run in _CJK_RUN_RE.findall(text):
+        saw_content = True
+        if not _consumed_cjk_run(run):
+            return False
+    for word in _ASCII_WORD_RE.findall(text):
+        saw_content = True
+        if word.lower() not in _CONSUMABLE_ASCII_WORDS:
+            return False
+    if not saw_content:
+        return False
+    return any(marker in text for marker in CONTINUATION_CUE_MARKERS)
+
 
 def _phatic_run_core(run: str) -> str:
     stripped = run.rstrip(_PHATIC_TAIL_PARTICLES)
@@ -579,9 +695,11 @@ def _is_safety_pin(candidate: MemoryUseCandidate) -> bool:
 
 def _relevance_flag(candidate: MemoryUseCandidate, ctx: SelfCheckContext) -> SelfCheckFlag | None:
     message = (ctx.user_message or "").strip()
-    if not message or is_phatic_query(message):
-        # No topical signal to constrain against — conservative-pass; the
-        # phatic case is owned by necessity below.
+    if not message or is_phatic_query(message) or is_continuation_opening(message):
+        # No topical signal to constrain against — conservative-pass. Pure acks
+        # are owned by necessity below; session-continuation openings
+        # (「早上好，今天从哪里开始？」) are the canonical cross-session
+        # continuation case the L2 memory guidance promises to serve.
         return None
     if _is_safety_pin(candidate) or _is_meta_pref(candidate):
         return None

@@ -208,7 +208,15 @@ async def test_two_consecutive_sessions_prompt_includes_inferred_memory(db_sessi
     )
     prompt = build_system_prompt(pack.to_prompt_context(), {"messages": []})
 
-    assert prompt.startswith("## 跨会话记忆 [L2 引导]\n")
+    # CTX-PACK（2026-09-22）：两处对齐——
+    # 1) 渲染位置：R2-final(a2) 把记忆段从 prompt 最前部挪到末尾（紧邻 user
+    #    消息，修 qwen3.8-flash "没有记录"失败模式），断言从 startswith 改为
+    #    包含 + 尾部位置（输出格式约束之后）；
+    # 2) 链路：续接开场「早上好，今天从哪里开始？」原先被 M-05 relevance
+    #    词法检查误降档（与记忆零重叠 -> internal-only -> prompt 面空），
+    #    memory_use_selfcheck v3 对会话续接开场保守放行后记忆重新进 prompt。
+    assert "## 跨会话记忆 [L2 引导]" in prompt
+    assert prompt.index("## 跨会话记忆") > prompt.index("输出格式约束")
     assert "请自然衔接上次内容" in prompt
     assert "TCP 流量控制有点难" in prompt
     assert "明天还要考高数" in prompt
