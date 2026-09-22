@@ -38209,4 +38209,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String goalDetailRelevance(int percent) {
     return '$percent% relevant';
   }
+
+  @override
+  String get redeemCodeTitle => 'Redeem Code';
+
+  @override
+  String get redeemCodeSubtitle => 'Enter a redeem code to unlock Pro';
+
+  @override
+  String get redeemCodeHint => 'e.g. SPARK-XXXX-XXXX-XXXX';
+
+  @override
+  String get redeemCodeAction => 'Redeem';
+
+  @override
+  String redeemCodeSuccess(String tier, String date) {
+    return 'Redeemed! $tier active until $date';
+  }
+
+  @override
+  String get redeemCodeInvalid => 'Code not found or invalid';
+
+  @override
+  String get redeemCodeExpired => 'This code has expired';
+
+  @override
+  String get redeemCodeExhausted => 'This code has already been used';
+
+  @override
+  String get redeemCodeError => 'Redemption failed, please try again later';
 }

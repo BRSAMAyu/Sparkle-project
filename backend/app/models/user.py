@@ -77,6 +77,12 @@ class User(BaseModel):
     # 禁止用 flame_level 派生权益 —— 权益唯一判据是本列。
     entitlement = Column(String(32), default="free", nullable=False, server_default="free")
 
+    # 🆕 权益到期时间 (D-REDEEM)：NULL = 永久（存量行/手工授予的既有语义，零变化）。
+    # 非空且已过 → 有效判级降为 free（到期降级，宁降不升；判级真源
+    # app/core/entitlement.entitlement_effective，网关同语义
+    # IsProEntitlementEffective）。兑换码核销是唯一写本列的业务路径。
+    entitlement_expires_at = Column(DateTime, nullable=True)
+
     # 用户偏好
     depth_preference = Column(Float, default=0.5, nullable=False)
     curiosity_preference = Column(Float, default=0.5, nullable=False)

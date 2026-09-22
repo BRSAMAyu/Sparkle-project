@@ -5,6 +5,7 @@ import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/features/user/data/models/redeem_code_result.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 
 class UserRepository {
@@ -1044,6 +1045,28 @@ class UserRepository {
       return response.data ?? const [];
     } catch (e) {
       rethrow;
+    }
+  }
+
+  /// D-REDEEM · 核销兑换码（POST /api/v1/billing/redeem，gateway authed 代理）。
+  ///
+  /// 业务失败（404 invalid / 409 exhausted / 410 expired）映射为有界
+  /// [RedeemCodeStatus]，不向 UI 泄漏原始异常结构。
+  Future<RedeemCodeResult> redeemCode(String code) async {
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        '/billing/redeem',
+        data: <String, dynamic>{'code': code},
+      );
+      final payload = ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'redeemCode',
+      );
+      return RedeemCodeResult.parse(payload);
+    } on DioException catch (e) {
+      return RedeemCodeResult.fromDioError(e);
+    } catch (_) {
+      return const RedeemCodeResult(status: RedeemCodeStatus.error);
     }
   }
 }

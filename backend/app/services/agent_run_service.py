@@ -858,17 +858,25 @@ class AgentRunService:
 
         真源分工：判级只认 ``users.entitlement``（经 ``normalize_entitlement``
         归一）；派生逻辑在 ``app/core/budget_matrix``（薄层，非第二真源）。
+        D-REDEEM: 有效判级走 ``entitlement_effective``——``entitlement_expires_at``
+        已过判 free（到期降级，宁降不升同向）。
         任何读取/派生异常一律回落 free 档派生值——预算派生是收紧面，故障方向
         必须是「更保守」而不是「更无界」。
         """
         from app.core.budget_matrix import derive_default_run_budget_if_enabled
-        from app.core.entitlement import ENTITLEMENT_FREE
+        from app.core.entitlement import (
+            ENTITLEMENT_FREE,
+            entitlement_effective,
+        )
         from app.models.user import User
 
         try:
-            entitlement = (
-                await self.db.execute(select(User.entitlement).where(User.id == user_id))
-            ).scalar_one_or_none()
+            row = (
+                await self.db.execute(
+                    select(User.entitlement, User.entitlement_expires_at).where(User.id == user_id)
+                )
+            ).one_or_none()
+            entitlement = ENTITLEMENT_FREE if row is None else entitlement_effective(row[0], row[1])
         except Exception as exc:  # noqa: BLE001 — 判级读失败 → free（宁降不升）
             logger.warning("run budget derivation: entitlement read failed user_id={} -> free ({!r})", user_id, exc)
             entitlement = ENTITLEMENT_FREE

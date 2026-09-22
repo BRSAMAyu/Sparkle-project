@@ -78,6 +78,20 @@ func IsProEntitlement(entitlement string) bool {
 	return strings.EqualFold(strings.TrimSpace(entitlement), EntitlementPro)
 }
 
+// IsProEntitlementEffective reports whether the stored entitlement still grants
+// pro after applying the optional expiry (D-REDEEM: users.entitlement_expires_at,
+// NULL/invalid = 永久). Expired grants degrade to free — 宁降不升, safe default.
+// 引擎侧同语义实现：app/core/entitlement.entitlement_effective，改动需两侧同步。
+func IsProEntitlementEffective(entitlement string, expiresAt pgtype.Timestamp) bool {
+	if !IsProEntitlement(entitlement) {
+		return false
+	}
+	if !expiresAt.Valid {
+		return true
+	}
+	return time.Now().Before(expiresAt.Time)
+}
+
 // ChatUserProfileSnapshot captures the gateway-side user profile fields needed
 // for gRPC personalization.
 type ChatUserProfileSnapshot struct {
@@ -140,7 +154,7 @@ func (s *UserContextService) GetChatUserProfileSnapshot(ctx context.Context, use
 		Nickname:    nickname,
 		Timezone:    timezone,
 		Language:    language,
-		IsPro:       IsProEntitlement(user.Entitlement),
+		IsPro:       IsProEntitlementEffective(user.Entitlement, user.EntitlementExpiresAt),
 		Level:       user.FlameLevel,
 		Preferences: buildProfilePreferences(user, explicitPrefs),
 	}

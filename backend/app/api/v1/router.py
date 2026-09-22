@@ -90,6 +90,7 @@ from app.api.v1 import (
     push_interaction,
     recommendations,
     reflections,
+    redeem,  # D-REDEEM 兑换码付费闭环（user 核销 + admin 批量生成）
     release_approvals,
     research,
     research_consent,
@@ -229,6 +230,7 @@ api_router.include_router(preferences.router)
 api_router.include_router(research.router)
 api_router.include_router(research_consent.router)
 api_router.include_router(push_interaction.router)
+api_router.include_router(redeem.router, tags=["billing"])  # D-REDEEM：/billing 前缀定义在 redeem.router
 api_router.include_router(seed_libraries.router, tags=["seed-libraries"])
 api_router.include_router(marketplace.router, tags=["marketplace"])
 api_router.include_router(experiments.router, prefix="/experiments", tags=["experiments"])

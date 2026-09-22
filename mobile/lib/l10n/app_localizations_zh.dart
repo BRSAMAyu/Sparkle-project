@@ -36628,4 +36628,33 @@ class AppLocalizationsZh extends AppLocalizations {
   String goalDetailRelevance(int percent) {
     return '相关度 $percent%';
   }
+
+  @override
+  String get redeemCodeTitle => '兑换码';
+
+  @override
+  String get redeemCodeSubtitle => '输入兑换码，开通 Pro 权益';
+
+  @override
+  String get redeemCodeHint => '例如 SPARK-XXXX-XXXX-XXXX';
+
+  @override
+  String get redeemCodeAction => '兑换';
+
+  @override
+  String redeemCodeSuccess(String tier, String date) {
+    return '兑换成功！已开通 $tier，有效期至 $date';
+  }
+
+  @override
+  String get redeemCodeInvalid => '兑换码不存在或已失效';
+
+  @override
+  String get redeemCodeExpired => '兑换码已过期';
+
+  @override
+  String get redeemCodeExhausted => '兑换码已被使用';
+
+  @override
+  String get redeemCodeError => '兑换失败，请稍后再试';
 }

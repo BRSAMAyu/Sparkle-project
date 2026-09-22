@@ -30,10 +30,12 @@ import 'package:sparkle/features/memory/memory_routes.dart';
 import 'package:sparkle/features/settings/presentation/screens/accessibility_settings_screen.dart';
 import 'package:sparkle/features/settings/presentation/providers/accessibility_provider.dart';
 import 'package:sparkle/features/settings/presentation/widgets/settings_behavior_explanation.dart';
+import 'package:sparkle/features/user/data/models/redeem_code_result.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/features/user/presentation/screens/ai_ops_analysis_screen.dart';
 import 'package:sparkle/features/user/presentation/widgets/learning_mode_control.dart';
+import 'package:sparkle/features/user/presentation/widgets/redeem_code_dialog.dart';
 import 'package:sparkle/features/user/presentation/widgets/weekly_agenda_grid.dart';
 import 'package:sparkle/features/user/user_routes.dart';
 import 'package:sparkle/features/visual_elements/visual_elements_routes.dart';
@@ -689,6 +691,33 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
                       builder: (_) => const AccessibilitySettingsScreen(),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: DS.spacing16),
+              // D-REDEEM · 兑换码付费闭环入口（输入 → 核销 → Pro 权益 + 到期 toast）
+              GraphiteCardSurface(
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.redeem_rounded),
+                  title: Text(context.l10n.redeemCodeTitle),
+                  subtitle: Text(context.l10n.redeemCodeSubtitle),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => unawaited(
+                    RedeemCodeDialog.show(
+                      context,
+                      onRedeem: (code) async {
+                        try {
+                          return await ref
+                              .read(userRepositoryProvider)
+                              .redeemCode(code);
+                        } catch (_) {
+                          return const RedeemCodeResult(
+                            status: RedeemCodeStatus.error,
+                          );
+                        }
+                      },
                     ),
                   ),
                 ),

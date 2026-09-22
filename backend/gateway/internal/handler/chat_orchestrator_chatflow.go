@@ -282,7 +282,8 @@ func buildAgentUserProfile(inputNickname, userContextJSON string, snapshot *serv
 		}
 		if !profile.IsPro {
 			// V3-FIX-02 (D17): 权益只读独立 entitlement 字段，禁止 flame_level 派生。
-			profile.IsPro = service.IsProEntitlement(fallbackUser.Entitlement)
+			// D-REDEEM: 到期降级——expires_at 已过判 free（宁降不升，与引擎同语义）。
+			profile.IsPro = service.IsProEntitlementEffective(fallbackUser.Entitlement, fallbackUser.EntitlementExpiresAt)
 		}
 	}
 

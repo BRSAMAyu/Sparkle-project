@@ -66528,6 +66528,60 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'相关度 {percent}%'**
   String goalDetailRelevance(int percent);
+
+  /// No description provided for @redeemCodeTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'兑换码'**
+  String get redeemCodeTitle;
+
+  /// No description provided for @redeemCodeSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入兑换码，开通 Pro 权益'**
+  String get redeemCodeSubtitle;
+
+  /// No description provided for @redeemCodeHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'例如 SPARK-XXXX-XXXX-XXXX'**
+  String get redeemCodeHint;
+
+  /// No description provided for @redeemCodeAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'兑换'**
+  String get redeemCodeAction;
+
+  /// No description provided for @redeemCodeSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'兑换成功！已开通 {tier}，有效期至 {date}'**
+  String redeemCodeSuccess(String tier, String date);
+
+  /// No description provided for @redeemCodeInvalid.
+  ///
+  /// In zh, this message translates to:
+  /// **'兑换码不存在或已失效'**
+  String get redeemCodeInvalid;
+
+  /// No description provided for @redeemCodeExpired.
+  ///
+  /// In zh, this message translates to:
+  /// **'兑换码已过期'**
+  String get redeemCodeExpired;
+
+  /// No description provided for @redeemCodeExhausted.
+  ///
+  /// In zh, this message translates to:
+  /// **'兑换码已被使用'**
+  String get redeemCodeExhausted;
+
+  /// No description provided for @redeemCodeError.
+  ///
+  /// In zh, this message translates to:
+  /// **'兑换失败，请稍后再试'**
+  String get redeemCodeError;
 }
 
 class _AppLocalizationsDelegate

@@ -431,6 +431,7 @@ ENGINE_ONLY: dict[str, str] = {
     "/api/v1/errors/{}/review": "gateway serves /errors natively via gRPC ErrorBookHandler",
     "/api/v1/galaxy/documents/{}/nodes": "galaxy long tail — unreachable via gateway (P3 handoff §6.2)",
     "/api/v1/insights/understanding-dimensions": "D-03 five-dimension diagnostic face — no client consumer yet (mobile understanding panel reads /experience/understanding-snapshot via the experience catch-all); proxy when a UI wires up, then drop this entry",
+    "/api/v1/billing/redeem-codes": "D-REDEEM billing admin face — engine-side only (superuser + admin_audit), marketplace-admin precedent (P3 §6.2); the user face POST /billing/redeem is proxied",
 }
 
 GATEWAY_ONLY: dict[str, str] = {

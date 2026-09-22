@@ -74,6 +74,18 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	api *gin.RouterGroup,
 	authMiddleware gin.HandlerFunc,
 ) {
+	// ==================== Billing Routes (D-REDEEM) ====================
+	// route-tier: authed
+	billing := api.Group("/billing")
+	billing.Use(authMiddleware)
+	{
+		// 用户核销兑换码；admin 批量生成面按 marketplace/seed-libraries
+		// admin 先例 engine-side only。
+		// route-tier: authed
+		billing.POST("/redeem", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered billing proxy routes")
+
 	// ==================== Accountability Routes ====================
 	accountability := api.Group("/accountability")
 	accountability.Use(authMiddleware)

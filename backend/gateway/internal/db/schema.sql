@@ -857,6 +857,64 @@ CREATE TABLE achievements (
 ALTER TABLE achievements OWNER TO postgres;
 
 --
+-- Name: action_proposal_transitions; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE action_proposal_transitions (
+    id uuid NOT NULL,
+    proposal_id uuid NOT NULL,
+    from_status character varying(16),
+    to_status character varying(16) NOT NULL,
+    event_name character varying(64) NOT NULL,
+    actor character varying(32) NOT NULL,
+    idempotency_key character varying(255),
+    reason character varying(64),
+    details jsonb,
+    occurred_at timestamp without time zone NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE action_proposal_transitions OWNER TO postgres;
+
+--
+-- Name: action_proposals; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE action_proposals (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    status character varying(16) DEFAULT 'PENDING'::character varying NOT NULL,
+    command_type character varying(32) NOT NULL,
+    source character varying(16) DEFAULT 'system'::character varying NOT NULL,
+    terminal_reason character varying(32),
+    subject_type character varying(32),
+    subject_id uuid,
+    subject_version_token character varying(64),
+    payload jsonb NOT NULL,
+    diff jsonb,
+    "authorization" jsonb,
+    risk_class character varying(16),
+    reversible character varying(8),
+    summary text,
+    idempotency_key character varying(255),
+    expires_at timestamp without time zone NOT NULL,
+    receipt jsonb,
+    committed_at timestamp without time zone,
+    session_id character varying(64),
+    trace_id character varying(64),
+    run_id uuid,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE action_proposals OWNER TO postgres;
+
+--
 -- Name: admin_audit_log; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -933,6 +991,100 @@ ALTER SEQUENCE agent_execution_stats_id_seq OWNER TO postgres;
 
 ALTER SEQUENCE agent_execution_stats_id_seq OWNED BY agent_execution_stats.id;
 
+
+--
+-- Name: agent_run_transitions; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE agent_run_transitions (
+    run_id uuid NOT NULL,
+    from_status character varying(24),
+    to_status character varying(24) NOT NULL,
+    event_name character varying(64) NOT NULL,
+    actor character varying(32) NOT NULL,
+    idempotency_key character varying(255),
+    reason character varying(64),
+    details jsonb,
+    occurred_at timestamp without time zone NOT NULL,
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE agent_run_transitions OWNER TO postgres;
+
+--
+-- Name: agent_runs; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE agent_runs (
+    user_id uuid NOT NULL,
+    kind character varying(16) NOT NULL,
+    objective text NOT NULL,
+    context_refs jsonb NOT NULL,
+    allowed_tools jsonb NOT NULL,
+    permissions jsonb NOT NULL,
+    budget jsonb NOT NULL,
+    completion_condition jsonb NOT NULL,
+    risk_class character varying(16),
+    status character varying(24) NOT NULL,
+    wait_kind character varying(16),
+    wait_expires_at timestamp without time zone,
+    task_id uuid,
+    intent_id uuid,
+    session_id character varying(64),
+    trace_id character varying(64),
+    attempt integer NOT NULL,
+    current_stage character varying(64),
+    steps_done integer NOT NULL,
+    steps_total integer,
+    terminal_reason character varying(32),
+    error_category character varying(100),
+    error_message text,
+    result_ref jsonb,
+    heartbeat_at timestamp without time zone NOT NULL,
+    idempotency_key character varying(255),
+    started_at timestamp without time zone,
+    completed_at timestamp without time zone,
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    steps jsonb DEFAULT '[]'::jsonb NOT NULL
+);
+
+
+ALTER TABLE agent_runs OWNER TO postgres;
+
+--
+-- Name: agent_tool_calls; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE agent_tool_calls (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    run_id uuid,
+    tool_name character varying(100) NOT NULL,
+    tool_call_id character varying(128),
+    idempotency_key character varying(255),
+    args_hash character varying(64) DEFAULT ''::character varying NOT NULL,
+    permission_decision jsonb,
+    status character varying(16) DEFAULT 'in_progress'::character varying NOT NULL,
+    result jsonb,
+    execution_time_ms integer,
+    error_type character varying(100),
+    error_message text,
+    started_at timestamp without time zone,
+    finished_at timestamp without time zone,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE agent_tool_calls OWNER TO postgres;
 
 --
 -- Name: alembic_version; Type: TABLE; Schema: public; Owner: postgres
@@ -1127,6 +1279,38 @@ CREATE TABLE aurora_judgment_records (
 
 
 ALTER TABLE aurora_judgment_records OWNER TO postgres;
+
+--
+-- Name: aurora_policy_patches; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE aurora_policy_patches (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    patch_id character varying(64) NOT NULL,
+    surface character varying(32) NOT NULL,
+    payload jsonb NOT NULL,
+    scope_goal_type character varying(32),
+    scope_friction_tag character varying(40),
+    state character varying(24) DEFAULT 'candidate'::character varying NOT NULL,
+    provenance character varying(32) DEFAULT 'decision_loop'::character varying NOT NULL,
+    evidence_refs jsonb NOT NULL,
+    evidence_tier character varying(24),
+    evidence_verified_at timestamp without time zone,
+    user_confirmed boolean DEFAULT false NOT NULL,
+    confirmed_at timestamp without time zone,
+    activated_at timestamp without time zone,
+    expires_at timestamp without time zone,
+    revoked_at timestamp without time zone,
+    revoke_reason character varying(200),
+    transition_history jsonb NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE aurora_policy_patches OWNER TO postgres;
 
 --
 -- Name: aurora_policy_versions; Type: TABLE; Schema: public; Owner: postgres
@@ -2177,7 +2361,9 @@ CREATE TABLE document_chunks (
     id uuid NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    deleted_at timestamp without time zone
+    deleted_at timestamp without time zone,
+    embedding_model character varying(100),
+    embedding_dim integer
 );
 
 
@@ -2265,7 +2451,9 @@ CREATE TABLE episodic_memories (
     due_at timestamp without time zone,
     resolved_at timestamp without time zone,
     mentioned_entity_hash character varying(64),
-    mentioned_entity_owner_user_id uuid
+    mentioned_entity_owner_user_id uuid,
+    epistemic_class character varying(24),
+    superseded_by_id uuid
 );
 
 
@@ -3063,6 +3251,35 @@ CREATE TABLE intervention_feedback (
 ALTER TABLE intervention_feedback OWNER TO postgres;
 
 --
+-- Name: intervention_lifecycle_events; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE intervention_lifecycle_events (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    decision_id character varying(64) NOT NULL,
+    event_type character varying(24) NOT NULL,
+    intervention_type character varying(40) NOT NULL,
+    execution_mode character varying(16),
+    goal_type character varying(32) DEFAULT 'unknown'::character varying NOT NULL,
+    friction_tag character varying(40) DEFAULT 'unattributed'::character varying NOT NULL,
+    linkage jsonb,
+    outcome_source character varying(24),
+    outcome_ref character varying(80),
+    outcome_polarity character varying(16),
+    outcome_truth_class character varying(16),
+    detail jsonb,
+    dedupe_subkey character varying(96) DEFAULT ''::character varying NOT NULL,
+    occurred_at timestamp without time zone NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE intervention_lifecycle_events OWNER TO postgres;
+
+--
 -- Name: intervention_outcomes; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -3320,7 +3537,9 @@ CREATE TABLE knowledge_nodes (
     exam_weight double precision DEFAULT '0'::double precision NOT NULL,
     difficulty double precision DEFAULT '0.5'::double precision NOT NULL,
     trainability double precision DEFAULT '0.5'::double precision NOT NULL,
-    mistakes integer DEFAULT 0 NOT NULL
+    mistakes integer DEFAULT 0 NOT NULL,
+    embedding_model character varying(100),
+    embedding_dim integer
 );
 
 
@@ -3643,7 +3862,8 @@ CREATE TABLE memory_goals (
     updated_at timestamp without time zone NOT NULL,
     deleted_at timestamp without time zone,
     last_consumed_at timestamp without time zone,
-    archived_at timestamp without time zone
+    archived_at timestamp without time zone,
+    source_type character varying(30)
 );
 
 
@@ -4501,6 +4721,31 @@ CREATE TABLE recommendation_cache (
 
 
 ALTER TABLE recommendation_cache OWNER TO postgres;
+
+--
+-- Name: redeem_codes; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE redeem_codes (
+    code_hash character varying(64) NOT NULL,
+    code_prefix character varying(16),
+    tier character varying(32) DEFAULT 'pro'::character varying NOT NULL,
+    duration_days integer NOT NULL,
+    max_uses integer DEFAULT 1 NOT NULL,
+    used_count integer DEFAULT 0 NOT NULL,
+    used_by uuid,
+    used_at timestamp without time zone,
+    created_by uuid,
+    batch_id character varying(64) NOT NULL,
+    expires_at timestamp without time zone,
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE redeem_codes OWNER TO postgres;
 
 --
 -- Name: release_approval_requests; Type: TABLE; Schema: public; Owner: postgres
@@ -5665,7 +5910,15 @@ CREATE TABLE tasks (
     phase_index integer,
     success_criteria text,
     paused_at timestamp without time zone,
-    paused_reason text
+    paused_reason text,
+    action_schema_version character varying(16),
+    desired_outcome text,
+    smallest_useful_step jsonb,
+    completion_evidence jsonb,
+    cognitive_ownership character varying(16),
+    source_refs jsonb,
+    risk_class character varying(16),
+    reversible boolean
 );
 
 
@@ -5811,6 +6064,27 @@ CREATE TABLE transition_decision_records (
 ALTER TABLE transition_decision_records OWNER TO postgres;
 
 --
+-- Name: understanding_calibration_runs; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE understanding_calibration_runs (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    user_id uuid NOT NULL,
+    ran_at timestamp without time zone NOT NULL,
+    window_days integer NOT NULL,
+    coverage_map jsonb NOT NULL,
+    drift_report jsonb NOT NULL,
+    overall_status character varying(16) NOT NULL,
+    schema_version character varying(64) NOT NULL
+);
+
+
+ALTER TABLE understanding_calibration_runs OWNER TO postgres;
+
+--
 -- Name: understanding_depth_daily; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -5829,6 +6103,26 @@ CREATE TABLE understanding_depth_daily (
 
 
 ALTER TABLE understanding_depth_daily OWNER TO postgres;
+
+--
+-- Name: understanding_dimension_daily; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE understanding_dimension_daily (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    user_id uuid NOT NULL,
+    metric_date date NOT NULL,
+    dimensions jsonb NOT NULL,
+    anchors jsonb NOT NULL,
+    window_days integer NOT NULL,
+    schema_version character varying(64) NOT NULL
+);
+
+
+ALTER TABLE understanding_dimension_daily OWNER TO postgres;
 
 --
 -- Name: unresolved_conflicts; Type: TABLE; Schema: public; Owner: postgres
@@ -6201,7 +6495,10 @@ CREATE TABLE user_memory_settings (
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
     deleted_at timestamp without time zone,
-    allow_inferred_episodic boolean DEFAULT true NOT NULL
+    allow_inferred_episodic boolean DEFAULT true NOT NULL,
+    memory_epoch integer DEFAULT 1 NOT NULL,
+    memory_epoch_bumped_at timestamp without time zone,
+    memory_epoch_reason character varying(200)
 );
 
 
@@ -6368,7 +6665,8 @@ CREATE TABLE user_settings (
     ai_reasoning_mode character varying(16) DEFAULT 'balanced'::character varying NOT NULL,
     current_goal_id character varying(64),
     safe_experiments_opt_out boolean DEFAULT false NOT NULL,
-    community_intelligence_enabled boolean DEFAULT true NOT NULL
+    community_intelligence_enabled boolean DEFAULT true NOT NULL,
+    low_risk_auto_execute boolean DEFAULT false NOT NULL
 );
 
 
@@ -6679,7 +6977,8 @@ CREATE TABLE users (
     google_id_hash character varying(64),
     apple_id_hash character varying(64),
     wechat_unionid_hash character varying(64),
-    entitlement character varying(32) DEFAULT 'free'::character varying NOT NULL
+    entitlement character varying(32) DEFAULT 'free'::character varying NOT NULL,
+    entitlement_expires_at timestamp without time zone
 );
 
 
@@ -6881,6 +7180,22 @@ ALTER TABLE ONLY achievements
 
 
 --
+-- Name: action_proposal_transitions action_proposal_transitions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY action_proposal_transitions
+    ADD CONSTRAINT action_proposal_transitions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: action_proposals action_proposals_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY action_proposals
+    ADD CONSTRAINT action_proposals_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: admin_audit_log admin_audit_log_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -6894,6 +7209,30 @@ ALTER TABLE ONLY admin_audit_log
 
 ALTER TABLE ONLY agent_execution_stats
     ADD CONSTRAINT agent_execution_stats_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: agent_run_transitions agent_run_transitions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY agent_run_transitions
+    ADD CONSTRAINT agent_run_transitions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: agent_runs agent_runs_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY agent_runs
+    ADD CONSTRAINT agent_runs_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: agent_tool_calls agent_tool_calls_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY agent_tool_calls
+    ADD CONSTRAINT agent_tool_calls_pkey PRIMARY KEY (id);
 
 
 --
@@ -6958,6 +7297,14 @@ ALTER TABLE ONLY aurora_decision_telemetry
 
 ALTER TABLE ONLY aurora_judgment_records
     ADD CONSTRAINT aurora_judgment_records_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: aurora_policy_patches aurora_policy_patches_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY aurora_policy_patches
+    ADD CONSTRAINT aurora_policy_patches_pkey PRIMARY KEY (id);
 
 
 --
@@ -7729,6 +8076,14 @@ ALTER TABLE ONLY intervention_feedback
 
 
 --
+-- Name: intervention_lifecycle_events intervention_lifecycle_events_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY intervention_lifecycle_events
+    ADD CONSTRAINT intervention_lifecycle_events_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: intervention_outcomes intervention_outcomes_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -8193,6 +8548,14 @@ ALTER TABLE ONLY recommendation_cache
 
 
 --
+-- Name: redeem_codes redeem_codes_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY redeem_codes
+    ADD CONSTRAINT redeem_codes_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: release_approval_requests release_approval_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -8585,11 +8948,27 @@ ALTER TABLE ONLY transition_decision_records
 
 
 --
+-- Name: understanding_calibration_runs understanding_calibration_runs_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY understanding_calibration_runs
+    ADD CONSTRAINT understanding_calibration_runs_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: understanding_depth_daily understanding_depth_daily_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY understanding_depth_daily
     ADD CONSTRAINT understanding_depth_daily_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: understanding_dimension_daily understanding_dimension_daily_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY understanding_dimension_daily
+    ADD CONSTRAINT understanding_dimension_daily_pkey PRIMARY KEY (id);
 
 
 --
@@ -8721,6 +9100,14 @@ ALTER TABLE ONLY intervention_feedback
 
 
 --
+-- Name: intervention_lifecycle_events uq_intervention_lifecycle_once; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY intervention_lifecycle_events
+    ADD CONSTRAINT uq_intervention_lifecycle_once UNIQUE (decision_id, event_type, dedupe_subkey);
+
+
+--
 -- Name: item_similarities uq_item_similarity_pair; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -8750,6 +9137,14 @@ ALTER TABLE ONLY north_star_metric_events
 
 ALTER TABLE ONLY offline_message_queue
     ADD CONSTRAINT uq_offline_queue_nonce UNIQUE (user_id, client_nonce);
+
+
+--
+-- Name: aurora_policy_patches uq_policy_patch_once; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY aurora_policy_patches
+    ADD CONSTRAINT uq_policy_patch_once UNIQUE (patch_id);
 
 
 --
@@ -8838,6 +9233,14 @@ ALTER TABLE ONLY theater_predictions
 
 ALTER TABLE ONLY understanding_depth_daily
     ADD CONSTRAINT uq_understanding_depth_daily_user_date UNIQUE (user_id, metric_date);
+
+
+--
+-- Name: understanding_dimension_daily uq_understanding_dimension_daily_user_date; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY understanding_dimension_daily
+    ADD CONSTRAINT uq_understanding_dimension_daily_user_date UNIQUE (user_id, metric_date);
 
 
 --
@@ -9270,6 +9673,76 @@ CREATE INDEX idx_admin_audit_user_occurred ON admin_audit_log USING btree (admin
 
 
 --
+-- Name: idx_agent_run_transitions_run_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_agent_run_transitions_run_id ON agent_run_transitions USING btree (run_id);
+
+
+--
+-- Name: idx_agent_run_transitions_run_occurred; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_agent_run_transitions_run_occurred ON agent_run_transitions USING btree (run_id, occurred_at);
+
+
+--
+-- Name: idx_agent_runs_heartbeat; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_agent_runs_heartbeat ON agent_runs USING btree (heartbeat_at);
+
+
+--
+-- Name: idx_agent_runs_intent_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_agent_runs_intent_id ON agent_runs USING btree (intent_id);
+
+
+--
+-- Name: idx_agent_runs_session_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_agent_runs_session_id ON agent_runs USING btree (session_id);
+
+
+--
+-- Name: idx_agent_runs_task_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_agent_runs_task_id ON agent_runs USING btree (task_id);
+
+
+--
+-- Name: idx_agent_runs_trace_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_agent_runs_trace_id ON agent_runs USING btree (trace_id);
+
+
+--
+-- Name: idx_agent_runs_user_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_agent_runs_user_id ON agent_runs USING btree (user_id);
+
+
+--
+-- Name: idx_agent_runs_user_status; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_agent_runs_user_status ON agent_runs USING btree (user_id, status);
+
+
+--
+-- Name: idx_agent_tool_calls_user_created; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_agent_tool_calls_user_created ON agent_tool_calls USING btree (user_id, created_at);
+
+
+--
 -- Name: idx_aurora_core_session_conversation; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -9606,6 +10079,13 @@ CREATE INDEX idx_episodic_memories_embedding_hnsw ON episodic_memories USING hns
 
 
 --
+-- Name: idx_episodic_memories_epistemic_class; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_episodic_memories_epistemic_class ON episodic_memories USING btree (user_id, epistemic_class);
+
+
+--
 -- Name: idx_episodic_memories_evidence_missing; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -9652,6 +10132,13 @@ CREATE INDEX idx_episodic_memories_source_lane ON episodic_memories USING btree 
 --
 
 CREATE INDEX idx_episodic_memories_subject_type ON episodic_memories USING btree (user_id, subject_type);
+
+
+--
+-- Name: idx_episodic_memories_superseded_by_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_episodic_memories_superseded_by_id ON episodic_memories USING btree (superseded_by_id);
 
 
 --
@@ -10544,6 +11031,13 @@ CREATE INDEX idx_rec_cache_user_type ON recommendation_cache USING btree (user_i
 
 
 --
+-- Name: idx_redeem_codes_batch; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_redeem_codes_batch ON redeem_codes USING btree (batch_id, created_at);
+
+
+--
 -- Name: idx_release_approval_category_status_created; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -10866,6 +11360,13 @@ CREATE INDEX idx_token_usage_user_id ON token_usage USING btree (user_id);
 
 
 --
+-- Name: idx_understanding_calibration_runs_user_ran_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_understanding_calibration_runs_user_ran_at ON understanding_calibration_runs USING btree (user_id, ran_at);
+
+
+--
 -- Name: idx_understanding_depth_daily_date; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -10877,6 +11378,20 @@ CREATE INDEX idx_understanding_depth_daily_date ON understanding_depth_daily USI
 --
 
 CREATE INDEX idx_understanding_depth_daily_user_id ON understanding_depth_daily USING btree (user_id);
+
+
+--
+-- Name: idx_understanding_dimension_daily_date; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_understanding_dimension_daily_date ON understanding_dimension_daily USING btree (metric_date);
+
+
+--
+-- Name: idx_understanding_dimension_daily_user_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_understanding_dimension_daily_user_id ON understanding_dimension_daily USING btree (user_id);
 
 
 --
@@ -11251,6 +11766,69 @@ CREATE INDEX ix_achievements_type ON achievements USING btree (type);
 
 
 --
+-- Name: ix_action_proposal_transitions_proposal_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_action_proposal_transitions_proposal_id ON action_proposal_transitions USING btree (proposal_id);
+
+
+--
+-- Name: ix_action_proposals_expires_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_action_proposals_expires_at ON action_proposals USING btree (expires_at);
+
+
+--
+-- Name: ix_action_proposals_run_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_action_proposals_run_id ON action_proposals USING btree (run_id);
+
+
+--
+-- Name: ix_action_proposals_session_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_action_proposals_session_id ON action_proposals USING btree (session_id);
+
+
+--
+-- Name: ix_action_proposals_status; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_action_proposals_status ON action_proposals USING btree (status);
+
+
+--
+-- Name: ix_action_proposals_subject_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_action_proposals_subject_id ON action_proposals USING btree (subject_id);
+
+
+--
+-- Name: ix_action_proposals_trace_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_action_proposals_trace_id ON action_proposals USING btree (trace_id);
+
+
+--
+-- Name: ix_action_proposals_user_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_action_proposals_user_id ON action_proposals USING btree (user_id);
+
+
+--
+-- Name: ix_action_proposals_user_status; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_action_proposals_user_status ON action_proposals USING btree (user_id, status);
+
+
+--
 -- Name: ix_admin_audit_log_action; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -11377,10 +11955,31 @@ CREATE INDEX ix_agent_execution_stats_user_id ON agent_execution_stats USING btr
 
 
 --
+-- Name: ix_agent_runs_status; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_agent_runs_status ON agent_runs USING btree (status);
+
+
+--
 -- Name: ix_agent_stats_user_agent_type; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_agent_stats_user_agent_type ON agent_execution_stats USING btree (user_id, agent_type);
+
+
+--
+-- Name: ix_agent_tool_calls_run_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_agent_tool_calls_run_id ON agent_tool_calls USING btree (run_id);
+
+
+--
+-- Name: ix_agent_tool_calls_user_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_agent_tool_calls_user_id ON agent_tool_calls USING btree (user_id);
 
 
 --
@@ -11675,6 +12274,27 @@ CREATE INDEX ix_aurora_decision_telemetry_surface ON aurora_decision_telemetry U
 --
 
 CREATE INDEX ix_aurora_decision_telemetry_user_id ON aurora_decision_telemetry USING btree (user_id);
+
+
+--
+-- Name: ix_aurora_policy_patches_expires; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_aurora_policy_patches_expires ON aurora_policy_patches USING btree (expires_at);
+
+
+--
+-- Name: ix_aurora_policy_patches_state; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_aurora_policy_patches_state ON aurora_policy_patches USING btree (state);
+
+
+--
+-- Name: ix_aurora_policy_patches_user; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_aurora_policy_patches_user ON aurora_policy_patches USING btree (user_id);
 
 
 --
@@ -13477,6 +14097,41 @@ CREATE INDEX ix_intervention_feedback_user_id ON intervention_feedback USING btr
 
 
 --
+-- Name: ix_intervention_lifecycle_decision; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_intervention_lifecycle_decision ON intervention_lifecycle_events USING btree (decision_id);
+
+
+--
+-- Name: ix_intervention_lifecycle_event_type; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_intervention_lifecycle_event_type ON intervention_lifecycle_events USING btree (event_type);
+
+
+--
+-- Name: ix_intervention_lifecycle_occurred; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_intervention_lifecycle_occurred ON intervention_lifecycle_events USING btree (occurred_at);
+
+
+--
+-- Name: ix_intervention_lifecycle_user; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_intervention_lifecycle_user ON intervention_lifecycle_events USING btree (user_id);
+
+
+--
+-- Name: ix_intervention_lifecycle_user_intervention; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_intervention_lifecycle_user_intervention ON intervention_lifecycle_events USING btree (user_id, intervention_type);
+
+
+--
 -- Name: ix_intervention_outcome; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -14755,6 +15410,13 @@ CREATE UNIQUE INDEX ix_push_preferences_user_id ON push_preferences USING btree 
 --
 
 CREATE INDEX ix_recommendation_cache_deleted_at ON recommendation_cache USING btree (deleted_at);
+
+
+--
+-- Name: ix_redeem_codes_code_hash; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX ix_redeem_codes_code_hash ON redeem_codes USING btree (code_hash);
 
 
 --
@@ -16767,6 +17429,48 @@ CREATE INDEX ix_word_books_word ON word_books USING btree (word);
 
 
 --
+-- Name: uq_action_proposal_transitions_idem; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX uq_action_proposal_transitions_idem ON action_proposal_transitions USING btree (proposal_id, idempotency_key) WHERE (idempotency_key IS NOT NULL);
+
+
+--
+-- Name: uq_action_proposals_idem; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX uq_action_proposals_idem ON action_proposals USING btree (user_id, idempotency_key) WHERE (idempotency_key IS NOT NULL);
+
+
+--
+-- Name: uq_agent_run_transitions_idem; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX uq_agent_run_transitions_idem ON agent_run_transitions USING btree (run_id, idempotency_key);
+
+
+--
+-- Name: uq_agent_runs_idem; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX uq_agent_runs_idem ON agent_runs USING btree (user_id, idempotency_key);
+
+
+--
+-- Name: uq_agent_runs_intent_active; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX uq_agent_runs_intent_active ON agent_runs USING btree (intent_id) WHERE ((status)::text <> ALL ((ARRAY['BUDGET_EXCEEDED'::character varying, 'CANCELLED'::character varying, 'FAILED'::character varying, 'PARTIAL'::character varying, 'SUCCEEDED'::character varying, 'TIMED_OUT'::character varying, 'UNKNOWN_OUTCOME'::character varying])::text[]));
+
+
+--
+-- Name: uq_agent_tool_calls_idem; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX uq_agent_tool_calls_idem ON agent_tool_calls USING btree (user_id, tool_name, idempotency_key) WHERE (idempotency_key IS NOT NULL);
+
+
+--
 -- Name: uq_aurora_policy_versions_version; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -16952,11 +17656,75 @@ ALTER TABLE ONLY achievements
 
 
 --
+-- Name: action_proposal_transitions action_proposal_transitions_proposal_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY action_proposal_transitions
+    ADD CONSTRAINT action_proposal_transitions_proposal_id_fkey FOREIGN KEY (proposal_id) REFERENCES action_proposals(id) ON DELETE CASCADE;
+
+
+--
+-- Name: action_proposals action_proposals_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY action_proposals
+    ADD CONSTRAINT action_proposals_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: admin_audit_log admin_audit_log_admin_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY admin_audit_log
     ADD CONSTRAINT admin_audit_log_admin_user_id_fkey FOREIGN KEY (admin_user_id) REFERENCES users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: agent_run_transitions agent_run_transitions_run_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY agent_run_transitions
+    ADD CONSTRAINT agent_run_transitions_run_id_fkey FOREIGN KEY (run_id) REFERENCES agent_runs(id) ON DELETE CASCADE;
+
+
+--
+-- Name: agent_runs agent_runs_intent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY agent_runs
+    ADD CONSTRAINT agent_runs_intent_id_fkey FOREIGN KEY (intent_id) REFERENCES execution_intents(id) ON DELETE SET NULL;
+
+
+--
+-- Name: agent_runs agent_runs_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY agent_runs
+    ADD CONSTRAINT agent_runs_task_id_fkey FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE SET NULL;
+
+
+--
+-- Name: agent_runs agent_runs_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY agent_runs
+    ADD CONSTRAINT agent_runs_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: agent_tool_calls agent_tool_calls_run_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY agent_tool_calls
+    ADD CONSTRAINT agent_tool_calls_run_id_fkey FOREIGN KEY (run_id) REFERENCES agent_runs(id) ON DELETE SET NULL;
+
+
+--
+-- Name: agent_tool_calls agent_tool_calls_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY agent_tool_calls
+    ADD CONSTRAINT agent_tool_calls_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -16989,6 +17757,14 @@ ALTER TABLE ONLY aurora_decision_telemetry
 
 ALTER TABLE ONLY aurora_judgment_records
     ADD CONSTRAINT aurora_judgment_records_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+
+
+--
+-- Name: aurora_policy_patches aurora_policy_patches_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY aurora_policy_patches
+    ADD CONSTRAINT aurora_policy_patches_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
 
 
 --
@@ -17632,6 +18408,22 @@ ALTER TABLE ONLY plans
 
 
 --
+-- Name: redeem_codes fk_redeem_codes_created_by_users; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY redeem_codes
+    ADD CONSTRAINT fk_redeem_codes_created_by_users FOREIGN KEY (created_by) REFERENCES users(id);
+
+
+--
+-- Name: redeem_codes fk_redeem_codes_used_by_users; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY redeem_codes
+    ADD CONSTRAINT fk_redeem_codes_used_by_users FOREIGN KEY (used_by) REFERENCES users(id);
+
+
+--
 -- Name: shared_resources fk_shared_resources_card_share_record_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -17957,6 +18749,14 @@ ALTER TABLE ONLY intervention_feedback
 
 ALTER TABLE ONLY intervention_feedback
     ADD CONSTRAINT intervention_feedback_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+
+
+--
+-- Name: intervention_lifecycle_events intervention_lifecycle_events_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY intervention_lifecycle_events
+    ADD CONSTRAINT intervention_lifecycle_events_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
 
 
 --
@@ -19557,6 +20357,20 @@ GRANT SELECT ON TABLE achievements TO sparkle_readonly;
 
 
 --
+-- Name: TABLE action_proposal_transitions; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE action_proposal_transitions TO sparkle_readonly;
+
+
+--
+-- Name: TABLE action_proposals; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE action_proposals TO sparkle_readonly;
+
+
+--
 -- Name: TABLE admin_audit_log; Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -19580,6 +20394,27 @@ GRANT SELECT,USAGE ON SEQUENCE agent_execution_stats_id_seq TO sparkle_gateway;
 GRANT SELECT,USAGE ON SEQUENCE agent_execution_stats_id_seq TO sparkle_engine;
 GRANT SELECT,USAGE ON SEQUENCE agent_execution_stats_id_seq TO sparkle_celery;
 GRANT SELECT,USAGE ON SEQUENCE agent_execution_stats_id_seq TO sparkle_readonly;
+
+
+--
+-- Name: TABLE agent_run_transitions; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE agent_run_transitions TO sparkle_readonly;
+
+
+--
+-- Name: TABLE agent_runs; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE agent_runs TO sparkle_readonly;
+
+
+--
+-- Name: TABLE agent_tool_calls; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE agent_tool_calls TO sparkle_readonly;
 
 
 --
@@ -19642,6 +20477,13 @@ GRANT SELECT ON TABLE aurora_decision_telemetry TO sparkle_readonly;
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE aurora_judgment_records TO sparkle_engine;
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE aurora_judgment_records TO sparkle_celery;
 GRANT SELECT ON TABLE aurora_judgment_records TO sparkle_readonly;
+
+
+--
+-- Name: TABLE aurora_policy_patches; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE aurora_policy_patches TO sparkle_readonly;
 
 
 --
@@ -20313,6 +21155,13 @@ GRANT SELECT ON TABLE intervention_feedback TO sparkle_readonly;
 
 
 --
+-- Name: TABLE intervention_lifecycle_events; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE intervention_lifecycle_events TO sparkle_readonly;
+
+
+--
 -- Name: TABLE intervention_outcomes; Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -20800,6 +21649,13 @@ GRANT SELECT ON TABLE recommendation_cache TO sparkle_readonly;
 
 
 --
+-- Name: TABLE redeem_codes; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE redeem_codes TO sparkle_readonly;
+
+
+--
 -- Name: TABLE release_approval_requests; Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -21183,10 +22039,24 @@ GRANT SELECT ON TABLE transition_decision_records TO sparkle_readonly;
 
 
 --
+-- Name: TABLE understanding_calibration_runs; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE understanding_calibration_runs TO sparkle_readonly;
+
+
+--
 -- Name: TABLE understanding_depth_daily; Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT SELECT ON TABLE understanding_depth_daily TO sparkle_readonly;
+
+
+--
+-- Name: TABLE understanding_dimension_daily; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE understanding_dimension_daily TO sparkle_readonly;
 
 
 --

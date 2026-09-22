@@ -202,6 +202,7 @@ from app.models.recommendation import (
     UserLearningProfile,
     UserSimilarity,
 )
+from app.models.redeem_code import RedeemCode
 from app.models.report_snapshot import ReportSnapshot
 from app.models.research_consent import ResearchConsentRecord
 from app.models.response_feedback import ResponseFeedback
@@ -525,6 +526,8 @@ __all__ = [
     "UserItemInteraction",
     "UserLearningProfile",
     "UserSimilarity",
+    # Redeem (D-REDEEM)
+    "RedeemCode",
     # Research
     "ResearchConsentRecord",
     # Report
