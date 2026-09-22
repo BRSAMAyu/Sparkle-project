@@ -8,6 +8,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/task_notification_id_mapper.dart';
 import 'package:sparkle/core/services/task_notification_scheduler.dart';
@@ -189,7 +190,15 @@ Widget _buildDashboardProviderHarness({
     ],
     child: MaterialApp(
       locale: locale,
-      theme: theme ?? ThemeData.light(),
+      // 与 test/shared/i18n_test_helper.dart 的 testMaterialApp 同款：
+      // owner 组件（含 PredictedIntentCard）构建即读 context.sparkle，
+      // 未注册扩展直接断言失败。
+      theme: (theme ?? ThemeData.light()).copyWith(
+        extensions: [
+          ...?(theme?.extensions.values.toList()),
+          SparkleThemeExtension.light(),
+        ],
+      ),
       localizationsDelegates: const [
         ...AppLocalizations.localizationsDelegates,
         GlobalMaterialLocalizations.delegate,
