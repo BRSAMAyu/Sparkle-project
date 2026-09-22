@@ -652,6 +652,327 @@ _DS_CORE_TEMPLATE_KEYS = (
     "ds_sa_quicksort_worst",
 )
 
+# ---------------------------------------------------------------------------
+# P0-1: discrete-mathematics template set
+#
+# NS-001（北极星剧本：离散数学期末 7 天冲刺）的 Day1 第一张卡就是诊断分诊，
+# 但 MVP 题包只有计算机网络/数据结构 → diagnose/generate 422（LOOP1 BP-1）。
+# 本题包与 data_structures 同构：静态模板 + 确定性判卷（无 LLM、无预算面）。
+# linked_node_slugs = sprint-pack 节点后缀（dm.*，见 discrete_mathematics_v1.json），
+# 经 _pack_node_suffix_index 把掌握度落到 canonical dm.* 星图节点（P1-E3 模式）。
+# 章节覆盖（NS-001 考纲 6 章）：CH1 命题/谓词逻辑、CH2 集合/关系、CH3 函数与
+# 基数、CH4 图论（含欧拉/哈密顿、树）、CH5 组合计数、CH6 代数系统——诊断触达
+# 必需的章级面（10 节点），24 细粒度节点留待后续卡。
+# ---------------------------------------------------------------------------
+
+_DM_DEFAULT_NODES: tuple[dict[str, Any], ...] = (
+    {"slug": "propositional_logic", "name": "命题逻辑", "domain": "命题逻辑", "exam_weight": 1.2, "frequency": 1.15, "mistake_tags": ["truth_table_confusion", "implication_direction"]},
+    {"slug": "predicate_logic", "name": "谓词逻辑", "domain": "谓词逻辑", "exam_weight": 1.05, "frequency": 1.0, "mistake_tags": ["quantifier_negation"]},
+    {"slug": "set_theory", "name": "集合及其运算", "domain": "集合论", "exam_weight": 1.1, "frequency": 1.05, "mistake_tags": ["counting_overlap"]},
+    {"slug": "binary_relations", "name": "二元关系", "domain": "二元关系", "exam_weight": 1.2, "frequency": 1.15, "mistake_tags": ["relation_properties"]},
+    {"slug": "functions_cardinality", "name": "函数与基数", "domain": "函数与基数", "exam_weight": 0.95, "frequency": 0.9, "mistake_tags": ["counting_overlap"]},
+    {"slug": "graph_basics", "name": "图的基本概念", "domain": "图论", "exam_weight": 1.25, "frequency": 1.2, "mistake_tags": ["degree_parity", "euler_hamilton_mixup"]},
+    {"slug": "euler_hamilton", "name": "欧拉图与哈密顿图", "domain": "欧拉与哈密顿", "exam_weight": 1.2, "frequency": 1.15, "mistake_tags": ["euler_hamilton_mixup"]},
+    {"slug": "trees", "name": "树与生成树", "domain": "树与生成树", "exam_weight": 0.95, "frequency": 0.9, "mistake_tags": ["degree_parity"]},
+    {"slug": "combinatorics", "name": "组合计数", "domain": "组合计数", "exam_weight": 1.0, "frequency": 1.0, "mistake_tags": ["counting_overlap"]},
+    {"slug": "algebraic_structures", "name": "代数系统", "domain": "代数系统", "exam_weight": 0.9, "frequency": 0.85, "mistake_tags": ["group_axioms"]},
+)
+
+_DM_QUESTION_ARCHETYPES: tuple[str, ...] = (
+    "high_frequency_concept_judgment",
+    "high_frequency_calculation",
+    "process_trace",
+    "integrated_scenario",
+)
+
+_DM_TEMPLATES: tuple[QuestionTemplate, ...] = (
+    # --- CH1 命题逻辑 ---
+    QuestionTemplate(
+        template_key="dm_logic_tautology",
+        domain="命题逻辑",
+        archetype="high_frequency_concept_judgment",
+        question_type=DiagnoseQuestionType.SINGLE_CHOICE,
+        stem="下列公式中，属于重言式（永真式）的是？",
+        choices=("p→q", "p∨¬p", "p∧¬p", "¬(p→p)"),
+        correct_choice_index=1,
+        error_tags=("truth_table_confusion",),
+        linked_node_slugs=("propositional_logic",),
+        expected_seconds=50,
+    ),
+    QuestionTemplate(
+        template_key="dm_logic_implication_equiv",
+        domain="命题逻辑",
+        archetype="high_frequency_concept_judgment",
+        question_type=DiagnoseQuestionType.SINGLE_CHOICE,
+        stem="与蕴含式 `p→q` 等值的公式是？",
+        choices=("¬p∨q", "¬p∧q", "p∨¬q", "q→p"),
+        correct_choice_index=0,
+        error_tags=("implication_direction", "truth_table_confusion"),
+        linked_node_slugs=("propositional_logic",),
+        priority=1.2,
+    ),
+    QuestionTemplate(
+        template_key="dm_logic_biconditional",
+        domain="命题逻辑",
+        archetype="high_frequency_concept_judgment",
+        question_type=DiagnoseQuestionType.SINGLE_CHOICE,
+        stem="当 `p↔q` 为真时，p 与 q 的真值关系是？",
+        choices=("同为真", "同为假", "真值相同", "真值相反"),
+        correct_choice_index=2,
+        error_tags=("truth_table_confusion",),
+        linked_node_slugs=("propositional_logic",),
+        priority=0.95,
+    ),
+    QuestionTemplate(
+        template_key="dm_sa_modus_tollens",
+        domain="命题逻辑",
+        archetype="process_trace",
+        question_type=DiagnoseQuestionType.SHORT_ANSWER,
+        stem="已知 `p→q` 为真且 `q` 为假，请写出 `p` 的真值，并写出所用的推理规则名称。",
+        required_keywords=("假", "拒取"),
+        partial_keywords=("modus", "tollens", "推理"),
+        error_tags=("implication_direction",),
+        linked_node_slugs=("propositional_logic",),
+        expected_seconds=70,
+    ),
+    # --- CH1 谓词逻辑 ---
+    QuestionTemplate(
+        template_key="dm_predicate_negation",
+        domain="谓词逻辑",
+        archetype="high_frequency_concept_judgment",
+        question_type=DiagnoseQuestionType.SINGLE_CHOICE,
+        stem="`¬∀x F(x)` 与下列哪个公式等值？",
+        choices=("∀x¬F(x)", "∃x¬F(x)", "∃xF(x)", "¬∃x¬F(x)"),
+        correct_choice_index=1,
+        error_tags=("quantifier_negation",),
+        linked_node_slugs=("predicate_logic",),
+        priority=1.2,
+    ),
+    QuestionTemplate(
+        template_key="dm_predicate_bound_variable",
+        domain="谓词逻辑",
+        archetype="high_frequency_concept_judgment",
+        question_type=DiagnoseQuestionType.SINGLE_CHOICE,
+        stem="在公式 `∀x(F(x)→∃yG(x,y))` 中，变元 `y` 是？",
+        choices=("约束变元", "自由变元", "个体常项", "既是自由又是约束变元"),
+        correct_choice_index=0,
+        error_tags=("quantifier_negation",),
+        linked_node_slugs=("predicate_logic",),
+        priority=0.9,
+    ),
+    # --- CH2 集合论 ---
+    QuestionTemplate(
+        template_key="dm_set_union_absorption",
+        domain="集合论",
+        archetype="high_frequency_concept_judgment",
+        question_type=DiagnoseQuestionType.SINGLE_CHOICE,
+        stem="设 A、B 为集合，`A∪B = B` 成立的充要条件是？",
+        choices=("B⊆A", "A=B", "A⊆B", "A∩B=∅"),
+        correct_choice_index=2,
+        error_tags=("counting_overlap",),
+        linked_node_slugs=("set_theory",),
+    ),
+    QuestionTemplate(
+        template_key="dm_sa_set_laws",
+        domain="集合论",
+        archetype="high_frequency_concept_judgment",
+        question_type=DiagnoseQuestionType.SHORT_ANSWER,
+        stem="`A∪B = B∪A` 说明并运算满足什么律？`A∩(B∩C) = (A∩B)∩C` 说明交运算满足什么律？请分别写出。",
+        required_keywords=("交换", "结合"),
+        partial_keywords=("分配", "吸收", "幂等"),
+        error_tags=("counting_overlap",),
+        linked_node_slugs=("set_theory",),
+        expected_seconds=70,
+    ),
+    # --- CH2 二元关系 ---
+    QuestionTemplate(
+        template_key="dm_relation_equivalence",
+        domain="二元关系",
+        archetype="high_frequency_concept_judgment",
+        question_type=DiagnoseQuestionType.SINGLE_CHOICE,
+        stem="集合 A 上的关系 R 同时具有自反性、对称性和传递性，则 R 是 A 上的？",
+        choices=("等价关系", "偏序关系", "全序关系", "相容关系"),
+        correct_choice_index=0,
+        error_tags=("relation_properties",),
+        linked_node_slugs=("binary_relations",),
+        priority=1.1,
+    ),
+    QuestionTemplate(
+        template_key="dm_relation_equivalence_count",
+        domain="二元关系",
+        archetype="high_frequency_calculation",
+        question_type=DiagnoseQuestionType.SINGLE_CHOICE,
+        stem="三元集合 A={1,2,3} 上不同的等价关系共有多少个？（提示：等价关系与划分一一对应）",
+        choices=("4", "5", "6", "8"),
+        correct_choice_index=1,
+        error_tags=("counting_overlap", "relation_properties"),
+        linked_node_slugs=("binary_relations",),
+        expected_seconds=75,
+        priority=1.15,
+    ),
+    QuestionTemplate(
+        template_key="dm_relation_identity_properties",
+        domain="二元关系",
+        archetype="high_frequency_concept_judgment",
+        question_type=DiagnoseQuestionType.SINGLE_CHOICE,
+        stem="关于集合 A 上的恒等关系 `I_A`，下列说法正确的是？",
+        choices=("它是对称的，但不是反对称的", "它不是传递的", "它同时具有自反、对称、反对称和传递性", "它仅具有自反性"),
+        correct_choice_index=2,
+        error_tags=("relation_properties",),
+        linked_node_slugs=("binary_relations",),
+        priority=0.9,
+    ),
+    # --- CH3 函数与基数 ---
+    QuestionTemplate(
+        template_key="dm_function_injection_count",
+        domain="函数与基数",
+        archetype="high_frequency_calculation",
+        question_type=DiagnoseQuestionType.SINGLE_CHOICE,
+        stem="设 |A|=3，|B|=4，从 A 到 B 的单射函数共有多少个？",
+        choices=("12", "24", "64", "81"),
+        correct_choice_index=1,
+        error_tags=("counting_overlap",),
+        linked_node_slugs=("functions_cardinality",),
+        priority=1.2,
+    ),
+    QuestionTemplate(
+        template_key="dm_function_bijection",
+        domain="函数与基数",
+        archetype="high_frequency_concept_judgment",
+        question_type=DiagnoseQuestionType.SINGLE_CHOICE,
+        stem="下列函数 f: Z→Z 中，是双射的是？",
+        choices=("f(x)=x²", "f(x)=2x", "f(x)=x+1", "f(x)=0"),
+        correct_choice_index=2,
+        error_tags=("counting_overlap",),
+        linked_node_slugs=("functions_cardinality",),
+    ),
+    # --- CH4 图论 ---
+    QuestionTemplate(
+        template_key="dm_graph_complete_edges",
+        domain="图论",
+        archetype="high_frequency_calculation",
+        question_type=DiagnoseQuestionType.SINGLE_CHOICE,
+        stem="5 个顶点的无向完全图 `K5` 有多少条边？",
+        choices=("5", "10", "20", "25"),
+        correct_choice_index=1,
+        error_tags=("counting_overlap",),
+        linked_node_slugs=("graph_basics",),
+    ),
+    QuestionTemplate(
+        template_key="dm_graph_degree_sequence",
+        domain="图论",
+        archetype="high_frequency_concept_judgment",
+        question_type=DiagnoseQuestionType.SINGLE_CHOICE,
+        stem="下列度数序列中，不可能构成无向图的是？",
+        choices=("(1,1,1,1)", "(2,2,2,2)", "(1,2,2,3)", "(1,1,1,2)"),
+        correct_choice_index=3,
+        error_tags=("degree_parity",),
+        linked_node_slugs=("graph_basics",),
+        priority=1.15,
+    ),
+    QuestionTemplate(
+        template_key="dm_graph_euler_circuit",
+        domain="欧拉与哈密顿",
+        archetype="high_frequency_concept_judgment",
+        question_type=DiagnoseQuestionType.SINGLE_CHOICE,
+        stem="无向连通图 G 存在欧拉回路的充要条件是？",
+        choices=("所有顶点的度数都是偶数", "恰有两个奇度顶点", "是完全图", "所有顶点的度数都是奇数"),
+        correct_choice_index=0,
+        error_tags=("euler_hamilton_mixup",),
+        linked_node_slugs=("euler_hamilton", "graph_basics"),
+        priority=1.3,
+    ),
+    QuestionTemplate(
+        template_key="dm_graph_hamilton",
+        domain="欧拉与哈密顿",
+        archetype="high_frequency_concept_judgment",
+        question_type=DiagnoseQuestionType.SINGLE_CHOICE,
+        stem="下列关于哈密顿回路的说法，正确的是？",
+        choices=("要求经过每条边恰好一次", "要求经过每个顶点恰好一次", "充要条件是所有顶点的度数为偶数", "任何连通图都存在哈密顿回路"),
+        correct_choice_index=1,
+        error_tags=("euler_hamilton_mixup",),
+        linked_node_slugs=("euler_hamilton",),
+        priority=1.25,
+    ),
+    # --- CH5 组合计数 ---
+    QuestionTemplate(
+        template_key="dm_combination_committee",
+        domain="组合计数",
+        archetype="high_frequency_calculation",
+        question_type=DiagnoseQuestionType.SINGLE_CHOICE,
+        stem="从 6 名学生中选出 3 人组成代表队（不分顺序），共有多少种选法？",
+        choices=("15", "20", "30", "120"),
+        correct_choice_index=1,
+        error_tags=("counting_overlap",),
+        linked_node_slugs=("combinatorics",),
+        priority=1.05,
+    ),
+    QuestionTemplate(
+        template_key="dm_pigeonhole_sum11",
+        domain="组合计数",
+        archetype="high_frequency_calculation",
+        question_type=DiagnoseQuestionType.SINGLE_CHOICE,
+        stem="从 1~10 这十个数中至少取出多少个数，才能保证其中有两个数之和恰好为 11？",
+        choices=("5", "6", "9", "11"),
+        correct_choice_index=1,
+        error_tags=("counting_overlap",),
+        linked_node_slugs=("combinatorics",),
+        expected_seconds=70,
+        priority=1.1,
+    ),
+    # --- CH6 代数系统 ---
+    QuestionTemplate(
+        template_key="dm_algebra_group",
+        domain="代数系统",
+        archetype="high_frequency_concept_judgment",
+        question_type=DiagnoseQuestionType.SINGLE_CHOICE,
+        stem="下列代数系统中，构成群的是？",
+        choices=("⟨Z, −⟩（整数集关于减法）", "⟨N, +⟩（自然数集关于加法）", "⟨Z, ×⟩（整数集关于乘法）", "⟨Z, +⟩（整数集关于加法）"),
+        correct_choice_index=3,
+        error_tags=("group_axioms",),
+        linked_node_slugs=("algebraic_structures",),
+        priority=1.1,
+    ),
+    QuestionTemplate(
+        template_key="dm_algebra_element_order",
+        domain="代数系统",
+        archetype="high_frequency_calculation",
+        question_type=DiagnoseQuestionType.SINGLE_CHOICE,
+        stem="在群 `⟨Z6, +6⟩` 中，元素 2 的阶（周期）是？",
+        # 选项排列注意：判卷兼容裸数字作 0/1-based 索引提交，错误选项文本
+        # （2/6/1）不得命中 correct_choice_index 或其 +1（此处正确位=3）。
+        choices=("2", "6", "1", "3"),
+        correct_choice_index=3,
+        error_tags=("group_axioms",),
+        linked_node_slugs=("algebraic_structures",),
+        priority=1.05,
+    ),
+    # --- 综合题（不计入领域数，NS-001 高频痛点：七桥问题） ---
+    QuestionTemplate(
+        template_key="dm_sa_koenigsberg",
+        domain="综合题",
+        archetype="integrated_scenario",
+        question_type=DiagnoseQuestionType.SHORT_ANSWER,
+        stem="简答：哥尼斯堡七桥问题对应的图为什么不存在欧拉回路？请从顶点度数的角度说明。",
+        required_keywords=("奇", "度"),
+        partial_keywords=("偶", "桥", "四个", "4个"),
+        error_tags=("euler_hamilton_mixup", "degree_parity"),
+        linked_node_slugs=("euler_hamilton", "graph_basics"),
+        expected_seconds=90,
+        points=1.2,
+    ),
+)
+
+_DM_CORE_TEMPLATE_KEYS = (
+    "dm_logic_implication_equiv",
+    "dm_predicate_negation",
+    "dm_relation_equivalence_count",
+    "dm_function_injection_count",
+    "dm_graph_euler_circuit",
+    "dm_combination_committee",
+    "dm_algebra_group",
+)
+
 
 @dataclass(frozen=True)
 class _SubjectTemplateSet:
@@ -675,9 +996,12 @@ _SUBJECT_TEMPLATE_SETS: dict[str, _SubjectTemplateSet] = {
     "data_structures_algorithms": _SubjectTemplateSet(
         _DS_TEMPLATES, _DS_CORE_TEMPLATE_KEYS, _DS_DEFAULT_NODES, _DS_QUESTION_ARCHETYPES
     ),
+    "discrete_mathematics": _SubjectTemplateSet(
+        _DM_TEMPLATES, _DM_CORE_TEMPLATE_KEYS, _DM_DEFAULT_NODES, _DM_QUESTION_ARCHETYPES
+    ),
 }
 
-_SUPPORTED_SUBJECT_HINT = "计算机网络、数据结构"
+_SUPPORTED_SUBJECT_HINT = "计算机网络、数据结构、离散数学"
 
 
 def _resolve_subject_pack_key(subject: str) -> str | None:

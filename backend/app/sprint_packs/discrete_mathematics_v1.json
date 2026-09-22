@@ -1,0 +1,367 @@
+{
+  "id": "discrete_mathematics@v1",
+  "name": "离散数学冲刺包",
+  "version": "v1.0",
+  "description": "面向离散数学期末考试的冲刺知识包，覆盖数理逻辑（命题/谓词）、集合与关系、函数与基数、图论（含欧拉图与哈密顿图）、树、组合计数与代数系统。",
+  "subject": "离散数学",
+  "aliases": ["离散", "离散数学", "discrete math", "discrete mathematics", "discrete_math"],
+  "author": "sparkle-core",
+  "created_at": "2026-09-22T00:00:00",
+  "changelog": [
+    "Initial release: 10 knowledge nodes (chapter-level core surface) for discrete mathematics sprint mode; aligns with NS-001 curriculum CH1-CH6 for diagnostic topic->galaxy-node mapping."
+  ],
+  "knowledge_nodes": [
+    {
+      "node_id": "dm.propositional_logic",
+      "label": "命题逻辑",
+      "layer": "ch1_logic",
+      "prerequisites": [],
+      "exam_weight": 0.9,
+      "frequency": 0.95,
+      "trainability": 0.9,
+      "time_cost": 25,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": ["mistake.dm_truth_table", "mistake.dm_implication_direction"],
+      "recommended_action": "手写 5 种联结词真值表，并用等值演算推导 p→q 与 ¬p∨q 的等值证明"
+    },
+    {
+      "node_id": "dm.predicate_logic",
+      "label": "谓词逻辑",
+      "layer": "ch1_logic",
+      "prerequisites": ["dm.propositional_logic"],
+      "exam_weight": 0.7,
+      "frequency": 0.75,
+      "trainability": 0.85,
+      "time_cost": 30,
+      "difficulty": 3,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": ["mistake.dm_quantifier_negation"],
+      "recommended_action": "默写量词否定等值式 ¬∀x↔∃x¬，并对含多个量词的公式标注辖域与约束变元"
+    },
+    {
+      "node_id": "dm.set_theory",
+      "label": "集合及其运算",
+      "layer": "ch2_sets_relations",
+      "prerequisites": [],
+      "exam_weight": 0.8,
+      "frequency": 0.85,
+      "trainability": 0.9,
+      "time_cost": 20,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": ["mistake.dm_counting_overlap"],
+      "recommended_action": "用文氏图重推容斥原理，并证明 A⊆B ⇔ A∪B=B ⇔ A∩B=A"
+    },
+    {
+      "node_id": "dm.binary_relations",
+      "label": "二元关系",
+      "layer": "ch2_sets_relations",
+      "prerequisites": ["dm.set_theory"],
+      "exam_weight": 0.85,
+      "frequency": 0.9,
+      "trainability": 0.85,
+      "time_cost": 30,
+      "difficulty": 3,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": ["mistake.dm_relation_properties"],
+      "recommended_action": "对同一关系矩阵逐条验证自反/对称/反对称/传递，并枚举三元集上的全部划分（等价关系计数）"
+    },
+    {
+      "node_id": "dm.functions_cardinality",
+      "label": "函数与基数",
+      "layer": "ch3_functions",
+      "prerequisites": ["dm.set_theory"],
+      "exam_weight": 0.55,
+      "frequency": 0.6,
+      "trainability": 0.8,
+      "time_cost": 25,
+      "difficulty": 3,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": ["mistake.dm_counting_overlap"],
+      "recommended_action": "用乘法法则推导 |A|=m,|B|=n 时函数/单射/双射的计数公式，并各举一个实例"
+    },
+    {
+      "node_id": "dm.graph_basics",
+      "label": "图的基本概念",
+      "layer": "ch4_graph_theory",
+      "prerequisites": ["dm.set_theory"],
+      "exam_weight": 0.85,
+      "frequency": 0.9,
+      "trainability": 0.9,
+      "time_cost": 25,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": ["mistake.dm_degree_parity", "mistake.dm_euler_hamilton_mixup"],
+      "recommended_action": "用握手定理判断度数序列可图化性，并推导完全图边数公式 n(n-1)/2"
+    },
+    {
+      "node_id": "dm.euler_hamilton",
+      "label": "欧拉图与哈密顿图",
+      "layer": "ch4_graph_theory",
+      "prerequisites": ["dm.graph_basics"],
+      "exam_weight": 0.7,
+      "frequency": 0.75,
+      "trainability": 0.85,
+      "time_cost": 30,
+      "difficulty": 3,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": ["mistake.dm_euler_hamilton_mixup"],
+      "recommended_action": "对照记忆：欧拉看边（偶度充要）、哈密顿看点（无简单充要），并用七桥问题与星图各做一个反例"
+    },
+    {
+      "node_id": "dm.trees",
+      "label": "树与生成树",
+      "layer": "ch4_graph_theory",
+      "prerequisites": ["dm.graph_basics"],
+      "exam_weight": 0.55,
+      "frequency": 0.6,
+      "trainability": 0.85,
+      "time_cost": 25,
+      "difficulty": 2,
+      "minimum_pass_required": false,
+      "score_max_required": false,
+      "common_mistakes": ["mistake.dm_degree_parity"],
+      "recommended_action": "证明 n 顶点树的边数为 n-1 与等价定义，并手算一个最小生成树实例"
+    },
+    {
+      "node_id": "dm.combinatorics",
+      "label": "组合计数",
+      "layer": "ch5_combinatorics",
+      "prerequisites": ["dm.functions_cardinality"],
+      "exam_weight": 0.5,
+      "frequency": 0.6,
+      "trainability": 0.9,
+      "time_cost": 25,
+      "difficulty": 2,
+      "minimum_pass_required": false,
+      "score_max_required": false,
+      "common_mistakes": ["mistake.dm_counting_overlap"],
+      "recommended_action": "区分排列/组合场景各做 5 题，并练习用鸽巢原理构造保证性论证"
+    },
+    {
+      "node_id": "dm.algebraic_structures",
+      "label": "代数系统",
+      "layer": "ch6_algebraic_systems",
+      "prerequisites": ["dm.binary_relations"],
+      "exam_weight": 0.45,
+      "frequency": 0.5,
+      "trainability": 0.75,
+      "time_cost": 35,
+      "difficulty": 3,
+      "minimum_pass_required": false,
+      "score_max_required": false,
+      "common_mistakes": ["mistake.dm_group_axioms"],
+      "recommended_action": "按结合/单位元/逆元三步验证代数系统是否成群，并求 Zn 中元素阶与全部生成元"
+    }
+  ],
+  "mistake_types": [
+    {
+      "mistake_id": "mistake.dm_truth_table",
+      "label": "联结词与真值表混淆",
+      "related_nodes": ["dm.propositional_logic"],
+      "fix": "先列完整真值表再判重言/矛盾，不靠直觉跳步"
+    },
+    {
+      "mistake_id": "mistake.dm_implication_direction",
+      "label": "蕴含等值式方向记错",
+      "related_nodes": ["dm.propositional_logic"],
+      "fix": "记住 p→q 仅在 p 真q 假时为假，再用 ¬p∨q 交叉验证"
+    },
+    {
+      "mistake_id": "mistake.dm_quantifier_negation",
+      "label": "量词否定规则用错",
+      "related_nodes": ["dm.predicate_logic"],
+      "fix": "否定过量词时量词翻转且谓词取反：¬∀xF(x) ⇔ ∃x¬F(x)"
+    },
+    {
+      "mistake_id": "mistake.dm_counting_overlap",
+      "label": "计数重复或遗漏交集",
+      "related_nodes": ["dm.set_theory", "dm.functions_cardinality", "dm.combinatorics"],
+      "fix": "先写容斥公式再代数，排列与组合先判定是否计序"
+    },
+    {
+      "mistake_id": "mistake.dm_relation_properties",
+      "label": "关系性质判定混淆（对称/反对称）",
+      "related_nodes": ["dm.binary_relations"],
+      "fix": "用定义逐条验证，注意恒等关系同时满足对称与反对称"
+    },
+    {
+      "mistake_id": "mistake.dm_euler_hamilton_mixup",
+      "label": "欧拉/哈密顿条件混用",
+      "related_nodes": ["dm.euler_hamilton", "dm.graph_basics"],
+      "fix": "欧拉回路看边：连通且所有顶点偶度；哈密顿回路看点：过每点恰一次且无通用充要条件"
+    },
+    {
+      "mistake_id": "mistake.dm_degree_parity",
+      "label": "度数奇偶与握手定理误用",
+      "related_nodes": ["dm.graph_basics", "dm.trees"],
+      "fix": "先查度数总和是否为偶数，再检查最大度不超过 n-1"
+    },
+    {
+      "mistake_id": "mistake.dm_group_axioms",
+      "label": "群公理验证遗漏",
+      "related_nodes": ["dm.algebraic_structures"],
+      "fix": "按结合律、单位元、逆元的顺序逐条验证，缺一即非群"
+    }
+  ],
+  "question_archetypes": [
+    {
+      "archetype_id": "dm.archetype.logic_truth_reasoning",
+      "label": "命题/谓词逻辑推理题",
+      "knowledge_nodes": ["dm.propositional_logic", "dm.predicate_logic"],
+      "strategy": "先符号化，再列真值表或用量词否定、等值演算逐步推导"
+    },
+    {
+      "archetype_id": "dm.archetype.relation_property",
+      "label": "关系性质判定题",
+      "knowledge_nodes": ["dm.binary_relations", "dm.set_theory"],
+      "strategy": "对每条性质用定义验证，注意反例只需一个有序对"
+    },
+    {
+      "archetype_id": "dm.archetype.function_counting",
+      "label": "函数计数题",
+      "knowledge_nodes": ["dm.functions_cardinality"],
+      "strategy": "先定义务，再用乘法法则区分全函数/单射/双射计数"
+    },
+    {
+      "archetype_id": "dm.archetype.graph_condition",
+      "label": "图条件判定题",
+      "knowledge_nodes": ["dm.graph_basics", "dm.euler_hamilton", "dm.trees"],
+      "strategy": "从握手定理与度数奇偶入手，再区分欧拉（边）与哈密顿（点）条件"
+    },
+    {
+      "archetype_id": "dm.archetype.counting_drill",
+      "label": "组合计数题",
+      "knowledge_nodes": ["dm.combinatorics"],
+      "strategy": "判断计序与否选排列/组合，保证性论证优先考虑鸽巢原理"
+    },
+    {
+      "archetype_id": "dm.archetype.algebra_structure",
+      "label": "代数结构判定题",
+      "knowledge_nodes": ["dm.algebraic_structures"],
+      "strategy": "按结合律、单位元、逆元顺序验证群公理，用阶与生成元刻画循环群"
+    }
+  ],
+  "paths": {
+    "minimum_pass": {
+      "ordered_nodes": [
+        "dm.propositional_logic",
+        "dm.predicate_logic",
+        "dm.set_theory",
+        "dm.binary_relations",
+        "dm.functions_cardinality",
+        "dm.graph_basics",
+        "dm.euler_hamilton",
+        "dm.trees",
+        "dm.combinatorics",
+        "dm.algebraic_structures"
+      ]
+    },
+    "score_max": {
+      "ordered_nodes": [
+        "dm.propositional_logic",
+        "dm.binary_relations",
+        "dm.graph_basics",
+        "dm.euler_hamilton",
+        "dm.predicate_logic",
+        "dm.set_theory",
+        "dm.functions_cardinality",
+        "dm.trees",
+        "dm.combinatorics",
+        "dm.algebraic_structures"
+      ]
+    }
+  },
+  "strategy_presets": {
+    "7d": {
+      "daily_ratio": {
+        "concept_recall": 0.2,
+        "worked_examples": 0.25,
+        "trace_drills": 0.3,
+        "error_review": 0.15,
+        "mock": 0.1
+      }
+    },
+    "14d": {
+      "daily_ratio": {
+        "concept_recall": 0.2,
+        "worked_examples": 0.25,
+        "trace_drills": 0.25,
+        "error_review": 0.2,
+        "mock": 0.1
+      }
+    }
+  },
+  "last_24h_strategy": {
+    "label": "离散数学考前24小时策略",
+    "description": "最后一天只做高频逻辑等值式、关系性质判定表、欧拉/哈密顿条件对照和错题修复。",
+    "focus": [
+      {"node_id": "dm.propositional_logic"},
+      {"node_id": "dm.binary_relations"},
+      {"node_id": "dm.graph_basics"},
+      {"node_id": "dm.euler_hamilton"}
+    ],
+    "forbidden_actions": ["不展开新的证明专题", "不背孤立定义清单", "不做超过15分钟的单题"],
+    "mock_exam": {
+      "duration_minutes": 30,
+      "question_count": 6,
+      "instruction": "做 2 道逻辑等值/推理题、2 道关系性质题、1 道欧拉/哈密顿判定题、1 道计数题。"
+    }
+  },
+  "aurora_rules": {
+    "last_day_compact": {
+      "trigger_conditions": ["days_left <= 1"],
+      "action": "只保留命题逻辑等值式、关系性质判定、欧拉/哈密顿条件对照和错题重做。"
+    }
+  },
+  "task_card_templates": [
+    {
+      "template_id": "dm.proof_card",
+      "label": "证明书写卡",
+      "description": "完成一道离散数学证明或判定题的完整书写，保留每一步依据",
+      "steps": [
+        "抄写命题并明确已知与求证",
+        "逐步书写推导，每步标注所用定义或定理",
+        "圈出第一次卡壳的步骤并补学对应节点",
+        "重写一遍完整证明并核对每步依据"
+      ],
+      "done_criteria": "证明每步均有依据，能指出自己最初的断点",
+      "duration_minutes": 30
+    }
+  ],
+  "checkpoint_rules": {
+    "pass_threshold": 60,
+    "high_score_threshold": 80,
+    "mastery_minimum": {
+      "minimum_pass_nodes": 65,
+      "score_max_nodes": 75
+    },
+    "checkpoint_intervals": {
+      "7d": [3, 5, 7],
+      "14d": [4, 7, 10, 14]
+    },
+    "upgrade_criteria": {
+      "minimum_pass_to_score_max": {
+        "condition": "minimum_pass 节点掌握度 >= 70% 且逻辑推理、关系判定、图条件题正确率 >= 70%",
+        "action": "加入证明书写与代数系统深层专题"
+      }
+    },
+    "downgrade_criteria": {
+      "score_max_to_minimum_pass": {
+        "condition": "连续 2 次检查点基础判定题正确率低于 55%",
+        "action": "回退到 minimum_pass 路线，暂停证明专题"
+      }
+    }
+  },
+  "priority_matrix": {
+    "formula": "exam_weight * frequency * gap * trainability / (time_cost * difficulty)"
+  }
+}

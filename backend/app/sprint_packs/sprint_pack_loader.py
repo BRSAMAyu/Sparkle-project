@@ -66,6 +66,13 @@ _SUBJECT_ALIASES: dict[str, str] = {
     "data structures algorithms": "data_structures_algorithms",
     "data structures": "data_structures_algorithms",
     "dsa": "data_structures_algorithms",
+    "离散数学": "discrete_mathematics",
+    "离散": "discrete_mathematics",
+    "discrete_mathematics": "discrete_mathematics",
+    "discrete_math": "discrete_mathematics",
+    "discrete mathematics": "discrete_mathematics",
+    "discrete math": "discrete_mathematics",
+    "discrete": "discrete_mathematics",
 }
 
 
