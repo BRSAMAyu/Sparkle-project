@@ -1,0 +1,1103 @@
+diff --git a/mobile/lib/core/display/lexicon/date_formatting.dart b/mobile/lib/core/display/lexicon/date_formatting.dart
+index 7b044033..9f390c9c 100644
+--- a/mobile/lib/core/display/lexicon/date_formatting.dart
++++ b/mobile/lib/core/display/lexicon/date_formatting.dart
+@@ -44,6 +44,12 @@ String formatSparkleDateTime(DateTime value, AppLocalizations l10n) {
+   return l10n.displayDateAbsolute(local.month, local.day, clock);
+ }
+ 
++/// 纯日期（无时钟）的绝对格式，用于截止日等只看日不看时的展示位。
++String formatSparkleDateOnly(DateTime value, AppLocalizations l10n) {
++  final local = value.toLocal();
++  return l10n.displayDateOnly(local.month, local.day);
++}
++
+ /// 起止时间的 Range 格式；起止相同（同点/同分钟）折叠为单点（X8）。
+ String formatSparkleSceneRange(
+   DateTime start,
+diff --git a/mobile/lib/features/plan/presentation/screens/sprint_screen.dart b/mobile/lib/features/plan/presentation/screens/sprint_screen.dart
+index 2ef7f487..93b2b673 100755
+--- a/mobile/lib/features/plan/presentation/screens/sprint_screen.dart
++++ b/mobile/lib/features/plan/presentation/screens/sprint_screen.dart
+@@ -1,14 +1,18 @@
+ import 'dart:async';
+ 
+ import 'package:flutter/material.dart';
+-import 'package:sparkle/core/extensions/context_l10n.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:go_router/go_router.dart';
+-import 'package:sparkle/core/services/sensory_feedback_service.dart';
+ import 'package:sparkle/core/design/design_system.dart';
++import 'package:sparkle/core/design/widgets/empty_state.dart';
++import 'package:sparkle/core/design/widgets/error_widget.dart';
+ import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
++import 'package:sparkle/core/display/lexicon/date_formatting.dart';
++import 'package:sparkle/core/extensions/context_l10n.dart';
++import 'package:sparkle/core/services/sensory_feedback_service.dart';
+ import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
+ import 'package:sparkle/features/community/community_routes.dart';
++import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboard_provider.dart';
+ import 'package:sparkle/features/leaderboard/leaderboard_routes.dart';
+ import 'package:sparkle/features/plan/data/models/plan_model.dart';
+ import 'package:sparkle/features/plan/data/services/plan_description_codec.dart';
+@@ -174,7 +178,15 @@ class _ActiveSprintView extends ConsumerWidget {
+           ),
+           if (fullPlan.tasks == null || fullPlan.tasks!.isEmpty)
+             SliverToBoxAdapter(
+-              child: Center(child: Text(context.l10n.sprintNoTasks)),
++              // A-SPEC 改造#3（N4/§4.3）：任务空态三要素——为何空 + 影响 +
++              // 单一 CTA（去排任务），替换原裸文本 sprintNoTasks。
++              child: EmptyState(
++                title: context.l10n.sprintNoTasksTitle,
++                description: context.l10n.sprintNoTasksHint,
++                actionText: context.l10n.sprintNoTasksCta,
++                onAction: () => unawaited(context.push('/plans/${plan.id}')),
++                icon: Icons.task_outlined,
++              ),
+             )
+           else
+             SliverList(
+@@ -192,28 +204,31 @@ class _ActiveSprintView extends ConsumerWidget {
+         ],
+       ),
+       loading: () => const _SprintSkeleton(),
+-      error: (err, stack) => Center(
+-        child: Column(
+-          mainAxisAlignment: MainAxisAlignment.center,
+-          children: [
+-            Icon(Icons.error_outline, size: 48, color: DS.textSecondary),
+-            const SizedBox(height: DS.spacing12),
+-            Text(context.l10n.planLoadSprintFailed,
+-                style: TextStyle(color: DS.textSecondary)),
+-          ],
+-        ),
++      error: (err, stack) => CustomErrorWidget.page(
++        // A-SPEC 改造#3（N4 屏级错误三件套硬性）：人话标题 + 影响一句 +
++        // 可发现的重试钮，替换原 Icon+裸文案无动作分支。错误对象不直出。
++        context: context,
++        title: context.l10n.sprintLoadErrorTitle,
++        message: context.l10n.sprintLoadErrorImpact,
++        onRetry: () => ref.invalidate(planDetailProvider(plan.id)),
+       ),
+     );
+   }
+ }
+ 
+-class _SprintHeader extends StatelessWidget {
++class _SprintHeader extends ConsumerWidget {
+   const _SprintHeader({required this.plan});
+   final PlanModel plan;
+ 
+   @override
+-  Widget build(BuildContext context) {
+-    final daysLeft = plan.targetDate?.difference(DateTime.now()).inDays ?? 0;
++  Widget build(BuildContext context, WidgetRef ref) {
++    // A-SPEC 改造#1（N2 跨面派生值单算）：剩余天数只认服务端下传真值——
++    // 与 home 内嵌冲刺仪表卡共用 examSprintDashboardProvider 单一数据源，
++    // 收敛存量 S-G6 客户端本地时间推算的双算；payload 未覆盖到本计划时
++    // 降级为展示目标日（date_formatting 唯一入口），不再自算天数。
++    final examData = ref.watch(examSprintDashboardProvider).valueOrNull;
++    final serverDaysLeft =
++        (examData != null && examData.planId == plan.id) ? examData.daysLeft : null;
+     final parsed = PlanDescriptionCodec.parse(plan.description);
+ 
+     return Padding(
+@@ -264,13 +279,36 @@ class _SprintHeader extends StatelessWidget {
+               minHeight: 8,
+               borderRadius: BorderRadius.circular(4),
+             ),
+-            const SizedBox(height: DS.lg),
+-            Chip(
+-              label: Text(daysLeft > 0
+-                  ? context.l10n.sprintDaysLeft('$daysLeft')
+-                  : (context.l10n.sprintEnded)),
+-              avatar: const Icon(Icons.timelapse),
++            const SizedBox(height: DS.xs),
++            // A-SPEC 改造#1：进度口径就地标注——plan.progress 为 plan 域
++            // 服务端按任务完成比结算的值，与 exam 卡「今日完成度」口径区分。
++            Text(
++              context.l10n.sprintProgressScope,
++              style: Theme.of(context).textTheme.bodySmall?.copyWith(
++                    color: DS.textSecondary,
++                  ),
+             ),
++            const SizedBox(height: DS.lg),
++            if (serverDaysLeft != null)
++              Chip(
++                label: Text(
++                  serverDaysLeft > 0
++                      ? context.l10n.sprintDaysLeft(serverDaysLeft)
++                      : serverDaysLeft == 0
++                          ? context.l10n.examDay
++                          : context.l10n.sprintEnded,
++                ),
++                avatar: const Icon(Icons.timelapse),
++              )
++            else if (plan.targetDate != null)
++              Chip(
++                label: Text(
++                  context.l10n.sprintEndsOn(
++                    formatSparkleDateOnly(plan.targetDate!, context.l10n),
++                  ),
++                ),
++                avatar: const Icon(Icons.timelapse),
++              ),
+             const SizedBox(height: DS.md),
+             SizedBox(
+               width: double.infinity,
+@@ -417,6 +455,27 @@ class _SprintAchievementsProgressState
+   }
+ }
+ 
++/// A-SPEC 改造#5：稀有度→身份色映射本文件唯一一份（原 _CloseToUnlockBanner
++/// 与 _SprintAchievementTile 各持一份私有 helper，重复定义收敛）。
++/// 稀有度色只允许出现在图标环/描边等身份位，禁止再进进度条 valueColor。
++Color _rarityColor(AchievementRarity rarity) {
++  switch (rarity) {
++    case AchievementRarity.common:
++      return DS.neutral400;
++    case AchievementRarity.rare:
++      return DS.rarityRare;
++    case AchievementRarity.epic:
++      return DS.rarityEpic;
++    case AchievementRarity.legendary:
++      return DS.rarityLegendary;
++  }
++}
++
++/// A-SPEC 改造#5（B-02 进度/奖励两层分离）：进度位只编码完成度——
++/// 未满中性层、已满 success 语义槽；稀有度色不进进度位。
++Color _progressValueColor({required bool completed}) =>
++    completed ? DS.success : DS.neutral500;
++
+ /// P0功能: 成就临界提示横幅
+ /// 显示接近解锁的成就（80%以上进度）
+ class _CloseToUnlockBanner extends StatelessWidget {
+@@ -436,7 +495,7 @@ class _CloseToUnlockBanner extends StatelessWidget {
+     final remaining = progressTarget - progressValue;
+     final progress = closest.progressPercentage / 100.0;
+     final isDark = Theme.of(context).brightness == Brightness.dark;
+-    final rarityColor = _getRarityColor(closest.achievement.rarity);
++    final rarityColor = _rarityColor(closest.achievement.rarity);
+     final surfaceBase = isDark ? DS.surfaceSecondary : DS.surfacePrimary;
+     final accentWash = Color.lerp(
+       surfaceBase,
+@@ -445,15 +504,13 @@ class _CloseToUnlockBanner extends StatelessWidget {
+     )!;
+ 
+     return Container(
++      key: const ValueKey('sprint-close-unlock-banner'),
+       margin: const EdgeInsets.fromLTRB(DS.lg, 0, DS.lg, DS.sm),
+       padding: const EdgeInsets.all(DS.md),
+       decoration: BoxDecoration(
+-        gradient: LinearGradient(
+-          colors: [
+-            accentWash,
+-            Color.lerp(surfaceBase, accentWash, 0.45)!,
+-          ],
+-        ),
++        // A-SPEC 改造#5：渐变横幅降级为 S2 单色阶 + 稀有度描边（§5.3
++        // gradient 预算 ratchet -1）；色阶仍可保留稀有度身份的低浓度 wash。
++        color: accentWash,
+         borderRadius: DS.borderRadius12,
+         border: Border.all(
+           color: rarityColor.withValues(alpha: isDark ? 0.3 : 0.18),
+@@ -464,19 +521,20 @@ class _CloseToUnlockBanner extends StatelessWidget {
+           Container(
+             width: 40,
+             height: 40,
++            // 稀有度色合法域：图标环身份位（§8.7-3），与进度位分离。
+             decoration: BoxDecoration(
+               shape: BoxShape.circle,
+-              color: _getRarityColor(closest.achievement.rarity)
++              color: _rarityColor(closest.achievement.rarity)
+                   .withValues(alpha: 0.2),
+               border: Border.all(
+-                color: _getRarityColor(closest.achievement.rarity),
++                color: _rarityColor(closest.achievement.rarity),
+                 width: 2,
+               ),
+             ),
+             child: Icon(
+               Icons.flag_outlined,
+               size: DS.iconSizeSm,
+-              color: _getRarityColor(closest.achievement.rarity),
++              color: _rarityColor(closest.achievement.rarity),
+             ),
+           ),
+           const SizedBox(width: DS.sm),
+@@ -504,8 +562,9 @@ class _CloseToUnlockBanner extends StatelessWidget {
+                     value: progress,
+                     minHeight: 4,
+                     backgroundColor: DS.neutral100,
++                    // 进度位诚实编码：中性/success 口径色（B-02）。
+                     valueColor: AlwaysStoppedAnimation<Color>(
+-                      rarityColor,
++                      _progressValueColor(completed: progress >= 1.0),
+                     ),
+                   ),
+                 ),
+@@ -524,7 +583,8 @@ class _CloseToUnlockBanner extends StatelessWidget {
+               Text(
+                 '${closest.progressPercentage}%',
+                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
+-                      color: _getRarityColor(closest.achievement.rarity),
++                      // 进度读数归中性层，稀有度色只留在图标环身份位（B-02）。
++                      color: DS.textSecondary,
+                       fontWeight: DS.fontWeightBold,
+                     ),
+               ),
+@@ -534,19 +594,6 @@ class _CloseToUnlockBanner extends StatelessWidget {
+       ),
+     );
+   }
+-
+-  Color _getRarityColor(AchievementRarity rarity) {
+-    switch (rarity) {
+-      case AchievementRarity.common:
+-        return DS.neutral400;
+-      case AchievementRarity.rare:
+-        return DS.rarityRare;
+-      case AchievementRarity.epic:
+-        return DS.rarityEpic;
+-      case AchievementRarity.legendary:
+-        return DS.rarityLegendary;
+-    }
+-  }
+ }
+ 
+ class _SprintAchievementTile extends StatelessWidget {
+@@ -558,27 +605,28 @@ class _SprintAchievementTile extends StatelessWidget {
+   Widget build(BuildContext context) {
+     final progress = achievement.progressPercentage / 100.0;
+     final rarity = achievement.achievement.rarity;
++    final identityColor = _rarityColor(rarity);
+ 
+     return Padding(
+       padding: const EdgeInsets.symmetric(vertical: DS.xs),
+       child: Row(
+         children: [
+-          // Achievement icon
++          // Achievement icon（稀有度色身份位）
+           Container(
+             width: 40,
+             height: 40,
+             decoration: BoxDecoration(
+               shape: BoxShape.circle,
+-              color: _getRarityColor(rarity).withValues(alpha: 0.2),
++              color: identityColor.withValues(alpha: 0.2),
+               border: Border.all(
+-                color: _getRarityColor(rarity),
++                color: identityColor,
+                 width: 2,
+               ),
+             ),
+             child: Icon(
+               achievement.isUnlocked ? Icons.check : Icons.flag_outlined,
+               size: DS.iconSizeSm,
+-              color: _getRarityColor(rarity),
++              color: identityColor,
+             ),
+           ),
+           const SizedBox(width: DS.sm),
+@@ -598,27 +646,32 @@ class _SprintAchievementTile extends StatelessWidget {
+                   style: Theme.of(context).textTheme.bodySmall,
+                 ),
+                 const SizedBox(height: DS.xs),
+-                // Progress bar
++                // Progress bar（进度位诚实编码：中性/success，B-02）
+                 ClipRRect(
+                   borderRadius: BorderRadius.circular(DS.borderRadiusSM),
+                   child: LinearProgressIndicator(
+                     value: progress,
+                     minHeight: 4,
+                     backgroundColor: DS.neutral100,
+-                    valueColor:
+-                        AlwaysStoppedAnimation<Color>(_getRarityColor(rarity)),
++                    valueColor: AlwaysStoppedAnimation<Color>(
++                      _progressValueColor(
++                        completed: achievement.isUnlocked || progress >= 1.0,
++                      ),
++                    ),
+                   ),
+                 ),
+               ],
+             ),
+           ),
+-          // Progress percentage
++          // Progress percentage（读数归中性层/语义槽，不掺稀有度色）
+           Text(
+             achievement.isUnlocked
+                 ? context.l10n.planCompletedExclaim
+                 : '${achievement.progressPercentage}%',
+             style: Theme.of(context).textTheme.bodySmall?.copyWith(
+-                  color: _getRarityColor(rarity),
++                  color: achievement.isUnlocked
++                      ? DS.success
++                      : DS.textSecondary,
+                   fontWeight: DS.fontWeightMedium,
+                 ),
+           ),
+@@ -626,21 +679,12 @@ class _SprintAchievementTile extends StatelessWidget {
+       ),
+     );
+   }
+-
+-  Color _getRarityColor(AchievementRarity rarity) {
+-    switch (rarity) {
+-      case AchievementRarity.common:
+-        return DS.neutral400;
+-      case AchievementRarity.rare:
+-        return DS.rarityRare;
+-      case AchievementRarity.epic:
+-        return DS.rarityEpic;
+-      case AchievementRarity.legendary:
+-        return DS.rarityLegendary;
+-    }
+-  }
+ }
+ 
++/// A-SPEC 改造#3（§4.4.1 骨架贴真实布局）：骨架三段与数据态同构——
++/// ① header 卡（标题/概述/进度条/倒计时/复盘钮）② 成就卡（图标+标题行 +
++/// 40×40 圆环成就行）③ 任务区（标题 + TaskCard 形整卡行），
++/// 替换原「3 个 80×80 方块」的形异骨架，消除加载完成跳变。
+ class _SprintSkeleton extends StatelessWidget {
+   const _SprintSkeleton();
+ 
+@@ -650,6 +694,7 @@ class _SprintSkeleton extends StatelessWidget {
+         child: Column(
+           crossAxisAlignment: CrossAxisAlignment.start,
+           children: [
++            // ① header 卡
+             Container(
+               padding: const EdgeInsets.all(DS.spacing16),
+               decoration: BoxDecoration(
+@@ -665,52 +710,114 @@ class _SprintSkeleton extends StatelessWidget {
+                   SizedBox(height: DS.spacing8),
+                   SparkleSkeleton(width: 260, height: 14),
+                   SizedBox(height: DS.spacing16),
++                  Row(
++                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
++                    children: [
++                      SparkleSkeleton(width: 60, height: 14),
++                      SparkleSkeleton(width: 48, height: 14),
++                    ],
++                  ),
++                  SizedBox(height: DS.spacing8),
+                   SparkleSkeleton(height: 8),
+                   SizedBox(height: DS.spacing8),
++                  SparkleSkeleton(width: 120, height: 14),
++                  SizedBox(height: DS.spacing12),
++                  SparkleSkeleton(width: 96, height: 32, borderRadius: 16),
++                  SizedBox(height: DS.spacing16),
++                  SparkleSkeleton(
++                    width: double.infinity,
++                    height: 44,
++                    borderRadius: 14,
++                  ),
++                ],
++              ),
++            ),
++            const SizedBox(height: DS.spacing16),
++            // ② 成就卡
++            Container(
++              padding: const EdgeInsets.all(DS.spacing16),
++              decoration: BoxDecoration(
++                color: DS.surfaceSecondary,
++                borderRadius: DS.borderRadius16,
++              ),
++              child: const Column(
++                crossAxisAlignment: CrossAxisAlignment.start,
++                children: [
+                   Row(
+                     children: [
+-                      SparkleSkeleton(width: 60, height: 24),
++                      SparkleSkeleton(width: 24, height: 24, borderRadius: 6),
+                       SizedBox(width: DS.spacing8),
+-                      SparkleSkeleton(width: 80, height: 24),
++                      SparkleSkeleton(width: 110),
+                     ],
+                   ),
++                  SizedBox(height: DS.spacing12),
++                  _SkeletonAchievementRow(),
++                  SizedBox(height: DS.spacing12),
++                  _SkeletonAchievementRow(),
+                 ],
+               ),
+             ),
+             const SizedBox(height: DS.spacing16),
+-            const Row(
+-              children: [
+-                SparkleSkeleton(width: 80, height: 80, borderRadius: 12),
+-                SizedBox(width: DS.spacing8),
+-                SparkleSkeleton(width: 80, height: 80, borderRadius: 12),
+-                SizedBox(width: DS.spacing8),
+-                SparkleSkeleton(width: 80, height: 80, borderRadius: 12),
+-              ],
+-            ),
+-            const SizedBox(height: DS.spacing16),
++            // ③ 任务区
++            const SparkleSkeleton(width: 80, height: 20),
++            const SizedBox(height: DS.spacing12),
+             ...List.generate(
+-              4,
++              3,
+               (_) => const Padding(
+                 padding: EdgeInsets.only(bottom: DS.spacing8),
+-                child: Row(
+-                  children: [
+-                    SparkleSkeleton(width: 24, height: 24, borderRadius: 4),
+-                    SizedBox(width: DS.spacing12),
+-                    Expanded(
+-                      child: Column(
+-                        crossAxisAlignment: CrossAxisAlignment.start,
+-                        children: [
+-                          SparkleSkeleton(height: 14),
+-                          SizedBox(height: DS.spacing4),
+-                          SparkleSkeleton(width: 120, height: 12),
+-                        ],
+-                      ),
+-                    ),
+-                  ],
+-                ),
++                child: _SkeletonTaskRow(),
+               ),
+             ),
+           ],
+         ),
+       );
+ }
++
++/// 骨架成就行：圆环 + 标题/描述/进度细条 + 百分比，贴 _SprintAchievementTile。
++class _SkeletonAchievementRow extends StatelessWidget {
++  const _SkeletonAchievementRow();
++
++  @override
++  Widget build(BuildContext context) => const Row(
++        children: [
++          SparkleSkeleton(width: 40, height: 40, borderRadius: 20),
++          SizedBox(width: DS.spacing12),
++          Expanded(
++            child: Column(
++              crossAxisAlignment: CrossAxisAlignment.start,
++              children: [
++                SparkleSkeleton(height: 14),
++                SizedBox(height: DS.spacing4),
++                SparkleSkeleton(width: 160, height: 12),
++                SizedBox(height: DS.spacing8),
++                SparkleSkeleton(height: 4),
++              ],
++            ),
++          ),
++          SparkleSkeleton(width: 40, height: 14),
++        ],
++      );
++}
++
++/// 骨架任务行：整宽圆角卡 + 两行文案，贴 TaskCard 形制。
++class _SkeletonTaskRow extends StatelessWidget {
++  const _SkeletonTaskRow();
++
++  @override
++  Widget build(BuildContext context) => Container(
++        width: double.infinity,
++        padding: const EdgeInsets.all(DS.spacing12),
++        decoration: BoxDecoration(
++          color: DS.surfaceSecondary,
++          borderRadius: DS.borderRadius12,
++        ),
++        child: const Column(
++          crossAxisAlignment: CrossAxisAlignment.start,
++          children: [
++            SparkleSkeleton(width: 220, height: 14),
++            SizedBox(height: DS.spacing8),
++            SparkleSkeleton(width: 140, height: 12),
++          ],
++        ),
++      );
++}
+diff --git a/mobile/lib/l10n/app_en.arb b/mobile/lib/l10n/app_en.arb
+index 47a76beb..7dcebd04 100755
+--- a/mobile/lib/l10n/app_en.arb
++++ b/mobile/lib/l10n/app_en.arb
+@@ -14959,7 +14959,14 @@
+     "sprintMySprint": "My Sprint",
+     "sprintNoActive": "No Active Sprint",
+     "sprintTasks": "Tasks",
+-    "sprintNoTasks": "No tasks in this sprint.",
++    "sprintNoTasksTitle": "No tasks scheduled yet",
++    "sprintNoTasksHint": "Sprint tasks appear here day by day. Schedule today's targets first so your progress starts counting.",
++    "sprintNoTasksCta": "Schedule tasks",
++    "sprintLoadErrorTitle": "Couldn't load your sprint",
++    "sprintLoadErrorImpact": "Tasks and progress are hidden right now. Your data is safe — tap retry to reload.",
++    "sprintEndsOn": "Ends {date}",
++    "@sprintEndsOn": {"placeholders": {"date": {"type": "String"}}},
++    "sprintProgressScope": "Source: server-side task completion ratio",
+     "sprintProgress": "Progress",
+     "sprintDaysLeft": "{days} days left",
+     "sprintEnded": "Sprint ended",
+@@ -17642,6 +17649,8 @@
+     "@displayDateDaysAgo": {"placeholders": {"days": {"type": "int"}, "time": {"type": "String"}}},
+     "displayDateAbsolute": "{month}/{day} {time}",
+     "@displayDateAbsolute": {"placeholders": {"month": {"type": "int"}, "day": {"type": "int"}, "time": {"type": "String"}}},
++    "displayDateOnly": "{month}/{day}",
++    "@displayDateOnly": {"placeholders": {"month": {"type": "int"}, "day": {"type": "int"}}},
+     "displayDueLabel": "Due",
+     "@displayDueLabel": {},
+     "displaySceneQualityHigh": "High quality",
+diff --git a/mobile/lib/l10n/app_localizations.dart b/mobile/lib/l10n/app_localizations.dart
+index b4204ae8..01784e2c 100644
+--- a/mobile/lib/l10n/app_localizations.dart
++++ b/mobile/lib/l10n/app_localizations.dart
+@@ -58783,11 +58783,47 @@ abstract class AppLocalizations {
+   /// **'任务'**
+   String get sprintTasks;
+ 
+-  /// No description provided for @sprintNoTasks.
++  /// No description provided for @sprintNoTasksTitle.
+   ///
+   /// In zh, this message translates to:
+-  /// **'这个冲刺暂无任务。'**
+-  String get sprintNoTasks;
++  /// **'这个冲刺还没排任务'**
++  String get sprintNoTasksTitle;
++
++  /// No description provided for @sprintNoTasksHint.
++  ///
++  /// In zh, this message translates to:
++  /// **'冲刺的任务会按天排在这里：先安排今天要攻的内容，完成度才会开始累计。'**
++  String get sprintNoTasksHint;
++
++  /// No description provided for @sprintNoTasksCta.
++  ///
++  /// In zh, this message translates to:
++  /// **'去排任务'**
++  String get sprintNoTasksCta;
++
++  /// No description provided for @sprintLoadErrorTitle.
++  ///
++  /// In zh, this message translates to:
++  /// **'冲刺面板加载失败'**
++  String get sprintLoadErrorTitle;
++
++  /// No description provided for @sprintLoadErrorImpact.
++  ///
++  /// In zh, this message translates to:
++  /// **'任务和进度暂时看不到；你的数据没有丢，点重试即可恢复。'**
++  String get sprintLoadErrorImpact;
++
++  /// No description provided for @sprintEndsOn.
++  ///
++  /// In zh, this message translates to:
++  /// **'{date} 结束'**
++  String sprintEndsOn(String date);
++
++  /// No description provided for @sprintProgressScope.
++  ///
++  /// In zh, this message translates to:
++  /// **'口径：服务端按冲刺任务完成比结算'**
++  String get sprintProgressScope;
+ 
+   /// No description provided for @sprintProgress.
+   ///
+@@ -67183,6 +67219,12 @@ abstract class AppLocalizations {
+   /// **'{month}月{day}日 {time}'**
+   String displayDateAbsolute(int month, int day, String time);
+ 
++  /// No description provided for @displayDateOnly.
++  ///
++  /// In zh, this message translates to:
++  /// **'{month}月{day}日'**
++  String displayDateOnly(int month, int day);
++
+   /// No description provided for @displayDueLabel.
+   ///
+   /// In zh, this message translates to:
+diff --git a/mobile/lib/l10n/app_localizations_en.dart b/mobile/lib/l10n/app_localizations_en.dart
+index 3f364d17..e2387aa1 100644
+--- a/mobile/lib/l10n/app_localizations_en.dart
++++ b/mobile/lib/l10n/app_localizations_en.dart
+@@ -33736,7 +33736,29 @@ class AppLocalizationsEn extends AppLocalizations {
+   String get sprintTasks => 'Tasks';
+ 
+   @override
+-  String get sprintNoTasks => 'No tasks in this sprint.';
++  String get sprintNoTasksTitle => 'No tasks scheduled yet';
++
++  @override
++  String get sprintNoTasksHint =>
++      'Sprint tasks appear here day by day. Schedule today\'s targets first so your progress starts counting.';
++
++  @override
++  String get sprintNoTasksCta => 'Schedule tasks';
++
++  @override
++  String get sprintLoadErrorTitle => 'Couldn\'t load your sprint';
++
++  @override
++  String get sprintLoadErrorImpact =>
++      'Tasks and progress are hidden right now. Your data is safe — tap retry to reload.';
++
++  @override
++  String sprintEndsOn(String date) {
++    return 'Ends $date';
++  }
++
++  @override
++  String get sprintProgressScope => 'Source: server-side task completion ratio';
+ 
+   @override
+   String get sprintProgress => 'Progress';
+@@ -38594,6 +38616,11 @@ class AppLocalizationsEn extends AppLocalizations {
+     return '$month/$day $time';
+   }
+ 
++  @override
++  String displayDateOnly(int month, int day) {
++    return '$month/$day';
++  }
++
+   @override
+   String get displayDueLabel => 'Due';
+ 
+diff --git a/mobile/lib/l10n/app_localizations_zh.dart b/mobile/lib/l10n/app_localizations_zh.dart
+index 5f3f0817..12068ee3 100644
+--- a/mobile/lib/l10n/app_localizations_zh.dart
++++ b/mobile/lib/l10n/app_localizations_zh.dart
+@@ -32353,7 +32353,27 @@ class AppLocalizationsZh extends AppLocalizations {
+   String get sprintTasks => '任务';
+ 
+   @override
+-  String get sprintNoTasks => '这个冲刺暂无任务。';
++  String get sprintNoTasksTitle => '这个冲刺还没排任务';
++
++  @override
++  String get sprintNoTasksHint => '冲刺的任务会按天排在这里：先安排今天要攻的内容，完成度才会开始累计。';
++
++  @override
++  String get sprintNoTasksCta => '去排任务';
++
++  @override
++  String get sprintLoadErrorTitle => '冲刺面板加载失败';
++
++  @override
++  String get sprintLoadErrorImpact => '任务和进度暂时看不到；你的数据没有丢，点重试即可恢复。';
++
++  @override
++  String sprintEndsOn(String date) {
++    return '$date 结束';
++  }
++
++  @override
++  String get sprintProgressScope => '口径：服务端按冲刺任务完成比结算';
+ 
+   @override
+   String get sprintProgress => '进度';
+@@ -36995,6 +37015,11 @@ class AppLocalizationsZh extends AppLocalizations {
+     return '$month月$day日 $time';
+   }
+ 
++  @override
++  String displayDateOnly(int month, int day) {
++    return '$month月$day日';
++  }
++
+   @override
+   String get displayDueLabel => '截止';
+ 
+diff --git a/mobile/lib/l10n/app_zh.arb b/mobile/lib/l10n/app_zh.arb
+index d7d2928f..d427dbec 100755
+--- a/mobile/lib/l10n/app_zh.arb
++++ b/mobile/lib/l10n/app_zh.arb
+@@ -14965,7 +14965,14 @@
+     "sprintMySprint": "我的冲刺",
+     "sprintNoActive": "暂无活跃冲刺",
+     "sprintTasks": "任务",
+-    "sprintNoTasks": "这个冲刺暂无任务。",
++    "sprintNoTasksTitle": "这个冲刺还没排任务",
++    "sprintNoTasksHint": "冲刺的任务会按天排在这里：先安排今天要攻的内容，完成度才会开始累计。",
++    "sprintNoTasksCta": "去排任务",
++    "sprintLoadErrorTitle": "冲刺面板加载失败",
++    "sprintLoadErrorImpact": "任务和进度暂时看不到；你的数据没有丢，点重试即可恢复。",
++    "sprintEndsOn": "{date} 结束",
++    "@sprintEndsOn": {"placeholders": {"date": {"type": "String"}}},
++    "sprintProgressScope": "口径：服务端按冲刺任务完成比结算",
+     "sprintProgress": "进度",
+     "sprintDaysLeft": "剩余 {days} 天",
+     "sprintEnded": "冲刺已结束",
+@@ -17235,6 +17242,8 @@
+     "@displayDateDaysAgo": {"placeholders": {"days": {"type": "int"}, "time": {"type": "String"}}},
+     "displayDateAbsolute": "{month}月{day}日 {time}",
+     "@displayDateAbsolute": {"placeholders": {"month": {"type": "int"}, "day": {"type": "int"}, "time": {"type": "String"}}},
++    "displayDateOnly": "{month}月{day}日",
++    "@displayDateOnly": {"placeholders": {"month": {"type": "int"}, "day": {"type": "int"}}},
+     "displayDueLabel": "截止",
+     "@displayDueLabel": {},
+     "displaySceneQualityHigh": "高质量",
+diff --git a/mobile/test/features/plan/presentation/screens/sprint_screen_test.dart b/mobile/test/features/plan/presentation/screens/sprint_screen_test.dart
+new file mode 100644
+index 00000000..5ec7cc82
+--- /dev/null
++++ b/mobile/test/features/plan/presentation/screens/sprint_screen_test.dart
+@@ -0,0 +1,361 @@
++// SPEC-A 冲刺仪表盘 #1+#3+#5 验收测试。
++// 覆盖：①倒计时口径归一（跨屏同源同值 + 客户端零 DateTime.now() 推算）
++// ②三态补齐（错误态三件套 / 任务空态 EmptyState / 骨架贴真实布局）
++// ③进度位诚实编码（横幅无渐变、进度条仅中性/success 语义槽派生色）。
++import 'package:dio/dio.dart';
++import 'package:flutter/material.dart';
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import 'package:flutter_test/flutter_test.dart';
++import 'package:sparkle/core/design/design_system.dart';
++import 'package:sparkle/core/design/widgets/empty_state.dart';
++import 'package:sparkle/core/design/widgets/error_widget.dart';
++import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
++import 'package:sparkle/core/network/api_client.dart';
++import 'package:sparkle/features/achievement/data/repositories/achievement_repository.dart';
++import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
++import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboard_provider.dart';
++import 'package:sparkle/features/home/presentation/widgets/exam_sprint_dashboard_card.dart';
++import 'package:sparkle/features/plan/data/models/plan_model.dart';
++import 'package:sparkle/features/plan/data/repositories/plan_repository.dart';
++import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
++import 'package:sparkle/features/plan/presentation/screens/sprint_screen.dart';
++import 'package:sparkle/shared/entities/achievement_model.dart';
++import '../../../../shared/i18n_test_helper.dart';
++
++void main() {
++  setUp(setUpI18nForTesting);
++  TestWidgetsFlutterBinding.ensureInitialized();
++
++  ExamSprintDashboardData examPayload({int daysLeft = 5}) =>
++      ExamSprintDashboardData(
++        planId: 'plan-sprint-1',
++        planName: '操作系统期末冲刺',
++        subject: 'Operating Systems',
++        daysLeft: daysLeft,
++        targetMode: 'pass',
++        todayProgress: const ExamSprintTodayProgress(
++          completed: 2,
++          total: 3,
++          completionRate: 0.667,
++        ),
++        highFreqCoverage: 0.75,
++        highFreqCoveredCount: 15,
++        highFreqTotalCount: 20,
++        mistakeFixRate: 0.6,
++        fixedMistakeCount: 6,
++        totalMistakeCount: 10,
++        streakDays: 3,
++        taskGroups: const [],
++      );
++
++  Widget host({
++    required Widget child,
++    PlanListState? planListState,
++    Object Function()? planDetail,
++    ExamSprintDashboardData? examData,
++    AchievementNotifier Function()? achievement,
++  }) {
++    final effectivePlanState = planListState ?? PlanListState();
++    return ProviderScope(
++      overrides: [
++        planListProvider.overrideWith(
++          (ref) => _StaticPlanNotifier(effectivePlanState),
++        ),
++        if (planDetail != null)
++          planDetailProvider('plan-sprint-1').overrideWith((ref) {
++            final result = planDetail();
++            if (result is PlanModel) return Future<PlanModel>.value(result);
++            return Future.error(result);
++          }),
++        if (examData != null)
++          examSprintDashboardProvider
++              .overrideWith((ref) => Future.value(examData)),
++        if (achievement != null)
++          achievementProvider.overrideWith((ref) => achievement()),
++      ],
++      child: testMaterialApp(home: Scaffold(body: child)),
++    );
++  }
++
++  testWidgets('#1 跨屏同源同值：sprint 屏倒计时读 exam payload 服务端值', (tester) async {
++    await tester.pumpWidget(
++      host(
++        planListState: PlanListState(activePlans: [PlanModelStub.plan]),
++        planDetail: () => PlanModelStub.plan,
++        examData: examPayload(),
++        achievement: _StaticAchievementNotifier.new,
++        child: const SprintScreen(),
++      ),
++    );
++    // 用固定 pump 而非 pumpAndSettle：骨架/刷新件可能存在循环动画。
++    await tester.pump();
++    await tester.pump(const Duration(milliseconds: 300));
++    await tester.pump(const Duration(milliseconds: 300));
++
++    // 服务端真值 5 天（与 exam 卡同源），而非 targetDate 推算的 ~160 天。
++    expect(find.text('剩余 5 天'), findsOneWidget);
++    expect(find.textContaining('160'), findsNothing);
++    expect(find.text('冲刺已结束'), findsNothing);
++    // 口径标注就地可见。
++    expect(find.text('口径：服务端按冲刺任务完成比结算'), findsOneWidget);
++  });
++
++  testWidgets('#1 exam 卡同一 payload 显示同一剩余天数（跨屏同值）', (tester) async {
++    final data = examPayload();
++    await tester.pumpWidget(
++      testMaterialApp(
++        home: Scaffold(
++          body:
++              SingleChildScrollView(child: ExamSprintDashboardCard(data: data)),
++        ),
++      ),
++    );
++    await tester.pumpAndSettle(const Duration(milliseconds: 1200));
++
++    expect(find.text('还有 5 天'), findsOneWidget);
++    expect(find.text('距考试还有 5 天'), findsOneWidget);
++  });
++
++  testWidgets('#3 错误态三件套：人话标题+影响一句+可重试（N4）', (tester) async {
++    var buildCount = 0;
++    await tester.pumpWidget(
++      host(
++        planListState: PlanListState(activePlans: [PlanModelStub.plan]),
++        planDetail: () {
++          buildCount++;
++          return StateError('boom');
++        },
++        examData: examPayload(),
++        achievement: _StaticAchievementNotifier.new,
++        child: const SprintScreen(),
++      ),
++    );
++    await tester.pump();
++    await tester.pump(const Duration(milliseconds: 400));
++    await tester.pump(const Duration(milliseconds: 400));
++
++    expect(find.byType(CustomErrorWidget), findsOneWidget);
++    expect(find.text('冲刺面板加载失败'), findsOneWidget);
++    expect(find.text('任务和进度暂时看不到；你的数据没有丢，点重试即可恢复。'), findsOneWidget);
++    // 错误对象不裸奔：StateError 文案不出现。
++    expect(find.textContaining('boom'), findsNothing);
++    // 重试钮可发现且真的重试。
++    expect(find.text('重试'), findsOneWidget);
++    await tester.tap(find.text('重试'));
++    await tester.pump();
++    await tester.pump(const Duration(milliseconds: 300));
++    expect(buildCount, 2);
++  });
++
++  testWidgets('#3 任务空态：为何空 + 单一 CTA（EmptyState）', (tester) async {
++    await tester.pumpWidget(
++      host(
++        planListState: PlanListState(activePlans: [PlanModelStub.plan]),
++        planDetail: () => PlanModelStub.plan, // tasks: []
++        examData: examPayload(),
++        achievement: _StaticAchievementNotifier.new,
++        child: const SprintScreen(),
++      ),
++    );
++    await tester.pump();
++    await tester.pump(const Duration(milliseconds: 300));
++
++    expect(find.byType(EmptyState), findsOneWidget);
++    expect(find.text('这个冲刺还没排任务'), findsOneWidget);
++    expect(
++      find.textContaining('冲刺的任务会按天排在这里'),
++      findsOneWidget,
++    );
++    expect(find.text('去排任务'), findsOneWidget);
++    // 旧裸文本空态清零。
++    expect(find.text('这个冲刺暂无任务。'), findsNothing);
++  });
++
++  testWidgets('#3 骨架贴真实布局：无 80×80 方块，含 header/成就/任务三段', (tester) async {
++    await tester.pumpWidget(
++      host(
++        planListState: PlanListState(isLoading: true),
++        child: const SprintScreen(),
++      ),
++    );
++    await tester.pump();
++    await tester.pump(const Duration(milliseconds: 100));
++
++    final skeletons =
++        tester.widgetList<SparkleSkeleton>(find.byType(SparkleSkeleton));
++    // 旧骨架的形异件：80×80 方块必须清零。
++    expect(
++      skeletons.where((s) => (s.width ?? 0) == 80 && s.height == 80),
++      isEmpty,
++    );
++    // 新骨架贴真实布局的三个特征件：
++    // header 全宽复盘钮位、40×40 成就圆环位、全宽任务卡位。
++    expect(
++      skeletons.any((s) => s.width == double.infinity && s.height == 44),
++      isTrue,
++    );
++    expect(
++      skeletons.any((s) => (s.width ?? 0) == 40 && s.height == 40),
++      isTrue,
++    );
++    expect(
++      skeletons.where((s) => s.width == double.infinity && s.height == 14),
++      isNotEmpty,
++    );
++  });
++
++  testWidgets('#5 进度位诚实编码：横幅无渐变，进度条仅中性/success 语义色', (tester) async {
++    await tester.pumpWidget(
++      host(
++        planListState: PlanListState(activePlans: [PlanModelStub.plan]),
++        planDetail: () => PlanModelStub.plan,
++        examData: examPayload(),
++        achievement: () => _StaticAchievementNotifier(
++          closeToUnlock: [_AchievementStubs.epic82],
++          achievements: [_AchievementStubs.epic82],
++        ),
++        child: const SprintScreen(),
++      ),
++    );
++    await tester.pump();
++    await tester.pump(const Duration(milliseconds: 300));
++    await tester.pump(const Duration(milliseconds: 300));
++
++    // ① 渐变横幅降级为单色阶 + 描边：banner 容器 gradient == null。
++    final banner = tester.widget<Container>(
++      find.byKey(const ValueKey('sprint-close-unlock-banner')),
++    );
++    final decoration = banner.decoration! as BoxDecoration;
++    expect(decoration.gradient, isNull);
++    expect(decoration.color, isNotNull);
++    expect(decoration.border, isNotNull);
++
++    // ② 进度位色值断言：显式 valueColor 的进度条（成就进度位）只能是
++    // 中性层（neutral500）或语义槽（success），绝无稀有度色；
++    // header 总进度条走主题默认色，同样不得是稀有度色。
++    final progressBars = tester.widgetList<LinearProgressIndicator>(
++      find.byType(LinearProgressIndicator),
++    );
++    expect(progressBars, isNotEmpty);
++    final explicitBars =
++        progressBars.where((b) => b.valueColor != null).toList();
++    expect(explicitBars, isNotEmpty, reason: '成就进度位必须显式编码色值');
++    final rarityColors = [DS.rarityRare, DS.rarityEpic, DS.rarityLegendary];
++    for (final bar in progressBars) {
++      final color = bar.valueColor?.value;
++      if (color != null) {
++        expect(
++          color,
++          anyOf(DS.neutral500, DS.success),
++          reason: '进度位出现了非中性/语义槽的颜色：$color',
++        );
++      }
++      expect(
++        color,
++        isNot(anyOf(rarityColors[0], rarityColors[1], rarityColors[2])),
++        reason: '进度位不得出现稀有度色',
++      );
++    }
++    // 稀有度色只允许留在图标环身份位：进度条 hero 区不得出现 epic 紫。
++    expect(DS.rarityEpic, isNot(anyOf(DS.neutral500, DS.success)));
++  });
++}
++
++// ---------- 测试桩 ----------
++
++/// 供闭包引用的固定 plan（testWidgets 闭包捕获 final 即可）。
++class PlanModelStub {
++  static final PlanModel plan = PlanModel(
++    id: 'plan-sprint-1',
++    userId: 'user-1',
++    name: '操作系统期末冲刺',
++    subject: 'Operating Systems',
++    type: PlanType.sprint,
++    dailyAvailableMinutes: 120,
++    masteryLevel: 0.45,
++    progress: 0.35,
++    isActive: true,
++    tasks: const [],
++    targetDate: DateTime(2027, 3, 2),
++    createdAt: DateTime(2026, 4, 25),
++    updatedAt: DateTime(2026, 4, 25),
++  );
++}
++
++class _AchievementStubs {
++  static AchievementWithProgress get epic82 => AchievementWithProgress(
++        achievement: AchievementModel(
++          id: 'ach-1',
++          name: '七天冲刺王',
++          type: AchievementType.sprint,
++          rarity: AchievementRarity.epic,
++          createdAt: DateTime(2026, 2, 3),
++          updatedAt: DateTime(2026, 2, 3),
++        ),
++        isUnlocked: false,
++        progressPercentage: 82,
++      );
++}
++
++class _NoopApiClient extends ApiClient {
++  _NoopApiClient() : super(_UnusedRef());
++
++  @override
++  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
++}
++
++class _StaticPlanNotifier extends PlanNotifier {
++  _StaticPlanNotifier(PlanListState initialState)
++      : super(_UnusedPlanRepository(), _UnusedRef()) {
++    state = initialState;
++  }
++
++  @override
++  Future<void> loadPlans({PlanType? type}) async {}
++
++  @override
++  Future<void> loadActivePlans() async {}
++}
++
++class _UnusedRef implements Ref {
++  // 与 dashboard_test_harness 同款宽假 Ref：read 一律给占位对象，
++  // 桩 notifier 的生命周期内不会真正消费该值。
++  @override
++  T read<T>(ProviderListenable<T> provider) => InterceptorsWrapper() as T;
++
++  @override
++  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
++}
++
++class _UnusedPlanRepository extends PlanRepository {
++  _UnusedPlanRepository() : super(_NoopApiClient());
++}
++
++class _NoopAchievementRepository extends AchievementRepository {
++  _NoopAchievementRepository() : super(_NoopApiClient());
++}
++
++class _StaticAchievementNotifier extends AchievementNotifier {
++  _StaticAchievementNotifier({
++    List<AchievementWithProgress> closeToUnlock = const [],
++    List<AchievementWithProgress> achievements = const [],
++  })  : _closeToUnlock = closeToUnlock,
++        super(_NoopAchievementRepository(), _UnusedRef()) {
++    state = AchievementState.loading().copyWith(
++      achievements: achievements,
++      isLoading: false,
++    );
++  }
++
++  final List<AchievementWithProgress> _closeToUnlock;
++
++  @override
++  Future<void> loadInitialData() async {}
++
++  @override
++  Future<List<AchievementWithProgress>> getCloseToUnlockAchievements({
++    String? category,
++    double threshold = 0.8,
++  }) async =>
++      _closeToUnlock;
++}

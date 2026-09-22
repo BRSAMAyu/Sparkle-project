@@ -44,6 +44,12 @@ String formatSparkleDateTime(DateTime value, AppLocalizations l10n) {
   return l10n.displayDateAbsolute(local.month, local.day, clock);
 }
 
+/// 纯日期（无时钟）的绝对格式，用于截止日等只看日不看时的展示位。
+String formatSparkleDateOnly(DateTime value, AppLocalizations l10n) {
+  final local = value.toLocal();
+  return l10n.displayDateOnly(local.month, local.day);
+}
+
 /// 起止时间的 Range 格式；起止相同（同点/同分钟）折叠为单点（X8）。
 String formatSparkleSceneRange(
   DateTime start,

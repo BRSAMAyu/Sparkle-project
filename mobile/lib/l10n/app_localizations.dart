@@ -58795,11 +58795,47 @@ abstract class AppLocalizations {
   /// **'任务'**
   String get sprintTasks;
 
-  /// No description provided for @sprintNoTasks.
+  /// No description provided for @sprintNoTasksTitle.
   ///
   /// In zh, this message translates to:
-  /// **'这个冲刺暂无任务。'**
-  String get sprintNoTasks;
+  /// **'这个冲刺还没排任务'**
+  String get sprintNoTasksTitle;
+
+  /// No description provided for @sprintNoTasksHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺的任务会按天排在这里：先安排今天要攻的内容，完成度才会开始累计。'**
+  String get sprintNoTasksHint;
+
+  /// No description provided for @sprintNoTasksCta.
+  ///
+  /// In zh, this message translates to:
+  /// **'去排任务'**
+  String get sprintNoTasksCta;
+
+  /// No description provided for @sprintLoadErrorTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺面板加载失败'**
+  String get sprintLoadErrorTitle;
+
+  /// No description provided for @sprintLoadErrorImpact.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务和进度暂时看不到；你的数据没有丢，点重试即可恢复。'**
+  String get sprintLoadErrorImpact;
+
+  /// No description provided for @sprintEndsOn.
+  ///
+  /// In zh, this message translates to:
+  /// **'{date} 结束'**
+  String sprintEndsOn(String date);
+
+  /// No description provided for @sprintProgressScope.
+  ///
+  /// In zh, this message translates to:
+  /// **'口径：服务端按冲刺任务完成比结算'**
+  String get sprintProgressScope;
 
   /// No description provided for @sprintProgress.
   ///
@@ -67194,6 +67230,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'{month}月{day}日 {time}'**
   String displayDateAbsolute(int month, int day, String time);
+
+  /// No description provided for @displayDateOnly.
+  ///
+  /// In zh, this message translates to:
+  /// **'{month}月{day}日'**
+  String displayDateOnly(int month, int day);
 
   /// No description provided for @displayDueLabel.
   ///

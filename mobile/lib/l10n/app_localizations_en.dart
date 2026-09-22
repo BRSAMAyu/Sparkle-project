@@ -33744,7 +33744,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sprintTasks => 'Tasks';
 
   @override
-  String get sprintNoTasks => 'No tasks in this sprint.';
+  String get sprintNoTasksTitle => 'No tasks scheduled yet';
+
+  @override
+  String get sprintNoTasksHint =>
+      'Sprint tasks appear here day by day. Schedule today\'s targets first so your progress starts counting.';
+
+  @override
+  String get sprintNoTasksCta => 'Schedule tasks';
+
+  @override
+  String get sprintLoadErrorTitle => 'Couldn\'t load your sprint';
+
+  @override
+  String get sprintLoadErrorImpact =>
+      'Tasks and progress are hidden right now. Your data is safe — tap retry to reload.';
+
+  @override
+  String sprintEndsOn(String date) {
+    return 'Ends $date';
+  }
+
+  @override
+  String get sprintProgressScope => 'Source: server-side task completion ratio';
 
   @override
   String get sprintProgress => 'Progress';
@@ -38600,6 +38622,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String displayDateAbsolute(int month, int day, String time) {
     return '$month/$day $time';
+  }
+
+  @override
+  String displayDateOnly(int month, int day) {
+    return '$month/$day';
   }
 
   @override

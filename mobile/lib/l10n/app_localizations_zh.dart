@@ -32359,7 +32359,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sprintTasks => '任务';
 
   @override
-  String get sprintNoTasks => '这个冲刺暂无任务。';
+  String get sprintNoTasksTitle => '这个冲刺还没排任务';
+
+  @override
+  String get sprintNoTasksHint => '冲刺的任务会按天排在这里：先安排今天要攻的内容，完成度才会开始累计。';
+
+  @override
+  String get sprintNoTasksCta => '去排任务';
+
+  @override
+  String get sprintLoadErrorTitle => '冲刺面板加载失败';
+
+  @override
+  String get sprintLoadErrorImpact => '任务和进度暂时看不到；你的数据没有丢，点重试即可恢复。';
+
+  @override
+  String sprintEndsOn(String date) {
+    return '$date 结束';
+  }
+
+  @override
+  String get sprintProgressScope => '口径：服务端按冲刺任务完成比结算';
 
   @override
   String get sprintProgress => '进度';
@@ -36999,6 +37019,11 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String displayDateAbsolute(int month, int day, String time) {
     return '$month月$day日 $time';
+  }
+
+  @override
+  String displayDateOnly(int month, int day) {
+    return '$month月$day日';
   }
 
   @override
