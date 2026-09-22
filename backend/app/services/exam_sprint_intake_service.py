@@ -11,10 +11,11 @@ from typing import Any
 from uuid import UUID
 
 from loguru import logger
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_service
-from app.models.plan import PlanPriority, PlanStage, PlanType
+from app.models.plan import Plan, PlanPriority, PlanStage, PlanType
 from app.models.task import Task
 from app.orchestration.bottleneck_analyzer import bottleneck_analyzer
 from app.orchestration.planning_workflow import (
@@ -44,7 +45,13 @@ from app.services.task_service import TaskService
 
 @dataclass
 class GeneratedPlanBundle:
-    plan_id: str
+    """Launch anchor for the intake response.
+
+    ``plan_id`` keeps the DB native UUID (plans.id is a GUID column) so callers
+    never have to re-parse a string; serialize with ``str()`` at the API edge.
+    """
+
+    plan_id: UUID
     plan_name: str
     first_day_task_ids: list[str]
     recommended_task_id: str | None
@@ -140,19 +147,26 @@ class ExamSprintIntakeService:
             conversation_id=conversation_id,
         )
 
-        generated = await self._generate_plan_and_tasks(
-            user_id=user_id,
-            request=request,
-            session=session,
-            runtime_state=runtime_state,
-            strategy=strategy,
-            goal_model=goal_model,
-            assessment=assessment,
-            selected_pack=selected_pack,
-        )
+        # BP-7 幂等：intake 可重入（断线重连/重复提交是常态）。同 user + 同 goal
+        # （subject + exam_date）已存在 active sprint plan 时，直接复用既有计划，
+        # 不再生成第二份（否则先撞计划配额 403，配额未满时则静默双计划）。
+        reusable_plan = await self._find_reusable_sprint_plan(user_id=user_id, request=request)
+        if reusable_plan is not None:
+            generated = await self._bundle_from_existing_plan(plan=reusable_plan)
+        else:
+            generated = await self._generate_plan_and_tasks(
+                user_id=user_id,
+                request=request,
+                session=session,
+                runtime_state=runtime_state,
+                strategy=strategy,
+                goal_model=goal_model,
+                assessment=assessment,
+                selected_pack=selected_pack,
+            )
         await self._record_north_star_intake_metrics(
             user_id=user_id,
-            plan_id=UUID(generated.plan_id),
+            plan_id=generated.plan_id,
             request=request,
             goal_model=goal_model,
             assessment=assessment,
@@ -179,7 +193,7 @@ class ExamSprintIntakeService:
                 first_day_output=generated.first_day_output,
             ),
             launch=ExamSprintLaunchPayload(
-                plan_id=generated.plan_id,
+                plan_id=str(generated.plan_id),
                 plan_name=generated.plan_name,
                 first_day_task_ids=generated.first_day_task_ids,
                 recommended_task_id=generated.recommended_task_id,
@@ -188,6 +202,67 @@ class ExamSprintIntakeService:
                     f"/tasks/{generated.recommended_task_id}" if generated.recommended_task_id else None
                 ),
             ),
+        )
+
+    async def _find_reusable_sprint_plan(
+        self,
+        *,
+        user_id: UUID,
+        request: ExamSprintIntakeRequest,
+    ) -> Plan | None:
+        """Locate the active sprint plan for the same goal (subject + exam date).
+
+        The goal identity of an intake form is ``(user, SPRINT, subject, exam_date)``:
+        resubmitting the same form describes the same exam, so the existing plan is
+        the idempotent answer. A different subject/exam date is a different goal and
+        keeps the normal creation path (quota still applies there by design).
+        """
+        subject = self._strip(request.subject)[:100]
+        if not subject:
+            return None
+        query = (
+            select(Plan)
+            .where(
+                Plan.user_id == user_id,
+                Plan.type == PlanType.SPRINT,
+                Plan.is_active.is_(True),
+                Plan.deleted_at.is_(None),
+                Plan.subject == subject,
+                Plan.target_date == request.exam_date,
+            )
+            .order_by(desc(Plan.created_at))
+            .limit(1)
+        )
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none()
+
+    async def _bundle_from_existing_plan(self, *, plan: Plan) -> GeneratedPlanBundle:
+        """Rebuild the launch bundle from a reused plan without creating anything."""
+        result = await self.db.execute(
+            select(Task)
+            .where(
+                Task.plan_id == plan.id,
+                Task.deleted_at.is_(None),
+                Task.order_index >= 1000,
+                Task.order_index < 2000,  # day 1 band: order_index = day*1000 + offset
+            )
+            .order_by(Task.order_index.asc())
+        )
+        day_one_tasks = list(result.scalars())
+        first_day_task_ids = [str(task.id) for task in day_one_tasks]
+        first_day_focus = ""
+        first_day_output = ""
+        if day_one_tasks:
+            guide = self._as_dict(day_one_tasks[0].guide_json)
+            first_day_focus = self._strip(guide.get("objective")) or self._strip(day_one_tasks[0].guide_content)
+            first_day_output = self._strip(guide.get("output_action"))
+        return GeneratedPlanBundle(
+            plan_id=plan.id,
+            plan_name=plan.name,
+            first_day_task_ids=first_day_task_ids,
+            recommended_task_id=first_day_task_ids[0] if first_day_task_ids else None,
+            first_day_focus=first_day_focus or "先把考试范围和高频保底线稳住。",
+            first_day_output=first_day_output or "完成一次闭卷输出和最小检查。",
         )
 
     async def _persist_profile_payloads(
@@ -406,7 +481,7 @@ class ExamSprintIntakeService:
         await self.db.commit()
 
         return GeneratedPlanBundle(
-            plan_id=str(plan.id),
+            plan_id=plan.id,
             plan_name=plan.name,
             first_day_task_ids=first_day_task_ids,
             recommended_task_id=recommended_task_id,
