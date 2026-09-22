@@ -13,7 +13,7 @@ from app.core.agent_profiles import AgentRole, ModelTier, TaskType
 from app.core.business_metrics import EVIDENCE_BACKED_VISIBLE_UPDATE_TOTAL
 from app.gen.agent.v1 import agent_service_pb2
 from app.orchestration.goal_quality_evaluator import goal_quality_evaluator
-from app.orchestration.planning_intent import detect_planning_like_turn
+from app.orchestration.planning_intent import detect_planning_like_turn, has_correction_signal
 from app.orchestration.schemas import ExecutablePlan
 from app.orchestration.statechart_engine import WorkflowState
 from app.orchestration.sufficiency_checker import SufficiencyStatus, sufficiency_checker
@@ -168,7 +168,12 @@ class ValidationEngineMixin:
             "复习计划",
         )
 
-        if any(marker in message for marker in advisory_markers) and not any(
+        # BP-3B 判定序：用户明示纠正/指错信号（你说错了/不对/纠正/其实是…）
+        # 优先于规划词汇（复习/总结等）触发——含纠正信号的规划词面消息是
+        # 纠正请求，不得被规划澄清快速通道劫持；仅在用户同时明确要求
+        # 出计划（explicit_plan_markers）时维持规划意图。
+        correction_present = has_correction_signal(message)
+        if (correction_present or any(marker in message for marker in advisory_markers)) and not any(
             marker in message for marker in explicit_plan_markers
         ):
             return "knowledge_query"

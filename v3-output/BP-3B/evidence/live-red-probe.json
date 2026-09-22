@@ -1,0 +1,44 @@
+{
+  "account": "northstar_bp3b_a",
+  "stack": "shared gateway :8080 -> main-repo engine :50051 (main@e43fde1e, pre-fix)",
+  "results": {
+    "hijack_msg": {
+      "full_text": "已收到您的指正，正在为您同步更新复习方案。为更好地匹配您的节奏，需跟您确认：您计划复习这块内容多久？目前更倾向于先梳理核心概念，还是直接通过刷题巩固？您只需简单回复偏好，我会立即为您生成针对性的学习清单，随时准备开始。",
+      "delta_events": 0,
+      "event_types": {
+        "ack": 1,
+        "message_ack": 1,
+        "status_update": 2,
+        "metadata": 2,
+        "full_text": 1,
+        "meta": 1
+      },
+      "citations": [],
+      "tool_calls": [],
+      "errors": [],
+      "elapsed_s": 27.76,
+      "request_id": "124234fca6cf43c5b9a90e55956e8dd9",
+      "session_id": "ns001-937b5f641985",
+      "stale_frames_drained": 0
+    },
+    "planning_control": {
+      "full_text": "已收到您的请求，正在为您搭建复习框架。为让计划更精准高效，还需您补充两项基础信息：距离考试大概还有几天？每天可投入的复习时长是多少？您直接回复即可，我会据此为您快速生成专属方案。",
+      "delta_events": 0,
+      "event_types": {
+        "ack": 1,
+        "message_ack": 1,
+        "status_update": 2,
+        "metadata": 2,
+        "full_text": 1,
+        "meta": 1
+      },
+      "citations": [],
+      "tool_calls": [],
+      "errors": [],
+      "elapsed_s": 26.5,
+      "request_id": "68562b4baec040dea7b81669d5ae76df",
+      "session_id": "ns001-364aded145a3",
+      "stale_frames_drained": 0
+    }
+  }
+}
