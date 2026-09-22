@@ -1,0 +1,663 @@
+diff --git a/backend/app/core/security_monitor.py b/backend/app/core/security_monitor.py
+index f990e8ee..32cf56fb 100755
+--- a/backend/app/core/security_monitor.py
++++ b/backend/app/core/security_monitor.py
+@@ -11,6 +11,7 @@ from __future__ import annotations
+ 
+ import asyncio
+ import json
++from contextlib import suppress
+ from dataclasses import asdict, dataclass
+ from datetime import UTC, datetime, timedelta
+ from enum import Enum
+@@ -18,14 +19,29 @@ from typing import Any
+ from uuid import UUID
+ 
+ from loguru import logger
++from prometheus_client import Counter as PrometheusCounter
+ from sqlalchemy import func, select
+ from sqlalchemy.ext.asyncio import AsyncSession
+ 
+ from app.config import settings
+ from app.core.cache import cache_service
++from app.core.metrics import get_or_create_metric
+ from app.models.audit_log import SecurityAuditLog
+ from app.models.user import LoginAttempt
+ 
++# PROD-FIX-1（缺陷1）：启动/运行失败必须可观测——此前 initialize 签名漂移导致
++# 安全监控后台协程从未启动，TypeError 被吞成 warning，数月无人发现。
++SECURITY_MONITOR_START_FAILURES_TOTAL = get_or_create_metric(
++    PrometheusCounter,
++    "sparkle_security_monitor_start_failures_total",
++    "Security monitor startup failures (initialize raised)",
++)
++SECURITY_MONITOR_BACKGROUND_TASK_FAILURES_TOTAL = get_or_create_metric(
++    PrometheusCounter,
++    "sparkle_security_monitor_background_task_failures_total",
++    "Security monitor background tasks that exited with an unexpected error",
++)
++
+ 
+ def _utcnow() -> datetime:
+     return datetime.now(UTC).replace(tzinfo=None)
+@@ -88,23 +104,98 @@ class SecurityMonitor:
+         self._alerts_enabled = True
+         self._monitoring_enabled = True
+ 
++        # PROD-FIX-1（缺陷1）：启动即验的可观测状态
++        self.initialized = False
++        self.initialized_at: datetime | None = None
++        self._background_tasks: list[asyncio.Task] = []
++
+         # 配置
+         self.FAILED_LOGIN_THRESHOLD = 5  # 5分钟内失败登录次数阈值
+         self.FAILED_LOGIN_WINDOW = 300  # 5分钟（秒）
+         self.SUSPICIOUS_IP_THRESHOLD = 10  # 可疑IP阈值
+         self.ALERT_COOLDOWN = 300  # 告警冷却时间（秒）
+ 
+-    async def initialize(self):
+-        """初始化安全监控"""
++    async def initialize(self, redis: Any | None = None) -> None:
++        """初始化安全监控。
++
++        PROD-FIX-1（缺陷1）签名对齐：main.py lifespan 以
++        ``initialize(cache_service.redis)`` 传参调用——接受可选 redis 注入
++        （调用侧真实意图：显式注入启动期已就绪的 redis 实例），不传则沿用
++        ``__init__`` 自取的 ``cache_service.redis``。修复前两者漂移导致每次
++        引擎启动 TypeError 被吞成 warning，监控从未运行。
++
++        失败不再静默：任何异常 → ``initialized`` 保持 False、
++        ``sparkle_security_monitor_start_failures_total`` +1、ERROR 级日志，
++        并向上抛出（由调用方 lifespan 收敛为非致命 ERROR）。
++        """
++        if redis is not None:
++            self.redis = redis
++
+         if not self._monitoring_enabled:
+             logger.info("安全监控已禁用")
+             return
+ 
+-        # 启动后台监控任务
+-        asyncio.create_task(self._monitor_security_events())
+-        asyncio.create_task(self._cleanup_old_data())
++        try:
++            # 启动后台监控任务（持引用防 GC；done-callback 钉住运行期死亡）
++            self._background_tasks = [
++                asyncio.create_task(self._monitor_security_events()),
++                asyncio.create_task(self._cleanup_old_data()),
++            ]
++            for task in self._background_tasks:
++                task.add_done_callback(self._on_background_task_done)
++        except Exception:
++            self.initialized = False
++            SECURITY_MONITOR_START_FAILURES_TOTAL.inc()
++            logger.exception("Security Monitor startup FAILED — 安全监控未启动，安全面裸奔")
++            raise
++
++        self.initialized = True
++        self.initialized_at = _utcnow()
++        logger.info(
++            "Security Monitor startup verified: initialized=True "
++            "background_tasks={} redis_ready={}",
++            len(self._background_tasks),
++            self.redis is not None,
++        )
++
++    def get_startup_status(self) -> dict[str, Any]:
++        """启动即验的健康面：监控是否真正跑起来、后台协程在位情况。"""
++        return {
++            "initialized": self.initialized,
++            "initialized_at": (
++                self.initialized_at.isoformat() if self.initialized_at else None
++            ),
++            "monitoring_enabled": self._monitoring_enabled,
++            "background_tasks": sum(
++                1 for task in self._background_tasks if not task.done()
++            ),
++        }
+ 
+-        logger.info("安全监控服务已初始化")
++    def _on_background_task_done(self, task: asyncio.Task) -> None:
++        """后台协程退出钩子：非主动关停的死亡必须 ERROR + 计数，不许静默。"""
++        if task.cancelled():
++            return
++        exc = task.exception()
++        if exc is None:
++            return
++        SECURITY_MONITOR_BACKGROUND_TASK_FAILURES_TOTAL.inc()
++        logger.error(
++            "Security monitor background task died unexpectedly "
++            "(安全监控后台协程异常退出): {!r}",
++            exc,
++        )
++
++    async def shutdown(self) -> None:
++        """取消后台监控协程（引擎关停时调用，避免 pending-task 告警）。"""
++        tasks, self._background_tasks = self._background_tasks, []
++        self.initialized = False
++        for task in tasks:
++            task.cancel()
++        for task in tasks:
++            # 已死亡任务的非取消异常由 _on_background_task_done 记账，
++            # 这里只做收敛，不在关停路径再抛。
++            with suppress(asyncio.CancelledError, Exception):
++                await task
+ 
+     async def record_login_attempt(
+         self,
+diff --git a/backend/app/main.py b/backend/app/main.py
+index 789b7720..e827cd61 100755
+--- a/backend/app/main.py
++++ b/backend/app/main.py
+@@ -200,10 +200,20 @@ async def lifespan(fastapp: FastAPI):
+     # Initialize Security Monitor
+     try:
+         from app.core.security_monitor import security_monitor
++
+         await security_monitor.initialize(cache_service.redis)
+-        logger.info("Security Monitor initialized successfully")
++        # PROD-FIX-1（缺陷1）：启动即验——监控起来后必须留下可观测的成功标记
++        logger.info(
++            "Security Monitor initialized successfully: {}",
++            security_monitor.get_startup_status(),
++        )
+     except Exception as exc:
+-        logger.warning(f"Failed to initialize Security Monitor: {exc}")
++        # PROD-FIX-1（缺陷1）：失败不再静默为 warning（此前签名漂移让安全监控
++        # 全死却只留一行 warning）。非致命：引擎照常起，但必须 ERROR 级可寻。
++        logger.error(
++            "Failed to initialize Security Monitor — 安全监控未启动（安全面裸奔）: {!r}",
++            exc,
++        )
+     try:
+         await _run_working_memory_orphan_cleanup()
+     except Exception as exc:
+@@ -779,6 +789,16 @@ async def lifespan(fastapp: FastAPI):
+     except Exception as e:
+         logger.warning(f"Event bus shutdown failed: {e}")
+ 
++    # PROD-FIX-1（缺陷1）：SecurityMonitor 后台协程现在真的会跑起来了，
++    # 关停时必须一并收掉（在 Redis 释放之前），避免 pending-task 告警。
++    try:
++        from app.core.security_monitor import security_monitor
++
++        await security_monitor.shutdown()
++        logger.info("Security Monitor background tasks stopped")
++    except Exception as e:
++        logger.warning(f"Security Monitor shutdown failed: {e}")
++
+     # Close Cache
+     # R2-EI-18: graceful shutdown hygiene — detach the EpisodeLogger Redis sink
+     # (holds cache_service.redis) and close redis_search_client's own client
+diff --git a/backend/app/services/predictive_service.py b/backend/app/services/predictive_service.py
+index aa6aa606..19de6760 100755
+--- a/backend/app/services/predictive_service.py
++++ b/backend/app/services/predictive_service.py
+@@ -79,6 +79,10 @@ PREDICTION_DATA_ERRORS = (
+     ArithmeticError,
+     SQLAlchemyError,
+     TypeError,
++    # PROD-FIX-1（缺陷2）：KnowledgeNode.importance 坏列引用曾以 AttributeError
++    # 逃出本护栏、炸穿整个 get_user_state（user_state_v1 从未产出）。ORM 属性
++    # 漂移属于同一类"数据/语义错误"，降级为默认值 + ERROR 日志，不许上抛。
++    AttributeError,
+     ValueError,
+     statistics.StatisticsError,
+ )
+@@ -489,11 +493,14 @@ class PredictiveService:
+                 raise ValueError(f"Topic {topic_id} not found")
+ 
+             # 2. 查找前置知识
+-            # 简化：假设 importance 高的节点是前置知识
++            # 简化：假设 importance_level 高的节点是前置知识
++            # PROD-FIX-1（缺陷2）：真实列名是 importance_level（models/galaxy.py），
++            # 此前误写 KnowledgeNode.importance → AttributeError 炸穿 get_user_state，
++            # user_state_v1 从未产出。
+             prerequisite_query = select(KnowledgeNode).where(
+                 and_(
+                     KnowledgeNode.subject_id == topic.subject_id,
+-                    KnowledgeNode.importance > topic.importance,
++                    KnowledgeNode.importance_level > topic.importance_level,
+                 )
+             )
+             prereq_result = await self.db.execute(prerequisite_query)
+@@ -532,8 +539,8 @@ class PredictiveService:
+                 predicted_difficulty = 0.5
+ 
+             # 5. 估算学习时间
+-            # 基于难度和话题重要性
+-            base_hours = topic.importance * 2  # 重要性 1-10 -> 2-20小时
++            # 基于难度和话题重要性（importance_level 1-5 → 2-10 小时）
++            base_hours = topic.importance_level * 2
+             difficulty_multiplier = 1.0 + predicted_difficulty
+             estimated_hours = base_hours * difficulty_multiplier
+ 
+diff --git a/backend/app/services/profile_context_service.py b/backend/app/services/profile_context_service.py
+index fa7a0cfa..ac50196e 100644
+--- a/backend/app/services/profile_context_service.py
++++ b/backend/app/services/profile_context_service.py
+@@ -7,11 +7,13 @@ from typing import Any, get_args
+ from uuid import UUID
+ 
+ from loguru import logger
++from prometheus_client import Counter as PrometheusCounter
+ from sqlalchemy import desc, func, select
+ from sqlalchemy.ext.asyncio import AsyncSession
+ from sqlalchemy.sql import nullslast
+ 
+ from app.core.cache import cache_service
++from app.core.metrics import get_or_create_metric
+ from app.core.profile_context import (
+     ActivePattern,
+     CognitiveSummary,
+@@ -41,6 +43,15 @@ def _utcnow() -> datetime:
+     return datetime.now(UTC).replace(tzinfo=None)
+ 
+ 
++# PROD-FIX-1（缺陷2）：user_state_v1 缺失必须可观测——此前该 payload 构建失败
++# 只留一行无指标 warning（活栈 50 次炸无人发现）。
++USER_STATE_V1_PAYLOAD_FAILURES_TOTAL = get_or_create_metric(
++    PrometheusCounter,
++    "sparkle_user_state_v1_payload_failures_total",
++    "Failures while populating the user_state_v1 profile context payload",
++)
++
++
+ class ProfileContextService:
+     CACHE_TTL_SECONDS = 120  # 2 min to reduce stale knowledge mastery
+     INLINE_SNAPSHOT_CACHE_TTL_SECONDS = 120
+@@ -339,7 +350,14 @@ class ProfileContextService:
+                 payload[field_name] = self._serialize_user_state_value(envelope)
+             context.user_state_v1 = payload
+         except Exception as exc:
+-            logger.warning(f"Failed to populate user_state_v1 payload: {exc}")
++            # PROD-FIX-1（缺陷2）：不再只是一行无指标 warning——ERROR 级 + 计数器，
++            # 让 user_state_v1 整体缺失在生产指标面上可见。
++            USER_STATE_V1_PAYLOAD_FAILURES_TOTAL.inc()
++            logger.error(
++                "Failed to populate user_state_v1 payload "
++                "(user_state_v1 MISSING from context): {!r}",
++                exc,
++            )
+ 
+     @classmethod
+     def _serialize_user_state_value(cls, value: Any) -> Any:
+diff --git a/backend/app/state_aggregator/service.py b/backend/app/state_aggregator/service.py
+index aa285399..1eb525d7 100644
+--- a/backend/app/state_aggregator/service.py
++++ b/backend/app/state_aggregator/service.py
+@@ -6,10 +6,13 @@ from datetime import date, datetime, timedelta
+ from typing import Any
+ from uuid import UUID
+ 
++from loguru import logger
++from prometheus_client import Counter as PrometheusCounter
+ from sqlalchemy import func, select
+ from sqlalchemy.ext.asyncio import AsyncSession
+ 
+ from app.config import settings
++from app.core.metrics import get_or_create_metric
+ from app.core.telemetry_boundary import (
+     EMOTIONAL_BLOCK_SENTIMENTS,
+     TELEMETRY_DERIVED_FRAGMENT_SOURCE_TYPES,
+@@ -78,6 +81,16 @@ from app.state_aggregator.schema import (
+ )
+ from app.working_memory.service import WorkingMemoryService
+ 
++# PROD-FIX-1（缺陷2）：字段构建失败必须可观测——此前 foresight_hint 构建器里
++# KnowledgeNode.importance 坏列引用一路炸穿 get_user_state，user_state_v1
++# 从未产出，生产只留下一行无指标 warning。
++USER_STATE_FIELD_BUILD_FAILURES_TOTAL = get_or_create_metric(
++    PrometheusCounter,
++    "sparkle_user_state_field_build_failures_total",
++    "User-state field builds that degraded to a default value",
++    ["field"],
++)
++
+ 
+ class StateAggregatorService:
+     """Read-only Stage 18 user-state aggregator."""
+@@ -435,15 +448,33 @@ class StateAggregatorService:
+         now: datetime,
+         current_turn_parse: CurrentTurnParseResult | None = None,
+     ) -> StateFieldEnvelope[ForesightHintSummaryValue]:
+-        snapshot = await self.predictive_service.build_foresight_snapshot(user_id)
+-        latest_hint = snapshot.hints[0] if snapshot.hints else None
+-        confidence_items = tuple(
+-            ForesightConfidenceItemValue(dim=dim, confidence=state.confidence)
+-            for dim, state in sorted(
+-                snapshot.attractors.items(),
+-                key=lambda item: (-float(item[1].confidence), item[0]),
+-            )[:5]
++        # PROD-FIX-1（缺陷2）：该字段是下游优先级权重输入——构建失败必须降级为
++        # 默认（中性）权重 + 可观测计数，不许炸穿整个 get_user_state（此前
++        # KnowledgeNode.importance 坏列引用曾让 user_state_v1 整体缺失）。
++        try:
++            snapshot = await self.predictive_service.build_foresight_snapshot(user_id)
++        except Exception as exc:
++            USER_STATE_FIELD_BUILD_FAILURES_TOTAL.labels(field="foresight_hint").inc()
++            logger.error(
++                "user_state field foresight_hint degraded to default "
++                "(前瞻提示降级为默认权重): {!r}",
++                exc,
++            )
++            snapshot = None
++
++        latest_hint = snapshot.hints[0] if snapshot and snapshot.hints else None
++        confidence_items = (
++            ()
++            if snapshot is None
++            else tuple(
++                ForesightConfidenceItemValue(dim=dim, confidence=state.confidence)
++                for dim, state in sorted(
++                    snapshot.attractors.items(),
++                    key=lambda item: (-float(item[1].confidence), item[0]),
++                )[:5]
++            )
+         )
++        deviation_count = 0 if snapshot is None else len(snapshot.deviations)
+         source_ids = []
+         if latest_hint is not None:
+             source_ids.append(f"foresight_hint:{latest_hint.hint_id}")
+@@ -454,7 +485,7 @@ class StateAggregatorService:
+                 generated_at=(
+                     latest_hint.generated_at if latest_hint is not None else None
+                 ),
+-                deviation_count=len(snapshot.deviations),
++                deviation_count=deviation_count,
+                 attractor_confidences=confidence_items,
+             ),
+             computed_at=now,
+diff --git a/backend/tests/unit/test_prodfix1_monitor_and_userstate.py b/backend/tests/unit/test_prodfix1_monitor_and_userstate.py
+new file mode 100644
+index 00000000..a31ac963
+--- /dev/null
++++ b/backend/tests/unit/test_prodfix1_monitor_and_userstate.py
+@@ -0,0 +1,287 @@
++"""
++PROD-FIX-1 回归测试 — 活栈巡检两大 P1 生产缺陷。
++
++缺陷 1（SecurityMonitor 全死，安全面）：
++    main.py 启动时以传参方式调用 ``security_monitor.initialize(cache_service.redis)``，
++    而 ``SecurityMonitor.initialize`` 签名无参 → 每次引擎启动 TypeError 被吞成
++    warning，登录爆破 / 可疑 IP 监控后台协程从未运行。
++
++缺陷 2（user_state_v1 整体缺失，核心链路）：
++    predictive_service 引用了不存在的列 ``KnowledgeNode.importance``（真实列
++    ``importance_level``），AttributeError 逃出 PREDICTION_DATA_ERRORS 降级护栏，
++    沿 state_aggregator → profile_context_service 一路上抛后吞掉 → 整个
++    user_state_v1 上下文从未产出。
++
++本文件钉住修复后的契约：
++  1. initialize 接受调用方注入的 redis（对齐 main.py 调用契约）且无参兼容；
++  2. 启动成功有可观测标记（initialized / 后台任务登记），失败不再静默
++     （计数器 + ERROR 级日志 + 上抛）；
++  3. 后台监控协程运行期死亡也可观测（计数器 + ERROR 日志）；
++  4. predict_difficulty 按 importance_level 列取数（正常路径语义），
++     属性错误类失败降级为默认难度而不是炸穿；
++  5. foresight_hint 构建失败时 get_user_state 降级返回完整 user_state_v1
++     （默认权重），并打可观测计数；
++  6. profile_context 的 user_state_v1 payload 失败可观测（计数 + ERROR 日志）。
++"""
++
++from __future__ import annotations
++
++import asyncio
++from unittest.mock import AsyncMock
++from uuid import uuid4
++
++import pytest
++from loguru import logger
++from prometheus_client import REGISTRY
++from sqlalchemy.ext.asyncio import AsyncSession
++
++from app.core.profile_context import ProfileContext
++from app.core.security_monitor import SecurityMonitor
++from app.models.galaxy import KnowledgeNode
++from app.models.subject import Subject
++from app.services.predictive_service import PredictiveService
++from app.services.profile_context_service import ProfileContextService
++from app.state_aggregator.service import StateAggregatorService
++
++
++def _counter_total(name: str, labels: dict[str, str] | None = None) -> float | None:
++    """读取 prometheus 计数器当前值（不存在时返回 None）。"""
++    return REGISTRY.get_sample_value(name, labels or {})
++
++
++def _capture_error_logs():
++    """loguru ERROR 级日志捕获（sink 收到 str 子类 Message）。"""
++    records: list = []
++    handler_id = logger.add(records.append, level="ERROR")
++    return records, lambda: logger.remove(handler_id)
++
++
++def _log_text(records: list) -> str:
++    return "\n".join(str(rec) for rec in records)
++
++
++# ---------------------------------------------------------------------------
++# 缺陷 1：SecurityMonitor 启动契约
++# ---------------------------------------------------------------------------
++
++
++class TestSecurityMonitorStartup:
++    def _fresh_monitor(self) -> SecurityMonitor:
++        # 单测不污染全局单例：每次用新实例
++        return SecurityMonitor()
++
++    @pytest.mark.asyncio
++    async def test_initialize_accepts_caller_redis_and_marks_started(self, monkeypatch):
++        """main.py 调用契约：initialize(cache_service.redis) 必须成功并留下启动标记。
++
++        缺陷 1 红证：修复前本测试以
++        ``TypeError: initialize() takes 1 positional argument but 2 were given``
++        失败——即生产每次启动被吞成 warning 的同一异常。
++        """
++        monitor = self._fresh_monitor()
++        sentinel_redis = object()  # 调用方注入（main.py 传 cache_service.redis）
++
++        await monitor.initialize(sentinel_redis)
++
++        assert monitor.initialized is True, "启动成功标记缺失（启动即验）"
++        assert monitor.redis is sentinel_redis, "调用方注入的 redis 未被采纳"
++        assert len(monitor._background_tasks) == 2, "监控/清理两个后台协程未全部登记"
++        assert monitor.get_startup_status()["initialized"] is True
++
++        await monitor.shutdown()
++        assert monitor.get_startup_status()["background_tasks"] == 0
++
++    @pytest.mark.asyncio
++    async def test_initialize_without_argument_still_works(self):
++        """向后兼容：无参调用（类自取 cache_service.redis）也必须可用。"""
++        monitor = self._fresh_monitor()
++        await monitor.initialize()
++        assert monitor.initialized is True
++        await monitor.shutdown()
++
++    @pytest.mark.asyncio
++    async def test_initialize_failure_is_observable_and_reraises(self, monkeypatch):
++        """启动失败不再静默：计数器 + ERROR 日志 + 异常上抛（由 lifespan 收敛）。"""
++        monitor = self._fresh_monitor()
++
++        def _explode(coro=None, *args, **kwargs):
++            # 先关闭未消费的协程，避免 GC 期 "never awaited" 噪音
++            if coro is not None and hasattr(coro, "close"):
++                coro.close()
++            raise RuntimeError("event loop closed (simulated startup failure)")
++
++        monkeypatch.setattr(asyncio, "create_task", _explode)
++        before = _counter_total("sparkle_security_monitor_start_failures_total")
++        records, remove = _capture_error_logs()
++        try:
++            with pytest.raises(RuntimeError):
++                await monitor.initialize(object())
++        finally:
++            remove()
++
++        after = _counter_total("sparkle_security_monitor_start_failures_total")
++        assert monitor.initialized is False
++        assert (after or 0) - (before or 0) == 1, "启动失败未计数（静默失败）"
++        assert (
++            "Security Monitor" in _log_text(records)
++            or "安全监控" in _log_text(records)
++        ), "启动失败未打 ERROR 级日志"
++
++    @pytest.mark.asyncio
++    async def test_background_task_death_is_observable(self, monkeypatch):
++        """后台监控协程运行期死亡 → 计数器 + ERROR 日志（不许再次静默裸奔）。"""
++        monitor = self._fresh_monitor()
++
++        async def _die(self):
++            raise RuntimeError("monitor loop died (simulated runtime crash)")
++
++        monkeypatch.setattr(SecurityMonitor, "_monitor_security_events", _die)
++        before = _counter_total("sparkle_security_monitor_background_task_failures_total")
++        records, remove = _capture_error_logs()
++        try:
++            await monitor.initialize(object())
++            await asyncio.sleep(0.1)  # 让任务实际跑炸、done-callback 落账
++        finally:
++            remove()
++
++        after = _counter_total("sparkle_security_monitor_background_task_failures_total")
++        assert (after or 0) - (before or 0) == 1, "后台协程死亡未计数"
++        assert (
++            "security monitor background task" in _log_text(records).lower()
++            or "安全监控后台" in _log_text(records)
++        ), "后台协程死亡未打 ERROR 级日志"
++        await monitor.shutdown()
++
++
++# ---------------------------------------------------------------------------
++# 缺陷 2：importance_level 列语义 + 降级护栏
++# ---------------------------------------------------------------------------
++
++
++class TestPredictDifficultyImportanceLevel:
++    @pytest.mark.asyncio
++    async def test_predict_difficulty_uses_importance_level_column(self, db_session: AsyncSession):
++        """正常路径：前置知识按 importance_level 取数，估算时长按 1-5 → 2-10 小时。
++
++        缺陷 2 红证：修复前查询构造即抛
++        ``AttributeError: type object 'KnowledgeNode' has no attribute 'importance'``。
++        """
++        subject = Subject(name="prodfix-subject")
++        db_session.add(subject)
++        await db_session.flush()
++
++        topic = KnowledgeNode(
++            name="topic", subject_id=subject.id, importance_level=2
++        )
++        prereq_high = KnowledgeNode(
++            name="prereq_high", subject_id=subject.id, importance_level=3
++        )
++        prereq_low = KnowledgeNode(
++            name="prereq_low", subject_id=subject.id, importance_level=1
++        )
++        db_session.add_all([topic, prereq_high, prereq_low])
++        await db_session.commit()
++
++        service = PredictiveService(db_session)
++        prediction = await service.predict_difficulty(uuid4(), topic.id)
++
++        # 未降级（降级默认的 topic_name 是 "Unknown"）
++        assert prediction.topic_name == "topic"
++        # 只选中 importance_level 更高的前置（语义按真实列跑通）
++        assert prediction.suggested_prerequisites == ["prereq_high"]
++        # 前置存在但用户无掌握度记录 → mastery 记 0 → 难度 1.0；
++        # base_hours = importance_level(2)*2 = 4 → 4*(1+1.0) = 8.0
++        assert prediction.predicted_difficulty == pytest.approx(1.0)
++        assert prediction.estimated_time_hours == pytest.approx(8.0)
++
++    @pytest.mark.asyncio
++    async def test_predict_difficulty_degrades_on_attribute_error(
++        self, db_session: AsyncSession, monkeypatch
++    ):
++        """防御：属性漂移类失败（AttributeError）必须走默认难度降级，不许炸穿调用方。"""
++        subject = Subject(name="prodfix-subject-2")
++        db_session.add(subject)
++        await db_session.flush()
++        topic = KnowledgeNode(name="topic", subject_id=subject.id, importance_level=2)
++        db_session.add(topic)
++        await db_session.commit()
++
++        service = PredictiveService(db_session)
++        monkey_target = AsyncMock(side_effect=AttributeError("simulated column drift"))
++        monkeypatch.setattr(service.db, "execute", monkey_target)
++
++        prediction = await service.predict_difficulty(uuid4(), topic.id)
++
++        assert prediction.predicted_difficulty == pytest.approx(0.5)
++        assert prediction.topic_name == "Unknown"
++
++
++# ---------------------------------------------------------------------------
++# 缺陷 2：get_user_state 降级与 user_state_v1 可观测性
++# ---------------------------------------------------------------------------
++
++
++class TestUserStateDegradationAndObservability:
++    @pytest.mark.asyncio
++    async def test_get_user_state_degrades_foresight_hint_to_default(
++        self, db_session: AsyncSession, monkeypatch
++    ):
++        """foresight snapshot 构建失败 → get_user_state 仍返回完整 user_state_v1：
++        foresight_hint 为默认（空）权重 + 失败计数 +1。"""
++        service = StateAggregatorService(db_session)
++        monkeypatch.setattr(
++            service.predictive_service,
++            "build_foresight_snapshot",
++            AsyncMock(
++                side_effect=AttributeError(
++                    "type object 'KnowledgeNode' has no attribute 'importance'"
++                )
++            ),
++        )
++
++        labels = {"field": "foresight_hint"}
++        metric = "sparkle_user_state_field_build_failures_total"
++        before = _counter_total(metric, labels)
++
++        state = await service.get_user_state(uuid4(), required_fields=("foresight_hint",))
++
++        after = _counter_total(metric, labels)
++        assert state.foresight_hint is not None, "降级失败：字段整体缺失"
++        assert state.foresight_hint.value.hint_text is None
++        assert state.foresight_hint.value.deviation_count == 0
++        assert state.foresight_hint.value.attractor_confidences == ()
++        assert (after or 0) - (before or 0) == 1, "降级未打可观测计数"
++
++    @pytest.mark.asyncio
++    async def test_user_state_v1_payload_failure_is_observable(
++        self, db_session: AsyncSession, monkeypatch
++    ):
++        """profile_context 的 user_state_v1 payload 失败：计数 + ERROR 日志，不许再是一行无指标 warning。"""
++        from app.services import profile_context_service as pcs_module
++
++        metric = "sparkle_user_state_v1_payload_failures_total"
++        assert hasattr(pcs_module, "USER_STATE_V1_PAYLOAD_FAILURES_TOTAL"), (
++            "user_state_v1 失败计数指标缺失（可观测性未落地）"
++        )
++
++        async def _boom(self, *args, **kwargs):
++            raise RuntimeError("simulated user_state_v1 failure")
++
++        monkeypatch.setattr(StateAggregatorService, "get_user_state", _boom)
++
++        service = ProfileContextService(db_session, redis={})
++        context = ProfileContext()
++
++        before = _counter_total(metric)
++        records, remove = _capture_error_logs()
++        try:
++            await service._populate_user_state_v1_payload(uuid4(), context)
++        finally:
++            remove()
++
++        after = _counter_total(metric)
++        assert context.user_state_v1 is None
++        assert (after or 0) - (before or 0) == 1, "user_state_v1 失败未计数"
++        assert (
++            "user_state_v1" in _log_text(records)
++        ), "user_state_v1 失败未打 ERROR 级日志"

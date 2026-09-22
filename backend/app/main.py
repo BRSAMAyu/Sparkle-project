@@ -200,10 +200,20 @@ async def lifespan(fastapp: FastAPI):
     # Initialize Security Monitor
     try:
         from app.core.security_monitor import security_monitor
+
         await security_monitor.initialize(cache_service.redis)
-        logger.info("Security Monitor initialized successfully")
+        # PROD-FIX-1（缺陷1）：启动即验——监控起来后必须留下可观测的成功标记
+        logger.info(
+            "Security Monitor initialized successfully: {}",
+            security_monitor.get_startup_status(),
+        )
     except Exception as exc:
-        logger.warning(f"Failed to initialize Security Monitor: {exc}")
+        # PROD-FIX-1（缺陷1）：失败不再静默为 warning（此前签名漂移让安全监控
+        # 全死却只留一行 warning）。非致命：引擎照常起，但必须 ERROR 级可寻。
+        logger.error(
+            "Failed to initialize Security Monitor — 安全监控未启动（安全面裸奔）: {!r}",
+            exc,
+        )
     try:
         await _run_working_memory_orphan_cleanup()
     except Exception as exc:
@@ -778,6 +788,16 @@ async def lifespan(fastapp: FastAPI):
         logger.info("Event bus consume loops drained")
     except Exception as e:
         logger.warning(f"Event bus shutdown failed: {e}")
+
+    # PROD-FIX-1（缺陷1）：SecurityMonitor 后台协程现在真的会跑起来了，
+    # 关停时必须一并收掉（在 Redis 释放之前），避免 pending-task 告警。
+    try:
+        from app.core.security_monitor import security_monitor
+
+        await security_monitor.shutdown()
+        logger.info("Security Monitor background tasks stopped")
+    except Exception as e:
+        logger.warning(f"Security Monitor shutdown failed: {e}")
 
     # Close Cache
     # R2-EI-18: graceful shutdown hygiene — detach the EpisodeLogger Redis sink

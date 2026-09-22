@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from contextlib import suppress
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
 from enum import Enum
@@ -18,13 +19,28 @@ from typing import Any
 from uuid import UUID
 
 from loguru import logger
+from prometheus_client import Counter as PrometheusCounter
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.core.cache import cache_service
+from app.core.metrics import get_or_create_metric
 from app.models.audit_log import SecurityAuditLog
 from app.models.user import LoginAttempt
+
+# PROD-FIX-1（缺陷1）：启动/运行失败必须可观测——此前 initialize 签名漂移导致
+# 安全监控后台协程从未启动，TypeError 被吞成 warning，数月无人发现。
+SECURITY_MONITOR_START_FAILURES_TOTAL = get_or_create_metric(
+    PrometheusCounter,
+    "sparkle_security_monitor_start_failures_total",
+    "Security monitor startup failures (initialize raised)",
+)
+SECURITY_MONITOR_BACKGROUND_TASK_FAILURES_TOTAL = get_or_create_metric(
+    PrometheusCounter,
+    "sparkle_security_monitor_background_task_failures_total",
+    "Security monitor background tasks that exited with an unexpected error",
+)
 
 
 def _utcnow() -> datetime:
@@ -88,23 +104,98 @@ class SecurityMonitor:
         self._alerts_enabled = True
         self._monitoring_enabled = True
 
+        # PROD-FIX-1（缺陷1）：启动即验的可观测状态
+        self.initialized = False
+        self.initialized_at: datetime | None = None
+        self._background_tasks: list[asyncio.Task] = []
+
         # 配置
         self.FAILED_LOGIN_THRESHOLD = 5  # 5分钟内失败登录次数阈值
         self.FAILED_LOGIN_WINDOW = 300  # 5分钟（秒）
         self.SUSPICIOUS_IP_THRESHOLD = 10  # 可疑IP阈值
         self.ALERT_COOLDOWN = 300  # 告警冷却时间（秒）
 
-    async def initialize(self):
-        """初始化安全监控"""
+    async def initialize(self, redis: Any | None = None) -> None:
+        """初始化安全监控。
+
+        PROD-FIX-1（缺陷1）签名对齐：main.py lifespan 以
+        ``initialize(cache_service.redis)`` 传参调用——接受可选 redis 注入
+        （调用侧真实意图：显式注入启动期已就绪的 redis 实例），不传则沿用
+        ``__init__`` 自取的 ``cache_service.redis``。修复前两者漂移导致每次
+        引擎启动 TypeError 被吞成 warning，监控从未运行。
+
+        失败不再静默：任何异常 → ``initialized`` 保持 False、
+        ``sparkle_security_monitor_start_failures_total`` +1、ERROR 级日志，
+        并向上抛出（由调用方 lifespan 收敛为非致命 ERROR）。
+        """
+        if redis is not None:
+            self.redis = redis
+
         if not self._monitoring_enabled:
             logger.info("安全监控已禁用")
             return
 
-        # 启动后台监控任务
-        asyncio.create_task(self._monitor_security_events())
-        asyncio.create_task(self._cleanup_old_data())
+        try:
+            # 启动后台监控任务（持引用防 GC；done-callback 钉住运行期死亡）
+            self._background_tasks = [
+                asyncio.create_task(self._monitor_security_events()),
+                asyncio.create_task(self._cleanup_old_data()),
+            ]
+            for task in self._background_tasks:
+                task.add_done_callback(self._on_background_task_done)
+        except Exception:
+            self.initialized = False
+            SECURITY_MONITOR_START_FAILURES_TOTAL.inc()
+            logger.exception("Security Monitor startup FAILED — 安全监控未启动，安全面裸奔")
+            raise
 
-        logger.info("安全监控服务已初始化")
+        self.initialized = True
+        self.initialized_at = _utcnow()
+        logger.info(
+            "Security Monitor startup verified: initialized=True "
+            "background_tasks={} redis_ready={}",
+            len(self._background_tasks),
+            self.redis is not None,
+        )
+
+    def get_startup_status(self) -> dict[str, Any]:
+        """启动即验的健康面：监控是否真正跑起来、后台协程在位情况。"""
+        return {
+            "initialized": self.initialized,
+            "initialized_at": (
+                self.initialized_at.isoformat() if self.initialized_at else None
+            ),
+            "monitoring_enabled": self._monitoring_enabled,
+            "background_tasks": sum(
+                1 for task in self._background_tasks if not task.done()
+            ),
+        }
+
+    def _on_background_task_done(self, task: asyncio.Task) -> None:
+        """后台协程退出钩子：非主动关停的死亡必须 ERROR + 计数，不许静默。"""
+        if task.cancelled():
+            return
+        exc = task.exception()
+        if exc is None:
+            return
+        SECURITY_MONITOR_BACKGROUND_TASK_FAILURES_TOTAL.inc()
+        logger.error(
+            "Security monitor background task died unexpectedly "
+            "(安全监控后台协程异常退出): {!r}",
+            exc,
+        )
+
+    async def shutdown(self) -> None:
+        """取消后台监控协程（引擎关停时调用，避免 pending-task 告警）。"""
+        tasks, self._background_tasks = self._background_tasks, []
+        self.initialized = False
+        for task in tasks:
+            task.cancel()
+        for task in tasks:
+            # 已死亡任务的非取消异常由 _on_background_task_done 记账，
+            # 这里只做收敛，不在关停路径再抛。
+            with suppress(asyncio.CancelledError, Exception):
+                await task
 
     async def record_login_attempt(
         self,

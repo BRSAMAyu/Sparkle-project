@@ -7,11 +7,13 @@ from typing import Any, get_args
 from uuid import UUID
 
 from loguru import logger
+from prometheus_client import Counter as PrometheusCounter
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import nullslast
 
 from app.core.cache import cache_service
+from app.core.metrics import get_or_create_metric
 from app.core.profile_context import (
     ActivePattern,
     CognitiveSummary,
@@ -39,6 +41,15 @@ from app.state_aggregator.service import StateAggregatorService
 
 def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
+
+
+# PROD-FIX-1（缺陷2）：user_state_v1 缺失必须可观测——此前该 payload 构建失败
+# 只留一行无指标 warning（活栈 50 次炸无人发现）。
+USER_STATE_V1_PAYLOAD_FAILURES_TOTAL = get_or_create_metric(
+    PrometheusCounter,
+    "sparkle_user_state_v1_payload_failures_total",
+    "Failures while populating the user_state_v1 profile context payload",
+)
 
 
 class ProfileContextService:
@@ -339,7 +350,14 @@ class ProfileContextService:
                 payload[field_name] = self._serialize_user_state_value(envelope)
             context.user_state_v1 = payload
         except Exception as exc:
-            logger.warning(f"Failed to populate user_state_v1 payload: {exc}")
+            # PROD-FIX-1（缺陷2）：不再只是一行无指标 warning——ERROR 级 + 计数器，
+            # 让 user_state_v1 整体缺失在生产指标面上可见。
+            USER_STATE_V1_PAYLOAD_FAILURES_TOTAL.inc()
+            logger.error(
+                "Failed to populate user_state_v1 payload "
+                "(user_state_v1 MISSING from context): {!r}",
+                exc,
+            )
 
     @classmethod
     def _serialize_user_state_value(cls, value: Any) -> Any:

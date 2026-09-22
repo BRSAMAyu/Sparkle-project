@@ -6,10 +6,13 @@ from datetime import date, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
+from loguru import logger
+from prometheus_client import Counter as PrometheusCounter
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.core.metrics import get_or_create_metric
 from app.core.telemetry_boundary import (
     EMOTIONAL_BLOCK_SENTIMENTS,
     TELEMETRY_DERIVED_FRAGMENT_SOURCE_TYPES,
@@ -77,6 +80,16 @@ from app.state_aggregator.schema import (
     WorkingMemorySnapshotValueItem,
 )
 from app.working_memory.service import WorkingMemoryService
+
+# PROD-FIX-1（缺陷2）：字段构建失败必须可观测——此前 foresight_hint 构建器里
+# KnowledgeNode.importance 坏列引用一路炸穿 get_user_state，user_state_v1
+# 从未产出，生产只留下一行无指标 warning。
+USER_STATE_FIELD_BUILD_FAILURES_TOTAL = get_or_create_metric(
+    PrometheusCounter,
+    "sparkle_user_state_field_build_failures_total",
+    "User-state field builds that degraded to a default value",
+    ["field"],
+)
 
 
 class StateAggregatorService:
@@ -435,15 +448,33 @@ class StateAggregatorService:
         now: datetime,
         current_turn_parse: CurrentTurnParseResult | None = None,
     ) -> StateFieldEnvelope[ForesightHintSummaryValue]:
-        snapshot = await self.predictive_service.build_foresight_snapshot(user_id)
-        latest_hint = snapshot.hints[0] if snapshot.hints else None
-        confidence_items = tuple(
-            ForesightConfidenceItemValue(dim=dim, confidence=state.confidence)
-            for dim, state in sorted(
-                snapshot.attractors.items(),
-                key=lambda item: (-float(item[1].confidence), item[0]),
-            )[:5]
+        # PROD-FIX-1（缺陷2）：该字段是下游优先级权重输入——构建失败必须降级为
+        # 默认（中性）权重 + 可观测计数，不许炸穿整个 get_user_state（此前
+        # KnowledgeNode.importance 坏列引用曾让 user_state_v1 整体缺失）。
+        try:
+            snapshot = await self.predictive_service.build_foresight_snapshot(user_id)
+        except Exception as exc:
+            USER_STATE_FIELD_BUILD_FAILURES_TOTAL.labels(field="foresight_hint").inc()
+            logger.error(
+                "user_state field foresight_hint degraded to default "
+                "(前瞻提示降级为默认权重): {!r}",
+                exc,
+            )
+            snapshot = None
+
+        latest_hint = snapshot.hints[0] if snapshot and snapshot.hints else None
+        confidence_items = (
+            ()
+            if snapshot is None
+            else tuple(
+                ForesightConfidenceItemValue(dim=dim, confidence=state.confidence)
+                for dim, state in sorted(
+                    snapshot.attractors.items(),
+                    key=lambda item: (-float(item[1].confidence), item[0]),
+                )[:5]
+            )
         )
+        deviation_count = 0 if snapshot is None else len(snapshot.deviations)
         source_ids = []
         if latest_hint is not None:
             source_ids.append(f"foresight_hint:{latest_hint.hint_id}")
@@ -454,7 +485,7 @@ class StateAggregatorService:
                 generated_at=(
                     latest_hint.generated_at if latest_hint is not None else None
                 ),
-                deviation_count=len(snapshot.deviations),
+                deviation_count=deviation_count,
                 attractor_confidences=confidence_items,
             ),
             computed_at=now,

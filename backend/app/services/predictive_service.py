@@ -79,6 +79,10 @@ PREDICTION_DATA_ERRORS = (
     ArithmeticError,
     SQLAlchemyError,
     TypeError,
+    # PROD-FIX-1（缺陷2）：KnowledgeNode.importance 坏列引用曾以 AttributeError
+    # 逃出本护栏、炸穿整个 get_user_state（user_state_v1 从未产出）。ORM 属性
+    # 漂移属于同一类"数据/语义错误"，降级为默认值 + ERROR 日志，不许上抛。
+    AttributeError,
     ValueError,
     statistics.StatisticsError,
 )
@@ -489,11 +493,14 @@ class PredictiveService:
                 raise ValueError(f"Topic {topic_id} not found")
 
             # 2. 查找前置知识
-            # 简化：假设 importance 高的节点是前置知识
+            # 简化：假设 importance_level 高的节点是前置知识
+            # PROD-FIX-1（缺陷2）：真实列名是 importance_level（models/galaxy.py），
+            # 此前误写 KnowledgeNode.importance → AttributeError 炸穿 get_user_state，
+            # user_state_v1 从未产出。
             prerequisite_query = select(KnowledgeNode).where(
                 and_(
                     KnowledgeNode.subject_id == topic.subject_id,
-                    KnowledgeNode.importance > topic.importance,
+                    KnowledgeNode.importance_level > topic.importance_level,
                 )
             )
             prereq_result = await self.db.execute(prerequisite_query)
@@ -532,8 +539,8 @@ class PredictiveService:
                 predicted_difficulty = 0.5
 
             # 5. 估算学习时间
-            # 基于难度和话题重要性
-            base_hours = topic.importance * 2  # 重要性 1-10 -> 2-20小时
+            # 基于难度和话题重要性（importance_level 1-5 → 2-10 小时）
+            base_hours = topic.importance_level * 2
             difficulty_multiplier = 1.0 + predicted_difficulty
             estimated_hours = base_hours * difficulty_multiplier
 
