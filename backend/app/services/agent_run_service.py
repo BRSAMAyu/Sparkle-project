@@ -68,6 +68,7 @@ from app.core.run_steps import (
     first_incomplete_step,
     normalize_artifact_refs,
     normalize_run_steps,
+    reconcile_step_counters,
     step_completion_stamped,
 )
 from app.models.agent_run import AgentRun, AgentRunKind, AgentRunTransition
@@ -538,7 +539,9 @@ class AgentRunService:
             wait_kind=None,
             wait_expires_at=None,
             steps=steps_canonical,
-            steps_total=int(steps_total) if steps_total else (len(steps_canonical) or None),
+            # X-07 P2-1：有计划时计划长度即步骤总数真源（显式 steps_total 仅
+            # 在无计划时生效——两处进度不得分叉）。
+            steps_total=len(steps_canonical) or (int(steps_total) if steps_total else None),
             task_id=UUID(str(task_id)) if task_id else None,
             intent_id=UUID(str(intent_id)) if intent_id else None,
             session_id=str(session_id)[:64] if session_id else None,
@@ -682,6 +685,13 @@ class AgentRunService:
             run.steps_done = int(steps_done)
         if steps_total is not None:
             run.steps_total = int(steps_total)
+        # X-07 P2-1 · 双计数统一：有计划时计数收口到计划派生值（单调兜底）；
+        # 无计划原值透传（X-05 轨道零改动）。
+        run.steps_done, run.steps_total = reconcile_step_counters(
+            steps_done=run.steps_done,
+            steps_total=run.steps_total,
+            steps=run.steps,
+        )
         if result_ref is not None:
             run.result_ref = dict(result_ref)
 
@@ -1026,6 +1036,13 @@ class AgentRunService:
         run.heartbeat_at = now
         if steps_total is not None:
             run.steps_total = int(steps_total)
+        # X-07 P2-1 · 双计数统一：有计划时 total 收口到计划长度、done 不低于
+        # 计划完成戳数（max 单调兜底，序号语义不被拉回）；无计划原值透传。
+        run.steps_done, run.steps_total = reconcile_step_counters(
+            steps_done=run.steps_done,
+            steps_total=run.steps_total,
+            steps=run.steps,
+        )
         if label:
             run.current_stage = str(label)[:64]
         payload = {
@@ -1101,8 +1118,13 @@ class AgentRunService:
 
         run.steps = normalized
         run.heartbeat_at = _utcnow()
-        if not run.steps_total:
-            run.steps_total = len(normalized) or None
+        # X-07 P2-1 · 双计数统一：计划落库即步骤总数真源（len(plan) 收口，
+        # 不再仅在本列为空时同步）；done 单调兜底（计划先于重投场景不回退）。
+        run.steps_done, run.steps_total = reconcile_step_counters(
+            steps_done=run.steps_done,
+            steps_total=run.steps_total,
+            steps=normalized,
+        )
         await self.db.commit()
         await self.db.refresh(run)
         return RunMutationResult(run=run, applied=True, created=False, event_name=None, event_written=False)
@@ -1237,6 +1259,13 @@ class AgentRunService:
             return RunMutationResult(run=run, applied=False, created=False, event_name=None, event_written=False)
         run.steps = updated
         run.heartbeat_at = now
+        # X-07 P2-1 · 双计数统一：完成戳推进即计数推进（steps_done 派生自计划
+        # 完成戳数，单调兜底）——此前只盖戳不动计数，UI 两处进度脱节（债项）。
+        run.steps_done, run.steps_total = reconcile_step_counters(
+            steps_done=run.steps_done,
+            steps_total=run.steps_total,
+            steps=updated,
+        )
         event_written = await self._write_run_event_in_txn(
             run=run,
             event_name="run.step_completed",
@@ -1350,6 +1379,13 @@ class AgentRunService:
             return UserStepResult(run=run, step=step, applied=False, resumed=False, replay=True)
         run.steps = updated
         run.heartbeat_at = now
+        # X-07 P2-1 · 双计数统一：用户步完成戳同样计入 steps_done（与
+        # complete_agent_step 同法；随 resume 同事务提交）。
+        run.steps_done, run.steps_total = reconcile_step_counters(
+            steps_done=run.steps_done,
+            steps_total=run.steps_total,
+            steps=updated,
+        )
         # resume（含预算闸门/目标白名单/事件）与完成戳同事务提交；超限 →
         # BUDGET_EXCEEDED 明确终态（完成戳随迁移落库——事实不被掩盖）。
         resume_result = await self.resume(

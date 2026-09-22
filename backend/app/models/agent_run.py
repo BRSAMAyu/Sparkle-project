@@ -35,7 +35,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
 from app.core.run_state_machine import TERMINAL_RUN_STATUSES, RunStatus
-from app.core.run_steps import run_steps_wire
+from app.core.run_steps import reconcile_step_counters, run_steps_wire
 from app.models.base import GUID, BaseModel
 
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
@@ -150,6 +150,15 @@ class AgentRun(BaseModel):
     def to_dict(self) -> dict[str, Any]:
         from app.core.run_steps import awaiting_step_projection
 
+        # X-07 P2-1 · 双计数统一：有 steps 计划时计数由计划 completion 戳派生
+        # （单调兜底只升不降；无计划原值透传）。读面派生覆盖统一前落库的历史
+        # 脱节行——字段名与形状不变（移动端 agent_run_read_service 兼容面）。
+        derived_steps_done, derived_steps_total = reconcile_step_counters(
+            steps_done=self.steps_done,
+            steps_total=self.steps_total,
+            steps=self.steps,
+        )
+
         return {
             "run_id": str(self.id),
             "user_id": str(self.user_id),
@@ -171,8 +180,8 @@ class AgentRun(BaseModel):
             "completion_condition": self.completion_condition or {},
             "risk_class": self.risk_class,
             "current_stage": self.current_stage,
-            "steps_done": int(self.steps_done or 0),
-            "steps_total": self.steps_total,
+            "steps_done": derived_steps_done,
+            "steps_total": derived_steps_total,
             # X-07 · hybrid 步骤面：计划 wire 投影 + 推导的 awaiting step
             # （「轮到谁」/「恢复点」；冷启动/通知重开从持久化推导，不靠内存）。
             "steps": run_steps_wire(self.steps),

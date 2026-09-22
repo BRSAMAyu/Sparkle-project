@@ -46,6 +46,8 @@ __all__ = [
     "normalize_completion_condition",
     "find_step",
     "first_incomplete_step",
+    "completed_steps_count",
+    "reconcile_step_counters",
     "awaiting_step_projection",
     "run_steps_wire",
     "step_completion_stamped",
@@ -214,6 +216,44 @@ def first_incomplete_step(steps: Iterable[dict[str, Any]]) -> dict[str, Any] | N
         if not step.get("completion"):
             return step
     return None
+
+
+def completed_steps_count(steps: Iterable[dict[str, Any]] | None) -> int:
+    """已完成步骤数（``completion`` 戳计数；纯读）。"""
+    return sum(1 for step in steps or [] if step.get("completion"))
+
+
+def reconcile_step_counters(
+    *,
+    steps_done: int | None,
+    steps_total: int | None,
+    steps: Iterable[dict[str, Any]] | None,
+) -> tuple[int, int | None]:
+    """X-07 P2-1 · 双计数统一——steps 计划 completion 戳为真源的计数派生.
+
+    债项：``steps_done/steps_total``（X-05 单调计数）与 ``steps`` 计划的
+    completion 戳（X-07）双计数并存，两处进度可能不同步。本函数是**唯一
+    派生逻辑**（读面 ``to_dict`` 与服务层写点共用）：
+
+    - **无计划**（``steps`` 空）：原值透传——X-05 execution 轨道（里程碑
+      ``record_step`` 序号语义）零改动；
+    - **有计划**：
+      - ``steps_done = max(存储值, completed_steps_count(steps))``——计划
+        completion 戳是进度的下界真源；``max`` 是**单调兜底**：派生只升不
+        降，X-05「steps_done 不得倒退」语义原样保留（先经序号推进、后补
+        计划的混合历史行不被拉回）；
+      - ``steps_total = len(steps)``——计划只定义一次、长度不变（first-win
+        冲突拒绝），故计划长度即步骤总数的真源；显式传入的 ``steps_total``
+        （里程碑词表计数）在有计划时被收口，UI 两处进度不再分叉。
+
+    纯函数、零 IO；返回 ``(steps_done, steps_total)`` 派生值，字段名与形状
+    由调用方保持不变（移动端 ``agent_run_read_service`` 兼容面零改动）。
+    """
+    plan = list(steps or [])
+    if not plan:
+        return int(steps_done or 0), steps_total
+    derived_done = max(int(steps_done or 0), completed_steps_count(plan))
+    return derived_done, len(plan)
 
 
 def step_completion_stamped(
