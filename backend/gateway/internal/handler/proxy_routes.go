@@ -225,6 +225,9 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		// route-tier: authed
 		plans.POST("/:id/restore", h.proxyWithHeaders)
 		// route-tier: authed
+		// CP-01: exam-sprint 计划人工确认（幂等，Python 侧 PlanService.confirm_plan 承接）
+		plans.POST("/:id/confirm", h.proxyWithHeaders)
+		// route-tier: authed
 		plans.POST("/:id/generate-tasks", h.proxyWithHeaders)
 		// route-tier: authed
 		plans.GET("/:id/progress", h.proxyWithHeaders)

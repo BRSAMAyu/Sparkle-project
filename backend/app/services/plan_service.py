@@ -503,6 +503,52 @@ class PlanService:
         return plan
 
     @staticmethod
+    async def confirm_plan(db: AsyncSession, plan_id: UUID, user_id: UUID) -> dict[str, Any] | None:
+        """CP-01：用户确认计划正式生效（exam-sprint 计划草案→人工确认闭环）。
+
+        状态机落点：``plans.confirmed_at``（CP-01 迁移 cp01confirm_20260922 新列）。
+        plans 表没有 status/draft 列（PlanStatus 枚举无列引用、PlanStage 是学习
+        旅程阶段、PlanState.status 是执行态存储，三者均不承载确认语义），故以
+        ``confirmed_at IS NULL`` 表示待确认（草稿态）、非 NULL 表示已确认（生效态）。
+
+        幂等语义：已确认再确认返回当前态不报错，且保留首次确认时间戳
+        （不覆盖）——确认是盖章动作，重复点击/断线重连重放不产生新事实。
+        归属校验：plan 必须属于该用户且未软删，否则返回 None（handler 404，
+        对齐 plans 域统一 404 防资源枚举风格）。已归档（is_active=False）未
+        软删的计划允许确认：确认记录用户意图，不隐含恢复/激活。
+
+        Returns:
+            确认结果摘要 dict；plan 不存在/非本人/已软删时返回 None。
+        """
+        query = select(Plan).where(
+            and_(
+                Plan.id == plan_id,
+                Plan.user_id == user_id,
+                Plan.deleted_at.is_(None),
+            )
+        )
+        result = await db.execute(query)
+        plan = result.scalar_one_or_none()
+        if plan is None:
+            return None
+
+        already_confirmed = plan.confirmed_at is not None
+        if not already_confirmed:
+            plan.confirmed_at = _utcnow()
+            db.add(plan)
+            await db.commit()
+            await db.refresh(plan)
+            logger.info(f"Plan confirmed: {plan_id} for user {user_id}")
+
+        return {
+            "plan_id": str(plan.id),
+            "plan_stage": plan.plan_stage.value if plan.plan_stage else None,
+            "confirmed_at": plan.confirmed_at.isoformat() if plan.confirmed_at else None,
+            "already_confirmed": already_confirmed,
+            "message": "计划已确认，无需重复操作" if already_confirmed else "计划已确认生效",
+        }
+
+    @staticmethod
     async def get_primary(
         db: AsyncSession,
         user_id: UUID

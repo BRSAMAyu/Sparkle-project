@@ -4334,6 +4334,7 @@ type Plan struct {
 	Source                pgtype.Text      `json:"source"`
 	SourceMetadata        []byte           `json:"source_metadata"`
 	GoalID                pgtype.UUID      `json:"goal_id"`
+	ConfirmedAt           pgtype.Timestamp `json:"confirmed_at"`
 }
 
 type PlanExecutionRecord struct {

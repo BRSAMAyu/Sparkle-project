@@ -5,7 +5,21 @@ Plan Model - 冲刺计划和成长计划
 
 import enum
 
-from sqlalchemy import JSON, Boolean, Column, Date, Enum, Float, ForeignKey, Index, Integer, String, Text, text
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    text,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
@@ -106,6 +120,12 @@ class Plan(BaseModel):
 
     # 状态
     is_active = Column(Boolean, default=True, nullable=False, index=True)
+
+    # 人工确认（CP-01）：用户对计划草案「确认生效」的落点。
+    # NULL=待确认（草稿态），非 NULL=已确认（生效态）；幂等语义见
+    # PlanService.confirm_plan——重复确认保留首次时间戳。
+    # naive UTC DateTime，与 BaseModel/deleted_at 的时间列惯例一致。
+    confirmed_at = Column(DateTime, nullable=True, default=None)
 
     # 优先级和主计划 (P0: 并行计划限制)
     priority = Column(

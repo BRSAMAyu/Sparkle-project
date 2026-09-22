@@ -1,0 +1,528 @@
+diff --git a/backend/alembic/versions/cp01confirm_20260922_add_plan_confirmed_at.py b/backend/alembic/versions/cp01confirm_20260922_add_plan_confirmed_at.py
+new file mode 100644
+index 00000000..bb42cfca
+--- /dev/null
++++ b/backend/alembic/versions/cp01confirm_20260922_add_plan_confirmed_at.py
+@@ -0,0 +1,51 @@
++"""CP-01 · plans.confirmed_at 计划人工确认列（exam-sprint 计划草案→确认闭环）
++
++Revision ID: cp01confirm_20260922
++Revises: planlink_20260922
++Create Date: 2026-09-22
++
++Migration Contract:
++    type: reversible
++    rollback_plan: "alembic downgrade -1：drop plans.confirmed_at 列。
++        列为本卡新增、无存量数据依赖，downgrade 后 schema 与升级前一致；
++        确认动作本身是可再生的用户事实（重新点击确认即可），不涉及数据回填。"
++    verification_query: "SELECT column_name FROM information_schema.columns WHERE table_name='plans' AND column_name='confirmed_at';"
++    backfill_plan: "无回填——存量计划一律视为未确认（confirmed_at NULL），由
++        用户在端点上逐计划显式确认；不做任何推测性批量盖章。"
++    owner: "CP-01"
++    ticket: "V3 CP-01 exam-sprint 计划人工确认端点（北极星 LOOP3 实证 404 缺口）"
++
++背景：北极星 LOOP3 实测 `POST /plans/{id}/confirm` 404，静态审计全仓只有
++chat action 级 confirm 与 compass 工件 approve——exam-sprint 计划草案→人工
++确认无专用端点。落点裁决：plans 表没有 status/draft 列（PlanStatus 枚举无
++列引用；PlanStage 是学习旅程阶段 sprint/daily/review/paused；PlanState.status
++是执行态存储 active/archived），三者均不承载确认语义，故新增
++confirmed_at（nullable DateTime）：NULL=待确认（草稿态），非 NULL=已确认
++（生效态）。
++
++方言可移植性：纯 add_column/drop_column，无 JSON 谓词无数据改写；SQLite
++基座走 batch_alter_table（sqlite 无 ALTER DROP COLUMN 的老版本兼容），
++PostgreSQL 端 batch 模式原样发出 ALTER 语句、不触发表重建。
++"""
++
++from __future__ import annotations
++
++from typing import Sequence
++
++import sqlalchemy as sa
++
++from alembic import op
++
++revision: str = "cp01confirm_20260922"
++down_revision: str | None = "planlink_20260922"
++branch_labels: str | Sequence[str] | None = None
++depends_on: str | Sequence[str] | None = None
++
++
++def upgrade() -> None:
++    op.add_column("plans", sa.Column("confirmed_at", sa.DateTime(), nullable=True))
++
++
++def downgrade() -> None:
++    with op.batch_alter_table("plans") as batch_op:
++        batch_op.drop_column("confirmed_at")
+diff --git a/backend/app/api/v1/plans.py b/backend/app/api/v1/plans.py
+index 766dc2a1..fcd5640f 100755
+--- a/backend/app/api/v1/plans.py
++++ b/backend/app/api/v1/plans.py
+@@ -1487,6 +1487,26 @@ async def restore_plan_state(
+     }
+ 
+ 
++# route-tier: authed
++@router.post("/{plan_id:uuid}/confirm", response_model=dict[str, Any])
++async def confirm_plan(
++    plan_id: UUID = Path(..., description="Plan ID"),
++    current_user: User = Depends(get_current_user),
++    db: AsyncSession = Depends(get_db),
++):
++    """
++    Confirm a plan (CP-01): 用户确认该计划正式生效。
++
++    exam-sprint 冲刺旅程的人工确认动作闭环——幂等：已确认再确认返回当前态
++    不报错；plan 必须属于当前用户且未删除，否则 404（对齐 plans 域防枚举
++    风格，他人计划与不存在统一 404）。业务逻辑在 PlanService.confirm_plan。
++    """
++    result = await PlanService.confirm_plan(db=db, plan_id=plan_id, user_id=current_user.id)
++    if result is None:
++        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Plan {plan_id} not found")
++    return result
++
++
+ @router.get("/{plan_id:uuid}/progress", response_model=PlanProgress)
+ async def get_plan_progress(
+     plan_id: UUID = Path(..., description="Plan ID"),
+diff --git a/backend/app/models/plan.py b/backend/app/models/plan.py
+index 57ea944b..fcc443c9 100755
+--- a/backend/app/models/plan.py
++++ b/backend/app/models/plan.py
+@@ -5,7 +5,21 @@ Plan Model - 冲刺计划和成长计划
+ 
+ import enum
+ 
+-from sqlalchemy import JSON, Boolean, Column, Date, Enum, Float, ForeignKey, Index, Integer, String, Text, text
++from sqlalchemy import (
++    JSON,
++    Boolean,
++    Column,
++    Date,
++    DateTime,
++    Enum,
++    Float,
++    ForeignKey,
++    Index,
++    Integer,
++    String,
++    Text,
++    text,
++)
+ from sqlalchemy.dialects.postgresql import JSONB
+ from sqlalchemy.orm import relationship
+ 
+@@ -107,6 +121,12 @@ class Plan(BaseModel):
+     # 状态
+     is_active = Column(Boolean, default=True, nullable=False, index=True)
+ 
++    # 人工确认（CP-01）：用户对计划草案「确认生效」的落点。
++    # NULL=待确认（草稿态），非 NULL=已确认（生效态）；幂等语义见
++    # PlanService.confirm_plan——重复确认保留首次时间戳。
++    # naive UTC DateTime，与 BaseModel/deleted_at 的时间列惯例一致。
++    confirmed_at = Column(DateTime, nullable=True, default=None)
++
+     # 优先级和主计划 (P0: 并行计划限制)
+     priority = Column(
+         Enum(PlanPriority, values_callable=lambda obj: [e.value for e in obj]),
+diff --git a/backend/app/services/plan_service.py b/backend/app/services/plan_service.py
+index 58c31081..f8e5f1af 100755
+--- a/backend/app/services/plan_service.py
++++ b/backend/app/services/plan_service.py
+@@ -502,6 +502,52 @@ class PlanService:
+         logger.info(f"Plan priority updated: {plan_id} -> {priority}")
+         return plan
+ 
++    @staticmethod
++    async def confirm_plan(db: AsyncSession, plan_id: UUID, user_id: UUID) -> dict[str, Any] | None:
++        """CP-01：用户确认计划正式生效（exam-sprint 计划草案→人工确认闭环）。
++
++        状态机落点：``plans.confirmed_at``（CP-01 迁移 cp01confirm_20260922 新列）。
++        plans 表没有 status/draft 列（PlanStatus 枚举无列引用、PlanStage 是学习
++        旅程阶段、PlanState.status 是执行态存储，三者均不承载确认语义），故以
++        ``confirmed_at IS NULL`` 表示待确认（草稿态）、非 NULL 表示已确认（生效态）。
++
++        幂等语义：已确认再确认返回当前态不报错，且保留首次确认时间戳
++        （不覆盖）——确认是盖章动作，重复点击/断线重连重放不产生新事实。
++        归属校验：plan 必须属于该用户且未软删，否则返回 None（handler 404，
++        对齐 plans 域统一 404 防资源枚举风格）。已归档（is_active=False）未
++        软删的计划允许确认：确认记录用户意图，不隐含恢复/激活。
++
++        Returns:
++            确认结果摘要 dict；plan 不存在/非本人/已软删时返回 None。
++        """
++        query = select(Plan).where(
++            and_(
++                Plan.id == plan_id,
++                Plan.user_id == user_id,
++                Plan.deleted_at.is_(None),
++            )
++        )
++        result = await db.execute(query)
++        plan = result.scalar_one_or_none()
++        if plan is None:
++            return None
++
++        already_confirmed = plan.confirmed_at is not None
++        if not already_confirmed:
++            plan.confirmed_at = _utcnow()
++            db.add(plan)
++            await db.commit()
++            await db.refresh(plan)
++            logger.info(f"Plan confirmed: {plan_id} for user {user_id}")
++
++        return {
++            "plan_id": str(plan.id),
++            "plan_stage": plan.plan_stage.value if plan.plan_stage else None,
++            "confirmed_at": plan.confirmed_at.isoformat() if plan.confirmed_at else None,
++            "already_confirmed": already_confirmed,
++            "message": "计划已确认，无需重复操作" if already_confirmed else "计划已确认生效",
++        }
++
+     @staticmethod
+     async def get_primary(
+         db: AsyncSession,
+diff --git a/backend/gateway/internal/handler/proxy_routes.go b/backend/gateway/internal/handler/proxy_routes.go
+index 120697b7..9e0e1fee 100644
+--- a/backend/gateway/internal/handler/proxy_routes.go
++++ b/backend/gateway/internal/handler/proxy_routes.go
+@@ -225,6 +225,9 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
+ 		// route-tier: authed
+ 		plans.POST("/:id/restore", h.proxyWithHeaders)
+ 		// route-tier: authed
++		// CP-01: exam-sprint 计划人工确认（幂等，Python 侧 PlanService.confirm_plan 承接）
++		plans.POST("/:id/confirm", h.proxyWithHeaders)
++		// route-tier: authed
+ 		plans.POST("/:id/generate-tasks", h.proxyWithHeaders)
+ 		// route-tier: authed
+ 		plans.GET("/:id/progress", h.proxyWithHeaders)
+diff --git a/backend/gateway/internal/handler/proxy_routes_test.go b/backend/gateway/internal/handler/proxy_routes_test.go
+index 0a73a21b..0efaeb03 100644
+--- a/backend/gateway/internal/handler/proxy_routes_test.go
++++ b/backend/gateway/internal/handler/proxy_routes_test.go
+@@ -152,6 +152,7 @@ func TestProxyRoutesHandler_RegisterProxyRoutes(t *testing.T) {
+ 		"PATCH /api/v1/plans/:id",
+ 		"DELETE /api/v1/plans/:id",
+ 		"POST /api/v1/plans/:id/archive",
++		"POST /api/v1/plans/:id/confirm", // CP-01 计划人工确认
+ 	}
+ 
+ 	expectedLearningPathRoutes := []string{
+diff --git a/backend/tests/api/test_plan_confirm_api.py b/backend/tests/api/test_plan_confirm_api.py
+new file mode 100644
+index 00000000..e26e2433
+--- /dev/null
++++ b/backend/tests/api/test_plan_confirm_api.py
+@@ -0,0 +1,188 @@
++"""CP-01：exam-sprint 计划人工确认端点（POST /plans/{plan_id}/confirm）API 级测试。
++
++闭环语义（行为定义，REPORT.md 同步登记）：
++- 首次确认 → 200，confirmed_at 落值，already_confirmed=False；
++- 重复确认 → 200 幂等：confirmed_at 保留首次值，already_confirmed=True；
++- 他人计划 → 404（对齐 plans 域统一 404 防资源枚举风格）；
++- 计划不存在 → 404；
++- 软删计划（deleted_at 非空）→ 404；
++- 已归档（is_active=False）未软删 → 允许确认：确认记录用户意图，
++  不改 is_active（最小行为面，不扩散到归档/配额域）。
++"""
++
++from datetime import UTC, date, datetime, timedelta
++
++import pytest
++from fastapi import FastAPI
++from fastapi.testclient import TestClient
++
++from app.api.deps import get_current_user
++from app.api.v1.plans import router as plans_router
++from app.db.session import get_db
++from app.models.plan import Plan, PlanPriority, PlanStage, PlanType
++from app.models.user import User
++
++
++@pytest.fixture
++def confirm_client(db_session):
++    app = FastAPI()
++    app.include_router(plans_router, prefix="/plans")
++
++    state = {"current_user": None}
++
++    async def _override_get_db():
++        yield db_session
++
++    def _override_get_current_user():
++        return state["current_user"]
++
++    app.dependency_overrides[get_db] = _override_get_db
++    app.dependency_overrides[get_current_user] = _override_get_current_user
++
++    with TestClient(app) as client:
++        yield client, state
++
++
++async def _make_user(db_session, username: str) -> User:
++    user = User(
++        username=username,
++        email=f"{username}@example.com",
++        hashed_password="hashed",
++    )
++    db_session.add(user)
++    await db_session.flush()
++    return user
++
++
++async def _make_plan(db_session, user_id, **overrides) -> Plan:
++    defaults: dict = {
++        "user_id": user_id,
++        "name": "7天高数冲刺",
++        "type": PlanType.SPRINT,
++        "description": "考试冲刺计划",
++        "plan_stage": PlanStage.SPRINT,
++        "target_date": date.today() + timedelta(days=7),
++        "daily_available_minutes": 90,
++        "total_estimated_hours": 12,
++        "subject": "高等数学",
++        "is_active": True,
++        "priority": PlanPriority.HIGH,
++    }
++    defaults.update(overrides)
++    plan = Plan(**defaults)
++    db_session.add(plan)
++    await db_session.flush()
++    return plan
++
++
++@pytest.mark.asyncio
++async def test_confirm_plan_first_time_returns_200_with_confirmed_at(db_session, confirm_client):
++    client, state = confirm_client
++    user = await _make_user(db_session, "confirm_owner")
++    plan = await _make_plan(db_session, user.id)
++    await db_session.commit()
++    state["current_user"] = user
++
++    response = client.post(f"/plans/{plan.id}/confirm")
++
++    assert response.status_code == 200
++    payload = response.json()
++    assert payload["plan_id"] == str(plan.id)
++    assert payload["plan_stage"] == PlanStage.SPRINT.value
++    assert payload["confirmed_at"] is not None
++    assert payload["already_confirmed"] is False
++    assert payload["message"]
++
++    await db_session.refresh(plan)
++    assert plan.confirmed_at is not None
++
++
++@pytest.mark.asyncio
++async def test_confirm_plan_is_idempotent_keeps_first_timestamp(db_session, confirm_client):
++    client, state = confirm_client
++    user = await _make_user(db_session, "confirm_idempotent")
++    plan = await _make_plan(db_session, user.id)
++    await db_session.commit()
++    state["current_user"] = user
++
++    first = client.post(f"/plans/{plan.id}/confirm")
++    assert first.status_code == 200
++    first_confirmed_at = first.json()["confirmed_at"]
++
++    second = client.post(f"/plans/{plan.id}/confirm")
++    assert second.status_code == 200
++    second_payload = second.json()
++    assert second_payload["already_confirmed"] is True
++    assert second_payload["confirmed_at"] == first_confirmed_at
++
++    await db_session.refresh(plan)
++    assert plan.confirmed_at.isoformat() == first_confirmed_at
++
++
++@pytest.mark.asyncio
++async def test_confirm_plan_of_other_user_returns_404(db_session, confirm_client):
++    client, state = confirm_client
++    owner = await _make_user(db_session, "confirm_owner_b")
++    intruder = await _make_user(db_session, "confirm_intruder")
++    plan = await _make_plan(db_session, owner.id)
++    await db_session.commit()
++    state["current_user"] = intruder
++
++    response = client.post(f"/plans/{plan.id}/confirm")
++
++    assert response.status_code == 404
++
++
++@pytest.mark.asyncio
++async def test_confirm_missing_plan_returns_404(db_session, confirm_client):
++    import uuid as uuid_mod
++
++    client, state = confirm_client
++    user = await _make_user(db_session, "confirm_missing")
++    await db_session.commit()
++    state["current_user"] = user
++
++    response = client.post(f"/plans/{uuid_mod.uuid4()}/confirm")
++
++    assert response.status_code == 404
++
++
++@pytest.mark.asyncio
++async def test_confirm_soft_deleted_plan_returns_404(db_session, confirm_client):
++    client, state = confirm_client
++    user = await _make_user(db_session, "confirm_softdel")
++    plan = await _make_plan(db_session, user.id, deleted_at=None)
++    await db_session.commit()
++    # 软删（走 SoftDeleteMixin 语义：deleted_at 置值）
++    plan.deleted_at = datetime.now(UTC).replace(tzinfo=None)
++    db_session.add(plan)
++    await db_session.commit()
++    state["current_user"] = user
++
++    response = client.post(f"/plans/{plan.id}/confirm")
++
++    assert response.status_code == 404
++
++
++@pytest.mark.asyncio
++async def test_confirm_archived_but_not_deleted_plan_is_allowed(db_session, confirm_client):
++    """行为定义：已归档（is_active=False）未软删的计划允许确认。
++
++    确认记录的是用户意图（认可这份计划），不隐含恢复/激活——
++    不改 is_active，不进归档/配额域（最小行为面）。
++    """
++    client, state = confirm_client
++    user = await _make_user(db_session, "confirm_archived")
++    plan = await _make_plan(db_session, user.id, is_active=False)
++    await db_session.commit()
++    state["current_user"] = user
++
++    response = client.post(f"/plans/{plan.id}/confirm")
++
++    assert response.status_code == 200
++    payload = response.json()
++    assert payload["confirmed_at"] is not None
++
++    await db_session.refresh(plan)
++    assert plan.confirmed_at is not None
++    assert plan.is_active is False
+diff --git a/backend/tests/unit/test_cp01_confirm_migration_sqlite.py b/backend/tests/unit/test_cp01_confirm_migration_sqlite.py
+new file mode 100644
+index 00000000..a32718ea
+--- /dev/null
++++ b/backend/tests/unit/test_cp01_confirm_migration_sqlite.py
+@@ -0,0 +1,117 @@
++"""cp01confirm_20260922 迁移在本地 sqlite 基座上的隔离重放（主库只读纪律）.
++
++不连主库 PostgreSQL：用 alembic Operations/MigrationContext 把
++cp01confirm_20260922_add_plan_confirmed_at 的 upgrade/downgrade 单独跑在临时
++sqlite 文件库上，验证 CP-01 计划人工确认列的 schema 变更：
++
++- upgrade 后 plans 表新增 confirmed_at 列（nullable，无 NOT NULL 违约风险）；
++- 存量行（含已软删行）upgrade 后 confirmed_at 保持 NULL（无推测性回填）；
++- downgrade 后列被移除，round-trip 后 schema 还原；
++- upgrade→downgrade→upgrade 幂等可重入。
++
++迁移语义（落点裁决）见 PlanService.confirm_plan docstring 与
++v3-output/CP01-CONFIRM/REPORT.md。
++"""
++
++from __future__ import annotations
++
++import importlib.util
++from pathlib import Path
++
++import pytest
++from alembic.migration import MigrationContext
++from alembic.operations import Operations
++from sqlalchemy import create_engine, inspect
++
++BACKEND_ROOT = Path(__file__).resolve().parents[2]
++MIGRATION_PATH = BACKEND_ROOT / "alembic" / "versions" / "cp01confirm_20260922_add_plan_confirmed_at.py"
++
++
++@pytest.fixture(name="migration_env")
++def _migration_env(tmp_path):
++    engine = create_engine(f"sqlite:///{tmp_path / 'cp01_confirm_test.db'}")
++
++    # 最小 plans 基座：迁移前 schema（无 confirmed_at），含确认语义消费面的关键列
++    with engine.begin() as conn:
++        conn.exec_driver_sql("""
++            CREATE TABLE plans (
++                id VARCHAR(36) PRIMARY KEY,
++                user_id VARCHAR(36) NOT NULL,
++                type VARCHAR(16) NOT NULL,
++                is_active INTEGER NOT NULL DEFAULT 1,
++                deleted_at DATETIME
++            )
++        """)
++        conn.exec_driver_sql(
++            "INSERT INTO plans (id, user_id, type, is_active, deleted_at) "
++            "VALUES ('p-1', 'u-1', 'SPRINT', 1, NULL)"
++        )
++        conn.exec_driver_sql(
++            "INSERT INTO plans (id, user_id, type, is_active, deleted_at) "
++            "VALUES ('p-2', 'u-1', 'SPRINT', 0, '2026-09-01T00:00:00')"
++        )
++
++    def run_migration(op_fn) -> None:
++        # begin()：SQLAlchemy 2.x 无 commit 不落盘（DDL 亦在事务内），迁移必须在事务内执行
++        with engine.begin() as conn:
++            ctx = MigrationContext.configure(conn)
++            with Operations.context(ctx):
++                op_fn()
++
++    def load_upgrade_downgrade():
++        spec = importlib.util.spec_from_file_location("cp01_confirm_migration", MIGRATION_PATH)
++        module = importlib.util.module_from_spec(spec)
++        spec.loader.exec_module(module)
++        return module.upgrade, module.downgrade
++
++    yield engine, run_migration, load_upgrade_downgrade
++    engine.dispose()
++
++
++def _column_names(engine) -> set[str]:
++    inspector = inspect(engine)
++    return {col["name"] for col in inspector.get_columns("plans")}
++
++
++def test_upgrade_adds_confirmed_at_nullable_and_keeps_rows_null(migration_env):
++    engine, run_migration, load_upgrade_downgrade = migration_env
++    upgrade, _ = load_upgrade_downgrade()
++
++    assert "confirmed_at" not in _column_names(engine)
++
++    run_migration(upgrade)
++
++    assert "confirmed_at" in _column_names(engine)
++    with engine.begin() as conn:
++        rows = conn.exec_driver_sql(
++            "SELECT id, confirmed_at FROM plans ORDER BY id"
++        ).fetchall()
++    assert [row[0] for row in rows] == ["p-1", "p-2"]
++    # 无推测性回填：存量行（含软删行）一律视为未确认
++    assert all(row[1] is None for row in rows)
++
++
++def test_round_trip_downgrade_restores_schema(migration_env):
++    engine, run_migration, load_upgrade_downgrade = migration_env
++    upgrade, downgrade = load_upgrade_downgrade()
++
++    run_migration(upgrade)
++    assert "confirmed_at" in _column_names(engine)
++
++    run_migration(downgrade)
++    assert "confirmed_at" not in _column_names(engine)
++    # 数据行在 round-trip 后原样存活
++    with engine.begin() as conn:
++        count = conn.exec_driver_sql("SELECT COUNT(*) FROM plans").scalar()
++    assert count == 2
++
++
++def test_migration_is_reentrant(migration_env):
++    engine, run_migration, load_upgrade_downgrade = migration_env
++    upgrade, downgrade = load_upgrade_downgrade()
++
++    run_migration(upgrade)
++    run_migration(downgrade)
++    run_migration(upgrade)
++
++    assert "confirmed_at" in _column_names(engine)

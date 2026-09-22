@@ -4441,7 +4441,8 @@ CREATE TABLE plans (
     deleted_at timestamp without time zone,
     source character varying(32),
     source_metadata jsonb,
-    goal_id uuid
+    goal_id uuid,
+    confirmed_at timestamp without time zone
 );
 
 

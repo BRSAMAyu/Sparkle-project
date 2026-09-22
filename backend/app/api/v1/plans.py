@@ -1487,6 +1487,26 @@ async def restore_plan_state(
     }
 
 
+# route-tier: authed
+@router.post("/{plan_id:uuid}/confirm", response_model=dict[str, Any])
+async def confirm_plan(
+    plan_id: UUID = Path(..., description="Plan ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Confirm a plan (CP-01): 用户确认该计划正式生效。
+
+    exam-sprint 冲刺旅程的人工确认动作闭环——幂等：已确认再确认返回当前态
+    不报错；plan 必须属于当前用户且未删除，否则 404（对齐 plans 域防枚举
+    风格，他人计划与不存在统一 404）。业务逻辑在 PlanService.confirm_plan。
+    """
+    result = await PlanService.confirm_plan(db=db, plan_id=plan_id, user_id=current_user.id)
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Plan {plan_id} not found")
+    return result
+
+
 @router.get("/{plan_id:uuid}/progress", response_model=PlanProgress)
 async def get_plan_progress(
     plan_id: UUID = Path(..., description="Plan ID"),

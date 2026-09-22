@@ -152,6 +152,7 @@ func TestProxyRoutesHandler_RegisterProxyRoutes(t *testing.T) {
 		"PATCH /api/v1/plans/:id",
 		"DELETE /api/v1/plans/:id",
 		"POST /api/v1/plans/:id/archive",
+		"POST /api/v1/plans/:id/confirm", // CP-01 计划人工确认
 	}
 
 	expectedLearningPathRoutes := []string{
