@@ -136,13 +136,18 @@ class CustomErrorWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // l10n 债项修复：默认构造 l10n=null 原先静默走英文硬编码兜底，不走
+    // .page/.banner/.inline 工厂的调用点在中文环境拿到英文 'Retry' 等文案。
+    // build 时从 context 兜底解析（AppLocalizations.of 可空，无 Localizations
+    // 时维持英文兜底不变）；工厂注入路径 l10n 非 null，行为不变。
+    final effectiveL10n = l10n ?? AppLocalizations.of(context);
     switch (type) {
       case ErrorType.page:
-        return _buildErrorPage(context);
+        return _buildErrorPage(context, effectiveL10n);
       case ErrorType.banner:
-        return _buildErrorBanner(context);
+        return _buildErrorBanner(context, effectiveL10n);
       case ErrorType.inline:
-        return _buildInlineError(context);
+        return _buildInlineError(context, effectiveL10n);
     }
   }
 
@@ -190,7 +195,7 @@ class CustomErrorWidget extends StatelessWidget {
     }
   }
 
-  String _getDefaultTitle() {
+  String _getDefaultTitle(AppLocalizations? l10n) {
     switch (severity) {
       case ErrorSeverity.error:
         return l10n?.errorTitle ?? l10n?.errorDefaultTitle ?? 'Oops, something went wrong';
@@ -201,7 +206,7 @@ class CustomErrorWidget extends StatelessWidget {
     }
   }
 
-  String _getRetryText() => l10n?.retry ?? l10n?.retryLabel ?? 'Retry';
+  String _getRetryText(AppLocalizations? l10n) => l10n?.retry ?? l10n?.retryLabel ?? 'Retry';
 
   void _handleRetry() {
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
@@ -213,13 +218,13 @@ class CustomErrorWidget extends StatelessWidget {
     onClose?.call();
   }
 
-  Widget _buildErrorPage(BuildContext context) => Center(
+  Widget _buildErrorPage(BuildContext context, AppLocalizations? l10n) => Center(
         child: Padding(
           padding: const EdgeInsets.all(DS.spacing32),
           child: Semantics(
             container: true,
             liveRegion: true,
-            label: title ?? _getDefaultTitle(),
+            label: title ?? _getDefaultTitle(l10n),
             value: message,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 480),
@@ -255,7 +260,7 @@ class CustomErrorWidget extends StatelessWidget {
                   SparkleStaggerItem(
                     index: 0,
                     child: Text(
-                      title ?? _getDefaultTitle(),
+                      title ?? _getDefaultTitle(l10n),
                       style: TextStyle(
                         fontSize: DS.fontSize2xl,
                         fontWeight: DS.fontWeightBold,
@@ -287,7 +292,7 @@ class CustomErrorWidget extends StatelessWidget {
                         // U-01 Step 0：重试按钮迁移到 owner SparkleButton，
                         // 样式由 token 保证；severity 语义经 variant 投影
                         // （error→destructive，warning/info→primary）。
-                        label: _getRetryText(),
+                        label: _getRetryText(l10n),
                         onPressed: _handleRetry,
                         icon: const Icon(Icons.refresh_rounded),
                         variant: severity == ErrorSeverity.error
@@ -302,10 +307,10 @@ class CustomErrorWidget extends StatelessWidget {
         ),
       );
 
-  Widget _buildErrorBanner(BuildContext context) => Semantics(
+  Widget _buildErrorBanner(BuildContext context, AppLocalizations? l10n) => Semantics(
         container: true,
         liveRegion: true,
-        label: title ?? _getDefaultTitle(),
+        label: title ?? _getDefaultTitle(l10n),
         value: message,
         child: Container(
           width: double.infinity,
@@ -385,10 +390,10 @@ class CustomErrorWidget extends StatelessWidget {
         ),
       );
 
-  Widget _buildInlineError(BuildContext context) => Semantics(
+  Widget _buildInlineError(BuildContext context, AppLocalizations? l10n) => Semantics(
         container: true,
         liveRegion: true,
-        label: title ?? _getDefaultTitle(),
+        label: title ?? _getDefaultTitle(l10n),
         value: message,
         child: Container(
           padding: const EdgeInsets.all(DS.spacing12),

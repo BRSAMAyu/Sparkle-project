@@ -88,6 +88,36 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets(
+        'CustomErrorWidget default constructor resolves zh retry from context', (
+      tester,
+    ) async {
+      // l10n 债项：默认构造 l10n=null 原先静默走英文硬编码兜底（'Retry'），
+      // 不走 .page 工厂的调用点（如 main.dart ErrorWidget.builder）在中文
+      // 环境拿到英文文案。修复后 build 时从 context 兜底解析 l10n。
+      // 复刻 main.dart 真实用法：默认构造 + ErrorType.page（重试按钮可见）。
+      var retried = false;
+
+      await tester.pumpWidget(
+        _TestShell(
+          disableAnimations: true,
+          child: CustomErrorWidget(
+            type: ErrorType.page,
+            message: '网络连接失败',
+            onRetry: () => retried = true,
+          ),
+        ),
+      );
+
+      await tester.pump();
+      expect(find.text('重试'), findsOneWidget);
+      expect(find.text('Retry'), findsNothing);
+      await tester.tap(find.text('重试'));
+      await tester.pump();
+      expect(retried, isTrue);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('shared theme-aware components update in system mode', (
       tester,
     ) async {
