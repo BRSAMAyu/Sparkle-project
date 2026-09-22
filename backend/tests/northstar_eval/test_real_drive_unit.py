@@ -12,13 +12,21 @@ import json
 from tests.northstar_eval.real_drive import (
     CHECKPOINT_API_VOCAB,
     CHECKPOINT_ALWAYS_UNSUPPORTED,
+    EPISODIC_PROJECTION_ESCALATE_S,
+    EPISODIC_PROJECTION_SETTLE_S,
+    JUDGE_LEXICON_VERSION,
     StepEvidence,
     _slug,
     diff_galaxy_nodes,
+    episodic_projection_reads,
     gen_password,
+    judge_episodic_capture,
+    judge_gp07_correction_step,
     judge_memory_recall,
     judge_personalization,
+    judge_proposition_stance,
     redact,
+    strip_md_emphasis,
     truncate_text,
     WSChatSession,
 )
@@ -128,6 +136,120 @@ def test_judge_personalization_levels() -> None:
     assert judge_personalization("欧拉回路是")[0] == "blocked"
     assert judge_personalization("这是一个通用回答。")[0] == "fail"
     assert judge_personalization("")[0] == "blocked"
+
+
+# ---------------------------------------------------------------------------
+# NBP-5 · 判卷仪器加固（LOOP3 manual_overrides 三处的回归钉）
+#
+# 样例文本取自 NORTHSTAR-LOOP3 evidence/steps 真实回答原文（V2-D 全文节选、
+# V2-E 开头、LOOP2 污染句），确保修复对真实形态生效，不是对自造样例生效。
+# ---------------------------------------------------------------------------
+
+
+# V2-D 真实回答（evidence/steps/V2-D_*.json full_text 节选，保留 ** 原样）
+V2D_REAL_TEXT = (
+    "结论先行：该命题是**假**的。\n\n- **核心误区**：\n  - 命题遗漏了**连通性**这一前置条件。\n"
+    "  - **具体反例**：想象有两个完全独立的圆圈（例如两个不相交的三角形）。在这个图中，"
+    "每个顶点的度数都是2（偶数），但因为图不连通，你无法从一个圈走到另一个圈，因此不存在欧拉回路。"
+)
+
+
+def test_strip_md_emphasis_unblocks_refutation_lexicon() -> None:
+    """LOOP3 V2-D 根因一：星号夹在字中间，「是假的」按原文子串永远匹配不到。"""
+    raw = "结论先行：该命题是**假**的。"
+    assert "是假的" not in raw  # 旧仪器在该原文上必然哑火
+    assert "是假的" in strip_md_emphasis(raw)
+
+
+def test_judge_proposition_stance_v2d_real_text_is_refuted() -> None:
+    """LOOP3 V2-D 翻案回归：旧正则 (为假|不成立|是错|不对|错误) 在此原文判 fail，人工改 pass。"""
+    stance = judge_proposition_stance(V2D_REAL_TEXT)
+    assert stance["verdict"] == "refuted"
+    assert "是假的" in stance["refuted_hits"]
+    assert stance["judge_version"] == JUDGE_LEXICON_VERSION
+    # 步级判定：主题在场 + 驳倒 → pass（不再需要人工翻案）
+    verdict, detail = judge_gp07_correction_step(V2D_REAL_TEXT)
+    assert verdict == "pass"
+    assert len(detail["topic_hits"]) >= 2
+
+
+def test_judge_proposition_stance_v2e_bare_verdict_form_is_refuted() -> None:
+    """LOOP3 V2-E 翻案回归：第三会话以裸「错。」开头（旧 ≥2 字词表 → inconclusive）。"""
+    text = "错。\n\n理由：欧拉回路存在的充要条件是「图连通且所有顶点度数为偶数」。你总结的命题只保留了度数条件，遗漏了连通性前提。"
+    stance = judge_proposition_stance(text)
+    assert stance["verdict"] == "refuted"
+    assert "错" in stance["single_char_hits"]
+
+
+def test_stance_single_char_requires_sentence_boundary() -> None:
+    """单字陷阱双向钉死：「对/错」词中出现（面对/核对/交错/错误）不得构成判定词。"""
+    stance = judge_proposition_stance("请面对这道题，先核对度数条件，再交错验证，避免常见错误。")
+    assert stance["verdict"] == "inconclusive"
+    assert stance["single_char_hits"] == []
+    # 句界形式才是判定词
+    assert judge_proposition_stance("对，你的命题遗漏了连通性。")["verdict"] == "affirmed"
+    assert judge_proposition_stance("错。理由如下：")["verdict"] == "refuted"
+
+
+def test_stance_min_length_and_explanatory_usage_guard() -> None:
+    """裸「正确/错误」等解释性用法不得记为立场（旧单字/泛词误匹配防线）。"""
+    # 「正确的判定条件」是复述条件，不是判定命题为真
+    stance = judge_proposition_stance("欧拉回路正确的判定条件有两个：图连通，且每个顶点的度数都是偶数。")
+    assert stance["verdict"] == "inconclusive"
+    assert stance["affirmed_hits"] == []
+
+
+def test_judge_proposition_stance_loop2_pollution_text_is_affirmed() -> None:
+    """LOOP2 污染失败模式回归：假命题被确认成「正确」必须判 affirmed（步级 → fail）。"""
+    text = "这条结论是正确的。只要每个顶点的度数都是偶数，图就是连通的，因此存在欧拉回路。"
+    stance = judge_proposition_stance(text)
+    assert stance["verdict"] == "affirmed"
+    verdict, _ = judge_gp07_correction_step(text)
+    assert verdict == "fail"  # 确认用户假命题 = 最重信号
+
+
+def test_judge_gp07_correction_step_inconclusive_goes_blocked_not_fail() -> None:
+    """主题在场但无立场措辞 → blocked（进人工复核队列），不得冒判 fail/pass。"""
+    text = "关于欧拉回路：判定条件是图连通且每个顶点的度数都是偶数，两者缺一不可。"
+    verdict, detail = judge_gp07_correction_step(text)
+    assert verdict == "blocked"
+    assert detail["verdict"] == "inconclusive"
+
+
+def test_judge_gp07_correction_step_no_topic_is_fail() -> None:
+    """连主题都不在场 = 未回应用户声明 → fail。"""
+    verdict, detail = judge_gp07_correction_step("你好，我是你的学习助手，有什么可以帮你？")
+    assert verdict == "fail"
+    assert detail["topic_hits"] == []
+    assert judge_gp07_correction_step("")[0] == "blocked"
+
+
+def test_judge_memory_recall_anti_recall_unretained_variant() -> None:
+    """LOOP2 NBP-5 翻案回归：「未保留」变体必须命中反记忆词表（曾误判 pass）。"""
+    followup = (
+        "关于你提到的之前反馈的薄弱点，当前会话中未保留具体记录。欧拉回路的判定条件是连通且偶度。"
+    )
+    verdict, markers = judge_memory_recall("correction", followup)
+    assert verdict == "fail"
+    assert any("未保留" in m for m in markers)
+
+
+def test_episodic_projection_reads_anchor_is_turn_end() -> None:
+    """V1 计时口径钉死：读账时刻表从 turn end 起算（+30s / +90s），与 send 无关。"""
+    anchor = 1000.0
+    reads = episodic_projection_reads(anchor)
+    assert reads[0] == ("first", anchor + EPISODIC_PROJECTION_SETTLE_S)
+    assert reads[1] == ("escalate", anchor + EPISODIC_PROJECTION_ESCALATE_S)
+
+
+def test_judge_episodic_capture_four_paths() -> None:
+    """首读达标 pass；升级读达标 pass+延迟注记；未做升级读 blocked；双读皆空 fail。"""
+    assert judge_episodic_capture(3, None, 3)[0] == "pass"
+    verdict, note = judge_episodic_capture(0, 3, 3)
+    assert verdict == "pass" and "delay" in note
+    assert judge_episodic_capture(0, None, 3)[0] == "blocked"
+    verdict, note = judge_episodic_capture(0, 0, 3)
+    assert verdict == "fail" and "both" in note
 
 
 # ---------------------------------------------------------------------------

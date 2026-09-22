@@ -1,0 +1,419 @@
+diff --git a/backend/tests/northstar_eval/real_drive.py b/backend/tests/northstar_eval/real_drive.py
+index 46d4d4f2..c4e641a4 100644
+--- a/backend/tests/northstar_eval/real_drive.py
++++ b/backend/tests/northstar_eval/real_drive.py
+@@ -431,13 +431,179 @@ MEMORY_RECALL_MARKERS = (
+     "上次", "之前", "你提到", "你说过", "刚才", "前面", "上次说", "记得", "之前说", "你之前",
+ )
+ #: 反记忆指称：出现即判「未复用记忆」（防关键词误报——「记得」出现在「只记得你刚完成…」里）。
++#: 「未保留/没有保留」为 LOOP2 NBP-5 人工翻案词（D1a「当前会话中未保留具体记录」
++#: 曾因词表缺变体被自动误判 pass），LOOP3 报告 §3 点名同族债，NBP-5 收编。
+ MEMORY_ANTI_RECALL_MARKERS = (
+     "没有完整记录", "没有记录", "不记得", "无法记录", "未记录", "这里没有", "我这里没有", "不掌握",
+-    "没有你", "无法获取", "无法查看", "看不到",
++    "没有你", "无法获取", "无法查看", "看不到", "未保留", "没有保留",
+ )
+ CORRECTION_TOPIC_MARKERS = ("偶数", "度数", "连通", "欧拉")
+ PERSONALIZATION_MARKERS = ("你", "你的", "图论", "弱", "掌握", "欧拉", "哈密顿", "离散")
+ 
++#: 判卷词表版本（仪器序列号）：证据里落 judge_version，出分歧时可追因到词表代次。
++#: v3（NBP-5）：LOOP3 manual_overrides 三处（V2-D 词表缺口 / V2-E 单字判定词 /
++#: V1 30s 计时口径）修复后的代次。
++JUDGE_LEXICON_VERSION = "lexicon-v3-nbp5"
++
++#: ---- 命题立场判据词表（GP-07 纠正/第三会话拒答；LOOP3 manual_overrides V2-D/V2-E 修复）----
++#: 词表项全部 ≥2 字且带主语/系词锚定，杜绝词中子串误报（「正确」裸词会命中
++#: 「正确的判定条件是…」这类解释性用法——它是在复述条件、不是在判定命题）。
++PROPOSITION_REFUTED_MARKERS = (
++    "是假的", "是错的", "是错误的", "是假命题", "是伪命题",
++    "不成立", "并不成立", "不能成立", "无法成立", "不成立的是",
++    "不正确", "是不正确", "不对", "为假", "命题为假", "结论为假",
++    "命题错误", "结论错误", "说法错误",  # 裸「错误」不收：「常见错误/易错点」是解释性用法
++    "说法有误", "结论有误", "命题有误",
++)
++PROPOSITION_AFFIRMED_MARKERS = (
++    "是正确的", "是对的", "完全正确", "你总结的正确", "你的命题正确",
++    "命题正确", "结论正确", "说法正确", "命题成立", "结论成立", "说法成立", "是成立的",
++)
++#: 单字判定词（「错。」「对。」句界形式）：仅当独立成句才算判定措辞——
++#: 句首/句读后 + 句末标点。裸加进子串词表会词中误报（对→面对/核对/绝对/正对；
++#: 错→错误/错题/交错），即 LOOP3 V2-E 单字陷阱的反向缺陷。
++STANCE_SINGLE_CHARS = ("对", "错")
++_SENTENCE_OPEN_CHARS = "。！？!?；;，,\n\r\t 「」『』《》“”\"'（(:：*—-"
++_SENTENCE_CLOSE_CHARS = "。！？!?；;，,\n\r\t ~」』”\"'"
++
++
++def strip_md_emphasis(text: str) -> str:
++    """剥离 markdown 强调记号（*粗体* / _斜体_ / `代码` / ~删除线~）供词表判定。
++
++    LOOP3 V2-D 实测根因之一：回答正文是「该命题是**假**的」——星号夹在字中间，
++    任何「是假的」类词表项按原文子串匹配都物理上命中不了。判据输入必须是
++    归一化文本，否则词表补得再全仪器仍测不准。
++    """
++    return text.translate(str.maketrans("", "", "*_`~"))
++
++
++def _stance_single_char_verdicts(normalized: str) -> list[str]:
++    """单字判定词的句界匹配（词边界的中国话等价物）。"""
++    hits: list[str] = []
++    for index, char in enumerate(normalized):
++        if char not in STANCE_SINGLE_CHARS:
++            continue
++        prev_ok = index == 0 or normalized[index - 1] in _SENTENCE_OPEN_CHARS
++        next_ok = index + 1 >= len(normalized) or normalized[index + 1] in _SENTENCE_CLOSE_CHARS
++        if prev_ok and next_ok:
++            hits.append(char)
++    return hits
++
++
++def judge_proposition_stance(answer_text: str) -> dict[str, Any]:
++    """GP-07 命题立场启发式（V2-D/V2-E 判据宿主，LOOP4 探针直接 import 本函数）。
++
++    输入是「这个命题对吗/判断真假」类探针的回答全文；对 markdown 剥星后的
++    归一化文本做三类信号：
++    - refuted/affirmed 多字词表（整篇扫描，hit 原文位置一并返回供人工复核）；
++    - 单字判定词句界形式（「错。」开头 = LOOP3 V2-E 真实形态）；
++    - 返回 inconclusive 而不是硬猜——inconclusive 的下游语义是 blocked（进人工
++      复核队列），不是 fail 更不是 pass（诚实红线：启发式只许漏报给人工，不许
++      冒判）。
++    返回 dict：verdict ∈ {refuted, affirmed, inconclusive, empty} + 各信号 hits。
++    """
++    if not answer_text or not answer_text.strip():
++        return {"verdict": "empty", "refuted_hits": [], "affirmed_hits": [], "single_char_hits": [], "judge_version": JUDGE_LEXICON_VERSION}
++    normalized = strip_md_emphasis(answer_text)
++    refuted = [(normalized.find(m), m) for m in PROPOSITION_REFUTED_MARKERS if m in normalized]
++    affirmed = [(normalized.find(m), m) for m in PROPOSITION_AFFIRMED_MARKERS if m in normalized]
++    singles = _stance_single_char_verdicts(normalized)
++    wrong_say = bool(refuted) or "错" in singles
++    right_say = bool(affirmed) or "对" in singles
++    if wrong_say and not right_say:
++        verdict = "refuted"
++    elif right_say and not wrong_say:
++        verdict = "affirmed"
++    else:
++        verdict = "inconclusive"  # 双向都有或都没有：人工读全文定界（V2-E 原路径）
++    return {
++        "verdict": verdict,
++        "refuted_hits": [m for _, m in refuted],
++        "affirmed_hits": [m for _, m in affirmed],
++        "single_char_hits": singles,
++        "normalized_head": normalized[:200],
++        "judge_version": JUDGE_LEXICON_VERSION,
++    }
++
++
++def judge_gp07_correction_step(chat_full_text: str) -> tuple[str, dict[str, Any]]:
++    """V2-D 步级判定：「AI 是否回应并驳倒用户（假）声明」。
++
++    - refuted + 主题在场 → pass（纠正成功）；
++    - affirmed → fail（把假命题确认成对 = LOOP2 污染失败模式，最重信号）；
++    - 主题在场但立场 inconclusive → blocked（进人工复核，不冒判 fail）；
++    - 主题都不在场 → fail（未回应用户声明本身）。
++    旧判据（LOOP3 探针正则 `(为假|不成立|是错|不对|错误)`）的 fail 是词表缺口
++    造成的仪器误报——真实回答「该命题是**假**的」被记 fail，见 V2-D-rejudged。
++    """
++    stance = judge_proposition_stance(chat_full_text)
++    topic = [m for m in CORRECTION_TOPIC_MARKERS if m in chat_full_text]
++    stance["topic_hits"] = topic
++    verdict = stance["verdict"]
++    if verdict == "empty":
++        return VERDICT_BLOCKED, stance
++    if verdict == "refuted":
++        return (VERDICT_PASS, stance) if topic else (VERDICT_FAIL, stance)
++    if verdict == "affirmed":
++        return VERDICT_FAIL, stance
++    return (VERDICT_BLOCKED, stance) if topic else (VERDICT_FAIL, stance)
++
++
++# ---------------------------------------------------------------------------
++# V1 计时口径（episodic 投影判据；LOOP3 manual_overrides V1-EPISODIC30 修复）
++# ---------------------------------------------------------------------------
++#
++# 语义写死（LOOP4 起不得再各写各的）：
++#   * 等待窗口的锚点 = **turn end**——本回合 WS 终止帧（网关流末 meta）到达、
++#     WSChatSession.send_message 返回的时刻。**不是** send 起算。
++#   * 理由：declared-fact 写账入队（enqueue_from_chat_turn）发生在回合末；
++#     WS 回合墙钟实测 19–87s 高方差（LOOP3 V1-B 19.4s vs V1-A 86.9s），从
++#     send 起算会把「LLM 多快」混进「投影多快」，仪器测的不是被测量。
++#     LOOP3 误判即此类：30s 读 0 条判 fail，但投影 written_at 比读时刻仅晚
++#     1.5s，90s 复读 3 条全对（evidence/steps/V1-EPISODIC30/90）。
++#   * NBP-6（7454f484，declared-fact 快车道）已把投影实测压到 ~0.6s，LOOP3
++#     的 30–90s 是修复前现实。首读窗 30s 相对新现实有 ~50x 余量，不必放回
++#     90s 常态；但首读不足时必须在 +90s 复读后才许 fail（升级窗判据，见
++#     judge_episodic_capture）——这是把 LOOP3 的人工翻案规则固化成仪器口径，
++#     不是放宽：+30s 与 +90s 双读都为 0 才判 fail。
++EPISODIC_PROJECTION_SETTLE_S = 30.0  # 首读：turn end + 30s
++EPISODIC_PROJECTION_ESCALATE_S = 90.0  # 升级复读：turn end + 90s（首读不足时才读）
++
++
++def episodic_projection_reads(turn_end_monotonic: float) -> list[tuple[str, float]]:
++    """V1 读账时刻表（锚点=turn end，单调时钟秒）。
++
++    LOOP4 探针在 send_message 返回后记录 ``turn_end = time.monotonic()``，
++    据本函数排程两次读账；证据 request 里必须落 ``anchor: "turn_end"`` 与
++    ``turn_end_iso``，可审计。
++    """
++    return [
++        ("first", turn_end_monotonic + EPISODIC_PROJECTION_SETTLE_S),
++        ("escalate", turn_end_monotonic + EPISODIC_PROJECTION_ESCALATE_S),
++    ]
++
++
++def judge_episodic_capture(first_count: int, escalated_count: int | None, expected_min: int) -> tuple[str, str]:
++    """V1 步级判定：episodic 明示事实捕获（锚点=turn end）。
++
++    - 首读即达标 → pass（NBP-6 后的常态）；
++    - 首读不足、升级读达标 → pass 但 note 投影延迟（诚实记录，不静默）；
++    - 首读不足且未做升级读 → blocked（判据未走完，不冒判）；
++    - 双读皆不足 → fail。
++    """
++    if first_count >= expected_min:
++        return VERDICT_PASS, f"first read {first_count} >= {expected_min} at turn_end+{EPISODIC_PROJECTION_SETTLE_S:.0f}s"
++    if escalated_count is None:
++        return VERDICT_BLOCKED, (
++            f"first read {first_count} < {expected_min} and escalation read not performed — criterion undecided"
++        )
++    if escalated_count >= expected_min:
++        return VERDICT_PASS, (
++            f"escalated read {escalated_count} >= {expected_min} at turn_end+{EPISODIC_PROJECTION_ESCALATE_S:.0f}s "
++            f"(projection delay noted: first read was {first_count})"
++        )
++    return VERDICT_FAIL, f"only {escalated_count} < {expected_min} entries at both turn_end+30s and turn_end+90s"
++
+ 
+ def judge_memory_recall(correction_exchange_text: str, followup_text: str) -> tuple[str, list[str]]:
+     """GP-07 启发式判定：后续回答是否真实复用了纠正记忆。
+@@ -1396,6 +1562,7 @@ class NS001Driver:
+             "gain_proof": "GP-04",
+             "method": "compressed API proxy: personal-context differential (NOT the full blind-material protocol)",
+             "honesty_note": "GAIN_PROOFS GP-04 判据是真料/盲选双臂引用答对率；本轮以「私有上下文差分」为代理，结论仅限本轮证据",
++            "judge_version": JUDGE_LEXICON_VERSION,
+             "main_arm": {
+                 "answer": main_answer,
+                 "personalization_markers": main_markers,
+@@ -1429,6 +1596,7 @@ class NS001Driver:
+             "schema": SCHEMA_GAIN,
+             "gain_proof": "GP-07",
+             "method": "deliberate mistake -> delayed follow-up recall (heuristic marker judgment)",
++            "judge_version": JUDGE_LEXICON_VERSION,
+             "correction_exchange_full_text": truncate_text(correction_text, 4000),
+             "followup": followup,
+             "markers_found": markers_07,
+@@ -1523,7 +1691,7 @@ class NS001Driver:
+             else:
+                 text = data["followup"].get("full_text", "")
+                 verdict, markers = judge_memory_recall(data.get("correction_exchange_full_text", ""), text)
+-            data["rejudged"] = {"heuristic_verdict": verdict, "markers": markers, "judge_version": "anti-recall-v2"}
++            data["rejudged"] = {"heuristic_verdict": verdict, "markers": markers, "judge_version": JUDGE_LEXICON_VERSION}
+             out = self.out_dir / "evidence" / f"gp-{gp_name}-rejudged.json"
+             out.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+             print(f"[rejudge] {gp_name}: heuristic -> {verdict}")
+diff --git a/backend/tests/northstar_eval/test_real_drive_unit.py b/backend/tests/northstar_eval/test_real_drive_unit.py
+index 1c831e4f..0b3ce5e3 100644
+--- a/backend/tests/northstar_eval/test_real_drive_unit.py
++++ b/backend/tests/northstar_eval/test_real_drive_unit.py
+@@ -12,13 +12,21 @@ import json
+ from tests.northstar_eval.real_drive import (
+     CHECKPOINT_API_VOCAB,
+     CHECKPOINT_ALWAYS_UNSUPPORTED,
++    EPISODIC_PROJECTION_ESCALATE_S,
++    EPISODIC_PROJECTION_SETTLE_S,
++    JUDGE_LEXICON_VERSION,
+     StepEvidence,
+     _slug,
+     diff_galaxy_nodes,
++    episodic_projection_reads,
+     gen_password,
++    judge_episodic_capture,
++    judge_gp07_correction_step,
+     judge_memory_recall,
+     judge_personalization,
++    judge_proposition_stance,
+     redact,
++    strip_md_emphasis,
+     truncate_text,
+     WSChatSession,
+ )
+@@ -130,6 +138,120 @@ def test_judge_personalization_levels() -> None:
+     assert judge_personalization("")[0] == "blocked"
+ 
+ 
++# ---------------------------------------------------------------------------
++# NBP-5 · 判卷仪器加固（LOOP3 manual_overrides 三处的回归钉）
++#
++# 样例文本取自 NORTHSTAR-LOOP3 evidence/steps 真实回答原文（V2-D 全文节选、
++# V2-E 开头、LOOP2 污染句），确保修复对真实形态生效，不是对自造样例生效。
++# ---------------------------------------------------------------------------
++
++
++# V2-D 真实回答（evidence/steps/V2-D_*.json full_text 节选，保留 ** 原样）
++V2D_REAL_TEXT = (
++    "结论先行：该命题是**假**的。\n\n- **核心误区**：\n  - 命题遗漏了**连通性**这一前置条件。\n"
++    "  - **具体反例**：想象有两个完全独立的圆圈（例如两个不相交的三角形）。在这个图中，"
++    "每个顶点的度数都是2（偶数），但因为图不连通，你无法从一个圈走到另一个圈，因此不存在欧拉回路。"
++)
++
++
++def test_strip_md_emphasis_unblocks_refutation_lexicon() -> None:
++    """LOOP3 V2-D 根因一：星号夹在字中间，「是假的」按原文子串永远匹配不到。"""
++    raw = "结论先行：该命题是**假**的。"
++    assert "是假的" not in raw  # 旧仪器在该原文上必然哑火
++    assert "是假的" in strip_md_emphasis(raw)
++
++
++def test_judge_proposition_stance_v2d_real_text_is_refuted() -> None:
++    """LOOP3 V2-D 翻案回归：旧正则 (为假|不成立|是错|不对|错误) 在此原文判 fail，人工改 pass。"""
++    stance = judge_proposition_stance(V2D_REAL_TEXT)
++    assert stance["verdict"] == "refuted"
++    assert "是假的" in stance["refuted_hits"]
++    assert stance["judge_version"] == JUDGE_LEXICON_VERSION
++    # 步级判定：主题在场 + 驳倒 → pass（不再需要人工翻案）
++    verdict, detail = judge_gp07_correction_step(V2D_REAL_TEXT)
++    assert verdict == "pass"
++    assert len(detail["topic_hits"]) >= 2
++
++
++def test_judge_proposition_stance_v2e_bare_verdict_form_is_refuted() -> None:
++    """LOOP3 V2-E 翻案回归：第三会话以裸「错。」开头（旧 ≥2 字词表 → inconclusive）。"""
++    text = "错。\n\n理由：欧拉回路存在的充要条件是「图连通且所有顶点度数为偶数」。你总结的命题只保留了度数条件，遗漏了连通性前提。"
++    stance = judge_proposition_stance(text)
++    assert stance["verdict"] == "refuted"
++    assert "错" in stance["single_char_hits"]
++
++
++def test_stance_single_char_requires_sentence_boundary() -> None:
++    """单字陷阱双向钉死：「对/错」词中出现（面对/核对/交错/错误）不得构成判定词。"""
++    stance = judge_proposition_stance("请面对这道题，先核对度数条件，再交错验证，避免常见错误。")
++    assert stance["verdict"] == "inconclusive"
++    assert stance["single_char_hits"] == []
++    # 句界形式才是判定词
++    assert judge_proposition_stance("对，你的命题遗漏了连通性。")["verdict"] == "affirmed"
++    assert judge_proposition_stance("错。理由如下：")["verdict"] == "refuted"
++
++
++def test_stance_min_length_and_explanatory_usage_guard() -> None:
++    """裸「正确/错误」等解释性用法不得记为立场（旧单字/泛词误匹配防线）。"""
++    # 「正确的判定条件」是复述条件，不是判定命题为真
++    stance = judge_proposition_stance("欧拉回路正确的判定条件有两个：图连通，且每个顶点的度数都是偶数。")
++    assert stance["verdict"] == "inconclusive"
++    assert stance["affirmed_hits"] == []
++
++
++def test_judge_proposition_stance_loop2_pollution_text_is_affirmed() -> None:
++    """LOOP2 污染失败模式回归：假命题被确认成「正确」必须判 affirmed（步级 → fail）。"""
++    text = "这条结论是正确的。只要每个顶点的度数都是偶数，图就是连通的，因此存在欧拉回路。"
++    stance = judge_proposition_stance(text)
++    assert stance["verdict"] == "affirmed"
++    verdict, _ = judge_gp07_correction_step(text)
++    assert verdict == "fail"  # 确认用户假命题 = 最重信号
++
++
++def test_judge_gp07_correction_step_inconclusive_goes_blocked_not_fail() -> None:
++    """主题在场但无立场措辞 → blocked（进人工复核队列），不得冒判 fail/pass。"""
++    text = "关于欧拉回路：判定条件是图连通且每个顶点的度数都是偶数，两者缺一不可。"
++    verdict, detail = judge_gp07_correction_step(text)
++    assert verdict == "blocked"
++    assert detail["verdict"] == "inconclusive"
++
++
++def test_judge_gp07_correction_step_no_topic_is_fail() -> None:
++    """连主题都不在场 = 未回应用户声明 → fail。"""
++    verdict, detail = judge_gp07_correction_step("你好，我是你的学习助手，有什么可以帮你？")
++    assert verdict == "fail"
++    assert detail["topic_hits"] == []
++    assert judge_gp07_correction_step("")[0] == "blocked"
++
++
++def test_judge_memory_recall_anti_recall_unretained_variant() -> None:
++    """LOOP2 NBP-5 翻案回归：「未保留」变体必须命中反记忆词表（曾误判 pass）。"""
++    followup = (
++        "关于你提到的之前反馈的薄弱点，当前会话中未保留具体记录。欧拉回路的判定条件是连通且偶度。"
++    )
++    verdict, markers = judge_memory_recall("correction", followup)
++    assert verdict == "fail"
++    assert any("未保留" in m for m in markers)
++
++
++def test_episodic_projection_reads_anchor_is_turn_end() -> None:
++    """V1 计时口径钉死：读账时刻表从 turn end 起算（+30s / +90s），与 send 无关。"""
++    anchor = 1000.0
++    reads = episodic_projection_reads(anchor)
++    assert reads[0] == ("first", anchor + EPISODIC_PROJECTION_SETTLE_S)
++    assert reads[1] == ("escalate", anchor + EPISODIC_PROJECTION_ESCALATE_S)
++
++
++def test_judge_episodic_capture_four_paths() -> None:
++    """首读达标 pass；升级读达标 pass+延迟注记；未做升级读 blocked；双读皆空 fail。"""
++    assert judge_episodic_capture(3, None, 3)[0] == "pass"
++    verdict, note = judge_episodic_capture(0, 3, 3)
++    assert verdict == "pass" and "delay" in note
++    assert judge_episodic_capture(0, None, 3)[0] == "blocked"
++    verdict, note = judge_episodic_capture(0, 0, 3)
++    assert verdict == "fail" and "both" in note
++
++
+ # ---------------------------------------------------------------------------
+ # GP-03 galaxy 对账 diff
+ # ---------------------------------------------------------------------------
+diff --git a/v3-output/NBP5-DRIVER/REPORT.md b/v3-output/NBP5-DRIVER/REPORT.md
+new file mode 100644
+index 00000000..c598e6f3
+--- /dev/null
++++ b/v3-output/NBP5-DRIVER/REPORT.md
+@@ -0,0 +1,56 @@
++# NBP5-DRIVER · 北极星驱动器判定词表与判据口径加固（收工报告）
++
++> Worker 卡 NBP-5，worktree `wt130`（基线 `7454f484`）。性质：**只修测量仪器**（`backend/tests/northstar_eval/` 驱动器判据），被测系统零 diff。修复对象 = LOOP3 `manual_overrides` 登记的三处自动判据与人工复核不一致 + LOOP2 NBP-5 同族词表债（LOOP3 报告 §3 点名收编）。
++> 诚实声明：本轮未跑 8 相真实驱动（要活栈 + LLM 往返，主会话职责）；验证面 = 单测 42 全绿 + LOOP3 真实证据全文 sanity。本修复让仪器测准，**不是**让分数好看——升级窗判据把 LOOP3 的人工翻案规则固化成口径，双读皆 0 仍判 fail。
++
++## 1. 三处判据缺陷：证据引用与修法对照表
++
++| # | 缺陷 | LOOP3 原文证据 | 缺陷还原（哪一行/什么词/什么口径） | 修法（`real_drive.py`） |
++|---|---|---|---|---|
++| 1 | **V2-D 词表缺口（双层）** | `V2-D-rejudged.json` reason：「探针自动正则 `(为假\|不成立\|是错\|不对\|错误)` 漏『是假的』变体」；`run-summary.json` manual_overrides：「V2-D: fail→pass（判卷词表缺口）」 | ①词表缺「是假的」类措辞；②更深的仪器缺陷：真实回答正文是「该命题是**假**的」——markdown 星号夹在字中间，**即使补词，按原文子串匹配任何「是假的」类词表项都物理上命中不了**。旧判据据 noop 判 fail，人工翻案 pass | 新增 `strip_md_emphasis()`（剥 `*_\`~`）作判据前置归一化；新增 `PROPOSITION_REFUTED_MARKERS`（≥2 字、带主语/系词锚定，如「是假的/命题不成立/结论错误」；裸「错误/正确」**故意不收**——「正确的判定条件是…」是复述条件不是判定命题）；新增 `judge_proposition_stance()` + `judge_gp07_correction_step()`（V2-D 步级：refuted+主题在场→pass；affirmed→fail=LOOP2 污染模式；主题在场立场不明→**blocked 进人工**；主题不在场→fail） |
++| 2 | **V2-E 单字判定词** | `V2-E-rejudged.json` original_heuristic：「inconclusive: 无明确对/错判定措辞」；步证据 `says_wrong:false, wrong_hits_head400:[]`；回答原文以裸「**错。**」开头 | 旧 ≥2 字词表（错的/错误/不对/…）漏掉句界单字判定形式「错。」。而朴素补单字「对/错」进子串词表会**反向误匹配**（对→面对/核对/绝对/正对/针对；错→错误/错题/交错）——即任务卡所指单字陷阱，两头都不能走 | 新增 `_stance_single_char_verdicts()`：单字「对/错」仅当**独立成句**（句首或句读后 + 句末标点/串尾）才算判定词——中文无词边界，句界即边界。「错。」开头命中；「面对/核对/错误/对吗/对不上」全部不命中。单测 `test_stance_single_char_requires_sentence_boundary` 双向钉死 |
++| 3 | **V1 30s 计时口径** | `run-summary.json` manual_overrides：「V1-EPISODIC30: fail 维持（30s 判据口径）但 90s 补读 3 条全对」；步证据：30s 读 0 条（15:28:27.70），而条目 `written_at=15:28:29.22`——投影比读时刻晚 **1.5s**；90s 复读 3 条全对 | 30s 窗口的计时锚点口径不统一：WS 回合墙钟实测 **19–87s 高方差**（LOOP3 V1-B 19.4s vs V1-A 86.9s），从 **send** 起算会把「LLM 多快」混进「投影多快」，仪器测的不是被测量。写账入队（`enqueue_from_chat_turn`）发生在回合末 → 锚点必须是 **turn end**（WS 终止帧 meta 到达、`send_message` 返回） | 新增 `EPISODIC_PROJECTION_SETTLE_S=30.0` / `EPISODIC_PROJECTION_ESCALATE_S=90.0` + `episodic_projection_reads(turn_end_monotonic)`（锚点=turn end 写死在代码注释与函数签名）+ `judge_episodic_capture()`：首读达标 pass（NBP-6 后常态）；首读不足→+90s 复读后才许 fail；未做复读→blocked 不冒判。**不是放宽**：+30s 与 +90s 双读皆 0 才 fail。NBP-6（7454f484）已把投影实测压到 ~0.6s，30s 首读窗 ~50x 余量，无需放回 90s 常态 |
++
++### 附：LOOP2 NBP-5 同族债收编（LOOP3 报告 §3 点名「复跑者应先扩充 _judge 词表」）
++
++- LOOP2 NBP-5：D1a「当前会话中**未保留**具体记录」未被 `MEMORY_ANTI_RECALL_MARKERS` 命中，自动误判 pass（该翻的是 pass 被翻成 fail，方向与三处相反）。
++- 修法：词表补「未保留」「没有保留」两变体。单测 `test_judge_memory_recall_anti_recall_unretained_variant` 用 LOOP2 原句钉死。
++
++## 2. manual_overrides 机制支持
++
++- 三类 override 的判定逻辑已修进驱动器本体（`judge_proposition_stance` / `judge_gp07_correction_step` / `judge_episodic_capture` / 反记忆词表），LOOP4 探针直接 import，这三类**不再需要人工翻案**。
++- 溯源：新增 `JUDGE_LEXICON_VERSION = "lexicon-v3-nbp5"`（仪器序列号），gp-04/gp-07 增益证据与 `phase_rejudge` 产物统一落 `judge_version` 字段（原硬编码 `"anti-recall-v2"` 收编进常量）；`judge_proposition_stance` 返回值携带命中词与归一化头部 200 字，人工复核可直接看机器看到了什么。
++- 已知局限（诚实）：立场判据仍是启发式——inconclusive 的下游语义是 blocked（人工复核队列），不是 pass；「先驳后夹杂肯定语气」类长文仍可能 inconclusive，属漏报给人工，不属冒判。
++
++## 3. 回归验证
++
++- `cd backend && SECRET_KEY=test /opt/homebrew/bin/pytest tests/northstar_eval/ -q` → **42 passed**（gate 12 + real_drive 单测 30；其中新增 12 个 NBP-5 回归钉）。
++- 新增测试均以 **LOOP3/LOOP2 真实证据原文**为样例（V2-D full_text 节选含 `**假**` 原样、V2-E「错。」开头、LOOP2 污染句「这条结论是正确的」、LOOP2 D1a「未保留」句），不是自造样例。
++- LOOP3 证据**全文**（非节选）sanity：V2-D → pass（refuted 命中「是假的」）、V2-E → pass（refuted 命中句界「错」），双向 affirmed 命中均为空——无误报。
++- 未跑 8 相真实驱动（活栈 + LLM 往返，主会话职责）；驱动器自测 `--check` 亦未跑（无活栈保证，避免对演示栈产生探针流量）。
++
++## 4. 下轮 LOOP4 使用注意
++
++1. **import 面变了**：命题立场判据用 `from tests.northstar_eval.real_drive import judge_gp07_correction_step, judge_proposition_stance`；episodic 排程用 `episodic_projection_reads(time.monotonic())`（在 `send_message` **返回后**取锚点）+ `judge_episodic_capture(first_count, escalated_count, expected_min)`。
++2. **证据必须落锚点元数据**：V1 步证据 request 里写 `anchor: "turn_end"` + `turn_end_iso`，可审计防口径再漂移。
++3. **判据输入必须先过 `strip_md_emphasis`**（`judge_proposition_stance` 内部已做；探针里其他裸子串匹配一律照此办理）。
++4. **V1 判据语义**：首读（turn end+30s）0 条不许直接 fail，必须走 +90s 复读；双读皆 0 才 fail。NBP-6 后预期首读即达标。
++5. gp-04/gp-07 证据新增 `judge_version` 字段；出分歧先报代次再对词表。
++6. 裸「正确/错误」「为真」「有误」等词**保持不收**（解释性用法误报），扩充词表时维持「≥2 字 + 主语/系词锚定」纪律。
++
++## 5. Worker 五要素
++
++① **三处对照表**：见 §1（每处含 LOOP3 原文引用 + 旧判据为何错 + 新判据为何测得准）；同族债 LOOP2 NBP-5 一并收编。
++② **红线面**：`git status` 仅 `backend/tests/northstar_eval/real_drive.py` + `test_real_drive_unit.py` 两文件（+292/-2），被测系统（backend/app、gateway、mobile、proto）**零 diff**；worktree 缺 gitignored 的 `app/gen/`，按卡从主仓拷贝（900K，不入 git，两树 proto 一致——环境预存状况申报）。
++③ **冲突面**：在途卡 wt123（mobile chat UI）/wt125（plans API）/wt126（orchestration）/wt129（error 吸收）——本轮只动 `tests/northstar_eval/`，与其改动面**零交集**；不碰 `plans/`、`orchestration/`、`errors` 相关产品代码（NBP-3b 的 goal_type 一行修属产品侧，不在本卡范围，未动）。
++④ **诚实申报**：未跑真实 8 相与 `--check`（无活栈）；立场判据对「先驳后夹杂」长文可能 inconclusive→blocked（进人工），修复目标是消灭已知的漏报/误报类，不宣称全自判；单测样例中 V2-D 为节选（全文另做 sanity 验证）；`changes.patch` 由 `git add -N` 生成后已 `git reset -q` 还原 index；**未 commit / 未 push**。
++⑤ **收工核查**：见 §6。
++
++## 6. 收工核查
++
++- [x] 改动全部在 worktree `wt130` 内；主仓只读未触碰
++- [x] 零 commit / 零 push；交付物 = 本 REPORT.md + changes.patch
++- [x] /tmp 无本轮产物（未产生）；无新起进程/模拟器/浏览器；未触活栈
++- [x] pytest 仅定向跑 `tests/northstar_eval/`（42 passed，0.1s，内存纪律 LIGHT）
++- [x] `app/gen/` 拷贝为环境预存状况，git untracked，随 worktree 生命周期回收
++- [x] 本报告已登记于 `v3-output/NBP5-DRIVER/`

@@ -431,12 +431,178 @@ MEMORY_RECALL_MARKERS = (
     "上次", "之前", "你提到", "你说过", "刚才", "前面", "上次说", "记得", "之前说", "你之前",
 )
 #: 反记忆指称：出现即判「未复用记忆」（防关键词误报——「记得」出现在「只记得你刚完成…」里）。
+#: 「未保留/没有保留」为 LOOP2 NBP-5 人工翻案词（D1a「当前会话中未保留具体记录」
+#: 曾因词表缺变体被自动误判 pass），LOOP3 报告 §3 点名同族债，NBP-5 收编。
 MEMORY_ANTI_RECALL_MARKERS = (
     "没有完整记录", "没有记录", "不记得", "无法记录", "未记录", "这里没有", "我这里没有", "不掌握",
-    "没有你", "无法获取", "无法查看", "看不到",
+    "没有你", "无法获取", "无法查看", "看不到", "未保留", "没有保留",
 )
 CORRECTION_TOPIC_MARKERS = ("偶数", "度数", "连通", "欧拉")
 PERSONALIZATION_MARKERS = ("你", "你的", "图论", "弱", "掌握", "欧拉", "哈密顿", "离散")
+
+#: 判卷词表版本（仪器序列号）：证据里落 judge_version，出分歧时可追因到词表代次。
+#: v3（NBP-5）：LOOP3 manual_overrides 三处（V2-D 词表缺口 / V2-E 单字判定词 /
+#: V1 30s 计时口径）修复后的代次。
+JUDGE_LEXICON_VERSION = "lexicon-v3-nbp5"
+
+#: ---- 命题立场判据词表（GP-07 纠正/第三会话拒答；LOOP3 manual_overrides V2-D/V2-E 修复）----
+#: 词表项全部 ≥2 字且带主语/系词锚定，杜绝词中子串误报（「正确」裸词会命中
+#: 「正确的判定条件是…」这类解释性用法——它是在复述条件、不是在判定命题）。
+PROPOSITION_REFUTED_MARKERS = (
+    "是假的", "是错的", "是错误的", "是假命题", "是伪命题",
+    "不成立", "并不成立", "不能成立", "无法成立", "不成立的是",
+    "不正确", "是不正确", "不对", "为假", "命题为假", "结论为假",
+    "命题错误", "结论错误", "说法错误",  # 裸「错误」不收：「常见错误/易错点」是解释性用法
+    "说法有误", "结论有误", "命题有误",
+)
+PROPOSITION_AFFIRMED_MARKERS = (
+    "是正确的", "是对的", "完全正确", "你总结的正确", "你的命题正确",
+    "命题正确", "结论正确", "说法正确", "命题成立", "结论成立", "说法成立", "是成立的",
+)
+#: 单字判定词（「错。」「对。」句界形式）：仅当独立成句才算判定措辞——
+#: 句首/句读后 + 句末标点。裸加进子串词表会词中误报（对→面对/核对/绝对/正对；
+#: 错→错误/错题/交错），即 LOOP3 V2-E 单字陷阱的反向缺陷。
+STANCE_SINGLE_CHARS = ("对", "错")
+_SENTENCE_OPEN_CHARS = "。！？!?；;，,\n\r\t 「」『』《》“”\"'（(:：*—-"
+_SENTENCE_CLOSE_CHARS = "。！？!?；;，,\n\r\t ~」』”\"'"
+
+
+def strip_md_emphasis(text: str) -> str:
+    """剥离 markdown 强调记号（*粗体* / _斜体_ / `代码` / ~删除线~）供词表判定。
+
+    LOOP3 V2-D 实测根因之一：回答正文是「该命题是**假**的」——星号夹在字中间，
+    任何「是假的」类词表项按原文子串匹配都物理上命中不了。判据输入必须是
+    归一化文本，否则词表补得再全仪器仍测不准。
+    """
+    return text.translate(str.maketrans("", "", "*_`~"))
+
+
+def _stance_single_char_verdicts(normalized: str) -> list[str]:
+    """单字判定词的句界匹配（词边界的中国话等价物）。"""
+    hits: list[str] = []
+    for index, char in enumerate(normalized):
+        if char not in STANCE_SINGLE_CHARS:
+            continue
+        prev_ok = index == 0 or normalized[index - 1] in _SENTENCE_OPEN_CHARS
+        next_ok = index + 1 >= len(normalized) or normalized[index + 1] in _SENTENCE_CLOSE_CHARS
+        if prev_ok and next_ok:
+            hits.append(char)
+    return hits
+
+
+def judge_proposition_stance(answer_text: str) -> dict[str, Any]:
+    """GP-07 命题立场启发式（V2-D/V2-E 判据宿主，LOOP4 探针直接 import 本函数）。
+
+    输入是「这个命题对吗/判断真假」类探针的回答全文；对 markdown 剥星后的
+    归一化文本做三类信号：
+    - refuted/affirmed 多字词表（整篇扫描，hit 原文位置一并返回供人工复核）；
+    - 单字判定词句界形式（「错。」开头 = LOOP3 V2-E 真实形态）；
+    - 返回 inconclusive 而不是硬猜——inconclusive 的下游语义是 blocked（进人工
+      复核队列），不是 fail 更不是 pass（诚实红线：启发式只许漏报给人工，不许
+      冒判）。
+    返回 dict：verdict ∈ {refuted, affirmed, inconclusive, empty} + 各信号 hits。
+    """
+    if not answer_text or not answer_text.strip():
+        return {"verdict": "empty", "refuted_hits": [], "affirmed_hits": [], "single_char_hits": [], "judge_version": JUDGE_LEXICON_VERSION}
+    normalized = strip_md_emphasis(answer_text)
+    refuted = [(normalized.find(m), m) for m in PROPOSITION_REFUTED_MARKERS if m in normalized]
+    affirmed = [(normalized.find(m), m) for m in PROPOSITION_AFFIRMED_MARKERS if m in normalized]
+    singles = _stance_single_char_verdicts(normalized)
+    wrong_say = bool(refuted) or "错" in singles
+    right_say = bool(affirmed) or "对" in singles
+    if wrong_say and not right_say:
+        verdict = "refuted"
+    elif right_say and not wrong_say:
+        verdict = "affirmed"
+    else:
+        verdict = "inconclusive"  # 双向都有或都没有：人工读全文定界（V2-E 原路径）
+    return {
+        "verdict": verdict,
+        "refuted_hits": [m for _, m in refuted],
+        "affirmed_hits": [m for _, m in affirmed],
+        "single_char_hits": singles,
+        "normalized_head": normalized[:200],
+        "judge_version": JUDGE_LEXICON_VERSION,
+    }
+
+
+def judge_gp07_correction_step(chat_full_text: str) -> tuple[str, dict[str, Any]]:
+    """V2-D 步级判定：「AI 是否回应并驳倒用户（假）声明」。
+
+    - refuted + 主题在场 → pass（纠正成功）；
+    - affirmed → fail（把假命题确认成对 = LOOP2 污染失败模式，最重信号）；
+    - 主题在场但立场 inconclusive → blocked（进人工复核，不冒判 fail）；
+    - 主题都不在场 → fail（未回应用户声明本身）。
+    旧判据（LOOP3 探针正则 `(为假|不成立|是错|不对|错误)`）的 fail 是词表缺口
+    造成的仪器误报——真实回答「该命题是**假**的」被记 fail，见 V2-D-rejudged。
+    """
+    stance = judge_proposition_stance(chat_full_text)
+    topic = [m for m in CORRECTION_TOPIC_MARKERS if m in chat_full_text]
+    stance["topic_hits"] = topic
+    verdict = stance["verdict"]
+    if verdict == "empty":
+        return VERDICT_BLOCKED, stance
+    if verdict == "refuted":
+        return (VERDICT_PASS, stance) if topic else (VERDICT_FAIL, stance)
+    if verdict == "affirmed":
+        return VERDICT_FAIL, stance
+    return (VERDICT_BLOCKED, stance) if topic else (VERDICT_FAIL, stance)
+
+
+# ---------------------------------------------------------------------------
+# V1 计时口径（episodic 投影判据；LOOP3 manual_overrides V1-EPISODIC30 修复）
+# ---------------------------------------------------------------------------
+#
+# 语义写死（LOOP4 起不得再各写各的）：
+#   * 等待窗口的锚点 = **turn end**——本回合 WS 终止帧（网关流末 meta）到达、
+#     WSChatSession.send_message 返回的时刻。**不是** send 起算。
+#   * 理由：declared-fact 写账入队（enqueue_from_chat_turn）发生在回合末；
+#     WS 回合墙钟实测 19–87s 高方差（LOOP3 V1-B 19.4s vs V1-A 86.9s），从
+#     send 起算会把「LLM 多快」混进「投影多快」，仪器测的不是被测量。
+#     LOOP3 误判即此类：30s 读 0 条判 fail，但投影 written_at 比读时刻仅晚
+#     1.5s，90s 复读 3 条全对（evidence/steps/V1-EPISODIC30/90）。
+#   * NBP-6（7454f484，declared-fact 快车道）已把投影实测压到 ~0.6s，LOOP3
+#     的 30–90s 是修复前现实。首读窗 30s 相对新现实有 ~50x 余量，不必放回
+#     90s 常态；但首读不足时必须在 +90s 复读后才许 fail（升级窗判据，见
+#     judge_episodic_capture）——这是把 LOOP3 的人工翻案规则固化成仪器口径，
+#     不是放宽：+30s 与 +90s 双读都为 0 才判 fail。
+EPISODIC_PROJECTION_SETTLE_S = 30.0  # 首读：turn end + 30s
+EPISODIC_PROJECTION_ESCALATE_S = 90.0  # 升级复读：turn end + 90s（首读不足时才读）
+
+
+def episodic_projection_reads(turn_end_monotonic: float) -> list[tuple[str, float]]:
+    """V1 读账时刻表（锚点=turn end，单调时钟秒）。
+
+    LOOP4 探针在 send_message 返回后记录 ``turn_end = time.monotonic()``，
+    据本函数排程两次读账；证据 request 里必须落 ``anchor: "turn_end"`` 与
+    ``turn_end_iso``，可审计。
+    """
+    return [
+        ("first", turn_end_monotonic + EPISODIC_PROJECTION_SETTLE_S),
+        ("escalate", turn_end_monotonic + EPISODIC_PROJECTION_ESCALATE_S),
+    ]
+
+
+def judge_episodic_capture(first_count: int, escalated_count: int | None, expected_min: int) -> tuple[str, str]:
+    """V1 步级判定：episodic 明示事实捕获（锚点=turn end）。
+
+    - 首读即达标 → pass（NBP-6 后的常态）；
+    - 首读不足、升级读达标 → pass 但 note 投影延迟（诚实记录，不静默）；
+    - 首读不足且未做升级读 → blocked（判据未走完，不冒判）；
+    - 双读皆不足 → fail。
+    """
+    if first_count >= expected_min:
+        return VERDICT_PASS, f"first read {first_count} >= {expected_min} at turn_end+{EPISODIC_PROJECTION_SETTLE_S:.0f}s"
+    if escalated_count is None:
+        return VERDICT_BLOCKED, (
+            f"first read {first_count} < {expected_min} and escalation read not performed — criterion undecided"
+        )
+    if escalated_count >= expected_min:
+        return VERDICT_PASS, (
+            f"escalated read {escalated_count} >= {expected_min} at turn_end+{EPISODIC_PROJECTION_ESCALATE_S:.0f}s "
+            f"(projection delay noted: first read was {first_count})"
+        )
+    return VERDICT_FAIL, f"only {escalated_count} < {expected_min} entries at both turn_end+30s and turn_end+90s"
 
 
 def judge_memory_recall(correction_exchange_text: str, followup_text: str) -> tuple[str, list[str]]:
@@ -1396,6 +1562,7 @@ class NS001Driver:
             "gain_proof": "GP-04",
             "method": "compressed API proxy: personal-context differential (NOT the full blind-material protocol)",
             "honesty_note": "GAIN_PROOFS GP-04 判据是真料/盲选双臂引用答对率；本轮以「私有上下文差分」为代理，结论仅限本轮证据",
+            "judge_version": JUDGE_LEXICON_VERSION,
             "main_arm": {
                 "answer": main_answer,
                 "personalization_markers": main_markers,
@@ -1429,6 +1596,7 @@ class NS001Driver:
             "schema": SCHEMA_GAIN,
             "gain_proof": "GP-07",
             "method": "deliberate mistake -> delayed follow-up recall (heuristic marker judgment)",
+            "judge_version": JUDGE_LEXICON_VERSION,
             "correction_exchange_full_text": truncate_text(correction_text, 4000),
             "followup": followup,
             "markers_found": markers_07,
@@ -1523,7 +1691,7 @@ class NS001Driver:
             else:
                 text = data["followup"].get("full_text", "")
                 verdict, markers = judge_memory_recall(data.get("correction_exchange_full_text", ""), text)
-            data["rejudged"] = {"heuristic_verdict": verdict, "markers": markers, "judge_version": "anti-recall-v2"}
+            data["rejudged"] = {"heuristic_verdict": verdict, "markers": markers, "judge_version": JUDGE_LEXICON_VERSION}
             out = self.out_dir / "evidence" / f"gp-{gp_name}-rejudged.json"
             out.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
             print(f"[rejudge] {gp_name}: heuristic -> {verdict}")
