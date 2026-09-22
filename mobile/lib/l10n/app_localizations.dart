@@ -46249,6 +46249,60 @@ abstract class AppLocalizations {
   /// **'其他'**
   String get ebOther;
 
+  /// No description provided for @ebDiscreteMath.
+  ///
+  /// In zh, this message translates to:
+  /// **'离散数学'**
+  String get ebDiscreteMath;
+
+  /// No description provided for @ebLinearAlgebra.
+  ///
+  /// In zh, this message translates to:
+  /// **'线性代数'**
+  String get ebLinearAlgebra;
+
+  /// No description provided for @ebProbabilityStatistics.
+  ///
+  /// In zh, this message translates to:
+  /// **'概率统计'**
+  String get ebProbabilityStatistics;
+
+  /// No description provided for @ebCalculus.
+  ///
+  /// In zh, this message translates to:
+  /// **'高等数学'**
+  String get ebCalculus;
+
+  /// No description provided for @ebDataStructures.
+  ///
+  /// In zh, this message translates to:
+  /// **'数据结构'**
+  String get ebDataStructures;
+
+  /// No description provided for @ebAlgorithms.
+  ///
+  /// In zh, this message translates to:
+  /// **'算法'**
+  String get ebAlgorithms;
+
+  /// No description provided for @ebComputerNetworks.
+  ///
+  /// In zh, this message translates to:
+  /// **'计算机网络'**
+  String get ebComputerNetworks;
+
+  /// No description provided for @ebOperatingSystems.
+  ///
+  /// In zh, this message translates to:
+  /// **'操作系统'**
+  String get ebOperatingSystems;
+
+  /// No description provided for @ebDatabases.
+  ///
+  /// In zh, this message translates to:
+  /// **'数据库'**
+  String get ebDatabases;
+
   /// No description provided for @ebAnswerTooLong.
   ///
   /// In zh, this message translates to:

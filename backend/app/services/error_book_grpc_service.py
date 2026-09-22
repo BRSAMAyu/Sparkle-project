@@ -17,6 +17,7 @@ from app.schemas.error_book import (
     ReviewAction,
     ReviewPerformanceEnum,
     SubjectEnum,
+    normalize_subject,
 )
 from app.services.error_book_service import ErrorBookService
 
@@ -86,14 +87,15 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
             service = ErrorBookService(db)
             try:
                 # Convert gRPC request to Pydantic Create Schema
-                # Assuming simple mapping for enums or exact string match
+                # 科目走归一化层（BP-6）：中文/别名/枚举值均可；未识别落 OTHER
+                # 而不是抛 400（"离散数学" 曾因枚举无大学科目直接 INVALID_ARGUMENT）。
                 data = ErrorRecordCreate(
                     user_id=user_id,
                     question_text=request.question_text if request.question_text else None,
                     question_image_url=request.question_image_url if request.question_image_url else None,
                     user_answer=request.user_answer if request.user_answer else None,
                     correct_answer=request.correct_answer if request.correct_answer else None,
-                    subject=SubjectEnum(request.subject_code),
+                    subject=normalize_subject(request.subject_code) or SubjectEnum.OTHER,
                     chapter=request.chapter if request.chapter else None,
                     cognitive_tags=list(request.cognitive_tags or []),
                     ai_analysis_summary=request.ai_analysis_summary if request.ai_analysis_summary else None,
@@ -144,8 +146,9 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
             service = ErrorBookService(db)
 
             # Map params
+            # 过滤路径：未识别科目 → None（不筛），避免把查询错误收窄到 other 桶
             params = ErrorQueryParams(
-                subject=SubjectEnum(request.subject_code) if request.subject_code else None,
+                subject=normalize_subject(request.subject_code) if request.subject_code else None,
                 chapter=request.chapter if request.chapter else None,
                 error_type=ErrorTypeEnum(request.error_type) if request.error_type else None,
                 mastery_min=request.mastery_min if request.HasField("mastery_min") else None,
@@ -239,7 +242,9 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
                 question_text=request.question_text if request.HasField("question_text") else None,
                 user_answer=request.user_answer if request.HasField("user_answer") else None,
                 correct_answer=request.correct_answer if request.HasField("correct_answer") else None,
-                subject=SubjectEnum(request.subject_code) if request.HasField("subject_code") else None,
+                subject=(normalize_subject(request.subject_code) or SubjectEnum.OTHER)
+                if request.HasField("subject_code")
+                else None,
                 chapter=request.chapter if request.HasField("chapter") else None,
                 question_image_url=request.question_image_url if request.HasField("question_image_url") else None,
                 cognitive_tags=list(request.cognitive_tags) if request.cognitive_tags else None,

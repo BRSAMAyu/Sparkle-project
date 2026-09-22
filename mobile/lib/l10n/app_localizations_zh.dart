@@ -25312,6 +25312,33 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ebOther => '其他';
 
   @override
+  String get ebDiscreteMath => '离散数学';
+
+  @override
+  String get ebLinearAlgebra => '线性代数';
+
+  @override
+  String get ebProbabilityStatistics => '概率统计';
+
+  @override
+  String get ebCalculus => '高等数学';
+
+  @override
+  String get ebDataStructures => '数据结构';
+
+  @override
+  String get ebAlgorithms => '算法';
+
+  @override
+  String get ebComputerNetworks => '计算机网络';
+
+  @override
+  String get ebOperatingSystems => '操作系统';
+
+  @override
+  String get ebDatabases => '数据库';
+
+  @override
   String get ebAnswerTooLong => '答案内容过长（最多 2000 字符）';
 
   @override

@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from enum import StrEnum
 from typing import Any
@@ -17,7 +18,12 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 
 class SubjectEnum(StrEnum):
-    """科目枚举"""
+    """科目枚举（K12 + 大学常用科目，BP-6 扩展）
+
+    大学新增值与 sprint pack 体系对齐：discrete_math → discrete_mathematics、
+    data_structures → data_structures_algorithms、computer_networks/operating_systems
+    同名 pack；calculus/linear_algebra/probability_statistics 归 mathematics pack。
+    """
 
     MATH = "math"
     PHYSICS = "physics"
@@ -29,7 +35,128 @@ class SubjectEnum(StrEnum):
     GEOGRAPHY = "geography"
     POLITICS = "politics"
     COMPUTER = "computer"
+    # --- 大学常用科目（BP-6：错题本科目枚举无大学科目） ---
+    DISCRETE_MATH = "discrete_math"  # 离散数学
+    LINEAR_ALGEBRA = "linear_algebra"  # 线性代数
+    PROBABILITY_STATISTICS = "probability_statistics"  # 概率论与数理统计
+    CALCULUS = "calculus"  # 高等数学（微积分）
+    DATA_STRUCTURES = "data_structures"  # 数据结构
+    ALGORITHMS = "algorithms"  # 算法
+    COMPUTER_NETWORKS = "computer_networks"  # 计算机网络
+    OPERATING_SYSTEMS = "operating_systems"  # 操作系统
+    DATABASE_SYSTEMS = "database_systems"  # 数据库系统
     OTHER = "other"
+
+
+# 科目 → sprint pack key 映射（知识归位词典用；无对应 pack 的科目不出现）
+SUBJECT_TO_SPRINT_PACK: dict[SubjectEnum, str] = {
+    SubjectEnum.DISCRETE_MATH: "discrete_mathematics",
+    SubjectEnum.DATA_STRUCTURES: "data_structures_algorithms",
+    SubjectEnum.ALGORITHMS: "data_structures_algorithms",
+    SubjectEnum.COMPUTER_NETWORKS: "computer_networks",
+    SubjectEnum.OPERATING_SYSTEMS: "operating_systems",
+    SubjectEnum.CALCULUS: "mathematics",
+    SubjectEnum.LINEAR_ALGEBRA: "mathematics",
+    SubjectEnum.PROBABILITY_STATISTICS: "mathematics",
+    SubjectEnum.MATH: "mathematics",
+}
+
+# 归一化别名表：中文/缩写/英文变体 → SubjectEnum（校验放宽的统一入口）。
+# 命中即归位；未命中的非空输入由调用方决定兜底语义（创建路径落 OTHER，不再 400）。
+_SUBJECT_ALIASES: dict[str, SubjectEnum] = {
+    # K12 / 既有
+    "数学": SubjectEnum.MATH,
+    "高数": SubjectEnum.CALCULUS,
+    "高等数学": SubjectEnum.CALCULUS,
+    "微积分": SubjectEnum.CALCULUS,
+    "calculus": SubjectEnum.CALCULUS,
+    "物理": SubjectEnum.PHYSICS,
+    "化学": SubjectEnum.CHEMISTRY,
+    "生物": SubjectEnum.BIOLOGY,
+    "英语": SubjectEnum.ENGLISH,
+    "语文": SubjectEnum.CHINESE,
+    "历史": SubjectEnum.HISTORY,
+    "地理": SubjectEnum.GEOGRAPHY,
+    "政治": SubjectEnum.POLITICS,
+    "计算机": SubjectEnum.COMPUTER,
+    # 大学新增
+    "离散数学": SubjectEnum.DISCRETE_MATH,
+    "离散": SubjectEnum.DISCRETE_MATH,
+    "discrete_math": SubjectEnum.DISCRETE_MATH,
+    "discrete_mathematics": SubjectEnum.DISCRETE_MATH,
+    "discrete math": SubjectEnum.DISCRETE_MATH,
+    "discrete mathematics": SubjectEnum.DISCRETE_MATH,
+    "线代": SubjectEnum.LINEAR_ALGEBRA,
+    "线性代数": SubjectEnum.LINEAR_ALGEBRA,
+    "linear_algebra": SubjectEnum.LINEAR_ALGEBRA,
+    "linear algebra": SubjectEnum.LINEAR_ALGEBRA,
+    "概率论": SubjectEnum.PROBABILITY_STATISTICS,
+    "概率统计": SubjectEnum.PROBABILITY_STATISTICS,
+    "概率论与数理统计": SubjectEnum.PROBABILITY_STATISTICS,
+    "probability": SubjectEnum.PROBABILITY_STATISTICS,
+    "probability_statistics": SubjectEnum.PROBABILITY_STATISTICS,
+    "probability and statistics": SubjectEnum.PROBABILITY_STATISTICS,
+    "数据结构": SubjectEnum.DATA_STRUCTURES,
+    "数据结构与算法": SubjectEnum.DATA_STRUCTURES,
+    "数据结构和算法": SubjectEnum.DATA_STRUCTURES,
+    "data_structures": SubjectEnum.DATA_STRUCTURES,
+    "data_structures_algorithms": SubjectEnum.DATA_STRUCTURES,
+    "data structures": SubjectEnum.DATA_STRUCTURES,
+    "算法": SubjectEnum.ALGORITHMS,
+    "算法设计": SubjectEnum.ALGORITHMS,
+    "algorithms": SubjectEnum.ALGORITHMS,
+    "algorithm": SubjectEnum.ALGORITHMS,
+    "计算机网络": SubjectEnum.COMPUTER_NETWORKS,
+    "计网": SubjectEnum.COMPUTER_NETWORKS,
+    "computer_networks": SubjectEnum.COMPUTER_NETWORKS,
+    "computer networks": SubjectEnum.COMPUTER_NETWORKS,
+    "操作系统": SubjectEnum.OPERATING_SYSTEMS,
+    "操系": SubjectEnum.OPERATING_SYSTEMS,
+    "操作系统原理": SubjectEnum.OPERATING_SYSTEMS,
+    "operating_systems": SubjectEnum.OPERATING_SYSTEMS,
+    "operating system": SubjectEnum.OPERATING_SYSTEMS,
+    "数据库": SubjectEnum.DATABASE_SYSTEMS,
+    "数据库系统": SubjectEnum.DATABASE_SYSTEMS,
+    "数据库原理": SubjectEnum.DATABASE_SYSTEMS,
+    "database": SubjectEnum.DATABASE_SYSTEMS,
+    "database_systems": SubjectEnum.DATABASE_SYSTEMS,
+}
+
+# 紧凑形式索引（去空格/横线/下划线）："Discrete Mathematics" → discrete_math
+_COMPACT_SUBJECT_ALIASES: dict[str, SubjectEnum] = {
+    re.sub(r"[\s\-_]+", "", key): value for key, value in _SUBJECT_ALIASES.items()
+}
+
+
+def normalize_subject(raw: str | None) -> SubjectEnum | None:
+    """把自由文本科目归一化到 SubjectEnum。
+
+    规则（按确定性递减）：
+    1. 空值 → None（由调用方决定默认语义）；
+    2. 枚举 value 精确命中（含大小写，StrEnum 值比较）；
+    3. 别名表精确命中（中文/缩写/英文变体）；
+    4. 去空白/横线/下划线后的紧凑别名命中（"Discrete Mathematics" /
+       "discrete-mathematics" 等）；
+    5. 未识别 → None（调用方兜底；创建路径落 OTHER，不再抛 400）。
+    """
+    if raw is None:
+        return None
+    text = str(raw).strip()
+    if not text:
+        return None
+
+    lowered = text.lower()
+    try:
+        return SubjectEnum(lowered)
+    except ValueError:
+        pass
+
+    if text in _SUBJECT_ALIASES:
+        return _SUBJECT_ALIASES[text]
+    compact = re.sub(r"[\s\-_]+", "", lowered)
+    if compact in _SUBJECT_ALIASES:
+        return _SUBJECT_ALIASES[compact]
+    return _COMPACT_SUBJECT_ALIASES.get(compact)
 
 
 class ErrorTypeEnum(StrEnum):

@@ -287,21 +287,49 @@ class ErrorBookService:
                 logger.warning("No text available for analysis")
                 return
 
-            # --- Step 2: RAG Retrieval ---
+            # --- Step 2: Knowledge Linking ---
+            # CP-03: 确定性归位先行（零 LLM）——考纲 sprint pack 词典 + 星图节点名
+            # 匹配（chapter/subject/question_text），命中即写 linked_knowledge_node_ids，
+            # 冷启动不再让 mastery 同步合法 no-op（LOOP1「半程失败」上游缺口）。
             linked_ids = []
             nodes: list[KnowledgeNode] = []
+            linker = None
 
             try:
-                # Retrieve relevant knowledge nodes
-                nodes = await self._search_knowledge_nodes(user_id, final_text)
-                if nodes:
-                    linked_ids = [n.id for n in nodes]
-                    logger.info(f"Found {len(linked_ids)} linked nodes for error {error.id}")
-                else:
-                    logger.info("No relevant nodes found (Cold Start), asking LLM for suggestions")
+                from app.services.error_knowledge_linker import ErrorKnowledgeLinker
+
+                linker = ErrorKnowledgeLinker(self.db)
+                link_matches = await linker.link_error(user_id=user_id, error=error)
+                if link_matches:
+                    linked_ids = [match.node_id for match in link_matches]
+                    logger.info(
+                        f"CP-03 deterministic link: {len(linked_ids)} node(s) for error {error.id} "
+                        f"via {sorted({match.source for match in link_matches})}"
+                    )
             except Exception as e:
-                logger.error(f"RAG search failed: {e}")
-                # Continue without links
+                logger.warning(f"Deterministic knowledge linking failed: {e}")
+                linker = None
+
+            if linked_ids and not nodes:
+                try:
+                    node_stmt = select(KnowledgeNode).where(KnowledgeNode.id.in_(linked_ids))
+                    nodes = list((await self.db.execute(node_stmt)).scalars().all())
+                except Exception as e:
+                    logger.warning(f"Linked node fetch failed: {e}")
+                    nodes = []
+
+            if not linked_ids:
+                try:
+                    # Retrieve relevant knowledge nodes
+                    nodes = await self._search_knowledge_nodes(user_id, final_text)
+                    if nodes:
+                        linked_ids = [n.id for n in nodes]
+                        logger.info(f"Found {len(linked_ids)} linked nodes for error {error.id}")
+                    else:
+                        logger.info("No relevant nodes found (Cold Start), asking LLM for suggestions")
+                except Exception as e:
+                    logger.error(f"RAG search failed: {e}")
+                    # Continue without links
 
             # --- Step 3: LLM Analysis ---
             analysis_result = await self._run_llm_analysis(
@@ -315,15 +343,44 @@ class ErrorBookService:
             if ocr_text:
                 analysis_result["ocr_text"] = ocr_text
 
-            # Extract suggested concepts if any (from LLM or fallback)
-            # Currently strict JSON schema doesn't have 'suggested_concepts' in top level,
-            # but we can add it to the DB column.
+            # --- Step 3.5: CP-03 LLM 兜底归位 + 弱关联建议 ---
+            # 「LLM 归位」不新增任何调用：复用上方既有分析调用的
+            # recommended_knowledge 概念名做确定性字符串匹配（仍零 LLM），
+            # 确定性链+向量检索都落空时才启用；解析失败的概念名进
+            # suggested_concepts（弱关联，冷启动兜底——补完模型里预留的字段）。
+            unmatched_concepts: list[str] = []
+            try:
+                recommended: list[str] = []
+                if isinstance(analysis_result, dict):
+                    recommended = [
+                        str(concept).strip()
+                        for concept in (analysis_result.get("recommended_knowledge") or [])
+                        if str(concept).strip()
+                    ]
+                if recommended and not linked_ids and linker is not None:
+                    concept_matches = await linker.link_error(user_id=user_id, error=error, concept_hints=recommended)
+                    if concept_matches:
+                        linked_ids = [match.node_id for match in concept_matches]
+                        logger.info(f"CP-03 concept-hint link: {len(linked_ids)} node(s) for error {error.id}")
+                if linked_ids and not nodes:
+                    node_stmt = select(KnowledgeNode).where(KnowledgeNode.id.in_(linked_ids))
+                    nodes = list((await self.db.execute(node_stmt)).scalars().all())
+                linked_names = {str(getattr(node, "name", "") or "").strip() for node in nodes}
+                linked_names.discard("")
+                unmatched_concepts = [
+                    concept
+                    for concept in recommended
+                    if not any(concept in name or name in concept for name in linked_names)
+                ]
+            except Exception as e:
+                logger.warning(f"Concept-hint knowledge linking failed: {e}")
 
             # --- Step 4: Update DB ---
             error.latest_analysis = self._normalize_analysis_result(analysis_result)
             error.linked_knowledge_node_ids = linked_ids
             error.affected_node_id = linked_ids[0] if linked_ids else None
-            # error.suggested_concepts = ... (if LLM returns them)
+            if unmatched_concepts:
+                error.suggested_concepts = unmatched_concepts[:5]
 
             # 先落库核心分析结果，保证前端/验收链能尽快读取 latest_analysis。
             # 后续语义记忆、画像信号和事件总线即使稍慢，也不再阻塞“分析已完成”的主链路。

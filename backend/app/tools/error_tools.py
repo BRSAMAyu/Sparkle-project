@@ -4,19 +4,27 @@ from typing import Any
 from uuid import UUID
 
 from app.core.i18n import I18n
-from app.schemas.error_book import ErrorQueryParams, ErrorRecordCreate, ErrorTypeEnum, SubjectEnum
+from app.schemas.error_book import (
+    ErrorQueryParams,
+    ErrorRecordCreate,
+    ErrorTypeEnum,
+    SubjectEnum,
+    normalize_subject,
+)
 from app.services.error_book_service import ErrorBookService
 from app.tools.base import BaseTool, ToolCategory, ToolResult
 from app.tools.schemas import QueryErrorHistoryParams, RecordErrorParams
 
 
 def _safe_subject(subject: str | None) -> SubjectEnum:
+    """科目归一化：走 normalize_subject 统一别名面（BP-6）。
+
+    未识别的非空科目落 OTHER（校验放宽，不再吞成 math）；
+    空值保守维持既有 MATH 默认（调用方已挡空，此处为防御分支）。
+    """
     if not subject:
         return SubjectEnum.MATH
-    try:
-        return SubjectEnum(subject)
-    except ValueError:
-        return SubjectEnum.OTHER
+    return normalize_subject(subject) or SubjectEnum.OTHER
 
 
 def _safe_error_type(error_type: str | None) -> ErrorTypeEnum | None:

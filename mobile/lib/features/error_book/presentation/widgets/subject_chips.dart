@@ -52,6 +52,61 @@ class Subject {
       icon: Icons.menu_book,
       color: DS.warning,
     ),
+    // --- 大学常用科目（BP-6：错题本科目枚举无大学科目） ---
+    Subject(
+      code: 'discrete_math',
+      label: context.l10n.ebDiscreteMath,
+      icon: Icons.account_tree,
+      color: DS.brandPrimary,
+    ),
+    Subject(
+      code: 'calculus',
+      label: context.l10n.ebCalculus,
+      icon: Icons.functions,
+      color: DS.info,
+    ),
+    Subject(
+      code: 'linear_algebra',
+      label: context.l10n.ebLinearAlgebra,
+      icon: Icons.grid_on,
+      color: DS.success,
+    ),
+    Subject(
+      code: 'probability_statistics',
+      label: context.l10n.ebProbabilityStatistics,
+      icon: Icons.query_stats,
+      color: DS.warning,
+    ),
+    Subject(
+      code: 'data_structures',
+      label: context.l10n.ebDataStructures,
+      icon: Icons.data_object,
+      color: DS.brandSecondary,
+    ),
+    Subject(
+      code: 'algorithms',
+      label: context.l10n.ebAlgorithms,
+      icon: Icons.code,
+      color: DS.info,
+    ),
+    Subject(
+      code: 'computer_networks',
+      label: context.l10n.ebComputerNetworks,
+      icon: Icons.lan,
+      color: DS.success,
+    ),
+    Subject(
+      code: 'operating_systems',
+      label: context.l10n.ebOperatingSystems,
+      icon: Icons.memory,
+      color: DS.warningLight,
+    ),
+    Subject(
+      code: 'database_systems',
+      label: context.l10n.ebDatabases,
+      icon: Icons.storage,
+      color: DS.error,
+    ),
     Subject(
       code: 'other',
       label: context.l10n.ebOther,

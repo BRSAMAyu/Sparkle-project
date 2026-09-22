@@ -26387,6 +26387,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ebOther => 'Other';
 
   @override
+  String get ebDiscreteMath => 'Discrete Math';
+
+  @override
+  String get ebLinearAlgebra => 'Linear Algebra';
+
+  @override
+  String get ebProbabilityStatistics => 'Probability & Statistics';
+
+  @override
+  String get ebCalculus => 'Calculus';
+
+  @override
+  String get ebDataStructures => 'Data Structures';
+
+  @override
+  String get ebAlgorithms => 'Algorithms';
+
+  @override
+  String get ebComputerNetworks => 'Computer Networks';
+
+  @override
+  String get ebOperatingSystems => 'Operating Systems';
+
+  @override
+  String get ebDatabases => 'Databases';
+
+  @override
   String get ebAnswerTooLong => 'Answer too long (max 2000 characters)';
 
   @override

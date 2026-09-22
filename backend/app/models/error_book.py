@@ -7,12 +7,37 @@ import uuid
 from sqlalchemy import JSON, Boolean, Column, DateTime, Float, ForeignKey, Index, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import relationship
+from sqlalchemy.types import TypeDecorator
 
 from app.db.session import Base
 
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 ArrayStringCompat = ARRAY(String).with_variant(JSON(), "sqlite")
-ArrayUUIDCompat = ARRAY(UUID(as_uuid=True)).with_variant(JSON(), "sqlite")
+
+
+class _UUIDListJSON(TypeDecorator):
+    """sqlite 下 ARRAY(UUID) 的 JSON 兼容变体（prod 走原生 ARRAY(UUID)，不经此类型）。
+
+    JSON 序列化不认 UUID 对象——CP-03 E2E 首次以 ORM 直接写入该列时暴露；
+    绑定前统一转字符串，读侧由服务层 _coerce_uuid/str() 容错（与既有
+    mastery 同步读法一致）。
+    """
+
+    impl = JSON
+    cache_ok = True
+
+    def bind_processor(self, dialect):
+        super_process = super().bind_processor(dialect)
+
+        def process(value):
+            if isinstance(value, (list, tuple)):
+                value = [str(item) if isinstance(item, uuid.UUID) else item for item in value]
+            return super_process(value) if super_process is not None else value
+
+        return process
+
+
+ArrayUUIDCompat = ARRAY(UUID(as_uuid=True)).with_variant(_UUIDListJSON(), "sqlite")
 ArrayTextCompat = ARRAY(Text).with_variant(JSON(), "sqlite")
 
 
