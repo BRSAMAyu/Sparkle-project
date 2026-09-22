@@ -17506,6 +17506,13 @@ CREATE UNIQUE INDEX uq_plan_execution_records_intent ON plan_execution_records U
 
 
 --
+-- Name: uq_plans_user_sprint_goal_active; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX uq_plans_user_sprint_goal_active ON plans USING btree (user_id, subject, target_date) WHERE ((type = 'SPRINT'::plantype) AND is_active AND (deleted_at IS NULL));
+
+
+--
 -- Name: uq_research_consent_active_protocol; Type: INDEX; Schema: public; Owner: postgres
 --
 
