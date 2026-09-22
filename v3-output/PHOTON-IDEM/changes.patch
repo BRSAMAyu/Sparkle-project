@@ -1,0 +1,1030 @@
+diff --git a/backend/alembic/versions/photidem_20260923_photon_daily_first_idem_unique.py b/backend/alembic/versions/photidem_20260923_photon_daily_first_idem_unique.py
+new file mode 100644
+index 00000000..e391ddf4
+--- /dev/null
++++ b/backend/alembic/versions/photidem_20260923_photon_daily_first_idem_unique.py
+@@ -0,0 +1,115 @@
++"""PHOTON-IDEM · photon_transaction_history 每日首胜幂等键唯一部分索引
++
++Revision ID: photidem_20260923
++Revises: dc5share_20260922
++Create Date: 2026-09-23
++
++Migration Contract:
++    type: reversible
++    rollback_plan: "alembic downgrade -1：DROP INDEX uq_photon_tx_daily_first_idem。
++        索引纯约束、不携带数据；downgrade 后 schema 与升级前一致（升级时按
++        保留最早语义收敛掉的重复首胜流水不可再生——但那些行本身就是并发双发
++        污染，会虚增「可兑换基数」，见 backfill_plan）。"
++    verification_query: "SELECT indexname, indexdef FROM pg_indexes WHERE indexname='uq_photon_tx_daily_first_idem';"
++    backfill_plan: "无回填。反向操作：先收敛后建索引——升级时删除索引管辖域
++        （related_item_id LIKE 'daily_first:%'）内 (user_id, related_item_id)
++        重复组中不是最早的那批行（保留最早=首个真实发放事件；后来者是并发
++        check-then-insert 竞态双发的虚增基数污染，删除即还原审计诚实性）；
++        管辖域外的取值域（NULL、裸 achievement_id / contract_id、guest_welcome、
++        achievement_combo:<hex16>、purchase 裸 item_id）一概不动。"
++    owner: "PHOTON-IDEM"
++    ticket: "PHOTON-STREAM 残留：首胜发放的去重门是读侧先查重
++        （PhotonService._find_existing_transaction，check-then-insert），缓存
++        失守+DB 兜底双路径并发时两请求可同时读到「未发放」→ 双发双计基数。
++        写入侧以唯一部分索引 + ON CONFLICT DO NOTHING RETURNING 收口。"
++
++方案裁决（为什么是部分索引，不是全列唯一；为什么 combo 域不并入）：
++    photon_transaction_history.related_item_id 是多写入方共享列，取值域实测
++    （演示库只读 SELECT，2026-09-23，共 297 行）：NULL 7 行（transfer_in/out、
++    redeem_pro、旧 grant_achievement）、裸 achievement_id 81 行（celery 重试与
++    成就引擎，grant_achievement）、guest_welcome 170 行（guest_seed，**跨用户
++    同键合法**——170 行恰 170 个用户，per-user 域内零重复）、裸 item_id 5 行
++    （purchase，**同用户同 item 合法重复购买**——演示库实测 1 组同 (user,item)
++    重复对）、daily_first:<ISO> 2 行（2 用户，域内零重复）、
++    achievement_combo:<hex16> 32 行。全列 (user_id, related_item_id) 唯一会
++    当场炸掉 2 组域外既有重复（重复购买 + NULL 转账组），且把「可重复购买」
++    「跨用户同键」改写成非法——故收窄到首胜幂等键命名空间，键域与读侧门
++    （_find_existing_transaction 的 user+type+amount+source+related_item_id
++    匹配）在 daily_first 域内严格同域。
++
++    **combo 域不并入**（裁决）：其键 `achievement_combo:<uuid4.hex[:16]>` 的
++    唯一性由生成器构造保证（2^-64 碰撞），索引对它零防重放价值；且 combo 的
++    业务语义是「每次达标即一次独立合法经济事件」（PHOTON-STREAM 定案），不存在
++    「同键=重复发放」的幂等语义可供索引执行——给它上唯一约束是在执行一个
++    该域不存在的错误不变量，还会把假想中的生成器 bug 从「静默双发」变成
++    「无冲突处理的路径上硬 500」。成本虽同，价值为零、风险为正，故否决。
++
++方言可移植性：CREATE UNIQUE INDEX ... WHERE <LIKE 谓词>（PG 与 SQLite 均支持
++部分索引）；存量收敛用 correlated EXISTS + (created_at, CAST(id AS TEXT))
++字典序比较的双方言可移植写法——本表 PK 是 uuid，PG 无 min(uuid) 聚合
++（ERR-IDEM-CONCUR 在 mastery_audit_log 用的 MIN(id) 依赖 SERIAL 整型主键，
++此处不可复制），CAST 写法在双方言下语义一致：保留每组 (user_id,
++related_item_id) 中 created_at 最早者，同刻并列时以 id 文本序定 tie-break
++（确定性、双方言一致）。
++"""
++
++from __future__ import annotations
++
++from typing import Sequence
++
++from alembic import op
++
++revision: str = "photidem_20260923"
++down_revision: str | None = "dc5share_20260922"
++branch_labels: str | Sequence[str] | None = None
++depends_on: str | Sequence[str] | None = None
++
++INDEX_NAME = "uq_photon_tx_daily_first_idem"
++
++# 索引管辖域：每日首胜幂等键命名空间（与写侧 PhotonService 的前缀守卫同域）
++_IDEM_SCOPE_PREDICATE = "related_item_id LIKE 'daily_first:%'"
++
++# 收敛子查询里对同一谓词的限定名变体（手工展开，不用字符串替换的取巧写法）
++_KEEPER_SCOPE_PREDICATE = "keeper.related_item_id LIKE 'daily_first:%'"
++
++
++def upgrade() -> None:
++    # 1) 收敛存量重复（仅索引管辖域 daily_first:%）：保留每组 (user_id,
++    #    related_item_id) 最早一行（created_at 最小；同刻以 id 文本序
++    #    tie-break）。最早行 = 首个真实发放事件；后来者 = 并发竞态双发的
++    #    虚增「可兑换基数」污染。uuid 主键上无 min() 聚合（PG 无 min(uuid)），
++    #    故用 correlated EXISTS 的双方言可移植写法（ERR-IDEM-CONCUR 的
++    #    MIN(id) 写法依赖 SERIAL 整型主键，此处不可复制）。
++    op.execute(
++        f"""
++        DELETE FROM photon_transaction_history
++        WHERE {_IDEM_SCOPE_PREDICATE}
++          AND EXISTS (
++              SELECT 1 FROM photon_transaction_history AS keeper
++              WHERE {_KEEPER_SCOPE_PREDICATE}
++                AND keeper.user_id = photon_transaction_history.user_id
++                AND keeper.related_item_id = photon_transaction_history.related_item_id
++                AND (
++                    keeper.created_at < photon_transaction_history.created_at
++                    OR (
++                        keeper.created_at = photon_transaction_history.created_at
++                        AND CAST(keeper.id AS TEXT) < CAST(photon_transaction_history.id AS TEXT)
++                    )
++                )
++          )
++        """
++    )
++
++    # 2) 唯一部分索引：只约束每日首胜幂等键命名空间，键域与读侧门同域。
++    #    注意 NULL 行天然在谓词外（NULL LIKE ... 为 NULL，不视为真）。
++    op.execute(
++        f"""
++        CREATE UNIQUE INDEX IF NOT EXISTS {INDEX_NAME}
++        ON photon_transaction_history(user_id, related_item_id)
++        WHERE {_IDEM_SCOPE_PREDICATE}
++        """
++    )
++
++
++def downgrade() -> None:
++    op.execute(f"DROP INDEX IF EXISTS {INDEX_NAME}")
+diff --git a/backend/app/services/photon_service.py b/backend/app/services/photon_service.py
+index 1db6e40b..89d15bea 100644
+--- a/backend/app/services/photon_service.py
++++ b/backend/app/services/photon_service.py
+@@ -9,12 +9,13 @@ from typing import Any
+ from uuid import uuid4
+ 
+ from loguru import logger
+-from sqlalchemy import and_, case, desc, func, select, update
++from sqlalchemy import JSON, String, and_, bindparam, case, desc, func, select, text, update
+ from sqlalchemy.ext.asyncio import AsyncSession
+ from sqlalchemy.orm import lazyload
+ 
+ from app.config import settings
+ from app.core.cache import cache_service
++from app.models.base import GUID
+ from app.models.shop import PhotonTransactionHistory
+ from app.models.shop import PhotonTransactionType as DBPhotonTransactionType
+ from app.models.user import User
+@@ -25,6 +26,19 @@ def _utcnow() -> datetime:
+     return datetime.now(UTC).replace(tzinfo=None)
+ 
+ 
++#: PHOTON-IDEM：每日首胜幂等键命名空间前缀。唯一部分索引
++#: ``uq_photon_tx_daily_first_idem``（迁移 photidem_20260923）只管辖该域，
++#: 写入侧冲突仲裁分支以此为门——域外取值域（NULL、裸 achievement_id /
++#: contract_id、guest_welcome、achievement_combo:<hex16>、purchase item_id）
++#: 行为逐字节不变。
++DAILY_FIRST_IDEM_PREFIX = "daily_first:"
++
++
++def _is_daily_first_idem_key(related_item_id: str | None) -> bool:
++    """判定 related_item_id 是否落在首胜唯一部分索引的管辖键域内。"""
++    return bool(related_item_id) and str(related_item_id).startswith(DAILY_FIRST_IDEM_PREFIX)
++
++
+ class PhotonTransactionType:
+     """光子交易类型"""
+     GRANT_ACHIEVEMENT = "grant_achievement"      # 成就奖励
+@@ -193,6 +207,103 @@ class PhotonService:
+ 
+         return int(new_balance) + amount, int(new_balance)
+ 
++    async def _insert_daily_first_transaction_arbitrated(
++        self,
++        *,
++        user_id: str,
++        transaction_type: str,
++        amount: int,
++        balance_before: int,
++        balance_after: int,
++        source: str | None,
++        related_item_id: str,
++        extra_data: dict[str, Any] | None,
++    ) -> Any:
++        """daily_first 幂等键域的原子发放流水 INSERT（PHOTON-IDEM 写入侧收口）。
++
++        ``ON CONFLICT DO NOTHING RETURNING id``（galaxy_service 审计 INSERT
++        同款、PG/SQLite 双方言）：唯一部分索引 ``uq_photon_tx_daily_first_idem``
++        （迁移 photidem_20260923）仲裁并发同键双发——两个请求同时通过读侧门
++        的毫秒窗口内，败者的 INSERT 被索引丢弃（RETURNING 无行），调用方据此
++        判定 duplicate。无 target 形态可命中部分索引；表上另一唯一约束只有
++        uuid PK（id 由调用方新生成，冲突不可能），无误伤面。
++
++        GUID-typed bindparams（galaxy_service / outcome_absorption_service
++        同款惯例）：asyncpg 原生绑 UUID，aiosqlite 绑 str。
++        """
++        # 与 record_transaction 相同的枚举映射语义（含 admin_adjustment 兜底）
++        try:
++            db_transaction_type = DBPhotonTransactionType(transaction_type)
++        except ValueError:
++            logger.warning(f"Unknown transaction type: {transaction_type}, using admin_adjustment")
++            db_transaction_type = DBPhotonTransactionType.ADMIN_ADJUSTMENT
++
++        now = _utcnow()
++        stmt = text(
++            """
++            INSERT INTO photon_transaction_history (
++                id, user_id, transaction_type, amount,
++                balance_before, balance_after,
++                source, related_item_id, extra_data,
++                created_at, updated_at
++            )
++            VALUES (
++                :id, :user_id, :transaction_type, :amount,
++                :balance_before, :balance_after,
++                :source, :related_item_id, :extra_data,
++                :created_at, :updated_at
++            )
++            ON CONFLICT DO NOTHING
++            RETURNING id
++            """
++        ).bindparams(
++            bindparam("id", type_=GUID),
++            bindparam("user_id", type_=GUID),
++            bindparam("source", type_=String),
++            bindparam("related_item_id", type_=String),
++            bindparam("extra_data", type_=JSON),
++        )
++        result = await self.db.execute(
++            stmt,
++            {
++                "id": uuid4(),
++                "user_id": user_id,
++                "transaction_type": db_transaction_type.value,
++                "amount": amount,
++                "balance_before": balance_before,
++                "balance_after": balance_after,
++                "source": source,
++                "related_item_id": related_item_id,
++                "extra_data": extra_data,
++                "created_at": now,
++                "updated_at": now,
++            },
++        )
++        return result.scalar_one_or_none()
++
++    def _deduplicated_grant_result(
++        self,
++        existing_transaction: PhotonTransactionHistory,
++        *,
++        user_id: str,
++        amount: int,
++        source: str,
++        transaction_type: str,
++        transaction_metadata: dict[str, Any] | None,
++    ) -> dict[str, Any]:
++        """「已发放」终局：与读侧门命中同构的返回形状（PHOTON-IDEM 复用）。"""
++        return {
++            "user_id": user_id,
++            "amount": amount,
++            "old_balance": existing_transaction.balance_before,
++            "new_balance": existing_transaction.balance_after,
++            "source": source,
++            "transaction_type": transaction_type,
++            "timestamp": existing_transaction.created_at or _utcnow(),
++            "extra_data": existing_transaction.extra_data or transaction_metadata,
++            "deduplicated": True,
++        }
++
+     async def grant_photons(
+         self,
+         user_id: str,
+@@ -229,6 +340,7 @@ class PhotonService:
+         )
+ 
+         locked_user: User | None = None
++        daily_first_arbitrated = False
+         if record_history:
+             locked_user = await self._lock_user_balance_row(user_id)
+             existing_transaction = await self._find_existing_transaction(
+@@ -246,26 +358,90 @@ class PhotonService:
+                     transaction_type,
+                     related_item_id,
+                 )
+-                return {
+-                    "user_id": user_id,
+-                    "amount": amount,
+-                    "old_balance": existing_transaction.balance_before,
+-                    "new_balance": existing_transaction.balance_after,
+-                    "source": source,
+-                    "transaction_type": transaction_type,
+-                    "timestamp": existing_transaction.created_at or _utcnow(),
+-                    "extra_data": existing_transaction.extra_data or transaction_metadata,
+-                    "deduplicated": True,
+-                }
+-
+-        # 使用内部方法更新余额（自动删除缓存）
++                return self._deduplicated_grant_result(
++                    existing_transaction,
++                    user_id=user_id,
++                    amount=amount,
++                    source=source,
++                    transaction_type=transaction_type,
++                    transaction_metadata=transaction_metadata,
++                )
++
++            # PHOTON-IDEM 写入侧收口：daily_first 幂等键域由唯一部分索引
++            # （uq_photon_tx_daily_first_idem）仲裁「两个并发请求同时通过读侧
++            # 门」的毫秒窗口——读侧先查重（check-then-insert）的固有竞态在
++            # 缓存失守+DB 兜底双路径并发时仍可双发双计「可兑换基数」；这里
++            # 流水 INSERT 先行原子落定（ON CONFLICT DO NOTHING RETURNING），
++            # 冲突败者与读侧门命中同结局（零发放、deduplicated=True）。读侧
++            # 快路径保留：串行重放在上方已命中，不触达本分支。域外取值域
++            # （前缀守卫之外）不进本分支，行为逐字节不变。
++            if _is_daily_first_idem_key(related_item_id):
++                winner_id = await self._insert_daily_first_transaction_arbitrated(
++                    user_id=user_id,
++                    transaction_type=transaction_type,
++                    amount=amount,
++                    balance_before=int(locked_user.photon_balance or 0),
++                    balance_after=int(locked_user.photon_balance or 0) + amount,
++                    source=source,
++                    related_item_id=related_item_id,
++                    extra_data=transaction_metadata,
++                )
++                if winner_id is None:
++                    # 竞态败者：胜者流水已被索引提交落定。READ COMMITTED 下
++                    # 重查必可见（索引冲突本身即证明胜者行已提交）。
++                    race_winner = await self._find_existing_transaction(
++                        user_id=user_id,
++                        transaction_type=transaction_type,
++                        amount=amount,
++                        source=source,
++                        related_item_id=related_item_id,
++                    )
++                    if race_winner is not None:
++                        logger.info(
++                            "Lost daily-first idempotency race (unique index arbitration) "
++                            "for user %s, related_item_id=%s",
++                            user_id,
++                            related_item_id,
++                        )
++                        return self._deduplicated_grant_result(
++                            race_winner,
++                            user_id=user_id,
++                            amount=amount,
++                            source=source,
++                            transaction_type=transaction_type,
++                            transaction_metadata=transaction_metadata,
++                        )
++                    # 防御性兜底（理论上不可达）：零发放终局，余额原样返回，
++                    # 不伪造胜者账目。
++                    logger.warning(
++                        "Daily-first conflict winner row not visible for user %s, related_item_id=%s",
++                        user_id,
++                        related_item_id,
++                    )
++                    current_balance = int(locked_user.photon_balance or 0)
++                    return {
++                        "user_id": user_id,
++                        "amount": amount,
++                        "old_balance": current_balance,
++                        "new_balance": current_balance,
++                        "source": source,
++                        "transaction_type": transaction_type,
++                        "timestamp": _utcnow(),
++                        "extra_data": transaction_metadata,
++                        "deduplicated": True,
++                    }
++                daily_first_arbitrated = True
++
++        # 使用内部方法更新余额（自动删除缓存）。daily_first 仲裁胜者的流水已
++        # 先行落定（含 balance_before/after 快照），此处只补余额变更——同事务
++        # 内一致；败者已在上方返回，不会走到这里。
+         old_balance, new_balance, user = await self._update_balance(
+             user_id,
+             amount,
+             lock_for_update=locked_user is None,
+         )
+ 
+-        if record_history:
++        if record_history and not daily_first_arbitrated:
+             await self.record_transaction(
+                 user_id=user_id,
+                 transaction_type=transaction_type,
+diff --git a/backend/tests/unit/test_photon_idem_daily_first_concurrency.py b/backend/tests/unit/test_photon_idem_daily_first_concurrency.py
+new file mode 100644
+index 00000000..38f26bb4
+--- /dev/null
++++ b/backend/tests/unit/test_photon_idem_daily_first_concurrency.py
+@@ -0,0 +1,357 @@
++"""PHOTON-IDEM · 每日首胜发放毫秒窗口并发双发收口 —— 写侧唯一索引仲裁行为测试.
++
++PHOTON-STREAM 的同日幂等是读侧先查重（``PhotonService._find_existing_transaction``，
++check-then-insert）：Redis 缓存失守 + DB 兜底双路径并发时，两个请求在「彼此都还没
++写流水」的毫秒窗口内都读到「未发放」→ 双发双计「可兑换基数」。本卡收口 =
++
++- ``photon_transaction_history`` 上的唯一部分索引（迁移 photidem_20260923，只管辖
++  ``daily_first:`` 幂等键域）；
++- 写侧流水 INSERT ``ON CONFLICT DO NOTHING RETURNING``
++  （``PhotonService._insert_daily_first_transaction_arbitrated``）→ 冲突败者与
++  读侧门命中同结局（零发放、``deduplicated=True``），发放金额语义零变化。
++
++harness 与 ERR-IDEM-CONCUR（``test_error_mastery_concurrency``）同款：
++
++- 多个独立 session（sqlite 文件库、多条连接）模拟真实并发请求，各自持独立事务；
++- 真实 ``PhotonService.grant_photons`` 写入路径（不 stub 流水 INSERT），冲突检测
++  直接对着真实部分唯一索引仲裁；
++- ``asyncio.Barrier`` 把毫秒窗口放大成确定性交错点：所有协程都通过读侧门
++  （_find_existing_transaction）之后才同时放行写入——这正是修复前双发的窗口；
++- 断言全部写成交错无关（谁先落账都行）：恰好一方生效、恰好一行流水、余额只加一次。
++
++红线：读侧快路径保留（串行重放不触达写侧）、次日键不被索引吞、域外取值域
++（裸 achievement_id 等）不受索引约束。
++"""
++
++from __future__ import annotations
++
++import asyncio
++import sys
++from pathlib import Path
++from unittest.mock import AsyncMock
++from uuid import uuid4
++
++import pytest
++import pytest_asyncio
++from sqlalchemy import select, text
++
++REPO_ROOT = Path(__file__).resolve().parents[3]
++if str(REPO_ROOT) not in sys.path:
++    sys.path.insert(0, str(REPO_ROOT))
++
++from app.models.base import Base
++from app.models.shop import PhotonTransactionHistory
++from app.models.shop import PhotonTransactionType as DBTxType
++from app.models.user import User
++from app.services.photon_service import PhotonService, PhotonTransactionType
++
++TEST_DATABASE_URL = "sqlite+aiosqlite://"
++
++DAILY_FIRST_AMOUNT = 30
++
++# 与迁移 photidem_20260923 同构的唯一部分索引 DDL（谓词与迁移严格一致）。
++# ORM 建模不含该索引（迁移是唯一入口），测试台需手动补建。
++DAILY_FIRST_IDEM_UNIQUE_INDEX_DDL = """
++CREATE UNIQUE INDEX IF NOT EXISTS uq_photon_tx_daily_first_idem
++ON photon_transaction_history(user_id, related_item_id)
++WHERE related_item_id LIKE 'daily_first:%'
++"""
++
++
++class _ConcurrentRig:
++    """多 session（多条连接）+ 共享 schema 的并发测试台。"""
++
++    def __init__(self, engine):
++        self.engine = engine
++
++    def session_factory(self):
++        from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
++
++        return async_sessionmaker(self.engine, class_=AsyncSession, expire_on_commit=False)
++
++
++@pytest_asyncio.fixture
++async def rig(tmp_path):
++    from sqlalchemy.ext.asyncio import create_async_engine
++
++    engine = create_async_engine(
++        f"{TEST_DATABASE_URL}//{tmp_path / 'photon_idem.db'}",
++        connect_args={"timeout": 15.0},
++    )
++    async with engine.begin() as conn:
++        await conn.run_sync(Base.metadata.create_all)
++        await conn.execute(text(DAILY_FIRST_IDEM_UNIQUE_INDEX_DDL))
++
++    yield _ConcurrentRig(engine)
++    await engine.dispose()
++
++
++async def _seed_user(rig, *, balance: int = 0) -> str:
++    factory = rig.session_factory()
++    async with factory() as session:
++        user = User(
++            username=f"photidem_{uuid4().hex[:8]}",
++            email="photidem@example.com",
++            hashed_password="x",
++            photon_balance=balance,
++        )
++        session.add(user)
++        await session.commit()
++        return str(user.id)
++
++
++def _install_gate_barrier(service: PhotonService, barrier: asyncio.Barrier) -> None:
++    """毫秒窗口放大器：每个协程**第一次**通过读侧门后在 barrier 处等齐，再同时放行。
++
++    修复前语义下这就是双发窗口（双方都读到「未发放」）；修复后写入侧由
++    唯一部分索引仲裁出唯一胜者。注意必须单次拦截：竞态败者在写侧仲裁分支
++    会再次调用 _find_existing_transaction 重查胜者行（生产语义），那一次
++    不允许再进 barrier——否则败者在已收场的 barrier 上永久等待。
++    """
++    original_gate = service._find_existing_transaction
++    gate_armed = True
++
++    async def _gated(*args, **kwargs):
++        nonlocal gate_armed
++        seen = await original_gate(*args, **kwargs)
++        if gate_armed:
++            gate_armed = False
++            await barrier.wait()
++        return seen
++
++    service._find_existing_transaction = _gated
++
++
++async def _run_first_win(
++    rig,
++    user_id: str,
++    day: str,
++    barrier: asyncio.Barrier,
++) -> dict:
++    """一个真实请求：独立 session 内跑一次每日首胜发放面 + 请求边界提交。"""
++    factory = rig.session_factory()
++    async with factory() as session:
++        service = PhotonService(session)
++        _install_gate_barrier(service, barrier)
++        result = await service.grant_photons(
++            user_id=user_id,
++            amount=DAILY_FIRST_AMOUNT,
++            source="daily_first",
++            transaction_type=PhotonTransactionType.GRANT_DAILY_FIRST,
++            related_item_id=f"daily_first:{day}",
++            record_history=True,
++            manage_transaction=False,
++        )
++        # 生产语义：get_db 在请求边界提交（manage_transaction=False 只 flush）
++        await session.commit()
++        return result
++
++
++async def _tx_rows(rig, user_id: str, day: str | None = None) -> list[PhotonTransactionHistory]:
++    factory = rig.session_factory()
++    async with factory() as session:
++        stmt = select(PhotonTransactionHistory).where(
++            PhotonTransactionHistory.user_id == user_id
++        )
++        if day is not None:
++            stmt = stmt.where(PhotonTransactionHistory.related_item_id == f"daily_first:{day}")
++        stmt = stmt.order_by(PhotonTransactionHistory.created_at)
++        return list((await session.execute(stmt)).scalars().all())
++
++
++async def _final_balance(rig, user_id: str) -> int:
++    factory = rig.session_factory()
++    async with factory() as session:
++        result = await session.execute(select(User.photon_balance).where(User.id == user_id))
++        return int(result.scalar_one())
++
++
++# ===========================================================================
++# 1. 并发同日首胜（毫秒窗口）→ 恰好一发（修复前红：余额 60、流水 ×2）
++# ===========================================================================
++
++
++@pytest.mark.asyncio
++async def test_concurrent_same_day_first_win_grants_exactly_once(rig):
++    user_id = await _seed_user(rig, balance=0)
++    day = "2026-09-23"
++    barrier = asyncio.Barrier(2)  # 所有协程共享同一交错点
++
++    results = await asyncio.gather(*[
++        _run_first_win(rig, user_id, day, barrier)
++        for _ in range(2)
++    ])
++
++    effective = [r for r in results if not r["deduplicated"]]
++    deduped = [r for r in results if r["deduplicated"]]
++    assert len(effective) == 1, f"并发同日首胜必须恰好生效一次，实际 {len(effective)} 次"
++    assert len(deduped) == 1, "败者必须拿到 deduplicated=True 的读侧门同款结局"
++
++    rows = await _tx_rows(rig, user_id, day)
++    assert len(rows) == 1, f"同键流水必须恰好一行，实际 {len(rows)}"
++    assert rows[0].transaction_type == DBTxType.GRANT_DAILY_FIRST
++    assert rows[0].amount == DAILY_FIRST_AMOUNT
++    assert (rows[0].balance_before, rows[0].balance_after) == (0, DAILY_FIRST_AMOUNT)
++
++    assert await _final_balance(rig, user_id) == DAILY_FIRST_AMOUNT, "余额只允许加一次"
++
++
++# ===========================================================================
++# 2. 8 并发放大（照 ERR-IDEM-CONCUR 并发模式）→ 仍然恰好一发
++# ===========================================================================
++
++
++@pytest.mark.asyncio
++async def test_eight_way_concurrent_first_win_still_exactly_once(rig):
++    user_id = await _seed_user(rig, balance=0)
++    day = "2026-09-23"
++    barrier = asyncio.Barrier(8)  # 所有协程共享同一交错点
++
++    results = await asyncio.gather(*[
++        _run_first_win(rig, user_id, day, barrier)
++        for _ in range(8)
++    ])
++
++    effective = [r for r in results if not r["deduplicated"]]
++    assert len(effective) == 1, f"8 并发同键必须恰好生效一次，实际 {len(effective)} 次"
++    assert len(await _tx_rows(rig, user_id, day)) == 1
++    assert await _final_balance(rig, user_id) == DAILY_FIRST_AMOUNT
++    # 基数诚实性：审计流水重放口径下同键只可能贡献一份收入
++    assert sum(r.amount for r in await _tx_rows(rig, user_id)) == DAILY_FIRST_AMOUNT
++
++
++# ===========================================================================
++# 3. 竞态败者结局 == 读侧门命中（同形返回：零发放 + 胜者账目）
++# ===========================================================================
++
++
++@pytest.mark.asyncio
++async def test_race_loser_outcome_matches_read_gate_hit(rig):
++    user_id = await _seed_user(rig, balance=0)
++    barrier = asyncio.Barrier(2)  # 所有协程共享同一交错点
++
++    results = await asyncio.gather(*[
++        _run_first_win(rig, user_id, "2026-09-23", barrier)
++        for _ in range(2)
++    ])
++    winner = next(r for r in results if not r["deduplicated"])
++    loser = next(r for r in results if r["deduplicated"])
++
++    rows = await _tx_rows(rig, user_id, "2026-09-23")
++    assert len(rows) == 1
++    winner_row = rows[0]
++
++    # 败者返回胜者的账目快照（与读侧门命中 _find_existing_transaction 同构）
++    assert loser["deduplicated"] is True
++    assert loser["old_balance"] == winner_row.balance_before
++    assert loser["new_balance"] == winner_row.balance_after
++    assert loser["amount"] == DAILY_FIRST_AMOUNT
++    assert loser["source"] == "daily_first"
++    assert winner["deduplicated"] is False
++    assert (winner["old_balance"], winner["new_balance"]) == (0, DAILY_FIRST_AMOUNT)
++
++
++# ===========================================================================
++# 4. 串行重复（已提交后重放）→ 读侧快路径仍然生效（保留不回归）
++# ===========================================================================
++
++
++@pytest.mark.asyncio
++async def test_sequential_replay_still_uses_read_fast_path(rig):
++    user_id = await _seed_user(rig, balance=0)
++    day = "2026-09-23"
++
++    first = await _run_first_win(rig, user_id, day, asyncio.Barrier(1))
++    assert first["deduplicated"] is False
++
++    # 串行重放：读侧门直接命中，绝不触达写侧仲裁 INSERT（快路径保留）
++    factory = rig.session_factory()
++    async with factory() as session:
++        service = PhotonService(session)
++        service._insert_daily_first_transaction_arbitrated = AsyncMock(
++            side_effect=AssertionError("串行重放不得触达写侧仲裁")
++        )
++        replay = await service.grant_photons(
++            user_id=user_id,
++            amount=DAILY_FIRST_AMOUNT,
++            source="daily_first",
++            transaction_type=PhotonTransactionType.GRANT_DAILY_FIRST,
++            related_item_id=f"daily_first:{day}",
++            record_history=True,
++        )
++        service._insert_daily_first_transaction_arbitrated.assert_not_awaited()
++        await session.commit()
++
++    assert replay["deduplicated"] is True
++    assert len(await _tx_rows(rig, user_id, day)) == 1
++    assert await _final_balance(rig, user_id) == DAILY_FIRST_AMOUNT
++
++
++# ===========================================================================
++# 5. 红线：次日键自然变化 → 唯一索引绝不吞次日首胜（D-COMM-2 警告面）
++# ===========================================================================
++
++
++@pytest.mark.asyncio
++async def test_next_day_first_win_not_blocked_by_index(rig):
++    user_id = await _seed_user(rig, balance=0)
++
++    day1 = await _run_first_win(rig, user_id, "2026-09-23", asyncio.Barrier(1))
++    day2 = await _run_first_win(rig, user_id, "2026-09-24", asyncio.Barrier(1))
++
++    assert day1["deduplicated"] is False and day2["deduplicated"] is False
++    rows = await _tx_rows(rig, user_id)
++    assert [r.related_item_id for r in rows] == [
++        "daily_first:2026-09-23",
++        "daily_first:2026-09-24",
++    ]
++    assert await _final_balance(rig, user_id) == DAILY_FIRST_AMOUNT * 2
++
++
++# ===========================================================================
++# 6. 域外取值域不受索引约束：同键裸 achievement_id 重复写不违约（部分索引不越界）
++# ===========================================================================
++
++
++@pytest.mark.asyncio
++async def test_out_of_domain_keys_not_constrained_by_index(rig):
++    """裸 achievement_id（域外）即使读侧门失守也不该被索引误伤——
++    索引只管辖 daily_first: 域；域外重复本就存在合法场景（重试补发等）。"""
++    user_id = await _seed_user(rig, balance=0)
++
++    async def _grant_bare_key():
++        factory = rig.session_factory()
++        async with factory() as session:
++            service = PhotonService(session)
++            # 读侧门失守模拟（返回 None = 域外无去重语义的既有写入方形态）
++            service._find_existing_transaction = AsyncMock(return_value=None)
++            result = await service.grant_photons(
++                user_id=user_id,
++                amount=10,
++                source="achievement:ach_001",
++                transaction_type=PhotonTransactionType.GRANT_ACHIEVEMENT,
++                related_item_id="ach_001",
++                record_history=True,
++                manage_transaction=False,
++            )
++            await session.commit()
++            return result
++
++    await _grant_bare_key()
++    await _grant_bare_key()  # 不违约（域外不在部分索引谓词内）
++
++    factory = rig.session_factory()
++    async with factory() as session:
++        count = len(
++            list(
++                (
++                    await session.execute(
++                        select(PhotonTransactionHistory.id).where(
++                            PhotonTransactionHistory.user_id == user_id,
++                            PhotonTransactionHistory.related_item_id == "ach_001",
++                        )
++                    )
++                ).scalars()
++            )
++        )
++    assert count == 2, "域外同键重复写必须不受索引约束"
+diff --git a/backend/tests/unit/test_photonidem_daily_first_idem_unique_migration_sqlite.py b/backend/tests/unit/test_photonidem_daily_first_idem_unique_migration_sqlite.py
+new file mode 100644
+index 00000000..c1c01a41
+--- /dev/null
++++ b/backend/tests/unit/test_photonidem_daily_first_idem_unique_migration_sqlite.py
+@@ -0,0 +1,284 @@
++"""photidem_20260923 迁移在本地 sqlite 基座上的隔离重放（主库只读纪律）.
++
++不连主库 PostgreSQL：用 alembic Operations/MigrationContext 把
++photidem_20260923_photon_daily_first_idem_unique 的 upgrade/downgrade 单独跑在
++临时 sqlite 文件库上，验证 photon_transaction_history 每日首胜幂等键唯一部分
++索引的 schema 变更：
++
++- upgrade 收敛索引管辖域（related_item_id LIKE 'daily_first:%'）内的存量重复
++  (user_id, related_item_id) 组，保留最早一行（created_at 最小 = 首个真实发放
++  事件；后来者是并发 check-then-insert 竞态双发的虚增「可兑换基数」污染）；
++- 管辖域外的存量行（NULL、裸 achievement_id / contract_id、guest_welcome
++  跨用户同键、achievement_combo:<hex16>、purchase 裸 item_id 合法重复）一概
++  不动——部分索引谓词外零影响；
++- upgrade 后唯一部分索引存在且生效：同键二次 INSERT 违约、
++  ON CONFLICT DO NOTHING RETURNING 丢行（写侧生产契约）；
++- downgrade 后索引移除、存量行存活，round-trip 幂等可重入。
++
++迁移语义（为什么是部分索引而不是全列唯一、为什么 combo 域不并入）见迁移文件
++docstring 与 v3-output/PHOTON-IDEM/REPORT.md。
++"""
++
++from __future__ import annotations
++
++import importlib.util
++from pathlib import Path
++
++import pytest
++from alembic.migration import MigrationContext
++from alembic.operations import Operations
++from sqlalchemy import create_engine, inspect, text
++
++BACKEND_ROOT = Path(__file__).resolve().parents[2]
++MIGRATION_PATH = BACKEND_ROOT / "alembic" / "versions" / "photidem_20260923_photon_daily_first_idem_unique.py"
++
++INDEX_NAME = "uq_photon_tx_daily_first_idem"
++
++# 迁移前 schema：photon_transaction_history 裸表（无幂等唯一索引）。
++# 主表 PK 是 uuid（VARCHAR(36) 镜像）——PG 无 min(uuid) 聚合，迁移因此采用
++# (created_at, CAST(id AS TEXT)) 字典序收敛写法，本 DDL 与该语义对齐。
++BASE_DDL = """
++CREATE TABLE photon_transaction_history (
++    id VARCHAR(36) PRIMARY KEY,
++    user_id VARCHAR(36) NOT NULL,
++    transaction_type VARCHAR(50) NOT NULL,
++    amount INTEGER NOT NULL,
++    balance_before INTEGER NOT NULL,
++    balance_after INTEGER NOT NULL,
++    source VARCHAR(255),
++    related_item_id VARCHAR(50),
++    extra_data JSON,
++    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    updated_at TIMESTAMP NOT NULL,
++    deleted_at TIMESTAMP
++)
++"""
++
++U1 = "11111111-1111-1111-1111-111111111111"
++U2 = "22222222-2222-2222-2222-222222222222"
++U3 = "33333333-3333-3333-3333-333333333333"
++
++
++def _insert_tx(
++    conn,
++    *,
++    tx_id: str,
++    user: str,
++    related: str | None,
++    tx_type: str = "grant_daily_first",
++    amount: int = 30,
++    before: int = 0,
++    after: int = 30,
++    created: str = "2026-09-22 10:00:00",
++) -> None:
++    conn.exec_driver_sql(
++        "INSERT INTO photon_transaction_history "
++        "(id, user_id, transaction_type, amount, balance_before, balance_after, "
++        "source, related_item_id, extra_data, created_at, updated_at) "
++        "VALUES (?, ?, ?, ?, ?, ?, 'daily_first', ?, NULL, ?, ?)",
++        (tx_id, user, tx_type, amount, before, after, related, created, created),
++    )
++
++
++@pytest.fixture(name="migration_env")
++def _migration_env(tmp_path):
++    engine = create_engine(f"sqlite:///{tmp_path / 'photon_idem_migration.db'}")
++
++    # 迁移前基座：裸表 + 存量行（含索引管辖域内的重复组与域外各形态）
++    with engine.begin() as conn:
++        conn.exec_driver_sql(BASE_DDL)
++        # 管辖域内：同用户同日重复组（10:00 首个真实发放生效在前；
++        # 11:00 并发双发污染在后——并发竞态下胜者 0→30、败者又 +30）
++        _insert_tx(conn, tx_id="a" * 36, user=U1, related="daily_first:2026-09-22",
++                   before=0, after=30, created="2026-09-22 10:00:00")
++        _insert_tx(conn, tx_id="b" * 36, user=U1, related="daily_first:2026-09-22",
++                   before=30, after=60, created="2026-09-22 11:00:00")
++        # 管辖域内：唯一行（跨用户同日、同用户次日——都必须存活）
++        _insert_tx(conn, tx_id="c" * 36, user=U2, related="daily_first:2026-09-22",
++                   created="2026-09-22 12:00:00")
++        _insert_tx(conn, tx_id="d" * 36, user=U1, related="daily_first:2026-09-23",
++                   created="2026-09-23 09:00:00")
++        # 管辖域外：NULL（transfer/redeem_pro 形态，含同 NULL 重复组）
++        _insert_tx(conn, tx_id="e" * 36, user=U1, related=None, tx_type="transfer_in",
++                   amount=100, before=0, after=100, created="2026-09-20 10:00:00")
++        _insert_tx(conn, tx_id="f" * 36, user=U1, related=None, tx_type="transfer_in",
++                   amount=100, before=100, after=200, created="2026-09-21 10:00:00")
++        # 管辖域外：裸 achievement_id 重复对（重试补发形态）
++        _insert_tx(conn, tx_id="0" * 36, user=U1, related="ach_x", tx_type="grant_achievement",
++                   amount=10, before=0, after=10, created="2026-09-20 10:00:00")
++        _insert_tx(conn, tx_id="1" * 36, user=U1, related="ach_x", tx_type="grant_achievement",
++                   amount=10, before=10, after=20, created="2026-09-20 11:00:00")
++        # 管辖域外：guest_welcome 跨用户同键（per-user 域内各自唯一）
++        _insert_tx(conn, tx_id="2" * 36, user=U2, related="guest_welcome",
++                   tx_type="grant_achievement", amount=1000, before=0, after=1000)
++        _insert_tx(conn, tx_id="3" * 36, user=U3, related="guest_welcome",
++                   tx_type="grant_achievement", amount=1000, before=0, after=1000)
++        # 管辖域外：combo 键（uuid4 生成器唯一，裁决不并入索引）
++        _insert_tx(conn, tx_id="4" * 36, user=U1, related="achievement_combo:aaaabbbbccccdddd",
++                   tx_type="grant_bonus", amount=30, before=0, after=30)
++        # 管辖域外：purchase 裸 item_id 合法重复购买
++        _insert_tx(conn, tx_id="5" * 36, user=U1, related="consumable_exp_boost_1x_001",
++                   tx_type="purchase", amount=-300, before=300, after=0)
++        _insert_tx(conn, tx_id="6" * 36, user=U1, related="consumable_exp_boost_1x_001",
++                   tx_type="purchase", amount=-300, before=300, after=0)
++
++    def run_migration(op_fn) -> None:
++        # begin()：SQLAlchemy 2.x 无 commit 不落盘（DDL 亦在事务内），迁移必须在事务内执行
++        with engine.begin() as conn:
++            ctx = MigrationContext.configure(conn)
++            with Operations.context(ctx):
++                op_fn()
++
++    def load_upgrade_downgrade():
++        spec = importlib.util.spec_from_file_location("photidem_migration", MIGRATION_PATH)
++        module = importlib.util.module_from_spec(spec)
++        spec.loader.exec_module(module)
++        return module.upgrade, module.downgrade
++
++    yield engine, run_migration, load_upgrade_downgrade
++    engine.dispose()
++
++
++def _index_names(engine) -> set[str]:
++    insp = inspect(engine)
++    return {idx["name"] for idx in insp.get_indexes("photon_transaction_history")}
++
++
++def _scoped_rows(engine) -> list[tuple]:
++    with engine.connect() as conn:
++        return [
++            tuple(r)
++            for r in conn.execute(
++                text(
++                    "SELECT user_id, related_item_id, balance_before, balance_after "
++                    "FROM photon_transaction_history "
++                    "WHERE related_item_id LIKE 'daily_first:%' "
++                    "ORDER BY created_at, CAST(id AS TEXT)"
++                )
++            ).fetchall()
++        ]
++
++
++def test_upgrade_dedupes_daily_first_domain_keeping_earliest(migration_env):
++    engine, run_migration, load_upgrade_downgrade = migration_env
++    upgrade, _ = load_upgrade_downgrade()
++
++    # 迁移前：管辖域内 4 行（U1 同日重复组 + U2 同日唯一 + U1 次日唯一）
++    assert len(_scoped_rows(engine)) == 4
++
++    run_migration(upgrade)
++
++    # 重复收敛：U1 同日组保留最早一行（10:00 首个真实发放 0→30）；
++    # 11:00 的双发污染（30→60）被删除——「可兑换基数」还原诚实值
++    rows = _scoped_rows(engine)
++    assert rows == [
++        (U1, "daily_first:2026-09-22", 0, 30),
++        (U2, "daily_first:2026-09-22", 0, 30),
++        (U1, "daily_first:2026-09-23", 0, 30),
++    ], "保留最早、删除后来者；跨用户同日与同用户次日必须原样存活"
++    assert INDEX_NAME in _index_names(engine)
++
++
++def test_upgrade_leaves_out_of_scope_rows_untouched(migration_env):
++    engine, run_migration, load_upgrade_downgrade = migration_env
++    upgrade, _ = load_upgrade_downgrade()
++
++    run_migration(upgrade)
++
++    with engine.connect() as conn:
++        null_rows = conn.execute(
++            text("SELECT COUNT(*) FROM photon_transaction_history WHERE related_item_id IS NULL")
++        ).scalar()
++        bare_dup = conn.execute(
++            text(
++                "SELECT COUNT(*) FROM photon_transaction_history "
++                "WHERE related_item_id IN ('ach_x', 'consumable_exp_boost_1x_001')"
++            )
++        ).scalar()
++        guest_welcome = conn.execute(
++            text(
++                "SELECT COUNT(DISTINCT user_id) FROM photon_transaction_history "
++                "WHERE related_item_id = 'guest_welcome'"
++            )
++        ).scalar()
++        combo = conn.execute(
++            text(
++                "SELECT COUNT(*) FROM photon_transaction_history "
++                "WHERE related_item_id LIKE 'achievement_combo:%'"
++            )
++        ).scalar()
++    # 管辖域外零影响：NULL 重复组、域外既有重复对、跨用户同键、combo 全部原样
++    assert null_rows == 2
++    assert bare_dup == 4, "域外重复对（重试补发/合法重复购买）不属于本索引管辖"
++    assert guest_welcome == 2
++    assert combo == 1
++
++
++def test_upgrade_enforces_uniqueness_and_on_conflict_contract(migration_env):
++    engine, run_migration, load_upgrade_downgrade = migration_env
++    upgrade, _ = load_upgrade_downgrade()
++
++    run_migration(upgrade)
++
++    with engine.begin() as conn:
++        # 同键裸 INSERT 违约（同用户同日键）
++        with pytest.raises(Exception):
++            _insert_tx(conn, tx_id="7" * 36, user=U1, related="daily_first:2026-09-22",
++                       created="2026-09-22 15:00:00")
++    # 跨用户同日键不违约（per-user 语义）
++    with engine.begin() as conn:
++        _insert_tx(conn, tx_id="8" * 36, user=U3, related="daily_first:2026-09-22",
++                   created="2026-09-22 15:00:00")
++    # 写侧生产契约：ON CONFLICT DO NOTHING RETURNING 丢行（PhotonService 同款）
++    with engine.begin() as conn:
++        result = conn.execute(
++            text(
++                "INSERT INTO photon_transaction_history "
++                "(id, user_id, transaction_type, amount, balance_before, balance_after, "
++                "source, related_item_id, extra_data, created_at, updated_at) "
++                "VALUES (:id, :u, 'grant_daily_first', 30, 0, 30, 'daily_first', :q, NULL, "
++                "'2026-09-22 16:00:00', '2026-09-22 16:00:00') "
++                "ON CONFLICT DO NOTHING RETURNING id"
++            ),
++            {"id": "9" * 36, "u": U1, "q": "daily_first:2026-09-22"},
++        )
++        assert result.scalar_one_or_none() is None, "冲突时 RETURNING 必须无行（写侧据此判定 duplicate）"
++    # 非冲突键 RETURNING 返回新行 id
++    with engine.begin() as conn:
++        result = conn.execute(
++            text(
++                "INSERT INTO photon_transaction_history "
++                "(id, user_id, transaction_type, amount, balance_before, balance_after, "
++                "source, related_item_id, extra_data, created_at, updated_at) "
++                "VALUES (:id, :u, 'grant_daily_first', 30, 0, 30, 'daily_first', :q, NULL, "
++                "'2026-09-24 09:00:00', '2026-09-24 09:00:00') "
++                "ON CONFLICT DO NOTHING RETURNING id"
++            ),
++            {"id": "a" * 35 + "b", "u": U1, "q": "daily_first:2026-09-24"},
++        )
++        assert result.scalar_one_or_none() == "a" * 35 + "b"
++    # 域外重复写不受索引约束
++    with engine.begin() as conn:
++        _insert_tx(conn, tx_id="g" * 36, user=U2, related="ach_x", tx_type="grant_achievement",
++                   amount=10, before=0, after=10, created="2026-09-23 10:00:00")
++        _insert_tx(conn, tx_id="h" * 36, user=U2, related="ach_x", tx_type="grant_achievement",
++                   amount=10, before=10, after=20, created="2026-09-23 11:00:00")  # 不违约
++
++
++def test_round_trip_downgrade_and_reentrant(migration_env):
++    engine, run_migration, load_upgrade_downgrade = migration_env
++    upgrade, downgrade = load_upgrade_downgrade()
++
++    run_migration(upgrade)
++    assert INDEX_NAME in _index_names(engine)
++    scoped_after_upgrade = _scoped_rows(engine)
++
++    run_migration(downgrade)
++    assert INDEX_NAME not in _index_names(engine)
++    # downgrade 不回填被收敛的污染行；存量数据行原样存活
++    assert _scoped_rows(engine) == scoped_after_upgrade
++
++    # 可重入：再次 upgrade 幂等（无重复可删 + IF NOT EXISTS）
++    run_migration(upgrade)
++    assert INDEX_NAME in _index_names(engine)
++    assert _scoped_rows(engine) == scoped_after_upgrade

@@ -9,12 +9,13 @@ from typing import Any
 from uuid import uuid4
 
 from loguru import logger
-from sqlalchemy import and_, case, desc, func, select, update
+from sqlalchemy import JSON, String, and_, bindparam, case, desc, func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import lazyload
 
 from app.config import settings
 from app.core.cache import cache_service
+from app.models.base import GUID
 from app.models.shop import PhotonTransactionHistory
 from app.models.shop import PhotonTransactionType as DBPhotonTransactionType
 from app.models.user import User
@@ -23,6 +24,19 @@ from app.models.user import User
 def _utcnow() -> datetime:
     """Return naive UTC datetime compatible with existing DB fields."""
     return datetime.now(UTC).replace(tzinfo=None)
+
+
+#: PHOTON-IDEM：每日首胜幂等键命名空间前缀。唯一部分索引
+#: ``uq_photon_tx_daily_first_idem``（迁移 photidem_20260923）只管辖该域，
+#: 写入侧冲突仲裁分支以此为门——域外取值域（NULL、裸 achievement_id /
+#: contract_id、guest_welcome、achievement_combo:<hex16>、purchase item_id）
+#: 行为逐字节不变。
+DAILY_FIRST_IDEM_PREFIX = "daily_first:"
+
+
+def _is_daily_first_idem_key(related_item_id: str | None) -> bool:
+    """判定 related_item_id 是否落在首胜唯一部分索引的管辖键域内。"""
+    return bool(related_item_id) and str(related_item_id).startswith(DAILY_FIRST_IDEM_PREFIX)
 
 
 class PhotonTransactionType:
@@ -193,6 +207,103 @@ class PhotonService:
 
         return int(new_balance) + amount, int(new_balance)
 
+    async def _insert_daily_first_transaction_arbitrated(
+        self,
+        *,
+        user_id: str,
+        transaction_type: str,
+        amount: int,
+        balance_before: int,
+        balance_after: int,
+        source: str | None,
+        related_item_id: str,
+        extra_data: dict[str, Any] | None,
+    ) -> Any:
+        """daily_first 幂等键域的原子发放流水 INSERT（PHOTON-IDEM 写入侧收口）。
+
+        ``ON CONFLICT DO NOTHING RETURNING id``（galaxy_service 审计 INSERT
+        同款、PG/SQLite 双方言）：唯一部分索引 ``uq_photon_tx_daily_first_idem``
+        （迁移 photidem_20260923）仲裁并发同键双发——两个请求同时通过读侧门
+        的毫秒窗口内，败者的 INSERT 被索引丢弃（RETURNING 无行），调用方据此
+        判定 duplicate。无 target 形态可命中部分索引；表上另一唯一约束只有
+        uuid PK（id 由调用方新生成，冲突不可能），无误伤面。
+
+        GUID-typed bindparams（galaxy_service / outcome_absorption_service
+        同款惯例）：asyncpg 原生绑 UUID，aiosqlite 绑 str。
+        """
+        # 与 record_transaction 相同的枚举映射语义（含 admin_adjustment 兜底）
+        try:
+            db_transaction_type = DBPhotonTransactionType(transaction_type)
+        except ValueError:
+            logger.warning(f"Unknown transaction type: {transaction_type}, using admin_adjustment")
+            db_transaction_type = DBPhotonTransactionType.ADMIN_ADJUSTMENT
+
+        now = _utcnow()
+        stmt = text(
+            """
+            INSERT INTO photon_transaction_history (
+                id, user_id, transaction_type, amount,
+                balance_before, balance_after,
+                source, related_item_id, extra_data,
+                created_at, updated_at
+            )
+            VALUES (
+                :id, :user_id, :transaction_type, :amount,
+                :balance_before, :balance_after,
+                :source, :related_item_id, :extra_data,
+                :created_at, :updated_at
+            )
+            ON CONFLICT DO NOTHING
+            RETURNING id
+            """
+        ).bindparams(
+            bindparam("id", type_=GUID),
+            bindparam("user_id", type_=GUID),
+            bindparam("source", type_=String),
+            bindparam("related_item_id", type_=String),
+            bindparam("extra_data", type_=JSON),
+        )
+        result = await self.db.execute(
+            stmt,
+            {
+                "id": uuid4(),
+                "user_id": user_id,
+                "transaction_type": db_transaction_type.value,
+                "amount": amount,
+                "balance_before": balance_before,
+                "balance_after": balance_after,
+                "source": source,
+                "related_item_id": related_item_id,
+                "extra_data": extra_data,
+                "created_at": now,
+                "updated_at": now,
+            },
+        )
+        return result.scalar_one_or_none()
+
+    def _deduplicated_grant_result(
+        self,
+        existing_transaction: PhotonTransactionHistory,
+        *,
+        user_id: str,
+        amount: int,
+        source: str,
+        transaction_type: str,
+        transaction_metadata: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        """「已发放」终局：与读侧门命中同构的返回形状（PHOTON-IDEM 复用）。"""
+        return {
+            "user_id": user_id,
+            "amount": amount,
+            "old_balance": existing_transaction.balance_before,
+            "new_balance": existing_transaction.balance_after,
+            "source": source,
+            "transaction_type": transaction_type,
+            "timestamp": existing_transaction.created_at or _utcnow(),
+            "extra_data": existing_transaction.extra_data or transaction_metadata,
+            "deduplicated": True,
+        }
+
     async def grant_photons(
         self,
         user_id: str,
@@ -229,6 +340,7 @@ class PhotonService:
         )
 
         locked_user: User | None = None
+        daily_first_arbitrated = False
         if record_history:
             locked_user = await self._lock_user_balance_row(user_id)
             existing_transaction = await self._find_existing_transaction(
@@ -246,26 +358,90 @@ class PhotonService:
                     transaction_type,
                     related_item_id,
                 )
-                return {
-                    "user_id": user_id,
-                    "amount": amount,
-                    "old_balance": existing_transaction.balance_before,
-                    "new_balance": existing_transaction.balance_after,
-                    "source": source,
-                    "transaction_type": transaction_type,
-                    "timestamp": existing_transaction.created_at or _utcnow(),
-                    "extra_data": existing_transaction.extra_data or transaction_metadata,
-                    "deduplicated": True,
-                }
+                return self._deduplicated_grant_result(
+                    existing_transaction,
+                    user_id=user_id,
+                    amount=amount,
+                    source=source,
+                    transaction_type=transaction_type,
+                    transaction_metadata=transaction_metadata,
+                )
 
-        # 使用内部方法更新余额（自动删除缓存）
+            # PHOTON-IDEM 写入侧收口：daily_first 幂等键域由唯一部分索引
+            # （uq_photon_tx_daily_first_idem）仲裁「两个并发请求同时通过读侧
+            # 门」的毫秒窗口——读侧先查重（check-then-insert）的固有竞态在
+            # 缓存失守+DB 兜底双路径并发时仍可双发双计「可兑换基数」；这里
+            # 流水 INSERT 先行原子落定（ON CONFLICT DO NOTHING RETURNING），
+            # 冲突败者与读侧门命中同结局（零发放、deduplicated=True）。读侧
+            # 快路径保留：串行重放在上方已命中，不触达本分支。域外取值域
+            # （前缀守卫之外）不进本分支，行为逐字节不变。
+            if _is_daily_first_idem_key(related_item_id):
+                winner_id = await self._insert_daily_first_transaction_arbitrated(
+                    user_id=user_id,
+                    transaction_type=transaction_type,
+                    amount=amount,
+                    balance_before=int(locked_user.photon_balance or 0),
+                    balance_after=int(locked_user.photon_balance or 0) + amount,
+                    source=source,
+                    related_item_id=related_item_id,
+                    extra_data=transaction_metadata,
+                )
+                if winner_id is None:
+                    # 竞态败者：胜者流水已被索引提交落定。READ COMMITTED 下
+                    # 重查必可见（索引冲突本身即证明胜者行已提交）。
+                    race_winner = await self._find_existing_transaction(
+                        user_id=user_id,
+                        transaction_type=transaction_type,
+                        amount=amount,
+                        source=source,
+                        related_item_id=related_item_id,
+                    )
+                    if race_winner is not None:
+                        logger.info(
+                            "Lost daily-first idempotency race (unique index arbitration) "
+                            "for user %s, related_item_id=%s",
+                            user_id,
+                            related_item_id,
+                        )
+                        return self._deduplicated_grant_result(
+                            race_winner,
+                            user_id=user_id,
+                            amount=amount,
+                            source=source,
+                            transaction_type=transaction_type,
+                            transaction_metadata=transaction_metadata,
+                        )
+                    # 防御性兜底（理论上不可达）：零发放终局，余额原样返回，
+                    # 不伪造胜者账目。
+                    logger.warning(
+                        "Daily-first conflict winner row not visible for user %s, related_item_id=%s",
+                        user_id,
+                        related_item_id,
+                    )
+                    current_balance = int(locked_user.photon_balance or 0)
+                    return {
+                        "user_id": user_id,
+                        "amount": amount,
+                        "old_balance": current_balance,
+                        "new_balance": current_balance,
+                        "source": source,
+                        "transaction_type": transaction_type,
+                        "timestamp": _utcnow(),
+                        "extra_data": transaction_metadata,
+                        "deduplicated": True,
+                    }
+                daily_first_arbitrated = True
+
+        # 使用内部方法更新余额（自动删除缓存）。daily_first 仲裁胜者的流水已
+        # 先行落定（含 balance_before/after 快照），此处只补余额变更——同事务
+        # 内一致；败者已在上方返回，不会走到这里。
         old_balance, new_balance, user = await self._update_balance(
             user_id,
             amount,
             lock_for_update=locked_user is None,
         )
 
-        if record_history:
+        if record_history and not daily_first_arbitrated:
             await self.record_transaction(
                 user_id=user_id,
                 transaction_type=transaction_type,
