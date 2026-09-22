@@ -1,0 +1,682 @@
+diff --git a/mobile/lib/features/home/presentation/widgets/exam_sprint_dashboard_card.dart b/mobile/lib/features/home/presentation/widgets/exam_sprint_dashboard_card.dart
+index 6306b681..75230ab4 100644
+--- a/mobile/lib/features/home/presentation/widgets/exam_sprint_dashboard_card.dart
++++ b/mobile/lib/features/home/presentation/widgets/exam_sprint_dashboard_card.dart
+@@ -9,6 +9,9 @@ import 'package:sparkle/features/home/presentation/widgets/dashboard_section.dar
+ import 'package:sparkle/features/home/presentation/widgets/decoration_policy.dart';
+ import 'package:sparkle/l10n/app_localizations.dart';
+ 
++/// SPEC v1.1 A2.1 正典集入场时长（M3 梯内 320ms）——本卡 #2/#8 共用。
++const Duration _kCanonicalEntrance = Duration(milliseconds: 320);
++
+ class ExamSprintDashboardCard extends StatefulWidget {
+   const ExamSprintDashboardCard({
+     required this.data,
+@@ -38,7 +41,11 @@ class _ExamSprintDashboardCardState extends State<ExamSprintDashboardCard> {
+         .toLowerCase()
+         .startsWith('zh');
+     final data = widget.data;
+-    final accentColor = data.daysLeft <= 3 ? DS.error : DS.brandPrimary;
++    // SPEC v1.1 N5（改造 #9）：截止临近三档色阶 —— ≥7d 中性层（brandPrimary）
++    // → ≤7d warning → ≤1d error。error 槽在本上下文扩展为「不可挽回节点临近」，
++    // 禁再泛化；翻转范围收敛至 header（图标+模式 pill）与倒计时数字两处，
++    // 计划 chip / 任务组等其余位不再随 urgency 翻色。
++    final urgencyColor = _urgencyAccentColor(context.colors, data.daysLeft);
+     final futureGroups = data.futureGroups;
+ 
+     return ContentConstraint(
+@@ -64,7 +71,7 @@ class _ExamSprintDashboardCardState extends State<ExamSprintDashboardCard> {
+                     _CardHeader(
+                       isChinese: isChinese,
+                       targetMode: data.targetMode,
+-                      accentColor: accentColor,
++                      accentColor: urgencyColor,
+                     ),
+                     const SizedBox(height: DS.spacing18),
+                     LayoutBuilder(
+@@ -77,14 +84,13 @@ class _ExamSprintDashboardCardState extends State<ExamSprintDashboardCard> {
+                               _HeadlineBlock(
+                                 data: data,
+                                 isChinese: isChinese,
+-                                accentColor: accentColor,
++                                urgencyColor: urgencyColor,
+                               ),
+                               const SizedBox(height: DS.spacing18),
+                               Center(
+                                 child: _PassProbabilityArc(
+                                   data: data,
+                                   isChinese: isChinese,
+-                                  accentColor: accentColor,
+                                 ),
+                               ),
+                             ],
+@@ -98,14 +104,13 @@ class _ExamSprintDashboardCardState extends State<ExamSprintDashboardCard> {
+                               child: _HeadlineBlock(
+                                 data: data,
+                                 isChinese: isChinese,
+-                                accentColor: accentColor,
++                                urgencyColor: urgencyColor,
+                               ),
+                             ),
+                             const SizedBox(width: DS.spacing20),
+                             _PassProbabilityArc(
+                               data: data,
+                               isChinese: isChinese,
+-                              accentColor: accentColor,
+                             ),
+                           ],
+                         );
+@@ -183,7 +188,8 @@ class _ExamSprintDashboardCardState extends State<ExamSprintDashboardCard> {
+                       _TaskGroupCard(
+                         group: data.todayGroup!,
+                         isChinese: isChinese,
+-                        accentColor: accentColor,
++                        // N5 翻转收敛：任务组回归中性 accent（不随 urgency 翻色）。
++                        accentColor: context.colors.brandPrimary,
+                       )
+                     else
+                       Text(
+@@ -238,18 +244,20 @@ class _DayZeroBanner extends StatefulWidget {
+ 
+ class _DayZeroBannerState extends State<_DayZeroBanner>
+     with SingleTickerProviderStateMixin {
+-  late final AnimationController _floatController;
++  late final AnimationController _entranceController;
+ 
+-  /// U-01 Step 2 门控扩面：D-0 冲刺横幅的常驻浮动动画此前无条件 repeat；
+-  /// 中低档/reduce-motion 钉在静止相位，只保留静态卡面。
++  /// U-01 Step 2 门控保留；SPEC v1.1 N3（改造 #8）：常驻件禁循环呼吸/浮动——
++  /// 原 3000ms repeat(reverse) 浮动降级为**单次入场**（正典集 320ms，自下方
++  /// 6px 浮入），入场完成即静止定帧；中低档/reduce-motion 直接钉在静止位，
++  /// 不再占 home 屏 §2.6 持续动画源名额。
+   late DecorationMode _decorationMode = DecorationMode.animated;
+ 
+   @override
+   void initState() {
+     super.initState();
+-    _floatController = AnimationController(
++    _entranceController = AnimationController(
+       vsync: this,
+-      duration: const Duration(milliseconds: 3000),
++      duration: _kCanonicalEntrance,
+     );
+   }
+ 
+@@ -258,19 +266,22 @@ class _DayZeroBannerState extends State<_DayZeroBanner>
+     super.didChangeDependencies();
+     _decorationMode = resolveDecorationMode(context);
+     if (_decorationMode == DecorationMode.animated) {
+-      if (!_floatController.isAnimating) {
+-        _floatController.repeat(reverse: true);
++      // 单次入场：只播一次，依赖重建（主题/媒体变化）不重播。
++      if (!_entranceController.isAnimating &&
++          !_entranceController.isCompleted) {
++        _entranceController.forward();
+       }
+     } else {
+-      _floatController
++      // 静止定帧＝入场完成位（offset 0）。
++      _entranceController
+         ..stop()
+-        ..value = 0.5;
++        ..value = 1.0;
+     }
+   }
+ 
+   @override
+   void dispose() {
+-    _floatController.dispose();
++    _entranceController.dispose();
+     super.dispose();
+   }
+ 
+@@ -280,11 +291,13 @@ class _DayZeroBannerState extends State<_DayZeroBanner>
+     final tipText = data.sleepGuardHint;
+ 
+     return AnimatedBuilder(
+-      animation: _floatController,
++      animation: _entranceController,
+       builder: (context, child) {
+-        final offset = Curves.easeInOut.transform(_floatController.value) * 5;
++        // 单次入场映射：0＝自下方 6px，1＝静止位（0 偏移）；无循环往返。
++        final entrance =
++            Curves.easeOutCubic.transform(_entranceController.value);
+         return Transform.translate(
+-          offset: Offset(0, offset - 2.5),
++          offset: Offset(0, (1 - entrance) * 6),
+           child: child,
+         );
+       },
+@@ -454,12 +467,15 @@ class _HeadlineBlock extends StatelessWidget {
+   const _HeadlineBlock({
+     required this.data,
+     required this.isChinese,
+-    required this.accentColor,
++    required this.urgencyColor,
+   });
+ 
+   final ExamSprintDashboardData data;
+   final bool isChinese;
+-  final Color accentColor;
++
++  /// N5：倒计时数字位＝翻转收敛的两处之一（另一处是 header）。
++  /// ≥7d 档为中性 brandPrimary，≤7d warning，≤1d error。
++  final Color urgencyColor;
+ 
+   @override
+   Widget build(BuildContext context) {
+@@ -475,7 +491,7 @@ class _HeadlineBlock extends StatelessWidget {
+         Text(
+           countdown,
+           style: context.typo.headingLarge.copyWith(
+-            color: DS.textPrimary,
++            color: urgencyColor,
+             fontWeight: DS.fontWeightBold,
+             height: 1.06,
+           ),
+@@ -489,16 +505,17 @@ class _HeadlineBlock extends StatelessWidget {
+           ),
+         ),
+         const SizedBox(height: DS.spacing12),
++        // N5 翻转收敛：计划名 chip 回归中性面（不再随 urgency 翻色）。
+         Container(
+           padding: const EdgeInsets.symmetric(
+             horizontal: DS.spacing12,
+             vertical: DS.spacing10,
+           ),
+           decoration: BoxDecoration(
+-            color: accentColor.withValues(alpha: 0.08),
++            color: DS.surfaceSecondary,
+             borderRadius: BorderRadius.circular(14),
+             border: Border.all(
+-              color: accentColor.withValues(alpha: 0.14),
++              color: DS.textSecondary.withValues(alpha: 0.12),
+             ),
+           ),
+           child: Text(
+@@ -518,12 +535,10 @@ class _PassProbabilityArc extends StatefulWidget {
+   const _PassProbabilityArc({
+     required this.data,
+     required this.isChinese,
+-    required this.accentColor,
+   });
+ 
+   final ExamSprintDashboardData data;
+   final bool isChinese;
+-  final Color accentColor;
+ 
+   @override
+   State<_PassProbabilityArc> createState() => _PassProbabilityArcState();
+@@ -538,7 +553,9 @@ class _PassProbabilityArcState extends State<_PassProbabilityArc>
+     super.initState();
+     _controller = AnimationController(
+       vsync: this,
+-      duration: const Duration(milliseconds: 1200),
++      // SPEC v1.1 N6④（改造 #2）：入场动画收进 M3 正典集（A2.1 梯内 320ms），
++      // 原 1200ms offLadder 退役。
++      duration: _kCanonicalEntrance,
+     );
+     _controller.forward();
+   }
+@@ -562,6 +579,9 @@ class _PassProbabilityArcState extends State<_PassProbabilityArc>
+     final probability = widget.data.passProbability;
+     final isNull = probability == null;
+     final target = isNull ? 0.0 : probability.clamp(0.0, 1.0);
++    final colors = context.colors;
++    // N6③：低档（<0.4）按最终预测值判定（非动画中间值），触发动作文案兜底。
++    final showLowTierAction = !isNull && probability < 0.4;
+ 
+     return AnimatedBuilder(
+       animation: _controller,
+@@ -570,7 +590,7 @@ class _PassProbabilityArcState extends State<_PassProbabilityArc>
+         final value = target * eased;
+         final ringColor = isNull
+             ? DS.textSecondary.withValues(alpha: 0.3)
+-            : _probabilityColor(value);
++            : _probabilityColor(colors, value);
+ 
+         return Row(
+           mainAxisSize: MainAxisSize.min,
+@@ -633,6 +653,25 @@ class _PassProbabilityArcState extends State<_PassProbabilityArc>
+                     color: DS.textSecondary,
+                   ),
+                 ),
++                const SizedBox(height: DS.spacing4),
++                // N6②：预测数口径一行，就地可见（「按当前进度估算」级）。
++                Text(
++                  context.l10n.examPassProbabilityEstimate,
++                  style: context.typo.bodySmall.copyWith(
++                    color: DS.textSecondary,
++                  ),
++                ),
++                // N6③：低档分档动作文案兜底（不羞辱，给出口）。
++                if (showLowTierAction) ...[
++                  const SizedBox(height: DS.spacing4),
++                  Text(
++                    context.l10n.examPassProbabilityLowAction,
++                    style: context.typo.bodySmall.copyWith(
++                      color: DS.textSecondary,
++                      height: 1.3,
++                    ),
++                  ),
++                ],
+               ],
+             ),
+           ],
+@@ -641,10 +680,13 @@ class _PassProbabilityArcState extends State<_PassProbabilityArc>
+     );
+   }
+ 
+-  static Color _probabilityColor(double value) {
+-    if (value < 0.4) return DS.error;
+-    if (value <= 0.6) return DS.warning;
+-    return DS.success;
++  /// SPEC v1.1 N6④：红绿灯三档编码色走 theme 语义槽（context.colors）——
++  /// colorBlindFriendly 主题下自动切换 Okabe-Ito CB-safe 变体，消除红绿单通道依赖；
++  /// 禁回退静态 DS 常量直读（那会绕过注入主题）。
++  static Color _probabilityColor(SparkleColors colors, double value) {
++    if (value < 0.4) return colors.error;
++    if (value <= 0.6) return colors.warning;
++    return colors.success;
+   }
+ }
+ 
+@@ -993,6 +1035,15 @@ class _ModePill extends StatelessWidget {
+       );
+ }
+ 
++/// SPEC v1.1 N5（改造 #9）：倒计时上下文三档色阶——≤1d error（含考日豁免
++/// 语义「不可挽回节点临近」）→ ≤7d warning → 其余中性（brandPrimary）。
++/// 色源走 theme 语义槽，CB-friendly 主题下随 SparkleColors 变体切换。
++Color _urgencyAccentColor(SparkleColors colors, int daysLeft) {
++  if (daysLeft <= 1) return colors.error;
++  if (daysLeft <= 7) return colors.warning;
++  return colors.brandPrimary;
++}
++
+ String _modeLabel(String? mode, {required AppLocalizations l}) {
+   switch (mode) {
+     case 'high_score':
+diff --git a/mobile/lib/l10n/app_en.arb b/mobile/lib/l10n/app_en.arb
+index 47a76beb..c0663eff 100755
+--- a/mobile/lib/l10n/app_en.arb
++++ b/mobile/lib/l10n/app_en.arb
+@@ -9543,6 +9543,8 @@
+     "examStreakDays": "{count} d",
+     "examTaskMinutes": "{minutes} min",
+     "examPlanSubject": "{planName}",
++    "examPassProbabilityEstimate": "Estimated from your current progress",
++    "examPassProbabilityLowAction": "Still time — focus on high-yield topics first",
+     "openclawAutomationScheduleCount": "{count} automations",
+     "openclawBatchCandidateCount": "{count} batch candidates",
+     "openclawAutomationIntro": "Centralize one-off batch delegations and recurring scheduled executions here. You can manage both \"do now\" and \"automate later\" without leaving the OpenClaw Hub.",
+diff --git a/mobile/lib/l10n/app_localizations.dart b/mobile/lib/l10n/app_localizations.dart
+index b4204ae8..d5ff0517 100644
+--- a/mobile/lib/l10n/app_localizations.dart
++++ b/mobile/lib/l10n/app_localizations.dart
+@@ -36979,6 +36979,18 @@ abstract class AppLocalizations {
+   /// **'{planName}'**
+   String examPlanSubject(Object planName);
+ 
++  /// No description provided for @examPassProbabilityEstimate.
++  ///
++  /// In zh, this message translates to:
++  /// **'按当前进度估算'**
++  String get examPassProbabilityEstimate;
++
++  /// No description provided for @examPassProbabilityLowAction.
++  ///
++  /// In zh, this message translates to:
++  /// **'还来得及，先攻高频考点'**
++  String get examPassProbabilityLowAction;
++
+   /// No description provided for @openclawAutomationScheduleCount.
+   ///
+   /// In zh, this message translates to:
+diff --git a/mobile/lib/l10n/app_localizations_en.dart b/mobile/lib/l10n/app_localizations_en.dart
+index 3f364d17..6c58732a 100644
+--- a/mobile/lib/l10n/app_localizations_en.dart
++++ b/mobile/lib/l10n/app_localizations_en.dart
+@@ -21171,6 +21171,14 @@ class AppLocalizationsEn extends AppLocalizations {
+     return '$planName';
+   }
+ 
++  @override
++  String get examPassProbabilityEstimate =>
++      'Estimated from your current progress';
++
++  @override
++  String get examPassProbabilityLowAction =>
++      'Still time — focus on high-yield topics first';
++
+   @override
+   String openclawAutomationScheduleCount(Object count) {
+     return '$count automations';
+diff --git a/mobile/lib/l10n/app_localizations_zh.dart b/mobile/lib/l10n/app_localizations_zh.dart
+index 5f3f0817..be7f31ce 100644
+--- a/mobile/lib/l10n/app_localizations_zh.dart
++++ b/mobile/lib/l10n/app_localizations_zh.dart
+@@ -20297,6 +20297,12 @@ class AppLocalizationsZh extends AppLocalizations {
+     return '$planName';
+   }
+ 
++  @override
++  String get examPassProbabilityEstimate => '按当前进度估算';
++
++  @override
++  String get examPassProbabilityLowAction => '还来得及，先攻高频考点';
++
+   @override
+   String openclawAutomationScheduleCount(Object count) {
+     return '$count 条自动化';
+diff --git a/mobile/lib/l10n/app_zh.arb b/mobile/lib/l10n/app_zh.arb
+index d7d2928f..d90138a2 100755
+--- a/mobile/lib/l10n/app_zh.arb
++++ b/mobile/lib/l10n/app_zh.arb
+@@ -9345,6 +9345,8 @@
+     "examStreakDays": "{count} 天",
+     "examTaskMinutes": "{minutes} 分钟",
+     "examPlanSubject": "{planName}",
++    "examPassProbabilityEstimate": "按当前进度估算",
++    "examPassProbabilityLowAction": "还来得及，先攻高频考点",
+     "openclawAutomationScheduleCount": "{count} 条自动化",
+     "openclawBatchCandidateCount": "{count} 个批量候选",
+     "openclawAutomationIntro": "把一次性的批量委派和长期的定时执行都集中到这里。你不需要离开 OpenClaw Hub，就能把「现在做」与「之后自动做」都安排好。",
+diff --git a/mobile/test/features/home/presentation/widgets/exam_sprint_dashboard_card_test.dart b/mobile/test/features/home/presentation/widgets/exam_sprint_dashboard_card_test.dart
+index 161a0236..ad593d74 100644
+--- a/mobile/test/features/home/presentation/widgets/exam_sprint_dashboard_card_test.dart
++++ b/mobile/test/features/home/presentation/widgets/exam_sprint_dashboard_card_test.dart
+@@ -1,8 +1,13 @@
+ import 'package:flutter/material.dart';
++import 'package:flutter_localizations/flutter_localizations.dart';
+ import 'package:flutter_test/flutter_test.dart';
++import 'package:sparkle/core/design/theme/performance_tier.dart';
+ import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
++import 'package:sparkle/core/design/tokens_v2/theme_manager.dart';
++import 'package:sparkle/core/services/performance_service.dart';
+ import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboard_provider.dart';
+ import 'package:sparkle/features/home/presentation/widgets/exam_sprint_dashboard_card.dart';
++import 'package:sparkle/l10n/app_localizations.dart';
+ import '../../../../shared/i18n_test_helper.dart';
+ 
+ void main() {
+@@ -153,7 +158,7 @@ void main() {
+         sleepGuardHint: '保持稳定，不熬夜',
+       );
+       await tester.pumpWidget(_buildCard(data));
+-      // _DayZeroBanner has a repeating float animation — pump, not pumpAndSettle
++      // SPEC-B #8 后横幅为单次入场（320ms）——pump 越过入场窗口即可
+       await tester.pump(const Duration(milliseconds: 400));
+ 
+       // Banner title is present
+@@ -210,4 +215,270 @@ void main() {
+       expect(callbackFired, isTrue);
+     });
+   });
++
++  // ───────────────────────── SPEC-B（北极星全旅程 · A 纵队） ─────────────────────────
++  // 验收依据：v3-output/A-SPEC-V1_1/REPORT.md §4 N3/N5/N6 + §5 改造 #2/#8/#9。
++
++  group('SPEC-B #9 — N5 urgency 三档色阶（≥7d 中性 / ≤7d warning / ≤1d error）', () {
++    final standard = SparkleColors.light();
++
++    Future<void> pumpCardAt(WidgetTester tester, int daysLeft) async {
++      await tester
++          .pumpWidget(_buildCard(_makeData(daysLeft: daysLeft, passProbability: 0.72)));
++      await tester.pumpAndSettle();
++    }
++
++    Color headerIconColor(WidgetTester tester) => tester
++        .widget<Icon>(find.byIcon(Icons.rocket_launch_rounded))
++        .color!;
++
++    Color countdownColor(WidgetTester tester, String text) =>
++        tester.widget<Text>(find.text(text)).style!.color!;
++
++    testWidgets('中性档（daysLeft=10 ≥ 8）：header 与倒计时数字均为 brandPrimary',
++        (tester) async {
++      await pumpCardAt(tester, 10);
++      expect(find.text('距考试还有 10 天'), findsOneWidget);
++      // 翻转收敛两处之一：header（图标 + 模式 pill 同源）。
++      expect(headerIconColor(tester), standard.brandPrimary);
++      // 翻转收敛两处之二：倒计时数字。
++      expect(
++        countdownColor(tester, '距考试还有 10 天'),
++        standard.brandPrimary,
++      );
++    });
++
++    testWidgets('档位边界：daysLeft=8 中性 / daysLeft=7 与 2 warning',
++        (tester) async {
++      await pumpCardAt(tester, 8);
++      expect(
++        countdownColor(tester, '距考试还有 8 天'),
++        standard.brandPrimary,
++        reason: '≥7d（即 ≥8 天）应为中性档',
++      );
++
++      await pumpCardAt(tester, 7);
++      expect(
++        countdownColor(tester, '距考试还有 7 天'),
++        standard.semanticWarning,
++        reason: '≤7d 应进入 warning 档',
++      );
++
++      await pumpCardAt(tester, 2);
++      expect(countdownColor(tester, '距考试还有 2 天'), standard.semanticWarning);
++    });
++
++    testWidgets('warning 档（daysLeft=5）：色值命中 warning 槽，且全树无 error 槽',
++        (tester) async {
++      await pumpCardAt(tester, 5);
++      expect(find.text('距考试还有 5 天'), findsOneWidget);
++      expect(headerIconColor(tester), standard.semanticWarning);
++      expect(countdownColor(tester, '距考试还有 5 天'), standard.semanticWarning);
++
++      // 验收「error 槽在 ≤7d 档不出现」：扫全树 Text/Icon 前景色。
++      final errorColor = standard.semanticError;
++      final textColors = tester
++          .widgetList<Text>(find.byType(Text))
++          .map((t) => t.style?.color)
++          .whereType<Color>()
++          .toList();
++      expect(textColors, isNotEmpty);
++      expect(textColors, everyElement(isNot(errorColor)));
++      final iconColors = tester
++          .widgetList<Icon>(find.byType(Icon))
++          .map((i) => i.color)
++          .whereType<Color>()
++          .toList();
++      expect(iconColors, isNotEmpty);
++      expect(iconColors, everyElement(isNot(errorColor)));
++    });
++
++    testWidgets('error 档（daysLeft=1 ≤ 1d）：header 与倒计时数字均 error 槽',
++        (tester) async {
++      await pumpCardAt(tester, 1);
++      expect(find.text('距考试还有 1 天'), findsOneWidget);
++      expect(headerIconColor(tester), standard.semanticError);
++      expect(countdownColor(tester, '距考试还有 1 天'), standard.semanticError);
++    });
++  });
++
++  group('SPEC-B #2 — N6 预测数准入四件（口径行 / 低档文案 / CB-safe 色源 / 320ms）',
++      () {
++    testWidgets('② 口径一行就地可见：「按当前进度估算」', (tester) async {
++      await tester.pumpWidget(_buildCard(_makeData(passProbability: 0.72)));
++      await tester.pumpAndSettle();
++      expect(find.text('按当前进度估算'), findsOneWidget);
++    });
++
++    testWidgets('③ 低档（<0.4）动作文案触发；≥0.4 不出现', (tester) async {
++      await tester.pumpWidget(_buildCard(_makeData(passProbability: 0.35)));
++      await tester.pumpAndSettle();
++      expect(find.text('还来得及，先攻高频考点'), findsOneWidget);
++
++      await tester.pumpWidget(_buildCard(_makeData(passProbability: 0.72)));
++      await tester.pumpAndSettle();
++      expect(find.text('还来得及，先攻高频考点'), findsNothing);
++    });
++
++    testWidgets('④ 入场动画时长 ∈ 正典集：320ms 到点完成（排掉 1200ms offLadder 档）',
++        (tester) async {
++      await tester.pumpWidget(_buildCard(_makeData(passProbability: 0.72)));
++      await tester.pump(); // 首帧：动画起跑，弧值 0%
++      expect(find.text('0%'), findsOneWidget);
++
++      // 半程（160ms）：easeOutCubic(0.5)≈0.875 → 显示 ≈63%，证明动画在途非瞬时。
++      await tester.pump(const Duration(milliseconds: 160));
++      expect(find.text('72%'), findsNothing);
++
++      // 320ms 正典档到点：必须已到位（旧 1200ms 档在此刻远未完成）。
++      await tester.pump(const Duration(milliseconds: 160));
++      expect(find.text('72%'), findsOneWidget);
++    });
++
++    testWidgets('④ CB 变体：编码色经 theme 注入 Okabe-Ito CB-safe 槽（无红绿依赖）',
++        (tester) async {
++      // CB-friendly 主题（非 ThemeManager 单例路径）注入 ThemeData，
++      // 断言弧色取自主题变体而非静态常量。
++      final cbColors = SparkleColors.light(colorBlindFriendly: true);
++      final standardColors = SparkleColors.light();
++      await tester.pumpWidget(
++        MaterialApp(
++          theme: ThemeData.light().copyWith(
++            extensions: [SparkleThemeExtension.light(colors: cbColors)],
++          ),
++          locale: const Locale('zh'),
++          localizationsDelegates: const [
++            AppLocalizations.delegate,
++            GlobalMaterialLocalizations.delegate,
++            GlobalWidgetsLocalizations.delegate,
++            GlobalCupertinoLocalizations.delegate,
++          ],
++          supportedLocales: AppLocalizations.supportedLocales,
++          home: Scaffold(
++            body: SingleChildScrollView(
++              child: ExamSprintDashboardCard(
++                data: _makeData(passProbability: 0.35),
++              ),
++            ),
++          ),
++        ),
++      );
++      await tester.pumpAndSettle();
++
++      final ringColor = _passProbabilityRingColor(tester);
++      // 0.35 < 0.4 → error 槽：CB-safe 变体为 Okabe-Ito 朱红（非普通红），
++      // 与标准亮色主题的 error 值不同 ⇒ 色源确实走 theme 注入。
++      expect(ringColor, const Color(0xFFD55E00));
++      expect(ringColor, isNot(standardColors.semanticError));
++
++      // success 槽（0.72）在 CB 变体下为蓝绿（bluish green），与朱红形成
++      // 蓝/红双通道对比——色盲用户仍可区分（无红绿单通道依赖）。
++      await tester.pumpWidget(
++        MaterialApp(
++          theme: ThemeData.light().copyWith(
++            extensions: [SparkleThemeExtension.light(colors: cbColors)],
++          ),
++          locale: const Locale('zh'),
++          localizationsDelegates: const [
++            AppLocalizations.delegate,
++            GlobalMaterialLocalizations.delegate,
++            GlobalWidgetsLocalizations.delegate,
++            GlobalCupertinoLocalizations.delegate,
++          ],
++          supportedLocales: AppLocalizations.supportedLocales,
++          home: Scaffold(
++            body: SingleChildScrollView(
++              child: ExamSprintDashboardCard(
++                data: _makeData(passProbability: 0.72),
++              ),
++            ),
++          ),
++        ),
++      );
++      await tester.pumpAndSettle();
++      expect(
++        _passProbabilityRingColor(tester),
++        const Color(0xFF009E73),
++      );
++    });
++  });
++
++  group('SPEC-B #8 — N3 DayZero 单次入场 + 静止定帧（禁循环浮动）', () {
++    /// 横幅入场偏移（Transform.translate 的 y）；无偏移（全恒等矩阵）视为静止位 0。
++    double bannerTranslateY(WidgetTester tester) {
++      final transforms = tester
++          .widgetList<Transform>(find.byType(Transform))
++          .where((t) => !t.transform.isIdentity())
++          .toList();
++      if (transforms.isEmpty) return 0.0;
++      return transforms.first.transform.getTranslation().y;
++    }
++
++    ExamSprintDashboardData dayZeroData() => _makeData(
++          daysLeft: 0,
++          passProbability: 0.9,
++          subject: '计算机网络',
++        );
++
++    /// 测试宿主默认解析为 medium 档（60Hz + dpr 3.0 → staticFrame），
++    /// 强制 high 档才能走进 animated 分支验证入场行为。
++    void forceHighTier() {
++      PerformanceService.instance.currentTier.value = PerformanceTier.high;
++      addTearDown(() =>
++          PerformanceService.instance.currentTier.value =
++              defaultPerformanceTier());
++    }
++
++    testWidgets('单次入场：320ms 内到静止位，之后持续观察无循环浮动', (tester) async {
++      forceHighTier();
++      await tester.pumpWidget(_buildCard(dayZeroData()));
++      await tester.pump(); // 首帧：入场起跑（自下方 6px 浮入）
++      expect(find.text('今天考试 · 你已经准备好了 🎓'), findsOneWidget);
++      expect(bannerTranslateY(tester), greaterThan(0));
++
++      // 正典档 320ms 到点：静止位（offset 0）。
++      await tester.pump(const Duration(milliseconds: 320));
++      expect(bannerTranslateY(tester), 0.0);
++
++      // 持续观察 2.5s（覆盖旧 3000ms repeat 的一个完整周期）：偏移恒 0。
++      await tester.pump(const Duration(milliseconds: 1000));
++      expect(bannerTranslateY(tester), 0.0);
++      await tester.pump(const Duration(milliseconds: 1500));
++      expect(bannerTranslateY(tester), 0.0);
++    });
++
++    testWidgets('reduce-motion：首帧即钉在静止位（无入场播放）', (tester) async {
++      forceHighTier(); // 排除 tier 降档干扰：此路径专验 reduce-motion 门控
++      await tester.pumpWidget(
++        testMaterialApp(
++          home: MediaQuery(
++            data: const MediaQueryData(disableAnimations: true),
++            child: Scaffold(
++              body: SingleChildScrollView(
++                child: ExamSprintDashboardCard(data: _makeData(daysLeft: 0)),
++              ),
++            ),
++          ),
++        ),
++      );
++      await tester.pump();
++      expect(find.text('今天考试 · 你已经准备好了 🎓'), findsOneWidget);
++      expect(bannerTranslateY(tester), 0.0);
++      await tester.pump(const Duration(milliseconds: 500));
++      expect(bannerTranslateY(tester), 0.0);
++    });
++  });
++}
++
++/// 提取通过率弧 CustomPaint 的画家色值（画家为私有类，经 runtimeType 定位）。
++Color _passProbabilityRingColor(WidgetTester tester) {
++  final customPaint = tester.widget<CustomPaint>(
++    find.byWidgetPredicate(
++      (w) =>
++          w is CustomPaint &&
++          w.painter != null &&
++          w.painter!.runtimeType.toString() == '_PassProbabilityRingPainter',
++    ),
++  );
++  return (customPaint.painter! as dynamic).color as Color;
+ }

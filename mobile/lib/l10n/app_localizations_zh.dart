@@ -20298,6 +20298,12 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get examPassProbabilityEstimate => '按当前进度估算';
+
+  @override
+  String get examPassProbabilityLowAction => '还来得及，先攻高频考点';
+
+  @override
   String openclawAutomationScheduleCount(Object count) {
     return '$count 条自动化';
   }

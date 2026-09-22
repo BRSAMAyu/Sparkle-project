@@ -9543,6 +9543,8 @@
     "examStreakDays": "{count} d",
     "examTaskMinutes": "{minutes} min",
     "examPlanSubject": "{planName}",
+    "examPassProbabilityEstimate": "Estimated from your current progress",
+    "examPassProbabilityLowAction": "Still time — focus on high-yield topics first",
     "openclawAutomationScheduleCount": "{count} automations",
     "openclawBatchCandidateCount": "{count} batch candidates",
     "openclawAutomationIntro": "Centralize one-off batch delegations and recurring scheduled executions here. You can manage both \"do now\" and \"automate later\" without leaving the OpenClaw Hub.",

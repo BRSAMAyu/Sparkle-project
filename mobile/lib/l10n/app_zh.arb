@@ -9345,6 +9345,8 @@
     "examStreakDays": "{count} 天",
     "examTaskMinutes": "{minutes} 分钟",
     "examPlanSubject": "{planName}",
+    "examPassProbabilityEstimate": "按当前进度估算",
+    "examPassProbabilityLowAction": "还来得及，先攻高频考点",
     "openclawAutomationScheduleCount": "{count} 条自动化",
     "openclawBatchCandidateCount": "{count} 个批量候选",
     "openclawAutomationIntro": "把一次性的批量委派和长期的定时执行都集中到这里。你不需要离开 OpenClaw Hub，就能把「现在做」与「之后自动做」都安排好。",

@@ -36979,6 +36979,18 @@ abstract class AppLocalizations {
   /// **'{planName}'**
   String examPlanSubject(Object planName);
 
+  /// No description provided for @examPassProbabilityEstimate.
+  ///
+  /// In zh, this message translates to:
+  /// **'按当前进度估算'**
+  String get examPassProbabilityEstimate;
+
+  /// No description provided for @examPassProbabilityLowAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'还来得及，先攻高频考点'**
+  String get examPassProbabilityLowAction;
+
   /// No description provided for @openclawAutomationScheduleCount.
   ///
   /// In zh, this message translates to:

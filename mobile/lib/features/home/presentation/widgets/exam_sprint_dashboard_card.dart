@@ -9,6 +9,9 @@ import 'package:sparkle/features/home/presentation/widgets/dashboard_section.dar
 import 'package:sparkle/features/home/presentation/widgets/decoration_policy.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
+/// SPEC v1.1 A2.1 正典集入场时长（M3 梯内 320ms）——本卡 #2/#8 共用。
+const Duration _kCanonicalEntrance = Duration(milliseconds: 320);
+
 class ExamSprintDashboardCard extends StatefulWidget {
   const ExamSprintDashboardCard({
     required this.data,
@@ -38,7 +41,11 @@ class _ExamSprintDashboardCardState extends State<ExamSprintDashboardCard> {
         .toLowerCase()
         .startsWith('zh');
     final data = widget.data;
-    final accentColor = data.daysLeft <= 3 ? DS.error : DS.brandPrimary;
+    // SPEC v1.1 N5（改造 #9）：截止临近三档色阶 —— ≥7d 中性层（brandPrimary）
+    // → ≤7d warning → ≤1d error。error 槽在本上下文扩展为「不可挽回节点临近」，
+    // 禁再泛化；翻转范围收敛至 header（图标+模式 pill）与倒计时数字两处，
+    // 计划 chip / 任务组等其余位不再随 urgency 翻色。
+    final urgencyColor = _urgencyAccentColor(context.colors, data.daysLeft);
     final futureGroups = data.futureGroups;
 
     return ContentConstraint(
@@ -64,7 +71,7 @@ class _ExamSprintDashboardCardState extends State<ExamSprintDashboardCard> {
                     _CardHeader(
                       isChinese: isChinese,
                       targetMode: data.targetMode,
-                      accentColor: accentColor,
+                      accentColor: urgencyColor,
                     ),
                     const SizedBox(height: DS.spacing18),
                     LayoutBuilder(
@@ -77,14 +84,13 @@ class _ExamSprintDashboardCardState extends State<ExamSprintDashboardCard> {
                               _HeadlineBlock(
                                 data: data,
                                 isChinese: isChinese,
-                                accentColor: accentColor,
+                                urgencyColor: urgencyColor,
                               ),
                               const SizedBox(height: DS.spacing18),
                               Center(
                                 child: _PassProbabilityArc(
                                   data: data,
                                   isChinese: isChinese,
-                                  accentColor: accentColor,
                                 ),
                               ),
                             ],
@@ -98,14 +104,13 @@ class _ExamSprintDashboardCardState extends State<ExamSprintDashboardCard> {
                               child: _HeadlineBlock(
                                 data: data,
                                 isChinese: isChinese,
-                                accentColor: accentColor,
+                                urgencyColor: urgencyColor,
                               ),
                             ),
                             const SizedBox(width: DS.spacing20),
                             _PassProbabilityArc(
                               data: data,
                               isChinese: isChinese,
-                              accentColor: accentColor,
                             ),
                           ],
                         );
@@ -183,7 +188,8 @@ class _ExamSprintDashboardCardState extends State<ExamSprintDashboardCard> {
                       _TaskGroupCard(
                         group: data.todayGroup!,
                         isChinese: isChinese,
-                        accentColor: accentColor,
+                        // N5 翻转收敛：任务组回归中性 accent（不随 urgency 翻色）。
+                        accentColor: context.colors.brandPrimary,
                       )
                     else
                       Text(
@@ -238,18 +244,20 @@ class _DayZeroBanner extends StatefulWidget {
 
 class _DayZeroBannerState extends State<_DayZeroBanner>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _floatController;
+  late final AnimationController _entranceController;
 
-  /// U-01 Step 2 门控扩面：D-0 冲刺横幅的常驻浮动动画此前无条件 repeat；
-  /// 中低档/reduce-motion 钉在静止相位，只保留静态卡面。
+  /// U-01 Step 2 门控保留；SPEC v1.1 N3（改造 #8）：常驻件禁循环呼吸/浮动——
+  /// 原 3000ms repeat(reverse) 浮动降级为**单次入场**（正典集 320ms，自下方
+  /// 6px 浮入），入场完成即静止定帧；中低档/reduce-motion 直接钉在静止位，
+  /// 不再占 home 屏 §2.6 持续动画源名额。
   late DecorationMode _decorationMode = DecorationMode.animated;
 
   @override
   void initState() {
     super.initState();
-    _floatController = AnimationController(
+    _entranceController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 3000),
+      duration: _kCanonicalEntrance,
     );
   }
 
@@ -258,19 +266,22 @@ class _DayZeroBannerState extends State<_DayZeroBanner>
     super.didChangeDependencies();
     _decorationMode = resolveDecorationMode(context);
     if (_decorationMode == DecorationMode.animated) {
-      if (!_floatController.isAnimating) {
-        _floatController.repeat(reverse: true);
+      // 单次入场：只播一次，依赖重建（主题/媒体变化）不重播。
+      if (!_entranceController.isAnimating &&
+          !_entranceController.isCompleted) {
+        _entranceController.forward();
       }
     } else {
-      _floatController
+      // 静止定帧＝入场完成位（offset 0）。
+      _entranceController
         ..stop()
-        ..value = 0.5;
+        ..value = 1.0;
     }
   }
 
   @override
   void dispose() {
-    _floatController.dispose();
+    _entranceController.dispose();
     super.dispose();
   }
 
@@ -280,11 +291,13 @@ class _DayZeroBannerState extends State<_DayZeroBanner>
     final tipText = data.sleepGuardHint;
 
     return AnimatedBuilder(
-      animation: _floatController,
+      animation: _entranceController,
       builder: (context, child) {
-        final offset = Curves.easeInOut.transform(_floatController.value) * 5;
+        // 单次入场映射：0＝自下方 6px，1＝静止位（0 偏移）；无循环往返。
+        final entrance =
+            Curves.easeOutCubic.transform(_entranceController.value);
         return Transform.translate(
-          offset: Offset(0, offset - 2.5),
+          offset: Offset(0, (1 - entrance) * 6),
           child: child,
         );
       },
@@ -454,12 +467,15 @@ class _HeadlineBlock extends StatelessWidget {
   const _HeadlineBlock({
     required this.data,
     required this.isChinese,
-    required this.accentColor,
+    required this.urgencyColor,
   });
 
   final ExamSprintDashboardData data;
   final bool isChinese;
-  final Color accentColor;
+
+  /// N5：倒计时数字位＝翻转收敛的两处之一（另一处是 header）。
+  /// ≥7d 档为中性 brandPrimary，≤7d warning，≤1d error。
+  final Color urgencyColor;
 
   @override
   Widget build(BuildContext context) {
@@ -475,7 +491,7 @@ class _HeadlineBlock extends StatelessWidget {
         Text(
           countdown,
           style: context.typo.headingLarge.copyWith(
-            color: DS.textPrimary,
+            color: urgencyColor,
             fontWeight: DS.fontWeightBold,
             height: 1.06,
           ),
@@ -489,16 +505,17 @@ class _HeadlineBlock extends StatelessWidget {
           ),
         ),
         const SizedBox(height: DS.spacing12),
+        // N5 翻转收敛：计划名 chip 回归中性面（不再随 urgency 翻色）。
         Container(
           padding: const EdgeInsets.symmetric(
             horizontal: DS.spacing12,
             vertical: DS.spacing10,
           ),
           decoration: BoxDecoration(
-            color: accentColor.withValues(alpha: 0.08),
+            color: DS.surfaceSecondary,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: accentColor.withValues(alpha: 0.14),
+              color: DS.textSecondary.withValues(alpha: 0.12),
             ),
           ),
           child: Text(
@@ -518,12 +535,10 @@ class _PassProbabilityArc extends StatefulWidget {
   const _PassProbabilityArc({
     required this.data,
     required this.isChinese,
-    required this.accentColor,
   });
 
   final ExamSprintDashboardData data;
   final bool isChinese;
-  final Color accentColor;
 
   @override
   State<_PassProbabilityArc> createState() => _PassProbabilityArcState();
@@ -538,7 +553,9 @@ class _PassProbabilityArcState extends State<_PassProbabilityArc>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      // SPEC v1.1 N6④（改造 #2）：入场动画收进 M3 正典集（A2.1 梯内 320ms），
+      // 原 1200ms offLadder 退役。
+      duration: _kCanonicalEntrance,
     );
     _controller.forward();
   }
@@ -562,6 +579,9 @@ class _PassProbabilityArcState extends State<_PassProbabilityArc>
     final probability = widget.data.passProbability;
     final isNull = probability == null;
     final target = isNull ? 0.0 : probability.clamp(0.0, 1.0);
+    final colors = context.colors;
+    // N6③：低档（<0.4）按最终预测值判定（非动画中间值），触发动作文案兜底。
+    final showLowTierAction = !isNull && probability < 0.4;
 
     return AnimatedBuilder(
       animation: _controller,
@@ -570,7 +590,7 @@ class _PassProbabilityArcState extends State<_PassProbabilityArc>
         final value = target * eased;
         final ringColor = isNull
             ? DS.textSecondary.withValues(alpha: 0.3)
-            : _probabilityColor(value);
+            : _probabilityColor(colors, value);
 
         return Row(
           mainAxisSize: MainAxisSize.min,
@@ -633,6 +653,25 @@ class _PassProbabilityArcState extends State<_PassProbabilityArc>
                     color: DS.textSecondary,
                   ),
                 ),
+                const SizedBox(height: DS.spacing4),
+                // N6②：预测数口径一行，就地可见（「按当前进度估算」级）。
+                Text(
+                  context.l10n.examPassProbabilityEstimate,
+                  style: context.typo.bodySmall.copyWith(
+                    color: DS.textSecondary,
+                  ),
+                ),
+                // N6③：低档分档动作文案兜底（不羞辱，给出口）。
+                if (showLowTierAction) ...[
+                  const SizedBox(height: DS.spacing4),
+                  Text(
+                    context.l10n.examPassProbabilityLowAction,
+                    style: context.typo.bodySmall.copyWith(
+                      color: DS.textSecondary,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
               ],
             ),
           ],
@@ -641,10 +680,13 @@ class _PassProbabilityArcState extends State<_PassProbabilityArc>
     );
   }
 
-  static Color _probabilityColor(double value) {
-    if (value < 0.4) return DS.error;
-    if (value <= 0.6) return DS.warning;
-    return DS.success;
+  /// SPEC v1.1 N6④：红绿灯三档编码色走 theme 语义槽（context.colors）——
+  /// colorBlindFriendly 主题下自动切换 Okabe-Ito CB-safe 变体，消除红绿单通道依赖；
+  /// 禁回退静态 DS 常量直读（那会绕过注入主题）。
+  static Color _probabilityColor(SparkleColors colors, double value) {
+    if (value < 0.4) return colors.error;
+    if (value <= 0.6) return colors.warning;
+    return colors.success;
   }
 }
 
@@ -991,6 +1033,15 @@ class _ModePill extends StatelessWidget {
           ),
         ),
       );
+}
+
+/// SPEC v1.1 N5（改造 #9）：倒计时上下文三档色阶——≤1d error（含考日豁免
+/// 语义「不可挽回节点临近」）→ ≤7d warning → 其余中性（brandPrimary）。
+/// 色源走 theme 语义槽，CB-friendly 主题下随 SparkleColors 变体切换。
+Color _urgencyAccentColor(SparkleColors colors, int daysLeft) {
+  if (daysLeft <= 1) return colors.error;
+  if (daysLeft <= 7) return colors.warning;
+  return colors.brandPrimary;
 }
 
 String _modeLabel(String? mode, {required AppLocalizations l}) {

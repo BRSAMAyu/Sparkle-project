@@ -21172,6 +21172,14 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get examPassProbabilityEstimate =>
+      'Estimated from your current progress';
+
+  @override
+  String get examPassProbabilityLowAction =>
+      'Still time — focus on high-yield topics first';
+
+  @override
   String openclawAutomationScheduleCount(Object count) {
     return '$count automations';
   }
