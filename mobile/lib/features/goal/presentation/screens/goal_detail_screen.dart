@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/display/lexicon/goal_status_lexicon.dart'
+    show goalPriorityLabel, goalStatusLabel;
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
@@ -236,9 +238,11 @@ class _GoalHeader extends StatelessWidget {
                     children: [
                       _InfoChip(
                         icon: Icons.flag_outlined,
-                        label: data.goal.status,
+                        // S2 例3：状态枚举经词典人话化，禁「active」直出。
+                        label:
+                            goalStatusLabel(l10n, data.goal.status) ?? data.goal.status,
                         semanticsLabel:
-                            '${l10n.goalDetailStatus}: ${data.goal.status}',
+                            '${l10n.goalDetailStatus}: ${goalStatusLabel(l10n, data.goal.status) ?? data.goal.status}',
                       ),
                       _InfoChip(
                         icon: Icons.psychology_outlined,
@@ -250,8 +254,11 @@ class _GoalHeader extends StatelessWidget {
                       _buildTargetDateChip(context, data.goal.targetDate, l10n),
                       _InfoChip(
                         icon: Icons.priority_high_rounded,
-                        label: data.goal.priority,
-                        semanticsLabel: l10n.goalDetailPriority,
+                        // S2 例3：优先级枚举经词典人话化，禁「normal」直出。
+                        label: goalPriorityLabel(l10n, data.goal.priority) ??
+                            data.goal.priority,
+                        semanticsLabel:
+                            '${l10n.goalDetailPriority}: ${goalPriorityLabel(l10n, data.goal.priority) ?? data.goal.priority}',
                       ),
                     ],
                   ),

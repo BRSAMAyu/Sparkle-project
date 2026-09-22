@@ -38025,4 +38025,188 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get understandingPanelPlainSubtitle =>
       'These are Sparkle\'s current assumptions. Correct any of them.';
+
+  @override
+  String get goalStatusDraft => 'Draft';
+
+  @override
+  String get goalStatusActive => 'Active';
+
+  @override
+  String get goalStatusPaused => 'Paused';
+
+  @override
+  String get goalStatusCompleted => 'Completed';
+
+  @override
+  String get goalStatusArchived => 'Archived';
+
+  @override
+  String get goalStatusCancelled => 'Cancelled';
+
+  @override
+  String get goalPriorityCritical => 'Critical';
+
+  @override
+  String get goalPriorityHigh => 'High';
+
+  @override
+  String get goalPriorityNormal => 'Normal';
+
+  @override
+  String get goalPriorityLow => 'Low';
+
+  @override
+  String get memoryRecordStatusActive => 'Active';
+
+  @override
+  String get memoryRecordStatusResolved => 'Resolved';
+
+  @override
+  String get memoryRecordStatusArchived => 'Archived';
+
+  @override
+  String get memoryRecordStatusExpired => 'Expired';
+
+  @override
+  String get memoryRecordStatusRevoked => 'Revoked';
+
+  @override
+  String get memoryRecordStatusSuperseded => 'Superseded';
+
+  @override
+  String get memoryRecordStatusRetracted => 'Retracted';
+
+  @override
+  String get memoryRecordStatusCompleted => 'Completed';
+
+  @override
+  String get memoryRecordStatusCancelled => 'Cancelled';
+
+  @override
+  String get memoryRecordStatusPaused => 'Paused';
+
+  @override
+  String displayCriterionCompleteTemplate(String title) {
+    return 'Complete \"$title\" to meet the bar';
+  }
+
+  @override
+  String displayCriterionAtLeastUnitTemplate(
+      String title, String threshold, String unit) {
+    return '$title: at least $threshold $unit';
+  }
+
+  @override
+  String displayCriterionAtLeastTemplate(String title, String threshold) {
+    return '$title: at least $threshold';
+  }
+
+  @override
+  String get displayUnitTimes => 'times';
+
+  @override
+  String get displayUnitDays => 'days';
+
+  @override
+  String displayDateToday(String time) {
+    return 'Today $time';
+  }
+
+  @override
+  String displayDateTomorrow(String time) {
+    return 'Tomorrow $time';
+  }
+
+  @override
+  String displayDateYesterday(String time) {
+    return 'Yesterday $time';
+  }
+
+  @override
+  String displayDateInDays(int days, String time) {
+    return 'In $days days $time';
+  }
+
+  @override
+  String displayDateDaysAgo(int days, String time) {
+    return '$days days ago $time';
+  }
+
+  @override
+  String displayDateAbsolute(int month, int day, String time) {
+    return '$month/$day $time';
+  }
+
+  @override
+  String get displayDueLabel => 'Due';
+
+  @override
+  String get displaySceneQualityHigh => 'High quality';
+
+  @override
+  String get displaySceneQualityMid => 'Decent';
+
+  @override
+  String get displaySceneQualityLow => 'Building up';
+
+  @override
+  String get displayForesightConfident => 'Fairly confident';
+
+  @override
+  String get displayForesightVerifying => 'Still verifying, for reference';
+
+  @override
+  String get displayForesightUnsure => 'Not sure about this part';
+
+  @override
+  String memoryEventCompleted(String title) {
+    return 'Completed \"$title\"';
+  }
+
+  @override
+  String memoryEventFinished(String title) {
+    return 'Finished \"$title\"';
+  }
+
+  @override
+  String memoryEventReviewed(String title) {
+    return 'Reviewed \"$title\"';
+  }
+
+  @override
+  String memoryEventPracticed(String title) {
+    return 'Practiced \"$title\"';
+  }
+
+  @override
+  String memoryEventMastered(String title) {
+    return 'Mastered \"$title\"';
+  }
+
+  @override
+  String goalDetailMasteryPercent(int percent) {
+    return '$percent% mastery';
+  }
+
+  @override
+  String get goalDetailNoTargetDate => 'No date set';
+
+  @override
+  String get goalDetailDue => 'Due';
+
+  @override
+  String goalDetailPartners(int count) {
+    return '$count partners';
+  }
+
+  @override
+  String goalDetailCommitments(int count) {
+    return '$count active commitments';
+  }
+
+  @override
+  String goalDetailRelevance(int percent) {
+    return '$percent% relevant';
+  }
 }

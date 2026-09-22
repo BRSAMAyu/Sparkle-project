@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'package:sparkle/core/display/lexicon/criterion_lexicon.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 @immutable
 class UnderstandingSnapshot {
@@ -260,15 +262,19 @@ bool _notEmpty(String value) => value.trim().isNotEmpty;
 
 String _readableLine(Object? value) {
   final map = _map(value);
-  if (map == null) return _string(value);
-  return _string(
-    map['label'] ??
-        map['title'] ??
-        map['summary'] ??
-        map['question'] ??
-        map['claim'] ??
-        map['text'] ??
-        map['node_label'] ??
-        map['node_id'],
-  );
+  final line = map == null
+      ? _string(value)
+      : _string(
+          map['label'] ??
+              map['title'] ??
+              map['summary'] ??
+              map['question'] ??
+              map['claim'] ??
+              map['text'] ??
+              map['node_label'] ??
+              map['node_id'],
+        );
+  // S2 例1（SPEC DL §6.4）：对存量/缓存里的旧机话拼接（「X >= 1boolean」式）
+  // 做词典兜底；非机器格式原样返回。模式门控确保 node/claim 等普通文案不受影响。
+  return humanizeCriterionLabel(line, I18nService.instance.l10n) ?? line;
 }

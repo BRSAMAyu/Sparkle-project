@@ -175,7 +175,18 @@ def _iso(value: Any) -> str | None:
     return str(value)
 
 
+# B1-B / S2 例1（SPEC DL §6.4）：unit→人话单位词映射。
+# 全量取值域：goal_decomposition_service 产 boolean；demo/seed 产 percent/count/days/time。
+# 未知 unit 一律不拼接英文枚举，结构化值经 _criteria_payload 透传给端侧词典兜底。
+_CRITERION_UNIT_WORDS: dict[str, str] = {
+    "count": "次",
+    "percent": "%",
+    "days": "天",
+}
+
+
 def _criterion_label(item: Any) -> str:
+    """把结构化达标线翻成人类可读的一句话，禁「>= 1boolean」类机话直出（AUDIT S2）。"""
     if isinstance(item, str):
         return item.strip()
     if not isinstance(item, dict):
@@ -184,7 +195,15 @@ def _criterion_label(item: Any) -> str:
     threshold = item.get("threshold")
     unit = str(item.get("unit") or "").strip()
     if title and threshold is not None:
-        return f"{title} >= {threshold}{unit}"
+        if unit == "boolean":
+            # 枚举型达标线不走数值化拼接，直接给整句模板。
+            return f"完成「{title}」即达标"
+        unit_word = _CRITERION_UNIT_WORDS.get(unit)
+        if unit_word is None:
+            return f"{title} ≥ {threshold}"
+        # 「%」紧贴数字，「次/天」留空格。
+        separator = "" if unit_word == "%" else " "
+        return f"{title} ≥ {threshold}{separator}{unit_word}"
     return title
 
 
@@ -196,13 +215,18 @@ def _criteria_payload(raw: Any) -> list[dict[str, Any]]:
         label = _criterion_label(item)
         if not label:
             continue
-        payload.append(
-            {
-                "label": label,
-                "status": item.get("status", "pending") if isinstance(item, dict) else "pending",
-                "source": item.get("source", "goal") if isinstance(item, dict) else "goal",
-            }
-        )
+        entry: dict[str, Any] = {
+            "label": label,
+            "status": item.get("status", "pending") if isinstance(item, dict) else "pending",
+            "source": item.get("source", "goal") if isinstance(item, dict) else "goal",
+        }
+        if isinstance(item, dict):
+            # 结构化数据下传（threshold/unit/comparison 原值）：呈现层可据此二次人话化，
+            # proto/gRPC 透传原值，分层边界不破坏（SPEC DL §6.4）。
+            for key in ("threshold", "unit", "metric"):
+                if item.get(key) is not None:
+                    entry[key] = item[key]
+        payload.append(entry)
     return payload
 
 

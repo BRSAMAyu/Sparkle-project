@@ -604,13 +604,13 @@ class ExamSprintIntakeService:
         if days_left <= 7:
             return ExamSprintPackSelection(
                 pack_id="generic_exam_survival",
-                pack_name="7-Day Survival Sprint",
+                pack_name="7 天保底冲刺",
                 selection_type="generic_policy",
                 reason=f"距离考试只有 {days_left} 天，优先启用保底生存策略。",
             )
         return ExamSprintPackSelection(
             pack_id="generic_exam_sprint",
-            pack_name="Standard Exam Sprint",
+            pack_name="标准考试冲刺",
             selection_type="generic_policy",
             reason=f"距离考试还有 {days_left} 天，使用通用考试冲刺策略。",
         )

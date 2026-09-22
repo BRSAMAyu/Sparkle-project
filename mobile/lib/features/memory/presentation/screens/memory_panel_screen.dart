@@ -6,6 +6,10 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/display/lexicon/date_formatting.dart';
+import 'package:sparkle/core/display/lexicon/goal_status_lexicon.dart';
+import 'package:sparkle/core/display/lexicon/lexicon.dart';
+import 'package:sparkle/core/display/lexicon/memory_event_lexicon.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -743,8 +747,9 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
                     .take(3)
                     .map(
                       (confidence) => SemanticPill(
+                        // S2/§6.3：机器置信度禁出两位小数裸数值，走三档人话。
                         label:
-                            '${_labelForForesightDim(confidence.dim)} ${confidence.confidence.toStringAsFixed(2)}',
+                            '${_labelForForesightDim(confidence.dim)} · ${bandLabel(confidence.confidence, context.l10n, high: (l10n) => l10n.displayForesightConfident, mid: (l10n) => l10n.displayForesightVerifying, low: (l10n) => l10n.displayForesightUnsure)}',
                         tone: PillTone.neutral,
                         dense: true,
                       ),
@@ -822,7 +827,14 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
                 ),
                 const SizedBox(width: DS.sm),
                 SemanticPill(
-                  label: 'Q ${item.qualityScore.toStringAsFixed(2)}',
+                  // S2 例4：Q 值是机器指标，释义化为三档人话（§6.3 禁裸数值）。
+                  label: bandLabel(
+                    item.qualityScore,
+                    context.l10n,
+                    high: (l10n) => l10n.displaySceneQualityHigh,
+                    mid: (l10n) => l10n.displaySceneQualityMid,
+                    low: (l10n) => l10n.displaySceneQualityLow,
+                  ),
                   tone: PillTone.success,
                   dense: true,
                 ),
@@ -848,7 +860,9 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
 
   Widget _buildGoalCard(MemoryGoalItem item) => _MemoryCard(
         title: item.title,
-        subtitle: item.status,
+        // S2 例4：记录状态经词典人话化，禁「completed」等原始枚举直出。
+        subtitle: memoryRecordStatusLabel(context.l10n, item.status) ??
+            item.status,
         badge: MemoryEvidenceBadge(
           status: _statusFor(item.evidenceMissing, item.evidenceRefs),
         ),
@@ -860,7 +874,8 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
       );
 
   Widget _buildEpisodicCard(EpisodicMemoryItem item) => _MemoryCard(
-        title: item.summary,
+        // S2 例4：英文事件名（「completed …」类）经动词词典人话化。
+        title: humanizeMemoryEvent(item.summary, context.l10n),
         subtitle: _formatEpisodicSubtitle(item),
         badge: MemoryEvidenceBadge(
           status: _statusFor(item.evidenceMissing, item.evidenceRefs),
@@ -1093,11 +1108,8 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
   }
 
   String _formatSceneTime(DateTime start, DateTime end) {
-    final startLabel =
-        '${start.month.toString().padLeft(2, '0')}/${start.day.toString().padLeft(2, '0')} ${start.hour.toString().padLeft(2, '0')}:${start.minute.toString().padLeft(2, '0')}';
-    final endLabel =
-        '${end.month.toString().padLeft(2, '0')}/${end.day.toString().padLeft(2, '0')} ${end.hour.toString().padLeft(2, '0')}:${end.minute.toString().padLeft(2, '0')}';
-    return '$startLabel - $endLabel';
+    // S2 例2/X8：时间 Range 走唯一格式化入口；起止相同折叠为单点，禁毫秒。
+    return formatSparkleSceneRange(start, end, context.l10n);
   }
 
   String _labelForForesightDim(String dim) {

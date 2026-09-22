@@ -1,8 +1,8 @@
 {
   "id": "exam_prep_14d@v1.0",
-  "name": "14-Day Exam Prep",
+  "name": "14 天考试冲刺",
   "version": "v1.0",
-  "description": "A focused 14-day backbone for exam preparation with explicit readiness checks and daily recovery loops.",
+  "description": "为考试备考准备的 14 天主干，含明确的就绪检查与每日复盘闭环。",
   "applicability_conditions": [
     "user is preparing for an exam within 14 days",
     "user needs a structured daily backbone",

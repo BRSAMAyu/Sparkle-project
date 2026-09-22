@@ -36444,4 +36444,188 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get understandingPanelPlainSubtitle => '这些是 Sparkle 目前的判断，每一项都可以纠正。';
+
+  @override
+  String get goalStatusDraft => '草稿';
+
+  @override
+  String get goalStatusActive => '进行中';
+
+  @override
+  String get goalStatusPaused => '已暂停';
+
+  @override
+  String get goalStatusCompleted => '已完成';
+
+  @override
+  String get goalStatusArchived => '已归档';
+
+  @override
+  String get goalStatusCancelled => '已取消';
+
+  @override
+  String get goalPriorityCritical => '紧急';
+
+  @override
+  String get goalPriorityHigh => '高';
+
+  @override
+  String get goalPriorityNormal => '普通';
+
+  @override
+  String get goalPriorityLow => '低';
+
+  @override
+  String get memoryRecordStatusActive => '生效中';
+
+  @override
+  String get memoryRecordStatusResolved => '已解决';
+
+  @override
+  String get memoryRecordStatusArchived => '已归档';
+
+  @override
+  String get memoryRecordStatusExpired => '已过期';
+
+  @override
+  String get memoryRecordStatusRevoked => '已删除';
+
+  @override
+  String get memoryRecordStatusSuperseded => '已更新';
+
+  @override
+  String get memoryRecordStatusRetracted => '已撤回';
+
+  @override
+  String get memoryRecordStatusCompleted => '已达成';
+
+  @override
+  String get memoryRecordStatusCancelled => '已取消';
+
+  @override
+  String get memoryRecordStatusPaused => '已暂停';
+
+  @override
+  String displayCriterionCompleteTemplate(String title) {
+    return '完成「$title」即达标';
+  }
+
+  @override
+  String displayCriterionAtLeastUnitTemplate(
+      String title, String threshold, String unit) {
+    return '$title ≥ $threshold $unit';
+  }
+
+  @override
+  String displayCriterionAtLeastTemplate(String title, String threshold) {
+    return '$title ≥ $threshold';
+  }
+
+  @override
+  String get displayUnitTimes => '次';
+
+  @override
+  String get displayUnitDays => '天';
+
+  @override
+  String displayDateToday(String time) {
+    return '今天 $time';
+  }
+
+  @override
+  String displayDateTomorrow(String time) {
+    return '明天 $time';
+  }
+
+  @override
+  String displayDateYesterday(String time) {
+    return '昨天 $time';
+  }
+
+  @override
+  String displayDateInDays(int days, String time) {
+    return '$days天后 $time';
+  }
+
+  @override
+  String displayDateDaysAgo(int days, String time) {
+    return '$days天前 $time';
+  }
+
+  @override
+  String displayDateAbsolute(int month, int day, String time) {
+    return '$month月$day日 $time';
+  }
+
+  @override
+  String get displayDueLabel => '截止';
+
+  @override
+  String get displaySceneQualityHigh => '高质量';
+
+  @override
+  String get displaySceneQualityMid => '质量不错';
+
+  @override
+  String get displaySceneQualityLow => '还在积累';
+
+  @override
+  String get displayForesightConfident => '比较有把握';
+
+  @override
+  String get displayForesightVerifying => '还在确认，供你参考';
+
+  @override
+  String get displayForesightUnsure => '这部分我不确定';
+
+  @override
+  String memoryEventCompleted(String title) {
+    return '已完成「$title」';
+  }
+
+  @override
+  String memoryEventFinished(String title) {
+    return '已完成「$title」';
+  }
+
+  @override
+  String memoryEventReviewed(String title) {
+    return '已复盘「$title」';
+  }
+
+  @override
+  String memoryEventPracticed(String title) {
+    return '已练习「$title」';
+  }
+
+  @override
+  String memoryEventMastered(String title) {
+    return '已掌握「$title」';
+  }
+
+  @override
+  String goalDetailMasteryPercent(int percent) {
+    return '掌握 $percent%';
+  }
+
+  @override
+  String get goalDetailNoTargetDate => '未设置日期';
+
+  @override
+  String get goalDetailDue => '截止日期';
+
+  @override
+  String goalDetailPartners(int count) {
+    return '$count 位伙伴';
+  }
+
+  @override
+  String goalDetailCommitments(int count) {
+    return '$count 个活跃承诺';
+  }
+
+  @override
+  String goalDetailRelevance(int percent) {
+    return '相关度 $percent%';
+  }
 }

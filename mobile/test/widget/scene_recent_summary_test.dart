@@ -226,7 +226,8 @@ void main() {
 
     expect(find.text('最近场景'), findsOneWidget);
     expect(find.text('周末早晨学习场景 · 数学'), findsOneWidget);
-    expect(find.text('Q 0.82'), findsOneWidget);
+    // B1-B/例4：Q 值为机器指标，已释义化为三档人话（SPEC DL §6.3）。
+    expect(find.text('高质量'), findsOneWidget);
   });
 
   testWidgets('scene recent summary renders in V1 panel',

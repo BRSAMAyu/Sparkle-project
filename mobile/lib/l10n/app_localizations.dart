@@ -66233,6 +66233,301 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'这些是 Sparkle 目前的判断，每一项都可以纠正。'**
   String get understandingPanelPlainSubtitle;
+
+  /// No description provided for @goalStatusDraft.
+  ///
+  /// In zh, this message translates to:
+  /// **'草稿'**
+  String get goalStatusDraft;
+
+  /// No description provided for @goalStatusActive.
+  ///
+  /// In zh, this message translates to:
+  /// **'进行中'**
+  String get goalStatusActive;
+
+  /// No description provided for @goalStatusPaused.
+  ///
+  /// In zh, this message translates to:
+  /// **'已暂停'**
+  String get goalStatusPaused;
+
+  /// No description provided for @goalStatusCompleted.
+  ///
+  /// In zh, this message translates to:
+  /// **'已完成'**
+  String get goalStatusCompleted;
+
+  /// No description provided for @goalStatusArchived.
+  ///
+  /// In zh, this message translates to:
+  /// **'已归档'**
+  String get goalStatusArchived;
+
+  /// No description provided for @goalStatusCancelled.
+  ///
+  /// In zh, this message translates to:
+  /// **'已取消'**
+  String get goalStatusCancelled;
+
+  /// No description provided for @goalPriorityCritical.
+  ///
+  /// In zh, this message translates to:
+  /// **'紧急'**
+  String get goalPriorityCritical;
+
+  /// No description provided for @goalPriorityHigh.
+  ///
+  /// In zh, this message translates to:
+  /// **'高'**
+  String get goalPriorityHigh;
+
+  /// No description provided for @goalPriorityNormal.
+  ///
+  /// In zh, this message translates to:
+  /// **'普通'**
+  String get goalPriorityNormal;
+
+  /// No description provided for @goalPriorityLow.
+  ///
+  /// In zh, this message translates to:
+  /// **'低'**
+  String get goalPriorityLow;
+
+  /// No description provided for @memoryRecordStatusActive.
+  ///
+  /// In zh, this message translates to:
+  /// **'生效中'**
+  String get memoryRecordStatusActive;
+
+  /// No description provided for @memoryRecordStatusResolved.
+  ///
+  /// In zh, this message translates to:
+  /// **'已解决'**
+  String get memoryRecordStatusResolved;
+
+  /// No description provided for @memoryRecordStatusArchived.
+  ///
+  /// In zh, this message translates to:
+  /// **'已归档'**
+  String get memoryRecordStatusArchived;
+
+  /// No description provided for @memoryRecordStatusExpired.
+  ///
+  /// In zh, this message translates to:
+  /// **'已过期'**
+  String get memoryRecordStatusExpired;
+
+  /// No description provided for @memoryRecordStatusRevoked.
+  ///
+  /// In zh, this message translates to:
+  /// **'已删除'**
+  String get memoryRecordStatusRevoked;
+
+  /// No description provided for @memoryRecordStatusSuperseded.
+  ///
+  /// In zh, this message translates to:
+  /// **'已更新'**
+  String get memoryRecordStatusSuperseded;
+
+  /// No description provided for @memoryRecordStatusRetracted.
+  ///
+  /// In zh, this message translates to:
+  /// **'已撤回'**
+  String get memoryRecordStatusRetracted;
+
+  /// No description provided for @memoryRecordStatusCompleted.
+  ///
+  /// In zh, this message translates to:
+  /// **'已达成'**
+  String get memoryRecordStatusCompleted;
+
+  /// No description provided for @memoryRecordStatusCancelled.
+  ///
+  /// In zh, this message translates to:
+  /// **'已取消'**
+  String get memoryRecordStatusCancelled;
+
+  /// No description provided for @memoryRecordStatusPaused.
+  ///
+  /// In zh, this message translates to:
+  /// **'已暂停'**
+  String get memoryRecordStatusPaused;
+
+  /// No description provided for @displayCriterionCompleteTemplate.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成「{title}」即达标'**
+  String displayCriterionCompleteTemplate(String title);
+
+  /// No description provided for @displayCriterionAtLeastUnitTemplate.
+  ///
+  /// In zh, this message translates to:
+  /// **'{title} ≥ {threshold} {unit}'**
+  String displayCriterionAtLeastUnitTemplate(
+      String title, String threshold, String unit);
+
+  /// No description provided for @displayCriterionAtLeastTemplate.
+  ///
+  /// In zh, this message translates to:
+  /// **'{title} ≥ {threshold}'**
+  String displayCriterionAtLeastTemplate(String title, String threshold);
+
+  /// No description provided for @displayUnitTimes.
+  ///
+  /// In zh, this message translates to:
+  /// **'次'**
+  String get displayUnitTimes;
+
+  /// No description provided for @displayUnitDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'天'**
+  String get displayUnitDays;
+
+  /// No description provided for @displayDateToday.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天 {time}'**
+  String displayDateToday(String time);
+
+  /// No description provided for @displayDateTomorrow.
+  ///
+  /// In zh, this message translates to:
+  /// **'明天 {time}'**
+  String displayDateTomorrow(String time);
+
+  /// No description provided for @displayDateYesterday.
+  ///
+  /// In zh, this message translates to:
+  /// **'昨天 {time}'**
+  String displayDateYesterday(String time);
+
+  /// No description provided for @displayDateInDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'{days}天后 {time}'**
+  String displayDateInDays(int days, String time);
+
+  /// No description provided for @displayDateDaysAgo.
+  ///
+  /// In zh, this message translates to:
+  /// **'{days}天前 {time}'**
+  String displayDateDaysAgo(int days, String time);
+
+  /// No description provided for @displayDateAbsolute.
+  ///
+  /// In zh, this message translates to:
+  /// **'{month}月{day}日 {time}'**
+  String displayDateAbsolute(int month, int day, String time);
+
+  /// No description provided for @displayDueLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'截止'**
+  String get displayDueLabel;
+
+  /// No description provided for @displaySceneQualityHigh.
+  ///
+  /// In zh, this message translates to:
+  /// **'高质量'**
+  String get displaySceneQualityHigh;
+
+  /// No description provided for @displaySceneQualityMid.
+  ///
+  /// In zh, this message translates to:
+  /// **'质量不错'**
+  String get displaySceneQualityMid;
+
+  /// No description provided for @displaySceneQualityLow.
+  ///
+  /// In zh, this message translates to:
+  /// **'还在积累'**
+  String get displaySceneQualityLow;
+
+  /// No description provided for @displayForesightConfident.
+  ///
+  /// In zh, this message translates to:
+  /// **'比较有把握'**
+  String get displayForesightConfident;
+
+  /// No description provided for @displayForesightVerifying.
+  ///
+  /// In zh, this message translates to:
+  /// **'还在确认，供你参考'**
+  String get displayForesightVerifying;
+
+  /// No description provided for @displayForesightUnsure.
+  ///
+  /// In zh, this message translates to:
+  /// **'这部分我不确定'**
+  String get displayForesightUnsure;
+
+  /// No description provided for @memoryEventCompleted.
+  ///
+  /// In zh, this message translates to:
+  /// **'已完成「{title}」'**
+  String memoryEventCompleted(String title);
+
+  /// No description provided for @memoryEventFinished.
+  ///
+  /// In zh, this message translates to:
+  /// **'已完成「{title}」'**
+  String memoryEventFinished(String title);
+
+  /// No description provided for @memoryEventReviewed.
+  ///
+  /// In zh, this message translates to:
+  /// **'已复盘「{title}」'**
+  String memoryEventReviewed(String title);
+
+  /// No description provided for @memoryEventPracticed.
+  ///
+  /// In zh, this message translates to:
+  /// **'已练习「{title}」'**
+  String memoryEventPracticed(String title);
+
+  /// No description provided for @memoryEventMastered.
+  ///
+  /// In zh, this message translates to:
+  /// **'已掌握「{title}」'**
+  String memoryEventMastered(String title);
+
+  /// No description provided for @goalDetailMasteryPercent.
+  ///
+  /// In zh, this message translates to:
+  /// **'掌握 {percent}%'**
+  String goalDetailMasteryPercent(int percent);
+
+  /// No description provided for @goalDetailNoTargetDate.
+  ///
+  /// In zh, this message translates to:
+  /// **'未设置日期'**
+  String get goalDetailNoTargetDate;
+
+  /// No description provided for @goalDetailDue.
+  ///
+  /// In zh, this message translates to:
+  /// **'截止日期'**
+  String get goalDetailDue;
+
+  /// No description provided for @goalDetailPartners.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 位伙伴'**
+  String goalDetailPartners(int count);
+
+  /// No description provided for @goalDetailCommitments.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 个活跃承诺'**
+  String goalDetailCommitments(int count);
+
+  /// No description provided for @goalDetailRelevance.
+  ///
+  /// In zh, this message translates to:
+  /// **'相关度 {percent}%'**
+  String goalDetailRelevance(int percent);
 }
 
 class _AppLocalizationsDelegate

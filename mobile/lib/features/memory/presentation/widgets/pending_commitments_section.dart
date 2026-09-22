@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/display/lexicon/date_formatting.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/models/memory_models.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
 
 class PendingCommitmentsSection extends StatelessWidget {
@@ -51,9 +51,9 @@ class PendingCommitmentsSection extends StatelessWidget {
                       children: [
                         Text(c.summary, style: DS.bodySmall),
                         Text(
-                          I18nService.instance.isChinese
-                              ? '截止: ${c.dueAt}'
-                              : 'Due: ${c.dueAt}',
+                          // S2 例2：截止时间经唯一格式化入口人话化，禁毫秒直出。
+                          '${context.l10n.displayDueLabel}: '
+                          '${formatSparkleDateTime(c.dueAt, context.l10n)}',
                           style:
                               DS.labelSmall.copyWith(color: DS.textSecondary),
                         ),

@@ -3,14 +3,17 @@ import 'package:sparkle/l10n/app_localizations.dart';
 extension GoalDetailLocalizations on AppLocalizations {
   bool get _isZh => localeName.toLowerCase().startsWith('zh');
 
+  /// B1-B/例6：显式接收者，避免扩展成员与 arb getter 同名时的自解析。
+  AppLocalizations get _arb => this;
+
   String get goalDetailTitle => _isZh ? '目标详情' : 'Goal detail';
-  String get goalDetailProgress => _isZh ? '总体进度' : 'Overall progress';
-  String get goalDetailMastery => _isZh ? '掌握度' : 'Mastery';
-  String get goalDetailTargetDate => _isZh ? '目标日期' : 'Target date';
-  String get goalDetailPriority => _isZh ? '优先级' : 'Priority';
-  String get goalDetailNoTargetDate => _isZh ? '未设置日期' : 'No date set';
-  String get goalDetailOverdue => _isZh ? '已过期' : 'Overdue';
-  String get goalDetailDue => _isZh ? '截止日期' : 'Due';
+  String get goalDetailProgress => _arb.goalDetailProgress;
+  String get goalDetailMastery => _arb.goalDetailMastery;
+  String get goalDetailTargetDate => _arb.goalDetailTargetDate;
+  String get goalDetailPriority => _arb.goalDetailPriority;
+  String get goalDetailNoTargetDate => _arb.goalDetailNoTargetDate;
+  String get goalDetailOverdue => _arb.goalDetailOverdue;
+  String get goalDetailDue => _arb.goalDetailDue;
   String get goalDetailMinimumLine => _isZh ? '最低达标线' : 'Minimum bar';
   String get goalDetailSuggestedMinimum => _isZh
       ? '这是 Sparkle 为你建议的最低标准'
@@ -33,22 +36,19 @@ extension GoalDetailLocalizations on AppLocalizations {
       _isZh ? '暂时没有检测到瓶颈节点。' : 'No bottleneck nodes detected yet.';
   String get goalDetailOpenGalaxy => _isZh ? '打开星图' : 'Open galaxy';
   String goalDetailMasteryPercent(int percent) =>
-      _isZh ? '掌握 $percent%' : '$percent% mastery';
-  // 「今日最小下一步」区块与状态文案已迁入 l10n arb（S2 词典化批1-A）：
-  // goalDetailTodayStep / goalDetailNoTodayStep / goalDetailStart /
-  // goalDetailStartedSnack / goalDetailUndo / goalDetailEstimated /
-  // goalDetailMinutes / goalDetailStatus / goalDetailComplete /
-  // goalDetailCompletedTitle / goalDetailCompletedBody / goalDetailCancel。
-  // 其余条目待 S2 文案词典批全量迁移，勿在此新增重复定义。
+      _arb.goalDetailMasteryPercent(percent);
+  // 「今日最小下一步」区块与状态文案已迁入 l10n arb（S2 词典化批1-A，
+  // B1-B 补迁 goalDetailMasteryPercent）：消费者直接经 arb 取用，
+  // 勿在此新增重复定义。
   String get goalDetailPlanHealth => _isZh ? '计划健康状态' : 'Plan health';
   String get goalDetailPhaseHealth => _isZh ? '阶段健康' : 'Phase health';
   String get goalDetailTaskCompletion => _isZh ? '任务完成率' : 'Task completion';
   String get goalDetailCurrentPhase => _isZh ? '当前阶段' : 'Current phase';
   String get goalDetailAccountability => _isZh ? '责任伙伴' : 'Accountability';
   String goalDetailPartners(int count) =>
-      _isZh ? '$count 位伙伴' : '$count partners';
+      _arb.goalDetailPartners(count);
   String goalDetailCommitments(int count) =>
-      _isZh ? '$count 个活跃承诺' : '$count active commitments';
+      _arb.goalDetailCommitments(count);
   String get goalDetailNoCheckin => _isZh ? '暂无打卡' : 'No check-in yet';
   String get goalDetailOpenCommunity =>
       _isZh ? '进入责任伙伴空间' : 'Open accountability';
@@ -56,7 +56,7 @@ extension GoalDetailLocalizations on AppLocalizations {
   String get goalDetailNoSources =>
       _isZh ? '暂无关联资料。' : 'No related sources yet.';
   String goalDetailRelevance(int percent) =>
-      _isZh ? '相关度 $percent%' : '$percent% relevant';
+      _arb.goalDetailRelevance(percent);
   String get goalDetailRefresh => _isZh ? '刷新目标详情' : 'Refresh goal detail';
   String get goalDetailLoadFailed =>
       _isZh ? '目标详情加载失败' : 'Goal detail failed to load';
@@ -74,4 +74,6 @@ extension GoalDetailLocalizations on AppLocalizations {
   String get goalDetailEditFailed =>
       _isZh ? '目标更新失败' : 'Failed to update goal';
   String get goalDetailBack => _isZh ? '返回' : 'Back';
+  // B1-A 已迁 arb 的条目（Status/Estimated/Minutes 等）保持消费者直取 arb；
+  // B1-B 词典面新增条目见 core/display/lexicon/。
 }

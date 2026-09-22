@@ -250,8 +250,9 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('节奏 0.81'), findsOneWidget);
-    expect(find.text('计划跟随 0.74'), findsOneWidget);
+    // B1-B/例4：机器置信度走 §6.3 三档人话，不再直出两位小数。
+    expect(find.text('节奏 · 比较有把握'), findsOneWidget);
+    expect(find.text('计划跟随 · 还在确认，供你参考'), findsOneWidget);
   });
 
   testWidgets('hides foresight section when hint is absent', (
