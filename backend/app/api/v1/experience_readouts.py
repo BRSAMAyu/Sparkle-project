@@ -21,6 +21,7 @@ from app.models.plan import Plan
 from app.models.task import Task, TaskStatus
 from app.models.user import User
 from app.services.aurora_control_surface_service import AuroraControlSurfaceService
+from app.services.goal_today_view import fetch_todays_next_task, todays_task_payload
 from app.services.growth_dashboard_service import GrowthDashboardService
 from app.services.progress_narrative_service import ProgressNarrativeService
 
@@ -271,39 +272,25 @@ async def _task_counts(db: AsyncSession, user_id: UUID, *, plan_id: UUID | None 
 
 
 async def _next_task(db: AsyncSession, user_id: UUID, *, plan_id: UUID | None = None) -> dict[str, Any] | None:
-    conditions = [
-        Task.user_id == user_id,
-        Task.deleted_at.is_(None),
-        Task.status.in_(
-            [TaskStatus.PENDING, TaskStatus.IN_PROGRESS, TaskStatus.PAUSED, TaskStatus.STUCK, TaskStatus.RESTORE]
-        ),
-    ]
-    if plan_id is not None:
-        conditions.append(Task.plan_id == plan_id)
-    result = await db.execute(
-        select(Task)
-        .where(*conditions)
-        .order_by(
-            desc(Task.priority),
-            Task.due_date.is_(None),
-            Task.due_date,
-            Task.order_index,
-            Task.created_at,
-        )
-        .limit(1)
+    """home 快照/指挥台的「今日下一步」。
+
+    S7 单一事实源：「今日任务」判定与取数统一走 app/services/goal_today_view.py，
+    与 goal 详情（experience/goal_router）口径字面一致；本函数不再自带任何
+    「下一步」判定（历史实现无 today 过滤且状态集含 PAUSED，曾与 goal 详情
+    互斥）。plan_id 为 None 时按用户全局取（保留既有计划回退语义）。
+    """
+    task = await fetch_todays_next_task(
+        db,
+        user_id=user_id,
+        plan_id=plan_id,
+        today=_utcnow().date(),
     )
-    task = result.scalar_one_or_none()
-    if task is None:
-        return None
-    return {
-        "id": str(task.id),
-        "title": task.title,
-        "status": _value(task.status),
-        "priority": task.priority,
-        "due_date": _iso(task.due_date),
-        "estimated_minutes": task.estimated_minutes,
-        "knowledge_node_id": str(task.knowledge_node_id) if task.knowledge_node_id else None,
-    }
+    return todays_task_payload(task)
+
+
+def _next_task_payload_verdict(payload: dict[str, Any] | None) -> bool:
+    """home 快照口径的「今日有无任务」布尔判定（供 SSOT 回归测试引用）。"""
+    return bool(payload and payload.get("id") and payload.get("title"))
 
 
 async def _goal_graph_summary(user_id: UUID, goal_id: str | None) -> dict[str, Any]:

@@ -1,0 +1,3 @@
+FAILED tests/unit/test_goal_today_view.py::test_surface_queries_both_filter_by_ssot_condition
+FAILED tests/unit/test_goal_today_view.py::test_fetch_todays_next_task_filters_today
+============================== 14 failed in 2.62s ==============================

@@ -21266,9 +21266,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskBoardNoDate => 'No Date';
 
   @override
-  String get taskBoardTodayNoTasks => 'No tasks today';
-
-  @override
   String get unnamedTask => 'Unnamed Task';
 
   @override
@@ -32566,6 +32563,30 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get goalDetailTodayStep => 'Today’s smallest next step';
+
+  @override
+  String get goalDetailNoTodayStep =>
+      'No task queued for today. Review or refine the plan first.';
+
+  @override
+  String get goalDetailStart => 'Start';
+
+  @override
+  String get goalDetailStartedSnack => 'Started today’s smallest step';
+
+  @override
+  String get goalDetailUndo => 'Undo';
+
+  @override
+  String get goalDetailEstimated => 'Estimated';
+
+  @override
+  String goalDetailMinutes(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String get goalDetailStatus => 'Status';
 
   @override
   String get goalDetailPlanHealth => 'Plan health';

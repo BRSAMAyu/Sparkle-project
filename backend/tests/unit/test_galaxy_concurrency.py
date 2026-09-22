@@ -1,29 +1,72 @@
 """
 Test Galaxy Service concurrent mastery update (C1 fix verification)
 Tests atomic UPDATE with optimistic locking prevents race conditions
+
+测试卫生（批1-A · TRIAGE §2 表5）：本文件历史上直接写业务库且无任何
+cleanup——「并发测试节点-5c2d9cff」等测试节点永久留存并被真实星图查询命中
+（数据自相矛盾的污染源之一）。现改为：
+- 独立前缀：用户名/邮箱/节点名一律带 ``galaxy_concurrency_test`` 前缀，
+  任何未来泄漏都可被唯一识别；
+- teardown 清理：fixture 收尾按精确 ID 逆序删除 user_node_status /
+  knowledge_node / user，以及 mastery outbox 事件（event_outbox +
+  event_sequence_counters，aggregate_type='galaxy_node_mastery'）。
+  不触碰任何既有数据。
+本测试必须连 PostgreSQL（C1 原子 UPDATE 依赖 FOR UPDATE/RETURNING 的
+行锁语义，SQLite 无此保证）。
 """
 import asyncio
 from uuid import UUID, uuid4
 
 import pytest
 from sqlalchemy import text
+
 from app.db.session import AsyncSessionLocal, engine
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.user import User
 from app.services.galaxy_service import GalaxyService
 
+TEST_MARKER = "galaxy_concurrency_test"
+
+
+async def _cleanup(db, *, user_id: UUID, node_id: UUID) -> None:
+    """按精确 ID 清除本测试产生的全部行（逆 FK 顺序，不触碰既有数据）。"""
+    for stmt, params in (
+        ("DELETE FROM user_node_status WHERE user_id = :user_id AND node_id = :node_id",
+         {"user_id": user_id, "node_id": node_id}),
+        ("DELETE FROM knowledge_nodes WHERE id = :node_id", {"node_id": node_id}),
+        ("DELETE FROM event_outbox WHERE aggregate_type = 'galaxy_node_mastery' AND aggregate_id = :user_id",
+         {"user_id": user_id}),
+        ("DELETE FROM event_sequence_counters WHERE aggregate_type = 'galaxy_node_mastery' AND aggregate_id = :user_id",
+         {"user_id": user_id}),
+        ("DELETE FROM users WHERE id = :user_id", {"user_id": user_id}),
+    ):
+        await db.execute(text(stmt), params)
+    await db.commit()
+
+
+@pytest.fixture()
+async def seeded_ids():
+    """生成唯一的测试实体 ID；测试结束后精确清除本测试写入的所有行。"""
+    user_id = uuid4()
+    node_id = uuid4()
+    yield {"user_id": user_id, "node_id": node_id}
+
+    async with AsyncSessionLocal() as db:
+        await _cleanup(db, user_id=user_id, node_id=node_id)
+
 
 async def _seed_user_node_status(db, *, user_id: UUID, node_id: UUID, mastery_score: float, revision: int) -> None:
+    """种子数据全部带 TEST_MARKER 前缀，泄漏可识别、teardown 可精确删除。"""
     user = User(
         id=user_id,
-        username=f"concurrency_{user_id.hex[:12]}",
-        email=f"{user_id.hex[:12]}@example.com",
+        username=f"{TEST_MARKER}_{user_id.hex[:12]}",
+        email=f"{TEST_MARKER}.{user_id.hex[:12]}@example.invalid",
         hashed_password="hashed",
     )
     node = KnowledgeNode(
         id=node_id,
-        name=f"并发测试节点-{node_id.hex[:8]}",
-        description="用于验证知识星图掌握度并发更新。",
+        name=f"{TEST_MARKER}-{node_id.hex[:8]}",
+        description="用于验证知识星图掌握度并发更新（测试自清理）。",
         importance_level=1,
         source_type="user_created",
         dominant_sector_code="VOID",
@@ -42,13 +85,13 @@ async def _seed_user_node_status(db, *, user_id: UUID, node_id: UUID, mastery_sc
 
 
 @pytest.mark.asyncio
-async def test_concurrent_mastery_update_with_revision():
+async def test_concurrent_mastery_update_with_revision(seeded_ids):
     """
     C1 Fix Verification: Concurrent updates with same revision should result in only one success.
     This tests the atomic UPDATE with WHERE revision = expected_revision.
     """
-    user_id = uuid4()
-    node_id = uuid4()
+    user_id = seeded_ids["user_id"]
+    node_id = seeded_ids["node_id"]
     await engine.dispose()
 
     # Create initial node status
@@ -106,12 +149,12 @@ async def test_concurrent_mastery_update_with_revision():
 
 
 @pytest.mark.asyncio
-async def test_sequential_mastery_update_with_revision():
+async def test_sequential_mastery_update_with_revision(seeded_ids):
     """
     C1 Fix Verification: Sequential updates with incrementing revisions should all succeed.
     """
-    user_id = uuid4()
-    node_id = uuid4()
+    user_id = seeded_ids["user_id"]
+    node_id = seeded_ids["node_id"]
     await engine.dispose()
 
     async with AsyncSessionLocal() as db:
@@ -146,12 +189,12 @@ async def test_sequential_mastery_update_with_revision():
 
 
 @pytest.mark.asyncio
-async def test_stale_revision_rejected():
+async def test_stale_revision_rejected(seeded_ids):
     """
     C1 Fix Verification: Update with stale revision should be rejected.
     """
-    user_id = uuid4()
-    node_id = uuid4()
+    user_id = seeded_ids["user_id"]
+    node_id = seeded_ids["node_id"]
     await engine.dispose()
 
     async with AsyncSessionLocal() as db:

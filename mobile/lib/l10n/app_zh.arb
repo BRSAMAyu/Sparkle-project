@@ -9209,7 +9209,6 @@
     "taskBoardThisWeek": "本周",
     "taskBoardLater": "更晚",
     "taskBoardNoDate": "无日期",
-    "taskBoardTodayNoTasks": "今日无任务",
     "unnamedTask": "未命名任务",
     "taskConfirmAbandon": "确定要放弃「{title}」吗？",
     "taskAbandonTitle": "放弃任务",
@@ -14416,6 +14415,20 @@
     "goalDetailMinimumLine": "最低达标线",
     "goalDetailBottlenecks": "知识瓶颈",
     "goalDetailTodayStep": "今日最小下一步",
+    "goalDetailNoTodayStep": "今天没有待执行任务，可以先复盘或补充计划。",
+    "goalDetailStart": "开始",
+    "goalDetailStartedSnack": "已开始今日最小一步",
+    "goalDetailUndo": "撤销",
+    "goalDetailEstimated": "预计",
+    "goalDetailMinutes": "{minutes} 分钟",
+    "@goalDetailMinutes": {
+        "placeholders": {
+            "minutes": {
+                "type": "int"
+            }
+        }
+    },
+    "goalDetailStatus": "状态",
     "goalDetailPlanHealth": "计划健康状态",
     "goalDetailAccountability": "责任伙伴",
     "goalDetailRelatedSources": "相关资料来源",

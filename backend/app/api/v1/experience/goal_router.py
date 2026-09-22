@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -19,6 +19,7 @@ from app.models.strategy_belief import StrategyBeliefSnapshot
 from app.models.task import Task, TaskStatus
 from app.models.task_document import TaskDocument
 from app.models.user import User
+from app.services.goal_today_view import fetch_todays_next_task
 
 router = APIRouter(prefix="/experience", tags=["experience"])
 
@@ -280,26 +281,24 @@ async def _task_counts(db: AsyncSession, *, user_id: UUID, plan_id: UUID | None)
 
 
 async def _todays_next_task(db: AsyncSession, *, user_id: UUID, plan_id: UUID | None) -> Task | None:
-    if plan_id is None:
-        return None
-    result = await db.execute(
-        select(Task)
-        .where(
-            Task.user_id == user_id,
-            Task.plan_id == plan_id,
-            Task.status.in_([TaskStatus.PENDING, TaskStatus.IN_PROGRESS, TaskStatus.STUCK, TaskStatus.RESTORE]),
-            Task.deleted_at.is_(None),
-        )
-        .order_by(
-            (Task.status == TaskStatus.IN_PROGRESS).desc(),
-            Task.due_date.asc().nulls_last(),
-            Task.priority.desc(),
-            Task.order_index.asc(),
-            Task.created_at.asc(),
-        )
-        .limit(1)
+    """goal 详情「今日最小下一步」取数。
+
+    S7 单一事实源：「今日任务」判定与取数统一走 app/services/goal_today_view.py，
+    与 home 快照（experience_readouts goal-detail next_task）口径字面一致；
+    本函数不再自带查询定义（历史实现无 today 过滤且排除 PAUSED，曾与 home
+    快照对同一目标状态给出相反结论）。
+    """
+    return await fetch_todays_next_task(
+        db,
+        user_id=user_id,
+        plan_id=plan_id,
+        today=datetime.now(UTC).date(),
     )
-    return result.scalar_one_or_none()
+
+
+def _todays_step_exists(task: Task | None) -> bool:
+    """goal 详情口径的「今日有无任务」布尔判定（供 SSOT 回归测试引用）。"""
+    return task is not None
 
 
 async def _load_graph_payload(db: AsyncSession, *, user_id: UUID, goal_id: UUID) -> dict[str, Any]:

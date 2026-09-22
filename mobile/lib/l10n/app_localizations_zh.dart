@@ -20397,9 +20397,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskBoardNoDate => '无日期';
 
   @override
-  String get taskBoardTodayNoTasks => '今日无任务';
-
-  @override
   String get unnamedTask => '未命名任务';
 
   @override
@@ -31235,6 +31232,29 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get goalDetailTodayStep => '今日最小下一步';
+
+  @override
+  String get goalDetailNoTodayStep => '今天没有待执行任务，可以先复盘或补充计划。';
+
+  @override
+  String get goalDetailStart => '开始';
+
+  @override
+  String get goalDetailStartedSnack => '已开始今日最小一步';
+
+  @override
+  String get goalDetailUndo => '撤销';
+
+  @override
+  String get goalDetailEstimated => '预计';
+
+  @override
+  String goalDetailMinutes(int minutes) {
+    return '$minutes 分钟';
+  }
+
+  @override
+  String get goalDetailStatus => '状态';
 
   @override
   String get goalDetailPlanHealth => '计划健康状态';

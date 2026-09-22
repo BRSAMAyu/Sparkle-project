@@ -89,7 +89,10 @@ class MinimumCriteriaCard extends StatelessWidget {
                       _CriteriaRow(threshold: item),
                   ],
                 ),
-              if (!criteria.isConfirmed) ...[
+              if (!criteria.isConfirmed && criteria.thresholds.isNotEmpty) ...[
+                // S11 · D9 空态规范：空态只回答「为什么空」，不携带主 CTA。
+                // thresholds 为空时无物可确认，只保留 goalDetailNoCriteria 文案；
+                // 「添加达标线」入口由后续修改流统一提供（goalDetailModifySnack）。
                 const SizedBox(height: 14),
                 Wrap(
                   spacing: 10,

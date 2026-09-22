@@ -9407,7 +9407,6 @@
     "taskBoardThisWeek": "This Week",
     "taskBoardLater": "Later",
     "taskBoardNoDate": "No Date",
-    "taskBoardTodayNoTasks": "No tasks today",
     "unnamedTask": "Unnamed Task",
     "taskConfirmAbandon": "Are you sure you want to abandon \"{title}\"?",
     "taskAbandonTitle": "Abandon Task",
@@ -14410,6 +14409,20 @@
     "goalDetailMinimumLine": "Minimum bar",
     "goalDetailBottlenecks": "Knowledge bottlenecks",
     "goalDetailTodayStep": "Today’s smallest next step",
+    "goalDetailNoTodayStep": "No task queued for today. Review or refine the plan first.",
+    "goalDetailStart": "Start",
+    "goalDetailStartedSnack": "Started today’s smallest step",
+    "goalDetailUndo": "Undo",
+    "goalDetailEstimated": "Estimated",
+    "goalDetailMinutes": "{minutes} min",
+    "@goalDetailMinutes": {
+        "placeholders": {
+            "minutes": {
+                "type": "int"
+            }
+        }
+    },
+    "goalDetailStatus": "Status",
     "goalDetailPlanHealth": "Plan health",
     "goalDetailAccountability": "Accountability",
     "goalDetailRelatedSources": "Related sources",

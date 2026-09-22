@@ -37189,12 +37189,6 @@ abstract class AppLocalizations {
   /// **'无日期'**
   String get taskBoardNoDate;
 
-  /// No description provided for @taskBoardTodayNoTasks.
-  ///
-  /// In zh, this message translates to:
-  /// **'今日无任务'**
-  String get taskBoardTodayNoTasks;
-
   /// No description provided for @unnamedTask.
   ///
   /// In zh, this message translates to:
@@ -56783,6 +56777,48 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'今日最小下一步'**
   String get goalDetailTodayStep;
+
+  /// No description provided for @goalDetailNoTodayStep.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天没有待执行任务，可以先复盘或补充计划。'**
+  String get goalDetailNoTodayStep;
+
+  /// No description provided for @goalDetailStart.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始'**
+  String get goalDetailStart;
+
+  /// No description provided for @goalDetailStartedSnack.
+  ///
+  /// In zh, this message translates to:
+  /// **'已开始今日最小一步'**
+  String get goalDetailStartedSnack;
+
+  /// No description provided for @goalDetailUndo.
+  ///
+  /// In zh, this message translates to:
+  /// **'撤销'**
+  String get goalDetailUndo;
+
+  /// No description provided for @goalDetailEstimated.
+  ///
+  /// In zh, this message translates to:
+  /// **'预计'**
+  String get goalDetailEstimated;
+
+  /// No description provided for @goalDetailMinutes.
+  ///
+  /// In zh, this message translates to:
+  /// **'{minutes} 分钟'**
+  String goalDetailMinutes(int minutes);
+
+  /// No description provided for @goalDetailStatus.
+  ///
+  /// In zh, this message translates to:
+  /// **'状态'**
+  String get goalDetailStatus;
 
   /// No description provided for @goalDetailPlanHealth.
   ///

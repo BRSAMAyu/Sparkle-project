@@ -21,10 +21,24 @@ class TaskBoardTodaySummary {
 
   final int totalCount;
   final int completedCount;
-
-  String get label =>
-      totalCount == 0 ? S.taskBoardTodayNoTasks : S.taskBoardTodaySummary(completedCount, totalCount);
 }
+
+/// S7「今日」展示口径 · 单一定义点。
+///
+/// 真假判定以引擎 `backend/app/services/goal_today_view.py` 为唯一事实源
+/// （due_date == today 且状态非 COMPLETED/ABANDONED 即「今日待执行」）。
+/// 客户端此函数仅作看板的展示分组/计数投影，不另立判定语义；
+/// 头部汇总与「今日/逾期」分组必须共用本函数，禁止各写一套日期过滤。
+List<TaskModel> tasksDueOn(List<TaskModel> tasks, DateTime day) {
+  bool isSameDay(DateTime? value) =>
+      value != null &&
+      value.year == day.year &&
+      value.month == day.month &&
+      value.day == day.day;
+  return tasks.where((task) => isSameDay(task.dueDate)).toList();
+}
+
+DateTime dateOnlyOf(DateTime value) => DateTime(value.year, value.month, value.day);
 
 /// Task board state
 class TaskBoardState {
@@ -203,24 +217,16 @@ final taskBoardProvider =
 final taskBoardTodaySummaryProvider = Provider<TaskBoardTodaySummary>((ref) {
   final taskState = ref.watch(taskListProvider);
   final now = DateTime.now();
-  final today = DateTime(now.year, now.month, now.day);
 
-  bool isSameDay(DateTime? value) =>
-      value != null &&
-      value.year == today.year &&
-      value.month == today.month &&
-      value.day == today.day;
+  // 「今日 x/y」头部汇总：与今日分组同用 tasksDueOn 单一口径
+  //（到期日为今天，含当天已完成，排除已放弃）——不再把「今天完成的历史任务」
+  // 计入今日，消除「头部今日 1/1 正文却没有今日分组」的自相矛盾。
+  final todayTasks = tasksDueOn(
+    taskState.tasks.where((t) => t.status != TaskStatus.abandoned).toList(),
+    now,
+  );
 
-  final todayTasks = taskState.tasks
-      .where((task) => isSameDay(task.dueDate) || isSameDay(task.completedAt))
-      .toList();
-
-  final completedToday = todayTasks
-      .where(
-        (task) =>
-            task.status == TaskStatus.completed && isSameDay(task.completedAt),
-      )
-      .length;
+  final completedToday = todayTasks.where((task) => task.status == TaskStatus.completed).length;
 
   return TaskBoardTodaySummary(
     totalCount: todayTasks.length,
@@ -253,12 +259,14 @@ final scheduleGroupsProvider = Provider<List<ScheduleGroup>>((ref) {
       .toList();
 
   final now = DateTime.now();
-  final today = DateTime(now.year, now.month, now.day);
+  final today = dateOnlyOf(now);
   final tomorrow = today.add(const Duration(days: 1));
   final weekEnd = today.add(const Duration(days: 7));
 
   final overDue = <TaskModel>[];
-  final todayTasks = <TaskModel>[];
+  // 与头部汇总共用 tasksDueOn 单一口径（S7）：今日分组 = 到期日为今天的待执行任务。
+  final todayTasks = tasksDueOn(tasks, now);
+  final todayDueDates = todayTasks.map((t) => t.id).toSet();
   final tomorrowTasks = <TaskModel>[];
   final thisWeek = <TaskModel>[];
   final later = <TaskModel>[];
@@ -267,6 +275,9 @@ final scheduleGroupsProvider = Provider<List<ScheduleGroup>>((ref) {
   for (final task in tasks) {
     if (task.dueDate == null) {
       noDate.add(task);
+    } else if (todayDueDates.contains(task.id)) {
+      // 已在今日分组，跳过
+      continue;
     } else {
       final dueDate = DateTime(
         task.dueDate!.year,
@@ -275,8 +286,6 @@ final scheduleGroupsProvider = Provider<List<ScheduleGroup>>((ref) {
       );
       if (dueDate.isBefore(today)) {
         overDue.add(task);
-      } else if (dueDate == today) {
-        todayTasks.add(task);
       } else if (dueDate == tomorrow) {
         tomorrowTasks.add(task);
       } else if (dueDate.isBefore(weekEnd)) {

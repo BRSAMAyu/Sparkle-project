@@ -34,20 +34,12 @@ extension GoalDetailLocalizations on AppLocalizations {
   String get goalDetailOpenGalaxy => _isZh ? '打开星图' : 'Open galaxy';
   String goalDetailMasteryPercent(int percent) =>
       _isZh ? '掌握 $percent%' : '$percent% mastery';
-  String get goalDetailTodayStep =>
-      _isZh ? '今日最小下一步' : 'Today’s smallest next step';
-  String get goalDetailNoTodayStep => _isZh
-      ? '今天没有待执行任务，可以先复盘或补充计划。'
-      : 'No task queued for today. Review or refine the plan first.';
-  String get goalDetailStart => _isZh ? '开始' : 'Start';
-  String get goalDetailComplete => _isZh ? '完成' : 'Complete';
-  String get goalDetailStartedSnack =>
-      _isZh ? '已开始今日最小一步' : 'Started today’s smallest step';
-  String get goalDetailCompletedTitle =>
-      _isZh ? '完成这一步？' : 'Complete this step?';
-  String get goalDetailCompletedBody =>
-      _isZh ? '完成后会刷新目标详情。' : 'The goal detail will refresh after completion.';
-  String get goalDetailCancel => _isZh ? '取消' : 'Cancel';
+  // 「今日最小下一步」区块与状态文案已迁入 l10n arb（S2 词典化批1-A）：
+  // goalDetailTodayStep / goalDetailNoTodayStep / goalDetailStart /
+  // goalDetailStartedSnack / goalDetailUndo / goalDetailEstimated /
+  // goalDetailMinutes / goalDetailStatus / goalDetailComplete /
+  // goalDetailCompletedTitle / goalDetailCompletedBody / goalDetailCancel。
+  // 其余条目待 S2 文案词典批全量迁移，勿在此新增重复定义。
   String get goalDetailPlanHealth => _isZh ? '计划健康状态' : 'Plan health';
   String get goalDetailPhaseHealth => _isZh ? '阶段健康' : 'Phase health';
   String get goalDetailTaskCompletion => _isZh ? '任务完成率' : 'Task completion';
@@ -82,8 +74,4 @@ extension GoalDetailLocalizations on AppLocalizations {
   String get goalDetailEditFailed =>
       _isZh ? '目标更新失败' : 'Failed to update goal';
   String get goalDetailBack => _isZh ? '返回' : 'Back';
-  String get goalDetailStatus => _isZh ? '状态' : 'Status';
-  String get goalDetailEstimated => _isZh ? '预计' : 'Estimated';
-  String goalDetailMinutes(int minutes) =>
-      _isZh ? '$minutes 分钟' : '$minutes min';
 }

@@ -549,16 +549,10 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
           onPressed: () => context.pop(),
         ),
         title: Text(l10n.schedulePreferences),
-        actions: [
-          SparkleButton.ghost(
-            label: l10n.confirm,
-            onPressed: () {
-              if (context.mounted) {
-                context.pop();
-              }
-            },
-          ),
-        ],
+        // S13 · D9 裁决：本页为即时生效模型（每项开关拨动即写 provider），
+        // 不存在脏状态，故不设「确定」类手动保存按钮——右上角幽灵按钮
+        // 实际只做 pop()，伪装保存语义会误导用户「不按不生效」。
+        // 表单提交与即时生效不混用；返回用左上角返回箭头。
       ),
       child: ContentConstraint(
         child: SingleChildScrollView(
