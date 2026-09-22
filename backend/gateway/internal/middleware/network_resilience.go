@@ -110,10 +110,21 @@ func NetworkResilienceMiddleware(cfg NetworkResilienceConfig) gin.HandlerFunc {
 		}
 		c.Writer = dw
 
-		// Enforce overall request timeout
-		ctx, cancel := context.WithTimeout(c.Request.Context(), cfg.RequestTimeout)
-		defer cancel()
-		c.Request = c.Request.WithContext(ctx)
+		// SSE-EXEMPT: long-running routes (SSE streams, streamed downloads)
+		// must not inherit a total-request deadline — the resilience timeout
+		// is the same total-timeout class as TimeoutMiddleware's, so without
+		// this check every proxy route registered after setup.go's api.Use()
+		// would carry a double 30s ceiling even with the timeout exemption in
+		// place. Only the deadline is skipped: keepalive headers, the
+		// disconnect watcher and disconnect monitoring all stay active (the
+		// inbound request context still cancels on client disconnect).
+		ctx := c.Request.Context()
+		if !isLongRunningRoute(path) {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithTimeout(ctx, cfg.RequestTimeout)
+			defer cancel()
+			c.Request = c.Request.WithContext(ctx)
+		}
 
 		// Monitor for client disconnect in background
 		done := make(chan struct{})

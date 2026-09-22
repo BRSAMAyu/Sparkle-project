@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -402,5 +403,84 @@ func TestProxyRoutesHandler_AdminExecutionsRequireAdmin(t *testing.T) {
 	defer adminResp.Body.Close()
 	if adminResp.StatusCode != http.StatusOK {
 		t.Fatalf("expected admin request to proxy successfully, got %d", adminResp.StatusCode)
+	}
+}
+
+// TestProxyRoutesHandler_BackgroundTaskStreamRegistered — SSE-EXEMPT audit:
+// the engine serves GET /background-tasks/stream/events (SSE task-update
+// stream consumed by mobile task monitor). Without an explicit registration
+// the path fell through to NoRoute, which only proxies /api/v1/auth/* and
+// answered 404. It must now be routed to the backend proxy, and sibling
+// param routes must be unaffected.
+func TestProxyRoutesHandler_BackgroundTaskStreamRegistered(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	logger := zap.NewNop()
+
+	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/background-tasks/stream/events" {
+			t.Errorf("unexpected backend path: %s", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("data: {\"ok\":true}\n\n"))
+	}))
+	defer backend.Close()
+
+	backendURL, err := url.Parse(backend.URL)
+	if err != nil {
+		t.Fatalf("parse backend url: %v", err)
+	}
+	proxy := httputil.NewSingleHostReverseProxy(backendURL)
+	proxy.FlushInterval = -1
+
+	abTestConfig := &middleware.ABTestConfig{
+		BackendURL: backend.URL,
+		Timeout:    3 * time.Second,
+		Enabled:    false,
+	}
+	h := NewProxyRoutesHandler(proxy, middleware.NewABTestMiddleware(abTestConfig), logger)
+
+	router := gin.New()
+	api := router.Group("/api/v1")
+	mockAuthMiddleware := func(c *gin.Context) {
+		c.Set("user_id", "test-user-123")
+		c.Set("auth_token", "test-token-abc")
+		c.Next()
+	}
+	h.RegisterProxyRoutes(api, mockAuthMiddleware)
+
+	registered := make(map[string]bool, len(router.Routes()))
+	for _, route := range router.Routes() {
+		registered[route.Method+" "+route.Path] = true
+	}
+	if !registered["GET /api/v1/background-tasks/stream/events"] {
+		t.Fatal("GET /api/v1/background-tasks/stream/events is not registered")
+	}
+
+	// Proxy through a real HTTP server: ReverseProxy needs a CloseNotifier
+	// writer, which httptest.NewRecorder does not implement (panic).
+	streamServer := httptest.NewServer(router)
+	defer streamServer.Close()
+
+	streamResp, err := http.Get(streamServer.URL + "/api/v1/background-tasks/stream/events")
+	if err != nil {
+		t.Fatalf("expected stream route to proxy successfully: %v", err)
+	}
+	defer streamResp.Body.Close()
+	if streamResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected stream route to proxy with 200, got %d", streamResp.StatusCode)
+	}
+	body, _ := io.ReadAll(streamResp.Body)
+	if string(body) != "data: {\"ok\":true}\n\n" {
+		t.Fatalf("unexpected proxied body: %q", string(body))
+	}
+	if ct := streamResp.Header.Get("Content-Type"); ct != "text/event-stream" {
+		t.Fatalf("expected text/event-stream passthrough, got %q", ct)
+	}
+
+	// The param sibling must still match single-segment ids (not the stream
+	// path), proving the static/param route split is intact.
+	if !registered["GET /api/v1/background-tasks/:task_id"] {
+		t.Fatal("GET /api/v1/background-tasks/:task_id sibling is missing")
 	}
 }

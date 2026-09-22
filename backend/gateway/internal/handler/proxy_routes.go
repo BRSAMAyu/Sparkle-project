@@ -747,6 +747,13 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	{
 		backgroundTasks.GET("", h.proxyWithHeaders)
 		backgroundTasks.GET("/stats/summary", h.proxyWithHeaders)
+		// SSE-EXEMPT audit: the engine serves GET /background-tasks/stream/events
+		// (SSE task-update stream, consumed by mobile task monitor) but this
+		// group previously had no two-segment GET face, so the path fell through
+		// to NoRoute — which only proxies /api/v1/auth/* and answered 404. The
+		// route is exempt from total-request deadlines via
+		// middleware.isLongRunningRoute.
+		backgroundTasks.GET("/stream/events", h.proxyWithHeaders)
 		backgroundTasks.GET("/:task_id", h.proxyWithHeaders)
 		backgroundTasks.POST("/:task_id/retry", h.proxyWithHeaders)
 		backgroundTasks.POST("/:task_id/cancel", h.proxyWithHeaders)

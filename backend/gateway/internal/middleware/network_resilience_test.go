@@ -107,6 +107,80 @@ func TestNetworkResilienceMiddleware_RequestTimeout(t *testing.T) {
 	assert.True(t, w.Code == http.StatusGatewayTimeout || w.Code == http.StatusOK)
 }
 
+// TestNetworkResilienceMiddleware_ExemptRouteNoDeadline asserts the SSE-EXEMPT
+// behavior: long-running routes (SSE streams, streamed downloads) registered
+// after the resilience middleware in setup.go must NOT inherit its
+// RequestTimeout deadline — otherwise they would carry a double 30s ceiling
+// (TimeoutMiddleware + resilience) and get deterministically cut. Everything
+// else (keepalive headers, disconnect watcher) stays active.
+func TestNetworkResilienceMiddleware_ExemptRouteNoDeadline(t *testing.T) {
+	cfg := DefaultNetworkResilienceConfig()
+	cfg.RequestTimeout = 50 * time.Millisecond
+
+	exemptPaths := []string{
+		"/api/v1/galaxy/events",
+		"/api/v1/chat/stream",
+		"/api/v1/simulation/run/stream",
+		"/api/v1/simulation/sessions/abc-123/continue/stream",
+		"/api/v1/background-tasks/stream/events",
+		"/api/v1/users/me/export",
+		"/api/v1/tts/synthesize",
+	}
+
+	for _, path := range exemptPaths {
+		t.Run(path, func(t *testing.T) {
+			var hasDeadline bool
+			var completed bool
+			var watcherWrapped bool
+
+			r := gin.New()
+			r.Use(NetworkResilienceMiddleware(cfg))
+			r.Any(path, func(c *gin.Context) {
+				_, hasDeadline = c.Request.Context().Deadline()
+				_, watcherWrapped = c.Writer.(*disconnectWatcher)
+				time.Sleep(120 * time.Millisecond) // outlive the timeout
+				completed = true
+				c.Status(http.StatusOK)
+			})
+
+			req := httptest.NewRequest(http.MethodGet, path, nil)
+			w := httptest.NewRecorder()
+			r.ServeHTTP(w, req)
+
+			assert.Equal(t, http.StatusOK, w.Code, "exempt route must not be cut by the resilience deadline")
+			assert.True(t, completed, "handler must run to completion past the deadline")
+			assert.False(t, hasDeadline, "exempt route context must not carry a deadline")
+			assert.True(t, watcherWrapped, "disconnect watcher must stay active for exempt routes")
+		})
+	}
+}
+
+// TestNetworkResilienceMiddleware_NonExemptRouteKeepsDeadline pins the red
+// line: ordinary proxy routes registered after the resilience middleware keep
+// their total-timeout deadline (zero protection change).
+func TestNetworkResilienceMiddleware_NonExemptRouteKeepsDeadline(t *testing.T) {
+	cfg := DefaultNetworkResilienceConfig()
+	cfg.RequestTimeout = 50 * time.Millisecond
+
+	var hasDeadline bool
+	var deadline time.Time
+
+	r := gin.New()
+	r.Use(NetworkResilienceMiddleware(cfg))
+	r.GET("/api/v1/chat/sessions", func(c *gin.Context) {
+		deadline, hasDeadline = c.Request.Context().Deadline()
+		c.Status(http.StatusOK)
+	})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/chat/sessions", nil)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.True(t, hasDeadline, "non-exempt route context must carry the resilience deadline")
+	assert.WithinDuration(t, time.Now().Add(cfg.RequestTimeout), deadline, 40*time.Millisecond)
+}
+
 func TestDisconnectWatcher_WriteSuccess(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
