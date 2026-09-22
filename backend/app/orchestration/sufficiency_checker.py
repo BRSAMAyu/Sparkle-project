@@ -17,6 +17,35 @@ from loguru import logger
 from app.services.conflict_resolution_context import select_material_clarification
 from app.services.llm_fallback_utils import sufficiency_llm
 
+# TTFT-CFG: LLM 精化/澄清生成移 FAST 车道。探针实测 suff 单次 LLM 3.2-19.2s（原走
+# 全局 generation 服务=STANDARD 思考档）且全部串行在首个事件之前；force_tier=FAST
+# 短路 profile 策略（FAST 池首 = dashscope_fast），惰性单例避免重复构服。
+_FAST_LANE_SERVICE: Any = None
+_FAST_LANE_SERVICE_FAILED = False
+
+
+async def _get_fast_lane_service() -> Any | None:
+    """返回钉死 FAST tier 的 LLM 服务；构建失败回退 None（调用方走全局服务原链）。"""
+    global _FAST_LANE_SERVICE, _FAST_LANE_SERVICE_FAILED
+    if _FAST_LANE_SERVICE is not None:
+        return _FAST_LANE_SERVICE
+    if _FAST_LANE_SERVICE_FAILED:
+        return None
+    try:
+        from app.core.agent_profiles import AgentRole, ModelTier, TaskType
+        from app.services.llm_service import get_configured_llm_service_for_tier
+
+        _FAST_LANE_SERVICE = await get_configured_llm_service_for_tier(
+            AgentRole.ORCHESTRATOR,
+            ModelTier.FAST,
+            task_type=TaskType.QUICK_QUERY,
+        )
+        return _FAST_LANE_SERVICE
+    except Exception as exc:  # noqa: BLE001 — 车道构建失败不阻断充分性检查原链
+        _FAST_LANE_SERVICE_FAILED = True
+        logger.warning(f"Sufficiency FAST lane unavailable, falling back to default service: {exc}")
+        return None
+
 
 class SufficiencyStatus(StrEnum):
     """信息充分性状态"""
@@ -465,6 +494,7 @@ class SufficiencyChecker:
         result = await sufficiency_llm.json_call(
             messages=[{"role": "user", "content": prompt}],
             fallback={"specific": True},  # 降级时默认认为足够具体
+            service=await _get_fast_lane_service(),  # TTFT-CFG: FAST 车道
             temperature=0.1,
         )
         return bool(result.get("specific", True)) if result else True
@@ -483,6 +513,7 @@ class SufficiencyChecker:
         text = await sufficiency_llm.call(
             messages=[{"role": "user", "content": prompt}],
             fallback="为了更准确地帮你制定计划，请补充目标时间、考试节点和每天可投入时长。",
+            service=await _get_fast_lane_service(),  # TTFT-CFG: FAST 车道
             temperature=0.6,
         )
         return text.strip() if text else "为了更准确地帮你制定计划，请补充目标时间、考试节点和每天可投入时长。"

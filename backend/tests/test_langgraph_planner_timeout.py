@@ -91,11 +91,11 @@ def test_fallback_calls_pass_required_kwargs():
 
 
 def test_timeout_value_matches_execution_engine():
-    """All three callers should use the same 10.0s timeout."""
+    """All three callers should use the same 3.0s timeout (TTFT-CFG budget convergence, was 10.0)."""
     ee_source = EXEC_ENGINE_PATH.read_text()
     pr_source = PLAN_REVIEW_PATH.read_text()
     ma_source = MULTI_AGENT_PATH.read_text()
 
-    assert "_LANGGRAPH_PLANNER_TIMEOUT_SECONDS = 10.0" in ee_source
-    assert "timeout=10.0" in pr_source
-    assert "timeout=10.0" in ma_source
+    assert "_LANGGRAPH_PLANNER_TIMEOUT_SECONDS = 3.0" in ee_source
+    assert "timeout=3.0" in pr_source
+    assert "timeout=3.0" in ma_source

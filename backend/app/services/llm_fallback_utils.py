@@ -58,6 +58,7 @@ async def safe_llm_call(
     fallback: str = "",
     timeout: float = 30.0,
     retry_count: int = 1,
+    service: Any = None,
     **kwargs
 ) -> str:
     """
@@ -68,6 +69,8 @@ async def safe_llm_call(
         fallback: 失败时返回的默认值
         timeout: 超时时间（秒）
         retry_count: 重试次数
+        service: 可选，指定 LLM 服务实例（默认用全局 llm_service）；
+                 供 TTFT-CFG 前置链等需要钉死 FAST 车道的调用方使用
         **kwargs: 传递给llm_service.chat的额外参数
 
     Returns:
@@ -79,13 +82,14 @@ async def safe_llm_call(
             fallback="抱歉，服务暂时不可用"
         )
     """
+    target_service = service if service is not None else llm_service
     last_error = None
 
     for attempt in range(retry_count + 1):
         try:
             # 使用asyncio.wait_for添加超时保护
             result = await asyncio.wait_for(
-                llm_service.chat(messages, **kwargs),
+                target_service.chat(messages, **kwargs),
                 timeout=timeout
             )
             return result
@@ -112,6 +116,7 @@ async def safe_llm_json_call(
     fallback: dict[str, Any] | list[Any] | None = None,
     timeout: float = 30.0,
     retry_count: int = 1,
+    service: Any = None,
     **kwargs
 ) -> dict[str, Any] | list[Any] | None:
     """
@@ -122,6 +127,7 @@ async def safe_llm_json_call(
         fallback: 失败时返回的默认值
         timeout: 超时时间（秒）
         retry_count: 重试次数
+        service: 可选，指定 LLM 服务实例（默认用全局 llm_service）
         **kwargs: 传递给llm_service.chat的额外参数
 
     Returns:
@@ -138,6 +144,7 @@ async def safe_llm_json_call(
         fallback="",  # 空字符串作为中间fallback
         timeout=timeout,
         retry_count=retry_count,
+        service=service,
         **kwargs
     )
 
@@ -216,6 +223,7 @@ class LLMFallbackWrapper:
         self,
         messages: list[dict[str, str]],
         fallback: str | None = None,
+        service: Any = None,
         **kwargs
     ) -> str:
         """安全调用LLM"""
@@ -224,6 +232,7 @@ class LLMFallbackWrapper:
             fallback=fallback or self.default_fallback,
             timeout=self.timeout,
             retry_count=self.retry_count,
+            service=service,
             **kwargs
         )
 
@@ -231,6 +240,7 @@ class LLMFallbackWrapper:
         self,
         messages: list[dict[str, str]],
         fallback: dict[str, Any] | None = None,
+        service: Any = None,
         **kwargs
     ) -> dict[str, Any] | None:
         """安全调用LLM并返回JSON"""
@@ -239,6 +249,7 @@ class LLMFallbackWrapper:
             fallback=fallback or self.default_json_fallback,
             timeout=self.timeout,
             retry_count=self.retry_count,
+            service=service,
             **kwargs
         )
 

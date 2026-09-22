@@ -3,6 +3,7 @@ GoalQualityEvaluator - semantic goal quality gate after sufficiency checks.
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 from dataclasses import dataclass, field
@@ -10,8 +11,12 @@ from typing import Any
 
 from loguru import logger
 
-from app.core.agent_profiles import AgentRole, TaskType
-from app.services.llm_service import get_configured_llm_service
+from app.core.agent_profiles import AgentRole, ModelTier, TaskType
+from app.services.llm_service import get_configured_llm_service_for_tier
+
+# TTFT-CFG: 规划前置链预算收敛。探针实测 goal_quality 单次 LLM 15.7-35.8s 全部串行
+# 在首个事件之前；超时即落 _heuristic_fallback（既有兜底语义），给前置链封顶。
+GOAL_QUALITY_LLM_BUDGET_SECONDS = 5.0
 
 
 @dataclass
@@ -68,10 +73,18 @@ class GoalQualityEvaluator:
                 summary="intent_not_applicable",
             )
 
-        llm_result = await self._evaluate_with_llm(
-            user_message=user_message,
-            conversation_context=conversation_context or [],
-        )
+        llm_result: GoalQualityEvaluation | None = None
+        try:
+            async with asyncio.timeout(GOAL_QUALITY_LLM_BUDGET_SECONDS):
+                llm_result = await self._evaluate_with_llm(
+                    user_message=user_message,
+                    conversation_context=conversation_context or [],
+                )
+        except TimeoutError:
+            logger.warning(
+                f"GoalQualityEvaluator LLM budget ({GOAL_QUALITY_LLM_BUDGET_SECONDS}s) exceeded, "
+                "using heuristic fallback"
+            )
         if llm_result is not None:
             return llm_result
 
@@ -84,9 +97,13 @@ class GoalQualityEvaluator:
         conversation_context: list[dict[str, Any]],
     ) -> GoalQualityEvaluation | None:
         try:
-            llm = await get_configured_llm_service(
+            # TTFT-CFG: 前置质量门移 FAST 车道（force_tier 短路 profile 策略，
+            # FAST 池首 = dashscope_fast；不再经共享 ORCHESTRATOR 服务做任务级切换，
+            # 消除对缓存实例的模型污染副作用）。
+            llm = await get_configured_llm_service_for_tier(
                 AgentRole.ORCHESTRATOR,
-                TaskType.QUICK_QUERY,
+                ModelTier.FAST,
+                task_type=TaskType.QUICK_QUERY,
             )
             history_lines: list[str] = []
             for item in conversation_context[-4:]:

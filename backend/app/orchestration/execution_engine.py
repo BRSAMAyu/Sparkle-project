@@ -55,7 +55,9 @@ from app.services.galaxy.graph_structure_service import GraphStructureEvolutionS
 from app.services.llm_service import llm_service
 from app.services.system_update_service import SystemUpdateService, build_system_update
 
-_LANGGRAPH_PLANNER_TIMEOUT_SECONDS = 10.0
+# TTFT-CFG: 规划轮 planner 预算收敛 10s → 3s。探针实测 3/3 规划轮全部打满 10s 超时
+# 走 synthesized fallback（纯超时税）；提前失败落同一兜底，产物不变、首帧前移 7s。
+_LANGGRAPH_PLANNER_TIMEOUT_SECONDS = 3.0
 _OPENCLAW_CHAT_CONTROL_EXPLICIT_HINTS = (
     "openclaw",
     "通过 openclaw",

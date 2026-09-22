@@ -151,6 +151,39 @@ def glm_effective_max_tokens(
     return math.ceil(requested * _GLM_MIN_VISIBLE_SHARE / (1 - _GLM_WORST_THINKING_SHARE))
 
 
+# ============================================
+# DashScope（通义千问）车道思考控制（TTFT-CFG）
+# ============================================
+# TTFT-PROBE 簇 B 根因：qwen3 混合模型流式下默认先思考后作答（reasoning 13-43s），
+# DashScope 兼容模式的思考开关是 `enable_thinking`；引擎此前发的 GLM 风格
+# `thinking:{"type":…}` 对其无效——主聊天档位思考从未被显式关闭（探针 M6：fast 档
+# 不发参数仍流 reasoning，首块 356ms 即 reasoning，TTFT 33.4s）。
+# 产品裁决（2026-09 主会话）：
+# - FAST/STANDARD/PLUS（聊天主链路直出层，tier 池首均 dashscope_*）显式关思考；
+#   PLUS 层注册语义即"非思考"（dashscope_chat=qwen3.7-plus 非思考），随主链路一并关。
+# - PRO/MAX/TOP（深度分析层）保留思考：不注入参数（provider 默认思考开，流式），
+#   reasoning_mode 显式要求深思考的调用经 router 落到这些层即自然保持开启。
+# - GLM 车道 thinking:{} 现有发送保留：按 provider 分叉，不是全局替换。
+
+_DASHSCOPE_THINKING_OFF_TIERS: frozenset[ModelTier] = frozenset(
+    {ModelTier.FAST, ModelTier.STANDARD, ModelTier.PLUS}
+)
+
+
+def dashscope_enable_thinking_param(tier: ModelTier, thinking_mode: str | None) -> bool | None:
+    """DashScope 车道应在线上注入的 enable_thinking 三态（TTFT-CFG）。
+
+    返回 False = 显式注入关闭（FAST/STANDARD/PLUS 主聊天直出层）；
+    返回 None  = 不注入该参数（PRO/MAX/TOP 保留思考走 provider 默认，其余层维持原状）。
+    仅 provider=DASHSCOPE 的装配点调用；其他 provider 维持原 GLM 风格分支。
+    本函数永不返回 True：思考保留层靠"不注入+模型默认"表达，避免对
+    非流式/非混合模型注入 enable_thinking=true 触发 400。
+    """
+    if tier in _DASHSCOPE_THINKING_OFF_TIERS:
+        return False
+    return None
+
+
 @dataclass
 class ModelConfig:
     """模型配置"""
@@ -1719,13 +1752,26 @@ class LLMRouter:
             "max_tokens": config.max_tokens,
         }
 
+        extra_body: dict[str, Any] | None = None
+
         # GLM 特有参数：通过 extra_body 传递
         if config.provider == ModelProvider.ZHIPU and config.clear_thinking is not None:
-            extra_body: dict[str, Any] = {"clear_thinking": config.clear_thinking}
+            extra_body = {"clear_thinking": config.clear_thinking}
             # V3-FIX-04: 仅 coding 端点附 thinking disabled（唯一真关闭思考的通道）；
             # 标准端点发该参数会 400 code 1210，clear_thinking 字段本身被智谱静默忽略
             if glm_thinking_disabled_on_wire(config.provider, config.base_url, config.clear_thinking):
                 extra_body["thinking"] = {"type": "disabled"}
+
+        # TTFT-CFG: DashScope 车道思考开关是 enable_thinking（GLM 风格 thinking:{}
+        # 对其无效，主聊天档位思考从未被显式关过——簇 B 根因）。FAST/STANDARD/PLUS
+        # 显式关；PRO/MAX/TOP 不注入（provider 默认思考开 = 保留思考）。
+        if config.provider == ModelProvider.DASHSCOPE:
+            enable_thinking = dashscope_enable_thinking_param(config.tier, config.thinking_mode)
+            if enable_thinking is not None:
+                extra_body = dict(extra_body or {})
+                extra_body["enable_thinking"] = enable_thinking
+
+        if extra_body is not None:
             kwargs["extra_body"] = extra_body
 
         # V3-FIX-04: 思考车道 max_tokens 留量（最坏 88% 思考占比下保证可见输出 ≥ 配置值的 15%）

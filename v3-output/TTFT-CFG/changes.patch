@@ -1,0 +1,884 @@
+diff --git a/backend/app/core/llm_router.py b/backend/app/core/llm_router.py
+index f4f190db..ee2bb4da 100644
+--- a/backend/app/core/llm_router.py
++++ b/backend/app/core/llm_router.py
+@@ -151,6 +151,39 @@ def glm_effective_max_tokens(
+     return math.ceil(requested * _GLM_MIN_VISIBLE_SHARE / (1 - _GLM_WORST_THINKING_SHARE))
+ 
+ 
++# ============================================
++# DashScope（通义千问）车道思考控制（TTFT-CFG）
++# ============================================
++# TTFT-PROBE 簇 B 根因：qwen3 混合模型流式下默认先思考后作答（reasoning 13-43s），
++# DashScope 兼容模式的思考开关是 `enable_thinking`；引擎此前发的 GLM 风格
++# `thinking:{"type":…}` 对其无效——主聊天档位思考从未被显式关闭（探针 M6：fast 档
++# 不发参数仍流 reasoning，首块 356ms 即 reasoning，TTFT 33.4s）。
++# 产品裁决（2026-09 主会话）：
++# - FAST/STANDARD/PLUS（聊天主链路直出层，tier 池首均 dashscope_*）显式关思考；
++#   PLUS 层注册语义即"非思考"（dashscope_chat=qwen3.7-plus 非思考），随主链路一并关。
++# - PRO/MAX/TOP（深度分析层）保留思考：不注入参数（provider 默认思考开，流式），
++#   reasoning_mode 显式要求深思考的调用经 router 落到这些层即自然保持开启。
++# - GLM 车道 thinking:{} 现有发送保留：按 provider 分叉，不是全局替换。
++
++_DASHSCOPE_THINKING_OFF_TIERS: frozenset[ModelTier] = frozenset(
++    {ModelTier.FAST, ModelTier.STANDARD, ModelTier.PLUS}
++)
++
++
++def dashscope_enable_thinking_param(tier: ModelTier, thinking_mode: str | None) -> bool | None:
++    """DashScope 车道应在线上注入的 enable_thinking 三态（TTFT-CFG）。
++
++    返回 False = 显式注入关闭（FAST/STANDARD/PLUS 主聊天直出层）；
++    返回 None  = 不注入该参数（PRO/MAX/TOP 保留思考走 provider 默认，其余层维持原状）。
++    仅 provider=DASHSCOPE 的装配点调用；其他 provider 维持原 GLM 风格分支。
++    本函数永不返回 True：思考保留层靠"不注入+模型默认"表达，避免对
++    非流式/非混合模型注入 enable_thinking=true 触发 400。
++    """
++    if tier in _DASHSCOPE_THINKING_OFF_TIERS:
++        return False
++    return None
++
++
+ @dataclass
+ class ModelConfig:
+     """模型配置"""
+@@ -1719,13 +1752,26 @@ class LLMRouter:
+             "max_tokens": config.max_tokens,
+         }
+ 
++        extra_body: dict[str, Any] | None = None
++
+         # GLM 特有参数：通过 extra_body 传递
+         if config.provider == ModelProvider.ZHIPU and config.clear_thinking is not None:
+-            extra_body: dict[str, Any] = {"clear_thinking": config.clear_thinking}
++            extra_body = {"clear_thinking": config.clear_thinking}
+             # V3-FIX-04: 仅 coding 端点附 thinking disabled（唯一真关闭思考的通道）；
+             # 标准端点发该参数会 400 code 1210，clear_thinking 字段本身被智谱静默忽略
+             if glm_thinking_disabled_on_wire(config.provider, config.base_url, config.clear_thinking):
+                 extra_body["thinking"] = {"type": "disabled"}
++
++        # TTFT-CFG: DashScope 车道思考开关是 enable_thinking（GLM 风格 thinking:{}
++        # 对其无效，主聊天档位思考从未被显式关过——簇 B 根因）。FAST/STANDARD/PLUS
++        # 显式关；PRO/MAX/TOP 不注入（provider 默认思考开 = 保留思考）。
++        if config.provider == ModelProvider.DASHSCOPE:
++            enable_thinking = dashscope_enable_thinking_param(config.tier, config.thinking_mode)
++            if enable_thinking is not None:
++                extra_body = dict(extra_body or {})
++                extra_body["enable_thinking"] = enable_thinking
++
++        if extra_body is not None:
+             kwargs["extra_body"] = extra_body
+ 
+         # V3-FIX-04: 思考车道 max_tokens 留量（最坏 88% 思考占比下保证可见输出 ≥ 配置值的 15%）
+diff --git a/backend/app/orchestration/execution_engine.py b/backend/app/orchestration/execution_engine.py
+index c22ad16a..e7a84180 100644
+--- a/backend/app/orchestration/execution_engine.py
++++ b/backend/app/orchestration/execution_engine.py
+@@ -55,7 +55,9 @@ from app.services.galaxy.graph_structure_service import GraphStructureEvolutionS
+ from app.services.llm_service import llm_service
+ from app.services.system_update_service import SystemUpdateService, build_system_update
+ 
+-_LANGGRAPH_PLANNER_TIMEOUT_SECONDS = 10.0
++# TTFT-CFG: 规划轮 planner 预算收敛 10s → 3s。探针实测 3/3 规划轮全部打满 10s 超时
++# 走 synthesized fallback（纯超时税）；提前失败落同一兜底，产物不变、首帧前移 7s。
++_LANGGRAPH_PLANNER_TIMEOUT_SECONDS = 3.0
+ _OPENCLAW_CHAT_CONTROL_EXPLICIT_HINTS = (
+     "openclaw",
+     "通过 openclaw",
+diff --git a/backend/app/orchestration/goal_quality_evaluator.py b/backend/app/orchestration/goal_quality_evaluator.py
+index d0102e28..0fa02577 100644
+--- a/backend/app/orchestration/goal_quality_evaluator.py
++++ b/backend/app/orchestration/goal_quality_evaluator.py
+@@ -3,6 +3,7 @@ GoalQualityEvaluator - semantic goal quality gate after sufficiency checks.
+ """
+ from __future__ import annotations
+ 
++import asyncio
+ import json
+ import re
+ from dataclasses import dataclass, field
+@@ -10,8 +11,12 @@ from typing import Any
+ 
+ from loguru import logger
+ 
+-from app.core.agent_profiles import AgentRole, TaskType
+-from app.services.llm_service import get_configured_llm_service
++from app.core.agent_profiles import AgentRole, ModelTier, TaskType
++from app.services.llm_service import get_configured_llm_service_for_tier
++
++# TTFT-CFG: 规划前置链预算收敛。探针实测 goal_quality 单次 LLM 15.7-35.8s 全部串行
++# 在首个事件之前；超时即落 _heuristic_fallback（既有兜底语义），给前置链封顶。
++GOAL_QUALITY_LLM_BUDGET_SECONDS = 5.0
+ 
+ 
+ @dataclass
+@@ -68,10 +73,18 @@ class GoalQualityEvaluator:
+                 summary="intent_not_applicable",
+             )
+ 
+-        llm_result = await self._evaluate_with_llm(
+-            user_message=user_message,
+-            conversation_context=conversation_context or [],
+-        )
++        llm_result: GoalQualityEvaluation | None = None
++        try:
++            async with asyncio.timeout(GOAL_QUALITY_LLM_BUDGET_SECONDS):
++                llm_result = await self._evaluate_with_llm(
++                    user_message=user_message,
++                    conversation_context=conversation_context or [],
++                )
++        except TimeoutError:
++            logger.warning(
++                f"GoalQualityEvaluator LLM budget ({GOAL_QUALITY_LLM_BUDGET_SECONDS}s) exceeded, "
++                "using heuristic fallback"
++            )
+         if llm_result is not None:
+             return llm_result
+ 
+@@ -84,9 +97,13 @@ class GoalQualityEvaluator:
+         conversation_context: list[dict[str, Any]],
+     ) -> GoalQualityEvaluation | None:
+         try:
+-            llm = await get_configured_llm_service(
++            # TTFT-CFG: 前置质量门移 FAST 车道（force_tier 短路 profile 策略，
++            # FAST 池首 = dashscope_fast；不再经共享 ORCHESTRATOR 服务做任务级切换，
++            # 消除对缓存实例的模型污染副作用）。
++            llm = await get_configured_llm_service_for_tier(
+                 AgentRole.ORCHESTRATOR,
+-                TaskType.QUICK_QUERY,
++                ModelTier.FAST,
++                task_type=TaskType.QUICK_QUERY,
+             )
+             history_lines: list[str] = []
+             for item in conversation_context[-4:]:
+diff --git a/backend/app/orchestration/multi_agent_adapter.py b/backend/app/orchestration/multi_agent_adapter.py
+index ecee9026..c070cf45 100644
+--- a/backend/app/orchestration/multi_agent_adapter.py
++++ b/backend/app/orchestration/multi_agent_adapter.py
+@@ -101,7 +101,8 @@ class MultiAgentWorkflowAdapter:
+                     },
+                     locale=locale,
+                 ),
+-                timeout=10.0,
++                # TTFT-CFG: 与 execution_engine._LANGGRAPH_PLANNER_TIMEOUT_SECONDS 同步收敛 3s
++                timeout=3.0,
+             )
+         except TimeoutError:
+             logger.warning(
+diff --git a/backend/app/orchestration/plan_review_service.py b/backend/app/orchestration/plan_review_service.py
+index edd9e8c8..2511f6d1 100644
+--- a/backend/app/orchestration/plan_review_service.py
++++ b/backend/app/orchestration/plan_review_service.py
+@@ -2374,7 +2374,8 @@ Please review this plan and provide your assessment."""
+                             user_id=user_id,
+                             session_id=session_id,
+                         ),
+-                        timeout=10.0,
++                        # TTFT-CFG: 与 execution_engine._LANGGRAPH_PLANNER_TIMEOUT_SECONDS 同步收敛 3s
++                        timeout=3.0,
+                     )
+                 except TimeoutError:
+                     logger.warning(
+diff --git a/backend/app/orchestration/sufficiency_checker.py b/backend/app/orchestration/sufficiency_checker.py
+index 98fd67c2..9a2d0f03 100644
+--- a/backend/app/orchestration/sufficiency_checker.py
++++ b/backend/app/orchestration/sufficiency_checker.py
+@@ -17,6 +17,35 @@ from loguru import logger
+ from app.services.conflict_resolution_context import select_material_clarification
+ from app.services.llm_fallback_utils import sufficiency_llm
+ 
++# TTFT-CFG: LLM 精化/澄清生成移 FAST 车道。探针实测 suff 单次 LLM 3.2-19.2s（原走
++# 全局 generation 服务=STANDARD 思考档）且全部串行在首个事件之前；force_tier=FAST
++# 短路 profile 策略（FAST 池首 = dashscope_fast），惰性单例避免重复构服。
++_FAST_LANE_SERVICE: Any = None
++_FAST_LANE_SERVICE_FAILED = False
++
++
++async def _get_fast_lane_service() -> Any | None:
++    """返回钉死 FAST tier 的 LLM 服务；构建失败回退 None（调用方走全局服务原链）。"""
++    global _FAST_LANE_SERVICE, _FAST_LANE_SERVICE_FAILED
++    if _FAST_LANE_SERVICE is not None:
++        return _FAST_LANE_SERVICE
++    if _FAST_LANE_SERVICE_FAILED:
++        return None
++    try:
++        from app.core.agent_profiles import AgentRole, ModelTier, TaskType
++        from app.services.llm_service import get_configured_llm_service_for_tier
++
++        _FAST_LANE_SERVICE = await get_configured_llm_service_for_tier(
++            AgentRole.ORCHESTRATOR,
++            ModelTier.FAST,
++            task_type=TaskType.QUICK_QUERY,
++        )
++        return _FAST_LANE_SERVICE
++    except Exception as exc:  # noqa: BLE001 — 车道构建失败不阻断充分性检查原链
++        _FAST_LANE_SERVICE_FAILED = True
++        logger.warning(f"Sufficiency FAST lane unavailable, falling back to default service: {exc}")
++        return None
++
+ 
+ class SufficiencyStatus(StrEnum):
+     """信息充分性状态"""
+@@ -465,6 +494,7 @@ class SufficiencyChecker:
+         result = await sufficiency_llm.json_call(
+             messages=[{"role": "user", "content": prompt}],
+             fallback={"specific": True},  # 降级时默认认为足够具体
++            service=await _get_fast_lane_service(),  # TTFT-CFG: FAST 车道
+             temperature=0.1,
+         )
+         return bool(result.get("specific", True)) if result else True
+@@ -483,6 +513,7 @@ class SufficiencyChecker:
+         text = await sufficiency_llm.call(
+             messages=[{"role": "user", "content": prompt}],
+             fallback="为了更准确地帮你制定计划，请补充目标时间、考试节点和每天可投入时长。",
++            service=await _get_fast_lane_service(),  # TTFT-CFG: FAST 车道
+             temperature=0.6,
+         )
+         return text.strip() if text else "为了更准确地帮你制定计划，请补充目标时间、考试节点和每天可投入时长。"
+diff --git a/backend/app/orchestration/validation_engine.py b/backend/app/orchestration/validation_engine.py
+index dd7f2f62..736e0b81 100644
+--- a/backend/app/orchestration/validation_engine.py
++++ b/backend/app/orchestration/validation_engine.py
+@@ -1,5 +1,6 @@
+ from __future__ import annotations
+ 
++import asyncio
+ import json
+ import uuid
+ from datetime import UTC, datetime
+@@ -25,6 +26,10 @@ from app.services.plan_execution_record_service import PlanExecutionRecordServic
+ from app.services.plan_execution_validator import PlanExecutionValidator
+ from app.services.system_update_service import SystemUpdateService, build_system_update
+ 
++# TTFT-CFG: 规划前置链预算收敛。探针实测 suff 单次 LLM 3.2-19.2s 串行在首个事件之前；
++# 超预算即放弃本轮充分性裁决、继续通用链路（与既有 "check failed, continuing" 语义一致）。
++SUFFICIENCY_CHECK_BUDGET_SECONDS = 5.0
++
+ 
+ def _ws_turn_capture(
+     *,
+@@ -344,23 +349,32 @@ class ValidationEngineMixin:
+                 request=request,
+                 user_context_payload=user_context_payload,
+             )
+-            check_result = await sufficiency_checker.check(
+-                intent=intent_type,
+-                extracted_entities=extracted_entities,
+-                conversation_context=(conversation_context or {}).get("messages", []),
+-                user_message=user_message,
+-                use_llm_fallback=intent_type in {"create_plan", "time_planning"},
+-                tracking_key=":".join(
+-                    part
+-                    for part in (
+-                        user_id,
+-                        str((conversation_context or {}).get("session_id") or "").strip(),
+-                        intent_type,
++            try:
++                # TTFT-CFG: 充分性检查（含 LLM 精化）整体封顶，超时继续通用链路
++                async with asyncio.timeout(SUFFICIENCY_CHECK_BUDGET_SECONDS):
++                    check_result = await sufficiency_checker.check(
++                        intent=intent_type,
++                        extracted_entities=extracted_entities,
++                        conversation_context=(conversation_context or {}).get("messages", []),
++                        user_message=user_message,
++                        use_llm_fallback=intent_type in {"create_plan", "time_planning"},
++                        tracking_key=":".join(
++                            part
++                            for part in (
++                                user_id,
++                                str((conversation_context or {}).get("session_id") or "").strip(),
++                                intent_type,
++                            )
++                            if part
++                        ) or f"{user_id}:{intent_type}",
++                        planning_material_context=planning_material_context,
+                     )
+-                    if part
+-                ) or f"{user_id}:{intent_type}",
+-                planning_material_context=planning_material_context,
+-            )
++            except TimeoutError:
++                logger.warning(
++                    f"Sufficiency check budget ({SUFFICIENCY_CHECK_BUDGET_SECONDS}s) exceeded, "
++                    "continuing generic path"
++                )
++                return False, intent_type
+ 
+             if check_result.status == SufficiencyStatus.NEED_CLARIFICATION:
+                 questions = check_result.clarification_questions
+diff --git a/backend/app/services/llm_fallback_utils.py b/backend/app/services/llm_fallback_utils.py
+index eccf8dc9..763f0129 100644
+--- a/backend/app/services/llm_fallback_utils.py
++++ b/backend/app/services/llm_fallback_utils.py
+@@ -58,6 +58,7 @@ async def safe_llm_call(
+     fallback: str = "",
+     timeout: float = 30.0,
+     retry_count: int = 1,
++    service: Any = None,
+     **kwargs
+ ) -> str:
+     """
+@@ -68,6 +69,8 @@ async def safe_llm_call(
+         fallback: 失败时返回的默认值
+         timeout: 超时时间（秒）
+         retry_count: 重试次数
++        service: 可选，指定 LLM 服务实例（默认用全局 llm_service）；
++                 供 TTFT-CFG 前置链等需要钉死 FAST 车道的调用方使用
+         **kwargs: 传递给llm_service.chat的额外参数
+ 
+     Returns:
+@@ -79,13 +82,14 @@ async def safe_llm_call(
+             fallback="抱歉，服务暂时不可用"
+         )
+     """
++    target_service = service if service is not None else llm_service
+     last_error = None
+ 
+     for attempt in range(retry_count + 1):
+         try:
+             # 使用asyncio.wait_for添加超时保护
+             result = await asyncio.wait_for(
+-                llm_service.chat(messages, **kwargs),
++                target_service.chat(messages, **kwargs),
+                 timeout=timeout
+             )
+             return result
+@@ -112,6 +116,7 @@ async def safe_llm_json_call(
+     fallback: dict[str, Any] | list[Any] | None = None,
+     timeout: float = 30.0,
+     retry_count: int = 1,
++    service: Any = None,
+     **kwargs
+ ) -> dict[str, Any] | list[Any] | None:
+     """
+@@ -122,6 +127,7 @@ async def safe_llm_json_call(
+         fallback: 失败时返回的默认值
+         timeout: 超时时间（秒）
+         retry_count: 重试次数
++        service: 可选，指定 LLM 服务实例（默认用全局 llm_service）
+         **kwargs: 传递给llm_service.chat的额外参数
+ 
+     Returns:
+@@ -138,6 +144,7 @@ async def safe_llm_json_call(
+         fallback="",  # 空字符串作为中间fallback
+         timeout=timeout,
+         retry_count=retry_count,
++        service=service,
+         **kwargs
+     )
+ 
+@@ -216,6 +223,7 @@ class LLMFallbackWrapper:
+         self,
+         messages: list[dict[str, str]],
+         fallback: str | None = None,
++        service: Any = None,
+         **kwargs
+     ) -> str:
+         """安全调用LLM"""
+@@ -224,6 +232,7 @@ class LLMFallbackWrapper:
+             fallback=fallback or self.default_fallback,
+             timeout=self.timeout,
+             retry_count=self.retry_count,
++            service=service,
+             **kwargs
+         )
+ 
+@@ -231,6 +240,7 @@ class LLMFallbackWrapper:
+         self,
+         messages: list[dict[str, str]],
+         fallback: dict[str, Any] | None = None,
++        service: Any = None,
+         **kwargs
+     ) -> dict[str, Any] | None:
+         """安全调用LLM并返回JSON"""
+@@ -239,6 +249,7 @@ class LLMFallbackWrapper:
+             fallback=fallback or self.default_json_fallback,
+             timeout=self.timeout,
+             retry_count=self.retry_count,
++            service=service,
+             **kwargs
+         )
+ 
+diff --git a/backend/app/services/llm_service.py b/backend/app/services/llm_service.py
+index 74a440c4..c5795a7c 100755
+--- a/backend/app/services/llm_service.py
++++ b/backend/app/services/llm_service.py
+@@ -872,7 +872,13 @@ class LLMService:
+         if selection.config.enable_web_search:
+             params.setdefault("tools", [])
+             params["tools"].append({"type": "web_search"})
+-        if selection.config.thinking_mode:
++        # TTFT-CFG: 思考控制按 provider 分叉——DashScope 走 enable_thinking（已在
++        # get_openai_client_kwargs 注入），不再叠加 GLM 风格 thinking:{}（对其无效）；
++        # 其余 provider（GLM/MIMO/DeepSeek）保持现有 thinking:{} 发送不变。
++        if (
++            selection.config.thinking_mode
++            and selection.config.provider is not ModelProvider.DASHSCOPE
++        ):
+             extra_body = dict(params.get("extra_body") or {})
+             extra_body["thinking"] = {"type": selection.config.thinking_mode}
+             params["extra_body"] = extra_body
+@@ -925,7 +931,13 @@ class LLMService:
+         if selection.config.enable_web_search:
+             params.setdefault("tools", [])
+             params["tools"].append({"type": "web_search"})
+-        if selection.config.thinking_mode:
++        # TTFT-CFG: 思考控制按 provider 分叉——DashScope 走 enable_thinking（已在
++        # get_openai_client_kwargs 注入），不再叠加 GLM 风格 thinking:{}（对其无效）；
++        # 其余 provider（GLM/MIMO/DeepSeek）保持现有 thinking:{} 发送不变。
++        if (
++            selection.config.thinking_mode
++            and selection.config.provider is not ModelProvider.DASHSCOPE
++        ):
+             extra_body = dict(params.get("extra_body") or {})
+             extra_body["thinking"] = {"type": selection.config.thinking_mode}
+             params["extra_body"] = extra_body
+diff --git a/backend/tests/test_langgraph_planner_timeout.py b/backend/tests/test_langgraph_planner_timeout.py
+index af3b42d1..61b0c9fa 100644
+--- a/backend/tests/test_langgraph_planner_timeout.py
++++ b/backend/tests/test_langgraph_planner_timeout.py
+@@ -91,11 +91,11 @@ def test_fallback_calls_pass_required_kwargs():
+ 
+ 
+ def test_timeout_value_matches_execution_engine():
+-    """All three callers should use the same 10.0s timeout."""
++    """All three callers should use the same 3.0s timeout (TTFT-CFG budget convergence, was 10.0)."""
+     ee_source = EXEC_ENGINE_PATH.read_text()
+     pr_source = PLAN_REVIEW_PATH.read_text()
+     ma_source = MULTI_AGENT_PATH.read_text()
+ 
+-    assert "_LANGGRAPH_PLANNER_TIMEOUT_SECONDS = 10.0" in ee_source
+-    assert "timeout=10.0" in pr_source
+-    assert "timeout=10.0" in ma_source
++    assert "_LANGGRAPH_PLANNER_TIMEOUT_SECONDS = 3.0" in ee_source
++    assert "timeout=3.0" in pr_source
++    assert "timeout=3.0" in ma_source
+diff --git a/backend/tests/unit/test_ttft_cfg_thinking_and_budget.py b/backend/tests/unit/test_ttft_cfg_thinking_and_budget.py
+new file mode 100644
+index 00000000..3375b13a
+--- /dev/null
++++ b/backend/tests/unit/test_ttft_cfg_thinking_and_budget.py
+@@ -0,0 +1,423 @@
++"""
++TTFT-CFG：思考档分档配置 + 规划链预算收敛单测（全程 mock，零真实请求）。
++
++红绿契约（依据 v3-output/TTFT-PROBE/REPORT.md 簇 A/簇 B 根因 + 主会话产品裁决）：
++1. DashScope 思考开关分档（provider 分叉，非全局替换）：
++   - FAST/STANDARD/PLUS（主聊天直出层）→ 线上注入 `enable_thinking: false`
++   - PRO/MAX/TOP（深度分析层）→ 不注入（provider 默认思考开 = 保留思考，永不发 true
++     以避免非流式/非混合模型 400）
++   - DashScope 车道不再叠加 GLM 风格 `thinking:{"type":…}`（对 DashScope 无效——簇 B 根因）
++   - GLM 车道 `thinking:{}` 现有发送保持不变；非 DashScope 的 thinking_mode 车道原样
++2. planner 预算收敛：_LANGGRAPH_PLANNER_TIMEOUT_SECONDS 10s → 3s
++3. 规划前置链 FAST 化 + 预算：
++   - check_goal_quality LLM 走 force_tier=FAST，LLM 段 5s 封顶（超时落既有启发式兜底）
++   - check_sufficiency LLM 精化走 FAST 车道，check 段 5s 封顶（超时继续通用链路）
++   - asyncio.timeout 使用 `async with` 正确形态（上一卡修过 `asyncio.timeout(N)(fn)(…) 死码`）
++"""
++
++from __future__ import annotations
++
++import asyncio
++import json
++import time
++from types import SimpleNamespace
++from unittest.mock import AsyncMock, patch
++
++import httpx
++import pytest
++from openai import AsyncOpenAI
++
++from app.core.agent_profiles import AgentRole, ModelTier, TaskType
++from app.config import settings
++from app.core.llm_router import (
++    ModelProvider,
++    dashscope_enable_thinking_param,
++    llm_router,
++)
++from app.services.llm_service import LLMService
++
++DASHSCOPE_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
++
++
++def _rebuild_router() -> "object":
++    from app.core.llm_router import LLMRouter
++
++    with patch.object(settings, "DASHSCOPE_API_KEY", "test-dash-key"), patch.object(
++        settings, "MINIMAX_API_KEY", ""
++    ):
++        return LLMRouter()
++
++
++@pytest.fixture(autouse=True)
++def _deterministic_env(monkeypatch):
++    """环境无关化：清空 .env 注入的 *_API_KEY 与 LLM_TIER_* override（防主仓钉死穿透）。"""
++    field_names = set(getattr(settings, "model_fields", None) or getattr(settings, "__fields__", {}))
++    for k in field_names:
++        if k.endswith("_API_KEY") or k.startswith("LLM_TIER_"):
++            monkeypatch.setattr(settings, k, "")
++
++
++@pytest.fixture(autouse=True)
++def _restore_global_router():
++    """恢复全局单例快照，防重建污染同进程后续测试。"""
++    saved = dict(llm_router.__dict__)
++    yield
++    llm_router.__dict__.clear()
++    llm_router.__dict__.update(saved)
++
++
++def _capture_handler(captured: dict):
++    def handler(request: httpx.Request) -> httpx.Response:
++        captured["body"] = json.loads(request.content.decode("utf-8"))
++        return httpx.Response(
++            200,
++            json={"choices": [{"message": {"role": "assistant", "content": "ok"}, "finish_reason": "stop"}]},
++        )
++
++    return handler
++
++
++async def _capture_wire_body(base_url: str, extra_body: dict) -> dict:
++    """按引擎真实路径（get_openai_client_kwargs → SDK create）捕获线上 JSON payload。"""
++    captured: dict = {}
++    client = AsyncOpenAI(
++        api_key="test-key",
++        base_url=base_url,
++        http_client=httpx.AsyncClient(transport=httpx.MockTransport(_capture_handler(captured))),
++    )
++    await client.chat.completions.create(
++        model="model-test",
++        messages=[{"role": "user", "content": "hi"}],
++        extra_body=extra_body,
++    )
++    await client.close()
++    return captured["body"]
++
++
++# ---------------------------------------------------------------------------
++# 1. 裁决一：DashScope 思考分档（enable_thinking 三态 + provider 分叉）
++# ---------------------------------------------------------------------------
++
++
++def test_dashscope_enable_thinking_param_three_states():
++    """三态纯函数：主聊天直出层显式关；深思考层不注入；永不返回 True。"""
++    assert dashscope_enable_thinking_param(ModelTier.FAST, None) is False
++    assert dashscope_enable_thinking_param(ModelTier.STANDARD, "enabled") is False
++    assert dashscope_enable_thinking_param(ModelTier.PLUS, None) is False
++    # PRO/MAX/TOP 保留思考：不注入（None），即使 registered thinking_mode="enabled"
++    assert dashscope_enable_thinking_param(ModelTier.PRO, "enabled") is None
++    assert dashscope_enable_thinking_param(ModelTier.MAX, "enabled") is None
++    assert dashscope_enable_thinking_param(ModelTier.TOP, "enabled") is None
++    # 非能力层维持原状
++    assert dashscope_enable_thinking_param(ModelTier.GLM_BATCH, None) is None
++    assert dashscope_enable_thinking_param(ModelTier.FREE, None) is None
++    # 契约：永不注入 true（规避非流式/非混合模型 400）
++    values = {
++        dashscope_enable_thinking_param(t, m)
++        for t in ModelTier
++        for m in (None, "enabled", "disabled")
++    }
++    assert True not in values
++
++
++@pytest.mark.asyncio
++async def test_dashscope_main_chat_lanes_wire_enable_thinking_false():
++    """FAST/STANDARD/PLUS 三条主聊天车道 → 线上 payload 含 enable_thinking=false。"""
++    router = _rebuild_router()
++    for key in ("dashscope_fast", "dashscope_standard_thinking", "dashscope_chat"):
++        selection = router.select_specific_model(key, agent_role=AgentRole.ROUTER)
++        assert selection.config.provider == ModelProvider.DASHSCOPE
++        kwargs = router.get_openai_client_kwargs(selection)
++        body = await _capture_wire_body(selection.config.base_url, kwargs.get("extra_body") or {})
++        assert body["enable_thinking"] is False, f"{key} 必须显式关思考"
++        assert "thinking" not in body, f"{key} 不得携带 GLM 风格 thinking 参数"
++
++
++@pytest.mark.asyncio
++async def test_dashscope_deep_lanes_no_thinking_injection():
++    """PRO/MAX/TOP 深度分析车道 → 不注入 enable_thinking（保留 provider 默认思考）。"""
++    router = _rebuild_router()
++    for key in ("dashscope_reason", "qwen3_8_max", "qwen3_8_max_top"):
++        selection = router.select_specific_model(key, agent_role=AgentRole.ROUTER)
++        kwargs = router.get_openai_client_kwargs(selection)
++        assert kwargs.get("extra_body") is None, f"{key} 不应注入思考参数"
++        body = await _capture_wire_body(selection.config.base_url, {})
++        assert "enable_thinking" not in body
++        assert "thinking" not in body
++
++
++def test_glm_lane_wire_params_unchanged():
++    """GLM 车道红线：thinking:{} 现有发送不被 DashScope 分叉波及。"""
++    router = _rebuild_router()
++    selection = router.select_specific_model("glm_4_7_no_thinking", agent_role=AgentRole.ROUTER)
++    assert selection.config.provider == ModelProvider.ZHIPU
++    kwargs = router.get_openai_client_kwargs(selection)
++    assert kwargs["extra_body"] == {
++        "clear_thinking": True,
++        "thinking": {"type": "disabled"},
++    }
++
++
++def test_non_dashscope_thinking_mode_lane_unchanged():
++    """非 DashScope（如 MIMO）带 thinking_mode → 仍走原 GLM 风格分支，不受分叉影响。"""
++    from app.core.llm_router import LLMSelection
++
++    selection = LLMSelection(
++        model_key="xiaomi_chat",
++        config=SimpleNamespace(
++            provider=ModelProvider.XIAOMI,
++            model_name="mimo-test",
++            base_url="https://x.test",
++            api_key="k",
++            temperature=0.7,
++            max_tokens=None,
++            clear_thinking=None,
++            tier=ModelTier.FAST,
++            thinking_mode="enabled",
++        ),
++        agent_role=AgentRole.ROUTER,
++        task_type=None,
++        reason="test",
++    )
++    kwargs = llm_router.get_openai_client_kwargs(selection)
++    assert "enable_thinking" not in kwargs  # 分叉只作用于 DASHSCOPE
++
++
++class _FakeRawProvider:
++    """暴露 .client 供 raw 路径捕获最终请求参数。"""
++
++    def __init__(self, captured: dict, stream: bool = False):
++        self.captured = captured
++        self._stream = stream
++        self.client = SimpleNamespace(
++            chat=SimpleNamespace(completions=SimpleNamespace(create=self._create))
++        )
++
++    async def _create(self, **params):
++        self.captured.update(params)
++        if self._stream:
++            async def _gen():
++                yield SimpleNamespace(choices=[])
++
++            return _gen()
++        return SimpleNamespace(
++            choices=[SimpleNamespace(message=SimpleNamespace(content="ok"))], usage=None
++        )
++
++
++@pytest.mark.asyncio
++async def test_raw_stream_dashscope_sends_enable_thinking_not_glm_thinking():
++    """主聊天流式路径（chat_stream_with_tools 底座）：DashScope 车道发 enable_thinking，不发 GLM 风格 thinking。"""
++    router = _rebuild_router()
++    selection = router.select_specific_model("dashscope_standard_thinking", agent_role=AgentRole.ROUTER)
++    service = LLMService(agent_role=AgentRole.GENERATION, enable_dynamic_routing=True)
++    service._current_selection = selection
++    captured: dict = {}
++    service._provider = _FakeRawProvider(captured, stream=True)
++
++    chunks = [chunk async for chunk in service._create_raw_stream(selection, {"messages": []})]
++
++    assert len(chunks) == 1
++    assert captured["extra_body"] == {"enable_thinking": False}
++    assert "thinking" not in captured["extra_body"]
++
++
++@pytest.mark.asyncio
++async def test_raw_completion_zhipu_keeps_glm_thinking_param():
++    """raw 非流式路径红线：GLM 思考车道 thinking:{} 保持原样（分叉不全局替换）。"""
++    router = _rebuild_router()
++    selection = router.select_specific_model("glm_4_7_thinking", agent_role=AgentRole.ROUTER)
++    service = LLMService(agent_role=AgentRole.GENERATION, enable_dynamic_routing=True)
++    service._current_selection = selection
++    captured: dict = {}
++    service._provider = _FakeRawProvider(captured)
++
++    await service._create_raw_completion(selection, {"messages": []})
++
++    # glm_4_7_thinking 是标准端点思考车道：clear_thinking=False 且无 thinking disabled（V3-FIX-04 既有行为）
++    assert captured["extra_body"]["clear_thinking"] is False
++    assert "thinking" not in captured["extra_body"]
++    assert "enable_thinking" not in captured["extra_body"]
++
++
++# ---------------------------------------------------------------------------
++# 2. 裁决二：planner 预算收敛 10s → 3s
++# ---------------------------------------------------------------------------
++
++
++def test_planner_timeout_constant_is_3s():
++    """execution_engine planner 硬编码超时收敛为 3s（超时走兜底是既有语义）。"""
++    from app.orchestration import execution_engine
++
++    assert execution_engine._LANGGRAPH_PLANNER_TIMEOUT_SECONDS == 3.0
++
++
++def test_planner_budget_is_used_at_wait_for_site():
++    """wait_for 调用点必须引用收敛后的常量（防有人回填裸数字）。"""
++    from pathlib import Path
++
++    source = Path("app/orchestration/execution_engine.py").read_text()
++    assert "timeout=_LANGGRAPH_PLANNER_TIMEOUT_SECONDS" in source
++
++
++# ---------------------------------------------------------------------------
++# 3. 裁决三：前置链 FAST 车道 + 预算封顶
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.asyncio
++async def test_goal_quality_llm_uses_fast_tier(monkeypatch):
++    """check_goal_quality 的 LLM 段必须 force_tier=FAST（短路 profile 策略）。"""
++    from app.orchestration import goal_quality_evaluator as gqe_module
++    from app.orchestration.goal_quality_evaluator import GoalQualityEvaluator
++
++    captured: dict = {}
++
++    async def _fake_service_factory(agent_role, force_tier, task_type=None, reasoning_mode=None):
++        captured["args"] = (agent_role, force_tier, task_type)
++
++        class _StubService:
++            async def chat(self, messages, **kwargs):
++                return json.dumps(
++                    {"scores": {"specificity": 0.9, "measurability": 0.9, "time_bound": 0.9},
++                     "summary": "ok", "clarification_questions": []}
++                )
++
++        return _StubService()
++
++    monkeypatch.setattr(gqe_module, "get_configured_llm_service_for_tier", _fake_service_factory)
++
++    evaluator = GoalQualityEvaluator()
++    result = await evaluator._evaluate_with_llm(user_message="期末前把高数提到85分", conversation_context=[])
++
++    assert result is not None and result.passed is True
++    assert captured["args"][0] == AgentRole.ORCHESTRATOR
++    assert captured["args"][1] == ModelTier.FAST
++    assert captured["args"][2] == TaskType.QUICK_QUERY
++
++
++@pytest.mark.asyncio
++async def test_goal_quality_budget_exceeded_falls_back_to_heuristic(monkeypatch):
++    """goal_quality LLM 段 5s 封顶：超时落既有启发式兜底，evaluate 不抛异常。"""
++    from app.orchestration import goal_quality_evaluator as gqe_module
++    from app.orchestration.goal_quality_evaluator import GoalQualityEvaluator
++
++    monkeypatch.setattr(gqe_module, "GOAL_QUALITY_LLM_BUDGET_SECONDS", 0.05)
++
++    evaluator = GoalQualityEvaluator()
++
++    async def _slow_llm(*args, **kwargs):
++        await asyncio.sleep(1.0)
++        return None
++
++    monkeypatch.setattr(evaluator, "_evaluate_with_llm", _slow_llm)
++
++    t0 = time.perf_counter()
++    result = await evaluator.evaluate(user_message="我想学好数学", intent="create_plan")
++    elapsed = time.perf_counter() - t0
++
++    assert elapsed < 0.6, "超时必须在预算附近返回，而不是等满 LLM 时长"
++    assert result.passed is False
++    assert result.clarification_questions, "启发式兜底应给出澄清问题"
++
++
++@pytest.mark.asyncio
++async def test_sufficiency_llm_refinement_uses_fast_lane(monkeypatch):
++    """check_sufficiency 的 LLM 精化必须走 FAST 车道（force_tier=FAST）。"""
++    from app.orchestration import sufficiency_checker as sc_module
++    from app.orchestration.sufficiency_checker import sufficiency_checker
++
++    monkeypatch.setattr(sc_module, "_FAST_LANE_SERVICE", None)
++    monkeypatch.setattr(sc_module, "_FAST_LANE_SERVICE_FAILED", False)
++
++    captured: dict = {}
++
++    async def _fake_service_factory(agent_role, force_tier, task_type=None, reasoning_mode=None):
++        captured["args"] = (agent_role, force_tier, task_type)
++
++        class _StubService:
++            async def chat(self, messages, **kwargs):
++                return '{"specific": false}'
++
++        return _StubService()
++
++    import app.services.llm_service as llm_service_module
++    monkeypatch.setattr(llm_service_module, "get_configured_llm_service_for_tier", _fake_service_factory)
++
++    specific = await sufficiency_checker._llm_refinement("create_plan", "帮我做个计划")
++
++    assert specific is False
++    assert captured["args"][0] == AgentRole.ORCHESTRATOR
++    assert captured["args"][1] == ModelTier.FAST
++    assert captured["args"][2] == TaskType.QUICK_QUERY
++
++
++@pytest.mark.asyncio
++async def test_sufficiency_check_budget_wraps_and_continues(monkeypatch):
++    """check_sufficiency 整段封顶：超预算返回 (False, intent) 继续通用链路（既有 continuing 语义）。"""
++    from app.gen.agent.v1 import agent_service_pb2
++    from app.orchestration import validation_engine as ve_module
++    from app.orchestration.sufficiency_checker import SufficiencyCheckResult, SufficiencyStatus
++    from app.orchestration.validation_engine import ValidationEngineMixin
++
++    monkeypatch.setattr(ve_module, "SUFFICIENCY_CHECK_BUDGET_SECONDS", 0.05)
++
++    async def _slow_check(**kwargs):
++        await asyncio.sleep(1.0)
++        return SufficiencyCheckResult(status=SufficiencyStatus.SUFFICIENT)
++
++    import app.orchestration.sufficiency_checker as sc_module
++    monkeypatch.setattr(sc_module.sufficiency_checker, "check", _slow_check)
++
++    import app.services.shadow_prediction_service as sps_module
++    monkeypatch.setattr(
++        sps_module.shadow_prediction_service,
++        "predict_intent_only",
++        AsyncMock(return_value={"intent_type": "create_plan"}),
++    )
++
++    host = ValidationEngineMixin.__new__(ValidationEngineMixin)
++
++    async def _no_preflight(**kwargs):
++        return False
++
++    host._check_phase_a_planning_preflight = _no_preflight
++
++    t0 = time.perf_counter()
++    handled, intent_type = await host._check_sufficiency(
++        request=agent_service_pb2.ChatRequest(),
++        user_message="帮我做一个期末冲刺计划",
++        user_id="u1",
++        plan_id=None,
++        session_id=None,
++        conversation_context=None,
++        user_context_payload=None,
++        plan_context=None,
++        state=None,
++        active_db=None,
++        session_feedback_signal=None,
++        stream_callback=None,
++        queue=None,
++    )
++    elapsed = time.perf_counter() - t0
++
++    assert elapsed < 0.6, "超时必须在预算附近返回，而不是等满 check 时长"
++    assert handled is False
++    assert intent_type == "create_plan"
++
++
++def test_budget_wraps_use_async_with_form_not_dead_code():
++    """红线防回归：预算包装必须是 `async with asyncio.timeout(...)` 正确形态，
++    不得回退到 `asyncio.timeout(N)(fn)(...)` 死码（上一卡 TTFT-PROBE 修过的陷阱）。"""
++    from pathlib import Path
++
++    gqe_source = Path("app/orchestration/goal_quality_evaluator.py").read_text()
++    ve_source = Path("app/orchestration/validation_engine.py").read_text()
++
++    assert "async with asyncio.timeout(GOAL_QUALITY_LLM_BUDGET_SECONDS):" in gqe_source
++    assert "async with asyncio.timeout(SUFFICIENCY_CHECK_BUDGET_SECONDS):" in ve_source
++    for source in (gqe_source, ve_source):
++        timeout_lines = [line.strip() for line in source.splitlines() if "asyncio.timeout" in line]
++        assert not any(
++            ")(" in line for line in timeout_lines
++        ), "asyncio.timeout 不得作为可调用对象使用（死码形态）"

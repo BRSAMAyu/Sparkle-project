@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import uuid
 from datetime import UTC, datetime
@@ -24,6 +25,10 @@ from app.services.perceptible_intelligence_service import ProgressComparisonServ
 from app.services.plan_execution_record_service import PlanExecutionRecordService
 from app.services.plan_execution_validator import PlanExecutionValidator
 from app.services.system_update_service import SystemUpdateService, build_system_update
+
+# TTFT-CFG: 规划前置链预算收敛。探针实测 suff 单次 LLM 3.2-19.2s 串行在首个事件之前；
+# 超预算即放弃本轮充分性裁决、继续通用链路（与既有 "check failed, continuing" 语义一致）。
+SUFFICIENCY_CHECK_BUDGET_SECONDS = 5.0
 
 
 def _ws_turn_capture(
@@ -344,23 +349,32 @@ class ValidationEngineMixin:
                 request=request,
                 user_context_payload=user_context_payload,
             )
-            check_result = await sufficiency_checker.check(
-                intent=intent_type,
-                extracted_entities=extracted_entities,
-                conversation_context=(conversation_context or {}).get("messages", []),
-                user_message=user_message,
-                use_llm_fallback=intent_type in {"create_plan", "time_planning"},
-                tracking_key=":".join(
-                    part
-                    for part in (
-                        user_id,
-                        str((conversation_context or {}).get("session_id") or "").strip(),
-                        intent_type,
+            try:
+                # TTFT-CFG: 充分性检查（含 LLM 精化）整体封顶，超时继续通用链路
+                async with asyncio.timeout(SUFFICIENCY_CHECK_BUDGET_SECONDS):
+                    check_result = await sufficiency_checker.check(
+                        intent=intent_type,
+                        extracted_entities=extracted_entities,
+                        conversation_context=(conversation_context or {}).get("messages", []),
+                        user_message=user_message,
+                        use_llm_fallback=intent_type in {"create_plan", "time_planning"},
+                        tracking_key=":".join(
+                            part
+                            for part in (
+                                user_id,
+                                str((conversation_context or {}).get("session_id") or "").strip(),
+                                intent_type,
+                            )
+                            if part
+                        ) or f"{user_id}:{intent_type}",
+                        planning_material_context=planning_material_context,
                     )
-                    if part
-                ) or f"{user_id}:{intent_type}",
-                planning_material_context=planning_material_context,
-            )
+            except TimeoutError:
+                logger.warning(
+                    f"Sufficiency check budget ({SUFFICIENCY_CHECK_BUDGET_SECONDS}s) exceeded, "
+                    "continuing generic path"
+                )
+                return False, intent_type
 
             if check_result.status == SufficiencyStatus.NEED_CLARIFICATION:
                 questions = check_result.clarification_questions

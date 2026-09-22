@@ -872,7 +872,13 @@ class LLMService:
         if selection.config.enable_web_search:
             params.setdefault("tools", [])
             params["tools"].append({"type": "web_search"})
-        if selection.config.thinking_mode:
+        # TTFT-CFG: 思考控制按 provider 分叉——DashScope 走 enable_thinking（已在
+        # get_openai_client_kwargs 注入），不再叠加 GLM 风格 thinking:{}（对其无效）；
+        # 其余 provider（GLM/MIMO/DeepSeek）保持现有 thinking:{} 发送不变。
+        if (
+            selection.config.thinking_mode
+            and selection.config.provider is not ModelProvider.DASHSCOPE
+        ):
             extra_body = dict(params.get("extra_body") or {})
             extra_body["thinking"] = {"type": selection.config.thinking_mode}
             params["extra_body"] = extra_body
@@ -925,7 +931,13 @@ class LLMService:
         if selection.config.enable_web_search:
             params.setdefault("tools", [])
             params["tools"].append({"type": "web_search"})
-        if selection.config.thinking_mode:
+        # TTFT-CFG: 思考控制按 provider 分叉——DashScope 走 enable_thinking（已在
+        # get_openai_client_kwargs 注入），不再叠加 GLM 风格 thinking:{}（对其无效）；
+        # 其余 provider（GLM/MIMO/DeepSeek）保持现有 thinking:{} 发送不变。
+        if (
+            selection.config.thinking_mode
+            and selection.config.provider is not ModelProvider.DASHSCOPE
+        ):
             extra_body = dict(params.get("extra_body") or {})
             extra_body["thinking"] = {"type": selection.config.thinking_mode}
             params["extra_body"] = extra_body

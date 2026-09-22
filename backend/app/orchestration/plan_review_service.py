@@ -2374,7 +2374,8 @@ Please review this plan and provide your assessment."""
                             user_id=user_id,
                             session_id=session_id,
                         ),
-                        timeout=10.0,
+                        # TTFT-CFG: 与 execution_engine._LANGGRAPH_PLANNER_TIMEOUT_SECONDS 同步收敛 3s
+                        timeout=3.0,
                     )
                 except TimeoutError:
                     logger.warning(
