@@ -78,7 +78,7 @@ class LLMOutputValidator:
         (r"mkfs\s+", "格式化命令"),
         (r"shutdown\s+", "关机命令"),
         (r"reboot\s+", "重启命令"),
-        (r"kill\s+-9\s+", "强制杀进程"),
+        (r"\bkill\s+-9\s+-?[01](?![0-9])", "强制杀进程"),
     ]
 
     # 代码注入模式

@@ -169,11 +169,13 @@ class TestLLMOutputValidator:
         assert result.is_valid is False
 
     def test_kill_command(self, validator):
-        """测试杀进程命令"""
-        text = "终止进程: kill -9 1234"
-        result = validator.validate(text)
+        """测试杀进程命令 (SAFETY-OPS 收紧: 普通 PID 教学放行, 破坏性目标 0/1/-1 仍拦)"""
+        assert validator.validate("终止进程: kill -9 1234").is_valid is True
 
-        assert result.is_valid is False
+        for destructive in ("kill -9 1", "kill -9 -1", "kill -9 0"):
+            result = validator.validate(f"终止进程: {destructive}")
+            assert result.is_valid is False
+            assert result.action == "block"
 
     # =============================================================================
     # 代码注入防护测试
