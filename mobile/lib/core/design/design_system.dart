@@ -1255,6 +1255,56 @@ class DS {
   }
 
   // ============================================
+  // Profile 高亮稀有度 accent（U-01 Step 5 收敛入册，冻结值）
+  // ============================================
+  // profile 面「最近高光」列表的稀有度 accent 与上方卡片体系
+  // （rarityRare 金 / rarityEpic 紫 / rarityLegendary 红）逐值不同
+  // （历史两套并存，强统一会改变 profile 视觉，U-01 Step 5 比色结论
+  // 4/4 不同）。按 CONVENTION 规则 5 以命名 token 入册，值=profile
+  // 既有 UI 值；两套调色统一前不得互相替换，不得新增使用点。
+  static const Color profileRarityLegendary = Color(0xFFFFA726);
+  static const Color profileRarityEpic = Color(0xFFAB47BC);
+  static const Color profileRarityRare = Color(0xFF42A5F5);
+  static const Color profileRarityCommon = Color(0xFFB0BEC5);
+
+  /// profile 高亮列表稀有度 accent（键约定同 [getRarityColor]）
+  static Color getProfileRarityAccent(String rarity) {
+    switch (rarity.toLowerCase()) {
+      case 'rare':
+        return profileRarityRare;
+      case 'epic':
+        return profileRarityEpic;
+      case 'legendary':
+        return profileRarityLegendary;
+      default:
+        return profileRarityCommon;
+    }
+  }
+
+  // ============================================
+  // Profile 设置项 accent 色（U-01 Step 5 收敛入册，冻结值）
+  // ============================================
+  // profile 面设置分组每行图标 accent（原 16 处 Color(0x…) 字面量收编）。
+  // 语义命名、值=profile 既有 UI 值；仅限 profile 设置行 accent 使用，
+  // 不得新增使用点。
+  static const Color profileAccentGuestUpgrade = Color(0xFFC37D3A);
+  static const Color profileAccentLearningPortfolio = Color(0xFF5F8C72);
+  static const Color profileAccentStudyMaterials = Color(0xFF5C7DCC);
+  static const Color profileAccentAchievementEntry = Color(0xFFFFD700);
+  static const Color profileAccentPosterStudio = Color(0xFF6E8EF7);
+  static const Color profileAccentVisualElements = Color(0xFFD9B66F);
+  static const Color profileAccentPersona = Color(0xFF8877A6);
+  static const Color profileAccentPersonalInfo = Color(0xFF9B7A72);
+  static const Color profileAccentSchedulePreferences = Color(0xFF7087A6);
+  static const Color profileAccentMyWay = Color(0xFF6F8F86);
+  static const Color profileAccentMetacognitionPanel = Color(0xFF4A7A58);
+  static const Color profileAccentAccountSecurity = Color(0xFF6E8FAE);
+  static const Color profileAccentMemoryControl = Color(0xFF6D9282);
+  static const Color profileAccentExportData = Color(0xFF5A7FA0);
+  static const Color profileAccentLogout = Color(0xFFB06F67);
+  static const Color profileAccentDeleteAccount = Color(0xFFB84F45);
+
+  // ============================================
   // 连胜等级颜色 (Streak Tier System)
   // ============================================
 

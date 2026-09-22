@@ -570,7 +570,7 @@
     },
     "mobile/lib/features/memory/presentation/screens/memory_panel_screen.dart": {
       "colorLiteral": 0,
-      "parallelClass": 3,
+      "parallelClass": 2,
       "rawButton": 0,
       "rawChip": 0,
       "rawSpinner": 0
@@ -676,13 +676,6 @@
     "mobile/lib/features/task/presentation/widgets/task_protocol_panel.dart": {
       "colorLiteral": 0,
       "parallelClass": 2,
-      "rawButton": 0,
-      "rawChip": 0,
-      "rawSpinner": 0
-    },
-    "mobile/lib/features/user/presentation/screens/profile_screen.dart": {
-      "colorLiteral": 20,
-      "parallelClass": 0,
       "rawButton": 0,
       "rawChip": 0,
       "rawSpinner": 0

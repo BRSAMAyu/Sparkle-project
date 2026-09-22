@@ -454,19 +454,10 @@ class ProfileScreen extends ConsumerWidget {
     return DS.brandPrimary;
   }
 
-  Color _rarityColor(dynamic rarity) {
-    final key = rarity.toString().split('.').last;
-    switch (key) {
-      case 'legendary':
-        return const Color(0xFFFFA726);
-      case 'epic':
-        return const Color(0xFFAB47BC);
-      case 'rare':
-        return const Color(0xFF42A5F5);
-      default:
-        return const Color(0xFFB0BEC5);
-    }
-  }
+  /// U-01 Step 5: 色值已收编至 DS.profileRarity*（冻结值，与 DS.rarity*
+  /// 卡片体系逐值不同——比色结论见 v3-output/U01-STEP5/REPORT.md）。
+  Color _rarityColor(dynamic rarity) =>
+      DS.getProfileRarityAccent(rarity.toString().split('.').last);
 
   String _rarityLabel(dynamic rarity, AppLocalizations l10n) {
     final key = rarity.toString().split('.').last;
@@ -647,7 +638,7 @@ class ProfileScreen extends ConsumerWidget {
                 context,
                 icon: Icons.upgrade_rounded,
                 title: l10n.profileUpgradeGuest,
-                accentColor: const Color(0xFFC37D3A),
+                accentColor: DS.profileAccentGuestUpgrade,
                 onTap: () => context.push(UserRoutes.guestUpgrade),
               ),
             ),
@@ -665,7 +656,7 @@ class ProfileScreen extends ConsumerWidget {
                   icon: Icons.collections_bookmark_outlined,
                   title: l10n.profileLearningPortfolio,
                   subtitle: l10n.profileLearningPortfolioSubtitle,
-                  accentColor: const Color(0xFF5F8C72),
+                  accentColor: DS.profileAccentLearningPortfolio,
                   onTap: () => context.push(PlanRoutes.learningPortfolio),
                 ),
                 const Divider(height: 1, indent: 68),
@@ -674,7 +665,7 @@ class ProfileScreen extends ConsumerWidget {
                   icon: Icons.auto_stories_outlined,
                   title: l10n.studyMaterialsTitle,
                   subtitle: l10n.studyMaterialsEntrySubtitle,
-                  accentColor: const Color(0xFF5C7DCC),
+                  accentColor: DS.profileAccentStudyMaterials,
                   onTap: () => context.push(DocumentLibraryRoutes.library),
                 ),
                 const Divider(height: 1, indent: 68),
@@ -682,7 +673,7 @@ class ProfileScreen extends ConsumerWidget {
                   context,
                   icon: Icons.emoji_events_outlined,
                   title: l10n.achievementTitle,
-                  accentColor: const Color(0xFFFFD700),
+                  accentColor: DS.profileAccentAchievementEntry,
                   onTap: () => context.push(AchievementRoutes.basePath),
                 ),
                 const Divider(height: 1, indent: 68),
@@ -691,7 +682,7 @@ class ProfileScreen extends ConsumerWidget {
                   icon: Icons.photo_library_outlined,
                   title: l10n.profilePosterStudio,
                   subtitle: l10n.profilePosterStudioSubtitle,
-                  accentColor: const Color(0xFF6E8EF7),
+                  accentColor: DS.profileAccentPosterStudio,
                   onTap: () => context.push(UserRoutes.posterStudio),
                 ),
                 const Divider(height: 1, indent: 68),
@@ -699,7 +690,7 @@ class ProfileScreen extends ConsumerWidget {
                   context,
                   icon: Icons.palette_outlined,
                   title: l10n.visualElementsTitle,
-                  accentColor: const Color(0xFFD9B66F),
+                  accentColor: DS.profileAccentVisualElements,
                   onTap: () => context.push(VisualElementsRoutes.basePath),
                 ),
                 const Divider(height: 1, indent: 68),
@@ -707,7 +698,7 @@ class ProfileScreen extends ConsumerWidget {
                   context,
                   icon: Icons.psychology_alt_outlined,
                   title: l10n.myPersona,
-                  accentColor: const Color(0xFF8877A6),
+                  accentColor: DS.profileAccentPersona,
                   onTap: () => context.push(UserRoutes.persona),
                 ),
               ],
@@ -725,7 +716,7 @@ class ProfileScreen extends ConsumerWidget {
                   context,
                   icon: Icons.person_outline_rounded,
                   title: l10n.profilePersonalInfo,
-                  accentColor: const Color(0xFF9B7A72),
+                  accentColor: DS.profileAccentPersonalInfo,
                   onTap: () => context.push(UserRoutes.editProfile),
                 ),
                 const Divider(height: 1, indent: 68),
@@ -733,7 +724,7 @@ class ProfileScreen extends ConsumerWidget {
                   context,
                   icon: Icons.tune_rounded,
                   title: l10n.schedulePreferences,
-                  accentColor: const Color(0xFF7087A6),
+                  accentColor: DS.profileAccentSchedulePreferences,
                   onTap: () => context.push(UserRoutes.settings),
                 ),
                 const Divider(height: 1, indent: 68),
@@ -741,7 +732,7 @@ class ProfileScreen extends ConsumerWidget {
                   context,
                   icon: Icons.auto_awesome_motion_rounded,
                   title: l10n.profileMyWay,
-                  accentColor: const Color(0xFF6F8F86),
+                  accentColor: DS.profileAccentMyWay,
                   onTap: () => context.push(UserRoutes.skills),
                 ),
                 const Divider(height: 1, indent: 68),
@@ -754,7 +745,7 @@ class ProfileScreen extends ConsumerWidget {
                           true)
                       ? l10n.profileMetacognitionHidden
                       : l10n.profileMetacognitionVisible,
-                  accentColor: const Color(0xFF4A7A58),
+                  accentColor: DS.profileAccentMetacognitionPanel,
                   value: (profileContext?['metacognition_dashboard']
                           as Map<String, dynamic>?)?['hidden'] !=
                       true,
@@ -780,7 +771,7 @@ class ProfileScreen extends ConsumerWidget {
                   context,
                   icon: Icons.manage_accounts_outlined,
                   title: l10n.accountSecurity,
-                  accentColor: const Color(0xFF6E8FAE),
+                  accentColor: DS.profileAccentAccountSecurity,
                   onTap: () => context.push(UserRoutes.accountSecurity),
                 ),
                 if (AppFeatureFlags.enableUserMemoryControls)
@@ -788,7 +779,7 @@ class ProfileScreen extends ConsumerWidget {
                     context,
                     icon: Icons.memory_rounded,
                     title: l10n.memoryControl,
-                    accentColor: const Color(0xFF6D9282),
+                    accentColor: DS.profileAccentMemoryControl,
                     onTap: () => context.push(UserRoutes.memorySettings),
                   ),
                 if (AppFeatureFlags.enableUserMemoryControls)
@@ -798,7 +789,7 @@ class ProfileScreen extends ConsumerWidget {
                   icon: Icons.download_rounded,
                   title: l10n.profileExportData,
                   subtitle: context.l10n.userDownloadDataSubtitle,
-                  accentColor: const Color(0xFF5A7FA0),
+                  accentColor: DS.profileAccentExportData,
                   onTap: () => context.push(UserRoutes.exportData),
                 ),
               ],
@@ -816,7 +807,7 @@ class ProfileScreen extends ConsumerWidget {
                   context,
                   icon: Icons.logout_rounded,
                   title: l10n.logout,
-                  accentColor: const Color(0xFFB06F67),
+                  accentColor: DS.profileAccentLogout,
                   isDestructive: true,
                   onTap: () => _showLogoutDialog(context, ref, l10n),
                 ),
@@ -825,7 +816,7 @@ class ProfileScreen extends ConsumerWidget {
                   context,
                   icon: Icons.delete_forever_rounded,
                   title: l10n.profileDeleteAccount,
-                  accentColor: const Color(0xFFB84F45),
+                  accentColor: DS.profileAccentDeleteAccount,
                   isDestructive: true,
                   onTap: () => context.push(UserRoutes.deleteAccount),
                 ),

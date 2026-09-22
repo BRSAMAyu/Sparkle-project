@@ -30,6 +30,11 @@
 - **owner 扩展（规则 5）**：`SparkleButton` 新增 `ButtonVariant.text`（M3 TextButton 等价：透明底/无阴影/brandPrimary 文字）、`minWidth`/`minHeight`（命中区/布局下限，M3 64x40 对齐）、`borderSide`（OutlinedButton 描边）、`foregroundColor`（语义色文字）、`backgroundGradient`（历史渐变 CTA 无损承接）。全部默认 null/缺省=既有行为，有测试固定（`test/core/design/sparkle_button_test.dart` 9 例）。
 - **保留 4 处**（视觉不等价，逐条见 `v3-output/U01-STEP4/REPORT.md`）：exam_sprint 玻璃拟态 CTA、execution_approval semanticSuccess 实心 CTA（无 success variant）、aurora_status_band 11px 紧凑带内钮、experience_envelope 11px 密集选项钮。galaxy 7 处豁免；memory/user/aurora 三面 8 处与 U-03 撞面按纪律停手登记。
 
+## Step 5 收敛状态（U-01，2026-09-22）
+
+- **profile 色 token 收编**：profile 面单文件 20 处 `Color(0x…)` 字面量清零（ratchet colorLiteral 123→103）。`_rarityColor` 私有稀有度色表与 `DS.rarity*` 卡片体系**逐值不同（4/4，比色结论见 `v3-output/U01-STEP5/REPORT.md`）**，未硬迁；按规则 5 扩 `DS.profileRarity{Legendary,Epic,Rare,Common}` + `DS.getProfileRarityAccent()`（值=profile 既有 UI 值，冻结，禁与 rarity* 互替）。另收编 16 处设置行 accent 为 `DS.profileAccent*` 语义命名 token。
+- profile 面裸组件（rawButton/rawChip/rawSpinner）在 Step 1/4 已清零，本步复核 0 漏网。
+
 ## CONVENTION：新增 UI 必须用 design system（V3 冻结，2026-09-21）
 
 > 依据 `v3/04_ux/DESIGN_DIRECTION.md`（Components 收敛）与 `v3/00_context/DECISIONS_V3.md` D21/D22。
