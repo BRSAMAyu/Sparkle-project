@@ -138,6 +138,13 @@ class Settings(BaseSettings):
     # Community Settings
     MESSAGE_REVOKE_TIME_LIMIT_SECONDS: int = 120  # 消息撤回时间限制（秒），默认2分钟
     MESSAGE_SEND_MAX_RETRIES: int = 3  # 消息发送最大重试次数
+
+    # Photon → Pro redemption（D-COMM-2「学出会员」有界兑换通道）
+    # 汇率量级为参赛期保守拍定值【待产品校准】：上线后依兑换渗透率/付费转化校准
+    PHOTON_REDEEM_PRO_COST: int = 3000  # 单次兑换所需光子（仅合同/首胜/成就所得计入基数）
+    PHOTON_REDEEM_PRO_DAYS: int = 7  # 单次兑换授予 Pro 天数
+    PHOTON_REDEEM_PRO_MONTHLY_CAP: int = 1  # 每自然月硬顶次数（设计卡裁决：月顶 1 次）
+
     COMMUNITY_INTELLIGENCE_ENABLED: bool = True
     COMMUNITY_INTELLIGENCE_MIN_COHORT_SIZE: int = 5
     COMMUNITY_INTELLIGENCE_DP_ENABLED: bool = True

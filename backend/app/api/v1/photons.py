@@ -17,9 +17,25 @@ from app.schemas.photon import (
     PhotonAdjustmentRequest,
     PhotonTransferRequest,
 )
+from app.services import photon_redeem_service
+from app.services.photon_redeem_service import (
+    REDEEM_PRO_ERROR,
+    REDEEM_PRO_INSUFFICIENT_BALANCE,
+    REDEEM_PRO_INSUFFICIENT_BASE,
+    REDEEM_PRO_MONTHLY_CAP,
+    REDEEM_PRO_OK,
+)
 from app.services.photon_service import get_photon_service
 
 router = APIRouter()
+
+#: D-COMM-2 兑换业务终态 → HTTP 状态码（成功 200；映射风格同 billing/redeem）
+_REDEEM_PRO_HTTP_STATUS = {
+    REDEEM_PRO_INSUFFICIENT_BALANCE: 400,
+    REDEEM_PRO_INSUFFICIENT_BASE: 409,
+    REDEEM_PRO_MONTHLY_CAP: 409,
+    REDEEM_PRO_ERROR: 500,
+}
 
 
 @router.get("/balance", response_model=dict[str, Any])
@@ -233,3 +249,59 @@ async def adjust_photons(
     except Exception as e:
         logger.error(f"Unexpected adjustment error: {e}")
         raise HTTPException(status_code=500, detail="Failed to complete adjustment") from e
+
+
+# route-tier: authed
+@router.post("/redeem-pro", response_model=dict[str, Any])
+async def redeem_photons_for_pro(
+    http_request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    光子兑换 Pro 7 天（「学出会员」，D-COMM-2 有界兑换通道）
+
+    - 仅合同/首胜/成就所得光子可兑（transfer_in 不计入基数，防小号互转刷会员）；
+    - 每自然月硬顶 1 次（月顶即幂等屏障：重复请求同结果、不重复扣减）；
+    - 成功扣减光子并按叠加语义授予 entitlement='pro' + entitlement_expires_at。
+
+    业务失败返回 4xx/5xx + 结构化 status（风格同 POST /billing/redeem）。
+    """
+    # 访客禁止兑换：与 /photons/transfer 同款守卫（以 JWT is_guest 声明为准）
+    token_payload = getattr(http_request.state, "token_payload", None) or {}
+    if token_payload.get("is_guest"):
+        raise HTTPException(
+            status_code=403,
+            detail="Guest users cannot redeem photons. Please register for a full account.",
+        )
+
+    outcome = await photon_redeem_service.redeem_pro(db, user_id=str(current_user.id))
+    if outcome.status in _REDEEM_PRO_HTTP_STATUS:
+        raise HTTPException(
+            status_code=_REDEEM_PRO_HTTP_STATUS[outcome.status],
+            detail={
+                "status": outcome.status,
+                "message": outcome.message,
+                "cost_photons": outcome.cost_photons,
+                "pro_days": outcome.pro_days,
+                "redeemable_base": outcome.redeemable_base,
+            },
+        )
+    return {
+        "success": True,
+        "message": outcome.message,
+        "status": outcome.status,
+        "data": {
+            "user_id": str(current_user.id),
+            "cost_photons": outcome.cost_photons,
+            "pro_days": outcome.pro_days,
+            "redeemable_base": outcome.redeemable_base,
+            "balance_after": outcome.balance_after,
+            "entitlement": "pro",
+            "entitlement_expires_at": (
+                outcome.entitlement_expires_at.isoformat()
+                if outcome.entitlement_expires_at
+                else None
+            ),
+        },
+    }

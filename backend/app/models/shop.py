@@ -29,6 +29,7 @@ class PhotonTransactionType(enum.StrEnum):
     REFUND = "refund"                             # 退款
     PENALTY = "penalty"                           # 惩罚
     ADMIN_ADJUSTMENT = "admin_adjustment"         # 管理员调整
+    REDEEM_PRO = "redeem_pro"                     # 光子兑换 Pro（D-COMM-2 学出会员）
 
 
 class ShopItemType(enum.StrEnum):
