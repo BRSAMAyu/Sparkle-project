@@ -4,6 +4,8 @@ Tests task CRUD operations, status changes, and plan integration.
 """
 import sys
 import types
+from pathlib import Path
+
 import pytest
 from unittest.mock import AsyncMock, Mock, patch
 from uuid import uuid4
@@ -18,8 +20,14 @@ _signals_pkg = types.ModuleType("app.gen.sparkle.signals")
 _signals_v1_pkg = types.ModuleType("app.gen.sparkle.signals.v1")
 _gateway_client_pkg = types.ModuleType("app.services.gateway_client")
 _llm_dispatcher_pkg = types.ModuleType("app.services.llm_dispatcher")
-_gen_pkg.__path__ = []
-_sparkle_pkg.__path__ = []
+# 顶层桩必须挂真实目录路径：app.gen.sparkle 若是空 __path__ 的毒桩，
+# 会顶掉 PEP 420 隐式命名空间解析，使本测试先跑时 rag 等真实生成子包
+# （galaxy_service → app.gen.sparkle.rag.v1.evidence_pb2）在后续任何
+# 测试模块里都 ImportError，pytest 合跑即 collection 中断。
+# 叶子桩（inference/signals）在 sys.modules 命中先于路径扫描，保持 [] 即全吞。
+_GEN_ROOT = str(Path(__file__).resolve().parents[2] / "app" / "gen")
+_gen_pkg.__path__ = [_GEN_ROOT]
+_sparkle_pkg.__path__ = [_GEN_ROOT + "/sparkle"]
 _inference_pkg.__path__ = []
 _signals_pkg.__path__ = []
 _inference_v1_pkg.inference_pb2 = types.SimpleNamespace(
