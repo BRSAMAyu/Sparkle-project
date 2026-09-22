@@ -177,7 +177,17 @@ smoke:
 		fi; \
 		sleep 2; \
 	done; \
-	echo "✅ Smoke checks passed."
+		echo "✅ Smoke checks passed."
+
+# 云端一键部署总入口（D-BOOTSTRAP）：git clone → 全栈可演示。
+# 干跑预览: make cloud-plan；真实部署: make cloud-up [ARGS="..."]
+# 常用 ARGS: --with-demo-seed / --skip-smoke / --lean-observability / --domain <域名> / --image-tag <tag>
+cloud-plan:
+	@bash scripts/deploy/bootstrap.sh --plan
+
+cloud-up:
+	@bash scripts/deploy/bootstrap.sh $(ARGS)
+
 
 openclaw-ready:
 	@python3 scripts/openclaw_ready.py
