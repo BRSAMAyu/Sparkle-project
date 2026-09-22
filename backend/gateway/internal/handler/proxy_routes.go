@@ -617,6 +617,14 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		community.POST("/squads/:group_id/study-room/heartbeat", h.proxyWithHeaders)
 		community.GET("/squads/:group_id/study-room/presence", h.proxyWithHeaders)
 		community.GET("/squads/:group_id/leaderboard", h.proxyWithHeaders)
+		// Shared Error Cards (D-COMM-5: 错题卡互助分享) — engine side
+		// api/v1/community_squad_shared_errors.py; shares reference the
+		// server-side error record by id (client cannot forge content), go
+		// through the SAFETY lexicon, and produce zero photon / zero
+		// leaderboard effect by rule.
+		community.POST("/squads/:group_id/shared-errors", h.proxyWithHeaders)
+		community.GET("/squads/:group_id/shared-errors", h.proxyWithHeaders)
+		community.DELETE("/squads/:group_id/shared-errors/:share_id", h.proxyWithHeaders)
 		// Group Messages
 		community.GET("/groups/:group_id/messages", h.proxyWithHeaders)
 		community.POST("/groups/:group_id/messages", h.proxyWithHeaders)

@@ -36,6 +36,7 @@ from app.api.v1 import (
     community_aggregates,
     community_squad,
     community_squad_board,
+    community_squad_shared_errors,
     community_strategy_outcomes,
     community_study_room,
     counterfactual,
@@ -217,6 +218,9 @@ api_router.include_router(community_squad.router, prefix="/community")
 # D-COMM-4: 共学自习室（beacon 式在场证明）+ 小队榜（冲刺完成度口径）——同 D-COMM-3 先例挂新文件
 api_router.include_router(community_study_room.router, prefix="/community")
 api_router.include_router(community_squad_board.router, prefix="/community")
+# D-COMM-5: 错题卡分享（小队知识互助：谁在哪卡住了）——同 D 线先例挂新文件；
+# 分享内容服务端取（客户端不可伪造）、过 SAFETY 词库面、零光子零榜分
+api_router.include_router(community_squad_shared_errors.router, prefix="/community")
 api_router.include_router(community_aggregates.router)
 api_router.include_router(community_strategy_outcomes.router)
 api_router.include_router(cognitive.router, prefix="/cognitive", tags=["cognitive"])
