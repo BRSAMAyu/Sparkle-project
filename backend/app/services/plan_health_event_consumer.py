@@ -163,11 +163,17 @@ class PlanHealthEventConsumer:
                             )
 
                 except Exception as bridge_exc:
+                    # 显式单项 best-effort（EVENT-ACK-2 白名单）：card_protocol 桥失败
+                    # 仅回滚并告警，不上抛——冷却提醒可能已 enqueue，重投递会重复打扰用户。
+                    # 失败仍可见（warning + rollback），不静默。
                     await db.rollback()
                     logger.warning("PlanHealth→InterventionRecord bridge failed (non-fatal): {}", bridge_exc)
 
         except Exception as e:
-            logger.error(f"PlanHealthEventConsumer failed: {e}")
+            # EVENT-ACK-2：整事件失败必须上抛——吞掉会让 EventBus 视为成功恒 ack，
+            # 绕过失败 metric/有界重试/DLQ（原实现 error 日志后静默丢失）。
+            logger.error("PlanHealthEventConsumer failed for user={}: {}", event.get("user_id"), e)
+            raise
 
     @staticmethod
     def _build_cooldown_message(severity: str, reasons: list[str]) -> str:

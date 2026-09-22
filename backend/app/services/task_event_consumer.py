@@ -35,6 +35,13 @@ class TaskEventConsumer:
 
     @staticmethod
     async def _safe_run(coro_fn, label: str, ctx_id) -> None:
+        """显式单项 best-effort 隔离（EVENT-ACK-2 核查白名单）。
+
+        并行 fan-out 中的每个子处理器独立 contain（warning 留痕，不上抛），
+        保证单依赖故障不波及兄弟子处理器；整事件级失败仍由外层 handler 的
+        try/except + raise 兜底进入总线重试/DLQ（契约见
+        tests/services/test_consumer_exception_propagation.py）。
+        """
         try:
             result = coro_fn()
             if asyncio.iscoroutine(result):

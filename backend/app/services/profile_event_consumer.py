@@ -285,6 +285,8 @@ class ProfileEventConsumer:
 
     @staticmethod
     async def _load_seed_library(db: Any, library_id: Any) -> SeedLibrary | None:
+        # 显式单项 best-effort（EVENT-ACK-2 白名单）：种子库元数据读取失败降级为
+        # None（偏好更新退化为仅事件字段），warning 留痕，不阻断事件处理。
         if not library_id:
             return None
         try:
@@ -303,6 +305,8 @@ class ProfileEventConsumer:
         try:
             await self.redis.delete(*keys)
         except Exception as exc:
+            # 显式单项 best-effort（EVENT-ACK-2 白名单）：缓存失效失败只导致 TTL
+            # 窗口内的陈旧上下文，warning 留痕；上抛重试收益低于重复投递成本。
             logger.warning(f"Failed to invalidate context cache for user {user_id}: {exc}")
 
     async def _invalidate_profile_context_cache(self, user_id: str) -> None:
@@ -311,6 +315,8 @@ class ProfileEventConsumer:
         try:
             await self.redis.delete(f"user:profile_context:{user_id}")
         except Exception as exc:
+            # 显式单项 best-effort（EVENT-ACK-2 白名单）：同 _invalidate_context_cache，
+            # TTL 窗口内陈旧可接受，不阻断事件处理。
             logger.warning(f"Failed to invalidate profile context cache for user {user_id}: {exc}")
 
     @staticmethod

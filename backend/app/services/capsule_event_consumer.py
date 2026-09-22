@@ -100,7 +100,12 @@ class CapsuleEventConsumer:
                     generation_type="feedback_triggered",
                 )
             except Exception as exc:
-                logger.error(f"Failed to regenerate capsules for user {user_uuid}: {exc}")
+                # EVENT-ACK-2：上抛——这是用户的显式再生请求，失败静默 ack 即永久丢弃。
+                # generate_capsules_batch 自身已将生成失败落档（job.status=failed）并正常返回，
+                # 此处仅捕获偏好读取/批处理基础设施级失败；批次在单事务内，重投递前未提交
+                # 的部分已回滚，at-least-once 重试安全面良好。
+                logger.error("Capsule regenerate request failed for user {}: {}", user_uuid, exc)
+                raise
 
     async def _suggest_capsule_generation(self, user_id: str, reason: str, pattern_name: str | None = None):
         await SystemUpdateService(cache_service.redis).enqueue(

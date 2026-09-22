@@ -80,6 +80,10 @@ class JourneyEventConsumerBase:
             ).inc()
             logger.warning("{} rejected suspicious payload for user {}: {}", self.CONSUMER_LABEL, user_id, exc)
         except Exception as exc:
+            # 显式 contain（EVENT-ACK-2 核查白名单，UX 语义设计）：失败不上抛恒 ack，
+            # 改为 metric + error 日志 + 用户失败通知（_emit_failure_update）——
+            # 失败对用户可见，非静默丢失。上抛会导致每次重试重复发送失败通知，
+            # 需产品裁决后才能改走总线重试/DLQ（3 个 stage34 错误路径测试锁定本契约）。
             JOURNEY_EVENT_CONSUMER_ERROR_TOTAL.labels(
                 consumer=self.CONSUMER_LABEL,
                 event=self.EVENT_TYPE,

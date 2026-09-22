@@ -128,7 +128,11 @@ class ProactiveEventPipeline:
     # -- pipeline ---------------------------------------------------------
 
     async def handle_event(self, event: Mapping[str, Any]) -> ProactiveDecisionRecord | None:
-        """处理一条事件；白名单外返回 None，否则返回完整决定记录。永不抛出。"""
+        """处理一条事件；白名单外返回 None，否则返回完整决定记录。
+
+        正常路径与内部故障均不抛出（fail-closed：宁可漏报不可误报，逐处 contain）；
+        仅意外错误向总线上抛，由 EventBus 失败管线（metric/重试/DLQ）接管（EVENT-ACK-2）。
+        """
         occurred_at = _utcnow()
         event_name = str(event.get("event_type") or "").strip()
         classification = classify_event(event, now=occurred_at)
@@ -342,10 +346,21 @@ class ProactiveEventPipeline:
         )
 
     async def _on_bus_event(self, payload: dict) -> None:
+        # EVENT-ACK-2：失败必须上抛。原实现 blanket-except 吞掉异常并注释
+        # "失败走 DLQ 语义"——事实错误：吞掉恰使 EventBus 视为成功恒 ack，
+        # 失败 metric/有界重试/DLQ 全部永不触发。管线内部已按 fail-closed
+        # 哲学逐处 contain（快照/相关性/状态写/投递），能逃逸到这里的只有
+        # 意外故障，应交给总线的失败管线而不是静默丢失。
         try:
             await self.handle_event(payload)
-        except Exception as exc:  # 双保险：消费回调永不抛出（失败走 DLQ 语义）
-            logger.error("proactive pipeline crashed on event: {!r}", exc)
+        except Exception as exc:
+            logger.error(
+                "proactive pipeline failed on event_type={!r} user={!r}: {!r}",
+                payload.get("event_type"),
+                payload.get("user_id"),
+                exc,
+            )
+            raise
 
     # -- outlets ----------------------------------------------------------
 

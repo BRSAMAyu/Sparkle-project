@@ -276,7 +276,11 @@ class AchievementEventConsumer:
                     source="execution_chat_control",
                 )
         except Exception as exc:
-            logger.warning(f"Failed to process execution achievement event: {exc}")
+            # EVENT-ACK-2：上抛——执行结果驱动的成就进度失败时静默 ack 会永久丢失解锁。
+            logger.warning(
+                "Failed to process execution achievement event intent={}: {}", intent_id, exc
+            )
+            raise
 
     async def _handle_node_updated(self, event: dict):
         old_mastery = float(event.get("old_mastery") or 0.0)
@@ -347,6 +351,8 @@ class AchievementEventConsumer:
                         )
                         logger.info(f"Broadcast achievement {achievement_id} unlock to community for user {user_id}")
                     except Exception as broadcast_err:
+                        # 显式单项 best-effort（EVENT-ACK-2 白名单）：社区广播失败不阻断
+                        # 同事件内其余副作用；warning 留痕，非静默。
                         logger.warning(f"Failed to broadcast achievement to community: {broadcast_err}")
 
                 await self._maybe_create_milestone_notification(
@@ -373,6 +379,8 @@ class AchievementEventConsumer:
                         metadata=event,
                     )
                 except Exception as spine_err:
+                    # 显式单项 best-effort（EVENT-ACK-2 白名单）：Spine 强化信号失败
+                    # 仅 debug 留痕，不阻断成就解锁主链路。
                     logger.debug(f"Spine on_achievement_event skipped: {spine_err}")
 
                 # Persist chronicle event to PostgreSQL for durability beyond Redis TTL
@@ -386,9 +394,20 @@ class AchievementEventConsumer:
                         "timestamp": _utcnow().isoformat(),
                     })
                 except Exception as persist_err:
+                    # 显式单项 best-effort（EVENT-ACK-2 白名单）：chronicle 持久化失败
+                    # 保留 Redis-only fallback 语义（原条目仍在 TTL 窗口内可见），不阻断
+                    # 本事件其余已成功的副作用（碎片/广播/里程碑通知）。
                     logger.warning(f"Chronicle persistence failed, Redis-only fallback: {persist_err}")
         except Exception as e:
-            logger.warning(f"Failed to record cognitive fragment for achievement: {e}")
+            # EVENT-ACK-2：整事件失败必须上抛——吞掉会恒 ack，认知碎片/社区广播/
+            # 里程碑通知/画像信号全部静默丢失，绕过总线重试与 DLQ。
+            logger.error(
+                "Failed to handle achievement.unlocked user={} achievement={}: {}",
+                user_id,
+                achievement_id,
+                e,
+            )
+            raise
 
     def stop(self):
         self._running = False
