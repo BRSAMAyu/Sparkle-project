@@ -521,23 +521,30 @@ async def test_process_event_compensates_photon_grant_failure_instead_of_rolling
         "app.services.photon_service.PhotonService.grant_photons",
         AsyncMock(side_effect=RuntimeError("boom")),
     ), patch(
-        # Stub the Celery hop: the unit env has no reachable broker and the
-        # real .delay() would stall ~20s in result-backend retries.
-        "app.core.celery_tasks.retry_achievement_photon_reward.delay",
-        new=MagicMock(),
-    ) as mock_delay:
+        # P2DISPATCH：Celery hop 改接统一投递面（achievement_engine →
+        # celery_dispatch → celery_app.send_task）。Stub send_task：单元环境无
+        # broker，真实 send_task 会触发 kombu 重试。
+        "app.core.celery_app.celery_app.send_task",
+        new=MagicMock(return_value=MagicMock(id="tid")),
+    ) as mock_send, patch.object(
+        settings,
+        "QUEUE_BACKPRESSURE_ENABLED",
+        False,
+    ):
         # Compensation contract: no exception escapes process_event.
         await engine.process_event(
             user_id=str(test_user.id),
             event_type=AchievementEvent.TASK_COMPLETED,
         )
 
-    mock_delay.assert_called_once_with(
-        user_id=str(test_user.id),
-        achievement_id=str(achievement.id),
-        achievement_name=achievement.name,
-        quantity=66,
-    )
+    mock_send.assert_called_once()
+    assert mock_send.call_args.args[0] == "app.core.celery_tasks.retry_achievement_photon_reward"
+    assert mock_send.call_args.kwargs["kwargs"] == {
+        "user_id": str(test_user.id),
+        "achievement_id": str(achievement.id),
+        "achievement_name": achievement.name,
+        "quantity": 66,
+    }
 
     await db_session.refresh(test_user)
     await db_session.refresh(achievement)

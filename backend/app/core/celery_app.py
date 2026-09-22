@@ -687,8 +687,10 @@ def update_knowledge_galaxy(
                             )
                             result["nodes_created"] += 1
 
-                            # Schedule embedding generation
-                            celery_app.send_task(
+                            # Schedule embedding generation（P2DISPATCH：改接统一投递面，带背压）
+                            from app.core.celery_dispatch import dispatch_task_async
+
+                            await dispatch_task_async(
                                 "generate_embedding",
                                 args=(str(new_node.id), f"{concept['name']} {concept.get('description', '')}"),
                                 kwargs={"user_id": user_id},
@@ -841,8 +843,10 @@ def sync_plan_progress_to_galaxy(self, user_id: str):
                         # Check if plan has milestones completed
                         if hasattr(plan, "completed_milestones") and plan.completed_milestones:
                             # Trigger galaxy update for each completed milestone
+                            from app.core.celery_dispatch import dispatch_task_async
+
                             for milestone in plan.completed_milestones:
-                                celery_app.send_task(
+                                await dispatch_task_async(
                                     "update_knowledge_galaxy",
                                     args=(user_id, str(plan.id), "milestone_reached"),
                                     kwargs={"milestone_data": milestone},
@@ -910,8 +914,11 @@ def generate_daily_capsules_for_all(self):
                             stats["skipped_users"] += 1
                             continue
 
-                        # 调度异步生成任务
-                        celery_app.send_task(
+                        # 调度异步生成任务（P2DISPATCH：改接统一投递面，带背压；
+                        # 注意 queue 仍为显式 default——路由观察项见 REPORT）
+                        from app.core.celery_dispatch import dispatch_task_async
+
+                        dispatched_ok = await dispatch_task_async(
                             "generate_capsules_batch",
                             args=(
                                 str(user.id),
@@ -922,6 +929,8 @@ def generate_daily_capsules_for_all(self):
                             ),
                             queue="default",
                         )
+                        if not dispatched_ok:
+                            logger.warning(f"Celery: capsule dispatch dropped by backpressure for user {user.id}")
                         stats["eligible_users"] += 1
                         stats["generated_jobs"] += 1
 
@@ -1388,6 +1397,11 @@ def schedule_long_task(task_name: str, args: tuple = (), kwargs: dict = None, qu
     """
     调度长时任务
 
+    P2DISPATCH：改接统一投递面 ``celery_dispatch.submit_task_sync``（带 O-07
+    队列背压）。对外契约保持不变：成功返回 task_id；投递失败/被背压丢弃
+    抛 ``RuntimeError``（调用方的既有 ``except`` 降级分支——如直接 DB 落库
+    fallback——语义不变，丢弃时走降级正是期望行为）。
+
     Args:
         task_name: 任务名称
         args: 任务参数
@@ -1400,10 +1414,11 @@ def schedule_long_task(task_name: str, args: tuple = (), kwargs: dict = None, qu
     if kwargs is None:
         kwargs = {}
 
-    try:
-        task = celery_app.send_task(task_name, args=args, kwargs=kwargs, queue=queue)
-    except Exception as exc:
-        raise RuntimeError(f"Broker connection error: {exc}") from exc
+    from app.core.celery_dispatch import submit_task_sync
+
+    task = submit_task_sync(task_name, args=args, kwargs=kwargs, queue=queue, ignore_result=True)
+    if task is None:
+        raise RuntimeError(f"Task dispatch rejected or failed: {task_name} (queue={queue})")
 
     logger.info(f"📅 Scheduled task: {task_name} (ID: {task.id}, Queue: {queue})")
     return task.id

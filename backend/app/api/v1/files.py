@@ -12,7 +12,6 @@ from pydantic import AnyUrl, BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.core.celery_tasks import process_stored_file
 from app.db.session import get_db
 from app.models.background_task import BackgroundTask, BackgroundTaskStatus, BackgroundTaskType
 from app.models.file_storage import StoredFile
@@ -43,14 +42,23 @@ async def process_file(
     _: None = Depends(verify_internal_token),
     db: AsyncSession = Depends(get_db),
 ):
-    task = process_stored_file.delay(
-        file_id=str(payload.file_id),
-        user_id=str(payload.user_id),
-        download_url=str(payload.download_url),
-        file_name=payload.file_name,
-        mime_type=payload.mime_type,
-        thumbnail_upload_url=str(payload.thumbnail_upload_url) if payload.thumbnail_upload_url else None,
+    # P2DISPATCH：改接统一投递面（带队列背压）；被丢弃/失败 → 503（队列繁忙）
+    from app.core.celery_dispatch import submit_task_async
+
+    task = await submit_task_async(
+        "process_stored_file",
+        kwargs={
+            "file_id": str(payload.file_id),
+            "user_id": str(payload.user_id),
+            "download_url": str(payload.download_url),
+            "file_name": payload.file_name,
+            "mime_type": payload.mime_type,
+            "thumbnail_upload_url": str(payload.thumbnail_upload_url) if payload.thumbnail_upload_url else None,
+        },
+        queue="default",
     )
+    if task is None:
+        raise HTTPException(status_code=503, detail="Processing queue is at capacity; retry later")
     background_task = BackgroundTask(
         user_id=payload.user_id,
         task_type=BackgroundTaskType.DATA_SYNC,

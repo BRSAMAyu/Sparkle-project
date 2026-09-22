@@ -365,12 +365,17 @@ async def register(
             str(user.id),
             ttl=EMAIL_VERIFY_TTL_SECONDS,
         )
-        # 使用 Celery 任务替代 asyncio.create_task
-        from app.core.celery_tasks import send_verification_email_task
-        send_verification_email_task.delay(
-            to_email=user.email,
-            verify_token=verify_token,
-            username=user.nickname or user.username
+        # 使用 Celery 任务替代 asyncio.create_task（P2DISPATCH：改接统一投递面，带背压）
+        from app.core.celery_dispatch import dispatch_task_async
+
+        await dispatch_task_async(
+            "send_verification_email_task",
+            kwargs={
+                "to_email": user.email,
+                "verify_token": verify_token,
+                "username": user.nickname or user.username,
+            },
+            queue="default",
         )
     except Exception as e:
         logger.warning(f"Failed to schedule verification email: {e}")
@@ -728,11 +733,16 @@ async def forgot_password(
             str(user.id),
             ttl=PASSWORD_RESET_TTL_SECONDS,
         )
-        from app.core.celery_tasks import send_password_reset_email_task
-        send_password_reset_email_task.delay(
-            to_email=user.email,
-            reset_token=reset_token,
-            username=user.nickname or user.username,
+        from app.core.celery_dispatch import dispatch_task_async
+
+        await dispatch_task_async(
+            "send_password_reset_email_task",
+            kwargs={
+                "to_email": user.email,
+                "reset_token": reset_token,
+                "username": user.nickname or user.username,
+            },
+            queue="default",
         )
     except Exception as e:
         logger.warning(f"Failed to handle forgot-password: {e}")
@@ -799,11 +809,16 @@ async def send_verification_email(
         str(current_user.id),
         ttl=EMAIL_VERIFY_TTL_SECONDS,
     )
-    from app.core.celery_tasks import send_verification_email_task
-    send_verification_email_task.delay(
-        to_email=current_user.email,
-        verify_token=verify_token,
-        username=current_user.nickname or current_user.username,
+    from app.core.celery_dispatch import dispatch_task_async
+
+    await dispatch_task_async(
+        "send_verification_email_task",
+        kwargs={
+            "to_email": current_user.email,
+            "verify_token": verify_token,
+            "username": current_user.nickname or current_user.username,
+        },
+        queue="default",
     )
     return {"detail": "验证邮件已发送"}
 
@@ -995,11 +1010,16 @@ async def upgrade_guest(
     try:
         verify_token = uuid.uuid4().hex
         await cache_service.set(f"email_verify:{verify_token}", str(current_user.id), ttl=EMAIL_VERIFY_TTL_SECONDS)
-        from app.core.celery_tasks import send_verification_email_task
-        send_verification_email_task.delay(
-            to_email=current_user.email,
-            verify_token=verify_token,
-            username=current_user.nickname or current_user.username,
+        from app.core.celery_dispatch import dispatch_task_async
+
+        await dispatch_task_async(
+            "send_verification_email_task",
+            kwargs={
+                "to_email": current_user.email,
+                "verify_token": verify_token,
+                "username": current_user.nickname or current_user.username,
+            },
+            queue="default",
         )
     except Exception as e:
         logger.warning(f"Failed to schedule verification email after guest upgrade: {e}")

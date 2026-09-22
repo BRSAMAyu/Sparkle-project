@@ -4,9 +4,24 @@ from uuid import uuid4
 
 import pytest
 
+from app.config import settings
 from app.models.card_protocol import DeliveryChannel
 from app.services.behavior_signal_collector import BehaviorSignalCollector
 from app.services.task_stuck_signal_service import TaskExecutionSignal
+
+
+def _patch_push_send_capture(monkeypatch, scheduled_calls):
+    """P2DISPATCH：push 直发已改接统一投递面（celery_dispatch → send_task）。
+
+    捕获面从 task.delay 换成 celery_app.send_task（kwargs 透传，断言不变），
+    并关闭背压探测避免单测触网。
+    """
+
+    def _fake_send_task(task_name, *args, **kwargs):
+        scheduled_calls.append(kwargs.get("kwargs") or {})
+
+    monkeypatch.setattr(settings, "QUEUE_BACKPRESSURE_ENABLED", False)
+    monkeypatch.setattr("app.core.celery_app.celery_app.send_task", _fake_send_task)
 
 
 class _RowsResult:
@@ -134,16 +149,7 @@ async def test_behavior_signal_collector_schedules_push_for_push_channel_record(
         ),
     )
     scheduled_calls = []
-
-    class _FakeTask:
-        @staticmethod
-        def delay(**kwargs):
-            scheduled_calls.append(kwargs)
-
-    monkeypatch.setattr(
-        "app.core.celery_tasks.schedule_push_notification",
-        _FakeTask(),
-    )
+    _patch_push_send_capture(monkeypatch, scheduled_calls)
 
     await collector.handle_behavior_pattern_event(
         {

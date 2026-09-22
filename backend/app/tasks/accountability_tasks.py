@@ -586,10 +586,10 @@ async def _check_partner_progress(db: AsyncSession) -> dict[str, Any]:
                         "streak_days": streak,
                     })
 
-                    # 调度里程碑通知任务
-                    from app.core.celery_app import celery_app
+                    # 调度里程碑通知任务（P2DISPATCH：改接统一投递面，带背压）
+                    from app.core.celery_dispatch import dispatch_task_async
 
-                    celery_app.send_task(
+                    await dispatch_task_async(
                         "tasks.accountability.send_milestone_notification",
                         args=(str(partnership.id), str(user_id), milestone, {"streak_days": streak}),
                         queue="default",

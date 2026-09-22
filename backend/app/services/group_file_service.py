@@ -13,7 +13,6 @@ from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.celery_tasks import process_stored_file
 from app.core.event_bus import GroupFileSharedEvent, event_bus
 from app.models.background_task import BackgroundTask, BackgroundTaskStatus, BackgroundTaskType
 from app.models.community import GroupMember, GroupRole
@@ -147,7 +146,7 @@ class GroupFileService:
         *,
         stored_file: StoredFile,
         effective_user_id: UUID,
-    ) -> str:
+    ) -> str | None:
         download_url = document_upload_storage.create_presigned_get_url(object_key=stored_file.object_key)
         thumbnail_upload_url = None
         if stored_file.mime_type == "application/pdf":
@@ -157,14 +156,24 @@ class GroupFileService:
                 file_size=0,
             )
 
-        task = process_stored_file.delay(
-            file_id=str(stored_file.id),
-            user_id=str(effective_user_id),
-            download_url=download_url,
-            file_name=stored_file.file_name,
-            mime_type=stored_file.mime_type,
-            thumbnail_upload_url=thumbnail_upload_url,
+        # P2DISPATCH：改接统一投递面（带队列背压）。被丢弃/失败 → 返回 None，
+        # stored_file 保持 uploaded（不误标 queued）；调用方对 None job_id 已兼容。
+        from app.core.celery_dispatch import submit_task_async
+
+        task = await submit_task_async(
+            "process_stored_file",
+            kwargs={
+                "file_id": str(stored_file.id),
+                "user_id": str(effective_user_id),
+                "download_url": download_url,
+                "file_name": stored_file.file_name,
+                "mime_type": stored_file.mime_type,
+                "thumbnail_upload_url": thumbnail_upload_url,
+            },
+            queue="default",
         )
+        if task is None:
+            return None
 
         stored_file.status = "queued"
         stored_file.error_message = None

@@ -8,7 +8,6 @@ from loguru import logger
 
 from app.config import settings
 from app.core.agent_profiles import AgentRole, ModelTier, TaskType
-from app.core.celery_app import celery_app
 from app.core.celery_dispatch import dispatch_task_async
 from app.core.llm_router import llm_router
 from app.services.llm.concurrency import llm_concurrency
@@ -257,7 +256,12 @@ class GLMBatchService:
             generation_type=generation_type,
         )
         logger.info(f"[GLMBatch] enqueue capsule_generation user={user_id} model={plan.model_key} mode={plan.mode} {plan.reason}")
-        return celery_app.send_task(
+        # P2DISPATCH：改接统一投递面（带 O-07 队列背压，同步方法保持同步 API）。
+        # 返回 AsyncResult；被背压丢弃/投递失败返回 None（调用方 capsules.py
+        # 以 None → 走既有同步降级分支）。
+        from app.core.celery_dispatch import submit_task_sync
+
+        return submit_task_sync(
             "generate_capsules_batch",
             args=(
                 str(user_id),
@@ -286,7 +290,10 @@ class GLMBatchService:
             error_tags=error_tags,
         )
         logger.info(f"[GLMBatch] enqueue cognitive_analysis fragment={fragment_id} model={plan.model_key} mode={plan.mode} {plan.reason}")
-        return celery_app.send_task(
+        # P2DISPATCH：改接统一投递面（带 O-07 队列背压）。返回 AsyncResult | None。
+        from app.core.celery_dispatch import submit_task_sync
+
+        return submit_task_sync(
             "analyze_cognitive_fragment_batch",
             args=(str(user_id), str(fragment_id), plan.model_key),
             queue=plan.queue,

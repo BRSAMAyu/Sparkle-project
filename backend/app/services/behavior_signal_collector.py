@@ -264,12 +264,17 @@ class BehaviorSignalCollector:
         if intervention_created:
             for intervention_id, payload in pending_push_deliveries:
                 try:
-                    from app.core.celery_tasks import schedule_push_notification
+                    # P2DISPATCH：改接统一投递面（带背压，fire-and-forget）
+                    from app.core.celery_dispatch import dispatch_task_async
 
-                    schedule_push_notification.delay(
-                        user_id=str(user_id),
-                        intervention_id=intervention_id,
-                        payload=payload,
+                    await dispatch_task_async(
+                        "app.core.celery_tasks.schedule_push_notification",
+                        kwargs={
+                            "user_id": str(user_id),
+                            "intervention_id": intervention_id,
+                            "payload": payload,
+                        },
+                        queue="default",
                     )
                 except NON_CRITICAL_SIGNAL_ERRORS as delivery_exc:
                     logger.warning(

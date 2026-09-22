@@ -17,7 +17,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user, get_db
 from app.config import settings
 from app.core.cache import cache_service
-from app.core.celery_tasks import process_stored_file
 from app.models.background_task import BackgroundTask, BackgroundTaskStatus, BackgroundTaskType
 from app.models.community import GroupMember, GroupRole
 from app.models.document_chunks import DocumentChunk
@@ -343,14 +342,24 @@ async def confirm_document_upload(
             file_size=0,
         )
 
-    task = process_stored_file.delay(
-        file_id=str(record.id),
-        user_id=str(current_user.id),
-        download_url=download_url,
-        file_name=record.file_name,
-        mime_type=record.mime_type,
-        thumbnail_upload_url=thumbnail_upload_url,
+    # P2DISPATCH：改接统一投递面（带队列背压）；被丢弃/失败 → 503（队列繁忙，
+    # record 状态保持 uploaded，不误标 queued）
+    from app.core.celery_dispatch import submit_task_async
+
+    task = await submit_task_async(
+        "process_stored_file",
+        kwargs={
+            "file_id": str(record.id),
+            "user_id": str(current_user.id),
+            "download_url": download_url,
+            "file_name": record.file_name,
+            "mime_type": record.mime_type,
+            "thumbnail_upload_url": thumbnail_upload_url,
+        },
+        queue="default",
     )
+    if task is None:
+        raise HTTPException(status_code=503, detail="处理队列已满，请稍后重试")
     record.status = "queued"
     record.error_message = None
     db.add(record)

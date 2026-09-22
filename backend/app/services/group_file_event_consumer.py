@@ -8,7 +8,7 @@ import os
 
 from loguru import logger
 
-from app.core.celery_tasks import delete_group_file_index, process_group_shared_file
+from app.core.celery_dispatch import dispatch_task_async
 from app.core.event_bus import EventBus
 
 
@@ -51,33 +51,47 @@ class GroupFileEventConsumer:
     async def handle_event(self, event: dict) -> None:
         event_type = str(event.get("event_type") or "").strip()
         if event_type == "group.file.shared":
-            self._enqueue_group_processing(event)
+            await self._enqueue_group_processing(event)
         elif event_type == "group.file.deleted":
-            self._enqueue_group_cleanup(event)
+            await self._enqueue_group_cleanup(event)
 
-    def _enqueue_group_processing(self, event: dict) -> None:
+    # P2DISPATCH：改接统一投递面（带背压）。两方法原为同步 .delay（在事件循环
+    # 线程里做同步 broker I/O），现改 async 并走 dispatch_task_async（off-loop）。
+    async def _enqueue_group_processing(self, event: dict) -> None:
         group_id = str(event.get("group_id") or "").strip()
         file_id = str(event.get("file_id") or "").strip()
         shared_by_user_id = str(event.get("shared_by_user_id") or "").strip()
         if not group_id or not file_id or not shared_by_user_id:
             logger.warning(f"Discarding invalid group.file.shared event: {event}")
             return
-        process_group_shared_file.delay(
-            group_id=group_id,
-            file_id=file_id,
-            shared_by_user_id=shared_by_user_id,
+        dispatched_ok = await dispatch_task_async(
+            "process_group_shared_file",
+            kwargs={
+                "group_id": group_id,
+                "file_id": file_id,
+                "shared_by_user_id": shared_by_user_id,
+            },
+            queue="default",
         )
+        if not dispatched_ok:
+            logger.warning(f"Group file processing dispatch dropped/failed: group={group_id} file={file_id}")
 
-    def _enqueue_group_cleanup(self, event: dict) -> None:
+    async def _enqueue_group_cleanup(self, event: dict) -> None:
         group_id = str(event.get("group_id") or "").strip()
         file_id = str(event.get("file_id") or "").strip()
         if not group_id or not file_id:
             logger.warning(f"Discarding invalid group.file.deleted event: {event}")
             return
-        delete_group_file_index.delay(
-            group_id=group_id,
-            file_id=file_id,
+        dispatched_ok = await dispatch_task_async(
+            "delete_group_file_index",
+            kwargs={
+                "group_id": group_id,
+                "file_id": file_id,
+            },
+            queue="default",
         )
+        if not dispatched_ok:
+            logger.warning(f"Group file cleanup dispatch dropped/failed: group={group_id} file={file_id}")
 
     def stop(self) -> None:
         self._running = False

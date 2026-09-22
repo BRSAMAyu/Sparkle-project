@@ -402,8 +402,6 @@ async def request_batch_generation(
                 job_id=pending_job.id,
             )
         else:
-            from app.core.celery_app import celery_app
-
             pending_job = await capsule_generation_service.create_generation_job(
                 user_id=current_user.id,
                 db=db,
@@ -413,7 +411,12 @@ async def request_batch_generation(
                 requested_count=request.requested_count or 1,
                 model_used=None,
             )
-            task = celery_app.send_task(
+            # P2DISPATCH：改接统一投递面（带队列背压）。generate_capsules_batch
+            # 注册路由即 glm_batch，此处显式指定同队列（原 send_task 无显式 queue
+            # 时亦经 task_routes 落 glm_batch，投递语义不变）。
+            from app.core.celery_dispatch import submit_task_async
+
+            task = await submit_task_async(
                 "generate_capsules_batch",
                 args=(
                     str(current_user.id),
@@ -425,7 +428,11 @@ async def request_batch_generation(
                     "online",
                     str(pending_job.id),
                 ),
+                queue="glm_batch",
             )
+        if task is None:
+            # 背压超限丢弃 / 投递失败 → 走既有同步降级分支
+            raise RuntimeError("capsule batch dispatch dropped (queue backpressure) or failed")
     except Exception as exc:
         logger.warning(f"Celery batch generation failed, retrying synchronously: {exc}")
         job = await curiosity_capsule_service.generate_batch(

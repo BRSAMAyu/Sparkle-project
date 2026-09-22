@@ -125,8 +125,6 @@ class MilestoneHandler:
             trigger_type: Type of trigger (milestone_reached/plan_complete)
         """
         try:
-            from app.core.celery_app import celery_app
-
             # Prepare milestone data for the task
             milestone_data = {
                 "id": milestone.get("id"),
@@ -136,13 +134,20 @@ class MilestoneHandler:
                 "learning_outcomes": milestone.get("learning_outcomes", []),
             }
 
-            # Send task to Celery queue
-            celery_app.send_task(
+            # Send task to Celery queue（P2DISPATCH：改接统一投递面，带背压）
+            from app.core.celery_dispatch import dispatch_task_async
+
+            dispatched_ok = await dispatch_task_async(
                 "update_knowledge_galaxy",
                 args=(str(user_id), str(plan_id), trigger_type),
                 kwargs={"milestone_data": milestone_data},
                 queue="default",
             )
+            if not dispatched_ok:
+                logger.warning(
+                    f"Knowledge galaxy update dispatch dropped/failed for plan {plan_id}, "
+                    f"milestone {milestone.get('id')}"
+                )
 
             logger.info(
                 f"Scheduled knowledge galaxy update for plan {plan_id}, "

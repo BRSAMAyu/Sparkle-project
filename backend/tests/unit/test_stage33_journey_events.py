@@ -7,6 +7,7 @@ import pytest
 from starlette.requests import Request
 
 from app.api.v1.auth import register
+from app.config import settings
 from app.schemas.plan import PlanCreate
 from app.schemas.user import UserRegister
 from app.services.plan_service import PlanService
@@ -112,7 +113,8 @@ async def test_register_publishes_stage33_user_registered_event(db_session) -> N
             "app.api.v1.auth.Stage33JourneyEventService.publish",
             AsyncMock(return_value="1-0"),
         ) as publish_mock,
-        patch("app.core.celery_tasks.send_verification_email_task", MagicMock(delay=MagicMock())),
+        patch("app.core.celery_app.celery_app.send_task", MagicMock(return_value=MagicMock(id="tid"))),
+        patch.object(settings, "QUEUE_BACKPRESSURE_ENABLED", False),
     ):
         result = await register(request=request, data=payload, db=db_session)
 

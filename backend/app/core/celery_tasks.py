@@ -16,6 +16,7 @@ from datetime import UTC, datetime
 from loguru import logger
 
 from app.core.celery_app import _run_async, celery_app
+from app.core.celery_dispatch import dispatch_task_async
 
 
 def _notification_data_matches(actual, expected) -> bool:
@@ -1880,12 +1881,13 @@ def scan_spaced_repetition_reminders(self, limit: int = 500):
                     break
 
                 for user_uuid in user_ids:
-                    celery_app.send_task(
+                    dispatched_ok = await dispatch_task_async(
                         "app.core.celery_tasks.spaced_repetition_reminder_task",
                         args=(str(user_uuid),),
                         queue="default",
                     )
-                    dispatched += 1
+                    if dispatched_ok:
+                        dispatched += 1
 
                 if len(user_ids) < batch_size:
                     break
@@ -2064,12 +2066,13 @@ def scan_daily_sprint_reminders(self, limit: int = 500):
             rows = (await session.execute(stmt)).all()
             dispatched = 0
             for user_id, plan_id in rows:
-                celery_app.send_task(
+                dispatched_ok = await dispatch_task_async(
                     "app.core.celery_tasks.daily_sprint_reminder_task",
                     args=(str(user_id), str(plan_id)),
                     queue="default",
                 )
-                dispatched += 1
+                if dispatched_ok:
+                    dispatched += 1
 
             logger.info("✅ Dispatched %d sprint reminder tasks", dispatched)
             return {"dispatched": dispatched}
@@ -2218,12 +2221,13 @@ def scan_comeback_nudges(self, limit: int = 500):
 
             dispatched = 0
             for user_uuid in user_ids:
-                celery_app.send_task(
+                dispatched_ok = await dispatch_task_async(
                     "app.core.celery_tasks.comeback_nudge_task",
                     args=(str(user_uuid),),
                     queue="default",
                 )
-                dispatched += 1
+                if dispatched_ok:
+                    dispatched += 1
 
             logger.info("✅ Dispatched %d comeback nudge tasks", dispatched)
             return {"dispatched": dispatched}
@@ -2431,12 +2435,13 @@ def scan_weekly_growth_narratives(self, limit: int = 500):
 
             dispatched = 0
             for user_id in sorted(user_ids, key=str):
-                celery_app.send_task(
+                dispatched_ok = await dispatch_task_async(
                     "app.core.celery_tasks.weekly_growth_narrative_task",
                     args=(str(user_id),),
                     queue="default",
                 )
-                dispatched += 1
+                if dispatched_ok:
+                    dispatched += 1
 
             logger.info("✅ Dispatched %d weekly growth narrative tasks", dispatched)
             return {"dispatched": dispatched}
@@ -2667,8 +2672,13 @@ def scan_aurora_scheduled_wakes(self, limit: int = 200):
             for wake_record in due:
                 user_id = str(wake_record.user_id)
                 wake_id = wake_record.wake.wake_id
-                aurora_wake_deliver_task.delay(wake_id, user_id)
-                dispatched += 1
+                dispatched_ok = await dispatch_task_async(
+                    "app.core.celery_tasks.aurora_wake_deliver_task",
+                    args=(wake_id, user_id),
+                    queue="default",
+                )
+                if dispatched_ok:
+                    dispatched += 1
             logger.info(
                 "Aurora wake scan: %d due wakes found, %d dispatched",
                 len(due),
@@ -2844,12 +2854,13 @@ def scan_recall_notifications(self, limit: int = 500):
         dispatched = 0
         for uid in user_ids:
             for trigger_type in TRIGGER_TYPES:
-                celery_app.send_task(
+                dispatched_ok = await dispatch_task_async(
                     "app.core.celery_tasks.recall_notification_task",
                     args=(uid, trigger_type, json.dumps({})),
                     queue="default",
                 )
-                dispatched += 1
+                if dispatched_ok:
+                    dispatched += 1
 
         logger.info(
             "Recall scan: %d users × %d triggers = %d tasks dispatched (cap=%d)",
@@ -2962,12 +2973,13 @@ def scan_spine_snapshots(self, limit: int = 500):
 
         dispatched = 0
         for uid in user_ids:
-            celery_app.send_task(
+            dispatched_ok = await dispatch_task_async(
                 "app.core.celery_tasks.spine_snapshot_task",
                 args=(uid,),
                 queue="default",
             )
-            dispatched += 1
+            if dispatched_ok:
+                dispatched += 1
 
         logger.info("Spine snapshot scan: %d users, %d tasks dispatched", len(user_ids), dispatched)
         return {"users": len(user_ids), "dispatched": dispatched}
@@ -3029,12 +3041,13 @@ def scan_trace_compaction(self, limit: int = 500):
                     continue
                 # Extract user_id from key: spine:user_traces:{user_id}
                 user_id = key_str.split(":")[-1]
-                celery_app.send_task(
+                dispatched_ok = await dispatch_task_async(
                     "app.core.celery_tasks.compact_user_traces",
                     args=(user_id,),
                     queue="default",
                 )
-                dispatched += 1
+                if dispatched_ok:
+                    dispatched += 1
                 if dispatched >= limit:
                     break
             if cursor == 0 or dispatched >= limit:
@@ -3123,12 +3136,13 @@ def scan_community_cohort_signals(self, limit: int = 200):
                     # Check for community signal on this node
                     has_signal = await redis.get(f"galaxy:community_signal:{node_id}")
                     if has_signal:
-                        celery_app.send_task(
+                        dispatched_ok = await dispatch_task_async(
                             "app.core.celery_tasks.community_cohort_signal_task",
                             args=(user_id, node_id),
                             queue="low_priority",
                         )
-                        dispatched += 1
+                        if dispatched_ok:
+                            dispatched += 1
                 if node_cursor in (0, "0"):
                     break
             if dispatched >= limit:

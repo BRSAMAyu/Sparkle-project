@@ -58,8 +58,6 @@ class EmptyCapsuleStrategy(PushStrategy):
         """
         from loguru import logger
 
-        from app.core.celery_app import celery_app
-
         # 获取用户偏好
         from app.services.personalization.preference_service import PreferenceService
 
@@ -81,7 +79,10 @@ class EmptyCapsuleStrategy(PushStrategy):
         # 调度 Celery 任务（路由修正：generate_capsules_batch 的注册队列是
         # glm_batch（celery_app.py 路由表）；此前硬编码 default 导致积压在
         # default 队列、被通用 worker 消费时逐条烧真模型——2026-09-20 事故）
-        celery_app.send_task(
+        # P2DISPATCH：改接统一投递面（带队列背压）
+        from app.core.celery_dispatch import dispatch_task_async
+
+        dispatched_ok = await dispatch_task_async(
             "generate_capsules_batch",
             args=(
                 str(user.id),
@@ -96,5 +97,5 @@ class EmptyCapsuleStrategy(PushStrategy):
         logger.info(
             f"[EmptyCapsuleStrategy] Scheduled capsule generation for user {user.id}: "
             f"depth={depth_preference:.2f}, curiosity={curiosity_preference:.2f}, "
-            f"count={requested_count}"
+            f"count={requested_count}, dispatched={dispatched_ok}"
         )

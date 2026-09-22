@@ -1654,9 +1654,17 @@ class AchievementEngine:
         }
 
         try:
-            from app.core.celery_tasks import retry_achievement_photon_reward
+            # P2DISPATCH：改接统一投递面（带背压）。投递面不抛异常，丢弃/失败
+            # 以 None/False 表示 → 主动抛出走既有 enqueue_failed → 本地补偿链。
+            from app.core.celery_dispatch import dispatch_task_async
 
-            retry_achievement_photon_reward.delay(**payload)
+            dispatched_ok = await dispatch_task_async(
+                "app.core.celery_tasks.retry_achievement_photon_reward",
+                kwargs=payload,
+                queue="default",
+            )
+            if not dispatched_ok:
+                raise RuntimeError("photon reward dispatch dropped (queue backpressure) or failed")
             await AchievementRewardObservability.record_event(
                 status="enqueued",
                 channel="celery",

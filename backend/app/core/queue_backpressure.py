@@ -120,17 +120,42 @@ def get_queue_limit(queue: str) -> int:
     return int(getattr(settings, "QUEUE_BACKPRESSURE_DEFAULT_MAX_DEPTH", 1000) or 0)
 
 
-async def _llen_off_loop(queue: str) -> int:
-    """在 executor 线程里经 celery 连接池执行 ``LLEN <queue>``（永不冻结事件循环）。"""
+def _llen_via_celery(queue: str) -> int:
+    """经 celery 连接池执行 ``LLEN <queue>``（同步原语，async 版在 executor 里包一层）。"""
     from app.core.celery_app import celery_app
 
-    def _llen() -> int:
-        with celery_app.connection_or_acquire() as conn:
-            client = conn.default_channel.client
-            return int(client.llen(queue))
+    with celery_app.connection_or_acquire() as conn:
+        client = conn.default_channel.client
+        return int(client.llen(queue))
 
+
+async def _llen_off_loop(queue: str) -> int:
+    """在 executor 线程里经 celery 连接池执行 ``LLEN <queue>``（永不冻结事件循环）。"""
     loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(None, _llen)
+    return await loop.run_in_executor(None, _llen_via_celery, queue)
+
+
+def _depth_decision(queue: str, limit: int, depth: int) -> QueueBackpressureDecision:
+    """探测成功后的统一裁决 + depth gauge 回写（async/sync 两版共用，防策略漂移）。"""
+    QUEUE_DEPTH.labels(queue=queue).set(depth)
+    if depth >= limit:
+        return QueueBackpressureDecision(
+            queue=queue,
+            depth=depth,
+            limit=limit,
+            allowed=False,
+            reason=f"queue_depth={depth}>=cap={limit}",
+        )
+    return QueueBackpressureDecision(queue=queue, depth=depth, limit=limit, allowed=True, reason="within_cap")
+
+
+def _gate_disabled(queue: str, limit: int) -> QueueBackpressureDecision | None:
+    """无需探测即可裁决的情形（no_queue / 显式关闭）；返回 None 表示需继续探测。"""
+    if not queue:
+        return QueueBackpressureDecision(queue=queue, depth=None, limit=0, allowed=True, reason="no_queue")
+    if not bool(getattr(settings, "QUEUE_BACKPRESSURE_ENABLED", True)) or limit <= 0:
+        return QueueBackpressureDecision(queue=queue, depth=None, limit=limit, allowed=True, reason="disabled")
+    return None
 
 
 async def check_queue_backpressure(queue: str) -> QueueBackpressureDecision:
@@ -142,12 +167,10 @@ async def check_queue_backpressure(queue: str) -> QueueBackpressureDecision:
     - ``QUEUE_BACKPRESSURE_ENABLED=False`` 或上限 ≤0：不限（显式关闭）。
     """
     queue = str(queue or "")
-    if not queue:
-        return QueueBackpressureDecision(queue=queue, depth=None, limit=0, allowed=True, reason="no_queue")
-
     limit = get_queue_limit(queue)
-    if not bool(getattr(settings, "QUEUE_BACKPRESSURE_ENABLED", True)) or limit <= 0:
-        return QueueBackpressureDecision(queue=queue, depth=None, limit=limit, allowed=True, reason="disabled")
+    gated = _gate_disabled(queue, limit)
+    if gated is not None:
+        return gated
 
     timeout = float(getattr(settings, "QUEUE_BACKPRESSURE_PROBE_TIMEOUT_SECONDS", 1.5) or 1.5)
     try:
@@ -162,21 +185,52 @@ async def check_queue_backpressure(queue: str) -> QueueBackpressureDecision:
         )
         return QueueBackpressureDecision(queue=queue, depth=None, limit=limit, allowed=True, reason="probe_failed")
 
-    QUEUE_DEPTH.labels(queue=queue).set(depth)
-    if depth >= limit:
-        return QueueBackpressureDecision(
-            queue=queue,
-            depth=depth,
-            limit=limit,
-            allowed=False,
-            reason=f"queue_depth={depth}>=cap={limit}",
+    return _depth_decision(queue, limit, depth)
+
+
+def check_queue_backpressure_sync(queue: str) -> QueueBackpressureDecision:
+    """同步上下文的背压判定（P2DISPATCH 补齐：与 async 版共用同一策略面）。
+
+    供无事件循环的同步投递面使用（celery worker 同步任务体、sync 服务方法、
+    ``schedule_long_task`` 等）。上限解析 / 指标 / 裁决与 ``check_queue_backpressure``
+    完全共用（``get_queue_limit`` + ``_gate_disabled`` + ``_depth_decision``），
+    仅探测通道不同：同步线程里直接 LLEN——同步上下文本就没有事件循环可冻结。
+    有界降级语义与 async 版一致：探测失败 → 放行 + probe_failures 计数。
+    """
+    queue = str(queue or "")
+    limit = get_queue_limit(queue)
+    gated = _gate_disabled(queue, limit)
+    if gated is not None:
+        return gated
+
+    try:
+        depth = _llen_via_celery(queue)
+    except Exception as exc:  # noqa: BLE001 — 有界降级（与 async 版同语义）
+        QUEUE_BACKPRESSURE_PROBE_FAILURES_TOTAL.labels(queue=queue).inc()
+        logger.warning(
+            "[QueueBackpressure] sync depth probe failed queue={} -> allow (bounded): {!r}",
+            queue,
+            exc,
         )
-    return QueueBackpressureDecision(queue=queue, depth=depth, limit=limit, allowed=True, reason="within_cap")
+        return QueueBackpressureDecision(queue=queue, depth=None, limit=limit, allowed=True, reason="probe_failed")
+
+    return _depth_decision(queue, limit, depth)
 
 
 async def enforce_queue_backpressure(queue: str) -> bool:
     """判定 + 丢弃记账（超限记 drops 指标 + WARNING）。返回是否允许投递。"""
     decision = await check_queue_backpressure(queue)
+    return _enforce_from_decision(decision)
+
+
+def enforce_queue_backpressure_sync(queue: str) -> bool:
+    """``enforce_queue_backpressure`` 的同步孪生（P2DISPATCH）：判定 + 丢弃记账。"""
+    decision = check_queue_backpressure_sync(queue)
+    return _enforce_from_decision(decision)
+
+
+def _enforce_from_decision(decision: QueueBackpressureDecision) -> bool:
+    """丢弃记账共用尾段（async/sync 两版同形：超限 → drops 指标 + WARNING + 拒绝）。"""
     if decision.allowed:
         return True
     QUEUE_BACKPRESSURE_DROPS_TOTAL.labels(queue=decision.queue).inc()

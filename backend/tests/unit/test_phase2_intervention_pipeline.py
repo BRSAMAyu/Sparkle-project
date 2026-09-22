@@ -51,6 +51,7 @@ from app.models.card_protocol import (
     InterventionTriggerType,
 )
 from app.models.notification import Notification, PushHistory
+from app.config import settings
 from app.models.notification_interaction import NotificationInteraction
 from app.models.push_delivery_record import PushDeliveryRecord
 from app.models.user import PushPreference
@@ -336,11 +337,12 @@ async def test_plan_health_consumer_schedules_push_for_push_record(monkeypatch):
                 diagnosis_payload={"severity": "critical", "reason": "stall_detected"},
             )
 
-    class _FakeTask:
-        @staticmethod
-        def delay(**kwargs):
-            scheduled_calls.append(kwargs)
+    # P2DISPATCH：push 直发已改接统一投递面（celery_dispatch → send_task），
+    # 捕获面随之换成 send_task（kwargs 透传，断言不变）；关闭背压探测避免触网。
+    def _fake_send_task(task_name, *args, **kwargs):
+        scheduled_calls.append(kwargs.get("kwargs") or {})
 
+    monkeypatch.setattr(settings, "QUEUE_BACKPRESSURE_ENABLED", False)
     monkeypatch.setattr(
         "app.services.plan_health_event_consumer.AsyncSessionLocal",
         lambda: _AsyncSessionContext(fake_db),
@@ -350,8 +352,8 @@ async def test_plan_health_consumer_schedules_push_for_push_record(monkeypatch):
         lambda db, event_bus=None: FakeBridge(),
     )
     monkeypatch.setattr(
-        "app.core.celery_tasks.schedule_push_notification",
-        _FakeTask(),
+        "app.core.celery_app.celery_app.send_task",
+        _fake_send_task,
     )
 
     await consumer._handle_plan_health_alerted(

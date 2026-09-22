@@ -1947,13 +1947,16 @@ class PredictiveService:
             if not acquired:
                 return
 
-            from app.core.celery_app import celery_app
+            from app.core.celery_dispatch import dispatch_task_async
 
-            celery_app.send_task(
+            dispatched_ok = await dispatch_task_async(
                 "generate_long_horizon_prediction",
                 args=(str(user_id),),
                 queue="glm_batch",
             )
+            if not dispatched_ok:
+                # 背压超限丢弃/投递失败 → 释放刷新锁，走既有失败分支可重试
+                raise RuntimeError("long horizon prediction dispatch dropped (queue backpressure) or failed")
 
             if settings.DEBUG:
                 self._schedule_local_long_horizon_refresh(

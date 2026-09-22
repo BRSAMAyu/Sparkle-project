@@ -593,6 +593,9 @@ async def delete_account(
     await db.commit()
 
     # Schedule hard-delete 30 days from now (GDPR compliance)
+    # P2DISPATCH 登记的保留直发点：countdown=30d 的 ETA 任务。背压丢弃语义
+    # 不可接受（丢弃 = 静默取消 GDPR 硬删除）；量级为每用户注销 1 条，无洪泛面，
+    # 故不改接统一投递面（详见 O-07 P2DISPATCH REPORT 特殊语义登记）。
     _THIRTY_DAYS = 30 * 24 * 60 * 60
     try:
         from app.core.celery_tasks import purge_deleted_account

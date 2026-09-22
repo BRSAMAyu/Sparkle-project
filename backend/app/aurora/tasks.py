@@ -10,7 +10,7 @@ from typing import Any
 
 from app.aurora.context import AuroraDecisionContext, AuroraTier, AuroraTierExecution, AuroraTierStatus
 from app.aurora.observability.tiering import record_tier_failure, record_tier_outcome, tier_latency
-from app.core.celery_app import celery_app
+from app.core.celery_app import celery_app  # noqa: F401 — 任务装饰器仍需；enqueue_* 已改接 celery_dispatch
 
 NEARLINE_TASK_NAME = "app.aurora.tasks.run_aurora_nearline"
 LONG_HORIZON_TASK_NAME = "app.aurora.tasks.run_aurora_long_horizon"
@@ -60,13 +60,23 @@ def enqueue_nearline_context(context: AuroraDecisionContext) -> AuroraTierExecut
         return _miss_execution(nearline_context, "nearline_flag_disabled")
 
     try:
-        task = celery_app.send_task(
+        # P2DISPATCH：改接统一投递面（带 O-07 队列背压，同步 API 保持同步）。
+        # 返回 None = 背压超限丢弃或 broker 投递失败，按 tier failure 记账。
+        from app.core.celery_dispatch import submit_task_sync
+
+        task = submit_task_sync(
             NEARLINE_TASK_NAME,
             kwargs={"payload": nearline_context.to_payload()},
             queue=nearline_context.async_flags.nearline_queue,
         )
     except Exception as exc:  # pragma: no cover - broker errors depend on runtime infra
         return _failure_execution(nearline_context, "celery_dispatch_failed", exc)
+    if task is None:
+        return _failure_execution(
+            nearline_context,
+            "celery_dispatch_failed",
+            RuntimeError("dispatch rejected (queue backpressure) or broker failure"),
+        )
 
     record_tier_outcome(
         tier=nearline_context.tier.value,
@@ -96,13 +106,22 @@ def enqueue_long_horizon_context(context: AuroraDecisionContext) -> AuroraTierEx
         return _miss_execution(long_context, "long_horizon_flag_disabled")
 
     try:
-        task = celery_app.send_task(
+        # P2DISPATCH：改接统一投递面（带 O-07 队列背压，同步 API 保持同步）。
+        from app.core.celery_dispatch import submit_task_sync
+
+        task = submit_task_sync(
             LONG_HORIZON_TASK_NAME,
             kwargs={"payload": long_context.to_payload()},
             queue=long_context.async_flags.long_horizon_queue,
         )
     except Exception as exc:  # pragma: no cover - broker errors depend on runtime infra
         return _failure_execution(long_context, "celery_dispatch_failed", exc)
+    if task is None:
+        return _failure_execution(
+            long_context,
+            "celery_dispatch_failed",
+            RuntimeError("dispatch rejected (queue backpressure) or broker failure"),
+        )
 
     record_tier_outcome(
         tier=long_context.tier.value,
