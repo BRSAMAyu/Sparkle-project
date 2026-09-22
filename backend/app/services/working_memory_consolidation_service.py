@@ -76,6 +76,28 @@ class WorkingMemoryConsolidationService:
         time_span_seconds = max(0.0, (entry.last_seen_at - entry.first_seen_at).total_seconds())
         return entry.mention_count >= 3 and time_span_seconds >= 60
 
+    async def promote_entry_now(
+        self,
+        *,
+        user_id: UUID,
+        session_id: UUID,
+        entry: WorkingMemoryEntry,
+        declared_fact: bool = False,
+    ) -> WorkingMemoryEntry | None:
+        """明示事实（declared_fact）即时固化：不等重复提及/口令确认。
+
+        单次用户自我陈述（考试/截止、弱点、目标、约束）若只停留 session 级
+        工作记忆，会随会话消亡——Day1 追问即失忆（NORTHSTAR-LOOP1 BP-2）。
+        走既有固化链（``_consolidate_entry`` → L1 门禁/去重/冲突裁决全保留）；
+        consolidation kill-switch 关闭时不提升；重复提升经 semantic_key 去重
+        返回 None，无副作用。
+        """
+        if not await self.kill_switches.is_live("consolidation_enabled"):
+            return None
+        return await self._consolidate_entry(
+            user_id=user_id, session_id=session_id, entry=entry, declared_fact=declared_fact
+        )
+
     async def maybe_consolidate_recent_entries(
         self,
         *,
@@ -148,6 +170,7 @@ class WorkingMemoryConsolidationService:
         user_id: UUID,
         session_id: UUID,
         entry: WorkingMemoryEntry,
+        declared_fact: bool = False,
     ) -> WorkingMemoryEntry | None:
         lane = MemoryInferredWriteLaneService(self.db)
         candidate = InferredEpisodicCandidate(
@@ -169,6 +192,10 @@ class WorkingMemoryConsolidationService:
             due_at=entry.due_at,
             mentioned_entity_hash=None,
             mentioned_entity_owner_user_id=None,
+            # MEM-AMNESIA：明示事实标记必须随重建候选透传——否则 L1 去重会退回
+            # 「一轮一条」的 evidence_token OR 语义，把同轮其余明示事实误判为
+            # 重复（实测 weakness/constraint 两句被吞）。
+            declared_fact=declared_fact,
         )
         record = await lane.write_candidate_to_l1(
             user_id=user_id,

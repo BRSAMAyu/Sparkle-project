@@ -122,6 +122,15 @@ def parse_commitment_due_at(text: str, *, reference_time: datetime | None = None
         target = now + timedelta(days=delta_days)
         return ensure_naive_utc(target.replace(hour=18, minute=0, second=0, microsecond=0))
 
+    # MEM-AMNESIA（2026-09-22）：「N 天后/N天后/N天以后」与「N 天内」同构，
+    # 此前缺失导致考试句「期末考试在 7 天后」due_at 永不解析 → commitment
+    # 整条丢弃（NORTHSTAR-LOOP1 BP-2 断点①）。
+    days_after_match = re.search(r"(\d+)\s*天(?:以后|后)", sentence)
+    if days_after_match:
+        delta_days = int(days_after_match.group(1))
+        target = now + timedelta(days=delta_days)
+        return ensure_naive_utc(target.replace(hour=18, minute=0, second=0, microsecond=0))
+
     absolute_match = re.search(r"(\d{1,2})月(\d{1,2})[日号]?", sentence)
     if absolute_match:
         month = int(absolute_match.group(1))

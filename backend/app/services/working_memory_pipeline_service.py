@@ -31,6 +31,7 @@ class WorkingMemoryPipelineService:
         assistant_message: str,
         evidence_token: str,
         rule_candidate: InferredEpisodicCandidate | None,
+        declared_candidates: list[InferredEpisodicCandidate] | None = None,
     ) -> list[WorkingMemoryEntry]:
         accepted_entries: list[WorkingMemoryEntry] = []
         llm_candidates: list[InferredEpisodicCandidate] = []
@@ -58,6 +59,7 @@ class WorkingMemoryPipelineService:
         effective_candidates = [item for item in [rule_candidate] if item is not None]
         if llm_mode == "live":
             effective_candidates.extend(llm_candidates)
+        effective_candidates.extend(declared_candidates or [])
 
         for candidate in effective_candidates:
             entry = await self.working_memory.upsert_entry(
@@ -75,6 +77,20 @@ class WorkingMemoryPipelineService:
                 source_lane=candidate.source_lane,
             )
             accepted_entries.append(entry)
+            # MEM-AMNESIA（2026-09-22）：明示事实不等「mention_count>=3 才固化」
+            # ——Day0 单次声明的科目/截止/弱点/目标若只停留 session 级工作记忆，
+            # 会随会话消亡，Day1 追问即失忆（NORTHSTAR-LOOP1 BP-2/GP-07）。
+            # 即时提升走既有固化链（同一 L1 门禁/去重/冲突裁决），幂等由
+            # semantic_key/evidence_token 去重兜底；重复提升返回 None 无副作用。
+            if getattr(candidate, "declared_fact", False):
+                promoted = await self.consolidation.promote_entry_now(
+                    user_id=user_id,
+                    session_id=session_id,
+                    entry=entry,
+                    declared_fact=True,
+                )
+                if promoted is not None:
+                    accepted_entries[-1] = promoted
 
         if self.consolidation.is_explicit_rejection(user_message):
             rejected = await self.consolidation.handle_possible_rejection(

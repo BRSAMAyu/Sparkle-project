@@ -57,6 +57,7 @@ def _strip_memory_command_phrases(text: str) -> str:
         cleaned = cleaned.replace(phrase, "，")
     return cleaned
 
+
 # 显式口令也不得越过的硬禁止话题（人格判定/负面自我标签等）。
 EXPLICIT_COMMAND_HARD_BANNED_TOKENS = (
     "性格",
@@ -69,6 +70,54 @@ EXPLICIT_COMMAND_HARD_BANNED_TOKENS = (
     "我就是",
     "是不是有病",
 )
+
+# 学习科目词表（自 _looks_like_learning_context 原词表提取共用；明示事实的
+# weakness 判定要求科目词共现以保精度）。
+_LEARNING_SUBJECT_TOKENS = (
+    "高数",
+    "数学",
+    "线代",
+    "概率论",
+    "英语",
+    "TCP",
+    "计网",
+    "计算机网络",
+    "操作系统",
+    "OS",
+    "数据结构",
+    "算法",
+    "图论",
+    "物理",
+    "化学",
+    "考研",
+    "教资",
+    "论文",
+    "实验",
+    "错题",
+    "真题",
+    "笔记",
+    "复习",
+    "背单词",
+)
+
+# MEM-AMNESIA（2026-09-22）：用户明示事实捕获面。Day0 onboarding 一句自述
+# （考试/截止、弱点、目标、时间约束）是跨会话记忆的核心原料，但通用启发式
+# 只把候选句置信打到 0.79（< MEMORY_INFERRED_MIN_CONFIDENCE=0.9），且
+# working-memory live 路径要 mention_count>=3 才固化 → 明示事实永远进不了
+# 跨会话 episodic（NORTHSTAR-LOOP1 BP-2/GP-07 实锤：「memory 必须比裸 GPT
+# 好」在主路径失灵）。明示事实与显式记忆口令同级处理：用户自我陈述的关键
+# 备考事实是最高优先捕获信号（置信 0.92 直写档）。确定性正则、零 LLM、
+# 不新增投递点；幂等由既有 semantic_key/evidence_token 去重兜底。
+# 元组顺序即同句多信号时的优先级：exam（可解析截止日，最强）> weakness >
+# goal > constraint。
+DECLARED_FACT_EXAM_RE = re.compile(r"期末|期中|考试|小测|测验|模考|deadline|截止")
+DECLARED_FACT_WEAKNESS_RE = re.compile(
+    r"薄弱|最弱|不扎实|不熟|没掌握|搞不懂|分不清|容易混淆|最容易混淆|最难|困惑|难点|卡在"
+)
+DECLARED_FACT_GOAL_RE = re.compile(
+    r"目标|想考到|要考到|希望考到|冲到|冲\s*\d+\s*分|提到\s*\d+\s*分|达到\s*\d+\s*分|及格|不挂"
+)
+DECLARED_FACT_TIME_BUDGET_RE = re.compile(r"(每天|每日)[^。！？\n]{0,20}\d+\s*分钟")
 
 
 @dataclass(frozen=True)
@@ -85,6 +134,11 @@ class InferredEpisodicCandidate:
     due_at: datetime | None
     mentioned_entity_hash: str | None
     mentioned_entity_owner_user_id: UUID | None
+    # MEM-AMNESIA（2026-09-22）：明示事实标记。True 的候选在 working-memory
+    # live 路径跳过「mention_count>=3 才固化」的门槛，单次声明即时写入跨会话
+    # episodic（NORTHSTAR-LOOP1 BP-2：Day0 明示 Day1 失忆）。默认 False，
+    # 既有构造方零感知。
+    declared_fact: bool = False
 
 
 def _build_inferred_write_session_factory():
@@ -229,6 +283,13 @@ class MemoryInferredWriteLaneService:
             assistant_message=assistant_message,
             evidence_token=resolved_user_message_id,
         )
+        # MEM-AMNESIA：明示事实候选与规则候选并行抽取（互补形态——规则候选
+        # 只挑最佳一句，明示事实逐句扫描）；写入面共享同一去重/门禁/冲突链。
+        declared_candidates = self.extract_declared_fact_candidates(
+            user_id=user_id,
+            user_message=resolved_user_message,
+            evidence_token=resolved_user_message_id,
+        )
         if candidate is None:
             MEMORY_INFERRED_EXTRACT_TOTAL.labels(mode="chat", status="no_candidate").inc()
         else:
@@ -248,8 +309,20 @@ class MemoryInferredWriteLaneService:
                 assistant_message=assistant_message,
                 evidence_token=resolved_user_message_id,
                 rule_candidate=candidate,
+                declared_candidates=declared_candidates,
             )
             return candidate
+
+        # fallback（working-memory 关闭）：明示事实先直写 L1（0.92 越门禁），
+        # 规则候选照旧。两者共享 semantic_key 去重，同句不会双写。
+        for declared_candidate in declared_candidates:
+            declared_record = await self.write_candidate_to_l1(
+                user_id=user_id,
+                session_id=session_id,
+                candidate=declared_candidate,
+            )
+            if declared_record is not None:
+                MEMORY_INFERRED_WRITE_TOTAL.labels(status="written").inc()
 
         if candidate is None:
             return None
@@ -355,6 +428,89 @@ class MemoryInferredWriteLaneService:
             mentioned_entity_hash=mentioned_entity_hash,
             mentioned_entity_owner_user_id=mentioned_entity_owner_user_id,
         )
+
+    @classmethod
+    def _match_declared_fact_kind(cls, sentence: str) -> str | None:
+        """返回该句命中的明示事实种类；无命中返回 None。
+
+        exam 类额外要求可解析时间锚（否则信息量不足，留给通用启发式）；
+        weakness 类要求科目词共现（防「我比较薄弱」这类无主泛述误捕）。
+        """
+        if DECLARED_FACT_EXAM_RE.search(sentence) and parse_commitment_due_at(sentence) is not None:
+            return "exam"
+        if DECLARED_FACT_WEAKNESS_RE.search(sentence) and any(token in sentence for token in _LEARNING_SUBJECT_TOKENS):
+            return "weakness"
+        if DECLARED_FACT_GOAL_RE.search(sentence):
+            return "goal"
+        if DECLARED_FACT_TIME_BUDGET_RE.search(sentence):
+            return "constraint"
+        return None
+
+    def extract_declared_fact_candidates(
+        self,
+        *,
+        user_id: UUID,
+        user_message: str,
+        evidence_token: str,
+    ) -> list[InferredEpisodicCandidate]:
+        """逐句扫描用户明示事实（考试/截止、弱点、目标、时间约束）。
+
+        与 ``extract_candidate``（只挑最佳一句）互补：明示事实按句独立成
+        候选，覆盖 Day0 onboarding「一句一事实」的多句声明形态。置信固定
+        0.92 直写档（与显式记忆口令同级）；同一句多信号只取最高优先一类。
+        """
+        del user_id  # 保留签名对称；抽取为纯函数，不触库。
+        candidates: list[InferredEpisodicCandidate] = []
+        seen_keys: set[str] = set()
+        for raw_sentence in re.split(r"[。！？!?\n]+", str(user_message or "")):
+            sentence = raw_sentence.strip(" ，,；;")
+            if len(sentence) < 6 or len(sentence) > 180:
+                continue
+            # 与显式口令通道同一禁入面：人格判定/负面自我标签不得长期化。
+            if any(token in sentence for token in EXPLICIT_COMMAND_HARD_BANNED_TOKENS):
+                continue
+            kind = self._match_declared_fact_kind(sentence)
+            if kind is None:
+                continue
+            # goal 类排除请求句（「请帮我建立目标」是请求不是已声明的事实）。
+            if kind == "goal" and re.search(r"请|帮我|能不能|可不可以|麻烦", sentence):
+                continue
+            due_at: datetime | None = None
+            subject_type = "self"
+            decay_policy = "30d"
+            if kind == "exam":
+                due_at = parse_commitment_due_at(sentence)
+                subject_type = "commitment"
+                decay_policy = "due_at+7d"
+            occurred_at, _temporal_kind = self._resolve_occurred_at(sentence)
+            semantic_key = hashlib.sha1(self._normalize_semantic(sentence).encode("utf-8")).hexdigest()
+            if semantic_key in seen_keys:
+                continue
+            seen_keys.add(semantic_key)
+            candidates.append(
+                InferredEpisodicCandidate(
+                    candidate_text=sentence,
+                    subject_type=subject_type,
+                    confidence=0.92,
+                    evidence_token=evidence_token,
+                    decay_policy=decay_policy,
+                    source_lane=self.SOURCE_LANE,
+                    semantic_key=semantic_key,
+                    evidence_refs=[
+                        {
+                            "type": "chat_turn",
+                            "id": evidence_token,
+                            "schema_version": "stage16.declared_fact.v1",
+                        }
+                    ],
+                    occurred_at=ensure_naive_utc(occurred_at) or occurred_at,
+                    due_at=ensure_naive_utc(due_at),
+                    mentioned_entity_hash=None,
+                    mentioned_entity_owner_user_id=None,
+                    declared_fact=True,
+                )
+            )
+        return candidates
 
     @classmethod
     def _within_rate_limit(cls, user_id: UUID) -> bool:
@@ -463,6 +619,16 @@ class MemoryInferredWriteLaneService:
         user_id: UUID,
         candidate: InferredEpisodicCandidate,
     ) -> bool:
+        # MEM-AMNESIA：明示事实一轮可产多条候选（考试/弱点/约束各占一句），
+        # evidence_token 相同属预期形态——该通道只按 semantic_key 去重（同句
+        # 同键，重复对话/重放皆命中）；其余候选维持「一轮一条 OR 同键」的
+        # 既有单写语义不变。
+        if candidate.declared_fact:
+            duplicate_filter = EpisodicMemory.semantic_key == candidate.semantic_key
+        else:
+            duplicate_filter = (EpisodicMemory.evidence_token == candidate.evidence_token) | (
+                EpisodicMemory.semantic_key == candidate.semantic_key
+            )
         result = await self.db.execute(
             select(EpisodicMemory).where(
                 EpisodicMemory.user_id == user_id,
@@ -470,10 +636,7 @@ class MemoryInferredWriteLaneService:
                 EpisodicMemory.source_lane == self.SOURCE_LANE,
                 EpisodicMemory.retracted_at.is_(None),
                 EpisodicMemory.revoked_at.is_(None),
-                (
-                    (EpisodicMemory.evidence_token == candidate.evidence_token)
-                    | (EpisodicMemory.semantic_key == candidate.semantic_key)
-                ),
+                duplicate_filter,
             )
         )
         return result.scalar_one_or_none() is not None
@@ -841,33 +1004,7 @@ class MemoryInferredWriteLaneService:
 
     @staticmethod
     def _looks_like_learning_context(sentence: str) -> bool:
-        learning_tokens = (
-            "高数",
-            "数学",
-            "线代",
-            "概率论",
-            "英语",
-            "TCP",
-            "计网",
-            "计算机网络",
-            "操作系统",
-            "OS",
-            "数据结构",
-            "算法",
-            "图论",
-            "物理",
-            "化学",
-            "考研",
-            "教资",
-            "论文",
-            "实验",
-            "错题",
-            "真题",
-            "笔记",
-            "复习",
-            "背单词",
-        )
-        if not any(token in sentence for token in learning_tokens):
+        if not any(token in sentence for token in _LEARNING_SUBJECT_TOKENS):
             return False
         return (
             MemoryInferredWriteLaneService._has_temporal_anchor(sentence)
@@ -950,9 +1087,7 @@ class MemoryInferredWriteLaneService:
             "面试",
         )
         # "有英语课/有一节高数课"等"有…课"变体不含连续子串"有课"，用正则兜住。
-        if not any(token in sentence for token in event_markers) and not re.search(
-            r"有[^，。！？]{0,4}课", sentence
-        ):
+        if not any(token in sentence for token in event_markers) and not re.search(r"有[^，。！？]{0,4}课", sentence):
             return False
         return parse_commitment_due_at(sentence) is not None
 
