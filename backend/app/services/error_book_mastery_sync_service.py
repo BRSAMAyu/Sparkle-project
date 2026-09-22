@@ -410,12 +410,24 @@ class ErrorBookMasterySyncService:
             revision=int(revision) if revision is not None else None,
         )
         if not update_result or update_result.get("success") is False:
-            logger.warning(
-                "ErrorBookMasterySync: GalaxyService rejected mastery update for user={}/node={}, reason={}",
-                user_id,
-                node_id,
-                (update_result or {}).get("reason"),
-            )
+            if update_result and update_result.get("reason") == "duplicate":
+                # ERR-IDEM-CONCUR：写侧唯一索引仲裁的败者——毫秒窗口内另一
+                # 个同键并发请求先落账。与读侧门命中同一结局：返回 None，
+                # 调用方按「本次无变化」处理（掌握度已由胜者写定）。
+                logger.info(
+                    "ErrorBookMasterySync: {} lost write-side idempotency race for "
+                    "error {}/node {} (audit unique index already holds the key)",
+                    record_type,
+                    error_id,
+                    node_id,
+                )
+            else:
+                logger.warning(
+                    "ErrorBookMasterySync: GalaxyService rejected mastery update for user={}/node={}, reason={}",
+                    user_id,
+                    node_id,
+                    (update_result or {}).get("reason"),
+                )
             return None
 
         old_mastery = int(round(float(update_result.get("old_mastery", old_mastery) or 0)))

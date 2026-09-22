@@ -1,0 +1,998 @@
+diff --git a/backend/alembic/versions/erridemconc_20260922_mastery_audit_idem_unique.py b/backend/alembic/versions/erridemconc_20260922_mastery_audit_idem_unique.py
+new file mode 100644
+index 00000000..69e0e813
+--- /dev/null
++++ b/backend/alembic/versions/erridemconc_20260922_mastery_audit_idem_unique.py
+@@ -0,0 +1,86 @@
++"""ERR-IDEM-CONCUR · mastery_audit_log 幂等键唯一部分索引（毫秒窗口收口）
++
++Revision ID: erridemconc_20260922
++Revises: cp01confirm_20260922
++Create Date: 2026-09-23
++
++Migration Contract:
++    type: reversible
++    rollback_plan: "alembic downgrade -1：DROP INDEX uq_mastery_audit_log_idem_key。
++        索引纯约束、不携带数据；downgrade 后 schema 与升级前一致（升级时按
++        保留最早语义收敛掉的重复审计行不可再生——但那些行本身就是并发双扣
++        污染，见 backfill_plan）。"
++    verification_query: "SELECT indexname, indexdef FROM pg_indexes WHERE indexname='uq_mastery_audit_log_idem_key';"
++    backfill_plan: "无回填。反向操作：先删后建——升级时收敛索引管辖域内
++        （request_id LIKE 'edi:%' OR 'erv:%'）的存量重复三元组 (user_id,
++        node_id, request_id)，每组保留最早一行（MIN(id)=首个生效证据），
++        后来者是并发双写落账的重复扣分/重复回升污染，删除即还原审计诚实性；
++        管辖域外的取值域（NULL、task_complete 裸 task_id、sprint_task_completed:、
++        obs=/conf=/oc=/tk= 复合段、gRPC 客户端自由 request_id）一概不动。"
++    owner: "ERR-IDEM-CONCUR"
++    ticket: "ERR-IDEM 残留：读侧先查重门存在毫秒窗口，两个并发请求同时读到
++        「未吸收」→ 双写双扣。写入侧以唯一部分索引收口。"
++
++方案裁决（为什么是部分索引，不是全列唯一）：
++    mastery_audit_log.request_id 是多写入方共享列，取值域实测（演示库只读
++    SELECT，2026-09-23）：NULL 45 行（Galaxy REST /sync/mastery、/node/{id}/mastery
++    不传 request_id）、裸 task_id 20 行（stats_service task_complete）、
++    obs=..;conf=..;oc=..;tk=.. 复合段（outcome 证据账本）、gRPC 客户端自由
++    request_id（galaxy_grpc_service 透传 request.request_id）、
++    sprint_task_completed:{task}:{node}（task_service）。全列唯一会把所有
++    命名空间一锅端——gRPC 客户端自由串与跨节点复用串当场炸；且演示库
++    非管辖域已存在 3 组重复 (user,node,request_id) 三元组（旧格式
++    error_diagnosis:{err}:{node} 历史 double-write），全列索引无法落地。
++    故唯一索引收窄到 ERR-IDEM 幂等键命名空间（edi:/erv:），键域与读侧门
++    （ErrorBookMasterySyncService._sync_already_applied 的 user+node+request_id
++    三元组查询）严格同域。
++
++方言可移植性：CREATE UNIQUE INDEX ... WHERE 谓词（PG 与 SQLite 均支持部分
++索引，LIKE 谓词双方皆合法）；存量收敛用 DELETE ... NOT IN (SELECT MIN(id)
++GROUP BY ...) 可移植写法（PG 的 DELETE...USING 方言 sqlite 不认）。
++"""
++
++from __future__ import annotations
++
++from typing import Sequence
++
++from alembic import op
++
++revision: str = "erridemconc_20260922"
++down_revision: str | None = "cp01confirm_20260922"
++branch_labels: str | Sequence[str] | None = None
++depends_on: str | Sequence[str] | None = None
++
++INDEX_NAME = "uq_mastery_audit_log_idem_key"
++
++_IDEM_SCOPE_PREDICATE = "request_id LIKE 'edi:%' OR request_id LIKE 'erv:%'"
++
++
++def upgrade() -> None:
++    # 1) 收敛存量重复（仅索引管辖域 edi:/erv:）：保留每组三元组最早一行。
++    #    最早行 = 首个生效证据；后来者 = 并发/重试双写落账的重复扣分污染。
++    #    NOT IN (SELECT MIN(id) ...) 为 PG/SQLite 双方言可移植写法。
++    op.execute(
++        f"""
++        DELETE FROM mastery_audit_log
++        WHERE ({_IDEM_SCOPE_PREDICATE})
++          AND id NOT IN (
++              SELECT MIN(id) FROM mastery_audit_log
++              WHERE {_IDEM_SCOPE_PREDICATE}
++              GROUP BY user_id, node_id, request_id
++          )
++        """
++    )
++
++    # 2) 唯一部分索引：只约束 ERR-IDEM 幂等键命名空间，键域与读侧门同域。
++    op.execute(
++        f"""
++        CREATE UNIQUE INDEX IF NOT EXISTS {INDEX_NAME}
++        ON mastery_audit_log(user_id, node_id, request_id)
++        WHERE {_IDEM_SCOPE_PREDICATE}
++        """
++    )
++
++
++def downgrade() -> None:
++    op.execute(f"DROP INDEX IF EXISTS {INDEX_NAME}")
+diff --git a/backend/app/services/error_book_mastery_sync_service.py b/backend/app/services/error_book_mastery_sync_service.py
+index 7ae220cc..d33df94f 100644
+--- a/backend/app/services/error_book_mastery_sync_service.py
++++ b/backend/app/services/error_book_mastery_sync_service.py
+@@ -410,12 +410,24 @@ class ErrorBookMasterySyncService:
+             revision=int(revision) if revision is not None else None,
+         )
+         if not update_result or update_result.get("success") is False:
+-            logger.warning(
+-                "ErrorBookMasterySync: GalaxyService rejected mastery update for user={}/node={}, reason={}",
+-                user_id,
+-                node_id,
+-                (update_result or {}).get("reason"),
+-            )
++            if update_result and update_result.get("reason") == "duplicate":
++                # ERR-IDEM-CONCUR：写侧唯一索引仲裁的败者——毫秒窗口内另一
++                # 个同键并发请求先落账。与读侧门命中同一结局：返回 None，
++                # 调用方按「本次无变化」处理（掌握度已由胜者写定）。
++                logger.info(
++                    "ErrorBookMasterySync: {} lost write-side idempotency race for "
++                    "error {}/node {} (audit unique index already holds the key)",
++                    record_type,
++                    error_id,
++                    node_id,
++                )
++            else:
++                logger.warning(
++                    "ErrorBookMasterySync: GalaxyService rejected mastery update for user={}/node={}, reason={}",
++                    user_id,
++                    node_id,
++                    (update_result or {}).get("reason"),
++                )
+             return None
+ 
+         old_mastery = int(round(float(update_result.get("old_mastery", old_mastery) or 0)))
+diff --git a/backend/app/services/galaxy_service.py b/backend/app/services/galaxy_service.py
+index 3df474dc..efc78433 100755
+--- a/backend/app/services/galaxy_service.py
++++ b/backend/app/services/galaxy_service.py
+@@ -20,7 +20,7 @@ from typing import Any
+ from uuid import NAMESPACE_URL, UUID, uuid5
+ 
+ from loguru import logger
+-from sqlalchemy import and_, delete, func, inspect, or_, select, text
++from sqlalchemy import and_, delete, func, inspect, or_, select, text, String, bindparam
+ from sqlalchemy.ext.asyncio import AsyncSession
+ from sqlalchemy.orm import aliased, undefer
+ 
+@@ -28,6 +28,7 @@ from app.config import settings
+ from app.core.cache import cache_service, cached
+ from app.core.event_bus import event_bus
+ from app.gen.sparkle.rag.v1 import evidence_pb2
++from app.models.base import GUID
+ from app.models.document_chunks import DocumentChunk
+ from app.models.error_book import ErrorRecord
+ from app.models.file_storage import SourceLifecycleStatus, StoredFile
+@@ -3376,11 +3377,32 @@ class GalaxyService:
+ 
+             # B. Audit Log
+             if await self._table_exists("mastery_audit_log"):
+-                audit_query = text("""
++                # ERR-IDEM-CONCUR：error-book 幂等键（edi:/erv: 命名空间，见
++                # ErrorBookMasterySyncService）以审计行为天然去重账本，其
++                # 唯一部分索引（uq_mastery_audit_log_idem_key）仲裁读侧门的
++                # 毫秒窗口：两个并发同键同步都过读侧门时，败者的审计 INSERT
++                # 被 ON CONFLICT DO NOTHING 丢弃（RETURNING 无行）→ 整个更新
++                # 回滚、以 {"success": False, "reason": "duplicate"} 返回——
++                # 与读侧门命中同一可观察结局（掌握度不变、不写 StudyRecord、
++                # 不发事件）。其余取值域（NULL / 裸 task_id / sprint_task_
++                # completed: / obs= / oc= / gRPC 客户端自由 request_id）在部分
++                # 索引谓词之外，保持原语义不变。
++                # GUID-typed bindparams（outcome_absorption_service 同款）：
++                # asyncpg 原生绑 UUID，aiosqlite 绑 str。
++                audit_query = text(
++                    """
+                     INSERT INTO mastery_audit_log (node_id, user_id, old_mastery, new_mastery, reason, request_id, revision)
+                     VALUES (:node_id, :user_id, :old_mastery, :new_mastery, :reason, :request_id, :revision)
+-                """)
+-                await self.db.execute(
++                    ON CONFLICT DO NOTHING
++                    RETURNING id
++                    """
++                ).bindparams(
++                    bindparam("node_id", type_=GUID),
++                    bindparam("user_id", type_=GUID),
++                    bindparam("reason", type_=String),
++                    bindparam("request_id", type_=String),
++                )
++                audit_result = await self.db.execute(
+                     audit_query,
+                     {
+                         "node_id": node_id,
+@@ -3392,6 +3414,24 @@ class GalaxyService:
+                         "revision": new_revision,
+                     },
+                 )
++                if (
++                    audit_result.scalar_one_or_none() is None
++                    and request_id
++                    and str(request_id).startswith(("edi:", "erv:"))
++                ):
++                    # 前缀守卫：partial index 只管辖 edi:/erv: 域，该分支
++                    # 不可能误伤其他命名空间（PK 为 SERIAL，无冲突可能）。
++                    logger.warning(
++                        "GalaxyService: duplicate error-book mastery sync rejected by audit "
++                        "unique index for user={}/node={}, request_id={}",
++                        user_id,
++                        node_id,
++                        request_id,
++                    )
++                    # 与上方 revision-conflict 路径同一恢复方向：整体回滚，
++                    # 本次掌握度变体不落任何一行。
++                    await self.db.rollback()
++                    return {"success": False, "reason": "duplicate"}
+ 
+             # 4. Invalidate Semantic Cache (User specific)
+             from app.services.semantic_cache_service import semantic_cache_service
+diff --git a/backend/tests/unit/test_erridemconc_mastery_audit_idem_unique_migration_sqlite.py b/backend/tests/unit/test_erridemconc_mastery_audit_idem_unique_migration_sqlite.py
+new file mode 100644
+index 00000000..73f696fb
+--- /dev/null
++++ b/backend/tests/unit/test_erridemconc_mastery_audit_idem_unique_migration_sqlite.py
+@@ -0,0 +1,204 @@
++"""erridemconc_20260922 迁移在本地 sqlite 基座上的隔离重放（主库只读纪律）.
++
++不连主库 PostgreSQL：用 alembic Operations/MigrationContext 把
++erridemconc_20260922_mastery_audit_idem_unique 的 upgrade/downgrade 单独跑在
++临时 sqlite 文件库上，验证 mastery_audit_log 幂等键唯一部分索引的 schema 变更：
++
++- upgrade 收敛索引管辖域（edi:/erv:）内的存量重复三元组，保留最早一行
++  （首个生效证据；后来者是并发双写落账的重复扣分污染）；
++- 管辖域外的存量行（NULL request_id、裸 task_id、obs=/oc= 复合段、
++  gRPC 客户端自由 request_id）一概不动——部分索引谓词外零影响；
++- upgrade 后唯一部分索引存在且生效：同键二次 INSERT 违约、
++  ON CONFLICT DO NOTHING RETURNING 丢行（写侧生产契约）；
++- downgrade 后索引移除、存量行存活，round-trip 幂等可重入。
++
++迁移语义（为什么是部分索引而不是全列唯一）见迁移文件 docstring 与
++v3-output/ERR-IDEM-CONCUR/REPORT.md。
++"""
++
++from __future__ import annotations
++
++import importlib.util
++from pathlib import Path
++
++import pytest
++from alembic.migration import MigrationContext
++from alembic.operations import Operations
++from sqlalchemy import create_engine, inspect, text
++
++BACKEND_ROOT = Path(__file__).resolve().parents[2]
++MIGRATION_PATH = BACKEND_ROOT / "alembic" / "versions" / "erridemconc_20260922_mastery_audit_idem_unique.py"
++
++INDEX_NAME = "uq_mastery_audit_log_idem_key"
++
++# 迁移前 schema：c8e4f2a3b1d5 建的 mastery_audit_log 裸表（无唯一索引）
++BASE_DDL = """
++CREATE TABLE mastery_audit_log (
++    id INTEGER PRIMARY KEY AUTOINCREMENT,
++    node_id VARCHAR(36) NOT NULL,
++    user_id VARCHAR(36) NOT NULL,
++    old_mastery INTEGER NOT NULL,
++    new_mastery INTEGER NOT NULL,
++    reason VARCHAR(100) NOT NULL,
++    request_id VARCHAR(100),
++    revision INTEGER DEFAULT 1,
++    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
++)
++"""
++
++U = "11111111-1111-1111-1111-111111111111"
++N = "22222222-2222-2222-2222-222222222222"
++
++
++def _insert_audit(conn, request_id, old=50, new=42, user=U, node=N):
++    conn.exec_driver_sql(
++        "INSERT INTO mastery_audit_log (node_id, user_id, old_mastery, new_mastery, reason, request_id, revision) "
++        "VALUES (?, ?, ?, ?, 'error_diagnosis:concept_confusion', ?, 1)",
++        (node, user, old, new, request_id),
++    )
++
++
++@pytest.fixture(name="migration_env")
++def _migration_env(tmp_path):
++    engine = create_engine(f"sqlite:///{tmp_path / 'erridem_conc_migration.db'}")
++
++    # 迁移前基座：c8e4f2a3b1d5 裸表 + 存量行（含索引管辖域内的重复对）
++    with engine.begin() as conn:
++        conn.exec_driver_sql(BASE_DDL)
++        # 管辖域内：edi: 重复三元组（旧 50->42 生效在前，42->34 双扣污染在后）
++        _insert_audit(conn, "edi:aaaa00000000000000000000000000:d90c7fa3:" + "2" * 32, 50, 42)
++        _insert_audit(conn, "edi:aaaa00000000000000000000000000:d90c7fa3:" + "2" * 32, 42, 34)
++        # 管辖域内：erv: 重复三元组
++        _insert_audit(conn, "erv:bbbb00000000000000000000000000:d90c7fa3:remembered:" + "2" * 32, 42, 46)
++        _insert_audit(conn, "erv:bbbb00000000000000000000000000:d90c7fa3:remembered:" + "2" * 32, 46, 50)
++        # 管辖域内：唯一行（必须存活）
++        _insert_audit(conn, "edi:cccc00000000000000000000000000:ab12cd34:" + "3" * 32, 50, 42)
++        # 管辖域外：一律不动
++        _insert_audit(conn, None, 40, 44, user=U, node=N)                                    # NULL
++        _insert_audit(conn, "77777777-7777-7777-7777-777777777777", 60, 64)                  # 裸 task_id
++        _insert_audit(conn, "obs=60;conf=0.8;oc=" + "4" * 32, 64, 68)                        # obs= 复合段
++        _insert_audit(conn, "client-free-string", 68, 72)                                    # gRPC 自由串
++        # 管辖域外：已存在的重复三元组（演示库实测 3 组旧格式 double-write）
++        _insert_audit(conn, "99999999-9999-9999-9999-999999999999", 70, 74)                  # 裸 task_id 重复对
++        _insert_audit(conn, "99999999-9999-9999-9999-999999999999", 74, 78)
++
++    def run_migration(op_fn) -> None:
++        # begin()：SQLAlchemy 2.x 无 commit 不落盘（DDL 亦在事务内），迁移必须在事务内执行
++        with engine.begin() as conn:
++            ctx = MigrationContext.configure(conn)
++            with Operations.context(ctx):
++                op_fn()
++
++    def load_upgrade_downgrade():
++        spec = importlib.util.spec_from_file_location("erridemconc_migration", MIGRATION_PATH)
++        module = importlib.util.module_from_spec(spec)
++        spec.loader.exec_module(module)
++        return module.upgrade, module.downgrade
++
++    yield engine, run_migration, load_upgrade_downgrade
++    engine.dispose()
++
++
++def _index_names(engine) -> set[str]:
++    insp = inspect(engine)
++    return {idx["name"] for idx in insp.get_indexes("mastery_audit_log")}
++
++
++def _scoped_rows(engine):
++    with engine.connect() as conn:
++        return conn.execute(
++            text(
++                "SELECT old_mastery, new_mastery FROM mastery_audit_log "
++                "WHERE request_id LIKE 'edi:%' OR request_id LIKE 'erv:%' ORDER BY id"
++            )
++        ).fetchall()
++
++
++def test_upgrade_dedupes_idem_namespace_keeping_earliest(migration_env):
++    engine, run_migration, load_upgrade_downgrade = migration_env
++    upgrade, _ = load_upgrade_downgrade()
++
++    # 迁移前：管辖域内 5 行（两组重复对 + 一行唯一）
++    assert len(_scoped_rows(engine)) == 5
++
++    run_migration(upgrade)
++
++    # 重复收敛：每组保留最早一行；被删的是后来者（重复扣分/回升污染）
++    rows = _scoped_rows(engine)
++    assert [tuple(r) for r in rows] == [(50, 42), (42, 46), (50, 42)], "保留最早、删除后来者"
++    assert INDEX_NAME in _index_names(engine)
++
++
++def test_upgrade_leaves_out_of_scope_rows_untouched(migration_env):
++    engine, run_migration, load_upgrade_downgrade = migration_env
++    upgrade, _ = load_upgrade_downgrade()
++
++    run_migration(upgrade)
++
++    with engine.connect() as conn:
++        total_scoped = conn.execute(
++            text("SELECT COUNT(*) FROM mastery_audit_log WHERE request_id IS NULL")
++        ).scalar()
++        bare = conn.execute(
++            text(
++                "SELECT COUNT(*) FROM mastery_audit_log WHERE request_id = '99999999-9999-9999-9999-999999999999'"
++            )
++        ).scalar()
++        others = conn.execute(
++            text(
++                "SELECT COUNT(*) FROM mastery_audit_log WHERE request_id LIKE 'obs=%' "
++                "OR request_id = 'client-free-string'"
++            )
++        ).scalar()
++    # 管辖域外零影响：NULL/复合段行原样；域外既有重复对也不收敛（索引管不着）
++    assert total_scoped == 1
++    assert bare == 2, "域外重复对不属于本索引管辖，收敛不是本迁移的职责"
++    assert others == 2
++
++
++def test_upgrade_enforces_uniqueness_and_on_conflict_contract(migration_env):
++    engine, run_migration, load_upgrade_downgrade = migration_env
++    upgrade, _ = load_upgrade_downgrade()
++
++    run_migration(upgrade)
++
++    with engine.begin() as conn:
++        # 同键裸 INSERT 违约
++        with pytest.raises(Exception):
++            _insert_audit(conn, "edi:cccc00000000000000000000000000:ab12cd34:" + "3" * 32, 42, 34)
++    # 写侧生产契约：ON CONFLICT DO NOTHING RETURNING 丢行（galaxy_service 同款）
++    with engine.begin() as conn:
++        result = conn.execute(
++            text(
++                "INSERT INTO mastery_audit_log (node_id, user_id, old_mastery, new_mastery, reason, request_id, revision) "
++                "VALUES (:n, :u, :o, :w, 'r', :q, 1) ON CONFLICT DO NOTHING RETURNING id"
++            ),
++            {
++                "n": N, "u": U, "o": 42, "w": 34,
++                "q": "edi:cccc00000000000000000000000000:ab12cd34:" + "3" * 32,
++            },
++        )
++        assert result.scalar_one_or_none() is None, "冲突时 RETURNING 必须无行（写侧据此判定 duplicate）"
++    # 非管辖域重复写不受索引约束
++    with engine.begin() as conn:
++        _insert_audit(conn, "88888888-8888-8888-8888-888888888888", 80, 84)
++        _insert_audit(conn, "88888888-8888-8888-8888-888888888888", 84, 88)  # 不违约
++
++
++def test_round_trip_downgrade_and_reentrant(migration_env):
++    engine, run_migration, load_upgrade_downgrade = migration_env
++    upgrade, downgrade = load_upgrade_downgrade()
++
++    run_migration(upgrade)
++    assert INDEX_NAME in _index_names(engine)
++    scoped_after_upgrade = _scoped_rows(engine)
++
++    run_migration(downgrade)
++    assert INDEX_NAME not in _index_names(engine)
++    # downgrade 不回填被收敛的污染行；存量数据行原样存活
++    assert _scoped_rows(engine) == scoped_after_upgrade
++
++    # 可重入：再次 upgrade 幂等（无重复可删 + IF NOT EXISTS）
++    run_migration(upgrade)
++    assert INDEX_NAME in _index_names(engine)
++    assert _scoped_rows(engine) == scoped_after_upgrade
+diff --git a/backend/tests/unit/test_error_mastery_concurrency.py b/backend/tests/unit/test_error_mastery_concurrency.py
+new file mode 100644
+index 00000000..f135d452
+--- /dev/null
++++ b/backend/tests/unit/test_error_mastery_concurrency.py
+@@ -0,0 +1,357 @@
++"""ERR-IDEM-CONCUR · 毫秒窗口并发双扣收口 —— 写侧唯一索引仲裁行为测试.
++
++ERR-IDEM（a4ed7493）的幂等门是读侧先查重：两个并发请求在「彼此都还没写入
++审计行」的毫秒窗口内都读到「未吸收」→ 双写双扣（50→42→34）。本卡收口 =
++``mastery_audit_log`` 上的唯一部分索引（迁移 erridemconc_20260922，只管辖
++``edi:``/``erv:`` 幂等键命名空间）+ 写侧审计 INSERT ``ON CONFLICT DO NOTHING
++RETURNING`` → 冲突即整体回滚、以 ``{"success": False, "reason": "duplicate"}``
++返回（galaxy_service.update_node_mastery），与读侧门命中同一可观察结局。
++
++harness 与既有 ERR-IDEM 测试基建的关键差异：
++
++- **两个独立 session**（sqlite 文件库、两条连接）模拟两个真实并发请求，
++  各自持独立事务——写侧冲突/回滚只波及败者自己的事务，与生产语义一致；
++- **真实 GalaxyService.update_node_mastery 写入路径**（不 stub 审计 INSERT），
++  冲突检测直接对着真实部分唯一索引仲裁；
++- **asyncio.Barrier 把毫秒窗口放大成确定性交错点**：两个协程都通过读侧门
++  （_sync_already_applied）之后才放行写入——这正是修复前双扣发生的窗口。
++
++断言全部写成交错无关（谁先落账都行）：恰好一方生效、恰好一行审计、
++掌握度只扣/升一次。
++"""
++
++from __future__ import annotations
++
++import asyncio
++import sys
++from datetime import UTC, datetime, timedelta
++from pathlib import Path
++from unittest.mock import AsyncMock, MagicMock, patch
++from uuid import uuid4
++
++import pytest
++import pytest_asyncio
++from sqlalchemy import select, text
++
++REPO_ROOT = Path(__file__).resolve().parents[3]
++if str(REPO_ROOT) not in sys.path:
++    sys.path.insert(0, str(REPO_ROOT))
++
++from app.models.base import Base
++from app.models.error_book import ErrorRecord
++from app.models.galaxy import KnowledgeNode, StudyRecord, UserNodeStatus
++from app.models.theater_candidate_bundle import TheaterCandidateBundle  # noqa: F401 — create_all FK 解析
++from app.models.theater_prediction import TheaterPrediction  # noqa: F401 — create_all FK 解析
++from app.models.user import User
++from app.services.error_book_mastery_sync_service import ErrorBookMasterySyncService
++
++TEST_DATABASE_URL = "sqlite+aiosqlite://"
++
++# 与迁移 c8e4f2a3b1d5（建表）+ erridemconc_20260922（唯一部分索引）同构的
++# sqlite 版 DDL（mastery_audit_log 无 ORM 模型）。索引谓词与迁移严格一致。
++MASTERY_AUDIT_LOG_DDL = """
++CREATE TABLE mastery_audit_log (
++    id INTEGER PRIMARY KEY AUTOINCREMENT,
++    node_id VARCHAR(36) NOT NULL,
++    user_id VARCHAR(36) NOT NULL,
++    old_mastery INTEGER NOT NULL,
++    new_mastery INTEGER NOT NULL,
++    reason VARCHAR(100) NOT NULL,
++    request_id VARCHAR(100),
++    revision INTEGER DEFAULT 1,
++    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
++)
++"""
++
++IDEM_UNIQUE_INDEX_DDL = """
++CREATE UNIQUE INDEX IF NOT EXISTS uq_mastery_audit_log_idem_key
++ON mastery_audit_log(user_id, node_id, request_id)
++WHERE request_id LIKE 'edi:%' OR request_id LIKE 'erv:%'
++"""
++
++
++# ---------------------------------------------------------------------------
++# Fixtures / harness
++# ---------------------------------------------------------------------------
++
++
++class _ConcurrentRig:
++    """两个独立 session（两条连接）+ 共享 schema 的并发测试台。"""
++
++    def __init__(self, engine):
++        self.engine = engine
++
++    def session_factory(self):
++        from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
++
++        return async_sessionmaker(self.engine, class_=AsyncSession, expire_on_commit=False)
++
++
++@pytest_asyncio.fixture
++async def rig(tmp_path):
++    from sqlalchemy.ext.asyncio import create_async_engine
++
++    engine = create_async_engine(
++        f"{TEST_DATABASE_URL}//{tmp_path / 'erridem_conc.db'}",
++        connect_args={"timeout": 15.0},
++    )
++    async with engine.begin() as conn:
++        await conn.run_sync(Base.metadata.create_all)
++        await conn.execute(text(MASTERY_AUDIT_LOG_DDL))
++        await conn.execute(text(IDEM_UNIQUE_INDEX_DDL))
++
++    yield _ConcurrentRig(engine)
++    await engine.dispose()
++
++
++async def _seed_node(rig, *, mastery_score: float = 50.0):
++    """Seed user/node/status/error via its own session, then commit."""
++    factory = rig.session_factory()
++    async with factory() as session:
++        user = User(username=f"conc_{uuid4().hex[:8]}", email="conc@example.com", hashed_password="x")
++        session.add(user)
++        node = KnowledgeNode(name="ConcNode", description="d")
++        session.add(node)
++        await session.flush()
++        status = UserNodeStatus(
++            user_id=user.id,
++            node_id=node.id,
++            mastery_score=mastery_score,
++            bkt_mastery_prob=mastery_score / 100.0,
++            is_unlocked=True,
++            study_count=0,
++            total_minutes=0,
++            total_study_minutes=0,
++            revision=0,
++        )
++        session.add(status)
++        error = ErrorRecord(
++            user_id=user.id,
++            subject_code="math",
++            question_text="What is the derivative of sin(x)?",
++            user_answer="cos(x^2)",
++            correct_answer="cos(x)",
++            linked_knowledge_node_ids=[str(node.id)],
++            latest_analysis={"error_type": "concept_confusion"},
++            mastery_level=0.3,
++            review_count=0,
++        )
++        session.add(error)
++        await session.commit()
++        return user.id, node.id, error.id
++
++
++def _build_service(session) -> ErrorBookMasterySyncService:
++    """ErrorBookMasterySyncService with real GalaxyService write path.
++
++    GalaxyService.update_node_mastery 在 sqlite 上走非 PG 分支（ORM 更新 +
++    审计 INSERT ON CONFLICT DO NOTHING RETURNING + 提交），是本卡的被测
++    写入路径，不做 stub。计划压力评估等与幂等正交的副作用按 ERR-IDEM
++    基建同款 mock 掉。
++    """
++    with patch("app.services.error_book_mastery_sync_service.GalaxyStatsService") as MockStatsCls:
++        mock_stats = MagicMock()
++        mock_stats._calculate_next_review = MagicMock(
++            return_value=datetime.now(UTC) + timedelta(days=3)
++        )
++        MockStatsCls.return_value = mock_stats
++        service = ErrorBookMasterySyncService(session)
++
++    service._evaluate_impacted_plans = AsyncMock()
++    service._count_recent_errors_for_node = AsyncMock(return_value=0)
++    service._find_impacted_active_plans = AsyncMock(return_value=set())
++    return service
++
++
++def _install_gate_barrier(service: ErrorBookMasterySyncService, barrier: asyncio.Barrier) -> None:
++    """毫秒窗口放大器：每个协程通过读侧门后在 barrier 处等齐，再同时放行。
++
++    修复前语义下这就是双扣窗口（双方都读到「未吸收」）；修复后写入侧由
++    唯一索引仲裁出唯一胜者。
++    """
++    original_gate = service._sync_already_applied
++
++    async def _gated(user_id, node_id, request_key):
++        seen = await original_gate(user_id, node_id, request_key)
++        await barrier.wait()
++        return seen
++
++    service._sync_already_applied = _gated
++
++
++async def _audit_rows(rig, user_id, node_id) -> list[tuple]:
++    factory = rig.session_factory()
++    async with factory() as session:
++        result = await session.execute(
++            text(
++                "SELECT request_id, old_mastery, new_mastery FROM mastery_audit_log "
++                "WHERE user_id = :u AND node_id = :n ORDER BY id"
++            ),
++            {"u": str(user_id), "n": str(node_id)},
++        )
++        return list(result.fetchall())
++
++
++async def _final_mastery(rig, user_id, node_id) -> float:
++    factory = rig.session_factory()
++    async with factory() as session:
++        result = await session.execute(
++            select(UserNodeStatus.mastery_score).where(
++                UserNodeStatus.user_id == user_id,
++                UserNodeStatus.node_id == node_id,
++            )
++        )
++        return float(result.scalar_one())
++
++
++async def _study_record_count(rig, user_id, node_id, record_type: str) -> int:
++    factory = rig.session_factory()
++    async with factory() as session:
++        result = await session.execute(
++            select(StudyRecord.id).where(
++                StudyRecord.user_id == user_id,
++                StudyRecord.node_id == node_id,
++                StudyRecord.record_type == record_type,
++            )
++        )
++        return len(list(result.scalars().all()))
++
++
++# ===========================================================================
++# 1. 并发同键诊断（毫秒窗口）→ 恰好一扣（修复前红：50→42→34）
++# ===========================================================================
++
++
++@pytest.mark.asyncio
++async def test_concurrent_same_key_diagnosis_deducts_exactly_once(rig):
++    user_id, node_id, error_id = await _seed_node(rig, mastery_score=50.0)
++
++    barrier = asyncio.Barrier(2)
++    results = await asyncio.gather(*[
++        _run_diagnosis(rig, user_id, error_id, barrier)
++        for _ in range(2)
++    ])
++
++    node_results = [node for r in results for node in r]  # 生效者非空，败者 == []
++    assert len(node_results) == 1, f"并发同键诊断必须恰好生效一次，实际 {len(node_results)} 次"
++    assert node_results[0]["delta"] == -8
++
++    mastery = await _final_mastery(rig, user_id, node_id)
++    assert mastery == 42.0, f"掌握度只允许被扣一次（50→42），实际 {mastery}"
++
++    rows = await _audit_rows(rig, user_id, node_id)
++    assert len(rows) == 1, f"同键审计行必须恰好一行，实际 {len(rows)}: {rows}"
++    assert rows[0][0].startswith("edi:")
++
++    assert await _study_record_count(rig, user_id, node_id, "error_diagnosis") == 1
++
++
++# ===========================================================================
++# 2. 并发同键复盘（毫秒窗口）→ 恰好一升
++# ===========================================================================
++
++
++@pytest.mark.asyncio
++async def test_concurrent_same_key_review_recovers_exactly_once(rig):
++    user_id, node_id, error_id = await _seed_node(rig, mastery_score=42.0)
++
++    barrier = asyncio.Barrier(2)
++    results = await asyncio.gather(*[
++        _run_review(rig, user_id, error_id, "remembered", barrier)
++        for _ in range(2)
++    ])
++
++    node_results = [node for r in results for node in r]
++    assert len(node_results) == 1, f"并发同键复盘必须恰好生效一次，实际 {len(node_results)} 次"
++    assert node_results[0]["delta"] == 4
++
++    mastery = await _final_mastery(rig, user_id, node_id)
++    assert mastery == 46.0, f"掌握度只允许回升一次（42→46），实际 {mastery}"
++
++    rows = await _audit_rows(rig, user_id, node_id)
++    assert len(rows) == 1
++    assert rows[0][0].startswith("erv:")
++
++
++# ===========================================================================
++# 3. 并发双请求都拿到「读侧门命中」同款结局：败者结果为空
++# ===========================================================================
++
++
++@pytest.mark.asyncio
++async def test_concurrent_loser_gets_read_gate_hit_outcome(rig):
++    """写侧冲突败者的返回与读侧门命中完全同形：空结果列表（无 delta 字典）。
++
++    调用方（error_book router → analyze_and_link）对两种去重路径的处理
++    因此天然一致，不需要新增分支语义。
++    """
++    user_id, node_id, error_id = await _seed_node(rig, mastery_score=50.0)
++
++    barrier = asyncio.Barrier(2)
++    first, second = await asyncio.gather(*[
++        _run_diagnosis(rig, user_id, error_id, barrier)
++        for _ in range(2)
++    ])
++
++    # 交错无关：恰好一个为空、一个生效
++    assert (len(first) == 0) != (len(second) == 0), "恰好一方生效"
++    assert (first == [] and len(second) == 1) or (second == [] and len(first) == 1)
++
++
++# ===========================================================================
++# 4. 串行重复（已提交后重放）→ 读侧门快路径仍然生效（保留不回归）
++# ===========================================================================
++
++
++@pytest.mark.asyncio
++async def test_sequential_duplicate_still_caught_by_read_gate(rig):
++    """写入侧索引上线后，读侧先查重门保持为快路径：串行重放不触达写侧。"""
++    user_id, node_id, error_id = await _seed_node(rig, mastery_score=50.0)
++
++    barrier = asyncio.Barrier(1)
++    first = await _run_diagnosis(rig, user_id, error_id, barrier)
++    assert len(first) == 1
++    assert first[0]["delta"] == -8
++
++    # 内容未变的第二次分析（前一次已提交）→ 读侧门直接命中
++    second = await _run_diagnosis(rig, user_id, error_id, asyncio.Barrier(1))
++    assert second == [], "读侧门快路径必须继续拦截已落账的同键同步"
++
++    mastery = await _final_mastery(rig, user_id, node_id)
++    assert mastery == 42.0
++    assert len(await _audit_rows(rig, user_id, node_id)) == 1
++
++
++# ===========================================================================
++# helpers: 独立 session 里跑一次完整吸收（模拟一个真实请求）
++# ===========================================================================
++
++
++async def _run_diagnosis(rig, user_id, error_id, barrier) -> list[dict]:
++    factory = rig.session_factory()
++    async with factory() as session:
++        service = _build_service(session)
++        _install_gate_barrier(service, barrier)
++        result = await session.execute(
++            select(ErrorRecord).where(ErrorRecord.id == error_id)
++        )
++        error_record = result.scalar_one()
++        applied = list(await service.apply_error_diagnosis(user_id, error_record))
++        # 生产语义：router 在请求边界提交该 session（galaxy_service 内部已
++        # 提交过掌握度主写，这里的提交落 StudyRecord 等请求级副作用）
++        await session.commit()
++        return applied
++
++
++async def _run_review(rig, user_id, error_id, performance: str, barrier) -> list[dict]:
++    factory = rig.session_factory()
++    async with factory() as session:
++        service = _build_service(session)
++        _install_gate_barrier(service, barrier)
++        result = await session.execute(
++            select(ErrorRecord).where(ErrorRecord.id == error_id)
++        )
++        error_record = result.scalar_one()
++        applied = list(await service.apply_review_feedback(user_id, error_record, performance))
++        await session.commit()
++        return applied
+diff --git a/backend/tests/unit/test_galaxy_service_audit_idem_duplicate.py b/backend/tests/unit/test_galaxy_service_audit_idem_duplicate.py
+new file mode 100644
+index 00000000..90271f25
+--- /dev/null
++++ b/backend/tests/unit/test_galaxy_service_audit_idem_duplicate.py
+@@ -0,0 +1,210 @@
++"""ERR-IDEM-CONCUR · GalaxyService.update_node_mastery 写侧幂等冲突路径直测.
++
++毫秒窗口并发由 test_error_mastery_concurrency.py 用双 session + barrier 覆盖；
++本文件把真实 ``GalaxyService.update_node_mastery``（非 stub）在 sqlite 基座上
++对着真实部分唯一索引逐分支过一遍：
++
++- 同键重复（edi:/erv:）→ ``{"success": False, "reason": "duplicate"}``，
++  掌握度保持胜者值、审计行不重复、outbox 不重复；
++- 键域三元组 (user_id, node_id, request_id) —— 不同节点同键不误伤；
++- 部分索引只管辖 edi:/erv: 命名空间 —— 其他取值域（裸 task_id、NULL、
++  obs=/oc= 复合段）重复写入不受影响（行为与迁移前完全一致）。
++"""
++
++from __future__ import annotations
++
++import sys
++from datetime import UTC, datetime, timedelta
++from pathlib import Path
++from unittest.mock import MagicMock, patch
++from uuid import uuid4
++
++import pytest
++import pytest_asyncio
++from sqlalchemy import select, text
++
++REPO_ROOT = Path(__file__).resolve().parents[3]
++if str(REPO_ROOT) not in sys.path:
++    sys.path.insert(0, str(REPO_ROOT))
++
++from app.models.base import Base
++from app.models.galaxy import KnowledgeNode, UserNodeStatus
++from app.models.theater_candidate_bundle import TheaterCandidateBundle  # noqa: F401 — create_all FK 解析
++from app.models.theater_prediction import TheaterPrediction  # noqa: F401 — create_all FK 解析
++from app.models.user import User
++from app.services.galaxy_service import GalaxyService
++
++# 与迁移 c8e4f2a3b1d5（建表）+ erridemconc_20260922（唯一部分索引）同构的
++# sqlite 版 DDL（mastery_audit_log 无 ORM 模型）
++MASTERY_AUDIT_LOG_DDL = """
++CREATE TABLE mastery_audit_log (
++    id INTEGER PRIMARY KEY AUTOINCREMENT,
++    node_id VARCHAR(36) NOT NULL,
++    user_id VARCHAR(36) NOT NULL,
++    old_mastery INTEGER NOT NULL,
++    new_mastery INTEGER NOT NULL,
++    reason VARCHAR(100) NOT NULL,
++    request_id VARCHAR(100),
++    revision INTEGER DEFAULT 1,
++    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
++)
++"""
++
++IDEM_UNIQUE_INDEX_DDL = """
++CREATE UNIQUE INDEX IF NOT EXISTS uq_mastery_audit_log_idem_key
++ON mastery_audit_log(user_id, node_id, request_id)
++WHERE request_id LIKE 'edi:%' OR request_id LIKE 'erv:%'
++"""
++
++
++@pytest_asyncio.fixture
++async def galaxy_env(tmp_path):
++    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
++
++    engine = create_async_engine(
++        f"sqlite+aiosqlite:////{tmp_path / 'galaxy_idem.db'}",
++        connect_args={"timeout": 15.0},
++    )
++    async with engine.begin() as conn:
++        await conn.run_sync(Base.metadata.create_all)
++        await conn.execute(text(MASTERY_AUDIT_LOG_DDL))
++        await conn.execute(text(IDEM_UNIQUE_INDEX_DDL))
++
++    factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
++    async with factory() as session:
++        user = User(username=f"gal_idem_{uuid4().hex[:8]}", email="gal-idem@example.com", hashed_password="x")
++        session.add(user)
++        node_a = KnowledgeNode(name="NodeA", description="d")
++        node_b = KnowledgeNode(name="NodeB", description="d")
++        session.add_all([node_a, node_b])
++        await session.flush()
++        for node, score in ((node_a, 50.0), (node_b, 60.0)):
++            session.add(
++                UserNodeStatus(
++                    user_id=user.id,
++                    node_id=node.id,
++                    mastery_score=score,
++                    bkt_mastery_prob=score / 100.0,
++                    is_unlocked=True,
++                    study_count=0,
++                    total_minutes=0,
++                    total_study_minutes=0,
++                    revision=0,
++                )
++            )
++        await session.commit()
++        yield session, user.id, node_a.id, node_b.id
++
++    await engine.dispose()
++
++
++def _edi_key(error_id, node_id) -> str:
++    return (
++        f"edi:{str(error_id).replace('-', '')}:d90c7fa3:"
++        f"{str(node_id).replace('-', '')}"
++    )
++
++
++async def _audit_count(session, user_id, node_id, request_id) -> int:
++    result = await session.execute(
++        text(
++            "SELECT COUNT(*) FROM mastery_audit_log "
++            "WHERE user_id = :u AND node_id = :n AND request_id = :r"
++        ),
++        {"u": str(user_id), "n": str(node_id), "r": request_id},
++    )
++    return int(result.scalar_one())
++
++
++@pytest.mark.asyncio
++async def test_duplicate_edi_key_rejected_as_duplicate(galaxy_env):
++    """同键第二次写入 → duplicate；掌握度保持首次值、审计不重复。"""
++    session, user_id, node_a, _node_b = galaxy_env
++    service = GalaxyService(session)
++    key = _edi_key(uuid4(), node_a)
++
++    first = await service.update_node_mastery(
++        user_id=user_id, node_id=node_a, new_mastery=42,
++        reason="error_diagnosis:concept_confusion", request_id=key, revision=0,
++    )
++    assert first["success"] is True
++    assert first["new_mastery"] == 42
++
++    second = await service.update_node_mastery(
++        user_id=user_id, node_id=node_a, new_mastery=34,
++        reason="error_diagnosis:concept_confusion", request_id=key, revision=1,
++    )
++    assert second["success"] is False, "同键重复写入必须被写侧幂等仲裁拒绝"
++    assert second["reason"] == "duplicate"
++
++    await session.rollback()  # duplicate 分支内部已回滚，这里对齐观察点
++    refreshed = await session.get(UserNodeStatus, (user_id, node_a))
++    assert float(refreshed.mastery_score) == 42.0, "掌握度保持胜者（首次）值"
++    assert await _audit_count(session, user_id, node_a, key) == 1
++
++
++@pytest.mark.asyncio
++async def test_duplicate_erv_key_rejected_as_duplicate(galaxy_env):
++    session, user_id, node_a, _node_b = galaxy_env
++    service = GalaxyService(session)
++    key = f"erv:{uuid4().hex}:d90c7fa3:remembered:{node_a.hex}"
++
++    first = await service.update_node_mastery(
++        user_id=user_id, node_id=node_a, new_mastery=54,
++        reason="error_review:remembered", request_id=key, revision=0,
++    )
++    assert first["success"] is True
++
++    second = await service.update_node_mastery(
++        user_id=user_id, node_id=node_a, new_mastery=58,
++        reason="error_review:remembered", request_id=key, revision=1,
++    )
++    assert second["success"] is False
++    assert second["reason"] == "duplicate"
++
++
++@pytest.mark.asyncio
++async def test_same_key_on_different_node_not_blocked(galaxy_env):
++    """键域是 (user, node, request_id) 三元组：不同节点不受同前缀键牵连。"""
++    session, user_id, node_a, node_b = galaxy_env
++    service = GalaxyService(session)
++    error_id = uuid4()
++
++    key_a = _edi_key(error_id, node_a)
++    key_b = _edi_key(error_id, node_b)
++
++    first = await service.update_node_mastery(
++        user_id=user_id, node_id=node_a, new_mastery=42,
++        reason="error_diagnosis:concept_confusion", request_id=key_a, revision=0,
++    )
++    second = await service.update_node_mastery(
++        user_id=user_id, node_id=node_b, new_mastery=52,
++        reason="error_diagnosis:concept_confusion", request_id=key_b, revision=0,
++    )
++    assert first["success"] is True
++    assert second["success"] is True, "不同节点的同源诊断各自生效（多节点去重语义不变）"
++
++
++@pytest.mark.asyncio
++async def test_non_idem_namespace_duplicate_unaffected(galaxy_env):
++    """部分索引谓词之外的取值域保持原语义：重复写不拒绝（管不着）。"""
++    session, user_id, node_a, _node_b = galaxy_env
++    service = GalaxyService(session)
++
++    bare_task_id = str(uuid4())
++    first = await service.update_node_mastery(
++        user_id=user_id, node_id=node_a, new_mastery=55,
++        reason="task_complete", request_id=bare_task_id, revision=0,
++    )
++    second = await service.update_node_mastery(
++        user_id=user_id, node_id=node_a, new_mastery=60,
++        reason="task_complete", request_id=bare_task_id, revision=1,
++    )
++    assert first["success"] is True
++    assert second["success"] is True, "非 edi:/erv: 命名空间的 request_id 不受部分索引管辖"
++
++    # NULL request_id（Galaxy REST 不传）写两行也不受影响
++    null_first = await service.update_node_mastery(
++        user_id=user_id, node_id=node_a, new_mastery=65, reason="manual_update", revision=2,
++    )
++    assert null_first["success"] is True

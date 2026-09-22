@@ -20,7 +20,7 @@ from typing import Any
 from uuid import NAMESPACE_URL, UUID, uuid5
 
 from loguru import logger
-from sqlalchemy import and_, delete, func, inspect, or_, select, text
+from sqlalchemy import and_, delete, func, inspect, or_, select, text, String, bindparam
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased, undefer
 
@@ -28,6 +28,7 @@ from app.config import settings
 from app.core.cache import cache_service, cached
 from app.core.event_bus import event_bus
 from app.gen.sparkle.rag.v1 import evidence_pb2
+from app.models.base import GUID
 from app.models.document_chunks import DocumentChunk
 from app.models.error_book import ErrorRecord
 from app.models.file_storage import SourceLifecycleStatus, StoredFile
@@ -3376,11 +3377,32 @@ class GalaxyService:
 
             # B. Audit Log
             if await self._table_exists("mastery_audit_log"):
-                audit_query = text("""
+                # ERR-IDEM-CONCUR：error-book 幂等键（edi:/erv: 命名空间，见
+                # ErrorBookMasterySyncService）以审计行为天然去重账本，其
+                # 唯一部分索引（uq_mastery_audit_log_idem_key）仲裁读侧门的
+                # 毫秒窗口：两个并发同键同步都过读侧门时，败者的审计 INSERT
+                # 被 ON CONFLICT DO NOTHING 丢弃（RETURNING 无行）→ 整个更新
+                # 回滚、以 {"success": False, "reason": "duplicate"} 返回——
+                # 与读侧门命中同一可观察结局（掌握度不变、不写 StudyRecord、
+                # 不发事件）。其余取值域（NULL / 裸 task_id / sprint_task_
+                # completed: / obs= / oc= / gRPC 客户端自由 request_id）在部分
+                # 索引谓词之外，保持原语义不变。
+                # GUID-typed bindparams（outcome_absorption_service 同款）：
+                # asyncpg 原生绑 UUID，aiosqlite 绑 str。
+                audit_query = text(
+                    """
                     INSERT INTO mastery_audit_log (node_id, user_id, old_mastery, new_mastery, reason, request_id, revision)
                     VALUES (:node_id, :user_id, :old_mastery, :new_mastery, :reason, :request_id, :revision)
-                """)
-                await self.db.execute(
+                    ON CONFLICT DO NOTHING
+                    RETURNING id
+                    """
+                ).bindparams(
+                    bindparam("node_id", type_=GUID),
+                    bindparam("user_id", type_=GUID),
+                    bindparam("reason", type_=String),
+                    bindparam("request_id", type_=String),
+                )
+                audit_result = await self.db.execute(
                     audit_query,
                     {
                         "node_id": node_id,
@@ -3392,6 +3414,24 @@ class GalaxyService:
                         "revision": new_revision,
                     },
                 )
+                if (
+                    audit_result.scalar_one_or_none() is None
+                    and request_id
+                    and str(request_id).startswith(("edi:", "erv:"))
+                ):
+                    # 前缀守卫：partial index 只管辖 edi:/erv: 域，该分支
+                    # 不可能误伤其他命名空间（PK 为 SERIAL，无冲突可能）。
+                    logger.warning(
+                        "GalaxyService: duplicate error-book mastery sync rejected by audit "
+                        "unique index for user={}/node={}, request_id={}",
+                        user_id,
+                        node_id,
+                        request_id,
+                    )
+                    # 与上方 revision-conflict 路径同一恢复方向：整体回滚，
+                    # 本次掌握度变体不落任何一行。
+                    await self.db.rollback()
+                    return {"success": False, "reason": "duplicate"}
 
             # 4. Invalidate Semantic Cache (User specific)
             from app.services.semantic_cache_service import semantic_cache_service
