@@ -1,0 +1,62 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-JOURNEY2-20260922-211514",
+  "step_id": "C6b",
+  "phase": "day1",
+  "name": "capsules today",
+  "started_at": "2026-09-22T21:16:56.217743+00:00",
+  "finished_at": "2026-09-22T21:17:03.540709+00:00",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/capsules/today",
+    "body": {}
+  },
+  "response": {
+    "status": 200,
+    "body": [
+      {
+        "id": "0d0b5643-90de-43f1-b0d4-39398e6a7f58",
+        "title": "为什么要先'画基线'？——一切改进的起点",
+        "content": "无论是机器学习项目、性能优化还是个人效率提升，'Map the baseline'（建立基线）都是第一步：先准确记录当前状态，才能衡量任何改进是否真的有效。\n\n- **基线的本质**：它是'不做任何新干预'时的参照系。没有基线，你看到的提升可能只是自然波动、随机噪声或努力造成的错觉。\n- **常见误区**：基线常常被低估。例如新算法让人印象深刻，但对比一个简单基线（如均值预测、朴素规则）后，优势可能消失。这就是为什么严肃的实验都要设置对照组。\n- **好的基线长什么样**：可测量、可复现、有明确的时间窗口和指标定义。模糊的'感觉变好了'不是基线，'平均响应时间从 320ms 降到 280ms' 才是。\n\n下一步可以探索：A/B 测试如何利用基线做显著性检验，以及为什么'朴素基线'（naive baseline）在预测任务中往往出奇地难打败。",
+        "is_read": false,
+        "created_at": "2026-09-22T21:17:03.518786",
+        "related_subject": "Map the baseline",
+        "depth_level": "medium",
+        "generation_method": "glm_4_7_no_thinking",
+        "quality_score": 0.88,
+        "feedback_count": 0,
+        "share_count": 0,
+        "personalization_context": {
+          "depth_preference": 0.5,
+          "curiosity_preference": 0.5
+        },
+        "source_context": {
+          "depth_level": "medium",
+          "model_chain": [
+            "glm_4_7_no_thinking",
+            "glm_4_7_flash_no_thinking",
+            "deepseek_chat"
+          ],
+          "generated_at": "2026-09-22T21:17:03.517084",
+          "primary_model": "glm_4_7_no_thinking",
+          "thinking_mode": false,
+          "execution_mode": "online",
+          "selected_model": "glm_4_7_no_thinking",
+          "dominant_pattern": null,
+          "subjects_studied": [
+            "Map the baseline"
+          ],
+          "behavior_patterns": [],
+          "profile_preferences": {
+            "depth_preference": 0.5,
+            "curiosity_preference": 0.5
+          }
+        },
+        "is_favorite": false
+      }
+    ]
+  },
+  "verdict": "pass",
+  "checkpoints": [],
+  "notes": []
+}

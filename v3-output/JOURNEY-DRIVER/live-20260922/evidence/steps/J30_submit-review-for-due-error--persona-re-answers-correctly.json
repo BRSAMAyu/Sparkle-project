@@ -1,0 +1,84 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-JOURNEY2-20260922-211514",
+  "step_id": "J30",
+  "phase": "day2",
+  "name": "submit review for due error (persona re-answers correctly)",
+  "started_at": "2026-09-22T21:25:46.048417+00:00",
+  "finished_at": "2026-09-22T21:25:46.359940+00:00",
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/errors/57aa91c4-db10-49d2-9cce-fc5fd7f570e3/review",
+    "body": {
+      "performance": "remembered",
+      "time_spent_seconds": 45
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "id": "57aa91c4-db10-49d2-9cce-fc5fd7f570e3",
+      "user_id": "01ad2e3e-19ad-4a82-8ddd-3b3f98356af3",
+      "subject_code": "math",
+      "chapter": "CH4 图论",
+      "question_text": "判断题：只要一个图的每个顶点度数都是偶数，该图就一定是连通的（因此存在欧拉回路）。",
+      "question_image_url": "",
+      "user_answer": "对。每顶点偶度就足够判定连通/欧拉回路存在。",
+      "correct_answer": "错。欧拉回路需要「连通」且「所有顶点偶度」两个条件同时成立；反例：两个不相连的三角形，每顶点度数均为 2（偶）但整体不连通，无欧拉回路。",
+      "mastery_level": 0.15,
+      "review_count": 1,
+      "next_review_at": "2026-09-23T13:25:46.072138Z",
+      "last_reviewed_at": "2026-09-22T13:25:46.072183Z",
+      "latest_analysis": {
+        "error_type": "knowledge_gap",
+        "error_type_label": "必要充分条件缺失",
+        "root_cause": "学生仅记住了欧拉回路的判定条件之一（所有顶点度数为偶数），却忽略了另一个同等关键的前提条件（图为连通图）。学生将'每个顶点度数为偶数'误解为欧拉回路存在的充分条件，实际上它只是必要条件之一，必须与'图连通'同时成立才是充要条件。典型的反例：两个不相连的三角形构成的不连通图，每个顶点度数都是2（偶数），但图不连通，因此整体不存在欧拉回路。",
+        "correct_approach": "1. 明确欧拉回路存在的充要条件（Hierholzer定理）：无向图存在欧拉回路 ⟺ 图是连通图且所有顶点的度数均为偶数。\n2. 将条件拆分为两个独立且缺一不可的部分：\n   - 条件A：图必须连通（非连通则无法形成单一回路）\n   - 条件B：所有顶点度数为偶数（保证能从一个顶点出发遍历每条边恰好一次后回到起点）\n3. 检验时分别验证两个条件：先检查连通性（BFS/DFS或连通分量数），再检查度数奇偶性。\n4. 用反例验证理解：考虑两个分离的三角形（K₃ ∪ K₃）——6个顶点，每个顶点度数为2（满足条件B），但连通分量为2（不满足条件A），故不存在欧拉回路。",
+        "similar_traps": [
+          "混淆'所有顶点度数为偶数'与'图连通'，误把单一条件当作充要条件",
+          "将'所有顶点度数≥2'与'存在欧拉回路'等同（忽略偶数要求）",
+          "在有向图中混淆欧拉回路（要求每个顶点入度=出度）与欧拉通路（要求至多两个顶点入度≠出度）",
+          "忽略'连通'对无向图的隐含要求，误以为'偶度自动保证连通'"
+        ],
+        "recommended_knowledge": [
+          "欧拉回路与欧拉通路的充要条件（Hierholzer定理）",
+          "图的连通性判定（连通分量、BFS/DFS）",
+          "必要条件与充分条件的区分",
+          "反例法（counterexample）在证明命题为假时的应用"
+        ],
+        "study_suggestion": "1. 制作'充要条件清单'卡片：每个定理都列出所有必要条件并标注'缺一不可'，例如欧拉回路 = 连通 + 全偶度。\n2. 用反例强化记忆：对每个条件故意构造破坏它的反例（如本题的分离双三角形），理解条件缺失时的反例形态。\n3. 做题时养成'条件清单逐项打勾'的习惯：判断欧拉回路时先问'连通吗？'，再问'都偶度吗？'，两步都满足才能下结论。\n4. 类比记忆：欧拉通路类似'一笔画'问题，笔不离纸（连通）且每点出度入度平衡（偶度）才能一笔画完。",
+        "ocr_text": ""
+      },
+      "knowledge_links": [
+        {
+          "id": "182595bc-37d2-5bbd-ac25-2587dbefc5c3",
+          "name": "二叉树性质",
+          "relevance": 1,
+          "is_primary": true
+        },
+        {
+          "id": "bd30eaa2-494a-52ad-a389-6f0d4b3f8d93",
+          "name": "差错检测（奇偶校验/CRC/校验和）",
+          "relevance": 1,
+          "is_primary": false
+        },
+        {
+          "id": "3a323b99-f0fc-5f16-ab60-85e8dc16c830",
+          "name": "链表",
+          "relevance": 1,
+          "is_primary": false
+        }
+      ],
+      "created_at": "2026-09-22T21:16:56.175064Z",
+      "updated_at": "2026-09-22T21:25:46.068871Z",
+      "cognitive_tags": [],
+      "ai_analysis_summary": "概念混淆：把「偶度」误当充分条件，漏掉连通性前提（NS-001 Day1 故意犯错被纠正）。",
+      "affected_node_id": "182595bc-37d2-5bbd-ac25-2587dbefc5c3"
+    }
+  },
+  "verdict": "pass",
+  "checkpoints": [
+    "CP-05"
+  ],
+  "notes": []
+}

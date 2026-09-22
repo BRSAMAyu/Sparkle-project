@@ -1,0 +1,206 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-JOURNEY2-20260922-211514",
+  "step_id": "C9",
+  "phase": "day1settle",
+  "name": "task ledger baseline for day2/day3 (CP-04 structural face)",
+  "started_at": "2026-09-22T21:25:34.221976+00:00",
+  "finished_at": "2026-09-22T21:25:34.244674+00:00",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/tasks?limit=100",
+    "body": {}
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "id": "41fc968d-c13d-43b8-915d-26829c19fcfe",
+          "created_at": "2026-09-22T21:15:30.224367",
+          "updated_at": "2026-09-22T21:15:30.224368",
+          "title": "Readiness check",
+          "type": "LEARNING",
+          "status": "PENDING",
+          "tags": [
+            "goal_milestone"
+          ],
+          "estimated_minutes": 25,
+          "difficulty": 3,
+          "energy_cost": 2,
+          "priority": 0,
+          "due_date": null,
+          "user_id": "01ad2e3e-19ad-4a82-8ddd-3b3f98356af3",
+          "plan_id": "7917e864-59eb-4a3f-b33a-11e6e4b00385",
+          "guide_content": "Complete a mock or rubric check before the deadline. Keep it tied to why this matters: 一周后期末考，目标及格并冲击 70+",
+          "started_at": null,
+          "confirmed_at": null,
+          "completed_at": null,
+          "paused_at": null,
+          "paused_reason": null,
+          "actual_minutes": null,
+          "user_note": null,
+          "knowledge_node_id": null,
+          "tool_result_id": null,
+          "execution_mode": null,
+          "order_index": -2000,
+          "subtasks_total": 0,
+          "subtasks_completed": 0,
+          "guide_json": null,
+          "ai_prompt": null,
+          "source_planning_session_id": null,
+          "phase_index": null,
+          "success_criteria": null,
+          "action_plan": null,
+          "bound_sources": []
+        },
+        {
+          "id": "a339ca2d-c204-4a5e-9b23-a250db0d153e",
+          "created_at": "2026-09-22T21:15:30.183762",
+          "updated_at": "2026-09-22T21:15:30.183764",
+          "title": "Timed practice loop",
+          "type": "LEARNING",
+          "status": "PENDING",
+          "tags": [
+            "goal_milestone"
+          ],
+          "estimated_minutes": 25,
+          "difficulty": 3,
+          "energy_cost": 2,
+          "priority": 0,
+          "due_date": null,
+          "user_id": "01ad2e3e-19ad-4a82-8ddd-3b3f98356af3",
+          "plan_id": "7917e864-59eb-4a3f-b33a-11e6e4b00385",
+          "guide_content": "Run short drills and review mistakes after each round. Keep it tied to why this matters: 一周后期末考，目标及格并冲击 70+",
+          "started_at": null,
+          "confirmed_at": null,
+          "completed_at": null,
+          "paused_at": null,
+          "paused_reason": null,
+          "actual_minutes": null,
+          "user_note": null,
+          "knowledge_node_id": null,
+          "tool_result_id": null,
+          "execution_mode": null,
+          "order_index": -1000,
+          "subtasks_total": 0,
+          "subtasks_completed": 0,
+          "guide_json": null,
+          "ai_prompt": null,
+          "source_planning_session_id": null,
+          "phase_index": null,
+          "success_criteria": null,
+          "action_plan": null,
+          "bound_sources": []
+        },
+        {
+          "id": "55cea04f-9ef7-4724-8dea-5b45d0e429fc",
+          "created_at": "2026-09-22T21:15:30.137288",
+          "updated_at": "2026-09-22T21:15:30.137289",
+          "title": "Repair the core gaps",
+          "type": "LEARNING",
+          "status": "PENDING",
+          "tags": [
+            "goal_milestone"
+          ],
+          "estimated_minutes": 25,
+          "difficulty": 3,
+          "energy_cost": 2,
+          "priority": 0,
+          "due_date": null,
+          "user_id": "01ad2e3e-19ad-4a82-8ddd-3b3f98356af3",
+          "plan_id": "7917e864-59eb-4a3f-b33a-11e6e4b00385",
+          "guide_content": "Practice the prerequisites that block progress most often. Keep it tied to why this matters: 一周后期末考，目标及格并冲击 70+",
+          "started_at": null,
+          "confirmed_at": null,
+          "completed_at": null,
+          "paused_at": null,
+          "paused_reason": null,
+          "actual_minutes": null,
+          "user_note": null,
+          "knowledge_node_id": null,
+          "tool_result_id": null,
+          "execution_mode": null,
+          "order_index": 0,
+          "subtasks_total": 0,
+          "subtasks_completed": 0,
+          "guide_json": null,
+          "ai_prompt": null,
+          "source_planning_session_id": null,
+          "phase_index": null,
+          "success_criteria": null,
+          "action_plan": null,
+          "bound_sources": []
+        },
+        {
+          "id": "2ea4fc74-6a58-4deb-95d0-242c5db23437",
+          "created_at": "2026-09-22T21:15:30.095897",
+          "updated_at": "2026-09-22T21:16:52.580074",
+          "title": "Map the baseline",
+          "type": "LEARNING",
+          "status": "COMPLETED",
+          "tags": [
+            "goal_first_step"
+          ],
+          "estimated_minutes": 25,
+          "difficulty": 3,
+          "energy_cost": 2,
+          "priority": 0,
+          "due_date": null,
+          "user_id": "01ad2e3e-19ad-4a82-8ddd-3b3f98356af3",
+          "plan_id": "7917e864-59eb-4a3f-b33a-11e6e4b00385",
+          "guide_content": "Confirm scope, weak topics, and the first measurable benchmark. Keep it tied to why this matters: 一周后期末考，目标及格并冲击 70+",
+          "started_at": "2026-09-22T21:16:52.511204",
+          "confirmed_at": null,
+          "completed_at": "2026-09-22T21:16:52.577234",
+          "paused_at": null,
+          "paused_reason": null,
+          "actual_minutes": 0,
+          "user_note": "NS-001 Day1 执行完成",
+          "knowledge_node_id": null,
+          "tool_result_id": null,
+          "execution_mode": null,
+          "order_index": 1000,
+          "subtasks_total": 0,
+          "subtasks_completed": 0,
+          "guide_json": {
+            "completion_evidence_record": [
+              {
+                "source": "user",
+                "entries": [
+                  {
+                    "ref": null,
+                    "origin": "fallback",
+                    "description": "完成确认未附带证据（诚实回落类型，非伪造产物/测验）",
+                    "evidence_kind": "user_confirmation"
+                  }
+                ],
+                "fulfilled": false,
+                "recorded_at": "2026-09-22T21:16:52",
+                "declared_kinds": [
+                  "self_report"
+                ],
+                "schema_version": "completion_evidence.v1"
+              }
+            ]
+          },
+          "ai_prompt": null,
+          "source_planning_session_id": null,
+          "phase_index": null,
+          "success_criteria": null,
+          "action_plan": null,
+          "bound_sources": []
+        }
+      ],
+      "meta": {
+        "total": 4,
+        "page": 1,
+        "page_size": 20,
+        "total_pages": 1
+      }
+    }
+  },
+  "verdict": "pass",
+  "checkpoints": [],
+  "notes": []
+}

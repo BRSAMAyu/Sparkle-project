@@ -1,0 +1,8 @@
+{
+  "schema": "sparkle.northstar.real-drive.run.v1",
+  "day": {
+    "4": {}
+  },
+  "captured_before": "day3",
+  "at": "2026-09-22T21:26:51.613957+00:00"
+}

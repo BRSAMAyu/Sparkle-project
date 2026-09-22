@@ -1,0 +1,292 @@
+{
+  "schema": "sparkle.northstar.real-drive.run.v1",
+  "meta": {
+    "run_id": "NS001-JOURNEY2-20260922-211514",
+    "gateway_url": "http://localhost:8080",
+    "generated_at": "2026-09-22T21:26:36.569014+00:00",
+    "main_username": "northstar_jrn_5a140173",
+    "control_username": "northstar_jrn_ctrl_59522929",
+    "llm_messages_sent": 3,
+    "llm_budget_total": 24,
+    "honesty": "journey coverage: Day0-Day1 compressed + day phases with verdict evidence for [2]; CP-98/99 frozen unsupported; CP-06/07/08 unreachable until Day4-7 phases (JOURNEY-PLAN) — this summary NEVER declares north-star achievement"
+  },
+  "checkpoint_table": [
+    {
+      "checkpoint": "CP-00 baseline recorded and syllabus mapped",
+      "status": "pass",
+      "evidence_steps": [
+        "B4",
+        "B5",
+        "B5b"
+      ],
+      "note": "diagnostic generate+grade succeeded and dm.* galaxy nodes carry mastery (P0-1)"
+    },
+    {
+      "checkpoint": "CP-01 plan targets weakest exam-weighted nodes with human confirmation",
+      "status": "pass",
+      "evidence_steps": [
+        "B3",
+        "B3-2v"
+      ],
+      "note": "intake plan generated + idempotent reuse (BP-7/INTAKE); human-confirm step API 不存在则 blocked/fail 记断点"
+    },
+    {
+      "checkpoint": "CP-02 quiz score trajectory non-decreasing",
+      "status": "blocked",
+      "evidence_steps": [
+        "B5"
+      ],
+      "note": "compressed round: needs >=3 quiz days -> blocked"
+    },
+    {
+      "checkpoint": "CP-03 mistakes fully land in error book with mastery sync",
+      "status": "pass",
+      "evidence_steps": [
+        "C3",
+        "C5",
+        "C7b"
+      ],
+      "note": "correction + error entry + galaxy sync"
+    },
+    {
+      "checkpoint": "CP-04 next-day plan adapts to previous outcome",
+      "status": "blocked",
+      "evidence_steps": [
+        "C1",
+        "C1b"
+      ],
+      "note": "day2/day3 verdict steps (J4/K4) present -> judge them; else compressed round: no Day2 -> blocked"
+    },
+    {
+      "checkpoint": "CP-05 review hit rate at or above threshold",
+      "status": "blocked",
+      "evidence_steps": [
+        "C6a"
+      ],
+      "note": "mechanics face verified by J2/J3s/K2/K3s; hit-rate threshold needs multi-day product-graded samples -> stays blocked (n too small, performance self-declared)"
+    },
+    {
+      "checkpoint": "CP-06 weighted coverage at or above threshold by last study day",
+      "status": "blocked",
+      "evidence_steps": [],
+      "note": "compressed round: no Day6 -> blocked (Day4-7 design: JOURNEY-PLAN)"
+    },
+    {
+      "checkpoint": "CP-07 posttest gain at or above MDE",
+      "status": "blocked",
+      "evidence_steps": [],
+      "note": "compressed round: no Day7 mock -> blocked (Day7 design: JOURNEY-PLAN)"
+    },
+    {
+      "checkpoint": "CP-08 forgetting rate at or below threshold",
+      "status": "blocked",
+      "evidence_steps": [],
+      "note": "compressed round: no Day10 retest -> blocked (Day4-7 design: JOURNEY-PLAN)"
+    },
+    {
+      "checkpoint": "CP-98 daily cognitive load self-report",
+      "status": "unsupported",
+      "evidence_steps": [],
+      "note": "frozen: requires real human self-report -> unsupported"
+    },
+    {
+      "checkpoint": "CP-99 full mock exam wall clock at or below budget",
+      "status": "unsupported",
+      "evidence_steps": [],
+      "note": "frozen: requires real exam wall clock -> unsupported"
+    }
+  ],
+  "counts": {
+    "pass": 3,
+    "fail": 0,
+    "blocked": 6,
+    "unsupported": 2
+  },
+  "sprint_summary": {
+    "plan_id": "7917e864-59eb-4a3f-b33a-11e6e4b00385",
+    "plan_name": "离散数学期末 7 天冲刺：及格冲 70+",
+    "subject": "离散数学",
+    "exam_date": "2026-09-29",
+    "started_at": "2026-09-22T21:15:30.064186",
+    "days_used": 1,
+    "headline": "你用了 1 天，完成了 1 项任务，二元关系 从 50 分提升到 50 分。",
+    "task_stats": {
+      "total": 4,
+      "completed": 1,
+      "completion_rate": 0.25
+    },
+    "score_stats": {
+      "baseline_score": 13.2,
+      "current_score": 9.4,
+      "delta": -3.8,
+      "baseline_source": "diagnostic"
+    },
+    "mastery_changes": [
+      {
+        "node_id": "23207874-b0a6-5799-9b32-f9e4c98cfbc4",
+        "node_name": "二元关系",
+        "before_mastery": 50.0,
+        "after_mastery": 50.0,
+        "delta": 0.0
+      },
+      {
+        "node_id": "7d2d8a06-8df1-525c-90ab-79c348a19aa2",
+        "node_name": "命题逻辑",
+        "before_mastery": 25.0,
+        "after_mastery": 25.0,
+        "delta": 0.0
+      },
+      {
+        "node_id": "94803ffb-d9a2-597f-af8c-ec264bb2450f",
+        "node_name": "代数系统",
+        "before_mastery": 0.0,
+        "after_mastery": 0.0,
+        "delta": 0.0
+      },
+      {
+        "node_id": "aa4e7352-d4de-5a98-a936-a36a40985411",
+        "node_name": "函数与基数",
+        "before_mastery": 0.0,
+        "after_mastery": 0.0,
+        "delta": 0.0
+      },
+      {
+        "node_id": "c38bab26-24a0-53a7-a4e9-4a8d233b1d3a",
+        "node_name": "图的基本概念",
+        "before_mastery": 0.0,
+        "after_mastery": 0.0,
+        "delta": 0.0
+      },
+      {
+        "node_id": "77c1836a-2c7c-52aa-9088-229ca9e19edf",
+        "node_name": "欧拉图与哈密顿图",
+        "before_mastery": 0.0,
+        "after_mastery": 0.0,
+        "delta": 0.0
+      },
+      {
+        "node_id": "48421124-4f4a-5a62-a872-c83875ca65cf",
+        "node_name": "组合计数",
+        "before_mastery": 0.0,
+        "after_mastery": 0.0,
+        "delta": 0.0
+      },
+      {
+        "node_id": "3b3e9a6b-9cc0-5102-8dad-e456f20ab2b7",
+        "node_name": "谓词逻辑",
+        "before_mastery": 0.0,
+        "after_mastery": 0.0,
+        "delta": 0.0
+      }
+    ],
+    "top_improvement": {
+      "node_id": "23207874-b0a6-5799-9b32-f9e4c98cfbc4",
+      "node_name": "二元关系",
+      "before_mastery": 50.0,
+      "after_mastery": 50.0,
+      "delta": 0.0
+    },
+    "high_frequency_coverage": {
+      "baseline_rate": 0.0,
+      "current_rate": 0.0,
+      "delta_rate": 0.0,
+      "total_topics": 8,
+      "covered_topics_before": 0,
+      "covered_topics_after": 0
+    },
+    "error_recovery": {
+      "total_errors": 1,
+      "repaired_errors": 0,
+      "repair_rate": 0.0
+    },
+    "daily_study_trend": [
+      {
+        "date": "2026-09-22",
+        "minutes": 0
+      },
+      {
+        "date": "2026-09-23",
+        "minutes": 0
+      },
+      {
+        "date": "2026-09-24",
+        "minutes": 0
+      },
+      {
+        "date": "2026-09-25",
+        "minutes": 0
+      },
+      {
+        "date": "2026-09-26",
+        "minutes": 0
+      },
+      {
+        "date": "2026-09-27",
+        "minutes": 0
+      },
+      {
+        "date": "2026-09-28",
+        "minutes": 0
+      },
+      {
+        "date": "2026-09-29",
+        "minutes": 0
+      }
+    ],
+    "narrative_highlights": [
+      "你用了 1 天，完成了 1 / 4 项任务。",
+      "二元关系 从 50 分提升到 50 分。",
+      "高频考点覆盖率从 0% 提升到 0%。"
+    ],
+    "invitation_status": {
+      "eligible": false,
+      "invited_at": null,
+      "notification_id": null,
+      "completed_at": null,
+      "review_id": null
+    }
+  },
+  "steps": {
+    "A1": "pass",
+    "A2": "pass",
+    "B1": "pass",
+    "B1b": "fail",
+    "B2": "pass",
+    "B2b": "pass",
+    "B3-2": "pass",
+    "B3-2v": "pass",
+    "B3-3": "pass",
+    "B3": "pass",
+    "B4": "pass",
+    "B5": "pass",
+    "B5b": "pass",
+    "B6": "pass",
+    "B7": "pass",
+    "C1": "pass",
+    "C2": "pass",
+    "C3": "pass",
+    "C4a": "pass",
+    "C4b": "pass",
+    "C5": "pass",
+    "C6a": "pass",
+    "C6b": "pass",
+    "C7a": "pass",
+    "C7b": "pass",
+    "C7c": "pass",
+    "C7d": "pass",
+    "C8a-2": "pass",
+    "C9-2": "blocked",
+    "C9": "pass",
+    "E1": "pass",
+    "E2": "pass",
+    "J1": "pass",
+    "J1b-2": "blocked",
+    "J1b": "pass",
+    "J2": "pass",
+    "J30": "pass",
+    "J3s": "pass",
+    "J4": "blocked",
+    "J5": "blocked",
+    "J6": "blocked"
+  }
+}

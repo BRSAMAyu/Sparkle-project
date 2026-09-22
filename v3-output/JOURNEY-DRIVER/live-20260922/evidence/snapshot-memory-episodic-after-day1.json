@@ -1,0 +1,214 @@
+{
+  "schema": "sparkle.northstar.real-drive.run.v1",
+  "snapshot": {
+    "items": [
+      {
+        "id": "c04ec1b4-4247-4e5d-a267-12705ba63327",
+        "summary": "completed Readiness check",
+        "source_type": "chat_turn",
+        "source_id": "8c7fc1584d1d43bbab289d79805c835a",
+        "source_lane": "direct_capture",
+        "subject_type": "task_outcome",
+        "occurred_at": "2026-09-22T21:16:08.182301",
+        "due_at": null,
+        "resolved_at": null,
+        "importance_score": 0.72,
+        "confidence": 0.78,
+        "evidence_token": null,
+        "decay_policy": null,
+        "evidence_score": 0.2,
+        "correction_count": 0,
+        "evidence_missing": false,
+        "evidence_refs": [
+          {
+            "id": "8c7fc1584d1d43bbab289d79805c835a",
+            "type": "chat_turn",
+            "user_deleted": false,
+            "schema_version": "chat_turn.v1"
+          }
+        ],
+        "tags": [
+          "turn_end",
+          "task_completed",
+          "task_completed"
+        ],
+        "source_annotation": {
+          "turn_id": "8c7fc1584d1d43bbab289d79805c835a",
+          "label": "chat_turn",
+          "written_at": "2026-09-22T21:16:08.189496"
+        },
+        "updated_at": "2026-09-22T21:16:08.706037",
+        "retracted_at": null,
+        "revoked_at": null,
+        "mentioned_entity_hash": null,
+        "declaration_label": null,
+        "epistemic_class": "OBSERVATION",
+        "status": "active",
+        "scope": {
+          "level": "domain",
+          "domain_key": "task_outcome",
+          "time_window": {
+            "occurred_at": "2026-09-22T21:16:08.182301"
+          }
+        }
+      },
+      {
+        "id": "132f2c61-7562-4988-9fdc-b64da5ea8671",
+        "summary": "我每天只能投入 165 分钟",
+        "source_type": "chat",
+        "source_id": "f61c8455-7b2e-5129-bf9b-b449453b2f1f",
+        "source_lane": "inferred_extraction",
+        "subject_type": "self",
+        "occurred_at": "2026-09-22T21:15:29.975929",
+        "due_at": null,
+        "resolved_at": null,
+        "importance_score": 0.92,
+        "confidence": 0.92,
+        "evidence_token": "116ce74f-3f24-4b8d-9201-7f6dff615d16",
+        "decay_policy": "30d",
+        "evidence_score": 0.2,
+        "correction_count": 0,
+        "evidence_missing": false,
+        "evidence_refs": [
+          {
+            "id": "116ce74f-3f24-4b8d-9201-7f6dff615d16",
+            "type": "chat_turn",
+            "user_deleted": false,
+            "schema_version": "stage19.rule_y.v1"
+          }
+        ],
+        "tags": [
+          "stage16:auto_memory",
+          "decay:30d"
+        ],
+        "source_annotation": {
+          "turn_id": "116ce74f-3f24-4b8d-9201-7f6dff615d16",
+          "label": "对话记录",
+          "written_at": "2026-09-22T21:15:30.643905"
+        },
+        "updated_at": "2026-09-22T21:16:08.706037",
+        "retracted_at": null,
+        "revoked_at": null,
+        "mentioned_entity_hash": null,
+        "declaration_label": "AI 推断",
+        "epistemic_class": "HYPOTHESIS",
+        "status": "active",
+        "scope": {
+          "level": "domain",
+          "domain_key": "self",
+          "time_window": {
+            "occurred_at": "2026-09-22T21:15:29.975929"
+          },
+          "decay_policy": "30d"
+        }
+      },
+      {
+        "id": "d66041d0-dc4a-4090-b658-a4f2846bfdd3",
+        "summary": "我的情况：自评当前掌握度大约 42/100；最薄弱的章是图论（CH4）；一个具体的困惑：我总是分不清欧拉回路和哈密顿回路的判定条件，考试肯定考",
+        "source_type": "chat",
+        "source_id": "f61c8455-7b2e-5129-bf9b-b449453b2f1f",
+        "source_lane": "inferred_extraction",
+        "subject_type": "self",
+        "occurred_at": "2026-09-22T21:15:29.975919",
+        "due_at": null,
+        "resolved_at": null,
+        "importance_score": 0.92,
+        "confidence": 0.92,
+        "evidence_token": "116ce74f-3f24-4b8d-9201-7f6dff615d16",
+        "decay_policy": "30d",
+        "evidence_score": 0.2,
+        "correction_count": 0,
+        "evidence_missing": false,
+        "evidence_refs": [
+          {
+            "id": "116ce74f-3f24-4b8d-9201-7f6dff615d16",
+            "type": "chat_turn",
+            "user_deleted": false,
+            "schema_version": "stage19.rule_y.v1"
+          }
+        ],
+        "tags": [
+          "stage16:auto_memory",
+          "decay:30d"
+        ],
+        "source_annotation": {
+          "turn_id": "116ce74f-3f24-4b8d-9201-7f6dff615d16",
+          "label": "对话记录",
+          "written_at": "2026-09-22T21:15:30.427498"
+        },
+        "updated_at": "2026-09-22T21:16:08.706037",
+        "retracted_at": null,
+        "revoked_at": null,
+        "mentioned_entity_hash": null,
+        "declaration_label": "AI 推断",
+        "epistemic_class": "HYPOTHESIS",
+        "status": "active",
+        "scope": {
+          "level": "domain",
+          "domain_key": "self",
+          "time_window": {
+            "occurred_at": "2026-09-22T21:15:29.975919"
+          },
+          "decay_policy": "30d"
+        }
+      },
+      {
+        "id": "a27c6e93-2043-454c-a7a6-ba1efe88a237",
+        "summary": "你好，我要开始备考：离散数学期末考试在 7 天后（闭卷，100 分卷）",
+        "source_type": "chat",
+        "source_id": "f61c8455-7b2e-5129-bf9b-b449453b2f1f",
+        "source_lane": "inferred_extraction",
+        "subject_type": "commitment",
+        "occurred_at": "2026-09-22T21:15:29.975901",
+        "due_at": "2026-09-29T18:00:00",
+        "resolved_at": null,
+        "importance_score": 0.92,
+        "confidence": 0.92,
+        "evidence_token": "116ce74f-3f24-4b8d-9201-7f6dff615d16",
+        "decay_policy": "due_at+7d",
+        "evidence_score": 0.2,
+        "correction_count": 0,
+        "evidence_missing": false,
+        "evidence_refs": [
+          {
+            "id": "116ce74f-3f24-4b8d-9201-7f6dff615d16",
+            "type": "chat_turn",
+            "user_deleted": false,
+            "schema_version": "stage19.rule_y.v1"
+          }
+        ],
+        "tags": [
+          "stage16:auto_memory",
+          "decay:due_at+7d",
+          "m02:event_bounded"
+        ],
+        "source_annotation": {
+          "turn_id": "116ce74f-3f24-4b8d-9201-7f6dff615d16",
+          "label": "对话记录",
+          "written_at": "2026-09-22T21:15:30.132617"
+        },
+        "updated_at": "2026-09-22T21:16:08.706037",
+        "retracted_at": null,
+        "revoked_at": null,
+        "mentioned_entity_hash": null,
+        "declaration_label": "AI 推断",
+        "epistemic_class": "HYPOTHESIS",
+        "status": "active",
+        "scope": {
+          "level": "domain",
+          "domain_key": "commitment",
+          "time_window": {
+            "due_at": "2026-09-29T18:00:00",
+            "occurred_at": "2026-09-22T21:15:29.975901"
+          },
+          "decay_policy": "due_at+7d"
+        }
+      }
+    ],
+    "total": 4,
+    "offset": 0,
+    "limit": 20,
+    "has_more": false
+  },
+  "at": "2026-09-22T21:17:03.567069+00:00"
+}

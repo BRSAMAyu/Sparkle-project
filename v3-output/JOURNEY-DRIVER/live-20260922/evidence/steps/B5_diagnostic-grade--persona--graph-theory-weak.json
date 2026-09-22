@@ -1,0 +1,272 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-JOURNEY2-20260922-211514",
+  "step_id": "B5",
+  "phase": "day0",
+  "name": "diagnostic grade (persona: graph-theory weak)",
+  "started_at": "2026-09-22T21:15:30.641471+00:00",
+  "finished_at": "2026-09-22T21:15:31.022290+00:00",
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/exam-sprint/diagnose/grade",
+    "body": {
+      "subject": "离散数学",
+      "answers": [
+        {
+          "question_id": "diag_1_dm_logic_implication_equiv",
+          "answer": "¬p∨q",
+          "confidence": "fuzzy",
+          "elapsed_seconds": 45
+        },
+        {
+          "question_id": "diag_2_dm_predicate_negation",
+          "answer": "∀x¬F(x)",
+          "confidence": "fuzzy",
+          "elapsed_seconds": 45
+        },
+        {
+          "question_id": "diag_3_dm_relation_equivalence_count",
+          "answer": "4",
+          "confidence": "fuzzy",
+          "elapsed_seconds": 45
+        },
+        {
+          "question_id": "diag_4_dm_function_injection_count",
+          "answer": "12",
+          "confidence": "fuzzy",
+          "elapsed_seconds": 45
+        },
+        {
+          "question_id": "diag_5_dm_graph_euler_circuit",
+          "answer": "是完全图",
+          "confidence": "fuzzy",
+          "elapsed_seconds": 45
+        },
+        {
+          "question_id": "diag_6_dm_combination_committee",
+          "answer": "15",
+          "confidence": "fuzzy",
+          "elapsed_seconds": 45
+        },
+        {
+          "question_id": "diag_7_dm_algebra_group",
+          "answer": "⟨Z, −⟩（整数集关于减法）",
+          "confidence": "fuzzy",
+          "elapsed_seconds": 45
+        },
+        {
+          "question_id": "diag_8_dm_graph_degree_sequence",
+          "answer": "(1,2,2,3)",
+          "confidence": "fuzzy",
+          "elapsed_seconds": 45
+        },
+        {
+          "question_id": "diag_9_dm_graph_hamilton",
+          "answer": "充要条件是所有顶点的度数为偶数",
+          "confidence": "fuzzy",
+          "elapsed_seconds": 45
+        },
+        {
+          "question_id": "diag_10_dm_relation_equivalence",
+          "answer": "等价关系",
+          "confidence": "fuzzy",
+          "elapsed_seconds": 45
+        },
+        {
+          "question_id": "diag_11_dm_graph_complete_edges",
+          "answer": "20",
+          "confidence": "fuzzy",
+          "elapsed_seconds": 45
+        },
+        {
+          "question_id": "diag_12_dm_sa_koenigsberg",
+          "answer": "不确定",
+          "confidence": "fuzzy",
+          "elapsed_seconds": 45
+        },
+        {
+          "question_id": "diag_13_dm_logic_tautology",
+          "answer": "p→q",
+          "confidence": "fuzzy",
+          "elapsed_seconds": 45
+        },
+        {
+          "question_id": "diag_14_dm_sa_modus_tollens",
+          "answer": "不确定",
+          "confidence": "fuzzy",
+          "elapsed_seconds": 45
+        },
+        {
+          "question_id": "diag_15_dm_logic_biconditional",
+          "answer": "同为真",
+          "confidence": "fuzzy",
+          "elapsed_seconds": 45
+        }
+      ],
+      "days_left": 7,
+      "pass_score": 60.0,
+      "update_galaxy": true,
+      "diagnostic_id": "diag-8ceda9ee-27e8-451f-a10b-cca23530b17f"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "estimated_score_now": 13.2,
+      "pass_probability": 0.003,
+      "top_bottlenecks": [
+        {
+          "node_id": null,
+          "node_name": "图的基本概念",
+          "node_slug": "graph_basics",
+          "domain": "图论",
+          "mastery": 0.0,
+          "accuracy": 0.0,
+          "mistake_tags": [
+            "euler_hamilton_mixup",
+            "degree_parity",
+            "counting_overlap"
+          ],
+          "avg_confidence": "fuzzy",
+          "reason": "图的基本概念 相关题得分偏低，当前掌握度估计约 0.0/100。 主要问题集中在 euler_hamilton_mixup, degree_parity。"
+        },
+        {
+          "node_id": null,
+          "node_name": "欧拉图与哈密顿图",
+          "node_slug": "euler_hamilton",
+          "domain": "欧拉与哈密顿",
+          "mastery": 0.0,
+          "accuracy": 0.0,
+          "mistake_tags": [
+            "euler_hamilton_mixup",
+            "degree_parity"
+          ],
+          "avg_confidence": "fuzzy",
+          "reason": "欧拉图与哈密顿图 相关题得分偏低，当前掌握度估计约 0.0/100。 主要问题集中在 euler_hamilton_mixup, degree_parity。"
+        },
+        {
+          "node_id": null,
+          "node_name": "代数系统",
+          "node_slug": "algebraic_structures",
+          "domain": "代数系统",
+          "mastery": 0.0,
+          "accuracy": 0.0,
+          "mistake_tags": [
+            "group_axioms"
+          ],
+          "avg_confidence": "fuzzy",
+          "reason": "代数系统 相关题得分偏低，当前掌握度估计约 0.0/100。 主要问题集中在 group_axioms。"
+        }
+      ],
+      "error_distribution": {
+        "quantifier_negation": 1.0,
+        "counting_overlap": 4.0,
+        "relation_properties": 1.0,
+        "euler_hamilton_mixup": 3.0,
+        "group_axioms": 1.0,
+        "degree_parity": 2.0,
+        "truth_table_confusion": 2.0,
+        "implication_direction": 1.0
+      },
+      "mistake_clusters": [
+        {
+          "tag": "counting_overlap",
+          "count": 4
+        },
+        {
+          "tag": "euler_hamilton_mixup",
+          "count": 3
+        },
+        {
+          "tag": "degree_parity",
+          "count": 2
+        },
+        {
+          "tag": "truth_table_confusion",
+          "count": 2
+        }
+      ],
+      "recommended_path": "minimum_pass",
+      "node_mastery_updates": [
+        {
+          "node_id": "94803ffb-d9a2-597f-af8c-ec264bb2450f",
+          "node_name": "代数系统",
+          "node_slug": "algebraic_structures",
+          "mastery": 0.0,
+          "source": "exam_sprint_diagnose"
+        },
+        {
+          "node_id": "aa4e7352-d4de-5a98-a936-a36a40985411",
+          "node_name": "函数与基数",
+          "node_slug": "functions_cardinality",
+          "mastery": 0.0,
+          "source": "exam_sprint_diagnose"
+        },
+        {
+          "node_id": "c38bab26-24a0-53a7-a4e9-4a8d233b1d3a",
+          "node_name": "图的基本概念",
+          "node_slug": "graph_basics",
+          "mastery": 0.0,
+          "source": "exam_sprint_diagnose"
+        },
+        {
+          "node_id": "77c1836a-2c7c-52aa-9088-229ca9e19edf",
+          "node_name": "欧拉图与哈密顿图",
+          "node_slug": "euler_hamilton",
+          "mastery": 0.0,
+          "source": "exam_sprint_diagnose"
+        },
+        {
+          "node_id": "48421124-4f4a-5a62-a872-c83875ca65cf",
+          "node_name": "组合计数",
+          "node_slug": "combinatorics",
+          "mastery": 0.0,
+          "source": "exam_sprint_diagnose"
+        },
+        {
+          "node_id": "3b3e9a6b-9cc0-5102-8dad-e456f20ab2b7",
+          "node_name": "谓词逻辑",
+          "node_slug": "predicate_logic",
+          "mastery": 0.0,
+          "source": "exam_sprint_diagnose"
+        },
+        {
+          "node_id": "7d2d8a06-8df1-525c-90ab-79c348a19aa2",
+          "node_name": "命题逻辑",
+          "node_slug": "propositional_logic",
+          "mastery": 25.0,
+          "source": "exam_sprint_diagnose"
+        },
+        {
+          "node_id": "23207874-b0a6-5799-9b32-f9e4c98cfbc4",
+          "node_name": "二元关系",
+          "node_slug": "binary_relations",
+          "mastery": 50.0,
+          "source": "exam_sprint_diagnose"
+        }
+      ],
+      "coverage_domains": [
+        "二元关系",
+        "代数系统",
+        "函数与基数",
+        "命题逻辑",
+        "图的基本概念",
+        "图论",
+        "欧拉与哈密顿",
+        "欧拉图与哈密顿图",
+        "组合计数",
+        "谓词逻辑"
+      ],
+      "confidence_calibration": {
+        "certain_accuracy": 0.0,
+        "guess_accuracy": 0.0,
+        "overconfidence_miss_rate": 0.0
+      }
+    }
+  },
+  "verdict": "pass",
+  "checkpoints": [
+    "CP-00"
+  ],
+  "notes": []
+}

@@ -1,0 +1,26 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-JOURNEY2-20260922-211514",
+  "step_id": "J3s",
+  "phase": "day2",
+  "name": "day2 review queue mechanics summary (CP-05 partial face)",
+  "started_at": "2026-09-22T21:26:27.377064+00:00",
+  "finished_at": "2026-09-22T21:26:27.377070+00:00",
+  "request": {
+    "due_ids": [],
+    "reviewed_guard_ids": [
+      "57aa91c4-db10-49d2-9cce-fc5fd7f570e3"
+    ]
+  },
+  "response": {
+    "due_count": 0,
+    "submitted_this_run": 0,
+    "next_review_advanced_verifiable": 0,
+    "honesty_note": "performance=self-declared persona (remembered) — mechanics verification, NOT a product-graded hit rate; CP-05 threshold stays blocked"
+  },
+  "verdict": "pass",
+  "checkpoints": [],
+  "notes": [
+    "review queue empty on this day — spacing engine likely moved next_review_at beyond window (positive CP-08 signal, honestly recorded)"
+  ]
+}

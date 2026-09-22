@@ -1,0 +1,392 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-JOURNEY2-20260922-211514",
+  "step_id": "B4",
+  "phase": "day0",
+  "name": "diagnostic generate (pretest)",
+  "started_at": "2026-09-22T21:15:30.606883+00:00",
+  "finished_at": "2026-09-22T21:15:30.640522+00:00",
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/exam-sprint/diagnose/generate",
+    "body": {
+      "subject": "离散数学",
+      "question_count": 15,
+      "days_left": 7,
+      "pass_score": 60.0
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "diagnostic_id": "diag-8ceda9ee-27e8-451f-a10b-cca23530b17f",
+      "subject": "离散数学",
+      "sprint_pack_id": "exam_prep_14d@v1.0",
+      "question_count": 15,
+      "estimated_minutes": 14,
+      "coverage_domains": [
+        "命题逻辑",
+        "谓词逻辑",
+        "二元关系",
+        "函数与基数",
+        "欧拉与哈密顿",
+        "组合计数",
+        "代数系统",
+        "图论"
+      ],
+      "question_archetypes": [
+        "high_frequency_concept_judgment",
+        "high_frequency_calculation",
+        "process_trace",
+        "integrated_scenario"
+      ],
+      "checkpoint_template": "mixed_mastery_probe_v1",
+      "questions": [
+        {
+          "question_id": "diag_1_dm_logic_implication_equiv",
+          "domain": "命题逻辑",
+          "archetype": "high_frequency_concept_judgment",
+          "question_type": "single_choice",
+          "stem": "与蕴含式 `p→q` 等值的公式是？",
+          "choices": [
+            "¬p∨q",
+            "¬p∧q",
+            "p∨¬q",
+            "q→p"
+          ],
+          "linked_node_slugs": [
+            "propositional_logic"
+          ],
+          "linked_node_ids": [],
+          "linked_node_names": [
+            "命题逻辑"
+          ],
+          "points": 1.0,
+          "expected_seconds": 50,
+          "confidence_prompt": "你现在对这道题的把握是？"
+        },
+        {
+          "question_id": "diag_2_dm_predicate_negation",
+          "domain": "谓词逻辑",
+          "archetype": "high_frequency_concept_judgment",
+          "question_type": "single_choice",
+          "stem": "`¬∀x F(x)` 与下列哪个公式等值？",
+          "choices": [
+            "∀x¬F(x)",
+            "∃x¬F(x)",
+            "∃xF(x)",
+            "¬∃x¬F(x)"
+          ],
+          "linked_node_slugs": [
+            "predicate_logic"
+          ],
+          "linked_node_ids": [],
+          "linked_node_names": [
+            "谓词逻辑"
+          ],
+          "points": 1.0,
+          "expected_seconds": 50,
+          "confidence_prompt": "你现在对这道题的把握是？"
+        },
+        {
+          "question_id": "diag_3_dm_relation_equivalence_count",
+          "domain": "二元关系",
+          "archetype": "high_frequency_calculation",
+          "question_type": "single_choice",
+          "stem": "三元集合 A={1,2,3} 上不同的等价关系共有多少个？（提示：等价关系与划分一一对应）",
+          "choices": [
+            "4",
+            "5",
+            "6",
+            "8"
+          ],
+          "linked_node_slugs": [
+            "binary_relations"
+          ],
+          "linked_node_ids": [],
+          "linked_node_names": [
+            "二元关系"
+          ],
+          "points": 1.0,
+          "expected_seconds": 75,
+          "confidence_prompt": "你现在对这道题的把握是？"
+        },
+        {
+          "question_id": "diag_4_dm_function_injection_count",
+          "domain": "函数与基数",
+          "archetype": "high_frequency_calculation",
+          "question_type": "single_choice",
+          "stem": "设 |A|=3，|B|=4，从 A 到 B 的单射函数共有多少个？",
+          "choices": [
+            "12",
+            "24",
+            "64",
+            "81"
+          ],
+          "linked_node_slugs": [
+            "functions_cardinality"
+          ],
+          "linked_node_ids": [],
+          "linked_node_names": [
+            "函数与基数"
+          ],
+          "points": 1.0,
+          "expected_seconds": 50,
+          "confidence_prompt": "你现在对这道题的把握是？"
+        },
+        {
+          "question_id": "diag_5_dm_graph_euler_circuit",
+          "domain": "欧拉与哈密顿",
+          "archetype": "high_frequency_concept_judgment",
+          "question_type": "single_choice",
+          "stem": "无向连通图 G 存在欧拉回路的充要条件是？",
+          "choices": [
+            "所有顶点的度数都是偶数",
+            "恰有两个奇度顶点",
+            "是完全图",
+            "所有顶点的度数都是奇数"
+          ],
+          "linked_node_slugs": [
+            "euler_hamilton",
+            "graph_basics"
+          ],
+          "linked_node_ids": [],
+          "linked_node_names": [
+            "欧拉图与哈密顿图",
+            "图的基本概念"
+          ],
+          "points": 1.0,
+          "expected_seconds": 50,
+          "confidence_prompt": "你现在对这道题的把握是？"
+        },
+        {
+          "question_id": "diag_6_dm_combination_committee",
+          "domain": "组合计数",
+          "archetype": "high_frequency_calculation",
+          "question_type": "single_choice",
+          "stem": "从 6 名学生中选出 3 人组成代表队（不分顺序），共有多少种选法？",
+          "choices": [
+            "15",
+            "20",
+            "30",
+            "120"
+          ],
+          "linked_node_slugs": [
+            "combinatorics"
+          ],
+          "linked_node_ids": [],
+          "linked_node_names": [
+            "组合计数"
+          ],
+          "points": 1.0,
+          "expected_seconds": 50,
+          "confidence_prompt": "你现在对这道题的把握是？"
+        },
+        {
+          "question_id": "diag_7_dm_algebra_group",
+          "domain": "代数系统",
+          "archetype": "high_frequency_concept_judgment",
+          "question_type": "single_choice",
+          "stem": "下列代数系统中，构成群的是？",
+          "choices": [
+            "⟨Z, −⟩（整数集关于减法）",
+            "⟨N, +⟩（自然数集关于加法）",
+            "⟨Z, ×⟩（整数集关于乘法）",
+            "⟨Z, +⟩（整数集关于加法）"
+          ],
+          "linked_node_slugs": [
+            "algebraic_structures"
+          ],
+          "linked_node_ids": [],
+          "linked_node_names": [
+            "代数系统"
+          ],
+          "points": 1.0,
+          "expected_seconds": 50,
+          "confidence_prompt": "你现在对这道题的把握是？"
+        },
+        {
+          "question_id": "diag_8_dm_graph_degree_sequence",
+          "domain": "图论",
+          "archetype": "high_frequency_concept_judgment",
+          "question_type": "single_choice",
+          "stem": "下列度数序列中，不可能构成无向图的是？",
+          "choices": [
+            "(1,1,1,1)",
+            "(2,2,2,2)",
+            "(1,2,2,3)",
+            "(1,1,1,2)"
+          ],
+          "linked_node_slugs": [
+            "graph_basics"
+          ],
+          "linked_node_ids": [],
+          "linked_node_names": [
+            "图的基本概念"
+          ],
+          "points": 1.0,
+          "expected_seconds": 50,
+          "confidence_prompt": "你现在对这道题的把握是？"
+        },
+        {
+          "question_id": "diag_9_dm_graph_hamilton",
+          "domain": "欧拉与哈密顿",
+          "archetype": "high_frequency_concept_judgment",
+          "question_type": "single_choice",
+          "stem": "下列关于哈密顿回路的说法，正确的是？",
+          "choices": [
+            "要求经过每条边恰好一次",
+            "要求经过每个顶点恰好一次",
+            "充要条件是所有顶点的度数为偶数",
+            "任何连通图都存在哈密顿回路"
+          ],
+          "linked_node_slugs": [
+            "euler_hamilton"
+          ],
+          "linked_node_ids": [],
+          "linked_node_names": [
+            "欧拉图与哈密顿图"
+          ],
+          "points": 1.0,
+          "expected_seconds": 50,
+          "confidence_prompt": "你现在对这道题的把握是？"
+        },
+        {
+          "question_id": "diag_10_dm_relation_equivalence",
+          "domain": "二元关系",
+          "archetype": "high_frequency_concept_judgment",
+          "question_type": "single_choice",
+          "stem": "集合 A 上的关系 R 同时具有自反性、对称性和传递性，则 R 是 A 上的？",
+          "choices": [
+            "等价关系",
+            "偏序关系",
+            "全序关系",
+            "相容关系"
+          ],
+          "linked_node_slugs": [
+            "binary_relations"
+          ],
+          "linked_node_ids": [],
+          "linked_node_names": [
+            "二元关系"
+          ],
+          "points": 1.0,
+          "expected_seconds": 50,
+          "confidence_prompt": "你现在对这道题的把握是？"
+        },
+        {
+          "question_id": "diag_11_dm_graph_complete_edges",
+          "domain": "图论",
+          "archetype": "high_frequency_calculation",
+          "question_type": "single_choice",
+          "stem": "5 个顶点的无向完全图 `K5` 有多少条边？",
+          "choices": [
+            "5",
+            "10",
+            "20",
+            "25"
+          ],
+          "linked_node_slugs": [
+            "graph_basics"
+          ],
+          "linked_node_ids": [],
+          "linked_node_names": [
+            "图的基本概念"
+          ],
+          "points": 1.0,
+          "expected_seconds": 50,
+          "confidence_prompt": "你现在对这道题的把握是？"
+        },
+        {
+          "question_id": "diag_12_dm_sa_koenigsberg",
+          "domain": "综合题",
+          "archetype": "integrated_scenario",
+          "question_type": "short_answer",
+          "stem": "简答：哥尼斯堡七桥问题对应的图为什么不存在欧拉回路？请从顶点度数的角度说明。",
+          "choices": [],
+          "linked_node_slugs": [
+            "euler_hamilton",
+            "graph_basics"
+          ],
+          "linked_node_ids": [],
+          "linked_node_names": [
+            "欧拉图与哈密顿图",
+            "图的基本概念"
+          ],
+          "points": 1.2,
+          "expected_seconds": 90,
+          "confidence_prompt": "你现在对这道题的把握是？"
+        },
+        {
+          "question_id": "diag_13_dm_logic_tautology",
+          "domain": "命题逻辑",
+          "archetype": "high_frequency_concept_judgment",
+          "question_type": "single_choice",
+          "stem": "下列公式中，属于重言式（永真式）的是？",
+          "choices": [
+            "p→q",
+            "p∨¬p",
+            "p∧¬p",
+            "¬(p→p)"
+          ],
+          "linked_node_slugs": [
+            "propositional_logic"
+          ],
+          "linked_node_ids": [],
+          "linked_node_names": [
+            "命题逻辑"
+          ],
+          "points": 1.0,
+          "expected_seconds": 50,
+          "confidence_prompt": "你现在对这道题的把握是？"
+        },
+        {
+          "question_id": "diag_14_dm_sa_modus_tollens",
+          "domain": "命题逻辑",
+          "archetype": "process_trace",
+          "question_type": "short_answer",
+          "stem": "已知 `p→q` 为真且 `q` 为假，请写出 `p` 的真值，并写出所用的推理规则名称。",
+          "choices": [],
+          "linked_node_slugs": [
+            "propositional_logic"
+          ],
+          "linked_node_ids": [],
+          "linked_node_names": [
+            "命题逻辑"
+          ],
+          "points": 1.0,
+          "expected_seconds": 70,
+          "confidence_prompt": "你现在对这道题的把握是？"
+        },
+        {
+          "question_id": "diag_15_dm_logic_biconditional",
+          "domain": "命题逻辑",
+          "archetype": "high_frequency_concept_judgment",
+          "question_type": "single_choice",
+          "stem": "当 `p↔q` 为真时，p 与 q 的真值关系是？",
+          "choices": [
+            "同为真",
+            "同为假",
+            "真值相同",
+            "真值相反"
+          ],
+          "linked_node_slugs": [
+            "propositional_logic"
+          ],
+          "linked_node_ids": [],
+          "linked_node_names": [
+            "命题逻辑"
+          ],
+          "points": 1.0,
+          "expected_seconds": 50,
+          "confidence_prompt": "你现在对这道题的把握是？"
+        }
+      ]
+    }
+  },
+  "verdict": "pass",
+  "checkpoints": [
+    "CP-00"
+  ],
+  "notes": []
+}

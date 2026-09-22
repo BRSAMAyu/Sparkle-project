@@ -1,0 +1,111 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-JOURNEY2-20260922-211514",
+  "step_id": "B5b",
+  "phase": "day0",
+  "name": "galaxy dm.* node mapping check (CP-00/P0-1 fix face)",
+  "started_at": "2026-09-22T21:15:31.199249+00:00",
+  "finished_at": "2026-09-22T21:15:31.199253+00:00",
+  "request": {
+    "source": "B6 snapshot (post-grade), zero extra API call"
+  },
+  "response": {
+    "dm_node_count": 11,
+    "dm_nodes_with_mastery_gt0": 2,
+    "dm_nodes": [
+      {
+        "id": "94803ffb-d9a2-597f-af8c-ec264bb2450f",
+        "name": "代数系统",
+        "is_dm": true,
+        "mastery_score": 0,
+        "learning_state": null,
+        "unlocked": true
+      },
+      {
+        "id": "aa4e7352-d4de-5a98-a936-a36a40985411",
+        "name": "函数与基数",
+        "is_dm": true,
+        "mastery_score": 0,
+        "learning_state": null,
+        "unlocked": true
+      },
+      {
+        "id": "3b3e9a6b-9cc0-5102-8dad-e456f20ab2b7",
+        "name": "谓词逻辑",
+        "is_dm": true,
+        "mastery_score": 0,
+        "learning_state": null,
+        "unlocked": true
+      },
+      {
+        "id": "c38bab26-24a0-53a7-a4e9-4a8d233b1d3a",
+        "name": "图的基本概念",
+        "is_dm": true,
+        "mastery_score": 0,
+        "learning_state": null,
+        "unlocked": true
+      },
+      {
+        "id": "7d2d8a06-8df1-525c-90ab-79c348a19aa2",
+        "name": "命题逻辑",
+        "is_dm": true,
+        "mastery_score": 25,
+        "learning_state": null,
+        "unlocked": true
+      },
+      {
+        "id": "77c1836a-2c7c-52aa-9088-229ca9e19edf",
+        "name": "欧拉图与哈密顿图",
+        "is_dm": true,
+        "mastery_score": 0,
+        "learning_state": null,
+        "unlocked": true
+      },
+      {
+        "id": "23207874-b0a6-5799-9b32-f9e4c98cfbc4",
+        "name": "二元关系",
+        "is_dm": true,
+        "mastery_score": 50,
+        "learning_state": null,
+        "unlocked": true
+      },
+      {
+        "id": "48421124-4f4a-5a62-a872-c83875ca65cf",
+        "name": "组合计数",
+        "is_dm": true,
+        "mastery_score": 0,
+        "learning_state": null,
+        "unlocked": true
+      },
+      {
+        "id": "af06f450-cf86-46a7-9c35-05c28598729e",
+        "name": "谓词逻辑基础",
+        "is_dm": true,
+        "mastery_score": null,
+        "learning_state": null,
+        "unlocked": null
+      },
+      {
+        "id": "e6b46abb-d3bc-528d-b220-9472d913b64c",
+        "name": "Day1 数理逻辑 I：命题逻辑复习 + 图论弱点预习",
+        "is_dm": true,
+        "mastery_score": null,
+        "learning_state": null,
+        "unlocked": null
+      },
+      {
+        "id": "c578dcd0-de49-52f8-a7d8-6743db16a6aa",
+        "name": "集合及其运算",
+        "is_dm": true,
+        "mastery_score": null,
+        "learning_state": null,
+        "unlocked": null
+      }
+    ]
+  },
+  "verdict": "pass",
+  "checkpoints": [],
+  "notes": [
+    "dm.* nodes=11, with mastery>0=2 (expect >=6 nodes touched by 15q diagnostic)"
+  ]
+}

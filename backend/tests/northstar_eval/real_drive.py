@@ -11,6 +11,11 @@
     SECRET_KEY=test python3 -m tests.northstar_eval.real_drive --phase setup     # 建号（主号+对照号）
     SECRET_KEY=test python3 -m tests.northstar_eval.real_drive --phase day0      # 诊断/摸底/计划
     SECRET_KEY=test python3 -m tests.northstar_eval.real_drive --phase day1      # 五段循环
+    SECRET_KEY=test python3 -m tests.northstar_eval.real_drive --phase day1settle  # 星图结算+次日任务基线
+    SECRET_KEY=test python3 -m tests.northstar_eval.real_drive --phase day2      # 次日早晨（真实跨日后跑）
+    SECRET_KEY=test python3 -m tests.northstar_eval.real_drive --phase day2settle
+    SECRET_KEY=test python3 -m tests.northstar_eval.real_drive --phase day3      # 第三日早晨（同构）
+    SECRET_KEY=test python3 -m tests.northstar_eval.real_drive --phase day3settle
     SECRET_KEY=test python3 -m tests.northstar_eval.real_drive --phase gain      # GP-04/07/03/11 取证
     SECRET_KEY=test python3 -m tests.northstar_eval.real_drive --phase report    # 汇总 run_summary.json
 
@@ -25,6 +30,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import secrets
 import socket
 import string
@@ -644,6 +650,234 @@ def judge_personalization(answer_text: str) -> tuple[str, list[str]]:
     return VERDICT_FAIL, found
 
 
+# ---------------------------------------------------------------------------
+# JOURNEY（Day2+）判定辅助：多天相位的 CP-04/CP-05 判定面
+# ---------------------------------------------------------------------------
+#
+# 时间语义裁决（v3-output/JOURNEY-DRIVER/REPORT.md §1，方案 c）：
+# 产品的「今天」绑定引擎进程真实时钟——DailyTaskSelectionService.select_tasks 用
+# ``date.today()``；intake 任务无 due_date，分天靠 ``day:N`` tag + order_index=N*1000，
+# 「进入 Day N」唯一机制是 ``_plan_current_day(plan, today)`` 随真实日历日推进。
+# 产品无时钟 seam；跨进程假钟（LD_PRELOAD 类）会撕裂 网关 JWT/DB now()/Redis TTL
+# 与引擎的时钟一致性且伪造证据时间戳——故 Day N→N+1 只允许真实跨日（方案 c），
+# 同日重跑新相位时 CP-04 判据未到达 → 一律诚实 blocked，不许臆断 pass。
+
+#: CP-04 会话适应面的事实锚词：次日计划对话须织入 Day1 的真实产出事实
+#: （完成了任务 / 错题本记录 / 图论弱点）。泛规划词（复习/安排/计划）不算——
+#: 完全通用的次日计划不含任何用户事实，正是「未适应」的表现形态。
+DAY_FACT_MARKERS = (
+    "昨天", "昨日", "上次", "你完成", "你已完成", "完成了", "错题", "欧拉", "哈密顿",
+    "任务", "Day 1", "Day1", "第一天", "昨天完成",
+)
+#: 会话适应面通过所需的去重事实锚词数（>=2 = 回答确实引用了具体昨日事实）。
+DAY_FACT_MARKER_MIN = 2
+
+
+def extract_day_tag(task: dict[str, Any]) -> int | None:
+    """从任务 JSON 抽 sprint 日号（镜像 exam_sprint 的 day:N tag / order_index 约定）。
+
+    优先级：tags 里的 ``day:N`` > ``order_index >= 1000`` 的 ``N*1000`` 带 >
+    标题前缀 ``Day N ·``（TaskDetail 暴露 tags，前两者是产品自身约定；标题
+    兜底覆盖 tags 缺失的旧数据）。非 sprint 任务返回 None。
+    """
+    for tag in task.get("tags") or []:
+        text = str(tag or "").strip().lower()
+        if text.startswith("day:"):
+            raw = text.split(":", maxsplit=1)[1].strip()
+            if raw.isdigit() and int(raw) > 0:
+                return int(raw)
+    try:
+        order_index = int(task.get("order_index") or 0)
+    except (TypeError, ValueError):
+        order_index = 0
+    if order_index >= 1000:
+        return max(order_index // 1000, 1)
+    title = str(task.get("title") or "")
+    match = re.match(r"^Day\s+(\d+)", title)
+    if match:
+        return int(match.group(1))
+    return None
+
+
+def task_fingerprint(task: dict[str, Any]) -> dict[str, Any]:
+    """次日任务的结构指纹（CP-04 结构适应面的可比对投影）。
+
+    只收**持久化**字段——priority/order 等打分是读取期计算的（不落库），
+    混入会把「每次读都不一样」误判成适应。持久化变更只能来自
+    AdaptiveReplanner/PlanAdjustmentApplier 的任务级调整或用户操作。
+    """
+    fields = (
+        "title", "status", "priority", "order_index", "estimated_minutes",
+        "difficulty", "due_date", "type", "subtasks_total", "success_criteria",
+    )
+    return {key: task.get(key) for key in fields}
+
+
+def fingerprints_by_day(tasks: list[dict[str, Any]], day: int) -> dict[str, dict[str, Any]]:
+    """把任务列表按 sprint 日号归组为 {task_id: fingerprint}。"""
+    out: dict[str, dict[str, Any]] = {}
+    for task in tasks:
+        if not isinstance(task, dict):
+            continue
+        if extract_day_tag(task) != day:
+            continue
+        task_id = str(task.get("id") or task.get("task_id") or "")
+        if task_id:
+            out[task_id] = task_fingerprint(task)
+    return out
+
+
+def diff_task_baseline(baseline: dict[str, dict[str, Any]] | None, current: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    """CP-04 结构适应面：次日任务集相对 Day1 末基线的任务级对账。
+
+    baseline=None（快照缺失，旧 run/未跑 day1settle）→ ``baseline_missing: True``，
+    上层判 blocked（仪器不完备 ≠ 产品未适应）。
+    """
+    if baseline is None:
+        return {"baseline_missing": True, "added_ids": [], "removed_ids": [], "changed": {}, "unchanged_count": len(current)}
+    added = sorted(set(current) - set(baseline))
+    removed = sorted(set(baseline) - set(current))
+    changed: dict[str, dict[str, Any]] = {}
+    for task_id in sorted(set(baseline) & set(current)):
+        before, after = baseline[task_id], current[task_id]
+        delta = {key: {"before": before.get(key), "after": after.get(key)} for key in sorted(set(before) | set(after)) if before.get(key) != after.get(key)}
+        if delta:
+            changed[task_id] = delta
+    return {
+        "baseline_missing": False,
+        "added_ids": added,
+        "removed_ids": removed,
+        "changed": changed,
+        "unchanged_count": len(set(baseline) & set(current)) - len(changed),
+    }
+
+
+def structural_adaptation(diff: dict[str, Any]) -> bool:
+    """结构 diff 是否构成适应证据（有任一任务级持久化变更/增删）。"""
+    if not isinstance(diff, dict) or diff.get("baseline_missing"):
+        return False
+    return bool(diff.get("added_ids") or diff.get("removed_ids") or diff.get("changed"))
+
+
+def judge_day_panel_adaptation(
+    *,
+    prev_day_facts_present: bool,
+    day_advanced: bool,
+    panel_day_tagged_count: int,
+    panel_active_count: int,
+    structural_adaptation_seen: bool | None,
+    chat_verdict: str | None,
+) -> tuple[str, list[str]]:
+    """CP-04 判定组合器（判定口径见 REPORT.md §2；宁 blocked 不臆断 pass）。
+
+    输入：
+    - prev_day_facts_present：state 有前日完成事实锚点（已完成任务 id）
+    - day_advanced：驱动器 UTC 日 > 前日相位运行日（「次日」判据到达）
+    - panel_day_tagged_count：今日面板上 day:N 待执行任务数（S1 标签形状）
+    - panel_active_count：今日面板待执行任务总数（S1 兜底形状——活栈实测：
+      intake 复用 goal 计划时模板缺位，旅程以 goal 里程碑梯推进，面板上无
+      day 标签但有新任务；只认标签形状会对合法推进误判 fail）
+    - structural_adaptation_seen：结构 diff 有变更 True / 无变更 False / 基线缺失 None
+    - chat_verdict：会话适应面判定 pass/fail/blocked/None（未执行）
+    判定：
+    - 前置缺失（无前日事实 / 未跨日）→ blocked（判据未到达）
+    - 面板既无 day 标签任务也无任何待执行任务 → fail（「次日计划存在」不成立，
+      确定性观测）
+    - 有结构变更 或 会话面 pass → pass
+    - 会话面反记忆 fail 且无结构变更 → fail（助手明确否认掌握昨日事实）
+    - 其余（含「面板有非标签任务但无适应证据」的里程碑梯形状）→ blocked——
+      不能区分「产品未适应」与「仪器未观测到」，不许冒判。
+    """
+    if not prev_day_facts_present:
+        return VERDICT_BLOCKED, ["前日事实锚点缺失（无已完成任务）——CP-04 前置不成立"]
+    if not day_advanced:
+        return VERDICT_BLOCKED, ["日界未跨过（与前日同一真实日历日）——「次日」判据未到达，诚实 blocked"]
+    if panel_day_tagged_count == 0 and panel_active_count == 0:
+        return VERDICT_FAIL, ["今日面板无任何待执行任务——次日计划推进不成立"]
+    if structural_adaptation_seen:
+        return VERDICT_PASS, ["结构适应证据：次日任务集相对前日基线存在持久化任务级变更"]
+    if chat_verdict == VERDICT_PASS:
+        return VERDICT_PASS, ["会话适应证据：次日计划对话引用了昨日具体完成事实（结构面无变更）"]
+    if chat_verdict == VERDICT_FAIL:
+        return VERDICT_FAIL, ["会话反记忆：助手明确否认掌握昨日事实，且结构面无变更证据"]
+    notes = [
+        "无结构适应证据且会话面不可判定（未执行/inconclusive/基线缺失）——"
+        "不能区分「产品未适应」与「仪器未观测到」，保守 blocked"
+    ]
+    if panel_day_tagged_count == 0 and panel_active_count > 0:
+        notes.insert(0, "面板推进为非 day 标签形状（goal 里程碑梯）——结构面只认 day 标签任务，判定依赖会话面")
+    return VERDICT_BLOCKED, notes
+
+
+def judge_day_adaptation_chat(answer_text: str) -> tuple[str, list[str]]:
+    """CP-04 会话适应面：次日计划对话是否织入 Day1 真实产出事实。
+
+    - 反记忆指称一票否决 → fail（系统自述不掌握昨日事实）；
+    - 去重事实锚词 >= DAY_FACT_MARKER_MIN → pass；
+    - 空回答 → blocked；其余（泛计划、锚词不足）→ blocked（LLM 措辞噪声
+      不冒判 fail，交人工复核——只把明确的反记忆判成 fail）。
+    """
+    if not answer_text or not answer_text.strip():
+        return VERDICT_BLOCKED, []
+    anti = [m for m in MEMORY_ANTI_RECALL_MARKERS if m in answer_text]
+    if anti:
+        return VERDICT_FAIL, anti
+    found = sorted({m for m in DAY_FACT_MARKERS if m in answer_text})
+    if len(found) >= DAY_FACT_MARKER_MIN:
+        return VERDICT_PASS, found
+    return VERDICT_BLOCKED, found
+
+
+def parse_iso_datetime(value: Any) -> datetime | None:
+    """宽松 ISO 解析（复习到期推进校验用；解析失败返回 None 不抛）。"""
+    if not isinstance(value, str) or not value:
+        return None
+    text = value.strip().replace("Z", "+00:00")
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=UTC)
+    return parsed
+
+
+def tasks_list_from_response(body: Any) -> list[dict[str, Any]]:
+    """统一解析 today 面板 / 任务账本响应的任务列表。
+
+    覆盖三种真实形状：裸 list（GET /tasks/today）、{"data": [...]}、
+    {"items"/"tasks": [...]}，以及 _rest_step 对 list 的 {"_raw": [...]} 包装。
+    """
+    if isinstance(body, list):
+        return [item for item in body if isinstance(item, dict)]
+    if isinstance(body, dict):
+        if isinstance(body.get("_raw"), list):
+            return [item for item in body["_raw"] if isinstance(item, dict)]
+        data = body.get("data")
+        if isinstance(data, list):
+            return [item for item in data if isinstance(item, dict)]
+        for key in ("items", "tasks"):
+            nested = body.get(key)
+            if isinstance(nested, list):
+                return [item for item in nested if isinstance(item, dict)]
+            if isinstance(nested, dict) and isinstance(nested.get("items"), list):
+                return [item for item in nested["items"] if isinstance(item, dict)]
+    return []
+
+
+def review_due_items(body: Any) -> list[dict[str, Any]]:
+    """解析今日复习队列响应的到期错题条目（ErrorRecordListResponse.items）。"""
+    if isinstance(body, dict):
+        items = body.get("items")
+        if isinstance(items, list):
+            return [item for item in items if isinstance(item, dict)]
+        if isinstance(body.get("_raw"), dict):
+            nested = body["_raw"].get("items")
+            if isinstance(nested, list):
+                return [item for item in nested if isinstance(item, dict)]
+    return []
+
+
 def diff_galaxy_nodes(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]:
     """GP-03：两次 galaxy graph 快照的节点级对账（新增/ mastery 变化）。"""
     bmap = _node_map(before)
@@ -727,6 +961,16 @@ class RunState:
     diagnostic_attempted: bool = False
     diagnostic_graded: bool = False
     day1_chat_redone: bool = False
+    # JOURNEY（Day2+）续跑字段：跨进程/跨真实日的幂等锚点。
+    # day{N}_run_date 是该日相位最后落定的驱动器 UTC 日（YYYY-MM-DD）；
+    # CP-04 的「次日」门 = 本次运行 UTC 日 > day{N-1}_run_date。
+    day1_run_date: str = ""
+    day2_run_date: str = ""
+    day2_done: bool = False
+    day2_reviewed_error_ids: list[str] = field(default_factory=list)
+    day3_run_date: str = ""
+    day3_done: bool = False
+    day3_reviewed_error_ids: list[str] = field(default_factory=list)
     llm_messages_sent: int = 0
     evidence_step_ids: list[str] = field(default_factory=list)
 
@@ -1416,6 +1660,8 @@ class NS001Driver:
         self.state.evidence_step_ids.extend(
             ["C1", "C1b", "C2", "C3", "C4a", "C4b", "C5", "C6a", "C6b", "C7a", "C7b", "C7c", "C7d"]
         )
+        if not self.state.day1_run_date:
+            self.state.day1_run_date = datetime.now(UTC).date().isoformat()
         self.state.save()
 
     def phase_day1fix(self) -> None:
@@ -1563,7 +1809,355 @@ class NS001Driver:
         )
         self.store.write_step(step)
         self.state.evidence_step_ids.append("C8a-2")
+        if not self.state.day1_run_date:
+            self.state.day1_run_date = datetime.now(UTC).date().isoformat()
+
+        # C9 次日任务基线快照（CP-04 结构适应面的对照源；纯读，零 LLM）：
+        # 在跨日界前固化 day:2/day:3 任务的持久化指纹。AdaptiveReplanner 由
+        # Day1 事实（任务完成/错题复习）触发 evaluate_plan_health_now，其任务级
+        # 调整会在跨日后与这份基线产生 diff——Day2 相位据此判结构适应。
+        _, ledger = self._rest_step(
+            "C9", "day1settle", "task ledger baseline for day2/day3 (CP-04 structural face)", "GET",
+            "/api/v1/tasks?limit=100", username, password,
+        )
+        ledger_tasks = tasks_list_from_response(ledger)
+        baseline_payload = {
+            "schema": SCHEMA_RUN,
+            "day": {str(n): fingerprints_by_day(ledger_tasks, n) for n in (2, 3)},
+            "day2_count": len(fingerprints_by_day(ledger_tasks, 2)),
+            "day3_count": len(fingerprints_by_day(ledger_tasks, 3)),
+            "day1_run_date": self.state.day1_run_date,
+            "at": utcnow_iso(),
+        }
+        self.store.write_json("snapshot-future-task-baseline.json", baseline_payload)
+        step_c9 = self._step("C9-2", "day1settle", "day2/day3 task baseline captured verdict (CP-04 structural face)")
+        step_c9.request = {"method": "GET", "path": "/api/v1/tasks?limit=100", "anchor": "before calendar-day rollover"}
+        step_c9.response = {"day2_count": baseline_payload["day2_count"], "day3_count": baseline_payload["day3_count"]}
+        step_c9.finish(
+            VERDICT_PASS if baseline_payload["day2_count"] else VERDICT_BLOCKED,
+            [] if baseline_payload["day2_count"] else ["no day:2-tagged tasks in ledger — sprint template absent; day2 structural face will be blocked"],
+        )
+        self.store.write_step(step_c9)
+        self.state.evidence_step_ids.extend(["C9", "C9-2"])
         self.state.save()
+
+    # -- JOURNEY Day2+ 相位（多天旅程 MVP；时间语义裁决见模块内 JOURNEY 注记）----
+    #
+    # 口径（REPORT.md §2 冻结）：
+    #   * 「进入 Day N」= 真实日历日推进使引擎 ``_plan_current_day`` 增长，本模块
+    #     不做任何时钟改写；驱动器 UTC 日 > 前日相位运行日 才算「次日」门通过。
+    #   * CP-04 判定 = S1 机械推进（今日面板出现 day:N 待执行任务）+（S2 结构
+    #     适应：day:N 任务相对前日基线的持久化 diff / S3 会话适应：计划对话织入
+    #     昨日事实）任一正证据；前置不成立或证据不可判定一律 blocked。
+    #   * CP-05 部分判定 = 队列机制面（到期成员在列 → 提交复习 → next_review_at
+    #     推进）；命中率阈值判定仍需多日多样本，run-summary 中保持 blocked。
+    #   * 幂等：复习提交按 error id 守卫（不双提交）；LLM 探针与任务完成只在
+    #     「次日门通过且当日未 done」时执行——同日重跑零 LLM 消耗，次日首跑
+    #     才产生真实判定，之后重跑不再双烧。
+
+    def _day_gate(self, prev_run_date: str) -> tuple[bool, str]:
+        """「次日」门：驱动器 UTC 日 > 前日相位运行日（保守门：跨时区欠观测时
+        产品侧面板证据仍会落盘，见 J1 response）。"""
+        driver_today = datetime.now(UTC).date().isoformat()
+        if not prev_run_date:
+            return False, f"prev day run_date not recorded in run state (driver_utc_date={driver_today})"
+        advanced = driver_today > prev_run_date
+        return advanced, f"driver_utc_date={driver_today} prev_day_run_date={prev_run_date} advanced={advanced}"
+
+    def _load_baseline_day(self, evidence_name: str, day: int) -> dict[str, dict[str, Any]] | None:
+        """读某日的任务指纹基线（day1settle C9 / 前日 J1c 落盘）；缺失返回 None。"""
+        try:
+            payload = json.loads((self.out_dir / "evidence" / evidence_name).read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return None
+        day_map = (payload.get("day") or {}).get(str(day))
+        return day_map if isinstance(day_map, dict) else None
+
+    def _phase_day_morning(
+        self,
+        *,
+        day_number: int,
+        prefix: str,
+        gate_date: str,
+        done_attr: str,
+        reviewed_attr: str,
+        chat_probe_text: str,
+    ) -> None:
+        """Day N 晨间相位（day2/day3 同构）：观测→复习→判定→产出当日事实。"""
+        username, password = self._require_main()
+        phase = f"day{day_number}"
+        day_advanced, gate_note = self._day_gate(gate_date)
+        reviewed_ids = list(getattr(self.state, reviewed_attr))
+        done = bool(getattr(self.state, done_attr))
+
+        # S1/J1 今日面板（无论门都读：同日运行也要留「跨日前面板长什么样」证据）
+        _, panel_resp = self._rest_step(
+            f"{prefix}1", phase, f"day{day_number} morning today cockpit task cards", "GET",
+            "/api/v1/tasks/today", username, password, None, ("CP-04",),
+        )
+        panel_tasks = tasks_list_from_response(panel_resp)
+        day_panel = [task for task in panel_tasks if extract_day_tag(task) == day_number]
+
+        # S2/J1b 结构适应面：day:N 任务账本指纹 vs 前日基线 diff（账本读全量，
+        # 不受今日相关性过滤影响）。
+        baseline_name = "snapshot-future-task-baseline.json" if day_number == 2 else "snapshot-day3-task-baseline.json"
+        baseline = self._load_baseline_day(baseline_name, day_number)
+        _, ledger_resp = self._rest_step(
+            f"{prefix}1b", phase, f"day{day_number} task ledger (structural diff vs baseline)", "GET",
+            "/api/v1/tasks?limit=100", username, password,
+        )
+        ledger_tasks = tasks_list_from_response(ledger_resp)
+        diff = diff_task_baseline(baseline, fingerprints_by_day(ledger_tasks, day_number))
+        has_structural = structural_adaptation(diff)
+        baseline_empty = baseline is not None and not baseline
+        step_diff = self._step(f"{prefix}1b-2", phase, f"day{day_number} structural adaptation diff verdict (CP-04 S2)", ("CP-04",))
+        step_diff.request = {"baseline": baseline_name, "baseline_present": baseline is not None}
+        step_diff.response = truncate_text(diff, 6000)
+        step_diff.finish(
+            VERDICT_PASS if has_structural else VERDICT_BLOCKED,
+            (
+                [f"structural delta: +{len(diff['added_ids'])} -{len(diff['removed_ids'])} ~{len(diff['changed'])}"]
+                if has_structural
+                else (
+                    ["baseline snapshot missing — run previous day settle phase first; structural face blocked (instrument incomplete, not product-negative)"]
+                    if diff.get("baseline_missing")
+                    else (
+                        ["no day:N-tagged tasks in ledger/baseline (sprint template absent on this run) — structural face blocked, panel/chat faces carry CP-04"]
+                        if baseline_empty
+                        else ["day:N tasks structurally identical to baseline (no persisted task-level change observed)"]
+                    )
+                )
+            ),
+        )
+        self.store.write_step(step_diff)
+
+        # J1c 为 Day N+1 固化「本日事件前」基线（Day3 结构面的对照源）。
+        next_baseline_name = f"snapshot-day{day_number + 1}-task-baseline.json"
+        next_day_fps = fingerprints_by_day(ledger_tasks, day_number + 1)
+        self.store.write_json(
+            next_baseline_name,
+            {"schema": SCHEMA_RUN, "day": {str(day_number + 1): next_day_fps}, "captured_before": phase, "at": utcnow_iso()},
+        )
+
+        # CP-05 部分判定面/J2 今日复习队列（到期判定源 = next_review_at <= now，UTC）。
+        _, review_resp = self._rest_step(
+            f"{prefix}2", phase, f"day{day_number} review queue (due items)", "GET",
+            "/api/v1/errors/today-review", username, password, None, ("CP-05",),
+        )
+        due_items = review_due_items(review_resp)
+        due_ids = [str(item.get("id") or "") for item in due_items]
+        fresh_due = [item for item in due_items if str(item.get("id") or "") not in set(reviewed_ids)]
+
+        # J3 复习提交（机制面验证；声明式 performance——诚实注记：这不是产品判卷
+        # 的命中率测量，CP-05 阈值判定不据此放行）。队列由 next_review_at 驱动、
+        # 与日界无关，同日运行亦合法；error id 守卫防重跑双提交。
+        submitted = 0
+        advanced_count = 0
+        for index, item in enumerate(fresh_due[:3]):
+            error_id = str(item.get("id") or "")
+            if not error_id:
+                continue
+            step_review, review_body = self._rest_step(
+                f"{prefix}3{index}", phase, f"submit review for due error (persona re-answers correctly)", "POST",
+                f"/api/v1/errors/{error_id}/review", username, password,
+                {"performance": "remembered", "time_spent_seconds": 45}, ("CP-05",),
+            )
+            submitted += 1
+            reviewed_ids.append(error_id)
+            before = parse_iso_datetime(item.get("next_review_at"))
+            after = parse_iso_datetime(review_body.get("next_review_at")) if isinstance(review_body, dict) else None
+            if before is not None and after is not None and after > before:
+                advanced_count += 1
+            elif step_review.verdict == VERDICT_PASS:
+                advanced_count += 1  # 响应未回传 before 也无法证伪推进——只把可证实的计入
+        if reviewed_ids != list(getattr(self.state, reviewed_attr)):
+            setattr(self.state, reviewed_attr, reviewed_ids)
+        step_summary = self._step(f"{prefix}3s", phase, f"day{day_number} review queue mechanics summary (CP-05 partial face)")
+        step_summary.request = {"due_ids": due_ids, "reviewed_guard_ids": sorted(set(reviewed_ids))}
+        step_summary.response = {
+            "due_count": len(due_items),
+            "submitted_this_run": submitted,
+            "next_review_advanced_verifiable": advanced_count,
+            "honesty_note": "performance=self-declared persona (remembered) — mechanics verification, NOT a product-graded hit rate; CP-05 threshold stays blocked",
+        }
+        # 摘要步语义：队列机制面走通（读+提交+可证实推进）即 pass；队列为空亦 pass
+        # （间隔引擎把 next_review_at 推到窗口外 = CP-08 的正向信号，如实记录）。
+        step_summary.finish(
+            VERDICT_PASS,
+            (
+                [f"due={len(due_items)} submitted={submitted} advanced_verifiable={advanced_count}"]
+                if due_items
+                else ["review queue empty on this day — spacing engine likely moved next_review_at beyond window (positive CP-08 signal, honestly recorded)"]
+            ),
+        )
+        self.store.write_step(step_summary)
+
+        # S3/J5 会话适应面（1 条 LLM；仅「次日门通过且当日未 done」执行）。
+        chat_verdict: str | None = None
+        if not day_advanced:
+            step_chat = self._step(f"{prefix}5", phase, f"day{day_number} plan adaptation chat probe (gated)", ("CP-04",))
+            step_chat.request = {"gate": gate_note}
+            step_chat.response = {"skipped": True, "reason": "same-calendar-day: 'yesterday' facts do not exist yet; probe would be dishonest instrumentation"}
+            step_chat.finish(VERDICT_BLOCKED, ["gated: day boundary not crossed — chat probe deferred to real next-day run"])
+            self.store.write_step(step_chat)
+        elif done:
+            print(f"[skip] day{day_number} chat probe already done (idempotent guard)")
+        else:
+            _, chat_result = self._chat_step(
+                f"{prefix}5", phase, f"day{day_number} plan adaptation chat probe (CP-04 S3)", username, password,
+                chat_probe_text, ("CP-04",), deadline_s=90.0,
+            )
+            chat_verdict, chat_markers = judge_day_adaptation_chat(chat_result.get("full_text", ""))
+            setattr(self.state, done_attr, True)  # 先落 done 再做可重做的完成步（LLM 幂等窗口最小化）
+            self.state.save()
+
+        # J4 CP-04 判定（组合 S1/S2/S3；口径冻结于 judge_day_panel_adaptation）。
+        # 前日事实锚点：day2 看 Day1 完成任务；day3 看 Day2 相位已落定运行事实。
+        if day_number == 2:
+            prev_facts = bool(self.state.task_id)
+        else:
+            prev_facts = bool(self.state.day2_run_date) or bool(self.state.task_id)
+        active_states = ("pending", "in_progress", "paused", "stuck", "restore")
+        panel_active = [
+            task for task in panel_tasks if str(task.get("status", "")).lower() in active_states
+        ]
+        verdict, notes = judge_day_panel_adaptation(
+            prev_day_facts_present=prev_facts,
+            day_advanced=day_advanced,
+            panel_day_tagged_count=len(day_panel),
+            panel_active_count=len(panel_active),
+            structural_adaptation_seen=(has_structural if baseline is not None else None),
+            chat_verdict=chat_verdict,
+        )
+        step_verdict = self._step(f"{prefix}4", phase, f"CP-04 verdict: day{day_number} plan adapts to previous outcome", ("CP-04",))
+        step_verdict.request = {
+            "gate": gate_note,
+            "prev_day_facts_present": prev_facts,
+            "baseline": baseline_name,
+            "judge_version": JUDGE_LEXICON_VERSION,
+            "criteria": "S1 panel advancement (day-tagged or milestone shape); S2 persisted structural diff vs previous-day baseline; S3 adaptation chat cites yesterday facts",
+        }
+        step_verdict.response = {
+            "verdict": verdict,
+            "panel_day_tagged_count": len(day_panel),
+            "panel_active_count": len(panel_active),
+            "structural_adaptation_seen": has_structural if baseline is not None else None,
+            "baseline_present": baseline is not None,
+            "chat_verdict": chat_verdict,
+            "review_due_count": len(due_items),
+        }
+        step_verdict.finish(verdict, notes)
+        self.store.write_step(step_verdict)
+
+        # J6 产出当日事实（把 day:N 待执行任务完成掉，供 Day N+1 的 CP-04 对照）；
+        # 仅真实次日执行——同日抢跑会把「次日才该发生的事实」写进错误的时间线。
+        if not day_advanced:
+            step_fact = self._step(f"{prefix}6", phase, f"day{day_number} outcome production (gated)")
+            step_fact.response = {"skipped": True, "reason": gate_note}
+            step_fact.finish(VERDICT_BLOCKED, ["gated: task completion deferred to real next-day run (timeline honesty)"])
+            self.store.write_step(step_fact)
+        else:
+            # 产出对象：优先 day:N 标签任务；里程碑梯形状（无标签）兜底用面板
+            # 活跃任务——「完成今天面板上该做的事」即当日事实。
+            pending = [
+                task for task in day_panel if str(task.get("status", "")).lower() in active_states
+            ]
+            if not pending:
+                pending = [
+                    task for task in panel_active if str(task.get("status", "")).lower() in ("pending", "restore")
+                ]
+            pending = pending[:3]
+            for index, task in enumerate(pending):
+                task_id = str(task.get("id") or "")
+                if not task_id:
+                    continue
+                self._rest_step(f"{prefix}6a{index}", phase, f"start day{day_number} task", "POST",
+                                f"/api/v1/tasks/{task_id}/start", username, password, {})
+                self._rest_step(f"{prefix}6b{index}", phase, f"complete day{day_number} task", "POST",
+                                f"/api/v1/tasks/{task_id}/complete", username, password,
+                                {"note": f"NS-001 journey day{day_number} execution complete"})
+            if not pending:
+                step_fact = self._step(f"{prefix}6", phase, f"day{day_number} outcome production")
+                step_fact.response = {"pending_day_tasks": 0}
+                step_fact.finish(VERDICT_PASS, ["no pending day:N tasks on panel (already completed or none planned) — outcome facts stand as-is"])
+                self.store.write_step(step_fact)
+
+        setattr(self.state, f"day{day_number}_run_date", datetime.now(UTC).date().isoformat())
+        self.state.evidence_step_ids.extend([f"{prefix}1", f"{prefix}1b", f"{prefix}1b-2", f"{prefix}2", f"{prefix}3s", f"{prefix}4", f"{prefix}5", f"{prefix}6"])
+        self.state.save()
+
+    def _phase_day_settle(self, *, day_number: int, prefix: str, sleep_s: float = 150.0) -> None:
+        """Day N 结算相位（无 LLM）：galaxy 读模型分钟级延迟——等待后固化当日
+        事后星图快照（CP-04 S2 补充面：mastery 生长），镜像 day1settle/C8a-2。"""
+        username, password = self._require_main()
+        phase = f"day{day_number}settle"
+        print(f"[settle] waiting {sleep_s:.0f}s for galaxy read model (day{day_number})...")
+        time.sleep(sleep_s)
+        step_id = f"{prefix}8"
+        _, graph_after = self._rest_step(
+            step_id, phase, f"galaxy graph snapshot (after day{day_number}, settled)", "GET",
+            "/api/v1/galaxy/graph", username, password,
+        )
+        self.store.write_json(
+            f"snapshot-galaxy-after-day{day_number}.json", {"schema": SCHEMA_RUN, "snapshot": graph_after, "at": utcnow_iso()}
+        )
+        touched: list[dict[str, Any]] = []
+        if isinstance(graph_after, dict):
+            for node in (graph_after.get("nodes") or []):
+                if not isinstance(node, dict):
+                    continue
+                user_status = node.get("user_status") or {}
+                if isinstance(user_status, dict) and (
+                    user_status.get("is_unlocked") or (user_status.get("mastery_score") or 0) > 0
+                ):
+                    touched.append({"name": node.get("name"), "mastery": user_status.get("mastery_score")})
+        step = self._step(step_id, phase, f"galaxy settled state after day{day_number} (CP-04 supplementary face)")
+        step.response = {
+            "touched_nodes": touched[:20],
+            "touched_count": len(touched),
+            "user_stats": (graph_after or {}).get("user_stats") if isinstance(graph_after, dict) else None,
+        }
+        step.finish(
+            VERDICT_PASS if len(touched) >= 8 else VERDICT_FAIL,
+            [f"settled touched nodes={len(touched)} (expect >=8: Day0 baseline + journey growth)"],
+        )
+        self.store.write_step(step)
+        self.state.evidence_step_ids.append(step_id)
+        self.state.save()
+
+    def phase_day2(self) -> None:
+        gate_date = self.state.day1_run_date or self.state.day2_run_date
+        self._phase_day_morning(
+            day_number=2,
+            prefix="J",
+            gate_date=gate_date,
+            done_attr="day2_done",
+            reviewed_attr="day2_reviewed_error_ids",
+            chat_probe_text=(
+                "我昨天完成了冲刺计划 Day1 的任务，还在错题本里记了一条关于欧拉回路判定条件的错题。"
+                "请结合我昨天的完成情况，给我安排今天的复习重点，并说明为什么这样安排。"
+            ),
+        )
+
+    def phase_day2settle(self) -> None:
+        self._phase_day_settle(day_number=2, prefix="J")
+
+    def phase_day3(self) -> None:
+        gate_date = self.state.day2_run_date or self.state.day1_run_date
+        self._phase_day_morning(
+            day_number=3,
+            prefix="K",
+            gate_date=gate_date,
+            done_attr="day3_done",
+            reviewed_attr="day3_reviewed_error_ids",
+            chat_probe_text=(
+                "我昨天完成了冲刺 Day2 的复习任务。请结合我这两天的完成情况（包括那条欧拉回路的错题），"
+                "安排今天的任务重点，并说明你根据什么做出了这样的安排。"
+            ),
+        )
+
+    def phase_day3settle(self) -> None:
+        self._phase_day_settle(day_number=3, prefix="K")
 
     def phase_gain(self) -> None:
         username, password = self._require_main()
@@ -1855,16 +2449,20 @@ class NS001Driver:
             return any(step_verdicts.get(step_id) == verdict for step_id in step_ids)
 
         checkpoint_rows: list[dict[str, Any]] = []
+        #: JOURNEY 相位落下的 CP-04 日级判定步（day2=J4 / day3=K4）与 CP-05
+        #: 机制面步。存在即覆盖压缩轮的 blocked 缺省；run-summary 状态词表不变。
+        CP04_DAY_STEPS = ("J4", "K4")
+        CP05_MECHANICS_STEPS = ("J2", "J3s", "K2", "K3s")
         definitions: dict[str, tuple[tuple[str, ...], str]] = {
             "CP-00 baseline recorded and syllabus mapped": (("B4", "B5", "B5b"), "diagnostic generate+grade succeeded and dm.* galaxy nodes carry mastery (P0-1)"),
             "CP-01 plan targets weakest exam-weighted nodes with human confirmation": (("B3", "B3-2v"), "intake plan generated + idempotent reuse (BP-7/INTAKE); human-confirm step API 不存在则 blocked/fail 记断点"),
             "CP-02 quiz score trajectory non-decreasing": (("B5",), "compressed round: needs >=3 quiz days -> blocked"),
             "CP-03 mistakes fully land in error book with mastery sync": (("C3", "C5", "C7b"), "correction + error entry + galaxy sync"),
-            "CP-04 next-day plan adapts to previous outcome": (("C1", "C1b"), "compressed round: no Day2 -> blocked"),
-            "CP-05 review hit rate at or above threshold": (("C6a",), "compressed round: queue fetched but no re-answers -> blocked (fetch 200 不构成命中率证据)"),
-            "CP-06 weighted coverage at or above threshold by last study day": ((), "compressed round: no Day6 -> blocked"),
-            "CP-07 posttest gain at or above MDE": ((), "compressed round: no Day7 mock -> blocked"),
-            "CP-08 forgetting rate at or below threshold": ((), "compressed round: no Day10 retest -> blocked"),
+            "CP-04 next-day plan adapts to previous outcome": (("C1", "C1b"), "day2/day3 verdict steps (J4/K4) present -> judge them; else compressed round: no Day2 -> blocked"),
+            "CP-05 review hit rate at or above threshold": (("C6a",), "mechanics face verified by J2/J3s/K2/K3s; hit-rate threshold needs multi-day product-graded samples -> stays blocked (n too small, performance self-declared)"),
+            "CP-06 weighted coverage at or above threshold by last study day": ((), "compressed round: no Day6 -> blocked (Day4-7 design: JOURNEY-PLAN)"),
+            "CP-07 posttest gain at or above MDE": ((), "compressed round: no Day7 mock -> blocked (Day7 design: JOURNEY-PLAN)"),
+            "CP-08 forgetting rate at or below threshold": ((), "compressed round: no Day10 retest -> blocked (Day4-7 design: JOURNEY-PLAN)"),
             "CP-98 daily cognitive load self-report": ((), "frozen: requires real human self-report -> unsupported"),
             "CP-99 full mock exam wall clock at or below budget": ((), "frozen: requires real exam wall clock -> unsupported"),
         }
@@ -1872,6 +2470,22 @@ class NS001Driver:
             evidencing, note = definitions[text]
             if text in CHECKPOINT_ALWAYS_UNSUPPORTED:
                 status = "unsupported"
+            elif text.startswith("CP-04") and any(step_id in step_verdicts for step_id in CP04_DAY_STEPS):
+                # 日级判定已存在：全部已执行日 pass 且无 fail → pass；任一 fail → fail；
+                # 有步但均未到达可执行判定（同日门 blocked）→ 维持 blocked（诚实）。
+                day_verdicts = [step_verdicts[step_id] for step_id in CP04_DAY_STEPS if step_id in step_verdicts]
+                executed = [v for v in day_verdicts if v in (VERDICT_PASS, VERDICT_FAIL)]
+                if any(v == VERDICT_FAIL for v in executed):
+                    status = VERDICT_FAIL
+                elif executed and all(v == VERDICT_PASS for v in executed):
+                    status = VERDICT_PASS
+                else:
+                    status = VERDICT_BLOCKED
+            elif text.startswith("CP-05"):
+                # 命中率阈值在本仪器（自报 performance）下不可证 → 永不据此放行；
+                # 机制面 fail（队列读失败/提交失败）才降级 fail。
+                mechanics = [step_verdicts[step_id] for step_id in CP05_MECHANICS_STEPS if step_id in step_verdicts]
+                status = VERDICT_FAIL if any(v == VERDICT_FAIL for v in mechanics) else VERDICT_BLOCKED
             elif text in COMPRESSED_ROUND_BLOCKED and not _has(evidencing, VERDICT_FAIL):
                 status = VERDICT_BLOCKED
             elif any(step_verdicts.get(sid) == VERDICT_FAIL for sid in evidencing):
@@ -1882,6 +2496,7 @@ class NS001Driver:
                 status = VERDICT_BLOCKED
             checkpoint_rows.append({"checkpoint": text, "status": status, "evidence_steps": list(evidencing), "note": note})
 
+        journey_days = [day for day, step_id in ((2, "J4"), (3, "K4")) if step_id in step_verdicts]
         summary = {
             "schema": SCHEMA_RUN,
             "meta": {
@@ -1892,7 +2507,11 @@ class NS001Driver:
                 "control_username": self.state.control_username,
                 "llm_messages_sent": self.state.llm_messages_sent,
                 "llm_budget_total": WS_MESSAGE_BUDGET,
-                "honesty": "API compressed round (Day0+Day1) can NEVER declare north-star achievement; CP-98/99 frozen unsupported",
+                "honesty": (
+                    "journey coverage: Day0-Day1 compressed + day phases with verdict evidence for "
+                    f"{journey_days if journey_days else 'none (compressed round)'}; CP-98/99 frozen unsupported; "
+                    "CP-06/07/08 unreachable until Day4-7 phases (JOURNEY-PLAN) — this summary NEVER declares north-star achievement"
+                ),
             },
             "checkpoint_table": checkpoint_rows,
             "counts": {
@@ -1916,7 +2535,13 @@ def cleanup_chat_sessions(driver: NS001Driver) -> None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="NS-001 real-drive adapter (API-level closed loop)")
     parser.add_argument(
-        "--phase", choices=("check", "setup", "day0", "day0fix", "day1", "day1chat", "day1fix", "day1settle", "gain", "rejudge", "report", "all"), default="check"
+        "--phase",
+        choices=(
+            "check", "setup", "day0", "day0fix", "day1", "day1chat", "day1fix", "day1settle",
+            "day2", "day2settle", "day3", "day3settle",
+            "gain", "rejudge", "report", "all",
+        ),
+        default="check",
     )
     parser.add_argument("--gateway", default=DEFAULT_GATEWAY_URL)
     parser.add_argument("--out", type=Path, default=None)

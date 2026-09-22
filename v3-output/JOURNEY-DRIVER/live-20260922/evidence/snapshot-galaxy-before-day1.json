@@ -1,0 +1,1993 @@
+{
+  "schema": "sparkle.northstar.real-drive.run.v1",
+  "snapshot": {
+    "edges": [
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "fc97668c-5799-47ba-a9a3-afb67f9054a2",
+        "target_node_id": "e800d4d3-19a4-4ea7-86c2-c5ef1ce3c98a"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "fc97668c-5799-47ba-a9a3-afb67f9054a2",
+        "target_node_id": "e9f89d79-c55f-41ee-bfe9-777fb6b4424d"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "6cdb452d-c71d-48ea-8c58-8f419ab82c5d",
+        "target_node_id": "54a93db1-edf3-48f2-aaae-483bc3ba100c"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "6cdb452d-c71d-48ea-8c58-8f419ab82c5d",
+        "target_node_id": "c6a643fc-0c88-40b5-bd64-4292c3d93d11"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "283ecd6d-4f8f-43ee-bc55-91902ece8e60",
+        "target_node_id": "650ddd42-c9fd-43b0-b95d-1dbd79ae9e67"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "fc97668c-5799-47ba-a9a3-afb67f9054a2",
+        "target_node_id": "e886fa61-b8fa-4ab9-9c10-61f79f066cda"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "fc97668c-5799-47ba-a9a3-afb67f9054a2",
+        "target_node_id": "dec3a067-60e3-4423-b531-1a399cace794"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "e9f89d79-c55f-41ee-bfe9-777fb6b4424d",
+        "target_node_id": "c9353fdd-ffa7-42ce-8204-945872f3eb2f"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "d8296780-346d-42ff-ad11-207935e63215",
+        "target_node_id": "89231802-86be-4051-b307-e14cec9794d9"
+      },
+      {
+        "relation_type": "related",
+        "source_node_id": "89231802-86be-4051-b307-e14cec9794d9",
+        "target_node_id": "27e77dd1-6207-44bd-9bdf-faed51b6e9ce"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "610ce924-5b19-43a3-aefd-721c9a164ed2",
+        "target_node_id": "8eb24485-b5d6-4438-81f6-ed586ce642a2"
+      },
+      {
+        "relation_type": "related",
+        "source_node_id": "01592544-93d0-4b3d-b21b-c9c0565da849",
+        "target_node_id": "9e42acea-07ae-4466-9034-350c39259de3"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "ff3adbe8-8fad-4ee3-96d9-3f875748d7b5",
+        "target_node_id": "f83fb575-79b5-4760-814d-b14287e36edc"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "c6a643fc-0c88-40b5-bd64-4292c3d93d11",
+        "target_node_id": "f83fb575-79b5-4760-814d-b14287e36edc"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "54a93db1-edf3-48f2-aaae-483bc3ba100c",
+        "target_node_id": "ff3adbe8-8fad-4ee3-96d9-3f875748d7b5"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "8bb44eee-54c0-4928-9f2c-e3ac7ef1c71f",
+        "target_node_id": "213853b6-da99-4dc4-b0ac-7c0d606134f6"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "8bb44eee-54c0-4928-9f2c-e3ac7ef1c71f",
+        "target_node_id": "60f30450-d7c9-4ba5-b99f-93ba3a4db181"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "b97063e1-a91c-4a2a-8896-592fe81413d2",
+        "target_node_id": "300e381f-a15b-4b1f-86b3-e98f8f20f7d7"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "b97063e1-a91c-4a2a-8896-592fe81413d2",
+        "target_node_id": "f557a3b2-8d28-414a-8e19-09a047c4c1d3"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "2352cca6-56a8-41f0-85b1-b6dc28ad61a0",
+        "target_node_id": "0a507efc-7241-4226-9857-edd050325f95"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "2352cca6-56a8-41f0-85b1-b6dc28ad61a0",
+        "target_node_id": "946e4483-4531-4e67-8d5a-4af69b5cb151"
+      },
+      {
+        "relation_type": "related",
+        "source_node_id": "2eda6866-d9f6-4c27-88b8-c88b733959fd",
+        "target_node_id": "0e310984-4bcf-4ff7-af74-35ddde4542f9"
+      },
+      {
+        "relation_type": "related",
+        "source_node_id": "0e310984-4bcf-4ff7-af74-35ddde4542f9",
+        "target_node_id": "71f14eda-b611-4820-9b22-0e3d3d969ce0"
+      },
+      {
+        "relation_type": "related",
+        "source_node_id": "8bb44eee-54c0-4928-9f2c-e3ac7ef1c71f",
+        "target_node_id": "0e310984-4bcf-4ff7-af74-35ddde4542f9"
+      },
+      {
+        "relation_type": "application",
+        "source_node_id": "2eda6866-d9f6-4c27-88b8-c88b733959fd",
+        "target_node_id": "aaf34d44-e9b5-4dc8-8f7d-77699b15d3b2"
+      },
+      {
+        "relation_type": "related",
+        "source_node_id": "e192ba86-dbb2-4329-a485-c13035f9472e",
+        "target_node_id": "c65b8e36-5cf5-44fe-baef-c824f51453ea"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "2343d8d8-5379-41d0-be40-fc1a57946fe8",
+        "target_node_id": "e41c63dc-ec44-44a1-88e0-956feb2bd015"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "2343d8d8-5379-41d0-be40-fc1a57946fe8",
+        "target_node_id": "6d6de35d-959a-491d-9cd0-aaa5c0a79db7"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "aaa847cd-9298-429f-83fa-c5a717aa7978",
+        "target_node_id": "e9f89d79-c55f-41ee-bfe9-777fb6b4424d"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "aaa847cd-9298-429f-83fa-c5a717aa7978",
+        "target_node_id": "c9353fdd-ffa7-42ce-8204-945872f3eb2f"
+      },
+      {
+        "relation_type": "related",
+        "source_node_id": "6cdb452d-c71d-48ea-8c58-8f419ab82c5d",
+        "target_node_id": "aaa847cd-9298-429f-83fa-c5a717aa7978"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "94803ffb-d9a2-597f-af8c-ec264bb2450f",
+        "mastery_score": 0,
+        "name": "代数系统",
+        "node_type": "unknown",
+        "tags": [
+          "sprint_pack_node",
+          "dm.algebraic_structures",
+          "mistake.dm_group_axioms",
+          "离散数学",
+          "wisdom"
+        ],
+        "user_status": {
+          "days_since_mastery_update": 0,
+          "first_unlock_at": null,
+          "is_review_recommended": true,
+          "is_unlocked": true,
+          "mastery_last_updated_at": "2026-09-22T21:15:30.671695Z",
+          "mastery_score": 0,
+          "recent_error_count": 0,
+          "review_urgency_reason": "low_mastery",
+          "review_urgency_score": 0.55,
+          "study_count": 0
+        }
+      },
+      {
+        "id": "aa4e7352-d4de-5a98-a936-a36a40985411",
+        "mastery_score": 0,
+        "name": "函数与基数",
+        "node_type": "unknown",
+        "tags": [
+          "sprint_pack_node",
+          "dm.functions_cardinality",
+          "mistake.dm_counting_overlap",
+          "离散数学",
+          "wisdom"
+        ],
+        "user_status": {
+          "days_since_mastery_update": 0,
+          "first_unlock_at": null,
+          "is_review_recommended": true,
+          "is_unlocked": true,
+          "mastery_last_updated_at": "2026-09-22T21:15:30.723344Z",
+          "mastery_score": 0,
+          "recent_error_count": 0,
+          "review_urgency_reason": "low_mastery",
+          "review_urgency_score": 0.55,
+          "study_count": 0
+        }
+      },
+      {
+        "id": "3b3e9a6b-9cc0-5102-8dad-e456f20ab2b7",
+        "mastery_score": 0,
+        "name": "谓词逻辑",
+        "node_type": "unknown",
+        "tags": [
+          "sprint_pack_node",
+          "dm.predicate_logic",
+          "mistake.dm_quantifier_negation",
+          "离散数学",
+          "wisdom"
+        ],
+        "user_status": {
+          "days_since_mastery_update": 0,
+          "first_unlock_at": null,
+          "is_review_recommended": true,
+          "is_unlocked": true,
+          "mastery_last_updated_at": "2026-09-22T21:15:30.867312Z",
+          "mastery_score": 0,
+          "recent_error_count": 0,
+          "review_urgency_reason": "low_mastery",
+          "review_urgency_score": 0.55,
+          "study_count": 0
+        }
+      },
+      {
+        "id": "c38bab26-24a0-53a7-a4e9-4a8d233b1d3a",
+        "mastery_score": 0,
+        "name": "图的基本概念",
+        "node_type": "unknown",
+        "tags": [
+          "sprint_pack_node",
+          "dm.graph_basics",
+          "mistake.dm_degree_parity",
+          "mistake.dm_euler_hamilton_mixup",
+          "离散数学"
+        ],
+        "user_status": {
+          "days_since_mastery_update": 0,
+          "first_unlock_at": null,
+          "is_review_recommended": false,
+          "is_unlocked": true,
+          "mastery_last_updated_at": "2026-09-22T21:15:30.763963Z",
+          "mastery_score": 0,
+          "recent_error_count": 0,
+          "review_urgency_reason": "low_mastery",
+          "review_urgency_score": 0.55,
+          "study_count": 0
+        }
+      },
+      {
+        "id": "7d2d8a06-8df1-525c-90ab-79c348a19aa2",
+        "mastery_score": 25,
+        "name": "命题逻辑",
+        "node_type": "unknown",
+        "tags": [
+          "sprint_pack_node",
+          "dm.propositional_logic",
+          "mistake.dm_truth_table",
+          "mistake.dm_implication_direction",
+          "离散数学"
+        ],
+        "user_status": {
+          "days_since_mastery_update": 0,
+          "first_unlock_at": null,
+          "is_review_recommended": false,
+          "is_unlocked": true,
+          "mastery_last_updated_at": "2026-09-22T21:15:30.896917Z",
+          "mastery_score": 25,
+          "recent_error_count": 0,
+          "review_urgency_reason": "low_mastery",
+          "review_urgency_score": 0.434,
+          "study_count": 0
+        }
+      },
+      {
+        "id": "77c1836a-2c7c-52aa-9088-229ca9e19edf",
+        "mastery_score": 0,
+        "name": "欧拉图与哈密顿图",
+        "node_type": "unknown",
+        "tags": [
+          "sprint_pack_node",
+          "dm.euler_hamilton",
+          "mistake.dm_euler_hamilton_mixup",
+          "离散数学",
+          "wisdom"
+        ],
+        "user_status": {
+          "days_since_mastery_update": 0,
+          "first_unlock_at": null,
+          "is_review_recommended": false,
+          "is_unlocked": true,
+          "mastery_last_updated_at": "2026-09-22T21:15:30.801212Z",
+          "mastery_score": 0,
+          "recent_error_count": 0,
+          "review_urgency_reason": "low_mastery",
+          "review_urgency_score": 0.55,
+          "study_count": 0
+        }
+      },
+      {
+        "id": "23207874-b0a6-5799-9b32-f9e4c98cfbc4",
+        "mastery_score": 50,
+        "name": "二元关系",
+        "node_type": "unknown",
+        "tags": [
+          "sprint_pack_node",
+          "dm.binary_relations",
+          "mistake.dm_relation_properties",
+          "离散数学",
+          "wisdom"
+        ],
+        "user_status": {
+          "days_since_mastery_update": 0,
+          "first_unlock_at": null,
+          "is_review_recommended": false,
+          "is_unlocked": true,
+          "mastery_last_updated_at": "2026-09-22T21:15:30.932553Z",
+          "mastery_score": 50,
+          "recent_error_count": 0,
+          "review_urgency_reason": "low_mastery",
+          "review_urgency_score": 0.312,
+          "study_count": 0
+        }
+      },
+      {
+        "id": "48421124-4f4a-5a62-a872-c83875ca65cf",
+        "mastery_score": 0,
+        "name": "组合计数",
+        "node_type": "unknown",
+        "tags": [
+          "sprint_pack_node",
+          "dm.combinatorics",
+          "mistake.dm_counting_overlap",
+          "离散数学",
+          "wisdom"
+        ],
+        "user_status": {
+          "days_since_mastery_update": 0,
+          "first_unlock_at": null,
+          "is_review_recommended": false,
+          "is_unlocked": true,
+          "mastery_last_updated_at": "2026-09-22T21:15:30.83684Z",
+          "mastery_score": 0,
+          "recent_error_count": 0,
+          "review_urgency_reason": "low_mastery",
+          "review_urgency_score": 0.55,
+          "study_count": 0
+        }
+      },
+      {
+        "id": "35fa0d66-840c-5263-9f35-b7554381be1b",
+        "mastery_score": 0,
+        "name": "栈",
+        "node_type": "unknown",
+        "tags": [
+          "sprint_pack_node",
+          "ds.stack",
+          "mistake.stack_queue_boundary",
+          "数据结构与算法设计",
+          "tech"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "42e6d29e-783c-5752-82db-145894e90168",
+        "mastery_score": 0,
+        "name": "Day 1 · TCP 流量控制",
+        "node_type": "unknown",
+        "tags": [
+          "Day 1 · TCP 流量控制",
+          "tech"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "8f6d0dde-ee31-58a1-89dd-97e26e636947",
+        "mastery_score": 0,
+        "name": "Map the baseline",
+        "node_type": "unknown",
+        "tags": [
+          "Map the baseline",
+          "wisdom"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "c65b8e36-5cf5-44fe-baef-c824f51453ea",
+        "mastery_score": 0,
+        "name": "管理学基础",
+        "node_type": "unknown",
+        "tags": [
+          "管理",
+          "组织",
+          "civilization",
+          "seed"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "7e38ea61-b07d-5a49-809b-fd4ccf3bd0f5",
+        "mastery_score": 0,
+        "name": "任务 2",
+        "node_type": "unknown",
+        "tags": [
+          "任务 2"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "80847a18-4f54-5074-9db8-ee96013cad04",
+        "mastery_score": 0,
+        "name": "快速排序",
+        "node_type": "unknown",
+        "tags": [
+          "sprint_pack_node",
+          "ds.quicksort",
+          "mistake.quicksort_partition_boundary",
+          "mistake.quicksort_pivot_recursion",
+          "数据结构与算法设计"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "610ce924-5b19-43a3-aefd-721c9a164ed2",
+        "mastery_score": 0,
+        "name": "数据库系统",
+        "node_type": "unknown",
+        "tags": [
+          "数据库",
+          "SQL",
+          "tech",
+          "seed",
+          "core"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "bd30eaa2-494a-52ad-a389-6f0d4b3f8d93",
+        "mastery_score": 0,
+        "name": "差错检测（奇偶校验/CRC/校验和）",
+        "node_type": "unknown",
+        "tags": [
+          "sprint_pack_node",
+          "cn.error_detection",
+          "mistake.crc_calculation",
+          "mistake.hamming_distance",
+          "计算机网络"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "c15516d4-282c-432b-b54c-172309732e8b",
+        "mastery_score": 0,
+        "name": "外国文学",
+        "node_type": "unknown",
+        "tags": [
+          "文学",
+          "外国",
+          "art",
+          "seed"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "b8bae9a0-434c-5eac-ad17-d97f1dea4e95",
+        "mastery_score": 0,
+        "name": "时间复杂度分析",
+        "node_type": "unknown",
+        "tags": [
+          "sprint_pack_node",
+          "ds.time_complexity",
+          "mistake.complexity_growth",
+          "数据结构与算法设计",
+          "tech"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "aaa847cd-9298-429f-83fa-c5a717aa7978",
+        "mastery_score": 0,
+        "name": "离散数学",
+        "node_type": "unknown",
+        "tags": [
+          "数学",
+          "离散",
+          "signal:weak_at",
+          "cosmos",
+          "seed"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "ba68afbd-01b9-4087-b576-ffadb3e6f21e",
+        "mastery_score": 0,
+        "name": "实践项目练习",
+        "node_type": "unknown",
+        "tags": [
+          "onboarding_seed",
+          "goal_type:skill",
+          "goal:备考期末考试，掌握 Flutter 开发技能",
+          "seed_rank:1",
+          "tech"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "d568dd4e-0b72-4053-85f6-61da8aa2e723",
+        "mastery_score": 0,
+        "name": "系统思维",
+        "node_type": "unknown",
+        "tags": [
+          "思维",
+          "系统",
+          "wisdom",
+          "seed",
+          "core"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "a547da5e-cf87-53f7-a5eb-861ede4267de",
+        "mastery_score": 0,
+        "name": "路由基础（路由表/最长前缀匹配/默认路由）",
+        "node_type": "unknown",
+        "tags": [
+          "sprint_pack_node",
+          "cn.routing_basics",
+          "mistake.longest_prefix_error",
+          "mistake.route_update_confusion",
+          "计算机网络"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "e886fa61-b8fa-4ab9-9c10-61f79f066cda",
+        "mastery_score": 0,
+        "name": "C/C++编程",
+        "node_type": "unknown",
+        "tags": [
+          "C++",
+          "编程",
+          "tech",
+          "seed",
+          "core"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "25ced631-96d7-4c87-8734-50d818b6ac91",
+        "mastery_score": 0,
+        "name": "社会学导论",
+        "node_type": "unknown",
+        "tags": [
+          "社会",
+          "群体",
+          "civilization",
+          "seed"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "045f2cb9-8dd1-5a50-ae47-3ed907ab1dd3",
+        "mastery_score": 0,
+        "name": "广度优先搜索",
+        "node_type": "unknown",
+        "tags": [
+          "sprint_pack_node",
+          "ds.bfs",
+          "mistake.graph_visit_order",
+          "数据结构与算法设计",
+          "tech"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "e800d4d3-19a4-4ea7-86c2-c5ef1ce3c98a",
+        "mastery_score": 0,
+        "name": "Python编程",
+        "node_type": "unknown",
+        "tags": [
+          "Python",
+          "编程",
+          "tech",
+          "seed",
+          "core"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "f2a1edf7-0cf1-4d84-950b-c5f9d70cfe5b",
+        "mastery_score": 0,
+        "name": "世界历史",
+        "node_type": "unknown",
+        "tags": [
+          "历史",
+          "世界",
+          "civilization",
+          "seed",
+          "core"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "182595bc-37d2-5bbd-ac25-2587dbefc5c3",
+        "mastery_score": 0,
+        "name": "二叉树性质",
+        "node_type": "unknown",
+        "tags": [
+          "sprint_pack_node",
+          "ds.binary_tree",
+          "mistake.tree_formula",
+          "数据结构与算法设计",
+          "tech"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "adb05310-d767-4309-b83c-5992a962ce89",
+        "mastery_score": 0,
+        "name": "哈密顿回路与哈密顿路径",
+        "node_type": "unknown",
+        "tags": [
+          "document_import",
+          "图论",
+          "tech",
+          "core"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "3e43731b-baed-592d-a8d3-8cff76e56f47",
+        "mastery_score": 0,
+        "name": "TCP 可靠传输机制（序号/确认/重传）",
+        "node_type": "unknown",
+        "tags": [
+          "sprint_pack_node",
+          "cn.tcp_reliable_transport",
+          "mistake.ack_misread",
+          "mistake.cumulative_ack",
+          "计算机网络"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "2343d8d8-5379-41d0-be40-fc1a57946fe8",
+        "mastery_score": 0,
+        "name": "大学物理",
+        "node_type": "unknown",
+        "tags": [
+          "物理",
+          "基础",
+          "signal:weak_at",
+          "cosmos",
+          "seed"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "ff3adbe8-8fad-4ee3-96d9-3f875748d7b5",
+        "mastery_score": 0,
+        "name": "人工智能基础",
+        "node_type": "unknown",
+        "tags": [
+          "AI",
+          "机器学习",
+          "tech",
+          "seed",
+          "core"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "e9f89d79-c55f-41ee-bfe9-777fb6b4424d",
+        "mastery_score": 0,
+        "name": "数据结构",
+        "node_type": "unknown",
+        "tags": [
+          "算法",
+          "数据结构",
+          "tech",
+          "seed",
+          "core"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "af06f450-cf86-46a7-9c35-05c28598729e",
+        "mastery_score": 0,
+        "name": "谓词逻辑基础",
+        "node_type": "unknown",
+        "tags": [
+          "document_import",
+          "逻辑学",
+          "wisdom"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "2352cca6-56a8-41f0-85b1-b6dc28ad61a0",
+        "mastery_score": 0,
+        "name": "哲学导论",
+        "node_type": "unknown",
+        "tags": [
+          "哲学",
+          "思考",
+          "wisdom",
+          "seed",
+          "core"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "81cb96e7-2aa0-4260-a647-162d92c38ccd",
+        "mastery_score": 0,
+        "name": "TCP 三次握手",
+        "node_type": "unknown",
+        "tags": [
+          "TCP",
+          "三次握手"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "ff5f76fe-c506-5e47-9593-cd1d6907532f",
+        "mastery_score": 0,
+        "name": "子网划分与 CIDR",
+        "node_type": "unknown",
+        "tags": [
+          "sprint_pack_node",
+          "cn.subnetting",
+          "mistake.subnet_calculation_error",
+          "mistake.bit_byte_confusion",
+          "计算机网络"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "360d02fe-9509-48b8-9633-def0474287c0",
+        "mastery_score": 0,
+        "name": "TCP 拥塞控制",
+        "node_type": "unknown",
+        "tags": [
+          "TCP",
+          "拥塞控制",
+          "tech"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "f557a3b2-8d28-414a-8e19-09a047c4c1d3",
+        "mastery_score": 0,
+        "name": "基因与遗传",
+        "node_type": "unknown",
+        "tags": [
+          "遗传",
+          "基因",
+          "life",
+          "seed"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "d6f0deeb-c3da-47c4-a376-4c37da7a468e",
+        "mastery_score": 0,
+        "name": "TCP 流量控制",
+        "node_type": "unknown",
+        "tags": [
+          "TCP",
+          "流量控制",
+          "networking",
+          "tech"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "20850efc-666d-4f23-8d25-139328295525",
+        "mastery_score": 0,
+        "name": "主析取范式与主合取范式",
+        "node_type": "unknown",
+        "tags": [
+          "document_import",
+          "逻辑学",
+          "tech",
+          "core"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "e6b46abb-d3bc-528d-b220-9472d913b64c",
+        "mastery_score": 0,
+        "name": "Day1 数理逻辑 I：命题逻辑复习 + 图论弱点预习",
+        "node_type": "unknown",
+        "tags": [
+          "Day1 数理逻辑 I：命题逻辑复习 + 图论弱点预习",
+          "wisdom"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "5e103872-d041-5a40-8e27-12aabe31bfde",
+        "mastery_score": 0,
+        "name": "完成一项稳定任务",
+        "node_type": "unknown",
+        "tags": [
+          "完成一项稳定任务",
+          "tech"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "4d982925-a266-459a-8c87-14604b73e9b1",
+        "mastery_score": 0,
+        "name": "影视制作",
+        "node_type": "unknown",
+        "tags": [
+          "影视",
+          "制作",
+          "art",
+          "seed"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "4ad2921e-3f51-4356-91ab-29a139cbaa26",
+        "mastery_score": 0,
+        "name": "进阶技巧",
+        "node_type": "unknown",
+        "tags": [
+          "onboarding_seed",
+          "goal_type:skill",
+          "goal:备考期末考试，掌握 Flutter 开发技能",
+          "seed_rank:3",
+          "tech"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "98774595-89ea-527e-8352-ebf3c617c664",
+        "mastery_score": 0,
+        "name": "TCP 流量控制（滑动窗口/rwnd）",
+        "node_type": "unknown",
+        "tags": [
+          "sprint_pack_node",
+          "cn.tcp_flow_control",
+          "mistake.window_variable_confusion",
+          "mistake.flow_congestion_confusion",
+          "计算机网络"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "ba38c068-a1a8-4709-a32c-1267ec3b0416",
+        "mastery_score": 0,
+        "name": "典型题型训练",
+        "node_type": "unknown",
+        "tags": [
+          "onboarding_seed",
+          "goal_type:exam",
+          "goal:期末高数冲刺复习",
+          "seed_rank:1",
+          "goal:Prepare for my data structures midt"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "34c0293f-9f20-494c-8216-6b753dec5bbd",
+        "mastery_score": 0,
+        "name": "TCP 流量控制",
+        "node_type": "unknown",
+        "tags": [
+          "TCP",
+          "流量控制",
+          "networking",
+          "tech"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "213853b6-da99-4dc4-b0ac-7c0d606134f6",
+        "mastery_score": 0,
+        "name": "发展心理学",
+        "node_type": "unknown",
+        "tags": [
+          "心理",
+          "发展",
+          "life",
+          "seed"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "3a323b99-f0fc-5f16-ab60-85e8dc16c830",
+        "mastery_score": 0,
+        "name": "链表",
+        "node_type": "unknown",
+        "tags": [
+          "sprint_pack_node",
+          "ds.linked_list",
+          "mistake.pointer_update",
+          "数据结构与算法设计",
+          "tech"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "bcf6c202-88b0-4f3c-b4a7-03579e4e0498",
+        "mastery_score": 0,
+        "name": "TCP 拥塞控制",
+        "node_type": "unknown",
+        "tags": [
+          "TCP",
+          "拥塞控制",
+          "tech"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "6d6de35d-959a-491d-9cd0-aaa5c0a79db7",
+        "mastery_score": 0,
+        "name": "经典力学",
+        "node_type": "unknown",
+        "tags": [
+          "物理",
+          "力学",
+          "signal:weak_at",
+          "cosmos",
+          "seed"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "2ad2bcdc-36ea-54f9-93cb-8a7bea281de0",
+        "mastery_score": 0,
+        "name": "Day 1 · 建立框架 - TCP 三次握手 等2个点",
+        "node_type": "unknown",
+        "tags": [
+          "Day 1 · 建立框架 - TCP 三次握手 等2个点",
+          "tech"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "d8296780-346d-42ff-ad11-207935e63215",
+        "mastery_score": 0,
+        "name": "计算机组成原理",
+        "node_type": "unknown",
+        "tags": [
+          "计算机系统",
+          "硬件",
+          "tech",
+          "seed",
+          "core"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "facdd5df-e4e9-4f3c-a7bd-cb9da62c1582",
+        "mastery_score": 0,
+        "name": "TCP 三次握手",
+        "node_type": "unknown",
+        "tags": [
+          "TCP",
+          "三次握手",
+          "tech"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "eb11f586-3a88-41da-9545-e6a6091c5f77",
+        "mastery_score": 0,
+        "name": "错题归因分析",
+        "node_type": "unknown",
+        "tags": [
+          "onboarding_seed",
+          "goal_type:exam",
+          "goal:期末高数冲刺复习",
+          "seed_rank:2",
+          "goal:Prepare for my data structures midt"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "283ecd6d-4f8f-43ee-bc55-91902ece8e60",
+        "mastery_score": 0,
+        "name": "普通化学",
+        "node_type": "unknown",
+        "tags": [
+          "化学",
+          "基础",
+          "cosmos",
+          "seed"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "0a507efc-7241-4226-9857-edd050325f95",
+        "mastery_score": 0,
+        "name": "中国哲学",
+        "node_type": "unknown",
+        "tags": [
+          "哲学",
+          "中国",
+          "wisdom",
+          "seed"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "45e956d1-353e-4d4f-aae4-25d3b8d5dca3",
+        "mastery_score": 0,
+        "name": "马克思主义基本原理",
+        "node_type": "unknown",
+        "tags": [
+          "政治",
+          "马克思主义",
+          "civilization",
+          "seed",
+          "core"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "0e310984-4bcf-4ff7-af74-35ddde4542f9",
+        "mastery_score": 0,
+        "name": "学习科学",
+        "node_type": "unknown",
+        "tags": [
+          "学习",
+          "方法",
+          "wisdom",
+          "seed",
+          "core"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "aaf34d44-e9b5-4dc8-8f7d-77699b15d3b2",
+        "mastery_score": 0,
+        "name": "写作技巧",
+        "node_type": "unknown",
+        "tags": [
+          "写作",
+          "技巧",
+          "art",
+          "seed"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "abc4e27f-9259-5eaf-a1fb-56dee58ccd9f",
+        "mastery_score": 0,
+        "name": "Day 1 · 诊断分诊 - 诊断分诊",
+        "node_type": "unknown",
+        "tags": [
+          "Day 1 · 诊断分诊 - 诊断分诊",
+          "life"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "97b311a4-2dd1-453c-91e9-386e349fa2a0",
+        "mastery_score": 0,
+        "name": "应用场景拓展",
+        "node_type": "unknown",
+        "tags": [
+          "onboarding_seed",
+          "goal_type:skill",
+          "goal:备考期末考试，掌握 Flutter 开发技能",
+          "seed_rank:4",
+          "wisdom"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "2eda6866-d9f6-4c27-88b8-c88b733959fd",
+        "mastery_score": 0,
+        "name": "批判性思维",
+        "node_type": "unknown",
+        "tags": [
+          "思维",
+          "逻辑",
+          "wisdom",
+          "seed",
+          "core"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "71f14eda-b611-4820-9b22-0e3d3d969ce0",
+        "mastery_score": 0,
+        "name": "时间管理",
+        "node_type": "unknown",
+        "tags": [
+          "效率",
+          "时间",
+          "wisdom",
+          "seed",
+          "core"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "78d7e2ac-82d8-48fb-b677-f13fb2a22552",
+        "mastery_score": 0,
+        "name": "命题与联结词",
+        "node_type": "unknown",
+        "tags": [
+          "document_import",
+          "逻辑学",
+          "wisdom"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "eb218e30-64ab-502e-9dd3-6c5583b14dcd",
+        "mastery_score": 0,
+        "name": "TCP 拥塞控制（慢启动/拥塞避免/快重传/快恢复）",
+        "node_type": "unknown",
+        "tags": [
+          "sprint_pack_node",
+          "cn.tcp_congestion_control",
+          "mistake.state_transition_error",
+          "mistake.window_variable_confusion",
+          "mistake.ssthresh_calc"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "7cdc5328-0f14-4f9b-ba70-7bd627b4c091",
+        "mastery_score": 0,
+        "name": "健康与养生",
+        "node_type": "unknown",
+        "tags": [
+          "健康",
+          "养生",
+          "life",
+          "seed"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "27e77dd1-6207-44bd-9bdf-faed51b6e9ce",
+        "mastery_score": 0,
+        "name": "计算机网络",
+        "node_type": "unknown",
+        "tags": [
+          "网络",
+          "协议",
+          "tech",
+          "seed",
+          "core"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "89231802-86be-4051-b307-e14cec9794d9",
+        "mastery_score": 0,
+        "name": "操作系统",
+        "node_type": "unknown",
+        "tags": [
+          "操作系统",
+          "OS",
+          "tech",
+          "seed",
+          "core"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "e41c63dc-ec44-44a1-88e0-956feb2bd015",
+        "mastery_score": 0,
+        "name": "电磁学基础",
+        "node_type": "unknown",
+        "tags": [
+          "物理",
+          "电磁",
+          "cosmos",
+          "seed"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "b2ef3fc6-d2fa-40a6-be0c-02a130067c23",
+        "mastery_score": 0,
+        "name": "美术基础",
+        "node_type": "unknown",
+        "tags": [
+          "美术",
+          "绘画",
+          "art",
+          "seed"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "b641c5dc-3c36-410b-8c14-1120a826c7cd",
+        "mastery_score": 0,
+        "name": "核心概念理解",
+        "node_type": "unknown",
+        "tags": [
+          "onboarding_seed",
+          "goal_type:exam",
+          "goal:期末高数冲刺复习",
+          "seed_rank:0",
+          "goal:Prepare for my data structures midt"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "987d54f0-1ed3-5ba1-b9fa-828c8ccc40ba",
+        "mastery_score": 0,
+        "name": "HTTP/HTTPS 协议",
+        "node_type": "unknown",
+        "tags": [
+          "sprint_pack_node",
+          "cn.http",
+          "mistake.http_version_diff",
+          "mistake.process_gap",
+          "计算机网络"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "8eb24485-b5d6-4438-81f6-ed586ce642a2",
+        "mastery_score": 0,
+        "name": "Web后端开发",
+        "node_type": "unknown",
+        "tags": [
+          "Web",
+          "后端",
+          "tech",
+          "seed"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "7e138e1a-70a1-53ee-8358-6dd43201a573",
+        "mastery_score": 0,
+        "name": "深度优先搜索",
+        "node_type": "unknown",
+        "tags": [
+          "sprint_pack_node",
+          "ds.dfs",
+          "mistake.graph_visit_order",
+          "数据结构与算法设计",
+          "tech"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "5020ecb7-b5d3-5e33-8a69-6ca5ccebb103",
+        "mastery_score": 0,
+        "name": "Day1·深度理解贝叶斯证据融合",
+        "node_type": "unknown",
+        "tags": [
+          "Day1·深度理解贝叶斯证据融合",
+          "wisdom"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "288e7106-64d1-4a4b-b223-6d9828997ae2",
+        "mastery_score": 0,
+        "name": "难点突破",
+        "node_type": "unknown",
+        "tags": [
+          "onboarding_seed",
+          "goal_type:skill",
+          "goal:备考期末考试，掌握 Flutter 开发技能",
+          "seed_rank:2",
+          "wisdom"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "fc97668c-5799-47ba-a9a3-afb67f9054a2",
+        "mastery_score": 0,
+        "name": "程序设计基础",
+        "node_type": "unknown",
+        "tags": [
+          "编程",
+          "基础",
+          "tech",
+          "seed",
+          "core"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "a002eb11-5d2d-5e63-bf13-e0fa927865f1",
+        "mastery_score": 0,
+        "name": "欧拉回路 vs 哈密顿回路：10 道判定题小步练习",
+        "node_type": "unknown",
+        "tags": [
+          "欧拉回路 vs 哈密顿回路：10 道判定题小步练习",
+          "wisdom"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "9e42acea-07ae-4466-9034-350c39259de3",
+        "mastery_score": 0,
+        "name": "设计思维",
+        "node_type": "unknown",
+        "tags": [
+          "设计",
+          "UI",
+          "art",
+          "seed"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "dec3a067-60e3-4423-b531-1a399cace794",
+        "mastery_score": 0,
+        "name": "Java编程",
+        "node_type": "unknown",
+        "tags": [
+          "Java",
+          "编程",
+          "tech",
+          "seed",
+          "core"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "26f20f07-a0a3-5ce0-b5e6-1da49ad1011e",
+        "mastery_score": 0,
+        "name": "Day1·练习CSMA/CD争用期计算",
+        "node_type": "unknown",
+        "tags": [
+          "Day1·练习CSMA/CD争用期计算",
+          "tech"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "46cb9495-2322-44bd-893e-539a4957e0d4",
+        "mastery_score": 0,
+        "name": "法律基础",
+        "node_type": "unknown",
+        "tags": [
+          "法律",
+          "权利",
+          "civilization",
+          "seed"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "8bb44eee-54c0-4928-9f2c-e3ac7ef1c71f",
+        "mastery_score": 0,
+        "name": "心理学导论",
+        "node_type": "unknown",
+        "tags": [
+          "心理",
+          "认知",
+          "life",
+          "seed",
+          "core"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "8c67d467-52fa-5b96-83b8-996bfdaa87c5",
+        "mastery_score": 0,
+        "name": "折半查找",
+        "node_type": "unknown",
+        "tags": [
+          "sprint_pack_node",
+          "ds.binary_search",
+          "mistake.binary_search_boundary",
+          "数据结构与算法设计",
+          "tech"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "e772206b-85a8-44e6-ae9d-40b7fc2b1538",
+        "mastery_score": 0,
+        "name": "音乐欣赏",
+        "node_type": "unknown",
+        "tags": [
+          "音乐",
+          "欣赏",
+          "art",
+          "seed"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "608aee96-add4-4f61-9d68-60c785c8a4fa",
+        "mastery_score": 0,
+        "name": "中国近现代史",
+        "node_type": "unknown",
+        "tags": [
+          "历史",
+          "中国",
+          "civilization",
+          "seed",
+          "core"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "4f0138c8-a096-5f00-8103-0115f8f856ed",
+        "mastery_score": 0,
+        "name": "P1-5 探针 · 欧拉回路判定练习",
+        "node_type": "unknown",
+        "tags": [
+          "P1-5 探针 · 欧拉回路判定练习",
+          "wisdom"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "1a57d70a-3fbe-582c-9be3-85476bfc7e92",
+        "mastery_score": 0,
+        "name": "复验·高数极限计算",
+        "node_type": "unknown",
+        "tags": [
+          "复验·高数极限计算",
+          "cosmos"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "c578dcd0-de49-52f8-a7d8-6743db16a6aa",
+        "mastery_score": 0,
+        "name": "集合及其运算",
+        "node_type": "unknown",
+        "tags": [
+          "sprint_pack_node",
+          "dm.set_theory",
+          "mistake.dm_counting_overlap",
+          "离散数学",
+          "wisdom"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "83a060e6-73c6-445f-ab97-990184c06da6",
+        "mastery_score": 0,
+        "name": "欧拉回路与欧拉路径",
+        "node_type": "unknown",
+        "tags": [
+          "document_import",
+          "图论",
+          "tech",
+          "core"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "96e5ec81-1a4f-5642-965b-fcd98d2d806c",
+        "mastery_score": 0,
+        "name": "顺序表",
+        "node_type": "unknown",
+        "tags": [
+          "sprint_pack_node",
+          "ds.array",
+          "mistake.boundary_index",
+          "数据结构与算法设计",
+          "tech"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "12219a86-dac2-4852-b236-8a335111d54b",
+        "mastery_score": 0,
+        "name": "TCP 状态机",
+        "node_type": "unknown",
+        "tags": [
+          "TCP",
+          "状态机",
+          "关键易错点",
+          "tech"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "f83fb575-79b5-4760-814d-b14287e36edc",
+        "mastery_score": 0,
+        "name": "机器学习",
+        "node_type": "unknown",
+        "tags": [
+          "机器学习",
+          "ML",
+          "tech",
+          "seed",
+          "core"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "946e4483-4531-4e67-8d5a-4af69b5cb151",
+        "mastery_score": 0,
+        "name": "西方哲学",
+        "node_type": "unknown",
+        "tags": [
+          "哲学",
+          "西方",
+          "wisdom",
+          "seed"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "6cdb452d-c71d-48ea-8c58-8f419ab82c5d",
+        "mastery_score": 0,
+        "name": "高等数学",
+        "node_type": "unknown",
+        "tags": [
+          "数学",
+          "基础",
+          "cosmos",
+          "seed",
+          "core"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "01592544-93d0-4b3d-b21b-c9c0565da849",
+        "mastery_score": 0,
+        "name": "Web前端开发",
+        "node_type": "unknown",
+        "tags": [
+          "Web",
+          "前端",
+          "tech",
+          "seed"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "c9353fdd-ffa7-42ce-8204-945872f3eb2f",
+        "mastery_score": 0,
+        "name": "算法设计与分析",
+        "node_type": "unknown",
+        "tags": [
+          "算法",
+          "优化",
+          "tech",
+          "seed",
+          "core"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "300e381f-a15b-4b1f-86b3-e98f8f20f7d7",
+        "mastery_score": 0,
+        "name": "人体生理学",
+        "node_type": "unknown",
+        "tags": [
+          "生理",
+          "人体",
+          "life",
+          "seed"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "60f30450-d7c9-4ba5-b99f-93ba3a4db181",
+        "mastery_score": 0,
+        "name": "社会心理学",
+        "node_type": "unknown",
+        "tags": [
+          "心理",
+          "社会",
+          "life",
+          "seed"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "e192ba86-dbb2-4329-a485-c13035f9472e",
+        "mastery_score": 0,
+        "name": "经济学原理",
+        "node_type": "unknown",
+        "tags": [
+          "经济",
+          "市场",
+          "civilization",
+          "seed",
+          "core"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "b94d26dc-87af-4b7e-9797-cabd0c39ade4",
+        "mastery_score": 0,
+        "name": "阶段性自测",
+        "node_type": "unknown",
+        "tags": [
+          "onboarding_seed",
+          "goal_type:exam",
+          "goal:期末高数冲刺复习",
+          "seed_rank:3",
+          "goal:Prepare for my data structures midt"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "1b397a98-9214-4a87-9587-57d1d1de71d6",
+        "mastery_score": 0,
+        "name": "备考节奏规划",
+        "node_type": "unknown",
+        "tags": [
+          "onboarding_seed",
+          "goal_type:exam",
+          "goal:期末高数冲刺复习",
+          "seed_rank:4",
+          "goal:Prepare for my data structures midt"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "c77fc266-1e82-5c7b-a1af-64e7d491f746",
+        "mastery_score": 0,
+        "name": "图的存储结构",
+        "node_type": "unknown",
+        "tags": [
+          "sprint_pack_node",
+          "ds.graph_representation",
+          "mistake.graph_matrix_list",
+          "数据结构与算法设计",
+          "tech"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "c6a643fc-0c88-40b5-bd64-4292c3d93d11",
+        "mastery_score": 0,
+        "name": "概率论与数理统计",
+        "node_type": "unknown",
+        "tags": [
+          "数学",
+          "统计",
+          "cosmos",
+          "seed",
+          "core"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "b97063e1-a91c-4a2a-8896-592fe81413d2",
+        "mastery_score": 0,
+        "name": "普通生物学",
+        "node_type": "unknown",
+        "tags": [
+          "生物",
+          "基础",
+          "life",
+          "seed",
+          "core"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "dfedc835-140a-4e19-a147-1cba64f51817",
+        "mastery_score": 0,
+        "name": "最短路径算法",
+        "node_type": "unknown",
+        "tags": [
+          "document_import",
+          "图论",
+          "tech"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "1c44b013-f041-4a9f-805c-0c90afb666d3",
+        "mastery_score": 0,
+        "name": "创新思维",
+        "node_type": "unknown",
+        "tags": [
+          "思维",
+          "创新",
+          "wisdom",
+          "seed",
+          "core"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "5ad9cd5f-4841-5410-a511-acf6109507cb",
+        "mastery_score": 0,
+        "name": "二叉排序树",
+        "node_type": "unknown",
+        "tags": [
+          "sprint_pack_node",
+          "ds.bst",
+          "mistake.bst_delete",
+          "数据结构与算法设计",
+          "tech"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "650ddd42-c9fd-43b0-b95d-1dbd79ae9e67",
+        "mastery_score": 0,
+        "name": "有机化学",
+        "node_type": "unknown",
+        "tags": [
+          "化学",
+          "有机",
+          "cosmos",
+          "seed"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "7f410aac-a894-4b83-9edf-7393373d2443",
+        "mastery_score": 0,
+        "name": "急救与安全",
+        "node_type": "unknown",
+        "tags": [
+          "急救",
+          "安全",
+          "life",
+          "seed"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "667ca84c-00c4-40cb-9da3-884a0f05d943",
+        "mastery_score": 0,
+        "name": "中国文学",
+        "node_type": "unknown",
+        "tags": [
+          "文学",
+          "中国",
+          "art",
+          "seed",
+          "core"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "a94a4e40-c4af-4261-99f3-6362f7ce4df5",
+        "mastery_score": 0,
+        "name": "摄影基础",
+        "node_type": "unknown",
+        "tags": [
+          "摄影",
+          "艺术",
+          "art",
+          "seed"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "54a93db1-edf3-48f2-aaae-483bc3ba100c",
+        "mastery_score": 0,
+        "name": "线性代数",
+        "node_type": "unknown",
+        "tags": [
+          "数学",
+          "线性代数",
+          "cosmos",
+          "seed",
+          "core"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "e7212573-e582-45f6-b0b5-718d66ba36eb",
+        "mastery_score": 0,
+        "name": "TCP 状态机",
+        "node_type": "unknown",
+        "tags": [
+          "TCP",
+          "状态机",
+          "关键易错点",
+          "tech"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "e6f8a9a6-3e92-5c41-9aff-f292e794636f",
+        "mastery_score": 0,
+        "name": "Day 2 · 建立框架 - IP 地址分类（A/B/C/D/E 类） 等2个点",
+        "node_type": "unknown",
+        "tags": [
+          "Day 2 · 建立框架 - IP 地址分类（A/B/C/D/E 类） 等2个点",
+          "tech"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "9371e9a4-ef3e-5904-95b7-48af1af1deac",
+        "mastery_score": 0,
+        "name": "协议栈核心概念（封装/解封装/对等层）",
+        "node_type": "unknown",
+        "tags": [
+          "sprint_pack_node",
+          "cn.protocol_stack_concepts",
+          "mistake.layer_data_unit",
+          "mistake.encapsulation_order",
+          "计算机网络"
+        ],
+        "user_status": null
+      },
+      {
+        "id": "b81e60ba-5788-4872-a723-184f11877f5f",
+        "mastery_score": 0,
+        "name": "基础技能搭建",
+        "node_type": "unknown",
+        "tags": [
+          "onboarding_seed",
+          "goal_type:skill",
+          "goal:备考期末考试，掌握 Flutter 开发技能",
+          "seed_rank:0",
+          "tech"
+        ],
+        "user_status": null
+      }
+    ],
+    "relations": [
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "fc97668c-5799-47ba-a9a3-afb67f9054a2",
+        "target_node_id": "e800d4d3-19a4-4ea7-86c2-c5ef1ce3c98a"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "fc97668c-5799-47ba-a9a3-afb67f9054a2",
+        "target_node_id": "e9f89d79-c55f-41ee-bfe9-777fb6b4424d"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "6cdb452d-c71d-48ea-8c58-8f419ab82c5d",
+        "target_node_id": "54a93db1-edf3-48f2-aaae-483bc3ba100c"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "6cdb452d-c71d-48ea-8c58-8f419ab82c5d",
+        "target_node_id": "c6a643fc-0c88-40b5-bd64-4292c3d93d11"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "283ecd6d-4f8f-43ee-bc55-91902ece8e60",
+        "target_node_id": "650ddd42-c9fd-43b0-b95d-1dbd79ae9e67"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "fc97668c-5799-47ba-a9a3-afb67f9054a2",
+        "target_node_id": "e886fa61-b8fa-4ab9-9c10-61f79f066cda"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "fc97668c-5799-47ba-a9a3-afb67f9054a2",
+        "target_node_id": "dec3a067-60e3-4423-b531-1a399cace794"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "e9f89d79-c55f-41ee-bfe9-777fb6b4424d",
+        "target_node_id": "c9353fdd-ffa7-42ce-8204-945872f3eb2f"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "d8296780-346d-42ff-ad11-207935e63215",
+        "target_node_id": "89231802-86be-4051-b307-e14cec9794d9"
+      },
+      {
+        "relation_type": "related",
+        "source_node_id": "89231802-86be-4051-b307-e14cec9794d9",
+        "target_node_id": "27e77dd1-6207-44bd-9bdf-faed51b6e9ce"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "610ce924-5b19-43a3-aefd-721c9a164ed2",
+        "target_node_id": "8eb24485-b5d6-4438-81f6-ed586ce642a2"
+      },
+      {
+        "relation_type": "related",
+        "source_node_id": "01592544-93d0-4b3d-b21b-c9c0565da849",
+        "target_node_id": "9e42acea-07ae-4466-9034-350c39259de3"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "ff3adbe8-8fad-4ee3-96d9-3f875748d7b5",
+        "target_node_id": "f83fb575-79b5-4760-814d-b14287e36edc"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "c6a643fc-0c88-40b5-bd64-4292c3d93d11",
+        "target_node_id": "f83fb575-79b5-4760-814d-b14287e36edc"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "54a93db1-edf3-48f2-aaae-483bc3ba100c",
+        "target_node_id": "ff3adbe8-8fad-4ee3-96d9-3f875748d7b5"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "8bb44eee-54c0-4928-9f2c-e3ac7ef1c71f",
+        "target_node_id": "213853b6-da99-4dc4-b0ac-7c0d606134f6"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "8bb44eee-54c0-4928-9f2c-e3ac7ef1c71f",
+        "target_node_id": "60f30450-d7c9-4ba5-b99f-93ba3a4db181"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "b97063e1-a91c-4a2a-8896-592fe81413d2",
+        "target_node_id": "300e381f-a15b-4b1f-86b3-e98f8f20f7d7"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "b97063e1-a91c-4a2a-8896-592fe81413d2",
+        "target_node_id": "f557a3b2-8d28-414a-8e19-09a047c4c1d3"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "2352cca6-56a8-41f0-85b1-b6dc28ad61a0",
+        "target_node_id": "0a507efc-7241-4226-9857-edd050325f95"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "2352cca6-56a8-41f0-85b1-b6dc28ad61a0",
+        "target_node_id": "946e4483-4531-4e67-8d5a-4af69b5cb151"
+      },
+      {
+        "relation_type": "related",
+        "source_node_id": "2eda6866-d9f6-4c27-88b8-c88b733959fd",
+        "target_node_id": "0e310984-4bcf-4ff7-af74-35ddde4542f9"
+      },
+      {
+        "relation_type": "related",
+        "source_node_id": "0e310984-4bcf-4ff7-af74-35ddde4542f9",
+        "target_node_id": "71f14eda-b611-4820-9b22-0e3d3d969ce0"
+      },
+      {
+        "relation_type": "related",
+        "source_node_id": "8bb44eee-54c0-4928-9f2c-e3ac7ef1c71f",
+        "target_node_id": "0e310984-4bcf-4ff7-af74-35ddde4542f9"
+      },
+      {
+        "relation_type": "application",
+        "source_node_id": "2eda6866-d9f6-4c27-88b8-c88b733959fd",
+        "target_node_id": "aaf34d44-e9b5-4dc8-8f7d-77699b15d3b2"
+      },
+      {
+        "relation_type": "related",
+        "source_node_id": "e192ba86-dbb2-4329-a485-c13035f9472e",
+        "target_node_id": "c65b8e36-5cf5-44fe-baef-c824f51453ea"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "2343d8d8-5379-41d0-be40-fc1a57946fe8",
+        "target_node_id": "e41c63dc-ec44-44a1-88e0-956feb2bd015"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "2343d8d8-5379-41d0-be40-fc1a57946fe8",
+        "target_node_id": "6d6de35d-959a-491d-9cd0-aaa5c0a79db7"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "aaa847cd-9298-429f-83fa-c5a717aa7978",
+        "target_node_id": "e9f89d79-c55f-41ee-bfe9-777fb6b4424d"
+      },
+      {
+        "relation_type": "prerequisite",
+        "source_node_id": "aaa847cd-9298-429f-83fa-c5a717aa7978",
+        "target_node_id": "c9353fdd-ffa7-42ce-8204-945872f3eb2f"
+      },
+      {
+        "relation_type": "related",
+        "source_node_id": "6cdb452d-c71d-48ea-8c58-8f419ab82c5d",
+        "target_node_id": "aaa847cd-9298-429f-83fa-c5a717aa7978"
+      }
+    ],
+    "total_nodes": 119,
+    "via": "grpc"
+  },
+  "at": "2026-09-22T21:15:31.197884+00:00"
+}

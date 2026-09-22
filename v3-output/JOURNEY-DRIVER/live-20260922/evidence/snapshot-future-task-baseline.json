@@ -1,0 +1,11 @@
+{
+  "schema": "sparkle.northstar.real-drive.run.v1",
+  "day": {
+    "2": {},
+    "3": {}
+  },
+  "day2_count": 0,
+  "day3_count": 0,
+  "day1_run_date": "2026-09-22",
+  "at": "2026-09-22T21:25:34.252913+00:00"
+}

@@ -1,0 +1,29 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-JOURNEY2-20260922-211514",
+  "step_id": "B3-2v",
+  "phase": "day0",
+  "name": "intake idempotency verdict (same plan reused, no 403, no double plan)",
+  "started_at": "2026-09-22T21:15:30.606773+00:00",
+  "finished_at": "2026-09-22T21:15:30.606777+00:00",
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/exam-sprint/intake",
+    "same_body_as_B3": true
+  },
+  "response": {
+    "rerun_status": 200,
+    "rerun_plan_id": "7917e864-59eb-4a3f-b33a-11e6e4b00385",
+    "first_plan_id": "7917e864-59eb-4a3f-b33a-11e6e4b00385",
+    "sprint_plan_ids_in_ledger": [
+      "7917e864-59eb-4a3f-b33a-11e6e4b00385"
+    ],
+    "sub_intake_reuse_ok": true,
+    "sub_no_goal_intake_double_plan": true
+  },
+  "verdict": "pass",
+  "checkpoints": [],
+  "notes": [
+    "intake-vs-intake idempotent reuse=True; goal-vs-intake no double plan=True (residual if False: goal plan subject=null never matches Plan.subject key)"
+  ]
+}

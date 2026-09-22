@@ -417,3 +417,144 @@ def test_send_message_error_frame_is_terminal() -> None:
     result = session.send_message("问题")
     assert result["full_text"] == ""
     assert result["errors"] == [{"error_code": "internal", "message": "boom"}]
+
+
+# ---------------------------------------------------------------------------
+# JOURNEY（Day2+）判定辅助：day tag 抽取 / 结构 diff / CP-04 组合判定
+# ---------------------------------------------------------------------------
+
+
+def test_extract_day_tag_prefers_tag_then_order_then_title() -> None:
+    from tests.northstar_eval.real_drive import extract_day_tag
+
+    assert extract_day_tag({"tags": ["规划生成", "day:2"], "order_index": 7000, "title": "Day 7 · x"}) == 2
+    assert extract_day_tag({"tags": [], "order_index": 3005, "title": "Day 9 · x"}) == 3
+    assert extract_day_tag({"tags": [], "order_index": 0, "title": "Day 4 · 复习 - 图论"}) == 4
+    assert extract_day_tag({"tags": [], "order_index": 0, "title": "随手笔记"}) is None
+    assert extract_day_tag({"tags": ["day:0"], "order_index": 0, "title": "x"}) is None  # day:0 非法 → 忽略
+
+
+def test_task_fingerprint_only_persisted_fields() -> None:
+    from tests.northstar_eval.real_drive import task_fingerprint
+
+    fp = task_fingerprint({"id": "t1", "title": "Day 2 · x", "priority": 3, "score": 88.5, "order_index": 2000})
+    assert "score" not in fp  # 读取期计算字段不得混入（会误判成适应）
+    assert fp["title"] == "Day 2 · x" and fp["priority"] == 3 and fp["order_index"] == 2000
+
+
+def test_fingerprints_by_day_groups_and_skips_unkeyed() -> None:
+    from tests.northstar_eval.real_drive import fingerprints_by_day
+
+    tasks = [
+        {"id": "a", "tags": ["day:2"], "title": "t"},
+        {"id": "b", "tags": ["day:3"], "title": "t"},
+        {"title": "no-id"},  # 无 id 跳过
+    ]
+    grouped = fingerprints_by_day(tasks, 2)
+    assert set(grouped) == {"a"}
+    assert fingerprints_by_day(tasks, 5) == {}
+
+
+def test_diff_task_baseline_added_removed_changed() -> None:
+    from tests.northstar_eval.real_drive import diff_task_baseline
+
+    baseline = {
+        "t1": {"title": "A", "priority": 2},
+        "t2": {"title": "B", "priority": 1},
+    }
+    current = {
+        "t1": {"title": "A", "priority": 5},  # changed
+        "t3": {"title": "C", "priority": 0},  # added
+    }
+    diff = diff_task_baseline(baseline, current)
+    assert diff["baseline_missing"] is False
+    assert diff["added_ids"] == ["t3"]
+    assert diff["removed_ids"] == ["t2"]
+    assert diff["changed"]["t1"]["priority"]["before"] == 2
+    assert diff["unchanged_count"] == 0
+
+
+def test_diff_task_baseline_missing_is_explicit() -> None:
+    from tests.northstar_eval.real_drive import diff_task_baseline
+
+    diff = diff_task_baseline(None, {"t1": {"title": "A"}})
+    assert diff["baseline_missing"] is True
+    assert diff["added_ids"] == []
+
+
+def test_structural_adaptation_requires_delta_and_real_baseline() -> None:
+    from tests.northstar_eval.real_drive import structural_adaptation
+
+    assert structural_adaptation({"baseline_missing": True}) is False
+    assert structural_adaptation({"baseline_missing": False, "added_ids": ["x"], "removed_ids": [], "changed": {}}) is True
+    assert structural_adaptation({"baseline_missing": False, "added_ids": [], "removed_ids": [], "changed": {"t": {"title": {}}}}) is True
+    assert structural_adaptation({"baseline_missing": False, "added_ids": [], "removed_ids": [], "changed": {}}) is False
+
+
+def test_judge_day_panel_adaptation_honest_paths() -> None:
+    from tests.northstar_eval.real_drive import judge_day_panel_adaptation
+
+    # 无前日事实 → blocked
+    v, _ = judge_day_panel_adaptation(prev_day_facts_present=False, day_advanced=True, panel_day_tagged_count=3, panel_active_count=3, structural_adaptation_seen=None, chat_verdict=None)
+    assert v == "blocked"
+    # 同日（门未过）→ blocked，即使面板有任务
+    v, _ = judge_day_panel_adaptation(prev_day_facts_present=True, day_advanced=False, panel_day_tagged_count=3, panel_active_count=3, structural_adaptation_seen=True, chat_verdict="pass")
+    assert v == "blocked"
+    # 跨日但面板全空 → fail（确定性观测：计划推进不成立）
+    v, _ = judge_day_panel_adaptation(prev_day_facts_present=True, day_advanced=True, panel_day_tagged_count=0, panel_active_count=0, structural_adaptation_seen=None, chat_verdict=None)
+    assert v == "fail"
+    # 跨日、面板只有非标签里程碑任务、无适应证据 → blocked（不误判 fail）
+    v, notes = judge_day_panel_adaptation(prev_day_facts_present=True, day_advanced=True, panel_day_tagged_count=0, panel_active_count=2, structural_adaptation_seen=False, chat_verdict="blocked")
+    assert v == "blocked"
+    assert any("里程碑梯" in n for n in notes)
+    # 结构适应证据 → pass
+    v, _ = judge_day_panel_adaptation(prev_day_facts_present=True, day_advanced=True, panel_day_tagged_count=2, panel_active_count=2, structural_adaptation_seen=True, chat_verdict=None)
+    assert v == "pass"
+    # 会话适应证据（结构无变更）→ pass
+    v, _ = judge_day_panel_adaptation(prev_day_facts_present=True, day_advanced=True, panel_day_tagged_count=2, panel_active_count=2, structural_adaptation_seen=False, chat_verdict="pass")
+    assert v == "pass"
+    # 会话反记忆 + 无结构变更 → fail
+    v, _ = judge_day_panel_adaptation(prev_day_facts_present=True, day_advanced=True, panel_day_tagged_count=2, panel_active_count=2, structural_adaptation_seen=False, chat_verdict="fail")
+    assert v == "fail"
+    # 无结构证据 + 会话不可判定 → blocked（不许臆断）
+    v, notes = judge_day_panel_adaptation(prev_day_facts_present=True, day_advanced=True, panel_day_tagged_count=2, panel_active_count=2, structural_adaptation_seen=None, chat_verdict="blocked")
+    assert v == "blocked"
+    assert "不能区分" in notes[-1]
+
+
+def test_judge_day_adaptation_chat_markers() -> None:
+    from tests.northstar_eval.real_drive import judge_day_adaptation_chat
+
+    pass_text = "你昨天完成了 Day1 的任务，错题本里那条欧拉回路的题已经复习过，今天建议先回顾错题再做一组新题。"
+    v, found = judge_day_adaptation_chat(pass_text)
+    assert v == "pass" and len(set(found)) >= 2
+    v, found = judge_day_adaptation_chat("抱歉，我这里没有你之前任务的记录，无法给你安排今天的内容。")
+    assert v == "fail" and found  # 反记忆一票否决
+    v, found = judge_day_adaptation_chat("今天建议复习图论。")  # 泛计划无事实
+    assert v == "blocked"
+    v, _ = judge_day_adaptation_chat("")
+    assert v == "blocked"
+
+
+def test_parse_iso_datetime_lenient() -> None:
+    from tests.northstar_eval.real_drive import parse_iso_datetime
+
+    assert parse_iso_datetime("2026-09-24T08:00:00+00:00") is not None
+    assert parse_iso_datetime("2026-09-24T08:00:00Z") is not None
+    assert parse_iso_datetime("2026-09-24T08:00:00") is not None  # naive → 视为 UTC
+    assert parse_iso_datetime("not-a-date") is None
+    assert parse_iso_datetime(None) is None
+    assert parse_iso_datetime("") is None
+
+
+def test_tasks_list_and_review_items_parsers() -> None:
+    from tests.northstar_eval.real_drive import review_due_items, tasks_list_from_response
+
+    assert tasks_list_from_response([{"id": "a"}]) == [{"id": "a"}]
+    assert tasks_list_from_response({"_raw": [{"id": "a"}], "_is_list": True}) == [{"id": "a"}]
+    assert tasks_list_from_response({"data": [{"id": "a"}]}) == [{"id": "a"}]
+    assert tasks_list_from_response({"items": [{"id": "a"}]}) == [{"id": "a"}]
+    assert tasks_list_from_response({"error": "x"}) == []
+    assert review_due_items({"items": [{"id": "e1", "next_review_at": "2026-09-24T00:00:00Z"}]})[0]["id"] == "e1"
+    assert review_due_items({"_raw": {"items": [{"id": "e2"}]}})[0]["id"] == "e2"
+    assert review_due_items({"total": 0}) == []

@@ -1,0 +1,23 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-JOURNEY2-20260922-211514",
+  "step_id": "C9-2",
+  "phase": "day1settle",
+  "name": "day2/day3 task baseline captured verdict (CP-04 structural face)",
+  "started_at": "2026-09-22T21:25:34.253182+00:00",
+  "finished_at": "2026-09-22T21:25:34.253197+00:00",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/tasks?limit=100",
+    "anchor": "before calendar-day rollover"
+  },
+  "response": {
+    "day2_count": 0,
+    "day3_count": 0
+  },
+  "verdict": "blocked",
+  "checkpoints": [],
+  "notes": [
+    "no day:2-tagged tasks in ledger — sprint template absent; day2 structural face will be blocked"
+  ]
+}

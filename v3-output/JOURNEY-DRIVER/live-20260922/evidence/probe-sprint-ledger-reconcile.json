@@ -1,0 +1,12 @@
+{
+  "schema": "sparkle.northstar.real-drive.gain-proof.v1",
+  "probe": "sprint-dashboard-vs-task-ledger",
+  "task_ledger_completed_ids": [
+    "2ea4fc74-6a58-4deb-95d0-242c5db23437"
+  ],
+  "task_ledger_completed_count": 1,
+  "sprint_dashboard_completed": 1,
+  "contradiction": false,
+  "note": "完成事件在任务账本成立但 dashboard 记 0 → 跨账本不一致（M9 仪表盘诚实性反例候选）",
+  "at": "2026-09-22T21:26:36.515084+00:00"
+}

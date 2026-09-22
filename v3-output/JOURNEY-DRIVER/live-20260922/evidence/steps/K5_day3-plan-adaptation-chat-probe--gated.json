@@ -1,0 +1,23 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-JOURNEY2-20260922-211514",
+  "step_id": "K5",
+  "phase": "day3",
+  "name": "day3 plan adaptation chat probe (gated)",
+  "started_at": "2026-09-22T21:26:51.630622+00:00",
+  "finished_at": "2026-09-22T21:26:51.630625+00:00",
+  "request": {
+    "gate": "driver_utc_date=2026-09-22 prev_day_run_date=2026-09-22 advanced=False"
+  },
+  "response": {
+    "skipped": true,
+    "reason": "same-calendar-day: 'yesterday' facts do not exist yet; probe would be dishonest instrumentation"
+  },
+  "verdict": "blocked",
+  "checkpoints": [
+    "CP-04"
+  ],
+  "notes": [
+    "gated: day boundary not crossed — chat probe deferred to real next-day run"
+  ]
+}

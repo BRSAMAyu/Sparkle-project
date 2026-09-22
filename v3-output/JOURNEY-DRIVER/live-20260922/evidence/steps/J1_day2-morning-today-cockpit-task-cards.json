@@ -1,0 +1,23 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-JOURNEY2-20260922-211514",
+  "step_id": "J1",
+  "phase": "day2",
+  "name": "day2 morning today cockpit task cards",
+  "started_at": "2026-09-22T21:26:27.083706+00:00",
+  "finished_at": "2026-09-22T21:26:27.336547+00:00",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/tasks/today",
+    "body": {}
+  },
+  "response": {
+    "status": 200,
+    "body": []
+  },
+  "verdict": "pass",
+  "checkpoints": [
+    "CP-04"
+  ],
+  "notes": []
+}

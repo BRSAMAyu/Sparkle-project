@@ -1,0 +1,29 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-JOURNEY2-20260922-211514",
+  "step_id": "K2",
+  "phase": "day3",
+  "name": "day3 review queue (due items)",
+  "started_at": "2026-09-22T21:26:51.614072+00:00",
+  "finished_at": "2026-09-22T21:26:51.630219+00:00",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/errors/today-review",
+    "body": {}
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "items": [],
+      "total": "0",
+      "page": 1,
+      "page_size": 20,
+      "has_next": false
+    }
+  },
+  "verdict": "pass",
+  "checkpoints": [
+    "CP-05"
+  ],
+  "notes": []
+}

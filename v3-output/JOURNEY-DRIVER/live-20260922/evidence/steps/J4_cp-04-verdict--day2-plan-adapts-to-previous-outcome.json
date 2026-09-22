@@ -1,0 +1,32 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-JOURNEY2-20260922-211514",
+  "step_id": "J4",
+  "phase": "day2",
+  "name": "CP-04 verdict: day2 plan adapts to previous outcome",
+  "started_at": "2026-09-22T21:26:27.377598+00:00",
+  "finished_at": "2026-09-22T21:26:27.377602+00:00",
+  "request": {
+    "gate": "driver_utc_date=2026-09-22 prev_day_run_date=2026-09-22 advanced=False",
+    "prev_day_facts_present": true,
+    "baseline": "snapshot-future-task-baseline.json",
+    "judge_version": "lexicon-v3-nbp5",
+    "criteria": "S1 panel advancement (day-tagged or milestone shape); S2 persisted structural diff vs previous-day baseline; S3 adaptation chat cites yesterday facts"
+  },
+  "response": {
+    "verdict": "blocked",
+    "panel_day_tagged_count": 0,
+    "panel_active_count": 0,
+    "structural_adaptation_seen": false,
+    "baseline_present": true,
+    "chat_verdict": null,
+    "review_due_count": 0
+  },
+  "verdict": "blocked",
+  "checkpoints": [
+    "CP-04"
+  ],
+  "notes": [
+    "日界未跨过（与前日同一真实日历日）——「次日」判据未到达，诚实 blocked"
+  ]
+}

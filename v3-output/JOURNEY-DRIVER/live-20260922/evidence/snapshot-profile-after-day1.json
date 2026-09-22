@@ -1,0 +1,25 @@
+{
+  "schema": "sparkle.northstar.real-drive.run.v1",
+  "snapshot": {
+    "layer_1": {
+      "preferences": [],
+      "goals": []
+    },
+    "layer_2": {
+      "persona": {
+        "tags": []
+      },
+      "editable": false
+    },
+    "layer_3": {
+      "patterns": [],
+      "fragments": []
+    },
+    "hidden_item_count": 22,
+    "transparency": {
+      "enabled": false,
+      "level": 0
+    }
+  },
+  "at": "2026-09-22T21:17:03.647876+00:00"
+}

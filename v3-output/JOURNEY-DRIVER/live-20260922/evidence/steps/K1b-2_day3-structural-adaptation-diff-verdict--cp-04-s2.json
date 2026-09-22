@@ -1,0 +1,27 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-JOURNEY2-20260922-211514",
+  "step_id": "K1b-2",
+  "phase": "day3",
+  "name": "day3 structural adaptation diff verdict (CP-04 S2)",
+  "started_at": "2026-09-22T21:26:51.613807+00:00",
+  "finished_at": "2026-09-22T21:26:51.613817+00:00",
+  "request": {
+    "baseline": "snapshot-day3-task-baseline.json",
+    "baseline_present": true
+  },
+  "response": {
+    "baseline_missing": false,
+    "added_ids": [],
+    "removed_ids": [],
+    "changed": {},
+    "unchanged_count": 0
+  },
+  "verdict": "blocked",
+  "checkpoints": [
+    "CP-04"
+  ],
+  "notes": [
+    "no day:N-tagged tasks in ledger/baseline (sprint template absent on this run) — structural face blocked, panel/chat faces carry CP-04"
+  ]
+}

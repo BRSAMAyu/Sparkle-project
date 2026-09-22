@@ -1,0 +1,23 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-JOURNEY2-20260922-211514",
+  "step_id": "C7d",
+  "phase": "day1",
+  "name": "memory preferences",
+  "started_at": "2026-09-22T21:17:03.647972+00:00",
+  "finished_at": "2026-09-22T21:17:03.659309+00:00",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/memory/preferences",
+    "body": {}
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "items": []
+    }
+  },
+  "verdict": "pass",
+  "checkpoints": [],
+  "notes": []
+}

@@ -1,0 +1,19 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-JOURNEY2-20260922-211514",
+  "step_id": "K6",
+  "phase": "day3",
+  "name": "day3 outcome production (gated)",
+  "started_at": "2026-09-22T21:26:51.630843+00:00",
+  "finished_at": "2026-09-22T21:26:51.630845+00:00",
+  "request": {},
+  "response": {
+    "skipped": true,
+    "reason": "driver_utc_date=2026-09-22 prev_day_run_date=2026-09-22 advanced=False"
+  },
+  "verdict": "blocked",
+  "checkpoints": [],
+  "notes": [
+    "gated: task completion deferred to real next-day run (timeline honesty)"
+  ]
+}
