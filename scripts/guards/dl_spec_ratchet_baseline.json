@@ -1,5 +1,5 @@
 {
-  "comment": "Frozen ratchet baseline for check_dl_spec_ratchet.py (DL-R3 SPEC v0.9 immediately-effective clauses, generated at main@d87d42ea). Only lower via --update-baseline after a migration batch; never raise.",
+  "comment": "Frozen ratchet baseline for check_dl_spec_ratchet.py (DL-R3 SPEC v0.9 immediately-effective clauses; dsGradientApiCalls/dsAccentGradientForbidden added by DS-GRADIENT @wt134 covering the DS gradient-API blind spot). Only lower via --update-baseline after a migration batch; never raise.",
   "files": {
     "mobile/lib/core/design/motion.dart": {
       "bannedCurve": 1,
@@ -9,7 +9,18 @@
       "bannedCurve": 2
     },
     "mobile/lib/core/design/widgets/error_widget.dart": {
+      "dsGradientApiCalls": 3,
       "errorCopyOops": 2
+    },
+    "mobile/lib/core/design/widgets/flame_indicator.dart": {
+      "dsAccentGradientForbidden": 1,
+      "dsGradientApiCalls": 2
+    },
+    "mobile/lib/core/design/widgets/graphite_surfaces.dart": {
+      "dsGradientApiCalls": 2
+    },
+    "mobile/lib/core/design/widgets/loading_indicator.dart": {
+      "dsGradientApiCalls": 2
     },
     "mobile/lib/core/design/widgets/sparkle_confetti.dart": {
       "confettiPerFile": 1
@@ -66,6 +77,9 @@
     "mobile/lib/features/achievement/presentation/widgets/achievement_share_bottom_sheet.dart": {
       "gradientLiteral": 1
     },
+    "mobile/lib/features/achievement/presentation/widgets/achievement_stats_panel.dart": {
+      "dsGradientApiCalls": 1
+    },
     "mobile/lib/features/achievement/presentation/widgets/achievement_unlock_dialog.dart": {
       "bannedCurve": 7,
       "confettiPerFile": 1,
@@ -113,7 +127,7 @@
     },
     "mobile/lib/features/chat/presentation/screens/chat_screen.dart": {
       "gradientLiteral": 6,
-      "offLadderDuration": 6
+      "offLadderDuration": 4
     },
     "mobile/lib/features/chat/presentation/screens/group_chat_screen.dart": {
       "offLadderDuration": 1
@@ -123,6 +137,7 @@
     },
     "mobile/lib/features/chat/presentation/widgets/action_card.dart": {
       "coldColorLiteral": 6,
+      "dsGradientApiCalls": 19,
       "gradientLiteral": 9,
       "offLadderDuration": 1
     },
@@ -169,10 +184,12 @@
     },
     "mobile/lib/features/chat/presentation/widgets/chat_bubble.dart": {
       "bannedCurve": 1,
+      "dsGradientApiCalls": 2,
       "gradientLiteral": 2,
       "offLadderDuration": 4
     },
     "mobile/lib/features/chat/presentation/widgets/chat_input.dart": {
+      "dsGradientApiCalls": 2,
       "offLadderDuration": 1
     },
     "mobile/lib/features/chat/presentation/widgets/chat_mode_selector_pill.dart": {
@@ -187,8 +204,14 @@
     "mobile/lib/features/chat/presentation/widgets/comeback_banner.dart": {
       "offLadderDuration": 1
     },
+    "mobile/lib/features/chat/presentation/widgets/community_chat_input.dart": {
+      "dsGradientApiCalls": 1
+    },
     "mobile/lib/features/chat/presentation/widgets/community_insight_card.dart": {
       "offLadderDuration": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/content_review_card.dart": {
+      "dsGradientApiCalls": 3
     },
     "mobile/lib/features/chat/presentation/widgets/contextual_correction_bar.dart": {
       "gradientLiteral": 1
@@ -196,6 +219,9 @@
     "mobile/lib/features/chat/presentation/widgets/expert_roundtable_widget.dart": {
       "coldColorLiteral": 2,
       "offLadderDuration": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/focus_action_card.dart": {
+      "dsGradientApiCalls": 1
     },
     "mobile/lib/features/chat/presentation/widgets/goal_arbitration_card.dart": {
       "offLadderDuration": 1
@@ -213,6 +239,7 @@
       "offLadderDuration": 1
     },
     "mobile/lib/features/chat/presentation/widgets/plan_review_card.dart": {
+      "dsGradientApiCalls": 4,
       "gradientLiteral": 1
     },
     "mobile/lib/features/chat/presentation/widgets/plan_selector_pill.dart": {
@@ -246,6 +273,9 @@
     "mobile/lib/features/chat/presentation/widgets/strategy_intervention_card.dart": {
       "offLadderDuration": 1
     },
+    "mobile/lib/features/chat/presentation/widgets/transparency_panel.dart": {
+      "dsGradientApiCalls": 1
+    },
     "mobile/lib/features/chat/widgets/agent_status_indicator.dart": {
       "offLadderDuration": 2
     },
@@ -266,6 +296,9 @@
     },
     "mobile/lib/features/cognitive/presentation/widgets/interactive_decay_timeline.dart": {
       "gradientLiteral": 1
+    },
+    "mobile/lib/features/cognitive/presentation/widgets/pattern_card.dart": {
+      "dsGradientApiCalls": 4
     },
     "mobile/lib/features/cognitive/presentation/widgets/prism_behavior_card.dart": {
       "gradientLiteral": 1
@@ -352,8 +385,14 @@
       "gradientLiteral": 2,
       "offLadderDuration": 3
     },
+    "mobile/lib/features/focus/presentation/widgets/candidate_action_sheet.dart": {
+      "dsGradientApiCalls": 1
+    },
     "mobile/lib/features/focus/presentation/widgets/flip_clock.dart": {
       "gradientLiteral": 3
+    },
+    "mobile/lib/features/focus/presentation/widgets/focus_agent_sheet.dart": {
+      "dsGradientApiCalls": 1
     },
     "mobile/lib/features/focus/presentation/widgets/focus_stats_chart.dart": {
       "gradientLiteral": 1
@@ -421,7 +460,11 @@
     "mobile/lib/features/goal/presentation/screens/goal_creation_wizard_screen.dart": {
       "offLadderDuration": 1
     },
+    "mobile/lib/features/goal/presentation/widgets/goal_created_dialog.dart": {
+      "dsGradientApiCalls": 1
+    },
     "mobile/lib/features/home/presentation/screens/dashboard_screen.dart": {
+      "dsGradientApiCalls": 1,
       "gradientLiteral": 1
     },
     "mobile/lib/features/home/presentation/screens/openclaw_hub_screen.dart": {
@@ -436,6 +479,9 @@
     },
     "mobile/lib/features/home/presentation/widgets/cognitive_tool_hub_card.dart": {
       "gradientLiteral": 2
+    },
+    "mobile/lib/features/home/presentation/widgets/curiosity_capsule_card.dart": {
+      "dsGradientApiCalls": 1
     },
     "mobile/lib/features/home/presentation/widgets/dashboard_card_section.dart": {
       "gradientLiteral": 1
@@ -458,6 +504,7 @@
       "gradientLiteral": 2
     },
     "mobile/lib/features/home/presentation/widgets/layers/background_layer.dart": {
+      "dsGradientApiCalls": 1,
       "gradientLiteral": 8
     },
     "mobile/lib/features/home/presentation/widgets/layers/effect_layer.dart": {
@@ -570,10 +617,14 @@
       "offLadderDuration": 1
     },
     "mobile/lib/features/task/presentation/screens/task_detail_screen.dart": {
+      "dsGradientApiCalls": 5,
       "gradientLiteral": 7
     },
     "mobile/lib/features/task/presentation/screens/task_execution_screen.dart": {
       "gradientLiteral": 4
+    },
+    "mobile/lib/features/task/presentation/screens/task_list_screen.dart": {
+      "dsGradientApiCalls": 1
     },
     "mobile/lib/features/task/presentation/widgets/execution_status_indicator.dart": {
       "bannedCurve": 1,
@@ -685,6 +736,7 @@
       "gradientLiteral": 1
     },
     "mobile/lib/features/user/presentation/widgets/preference_controller_2d.dart": {
+      "dsGradientApiCalls": 1,
       "gradientLiteral": 4
     },
     "mobile/lib/features/user/presentation/widgets/statistics_card.dart": {

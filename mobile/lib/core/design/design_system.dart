@@ -782,6 +782,15 @@ class DS {
       );
   static LinearGradient get secondaryGradientDark =>
       _buildGradient(secondaryBaseDark, brandPrimary);
+  /// 退役别名渐变（SPEC v1.0 §1.4.2，DS-GRADIENT 增补）：`accentGradient` 是
+  /// 已退役别名 `DS.accent`（=> brandSecondary，第二交互色）的满饱和渐变形式，
+  /// 与别名同族禁新增。守卫面：DL-SPEC `dsAccentGradientForbidden`（ratchet，
+  /// 存量 1 处 @ flame_indicator.dart，B2-3+ 迁移）；语义槽渐变请用
+  /// `infoGradient` 等，表面环境光用 `primaryGradient`/`secondaryGradient`。
+  @Deprecated(
+    'SPEC v1.0 §1.4.2: accent 别名族退役；满饱和 brandSecondary 渐变禁新增，'
+    '用语义槽渐变（infoGradient 等）或表面渐变',
+  )
   static LinearGradient get accentGradient =>
       _buildGradient(accent, _shiftLightness(accent, _isDark ? 0.1 : -0.05));
   static LinearGradient get infoGradient =>

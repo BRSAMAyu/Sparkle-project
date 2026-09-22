@@ -23,6 +23,12 @@ ratchet guards, which are left untouched:
                                no GlobalParticleCounter reference (ratchet; A2.7 bypass)
   textHardcodedZh      A3.2    Text('…中文…') literal in features (zero-tolerance; HEAD=0)
   gradientLiteral      A5.3    LinearGradient(|RadialGradient( in features (ratchet)
+  dsGradientApiCalls   A5.3    \\bDS\\.<gradientApi>\\b refs repo mobile/lib (ratchet; SPEC §5.3
+                               "ratchet 口径新维度" — DS gradient-API family, the blind
+                               spot raw gradientLiteral cannot see)
+  dsAccentGradientForbidden A1.5 \\bDS\\.accentGradient\\b refs (ratchet; the full-strength
+                               brandSecondary gradient, alias family of the retired
+                               DS.accent — SPEC §1.4.2)
   errorCopyOops        A6.6    Oops|something went wrong in mobile/lib (ratchet to zero)
 
 Ratchet discipline (same as UX-COMP): per-file counts frozen in
@@ -131,6 +137,20 @@ _P_BANNED_CURVE = re.compile(r"\bCurves\.(?:elasticOut|bounceOut|elasticInOut)\b
 _P_BREATHING = re.compile(r"\bcreateBreathingController\b")
 _P_CONFETTI = re.compile(r"\bSparkleConfetti\(")
 _P_GRADIENT = re.compile(r"\b(?:LinearGradient|RadialGradient)\(")
+# DS gradient-API family (design_system.dart `// Gradients` block + role/task
+# helpers). Deliberately name-enumerated, not `\bDS\.\w*Gradient\b`, so a future
+# getter must be added here consciously. Definitions inside design_system.dart
+# itself (`static LinearGradient get accentGradient`) carry no `DS.` prefix and
+# never match.
+_P_DS_GRADIENT_API = re.compile(
+    r"\bDS\.(?:"
+    r"secondaryGradientDark|secondaryGradient|"  # longest first (trailing \b)
+    r"primaryGradient|accentGradient|infoGradient|warningGradient|"
+    r"successGradient|errorGradient|cardGradientNeutral|deepSpaceGradient|"
+    r"flameGradient|pageGradientForRole|getTaskGradient"
+    r")\b"
+)
+_P_DS_ACCENT_GRADIENT = re.compile(r"\bDS\.accentGradient\b")
 _P_ERROR_OOPS = re.compile(r"Oops|something went wrong")
 _P_TEXT_ZH = re.compile(r"\bText\(\s*(['\"])(?:(?!\1).)*[\u4e00-\u9fff](?:(?!\1).)*\1")
 _D_HEX_COLOR = re.compile(r"\b0xFF([0-9A-Fa-f]{6})\b")
@@ -173,6 +193,8 @@ DIMENSIONS: list[Dimension] = [
     Dimension("particleBypass", "A2.7", "mobile-lib", _count_particle_bypass, exempt_files=PARTICLE_INFRA_FILES),
     Dimension("textHardcodedZh", "A3.2", "features", _count_regex(_P_TEXT_ZH), zero_tolerance=True),
     Dimension("gradientLiteral", "A5.3", "features", _count_regex(_P_GRADIENT)),
+    Dimension("dsGradientApiCalls", "A5.3", "mobile-lib", _count_regex(_P_DS_GRADIENT_API)),
+    Dimension("dsAccentGradientForbidden", "A1.5", "mobile-lib", _count_regex(_P_DS_ACCENT_GRADIENT)),
     Dimension("errorCopyOops", "A6.6", "mobile-lib", _count_regex(_P_ERROR_OOPS)),
 ]
 
@@ -289,12 +311,21 @@ def update_baseline(repo_root: Path, baseline_path: Path, allow_raise: bool) -> 
                 f"[dl-spec-ratchet] REFUSED — --update-baseline would RAISE totals ({detail}). "
                 "Baselines only go down (ACCEPTANCE A9.3). Fix the code or pass --allow-raise."
             )
+            print(
+                "[dl-spec-ratchet] note: onboarding a NEW dimension legitimately grows its "
+                "own total from 0; that is the one sanctioned --allow-raise use — verify "
+                "no PRE-EXISTING dim's total moved, then re-run with --allow-raise."
+            )
             return 1
+        if raised and allow_raise:
+            detail = ", ".join(f"{d}: {old_totals[d]} -> {current_totals[d]}" for d in raised)
+            print(f"[dl-spec-ratchet] ALLOW-RAISE used — totals that rose: {detail}")
     payload = {
         "comment": (
             "Frozen ratchet baseline for check_dl_spec_ratchet.py (DL-R3 SPEC v0.9 "
-            "immediately-effective clauses, generated at main@d87d42ea). Only lower via "
-            "--update-baseline after a migration batch; never raise."
+            "immediately-effective clauses; dsGradientApiCalls/dsAccentGradientForbidden "
+            "added by DS-GRADIENT @wt134 covering the DS gradient-API blind spot). Only "
+            "lower via --update-baseline after a migration batch; never raise."
         ),
         "files": current,
     }
@@ -509,13 +540,71 @@ def self_test() -> int:
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
+    # Case 4 — DS gradient-API dims: accent alias-family ban + family ratchet.
+    tmp = make_fixture()
+    try:
+        import contextlib
+        import io
+
+        (tmp / "mobile/lib/core/design/widgets").mkdir(parents=True)
+        pinned = "mobile/lib/core/design/widgets/legacy_widget.dart"
+        f = tmp / pinned
+        f.write_text("final g = DS.accentGradient;\n", encoding="utf-8")
+        bp = write_baseline(
+            tmp,
+            {pinned: {"dsGradientApiCalls": 1, "dsAccentGradientForbidden": 1}},
+        )
+
+        def run_capture4() -> tuple[int, str]:
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                code = run_guard(tmp, bp)
+            return code, buf.getvalue()
+
+        # a) any DS gradient API in a NEW file: allowance 0 → family dim fires
+        new_f = tmp / "mobile/lib/features/demo/presentation/g_new_screen.dart"
+        new_f.write_text("final g = DS.infoGradient;\n", encoding="utf-8")
+        code, out = run_capture4()
+        if code != 1 or "dsGradientApiCalls" not in out:
+            failures.append("case4a new-file DS gradient API should FAIL")
+        if "dsAccentGradientForbidden" in out:
+            failures.append("case4a infoGradient must not trip the accent ban")
+        new_f.unlink()
+
+        # b) DS.accentGradient in a NEW file: BOTH the family dim and the
+        #    accent alias-family ban fire (the gradientLiteral blind spot).
+        new_f.write_text("final g = DS.accentGradient;\n", encoding="utf-8")
+        code, out = run_capture4()
+        if code != 1 or "dsAccentGradientForbidden" not in out or "dsGradientApiCalls" not in out:
+            failures.append("case4b new-file accentGradient should FAIL both dims")
+        new_f.unlink()
+
+        # c) pinned file raising its family count: ratchet refuses.
+        f.write_text(
+            "final g = DS.accentGradient;\n"
+            "final h = DS.secondaryGradientDark;\n",
+            encoding="utf-8",
+        )
+        code, out = run_capture4()
+        if code != 1 or "dsGradientApiCalls 2 > baseline 1" not in out:
+            failures.append("case4c pinned-file gradient-API raise should FAIL")
+
+        # d) restore pinned content: PASS (forbidden stays at its pin).
+        f.write_text("final g = DS.accentGradient;\n", encoding="utf-8")
+        code, out = run_capture4()
+        if code != 0:
+            failures.append("case4d restored pinned file should PASS")
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
     if failures:
         print(f"[dl-spec-ratchet] SELF-TEST FAIL — {len(failures)} case(s):")
         for f in failures:
             print(f"  - {f}")
         return 1
     print("[dl-spec-ratchet] SELF-TEST PASS — clean PASS, stacked violations, "
-          "ratchet raise, zero-tolerance, confetti allowance, particle bypass all behave")
+          "ratchet raise, zero-tolerance, confetti allowance, particle bypass, "
+          "DS gradient-API dims all behave")
     return 0
 
 
