@@ -302,6 +302,26 @@ class GalaxyOutcomeAbsorber:
         TaskKnowledgeLink 前置链接。无模糊匹配（完成不得凭猜测点亮）。"""
         resolved: list[UUID] = []
 
+        # GHOST-OUTCOME 守卫：outcome 的任务主体已被删除（生产硬删路径
+        # TaskService.delete 无 outcome 回收联动；探针账号清理同样级联删
+        # 任务）时，捕获后广播的事件成为幽灵——D-02 账本读模型从 tasks
+        # 重算、已删任务直接消失，若仍凭 correlation_node_id 点亮，星图
+        # 与真源漂移（mastery 被不存在任务的事件拨动）。诚实动作 =
+        # no_target，与账本对账面保持一致。
+        raw_subject = payload.get("correlation_task_id")
+        if raw_subject:
+            try:
+                subject_id = UUID(str(raw_subject))
+            except (ValueError, AttributeError):
+                subject_id = None
+            if subject_id is not None and await self.db.get(Task, subject_id) is None:
+                logger.warning(
+                    "outcome {} references deleted task {}; skipped (ghost guard)",
+                    payload.get("outcome_id"),
+                    subject_id,
+                )
+                return []
+
         raw_node = payload.get("correlation_node_id")
         if raw_node:
             try:

@@ -423,6 +423,34 @@ async def test_stale_node_reference_is_skipped(absorber_env):
     assert await _status(db, user.id, node.id) is None, "悬挂引用不得点亮其他节点"
 
 
+async def test_ghost_outcome_of_deleted_task_never_lights(absorber_env):
+    """GHOST-OUTCOME：捕获后任务被删（生产硬删路径无 outcome 联动）→ 零写入.
+
+    wt135 活库取证：DELETE /tasks/{id} → TaskService.delete 硬删任务且不回收
+    已广播的 outcome.recorded；探针账号清理（user/task 级联删除）后事件残留
+    于 Redis stream 成为幽灵。旧解析链在 payload 带 correlation_node_id 时
+    绕过任务存在性直接点亮 → mastery 被不存在任务拨动，且与 D-02 账本读模型
+    （从 tasks 重算、已删任务消失）漂移——「星图不诚实」。
+
+    守卫语义：correlation_task_id 指向不存在任务 → no_target，与账本对账面
+    保持一致（真实成果的真相面在任务行，任务没了 outcome 不可验证）。
+    """
+    db, user, node = absorber_env
+    task = await _make_task(db, user, node)
+    payload = _task_payload(task)  # 捕获时任务在：带 correlation_task_id + correlation_node_id
+    assert payload["correlation_task_id"] == str(task.id)
+    assert payload["correlation_node_id"] == str(node.id)
+
+    await db.delete(task)  # 生产同款硬删（TaskService.delete = db.delete）
+    await db.commit()
+
+    result = await GalaxyOutcomeAbsorber(db).absorb_outcome(payload)
+
+    assert result.action == "no_target", "已删任务的 outcome 不得点亮任何节点"
+    assert await _status(db, user.id, node.id) is None, "幽灵事件不得创建节点状态"
+    assert await _audit_rows(db, user.id, node.id) == [], "幽灵事件不得写掌握度证据行"
+
+
 # ---------------------------------------------------------------------------
 # 消费者路由（传输层薄包装；吸收行为走真实 DB）
 # ---------------------------------------------------------------------------
