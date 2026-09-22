@@ -1571,10 +1571,12 @@ async def test_process_stream_review_required_drains_queue_before_return(orchest
 
 
 @pytest.mark.asyncio
-async def test_process_stream_phase_a_hard_stops_cold_start_plan_before_planning(orchestrator_factory):
+async def test_process_stream_phase_a_hard_stops_cold_start_plan_before_planning(orchestrator_factory, monkeypatch):
     orchestrator, _, _state_updates = orchestrator_factory()
     request = _make_request(message="帮我做一个 14 天物理考试冲刺计划")
 
+    # monkeypatch 作用域注入：测试结束自动还原 sys.modules，不再向字母序靠后
+    # 的测试文件泄漏假 shadow_prediction_service 模块（ORCH-DEBT 治理）。
     shadow_module = types.ModuleType("app.services.shadow_prediction_service")
     shadow_module.shadow_prediction_service = types.SimpleNamespace(
         predict_intent_only=AsyncMock(
@@ -1584,7 +1586,7 @@ async def test_process_stream_phase_a_hard_stops_cold_start_plan_before_planning
             }
         )
     )
-    sys.modules["app.services.shadow_prediction_service"] = shadow_module
+    monkeypatch.setitem(sys.modules, "app.services.shadow_prediction_service", shadow_module)
 
     orchestrator_module = importlib.import_module("app.orchestration.orchestrator")
     orchestrator._check_sufficiency = orchestrator_module.ChatOrchestrator._check_sufficiency.__get__(
@@ -1635,10 +1637,13 @@ async def test_process_stream_phase_a_hard_stops_cold_start_plan_before_planning
 
 
 @pytest.mark.asyncio
-async def test_process_stream_phase_a_hard_stop_survives_underclassified_planning_intent(orchestrator_factory):
+async def test_process_stream_phase_a_hard_stop_survives_underclassified_planning_intent(
+    orchestrator_factory, monkeypatch
+):
     orchestrator, _, _state_updates = orchestrator_factory()
     request = _make_request(message="帮我安排一下 14 天物理考试冲刺计划")
 
+    # monkeypatch 作用域注入：测试结束自动还原 sys.modules，不跨文件泄漏。
     shadow_module = types.ModuleType("app.services.shadow_prediction_service")
     shadow_module.shadow_prediction_service = types.SimpleNamespace(
         predict_intent_only=AsyncMock(
@@ -1648,7 +1653,7 @@ async def test_process_stream_phase_a_hard_stop_survives_underclassified_plannin
             }
         )
     )
-    sys.modules["app.services.shadow_prediction_service"] = shadow_module
+    monkeypatch.setitem(sys.modules, "app.services.shadow_prediction_service", shadow_module)
 
     orchestrator_module = importlib.import_module("app.orchestration.orchestrator")
     orchestrator._check_sufficiency = orchestrator_module.ChatOrchestrator._check_sufficiency.__get__(
@@ -1698,10 +1703,11 @@ async def test_process_stream_phase_a_hard_stop_survives_underclassified_plannin
 
 
 @pytest.mark.asyncio
-async def test_sufficiency_gate_allows_normal_chat_without_clarification(orchestrator_factory):
+async def test_sufficiency_gate_allows_normal_chat_without_clarification(orchestrator_factory, monkeypatch):
     orchestrator, _, _state_updates = orchestrator_factory()
     request = _make_request(message="帮我解释一下 TCP 三次握手")
 
+    # monkeypatch 作用域注入：测试结束自动还原 sys.modules，不跨文件泄漏。
     shadow_module = types.ModuleType("app.services.shadow_prediction_service")
     shadow_module.shadow_prediction_service = types.SimpleNamespace(
         predict_intent_only=AsyncMock(
@@ -1711,7 +1717,7 @@ async def test_sufficiency_gate_allows_normal_chat_without_clarification(orchest
             }
         )
     )
-    sys.modules["app.services.shadow_prediction_service"] = shadow_module
+    monkeypatch.setitem(sys.modules, "app.services.shadow_prediction_service", shadow_module)
 
     orchestrator_module = importlib.import_module("app.orchestration.orchestrator")
     orchestrator._check_sufficiency = orchestrator_module.ChatOrchestrator._check_sufficiency.__get__(

@@ -273,3 +273,24 @@ def pytest_collection_modifyitems(config, items):
         nodeid = item.nodeid
         if "tests/benchmark/" in nodeid and not perf_enabled:
             item.add_marker(pytest.mark.skip(reason="PERF_TESTS=1 required"))
+
+
+def pytest_collection_finish(session):
+    """TEST-HYGIENE：0-collected 防护（zsh 通配族「no tests ran」警示）。
+
+    合并会话多次踩坑：zsh 通配不匹配/猜错测试文件名后，pytest 静默收集到
+    0 个用例，退出码 5（no tests ran）容易被误读为「无事发生」。此处仅在
+    收集结果为 0 时打印醒目定位提示；刻意空跑（如 -k 过滤全剔除）看到提示
+    也无害——不改变任何退出码语义，CI 判定不受影响。
+    """
+    # pytest 9.x 里 session.testscollected 在本 hook 之后才赋值，取 session.items。
+    if getattr(session, "items", None):
+        return
+    invocation_args = list(session.config.invocation_params.args or [])
+    print("\n" + "=" * 78)
+    print("WARNING: pytest collected 0 tests —— 本次运行没有收集到任何用例！")
+    print(f"  invocation args: {invocation_args!r}")
+    print("  提示：zsh 通配不匹配会静默失败；请先用 `rg --files -g 'test_*.py'`")
+    print("  在 backend/tests/ 下确认真实文件名，再把确切路径传给 pytest。")
+    print("  （本警示不改变退出码：no-tests 仍为退出码 5。）")
+    print("=" * 78)

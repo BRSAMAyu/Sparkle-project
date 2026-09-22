@@ -187,8 +187,10 @@ async def test_experience_actuator_auto_retrieves_user_material_grounding(monkey
         ),
     )
 
-    async def _fake_resolve_scoped_files(db_session, *, user_id, requested_file_ids):
-        del db_session, user_id, requested_file_ids
+    async def _fake_resolve_scoped_files(
+        db_session, *, user_id, requested_file_ids, include_group_documents, group_ids
+    ):
+        del db_session, user_id, requested_file_ids, include_group_documents, group_ids
         return [fake_file]
 
     async def _fake_document_vector_search(self, *, user_id, query, file_ids, vector_query, limit, threshold):
@@ -248,8 +250,10 @@ async def test_experience_actuator_keeps_core_adjustments_when_grounding_sidecar
 ):
     actuator = ExperienceActuator(db_session, redis=_FakeRedis())
 
-    async def _fake_resolve_scoped_files(db_session, *, user_id, requested_file_ids):
-        del db_session, user_id, requested_file_ids
+    async def _fake_resolve_scoped_files(
+        db_session, *, user_id, requested_file_ids, include_group_documents, group_ids
+    ):
+        del db_session, user_id, requested_file_ids, include_group_documents, group_ids
         raise RuntimeError("vector index unavailable")
 
     monkeypatch.setattr(

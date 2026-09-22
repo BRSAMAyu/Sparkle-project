@@ -544,6 +544,7 @@ async def test_phase5_orchestrator_cold_start_plan_asks_one_question_instead_of_
 
     monkeypatch.setattr(circuit_breaker_module.CircuitBreaker, "initialize", _breaker_initialize)
 
+    # monkeypatch 作用域注入：测试结束自动还原 sys.modules，不跨文件泄漏。
     shadow_module = types.ModuleType("app.services.shadow_prediction_service")
     shadow_module.shadow_prediction_service = SimpleNamespace(
         predict_intent_only=AsyncMock(
@@ -553,7 +554,7 @@ async def test_phase5_orchestrator_cold_start_plan_asks_one_question_instead_of_
             }
         )
     )
-    sys.modules["app.services.shadow_prediction_service"] = shadow_module
+    monkeypatch.setitem(sys.modules, "app.services.shadow_prediction_service", shadow_module)
 
     user = User(
         username="phase5_cold_start_user",

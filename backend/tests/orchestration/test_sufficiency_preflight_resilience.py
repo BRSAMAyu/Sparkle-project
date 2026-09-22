@@ -21,7 +21,6 @@ from __future__ import annotations
 import asyncio
 import importlib
 import json
-import sys
 import uuid
 from typing import Any
 
@@ -66,15 +65,9 @@ async def preflight_probe(orchestrator_factory, monkeypatch):  # noqa: F811
     orchestrator_module = importlib.import_module("app.orchestration.orchestrator")
     sufficiency_checker_module = importlib.import_module("app.orchestration.sufficiency_checker")
 
-    # 套件级污染防御：test_orchestrator_process_stream_integration 的若干用例把
-    # 假 shadow_prediction_service 模块塞进 sys.modules 且不回收（字母序先于本
-    # 文件执行）。此处还原并钉住真实模块，保证启发式意图判定与本文件任意
-    # 排序无关。
-    leaked_shadow = sys.modules.get("app.services.shadow_prediction_service")
-    if leaked_shadow is None or getattr(leaked_shadow, "__file__", None) is None:
-        sys.modules.pop("app.services.shadow_prediction_service", None)
-        real_shadow = importlib.import_module("app.services.shadow_prediction_service")
-        monkeypatch.setitem(sys.modules, "app.services.shadow_prediction_service", real_shadow)
+    # 说明：上游 test_orchestrator_process_stream_integration 的假
+    # shadow_prediction_service 注入已改为 monkeypatch 作用域（自动回收），
+    # 本文件原先的「钉回真实模块」防御随之移除（TEST-HYGIENE 治理）。
 
     # 快响文案走兜底（确定性，不经 LLM）
     monkeypatch.setattr(settings, "FAST_INTERACTION_COPY_ENABLED", False, raising=False)
