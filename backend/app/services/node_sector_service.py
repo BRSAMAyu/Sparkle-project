@@ -17,6 +17,14 @@ from app.models.galaxy import KnowledgeNode, NodeRelation
 from app.models.sector import SectorCode
 from app.services.llm_service import get_llm_service, get_llm_service_for_specific_model
 
+#: SECTOR-BACKFILL-Dedup · 在途去重键（Redis，TTL 见
+#: ``NODE_SECTOR_BACKFILL_DEDUP_TTL``）。同一用户的回填批次在队列/执行期间
+#: 不重复入队（get_galaxy_graph 每次取图都会触发 ensure_backfill_for_user，
+#: 无去重时同一批 VOID/pending 节点会被反复灌进 glm_batch——COLDSTART 实证
+#: 队列恒满 200/200、新节点回填被背压丢弃）。Redis 故障时放行（有界降级：
+#: 背压硬顶仍在，不产生无界堆积）。
+BACKFILL_INFLIGHT_KEY = "sector_backfill:inflight:{user_id}"
+
 
 def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
@@ -474,13 +482,27 @@ class NodeSectorService:
         user_id: UUID,
         limit: int = 24,
     ) -> list[UUID]:
+        # SECTOR-BACKFILL-Dedup：已 completed 的节点不再回填（含 completed-VOID）。
+        # 旧条件 ``dominant_sector_code == VOID`` 无 status 门槛，LLM 判定确属
+        # VOID 的 completed 节点会在每次取图时被重选、重灌队列——实证（演示库）
+        # 27 个 completed-VOID 节点构成永久重复入队源，把 glm_batch 顶到背压
+        # 上限，饿死真正未分类节点的回填。completed-VOID 的存量修正走
+        # scripts/devtools/replay_void_sector_backfill.py（幂等重放），不走热路径。
+        not_completed = or_(
+            KnowledgeNode.sector_classification_status.is_(None),
+            KnowledgeNode.sector_classification_status != "completed",
+        )
         stmt = (
             select(KnowledgeNode.id)
             .where(
-                or_(
-                    KnowledgeNode.sector_weights.is_(None),
-                    KnowledgeNode.dominant_sector_code == SectorCode.VOID.value,
-                    KnowledgeNode.sector_classification_status.in_(["pending", "failed"]),
+                and_(
+                    KnowledgeNode.deleted_at.is_(None),  # 软删节点不占回填预算
+                    not_completed,
+                    or_(
+                        KnowledgeNode.sector_weights.is_(None),
+                        KnowledgeNode.dominant_sector_code == SectorCode.VOID.value,
+                        KnowledgeNode.sector_classification_status.in_(["pending", "failed"]),
+                    ),
                 )
             )
             .limit(limit)
@@ -488,20 +510,52 @@ class NodeSectorService:
         result = await self.db.execute(stmt)
         return [row[0] for row in result.all()]
 
+    async def _backfill_inflight(self, user_id: UUID) -> bool:
+        """在途去重探测（Redis 故障放行，有界降级：背压硬顶仍在）。"""
+        try:
+            marker = await cache_service.get(BACKFILL_INFLIGHT_KEY.format(user_id=user_id))
+            return bool(marker)
+        except Exception as exc:  # noqa: BLE001 — 去重面故障不得打断回填主路径
+            logger.warning("[NodeSectorBackfill] inflight probe failed (allow): user={} {!r}", user_id, exc)
+            return False
+
+    async def _mark_backfill_inflight(self, user_id: UUID) -> None:
+        try:
+            ttl = int(getattr(settings, "NODE_SECTOR_BACKFILL_DEDUP_TTL", 600) or 600)
+            await cache_service.set(
+                BACKFILL_INFLIGHT_KEY.format(user_id=user_id),
+                "1",
+                ttl=ttl,
+            )
+        except Exception as exc:  # noqa: BLE001 — 标记失败只影响去重，不影响投递
+            logger.warning("[NodeSectorBackfill] inflight mark failed (dedup weakened): user={} {!r}", user_id, exc)
+
     async def enqueue_backfill_for_nodes(
         self,
         *,
         user_id: UUID,
         node_ids: list[UUID],
     ) -> bool:
+        if not node_ids:
+            return False
         from app.services.glm_batch_service import glm_batch_service
 
+        # SECTOR-BACKFILL-Dedup：该用户已有批次在队列/执行中 → 本轮跳过。
+        # ensure_backfill_for_user 挂在 get_galaxy_graph 每次取图上，无此去重时
+        # 同一批 pending 节点每取一次图就重发一次任务（活栈实证：同一用户
+        # 0.7s/12s 内两次 enqueue node_count=24），队列被重复任务灌满。
+        if await self._backfill_inflight(user_id):
+            logger.debug(
+                "[NodeSectorBackfill] batch already inflight for user={}, skip enqueue",
+                user_id,
+            )
+            return False
         accepted = await self.mark_nodes_pending(node_ids)
         if not accepted:
             return False
         try:
             # dispatch_task_async 内部 off-loop + 超时熔断 + 不抛异常（restore-storm 修复）
-            return await glm_batch_service.enqueue_node_sector_backfill(
+            dispatched = await glm_batch_service.enqueue_node_sector_backfill(
                 user_id=user_id,
                 node_ids=accepted,
             )
@@ -513,6 +567,18 @@ class NodeSectorService:
                 exc,
             )
             return False
+        if dispatched:
+            await self._mark_backfill_inflight(user_id)
+        else:
+            # 丢弃/投递失败显式降级：节点保持 pending（下轮取图自然重试），
+            # 不静默——背压丢弃本身已有 drops 指标 + WARNING，这里补齐业务面留痕。
+            logger.warning(
+                "[NodeSectorBackfill] dispatch dropped or failed for user={} nodes={} "
+                "(queue backpressure/broker); nodes stay pending for next-fetch retry",
+                user_id,
+                len(accepted),
+            )
+        return dispatched
 
     async def ensure_backfill_for_user(
         self,
@@ -522,13 +588,20 @@ class NodeSectorService:
         limit: int = 24,
     ) -> bool:
         if candidate_nodes is not None:
-            node_ids = [
-                node.id
-                for node in candidate_nodes
-                if not getattr(node, "sector_weights", None)
-                or str(getattr(node, "dominant_sector_code", "VOID") or "VOID") == SectorCode.VOID.value
-                or str(getattr(node, "sector_classification_status", "pending") or "pending") in {"pending", "failed"}
-            ][:limit]
+            node_ids = []
+            for node in candidate_nodes:
+                status = str(getattr(node, "sector_classification_status", None) or "pending")
+                # SECTOR-BACKFILL-Dedup：completed（含 completed-VOID）不回填，
+                # 与 find_nodes_needing_backfill 的选择面同语义（防重复入队洪泛）。
+                if status == "completed":
+                    continue
+                if (
+                    not getattr(node, "sector_weights", None)
+                    or str(getattr(node, "dominant_sector_code", "VOID") or "VOID") == SectorCode.VOID.value
+                    or status in {"pending", "failed"}
+                ):
+                    node_ids.append(node.id)
+            node_ids = node_ids[:limit]
         else:
             node_ids = await self.find_nodes_needing_backfill(user_id=user_id, limit=limit)
         return await self.enqueue_backfill_for_nodes(user_id=user_id, node_ids=node_ids)

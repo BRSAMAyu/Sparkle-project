@@ -1,0 +1,856 @@
+diff --git a/backend/app/config/settings.py b/backend/app/config/settings.py
+index 1164fb0c..0a4dd449 100755
+--- a/backend/app/config/settings.py
++++ b/backend/app/config/settings.py
+@@ -434,6 +434,10 @@ class Settings(BaseSettings):
+     QUEUE_BACKPRESSURE_DEFAULT_MAX_DEPTH: int = 1000
+     QUEUE_BACKPRESSURE_LIMITS_JSON: str = '{"glm_batch": 200}'
+     QUEUE_BACKPRESSURE_PROBE_TIMEOUT_SECONDS: float = 1.5
++    # SECTOR-BACKFILL-Dedup · 星域回填在途去重 TTL（秒）：同用户回填批次入队后
++    # 在该窗口内不重复入队（get_galaxy_graph 每次取图都触发 ensure_backfill，
++    # 活栈实证无去重时同一批节点 0.7s 内被重复 enqueue、队列恒满 200/200）。
++    NODE_SECTOR_BACKFILL_DEDUP_TTL: int = 600
+     AI_MODE_FAST_DAILY_REQUEST_LIMIT: int = 120
+     AI_MODE_BALANCED_DAILY_REQUEST_LIMIT: int = 60
+     AI_MODE_DEEP_DAILY_REQUEST_LIMIT: int = 24
+diff --git a/backend/app/core/security_monitor.py b/backend/app/core/security_monitor.py
+index f292fc4f..f990e8ee 100755
+--- a/backend/app/core/security_monitor.py
++++ b/backend/app/core/security_monitor.py
+@@ -405,7 +405,15 @@ class SecurityMonitor:
+         event: SecurityEvent,
+         db: AsyncSession
+     ) -> None:
+-        """记录安全事件到数据库"""
++        """记录安全事件到数据库。
++
++        AUDIT-INSERT-Fix（COLDSTART 双可靠性项之二）：
++        - 插入包在 SAVEPOINT（``begin_nested``）里：审计行失败只回滚自身，
++          不再 ``db.rollback()`` 整个请求事务（旧实现会把同事务里已 flush 的
++          LoginAttempt 等一并回滚——审计失败反而放大成业务数据丢失）；
++        - 失败降级：完整事件 JSON 以 ``[SecurityAuditFallback]`` 打进日志
++          （loguru 文件 sink 落盘），安全事件不再只留一句异常摘要后静默丢失。
++        """
+         try:
+             audit_log = SecurityAuditLog(
+                 event_type=event.event_type.value,
+@@ -418,21 +426,29 @@ class SecurityMonitor:
+                 threat_level=event.threat_level.value,
+                 timestamp=event.timestamp
+             )
+-            db.add(audit_log)
+-            # 同上：flush 由 get_db 统一提交，避免请求中段终结事务
+-            await db.flush()
++            async with db.begin_nested():
++                db.add(audit_log)
++                # 同上：flush 由 get_db 统一提交，避免请求中段终结事务
++                await db.flush()
++        except Exception as e:
++            logger.error(f"记录安全事件失败（已降级为日志留痕）: {e}")
++            try:
++                payload = json.dumps(event.to_dict(), ensure_ascii=False, default=str)
++            except Exception:  # noqa: BLE001 — 事件本身残缺时也要留痕
++                payload = repr(event)
++            logger.warning("[SecurityAuditFallback] {}", payload)
++            return
+ 
+-            # 同时记录到Redis用于实时监控
++        # 同时记录到Redis用于实时监控（非关键路径：失败不影响审计落库）
++        try:
+             redis_key = f"security:events:{event.timestamp.timestamp()}"
+             await self.redis.setex(
+                 redis_key,
+                 3600,  # 保留1小时
+                 json.dumps(event.to_dict())
+             )
+-
+         except Exception as e:
+-            logger.error(f"记录安全事件失败: {e}")
+-            await db.rollback()
++            logger.warning(f"安全事件 Redis 记录失败（审计行已落库）: {e}")
+ 
+     async def _check_failed_login_rate(
+         self,
+diff --git a/backend/app/models/audit_log.py b/backend/app/models/audit_log.py
+index 831319c7..2229e248 100755
+--- a/backend/app/models/audit_log.py
++++ b/backend/app/models/audit_log.py
+@@ -17,9 +17,14 @@ from app.models.base import GUID
+ 
+ class SecurityAuditLog(Base):
+     """安全审计日志表"""
++
+     __tablename__ = "security_audit_logs"
+ 
+-    id = Column(PGUUID(as_uuid=True), primary_key=True, index=True)
++    # AUDIT-INSERT-Fix · id 必须有客户端默认值：表 DDL（baseline cc9383c4c29f）
++    # 无 server_default，模型再无 Python 侧 default 时 INSERT 缺 id →
++    # NotNullViolationError（活栈 /tmp/fastapi_engine.log 实证：每条安全事件
++    # 全部落库失败）。与同文件 AdminAuditLog.id 的写法对齐。
++    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+ 
+     # 事件信息
+     event_type = Column(String(100), nullable=False, index=True)  # 事件类型
+diff --git a/backend/app/services/node_sector_service.py b/backend/app/services/node_sector_service.py
+index addf0934..4ed21aeb 100644
+--- a/backend/app/services/node_sector_service.py
++++ b/backend/app/services/node_sector_service.py
+@@ -17,6 +17,14 @@ from app.models.galaxy import KnowledgeNode, NodeRelation
+ from app.models.sector import SectorCode
+ from app.services.llm_service import get_llm_service, get_llm_service_for_specific_model
+ 
++#: SECTOR-BACKFILL-Dedup · 在途去重键（Redis，TTL 见
++#: ``NODE_SECTOR_BACKFILL_DEDUP_TTL``）。同一用户的回填批次在队列/执行期间
++#: 不重复入队（get_galaxy_graph 每次取图都会触发 ensure_backfill_for_user，
++#: 无去重时同一批 VOID/pending 节点会被反复灌进 glm_batch——COLDSTART 实证
++#: 队列恒满 200/200、新节点回填被背压丢弃）。Redis 故障时放行（有界降级：
++#: 背压硬顶仍在，不产生无界堆积）。
++BACKFILL_INFLIGHT_KEY = "sector_backfill:inflight:{user_id}"
++
+ 
+ def _utcnow() -> datetime:
+     return datetime.now(UTC).replace(tzinfo=None)
+@@ -474,13 +482,27 @@ class NodeSectorService:
+         user_id: UUID,
+         limit: int = 24,
+     ) -> list[UUID]:
++        # SECTOR-BACKFILL-Dedup：已 completed 的节点不再回填（含 completed-VOID）。
++        # 旧条件 ``dominant_sector_code == VOID`` 无 status 门槛，LLM 判定确属
++        # VOID 的 completed 节点会在每次取图时被重选、重灌队列——实证（演示库）
++        # 27 个 completed-VOID 节点构成永久重复入队源，把 glm_batch 顶到背压
++        # 上限，饿死真正未分类节点的回填。completed-VOID 的存量修正走
++        # scripts/devtools/replay_void_sector_backfill.py（幂等重放），不走热路径。
++        not_completed = or_(
++            KnowledgeNode.sector_classification_status.is_(None),
++            KnowledgeNode.sector_classification_status != "completed",
++        )
+         stmt = (
+             select(KnowledgeNode.id)
+             .where(
+-                or_(
+-                    KnowledgeNode.sector_weights.is_(None),
+-                    KnowledgeNode.dominant_sector_code == SectorCode.VOID.value,
+-                    KnowledgeNode.sector_classification_status.in_(["pending", "failed"]),
++                and_(
++                    KnowledgeNode.deleted_at.is_(None),  # 软删节点不占回填预算
++                    not_completed,
++                    or_(
++                        KnowledgeNode.sector_weights.is_(None),
++                        KnowledgeNode.dominant_sector_code == SectorCode.VOID.value,
++                        KnowledgeNode.sector_classification_status.in_(["pending", "failed"]),
++                    ),
+                 )
+             )
+             .limit(limit)
+@@ -488,20 +510,52 @@ class NodeSectorService:
+         result = await self.db.execute(stmt)
+         return [row[0] for row in result.all()]
+ 
++    async def _backfill_inflight(self, user_id: UUID) -> bool:
++        """在途去重探测（Redis 故障放行，有界降级：背压硬顶仍在）。"""
++        try:
++            marker = await cache_service.get(BACKFILL_INFLIGHT_KEY.format(user_id=user_id))
++            return bool(marker)
++        except Exception as exc:  # noqa: BLE001 — 去重面故障不得打断回填主路径
++            logger.warning("[NodeSectorBackfill] inflight probe failed (allow): user={} {!r}", user_id, exc)
++            return False
++
++    async def _mark_backfill_inflight(self, user_id: UUID) -> None:
++        try:
++            ttl = int(getattr(settings, "NODE_SECTOR_BACKFILL_DEDUP_TTL", 600) or 600)
++            await cache_service.set(
++                BACKFILL_INFLIGHT_KEY.format(user_id=user_id),
++                "1",
++                ttl=ttl,
++            )
++        except Exception as exc:  # noqa: BLE001 — 标记失败只影响去重，不影响投递
++            logger.warning("[NodeSectorBackfill] inflight mark failed (dedup weakened): user={} {!r}", user_id, exc)
++
+     async def enqueue_backfill_for_nodes(
+         self,
+         *,
+         user_id: UUID,
+         node_ids: list[UUID],
+     ) -> bool:
++        if not node_ids:
++            return False
+         from app.services.glm_batch_service import glm_batch_service
+ 
++        # SECTOR-BACKFILL-Dedup：该用户已有批次在队列/执行中 → 本轮跳过。
++        # ensure_backfill_for_user 挂在 get_galaxy_graph 每次取图上，无此去重时
++        # 同一批 pending 节点每取一次图就重发一次任务（活栈实证：同一用户
++        # 0.7s/12s 内两次 enqueue node_count=24），队列被重复任务灌满。
++        if await self._backfill_inflight(user_id):
++            logger.debug(
++                "[NodeSectorBackfill] batch already inflight for user={}, skip enqueue",
++                user_id,
++            )
++            return False
+         accepted = await self.mark_nodes_pending(node_ids)
+         if not accepted:
+             return False
+         try:
+             # dispatch_task_async 内部 off-loop + 超时熔断 + 不抛异常（restore-storm 修复）
+-            return await glm_batch_service.enqueue_node_sector_backfill(
++            dispatched = await glm_batch_service.enqueue_node_sector_backfill(
+                 user_id=user_id,
+                 node_ids=accepted,
+             )
+@@ -513,6 +567,18 @@ class NodeSectorService:
+                 exc,
+             )
+             return False
++        if dispatched:
++            await self._mark_backfill_inflight(user_id)
++        else:
++            # 丢弃/投递失败显式降级：节点保持 pending（下轮取图自然重试），
++            # 不静默——背压丢弃本身已有 drops 指标 + WARNING，这里补齐业务面留痕。
++            logger.warning(
++                "[NodeSectorBackfill] dispatch dropped or failed for user={} nodes={} "
++                "(queue backpressure/broker); nodes stay pending for next-fetch retry",
++                user_id,
++                len(accepted),
++            )
++        return dispatched
+ 
+     async def ensure_backfill_for_user(
+         self,
+@@ -522,13 +588,20 @@ class NodeSectorService:
+         limit: int = 24,
+     ) -> bool:
+         if candidate_nodes is not None:
+-            node_ids = [
+-                node.id
+-                for node in candidate_nodes
+-                if not getattr(node, "sector_weights", None)
+-                or str(getattr(node, "dominant_sector_code", "VOID") or "VOID") == SectorCode.VOID.value
+-                or str(getattr(node, "sector_classification_status", "pending") or "pending") in {"pending", "failed"}
+-            ][:limit]
++            node_ids = []
++            for node in candidate_nodes:
++                status = str(getattr(node, "sector_classification_status", None) or "pending")
++                # SECTOR-BACKFILL-Dedup：completed（含 completed-VOID）不回填，
++                # 与 find_nodes_needing_backfill 的选择面同语义（防重复入队洪泛）。
++                if status == "completed":
++                    continue
++                if (
++                    not getattr(node, "sector_weights", None)
++                    or str(getattr(node, "dominant_sector_code", "VOID") or "VOID") == SectorCode.VOID.value
++                    or status in {"pending", "failed"}
++                ):
++                    node_ids.append(node.id)
++            node_ids = node_ids[:limit]
+         else:
+             node_ids = await self.find_nodes_needing_backfill(user_id=user_id, limit=limit)
+         return await self.enqueue_backfill_for_nodes(user_id=user_id, node_ids=node_ids)
+diff --git a/backend/tests/unit/test_node_sector_backfill_dedup.py b/backend/tests/unit/test_node_sector_backfill_dedup.py
+new file mode 100644
+index 00000000..14c57113
+--- /dev/null
++++ b/backend/tests/unit/test_node_sector_backfill_dedup.py
+@@ -0,0 +1,244 @@
++"""SECTOR-BACKFILL-Dedup · 星域回填去重与降级回归（COLDSTART 双可靠性项之一）.
++
++活栈根因（2026-09 实证：glm_batch 恒满 200/200、VOID 29/129）：
++- ``get_galaxy_graph`` 每次取图调 ``ensure_backfill_for_user``，无在途去重时
++  同一批 pending/VOID 节点被反复 enqueue（同一用户 0.7s 两次 node_count=24）；
++- completed-VOID 节点（演示库 27 个）被 ``dominant_sector_code == VOID`` 无
++  status 门槛地永久重选 → 重复任务灌满队列 → 背压丢新节点回填。
++
++本文件双向钉死：
++- 选择面：completed（含 completed-VOID）不再被 ``find_nodes_needing_backfill``
++  与 ``ensure_backfill_for_user`` 选中；pending/failed/未分类仍被选中；
++- 入队面：在途去重命中 → 不重复入队；投递成功 → 写在途标记；
++  背压丢弃/投递失败 → 显式 WARNING 留痕（不静默）、不写标记（下轮自然重试）、
++  节点保持 pending；
++- 有界降级：Redis 去重探测自身故障 → 放行入队（背压硬顶仍在）。
++"""
++
++from __future__ import annotations
++
++import sys
++from pathlib import Path
++from unittest.mock import AsyncMock, patch
++from uuid import uuid4
++
++import pytest
++import pytest_asyncio
++from sqlalchemy import select
++
++REPO_ROOT = Path(__file__).resolve().parents[3]
++if str(REPO_ROOT) not in sys.path:
++    sys.path.insert(0, str(REPO_ROOT))
++
++from app.models.base import Base
++from app.models.galaxy import KnowledgeNode
++from app.services.node_sector_service import NodeSectorService
++
++
++@pytest_asyncio.fixture
++async def sector_env(tmp_path):
++    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
++
++    engine = create_async_engine(
++        f"sqlite+aiosqlite:////{tmp_path / 'sector_dedup.db'}",
++        connect_args={"timeout": 15.0},
++    )
++    async with engine.begin() as conn:
++        await conn.run_sync(Base.metadata.create_all)
++
++    factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
++    async with factory() as session:
++        nodes = {
++            "unclassified": KnowledgeNode(name="Unclassified", description="d"),
++            "pending": KnowledgeNode(name="Pending", description="d"),
++            "failed": KnowledgeNode(name="Failed", description="d"),
++            "completed_void": KnowledgeNode(name="CompletedVoid", description="d"),
++            "completed_tech": KnowledgeNode(name="CompletedTech", description="d"),
++        }
++        for node in nodes.values():
++            session.add(node)
++        await session.flush()
++
++        nodes["pending"].sector_classification_status = "pending"
++        nodes["failed"].sector_classification_status = "failed"
++        nodes["completed_void"].sector_classification_status = "completed"
++        nodes["completed_void"].dominant_sector_code = "VOID"
++        nodes["completed_void"].sector_weights = {"VOID": 100}
++        nodes["completed_tech"].sector_classification_status = "completed"
++        nodes["completed_tech"].dominant_sector_code = "TECH"
++        nodes["completed_tech"].sector_weights = {"TECH": 100}
++        await session.commit()
++
++        yield session, nodes
++
++    await engine.dispose()
++
++
++@pytest.mark.asyncio
++async def test_find_nodes_excludes_completed_void(sector_env):
++    """completed-VOID / completed 非_VOID 不再被重选（重复入队根因钉死）。"""
++    session, nodes = sector_env
++    service = NodeSectorService(session)
++    found = await service.find_nodes_needing_backfill(user_id=uuid4())
++    found_set = set(found)
++    assert nodes["unclassified"].id in found_set
++    assert nodes["pending"].id in found_set
++    assert nodes["failed"].id in found_set
++    # 修复核心：completed 节点（无论是否 VOID）不进热路径
++    assert nodes["completed_void"].id not in found_set
++    assert nodes["completed_tech"].id not in found_set
++
++
++@pytest.mark.asyncio
++async def test_candidate_filter_excludes_completed(sector_env):
++    """candidate_nodes 路径与 DB 查询路径同语义：completed 被过滤。"""
++    session, nodes = sector_env
++    service = NodeSectorService(session)
++    with patch(
++        "app.services.node_sector_service.NodeSectorService.enqueue_backfill_for_nodes",
++        new=AsyncMock(return_value=True),
++    ) as enqueue:
++        await service.ensure_backfill_for_user(
++            user_id=uuid4(),
++            candidate_nodes=list(nodes.values()),
++        )
++    selected = enqueue.call_args.kwargs["node_ids"]
++    selected_set = set(selected)
++    assert nodes["completed_void"].id not in selected_set
++    assert nodes["completed_tech"].id not in selected_set
++    assert nodes["unclassified"].id in selected_set
++    assert nodes["pending"].id in selected_set
++    assert nodes["failed"].id in selected_set
++
++
++def _patch_cache(get_return=None, get_exc=None):
++    cache_mock = type("CacheMock", (), {})()
++    if get_exc is not None:
++        cache_mock.get = AsyncMock(side_effect=get_exc)
++    else:
++        cache_mock.get = AsyncMock(return_value=get_return)
++    cache_mock.set = AsyncMock(return_value=True)
++    return cache_mock
++
++
++@pytest.mark.asyncio
++async def test_enqueue_skipped_when_batch_inflight(sector_env):
++    """在途去重命中：不重复入队（同一批节点不被反复灌进 glm_batch）。"""
++    session, nodes = sector_env
++    service = NodeSectorService(session)
++    cache = _patch_cache(get_return="1")
++    with (
++        patch("app.services.node_sector_service.cache_service", cache),
++        patch(
++            "app.services.glm_batch_service.glm_batch_service.enqueue_node_sector_backfill",
++            new=AsyncMock(return_value=True),
++        ) as enqueue,
++    ):
++        dispatched = await service.enqueue_backfill_for_nodes(
++            user_id=uuid4(),
++            node_ids=[nodes["pending"].id],
++        )
++    assert dispatched is False
++    enqueue.assert_not_awaited()
++    cache.set.assert_not_awaited()
++    # 未进入 mark_nodes_pending：pending 状态不被无谓改写
++    await session.refresh(nodes["pending"])
++    assert nodes["pending"].sector_classification_status == "pending"
++
++
++@pytest.mark.asyncio
++async def test_enqueue_success_sets_inflight_marker(sector_env):
++    """投递成功 → 写在途标记 + 节点标记 pending。"""
++    session, nodes = sector_env
++    service = NodeSectorService(session)
++    cache = _patch_cache(get_return=None)
++    with (
++        patch("app.services.node_sector_service.cache_service", cache),
++        patch(
++            "app.services.glm_batch_service.glm_batch_service.enqueue_node_sector_backfill",
++            new=AsyncMock(return_value=True),
++        ) as enqueue,
++    ):
++        dispatched = await service.enqueue_backfill_for_nodes(
++            user_id=uuid4(),
++            node_ids=[nodes["unclassified"].id],
++        )
++    assert dispatched is True
++    enqueue.assert_awaited_once()
++    cache.set.assert_awaited_once()
++    await session.refresh(nodes["unclassified"])
++    assert nodes["unclassified"].sector_classification_status == "pending"
++
++
++@pytest.mark.asyncio
++async def test_enqueue_drop_degrades_loudly_not_silently(sector_env, tmp_path):
++    """背压丢弃（dispatch 返回 False）：显式 WARNING 留痕、不写标记、节点保持
++    pending 供下轮重试——丢弃不再无声。"""
++    session, nodes = sector_env
++    service = NodeSectorService(session)
++    cache = _patch_cache(get_return=None)
++
++    logs: list[str] = []
++    sink_id = None
++    from loguru import logger
++
++    try:
++        sink_id = logger.add(lambda message: logs.append(str(message)), level="WARNING")
++        with (
++            patch("app.services.node_sector_service.cache_service", cache),
++            patch(
++                "app.services.glm_batch_service.glm_batch_service.enqueue_node_sector_backfill",
++                new=AsyncMock(return_value=False),
++            ),
++        ):
++            dispatched = await service.enqueue_backfill_for_nodes(
++                user_id=uuid4(),
++                node_ids=[nodes["unclassified"].id],
++            )
++    finally:
++        if sink_id is not None:
++            logger.remove(sink_id)
++
++    assert dispatched is False
++    cache.set.assert_not_awaited()  # 丢弃不写在途标记 → 下轮取图自然重试
++    await session.refresh(nodes["unclassified"])
++    assert nodes["unclassified"].sector_classification_status == "pending"
++    assert any("dispatch dropped or failed" in line for line in logs), logs
++
++
++@pytest.mark.asyncio
++async def test_enqueue_probe_failure_degrades_bounded(sector_env):
++    """Redis 去重面自身故障 → 放行入队（有界降级；背压硬顶仍在）。"""
++    session, nodes = sector_env
++    service = NodeSectorService(session)
++    cache = _patch_cache(get_exc=ConnectionError("redis down"))
++    with (
++        patch("app.services.node_sector_service.cache_service", cache),
++        patch(
++            "app.services.glm_batch_service.glm_batch_service.enqueue_node_sector_backfill",
++            new=AsyncMock(return_value=True),
++        ) as enqueue,
++    ):
++        dispatched = await service.enqueue_backfill_for_nodes(
++            user_id=uuid4(),
++            node_ids=[nodes["pending"].id],
++        )
++    assert dispatched is True
++    enqueue.assert_awaited_once()
++
++
++@pytest.mark.asyncio
++async def test_backfill_updates_node_and_leaves_pool(sector_env):
++    """端到端语义：分类成功后节点离开回填池（不再被重选）。"""
++    session, nodes = sector_env
++    service = NodeSectorService(session)
++    node = nodes["unclassified"]
++    node.sector_weights = {"TECH": 100}
++    node.dominant_sector_code = "TECH"
++    node.sector_classification_status = "completed"
++    await session.commit()
++
++    found = await service.find_nodes_needing_backfill(user_id=uuid4())
++    assert node.id not in set(found)
++    rows = (await session.execute(select(KnowledgeNode.id))).all()
++    assert len(rows) == 5
+diff --git a/backend/tests/unit/test_security_audit_insert.py b/backend/tests/unit/test_security_audit_insert.py
+new file mode 100644
+index 00000000..c289d5ef
+--- /dev/null
++++ b/backend/tests/unit/test_security_audit_insert.py
+@@ -0,0 +1,190 @@
++"""AUDIT-INSERT-Fix · security_audit_logs 落库与降级回归（COLDSTART 双可靠性项之二）.
++
++活栈根因（/tmp/fastapi_engine.log 实证，每条安全事件全灭）::
++
++    NotNullViolationError: null value in column "id" of relation
++    "security_audit_logs" violates not-null constraint
++
++表 DDL（baseline cc9383c4c29f）无 server_default、模型无 Python 侧 default →
++``_record_security_event`` 的 INSERT 缺 id 必然失败；旧失败分支还
++``db.rollback()`` 整个请求事务（把同事务已 flush 的 LoginAttempt 一并吞掉）。
++
++本文件双向钉死：
++- INSERT 成功：模型 id 有客户端默认值，无显式 id 的 INSERT 落库成功；
++- 失败降级：插入失败只回滚 SAVEPOINT——外层事务完好（LoginAttempt 存活）、
++  完整事件 JSON 以 ``[SecurityAuditFallback]`` 落日志（留痕不静默）；
++- Redis 实时监控面失败不拖垮已落库的审计行。
++"""
++
++from __future__ import annotations
++
++import sys
++from pathlib import Path
++from unittest.mock import AsyncMock
++
++import pytest
++import pytest_asyncio
++from sqlalchemy import select
++
++REPO_ROOT = Path(__file__).resolve().parents[3]
++if str(REPO_ROOT) not in sys.path:
++    sys.path.insert(0, str(REPO_ROOT))
++
++from app.core.security_monitor import SecurityEvent, SecurityEventType, SecurityMonitor, ThreatLevel
++from app.models.audit_log import SecurityAuditLog
++from app.models.base import Base
++from app.models.user import LoginAttempt
++
++
++@pytest_asyncio.fixture
++async def audit_session(tmp_path):
++    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
++
++    engine = create_async_engine(
++        f"sqlite+aiosqlite:////{tmp_path / 'audit_insert.db'}",
++        connect_args={"timeout": 15.0},
++    )
++    async with engine.begin() as conn:
++        await conn.run_sync(Base.metadata.create_all)
++
++    factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
++    async with factory() as session:
++        yield session
++    await engine.dispose()
++
++
++def _make_monitor() -> SecurityMonitor:
++    monitor = SecurityMonitor()
++    monitor.redis = AsyncMock()
++    return monitor
++
++
++def _make_event(**overrides) -> SecurityEvent:
++    payload = {
++        "event_type": SecurityEventType.LOGIN_FAILED,
++        "ip_address": "203.0.113.9",
++        "threat_level": ThreatLevel.MEDIUM,
++        "details": {"username": "alice", "success": False},
++    }
++    payload.update(overrides)
++    return SecurityEvent(**payload)
++
++
++@pytest.mark.asyncio
++async def test_insert_succeeds_with_generated_id(audit_session):
++    """修复核心：无显式 id 的 INSERT 成功（id 由客户端默认值在 flush 时生成）。"""
++    row = SecurityAuditLog(
++        event_type="login_failed",
++        threat_level="medium",
++        details={"username": "alice"},
++    )
++    audit_session.add(row)
++    await audit_session.flush()
++
++    assert row.id is not None, "SecurityAuditLog.id 必须有 Python 侧默认值"
++    count = len((await audit_session.execute(select(SecurityAuditLog.id))).all())
++    assert count == 1
++
++
++@pytest.mark.asyncio
++async def test_record_security_event_persists_and_mirrors_redis(audit_session):
++    monitor = _make_monitor()
++    event = _make_event()
++    await monitor._record_security_event(event, audit_session)
++
++    rows = (await audit_session.execute(select(SecurityAuditLog))).scalars().all()
++    assert len(rows) == 1
++    assert rows[0].event_type == "login_failed"
++    assert rows[0].threat_level == "medium"
++    monitor.redis.setex.assert_awaited_once()
++
++
++@pytest.mark.asyncio
++async def test_insert_failure_degrades_without_poisoning_outer_transaction(audit_session):
++    """插入失败（flush 抛 IntegrityError）只回滚 SAVEPOINT：
++    外层已 flush 的 LoginAttempt 存活，完整事件 JSON 落日志留痕。"""
++    from sqlalchemy.exc import IntegrityError
++
++    # 外层事务先 flush 一行业务数据（对应 record_login_attempt 的真实序列）
++    attempt = LoginAttempt(username="alice", ip_address="203.0.113.9", success=False)
++    audit_session.add(attempt)
++    await audit_session.flush()
++
++    async def _boom():
++        raise IntegrityError(
++            "INSERT INTO security_audit_logs ...", {}, Exception("NOT NULL check failed")
++        )
++
++    logs: list[str] = []
++    from loguru import logger
++
++    original_flush = audit_session.flush
++    audit_session.flush = _boom  # 只打断审计插入那一次 flush
++    sink_id = logger.add(lambda message: logs.append(str(message)), level="WARNING")
++    try:
++        monitor = _make_monitor()
++        event = _make_event()
++        await monitor._record_security_event(event, audit_session)
++    finally:
++        audit_session.flush = original_flush
++        logger.remove(sink_id)
++
++    # 审计行没进来，但外层事务未被 rollback 毒化
++    audit_rows = (await audit_session.execute(select(SecurityAuditLog))).scalars().all()
++    assert audit_rows == []
++    await audit_session.commit()
++    kept = (await audit_session.execute(select(LoginAttempt))).scalars().all()
++    assert len(kept) == 1, "SAVEPOINT 修复后外层业务行必须存活"
++
++    # 降级留痕：完整事件 JSON 进日志（非静默）
++    assert any("[SecurityAuditFallback]" in line for line in logs), logs
++    assert any("login_failed" in line for line in logs), logs
++
++
++@pytest.mark.asyncio
++async def test_malformed_event_degrades_without_raising(audit_session):
++    """事件本身残缺（event_type=None）：构造即失败也走降级，不外抛打断调用方，
++    外层事务不受影响。"""
++    attempt = LoginAttempt(username="bob", ip_address="203.0.113.10", success=True)
++    audit_session.add(attempt)
++    await audit_session.flush()
++
++    logs: list[str] = []
++    from loguru import logger
++
++    sink_id = logger.add(lambda message: logs.append(str(message)), level="WARNING")
++    try:
++        monitor = _make_monitor()
++        bad_event = _make_event(event_type=None)  # type: ignore[arg-type] — 故意残缺
++        await monitor._record_security_event(bad_event, audit_session)
++    finally:
++        logger.remove(sink_id)
++
++    assert any("[SecurityAuditFallback]" in line for line in logs), logs
++    await audit_session.commit()
++    kept = (await audit_session.execute(select(LoginAttempt))).scalars().all()
++    assert len(kept) == 1
++
++
++@pytest.mark.asyncio
++async def test_redis_failure_does_not_lose_audit_row(audit_session):
++    """Redis 实时监控面失败：审计行（已 flush）不受影响，仅 WARNING。"""
++    monitor = _make_monitor()
++    monitor.redis.setex = AsyncMock(side_effect=ConnectionError("redis down"))
++
++    event = _make_event()
++    await monitor._record_security_event(event, audit_session)
++
++    rows = (await audit_session.execute(select(SecurityAuditLog))).scalars().all()
++    assert len(rows) == 1, "审计行已落事务，Redis 故障不得回滚它"
++
++
++@pytest.mark.asyncio
++async def test_id_default_is_unique_per_row(audit_session):
++    ids = set()
++    for _ in range(3):
++        row = SecurityAuditLog(event_type="data_access", threat_level="low")
++        audit_session.add(row)
++        await audit_session.flush()
++        ids.add(row.id)
++    assert len(ids) == 3
+diff --git a/scripts/devtools/replay_void_sector_backfill.py b/scripts/devtools/replay_void_sector_backfill.py
+new file mode 100644
+index 00000000..819ddd42
+--- /dev/null
++++ b/scripts/devtools/replay_void_sector_backfill.py
+@@ -0,0 +1,159 @@
++#!/usr/bin/env python3
++"""存量 VOID 节点星域回填重放（SECTOR-BACKFILL-Dedup 配套运维工具）。
++
++背景（COLDSTART 双可靠性项之一）：热路径 ``ensure_backfill_for_user`` 的选择面
++修复后，completed-VOID 节点不再走每次取图的重选循环（那是队列灌满、背压丢新
++任务的根因）；本脚本提供这些存量节点的幂等重放手段：
++
++- 按 user 分组、进程内直接调用 ``NodeSectorService.classify_nodes_by_ids``
++  （逐节点 LLM 重分类，每批 commit + 按 user 失效星图缓存），不经过
++  glm_batch 队列（不占背压额度、不依赖 celery worker 在跑）；
++- 幂等：可重复执行，重跑只是按当前 LLM 判定重写 sector_weights / dominant /
++  坐标；LLM 单节点失败只标 failed，不影响其余节点与后续批次；
++- 默认重放「未分类 / VOID 主星域 / pending / failed」；completed-VOID 是否
++  包含由 ``--no-completed-void`` 控制（默认包含——它们正是积压主体）。
++
++用法（backend 依赖已装、DB 可达；worktree 无 .env 时先导出必要变量）::
++
++    SECRET_KEY=test DATABASE_URL=postgresql+asyncpg://... \
++        python scripts/devtools/replay_void_sector_backfill.py --dry-run
++    SECRET_KEY=test DATABASE_URL=... \
++        python scripts/devtools/replay_void_sector_backfill.py \
++        --user-id <uuid> --batch-size 12
++
++零凭据：本脚本不读不写任何密钥；只按运行者显式给的 DATABASE_URL 连库。
++"""
++from __future__ import annotations
++
++import argparse
++import asyncio
++import sys
++import uuid
++from pathlib import Path
++
++REPO_ROOT = Path(__file__).resolve().parents[2]
++BACKEND_ROOT = REPO_ROOT / "backend"
++if str(BACKEND_ROOT) not in sys.path:
++    sys.path.insert(0, str(BACKEND_ROOT))
++
++from loguru import logger  # noqa: E402
++
++from app.models.sector import SectorCode  # noqa: E402
++
++
++async def _targets_by_user(
++    session,
++    *,
++    user_id: str | None,
++    include_completed_void: bool,
++) -> dict[uuid.UUID, list[uuid.UUID]]:
++    """按 user 分组收集需要重放的节点 id。
++
++    用户↔节点关联与 ``GalaxyService`` 取图同源（``UserNodeStatus`` join，
++    见 galaxy_service.get_graph_view）。选择语义（与修复后的热路径互补——
++    这里是重放面，包含 completed-VOID）：
++    - 未分类（weights NULL / status NULL、pending、failed）一律重放；
++    - dominant == VOID 且已 completed 的节点仅在 include_completed_void 时重放。
++    """
++    from sqlalchemy import select
++
++    from app.models.galaxy import KnowledgeNode, UserNodeStatus
++
++    stmt = (
++        select(
++            UserNodeStatus.user_id,
++            KnowledgeNode.id,
++            KnowledgeNode.dominant_sector_code,
++            KnowledgeNode.sector_classification_status,
++        )
++        .join(UserNodeStatus, UserNodeStatus.node_id == KnowledgeNode.id)
++        .where(KnowledgeNode.deleted_at.is_(None))  # 软删节点不重放
++        .order_by(UserNodeStatus.user_id, KnowledgeNode.created_at.asc())
++    )
++    if user_id:
++        stmt = stmt.where(UserNodeStatus.user_id == uuid.UUID(user_id))
++
++    grouped: dict[uuid.UUID, list[uuid.UUID]] = {}
++    for owner_id, node_id, dominant, status in (await session.execute(stmt)).all():
++        completed = str(status or "") == "completed"
++        if completed and not include_completed_void:
++            continue
++        needs_replay = not completed or str(dominant or "") == SectorCode.VOID.value
++        if not needs_replay:
++            continue
++        grouped.setdefault(owner_id, []).append(node_id)
++    return grouped
++
++
++async def main_async(args: argparse.Namespace) -> int:
++    from app.db.session import AsyncSessionLocal
++    from app.services.node_sector_service import NodeSectorService
++
++    async with AsyncSessionLocal() as session:
++        grouped = await _targets_by_user(
++            session,
++            user_id=args.user_id,
++            include_completed_void=args.include_completed_void,
++        )
++        total = sum(len(ids) for ids in grouped.values())
++        logger.info(
++            "replay targets: {} nodes across {} users{}",
++            total,
++            len(grouped),
++            f" (user={args.user_id})" if args.user_id else " (all users)",
++        )
++        if total == 0:
++            logger.info("nothing to replay")
++            return 0
++        if args.dry_run:
++            shown = 0
++            for owner_id, node_ids in grouped.items():
++                for node_id in node_ids:
++                    if shown >= args.sample:
++                        break
++                    logger.info("  dry-run target user={} node={}", owner_id, node_id)
++                    shown += 1
++            logger.info("dry-run only, no writes; rerun without --dry-run to replay")
++            return 0
++
++        processed = updated = 0
++        for owner_id, node_ids in grouped.items():
++            for start in range(0, len(node_ids), args.batch_size):
++                chunk = node_ids[start : start + args.batch_size]
++                result = await NodeSectorService(session).classify_nodes_by_ids(
++                    user_id=owner_id,
++                    node_ids=chunk,
++                )
++                processed += result.get("processed", 0)
++                updated += result.get("updated", 0)
++                logger.info(
++                    "chunk replayed user={} processed={} updated={} (cum {}/{})",
++                    owner_id,
++                    result.get("processed", 0),
++                    result.get("updated", 0),
++                    processed,
++                    total,
++                )
++        logger.info("replay done: processed={} updated={}", processed, updated)
++    return 0
++
++
++def main() -> int:
++    parser = argparse.ArgumentParser(description="Replay VOID node sector backfill (idempotent, in-process)")
++    parser.add_argument("--user-id", default=None, help="scope to one user (subjects.user_id); default all users")
++    parser.add_argument("--batch-size", type=int, default=24, help="nodes per classify batch (default 24)")
++    parser.add_argument("--dry-run", action="store_true", help="list targets without LLM calls or writes")
++    parser.add_argument("--sample", type=int, default=20, help="dry-run listing cap (default 20)")
++    parser.add_argument(
++        "--no-completed-void",
++        dest="include_completed_void",
++        action="store_false",
++        help="exclude completed nodes whose dominant sector is VOID",
++    )
++    parser.set_defaults(include_completed_void=True)
++    args = parser.parse_args()
++    return asyncio.run(main_async(args))
++
++
++if __name__ == "__main__":
++    raise SystemExit(main())

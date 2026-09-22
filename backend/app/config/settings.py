@@ -434,6 +434,10 @@ class Settings(BaseSettings):
     QUEUE_BACKPRESSURE_DEFAULT_MAX_DEPTH: int = 1000
     QUEUE_BACKPRESSURE_LIMITS_JSON: str = '{"glm_batch": 200}'
     QUEUE_BACKPRESSURE_PROBE_TIMEOUT_SECONDS: float = 1.5
+    # SECTOR-BACKFILL-Dedup · 星域回填在途去重 TTL（秒）：同用户回填批次入队后
+    # 在该窗口内不重复入队（get_galaxy_graph 每次取图都触发 ensure_backfill，
+    # 活栈实证无去重时同一批节点 0.7s 内被重复 enqueue、队列恒满 200/200）。
+    NODE_SECTOR_BACKFILL_DEDUP_TTL: int = 600
     AI_MODE_FAST_DAILY_REQUEST_LIMIT: int = 120
     AI_MODE_BALANCED_DAILY_REQUEST_LIMIT: int = 60
     AI_MODE_DEEP_DAILY_REQUEST_LIMIT: int = 24

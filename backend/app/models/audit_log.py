@@ -17,9 +17,14 @@ from app.models.base import GUID
 
 class SecurityAuditLog(Base):
     """安全审计日志表"""
+
     __tablename__ = "security_audit_logs"
 
-    id = Column(PGUUID(as_uuid=True), primary_key=True, index=True)
+    # AUDIT-INSERT-Fix · id 必须有客户端默认值：表 DDL（baseline cc9383c4c29f）
+    # 无 server_default，模型再无 Python 侧 default 时 INSERT 缺 id →
+    # NotNullViolationError（活栈 /tmp/fastapi_engine.log 实证：每条安全事件
+    # 全部落库失败）。与同文件 AdminAuditLog.id 的写法对齐。
+    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
 
     # 事件信息
     event_type = Column(String(100), nullable=False, index=True)  # 事件类型

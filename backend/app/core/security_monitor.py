@@ -405,7 +405,15 @@ class SecurityMonitor:
         event: SecurityEvent,
         db: AsyncSession
     ) -> None:
-        """记录安全事件到数据库"""
+        """记录安全事件到数据库。
+
+        AUDIT-INSERT-Fix（COLDSTART 双可靠性项之二）：
+        - 插入包在 SAVEPOINT（``begin_nested``）里：审计行失败只回滚自身，
+          不再 ``db.rollback()`` 整个请求事务（旧实现会把同事务里已 flush 的
+          LoginAttempt 等一并回滚——审计失败反而放大成业务数据丢失）；
+        - 失败降级：完整事件 JSON 以 ``[SecurityAuditFallback]`` 打进日志
+          （loguru 文件 sink 落盘），安全事件不再只留一句异常摘要后静默丢失。
+        """
         try:
             audit_log = SecurityAuditLog(
                 event_type=event.event_type.value,
@@ -418,21 +426,29 @@ class SecurityMonitor:
                 threat_level=event.threat_level.value,
                 timestamp=event.timestamp
             )
-            db.add(audit_log)
-            # 同上：flush 由 get_db 统一提交，避免请求中段终结事务
-            await db.flush()
+            async with db.begin_nested():
+                db.add(audit_log)
+                # 同上：flush 由 get_db 统一提交，避免请求中段终结事务
+                await db.flush()
+        except Exception as e:
+            logger.error(f"记录安全事件失败（已降级为日志留痕）: {e}")
+            try:
+                payload = json.dumps(event.to_dict(), ensure_ascii=False, default=str)
+            except Exception:  # noqa: BLE001 — 事件本身残缺时也要留痕
+                payload = repr(event)
+            logger.warning("[SecurityAuditFallback] {}", payload)
+            return
 
-            # 同时记录到Redis用于实时监控
+        # 同时记录到Redis用于实时监控（非关键路径：失败不影响审计落库）
+        try:
             redis_key = f"security:events:{event.timestamp.timestamp()}"
             await self.redis.setex(
                 redis_key,
                 3600,  # 保留1小时
                 json.dumps(event.to_dict())
             )
-
         except Exception as e:
-            logger.error(f"记录安全事件失败: {e}")
-            await db.rollback()
+            logger.warning(f"安全事件 Redis 记录失败（审计行已落库）: {e}")
 
     async def _check_failed_login_rate(
         self,
