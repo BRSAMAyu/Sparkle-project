@@ -74,6 +74,30 @@ services:
       - app
     restart: "no"
 
+  # Apache AGE 扩展 + 默认图谱初始化（跟随 db_migrate 的 one-shot 模式，镜像即 backend 镜像）
+  # 与 dev 侧 sparkle_age_init 等价：运行 backend/scripts/init_age_extension.py
+  db_age_init:
+    image: ${BACKEND_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/sparkle-backend}:${IMAGE_TAG:?IMAGE_TAG must be set}
+    container_name: sparkle_db_age_init
+    command: ["python", "scripts/init_age_extension.py"]
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - SERVICE_ROLE=age-init
+    depends_on:
+      db:
+        condition: service_healthy
+      db_migrate:
+        condition: service_completed_successfully
+    networks:
+      - app
+    restart: "no"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
   nginx:
     image: nginx:1.27-alpine
     container_name: sparkle_nginx
@@ -296,6 +320,8 @@ services:
         condition: service_healthy
       db_migrate:
         condition: service_completed_successfully
+      db_age_init:
+        condition: service_completed_successfully
     networks:
       - app
     healthcheck:
@@ -384,6 +410,8 @@ services:
         condition: service_healthy
       db_migrate:
         condition: service_completed_successfully
+      db_age_init:
+        condition: service_completed_successfully
     networks:
       - app
     healthcheck:
@@ -420,6 +448,8 @@ services:
       redis:
         condition: service_healthy
       db_migrate:
+        condition: service_completed_successfully
+      db_age_init:
         condition: service_completed_successfully
     networks:
       - app
@@ -459,6 +489,8 @@ services:
         condition: service_healthy
       db_migrate:
         condition: service_completed_successfully
+      db_age_init:
+        condition: service_completed_successfully
     networks:
       - app
     healthcheck:
@@ -496,6 +528,8 @@ services:
         condition: service_healthy
       db_migrate:
         condition: service_completed_successfully
+      db_age_init:
+        condition: service_completed_successfully
     networks:
       - app
     healthcheck:
@@ -508,7 +542,14 @@ services:
       resources: *resources_beat
 
   db:
-    image: pgvector/pgvector:pg16
+    # 与 dev 侧 (docker-compose.yml sparkle_db) 同一构建源：pgvector + Apache AGE
+    # 守卫: scripts/guards/check_rule_bn_prod_db_age_parity.py
+    build:
+      context: .
+      dockerfile: docker/pgvector-age.Dockerfile
+      args:
+        AGE_REF: PG16/v1.6.0-rc0
+    image: sparkle/pgvector-age:pg16
     container_name: sparkle_db
     restart: unless-stopped
     command:

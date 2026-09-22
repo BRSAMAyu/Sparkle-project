@@ -84,8 +84,14 @@ services:
       - celery
 
   # PostgreSQL (shared with main stack)
+  # 与主栈 sparkle_db 同一构建源（pgvector + Apache AGE），守卫: scripts/guards/check_rule_bn_prod_db_age_parity.py
   sparkle_db:
-    image: pgvector/pgvector:pg16
+    build:
+      context: .
+      dockerfile: docker/pgvector-age.Dockerfile
+      args:
+        AGE_REF: PG16/v1.6.0-rc0
+    image: sparkle/pgvector-age:pg16
     container_name: sparkle_db
     ports:
       - "5432:5432"
