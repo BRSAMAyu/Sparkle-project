@@ -404,7 +404,7 @@ class _SimulationChatBubbleState extends State<SimulationChatBubble> {
       DS.success,
       DS.warning,
       DS.brandPrimary,
-      DS.accent,
+      DS.brandSecondary,
     ];
     return palette[speaker.hashCode.abs() % palette.length];
   }

@@ -103,7 +103,7 @@ class _FlameIndicatorState extends State<FlameIndicator>
     if (widget.brightness >= 80) {
       return DS.rarityRare;
     } else if (widget.brightness >= 60) {
-      return DS.accent; // 黄色
+      return DS.brandSecondary; // 第二品牌色（退役 accent 别名的等值直引，B2-3a）
     } else if (widget.brightness >= 40) {
       return DS.primaryBase; // 橙色
     } else {
@@ -341,7 +341,7 @@ class CompactFlameIndicator extends StatelessWidget {
     if (brightness >= 80) {
       return DS.rarityRare;
     } else if (brightness >= 60) {
-      return DS.accent;
+      return DS.brandSecondary;
     } else if (brightness >= 40) {
       return DS.primaryBase;
     } else {

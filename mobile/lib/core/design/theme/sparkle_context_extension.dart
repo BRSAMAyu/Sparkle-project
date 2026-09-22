@@ -33,9 +33,10 @@ extension SparkleContextExtension on BuildContext {
 }
 
 // ═══ 语义别名层（SPEC v1.0 §1；B2-2 合入即 §1.7【批 2 起】门禁段生效）═══
-// 纯映射层：只做别名转发，零色值改动——值 owner 仍是 [SparkleColors] 字段
-// （tonal 再生成属后续工作包；本层不派生任何新色值，text.tertiary / focus
-// 两槽现无独立值，按 SPEC 原文映射最近 owner 值并标 TODO(B2-3)）。
+// 纯映射层：只做别名转发——值 owner 仍是 [SparkleColors] 字段（tonal 再
+// 生成属后续工作包）。B2-3a 起 text.tertiary 接独立定标槽 textTertiary；
+// focus 槽经评审维持 accent（brandPrimary）兼任（证据与建议见
+// v3-output/B2-3A/REPORT.md）。
 // 【批 2 起】新代码取色只走语义名（context.colors.surface.canvas 等），
 // 旧字段名（surfaceAmbient 等）降为只读 owner（SPEC §1.7 替换映射表）。
 
@@ -76,10 +77,10 @@ class SparkleTextSemantics {
   /// 次要说明/元数据。owner: `textSecondary`。
   Color get secondary => _owner.textSecondary;
 
-  /// 辅助文字。
-  /// TODO(B2-3): 独立 textTertiary 槽批 2 定标（SPEC §1.3【定标待实测】）；
-  /// 现按规范原文「现用 textSecondary 兼」映射最近 owner 值，不派生新色。
-  Color get tertiary => _owner.textSecondary;
+  /// 辅助文字（时间戳、脚注等扫视件）。owner: `textTertiary`（B2-3a 独立
+  /// 定标：各变体 >=4.5:1 on S0/S1，强调度严格介于 secondary 与 disabled
+  /// 之间；SPEC §1.3【定标待实测】已闭）。
+  Color get tertiary => _owner.textTertiary;
 
   /// 禁用态（状态色，非层级，对比度豁免）。owner: `textDisabled`。
   Color get disabled => _owner.textDisabled;
@@ -113,8 +114,11 @@ extension SparkleSemanticColorNames on SparkleColors {
   /// 数据可视化主色；冷色只准经本槽出现（规则 1.5.2）。
   Color get info => semanticInfo;
 
-  /// 语义槽 focus（键盘/无障碍焦点环）。
-  /// TODO(B2-3): SPEC §1.5「批 2 评审是否独立」；现由 accent 兼任（规范现状），
-  /// 映射最近 owner 值 brandPrimary。
+  /// 语义槽 focus（键盘/无障碍焦点环）＝ `brandPrimary` 兼任。
+  /// B2-3a 裁决：维持兼任——全 app 无自绘焦点环渲染点（focusRing 0 处；
+  /// 唯一 FocusableActionDetector 仅承载 enter/space 激活语义不绘制环；
+  /// Material focus 高亮仅在键盘遍历模式可见，触摸优先场景不渲染；TalkBack/
+  /// VoiceOver 焦点框由系统绘制，不消费 app 令牌）。独立槽建议与触发条件
+  /// 见 v3-output/B2-3A/REPORT.md（规范修订走 R5）。
   Color get focus => brandPrimary;
 }

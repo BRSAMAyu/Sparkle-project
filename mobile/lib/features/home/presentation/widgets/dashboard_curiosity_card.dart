@@ -45,7 +45,7 @@ class DashboardCuriosityCard extends ConsumerWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Icon(Icons.lightbulb_outline, color: DS.accent, size: iconSize),
+                Icon(Icons.lightbulb_outline, color: DS.brandSecondary, size: iconSize),
                 if (cognitive.hasNewInsight)
                   Container(
                     width: 8,

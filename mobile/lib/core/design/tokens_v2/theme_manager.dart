@@ -386,6 +386,7 @@ class SparkleColors {
     required this.noiseColor,
     required this.textPrimary,
     required this.textSecondary,
+    required this.textTertiary,
     required this.textDisabled,
     required this.brightness,
     required this.taskLearning,
@@ -405,6 +406,9 @@ class SparkleColors {
     required this.neutral400,
     required this.neutral500,
     required this.neutral600,
+    // Structural outline for out-of-domain legacy greys (routes 404 icon).
+    // Snapshot of Colors.grey pending batch-3 tonal regeneration.
+    required this.neutralOutline,
     // Chat bubble colors
     required this.chatBubbleUser,
     required this.chatBubbleUserText,
@@ -434,6 +438,9 @@ class SparkleColors {
         noiseColor: Color(0x0D000000),
         textPrimary: Color(0xFF171717),
         textSecondary: Color(0xFF555555),
+        // textTertiary B2-3a calibration: >=4.5:1 on S0(FCFAF5)/S1(F8F5F0),
+        // below textSecondary (6.86) above textDisabled (2.62) on S1.
+        textTertiary: Color(0xFF707070),
         textDisabled: Color(0xFF999999),
         brightness: Brightness.light,
         taskLearning: Color(0xFF0072B2),        // Blue
@@ -453,6 +460,7 @@ class SparkleColors {
         neutral400: Color(0xFFB1A89C),
         neutral500: Color(0xFF857B6D),
         neutral600: Color(0xFF5A5148),
+        neutralOutline: Color(0xFF9E9E9E),
         chatBubbleUser: Color(0xFF0072B2),
         chatBubbleUserText: Colors.white,
         chatBubbleOther: Color(0xFFF0ECE5),
@@ -478,6 +486,9 @@ class SparkleColors {
         noiseColor: Color(0x00000000),
         textPrimary: Color(0xFF171717),
         textSecondary: Color(0xFF171717),
+        // textTertiary B2-3a calibration: >=4.5:1 on S0(F8F5EE)/S1(F4F1EA),
+        // between textSecondary (15.89) and textDisabled (5.09) on S1.
+        textTertiary: Color(0xFF404040),
         textDisabled: Color(0xFF666666),
         brightness: Brightness.light,
         taskLearning: Color(0xFF687A96),
@@ -497,6 +508,7 @@ class SparkleColors {
         neutral400: Color(0xFFB1A89C),
         neutral500: Color(0xFF857B6D),
         neutral600: Color(0xFF5A5148),
+        neutralOutline: Color(0xFF9E9E9E),
         // Chat bubble colors
         chatBubbleUser: Color(0xFF4F637D),
         chatBubbleUserText: Colors.white,
@@ -531,6 +543,13 @@ class SparkleColors {
       noiseColor: Color(0x0D000000), // black 0.05
       textPrimary: Color(0xFF171717),
       textSecondary: Color(0xFF6C655D),
+      // textTertiary B2-3a calibration (SPEC §1.3 【定标待实测】 closure):
+      // warm-paper family (r>g>b), WCAG relative-luminance contrast
+      // 4.75:1 on S0(FCF8F3) / 4.59:1 on S1(F8F4EF) — both >=4.5:1,
+      // strictly between textSecondary (5.24) and textDisabled (2.50) on S1;
+      // CIEDE2000 distance 4.93 from textSecondary / 16.82 from textDisabled
+      // (same colorimetry as scripts/design/check_surface_ladder_de.py).
+      textTertiary: Color(0xFF736F62),
       textDisabled: Color(0xFFA49B90),
       brightness: Brightness.light,
       // Task/plan colors converged onto the calibrated semantic values where
@@ -556,6 +575,7 @@ class SparkleColors {
       neutral400: Color(0xFFBBB0A4),
       neutral500: Color(0xFF958A80),
       neutral600: Color(0xFF6A6057),
+      neutralOutline: Color(0xFF9E9E9E),
       // Chat bubble colors
       chatBubbleUser: Color(0xFF566C8C), // was 6B82A0; white text 3.94 -> 5.36:1
       chatBubbleUserText: Colors.white,
@@ -587,6 +607,9 @@ class SparkleColors {
         noiseColor: Color(0x08FFFFFF),
         textPrimary: Color(0xFFF4F1EB),
         textSecondary: Color(0xFFB8B1A6),
+        // textTertiary B2-3a calibration: >=4.5:1 on S0(0E0E10)/S1(1A1A1E),
+        // below textSecondary (8.16) above textDisabled (3.62) on S1.
+        textTertiary: Color(0xFF878375),
         textDisabled: Color(0xFF6B737E),
         brightness: Brightness.dark,
         taskLearning: Color(0xFF56B4E9),        // Sky Blue
@@ -606,6 +629,7 @@ class SparkleColors {
         neutral400: Color(0xFF4E4E52),
         neutral500: Color(0xFF6E6E72),
         neutral600: Color(0xFFA8A8AE),
+        neutralOutline: Color(0xFF9E9E9E),
         chatBubbleUser: Color(0xFF5A5A62),
         chatBubbleUserText: Colors.white,
         chatBubbleOther: Color(0xFF2A2A2E),
@@ -632,6 +656,9 @@ class SparkleColors {
         noiseColor: Color(0x00000000),
         textPrimary: Color(0xFFFFFFFF),
         textSecondary: Color(0xFFFFFFFF),
+        // textTertiary B2-3a calibration: >=4.5:1 on S0(060608)/S1(0A0A0C),
+        // between textSecondary (19.78) and textDisabled (6.94) on S1.
+        textTertiary: Color(0xFFCCCCCC),
         textDisabled: Color(0xFF999999),
         brightness: Brightness.dark,
         taskLearning: Color(0xFF95A6C8),
@@ -651,6 +678,7 @@ class SparkleColors {
         neutral400: Color(0xFF626A77),
         neutral500: Color(0xFF848D99),
         neutral600: Color(0xFFB2BCCB),
+        neutralOutline: Color(0xFF9E9E9E),
         // Chat bubble colors
         chatBubbleUser: Color(0xFF65789A),
         chatBubbleUserText: Colors.white,
@@ -679,6 +707,11 @@ class SparkleColors {
       noiseColor: Color(0x08FFFFFF), // white 0.03
       textPrimary: Color(0xFFF4F1EB),
       textSecondary: Color(0xFFB8B1A6),
+      // textTertiary B2-3a calibration: warm family, WCAG relative-luminance
+      // contrast 5.08:1 on S0(0E0E10) / 4.57:1 on S1(1A1A1E) — both >=4.5:1,
+      // strictly between textSecondary (8.16) and textDisabled (3.62) on S1;
+      // CIEDE2000 distance 15.09 from textSecondary / 15.16 from textDisabled.
+      textTertiary: Color(0xFF878375),
       textDisabled: Color(0xFF6B737E),
       brightness: Brightness.dark,
       taskLearning: Color(0xFF8CA5C8),
@@ -700,6 +733,7 @@ class SparkleColors {
       neutral400: Color(0xFF4E4E52),
       neutral500: Color(0xFF6E6E72),
       neutral600: Color(0xFFA8A8AE),
+      neutralOutline: Color(0xFF9E9E9E),
       // Chat bubble colors
       chatBubbleUser: Color(0xFF5A5A62),
       chatBubbleUserText: Colors.white,
@@ -729,6 +763,11 @@ class SparkleColors {
 
   final Color textPrimary;
   final Color textSecondary;
+
+  /// 辅助文字槽（SPEC v1.0 §1.3 三级文字阶的第三级）。B2-3a 定标：
+  /// 各变体 >=4.5:1 on S0/S1，且强调度严格介于 textSecondary 与
+  /// textDisabled 之间（定标计算见 v3-output/B2-3A/REPORT.md）。
+  final Color textTertiary;
   final Color textDisabled;
 
   // Task and plan type colors
@@ -753,6 +792,11 @@ class SparkleColors {
   final Color neutral400;
   final Color neutral500;
   final Color neutral600;
+
+  /// 结构性描边/不可达图标灰——`Colors.grey`（0xFF9E9E9E）的语义收编快照
+  /// （B2-3a，routes.dart 404 图标单点消费者）。批 3 tonal 再生成时按暖
+  /// seed 重定标并做视觉评审；禁作新增取灰入口（中性层算法生成，规则 1.2）。
+  final Color neutralOutline;
 
   // Chat bubble colors
   final Color chatBubbleUser;
@@ -861,6 +905,7 @@ class SparkleColors {
     Color? noiseColor,
     Color? textPrimary,
     Color? textSecondary,
+    Color? textTertiary,
     Color? textDisabled,
     Color? taskLearning,
     Color? taskTraining,
@@ -879,6 +924,7 @@ class SparkleColors {
     Color? neutral400,
     Color? neutral500,
     Color? neutral600,
+    Color? neutralOutline,
     Color? chatBubbleUser,
     Color? chatBubbleUserText,
     Color? chatBubbleOther,
@@ -902,6 +948,7 @@ class SparkleColors {
         noiseColor: noiseColor ?? this.noiseColor,
         textPrimary: textPrimary ?? this.textPrimary,
         textSecondary: textSecondary ?? this.textSecondary,
+        textTertiary: textTertiary ?? this.textTertiary,
         textDisabled: textDisabled ?? this.textDisabled,
         brightness: brightness,
         taskLearning: taskLearning ?? this.taskLearning,
@@ -921,6 +968,7 @@ class SparkleColors {
         neutral400: neutral400 ?? this.neutral400,
         neutral500: neutral500 ?? this.neutral500,
         neutral600: neutral600 ?? this.neutral600,
+        neutralOutline: neutralOutline ?? this.neutralOutline,
         chatBubbleUser: chatBubbleUser ?? this.chatBubbleUser,
         chatBubbleUserText: chatBubbleUserText ?? this.chatBubbleUserText,
         chatBubbleOther: chatBubbleOther ?? this.chatBubbleOther,
@@ -946,6 +994,7 @@ class SparkleColors {
         noiseColor: Color.lerp(noiseColor, other.noiseColor, t)!,
         textPrimary: Color.lerp(textPrimary, other.textPrimary, t)!,
         textSecondary: Color.lerp(textSecondary, other.textSecondary, t)!,
+        textTertiary: Color.lerp(textTertiary, other.textTertiary, t)!,
         textDisabled: Color.lerp(textDisabled, other.textDisabled, t)!,
         brightness: t < 0.5 ? brightness : other.brightness,
         taskLearning: Color.lerp(taskLearning, other.taskLearning, t)!,
@@ -965,6 +1014,7 @@ class SparkleColors {
         neutral400: Color.lerp(neutral400, other.neutral400, t)!,
         neutral500: Color.lerp(neutral500, other.neutral500, t)!,
         neutral600: Color.lerp(neutral600, other.neutral600, t)!,
+        neutralOutline: Color.lerp(neutralOutline, other.neutralOutline, t)!,
         chatBubbleUser: Color.lerp(chatBubbleUser, other.chatBubbleUser, t)!,
         chatBubbleUserText:
             Color.lerp(chatBubbleUserText, other.chatBubbleUserText, t)!,

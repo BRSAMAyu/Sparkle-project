@@ -11,12 +11,8 @@
     "mobile/lib/core/design/widgets/error_widget.dart": {
       "errorCopyOops": 2
     },
-    "mobile/lib/core/design/widgets/flame_indicator.dart": {
-      "dsAccentAlias": 2
-    },
     "mobile/lib/core/design/widgets/sparkle_confetti.dart": {
-      "confettiPerFile": 1,
-      "dsAccentAlias": 1
+      "confettiPerFile": 1
     },
     "mobile/lib/core/design/widgets/success_animation.dart": {
       "confettiPerFile": 1
@@ -444,9 +440,6 @@
     "mobile/lib/features/home/presentation/widgets/dashboard_card_section.dart": {
       "gradientLiteral": 1
     },
-    "mobile/lib/features/home/presentation/widgets/dashboard_curiosity_card.dart": {
-      "dsAccentAlias": 1
-    },
     "mobile/lib/features/home/presentation/widgets/dashboard_motion.dart": {
       "offLadderDuration": 1
     },
@@ -462,7 +455,6 @@
       "offLadderDuration": 1
     },
     "mobile/lib/features/home/presentation/widgets/insight_hub_card.dart": {
-      "dsAccentAlias": 2,
       "gradientLiteral": 2
     },
     "mobile/lib/features/home/presentation/widgets/layers/background_layer.dart": {
@@ -511,12 +503,6 @@
       "gradientLiteral": 7,
       "offLadderDuration": 2,
       "particleBypass": 7
-    },
-    "mobile/lib/features/insights/presentation/screens/learning_insights_overview_screen.dart": {
-      "dsAccentAlias": 1
-    },
-    "mobile/lib/features/insights/presentation/widgets/predictive_insights_card.dart": {
-      "dsAccentAlias": 1
     },
     "mobile/lib/features/insights/presentation/widgets/weekly_growth_narrative_card.dart": {
       "offLadderDuration": 1
@@ -569,12 +555,10 @@
       "gradientLiteral": 1
     },
     "mobile/lib/features/simulation/presentation/screens/simulation_screen.dart": {
-      "dsAccentAlias": 3,
       "gradientLiteral": 3,
       "offLadderDuration": 1
     },
     "mobile/lib/features/simulation/presentation/widgets/simulation_chat_bubble.dart": {
-      "dsAccentAlias": 1,
       "gradientLiteral": 2,
       "offLadderDuration": 1
     },

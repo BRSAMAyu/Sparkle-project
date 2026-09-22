@@ -2442,7 +2442,7 @@ class _SimulationStatusCard extends StatelessWidget {
       DS.success,
       DS.warning,
       DS.brandPrimary,
-      DS.accent,
+      DS.brandSecondary,
     ];
     return palette[name.hashCode.abs() % palette.length];
   }
@@ -3197,7 +3197,7 @@ class _SimulationMiniParticipantPill extends StatelessWidget {
       DS.success,
       DS.warning,
       DS.brandPrimary,
-      DS.accent,
+      DS.brandSecondary,
     ];
     return palette[name.hashCode.abs() % palette.length];
   }
@@ -3278,7 +3278,7 @@ class _ParticipantSnapshotPill extends StatelessWidget {
       DS.success,
       DS.warning,
       DS.brandPrimary,
-      DS.accent,
+      DS.brandSecondary,
     ];
     return palette[name.hashCode.abs() % palette.length];
   }

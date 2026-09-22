@@ -362,7 +362,7 @@ class PredictiveInsightsCard extends StatelessWidget {
                     children: [
                       Icon(
                         Icons.lightbulb_outline,
-                        color: DS.accent,
+                        color: DS.brandSecondary,
                         size: DS.iconSizeXs,
                       ),
                       const SizedBox(width: DS.spacing8),

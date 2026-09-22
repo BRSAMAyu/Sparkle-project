@@ -127,7 +127,7 @@ class _InsightHubCardState extends ConsumerState<InsightHubCard> {
                     simulationState,
                     latestSimulation: latestSimulation,
                   ),
-                  accent: DS.accent,
+                  accent: DS.brandSecondary,
                   onTap: () => _openSimulation(
                     context,
                     simulationState,
@@ -394,7 +394,7 @@ class _CompactInsightHubCard extends ConsumerWidget {
                         latestSimulation: latestSimulation,
                       ),
                       icon: Icons.groups_rounded,
-                      accent: DS.accent,
+                      accent: DS.brandSecondary,
                       onTap: () {
                         final metadata = Map<String, dynamic>.from(
                           latestSimulation?['metadata'] as Map? ?? const {},

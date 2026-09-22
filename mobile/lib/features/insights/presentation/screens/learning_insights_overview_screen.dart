@@ -158,7 +158,7 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
                         ? context.l10n.lioRecommendedSeeds(
                             simulationState.recommendedSeeds.length)
                         : context.l10n.lioStartNewSim,
-                accent: DS.accent,
+                accent: DS.brandSecondary,
                 icon: Icons.groups_rounded,
                 highlighted: initialPanel == panelSimulation,
                 buttonLabel: latestSimulation != null

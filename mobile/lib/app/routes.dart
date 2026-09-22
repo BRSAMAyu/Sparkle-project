@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/experience/experience_profile.dart';
 import 'package:sparkle/core/navigation/sensory_navigation_observer.dart';
@@ -110,7 +111,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.explore_off, size: 64, color: Colors.grey),
+            // B2-3a: Colors.grey（0xFF9E9E9E）语义收编 → neutralOutline 快照
+            // token（视觉等值，hex 逐位一致；SPEC §1.5.2 域外单点清偿）。
+            Icon(
+              Icons.explore_off,
+              size: 64,
+              color: context.colors.neutralOutline,
+            ),
             const SizedBox(height: 16),
             Text(context.l10n.routerPageNotFoundMessage(
               state.error?.message ?? state.uri.path,

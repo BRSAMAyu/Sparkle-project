@@ -150,7 +150,7 @@ class _SparkleConfettiState extends State<SparkleConfetti> {
               colors: widget.colors ??
                   [
                     DS.primaryBase,
-                    DS.accent,
+                    DS.brandSecondary,
                     DS.success,
                     DS.info,
                     DS.warning,
